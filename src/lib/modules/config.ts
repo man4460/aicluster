@@ -22,6 +22,13 @@ export const BARBER_MODULE_GROUP_ID = 1 as const;
 export const HOME_FINANCE_BASIC_MODULE_SLUG = "income-expense-basic" as const;
 export const HOME_FINANCE_BASIC_MODULE_GROUP_ID = 1 as const;
 
+/** ชื่อแสดงในการ์ด/เมนู — ให้ตรงกันทุกที่แม้ DB เก่าจะยังเป็นชื่อสั้น */
+export function displayAppModuleTitle(slug: string, title: string): string {
+  if (slug === ATTENDANCE_MODULE_SLUG) return "ระบบเช็คชื่ออัจฉริยะ";
+  if (slug === HOME_FINANCE_BASIC_MODULE_SLUG) return "ระบบบันทึกรายรับ-รายจ่าย";
+  return title;
+}
+
 /**
  * แมปกลุ่มโมดูล (module_list.group_id) กับชื่อระดับแพ็กเกจ
  * — sync กับข้อมูล seed / ที่ตั้งค่าใน DB

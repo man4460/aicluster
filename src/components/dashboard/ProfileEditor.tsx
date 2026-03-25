@@ -4,10 +4,14 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
+import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enums";
+import { TokenTopupModal } from "@/components/dashboard/TokenTopupModal";
 
 type Initial = {
   email: string;
   username: string;
+  subscriptionTier: SubscriptionTier;
+  subscriptionType: SubscriptionType;
   fullName: string | null;
   phone: string | null;
   address: string | null;
@@ -139,6 +143,12 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
         <p className="text-center text-xs text-slate-500">{initial.email}</p>
         <p className="text-center text-sm font-medium text-slate-700">@{initial.username}</p>
         <p className="text-center text-sm text-amber-800">โทเคน: {initial.tokens}</p>
+        <TokenTopupModal
+          triggerLabel="เติมโทเคน"
+          triggerClassName="inline-flex w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
+          subscriptionTier={initial.subscriptionTier}
+          subscriptionType={initial.subscriptionType}
+        />
       </div>
 
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

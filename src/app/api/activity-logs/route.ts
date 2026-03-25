@@ -12,6 +12,9 @@ function dateOnly(value: string): Date | null {
 export async function GET(req: Request) {
   const auth = await requireSession();
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (auth.session.role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const { prisma } = await import("@/lib/prisma");
   const u = new URL(req.url);
@@ -45,9 +48,6 @@ export async function GET(req: Request) {
   }
 
   const where = {
-    ...(auth.session.role === "ADMIN"
-      ? {}
-      : { OR: [{ actorUserId: auth.session.sub }, { actorUserId: null }] }),
     ...(fromD || toNext
       ? {
           createdAt: {
@@ -83,10 +83,6 @@ export async function GET(req: Request) {
   } else {
     const filters: string[] = [];
     const values: unknown[] = [];
-    if (auth.session.role !== "ADMIN") {
-      filters.push("`actor_user_id` = ?");
-      values.push(auth.session.sub);
-    }
     if (fromD) {
       filters.push("`created_at` >= ?");
       values.push(fromD);

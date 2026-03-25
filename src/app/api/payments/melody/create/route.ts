@@ -8,6 +8,7 @@ import {
   computeBuffetSubscriptionTokenCharge,
   type PlanPrice,
 } from "@/lib/module-permissions";
+import { getMelodyMqttBridge } from "@/lib/integrations/melody-mqtt";
 
 const bodySchema = z.object({
   /** รหัสราคาแพ็ก 199–599 (ราคาเป็นหน่วยโทเคนที่จะหัก / ส่วนต่างเมื่ออัปเกรด) */
@@ -54,15 +55,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: charge.error }, { status: 400 });
   }
 
-  if (user.tokens < charge.tokensToDeduct) {
-    return NextResponse.json(
-      {
-        error: `โทเคนไม่พอ — ต้องการ ${charge.tokensToDeduct} โทเคน (คงเหลือ ${user.tokens})`,
-      },
-      { status: 400 },
-    );
-  }
-
   const order = await prisma.topUpOrder.create({
     data: {
       userId: auth.session.sub,
@@ -72,11 +64,36 @@ export async function POST(req: Request) {
     },
   });
 
+  const mqtt = getMelodyMqttBridge();
+  mqtt.ensureStarted();
+  let qrCodeContent: string | null = null;
+  if (mqtt.enabled) {
+    try {
+      qrCodeContent = await mqtt.createTopupQr({
+        orderId: order.id,
+        userId: auth.session.sub,
+        amountBaht: planPriceKey,
+      });
+    } catch (e) {
+      console.error("[melody/create] mqtt qrgen failed", e);
+      await prisma.topUpOrder.update({
+        where: { id: order.id },
+        data: { status: "FAILED" },
+      });
+      return NextResponse.json(
+        { error: "สร้าง QR ชำระเงินไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" },
+        { status: 502 },
+      );
+    }
+  }
+
   return NextResponse.json({
     orderId: order.id,
     planPriceKey,
     tokensToDeduct: charge.tokensToDeduct,
     targetTier,
+    paymentMethod: mqtt.enabled ? "MQTT_QR" : "WEBHOOK",
+    qrCodeContent,
     /** ส่งต่อไป Melody checkout / QR — ตอนนี้เป็น placeholder */
     clientReference: order.id,
   });

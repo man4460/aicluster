@@ -18,6 +18,8 @@ export default async function ProfilePage() {
     select: {
       email: true,
       username: true,
+      subscriptionTier: true,
+      subscriptionType: true,
       fullName: true,
       phone: true,
       address: true,

@@ -2,8 +2,9 @@
 
 import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enums";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
+import QRCode from "qrcode";
 import {
   PLAN_PRICES,
   PRICE_TO_TIER,
@@ -23,10 +24,12 @@ export function PlansPricing({
   showUpgradeHint,
   subscriptionTier,
   subscriptionType,
-  tokens,
 }: Props) {
   const router = useRouter();
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [qrCodeContent, setQrCodeContent] = useState<string | null>(null);
+  const [qrImageDataUrl, setQrImageDataUrl] = useState<string | null>(null);
+  const [waitingPayment, setWaitingPayment] = useState(false);
   const [loading, setLoading] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -40,12 +43,20 @@ export function PlansPricing({
         credentials: "include",
         body: JSON.stringify({ amountBaht: price }),
       });
-      const data = (await res.json()) as { error?: string; orderId?: string };
+      const data = (await res.json()) as {
+        error?: string;
+        orderId?: string;
+        qrCodeContent?: string | null;
+      };
       if (!res.ok) {
         setErr(data.error ?? "สร้างคำสั่งซื้อไม่สำเร็จ");
         return;
       }
-      setOrderId(data.orderId ?? null);
+      const nextOrderId = data.orderId ?? null;
+      setOrderId(nextOrderId);
+      setQrCodeContent(data.qrCodeContent ?? null);
+      setQrImageDataUrl(null);
+      setWaitingPayment(Boolean(nextOrderId));
     } finally {
       setLoading(null);
     }
@@ -65,11 +76,54 @@ export function PlansPricing({
       setErr(data.error ?? "จำลองชำระไม่สำเร็จ");
       return;
     }
+    setQrCodeContent(null);
+    setQrImageDataUrl(null);
+    setWaitingPayment(false);
     setOrderId(null);
     router.refresh();
   }
 
   const isDev = process.env.NODE_ENV === "development";
+
+  useEffect(() => {
+    let done = false;
+    if (!qrCodeContent) {
+      setQrImageDataUrl(null);
+      return;
+    }
+    (async () => {
+      try {
+        const dataUrl = await QRCode.toDataURL(qrCodeContent, { margin: 1, width: 280 });
+        if (!done) setQrImageDataUrl(dataUrl);
+      } catch {
+        if (!done) setQrImageDataUrl(null);
+      }
+    })();
+    return () => {
+      done = true;
+    };
+  }, [qrCodeContent]);
+
+  useEffect(() => {
+    if (!orderId || !waitingPayment) return;
+    const timer = window.setInterval(async () => {
+      try {
+        const res = await fetch(`/api/payments/melody/status/${orderId}`, { credentials: "include" });
+        const data = (await res.json().catch(() => ({}))) as { status?: string };
+        if (!res.ok) return;
+        if (data.status === "PAID") {
+          setWaitingPayment(false);
+          setOrderId(null);
+          setQrCodeContent(null);
+          setQrImageDataUrl(null);
+          router.refresh();
+        }
+      } catch {
+        // ignore transient poll errors
+      }
+    }, 3000);
+    return () => window.clearInterval(timer);
+  }, [orderId, waitingPayment, router]);
 
   return (
     <div>
@@ -95,8 +149,8 @@ export function PlansPricing({
             currentTier: subscriptionTier,
             subscriptionType,
           });
-          const canSelect = charge.ok && tokens >= charge.tokensToDeduct;
-          const disabledReason = !charge.ok ? charge.error : !canSelect ? "โทเคนไม่พอ" : null;
+          const canSelect = charge.ok;
+          const disabledReason = !charge.ok ? charge.error : null;
 
           return (
             <div
@@ -146,10 +200,28 @@ export function PlansPricing({
       {orderId ? (
         <div className="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
           <p className="font-medium">คำสั่งซื้อ: {orderId}</p>
-          <p className="mt-1 text-xs">
-            เมื่อชำระสำเร็จ ระบบจะหักโทเคนตามที่แสดงบนการ์ด — ในระบบจริงให้ส่งลูกค้าไปหน้าชำระ Melody แล้วให้ Melody callback ไปที่{" "}
-            <code className="rounded bg-white px-1">POST /api/payments/melody/webhook</code>
-          </p>
+          {qrCodeContent ? (
+            <p className="mt-1 text-xs">
+              สแกน QR เพื่อชำระเงิน จากนั้นระบบจะอัปเดตสถานะและรีเฟรชโทเคนอัตโนมัติ
+            </p>
+          ) : (
+            <p className="mt-1 text-xs">
+              เมื่อชำระสำเร็จ ระบบจะหักโทเคนตามที่แสดงบนการ์ด — ในระบบจริงให้ส่ง callback เข้า{" "}
+              <code className="rounded bg-white px-1">POST /api/payments/melody/webhook</code>
+            </p>
+          )}
+          {qrCodeContent ? (
+            <div className="mt-3 rounded-lg border border-blue-200 bg-white p-3">
+              {qrImageDataUrl ? (
+                <img src={qrImageDataUrl} alt="Melody payment QR" className="mx-auto h-56 w-56 rounded-md" />
+              ) : (
+                <p className="text-xs text-slate-500">กำลังสร้างภาพ QR...</p>
+              )}
+              <p className="mt-2 text-center text-xs text-slate-500">
+                {waitingPayment ? "รอยืนยันการชำระเงิน..." : "ชำระเงินแล้ว"}
+              </p>
+            </div>
+          ) : null}
           {isDev ? (
             <button
               type="button"

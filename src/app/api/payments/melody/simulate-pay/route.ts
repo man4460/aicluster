@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireSession } from "@/lib/api-auth";
-import { fulfillTopUpOrder } from "@/lib/payments/fulfill-top-up";
+import { fulfillMelodyOrder } from "@/lib/payments/fulfill-melody-order";
 import { prisma } from "@/lib/prisma";
 
 const bodySchema = z.object({
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "ไม่พบคำสั่งซื้อ" }, { status: 404 });
   }
 
-  const result = await fulfillTopUpOrder(order.id);
+  const result = await fulfillMelodyOrder(order.id);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

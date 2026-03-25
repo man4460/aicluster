@@ -1,7 +1,12 @@
 import { PageHeader } from "@/components/ui/page-container";
 import { ActivityLogsClient } from "@/systems/activity-logs/components/ActivityLogsClient";
+import { getSession } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
 
-export default function ActivityLogsPage() {
+export default async function ActivityLogsPage() {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") redirect("/dashboard");
+
   return (
     <div className="space-y-6">
       <PageHeader

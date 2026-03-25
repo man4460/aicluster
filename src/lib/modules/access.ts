@@ -41,6 +41,21 @@ export function canAccessAppModule(
   return mod.groupId === 1;
 }
 
+/**
+ * ปุ่ม “ทดลองใช้งาน” — สายรายวัน + มีโทเคน: ทดลองโมดูลใดก็ได้ในแคตตาล็อก (ชวนอัปเกรดแพ็กเกจ)
+ * Subscribe ยังใช้ canAccessAppModule ตามเดิม
+ */
+export function canStartTrialForModule(
+  user: UserAccessFields,
+  mod: { slug: string; groupId: number },
+): boolean {
+  if (user.role === "ADMIN") return true;
+  if (user.subscriptionType === "BUFFET") {
+    return canAccessAppModule(user, mod);
+  }
+  return user.tokens > 0;
+}
+
 /** true = แพ็กเหมา (ไม่หักโทเคนรายวัน) */
 export function isBuffetSubscriber(user: Pick<UserAccessFields, "role" | "subscriptionType">): boolean {
   if (user.role === "ADMIN") return true;

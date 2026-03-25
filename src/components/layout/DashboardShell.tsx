@@ -36,17 +36,32 @@ function SidebarNavLink({
   href,
   pathname,
   label,
+  serviceGroupId,
 }: {
   href: string;
   pathname: string;
   label: string;
+  serviceGroupId?: number;
 }) {
   const active = isNavActive(href, pathname);
+  const groupTone =
+    serviceGroupId === 1
+      ? "before:bg-[#0000BF]"
+      : serviceGroupId === 2
+        ? "before:bg-slate-500"
+        : serviceGroupId === 3
+          ? "before:bg-amber-500"
+          : serviceGroupId === 4
+            ? "before:bg-fuchsia-500"
+            : serviceGroupId === 5
+              ? "before:bg-rose-500"
+              : "before:bg-emerald-500";
   return (
     <Link
       href={href}
       className={cn(
         "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition",
+        serviceGroupId ? `before:h-2 before:w-2 before:rounded-full before:content-[''] ${groupTone}` : "",
         active
           ? "bg-[#0000BF]/10 text-[#0000BF]"
           : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
@@ -63,19 +78,34 @@ function DrawerNavLink({
   pathname,
   onNavigate,
   label,
+  serviceGroupId,
 }: {
   href: string;
   pathname: string;
   onNavigate: () => void;
   label: string;
+  serviceGroupId?: number;
 }) {
   const active = isNavActive(href, pathname);
+  const groupTone =
+    serviceGroupId === 1
+      ? "before:bg-[#0000BF]"
+      : serviceGroupId === 2
+        ? "before:bg-slate-500"
+        : serviceGroupId === 3
+          ? "before:bg-amber-500"
+          : serviceGroupId === 4
+            ? "before:bg-fuchsia-500"
+            : serviceGroupId === 5
+              ? "before:bg-rose-500"
+              : "before:bg-emerald-500";
   return (
     <Link
       href={href}
       onClick={onNavigate}
       className={cn(
         "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition",
+        serviceGroupId ? `before:h-2 before:w-2 before:rounded-full before:content-[''] ${groupTone}` : "",
         active
           ? "bg-[#0000BF]/10 text-[#0000BF]"
           : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
@@ -126,17 +156,38 @@ function NavCollapsibleGroup({
   variant: "sidebar" | "drawer";
   onDrawerNavigate?: () => void;
 }) {
+  const isBasic = group.id === "basic";
+  const cardClass = isBasic
+    ? "border-[#0000BF]/20 bg-[#0000BF]/[0.04]"
+    : "border-emerald-200/90 bg-emerald-50/70";
+  const headerHoverClass = isBasic ? "hover:bg-[#0000BF]/10" : "hover:bg-emerald-100/80";
+  const titleClass = isBasic ? "text-[#00008f]" : "text-emerald-800";
+  const badgeClass = isBasic
+    ? "bg-[#0000BF]/10 text-[#0000BF] border-[#0000BF]/20"
+    : "bg-emerald-100 text-emerald-700 border-emerald-200";
+  const badgeLabel = isBasic ? "BASIC" : "SERVICES";
+
   return (
-    <div className="rounded-xl border border-slate-200/90 bg-slate-50 p-2 shadow-sm">
+    <div className={cn("rounded-xl border p-2 shadow-sm", cardClass)}>
       <button
         type="button"
-        className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left outline-none transition hover:bg-slate-100/90 focus-visible:ring-2 focus-visible:ring-[#0000BF]/30"
+        className={cn(
+          "flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[#0000BF]/30",
+          headerHoverClass,
+        )}
         aria-expanded={open}
         onClick={onToggle}
       >
-        <span className="line-clamp-2 min-w-0 flex-1 text-sm font-semibold leading-snug text-slate-700">
-          {group.label}
-        </span>
+        <div className="min-w-0 flex-1">
+          <span className={cn("line-clamp-2 text-sm font-semibold leading-snug", titleClass)}>
+            {group.label}
+          </span>
+          <div className="mt-1">
+            <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold", badgeClass)}>
+              {badgeLabel}
+            </span>
+          </div>
+        </div>
         <span className="sr-only">{open ? "ย่อกลุ่ม" : "ขยายกลุ่ม"}</span>
         <ChevronNavExpand expanded={open} />
       </button>
@@ -144,7 +195,13 @@ function NavCollapsibleGroup({
         <div className="mt-0.5 flex flex-col gap-0.5">
           {group.items.map((item) =>
             variant === "sidebar" ? (
-              <SidebarNavLink key={item.href} href={item.href} pathname={pathname} label={item.label} />
+              <SidebarNavLink
+                key={item.href}
+                href={item.href}
+                pathname={pathname}
+                label={item.label}
+                serviceGroupId={"groupId" in item ? item.groupId : undefined}
+              />
             ) : (
               <DrawerNavLink
                 key={item.href}
@@ -152,6 +209,7 @@ function NavCollapsibleGroup({
                 pathname={pathname}
                 label={item.label}
                 onNavigate={onDrawerNavigate ?? (() => {})}
+                serviceGroupId={"groupId" in item ? item.groupId : undefined}
               />
             ),
           )}
@@ -170,7 +228,7 @@ type Props = {
   subscriptionTier: SubscriptionTier;
   subscriptionType: SubscriptionType;
   /** โมดูลที่ user มีสิทธิ์ — แสดงในกลุ่มระบบใช้บริการ */
-  serviceModules: { slug: string; title: string }[];
+  serviceModules: { slug: string; title: string; groupId: number }[];
   avatarUrl: string | null;
   children: React.ReactNode;
 };

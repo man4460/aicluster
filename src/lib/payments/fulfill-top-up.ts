@@ -42,17 +42,6 @@ export async function fulfillTopUpOrder(
         return { ok: false as const, error: "ไม่พบผู้ใช้" };
       }
 
-      if (user.tokens < deduct) {
-        await tx.topUpOrder.update({
-          where: { id: orderId },
-          data: { status: "FAILED" },
-        });
-        return {
-          ok: false as const,
-          error: `โทเคนไม่พอ (ต้องการ ${deduct} มี ${user.tokens})`,
-        };
-      }
-
       await tx.topUpOrder.update({
         where: { id: orderId },
         data: { status: "PAID" },
@@ -61,7 +50,7 @@ export async function fulfillTopUpOrder(
       await tx.user.update({
         where: { id: order.userId },
         data: {
-          tokens: user.tokens - deduct,
+          tokens: user.tokens,
           subscriptionTier: targetTier,
           subscriptionType: "BUFFET",
           lastBuffetBillingMonth: bangkokMonthKey(),

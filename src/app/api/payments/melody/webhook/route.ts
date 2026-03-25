@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { melodyPaidPayloadSchema, verifyMelodySignature } from "@/lib/integrations/melody";
-import { fulfillTopUpOrder } from "@/lib/payments/fulfill-top-up";
+import { fulfillMelodyOrder } from "@/lib/payments/fulfill-melody-order";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
@@ -40,11 +40,15 @@ export async function POST(req: Request) {
     where: { id: order.id },
     data: {
       externalRef: reference,
-      melodyMeta: json as object,
+      melodyMeta: {
+        ...((order.melodyMeta ?? {}) as Record<string, unknown>),
+        webhookLastEvent: json as object,
+        webhookLastEventAt: new Date().toISOString(),
+      },
     },
   });
 
-  const result = await fulfillTopUpOrder(order.id);
+  const result = await fulfillMelodyOrder(order.id);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

@@ -68,3 +68,4 @@ cd /d "D:\Buffe App\web"
 npm run pm2:stop
 npm run pm2:dev
 npm run pm2:restart
+

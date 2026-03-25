@@ -30,15 +30,18 @@ export const DASHBOARD_NAV_GROUP_LABEL: Record<DashboardNavGroupId, string> = {
 export const DASHBOARD_NAV: DashboardNavItem[] = [
   { href: "/dashboard", label: "แดชบอร์ด" },
   { href: "/dashboard/profile", label: "โปรไฟล์" },
-  { href: "/dashboard/activity-logs", label: "ความเคลื่อนไหวระบบ" },
   { href: "/dashboard/plans", label: "แพ็กเกจ" },
   { href: "/dashboard/chat", label: "แชท" },
   { href: "/dashboard/admin/users", label: "จัดการผู้ใช้", adminOnly: true },
+  { href: "/dashboard/activity-logs", label: "ความเคลื่อนไหวระบบ", adminOnly: true },
+  { href: "/dashboard/admin/mqtt", label: "สถานะ MQTT", adminOnly: true },
+  { href: "/dashboard/admin/module-cooldowns", label: "ปลดล็อค Subscribe", adminOnly: true },
 ];
 
 export type SubscribedModuleLink = {
   href: string;
   label: string;
+  groupId: number;
 };
 
 export type DashboardNavGroup = {
@@ -58,7 +61,7 @@ export function basicNavForRole(role: DashboardNavRole): DashboardNavItem[] {
  */
 export function buildDashboardNavGroups(
   role: DashboardNavRole,
-  subscribedModules: { slug: string; title: string }[],
+  subscribedModules: { slug: string; title: string; groupId: number }[],
 ): DashboardNavGroup[] {
   const basicItems = basicNavForRole(role);
   const groups: DashboardNavGroup[] = [
@@ -72,6 +75,7 @@ export function buildDashboardNavGroups(
   const serviceItems: SubscribedModuleLink[] = subscribedModules.map((m) => ({
     href: dashboardModuleHref(m.slug),
     label: m.title,
+    groupId: m.groupId,
   }));
 
   if (serviceItems.length > 0) {
@@ -88,7 +92,7 @@ export function buildDashboardNavGroups(
 /** รายการแบนเรียงเดียว (รวมลิงก์โมดูล) */
 export function navForRole(
   role: DashboardNavRole,
-  subscribedModules: { slug: string; title: string }[],
+  subscribedModules: { slug: string; title: string; groupId: number }[],
 ): { href: string; label: string }[] {
   const mods = subscribedModules.map((m) => ({
     href: dashboardModuleHref(m.slug),
