@@ -42,6 +42,16 @@ yarn-error.log*
 *.db
 *.db-journal
 
+# user uploads (เก็บโฟลเดอร์ว่างใน repo)
+/public/uploads/avatars/*
+!/public/uploads/avatars/.gitkeep
+/public/uploads/dorm-logos/*
+!/public/uploads/dorm-logos/.gitkeep
+/public/uploads/dorm-payment-proofs/*
+!/public/uploads/dorm-payment-proofs/.gitkeep
+/public/uploads/attendance-faces/*
+!/public/uploads/attendance-faces/.gitkeep
+
 # vercel
 .vercel
 

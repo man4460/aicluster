@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { AuthCard, AuthFooterLink } from "@/components/auth/AuthCard";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { cn } from "@/lib/cn";
 
 function ResetPasswordInner() {
@@ -65,14 +66,12 @@ function ResetPasswordInner() {
           <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
             รหัสผ่านใหม่
           </label>
-          <input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none ring-[#0000BF]/20 transition focus:border-[#0000BF] focus:ring-2"
             required
             minLength={8}
           />
@@ -81,14 +80,12 @@ function ResetPasswordInner() {
           <label htmlFor="password2" className="mb-1 block text-sm font-medium text-slate-700">
             ยืนยันรหัสผ่าน
           </label>
-          <input
+          <PasswordInput
             id="password2"
             name="password2"
-            type="password"
             autoComplete="new-password"
             value={password2}
             onChange={(e) => setPassword2(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none ring-[#0000BF]/20 transition focus:border-[#0000BF] focus:ring-2"
             required
             minLength={8}
           />

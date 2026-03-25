@@ -27,7 +27,7 @@ export async function sendPasswordResetEmail(to: string, token: string) {
   await transporter.sendMail({
     from: process.env.SMTP_FROM ?? `"MAWELL Buffet" <noreply@mawell.local>`,
     to,
-    subject: "รีเซ็ตรหัสผ่าน — MAWELL Buffet Management System",
+    subject: "รีเซ็ตรหัสผ่าน — MAWELL Buffet",
     text: `คลิกลิงก์เพื่อตั้งรหัสผ่านใหม่:\n${resetUrl}\n\nลิงก์หมดอายุใน 1 ชั่วโมง`,
     html: `<p>คลิกลิงก์เพื่อตั้งรหัสผ่านใหม่:</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>ลิงก์หมดอายุใน 1 ชั่วโมง</p>`,
   });

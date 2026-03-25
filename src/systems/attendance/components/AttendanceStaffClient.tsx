@@ -1,0 +1,150 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+
+type StaffRow = {
+  id: string;
+  email: string;
+  username: string;
+  fullName: string | null;
+  createdAt: string;
+};
+
+export function AttendanceStaffClient() {
+  const [list, setList] = useState<StaffRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    const res = await fetch("/api/attendance/owner/staff", { credentials: "include" });
+    const j = (await res.json().catch(() => ({}))) as { staff?: StaffRow[] };
+    setList(j.staff ?? []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function onCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    setMsg(null);
+    setSaving(true);
+    try {
+      const res = await fetch("/api/attendance/owner/staff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email,
+          username,
+          password,
+          fullName: fullName.trim() || null,
+        }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setErr(j.error ?? "สร้างไม่สำเร็จ");
+        return;
+      }
+      setMsg("สร้างบัญชีพนักงานแล้ว — ให้ล็อกอินที่หน้าเข้าสู่ระบบด้วยอีเมล/รหัสที่ตั้ง");
+      setPassword("");
+      await load();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function revoke(id: string) {
+    if (!confirm("ถอดพนักงานออกจากองค์กร?")) return;
+    const res = await fetch(`/api/attendance/owner/staff/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (res.ok) await load();
+  }
+
+  return (
+    <div className="space-y-8">
+      <form
+        onSubmit={onCreate}
+        className="max-w-xl space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+      >
+        <h2 className="text-sm font-bold text-slate-900">เพิ่มพนักงาน</h2>
+        {err ? <p className="text-sm text-red-700">{err}</p> : null}
+        {msg ? <p className="text-sm text-emerald-800">{msg}</p> : null}
+        <input
+          required
+          type="email"
+          placeholder="อีเมล"
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <input
+          required
+          placeholder="ชื่อผู้ใช้"
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+        <input
+          required
+          type="password"
+          placeholder="รหัสผ่าน (≥8)"
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <input
+          placeholder="ชื่อแสดง (ไม่บังคับ)"
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+        />
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-xl bg-[#0000BF] px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+        >
+          {saving ? "กำลังสร้าง…" : "สร้างบัญชี"}
+        </button>
+      </form>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-bold text-slate-900">รายชื่อพนักงาน</h2>
+        {loading ? (
+          <p className="mt-4 text-sm text-slate-500">กำลังโหลด…</p>
+        ) : list.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-500">ยังไม่มี</p>
+        ) : (
+          <ul className="mt-4 divide-y divide-slate-100">
+            {list.map((s) => (
+              <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+                <div>
+                  <p className="font-medium text-slate-900">{s.username}</p>
+                  <p className="text-xs text-slate-600">{s.email}</p>
+                  {s.fullName ? <p className="text-xs text-slate-500">{s.fullName}</p> : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void revoke(s.id)}
+                  className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-800 hover:bg-red-50"
+                >
+                  ถอดออก
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}

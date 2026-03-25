@@ -1,6 +1,7 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+// engine แบบ library ทำงานกับ Next/Turbopack ได้ดีกว่า binary (binary runtime เรียก process.once ซึ่ง polyfill ของ bundler มักไม่มี)
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -16,14 +17,702 @@ enum UserRole {
   ADMIN
 }
 
+enum TopUpStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+enum SubscriptionTier {
+  NONE
+  TIER_199
+  TIER_299
+  TIER_399
+  TIER_499
+  TIER_599
+}
+
+/** BUFFET = แพ็กเกจ/รายเดือน | DAILY = สายรายวัน */
+enum SubscriptionType {
+  BUFFET
+  DAILY
+}
+
+/**
+ * ผู้ใช้แพลตฟอร์ม MAWELL — ตาราง `User` (String/cuid) = ผู้ใช้ + Token/Buffet
+ * สเปกเอกสารที่เรียกตาราง `users` + INT ใช้เป็นแนวคิดเทียบเท่า: ฟิลด์ subscription/tokens/last หักโทเคน อยู่ที่นี่
+ */
 model User {
-  id                 String    @id @default(cuid())
-  email              String    @unique
-  username           String    @unique
-  passwordHash       String
-  role               UserRole  @default(USER)
-  resetToken         String?
-  resetTokenExpires  DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id                       String           @id @default(cuid())
+  email                    String           @unique
+  username                 String           @unique
+  passwordHash             String
+  role                     UserRole         @default(USER)
+  resetToken               String?
+  resetTokenExpires        DateTime?
+  tokens                   Int              @default(0) @map("tokens")
+  lastDeductionDate        DateTime?        @map("last_deduction_date")
+  lastBuffetBillingMonth   String?          @map("last_buffet_billing_month") @db.VarChar(7)
+  lastDormitoryTokenDate   DateTime?        @map("last_dormitory_token_date") @db.Date
+  lastBarberTokenDate      DateTime?        @map("last_barber_token_date") @db.Date
+  lastAttendanceTokenDate  DateTime?        @map("last_attendance_token_date") @db.Date
+  /** ถ้ามี = พนักงานใต้เจ้าของ — ใช้สิทธิ์/โทเคนของ employer */
+  employerUserId           String?          @map("employer_user_id") @db.VarChar(191)
+  employer                 User?            @relation("EmployerStaff", fields: [employerUserId], references: [id], onDelete: SetNull)
+  staffMembers             User[]           @relation("EmployerStaff")
+  subscriptionTier         SubscriptionTier @default(NONE) @map("subscription_tier")
+  subscriptionType         SubscriptionType @default(DAILY) @map("subscription_type")
+  fullName                 String?          @db.VarChar(255)
+  phone                    String?          @db.VarChar(64)
+  address                  String?          @db.Text
+  latitude                 Float?
+  longitude                Float?
+  avatarUrl                String?          @db.VarChar(512)
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+
+  chatMessages           ChatMessage[]
+  topUpOrders            TopUpOrder[]
+  dormitoryProfile       DormitoryProfile?
+  barberShopProfile      BarberShopProfile?
+  rooms                  Room[]
+  barberPackages         BarberPackage[]
+  barberCustomers        BarberCustomer[]
+  barberSubscriptions    BarberCustomerSubscription[]
+  barberServiceLogs      BarberServiceLog[]
+  barberStylists         BarberStylist[]
+  barberPortalStaffPings BarberPortalStaffPing[]
+  barberBookings         BarberBooking[]
+  attendanceSettings       AttendanceSettings?
+  attendanceLogsOwned      AttendanceLog[]           @relation("AttendanceOrg")
+  attendanceLogsAsActor    AttendanceLog[]           @relation("AttendanceActor")
+  attendanceRosterEntries  AttendanceRosterEntry[]
+  attendanceLocations      AttendanceLocation[]
+  homeFinanceEntries       HomeFinanceEntry[]
+  homeFinanceCategories    HomeFinanceCategory[]
+  homeUtilityProfiles      HomeUtilityProfile[]
+  homeVehicleProfiles      HomeVehicleProfile[]
+  homeFinanceReminders     HomeFinanceReminder[]
+
+  @@index([employerUserId])
+}
+
+/** แจ้งเตือนจาก Customer QR Portal (ลูกค้ากดแจ้งพนักงาน) */
+model BarberPortalStaffPing {
+  id               Int      @id @default(autoincrement())
+  ownerUserId      String   @map("owner_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  barberCustomerId Int?     @map("barber_customer_id")
+  subscriptionId   Int?     @map("subscription_id")
+  phoneMasked      String   @map("phone_masked") @db.VarChar(32)
+  clientLatitude   Float?   @map("client_latitude")
+  clientLongitude  Float?   @map("client_longitude")
+  distanceMeters   Float?   @map("distance_meters")
+  geoVerified      Boolean  @default(false) @map("geo_verified")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([ownerUserId, createdAt])
+  @@map("barber_portal_staff_pings")
+}
+
+/** ช่างตัดผมในร้าน — ต่อเจ้าของร้าน (User แพลตฟอร์ม) */
+model BarberStylist {
+  id          Int      @id @default(autoincrement())
+  ownerUserId String   @map("owner_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(100)
+  phone       String?  @db.VarChar(20)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  subscriptionsSold BarberCustomerSubscription[] @relation("SubscriptionSoldByStylist")
+  serviceLogs       BarberServiceLog[]
+
+  @@index([ownerUserId])
+  @@index([ownerUserId, isActive])
+  @@map("barber_stylists")
+}
+
+model AppModule {
+  id          String   @id @default(cuid())
+  slug        String   @unique @db.VarChar(191)
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  groupId     Int      @map("group_id")
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([groupId])
+  @@index([isActive, sortOrder])
+  @@map("module_list")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String   @db.VarChar(2000)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model TopUpOrder {
+  id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planPriceKey   Int         @map("amountBaht")
+  tokensToDeduct Int         @map("tokensToAdd")
+  status         TopUpStatus @default(PENDING)
+  externalRef    String?     @unique @db.VarChar(191)
+  melodyMeta     Json?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+}
+
+/** ข้อมูลแสดงบนใบเสร็จ / สลิป — 1 บัญชีต่อเจ้าของหอพัก */
+model DormitoryProfile {
+  id               Int      @id @default(autoincrement())
+  ownerUserId      String   @unique @map("owner_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  /** ชื่อหอพัก (แสดงบนสลิป) */
+  displayName      String?  @map("display_name") @db.VarChar(200)
+  /** โลโก้ เช่น /uploads/dorm-logos/... */
+  logoUrl          String?  @map("logo_url") @db.VarChar(512)
+  /** เลขประจำตัวผู้เสียภาษี */
+  taxId            String?  @map("tax_id") @db.VarChar(30)
+  /** ที่อยู่หอพัก */
+  address          String?  @db.Text
+  /** เบอร์โทรผู้ดูแล */
+  caretakerPhone   String?  @map("caretaker_phone") @db.VarChar(32)
+  /** ขนาดกระดาษเริ่มต้นเมื่อเปิดใบเสร็จ: SLIP_58 | SLIP_80 | A4 */
+  defaultPaperSize String   @default("SLIP_58") @map("default_paper_size") @db.VarChar(16)
+  /** เบอร์พร้อมเพย์ (เฉพาะตัวเลข 10 หลัก หรือ 081...) สำหรับ QR บนใบแจ้งหนี้ */
+  promptPayPhone   String?  @map("prompt_pay_phone") @db.VarChar(20)
+  /** ข้อความช่องทางชำระ (โอนธนาคาร ฯลฯ) แสดงบนใบแจ้งหนี้ */
+  paymentChannelsNote String? @map("payment_channels_note") @db.Text
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("dormitory_profiles")
+}
+
+/** ข้อมูลร้านตัดผม — โลโก้/ชื่อร้าน สำหรับป้าย QR และแสดงผลทั่วไป */
+model BarberShopProfile {
+  id           Int      @id @default(autoincrement())
+  ownerUserId  String   @unique @map("owner_id") @db.VarChar(191)
+  owner        User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  displayName  String?  @map("display_name") @db.VarChar(200)
+  logoUrl      String?  @map("logo_url") @db.VarChar(512)
+  taxId        String?  @map("tax_id") @db.VarChar(30)
+  address      String?  @db.Text
+  contactPhone String?  @map("contact_phone") @db.VarChar(32)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("barber_shop_profiles")
+}
+
+/** ห้องพัก — เจ้าของข้อมูล = ผู้ใช้ MAWELL (owner_id → users.id) */
+model Room {
+  id           Int        @id @default(autoincrement())
+  ownerUserId  String     @map("owner_id") @db.VarChar(191)
+  owner        User       @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  roomNumber   String     @map("room_number") @db.VarChar(10)
+  floor        Int
+  roomType     String     @map("room_type") @db.VarChar(50)
+  maxOccupants Int        @default(1) @map("max_occupants")
+  basePrice    Decimal    @map("base_price") @db.Decimal(10, 2)
+  status       RoomStatus @default(AVAILABLE)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  tenants      Tenant[]
+  utilityBills UtilityBill[]
+
+  @@unique([ownerUserId, roomNumber])
+  @@index([ownerUserId])
+  @@map("rooms")
+}
+
+enum TenantStatus {
+  ACTIVE
+  MOVED_OUT
+}
+
+model Tenant {
+  id           Int          @id @default(autoincrement())
+  roomId       Int          @map("room_id")
+  room         Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  name         String       @db.VarChar(100)
+  phone        String       @db.VarChar(20)
+  idCard       String       @map("id_card") @db.VarChar(13)
+  status       TenantStatus @default(ACTIVE)
+  checkInDate  DateTime     @map("check_in_date") @db.Date
+  checkOutDate DateTime?    @map("check_out_date") @db.Date
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  payments SplitBillPayment[]
+
+  @@index([roomId])
+  @@map("tenants")
+}
+
+/** บิลมิเตอร์น้ำ-ไฟระดับห้อง (ห้องละ 1 ชุดมิเตอร์ต่องวด) — ไม่ผูก tenant */
+model UtilityBill {
+  id                  Int      @id @default(autoincrement())
+  roomId              Int      @map("room_id")
+  room                Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  billingMonth        Int      @map("billing_month")
+  billingYear         Int      @map("billing_year")
+  waterMeterPrev      Int      @map("water_meter_prev")
+  waterMeterCurr      Int      @map("water_meter_curr")
+  electricMeterPrev   Int      @map("electric_meter_prev")
+  electricMeterCurr   Int      @map("electric_meter_curr")
+  waterPrice          Decimal  @map("water_price") @db.Decimal(10, 2)
+  electricPrice       Decimal  @map("electric_price") @db.Decimal(10, 2)
+  fixedFees           Json?    @map("fixed_fees")
+  totalRoomAmount     Decimal  @map("total_room_amount") @db.Decimal(10, 2)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  payments SplitBillPayment[]
+
+  @@unique([roomId, billingYear, billingMonth])
+  @@index([roomId])
+  @@map("utility_bills")
+}
+
+enum DormPaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+/** Split Bill รายคน — อ้างอิงบิลของห้อง (bill_id) + ผู้พัก (tenant_id) */
+model SplitBillPayment {
+  id              Int               @id @default(autoincrement())
+  tenantId        Int               @map("tenant_id")
+  billId          Int               @map("bill_id")
+  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bill            UtilityBill       @relation(fields: [billId], references: [id], onDelete: Cascade)
+  amountToPay     Decimal           @map("amount_to_pay") @db.Decimal(10, 2)
+  paymentStatus   DormPaymentStatus @default(PENDING) @map("payment_status")
+  paidAt          DateTime?         @map("paid_at")
+  receiptNumber   String?           @unique @map("receipt_number") @db.VarChar(32)
+  note            String?           @db.VarChar(500)
+  /** รูปสลิปที่ผู้พักอัปโหลด (ลิงก์สาธารณะ) หรือเจ้าของหออัปโหลดแทน */
+  proofSlipUrl    String?           @map("proof_slip_url") @db.VarChar(512)
+  proofUploadedAt DateTime?         @map("proof_uploaded_at")
+  /** โทเคนสำหรับหน้า /pay/dorm/[token] อัปโหลดสลิปโดยไม่ล็อกอิน */
+  publicProofToken String?          @unique @map("public_proof_token") @db.VarChar(64)
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  @@unique([tenantId, billId])
+  @@index([tenantId])
+  @@index([billId])
+  @@index([paymentStatus])
+  @@map("payments")
+}
+
+// --- Barber / ร้านตัดผม (กลุ่ม 1) ---
+
+enum BarberSubscriptionStatus {
+  ACTIVE
+  EXHAUSTED
+  CANCELLED
+}
+
+enum BarberVisitType {
+  PACKAGE_USE
+  CASH_WALK_IN
+}
+
+/** สถานะการจองคิว (เจ้าของร้านเป็นผู้บันทึก) */
+enum BarberBookingStatus {
+  SCHEDULED
+  ARRIVED
+  NO_SHOW
+  CANCELLED
+}
+
+/** แพ็กเกจ/โปรโมชั่น (เช่น ตัด 10 ครั้ง 1,200 บ.) — ต่อเจ้าของร้าน */
+model BarberPackage {
+  id            Int      @id @default(autoincrement())
+  ownerUserId   String   @map("owner_id") @db.VarChar(191)
+  owner         User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name          String   @db.VarChar(191)
+  price         Decimal  @db.Decimal(10, 2)
+  totalSessions Int      @map("total_sessions")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  subscriptions BarberCustomerSubscription[]
+
+  @@index([ownerUserId])
+  @@map("barber_packages")
+}
+
+/** ลูกค้าร้าน (ค้นด้วยเบอร์) — ไม่ใช่ User แพลตฟอร์ม */
+model BarberCustomer {
+  id           Int      @id @default(autoincrement())
+  ownerUserId  String   @map("owner_id") @db.VarChar(191)
+  owner        User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  phone        String   @db.VarChar(20)
+  name         String?  @db.VarChar(100)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  subscriptions BarberCustomerSubscription[]
+  serviceLogs   BarberServiceLog[]
+  bookings      BarberBooking[]
+
+  @@unique([ownerUserId, phone])
+  @@index([ownerUserId])
+  @@map("barber_customers")
+}
+
+/** จองคิวล่วงหน้า — ผูกเบอร์/ลูกค้าในระบบได้ */
+model BarberBooking {
+  id               Int                  @id @default(autoincrement())
+  ownerUserId      String               @map("owner_id") @db.VarChar(191)
+  owner            User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  barberCustomerId Int?                 @map("barber_customer_id")
+  customer         BarberCustomer?      @relation(fields: [barberCustomerId], references: [id], onDelete: SetNull)
+  phone            String               @map("phone") @db.VarChar(20)
+  customerName     String?              @map("customer_name") @db.VarChar(100)
+  scheduledAt      DateTime             @map("scheduled_at")
+  status           BarberBookingStatus  @default(SCHEDULED) @map("status")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, scheduledAt])
+  @@map("barber_bookings")
+}
+
+/**
+ * สมาชิกแพ็กเกจ — `barber_customer_id` = ลูกค้าร้าน (สเปกเอกสาร user_id ใช้ความหมายเดียวกับลูกค้าในระบบร้าน)
+ */
+model BarberCustomerSubscription {
+  id                Int                      @id @default(autoincrement())
+  ownerUserId       String                   @map("owner_id") @db.VarChar(191)
+  owner             User                     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  barberCustomerId  Int                      @map("barber_customer_id")
+  customer          BarberCustomer           @relation(fields: [barberCustomerId], references: [id], onDelete: Cascade)
+  packageId         Int                      @map("package_id")
+  package           BarberPackage            @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  /** ช่างที่บันทึกการขายแพ็ก (ถ้ามี) */
+  soldByStylistId   Int?                     @map("sold_by_stylist_id")
+  soldByStylist     BarberStylist?           @relation("SubscriptionSoldByStylist", fields: [soldByStylistId], references: [id], onDelete: SetNull)
+  remainingSessions Int                      @map("remaining_sessions")
+  status            BarberSubscriptionStatus @default(ACTIVE)
+  createdAt         DateTime                 @default(now()) @map("created_at")
+  updatedAt         DateTime                 @updatedAt @map("updated_at")
+
+  serviceLogs BarberServiceLog[]
+
+  @@index([ownerUserId])
+  @@index([barberCustomerId])
+  @@index([packageId])
+  @@index([soldByStylistId])
+  @@map("customer_subscriptions")
+}
+
+/** ประวัติการเข้าใช้ / หักครั้ง / เงินสด */
+model BarberServiceLog {
+  id               Int                           @id @default(autoincrement())
+  ownerUserId      String                        @map("owner_id") @db.VarChar(191)
+  owner            User                          @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  subscriptionId   Int?                          @map("subscription_id")
+  subscription     BarberCustomerSubscription?   @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  barberCustomerId Int                           @map("barber_customer_id")
+  customer         BarberCustomer                @relation(fields: [barberCustomerId], references: [id], onDelete: Cascade)
+  visitType        BarberVisitType               @map("visit_type")
+  /** ช่างที่บันทึกเช็คอิน (ถ้ามี) */
+  stylistId        Int?                          @map("stylist_id")
+  stylist          BarberStylist?                @relation(fields: [stylistId], references: [id], onDelete: SetNull)
+  /** บันทึกเฉพาะ walk-in เงินสด — ใช้คำนวณรายได้ในประวัติ */
+  amountBaht       Decimal?                      @map("amount_baht") @db.Decimal(10, 2)
+  note             String?                       @db.VarChar(255)
+  createdAt        DateTime                      @default(now()) @map("created_at")
+
+  @@index([ownerUserId, createdAt])
+  @@index([barberCustomerId])
+  @@index([stylistId])
+  @@map("barber_service_logs")
+}
+
+// --- Smart Attendance / เช็คชื่ออัจฉริยะ (กลุ่ม 1) ---
+
+enum AttendanceSummaryStatus {
+  AWAITING_CHECKOUT
+  ON_TIME
+  LATE
+  EARLY_LEAVE
+  LATE_AND_EARLY
+}
+
+/** ผู้เช็คผ่านหน้าสาธารณะ — พนักงานในรายชื่อ vs บุคคลภายนอก */
+enum AttendancePublicVisitorKind {
+  ROSTER_STAFF
+  EXTERNAL_GUEST
+}
+
+enum HomeFinanceEntryType {
+  INCOME
+  EXPENSE
+}
+
+enum HomeUtilityType {
+  ELECTRIC
+  WATER
+}
+
+enum HomeVehicleType {
+  CAR
+  MOTORCYCLE
+}
+
+enum SystemActivityAction {
+  CREATE
+  UPDATE
+  UPSERT
+  DELETE
+  CREATE_MANY
+  UPDATE_MANY
+  DELETE_MANY
+}
+
+/** ตั้งค่าเขตเวลา + จุดเช็คอิน — ต่อเจ้าขององค์กร (owner user) */
+model AttendanceSettings {
+  id                   Int      @id @default(autoincrement())
+  ownerUserId          String   @unique @map("owner_id") @db.VarChar(191)
+  owner                User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  /** เวลาเริ่มกะ รูปแบบ HH:mm (เวลาไทย) */
+  shiftStartTime       String   @default("09:00") @map("shift_start_time") @db.VarChar(5)
+  shiftEndTime         String   @default("18:00") @map("shift_end_time") @db.VarChar(5)
+  allowedLocationLat   Float    @map("allowed_location_lat")
+  allowedLocationLng   Float    @map("allowed_location_lng")
+  radiusMeters         Int      @default(120) @map("radius_meters")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("attendance_settings")
+}
+
+/** โลเคชันจุดเช็ค (หลายจุดตามแพ็กเกจ) — กะสูงสุด 5 ต่อจุด */
+model AttendanceLocation {
+  id                 Int               @id @default(autoincrement())
+  ownerUserId        String            @map("owner_id") @db.VarChar(191)
+  owner              User              @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name               String            @default("จุดเช็ค") @db.VarChar(80)
+  allowedLocationLat Float             @map("allowed_location_lat")
+  allowedLocationLng Float             @map("allowed_location_lng")
+  radiusMeters       Int               @default(120) @map("radius_meters")
+  sortOrder          Int               @default(0) @map("sort_order")
+  shifts             AttendanceShift[]
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, sortOrder])
+  @@map("attendance_locations")
+}
+
+model AttendanceShift {
+  id         Int                @id @default(autoincrement())
+  locationId Int                @map("location_id")
+  location   AttendanceLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  startTime  String             @map("start_time") @db.VarChar(5)
+  endTime    String             @map("end_time") @db.VarChar(5)
+  sortOrder  Int                @default(0) @map("sort_order")
+  createdAt  DateTime           @default(now()) @map("created_at")
+  updatedAt  DateTime           @updatedAt @map("updated_at")
+
+  @@index([locationId, sortOrder])
+  @@map("attendance_shifts")
+}
+
+/** รายชื่อพนักงานสำหรับเช็คผ่าน QR/ลิงก์สาธารณะ — ยืนยันด้วยเบอร์ */
+model AttendanceRosterEntry {
+  id          Int      @id @default(autoincrement())
+  ownerUserId String   @map("owner_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  displayName String   @map("display_name") @db.VarChar(100)
+  phone       String   @map("phone") @db.VarChar(20)
+  isActive    Boolean  @default(true) @map("is_active")
+  /** ลำดับกะในโลเคชัน (0 = กะแรก ตาม sort_order) สูงสุด 4 ถ้ามี 5 กะ */
+  rosterShiftIndex Int @default(0) @map("roster_shift_index")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, phone])
+  @@index([ownerUserId, isActive])
+  @@map("attendance_roster_entries")
+}
+
+/** บันทึกเช็คเข้า-ออก — actor = User แพลตฟอร์ม หรือ guest ผ่านเบอร์ */
+model AttendanceLog {
+  id              Int                      @id @default(autoincrement())
+  ownerUserId     String                   @map("owner_id") @db.VarChar(191)
+  owner           User                     @relation("AttendanceOrg", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  actorUserId     String?                  @map("actor_user_id") @db.VarChar(191)
+  actor           User?                    @relation("AttendanceActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  guestPhone      String?                      @map("guest_phone") @db.VarChar(20)
+  guestName       String?                      @map("guest_name") @db.VarChar(100)
+  /** ใช้เมื่อเช็คผ่านลิงก์สาธารณะ — แยกพนักงานในรายชื่อ vs บุคคลภายนอก */
+  publicVisitorKind AttendancePublicVisitorKind? @map("public_visitor_kind")
+  checkInTime     DateTime?                @map("check_in_time")
+  checkOutTime    DateTime?                @map("check_out_time")
+  checkInLat      Float?                   @map("check_in_lat")
+  checkInLng      Float?                   @map("check_in_lng")
+  checkOutLat     Float?                   @map("check_out_lat")
+  checkOutLng     Float?                   @map("check_out_lng")
+  status          AttendanceSummaryStatus  @default(AWAITING_CHECKOUT) @map("status")
+  lateCheckIn     Boolean                  @default(false) @map("late_check_in")
+  earlyCheckOut   Boolean                  @default(false) @map("early_check_out")
+  /** รูปใบหน้าตอนเช็คเข้า (ลิงก์ใน public/uploads) — บังคับถ่ายก่อนเช็คเข้า */
+  checkInFacePhotoUrl String?              @map("check_in_face_photo_url") @db.VarChar(512)
+  /** กะที่ใช้คำนวณมาสาย/ออกก่อนเวลา ณ เวลาเช็คเข้า (ลำดับในโลเคชัน) */
+  appliedShiftIndex Int?                   @map("applied_shift_index")
+  note            String?                  @db.VarChar(500)
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, checkInTime])
+  @@index([ownerUserId, guestPhone])
+  @@index([actorUserId])
+  @@map("attendance_logs")
+}
+
+/** รายรับ-รายจ่ายในบ้าน/ร้าน (กลุ่ม 1) */
+model HomeFinanceEntry {
+  id               Int                 @id @default(autoincrement())
+  ownerUserId      String              @map("owner_id") @db.VarChar(191)
+  owner            User                @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  entryDate        DateTime            @map("entry_date") @db.Date
+  type             HomeFinanceEntryType
+  categoryKey      String              @map("category_key") @db.VarChar(64)
+  categoryLabel    String              @map("category_label") @db.VarChar(100)
+  title            String              @db.VarChar(160)
+  amount           Decimal             @db.Decimal(12, 2)
+  dueDate          DateTime?           @map("due_date") @db.Date
+  billNumber       String?             @map("bill_number") @db.VarChar(100)
+  vehicleType      String?             @map("vehicle_type") @db.VarChar(40)
+  serviceCenter    String?             @map("service_center") @db.VarChar(160)
+  paymentMethod    String?             @map("payment_method") @db.VarChar(40)
+  note             String?             @db.VarChar(600)
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, entryDate])
+  @@index([ownerUserId, categoryKey])
+  @@map("home_finance_entries")
+}
+
+/** หมวดแบบกำหนดเองของผู้ใช้ */
+model HomeFinanceCategory {
+  id          Int      @id @default(autoincrement())
+  ownerUserId String   @map("owner_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(100)
+  sortOrder   Int      @default(100) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, isActive])
+  @@unique([ownerUserId, name])
+  @@map("home_finance_categories")
+}
+
+/** รายการบิลค่าน้ำ/ค่าไฟของบ้าน */
+model HomeUtilityProfile {
+  id             Int             @id @default(autoincrement())
+  ownerUserId    String          @map("owner_id") @db.VarChar(191)
+  owner          User            @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  utilityType    HomeUtilityType @map("utility_type")
+  label          String          @db.VarChar(120)
+  provider       String?         @db.VarChar(120)
+  accountNumber  String?         @map("account_number") @db.VarChar(80)
+  meterNumber    String?         @map("meter_number") @db.VarChar(80)
+  defaultDueDay  Int?            @map("default_due_day")
+  dueDate        DateTime?       @map("due_date") @db.Date
+  note           String?         @db.VarChar(400)
+  isActive       Boolean         @default(true) @map("is_active")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, utilityType, isActive])
+  @@map("home_utility_profiles")
+}
+
+/** รายการยานพาหนะในบ้าน */
+model HomeVehicleProfile {
+  id            Int             @id @default(autoincrement())
+  ownerUserId   String          @map("owner_id") @db.VarChar(191)
+  owner         User            @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  vehicleType   HomeVehicleType @map("vehicle_type")
+  label         String          @db.VarChar(120)
+  brand         String?         @db.VarChar(80)
+  model         String?         @db.VarChar(80)
+  plateNumber   String?         @map("plate_number") @db.VarChar(40)
+  vehicleYear   Int?            @map("vehicle_year")
+  taxDueDate    DateTime?       @map("tax_due_date") @db.Date
+  serviceDueDate DateTime?      @map("service_due_date") @db.Date
+  insuranceDueDate DateTime?    @map("insurance_due_date") @db.Date
+  note          String?         @db.VarChar(400)
+  isActive      Boolean         @default(true) @map("is_active")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, vehicleType, isActive])
+  @@map("home_vehicle_profiles")
+}
+
+/** แจ้งเตือนอื่นๆ สำหรับระบบรายรับรายจ่าย */
+model HomeFinanceReminder {
+  id          Int      @id @default(autoincrement())
+  ownerUserId String   @map("owner_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  title       String   @db.VarChar(160)
+  dueDate     DateTime @map("due_date") @db.Date
+  note        String?  @db.VarChar(400)
+  isDone      Boolean  @default(false) @map("is_done")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, dueDate, isDone])
+  @@map("home_finance_reminders")
+}
+
+/** Log กลางทั้งระบบ (immutable) สำหรับตรวจสอบการจัดการข้อมูล */
+model SystemActivityLog {
+  id          BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  actorUserId String?              @map("actor_user_id") @db.VarChar(191)
+  action      SystemActivityAction @map("action")
+  modelName   String               @map("model_name") @db.VarChar(120)
+  payload     Json?                @map("payload")
+  createdAt   DateTime             @default(now()) @map("created_at")
+  expiresAt   DateTime             @map("expires_at")
+
+  @@index([createdAt])
+  @@index([expiresAt])
+  @@index([actorUserId, createdAt])
+  @@index([modelName, createdAt])
+  @@map("system_activity_logs")
 }

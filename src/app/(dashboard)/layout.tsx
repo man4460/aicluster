@@ -1,6 +1,15 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
+import { TokenGate } from "@/components/dashboard/TokenGate";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { canAccessAppModule, type UserAccessFields } from "@/lib/modules/access";
+import { getModuleBillingContext } from "@/lib/modules/billing-context";
+import { STAFF_ALLOWED_MODULE_SLUGS } from "@/lib/modules/staff-policy";
+import { computeDashboardAccessAllowed } from "@/lib/tokens/dashboard-access";
+import { applyBuffetMonthlyBilling } from "@/lib/tokens/buffet-monthly-billing";
+import { applyDailyTokenDeduction } from "@/lib/tokens/daily-deduction";
+import { ATTENDANCE_MODULE_SLUG, HOME_FINANCE_BASIC_MODULE_SLUG } from "@/lib/modules/config";
 
 export default async function DashboardLayout({
   children,
@@ -10,9 +19,78 @@ export default async function DashboardLayout({
   const session = await getSession();
   if (!session) redirect("/login");
 
+  try {
+    await applyDailyTokenDeduction(session.sub);
+    await applyBuffetMonthlyBilling(session.sub);
+  } catch (e) {
+    console.error("[token billing]", e);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.sub },
+    select: {
+      username: true,
+      fullName: true,
+      role: true,
+      tokens: true,
+      subscriptionTier: true,
+      subscriptionType: true,
+      lastBuffetBillingMonth: true,
+      avatarUrl: true,
+      employerUserId: true,
+    },
+  });
+
+  if (!user) redirect("/login");
+
+  const billCtx = await getModuleBillingContext(session.sub);
+  if (!billCtx) redirect("/login");
+
+  const allModules = await prisma.appModule.findMany({
+    where: { isActive: true },
+    orderBy: [{ groupId: "asc" }, { sortOrder: "asc" }],
+    select: { slug: true, title: true, groupId: true },
+  });
+
+  const access: UserAccessFields = billCtx.access;
+
+  const allowDashboard = user.employerUserId
+    ? true
+    : computeDashboardAccessAllowed({
+        role: user.role,
+        subscriptionType: user.subscriptionType,
+        subscriptionTier: user.subscriptionTier,
+        tokens: user.tokens,
+        lastBuffetBillingMonth: user.lastBuffetBillingMonth,
+      });
+
+  const serviceModules = allModules
+    .filter((m) => canAccessAppModule(access, { slug: m.slug, groupId: m.groupId }))
+    .filter((m) => !user.employerUserId || STAFF_ALLOWED_MODULE_SLUGS.has(m.slug))
+    .map(({ slug, title }) => {
+      let displayTitle = title;
+      if (slug === HOME_FINANCE_BASIC_MODULE_SLUG) displayTitle = "ระบบบันทึกรายรับ-รายจ่าย";
+      if (slug === ATTENDANCE_MODULE_SLUG) displayTitle = "ระบบเช็คชื่ออัจฉริยะ";
+      return { slug, title: displayTitle };
+    });
+
+  const safeAvatar =
+    user.avatarUrl && user.avatarUrl.startsWith("/uploads/") ? user.avatarUrl : null;
+
   return (
-    <DashboardShell username={session.username} role={session.role}>
-      {children}
+    <DashboardShell
+      username={user.username}
+      displayName={user.fullName?.trim() || user.username}
+      role={user.role}
+      tokens={user.tokens}
+      subscriptionTier={user.subscriptionTier}
+      subscriptionType={user.subscriptionType}
+      serviceModules={serviceModules}
+      avatarUrl={safeAvatar}
+    >
+      <TokenGate allowDashboard={allowDashboard} role={user.role}>
+        {children}
+      </TokenGate>
     </DashboardShell>
   );
 }

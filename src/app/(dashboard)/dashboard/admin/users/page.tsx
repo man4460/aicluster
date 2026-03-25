@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { UsersAdmin } from "@/systems/admin/components/UsersAdmin";
+import { PageHeader } from "@/components/ui/page-container";
 import { getSession } from "@/lib/auth/session";
-import { UsersAdmin } from "@/components/admin/UsersAdmin";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "จัดการผู้ใช้ | MAWELL Buffet",
@@ -14,10 +15,10 @@ export default async function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">จัดการผู้ใช้</h1>
-        <p className="mt-1 text-sm text-slate-600">สร้าง ดู แก้ไข และลบข้อมูลผู้ใช้ในฐานข้อมูล</p>
-      </div>
+      <PageHeader
+        title="จัดการผู้ใช้"
+        description="สร้าง ดู แก้ไข และลบข้อมูลผู้ใช้ในฐานข้อมูล"
+      />
       <UsersAdmin />
     </div>
   );

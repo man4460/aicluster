@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AuthCard, AuthFooterLink } from "@/components/auth/AuthCard";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
 import { cn } from "@/lib/cn";
 
@@ -55,7 +56,7 @@ export function RegisterForm() {
   }
 
   return (
-    <AuthCard title="สมัครสมาชิก" subtitle="MAWELL Buffet Management System">
+    <AuthCard title="สมัครสมาชิก">
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
           <label htmlFor="reg-email" className="mb-1 block text-sm font-medium text-slate-700">
@@ -91,15 +92,14 @@ export function RegisterForm() {
           <label htmlFor="reg-password" className="mb-1 block text-sm font-medium text-slate-700">
             รหัสผ่าน
           </label>
-          <input
+          <PasswordInput
             id="reg-password"
             name="password"
-            type="password"
             autoComplete="new-password"
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={input}
+            inputClassName={inputWithEye}
             required
           />
         </div>
@@ -107,15 +107,14 @@ export function RegisterForm() {
           <label htmlFor="reg-password2" className="mb-1 block text-sm font-medium text-slate-700">
             ยืนยันรหัสผ่าน
           </label>
-          <input
+          <PasswordInput
             id="reg-password2"
             name="password2"
-            type="password"
             autoComplete="new-password"
             minLength={8}
             value={password2}
             onChange={(e) => setPassword2(e.target.value)}
-            className={input}
+            inputClassName={inputWithEye}
             required
           />
         </div>
@@ -150,3 +149,6 @@ export function RegisterForm() {
 
 const input =
   "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none ring-[#0000BF]/20 transition focus:border-[#0000BF] focus:ring-2";
+
+const inputWithEye =
+  "w-full rounded-lg border border-slate-200 bg-white py-2 pl-3 pr-10 text-slate-900 shadow-sm outline-none ring-[#0000BF]/20 transition focus:border-[#0000BF] focus:ring-2";

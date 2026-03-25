@@ -1,4 +1,5 @@
 import { cn } from "@/lib/cn";
+import { PAGE_GUTTER_X } from "@/components/ui/page-container";
 
 export function AuthCard({
   title,
@@ -22,7 +23,12 @@ export function AuthCard({
 
 export function AuthPageFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#f8fafc] px-4 py-10">
+    <div
+      className={cn(
+        "flex min-h-screen flex-col items-center justify-center bg-[#f8fafc] py-10",
+        PAGE_GUTTER_X,
+      )}
+    >
       {children}
     </div>
   );

@@ -51,6 +51,10 @@ export async function POST(req: Request) {
         username,
         passwordHash,
         role: "USER",
+        tokens: 7,
+        lastDeductionDate: null,
+        subscriptionType: "DAILY",
+        subscriptionTier: "NONE",
       },
     });
   } catch {

@@ -5,6 +5,8 @@ import { verifyPassword } from "@/lib/auth/password";
 import { setSessionCookie, signSessionToken } from "@/lib/auth/session";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { verifyTurnstileToken } from "@/lib/turnstile";
+import { applyBuffetMonthlyBilling } from "@/lib/tokens/buffet-monthly-billing";
+import { applyDailyTokenDeduction } from "@/lib/tokens/daily-deduction";
 
 const bodySchema = z.object({
   identifier: z.string().min(1),
@@ -55,6 +57,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }, { status: 401 });
   }
 
+  await applyDailyTokenDeduction(user.id);
+  await applyBuffetMonthlyBilling(user.id);
+  const fresh = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { tokens: true },
+  });
+
   let token: string;
   try {
     token = await signSessionToken({
@@ -69,6 +78,10 @@ export async function POST(req: Request) {
   await setSessionCookie(token);
   return NextResponse.json({
     ok: true,
-    user: { username: user.username, role: user.role },
+    user: {
+      username: user.username,
+      role: user.role,
+      tokens: fresh?.tokens ?? user.tokens,
+    },
   });
 }

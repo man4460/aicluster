@@ -1,24 +1,16 @@
 /**
- * PM2 — รีสตาร์ทอัตโนมัติเมื่อแก้ไฟล์ (โหมด mawell-dev)
- * รัน: npm run pm2:dev
+ * PM2
+ * - mawell-dev: `next dev` — ปิด watch ของ PM2 เพราะ Next มี HMR อยู่แล้ว
+ *   ถ้าเปิด PM2 watch จะรีสตาร์ท process ทั้งตัวบ่อย/วนลูปเมื่อไฟล์ในโปรเจกต์เปลี่ยน
+ * - mawell-serve: production `next start` — watch ปิดอยู่แล้ว
  *
- * โปรดักชัน: รัน npm run build ก่อน แล้ว npm run pm2:prod
+ * รัน dev: npm run pm2:dev
+ * โปรดักชัน: npm run build แล้ว npm run pm2:prod
  */
 const path = require("path");
 
 const cwd = __dirname;
 const nextBin = path.join(cwd, "node_modules", "next", "dist", "bin", "next");
-
-/** ไม่ให้ watch โฟลเดอร์ที่ไม่เกี่ยวกับโค้ดแอป (ลดการรีสตาร์ทเกินจำเป็น) */
-const ignoreWatch = [
-  "node_modules",
-  ".next",
-  ".git",
-  "prisma/migrations",
-  "*.log",
-  ".env",
-  ".env.*",
-];
 
 module.exports = {
   apps: [
@@ -28,9 +20,7 @@ module.exports = {
       interpreter: "node",
       script: nextBin,
       args: "dev",
-      watch: true,
-      ignore_watch: ignoreWatch,
-      watch_delay: 800,
+      watch: false,
       env: {
         NODE_ENV: "development",
       },

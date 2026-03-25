@@ -1,8 +1,10 @@
 import { getSession } from "@/lib/auth/session";
+import { setAuditActor } from "@/lib/audit-context";
 
 export async function requireSession() {
   const session = await getSession();
   if (!session) return { ok: false as const, status: 401 as const };
+  setAuditActor(session.sub);
   return { ok: true as const, session };
 }
 

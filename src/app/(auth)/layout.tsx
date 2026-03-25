@@ -1,8 +1,13 @@
 import Link from "next/link";
-import { MawellLogo } from "@/components/layout/MawellLogo";
+import { redirect } from "next/navigation";
 import { AuthPageFrame } from "@/components/auth/AuthCard";
+import { MawellLogo } from "@/components/layout/MawellLogo";
+import { getSession } from "@/lib/auth/session";
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  const session = await getSession();
+  if (session) redirect("/dashboard");
+
   return (
     <AuthPageFrame>
       <div className="mb-8 flex flex-col items-center text-center">

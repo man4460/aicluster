@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AuthCard, AuthFooterLink } from "@/components/auth/AuthCard";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
 import { cn } from "@/lib/cn";
 
@@ -48,7 +49,7 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
   }
 
   return (
-    <AuthCard title="เข้าสู่ระบบ" subtitle="MAWELL Buffet Management System">
+    <AuthCard title="เข้าสู่ระบบ">
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
           <label htmlFor="identifier" className="mb-1 block text-sm font-medium text-slate-700">
@@ -68,14 +69,12 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
           <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
             รหัสผ่าน
           </label>
-          <input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none ring-[#0000BF]/20 transition focus:border-[#0000BF] focus:ring-2"
             required
           />
         </div>

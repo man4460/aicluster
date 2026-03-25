@@ -11,10 +11,10 @@ const notoSansThai = Noto_Sans_Thai({
 
 export const metadata: Metadata = {
   title: {
-    default: "MAWELL Buffet Management System",
+    default: "MAWELL Buffet",
     template: "%s",
   },
-  description: "MAWELL Buffet Management System — ระบบจัดการบุฟเฟต์",
+  description: "MAWELL Buffet — ระบบจัดการบุฟเฟต์",
 };
 
 export default function RootLayout({

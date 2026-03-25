@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/api-auth";
 import { hashPassword } from "@/lib/auth/password";
+import { bangkokMonthKey } from "@/lib/time/bangkok";
 
 const createSchema = z.object({
   email: z.string().email(),
@@ -24,6 +25,9 @@ export async function GET() {
       email: true,
       username: true,
       role: true,
+      tokens: true,
+      subscriptionTier: true,
+      subscriptionType: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -54,18 +58,27 @@ export async function POST(req: Request) {
   const passwordHash = await hashPassword(password);
 
   try {
+    const r = role ?? "USER";
     const user = await prisma.user.create({
       data: {
         email,
         username,
         passwordHash,
-        role: role ?? "USER",
+        role: r,
+        tokens: r === "ADMIN" ? 99999 : 7,
+        lastDeductionDate: r === "ADMIN" ? new Date() : null,
+        subscriptionType: r === "ADMIN" ? "BUFFET" : "DAILY",
+        subscriptionTier: r === "ADMIN" ? "TIER_599" : "NONE",
+        lastBuffetBillingMonth: r === "ADMIN" ? bangkokMonthKey() : null,
       },
       select: {
         id: true,
         email: true,
         username: true,
         role: true,
+        tokens: true,
+        subscriptionTier: true,
+        subscriptionType: true,
         createdAt: true,
         updatedAt: true,
       },
