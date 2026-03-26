@@ -18,7 +18,7 @@ export function PublicCheckInLinkCopy({ url, title }: { url: string; title?: str
   }, [url]);
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="app-surface rounded-2xl p-4">
       <p className="text-sm font-semibold text-slate-900">
         {title ?? "ลิงก์เช็คชื่อสาธารณะ (แขก / พนักงานไม่ล็อกอิน)"}
       </p>
@@ -27,13 +27,13 @@ export function PublicCheckInLinkCopy({ url, title }: { url: string; title?: str
         (อยู่ในท้าย URL แล้ว)
       </p>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <code className="block flex-1 break-all rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-800">
+        <code className="block flex-1 break-all rounded-lg bg-[#f7f6ff] px-3 py-2 text-xs text-[#4c4874]">
           {url}
         </code>
         <button
           type="button"
           onClick={copy}
-          className="shrink-0 rounded-xl bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a6]"
+          className="app-btn-primary shrink-0 rounded-xl px-4 py-2 text-sm font-semibold"
         >
           {done ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
         </button>

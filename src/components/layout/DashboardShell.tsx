@@ -46,7 +46,7 @@ function SidebarNavLink({
   const active = isNavActive(href, pathname);
   const groupTone =
     serviceGroupId === 1
-      ? "before:bg-[#0000BF]"
+      ? "before:bg-[#7a7eff]"
       : serviceGroupId === 2
         ? "before:bg-slate-500"
         : serviceGroupId === 3
@@ -63,8 +63,8 @@ function SidebarNavLink({
         "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition",
         serviceGroupId ? `before:h-2 before:w-2 before:rounded-full before:content-[''] ${groupTone}` : "",
         active
-          ? "bg-[#0000BF]/10 text-[#0000BF]"
-          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+          ? "bg-[#6b6fff]/16 text-[#4d47b6]"
+          : "text-[#67638f] hover:bg-[#f0efff] hover:text-[#2e2a58]",
       )}
     >
       {dashboardNavIconForHref(href)}
@@ -89,7 +89,7 @@ function DrawerNavLink({
   const active = isNavActive(href, pathname);
   const groupTone =
     serviceGroupId === 1
-      ? "before:bg-[#0000BF]"
+      ? "before:bg-[#7a7eff]"
       : serviceGroupId === 2
         ? "before:bg-slate-500"
         : serviceGroupId === 3
@@ -107,8 +107,8 @@ function DrawerNavLink({
         "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition",
         serviceGroupId ? `before:h-2 before:w-2 before:rounded-full before:content-[''] ${groupTone}` : "",
         active
-          ? "bg-[#0000BF]/10 text-[#0000BF]"
-          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+          ? "bg-[#6b6fff]/16 text-[#4d47b6]"
+          : "text-[#67638f] hover:bg-[#f0efff] hover:text-[#2e2a58]",
       )}
     >
       {dashboardNavIconForHref(href)}
@@ -158,13 +158,13 @@ function NavCollapsibleGroup({
 }) {
   const isBasic = group.id === "basic";
   const cardClass = isBasic
-    ? "border-[#0000BF]/20 bg-[#0000BF]/[0.04]"
-    : "border-emerald-200/90 bg-emerald-50/70";
-  const headerHoverClass = isBasic ? "hover:bg-[#0000BF]/10" : "hover:bg-emerald-100/80";
-  const titleClass = isBasic ? "text-[#00008f]" : "text-emerald-800";
+    ? "border-[#cbcfff] bg-[#f6f4ff]"
+    : "border-[#d7e5ff] bg-[#f4f8ff]";
+  const headerHoverClass = isBasic ? "hover:bg-[#eceaff]" : "hover:bg-[#eaf2ff]";
+  const titleClass = isBasic ? "text-[#4b47a2]" : "text-[#39639f]";
   const badgeClass = isBasic
-    ? "bg-[#0000BF]/10 text-[#0000BF] border-[#0000BF]/20"
-    : "bg-emerald-100 text-emerald-700 border-emerald-200";
+    ? "bg-[#e8e7ff] text-[#4d47b6] border-[#cfd2ff]"
+    : "bg-[#e7f0ff] text-[#39639f] border-[#cadbff]";
   const badgeLabel = isBasic ? "BASIC" : "SERVICES";
 
   return (
@@ -299,13 +299,13 @@ export function DashboardShell({
   }, [accountOpen]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#f8fafc] text-slate-800">
+    <div className="flex min-h-screen flex-col text-[#2e2a58]">
       {/* แถบบนเต็มความกว้างหน้าจอ — โลโก้ + ข้อมูลผู้ใช้ */}
-      <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-sm">
+      <header className="sticky top-0 z-30 w-full border-b border-[#dfe1ff] bg-[#ffffffd9] shadow-[0_8px_24px_-18px_rgba(69,53,179,0.55)] backdrop-blur-sm">
         <div className="flex h-14 w-full items-center gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8">
           <button
             type="button"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 md:hidden"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#d9dcff] bg-white text-[#4a4594] shadow-sm hover:bg-[#f4f3ff] md:hidden"
             aria-expanded={drawerOpen}
             aria-controls={menuId}
             onClick={() => setDrawerOpen((o) => !o)}
@@ -321,18 +321,18 @@ export function DashboardShell({
           <div className="min-w-0 flex-1" aria-hidden />
 
           <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1 sm:gap-x-3">
-            <span className="text-sm text-slate-700">
+            <span className="text-sm text-[#58547f]">
               <span className="tabular-nums font-medium">{tokens}</span> โทเคน
             </span>
             <span className="hidden text-slate-300 sm:inline" aria-hidden>
               |
             </span>
-            <span className="text-sm font-medium text-slate-800">{packageLabel}</span>
+            <span className="text-sm font-medium text-[#2e2a58]">{packageLabel}</span>
             <span className="hidden text-slate-300 sm:inline" aria-hidden>
               |
             </span>
             <span
-              className="max-w-[120px] truncate text-sm text-slate-600 sm:max-w-[160px]"
+              className="max-w-[120px] truncate text-sm text-[#67638f] sm:max-w-[160px]"
               title={displayName}
             >
               {displayName}
@@ -348,11 +348,11 @@ export function DashboardShell({
                   alt=""
                   width={32}
                   height={32}
-                  className="h-8 w-8 rounded-full border border-slate-200 object-cover"
+                  className="h-8 w-8 rounded-full border border-[#d9dcff] object-cover"
                   unoptimized
                 />
               ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xs font-semibold text-slate-500">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#d9dcff] bg-[#f4f3ff] text-xs font-semibold text-[#67638f]">
                   {username.slice(0, 1).toUpperCase()}
                 </div>
               )}
@@ -361,7 +361,7 @@ export function DashboardShell({
             <div className="relative md:hidden" ref={accountWrapRef}>
               <button
                 type="button"
-                className="flex h-10 max-w-[44px] items-center justify-center rounded-lg border border-slate-200 bg-white p-1 shadow-sm hover:bg-slate-50"
+                className="flex h-10 max-w-[44px] items-center justify-center rounded-xl border border-[#d9dcff] bg-white p-1 shadow-sm hover:bg-[#f4f3ff]"
                 aria-expanded={accountOpen}
                 aria-label="เมนูบัญชี"
                 onClick={() => setAccountOpen((o) => !o)}
@@ -372,23 +372,23 @@ export function DashboardShell({
                     alt=""
                     width={28}
                     height={28}
-                    className="h-7 w-7 shrink-0 rounded-full border border-slate-200 object-cover"
+                    className="h-7 w-7 shrink-0 rounded-full border border-[#d9dcff] object-cover"
                     unoptimized
                   />
                 ) : (
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#f4f3ff] text-xs font-semibold text-[#67638f]">
                     {username.slice(0, 1).toUpperCase()}
                   </div>
                 )}
               </button>
               {accountOpen ? (
                 <div
-                  className="absolute right-0 z-40 mt-1 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                  className="absolute right-0 z-40 mt-1 w-48 rounded-xl border border-[#d9dcff] bg-white py-1 shadow-lg"
                   role="menu"
                 >
                   <Link
                     href="/dashboard/profile"
-                    className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    className="block px-3 py-2 text-sm text-[#4e4a74] hover:bg-[#f4f3ff]"
                     role="menuitem"
                     onClick={() => setAccountOpen(false)}
                   >
@@ -404,7 +404,7 @@ export function DashboardShell({
       <div className="flex min-h-0 flex-1">
         {/* Sidebar — เดสก์ท็อป / แท็บเล็ต (ใต้ header เต็มความกว้าง) */}
         <aside
-          className="hidden w-56 shrink-0 flex-col border-r border-slate-200/90 bg-white md:flex"
+          className="hidden w-56 shrink-0 flex-col border-r border-[#dfe1ff] bg-[#ffffffbf] backdrop-blur-sm md:flex"
           aria-label="เมนูหลัก"
         >
           <nav className="flex flex-1 flex-col gap-3 overflow-y-auto p-2 pt-3" aria-label="เมนูหลัก">
@@ -433,19 +433,19 @@ export function DashboardShell({
             <>
               <button
                 type="button"
-                className="fixed inset-x-0 bottom-0 top-14 z-40 bg-slate-900/40 backdrop-blur-[1px] md:hidden"
+                className="fixed inset-x-0 bottom-0 top-14 z-40 bg-[#2a245633] backdrop-blur-[2px] md:hidden"
                 aria-label="ปิดเมนู"
                 onClick={closeDrawer}
               />
               <div
                 id={menuId}
-                className="fixed bottom-0 left-0 top-14 z-50 flex w-[min(100vw-3rem,17.5rem)] flex-col border-r border-t border-slate-200 bg-white shadow-2xl md:hidden"
+                className="fixed bottom-0 left-0 top-14 z-50 flex w-[min(100vw-3rem,17.5rem)] flex-col border-r border-t border-[#dfe1ff] bg-[#fffefee8] shadow-2xl backdrop-blur-sm md:hidden"
               >
                 <div className="flex h-14 items-center justify-between border-b border-slate-100 px-3">
                   <MawellLogo size="md" />
                   <button
                     type="button"
-                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                    className="rounded-lg p-2 text-[#67638f] hover:bg-[#f0efff]"
                     onClick={closeDrawer}
                     aria-label="ปิดเมนู"
                   >
@@ -482,7 +482,7 @@ export function DashboardShell({
 
 function MenuIcon({ open }: { open: boolean }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-slate-800" aria-hidden>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-[#3e3a73]" aria-hidden>
       {open ? (
         <path
           d="M6 6l12 12M18 6L6 18"
@@ -501,7 +501,7 @@ function MenuIcon({ open }: { open: boolean }) {
 
 function CloseIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-slate-600" aria-hidden>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-[#67638f]" aria-hidden>
       <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );

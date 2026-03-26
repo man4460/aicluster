@@ -16,7 +16,7 @@ export function DormLayoutChrome({
     <>
       <DormModuleHeader pathname={pathname} />
       {trialExpiresAtIso ? (
-        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <div className="app-banner mb-4 rounded-xl px-4 py-3 text-sm">
           <span className="font-semibold">โหมดทดลอง</span> — ข้อมูลในชุดนี้แยกจากข้อมูลจริงหลัง Subscribe
           วันหมดอายุ:{" "}
           {new Date(trialExpiresAtIso).toLocaleString("th-TH", {

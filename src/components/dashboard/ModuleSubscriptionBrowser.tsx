@@ -226,13 +226,13 @@ export function ModuleSubscriptionBrowser({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-[#0000BF]/[0.05] via-white to-sky-100/50 p-4 shadow-sm">
+      <div className="app-surface rounded-2xl bg-gradient-to-r from-[#0000BF]/[0.05] via-white to-sky-100/50 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="ค้นหาระบบ..."
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-[#0000BF]/30 focus:ring-2 focus:ring-[#0000BF]/15 sm:max-w-xs"
+            className="app-input w-full rounded-xl px-3 py-2 text-sm outline-none sm:max-w-xs"
           />
           <p className="text-xs text-slate-600">
             สายรายวัน Subscribe ได้ 1 ระบบ — ระบบอื่นยังกด “ทดลองใช้งาน” เพื่อลองก่อนตัดสินใจอัปเกรดแพ็กเกจได้
@@ -276,7 +276,7 @@ export function ModuleSubscriptionBrowser({
                   return (
                     <div
                       key={m.id}
-                      className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                      className="app-surface-strong flex h-full flex-col rounded-xl p-4 transition hover:-translate-y-0.5 hover:shadow-md"
                     >
                       <div
                         className={`inline-flex w-fit items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold ${cardTone.chip}`}
@@ -322,7 +322,7 @@ export function ModuleSubscriptionBrowser({
                               type="button"
                               disabled={busyId === m.id || !unlocked}
                               onClick={() => void subscribeOnly(m.id)}
-                              className="flex-1 rounded-lg bg-[#0000BF] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                              className="app-btn-primary flex-1 rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-50"
                             >
                               Subscribe
                             </button>
@@ -351,7 +351,7 @@ export function ModuleSubscriptionBrowser({
                           {subscribed || trialing ? (
                             <Link
                               href={dashboardModuleHref(m.slug)}
-                              className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          className="app-btn-soft rounded-lg px-3 py-2 text-xs font-semibold"
                             >
                               เข้าใช้งาน
                             </Link>
@@ -387,7 +387,7 @@ export function ModuleSubscriptionBrowser({
           aria-modal="true"
           aria-labelledby="unsub-confirm-title"
         >
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl">
+          <div className="app-surface-strong w-full max-w-md rounded-2xl p-5 shadow-xl">
             <h2 id="unsub-confirm-title" className="text-base font-bold text-slate-900">
               ยืนยันยกเลิก Subscribe
             </h2>
@@ -404,7 +404,7 @@ export function ModuleSubscriptionBrowser({
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="app-btn-soft rounded-lg px-4 py-2 text-sm font-semibold"
                 onClick={() => setPendingUnsubscribe(null)}
               >
                 ยกเลิก

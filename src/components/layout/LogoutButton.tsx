@@ -25,7 +25,7 @@ export function LogoutButton({ className }: { className?: string }) {
       onClick={handleLogout}
       disabled={pending}
       className={cn(
-        "rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60",
+        "app-btn-soft rounded-xl px-3 py-1.5 text-sm font-medium disabled:opacity-60",
         className,
       )}
     >

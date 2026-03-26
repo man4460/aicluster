@@ -125,14 +125,14 @@ export function AttendanceRosterClient() {
 
       <form
         onSubmit={add}
-        className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:flex-wrap lg:items-end"
+        className="app-surface flex flex-col gap-3 rounded-2xl p-4 lg:flex-row lg:flex-wrap lg:items-end"
       >
         <label className="min-w-[140px] text-xs font-semibold text-slate-700">
           ชื่อ-นามสกุล
           <input
             value={name}
             onChange={(e) => setName(e.target.value.slice(0, 100))}
-            className="mt-1 block w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            className="app-input mt-1 block w-full rounded-xl px-3 py-2 text-sm"
             placeholder="เช่น สมชาย ใจดี"
             required
           />
@@ -143,7 +143,7 @@ export function AttendanceRosterClient() {
             value={phone}
             onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
             inputMode="numeric"
-            className="mt-1 block w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-mono"
+            className="app-input mt-1 block w-full rounded-xl px-3 py-2 text-sm font-mono"
             placeholder="0812345678"
             required
           />
@@ -151,7 +151,7 @@ export function AttendanceRosterClient() {
         <label className="min-w-[200px] text-xs font-semibold text-slate-700">
           กะที่ปฏิบัติงาน
           <select
-            className="mt-1 block w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            className="app-input mt-1 block w-full rounded-xl px-3 py-2 text-sm"
             value={newShiftIndex}
             onChange={(e) => setNewShiftIndex(Number(e.target.value))}
             disabled={shiftSlots.length === 0}
@@ -166,14 +166,14 @@ export function AttendanceRosterClient() {
         <button
           type="submit"
           disabled={busy || shiftSlots.length === 0}
-          className="rounded-xl bg-[#0000BF] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a6] disabled:opacity-50"
+          className="app-btn-primary rounded-xl px-5 py-2.5 text-sm font-semibold disabled:opacity-50"
         >
           เพิ่มรายชื่อ
         </button>
         {err ? <p className="w-full text-sm text-red-600">{err}</p> : null}
       </form>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="app-surface rounded-2xl">
         {loading ? (
           <p className="p-6 text-center text-sm text-slate-500">กำลังโหลด…</p>
         ) : entries.length === 0 ? (
@@ -184,7 +184,7 @@ export function AttendanceRosterClient() {
           <>
             <ul className="space-y-3 p-3 md:hidden">
               {entries.map((r) => (
-                <li key={r.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <li key={r.id} className="app-surface-strong rounded-2xl p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-slate-900">{r.displayName}</p>
@@ -205,7 +205,7 @@ export function AttendanceRosterClient() {
                   <label className="mt-3 block text-[11px] font-semibold text-slate-600">
                     กะ
                     <select
-                      className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-2 text-sm"
+                      className="app-input mt-1 w-full rounded-lg px-2 py-2 text-sm"
                       value={clampNewShift(r.rosterShiftIndex, shiftSlots.length)}
                       onChange={(e) => void setEntryShift(r.id, Number(e.target.value))}
                     >
@@ -247,7 +247,7 @@ export function AttendanceRosterClient() {
                       <td className="px-3 py-2 font-mono text-xs">{r.phone}</td>
                       <td className="px-3 py-2">
                         <select
-                          className="max-w-[240px] rounded-lg border border-slate-200 px-2 py-1 text-xs"
+                          className="app-input max-w-[240px] rounded-lg px-2 py-1 text-xs"
                           value={clampNewShift(r.rosterShiftIndex, shiftSlots.length)}
                           onChange={(e) => void setEntryShift(r.id, Number(e.target.value))}
                         >

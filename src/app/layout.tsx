@@ -25,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="th" className={`${notoSansThai.variable} h-full antialiased`}>
       <body
-        className={`${notoSansThai.className} font-sans min-h-full flex flex-col bg-[#f8fafc] text-slate-900`}
+        className={`${notoSansThai.className} min-h-full flex flex-col font-sans`}
       >
         {children}
       </body>

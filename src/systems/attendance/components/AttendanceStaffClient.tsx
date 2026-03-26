@@ -75,7 +75,7 @@ export function AttendanceStaffClient() {
     <div className="space-y-8">
       <form
         onSubmit={onCreate}
-        className="max-w-xl space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+        className="app-surface max-w-xl space-y-3 rounded-2xl p-5"
       >
         <h2 className="text-sm font-bold text-slate-900">เพิ่มพนักงาน</h2>
         {err ? <p className="text-sm text-red-700">{err}</p> : null}
@@ -84,14 +84,14 @@ export function AttendanceStaffClient() {
           required
           type="email"
           placeholder="อีเมล"
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+          className="app-input w-full rounded-xl px-3 py-2 text-sm"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
         <input
           required
           placeholder="ชื่อผู้ใช้"
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+          className="app-input w-full rounded-xl px-3 py-2 text-sm"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
@@ -99,26 +99,26 @@ export function AttendanceStaffClient() {
           required
           type="password"
           placeholder="รหัสผ่าน (≥8)"
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+          className="app-input w-full rounded-xl px-3 py-2 text-sm"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
         <input
           placeholder="ชื่อแสดง (ไม่บังคับ)"
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+          className="app-input w-full rounded-xl px-3 py-2 text-sm"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
         />
         <button
           type="submit"
           disabled={saving}
-          className="rounded-xl bg-[#0000BF] px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+          className="app-btn-primary rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-50"
         >
           {saving ? "กำลังสร้าง…" : "สร้างบัญชี"}
         </button>
       </form>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="app-surface rounded-2xl p-5">
         <h2 className="text-sm font-bold text-slate-900">รายชื่อพนักงาน</h2>
         {loading ? (
           <p className="mt-4 text-sm text-slate-500">กำลังโหลด…</p>

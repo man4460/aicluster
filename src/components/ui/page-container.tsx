@@ -63,9 +63,9 @@ export function PageHeader({
     <header className={cn(!compact && "mb-6 sm:mb-8", className)}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-[#2e2a58]">{title}</h1>
           {description ? (
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-600">{description}</p>
+            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[#66638c]">{description}</p>
           ) : null}
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}

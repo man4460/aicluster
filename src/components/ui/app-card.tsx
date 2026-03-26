@@ -13,7 +13,7 @@ export function AppCard({ children, className, padding = "default" }: AppCardPro
   return (
     <div
       className={cn(
-        "rounded-2xl border border-slate-200/80 bg-white shadow-sm",
+        "app-surface rounded-2xl",
         pad,
         className,
       )}
@@ -34,9 +34,9 @@ export function AppCardHeader({ title, description, action, className }: AppCard
   return (
     <div className={cn("flex flex-wrap items-start justify-between gap-3", className)}>
       <div className="min-w-0">
-        <h2 className="text-lg font-semibold tracking-tight text-slate-900">{title}</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-[#2e2a58]">{title}</h2>
         {description ? (
-          <p className="mt-1 text-sm leading-relaxed text-slate-500">{description}</p>
+          <p className="mt-1 text-sm leading-relaxed text-[#5f5a8a]">{description}</p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -53,7 +53,7 @@ export function AppCardFooter({ children, className }: AppCardFooterProps) {
   return (
     <div
       className={cn(
-        "mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4",
+        "mt-4 flex flex-wrap items-center gap-2 border-t border-[#ecebff] pt-4",
         className,
       )}
     >
@@ -72,8 +72,8 @@ type DataRowProps = {
 export function DataRow({ label, children, className }: DataRowProps) {
   return (
     <div className={cn("flex items-start justify-between gap-3 py-1.5", className)}>
-      <span className="shrink-0 text-xs font-medium text-slate-500">{label}</span>
-      <div className="min-w-0 text-right text-sm text-slate-900">{children}</div>
+      <span className="shrink-0 text-xs font-medium text-[#66638c]">{label}</span>
+      <div className="min-w-0 text-right text-sm text-[#2d2955]">{children}</div>
     </div>
   );
 }
