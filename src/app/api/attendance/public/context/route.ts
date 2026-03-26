@@ -5,6 +5,7 @@ import { ensureAttendanceLocationsFromLegacy } from "@/lib/attendance/location-e
 import { AttendanceBusinessError, resolveAttendanceLocation } from "@/lib/attendance/service";
 import { getBusinessProfile } from "@/lib/profile/business-profile";
 import { prisma } from "@/lib/prisma";
+import { resolvePublicAttendanceTrialSessionId } from "@/lib/attendance/public-trial-scope";
 
 export async function GET(req: Request) {
   const ip = clientIp(req.headers);
@@ -13,6 +14,12 @@ export async function GET(req: Request) {
   if (ownerId.length < 10) {
     return NextResponse.json({ error: "ไม่พบ" }, { status: 400 });
   }
+
+  const trialParam = searchParams.get("t")?.trim() ?? searchParams.get("trialSessionId")?.trim() ?? "";
+  const { trialSessionId } = await resolvePublicAttendanceTrialSessionId(
+    ownerId,
+    trialParam.length > 0 ? trialParam : null,
+  );
 
   const locRaw = searchParams.get("loc")?.trim();
   const locationId =
@@ -26,11 +33,11 @@ export async function GET(req: Request) {
   const ok = await isAttendancePublicOpenForOwner(ownerId);
   if (!ok) return NextResponse.json({ error: "ไม่พร้อมใช้งาน" }, { status: 404 });
 
-  await ensureAttendanceLocationsFromLegacy(ownerId);
+  await ensureAttendanceLocationsFromLegacy(ownerId, trialSessionId);
 
   let site;
   try {
-    site = await resolveAttendanceLocation(ownerId, locationId && locationId > 0 ? locationId : null);
+    site = await resolveAttendanceLocation(ownerId, locationId && locationId > 0 ? locationId : null, trialSessionId);
   } catch (e) {
     if (e instanceof AttendanceBusinessError) {
       if (e.message === "NO_SETTINGS")
@@ -45,7 +52,7 @@ export async function GET(req: Request) {
   const orgName = profile?.name?.trim() || "องค์กร";
 
   const locations = await prisma.attendanceLocation.findMany({
-    where: { ownerUserId: ownerId },
+    where: { ownerUserId: ownerId, trialSessionId },
     orderBy: { sortOrder: "asc" },
     select: { id: true, name: true },
   });
@@ -55,6 +62,7 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     ownerId,
+    trialSessionId,
     orgName,
     logoUrl: profile?.logoUrl ?? null,
     geofence: {

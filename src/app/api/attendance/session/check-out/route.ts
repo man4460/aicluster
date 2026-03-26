@@ -7,6 +7,7 @@ import {
   AttendanceGeoError,
   checkOutAsUser,
 } from "@/lib/attendance/service";
+import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
 
 const bodySchema = z.object({
   latitude: z.number().finite(),
@@ -18,6 +19,8 @@ export async function POST(req: Request) {
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const ctx = await getModuleBillingContext(auth.session.sub);
   if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const scope = await getAttendanceDataScope(ctx.billingUserId);
 
   let json: unknown;
   try {
@@ -31,6 +34,7 @@ export async function POST(req: Request) {
   try {
     const log = await checkOutAsUser({
       ownerUserId: ctx.billingUserId,
+      trialSessionId: scope.trialSessionId,
       actorUserId: ctx.actorUserId,
       latitude: parsed.data.latitude,
       longitude: parsed.data.longitude,

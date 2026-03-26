@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import type { TenantStatus } from "@/generated/prisma/enums";
+import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 const patchSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -19,9 +20,9 @@ function parseTenantId(id: string): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-async function assertTenantOwner(ownerId: string, tenantId: number) {
+async function assertTenantOwner(ownerId: string, tenantId: number, trialSessionId: string) {
   return prisma.tenant.findFirst({
-    where: { id: tenantId, room: { ownerUserId: ownerId } },
+    where: { id: tenantId, room: { ownerUserId: ownerId, trialSessionId } },
     include: { room: true },
   });
 }
@@ -32,7 +33,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const tid = parseTenantId((await ctx.params).id);
   if (tid === null) return NextResponse.json({ error: "ไม่พบผู้เข้าพัก" }, { status: 404 });
 
-  const existing = await assertTenantOwner(auth.session.sub, tid);
+  const scope = await getDormitoryDataScope(auth.session.sub);
+  const existing = await assertTenantOwner(auth.session.sub, tid, scope.trialSessionId);
   if (!existing) return NextResponse.json({ error: "ไม่พบผู้เข้าพัก" }, { status: 404 });
 
   let json: unknown;
@@ -72,7 +74,8 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   const tid = parseTenantId((await ctx.params).id);
   if (tid === null) return NextResponse.json({ error: "ไม่พบผู้เข้าพัก" }, { status: 404 });
 
-  const existing = await assertTenantOwner(auth.session.sub, tid);
+  const scope = await getDormitoryDataScope(auth.session.sub);
+  const existing = await assertTenantOwner(auth.session.sub, tid, scope.trialSessionId);
   if (!existing) return NextResponse.json({ error: "ไม่พบผู้เข้าพัก" }, { status: 404 });
 
   await prisma.tenant.delete({ where: { id: tid } });

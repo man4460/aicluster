@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 
 function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "").slice(0, 20);
@@ -13,6 +14,8 @@ export async function GET(req: Request) {
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
 
+  const scope = await getBarberDataScope(own.ownerId);
+
   const { searchParams } = new URL(req.url);
   const phone = normalizePhone(searchParams.get("phone") ?? "");
   if (phone.length < 9) {
@@ -21,7 +24,11 @@ export async function GET(req: Request) {
 
   const customer = await prisma.barberCustomer.findUnique({
     where: {
-      ownerUserId_phone: { ownerUserId: own.ownerId, phone },
+      ownerUserId_phone_trialSessionId: {
+        ownerUserId: own.ownerId,
+        phone,
+        trialSessionId: scope.trialSessionId,
+      },
     },
     include: {
       subscriptions: {

@@ -3,6 +3,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import { bangkokMonthStartEnd, bangkokYearStartEnd } from "@/lib/barber/bangkok-day";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 
@@ -27,9 +28,9 @@ function parseMonthParam(searchParams: URLSearchParams): number | "all" {
 }
 
 /** ปีปฏิทินไทยที่มี log จริง — ไม่พึ่ง DATE_ADD ใน SQL (ลดปัญหา timezone / เวอร์ชัน MySQL) */
-async function distinctBangkokYears(ownerId: string): Promise<number[]> {
+async function distinctBangkokYears(ownerId: string, trialSessionId: string): Promise<number[]> {
   const bounds = await prisma.barberServiceLog.aggregate({
-    where: { ownerUserId: ownerId },
+    where: { ownerUserId: ownerId, trialSessionId },
     _min: { createdAt: true },
     _max: { createdAt: true },
   });
@@ -53,6 +54,7 @@ async function distinctBangkokYears(ownerId: string): Promise<number[]> {
 
 async function sumPackageRevenueBaht(
   ownerId: string,
+  trialSessionId: string,
   start: Date,
   end: Date,
   q: string,
@@ -65,6 +67,7 @@ async function sumPackageRevenueBaht(
       INNER JOIN customer_subscriptions cs ON l.subscription_id = cs.id
       INNER JOIN barber_packages bp ON cs.package_id = bp.id
       WHERE l.owner_id = ${ownerId}
+        AND l.trial_session_id = ${trialSessionId}
         AND l.visit_type = 'PACKAGE_USE'
         AND l.created_at >= ${start}
         AND l.created_at < ${end}
@@ -78,6 +81,7 @@ async function sumPackageRevenueBaht(
     INNER JOIN barber_packages bp ON cs.package_id = bp.id
     INNER JOIN barber_customers c ON l.barber_customer_id = c.id
     WHERE l.owner_id = ${ownerId}
+      AND l.trial_session_id = ${trialSessionId}
       AND l.visit_type = 'PACKAGE_USE'
       AND l.created_at >= ${start}
       AND l.created_at < ${end}
@@ -92,6 +96,7 @@ export async function GET(req: Request) {
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
 
+  const scope = await getBarberDataScope(own.ownerId);
   const ownerId = own.ownerId;
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") ?? "").trim();
@@ -101,7 +106,7 @@ export async function GET(req: Request) {
   const defY = Number(key.split("-")[0]);
 
   try {
-    const dbYears = await distinctBangkokYears(ownerId);
+    const dbYears = await distinctBangkokYears(ownerId, scope.trialSessionId);
     const yearParam = Number(searchParams.get("year"));
 
     const fromDb = dbYears.length > 0 ? dbYears : [];
@@ -129,13 +134,14 @@ export async function GET(req: Request) {
 
     const where = {
       ownerUserId: ownerId,
+      trialSessionId: scope.trialSessionId,
       createdAt: { gte: start, lt: end },
       ...textFilter,
     };
 
     let revenuePackageBaht = 0;
     try {
-      revenuePackageBaht = await sumPackageRevenueBaht(ownerId, start, end, q);
+      revenuePackageBaht = await sumPackageRevenueBaht(ownerId, scope.trialSessionId, start, end, q);
     } catch (e) {
       console.error("[barber/history] package revenue", e);
     }

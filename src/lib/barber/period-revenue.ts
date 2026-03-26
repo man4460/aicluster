@@ -8,6 +8,7 @@ export async function getBarberRevenueBahtInRange(
   ownerId: string,
   start: Date,
   end: Date,
+  trialSessionId: string,
 ): Promise<{
   revenueCashBaht: number;
   revenuePackageBaht: number;
@@ -22,6 +23,7 @@ export async function getBarberRevenueBahtInRange(
       INNER JOIN customer_subscriptions cs ON l.subscription_id = cs.id
       INNER JOIN barber_packages bp ON cs.package_id = bp.id
       WHERE l.owner_id = ${ownerId}
+        AND l.trial_session_id = ${trialSessionId}
         AND l.visit_type = 'PACKAGE_USE'
         AND l.created_at >= ${start}
         AND l.created_at < ${end}
@@ -37,6 +39,7 @@ export async function getBarberRevenueBahtInRange(
     const cashSumRow = await prisma.barberServiceLog.aggregate({
       where: {
         ownerUserId: ownerId,
+        trialSessionId,
         visitType: "CASH_WALK_IN",
         createdAt: { gte: start, lt: end },
       },

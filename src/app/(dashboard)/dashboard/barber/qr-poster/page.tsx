@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { PageHeader } from "@/components/ui/page-container";
 import { getBusinessProfile } from "@/lib/profile/business-profile";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import { BarberQrPosterClient } from "@/systems/barber/components/BarberQrPosterClient";
 
 async function requestBaseUrl(): Promise<string> {
@@ -19,7 +20,11 @@ export default async function BarberQrPosterPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const [profile, baseUrl] = await Promise.all([getBusinessProfile(session.sub), requestBaseUrl()]);
+  const scope = await getBarberDataScope(session.sub);
+  const [profile, baseUrl] = await Promise.all([
+    getBusinessProfile(session.sub, { barberTrialSessionId: scope.trialSessionId }),
+    requestBaseUrl(),
+  ]);
   const shopLabel = profile?.name?.trim() || "ร้านตัดผม";
   const logoUrl = profile?.logoUrl?.trim() || null;
 
@@ -34,6 +39,7 @@ export default async function BarberQrPosterPage() {
         shopLabel={shopLabel}
         logoUrl={logoUrl}
         baseUrl={baseUrl}
+        trialExportBlocked={scope.isTrialSandbox}
       />
     </div>
   );

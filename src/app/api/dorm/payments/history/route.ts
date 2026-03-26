@@ -4,13 +4,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
+import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 export async function GET() {
   const auth = await requireSession();
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const scope = await getDormitoryDataScope(auth.session.sub);
   const rows = await prisma.splitBillPayment.findMany({
-    where: { tenant: { room: { ownerUserId: auth.session.sub } } },
+    where: { tenant: { room: { ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId } } },
     include: {
       tenant: { select: { id: true, name: true, phone: true } },
       bill: {

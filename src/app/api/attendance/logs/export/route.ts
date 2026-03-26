@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { bangkokDayRangeFromDateKey } from "@/lib/barber/booking-datetime";
+import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
 
 function csvEscape(s: string) {
   if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
@@ -63,6 +64,7 @@ export async function GET(req: Request) {
   const rows = await prisma.attendanceLog.findMany({
     where: {
       ownerUserId: ctx.billingUserId,
+      trialSessionId: scope.trialSessionId,
       checkInTime: { gte: start, lt: end },
       ...searchFilter,
       ...kindFilter,

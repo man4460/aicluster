@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import type { RoomStatus } from "@/generated/prisma/enums";
+import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 const patchSchema = z.object({
   roomNumber: z.string().min(1).max(10).optional(),
@@ -26,8 +27,9 @@ export async function GET(_req: Request, ctx: Ctx) {
   const rid = parseRoomId((await ctx.params).id);
   if (rid === null) return NextResponse.json({ error: "ไม่พบห้อง" }, { status: 404 });
 
+  const scope = await getDormitoryDataScope(auth.session.sub);
   const room = await prisma.room.findFirst({
-    where: { id: rid, ownerUserId: auth.session.sub },
+    where: { id: rid, ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId },
     include: {
       tenants: { orderBy: { id: "asc" } },
       utilityBills: {
@@ -88,6 +90,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const rid = parseRoomId((await ctx.params).id);
   if (rid === null) return NextResponse.json({ error: "ไม่พบห้อง" }, { status: 404 });
 
+  const scope = await getDormitoryDataScope(auth.session.sub);
+
   let json: unknown;
   try {
     json = await req.json();
@@ -129,8 +133,9 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   const rid = parseRoomId((await ctx.params).id);
   if (rid === null) return NextResponse.json({ error: "ไม่พบห้อง" }, { status: 404 });
 
+  const scope = await getDormitoryDataScope(auth.session.sub);
   const existing = await prisma.room.findFirst({
-    where: { id: rid, ownerUserId: auth.session.sub },
+    where: { id: rid, ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId },
   });
   if (!existing) return NextResponse.json({ error: "ไม่พบห้อง" }, { status: 404 });
 

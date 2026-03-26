@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import { writeSystemActivityLog } from "@/lib/audit-log";
 
 const patchSchema = z.object({
@@ -26,6 +27,8 @@ export async function PATCH(
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
 
+  const scope = await getBarberDataScope(own.ownerId);
+
   const id = Number((await ctx.params).id);
   if (!Number.isInteger(id) || id < 1) {
     return NextResponse.json({ error: "ไม่ถูกต้อง" }, { status: 400 });
@@ -43,7 +46,7 @@ export async function PATCH(
   }
 
   const existing = await prisma.barberStylist.findFirst({
-    where: { id, ownerUserId: own.ownerId },
+    where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
   });
   if (!existing) {
     return NextResponse.json({ error: "ไม่พบช่าง" }, { status: 404 });
@@ -83,12 +86,13 @@ export async function DELETE(
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
+  const scope = await getBarberDataScope(own.ownerId);
   const id = Number((await ctx.params).id);
   if (!Number.isInteger(id) || id < 1) {
     return NextResponse.json({ error: "ไม่ถูกต้อง" }, { status: 400 });
   }
   const existing = await prisma.barberStylist.findFirst({
-    where: { id, ownerUserId: own.ownerId },
+    where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
     select: { id: true },
   });
   if (!existing) return NextResponse.json({ error: "ไม่พบช่าง" }, { status: 404 });

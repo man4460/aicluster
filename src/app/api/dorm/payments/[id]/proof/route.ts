@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { saveDormPaymentProofImage } from "@/lib/dormitory/payment-proof-file";
+import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 function parseId(raw: string): number | null {
   const n = Number(raw);
@@ -18,11 +19,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ error: "ไม่ถูกต้อง" }, { status: 400 });
   }
 
+  const scope = await getDormitoryDataScope(auth.session.sub);
   const payment = await prisma.splitBillPayment.findFirst({
     where: {
       id: paymentId,
       paymentStatus: "PENDING",
-      tenant: { room: { ownerUserId: auth.session.sub } },
+      tenant: { room: { ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId } },
     },
   });
   if (!payment) {
@@ -70,11 +72,12 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     return NextResponse.json({ error: "ไม่ถูกต้อง" }, { status: 400 });
   }
 
+  const scope = await getDormitoryDataScope(auth.session.sub);
   const payment = await prisma.splitBillPayment.findFirst({
     where: {
       id: paymentId,
       paymentStatus: "PENDING",
-      tenant: { room: { ownerUserId: auth.session.sub } },
+      tenant: { room: { ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId } },
     },
   });
   if (!payment) {

@@ -9,7 +9,7 @@ export async function DELETE(_: Request, { params }: Params) {
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { moduleId } = await params;
   if (!moduleId) return NextResponse.json({ error: "moduleId ไม่ถูกต้อง" }, { status: 400 });
-  stopTrial(auth.session.sub, moduleId);
+  await stopTrial(auth.session.sub, moduleId);
   return NextResponse.json({ ok: true });
 }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import { writeSystemActivityLog } from "@/lib/audit-log";
 import { z } from "zod";
 
@@ -22,11 +23,12 @@ export async function GET(_req: Request, ctx: Ctx) {
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
+  const scope = await getBarberDataScope(own.ownerId);
   const id = parseId((await ctx.params).id);
   if (id === null) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 
   const sub = await prisma.barberCustomerSubscription.findFirst({
-    where: { id, ownerUserId: own.ownerId },
+    where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
     include: {
       customer: true,
       package: true,
@@ -55,6 +57,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
+  const scope = await getBarberDataScope(own.ownerId);
   const id = parseId((await ctx.params).id);
   if (id === null) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 
@@ -68,7 +71,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
   const sub = await prisma.barberCustomerSubscription.findFirst({
-    where: { id, ownerUserId: own.ownerId },
+    where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
     include: { customer: true },
   });
   if (!sub) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
@@ -100,10 +103,11 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
+  const scope = await getBarberDataScope(own.ownerId);
   const id = parseId((await ctx.params).id);
   if (id === null) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
   const sub = await prisma.barberCustomerSubscription.findFirst({
-    where: { id, ownerUserId: own.ownerId },
+    where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
     select: { id: true },
   });
   if (!sub) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });

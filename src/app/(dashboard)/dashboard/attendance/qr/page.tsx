@@ -6,6 +6,7 @@ import { getBusinessProfile } from "@/lib/profile/business-profile";
 import { ensureAttendanceLocationsFromLegacy } from "@/lib/attendance/location-ensure";
 import { AttendanceQrPosterClient } from "@/systems/attendance/components/AttendanceQrPosterClient";
 import { getServerAppBaseUrl } from "@/lib/url/server-app-base-url";
+import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
 
 export default async function AttendanceQrPage() {
   const session = await getSession();
@@ -17,12 +18,16 @@ export default async function AttendanceQrPage() {
   });
   if (user?.employerUserId) redirect("/dashboard/attendance/check");
 
-  const [baseUrl, profile] = await Promise.all([getServerAppBaseUrl(), getBusinessProfile(session.sub)]);
+  const [baseUrl, profile, scope] = await Promise.all([
+    getServerAppBaseUrl(),
+    getBusinessProfile(session.sub),
+    getAttendanceDataScope(session.sub),
+  ]);
   const orgLabel = profile?.name?.trim() || "องค์กร";
 
-  await ensureAttendanceLocationsFromLegacy(session.sub);
+  await ensureAttendanceLocationsFromLegacy(session.sub, scope.trialSessionId);
   const locations = await prisma.attendanceLocation.findMany({
-    where: { ownerUserId: session.sub },
+    where: { ownerUserId: session.sub, trialSessionId: scope.trialSessionId },
     orderBy: { sortOrder: "asc" },
     select: { id: true, name: true },
   });
@@ -50,6 +55,7 @@ export default async function AttendanceQrPage() {
               </h2>
               <AttendanceQrPosterClient
                 ownerId={session.sub}
+                sandboxTrialSessionId={scope.isTrialSandbox ? scope.trialSessionId : null}
                 orgLabel={orgLabel}
                 logoUrl={profile?.logoUrl ?? null}
                 baseUrl={baseUrl}

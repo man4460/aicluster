@@ -24,8 +24,10 @@ export class AttendanceBusinessError extends Error {
   }
 }
 
-export async function getAttendanceSettings(ownerUserId: string) {
-  return prisma.attendanceSettings.findUnique({ where: { ownerUserId } });
+export async function getAttendanceSettings(ownerUserId: string, trialSessionId: string) {
+  return prisma.attendanceSettings.findUnique({
+    where: { ownerUserId_trialSessionId: { ownerUserId, trialSessionId } },
+  });
 }
 
 /** จุดเช็คที่ใช้คำนวณกะ / รัศมี — แยกตามโลเคชัน */
@@ -39,18 +41,21 @@ export type ResolvedAttendanceSite = {
 
 export async function resolveAttendanceLocation(
   ownerUserId: string,
-  locationId?: number | null,
+  locationId: number | null | undefined,
+  trialSessionId: string,
 ): Promise<ResolvedAttendanceSite> {
-  await ensureAttendanceLocationsFromLegacy(ownerUserId);
+  await ensureAttendanceLocationsFromLegacy(ownerUserId, trialSessionId);
 
   const locs = await prisma.attendanceLocation.findMany({
-    where: { ownerUserId },
+    where: { ownerUserId, trialSessionId },
     orderBy: { sortOrder: "asc" },
     include: { shifts: { orderBy: { sortOrder: "asc" } } },
   });
 
   if (locs.length === 0) {
-    const s = await prisma.attendanceSettings.findUnique({ where: { ownerUserId } });
+    const s = await prisma.attendanceSettings.findUnique({
+      where: { ownerUserId_trialSessionId: { ownerUserId, trialSessionId } },
+    });
     if (!s) throw new AttendanceBusinessError("NO_SETTINGS");
     return {
       locationId: 0,
@@ -61,8 +66,12 @@ export async function resolveAttendanceLocation(
     };
   }
 
-  const pick =
+  let pick: (typeof locs)[0] | undefined =
     locationId != null && locationId > 0 ? locs.find((l) => l.id === locationId) : locs[0];
+  /** ลิงก์/QR เก่าอาจมี ?loc= ที่เป็นของชุดทดลองหรือแถวที่ลบ — ใช้โลเคชันแรกในชุด scope ปัจจุบัน */
+  if (pick == null && locs.length > 0) {
+    pick = locs[0];
+  }
   if (!pick) throw new AttendanceBusinessError("BAD_LOCATION");
 
   const shifts = pick.shifts.map((sh) => ({ startTime: sh.startTime, endTime: sh.endTime }));
@@ -92,6 +101,7 @@ function normalizePhone(raw: string): string {
 
 export async function checkInAsUser(params: {
   ownerUserId: string;
+  trialSessionId: string;
   actorUserId: string;
   latitude: number;
   longitude: number;
@@ -99,7 +109,11 @@ export async function checkInAsUser(params: {
   /** ไม่ส่ง = ใช้โลเคชันลำดับแรก (พนักงานล็อกอิน) */
   locationId?: number | null;
 }) {
-  const site = await resolveAttendanceLocation(params.ownerUserId, params.locationId ?? null);
+  const site = await resolveAttendanceLocation(
+    params.ownerUserId,
+    params.locationId ?? null,
+    params.trialSessionId,
+  );
   assertInsideGeofence(site, params.latitude, params.longitude);
 
   const now = new Date();
@@ -108,6 +122,7 @@ export async function checkInAsUser(params: {
   const open = await prisma.attendanceLog.findFirst({
     where: {
       ownerUserId: params.ownerUserId,
+      trialSessionId: params.trialSessionId,
       actorUserId: params.actorUserId,
       guestPhone: null,
       checkOutTime: null,
@@ -124,7 +139,12 @@ export async function checkInAsUser(params: {
   let shiftIdx: number;
   if (aphone.length >= 9) {
     const roster = await prisma.attendanceRosterEntry.findFirst({
-      where: { ownerUserId: params.ownerUserId, phone: aphone, isActive: true },
+      where: {
+        ownerUserId: params.ownerUserId,
+        trialSessionId: params.trialSessionId,
+        phone: aphone,
+        isActive: true,
+      },
     });
     if (roster) shiftIdx = clampShiftIndex(roster.rosterShiftIndex, site.shifts.length);
     else shiftIdx = pickShiftIndexAuto(now, site.shifts);
@@ -138,6 +158,7 @@ export async function checkInAsUser(params: {
   return prisma.attendanceLog.create({
     data: {
       ownerUserId: params.ownerUserId,
+      trialSessionId: params.trialSessionId,
       actorUserId: params.actorUserId,
       checkInTime: now,
       checkInLat: params.latitude,
@@ -152,6 +173,7 @@ export async function checkInAsUser(params: {
 
 export async function checkInAsGuest(params: {
   ownerUserId: string;
+  trialSessionId: string;
   guestPhone: string;
   guestName: string | null;
   visitorKind: AttendancePublicVisitorKind;
@@ -163,7 +185,11 @@ export async function checkInAsGuest(params: {
   const phone = normalizePhone(params.guestPhone);
   if (phone.length < 9) throw new AttendanceBusinessError("BAD_PHONE");
 
-  const site = await resolveAttendanceLocation(params.ownerUserId, params.locationId ?? null);
+  const site = await resolveAttendanceLocation(
+    params.ownerUserId,
+    params.locationId ?? null,
+    params.trialSessionId,
+  );
   assertInsideGeofence(site, params.latitude, params.longitude);
 
   let resolvedName: string | null = params.guestName?.trim().slice(0, 100) || null;
@@ -174,7 +200,12 @@ export async function checkInAsGuest(params: {
 
   if (params.visitorKind === "ROSTER_STAFF") {
     const roster = await prisma.attendanceRosterEntry.findFirst({
-      where: { ownerUserId: params.ownerUserId, phone, isActive: true },
+      where: {
+        ownerUserId: params.ownerUserId,
+        trialSessionId: params.trialSessionId,
+        phone,
+        isActive: true,
+      },
     });
     if (!roster) throw new AttendanceBusinessError("ROSTER_NO_MATCH");
     if (!resolvedName || resolvedName.length === 0) resolvedName = roster.displayName.trim().slice(0, 100);
@@ -186,6 +217,7 @@ export async function checkInAsGuest(params: {
   const open = await prisma.attendanceLog.findFirst({
     where: {
       ownerUserId: params.ownerUserId,
+      trialSessionId: params.trialSessionId,
       guestPhone: phone,
       checkOutTime: null,
       checkInTime: { gte: start, lt: end },
@@ -199,6 +231,7 @@ export async function checkInAsGuest(params: {
   return prisma.attendanceLog.create({
     data: {
       ownerUserId: params.ownerUserId,
+      trialSessionId: params.trialSessionId,
       guestPhone: phone,
       guestName: resolvedName,
       publicVisitorKind: params.visitorKind,
@@ -215,12 +248,17 @@ export async function checkInAsGuest(params: {
 
 export async function checkOutAsUser(params: {
   ownerUserId: string;
+  trialSessionId: string;
   actorUserId: string;
   latitude: number;
   longitude: number;
   locationId?: number | null;
 }) {
-  const site = await resolveAttendanceLocation(params.ownerUserId, params.locationId ?? null);
+  const site = await resolveAttendanceLocation(
+    params.ownerUserId,
+    params.locationId ?? null,
+    params.trialSessionId,
+  );
   assertInsideGeofence(site, params.latitude, params.longitude);
 
   const now = new Date();
@@ -229,6 +267,7 @@ export async function checkOutAsUser(params: {
   const open = await prisma.attendanceLog.findFirst({
     where: {
       ownerUserId: params.ownerUserId,
+      trialSessionId: params.trialSessionId,
       actorUserId: params.actorUserId,
       guestPhone: null,
       checkOutTime: null,
@@ -255,6 +294,7 @@ export async function checkOutAsUser(params: {
 
 export async function checkOutAsGuest(params: {
   ownerUserId: string;
+  trialSessionId: string;
   guestPhone: string;
   latitude: number;
   longitude: number;
@@ -263,7 +303,11 @@ export async function checkOutAsGuest(params: {
   const phone = normalizePhone(params.guestPhone);
   if (phone.length < 9) throw new AttendanceBusinessError("BAD_PHONE");
 
-  const site = await resolveAttendanceLocation(params.ownerUserId, params.locationId ?? null);
+  const site = await resolveAttendanceLocation(
+    params.ownerUserId,
+    params.locationId ?? null,
+    params.trialSessionId,
+  );
   assertInsideGeofence(site, params.latitude, params.longitude);
 
   const now = new Date();
@@ -272,6 +316,7 @@ export async function checkOutAsGuest(params: {
   const open = await prisma.attendanceLog.findFirst({
     where: {
       ownerUserId: params.ownerUserId,
+      trialSessionId: params.trialSessionId,
       guestPhone: phone,
       checkOutTime: null,
       checkInTime: { gte: start, lt: end },
@@ -314,11 +359,16 @@ function earlyCheckoutForAppliedShift(
 }
 
 /** รายการที่ยังไม่เช็คออกวันนี้ */
-export async function openTodayUserLog(ownerUserId: string, actorUserId: string) {
+export async function openTodayUserLog(
+  ownerUserId: string,
+  actorUserId: string,
+  trialSessionId: string,
+) {
   const { start, end } = bangkokDayStartEnd();
   return prisma.attendanceLog.findFirst({
     where: {
       ownerUserId,
+      trialSessionId,
       actorUserId,
       guestPhone: null,
       checkOutTime: null,
@@ -332,11 +382,16 @@ export async function openTodayUserLog(ownerUserId: string, actorUserId: string)
 }
 
 /** รายการล่าสุดของวัน (รวมที่ปิดแล้ว) — แสดงสถานะสรุป */
-export async function latestTodayUserLog(ownerUserId: string, actorUserId: string) {
+export async function latestTodayUserLog(
+  ownerUserId: string,
+  actorUserId: string,
+  trialSessionId: string,
+) {
   const { start, end } = bangkokDayStartEnd();
   return prisma.attendanceLog.findFirst({
     where: {
       ownerUserId,
+      trialSessionId,
       actorUserId,
       guestPhone: null,
       checkInTime: { gte: start, lt: end },
@@ -345,13 +400,18 @@ export async function latestTodayUserLog(ownerUserId: string, actorUserId: strin
   });
 }
 
-export async function openTodayGuestLog(ownerUserId: string, guestPhone: string) {
+export async function openTodayGuestLog(
+  ownerUserId: string,
+  guestPhone: string,
+  trialSessionId: string,
+) {
   const phone = normalizePhone(guestPhone);
   if (phone.length < 9) return null;
   const { start, end } = bangkokDayStartEnd();
   return prisma.attendanceLog.findFirst({
     where: {
       ownerUserId,
+      trialSessionId,
       guestPhone: phone,
       checkOutTime: null,
       checkInTime: { gte: start, lt: end },
@@ -360,13 +420,18 @@ export async function openTodayGuestLog(ownerUserId: string, guestPhone: string)
   });
 }
 
-export async function latestTodayGuestLog(ownerUserId: string, guestPhone: string) {
+export async function latestTodayGuestLog(
+  ownerUserId: string,
+  guestPhone: string,
+  trialSessionId: string,
+) {
   const phone = normalizePhone(guestPhone);
   if (phone.length < 9) return null;
   const { start, end } = bangkokDayStartEnd();
   return prisma.attendanceLog.findFirst({
     where: {
       ownerUserId,
+      trialSessionId,
       guestPhone: phone,
       checkInTime: { gte: start, lt: end },
     },

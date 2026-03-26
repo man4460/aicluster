@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
 import { getBusinessProfile } from "@/lib/profile/business-profile";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 
 const patchSchema = z.object({
   displayName: z.string().trim().max(200).optional().nullable(),
@@ -35,7 +36,8 @@ export async function GET() {
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
 
-  const row = await getBusinessProfile(own.ownerId);
+  const scope = await getBarberDataScope(own.ownerId);
+  const row = await getBusinessProfile(own.ownerId, { barberTrialSessionId: scope.trialSessionId });
   return NextResponse.json({
     profile: toDto({
       displayName: row?.name ?? null,
@@ -53,6 +55,8 @@ export async function PATCH(req: Request) {
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
   if (own.isStaff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const scope = await getBarberDataScope(own.ownerId);
 
   let json: unknown;
   try {
@@ -87,14 +91,23 @@ export async function PATCH(req: Request) {
     }
     if (data.taxId !== undefined) {
       await tx.barberShopProfile.upsert({
-        where: { ownerUserId: own.ownerId },
-        create: { ownerUserId: own.ownerId, taxId: emptyToNull(data.taxId) },
+        where: {
+          ownerUserId_trialSessionId: {
+            ownerUserId: own.ownerId,
+            trialSessionId: scope.trialSessionId,
+          },
+        },
+        create: {
+          ownerUserId: own.ownerId,
+          trialSessionId: scope.trialSessionId,
+          taxId: emptyToNull(data.taxId),
+        },
         update: { taxId: emptyToNull(data.taxId) },
       });
     }
   });
 
-  const row = await getBusinessProfile(own.ownerId);
+  const row = await getBusinessProfile(own.ownerId, { barberTrialSessionId: scope.trialSessionId });
   return NextResponse.json({
     profile: toDto({
       displayName: row?.name ?? null,

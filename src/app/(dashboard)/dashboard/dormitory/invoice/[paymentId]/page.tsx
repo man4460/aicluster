@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { ensurePaymentPublicProofToken } from "@/lib/dormitory/proof-token";
+import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 import { buildPromptPayQrDataUrl } from "@/lib/dormitory/promptpay-qr-image";
 import { buildUrlQrDataUrl } from "@/lib/dormitory/url-qr-dataurl";
 import { PrintButton } from "@/systems/dormitory/components/PrintButton";
@@ -32,11 +33,12 @@ export default async function DormitoryInvoicePage({ params }: Props) {
   const pid = parsePaymentId(raw);
   if (pid === null) notFound();
 
+  const scope = await getDormitoryDataScope(session.sub);
   const payment = await prisma.splitBillPayment.findFirst({
     where: {
       id: pid,
       paymentStatus: "PENDING",
-      tenant: { room: { ownerUserId: session.sub } },
+      tenant: { room: { ownerUserId: session.sub, trialSessionId: scope.trialSessionId } },
     },
     include: {
       tenant: true,
@@ -47,7 +49,9 @@ export default async function DormitoryInvoicePage({ params }: Props) {
 
   const ownerId = payment.bill.room.ownerUserId;
   const profile = await prisma.dormitoryProfile.findUnique({
-    where: { ownerUserId: ownerId },
+    where: {
+      ownerUserId_trialSessionId: { ownerUserId: ownerId, trialSessionId: scope.trialSessionId },
+    },
   });
 
   const proofToken = await ensurePaymentPublicProofToken(payment.id);

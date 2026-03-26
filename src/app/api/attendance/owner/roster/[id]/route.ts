@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { clampShiftIndex } from "@/lib/attendance/shift";
+import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -18,9 +19,9 @@ function parseId(s: string): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-async function shiftCountForOwner(ownerUserId: string): Promise<number> {
+async function shiftCountForOwner(ownerUserId: string, trialSessionId: string): Promise<number> {
   const loc = await prisma.attendanceLocation.findFirst({
-    where: { ownerUserId },
+    where: { ownerUserId, trialSessionId },
     orderBy: { sortOrder: "asc" },
     include: { _count: { select: { shifts: true } } },
   });
@@ -32,6 +33,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const mod = await getModuleBillingContext(auth.session.sub);
   if (!mod || mod.isStaff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const scope = await getAttendanceDataScope(mod.billingUserId);
 
   const id = parseId((await ctx.params).id);
   if (id === null) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
@@ -46,13 +49,13 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
   const existing = await prisma.attendanceRosterEntry.findFirst({
-    where: { id, ownerUserId: mod.billingUserId },
+    where: { id, ownerUserId: mod.billingUserId, trialSessionId: scope.trialSessionId },
   });
   if (!existing) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 
   let nextRosterShiftIndex = existing.rosterShiftIndex;
   if (parsed.data.rosterShiftIndex !== undefined) {
-    const nShifts = await shiftCountForOwner(mod.billingUserId);
+    const nShifts = await shiftCountForOwner(mod.billingUserId, scope.trialSessionId);
     if (nShifts === 0) {
       return NextResponse.json(
         { error: "ยังไม่มีกะในระบบ — ตั้งค่าที่เมนูตั้งค่าก่อน" },
@@ -88,11 +91,13 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   const mod = await getModuleBillingContext(auth.session.sub);
   if (!mod || mod.isStaff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  const scope = await getAttendanceDataScope(mod.billingUserId);
+
   const id = parseId((await ctx.params).id);
   if (id === null) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 
   const existing = await prisma.attendanceRosterEntry.findFirst({
-    where: { id, ownerUserId: mod.billingUserId },
+    where: { id, ownerUserId: mod.billingUserId, trialSessionId: scope.trialSessionId },
   });
   if (!existing) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 

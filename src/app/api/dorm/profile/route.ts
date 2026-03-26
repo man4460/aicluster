@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { getBusinessProfile } from "@/lib/profile/business-profile";
+import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 const paperSizes = ["SLIP_58", "SLIP_80", "A4"] as const;
 
@@ -38,8 +39,14 @@ export async function GET() {
   const auth = await requireSession();
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const scope = await getDormitoryDataScope(auth.session.sub);
   const row = await prisma.dormitoryProfile.findUnique({
-    where: { ownerUserId: auth.session.sub },
+    where: {
+      ownerUserId_trialSessionId: {
+        ownerUserId: auth.session.sub,
+        trialSessionId: scope.trialSessionId,
+      },
+    },
   });
   const business = await getBusinessProfile(auth.session.sub);
   if (!row) {
@@ -105,8 +112,14 @@ export async function PATCH(req: Request) {
     update.paymentChannelsNote = emptyToNull(data.paymentChannelsNote);
   }
 
+  const scope = await getDormitoryDataScope(auth.session.sub);
   const existing = await prisma.dormitoryProfile.findUnique({
-    where: { ownerUserId: auth.session.sub },
+    where: {
+      ownerUserId_trialSessionId: {
+        ownerUserId: auth.session.sub,
+        trialSessionId: scope.trialSessionId,
+      },
+    },
   });
 
   const merged = {
@@ -124,9 +137,15 @@ export async function PATCH(req: Request) {
   }
 
   const row = await prisma.dormitoryProfile.upsert({
-    where: { ownerUserId: auth.session.sub },
+    where: {
+      ownerUserId_trialSessionId: {
+        ownerUserId: auth.session.sub,
+        trialSessionId: scope.trialSessionId,
+      },
+    },
     create: {
       ownerUserId: auth.session.sub,
+      trialSessionId: scope.trialSessionId,
       displayName: null,
       logoUrl: null,
       taxId: null,

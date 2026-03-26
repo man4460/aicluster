@@ -64,6 +64,8 @@ type Props =
   | {
       mode: "public";
       ownerId: string;
+      /** ชุดทดลอง — ส่งต่อ API สาธารณะ (ไม่ส่งเมื่อ subscribe จริง / prod) */
+      sandboxTrialSessionId?: string | null;
       orgName: string;
       logoUrl: string | null;
       geofence: { lat: number; lng: number; radiusMeters: number };
@@ -309,17 +311,22 @@ export function AttendanceCheckClient(props: Props) {
   }, []);
 
   const loadStatePublic = useCallback(async () => {
-    if (!isPublic) return;
+    if (!isPublic || props.mode !== "public") return;
     const digits = phone.replace(/\D/g, "");
     if (digits.length < 9) {
       setOpenLog(null);
       setTodayLatest(null);
       return;
     }
+    const tid = props.sandboxTrialSessionId?.trim();
     const res = await fetch("/api/attendance/public/state", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ownerId: props.ownerId, phone: digits }),
+      body: JSON.stringify({
+        ownerId: props.ownerId,
+        phone: digits,
+        ...(tid ? { trialSessionId: tid } : {}),
+      }),
     });
     const j = (await res.json().catch(() => ({}))) as {
       openLog?: OpenAttendanceLog | null;
@@ -397,6 +404,8 @@ export function AttendanceCheckClient(props: Props) {
         if (props.publicLocationId != null && props.publicLocationId > 0) {
           fd.set("locationId", String(props.publicLocationId));
         }
+        const pubTid = props.sandboxTrialSessionId?.trim();
+        if (pubTid) fd.set("trialSessionId", pubTid);
         const res = await fetch("/api/attendance/public/check-in", {
           method: "POST",
           body: fd,
@@ -466,6 +475,7 @@ export function AttendanceCheckClient(props: Props) {
           setErr("กรอกเบอร์");
           return;
         }
+        const pubTidOut = props.sandboxTrialSessionId?.trim();
         const res = await fetch("/api/attendance/public/check-out", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -477,6 +487,7 @@ export function AttendanceCheckClient(props: Props) {
             ...(props.publicLocationId != null && props.publicLocationId > 0
               ? { locationId: props.publicLocationId }
               : {}),
+            ...(pubTidOut ? { trialSessionId: pubTidOut } : {}),
           }),
         });
         const j = (await res.json().catch(() => ({}))) as { error?: string };
@@ -530,10 +541,15 @@ export function AttendanceCheckClient(props: Props) {
       setErr("กรอกเบอร์อย่างน้อย 9 หลักก่อนค้นหา");
       return;
     }
+    const lookTid = props.mode === "public" ? props.sandboxTrialSessionId?.trim() : "";
     const res = await fetch("/api/attendance/public/lookup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ownerId, phone: digits }),
+      body: JSON.stringify({
+        ownerId,
+        phone: digits,
+        ...(lookTid ? { trialSessionId: lookTid } : {}),
+      }),
     });
     const j = (await res.json().catch(() => ({}))) as { displayName?: string | null; error?: string };
     if (!res.ok) {

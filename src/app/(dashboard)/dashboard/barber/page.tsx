@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bangkokDayStartEnd } from "@/lib/barber/bangkok-day";
 import { getBarberRevenueBahtInRange } from "@/lib/barber/period-revenue";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import { PageHeader } from "@/components/ui/page-container";
 import { BarberTodayBookings } from "@/systems/barber/components/BarberTodayBookings";
 
@@ -16,9 +17,12 @@ export default async function BarberDashboardPage() {
 
   const { start, end } = bangkokDayStartEnd();
 
+  const scope = await getBarberDataScope(session.sub);
+
   const logs = await prisma.barberServiceLog.findMany({
     where: {
       ownerUserId: session.sub,
+      trialSessionId: scope.trialSessionId,
       createdAt: { gte: start, lt: end },
     },
     select: {
@@ -33,9 +37,14 @@ export default async function BarberDashboardPage() {
 
   const [subActive, revenue] = await Promise.all([
     prisma.barberCustomerSubscription.count({
-      where: { ownerUserId: session.sub, status: "ACTIVE", remainingSessions: { gt: 0 } },
+      where: {
+        ownerUserId: session.sub,
+        trialSessionId: scope.trialSessionId,
+        status: "ACTIVE",
+        remainingSessions: { gt: 0 },
+      },
     }),
-    getBarberRevenueBahtInRange(session.sub, start, end),
+    getBarberRevenueBahtInRange(session.sub, start, end, scope.trialSessionId),
   ]);
 
   const statClass =

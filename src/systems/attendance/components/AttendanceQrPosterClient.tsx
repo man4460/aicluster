@@ -7,6 +7,8 @@ import QRCode from "qrcode";
 
 type Props = {
   ownerId: string;
+  /** โหมดทดลอง — ใส่พารามิเตอร์ `t` ในลิงก์เช็คสาธารณะ */
+  sandboxTrialSessionId?: string | null;
   orgLabel: string;
   logoUrl: string | null;
   baseUrl: string;
@@ -25,28 +27,50 @@ function absoluteAssetUrl(relativeOrAbsolute: string, baseUrl: string): string {
 
 export function AttendanceQrPosterClient({
   ownerId,
+  sandboxTrialSessionId,
   orgLabel,
   logoUrl,
   baseUrl,
   locationId,
   locationName,
 }: Props) {
+  const [clientOrigin, setClientOrigin] = useState("");
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location?.origin) {
+      setClientOrigin(window.location.origin);
+    }
+  }, []);
+
+  const effectiveBaseUrl = useMemo(() => {
+    if (baseUrl.startsWith("http://") || baseUrl.startsWith("https://")) {
+      return baseUrl.replace(/\/$/, "");
+    }
+    if (clientOrigin.startsWith("http://") || clientOrigin.startsWith("https://")) {
+      return clientOrigin.replace(/\/$/, "");
+    }
+    return "";
+  }, [baseUrl, clientOrigin]);
+
   const checkInUrl = useMemo(() => {
-    if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) return "";
-    const root = `${baseUrl.replace(/\/$/, "")}/check-in/${ownerId}`;
-    if (locationId != null && locationId > 0) return `${root}?loc=${locationId}`;
-    return root;
-  }, [baseUrl, ownerId, locationId]);
+    if (!effectiveBaseUrl) return "";
+    const root = `${effectiveBaseUrl}/check-in/${ownerId}`;
+    const params = new URLSearchParams();
+    if (locationId != null && locationId > 0) params.set("loc", String(locationId));
+    const tid = sandboxTrialSessionId?.trim();
+    if (tid) params.set("t", tid);
+    const q = params.toString();
+    return q ? `${root}?${q}` : root;
+  }, [effectiveBaseUrl, ownerId, locationId, sandboxTrialSessionId]);
 
   const logoSrc = useMemo(() => {
     if (!logoUrl?.trim()) return null;
     const u = logoUrl.trim();
     if (u.startsWith("http://") || u.startsWith("https://")) return u;
-    if (baseUrl.startsWith("http://") || baseUrl.startsWith("https://")) {
-      return absoluteAssetUrl(u, baseUrl);
+    if (effectiveBaseUrl) {
+      return absoluteAssetUrl(u, effectiveBaseUrl);
     }
     return u.startsWith("/") ? u : `/${u}`;
-  }, [logoUrl, baseUrl]);
+  }, [logoUrl, effectiveBaseUrl]);
 
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const posterRef = useRef<HTMLDivElement>(null);
@@ -138,8 +162,9 @@ export function AttendanceQrPosterClient({
     <div className="space-y-6">
       {!checkInUrl ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          ไม่พบโดเมน — ตั้งค่า <code className="rounded bg-white px-1">NEXT_PUBLIC_APP_URL</code> หรือ{" "}
-          <code className="rounded bg-white px-1">APP_URL</code> หรือ deploy บน Vercel (VERCEL_URL)
+          ยังสร้างลิงก์/QR ไม่ได้ — เปิดหน้านี้จากเบราว์เซอร์บนโดเมนจริง หรือตั้งค่า{" "}
+          <code className="rounded bg-white px-1">NEXT_PUBLIC_APP_URL</code> /{" "}
+          <code className="rounded bg-white px-1">APP_URL</code> / Vercel (VERCEL_URL)
         </p>
       ) : (
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">

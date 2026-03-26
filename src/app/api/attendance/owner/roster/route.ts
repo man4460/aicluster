@@ -5,14 +5,15 @@ import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { isPrismaSchemaMismatchError, PRISMA_SYNC_HINT_TH } from "@/lib/prisma-errors";
 import { clampShiftIndex, formatShiftSlotLabel } from "@/lib/attendance/shift";
+import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
 
 function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "").slice(0, 20);
 }
 
-async function shiftCountForOwner(ownerUserId: string): Promise<number> {
+async function shiftCountForOwner(ownerUserId: string, trialSessionId: string): Promise<number> {
   const loc = await prisma.attendanceLocation.findFirst({
-    where: { ownerUserId },
+    where: { ownerUserId, trialSessionId },
     orderBy: { sortOrder: "asc" },
     include: { _count: { select: { shifts: true } } },
   });
@@ -31,15 +32,17 @@ export async function GET() {
   const ctx = await getModuleBillingContext(auth.session.sub);
   if (!ctx || ctx.isStaff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  const scope = await getAttendanceDataScope(ctx.billingUserId);
+
   try {
     const [rows, loc] = await Promise.all([
       prisma.attendanceRosterEntry.findMany({
-        where: { ownerUserId: ctx.billingUserId },
+        where: { ownerUserId: ctx.billingUserId, trialSessionId: scope.trialSessionId },
         orderBy: [{ isActive: "desc" }, { displayName: "asc" }],
         take: 2500,
       }),
       prisma.attendanceLocation.findFirst({
-        where: { ownerUserId: ctx.billingUserId },
+        where: { ownerUserId: ctx.billingUserId, trialSessionId: scope.trialSessionId },
         orderBy: { sortOrder: "asc" },
         include: { shifts: { orderBy: { sortOrder: "asc" } } },
       }),
@@ -78,6 +81,8 @@ export async function POST(req: Request) {
   const ctx = await getModuleBillingContext(auth.session.sub);
   if (!ctx || ctx.isStaff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  const scope = await getAttendanceDataScope(ctx.billingUserId);
+
   let json: unknown;
   try {
     json = await req.json();
@@ -90,7 +95,7 @@ export async function POST(req: Request) {
   const phone = normalizePhone(parsed.data.phone);
   if (phone.length < 9) return NextResponse.json({ error: "เบอร์ไม่ถูกต้อง" }, { status: 400 });
 
-  const nShifts = await shiftCountForOwner(ctx.billingUserId);
+  const nShifts = await shiftCountForOwner(ctx.billingUserId, scope.trialSessionId);
   if (nShifts === 0) {
     return NextResponse.json(
       { error: "ยังไม่มีกะในระบบ — ตั้งค่าเวลากะที่เมนูตั้งค่าเช็คชื่อก่อน" },
@@ -103,6 +108,7 @@ export async function POST(req: Request) {
     const row = await prisma.attendanceRosterEntry.create({
       data: {
         ownerUserId: ctx.billingUserId,
+        trialSessionId: scope.trialSessionId,
         displayName: parsed.data.displayName,
         phone,
         isActive: true,

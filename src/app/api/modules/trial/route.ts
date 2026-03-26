@@ -15,7 +15,8 @@ const bodySchema = z.object({
 export async function GET() {
   const auth = await requireSession();
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  return NextResponse.json({ moduleIds: listTrialModuleIds(auth.session.sub) });
+  const moduleIds = await listTrialModuleIds(auth.session.sub);
+  return NextResponse.json({ moduleIds });
 }
 
 export async function POST(req: Request) {
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
   }
   if (ctx.access.role !== "ADMIN" && ctx.access.subscriptionType !== "BUFFET") {
     const subscribedIds = await listSubscribedModuleIds(auth.session.sub);
-    const trialIds = listTrialModuleIds(auth.session.sub);
+    const trialIds = await listTrialModuleIds(auth.session.sub);
     /** จำกัดแค่ Subscribe 1 ระบบ — ทดลองระบบอื่นได้เพื่อดูก่อนอัปเกรดแพ็กเกจ */
     if (subscribedIds.includes(mod.id)) {
       return NextResponse.json({ error: "Subscribe ระบบนี้อยู่แล้ว" }, { status: 400 });
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
     }
   }
 
-  startTrial(auth.session.sub, mod.id);
+  await startTrial(auth.session.sub, mod.id);
   return NextResponse.json({ ok: true });
 }
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 
 const packageUseSchema = z.object({
   subscriptionId: z.number().int().positive(),
@@ -30,6 +31,9 @@ export async function POST(req: Request) {
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
 
+  const scope = await getBarberDataScope(own.ownerId);
+  const trialSessionId = scope.trialSessionId;
+
   let json: unknown;
   try {
     json = await req.json();
@@ -46,7 +50,7 @@ export async function POST(req: Request) {
   async function resolveStylistId(stylistId: number | null | undefined): Promise<number | null> {
     if (stylistId == null) return null;
     const st = await prisma.barberStylist.findFirst({
-      where: { id: stylistId, ownerUserId: ownerId, isActive: true },
+      where: { id: stylistId, ownerUserId: ownerId, trialSessionId, isActive: true },
     });
     if (!st) return null;
     return st.id;
@@ -61,7 +65,7 @@ export async function POST(req: Request) {
     try {
       const out = await prisma.$transaction(async (tx) => {
         const sub = await tx.barberCustomerSubscription.findFirst({
-          where: { id: subscriptionId, ownerUserId: ownerId },
+          where: { id: subscriptionId, ownerUserId: ownerId, trialSessionId },
           include: { customer: true },
         });
         if (!sub) throw new Error("NOT_FOUND");
@@ -131,10 +135,15 @@ export async function POST(req: Request) {
 
   const customer = await prisma.barberCustomer.upsert({
     where: {
-      ownerUserId_phone: { ownerUserId: ownerId, phone },
+      ownerUserId_phone_trialSessionId: {
+        ownerUserId: ownerId,
+        phone,
+        trialSessionId,
+      },
     },
     create: {
       ownerUserId: ownerId,
+      trialSessionId,
       phone,
       name,
     },
@@ -146,6 +155,7 @@ export async function POST(req: Request) {
   await prisma.barberServiceLog.create({
     data: {
       ownerUserId: ownerId,
+      trialSessionId,
       subscriptionId: null,
       barberCustomerId: customer.id,
       visitType: "CASH_WALK_IN",

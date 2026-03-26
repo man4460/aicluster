@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import {
   isPrismaSchemaMismatch,
   THAI_PRISMA_SCHEMA_MISMATCH,
@@ -25,6 +26,8 @@ export async function GET(req: Request) {
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
 
+  const scope = await getBarberDataScope(own.ownerId);
+
   const { searchParams } = new URL(req.url);
   const all = searchParams.get("all") === "1";
 
@@ -32,6 +35,7 @@ export async function GET(req: Request) {
     const rows = await prisma.barberStylist.findMany({
       where: {
         ownerUserId: own.ownerId,
+        trialSessionId: scope.trialSessionId,
         ...(all ? {} : { isActive: true }),
       },
       orderBy: [{ isActive: "desc" }, { name: "asc" }],
@@ -61,6 +65,8 @@ export async function POST(req: Request) {
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
 
+  const scope = await getBarberDataScope(own.ownerId);
+
   let json: unknown;
   try {
     json = await req.json();
@@ -77,6 +83,7 @@ export async function POST(req: Request) {
   const s = await prisma.barberStylist.create({
     data: {
       ownerUserId: own.ownerId,
+      trialSessionId: scope.trialSessionId,
       name: parsed.data.name.trim(),
       phone,
       isActive: true,

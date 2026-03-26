@@ -22,7 +22,7 @@ export default async function ModulesCatalogPage() {
       select: { id: true, slug: true, title: true, description: true, groupId: true },
     }),
     listSubscribedModuleIds(session.sub),
-    Promise.resolve(listTrialModuleIds(session.sub)),
+    listTrialModuleIds(session.sub),
     listActiveResubscribeCooldowns(session.sub),
   ]);
 

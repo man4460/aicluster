@@ -4,6 +4,7 @@ import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { getOwnerShiftWindowsOrdered } from "@/lib/attendance/owner-shift-slots";
 import { latestTodayUserLog, openTodayUserLog } from "@/lib/attendance/service";
 import { isPrismaSchemaMismatchError, PRISMA_SYNC_HINT_TH } from "@/lib/prisma-errors";
+import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
 
 function dto(
   row: {
@@ -55,12 +56,14 @@ export async function GET() {
   const ctx = await getModuleBillingContext(auth.session.sub);
   if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const scope = await getAttendanceDataScope(ctx.billingUserId);
+
   try {
-    const windows = await getOwnerShiftWindowsOrdered(ctx.billingUserId);
+    const windows = await getOwnerShiftWindowsOrdered(ctx.billingUserId, scope.trialSessionId);
 
     const [open, latest] = await Promise.all([
-      openTodayUserLog(ctx.billingUserId, ctx.actorUserId),
-      latestTodayUserLog(ctx.billingUserId, ctx.actorUserId),
+      openTodayUserLog(ctx.billingUserId, ctx.actorUserId, scope.trialSessionId),
+      latestTodayUserLog(ctx.billingUserId, ctx.actorUserId, scope.trialSessionId),
     ]);
     function latestDto(l: typeof latest) {
       if (!l) return null;

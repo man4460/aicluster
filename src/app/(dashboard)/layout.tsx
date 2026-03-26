@@ -57,7 +57,7 @@ export default async function DashboardLayout({
   const access: UserAccessFields = billCtx.access;
   const [subscribedIds, trialIds] = await Promise.all([
     listSubscribedModuleIds(session.sub),
-    Promise.resolve(listTrialModuleIds(session.sub)),
+    listTrialModuleIds(session.sub),
   ]);
   const subscribedSet = new Set(subscribedIds);
   const trialSet = new Set(trialIds);

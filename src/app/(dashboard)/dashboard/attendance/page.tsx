@@ -6,6 +6,22 @@ import { bangkokDayStartEnd } from "@/lib/barber/bangkok-day";
 import { ensureAttendanceLocationsFromLegacy } from "@/lib/attendance/location-ensure";
 import { PublicCheckInLinkCopy } from "@/systems/attendance/components/PublicCheckInLinkCopy";
 import { getServerAppBaseUrl } from "@/lib/url/server-app-base-url";
+import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
+
+function publicCheckInUrl(
+  basePrefix: string,
+  ownerSub: string,
+  locId: number | null,
+  trialSessionId: string,
+  isTrialSandbox: boolean,
+) {
+  const root = `${basePrefix.replace(/\/$/, "")}/check-in/${ownerSub}`;
+  const params = new URLSearchParams();
+  if (locId != null && locId > 0) params.set("loc", String(locId));
+  if (isTrialSandbox) params.set("t", trialSessionId);
+  const q = params.toString();
+  return q ? `${root}?${q}` : root;
+}
 
 export default async function AttendanceHomePage() {
   const session = await getSession();
@@ -20,10 +36,10 @@ export default async function AttendanceHomePage() {
   }
 
   const baseUrl = await getServerAppBaseUrl();
-  const publicPath = `/check-in/${session.sub}`;
-  await ensureAttendanceLocationsFromLegacy(session.sub);
+  const scope = await getAttendanceDataScope(session.sub);
+  await ensureAttendanceLocationsFromLegacy(session.sub, scope.trialSessionId);
   const attendanceLocs = await prisma.attendanceLocation.findMany({
-    where: { ownerUserId: session.sub },
+    where: { ownerUserId: session.sub, trialSessionId: scope.trialSessionId },
     orderBy: { sortOrder: "asc" },
     select: { id: true, name: true },
   });
@@ -33,6 +49,7 @@ export default async function AttendanceHomePage() {
     prisma.attendanceLog.findMany({
       where: {
         ownerUserId: session.sub,
+        trialSessionId: scope.trialSessionId,
         checkInTime: { gte: start, lt: end },
       },
       select: {
@@ -42,11 +59,12 @@ export default async function AttendanceHomePage() {
       },
     }),
     prisma.attendanceRosterEntry.count({
-      where: { ownerUserId: session.sub, isActive: true },
+      where: { ownerUserId: session.sub, trialSessionId: scope.trialSessionId, isActive: true },
     }),
     prisma.attendanceLog.count({
       where: {
         ownerUserId: session.sub,
+        trialSessionId: scope.trialSessionId,
         checkInTime: { gte: start, lt: end },
         publicVisitorKind: "ROSTER_STAFF",
       },
@@ -98,8 +116,20 @@ export default async function AttendanceHomePage() {
           <PublicCheckInLinkCopy
             url={
               baseUrl
-                ? `${baseUrl.replace(/\/$/, "")}${publicPath}${attendanceLocs[0] ? `?loc=${attendanceLocs[0].id}` : ""}`
-                : `${publicPath}${attendanceLocs[0] ? `?loc=${attendanceLocs[0].id}` : ""}`
+                ? publicCheckInUrl(
+                    baseUrl,
+                    session.sub,
+                    attendanceLocs[0]?.id ?? null,
+                    scope.trialSessionId,
+                    scope.isTrialSandbox,
+                  )
+                : publicCheckInUrl(
+                    "",
+                    session.sub,
+                    attendanceLocs[0]?.id ?? null,
+                    scope.trialSessionId,
+                    scope.isTrialSandbox,
+                  )
             }
           />
         ) : (
@@ -113,8 +143,8 @@ export default async function AttendanceHomePage() {
                 title={`ลิงก์เช็คชื่อ · ${loc.name.trim() || `จุด #${loc.id}`}`}
                 url={
                   baseUrl
-                    ? `${baseUrl.replace(/\/$/, "")}${publicPath}?loc=${loc.id}`
-                    : `${publicPath}?loc=${loc.id}`
+                    ? publicCheckInUrl(baseUrl, session.sub, loc.id, scope.trialSessionId, scope.isTrialSandbox)
+                    : publicCheckInUrl("", session.sub, loc.id, scope.trialSessionId, scope.isTrialSandbox)
                 }
               />
             ))}

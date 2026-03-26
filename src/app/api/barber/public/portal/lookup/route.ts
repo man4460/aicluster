@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { isBarberCustomerPortalOpenForOwner } from "@/lib/barber/portal-access";
+import { BARBER_MODULE_SLUG } from "@/lib/modules/config";
+import { resolveDataScopeBySlug } from "@/lib/trial/scope";
 import { maskPersonName, maskThaiPhone } from "@/lib/barber/portal-privacy";
 
 const bodySchema = z.object({
@@ -46,8 +48,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "ไม่พบข้อมูล" }, { status: 404 });
   }
 
+  const scope = await resolveDataScopeBySlug(ownerId, BARBER_MODULE_SLUG);
   const customer = await prisma.barberCustomer.findUnique({
-    where: { ownerUserId_phone: { ownerUserId: ownerId, phone } },
+    where: {
+      ownerUserId_phone_trialSessionId: {
+        ownerUserId: ownerId,
+        phone,
+        trialSessionId: scope.trialSessionId,
+      },
+    },
     include: {
       subscriptions: {
         where: { status: { in: ["ACTIVE", "EXHAUSTED"] } },

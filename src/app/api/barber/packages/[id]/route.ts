@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 
 const patchSchema = z.object({
   name: z.string().min(1).max(191).optional(),
@@ -81,8 +82,9 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   const id = parseId((await ctx.params).id);
   if (id === null) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 
+  const scope = await getBarberDataScope(own.ownerId);
   const existing = await prisma.barberPackage.findFirst({
-    where: { id, ownerUserId: own.ownerId },
+    where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
   });
   if (!existing) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 

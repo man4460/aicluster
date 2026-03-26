@@ -11,7 +11,7 @@ export async function DELETE(_: Request, { params }: Params) {
   const { moduleId } = await params;
   if (!moduleId) return NextResponse.json({ error: "moduleId ไม่ถูกต้อง" }, { status: 400 });
   await unsubscribeModule(auth.session.sub, moduleId);
-  stopTrial(auth.session.sub, moduleId);
+  await stopTrial(auth.session.sub, moduleId);
   return NextResponse.json({ ok: true });
 }
 

@@ -7,6 +7,7 @@ import {
   AttendanceGeoError,
   checkOutAsGuest,
 } from "@/lib/attendance/service";
+import { resolvePublicAttendanceTrialSessionId } from "@/lib/attendance/public-trial-scope";
 
 const bodySchema = z.object({
   ownerId: z.string().min(10).max(64),
@@ -14,6 +15,7 @@ const bodySchema = z.object({
   latitude: z.number().finite(),
   longitude: z.number().finite(),
   locationId: z.number().int().positive().optional().nullable(),
+  trialSessionId: z.string().max(36).optional().nullable(),
 });
 
 export async function POST(req: Request) {
@@ -33,9 +35,15 @@ export async function POST(req: Request) {
   const portalOk = await isAttendancePublicOpenForOwner(parsed.data.ownerId);
   if (!portalOk) return NextResponse.json({ error: "ไม่พร้อมใช้งาน" }, { status: 404 });
 
+  const { trialSessionId } = await resolvePublicAttendanceTrialSessionId(
+    parsed.data.ownerId,
+    parsed.data.trialSessionId,
+  );
+
   try {
     const log = await checkOutAsGuest({
       ownerUserId: parsed.data.ownerId,
+      trialSessionId,
       guestPhone: parsed.data.phone,
       latitude: parsed.data.latitude,
       longitude: parsed.data.longitude,

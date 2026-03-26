@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
+import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 
 const patchSchema = z.object({
   fullName: z.string().max(255).optional().nullable(),
@@ -19,34 +20,50 @@ export async function GET() {
   const auth = await requireSession();
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const user = await prisma.user.findUnique({
-    where: { id: auth.session.sub },
-    select: {
-      email: true,
-      username: true,
-      fullName: true,
-      phone: true,
-      address: true,
-      latitude: true,
-      longitude: true,
-      avatarUrl: true,
-      tokens: true,
-      subscriptionTier: true,
-      barberShopProfile: { select: { taxId: true } },
-      dormitoryProfile: {
-        select: { promptPayPhone: true, paymentChannelsNote: true, defaultPaperSize: true },
+  const [user, prodBarber, prodDorm] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: auth.session.sub },
+      select: {
+        email: true,
+        username: true,
+        fullName: true,
+        phone: true,
+        address: true,
+        latitude: true,
+        longitude: true,
+        avatarUrl: true,
+        tokens: true,
+        subscriptionTier: true,
       },
-    },
-  });
+    }),
+    prisma.barberShopProfile.findUnique({
+      where: {
+        ownerUserId_trialSessionId: {
+          ownerUserId: auth.session.sub,
+          trialSessionId: TRIAL_PROD_SCOPE,
+        },
+      },
+      select: { taxId: true },
+    }),
+    prisma.dormitoryProfile.findUnique({
+      where: {
+        ownerUserId_trialSessionId: {
+          ownerUserId: auth.session.sub,
+          trialSessionId: TRIAL_PROD_SCOPE,
+        },
+      },
+      select: { promptPayPhone: true, paymentChannelsNote: true, defaultPaperSize: true },
+    }),
+  ]);
 
   if (!user) return NextResponse.json({ error: "ไม่พบผู้ใช้" }, { status: 404 });
   return NextResponse.json({
     profile: {
       ...user,
-      taxId: user.barberShopProfile?.taxId ?? null,
-      promptPayPhone: user.dormitoryProfile?.promptPayPhone ?? null,
-      paymentChannelsNote: user.dormitoryProfile?.paymentChannelsNote ?? null,
-      defaultPaperSize: user.dormitoryProfile?.defaultPaperSize ?? "SLIP_58",
+      taxId: prodBarber?.taxId ?? null,
+      promptPayPhone: prodDorm?.promptPayPhone ?? null,
+      paymentChannelsNote: prodDorm?.paymentChannelsNote ?? null,
+      defaultPaperSize: prodDorm?.defaultPaperSize ?? "SLIP_58",
     },
   });
 }
@@ -94,8 +111,17 @@ export async function PATCH(req: Request) {
 
     if (data.taxId !== undefined) {
       await tx.barberShopProfile.upsert({
-        where: { ownerUserId: auth.session.sub },
-        create: { ownerUserId: auth.session.sub, taxId: data.taxId },
+        where: {
+          ownerUserId_trialSessionId: {
+            ownerUserId: auth.session.sub,
+            trialSessionId: TRIAL_PROD_SCOPE,
+          },
+        },
+        create: {
+          ownerUserId: auth.session.sub,
+          trialSessionId: TRIAL_PROD_SCOPE,
+          taxId: data.taxId,
+        },
         update: { taxId: data.taxId },
       });
     }
@@ -110,9 +136,15 @@ export async function PATCH(req: Request) {
         return d.length > 0 ? d : null;
       };
       await tx.dormitoryProfile.upsert({
-        where: { ownerUserId: auth.session.sub },
+        where: {
+          ownerUserId_trialSessionId: {
+            ownerUserId: auth.session.sub,
+            trialSessionId: TRIAL_PROD_SCOPE,
+          },
+        },
         create: {
           ownerUserId: auth.session.sub,
+          trialSessionId: TRIAL_PROD_SCOPE,
           defaultPaperSize: data.defaultPaperSize ?? "SLIP_58",
           promptPayPhone: normalizePromptPay(data.promptPayPhone),
           paymentChannelsNote: data.paymentChannelsNote ?? null,
@@ -133,11 +165,21 @@ export async function PATCH(req: Request) {
 
     const [tax, dorm] = await Promise.all([
       tx.barberShopProfile.findUnique({
-        where: { ownerUserId: auth.session.sub },
+        where: {
+          ownerUserId_trialSessionId: {
+            ownerUserId: auth.session.sub,
+            trialSessionId: TRIAL_PROD_SCOPE,
+          },
+        },
         select: { taxId: true },
       }),
       tx.dormitoryProfile.findUnique({
-        where: { ownerUserId: auth.session.sub },
+        where: {
+          ownerUserId_trialSessionId: {
+            ownerUserId: auth.session.sub,
+            trialSessionId: TRIAL_PROD_SCOPE,
+          },
+        },
         select: { promptPayPhone: true, paymentChannelsNote: true, defaultPaperSize: true },
       }),
     ]);

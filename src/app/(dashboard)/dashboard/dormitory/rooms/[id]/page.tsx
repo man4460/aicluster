@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 import { PageHeader } from "@/components/ui/page-container";
 import { RoomDetailClient, type DormRoomDetailJson } from "@/systems/dormitory/components/RoomDetailClient";
 
@@ -19,8 +20,9 @@ export default async function DormitoryRoomDetailPage({ params }: Props) {
   const roomId = parseRoomId(id);
   if (roomId === null) notFound();
 
+  const scope = await getDormitoryDataScope(session.sub);
   const room = await prisma.room.findFirst({
-    where: { id: roomId, ownerUserId: session.sub },
+    where: { id: roomId, ownerUserId: session.sub, trialSessionId: scope.trialSessionId },
     include: {
       tenants: { orderBy: { id: "asc" } },
       utilityBills: {

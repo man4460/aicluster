@@ -13,6 +13,7 @@ import {
   syncAttendanceSettingsMirrorFromPrimaryLocation,
 } from "@/lib/attendance/location-ensure";
 import { isPrismaSchemaMismatchError, PRISMA_SYNC_HINT_TH } from "@/lib/prisma-errors";
+import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
 
 const hhmm = z.string().regex(/^\d{1,2}:\d{2}$/);
 
@@ -35,8 +36,10 @@ const putSchema = z.object({
   locations: z.array(locationInSchema).min(1),
 });
 
-async function ensureSettings(ownerUserId: string) {
-  const existing = await prisma.attendanceSettings.findUnique({ where: { ownerUserId } });
+async function ensureSettings(ownerUserId: string, trialSessionId: string) {
+  const existing = await prisma.attendanceSettings.findUnique({
+    where: { ownerUserId_trialSessionId: { ownerUserId, trialSessionId } },
+  });
   if (existing) return existing;
   const user = await prisma.user.findUnique({
     where: { id: ownerUserId },
@@ -49,6 +52,7 @@ async function ensureSettings(ownerUserId: string) {
   return prisma.attendanceSettings.create({
     data: {
       ownerUserId,
+      trialSessionId,
       allowedLocationLat: lat,
       allowedLocationLng: lng,
       radiusMeters: 150,
@@ -70,9 +74,11 @@ export async function GET() {
   const ctx = await getModuleBillingContext(auth.session.sub);
   if (!ctx || ctx.isStaff) return NextResponse.json({ error: "เฉพาะเจ้าขององค์กร" }, { status: 403 });
 
+  const scope = await getAttendanceDataScope(ctx.billingUserId);
+
   try {
-    await ensureSettings(ctx.billingUserId);
-    await ensureAttendanceLocationsFromLegacy(ctx.billingUserId);
+    await ensureSettings(ctx.billingUserId, scope.trialSessionId);
+    await ensureAttendanceLocationsFromLegacy(ctx.billingUserId, scope.trialSessionId);
 
     const boss = await prisma.user.findUnique({
       where: { id: ctx.billingUserId },
@@ -83,7 +89,7 @@ export async function GET() {
     const quota = getAttendancePlanQuota(boss.subscriptionType, boss.subscriptionTier);
 
     const locations = await prisma.attendanceLocation.findMany({
-      where: { ownerUserId: ctx.billingUserId },
+      where: { ownerUserId: ctx.billingUserId, trialSessionId: scope.trialSessionId },
       orderBy: { sortOrder: "asc" },
       include: { shifts: { orderBy: { sortOrder: "asc" } } },
     });
@@ -120,6 +126,8 @@ export async function PUT(req: Request) {
   const ctx = await getModuleBillingContext(auth.session.sub);
   if (!ctx || ctx.isStaff) return NextResponse.json({ error: "เฉพาะเจ้าขององค์กร" }, { status: 403 });
 
+  const scope = await getAttendanceDataScope(ctx.billingUserId);
+
   let json: unknown;
   try {
     json = await req.json();
@@ -144,7 +152,11 @@ export async function PUT(req: Request) {
   }
   if (idList.length > 0) {
     const okCount = await prisma.attendanceLocation.count({
-      where: { ownerUserId: ctx.billingUserId, id: { in: idList } },
+      where: {
+        ownerUserId: ctx.billingUserId,
+        trialSessionId: scope.trialSessionId,
+        id: { in: idList },
+      },
     });
     if (okCount !== idList.length) {
       return NextResponse.json({ error: "รหัสโลเคชันไม่ถูกต้อง — โหลดหน้าใหม่แล้วลองอีกครั้ง" }, { status: 400 });
@@ -167,7 +179,7 @@ export async function PUT(req: Request) {
     }
   }
 
-  await ensureSettings(ctx.billingUserId);
+  await ensureSettings(ctx.billingUserId, scope.trialSessionId);
 
   await prisma.$transaction(async (tx) => {
     const keptIds: number[] = [];
@@ -203,6 +215,7 @@ export async function PUT(req: Request) {
         const created = await tx.attendanceLocation.create({
           data: {
             ownerUserId: ctx.billingUserId,
+            trialSessionId: scope.trialSessionId,
             name: L.name,
             allowedLocationLat: L.allowedLocationLat,
             allowedLocationLng: L.allowedLocationLng,
@@ -224,15 +237,16 @@ export async function PUT(req: Request) {
     await tx.attendanceLocation.deleteMany({
       where: {
         ownerUserId: ctx.billingUserId,
+        trialSessionId: scope.trialSessionId,
         ...(keptIds.length > 0 ? { id: { notIn: keptIds } } : {}),
       },
     });
   });
 
-  await syncAttendanceSettingsMirrorFromPrimaryLocation(ctx.billingUserId);
+  await syncAttendanceSettingsMirrorFromPrimaryLocation(ctx.billingUserId, scope.trialSessionId);
 
   const locations = await prisma.attendanceLocation.findMany({
-    where: { ownerUserId: ctx.billingUserId },
+    where: { ownerUserId: ctx.billingUserId, trialSessionId: scope.trialSessionId },
     orderBy: { sortOrder: "asc" },
     include: { shifts: { orderBy: { sortOrder: "asc" } } },
   });

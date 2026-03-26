@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import { writeSystemActivityLog } from "@/lib/audit-log";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -61,10 +62,11 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
+  const scope = await getBarberDataScope(own.ownerId);
   const id = parseId((await ctx.params).id);
   if (!id) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
   const row = await prisma.barberServiceLog.findFirst({
-    where: { id, ownerUserId: own.ownerId },
+    where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
     select: { id: true },
   });
   if (!row) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });

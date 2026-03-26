@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import type { RoomStatus } from "@/generated/prisma/enums";
+import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 const postSchema = z.object({
   roomNumber: z.string().min(1).max(10),
@@ -62,8 +63,9 @@ export async function GET() {
   const auth = await requireSession();
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const scope = await getDormitoryDataScope(auth.session.sub);
   const rooms = await prisma.room.findMany({
-    where: { ownerUserId: auth.session.sub },
+    where: { ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId },
     orderBy: [{ roomNumber: "asc" }],
     include: {
       tenants: { orderBy: { id: "asc" } },
@@ -105,6 +107,8 @@ export async function POST(req: Request) {
   const auth = await requireSession();
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const scope = await getDormitoryDataScope(auth.session.sub);
+
   let json: unknown;
   try {
     json = await req.json();
@@ -123,6 +127,7 @@ export async function POST(req: Request) {
     const room = await prisma.room.create({
       data: {
         ownerUserId: auth.session.sub,
+        trialSessionId: scope.trialSessionId,
         roomNumber: roomNumber.trim(),
         floor,
         roomType: roomType.trim(),

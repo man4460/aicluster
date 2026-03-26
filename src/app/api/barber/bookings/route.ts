@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { bangkokDayRangeFromDateKey, parseBangkokLocalToDate } from "@/lib/barber/booking-datetime";
 
@@ -41,6 +42,8 @@ export async function GET(req: Request) {
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
 
+  const scope = await getBarberDataScope(own.ownerId);
+
   const { searchParams } = new URL(req.url);
   const dateKey = searchParams.get("date")?.trim() || bangkokDateKey();
   const range = bangkokDayRangeFromDateKey(dateKey);
@@ -51,6 +54,7 @@ export async function GET(req: Request) {
   const rows = await prisma.barberBooking.findMany({
     where: {
       ownerUserId: own.ownerId,
+      trialSessionId: scope.trialSessionId,
       scheduledAt: { gte: range.start, lt: range.end },
     },
     orderBy: { scheduledAt: "asc" },
@@ -64,6 +68,8 @@ export async function POST(req: Request) {
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
+
+  const scope = await getBarberDataScope(own.ownerId);
 
   let json: unknown;
   try {
@@ -89,14 +95,25 @@ export async function POST(req: Request) {
   let barberCustomerId: number | null = parsed.data.barberCustomerId ?? null;
   if (barberCustomerId != null) {
     const c = await prisma.barberCustomer.findFirst({
-      where: { id: barberCustomerId, ownerUserId: own.ownerId, phone },
+      where: {
+        id: barberCustomerId,
+        ownerUserId: own.ownerId,
+        trialSessionId: scope.trialSessionId,
+        phone,
+      },
     });
     if (!c) {
       return NextResponse.json({ error: "ลูกค้าไม่ตรงกับเบอร์" }, { status: 400 });
     }
   } else {
     const existing = await prisma.barberCustomer.findUnique({
-      where: { ownerUserId_phone: { ownerUserId: own.ownerId, phone } },
+      where: {
+        ownerUserId_phone_trialSessionId: {
+          ownerUserId: own.ownerId,
+          phone,
+          trialSessionId: scope.trialSessionId,
+        },
+      },
     });
     if (existing) barberCustomerId = existing.id;
   }
@@ -109,6 +126,7 @@ export async function POST(req: Request) {
   const row = await prisma.barberBooking.create({
     data: {
       ownerUserId: own.ownerId,
+      trialSessionId: scope.trialSessionId,
       phone,
       barberCustomerId,
       customerName: name,

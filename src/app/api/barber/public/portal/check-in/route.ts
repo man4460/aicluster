@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { isBarberCustomerPortalOpenForOwner } from "@/lib/barber/portal-access";
+import { BARBER_MODULE_SLUG } from "@/lib/modules/config";
+import { resolveDataScopeBySlug } from "@/lib/trial/scope";
 
 const bodySchema = z.object({
   ownerId: z.string().min(10).max(64),
@@ -46,10 +48,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "ไม่สามารถใช้งานได้ในขณะนี้" }, { status: 403 });
   }
 
+  const scope = await resolveDataScopeBySlug(ownerId, BARBER_MODULE_SLUG);
+
   try {
     const out = await prisma.$transaction(async (tx) => {
       const sub = await tx.barberCustomerSubscription.findFirst({
-        where: { id: subscriptionId, ownerUserId: ownerId },
+        where: { id: subscriptionId, ownerUserId: ownerId, trialSessionId: scope.trialSessionId },
         include: { customer: true, package: true },
       });
       if (!sub) throw new Error("NOT_FOUND");
@@ -70,6 +74,7 @@ export async function POST(req: Request) {
       await tx.barberServiceLog.create({
         data: {
           ownerUserId: ownerId,
+          trialSessionId: scope.trialSessionId,
           subscriptionId: sub.id,
           barberCustomerId: sub.barberCustomerId,
           visitType: "PACKAGE_USE",

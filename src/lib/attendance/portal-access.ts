@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { canAccessAppModule, type UserAccessFields } from "@/lib/modules/access";
 import { ATTENDANCE_MODULE_SLUG } from "@/lib/modules/config";
+import { expireStaleTrialSessions } from "@/lib/trial/trial-service";
 
 /** เจ้าของเปิดโมดูลเช็คชื่อ + มีสิทธิ์ — หน้าสาธารณะ /check-in/[ownerId] */
 export async function isAttendancePublicOpenForOwner(ownerId: string): Promise<boolean> {
@@ -26,5 +27,19 @@ export async function isAttendancePublicOpenForOwner(ownerId: string): Promise<b
     subscriptionTier: user.subscriptionTier,
     tokens: user.tokens,
   };
-  return canAccessAppModule(access, { slug: mod.slug, groupId: mod.groupId });
+  if (canAccessAppModule(access, { slug: mod.slug, groupId: mod.groupId })) {
+    return true;
+  }
+  /** โหมดทดลองที่ยังไม่หมดอายุ — ลิงก์/QR สาธารณะต้องใช้ได้แม้ยังไม่ subscribe โมดูล */
+  await expireStaleTrialSessions();
+  const activeTrial = await prisma.trialSession.findFirst({
+    where: {
+      userId: ownerId,
+      moduleId: mod.id,
+      status: "ACTIVE",
+      expiresAt: { gt: new Date() },
+    },
+    select: { id: true },
+  });
+  return activeTrial != null;
 }

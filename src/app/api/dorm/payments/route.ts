@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
+import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 const postSchema = z.object({
   billId: z.number().int().positive(),
@@ -29,12 +30,13 @@ export async function POST(req: Request) {
 
   const { billId, tenantId, note } = parsed.data;
 
+  const scope = await getDormitoryDataScope(auth.session.sub);
   const row = await prisma.splitBillPayment.findFirst({
     where: {
       billId,
       tenantId,
       paymentStatus: "PENDING",
-      tenant: { room: { ownerUserId: auth.session.sub } },
+      tenant: { room: { ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId } },
     },
   });
 

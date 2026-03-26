@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import {
   isPrismaSchemaMismatch,
   THAI_PRISMA_SCHEMA_MISMATCH,
@@ -24,6 +25,8 @@ export async function GET(req: Request) {
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
+
+  const scope = await getBarberDataScope(own.ownerId);
 
   const { searchParams } = new URL(req.url);
   const take = Math.min(200, Math.max(1, Number(searchParams.get("limit")) || 100));
@@ -68,7 +71,7 @@ export async function GET(req: Request) {
 
   try {
     const rows = await prisma.barberCustomerSubscription.findMany({
-      where: { ownerUserId: ownerId },
+      where: { ownerUserId: ownerId, trialSessionId: scope.trialSessionId },
       orderBy: { createdAt: "desc" },
       take,
       include: {
@@ -87,7 +90,7 @@ export async function GET(req: Request) {
     }
     try {
       const rows = await prisma.barberCustomerSubscription.findMany({
-        where: { ownerUserId: ownerId },
+        where: { ownerUserId: ownerId, trialSessionId: scope.trialSessionId },
         orderBy: { createdAt: "desc" },
         take,
         include: { customer: true, package: true },
@@ -110,6 +113,8 @@ export async function POST(req: Request) {
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
 
+  const scope = await getBarberDataScope(own.ownerId);
+
   let json: unknown;
   try {
     json = await req.json();
@@ -127,7 +132,7 @@ export async function POST(req: Request) {
   }
 
   const pkg = await prisma.barberPackage.findFirst({
-    where: { id: parsed.data.packageId, ownerUserId: own.ownerId },
+    where: { id: parsed.data.packageId, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
   });
   if (!pkg) {
     return NextResponse.json({ error: "ไม่พบแพ็กเกจ" }, { status: 404 });
@@ -139,6 +144,7 @@ export async function POST(req: Request) {
       where: {
         id: parsed.data.stylistId,
         ownerUserId: own.ownerId,
+        trialSessionId: scope.trialSessionId,
         isActive: true,
       },
     });
@@ -152,10 +158,15 @@ export async function POST(req: Request) {
 
   const customer = await prisma.barberCustomer.upsert({
     where: {
-      ownerUserId_phone: { ownerUserId: own.ownerId, phone },
+      ownerUserId_phone_trialSessionId: {
+        ownerUserId: own.ownerId,
+        phone,
+        trialSessionId: scope.trialSessionId,
+      },
     },
     create: {
       ownerUserId: own.ownerId,
+      trialSessionId: scope.trialSessionId,
       phone,
       name,
     },
@@ -167,6 +178,7 @@ export async function POST(req: Request) {
   const sub = await prisma.barberCustomerSubscription.create({
     data: {
       ownerUserId: own.ownerId,
+      trialSessionId: scope.trialSessionId,
       barberCustomerId: customer.id,
       packageId: pkg.id,
       remainingSessions: pkg.totalSessions,

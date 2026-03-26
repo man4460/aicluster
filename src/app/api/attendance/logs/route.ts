@@ -4,12 +4,15 @@ import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { bangkokDayRangeFromDateKey } from "@/lib/barber/booking-datetime";
 import { isPrismaSchemaMismatchError, PRISMA_SYNC_HINT_TH } from "@/lib/prisma-errors";
+import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
 
 export async function GET(req: Request) {
   const auth = await requireSession();
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const ctx = await getModuleBillingContext(auth.session.sub);
   if (!ctx || ctx.isStaff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const scope = await getAttendanceDataScope(ctx.billingUserId);
 
   const { searchParams } = new URL(req.url);
   const fromKey = searchParams.get("from")?.trim();
@@ -28,6 +31,7 @@ export async function GET(req: Request) {
 
   const whereBase = {
     ownerUserId: ctx.billingUserId,
+    trialSessionId: scope.trialSessionId,
     checkInTime: { gte: start, lt: end },
   } as const;
 

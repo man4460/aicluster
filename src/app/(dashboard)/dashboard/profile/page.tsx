@@ -4,6 +4,7 @@ import { ProfileEditor } from "@/components/dashboard/ProfileEditor";
 import { PageHeader } from "@/components/ui/page-container";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 
 export const metadata: Metadata = {
   title: "โปรไฟล์ | MAWELL Buffet",
@@ -13,26 +14,42 @@ export default async function ProfilePage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.sub },
-    select: {
-      email: true,
-      username: true,
-      subscriptionTier: true,
-      subscriptionType: true,
-      fullName: true,
-      phone: true,
-      address: true,
-      latitude: true,
-      longitude: true,
-      avatarUrl: true,
-      barberShopProfile: { select: { taxId: true } },
-      dormitoryProfile: {
-        select: { promptPayPhone: true, paymentChannelsNote: true, defaultPaperSize: true },
+  const [user, prodBarber, prodDorm] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session.sub },
+      select: {
+        email: true,
+        username: true,
+        subscriptionTier: true,
+        subscriptionType: true,
+        fullName: true,
+        phone: true,
+        address: true,
+        latitude: true,
+        longitude: true,
+        avatarUrl: true,
+        tokens: true,
       },
-      tokens: true,
-    },
-  });
+    }),
+    prisma.barberShopProfile.findUnique({
+      where: {
+        ownerUserId_trialSessionId: {
+          ownerUserId: session.sub,
+          trialSessionId: TRIAL_PROD_SCOPE,
+        },
+      },
+      select: { taxId: true },
+    }),
+    prisma.dormitoryProfile.findUnique({
+      where: {
+        ownerUserId_trialSessionId: {
+          ownerUserId: session.sub,
+          trialSessionId: TRIAL_PROD_SCOPE,
+        },
+      },
+      select: { promptPayPhone: true, paymentChannelsNote: true, defaultPaperSize: true },
+    }),
+  ]);
 
   if (!user) redirect("/login");
 
@@ -45,10 +62,10 @@ export default async function ProfilePage() {
       <ProfileEditor
         initial={{
           ...user,
-          taxId: user.barberShopProfile?.taxId ?? null,
-          promptPayPhone: user.dormitoryProfile?.promptPayPhone ?? null,
-          paymentChannelsNote: user.dormitoryProfile?.paymentChannelsNote ?? null,
-          defaultPaperSize: user.dormitoryProfile?.defaultPaperSize ?? "SLIP_58",
+          taxId: prodBarber?.taxId ?? null,
+          promptPayPhone: prodDorm?.promptPayPhone ?? null,
+          paymentChannelsNote: prodDorm?.paymentChannelsNote ?? null,
+          defaultPaperSize: prodDorm?.defaultPaperSize ?? "SLIP_58",
         }}
       />
     </div>

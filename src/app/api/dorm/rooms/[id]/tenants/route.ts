@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
+import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 const postSchema = z.object({
   name: z.string().min(1).max(100),
@@ -23,8 +24,9 @@ export async function POST(req: Request, ctx: Ctx) {
   const rid = parseRoomId((await ctx.params).id);
   if (rid === null) return NextResponse.json({ error: "ไม่พบห้อง" }, { status: 404 });
 
+  const scope = await getDormitoryDataScope(auth.session.sub);
   const room = await prisma.room.findFirst({
-    where: { id: rid, ownerUserId: auth.session.sub },
+    where: { id: rid, ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId },
     include: { tenants: { where: { status: "ACTIVE" } } },
   });
   if (!room) return NextResponse.json({ error: "ไม่พบห้อง" }, { status: 404 });

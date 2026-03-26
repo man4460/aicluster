@@ -6,10 +6,12 @@ import { AttendanceBusinessError, resolveAttendanceLocation } from "@/lib/attend
 import { getBusinessProfile } from "@/lib/profile/business-profile";
 import { prisma } from "@/lib/prisma";
 import { AttendanceCheckClient } from "@/systems/attendance/components/AttendanceCheckClient";
+import { resolvePublicAttendanceTrialSessionId } from "@/lib/attendance/public-trial-scope";
+import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 
 type Props = {
   params: Promise<{ ownerId: string }>;
-  searchParams: Promise<{ loc?: string }>;
+  searchParams: Promise<{ loc?: string; t?: string; trialSessionId?: string }>;
 };
 
 export const metadata: Metadata = {
@@ -29,11 +31,17 @@ export default async function PublicAttendancePage({ params, searchParams }: Pro
   const locNum =
     locRaw && /^\d+$/.test(locRaw) ? Math.min(Number.MAX_SAFE_INTEGER, Number(locRaw)) : null;
 
-  await ensureAttendanceLocationsFromLegacy(ownerId);
+  const trialParam = sp.t?.trim() ?? sp.trialSessionId?.trim() ?? "";
+  const { trialSessionId } = await resolvePublicAttendanceTrialSessionId(
+    ownerId,
+    trialParam.length > 0 ? trialParam : null,
+  );
+
+  await ensureAttendanceLocationsFromLegacy(ownerId, trialSessionId);
 
   let site;
   try {
-    site = await resolveAttendanceLocation(ownerId, locNum && locNum > 0 ? locNum : null);
+    site = await resolveAttendanceLocation(ownerId, locNum && locNum > 0 ? locNum : null, trialSessionId);
   } catch (e) {
     if (e instanceof AttendanceBusinessError) {
       if (e.message === "NO_SETTINGS") {
@@ -43,7 +51,13 @@ export default async function PublicAttendancePage({ params, searchParams }: Pro
           </div>
         );
       }
-      if (e.message === "BAD_LOCATION" || e.message === "NO_SHIFTS") notFound();
+      if (e.message === "BAD_LOCATION" || e.message === "NO_SHIFTS") {
+        return (
+          <div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-slate-600">
+            ไม่พบจุดเช็คนี้หรือยังไม่ได้ตั้งกะในระบบ — ลองสแกน QR / ลิงก์ใหม่จากเจ้าของ หรือติดต่อผู้ดูแล
+          </div>
+        );
+      }
     }
     throw e;
   }
@@ -54,15 +68,19 @@ export default async function PublicAttendancePage({ params, searchParams }: Pro
   const locRow =
     site.locationId > 0
       ? await prisma.attendanceLocation.findFirst({
-          where: { id: site.locationId, ownerUserId: ownerId },
+          where: { id: site.locationId, ownerUserId: ownerId, trialSessionId },
           select: { name: true },
         })
       : null;
+
+  const sandboxTrialSessionIdForClient =
+    trialSessionId === TRIAL_PROD_SCOPE ? null : trialSessionId;
 
   return (
     <AttendanceCheckClient
       mode="public"
       ownerId={ownerId}
+      sandboxTrialSessionId={sandboxTrialSessionIdForClient}
       orgName={orgName}
       logoUrl={profile?.logoUrl ?? null}
       geofence={{

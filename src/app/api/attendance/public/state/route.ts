@@ -5,10 +5,12 @@ import { isAttendancePublicOpenForOwner } from "@/lib/attendance/portal-access";
 import { getOwnerShiftWindowsOrdered } from "@/lib/attendance/owner-shift-slots";
 import { latestTodayGuestLog, openTodayGuestLog } from "@/lib/attendance/service";
 import { isPrismaSchemaMismatchError, PRISMA_SYNC_HINT_TH } from "@/lib/prisma-errors";
+import { resolvePublicAttendanceTrialSessionId } from "@/lib/attendance/public-trial-scope";
 
 const bodySchema = z.object({
   ownerId: z.string().min(10).max(64),
   phone: z.string().min(9).max(32),
+  trialSessionId: z.string().max(36).optional().nullable(),
 });
 
 function dto(
@@ -68,12 +70,17 @@ export async function POST(req: Request) {
   const open = await isAttendancePublicOpenForOwner(parsed.data.ownerId);
   if (!open) return NextResponse.json({ error: "ไม่พร้อมใช้งาน" }, { status: 404 });
 
+  const { trialSessionId } = await resolvePublicAttendanceTrialSessionId(
+    parsed.data.ownerId,
+    parsed.data.trialSessionId,
+  );
+
   try {
-    const windows = await getOwnerShiftWindowsOrdered(parsed.data.ownerId);
+    const windows = await getOwnerShiftWindowsOrdered(parsed.data.ownerId, trialSessionId);
 
     const [o, l] = await Promise.all([
-      openTodayGuestLog(parsed.data.ownerId, parsed.data.phone),
-      latestTodayGuestLog(parsed.data.ownerId, parsed.data.phone),
+      openTodayGuestLog(parsed.data.ownerId, parsed.data.phone, trialSessionId),
+      latestTodayGuestLog(parsed.data.ownerId, parsed.data.phone, trialSessionId),
     ]);
 
     return NextResponse.json({

@@ -1,12 +1,18 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { bangkokDayStartEnd } from "@/lib/barber/bangkok-day";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import { BarberBookingStatusBadge } from "./BarberBookingStatusBadge";
 
 export async function BarberTodayBookings({ ownerId }: { ownerId: string }) {
+  const scope = await getBarberDataScope(ownerId);
   const { start, end } = bangkokDayStartEnd();
   const rows = await prisma.barberBooking.findMany({
-    where: { ownerUserId: ownerId, scheduledAt: { gte: start, lt: end } },
+    where: {
+      ownerUserId: ownerId,
+      trialSessionId: scope.trialSessionId,
+      scheduledAt: { gte: start, lt: end },
+    },
     orderBy: { scheduledAt: "asc" },
   });
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 
 const postSchema = z.object({
   name: z.string().min(1).max(191),
@@ -16,8 +17,9 @@ export async function GET() {
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
 
+  const scope = await getBarberDataScope(own.ownerId);
   const rows = await prisma.barberPackage.findMany({
-    where: { ownerUserId: own.ownerId },
+    where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
     orderBy: { id: "desc" },
   });
 
@@ -38,6 +40,8 @@ export async function POST(req: Request) {
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
 
+  const scope = await getBarberDataScope(own.ownerId);
+
   let json: unknown;
   try {
     json = await req.json();
@@ -52,6 +56,7 @@ export async function POST(req: Request) {
   const p = await prisma.barberPackage.create({
     data: {
       ownerUserId: own.ownerId,
+      trialSessionId: scope.trialSessionId,
       name: parsed.data.name.trim(),
       price: parsed.data.price,
       totalSessions: parsed.data.totalSessions,

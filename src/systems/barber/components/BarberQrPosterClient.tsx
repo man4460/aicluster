@@ -10,6 +10,8 @@ type Props = {
   shopLabel: string;
   logoUrl: string | null;
   baseUrl: string;
+  /** โหมดทดลอง — ปิดดาวน์โหลด PDF/PNG */
+  trialExportBlocked?: boolean;
 };
 
 function absoluteAssetUrl(relativeOrAbsolute: string, baseUrl: string): string {
@@ -20,7 +22,13 @@ function absoluteAssetUrl(relativeOrAbsolute: string, baseUrl: string): string {
   return u;
 }
 
-export function BarberQrPosterClient({ ownerId, shopLabel, logoUrl, baseUrl }: Props) {
+export function BarberQrPosterClient({
+  ownerId,
+  shopLabel,
+  logoUrl,
+  baseUrl,
+  trialExportBlocked = false,
+}: Props) {
   const portalUrl =
     baseUrl.startsWith("http://") || baseUrl.startsWith("https://")
       ? `${baseUrl.replace(/\/$/, "")}/m/${ownerId}`
@@ -64,7 +72,7 @@ export function BarberQrPosterClient({ ownerId, shopLabel, logoUrl, baseUrl }: P
   }
 
   async function downloadPng() {
-    if (!portalUrl) return;
+    if (!portalUrl || trialExportBlocked) return;
     setBusy(true);
     try {
       const canvas = await capturePosterCanvas();
@@ -78,7 +86,7 @@ export function BarberQrPosterClient({ ownerId, shopLabel, logoUrl, baseUrl }: P
   }
 
   async function downloadPdf(format: "a4" | "a5") {
-    if (!portalUrl) return;
+    if (!portalUrl || trialExportBlocked) return;
     setBusy(true);
     try {
       const canvas = await capturePosterCanvas();
@@ -113,6 +121,10 @@ export function BarberQrPosterClient({ ownerId, shopLabel, logoUrl, baseUrl }: P
           ไม่พบโดเมน (Host) — เปิดหน้านี้ผ่าน URL จริงของเว็บ หรือตั้งค่า{" "}
           <code className="rounded bg-white px-1">NEXT_PUBLIC_APP_URL</code> แล้วรีสตาร์ทเซิร์ฟเวอร์
         </p>
+      ) : trialExportBlocked ? (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          โหมดทดลอง — ไม่รองรับการดาวน์โหลด PDF/PNG โปสเตอร์ QR หน้าร้าน (Subscribe ระบบเพื่อใช้งานเต็มรูปแบบ)
+        </p>
       ) : (
         <p className="text-sm text-slate-600">
           ลิงก์ลูกค้า:{" "}
@@ -123,7 +135,7 @@ export function BarberQrPosterClient({ ownerId, shopLabel, logoUrl, baseUrl }: P
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          disabled={busy || !portalUrl}
+          disabled={busy || !portalUrl || trialExportBlocked}
           onClick={() => downloadPdf("a4")}
           className="rounded-xl bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a6] disabled:opacity-50"
         >
@@ -131,7 +143,7 @@ export function BarberQrPosterClient({ ownerId, shopLabel, logoUrl, baseUrl }: P
         </button>
         <button
           type="button"
-          disabled={busy || !portalUrl}
+          disabled={busy || !portalUrl || trialExportBlocked}
           onClick={() => downloadPdf("a5")}
           className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
         >
@@ -139,7 +151,7 @@ export function BarberQrPosterClient({ ownerId, shopLabel, logoUrl, baseUrl }: P
         </button>
         <button
           type="button"
-          disabled={busy || !portalUrl}
+          disabled={busy || !portalUrl || trialExportBlocked}
           onClick={downloadPng}
           className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
         >

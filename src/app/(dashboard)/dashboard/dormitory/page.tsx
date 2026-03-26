@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 import { PageHeader } from "@/components/ui/page-container";
 import { RoomBillingStatusBadge } from "@/systems/dormitory/components/RoomBillingStatusBadge";
 import {
@@ -14,8 +15,9 @@ export default async function DormitoryDashboardPage() {
   const session = await getSession();
   if (!session) return null;
 
+  const scope = await getDormitoryDataScope(session.sub);
   const rooms = await prisma.room.findMany({
-    where: { ownerUserId: session.sub },
+    where: { ownerUserId: session.sub, trialSessionId: scope.trialSessionId },
     orderBy: [{ floor: "asc" }, { roomNumber: "asc" }],
     include: {
       tenants: true,

@@ -74,8 +74,8 @@ model User {
 
   chatMessages           ChatMessage[]
   topUpOrders            TopUpOrder[]
-  dormitoryProfile       DormitoryProfile?
-  barberShopProfile      BarberShopProfile?
+  dormitoryProfiles      DormitoryProfile[]
+  barberShopProfiles     BarberShopProfile[]
   rooms                  Room[]
   barberPackages         BarberPackage[]
   barberCustomers        BarberCustomer[]
@@ -84,7 +84,7 @@ model User {
   barberStylists         BarberStylist[]
   barberPortalStaffPings BarberPortalStaffPing[]
   barberBookings         BarberBooking[]
-  attendanceSettings       AttendanceSettings?
+  attendanceSettings       AttendanceSettings[]
   attendanceLogsOwned      AttendanceLog[]           @relation("AttendanceOrg")
   attendanceLogsAsActor    AttendanceLog[]           @relation("AttendanceActor")
   attendanceRosterEntries  AttendanceRosterEntry[]
@@ -94,8 +94,31 @@ model User {
   homeUtilityProfiles      HomeUtilityProfile[]
   homeVehicleProfiles      HomeVehicleProfile[]
   homeFinanceReminders     HomeFinanceReminder[]
+  trialSessions            TrialSession[]
 
   @@index([employerUserId])
+}
+
+/** ทดลองใช้โมดูล — แยกข้อมูล sandbox ใน DB เดียวกันด้วย trialSessionId บนแถวข้อมูล */
+enum TrialSessionStatus {
+  ACTIVE
+  EXPIRED
+}
+
+model TrialSession {
+  id        String             @id @default(cuid())
+  userId    String             @map("user_id") @db.VarChar(191)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moduleId  String             @map("module_id") @db.VarChar(191)
+  module    AppModule          @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  status    TrialSessionStatus @default(ACTIVE) @map("status")
+  expiresAt DateTime           @map("expires_at")
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  @@index([userId, moduleId])
+  @@index([expiresAt])
+  @@map("trial_sessions")
 }
 
 /** แจ้งเตือนจาก Customer QR Portal (ลูกค้ากดแจ้งพนักงาน) */
@@ -103,6 +126,7 @@ model BarberPortalStaffPing {
   id               Int      @id @default(autoincrement())
   ownerUserId      String   @map("owner_id") @db.VarChar(191)
   owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
   barberCustomerId Int?     @map("barber_customer_id")
   subscriptionId   Int?     @map("subscription_id")
   phoneMasked      String   @map("phone_masked") @db.VarChar(32)
@@ -121,6 +145,7 @@ model BarberStylist {
   id          Int      @id @default(autoincrement())
   ownerUserId String   @map("owner_id") @db.VarChar(191)
   owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String @default("prod") @map("trial_session_id") @db.VarChar(36)
   name        String   @db.VarChar(100)
   phone       String?  @db.VarChar(20)
   isActive    Boolean  @default(true) @map("is_active")
@@ -132,6 +157,7 @@ model BarberStylist {
 
   @@index([ownerUserId])
   @@index([ownerUserId, isActive])
+  @@index([ownerUserId, trialSessionId])
   @@map("barber_stylists")
 }
 
@@ -145,6 +171,8 @@ model AppModule {
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+
+  trialSessions TrialSession[]
 
   @@index([groupId])
   @@index([isActive, sortOrder])
@@ -183,11 +211,13 @@ enum RoomStatus {
   MAINTENANCE
 }
 
-/** ข้อมูลแสดงบนใบเสร็จ / สลิป — 1 บัญชีต่อเจ้าของหอพัก */
+/** ข้อมูลแสดงบนใบเสร็จ / สลิป — แยก production (`prod`) กับ sandbox ทดลอง */
 model DormitoryProfile {
   id               Int      @id @default(autoincrement())
-  ownerUserId      String   @unique @map("owner_id") @db.VarChar(191)
+  ownerUserId      String   @map("owner_id") @db.VarChar(191)
   owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  /** `prod` = ข้อมูลจริง | cuid = ชุดทดลอง */
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
   /** ชื่อหอพัก (แสดงบนสลิป) */
   displayName      String?  @map("display_name") @db.VarChar(200)
   /** โลโก้ เช่น /uploads/dorm-logos/... */
@@ -207,14 +237,17 @@ model DormitoryProfile {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
+  @@unique([ownerUserId, trialSessionId])
+  @@index([ownerUserId])
   @@map("dormitory_profiles")
 }
 
 /** ข้อมูลร้านตัดผม — โลโก้/ชื่อร้าน สำหรับป้าย QR และแสดงผลทั่วไป */
 model BarberShopProfile {
   id           Int      @id @default(autoincrement())
-  ownerUserId  String   @unique @map("owner_id") @db.VarChar(191)
+  ownerUserId  String   @map("owner_id") @db.VarChar(191)
   owner        User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String @default("prod") @map("trial_session_id") @db.VarChar(36)
   displayName  String?  @map("display_name") @db.VarChar(200)
   logoUrl      String?  @map("logo_url") @db.VarChar(512)
   taxId        String?  @map("tax_id") @db.VarChar(30)
@@ -223,6 +256,8 @@ model BarberShopProfile {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  @@unique([ownerUserId, trialSessionId])
+  @@index([ownerUserId])
   @@map("barber_shop_profiles")
 }
 
@@ -231,6 +266,7 @@ model Room {
   id           Int        @id @default(autoincrement())
   ownerUserId  String     @map("owner_id") @db.VarChar(191)
   owner        User       @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
   roomNumber   String     @map("room_number") @db.VarChar(10)
   floor        Int
   roomType     String     @map("room_type") @db.VarChar(50)
@@ -243,7 +279,7 @@ model Room {
   tenants      Tenant[]
   utilityBills UtilityBill[]
 
-  @@unique([ownerUserId, roomNumber])
+  @@unique([ownerUserId, roomNumber, trialSessionId])
   @@index([ownerUserId])
   @@map("rooms")
 }
@@ -356,6 +392,7 @@ model BarberPackage {
   id            Int      @id @default(autoincrement())
   ownerUserId   String   @map("owner_id") @db.VarChar(191)
   owner         User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String  @default("prod") @map("trial_session_id") @db.VarChar(36)
   name          String   @db.VarChar(191)
   price         Decimal  @db.Decimal(10, 2)
   totalSessions Int      @map("total_sessions")
@@ -365,6 +402,7 @@ model BarberPackage {
   subscriptions BarberCustomerSubscription[]
 
   @@index([ownerUserId])
+  @@index([ownerUserId, trialSessionId])
   @@map("barber_packages")
 }
 
@@ -373,6 +411,7 @@ model BarberCustomer {
   id           Int      @id @default(autoincrement())
   ownerUserId  String   @map("owner_id") @db.VarChar(191)
   owner        User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String @default("prod") @map("trial_session_id") @db.VarChar(36)
   phone        String   @db.VarChar(20)
   name         String?  @db.VarChar(100)
   createdAt    DateTime @default(now()) @map("created_at")
@@ -382,7 +421,7 @@ model BarberCustomer {
   serviceLogs   BarberServiceLog[]
   bookings      BarberBooking[]
 
-  @@unique([ownerUserId, phone])
+  @@unique([ownerUserId, phone, trialSessionId])
   @@index([ownerUserId])
   @@map("barber_customers")
 }
@@ -392,6 +431,7 @@ model BarberBooking {
   id               Int                  @id @default(autoincrement())
   ownerUserId      String               @map("owner_id") @db.VarChar(191)
   owner            User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String               @default("prod") @map("trial_session_id") @db.VarChar(36)
   barberCustomerId Int?                 @map("barber_customer_id")
   customer         BarberCustomer?      @relation(fields: [barberCustomerId], references: [id], onDelete: SetNull)
   phone            String               @map("phone") @db.VarChar(20)
@@ -402,6 +442,7 @@ model BarberBooking {
   updatedAt        DateTime             @updatedAt @map("updated_at")
 
   @@index([ownerUserId, scheduledAt])
+  @@index([ownerUserId, trialSessionId])
   @@map("barber_bookings")
 }
 
@@ -412,6 +453,7 @@ model BarberCustomerSubscription {
   id                Int                      @id @default(autoincrement())
   ownerUserId       String                   @map("owner_id") @db.VarChar(191)
   owner             User                     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId    String                   @default("prod") @map("trial_session_id") @db.VarChar(36)
   barberCustomerId  Int                      @map("barber_customer_id")
   customer          BarberCustomer           @relation(fields: [barberCustomerId], references: [id], onDelete: Cascade)
   packageId         Int                      @map("package_id")
@@ -430,6 +472,7 @@ model BarberCustomerSubscription {
   @@index([barberCustomerId])
   @@index([packageId])
   @@index([soldByStylistId])
+  @@index([ownerUserId, trialSessionId])
   @@map("customer_subscriptions")
 }
 
@@ -438,6 +481,7 @@ model BarberServiceLog {
   id               Int                           @id @default(autoincrement())
   ownerUserId      String                        @map("owner_id") @db.VarChar(191)
   owner            User                          @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String                        @default("prod") @map("trial_session_id") @db.VarChar(36)
   subscriptionId   Int?                          @map("subscription_id")
   subscription     BarberCustomerSubscription?   @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
   barberCustomerId Int                           @map("barber_customer_id")
@@ -452,6 +496,7 @@ model BarberServiceLog {
   createdAt        DateTime                      @default(now()) @map("created_at")
 
   @@index([ownerUserId, createdAt])
+  @@index([ownerUserId, trialSessionId])
   @@index([barberCustomerId])
   @@index([stylistId])
   @@map("barber_service_logs")
@@ -501,8 +546,10 @@ enum SystemActivityAction {
 /** ตั้งค่าเขตเวลา + จุดเช็คอิน — ต่อเจ้าขององค์กร (owner user) */
 model AttendanceSettings {
   id                   Int      @id @default(autoincrement())
-  ownerUserId          String   @unique @map("owner_id") @db.VarChar(191)
+  ownerUserId          String   @map("owner_id") @db.VarChar(191)
   owner                User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  /** `prod` = ข้อมูลจริง | cuid = ชุดทดลอง */
+  trialSessionId       String   @default("prod") @map("trial_session_id") @db.VarChar(36)
   /** เวลาเริ่มกะ รูปแบบ HH:mm (เวลาไทย) */
   shiftStartTime       String   @default("09:00") @map("shift_start_time") @db.VarChar(5)
   shiftEndTime         String   @default("18:00") @map("shift_end_time") @db.VarChar(5)
@@ -512,6 +559,8 @@ model AttendanceSettings {
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
+  @@unique([ownerUserId, trialSessionId], map: "atset_owner_trial_uidx")
+  @@index([ownerUserId], map: "atset_owner_id_idx")
   @@map("attendance_settings")
 }
 
@@ -520,6 +569,7 @@ model AttendanceLocation {
   id                 Int               @id @default(autoincrement())
   ownerUserId        String            @map("owner_id") @db.VarChar(191)
   owner              User              @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId     String            @default("prod") @map("trial_session_id") @db.VarChar(36)
   name               String            @default("จุดเช็ค") @db.VarChar(80)
   allowedLocationLat Float             @map("allowed_location_lat")
   allowedLocationLng Float             @map("allowed_location_lng")
@@ -529,7 +579,8 @@ model AttendanceLocation {
   createdAt          DateTime          @default(now()) @map("created_at")
   updatedAt          DateTime          @updatedAt @map("updated_at")
 
-  @@index([ownerUserId, sortOrder])
+  @@index([ownerUserId, trialSessionId, sortOrder], map: "aloc_owner_trial_sort_idx")
+  @@index([ownerUserId], map: "aloc_owner_id_idx")
   @@map("attendance_locations")
 }
 
@@ -552,6 +603,7 @@ model AttendanceRosterEntry {
   id          Int      @id @default(autoincrement())
   ownerUserId String   @map("owner_id") @db.VarChar(191)
   owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String @default("prod") @map("trial_session_id") @db.VarChar(36)
   displayName String   @map("display_name") @db.VarChar(100)
   phone       String   @map("phone") @db.VarChar(20)
   isActive    Boolean  @default(true) @map("is_active")
@@ -560,8 +612,8 @@ model AttendanceRosterEntry {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  @@unique([ownerUserId, phone])
-  @@index([ownerUserId, isActive])
+  @@unique([ownerUserId, phone, trialSessionId])
+  @@index([ownerUserId, trialSessionId, isActive])
   @@map("attendance_roster_entries")
 }
 
@@ -570,6 +622,7 @@ model AttendanceLog {
   id              Int                      @id @default(autoincrement())
   ownerUserId     String                   @map("owner_id") @db.VarChar(191)
   owner           User                     @relation("AttendanceOrg", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId  String                   @default("prod") @map("trial_session_id") @db.VarChar(36)
   actorUserId     String?                  @map("actor_user_id") @db.VarChar(191)
   actor           User?                    @relation("AttendanceActor", fields: [actorUserId], references: [id], onDelete: SetNull)
   guestPhone      String?                      @map("guest_phone") @db.VarChar(20)
@@ -593,8 +646,9 @@ model AttendanceLog {
   createdAt       DateTime                 @default(now()) @map("created_at")
   updatedAt       DateTime                 @updatedAt @map("updated_at")
 
-  @@index([ownerUserId, checkInTime])
-  @@index([ownerUserId, guestPhone])
+  @@index([ownerUserId, trialSessionId, checkInTime], map: "alog_owner_trial_in_idx")
+  @@index([ownerUserId, trialSessionId, guestPhone], map: "alog_owner_trial_phone_idx")
+  @@index([ownerUserId], map: "alog_owner_id_idx")
   @@index([actorUserId])
   @@map("attendance_logs")
 }

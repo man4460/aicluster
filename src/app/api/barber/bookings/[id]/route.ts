@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -21,6 +22,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
 
+  const scope = await getBarberDataScope(own.ownerId);
+
   const id = parseId((await ctx.params).id);
   if (id === null) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 
@@ -36,7 +39,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   }
 
   const existing = await prisma.barberBooking.findFirst({
-    where: { id, ownerUserId: own.ownerId },
+    where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
   });
   if (!existing) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 

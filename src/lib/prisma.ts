@@ -5,7 +5,7 @@ import { getAuditActor } from "@/lib/audit-context";
  * เพิ่มทุกครั้งที่แก้ schema แล้วต้องการให้ dev โหลด PrismaClient ใหม่
  * (แก้กรณี globalThis.prisma ค้างตัวเก่าหลัง prisma generate — select ฟิลด์ใหม่แล้ว error)
  */
-const PRISMA_SINGLETON_VERSION = 23;
+const PRISMA_SINGLETON_VERSION = 24;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -14,8 +14,9 @@ const globalForPrisma = globalThis as unknown as {
 
 /** ต้องสอดคล้องกับ schema ล่าสุด — ถ้าแค่เช็ค appModule จะค้าง PrismaClient เก่าหลังเพิ่มโมเดลใหม่ แล้วเกิด undefined.findMany */
 function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
-  const c = client as unknown as {
+    const c = client as unknown as {
     appModule?: { findMany?: unknown };
+    trialSession?: { findMany?: unknown };
     barberServiceLog?: { findMany?: unknown };
     barberStylist?: { findMany?: unknown };
     dormitoryProfile?: { findUnique?: unknown };
@@ -36,6 +37,7 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
   };
   return (
     typeof c.appModule?.findMany === "function" &&
+    typeof c.trialSession?.findMany === "function" &&
     typeof c.barberServiceLog?.findMany === "function" &&
     typeof c.barberStylist?.findMany === "function" &&
     typeof c.dormitoryProfile?.findUnique === "function" &&

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { writeSystemActivityLog } from "@/lib/audit-log";
+import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -31,8 +32,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const id = parseId((await ctx.params).id);
   if (!id) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 
+  const scope = await getDormitoryDataScope(auth.session.sub);
   const existing = await prisma.splitBillPayment.findFirst({
-    where: { id, tenant: { room: { ownerUserId: auth.session.sub } } },
+    where: { id, tenant: { room: { ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId } } },
   });
   if (!existing) return NextResponse.json({ error: "ไม่พบรายการ" }, { status: 404 });
 
@@ -106,8 +108,9 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   const id = parseId((await ctx.params).id);
   if (!id) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 
+  const scope = await getDormitoryDataScope(auth.session.sub);
   const existing = await prisma.splitBillPayment.findFirst({
-    where: { id, tenant: { room: { ownerUserId: auth.session.sub } } },
+    where: { id, tenant: { room: { ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId } } },
     select: { id: true },
   });
   if (!existing) return NextResponse.json({ error: "ไม่พบรายการ" }, { status: 404 });

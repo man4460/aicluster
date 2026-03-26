@@ -8,6 +8,7 @@ import {
   AttendanceGeoError,
   checkInAsGuest,
 } from "@/lib/attendance/service";
+import { resolvePublicAttendanceTrialSessionId } from "@/lib/attendance/public-trial-scope";
 
 const fieldsSchema = z.object({
   ownerId: z.string().min(10).max(64),
@@ -60,6 +61,14 @@ export async function POST(req: Request) {
   const portalOk = await isAttendancePublicOpenForOwner(parsed.data.ownerId);
   if (!portalOk) return NextResponse.json({ error: "ไม่พร้อมใช้งาน" }, { status: 404 });
 
+  const trialRaw = form.get("trialSessionId");
+  const trialSessionIdParam =
+    trialRaw != null && String(trialRaw).trim() !== "" ? String(trialRaw).trim() : null;
+  const { trialSessionId } = await resolvePublicAttendanceTrialSessionId(
+    parsed.data.ownerId,
+    trialSessionIdParam,
+  );
+
   const buf = Buffer.from(await face.arrayBuffer());
   let photoUrl: string;
   try {
@@ -77,6 +86,7 @@ export async function POST(req: Request) {
   try {
     const log = await checkInAsGuest({
       ownerUserId: parsed.data.ownerId,
+      trialSessionId,
       guestPhone: parsed.data.phone,
       guestName: parsed.data.name ?? null,
       visitorKind: parsed.data.visitorKind,
