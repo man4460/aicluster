@@ -1,0 +1,190 @@
+import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enums";
+
+/** จำนวนกลุ่มโมดูลทั้งระบบ — ขยาย logic ใน access/config ให้สอดคล้อง */
+export const MAX_MODULE_GROUP = 5 as const;
+
+/**
+ * สายรายวันเคยจำกัดเฉพาะเช็คชื่อ — ปัจจุบันใช้ `canAccessAppModule`: กลุ่ม 1 ทั้งหมดเมื่อมีโทเคน
+ * (ค่านี้ยัง export ไว้สำหรับอ้างอิง/สคริปต์เก่า)
+ */
+export const DAILY_ALLOWED_MODULE_SLUG = "attendance" as const;
+
+/** กลุ่ม 1 (Basic): สายรายวันหัก 1 โทเคน/วัน Bangkok เมื่อเข้าใช้ (ดู applyDormitoryModuleTokenDeduction) */
+export const DORMITORY_MODULE_SLUG = "dormitory" as const;
+export const DORMITORY_MODULE_GROUP_ID = 1 as const;
+
+/** เช็คชื่ออัจฉริยะ — slug ตรง module_list */
+export const ATTENDANCE_MODULE_SLUG = "attendance" as const;
+export const ATTENDANCE_MODULE_GROUP_ID = 1 as const;
+
+export const BARBER_MODULE_SLUG = "barber" as const;
+export const BARBER_MODULE_GROUP_ID = 1 as const;
+export const HOME_FINANCE_BASIC_MODULE_SLUG = "income-expense-basic" as const;
+export const HOME_FINANCE_BASIC_MODULE_GROUP_ID = 1 as const;
+export const CAR_WASH_MODULE_SLUG = "car-wash" as const;
+export const CAR_WASH_MODULE_GROUP_ID = 1 as const;
+export const MQTT_SERVICE_MODULE_SLUG = "mqtt-service" as const;
+export const MQTT_SERVICE_MODULE_GROUP_ID = 1 as const;
+export const BUILDING_POS_MODULE_SLUG = "building-pos" as const;
+export const BUILDING_POS_MODULE_GROUP_ID = 1 as const;
+
+/** ชื่อแสดงในการ์ด/เมนู — ให้ตรงกันทุกที่แม้ DB เก่าจะยังเป็นชื่อสั้น */
+export function displayAppModuleTitle(slug: string, title: string): string {
+  if (slug === ATTENDANCE_MODULE_SLUG) return "ระบบเช็คชื่ออัจฉริยะ";
+  if (slug === HOME_FINANCE_BASIC_MODULE_SLUG) return "ระบบบันทึกรายรับ-รายจ่าย";
+  if (slug === CAR_WASH_MODULE_SLUG) return "ระบบจัดการคาร์แคร์";
+  if (slug === MQTT_SERVICE_MODULE_SLUG) return "ระบบบริการ MQTT";
+  if (slug === BUILDING_POS_MODULE_SLUG) return "ระบบ POS ร้านอาหารอาคาร";
+  return title;
+}
+
+/**
+ * แมปกลุ่มโมดูล (module_list.group_id) กับชื่อระดับแพ็กเกจ
+ * — sync กับข้อมูล seed / ที่ตั้งค่าใน DB
+ */
+export const MODULE_GROUP_TIER_NAME: Record<number, string> = {
+  1: "Basic",
+  2: "Silver",
+  3: "Gold",
+  4: "Platinum",
+  5: "Ultimate",
+};
+
+/** สรุปฟีเจอร์ต่อกลุ่ม (ใช้ในหน้าแพ็กเกจ / คำอธิบาย) */
+export const MODULE_GROUP_FEATURE_SUMMARY: Record<number, string> = {
+  1: "เช็คชื่ออัจฉริยะ · หอพัก · ร้านตัดผม · คาร์แคร์ · MQTT Service · POS ร้านอาหารอาคาร · รายรับ-รายจ่ายเบื้องต้น (สายรายวันใช้กลุ่มนี้)",
+  2: "สต็อก · พิมพ์ใบเสร็จ",
+  3: "Dashboard วิเคราะห์ · แชทระหว่างสาขา",
+  4: "จัดการพนักงาน · เงินเดือน",
+  5: "API ภายนอก · Automation ขั้นสูง",
+};
+
+export function moduleGroupLine(groupId: number): string {
+  const tier = MODULE_GROUP_TIER_NAME[groupId];
+  const feat = MODULE_GROUP_FEATURE_SUMMARY[groupId];
+  if (tier && feat) return `กลุ่ม ${groupId} (${tier}): ${feat}`;
+  return `กลุ่ม ${groupId}`;
+}
+
+export const PLAN_PRICES = [199, 299, 399, 499, 599] as const;
+export type PlanPrice = (typeof PLAN_PRICES)[number];
+
+export const PRICE_TO_TIER: Record<PlanPrice, SubscriptionTier> = {
+  199: "TIER_199",
+  299: "TIER_299",
+  399: "TIER_399",
+  499: "TIER_499",
+  599: "TIER_599",
+};
+
+/** ราคาแพ็กเหมาเป็นหน่วยโทเคน (สมัครใหม่ = หักเต็มจำนวน) */
+export const TIER_SUBSCRIPTION_TOKEN_COST: Record<SubscriptionTier, number> = {
+  NONE: 0,
+  TIER_199: 199,
+  TIER_299: 299,
+  TIER_399: 399,
+  TIER_499: 499,
+  TIER_599: 599,
+};
+
+/** โทเคนที่หักทุกเดือน (BUFFET) — เรตเดียวกับมูลค่าแพ็กเป็นหน่วยโทเคน */
+export function tierMonthlyBuffetTokenCost(tier: SubscriptionTier): number {
+  return TIER_SUBSCRIPTION_TOKEN_COST[tier];
+}
+
+const BUFFET_TARGET_TIERS: SubscriptionTier[] = [
+  "TIER_199",
+  "TIER_299",
+  "TIER_399",
+  "TIER_499",
+  "TIER_599",
+];
+
+export type BuffetSubscriptionChargeResult =
+  | { ok: true; tokensToDeduct: number; targetTier: SubscriptionTier }
+  | { ok: false; error: string };
+
+/**
+ * คำนวณโทเคนที่จะหักเมื่อสมัคร/อัปเกรดแพ็กเหมา
+ * - สายรายวันหรือยังไม่มีเหมา → หักราคาเต็มของแพ็กปลายทาง
+ * - มีเหมาอยู่แล้ว → อัปเกรดหักเฉพาะส่วนต่าง (ราคาใหม่ − ราคาแพ็กปัจจุบัน)
+ */
+export function computeBuffetSubscriptionTokenCharge(input: {
+  targetTier: SubscriptionTier;
+  currentTier: SubscriptionTier;
+  subscriptionType: SubscriptionType;
+}): BuffetSubscriptionChargeResult {
+  const { targetTier, currentTier, subscriptionType } = input;
+  if (!BUFFET_TARGET_TIERS.includes(targetTier)) {
+    return { ok: false, error: "แพ็กไม่ถูกต้อง" };
+  }
+
+  const isBuffetActive = subscriptionType === "BUFFET" && currentTier !== "NONE";
+
+  if (isBuffetActive) {
+    const curRank = buffetTierMaxGroup(currentTier);
+    const tarRank = buffetTierMaxGroup(targetTier);
+    if (tarRank <= curRank) {
+      return {
+        ok: false,
+        error: "คุณใช้แพ็กนี้หรือสูงกว่าแล้ว — เลือกแพ็กที่สูงขึ้นเพื่ออัปเกรด (หักเฉพาะส่วนต่าง)",
+      };
+    }
+    const fullNew = TIER_SUBSCRIPTION_TOKEN_COST[targetTier];
+    const fullCur = TIER_SUBSCRIPTION_TOKEN_COST[currentTier];
+    return { ok: true, tokensToDeduct: fullNew - fullCur, targetTier };
+  }
+
+  return {
+    ok: true,
+    tokensToDeduct: TIER_SUBSCRIPTION_TOKEN_COST[targetTier],
+    targetTier,
+  };
+}
+
+/**
+ * แพ็กเหมา: สูงสุดถึงกลุ่มไหน (199→1, 299→2, …, 599→5)
+ * NONE → 0 (ไม่ควรใช้คู่ BUFFET)
+ */
+export function buffetTierMaxGroup(tier: SubscriptionTier): number {
+  switch (tier) {
+    case "TIER_199":
+      return 1;
+    case "TIER_299":
+      return 2;
+    case "TIER_399":
+      return 3;
+    case "TIER_499":
+      return 4;
+    case "TIER_599":
+      return 5;
+    case "NONE":
+    default:
+      return 0;
+  }
+}
+
+export function tierGroupLabel(tier: SubscriptionTier): string {
+  if (tier === "NONE") return "ยังไม่สมัครแพ็กเกจเหมา";
+  const n = buffetTierMaxGroup(tier);
+  if (n <= 0) return "—";
+  const name = MODULE_GROUP_TIER_NAME[n];
+  if (n === 1 && name) return `เข้าถึงกลุ่ม 1 (${name}) เท่านั้น`;
+  if (name) return `เข้าถึงกลุ่ม 1–${n} ถึงระดับ ${name}`;
+  return `เข้าถึงกลุ่มโมดูล 1–${n}`;
+}
+
+export function tierGroupBullets(tier: SubscriptionTier): string[] {
+  if (tier === "NONE") {
+    return [
+      "สายรายวัน: หักโทเคนทุกวัน — ไม่มีโทเคนใช้งานไม่ได้ ต้องเติมก่อน",
+      moduleGroupLine(1),
+    ];
+  }
+  const n = buffetTierMaxGroup(tier);
+  const lines: string[] = [`แพ็กเกจรายเดือน: หักโทเคนทุกเดือนตามระดับแพ็ก (เวลาไทย) — โทเคนไม่พอให้เติมก่อน`];
+  for (let g = 1; g <= n; g++) {
+    lines.push(moduleGroupLine(g));
+  }
+  return lines;
+}

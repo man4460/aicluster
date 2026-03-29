@@ -1,0 +1,162 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f6ff;
+  --foreground: #1e1b3a;
+  --surface: #ffffffcc;
+  --surface-strong: #ffffff;
+  --surface-border: #d8d9ff;
+  --ring-soft: #8b90ff66;
+  --brand-600: #5b61ff;
+  --brand-500: #7a7eff;
+  --brand-400: #9a9dff;
+  --banner-bg: #fff8ff;
+  --banner-border: #e6cbff;
+  --banner-text: #5a2a85;
+  --soft-shadow: 0 10px 30px -18px rgba(76, 58, 180, 0.45);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  /* Noto Sans Thai — โหลดผ่าน next/font ที่ layout.tsx (ตัวแปรบน <html>) */
+  --font-sans: var(--font-noto-sans-thai), "Noto Sans Thai", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  background-image:
+    radial-gradient(circle at 8% 8%, rgba(255, 196, 245, 0.45), transparent 32%),
+    radial-gradient(circle at 92% 6%, rgba(182, 221, 255, 0.42), transparent 34%),
+    radial-gradient(circle at 50% 100%, rgba(205, 195, 255, 0.3), transparent 44%);
+  background-attachment: fixed;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring-soft);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+textarea,
+select {
+  border: 1px solid var(--surface-border);
+  background: #ffffff;
+  color: var(--foreground);
+}
+
+.app-surface {
+  border: 1px solid var(--surface-border);
+  background: var(--surface);
+  box-shadow: var(--soft-shadow);
+  backdrop-filter: blur(8px);
+}
+
+.app-surface-strong {
+  border: 1px solid var(--surface-border);
+  background: var(--surface-strong);
+  box-shadow: var(--soft-shadow);
+}
+
+.app-gradient-text {
+  background: linear-gradient(105deg, var(--brand-600), #9f65ff 55%, #f072c6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.app-btn-primary {
+  color: #fff;
+  background-image: linear-gradient(120deg, var(--brand-600), #8d64ff 52%, #f06dc8);
+  box-shadow: 0 8px 18px -10px rgba(98, 80, 233, 0.65);
+}
+
+.app-btn-primary:hover {
+  filter: brightness(1.03);
+}
+
+.app-btn-soft {
+  color: #2d2759;
+  border: 1px solid var(--surface-border);
+  background: #ffffff;
+}
+
+.app-input {
+  border: 1px solid var(--surface-border);
+  background: #fff;
+  color: var(--foreground);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+}
+
+.app-banner {
+  border: 1px solid var(--banner-border);
+  background: var(--banner-bg);
+  color: var(--banner-text);
+  box-shadow: var(--soft-shadow);
+}
+
+/* Compatibility layer: map legacy blue utility classes to new palette */
+.bg-\[\#0000BF\] {
+  background-image: linear-gradient(120deg, var(--brand-600), #8d64ff 52%, #f06dc8);
+  color: #fff;
+}
+
+.hover\:bg-\[\#0000a6\]:hover,
+.hover\:bg-\[\#0000a3\]:hover {
+  filter: brightness(1.03);
+}
+
+.text-\[\#0000BF\] {
+  color: #4d47b6;
+}
+
+.border-\[\#0000BF\] {
+  border-color: #8f93ff;
+}
+
+.border-\[\#0000BF\]\/20 {
+  border-color: #c8ccff;
+}
+
+.border-\[\#0000BF\]\/30,
+.border-\[\#0000BF\]\/35,
+.border-\[\#0000BF\]\/40 {
+  border-color: #b8bcff;
+}
+
+.bg-\[\#0000BF\]\/10,
+.bg-\[\#0000BF\]\/12 {
+  background-color: #ecebff;
+}
+
+.bg-\[\#0000BF\]\/\[0\.03\],
+.bg-\[\#0000BF\]\/\[0\.04\],
+.bg-\[\#0000BF\]\/5 {
+  background-color: #f4f3ff;
+}
+
+.from-\[\#0000BF\]\/\[0\.04\] {
+  --tw-gradient-from: #f4f3ff var(--tw-gradient-from-position);
+}
+
+.shadow-\[\#0000BF\]\/20,
+.shadow-\[\#0000BF\]\/25 {
+  --tw-shadow-color: rgba(109, 92, 233, 0.28);
+  --tw-shadow: var(--tw-shadow-colored);
+}

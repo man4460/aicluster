@@ -1,0 +1,11 @@
+---
+description: โมดูลย่อยใต้แดชบอร์ด — ห้ามซ้ำ MAWELL / โลโก้ / หัวบริษัท
+alwaysApply: true
+---
+
+# Module chrome under dashboard
+
+เมื่อสร้างหรือแก้ **ระบบ/โมดูลย่อย** ที่อยู่ภายใต้ `(dashboard)` และมี `DashboardShell` หรือ header หลักของแอปอยู่แล้ว:
+
+- **ห้าม** ใส่ `MawellLogo` หรือแถบแบรนด์ซ้ำ (MAWELL, หจก.มาเวล, wordmark) ใน layout/header เฉพาะโมดูล
+- ให้เหลือเฉพาะเมนู/เนื้อหาของโมดูลนั้น — แบรนด์อยู่ที่ shell หลักพอแล้ว

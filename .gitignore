@@ -1,62 +1,53 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Root repo � paths relative to Buffe App
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+# Web app (sync with web/.gitignore)
+web/node_modules/
+web/.pnp
+web/.pnp.*
+web/.yarn/*
+!web/.yarn/patches
+!web/.yarn/plugins
+!web/.yarn/releases
+!web/.yarn/versions
+web/coverage/
+web/.next/
+web/out/
+web/build/
+web/*.pem
+web/npm-debug.log*
+web/yarn-debug.log*
+web/yarn-error.log*
+web/.pnpm-debug.log*
 
 # env files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-!.env.example
+web/.env
+web/.env.local
+web/.env.development.local
+web/.env.test.local
+web/.env.production.local
+!web/.env.example
 
 # local databases
-*.db
-*.db-journal
+web/*.db
+web/*.db-journal
 
-# user uploads (เก็บโฟลเดอร์ว่างใน repo)
-/public/uploads/avatars/*
-!/public/uploads/avatars/.gitkeep
-/public/uploads/dorm-logos/*
-!/public/uploads/dorm-logos/.gitkeep
-/public/uploads/dorm-payment-proofs/*
-!/public/uploads/dorm-payment-proofs/.gitkeep
-/public/uploads/attendance-faces/*
-!/public/uploads/attendance-faces/.gitkeep
+# uploads (keep .gitkeep)
+web/public/uploads/avatars/*
+!web/public/uploads/avatars/.gitkeep
+web/public/uploads/dorm-logos/*
+!web/public/uploads/dorm-logos/.gitkeep
+web/public/uploads/dorm-payment-proofs/*
+!web/public/uploads/dorm-payment-proofs/.gitkeep
+web/public/uploads/attendance-faces/*
+!web/public/uploads/attendance-faces/.gitkeep
+web/public/uploads/village-slips/*
+!web/public/uploads/village-slips/.gitkeep
 
-# vercel
-.vercel
+# vercel/typescript/generated
+web/.vercel
+web/*.tsbuildinfo
+web/next-env.d.ts
+web/src/generated/prisma
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-/src/generated/prisma
+# OS
+.DS_Store
