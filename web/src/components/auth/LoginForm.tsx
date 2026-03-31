@@ -5,6 +5,7 @@ import { useState } from "react";
 import { AuthCard, AuthFooterLink } from "@/components/auth/AuthCard";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
+import { MawellLogo } from "@/components/layout/MawellLogo";
 import { cn } from "@/lib/cn";
 
 export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }) {
@@ -50,6 +51,9 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
 
   return (
     <AuthCard title="เข้าสู่ระบบ">
+      <div className="mb-5 flex justify-start">
+        <MawellLogo size="md" />
+      </div>
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
           <label htmlFor="identifier" className="mb-1 block text-sm font-medium text-slate-700">

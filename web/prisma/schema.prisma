@@ -57,6 +57,7 @@ model User {
   lastDormitoryTokenDate   DateTime?        @map("last_dormitory_token_date") @db.Date
   lastBarberTokenDate      DateTime?        @map("last_barber_token_date") @db.Date
   lastAttendanceTokenDate  DateTime?        @map("last_attendance_token_date") @db.Date
+  lastVillageTokenDate     DateTime?        @map("last_village_token_date") @db.Date
   /** ถ้ามี = พนักงานใต้เจ้าของ — ใช้สิทธิ์/โทเคนของ employer */
   employerUserId           String?          @map("employer_user_id") @db.VarChar(191)
   employer                 User?            @relation("EmployerStaff", fields: [employerUserId], references: [id], onDelete: SetNull)
@@ -106,6 +107,10 @@ model User {
   buildingPosCategories    BuildingPosCategory[]
   buildingPosMenuItems     BuildingPosMenuItem[]
   buildingPosOrders        BuildingPosOrder[]
+  villageProfiles           VillageProfile[]           @relation("VillageProfileToUser")
+  villageHouses             VillageHouse[]             @relation("VillageHouseToUser")
+  villageCommonFeeRows      VillageCommonFeeRow[]      @relation("VillageFeeRowToUser")
+  villageSlipSubmissions    VillageSlipSubmission[]    @relation("VillageSlipToUser")
   trialSessions            TrialSession[]
 
   @@index([employerUserId])
@@ -1002,6 +1007,132 @@ model BuildingPosOrder {
   @@index([ownerUserId, trialSessionId, createdAt], map: "bpos_order_owner_trial_created_idx")
   @@index([ownerUserId], map: "bpos_order_owner_idx")
   @@map("building_pos_orders")
+}
+
+enum VillageFeeRowStatus {
+  PENDING
+  PARTIAL
+  PAID
+  WAIVED
+}
+
+enum VillageSlipStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/** โปรไฟล์หมู่บ้าน / นิติ — ตั้งค่าค่าส่วนกลางเริ่มต้น */
+model VillageProfile {
+  id                   Int      @id @default(autoincrement())
+  ownerUserId          String   @map("owner_id") @db.VarChar(191)
+  owner                User     @relation("VillageProfileToUser", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId       String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  displayName          String?  @map("display_name") @db.VarChar(200)
+  address              String?  @db.Text
+  contactPhone         String?  @map("contact_phone") @db.VarChar(32)
+  promptPayPhone       String?  @map("prompt_pay_phone") @db.VarChar(20)
+  paymentChannelsNote  String?  @map("payment_channels_note") @db.Text
+  /** ค่าส่วนกลางมาตรฐานต่อเดือน (บาท) */
+  defaultMonthlyFee    Int      @default(0) @map("default_monthly_fee")
+  /** วันครบกำหนดชำระของแต่ละเดือน (1–28) */
+  dueDayOfMonth        Int      @default(5) @map("due_day_of_month")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId], map: "vprof_owner_trial_uniq")
+  @@index([ownerUserId], map: "vprof_owner_idx")
+  @@map("village_profiles")
+}
+
+/** แปลง/บ้านในโครงการ */
+model VillageHouse {
+  id                   Int      @id @default(autoincrement())
+  ownerUserId          String   @map("owner_id") @db.VarChar(191)
+  owner                User     @relation("VillageHouseToUser", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId       String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  houseNo              String   @map("house_no") @db.VarChar(40)
+  plotLabel            String?  @map("plot_label") @db.VarChar(80)
+  ownerName            String?  @map("owner_name") @db.VarChar(200)
+  phone                String?  @db.VarChar(32)
+  /** null = ใช้ defaultMonthlyFee จากโปรไฟล์ */
+  monthlyFeeOverride   Int?     @map("monthly_fee_override")
+  isActive             Boolean  @default(true) @map("is_active")
+  sortOrder            Int      @default(0) @map("sort_order")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  residents            VillageResident[]
+  feeRows              VillageCommonFeeRow[]
+  slips                VillageSlipSubmission[]
+
+  @@unique([ownerUserId, trialSessionId, houseNo], map: "vhouse_owner_trial_no_uniq")
+  @@index([ownerUserId, trialSessionId, sortOrder], map: "vhouse_owner_trial_sort_idx")
+  @@index([ownerUserId], map: "vhouse_owner_idx")
+  @@map("village_houses")
+}
+
+model VillageResident {
+  id        Int          @id @default(autoincrement())
+  houseId   Int          @map("house_id")
+  house     VillageHouse @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  name      String       @db.VarChar(120)
+  phone     String?      @db.VarChar(32)
+  note      String?      @db.VarChar(200)
+  isPrimary Boolean      @default(false) @map("is_primary")
+  isActive  Boolean      @default(true) @map("is_active")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  @@index([houseId], map: "vres_house_idx")
+  @@map("village_residents")
+}
+
+/** ค่าส่วนกลางรายบ้านต่อเดือน (YYYY-MM) */
+model VillageCommonFeeRow {
+  id             Int                  @id @default(autoincrement())
+  ownerUserId    String               @map("owner_id") @db.VarChar(191)
+  owner          User                 @relation("VillageFeeRowToUser", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String               @default("prod") @map("trial_session_id") @db.VarChar(36)
+  houseId        Int                  @map("house_id")
+  house          VillageHouse         @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  yearMonth      String               @map("year_month") @db.VarChar(7)
+  amountDue      Int                  @map("amount_due")
+  amountPaid     Int                  @default(0) @map("amount_paid")
+  status         VillageFeeRowStatus  @default(PENDING) @map("status")
+  note           String?              @db.VarChar(500)
+  paidAt         DateTime?            @map("paid_at")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  slips          VillageSlipSubmission[]
+
+  @@unique([ownerUserId, trialSessionId, houseId, yearMonth], map: "vfee_owner_trial_house_ym_uniq")
+  @@index([ownerUserId, trialSessionId, yearMonth], map: "vfee_owner_trial_ym_idx")
+  @@index([ownerUserId], map: "vfee_owner_idx")
+  @@map("village_common_fee_rows")
+}
+
+/** สลิปโอน — รอตรวจ / อนุมัติ */
+model VillageSlipSubmission {
+  id             Int                  @id @default(autoincrement())
+  ownerUserId    String               @map("owner_id") @db.VarChar(191)
+  owner          User                 @relation("VillageSlipToUser", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String               @default("prod") @map("trial_session_id") @db.VarChar(36)
+  houseId        Int                  @map("house_id")
+  house          VillageHouse         @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  feeRowId       Int?                 @map("fee_row_id")
+  feeRow         VillageCommonFeeRow? @relation(fields: [feeRowId], references: [id], onDelete: SetNull)
+  yearMonth      String               @map("year_month") @db.VarChar(7)
+  amount         Int
+  slipImageUrl   String               @map("slip_image_url") @db.VarChar(512)
+  status         VillageSlipStatus    @default(PENDING) @map("status")
+  reviewerNote   String?              @map("reviewer_note") @db.VarChar(500)
+  submittedAt    DateTime             @default(now()) @map("submitted_at")
+  reviewedAt     DateTime?            @map("reviewed_at")
+
+  @@index([ownerUserId, trialSessionId, status], map: "vslip_owner_trial_status_idx")
+  @@index([ownerUserId, trialSessionId, yearMonth], map: "vslip_owner_trial_ym_idx")
+  @@index([feeRowId], map: "vslip_fee_row_idx")
+  @@map("village_slip_submissions")
 }
 
 /** Log กลางทั้งระบบ (immutable) สำหรับตรวจสอบการจัดการข้อมูล */
