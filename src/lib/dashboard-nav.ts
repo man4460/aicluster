@@ -3,9 +3,13 @@ export type DashboardNavRole = "USER" | "ADMIN";
 export type DashboardNavGroupId = "basic" | "services";
 
 import {
+  CAR_WASH_MODULE_SLUG,
   BARBER_MODULE_SLUG,
+  BUILDING_POS_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   HOME_FINANCE_BASIC_MODULE_SLUG,
+  MQTT_SERVICE_MODULE_SLUG,
+  VILLAGE_MODULE_SLUG,
 } from "@/lib/modules/config";
 
 export type DashboardNavItem = {
@@ -18,6 +22,10 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === DORMITORY_MODULE_SLUG) return "/dashboard/dormitory";
   if (slug === BARBER_MODULE_SLUG) return "/dashboard/barber";
   if (slug === HOME_FINANCE_BASIC_MODULE_SLUG) return "/dashboard/home-finance";
+  if (slug === CAR_WASH_MODULE_SLUG) return "/dashboard/car-wash";
+  if (slug === MQTT_SERVICE_MODULE_SLUG) return "/dashboard/mqtt-service";
+  if (slug === BUILDING_POS_MODULE_SLUG) return "/dashboard/building-pos";
+  if (slug === VILLAGE_MODULE_SLUG) return "/dashboard/village";
   return `/dashboard/modules/${slug}`;
 }
 

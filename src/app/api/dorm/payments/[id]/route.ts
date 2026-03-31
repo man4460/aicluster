@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { writeSystemActivityLog } from "@/lib/audit-log";
@@ -47,13 +48,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const parsed = patchSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
-  const data: {
-    amountToPay?: unknown;
-    note?: string | null;
-    paymentStatus?: "PENDING" | "PAID" | "OVERDUE";
-    paidAt?: Date | null;
-    receiptNumber?: string | null;
-  } = {};
+  const data: Prisma.SplitBillPaymentUpdateInput = {};
 
   if (parsed.data.amountToPay !== undefined) {
     data.amountToPay = parsed.data.amountToPay;

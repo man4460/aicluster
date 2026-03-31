@@ -101,6 +101,21 @@ async function main() {
       sortOrder: 17,
     },
     {
+      slug: "car-wash",
+      title: "ระบบจัดการคาร์แคร์",
+      description: "กลุ่ม 1 (Basic) — แพ็กเกจบริการ บันทึกเข้ารับบริการ และติดตามร้องเรียน",
+      groupId: 1,
+      sortOrder: 18,
+    },
+    {
+      slug: "village",
+      title: "ระบบจัดการหมู่บ้าน",
+      description:
+        "กลุ่ม 1 (Basic) — ลูกบ้าน ค่าส่วนกลางรายบ้าน ตรวจสลิป สรุปรายปี รายงาน Excel",
+      groupId: 1,
+      sortOrder: 19,
+    },
+    {
       slug: "stock-management",
       title: "ระบบจัดการสต็อกสินค้า",
       description: "กลุ่ม 2 (Silver)",

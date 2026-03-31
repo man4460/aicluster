@@ -1,10 +1,21 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
-import { DORMITORY_MODULE_SLUG, BARBER_MODULE_SLUG } from "@/lib/modules/config";
+import {
+  ATTENDANCE_MODULE_SLUG,
+  BARBER_MODULE_SLUG,
+  BUILDING_POS_MODULE_SLUG,
+  CAR_WASH_MODULE_SLUG,
+  DORMITORY_MODULE_SLUG,
+  VILLAGE_MODULE_SLUG,
+} from "@/lib/modules/config";
 import { TRIAL_PROD_SCOPE, trialSessionDaysDefault } from "./constants";
-import { seedDormitoryTrialData } from "./seed-dorm";
+import { seedAttendanceTrialData } from "./seed-attendance";
 import { seedBarberTrialData } from "./seed-barber";
+import { seedBuildingPosTrialData } from "./seed-building-pos";
+import { seedCarWashTrialData } from "./seed-car-wash";
+import { seedDormitoryTrialData } from "./seed-dorm";
+import { seedVillageTrialData } from "./seed-village";
 
 type Tx = Omit<
   PrismaClient,
@@ -13,6 +24,29 @@ type Tx = Omit<
 
 async function deleteSandboxRowsInTx(tx: Tx, ownerUserId: string, trialSessionId: string): Promise<void> {
   if (!trialSessionId || trialSessionId === TRIAL_PROD_SCOPE) return;
+  await tx.villageSlipSubmission.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.villageCommonFeeRow.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.villageResident.deleteMany({
+    where: { house: { ownerUserId, trialSessionId } },
+  });
+  await tx.villageHouse.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.villageProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.buildingPosOrder.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.buildingPosMenuItem.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.buildingPosCategory.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.attendanceLog.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.attendanceRosterEntry.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.attendanceLocation.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.attendanceSettings.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.carWashVisit.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.carWashBundle.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.carWashComplaint.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.carWashPackage.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.mqttClientSessionLog.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.mqttMessageStatDaily.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.mqttAclRule.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.mqttCredential.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.mqttTenantProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.barberServiceLog.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.barberBooking.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.barberCustomerSubscription.deleteMany({ where: { ownerUserId, trialSessionId } });
@@ -111,6 +145,14 @@ export async function startTrial(userId: string, moduleId: string): Promise<void
       await seedDormitoryTrialData(tx, userId, session.id);
     } else if (mod.slug === BARBER_MODULE_SLUG) {
       await seedBarberTrialData(tx, userId, session.id);
+    } else if (mod.slug === ATTENDANCE_MODULE_SLUG) {
+      await seedAttendanceTrialData(tx, userId, session.id);
+    } else if (mod.slug === BUILDING_POS_MODULE_SLUG) {
+      await seedBuildingPosTrialData(tx, userId, session.id);
+    } else if (mod.slug === CAR_WASH_MODULE_SLUG) {
+      await seedCarWashTrialData(tx, userId, session.id);
+    } else if (mod.slug === VILLAGE_MODULE_SLUG) {
+      await seedVillageTrialData(tx, userId, session.id);
     }
   });
 }

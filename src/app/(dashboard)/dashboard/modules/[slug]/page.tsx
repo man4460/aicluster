@@ -4,8 +4,10 @@ import { PageHeader } from "@/components/ui/page-container";
 import {
   ATTENDANCE_MODULE_SLUG,
   BARBER_MODULE_SLUG,
+  BUILDING_POS_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   HOME_FINANCE_BASIC_MODULE_SLUG,
+  MQTT_SERVICE_MODULE_SLUG,
   MODULE_GROUP_TIER_NAME,
 } from "@/lib/modules/config";
 import { requireModulePage } from "@/lib/modules/guard";
@@ -25,6 +27,12 @@ export default async function ModuleEntryPage({ params }: Props) {
   }
   if (slug === HOME_FINANCE_BASIC_MODULE_SLUG) {
     redirect("/dashboard/home-finance");
+  }
+  if (slug === MQTT_SERVICE_MODULE_SLUG) {
+    redirect("/dashboard/mqtt-service");
+  }
+  if (slug === BUILDING_POS_MODULE_SLUG) {
+    redirect("/dashboard/building-pos");
   }
   const { module: mod } = await requireModulePage(slug);
 

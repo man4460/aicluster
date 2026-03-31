@@ -57,7 +57,7 @@ export default async function AttendanceQrPage() {
                 ownerId={session.sub}
                 sandboxTrialSessionId={scope.isTrialSandbox ? scope.trialSessionId : null}
                 orgLabel={orgLabel}
-                logoUrl={profile?.logoUrl ?? null}
+                logoUrl={profile?.logoUrl?.trim() || null}
                 baseUrl={baseUrl}
                 locationId={loc.id}
                 locationName={loc.name}

@@ -1,9 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
+import {
+  createShopQrPosterCanvas,
+  createShopQrPosterDataUrl,
+  downloadPosterPdf,
+  downloadPosterPng,
+  resolveAssetUrl,
+} from "@/components/qr/shop-qr-template";
 
 type Props = {
   ownerId: string;
@@ -16,14 +21,6 @@ type Props = {
   locationId?: number | null;
   locationName?: string | null;
 };
-
-function absoluteAssetUrl(relativeOrAbsolute: string, baseUrl: string): string {
-  const u = relativeOrAbsolute.trim();
-  if (u.startsWith("http://") || u.startsWith("https://")) return u;
-  const base = baseUrl.replace(/\/$/, "");
-  if (u.startsWith("/")) return `${base}${u}`;
-  return u;
-}
 
 export function AttendanceQrPosterClient({
   ownerId,
@@ -64,16 +61,19 @@ export function AttendanceQrPosterClient({
 
   const logoSrc = useMemo(() => {
     if (!logoUrl?.trim()) return null;
-    const u = logoUrl.trim();
-    if (u.startsWith("http://") || u.startsWith("https://")) return u;
-    if (effectiveBaseUrl) {
-      return absoluteAssetUrl(u, effectiveBaseUrl);
+    const raw = logoUrl.trim();
+    if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+    // Prefer current browser origin first so protected assets can be loaded with current session/cookies.
+    if (clientOrigin.startsWith("http://") || clientOrigin.startsWith("https://")) {
+      return resolveAssetUrl(raw, clientOrigin) ?? resolveAssetUrl(raw, effectiveBaseUrl);
     }
-    return u.startsWith("/") ? u : `/${u}`;
-  }, [logoUrl, effectiveBaseUrl]);
+    return resolveAssetUrl(raw, effectiveBaseUrl);
+  }, [logoUrl, clientOrigin, effectiveBaseUrl]);
+  const headline = orgLabel.trim() || "เช็คชื่อเข้างาน";
+  const subLocation = locationName?.trim() || null;
 
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const posterRef = useRef<HTMLDivElement>(null);
+  const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copyDone, setCopyDone] = useState(false);
   const [copyErr, setCopyErr] = useState(false);
@@ -102,61 +102,63 @@ export function AttendanceQrPosterClient({
       .catch(() => setQrDataUrl(null));
   }, [checkInUrl]);
 
-  async function capturePosterCanvas() {
-    const el = posterRef.current;
-    if (!el) throw new Error("no poster");
-    return html2canvas(el, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: false,
-      backgroundColor: "#ffffff",
-      logging: false,
-    });
-  }
+  useEffect(() => {
+    if (!qrDataUrl) {
+      setPosterPreviewUrl(null);
+      return;
+    }
+    let cancelled = false;
+    void createShopQrPosterDataUrl({
+      qrDataUrl,
+      shopLabel: headline,
+      logoUrl: logoSrc,
+      tagline: "สแกนเพื่อเช็คชื่อเข้า-ออกงาน",
+      subtitle: subLocation ? `จุดเช็ค: ${subLocation}` : "เปิด GPS · เลือกประเภทผู้เช็ค · ยืนยันเบอร์โทร",
+    })
+      .then((url) => {
+        if (!cancelled) setPosterPreviewUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setPosterPreviewUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [qrDataUrl, headline, logoSrc, subLocation]);
 
   async function downloadPng() {
-    if (!checkInUrl) return;
+    if (!checkInUrl || !qrDataUrl) return;
     setBusy(true);
     try {
-      const canvas = await capturePosterCanvas();
-      const a = document.createElement("a");
-      a.href = canvas.toDataURL("image/png");
-      a.download = `qr-check-in-${ownerId.slice(0, 8)}.png`;
-      a.click();
+      const canvas = await createShopQrPosterCanvas({
+        qrDataUrl,
+        shopLabel: headline,
+        logoUrl: logoSrc,
+        tagline: "สแกนเพื่อเช็คชื่อเข้า-ออกงาน",
+        subtitle: subLocation ? `จุดเช็ค: ${subLocation}` : "เปิด GPS · เลือกประเภทผู้เช็ค · ยืนยันเบอร์โทร",
+      });
+      await downloadPosterPng(canvas, `qr-check-in-${ownerId.slice(0, 8)}.png`);
     } finally {
       setBusy(false);
     }
   }
 
   async function downloadPdf(format: "a4" | "a5") {
-    if (!checkInUrl) return;
+    if (!checkInUrl || !qrDataUrl) return;
     setBusy(true);
     try {
-      const canvas = await capturePosterCanvas();
-      const imgData = canvas.toDataURL("image/png");
-      const orientation = "portrait";
-      const pdf = new jsPDF({ orientation, unit: "mm", format });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const pxW = canvas.width;
-      const pxH = canvas.height;
-      let mmW = pageW;
-      let mmH = (pxH * mmW) / pxW;
-      if (mmH > pageH) {
-        mmH = pageH;
-        mmW = (pxW * mmH) / pxH;
-      }
-      const x = (pageW - mmW) / 2;
-      const y = (pageH - mmH) / 2;
-      pdf.addImage(imgData, "PNG", x, y, mmW, mmH);
-      pdf.save(`qr-check-in-${format}-${ownerId.slice(0, 8)}.pdf`);
+      const canvas = await createShopQrPosterCanvas({
+        qrDataUrl,
+        shopLabel: headline,
+        logoUrl: logoSrc,
+        tagline: "สแกนเพื่อเช็คชื่อเข้า-ออกงาน",
+        subtitle: subLocation ? `จุดเช็ค: ${subLocation}` : "เปิด GPS · เลือกประเภทผู้เช็ค · ยืนยันเบอร์โทร",
+      });
+      await downloadPosterPdf(canvas, `qr-check-in-${format}-${ownerId.slice(0, 8)}.pdf`, format);
     } finally {
       setBusy(false);
     }
   }
-
-  const headline = orgLabel.trim() || "เช็คชื่อเข้างาน";
-  const subLocation = locationName?.trim() || null;
 
   return (
     <div className="space-y-6">
@@ -219,49 +221,14 @@ export function AttendanceQrPosterClient({
       </p>
 
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100 p-6">
-        <div
-          ref={posterRef}
-          className="mx-auto w-[340px] rounded-[28px] border-[3px] border-[#0000BF]/35 bg-white shadow-md"
-          style={{ fontFamily: "inherit" }}
-        >
-          <div className="flex flex-col items-center px-7 pb-10 pt-9">
-            {logoSrc ? (
-              <div className="flex h-[88px] w-full max-w-[280px] items-center justify-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={logoSrc} alt="" className="max-h-[88px] max-w-full object-contain" />
-              </div>
-            ) : (
-              <h1 className="text-center text-[20px] font-black leading-tight tracking-tight text-slate-900">
-                {headline}
-              </h1>
-            )}
-
-            <p className="mt-8 text-center text-[14px] font-bold leading-snug text-slate-800">
-              สแกนเพื่อเช็คชื่อเข้า-ออกงาน
-            </p>
-            {subLocation ? (
-              <p className="mt-2 text-center text-[12px] font-semibold text-[#0000BF]">{subLocation}</p>
-            ) : null}
-            <p className="mt-2 text-center text-[12px] leading-snug text-slate-600">
-              เปิด GPS · เลือกประเภทผู้เช็ค · ยืนยันเบอร์โทร
-            </p>
-
-            <div className="mt-7 rounded-2xl border-2 border-slate-200 bg-white p-3">
-              {qrDataUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={qrDataUrl} alt="QR" width={232} height={232} className="h-[232px] w-[232px]" />
-              ) : (
-                <div className="flex h-[232px] w-[232px] items-center justify-center bg-slate-50 text-xs text-slate-400">
-                  กำลังสร้าง QR…
-                </div>
-              )}
-            </div>
-
-            {logoSrc && orgLabel.trim() ? (
-              <p className="mt-7 text-center text-[13px] font-medium text-slate-500">{orgLabel.trim()}</p>
-            ) : null}
+        {posterPreviewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={posterPreviewUrl} alt="ตัวอย่างโปสเตอร์ QR เช็คชื่อ" className="mx-auto w-[340px] rounded-3xl shadow-md" />
+        ) : (
+          <div className="mx-auto flex h-[560px] w-[340px] items-center justify-center rounded-3xl border border-slate-300 bg-white text-xs text-slate-500">
+            กำลังเรนเดอร์ตัวอย่าง...
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
+import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
+import {
+  createShopQrPosterCanvas,
+  createShopQrPosterDataUrl,
+  downloadPosterPdf,
+  downloadPosterPng,
+  resolveAssetUrl,
+} from "@/components/qr/shop-qr-template";
 
 type Props = {
   ownerId: string;
@@ -13,14 +18,6 @@ type Props = {
   /** โหมดทดลอง — ปิดดาวน์โหลด PDF/PNG */
   trialExportBlocked?: boolean;
 };
-
-function absoluteAssetUrl(relativeOrAbsolute: string, baseUrl: string): string {
-  const u = relativeOrAbsolute.trim();
-  if (u.startsWith("http://") || u.startsWith("https://")) return u;
-  const base = baseUrl.replace(/\/$/, "");
-  if (u.startsWith("/")) return `${base}${u}`;
-  return u;
-}
 
 export function BarberQrPosterClient({
   ownerId,
@@ -33,18 +30,11 @@ export function BarberQrPosterClient({
     baseUrl.startsWith("http://") || baseUrl.startsWith("https://")
       ? `${baseUrl.replace(/\/$/, "")}/m/${ownerId}`
       : "";
-  const logoSrc = useMemo(() => {
-    if (!logoUrl?.trim()) return null;
-    const u = logoUrl.trim();
-    if (u.startsWith("http://") || u.startsWith("https://")) return u;
-    if (baseUrl.startsWith("http://") || baseUrl.startsWith("https://")) {
-      return absoluteAssetUrl(u, baseUrl);
-    }
-    return u.startsWith("/") ? u : `/${u}`;
-  }, [logoUrl, baseUrl]);
+  const headline = shopLabel.trim() || "ร้านตัดผม";
+  const logoSrc = useMemo(() => resolveAssetUrl(logoUrl, baseUrl), [logoUrl, baseUrl]);
 
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const posterRef = useRef<HTMLDivElement>(null);
+  const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -59,60 +49,60 @@ export function BarberQrPosterClient({
       .catch(() => setQrDataUrl(null));
   }, [portalUrl]);
 
-  async function capturePosterCanvas() {
-    const el = posterRef.current;
-    if (!el) throw new Error("no poster");
-    return html2canvas(el, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: false,
-      backgroundColor: "#ffffff",
-      logging: false,
-    });
-  }
+  useEffect(() => {
+    if (!qrDataUrl) {
+      setPosterPreviewUrl(null);
+      return;
+    }
+    let cancelled = false;
+    void createShopQrPosterDataUrl({
+      qrDataUrl,
+      shopLabel: headline,
+      logoUrl: logoSrc,
+      tagline: "สแกน กรอกเบอร์ ยืนยันใช้บริการ — หักสิทธิ์อัตโนมัติ",
+    })
+      .then((url) => {
+        if (!cancelled) setPosterPreviewUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setPosterPreviewUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [qrDataUrl, headline, logoSrc]);
 
   async function downloadPng() {
-    if (!portalUrl || trialExportBlocked) return;
+    if (!portalUrl || trialExportBlocked || !qrDataUrl) return;
     setBusy(true);
     try {
-      const canvas = await capturePosterCanvas();
-      const a = document.createElement("a");
-      a.href = canvas.toDataURL("image/png");
-      a.download = `qr-store-${ownerId.slice(0, 8)}.png`;
-      a.click();
+      const canvas = await createShopQrPosterCanvas({
+        qrDataUrl,
+        shopLabel: headline,
+        logoUrl: logoSrc,
+        tagline: "สแกน กรอกเบอร์ ยืนยันใช้บริการ — หักสิทธิ์อัตโนมัติ",
+      });
+      await downloadPosterPng(canvas, `qr-store-${ownerId.slice(0, 8)}.png`);
     } finally {
       setBusy(false);
     }
   }
 
   async function downloadPdf(format: "a4" | "a5") {
-    if (!portalUrl || trialExportBlocked) return;
+    if (!portalUrl || trialExportBlocked || !qrDataUrl) return;
     setBusy(true);
     try {
-      const canvas = await capturePosterCanvas();
-      const imgData = canvas.toDataURL("image/png");
-      const orientation = "portrait";
-      const pdf = new jsPDF({ orientation, unit: "mm", format });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const pxW = canvas.width;
-      const pxH = canvas.height;
-      let mmW = pageW;
-      let mmH = (pxH * mmW) / pxW;
-      if (mmH > pageH) {
-        mmH = pageH;
-        mmW = (pxW * mmH) / pxH;
-      }
-      const x = (pageW - mmW) / 2;
-      const y = (pageH - mmH) / 2;
-      pdf.addImage(imgData, "PNG", x, y, mmW, mmH);
-      pdf.save(`qr-poster-${format}-${ownerId.slice(0, 8)}.pdf`);
+      const canvas = await createShopQrPosterCanvas({
+        qrDataUrl,
+        shopLabel: headline,
+        logoUrl: logoSrc,
+        tagline: "สแกน กรอกเบอร์ ยืนยันใช้บริการ — หักสิทธิ์อัตโนมัติ",
+      });
+      await downloadPosterPdf(canvas, `qr-poster-${format}-${ownerId.slice(0, 8)}.pdf`, format);
     } finally {
       setBusy(false);
     }
   }
-
-  const headline = shopLabel.trim() || "ร้านตัดผม";
 
   return (
     <div className="space-y-6">
@@ -164,43 +154,14 @@ export function BarberQrPosterClient({
       </p>
 
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100 p-6">
-        <div
-          ref={posterRef}
-          className="mx-auto w-[340px] rounded-[28px] border-[3px] border-[#0000BF]/35 bg-white shadow-md"
-          style={{ fontFamily: "inherit" }}
-        >
-          <div className="flex flex-col items-center px-7 pb-10 pt-9">
-            {logoSrc ? (
-              <div className="flex h-[88px] w-full max-w-[280px] items-center justify-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={logoSrc} alt="" className="max-h-[88px] max-w-full object-contain" />
-              </div>
-            ) : (
-              <h1 className="text-center text-[22px] font-black leading-tight tracking-tight text-slate-900">
-                {headline}
-              </h1>
-            )}
-
-            <p className="mt-8 text-center text-[15px] font-bold leading-snug text-slate-800">
-              สแกน กรอกเบอร์ ยืนยันใช้บริการ — หักสิทธิ์อัตโนมัติ
-            </p>
-
-            <div className="mt-9 rounded-2xl border-2 border-slate-200 bg-white p-3">
-              {qrDataUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={qrDataUrl} alt="QR" width={232} height={232} className="h-[232px] w-[232px]" />
-              ) : (
-                <div className="flex h-[232px] w-[232px] items-center justify-center bg-slate-50 text-xs text-slate-400">
-                  กำลังสร้าง QR…
-                </div>
-              )}
-            </div>
-
-            {logoSrc && shopLabel.trim() ? (
-              <p className="mt-8 text-center text-[13px] font-medium text-slate-500">{shopLabel.trim()}</p>
-            ) : null}
+        {posterPreviewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={posterPreviewUrl} alt="ตัวอย่างโปสเตอร์ QR ร้านตัดผม" className="mx-auto w-[340px] rounded-3xl shadow-md" />
+        ) : (
+          <div className="mx-auto flex h-[560px] w-[340px] items-center justify-center rounded-3xl border border-slate-300 bg-white text-xs text-slate-500">
+            กำลังเรนเดอร์ตัวอย่าง...
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

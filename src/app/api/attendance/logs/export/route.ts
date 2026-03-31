@@ -16,6 +16,8 @@ export async function GET(req: Request) {
   const ctx = await getModuleBillingContext(auth.session.sub);
   if (!ctx || ctx.isStaff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  const scope = await getAttendanceDataScope(ctx.billingUserId);
+
   const { searchParams } = new URL(req.url);
   const fromKey = searchParams.get("from")?.trim();
   const toKey = searchParams.get("to")?.trim();

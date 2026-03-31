@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
@@ -62,27 +63,28 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (parsed.data.dueDate && !dueDate) return NextResponse.json({ error: "วันครบกำหนดไม่ถูกต้อง" }, { status: 400 });
   if (parsed.data.entryDate && !entryDate) return NextResponse.json({ error: "วันที่รายการไม่ถูกต้อง" }, { status: 400 });
 
+  const data: Prisma.HomeFinanceEntryUpdateInput = {};
+  if (parsed.data.entryDate !== undefined && entryDate != null) data.entryDate = entryDate;
+  if (parsed.data.type !== undefined) data.type = parsed.data.type;
+  if (parsed.data.categoryKey !== undefined) data.categoryKey = parsed.data.categoryKey;
+  if (parsed.data.categoryLabel !== undefined) {
+    data.categoryLabel = parsed.data.categoryLabel.trim().slice(0, 100);
+  }
+  if (parsed.data.title !== undefined) data.title = parsed.data.title.trim();
+  if (parsed.data.amount !== undefined) data.amount = parsed.data.amount;
+  if (parsed.data.dueDate !== undefined) data.dueDate = dueDate;
+  if (parsed.data.billNumber !== undefined) data.billNumber = parsed.data.billNumber?.trim() || null;
+  if (parsed.data.serviceCenter !== undefined) {
+    data.serviceCenter = parsed.data.serviceCenter?.trim() || null;
+  }
+  if (parsed.data.paymentMethod !== undefined) {
+    data.paymentMethod = parsed.data.paymentMethod?.trim() || null;
+  }
+  if (parsed.data.note !== undefined) data.note = parsed.data.note?.trim() || null;
+
   await prisma.homeFinanceEntry.update({
     where: { id },
-    data: {
-      ...(parsed.data.entryDate !== undefined ? { entryDate } : {}),
-      ...(parsed.data.type !== undefined ? { type: parsed.data.type } : {}),
-      ...(parsed.data.categoryKey !== undefined ? { categoryKey: parsed.data.categoryKey } : {}),
-      ...(parsed.data.categoryLabel !== undefined
-        ? { categoryLabel: parsed.data.categoryLabel.trim().slice(0, 100) }
-        : {}),
-      ...(parsed.data.title !== undefined ? { title: parsed.data.title.trim() } : {}),
-      ...(parsed.data.amount !== undefined ? { amount: parsed.data.amount } : {}),
-      ...(parsed.data.dueDate !== undefined ? { dueDate } : {}),
-      ...(parsed.data.billNumber !== undefined ? { billNumber: parsed.data.billNumber?.trim() || null } : {}),
-      ...(parsed.data.serviceCenter !== undefined
-        ? { serviceCenter: parsed.data.serviceCenter?.trim() || null }
-        : {}),
-      ...(parsed.data.paymentMethod !== undefined
-        ? { paymentMethod: parsed.data.paymentMethod?.trim() || null }
-        : {}),
-      ...(parsed.data.note !== undefined ? { note: parsed.data.note?.trim() || null } : {}),
-    },
+    data,
   });
 
   await writeSystemActivityLog({

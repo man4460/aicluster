@@ -1,4 +1,5 @@
 import mqtt, { type MqttClient } from "mqtt";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { fulfillMelodyOrder } from "@/lib/payments/fulfill-melody-order";
 
@@ -180,7 +181,7 @@ class MelodyMqttBridge {
                 : null,
           melodyMeta: {
             ...prevMeta,
-            mqttLastEvent: payload,
+            mqttLastEvent: JSON.parse(JSON.stringify(payload)) as Prisma.InputJsonValue,
             mqttLastEventAt: new Date().toISOString(),
           },
         },

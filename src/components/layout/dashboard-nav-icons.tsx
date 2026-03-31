@@ -72,6 +72,19 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  if (href.startsWith("/dashboard/car-wash")) {
+    return (
+      <Svg>
+        <path
+          d="M3 14l2-5h14l2 5M6 14l1 4h10l1-4M8 9l1-3h6l1 3"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
   if (href.startsWith("/dashboard/admin")) {
     return (
       <Svg>

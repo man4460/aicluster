@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
@@ -48,16 +49,18 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const parsed = patchSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
   const dueDate = parseDateOnly(parsed.data.dueDate);
-  if (parsed.data.dueDate && !dueDate) return NextResponse.json({ error: "วันครบกำหนดไม่ถูกต้อง" }, { status: 400 });
+  const data: Prisma.HomeFinanceReminderUpdateInput = {};
+  if (parsed.data.title !== undefined) data.title = parsed.data.title;
+  if (parsed.data.dueDate !== undefined) {
+    if (!dueDate) return NextResponse.json({ error: "วันครบกำหนดไม่ถูกต้อง" }, { status: 400 });
+    data.dueDate = dueDate;
+  }
+  if (parsed.data.note !== undefined) data.note = parsed.data.note?.trim() || null;
+  if (parsed.data.isDone !== undefined) data.isDone = parsed.data.isDone;
 
   const row = await prisma.homeFinanceReminder.update({
     where: { id },
-    data: {
-      ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}),
-      ...(parsed.data.dueDate !== undefined ? { dueDate } : {}),
-      ...(parsed.data.note !== undefined ? { note: parsed.data.note?.trim() || null } : {}),
-      ...(parsed.data.isDone !== undefined ? { isDone: parsed.data.isDone } : {}),
-    },
+    data,
   });
   await writeSystemActivityLog({
     actorUserId: auth.session.sub,
