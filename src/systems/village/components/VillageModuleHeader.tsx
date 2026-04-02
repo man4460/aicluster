@@ -10,8 +10,8 @@ const links = [
   { href: "/dashboard/village/fees", label: "ค่าส่วนกลางรายบ้าน" },
   { href: "/dashboard/village/slips", label: "ตรวจสอบสลิป" },
   { href: "/dashboard/village/annual", label: "สรุปรายปี" },
-  { href: "/dashboard/village/reports", label: "รายงาน & Excel" },
-  { href: "/dashboard/village/settings", label: "การตั้งค่า" },
+  { href: "/dashboard/village/reports", label: "ส่งออก CSV" },
+  { href: "/dashboard/village/settings", label: "ตั้งค่า" },
 ] as const;
 
 export function VillageModuleHeader() {

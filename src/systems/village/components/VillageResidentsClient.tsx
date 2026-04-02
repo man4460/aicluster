@@ -4,11 +4,21 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-container";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
+import { normalizeVillageHouseNo } from "@/lib/village/house-no";
 import {
   createVillageSessionApiRepository,
+  villageFeeCycleLabelTh,
   type VillageHouse,
+  type VillageHouseFeeCycle,
   type VillageResident,
 } from "@/systems/village/village-service";
+import {
+  villageBtnPrimary,
+  villageBtnSecondary,
+  villageCard,
+  villageField,
+  villageToolbar,
+} from "@/systems/village/village-ui";
 
 export function VillageResidentsClient() {
   const api = useMemo(() => createVillageSessionApiRepository(), []);
@@ -57,38 +67,31 @@ export function VillageResidentsClient() {
   }, [houses, needle]);
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="จัดการลูกบ้าน" description="แปลง/บ้าน และสมาชิกในบ้าน — ค้นหาและส่งออกรายชื่อเป็น CSV" />
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="min-w-[200px] flex-1 text-sm">
-          <span className="text-slate-600">ค้นหา</span>
+    <div className="space-y-8">
+      <PageHeader title="ลูกบ้าน" description="แปลง บ้าน และผู้พักอาศัย — ค้นหา ส่งออก CSV และกำหนดรอบค่าส่วนกลางต่อหลัง" />
+      <div className={villageToolbar}>
+        <label className="min-w-[200px] flex-1 text-sm font-medium text-slate-700">
+          ค้นหา
           <input
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+            className={`mt-1.5 ${villageField}`}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="เลขบ้าน ชื่อ เบอร์…"
           />
         </label>
-        <a
-          href={api.exportUrl("residents")}
-          className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
-        >
-          ดาวน์โหลด CSV ลูกบ้าน
+        <a href={api.exportUrl("residents")} className={villageBtnSecondary}>
+          ดาวน์โหลด CSV
         </a>
       </div>
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="rounded-lg bg-[#0000BF] px-4 py-2 text-sm font-medium text-white hover:opacity-95"
-          onClick={() => setHouseModal({ mode: "add" })}
-        >
-          เพิ่มบ้าน / แปลง
+        <button type="button" className={villageBtnPrimary} onClick={() => setHouseModal({ mode: "add" })}>
+          เพิ่มบ้าน
         </button>
-        <button type="button" className="rounded-lg border border-slate-200 px-4 py-2 text-sm" onClick={() => void load()}>
+        <button type="button" className={villageBtnSecondary} onClick={() => void load()}>
           รีเฟรช
         </button>
-        <Link href="/dashboard/village/reports" className="rounded-lg border border-slate-200 px-4 py-2 text-sm leading-[1.25]">
-          รายงาน &amp; Excel
+        <Link href="/dashboard/village/reports" className={villageBtnSecondary}>
+          ส่งออก CSV
         </Link>
       </div>
       {err ? <p className="text-sm text-rose-600">{err}</p> : null}
@@ -100,39 +103,41 @@ export function VillageResidentsClient() {
       ) : null}
       <ul className="space-y-4">
         {filteredHouses.map((h) => (
-          <li key={h.id} className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-2">
+          <li key={h.id} className={`${villageCard} p-5`}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="font-semibold text-slate-900">
+                <p className="text-base font-semibold tracking-tight text-slate-900">
                   บ้านเลขที่ {h.house_no}
-                  {h.plot_label ? <span className="text-slate-500"> ({h.plot_label})</span> : null}
+                  {h.plot_label ? <span className="font-normal text-slate-500"> ({h.plot_label})</span> : null}
                 </p>
-                <p className="text-sm text-slate-600">
+                <p className="mt-1 text-sm text-slate-600">
                   {h.owner_name || "—"} {h.phone ? `· ${h.phone}` : ""}
                 </p>
-                <p className="text-xs text-slate-500">
-                  ค่าส่วนกลาง:{" "}
-                  {h.monthly_fee_override != null ? `${h.monthly_fee_override} บาท (กำหนดเฉพาะหลังนี้)` : "ใช้ค่ามาตรฐานจากตั้งค่า"}
+                <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                  ค่าส่วนกลาง: {villageFeeCycleLabelTh(h.fee_cycle)} ·{" "}
+                  {h.monthly_fee_override != null
+                    ? `${h.monthly_fee_override.toLocaleString("th-TH")} บาท/เดือน (เฉพาะหลังนี้)`
+                    : "อัตราต่อเดือนตามตั้งค่าโครงการ"}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium"
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:border-[#0000BF]/25"
                   onClick={() => setHouseModal({ mode: "edit", house: h })}
                 >
                   แก้ไขบ้าน
                 </button>
                 <button
                   type="button"
-                  className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium"
+                  className="rounded-xl bg-[#0000BF]/10 px-3 py-2 text-xs font-semibold text-[#0000BF] hover:bg-[#0000BF]/15"
                   onClick={() => setResidentModal({ houseId: h.id })}
                 >
                   เพิ่มลูกบ้าน
                 </button>
               </div>
             </div>
-            <ul className="mt-3 space-y-1 border-t border-slate-100 pt-3">
+            <ul className="mt-4 space-y-1 border-t border-slate-100 pt-4">
               {h.residents.length === 0 ? (
                 <li className="text-sm text-slate-500">ยังไม่มีรายชื่อในบ้านนี้</li>
               ) : (
@@ -252,6 +257,7 @@ function HouseFormModal({
   const [ownerName, setOwnerName] = useState(house?.owner_name ?? "");
   const [phone, setPhone] = useState(house?.phone ?? "");
   const [override, setOverride] = useState(house?.monthly_fee_override != null ? String(house.monthly_fee_override) : "");
+  const [feeCycle, setFeeCycle] = useState<VillageHouseFeeCycle>(house?.fee_cycle ?? "MONTHLY");
   const [busy, setBusy] = useState(false);
 
   return (
@@ -265,18 +271,19 @@ function HouseFormModal({
           cancelLabel="ยกเลิก"
           onCancel={onClose}
           submitLabel="บันทึก"
-          submitDisabled={busy || !houseNo.trim()}
+          submitDisabled={busy || !normalizeVillageHouseNo(houseNo)}
           loading={busy}
           onSubmit={async () => {
             setBusy(true);
             try {
               const ov = override.trim() === "" ? null : Number.parseInt(override, 10);
               const body = {
-                house_no: houseNo.trim(),
+                house_no: normalizeVillageHouseNo(houseNo),
                 plot_label: plot.trim() || null,
                 owner_name: ownerName.trim() || null,
                 phone: phone.trim() || null,
                 monthly_fee_override: ov != null && Number.isFinite(ov) ? ov : null,
+                fee_cycle: feeCycle,
               };
               if (mode === "add") await api.postHouse(body);
               else if (house) await api.patchHouse(house.id, body);
@@ -290,43 +297,47 @@ function HouseFormModal({
         />
       }
     >
-      <div className="space-y-3 text-sm">
+      <div className="space-y-4 text-sm">
         <label className="block">
-          <span className="text-slate-600">เลขที่บ้าน</span>
+          <span className="text-xs font-medium text-slate-600">เลขที่บ้าน</span>
           <input
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+            className={`mt-1.5 ${villageField}`}
             value={houseNo}
             onChange={(e) => setHouseNo(e.target.value)}
+            maxLength={120}
+            placeholder="เช่น 222/284"
+            autoComplete="off"
           />
+          <span className="mt-1 block text-[11px] text-slate-400">เปรียบเทียบทั้งข้อความ — สแลชแบบไทย/อังกฤษจะถูกจัดเป็นแบบเดียวกัน</span>
         </label>
         <label className="block">
-          <span className="text-slate-600">แปลง / หมายเหตุที่อยู่</span>
-          <input
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-            value={plot}
-            onChange={(e) => setPlot(e.target.value)}
-          />
+          <span className="text-xs font-medium text-slate-600">แปลง / หมายเหตุที่อยู่</span>
+          <input className={`mt-1.5 ${villageField}`} value={plot} onChange={(e) => setPlot(e.target.value)} />
         </label>
         <label className="block">
-          <span className="text-slate-600">ชื่อเจ้าบ้าน (แสดงผล)</span>
-          <input
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-            value={ownerName}
-            onChange={(e) => setOwnerName(e.target.value)}
-          />
+          <span className="text-xs font-medium text-slate-600">ชื่อเจ้าบ้าน (แสดงผล)</span>
+          <input className={`mt-1.5 ${villageField}`} value={ownerName} onChange={(e) => setOwnerName(e.target.value)} />
         </label>
         <label className="block">
-          <span className="text-slate-600">เบอร์โทร</span>
-          <input
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
+          <span className="text-xs font-medium text-slate-600">เบอร์โทร</span>
+          <input className={`mt-1.5 ${villageField}`} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" />
         </label>
         <label className="block">
-          <span className="text-slate-600">ค่าส่วนกลางเฉพาะหลัง (บาท) — เว้นว่าง = ใช้มาตรฐาน</span>
+          <span className="text-xs font-medium text-slate-600">รอบเรียกเก็บ (อัตราด้านล่าง = บาทต่อเดือน)</span>
+          <select
+            className={`mt-1.5 ${villageField}`}
+            value={feeCycle}
+            onChange={(e) => setFeeCycle(e.target.value as VillageHouseFeeCycle)}
+          >
+            <option value="MONTHLY">รายเดือน — เรียกเก็บทุกเดือนเท่ากับอัตราต่อเดือน</option>
+            <option value="SEMI_ANNUAL">รายหกเดือน — เรียกเก็บ ม.ค. และ ก.ค. (6 × อัตราต่อเดือน)</option>
+            <option value="ANNUAL">รายปี — เรียกเก็บเดือน ม.ค. เท่านั้น (12 × อัตราต่อเดือน)</option>
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-slate-600">อัตราต่อเดือนเฉพาะหลัง (บาท) — เว้นว่าง = ใช้มาตรฐาน</span>
           <input
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+            className={`mt-1.5 ${villageField}`}
             value={override}
             onChange={(e) => setOverride(e.target.value)}
             inputMode="numeric"
@@ -379,22 +390,14 @@ function ResidentFormModal({
         />
       }
     >
-      <div className="space-y-3 text-sm">
+      <div className="space-y-4 text-sm">
         <label className="block">
-          <span className="text-slate-600">ชื่อ-สกุล</span>
-          <input
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+          <span className="text-xs font-medium text-slate-600">ชื่อ-สกุล</span>
+          <input className={`mt-1.5 ${villageField}`} value={name} onChange={(e) => setName(e.target.value)} />
         </label>
         <label className="block">
-          <span className="text-slate-600">เบอร์</span>
-          <input
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
+          <span className="text-xs font-medium text-slate-600">เบอร์</span>
+          <input className={`mt-1.5 ${villageField}`} value={phone} onChange={(e) => setPhone(e.target.value)} />
         </label>
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={primary} onChange={(e) => setPrimary(e.target.checked)} />

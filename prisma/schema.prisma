@@ -112,6 +112,7 @@ model User {
   villageCommonFeeRows      VillageCommonFeeRow[]      @relation("VillageFeeRowToUser")
   villageSlipSubmissions    VillageSlipSubmission[]    @relation("VillageSlipToUser")
   trialSessions            TrialSession[]
+  parkingSites             ParkingSite[]
 
   @@index([employerUserId])
 }
@@ -1022,6 +1023,13 @@ enum VillageSlipStatus {
   REJECTED
 }
 
+/** รอบเรียกเก็บค่าส่วนกลางต่อหลัง — อัตราในระบบยังคิดเป็นบาท/เดือน แล้วคูณตามรอบ */
+enum VillageHouseFeeCycle {
+  MONTHLY
+  SEMI_ANNUAL
+  ANNUAL
+}
+
 /** โปรไฟล์หมู่บ้าน / นิติ — ตั้งค่าค่าส่วนกลางเริ่มต้น */
 model VillageProfile {
   id                   Int      @id @default(autoincrement())
@@ -1051,12 +1059,14 @@ model VillageHouse {
   ownerUserId          String   @map("owner_id") @db.VarChar(191)
   owner                User     @relation("VillageHouseToUser", fields: [ownerUserId], references: [id], onDelete: Cascade)
   trialSessionId       String   @default("prod") @map("trial_session_id") @db.VarChar(36)
-  houseNo              String   @map("house_no") @db.VarChar(40)
+  houseNo              String   @map("house_no") @db.VarChar(120)
   plotLabel            String?  @map("plot_label") @db.VarChar(80)
   ownerName            String?  @map("owner_name") @db.VarChar(200)
   phone                String?  @db.VarChar(32)
   /** null = ใช้ defaultMonthlyFee จากโปรไฟล์ */
   monthlyFeeOverride   Int?     @map("monthly_fee_override")
+  /** รายเดือน = ทุกเดือน | รายหกเดือน = ม.ค.+ก.ค. (6×อัตรา/เดือน) | รายปี = ม.ค. (12×) */
+  feeCycle             VillageHouseFeeCycle @default(MONTHLY) @map("fee_cycle")
   isActive             Boolean  @default(true) @map("is_active")
   sortOrder            Int      @default(0) @map("sort_order")
   createdAt            DateTime @default(now()) @map("created_at")
@@ -1133,6 +1143,89 @@ model VillageSlipSubmission {
   @@index([ownerUserId, trialSessionId, yearMonth], map: "vslip_owner_trial_ym_idx")
   @@index([feeRowId], map: "vslip_fee_row_idx")
   @@map("village_slip_submissions")
+}
+
+/** โหมดคิดเงินที่จอดรถ — รายชั่วโมง (ปัดขึ้น) หรือ เหมารายวันปฏิทิน (Bangkok) */
+enum ParkingPricingMode {
+  HOURLY
+  DAILY
+}
+
+enum ParkingSessionStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+/** ลานจอดต่อเจ้าของ — ตั้งราคาและโหมดคิดเงิน */
+model ParkingSite {
+  id               Int                @id @default(autoincrement())
+  ownerUserId      String             @map("owner_user_id") @db.VarChar(191)
+  owner            User               @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String             @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name             String             @db.VarChar(120)
+  pricingMode      ParkingPricingMode @default(HOURLY) @map("pricing_mode")
+  hourlyRateBaht   Decimal?           @map("hourly_rate_baht") @db.Decimal(10, 2)
+  dailyRateBaht    Decimal?           @map("daily_rate_baht") @db.Decimal(10, 2)
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  spots ParkingSpot[]
+
+  @@unique([ownerUserId, name, trialSessionId], map: "parking_site_owner_name_trial_uniq")
+  @@index([ownerUserId], map: "parking_site_owner_idx")
+  @@map("parking_sites")
+}
+
+/** ช่องจอด — QR เช็คอินรายช่อง (check_in_token) */
+model ParkingSpot {
+  id           Int         @id @default(autoincrement())
+  siteId       Int         @map("site_id")
+  site         ParkingSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  spotCode     String      @map("spot_code") @db.VarChar(24)
+  zoneLabel    String?     @map("zone_label") @db.VarChar(80)
+  sortFloor    Int         @default(0) @map("sort_floor")
+  sortOrder    Int         @default(0) @map("sort_order")
+  checkInToken String      @unique @map("check_in_token") @db.VarChar(64)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  sessions ParkingSession[]
+
+  @@unique([siteId, spotCode], map: "parking_spot_site_code_uniq")
+  @@index([siteId], map: "parking_spot_site_idx")
+  @@map("parking_spots")
+}
+
+/** รอบการจอด — เช็คอิน/เอาออก + หมายเหตุรับส่ง */
+model ParkingSession {
+  id              Int                  @id @default(autoincrement())
+  spotId          Int                  @map("spot_id")
+  spot            ParkingSpot          @relation(fields: [spotId], references: [id], onDelete: Cascade)
+  status          ParkingSessionStatus @default(ACTIVE)
+  checkInAt       DateTime             @map("check_in_at")
+  checkOutAt      DateTime?            @map("check_out_at")
+  licensePlate    String               @map("license_plate") @db.VarChar(24)
+  customerName    String?              @map("customer_name") @db.VarChar(100)
+  customerPhone   String?              @map("customer_phone") @db.VarChar(32)
+  selfCheckIn     Boolean              @default(false) @map("self_check_in")
+  pricingMode     ParkingPricingMode   @map("pricing_mode")
+  hourlyRateSnap  Decimal?             @map("hourly_rate_snap") @db.Decimal(10, 2)
+  dailyRateSnap   Decimal?             @map("daily_rate_snap") @db.Decimal(10, 2)
+  billedUnits     Int?                 @map("billed_units")
+  amountDueBaht   Decimal?             @map("amount_due_baht") @db.Decimal(10, 2)
+  amountPaidBaht  Decimal?             @map("amount_paid_baht") @db.Decimal(10, 2)
+  internalNote    String?              @map("internal_note") @db.Text
+  shuttleFrom     String?              @map("shuttle_from") @db.VarChar(255)
+  shuttleTo       String?              @map("shuttle_to") @db.VarChar(255)
+  shuttleNote     String?              @map("shuttle_note") @db.Text
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+
+  @@index([spotId, status], map: "parking_sess_spot_status_idx")
+  @@index([checkInAt], map: "parking_sess_checkin_idx")
+  @@index([licensePlate], map: "parking_sess_plate_idx")
+  @@map("parking_sessions")
 }
 
 /** Log กลางทั้งระบบ (immutable) สำหรับตรวจสอบการจัดการข้อมูล */

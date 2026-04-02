@@ -75,7 +75,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "การตั้งค่าเซิร์ฟเวอร์ไม่สมบูรณ์" }, { status: 500 });
   }
 
-  await setSessionCookie(token);
+  await setSessionCookie(token, req);
   return NextResponse.json({
     ok: true,
     user: {

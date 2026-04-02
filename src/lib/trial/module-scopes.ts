@@ -5,6 +5,7 @@ import {
   CAR_WASH_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
+  PARKING_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
 } from "@/lib/modules/config";
 import { resolveDataScopeBySlug, type ModuleDataScope } from "@/lib/trial/scope";
@@ -35,4 +36,8 @@ export function getBuildingPosDataScope(userId: string): Promise<ModuleDataScope
 
 export function getVillageDataScope(userId: string): Promise<ModuleDataScope> {
   return resolveDataScopeBySlug(userId, VILLAGE_MODULE_SLUG);
+}
+
+export function getParkingDataScope(userId: string): Promise<ModuleDataScope> {
+  return resolveDataScopeBySlug(userId, PARKING_MODULE_SLUG);
 }

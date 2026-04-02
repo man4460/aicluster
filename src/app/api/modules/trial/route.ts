@@ -7,6 +7,8 @@ import { canStartTrialForModule } from "@/lib/modules/access";
 import { STAFF_ALLOWED_MODULE_SLUGS } from "@/lib/modules/staff-policy";
 import { listTrialModuleIds, startTrial } from "@/lib/modules/trial-store";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
+import { MQTT_SERVICE_MODULE_SLUG } from "@/lib/modules/config";
+import { isMqttServiceModuleEnabled } from "@/lib/modules/mqtt-feature";
 
 const bodySchema = z.object({
   moduleId: z.string().min(1),
@@ -36,6 +38,9 @@ export async function POST(req: Request) {
     select: { id: true, slug: true, groupId: true, isActive: true },
   });
   if (!mod || !mod.isActive) return NextResponse.json({ error: "ไม่พบระบบ" }, { status: 404 });
+  if (mod.slug === MQTT_SERVICE_MODULE_SLUG && !isMqttServiceModuleEnabled()) {
+    return NextResponse.json({ error: "ระบบบริการ MQTT ปิดโหมดทดลองชั่วคราว" }, { status: 403 });
+  }
 
   const ctx = await getModuleBillingContext(auth.session.sub);
   if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

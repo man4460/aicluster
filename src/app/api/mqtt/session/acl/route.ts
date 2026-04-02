@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { mqttOwnerFromAuth } from "@/lib/mqtt/api-owner";
 import { getMqttDataScope } from "@/lib/trial/module-scopes";
+import { mqttSessionApiDisabled } from "@/lib/mqtt/session-api-guard";
 
 const postSchema = z.object({
   subject_type: z.enum(["username", "clientId"]),
@@ -21,6 +22,8 @@ function tenantCodeFor(ownerId: string, trialId: string) {
 }
 
 export async function GET() {
+  const disabled = mqttSessionApiDisabled();
+  if (disabled) return disabled;
   const auth = await requireSession();
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const own = await mqttOwnerFromAuth(auth.session.sub);
@@ -46,6 +49,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const disabled = mqttSessionApiDisabled();
+  if (disabled) return disabled;
   const auth = await requireSession();
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const own = await mqttOwnerFromAuth(auth.session.sub);

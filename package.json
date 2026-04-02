@@ -2,11 +2,17 @@
   "name": "web",
   "version": "0.1.0",
   "private": true,
+  "bin": {
+    "mawell-deploy": "./bin/mawell-deploy"
+  },
   "scripts": {
-    "dev": "next dev",
-    "dev:clean": "npx --yes kill-port 3000 3001 && next dev -p 3000",
+    "dev": "next dev -H 0.0.0.0",
+    "dev:clean": "npx --yes kill-port 3000 3001 && next dev -p 3000 -H 0.0.0.0",
     "build": "prisma generate && next build",
-    "start": "next start",
+    "build:pm2:prod": "npm run build && pm2 restart mawell-serve",
+    "watch:build": "chokidar \"src/**/*\" \"public/**/*\" \"prisma/schema.prisma\" \"next.config.ts\" \"postcss.config.mjs\" \"package.json\" -c \"npm run build\" -d 12000 --silent",
+    "watch:pm2:prod": "chokidar \"src/**/*\" \"public/**/*\" \"prisma/schema.prisma\" \"next.config.ts\" \"postcss.config.mjs\" \"package.json\" \"ecosystem.config.cjs\" -c \"npm run build:pm2:prod\" -d 12000 --silent",
+    "start": "next start -H 0.0.0.0",
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate": "prisma migrate deploy",
@@ -17,7 +23,9 @@
     "pm2:stop": "pm2 stop mawell-dev mawell-serve",
     "pm2:restart": "pm2 restart mawell-dev",
     "pm2:logs": "pm2 logs mawell-dev",
-    "pm2:delete": "pm2 delete mawell-dev mawell-serve"
+    "pm2:delete": "pm2 delete mawell-dev mawell-serve",
+    "deploy": "bash scripts/deploy.sh",
+    "link:cli": "npm link --ignore-scripts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -46,6 +54,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "chokidar-cli": "^3.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "pm2": "^6.0.14",

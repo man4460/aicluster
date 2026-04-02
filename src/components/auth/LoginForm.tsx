@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AuthCard, AuthFooterLink } from "@/components/auth/AuthCard";
 import { PasswordInput } from "@/components/auth/PasswordInput";
@@ -9,7 +8,6 @@ import { MawellLogo } from "@/components/layout/MawellLogo";
 import { cn } from "@/lib/cn";
 
 export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }) {
-  const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -42,8 +40,8 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
         setError(data.error ?? "เข้าสู่ระบบไม่สำเร็จ");
         return;
       }
-      router.push(redirectTo);
-      router.refresh();
+      // เต็มหน้าแทน client navigation — ให้คำขอถัดไปส่งคุกกี้ session แน่นอน (กัน RSC ค้างสถานะเก่า)
+      window.location.assign(redirectTo);
     } finally {
       setLoading(false);
     }

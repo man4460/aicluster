@@ -4,19 +4,36 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 import { PageHeader } from "@/components/ui/page-container";
-import { RoomDetailClient, type DormRoomDetailJson } from "@/systems/dormitory/components/RoomDetailClient";
+import {
+  RoomDetailClient,
+  type DormOverdueRow,
+  type DormRoomDetailJson,
+} from "@/systems/dormitory/components/RoomDetailClient";
+import { dormBtnSecondary } from "@/systems/dormitory/dorm-ui";
+import {
+  buildRoomComputeInput,
+  computeAllBalanceLines,
+  overdueLines,
+} from "@/systems/dormitory/lib/compute";
 
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ month?: string }> };
 
 function parseRoomId(raw: string): number | null {
   const n = Number(raw);
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-export default async function DormitoryRoomDetailPage({ params }: Props) {
+function billPeriodKey(b: { billingYear: number; billingMonth: number }): string {
+  return `${b.billingYear}-${String(b.billingMonth).padStart(2, "0")}`;
+}
+
+export default async function DormitoryRoomDetailPage({ params, searchParams }: Props) {
   const session = await getSession();
   if (!session) redirect("/login");
   const { id } = await params;
+  const sp = await searchParams;
+  const focusMonth =
+    typeof sp.month === "string" && /^\d{4}-\d{2}$/.test(sp.month) ? sp.month : null;
   const roomId = parseRoomId(id);
   if (roomId === null) notFound();
 
@@ -42,6 +59,25 @@ export default async function DormitoryRoomDetailPage({ params }: Props) {
     orderBy: { paidAt: "desc" },
     take: 40,
     include: { tenant: true, bill: true },
+  });
+
+  const computeInput = buildRoomComputeInput(room);
+  const overdueBalanceLines = overdueLines(computeAllBalanceLines(computeInput)).filter(
+    (l) => l.roomId === String(room.id),
+  );
+  const overdueRows: DormOverdueRow[] = overdueBalanceLines.map((l) => {
+    const bill = room.utilityBills.find((b) => billPeriodKey(b) === l.month);
+    const payment = bill?.payments.find((p) => String(p.tenantId) === l.tenantId);
+    return {
+      tenantId: l.tenantId,
+      tenantName: l.tenantName,
+      month: l.month,
+      balance: l.balance,
+      billId: bill?.id ?? null,
+      paymentId: payment?.id ?? null,
+      paymentStatus: payment?.paymentStatus ?? null,
+      proofSlipUrl: payment?.proofSlipUrl ?? null,
+    };
   });
 
   const json: DormRoomDetailJson = {
@@ -91,20 +127,22 @@ export default async function DormitoryRoomDetailPage({ params }: Props) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title={`ห้อง ${room.roomNumber}`}
         description={`${room.roomType} · ชั้น ${room.floor} · ค่าเช่า ${Number(room.basePrice).toLocaleString("th-TH")} บาท/เดือน`}
         action={
-          <Link
-            href="/dashboard/dormitory/rooms"
-            className="text-sm font-medium text-[#0000BF] hover:underline"
-          >
+          <Link href="/dashboard/dormitory/rooms" className={dormBtnSecondary}>
             ← รายการห้อง
           </Link>
         }
       />
-      <RoomDetailClient key={`${room.id}-${room.updatedAt.toISOString()}`} room={json} />
+      <RoomDetailClient
+        key={`${room.id}-${room.updatedAt.toISOString()}`}
+        room={json}
+        overdueRows={overdueRows}
+        initialPayMonth={focusMonth}
+      />
     </div>
   );
 }

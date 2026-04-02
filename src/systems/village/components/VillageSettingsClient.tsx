@@ -4,6 +4,82 @@ import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/ui/page-container";
 import { createVillageSessionApiRepository, type VillageProfile } from "@/systems/village/village-service";
 
+function IconBuilding({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M4 21V8l8-5 8 5v13M9 21v-8h6v8" strokeLinejoin="round" />
+      <path d="M9 12h2M13 12h2M9 16h2M13 16h2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconCoin({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8.5v7M9.2 12h5.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconWallet({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7z" strokeLinejoin="round" />
+      <path d="M4 10h16v4H4M16 14h2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconCheck({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+      <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconSave({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M5 3h11l3 3v14a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z" strokeLinejoin="round" />
+      <path d="M9 3v6h6V3M9 21v-5h6v5" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+const inputClass =
+  "mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#0000BF]/40 focus:bg-white focus:ring-2 focus:ring-[#0000BF]/15";
+
+type SettingsSectionProps = {
+  icon: React.ReactNode;
+  tone: string;
+  title: string;
+  hint: string;
+  children: React.ReactNode;
+};
+
+function SettingsSection({ icon, tone, title, hint, children }: SettingsSectionProps) {
+  return (
+    <section className="rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-white to-slate-50/90 p-5 shadow-sm">
+      <div className="flex gap-3 border-b border-slate-100 pb-4">
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${tone}`} aria-hidden>
+          {icon}
+        </div>
+        <div className="min-w-0 pt-0.5">
+          <h2 className="text-base font-semibold tracking-tight text-slate-900">{title}</h2>
+          <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{hint}</p>
+        </div>
+      </div>
+      <div className="mt-4 space-y-4">{children}</div>
+    </section>
+  );
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <span className="text-xs font-medium text-slate-600">{children}</span>;
+}
+
 export function VillageSettingsClient() {
   const api = useMemo(() => createVillageSessionApiRepository(), []);
   const [p, setP] = useState<VillageProfile | null>(null);
@@ -22,15 +98,28 @@ export function VillageSettingsClient() {
   }, [api]);
 
   if (!p) {
-    return err ? <p className="text-sm text-rose-600">{err}</p> : <p className="text-sm text-slate-500">กำลังโหลด…</p>;
+    return err ? (
+      <p className="text-sm text-rose-600">{err}</p>
+    ) : (
+      <p className="text-sm text-slate-500">กำลังโหลด…</p>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="การตั้งค่า" description="ชื่อโครงการ ค่าส่วนกลางมาตรฐาน วันครบกำหนด และช่องทางชำระ" />
-      {saved ? <p className="text-sm text-emerald-700">บันทึกแล้ว</p> : null}
+    <div className="space-y-8">
+      <PageHeader title="ตั้งค่าโครงการ" description="ใช้เป็นค่าเริ่มต้นสำหรับบิลและสลิป — แก้แล้วกดบันทึก" />
+
+      {saved ? (
+        <p className="flex items-center gap-2 rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-4 py-2.5 text-sm font-medium text-emerald-800">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+            <IconCheck />
+          </span>
+          บันทึกแล้ว
+        </p>
+      ) : null}
+
       <form
-        className="max-w-xl space-y-8 text-sm"
+        className="w-full space-y-5"
         onSubmit={async (e) => {
           e.preventDefault();
           setErr(null);
@@ -53,66 +142,83 @@ export function VillageSettingsClient() {
           }
         }}
       >
-        <fieldset className="space-y-4 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm">
-          <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">ข้อมูลโครงการ</legend>
+        <SettingsSection
+          icon={<IconBuilding className="text-[#0000BF]" />}
+          tone="bg-[#0000BF]/10"
+          title="ข้อมูลโครงการ"
+          hint="ชื่อ ที่อยู่ และเบอร์ติดต่อนิติ"
+        >
           <label className="block">
-            <span className="text-slate-600">ชื่อโครงการ / หมู่บ้าน</span>
-            <input name="display_name" defaultValue={p.display_name ?? ""} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" />
+            <FieldLabel>ชื่อโครงการ</FieldLabel>
+            <input id="display_name" name="display_name" defaultValue={p.display_name ?? ""} className={inputClass} />
           </label>
           <label className="block">
-            <span className="text-slate-600">ที่อยู่ / หมายเหตุ</span>
-            <textarea name="address" defaultValue={p.address ?? ""} rows={3} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" />
+            <FieldLabel>ที่อยู่</FieldLabel>
+            <textarea id="address" name="address" defaultValue={p.address ?? ""} rows={3} className={inputClass} />
           </label>
           <label className="block">
-            <span className="text-slate-600">เบอร์ติดต่อนิติ</span>
-            <input name="contact_phone" defaultValue={p.contact_phone ?? ""} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" />
+            <FieldLabel>เบอร์นิติ</FieldLabel>
+            <input id="contact_phone" name="contact_phone" defaultValue={p.contact_phone ?? ""} className={inputClass} inputMode="tel" />
           </label>
-        </fieldset>
+        </SettingsSection>
 
-        <fieldset className="space-y-4 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm">
-          <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">ค่าส่วนกลาง</legend>
-          <label className="block">
-            <span className="text-slate-600">ค่าส่วนกลางมาตรฐาน (บาท/เดือน)</span>
-            <input
-              name="default_monthly_fee"
-              type="number"
-              defaultValue={p.default_monthly_fee}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-            />
-          </label>
-          <label className="block">
-            <span className="text-slate-600">วันครบกำหนดชำระ (1–28)</span>
-            <input
-              name="due_day_of_month"
-              type="number"
-              min={1}
-              max={28}
-              defaultValue={p.due_day_of_month}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-            />
-          </label>
-        </fieldset>
+        <SettingsSection
+          icon={<IconCoin className="text-emerald-700" />}
+          tone="bg-emerald-100/80"
+          title="ค่าส่วนกลาง"
+          hint="อัตราต่อเดือนเริ่มต้นและวันครบกำหนด — รอบเรียกเก็บ (รายเดือน/หกเดือน/ปี) กำหนดที่แต่ละหลังในหน้าลูกบ้าน"
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <FieldLabel>บาท / เดือน</FieldLabel>
+              <input
+                id="default_monthly_fee"
+                name="default_monthly_fee"
+                type="number"
+                min={0}
+                defaultValue={p.default_monthly_fee}
+                className={inputClass}
+              />
+            </label>
+            <label className="block">
+              <FieldLabel>ครบกำหนดวันที่ (1–28)</FieldLabel>
+              <input
+                id="due_day_of_month"
+                name="due_day_of_month"
+                type="number"
+                min={1}
+                max={28}
+                defaultValue={p.due_day_of_month}
+                className={inputClass}
+              />
+            </label>
+          </div>
+        </SettingsSection>
 
-        <fieldset className="space-y-4 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm">
-          <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">ช่องทางชำระเงิน</legend>
+        <SettingsSection
+          icon={<IconWallet className="text-sky-700" />}
+          tone="bg-sky-100/80"
+          title="ชำระเงิน"
+          hint="พร้อมเพย์และข้อความแนะนำช่องทาง"
+        >
           <label className="block">
-            <span className="text-slate-600">เบอร์พร้อมเพย์ (ตัวเลข)</span>
-            <input name="prompt_pay_phone" defaultValue={p.prompt_pay_phone ?? ""} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" />
+            <FieldLabel>พร้อมเพย์ (ตัวเลข)</FieldLabel>
+            <input id="prompt_pay_phone" name="prompt_pay_phone" defaultValue={p.prompt_pay_phone ?? ""} className={inputClass} inputMode="numeric" />
           </label>
           <label className="block">
-            <span className="text-slate-600">ช่องทางชำระ (ข้อความ)</span>
-            <textarea
-              name="payment_channels_note"
-              defaultValue={p.payment_channels_note ?? ""}
-              rows={2}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
-            />
+            <FieldLabel>ช่องทางอื่น</FieldLabel>
+            <textarea id="payment_channels_note" name="payment_channels_note" defaultValue={p.payment_channels_note ?? ""} rows={2} className={inputClass} />
           </label>
-        </fieldset>
+        </SettingsSection>
 
         {err ? <p className="text-sm text-rose-600">{err}</p> : null}
-        <button type="submit" className="rounded-lg bg-[#0000BF] px-4 py-2 font-medium text-white">
-          บันทึกการตั้งค่า
+
+        <button
+          type="submit"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#0000BF] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0000a3] sm:w-auto sm:min-w-[200px]"
+        >
+          <IconSave className="text-white/90" />
+          บันทึก
         </button>
       </form>
     </div>

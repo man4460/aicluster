@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* สแกนทั้ง src — Tailwind v4 ไม่เห็นคลาสนอก app/ ถ้าไม่ระบุ @source */
+/* แยกนามสกุล (บางเวอร์ชัน/บันเดิล parse กลุ่ม {js,ts,...} ไม่ได้ → utility หายหมด) */
+@source "../**/*.tsx";
+@source "../**/*.ts";
+@source "../**/*.jsx";
+@source "../**/*.js";
+
 :root {
   --background: #f7f6ff;
   --foreground: #1e1b3a;

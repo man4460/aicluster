@@ -80,32 +80,25 @@ async function main() {
       sortOrder: 10,
     },
     {
-      slug: "income-expense-basic",
-      title: "ระบบบันทึกรายรับรายจ่ายบ้าน",
-      description: "กลุ่ม 1 (Basic) — ค่าน้ำไฟ รถ ซ่อมบ้าน รายรับรายจ่ายทั่วไป",
-      groupId: 1,
-      sortOrder: 20,
-    },
-    {
       slug: "dormitory",
       title: "ระบบจัดการหอพัก",
       description: "กลุ่ม 1 (Basic) — ห้อง/ผู้เข้าพัก มิเตอร์น้ำไฟ Split Bill ใบเสร็จ",
       groupId: 1,
-      sortOrder: 15,
+      sortOrder: 12,
     },
     {
       slug: "barber",
       title: "ระบบจัดการร้านตัดผม",
       description: "กลุ่ม 1 (Basic) — แพ็กเกจ สมาชิก เช็คอินเบอร์ ประวัติ",
       groupId: 1,
-      sortOrder: 17,
+      sortOrder: 14,
     },
     {
       slug: "car-wash",
       title: "ระบบจัดการคาร์แคร์",
       description: "กลุ่ม 1 (Basic) — แพ็กเกจบริการ บันทึกเข้ารับบริการ และติดตามร้องเรียน",
       groupId: 1,
-      sortOrder: 18,
+      sortOrder: 16,
     },
     {
       slug: "village",
@@ -113,7 +106,38 @@ async function main() {
       description:
         "กลุ่ม 1 (Basic) — ลูกบ้าน ค่าส่วนกลางรายบ้าน ตรวจสลิป สรุปรายปี รายงาน Excel",
       groupId: 1,
-      sortOrder: 19,
+      sortOrder: 18,
+    },
+    {
+      slug: "mqtt-service",
+      title: "ระบบบริการ MQTT",
+      description:
+        "กลุ่ม 1 (Basic) — จัดการ credentials, ACL, และสถานะการเชื่อมต่อสำหรับอุปกรณ์ IoT",
+      groupId: 1,
+      sortOrder: 20,
+    },
+    {
+      slug: "building-pos",
+      title: "ระบบ POS ร้านอาหารอาคาร",
+      description:
+        "กลุ่ม 1 (Basic) — เพิ่มเมนู จัดกลุ่มเมนู รับออเดอร์ และ QR สั่งอาหารด้วยตนเอง",
+      groupId: 1,
+      sortOrder: 22,
+    },
+    {
+      slug: "income-expense-basic",
+      title: "ระบบบันทึกรายรับรายจ่ายบ้าน",
+      description: "กลุ่ม 1 (Basic) — ค่าน้ำไฟ รถ ซ่อมบ้าน รายรับรายจ่ายทั่วไป",
+      groupId: 1,
+      sortOrder: 24,
+    },
+    {
+      slug: "parking",
+      title: "ระบบเช่าที่จอดรถ",
+      description:
+        "กลุ่ม 1 (Basic) — ผังช่องจอด เช็คอิน QR คิดรายชั่วโมงหรือเหมาวัน หมายเหตุรับส่ง ประวัติ",
+      groupId: 1,
+      sortOrder: 26,
     },
     {
       slug: "stock-management",

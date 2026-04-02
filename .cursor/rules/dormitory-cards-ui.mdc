@@ -1,0 +1,32 @@
+---
+description: การ์ดห้องพักหอพัก — โทน UI และตัวหนังสือให้สอดคล้องกับ dorm-ui
+globs:
+  - "src/systems/dormitory/**/*.{ts,tsx}"
+  - "src/app/(dashboard)/dashboard/dormitory/**/*.tsx"
+alwaysApply: false
+---
+
+# การ์ดและตัวหนังสือโมดูลหอพัก
+
+เมื่อเพิ่มหรือแก้ **หน้าแดชบอร์ดผังห้อง**, **รายการห้อง**, หรือการ์ด/กล่องข้อมูลห้องในโมดูลหอพัก:
+
+1. **ใช้คลาสจาก** `@/systems/dormitory/dorm-ui` — ห้ามคิดสไตล์การ์ดห้องใหม่แยก ถ้ามีโทเคนอยู่แล้ว (`dormCard`, `dormRoomTile`, `dormRoomListCard`, `dormRoomFloorPill`, `dormRoomCardDivider`, `dormRoomFieldLabel`, `dormRoomOccLine`, `dormRoomTypeHint`, `dormRoomStatRow`, `dormRoomStatValue`, `dormRoomCardCta`, `dormBtnPrimary` / `dormBtnSecondary` ฯลฯ)  
+   - ถ้าต้องการรูปแบบใหม่ที่ใช้ซ้ำ — **ขยาย `dorm-ui.ts`** แล้วใช้จากที่เดียว
+
+2. **ลำดับชั้นข้อความในการ์ด**  
+   - ป้ายกำกับจิ๋วภาษาไทย (`dormRoomFieldLabel`) คู่กับค่าหลัก (เลขห้อง, สถานะ, ประเภท)  
+   - เลขห้องใช้ `dormRoomNumberHero` (ผัง) หรือ `dormRoomNumberList` (รายการ)  
+   - ชั้นใช้ `dormRoomFloorPill` บนผัง; บนรายการใช้บรรทัดชัดแยกจากประเภทห้อง
+
+3. **ภาษาไทย** — **ห้ามใช้ `uppercase`** กับข้อความไทยในป้าย/การ์ด (ไม่สวยและไม่จำเป็น)
+
+4. **`RoomBillingStatusBadge`**  
+   - ผังห้อง (การ์ดแคบ): `size="compact"`  
+   - การ์ดรายการห้อง (คอลัมน์ขวา): `size="compactWide"`  
+   - ที่เหลือ: `default`
+
+5. **ตัวเลข** — ค่าเช่า/ยอดเงินใช้ `tabular-nums` และ `toLocaleString("th-TH", …)` ให้สอดคล้องหน้าอื่น
+
+6. **การ์ดรายการห้อง** — แถว **ผู้พัก** / **ค่าเช่า** ใช้ `dormRoomStatRow` + ป้าย + `dormRoomStatValue`; ลิงก์ท้ายการ์ดใช้ `dormRoomCardCta`
+
+7. **ผังห้อง** — ห้องที่มีค้างชำระงวดเก่า ต่อท้ายคลาสการ์ดด้วย `dormRoomTileOverdueHint` (จุดส้ม) ให้สอดคล้องแดชบอร์ด

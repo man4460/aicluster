@@ -5,12 +5,17 @@ import {
   ATTENDANCE_MODULE_SLUG,
   BARBER_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
+  CAR_WASH_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   HOME_FINANCE_BASIC_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
+  PARKING_MODULE_SLUG,
+  VILLAGE_MODULE_SLUG,
   MODULE_GROUP_TIER_NAME,
+  displayAppModuleTitle,
 } from "@/lib/modules/config";
 import { requireModulePage } from "@/lib/modules/guard";
+import { isMqttServiceModuleEnabled } from "@/lib/modules/mqtt-feature";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -29,17 +34,27 @@ export default async function ModuleEntryPage({ params }: Props) {
     redirect("/dashboard/home-finance");
   }
   if (slug === MQTT_SERVICE_MODULE_SLUG) {
+    if (!isMqttServiceModuleEnabled()) redirect("/dashboard/modules");
     redirect("/dashboard/mqtt-service");
   }
   if (slug === BUILDING_POS_MODULE_SLUG) {
     redirect("/dashboard/building-pos");
+  }
+  if (slug === CAR_WASH_MODULE_SLUG) {
+    redirect("/dashboard/car-wash");
+  }
+  if (slug === VILLAGE_MODULE_SLUG) {
+    redirect("/dashboard/village");
+  }
+  if (slug === PARKING_MODULE_SLUG) {
+    redirect("/dashboard/parking");
   }
   const { module: mod } = await requireModulePage(slug);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <PageHeader
-        title={mod.title}
+        title={displayAppModuleTitle(mod.slug, mod.title)}
         description={mod.description ?? undefined}
         action={
           <Link

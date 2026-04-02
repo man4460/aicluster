@@ -69,3 +69,12 @@ npm run pm2:stop
 npm run pm2:dev
 npm run pm2:restart
 
+
+สรุป: อยาก “แก้แล้วเห็นทันที” ให้ใช้ next dev; อยากให้ production บิลด์เองหลังแก้โค้ด ให้ใช้ npm run watch:pm2:prod
+
+### เข้าจากมือถือ / PC อื่นใน WiFi เดียวกัน
+
+1. เปิดจากเครื่องเซิร์ฟเวอร์ด้วย `http://<IP-ของ-PC>:3000` (เซิร์ฟผูก `0.0.0.0` อยู่แล้วใน `npm run dev` / PM2)
+2. ถ้ารันแบบ production บน **HTTP** ใน LAN ให้ใส่ใน `.env`: `COOKIE_SECURE=false` แล้วรีสตาร์ท — ไม่งั้นคุกกี้ session ไม่ถูกส่ง ล็อกอินไม่ติด
+3. ฐานข้อมูล: `DATABASE_URL` ชี้ที่เครื่องที่รันแอปได้ (`localhost` ถ้า MySQL อยู่เครื่องเดียวกัน); อุปกรณ์อื่นไม่ต้องแก้ connection ฐานข้อมูล
+4. โหมด dev ถ้าโหลด `/_next` โดน 403 ให้เพิ่ม `ALLOWED_DEV_ORIGINS` หรือดูค่าเริ่มต้นใน `next.config.ts` / `.env.example`

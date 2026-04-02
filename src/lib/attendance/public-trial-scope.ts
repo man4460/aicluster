@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ATTENDANCE_MODULE_SLUG } from "@/lib/modules/config";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
-import { expireStaleTrialSessions } from "@/lib/trial/trial-service";
+import { expireStaleTrialSessionsForUser } from "@/lib/trial/trial-service";
 
 /**
  * ลิงก์สาธารณะ: ไม่ส่งพารามิเตอร์ = production
@@ -16,7 +16,7 @@ export async function resolvePublicAttendanceTrialSessionId(
   if (!t || t === TRIAL_PROD_SCOPE) {
     return { trialSessionId: TRIAL_PROD_SCOPE };
   }
-  await expireStaleTrialSessions();
+  await expireStaleTrialSessionsForUser(ownerId);
   const mod = await prisma.appModule.findFirst({
     where: { slug: ATTENDANCE_MODULE_SLUG, isActive: true },
     select: { id: true },

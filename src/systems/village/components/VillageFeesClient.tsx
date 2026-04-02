@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/ui/page-container";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
-import { createVillageSessionApiRepository, type VillageFeeRow } from "@/systems/village/village-service";
+import {
+  createVillageSessionApiRepository,
+  villageFeeCycleLabelTh,
+  type VillageFeeRow,
+} from "@/systems/village/village-service";
+import { villageBtnPrimary, villageBtnSecondary, villageField, villageTableWrap, villageToolbar } from "@/systems/village/village-ui";
 
 function currentYm(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }).slice(0, 7);
@@ -69,29 +74,29 @@ function FeeEditModal({
         />
       }
     >
-      <div className="space-y-3 text-sm">
+      <div className="space-y-4 text-sm">
         <label className="block">
-          <span className="text-slate-600">ยอดเรียกเก็บ (บาท)</span>
+          <span className="text-xs font-medium text-slate-600">ยอดเรียกเก็บ (บาท)</span>
           <input
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+            className={`mt-1.5 ${villageField}`}
             value={due}
             onChange={(e) => setDue(e.target.value)}
             inputMode="numeric"
           />
         </label>
         <label className="block">
-          <span className="text-slate-600">ยอดรับแล้ว (บาท)</span>
+          <span className="text-xs font-medium text-slate-600">ยอดรับแล้ว (บาท)</span>
           <input
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+            className={`mt-1.5 ${villageField}`}
             value={paid}
             onChange={(e) => setPaid(e.target.value)}
             inputMode="numeric"
           />
         </label>
         <label className="block">
-          <span className="text-slate-600">สถานะ</span>
+          <span className="text-xs font-medium text-slate-600">สถานะ</span>
           <select
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+            className={`mt-1.5 ${villageField}`}
             value={status}
             onChange={(e) => setStatus(e.target.value as FeeStatus)}
           >
@@ -103,8 +108,8 @@ function FeeEditModal({
           </select>
         </label>
         <label className="block">
-          <span className="text-slate-600">หมายเหตุ (ถ้ามี)</span>
-          <input className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" value={note} onChange={(e) => setNote(e.target.value)} />
+          <span className="text-xs font-medium text-slate-600">หมายเหตุ (ถ้ามี)</span>
+          <input className={`mt-1.5 ${villageField}`} value={note} onChange={(e) => setNote(e.target.value)} />
         </label>
       </div>
     </FormModal>
@@ -142,27 +147,27 @@ export function VillageFeesClient() {
   }, [load]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
-        title="ค่าส่วนกลางรายบ้าน"
-        description="เลือกเดือน สร้างแถวบิลทุกหลัง กรองสถานะ และแก้ยอดในโมดัล"
+        title="ค่าส่วนกลาง"
+        description="เลือกเดือน โหลดบิล หรือสร้าง/เติมทุกหลัง — ยอดตามรอบและอัตราต่อเดือนของแต่ละบ้าน"
       />
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="text-sm">
-          <span className="text-slate-600">เดือน</span>
+      <div className={villageToolbar}>
+        <label className="text-sm font-medium text-slate-700">
+          เดือน
           <input
             type="month"
-            className="mt-1 block rounded-lg border border-slate-200 px-3 py-2 font-mono"
+            className={`mt-1.5 block font-mono ${villageField}`}
             value={ym}
             onChange={(e) => setYm(e.target.value)}
           />
         </label>
-        <button type="button" className="rounded-lg bg-[#0000BF] px-4 py-2 text-sm font-medium text-white" onClick={() => void load()}>
+        <button type="button" className={villageBtnSecondary} onClick={() => void load()}>
           โหลด
         </button>
         <button
           type="button"
-          className="rounded-lg border border-slate-200 px-4 py-2 text-sm"
+          className={villageBtnPrimary}
           onClick={async () => {
             try {
               await api.generateFeeRows(ym);
@@ -172,14 +177,14 @@ export function VillageFeesClient() {
             }
           }}
         >
-          สร้าง/เติมรายการทุกบ้านในเดือนนี้
+          สร้าง/เติมทุกหลัง
         </button>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <span className="self-center text-xs text-slate-500">กรองสถานะ:</span>
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200/90 bg-white px-4 py-3 shadow-sm">
+        <span className="text-xs font-medium text-slate-500">กรองสถานะ</span>
         <button
           type="button"
-          className={`rounded-full px-3 py-1 text-xs font-medium ${statusFilter == null ? "bg-[#0000BF]/15 text-[#0000BF]" : "bg-slate-100 text-slate-600"}`}
+          className={`rounded-full px-3 py-1.5 text-xs font-semibold ${statusFilter == null ? "bg-[#0000BF] text-white" : "bg-slate-100 text-slate-600"}`}
           onClick={() => setStatusFilter(null)}
         >
           ทั้งหมด
@@ -188,24 +193,25 @@ export function VillageFeesClient() {
           <button
             key={s}
             type="button"
-            className={`rounded-full px-3 py-1 text-xs font-medium ${statusFilter === s ? "bg-[#0000BF]/15 text-[#0000BF]" : "bg-slate-100 text-slate-600"}`}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${statusFilter === s ? "bg-[#0000BF] text-white" : "bg-slate-100 text-slate-600"}`}
             onClick={() => setStatusFilter(s)}
           >
             {s}
           </button>
         ))}
       </div>
-      <p className="text-xs text-slate-500">
-        ค่ามาตรฐานจากตั้งค่า: {defaultFee.toLocaleString("th-TH")} บาท · ครบกำหนดวันที่ {dueDay} ของเดือน (แต่ละหลังอาจ override)
+      <p className="text-center text-xs text-slate-500">
+        อัตราต่อเดือนจากตั้งค่า {defaultFee.toLocaleString("th-TH")} บาท · ครบกำหนดวันที่ {dueDay} · รอบเรียกเก็บตั้งที่ลูกบ้าน
       </p>
       {err ? <p className="text-sm text-rose-600">{err}</p> : null}
       {loading ? <p className="text-sm text-slate-500">กำลังโหลด…</p> : null}
-      <div className="overflow-x-auto rounded-xl border border-slate-200/90">
+      <div className={villageTableWrap}>
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs font-semibold text-slate-600">
+          <thead className="bg-slate-50/90 text-xs font-semibold text-slate-600">
             <tr>
               <th className="px-3 py-2">บ้าน</th>
               <th className="px-3 py-2">เจ้าบ้าน</th>
+              <th className="px-3 py-2">รอบ</th>
               <th className="px-3 py-2">เรียกเก็บ</th>
               <th className="px-3 py-2">รับแล้ว</th>
               <th className="px-3 py-2">สถานะ</th>
@@ -217,6 +223,7 @@ export function VillageFeesClient() {
               <tr key={r.id} className="border-t border-slate-100">
                 <td className="px-3 py-2 font-medium">{r.house_no}</td>
                 <td className="px-3 py-2 text-slate-600">{r.owner_name ?? "—"}</td>
+                <td className="px-3 py-2 text-xs text-slate-600">{villageFeeCycleLabelTh(r.fee_cycle)}</td>
                 <td className="px-3 py-2">{r.amount_due.toLocaleString("th-TH")}</td>
                 <td className="px-3 py-2">{r.amount_paid.toLocaleString("th-TH")}</td>
                 <td className="px-3 py-2">{r.status}</td>

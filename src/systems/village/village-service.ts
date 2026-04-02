@@ -1,3 +1,5 @@
+export type VillageHouseFeeCycle = "MONTHLY" | "SEMI_ANNUAL" | "ANNUAL";
+
 export type VillageProfile = {
   id: number;
   display_name: string | null;
@@ -16,6 +18,7 @@ export type VillageHouse = {
   owner_name: string | null;
   phone: string | null;
   monthly_fee_override: number | null;
+  fee_cycle: VillageHouseFeeCycle;
   is_active: boolean;
   sort_order: number;
   residents: VillageResident[];
@@ -35,6 +38,7 @@ export type VillageFeeRow = {
   house_id: number;
   house_no: string;
   owner_name: string | null;
+  fee_cycle: VillageHouseFeeCycle;
   year_month: string;
   amount_due: number;
   amount_paid: number;
@@ -80,6 +84,19 @@ export type VillageOverview = {
 };
 
 export type VillageExportKind = "fees" | "slips" | "residents" | "annual_summary";
+
+export function villageFeeCycleLabelTh(cycle: VillageHouseFeeCycle): string {
+  switch (cycle) {
+    case "MONTHLY":
+      return "รายเดือน";
+    case "SEMI_ANNUAL":
+      return "รายหกเดือน (ม.ค./ก.ค.)";
+    case "ANNUAL":
+      return "รายปี (ม.ค.)";
+    default:
+      return cycle;
+  }
+}
 
 export function createVillageSessionApiRepository() {
   async function parse<T>(res: Response): Promise<T> {

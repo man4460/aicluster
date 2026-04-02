@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { TRIAL_PROD_SCOPE } from "./constants";
-import { expireStaleTrialSessions } from "./trial-service";
+import { expireStaleTrialSessionsForUser } from "./trial-service";
 
 export type ModuleDataScope = {
   trialSessionId: string;
@@ -16,7 +16,7 @@ export async function resolveDataScopeForModule(
   userId: string,
   moduleId: string,
 ): Promise<ModuleDataScope> {
-  await expireStaleTrialSessions();
+  await expireStaleTrialSessionsForUser(userId);
   const subscribed = await listSubscribedModuleIds(userId);
   if (subscribed.includes(moduleId)) {
     return { trialSessionId: TRIAL_PROD_SCOPE, isTrialSandbox: false };

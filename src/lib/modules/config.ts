@@ -30,6 +30,10 @@ export const BUILDING_POS_MODULE_GROUP_ID = 1 as const;
 export const VILLAGE_MODULE_SLUG = "village" as const;
 export const VILLAGE_MODULE_GROUP_ID = 1 as const;
 
+/** ระบบเช่าที่จอดรถ — กลุ่ม 1 (Basic) ลูกค้าเลือก Subscribe/ทดลองจากแคตตาล็อกโมดูล */
+export const PARKING_MODULE_SLUG = "parking" as const;
+export const PARKING_MODULE_GROUP_ID = 1 as const;
+
 /** ชื่อแสดงในการ์ด/เมนู — ให้ตรงกันทุกที่แม้ DB เก่าจะยังเป็นชื่อสั้น */
 export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === ATTENDANCE_MODULE_SLUG) return "ระบบเช็คชื่ออัจฉริยะ";
@@ -38,6 +42,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === MQTT_SERVICE_MODULE_SLUG) return "ระบบบริการ MQTT";
   if (slug === BUILDING_POS_MODULE_SLUG) return "ระบบ POS ร้านอาหารอาคาร";
   if (slug === VILLAGE_MODULE_SLUG) return "ระบบจัดการหมู่บ้าน";
+  if (slug === PARKING_MODULE_SLUG) return "ระบบเช่าที่จอดรถ";
   return title;
 }
 
@@ -55,7 +60,7 @@ export const MODULE_GROUP_TIER_NAME: Record<number, string> = {
 
 /** สรุปฟีเจอร์ต่อกลุ่ม (ใช้ในหน้าแพ็กเกจ / คำอธิบาย) */
 export const MODULE_GROUP_FEATURE_SUMMARY: Record<number, string> = {
-  1: "เช็คชื่ออัจฉริยะ · หอพัก · หมู่บ้าน · ร้านตัดผม · คาร์แคร์ · MQTT Service · POS ร้านอาหารอาคาร · รายรับ-รายจ่ายเบื้องต้น (สายรายวันใช้กลุ่มนี้)",
+  1: "เช็คชื่ออัจฉริยะ · หอพัก · หมู่บ้าน · ร้านตัดผม · คาร์แคร์ · เช่าที่จอดรถ · MQTT Service · POS ร้านอาหารอาคาร · รายรับ-รายจ่ายเบื้องต้น (สายรายวันใช้กลุ่มนี้)",
   2: "สต็อก · พิมพ์ใบเสร็จ",
   3: "Dashboard วิเคราะห์ · แชทระหว่างสาขา",
   4: "จัดการพนักงาน · เงินเดือน",

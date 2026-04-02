@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { displayAppModuleTitle } from "@/lib/modules/config";
 import { MODULE_RESUBSCRIBE_COOLDOWN_MS } from "@/lib/modules/module-subscription-cooldown";
 
 export { MODULE_RESUBSCRIBE_COOLDOWN_MS } from "@/lib/modules/module-subscription-cooldown";
@@ -168,7 +169,7 @@ export async function listAllActiveResubscribeCooldownsForAdmin(): Promise<Admin
       email: u?.email ?? r.userId,
       username: u?.username ?? "—",
       moduleId: r.moduleId,
-      moduleTitle: mod?.title ?? r.moduleId,
+      moduleTitle: mod ? displayAppModuleTitle(mod.slug, mod.title) : r.moduleId,
       slug: mod?.slug ?? "",
       unlockAtIso: unlockAt.toISOString(),
       unsubscribedAtIso: new Date(r.unsubscribedAt).toISOString(),

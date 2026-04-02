@@ -3,14 +3,17 @@ export type DashboardNavRole = "USER" | "ADMIN";
 export type DashboardNavGroupId = "basic" | "services";
 
 import {
+  ATTENDANCE_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
   BARBER_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   HOME_FINANCE_BASIC_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
+  PARKING_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
 } from "@/lib/modules/config";
+import { SYSTEM_MAP_CATALOG_SLUG } from "@/lib/modules/system-map-catalog";
 
 export type DashboardNavItem = {
   href: string;
@@ -19,13 +22,16 @@ export type DashboardNavItem = {
 };
 
 export function dashboardModuleHref(slug: string): string {
+  if (slug === SYSTEM_MAP_CATALOG_SLUG) return "/dashboard/explore";
   if (slug === DORMITORY_MODULE_SLUG) return "/dashboard/dormitory";
+  if (slug === ATTENDANCE_MODULE_SLUG) return "/dashboard/attendance";
   if (slug === BARBER_MODULE_SLUG) return "/dashboard/barber";
   if (slug === HOME_FINANCE_BASIC_MODULE_SLUG) return "/dashboard/home-finance";
   if (slug === CAR_WASH_MODULE_SLUG) return "/dashboard/car-wash";
   if (slug === MQTT_SERVICE_MODULE_SLUG) return "/dashboard/mqtt-service";
   if (slug === BUILDING_POS_MODULE_SLUG) return "/dashboard/building-pos";
   if (slug === VILLAGE_MODULE_SLUG) return "/dashboard/village";
+  if (slug === PARKING_MODULE_SLUG) return "/dashboard/parking";
   return `/dashboard/modules/${slug}`;
 }
 
@@ -52,6 +58,12 @@ export type SubscribedModuleLink = {
   groupId: number;
 };
 
+export function isSubscribedModuleLink(
+  item: DashboardNavItem | SubscribedModuleLink,
+): item is SubscribedModuleLink {
+  return "groupId" in item && typeof (item as SubscribedModuleLink).groupId === "number";
+}
+
 export type DashboardNavGroup = {
   id: DashboardNavGroupId;
   label: string;
@@ -65,7 +77,7 @@ export function basicNavForRole(role: DashboardNavRole): DashboardNavItem[] {
 
 /**
  * ประกอบ sidebar: พื้นฐาน + ระบบที่เปิดสิทธิ์ (จาก DB)
- * `subscribedModules` = slug + title ของแอปโมดูลที่ user เข้าได้
+ * `subscribedModules` = slug + title ของแอปโมดูลที่ user Subscribe หรือทดลองอยู่
  */
 export function buildDashboardNavGroups(
   role: DashboardNavRole,

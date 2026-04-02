@@ -59,10 +59,33 @@ async function deleteSandboxRowsInTx(tx: Tx, ownerUserId: string, trialSessionId
   await tx.dormitoryProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
 }
 
-export async function expireStaleTrialSessions(): Promise<void> {
+/**
+ * ล้าง trial หมดอายุทั้งระบบ — ใช้เฉพาะงาน batch/cron; อย่าเรียกบนเส้นทาง hot path (แดชบอร์ด)
+ */
+export async function expireStaleTrialSessions(options?: { limit?: number }): Promise<void> {
+  const limit = options?.limit ?? 200;
   const now = new Date();
   const stale = await prisma.trialSession.findMany({
     where: { status: "ACTIVE", expiresAt: { lte: now } },
+    select: { id: true, userId: true },
+    take: limit,
+  });
+  for (const s of stale) {
+    await deleteSandboxRowsForTrialSession(s.userId, s.id);
+  }
+  if (stale.length > 0) {
+    await prisma.trialSession.updateMany({
+      where: { id: { in: stale.map((x) => x.id) } },
+      data: { status: "EXPIRED" },
+    });
+  }
+}
+
+/** ล้าง trial หมดอายุเฉพาะ user — ใช้บน layout/API ที่เรียกบ่อย กันเพจค้างโหลด */
+export async function expireStaleTrialSessionsForUser(userId: string): Promise<void> {
+  const now = new Date();
+  const stale = await prisma.trialSession.findMany({
+    where: { userId, status: "ACTIVE", expiresAt: { lte: now } },
     select: { id: true, userId: true },
   });
   for (const s of stale) {
@@ -77,7 +100,7 @@ export async function expireStaleTrialSessions(): Promise<void> {
 }
 
 export async function listTrialModuleIds(userId: string): Promise<string[]> {
-  await expireStaleTrialSessions();
+  await expireStaleTrialSessionsForUser(userId);
   const rows = await prisma.trialSession.findMany({
     where: {
       userId,
@@ -101,7 +124,7 @@ export async function deleteSandboxRowsForTrialSession(
 }
 
 export async function stopTrial(userId: string, moduleId: string): Promise<void> {
-  await expireStaleTrialSessions();
+  await expireStaleTrialSessionsForUser(userId);
   const row = await prisma.trialSession.findFirst({
     where: { userId, moduleId, status: "ACTIVE" },
     select: { id: true },
@@ -112,7 +135,7 @@ export async function stopTrial(userId: string, moduleId: string): Promise<void>
 }
 
 export async function startTrial(userId: string, moduleId: string): Promise<void> {
-  await expireStaleTrialSessions();
+  await expireStaleTrialSessionsForUser(userId);
   const mod = await prisma.appModule.findUnique({
     where: { id: moduleId },
     select: { id: true, slug: true },
@@ -161,7 +184,7 @@ export async function getActiveTrialBanner(
   userId: string,
   moduleSlug: string,
 ): Promise<{ expiresAt: Date } | null> {
-  await expireStaleTrialSessions();
+  await expireStaleTrialSessionsForUser(userId);
   const mod = await prisma.appModule.findFirst({
     where: { slug: moduleSlug, isActive: true },
     select: { id: true },

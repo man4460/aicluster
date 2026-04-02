@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { PrismaClient } from "@/generated/prisma/client";
 import { getAuditActor } from "@/lib/audit-context";
 
@@ -5,16 +6,16 @@ import { getAuditActor } from "@/lib/audit-context";
  * เพิ่มทุกครั้งที่แก้ schema แล้วต้องการให้ dev โหลด PrismaClient ใหม่
  * (แก้กรณี globalThis.prisma ค้างตัวเก่าหลัง prisma generate — select ฟิลด์ใหม่แล้ว error)
  */
-const PRISMA_SINGLETON_VERSION = 24;
+const PRISMA_SINGLETON_VERSION = 28;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
   prismaSingletonVersion?: number;
 };
 
-/** ต้องสอดคล้องกับ schema ล่าสุด — ถ้าแค่เช็ค appModule จะค้าง PrismaClient เก่าหลังเพิ่มโมเดลใหม่ แล้วเกิด undefined.findMany */
+/** ต้องสอดคล้องกับ schema ล่าสุด — delegate ไม่ครบ = ค้าง PrismaClient เก่า แล้วเกิด undefined.findFirst/findMany */
 function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
-    const c = client as unknown as {
+  const c = client as unknown as {
     appModule?: { findMany?: unknown };
     trialSession?: { findMany?: unknown };
     barberServiceLog?: { findMany?: unknown };
@@ -34,6 +35,9 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     homeFinanceReminder?: { findMany?: unknown };
     barberPortalStaffPing?: { findMany?: unknown };
     systemActivityLog?: { findMany?: unknown };
+    parkingSite?: { findFirst?: unknown };
+    parkingSpot?: { findMany?: unknown };
+    parkingSession?: { findMany?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -54,8 +58,16 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.homeVehicleProfile?.findMany === "function" &&
     typeof c.homeFinanceReminder?.findMany === "function" &&
     typeof c.barberPortalStaffPing?.findMany === "function" &&
-    typeof c.systemActivityLog?.findMany === "function"
+    typeof c.systemActivityLog?.findMany === "function" &&
+    typeof c.parkingSite?.findFirst === "function" &&
+    typeof c.parkingSpot?.findMany === "function" &&
+    typeof c.parkingSession?.findMany === "function"
   );
+}
+
+function parkingDelegatesPresent(client: unknown): boolean {
+  const c = client as { parkingSite?: { findFirst?: unknown } };
+  return typeof c.parkingSite?.findFirst === "function";
 }
 
 function getPrisma(): PrismaClient {
@@ -75,7 +87,7 @@ function getPrisma(): PrismaClient {
   }
 
   const base = new PrismaClient();
-  client = base.$extends({
+  const extended = base.$extends({
     query: {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
@@ -142,6 +154,23 @@ function getPrisma(): PrismaClient {
       },
     },
   }) as PrismaClient;
+
+  if (parkingDelegatesPresent(extended)) {
+    client = extended;
+  } else if (parkingDelegatesPresent(base)) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn(
+        "[prisma] client หลัง $extends ไม่มี parkingSite — ใช้ PrismaClient ฐาน (hook audit ผ่าน query extension ไม่ทำงานบน instance นี้)",
+      );
+    }
+    client = base as PrismaClient;
+  } else {
+    void base.$disconnect().catch(() => {});
+    throw new Error(
+      "Prisma client ไม่มีโมเดล parking — รัน `npx prisma generate` ที่รากโปรเจกต์ แล้วลบ `.next` และรีสตาร์ทเซิร์ฟเวอร์",
+    );
+  }
+
   if (process.env.NODE_ENV !== "production") {
     globalForPrisma.prisma = client;
     globalForPrisma.prismaSingletonVersion = PRISMA_SINGLETON_VERSION;

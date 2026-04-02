@@ -14,7 +14,7 @@ export default async function MqttServicePage() {
     <div className="space-y-6">
       <PageHeader
         title="ระบบบริการ MQTT"
-        description="กลุ่ม 1 (Basic): จัดการ credentials, ACL, และสถานะการเชื่อมต่ออุปกรณ์"
+        description="ดูวิธีเชื่อมต่อ broker, จำนวนเครื่องที่เชื่อมต่อ, credentials, ACL และ URL webhook สำหรับตั้งค่า broker"
       />
       <MqttServiceClient />
     </div>

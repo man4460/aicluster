@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { displayAppModuleTitle } from "@/lib/modules/config";
 import {
   listActiveResubscribeCooldowns,
   listAllActiveResubscribeCooldownsForAdmin,
@@ -47,7 +48,7 @@ export async function GET(req: Request) {
       return {
         moduleId: r.moduleId,
         unlockAtIso: r.unlockAtIso,
-        title: mod?.title ?? r.moduleId,
+        title: mod ? displayAppModuleTitle(mod.slug, mod.title) : r.moduleId,
         slug: mod?.slug ?? "",
       };
     }),

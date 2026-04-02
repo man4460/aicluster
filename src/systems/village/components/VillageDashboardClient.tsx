@@ -33,7 +33,7 @@ function Sparkline({ data }: { data: VillageOverview["twelve_month_sparkline"] }
 }
 
 const cardLinkClass =
-  "group block rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm transition hover:border-[#0000BF]/25 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0000BF]/35 focus-visible:ring-offset-2 active:scale-[0.99] motion-reduce:active:scale-100";
+  "group block rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-white to-slate-50/90 p-5 shadow-sm transition hover:border-[#0000BF]/25 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0000BF]/35 focus-visible:ring-offset-2 active:scale-[0.99] motion-reduce:active:scale-100";
 
 function CardChevron() {
   return (
@@ -68,11 +68,8 @@ export function VillageDashboardClient() {
   }, [api]);
 
   return (
-    <div className="space-y-5 sm:space-y-6">
-      <PageHeader
-        title="แดชบอร์ดหมู่บ้าน"
-        description="สรุปภาพรวมและลิงก์ด่วน — ใช้แถบเมนูด้านบนเพื่อสลับหน้าหลักของโมดูล"
-      />
+    <div className="space-y-8">
+      <PageHeader title="แดชบอร์ด" description="ภาพรวมและลิงก์ด่วน — เมนูด้านบนสลับหน้าโมดูล" />
       {err ? <p className="text-sm text-rose-600">{err}</p> : null}
       {data ? (
         <>

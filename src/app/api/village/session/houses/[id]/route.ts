@@ -4,15 +4,20 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { villageOwnerFromAuth } from "@/lib/village/api-owner";
 import { getVillageDataScope } from "@/lib/trial/module-scopes";
+import { isPrismaSchemaMismatchError, isPrismaUniqueViolation, PRISMA_SYNC_HINT_TH } from "@/lib/prisma-errors";
+import { normalizeVillageHouseNo } from "@/lib/village/house-no";
 
 type Ctx = { params: Promise<{ id: string }> };
 
+const feeCycleEnum = z.enum(["MONTHLY", "SEMI_ANNUAL", "ANNUAL"]);
+
 const patchSchema = z.object({
-  house_no: z.string().min(1).max(40).optional(),
+  house_no: z.string().min(1).max(120).optional(),
   plot_label: z.string().max(80).optional().nullable(),
   owner_name: z.string().max(200).optional().nullable(),
   phone: z.string().max(32).optional().nullable(),
   monthly_fee_override: z.number().int().min(0).max(9_999_999).optional().nullable(),
+  fee_cycle: feeCycleEnum.optional(),
   is_active: z.boolean().optional(),
   sort_order: z.number().int().min(0).max(999_999).optional(),
 });
@@ -46,17 +51,24 @@ export async function PATCH(req: Request, ctx: Ctx) {
   });
   if (!existing) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 
+  let normalizedHouseNo: string | undefined;
+  if (parsed.data.house_no !== undefined) {
+    normalizedHouseNo = normalizeVillageHouseNo(parsed.data.house_no);
+    if (!normalizedHouseNo) return NextResponse.json({ error: "ระบุเลขที่บ้าน" }, { status: 400 });
+  }
+
   try {
     const row = await prisma.villageHouse.update({
       where: { id },
       data: {
-        ...(parsed.data.house_no !== undefined ? { houseNo: parsed.data.house_no.trim() } : {}),
+        ...(normalizedHouseNo !== undefined ? { houseNo: normalizedHouseNo } : {}),
         ...(parsed.data.plot_label !== undefined ? { plotLabel: parsed.data.plot_label?.trim() || null } : {}),
         ...(parsed.data.owner_name !== undefined ? { ownerName: parsed.data.owner_name?.trim() || null } : {}),
         ...(parsed.data.phone !== undefined ? { phone: parsed.data.phone?.trim() || null } : {}),
         ...(parsed.data.monthly_fee_override !== undefined
           ? { monthlyFeeOverride: parsed.data.monthly_fee_override }
           : {}),
+        ...(parsed.data.fee_cycle !== undefined ? { feeCycle: parsed.data.fee_cycle } : {}),
         ...(parsed.data.is_active !== undefined ? { isActive: parsed.data.is_active } : {}),
         ...(parsed.data.sort_order !== undefined ? { sortOrder: parsed.data.sort_order } : {}),
       },
@@ -69,12 +81,28 @@ export async function PATCH(req: Request, ctx: Ctx) {
         owner_name: row.ownerName,
         phone: row.phone,
         monthly_fee_override: row.monthlyFeeOverride,
+        fee_cycle: row.feeCycle,
         is_active: row.isActive,
         sort_order: row.sortOrder,
       },
     });
-  } catch {
-    return NextResponse.json({ error: "เลขบ้านซ้ำ" }, { status: 409 });
+  } catch (e) {
+    if (isPrismaUniqueViolation(e)) {
+      return NextResponse.json(
+        {
+          error:
+            normalizedHouseNo !== undefined
+              ? `เลขที่บ้าน "${normalizedHouseNo}" มีในระบบแล้ว — เปรียบเทียบทั้งข้อความ`
+              : "ข้อมูลซ้ำในระบบ (เลขที่บ้าน)",
+        },
+        { status: 409 },
+      );
+    }
+    if (isPrismaSchemaMismatchError(e)) {
+      return NextResponse.json({ error: PRISMA_SYNC_HINT_TH }, { status: 500 });
+    }
+    console.error("village houses PATCH", e);
+    return NextResponse.json({ error: "บันทึกไม่สำเร็จ" }, { status: 500 });
   }
 }
 

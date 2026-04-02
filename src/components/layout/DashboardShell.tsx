@@ -11,6 +11,7 @@ import { cn } from "@/lib/cn";
 import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enums";
 import {
   buildDashboardNavGroups,
+  isSubscribedModuleLink,
   type DashboardNavGroup,
   type DashboardNavGroupId,
 } from "@/lib/dashboard-nav";
@@ -193,14 +194,32 @@ function NavCollapsibleGroup({
       </button>
       {open ? (
         <div className="mt-0.5 flex flex-col gap-0.5">
-          {group.items.map((item) =>
-            variant === "sidebar" ? (
+          {group.items.map((item) => {
+            if (!isSubscribedModuleLink(item)) {
+              return variant === "sidebar" ? (
+                <SidebarNavLink
+                  key={item.href}
+                  href={item.href}
+                  pathname={pathname}
+                  label={item.label}
+                />
+              ) : (
+                <DrawerNavLink
+                  key={item.href}
+                  href={item.href}
+                  pathname={pathname}
+                  label={item.label}
+                  onNavigate={onDrawerNavigate ?? (() => {})}
+                />
+              );
+            }
+            return variant === "sidebar" ? (
               <SidebarNavLink
                 key={item.href}
                 href={item.href}
                 pathname={pathname}
                 label={item.label}
-                serviceGroupId={"groupId" in item ? item.groupId : undefined}
+                serviceGroupId={item.groupId}
               />
             ) : (
               <DrawerNavLink
@@ -209,10 +228,10 @@ function NavCollapsibleGroup({
                 pathname={pathname}
                 label={item.label}
                 onNavigate={onDrawerNavigate ?? (() => {})}
-                serviceGroupId={"groupId" in item ? item.groupId : undefined}
+                serviceGroupId={item.groupId}
               />
-            ),
-          )}
+            );
+          })}
         </div>
       ) : null}
     </div>

@@ -57,6 +57,17 @@ export type DormRoomDetailJson = {
   }>;
 };
 
+export type DormOverdueRow = {
+  tenantId: string;
+  tenantName: string;
+  month: string;
+  balance: number;
+  billId: number | null;
+  paymentId: number | null;
+  paymentStatus: "PENDING" | "PAID" | "OVERDUE" | null;
+  proofSlipUrl: string | null;
+};
+
 function bangkokYmNow(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }).slice(0, 7);
 }
@@ -78,7 +89,19 @@ function formatPeriodMonthTh(ym: string): string {
   return d.toLocaleDateString("th-TH", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
-export function RoomDetailClient({ room }: { room: DormRoomDetailJson }) {
+function isUnpaidStatus(s: string | null | undefined): boolean {
+  return s === "PENDING" || s === "OVERDUE";
+}
+
+export function RoomDetailClient({
+  room,
+  overdueRows = [],
+  initialPayMonth = null,
+}: {
+  room: DormRoomDetailJson;
+  overdueRows?: DormOverdueRow[];
+  initialPayMonth?: string | null;
+}) {
   const router = useRouter();
 
   async function deleteRoom() {
@@ -219,10 +242,17 @@ export function RoomDetailClient({ room }: { room: DormRoomDetailJson }) {
         ok: true,
         title: "บันทึกสำเร็จ",
         message: "บันทึกมิเตอร์น้ำ / ไฟ และค่าคงที่สำหรับงวดนี้แล้ว",
-        hint: "ยอด Split Bill ต่อคนจะอัปเดตตามผู้พัก ACTIVE ในห้องนี้",
+        hint: "กำลังเลื่อนไปส่วนชำระเงิน — ออกใบแจ้งหนี้ แนบสลิป หรือกดรับชำระได้ที่นั่น",
       });
+      setPayMonth(periodMonth);
       setMeterModalOpen(false);
       router.refresh();
+      window.setTimeout(() => {
+        document.getElementById("dorm-record-payment")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 450);
     } catch (err) {
       setBillFeedback({
         ok: false,
@@ -283,7 +313,7 @@ export function RoomDetailClient({ room }: { room: DormRoomDetailJson }) {
   }
 
   const [payTenant, setPayTenant] = useState(activeTenants[0]?.id ?? "");
-  const [payMonth, setPayMonth] = useState(bangkokYmNow());
+  const [payMonth, setPayMonth] = useState(() => initialPayMonth ?? bangkokYmNow());
   const [payNote, setPayNote] = useState("");
   const [payLoading, setPayLoading] = useState(false);
   const [payErr, setPayErr] = useState<string | null>(null);
@@ -295,6 +325,14 @@ export function RoomDetailClient({ room }: { room: DormRoomDetailJson }) {
     }
   }, [activeTenants, payTenant]);
 
+  useEffect(() => {
+    if (!initialPayMonth) return;
+    const row = overdueRows.find((r) => r.month === initialPayMonth);
+    if (row?.tenantId && room.tenants.some((t) => t.id === row.tenantId && t.status === "ACTIVE")) {
+      setPayTenant(row.tenantId);
+    }
+  }, [initialPayMonth, overdueRows, room.tenants]);
+
   const billForPay = useMemo(
     () => room.utilityBills.find((b) => b.periodMonth === payMonth),
     [room.utilityBills, payMonth],
@@ -304,10 +342,28 @@ export function RoomDetailClient({ room }: { room: DormRoomDetailJson }) {
     if (!billForPay || !payTenant) return null;
     return (
       billForPay.payments.find(
-        (p) => String(p.tenantId) === payTenant && p.paymentStatus === "PENDING",
+        (p) => String(p.tenantId) === payTenant && isUnpaidStatus(p.paymentStatus),
       ) ?? null
     );
   }, [billForPay, payTenant]);
+
+  /** แถวค้างชำระที่ตรงกับผู้พัก + งวดในแบบฟอร์ม (สอดคล้องแดชบอร์ด) */
+  const overdueRowForPay = useMemo(
+    () => overdueRows.find((r) => r.month === payMonth && r.tenantId === payTenant) ?? null,
+    [overdueRows, payMonth, payTenant],
+  );
+
+  /** ยอดที่แสดงในส่วนชำระเงิน — ใช้ Split Bill ถ้ามีแถวค้าง; ไม่เช่นนั้นใช้ยอดจากการคำนวณค้างชำระ */
+  const displayOutstanding = useMemo(() => {
+    if (pendingForTenant) return pendingForTenant.amountToPay;
+    if (overdueRowForPay && overdueRowForPay.balance > 0.005) return overdueRowForPay.balance;
+    return null;
+  }, [pendingForTenant, overdueRowForPay]);
+
+  const overdueNoBillForPayMonth = Boolean(overdueRowForPay && !overdueRowForPay.billId);
+
+  const billButNoUnpaidRow =
+    Boolean(billForPay && payTenant && !pendingForTenant && overdueRowForPay && overdueRowForPay.balance > 0.005);
 
   async function recordPayment(e: React.FormEvent) {
     e.preventDefault();
@@ -368,6 +424,118 @@ export function RoomDetailClient({ room }: { room: DormRoomDetailJson }) {
 
   return (
     <div className="space-y-8">
+      {overdueRows.length > 0 ? (
+        <section
+          className="rounded-2xl border-2 border-amber-200/90 bg-gradient-to-br from-amber-50/80 via-white to-white p-5 shadow-sm"
+          aria-label="ค้างชำระ"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold tracking-tight text-amber-950">ค้างชำระ (งวดที่ผ่านมา)</h2>
+              <p className="mt-1 text-xs leading-relaxed text-amber-900/80">
+                รายการตรงกับแดชบอร์ด — ใช้ใบแจ้งหนี้ / แนบสลิป หรือบันทึกมิเตอร์ถ้ายังไม่มีบิลในงวดนั้น
+              </p>
+            </div>
+          </div>
+          <ul className="mt-4 space-y-3">
+            {overdueRows.map((row) => (
+              <li
+                key={`${row.tenantId}-${row.month}`}
+                className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm"
+              >
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900">{row.tenantName}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      งวด {formatPeriodMonthTh(row.month)}{" "}
+                      <span className="font-mono text-slate-400">({row.month})</span>
+                    </p>
+                    <p className="mt-2 text-lg font-bold tabular-nums text-red-800">
+                      {row.balance.toLocaleString("th-TH", { maximumFractionDigits: 2 })}{" "}
+                      <span className="text-sm font-semibold">บาท</span>
+                    </p>
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col gap-3 lg:max-w-md">
+                    {!row.billId ? (
+                      <>
+                        <p className="text-xs leading-relaxed text-amber-900">
+                          ยังไม่มีบิลมิเตอร์ในงวดนี้ — บันทึกมิเตอร์และค่าคงที่ก่อน ระบบจะสร้างยอดแยกคนและใบแจ้งหนี้ให้
+                          จากนั้นไปที่ส่วน &quot;บันทึกการชำระเงิน&quot; ด้านล่างเพื่อออกใบแจ้งหนี้ แนบสลิป หรือรับชำระ
+                          (หลังบันทึกมิเตอร์สำเร็จ หน้าจะเลื่อนไปให้อัตโนมัติ)
+                        </p>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                          <button
+                            type="button"
+                            className="w-full rounded-xl bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3] sm:w-auto"
+                            onClick={() => {
+                              setPayTenant(row.tenantId);
+                              setPayMonth(row.month);
+                              setPeriodMonth(row.month);
+                              setBillFeedback(null);
+                              setMeterModalOpen(true);
+                            }}
+                          >
+                            บันทึกมิเตอร์ / ค่าคงที่ — {row.month}
+                          </button>
+                          <button
+                            type="button"
+                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 sm:w-auto"
+                            onClick={() => {
+                              setPayTenant(row.tenantId);
+                              setPayMonth(row.month);
+                              document.getElementById("dorm-record-payment")?.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                              });
+                            }}
+                          >
+                            ไปส่วนชำระเงิน (หลังมีบิลจึงชำระได้)
+                          </button>
+                        </div>
+                      </>
+                    ) : row.paymentId != null && isUnpaidStatus(row.paymentStatus) ? (
+                      <>
+                        <div className="flex flex-wrap gap-2">
+                          <Link
+                            href={`/dashboard/dormitory/invoice/${row.paymentId}`}
+                            target="_blank"
+                            className="inline-flex items-center justify-center rounded-xl bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a3]"
+                          >
+                            ใบแจ้งหนี้ / QR / ลิงก์แนบสลิป
+                          </Link>
+                          <button
+                            type="button"
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                            onClick={() => {
+                              setPayTenant(row.tenantId);
+                              setPayMonth(row.month);
+                              document.getElementById("dorm-record-payment")?.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                              });
+                            }}
+                          >
+                            เลือกในแบบฟอร์มชำระ
+                          </button>
+                        </div>
+                        <DormPaymentProofBlock
+                          paymentId={row.paymentId}
+                          initialUrl={row.proofSlipUrl ?? null}
+                        />
+                      </>
+                    ) : (
+                      <p className="text-xs text-slate-500">
+                        ไม่พบแถวชำระในงวดนี้ — ลองรีเฟรช หรือบันทึกมิเตอร์ใหม่
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
         <h2 className="text-sm font-semibold text-slate-900">งวดปัจจุบัน ({dashboardYm})</h2>
         <p className="mt-1 text-xs text-slate-500">
@@ -450,7 +618,7 @@ export function RoomDetailClient({ room }: { room: DormRoomDetailJson }) {
                               >
                                 {paymentStatusTh(row.paymentStatus)}
                               </span>
-                              {row.paymentStatus === "PENDING" && row.proofSlipUrl ? (
+                              {isUnpaidStatus(row.paymentStatus) && row.proofSlipUrl ? (
                                 <span className="text-[10px] font-medium text-sky-700">มีสลิปรอตรวจ</span>
                               ) : null}
                             </div>
@@ -459,7 +627,7 @@ export function RoomDetailClient({ room }: { room: DormRoomDetailJson }) {
                           )}
                         </td>
                         <td className="px-3 py-2">
-                          {t.status === "ACTIVE" && row && row.paymentStatus === "PENDING" ? (
+                          {t.status === "ACTIVE" && row && isUnpaidStatus(row.paymentStatus) ? (
                             <Link
                               href={`/dashboard/dormitory/invoice/${row.id}`}
                               className="text-xs font-semibold text-[#0000BF] hover:underline"
@@ -625,11 +793,15 @@ export function RoomDetailClient({ room }: { room: DormRoomDetailJson }) {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+      <section
+        id="dorm-record-payment"
+        className="scroll-mt-6 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm"
+      >
         <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-5 py-4">
           <h2 className="text-base font-semibold text-slate-900">บันทึกการชำระเงิน</h2>
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-500">
             เลือกผู้เข้าพักและงวดที่บันทึกมิเตอร์แล้ว — พิมพ์ใบแจ้งหนี้ให้ผู้พักสแกนพร้อมเพย์และแนบสลิป จากนั้นตรวจสลิปแล้วกดรับชำระ
+            ถ้างวดนั้นยังไม่มีบิล ให้บันทึกมิเตอร์ก่อน (จากการ์ดค้างชำระหรือปุ่มมิเตอร์ด้านบน) แล้วยอดจะขึ้นที่นี่
           </p>
         </div>
 
@@ -669,26 +841,49 @@ export function RoomDetailClient({ room }: { room: DormRoomDetailJson }) {
 
           <div
             className={
-              pendingForTenant
+              displayOutstanding != null
                 ? "rounded-2xl border-2 border-[#0000BF]/20 bg-[#0000BF]/[0.04] p-4 sm:p-5"
                 : "rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-4 sm:p-5"
             }
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">ยอด Split Bill</p>
-                {pendingForTenant ? (
-                  <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-[#0000BF] sm:text-3xl">
-                    {pendingForTenant.amountToPay.toLocaleString("th-TH", { maximumFractionDigits: 2 })}{" "}
-                    <span className="text-base font-semibold text-[#0000BF]/80">บาท</span>
-                  </p>
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  {pendingForTenant ? "ยอด Split Bill (เรียกเก็บ)" : "ยอดค้างชำระ"}
+                </p>
+                {displayOutstanding != null ? (
+                  <>
+                    <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-red-800 sm:text-3xl">
+                      {displayOutstanding.toLocaleString("th-TH", { maximumFractionDigits: 2 })}{" "}
+                      <span className="text-base font-semibold text-red-800/85">บาท</span>
+                    </p>
+                    {pendingForTenant ? (
+                      <p className="mt-1 text-[11px] text-slate-600">
+                        ตรงกับใบแจ้งหนี้ / แนบสลิปในงวด {payMonth}
+                      </p>
+                    ) : overdueNoBillForPayMonth ? (
+                      <p className="mt-2 text-xs leading-relaxed text-amber-950">
+                        งวดนี้ยังไม่มีบิลมิเตอร์ — บันทึกมิเตอร์ / ค่าคงที่ก่อน (การ์ดค้างชำระหรือส่วนมิเตอร์)
+                        หลังมีบิลแล้วยอดด้านบนจะตรงกับ Split Bill และจะออกใบแจ้งหนี้ได้
+                      </p>
+                    ) : billButNoUnpaidRow ? (
+                      <p className="mt-2 text-xs leading-relaxed text-amber-900">
+                        มีบิลในงวดนี้แต่ไม่พบแถวชำระที่ยังค้างสำหรับผู้พักนี้ — ลองรีเฟรชหน้า หรือบันทึกมิเตอร์ใหม่ให้ครบผู้พัก ACTIVE
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-[11px] text-slate-600">
+                        ยอดตามการคำนวณค้างชำระ (สอดคล้องแดชบอร์ด)
+                      </p>
+                    )}
+                  </>
                 ) : (
                   <p className="mt-2 text-sm text-slate-500">
-                    ไม่มียอดค้างชำระในงวดนี้ — บันทึกมิเตอร์ด้วยปุ่ม &quot;บันทึกมิเตอร์ / ค่าคงที่&quot; ก่อน
+                    ไม่มียอดค้างชำระในงวดนี้สำหรับผู้พักที่เลือก — หรือยังไม่มีบิลมิเตอร์ ให้บันทึกมิเตอร์ด้วยปุ่ม
+                    &quot;บันทึกมิเตอร์ / ค่าคงที่&quot; ก่อน
                   </p>
                 )}
               </div>
-              {pendingForTenant ? (
+              {displayOutstanding != null ? (
                 <span className="inline-flex w-fit shrink-0 items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-950 ring-1 ring-amber-200/80">
                   ค้างชำระ
                 </span>

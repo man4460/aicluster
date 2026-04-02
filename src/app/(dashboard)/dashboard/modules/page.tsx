@@ -4,10 +4,12 @@ import { PageHeader } from "@/components/ui/page-container";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
-import { displayAppModuleTitle } from "@/lib/modules/config";
+import { displayAppModuleTitle, MQTT_SERVICE_MODULE_SLUG } from "@/lib/modules/config";
 import { ModuleSubscriptionBrowser } from "@/components/dashboard/ModuleSubscriptionBrowser";
 import { listActiveResubscribeCooldowns, listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { listTrialModuleIds } from "@/lib/modules/trial-store";
+import { SYSTEM_MAP_CATALOG_ROW } from "@/lib/modules/system-map-catalog";
+import { isMqttServiceModuleEnabled } from "@/lib/modules/mqtt-feature";
 
 export default async function ModulesCatalogPage() {
   const session = await getSession();
@@ -28,10 +30,23 @@ export default async function ModulesCatalogPage() {
 
   const initialCooldownUnlocks = Object.fromEntries(cooldownRows.map((c) => [c.moduleId, c.unlockAtIso]));
 
-  const modulesWithDisplayTitles = modules.map((m) => ({
-    ...m,
-    title: displayAppModuleTitle(m.slug, m.title),
-  }));
+  const catalogModules = isMqttServiceModuleEnabled()
+    ? modules
+    : modules.filter((m) => m.slug !== MQTT_SERVICE_MODULE_SLUG);
+
+  const group1 = catalogModules.filter((m) => m.groupId === 1);
+  const rest = catalogModules.filter((m) => m.groupId !== 1);
+  const modulesWithDisplayTitles = [
+    { ...SYSTEM_MAP_CATALOG_ROW },
+    ...group1.map((m) => ({
+      ...m,
+      title: displayAppModuleTitle(m.slug, m.title),
+    })),
+    ...rest.map((m) => ({
+      ...m,
+      title: displayAppModuleTitle(m.slug, m.title),
+    })),
+  ];
 
   return (
     <div className="space-y-6">

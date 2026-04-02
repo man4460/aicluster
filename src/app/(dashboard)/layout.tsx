@@ -3,13 +3,13 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { TokenGate } from "@/components/dashboard/TokenGate";
 import { DashboardShell } from "@/components/layout/DashboardShell";
-import { canAccessAppModule, type UserAccessFields } from "@/lib/modules/access";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { STAFF_ALLOWED_MODULE_SLUGS } from "@/lib/modules/staff-policy";
 import { computeDashboardAccessAllowed } from "@/lib/tokens/dashboard-access";
 import { applyBuffetMonthlyBilling } from "@/lib/tokens/buffet-monthly-billing";
 import { applyDailyTokenDeduction } from "@/lib/tokens/daily-deduction";
-import { displayAppModuleTitle } from "@/lib/modules/config";
+import { displayAppModuleTitle, MQTT_SERVICE_MODULE_SLUG } from "@/lib/modules/config";
+import { isMqttServiceModuleEnabled } from "@/lib/modules/mqtt-feature";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { listTrialModuleIds } from "@/lib/modules/trial-store";
 
@@ -54,7 +54,6 @@ export default async function DashboardLayout({
     select: { id: true, slug: true, title: true, groupId: true },
   });
 
-  const access: UserAccessFields = billCtx.access;
   const [subscribedIds, trialIds] = await Promise.all([
     listSubscribedModuleIds(session.sub),
     listTrialModuleIds(session.sub),
@@ -72,7 +71,7 @@ export default async function DashboardLayout({
         lastBuffetBillingMonth: user.lastBuffetBillingMonth,
       });
 
-  const serviceModules = allModules
+  let serviceModules = allModules
     .filter((m) => !user.employerUserId || STAFF_ALLOWED_MODULE_SLUGS.has(m.slug))
     .filter((m) => subscribedSet.has(m.id) || trialSet.has(m.id))
     .map(({ slug, title, groupId }) => ({
@@ -80,6 +79,14 @@ export default async function DashboardLayout({
       title: displayAppModuleTitle(slug, title),
       groupId,
     }));
+
+  if (!isMqttServiceModuleEnabled()) {
+    serviceModules = serviceModules.filter((m) => m.slug !== MQTT_SERVICE_MODULE_SLUG);
+  }
+
+  serviceModules.sort((a, b) =>
+    a.groupId !== b.groupId ? a.groupId - b.groupId : a.title.localeCompare(b.title, "th"),
+  );
 
   const safeAvatar =
     user.avatarUrl && user.avatarUrl.startsWith("/uploads/") ? user.avatarUrl : null;

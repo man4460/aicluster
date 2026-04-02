@@ -54,6 +54,9 @@ yarn-error.log*
 /public/uploads/village-slips/*
 !/public/uploads/village-slips/.gitkeep
 
+# Legacy duplicate tree — แอปจริงอยู่ราก repo (มี node_modules/.next ของ copy เก่า)
+/web/
+
 # vercel
 .vercel
 

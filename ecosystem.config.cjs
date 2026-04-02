@@ -6,6 +6,11 @@
  *
  * รัน dev: npm run pm2:dev
  * โปรดักชัน: npm run build แล้ว npm run pm2:prod
+ *
+ * บิลด์อัตโนมัติเมื่อแก้โค้ด (โหมด production + PM2):
+ *   เปิด mawell-serve ไว้ก่อน แล้วรันในอีกเทอร์มินัล: npm run watch:pm2:prod
+ *   (debounce ~12s — หลังหยุดแก้ไฟล์ชั่วคราวจึงค่อย build + restart)
+ * พัฒนาปกติไม่ต้องบิลด์ซ้ำ: ใช้ next dev (pm2:dev หรือ npm run dev)
  */
 const path = require("path");
 
@@ -19,7 +24,7 @@ module.exports = {
       cwd,
       interpreter: "node",
       script: nextBin,
-      args: "dev",
+      args: "dev -H 0.0.0.0",
       watch: false,
       env: {
         NODE_ENV: "development",
@@ -30,7 +35,7 @@ module.exports = {
       cwd,
       interpreter: "node",
       script: nextBin,
-      args: "start",
+      args: "start -H 0.0.0.0",
       watch: false,
       env: {
         NODE_ENV: "production",

@@ -1,6 +1,10 @@
 import { cookies } from "next/headers";
 import * as jose from "jose";
 import { SESSION_COOKIE } from "@/lib/auth/constants";
+import {
+  sessionCookieSecure,
+  sessionCookieSecureForIncomingRequest,
+} from "@/lib/auth/cookie-secure";
 
 export type SessionUser = {
   sub: string;
@@ -57,22 +61,24 @@ export async function getSession(): Promise<SessionUser | null> {
   return verifySessionToken(token);
 }
 
-export async function setSessionCookie(token: string) {
+export async function setSessionCookie(token: string, req?: Request) {
   const store = await cookies();
+  const secure = req ? sessionCookieSecureForIncomingRequest(req) : sessionCookieSecure();
   store.set(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure,
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
   });
 }
 
-export async function clearSessionCookie() {
+export async function clearSessionCookie(req?: Request) {
   const store = await cookies();
+  const secure = req ? sessionCookieSecureForIncomingRequest(req) : sessionCookieSecure();
   store.set(SESSION_COOKIE, "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure,
     sameSite: "lax",
     path: "/",
     maxAge: 0,

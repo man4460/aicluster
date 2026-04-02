@@ -72,6 +72,104 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  if (href.startsWith("/dashboard/mqtt-service")) {
+    return (
+      <Svg>
+        <path
+          d="M12 20a2 2 0 100-4 2 2 0 000 4zM4.93 4.93l1.41 1.41M18.36 6.34l1.42-1.41M12 4V2M7.05 7.05L5.64 5.64M16.95 7.05l1.41-1.41M8 12a4 4 0 018 0"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </Svg>
+    );
+  }
+  if (href.startsWith("/dashboard/building-pos")) {
+    return (
+      <Svg>
+        <path
+          d="M3 21h18M6 21V10l6-3 6 3v11M10 21v-6h4v6"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
+  if (href.startsWith("/dashboard/village")) {
+    return (
+      <Svg>
+        <path
+          d="M3 21h18M5 21V12l4-2 4 2v9M15 21v-5l3-1 3 1v5M9 14h.01M9 17h.01M12 14h.01"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
+  if (href.startsWith("/dashboard/activity-logs")) {
+    return (
+      <Svg>
+        <path
+          d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </Svg>
+    );
+  }
+  /* แยกไอคอนแอดมิน — อย่าให้ทุกรายการไปลงโล่ตัวเดียว */
+  if (href.startsWith("/dashboard/admin/users")) {
+    return (
+      <Svg>
+        <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="2" />
+        <path
+          d="M3.5 20.5v-.5a5 5 0 015-5h1a5 5 0 015 5v.5"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle cx="17" cy="9" r="2.5" stroke="currentColor" strokeWidth="2" />
+        <path
+          d="M14 20.5v-.5a3.5 3.5 0 013.2-3.48"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
+  if (href.startsWith("/dashboard/admin/mqtt")) {
+    return (
+      <Svg>
+        <path
+          d="M4 7h4v10H4V7zm6-3h4v16h-4V4zm6 5h4v6h-4V9z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
+  if (href.startsWith("/dashboard/admin/module-cooldowns")) {
+    return (
+      <Svg>
+        <path
+          d="M21 12a9 9 0 00-9-9 9.75 9.75 0 00-6.74 2.74L3 8M3 3v5h5M3 12a9 9 0 009 9 9.75 9.75 0 006.74-2.74L21 16M21 21v-5h-5"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
   if (href.startsWith("/dashboard/car-wash")) {
     return (
       <Svg>

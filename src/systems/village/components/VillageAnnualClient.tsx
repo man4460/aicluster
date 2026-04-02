@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-container";
 import { createVillageSessionApiRepository } from "@/systems/village/village-service";
+import { villageBtnPrimary, villageBtnSecondary, villageCard, villageField, villageTableWrap, villageToolbar } from "@/systems/village/village-ui";
 
 function bangkokYear(): number {
   return Number.parseInt(new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok", year: "numeric" }), 10);
@@ -46,33 +47,32 @@ export function VillageAnnualClient() {
   const maxBar = Math.max(1, ...rows.map((m) => Math.max(m.total_due, m.total_paid)));
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="สรุปรายปี 12 เดือน" description="ยอดเรียกเก็บและรับชำระรวมต่อเดือน พร้อมกราฟและส่งออก CSV" />
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="text-sm">
+    <div className="space-y-8">
+      <PageHeader title="สรุป 12 เดือน" description="ยอดรวมต่อเดือน กราฟ และดาวน์โหลด CSV — ปีตามปฏิทิน (กรุงเทพ)" />
+      <div className={villageToolbar}>
+        <label className="text-sm font-medium text-slate-700">
           ปี (ค.ศ.)
           <input
             type="number"
-            className="ml-2 rounded-lg border border-slate-200 px-3 py-2"
+            min={2000}
+            max={2100}
+            className={`mt-1.5 w-28 text-center font-semibold tabular-nums ${villageField}`}
             value={year}
             onChange={(e) => setYear(Number.parseInt(e.target.value, 10) || year)}
           />
         </label>
-        <a
-          href={api.exportUrl("annual_summary", year)}
-          className="rounded-lg bg-[#0000BF] px-4 py-2 text-sm font-medium text-white"
-        >
-          ดาวน์โหลด CSV สรุป 12 เดือน
+        <a href={api.exportUrl("annual_summary", year)} className={villageBtnPrimary}>
+          ดาวน์โหลด CSV
         </a>
-        <Link href="/dashboard/village/reports" className="text-sm text-[#0000BF] hover:underline">
-          รายงาน &amp; Excel อื่น ๆ
+        <Link href="/dashboard/village/reports" className={villageBtnSecondary}>
+          ส่งออกอื่น ๆ
         </Link>
       </div>
       {err ? <p className="text-sm text-rose-600">{err}</p> : null}
 
-      <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm">
-        <h3 className="text-sm font-semibold text-slate-900">ภาพรวมการเก็บรายเดือน</h3>
-        <p className="mt-1 text-xs text-slate-500">แท่งเทา = เรียกเก็บ · เขียว = รับแล้ว (สเกลตามเดือนที่สูงสุดในปี)</p>
+      <div className={`${villageCard} p-5`}>
+        <h3 className="text-base font-semibold tracking-tight text-slate-900">กราฟรายเดือน</h3>
+        <p className="mt-1 text-xs text-slate-500">แท่งเทา = เรียกเก็บ · เขียว = รับแล้ว (สเกลตามเดือนสูงสุดในปี)</p>
         <div className="mt-4 flex h-36 items-end gap-1 border-b border-slate-100 pb-8">
           {rows.map((m) => {
             const hDue = Math.round((m.total_due / maxBar) * 100);
@@ -90,9 +90,9 @@ export function VillageAnnualClient() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200/90">
+      <div className={villageTableWrap}>
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs font-semibold text-slate-600">
+          <thead className="bg-slate-50/90 text-xs font-semibold text-slate-600">
             <tr>
               <th className="px-3 py-2">เดือน</th>
               <th className="px-3 py-2">จำนวนแถวบิล</th>

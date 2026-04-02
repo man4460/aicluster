@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# รันจากที่ไหนก็ได้หลังทำ: cd <repo> && npm link
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+export DEPLOY_PATH="${DEPLOY_PATH:-$ROOT}"
+exec bash "$ROOT/scripts/deploy.sh"

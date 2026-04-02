@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { villageOwnerFromAuth } from "@/lib/village/api-owner";
 import { getVillageDataScope } from "@/lib/trial/module-scopes";
+import { isPrismaSchemaMismatchError, PRISMA_SYNC_HINT_TH } from "@/lib/prisma-errors";
 
 function csvEscape(s: string) {
   if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
@@ -118,19 +119,29 @@ export async function GET(req: Request) {
   }
 
   if (kind === "residents") {
-    const houses = await prisma.villageHouse.findMany({
-      where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
-      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-      include: {
-        residents: { where: { isActive: true }, orderBy: { id: "asc" } },
-      },
-    });
+    let houses;
+    try {
+      houses = await prisma.villageHouse.findMany({
+        where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+        include: {
+          residents: { where: { isActive: true }, orderBy: { id: "asc" } },
+        },
+      });
+    } catch (e) {
+      if (isPrismaSchemaMismatchError(e)) {
+        return NextResponse.json({ error: PRISMA_SYNC_HINT_TH }, { status: 503 });
+      }
+      console.error("village export residents", e);
+      return NextResponse.json({ error: "ส่งออกไม่สำเร็จ" }, { status: 500 });
+    }
     const header = [
       "house_no",
       "plot_label",
       "house_owner_name",
       "house_phone",
       "monthly_fee_override",
+      "fee_cycle",
       "house_active",
       "resident_name",
       "resident_phone",
@@ -147,6 +158,7 @@ export async function GET(req: Request) {
             h.ownerName ?? "",
             h.phone ?? "",
             h.monthlyFeeOverride ?? "",
+            h.feeCycle,
             h.isActive ? "1" : "0",
             "",
             "",
@@ -165,6 +177,7 @@ export async function GET(req: Request) {
               h.ownerName ?? "",
               h.phone ?? "",
               h.monthlyFeeOverride ?? "",
+              h.feeCycle,
               h.isActive ? "1" : "0",
               r.name,
               r.phone ?? "",

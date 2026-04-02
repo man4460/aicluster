@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# รันจากที่ไหนก็ได้: ~/aicluster/deploy หรือ /path/to/aicluster/deploy
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+export DEPLOY_PATH="${DEPLOY_PATH:-$ROOT}"
+exec bash "$ROOT/scripts/deploy.sh"

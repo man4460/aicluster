@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
 import { canAccessAppModule, canStartTrialForModule, type UserAccessFields } from "@/lib/modules/access";
 import { MODULE_RESUBSCRIBE_COOLDOWN_MS } from "@/lib/modules/module-subscription-cooldown";
+import { isSystemMapCatalogSlug } from "@/lib/modules/system-map-catalog";
 
 type ModuleCardDTO = {
   id: string;
@@ -261,6 +262,34 @@ export function ModuleSubscriptionBrowser({
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {items.map((m) => {
+                  if (isSystemMapCatalogSlug(m.slug)) {
+                    const cardTone = groupTone(m.groupId);
+                    return (
+                      <div
+                        key={m.id}
+                        className="app-surface-strong flex h-full flex-col rounded-xl border-2 border-dashed border-[#0000BF]/25 bg-[#0000BF]/[0.02] p-4 transition hover:-translate-y-0.5 hover:shadow-md"
+                      >
+                        <div
+                          className={`inline-flex w-fit items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold ${cardTone.chip}`}
+                        >
+                          <span aria-hidden>{cardTone.icon}</span>
+                          <span>กลุ่ม {m.groupId}</span>
+                        </div>
+                        <h3 className="mt-1 text-sm font-bold text-slate-900">{m.title}</h3>
+                        <p className="mt-1 min-h-[2.5rem] flex-1 text-xs leading-relaxed text-slate-600">{m.description}</p>
+                        <div className="mt-auto pt-3">
+                          <Link
+                            href="/dashboard/explore"
+                            className="app-btn-primary inline-flex w-full items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold"
+                          >
+                            เปิดแผนผังระบบ
+                          </Link>
+                        </div>
+                        <p className="mt-2 text-[11px] text-slate-500">ไม่ต้อง Subscribe — ดูภาพรวมและทางลัดเข้าระบบ</p>
+                      </div>
+                    );
+                  }
+
                   const subscribed = savedSubscribedIds.has(m.id);
                   const trialing = !subscribed && trialIds.has(m.id);
                   const unlocked = canAccessAppModule(access, { slug: m.slug, groupId: m.groupId });

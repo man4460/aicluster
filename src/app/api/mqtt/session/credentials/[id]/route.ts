@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { mqttOwnerFromAuth } from "@/lib/mqtt/api-owner";
 import { getMqttDataScope } from "@/lib/trial/module-scopes";
+import { mqttSessionApiDisabled } from "@/lib/mqtt/session-api-guard";
 
 const patchSchema = z.object({
   label: z.string().max(160).optional().nullable(),
@@ -11,6 +12,8 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const disabled = mqttSessionApiDisabled();
+  if (disabled) return disabled;
   const auth = await requireSession();
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const own = await mqttOwnerFromAuth(auth.session.sub);
@@ -53,6 +56,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 }
 
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const disabled = mqttSessionApiDisabled();
+  if (disabled) return disabled;
   const auth = await requireSession();
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const own = await mqttOwnerFromAuth(auth.session.sub);
