@@ -38,7 +38,7 @@ export const PARKING_MODULE_GROUP_ID = 1 as const;
 export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === ATTENDANCE_MODULE_SLUG) return "เช็คอินอัจฉริยะ";
   if (slug === HOME_FINANCE_BASIC_MODULE_SLUG) return "รายรับ–รายจ่าย";
-  if (slug === CAR_WASH_MODULE_SLUG) return "ระบบจัดการคาร์แคร์";
+  if (slug === CAR_WASH_MODULE_SLUG) return "คาร์แคร์";
   if (slug === MQTT_SERVICE_MODULE_SLUG) return "ระบบบริการ MQTT";
   if (slug === BUILDING_POS_MODULE_SLUG) return "POS ร้านอาหาร";
   if (slug === VILLAGE_MODULE_SLUG) return "ระบบจัดการหมู่บ้าน";

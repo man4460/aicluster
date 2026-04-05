@@ -1,0 +1,37 @@
+---
+description: เทมเพลต UI ลานล้างรถ (car-wash) — การ์ดรายการ ปุ่มไอคอน popup แยกซ้าย-ขวา และโมดูลร่วม
+globs:
+  - "**/systems/car-wash/**"
+  - "**/api/car-wash/**"
+---
+
+# Car wash — เทมเพลตการแก้ไข UI / โครงสร้าง
+
+## โมดูลปุ่มไอคอนร่วม
+
+- ใช้ **`@/systems/car-wash/car-wash-popup-icon-buttons`**
+  - **`SalesRowOpenDetailButton`** — ปุ่มเปิด popup รายละเอียด (กริดเล็ก 32px, โทนม่วง) บนการ์ดรายการ / แท็บเหมา
+  - **`PopupIconButton`** + **`popupIconBtnDanger`** — แถบเครื่องมือใน `FormModal` (ดูรูป/สลิป, อัปโหลด, กล้อง, ล้าง, แก้ไข, ลบ, พิมพ์) พร้อม `title` / `aria-label` ภาษาไทย และ `busy` ตอนอัปโหลด
+
+## การ์ดรายการ (ยอดขาย — ช่วงที่กรอง)
+
+- ไฟล์หลัก: **`CarWashSalesPanel.tsx`**
+- **แถวเดียวกระชับ:** รูปย่อ **48px** (`h-12 w-12`), กลาง = เวลา + สถานะ + `#id`, **ทะเบียนหนาโดยไม่มีป้ายคำว่า "ทะเบียน"**, แพ็ก, ชื่อ, โน้ต `line-clamp-1`
+- **ขวา:** ยอดเงิน + **`SalesRowOpenDetailButton`** เท่านั้น — การกระทำทั้งหมดอยู่ใน **`FormModal`** (`salesRowDetail`)
+- แถว **แพ็กเหมา** ในลิสต์เดียวกัน: ขอบซ้ายบางสีอำพัน, ป้ายสั้น **「เหมา」**
+
+## แท็บเหมา (`CarWashDashboard.tsx`)
+
+- **ซ้าย (flex-1):** แถว — สลิป + คอลัมน์ข้อมูล (สถานะ, `#id`, ทะเบียน, ชื่อ, `เบอร์ · แพ็ก`)
+- **ขวา (shrink-0):** **`border-l`** แยกโซน — หัวข้อย่อย **ยอด** / **สิทธิ์คงเหลือ** (ชิดขวา) + **`SalesRowOpenDetailButton`** ด้านล่าง (`justify-between` ในคอลัมน์ขวา)
+- **`FormModal`** แยก (`bundleTabRowDetail`) — แถบไอคอนเหมือนใน popup ยอดขาย; เปิดแก้ไข/ลบแล้วปิด popup รายละเอียด (`setBundleTabRowDetailId(null)` / ล้างเมื่อลบรายการ)
+
+## พฤติกรรมทั่วไป
+
+- **อย่า** กลืน error ใน `loadAll` แบบไม่มีข้อความ — ใช้ `e instanceof Error ? e.message : …`
+- Schema/คอลัมน์ใหม่ (เช่น bundle, slip): รัน **`npx prisma migrate deploy`** แล้วรีสตาร์ทเซิร์ฟเวอร์ — ข้อความ DB ใช้ **`@/lib/car-wash/route-errors`** / **`prisma-errors`**
+
+## อ้างอิงที่เกี่ยวข้อง
+
+- อัปโหลดรูปรายการ: **`AppGalleryCameraFileInputs`** + ref เป้าหมายก่อนเปิดแกลเลอรี/กล้อง
+- พิมพ์ใบเหมา: **`car-wash-bundle-slip-print`**, **`buildCarWashBundleSlipInnerHtml`**

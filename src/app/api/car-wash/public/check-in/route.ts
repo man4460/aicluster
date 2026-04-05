@@ -59,6 +59,7 @@ export async function POST(req: Request) {
           finalPrice: 0,
           note: "ลูกค้าเช็กอินผ่าน QR",
           recordedByName: "ลูกค้า (QR)",
+          serviceStatus: "COMPLETED",
         },
       });
       return consumed;
@@ -76,6 +77,7 @@ export async function POST(req: Request) {
         total_uses: out.totalUses,
         used_uses: out.usedUses,
         is_active: out.isActive,
+        slip_photo_url: (out as { slipPhotoUrl?: string }).slipPhotoUrl ?? "",
         created_at: out.createdAt.toISOString(),
       },
     });

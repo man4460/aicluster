@@ -14,7 +14,7 @@ export async function seedCarWashTrialData(tx: Tx, ownerUserId: string, trialSes
       name: "ล้างสี + ดูดฝุ่น (ทดลอง)",
       price: 199,
       durationMinutes: 45,
-      description: "ใช้ทดลองระบบคาร์แคร์ — แก้ไขหรือลบได้ในแดชบอร์ด",
+      description: "ทดลองคาร์แคร์ — แก้/ลบในแดชบอร์ดได้",
       isActive: true,
     },
   });

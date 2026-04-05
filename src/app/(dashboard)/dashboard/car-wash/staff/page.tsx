@@ -17,7 +17,8 @@ async function requestBaseUrl(): Promise<string> {
   return `${proto}://${host}`;
 }
 
-export default async function CarWashDashboardPage() {
+/** หน้าเป้าหมายของ QR พนักงาน — เฉพาะลานล้างวันนี้ + บันทึกรายการ (ต้องล็อกอิน) */
+export default async function CarWashStaffLanePage() {
   const session = await getSession();
   if (!session) redirect("/login");
   const [profile, baseUrl, userRow, scope, dormPay] = await Promise.all([
@@ -47,6 +48,7 @@ export default async function CarWashDashboardPage() {
         trialSessionId={scope.trialSessionId}
         isTrialSandbox={scope.isTrialSandbox}
         paymentChannelsNote={dormPay?.paymentChannelsNote?.trim() || null}
+        layoutVariant="staff_lane"
       />
     </div>
   );

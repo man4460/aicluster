@@ -99,6 +99,8 @@ model User {
   carWashBundles           CarWashBundle[]
   carWashVisits            CarWashVisit[]
   carWashComplaints        CarWashComplaint[]
+  carWashCostCategories    CarWashCostCategory[]
+  carWashCostEntries       CarWashCostEntry[]
   mqttTenantProfiles       MqttTenantProfile[]
   mqttCredentials          MqttCredential[]
   mqttAclRules             MqttAclRule[]
@@ -820,8 +822,11 @@ model CarWashBundle {
   totalUses     Int      @default(0) @map("total_uses")
   usedUses      Int      @default(0) @map("used_uses")
   isActive      Boolean  @default(true) @map("is_active")
+  /** สลิปชำระเงินซื้อแพ็กเหมา — อัปโหลดจากแดชบอร์ด */
+  slipPhotoUrl  String   @default("") @map("slip_photo_url") @db.VarChar(512)
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
+  pendingBundleVisits CarWashVisit[] @relation("CarWashVisitPendingBundle")
 
   @@index([ownerUserId, trialSessionId, isActive], map: "cwash_bundle_owner_trial_active_idx")
   @@index([ownerUserId, trialSessionId, customerPhone], map: "cwash_bundle_owner_trial_phone_idx")
@@ -845,6 +850,13 @@ model CarWashVisit {
   finalPrice     Int      @default(0) @map("final_price")
   note           String   @default("") @db.VarChar(1000)
   recordedByName String   @default("") @map("recorded_by_name") @db.VarChar(160)
+  /** QUEUED | WASHING | VACUUMING | WAXING | COMPLETED | PAID — ลานล้าง (PAID = ปิดคิว; รองรับ IN_PROGRESS เก่า) */
+  serviceStatus  String   @default("COMPLETED") @map("service_status") @db.VarChar(32)
+  /** รูปแนบรายการ (สลิป/หลักฐาน) — อัปโหลดจากแดชบอร์ด */
+  photoUrl       String   @default("") @map("photo_url") @db.VarChar(512)
+  /** แพ็กเกจเหมา: ค้างหักครั้งจนกว่าจะชำระแล้ว (PAID) แล้วเซิร์ฟเวอร์จะหักและเคลียร์ */
+  bundleId       Int?     @map("bundle_id")
+  pendingBundle  CarWashBundle? @relation("CarWashVisitPendingBundle", fields: [bundleId], references: [id], onDelete: SetNull)
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -870,6 +882,43 @@ model CarWashComplaint {
   @@index([ownerUserId, trialSessionId, createdAt], map: "cwash_cmp_owner_trial_created_idx")
   @@index([ownerUserId], map: "cwash_cmp_owner_idx")
   @@map("car_wash_complaints")
+}
+
+/** หมวดค่าใช้จ่ายต้นทุนลานล้างรถ */
+model CarWashCostCategory {
+  id             Int                @id @default(autoincrement())
+  ownerUserId    String             @map("owner_id") @db.VarChar(191)
+  owner          User               @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String             @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String             @db.VarChar(120)
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  entries        CarWashCostEntry[]
+
+  @@index([ownerUserId, trialSessionId], map: "cwash_cost_cat_owner_trial_idx")
+  @@map("car_wash_cost_categories")
+}
+
+/** รายการจ่ายต้นทุนรายวัน/รายครั้ง */
+model CarWashCostEntry {
+  id             Int                 @id @default(autoincrement())
+  ownerUserId    String              @map("owner_id") @db.VarChar(191)
+  owner          User                @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String              @default("prod") @map("trial_session_id") @db.VarChar(36)
+  categoryId     Int                 @map("category_id")
+  category       CarWashCostCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  spentAt        DateTime            @map("spent_at")
+  amount         Int
+  /** รายการค่าใช้จ่าย (สิ่งที่ซื้อ/จ่าย) */
+  itemLabel      String              @default("") @map("item_label") @db.VarChar(200)
+  note           String              @default("") @db.VarChar(500)
+  /** รูปสลิป/บิลแนบ */
+  slipPhotoUrl   String              @default("") @map("slip_photo_url") @db.VarChar(512)
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, spentAt], map: "cwash_cost_ent_owner_trial_spent_idx")
+  @@map("car_wash_cost_entries")
 }
 
 model MqttTenantProfile {

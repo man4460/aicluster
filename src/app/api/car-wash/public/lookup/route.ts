@@ -63,6 +63,68 @@ export async function POST(req: Request) {
           return p === plate || p.includes(plate) || plate.includes(p);
         });
 
+  const visitSelect = {
+    id: true,
+    visitAt: true,
+    serviceStatus: true,
+    packageName: true,
+    plateNumber: true,
+    bundleId: true,
+    finalPrice: true,
+  } as const;
+
+  let recentVisits: {
+    id: number;
+    visit_at: string;
+    service_status: string;
+    package_name: string;
+    plate_number: string;
+    bundle_id: number | null;
+    final_price: number;
+  }[] = [];
+
+  if (rows.length > 0) {
+    if (byPhone.length > 0 && digits.length >= 9) {
+      const list = await prisma.carWashVisit.findMany({
+        where: { ownerUserId: ownerId, trialSessionId, customerPhone: digits },
+        orderBy: { visitAt: "desc" },
+        take: 15,
+        select: visitSelect,
+      });
+      recentVisits = list.map((v) => ({
+        id: v.id,
+        visit_at: v.visitAt.toISOString(),
+        service_status: v.serviceStatus,
+        package_name: v.packageName,
+        plate_number: v.plateNumber,
+        bundle_id: v.bundleId,
+        final_price: v.finalPrice,
+      }));
+    } else if (plate.length >= 2) {
+      const candidates = await prisma.carWashVisit.findMany({
+        where: { ownerUserId: ownerId, trialSessionId },
+        orderBy: { visitAt: "desc" },
+        take: 120,
+        select: visitSelect,
+      });
+      recentVisits = candidates
+        .filter((x) => {
+          const p = normalizePlate(x.plateNumber);
+          return p === plate || p.includes(plate) || plate.includes(p);
+        })
+        .slice(0, 15)
+        .map((v) => ({
+          id: v.id,
+          visit_at: v.visitAt.toISOString(),
+          service_status: v.serviceStatus,
+          package_name: v.packageName,
+          plate_number: v.plateNumber,
+          bundle_id: v.bundleId,
+          final_price: v.finalPrice,
+        }));
+    }
+  }
+
   return NextResponse.json({
     bundles: rows.map((r) => ({
       id: r.id,
@@ -75,7 +137,9 @@ export async function POST(req: Request) {
       total_uses: r.totalUses,
       used_uses: r.usedUses,
       is_active: r.isActive,
+      slip_photo_url: (r as { slipPhotoUrl?: string }).slipPhotoUrl ?? "",
       created_at: r.createdAt.toISOString(),
     })),
+    recent_visits: recentVisits,
   });
 }

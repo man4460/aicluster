@@ -23,6 +23,11 @@ export { AppSectionHeader, type AppSectionHeaderProps } from "./AppSectionHeader
 export { AppEmptyState, type AppEmptyStateProps } from "./AppEmptyState";
 export { AppCompareBarList, type AppCompareBarListProps, type AppCompareBarRow } from "./AppCompareBarList";
 export { AppColumnBarSparkChart, type AppColumnBarSparkChartProps, type AppColumnBarBucket } from "./AppColumnBarSparkChart";
+export {
+  AppRevenueCostColumnChart,
+  type AppRevenueCostColumnChartProps,
+  type AppRevenueCostBucket,
+} from "./AppRevenueCostColumnChart";
 export { AppWindowPrintButton, type AppWindowPrintButtonProps } from "./AppWindowPrintButton";
 export { AppGalleryCameraFileInputs, type AppGalleryCameraFileInputsProps } from "./AppGalleryCameraFileInputs";
 export { AppImagePickCameraButtons, type AppImagePickCameraButtonsProps } from "./AppImagePickCameraButtons";

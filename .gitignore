@@ -59,6 +59,8 @@ yarn-error.log*
 !/public/uploads/home-finance/.gitkeep
 /public/uploads/attendance-roster/*
 !/public/uploads/attendance-roster/.gitkeep
+/public/uploads/car-wash/*
+!/public/uploads/car-wash/.gitkeep
 
 # Legacy duplicate tree — แอปจริงอยู่ราก repo (มี node_modules/.next ของ copy เก่า)
 /web/
