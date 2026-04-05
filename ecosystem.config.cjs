@@ -8,7 +8,8 @@
  * โปรดักชัน: npm run build แล้ว npm run pm2:prod
  *
  * บิลด์อัตโนมัติเมื่อแก้โค้ด (โหมด production + PM2):
- *   เปิด mawell-serve ไว้ก่อน แล้วรันในอีกเทอร์มินัล: npm run watch:pm2:prod
+ *   คำสั่งเดียว: npm run build  (ครั้งแรก) แล้ว npm run pm2:prod:watch
+ *   หรือแยกเทอร์มินัล: npm run pm2:prod แล้ว npm run watch:pm2:prod
  *   (debounce ~12s — หลังหยุดแก้ไฟล์ชั่วคราวจึงค่อย build + restart)
  * พัฒนาปกติไม่ต้องบิลด์ซ้ำ: ใช้ next dev (pm2:dev หรือ npm run dev)
  */

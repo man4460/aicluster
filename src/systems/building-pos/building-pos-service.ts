@@ -39,6 +39,8 @@ export type PosOrder = {
   items: PosOrderItem[];
   total_amount: number;
   note: string;
+  /** รูปสลิปโอน — อัปโหลดจากแดชบอร์ด */
+  payment_slip_url?: string;
 };
 
 type PosDB = {
@@ -178,6 +180,7 @@ export class LocalStorageBuildingPosRepository {
     const db = loadDB();
     const row: PosOrder = {
       ...input,
+      payment_slip_url: input.payment_slip_url?.trim() ?? "",
       id: db.seq.order + 1,
       created_at: new Date().toISOString(),
       total_amount: input.items.reduce((s, x) => s + x.price * x.qty, 0),
@@ -203,10 +206,43 @@ export function createBuildingPosRepository() {
   return new LocalStorageBuildingPosRepository();
 }
 
-async function readJson<T>(res: Response): Promise<T> {
-  const data = (await res.json().catch(() => ({}))) as T & { error?: string };
+/** อัปโหลดรูปไปที่ session building-pos — ส่ง cookie เซสชันเสมอ */
+export async function uploadBuildingPosSessionImage(file: File): Promise<string> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch("/api/building-pos/session/images/upload", {
+    method: "POST",
+    body: form,
+    credentials: "include",
+  });
+  const data = (await res.json().catch(() => ({}))) as { error?: string; imageUrl?: string; debug?: string };
   if (!res.ok) {
-    const msg = typeof (data as { error?: unknown }).error === "string" ? (data as { error: string }).error : "Request failed";
+    let msg =
+      typeof data.error === "string" && data.error.trim() ?
+        data.error
+      : `${res.status} ${res.statusText}`.trim() || "อัปโหลดรูปไม่สำเร็จ";
+    if (typeof data.debug === "string" && data.debug.trim()) {
+      msg += `\n\n--- รายละเอียด (dev) ---\n${data.debug.slice(0, 3500)}`;
+    }
+    throw new Error(msg);
+  }
+  const url = data.imageUrl?.trim();
+  if (!url) throw new Error("อัปโหลดรูปไม่สำเร็จ");
+  return url;
+}
+
+async function readJson<T>(res: Response): Promise<T> {
+  const data = (await res.json().catch(() => ({}))) as T & { error?: string; debug?: string };
+  if (!res.ok) {
+    const fromBody = (data as { error?: unknown }).error;
+    let msg =
+      typeof fromBody === "string" && fromBody.trim() ?
+        fromBody
+      : `${res.status} ${res.statusText}`.trim() || "Request failed";
+    const dbg = (data as { debug?: unknown }).debug;
+    if (typeof dbg === "string" && dbg.trim()) {
+      msg += `\n\n--- รายละเอียด (dev) ---\n${dbg.slice(0, 3500)}`;
+    }
     throw new Error(msg);
   }
   return data;
@@ -318,6 +354,7 @@ class PublicApiBuildingPosRepository {
     await readJson<{ ok: boolean; orderId: number }>(res);
     return {
       ...input,
+      payment_slip_url: "",
       id: 0,
       created_at: new Date().toISOString(),
       total_amount: input.items.reduce((s, x) => s + x.price * x.qty, 0),

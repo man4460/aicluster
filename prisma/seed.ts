@@ -118,9 +118,9 @@ async function main() {
     },
     {
       slug: "building-pos",
-      title: "ระบบ POS ร้านอาหารอาคาร",
+      title: "POS ร้านอาหาร",
       description:
-        "กลุ่ม 1 (Basic) — เพิ่มเมนู จัดกลุ่มเมนู รับออเดอร์ และ QR สั่งอาหารด้วยตนเอง",
+        "กลุ่ม 1 (Basic) — เมนู ออเดอร์ QR สั่งอาหาร",
       groupId: 1,
       sortOrder: 22,
     },

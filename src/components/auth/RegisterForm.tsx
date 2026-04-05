@@ -5,6 +5,7 @@ import { AuthCard, AuthFooterLink } from "@/components/auth/AuthCard";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
 import { cn } from "@/lib/cn";
+import { parseJsonResponse } from "@/lib/parse-json-response";
 
 export function RegisterForm() {
   const [email, setEmail] = useState("");
@@ -41,9 +42,11 @@ export function RegisterForm() {
           turnstileToken: turnstileToken ?? undefined,
         }),
       });
-      const data = (await res.json()) as { error?: string };
+      const data = await parseJsonResponse<{ error?: string }>(res);
       if (!res.ok) {
-        setError(data.error ?? "สมัครสมาชิกไม่สำเร็จ");
+        setError(
+          data.error ?? (res.status >= 500 ? "เซิร์ฟเวอร์มีปัญหา ลองใหม่ภายหลัง" : "สมัครสมาชิกไม่สำเร็จ"),
+        );
         return;
       }
       window.location.assign("/dashboard");

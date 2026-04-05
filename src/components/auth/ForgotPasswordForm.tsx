@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AuthCard, AuthFooterLink } from "@/components/auth/AuthCard";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
 import { cn } from "@/lib/cn";
+import { parseJsonResponse } from "@/lib/parse-json-response";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -29,9 +30,11 @@ export function ForgotPasswordForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, turnstileToken: turnstileToken ?? undefined }),
       });
-      const data = (await res.json()) as { error?: string; message?: string };
+      const data = await parseJsonResponse<{ error?: string; message?: string }>(res);
       if (!res.ok) {
-        setError(data.error ?? "ส่งคำขอไม่สำเร็จ");
+        setError(
+          data.error ?? (res.status >= 500 ? "เซิร์ฟเวอร์มีปัญหา ลองใหม่ภายหลัง" : "ส่งคำขอไม่สำเร็จ"),
+        );
         return;
       }
       setMessage(data.message ?? "ตรวจสอบอีเมลของคุณ");

@@ -4,6 +4,12 @@ import { cn } from "@/lib/cn";
 export const PAGE_GUTTER_X = "px-4 sm:px-6";
 export const PAGE_GUTTER_Y = "py-6 sm:py-8";
 
+/**
+ * Padding แนวนอนของการ์ด/แถบชั้นในใต้ PageContainer — ให้แถบเมนูกับเนื้อหาในการ์ดเส้นตั้งเดียวกัน
+ * (PageContainer มี PAGE_GUTTER_X อยู่แล้วชั้นนอก; ชั้นในใช้ค่านี้แทน px คนละชุด)
+ */
+export const PAGE_INNER_GUTTER_X = "px-4 sm:px-6 md:px-8";
+
 type PageContainerProps = {
   children: React.ReactNode;
   className?: string;

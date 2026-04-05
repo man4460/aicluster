@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
+    "dev:webpack": "next dev -H 0.0.0.0 --webpack",
     "dev:clean": "npx --yes kill-port 3000 3001 && next dev -p 3000 -H 0.0.0.0",
     "build": "prisma generate && next build",
     "build:pm2:prod": "npm run build && pm2 restart mawell-serve",
@@ -20,6 +21,7 @@
     "postinstall": "prisma generate",
     "pm2:dev": "pm2 start ecosystem.config.cjs --only mawell-dev",
     "pm2:prod": "pm2 start ecosystem.config.cjs --only mawell-serve",
+    "pm2:prod:watch": "npm run pm2:prod && npm run watch:pm2:prod",
     "pm2:stop": "pm2 stop mawell-dev mawell-serve",
     "pm2:restart": "pm2 restart mawell-dev",
     "pm2:logs": "pm2 logs mawell-dev",

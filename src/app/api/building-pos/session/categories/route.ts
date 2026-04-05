@@ -91,11 +91,11 @@ export async function PATCH(req: Request) {
     where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
     data,
   });
-  if (n.count === 0) return NextResponse.json({ error: "ไม่พบกลุ่ม" }, { status: 404 });
+  if (n.count === 0) return NextResponse.json({ error: "ไม่พบหมวดหมู่" }, { status: 404 });
   const row = await prisma.buildingPosCategory.findFirst({
     where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
   });
-  if (!row) return NextResponse.json({ error: "ไม่พบกลุ่ม" }, { status: 404 });
+  if (!row) return NextResponse.json({ error: "ไม่พบหมวดหมู่" }, { status: 404 });
   return NextResponse.json({
     category: { id: row.id, name: row.name, image_url: row.imageUrl, sort_order: row.sortOrder, is_active: row.isActive },
   });
@@ -114,13 +114,13 @@ export async function DELETE(req: Request) {
   });
   if (inUse > 0) {
     return NextResponse.json(
-      { error: "ย้ายหรือลบเมนูในกลุ่มนี้ก่อน จึงจะลบกลุ่มได้" },
+      { error: "ย้ายหรือลบเมนูในหมวดนี้ก่อน จึงจะลบหมวดหมู่ได้" },
       { status: 400 },
     );
   }
   const n = await prisma.buildingPosCategory.deleteMany({
     where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
   });
-  if (n.count === 0) return NextResponse.json({ error: "ไม่พบกลุ่ม" }, { status: 404 });
+  if (n.count === 0) return NextResponse.json({ error: "ไม่พบหมวดหมู่" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

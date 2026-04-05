@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { PageHeader } from "@/components/ui/page-container";
 import { getSession } from "@/lib/auth/session";
 import { getBusinessProfile } from "@/lib/profile/business-profile";
+import { prisma } from "@/lib/prisma";
+import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import { getBuildingPosDataScope } from "@/lib/trial/module-scopes";
 import { BuildingPosDashboardClient } from "@/systems/building-pos/BuildingPosDashboardClient";
 
@@ -19,25 +21,28 @@ async function requestBaseUrl(): Promise<string> {
 export default async function BuildingPosPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  const [profile, baseUrl, scope] = await Promise.all([
+  const [profile, baseUrl, scope, dormPay] = await Promise.all([
     getBusinessProfile(session.sub),
     requestBaseUrl(),
     getBuildingPosDataScope(session.sub),
+    prisma.dormitoryProfile.findUnique({
+      where: {
+        ownerUserId_trialSessionId: { ownerUserId: session.sub, trialSessionId: TRIAL_PROD_SCOPE },
+      },
+      select: { paymentChannelsNote: true },
+    }),
   ]);
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="POS ร้านอาหารอาคาร"
-        description="เพิ่มเมนู จัดกลุ่มเมนู รับออเดอร์ลูกค้า และสร้าง QR ให้ลูกค้าสั่งเอง"
-      />
+    <Suspense fallback={<div className="h-24 animate-pulse rounded-2xl bg-[#ecebff]/40" aria-hidden />}>
       <BuildingPosDashboardClient
         ownerId={session.sub}
         trialSessionId={scope.trialSessionId}
         isTrialSandbox={scope.isTrialSandbox}
         baseUrl={baseUrl}
-        shopLabel={profile?.name?.trim() || "POS ร้านอาหารอาคาร"}
+        shopLabel={profile?.name?.trim() || "POS ร้านอาหาร"}
         logoUrl={profile?.logoUrl?.trim() || null}
+        paymentChannelsNote={dormPay?.paymentChannelsNote?.trim() || null}
       />
-    </div>
+    </Suspense>
   );
 }

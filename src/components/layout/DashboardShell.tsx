@@ -37,35 +37,20 @@ function SidebarNavLink({
   href,
   pathname,
   label,
-  serviceGroupId,
 }: {
   href: string;
   pathname: string;
   label: string;
-  serviceGroupId?: number;
 }) {
   const active = isNavActive(href, pathname);
-  const groupTone =
-    serviceGroupId === 1
-      ? "before:bg-[#7a7eff]"
-      : serviceGroupId === 2
-        ? "before:bg-slate-500"
-        : serviceGroupId === 3
-          ? "before:bg-amber-500"
-          : serviceGroupId === 4
-            ? "before:bg-fuchsia-500"
-            : serviceGroupId === 5
-              ? "before:bg-rose-500"
-              : "before:bg-emerald-500";
   return (
     <Link
       href={href}
       className={cn(
-        "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition",
-        serviceGroupId ? `before:h-2 before:w-2 before:rounded-full before:content-[''] ${groupTone}` : "",
+        "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition",
         active
-          ? "bg-[#6b6fff]/16 text-[#4d47b6]"
-          : "text-[#67638f] hover:bg-[#f0efff] hover:text-[#2e2a58]",
+          ? "bg-gradient-to-r from-[#8b9cff]/14 to-[#f9a8d4]/12 text-[#4d47b6] ring-1 ring-white/70"
+          : "text-[#67638f] hover:bg-white/65 hover:text-[#2e2a58]",
       )}
     >
       {dashboardNavIconForHref(href)}
@@ -79,37 +64,22 @@ function DrawerNavLink({
   pathname,
   onNavigate,
   label,
-  serviceGroupId,
 }: {
   href: string;
   pathname: string;
   onNavigate: () => void;
   label: string;
-  serviceGroupId?: number;
 }) {
   const active = isNavActive(href, pathname);
-  const groupTone =
-    serviceGroupId === 1
-      ? "before:bg-[#7a7eff]"
-      : serviceGroupId === 2
-        ? "before:bg-slate-500"
-        : serviceGroupId === 3
-          ? "before:bg-amber-500"
-          : serviceGroupId === 4
-            ? "before:bg-fuchsia-500"
-            : serviceGroupId === 5
-              ? "before:bg-rose-500"
-              : "before:bg-emerald-500";
   return (
     <Link
       href={href}
       onClick={onNavigate}
       className={cn(
-        "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition",
-        serviceGroupId ? `before:h-2 before:w-2 before:rounded-full before:content-[''] ${groupTone}` : "",
+        "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition",
         active
-          ? "bg-[#6b6fff]/16 text-[#4d47b6]"
-          : "text-[#67638f] hover:bg-[#f0efff] hover:text-[#2e2a58]",
+          ? "bg-gradient-to-r from-[#8b9cff]/14 to-[#f9a8d4]/12 text-[#4d47b6] ring-1 ring-white/70"
+          : "text-[#67638f] hover:bg-white/65 hover:text-[#2e2a58]",
       )}
     >
       {dashboardNavIconForHref(href)}
@@ -159,21 +129,21 @@ function NavCollapsibleGroup({
 }) {
   const isBasic = group.id === "basic";
   const cardClass = isBasic
-    ? "border-[#cbcfff] bg-[#f6f4ff]"
-    : "border-[#d7e5ff] bg-[#f4f8ff]";
-  const headerHoverClass = isBasic ? "hover:bg-[#eceaff]" : "hover:bg-[#eaf2ff]";
-  const titleClass = isBasic ? "text-[#4b47a2]" : "text-[#39639f]";
+    ? "mawell-card-surface border-white/60 shadow-md"
+    : "mawell-card-surface border-white/60 shadow-md";
+  const headerHoverClass = isBasic ? "hover:bg-white/35" : "hover:bg-white/35";
+  const titleClass = isBasic ? "text-[#312e81]" : "text-[#1e3a5f]";
   const badgeClass = isBasic
-    ? "bg-[#e8e7ff] text-[#4d47b6] border-[#cfd2ff]"
-    : "bg-[#e7f0ff] text-[#39639f] border-[#cadbff]";
+    ? "border border-[#d4dcff] bg-gradient-to-r from-[#eef1ff] to-[#f0e8ff] text-[#4d47b6]"
+    : "border border-[#f5d0e6] bg-gradient-to-r from-[#fff5fb] to-[#eef2ff] text-[#7c3a5c]";
   const badgeLabel = isBasic ? "BASIC" : "SERVICES";
 
   return (
-    <div className={cn("rounded-xl border p-2 shadow-sm", cardClass)}>
+    <div className={cn("rounded-2xl p-2.5", cardClass)}>
       <button
         type="button"
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[#0000BF]/30",
+          "flex w-full items-center justify-between gap-2 rounded-xl px-2 py-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500/35",
           headerHoverClass,
         )}
         aria-expanded={open}
@@ -219,7 +189,6 @@ function NavCollapsibleGroup({
                 href={item.href}
                 pathname={pathname}
                 label={item.label}
-                serviceGroupId={item.groupId}
               />
             ) : (
               <DrawerNavLink
@@ -228,7 +197,6 @@ function NavCollapsibleGroup({
                 pathname={pathname}
                 label={item.label}
                 onNavigate={onDrawerNavigate ?? (() => {})}
-                serviceGroupId={item.groupId}
               />
             );
           })}
@@ -319,12 +287,12 @@ export function DashboardShell({
 
   return (
     <div className="flex min-h-screen flex-col text-[#2e2a58]">
-      {/* แถบบนเต็มความกว้างหน้าจอ — โลโก้ + ข้อมูลผู้ใช้ */}
-      <header className="sticky top-0 z-30 w-full border-b border-[#dfe1ff] bg-[#ffffffd9] shadow-[0_8px_24px_-18px_rgba(69,53,179,0.55)] backdrop-blur-sm">
-        <div className="flex h-14 w-full items-center gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8">
+      {/* แถบบน — แก้ว โค้งมน ไล่โทนเดียวกับการ์ด */}
+      <header className="sticky top-0 z-30 w-full px-3 pt-3 sm:px-4 sm:pt-4">
+        <div className="mawell-glass-panel flex h-14 w-full items-center gap-3 rounded-2xl px-4 shadow-lg sm:gap-4 sm:px-6 lg:px-8">
           <button
             type="button"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#d9dcff] bg-white text-[#4a4594] shadow-sm hover:bg-[#f4f3ff] md:hidden"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/60 bg-white/70 text-[#3730a3] shadow-sm hover:bg-white/90 md:hidden"
             aria-expanded={drawerOpen}
             aria-controls={menuId}
             onClick={() => setDrawerOpen((o) => !o)}
@@ -367,11 +335,11 @@ export function DashboardShell({
                   alt=""
                   width={32}
                   height={32}
-                  className="h-8 w-8 rounded-full border border-[#d9dcff] object-cover"
+                  className="h-8 w-8 rounded-full border border-white/60 object-cover shadow-sm"
                   unoptimized
                 />
               ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#d9dcff] bg-[#f4f3ff] text-xs font-semibold text-[#67638f]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/60 bg-white/50 text-xs font-semibold text-[#4c4a6e] shadow-sm">
                   {username.slice(0, 1).toUpperCase()}
                 </div>
               )}
@@ -380,7 +348,7 @@ export function DashboardShell({
             <div className="relative md:hidden" ref={accountWrapRef}>
               <button
                 type="button"
-                className="flex h-10 max-w-[44px] items-center justify-center rounded-xl border border-[#d9dcff] bg-white p-1 shadow-sm hover:bg-[#f4f3ff]"
+                className="flex h-10 max-w-[44px] items-center justify-center rounded-xl border border-white/60 bg-white/75 p-1 shadow-sm hover:bg-white/95"
                 aria-expanded={accountOpen}
                 aria-label="เมนูบัญชี"
                 onClick={() => setAccountOpen((o) => !o)}
@@ -391,23 +359,23 @@ export function DashboardShell({
                     alt=""
                     width={28}
                     height={28}
-                    className="h-7 w-7 shrink-0 rounded-full border border-[#d9dcff] object-cover"
+                    className="h-7 w-7 shrink-0 rounded-full border border-white/60 object-cover"
                     unoptimized
                   />
                 ) : (
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#f4f3ff] text-xs font-semibold text-[#67638f]">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/55 text-xs font-semibold text-[#4c4a6e]">
                     {username.slice(0, 1).toUpperCase()}
                   </div>
                 )}
               </button>
               {accountOpen ? (
                 <div
-                  className="absolute right-0 z-40 mt-1 w-48 rounded-xl border border-[#d9dcff] bg-white py-1 shadow-lg"
+                  className="mawell-card-surface absolute right-0 z-40 mt-1 w-48 rounded-2xl py-1 shadow-lg"
                   role="menu"
                 >
                   <Link
                     href="/dashboard/profile"
-                    className="block px-3 py-2 text-sm text-[#4e4a74] hover:bg-[#f4f3ff]"
+                    className="block rounded-xl px-3 py-2 text-sm text-[#3730a3] hover:bg-white/60"
                     role="menuitem"
                     onClick={() => setAccountOpen(false)}
                   >
@@ -420,13 +388,13 @@ export function DashboardShell({
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
-        {/* Sidebar — เดสก์ท็อป / แท็บเล็ต (ใต้ header เต็มความกว้าง) */}
+      <div className="flex min-h-0 flex-1 gap-3 px-3 pb-3 pt-2 sm:gap-4 sm:px-4 sm:pb-4">
+        {/* Sidebar — แก้ว โค้งมน */}
         <aside
-          className="hidden w-56 shrink-0 flex-col border-r border-[#dfe1ff] bg-[#ffffffbf] backdrop-blur-sm md:flex"
+          className="mawell-glass-panel hidden w-[15.5rem] shrink-0 flex-col overflow-hidden rounded-2xl md:flex"
           aria-label="เมนูหลัก"
         >
-          <nav className="flex flex-1 flex-col gap-3 overflow-y-auto p-2 pt-3" aria-label="เมนูหลัก">
+          <nav className="flex flex-1 flex-col gap-3 overflow-y-auto p-2.5 pt-3" aria-label="เมนูหลัก">
             {navGroups.map((group) => (
               <NavCollapsibleGroup
                 key={group.id}
@@ -438,33 +406,33 @@ export function DashboardShell({
               />
             ))}
           </nav>
-          <div className="border-t border-slate-100 p-3">
-            <p className="truncate text-xs text-slate-500" title={username}>
+          <div className="border-t border-white/40 bg-white/20 p-3">
+            <p className="truncate text-xs text-slate-600" title={username}>
               {username}
             </p>
             <LogoutButton className="mt-2 w-full justify-center text-sm" />
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 min-h-0 flex-1 flex-col">
           {/* Drawer มือถือ — เริ่มใต้แถบ header */}
           {drawerOpen ? (
             <>
               <button
                 type="button"
-                className="fixed inset-x-0 bottom-0 top-14 z-40 bg-[#2a245633] backdrop-blur-[2px] md:hidden"
+                className="fixed inset-x-0 bottom-0 top-[4.25rem] z-40 bg-slate-900/25 backdrop-blur-[2px] md:hidden"
                 aria-label="ปิดเมนู"
                 onClick={closeDrawer}
               />
               <div
                 id={menuId}
-                className="fixed bottom-0 left-0 top-14 z-50 flex w-[min(100vw-3rem,17.5rem)] flex-col border-r border-t border-[#dfe1ff] bg-[#fffefee8] shadow-2xl backdrop-blur-sm md:hidden"
+                className="mawell-glass-panel fixed bottom-3 left-3 top-[4.25rem] z-50 flex w-[min(100vw-2.5rem,17.5rem)] flex-col overflow-hidden rounded-2xl shadow-2xl md:hidden"
               >
-                <div className="flex h-14 items-center justify-between border-b border-slate-100 px-3">
+                <div className="flex h-14 items-center justify-between border-b border-white/40 px-3">
                   <MawellLogo size="md" />
                   <button
                     type="button"
-                    className="rounded-lg p-2 text-[#67638f] hover:bg-[#f0efff]"
+                    className="rounded-xl p-2 text-[#4c4a6e] hover:bg-white/45"
                     onClick={closeDrawer}
                     aria-label="ปิดเมนู"
                   >
@@ -484,15 +452,15 @@ export function DashboardShell({
                     />
                   ))}
                 </nav>
-                <div className="border-t border-slate-100 p-3">
-                  <p className="mb-2 truncate text-xs text-slate-500">{username}</p>
+                <div className="border-t border-white/40 bg-white/15 p-3">
+                  <p className="mb-2 truncate text-xs text-slate-600">{username}</p>
                   <LogoutButton className="w-full justify-center" />
                 </div>
               </div>
             </>
           ) : null}
 
-          <main className="flex min-h-0 flex-1 flex-col">{children}</main>
+          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden rounded-2xl">{children}</main>
         </div>
       </div>
     </div>

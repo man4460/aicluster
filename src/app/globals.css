@@ -17,10 +17,37 @@
   --brand-600: #5b61ff;
   --brand-500: #7a7eff;
   --brand-400: #9a9dff;
-  --banner-bg: #fff8ff;
+  --banner-bg: linear-gradient(125deg, #fff8ff 0%, #f3f6ff 45%, #fff5fb 100%);
   --banner-border: #e6cbff;
   --banner-text: #5a2a85;
-  --soft-shadow: 0 10px 30px -18px rgba(76, 58, 180, 0.45);
+  /* เงานุ่มแบบเดิม — ไม่เข้ม */
+  --soft-shadow: 0 10px 30px -18px rgba(76, 58, 180, 0.28);
+  /**
+   * พื้นหลัง: โทนเก่า (ชมพูอ่อน / ฟ้าอ่อน / ม่วงลาเวนเดอร์) + ไล่สีนุ่มซ้อน
+   * ไม่ใช้น้ำเงิน-แดงเข้ม — บานเย็น อ่านสบาย
+   */
+  --mawell-page-gradient:
+    radial-gradient(circle at 8% 10%, rgba(255, 196, 245, 0.42) 0%, transparent 42%),
+    radial-gradient(circle at 92% 8%, rgba(182, 221, 255, 0.4) 0%, transparent 40%),
+    radial-gradient(circle at 50% 100%, rgba(205, 195, 255, 0.32) 0%, transparent 48%),
+    linear-gradient(
+      168deg,
+      #f7f6ff 0%,
+      #f0f4ff 28%,
+      #faf5ff 52%,
+      #fff5f9 78%,
+      #fefeff 100%
+    );
+  /* การ์ด — ขาวโปร่งอมฟ้า–ชมพูจาง ๆ */
+  --mawell-card-gradient: linear-gradient(
+    152deg,
+    rgba(255, 255, 255, 0.94) 0%,
+    rgba(248, 250, 255, 0.92) 40%,
+    rgba(255, 248, 252, 0.9) 72%,
+    rgba(255, 255, 255, 0.97) 100%
+  );
+  --mawell-glass-border: rgba(255, 255, 255, 0.85);
+  --mawell-glass-highlight: rgba(255, 255, 255, 0.55);
 }
 
 @theme inline {
@@ -31,13 +58,44 @@
 }
 
 body {
-  background: var(--background);
   color: var(--foreground);
-  background-image:
-    radial-gradient(circle at 8% 8%, rgba(255, 196, 245, 0.45), transparent 32%),
-    radial-gradient(circle at 92% 6%, rgba(182, 221, 255, 0.42), transparent 34%),
-    radial-gradient(circle at 50% 100%, rgba(205, 195, 255, 0.3), transparent 44%);
+  background-color: var(--background);
+  background-image: var(--mawell-page-gradient);
   background-attachment: fixed;
+  min-height: 100dvh;
+}
+
+/**
+ * พื้นหลังการ์ดมาตรฐาน — ใช้คู่กับ rounded-3xl ในโค้ด
+ */
+.mawell-card-surface {
+  background: var(--mawell-card-gradient);
+  border: 1px solid var(--mawell-glass-border);
+  box-shadow: var(--soft-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/** กรอบแก้วอย่างเดียว — ใช้คู่กับ bg-gradient-to-* ของ Tailwind */
+.mawell-card-frame {
+  border: 1px solid var(--mawell-glass-border);
+  box-shadow: var(--soft-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/** แผงแก้ว (ไซด์บาร์ / แถบบน) — อ่อน โปร่ง ใกล้โทนเดิม */
+.mawell-glass-panel {
+  background: linear-gradient(
+    150deg,
+    rgba(255, 255, 255, 0.72) 0%,
+    rgba(255, 255, 255, 0.55) 40%,
+    rgba(255, 252, 254, 0.5) 100%
+  );
+  border: 1px solid rgba(230, 228, 255, 0.9);
+  box-shadow: 0 10px 36px -20px rgba(76, 58, 180, 0.22), 0 4px 16px -12px rgba(255, 182, 220, 0.12);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 button,
@@ -69,16 +127,21 @@ select {
 }
 
 .app-surface {
-  border: 1px solid var(--surface-border);
-  background: var(--surface);
+  border: 1px solid var(--mawell-glass-border);
+  background: var(--mawell-card-gradient);
+  border-radius: 1.25rem;
   box-shadow: var(--soft-shadow);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .app-surface-strong {
-  border: 1px solid var(--surface-border);
-  background: var(--surface-strong);
+  border: 1px solid var(--mawell-glass-border);
+  background: var(--mawell-card-gradient);
+  border-radius: 1.25rem;
   box-shadow: var(--soft-shadow);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .app-gradient-text {
@@ -116,6 +179,7 @@ select {
   background: var(--banner-bg);
   color: var(--banner-text);
   box-shadow: var(--soft-shadow);
+  border-radius: 1rem;
 }
 
 /* Compatibility layer: map legacy blue utility classes to new palette */

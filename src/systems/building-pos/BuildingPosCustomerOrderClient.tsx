@@ -394,7 +394,7 @@ export function BuildingPosCustomerOrderClient({
         </div>
 
         <div className="mt-5">
-          <p className="mb-2 text-xs font-medium text-slate-500">กลุ่มเมนู</p>
+          <p className="mb-2 text-xs font-medium text-slate-500">หมวดหมู่</p>
           <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
             <button
               type="button"

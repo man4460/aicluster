@@ -1,0 +1,12 @@
+---
+description: ความกว้างและ gutter หน้าแดชบอร์ดให้สม่ำเสมอ — ห้ามซ้อน max-width หรือ padding แนวนอนคนละชุดโดยไม่จำเป็น
+alwaysApply: true
+---
+
+# Dashboard layout — ความกว้าง container ให้เท่ากัน
+
+- หน้าใต้ `src/app/(dashboard)/dashboard/` ถูกห่อด้วย `PageContainer` ใน `dashboard/layout.tsx` แล้ว — ใช้ **`max-w-6xl`** และ **`PAGE_GUTTER_X`** (`px-4 sm:px-6`) เป็นชั้นเดียวสำหรับจำกัดความกว้างและระยะขอบจากขอบ viewport
+- **ห้าม** ใส่ `max-w-6xl mx-auto` ซ้ำใน layout/shell ของโมดูลย่อย ยกเว้นมีเหตุผลชัด (เช่น หน้าเต็มจอที่ไม่อยู่ใต้ PageContainer)
+- โมดูลที่มีหลายหน้า ให้ยึดแบบเดียวกับ **รายรับ-รายจ่าย** (`*Shell` = หัวข้อ + แถบเมนู) หรือ **POS ร้านอาหาร** (`*Shell` = หัวข้ออย่างเดียว; แถบเมนูรวมอยู่ใน `BuildingPosUnifiedMenuBar` การ์ด `app-surface` เดียวกับลิงก์หน้า + แท็บ) — **ห้าม** ห่อ `children` ทั้งหน้าด้วยการ์ดใหญ่ `rounded-3xl border` อีกชั้น; เนื้อหาไหลต่อใต้ `PageContainer` โดยแต่ละการ์ดย่อยใช้ `app-surface` / border ตามจุดได้
+- ถ้าจำเป็นต้องจัด padding แนวนอนชั้นในเพิ่ม ใช้ **`PAGE_INNER_GUTTER_X`** จาก `@/components/ui/page-container` ให้สม่ำเสมอ ไม่ให้เมนูกับเนื้อหาหลุดจังหวะ
+- เมื่อเพิ่มหน้า/โมดูลแดชบอร์ดใหม่ ให้เช็คว่าไม่ทำให้ content แคบหรือกว้างกว่าหน้าอื่นที่ใช้ `PageContainer` อย่างผิดลิขสิทธิ์

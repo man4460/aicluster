@@ -1,0 +1,50 @@
+---
+description: Template กลาง app-templates — รูป/lightbox, แดชบอร์ด, กราฟ, พิมพ์, อัปโหลดสลิป (กล้อง/แกลเลอรี)
+alwaysApply: true
+---
+
+# Template กลาง — รูปแนบ / สลิป / ดูรูปเต็ม
+
+เมื่อทำฟีเจอร์ที่มี **รูปย่อคลิกดูใหญ่**, **สลิป**, **หลักฐานโอน**, หรือ lightbox แบบเดียวกับรายรับ–รายจ่าย:
+
+## บังคับ
+
+- Import จาก **`@/components/app-templates`** เท่านั้น:
+  - **`AppImageThumb`** — ปุ่มรูป 64×64 + `onOpen`
+  - **`AppImageLightbox`** — overlay ดูรูปเต็ม
+  - **`useAppImageLightbox()`** — `{ src, open, close }` คู่กับ Lightbox
+- **ห้าม** คัดลอก/เลียนแบบ `HomeFinanceImageLightbox` หรือ `HomeFinanceThumb` เป็นไฟล์ใหม่ในโมดูลอื่น
+- **ห้าม** สร้าง lightbox ใหม่ด้วย `fixed inset-0` + `img` เองถ้าเป้าหมายคือ “ดูรูปแนบแบบเดียวกับระบบเดิม” — ขยายที่ `AppImageLightbox` ถ้าต้องการพฤติกรรมเพิ่ม (แล้วได้ทุกหน้าพร้อมกัน)
+
+## แพทเทิร์นมาตรฐาน
+
+```tsx
+import { AppImageLightbox, AppImageThumb, useAppImageLightbox } from "@/components/app-templates";
+
+const lb = useAppImageLightbox();
+
+<AppImageThumb src={url} alt="คำอธิบาย" onOpen={() => url && lb.open(url)} />
+<AppImageLightbox src={lb.src} onClose={lb.close} alt="คำอธิบาย" />
+```
+
+## ความเข้ากันได้
+
+- ชื่อเก่า `HomeFinanceImageLightbox` / `HomeFinanceThumb` ยัง re-export ได้ — โค้ดใหม่ให้ใช้ **`AppImage*`** จาก `app-templates` โดยตรง
+
+## แดชบอร์ด / กราฟ / พิมพ์ / อัปโหลดรูป
+
+โมดูลรายรับ–รายจ่าย, POS, หรือรายงานที่ต้องการ UI สอดคล้องกัน:
+
+- **`AppDashboardSection`** + **`appDashboardSectionSlateClass` / `appDashboardSectionVioletClass`** — การ์ดหลัก
+- **`AppSectionHeader`** — หัวข้อ + คำอธิบาย + ปุ่มขวา (`tone`: `slate` | `violet`)
+- **`AppEmptyState`** — กล่องว่างเส้นประ
+- **`AppCompareBarList`** — กราฟแท่งแนวนอนเปรียบเทียบหลายแถว
+- **`AppColumnBarSparkChart`** — กราฟแท่งแนวตั้งเลื่อนแนวนอน (ยอดรายวัน ฯลฯ)
+- **`openPrintableHtml` / `printPrintableHtmlInHiddenIframe`** — เอกสาร HTML เต็มฉบับสำหรับ `window.print()` (บิล/สลิป/รายงาน)
+- **`prepareImageFileForUpload`** — ย่อ/บีบ JPEG ก่อนอัปโหลด
+- **`AppPickGalleryImageButton`** / **`AppTakePhotoButton`** — ปุ่มเดี่ยว (คลาส: `appTemplatePickGalleryImageButtonClass`, `appTemplateTakePhotoButtonClass`)
+- **`AppGalleryCameraFileInputs`** + **`AppImagePickCameraButtons`** — แถวปุ่มคู่ (คู่กับ **`AppCameraCaptureModal`** — `getUserMedia`; สำรอง `input capture`)
+- **`appTemplateOutlineButtonClass`** — ปุ่มขอบ (เช่น เลือกขนาดกระดาษพิมพ์)
+- **`AppWindowPrintButton`** — พิมพ์หน้าปัจจุบัน (`window.print()`)
+
+หลีกเลี่ยงการคัดลอกบล็อก JSX เดิมจาก POS / home-finance — ขยายที่ `app-templates` แทน

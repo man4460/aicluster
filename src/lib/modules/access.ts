@@ -42,18 +42,15 @@ export function canAccessAppModule(
 }
 
 /**
- * ปุ่ม “ทดลองใช้งาน” — สายรายวัน + มีโทเคน: ทดลองโมดูลใดก็ได้ในแคตตาล็อก (ชวนอัปเกรดแพ็กเกจ)
- * Subscribe ยังใช้ canAccessAppModule ตามเดิม
+ * ปุ่ม “ทดลองใช้งาน” — ใช้เกณฑ์เดียวกับการเข้าโมดูลจริง
+ * (สายรายวัน + มีโทเคน = กลุ่ม 1 เท่านั้น — ไม่เปิดทดลองกลุ่ม 2+ แล้ว redirect)
  */
 export function canStartTrialForModule(
   user: UserAccessFields,
   mod: { slug: string; groupId: number },
 ): boolean {
   if (user.role === "ADMIN") return true;
-  if (user.subscriptionType === "BUFFET") {
-    return canAccessAppModule(user, mod);
-  }
-  return user.tokens > 0;
+  return canAccessAppModule(user, mod);
 }
 
 /** true = แพ็กเหมา (ไม่หักโทเคนรายวัน) */

@@ -8,6 +8,7 @@ import { STAFF_ALLOWED_MODULE_SLUGS } from "@/lib/modules/staff-policy";
 import { computeDashboardAccessAllowed } from "@/lib/tokens/dashboard-access";
 import { applyBuffetMonthlyBilling } from "@/lib/tokens/buffet-monthly-billing";
 import { applyDailyTokenDeduction } from "@/lib/tokens/daily-deduction";
+import { canAccessAppModule } from "@/lib/modules/access";
 import { displayAppModuleTitle, MQTT_SERVICE_MODULE_SLUG } from "@/lib/modules/config";
 import { isMqttServiceModuleEnabled } from "@/lib/modules/mqtt-feature";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
@@ -71,9 +72,22 @@ export default async function DashboardLayout({
         lastBuffetBillingMonth: user.lastBuffetBillingMonth,
       });
 
+  const accessFields = {
+    role: user.role,
+    subscriptionType: user.subscriptionType,
+    subscriptionTier: user.subscriptionTier,
+    tokens: user.tokens,
+  };
+
   let serviceModules = allModules
     .filter((m) => !user.employerUserId || STAFF_ALLOWED_MODULE_SLUGS.has(m.slug))
     .filter((m) => subscribedSet.has(m.id) || trialSet.has(m.id))
+    .filter(
+      (m) =>
+        user.role === "ADMIN" ||
+        user.employerUserId ||
+        canAccessAppModule(accessFields, { slug: m.slug, groupId: m.groupId }),
+    )
     .map(({ slug, title, groupId }) => ({
       slug,
       title: displayAppModuleTitle(slug, title),

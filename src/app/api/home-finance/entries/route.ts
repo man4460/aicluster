@@ -1,32 +1,11 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { writeSystemActivityLog } from "@/lib/audit-log";
-import type { HomeFinanceEntryType } from "@/generated/prisma/enums";
-
-const postSchema = z.object({
-  entryDate: z.string().min(10).max(10),
-  type: z.enum(["INCOME", "EXPENSE"]),
-  categoryKey: z.string().min(2).max(64),
-  categoryLabel: z.string().min(1).max(100),
-  title: z.string().min(1).max(160),
-  amount: z.number().finite().positive().max(9_999_999.99),
-  dueDate: z.string().min(10).max(10).optional().nullable(),
-  billNumber: z.string().max(100).optional().nullable(),
-  vehicleType: z.string().max(40).optional().nullable(),
-  serviceCenter: z.string().max(160).optional().nullable(),
-  paymentMethod: z.string().max(40).optional().nullable(),
-  note: z.string().max(600).optional().nullable(),
-});
-
-function parseDateOnly(v: string | null | undefined): Date | null {
-  if (!v) return null;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
-  const d = new Date(`${v}T00:00:00+07:00`);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
+import { exclusiveEndAfterInclusiveTo, formatDbDateToYmd, parseYmdToDbDate } from "@/lib/home-finance/entry-date";
+import { homeFinanceEntryPostSchema, zodFirstIssueMessage } from "@/lib/home-finance/entry-schema";
+import type { HomeFinanceEntryType, HomeUtilityType, HomeVehicleType } from "@/generated/prisma/enums";
 
 function mapRow(r: {
   id: number;
@@ -42,38 +21,69 @@ function mapRow(r: {
   serviceCenter: string | null;
   paymentMethod: string | null;
   note: string | null;
+  slipImageUrl: string | null;
+  linkedUtilityId: number | null;
+  linkedVehicleId: number | null;
+  linkedUtility?: {
+    id: number;
+    label: string;
+    utilityType: HomeUtilityType;
+  } | null;
+  linkedVehicle?: {
+    id: number;
+    label: string;
+    plateNumber: string | null;
+    vehicleType: HomeVehicleType;
+  } | null;
 }) {
   return {
     id: r.id,
-    entryDate: r.entryDate.toISOString().slice(0, 10),
+    entryDate: formatDbDateToYmd(r.entryDate),
     type: r.type,
     categoryKey: r.categoryKey,
     categoryLabel: r.categoryLabel,
     title: r.title,
     amount: Number(r.amount),
-    dueDate: r.dueDate ? r.dueDate.toISOString().slice(0, 10) : null,
+    dueDate: r.dueDate ? formatDbDateToYmd(r.dueDate) : null,
     billNumber: r.billNumber,
     vehicleType: r.vehicleType,
     serviceCenter: r.serviceCenter,
     paymentMethod: r.paymentMethod,
     note: r.note,
+    slipImageUrl: r.slipImageUrl,
+    linkedUtilityId: r.linkedUtilityId,
+    linkedVehicleId: r.linkedVehicleId,
+    linkedUtility: r.linkedUtility ?? null,
+    linkedVehicle: r.linkedVehicle ?? null,
   };
 }
 
 export async function GET(req: Request) {
   const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth.ok) {
+    return NextResponse.json({ error: "ไม่ได้เข้าสู่ระบบ — ล็อกอินใหม่" }, { status: 401 });
+  }
   const ctx = await getModuleBillingContext(auth.session.sub);
-  if (!ctx || ctx.isStaff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!ctx || ctx.isStaff) {
+    return NextResponse.json(
+      {
+        error:
+          ctx?.isStaff === true
+            ? "บัญชีพนักงานไม่สามารถใช้รายรับ-รายจ่ายได้ — โปรดเข้าด้วยบัญชีเจ้าของ"
+            : "ไม่มีสิทธิ์เข้าใช้",
+      },
+      { status: 403 },
+    );
+  }
 
   const { searchParams } = new URL(req.url);
-  const from = parseDateOnly(searchParams.get("from"));
-  const to = parseDateOnly(searchParams.get("to"));
+  const from = parseYmdToDbDate(searchParams.get("from"));
+  const to = parseYmdToDbDate(searchParams.get("to"));
   const type = searchParams.get("type")?.trim() ?? "";
   const category = searchParams.get("category")?.trim() ?? "";
   const q = searchParams.get("q")?.trim() ?? "";
   if (!from || !to) return NextResponse.json({ error: "from/to ไม่ถูกต้อง" }, { status: 400 });
-  const toEnd = new Date(to.getTime() + 24 * 60 * 60 * 1000);
+  const toEnd = exclusiveEndAfterInclusiveTo(to);
 
   const rows = await prisma.homeFinanceEntry.findMany({
     where: {
@@ -87,9 +97,14 @@ export async function GET(req: Request) {
               { title: { contains: q } },
               { note: { contains: q } },
               { billNumber: { contains: q } },
+              { categoryLabel: { contains: q } },
             ],
           }
         : {}),
+    },
+    include: {
+      linkedUtility: { select: { id: true, label: true, utilityType: true } },
+      linkedVehicle: { select: { id: true, label: true, plateNumber: true, vehicleType: true } },
     },
     orderBy: [{ entryDate: "desc" }, { id: "desc" }],
     take: 1000,
@@ -111,9 +126,21 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth.ok) {
+    return NextResponse.json({ error: "ไม่ได้เข้าสู่ระบบ — ล็อกอินใหม่" }, { status: 401 });
+  }
   const ctx = await getModuleBillingContext(auth.session.sub);
-  if (!ctx || ctx.isStaff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!ctx || ctx.isStaff) {
+    return NextResponse.json(
+      {
+        error:
+          ctx?.isStaff === true
+            ? "บัญชีพนักงานไม่สามารถใช้รายรับ-รายจ่ายได้ — โปรดเข้าด้วยบัญชีเจ้าของ"
+            : "ไม่มีสิทธิ์เข้าใช้",
+      },
+      { status: 403 },
+    );
+  }
 
   let json: unknown;
   try {
@@ -121,31 +148,77 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "รูปแบบข้อมูลไม่ถูกต้อง" }, { status: 400 });
   }
-  const parsed = postSchema.safeParse(json);
-  if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
+  const parsed = homeFinanceEntryPostSchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: `ข้อมูลไม่ถูกต้อง — ${zodFirstIssueMessage(parsed.error)}` },
+      { status: 400 },
+    );
+  }
 
-  const entryDate = parseDateOnly(parsed.data.entryDate);
-  const dueDate = parseDateOnly(parsed.data.dueDate ?? null);
+  const entryDate = parseYmdToDbDate(parsed.data.entryDate);
+  const dueDate = parseYmdToDbDate(parsed.data.dueDate ?? null);
   if (!entryDate) return NextResponse.json({ error: "วันที่รายการไม่ถูกต้อง" }, { status: 400 });
   if (parsed.data.dueDate && !dueDate) return NextResponse.json({ error: "วันครบกำหนดไม่ถูกต้อง" }, { status: 400 });
 
-  const row = await prisma.homeFinanceEntry.create({
-    data: {
-      ownerUserId: ctx.billingUserId,
-      entryDate,
-      type: parsed.data.type,
-      categoryKey: parsed.data.categoryKey,
-      categoryLabel: parsed.data.categoryLabel.trim().slice(0, 100),
-      title: parsed.data.title.trim(),
-      amount: parsed.data.amount,
-      dueDate,
-      billNumber: parsed.data.billNumber?.trim() || null,
-      vehicleType: parsed.data.vehicleType?.trim() || null,
-      serviceCenter: parsed.data.serviceCenter?.trim() || null,
-      paymentMethod: parsed.data.paymentMethod?.trim() || null,
-      note: parsed.data.note?.trim() || null,
-    },
-  });
+  let linkedUtilityId = parsed.data.linkedUtilityId ?? null;
+  let linkedVehicleId = parsed.data.linkedVehicleId ?? null;
+  if (linkedUtilityId != null && linkedVehicleId != null) {
+    return NextResponse.json({ error: "เลือกได้เพียงบิลค่าไฟ/น้ำ หรือรถ อย่างใดอย่างหนึ่ง" }, { status: 400 });
+  }
+  if (linkedUtilityId != null) {
+    const u = await prisma.homeUtilityProfile.findFirst({
+      where: { id: linkedUtilityId, ownerUserId: ctx.billingUserId },
+      select: { id: true },
+    });
+    if (!u) return NextResponse.json({ error: "ไม่พบรายการค่าไฟ/ค่าน้ำ" }, { status: 400 });
+  }
+  if (linkedVehicleId != null) {
+    const v = await prisma.homeVehicleProfile.findFirst({
+      where: { id: linkedVehicleId, ownerUserId: ctx.billingUserId },
+      select: { id: true },
+    });
+    if (!v) return NextResponse.json({ error: "ไม่พบรายการยานพาหนะ" }, { status: 400 });
+  }
+
+  const slip = parsed.data.slipImageUrl?.trim();
+  const slipOk =
+    !slip ||
+    (slip.startsWith("/uploads/home-finance/") && !slip.includes("..") && slip.length <= 512);
+
+  let row;
+  try {
+    row = await prisma.homeFinanceEntry.create({
+      data: {
+        ownerUserId: ctx.billingUserId,
+        entryDate,
+        type: parsed.data.type,
+        categoryKey: parsed.data.categoryKey,
+        categoryLabel: parsed.data.categoryLabel.trim().slice(0, 100),
+        title: parsed.data.title.trim(),
+        amount: parsed.data.amount,
+        dueDate,
+        billNumber: parsed.data.billNumber?.trim() || null,
+        vehicleType: parsed.data.vehicleType?.trim() || null,
+        serviceCenter: parsed.data.serviceCenter?.trim() || null,
+        paymentMethod: parsed.data.paymentMethod?.trim() || null,
+        note: parsed.data.note?.trim() || null,
+        slipImageUrl: slipOk ? slip || null : null,
+        linkedUtilityId,
+        linkedVehicleId,
+      },
+      include: {
+        linkedUtility: { select: { id: true, label: true, utilityType: true } },
+        linkedVehicle: { select: { id: true, label: true, plateNumber: true, vehicleType: true } },
+      },
+    });
+  } catch (e) {
+    console.error("homeFinanceEntry.create", e);
+    return NextResponse.json(
+      { error: "บันทึกลงฐานข้อมูลไม่สำเร็จ — ลองใหม่หรือตรวจสอบการเชื่อมต่อ" },
+      { status: 500 },
+    );
+  }
 
   await writeSystemActivityLog({
     actorUserId: auth.session.sub,

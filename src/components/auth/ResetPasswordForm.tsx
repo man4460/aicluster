@@ -5,6 +5,7 @@ import { Suspense, useState } from "react";
 import { AuthCard, AuthFooterLink } from "@/components/auth/AuthCard";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { cn } from "@/lib/cn";
+import { parseJsonResponse } from "@/lib/parse-json-response";
 
 function ResetPasswordInner() {
   const router = useRouter();
@@ -36,9 +37,11 @@ function ResetPasswordInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password }),
       });
-      const data = (await res.json()) as { error?: string; message?: string };
+      const data = await parseJsonResponse<{ error?: string; message?: string }>(res);
       if (!res.ok) {
-        setError(data.error ?? "รีเซ็ตไม่สำเร็จ");
+        setError(
+          data.error ?? (res.status >= 500 ? "เซิร์ฟเวอร์มีปัญหา ลองใหม่ภายหลัง" : "รีเซ็ตไม่สำเร็จ"),
+        );
         return;
       }
       setMessage(data.message ?? "สำเร็จ");

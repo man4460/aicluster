@@ -7,6 +7,7 @@ import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { applyBuffetMonthlyBilling } from "@/lib/tokens/buffet-monthly-billing";
 import { applyDailyTokenDeduction } from "@/lib/tokens/daily-deduction";
+import { authRouteErrorResponse } from "@/lib/auth/route-error-response";
 
 const bodySchema = z.object({
   identifier: z.string().min(1),
@@ -42,46 +43,45 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "การยืนยันตัวตนล้มเหลว ลองใหม่อีกครั้ง" }, { status: 400 });
   }
 
-  const user = await prisma.user.findFirst({
-    where: {
-      OR: [{ email: identifier }, { username: identifier }],
-    },
-  });
-
-  if (!user) {
-    return NextResponse.json({ error: "อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }, { status: 401 });
-  }
-
-  const valid = await verifyPassword(password, user.passwordHash);
-  if (!valid) {
-    return NextResponse.json({ error: "อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }, { status: 401 });
-  }
-
-  await applyDailyTokenDeduction(user.id);
-  await applyBuffetMonthlyBilling(user.id);
-  const fresh = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { tokens: true },
-  });
-
-  let token: string;
   try {
-    token = await signSessionToken({
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: identifier }, { username: identifier }],
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }, { status: 401 });
+    }
+
+    const valid = await verifyPassword(password, user.passwordHash);
+    if (!valid) {
+      return NextResponse.json({ error: "อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }, { status: 401 });
+    }
+
+    await applyDailyTokenDeduction(user.id);
+    await applyBuffetMonthlyBilling(user.id);
+    const fresh = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { tokens: true },
+    });
+
+    const token = await signSessionToken({
       id: user.id,
       username: user.username,
       role: user.role,
     });
-  } catch {
-    return NextResponse.json({ error: "การตั้งค่าเซิร์ฟเวอร์ไม่สมบูรณ์" }, { status: 500 });
-  }
 
-  await setSessionCookie(token, req);
-  return NextResponse.json({
-    ok: true,
-    user: {
-      username: user.username,
-      role: user.role,
-      tokens: fresh?.tokens ?? user.tokens,
-    },
-  });
+    await setSessionCookie(token, req);
+    return NextResponse.json({
+      ok: true,
+      user: {
+        username: user.username,
+        role: user.role,
+        tokens: fresh?.tokens ?? user.tokens,
+      },
+    });
+  } catch (err) {
+    return authRouteErrorResponse(err, "api/auth/login");
+  }
 }

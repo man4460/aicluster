@@ -6,6 +6,7 @@ import { PasswordInput } from "@/components/auth/PasswordInput";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
 import { MawellLogo } from "@/components/layout/MawellLogo";
 import { cn } from "@/lib/cn";
+import { parseJsonResponse } from "@/lib/parse-json-response";
 
 export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }) {
   const [identifier, setIdentifier] = useState("");
@@ -35,9 +36,11 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
           turnstileToken: turnstileToken ?? undefined,
         }),
       });
-      const data = (await res.json()) as { error?: string };
+      const data = await parseJsonResponse<{ error?: string }>(res);
       if (!res.ok) {
-        setError(data.error ?? "เข้าสู่ระบบไม่สำเร็จ");
+        setError(
+          data.error ?? (res.status >= 500 ? "เซิร์ฟเวอร์มีปัญหา ลองใหม่ภายหลัง" : "เข้าสู่ระบบไม่สำเร็จ"),
+        );
         return;
       }
       // เต็มหน้าแทน client navigation — ให้คำขอถัดไปส่งคุกกี้ session แน่นอน (กัน RSC ค้างสถานะเก่า)

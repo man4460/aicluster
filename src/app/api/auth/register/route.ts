@@ -5,6 +5,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { setSessionCookie, signSessionToken } from "@/lib/auth/session";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { verifyTurnstileToken } from "@/lib/turnstile";
+import { authRouteErrorResponse } from "@/lib/auth/route-error-response";
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -43,9 +44,8 @@ export async function POST(req: Request) {
 
   const passwordHash = await hashPassword(password);
 
-  let user;
   try {
-    user = await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         email,
         username,
@@ -57,24 +57,19 @@ export async function POST(req: Request) {
         subscriptionTier: "NONE",
       },
     });
-  } catch {
-    return NextResponse.json({ error: "อีเมลหรือชื่อผู้ใช้นี้ถูกใช้แล้ว" }, { status: 409 });
-  }
 
-  let token: string;
-  try {
-    token = await signSessionToken({
+    const token = await signSessionToken({
       id: user.id,
       username: user.username,
       role: user.role,
     });
-  } catch {
-    return NextResponse.json({ error: "การตั้งค่าเซิร์ฟเวอร์ไม่สมบูรณ์" }, { status: 500 });
-  }
 
-  await setSessionCookie(token, req);
-  return NextResponse.json({
-    ok: true,
-    user: { username: user.username, role: user.role },
-  });
+    await setSessionCookie(token, req);
+    return NextResponse.json({
+      ok: true,
+      user: { username: user.username, role: user.role },
+    });
+  } catch (err) {
+    return authRouteErrorResponse(err, "api/auth/register");
+  }
 }

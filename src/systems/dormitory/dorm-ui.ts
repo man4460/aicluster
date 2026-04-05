@@ -1,19 +1,19 @@
 /** คลาส UI ร่วมโมดูลหอพัก — โทนเดียวกับหมู่บ้าน/ตั้งค่า */
 export const dormField =
-  "w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#0000BF]/40 focus:bg-white focus:ring-2 focus:ring-[#0000BF]/15";
+  "w-full rounded-2xl border border-white/70 bg-white/75 px-3 py-2.5 text-sm text-slate-900 outline-none transition backdrop-blur-sm focus:border-blue-400/50 focus:bg-white focus:ring-2 focus:ring-blue-500/20";
 
 export const dormCard =
-  "rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-white to-slate-50/90 shadow-sm";
+  "mawell-card-surface rounded-3xl shadow-md";
 
 export const dormBtnPrimary =
-  "inline-flex items-center justify-center rounded-xl bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0000a3] disabled:opacity-50";
+  "inline-flex items-center justify-center rounded-2xl bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#0000a3] disabled:opacity-50";
 
 export const dormBtnSecondary =
-  "inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:border-[#0000BF]/30 hover:bg-[#0000BF]/[0.04]";
+  "inline-flex items-center justify-center rounded-2xl border border-white/70 bg-white/80 px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm backdrop-blur-sm transition hover:border-blue-300/60 hover:bg-white";
 
 /** การ์ดห้อง — ผังห้อง (แดชบอร์ด): เน้นเลขห้องกลาง แถบไฮไลต์ด้านบน */
 export const dormRoomTile =
-  "group relative flex h-full min-h-[160px] flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-gradient-to-b from-white via-slate-50/40 to-slate-100/35 p-4 pt-[1.125rem] text-slate-900 antialiased shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#0000BF]/45 hover:shadow-lg hover:shadow-[#0000BF]/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0000BF]/35 focus-visible:ring-offset-2 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-gradient-to-r before:from-[#0000BF]/75 before:via-[#0000BF] before:to-indigo-500 before:content-['']";
+  "group relative mawell-card-surface flex h-full min-h-[160px] flex-col overflow-hidden rounded-3xl p-4 pt-[1.125rem] text-slate-900 antialiased shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-300/70 hover:shadow-lg hover:shadow-blue-500/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35 focus-visible:ring-offset-2 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1.5 before:rounded-b-full before:bg-gradient-to-r before:from-[#9cb0ff] before:via-[#f9a8c8] before:to-[#b8d4ff] before:content-['']";
 
 /** ห้องนี้มีรายการค้างชำระงวดเก่า (แดชบอร์ด) */
 export const dormRoomTileOverdueHint =
@@ -21,7 +21,7 @@ export const dormRoomTileOverdueHint =
 
 /** การ์ดห้อง — หน้าจัดการห้อง: ข้อมูลแนวแถว + CTA */
 export const dormRoomListCard =
-  "group relative flex h-full min-h-[168px] flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white via-white to-slate-50/90 p-4 pt-[1.125rem] text-slate-900 antialiased shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#0000BF]/40 hover:shadow-md hover:shadow-[#0000BF]/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0000BF]/35 focus-visible:ring-offset-2 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-gradient-to-r before:from-slate-400/50 before:via-[#0000BF]/90 before:to-indigo-500/85 before:content-['']";
+  "group relative mawell-card-surface flex h-full min-h-[168px] flex-col overflow-hidden rounded-3xl p-4 pt-[1.125rem] text-slate-900 antialiased shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-300/65 hover:shadow-lg hover:shadow-rose-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35 focus-visible:ring-offset-2 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1.5 before:rounded-b-full before:bg-gradient-to-r before:from-[#a8b0ff] before:via-[#f0abce] before:to-[#a5d8ff] before:content-['']";
 
 export const dormRoomNumberHero =
   "text-center text-[1.75rem] font-bold tabular-nums leading-none tracking-tight text-slate-900 antialiased transition-colors duration-200 group-hover:text-[#0000BF]";

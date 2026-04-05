@@ -1,0 +1,26 @@
+---
+description: บังคับให้ใช้ template กลาง @/components/app-templates ก่อนสร้าง UI ซ้ำ — ตรวจทุกครั้งที่แตะฟีเจอร์ที่มีในแพ็กเกจนี้
+alwaysApply: true
+---
+
+# Template กลาง — ตรวจก่อนเขียน UI
+
+ก่อนเพิ่มหรือแก้ UI ที่เกี่ยวกับ **รูป / lightbox / แดชบอร์ด / กราฟแท่ง / พิมพ์เอกสาร / อัปโหลดสลิป / กล้องถ่ายรูป**:
+
+## บังคับ
+
+1. **เปิดหรือค้น** `src/components/app-templates/index.ts` และโฟลเดอร์ `src/components/app-templates/` — ดูว่ามีคอมโพเนนต์ ฟังก์ชัน หรือโทเค็น (`appTemplate*`, `App*`) ที่ตรงงานหรือไม่
+2. **Import จาก** `@/components/app-templates` (barrel) — ห้ามคัดลอกบล็อก JSX/CSS จาก `home-finance`, `building-pos` หรือโมดูลอื่นมาเป็นของใหม่ถ้าหน้าที่เดียวกันมีใน template แล้ว
+3. **ถ้ายังไม่มี** สิ่งที่ต้องการ — **ขยายที่ `app-templates`** (คอมโพเนนต์ใหม่ / prop เพิ่ม / โทเค็นใน `dashboard-tokens`) แล้ว export ใน `index.ts` แทนการผูกเฉพาะหน้าเดียว
+
+## หมวดที่ครอบคลุม (สรุป)
+
+- รูปย่อ + ดูเต็มจอ → `AppImageThumb`, `AppImageLightbox`, `useAppImageLightbox` (รายละเอียดเพิ่มในกฎ `app-templates-media.mdc`)
+- การ์ดแดชบอร์ด / หัวข้อ / ว่าง → `AppDashboardSection`, `AppSectionHeader`, `AppEmptyState`, โทเค็น `appDashboard*`
+- กราฟแท่งเปรียบเทียบ / แท่งรายวัน → `AppCompareBarList`, `AppColumnBarSparkChart`
+- พิมพ์ HTML / ย่อรูปก่อนอัปโหลด → `openPrintableHtml`, `printPrintableHtmlInHiddenIframe`, `prepareImageFileForUpload`
+- สลิป เลือกรูป ถ่ายกล้อง → `AppGalleryCameraFileInputs`, `AppImagePickCameraButtons`, `AppPickGalleryImageButton`, `AppTakePhotoButton`, `AppCameraCaptureModal`
+
+## ข้อยกเว้น
+
+- โมดูลที่ **ไม่เกี่ยวกับแพทเทิร์นข้างต้น** ไม่ต้องบังคับใช้ template — แต่ถ้าจะทำฟีเจอร์เดียวกันในอนาคต ให้ย้ายมาใช้กลางแทน

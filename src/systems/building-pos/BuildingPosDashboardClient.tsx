@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
 import {
   createShopQrPosterCanvas,
@@ -16,11 +17,20 @@ import {
 } from "@/systems/building-pos/building-pos-service";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { PrintButton } from "@/systems/dormitory/components/PrintButton";
-
-type TabKey = "overview" | "orders" | "menu" | "categories";
+import { BuildingPosOpenTablesPanel } from "@/systems/building-pos/BuildingPosSalesAnalytics";
+import {
+  BuildingPosUnifiedMenuBar,
+  buildingPosDashboardTabHref,
+  type BuildingPosDashTab,
+} from "@/systems/building-pos/components/BuildingPosUnifiedMenuBar";
 
 function tableQrStorageKey(ownerId: string) {
   return `mawell.buildingpos.tableQrLabels.${ownerId}`;
+}
+
+function parseBuildingPosTabQuery(q: string | null): BuildingPosDashTab {
+  if (q === "orders" || q === "menu" || q === "categories") return q;
+  return "overview";
 }
 
 function PosThumb({ url, size = "md" }: { url: string; size?: "sm" | "md" }) {
@@ -76,9 +86,6 @@ function OrderLineItems({
   );
 }
 
-const tabBtn =
-  "shrink-0 snap-start rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors sm:py-2";
-
 export function BuildingPosDashboardClient({
   ownerId,
   trialSessionId,
@@ -86,6 +93,7 @@ export function BuildingPosDashboardClient({
   baseUrl,
   shopLabel,
   logoUrl,
+  paymentChannelsNote,
 }: {
   ownerId: string;
   trialSessionId: string;
@@ -93,9 +101,28 @@ export function BuildingPosDashboardClient({
   baseUrl: string;
   shopLabel: string;
   logoUrl: string | null;
+  /** จากโปรไฟล์ส่วนกลาง — แสดงบนบิล / QR */
+  paymentChannelsNote?: string | null;
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabQ = searchParams.get("tab");
+
   const repo = useMemo(() => createBuildingPosSessionApiRepository(), []);
-  const [tab, setTab] = useState<TabKey>("overview");
+  const [tab, setTabState] = useState<BuildingPosDashTab>("overview");
+
+  useLayoutEffect(() => {
+    setTabState(parseBuildingPosTabQuery(tabQ));
+  }, [tabQ]);
+
+  const setTab = useCallback(
+    (t: BuildingPosDashTab) => {
+      setTabState(t);
+      router.replace(buildingPosDashboardTabHref(t), { scroll: false });
+    },
+    [router],
+  );
+
   const [categories, setCategories] = useState<PosCategory[]>([]);
   const [menuItems, setMenuItems] = useState<PosMenuItem[]>([]);
   const [orders, setOrders] = useState<PosOrder[]>([]);
@@ -130,6 +157,7 @@ export function BuildingPosDashboardClient({
   const [menuModalOpen, setMenuModalOpen] = useState(false);
   const [menuEditing, setMenuEditing] = useState<PosMenuItem | null>(null);
   const [menuSaving, setMenuSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const dashboardStats = useMemo(() => {
     const paidRevenue = orders.filter((o) => o.status === "PAID").reduce((s, o) => s + o.total_amount, 0);
@@ -177,6 +205,15 @@ export function BuildingPosDashboardClient({
     setCategories(c);
     setMenuItems(m);
     setOrders(o);
+  }
+
+  async function refreshData() {
+    setRefreshing(true);
+    try {
+      await loadAll();
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   useEffect(() => {
@@ -347,7 +384,7 @@ export function BuildingPosDashboardClient({
   }
 
   async function deleteCategoryRow(c: PosCategory) {
-    if (!window.confirm(`ลบกลุ่ม "${c.name}" ?\n(ถ้ามีเมนูในกลุ่มนี้ต้องลบหรือย้ายเมนูก่อน)`)) return;
+    if (!window.confirm(`ลบหมวดหมู่ "${c.name}" ?\n(ถ้ามีเมนูในหมวดนี้ต้องลบหรือย้ายเมนูก่อน)`)) return;
     try {
       await repo.deleteCategory(c.id);
       await loadAll();
@@ -548,7 +585,11 @@ export function BuildingPosDashboardClient({
   async function uploadImage(file: File): Promise<string | null> {
     const form = new FormData();
     form.append("file", file);
-    const res = await fetch("/api/building-pos/session/images/upload", { method: "POST", body: form });
+    const res = await fetch("/api/building-pos/session/images/upload", {
+      method: "POST",
+      body: form,
+      credentials: "include",
+    });
     const data = (await res.json().catch(() => ({}))) as { error?: string; imageUrl?: string };
     if (!res.ok) throw new Error(data.error || "อัปโหลดรูปไม่สำเร็จ");
     return data.imageUrl ?? null;
@@ -556,6 +597,11 @@ export function BuildingPosDashboardClient({
 
   async function moveOrderStatus(id: number, status: PosOrder["status"]) {
     await repo.updateOrder(id, { status });
+    await loadAll();
+  }
+
+  async function saveOrderPaymentSlip(orderId: number, imageUrl: string) {
+    await repo.updateOrder(orderId, { payment_slip_url: imageUrl });
     await loadAll();
   }
 
@@ -584,52 +630,61 @@ export function BuildingPosDashboardClient({
 
   return (
     <div className="max-w-full space-y-4 sm:space-y-6">
-      <div className="app-surface rounded-2xl p-3 sm:p-4 print:hidden">
-        <p className="mb-2 text-xs font-medium text-[#66638c] sm:hidden">เมนูหลัก</p>
-        <div className="-mx-1 flex snap-x snap-mandatory gap-1.5 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] sm:mx-0 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pb-0 sm:snap-none">
-          <button type="button" onClick={() => setTab("overview")} className={`${tabBtn} ${tab === "overview" ? "bg-[#ecebff] text-[#4d47b6]" : "app-btn-soft text-[#66638c]"}`}>
-            แดชบอร์ด
-          </button>
-          <button type="button" onClick={() => setTab("orders")} className={`${tabBtn} ${tab === "orders" ? "bg-[#ecebff] text-[#4d47b6]" : "app-btn-soft text-[#66638c]"}`}>
-            ออเดอร์
-          </button>
-          <button type="button" onClick={() => setTab("menu")} className={`${tabBtn} ${tab === "menu" ? "bg-[#ecebff] text-[#4d47b6]" : "app-btn-soft text-[#66638c]"}`}>
-            เมนูอาหาร
-          </button>
-          <button type="button" onClick={() => setTab("categories")} className={`${tabBtn} ${tab === "categories" ? "bg-[#ecebff] text-[#4d47b6]" : "app-btn-soft text-[#66638c]"}`}>
-            กลุ่มเมนู
-          </button>
-        </div>
-      </div>
+      <BuildingPosUnifiedMenuBar
+        activeTab={tab}
+        onTabChange={setTab}
+        onRefresh={() => void refreshData()}
+        refreshing={refreshing}
+      />
 
       {tab === "overview" ? (
-        <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="app-surface rounded-2xl p-4 sm:p-5">
-            <p className="text-xs text-[#66638c]">รายรับ (ออเดอร์ที่ชำระแล้ว)</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-700 sm:text-3xl">฿ {dashboardStats.paidRevenue.toLocaleString()}</p>
-          </div>
-          <div className="app-surface rounded-2xl p-4 sm:p-5">
-            <p className="text-xs text-[#66638c]">กลุ่มเมนูขายดี</p>
-            <p className="mt-1 text-lg font-bold leading-snug text-[#2e2a58] sm:text-xl">{dashboardStats.bestCategoryLabel}</p>
-            <p className="mt-1 text-xs text-[#66638c]">ขายรวม {dashboardStats.bestCategoryQty.toLocaleString()} จาน/แก้ว</p>
-          </div>
-          <div className="app-surface rounded-2xl p-4 sm:p-5">
-            <p className="text-xs text-[#66638c]">จำนวนลูกค้า</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-[#4d47b6] sm:text-3xl">{dashboardStats.uniqueCustomers.toLocaleString()}</p>
-            <p className="mt-1 text-xs text-[#66638c]">นับจากชื่อ/โต๊ะที่มีออเดอร์</p>
-          </div>
-        </section>
+        <div className="space-y-5 sm:space-y-6">
+          <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="app-surface rounded-2xl p-4 sm:p-5">
+              <p className="text-xs text-[#66638c]">รายรับ (ออเดอร์ที่ชำระแล้ว)</p>
+              <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-700 sm:text-3xl">฿ {dashboardStats.paidRevenue.toLocaleString()}</p>
+            </div>
+            <div className="app-surface rounded-2xl p-4 sm:p-5">
+              <p className="text-xs text-[#66638c]">หมวดหมู่ขายดี</p>
+              <p className="mt-1 text-lg font-bold leading-snug text-[#2e2a58] sm:text-xl">{dashboardStats.bestCategoryLabel}</p>
+              <p className="mt-1 text-xs text-[#66638c]">ขายรวม {dashboardStats.bestCategoryQty.toLocaleString()} จาน/แก้ว</p>
+            </div>
+            <div className="app-surface rounded-2xl p-4 sm:p-5">
+              <p className="text-xs text-[#66638c]">จำนวนลูกค้า</p>
+              <p className="mt-1 text-2xl font-bold tabular-nums text-[#4d47b6] sm:text-3xl">{dashboardStats.uniqueCustomers.toLocaleString()}</p>
+              <p className="mt-1 text-xs text-[#66638c]">นับจากชื่อ/โต๊ะที่มีออเดอร์</p>
+            </div>
+          </section>
+          <BuildingPosOpenTablesPanel
+            orders={orders}
+            menuImageById={menuImageById}
+            onOrderStatusChange={(id, status) => void moveOrderStatus(id, status)}
+            onOrderPaymentSlipSaved={(id, url) => saveOrderPaymentSlip(id, url)}
+            shopLabel={shopLabel}
+            logoUrl={logoUrl}
+            paymentChannelsNote={paymentChannelsNote ?? null}
+            headerAction={
+              <button
+                type="button"
+                onClick={() => setTab("orders")}
+                className="inline-flex min-h-[40px] min-w-[5.5rem] items-center justify-center rounded-xl bg-[#ecebff] px-3 py-2 text-sm font-semibold text-[#4d47b6] ring-1 ring-[#4d47b6]/20 touch-manipulation transition-colors hover:bg-[#e0dcff] active:opacity-90 sm:min-h-[44px] sm:px-4"
+              >
+                ออเดอร์
+              </button>
+            }
+          />
+        </div>
       ) : null}
 
       {tab === "categories" ? (
         <section className="app-surface rounded-2xl p-4 sm:p-5">
           <div className="flex flex-col gap-3 border-b border-[#ecebff] pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-bold text-[#2e2a58]">จัดกลุ่มเมนู</h2>
-              <p className="mt-1 text-xs text-[#66638c]">ลำดับเลขน้อยแสดงก่อน — ลบกลุ่มได้เมื่อไม่มีเมนูในกลุ่ม</p>
+              <h2 className="text-lg font-bold text-[#2e2a58]">จัดหมวดหมู่</h2>
+              <p className="mt-1 text-xs text-[#66638c]">ลำดับเลขน้อยแสดงก่อน — ลบหมวดได้เมื่อไม่มีเมนูในหมวด</p>
             </div>
             <button type="button" onClick={() => openCatCreate()} className="app-btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold">
-              + เพิ่มกลุ่ม
+              + เพิ่มหมวดหมู่
             </button>
           </div>
           <ul className="mt-4 grid grid-cols-1 gap-2 sm:gap-3">
@@ -1086,8 +1141,8 @@ export function BuildingPosDashboardClient({
           setCatModalOpen(false);
           setCatEditing(null);
         }}
-        title={catEditing ? "แก้ไขกลุ่มเมนู" : "เพิ่มกลุ่มเมนู"}
-        description="กรอกข้อมูลกลุ่มแล้วกดบันทึก — ลำดับเลขน้อยแสดงก่อนในหน้าลูกค้า"
+        title={catEditing ? "แก้ไขหมวดหมู่" : "เพิ่มหมวดหมู่"}
+        description="กรอกข้อมูลหมวดหมู่แล้วกดบันทึก — ลำดับเลขน้อยแสดงก่อนในหน้าลูกค้า"
         size="md"
         footer={
           <FormModalFooterActions
@@ -1097,7 +1152,7 @@ export function BuildingPosDashboardClient({
               setCatEditing(null);
             }}
             onSubmit={() => void submitCatModal()}
-            submitLabel={catEditing ? "บันทึกการแก้ไข" : "เพิ่มกลุ่ม"}
+            submitLabel={catEditing ? "บันทึกการแก้ไข" : "เพิ่มหมวดหมู่"}
             loading={catSaving}
             submitDisabled={!catForm.name.trim() || !Number.isFinite(Number(catForm.sort_order))}
           />
@@ -1105,12 +1160,12 @@ export function BuildingPosDashboardClient({
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <div className="mx-auto shrink-0 sm:mx-0">
-            <p className="mb-1 text-xs font-medium text-[#4d47b6]">ตัวอย่างรูปกลุ่ม</p>
+            <p className="mb-1 text-xs font-medium text-[#4d47b6]">ตัวอย่างรูปหมวด</p>
             <PosThumb url={catForm.image_url} />
           </div>
           <div className="min-w-0 flex-1 space-y-3">
             <label className="block text-xs font-medium text-[#4d47b6]">
-              ชื่อกลุ่ม
+              ชื่อหมวดหมู่
               <input
                 className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
                 placeholder="เช่น อาหารจานเดียว"
@@ -1120,7 +1175,7 @@ export function BuildingPosDashboardClient({
               />
             </label>
             <label className="block text-xs font-medium text-[#4d47b6]">
-              URL รูปกลุ่ม <span className="font-normal text-[#9b98c4]">(ไม่บังคับ)</span>
+              URL รูปหมวด <span className="font-normal text-[#9b98c4]">(ไม่บังคับ)</span>
               <input
                 className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
                 placeholder="https://..."
@@ -1160,7 +1215,7 @@ export function BuildingPosDashboardClient({
             </label>
             <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#4d47b6]">
               <input type="checkbox" checked={catForm.is_active} onChange={(e) => setCatForm((s) => ({ ...s, is_active: e.target.checked }))} />
-              เปิดใช้งานกลุ่มนี้
+              เปิดใช้งานหมวดนี้
             </label>
           </div>
         </div>
@@ -1174,7 +1229,7 @@ export function BuildingPosDashboardClient({
           setMenuEditing(null);
         }}
         title={menuEditing ? "แก้ไขเมนู" : "เพิ่มเมนูอาหาร"}
-        description="เลือกกลุ่ม ระบุชื่อและราคา — รายละเอียดจะแสดงหน้าลูกค้า"
+        description="เลือกหมวดหมู่ ระบุชื่อและราคา — รายละเอียดจะแสดงหน้าลูกค้า"
         size="lg"
         footer={
           <FormModalFooterActions
@@ -1202,13 +1257,13 @@ export function BuildingPosDashboardClient({
           </div>
           <div className="min-w-0 flex-1 space-y-3">
             <label className="block text-xs font-medium text-[#4d47b6]">
-              กลุ่มเมนู
+              หมวดหมู่
               <select
                 className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
                 value={menuForm.category_id}
                 onChange={(e) => setMenuForm((s) => ({ ...s, category_id: e.target.value }))}
               >
-                <option value="">เลือกกลุ่มเมนู</option>
+                <option value="">เลือกหมวดหมู่</option>
                 {(menuEditing ? categories : categories.filter((c) => c.is_active)).map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}

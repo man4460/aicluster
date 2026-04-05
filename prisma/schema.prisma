@@ -688,11 +688,18 @@ model HomeFinanceEntry {
   serviceCenter    String?             @map("service_center") @db.VarChar(160)
   paymentMethod    String?             @map("payment_method") @db.VarChar(40)
   note             String?             @db.VarChar(600)
+  slipImageUrl     String?             @map("slip_image_url") @db.VarChar(512)
+  linkedUtilityId  Int?                @map("linked_utility_id")
+  linkedVehicleId  Int?                @map("linked_vehicle_id")
+  linkedUtility    HomeUtilityProfile? @relation(fields: [linkedUtilityId], references: [id], onDelete: SetNull)
+  linkedVehicle    HomeVehicleProfile? @relation(fields: [linkedVehicleId], references: [id], onDelete: SetNull)
   createdAt        DateTime            @default(now()) @map("created_at")
   updatedAt        DateTime            @updatedAt @map("updated_at")
 
   @@index([ownerUserId, entryDate])
   @@index([ownerUserId, categoryKey])
+  @@index([linkedUtilityId])
+  @@index([linkedVehicleId])
   @@map("home_finance_entries")
 }
 
@@ -725,9 +732,11 @@ model HomeUtilityProfile {
   defaultDueDay  Int?            @map("default_due_day")
   dueDate        DateTime?       @map("due_date") @db.Date
   note           String?         @db.VarChar(400)
+  photoUrl       String?         @map("photo_url") @db.VarChar(512)
   isActive       Boolean         @default(true) @map("is_active")
   createdAt      DateTime        @default(now()) @map("created_at")
   updatedAt      DateTime        @updatedAt @map("updated_at")
+  financeEntries HomeFinanceEntry[]
 
   @@index([ownerUserId, utilityType, isActive])
   @@map("home_utility_profiles")
@@ -748,9 +757,11 @@ model HomeVehicleProfile {
   serviceDueDate DateTime?      @map("service_due_date") @db.Date
   insuranceDueDate DateTime?    @map("insurance_due_date") @db.Date
   note          String?         @db.VarChar(400)
+  photoUrl      String?         @map("photo_url") @db.VarChar(512)
   isActive      Boolean         @default(true) @map("is_active")
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
+  financeEntries HomeFinanceEntry[]
 
   @@index([ownerUserId, vehicleType, isActive])
   @@map("home_vehicle_profiles")
@@ -1002,6 +1013,8 @@ model BuildingPosOrder {
   itemsJson      Json     @map("items_json")
   totalAmount    Int      @default(0) @map("total_amount")
   note           String   @default("") @db.VarChar(1000)
+  /** รูปสลิปโอน/ชำระ — อัปโหลดจากแดชบอร์ด */
+  paymentSlipUrl String   @default("") @map("payment_slip_url") @db.VarChar(2048)
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 

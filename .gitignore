@@ -53,6 +53,10 @@ yarn-error.log*
 !/public/uploads/attendance-faces/.gitkeep
 /public/uploads/village-slips/*
 !/public/uploads/village-slips/.gitkeep
+/public/uploads/building-pos/*
+!/public/uploads/building-pos/.gitkeep
+/public/uploads/home-finance/*
+!/public/uploads/home-finance/.gitkeep
 
 # Legacy duplicate tree — แอปจริงอยู่ราก repo (มี node_modules/.next ของ copy เก่า)
 /web/

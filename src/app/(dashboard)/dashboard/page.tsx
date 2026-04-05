@@ -3,6 +3,7 @@ import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enum
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
+import { canAccessAppModule } from "@/lib/modules/access";
 import { TokenTopupModal } from "@/components/dashboard/TokenTopupModal";
 import { PageHeader } from "@/components/ui/page-container";
 import { getSession } from "@/lib/auth/session";
@@ -32,11 +33,11 @@ function groupTone(groupId: number): { chip: string; icon: string } {
 }
 
 function groupCardAccent(groupId: number): string {
-  if (groupId === 1) return "from-[#0000BF]/[0.05] to-white";
-  if (groupId === 2) return "from-slate-100 to-white";
-  if (groupId === 3) return "from-amber-100/70 to-white";
-  if (groupId === 4) return "from-fuchsia-100/70 to-white";
-  return "from-rose-100/70 to-white";
+  if (groupId === 1) return "from-[#eef2ff]/90 via-white to-[#fff5f9]/95";
+  if (groupId === 2) return "from-slate-50/95 via-white to-[#f3f6ff]/90";
+  if (groupId === 3) return "from-amber-50/90 via-white to-[#fff7ed]/85";
+  if (groupId === 4) return "from-fuchsia-50/85 via-white to-sky-50/80";
+  return "from-rose-50/88 via-white to-[#f5f3ff]/90";
 }
 
 function groupIcon(groupId: number): string {
@@ -92,10 +93,22 @@ export default async function DashboardHomePage() {
   const tierLine = planDisplayLabel(user.subscriptionType, user.subscriptionTier);
 
   const accessSet = new Set([...subscribedIds, ...trialIds]);
+  const accessFields = {
+    role: user.role,
+    subscriptionType: user.subscriptionType,
+    subscriptionTier: user.subscriptionTier,
+    tokens: user.tokens,
+  };
   const subscribedModules = modules
     .filter((m) => isMqttServiceModuleEnabled() || m.slug !== MQTT_SERVICE_MODULE_SLUG)
     .filter((m) => !user.employerUserId || STAFF_ALLOWED_MODULE_SLUGS.has(m.slug))
     .filter((m) => accessSet.has(m.id))
+    .filter(
+      (m) =>
+        user.role === "ADMIN" ||
+        user.employerUserId ||
+        canAccessAppModule(accessFields, { slug: m.slug, groupId: m.groupId }),
+    )
     .map((m) => ({ ...m, title: displayAppModuleTitle(m.slug, m.title) }));
 
   return (
@@ -105,7 +118,7 @@ export default async function DashboardHomePage() {
         description="ยินดีต้อนรับกลับมา — เข้าระบบที่มีสิทธิ์ได้จากเมนูด้านข้างหรือการ์ดด้านล่าง โมดูลเพิ่มเติมดูได้ที่หน้าระบบทั้งหมด"
       />
 
-      <section className="rounded-3xl border border-[#0000BF]/15 bg-gradient-to-br from-white via-[#0000BF]/[0.03] to-sky-100/60 p-5 shadow-sm sm:p-6">
+      <section className="mawell-card-frame rounded-3xl bg-gradient-to-br from-white via-[#f7f6ff] to-[#fff8fc] p-5 sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-[#0000BF]/80">Token Balance</p>
@@ -138,7 +151,7 @@ export default async function DashboardHomePage() {
             />
             <Link
               href="/dashboard/plans"
-              className="inline-flex items-center justify-center rounded-xl border border-[#0000BF]/20 bg-white px-4 py-2 text-sm font-semibold text-[#0000BF] hover:bg-[#0000BF]/5"
+              className="inline-flex items-center justify-center rounded-2xl border border-white/80 bg-white/90 px-4 py-2 text-sm font-semibold text-[#0000BF] shadow-sm backdrop-blur-sm hover:bg-white"
             >
               ดูแพ็กเกจ
             </Link>
@@ -147,17 +160,17 @@ export default async function DashboardHomePage() {
       </section>
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mawell-card-surface rounded-3xl p-4 shadow-md">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Subscription Type</p>
           <p className="mt-2 text-sm font-semibold text-slate-900">
             {user.subscriptionType === "BUFFET" ? "แพ็กเกจเหมา (Buffet)" : "สายรายวัน (Pay-per-day)"}
           </p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mawell-card-surface rounded-3xl p-4 shadow-md">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current Plan</p>
           <p className="mt-2 text-sm font-semibold text-slate-900">{tierLine}</p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:col-span-2 lg:col-span-1">
+        <div className="mawell-card-surface rounded-3xl p-4 shadow-md sm:col-span-2 lg:col-span-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">ระบบที่เปิดสิทธิ์</p>
           <p className="mt-2 text-sm font-semibold text-slate-900">{subscribedModules.length} ระบบ</p>
           <p className="mt-1 text-xs text-slate-500">จัดการรายการระบบได้ที่เมนูระบบทั้งหมด</p>
@@ -165,12 +178,12 @@ export default async function DashboardHomePage() {
       </section>
 
       {user.tokens <= 0 && user.role === "USER" ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <div className="rounded-3xl border border-amber-200/80 bg-gradient-to-r from-amber-50/95 via-white/90 to-rose-50/60 px-4 py-3 shadow-md backdrop-blur-sm">
           <p className="text-sm font-medium text-amber-900">โทเคนของคุณหมดแล้ว กรุณาเติมโทเคนเพื่อใช้งานต่อ</p>
           <div className="mt-3">
             <Link
               href="/dashboard/plans"
-              className="inline-flex rounded-lg bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a3]"
+              className="inline-flex rounded-2xl bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-[#0000a3]"
             >
               ดูแพ็กเกจเหมา
             </Link>
@@ -195,7 +208,7 @@ export default async function DashboardHomePage() {
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <div
-            className={`flex h-full flex-col rounded-2xl border-2 border-dashed border-[#0000BF]/30 bg-gradient-to-br ${groupCardAccent(1)} p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md`}
+            className={`mawell-card-frame flex h-full flex-col rounded-3xl border-2 border-dashed border-[#c8c4ff]/55 bg-gradient-to-br ${groupCardAccent(1)} p-4 transition hover:-translate-y-0.5 hover:shadow-lg`}
           >
             <div className="flex items-start justify-between gap-2">
               <div
@@ -212,7 +225,7 @@ export default async function DashboardHomePage() {
             <p className="mt-1 min-h-[2.5rem] line-clamp-3 text-xs text-slate-500">{SYSTEM_MAP_CATALOG_ROW.description}</p>
             <Link
               href="/dashboard/explore"
-              className="mt-auto inline-flex w-full items-center justify-center rounded-lg bg-[#0000BF] py-2 text-xs font-semibold text-white hover:bg-[#0000a3]"
+              className="mt-auto inline-flex w-full items-center justify-center rounded-2xl bg-[#0000BF] py-2 text-xs font-semibold text-white shadow-md hover:bg-[#0000a3]"
             >
               เปิดแผนผังระบบ
             </Link>
@@ -222,7 +235,7 @@ export default async function DashboardHomePage() {
             return (
               <div
                 key={m.id}
-                className={`flex h-full flex-col rounded-2xl border border-slate-200 bg-gradient-to-br ${groupCardAccent(m.groupId)} p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md`}
+                className={`mawell-card-frame flex h-full flex-col rounded-3xl bg-gradient-to-br ${groupCardAccent(m.groupId)} p-4 transition hover:-translate-y-0.5 hover:shadow-lg`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div
@@ -241,7 +254,7 @@ export default async function DashboardHomePage() {
                 </p>
                 <Link
                   href={dashboardModuleHref(m.slug)}
-                  className="mt-auto inline-flex w-full items-center justify-center rounded-lg bg-[#0000BF] py-2 text-xs font-semibold text-white hover:bg-[#0000a3]"
+                  className="mt-auto inline-flex w-full items-center justify-center rounded-2xl bg-[#0000BF] py-2 text-xs font-semibold text-white shadow-md hover:bg-[#0000a3]"
                 >
                   เข้าใช้งาน
                 </Link>
@@ -250,7 +263,7 @@ export default async function DashboardHomePage() {
           })}
         </div>
         {subscribedModules.length === 0 ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="rounded-3xl border border-amber-200/80 bg-gradient-to-r from-amber-50/95 to-rose-50/70 px-4 py-3 text-sm text-amber-900 shadow-md backdrop-blur-sm">
             ยังไม่มีระบบที่ Subscribe หรือทดลอง — กด{" "}
             <Link href="/dashboard/modules" className="font-semibold underline">
               ดูระบบทั้งหมด
