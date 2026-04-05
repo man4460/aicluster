@@ -198,6 +198,11 @@ function vehicleTypeForCategoryKey(key: string): "CAR" | "MOTORCYCLE" | null {
   return null;
 }
 
+/** หมวดรถยนต์ / รถจักรยานยนต์ — ไม่มีช่องประเภทรถ และไม่เติมชื่อรายการอัตโนมัติเมื่อเลือกยานพาหนะ */
+function isStandaloneVehicleCategoryKey(key: string) {
+  return key === "VEHICLE_CAR" || key === "VEHICLE_MOTORCYCLE";
+}
+
 function todayKey() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
 }
@@ -525,6 +530,7 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
     [categories],
   );
   const showVehicleFields = categoryKey.startsWith("VEHICLE_");
+  const showVehicleTypeField = showVehicleFields && !isStandaloneVehicleCategoryKey(categoryKey);
 
   const utilitiesForCategory = useMemo(() => {
     const t = utilityTypeForCategoryKey(categoryKey);
@@ -703,7 +709,7 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
             amount: n,
             dueDate: dueDate || null,
             billNumber: billNumber || null,
-            vehicleType: showVehicleFields ? vehicleType || null : null,
+            vehicleType: showVehicleTypeField ? vehicleType || null : null,
             serviceCenter: showVehicleFields ? serviceCenter || null : null,
             paymentMethod: paymentMethod || null,
             note: note || null,
@@ -1583,15 +1589,48 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
                       </select>
                     </Field>
                     <Field label="หมวด">
-                      <select value={categoryKey} onChange={(e) => setCategoryKey(e.target.value)} className={inputClz}>
-                        {categoryOptions.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+                      <select
+                        value={categoryKey}
+                        onChange={(e) => {
+                          const k = e.target.value;
+                          setCategoryKey(k);
+                          if (isStandaloneVehicleCategoryKey(k)) setVehicleType("");
+                        }}
+                        className={inputClz}
+                      >
+                        {categoryOptions.map((c) => (
+                          <option key={c.key} value={c.key}>
+                            {c.label}
+                          </option>
+                        ))}
                       </select>
                     </Field>
                     <Field label="จำนวนเงิน"><input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" className={inputClz} placeholder="0.00" /></Field>
                   </div>
-                  <Field label="ชื่อรายการ"><input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClz} placeholder="เช่น ค่าไฟฟ้าเดือนนี้ / ค่าเข้าศูนย์รถ" required /></Field>
+                  <Field label="ชื่อรายการ">
+                    <input
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className={inputClz}
+                      placeholder={
+                        isStandaloneVehicleCategoryKey(categoryKey)
+                          ? "เช่น ค่าน้ำมัน / ค่าประกัน / ค่าจอดรถ"
+                          : "เช่น ค่าไฟฟ้าเดือนนี้ / ค่าเข้าศูนย์รถ"
+                      }
+                      required
+                    />
+                  </Field>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    {showVehicleFields ? <Field label="ประเภทรถ"><input value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} className={inputClz} placeholder="รถยนต์/มอเตอร์ไซค์" /></Field> : null}
+                    {showVehicleTypeField ? (
+                      <Field label="ประเภทรถ">
+                        <input
+                          value={vehicleType}
+                          onChange={(e) => setVehicleType(e.target.value)}
+                          className={inputClz}
+                          placeholder="รถยนต์/มอเตอร์ไซค์"
+                        />
+                      </Field>
+                    ) : null}
                   </div>
                   {showVehicleFields ? <Field label="ศูนย์บริการ/อู่"><input value={serviceCenter} onChange={(e) => setServiceCenter(e.target.value)} className={inputClz} /></Field> : null}
                   {isUtilityCategoryKey(categoryKey) ? (
@@ -1627,7 +1666,9 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
                           setLinkedVehicleId(id);
                           if (id === "") return;
                           const v = vehiclesForCategory.find((x) => x.id === id);
-                          if (v) setTitle(entryAutoTitleFromVehicle(v));
+                          if (v && !isStandaloneVehicleCategoryKey(categoryKey)) {
+                            setTitle(entryAutoTitleFromVehicle(v));
+                          }
                         }}
                         className={inputClz}
                       >
@@ -1795,7 +1836,10 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
                             ...s,
                             linkedVehicleId: id,
                             linkedUtilityId: null,
-                            title: v ? entryAutoTitleFromVehicle(v) : s.title,
+                            title:
+                              v && !isStandaloneVehicleCategoryKey(editForm.categoryKey)
+                                ? entryAutoTitleFromVehicle(v)
+                                : s.title,
                           }));
                         }}
                         className={inputClz}
