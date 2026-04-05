@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { deriveBuildingPosSection } from "@/systems/building-pos/buildingPosSection";
 
-export type BuildingPosDashTab = "overview" | "orders" | "menu" | "categories";
+export type BuildingPosDashTab = "overview" | "orders" | "menu" | "categories" | "ingredients" | "purchases";
 
 /** มือถือ: กริด 2 คอลัมน์ แตะง่าย (min 44px) · จอใหญ่: แถบ wrap เหมือนเมนูรายรับ–รายจ่าย */
 const navItemBase =
@@ -67,7 +67,19 @@ export function BuildingPosUnifiedMenuBar({ activeTab, onTabChange, onRefresh, r
           </Link>
         </li>
 
-        {(["orders", "menu", "categories"] as const).map((key) => (
+        <li className="min-w-0 sm:w-auto">
+          <Link
+            href="/dashboard/building-pos/staff-link"
+            className={cn(
+              navItemBase,
+              section === "staff-link" ? "bg-[#ecebff] text-[#4d47b6] ring-1 ring-[#4d47b6]/20" : "app-btn-soft text-[#66638c]",
+            )}
+          >
+            พนักงานเสิร์ฟ
+          </Link>
+        </li>
+
+        {(["orders", "menu", "categories", "ingredients", "purchases"] as const).map((key) => (
           <li key={key} className="min-w-0 sm:w-auto">
             {useTabButtons ? (
               <button
@@ -78,14 +90,30 @@ export function BuildingPosUnifiedMenuBar({ activeTab, onTabChange, onRefresh, r
                   activeTab === key ? "bg-[#ecebff] text-[#4d47b6] ring-1 ring-[#4d47b6]/20" : "app-btn-soft text-[#66638c]",
                 )}
               >
-                {key === "orders" ? "ออเดอร์" : key === "menu" ? "เมนูอาหาร" : "หมวดหมู่"}
+                {key === "orders"
+                  ? "QR สั่งอาหาร"
+                  : key === "menu"
+                    ? "เมนูอาหาร"
+                    : key === "categories"
+                      ? "หมวดหมู่"
+                      : key === "ingredients"
+                        ? "รายการของ"
+                        : "บันทึกจ่ายตลาด"}
               </button>
             ) : (
               <Link
                 href={buildingPosDashboardTabHref(key)}
                 className={cn(navItemBase, "app-btn-soft text-[#66638c]")}
               >
-                {key === "orders" ? "ออเดอร์" : key === "menu" ? "เมนูอาหาร" : "หมวดหมู่"}
+                {key === "orders"
+                  ? "QR สั่งอาหาร"
+                  : key === "menu"
+                    ? "เมนูอาหาร"
+                    : key === "categories"
+                      ? "หมวดหมู่"
+                      : key === "ingredients"
+                        ? "รายการของ"
+                        : "บันทึกจ่ายตลาด"}
               </Link>
             )}
           </li>

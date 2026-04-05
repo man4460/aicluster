@@ -34,5 +34,9 @@ export {
 } from "./AppTemplateSlipImageButtons";
 export { AppCameraCaptureModal, type AppCameraCaptureModalProps } from "./AppCameraCaptureModal";
 
-export { openPrintableHtml, printPrintableHtmlInHiddenIframe } from "./openPrintableHtml";
+export {
+  openPrintableHtml,
+  printDataUrlImagePoster,
+  printPrintableHtmlInHiddenIframe,
+} from "./openPrintableHtml";
 export { prepareImageFileForUpload } from "./prepareImageFileForUpload";

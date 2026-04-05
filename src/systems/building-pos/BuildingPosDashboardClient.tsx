@@ -3,20 +3,27 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
+import { printDataUrlImagePoster } from "@/components/app-templates";
+import { cn } from "@/lib/cn";
 import {
   createShopQrPosterCanvas,
   createShopQrPosterDataUrl,
   downloadPosterPdf,
   downloadPosterPng,
+  shopQrTemplateGeneratedPosterThumbClass,
 } from "@/components/qr/shop-qr-template";
 import {
   createBuildingPosSessionApiRepository,
   type PosCategory,
+  type PosEstimatedCosts,
+  type PosIngredient,
   type PosMenuItem,
   type PosOrder,
+  type PosPurchaseOrder,
+  type PosRecipeLine,
 } from "@/systems/building-pos/building-pos-service";
+import { BuildingPosIngredientsPanel, BuildingPosPurchasesPanel } from "@/systems/building-pos/components/BuildingPosInventoryPanels";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
-import { PrintButton } from "@/systems/dormitory/components/PrintButton";
 import { BuildingPosOpenTablesPanel } from "@/systems/building-pos/BuildingPosSalesAnalytics";
 import {
   BuildingPosUnifiedMenuBar,
@@ -29,7 +36,7 @@ function tableQrStorageKey(ownerId: string) {
 }
 
 function parseBuildingPosTabQuery(q: string | null): BuildingPosDashTab {
-  if (q === "orders" || q === "menu" || q === "categories") return q;
+  if (q === "orders" || q === "menu" || q === "categories" || q === "ingredients" || q === "purchases") return q;
   return "overview";
 }
 
@@ -57,32 +64,6 @@ function PosThumb({ url, size = "md" }: { url: string; size?: "sm" | "md" }) {
     >
       —
     </div>
-  );
-}
-
-function OrderLineItems({
-  orderId,
-  items,
-  menuImageById,
-}: {
-  orderId: number;
-  items: PosOrder["items"];
-  menuImageById: Map<number, string>;
-}) {
-  if (!items.length) {
-    return <span className="text-sm text-[#9b98c4]">-</span>;
-  }
-  return (
-    <ul className="space-y-2">
-      {items.map((x, i) => (
-        <li key={`${orderId}-${x.menu_item_id}-${i}`} className="flex items-center gap-2.5">
-          <PosThumb url={menuImageById.get(x.menu_item_id) ?? ""} size="sm" />
-          <span className="min-w-0 flex-1 text-sm leading-snug text-[#2e2a58]">
-            {x.name} <span className="text-[#66638c]">×{x.qty}</span>
-          </span>
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -132,7 +113,6 @@ export function BuildingPosDashboardClient({
   const [qrBusy, setQrBusy] = useState(false);
   const [catUploading, setCatUploading] = useState(false);
   const [menuUploading, setMenuUploading] = useState(false);
-  const [printOrderId, setPrintOrderId] = useState<number | null>(null);
   const [posTableQrLabel, setPosTableQrLabel] = useState("");
   const [posTableQrPng, setPosTableQrPng] = useState<string | null>(null);
   const [posTablePosterUrl, setPosTablePosterUrl] = useState<string | null>(null);
@@ -140,6 +120,15 @@ export function BuildingPosDashboardClient({
   const [qrCardFocus, setQrCardFocus] = useState<"shop" | string>("shop");
   const [tableQrCards, setTableQrCards] = useState<string[] | null>(null);
   const [newTableCardInput, setNewTableCardInput] = useState("");
+  const [ingredients, setIngredients] = useState<PosIngredient[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PosPurchaseOrder[]>([]);
+  const [recipesByMenu, setRecipesByMenu] = useState<Record<string, PosRecipeLine[]>>({});
+  const [estimatedCosts, setEstimatedCosts] = useState<PosEstimatedCosts>({
+    estimated_cost_baht: {},
+    margin_baht: {},
+    ingredient_last_unit_price_baht: {},
+  });
+  const [recipeLinesDraft, setRecipeLinesDraft] = useState<PosRecipeLine[]>([]);
 
   const [catForm, setCatForm] = useState({ name: "", image_url: "", sort_order: "1", is_active: true });
   const [menuForm, setMenuForm] = useState({
@@ -205,6 +194,22 @@ export function BuildingPosDashboardClient({
     setCategories(c);
     setMenuItems(m);
     setOrders(o);
+
+    const emptyCosts: PosEstimatedCosts = {
+      estimated_cost_baht: {},
+      margin_baht: {},
+      ingredient_last_unit_price_baht: {},
+    };
+    const inv = await Promise.allSettled([
+      repo.listIngredients(),
+      repo.listPurchaseOrders(),
+      repo.listRecipesByMenu(),
+      repo.getEstimatedCosts(),
+    ]);
+    setIngredients(inv[0].status === "fulfilled" ? inv[0].value : []);
+    setPurchaseOrders(inv[1].status === "fulfilled" ? inv[1].value : []);
+    setRecipesByMenu(inv[2].status === "fulfilled" ? inv[2].value : {});
+    setEstimatedCosts(inv[3].status === "fulfilled" ? inv[3].value : emptyCosts);
   }
 
   async function refreshData() {
@@ -404,6 +409,7 @@ export function BuildingPosDashboardClient({
       is_active: true,
       is_featured: false,
     });
+    setRecipeLinesDraft([]);
     setMenuModalOpen(true);
   }
 
@@ -418,6 +424,8 @@ export function BuildingPosDashboardClient({
       is_active: m.is_active,
       is_featured: !!m.is_featured,
     });
+    const existing = recipesByMenu[String(m.id)] ?? [];
+    setRecipeLinesDraft(existing.map((x) => ({ ...x })));
     setMenuModalOpen(true);
   }
 
@@ -436,11 +444,18 @@ export function BuildingPosDashboardClient({
         is_active: menuForm.is_active,
         is_featured: menuForm.is_featured,
       };
+      let menuId: number;
       if (menuEditing) {
         await repo.updateMenuItem(menuEditing.id, payload);
+        menuId = menuEditing.id;
       } else {
-        await repo.createMenuItem(payload);
+        const created = await repo.createMenuItem(payload);
+        menuId = created.id;
       }
+      const recipePayload = recipeLinesDraft.filter(
+        (l) => l.ingredient_id > 0 && Number.isFinite(l.qty_per_portion) && l.qty_per_portion > 0,
+      );
+      await repo.putMenuRecipe(menuId, recipePayload);
       setMenuModalOpen(false);
       setMenuEditing(null);
       await loadAll();
@@ -523,26 +538,30 @@ export function BuildingPosDashboardClient({
 
   function printQrPoster(size: "A4" | "A5") {
     if (!posterUrl) return;
-    const w = window.open("", "_blank", "noopener,noreferrer,width=900,height=1200");
-    if (!w) return;
-    const pageSize = size === "A5" ? "A5 portrait" : "A4 portrait";
-    w.document.write(`<!doctype html><html><head><title>Print QR</title><style>@page{size:${pageSize};margin:12mm;}body{margin:0;display:flex;justify-content:center;align-items:flex-start;background:#fff;}img{width:340px;max-width:100%;margin-top:8mm;}</style></head><body><img src="${posterUrl}" /></body></html>`);
-    w.document.close();
-    w.focus();
-    w.print();
+    const ok = printDataUrlImagePoster({
+      dataUrl: posterUrl,
+      documentTitle: "พิมพ์ QR สั่งอาหาร",
+      pageSize: size,
+    });
+    if (!ok) window.alert("เปิดหน้าต่างพิมพ์ไม่ได้ — ลองอนุญาตป๊อปอัปหรือใช้ดาวน์โหลด PDF แทน");
   }
 
   function printPosTablePoster(size: "A4" | "A5") {
     if (!posTablePosterUrl) return;
-    const w = window.open("", "_blank", "noopener,noreferrer,width=900,height=1200");
-    if (!w) return;
-    const pageSize = size === "A5" ? "A5 portrait" : "A4 portrait";
-    w.document.write(
-      `<!doctype html><html><head><title>Print QR โต๊ะ</title><style>@page{size:${pageSize};margin:12mm;}body{margin:0;display:flex;justify-content:center;align-items:flex-start;background:#fff;}img{width:340px;max-width:100%;margin-top:8mm;}</style></head><body><img src="${posTablePosterUrl}" /></body></html>`,
-    );
-    w.document.close();
-    w.focus();
-    w.print();
+    const ok = printDataUrlImagePoster({
+      dataUrl: posTablePosterUrl,
+      documentTitle: "พิมพ์ QR โต๊ะ",
+      pageSize: size,
+    });
+    if (!ok) window.alert("เปิดหน้าต่างพิมพ์ไม่ได้ — ลองอนุญาตป๊อปอัปหรือใช้ดาวน์โหลด PDF แทน");
+  }
+
+  async function copyOrderLink(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      window.alert("คัดลอกไม่สำเร็จ — ลองเลือกลิงก์ด้วยตนเอง");
+    }
   }
 
   async function downloadPosTablePng() {
@@ -623,11 +642,6 @@ export function BuildingPosDashboardClient({
     setQrCardFocus((f) => (f === label ? "shop" : f));
   }
 
-  const printOrder = useMemo(
-    () => orders.find((o) => o.id === printOrderId) ?? null,
-    [orders, printOrderId],
-  );
-
   return (
     <div className="max-w-full space-y-4 sm:space-y-6">
       <BuildingPosUnifiedMenuBar
@@ -655,6 +669,7 @@ export function BuildingPosDashboardClient({
               <p className="mt-1 text-xs text-[#66638c]">นับจากชื่อ/โต๊ะที่มีออเดอร์</p>
             </div>
           </section>
+
           <BuildingPosOpenTablesPanel
             orders={orders}
             menuImageById={menuImageById}
@@ -669,7 +684,7 @@ export function BuildingPosDashboardClient({
                 onClick={() => setTab("orders")}
                 className="inline-flex min-h-[40px] min-w-[5.5rem] items-center justify-center rounded-xl bg-[#ecebff] px-3 py-2 text-sm font-semibold text-[#4d47b6] ring-1 ring-[#4d47b6]/20 touch-manipulation transition-colors hover:bg-[#e0dcff] active:opacity-90 sm:min-h-[44px] sm:px-4"
               >
-                ออเดอร์
+                QR สั่งอาหาร
               </button>
             }
           />
@@ -725,14 +740,20 @@ export function BuildingPosDashboardClient({
           <div className="flex flex-col gap-3 border-b border-[#ecebff] pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-bold text-[#2e2a58]">เมนูอาหาร</h2>
-              <p className="mt-1 text-xs text-[#66638c]">ราคาต่อ 1 ที่ — ปุ่มดาวแสดงในแถวแนะนำหน้าลูกค้า</p>
+              <p className="mt-1 text-xs text-[#66638c]">
+                ราคาต่อ 1 ที่ — ต้นทุนจากสูตร × ราคาจากบันทึกจ่ายตลาดล่าสุด — ปุ่มดาวแสดงในแถวแนะนำหน้าลูกค้า
+              </p>
             </div>
             <button type="button" onClick={() => openMenuCreate()} className="app-btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold">
               + เพิ่มเมนู
             </button>
           </div>
           <ul className="mt-4 grid grid-cols-1 gap-2 sm:gap-3">
-            {menuItems.map((m) => (
+            {menuItems.map((m) => {
+              const hasRecipe = (recipesByMenu[String(m.id)]?.length ?? 0) > 0;
+              const ec = estimatedCosts.estimated_cost_baht[String(m.id)] ?? 0;
+              const mg = estimatedCosts.margin_baht[String(m.id)];
+              return (
               <li
                 key={m.id}
                 className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#e1e3ff] bg-[#faf9ff] px-3 py-3 text-sm shadow-sm sm:flex-nowrap sm:bg-white"
@@ -742,6 +763,13 @@ export function BuildingPosDashboardClient({
                   <span className="font-semibold text-[#2e2a58]">{m.name}</span>
                   <span className="mt-0.5 block text-xs text-[#66638c]">
                     ฿{m.price.toLocaleString()} · {categories.find((c) => c.id === m.category_id)?.name ?? "-"}
+                    {hasRecipe ? (
+                      <>
+                        {" "}
+                        · ต้นทุน ~฿{ec.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        {mg != null ? ` · กำไร ~฿${mg.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : ""}
+                      </>
+                    ) : null}
                   </span>
                   {!m.is_active ? <span className="mt-1 inline-block text-xs text-amber-700">ปิดใช้งาน</span> : null}
                 </span>
@@ -774,9 +802,22 @@ export function BuildingPosDashboardClient({
                   </button>
                 </div>
               </li>
-            ))}
+            );
+            })}
           </ul>
         </section>
+      ) : null}
+
+      {tab === "ingredients" ? (
+        <BuildingPosIngredientsPanel ingredients={ingredients} onChanged={() => void loadAll()} />
+      ) : null}
+
+      {tab === "purchases" ? (
+        <BuildingPosPurchasesPanel
+          purchaseOrders={purchaseOrders}
+          ingredients={ingredients}
+          onChanged={() => void loadAll()}
+        />
       ) : null}
 
       {tab === "orders" ? (
@@ -881,58 +922,76 @@ export function BuildingPosDashboardClient({
                   <>
                     <h3 className="text-sm font-semibold text-[#2e2a58] sm:text-base">ส่งออก QR — ร้านทั่วไป</h3>
                     <p className="mt-1 text-xs text-[#66638c]">ลูกค้าเลือกเมนูและกรอกเลขโต๊ะเองหลังแสกน</p>
-                    <p className="mt-3 break-all rounded-xl bg-[#f4f3ff] px-3 py-2 text-[11px] leading-relaxed text-[#4d47b6] sm:text-xs">
-                      {orderQrUrl || "—"}
-                    </p>
-                    <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:max-w-3xl lg:grid-cols-3">
-                      <button
-                        type="button"
-                        disabled={qrBusy || !orderQrUrl}
-                        onClick={() => void downloadQrPdf()}
-                        className="app-btn-primary rounded-xl px-4 py-3 text-sm font-semibold sm:py-2.5"
-                      >
-                        ดาวน์โหลด PDF (A4)
-                      </button>
-                      <button
-                        type="button"
-                        disabled={qrBusy || !orderQrUrl}
-                        onClick={() => void downloadQrPdfA5()}
-                        className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:py-2.5"
-                      >
-                        ดาวน์โหลด PDF (A5)
-                      </button>
-                      <button
-                        type="button"
-                        disabled={qrBusy || !orderQrUrl}
-                        onClick={() => void downloadQrPng()}
-                        className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:py-2.5"
-                      >
-                        ดาวน์โหลด PNG
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!posterUrl}
-                        onClick={() => printQrPoster("A4")}
-                        className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:py-2.5"
-                      >
-                        พิมพ์ A4
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!posterUrl}
-                        onClick={() => printQrPoster("A5")}
-                        className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:py-2.5"
-                      >
-                        พิมพ์ A5
-                      </button>
-                    </div>
-                    {posterUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={posterUrl}
-                        alt="QR สั่งอาหารร้าน"
-                        className="mx-auto mt-4 w-full max-w-[280px] rounded-2xl border border-[#e1e3ff] shadow-md"
-                      />
+                    {baseUrl.startsWith("http") && orderQrUrl ? (
+                      <>
+                        <div className="mt-3">
+                          <button
+                            type="button"
+                            onClick={() => void copyOrderLink(orderQrUrl)}
+                            className="app-btn-soft rounded-xl px-4 py-2.5 text-sm font-semibold text-[#4d47b6]"
+                          >
+                            คัดลอกลิงก์
+                          </button>
+                        </div>
+                        <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+                          {posterUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={posterUrl}
+                              alt="QR สั่งอาหารร้าน"
+                              className={cn(shopQrTemplateGeneratedPosterThumbClass, "shrink-0")}
+                            />
+                          ) : (
+                            <div className="mx-auto flex min-h-[200px] w-full max-w-[280px] shrink-0 items-center justify-center rounded-2xl border border-dashed border-[#d8d6ec] bg-[#faf9ff] px-3">
+                              <span className="text-center text-xs text-[#9b98c4]">กำลังสร้างใบป้าย…</span>
+                            </div>
+                          )}
+                          <div className="grid w-full max-w-md flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
+                            <button
+                              type="button"
+                              disabled={qrBusy || !orderQrUrl}
+                              onClick={() => void downloadQrPdf()}
+                              className="app-btn-primary rounded-xl px-4 py-3 text-sm font-semibold sm:py-2"
+                            >
+                              ดาวน์โหลด PDF (A4)
+                            </button>
+                            <button
+                              type="button"
+                              disabled={qrBusy || !orderQrUrl}
+                              onClick={() => void downloadQrPdfA5()}
+                              className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:py-2"
+                            >
+                              ดาวน์โหลด PDF (A5)
+                            </button>
+                            <button
+                              type="button"
+                              disabled={qrBusy || !orderQrUrl}
+                              onClick={() => void downloadQrPng()}
+                              className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:py-2"
+                            >
+                              ดาวน์โหลด PNG
+                            </button>
+                            <button
+                              type="button"
+                              disabled={!posterUrl}
+                              onClick={() => printQrPoster("A4")}
+                              className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:py-2"
+                            >
+                              พิมพ์ A4
+                            </button>
+                            <button
+                              type="button"
+                              disabled={!posterUrl}
+                              onClick={() => printQrPoster("A5")}
+                              className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:col-span-2 sm:py-2"
+                            >
+                              พิมพ์ A5
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    ) : baseUrl.startsWith("http") ? (
+                      <p className="mt-3 text-xs text-[#66638c]">กำลังเตรียมลิงก์…</p>
                     ) : null}
                   </>
                 ) : (
@@ -943,20 +1002,26 @@ export function BuildingPosDashboardClient({
                     <p className="mt-1 text-xs text-[#66638c]">ลูกค้าแสกนแล้วหน้าสั่งอาหารจะกรอกโต๊ะนี้ให้อัตโนมัติ</p>
                     {baseUrl.startsWith("http") && posTableOrderUrl ? (
                       <>
-                        <p className="mt-3 break-all rounded-xl bg-[#f4f3ff] px-3 py-2 text-[11px] leading-relaxed text-[#4d47b6] sm:text-xs">
-                          {posTableOrderUrl}
-                        </p>
+                        <div className="mt-3">
+                          <button
+                            type="button"
+                            onClick={() => void copyOrderLink(posTableOrderUrl)}
+                            className="app-btn-soft rounded-xl px-4 py-2.5 text-sm font-semibold text-[#4d47b6]"
+                          >
+                            คัดลอกลิงก์
+                          </button>
+                        </div>
                         <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
                           {posTablePosterUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={posTablePosterUrl}
                               alt={`QR โต๊ะ ${qrCardFocus}`}
-                              className="w-full max-w-[260px] rounded-2xl border border-[#e1e3ff] shadow-md"
+                              className={cn(shopQrTemplateGeneratedPosterThumbClass, "shrink-0")}
                             />
                           ) : (
-                            <div className="flex h-[200px] w-full max-w-[260px] items-center justify-center rounded-2xl border border-dashed border-[#d8d6ec] bg-[#faf9ff] text-xs text-[#9b98c4]">
-                              กำลังสร้างใบป้าย…
+                            <div className="mx-auto flex min-h-[200px] w-full max-w-[280px] shrink-0 items-center justify-center rounded-2xl border border-dashed border-[#d8d6ec] bg-[#faf9ff] px-3">
+                              <span className="text-center text-xs text-[#9b98c4]">กำลังสร้างใบป้าย…</span>
                             </div>
                           )}
                           <div className="grid w-full max-w-md flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
@@ -1010,126 +1075,6 @@ export function BuildingPosDashboardClient({
                 )}
               </div>
             </div>
-          </section>
-
-          <section className="app-surface rounded-2xl border border-[#e8e6fc]/80 p-4 shadow-sm sm:p-5">
-            <div className="flex flex-col gap-1 border-b border-[#ecebff] pb-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-[#2e2a58]">รายการออเดอร์</h2>
-                <p className="mt-1 text-xs text-[#66638c]">มุมมองการ์ดบนมือถือ · ตารางบนจอใหญ่</p>
-              </div>
-            </div>
-
-          <div className="mt-4 space-y-3 md:hidden">
-            {orders.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-[#d8d6ec] bg-[#faf9ff] py-8 text-center text-sm text-[#66638c]">ยังไม่มีออเดอร์</p>
-            ) : (
-              orders.map((o) => (
-                <article
-                  key={o.id}
-                  className="overflow-hidden rounded-2xl border border-[#e1e3ff] bg-white shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-2 border-b border-[#ecebff] bg-[#f4f3ff]/80 px-4 py-3">
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-medium uppercase tracking-wide text-[#66638c]">เวลา</p>
-                      <p className="mt-0.5 text-sm font-semibold leading-snug text-[#2e2a58]">{new Date(o.created_at).toLocaleString("th-TH")}</p>
-                    </div>
-                    <span className="shrink-0 rounded-lg bg-white px-2 py-1 text-xs font-mono text-[#4d47b6]">#{o.id}</span>
-                  </div>
-                  <div className="space-y-3 px-4 py-3">
-                    <div>
-                      <p className="text-[10px] font-medium text-[#66638c]">ลูกค้า / โต๊ะ</p>
-                      <p className="mt-0.5 text-sm text-[#2e2a58]">
-                        {o.customer_name || "ลูกค้า"} <span className="text-[#9b98c4]">·</span> โต๊ะ {o.table_no || "-"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="mb-2 text-[10px] font-medium text-[#4d47b6]">รายการ</p>
-                      <OrderLineItems orderId={o.id} items={o.items} menuImageById={menuImageById} />
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-3 border-t border-[#ecebff] bg-[#faf9ff]/50 px-4 py-3">
-                    <div className="flex items-end justify-between gap-3">
-                      <div>
-                        <p className="text-[10px] text-[#66638c]">ยอดรวม</p>
-                        <p className="text-xl font-bold tabular-nums text-emerald-700">฿ {o.total_amount.toLocaleString()}</p>
-                      </div>
-                    </div>
-                    <label className="block text-[10px] font-medium text-[#66638c]">
-                      สถานะ
-                      <select
-                        className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
-                        value={o.status}
-                        onChange={(e) => void moveOrderStatus(o.id, e.target.value as PosOrder["status"])}
-                      >
-                        <option value="NEW">NEW</option>
-                        <option value="PREPARING">PREPARING</option>
-                        <option value="SERVED">SERVED</option>
-                        <option value="PAID">PAID</option>
-                      </select>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setPrintOrderId(o.id)}
-                      className="w-full rounded-xl border border-[#d8d6ff] bg-[#f7f6ff] py-2.5 text-sm font-semibold text-[#4d47b6]"
-                    >
-                      พิมพ์สลิป
-                    </button>
-                  </div>
-                </article>
-              ))
-            )}
-          </div>
-
-          <div className="mt-4 hidden overflow-x-auto rounded-xl border border-[#e1e3ff] md:block">
-            <table className="min-w-[920px] w-full text-sm">
-              <thead className="bg-[#f4f3ff] text-[#4d47b6]">
-                <tr>
-                  <th className="px-3 py-2.5 text-left font-semibold">เวลา</th>
-                  <th className="px-3 py-2.5 text-left font-semibold">ลูกค้า/โต๊ะ</th>
-                  <th className="px-3 py-2.5 text-left font-semibold">รายการ</th>
-                  <th className="px-3 py-2.5 text-left font-semibold">ยอดรวม</th>
-                  <th className="px-3 py-2.5 text-left font-semibold">สถานะ</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">สลิป</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr key={o.id} className="border-t border-[#ecebff]">
-                    <td className="px-3 py-2.5 align-top text-[#2e2a58]">{new Date(o.created_at).toLocaleString("th-TH")}</td>
-                    <td className="px-3 py-2.5 align-top">
-                      {o.customer_name || "ลูกค้า"} / {o.table_no || "-"}
-                    </td>
-                    <td className="max-w-[280px] px-3 py-2.5 align-top">
-                      <OrderLineItems orderId={o.id} items={o.items} menuImageById={menuImageById} />
-                    </td>
-                    <td className="px-3 py-2.5 align-top font-medium tabular-nums">฿ {o.total_amount.toLocaleString()}</td>
-                    <td className="px-3 py-2.5 align-top">
-                      <select
-                        className="app-input rounded-lg px-2 py-1.5 text-xs"
-                        value={o.status}
-                        onChange={(e) => void moveOrderStatus(o.id, e.target.value as PosOrder["status"])}
-                      >
-                        <option value="NEW">NEW</option>
-                        <option value="PREPARING">PREPARING</option>
-                        <option value="SERVED">SERVED</option>
-                        <option value="PAID">PAID</option>
-                      </select>
-                    </td>
-                    <td className="px-3 py-2.5 text-right align-top">
-                      <button
-                        type="button"
-                        onClick={() => setPrintOrderId(o.id)}
-                        className="rounded-lg border border-[#d8d6ff] bg-[#f7f6ff] px-2.5 py-1.5 text-xs font-semibold text-[#4d47b6]"
-                      >
-                        พิมพ์สลิป
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
           </section>
         </div>
       ) : null}
@@ -1332,6 +1277,78 @@ export function BuildingPosDashboardClient({
                 onChange={(e) => setMenuForm((s) => ({ ...s, description: e.target.value }))}
               />
             </label>
+            <div className="rounded-2xl border border-[#e6e4fa] bg-[#faf9ff]/80 p-3">
+              <p className="text-xs font-semibold text-[#4d47b6]">สูตร / ต้นทุน (ต่อ 1 ที่ขาย)</p>
+              <p className="mt-0.5 text-[11px] leading-snug text-[#66638c]">
+                เลือกของจากแท็บ &quot;รายการของ&quot; และจำนวนต่อจาน — ราคาต่อหน่วยใช้จากบันทึกจ่ายตลาดล่าสุด
+              </p>
+              {ingredients.length === 0 ? (
+                <p className="mt-2 text-xs text-amber-800">ยังไม่มีรายการของ — เพิ่มที่แท็บ &quot;รายการของ&quot; ก่อน</p>
+              ) : (
+                <ul className="mt-2 space-y-2">
+                  {recipeLinesDraft.map((row, idx) => (
+                    <li key={idx} className="flex flex-wrap items-end gap-2 rounded-xl border border-[#e1e3ff] bg-white p-2">
+                      <label className="min-w-[160px] flex-1 text-[10px] font-medium text-[#66638c]">
+                        รายการของ
+                        <select
+                          className="app-input mt-1 w-full rounded-lg px-2 py-2 text-sm"
+                          value={row.ingredient_id || ""}
+                          onChange={(e) => {
+                            const v = Number(e.target.value);
+                            setRecipeLinesDraft((prev) =>
+                              prev.map((r, j) => (j === idx ? { ...r, ingredient_id: v } : r)),
+                            );
+                          }}
+                        >
+                          <option value="">เลือก</option>
+                          {ingredients.map((g) => (
+                            <option key={g.id} value={g.id}>
+                              {g.name}
+                              {g.unit_label ? ` (${g.unit_label})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="w-[100px] text-[10px] font-medium text-[#66638c]">
+                        จำนวน/จาน
+                        <input
+                          className="app-input mt-1 w-full rounded-lg px-2 py-2 text-sm tabular-nums"
+                          inputMode="decimal"
+                          value={Number.isFinite(row.qty_per_portion) ? String(row.qty_per_portion) : ""}
+                          onChange={(e) => {
+                            const n = Number(e.target.value);
+                            setRecipeLinesDraft((prev) =>
+                              prev.map((r, j) =>
+                                j === idx ? { ...r, qty_per_portion: Number.isFinite(n) ? n : 0 } : r,
+                              ),
+                            );
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="mb-0.5 rounded-lg border border-slate-200 px-2 py-2 text-xs text-slate-500 hover:bg-slate-50"
+                        aria-label="ลบแถวสูตร"
+                        onClick={() =>
+                          setRecipeLinesDraft((prev) => (prev.length <= 1 ? prev : prev.filter((_, j) => j !== idx)))
+                        }
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {ingredients.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setRecipeLinesDraft((prev) => [...prev, { ingredient_id: 0, qty_per_portion: 0.01 }])}
+                  className="mt-2 app-btn-soft rounded-xl px-3 py-2 text-xs font-semibold text-[#4d47b6]"
+                >
+                  + เพิ่มของในสูตร
+                </button>
+              ) : null}
+            </div>
             <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#4d47b6]">
               <input
                 type="checkbox"
@@ -1351,49 +1368,6 @@ export function BuildingPosDashboardClient({
           </div>
         </div>
       </FormModal>
-
-      {printOrder ? (
-        <section className="app-surface rounded-2xl p-4 print:rounded-none print:border-0 print:shadow-none sm:p-5">
-          <div className="flex flex-col gap-3 print:hidden sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-base font-semibold text-[#2e2a58]">สลิปออเดอร์ #{printOrder.id}</h3>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <PrintButton label="พิมพ์สลิป" />
-              <button
-                type="button"
-                onClick={() => setPrintOrderId(null)}
-                className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 sm:py-2"
-              >
-                ปิด
-              </button>
-            </div>
-          </div>
-          <div className="mx-auto mt-3 w-full max-w-[360px] rounded-xl border border-slate-300 bg-white p-4 print:mt-0 print:max-w-none print:border-0 print:p-0">
-            <p className="text-center text-lg font-bold">{shopLabel.trim() || "POS ร้านอาหารอาคาร"}</p>
-            <p className="mt-1 text-center text-xs text-slate-500">Order Slip</p>
-            <div className="mt-3 space-y-1 text-sm">
-              <p>ออเดอร์: #{printOrder.id}</p>
-              <p>เวลา: {new Date(printOrder.created_at).toLocaleString("th-TH")}</p>
-              <p>ลูกค้า: {printOrder.customer_name || "-"}</p>
-              <p>โต๊ะ: {printOrder.table_no || "-"}</p>
-              <p>สถานะ: {printOrder.status}</p>
-            </div>
-            <div className="mt-3 border-t border-dashed border-slate-300 pt-2 text-sm">
-              {printOrder.items.map((it, idx) => (
-                <div key={`${it.menu_item_id}-${idx}`} className="mb-2 flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-2">
-                    <PosThumb url={menuImageById.get(it.menu_item_id) ?? ""} size="sm" />
-                    <p className="min-w-0 pt-0.5">{it.name} ×{it.qty}</p>
-                  </div>
-                  <p className="shrink-0 pt-0.5">฿ {(it.price * it.qty).toLocaleString()}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 border-t border-dashed border-slate-300 pt-2">
-              <p className="text-right text-base font-bold">รวม ฿ {printOrder.total_amount.toLocaleString()}</p>
-            </div>
-          </div>
-        </section>
-      ) : null}
     </div>
   );
 }

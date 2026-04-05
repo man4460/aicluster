@@ -1,0 +1,29 @@
+---
+description: เทมเพลตแดชบอร์ด POS ร้านอาหาร (building-pos ใต้ /dashboard) — ห้ามใส่พื้นหลังสีเทาเต็มแผงหรือดัดให้เหมือนหน้าลูกค้าโดยไม่ได้ขอ
+globs:
+  - "**/dashboard/building-pos/**"
+  - "**/systems/building-pos/**"
+---
+
+# Building POS — เทมเพลตแดชบอร์ด (ยึดแบบนี้)
+
+## Layout ชั้นนอก (`src/app/(dashboard)/dashboard/building-pos/layout.tsx`)
+
+- ห่อด้วย **`requireBuildingPosSection()`** แล้ว `div` แค่ **`flex min-h-0 flex-1 flex-col`** — ส่ง `BuildingPosShell` ห่อ `children`
+- **ห้าม** ใส่ `shopQrTemplatePageBgClass` / `bg-[#eef0f3]` / แผงพื้นหลังสีในชั้นนี้
+- **ห้าม** ใส่ `-mx-4 sm:-mx-6` + `rounded-2xl` เพื่อ bleed พื้นสีเทาเต็มคอลัมน์ (เลิกใช้แล้ว)
+- ความกว้างและระยะขอบแนวนอนยึด **`PageContainer`** ใน `dashboard/layout.tsx` อย่างเดียว
+
+## Shell (`BuildingPosShell.tsx`)
+
+- หัวข้อหน้า: การ์ด **`app-surface rounded-2xl`** + หัวข้อ **`text-[#2e2a58]`** + คำอธิบาย **`text-[#66638c]`** (โทน MAWELL เดียวกับแดชบอร์ดอื่น)
+- **ห้าม** เปลี่ยนไปใช้หัวแบบ `shopQrTemplateHead*` (จัดกึ่งกลาง / indigo kicker) ใน shell แดชบอร์ดนี้ — นั่นใช้กับ **หน้าลูกค้า / ลิงก์พนักงาน** เท่านั้น
+
+## แยกจากหน้าสาธารณะ
+
+- **`@/components/qr/shop-qr-template`** (`shopQrTemplateCardClass`, หัว kicker/title ฯลฯ) ใช้กับ **หน้าสั่งอาหารลูกค้า** และ **หน้าลิงก์พนักงานในแดชบอร์ด** ที่ออกแบบเป็นโปสเตอร์/QR — **ไม่ใช่** shell หลักของแท็บแดชบอร์ด POS
+- แถบเมนูรวม: **`BuildingPosUnifiedMenuBar`** คง **`app-surface rounded-2xl`** ให้สอดคล้องกับการ์ดแดชบอร์ด
+
+## เนื้อหาในแท็บ
+
+- การ์ดย่อย / แผงข้อมูล: ยึด **`app-surface`** และ **`AppDashboardSection`** / โทเค็นใน `@/components/app-templates` ตามกฎ `app-templates-central.mdc`

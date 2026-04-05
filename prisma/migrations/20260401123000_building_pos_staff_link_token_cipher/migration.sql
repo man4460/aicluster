@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `building_pos_staff_links` ADD COLUMN `token_cipher` TEXT NULL;

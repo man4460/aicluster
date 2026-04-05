@@ -7,6 +7,7 @@ import {
   type PosMenuItem,
   type PosOrder,
   uploadBuildingPosSessionImage,
+  uploadBuildingPosStaffImage,
 } from "@/systems/building-pos/building-pos-service";
 import { prepareBuildingPosSlipImageFile } from "@/systems/building-pos/building-pos-slip-image";
 import {
@@ -162,6 +163,8 @@ type OpenTablesProps = {
   shopLabel: string;
   logoUrl?: string | null;
   paymentChannelsNote?: string | null;
+  /** โหมดลิงก์พนักงาน — ใช้ API staff แทน session cookie */
+  staffAuth?: { ownerId: string; trialSessionId: string; k: string };
 };
 
 /** แดชบอร์ดหลัก — โต๊ะที่มีออเดอร์ค้าง */
@@ -174,6 +177,7 @@ export function BuildingPosOpenTablesPanel({
   shopLabel,
   logoUrl = null,
   paymentChannelsNote = null,
+  staffAuth,
 }: OpenTablesProps) {
   const slipGalleryInputRef = useRef<HTMLInputElement>(null);
   const slipCameraInputRef = useRef<HTMLInputElement>(null);
@@ -264,10 +268,20 @@ export function BuildingPosOpenTablesPanel({
     }
     let cancelled = false;
     setPpQrLoading(true);
-    void fetch("/api/building-pos/session/promptpay-qr", {
+    const staffQs = staffAuth
+      ? new URLSearchParams({
+          ownerId: staffAuth.ownerId,
+          t: staffAuth.trialSessionId,
+          k: staffAuth.k,
+        }).toString()
+      : "";
+    const ppUrl = staffAuth
+      ? `/api/building-pos/staff/promptpay-qr?${staffQs}`
+      : "/api/building-pos/session/promptpay-qr";
+    void fetch(ppUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
+      credentials: staffAuth ? "omit" : "include",
       body: JSON.stringify({ amount: modalGrandTotal }),
     })
       .then(async (r) => {
@@ -291,7 +305,7 @@ export function BuildingPosOpenTablesPanel({
     return () => {
       cancelled = true;
     };
-  }, [tableModalKey, modalGrandTotal]);
+  }, [tableModalKey, modalGrandTotal, staffAuth]);
 
   const openSlipGalleryPicker = useCallback((orderId: number) => {
     if (!onOrderPaymentSlipSaved) return;
@@ -313,7 +327,10 @@ export function BuildingPosOpenTablesPanel({
       setSlipBusyOrderId(orderId);
       try {
         const prepared = await prepareBuildingPosSlipImageFile(file);
-        const url = await uploadBuildingPosSessionImage(prepared);
+        const url =
+          staffAuth ?
+            await uploadBuildingPosStaffImage(prepared, staffAuth)
+          : await uploadBuildingPosSessionImage(prepared);
         await onOrderPaymentSlipSaved(orderId, url);
       } catch (err) {
         window.alert(err instanceof Error ? err.message : "อัปโหลดสลิปไม่สำเร็จ");
@@ -321,7 +338,7 @@ export function BuildingPosOpenTablesPanel({
         setSlipBusyOrderId(null);
       }
     },
-    [onOrderPaymentSlipSaved],
+    [onOrderPaymentSlipSaved, staffAuth],
   );
 
   const onSlipFileChange = useCallback(

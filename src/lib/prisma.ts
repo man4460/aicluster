@@ -6,7 +6,7 @@ import { getAuditActor } from "@/lib/audit-context";
  * เพิ่มทุกครั้งที่แก้ schema แล้วต้องการให้ dev โหลด PrismaClient ใหม่
  * (แก้กรณี globalThis.prisma ค้างตัวเก่าหลัง prisma generate — select ฟิลด์ใหม่แล้ว error)
  */
-const PRISMA_SINGLETON_VERSION = 30;
+const PRISMA_SINGLETON_VERSION = 33;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -39,6 +39,13 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     parkingSpot?: { findMany?: unknown };
     parkingSession?: { findMany?: unknown };
     buildingPosOrder?: { findMany?: unknown };
+    buildingPosStaffLink?: { findUnique?: unknown };
+    buildingPosCategory?: { findMany?: unknown };
+    buildingPosMenuItem?: { findMany?: unknown };
+    buildingPosIngredient?: { findMany?: unknown };
+    buildingPosPurchaseOrder?: { findMany?: unknown };
+    buildingPosPurchaseLine?: { findMany?: unknown };
+    buildingPosMenuRecipeLine?: { findMany?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -63,7 +70,14 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.parkingSite?.findFirst === "function" &&
     typeof c.parkingSpot?.findMany === "function" &&
     typeof c.parkingSession?.findMany === "function" &&
-    typeof c.buildingPosOrder?.findMany === "function"
+    typeof c.buildingPosOrder?.findMany === "function" &&
+    typeof c.buildingPosStaffLink?.findUnique === "function" &&
+    typeof c.buildingPosCategory?.findMany === "function" &&
+    typeof c.buildingPosMenuItem?.findMany === "function" &&
+    typeof c.buildingPosIngredient?.findMany === "function" &&
+    typeof c.buildingPosPurchaseOrder?.findMany === "function" &&
+    typeof c.buildingPosPurchaseLine?.findMany === "function" &&
+    typeof c.buildingPosMenuRecipeLine?.findMany === "function"
   );
 }
 

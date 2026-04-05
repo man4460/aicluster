@@ -104,9 +104,12 @@ model User {
   mqttAclRules             MqttAclRule[]
   mqttClientSessionLogs    MqttClientSessionLog[]
   mqttMessageStatDailies   MqttMessageStatDaily[]
-  buildingPosCategories    BuildingPosCategory[]
-  buildingPosMenuItems     BuildingPosMenuItem[]
-  buildingPosOrders        BuildingPosOrder[]
+  buildingPosCategories     BuildingPosCategory[]
+  buildingPosMenuItems      BuildingPosMenuItem[]
+  buildingPosOrders         BuildingPosOrder[]
+  buildingPosStaffLinks     BuildingPosStaffLink[]
+  buildingPosIngredients    BuildingPosIngredient[]
+  buildingPosPurchaseOrders BuildingPosPurchaseOrder[]
   villageProfiles           VillageProfile[]           @relation("VillageProfileToUser")
   villageHouses             VillageHouse[]             @relation("VillageHouseToUser")
   villageCommonFeeRows      VillageCommonFeeRow[]      @relation("VillageFeeRowToUser")
@@ -996,10 +999,77 @@ model BuildingPosMenuItem {
   isFeatured     Boolean  @default(false) @map("is_featured")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
+  recipeLines    BuildingPosMenuRecipeLine[]
 
   @@index([ownerUserId, trialSessionId, categoryId], map: "bpos_menu_owner_trial_cat_idx")
   @@index([ownerUserId], map: "bpos_menu_owner_idx")
   @@map("building_pos_menu_items")
+}
+
+/** รายการของที่ซื้อจากตลาด — หน่วยป้ายกำกับ (กก., ml) ราคาต่อหน่วยล่าสุดมาจากบันทึกการจ่ายตลาด */
+model BuildingPosIngredient {
+  id             Int      @id @default(autoincrement())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String   @db.VarChar(160)
+  unitLabel      String   @default("") @map("unit_label") @db.VarChar(32)
+  sortOrder      Int      @default(100) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  purchaseLines  BuildingPosPurchaseLine[]
+  recipeLines    BuildingPosMenuRecipeLine[]
+
+  @@index([ownerUserId, trialSessionId, sortOrder], map: "bpos_ing_owner_trial_sort_idx")
+  @@index([ownerUserId], map: "bpos_ing_owner_idx")
+  @@map("building_pos_ingredients")
+}
+
+/** บันทึกการจ่ายตลาดแต่ละครั้ง (หนึ่งครั้งหลายรายการของ) */
+model BuildingPosPurchaseOrder {
+  id             Int      @id @default(autoincrement())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  purchasedOn    DateTime @map("purchased_on") @db.Date
+  note           String   @default("") @db.VarChar(500)
+  /** รูปสลิปโอน/หลักฐานการจ่ายตลาด — อัปโหลดจากแดชบอร์ด */
+  paymentSlipUrl String   @default("") @map("payment_slip_url") @db.VarChar(2048)
+  createdAt      DateTime @default(now()) @map("created_at")
+  lines          BuildingPosPurchaseLine[]
+
+  @@index([ownerUserId, trialSessionId, purchasedOn], map: "bpos_po_owner_trial_date_idx")
+  @@index([ownerUserId], map: "bpos_po_owner_idx")
+  @@map("building_pos_purchase_orders")
+}
+
+model BuildingPosPurchaseLine {
+  id              Int                     @id @default(autoincrement())
+  purchaseOrderId Int                     @map("purchase_order_id")
+  purchaseOrder   BuildingPosPurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  ingredientId    Int                     @map("ingredient_id")
+  ingredient      BuildingPosIngredient   @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  quantity        Decimal                 @map("quantity") @db.Decimal(14, 4)
+  unitPriceBaht   Decimal                 @map("unit_price_baht") @db.Decimal(12, 2)
+
+  @@index([purchaseOrderId], map: "bpos_pl_po_idx")
+  @@index([ingredientId], map: "bpos_pl_ing_idx")
+  @@map("building_pos_purchase_lines")
+}
+
+/** สูตรต่อจาน — qty ต่อ 1 ที่ขาย */
+model BuildingPosMenuRecipeLine {
+  id            Int                   @id @default(autoincrement())
+  menuItemId    Int                   @map("menu_item_id")
+  menuItem      BuildingPosMenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  ingredientId  Int                   @map("ingredient_id")
+  ingredient    BuildingPosIngredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  qtyPerPortion Decimal               @map("qty_per_portion") @db.Decimal(14, 4)
+
+  @@unique([menuItemId, ingredientId], map: "bpos_recipe_menu_ing_uniq")
+  @@index([menuItemId], map: "bpos_recipe_menu_idx")
+  @@index([ingredientId], map: "bpos_recipe_ing_idx")
+  @@map("building_pos_menu_recipe_lines")
 }
 
 model BuildingPosOrder {
@@ -1015,12 +1085,32 @@ model BuildingPosOrder {
   note           String   @default("") @db.VarChar(1000)
   /** รูปสลิปโอน/ชำระ — อัปโหลดจากแดชบอร์ด */
   paymentSlipUrl String   @default("") @map("payment_slip_url") @db.VarChar(2048)
+  /** ลูกค้า QR — รอบสั่งต่อโต๊ะ (รีเซ็ตหลังออเดอร์ในรอบนี้ชำระครบ) */
+  customerSessionId String @default("") @map("customer_session_id") @db.VarChar(40)
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
+  @@index([ownerUserId, trialSessionId, tableNo, customerSessionId], map: "bpos_order_owner_trial_table_custsess_idx")
   @@index([ownerUserId, trialSessionId, createdAt], map: "bpos_order_owner_trial_created_idx")
   @@index([ownerUserId], map: "bpos_order_owner_idx")
   @@map("building_pos_orders")
+}
+
+/** ลิงก์/QR พนักงานเสิร์ฟ — ยืนยันด้วยโทเค็น (hash) + cipher สำหรับให้เจ้าของดึงลิงก์แสดง QR ค้าง */
+model BuildingPosStaffLink {
+  id             Int      @id @default(autoincrement())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  tokenHash      String   @map("token_hash") @db.VarChar(128)
+  /** AES-GCM(base64url) — ถอดได้ด้วย AUTH_SECRET เฉพาะฝั่งเซิร์ฟเวอร์ */
+  tokenCipher    String?  @map("token_cipher") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId], map: "bpos_staff_link_owner_trial_uniq")
+  @@index([ownerUserId], map: "bpos_staff_link_owner_idx")
+  @@map("building_pos_staff_links")
 }
 
 enum VillageFeeRowStatus {

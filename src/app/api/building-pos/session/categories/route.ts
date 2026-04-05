@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { buildingPosOwnerFromAuth } from "@/lib/building-pos/api-owner";
+import { formatBuildingPosDbError, jsonBuildingPosError } from "@/lib/building-pos/route-errors";
 import { getBuildingPosDataScope } from "@/lib/trial/module-scopes";
 
 const postSchema = z.object({
@@ -37,28 +38,33 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const own = await buildingPosOwnerFromAuth(auth.session.sub);
-  if (!own.ok) return own.response;
-  const scope = await getBuildingPosDataScope(own.ownerId);
-  let json: unknown;
-  try { json = await req.json(); } catch { return NextResponse.json({ error: "รูปแบบข้อมูลไม่ถูกต้อง" }, { status: 400 }); }
-  const parsed = postSchema.safeParse(json);
-  if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
-  const row = await prisma.buildingPosCategory.create({
-    data: {
-      ownerUserId: own.ownerId,
-      trialSessionId: scope.trialSessionId,
-      name: parsed.data.name.trim(),
-      imageUrl: parsed.data.image_url?.trim() ?? "",
-      sortOrder: parsed.data.sort_order,
-      isActive: parsed.data.is_active,
-    },
-  });
-  return NextResponse.json({
-    category: { id: row.id, name: row.name, image_url: row.imageUrl, sort_order: row.sortOrder, is_active: row.isActive },
-  });
+  try {
+    const auth = await requireSession();
+    if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const own = await buildingPosOwnerFromAuth(auth.session.sub);
+    if (!own.ok) return own.response;
+    const scope = await getBuildingPosDataScope(own.ownerId);
+    let json: unknown;
+    try { json = await req.json(); } catch { return NextResponse.json({ error: "รูปแบบข้อมูลไม่ถูกต้อง" }, { status: 400 }); }
+    const parsed = postSchema.safeParse(json);
+    if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
+    const row = await prisma.buildingPosCategory.create({
+      data: {
+        ownerUserId: own.ownerId,
+        trialSessionId: scope.trialSessionId,
+        name: parsed.data.name.trim(),
+        imageUrl: parsed.data.image_url?.trim() ?? "",
+        sortOrder: parsed.data.sort_order,
+        isActive: parsed.data.is_active,
+      },
+    });
+    return NextResponse.json({
+      category: { id: row.id, name: row.name, image_url: row.imageUrl, sort_order: row.sortOrder, is_active: row.isActive },
+    });
+  } catch (e) {
+    console.error("[building-pos/session/categories POST]", e);
+    return jsonBuildingPosError(formatBuildingPosDbError(e), e, 503);
+  }
 }
 
 export async function PATCH(req: Request) {
@@ -102,25 +108,30 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const own = await buildingPosOwnerFromAuth(auth.session.sub);
-  if (!own.ok) return own.response;
-  const scope = await getBuildingPosDataScope(own.ownerId);
-  const id = Number(new URL(req.url).searchParams.get("id"));
-  if (!Number.isFinite(id) || id <= 0) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
-  const inUse = await prisma.buildingPosMenuItem.count({
-    where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId, categoryId: id },
-  });
-  if (inUse > 0) {
-    return NextResponse.json(
-      { error: "ย้ายหรือลบเมนูในหมวดนี้ก่อน จึงจะลบหมวดหมู่ได้" },
-      { status: 400 },
-    );
+  try {
+    const auth = await requireSession();
+    if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const own = await buildingPosOwnerFromAuth(auth.session.sub);
+    if (!own.ok) return own.response;
+    const scope = await getBuildingPosDataScope(own.ownerId);
+    const id = Number(new URL(req.url).searchParams.get("id"));
+    if (!Number.isFinite(id) || id <= 0) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
+    const inUse = await prisma.buildingPosMenuItem.count({
+      where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId, categoryId: id },
+    });
+    if (inUse > 0) {
+      return NextResponse.json(
+        { error: "ย้ายหรือลบเมนูในหมวดนี้ก่อน จึงจะลบหมวดหมู่ได้" },
+        { status: 400 },
+      );
+    }
+    const n = await prisma.buildingPosCategory.deleteMany({
+      where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
+    });
+    if (n.count === 0) return NextResponse.json({ error: "ไม่พบหมวดหมู่" }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error("[building-pos/session/categories DELETE]", e);
+    return jsonBuildingPosError(formatBuildingPosDbError(e), e, 503);
   }
-  const n = await prisma.buildingPosCategory.deleteMany({
-    where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
-  });
-  if (n.count === 0) return NextResponse.json({ error: "ไม่พบหมวดหมู่" }, { status: 404 });
-  return NextResponse.json({ ok: true });
 }

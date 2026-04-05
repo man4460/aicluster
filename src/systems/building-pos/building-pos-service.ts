@@ -22,6 +22,44 @@ export type PosMenuItem = {
   sold_qty?: number;
 };
 
+/** รายการของที่ซื้อจากตลาด (ใช้ในบันทึกจ่ายตลาด + สูตร) */
+export type PosIngredient = {
+  id: number;
+  name: string;
+  unit_label: string;
+  sort_order: number;
+};
+
+export type PosPurchaseLine = {
+  id: number;
+  ingredient_id: number;
+  quantity: number;
+  unit_price_baht: number;
+  line_total_baht: number;
+};
+
+/** หนึ่งครั้งของการบันทึกการจ่ายตลาด */
+export type PosPurchaseOrder = {
+  id: number;
+  purchased_on: string;
+  note: string;
+  /** รูปสลิปโอน/หลักฐานการจ่ายตลาด */
+  payment_slip_url?: string;
+  created_at: string;
+  lines: PosPurchaseLine[];
+};
+
+export type PosRecipeLine = {
+  ingredient_id: number;
+  qty_per_portion: number;
+};
+
+export type PosEstimatedCosts = {
+  estimated_cost_baht: Record<string, number>;
+  margin_baht: Record<string, number | null>;
+  ingredient_last_unit_price_baht: Record<string, number>;
+};
+
 export type PosOrderItem = {
   menu_item_id: number;
   name: string;
@@ -207,6 +245,30 @@ export function createBuildingPosRepository() {
 }
 
 /** อัปโหลดรูปไปที่ session building-pos — ส่ง cookie เซสชันเสมอ */
+export async function uploadBuildingPosStaffImage(
+  file: File,
+  ctx: { ownerId: string; trialSessionId: string; k: string },
+): Promise<string> {
+  const q = new URLSearchParams({ ownerId: ctx.ownerId, t: ctx.trialSessionId, k: ctx.k });
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`/api/building-pos/staff/images/upload?${q}`, { method: "POST", body: form });
+  const data = (await res.json().catch(() => ({}))) as { error?: string; imageUrl?: string; debug?: string };
+  if (!res.ok) {
+    let msg =
+      typeof data.error === "string" && data.error.trim() ?
+        data.error
+      : `${res.status} ${res.statusText}`.trim() || "อัปโหลดรูปไม่สำเร็จ";
+    if (typeof data.debug === "string" && data.debug.trim()) {
+      msg += `\n\n--- รายละเอียด (dev) ---\n${data.debug.slice(0, 3500)}`;
+    }
+    throw new Error(msg);
+  }
+  const url = data.imageUrl?.trim();
+  if (!url) throw new Error("อัปโหลดรูปไม่สำเร็จ");
+  return url;
+}
+
 export async function uploadBuildingPosSessionImage(file: File): Promise<string> {
   const form = new FormData();
   form.append("file", file);
@@ -311,12 +373,124 @@ class SessionApiBuildingPosRepository {
     const res = await fetch(`/api/building-pos/session/menu-items?id=${id}`, { method: "DELETE" });
     await readJson<{ ok: boolean }>(res);
   }
+
+  async listIngredients() {
+    const res = await fetch("/api/building-pos/session/ingredients", { cache: "no-store" });
+    return (await readJson<{ ingredients: PosIngredient[] }>(res)).ingredients;
+  }
+  async createIngredient(input: Omit<PosIngredient, "id">) {
+    const res = await fetch("/api/building-pos/session/ingredients", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: input.name,
+        unit_label: input.unit_label,
+        sort_order: input.sort_order,
+      }),
+    });
+    return (await readJson<{ ingredient: PosIngredient }>(res)).ingredient;
+  }
+  async updateIngredient(id: number, patch: Partial<Omit<PosIngredient, "id">>) {
+    const res = await fetch(`/api/building-pos/session/ingredients?id=${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    return (await readJson<{ ingredient: PosIngredient }>(res)).ingredient;
+  }
+  async deleteIngredient(id: number) {
+    const res = await fetch(`/api/building-pos/session/ingredients?id=${id}`, { method: "DELETE" });
+    await readJson<{ ok: boolean }>(res);
+  }
+
+  async listPurchaseOrders() {
+    const res = await fetch("/api/building-pos/session/purchase-orders", { cache: "no-store" });
+    return (await readJson<{ purchase_orders: PosPurchaseOrder[] }>(res)).purchase_orders;
+  }
+  async createPurchaseOrder(input: {
+    purchased_on: string;
+    note?: string | null;
+    payment_slip_url?: string | null;
+    lines: Omit<PosPurchaseLine, "id" | "line_total_baht">[];
+  }) {
+    const res = await fetch("/api/building-pos/session/purchase-orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    return (await readJson<{ purchase_order: PosPurchaseOrder }>(res)).purchase_order;
+  }
+  async updatePurchaseOrder(
+    id: number,
+    patch: {
+      purchased_on?: string;
+      note?: string | null;
+      payment_slip_url?: string | null;
+      lines?: Omit<PosPurchaseLine, "id" | "line_total_baht">[];
+    },
+  ) {
+    const res = await fetch(`/api/building-pos/session/purchase-orders?id=${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    return (await readJson<{ purchase_order: PosPurchaseOrder }>(res)).purchase_order;
+  }
+  async deletePurchaseOrder(id: number) {
+    const res = await fetch(`/api/building-pos/session/purchase-orders?id=${id}`, { method: "DELETE" });
+    await readJson<{ ok: boolean }>(res);
+  }
+
+  async listRecipesByMenu() {
+    const res = await fetch("/api/building-pos/session/menu-recipes", { cache: "no-store" });
+    return (await readJson<{ recipes_by_menu: Record<string, PosRecipeLine[]> }>(res)).recipes_by_menu;
+  }
+  async putMenuRecipe(menuItemId: number, lines: PosRecipeLine[]) {
+    const res = await fetch(`/api/building-pos/session/menu-recipes?menu_item_id=${menuItemId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lines }),
+    });
+    return (await readJson<{ menu_item_id: number; lines: PosRecipeLine[] }>(res)).lines;
+  }
+
+  async getEstimatedCosts() {
+    const res = await fetch("/api/building-pos/session/estimated-costs", { cache: "no-store" });
+    return readJson<PosEstimatedCosts>(res);
+  }
+
   async listOrders() {
     const res = await fetch("/api/building-pos/session/orders", { cache: "no-store" });
     return (await readJson<{ orders: PosOrder[] }>(res)).orders;
   }
   async updateOrder(id: number, patch: Partial<Omit<PosOrder, "id" | "created_at">>) {
     const res = await fetch(`/api/building-pos/session/orders?id=${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    return (await readJson<{ order: PosOrder }>(res)).order;
+  }
+}
+
+class StaffApiBuildingPosRepository {
+  constructor(
+    private readonly ownerId: string,
+    private readonly trialSessionId: string,
+    private readonly k: string,
+  ) {}
+
+  private qs() {
+    return new URLSearchParams({ ownerId: this.ownerId, t: this.trialSessionId, k: this.k }).toString();
+  }
+
+  async listOrders() {
+    const res = await fetch(`/api/building-pos/staff/orders?${this.qs()}`, { cache: "no-store" });
+    return (await readJson<{ orders: PosOrder[] }>(res)).orders;
+  }
+
+  async updateOrder(id: number, patch: Partial<Omit<PosOrder, "id" | "created_at">>) {
+    const res = await fetch(`/api/building-pos/staff/orders?id=${id}&${this.qs()}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
@@ -339,7 +513,11 @@ class PublicApiBuildingPosRepository {
     const res = await fetch(`/api/building-pos/public/menu?${params.toString()}`, { cache: "no-store" });
     return (await readJson<{ menu_items: PosMenuItem[] }>(res)).menu_items;
   }
-  async createOrder(input: Omit<PosOrder, "id" | "created_at">) {
+  async createOrder(
+    input: Omit<PosOrder, "id" | "created_at">,
+    opts?: { customerSessionId?: string },
+  ) {
+    const total = input.items.reduce((s, x) => s + x.price * x.qty, 0);
     const res = await fetch("/api/building-pos/public/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -349,16 +527,29 @@ class PublicApiBuildingPosRepository {
         customer_name: input.customer_name,
         table_no: input.table_no,
         items: input.items,
+        note: input.note?.trim() ? input.note.trim() : null,
+        customer_session_id: opts?.customerSessionId?.trim() || null,
       }),
     });
-    await readJson<{ ok: boolean; orderId: number }>(res);
+    const data = await readJson<{ ok: boolean; orderId: number }>(res);
     return {
       ...input,
       payment_slip_url: "",
-      id: 0,
+      id: data.orderId,
       created_at: new Date().toISOString(),
-      total_amount: input.items.reduce((s, x) => s + x.price * x.qty, 0),
+      total_amount: total,
     } as PosOrder;
+  }
+
+  async listMyOrders(tableNo: string, customerSessionId: string) {
+    const params = new URLSearchParams({
+      ownerId: this.ownerId,
+      table: tableNo.trim(),
+      session: customerSessionId.trim(),
+    });
+    if (this.trialSessionId) params.set("t", this.trialSessionId);
+    const res = await fetch(`/api/building-pos/public/my-orders?${params}`, { cache: "no-store" });
+    return (await readJson<{ orders: PosOrder[] }>(res)).orders;
   }
 }
 
@@ -368,4 +559,8 @@ export function createBuildingPosSessionApiRepository() {
 
 export function createBuildingPosPublicApiRepository(ownerId: string, trialSessionId?: string) {
   return new PublicApiBuildingPosRepository(ownerId, trialSessionId);
+}
+
+export function createBuildingPosStaffApiRepository(ownerId: string, trialSessionId: string, staffKey: string) {
+  return new StaffApiBuildingPosRepository(ownerId, trialSessionId, staffKey);
 }

@@ -53,3 +53,45 @@ export function openPrintableHtml(fullDocumentHtml: string): boolean {
 
   return printPrintableHtmlInHiddenIframe(fullDocumentHtml);
 }
+
+/**
+ * พิมพ์รูปโปสเตอร์ (data URL) — รอให้รูปโหลดก่อนเรียก print() เพื่อหลีกเลี่ยงหน้าว่างใน Chrome/Edge
+ */
+export function printDataUrlImagePoster(args: {
+  dataUrl: string;
+  documentTitle: string;
+  pageSize: "A4" | "A5";
+}): boolean {
+  const page = args.pageSize === "A5" ? "A5 portrait" : "A4 portrait";
+  const safeTitle = args.documentTitle.replace(/[<>"]/g, "");
+  const src = args.dataUrl;
+  const html = `<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<title>${safeTitle}</title>
+<style>
+@page { size: ${page}; margin: 12mm; }
+html, body { margin: 0; padding: 0; background: #fff; }
+body { display: flex; justify-content: center; align-items: flex-start; min-height: 100%; }
+img#print-img { width: 340px; max-width: 100%; height: auto; display: block; }
+</style>
+</head>
+<body>
+<img id="print-img" src="${src}" alt=""/>
+<script>
+(function () {
+  var img = document.getElementById("print-img");
+  function doPrint() {
+    window.focus();
+    setTimeout(function () { window.print(); }, 150);
+  }
+  if (!img) return;
+  if (img.complete) doPrint();
+  else img.onload = function () { doPrint(); };
+})();
+</script>
+</body>
+</html>`;
+  return openPrintableHtml(html);
+}

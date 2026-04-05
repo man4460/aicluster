@@ -21,17 +21,35 @@ async function requestBaseUrl(): Promise<string> {
 export default async function BuildingPosPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  const [profile, baseUrl, scope, dormPay] = await Promise.all([
-    getBusinessProfile(session.sub),
-    requestBaseUrl(),
-    getBuildingPosDataScope(session.sub),
-    prisma.dormitoryProfile.findUnique({
-      where: {
-        ownerUserId_trialSessionId: { ownerUserId: session.sub, trialSessionId: TRIAL_PROD_SCOPE },
-      },
-      select: { paymentChannelsNote: true },
-    }),
-  ]);
+
+  let profile: Awaited<ReturnType<typeof getBusinessProfile>> = null;
+  let baseUrl = "";
+  let scope: Awaited<ReturnType<typeof getBuildingPosDataScope>> = {
+    trialSessionId: TRIAL_PROD_SCOPE,
+    isTrialSandbox: false,
+  };
+  let dormPay: { paymentChannelsNote: string | null } | null = null;
+
+  try {
+    const results = await Promise.all([
+      getBusinessProfile(session.sub),
+      requestBaseUrl(),
+      getBuildingPosDataScope(session.sub),
+      prisma.dormitoryProfile.findUnique({
+        where: {
+          ownerUserId_trialSessionId: { ownerUserId: session.sub, trialSessionId: TRIAL_PROD_SCOPE },
+        },
+        select: { paymentChannelsNote: true },
+      }),
+    ]);
+    profile = results[0];
+    baseUrl = results[1];
+    scope = results[2];
+    dormPay = results[3];
+  } catch (e) {
+    console.error("[building-pos/page]", e);
+  }
+
   return (
     <Suspense fallback={<div className="h-24 animate-pulse rounded-2xl bg-[#ecebff]/40" aria-hidden />}>
       <BuildingPosDashboardClient

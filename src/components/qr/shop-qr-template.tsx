@@ -1,6 +1,57 @@
 "use client";
 
 import { jsPDF } from "jspdf";
+import { shopQrTemplatePageBgClass } from "@/lib/shop-qr-template-theme";
+
+export { shopQrTemplatePageBgClass };
+export const shopQrTemplateCardClass =
+  "rounded-2xl border-[3px] border-indigo-300/60 bg-[#f4f5f7] shadow-xl shadow-slate-300/40";
+
+/** ความกว้างเนื้อหาหลัก — ใช้ร่วมกันหน้าสั่งอาหารและหน้าลิงก์พนักงาน */
+export const shopQrTemplateMaxWidthClass = "mx-auto max-w-lg sm:max-w-xl";
+/** padding หน้าสั่งอาหาร (มีแถบล่าง fixed) */
+export const shopQrTemplateOrderPagePaddingClass =
+  "px-4 pb-32 pt-6 sm:px-5 sm:pb-36 sm:pt-8";
+/** padding หน้า QR ในแดชบอร์ด (ไม่มีแถบล่าง fixed) */
+export const shopQrTemplateDashboardQrPaddingClass =
+  "px-4 pb-10 pt-4 sm:px-5 sm:pb-12 sm:pt-6";
+
+export const shopQrTemplateHeadKickerClass =
+  "text-center text-[11px] font-medium uppercase tracking-[0.2em] text-indigo-600";
+export const shopQrTemplateHeadTitleClass =
+  "mt-2 text-center text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl";
+export const shopQrTemplateHeadSubtitleClass = "mt-2 text-center text-sm text-slate-600";
+
+/** ปุ่มหลักแบบหน้าลูกค้า (ส่งออเดอร์ / สร้างลิงก์) */
+export const shopQrTemplateCtaButtonClass =
+  "min-h-[48px] shrink-0 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 text-sm font-bold text-white shadow-lg shadow-indigo-900/25 transition enabled:hover:from-indigo-500 enabled:hover:to-violet-500 disabled:cursor-not-allowed disabled:opacity-40";
+
+/** ปุ่มรอง (คัดลอก / ขอบขาว) */
+export const shopQrTemplateSecondaryButtonClass =
+  "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 touch-manipulation";
+
+/** ปุ่มแถวกริดรอง (PDF / PNG) — โทน indigo อ่อน */
+export const shopQrTemplateGridSoftButtonClass =
+  "rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-indigo-700 shadow-sm hover:border-indigo-200 hover:bg-indigo-50/60 disabled:cursor-not-allowed disabled:opacity-40 sm:py-2.5";
+
+/** ปุ่มแถวกริดหลัก (เช่น PDF A4) */
+export const shopQrTemplateGridPrimaryButtonClass =
+  "rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-indigo-600/20 hover:from-indigo-500 hover:to-violet-500 disabled:cursor-not-allowed disabled:opacity-40 sm:py-2.5";
+
+/** กล่องแสดง URL */
+export const shopQrTemplateUrlBoxClass =
+  "mt-3 break-all rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] leading-relaxed text-indigo-800 sm:text-xs";
+
+/** พรีวิวโปสเตอร์/QR — กรอบมนเดียว (ขอบ indigo พื้นขาว) ไม่ซ้อนชั้น */
+export const shopQrTemplatePosterPreviewShellClass =
+  "mx-auto w-full max-w-[280px] overflow-hidden rounded-2xl border-[3px] border-indigo-300/60 bg-white p-2 shadow-md shadow-slate-300/25";
+
+/** รูปภายในกรอบ — ไม่ใส่กรอบ/มุมมนซ้ำ */
+export const shopQrTemplatePosterPreviewImgClass = "block h-auto w-full object-contain";
+
+/** โปสเตอร์จากแคนวาส (PNG เต็มใบ) — ไม่ห่อกรอบ HTML เพิ่ม เพราะขอบอยู่ในภาพแล้ว */
+export const shopQrTemplateGeneratedPosterThumbClass =
+  "mx-auto mt-4 block h-auto w-full max-w-[280px] shadow-md shadow-slate-300/25";
 
 type PosterCanvasInput = {
   qrDataUrl: string;
@@ -87,22 +138,25 @@ export async function createShopQrPosterCanvas(input: PosterCanvasInput): Promis
   ctx.fillStyle = "#eef0f3";
   ctx.fillRect(0, 0, width, height);
 
-  // card shadow
+  const cardX = 20;
+  const cardY = 12;
+  const cardW = width - 40;
+  const cardH = height - 52;
+  const cardR = 52;
+
+  // การ์ดใบเดียว: เงา + พื้น + ขอบ indigo ชั้นเดียว (ไม่ซ้อนการ์ดขาว/เทาสองใบ)
   ctx.save();
-  ctx.shadowColor = "rgba(15, 23, 42, 0.16)";
-  ctx.shadowBlur = 28;
-  ctx.shadowOffsetY = 10;
-  roundedRectPath(ctx, 24, 16, width - 48, height - 52, 52);
+  ctx.shadowColor = "rgba(15, 23, 42, 0.14)";
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 8;
+  roundedRectPath(ctx, cardX, cardY, cardW, cardH, cardR);
   ctx.fillStyle = "#ffffff";
   ctx.fill();
   ctx.restore();
 
-  // main rounded card
-  roundedRectPath(ctx, 20, 12, width - 40, height - 52, 52);
-  ctx.fillStyle = "#f4f5f7";
-  ctx.fill();
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = "rgba(99, 102, 241, 0.45)";
+  roundedRectPath(ctx, cardX, cardY, cardW, cardH, cardR);
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = "rgba(99, 102, 241, 0.5)";
   ctx.stroke();
 
   const logo = logoUrl ? await loadImage(logoUrl).catch(() => null) : null;
@@ -137,13 +191,7 @@ export async function createShopQrPosterCanvas(input: PosterCanvasInput): Promis
   const qrSize = 470;
   const qrX = (width - qrSize) / 2;
   const qrY = 450;
-  ctx.fillStyle = "#ffffff";
-  roundedRectPath(ctx, qrX - 24, qrY - 24, qrSize + 48, qrSize + 48, 26);
-  ctx.fill();
-  ctx.strokeStyle = "#e2e8f0";
-  ctx.lineWidth = 4;
-  roundedRectPath(ctx, qrX - 24, qrY - 24, qrSize + 48, qrSize + 48, 26);
-  ctx.stroke();
+  // ไม่วาดกรอบซ้อนรอบ QR — โค้ดใน PNG มีขอบขาวอยู่แล้ว
   ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
 
   if (logo && shopLabel.trim()) {
@@ -210,7 +258,7 @@ export function ShopQrPosterPreview({
 }) {
   return (
     <div
-      className="mx-auto w-[340px] rounded-[36px] border-[4px] border-indigo-300/70 bg-[#f4f5f7] p-5 shadow-xl shadow-slate-300/40"
+      className="mx-auto w-[340px] rounded-[36px] border-[4px] border-indigo-300/70 bg-white p-5 shadow-xl shadow-slate-300/40"
       style={{ fontFamily: '"Noto Sans Thai", "Noto Sans", sans-serif' }}
     >
       <div className="flex flex-col items-center px-4 pb-5 pt-1">
@@ -224,12 +272,12 @@ export function ShopQrPosterPreview({
         )}
         <p className="mt-4 text-center text-[15px] font-bold leading-snug text-slate-800">{tagline}</p>
         {subtitle?.trim() ? <p className="mt-1 text-center text-[10px] font-medium text-slate-600">{subtitle.trim()}</p> : null}
-        <div className="mt-5 rounded-[22px] border-[3px] border-slate-300 bg-white p-3">
+        <div className="mt-5 flex justify-center">
           {qrDataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={qrDataUrl} alt="QR" width={232} height={232} className="h-[232px] w-[232px]" />
           ) : (
-            <div className="flex h-[232px] w-[232px] items-center justify-center bg-slate-50 text-xs text-slate-400">กำลังสร้าง QR...</div>
+            <div className="flex h-[232px] w-[232px] items-center justify-center text-xs text-slate-400">กำลังสร้าง QR...</div>
           )}
         </div>
         {logoUrl && shopLabel.trim() ? <p className="mt-6 text-center text-[17px] font-semibold tracking-tight text-slate-500">{shopLabel.trim()}</p> : null}
