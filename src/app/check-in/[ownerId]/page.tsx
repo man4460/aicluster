@@ -15,7 +15,7 @@ type Props = {
 };
 
 export const metadata: Metadata = {
-  title: "เช็คชื่อเข้างาน",
+  title: "เช็คอินเข้างาน",
   robots: { index: false, follow: false },
 };
 

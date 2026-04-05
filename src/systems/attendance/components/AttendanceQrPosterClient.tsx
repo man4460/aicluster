@@ -9,6 +9,7 @@ import {
   downloadPosterPng,
   resolveAssetUrl,
 } from "@/components/qr/shop-qr-template";
+import { attendanceOutlineBtnClass, attendancePosterPreviewShellClass } from "@/systems/attendance/attendance-ui";
 
 type Props = {
   ownerId: string;
@@ -69,7 +70,7 @@ export function AttendanceQrPosterClient({
     }
     return resolveAssetUrl(raw, effectiveBaseUrl);
   }, [logoUrl, clientOrigin, effectiveBaseUrl]);
-  const headline = orgLabel.trim() || "เช็คชื่อเข้างาน";
+  const headline = orgLabel.trim() || "เช็คอินเข้างาน";
   const subLocation = locationName?.trim() || null;
 
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -160,76 +161,67 @@ export function AttendanceQrPosterClient({
     }
   }
 
+  const actionBtnOutline =
+    "rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50";
+
   return (
     <div className="space-y-6">
       {!checkInUrl ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          ยังสร้างลิงก์/QR ไม่ได้ — เปิดหน้านี้จากเบราว์เซอร์บนโดเมนจริง หรือตั้งค่า{" "}
-          <code className="rounded bg-white px-1">NEXT_PUBLIC_APP_URL</code> /{" "}
-          <code className="rounded bg-white px-1">APP_URL</code> / Vercel (VERCEL_URL)
+          ยังสร้างลิงก์/QR ไม่ได้ — เปิดหน้านี้จากเบราว์เซอร์บนโดเมนที่ใช้งานจริง หรือตั้งค่า URL แอปให้ตรงโดเมนนั้น
         </p>
-      ) : (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-sm font-semibold text-slate-900">ลิงก์เช็คชื่อ</p>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-            <code className="block flex-1 break-all rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-800">
-              {checkInUrl}
-            </code>
+      ) : null}
+
+      {checkInUrl ? (
+        <>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => void copyLink()} className={attendanceOutlineBtnClass}>
+              {copyDone ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
+            </button>
             <button
               type="button"
-              onClick={() => void copyLink()}
-              className="shrink-0 rounded-xl bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a6]"
+              disabled={busy}
+              onClick={() => downloadPdf("a4")}
+              className="rounded-xl bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50"
             >
-              {copyDone ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
+              ดาวน์โหลด PDF (A4)
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => downloadPdf("a5")}
+              className={attendanceOutlineBtnClass}
+            >
+              ดาวน์โหลด PDF (A5)
+            </button>
+            <button type="button" disabled={busy} onClick={downloadPng} className={attendanceOutlineBtnClass}>
+              ดาวน์โหลด PNG
             </button>
           </div>
           {copyErr ? (
-            <p className="mt-2 text-xs text-red-600">คัดลอกไม่สำเร็จ — เลือกข้อความด้านบนแล้วคัดลอกเอง</p>
+            <p className="text-xs text-red-600">คัดลอกไม่สำเร็จ — ลองอนุญาตคลิปบอร์ดหรือเปิดหน้าใน HTTPS</p>
           ) : null}
-        </div>
-      )}
+        </>
+      ) : null}
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={busy || !checkInUrl}
-          onClick={() => downloadPdf("a4")}
-          className="rounded-xl bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a6] disabled:opacity-50"
-        >
-          ดาวน์โหลด PDF (A4)
-        </button>
-        <button
-          type="button"
-          disabled={busy || !checkInUrl}
-          onClick={() => downloadPdf("a5")}
-          className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
-        >
-          ดาวน์โหลด PDF (A5)
-        </button>
-        <button
-          type="button"
-          disabled={busy || !checkInUrl}
-          onClick={downloadPng}
-          className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
-        >
-          ดาวน์โหลด PNG
-        </button>
-      </div>
+      {checkInUrl ? (
+        <>
+          <p className="text-xs text-[#66638c]">
+            นำไปปริ๊นต์วางจุดเช็ค — พนักงานสแกนแล้วเลือก &quot;พนักงาน&quot; ยืนยันด้วยเบอร์ในรายชื่อ
+          </p>
 
-      <p className="text-xs text-slate-500">
-        นำไปปริ๊นต์วางจุดเช็ค — พนักงานสแกนแล้วเลือก &quot;พนักงาน&quot; ยืนยันด้วยเบอร์ในรายชื่อ
-      </p>
-
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-100 p-6">
-        {posterPreviewUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={posterPreviewUrl} alt="ตัวอย่างโปสเตอร์ QR เช็คชื่อ" className="mx-auto w-[340px] rounded-3xl shadow-md" />
-        ) : (
-          <div className="mx-auto flex h-[560px] w-[340px] items-center justify-center rounded-3xl border border-slate-300 bg-white text-xs text-slate-500">
-            กำลังเรนเดอร์ตัวอย่าง...
+          <div className={attendancePosterPreviewShellClass}>
+            {posterPreviewUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={posterPreviewUrl} alt="ตัวอย่างโปสเตอร์ QR เช็คอิน" className="mx-auto w-[340px] rounded-3xl shadow-md" />
+            ) : (
+              <div className="mx-auto flex h-[560px] w-[340px] items-center justify-center rounded-3xl border border-[#e1e3ff] bg-white text-xs text-[#66638c]">
+                กำลังเรนเดอร์ตัวอย่าง...
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      ) : null}
     </div>
   );
 }

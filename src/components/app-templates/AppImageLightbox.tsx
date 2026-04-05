@@ -31,7 +31,7 @@ export function AppImageLightbox({ src, alt = "ภาพ", onClose }: AppImageLi
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/85 px-[max(12px,env(safe-area-inset-left))] pb-[max(12px,env(safe-area-inset-bottom))] pr-[max(12px,env(safe-area-inset-right))] pt-14 sm:px-5 sm:pb-5 sm:pt-16"
+      className="fixed inset-0 z-[240] flex items-center justify-center bg-slate-950/85 px-[max(12px,env(safe-area-inset-left))] pb-[max(12px,env(safe-area-inset-bottom))] pr-[max(12px,env(safe-area-inset-right))] pt-14 sm:px-5 sm:pb-5 sm:pt-16"
       role="dialog"
       aria-modal="true"
       aria-label={alt}

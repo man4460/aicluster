@@ -3,7 +3,7 @@ import { bangkokDateKey } from "@/lib/time/bangkok";
 
 export type AttendanceTokenResult = { ok: true } | { ok: false; reason: "no_tokens" };
 
-/** สายรายวัน: เข้าโมดูลเช็คชื่อหัก 1 โทเคน/วัน Bangkok ที่บัญชีเจ้าของ (billing user) */
+/** สายรายวัน: เข้าโมดูล «เช็คอินอัจฉริยะ» หัก 1 โทเคน/วัน Bangkok ที่บัญชีเจ้าของ (billing user) */
 export async function applyAttendanceModuleTokenDeduction(billingUserId: string): Promise<AttendanceTokenResult> {
   return prisma.$transaction(async (tx): Promise<AttendanceTokenResult> => {
     const user = await tx.user.findUnique({ where: { id: billingUserId } });

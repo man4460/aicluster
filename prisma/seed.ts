@@ -74,7 +74,7 @@ async function main() {
   const moduleSeeds = [
     {
       slug: "attendance",
-      title: "ระบบเช็คชื่ออัจฉริยะ",
+      title: "เช็คอินอัจฉริยะ",
       description: "กลุ่ม 1 (Basic) — เช็คเข้า-ออก GPS · หลังบ้าน · พนักงานใต้เจ้าของ",
       groupId: 1,
       sortOrder: 10,

@@ -6,7 +6,7 @@ import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { ATTENDANCE_MODULE_SLUG } from "@/lib/modules/config";
 import { applyAttendanceModuleTokenDeduction } from "./attendance-module-deduction";
 
-/** Layout ใต้ /dashboard/attendance — สิทธิ์ตามเจ้าของ + หักโทเคนรายวันที่บัญชีเจ้าของ */
+/** Shell ใต้ /dashboard/attendance — สิทธิ์ตามเจ้าของ + หักโทเคนรายวันที่บัญชีเจ้าของ */
 export async function requireAttendanceSection() {
   const session = await getSession();
   if (!session) redirect("/login");

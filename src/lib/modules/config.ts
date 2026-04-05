@@ -4,7 +4,7 @@ import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enum
 export const MAX_MODULE_GROUP = 5 as const;
 
 /**
- * สายรายวันเคยจำกัดเฉพาะเช็คชื่อ — ปัจจุบันใช้ `canAccessAppModule`: กลุ่ม 1 ทั้งหมดเมื่อมีโทเคน
+ * สายรายวันเคยจำกัดเฉพาะเช็คอิน — ปัจจุบันใช้ `canAccessAppModule`: กลุ่ม 1 ทั้งหมดเมื่อมีโทเคน
  * (ค่านี้ยัง export ไว้สำหรับอ้างอิง/สคริปต์เก่า)
  */
 export const DAILY_ALLOWED_MODULE_SLUG = "attendance" as const;
@@ -13,7 +13,7 @@ export const DAILY_ALLOWED_MODULE_SLUG = "attendance" as const;
 export const DORMITORY_MODULE_SLUG = "dormitory" as const;
 export const DORMITORY_MODULE_GROUP_ID = 1 as const;
 
-/** เช็คชื่ออัจฉริยะ — slug ตรง module_list */
+/** เช็คอินอัจฉริยะ — slug ตรง module_list */
 export const ATTENDANCE_MODULE_SLUG = "attendance" as const;
 export const ATTENDANCE_MODULE_GROUP_ID = 1 as const;
 
@@ -36,7 +36,7 @@ export const PARKING_MODULE_GROUP_ID = 1 as const;
 
 /** ชื่อแสดงในการ์ด/เมนู — ให้ตรงกันทุกที่แม้ DB เก่าจะยังเป็นชื่อสั้น */
 export function displayAppModuleTitle(slug: string, title: string): string {
-  if (slug === ATTENDANCE_MODULE_SLUG) return "ระบบเช็คชื่ออัจฉริยะ";
+  if (slug === ATTENDANCE_MODULE_SLUG) return "เช็คอินอัจฉริยะ";
   if (slug === HOME_FINANCE_BASIC_MODULE_SLUG) return "รายรับ–รายจ่าย";
   if (slug === CAR_WASH_MODULE_SLUG) return "ระบบจัดการคาร์แคร์";
   if (slug === MQTT_SERVICE_MODULE_SLUG) return "ระบบบริการ MQTT";
@@ -60,7 +60,7 @@ export const MODULE_GROUP_TIER_NAME: Record<number, string> = {
 
 /** สรุปฟีเจอร์ต่อกลุ่ม (ใช้ในหน้าแพ็กเกจ / คำอธิบาย) */
 export const MODULE_GROUP_FEATURE_SUMMARY: Record<number, string> = {
-  1: "เช็คชื่อ · หอพัก · หมู่บ้าน · ตัดผม · คาร์แคร์ · จอดรถ · MQTT · POS อาคาร · รายรับ–รายจ่าย (สายรายวัน)",
+  1: "เช็คอินอัจฉริยะ · หอพัก · หมู่บ้าน · ตัดผม · คาร์แคร์ · จอดรถ · MQTT · POS อาคาร · รายรับ–รายจ่าย (สายรายวัน)",
   2: "สต็อก · พิมพ์ใบเสร็จ",
   3: "Dashboard วิเคราะห์ · แชทระหว่างสาขา",
   4: "จัดการพนักงาน · เงินเดือน",

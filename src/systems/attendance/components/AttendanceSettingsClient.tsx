@@ -3,6 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AttendancePlanQuota } from "@/lib/attendance/plan-quota";
 import { ATTENDANCE_MAX_SHIFTS_PER_LOCATION } from "@/lib/attendance/plan-quota";
+import { cn } from "@/lib/cn";
+import {
+  attendanceInsetClass,
+  attendanceLabelClass,
+  attendancePanelClass,
+  attendanceSectionTitleClass,
+} from "@/systems/attendance/attendance-ui";
 
 type ShiftRow = { startTime: string; endTime: string };
 type LocRow = {
@@ -150,35 +157,19 @@ export function AttendanceSettingsClient() {
   }
 
   if (loading) {
-    return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-500">กำลังโหลด…</p>
-      </div>
-    );
+    return <p className="text-sm text-[#66638c]">กำลังโหลด…</p>;
   }
 
   if (!quota) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm">
+      <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
         {err ?? "ไม่สามารถโหลดข้อมูลได้"}
-      </div>
+      </p>
     );
   }
 
   return (
     <form onSubmit={onSave} className="space-y-4">
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="text-sm font-bold text-slate-900">แพ็กเกจและข้อจำกัด</h2>
-        <p className="mt-1 text-xs text-slate-600">{quota.label}</p>
-        <ul className="mt-3 list-inside list-disc space-y-1 border-t border-slate-100 pt-3 text-xs text-slate-600">
-          <li>พนักงานในรายชื่อ: ไม่จำกัดจำนวน</li>
-          <li>โลเคชันจุดเช็ค: 1 แห่ง</li>
-          <li>
-            กะต่อจุดเช็ค: สูงสุด {quota.maxShiftsPerLocation} กะ — กำหนดช่วงเวลาแล้วให้พนักงานเลือกกะในรายชื่อ
-          </li>
-        </ul>
-      </section>
-
       {err ? (
         <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{err}</p>
       ) : null}
@@ -207,12 +198,12 @@ export function AttendanceSettingsClient() {
           </div>
 
           <div className="mt-4 space-y-4">
-            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-              <p className="text-xs font-semibold text-slate-800">ชื่อและตำแหน่ง</p>
-              <label className="mt-3 block text-xs font-semibold text-slate-700">
+            <div className={attendanceInsetClass}>
+              <p className={cn(attendanceSectionTitleClass, "text-xs")}>ชื่อและตำแหน่ง</p>
+              <label className={cn("mt-3 block", attendanceLabelClass)}>
                 ชื่อจุดเช็ค (แสดงบนหน้าเช็ค / QR)
                 <input
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2"
+                  className="mt-1 w-full rounded-xl border border-[#e1e3ff] bg-white px-3 py-2"
                   value={loc.name}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -237,12 +228,12 @@ export function AttendanceSettingsClient() {
                     }}
                   />
                 </label>
-                <label className="text-xs font-semibold text-slate-700">
+                <label className={attendanceLabelClass}>
                   ลองจิจูด
                   <input
                     type="number"
                     step="any"
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2"
+                    className="mt-1 w-full rounded-xl border border-[#e1e3ff] bg-white px-3 py-2"
                     value={loc.allowedLocationLng}
                     onChange={(e) => {
                       const n = Number(e.target.value);
@@ -258,21 +249,21 @@ export function AttendanceSettingsClient() {
                 type="button"
                 disabled={geoBusyIndex === li}
                 onClick={() => fillLocationFromDevice(li)}
-                className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 sm:w-auto"
+                className="mt-3 w-full rounded-xl border border-[#d8d6ec] bg-white px-4 py-2.5 text-sm font-semibold text-[#2e2a58] shadow-sm transition hover:bg-[#faf9ff] disabled:opacity-50 sm:w-auto"
               >
                 {geoBusyIndex === li ? "กำลังดึงตำแหน่ง…" : "ดึงตำแหน่งจากอุปกรณ์นี้"}
               </button>
             </div>
 
-            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-              <p className="text-xs font-semibold text-slate-800">รัศมีอนุญาต</p>
-              <label className="mt-3 block text-xs font-semibold text-slate-700">
+            <div className={attendanceInsetClass}>
+              <p className={cn(attendanceSectionTitleClass, "text-xs")}>รัศมีอนุญาต</p>
+              <label className={cn("mt-3 block", attendanceLabelClass)}>
                 รัศมี (เมตร) — พนักงานต้องอยู่ในระยะนี้จากจุดกลาง
                 <input
                   type="number"
                   min={10}
                   max={5000}
-                  className="mt-1 w-full max-w-xs rounded-xl border border-slate-200 bg-white px-3 py-2"
+                  className="mt-1 w-full max-w-xs rounded-xl border border-[#e1e3ff] bg-white px-3 py-2"
                   value={loc.radiusMeters}
                   onChange={(e) => {
                     const n = Number(e.target.value);
@@ -284,20 +275,20 @@ export function AttendanceSettingsClient() {
               </label>
             </div>
 
-            <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-              <p className="text-xs font-semibold text-slate-800">
+            <div className={attendanceInsetClass}>
+              <p className={cn(attendanceSectionTitleClass, "text-xs")}>
                 กะ (สูงสุด {ATTENDANCE_MAX_SHIFTS_PER_LOCATION})
               </p>
               <div className="mt-3 space-y-3">
                 {loc.shifts.map((sh, si) => (
                   <div
                     key={si}
-                    className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200/80 bg-white p-3"
+                    className="flex flex-wrap items-end gap-3 rounded-lg border border-[#e1e3ff] bg-white p-3"
                   >
-                    <label className="text-[11px] font-medium text-slate-600">
+                    <label className="text-[11px] font-medium text-[#66638c]">
                       เริ่ม (HH:mm)
                       <input
-                        className="mt-0.5 block w-[100px] rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                        className="mt-0.5 block w-[100px] rounded-lg border border-[#e1e3ff] px-2 py-1.5 text-sm"
                         value={sh.startTime}
                         onChange={(e) => {
                           const v = e.target.value;
@@ -376,7 +367,7 @@ export function AttendanceSettingsClient() {
       ))}
 
       {canAddLocation ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center shadow-sm">
+        <div className="rounded-2xl border border-dashed border-[#d8d6ec] bg-[#faf9ff]/50 p-4 text-center shadow-sm">
           <button
             type="button"
             className="text-sm font-bold text-[#0000BF] hover:underline"
@@ -387,7 +378,7 @@ export function AttendanceSettingsClient() {
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className={cn("flex flex-wrap items-center gap-3", attendancePanelClass)}>
         <button
           type="submit"
           disabled={saving || locations.length === 0}

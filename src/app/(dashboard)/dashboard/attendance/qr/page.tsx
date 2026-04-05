@@ -1,13 +1,16 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { PageHeader } from "@/components/ui/page-container";
 import { getBusinessProfile } from "@/lib/profile/business-profile";
 import { ensureAttendanceLocationsFromLegacy } from "@/lib/attendance/location-ensure";
 import { AttendanceQrPosterClient } from "@/systems/attendance/components/AttendanceQrPosterClient";
 import { getServerAppBaseUrl } from "@/lib/url/server-app-base-url";
 import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
-
+import {
+  HomeFinanceListHeading,
+  HomeFinancePageSection,
+  HomeFinanceSectionHeader,
+} from "@/systems/home-finance/components/HomeFinanceUi";
 export default async function AttendanceQrPage() {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -33,26 +36,26 @@ export default async function AttendanceQrPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <HomeFinancePageSection>
+      <HomeFinanceSectionHeader
         title="QR จุดเช็คอิน"
-        description="ลิงก์และ QR อัปเดตตามโดเมน (NEXT_PUBLIC_APP_URL / VERCEL_URL) และตามจุดเช็คที่ตั้งในเมนูตั้งค่า — แยก QR ต่อโลเคชันได้"
+        description="คัดลอกลิงก์หรือดาวน์โหลดโปสเตอร์ — แยกตามจุดเช็ค"
       />
       {locations.length === 0 ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           ยังไม่มีจุดเช็ค — ไปที่{" "}
           <a href="/dashboard/attendance/settings" className="font-semibold underline">
-            ตั้งค่าเช็คชื่อ
+            ตั้งค่าเช็คอิน
           </a>{" "}
           แล้วบันทึกอย่างน้อยหนึ่งโลเคชัน
         </p>
       ) : (
-        <div className="space-y-12">
+        <div className="space-y-10">
           {locations.map((loc) => (
-            <section key={loc.id} className="space-y-4 border-b border-slate-200 pb-10 last:border-0">
-              <h2 className="text-base font-bold text-slate-900">
+            <section key={loc.id} className="space-y-4 border-b border-slate-100 pb-8 last:border-0 last:pb-0">
+              <HomeFinanceListHeading>
                 {loc.name.trim() || `จุดเช็ค #${loc.id}`}
-              </h2>
+              </HomeFinanceListHeading>
               <AttendanceQrPosterClient
                 ownerId={session.sub}
                 sandboxTrialSessionId={scope.isTrialSandbox ? scope.trialSessionId : null}
@@ -66,6 +69,6 @@ export default async function AttendanceQrPage() {
           ))}
         </div>
       )}
-    </div>
+    </HomeFinancePageSection>
   );
 }

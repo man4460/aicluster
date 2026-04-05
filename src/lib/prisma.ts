@@ -6,7 +6,7 @@ import { getAuditActor } from "@/lib/audit-context";
  * เพิ่มทุกครั้งที่แก้ schema แล้วต้องการให้ dev โหลด PrismaClient ใหม่
  * (แก้กรณี globalThis.prisma ค้างตัวเก่าหลัง prisma generate — select ฟิลด์ใหม่แล้ว error)
  */
-const PRISMA_SINGLETON_VERSION = 33;
+const PRISMA_SINGLETON_VERSION = 34;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;

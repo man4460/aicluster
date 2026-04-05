@@ -6,12 +6,26 @@ export function isPrismaSchemaMismatchError(e: unknown): boolean {
     return e.code === "P2022" || e.code === "P2021";
   }
   const msg = e instanceof Error ? e.message : String(e);
-  // MySQL driver บางเวอร์ชันส่งเป็น Error ธรรมดา
-  if (/Unknown column/i.test(msg) && (/fee_cycle|village_houses/i.test(msg) || /\b1054\b/.test(msg))) {
+  // MySQL driver บางเวอร์ชันส่งเป็น Error ธรรมดา — 1054 = unknown column
+  if (
+    /Unknown column/i.test(msg) &&
+    (/fee_cycle|village_houses|photo_url|attendance_roster|check_in_face/i.test(msg) || /\b1054\b/.test(msg))
+  ) {
     return true;
   }
   return false;
 }
+
+/**
+ * Client ที่ generate แล้วไม่ตรงกับ schema (เช่น มีฟิลด์ใน schema แต่โค้ดรันด้วย client เก่า)
+ * มักเกิดหลัง git pull โดยยังไม่รัน prisma generate / ยังไม่รีบิลด์ Next
+ */
+export function isPrismaClientValidationSyncError(e: unknown): boolean {
+  return e instanceof Prisma.PrismaClientValidationError;
+}
+
+export const PRISMA_GENERATE_HINT_TH =
+  "Prisma Client ไม่ตรงกับ schema — ที่รากโปรเจกต์รัน npx prisma generate แล้วรีสตาร์ทเซิร์ฟเวอร์ (หรือรีบิลด์แอป)";
 
 export function isPrismaUniqueViolation(e: unknown): boolean {
   return e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
@@ -19,3 +33,7 @@ export function isPrismaUniqueViolation(e: unknown): boolean {
 
 export const PRISMA_SYNC_HINT_TH =
   "ฐานข้อมูลยังไม่อัปเดต schema — ที่รากโปรเจกต์รัน npx prisma migrate deploy แล้ว npx prisma generate จากนั้นรีสตาร์ทเซิร์ฟเวอร์";
+
+/** ใช้เมื่อไม่แน่ใจว่าเป็น DB หรือ client — ครอบทั้ง migrate + generate */
+export const PRISMA_FULL_SYNC_HINT_TH =
+  "ให้ที่รากโปรเจกต์รัน: npx prisma migrate deploy แล้ว npx prisma generate จากนั้นรีสตาร์ทเซิร์ฟเวอร์ (หรือรีบิลด์ production)";

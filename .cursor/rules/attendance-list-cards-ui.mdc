@@ -1,0 +1,43 @@
+---
+description: เช็คอิน / รายชื่อพนักงาน — การ์ดรายการกระชับ จัดซ้าย–ขวา และรูปตาม app-templates
+globs:
+  - "src/systems/attendance/**/*.{ts,tsx}"
+  - "src/app/**/dashboard/**/attendance/**/*.tsx"
+alwaysApply: false
+---
+
+# การ์ดรายการโมดูลเช็คอิน (รายชื่อพนักงาน ฯลฯ)
+
+เมื่อเพิ่มหรือแก้ **รายการเป็นการ์ด** ในระบบเช็คอิน — ให้ทำครบในครั้งเดียวตามนี้ ไม่ต้องรอให้ผู้ใช้สั่งซ้ำเรื่อง “จัดระเบียบ / กระชับ / เฉลี่ยซ้ายขวา”:
+
+## โครงการ์ด
+
+1. **กระชับ** — padding การ์ดประมาณ `p-2.5 sm:p-3`; ระยะระหว่างการ์ดในรายการ `gap-1.5 sm:gap-2` (ไม่เว้นโล่งเกินจำเป็น)
+
+2. **เฉลี่ย / แบ่งซ้าย–ขวา** — ใช้ `flex` + `justify-between` + `items-start` หรือ `items-end` ตามแถว:
+   - **ซ้าย**: ข้อมูลหลัก (`min-w-0 flex-1 pr-1`) — ชื่อ เบอร์ คำอธิบาย
+   - **ขวา**: สถานะ ปุ่มสำคัญ (`shrink-0`)
+
+3. **ข้อความไทย** — หัวข้อ/ชื่อยาวใช้ `text-balance` และ `line-clamp-2` ถ้าจำเป็น; **ห้ามใช้ `uppercase`** กับข้อความไทยในป้ายการ์ด
+
+4. **เบอร์โทร / รหัสยาว** — ใช้ `truncate` + `title={…}` ให้เห็นเต็มเมื่อโฮเวอร์/กดค้าง แทน `break-all` ยาวเต็มบรรทัดถ้าเป้าหมายคือการ์ดสะอาด
+
+5. **แยกโซนในการ์ด** — คั่นแถวด้วย `border-t border-slate-100` หรือ `border-dashed border-slate-100` + `pt-1.5`–`pt-2` แทนการเว้นวรรคใหญ่หลายชั้นโดยไม่จำเป็น
+
+6. **ป้ายสถานะ** — ให้สมส่วนกับการ์ดกระชับ: ประมาณ `text-[10px]`–`text-[11px]`, `px-2 py-0.5`, `rounded-md`
+
+7. **แถวควบคุมล่าง** (เช่น เลือกกะ + ลบรายการ) — แถวเดียว `flex flex-wrap items-end justify-between gap-2`; ฟิลด์หลัก `flex-1 min-w-0`; ปุ่มทำลาย `shrink-0`
+
+8. **มือถือ** — select / ปุ่มแตะหลักยังใช้ `min-h-[40px]`–`min-h-[44px]` และ `touch-manipulation` ตามที่หน้าเดิมใช้
+
+## รูปโปรไฟล์ / สลิป / lightbox
+
+- ใช้ **`AppImageThumb`**, **`AppImageLightbox`**, **`useAppImageLightbox`**, **`AppGalleryCameraFileInputs`**, **`AppImagePickCameraButtons`**, **`AppCameraCaptureModal`** จาก `@/components/app-templates` ตามกฎ **`app-templates-media`** — ห้ามทำ thumb/lightbox/input กล้องแยกสไตล์ใหม่ในโมดูลนี้
+
+## โทนสี (template เดียวกับ Shell)
+
+- ใช้โทเค็นใน **`src/systems/attendance/attendance-ui.ts`** — `attendanceCardClass`, `attendancePanelClass`, `attendanceFilterBarClass`, `attendanceEmptyStateClass`, `attendanceInsetClass`, `attendanceLabelClass`, `attendanceSecondaryBtnClass`, `attendanceOutlineBtnClass` ฯลฯ — ให้ขอบ/พื้นหลัง/ตัวอักษรสอดคล้อง `AttendanceShell` และ `appDashboardSectionVioletClass` (#2e2a58 / #66638c / #e8e6fc / #4d47b6)
+
+## อ้างอิงโค้ด
+
+- แพทเทิร์นการ์ดรายชื่อพนักงาน: `src/systems/attendance/components/AttendanceRosterClient.tsx`

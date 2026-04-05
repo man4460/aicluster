@@ -26,19 +26,23 @@ export function AppImageThumb({
         type="button"
         onClick={() => onOpen?.()}
         className={cn(
-          "shrink-0 overflow-hidden rounded-xl ring-2 ring-slate-100 transition hover:ring-[#0000BF]/30",
+          "relative flex h-16 w-16 shrink-0 overflow-hidden rounded-xl ring-2 ring-slate-100 transition hover:ring-[#0000BF]/30",
           className,
         )}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={alt} className="h-16 w-16 object-cover" />
+        <img
+          src={src}
+          alt={alt}
+          className="h-full w-full min-h-0 min-w-0 object-cover object-center"
+        />
       </button>
     );
   }
   return (
     <div
       className={cn(
-        "flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-center text-[10px] leading-tight text-slate-400",
+        "flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-center text-[10px] leading-tight text-slate-400 ring-2 ring-slate-100",
         className,
       )}
     >

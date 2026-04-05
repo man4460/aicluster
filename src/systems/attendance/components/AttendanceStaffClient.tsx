@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { attendanceSectionTitleClass } from "@/systems/attendance/attendance-ui";
 
 type StaffRow = {
   id: string;
@@ -77,7 +78,7 @@ export function AttendanceStaffClient() {
         onSubmit={onCreate}
         className="app-surface max-w-xl space-y-3 rounded-2xl p-5"
       >
-        <h2 className="text-sm font-bold text-slate-900">เพิ่มพนักงาน</h2>
+        <h2 className={attendanceSectionTitleClass}>เพิ่มพนักงาน</h2>
         {err ? <p className="text-sm text-red-700">{err}</p> : null}
         {msg ? <p className="text-sm text-emerald-800">{msg}</p> : null}
         <input
@@ -119,19 +120,19 @@ export function AttendanceStaffClient() {
       </form>
 
       <div className="app-surface rounded-2xl p-5">
-        <h2 className="text-sm font-bold text-slate-900">รายชื่อพนักงาน</h2>
+        <h2 className={attendanceSectionTitleClass}>รายชื่อพนักงาน</h2>
         {loading ? (
-          <p className="mt-4 text-sm text-slate-500">กำลังโหลด…</p>
+          <p className="mt-4 text-sm text-[#66638c]">กำลังโหลด…</p>
         ) : list.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">ยังไม่มี</p>
+          <p className="mt-4 text-sm text-[#66638c]">ยังไม่มี</p>
         ) : (
-          <ul className="mt-4 divide-y divide-slate-100">
+          <ul className="mt-4 divide-y divide-[#e8e6fc]/90">
             {list.map((s) => (
               <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
                 <div>
-                  <p className="font-medium text-slate-900">{s.username}</p>
-                  <p className="text-xs text-slate-600">{s.email}</p>
-                  {s.fullName ? <p className="text-xs text-slate-500">{s.fullName}</p> : null}
+                  <p className="font-medium text-[#2e2a58]">{s.username}</p>
+                  <p className="text-xs text-[#66638c]">{s.email}</p>
+                  {s.fullName ? <p className="text-xs text-[#9b98c4]">{s.fullName}</p> : null}
                 </div>
                 <button
                   type="button"

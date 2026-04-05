@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { distanceMeters } from "@/lib/geo/haversine";
 import { MawellThBrandHeader } from "@/components/branding/MawellThBrandHeader";
+import { attendanceStepBoxClass } from "@/systems/attendance/attendance-ui";
 
 const statusTh: Record<string, string> = {
   AWAITING_CHECKOUT: "รอเช็คออก",
@@ -76,7 +77,7 @@ type Props =
 
 type PublicFlow = "pick" | "staff" | "external";
 
-const stepBox = "mt-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm";
+const stepBox = attendanceStepBoxClass;
 
 function StepDoneMark({ done, label = "ทำครบแล้ว" }: { done: boolean; label?: string }) {
   if (!done) return null;
@@ -112,14 +113,14 @@ function PublicCheckInHeader({
   return (
     <header className="flex flex-col items-center gap-3 text-center">
       {logoUrl ? (
-        <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-[#e8e6fc] bg-white shadow-sm">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={logoUrl} alt={orgName} className="max-h-full max-w-full object-contain p-1" />
         </div>
       ) : null}
-      <h1 className="text-xl font-bold leading-snug text-slate-900">{orgName}</h1>
+      <h1 className="text-xl font-bold leading-snug text-[#2e2a58]">{orgName}</h1>
       {locationLabel?.trim() ? (
-        <p className="text-xs font-medium text-slate-500">จุดเช็ค · {locationLabel.trim()}</p>
+        <p className="text-xs font-medium text-[#66638c]">จุดเช็ค · {locationLabel.trim()}</p>
       ) : null}
     </header>
   );
@@ -621,8 +622,8 @@ export function AttendanceCheckClient(props: Props) {
       ) : null}
 
       <div className="mt-8 rounded-2xl border border-[#0000BF]/15 bg-white px-5 py-6 shadow-sm">
-        <p className="text-center text-xs font-medium uppercase tracking-wider text-slate-500">เวลาปัจจุบัน</p>
-        <p className="mt-2 text-center text-3xl font-bold tabular-nums text-slate-900">
+        <p className="text-center text-xs font-medium uppercase tracking-wider text-[#66638c]">เวลาปัจจุบัน</p>
+        <p className="mt-2 text-center text-3xl font-bold tabular-nums text-[#2e2a58]">
           {now
             ? now.toLocaleTimeString("th-TH", {
                 timeZone: "Asia/Bangkok",
@@ -632,7 +633,7 @@ export function AttendanceCheckClient(props: Props) {
               })
             : "--:--:--"}
         </p>
-        <p className="mt-1 text-center text-sm text-slate-500">
+        <p className="mt-1 text-center text-sm text-[#66638c]">
           {now
             ? now.toLocaleDateString("th-TH", {
                 timeZone: "Asia/Bangkok",
@@ -648,8 +649,8 @@ export function AttendanceCheckClient(props: Props) {
       {isPublic ? (
         publicFlow === "pick" ? (
           <div className={stepBox} id={CHECK_STEP_1_ANCHOR_ID}>
-            <p className="text-sm font-semibold text-slate-900">ขั้นตอนที่ 1 · เลือกประเภทผู้เช็ค</p>
-            <p className="mt-1 text-xs text-slate-600">เลือกว่าเป็นพนักงานหรือบุคคลภายนอก</p>
+            <p className="text-sm font-semibold text-[#2e2a58]">ขั้นตอนที่ 1 · เลือกประเภทผู้เช็ค</p>
+            <p className="mt-1 text-xs text-[#66638c]">เลือกว่าเป็นพนักงานหรือบุคคลภายนอก</p>
             <div className="mt-4 space-y-3">
               <button
                 type="button"
@@ -677,7 +678,7 @@ export function AttendanceCheckClient(props: Props) {
                   setDataConsent(false);
                   clearFaceCapture();
                 }}
-                className="min-h-[52px] w-full rounded-2xl border-2 border-slate-300 bg-white py-3.5 text-base font-bold text-slate-800"
+                className="min-h-[52px] w-full rounded-2xl border-2 border-[#d8d6ec] bg-white py-3.5 text-base font-bold text-[#2e2a58]"
               >
                 บุคคลภายนอก — กรอกข้อมูลอิสระ
               </button>
@@ -700,24 +701,24 @@ export function AttendanceCheckClient(props: Props) {
               ← เปลี่ยนประเภทผู้เช็ค
             </button>
             <div className="mt-2 flex items-start justify-between gap-3">
-              <p className="min-w-0 flex-1 text-sm font-semibold text-slate-900">ขั้นตอนที่ 1 · เบอร์โทรและชื่อ</p>
+              <p className="min-w-0 flex-1 text-sm font-semibold text-[#2e2a58]">ขั้นตอนที่ 1 · เบอร์โทรและชื่อ</p>
               <StepDoneMark done={step1PublicFormDone} label="กรอกเบอร์และชื่อครบแล้ว" />
             </div>
-            <p className="mt-1 text-xs text-slate-600">
+            <p className="mt-1 text-xs text-[#66638c]">
               {openLog
                 ? "เบอร์นี้มีการเช็คเข้าค้าง — ตรวจสอบรายละเอียดที่ขั้นตอนสุดท้าย แล้วดึง GPS ก่อนกดเช็คออก"
                 : publicFlow === "staff"
                   ? "เบอร์ต้องตรงรายชื่อที่เจ้าของลงทะเบียน — กดค้นหาชื่อก่อนเช็คเข้า"
                   : "กรอกเบอร์และชื่อตามจริง — ไม่ต้องอยู่ในรายชื่อพนักงาน"}
             </p>
-            <label className="mt-3 block text-xs font-semibold text-slate-700">
+            <label className="mt-3 block text-xs font-semibold text-[#2e2a58]">
               เบอร์โทร
               <input
                 type="tel"
                 inputMode="numeric"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
-                className="mt-1 w-full rounded-2xl border-2 border-slate-200 px-4 py-3 text-lg outline-none focus:border-[#0000BF]/40"
+                className="mt-1 w-full rounded-2xl border-2 border-[#e1e3ff] px-4 py-3 text-lg outline-none focus:border-[#0000BF]/40"
                 placeholder="0812345678"
               />
             </label>
@@ -731,13 +732,13 @@ export function AttendanceCheckClient(props: Props) {
               </button>
             ) : null}
             {!openLog ? (
-              <label className="mt-3 block text-xs font-semibold text-slate-700">
+              <label className="mt-3 block text-xs font-semibold text-[#2e2a58]">
                 {publicFlow === "staff" ? "ชื่อ (ดึงจากรายชื่อ หรือแก้ได้)" : "ชื่อ / หมายเหตุ (อิสระ)"}
                 <input
                   type="text"
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value.slice(0, 100))}
-                  className="mt-1 w-full rounded-2xl border-2 border-slate-200 px-4 py-3 outline-none focus:border-[#0000BF]/40"
+                  className="mt-1 w-full rounded-2xl border-2 border-[#e1e3ff] px-4 py-3 outline-none focus:border-[#0000BF]/40"
                   placeholder={publicFlow === "external" ? "เช่น คุณสมศรี — ผู้รับเหมา" : ""}
                 />
               </label>
@@ -747,10 +748,10 @@ export function AttendanceCheckClient(props: Props) {
       ) : (
         <div className={stepBox} id={CHECK_STEP_1_ANCHOR_ID}>
           <div className="flex items-start justify-between gap-3">
-            <p className="min-w-0 flex-1 text-sm font-semibold text-slate-900">ขั้นตอนที่ 1 · ตัวตนผู้เช็ค</p>
+            <p className="min-w-0 flex-1 text-sm font-semibold text-[#2e2a58]">ขั้นตอนที่ 1 · ตัวตนผู้เช็ค</p>
             <StepDoneMark done={step1SessionIdentityDone} label="ล็อกอินแล้ว" />
           </div>
-          <p className="mt-1 text-xs text-slate-600">
+          <p className="mt-1 text-xs text-[#66638c]">
             {openLog
               ? "มีการเช็คเข้าค้าง — ดำเนินการเช็คออกได้ที่ขั้นตอนถัดไป (ดึง GPS แล้วกดเช็คออก)"
               : "เข้าสู่ระบบด้วยบัญชีพนักงานแล้ว — ไม่ต้องกรอกเบอร์โทรในขั้นตอนนี้"}
@@ -762,12 +763,12 @@ export function AttendanceCheckClient(props: Props) {
         <>
           <div className={stepBox}>
             <div className="flex items-start justify-between gap-3">
-              <p className="min-w-0 flex-1 text-sm font-semibold text-slate-900">
+              <p className="min-w-0 flex-1 text-sm font-semibold text-[#2e2a58]">
                 {checkoutOnlyUi ? "ขั้นตอนที่ 2 · ดึงตำแหน่ง (เช็คออก)" : "ขั้นตอนที่ 2 · ดึงตำแหน่ง GPS"}
               </p>
               <StepDoneMark done={step2GpsDone} label="ตำแหน่งพร้อมแล้ว" />
             </div>
-            <p className="mt-1 text-xs text-slate-600">
+            <p className="mt-1 text-xs text-[#66638c]">
               {checkoutOnlyUi
                 ? isPublic
                   ? "กดปุ่มเพื่อยืนยันตำแหน่งก่อนเช็คชื่อออก — ต้องอยู่ในจุดเช็คที่องค์กรกำหนด"
@@ -776,7 +777,7 @@ export function AttendanceCheckClient(props: Props) {
                   ? "กดปุ่มด้านล่างเพื่อตรวจว่าอยู่ในจุดเช็คอินที่องค์กรกำหนด"
                   : "กดปุ่มด้านล่างเพื่อยืนยันตำแหน่ง — ตอนกดเช็คเข้า/ออกระบบจะส่งพิกัดใหม่อีกครั้ง"}
             </p>
-            <p className="mt-3 text-xs leading-relaxed text-slate-700">
+            <p className="mt-3 text-xs leading-relaxed text-[#2e2a58]">
               {geo.ok
                 ? geo.distance != null
                   ? `อยู่ในรัศมี — ห่างจุดเช็ค ~${Math.round(geo.distance)} เมตร`
@@ -798,15 +799,15 @@ export function AttendanceCheckClient(props: Props) {
             <>
               <div className={stepBox}>
                 <div className="flex items-start justify-between gap-3">
-                  <p className="min-w-0 flex-1 text-sm font-semibold text-slate-900">ขั้นตอนที่ 3 · ถ่ายรูปใบหน้า</p>
+                  <p className="min-w-0 flex-1 text-sm font-semibold text-[#2e2a58]">ขั้นตอนที่ 3 · ถ่ายรูปใบหน้า</p>
                   <StepDoneMark done={step3FaceDone} label="ถ่ายรูปแล้ว" />
                 </div>
-                <p className="mt-1 text-xs text-slate-600">
+                <p className="mt-1 text-xs text-[#66638c]">
                   ถ่ายจากกล้องเท่านั้น — เปิดกล้องหน้า แล้วกดยืนยันถ่ายรูป
                 </p>
                 {!facePreview ? (
                   cameraActive ? (
-                    <div className="mt-3 space-y-3 rounded-2xl border border-slate-200 bg-black p-2">
+                    <div className="mt-3 space-y-3 rounded-2xl border border-[#e8e6fc]/90 bg-black p-2">
                       <video
                         ref={videoRef}
                         className="mx-auto aspect-[3/4] w-full max-w-xs rounded-xl bg-black object-cover"
@@ -818,7 +819,7 @@ export function AttendanceCheckClient(props: Props) {
                         <button
                           type="button"
                           onClick={cancelFaceCamera}
-                          className="flex-1 rounded-xl border border-slate-300 bg-white py-2.5 text-sm font-semibold text-slate-800"
+                          className="flex-1 rounded-xl border border-[#d8d6ec] bg-white py-2.5 text-sm font-semibold text-[#2e2a58]"
                         >
                           ยกเลิก
                         </button>
@@ -835,20 +836,20 @@ export function AttendanceCheckClient(props: Props) {
                     <button
                       type="button"
                       onClick={() => void startFaceCamera()}
-                      className="mt-3 w-full rounded-2xl border-2 border-dashed border-[#0000BF]/40 bg-slate-50 py-10 text-center"
+                      className="mt-3 w-full rounded-2xl border-2 border-dashed border-[#0000BF]/40 bg-[#faf9ff] py-10 text-center"
                     >
                       <span className="text-sm font-bold text-[#0000BF]">เปิดกล้องถ่ายรูปใบหน้า</span>
-                      <span className="mt-1 block text-xs text-slate-500">อนุญาตการใช้กล้องเมื่อเบราว์เซอร์ถาม</span>
+                      <span className="mt-1 block text-xs text-[#66638c]">อนุญาตการใช้กล้องเมื่อเบราว์เซอร์ถาม</span>
                     </button>
                   )
                 ) : (
                   <div className="mt-3 space-y-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={facePreview} alt="" className="mx-auto max-h-56 w-full max-w-xs rounded-2xl border border-slate-200 object-cover" />
+                    <img src={facePreview} alt="" className="mx-auto max-h-56 w-full max-w-xs rounded-2xl border border-[#e8e6fc]/90 object-cover" />
                     <button
                       type="button"
                       onClick={clearFaceCapture}
-                      className="w-full rounded-xl border border-slate-200 bg-white py-2 text-sm font-semibold text-slate-800"
+                      className="w-full rounded-xl border border-[#e8e6fc]/90 bg-white py-2 text-sm font-semibold text-[#2e2a58]"
                     >
                       ถ่ายใหม่
                     </button>
@@ -858,18 +859,18 @@ export function AttendanceCheckClient(props: Props) {
 
               <div className={stepBox}>
                 <div className="flex items-start justify-between gap-3">
-                  <p className="min-w-0 flex-1 text-sm font-semibold text-slate-900">ขั้นตอนที่ 4 · ยินยอมให้เก็บข้อมูล</p>
+                  <p className="min-w-0 flex-1 text-sm font-semibold text-[#2e2a58]">ขั้นตอนที่ 4 · ยินยอมให้เก็บข้อมูล</p>
                   <StepDoneMark done={step4ConsentDone} label="ยินยอมแล้ว" />
                 </div>
-                <p className="mt-1 text-xs text-slate-600">อ่านแล้วติ๊กยืนยันก่อนกดเข้างาน</p>
-                <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+                <p className="mt-1 text-xs text-[#66638c]">อ่านแล้วติ๊กยืนยันก่อนกดเข้างาน</p>
+                <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-xl border border-[#e8e6fc]/70 bg-[#faf9ff]/90 p-3">
                   <input
                     type="checkbox"
                     checked={dataConsent}
                     onChange={(e) => setDataConsent(e.target.checked)}
-                    className="mt-1 h-5 w-5 shrink-0 rounded border-slate-300 text-[#0000BF] focus:ring-[#0000BF]/30"
+                    className="mt-1 h-5 w-5 shrink-0 rounded border-[#d8d6ec] text-[#0000BF] focus:ring-[#0000BF]/30"
                   />
-                  <span className="text-sm leading-snug text-slate-700">
+                  <span className="text-sm leading-snug text-[#2e2a58]">
                     ข้าพเจ้ายินยอมให้เก็บพิกัด GPS รูปใบหน้า และบันทึกเวลาเข้า-ออกงาน เพื่อการเช็คชื่อและหลักฐานตามที่องค์กรกำหนด
                   </span>
                 </label>
@@ -880,7 +881,7 @@ export function AttendanceCheckClient(props: Props) {
           {showFaceCapture ? (
             <div className={stepBox}>
               <div className="flex items-start justify-between gap-3">
-                <p className="min-w-0 flex-1 text-sm font-semibold text-slate-900">
+                <p className="min-w-0 flex-1 text-sm font-semibold text-[#2e2a58]">
                   {checkoutOnlyUi ? "ขั้นตอนที่ 3 · เช็คชื่อออก" : "ขั้นตอนที่ 5 · บันทึกเวลาเข้า-ออก"}
                 </p>
                 <StepDoneMark
@@ -888,7 +889,7 @@ export function AttendanceCheckClient(props: Props) {
                   label={openLog ? "เช็คเข้าแล้ววันนี้" : "บันทึกครบวันแล้ว"}
                 />
               </div>
-              <p className="mt-1 text-xs text-slate-600">
+              <p className="mt-1 text-xs text-[#66638c]">
                 {checkoutOnlyUi
                   ? isPublic
                     ? "ระบบดึงรายละเอียดการเข้างานแล้ว — กดเช็คชื่อออกเมื่อพร้อม (ต้องดึง GPS ในขั้นตอนที่ 2)"
@@ -897,26 +898,26 @@ export function AttendanceCheckClient(props: Props) {
                     ? "กรอกเบอร์ครบแล้วระบบจะดึงสถานะอัตโนมัติ — หากมีการเช็คเข้าในระบบจะแสดงรายละเอียดด้านล่างและให้กดเช็คชื่อออก"
                     : "ตรวจสอบสถานะวันนี้ แล้วกดปุ่มที่ต้องการ"}
               </p>
-                <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-3">
-                  <p className="text-center text-xs font-semibold text-slate-600">สถานะวันนี้</p>
+                <div className="mt-3 rounded-xl border border-[#e8e6fc]/70 bg-[#faf9ff]/90 px-3 py-3">
+                  <p className="text-center text-xs font-semibold text-[#66638c]">สถานะวันนี้</p>
                   {openLog ? (
-                    <div className="mt-3 space-y-3 text-left text-sm text-slate-800">
+                    <div className="mt-3 space-y-3 text-left text-sm text-[#2e2a58]">
                       <p className="text-center text-sm font-semibold text-emerald-800">
                         พบบันทึกเช็คเข้าวันนี้ — ตรวจสอบรายละเอียดแล้วกดเช็คชื่อออก
                       </p>
-                      <div className="space-y-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs">
-                        <div className="flex justify-between gap-2 border-b border-slate-100 pb-2">
-                          <span className="text-slate-500">เวลาเข้างาน</span>
-                          <span className="text-right font-medium text-slate-900">{formatThDateTime(openLog.checkInTime)}</span>
+                      <div className="space-y-2 rounded-xl border border-[#e8e6fc]/90 bg-white px-3 py-3 text-xs">
+                        <div className="flex justify-between gap-2 border-b border-[#e8e6fc]/80 pb-2">
+                          <span className="text-[#66638c]">เวลาเข้างาน</span>
+                          <span className="text-right font-medium text-[#2e2a58]">{formatThDateTime(openLog.checkInTime)}</span>
                         </div>
-                        <div className="flex justify-between gap-2 border-b border-slate-100 pb-2">
-                          <span className="text-slate-500">สถานะ</span>
+                        <div className="flex justify-between gap-2 border-b border-[#e8e6fc]/80 pb-2">
+                          <span className="text-[#66638c]">สถานะ</span>
                           <span className="text-right font-medium text-[#0000BF]">{statusTh[openLog.status] ?? openLog.status}</span>
                         </div>
                         {openLog.appliedShiftLabel ? (
-                          <div className="flex justify-between gap-2 border-b border-slate-100 pb-2">
-                            <span className="text-slate-500">กะที่ใช้คำนวณ</span>
-                            <span className="text-right font-medium text-slate-900">{openLog.appliedShiftLabel}</span>
+                          <div className="flex justify-between gap-2 border-b border-[#e8e6fc]/80 pb-2">
+                            <span className="text-[#66638c]">กะที่ใช้คำนวณ</span>
+                            <span className="text-right font-medium text-[#2e2a58]">{openLog.appliedShiftLabel}</span>
                           </div>
                         ) : null}
                         {openLog.lateCheckIn ? (
@@ -925,20 +926,20 @@ export function AttendanceCheckClient(props: Props) {
                         {isPublic ? (
                           <>
                             {openLog.guestPhone ? (
-                              <div className="flex justify-between gap-2 border-b border-slate-100 pb-2">
-                                <span className="text-slate-500">เบอร์โทร</span>
+                              <div className="flex justify-between gap-2 border-b border-[#e8e6fc]/80 pb-2">
+                                <span className="text-[#66638c]">เบอร์โทร</span>
                                 <span className="text-right font-medium">{openLog.guestPhone}</span>
                               </div>
                             ) : null}
                             {openLog.guestName ? (
-                              <div className="flex justify-between gap-2 border-b border-slate-100 pb-2">
-                                <span className="text-slate-500">ชื่อ</span>
+                              <div className="flex justify-between gap-2 border-b border-[#e8e6fc]/80 pb-2">
+                                <span className="text-[#66638c]">ชื่อ</span>
                                 <span className="text-right font-medium">{openLog.guestName}</span>
                               </div>
                             ) : null}
                             {openLog.publicVisitorKind ? (
-                              <div className="flex justify-between gap-2 border-b border-slate-100 pb-2">
-                                <span className="text-slate-500">ประเภทผู้เช็ค</span>
+                              <div className="flex justify-between gap-2 border-b border-[#e8e6fc]/80 pb-2">
+                                <span className="text-[#66638c]">ประเภทผู้เช็ค</span>
                                 <span className="text-right font-medium">
                                   {visitorKindTh[openLog.publicVisitorKind] ?? openLog.publicVisitorKind}
                                 </span>
@@ -946,8 +947,8 @@ export function AttendanceCheckClient(props: Props) {
                             ) : null}
                           </>
                         ) : (
-                          <div className="flex justify-between gap-2 border-b border-slate-100 pb-2">
-                            <span className="text-slate-500">ผู้เช็ค</span>
+                          <div className="flex justify-between gap-2 border-b border-[#e8e6fc]/80 pb-2">
+                            <span className="text-[#66638c]">ผู้เช็ค</span>
                             <span className="text-right font-medium">
                               {openLog.actorFullName?.trim() ||
                                 openLog.actorUsername ||
@@ -956,27 +957,27 @@ export function AttendanceCheckClient(props: Props) {
                             </span>
                           </div>
                         )}
-                        <div className="flex justify-between gap-2 border-b border-slate-100 pb-2">
-                          <span className="text-slate-500">พิกัดตอนเข้า (lat, lng)</span>
-                          <span className="max-w-[55%] text-right font-mono text-[11px] text-slate-700">
+                        <div className="flex justify-between gap-2 border-b border-[#e8e6fc]/80 pb-2">
+                          <span className="text-[#66638c]">พิกัดตอนเข้า (lat, lng)</span>
+                          <span className="max-w-[55%] text-right font-mono text-[11px] text-[#2e2a58]">
                             {formatCoord(openLog.checkInLat)}, {formatCoord(openLog.checkInLng)}
                           </span>
                         </div>
                         {openLog.note?.trim() ? (
                           <div className="pt-1">
-                            <span className="text-slate-500">หมายเหตุ</span>
-                            <p className="mt-1 text-slate-800">{openLog.note.trim()}</p>
+                            <span className="text-[#66638c]">หมายเหตุ</span>
+                            <p className="mt-1 text-[#2e2a58]">{openLog.note.trim()}</p>
                           </div>
                         ) : null}
                         {openLog.checkInFacePhotoUrl ? (
                           <div className="pt-2">
-                            <span className="text-slate-500">รูปใบหน้าตอนเข้า</span>
+                            <span className="text-[#66638c]">รูปใบหน้าตอนเข้า</span>
                             <div className="mt-2 flex justify-center">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={openLog.checkInFacePhotoUrl}
                                 alt="รูปตอนเช็คเข้า"
-                                className="max-h-48 max-w-full rounded-xl border border-slate-200 object-contain"
+                                className="max-h-48 max-w-full rounded-xl border border-[#e8e6fc]/90 object-contain"
                               />
                             </div>
                           </div>
@@ -984,12 +985,12 @@ export function AttendanceCheckClient(props: Props) {
                       </div>
                     </div>
                   ) : todayLatest?.checkOutTime ? (
-                    <div className="mt-2 text-center text-sm text-slate-700">
+                    <div className="mt-2 text-center text-sm text-[#2e2a58]">
                       <p>เช็คครบวันแล้ว</p>
-                      <p className="mt-1 text-xs text-slate-500">{statusTh[todayLatest.status] ?? todayLatest.status}</p>
+                      <p className="mt-1 text-xs text-[#66638c]">{statusTh[todayLatest.status] ?? todayLatest.status}</p>
                     </div>
                   ) : (
-                    <p className="mt-2 text-center text-sm text-slate-500">ยังไม่ได้เช็คเข้าวันนี้</p>
+                    <p className="mt-2 text-center text-sm text-[#66638c]">ยังไม่ได้เช็คเข้าวันนี้</p>
                   )}
                 </div>
               <div className="mt-4 flex flex-col gap-3">
@@ -1007,7 +1008,7 @@ export function AttendanceCheckClient(props: Props) {
                   type="button"
                   disabled={busy || !canCheckOut}
                   onClick={() => void onCheckOut()}
-                  className="min-h-[52px] w-full rounded-2xl border-2 border-slate-800 bg-white py-3.5 text-base font-bold text-slate-900 disabled:opacity-45"
+                  className="min-h-[52px] w-full rounded-2xl border-2 border-[#2e2a58]/35 bg-white py-3.5 text-base font-bold text-[#2e2a58] disabled:opacity-45"
                 >
                   เช็คชื่อออกงาน
                 </button>

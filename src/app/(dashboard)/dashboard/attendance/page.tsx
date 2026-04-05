@@ -1,5 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import {
+  AppDashboardSection,
+  AppSectionHeader,
+  appDashboardSectionSlateClass,
+  appTemplateOutlineButtonClass,
+} from "@/components/app-templates";
+import { cn } from "@/lib/cn";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bangkokDayStartEnd } from "@/lib/barber/bangkok-day";
@@ -78,79 +85,93 @@ export default async function AttendanceHomePage() {
   const remaining = Math.max(rosterTotal - rosterCheckedIn, 0);
 
   return (
-    <div className="space-y-7">
-      <div className="rounded-2xl border border-[#0000BF]/15 bg-gradient-to-r from-[#0000BF]/[0.04] via-white to-white p-5">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">สรุปเช็คชื่อวันนี้</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            อัปเดตตามข้อมูลจริงของวันนี้ (เวลาไทย) สำหรับเจ้าของระบบ
-          </p>
+    <div className="space-y-4 sm:space-y-6">
+      <AppDashboardSection tone="violet">
+        <AppSectionHeader
+          tone="violet"
+          title="สรุปวันนี้"
+          description="อัปเดตตามข้อมูลจริงของวันนี้ (เวลาไทย) สำหรับเจ้าของระบบ"
+        />
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <StatCard label="เข้างานแล้ว" value={checkedIn} hint="รวมผู้ที่เช็คชื่อเข้าแล้วทั้งหมด" accent="violet" />
+          <StatCard label="มาสาย" value={late} hint="เข้าเกินเวลาเริ่มกะที่ตั้งไว้" accent="amber" />
+          <StatCard label="ยังเหลือ" value={remaining} hint="คงเหลือจากรายชื่อพนักงาน QR ที่ยังไม่เข้า" accent="slate" />
+          <StatCard label="กำลังทำงาน" value={stillWorking} hint="เข้าแล้วและยังไม่เช็คออก" accent="green" />
+          <StatCard label="ออกงานแล้ว" value={checkedOut} hint="เช็คออกเรียบร้อยแล้ววันนี้" accent="indigo" />
         </div>
-      </div>
+        <div className="mt-5 flex flex-wrap items-center gap-2 sm:gap-3">
+          <Link
+            href="/dashboard/attendance/check"
+            className="app-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold sm:min-h-0"
+          >
+            เปิดหน้าเช็คอิน
+          </Link>
+          <Link
+            href="/dashboard/attendance/logs"
+            className={cn(
+              appTemplateOutlineButtonClass,
+              "inline-flex min-h-[44px] items-center justify-center sm:min-h-0",
+            )}
+          >
+            ดูรายงานย้อนหลัง
+          </Link>
+        </div>
+      </AppDashboardSection>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <StatCard label="เข้างานแล้ว" value={checkedIn} hint="รวมผู้ที่เช็คชื่อเข้าแล้วทั้งหมด" tone="blue" />
-        <StatCard label="มาสาย" value={late} hint="เข้าเกินเวลาเริ่มกะที่ตั้งไว้" tone="amber" />
-        <StatCard label="ยังเหลือ" value={remaining} hint="คงเหลือจากรายชื่อพนักงาน QR ที่ยังไม่เข้า" tone="slate" />
-        <StatCard label="กำลังทำงาน" value={stillWorking} hint="เข้าแล้วและยังไม่เช็คออก" tone="green" />
-        <StatCard label="ออกงานแล้ว" value={checkedOut} hint="เช็คออกเรียบร้อยแล้ววันนี้" tone="indigo" />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <Link
-          href="/dashboard/attendance/check"
-          className="rounded-xl bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a6]"
-        >
-          เปิดหน้าเช็คชื่อ
-        </Link>
-        <Link
-          href="/dashboard/attendance/logs"
-          className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          ดูรายงานย้อนหลัง
-        </Link>
-      </div>
-
-      <div className="space-y-4">
-        {attendanceLocs.length <= 1 ? (
-          <PublicCheckInLinkCopy
-            url={
-              baseUrl
-                ? publicCheckInUrl(
-                    baseUrl,
-                    session.sub,
-                    attendanceLocs[0]?.id ?? null,
-                    scope.trialSessionId,
-                    scope.isTrialSandbox,
-                  )
-                : publicCheckInUrl(
-                    "",
-                    session.sub,
-                    attendanceLocs[0]?.id ?? null,
-                    scope.trialSessionId,
-                    scope.isTrialSandbox,
-                  )
-            }
-          />
-        ) : (
-          <>
-            <p className="text-xs text-slate-600">
-              มีหลายโลเคชัน — ใช้ลิงก์ตามจุด (หรือสร้าง QR แยกในหน้า QR จุดเช็คอิน)
-            </p>
-            {attendanceLocs.map((loc) => (
+      <AppDashboardSection tone="violet">
+        <AppSectionHeader
+          tone="violet"
+          title="ลิงก์เช็คอินสาธารณะ"
+          description={
+            attendanceLocs.length > 1 ? (
+              <span>
+                มีหลายโลเคชัน — ใช้ลิงก์ตามจุด (หรือสร้าง QR แยกใน{" "}
+                <Link href="/dashboard/attendance/qr" className="font-semibold text-[#4d47b6] underline">
+                  QR จุดเช็คอิน
+                </Link>
+                )
+              </span>
+            ) : (
+              "แชร์ลิงก์หรือสร้างโปสเตอร์ QR จากเมนู QR จุดเช็คอิน — กดคัดลอกแล้วส่งต่อ"
+            )
+          }
+        />
+        <div className="mt-4 space-y-3 sm:space-y-4">
+          {attendanceLocs.length <= 1 ? (
+            <PublicCheckInLinkCopy
+              url={
+                baseUrl
+                  ? publicCheckInUrl(
+                      baseUrl,
+                      session.sub,
+                      attendanceLocs[0]?.id ?? null,
+                      scope.trialSessionId,
+                      scope.isTrialSandbox,
+                    )
+                  : publicCheckInUrl(
+                      "",
+                      session.sub,
+                      attendanceLocs[0]?.id ?? null,
+                      scope.trialSessionId,
+                      scope.isTrialSandbox,
+                    )
+              }
+            />
+          ) : (
+            attendanceLocs.map((loc) => (
               <PublicCheckInLinkCopy
                 key={loc.id}
-                title={`ลิงก์เช็คชื่อ · ${loc.name.trim() || `จุด #${loc.id}`}`}
+                title={`ลิงก์เช็คอิน · ${loc.name.trim() || `จุด #${loc.id}`}`}
                 url={
                   baseUrl
                     ? publicCheckInUrl(baseUrl, session.sub, loc.id, scope.trialSessionId, scope.isTrialSandbox)
                     : publicCheckInUrl("", session.sub, loc.id, scope.trialSessionId, scope.isTrialSandbox)
                 }
               />
-            ))}
-          </>
-        )}
-      </div>
+            ))
+          )}
+        </div>
+      </AppDashboardSection>
     </div>
   );
 }
@@ -159,29 +180,31 @@ function StatCard({
   label,
   value,
   hint,
-  tone,
+  accent,
 }: {
   label: string;
   value: number;
   hint: string;
-  tone: "blue" | "amber" | "slate" | "green" | "indigo";
+  accent: "violet" | "amber" | "slate" | "green" | "indigo";
 }) {
-  const toneClass =
-    tone === "blue"
-      ? "border-[#0000BF]/20 bg-[#0000BF]/[0.03]"
-      : tone === "amber"
-        ? "border-amber-200 bg-amber-50/60"
-        : tone === "green"
-          ? "border-emerald-200 bg-emerald-50/60"
-          : tone === "indigo"
-            ? "border-indigo-200 bg-indigo-50/60"
-            : "border-slate-200 bg-slate-50/80";
+  const valueTone =
+    accent === "green"
+      ? "text-emerald-700"
+      : accent === "amber"
+        ? "text-amber-800"
+        : accent === "indigo"
+          ? "text-indigo-700"
+          : accent === "violet"
+            ? "text-[#4d47b6]"
+            : "text-[#2e2a58]";
 
   return (
-    <div className={`rounded-2xl border p-4 shadow-sm ${toneClass}`}>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">{value.toLocaleString("th-TH")}</p>
-      <p className="mt-1 text-xs text-slate-600">{hint}</p>
+    <div className={cn(appDashboardSectionSlateClass, "space-y-0")}>
+      <p className="text-xs font-medium text-[#66638c]">{label}</p>
+      <p className={cn("mt-1 text-2xl font-bold tabular-nums sm:text-3xl", valueTone)}>
+        {value.toLocaleString("th-TH")}
+      </p>
+      <p className="mt-1 text-xs leading-snug text-[#66638c]">{hint}</p>
     </div>
   );
 }

@@ -22,7 +22,7 @@ export function getAttendancePlanQuota(
   subscriptionType: SubscriptionType,
   subscriptionTier: SubscriptionTier,
 ): AttendancePlanQuota {
-  let label = "เช็คชื่ออัจฉริยะ";
+  let label = "เช็คอินอัจฉริยะ";
   if (subscriptionType === "DAILY") label = "สายรายวัน";
   else if (subscriptionTier === "TIER_199") label = "แพ็กเหมา · กลุ่ม 1";
   else if (subscriptionTier === "TIER_299") label = "แพ็กเหมา · กลุ่ม 2";

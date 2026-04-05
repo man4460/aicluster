@@ -6,7 +6,7 @@ export type DashboardSystemCard = {
 };
 
 export const DASHBOARD_LIVE_SYSTEMS: DashboardSystemCard[] = [
-  { href: "/dashboard/attendance", label: "เช็คชื่ออัจฉริยะ", emoji: "📋" },
+  { href: "/dashboard/attendance", label: "เช็คอินอัจฉริยะ", emoji: "📋" },
   { href: "/dashboard/dormitory", label: "หอพัก", emoji: "🏠" },
   { href: "/dashboard/home-finance", label: "รายรับ–รายจ่าย", emoji: "💰" },
   { href: "/dashboard/village", label: "หมู่บ้าน", emoji: "🏘️" },

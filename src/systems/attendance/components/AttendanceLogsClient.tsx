@@ -1,7 +1,15 @@
 "use client";
 
+import { AppImageLightbox, AppImageThumb, useAppImageLightbox } from "@/components/app-templates";
+import { cn } from "@/lib/cn";
 import { bangkokDateKey } from "@/lib/time/bangkok";
-import Link from "next/link";
+import {
+  attendanceCardClass,
+  attendanceEmptyStateLargeClass,
+  attendanceFilterBarClass,
+  attendanceLabelClass,
+  attendanceSecondaryBtnClass,
+} from "@/systems/attendance/attendance-ui";
 import { useCallback, useEffect, useState } from "react";
 
 type Row = {
@@ -35,7 +43,15 @@ const statusTh: Record<string, string> = {
   LATE_AND_EARLY: "มาสาย+ออกก่อน",
 };
 
+function logPrimaryLine(r: Row): { title: string; subId: string } {
+  const name = (r.guestName ?? r.actorFullName ?? "").trim();
+  const id = r.guestPhone ?? r.actorUsername ?? "—";
+  if (name) return { title: name, subId: id };
+  return { title: id, subId: "" };
+}
+
 export function AttendanceLogsClient() {
+  const imageLightbox = useAppImageLightbox();
   const [from, setFrom] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
@@ -95,38 +111,38 @@ export function AttendanceLogsClient() {
       {loadErr ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">{loadErr}</p>
       ) : null}
-      <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <label className="text-xs font-semibold text-slate-700">
+      <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-12 lg:items-end">
+        <label className="text-xs font-semibold text-slate-700 lg:col-span-2">
           จาก
           <input
             type="date"
-            className="mt-1 block rounded-xl border border-slate-200 px-2 py-1.5 text-sm"
+            className="mt-1 min-h-[44px] w-full rounded-xl border border-slate-200 px-3 py-2 text-sm touch-manipulation sm:min-h-0"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
           />
         </label>
-        <label className="text-xs font-semibold text-slate-700">
+        <label className={cn(attendanceLabelClass, "lg:col-span-2")}>
           ถึง
           <input
             type="date"
-            className="mt-1 block rounded-xl border border-slate-200 px-2 py-1.5 text-sm"
+            className="mt-1 min-h-[44px] w-full rounded-xl border border-[#e1e3ff] bg-white px-3 py-2 text-sm touch-manipulation sm:min-h-0"
             value={to}
             onChange={(e) => setTo(e.target.value)}
           />
         </label>
-        <label className="min-w-[160px] text-xs font-semibold text-slate-700">
+        <label className="text-xs font-semibold text-slate-700 sm:col-span-2 lg:col-span-3">
           ค้นหา
           <input
-            className="mt-1 block w-full rounded-xl border border-slate-200 px-2 py-1.5 text-sm"
+            className="mt-1 min-h-[44px] w-full rounded-xl border border-slate-200 px-3 py-2 text-sm touch-manipulation sm:min-h-0"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="เบอร์ / ชื่อ / ยูสเซอร์"
           />
         </label>
-        <label className="text-xs font-semibold text-slate-700">
+        <label className={cn(attendanceLabelClass, "sm:col-span-2 lg:col-span-2")}>
           กลุ่ม
           <select
-            className="mt-1 block rounded-xl border border-slate-200 px-2 py-1.5 text-sm"
+            className="mt-1 min-h-[44px] w-full rounded-xl border border-[#e1e3ff] bg-white px-3 py-2 text-sm touch-manipulation sm:min-h-0"
             value={kind}
             onChange={(e) => setKind(e.target.value)}
           >
@@ -137,129 +153,97 @@ export function AttendanceLogsClient() {
             <option value="public_legacy">แขกเดิม (ไม่ระบุประเภท)</option>
           </select>
         </label>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-800"
-        >
-          ค้นหา
-        </button>
-        <a
-          href={exportUrl()}
-          className="rounded-xl border border-[#0000BF] px-4 py-2 text-sm font-semibold text-[#0000BF]"
-        >
-          Export CSV
-        </a>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap lg:col-span-3 lg:justify-end">
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="min-h-[44px] w-full rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800 touch-manipulation sm:w-auto sm:min-h-0"
+          >
+            ค้นหา
+          </button>
+          <a
+            href={exportUrl()}
+            className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-[#0000BF] px-4 py-2.5 text-sm font-semibold text-[#0000BF] touch-manipulation sm:w-auto sm:min-h-0"
+          >
+            Export CSV
+          </a>
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div>
         {loading ? (
-          <p className="p-6 text-center text-sm text-slate-500">กำลังโหลด…</p>
+          <p className={attendanceEmptyStateLargeClass}>กำลังโหลด…</p>
         ) : rows.length === 0 ? (
-          <p className="p-6 text-center text-sm text-slate-500">ไม่มีข้อมูล</p>
+          <p className={attendanceEmptyStateLargeClass}>ไม่มีข้อมูล</p>
         ) : (
-          <>
-            <ul className="space-y-3 p-3 md:hidden">
-              {rows.map((r) => (
-                <li key={r.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2">
-                    <span className="text-xs font-semibold text-slate-600">{visitorGroupLabel(r)}</span>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800">
-                      {statusTh[r.status] ?? r.status}
-                    </span>
-                  </div>
-                  <div className="mt-3 space-y-2 text-sm">
-                    <div>
-                      <p className="text-xs text-slate-500">ผู้เช็ค</p>
-                      <p className="font-mono text-xs text-slate-900">{r.guestPhone ?? r.actorUsername ?? "—"}</p>
-                      <p className="text-xs text-slate-600">{r.guestName ?? r.actorFullName ?? ""}</p>
+          <ul className="flex flex-col gap-2" aria-label="รายการบันทึกเช็คอิน">
+            {rows.map((r) => {
+              const { title, subId } = logPrimaryLine(r);
+              return (
+                <li key={r.id} className={cn(attendanceCardClass, "p-3 sm:p-3.5")}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                      <span className="rounded-md bg-[#ecebff] px-2 py-0.5 text-[11px] font-semibold text-[#4d47b6]">
+                        {visitorGroupLabel(r)}
+                      </span>
+                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                        {statusTh[r.status] ?? r.status}
+                      </span>
+                      {r.lateCheckIn ? (
+                        <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-200/60">
+                          สาย
+                        </span>
+                      ) : null}
+                      {r.earlyCheckOut ? (
+                        <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-200/60">
+                          ออกก่อน
+                        </span>
+                      ) : null}
                     </div>
-                    <div className="grid grid-cols-1 gap-1 text-xs text-slate-700 sm:grid-cols-2">
-                      <div>
-                        <span className="text-slate-500">เข้า </span>
-                        {formatLogTime(r.checkInTime)}
-                      </div>
-                      <div>
-                        <span className="text-slate-500">ออก </span>
-                        {formatLogTime(r.checkOutTime)}
-                      </div>
-                    </div>
-                    {(r.lateCheckIn || r.earlyCheckOut) && (
-                      <p className="text-xs text-amber-800">
-                        {r.lateCheckIn ? "สาย" : ""}
-                        {r.lateCheckIn && r.earlyCheckOut ? " · " : ""}
-                        {r.earlyCheckOut ? "ออกก่อน" : ""}
-                      </p>
-                    )}
                     {r.checkInFacePhotoUrl ? (
-                      <p className="text-xs">
-                        <Link
-                          href={r.checkInFacePhotoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-semibold text-[#0000BF] hover:underline"
-                        >
-                          ดูรูปตอนเช็คเข้า
-                        </Link>
-                      </p>
+                      <AppImageThumb
+                        src={r.checkInFacePhotoUrl}
+                        alt="รูปเช็คเข้า"
+                        onOpen={() => imageLightbox.open(r.checkInFacePhotoUrl!)}
+                        className="ring-1 ring-[#e8e6fc]"
+                      />
                     ) : null}
                   </div>
-                </li>
-              ))}
-            </ul>
 
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[820px] text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
-                  <tr>
-                    <th className="px-3 py-2">กลุ่ม</th>
-                    <th className="px-3 py-2">ผู้เช็ค</th>
-                    <th className="px-3 py-2">เข้า</th>
-                    <th className="px-3 py-2">ออก</th>
-                    <th className="px-3 py-2">สถานะ</th>
-                    <th className="px-3 py-2">รูปเข้า</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.id} className="border-b border-slate-100">
-                      <td className="px-3 py-2 text-xs font-medium text-slate-700">{visitorGroupLabel(r)}</td>
-                      <td className="px-3 py-2">
-                        <div className="font-mono text-xs">{r.guestPhone ?? r.actorUsername ?? "—"}</div>
-                        <div className="text-xs text-slate-600">{r.guestName ?? r.actorFullName ?? ""}</div>
-                      </td>
-                      <td className="px-3 py-2 text-xs text-slate-700">{formatLogTime(r.checkInTime)}</td>
-                      <td className="px-3 py-2 text-xs text-slate-700">{formatLogTime(r.checkOutTime)}</td>
-                      <td className="px-3 py-2 text-xs">
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium">
-                          {statusTh[r.status] ?? r.status}
-                        </span>
-                        {r.lateCheckIn ? <span className="ml-1 text-amber-800">สาย</span> : null}
-                        {r.earlyCheckOut ? <span className="ml-1 text-amber-800">ออกก่อน</span> : null}
-                      </td>
-                      <td className="px-3 py-2 text-xs">
-                        {r.checkInFacePhotoUrl ? (
-                          <Link
-                            href={r.checkInFacePhotoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-semibold text-[#0000BF] hover:underline"
-                          >
-                            เปิด
-                          </Link>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+                  <div className="mt-2 flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1 pr-1">
+                      <p className="text-sm font-semibold leading-snug text-[#2e2a58]">
+                        <span className="break-words">{title}</span>
+                        {subId ? (
+                          <>
+                            <span className="font-normal text-[#66638c]"> · </span>
+                            <span className="break-all font-mono text-xs font-medium tabular-nums text-[#66638c]">
+                              {subId}
+                            </span>
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+                    <div className="max-w-[48%] shrink-0 text-right text-[11px] leading-snug text-[#66638c] tabular-nums sm:max-w-[55%] sm:text-xs">
+                      <div>
+                        <span className="text-[#9b98c4]">เข้า</span>{" "}
+                        <span className="text-[#2e2a58]">{formatLogTime(r.checkInTime)}</span>
+                      </div>
+                      <div className="mt-0.5">
+                        <span className="text-[#9b98c4]">ออก</span>{" "}
+                        <span className="text-[#2e2a58]">{formatLogTime(r.checkOutTime)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
-      <p className="text-[11px] text-slate-500">อัปเดตอัตโนมัติทุก 15 วินาที</p>
+      <p className="text-[11px] text-[#66638c]">อัปเดตอัตโนมัติทุก 15 วินาที</p>
+
+      <AppImageLightbox src={imageLightbox.src} alt="รูปเช็คเข้า" onClose={imageLightbox.close} />
     </div>
   );
 }

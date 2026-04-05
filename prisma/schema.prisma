@@ -523,7 +523,7 @@ model BarberServiceLog {
   @@map("barber_service_logs")
 }
 
-// --- Smart Attendance / เช็คชื่ออัจฉริยะ (กลุ่ม 1) ---
+// --- Smart Attendance / เช็คอินอัจฉริยะ (กลุ่ม 1) ---
 
 enum AttendanceSummaryStatus {
   AWAITING_CHECKOUT
@@ -630,6 +630,8 @@ model AttendanceRosterEntry {
   isActive    Boolean  @default(true) @map("is_active")
   /** ลำดับกะในโลเคชัน (0 = กะแรก ตาม sort_order) สูงสุด 4 ถ้ามี 5 กะ */
   rosterShiftIndex Int @default(0) @map("roster_shift_index")
+  /** รูปโปรไฟล์รายชื่อ (path ใต้ public เช่น /uploads/attendance-roster/...) */
+  photoUrl    String?  @map("photo_url") @db.VarChar(512)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

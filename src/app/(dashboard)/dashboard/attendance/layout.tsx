@@ -1,13 +1,7 @@
-import { PageContainer } from "@/components/ui/page-container";
 import { requireAttendanceSection } from "@/systems/attendance/lib/guard";
-import { AttendanceLayoutChrome } from "@/systems/attendance/components/AttendanceLayoutChrome";
+import { AttendanceShell } from "@/systems/attendance/components/AttendanceShell";
 
 export default async function AttendanceLayout({ children }: { children: React.ReactNode }) {
   await requireAttendanceSection();
-
-  return (
-    <PageContainer>
-      <AttendanceLayoutChrome>{children}</AttendanceLayoutChrome>
-    </PageContainer>
-  );
+  return <AttendanceShell>{children}</AttendanceShell>;
 }

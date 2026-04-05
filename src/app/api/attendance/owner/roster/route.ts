@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { isPrismaSchemaMismatchError, PRISMA_SYNC_HINT_TH } from "@/lib/prisma-errors";
+import { isValidRosterPhotoUrl } from "@/lib/attendance/roster-photo-url";
 import { clampShiftIndex, formatShiftSlotLabel } from "@/lib/attendance/shift";
 import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
 
@@ -24,6 +25,7 @@ const postSchema = z.object({
   displayName: z.string().trim().min(1).max(100),
   phone: z.string().min(9).max(20),
   rosterShiftIndex: z.number().int().min(0).max(4).optional(),
+  photoUrl: z.union([z.string().max(512), z.null()]).optional(),
 });
 
 export async function GET() {
@@ -61,6 +63,7 @@ export async function GET() {
         phone: r.phone,
         isActive: r.isActive,
         rosterShiftIndex: typeof r.rosterShiftIndex === "number" ? r.rosterShiftIndex : 0,
+        photoUrl: r.photoUrl ?? null,
       })),
     });
   } catch (e) {
@@ -98,11 +101,24 @@ export async function POST(req: Request) {
   const nShifts = await shiftCountForOwner(ctx.billingUserId, scope.trialSessionId);
   if (nShifts === 0) {
     return NextResponse.json(
-      { error: "ยังไม่มีกะในระบบ — ตั้งค่าเวลากะที่เมนูตั้งค่าเช็คชื่อก่อน" },
+      { error: "ยังไม่มีกะในระบบ — ตั้งค่าเวลากะที่เมนูตั้งค่าเช็คอินก่อน" },
       { status: 400 },
     );
   }
   const rosterShiftIndex = clampShiftIndex(parsed.data.rosterShiftIndex ?? 0, nShifts);
+
+  let photoUrl: string | null | undefined;
+  if (parsed.data.photoUrl !== undefined) {
+    if (parsed.data.photoUrl === null) {
+      photoUrl = null;
+    } else {
+      const t = parsed.data.photoUrl.trim();
+      photoUrl = t === "" ? null : t;
+      if (photoUrl !== null && !isValidRosterPhotoUrl(photoUrl)) {
+        return NextResponse.json({ error: "ลิงก์รูปไม่ถูกต้อง" }, { status: 400 });
+      }
+    }
+  }
 
   try {
     const row = await prisma.attendanceRosterEntry.create({
@@ -113,6 +129,7 @@ export async function POST(req: Request) {
         phone,
         isActive: true,
         rosterShiftIndex,
+        ...(photoUrl !== undefined ? { photoUrl } : {}),
       },
     });
     return NextResponse.json({
@@ -122,6 +139,7 @@ export async function POST(req: Request) {
         phone: row.phone,
         isActive: row.isActive,
         rosterShiftIndex: row.rosterShiftIndex,
+        photoUrl: row.photoUrl ?? null,
       },
     });
   } catch (e) {

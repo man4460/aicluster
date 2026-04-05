@@ -10,7 +10,7 @@ alwaysApply: true
 ## บังคับ
 
 - Import จาก **`@/components/app-templates`** เท่านั้น:
-  - **`AppImageThumb`** — ปุ่มรูป 64×64 + `onOpen`
+  - **`AppImageThumb`** — ปุ่มรูปย่อ (ค่าเริ่ม 64×64) + `onOpen`
   - **`AppImageLightbox`** — overlay ดูรูปเต็ม
   - **`useAppImageLightbox()`** — `{ src, open, close }` คู่กับ Lightbox
 - **ห้าม** คัดลอก/เลียนแบบ `HomeFinanceImageLightbox` หรือ `HomeFinanceThumb` เป็นไฟล์ใหม่ในโมดูลอื่น
@@ -26,6 +26,16 @@ const lb = useAppImageLightbox();
 <AppImageThumb src={url} alt="คำอธิบาย" onOpen={() => url && lb.open(url)} />
 <AppImageLightbox src={lb.src} onClose={lb.close} alt="คำอธิบาย" />
 ```
+
+## AppImageThumb — กรอบคงที่ รูปพอดีกรอบ (template มาตรฐาน)
+
+เมื่อแก้หรือเพิ่ม **`AppImageThumb`** (`src/components/app-templates/AppImageThumb.tsx`) หรือเลียนแบบรูปแบบเดียวกัน:
+
+1. **กำหนดขนาดที่ wrapper** (`<button>` / กรอบคลิก) — เช่น `h-16 w-16` + `overflow-hidden` + `rounded-xl` + `ring-2` — ไม่ใช่กำหนดแค่ที่ `<img>` อย่างเดียว เพื่อไม่ให้กรอบกับรูปคนละขนาด
+2. **`<img>`** ใช้ **`h-full w-full min-h-0 min-w-0 object-cover object-center`** ให้รูปเต็มกรอบสี่เหลี่ยม ตัดส่วนเกินสม่ำเสมอ ไม่เว้นขอบแปลกจาก intrinsic size
+3. **สถานะไม่มีรูป** (`emptyLabel`) — ใช้ **ขนาดเดียวกับมีรูป** (`h-16 w-16` ฯลฯ) + `ring` สอดคล้องกรอบมีรูป
+4. **ขนาดอื่น** — ส่ง **`className`** ไปที่ `AppImageThumb` เพื่อ override ขนาดกรอบ เช่น `className="h-20 w-20"` (ทั้งปุ่มและ empty ใช้ className ร่วมกันใน component)
+5. **Lightbox ทับโมดัล** — `AppImageLightbox` ใช้ **`z-[240]`** เหนือ `FormModal` (`z-[200]`) และ `AppCameraCaptureModal` (`z-[220]`) — ถ้าแก้ z-index โมดัล ต้องเช็คลำดับซ้อนกับ lightbox
 
 ## ความเข้ากันได้
 

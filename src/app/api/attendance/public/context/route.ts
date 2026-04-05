@@ -41,7 +41,7 @@ export async function GET(req: Request) {
   } catch (e) {
     if (e instanceof AttendanceBusinessError) {
       if (e.message === "NO_SETTINGS")
-        return NextResponse.json({ error: "เจ้าของยังไม่ตั้งค่าระบบเช็คชื่อ" }, { status: 404 });
+        return NextResponse.json({ error: "เจ้าของยังไม่ตั้งค่าเช็คอิน" }, { status: 404 });
       if (e.message === "BAD_LOCATION" || e.message === "NO_SHIFTS")
         return NextResponse.json({ error: "ไม่พบจุดเช็คนี้" }, { status: 404 });
     }
