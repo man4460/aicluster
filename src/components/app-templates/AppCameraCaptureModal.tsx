@@ -142,8 +142,9 @@ export function AppCameraCaptureModal({
       if (!file) return;
       stopStream();
       onCapture(file);
+      onClose();
     });
-  }, [onCapture, ready, stopStream]);
+  }, [onCapture, onClose, ready, stopStream]);
 
   useEffect(() => {
     if (!open) return;

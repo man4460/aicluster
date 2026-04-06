@@ -1,37 +1,56 @@
 ---
-description: เทมเพลต UI ลานล้างรถ (car-wash) — การ์ดรายการ ปุ่มไอคอน popup แยกซ้าย-ขวา และโมดูลร่วม
+description: คาร์แคร์ — เทมเพลตแดชบอร์ด เมนู ลานล้าง QR โปสเตอร์ ยอดขาย และคอมโพเนนต์ร่วม
 globs:
   - "**/systems/car-wash/**"
   - "**/api/car-wash/**"
+  - "**/app/**/car-wash/**"
 ---
 
-# Car wash — เทมเพลตการแก้ไข UI / โครงสร้าง
+# Car wash — แดชบอร์ด & UI
 
-## โมดูลปุ่มไอคอนร่วม
+## โมดูลปุ่ม / การ์ดรายการ
 
-- ใช้ **`@/systems/car-wash/car-wash-popup-icon-buttons`**
-  - **`SalesRowOpenDetailButton`** — ปุ่มเปิด popup รายละเอียด (กริดเล็ก 32px, โทนม่วง) บนการ์ดรายการ / แท็บเหมา
-  - **`PopupIconButton`** + **`popupIconBtnDanger`** — แถบเครื่องมือใน `FormModal` (ดูรูป/สลิป, อัปโหลด, กล้อง, ล้าง, แก้ไข, ลบ, พิมพ์) พร้อม `title` / `aria-label` ภาษาไทย และ `busy` ตอนอัปโหลด
+- **`@/systems/car-wash/car-wash-popup-icon-buttons`**: `SalesRowOpenDetailButton`, `PopupIconButton`, `popupIconBtnDanger` — รายละเอียดใน `FormModal`, `aria-label` ไทย, `busy` ตอนอัปโหลด
+- **ยอดขาย (`CarWashSalesPanel`)**: แถวกระชับ รูป 48px, ทะเบียนหนา, ขวาแค่ยอด + ปุ่มรายละเอียด; แพ็กเหมาขอบซ้ายอำพัน + ป้าย「เหมา」
+- **แท็บเหมา (`CarWashDashboard`)**: ซ้ายข้อมูล / ขวา `border-l` ยอด + สิทธิ์ + `SalesRowOpenDetailButton`
 
-## การ์ดรายการ (ยอดขาย — ช่วงที่กรอง)
+## เมนู & ตำแหน่งปุ่ม
 
-- ไฟล์หลัก: **`CarWashSalesPanel.tsx`**
-- **แถวเดียวกระชับ:** รูปย่อ **48px** (`h-12 w-12`), กลาง = เวลา + สถานะ + `#id`, **ทะเบียนหนาโดยไม่มีป้ายคำว่า "ทะเบียน"**, แพ็ก, ชื่อ, โน้ต `line-clamp-1`
-- **ขวา:** ยอดเงิน + **`SalesRowOpenDetailButton`** เท่านั้น — การกระทำทั้งหมดอยู่ใน **`FormModal`** (`salesRowDetail`)
-- แถว **แพ็กเหมา** ในลิสต์เดียวกัน: ขอบซ้ายบางสีอำพัน, ป้ายสั้น **「เหมา」**
+- แท็บ: **แพ็กเกจเหมา** (key `bundles`), **QR พนักงาน** (`staff_qr`)
+- ปุ่มเมนู: **QR ลูกค้า** → เปิด `FormModal` (ไม่ใช่แท็บ)
+- **บันทึกรายการ** อยู่ใน **`CarWashServiceLanePanel`** (หัวกล่องลานล้างวันนี้) ผ่าน `onRecordVisit` — ไม่วางมุมขวาหัวการ์ดหลัก
 
-## แท็บเหมา (`CarWashDashboard.tsx`)
+## QR ลูกค้า & QR พนักงาน (โปสเตอร์กลาง MAWELL)
 
-- **ซ้าย (flex-1):** แถว — สลิป + คอลัมน์ข้อมูล (สถานะ, `#id`, ทะเบียน, ชื่อ, `เบอร์ · แพ็ก`)
-- **ขวา (shrink-0):** **`border-l`** แยกโซน — หัวข้อย่อย **ยอด** / **สิทธิ์คงเหลือ** (ชิดขวา) + **`SalesRowOpenDetailButton`** ด้านล่าง (`justify-between` ในคอลัมน์ขวา)
-- **`FormModal`** แยก (`bundleTabRowDetail`) — แถบไอคอนเหมือนใน popup ยอดขาย; เปิดแก้ไข/ลบแล้วปิด popup รายละเอียด (`setBundleTabRowDetailId(null)` / ล้างเมื่อลบรายการ)
+- ใช้ **`@/components/qr/shop-qr-template`**: `QRCode.toDataURL` (240px) → **`createShopQrPosterDataUrl`** (พรีวิว) / **`createShopQrPosterCanvas`** + **`downloadPosterPng`** / **`downloadPosterPdf`**
+- คนละ **tagline** เป็นค่าคงที่ (เช่น `CAR_WASH_CUSTOMER_QR_TAGLINE`, `CAR_WASH_STAFF_QR_TAGLINE`); โลโก้ + `shopLabel` เหมือนกัน
+- พรีวิว: กล่อง `overflow-x-auto` + รูป `w-[340px]` + สถานะโหลดเหมือนกัน
+- **Modal QR ลูกค้า**: มีปุ่ม **ปิด** ใน `footer`; **แสดงลิงก์ / ซ่อนลิงก์** (ค่าเริ่มต้นซ่อน); รีเซ็ตซ่อนเมื่อเปิด modal
+- **ลิงก์พนักงาน**: `/dashboard/car-wash/staff` (+ `t` ถ้า trial sandbox)
 
-## พฤติกรรมทั่วไป
+## หน้าพนักงาน (สแกน QR)
 
-- **อย่า** กลืน error ใน `loadAll` แบบไม่มีข้อความ — ใช้ `e instanceof Error ? e.message : …`
-- Schema/คอลัมน์ใหม่ (เช่น bundle, slip): รัน **`npx prisma migrate deploy`** แล้วรีสตาร์ทเซิร์ฟเวอร์ — ข้อความ DB ใช้ **`@/lib/car-wash/route-errors`** / **`prisma-errors`**
+- Route: **`/dashboard/car-wash/staff`** → `CarWashDashboard` + **`layoutVariant="staff_lane"`**
+- แสดงเฉพาะหัวข้อลาน + **`CarWashServiceLanePanel`** + modals ที่จำเป็นสำหรับบันทึก — **ไม่ใส่ลิงก์กลับหน้าหลักคาร์แคร์**
 
-## อ้างอิงที่เกี่ยวข้อง
+## พอร์ทัลลูกค้า (สมาชิก)
 
-- อัปโหลดรูปรายการ: **`AppGalleryCameraFileInputs`** + ref เป้าหมายก่อนเปิดแกลเลอรี/กล้อง
-- พิมพ์ใบเหมา: **`car-wash-bundle-slip-print`**, **`buildCarWashBundleSlipInnerHtml`**
+- **`CarWashCustomerPortalClient`** + API **`/api/car-wash/public/lookup`** (bundles + `recent_visits`), **`/api/car-wash/public/check-in`**
+- UI: **`AppDashboardSection` tone violet**, **`AppSectionHeader`**, **`AppEmptyState`**, `appDashboardHistoryListShellClass` ตามเทมเพลตกลาง
+- **ชำระ / หักสิทธิ์**: ต้องมีคิวในลาน (`service_status !== PAID`) และผู้ใช้ **แตะการ์ดคิวยืนยัน** ก่อนปุ่มชำระเปิด
+- จำแนกเหมาใน visit: `bundle_id != null` หรือ `package_name` ขึ้นต้น **`เหมาจ่าย:`** (รองรับหลัง PAID ที่เคลียร์ `bundle_id`)
+
+## กราฟสรุปเปรียบเทียบ (ยอดขาย)
+
+- **ซ้าย — ยอดตามแพ็กเกจ (ปกติ)**: รวม `final_price` จาก visit ที่ **ไม่** นับเป็นการใช้สิทธิ์เหมา (helper `isBundleConsumptionVisit`)
+- **ขวา — จำนวนครั้งตามแพ็กเหมา**: นับ **ครั้ง** จาก visit ที่เป็นเหมา จัดกลุ่มด้วย `bundleVisitPackageLabel` (ตัดคำนำหน้าเหมาจ่าย)
+- แสดงค่า: ซ้าย `฿ …`, ขวา `… ครั้ง`
+
+## ข้อความ / กราฟหลัก
+
+- กราฟรายได้–ต้นทุน: ตัด subtitle/คำอธิบายยาวเมื่อผู้ใช้ขอ — ป้ายสุทธิใช้ **สุทธิ** ไม่ใส่ "(เทียบคร่าว)"
+
+## Prisma / อัปโหลด / Git
+
+- คอลัมน์ใหม่: migrate แล้วรีสตาร์ท dev — ข้อความ DB ใช้ **`@/lib/car-wash/route-errors`**, **`prisma-errors`**
+- อัปโหลด: **`public/uploads/car-wash/*`** ใน **`.gitignore`** คงแค่ **`public/uploads/car-wash/.gitkeep`** ใน repo

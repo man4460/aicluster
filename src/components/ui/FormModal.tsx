@@ -11,6 +11,8 @@ export function FormModal({
   onClose,
   title,
   description,
+  /** `id` ขององค์ประกอบในเนื้อหาโมดัล (เช่น หัวข้อรอง) — โปรแกรมอ่านหน้าจอจะอ่านต่อจากชื่อไดอะล็อก */
+  ariaDescribedBy,
   size = "md",
   children,
   footer,
@@ -19,7 +21,8 @@ export function FormModal({
   onClose: () => void;
   title: string;
   description?: string;
-  size?: "sm" | "md" | "lg";
+  ariaDescribedBy?: string;
+  size?: "sm" | "md" | "lg" | "xl";
   children: ReactNode;
   footer?: ReactNode;
 }) {
@@ -43,7 +46,11 @@ export function FormModal({
 
   if (!open) return null;
 
-  const maxW = size === "sm" ? "max-w-md" : size === "lg" ? "max-w-2xl" : "max-w-lg";
+  const maxW =
+    size === "sm" ? "max-w-md"
+    : size === "lg" ? "max-w-2xl"
+    : size === "xl" ? "max-w-4xl"
+    : "max-w-lg";
 
   return (
     <div
@@ -60,6 +67,7 @@ export function FormModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="form-modal-title"
+        {...(ariaDescribedBy ? { "aria-describedby": ariaDescribedBy } : {})}
         className={cn(
           "relative z-10 flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-slate-200/95 bg-white shadow-[0_-8px_40px_rgba(15,23,42,0.12)] sm:rounded-3xl sm:shadow-2xl",
           maxW,

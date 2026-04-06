@@ -40,24 +40,29 @@ export async function POST(req: Request) {
 
   const name = parsed.data.name?.trim() || null;
 
-  const customer = await prisma.barberCustomer.upsert({
-    where: {
-      ownerUserId_phone_trialSessionId: {
-        ownerUserId: own.ownerId,
-        phone,
-        trialSessionId: scope.trialSessionId,
-      },
-    },
-    create: {
+  const whereCustomer = {
+    ownerUserId_phone_trialSessionId: {
       ownerUserId: own.ownerId,
-      trialSessionId: scope.trialSessionId,
       phone,
-      name,
+      trialSessionId: scope.trialSessionId,
     },
-    update: {
-      ...(name !== null && name.length > 0 ? { name } : {}),
-    },
-  });
+  } as const;
+  let customer = await prisma.barberCustomer.findUnique({ where: whereCustomer });
+  if (!customer) {
+    customer = await prisma.barberCustomer.create({
+      data: {
+        ownerUserId: own.ownerId,
+        trialSessionId: scope.trialSessionId,
+        phone,
+        name,
+      },
+    });
+  } else if (name !== null && name.length > 0) {
+    customer = await prisma.barberCustomer.update({
+      where: { id: customer.id },
+      data: { name },
+    });
+  }
 
   return NextResponse.json({
     customer: {

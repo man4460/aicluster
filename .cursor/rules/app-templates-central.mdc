@@ -17,7 +17,7 @@ alwaysApply: true
 
 - รูปย่อ + ดูเต็มจอ → `AppImageThumb`, `AppImageLightbox`, `useAppImageLightbox` (รายละเอียดเพิ่มในกฎ `app-templates-media.mdc`)
 - การ์ดแดชบอร์ด / หัวข้อ / ว่าง → `AppDashboardSection`, `AppSectionHeader`, `AppEmptyState`, โทเค็น `appDashboard*`
-- กราฟแท่งเปรียบเทียบ / แท่งรายวัน → `AppCompareBarList`, `AppColumnBarSparkChart`
+- กราฟแท่งเปรียบเทียบ / แท่งรายวัน / แท่งคู่ต่อช่วง / รายได้เทียบต้นทุนรายวัน → `AppCompareBarList`, `AppColumnBarSparkChart`, `AppColumnBarDualSparkChart`, `AppRevenueCostColumnChart`, เลย์เอาต์ `AppSparkChartPanel`, `AppSparkChartsTwoColumnGrid` (รายละเอียดกฎ `app-templates-spark-charts.mdc`)
 - พิมพ์ HTML / ย่อรูปก่อนอัปโหลด → `openPrintableHtml`, `printPrintableHtmlInHiddenIframe`, `prepareImageFileForUpload`
 - สลิป เลือกรูป ถ่ายกล้อง → `AppGalleryCameraFileInputs`, `AppImagePickCameraButtons`, `AppPickGalleryImageButton`, `AppTakePhotoButton`, `AppCameraCaptureModal`
 

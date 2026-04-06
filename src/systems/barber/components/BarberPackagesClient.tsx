@@ -2,6 +2,20 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import {
+  AppIconToolbarButton,
+  AppIconTrash,
+  AppSectionHeader,
+} from "@/components/app-templates";
+import { BarberDashboardBackLink } from "@/systems/barber/components/BarberDashboardBackLink";
+import {
+  barberIconToolbarGroupClass,
+  barberInlineAlertErrorClass,
+  barberListRowCardClass,
+  barberPageStackClass,
+  barberSectionActionsRowClass,
+  barberSectionFirstClass,
+} from "@/systems/barber/components/barber-ui-tokens";
 
 type Pkg = {
   id: number;
@@ -15,6 +29,7 @@ export function BarberPackagesClient() {
   const [list, setList] = useState<Pkg[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
 
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -45,6 +60,33 @@ export function BarberPackagesClient() {
     };
   }, [load]);
 
+  const closeAddModal = useCallback(() => {
+    setAddOpen(false);
+    setErr(null);
+  }, []);
+
+  useEffect(() => {
+    if (!addOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeAddModal();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [addOpen, closeAddModal]);
+
+  function openAddModal() {
+    setErr(null);
+    setName("");
+    setPrice("");
+    setSessions("10");
+    setAddOpen(true);
+  }
+
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
@@ -69,6 +111,8 @@ export function BarberPackagesClient() {
       setName("");
       setPrice("");
       setSessions("10");
+      setAddOpen(false);
+      setErr(null);
       await load();
       router.refresh();
     } finally {
@@ -90,92 +134,148 @@ export function BarberPackagesClient() {
   }
 
   return (
-    <div className="space-y-8">
-      <form
-        onSubmit={onCreate}
-        className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5"
-      >
-        <h2 className="text-sm font-semibold text-slate-900">เพิ่มแพ็กเกจ / โปรโมชั่น</h2>
-        <p className="mt-1 text-xs text-slate-500">เช่น ตัดผม 10 ครั้ง 1,200 บาท</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <label className="block text-xs font-semibold text-slate-700">
-            ชื่อแพ็กเกจ
-            <input
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="ตัดผม 10 ครั้ง"
-              required
-            />
-          </label>
-          <label className="block text-xs font-semibold text-slate-700">
-            ราคา (บาท)
-            <input
-              type="number"
-              min={0}
-              step={0.01}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              required
-            />
-          </label>
-          <label className="block text-xs font-semibold text-slate-700">
-            จำนวนครั้ง
-            <input
-              type="number"
-              min={1}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-              value={sessions}
-              onChange={(e) => setSessions(e.target.value)}
-              required
-            />
-          </label>
-        </div>
-        {err ? <p className="mt-3 text-sm text-red-600">{err}</p> : null}
-        <button
-          type="submit"
-          disabled={saving}
-          className="mt-4 min-h-[48px] w-full rounded-xl bg-[#0000BF] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0000a6] disabled:opacity-60 sm:w-auto"
-        >
-          {saving ? "กำลังบันทึก…" : "บันทึกแพ็กเกจ"}
-        </button>
-      </form>
+    <div className={barberPageStackClass}>
+      {err && !addOpen ? <p className={barberInlineAlertErrorClass}>{err}</p> : null}
 
-      <section>
-        <h2 className="text-sm font-semibold text-slate-900">รายการแพ็กเกจ</h2>
+      <section className={barberSectionFirstClass} aria-label="แพ็กเกจทั้งหมด">
+        <AppSectionHeader
+          tone="violet"
+          title="แพ็กเกจทั้งหมด"
+          action={
+            <div className={barberSectionActionsRowClass}>
+              <BarberDashboardBackLink />
+              <button
+                type="button"
+                onClick={openAddModal}
+                className="app-btn-primary min-h-[44px] rounded-xl px-4 py-2.5 text-sm font-semibold"
+              >
+                เพิ่มแพ็กเกจ
+              </button>
+            </div>
+          }
+        />
         {loading ? (
-          <p className="mt-3 text-sm text-slate-500">กำลังโหลด…</p>
+          <p className="rounded-lg bg-[#f8f7ff] px-4 py-3 text-sm text-[#66638c]">กำลังโหลดรายการ…</p>
         ) : list.length === 0 ? (
-          <p className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 py-8 text-center text-sm text-slate-500">
-            ยังไม่มีแพ็กเกจ
-          </p>
+          <div className="rounded-xl border border-dashed border-[#dcd8f0] bg-[#faf9ff]/80 px-4 py-10 text-center">
+            <p className="text-sm font-medium text-[#2e2a58]">ยังไม่มีแพ็กเกจ</p>
+            <p className="mx-auto mt-2 max-w-sm text-xs leading-relaxed text-[#66638c]">
+              เพิ่มแพ็กเกจเพื่อให้ขายจากหน้าเช็กอิน
+            </p>
+          </div>
         ) : (
-          <ul className="mt-3 space-y-2">
+          <ul className="space-y-2.5">
             {list.map((p) => (
               <li
                 key={p.id}
-                className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                className={`flex flex-wrap items-center justify-between gap-3 ${barberListRowCardClass}`}
               >
-                <div>
-                  <p className="font-semibold text-slate-900">{p.name}</p>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {p.price.toLocaleString("th-TH", { maximumFractionDigits: 2 })} บาท · {p.totalSessions}{" "}
-                    ครั้ง
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-semibold leading-snug text-[#2e2a58]">{p.name}</p>
+                  <p className="mt-1 text-xs tabular-nums text-[#7a7699]">
+                    {p.price.toLocaleString("th-TH", { maximumFractionDigits: 2 })} บาท · {p.totalSessions} ครั้ง
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => remove(p.id)}
-                  className="min-h-[44px] rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
-                >
-                  ลบ
-                </button>
+                <div className={barberIconToolbarGroupClass} role="group" aria-label="ลบแพ็กเกจ">
+                  <AppIconToolbarButton
+                    title="ลบแพ็กเกจ"
+                    ariaLabel="ลบแพ็กเกจ"
+                    onClick={() => remove(p.id)}
+                    className="text-[#9b97b8] hover:bg-red-50 hover:text-red-600"
+                  >
+                    <AppIconTrash className="h-3.5 w-3.5" />
+                  </AppIconToolbarButton>
+                </div>
               </li>
             ))}
           </ul>
         )}
       </section>
+
+      {addOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
+          role="presentation"
+          onClick={() => closeAddModal()}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="barber-add-package-title"
+            className="max-h-[min(92vh,640px)] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-[#ecebff] bg-white shadow-2xl sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 flex items-start justify-between gap-3 border-b border-[#ecebff] bg-white px-5 py-4">
+              <div>
+                <h2 id="barber-add-package-title" className="text-lg font-bold text-[#2e2a58]">
+                  รายละเอียดแพ็กเกจ
+                </h2>
+                <p className="mt-1 text-xs text-[#66638c]">เช่น ตัด 10 ครั้ง 1,200 บาท</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => closeAddModal()}
+                className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-[#66638c] hover:bg-[#f4f3fb] hover:text-[#2e2a58]"
+                aria-label="ปิด"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={onCreate} className="grid gap-3 px-5 py-4">
+              {err ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{err}</p> : null}
+              <label className="block text-xs font-semibold text-[#4d47b6]">
+                ชื่อแพ็กเกจ
+                <input
+                  className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="ตัดผม 10 ครั้ง"
+                  required
+                />
+              </label>
+              <label className="block text-xs font-semibold text-[#4d47b6]">
+                ราคา (บาท)
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  required
+                />
+              </label>
+              <label className="block text-xs font-semibold text-[#4d47b6]">
+                จำนวนครั้ง
+                <input
+                  type="number"
+                  min={1}
+                  className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+                  value={sessions}
+                  onChange={(e) => setSessions(e.target.value)}
+                  required
+                />
+              </label>
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => closeAddModal()}
+                  className="app-btn-soft min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold text-[#2e2a58]"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="app-btn-primary min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold disabled:opacity-60"
+                >
+                  {saving ? "กำลังบันทึก…" : "บันทึก"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

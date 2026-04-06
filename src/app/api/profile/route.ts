@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
+import { getBusinessProfile } from "@/lib/profile/business-profile";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import { getBarberDataScope } from "@/lib/trial/module-scopes";
 
 const patchSchema = z.object({
   fullName: z.string().max(255).optional().nullable(),
@@ -20,7 +22,7 @@ export async function GET() {
   const auth = await requireSession();
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [user, prodBarber, prodDorm] = await Promise.all([
+  const [user, prodDorm, barberScope] = await Promise.all([
     prisma.user.findUnique({
       where: { id: auth.session.sub },
       select: {
@@ -36,15 +38,6 @@ export async function GET() {
         subscriptionTier: true,
       },
     }),
-    prisma.barberShopProfile.findUnique({
-      where: {
-        ownerUserId_trialSessionId: {
-          ownerUserId: auth.session.sub,
-          trialSessionId: TRIAL_PROD_SCOPE,
-        },
-      },
-      select: { taxId: true },
-    }),
     prisma.dormitoryProfile.findUnique({
       where: {
         ownerUserId_trialSessionId: {
@@ -54,13 +47,17 @@ export async function GET() {
       },
       select: { promptPayPhone: true, paymentChannelsNote: true, defaultPaperSize: true },
     }),
+    getBarberDataScope(auth.session.sub),
   ]);
 
   if (!user) return NextResponse.json({ error: "ไม่พบผู้ใช้" }, { status: 404 });
+  const business = await getBusinessProfile(auth.session.sub, {
+    barberTrialSessionId: barberScope.trialSessionId,
+  });
   return NextResponse.json({
     profile: {
       ...user,
-      taxId: prodBarber?.taxId ?? null,
+      taxId: business?.taxId ?? null,
       promptPayPhone: prodDorm?.promptPayPhone ?? null,
       paymentChannelsNote: prodDorm?.paymentChannelsNote ?? null,
       defaultPaperSize: prodDorm?.defaultPaperSize ?? "SLIP_58",
@@ -85,6 +82,7 @@ export async function PATCH(req: Request) {
   }
 
   const data = parsed.data;
+  const barberScope = await getBarberDataScope(auth.session.sub);
   const user = await prisma.$transaction(async (tx) => {
     const updated = await tx.user.update({
       where: { id: auth.session.sub },
@@ -114,12 +112,12 @@ export async function PATCH(req: Request) {
         where: {
           ownerUserId_trialSessionId: {
             ownerUserId: auth.session.sub,
-            trialSessionId: TRIAL_PROD_SCOPE,
+            trialSessionId: barberScope.trialSessionId,
           },
         },
         create: {
           ownerUserId: auth.session.sub,
-          trialSessionId: TRIAL_PROD_SCOPE,
+          trialSessionId: barberScope.trialSessionId,
           taxId: data.taxId,
         },
         update: { taxId: data.taxId },
@@ -168,7 +166,7 @@ export async function PATCH(req: Request) {
         where: {
           ownerUserId_trialSessionId: {
             ownerUserId: auth.session.sub,
-            trialSessionId: TRIAL_PROD_SCOPE,
+            trialSessionId: barberScope.trialSessionId,
           },
         },
         select: { taxId: true },

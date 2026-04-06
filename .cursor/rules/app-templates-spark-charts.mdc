@@ -1,0 +1,23 @@
+---
+description: กราฟแท่งแนวตั้งแบบเลื่อน (spark) และรายได้เทียบต้นทุน — ใช้ template กลางเท่านั้น
+alwaysApply: true
+---
+
+# กราฟแดชบอร์ดแบบแท่งรายช่วง (template กลาง)
+
+## บังคับ
+
+1. **ห้าม** เขียนกราฟแท่งแนวตั้ง + เลื่อนแนวนอนใหม่เอง — ใช้จาก `@/components/app-templates` เท่านั้น
+2. **รายได้ vs รายจ่าย/ต้นทุนรายวัน** → `AppRevenueCostColumnChart` — ดูหลายวันใช้ `compact`
+3. **แท่งเดี่ยวรายช่วง** → `AppColumnBarSparkChart` — โทนแบรนด์ `variant="brand"` ดูหลายวันใช้ `compact` + ถ้าจัดคู่กับ dual chart ใช้ `pairedLayout`
+4. **สองแท่งคู่ต่อช่วง** (เช่น หมวด A vs B) → `AppColumnBarDualSparkChart` — คู่กับแบรนด์ใช้ `titleTone="brand"` + `compact`
+5. **เลย์เอาต์การ์ด + grid สองคอลัมน์** → `AppSparkChartPanel`, `AppSparkChartsTwoColumnGrid` หรือโทเค็น `appSparkChartPanelClass`, `appSparkChartsTwoColumnGridClass` จาก barrel เดียวกัน
+
+## แพทเทิร์นมาตรฐาน
+
+- กราฟข้างใน: `className="flex min-h-0 flex-1 flex-col"`
+- ช่องว่างระหว่างรายการในหน้าเดียวกัน: `space-y-3` ระหว่าง `AppRevenueCostColumnChart` กับแถวกราฟล่าง
+
+## ขยาย
+
+ถ้าต้องการพฤติกรรมใหม่ (เช่น stacked bar) — **เพิ่มที่ `src/components/app-templates/`** แล้ว export ใน `index.ts` อย่าคัดลอก CSS ไปโมดูลเดียว

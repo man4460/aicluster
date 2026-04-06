@@ -6,6 +6,8 @@ export async function barberOwnerFromAuth(sessionSub: string): Promise<
   { ok: true; ownerId: string; isStaff: boolean } | { ok: false; response: NextResponse }
 > {
   const ctx = await getModuleBillingContext(sessionSub);
-  if (!ctx) return { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+  if (!ctx) {
+    return { ok: false, response: NextResponse.json({ error: "กรุณาเข้าสู่ระบบใหม่" }, { status: 401 }) };
+  }
   return { ok: true, ownerId: ctx.billingUserId, isStaff: ctx.isStaff };
 }

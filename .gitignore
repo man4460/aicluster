@@ -61,6 +61,12 @@ yarn-error.log*
 !/public/uploads/attendance-roster/.gitkeep
 /public/uploads/car-wash/*
 !/public/uploads/car-wash/.gitkeep
+/public/uploads/barber-stylists/*
+!/public/uploads/barber-stylists/.gitkeep
+/public/uploads/barber-cash-receipts/*
+!/public/uploads/barber-cash-receipts/.gitkeep
+/public/uploads/barber-portal-slips/*
+!/public/uploads/barber-portal-slips/.gitkeep
 
 # Legacy duplicate tree — แอปจริงอยู่ราก repo (มี node_modules/.next ของ copy เก่า)
 /web/

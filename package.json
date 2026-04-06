@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
     "dev:webpack": "next dev -H 0.0.0.0 --webpack",
-    "dev:clean": "npx --yes kill-port 3000 3001 && next dev -p 3000 -H 0.0.0.0",
+    "dev:clean": "npx --yes kill-port 3000 3001 3456 3457 && npx --yes rimraf@6 .next && next dev -p 3000 -H 0.0.0.0",
     "build": "prisma generate && next build",
     "build:pm2:prod": "npm run build && pm2 restart mawell-serve",
     "watch:build": "chokidar \"src/**/*\" \"public/**/*\" \"prisma/schema.prisma\" \"next.config.ts\" \"postcss.config.mjs\" \"package.json\" -c \"npm run build\" -d 12000 --silent",

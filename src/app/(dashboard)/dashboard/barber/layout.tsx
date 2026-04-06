@@ -8,7 +8,9 @@ import { requireBarberSection } from "@/systems/barber/lib/guard";
 export default async function BarberLayout({ children }: { children: React.ReactNode }) {
   await requireBarberSection();
   const session = await getSession();
-  const trial = session ? await getActiveTrialBanner(session.sub, BARBER_MODULE_SLUG) : null;
+  if (!session) return null;
+
+  const trial = await getActiveTrialBanner(session.sub, BARBER_MODULE_SLUG);
 
   return (
     <PageContainer>

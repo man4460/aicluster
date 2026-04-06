@@ -1,11 +1,14 @@
-import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bangkokDayStartEnd } from "@/lib/barber/bangkok-day";
 import { getBarberRevenueBahtInRange } from "@/lib/barber/period-revenue";
 import { getBarberDataScope } from "@/lib/trial/module-scopes";
-import { PageHeader } from "@/components/ui/page-container";
 import { BarberTodayBookings } from "@/systems/barber/components/BarberTodayBookings";
+import {
+  barberPageStackClass,
+  barberSectionNextClass,
+  barberStatCardClass,
+} from "@/systems/barber/components/barber-ui-tokens";
 
 function formatBaht(n: number) {
   return `${n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
@@ -47,87 +50,67 @@ export default async function BarberDashboardPage() {
     getBarberRevenueBahtInRange(session.sub, start, end, scope.trialSessionId),
   ]);
 
-  const statClass =
-    "flex min-h-[100px] flex-col justify-center rounded-2xl border border-slate-200 bg-white p-4 shadow-sm";
-
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="ร้านตัดผม"
-        description="จองคิว เช็คอิน แพ็กเกจ และสถิติวันนี้"
-        action={
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/dashboard/barber/bookings"
-              className="rounded-xl border-2 border-[#0000BF] bg-white px-4 py-3 text-sm font-semibold text-[#0000BF] hover:bg-[#0000BF]/5"
-            >
-              จองคิว
-            </Link>
-            <Link
-              href="/dashboard/barber/check-in"
-              className="rounded-xl bg-[#0000BF] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0000a6]"
-            >
-              เช็คอิน
-            </Link>
-          </div>
-        }
-      />
-
+    <div className={barberPageStackClass}>
       <BarberTodayBookings ownerId={session.sub} />
 
-      <section>
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">สถิติวันนี้ (เวลาไทย)</h2>
-        <div className="mb-4 rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/40 p-5 shadow-sm">
+      <section className={barberSectionNextClass} aria-label="สถิติวันนี้">
+        <div>
+          <h2 className="text-lg font-bold text-[#2e2a58]">สถิติวันนี้</h2>
+          <p className="mt-1 text-xs text-[#66638c]">รายรับและจำนวนครั้งวันนี้ (เวลาไทย)</p>
+        </div>
+        <div className="mt-4 rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/40 p-5 shadow-sm">
           <p className="text-xs font-semibold text-emerald-800/90">รายรับวันนี้</p>
           <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-emerald-950">
             {formatBaht(revenue.revenueTotalBaht)}
           </p>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#66638c]">
             <span>
               เงินสด walk-in:{" "}
-              <span className="font-semibold tabular-nums text-slate-900">
-                {formatBaht(revenue.revenueCashBaht)}
-              </span>
+              <span className="font-semibold tabular-nums text-[#2e2a58]">{formatBaht(revenue.revenueCashBaht)}</span>
             </span>
-            <span className="hidden sm:inline text-slate-300" aria-hidden>
+            <span className="hidden text-[#d8d6ec] sm:inline" aria-hidden>
               |
             </span>
             <span>
-              จากการใช้แพ็ก:{" "}
-              <span className="font-semibold tabular-nums text-slate-900">
-                {formatBaht(revenue.revenuePackageBaht)}
+              ขายแพ็กใหม่:{" "}
+              <span className="font-semibold tabular-nums text-[#2e2a58]">
+                {formatBaht(revenue.revenueNewPackageBaht)}
               </span>
             </span>
           </div>
+          <p className="mt-2 text-[11px] leading-snug text-[#66638c]">
+            รายรับรวมนับเฉพาะเงินสดกับขายแพ็กใหม่ — การหักแพ็กหักแค่จำนวนครั้ง ไม่นับเป็นรายรับเพิ่ม
+          </p>
           {revenue.cashSumOk === false ? (
             <p className="mt-2 text-xs text-amber-800">
               ไม่สามารถรวมยอดเงินสดได้ — ตรวจสอบ migration คอลัมน์ amount_baht
             </p>
           ) : null}
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <div className={statClass}>
-            <p className="text-xs font-medium text-slate-500">ลูกค้า (ไม่ซ้ำ)</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">{uniqueCustomers}</p>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className={barberStatCardClass}>
+            <p className="text-xs font-medium text-[#8b87ad]">ลูกค้า (ไม่ซ้ำ)</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-[#2e2a58]">{uniqueCustomers}</p>
           </div>
-          <div className={statClass}>
-            <p className="text-xs font-medium text-slate-500">ใช้แพ็กเกจ</p>
+          <div className={barberStatCardClass}>
+            <p className="text-xs font-medium text-[#8b87ad]">ใช้แพ็ก</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-700">{packageUses}</p>
-            <p className="text-[10px] text-slate-400">ครั้งที่หักจากแพ็ก</p>
+            <p className="text-[10px] text-[#8b87ad]">หักจากแพ็ก</p>
           </div>
-          <div className={statClass}>
-            <p className="text-xs font-medium text-slate-500">เงินสด</p>
+          <div className={barberStatCardClass}>
+            <p className="text-xs font-medium text-[#8b87ad]">เงินสด</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-amber-800">{cashWalkIns}</p>
-            <p className="text-[10px] text-slate-400">Walk-in ที่บันทึก</p>
+            <p className="text-[10px] text-[#8b87ad]">Walk-in</p>
           </div>
-          <div className={statClass}>
-            <p className="text-xs font-medium text-slate-500">เข้าใช้บริการรวม</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-[#0000BF]">{logs.length}</p>
+          <div className={barberStatCardClass}>
+            <p className="text-xs font-medium text-[#8b87ad]">เข้าใช้รวม</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-[#4d47b6]">{logs.length}</p>
           </div>
-          <div className={`${statClass} col-span-2 sm:col-span-1`}>
-            <p className="text-xs font-medium text-slate-500">สมาชิกแพ็ก (เหลือครั้ง)</p>
+          <div className={`${barberStatCardClass} col-span-2 sm:col-span-1`}>
+            <p className="text-xs font-medium text-[#8b87ad]">แพ็กคงเหลือ</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-violet-800">{subActive}</p>
-            <p className="text-[10px] text-slate-400">สถานะใช้งาน &gt; 0 ครั้ง</p>
+            <p className="text-[10px] text-[#8b87ad]">ACTIVE &gt; 0 ครั้ง</p>
           </div>
         </div>
       </section>

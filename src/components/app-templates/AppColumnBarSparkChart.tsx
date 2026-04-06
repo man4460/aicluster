@@ -18,6 +18,11 @@ export type AppColumnBarSparkChartProps = {
   formatTitle?: (b: AppColumnBarBucket) => string;
   variant?: "brand" | "emerald";
   className?: string;
+  /**
+   * จัดระยะให้สอดคล้องกับ AppColumnBarDualSparkChart (เว้นที่ legend + ความกว้างคอลัมน์/gap เดียวกัน)
+   */
+  pairedLayout?: boolean;
+  compact?: boolean;
 };
 
 /**
@@ -31,6 +36,8 @@ export function AppColumnBarSparkChart({
   formatTitle,
   variant = "brand",
   className,
+  pairedLayout = false,
+  compact = false,
 }: AppColumnBarSparkChartProps) {
   const track = variant === "brand" ? "bg-[#ecebff]/50" : "bg-emerald-100/50";
   const bar =
@@ -45,34 +52,89 @@ export function AppColumnBarSparkChart({
       "border-[#d8d6ec] bg-[#faf9ff] text-[#66638c]"
     : "border-emerald-200/80 bg-emerald-50/50 text-slate-600";
 
+  const legendReserve =
+    pairedLayout ?
+      <div className={compact ? "mt-1 min-h-[1.5rem]" : "mt-2 min-h-[2.25rem]"} aria-hidden />
+    : null;
+
+  const colGap = compact ? "gap-px" : pairedLayout ? "gap-1.5" : "gap-1";
+  const colW = compact ?
+    pairedLayout ? "w-[1.55rem] sm:w-[2.05rem]"
+    : "w-[1.3rem] sm:w-6"
+  : pairedLayout ? "w-[2.75rem] sm:w-[3.5rem]"
+  : "w-8 sm:w-10";
+
+  const hChart = compact ? "h-24" : "h-36";
+  const titleSz = compact ? "text-xs" : "text-sm";
+  const subSz = compact ? "text-[10px]" : "text-xs";
+  const scrollMt = compact ? "mt-2" : "mt-3";
+  const scrollPad = compact ? "px-0 pb-0.5 pt-0" : "pb-2 pl-0.5 pr-1 pt-1";
+  const rowGap = compact ? "gap-0.5" : "gap-1.5";
+  const labelSz = compact ? "text-[8px] sm:text-[9px]" : "text-[9px] sm:text-[10px]";
+  const barMax =
+    pairedLayout ? (compact ? "max-w-[10px] sm:max-w-[11px]" : "max-w-[18px]") : compact ? "max-w-[11px] sm:max-w-[12px]" : "max-w-[22px]";
+  const trackRound = compact ? "rounded-t-sm" : "rounded-t-lg";
+  const emptyPy = compact ? "py-4 text-xs" : "py-6 text-sm";
+  const emptyMt = compact ? "mt-2" : "mt-3";
+
   if (buckets.length === 0) {
     return (
       <div className={className}>
-        {title ? <h3 className={cn("text-sm font-semibold", titleCls)}>{title}</h3> : null}
-        {subtitle ? <p className={cn("mt-0.5 text-xs", subCls)}>{subtitle}</p> : null}
-        <p className={cn("mt-3 rounded-xl border border-dashed py-6 text-center text-sm", emptyCls)}>{emptyText}</p>
+        {title ? <h3 className={cn("font-semibold", titleSz, titleCls)}>{title}</h3> : null}
+        {subtitle ? <p className={cn("mt-0.5", subSz, subCls)}>{subtitle}</p> : null}
+        {legendReserve}
+        <p className={cn("rounded-xl border border-dashed text-center", emptyMt, emptyPy, emptyCls)}>{emptyText}</p>
       </div>
     );
   }
 
   return (
     <div className={className}>
-      {title ? <h3 className={cn("text-sm font-semibold", titleCls)}>{title}</h3> : null}
-      {subtitle ? <p className={cn("mt-0.5 text-xs", subCls)}>{subtitle}</p> : null}
-      <div className="mt-4 flex max-w-full gap-1.5 overflow-x-auto pb-2 pt-1 [-webkit-overflow-scrolling:touch]">
+      {title ? <h3 className={cn("font-semibold", titleSz, titleCls)}>{title}</h3> : null}
+      {subtitle ? <p className={cn("mt-0.5", subSz, subCls)}>{subtitle}</p> : null}
+      {legendReserve}
+      <div
+        className={cn(
+          "flex max-w-full touch-pan-x overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]",
+          scrollMt,
+          scrollPad,
+          colGap,
+          "[scrollbar-width:thin]",
+        )}
+        role="region"
+        aria-label={title ?? "กราฟแท่งรายวัน"}
+      >
         {buckets.map((b) => (
           <div
             key={b.key}
-            className="flex w-10 shrink-0 flex-col items-center gap-1.5 sm:w-12"
+            className={cn("flex shrink-0 flex-col items-center", rowGap, colW)}
             title={formatTitle ? formatTitle(b) : `${b.label}: ${b.amount}`}
           >
-            <div className={cn("flex h-36 w-full items-end justify-center rounded-t-lg px-0.5 pt-1", track)}>
+            <div
+              className={cn(
+                "flex w-full items-end justify-center",
+                compact ? "gap-0 px-0 pt-0" : "gap-0.5 px-0.5 pt-0.5",
+                hChart,
+                trackRound,
+                track,
+              )}
+            >
               <div
-                className={cn("w-full max-w-[28px] rounded-t-md transition-all", bar)}
+                className={cn(
+                  compact ? "rounded-t-sm transition-all" : "rounded-t-md transition-all",
+                  pairedLayout ? "mx-auto w-full" : "w-full",
+                  barMax,
+                  bar,
+                )}
                 style={{ height: `${Math.max(8, b.pct)}%` }}
               />
             </div>
-            <span className="max-w-[3rem] truncate text-center text-[9px] font-medium leading-tight text-[#66638c] sm:text-[10px]">
+            <span
+              className={cn(
+                "max-w-full truncate text-center font-medium leading-tight text-[#66638c]",
+                labelSz,
+              )}
+            >
               {b.label}
             </span>
           </div>

@@ -7,7 +7,8 @@ export function BarberBookingStatusBadge({
   scheduledAt,
 }: {
   status: string;
-  scheduledAt: Date;
+  /** จาก Server Component อาจถูกส่งเป็น ISO string หลัง serialize */
+  scheduledAt: Date | string;
 }) {
   const ui = bookingUiLabel(status as BarberBookingStatusUi, scheduledAt, new Date());
   const toneClass = {

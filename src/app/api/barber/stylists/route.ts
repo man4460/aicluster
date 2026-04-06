@@ -9,9 +9,12 @@ import {
   THAI_PRISMA_SCHEMA_MISMATCH,
 } from "@/lib/prisma-schema-mismatch";
 
+const STYLIST_PHOTO_PREFIX = "/uploads/barber-stylists/";
+
 const postSchema = z.object({
   name: z.string().trim().min(1).max(100),
   phone: z.string().trim().max(20).optional().nullable(),
+  photoUrl: z.string().trim().max(512).optional().nullable(),
 });
 
 function normalizePhone(raw: string | null | undefined): string | null {
@@ -46,6 +49,7 @@ export async function GET(req: Request) {
         id: s.id,
         name: s.name,
         phone: s.phone,
+        photoUrl: s.photoUrl ?? null,
         isActive: s.isActive,
         createdAt: s.createdAt.toISOString(),
       })),
@@ -80,12 +84,22 @@ export async function POST(req: Request) {
 
   const phone = normalizePhone(parsed.data.phone ?? null);
 
+  let photoUrl: string | null = null;
+  if (parsed.data.photoUrl != null && parsed.data.photoUrl.trim() !== "") {
+    const t = parsed.data.photoUrl.trim();
+    if (!t.startsWith(STYLIST_PHOTO_PREFIX) || t.includes("..") || t.length > 512) {
+      return NextResponse.json({ error: "ลิงก์รูปไม่ถูกต้อง" }, { status: 400 });
+    }
+    photoUrl = t;
+  }
+
   const s = await prisma.barberStylist.create({
     data: {
       ownerUserId: own.ownerId,
       trialSessionId: scope.trialSessionId,
       name: parsed.data.name.trim(),
       phone,
+      photoUrl,
       isActive: true,
     },
   });
@@ -95,6 +109,7 @@ export async function POST(req: Request) {
       id: s.id,
       name: s.name,
       phone: s.phone,
+      photoUrl: s.photoUrl ?? null,
       isActive: s.isActive,
     },
   });

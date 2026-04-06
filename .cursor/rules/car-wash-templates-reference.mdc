@@ -1,0 +1,24 @@
+---
+description: อ้างอิงด่วน — ไฟล์หลักคาร์แคร์และเทมเพลตที่ใช้คู่กัน
+globs:
+  - "**/systems/car-wash/**"
+  - "**/components/qr/**"
+  - "**/components/app-templates/**"
+alwaysApply: false
+---
+
+# Car wash — แมปไฟล์ ↔ เทมเพลต
+
+| งาน | ไฟล์ / แพ็กเกจ |
+|-----|------------------|
+| แดชบอร์ดรวม | `CarWashDashboard.tsx` |
+| ลานวันนี้ + บิล/สถานะ | `CarWashServiceLanePanel.tsx` |
+| ยอดขาย กรอง กราฟ | `CarWashSalesPanel.tsx` + `AppRevenueCostColumnChart`, `AppCompareBarList` |
+| ต้นทุน | `CarWashCostPanel.tsx` |
+| พอร์ทัลลูกค้า | `CarWashCustomerPortalClient.tsx`, `app/car-wash/check-in/[ownerId]` |
+| หน้าพนักงาน | `app/(dashboard)/dashboard/car-wash/staff/page.tsx` |
+| โปสเตอร์ QR | `@/components/qr/shop-qr-template` (`createShopQrPosterDataUrl`, `createShopQrPosterCanvas`, `downloadPosterPng`, `downloadPosterPdf`) |
+| การ์ดแดชบอร์ด | `@/components/app-templates` — `AppDashboardSection`, `AppSectionHeader`, `AppEmptyState`, `FormModal` |
+| สถานะลาน | `@/lib/car-wash/service-status` (`carWashStatusLabelTh`, `normalizeCarWashServiceStatus`) |
+
+กฎบังคับใช้ template กลางทุกโมดูล: **`app-templates-central.mdc`**

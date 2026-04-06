@@ -1,6 +1,8 @@
+import path from "path";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { barberPortalSlipOwnerTag, barberPortalSlipPathPrefix } from "@/lib/barber/portal-slip-filename";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { isBarberCustomerPortalOpenForOwner } from "@/lib/barber/portal-access";
 import { BARBER_MODULE_SLUG } from "@/lib/modules/config";
@@ -10,7 +12,18 @@ const bodySchema = z.object({
   ownerId: z.string().min(10).max(64),
   phone: z.string().min(1).max(32),
   subscriptionId: z.number().int().positive(),
+  receiptImageUrl: z.string().max(512).optional().nullable(),
 });
+
+function isValidPortalSlipUrl(ownerId: string, url: string | null | undefined): boolean {
+  if (url == null || url.trim() === "") return true;
+  const u = url.trim();
+  const prefix = barberPortalSlipPathPrefix();
+  if (!u.startsWith(prefix)) return false;
+  const base = path.basename(u);
+  const tag = barberPortalSlipOwnerTag(ownerId);
+  return base.startsWith(`p-${tag}-`) && !base.includes("..") && base.length < 200;
+}
 
 function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "").slice(0, 20);
@@ -29,11 +42,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
   }
 
-  const { ownerId, phone: phoneRaw, subscriptionId } = parsed.data;
+  const { ownerId, phone: phoneRaw, subscriptionId, receiptImageUrl } = parsed.data;
   const phone = normalizePhone(phoneRaw);
   if (phone.length < 9) {
     return NextResponse.json({ error: "กรอกเบอร์อย่างน้อย 9 หลัก" }, { status: 400 });
   }
+  if (!isValidPortalSlipUrl(ownerId, receiptImageUrl)) {
+    return NextResponse.json({ error: "ลิงก์รูปไม่ถูกต้อง" }, { status: 400 });
+  }
+  const slip = receiptImageUrl?.trim() || null;
 
   const rl = rateLimit(`barber-portal-checkin:${ip}:${ownerId}`, 24, 10 * 60 * 1000);
   if (!rl.ok) {
@@ -78,6 +95,7 @@ export async function POST(req: Request) {
           subscriptionId: sub.id,
           barberCustomerId: sub.barberCustomerId,
           visitType: "PACKAGE_USE",
+          receiptImageUrl: slip ?? undefined,
         },
       });
 

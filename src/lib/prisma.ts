@@ -6,7 +6,9 @@ import { getAuditActor } from "@/lib/audit-context";
  * เพิ่มทุกครั้งที่แก้ schema แล้วต้องการให้ dev โหลด PrismaClient ใหม่
  * (แก้กรณี globalThis.prisma ค้างตัวเก่าหลัง prisma generate — select ฟิลด์ใหม่แล้ว error)
  */
-const PRISMA_SINGLETON_VERSION = 34;
+/** เพิ่มทุกครั้งที่ schema / prisma generate เปลี่ยน delegate หรือฟิลด์ที่มีผลต่อ query engine (เช่น barber_stylist.photo_url) */
+/** bump เมื่อ schema subscription มีฟิลด์ใหม่ (เช่น sale_receipt_image_url) — กันค้าง client เก่าแล้ว ValidationError */
+const PRISMA_SINGLETON_VERSION = 39;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -19,6 +21,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     appModule?: { findMany?: unknown };
     trialSession?: { findMany?: unknown };
     barberServiceLog?: { findMany?: unknown };
+    barberCostCategory?: { findMany?: unknown };
+    barberCostEntry?: { findMany?: unknown };
     barberStylist?: { findMany?: unknown };
     dormitoryProfile?: { findUnique?: unknown };
     barberShopProfile?: { findUnique?: unknown };
@@ -51,6 +55,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.appModule?.findMany === "function" &&
     typeof c.trialSession?.findMany === "function" &&
     typeof c.barberServiceLog?.findMany === "function" &&
+    typeof c.barberCostCategory?.findMany === "function" &&
+    typeof c.barberCostEntry?.findMany === "function" &&
     typeof c.barberStylist?.findMany === "function" &&
     typeof c.dormitoryProfile?.findUnique === "function" &&
     typeof c.barberShopProfile?.findUnique === "function" &&

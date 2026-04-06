@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
 import { getBarberDataScope } from "@/lib/trial/module-scopes";
-import { bangkokMonthStartEnd, bangkokYearStartEnd } from "@/lib/barber/bangkok-day";
-import { bangkokDateKey } from "@/lib/time/bangkok";
+import { bangkokRangeForCalendarFilter } from "@/lib/barber/bangkok-day";
+import { resolveBarberHistoryCalendarFromSearchParams } from "@/lib/barber/history-calendar-query";
 
 type BarberLogWithCustomer = Prisma.BarberServiceLogGetPayload<{
   include: { customer: true; stylist: true };
@@ -13,44 +13,6 @@ type BarberLogWithCustomer = Prisma.BarberServiceLogGetPayload<{
 
 /** ไม่ดึงรายการทั้งหมด — จำกัดภายในระบบเท่านั้น */
 const LIST_CAP = 120;
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** เลขเดือน 1–12 หรือ `all` = รวมทุกเดือนในปีที่เลือก (สรุปทั้งปี เวลาไทย) */
-function parseMonthParam(searchParams: URLSearchParams): number | "all" {
-  const raw = (searchParams.get("month") ?? "").trim().toLowerCase();
-  if (raw === "all") return "all";
-  const key = bangkokDateKey();
-  const defM = Number(key.split("-")[1]);
-  const month = Number(raw);
-  if (!Number.isFinite(month) || month < 1 || month > 12) return defM;
-  return month;
-}
-
-/** ปีปฏิทินไทยที่มี log จริง — ไม่พึ่ง DATE_ADD ใน SQL (ลดปัญหา timezone / เวอร์ชัน MySQL) */
-async function distinctBangkokYears(ownerId: string, trialSessionId: string): Promise<number[]> {
-  const bounds = await prisma.barberServiceLog.aggregate({
-    where: { ownerUserId: ownerId, trialSessionId },
-    _min: { createdAt: true },
-    _max: { createdAt: true },
-  });
-  const minAt = bounds._min.createdAt;
-  const maxAt = bounds._max.createdAt;
-  if (!minAt || !maxAt) return [];
-
-  const years = new Set<number>();
-  const startKey = minAt.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
-  const endKey = maxAt.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
-  const start = new Date(`${startKey}T12:00:00+07:00`);
-  const end = new Date(`${endKey}T12:00:00+07:00`);
-  for (let t = start.getTime(); t <= end.getTime(); t += DAY_MS) {
-    const y = Number(
-      new Date(t).toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }).slice(0, 4),
-    );
-    if (Number.isFinite(y)) years.add(y);
-  }
-  return [...years].sort((a, b) => a - b);
-}
 
 async function sumPackageRevenueBaht(
   ownerId: string,
@@ -90,6 +52,40 @@ async function sumPackageRevenueBaht(
   return Number(row[0]?.total ?? 0);
 }
 
+async function sumNewPackageSalesBaht(
+  ownerId: string,
+  trialSessionId: string,
+  start: Date,
+  end: Date,
+  q: string,
+): Promise<number> {
+  const like = `%${q}%`;
+  if (q.length === 0) {
+    const row = await prisma.$queryRaw<[{ total: unknown }]>`
+      SELECT COALESCE(SUM(CAST(bp.price AS DECIMAL(14, 4))), 0) AS total
+      FROM customer_subscriptions cs
+      INNER JOIN barber_packages bp ON cs.package_id = bp.id
+      WHERE cs.owner_id = ${ownerId}
+        AND cs.trial_session_id = ${trialSessionId}
+        AND cs.created_at >= ${start}
+        AND cs.created_at < ${end}
+    `;
+    return Number(row[0]?.total ?? 0);
+  }
+  const row = await prisma.$queryRaw<[{ total: unknown }]>`
+    SELECT COALESCE(SUM(CAST(bp.price AS DECIMAL(14, 4))), 0) AS total
+    FROM customer_subscriptions cs
+    INNER JOIN barber_packages bp ON cs.package_id = bp.id
+    INNER JOIN barber_customers c ON cs.barber_customer_id = c.id
+    WHERE cs.owner_id = ${ownerId}
+      AND cs.trial_session_id = ${trialSessionId}
+      AND cs.created_at >= ${start}
+      AND cs.created_at < ${end}
+      AND (c.phone LIKE ${like} OR COALESCE(c.name, '') LIKE ${like})
+  `;
+  return Number(row[0]?.total ?? 0);
+}
+
 export async function GET(req: Request) {
   const auth = await requireSession();
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -100,27 +96,12 @@ export async function GET(req: Request) {
   const ownerId = own.ownerId;
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") ?? "").trim();
-  const monthParam = parseMonthParam(searchParams);
-
-  const key = bangkokDateKey();
-  const defY = Number(key.split("-")[0]);
 
   try {
-    const dbYears = await distinctBangkokYears(ownerId, scope.trialSessionId);
-    const yearParam = Number(searchParams.get("year"));
+    const { year, month: monthParam, day: dayParam, availableYears } =
+      await resolveBarberHistoryCalendarFromSearchParams(ownerId, scope.trialSessionId, searchParams);
 
-    const fromDb = dbYears.length > 0 ? dbYears : [];
-    const availableYears = [...new Set([...fromDb, defY])].sort((a, b) => a - b);
-
-    let year = Number.isFinite(yearParam) && yearParam >= 2000 && yearParam <= 2100 ? yearParam : defY;
-    if (!availableYears.includes(year)) {
-      year = availableYears[availableYears.length - 1]!;
-    }
-
-    const { start, end } =
-      monthParam === "all"
-        ? bangkokYearStartEnd(year)
-        : bangkokMonthStartEnd(year, monthParam);
+    const { start, end } = bangkokRangeForCalendarFilter(year, monthParam, dayParam);
 
     const textFilter =
       q.length > 0
@@ -140,10 +121,16 @@ export async function GET(req: Request) {
     };
 
     let revenuePackageBaht = 0;
+    let revenueNewPackageBaht = 0;
     try {
       revenuePackageBaht = await sumPackageRevenueBaht(ownerId, scope.trialSessionId, start, end, q);
     } catch (e) {
       console.error("[barber/history] package revenue", e);
+    }
+    try {
+      revenueNewPackageBaht = await sumNewPackageSalesBaht(ownerId, scope.trialSessionId, start, end, q);
+    } catch (e) {
+      console.error("[barber/history] new package sales revenue", e);
     }
 
     let revenueCashBaht = 0;
@@ -178,6 +165,7 @@ export async function GET(req: Request) {
           createdAt: true,
           subscriptionId: true,
           barberCustomerId: true,
+          receiptImageUrl: true,
           customer: true,
         },
         orderBy: { createdAt: "desc" },
@@ -204,7 +192,8 @@ export async function GET(req: Request) {
 
     const uniqueCustomers = distinctCustomers.length;
     const truncated = totalVisits > logs.length;
-    const revenueTotalBaht = revenueCashBaht + revenuePackageBaht;
+    /** รายรับรวม = เงินสด + ขายแพ็กใหม่ — ไม่นับมูลค่าหักแพ็กต่อครั้ง (รับรู้ตอนขายแพ็กแล้ว) */
+    const revenueTotalBaht = revenueCashBaht + revenueNewPackageBaht;
 
     return NextResponse.json({
       logs: logs.map((l) => ({
@@ -212,6 +201,7 @@ export async function GET(req: Request) {
         visitType: l.visitType,
         note: l.note,
         amountBaht: l.amountBaht != null ? String(l.amountBaht) : null,
+        receiptImageUrl: l.receiptImageUrl ?? null,
         createdAt: l.createdAt.toISOString(),
         subscriptionId: l.subscriptionId,
         stylistName: l.stylist?.name ?? null,
@@ -228,12 +218,14 @@ export async function GET(req: Request) {
         uniqueCustomers,
         revenueCashBaht,
         revenuePackageBaht,
+        revenueNewPackageBaht,
         revenueTotalBaht,
         cashRevenueComplete: cashSumOk,
       },
       meta: {
         year,
         month: monthParam === "all" ? "all" : monthParam,
+        day: monthParam === "all" ? "all" : dayParam === "all" ? "all" : dayParam,
         availableYears,
         truncated,
       },

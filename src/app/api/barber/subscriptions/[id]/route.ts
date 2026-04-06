@@ -2,15 +2,24 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
+import { prismaErrorToApiMessage } from "@/lib/prisma-api-error";
 import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import { writeSystemActivityLog } from "@/lib/audit-log";
 import { z } from "zod";
 
 type Ctx = { params: Promise<{ id: string }> };
+
+const barberSaleReceiptUrl = z
+  .string()
+  .max(512)
+  .regex(/^\/uploads\/barber-cash-receipts\/[a-zA-Z0-9._-]+$/i);
+
 const patchSchema = z.object({
   remainingSessions: z.number().int().min(0).max(9999).optional(),
   status: z.enum(["ACTIVE", "EXHAUSTED", "CANCELLED"]).optional(),
   customerName: z.string().trim().max(100).optional().nullable(),
+  /** แนบสลิปขายแพ็กใหม่ หรือส่ง null เพื่อลบ */
+  saleReceiptImageUrl: z.union([barberSaleReceiptUrl, z.null()]).optional(),
 });
 
 function parseId(raw: string): number | null {
@@ -87,6 +96,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
     data: {
       ...(parsed.data.remainingSessions !== undefined ? { remainingSessions: parsed.data.remainingSessions } : {}),
       ...(parsed.data.status !== undefined ? { status: parsed.data.status } : {}),
+      ...(parsed.data.saleReceiptImageUrl !== undefined ?
+        { saleReceiptImageUrl: parsed.data.saleReceiptImageUrl }
+      : {}),
     },
   });
   await writeSystemActivityLog({
@@ -111,7 +123,26 @@ export async function DELETE(_req: Request, ctx: Ctx) {
     select: { id: true },
   });
   if (!sub) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
-  await prisma.barberCustomerSubscription.delete({ where: { id } });
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.barberServiceLog.updateMany({
+        where: { subscriptionId: id },
+        data: { subscriptionId: null },
+      });
+      await tx.barberPortalStaffPing.updateMany({
+        where: { subscriptionId: id },
+        data: { subscriptionId: null },
+      });
+      await tx.barberCustomerSubscription.delete({ where: { id } });
+    });
+  } catch (e) {
+    console.error("[barber/subscriptions DELETE]", id, e);
+    const hint = prismaErrorToApiMessage(e);
+    return NextResponse.json(
+      { error: hint ?? "ลบไม่สำเร็จ — มีรายการอื่นอ้างแพ็กนี้อยู่ หรือฐานข้อมูลไม่ตรงสคีมา" },
+      { status: 500 },
+    );
+  }
   await writeSystemActivityLog({
     actorUserId: auth.session.sub,
     action: "DELETE",

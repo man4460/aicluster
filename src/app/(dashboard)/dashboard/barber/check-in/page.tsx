@@ -1,18 +1,16 @@
-import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-container";
 import { BarberCheckInClient } from "@/systems/barber/components/BarberCheckInClient";
+import { BarberDashboardBackLink } from "@/systems/barber/components/BarberDashboardBackLink";
+import { barberPageStackClass } from "@/systems/barber/components/barber-ui-tokens";
 
 export default function BarberCheckInPage() {
   return (
-    <div className="space-y-6">
+    <div className={barberPageStackClass}>
       <PageHeader
-        title="เช็คอินลูกค้า"
-        description="ค้นหาเบอร์ — หักครั้งแพ็กหรือบันทึกเงินสด"
-        action={
-          <Link href="/dashboard/barber" className="text-sm font-medium text-[#0000BF] hover:underline">
-            ← แดชบอร์ด
-          </Link>
-        }
+        compact
+        title="เช็กอิน"
+        description="ค้นหาลูกค้า หักแพ็ก เงินสด ขายแพ็ก"
+        action={<BarberDashboardBackLink />}
       />
       <BarberCheckInClient />
     </div>

@@ -1,11 +1,10 @@
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
 
-const MAX_BYTES = 2 * 1024 * 1024;
+const MAX_BYTES = 3 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 export async function POST(req: Request) {
@@ -13,7 +12,6 @@ export async function POST(req: Request) {
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const own = await barberOwnerFromAuth(auth.session.sub);
   if (!own.ok) return own.response;
-  if (own.isStaff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   let form: FormData;
   try {
@@ -33,7 +31,7 @@ export async function POST(req: Request) {
 
   const buf = Buffer.from(await file.arrayBuffer());
   if (buf.length > MAX_BYTES) {
-    return NextResponse.json({ error: "ไฟล์ใหญ่เกิน 2MB" }, { status: 400 });
+    return NextResponse.json({ error: "ไฟล์ใหญ่เกิน 3MB" }, { status: 400 });
   }
 
   const ext =
@@ -44,18 +42,12 @@ export async function POST(req: Request) {
         : file.type === "image/gif"
           ? "gif"
           : "jpg";
-  const dir = path.join(process.cwd(), "public", "uploads", "barber-logos");
+  const dir = path.join(process.cwd(), "public", "uploads", "barber-cash-receipts");
   await mkdir(dir, { recursive: true });
-  const filename = `${own.ownerId}-${Date.now()}.${ext}`;
-  const fsPath = path.join(dir, filename);
-  await writeFile(fsPath, buf);
+  const prefix = own.ownerId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 16) || "u";
+  const filename = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  await writeFile(path.join(dir, filename), buf);
 
-  const logoUrl = `/uploads/barber-logos/${filename}`;
-
-  await prisma.user.update({
-    where: { id: own.ownerId },
-    data: { avatarUrl: logoUrl },
-  });
-
-  return NextResponse.json({ logoUrl });
+  const imageUrl = `/uploads/barber-cash-receipts/${filename}`;
+  return NextResponse.json({ imageUrl });
 }

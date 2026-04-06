@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
 import { getBarberDataScope } from "@/lib/trial/module-scopes";
+import { prismaErrorToApiMessage, prismaKnownRequestCode } from "@/lib/prisma-api-error";
 
 const packageUseSchema = z.object({
   subscriptionId: z.number().int().positive(),
   stylistId: z.number().int().positive().optional().nullable(),
 });
+
+const barberCashReceiptUrl = z
+  .string()
+  .max(512)
+  .regex(/^\/uploads\/barber-cash-receipts\/[a-zA-Z0-9._-]+$/);
 
 const cashSchema = z.object({
   visitType: z.literal("CASH_WALK_IN"),
@@ -17,12 +24,21 @@ const cashSchema = z.object({
   note: z.string().max(255).optional().nullable(),
   amountBaht: z.number().finite().min(0).max(999_999.99).optional().nullable(),
   stylistId: z.number().int().positive().optional().nullable(),
+  receiptImageUrl: barberCashReceiptUrl.optional().nullable(),
 });
 
-const bodySchema = z.union([packageUseSchema, cashSchema]);
+/** cash มาก่อน — ถ้า package มาก่อน JSON ที่มีทั้ง subscriptionId + visitType อาจถูก parse เป็นหักแพ็กผิด */
+const bodySchema = z.union([cashSchema, packageUseSchema]);
 
 function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "").slice(0, 20);
+}
+
+function isPrismaClientValidationError(e: unknown): boolean {
+  return (
+    e instanceof Prisma.PrismaClientValidationError ||
+    (e instanceof Error && e.name === "PrismaClientValidationError")
+  );
 }
 
 export async function POST(req: Request) {
@@ -85,6 +101,7 @@ export async function POST(req: Request) {
         await tx.barberServiceLog.create({
           data: {
             ownerUserId: ownerId,
+            trialSessionId,
             subscriptionId: sub.id,
             barberCustomerId: sub.barberCustomerId,
             visitType: "PACKAGE_USE",
@@ -133,37 +150,92 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "ไม่พบช่างหรือปิดใช้งานแล้ว" }, { status: 400 });
   }
 
-  const customer = await prisma.barberCustomer.upsert({
-    where: {
-      ownerUserId_phone_trialSessionId: {
-        ownerUserId: ownerId,
-        phone,
-        trialSessionId,
-      },
-    },
-    create: {
+  const receiptImageUrl =
+    parsed.data.receiptImageUrl != null && parsed.data.receiptImageUrl.length > 0
+      ? parsed.data.receiptImageUrl
+      : null;
+
+  const whereCustomer = {
+    ownerUserId_phone_trialSessionId: {
       ownerUserId: ownerId,
-      trialSessionId,
       phone,
-      name,
+      trialSessionId,
     },
-    update: {
-      ...(name !== null && name.length > 0 ? { name } : {}),
-    },
-  });
+  } as const;
 
-  await prisma.barberServiceLog.create({
-    data: {
+  try {
+    let customer = await prisma.barberCustomer.findUnique({ where: whereCustomer });
+    if (!customer) {
+      customer = await prisma.barberCustomer.create({
+        data: {
+          ownerUserId: ownerId,
+          trialSessionId,
+          phone,
+          name,
+        },
+      });
+    } else if (name !== null && name.length > 0) {
+      customer = await prisma.barberCustomer.update({
+        where: { id: customer.id },
+        data: { name },
+      });
+    }
+
+    const cashLogCore = {
       ownerUserId: ownerId,
       trialSessionId,
-      subscriptionId: null,
       barberCustomerId: customer.id,
-      visitType: "CASH_WALK_IN",
-      note,
-      ...(amountBaht != null ? { amountBaht } : {}),
+      visitType: "CASH_WALK_IN" as const,
+      ...(note != null ? { note } : {}),
+      ...(amountBaht != null ? { amountBaht: amountBaht.toFixed(2) } : {}),
       ...(stylistIdResolved != null ? { stylistId: stylistIdResolved } : {}),
-    },
-  });
+    };
 
-  return NextResponse.json({ ok: true, visitType: "CASH_WALK_IN", phone: customer.phone });
+    try {
+      await prisma.barberServiceLog.create({
+        data: {
+          ...cashLogCore,
+          ...(receiptImageUrl != null ? { receiptImageUrl } : {}),
+        },
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      const staleClientReceipt =
+        receiptImageUrl != null &&
+        isPrismaClientValidationError(e) &&
+        /receiptImageUrl|receipt_image|Unknown argument/i.test(msg);
+      if (staleClientReceipt) {
+        console.warn(
+          "[barber/check-in] Prisma ไม่รู้จัก receiptImageUrl (มักเป็น client ค้างหลัง prisma generate) — บันทึกโดยไม่แนบรูปสลิป",
+        );
+        await prisma.barberServiceLog.create({ data: cashLogCore });
+      } else {
+        throw e;
+      }
+    }
+
+    return NextResponse.json({ ok: true, visitType: "CASH_WALK_IN", phone: customer.phone });
+  } catch (e) {
+    console.error("[barber/check-in] CASH_WALK_IN", e);
+    const mapped = prismaErrorToApiMessage(e);
+    if (mapped) {
+      return NextResponse.json({ error: mapped }, { status: 500 });
+    }
+    const code = prismaKnownRequestCode(e);
+    if (code) {
+      return NextResponse.json(
+        { error: `บันทึกไม่สำเร็จ (รหัส ${code}) — ดู log เซิร์ฟเวอร์ หรือรัน prisma migrate deploy` },
+        { status: 500 },
+      );
+    }
+    const raw = e instanceof Error ? e.message : String(e);
+    const devHint =
+      process.env.NODE_ENV === "development" ? ` — ${raw.slice(0, 280)}` : "";
+    return NextResponse.json(
+      {
+        error: `บันทึกไม่สำเร็จ — ตรวจสอบการเชื่อมต่อฐานข้อมูลและ log ฝั่งเซิร์ฟเวอร์${devHint}`,
+      },
+      { status: 500 },
+    );
+  }
 }

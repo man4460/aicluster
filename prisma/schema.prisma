@@ -85,6 +85,8 @@ model User {
   barberStylists         BarberStylist[]
   barberPortalStaffPings BarberPortalStaffPing[]
   barberBookings         BarberBooking[]
+  barberCostCategories   BarberCostCategory[]
+  barberCostEntries      BarberCostEntry[]
   attendanceSettings       AttendanceSettings[]
   attendanceLogsOwned      AttendanceLog[]           @relation("AttendanceOrg")
   attendanceLogsAsActor    AttendanceLog[]           @relation("AttendanceActor")
@@ -171,6 +173,8 @@ model BarberStylist {
   trialSessionId String @default("prod") @map("trial_session_id") @db.VarChar(36)
   name        String   @db.VarChar(100)
   phone       String?  @db.VarChar(20)
+  /** รูปโปรไฟล์ — path ใต้ public เช่น /uploads/barber-stylists/... */
+  photoUrl    String?  @map("photo_url") @db.VarChar(512)
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -486,6 +490,8 @@ model BarberCustomerSubscription {
   soldByStylist     BarberStylist?           @relation("SubscriptionSoldByStylist", fields: [soldByStylistId], references: [id], onDelete: SetNull)
   remainingSessions Int                      @map("remaining_sessions")
   status            BarberSubscriptionStatus @default(ACTIVE)
+  /** รูปสลิปตอนขายแพ็ก (ถ้ามี) */
+  saleReceiptImageUrl String?                @map("sale_receipt_image_url") @db.VarChar(512)
   createdAt         DateTime                 @default(now()) @map("created_at")
   updatedAt         DateTime                 @updatedAt @map("updated_at")
 
@@ -515,6 +521,8 @@ model BarberServiceLog {
   stylist          BarberStylist?                @relation(fields: [stylistId], references: [id], onDelete: SetNull)
   /** บันทึกเฉพาะ walk-in เงินสด — ใช้คำนวณรายได้ในประวัติ */
   amountBaht       Decimal?                      @map("amount_baht") @db.Decimal(10, 2)
+  /** รูปบิล/สลิป walk-in เงินสด (ถ้ามี) */
+  receiptImageUrl  String?                       @map("receipt_image_url") @db.VarChar(512)
   note             String?                       @db.VarChar(255)
   createdAt        DateTime                      @default(now()) @map("created_at")
 
@@ -523,6 +531,41 @@ model BarberServiceLog {
   @@index([barberCustomerId])
   @@index([stylistId])
   @@map("barber_service_logs")
+}
+
+/** หมวดต้นทุนร้านตัดผม */
+model BarberCostCategory {
+  id             Int                @id @default(autoincrement())
+  ownerUserId    String             @map("owner_id") @db.VarChar(191)
+  owner          User               @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String             @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String             @db.VarChar(120)
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  entries        BarberCostEntry[]
+
+  @@index([ownerUserId, trialSessionId], map: "barber_cost_cat_owner_trial_idx")
+  @@map("barber_cost_categories")
+}
+
+/** รายการจ่ายต้นทุนร้านตัดผม */
+model BarberCostEntry {
+  id             Int                 @id @default(autoincrement())
+  ownerUserId    String              @map("owner_id") @db.VarChar(191)
+  owner          User                @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String              @default("prod") @map("trial_session_id") @db.VarChar(36)
+  categoryId     Int                 @map("category_id")
+  category       BarberCostCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  spentAt        DateTime            @map("spent_at")
+  amount         Int
+  itemLabel      String              @default("") @map("item_label") @db.VarChar(200)
+  note           String              @default("") @db.VarChar(500)
+  slipPhotoUrl   String              @default("") @map("slip_photo_url") @db.VarChar(512)
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, spentAt], map: "barber_cost_ent_owner_trial_spent_idx")
+  @@map("barber_cost_entries")
 }
 
 // --- Smart Attendance / เช็คอินอัจฉริยะ (กลุ่ม 1) ---
