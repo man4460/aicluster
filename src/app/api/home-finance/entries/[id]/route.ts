@@ -4,6 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { writeSystemActivityLog } from "@/lib/audit-log";
+import {
+  canonicalizeHomeFinanceAttachmentList,
+  normalizeHomeFinanceStoredPath,
+} from "@/lib/home-finance/attachments";
 import { parseYmdToDbDate } from "@/lib/home-finance/entry-date";
 import { homeFinanceEntryPatchSchema, zodFirstIssueMessage } from "@/lib/home-finance/entry-schema";
 
@@ -109,12 +113,25 @@ export async function PATCH(req: Request, ctx: Ctx) {
     data.paymentMethod = parsed.data.paymentMethod?.trim() || null;
   }
   if (parsed.data.note !== undefined) data.note = parsed.data.note?.trim() || null;
-  if (parsed.data.slipImageUrl !== undefined) {
+  if (parsed.data.attachmentUrls !== undefined) {
+    const urls = canonicalizeHomeFinanceAttachmentList(parsed.data.attachmentUrls);
+    data.attachmentUrls = urls;
+    data.slipImageUrl = urls[0] ?? null;
+  } else if (parsed.data.slipImageUrl !== undefined) {
     const slip = parsed.data.slipImageUrl?.trim() ?? "";
-    const slipOk =
-      slip === "" ||
-      (slip.startsWith("/uploads/home-finance/") && !slip.includes("..") && slip.length <= 512);
-    data.slipImageUrl = slipOk ? (slip === "" ? null : slip) : null;
+    if (slip === "") {
+      data.slipImageUrl = null;
+      data.attachmentUrls = [];
+    } else {
+      const c = normalizeHomeFinanceStoredPath(slip);
+      if (c) {
+        data.slipImageUrl = c;
+        data.attachmentUrls = [c];
+      } else {
+        data.slipImageUrl = null;
+        data.attachmentUrls = [];
+      }
+    }
   }
   if (linkedUtilityId !== undefined) {
     if (linkedUtilityId === null) {

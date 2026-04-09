@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@/generated/prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { prismaErrorToApiMessage } from "@/lib/prisma-api-error";
+import { zodFirstIssueMessage } from "@/lib/home-finance/entry-schema";
 import { requireSession } from "@/lib/api-auth";
+import {
+  canonicalizeHomeFinanceAttachmentList,
+  isAllowedHomeFinanceUploadPath,
+  MAX_HOME_FINANCE_ATTACHMENTS,
+  normalizeHomeFinanceStoredPath,
+} from "@/lib/home-finance/attachments";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -18,6 +26,16 @@ const vehicleYearOpt = z.preprocess((v: unknown) => {
   return v;
 }, z.number().int().min(1900).max(2100).optional().nullable());
 
+const attachmentUrlsPatchSchema = z
+  .array(
+    z
+      .string()
+      .max(512)
+      .refine((s) => isAllowedHomeFinanceUploadPath(s), "เส้นทางไฟล์ไม่ถูกต้อง"),
+  )
+  .max(MAX_HOME_FINANCE_ATTACHMENTS)
+  .optional();
+
 const patchSchema = z.object({
   vehicleType: z.enum(["CAR", "MOTORCYCLE"]).optional(),
   label: z.string().trim().min(1).max(120).optional(),
@@ -31,6 +49,7 @@ const patchSchema = z.object({
   note: z.string().trim().max(400).optional().nullable(),
   isActive: z.boolean().optional(),
   photoUrl: z.string().max(512).optional().nullable(),
+  attachmentUrls: attachmentUrlsPatchSchema,
 });
 
 function parseDateOnly(value?: string | null): Date | null {
@@ -77,45 +96,60 @@ export async function PATCH(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "รูปแบบข้อมูลไม่ถูกต้อง" }, { status: 400 });
   }
   const parsed = patchSchema.safeParse(json);
-  if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: `ข้อมูลไม่ถูกต้อง — ${zodFirstIssueMessage(parsed.error)}` },
+      { status: 400 },
+    );
+  }
+
+  const d = parsed.data;
+  const data: Prisma.HomeVehicleProfileUpdateInput = {};
+
+  if (d.vehicleType !== undefined) data.vehicleType = d.vehicleType;
+  if (d.label !== undefined) data.label = d.label;
+  if (d.brand !== undefined) data.brand = d.brand?.trim() || null;
+  if (d.model !== undefined) data.model = d.model?.trim() || null;
+  if (d.plateNumber !== undefined) data.plateNumber = d.plateNumber?.trim() || null;
+  if (d.vehicleYear !== undefined) data.vehicleYear = d.vehicleYear;
+  if (d.taxDueDate !== undefined) data.taxDueDate = parseDateOnly(d.taxDueDate);
+  if (d.serviceDueDate !== undefined) data.serviceDueDate = parseDateOnly(d.serviceDueDate);
+  if (d.insuranceDueDate !== undefined) data.insuranceDueDate = parseDateOnly(d.insuranceDueDate);
+  if (d.note !== undefined) data.note = d.note?.trim() || null;
+  if (d.isActive !== undefined) data.isActive = d.isActive;
+
+  if (d.photoUrl !== undefined) {
+    const p = d.photoUrl?.trim();
+    if (!p) data.photoUrl = null;
+    else {
+      const canon = normalizeHomeFinanceStoredPath(p);
+      if (canon) data.photoUrl = canon;
+    }
+  }
+
+  if (d.attachmentUrls !== undefined) {
+    data.attachmentUrls = canonicalizeHomeFinanceAttachmentList(d.attachmentUrls);
+  }
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: "ไม่มีข้อมูลที่จะบันทึก" }, { status: 400 });
+  }
 
   try {
     const row = await prisma.homeVehicleProfile.update({
       where: { id },
-      data: {
-        ...(parsed.data.vehicleType !== undefined ? { vehicleType: parsed.data.vehicleType } : {}),
-        ...(parsed.data.label !== undefined ? { label: parsed.data.label } : {}),
-        ...(parsed.data.brand !== undefined ? { brand: parsed.data.brand?.trim() || null } : {}),
-        ...(parsed.data.model !== undefined ? { model: parsed.data.model?.trim() || null } : {}),
-        ...(parsed.data.plateNumber !== undefined
-          ? { plateNumber: parsed.data.plateNumber?.trim() || null }
-          : {}),
-        ...(parsed.data.vehicleYear !== undefined ? { vehicleYear: parsed.data.vehicleYear } : {}),
-        ...(parsed.data.taxDueDate !== undefined ? { taxDueDate: parseDateOnly(parsed.data.taxDueDate) } : {}),
-        ...(parsed.data.serviceDueDate !== undefined
-          ? { serviceDueDate: parseDateOnly(parsed.data.serviceDueDate) }
-          : {}),
-        ...(parsed.data.insuranceDueDate !== undefined
-          ? { insuranceDueDate: parseDateOnly(parsed.data.insuranceDueDate) }
-          : {}),
-        ...(parsed.data.note !== undefined ? { note: parsed.data.note?.trim() || null } : {}),
-        ...(parsed.data.isActive !== undefined ? { isActive: parsed.data.isActive } : {}),
-        ...(parsed.data.photoUrl !== undefined
-          ? (() => {
-              const p = parsed.data.photoUrl?.trim();
-              if (!p) return { photoUrl: null };
-              if (p.startsWith("/uploads/home-finance/") && !p.includes("..") && p.length <= 512)
-                return { photoUrl: p };
-              return {};
-            })()
-          : {}),
-      },
+      data,
     });
     return NextResponse.json({ item: row });
   } catch (e) {
     console.error("home-finance/vehicles PATCH", e);
+    const msg = prismaErrorToApiMessage(e);
     return NextResponse.json(
-      { error: "บันทึกการแก้ไขยานพาหนะไม่สำเร็จ — ลองใหม่หรือตรวจสอบการเชื่อมต่อ" },
+      {
+        error:
+          msg ??
+          "บันทึกการแก้ไขยานพาหนะไม่สำเร็จ — ลองใหม่หรือตรวจสอบการเชื่อมต่อ",
+      },
       { status: 500 },
     );
   }

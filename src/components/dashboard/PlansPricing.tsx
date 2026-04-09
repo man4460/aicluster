@@ -6,10 +6,14 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import QRCode from "qrcode";
 import {
+  DAILY_LINE_PLAN_SUMMARY,
+  MODULE_GROUP_TIER_NAME,
   PLAN_PRICES,
   PRICE_TO_TIER,
   TIER_SUBSCRIPTION_TOKEN_COST,
+  buffetTierMaxGroup,
   computeBuffetSubscriptionTokenCharge,
+  isBuffetTierOpenForPurchase,
   tierGroupBullets,
 } from "@/lib/module-permissions";
 
@@ -139,30 +143,68 @@ export function PlansPricing({
         </div>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-col rounded-2xl border-2 border-[#0000BF]/20 bg-gradient-to-b from-indigo-50/90 to-white p-5 shadow-sm ring-1 ring-indigo-100/80">
+          <p className="text-lg font-bold text-[#2e2a58]">{DAILY_LINE_PLAN_SUMMARY.title}</p>
+          <p className="mt-1 text-xs text-slate-600">{DAILY_LINE_PLAN_SUMMARY.subtitle}</p>
+          <ul className="mt-3 flex-1 space-y-1.5 text-xs leading-relaxed text-slate-600">
+            {DAILY_LINE_PLAN_SUMMARY.lines.map((line, i) => (
+              <li key={i}>• {line}</li>
+            ))}
+          </ul>
+          {subscriptionType === "DAILY" ? (
+            <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-center text-sm font-medium text-emerald-800">
+              คุณใช้สายรายวันอยู่
+            </p>
+          ) : subscriptionType === "BUFFET" && subscriptionTier !== "NONE" ? (
+            <p className="mt-4 text-center text-xs text-slate-600">
+              คุณใช้แพ็กเหมารายเดือน — ปรับระดับได้จากการ์ดด้านข้าง (เปิดรับสมัครเฉพาะ 199 โทเคน)
+            </p>
+          ) : (
+            <p className="mt-4 text-center text-xs text-slate-500">
+              ต้องการรายเดือนเลือกการ์ด &quot;แพ็กเหมา&quot; ด้านข้าง · เปลี่ยนกลับมาสายรายวันติดต่อแอดมิน
+            </p>
+          )}
+        </div>
+
         {PLAN_PRICES.map((price) => {
           const tier = PRICE_TO_TIER[price];
           const fullCost = TIER_SUBSCRIPTION_TOKEN_COST[tier];
+          const maxG = buffetTierMaxGroup(tier);
+          const packTierName = MODULE_GROUP_TIER_NAME[maxG] ?? "";
           const bullets = tierGroupBullets(tier);
+          const tierOpen = isBuffetTierOpenForPurchase(tier);
           const charge = computeBuffetSubscriptionTokenCharge({
             targetTier: tier,
             currentTier: subscriptionTier,
             subscriptionType,
           });
-          const canSelect = charge.ok;
-          const disabledReason = !charge.ok ? charge.error : null;
+          const canSelect = charge.ok && tierOpen;
+          const disabledReason = !tierOpen
+            ? "ปิดจำหน่ายชั่วคราว — เปิดเฉพาะแพ็ก 199 โทเคน"
+            : !charge.ok
+              ? charge.error
+              : null;
 
           return (
             <div
               key={price}
-              className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+              className={cn(
+                "flex flex-col rounded-2xl border bg-white p-5 shadow-sm",
+                tierOpen ? "border-slate-200" : "border-slate-200/80 bg-slate-50/80 opacity-90",
+              )}
             >
               <p className="text-3xl font-bold tabular-nums text-slate-900">
                 {fullCost}
                 <span className="text-base font-normal text-slate-500"> โทเคน</span>
               </p>
-              <p className="mt-1 text-xs text-slate-500">ราคาเต็มของแพ็กนี้</p>
-              {charge.ok ? (
+              <p className="mt-1 text-xs text-slate-500">
+                แพ็กเหมา · กลุ่ม 1{maxG > 1 ? `–${maxG}` : ""}
+                {packTierName ? ` (${packTierName})` : ""}
+              </p>
+              {!tierOpen ? (
+                <p className="mt-2 text-xs font-medium text-amber-800">ปิดจำหน่ายชั่วคราว</p>
+              ) : charge.ok ? (
                 <p
                   className={cn(
                     "mt-2 text-sm font-medium",
@@ -187,10 +229,17 @@ export function PlansPricing({
                 title={disabledReason ?? undefined}
                 onClick={() => selectPlan(price)}
                 className={cn(
-                  "mt-4 w-full rounded-lg bg-[#0000BF] py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:cursor-not-allowed disabled:opacity-60",
+                  "mt-4 w-full rounded-lg py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-55",
+                  tierOpen
+                    ? "bg-[#0000BF] text-white hover:bg-[#0000a3]"
+                    : "border border-slate-300 bg-slate-100 text-slate-500",
                 )}
               >
-                {loading === price ? "กำลังสร้าง..." : "เลือกแพ็กเกจ"}
+                {loading === price
+                  ? "กำลังสร้าง..."
+                  : !tierOpen
+                    ? "ไม่เปิดรับสมัคร"
+                    : "เลือกแพ็กเกจ"}
               </button>
             </div>
           );

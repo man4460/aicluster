@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { bangkokYearMonthYm } from "@/lib/dates/bangkok-calendar";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
@@ -142,6 +143,7 @@ export default async function DormitoryRoomDetailPage({ params, searchParams }: 
         room={json}
         overdueRows={overdueRows}
         initialPayMonth={focusMonth}
+        initialBangkokYm={bangkokYearMonthYm()}
       />
     </div>
   );

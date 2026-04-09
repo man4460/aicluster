@@ -2,11 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/cn";
 import { useRouter } from "next/navigation";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
 import { canAccessAppModule, canStartTrialForModule, type UserAccessFields } from "@/lib/modules/access";
 import { MODULE_RESUBSCRIBE_COOLDOWN_MS } from "@/lib/modules/module-subscription-cooldown";
 import { isSystemMapCatalogSlug } from "@/lib/modules/system-map-catalog";
+import {
+  DashboardModuleHeroCard,
+  dashboardModulePrimaryButtonCore,
+  dashboardModulePrimaryCtaClass,
+} from "@/components/dashboard/DashboardModuleHeroCard";
 
 type ModuleCardDTO = {
   id: string;
@@ -14,6 +20,7 @@ type ModuleCardDTO = {
   title: string;
   description: string | null;
   groupId: number;
+  cardImageUrl?: string | null;
 };
 
 type Props = {
@@ -263,30 +270,26 @@ export function ModuleSubscriptionBrowser({
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {items.map((m) => {
                   if (isSystemMapCatalogSlug(m.slug)) {
-                    const cardTone = groupTone(m.groupId);
                     return (
-                      <div
+                      <DashboardModuleHeroCard
                         key={m.id}
-                        className="app-surface-strong flex h-full flex-col rounded-xl border-2 border-dashed border-[#0000BF]/25 bg-[#0000BF]/[0.02] p-4 transition hover:-translate-y-0.5 hover:shadow-md"
-                      >
-                        <div
-                          className={`inline-flex w-fit items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold ${cardTone.chip}`}
-                        >
-                          <span aria-hidden>{cardTone.icon}</span>
-                          <span>กลุ่ม {m.groupId}</span>
-                        </div>
-                        <h3 className="mt-1 text-sm font-bold text-slate-900">{m.title}</h3>
-                        <p className="mt-1 min-h-[2.5rem] flex-1 text-xs leading-relaxed text-slate-600">{m.description}</p>
-                        <div className="mt-auto pt-3">
-                          <Link
-                            href="/dashboard/explore"
-                            className="app-btn-primary inline-flex w-full items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold"
-                          >
-                            เปิดแผนผังระบบ
-                          </Link>
-                        </div>
-                        <p className="mt-2 text-[11px] text-slate-500">ไม่ต้อง Subscribe — ดูภาพรวมและทางลัดเข้าระบบ</p>
-                      </div>
+                        variant="systemMap"
+                        tall
+                        imageUrl={m.cardImageUrl}
+                        groupId={m.groupId}
+                        title={m.title}
+                        description={m.description ?? ""}
+                        footer={
+                          <>
+                            <Link href="/dashboard/explore" className={dashboardModulePrimaryCtaClass}>
+                              เปิดแผนผังระบบ
+                            </Link>
+                            <p className="text-center text-[11px] text-slate-500">
+                              ไม่ต้อง Subscribe — ดูภาพรวมและทางลัดเข้าระบบ
+                            </p>
+                          </>
+                        }
+                      />
                     );
                   }
 
@@ -294,7 +297,6 @@ export function ModuleSubscriptionBrowser({
                   const trialing = !subscribed && trialIds.has(m.id);
                   const unlocked = canAccessAppModule(access, { slug: m.slug, groupId: m.groupId });
                   const trialAllowed = canStartTrialForModule(access, { slug: m.slug, groupId: m.groupId });
-                  const cardTone = groupTone(m.groupId);
                   const cooldownIso = activeCooldownUnlockIso(m.id);
                   const lockedByCooldown = !subscribed && cooldownIso !== null;
                   const lockedByDailyLimit = !subscribed && !lockedByCooldown && reachedDailyLimit;
@@ -303,105 +305,102 @@ export function ModuleSubscriptionBrowser({
                   const showDailyLock = lockedByDailyLimit;
 
                   return (
-                    <div
+                    <DashboardModuleHeroCard
                       key={m.id}
-                      className="app-surface-strong flex h-full flex-col rounded-xl p-4 transition hover:-translate-y-0.5 hover:shadow-md"
-                    >
-                      <div
-                        className={`inline-flex w-fit items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold ${cardTone.chip}`}
-                      >
-                        <span aria-hidden>{cardTone.icon}</span>
-                        <span>กลุ่ม {m.groupId}</span>
-                      </div>
-                      <h3 className="mt-1 text-sm font-bold text-slate-900">{m.title}</h3>
-                      <p className="mt-1 min-h-[2.5rem] line-clamp-2 text-xs text-slate-600">{m.description ?? "—"}</p>
-                      <div className="mt-auto pt-3">
-                        <div className="flex flex-wrap gap-2">
-                          {subscribed ? (
-                            <button
-                              type="button"
-                              disabled={busyId === m.id}
-                              onClick={() => setPendingUnsubscribe({ id: m.id, title: m.title })}
-                              className="flex-1 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
-                            >
-                              Unsubscribe
-                            </button>
-                          ) : showCooldownLock ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setErr(
-                                  `ระบบนี้ถูกล็อคจนถึง ${formatThDateTime(cooldownIso!)} กรุณารอครบ 1 เดือนหลังยกเลิก Subscribe ก่อน Subscribe ใหม่`,
-                                )
-                              }
-                              className="flex-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100"
-                            >
-                              🔒 ล็อค
-                            </button>
-                          ) : showDailyLock ? (
-                            <button
-                              type="button"
-                              onClick={() => setErr(upgradeMessage)}
-                              className="flex-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100"
-                            >
-                              🔒 ล็อค
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              disabled={busyId === m.id || !unlocked}
-                              onClick={() => void subscribeOnly(m.id)}
-                              className="app-btn-primary flex-1 rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-50"
-                            >
-                              Subscribe
-                            </button>
-                          )}
-                          {!subscribed ? (
-                            trialing ? (
+                      tall
+                      imageUrl={m.cardImageUrl}
+                      groupId={m.groupId}
+                      title={m.title}
+                      description={m.description ?? "—"}
+                      footer={
+                        <>
+                          <div className="flex flex-wrap gap-2">
+                            {subscribed ? (
                               <button
                                 type="button"
                                 disabled={busyId === m.id}
-                                onClick={() => void stopTrialMode(m.id)}
-                                className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                                onClick={() => setPendingUnsubscribe({ id: m.id, title: m.title })}
+                                className="flex-1 min-w-[6.5rem] rounded-xl border border-red-400/45 bg-red-950/45 px-3 py-2 text-xs font-semibold text-red-100 hover:bg-red-950/60 disabled:opacity-50"
                               >
-                                หยุดทดลอง
+                                Unsubscribe
+                              </button>
+                            ) : showCooldownLock ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setErr(
+                                    `ระบบนี้ถูกล็อคจนถึง ${formatThDateTime(cooldownIso!)} กรุณารอครบ 1 เดือนหลังยกเลิก Subscribe ก่อน Subscribe ใหม่`,
+                                  )
+                                }
+                                className="flex-1 min-w-[6.5rem] rounded-xl border border-amber-400/45 bg-amber-950/35 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-950/50"
+                              >
+                                🔒 ล็อค
+                              </button>
+                            ) : showDailyLock ? (
+                              <button
+                                type="button"
+                                onClick={() => setErr(upgradeMessage)}
+                                className="flex-1 min-w-[6.5rem] rounded-xl border border-amber-400/45 bg-amber-950/35 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-950/50"
+                              >
+                                🔒 ล็อค
                               </button>
                             ) : (
                               <button
                                 type="button"
-                                disabled={busyId === m.id || !trialAllowed}
-                                onClick={() => void startTrialMode(m.id)}
-                                className="rounded-lg border border-sky-300 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800 hover:bg-sky-100 disabled:opacity-50"
+                                disabled={busyId === m.id || !unlocked}
+                                onClick={() => void subscribeOnly(m.id)}
+                                className="flex-1 min-w-[6.5rem] rounded-xl bg-white px-3 py-2 text-xs font-semibold text-[#1e1b4b] shadow-md hover:bg-white/90 disabled:opacity-50"
                               >
-                                ทดลองใช้งาน
+                                Subscribe
                               </button>
-                            )
+                            )}
+                            {!subscribed ? (
+                              trialing ? (
+                                <button
+                                  type="button"
+                                  disabled={busyId === m.id}
+                                  onClick={() => void stopTrialMode(m.id)}
+                                  className="rounded-xl border border-amber-400/45 bg-amber-950/35 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-950/50 disabled:opacity-50"
+                                >
+                                  หยุดทดลอง
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={busyId === m.id || !trialAllowed}
+                                  onClick={() => void startTrialMode(m.id)}
+                                  className="rounded-xl border border-sky-400/45 bg-sky-950/35 px-3 py-2 text-xs font-semibold text-sky-100 hover:bg-sky-950/50 disabled:opacity-50"
+                                >
+                                  ทดลองใช้งาน
+                                </button>
+                              )
+                            ) : null}
+                            {subscribed || trialing ? (
+                              <Link
+                                href={dashboardModuleHref(m.slug)}
+                                className="inline-flex flex-1 min-w-[6.5rem] items-center justify-center rounded-xl border border-white/40 bg-white/15 px-3 py-2 text-xs font-semibold text-white backdrop-blur-sm hover:bg-white/25"
+                              >
+                                เข้าใช้งาน
+                              </Link>
+                            ) : null}
+                          </div>
+                          {trialing ? (
+                            <p className="text-[11px] text-amber-800/90">
+                              โหมดทดลองใช้งาน: สิทธิ์ชั่วคราวในเมม — กด “เข้าใช้งาน” เพื่อเข้าระบบ
+                            </p>
                           ) : null}
-                          {subscribed || trialing ? (
-                            <Link
-                              href={dashboardModuleHref(m.slug)}
-                          className="app-btn-soft rounded-lg px-3 py-2 text-xs font-semibold"
-                            >
-                              เข้าใช้งาน
-                            </Link>
+                          {!subscribed && !trialing ? (
+                            <p className="text-[11px] text-slate-500">
+                              {showCooldownLock
+                                ? `Subscribe ถูกล็อคจนถึง ${formatThDateTime(cooldownIso!)} — ยังกด “ทดลองใช้งาน” ได้`
+                                : showDailyLock
+                                  ? "Subscribe ได้อีกเมื่ออัปเกรดแพ็กเกจ — ยังทดลองระบบนี้ได้ด้านข้าง"
+                                  : "ต้อง Subscribe ก่อน หรือกดทดลองใช้งานเพื่อเปิดระบบชั่วคราว"}
+                            </p>
                           ) : null}
-                        </div>
-                      </div>
-                      {trialing ? (
-                        <p className="mt-2 text-[11px] text-amber-700">
-                          โหมดทดลองใช้งาน: สิทธิ์ชั่วคราวในเมม — กด “เข้าใช้งาน” เพื่อเข้าระบบ
-                        </p>
-                      ) : null}
-                      {!subscribed && !trialing ? (
-                        <p className="mt-2 text-[11px] text-slate-500">
-                          {showCooldownLock
-                            ? `Subscribe ถูกล็อคจนถึง ${formatThDateTime(cooldownIso!)} — ยังกด “ทดลองใช้งาน” ได้`
-                            : showDailyLock
-                              ? "Subscribe ได้อีกเมื่ออัปเกรดแพ็กเกจ — ยังทดลองระบบนี้ได้ด้านข้าง"
-                              : "ต้อง Subscribe ก่อน หรือกดทดลองใช้งานเพื่อเปิดระบบชั่วคราว"}
-                        </p>
-                      ) : null}
-                    </div>
+                        </>
+                      }
+                    />
                   );
                 })}
               </div>

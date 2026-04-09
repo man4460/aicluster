@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  isAllowedHomeFinanceUploadPath,
+  MAX_HOME_FINANCE_ATTACHMENTS,
+} from "@/lib/home-finance/attachments";
 
 /** ข้อความแรกจาก Zod 4 ให้ผู้ใช้ / ล็อกดีบัก */
 export function zodFirstIssueMessage(err: z.ZodError): string {
@@ -70,6 +74,21 @@ const amountPost = z.preprocess(amountFromUnknown, z.number().finite().positive(
 
 const amountPatch = z.preprocess(amountFromUnknown, z.number().finite().positive().max(9_999_999.99).optional());
 
+const attachmentUrlField = z
+  .string()
+  .max(512)
+  .refine((s) => isAllowedHomeFinanceUploadPath(s), "เส้นทางไฟล์แนบไม่ถูกต้อง");
+
+const attachmentUrlsPost = z.preprocess(
+  (v: unknown) => (v === undefined || v === null ? undefined : v),
+  z.array(attachmentUrlField).max(MAX_HOME_FINANCE_ATTACHMENTS).optional(),
+);
+
+const attachmentUrlsPatch = z.preprocess(
+  (v: unknown) => (v === undefined ? undefined : v),
+  z.array(attachmentUrlField).max(MAX_HOME_FINANCE_ATTACHMENTS).optional(),
+);
+
 export const homeFinanceEntryPostSchema = z.object({
   entryDate: ymdRequired,
   type: z.enum(["INCOME", "EXPENSE"]),
@@ -84,6 +103,7 @@ export const homeFinanceEntryPostSchema = z.object({
   paymentMethod: optStrPost(40),
   note: optStrPost(600),
   slipImageUrl: optStrPost(512),
+  attachmentUrls: attachmentUrlsPost,
   linkedUtilityId: optIdPost,
   linkedVehicleId: optIdPost,
 });
@@ -102,6 +122,7 @@ export const homeFinanceEntryPatchSchema = z.object({
   paymentMethod: optStrPatch(40),
   note: optStrPatch(600),
   slipImageUrl: optStrPatch(512),
+  attachmentUrls: attachmentUrlsPatch,
   linkedUtilityId: optIdPatch,
   linkedVehicleId: optIdPatch,
 });

@@ -18,6 +18,7 @@ export default async function AdminMqttPage() {
       <PageHeader
         title="สถานะ MQTT"
         description="สำหรับแอดมินตรวจสอบว่า backend ฟัง MQTT อยู่หรือไม่ และกำลังฟัง topic อะไร"
+        compact
       />
       <MqttHealthClient />
     </div>

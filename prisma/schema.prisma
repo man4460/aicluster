@@ -24,6 +24,12 @@ enum TopUpStatus {
   CANCELLED
 }
 
+/** ห้องแชท — ชุมชน (กระทู้) | ติดต่อแอดมิน */
+enum ChatRoomKind {
+  COMMUNITY
+  ADMIN_SUPPORT
+}
+
 enum SubscriptionTier {
   NONE
   TIER_199
@@ -47,7 +53,10 @@ model User {
   id                       String           @id @default(cuid())
   email                    String           @unique
   username                 String           @unique
-  passwordHash             String
+  /** ว่างได้เมื่อสมัคร/เข้าสู่ระบบผ่าน Google เท่านั้น */
+  passwordHash             String?
+  /** OpenID subject จาก Google — ผูกบัญชีล็อกอิน Google */
+  googleSub                String?          @unique @map("google_sub") @db.VarChar(191)
   role                     UserRole         @default(USER)
   resetToken               String?
   resetTokenExpires        DateTime?
@@ -74,6 +83,7 @@ model User {
   updatedAt                DateTime         @updatedAt
 
   chatMessages           ChatMessage[]
+  chatThreadsAuthored    ChatThread[]
   topUpOrders            TopUpOrder[]
   dormitoryProfiles      DormitoryProfile[]
   barberShopProfiles     BarberShopProfile[]
@@ -189,15 +199,17 @@ model BarberStylist {
 }
 
 model AppModule {
-  id          String   @id @default(cuid())
-  slug        String   @unique @db.VarChar(191)
-  title       String   @db.VarChar(255)
-  description String?  @db.Text
-  groupId     Int      @map("group_id")
-  sortOrder   Int      @default(0) @map("sort_order")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(cuid())
+  slug          String   @unique @db.VarChar(191)
+  title         String   @db.VarChar(255)
+  description   String?  @db.Text
+  /** รูปการ์ดระบบ (path ใต้ public เช่น /uploads/module-cards/...) */
+  cardImageUrl  String?  @map("card_image_url") @db.VarChar(512)
+  groupId       Int      @map("group_id")
+  sortOrder     Int      @default(0) @map("sort_order")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   trialSessions TrialSession[]
 
@@ -206,13 +218,30 @@ model AppModule {
   @@map("module_list")
 }
 
-model ChatMessage {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content   String   @db.VarChar(2000)
-  createdAt DateTime @default(now())
+model ChatThread {
+  id        String       @id @default(cuid())
+  title     String       @db.VarChar(280)
+  authorId  String
+  author    User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  roomKind  ChatRoomKind
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  messages  ChatMessage[]
 
+  @@index([roomKind, createdAt])
+  @@index([authorId, roomKind])
+}
+
+model ChatMessage {
+  id        String     @id @default(cuid())
+  threadId  String
+  thread    ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String     @db.VarChar(2000)
+  createdAt DateTime   @default(now())
+
+  @@index([threadId, createdAt])
   @@index([createdAt])
 }
 
@@ -739,6 +768,8 @@ model HomeFinanceEntry {
   paymentMethod    String?             @map("payment_method") @db.VarChar(40)
   note             String?             @db.VarChar(600)
   slipImageUrl     String?             @map("slip_image_url") @db.VarChar(512)
+  /** URL หลายไฟล์ (รูป/PDF) — slipImageUrl เก็บไฟล์แรกเพื่อความเข้ากันได้ */
+  attachmentUrls   Json?               @map("attachment_urls")
   linkedUtilityId  Int?                @map("linked_utility_id")
   linkedVehicleId  Int?                @map("linked_vehicle_id")
   linkedUtility    HomeUtilityProfile? @relation(fields: [linkedUtilityId], references: [id], onDelete: SetNull)
@@ -808,6 +839,8 @@ model HomeVehicleProfile {
   insuranceDueDate DateTime?    @map("insurance_due_date") @db.Date
   note          String?         @db.VarChar(400)
   photoUrl      String?         @map("photo_url") @db.VarChar(512)
+  /** เอกสารประกอบ (เล่มทะเบียน กรมธรรม์ PDF ฯลฯ) หลายไฟล์ */
+  attachmentUrls Json?          @map("attachment_urls")
   isActive      Boolean         @default(true) @map("is_active")
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")

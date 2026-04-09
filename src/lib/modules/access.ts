@@ -1,5 +1,9 @@
 import type { SubscriptionTier, SubscriptionType, UserRole } from "@/generated/prisma/enums";
-import { MAX_MODULE_GROUP, buffetTierMaxGroup } from "@/lib/modules/config";
+import {
+  MAX_MODULE_GROUP,
+  UI_VISIBLE_MAX_MODULE_GROUP,
+  buffetTierMaxGroup,
+} from "@/lib/modules/config";
 
 export type UserAccessFields = {
   role: UserRole;
@@ -8,11 +12,15 @@ export type UserAccessFields = {
   tokens: number;
 };
 
+function effectiveBuffetMaxGroup(tier: SubscriptionTier): number {
+  return Math.min(buffetTierMaxGroup(tier), UI_VISIBLE_MAX_MODULE_GROUP);
+}
+
 /** สูงสุดถึงกลุ่มไหนที่ user เข้าได้ (0 = ไม่มีโมดูล) */
 export function userMaxModuleGroup(user: UserAccessFields): number {
   if (user.role === "ADMIN") return MAX_MODULE_GROUP;
   if (user.subscriptionType === "BUFFET") {
-    return buffetTierMaxGroup(user.subscriptionTier);
+    return effectiveBuffetMaxGroup(user.subscriptionTier);
   }
   if (user.tokens <= 0) return 0;
   return 1;
@@ -35,7 +43,7 @@ export function canAccessAppModule(
   }
   if (user.role === "ADMIN") return true;
   if (user.subscriptionType === "BUFFET") {
-    return mod.groupId <= buffetTierMaxGroup(user.subscriptionTier);
+    return mod.groupId <= effectiveBuffetMaxGroup(user.subscriptionTier);
   }
   if (user.tokens <= 0) return false;
   return mod.groupId === 1;

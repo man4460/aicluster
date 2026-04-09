@@ -1,6 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  actionLabelTh,
+  activityLogModelLabelTh,
+  humanizeActivityLogRow,
+} from "@/systems/activity-logs/lib/humanize-activity-log";
+
+export type ActivityLogsCalendarDefaults = {
+  initialFrom: string;
+  initialTo: string;
+};
 
 type ActivityLogRow = {
   id: string | number;
@@ -14,20 +24,9 @@ type ActivityLogRow = {
 const inputClz =
   "min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0000BF]/40";
 
-function todayKey() {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
-}
-
-function monthStartKey() {
-  const now = new Date();
-  const y = now.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }).slice(0, 4);
-  const m = now.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }).slice(5, 7);
-  return `${y}-${m}-01`;
-}
-
-export function ActivityLogsClient() {
-  const [from, setFrom] = useState(monthStartKey);
-  const [to, setTo] = useState(todayKey);
+export function ActivityLogsClient({ initialFrom, initialTo }: ActivityLogsCalendarDefaults) {
+  const [from, setFrom] = useState(initialFrom);
+  const [to, setTo] = useState(initialTo);
   const [modelName, setModelName] = useState("");
   const [action, setAction] = useState("");
   const [page, setPage] = useState(1);
@@ -38,7 +37,17 @@ export function ActivityLogsClient() {
   const [reloadTick, setReloadTick] = useState(0);
 
   const actionOptions = useMemo(
-    () => ["", "CREATE", "UPDATE", "UPSERT", "DELETE", "CREATE_MANY", "UPDATE_MANY", "DELETE_MANY"],
+    () =>
+      [
+        { value: "", label: "ทุกประเภทการกระทำ" },
+        { value: "CREATE", label: "เพิ่มข้อมูล (CREATE)" },
+        { value: "UPDATE", label: "แก้ไขข้อมูล (UPDATE)" },
+        { value: "UPSERT", label: "เพิ่มหรือแก้ไข (UPSERT)" },
+        { value: "DELETE", label: "ลบข้อมูล (DELETE)" },
+        { value: "CREATE_MANY", label: "เพิ่มหลายรายการ" },
+        { value: "UPDATE_MANY", label: "แก้ไขหลายรายการ" },
+        { value: "DELETE_MANY", label: "ลบหลายรายการ" },
+      ] as const,
     [],
   );
 
@@ -79,9 +88,21 @@ export function ActivityLogsClient() {
       <div className="grid gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-6">
         <input type="date" className={inputClz} value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
         <input type="date" className={inputClz} value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
-        <input className={inputClz} value={modelName} onChange={(e) => { setModelName(e.target.value); setPage(1); }} placeholder="Model เช่น HomeFinanceEntry" />
+        <input
+          className={inputClz}
+          value={modelName}
+          onChange={(e) => {
+            setModelName(e.target.value);
+            setPage(1);
+          }}
+          placeholder="ชื่อตาราง (อังกฤษ) เช่น HomeFinanceEntry"
+        />
         <select className={inputClz} value={action} onChange={(e) => { setAction(e.target.value); setPage(1); }}>
-          {actionOptions.map((a) => <option key={a || "ALL"} value={a}>{a || "ทุก action"}</option>)}
+          {actionOptions.map((a) => (
+            <option key={a.value || "ALL"} value={a.value}>
+              {a.label}
+            </option>
+          ))}
         </select>
         <div className="flex items-center text-xs text-slate-500">ระบบจะลบ log อัตโนมัติเมื่อเกิน 3 เดือน</div>
         <button
@@ -100,25 +121,28 @@ export function ActivityLogsClient() {
           <p className="p-6 text-center text-sm text-slate-500">ยังไม่มีความเคลื่อนไหวในช่วงที่เลือก</p>
         ) : null}
         {!loading && !error && rows.length > 0 ? (
-          <table className="w-full min-w-[980px] text-left text-sm">
+          <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="bg-slate-50 text-xs text-slate-600">
               <tr>
                 <th className="px-3 py-2">เวลา</th>
-                <th className="px-3 py-2">Action</th>
-                <th className="px-3 py-2">Model</th>
-                <th className="px-3 py-2">รายละเอียด</th>
+                <th className="px-3 py-2">การกระทำ</th>
+                <th className="px-3 py-2">ส่วนของระบบ</th>
+                <th className="min-w-[280px] px-3 py-2">สรุปที่เกิดขึ้น</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={String(r.id)} className="border-t border-slate-100">
-                  <td className="px-3 py-2 whitespace-nowrap">{new Date(r.createdAt).toLocaleString("th-TH")}</td>
-                  <td className="px-3 py-2 font-semibold text-[#0000BF]">{r.action}</td>
-                  <td className="px-3 py-2">{r.modelName}</td>
-                  <td className="px-3 py-2 text-xs text-slate-700">
-                    <pre className="max-h-36 overflow-auto whitespace-pre-wrap break-all rounded bg-slate-50 p-2">
-                      {JSON.stringify(r.payload, null, 2)}
-                    </pre>
+                <tr key={String(r.id)} className="border-t border-slate-100 align-top">
+                  <td className="px-3 py-2 whitespace-nowrap text-slate-700">
+                    {new Date(r.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
+                  </td>
+                  <td className="px-3 py-2 font-semibold text-[#0000BF]">{actionLabelTh(r.action)}</td>
+                  <td className="px-3 py-2 text-slate-800">
+                    <span className="font-medium">{activityLogModelLabelTh(r.modelName)}</span>
+                    <span className="mt-0.5 block text-[10px] font-normal text-slate-400">{r.modelName}</span>
+                  </td>
+                  <td className="px-3 py-2 text-sm leading-snug text-slate-800">
+                    {humanizeActivityLogRow(r.action, r.modelName, r.payload)}
                   </td>
                 </tr>
               ))}

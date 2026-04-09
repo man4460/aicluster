@@ -67,6 +67,8 @@ yarn-error.log*
 !/public/uploads/barber-cash-receipts/.gitkeep
 /public/uploads/barber-portal-slips/*
 !/public/uploads/barber-portal-slips/.gitkeep
+/public/uploads/module-cards/*
+!/public/uploads/module-cards/.gitkeep
 
 # Legacy duplicate tree — แอปจริงอยู่ราก repo (มี node_modules/.next ของ copy เก่า)
 /web/

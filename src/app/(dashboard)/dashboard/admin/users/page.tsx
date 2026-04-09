@@ -18,6 +18,7 @@ export default async function AdminUsersPage() {
       <PageHeader
         title="จัดการผู้ใช้"
         description="สร้าง ดู แก้ไข และลบข้อมูลผู้ใช้ในฐานข้อมูล"
+        compact
       />
       <UsersAdmin />
     </div>

@@ -5,7 +5,8 @@ export const SYSTEM_MAP_CATALOG_ROW = {
   id: "__system-map__",
   slug: SYSTEM_MAP_CATALOG_SLUG,
   title: "แผนผังระบบ",
-  description: "ภาพรวมระบบที่เปิดใช้งานและระบบในแผนพัฒนา — เปิดดูแผนผังได้ทันที",
+  /** สองบรรทัดกระชับ — สอดคล้องการ์ดแดชบอร์ด */
+  description: "ภาพรวมระบบที่เปิดและในแผนพัฒนา\nเปิดแผนผังดูความสัมพันธ์ได้ทันที",
   groupId: 1,
 } as const;
 

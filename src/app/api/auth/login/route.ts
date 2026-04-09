@@ -54,6 +54,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }, { status: 401 });
     }
 
+    if (!user.passwordHash) {
+      return NextResponse.json(
+        { error: "บัญชีนี้เชื่อมกับ Google — กรุณาเข้าสู่ระบบด้วย Google" },
+        { status: 401 },
+      );
+    }
+
     const valid = await verifyPassword(password, user.passwordHash);
     if (!valid) {
       return NextResponse.json({ error: "อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }, { status: 401 });

@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@/generated/prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { prismaErrorToApiMessage } from "@/lib/prisma-api-error";
 import { requireSession } from "@/lib/api-auth";
+import {
+  canonicalizeHomeFinanceAttachmentList,
+  isAllowedHomeFinanceUploadPath,
+  MAX_HOME_FINANCE_ATTACHMENTS,
+} from "@/lib/home-finance/attachments";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 
 const ymdOptional = z.preprocess(
@@ -16,6 +22,16 @@ const vehicleYearOpt = z.preprocess((v: unknown) => {
   return v;
 }, z.number().int().min(1900).max(2100).optional().nullable());
 
+const attachmentUrlsSchema = z
+  .array(
+    z
+      .string()
+      .max(512)
+      .refine((s) => isAllowedHomeFinanceUploadPath(s), "เส้นทางไฟล์ไม่ถูกต้อง"),
+  )
+  .max(MAX_HOME_FINANCE_ATTACHMENTS)
+  .optional();
+
 const postSchema = z.object({
   vehicleType: z.enum(["CAR", "MOTORCYCLE"]),
   label: z.string().trim().min(1).max(120),
@@ -27,6 +43,7 @@ const postSchema = z.object({
   serviceDueDate: ymdOptional,
   insuranceDueDate: ymdOptional,
   note: z.string().trim().max(400).optional().nullable(),
+  attachmentUrls: attachmentUrlsSchema,
 });
 
 function parseDateOnly(value?: string | null): Date | null {
@@ -102,6 +119,10 @@ export async function POST(req: Request) {
   const parsed = postSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
+  const att = canonicalizeHomeFinanceAttachmentList(parsed.data.attachmentUrls ?? []);
+  const attachmentJson: Prisma.InputJsonValue | undefined =
+    att.length > 0 ? att : undefined;
+
   try {
     const row = await prisma.homeVehicleProfile.create({
       data: {
@@ -116,6 +137,7 @@ export async function POST(req: Request) {
         serviceDueDate: parseDateOnly(parsed.data.serviceDueDate),
         insuranceDueDate: parseDateOnly(parsed.data.insuranceDueDate),
         note: parsed.data.note?.trim() || null,
+        ...(attachmentJson !== undefined ? { attachmentUrls: attachmentJson } : {}),
         isActive: true,
       },
     });

@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { PLAN_PRICES, PRICE_TO_TIER, type PlanPrice } from "@/lib/module-permissions";
+import {
+  PLAN_PRICES,
+  PRICE_TO_TIER,
+  isBuffetTierOpenForPurchase,
+  type PlanPrice,
+} from "@/lib/module-permissions";
 import { bangkokMonthKey } from "@/lib/time/bangkok";
 
 export async function fulfillTopUpOrder(
@@ -21,6 +26,13 @@ export async function fulfillTopUpOrder(
       }
 
       const targetTier = PRICE_TO_TIER[amt];
+      if (!isBuffetTierOpenForPurchase(targetTier)) {
+        await tx.topUpOrder.update({
+          where: { id: orderId },
+          data: { status: "FAILED" },
+        });
+        return { ok: false as const, error: "แพ็กนี้ปิดจำหน่ายชั่วคราว" };
+      }
       const deduct = order.tokensToDeduct;
       if (!Number.isInteger(deduct) || deduct < 0) {
         await tx.topUpOrder.update({

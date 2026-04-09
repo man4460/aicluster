@@ -7,8 +7,11 @@ import { getAuditActor } from "@/lib/audit-context";
  * (แก้กรณี globalThis.prisma ค้างตัวเก่าหลัง prisma generate — select ฟิลด์ใหม่แล้ว error)
  */
 /** เพิ่มทุกครั้งที่ schema / prisma generate เปลี่ยน delegate หรือฟิลด์ที่มีผลต่อ query engine (เช่น barber_stylist.photo_url) */
-/** bump เมื่อ schema subscription มีฟิลด์ใหม่ (เช่น sale_receipt_image_url) — กันค้าง client เก่าแล้ว ValidationError */
-const PRISMA_SINGLETON_VERSION = 39;
+/** bump เมื่อ schema มีฟิลด์ใหม่ (เช่น module_list.card_image_url) — กันค้าง client เก่าแล้ว ValidationError */
+/** 43: home_vehicle_profiles.attachment_urls (Json) — client เก่า reject update({ data: { attachmentUrls } }) */
+/** 44: ChatThread + ChatMessage.threadId — client เก่าไม่มี delegate chatThread แล้วแชท API ล้ม */
+/** 45: User.passwordHash optional + googleSub (ล็อกอิน Google) */
+const PRISMA_SINGLETON_VERSION = 45;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -50,6 +53,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     buildingPosPurchaseOrder?: { findMany?: unknown };
     buildingPosPurchaseLine?: { findMany?: unknown };
     buildingPosMenuRecipeLine?: { findMany?: unknown };
+    chatThread?: { findMany?: unknown };
+    chatMessage?: { findMany?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -83,7 +88,9 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.buildingPosIngredient?.findMany === "function" &&
     typeof c.buildingPosPurchaseOrder?.findMany === "function" &&
     typeof c.buildingPosPurchaseLine?.findMany === "function" &&
-    typeof c.buildingPosMenuRecipeLine?.findMany === "function"
+    typeof c.buildingPosMenuRecipeLine?.findMany === "function" &&
+    typeof c.chatThread?.findMany === "function" &&
+    typeof c.chatMessage?.findMany === "function"
   );
 }
 

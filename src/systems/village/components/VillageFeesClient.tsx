@@ -10,10 +10,6 @@ import {
 } from "@/systems/village/village-service";
 import { villageBtnPrimary, villageBtnSecondary, villageField, villageTableWrap, villageToolbar } from "@/systems/village/village-ui";
 
-function currentYm(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }).slice(0, 7);
-}
-
 type FeeStatus = "PENDING" | "PARTIAL" | "PAID" | "WAIVED";
 
 const STATUS_OPTIONS: FeeStatus[] = ["PENDING", "PARTIAL", "PAID", "WAIVED"];
@@ -116,9 +112,9 @@ function FeeEditModal({
   );
 }
 
-export function VillageFeesClient() {
+export function VillageFeesClient({ initialYm }: { initialYm: string }) {
   const api = useMemo(() => createVillageSessionApiRepository(), []);
-  const [ym, setYm] = useState(currentYm);
+  const [ym, setYm] = useState(initialYm);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [rows, setRows] = useState<VillageFeeRow[]>([]);
   const [defaultFee, setDefaultFee] = useState(0);

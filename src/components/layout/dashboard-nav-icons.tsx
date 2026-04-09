@@ -110,7 +110,7 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
-  if (href.startsWith("/dashboard/activity-logs")) {
+  if (href.startsWith("/dashboard/admin/activity-logs")) {
     return (
       <Svg>
         <path
@@ -170,6 +170,15 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  if (href.startsWith("/dashboard/admin/module-cards")) {
+    return (
+      <Svg>
+        <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
+        <circle cx="8.5" cy="10" r="1.5" fill="currentColor" />
+        <path d="M13 15l3-3 2 2 3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </Svg>
+    );
+  }
   if (href.startsWith("/dashboard/car-wash")) {
     return (
       <Svg>
@@ -183,7 +192,7 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
-  if (href.startsWith("/dashboard/admin")) {
+  if (href === "/dashboard/admin" || href.startsWith("/dashboard/admin/")) {
     return (
       <Svg>
         <path

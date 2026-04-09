@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { LogoutButton } from "@/components/layout/LogoutButton";
+import { LogoutButton, LogoutIconButton } from "@/components/layout/LogoutButton";
 import { dashboardNavIconForHref } from "@/components/layout/dashboard-nav-icons";
 import { MawellLogo } from "@/components/layout/MawellLogo";
 import { cn } from "@/lib/cn";
@@ -15,7 +15,11 @@ import {
   type DashboardNavGroup,
   type DashboardNavGroupId,
 } from "@/lib/dashboard-nav";
-import { buffetTierMaxGroup, MODULE_GROUP_TIER_NAME } from "@/lib/modules/config";
+import {
+  buffetTierMaxGroup,
+  MODULE_GROUP_TIER_NAME,
+  UI_VISIBLE_MAX_MODULE_GROUP,
+} from "@/lib/modules/config";
 
 function headerPackageLabel(
   subscriptionType: SubscriptionType,
@@ -23,7 +27,11 @@ function headerPackageLabel(
 ): string {
   if (subscriptionType === "BUFFET" && subscriptionTier !== "NONE") {
     const g = buffetTierMaxGroup(subscriptionTier);
-    return MODULE_GROUP_TIER_NAME[g] ?? subscriptionTier;
+    const name = MODULE_GROUP_TIER_NAME[g] ?? subscriptionTier;
+    if (g > UI_VISIBLE_MAX_MODULE_GROUP) {
+      return `${name} · เปิดกลุ่ม 1`;
+    }
+    return name;
   }
   return "สายรายวัน";
 }
@@ -289,7 +297,7 @@ export function DashboardShell({
     <div className="flex min-h-screen flex-col text-[#2e2a58]">
       {/* แถบบน — แก้ว โค้งมน ไล่โทนเดียวกับการ์ด */}
       <header className="sticky top-0 z-30 w-full px-3 pt-3 sm:px-4 sm:pt-4">
-        <div className="mawell-glass-panel flex h-14 w-full items-center gap-3 rounded-2xl px-4 shadow-lg sm:gap-4 sm:px-6 lg:px-8">
+        <div className="mawell-glass-panel flex h-14 w-full min-w-0 items-center gap-2 rounded-2xl px-3 shadow-lg sm:gap-3 sm:px-6 lg:px-8">
           <button
             type="button"
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/60 bg-white/70 text-[#3730a3] shadow-sm hover:bg-white/90 md:hidden"
@@ -301,33 +309,36 @@ export function DashboardShell({
             <MenuIcon open={drawerOpen} />
           </button>
 
-          <Link href="/dashboard" className="min-w-0 shrink" onClick={() => setDrawerOpen(false)}>
+          <Link
+            href="/dashboard"
+            className="shrink-0"
+            onClick={() => setDrawerOpen(false)}
+          >
             <MawellLogo size="sm" />
           </Link>
 
-          <div className="min-w-0 flex-1" aria-hidden />
-
-          <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1 sm:gap-x-3">
-            <span className="text-sm text-[#58547f]">
-              <span className="tabular-nums font-medium">{tokens}</span> โทเคน
-            </span>
-            <span className="hidden text-slate-300 sm:inline" aria-hidden>
-              |
-            </span>
-            <span className="text-sm font-medium text-[#2e2a58]">{packageLabel}</span>
-            <span className="hidden text-slate-300 sm:inline" aria-hidden>
-              |
-            </span>
-            <span
-              className="max-w-[120px] truncate text-sm text-[#67638f] sm:max-w-[160px]"
-              title={displayName}
+          {/* กลาง: บรรทัดเดียว + truncate บนมือถือ — ไม่ดันกลุ่มปุ่มขวา */}
+          <div className="min-w-0 flex-1 overflow-hidden px-0.5 sm:px-1">
+            <p
+              className="truncate text-left text-[11px] leading-snug text-[#58547f] sm:text-sm sm:leading-normal md:text-right"
+              title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
             >
-              {displayName}
-            </span>
-            <span className="hidden text-slate-300 md:inline" aria-hidden>
-              |
-            </span>
+              <span className="tabular-nums font-medium">{tokens}</span> โทเคน
+              <span className="text-slate-300/90" aria-hidden>
+                {" "}
+                ·{" "}
+              </span>
+              <span className="font-medium text-[#2e2a58]">{packageLabel}</span>
+              <span className="text-slate-300/90" aria-hidden>
+                {" "}
+                ·{" "}
+              </span>
+              <span className="text-[#67638f]">{displayName}</span>
+            </p>
+          </div>
 
+          {/* ขวา: ไม่ wrap — โปรไฟล์ + logout เรียงแนวนอนเสมอ */}
+          <div className="flex shrink-0 flex-nowrap items-center gap-1.5 border-l border-white/50 pl-2 sm:gap-2 sm:pl-3">
             <div className="hidden shrink-0 md:block">
               {avatarUrl ? (
                 <Image
@@ -345,10 +356,10 @@ export function DashboardShell({
               )}
             </div>
 
-            <div className="relative md:hidden" ref={accountWrapRef}>
+            <div className="relative shrink-0 md:hidden" ref={accountWrapRef}>
               <button
                 type="button"
-                className="flex h-10 max-w-[44px] items-center justify-center rounded-xl border border-white/60 bg-white/75 p-1 shadow-sm hover:bg-white/95"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/60 bg-white/75 p-1 shadow-sm hover:bg-white/95"
                 aria-expanded={accountOpen}
                 aria-label="เมนูบัญชี"
                 onClick={() => setAccountOpen((o) => !o)}
@@ -384,6 +395,8 @@ export function DashboardShell({
                 </div>
               ) : null}
             </div>
+
+            <LogoutIconButton className="h-9 w-9 sm:h-10 sm:w-10" />
           </div>
         </div>
       </header>

@@ -1,6 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+} from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppImageLightbox, AppImageThumb, useAppImageLightbox } from "@/components/app-templates";
@@ -20,11 +30,29 @@ import {
   HomeFinancePanelHeading,
   HomeFinancePrimaryButton,
   HomeFinanceRowActionButton,
+  HomeFinanceRowActionIconButton,
+  HomeFinanceRowIconActivate,
+  HomeFinanceRowIconDeactivate,
+  HomeFinanceRowIconEdit,
+  HomeFinanceRowIconTrash,
   HomeFinanceSecondaryButton,
   HomeFinanceSectionHeader,
   HomeFinanceToolbarButton,
   HomeFinanceUploadTrigger,
+  HomeFinanceVehicleCoverUpload,
 } from "@/systems/home-finance/components/HomeFinanceUi";
+import {
+  HomeFinanceFormAttachmentsBlock,
+  HomeFinanceHistoryAttachmentStrip,
+  HomeFinanceVehicleRowAttachments,
+  revokeHomeFinancePendingObjectUrls,
+  type HomeFinancePendingUpload,
+} from "@/systems/home-finance/components/HomeFinanceEntryAttachmentsUi";
+import {
+  isHomeFinancePdfUrl,
+  MAX_HOME_FINANCE_ATTACHMENTS,
+  normalizeVehicleAttachmentUrls,
+} from "@/lib/home-finance/attachments";
 import { cn } from "@/lib/cn";
 import {
   deriveHomeFinanceSection,
@@ -46,6 +74,7 @@ type Entry = {
   paymentMethod: string | null;
   note: string | null;
   slipImageUrl: string | null;
+  attachmentUrls: string[];
   linkedUtilityId: number | null;
   linkedVehicleId: number | null;
   linkedUtility: { id: number; label: string; utilityType: string } | null;
@@ -72,6 +101,7 @@ type Vehicle = {
   insuranceDueDate: string | null;
   isActive: boolean;
   photoUrl?: string | null;
+  attachmentUrls: string[];
 };
 type Reminder = {
   id: number;
@@ -80,6 +110,23 @@ type Reminder = {
   note: string | null;
   isDone: boolean;
 };
+
+/** ผูกแถวจาก API หลัง POST/PATCH ให้ attachmentUrls ตรงกับที่บันทึกในฐานข้อมูล */
+function vehicleFromHomeFinanceApiItem(item: unknown): Vehicle | null {
+  if (!item || typeof item !== "object") return null;
+  const r = item as Vehicle & { attachmentUrls?: unknown };
+  if (typeof r.id !== "number") return null;
+  return {
+    ...r,
+    attachmentUrls: normalizeVehicleAttachmentUrls(r),
+  };
+}
+
+function mergeVehicleWithHomeFinanceApiItem(prev: Vehicle, item: unknown): Vehicle {
+  const next = vehicleFromHomeFinanceApiItem(item);
+  if (!next) return prev;
+  return { ...prev, ...next, attachmentUrls: next.attachmentUrls };
+}
 
 function homeFinanceEntryLinkLabel(e: Entry): string {
   if (e.linkedUtility != null) {
@@ -107,28 +154,6 @@ function entryAutoTitleFromVehicle(v: Vehicle): string {
   return `${v.label}${plate} (${kind})`;
 }
 
-function HomeFinanceSlipUploadIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      xmlns="http://www.w3.org/2000/svg"
-      width={20}
-      height={20}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
-  );
-}
-
 const CATEGORIES = [
   { key: "UTILITIES_ELECTRIC", label: "ค่าไฟฟ้า" },
   { key: "UTILITIES_WATER", label: "ค่าน้ำประปา" },
@@ -149,6 +174,19 @@ const CATEGORIES = [
 const HOME_FINANCE_UPLOAD_TIMEOUT = "HOME_FINANCE_UPLOAD_TIMEOUT";
 const HOME_FINANCE_UPLOAD_MS = 120_000;
 
+function newHomeFinancePendingRow(file: File): HomeFinancePendingUpload {
+  const id =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+  return {
+    id,
+    objectUrl: URL.createObjectURL(file),
+    name: file.name,
+    isPdf: file.type === "application/pdf" || /\.pdf$/i.test(file.name),
+  };
+}
+
 async function uploadHomeFinanceFile(file: File): Promise<string | null> {
   const fd = new FormData();
   fd.set("file", file);
@@ -158,7 +196,7 @@ async function uploadHomeFinanceFile(file: File): Promise<string | null> {
     const res = await fetch("/api/home-finance/upload", {
       method: "POST",
       body: fd,
-      credentials: "same-origin",
+      credentials: "include",
       signal: ctrl.signal,
     });
     const j = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
@@ -229,7 +267,8 @@ async function homeFinanceFetch(input: string, init?: RequestInit): Promise<Resp
   try {
     return await fetch(input, {
       ...init,
-      credentials: "same-origin",
+      /** ให้สอดคล้องกับอัปโหลดไฟล์ — ส่งคุกกี้เซสชันในทุกกรณีที่เบราว์เซอร์ยอมรับ */
+      credentials: "include",
       signal: ctrl.signal,
     });
   } finally {
@@ -425,15 +464,18 @@ const inputClz =
 type HomeFinanceClientProps = {
   /** ส่งจากแต่ละ page.tsx — กันพลาดจาก pathname / hydration */
   section?: HomeFinanceSection;
+  /** snapshot จาก Server Component — กัน hydration mismatch ของช่องวันที่ */
+  calendarDefaults: { monthStartYmd: string; todayYmd: string };
 };
 
-export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClientProps = {}) {
+export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults }: HomeFinanceClientProps) {
   const pathname = usePathname() ?? "";
   const section = sectionFromRoute ?? deriveHomeFinanceSection(pathname);
-  const entrySlipFileInputId = useId();
   const editSlipFileInputId = useId();
-  const [from, setFrom] = useState(monthStartKey);
-  const [to, setTo] = useState(todayKey);
+  const vehicleAddAttachInputId = useId();
+  const vehicleEditAttachInputId = useId();
+  const [from, setFrom] = useState(calendarDefaults.monthStartYmd);
+  const [to, setTo] = useState(calendarDefaults.todayYmd);
   const [typeFilter, setTypeFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [q, setQ] = useState("");
@@ -451,7 +493,7 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
   const [vehicleCounts, setVehicleCounts] = useState({ cars: 0, motorcycles: 0 });
   const [reminders, setReminders] = useState<Reminder[]>([]);
 
-  const [entryDate, setEntryDate] = useState(todayKey);
+  const [entryDate, setEntryDate] = useState(calendarDefaults.todayYmd);
   const [type, setType] = useState<"INCOME" | "EXPENSE">("EXPENSE");
   const [categoryKey, setCategoryKey] = useState<string>("UTILITIES_ELECTRIC");
   const [title, setTitle] = useState("");
@@ -462,7 +504,9 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
   const [serviceCenter, setServiceCenter] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [note, setNote] = useState("");
-  const [slipUrl, setSlipUrl] = useState<string | null>(null);
+  /** ฟอร์มเพิ่มรายการ — สลิปได้ 1 รูปเท่านั้น */
+  const [entrySlipImageUrl, setEntrySlipImageUrl] = useState<string | null>(null);
+  const [entrySlipUploading, setEntrySlipUploading] = useState(false);
   const [linkedUtilityId, setLinkedUtilityId] = useState<number | "">("");
   const [linkedVehicleId, setLinkedVehicleId] = useState<number | "">("");
   const [saving, setSaving] = useState(false);
@@ -470,16 +514,23 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
   const imageLightbox = useAppImageLightbox();
   const [editForm, setEditForm] = useState({
-    entryDate: todayKey(),
+    entryDate: calendarDefaults.todayYmd,
     type: "EXPENSE" as "INCOME" | "EXPENSE",
     categoryKey: "UTILITIES_ELECTRIC",
     title: "",
     amount: "",
     note: "",
-    slipImageUrl: null as string | null,
+    attachmentUrls: [] as string[],
     linkedUtilityId: null as number | null,
     linkedVehicleId: null as number | null,
   });
+
+  const setEditEntryAttachmentUrls = useCallback((action: SetStateAction<string[]>) => {
+    setEditForm((s) => ({
+      ...s,
+      attachmentUrls: typeof action === "function" ? action(s.attachmentUrls) : action,
+    }));
+  }, []);
 
   const [categoryAddModalOpen, setCategoryAddModalOpen] = useState(false);
   const [customCategoryName, setCustomCategoryName] = useState("");
@@ -506,7 +557,9 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
     insuranceDueDate: "",
   });
   const [vehicleAddModalOpen, setVehicleAddModalOpen] = useState(false);
+  const [vehicleAddAttachmentUrls, setVehicleAddAttachmentUrls] = useState<string[]>([]);
   const [vehicleEditModalId, setVehicleEditModalId] = useState<number | null>(null);
+  const [vehicleEditAttachmentUrls, setVehicleEditAttachmentUrls] = useState<string[]>([]);
   const [vehicleModalForm, setVehicleModalForm] = useState({
     vehicleType: "CAR" as "CAR" | "MOTORCYCLE",
     label: "",
@@ -518,9 +571,113 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
   const [reminderAddModalOpen, setReminderAddModalOpen] = useState(false);
   const [reminderForm, setReminderForm] = useState({
     title: "",
-    dueDate: todayKey(),
+    dueDate: calendarDefaults.todayYmd,
     note: "",
   });
+
+  const [attachmentUploadProgress, setAttachmentUploadProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
+  const [editEntryAttachmentPending, setEditEntryAttachmentPending] = useState<HomeFinancePendingUpload[]>([]);
+  const [vehicleAddAttachmentPending, setVehicleAddAttachmentPending] = useState<HomeFinancePendingUpload[]>([]);
+  const [vehicleEditAttachmentPending, setVehicleEditAttachmentPending] = useState<HomeFinancePendingUpload[]>([]);
+  /** แยก epoch ต่อบริบท — อย่าใช้ตัวเดียวกันทั้งหมด เดี๋ยวปิดฟอร์มหนึ่งแล้วอัปโหลดในอีกฟอร์มถูกยกเลิก */
+  const hfAttachEpochEntryRef = useRef(0);
+  const hfAttachEpochVehicleAddRef = useRef(0);
+  const hfAttachEpochVehicleEditRef = useRef(0);
+  /** อัปเดตทุก render — appendFilesToList อ่านตอนเริ่มคลิกเลือกไฟล์ กันค่า length จาก closure เก่า (หลายไฟล์ + แก้ไขรถ) */
+  const hfAttachEntryUrlCountRef = useRef(0);
+  const hfAttachEntryPendingCountRef = useRef(0);
+  const hfAttachVehicleAddUrlCountRef = useRef(0);
+  const hfAttachVehicleAddPendingCountRef = useRef(0);
+  const hfAttachVehicleEditUrlCountRef = useRef(0);
+  const hfAttachVehicleEditPendingCountRef = useRef(0);
+  const lastEditEntryIdRef = useRef<number | null>(null);
+  const lastVehicleEditIdRef = useRef<number | null>(null);
+  const [coverPhotoUploadingVehicleId, setCoverPhotoUploadingVehicleId] = useState<number | null>(null);
+  const [coverPhotoUploadingUtilityId, setCoverPhotoUploadingUtilityId] = useState<number | null>(null);
+  const [vehicleFormSaving, setVehicleFormSaving] = useState(false);
+
+  useEffect(() => {
+    if (!editingEntry) {
+      if (lastEditEntryIdRef.current != null) {
+        hfAttachEpochEntryRef.current += 1;
+        lastEditEntryIdRef.current = null;
+        setEditEntryAttachmentPending((p) => {
+          revokeHomeFinancePendingObjectUrls(p);
+          return [];
+        });
+      }
+      return;
+    }
+    const id = editingEntry.id;
+    if (lastEditEntryIdRef.current === null) {
+      setEditEntryAttachmentPending((p) => {
+        revokeHomeFinancePendingObjectUrls(p);
+        return [];
+      });
+      lastEditEntryIdRef.current = id;
+      return;
+    }
+    if (lastEditEntryIdRef.current !== id) {
+      hfAttachEpochEntryRef.current += 1;
+      setEditEntryAttachmentPending((p) => {
+        revokeHomeFinancePendingObjectUrls(p);
+        return [];
+      });
+      lastEditEntryIdRef.current = id;
+    }
+  }, [editingEntry]);
+
+  const prevVehicleAddOpenRef = useRef(false);
+  useEffect(() => {
+    if (prevVehicleAddOpenRef.current && !vehicleAddModalOpen) {
+      hfAttachEpochVehicleAddRef.current += 1;
+      setVehicleAddAttachmentPending((p) => {
+        revokeHomeFinancePendingObjectUrls(p);
+        return [];
+      });
+    }
+    if (!prevVehicleAddOpenRef.current && vehicleAddModalOpen) {
+      setVehicleAddAttachmentPending((p) => {
+        revokeHomeFinancePendingObjectUrls(p);
+        return [];
+      });
+    }
+    prevVehicleAddOpenRef.current = vehicleAddModalOpen;
+  }, [vehicleAddModalOpen]);
+
+  useEffect(() => {
+    if (vehicleEditModalId == null) {
+      if (lastVehicleEditIdRef.current != null) {
+        hfAttachEpochVehicleEditRef.current += 1;
+        lastVehicleEditIdRef.current = null;
+        setVehicleEditAttachmentPending((p) => {
+          revokeHomeFinancePendingObjectUrls(p);
+          return [];
+        });
+      }
+      return;
+    }
+    const id = vehicleEditModalId;
+    if (lastVehicleEditIdRef.current === null) {
+      setVehicleEditAttachmentPending((p) => {
+        revokeHomeFinancePendingObjectUrls(p);
+        return [];
+      });
+      lastVehicleEditIdRef.current = id;
+      return;
+    }
+    if (lastVehicleEditIdRef.current !== id) {
+      hfAttachEpochVehicleEditRef.current += 1;
+      setVehicleEditAttachmentPending((p) => {
+        revokeHomeFinancePendingObjectUrls(p);
+        return [];
+      });
+      lastVehicleEditIdRef.current = id;
+    }
+  }, [vehicleEditModalId]);
 
   const categoryOptions = useMemo(
     () => [
@@ -589,7 +746,19 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
         return;
       }
       setError(null);
-      setEntries((j.entries ?? []) as Entry[]);
+      const raw = j.entries ?? [];
+      setEntries(
+        raw.map((row) => {
+          const att = row.attachmentUrls;
+          const attachmentUrls =
+            Array.isArray(att) && att.length > 0
+              ? att.filter((u): u is string => typeof u === "string")
+              : row.slipImageUrl
+                ? [row.slipImageUrl]
+                : [];
+          return { ...row, attachmentUrls } as Entry;
+        }),
+      );
       setSummary(j.summary ?? { count: 0, income: 0, expense: 0, balance: 0 });
     } catch (e) {
       setError(fetchErrorMessage(e));
@@ -624,7 +793,11 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
         failures.push(metaEndpointFailureLine("ค่าไฟ/ค่าน้ำ", uRes, uP.data));
       }
       if (vP.ok) {
-        const items = (vP.data.items as Vehicle[] | undefined) ?? [];
+        const rawItems = (vP.data.items as Array<Vehicle & { attachmentUrls?: unknown }> | undefined) ?? [];
+        const items: Vehicle[] = rawItems.map((row) => ({
+          ...row,
+          attachmentUrls: normalizeVehicleAttachmentUrls(row),
+        }));
         const counts = (vP.data.counts as { cars: number; motorcycles: number } | undefined) ?? {
           cars: 0,
           motorcycles: 0,
@@ -673,8 +846,37 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
     window.setTimeout(() => setSaveNotice(null), 14000);
   }
 
+  async function uploadEntrySlipFile(file: File) {
+    setEntrySlipUploading(true);
+    setError(null);
+    try {
+      let url: string | null;
+      try {
+        url = await uploadHomeFinanceFile(file);
+      } catch (err) {
+        setError(
+          err instanceof Error && err.message === HOME_FINANCE_UPLOAD_TIMEOUT
+            ? "อัปโหลดรูปหมดเวลา — ลองรูปเล็กลงหรือเน็ตที่เร็วขึ้น"
+            : "อัปโหลดรูปไม่สำเร็จ",
+        );
+        return;
+      }
+      if (!url) {
+        setError("อัปโหลดรูปไม่สำเร็จ — ใช้ JPG/PNG/WebP/GIF ไม่เกิน 3MB");
+        return;
+      }
+      setEntrySlipImageUrl(url);
+    } finally {
+      setEntrySlipUploading(false);
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (entrySlipUploading) {
+      setError("รอให้อัปโหลดรูปสลิปให้เสร็จก่อน แล้วค่อยบันทึก");
+      return;
+    }
     setSaving(true);
     setError(null);
     let savedOk = false;
@@ -713,7 +915,7 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
             serviceCenter: showVehicleFields ? serviceCenter || null : null,
             paymentMethod: paymentMethod || null,
             note: note || null,
-            slipImageUrl: slipUrl,
+            attachmentUrls: entrySlipImageUrl ? [entrySlipImageUrl] : [],
             linkedUtilityId: uLink,
             linkedVehicleId: vLink,
           }),
@@ -742,7 +944,7 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
       setServiceCenter("");
       setPaymentMethod("");
       setNote("");
-      setSlipUrl(null);
+      setEntrySlipImageUrl(null);
       setLinkedUtilityId("");
       setLinkedVehicleId("");
       setEntryModalOpen(false);
@@ -784,7 +986,12 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
       title: entry.title,
       amount: String(entry.amount),
       note: entry.note ?? "",
-      slipImageUrl: entry.slipImageUrl,
+      attachmentUrls:
+        entry.attachmentUrls?.length > 0
+          ? entry.attachmentUrls
+          : entry.slipImageUrl
+            ? [entry.slipImageUrl]
+            : [],
       linkedUtilityId: entry.linkedUtilityId,
       linkedVehicleId: entry.linkedVehicleId,
     });
@@ -793,6 +1000,10 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
   async function onSubmitEdit(e: React.FormEvent) {
     e.preventDefault();
     if (!editingEntry) return;
+    if (editEntryAttachmentPending.length > 0) {
+      setError("รอให้อัปโหลดไฟล์แนบให้เสร็จก่อน แล้วค่อยบันทึก");
+      return;
+    }
     setSaving(true);
     setError(null);
     let savedOk = false;
@@ -826,7 +1037,7 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
             title: editForm.title.trim(),
             amount: n,
             note: editForm.note.trim() || null,
-            slipImageUrl: editForm.slipImageUrl,
+            attachmentUrls: editForm.attachmentUrls,
             linkedUtilityId: uLink,
             linkedVehicleId: vLink,
           }),
@@ -1016,78 +1227,96 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
   }
 
   async function patchUtilityPhoto(id: number, file: File) {
-    let url: string | null;
+    setCoverPhotoUploadingUtilityId(id);
+    setError(null);
     try {
-      url = await uploadHomeFinanceFile(file);
-    } catch (err) {
-      setError(
-        err instanceof Error && err.message === HOME_FINANCE_UPLOAD_TIMEOUT
-          ? "อัปโหลดรูปหมดเวลา — ลองรูปเล็กลงหรือเน็ตที่เร็วขึ้น"
-          : "อัปโหลดรูปไม่สำเร็จ",
-      );
-      return;
-    }
-    if (!url) {
-      setError("อัปโหลดรูปไม่สำเร็จ");
-      return;
-    }
-    try {
-      const res = await homeFinanceFetch(`/api/home-finance/utilities/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photoUrl: url }),
-      });
-      const pr = await readHomeFinanceJsonResponse(res);
-      if (!pr.ok) {
-        const err = typeof pr.data.error === "string" ? pr.data.error.trim() : "";
-        setError(err || metaEndpointFailureLine("บันทึกรูปบิล", res, pr.data));
+      let url: string | null;
+      try {
+        url = await uploadHomeFinanceFile(file);
+      } catch (err) {
+        setError(
+          err instanceof Error && err.message === HOME_FINANCE_UPLOAD_TIMEOUT
+            ? "อัปโหลดรูปหมดเวลา — ลองรูปเล็กลงหรือเน็ตที่เร็วขึ้น"
+            : "อัปโหลดรูปไม่สำเร็จ",
+        );
         return;
       }
-    } catch (e) {
-      setError(fetchErrorMessage(e));
-      return;
+      if (!url) {
+        setError("อัปโหลดรูปไม่สำเร็จ");
+        return;
+      }
+      try {
+        const res = await homeFinanceFetch(`/api/home-finance/utilities/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ photoUrl: url }),
+        });
+        const pr = await readHomeFinanceJsonResponse(res);
+        if (!pr.ok) {
+          const err = typeof pr.data.error === "string" ? pr.data.error.trim() : "";
+          setError(err || metaEndpointFailureLine("บันทึกรูปบิล", res, pr.data));
+          return;
+        }
+      } catch (e) {
+        setError(fetchErrorMessage(e));
+        return;
+      }
+      await loadMeta();
+    } finally {
+      setCoverPhotoUploadingUtilityId(null);
     }
-    await loadMeta();
   }
 
   async function patchVehiclePhoto(id: number, file: File) {
-    let url: string | null;
+    setCoverPhotoUploadingVehicleId(id);
+    setError(null);
     try {
-      url = await uploadHomeFinanceFile(file);
-    } catch (err) {
-      setError(
-        err instanceof Error && err.message === HOME_FINANCE_UPLOAD_TIMEOUT
-          ? "อัปโหลดรูปหมดเวลา — ลองรูปเล็กลงหรือเน็ตที่เร็วขึ้น"
-          : "อัปโหลดรูปไม่สำเร็จ",
-      );
-      return;
-    }
-    if (!url) {
-      setError("อัปโหลดรูปไม่สำเร็จ");
-      return;
-    }
-    try {
-      const res = await homeFinanceFetch(`/api/home-finance/vehicles/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photoUrl: url }),
-      });
-      const pr = await readHomeFinanceJsonResponse(res);
-      if (!pr.ok) {
-        const err = typeof pr.data.error === "string" ? pr.data.error.trim() : "";
-        setError(err || metaEndpointFailureLine("บันทึกรูปยานพาหนะ", res, pr.data));
+      let url: string | null;
+      try {
+        url = await uploadHomeFinanceFile(file);
+      } catch (err) {
+        setError(
+          err instanceof Error && err.message === HOME_FINANCE_UPLOAD_TIMEOUT
+            ? "อัปโหลดรูปหมดเวลา — ลองรูปเล็กลงหรือเน็ตที่เร็วขึ้น"
+            : "อัปโหลดรูปไม่สำเร็จ",
+        );
         return;
       }
-    } catch (e) {
-      setError(fetchErrorMessage(e));
-      return;
+      if (!url) {
+        setError("อัปโหลดรูปไม่สำเร็จ");
+        return;
+      }
+      try {
+        const res = await homeFinanceFetch(`/api/home-finance/vehicles/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ photoUrl: url }),
+        });
+        const pr = await readHomeFinanceJsonResponse(res);
+        if (!pr.ok) {
+          const err = typeof pr.data.error === "string" ? pr.data.error.trim() : "";
+          setError(err || metaEndpointFailureLine("บันทึกรูปยานพาหนะ", res, pr.data));
+          return;
+        }
+      } catch (e) {
+        setError(fetchErrorMessage(e));
+        return;
+      }
+      await loadMeta();
+    } finally {
+      setCoverPhotoUploadingVehicleId(null);
     }
-    await loadMeta();
   }
 
   async function addVehicle() {
     if (!vehicleForm.label.trim()) return;
+    if (attachmentUploadProgress) return;
+    if (vehicleAddAttachmentPending.length > 0) {
+      setError("รอให้อัปโหลดเอกสารให้เสร็จก่อน แล้วค่อยบันทึก");
+      return;
+    }
     setError(null);
+    setVehicleFormSaving(true);
     const body = {
       vehicleType: vehicleForm.vehicleType,
       label: vehicleForm.label.trim(),
@@ -1095,30 +1324,38 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
       taxDueDate: vehicleForm.taxDueDate.trim() || null,
       serviceDueDate: vehicleForm.serviceDueDate.trim() || null,
       insuranceDueDate: vehicleForm.insuranceDueDate.trim() || null,
+      attachmentUrls: vehicleAddAttachmentUrls,
     };
-    let res: Response;
     try {
-      res = await homeFinanceFetch("/api/home-finance/vehicles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-    } catch (e) {
-      setError(fetchErrorMessage(e));
-      return;
+      let res: Response;
+      try {
+        res = await homeFinanceFetch("/api/home-finance/vehicles", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      } catch (e) {
+        setError(fetchErrorMessage(e));
+        return;
+      }
+      const parsed = await readHomeFinanceJsonResponse(res);
+      if (!parsed.ok) {
+        const err = typeof parsed.data.error === "string" ? parsed.data.error.trim() : "";
+        setError(err || metaEndpointFailureLine("เพิ่มยานพาหนะ", res, parsed.data));
+        return;
+      }
+      const created = vehicleFromHomeFinanceApiItem(parsed.data.item);
+      if (created) setVehicles((prev) => [created, ...prev]);
+      closeVehicleAddModal();
+      await loadMeta();
+    } finally {
+      setVehicleFormSaving(false);
     }
-    const parsed = await readHomeFinanceJsonResponse(res);
-    if (!parsed.ok) {
-      const err = typeof parsed.data.error === "string" ? parsed.data.error.trim() : "";
-      setError(err || metaEndpointFailureLine("เพิ่มยานพาหนะ", res, parsed.data));
-      return;
-    }
-    closeVehicleAddModal();
-    await loadMeta();
   }
 
   function openVehicleAddModal() {
     setError(null);
+    setVehicleAddAttachmentUrls([]);
     setVehicleForm({
       vehicleType: "CAR",
       label: "",
@@ -1132,6 +1369,7 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
 
   function closeVehicleAddModal() {
     setVehicleAddModalOpen(false);
+    setVehicleAddAttachmentUrls([]);
     setVehicleForm({
       vehicleType: "CAR",
       label: "",
@@ -1146,6 +1384,7 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
   function openVehicleEditModal(item: Vehicle) {
     setError(null);
     setVehicleEditModalId(item.id);
+    setVehicleEditAttachmentUrls([...item.attachmentUrls]);
     setVehicleModalForm({
       vehicleType: item.vehicleType,
       label: item.label,
@@ -1159,6 +1398,7 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
   function closeVehicleEditModal() {
     setError(null);
     setVehicleEditModalId(null);
+    setVehicleEditAttachmentUrls([]);
     setVehicleModalForm({
       vehicleType: "CAR",
       label: "",
@@ -1172,7 +1412,13 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
   async function saveVehicleEdit() {
     if (vehicleEditModalId == null) return;
     if (!vehicleModalForm.label.trim()) return;
+    if (attachmentUploadProgress) return;
+    if (vehicleEditAttachmentPending.length > 0) {
+      setError("รอให้อัปโหลดเอกสารให้เสร็จก่อน แล้วค่อยบันทึก");
+      return;
+    }
     setError(null);
+    setVehicleFormSaving(true);
     const body = {
       vehicleType: vehicleModalForm.vehicleType,
       label: vehicleModalForm.label.trim(),
@@ -1180,27 +1426,37 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
       taxDueDate: vehicleModalForm.taxDueDate.trim() || null,
       serviceDueDate: vehicleModalForm.serviceDueDate.trim() || null,
       insuranceDueDate: vehicleModalForm.insuranceDueDate.trim() || null,
+      attachmentUrls: vehicleEditAttachmentUrls,
     };
-    let res: Response;
     try {
-      res = await homeFinanceFetch(`/api/home-finance/vehicles/${vehicleEditModalId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-    } catch (e) {
-      setError(fetchErrorMessage(e));
-      return;
+      let res: Response;
+      try {
+        res = await homeFinanceFetch(`/api/home-finance/vehicles/${vehicleEditModalId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      } catch (e) {
+        setError(fetchErrorMessage(e));
+        return;
+      }
+      const parsed = await readHomeFinanceJsonResponse(res);
+      if (!parsed.ok) {
+        const err = typeof parsed.data.error === "string" ? parsed.data.error.trim() : "";
+        setError(err || metaEndpointFailureLine("แก้ไขยานพาหนะ", res, parsed.data));
+        return;
+      }
+      const savedId = vehicleEditModalId;
+      const item = parsed.data.item;
+      if (savedId != null && item != null) {
+        setVehicles((prev) => prev.map((x) => (x.id === savedId ? mergeVehicleWithHomeFinanceApiItem(x, item) : x)));
+      }
+      setError(null);
+      closeVehicleEditModal();
+      await loadMeta();
+    } finally {
+      setVehicleFormSaving(false);
     }
-    const parsed = await readHomeFinanceJsonResponse(res);
-    if (!parsed.ok) {
-      const err = typeof parsed.data.error === "string" ? parsed.data.error.trim() : "";
-      setError(err || metaEndpointFailureLine("แก้ไขยานพาหนะ", res, parsed.data));
-      return;
-    }
-    setError(null);
-    closeVehicleEditModal();
-    await loadMeta();
   }
 
   async function toggleVehicleActive(id: number, isActive: boolean) {
@@ -1301,6 +1557,102 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
 
   const thb = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const today = todayKey();
+
+  hfAttachEntryUrlCountRef.current = editForm.attachmentUrls.length;
+  hfAttachEntryPendingCountRef.current = editEntryAttachmentPending.length;
+  hfAttachVehicleAddUrlCountRef.current = vehicleAddAttachmentUrls.length;
+  hfAttachVehicleAddPendingCountRef.current = vehicleAddAttachmentPending.length;
+  hfAttachVehicleEditUrlCountRef.current = vehicleEditAttachmentUrls.length;
+  hfAttachVehicleEditPendingCountRef.current = vehicleEditAttachmentPending.length;
+
+  /** แสดงตัวอย่าง blob ในฟอร์มทันที แล้วอัปโหลดทีละไฟล์ */
+  async function appendFilesToList(
+    files: FileList | File[],
+    setList: Dispatch<SetStateAction<string[]>>,
+    setPending: Dispatch<SetStateAction<HomeFinancePendingUpload[]>>,
+    getUrlCount: () => number,
+    getPendingCount: () => number,
+    epochRef: MutableRefObject<number>,
+  ) {
+    const epochAtStart = epochRef.current;
+    const isStale = () => epochRef.current !== epochAtStart;
+
+    const fileArr = Array.from(files);
+    if (fileArr.length === 0) return;
+
+    const urlCount = getUrlCount();
+    const pendingCount = getPendingCount();
+    const room = Math.max(0, MAX_HOME_FINANCE_ATTACHMENTS - urlCount - pendingCount);
+    if (room === 0) {
+      setError(`แนบได้สูงสุด ${MAX_HOME_FINANCE_ATTACHMENTS} ไฟล์`);
+      return;
+    }
+    const batch = fileArr.slice(0, room);
+    if (fileArr.length > room) {
+      setError(
+        `แนบได้สูงสุด ${MAX_HOME_FINANCE_ATTACHMENTS} ไฟล์ — จะอัปโหลด ${batch.length} ไฟล์แรกจากที่เลือก (${fileArr.length} ไฟล์)`,
+      );
+    } else {
+      setError(null);
+    }
+
+    const rows = batch.map((f) => newHomeFinancePendingRow(f));
+    if (isStale()) {
+      revokeHomeFinancePendingObjectUrls(rows);
+      return;
+    }
+    setPending((prev) => [...prev, ...rows]);
+
+    setAttachmentUploadProgress({ current: 0, total: batch.length });
+    try {
+      for (let i = 0; i < batch.length; i++) {
+        const row = rows[i];
+        const file = batch[i];
+        setAttachmentUploadProgress({ current: i + 1, total: batch.length });
+        try {
+          const url = await uploadHomeFinanceFile(file);
+          if (isStale()) {
+            URL.revokeObjectURL(row.objectUrl);
+            setPending((p) => p.filter((x) => x.id !== row.id));
+            break;
+          }
+          if (!url) {
+            setError("อัปโหลดไม่สำเร็จ — ตรวจสอบชนิดไฟล์ (JPG/PNG/WebP/GIF/PDF) และขนาด");
+            URL.revokeObjectURL(row.objectUrl);
+            setPending((p) => p.filter((x) => x.id !== row.id));
+            break;
+          }
+          URL.revokeObjectURL(row.objectUrl);
+          setPending((p) => p.filter((x) => x.id !== row.id));
+          setList((prev) => {
+            if (prev.length >= MAX_HOME_FINANCE_ATTACHMENTS) return prev;
+            return [...prev, url];
+          });
+        } catch (err) {
+          URL.revokeObjectURL(row.objectUrl);
+          setPending((p) => p.filter((x) => x.id !== row.id));
+          setError(
+            err instanceof Error && err.message === HOME_FINANCE_UPLOAD_TIMEOUT
+              ? "อัปโหลดหมดเวลา — ลองไฟล์เล็กลงหรือเน็ตที่เร็วขึ้น"
+              : "อัปโหลดไม่สำเร็จ",
+          );
+          break;
+        }
+      }
+    } finally {
+      setAttachmentUploadProgress(null);
+    }
+  }
+
+  function openFinanceAttachmentUrl(url: string) {
+    if (isHomeFinancePdfUrl(url)) window.open(url, "_blank", "noopener,noreferrer");
+    else imageLightbox.open(url);
+  }
+
+  const openLocalFinancePreview = useCallback((objectUrl: string, isPdf: boolean) => {
+    if (isPdf) window.open(objectUrl, "_blank", "noopener,noreferrer");
+    else imageLightbox.open(objectUrl);
+  }, [imageLightbox]);
   const dueAlerts = useMemo(() => {
     const items: Array<{ kind: string; title: string; dueDate: string; note?: string | null }> = [];
     for (const u of utilities) {
@@ -1398,7 +1750,7 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
                 buttonLabel="+ เพิ่มรายการ"
                 onAddClick={() => {
                   setError(null);
-                  setSlipUrl(null);
+                  setEntrySlipImageUrl(null);
                   setLinkedUtilityId("");
                   setLinkedVehicleId("");
                   setEntryModalOpen(true);
@@ -1429,7 +1781,7 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
                 buttonLabel="+ เพิ่มรายการ"
                 onAddClick={() => {
                   setError(null);
-                  setSlipUrl(null);
+                  setEntrySlipImageUrl(null);
                   setLinkedUtilityId("");
                   setLinkedVehicleId("");
                   setEntryModalOpen(true);
@@ -1547,9 +1899,7 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
                         <HomeFinanceEntryHistoryCard
                           entry={e}
                           thb={thb}
-                          onSlipClick={() => {
-                            if (e.slipImageUrl) imageLightbox.open(e.slipImageUrl);
-                          }}
+                          onOpenImage={(url) => openFinanceAttachmentUrl(url)}
                           onEdit={() => openEdit(e)}
                           onDelete={() => void removeEntry(e.id)}
                         />
@@ -1683,65 +2033,42 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
                       </select>
                     </Field>
                   ) : null}
-                  <Field label="อัปโหลดสลิป">
+                  <Field label="สลิป / รูปแนบ (ได้ 1 รูป)">
                     <div className="flex flex-wrap items-center gap-3">
-                      <input
-                        id={entrySlipFileInputId}
-                        type="file"
+                      {entrySlipImageUrl ? (
+                        <>
+                          <AppImageThumb
+                            src={entrySlipImageUrl}
+                            onOpen={() => imageLightbox.open(entrySlipImageUrl)}
+                          />
+                          <HomeFinanceSecondaryButton type="button" onClick={() => setEntrySlipImageUrl(null)}>
+                            ลบรูป
+                          </HomeFinanceSecondaryButton>
+                        </>
+                      ) : null}
+                      <HomeFinanceUploadTrigger
+                        busy={entrySlipUploading}
+                        disabled={saving}
                         accept="image/jpeg,image/png,image/webp,image/gif"
-                        className="sr-only"
-                        onChange={async (e) => {
-                          const f = e.target.files?.[0];
-                          e.target.value = "";
-                          if (!f) return;
-                          try {
-                            const url = await uploadHomeFinanceFile(f);
-                            if (url) setSlipUrl(url);
-                            else setError("อัปโหลดรูปไม่สำเร็จ");
-                          } catch (err) {
-                            setError(
-                              err instanceof Error && err.message === HOME_FINANCE_UPLOAD_TIMEOUT
-                                ? "อัปโหลดรูปหมดเวลา — ลองรูปเล็กลงหรือเน็ตที่เร็วขึ้น"
-                                : "อัปโหลดรูปไม่สำเร็จ",
-                            );
-                          }
-                        }}
-                      />
-                      <label
-                        htmlFor={entrySlipFileInputId}
-                        className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-100"
+                        onFile={(f) => void uploadEntrySlipFile(f)}
                       >
-                        <HomeFinanceSlipUploadIcon className="shrink-0 text-slate-600" />
-                        <span>{slipUrl ? "เปลี่ยนรูป" : "แนบรูป"}</span>
-                      </label>
-                      <span className="text-xs text-slate-500">JPG / PNG / WebP สูงสุด 3MB</span>
+                        {entrySlipImageUrl ? "เปลี่ยนรูป" : "เลือกรูป"}
+                      </HomeFinanceUploadTrigger>
+                      <span className="max-w-xs text-xs text-slate-500">
+                        JPG / PNG / WebP / GIF สูงสุด 3MB — แนบได้ทีละ 1 รูป
+                      </span>
                     </div>
-                    {slipUrl ? (
-                      <div className="mt-2 flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => imageLightbox.open(slipUrl)}
-                          className="overflow-hidden rounded-lg ring-1 ring-slate-200"
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={slipUrl} alt="" className="h-16 w-16 object-cover" />
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs font-semibold text-red-600 hover:underline"
-                          onClick={() => setSlipUrl(null)}
-                        >
-                          ลบรูป
-                        </button>
-                      </div>
-                    ) : null}
                   </Field>
                   <Field label="หมายเหตุ"><textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={inputClz} /></Field>
                   <div className="flex justify-end gap-2">
                     <HomeFinanceSecondaryButton type="button" onClick={() => setEntryModalOpen(false)}>
                       ยกเลิก
                     </HomeFinanceSecondaryButton>
-                    <HomeFinancePrimaryButton type="submit" disabled={saving} className="disabled:opacity-60">
+                    <HomeFinancePrimaryButton
+                      type="submit"
+                      disabled={saving || entrySlipUploading}
+                      className="disabled:opacity-60"
+                    >
                       {saving ? "กำลังบันทึก..." : "บันทึกรายการ"}
                     </HomeFinancePrimaryButton>
                   </div>
@@ -1855,67 +2182,39 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
                       </select>
                     </Field>
                   ) : null}
-                  <Field label="สลิป">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <input
-                        id={editSlipFileInputId}
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        className="sr-only"
-                        onChange={async (e) => {
-                          const f = e.target.files?.[0];
-                          e.target.value = "";
-                          if (!f) return;
-                          try {
-                            const url = await uploadHomeFinanceFile(f);
-                            if (url) setEditForm((s) => ({ ...s, slipImageUrl: url }));
-                            else setError("อัปโหลดรูปไม่สำเร็จ");
-                          } catch (err) {
-                            setError(
-                              err instanceof Error && err.message === HOME_FINANCE_UPLOAD_TIMEOUT
-                                ? "อัปโหลดรูปหมดเวลา — ลองรูปเล็กลงหรือเน็ตที่เร็วขึ้น"
-                                : "อัปโหลดรูปไม่สำเร็จ",
-                            );
-                          }
-                        }}
-                      />
-                      <label
-                        htmlFor={editSlipFileInputId}
-                        className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-100"
-                      >
-                        <HomeFinanceSlipUploadIcon className="shrink-0 text-slate-600" />
-                        <span>{editForm.slipImageUrl ? "เปลี่ยนรูป" : "แนบรูป"}</span>
-                      </label>
-                      <span className="text-xs text-slate-500">JPG / PNG / WebP สูงสุด 3MB</span>
-                    </div>
-                    {editForm.slipImageUrl ? (
-                      <div className="mt-2 flex flex-wrap items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            editForm.slipImageUrl ? imageLightbox.open(editForm.slipImageUrl) : undefined
-                          }
-                          className="overflow-hidden rounded-lg ring-1 ring-slate-200"
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={editForm.slipImageUrl} alt="" className="h-16 w-16 object-cover" />
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs font-semibold text-red-600 hover:underline"
-                          onClick={() => setEditForm((s) => ({ ...s, slipImageUrl: null }))}
-                        >
-                          ลบสลิป
-                        </button>
-                      </div>
-                    ) : null}
+                  <Field label="แนบเอกสาร / สลิป (หลายไฟล์)">
+                    <HomeFinanceFormAttachmentsBlock
+                      urls={editForm.attachmentUrls}
+                      pendingUploads={editEntryAttachmentPending}
+                      onChange={(next) => setEditForm((s) => ({ ...s, attachmentUrls: next }))}
+                      inputId={editSlipFileInputId}
+                      accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+                      hint="รูป JPG/PNG/WebP/GIF สูงสุด 3MB ต่อไฟล์ · PDF สูงสุด 5MB · สูงสุด 20 ไฟล์"
+                      uploadProgress={attachmentUploadProgress}
+                      onUploadFiles={(files) =>
+                        appendFilesToList(
+                          files,
+                          setEditEntryAttachmentUrls,
+                          setEditEntryAttachmentPending,
+                          () => hfAttachEntryUrlCountRef.current,
+                          () => hfAttachEntryPendingCountRef.current,
+                          hfAttachEpochEntryRef,
+                        )
+                      }
+                      onOpenUrl={openFinanceAttachmentUrl}
+                      onOpenLocalPreview={openLocalFinancePreview}
+                    />
                   </Field>
                   <Field label="หมายเหตุ"><textarea value={editForm.note} onChange={(e) => setEditForm((s) => ({ ...s, note: e.target.value }))} rows={2} className={inputClz} /></Field>
                   <div className="flex justify-end gap-2">
                     <HomeFinanceSecondaryButton type="button" onClick={() => setEditingEntry(null)}>
                       ยกเลิก
                     </HomeFinanceSecondaryButton>
-                    <HomeFinancePrimaryButton type="submit" disabled={saving} className="disabled:opacity-60">
+                    <HomeFinancePrimaryButton
+                      type="submit"
+                      disabled={saving || editEntryAttachmentPending.length > 0 || attachmentUploadProgress != null}
+                      className="disabled:opacity-60"
+                    >
                       {saving ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
                     </HomeFinancePrimaryButton>
                   </div>
@@ -2029,13 +2328,18 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
                 <HomeFinanceEmptyState>ยังไม่มีบิล — กด &quot;เพิ่มบิลใหม่&quot;</HomeFinanceEmptyState>
               ) : (
                 utilities.map((u) => (
-                  <HomeFinanceEntityRow key={u.id}>
-                    <HomeFinanceEntityMain>
-                      <AppImageThumb
-                        src={u.photoUrl}
-                        onOpen={() => u.photoUrl && imageLightbox.open(u.photoUrl)}
+                  <HomeFinanceEntityRow key={u.id} className="flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+                    <HomeFinanceEntityMain className="w-full flex-col gap-3 sm:flex-row sm:items-start">
+                      <HomeFinanceVehicleCoverUpload
+                        photoUrl={u.photoUrl}
+                        onOpenPhoto={() => u.photoUrl && imageLightbox.open(u.photoUrl)}
+                        onFile={(f) => void patchUtilityPhoto(u.id, f)}
+                        busy={coverPhotoUploadingUtilityId === u.id}
+                        disabled={coverPhotoUploadingUtilityId !== null}
+                        idleUploadLabel="อัปโหลดรูปหรือสลิปบิล"
+                        busyUploadLabel="กำลังอัปโหลดรูป…"
                       />
-                      <div className="min-w-0 flex-1 space-y-1.5">
+                      <div className="min-w-0 w-full flex-1 space-y-1.5">
                         <span className="inline-flex rounded-full bg-[#0000BF]/10 px-2 py-0.5 text-[10px] font-semibold text-[#0000BF]">
                           {u.utilityType === "ELECTRIC" ? "ค่าไฟ" : "ค่าน้ำ"}
                         </span>
@@ -2058,16 +2362,21 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
                         </div>
                       </div>
                     </HomeFinanceEntityMain>
-                    <HomeFinanceEntityActions>
-                      <HomeFinanceUploadTrigger onFile={(f) => void patchUtilityPhoto(u.id, f)}>
-                        อัปโหลดรูป
-                      </HomeFinanceUploadTrigger>
-                      <HomeFinanceRowActionButton variant="primary" onClick={() => openUtilityEditModal(u)}>
-                        แก้ไข
-                      </HomeFinanceRowActionButton>
-                      <HomeFinanceRowActionButton variant="danger" onClick={() => void removeUtility(u.id)}>
-                        ลบ
-                      </HomeFinanceRowActionButton>
+                    <HomeFinanceEntityActions className="w-full flex-wrap justify-start sm:w-auto sm:justify-end">
+                      <HomeFinanceRowActionIconButton
+                        variant="primary"
+                        title="แก้ไข"
+                        onClick={() => openUtilityEditModal(u)}
+                      >
+                        <HomeFinanceRowIconEdit />
+                      </HomeFinanceRowActionIconButton>
+                      <HomeFinanceRowActionIconButton
+                        variant="danger"
+                        title="ลบ"
+                        onClick={() => void removeUtility(u.id)}
+                      >
+                        <HomeFinanceRowIconTrash />
+                      </HomeFinanceRowActionIconButton>
                     </HomeFinanceEntityActions>
                   </HomeFinanceEntityRow>
                 ))
@@ -2223,7 +2532,7 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
         <HomeFinancePageSection tight>
           <HomeFinanceSectionHeader
             title="ยานพาหนะ"
-            description="เพิ่มรถจากปุ่มด้านขวา · แก้ไขจากรายการด้านล่าง"
+            description="แก้ไขรถเพื่อแนบเอกสาร (ทีละไฟล์) · รูปหน้าปกอัปโหลดจากไอคอนกล้องมุมรูปในแต่ละการ์ด"
             action={<HomeFinanceToolbarButton onClick={() => openVehicleAddModal()}>เพิ่มรถใหม่</HomeFinanceToolbarButton>}
           />
           <div className="grid gap-3 sm:grid-cols-2">
@@ -2237,38 +2546,58 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
                 <HomeFinanceEmptyState>ยังไม่มีรถ — กด &quot;เพิ่มรถใหม่&quot;</HomeFinanceEmptyState>
               ) : (
                 vehicles.map((v) => (
-                  <HomeFinanceEntityRow key={v.id}>
-                    <HomeFinanceEntityMain className="items-start">
-                      <AppImageThumb
-                        src={v.photoUrl}
-                        onOpen={() => v.photoUrl && imageLightbox.open(v.photoUrl)}
+                  <HomeFinanceEntityRow key={v.id} className="flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:gap-3">
+                    <HomeFinanceEntityMain className="w-full flex-col gap-3 sm:flex-row sm:items-start">
+                      <HomeFinanceVehicleCoverUpload
+                        photoUrl={v.photoUrl}
+                        onOpenPhoto={() => v.photoUrl && imageLightbox.open(v.photoUrl)}
+                        onFile={(f) => void patchVehiclePhoto(v.id, f)}
+                        busy={coverPhotoUploadingVehicleId === v.id}
+                        disabled={coverPhotoUploadingVehicleId !== null}
                       />
-                      <p className="min-w-0 flex-1 text-sm text-slate-800">
-                        <span className="font-medium">
-                          {v.vehicleType === "CAR" ? "รถยนต์" : "รถจักรยานยนต์"}
-                        </span>{" "}
-                        · {v.label} {v.plateNumber ? `· ${v.plateNumber}` : ""}
-                        {v.taxDueDate ? ` · ต่อภาษี ${v.taxDueDate.slice(0, 10)}` : ""}
-                        {v.serviceDueDate ? ` · เข้าศูนย์ ${v.serviceDueDate.slice(0, 10)}` : ""}
-                        {v.insuranceDueDate ? ` · ประกันภัย ${v.insuranceDueDate.slice(0, 10)}` : ""}
-                      </p>
+                      <div className="min-w-0 w-full flex-1 space-y-2">
+                        <p className="text-sm text-slate-800">
+                          <span className="font-medium">
+                            {v.vehicleType === "CAR" ? "รถยนต์" : "รถจักรยานยนต์"}
+                          </span>{" "}
+                          · {v.label} {v.plateNumber ? `· ${v.plateNumber}` : ""}
+                          {v.taxDueDate ? ` · ต่อภาษี ${v.taxDueDate.slice(0, 10)}` : ""}
+                          {v.serviceDueDate ? ` · เข้าศูนย์ ${v.serviceDueDate.slice(0, 10)}` : ""}
+                          {v.insuranceDueDate ? ` · ประกันภัย ${v.insuranceDueDate.slice(0, 10)}` : ""}
+                        </p>
+                        <div className="space-y-1.5">
+                          <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                            เอกสารแนบ
+                          </span>
+                          <HomeFinanceVehicleRowAttachments
+                            urls={v.attachmentUrls}
+                            onOpenAttachment={openFinanceAttachmentUrl}
+                          />
+                        </div>
+                      </div>
                     </HomeFinanceEntityMain>
-                    <HomeFinanceEntityActions>
-                      <HomeFinanceUploadTrigger onFile={(f) => void patchVehiclePhoto(v.id, f)}>
-                        อัปโหลดรูป
-                      </HomeFinanceUploadTrigger>
-                      <HomeFinanceRowActionButton variant="primary" onClick={() => openVehicleEditModal(v)}>
-                        แก้ไข
-                      </HomeFinanceRowActionButton>
-                      <HomeFinanceRowActionButton
+                    <HomeFinanceEntityActions className="w-full flex-wrap justify-start sm:w-auto sm:justify-end">
+                      <HomeFinanceRowActionIconButton
+                        variant="primary"
+                        title="แก้ไข"
+                        onClick={() => openVehicleEditModal(v)}
+                      >
+                        <HomeFinanceRowIconEdit />
+                      </HomeFinanceRowActionIconButton>
+                      <HomeFinanceRowActionIconButton
                         variant="muted"
+                        title={v.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
                         onClick={() => void toggleVehicleActive(v.id, v.isActive)}
                       >
-                        {v.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-                      </HomeFinanceRowActionButton>
-                      <HomeFinanceRowActionButton variant="danger" onClick={() => void removeVehicle(v.id)}>
-                        ลบ
-                      </HomeFinanceRowActionButton>
+                        {v.isActive ? <HomeFinanceRowIconDeactivate /> : <HomeFinanceRowIconActivate />}
+                      </HomeFinanceRowActionIconButton>
+                      <HomeFinanceRowActionIconButton
+                        variant="danger"
+                        title="ลบ"
+                        onClick={() => void removeVehicle(v.id)}
+                      >
+                        <HomeFinanceRowIconTrash />
+                      </HomeFinanceRowActionIconButton>
                     </HomeFinanceEntityActions>
                   </HomeFinanceEntityRow>
                 ))
@@ -2285,78 +2614,125 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
             titleId="vehicle-add-title"
             onClose={() => closeVehicleAddModal()}
             error={error}
-            maxWidthClassName="max-w-2xl"
+            maxWidthClassName="max-w-3xl"
           >
-            <form
-              noValidate
-              className="space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void addVehicle();
-              }}
-            >
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="ประเภทยานพาหนะ">
-                  <select
-                    value={vehicleForm.vehicleType}
-                    onChange={(e) =>
-                      setVehicleForm((s) => ({ ...s, vehicleType: e.target.value as "CAR" | "MOTORCYCLE" }))
-                    }
-                    className={inputClz}
-                  >
-                    <option value="CAR">รถยนต์</option>
-                    <option value="MOTORCYCLE">รถจักรยานยนต์</option>
-                  </select>
-                </Field>
-                <Field label="ชื่อเรียกรถ">
-                  <input
-                    value={vehicleForm.label}
-                    onChange={(e) => setVehicleForm((s) => ({ ...s, label: e.target.value }))}
-                    className={inputClz}
-                    placeholder="เช่น คันหลัก"
-                    required
-                  />
-                </Field>
-                <Field label="ทะเบียนรถ">
-                  <input
-                    value={vehicleForm.plateNumber}
-                    onChange={(e) => setVehicleForm((s) => ({ ...s, plateNumber: e.target.value }))}
-                    className={inputClz}
-                    placeholder="เช่น กข 1234"
-                  />
-                </Field>
-                <Field label="วันครบต่อภาษี">
-                  <input
-                    type="date"
-                    value={vehicleForm.taxDueDate}
-                    onChange={(e) => setVehicleForm((s) => ({ ...s, taxDueDate: e.target.value }))}
-                    className={inputClz}
-                  />
-                </Field>
-                <Field label="วันเข้าศูนย์บริการ">
-                  <input
-                    type="date"
-                    value={vehicleForm.serviceDueDate}
-                    onChange={(e) => setVehicleForm((s) => ({ ...s, serviceDueDate: e.target.value }))}
-                    className={inputClz}
-                  />
-                </Field>
-                <Field label="วันครบประกันภัย">
-                  <input
-                    type="date"
-                    value={vehicleForm.insuranceDueDate}
-                    onChange={(e) => setVehicleForm((s) => ({ ...s, insuranceDueDate: e.target.value }))}
-                    className={inputClz}
-                  />
-                </Field>
-              </div>
+            <div className="space-y-4">
+              <form
+                id="hf-vehicle-add-form"
+                noValidate
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void addVehicle();
+                }}
+              >
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="ประเภทยานพาหนะ">
+                    <select
+                      value={vehicleForm.vehicleType}
+                      onChange={(e) =>
+                        setVehicleForm((s) => ({ ...s, vehicleType: e.target.value as "CAR" | "MOTORCYCLE" }))
+                      }
+                      className={inputClz}
+                    >
+                      <option value="CAR">รถยนต์</option>
+                      <option value="MOTORCYCLE">รถจักรยานยนต์</option>
+                    </select>
+                  </Field>
+                  <Field label="ชื่อเรียกรถ">
+                    <input
+                      value={vehicleForm.label}
+                      onChange={(e) => setVehicleForm((s) => ({ ...s, label: e.target.value }))}
+                      className={inputClz}
+                      placeholder="เช่น คันหลัก"
+                      required
+                    />
+                  </Field>
+                  <Field label="ทะเบียนรถ">
+                    <input
+                      value={vehicleForm.plateNumber}
+                      onChange={(e) => setVehicleForm((s) => ({ ...s, plateNumber: e.target.value }))}
+                      className={inputClz}
+                      placeholder="เช่น กข 1234"
+                    />
+                  </Field>
+                  <Field label="วันครบต่อภาษี">
+                    <input
+                      type="date"
+                      value={vehicleForm.taxDueDate}
+                      onChange={(e) => setVehicleForm((s) => ({ ...s, taxDueDate: e.target.value }))}
+                      className={inputClz}
+                    />
+                  </Field>
+                  <Field label="วันเข้าศูนย์บริการ">
+                    <input
+                      type="date"
+                      value={vehicleForm.serviceDueDate}
+                      onChange={(e) => setVehicleForm((s) => ({ ...s, serviceDueDate: e.target.value }))}
+                      className={inputClz}
+                    />
+                  </Field>
+                  <Field label="วันครบประกันภัย">
+                    <input
+                      type="date"
+                      value={vehicleForm.insuranceDueDate}
+                      onChange={(e) => setVehicleForm((s) => ({ ...s, insuranceDueDate: e.target.value }))}
+                      className={inputClz}
+                    />
+                  </Field>
+                </div>
+              </form>
+              <Field label="เอกสารแนบ (PDF หรือรูป)">
+                <HomeFinanceFormAttachmentsBlock
+                  urls={vehicleAddAttachmentUrls}
+                  pendingUploads={vehicleAddAttachmentPending}
+                  onChange={setVehicleAddAttachmentUrls}
+                  inputId={vehicleAddAttachInputId}
+                  accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
+                  hint="PDF สูงสุด 5MB · รูปสูงสุด 3MB ต่อไฟล์ · รวมได้สูงสุด 20 ไฟล์ — แนบทีละ 1 ไฟล์"
+                  emptyStateVariant="vehicle"
+                  attachUiMode="vehicle-single"
+                  uploadProgress={attachmentUploadProgress}
+                  onUploadFiles={(files) =>
+                    appendFilesToList(
+                      files,
+                      setVehicleAddAttachmentUrls,
+                      setVehicleAddAttachmentPending,
+                      () => hfAttachVehicleAddUrlCountRef.current,
+                      () => hfAttachVehicleAddPendingCountRef.current,
+                      hfAttachEpochVehicleAddRef,
+                    )
+                  }
+                  onOpenUrl={openFinanceAttachmentUrl}
+                  onOpenLocalPreview={openLocalFinancePreview}
+                />
+              </Field>
               <div className="flex justify-end gap-2 pt-2">
-                <HomeFinanceSecondaryButton type="button" onClick={() => closeVehicleAddModal()}>
+                <HomeFinanceSecondaryButton
+                  type="button"
+                  disabled={
+                    vehicleFormSaving ||
+                    attachmentUploadProgress != null ||
+                    vehicleAddAttachmentPending.length > 0
+                  }
+                  onClick={() => closeVehicleAddModal()}
+                >
                   ยกเลิก
                 </HomeFinanceSecondaryButton>
-                <HomeFinancePrimaryButton type="submit">เพิ่มรถ</HomeFinancePrimaryButton>
+                <HomeFinancePrimaryButton
+                  type="submit"
+                  form="hf-vehicle-add-form"
+                  disabled={
+                    vehicleFormSaving ||
+                    attachmentUploadProgress != null ||
+                    vehicleAddAttachmentPending.length > 0
+                  }
+                  className="disabled:opacity-60"
+                >
+                  {vehicleFormSaving ? "กำลังบันทึก…" : "เพิ่มรถ"}
+                </HomeFinancePrimaryButton>
               </div>
-            </form>
+            </div>
           </HomeFinanceModalPanel>
         </HomeFinanceModalBackdrop>
       ) : null}
@@ -2376,77 +2752,110 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
               closeVehicleEditModal();
             }}
             error={error}
-            maxWidthClassName="max-w-2xl"
+            maxWidthClassName="max-w-3xl"
           >
-            <form
-              noValidate
-              className="space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void saveVehicleEdit();
-              }}
-            >
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="ประเภทยานพาหนะ">
-                  <select
-                    value={vehicleModalForm.vehicleType}
-                    onChange={(e) =>
-                      setVehicleModalForm((s) => ({
-                        ...s,
-                        vehicleType: e.target.value as "CAR" | "MOTORCYCLE",
-                      }))
-                    }
-                    className={inputClz}
-                  >
-                    <option value="CAR">รถยนต์</option>
-                    <option value="MOTORCYCLE">รถจักรยานยนต์</option>
-                  </select>
-                </Field>
-                <Field label="ชื่อเรียกรถ">
-                  <input
-                    value={vehicleModalForm.label}
-                    onChange={(e) => setVehicleModalForm((s) => ({ ...s, label: e.target.value }))}
-                    className={inputClz}
-                    placeholder="เช่น คันหลัก"
-                    required
-                  />
-                </Field>
-                <Field label="ทะเบียนรถ">
-                  <input
-                    value={vehicleModalForm.plateNumber}
-                    onChange={(e) => setVehicleModalForm((s) => ({ ...s, plateNumber: e.target.value }))}
-                    className={inputClz}
-                    placeholder="เช่น กข 1234"
-                  />
-                </Field>
-                <Field label="วันครบต่อภาษี">
-                  <input
-                    type="date"
-                    value={vehicleModalForm.taxDueDate}
-                    onChange={(e) => setVehicleModalForm((s) => ({ ...s, taxDueDate: e.target.value }))}
-                    className={inputClz}
-                  />
-                </Field>
-                <Field label="วันเข้าศูนย์บริการ">
-                  <input
-                    type="date"
-                    value={vehicleModalForm.serviceDueDate}
-                    onChange={(e) => setVehicleModalForm((s) => ({ ...s, serviceDueDate: e.target.value }))}
-                    className={inputClz}
-                  />
-                </Field>
-                <Field label="วันครบประกันภัย">
-                  <input
-                    type="date"
-                    value={vehicleModalForm.insuranceDueDate}
-                    onChange={(e) => setVehicleModalForm((s) => ({ ...s, insuranceDueDate: e.target.value }))}
-                    className={inputClz}
-                  />
-                </Field>
-              </div>
+            <div className="space-y-4">
+              <form
+                id="hf-vehicle-edit-form"
+                noValidate
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void saveVehicleEdit();
+                }}
+              >
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="ประเภทยานพาหนะ">
+                    <select
+                      value={vehicleModalForm.vehicleType}
+                      onChange={(e) =>
+                        setVehicleModalForm((s) => ({
+                          ...s,
+                          vehicleType: e.target.value as "CAR" | "MOTORCYCLE",
+                        }))
+                      }
+                      className={inputClz}
+                    >
+                      <option value="CAR">รถยนต์</option>
+                      <option value="MOTORCYCLE">รถจักรยานยนต์</option>
+                    </select>
+                  </Field>
+                  <Field label="ชื่อเรียกรถ">
+                    <input
+                      value={vehicleModalForm.label}
+                      onChange={(e) => setVehicleModalForm((s) => ({ ...s, label: e.target.value }))}
+                      className={inputClz}
+                      placeholder="เช่น คันหลัก"
+                      required
+                    />
+                  </Field>
+                  <Field label="ทะเบียนรถ">
+                    <input
+                      value={vehicleModalForm.plateNumber}
+                      onChange={(e) => setVehicleModalForm((s) => ({ ...s, plateNumber: e.target.value }))}
+                      className={inputClz}
+                      placeholder="เช่น กข 1234"
+                    />
+                  </Field>
+                  <Field label="วันครบต่อภาษี">
+                    <input
+                      type="date"
+                      value={vehicleModalForm.taxDueDate}
+                      onChange={(e) => setVehicleModalForm((s) => ({ ...s, taxDueDate: e.target.value }))}
+                      className={inputClz}
+                    />
+                  </Field>
+                  <Field label="วันเข้าศูนย์บริการ">
+                    <input
+                      type="date"
+                      value={vehicleModalForm.serviceDueDate}
+                      onChange={(e) => setVehicleModalForm((s) => ({ ...s, serviceDueDate: e.target.value }))}
+                      className={inputClz}
+                    />
+                  </Field>
+                  <Field label="วันครบประกันภัย">
+                    <input
+                      type="date"
+                      value={vehicleModalForm.insuranceDueDate}
+                      onChange={(e) => setVehicleModalForm((s) => ({ ...s, insuranceDueDate: e.target.value }))}
+                      className={inputClz}
+                    />
+                  </Field>
+                </div>
+              </form>
+              <Field label="เอกสารแนบ (PDF หรือรูป)">
+                <HomeFinanceFormAttachmentsBlock
+                  urls={vehicleEditAttachmentUrls}
+                  pendingUploads={vehicleEditAttachmentPending}
+                  onChange={setVehicleEditAttachmentUrls}
+                  inputId={vehicleEditAttachInputId}
+                  accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
+                  hint="PDF สูงสุด 5MB · รูปสูงสุด 3MB ต่อไฟล์ · รวมได้สูงสุด 20 ไฟล์ — แนบทีละ 1 ไฟล์"
+                  emptyStateVariant="vehicle"
+                  attachUiMode="vehicle-single"
+                  uploadProgress={attachmentUploadProgress}
+                  onUploadFiles={(files) =>
+                    appendFilesToList(
+                      files,
+                      setVehicleEditAttachmentUrls,
+                      setVehicleEditAttachmentPending,
+                      () => hfAttachVehicleEditUrlCountRef.current,
+                      () => hfAttachVehicleEditPendingCountRef.current,
+                      hfAttachEpochVehicleEditRef,
+                    )
+                  }
+                  onOpenUrl={openFinanceAttachmentUrl}
+                  onOpenLocalPreview={openLocalFinancePreview}
+                />
+              </Field>
               <div className="flex justify-end gap-2 pt-2">
                 <HomeFinanceSecondaryButton
                   type="button"
+                  disabled={
+                    vehicleFormSaving ||
+                    attachmentUploadProgress != null ||
+                    vehicleEditAttachmentPending.length > 0
+                  }
                   onClick={() => {
                     setError(null);
                     closeVehicleEditModal();
@@ -2454,9 +2863,20 @@ export function HomeFinanceClient({ section: sectionFromRoute }: HomeFinanceClie
                 >
                   ยกเลิก
                 </HomeFinanceSecondaryButton>
-                <HomeFinancePrimaryButton type="submit">บันทึก</HomeFinancePrimaryButton>
+                <HomeFinancePrimaryButton
+                  type="submit"
+                  form="hf-vehicle-edit-form"
+                  disabled={
+                    vehicleFormSaving ||
+                    attachmentUploadProgress != null ||
+                    vehicleEditAttachmentPending.length > 0
+                  }
+                  className="disabled:opacity-60"
+                >
+                  {vehicleFormSaving ? "กำลังบันทึก…" : "บันทึก"}
+                </HomeFinancePrimaryButton>
               </div>
-            </form>
+            </div>
           </HomeFinanceModalPanel>
         </HomeFinanceModalBackdrop>
       ) : null}
@@ -2880,17 +3300,23 @@ function HomeFinanceAnalyticsSection({ entries, from, to, loading, thb, context 
 function HomeFinanceEntryHistoryCard({
   entry: e,
   thb,
-  onSlipClick,
+  onOpenImage,
   onEdit,
   onDelete,
 }: {
   entry: Entry;
   thb: (n: number) => string;
-  onSlipClick: () => void;
+  onOpenImage: (url: string) => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   const link = homeFinanceEntryLinkLabel(e);
+  const attachmentList =
+    e.attachmentUrls?.length > 0
+      ? e.attachmentUrls
+      : e.slipImageUrl
+        ? [e.slipImageUrl]
+        : [];
   return (
     <article className="rounded-xl border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm transition hover:border-slate-300">
       <div className="flex items-center justify-between gap-2">
@@ -2928,20 +3354,9 @@ function HomeFinanceEntryHistoryCard({
         <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-slate-600">{e.note}</p>
       ) : null}
       <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="shrink-0 text-[10px] font-medium text-slate-400">สลิป</span>
-          {e.slipImageUrl ? (
-            <button
-              type="button"
-              onClick={onSlipClick}
-              className="touch-manipulation shrink-0 overflow-hidden rounded-lg ring-1 ring-slate-200 transition hover:ring-[#0000BF]/40"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={e.slipImageUrl} alt="" className="h-9 w-9 object-cover" />
-            </button>
-          ) : (
-            <span className="text-[11px] text-slate-400">—</span>
-          )}
+        <div className="flex min-w-0 items-start gap-2">
+          <span className="shrink-0 pt-0.5 text-[10px] font-medium text-slate-400">เอกสาร</span>
+          <HomeFinanceHistoryAttachmentStrip urls={attachmentList} onOpenImage={onOpenImage} />
         </div>
         <div className="flex shrink-0 gap-1">
           <button
@@ -3028,12 +3443,13 @@ function HomeFinanceRecentSummary({ entries, thb }: { entries: Entry[]; thb: (n:
   );
 }
 
+/** ใช้ div ไม่ใช่ <label> ห่อทั้งก้อน — ลูกข้างใน (เช่นปุ่มเลือกไฟล์ที่เป็น <label htmlFor>) จะได้ไม่ nested label ซึ่งทำให้เบราว์เซอร์คลิก/เลือกหลายไฟล์พัง */
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="block text-xs font-medium text-slate-600">
-      {label}
+    <div className="block">
+      <div className="text-xs font-medium text-slate-600">{label}</div>
       <div className="mt-1">{children}</div>
-    </label>
+    </div>
   );
 }
 

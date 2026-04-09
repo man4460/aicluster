@@ -46,10 +46,7 @@ export const DASHBOARD_NAV: DashboardNavItem[] = [
   { href: "/dashboard/profile", label: "โปรไฟล์" },
   { href: "/dashboard/plans", label: "แพ็กเกจ" },
   { href: "/dashboard/chat", label: "แชท" },
-  { href: "/dashboard/admin/users", label: "จัดการผู้ใช้", adminOnly: true },
-  { href: "/dashboard/activity-logs", label: "ความเคลื่อนไหวระบบ", adminOnly: true },
-  { href: "/dashboard/admin/mqtt", label: "สถานะ MQTT", adminOnly: true },
-  { href: "/dashboard/admin/module-cooldowns", label: "ปลดล็อค Subscribe", adminOnly: true },
+  { href: "/dashboard/admin", label: "ศูนย์แอดมิน", adminOnly: true },
 ];
 
 export type SubscribedModuleLink = {

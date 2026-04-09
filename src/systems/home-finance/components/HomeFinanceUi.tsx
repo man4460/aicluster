@@ -133,6 +133,112 @@ export function HomeFinanceRowActionButton({
   return <button type="button" className={cn(rowActionBase, v, className)} {...props} />;
 }
 
+const rowActionIconBase =
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border touch-manipulation transition-colors sm:h-8 sm:w-8";
+
+/** ปุ่มไอคอนในแถวการ์ด (เช่น รถ) — ต้องมี title / aria-label ชัดเจน */
+export function HomeFinanceRowActionIconButton({
+  variant,
+  title,
+  "aria-label": ariaLabel,
+  children,
+  className,
+  ...props
+}: Omit<React.ComponentProps<"button">, "children"> & {
+  variant: "primary" | "muted" | "danger";
+  title: string;
+  "aria-label"?: string;
+  children: ReactNode;
+}) {
+  const v =
+    variant === "primary"
+      ? "border-slate-200 bg-slate-50 text-[#0000BF] hover:bg-slate-100"
+      : variant === "danger"
+        ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+        : "border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-100";
+  const label = ariaLabel ?? title;
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={label}
+      className={cn(rowActionIconBase, v, className)}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+function HfRowSvg({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <span className={cn("inline-flex text-current [&>svg]:h-4 [&>svg]:w-4", className)} aria-hidden>
+      {children}
+    </span>
+  );
+}
+
+/** ไอคอนแก้ไข — ใช้ใน HomeFinanceRowActionIconButton */
+export function HomeFinanceRowIconEdit() {
+  return (
+    <HfRowSvg>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.85} stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+        />
+      </svg>
+    </HfRowSvg>
+  );
+}
+
+export function HomeFinanceRowIconTrash() {
+  return (
+    <HfRowSvg>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.85} stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+        />
+      </svg>
+    </HfRowSvg>
+  );
+}
+
+/** ปิดใช้งาน — ลบในวงกลม */
+export function HomeFinanceRowIconDeactivate() {
+  return (
+    <HfRowSvg>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.85} stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+        />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6" />
+      </svg>
+    </HfRowSvg>
+  );
+}
+
+/** เปิดใช้งาน — บวกในวงกลม */
+export function HomeFinanceRowIconActivate() {
+  return (
+    <HfRowSvg>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.85} stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+        />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6M9 12h6" />
+      </svg>
+    </HfRowSvg>
+  );
+}
+
 /** ปุ่มหลักมุมขวาบน (เพิ่มบิล / เพิ่มรถ) */
 export function HomeFinanceToolbarButton({ className, ...props }: React.ComponentProps<"button">) {
   return (
@@ -285,28 +391,131 @@ export function HomeFinanceModalPanel({
   );
 }
 
+function HfIconCameraUpload({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.75}
+      stroke="currentColor"
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+      />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+
+/**
+ * รูปปก + ปุ่มกลมอัปโหลดมุมขวาล่าง — ใช้กับรถ (หน้าปก) และบิลค่าไฟ/น้ำ (รูปอ้างอิง/สลิป)
+ */
+export function HomeFinanceVehicleCoverUpload({
+  photoUrl,
+  onOpenPhoto,
+  onFile,
+  busy = false,
+  disabled = false,
+  emptyLabel = "ไม่มีรูป",
+  idleUploadLabel = "อัปโหลดรูปหน้าปก",
+  busyUploadLabel = "กำลังอัปโหลดรูปหน้าปก",
+}: {
+  photoUrl: string | null | undefined;
+  onOpenPhoto: () => void;
+  onFile: (file: File) => void;
+  busy?: boolean;
+  disabled?: boolean;
+  /** ข้อความในกล่องเมื่อยังไม่มีรูป */
+  emptyLabel?: string;
+  /** title + sr-only เมื่อพร้อมอัปโหลด */
+  idleUploadLabel?: string;
+  /** title + sr-only ขณะอัปโหลด */
+  busyUploadLabel?: string;
+}) {
+  const off = disabled || busy;
+  return (
+    <div className="relative h-[4.5rem] w-[4.5rem] shrink-0 sm:h-16 sm:w-16">
+      {photoUrl ? (
+        <button
+          type="button"
+          onClick={onOpenPhoto}
+          className="flex h-full w-full overflow-hidden rounded-xl ring-2 ring-slate-100 transition hover:ring-[#0000BF]/35"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={photoUrl} alt="" className="h-full w-full object-cover object-center" />
+        </button>
+      ) : (
+        <div className="flex h-full w-full items-center justify-center rounded-xl bg-slate-100 px-1 text-center text-[9px] leading-tight text-slate-400 ring-2 ring-slate-100">
+          {emptyLabel}
+        </div>
+      )}
+      <label
+        title={busy ? busyUploadLabel : idleUploadLabel}
+        className={cn(
+          "absolute -bottom-1 -right-1 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-[#0000BF] text-white shadow-md transition hover:opacity-95 active:scale-[0.97] touch-manipulation",
+          off && "pointer-events-none cursor-not-allowed opacity-50",
+        )}
+      >
+        {busy ? (
+          <span
+            className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+            aria-hidden
+          />
+        ) : (
+          <HfIconCameraUpload className="h-4 w-4" />
+        )}
+        <span className="sr-only">{busy ? busyUploadLabel : idleUploadLabel}</span>
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="sr-only"
+          disabled={off}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (f) onFile(f);
+          }}
+        />
+      </label>
+    </div>
+  );
+}
+
 /** label + input file ซ่อน — สไตล์เดียวกับปุ่มแถว */
 export function HomeFinanceUploadTrigger({
   children,
   onFile,
   accept = "image/jpeg,image/png,image/webp,image/gif",
+  disabled = false,
+  busy = false,
 }: {
   children: ReactNode;
   onFile: (file: File) => void;
   accept?: string;
+  disabled?: boolean;
+  busy?: boolean;
 }) {
   return (
     <label
       className={cn(
         rowActionBase,
-        "cursor-pointer border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
+        "border-slate-200 bg-slate-50 text-slate-700",
+        disabled || busy
+          ? "cursor-not-allowed opacity-65"
+          : "cursor-pointer hover:bg-slate-100",
       )}
     >
-      {children}
+      {busy ? <span className="tabular-nums">กำลังอัปโหลด…</span> : children}
       <input
         type="file"
         accept={accept}
         className="hidden"
+        disabled={disabled || busy}
         onChange={(e) => {
           const f = e.target.files?.[0];
           e.target.value = "";

@@ -4,10 +4,6 @@ import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/ui/page-container";
 import { createVillageSessionApiRepository } from "@/systems/village/village-service";
 
-function bangkokYear(): number {
-  return Number.parseInt(new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok", year: "numeric" }), 10);
-}
-
 function IconTable({ className }: { className?: string }) {
   return (
     <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -95,9 +91,9 @@ function ExportCard({ icon, tone, title, hint, href, cta, primary }: ExportCardP
   );
 }
 
-export function VillageReportsClient() {
+export function VillageReportsClient({ initialYear }: { initialYear: number }) {
   const api = useMemo(() => createVillageSessionApiRepository(), []);
-  const [year, setYear] = useState(bangkokYear);
+  const [year, setYear] = useState(initialYear);
 
   return (
     <div className="space-y-8">

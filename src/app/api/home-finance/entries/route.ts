@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { writeSystemActivityLog } from "@/lib/audit-log";
+import {
+  canonicalizeHomeFinanceAttachmentList,
+  normalizeHomeFinanceAttachmentUrls,
+  normalizeHomeFinanceStoredPath,
+} from "@/lib/home-finance/attachments";
 import { exclusiveEndAfterInclusiveTo, formatDbDateToYmd, parseYmdToDbDate } from "@/lib/home-finance/entry-date";
 import { homeFinanceEntryPostSchema, zodFirstIssueMessage } from "@/lib/home-finance/entry-schema";
 import type { HomeFinanceEntryType, HomeUtilityType, HomeVehicleType } from "@/generated/prisma/enums";
@@ -22,6 +28,7 @@ function mapRow(r: {
   paymentMethod: string | null;
   note: string | null;
   slipImageUrl: string | null;
+  attachmentUrls: unknown;
   linkedUtilityId: number | null;
   linkedVehicleId: number | null;
   linkedUtility?: {
@@ -36,6 +43,10 @@ function mapRow(r: {
     vehicleType: HomeVehicleType;
   } | null;
 }) {
+  const attachmentUrls = normalizeHomeFinanceAttachmentUrls({
+    attachmentUrls: r.attachmentUrls,
+    slipImageUrl: r.slipImageUrl,
+  });
   return {
     id: r.id,
     entryDate: formatDbDateToYmd(r.entryDate),
@@ -50,7 +61,8 @@ function mapRow(r: {
     serviceCenter: r.serviceCenter,
     paymentMethod: r.paymentMethod,
     note: r.note,
-    slipImageUrl: r.slipImageUrl,
+    slipImageUrl: attachmentUrls[0] ?? null,
+    attachmentUrls,
     linkedUtilityId: r.linkedUtilityId,
     linkedVehicleId: r.linkedVehicleId,
     linkedUtility: r.linkedUtility ?? null,
@@ -181,11 +193,17 @@ export async function POST(req: Request) {
     if (!v) return NextResponse.json({ error: "ไม่พบรายการยานพาหนะ" }, { status: 400 });
   }
 
-  const slip = parsed.data.slipImageUrl?.trim();
-  const slipOk =
-    !slip ||
-    (slip.startsWith("/uploads/home-finance/") && !slip.includes("..") && slip.length <= 512);
+  const fromMulti = parsed.data.attachmentUrls;
+  const urls: string[] =
+    fromMulti != null && fromMulti.length > 0
+      ? canonicalizeHomeFinanceAttachmentList(fromMulti)
+      : (() => {
+          const slip = parsed.data.slipImageUrl?.trim() ?? "";
+          const c = slip ? normalizeHomeFinanceStoredPath(slip) : null;
+          return c ? [c] : [];
+        })();
 
+  const attachmentJson: Prisma.InputJsonValue = urls;
   let row;
   try {
     row = await prisma.homeFinanceEntry.create({
@@ -203,7 +221,8 @@ export async function POST(req: Request) {
         serviceCenter: parsed.data.serviceCenter?.trim() || null,
         paymentMethod: parsed.data.paymentMethod?.trim() || null,
         note: parsed.data.note?.trim() || null,
-        slipImageUrl: slipOk ? slip || null : null,
+        slipImageUrl: urls[0] ?? null,
+        attachmentUrls: attachmentJson,
         linkedUtilityId,
         linkedVehicleId,
       },

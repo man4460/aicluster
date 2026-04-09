@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/page-container";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
-import { displayAppModuleTitle, MQTT_SERVICE_MODULE_SLUG } from "@/lib/modules/config";
+import { displayAppModuleTitle, filterAppModulesForDashboardUi, MQTT_SERVICE_MODULE_SLUG } from "@/lib/modules/config";
 import { ModuleSubscriptionBrowser } from "@/components/dashboard/ModuleSubscriptionBrowser";
 import { listActiveResubscribeCooldowns, listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { listTrialModuleIds } from "@/lib/modules/trial-store";
@@ -17,11 +17,11 @@ export default async function ModulesCatalogPage() {
   const ctx = await getModuleBillingContext(session.sub);
   if (!ctx) redirect("/login");
 
-  const [modules, subscribedIds, trialIds, cooldownRows] = await Promise.all([
+  const [modulesRaw, subscribedIds, trialIds, cooldownRows] = await Promise.all([
     prisma.appModule.findMany({
       where: { isActive: true },
       orderBy: [{ groupId: "asc" }, { sortOrder: "asc" }],
-      select: { id: true, slug: true, title: true, description: true, groupId: true },
+      select: { id: true, slug: true, title: true, description: true, groupId: true, cardImageUrl: true },
     }),
     listSubscribedModuleIds(session.sub),
     listTrialModuleIds(session.sub),
@@ -30,19 +30,15 @@ export default async function ModulesCatalogPage() {
 
   const initialCooldownUnlocks = Object.fromEntries(cooldownRows.map((c) => [c.moduleId, c.unlockAtIso]));
 
+  const modules = filterAppModulesForDashboardUi(modulesRaw, ctx.access.role);
+
   const catalogModules = isMqttServiceModuleEnabled()
     ? modules
     : modules.filter((m) => m.slug !== MQTT_SERVICE_MODULE_SLUG);
 
-  const group1 = catalogModules.filter((m) => m.groupId === 1);
-  const rest = catalogModules.filter((m) => m.groupId !== 1);
   const modulesWithDisplayTitles = [
     { ...SYSTEM_MAP_CATALOG_ROW },
-    ...group1.map((m) => ({
-      ...m,
-      title: displayAppModuleTitle(m.slug, m.title),
-    })),
-    ...rest.map((m) => ({
+    ...catalogModules.map((m) => ({
       ...m,
       title: displayAppModuleTitle(m.slug, m.title),
     })),

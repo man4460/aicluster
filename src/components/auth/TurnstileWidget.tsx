@@ -85,8 +85,8 @@ export function TurnstileWidget({ onToken }: Props) {
   if (!siteKey) return null;
 
   return (
-    <div className="flex min-h-[4.125rem] w-full justify-center">
-      <div ref={containerRef} />
+    <div className="flex min-h-[4.125rem] w-full justify-center" suppressHydrationWarning>
+      <div ref={containerRef} suppressHydrationWarning />
     </div>
   );
 }

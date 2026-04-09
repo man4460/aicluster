@@ -97,10 +97,13 @@ export function RoomDetailClient({
   room,
   overdueRows = [],
   initialPayMonth = null,
+  initialBangkokYm,
 }: {
   room: DormRoomDetailJson;
   overdueRows?: DormOverdueRow[];
   initialPayMonth?: string | null;
+  /** snapshot จาก Server Component — กัน hydration ของช่องงวด YYYY-MM */
+  initialBangkokYm: string;
 }) {
   const router = useRouter();
 
@@ -110,7 +113,7 @@ export function RoomDetailClient({
     if (res.ok) router.push("/dashboard/dormitory/rooms");
   }
 
-  const [periodMonth, setPeriodMonth] = useState(bangkokYmNow());
+  const [periodMonth, setPeriodMonth] = useState(initialBangkokYm);
   const [loadingBill, setLoadingBill] = useState(false);
   const [billFeedback, setBillFeedback] = useState<{
     ok: boolean;
@@ -124,7 +127,11 @@ export function RoomDetailClient({
   const activeTenants = room.tenants.filter((t) => t.status === "ACTIVE");
   const n = activeTenants.length;
 
-  const dashboardYm = bangkokYmNow();
+  const [liveBangkokYm, setLiveBangkokYm] = useState<string | null>(null);
+  useEffect(() => {
+    setLiveBangkokYm(bangkokYmNow());
+  }, []);
+  const dashboardYm = liveBangkokYm ?? initialBangkokYm;
   const billCurrent = useMemo(
     () => room.utilityBills.find((b) => b.periodMonth === dashboardYm),
     [room.utilityBills, dashboardYm],
@@ -313,7 +320,7 @@ export function RoomDetailClient({
   }
 
   const [payTenant, setPayTenant] = useState(activeTenants[0]?.id ?? "");
-  const [payMonth, setPayMonth] = useState(() => initialPayMonth ?? bangkokYmNow());
+  const [payMonth, setPayMonth] = useState(() => initialPayMonth ?? initialBangkokYm);
   const [payNote, setPayNote] = useState("");
   const [payLoading, setPayLoading] = useState(false);
   const [payErr, setPayErr] = useState<string | null>(null);

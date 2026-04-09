@@ -1,7 +1,29 @@
-import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enums";
+import type { SubscriptionTier, SubscriptionType, UserRole } from "@/generated/prisma/enums";
 
 /** จำนวนกลุ่มโมดูลทั้งระบบ — ขยาย logic ใน access/config ให้สอดคล้อง */
 export const MAX_MODULE_GROUP = 5 as const;
+
+/**
+ * กลุ่มโมดูลสูงสุดที่เปิดใช้งาน/แสดงในแดชบอร์ดและแคตตาล็อก (ไม่นับแอดมิน)
+ * — กลุ่มอื่นปิดชั่วคราวจนกว่าจะปรับค่านี้
+ */
+export const UI_VISIBLE_MAX_MODULE_GROUP = 1 as const;
+
+/** แพ็กเหมาที่เปิดให้สมัครใหม่ได้ — ตอนนี้เฉพาะ 199 (กลุ่ม 1) */
+export const BUFFET_TIERS_OPEN_FOR_PURCHASE: ReadonlySet<SubscriptionTier> = new Set(["TIER_199"]);
+
+export function isBuffetTierOpenForPurchase(tier: SubscriptionTier): boolean {
+  return tier !== "NONE" && BUFFET_TIERS_OPEN_FOR_PURCHASE.has(tier);
+}
+
+/** กรองโมดูลในแคตตาล็อก/แดชบอร์ด — แอดมินเห็นทุกกลุ่ม */
+export function filterAppModulesForDashboardUi<T extends { groupId: number }>(
+  modules: T[],
+  role: UserRole,
+): T[] {
+  if (role === "ADMIN") return modules;
+  return modules.filter((m) => m.groupId <= UI_VISIBLE_MAX_MODULE_GROUP);
+}
 
 /**
  * สายรายวันเคยจำกัดเฉพาะเช็คอิน — ปัจจุบันใช้ `canAccessAppModule`: กลุ่ม 1 ทั้งหมดเมื่อมีโทเคน
@@ -59,14 +81,24 @@ export const MODULE_GROUP_TIER_NAME: Record<number, string> = {
   5: "Ultimate",
 };
 
-/** สรุปฟีเจอร์ต่อกลุ่ม (ใช้ในหน้าแพ็กเกจ / คำอธิบาย) */
+/** สรุปฟีเจอร์ต่อกลุ่ม (ใช้ในหน้าแพ็กเกจ / คำอธิบาย) — ข้อความกระชับ */
 export const MODULE_GROUP_FEATURE_SUMMARY: Record<number, string> = {
-  1: "เช็คอินอัจฉริยะ · หอพัก · หมู่บ้าน · ตัดผม · คาร์แคร์ · จอดรถ · MQTT · POS อาคาร · รายรับ–รายจ่าย (สายรายวัน)",
-  2: "สต็อก · พิมพ์ใบเสร็จ",
-  3: "Dashboard วิเคราะห์ · แชทระหว่างสาขา",
-  4: "จัดการพนักงาน · เงินเดือน",
-  5: "API ภายนอก · Automation ขั้นสูง",
+  1: "กลุ่ม 1: เช็คอิน · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ตัดผม · คาร์แคร์ · จอดรถ · POS",
+  2: "สต็อก · ใบเสร็จ",
+  3: "วิเคราะห์ · แชทสาขา",
+  4: "พนักงาน · เงินเดือน",
+  5: "API ภายนอก · Automation",
 };
+
+/** ข้อความการ์ด «สายรายวัน» ในหน้าแพ็กเกจ */
+export const DAILY_LINE_PLAN_SUMMARY = {
+  title: "สายรายวัน",
+  subtitle: "ไม่สมัครแพ็กเหมา — ใช้เมื่อมีโทเคน",
+  lines: [
+    "เปิดระบบกลุ่ม 1 ได้เมื่อมียอดโทเคน (โทเคนหมดใช้ไม่ได้)",
+    "เหมาะกับใช้ไม่ถี่หรือทดลองระบบพื้นฐาน",
+  ],
+} as const;
 
 export function moduleGroupLine(groupId: number): string {
   const tier = MODULE_GROUP_TIER_NAME[groupId];
@@ -128,6 +160,13 @@ export function computeBuffetSubscriptionTokenCharge(input: {
     return { ok: false, error: "แพ็กไม่ถูกต้อง" };
   }
 
+  if (!isBuffetTierOpenForPurchase(targetTier)) {
+    return {
+      ok: false,
+      error: "แพ็กราคานี้ปิดจำหน่ายชั่วคราว — เปิดเฉพาะแพ็กเหมา 199 โทเคน (กลุ่ม 1)",
+    };
+  }
+
   const isBuffetActive = subscriptionType === "BUFFET" && currentTier !== "NONE";
 
   if (isBuffetActive) {
@@ -178,22 +217,29 @@ export function tierGroupLabel(tier: SubscriptionTier): string {
   const n = buffetTierMaxGroup(tier);
   if (n <= 0) return "—";
   const name = MODULE_GROUP_TIER_NAME[n];
-  if (n === 1 && name) return `เข้าถึงกลุ่ม 1 (${name}) เท่านั้น`;
-  if (name) return `เข้าถึงกลุ่ม 1–${n} ถึงระดับ ${name}`;
+  if (n > UI_VISIBLE_MAX_MODULE_GROUP) {
+    const tierName = name ?? `ระดับ ${n}`;
+    return `แพ็ก ${tierName} — ขณะนี้ใช้งานได้เฉพาะกลุ่ม 1`;
+  }
+  if (n === 1 && name) return `รายเดือน 199 · กลุ่ม 1 (${name})`;
+  if (name) return `เข้าถึงกลุ่ม 1–${n} (${name})`;
   return `เข้าถึงกลุ่มโมดูล 1–${n}`;
 }
 
 export function tierGroupBullets(tier: SubscriptionTier): string[] {
   if (tier === "NONE") {
-    return [
-      "สายรายวัน: หักโทเคนทุกวัน — ไม่มีโทเคนใช้งานไม่ได้ ต้องเติมก่อน",
-      moduleGroupLine(1),
-    ];
+    return [...DAILY_LINE_PLAN_SUMMARY.lines, MODULE_GROUP_FEATURE_SUMMARY[1] ?? moduleGroupLine(1)];
   }
   const n = buffetTierMaxGroup(tier);
-  const lines: string[] = [`แพ็กเกจรายเดือน: หักโทเคนทุกเดือนตามระดับแพ็ก (เวลาไทย) — โทเคนไม่พอให้เติมก่อน`];
-  for (let g = 1; g <= n; g++) {
-    lines.push(moduleGroupLine(g));
+  const lines: string[] = [
+    "แพ็กเหมารายเดือน: หักโทเคนตามแพ็กทุกเดือน (เวลาไทย) — โทเคนไม่พอให้เติม",
+  ];
+  const shown = Math.min(n, UI_VISIBLE_MAX_MODULE_GROUP);
+  for (let g = 1; g <= shown; g++) {
+    lines.push(MODULE_GROUP_FEATURE_SUMMARY[g] ?? moduleGroupLine(g));
+  }
+  if (n > UI_VISIBLE_MAX_MODULE_GROUP) {
+    lines.push("กลุ่มโมดูลสูงกว่านี้ปิดชั่วคราว — จะเปิดภายหลัง");
   }
   return lines;
 }

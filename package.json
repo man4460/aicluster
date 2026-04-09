@@ -15,6 +15,7 @@
     "watch:pm2:prod": "chokidar \"src/**/*\" \"public/**/*\" \"prisma/schema.prisma\" \"next.config.ts\" \"postcss.config.mjs\" \"package.json\" \"ecosystem.config.cjs\" -c \"npm run build:pm2:prod\" -d 12000 --silent",
     "start": "next start -H 0.0.0.0",
     "lint": "eslint",
+    "verify:hf-vehicle-attachments": "tsx scripts/verify-home-finance-vehicle-attachments-db.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate": "prisma migrate deploy",
     "db:generate": "prisma generate",

@@ -6,15 +6,11 @@ import { PageHeader } from "@/components/ui/page-container";
 import { createVillageSessionApiRepository } from "@/systems/village/village-service";
 import { villageBtnPrimary, villageBtnSecondary, villageCard, villageField, villageTableWrap, villageToolbar } from "@/systems/village/village-ui";
 
-function bangkokYear(): number {
-  return Number.parseInt(new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok", year: "numeric" }), 10);
-}
-
 type MonthRow = { year_month: string; house_rows: number; total_due: number; total_paid: number };
 
-export function VillageAnnualClient() {
+export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
   const api = useMemo(() => createVillageSessionApiRepository(), []);
-  const [year, setYear] = useState(bangkokYear);
+  const [year, setYear] = useState(initialYear);
   const [rows, setRows] = useState<MonthRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
 

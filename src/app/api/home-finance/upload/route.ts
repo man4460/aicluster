@@ -4,8 +4,9 @@ import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 
-const MAX_BYTES = 3 * 1024 * 1024;
-const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+const MAX_PDF_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 export async function POST(req: Request) {
   const auth = await requireSession();
@@ -25,17 +26,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "ไม่มีไฟล์" }, { status: 400 });
   }
 
-  if (!ALLOWED.has(file.type)) {
-    return NextResponse.json({ error: "รองรับเฉพาะ JPG PNG WEBP GIF" }, { status: 400 });
+  const isPdf = file.type === "application/pdf";
+  if (!isPdf && !ALLOWED_IMAGES.has(file.type)) {
+    return NextResponse.json({ error: "รองรับ JPG PNG WEBP GIF หรือ PDF" }, { status: 400 });
   }
 
   const buf = Buffer.from(await file.arrayBuffer());
-  if (buf.length > MAX_BYTES) {
-    return NextResponse.json({ error: "ไฟล์ใหญ่เกิน 3MB" }, { status: 400 });
+  const maxBytes = isPdf ? MAX_PDF_BYTES : MAX_IMAGE_BYTES;
+  if (buf.length > maxBytes) {
+    return NextResponse.json(
+      { error: isPdf ? "PDF ใหญ่เกิน 5MB" : "ไฟล์ใหญ่เกิน 3MB" },
+      { status: 400 },
+    );
   }
 
-  const ext =
-    file.type === "image/png"
+  if (isPdf) {
+    if (buf.length < 5 || !buf.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
+      return NextResponse.json({ error: "ไฟล์ PDF ไม่ถูกต้อง" }, { status: 400 });
+    }
+  }
+
+  const ext = isPdf
+    ? "pdf"
+    : file.type === "image/png"
       ? "png"
       : file.type === "image/webp"
         ? "webp"

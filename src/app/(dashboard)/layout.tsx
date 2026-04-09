@@ -9,7 +9,11 @@ import { computeDashboardAccessAllowed } from "@/lib/tokens/dashboard-access";
 import { applyBuffetMonthlyBilling } from "@/lib/tokens/buffet-monthly-billing";
 import { applyDailyTokenDeduction } from "@/lib/tokens/daily-deduction";
 import { canAccessAppModule } from "@/lib/modules/access";
-import { displayAppModuleTitle, MQTT_SERVICE_MODULE_SLUG } from "@/lib/modules/config";
+import {
+  displayAppModuleTitle,
+  filterAppModulesForDashboardUi,
+  MQTT_SERVICE_MODULE_SLUG,
+} from "@/lib/modules/config";
 import { isMqttServiceModuleEnabled } from "@/lib/modules/mqtt-feature";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { listTrialModuleIds } from "@/lib/modules/trial-store";
@@ -49,11 +53,12 @@ export default async function DashboardLayout({
   const billCtx = await getModuleBillingContext(session.sub);
   if (!billCtx) redirect("/login");
 
-  const allModules = await prisma.appModule.findMany({
+  const allModulesRaw = await prisma.appModule.findMany({
     where: { isActive: true },
     orderBy: [{ groupId: "asc" }, { sortOrder: "asc" }],
     select: { id: true, slug: true, title: true, groupId: true },
   });
+  const allModules = filterAppModulesForDashboardUi(allModulesRaw, user.role);
 
   const [subscribedIds, trialIds] = await Promise.all([
     listSubscribedModuleIds(session.sub),

@@ -1,5 +1,11 @@
+import { bangkokMonthStartYmd, bangkokTodayYmd } from "@/lib/dates/bangkok-calendar";
 import { HomeFinanceClient } from "@/systems/home-finance/components/HomeFinanceClient";
 
 export default function HomeFinanceRemindersPage() {
-  return <HomeFinanceClient section="reminders" />;
+  return (
+    <HomeFinanceClient
+      section="reminders"
+      calendarDefaults={{ monthStartYmd: bangkokMonthStartYmd(), todayYmd: bangkokTodayYmd() }}
+    />
+  );
 }
