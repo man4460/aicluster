@@ -356,7 +356,11 @@ client.on("message", (topic, payload) => {
                     {overview.recent_sessions.slice(0, 15).map((s) => (
                       <tr key={s.id} className="border-t border-slate-100">
                         <td className="px-2 py-2 whitespace-nowrap text-slate-600">
-                          {new Date(s.created_at).toLocaleString("th-TH")}
+                          {new Date(s.created_at).toLocaleString("th-TH", {
+                            timeZone: "Asia/Bangkok",
+                            dateStyle: "short",
+                            timeStyle: "medium",
+                          })}
                         </td>
                         <td className="px-2 py-2 font-mono">{s.client_id}</td>
                         <td className="px-2 py-2 font-mono">{s.username ?? "—"}</td>
@@ -401,7 +405,15 @@ client.on("message", (topic, payload) => {
                   <td className="px-3 py-2">{c.label || "-"}</td>
                   <td className="px-3 py-2 font-mono text-xs">{c.client_id}</td>
                   <td className="px-3 py-2 font-mono text-xs">{c.username}</td>
-                  <td className="px-3 py-2 text-slate-600">{c.last_seen_at ? new Date(c.last_seen_at).toLocaleString("th-TH") : "-"}</td>
+                  <td className="px-3 py-2 text-slate-600">
+                    {c.last_seen_at
+                      ? new Date(c.last_seen_at).toLocaleString("th-TH", {
+                          timeZone: "Asia/Bangkok",
+                          dateStyle: "short",
+                          timeStyle: "medium",
+                        })
+                      : "-"}
+                  </td>
                   <td className="px-3 py-2 text-right">
                     <button
                       type="button"

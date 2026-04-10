@@ -1,3 +1,16 @@
+/** วันเวลาแสดงผลภาษาไทยในเขต Asia/Bangkok — ใช้ใน Client ที่ SSR เพื่อกัน hydration mismatch */
+export function formatBangkokDateTimeLong(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString("th-TH", {
+      timeZone: "Asia/Bangkok",
+      dateStyle: "long",
+      timeStyle: "short",
+    });
+  } catch {
+    return iso;
+  }
+}
+
 /** วันที่ปฏิทินในเขต Asia/Bangkok รูปแบบ YYYY-MM-DD */
 export function bangkokDateKey(d = new Date()): string {
   return d.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });

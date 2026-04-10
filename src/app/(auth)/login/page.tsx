@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { LoginForm } from "@/components/auth/LoginForm";
-import { isGoogleOAuthConfigured } from "@/lib/auth/google-oauth";
+import { LoginFormClient } from "./LoginFormClient";
+import { getGoogleOAuthClientId } from "@/lib/auth/google-oauth";
 
 export const metadata: Metadata = {
   title: "เข้าสู่ระบบ | MAWELL Buffet",
@@ -14,8 +14,13 @@ type Props = { searchParams: Promise<{ next?: string; error?: string }> };
 export default async function LoginPage({ searchParams }: Props) {
   const q = await searchParams;
   const next = q.next?.startsWith("/") && !q.next.startsWith("//") ? q.next : "/dashboard";
-  const googleOAuthEnabled = isGoogleOAuthConfigured();
+  /** แสดงปุ่มเมื่อมี Client ID — การแลกโค้ดยังต้องมี GOOGLE_CLIENT_SECRET (API จะ redirect กลับพร้อมข้อความถ้ายังไม่ครบ) */
+  const googleOAuthEnabled = Boolean(getGoogleOAuthClientId());
   return (
-    <LoginForm redirectTo={next} initialErrorKey={q.error} googleOAuthEnabled={googleOAuthEnabled} />
+    <LoginFormClient
+      redirectTo={next}
+      initialErrorKey={q.error}
+      googleOAuthEnabled={googleOAuthEnabled}
+    />
   );
 }

@@ -64,7 +64,8 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === CAR_WASH_MODULE_SLUG) return "คาร์แคร์";
   if (slug === MQTT_SERVICE_MODULE_SLUG) return "ระบบบริการ MQTT";
   if (slug === BUILDING_POS_MODULE_SLUG) return "POS ร้านอาหาร";
-  if (slug === VILLAGE_MODULE_SLUG) return "ระบบจัดการหมู่บ้าน";
+  if (slug === DORMITORY_MODULE_SLUG) return "จัดการหอพัก";
+  if (slug === VILLAGE_MODULE_SLUG) return "จัดการหมู่บ้าน";
   if (slug === PARKING_MODULE_SLUG) return "ระบบเช่าที่จอดรถ";
   return title;
 }

@@ -3,13 +3,12 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
-import { PageHeader } from "@/components/ui/page-container";
 import { AddRoomForm } from "@/systems/dormitory/components/AddRoomForm";
+import { DormEmptyDashed, DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
 import { RoomBillingStatusBadge } from "@/systems/dormitory/components/RoomBillingStatusBadge";
 import { buildRoomComputeInput, roomBillingUiStatus } from "@/systems/dormitory/lib/compute";
 import {
   dormBtnSecondary,
-  dormCard,
   dormRoomCardCta,
   dormRoomFieldLabel,
   dormRoomListCard,
@@ -17,6 +16,7 @@ import {
   dormRoomStatRow,
   dormRoomStatValue,
 } from "@/systems/dormitory/dorm-ui";
+import { cn } from "@/lib/cn";
 
 export default async function DormitoryRoomsPage() {
   const session = await getSession();
@@ -35,37 +35,29 @@ export default async function DormitoryRoomsPage() {
   });
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="จัดการห้องพัก"
-        description="เพิ่มห้อง มิเตอร์ระดับห้อง และ Split Bill ตามจำนวนผู้พัก ACTIVE"
+    <DormPageStack>
+      <DormPanelCard
+        title="ห้องพัก"
+        description="เพิ่มห้อง มิเตอร์ระดับห้อง และแบ่งบิลตามผู้พัก ACTIVE"
         action={
-          <Link href="/dashboard/dormitory" className={dormBtnSecondary}>
-            ← ผังห้อง
+          <Link href="/dashboard/dormitory" className={cn(dormBtnSecondary, "w-full justify-center sm:w-auto")}>
+            ผังห้อง
           </Link>
         }
-      />
+      >
+        <AddRoomForm />
+      </DormPanelCard>
 
-      <AddRoomForm />
-
-      <section className={`${dormCard} p-5`}>
-        <h2 className="text-base font-semibold tracking-tight text-slate-900">รายการห้อง</h2>
-        <p className="mt-1 text-xs leading-relaxed text-slate-500">
-          คลิกการ์ดเพื่อเปิดรายละเอียด มิเตอร์ และการชำระเงิน
-        </p>
+      <DormPanelCard title="รายการห้อง" description="คลิกการ์ดเพื่อเปิดรายละเอียด มิเตอร์ และการชำระ">
         {rooms.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">ยังไม่มีห้อง</p>
+          <DormEmptyDashed>ยังไม่มีห้อง — กด «เพิ่มห้องพัก» ด้านบน</DormEmptyDashed>
         ) : (
-          <ul className="mt-5 grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
             {rooms.map((r) => {
               const billing = roomBillingUiStatus(buildRoomComputeInput(r));
               const activeN = r.tenants.filter((t) => t.status === "ACTIVE").length;
               const occ =
-                activeN === 0
-                  ? "ว่าง"
-                  : activeN >= r.maxOccupants
-                    ? "เต็ม"
-                    : `${activeN}/${r.maxOccupants} คน`;
+                activeN === 0 ? "ว่าง" : activeN >= r.maxOccupants ? "เต็ม" : `${activeN}/${r.maxOccupants} คน`;
 
               return (
                 <li key={r.id}>
@@ -91,11 +83,11 @@ export default async function DormitoryRoomsPage() {
                       <span className={dormRoomStatValue}>{occ}</span>
                       <span className={dormRoomFieldLabel}>ค่าเช่า</span>
                       <span className={`${dormRoomStatValue} tabular-nums`}>
-                        {Number(r.basePrice).toLocaleString("th-TH", { maximumFractionDigits: 0 })} บาท/เดือน
+                        {Number(r.basePrice).toLocaleString("th-TH", { maximumFractionDigits: 0 })} บาท/ด.
                       </span>
                     </div>
                     <span className={dormRoomCardCta}>
-                      รายละเอียดห้อง
+                      รายละเอียด
                       <svg
                         className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5"
                         viewBox="0 0 20 20"
@@ -115,7 +107,7 @@ export default async function DormitoryRoomsPage() {
             })}
           </ul>
         )}
-      </section>
-    </div>
+      </DormPanelCard>
+    </DormPageStack>
   );
 }

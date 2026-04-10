@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { DormPaymentProofBlock } from "@/systems/dormitory/components/DormPaymentProofBlock";
+import { DormRoomInvoiceSheetModal } from "@/systems/dormitory/components/DormRoomInvoiceSheetModal";
+import { DormPageStack } from "@/systems/dormitory/components/DormPageChrome";
+import { formatDormAmountStable, formatPeriodMonthLabelStable } from "@/lib/dormitory/format-display-stable";
 import {
   rentPerTenant,
   utilityBillRoomTotal,
@@ -77,16 +80,6 @@ function paymentStatusTh(s: string) {
   if (s === "PENDING") return "ค้างชำระ";
   if (s === "OVERDUE") return "เกินกำหนด";
   return s;
-}
-
-/** แสดงงวด YYYY-MM เป็นชื่อเดือนภาษาไทย */
-function formatPeriodMonthTh(ym: string): string {
-  const [ys, ms] = ym.split("-");
-  const y = Number(ys);
-  const m = Number(ms);
-  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return ym;
-  const d = new Date(Date.UTC(y, m - 1, 1));
-  return d.toLocaleDateString("th-TH", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
 function isUnpaidStatus(s: string | null | undefined): boolean {
@@ -416,6 +409,7 @@ export function RoomDetailClient({
 
   const [tenantModalOpen, setTenantModalOpen] = useState(false);
   const [meterModalOpen, setMeterModalOpen] = useState(false);
+  const [invoiceSheetPaymentId, setInvoiceSheetPaymentId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!tenantModalOpen && !meterModalOpen) return;
@@ -430,7 +424,15 @@ export function RoomDetailClient({
   }, [tenantModalOpen, meterModalOpen]);
 
   return (
-    <div className="space-y-8">
+    <DormPageStack>
+      {invoiceSheetPaymentId != null ? (
+        <DormRoomInvoiceSheetModal
+          paymentId={invoiceSheetPaymentId}
+          roomId={room.id}
+          roomNumber={room.roomNumber}
+          onClose={() => setInvoiceSheetPaymentId(null)}
+        />
+      ) : null}
       {overdueRows.length > 0 ? (
         <section
           className="rounded-2xl border-2 border-amber-200/90 bg-gradient-to-br from-amber-50/80 via-white to-white p-5 shadow-sm"
@@ -454,11 +456,11 @@ export function RoomDetailClient({
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-900">{row.tenantName}</p>
                     <p className="mt-0.5 text-xs text-slate-500">
-                      งวด {formatPeriodMonthTh(row.month)}{" "}
+                      งวด {formatPeriodMonthLabelStable(row.month)}{" "}
                       <span className="font-mono text-slate-400">({row.month})</span>
                     </p>
                     <p className="mt-2 text-lg font-bold tabular-nums text-red-800">
-                      {row.balance.toLocaleString("th-TH", { maximumFractionDigits: 2 })}{" "}
+                      {formatDormAmountStable(row.balance, 2)}{" "}
                       <span className="text-sm font-semibold">บาท</span>
                     </p>
                   </div>
@@ -503,13 +505,13 @@ export function RoomDetailClient({
                     ) : row.paymentId != null && isUnpaidStatus(row.paymentStatus) ? (
                       <>
                         <div className="flex flex-wrap gap-2">
-                          <Link
-                            href={`/dashboard/dormitory/invoice/${row.paymentId}`}
-                            target="_blank"
+                          <button
+                            type="button"
+                            onClick={() => setInvoiceSheetPaymentId(row.paymentId!)}
                             className="inline-flex items-center justify-center rounded-xl bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a3]"
                           >
                             ใบแจ้งหนี้ / QR / ลิงก์แนบสลิป
-                          </Link>
+                          </button>
                           <button
                             type="button"
                             className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
@@ -565,7 +567,7 @@ export function RoomDetailClient({
                   </span>
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
-                  ราคา/หน่วย {billCurrent.waterPrice.toLocaleString("th-TH")} บาท
+                  ราคา/หน่วย {formatDormAmountStable(billCurrent.waterPrice)} บาท
                 </p>
               </div>
               <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
@@ -578,13 +580,13 @@ export function RoomDetailClient({
                   </span>
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
-                  ราคา/หน่วย {billCurrent.electricPrice.toLocaleString("th-TH")} บาท
+                  ราคา/หน่วย {formatDormAmountStable(billCurrent.electricPrice)} บาท
                 </p>
               </div>
             </div>
             <p className="text-sm text-slate-700">
               <span className="font-medium">ยอดน้ำไฟ+คงที่ (ห้อง):</span>{" "}
-              {billCurrent.totalRoomAmount.toLocaleString("th-TH", { maximumFractionDigits: 2 })} บาท
+              {formatDormAmountStable(billCurrent.totalRoomAmount, 2)} บาท
             </p>
             <div className="overflow-x-auto rounded-xl border border-slate-100">
               <table className="min-w-full text-left text-sm">
@@ -608,7 +610,7 @@ export function RoomDetailClient({
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">
                           {t.status === "ACTIVE" && row
-                            ? row.amountToPay.toLocaleString("th-TH", { maximumFractionDigits: 2 })
+                            ? formatDormAmountStable(row.amountToPay, 2)
                             : "—"}
                         </td>
                         <td className="px-3 py-2">
@@ -635,13 +637,13 @@ export function RoomDetailClient({
                         </td>
                         <td className="px-3 py-2">
                           {t.status === "ACTIVE" && row && isUnpaidStatus(row.paymentStatus) ? (
-                            <Link
-                              href={`/dashboard/dormitory/invoice/${row.id}`}
-                              className="text-xs font-semibold text-[#0000BF] hover:underline"
-                              target="_blank"
+                            <button
+                              type="button"
+                              onClick={() => setInvoiceSheetPaymentId(row.id)}
+                              className="text-xs font-semibold text-[#0000BF] underline decoration-[#0000BF]/40 underline-offset-2 hover:decoration-[#0000BF]"
                             >
                               พิมพ์ / QR
-                            </Link>
+                            </button>
                           ) : (
                             <span className="text-slate-400">—</span>
                           )}
@@ -709,8 +711,8 @@ export function RoomDetailClient({
       <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
         <h2 className="text-sm font-semibold text-slate-900">ผู้เข้าพัก ({n}/{room.maxOccupants})</h2>
         <p className="mt-1 text-xs text-slate-500">
-          ค่าเช่า {room.basePrice.toLocaleString("th-TH")} บาท — หาร {n > 0 ? n : "—"} คน ={" "}
-          <span className="font-medium text-slate-800">{n > 0 ? rentShare.toLocaleString("th-TH") : "—"}</span>{" "}
+          ค่าเช่า {formatDormAmountStable(room.basePrice)} บาท — หาร {n > 0 ? n : "—"} คน ={" "}
+          <span className="font-medium text-slate-800">{n > 0 ? formatDormAmountStable(rentShare) : "—"}</span>{" "}
           บาท/คน
         </p>
         <ul className="mt-4 divide-y divide-slate-100 rounded-xl border border-slate-100">
@@ -781,9 +783,9 @@ export function RoomDetailClient({
             </p>
             <p className="mt-2 text-xs text-slate-600">
               <span className="font-medium text-slate-700">สรุปงวด {periodMonth}</span> (
-              {formatPeriodMonthTh(periodMonth)}
+              {formatPeriodMonthLabelStable(periodMonth)}
               {billForMonth
-                ? `) · ยอดห้อง ${billForMonth.totalRoomAmount.toLocaleString("th-TH", { maximumFractionDigits: 2 })} บาท`
+                ? `) · ยอดห้อง ${formatDormAmountStable(billForMonth.totalRoomAmount, 2)} บาท`
                 : ") · ยังไม่มีบิลในงวดนี้"}
             </p>
           </div>
@@ -842,7 +844,7 @@ export function RoomDetailClient({
                 value={payMonth}
                 onChange={(e) => setPayMonth(e.target.value)}
               />
-              <p className="text-xs text-slate-500">{formatPeriodMonthTh(payMonth)}</p>
+              <p className="text-xs text-slate-500">{formatPeriodMonthLabelStable(payMonth)}</p>
             </div>
           </div>
 
@@ -861,7 +863,7 @@ export function RoomDetailClient({
                 {displayOutstanding != null ? (
                   <>
                     <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-red-800 sm:text-3xl">
-                      {displayOutstanding.toLocaleString("th-TH", { maximumFractionDigits: 2 })}{" "}
+                      {formatDormAmountStable(displayOutstanding, 2)}{" "}
                       <span className="text-base font-semibold text-red-800/85">บาท</span>
                     </p>
                     {pendingForTenant ? (
@@ -905,13 +907,13 @@ export function RoomDetailClient({
                 <p className="mt-1 text-[11px] text-slate-500">
                   ตั้งเบอร์พร้อมเพย์และช่องทางโอนได้ที่ &quot;ตั้งค่าหอพัก&quot;
                 </p>
-                <Link
-                  href={`/dashboard/dormitory/invoice/${pendingForTenant.id}`}
-                  target="_blank"
+                <button
+                  type="button"
+                  onClick={() => setInvoiceSheetPaymentId(pendingForTenant.id)}
                   className="mt-3 inline-flex min-h-[44px] items-center rounded-xl bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a6]"
                 >
                   เปิดใบแจ้งหนี้ (พิมพ์ / ลิงก์แนบสลิป)
-                </Link>
+                </button>
               </div>
               <DormPaymentProofBlock
                 paymentId={pendingForTenant.id}
@@ -973,11 +975,11 @@ export function RoomDetailClient({
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-slate-900">{tn}</p>
                       <p className="mt-0.5 text-xs text-slate-500">
-                        งวด {formatPeriodMonthTh(p.periodMonth)}{" "}
+                        งวด {formatPeriodMonthLabelStable(p.periodMonth)}{" "}
                         <span className="text-slate-400">({p.periodMonth})</span>
                       </p>
                       <p className="mt-1 text-lg font-bold tabular-nums text-emerald-800">
-                        {p.amountToPay.toLocaleString("th-TH", { maximumFractionDigits: 2 })}{" "}
+                        {formatDormAmountStable(p.amountToPay, 2)}{" "}
                         <span className="text-sm font-semibold">บาท</span>
                       </p>
                     </div>
@@ -1260,12 +1262,12 @@ export function RoomDetailClient({
               <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
                 <p>
                   <span className="font-medium">ยอดน้ำไฟ+คงที่รวมห้อง:</span>{" "}
-                  {utilityTotal.toLocaleString("th-TH", { maximumFractionDigits: 2 })} บาท
+                  {formatDormAmountStable(utilityTotal, 2)} บาท
                 </p>
                 <p className="mt-1">
                   <span className="font-medium">Split Bill ต่อคน (งวด {periodMonth}):</span> ค่าเช่า{" "}
-                  {rentShare.toLocaleString("th-TH")} + ส่วนน้ำไฟ {utilShare.toLocaleString("th-TH")} ={" "}
-                  <span className="font-semibold text-[#0000BF]">{totalPerPerson.toLocaleString("th-TH")}</span>{" "}
+                  {formatDormAmountStable(rentShare)} + ส่วนน้ำไฟ {formatDormAmountStable(utilShare)} ={" "}
+                  <span className="font-semibold text-[#0000BF]">{formatDormAmountStable(totalPerPerson)}</span>{" "}
                   บาท
                 </p>
               </div>
@@ -1325,6 +1327,6 @@ export function RoomDetailClient({
           </div>
         </div>
       ) : null}
-    </div>
+    </DormPageStack>
   );
 }

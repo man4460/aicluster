@@ -2,6 +2,15 @@
  * OAuth 2.0 กับ Google (Authorization Code) — ไม่ใช้ SDK เพื่อลด dependency
  */
 
+import { createHash, randomBytes } from "crypto";
+
+/** PKCE — Google แนะนำ / บังคับในบางกรณี เพื่อลด invalid_request ด้านนโยบาย */
+export function createGooglePkcePair(): { verifier: string; challenge: string } {
+  const verifier = randomBytes(32).toString("base64url");
+  const challenge = createHash("sha256").update(verifier).digest("base64url");
+  return { verifier, challenge };
+}
+
 /** Client ID — รองรับ GOOGLE_CLIENT_ID หรือ NEXT_PUBLIC_GOOGLE_CLIENT_ID (ค่าเดียวกับหน้า Google Cloud) */
 export function getGoogleOAuthClientId(): string {
   return (
@@ -21,8 +30,58 @@ export function getGoogleRedirectUri(origin: string): string {
   return `${origin.replace(/\/$/, "")}/api/auth/google/callback`;
 }
 
-export function buildGoogleAuthorizationUrl(params: { state: string; redirectUri: string }): string {
-  const clientId = process.env.GOOGLE_CLIENT_ID!.trim();
+/**
+ * Origin สำหรับ Google redirect_uri — ห้ามส่ง 0.0.0.0 / [::] (Google ไม่รับ)
+ * ใช้ Host / X-Forwarded-* ก่อน req.url (เพราะ next dev -H 0.0.0.0 มักได้ URL เป็น http://0.0.0.0:3000)
+ */
+export function resolveGoogleOAuthOrigin(req: Request): string {
+  const url = new URL(req.url);
+  const xfHost = req.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const xfProto = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+  const hostHdr = req.headers.get("host")?.split(",")[0]?.trim();
+
+  let hostPort = xfHost || hostHdr || url.host;
+  if (!hostPort) {
+    hostPort = url.port ? `${url.hostname}:${url.port}` : url.hostname;
+  }
+
+  hostPort = hostPort.replace(/\b0\.0\.0\.0\b/g, "localhost");
+  if (hostPort === "[::]" || hostPort.startsWith("[::]:")) {
+    const rest = hostPort.startsWith("[::]:") ? hostPort.slice("[::]:".length) : "";
+    hostPort = rest ? `localhost:${rest}` : url.port ? `localhost:${url.port}` : "localhost";
+  }
+
+  let hostnameForCheck = "";
+  if (hostPort.startsWith("[")) {
+    const end = hostPort.indexOf("]");
+    hostnameForCheck = end !== -1 ? hostPort.slice(1, end).toLowerCase() : "";
+  } else {
+    hostnameForCheck = (hostPort.split(":")[0] ?? "").toLowerCase();
+  }
+
+  let protocol: "http" | "https" =
+    xfProto === "https" || xfProto === "http" ?
+      xfProto
+    : url.protocol === "https:" ? "https"
+    : "http";
+
+  const isLocalDevHost =
+    hostnameForCheck === "localhost" ||
+    hostnameForCheck === "127.0.0.1" ||
+    hostnameForCheck === "::1";
+  if (process.env.NODE_ENV !== "production" && isLocalDevHost) {
+    protocol = "http";
+  }
+
+  return `${protocol}://${hostPort}`;
+}
+
+export function buildGoogleAuthorizationUrl(params: {
+  state: string;
+  redirectUri: string;
+  codeChallenge: string;
+}): string {
+  const clientId = getGoogleOAuthClientId();
   const u = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   u.searchParams.set("client_id", clientId);
   u.searchParams.set("redirect_uri", params.redirectUri);
@@ -30,12 +89,15 @@ export function buildGoogleAuthorizationUrl(params: { state: string; redirectUri
   u.searchParams.set("scope", "openid email profile");
   u.searchParams.set("state", params.state);
   u.searchParams.set("prompt", "select_account");
+  u.searchParams.set("code_challenge", params.codeChallenge);
+  u.searchParams.set("code_challenge_method", "S256");
   return u.toString();
 }
 
 export async function exchangeGoogleAuthorizationCode(
   code: string,
   redirectUri: string,
+  codeVerifier: string,
 ): Promise<{ access_token: string } | null> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -46,6 +108,7 @@ export async function exchangeGoogleAuthorizationCode(
       client_secret: getGoogleOAuthClientSecret(),
       redirect_uri: redirectUri,
       grant_type: "authorization_code",
+      code_verifier: codeVerifier,
     }),
   });
   if (!res.ok) return null;

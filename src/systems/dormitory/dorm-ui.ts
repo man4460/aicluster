@@ -6,10 +6,10 @@ export const dormCard =
   "mawell-card-surface rounded-3xl shadow-md";
 
 export const dormBtnPrimary =
-  "inline-flex items-center justify-center rounded-2xl bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-[#0000a3] disabled:opacity-50";
+  "app-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:opacity-95 disabled:opacity-50 sm:min-h-0";
 
 export const dormBtnSecondary =
-  "inline-flex items-center justify-center rounded-2xl border border-white/70 bg-white/80 px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm backdrop-blur-sm transition hover:border-blue-300/60 hover:bg-white";
+  "app-btn-soft inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-200/90 bg-white px-4 py-2.5 text-sm font-semibold text-[#66638c] shadow-sm transition hover:bg-slate-50 sm:min-h-0";
 
 /** การ์ดห้อง — ผังห้อง (แดชบอร์ด): เน้นเลขห้องกลาง แถบไฮไลต์ด้านบน */
 export const dormRoomTile =

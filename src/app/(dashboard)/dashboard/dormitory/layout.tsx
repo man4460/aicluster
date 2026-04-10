@@ -9,10 +9,18 @@ export default async function DormitoryLayout({ children }: { children: React.Re
   await requireDormitorySection();
   const session = await getSession();
   const trial = session ? await getActiveTrialBanner(session.sub, DORMITORY_MODULE_SLUG) : null;
+  const trialExpiresLabel =
+    trial == null
+      ? null
+      : trial.expiresAt.toLocaleString("th-TH", {
+          timeZone: "Asia/Bangkok",
+          dateStyle: "medium",
+          timeStyle: "short",
+        });
 
   return (
     <PageContainer>
-      <DormLayoutChrome trialExpiresAtIso={trial?.expiresAt.toISOString() ?? null}>
+      <DormLayoutChrome trialExpiresLabel={trialExpiresLabel}>
         {children}
       </DormLayoutChrome>
     </PageContainer>

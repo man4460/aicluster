@@ -7,10 +7,10 @@ import { SYSTEM_MAP_CATALOG_ROW } from "@/lib/modules/system-map-catalog";
 const BY_SLUG: Record<string, string> = {
   attendance:
     "เช็คเข้า-ออก · GPS และหลังบ้าน\nจัดการพนักงานภายใต้เจ้าของ",
-  dormitory: "ห้อง ผู้เข้าพัก · มิเตอร์น้ำไฟ\nSplit bill และใบเสร็จ",
+  dormitory: "ห้อง · มิเตอร์ · แบ่งบิล\nประวัติชำระ · ตั้งค่า",
   barber: "แพ็กเกจ สมาชิก · เช็คอินเบอร์\nบันทึกประวัติการใช้บริการ",
   "car-wash": "แพ็กเกจบริการ · รับ-ส่งรถ\nติดตามร้องเรียนและบริการ",
-  village: "ลูกบ้าน · ค่าส่วนกลางรายบ้าน\nตรวจสลิป สรุปรายปี Excel",
+  village: "ลูกบ้าน · ค่าส่วนกลาง\nสลิป · รายปี · ส่งออก",
   "mqtt-service": "Credentials · ACL อุปกรณ์ IoT\nสถานะการเชื่อมต่อแบบรวมศูนย์",
   "building-pos": "เมนู ออเดอร์ · ห้องครัว\nสั่งผ่าน QR ที่โต๊ะ",
   "income-expense-basic": "ค่าน้ำไฟ รถ · ซ่อมบ้าน\nรายรับรายจ่ายในครัวเรือน",

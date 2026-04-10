@@ -29,6 +29,7 @@ export default async function ModulesCatalogPage() {
   ]);
 
   const initialCooldownUnlocks = Object.fromEntries(cooldownRows.map((c) => [c.moduleId, c.unlockAtIso]));
+  const hydrationReferenceMs = Date.now();
 
   const modules = filterAppModulesForDashboardUi(modulesRaw, ctx.access.role);
 
@@ -61,6 +62,7 @@ export default async function ModulesCatalogPage() {
         initialSubscribedIds={subscribedIds}
         initialTrialIds={trialIds}
         initialCooldownUnlocks={initialCooldownUnlocks}
+        hydrationReferenceMs={hydrationReferenceMs}
       />
     </div>
   );

@@ -6,10 +6,13 @@ import { formatBuildingPosDbError, jsonBuildingPosError } from "@/lib/building-p
 import { decryptStaffTokenFromStorage, encryptStaffTokenForStorage } from "@/lib/building-pos/staff-token-cipher";
 import { generatePlainStaffToken, hashStaffToken } from "@/lib/building-pos/staff-token";
 import { getBuildingPosDataScope } from "@/lib/trial/module-scopes";
+import { normalizeAppPublicBase } from "@/lib/url/normalize-app-public-base";
 
 function absoluteOrigin(req: Request): string {
-  const env = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
-  if (env && (env.startsWith("http://") || env.startsWith("https://"))) return env;
+  const envRaw = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
+  if (envRaw && (envRaw.startsWith("http://") || envRaw.startsWith("https://"))) {
+    return normalizeAppPublicBase(envRaw);
+  }
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
   if (!host) return "";
   const proto = req.headers.get("x-forwarded-proto") ?? "https";

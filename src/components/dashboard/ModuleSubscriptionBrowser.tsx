@@ -13,6 +13,7 @@ import {
   dashboardModulePrimaryButtonCore,
   dashboardModulePrimaryCtaClass,
 } from "@/components/dashboard/DashboardModuleHeroCard";
+import { formatBangkokDateTimeLong } from "@/lib/time/bangkok";
 
 type ModuleCardDTO = {
   id: string;
@@ -29,15 +30,9 @@ type Props = {
   initialSubscribedIds: string[];
   initialTrialIds?: string[];
   initialCooldownUnlocks?: Record<string, string>;
+  /** Date.now() ตอน render บนเซิร์ฟเวอร์ — ใช้แทน Date.now() รอบแรกบนไคลเอนต์เพื่อกัน hydration mismatch ตอนเช็ค cooldown */
+  hydrationReferenceMs: number;
 };
-
-function formatThDateTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString("th-TH", { dateStyle: "long", timeStyle: "short" });
-  } catch {
-    return iso;
-  }
-}
 
 function groupTone(groupId: number): { header: string; chip: string; icon: string } {
   if (groupId === 1) {
@@ -81,8 +76,13 @@ export function ModuleSubscriptionBrowser({
   initialSubscribedIds,
   initialTrialIds = [],
   initialCooldownUnlocks = {},
+  hydrationReferenceMs,
 }: Props) {
   const router = useRouter();
+  const [cooldownClockMounted, setCooldownClockMounted] = useState(false);
+  useEffect(() => setCooldownClockMounted(true), []);
+  const cooldownNowMs = cooldownClockMounted ? Date.now() : hydrationReferenceMs;
+
   const [q, setQ] = useState("");
   const [savedSubscribedIds, setSavedSubscribedIds] = useState<Set<string>>(() => new Set(initialSubscribedIds));
   const [trialIds, setTrialIds] = useState<Set<string>>(() => new Set(initialTrialIds));
@@ -109,7 +109,7 @@ export function ModuleSubscriptionBrowser({
   function activeCooldownUnlockIso(moduleId: string): string | null {
     const iso = cooldownUnlocks[moduleId];
     if (!iso) return null;
-    if (new Date(iso).getTime() <= Date.now()) return null;
+    if (new Date(iso).getTime() <= cooldownNowMs) return null;
     return iso;
   }
 
@@ -141,7 +141,7 @@ export function ModuleSubscriptionBrowser({
       const unlockIso = new Date(Date.now() + MODULE_RESUBSCRIBE_COOLDOWN_MS).toISOString();
       setCooldownUnlocks((prev) => ({ ...prev, [moduleId]: unlockIso }));
       setInfoBanner(
-        `ยกเลิก Subscribe แล้ว — ปุ่ม Subscribe จะถูกล็อคจนถึง ${formatThDateTime(unlockIso)} (ครบ 1 เดือนนับจากนี้) ยังกด “ทดลองใช้งาน” ได้หากแพ็กเกจอนุญาต`,
+        `ยกเลิก Subscribe แล้ว — ปุ่ม Subscribe จะถูกล็อคจนถึง ${formatBangkokDateTimeLong(unlockIso)} (ครบ 1 เดือนนับจากนี้) ยังกด “ทดลองใช้งาน” ได้หากแพ็กเกจอนุญาต`,
       );
       router.refresh();
     } finally {
@@ -329,7 +329,7 @@ export function ModuleSubscriptionBrowser({
                                 type="button"
                                 onClick={() =>
                                   setErr(
-                                    `ระบบนี้ถูกล็อคจนถึง ${formatThDateTime(cooldownIso!)} กรุณารอครบ 1 เดือนหลังยกเลิก Subscribe ก่อน Subscribe ใหม่`,
+                                    `ระบบนี้ถูกล็อคจนถึง ${formatBangkokDateTimeLong(cooldownIso!)} กรุณารอครบ 1 เดือนหลังยกเลิก Subscribe ก่อน Subscribe ใหม่`,
                                   )
                                 }
                                 className="flex-1 min-w-[6.5rem] rounded-xl border border-amber-400/45 bg-amber-950/35 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-950/50"
@@ -392,7 +392,7 @@ export function ModuleSubscriptionBrowser({
                           {!subscribed && !trialing ? (
                             <p className="text-[11px] text-slate-500">
                               {showCooldownLock
-                                ? `Subscribe ถูกล็อคจนถึง ${formatThDateTime(cooldownIso!)} — ยังกด “ทดลองใช้งาน” ได้`
+                                ? `Subscribe ถูกล็อคจนถึง ${formatBangkokDateTimeLong(cooldownIso!)} — ยังกด “ทดลองใช้งาน” ได้`
                                 : showDailyLock
                                   ? "Subscribe ได้อีกเมื่ออัปเกรดแพ็กเกจ — ยังทดลองระบบนี้ได้ด้านข้าง"
                                   : "ต้อง Subscribe ก่อน หรือกดทดลองใช้งานเพื่อเปิดระบบชั่วคราว"}

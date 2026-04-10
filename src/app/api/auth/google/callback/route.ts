@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { GOOGLE_OAUTH_NEXT_COOKIE, GOOGLE_OAUTH_STATE_COOKIE } from "@/lib/auth/constants";
+import {
+  GOOGLE_OAUTH_NEXT_COOKIE,
+  GOOGLE_OAUTH_PKCE_COOKIE,
+  GOOGLE_OAUTH_STATE_COOKIE,
+} from "@/lib/auth/constants";
 import { cookies } from "next/headers";
 import {
   exchangeGoogleAuthorizationCode,
   fetchGoogleUserInfo,
   getGoogleRedirectUri,
   isGoogleOAuthConfigured,
+  resolveGoogleOAuthOrigin,
 } from "@/lib/auth/google-oauth";
 import { clearGoogleOauthCookies } from "@/lib/auth/google-oauth-cookies";
 import { findOrCreateUserFromGoogle } from "@/lib/auth/google-user";
@@ -21,24 +26,25 @@ function safeNextPath(raw: string | null | undefined): string {
   return raw;
 }
 
-function loginError(code: string, reqUrl: string): NextResponse {
-  return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(code)}`, reqUrl));
+function loginError(code: string, req: Request): NextResponse {
+  const origin = resolveGoogleOAuthOrigin(req);
+  return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(code)}`, origin));
 }
 
 export async function GET(req: Request) {
   if (!isGoogleOAuthConfigured()) {
-    return loginError("google_not_configured", req.url);
+    return loginError("google_not_configured", req);
   }
 
   const url = new URL(req.url);
   const err = url.searchParams.get("error");
   if (err === "access_denied") {
     await clearGoogleOauthCookies(req);
-    return loginError("google_access_denied", req.url);
+    return loginError("google_access_denied", req);
   }
   if (err) {
     await clearGoogleOauthCookies(req);
-    return loginError("google_auth_failed", req.url);
+    return loginError("google_auth_failed", req);
   }
 
   const code = url.searchParams.get("code");
@@ -47,22 +53,23 @@ export async function GET(req: Request) {
   const store = await cookies();
   const savedState = store.get(GOOGLE_OAUTH_STATE_COOKIE)?.value;
   const nextRaw = store.get(GOOGLE_OAUTH_NEXT_COOKIE)?.value;
+  const pkceVerifier = store.get(GOOGLE_OAUTH_PKCE_COOKIE)?.value;
   await clearGoogleOauthCookies(req);
 
-  if (!code || !state || !savedState || state !== savedState) {
-    return loginError("google_state", req.url);
+  if (!code || !state || !savedState || state !== savedState || !pkceVerifier) {
+    return loginError("google_state", req);
   }
 
-  const origin = url.origin;
+  const origin = resolveGoogleOAuthOrigin(req);
   const redirectUri = getGoogleRedirectUri(origin);
-  const tokens = await exchangeGoogleAuthorizationCode(code, redirectUri);
+  const tokens = await exchangeGoogleAuthorizationCode(code, redirectUri, pkceVerifier);
   if (!tokens) {
-    return loginError("google_token", req.url);
+    return loginError("google_token", req);
   }
 
   const profile = await fetchGoogleUserInfo(tokens.access_token);
   if (!profile) {
-    return loginError("google_profile", req.url);
+    return loginError("google_profile", req);
   }
 
   const resolved = await findOrCreateUserFromGoogle(prisma, profile);
@@ -72,7 +79,7 @@ export async function GET(req: Request) {
       account_conflict: "google_account_conflict",
       create_failed: "google_create_failed",
     };
-    return loginError(map[resolved.code] ?? "google_auth_failed", req.url);
+    return loginError(map[resolved.code] ?? "google_auth_failed", req);
   }
 
   await applyDailyTokenDeduction(resolved.userId);
@@ -83,7 +90,7 @@ export async function GET(req: Request) {
     select: { username: true, role: true, tokens: true },
   });
   if (!user) {
-    return loginError("google_auth_failed", req.url);
+    return loginError("google_auth_failed", req);
   }
 
   const jwt = await signSessionToken({

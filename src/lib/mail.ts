@@ -1,7 +1,13 @@
 import nodemailer from "nodemailer";
+import { normalizeAppPublicBase } from "@/lib/url/normalize-app-public-base";
 
 function appUrl() {
-  return process.env.APP_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
+  const raw = (process.env.APP_URL ?? "").trim().replace(/\/$/, "");
+  if (!raw) return "http://localhost:3000";
+  if (raw.startsWith("http://") || raw.startsWith("https://")) {
+    return normalizeAppPublicBase(raw);
+  }
+  return raw;
 }
 
 export async function sendPasswordResetEmail(to: string, token: string) {

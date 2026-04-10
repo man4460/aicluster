@@ -1,8 +1,10 @@
 "use client";
 
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { AuthCard, AuthFooterLink } from "@/components/auth/AuthCard";
+import { GoogleSdkLoginButton } from "@/components/auth/GoogleSdkLoginButton";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
 import { MawellLogo } from "@/components/layout/MawellLogo";
@@ -10,7 +12,8 @@ import { cn } from "@/lib/cn";
 import { parseJsonResponse } from "@/lib/parse-json-response";
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
-  google_not_configured: "ระบบยังไม่ตั้งค่าเข้าสู่ระบบด้วย Google",
+  google_not_configured:
+    "เข้าสู่ระบบด้วย Google ยังไม่พร้อม — แบบ redirect: ตั้ง GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET และ redirect URI ใน Google Cloud หรือแบบ Melody: ตั้ง NEXT_PUBLIC_GOOGLE_CLIENT_ID + JavaScript origins อย่างเดียว",
   google_state: "เซสชัน Google หมดอายุหรือไม่ถูกต้อง — ลองใหม่",
   google_access_denied: "ยกเลิกการเข้าสู่ระบบด้วย Google",
   google_token: "แลกโทเคนกับ Google ไม่สำเร็จ — ลองใหม่",
@@ -21,14 +24,16 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   google_auth_failed: "เข้าสู่ระบบด้วย Google ไม่สำเร็จ — ลองใหม่",
 };
 
-export function LoginForm({
+type GoogleUiMode = "sdk" | "redirect" | "none";
+
+function LoginFormInner({
   redirectTo = "/dashboard",
   initialErrorKey,
-  googleOAuthEnabled = false,
+  googleUiMode,
 }: {
   redirectTo?: string;
   initialErrorKey?: string;
-  googleOAuthEnabled?: boolean;
+  googleUiMode: GoogleUiMode;
 }) {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -39,6 +44,10 @@ export function LoginForm({
   const [loading, setLoading] = useState(false);
 
   const turnstileRequired = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
+
+  const onGoogleSdkErrorKey = useCallback((key: string) => {
+    setError(OAUTH_ERROR_MESSAGES[key] ?? key);
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -79,7 +88,23 @@ export function LoginForm({
         <MawellLogo size="md" />
       </div>
 
-      {googleOAuthEnabled ? (
+      {googleUiMode === "sdk" ? (
+        <>
+          <GoogleSdkLoginButton
+            redirectTo={redirectTo}
+            onErrorKey={onGoogleSdkErrorKey}
+            disabled={loading}
+          />
+          <div className="relative mb-4">
+            <div className="absolute inset-0 flex items-center" aria-hidden>
+              <div className="w-full border-t border-slate-200" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-white px-2 text-slate-500">หรือใช้อีเมล / รหัสผ่าน</span>
+            </div>
+          </div>
+        </>
+      ) : googleUiMode === "redirect" ? (
         <>
           <Link
             href={`/api/auth/google?next=${encodeURIComponent(redirectTo)}`}
@@ -171,5 +196,35 @@ export function LoginForm({
         <AuthFooterLink href="/forgot-password">ลืมรหัสผ่าน</AuthFooterLink>
       </p>
     </AuthCard>
+  );
+}
+
+/**
+ * ถ้ามี NEXT_PUBLIC_GOOGLE_CLIENT_ID → แบบ MelodyWebapp (@react-oauth/google + /api/auth/google/token) ไม่ต้องมี Client secret
+ * ถ้าไม่มีแต่มี GOOGLE_CLIENT_ID บนเซิร์ฟเวอร์ → redirect ไป /api/auth/google (ต้องมี GOOGLE_CLIENT_SECRET + redirect URI)
+ */
+export function LoginForm({
+  redirectTo = "/dashboard",
+  initialErrorKey,
+  googleOAuthEnabled = false,
+}: {
+  redirectTo?: string;
+  initialErrorKey?: string;
+  googleOAuthEnabled?: boolean;
+}) {
+  const publicId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() ?? "";
+  if (publicId) {
+    return (
+      <GoogleOAuthProvider clientId={publicId}>
+        <LoginFormInner redirectTo={redirectTo} initialErrorKey={initialErrorKey} googleUiMode="sdk" />
+      </GoogleOAuthProvider>
+    );
+  }
+  return (
+    <LoginFormInner
+      redirectTo={redirectTo}
+      initialErrorKey={initialErrorKey}
+      googleUiMode={googleOAuthEnabled ? "redirect" : "none"}
+    />
   );
 }

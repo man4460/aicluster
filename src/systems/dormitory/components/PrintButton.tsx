@@ -1,12 +1,11 @@
 "use client";
 
+import { dormBtnPrimary } from "@/systems/dormitory/dorm-ui";
+import { cn } from "@/lib/cn";
+
 export function PrintButton({ label = "พิมพ์ใบเสร็จ" }: { label?: string }) {
   return (
-    <button
-      type="button"
-      onClick={() => window.print()}
-      className="rounded-lg bg-[#0000BF] px-4 py-2 text-sm font-medium text-white hover:bg-[#0000a6]"
-    >
+    <button type="button" onClick={() => window.print()} className={cn(dormBtnPrimary, "w-full justify-center sm:w-auto")}>
       {label}
     </button>
   );

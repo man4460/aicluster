@@ -5,12 +5,19 @@ import { bookingUiLabel, type BarberBookingStatusUi } from "@/lib/barber/booking
 export function BarberBookingStatusBadge({
   status,
   scheduledAt,
+  /** เวลาอ้างอิงจาก request เซิร์ฟเวอร์ — ส่งจาก RSC เพื่อให้ SSR กับ hydration ใช้ค่าเดียวกัน */
+  referenceNow,
 }: {
   status: string;
   /** จาก Server Component อาจถูกส่งเป็น ISO string หลัง serialize */
   scheduledAt: Date | string;
+  referenceNow?: Date | string;
 }) {
-  const ui = bookingUiLabel(status as BarberBookingStatusUi, scheduledAt, new Date());
+  const ui = bookingUiLabel(
+    status as BarberBookingStatusUi,
+    scheduledAt,
+    referenceNow !== undefined ? referenceNow : new Date(),
+  );
   const toneClass = {
     default: "bg-slate-100 text-slate-800",
     success: "bg-emerald-100 text-emerald-900",

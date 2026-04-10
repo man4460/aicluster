@@ -1,5 +1,5 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getRequestBaseUrl } from "@/lib/app/request-base-url";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getBusinessProfile } from "@/lib/profile/business-profile";
@@ -7,22 +7,12 @@ import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import { getCarWashDataScope } from "@/lib/trial/module-scopes";
 import { CarWashDashboard } from "@/systems/car-wash/CarWashDashboard";
 
-async function requestBaseUrl(): Promise<string> {
-  const env = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
-  if (env && (env.startsWith("http://") || env.startsWith("https://"))) return env;
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  if (!host) return "";
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  return `${proto}://${host}`;
-}
-
 export default async function CarWashDashboardPage() {
   const session = await getSession();
   if (!session) redirect("/login");
   const [profile, baseUrl, userRow, scope, dormPay] = await Promise.all([
     getBusinessProfile(session.sub),
-    requestBaseUrl(),
+    getRequestBaseUrl(),
     prisma.user.findUnique({
       where: { id: session.sub },
       select: { fullName: true, username: true },

@@ -15,6 +15,7 @@ import {
 } from "@/components/app-templates";
 import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
 import { cn } from "@/lib/cn";
+import { bangkokDateKey } from "@/lib/time/bangkok";
 import { FormModal } from "@/components/ui/FormModal";
 import { CAR_WASH_SERVICE_STATUSES, carWashStatusLabelTh } from "@/lib/car-wash/service-status";
 import {
@@ -70,13 +71,11 @@ function activeLaneKey(s: CarWashServiceStatus): Exclude<CarWashServiceStatus, "
 }
 
 function isVisitToday(iso: string): boolean {
-  const d = new Date(iso);
-  const n = new Date();
-  return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+  return bangkokDateKey(new Date(iso)) === bangkokDateKey();
 }
 
-function minsSince(iso: string): number {
-  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000));
+function minsSince(iso: string, nowMs: number): number {
+  return Math.max(0, Math.floor((nowMs - new Date(iso).getTime()) / 60_000));
 }
 
 function modalDetailBoxClass(st: CarWashServiceStatus): string {
@@ -177,6 +176,8 @@ export function CarWashServiceLanePanel({
   const [ppConfigured, setPpConfigured] = useState(true);
   const [lanePhotoBusy, setLanePhotoBusy] = useState(false);
   const [laneCameraOpen, setLaneCameraOpen] = useState(false);
+  /** หลัง mount เท่านั้น — กัน SSR กับ client ใช้ Date.now() คนละค่าตอน hydrate */
+  const [laneClockMs, setLaneClockMs] = useState<number | null>(null);
 
   const laneGalleryInputRef = useRef<HTMLInputElement>(null);
   const laneCameraInputRef = useRef<HTMLInputElement>(null);
@@ -204,6 +205,12 @@ export function CarWashServiceLanePanel({
     modalVisit != null &&
     modalVisit.service_status === "COMPLETED" &&
     (hasLaneSlipPhoto(modalVisit) || isPendingBundleVisit(modalVisit));
+
+  useEffect(() => {
+    setLaneClockMs(Date.now());
+    const id = window.setInterval(() => setLaneClockMs(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (laneModalVisitId == null) return;
@@ -402,7 +409,7 @@ export function CarWashServiceLanePanel({
             const tone = waitingSlip ? waitingSlipLaneTone : waitingPay ? waitingPayLaneTone : laneTone[st];
             const badgeLabel = waitingSlip ? "รอแนบสลิป" : waitingPay ? "รอชำระ" : carWashStatusLabelTh(st);
             const pkgMins = packages.find((p) => p.id === v.package_id)?.duration_minutes;
-            const elapsed = minsSince(v.visit_at);
+            const elapsed = laneClockMs != null ? minsSince(v.visit_at, laneClockMs) : 0;
             return (
               <li key={v.id}>
                 <button
@@ -431,7 +438,12 @@ export function CarWashServiceLanePanel({
                   <p className="mt-1 line-clamp-1 text-xs font-medium text-[#4d47b6]">{v.package_name}</p>
                   <p className="mt-0.5 line-clamp-1 text-[11px] text-[#66638c]">{v.customer_name}</p>
                   <p className="mt-1 text-[10px] tabular-nums text-slate-500">
-                    {new Date(v.visit_at).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })} · ผ่านมา{" "}
+                    {new Date(v.visit_at).toLocaleTimeString("th-TH", {
+                      timeZone: "Asia/Bangkok",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}{" "}
+                    · ผ่านมา{" "}
                     {elapsed} นาที
                   </p>
                   {pkgMins != null ? <p className="text-[10px] text-slate-400">แพ็กเกจประมาณ {pkgMins} นาที</p> : null}
@@ -534,7 +546,14 @@ export function CarWashServiceLanePanel({
                       : carWashStatusLabelTh(modalVisit.service_status)}
                     </span>
                     <span className="text-xs text-[#66638c]">
-                      เข้าเมื่อ {new Date(modalVisit.visit_at).toLocaleString("th-TH")} · ผ่านมา {minsSince(modalVisit.visit_at)}{" "}
+                      เข้าเมื่อ{" "}
+                      {new Date(modalVisit.visit_at).toLocaleString("th-TH", {
+                        timeZone: "Asia/Bangkok",
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}{" "}
+                      · ผ่านมา{" "}
+                      {laneClockMs != null ? minsSince(modalVisit.visit_at, laneClockMs) : 0}{" "}
                       นาที
                     </span>
                   </div>

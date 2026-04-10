@@ -12,6 +12,7 @@ import {
   shopQrTemplatePageBgClass,
 } from "@/components/qr/shop-qr-template";
 import { cn } from "@/lib/cn";
+import { formatBangkokDateTimeStable, formatDormAmountStable } from "@/lib/dormitory/format-display-stable";
 import {
   buildingPosCustomerSessionStorageKey,
   isCustomerOrderSessionUuid,
@@ -198,7 +199,7 @@ function MenuDishCard({
               useTemplate ? "text-indigo-700" : "text-emerald-400",
             )}
           >
-            ฿{item.price.toLocaleString()}
+            ฿{formatDormAmountStable(item.price)}
           </p>
           <div
             className={cn(
@@ -352,7 +353,7 @@ function MenuDishCardGrid({
                 useTemplate ? "text-indigo-700" : "text-emerald-400",
               )}
             >
-              ฿{item.price.toLocaleString()}
+              ฿{formatDormAmountStable(item.price)}
             </p>
             <div
               className={cn(
@@ -758,10 +759,7 @@ export function BuildingPosCustomerOrderClient({
                       </span>
                     </div>
                     <p className="mt-1 text-[11px] text-slate-500">
-                      {new Date(o.created_at).toLocaleString("th-TH", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })}
+                      {formatBangkokDateTimeStable(o.created_at)}
                     </p>
                     <ul className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-xs text-slate-700">
                       {o.items.map((it, idx) => (
@@ -769,12 +767,12 @@ export function BuildingPosCustomerOrderClient({
                           <span className="min-w-0">
                             <span className="tabular-nums text-slate-500">×{it.qty}</span> {it.name}
                           </span>
-                          <span className="shrink-0 tabular-nums">฿{(it.price * it.qty).toLocaleString()}</span>
+                          <span className="shrink-0 tabular-nums">฿{formatDormAmountStable(it.price * it.qty)}</span>
                         </li>
                       ))}
                     </ul>
                     <p className="mt-2 text-right text-sm font-bold tabular-nums text-indigo-800">
-                      รวม ฿{o.total_amount.toLocaleString()}
+                      รวม ฿{formatDormAmountStable(o.total_amount)}
                     </p>
                   </li>
                 ))}
@@ -968,7 +966,7 @@ export function BuildingPosCustomerOrderClient({
                 useTemplate ? "text-slate-900" : "text-white",
               )}
             >
-              ฿{cartTotal.toLocaleString()}
+              ฿{formatDormAmountStable(cartTotal)}
               {cartCount > 0 ? (
                 <span className="ml-2 text-sm font-normal text-slate-500">({cartCount} ชิ้น)</span>
               ) : null}
@@ -1027,7 +1025,7 @@ export function BuildingPosCustomerOrderClient({
                       : null}
                     </div>
                     <span className="shrink-0 tabular-nums font-semibold text-indigo-800">
-                      ฿{(line.price * line.qty).toLocaleString()}
+                      ฿{formatDormAmountStable(line.price * line.qty)}
                     </span>
                   </li>
                 ))}
@@ -1048,7 +1046,7 @@ export function BuildingPosCustomerOrderClient({
                 </div>
                 <div className="flex justify-between gap-2 border-t border-slate-200/80 pt-2">
                   <dt className="font-semibold text-slate-700">ยอดรวม</dt>
-                  <dd className="text-lg font-bold tabular-nums text-indigo-800">฿{cartTotal.toLocaleString()}</dd>
+                  <dd className="text-lg font-bold tabular-nums text-indigo-800">฿{formatDormAmountStable(cartTotal)}</dd>
                 </div>
               </dl>
             </div>

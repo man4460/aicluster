@@ -79,6 +79,7 @@ export function AppCameraCaptureModal({
   const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [secureHint, setSecureHint] = useState("");
 
   const stopStream = useCallback(() => {
     const s = streamRef.current;
@@ -147,6 +148,18 @@ export function AppCameraCaptureModal({
   }, [onCapture, onClose, ready, stopStream]);
 
   useEffect(() => {
+    if (!open) {
+      setSecureHint("");
+      return;
+    }
+    setSecureHint(
+      typeof window !== "undefined" && !window.isSecureContext ?
+        " ต้องใช้ HTTPS (หรือ localhost) เพื่อเปิดกล้อง"
+      : "",
+    );
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -159,11 +172,6 @@ export function AppCameraCaptureModal({
   }, [open, onClose]);
 
   if (!open) return null;
-
-  const secureHint =
-    typeof window !== "undefined" && !window.isSecureContext ?
-      " ต้องใช้ HTTPS (หรือ localhost) เพื่อเปิดกล้อง"
-    : "";
 
   return (
     <div

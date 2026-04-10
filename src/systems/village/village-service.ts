@@ -80,6 +80,7 @@ export type VillageOverview = {
   ytd_total_due: number;
   ytd_total_paid: number;
   ytd_collection_percent: number;
+  /** ม.ค.–ธ.ค. ของปี bangkok_year (เดือนที่ไม่มีบิลเป็น 0) */
   twelve_month_sparkline: { year_month: string; total_due: number; total_paid: number }[];
 };
 

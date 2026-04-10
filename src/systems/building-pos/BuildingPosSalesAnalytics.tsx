@@ -10,8 +10,10 @@ import {
   uploadBuildingPosStaffImage,
 } from "@/systems/building-pos/building-pos-service";
 import { prepareBuildingPosSlipImageFile } from "@/systems/building-pos/building-pos-slip-image";
+import { downloadPosTableStaticHtmlAsA4Pdf } from "@/systems/building-pos/pos-table-bill-pdf-capture";
 import {
   buildPosTableBillInnerHtml,
+  buildPosTableStaticDocumentHtml,
   openPosTableBillPrintWindow,
   type PosTablePaperSize,
 } from "@/systems/building-pos/pos-table-bill-print";
@@ -29,6 +31,7 @@ import {
   appDashboardHistoryListShellClass,
   appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
+import { shopQrTemplateGridPrimaryButtonClass } from "@/components/qr/shop-qr-template";
 import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { HomeFinanceList } from "@/systems/home-finance/components/HomeFinanceUi";
@@ -187,6 +190,7 @@ export function BuildingPosOpenTablesPanel({
 
   const [tableModalKey, setTableModalKey] = useState<string | null>(null);
   const [tableModalView, setTableModalView] = useState<"details" | "bill">("details");
+  const [billPdfBusy, setBillPdfBusy] = useState(false);
   const [billPrintedAt, setBillPrintedAt] = useState("");
   const [ppQrUrl, setPpQrUrl] = useState<string | null>(null);
   const [ppQrLoading, setPpQrLoading] = useState(false);
@@ -255,6 +259,44 @@ export function BuildingPosOpenTablesPanel({
       ppQrUrl,
     ],
   );
+
+  const handleDownloadBillPdf = useCallback(async () => {
+    if (!tableModalKey) return;
+    const inner = buildPosTableBillInnerHtml({
+      shopLabel,
+      logoUrl,
+      tableLabel: tableModalKey,
+      billPrintedAt: billPrintedAt || "—",
+      orders: modalOrders,
+      grandTotal: modalGrandTotal,
+      paymentChannelsNote,
+      ppQrUrl,
+    });
+    const docTitle = `บิล โต๊ะ ${tableModalKey}`;
+    const fullHtml = buildPosTableStaticDocumentHtml("A4", inner, docTitle);
+    const safeTable = tableModalKey.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "-");
+    const filename = `pos-bill-${safeTable}-${Date.now()}.pdf`;
+    setBillPdfBusy(true);
+    try {
+      await downloadPosTableStaticHtmlAsA4Pdf(fullHtml, filename, {
+        iframeTitle: "สร้าง PDF บิลโต๊ะ",
+        notFoundMessage: "ไม่พบเนื้อหาบิล",
+      });
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "สร้าง PDF ไม่สำเร็จ");
+    } finally {
+      setBillPdfBusy(false);
+    }
+  }, [
+    tableModalKey,
+    shopLabel,
+    logoUrl,
+    billPrintedAt,
+    modalOrders,
+    modalGrandTotal,
+    paymentChannelsNote,
+    ppQrUrl,
+  ]);
 
   useEffect(() => {
     if (!tableModalKey) {
@@ -380,6 +422,14 @@ export function BuildingPosOpenTablesPanel({
       <button type="button" className={appTemplateOutlineButtonClass} onClick={() => handlePrintBill("A4")}>
         พิมพ์ A4
       </button>
+      <button
+        type="button"
+        className={shopQrTemplateGridPrimaryButtonClass}
+        disabled={billPdfBusy}
+        onClick={() => void handleDownloadBillPdf()}
+      >
+        {billPdfBusy ? "กำลังสร้าง PDF…" : "ดาวน์โหลด PDF"}
+      </button>
     </div>
   );
 
@@ -475,7 +525,7 @@ export function BuildingPosOpenTablesPanel({
         description={
           tableModalView === "details" ?
             "แก้สถานะออเดอร์ — เปิดบิลพร้อมเพย์เมื่อต้องการพิมพ์หรือให้ลูกค้าสแกน QR"
-          : "ให้ลูกค้าสแกนจ่าย — พิมพ์บิลตามขนาดเครื่องพิมพ์ได้จากปุ่มด้านล่าง"
+          : "ให้ลูกค้าสแกนจ่าย — พิมพ์บิลหรือดาวน์โหลด PDF ได้จากปุ่มด้านล่าง"
         }
         onClose={() => setTableModalKey(null)}
         size="lg"

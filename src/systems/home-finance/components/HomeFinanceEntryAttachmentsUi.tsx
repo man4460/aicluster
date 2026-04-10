@@ -53,12 +53,9 @@ function fileBasename(url: string): string {
   }
 }
 
-/** ใช้ URL เต็มสำหรับ img/a บางเคส (โฟลเดอร์ย่อย / แท็บใหม่) */
+/** ใช้ path เดียวกันบน SSR กับ client — ห้ามต่อ origin ตอน render (กัน hydration) */
 function resolvePublicUrl(u: string): string {
-  if (typeof window === "undefined") return u;
-  const t = u.trim();
-  if (t.startsWith("/")) return `${window.location.origin}${t}`;
-  return t;
+  return u.trim();
 }
 
 function pickSingleFile(

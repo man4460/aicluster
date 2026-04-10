@@ -1,18 +1,19 @@
 import { headers } from "next/headers";
+import { normalizeAppPublicBase } from "@/lib/url/normalize-app-public-base";
 
 /**
- * โดเมนฐานของแอปสำหรับลิงก์สาธารณะ / QR
+ * โดเมนฐานของแอปสำหรับลิงก์สาธารณะ / QR (origin เท่านั้น — path ใน env จะถูกตัด)
  * ลำดับ: NEXT_PUBLIC_APP_URL → VERCEL_URL (https) → Host จาก request
  */
 export async function getServerAppBaseUrl(): Promise<string> {
-  const pub = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
-  if (pub?.startsWith("http://") || pub?.startsWith("https://")) {
-    return pub;
+  const pubRaw = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
+  if (pubRaw?.startsWith("http://") || pubRaw?.startsWith("https://")) {
+    return normalizeAppPublicBase(pubRaw);
   }
 
-  const appOnly = process.env.APP_URL?.trim().replace(/\/$/, "");
-  if (appOnly?.startsWith("http://") || appOnly?.startsWith("https://")) {
-    return appOnly;
+  const appRaw = process.env.APP_URL?.trim().replace(/\/$/, "");
+  if (appRaw?.startsWith("http://") || appRaw?.startsWith("https://")) {
+    return normalizeAppPublicBase(appRaw);
   }
 
   const vercel = process.env.VERCEL_URL?.trim();

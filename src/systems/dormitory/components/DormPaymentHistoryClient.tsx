@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/cn";
+import { formatBangkokDateTimeStable, formatDormAmountStable } from "@/lib/dormitory/format-display-stable";
+import { DormEmptyDashed, DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
+import { dormBtnSecondary } from "@/systems/dormitory/dorm-ui";
 
 type Row = {
   id: number;
@@ -29,10 +33,6 @@ function statusTh(s: string) {
   return s;
 }
 
-function formatUpdated(iso: string) {
-  return new Date(iso).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
-}
-
 function PaymentHistoryRowActions({
   r,
   onEdit,
@@ -45,14 +45,25 @@ function PaymentHistoryRowActions({
   return (
     <div className="flex flex-wrap gap-2">
       {r.paymentStatus === "PAID" && r.receiptNumber ? (
-        <Link href={`/dashboard/dormitory/receipt/${r.id}`} className="text-xs font-semibold text-[#0000BF] hover:underline">
+        <Link
+          href={`/dashboard/dormitory/receipt/${r.id}`}
+          className="min-h-[40px] rounded-lg bg-[#ecebff] px-2.5 py-1.5 text-[11px] font-bold text-[#4338ca] ring-1 ring-[#4d47b6]/20 hover:bg-[#e0dcff] sm:min-h-0"
+        >
           ใบเสร็จ
         </Link>
       ) : null}
-      <button type="button" onClick={() => onEdit(r)} className="text-xs font-semibold text-[#0000BF] hover:underline">
+      <button
+        type="button"
+        onClick={() => onEdit(r)}
+        className="min-h-[40px] rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-[#4338ca] hover:bg-slate-100 sm:min-h-0"
+      >
         แก้ไข
       </button>
-      <button type="button" onClick={() => onRemove(r)} className="text-xs font-semibold text-red-700 hover:underline">
+      <button
+        type="button"
+        onClick={() => onRemove(r)}
+        className="min-h-[40px] rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-50 sm:min-h-0"
+      >
         ลบ
       </button>
     </div>
@@ -60,7 +71,7 @@ function PaymentHistoryRowActions({
 }
 
 const inputClz =
-  "min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0000BF]/40";
+  "min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#4d47b6]/40 focus:ring-2 focus:ring-[#4d47b6]/15 sm:min-h-0";
 
 /** วันที่ปฏิทินในเขตเวลาไทย (YYYY-MM-DD) สำหรับเทียบกับ input type=date */
 function bangkokCalendarDay(iso: string): string {
@@ -85,13 +96,12 @@ function bangkokCurrentMonthRange(): { from: string; to: string } {
 }
 
 export function DormPaymentHistoryClient() {
-  const monthDefault = useMemo(() => bangkokCurrentMonthRange(), []);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const [dateFrom, setDateFrom] = useState(monthDefault.from);
-  const [dateTo, setDateTo] = useState(monthDefault.to);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [editing, setEditing] = useState<Row | null>(null);
   const [form, setForm] = useState({
     amountToPay: "",
@@ -111,6 +121,12 @@ export function DormPaymentHistoryClient() {
       return;
     }
     setRows(data.items ?? []);
+  }, []);
+
+  useEffect(() => {
+    const r = bangkokCurrentMonthRange();
+    setDateFrom(r.from);
+    setDateTo(r.to);
   }, []);
 
   useEffect(() => {
@@ -208,127 +224,151 @@ export function DormPaymentHistoryClient() {
   }
 
   return (
-    <div className="space-y-4">
-      {err ? <p className="text-sm text-red-600">{err}</p> : null}
+    <DormPageStack>
+      {err ? <p className="text-sm text-rose-600">{err}</p> : null}
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
-        <div>
-          <label className="block text-xs font-medium text-slate-600">ค้นหา (ห้อง / ชื่อ / เบอร์ / งวด)</label>
-          <input className={`${inputClz} mt-1`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="เช่น 101 หรือ 08…" />
+      <DormPanelCard
+        title="ค้นหาและกรอง"
+        description="กรองตามวันที่อัปเดตล่าสุด (เวลาไทย) — ค้นหาห้อง ชื่อ เบอร์ หรืองวด"
+      >
+        <label className="block">
+          <span className="mb-1 block text-[11px] font-bold tracking-wide text-slate-500">ค้นหา</span>
+          <input
+            className={inputClz}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="เช่น 101 หรือ 08…"
+          />
+        </label>
+        <div
+          className={cn(
+            "mt-3 grid grid-cols-1 gap-3 sm:items-end",
+            dateFrom || dateTo ? "sm:grid-cols-[1fr_1fr_auto]" : "sm:grid-cols-2",
+          )}
+        >
+          <label className="min-w-0">
+            <span className="mb-1 block text-[11px] font-bold tracking-wide text-slate-500">อัปเดตตั้งแต่</span>
+            <input type="date" className={inputClz} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          </label>
+          <label className="min-w-0">
+            <span className="mb-1 block text-[11px] font-bold tracking-wide text-slate-500">ถึง</span>
+            <input type="date" className={inputClz} value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          </label>
+          {dateFrom || dateTo ? (
+            <button
+              type="button"
+              onClick={() => {
+                setDateFrom("");
+                setDateTo("");
+              }}
+              className={cn(dormBtnSecondary, "w-full shrink-0 sm:w-auto")}
+            >
+              ล้างวันที่
+            </button>
+          ) : null}
         </div>
-        <div>
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="block min-w-[140px] flex-1">
-              <span className="block text-xs font-medium text-slate-600">วันที่อัปเดต — ตั้งแต่</span>
-              <input
-                type="date"
-                className={`${inputClz} mt-1`}
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
-            </label>
-            <label className="block min-w-[140px] flex-1">
-              <span className="block text-xs font-medium text-slate-600">ถึง</span>
-              <input type="date" className={`${inputClz} mt-1`} value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-            </label>
-            {(dateFrom || dateTo) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setDateFrom("");
-                  setDateTo("");
-                }}
-                className="min-h-[44px] shrink-0 rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                ล้างช่วงวันที่
-              </button>
-            )}
-          </div>
-          <p className="mt-1.5 text-xs text-slate-500">กรองตามคอลัมน์ &quot;อัปเดตล่าสุด&quot; (เขตเวลาไทย)</p>
-        </div>
-      </div>
+      </DormPanelCard>
 
-      {loading ? (
-        <p className="text-sm text-slate-500">กำลังโหลด…</p>
-      ) : filtered.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-slate-200 py-10 text-center text-sm text-slate-500">
-          {rows.length === 0 ? "ยังไม่มีรายการประวัติการชำระ" : "ไม่พบรายการตามการค้นหาหรือช่วงวันที่"}
-        </p>
-      ) : (
-        <>
-          <ul className="space-y-3 md:hidden">
-            {filtered.map((r) => (
-              <li
-                key={r.id}
-                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-              >
-                <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
-                  <div>
-                    <p className="text-lg font-bold tabular-nums text-slate-900">ห้อง {r.bill.room.roomNumber}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      งวด {r.bill.billingMonth}/{r.bill.billingYear}
-                    </p>
+      <DormPanelCard
+        title="รายการ"
+        description={
+          loading ? (
+            "กำลังโหลด…"
+          ) : (
+            <>
+              <span className="tabular-nums font-semibold text-slate-700">{filtered.length}</span> รายการ
+            </>
+          )
+        }
+      >
+        {loading ? (
+          <p className="text-center text-sm text-[#66638c]">กำลังโหลด…</p>
+        ) : filtered.length === 0 ? (
+          <DormEmptyDashed>
+            {rows.length === 0 ? "ยังไม่มีรายการประวัติการชำระ" : "ไม่พบรายการตามการค้นหาหรือช่วงวันที่"}
+          </DormEmptyDashed>
+        ) : (
+          <>
+            <ul className="grid list-none gap-2 md:hidden">
+              {filtered.map((r) => (
+                <li
+                  key={r.id}
+                  className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50/95 p-3 shadow-sm ring-1 ring-slate-100/80"
+                >
+                  <div
+                    className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-indigo-400/85 via-violet-300/75 to-emerald-400/80"
+                    aria-hidden
+                  />
+                  <div className="flex items-start justify-between gap-2 pt-0.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold tabular-nums text-slate-900">ห้อง {r.bill.room.roomNumber}</p>
+                      <p className="mt-0.5 font-mono text-[10px] font-semibold text-slate-500">
+                        งวด {r.bill.billingMonth}/{r.bill.billingYear}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-slate-200/80 bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+                      {statusTh(r.paymentStatus)}
+                    </span>
                   </div>
-                  <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                    {statusTh(r.paymentStatus)}
-                  </span>
-                </div>
-                <div className="mt-3 space-y-2 text-sm">
-                  <div>
-                    <p className="text-xs text-slate-500">ผู้พัก</p>
-                    <p className="font-medium text-slate-900">{r.tenant.name}</p>
-                    <p className="text-xs text-slate-500">{r.tenant.phone}</p>
+                  <div className="mt-2 space-y-1.5 text-[13px]">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400">ผู้พัก</p>
+                      <p className="font-semibold text-slate-900">{r.tenant.name}</p>
+                      <p className="text-[11px] text-slate-500">{r.tenant.phone}</p>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2 border-t border-slate-100/90 pt-2">
+                      <span className="text-[10px] text-slate-500">จำนวน</span>
+                      <span className="text-base font-bold tabular-nums text-slate-900">
+                        {formatDormAmountStable(r.amountToPay)} บาท
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-500">อัปเดต {formatBangkokDateTimeStable(r.updatedAt)}</p>
                   </div>
-                  <div className="flex items-baseline justify-between gap-2 pt-1">
-                    <span className="text-xs text-slate-500">จำนวน</span>
-                    <span className="text-base font-semibold tabular-nums text-slate-900">{r.amountToPay.toLocaleString("th-TH")} บาท</span>
+                  <div className="mt-3 border-t border-slate-100 pt-2">
+                    <PaymentHistoryRowActions r={r} onEdit={openEdit} onRemove={(row) => void removeRow(row)} />
                   </div>
-                  <p className="text-xs text-slate-500">อัปเดตล่าสุด {formatUpdated(r.updatedAt)}</p>
-                </div>
-                <div className="mt-4 border-t border-slate-100 pt-3">
-                  <PaymentHistoryRowActions r={r} onEdit={openEdit} onRemove={(row) => void removeRow(row)} />
-                </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
 
-          <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
-            <table className="w-full min-w-[880px] text-left text-sm">
-              <thead className="bg-slate-50 text-xs text-slate-600">
-                <tr>
-                  <th className="px-3 py-2">ห้อง</th>
-                  <th className="px-3 py-2">งวด</th>
-                  <th className="px-3 py-2">ผู้พัก</th>
-                  <th className="px-3 py-2">จำนวน</th>
-                  <th className="px-3 py-2">สถานะ</th>
-                  <th className="px-3 py-2">อัปเดตล่าสุด</th>
-                  <th className="px-3 py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r) => (
-                  <tr key={r.id} className="border-t border-slate-100">
-                    <td className="px-3 py-2 font-medium text-slate-900">{r.bill.room.roomNumber}</td>
-                    <td className="px-3 py-2">
-                      {r.bill.billingMonth}/{r.bill.billingYear}
-                    </td>
-                    <td className="px-3 py-2">
-                      <div>{r.tenant.name}</div>
-                      <div className="text-xs text-slate-500">{r.tenant.phone}</div>
-                    </td>
-                    <td className="px-3 py-2 tabular-nums">{r.amountToPay.toLocaleString("th-TH")}</td>
-                    <td className="px-3 py-2">{statusTh(r.paymentStatus)}</td>
-                    <td className="px-3 py-2 text-xs text-slate-500">{formatUpdated(r.updatedAt)}</td>
-                    <td className="px-3 py-2">
-                      <PaymentHistoryRowActions r={r} onEdit={openEdit} onRemove={(row) => void removeRow(row)} />
-                    </td>
+            <div className="hidden overflow-x-auto rounded-xl border border-slate-200/80 md:block [-webkit-overflow-scrolling:touch]">
+              <table className="w-full min-w-[800px] text-left text-sm">
+                <thead className="border-b border-slate-200 bg-slate-50/95 text-[11px] font-bold text-slate-600">
+                  <tr>
+                    <th className="whitespace-nowrap px-3 py-2.5">ห้อง</th>
+                    <th className="whitespace-nowrap px-3 py-2.5">งวด</th>
+                    <th className="whitespace-nowrap px-3 py-2.5">ผู้พัก</th>
+                    <th className="whitespace-nowrap px-3 py-2.5">จำนวน</th>
+                    <th className="whitespace-nowrap px-3 py-2.5">สถานะ</th>
+                    <th className="whitespace-nowrap px-3 py-2.5">อัปเดต</th>
+                    <th className="px-3 py-2.5" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((r) => (
+                    <tr key={r.id} className="bg-white/80 hover:bg-slate-50/80">
+                      <td className="px-3 py-2 font-semibold text-slate-900">{r.bill.room.roomNumber}</td>
+                      <td className="px-3 py-2 tabular-nums">
+                        {r.bill.billingMonth}/{r.bill.billingYear}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="font-medium">{r.tenant.name}</div>
+                        <div className="text-xs text-slate-500">{r.tenant.phone}</div>
+                      </td>
+                      <td className="px-3 py-2 tabular-nums">{formatDormAmountStable(r.amountToPay)}</td>
+                      <td className="px-3 py-2 text-xs font-semibold">{statusTh(r.paymentStatus)}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500">{formatBangkokDateTimeStable(r.updatedAt)}</td>
+                      <td className="px-3 py-2">
+                        <PaymentHistoryRowActions r={r} onEdit={openEdit} onRemove={(row) => void removeRow(row)} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </DormPanelCard>
 
       {editing ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
@@ -381,6 +421,6 @@ export function DormPaymentHistoryClient() {
           </div>
         </div>
       ) : null}
-    </div>
+    </DormPageStack>
   );
 }

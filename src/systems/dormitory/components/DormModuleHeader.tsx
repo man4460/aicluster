@@ -1,38 +1,48 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
+
+const dormNavItemBase =
+  "flex min-h-[44px] min-w-0 touch-manipulation select-none items-center justify-center rounded-xl px-3 text-sm font-semibold transition-colors active:opacity-90 sm:min-h-0 sm:w-auto sm:justify-center sm:px-3.5 sm:py-2";
 
 const links = [
   { href: "/dashboard/dormitory", label: "แดชบอร์ด" },
-  { href: "/dashboard/dormitory/rooms", label: "ห้องพัก" },
-  { href: "/dashboard/dormitory/history", label: "รายการประวัติ" },
-  { href: "/dashboard/dormitory/settings", label: "ตั้งค่าหอพัก" },
+  { href: "/dashboard/dormitory/rooms", label: "ห้อง" },
+  { href: "/dashboard/dormitory/history", label: "ประวัติ" },
+  { href: "/dashboard/dormitory/settings", label: "ตั้งค่า" },
 ] as const;
 
-export function DormModuleHeader({ pathname }: { pathname: string }) {
+export function DormModuleHeader() {
+  const pathname = usePathname() ?? "";
   return (
-    <div className="mb-6 border-b border-slate-200/90 pb-6">
-      <nav className="flex flex-wrap gap-2" aria-label="เมนูหอพัก">
+    <nav aria-label="เมนูหอพัก" className="app-surface rounded-2xl p-3 sm:p-4 print:hidden">
+      <p className="mb-2.5 text-xs font-medium text-[#66638c] sm:mb-3">เมนู</p>
+      <ul className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
         {links.map((l) => {
           const active =
             l.href === "/dashboard/dormitory"
               ? pathname === "/dashboard/dormitory"
               : pathname === l.href || pathname.startsWith(`${l.href}/`);
           return (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={cn(
-                "rounded-lg px-3 py-2 text-sm font-medium transition",
-                active
-                  ? "bg-[#0000BF]/10 text-[#0000BF]"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900",
-              )}
-            >
-              {l.label}
-            </Link>
+            <li key={l.href} className="min-w-0 sm:w-auto">
+              <Link
+                href={l.href}
+                className={cn(
+                  dormNavItemBase,
+                  "w-full sm:w-auto",
+                  active
+                    ? "bg-[#ecebff] text-[#4d47b6] ring-1 ring-[#4d47b6]/20"
+                    : "app-btn-soft text-[#66638c]",
+                )}
+              >
+                {l.label}
+              </Link>
+            </li>
           );
         })}
-      </nav>
-    </div>
+      </ul>
+    </nav>
   );
 }

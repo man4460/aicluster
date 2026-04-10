@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { dormBtnPrimary } from "@/systems/dormitory/dorm-ui";
+import { cn } from "@/lib/cn";
 
 const inputClz =
   "mt-1 w-full min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0000BF]/40";
@@ -83,15 +85,9 @@ export function AddRoomForm() {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={openModal}
-          className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[#0000BF] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0000a6]"
-        >
-          เพิ่มห้องพัก
-        </button>
-      </div>
+      <button type="button" onClick={openModal} className={cn(dormBtnPrimary, "w-full justify-center sm:w-auto")}>
+        + เพิ่มห้องพัก
+      </button>
 
       {open ? (
         <div

@@ -62,7 +62,6 @@ export async function GET() {
         yearMonth: { gte: `${yearStr}-01`, lte: `${yearStr}-12` },
       },
       _sum: { amountDue: true, amountPaid: true },
-      orderBy: { yearMonth: "asc" },
     }),
   ]);
 
@@ -75,11 +74,17 @@ export async function GET() {
   const ytdPaid = Number(ytdAgg._sum.amountPaid ?? 0);
   const ytdPercent = ytdDue > 0 ? Math.round(Math.min(100, (ytdPaid / ytdDue) * 100)) : 0;
 
-  const sparkline = twelve.map((g) => ({
-    year_month: g.yearMonth,
-    total_due: Number(g._sum.amountDue ?? 0),
-    total_paid: Number(g._sum.amountPaid ?? 0),
-  }));
+  const byMonth = new Map(twelve.map((g) => [g.yearMonth, g]));
+  const sparkline = Array.from({ length: 12 }, (_, i) => {
+    const m = String(i + 1).padStart(2, "0");
+    const key = `${yearStr}-${m}`;
+    const g = byMonth.get(key);
+    return {
+      year_month: key,
+      total_due: g ? Number(g._sum.amountDue ?? 0) : 0,
+      total_paid: g ? Number(g._sum.amountPaid ?? 0) : 0,
+    };
+  });
 
   return NextResponse.json({
     village_name: profile?.displayName ?? null,

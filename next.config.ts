@@ -2,10 +2,17 @@ import type { NextConfig } from "next";
 
 /**
  * โหมด dev: Next บล็อก cross-origin ไปที่ `/_next/*` — ถ้าเปิดจากมือถือด้วย IP LAN ต้องอนุญาต hostname นั้น
- * ตั้ง ALLOWED_DEV_ORIGINS=192.168.1.50,myhost.local (คั่นด้วย comma/ช่องว่าง) เพื่อ **เพิ่ม** นอกเหนือจาก pattern เริ่มต้น
+ * ตั้ง ALLOWED_DEV_ORIGINS=host1,host2 (คั่นด้วย comma/ช่องว่าง) เพื่อ **เพิ่ม** นอกเหนือจาก pattern เริ่มต้น (มี *.ma-well.com สำหรับ tunnel แล้ว)
  * (ไม่ตัด 192.168.*.* / 10.* / 172.* ทิ้ง — กันเคสตั้งแค่ host เดียวแล้วเครื่องอื่นโดน 403 ที่ `/_next/*`)
  */
-const DEFAULT_ALLOWED_DEV_ORIGINS = ["127.0.0.1", "192.168.*.*", "10.*.*.*", "172.*.*.*"] as const;
+/** รวม *.ma-well.com — โหมด dev ผ่าน Cloudflare Tunnel (Origin ไม่ใช่ localhost) */
+const DEFAULT_ALLOWED_DEV_ORIGINS = [
+  "127.0.0.1",
+  "192.168.*.*",
+  "10.*.*.*",
+  "172.*.*.*",
+  "*.ma-well.com",
+] as const;
 
 function parseAllowedDevOrigins(): string[] {
   const raw = process.env.ALLOWED_DEV_ORIGINS?.trim();

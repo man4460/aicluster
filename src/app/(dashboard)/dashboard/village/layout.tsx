@@ -9,10 +9,18 @@ export default async function VillageLayout({ children }: { children: React.Reac
   await requireVillageSection();
   const session = await getSession();
   const trial = session ? await getActiveTrialBanner(session.sub, VILLAGE_MODULE_SLUG) : null;
+  const trialExpiresLabel =
+    trial == null
+      ? null
+      : trial.expiresAt.toLocaleString("th-TH", {
+          timeZone: "Asia/Bangkok",
+          dateStyle: "medium",
+          timeStyle: "short",
+        });
 
   return (
     <PageContainer>
-      <VillageLayoutChrome trialExpiresAtIso={trial?.expiresAt.toISOString() ?? null}>
+      <VillageLayoutChrome trialExpiresLabel={trialExpiresLabel}>
         {children}
       </VillageLayoutChrome>
     </PageContainer>

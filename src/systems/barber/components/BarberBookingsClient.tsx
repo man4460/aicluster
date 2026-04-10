@@ -58,7 +58,8 @@ export function BarberBookingsClient({
   const [phone, setPhone] = useState("");
   const [barberCustomerId, setBarberCustomerId] = useState<number | null>(null);
   const [customerName, setCustomerName] = useState("");
-  const [scheduledAtLocal, setScheduledAtLocal] = useState(defaultNextSlotBangkok);
+  /** ค่าเริ่มว่าง — ตั้งเวลาจริงตอนเปิดโมดัล (กัน useState(ฟังก์ชัน) ให้คนละเวลา SSR/client) */
+  const [scheduledAtLocal, setScheduledAtLocal] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [patchingId, setPatchingId] = useState<number | null>(null);
@@ -160,6 +161,10 @@ export function BarberBookingsClient({
     const digits = phone.replace(/\D/g, "");
     if (digits.length < 9) {
       setErr("กรอกเบอร์อย่างน้อย 9 หลัก");
+      return;
+    }
+    if (!scheduledAtLocal.trim()) {
+      setErr("เลือกวันและเวลานัด");
       return;
     }
     setSaving(true);

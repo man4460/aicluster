@@ -4,13 +4,14 @@ import { bangkokYearMonthYm } from "@/lib/dates/bangkok-calendar";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
-import { PageHeader } from "@/components/ui/page-container";
+import { DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
 import {
   RoomDetailClient,
   type DormOverdueRow,
   type DormRoomDetailJson,
 } from "@/systems/dormitory/components/RoomDetailClient";
 import { dormBtnSecondary } from "@/systems/dormitory/dorm-ui";
+import { cn } from "@/lib/cn";
 import {
   buildRoomComputeInput,
   computeAllBalanceLines,
@@ -128,16 +129,20 @@ export default async function DormitoryRoomDetailPage({ params, searchParams }: 
   };
 
   return (
-    <div className="space-y-8">
-      <PageHeader
+    <DormPageStack>
+      <DormPanelCard
         title={`ห้อง ${room.roomNumber}`}
         description={`${room.roomType} · ชั้น ${room.floor} · ค่าเช่า ${Number(room.basePrice).toLocaleString("th-TH")} บาท/เดือน`}
         action={
-          <Link href="/dashboard/dormitory/rooms" className={dormBtnSecondary}>
-            ← รายการห้อง
+          <Link href="/dashboard/dormitory/rooms" className={cn(dormBtnSecondary, "w-full justify-center sm:w-auto")}>
+            รายการห้อง
           </Link>
         }
-      />
+      >
+        <p className="text-[11px] leading-relaxed text-slate-500">
+          เลือกงวดด้านล่างเพื่อบันทึกมิเตอร์ แบ่งบิล แนบสลิป และชำระเงิน
+        </p>
+      </DormPanelCard>
       <RoomDetailClient
         key={`${room.id}-${room.updatedAt.toISOString()}`}
         room={json}
@@ -145,6 +150,6 @@ export default async function DormitoryRoomDetailPage({ params, searchParams }: 
         initialPayMonth={focusMonth}
         initialBangkokYm={bangkokYearMonthYm()}
       />
-    </div>
+    </DormPageStack>
   );
 }

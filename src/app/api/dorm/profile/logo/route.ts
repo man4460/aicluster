@@ -3,6 +3,7 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
+import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 const MAX_BYTES = 2 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -51,6 +52,22 @@ export async function POST(req: Request) {
   await prisma.user.update({
     where: { id: auth.session.sub },
     data: { avatarUrl: logoUrl },
+  });
+
+  const scope = await getDormitoryDataScope(auth.session.sub);
+  await prisma.dormitoryProfile.upsert({
+    where: {
+      ownerUserId_trialSessionId: {
+        ownerUserId: auth.session.sub,
+        trialSessionId: scope.trialSessionId,
+      },
+    },
+    create: {
+      ownerUserId: auth.session.sub,
+      trialSessionId: scope.trialSessionId,
+      logoUrl,
+    },
+    update: { logoUrl },
   });
 
   return NextResponse.json({ logoUrl });

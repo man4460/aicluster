@@ -3,6 +3,12 @@ import type { PosOrder } from "@/systems/building-pos/building-pos-service";
 
 export type PosTablePaperSize = "SLIP_58" | "SLIP_80" | "A4";
 
+/** ตัวเลือกหน้ากระดาษ (เช่น ใบแจ้งหนี้หอ — A4 ลด margin บน-ล่าง) */
+export type PosTablePrintPageOptions = {
+  /** A4: ลด margin แนวตั้งเพื่อตัดพื้นที่ว่างบน-ล่างตอนพิมพ์ */
+  a4TightVerticalMargins?: boolean;
+};
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -11,10 +17,13 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function pageAndRootCss(paper: PosTablePaperSize): string {
+export function pageAndRootCss(paper: PosTablePaperSize, opts?: PosTablePrintPageOptions): string {
   if (paper === "A4") {
+    const tight = opts?.a4TightVerticalMargins === true;
+    const v = tight ? "5mm" : "12mm";
+    const h = tight ? "10mm" : "12mm";
     return `
-@page { size: A4 portrait; margin: 12mm; }
+@page { size: A4 portrait; margin: ${v} ${h}; }
 body { margin: 0; font-family: system-ui, "Segoe UI", sans-serif; color: #0f172a; background: #fff; }
 .root { max-width: 180mm; margin: 0 auto; font-size: 12px; line-height: 1.4; }
 h1 { font-size: 1.25rem; margin: 0 0 0.25rem; }
@@ -111,19 +120,38 @@ ${qrBlock}
 `;
 }
 
+function escapeDocTitle(title: string): string {
+  return title.replace(/[<>"]/g, "");
+}
+
 function buildPrintDocumentHtml(
   paper: PosTablePaperSize,
   innerHtml: string,
   afterPrint: "closeWindow" | "none",
+  documentTitle = "บิลโต๊ะ",
+  pageOpts?: PosTablePrintPageOptions,
 ): string {
-  const css = pageAndRootCss(paper);
+  const css = pageAndRootCss(paper, pageOpts);
   const after =
     afterPrint === "closeWindow" ?
       "setTimeout(function(){try{window.close();}catch(e){}},400);"
     : "";
   // ต้องใช้ window.onload — addEventListener เปล่า ๆ จะ ReferenceError ในเบราว์เซอร์
   const boot = `window.onload=function(){setTimeout(function(){window.print();${after}},200);};`;
-  return `<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"/><title>บิลโต๊ะ</title><style>${css}</style></head><body><div class="root">${innerHtml}</div><script>${boot}<\/script></body></html>`;
+  const safeTitle = escapeDocTitle(documentTitle);
+  return `<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"/><title>${safeTitle}</title><style>${css}</style></head><body><div class="root">${innerHtml}</div><script>${boot}<\/script></body></html>`;
+}
+
+/** เอกสาร HTML นิ่ง (ไม่มีสคริปต์พิมพ์) — ใช้จับภาพ PDF / preview */
+export function buildPosTableStaticDocumentHtml(
+  paper: PosTablePaperSize,
+  innerHtml: string,
+  documentTitle: string,
+  pageOpts?: PosTablePrintPageOptions,
+): string {
+  const css = pageAndRootCss(paper, pageOpts);
+  const safeTitle = escapeDocTitle(documentTitle);
+  return `<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"/><title>${safeTitle}</title><style>${css}</style></head><body><div class="root">${innerHtml}</div></body></html>`;
 }
 
 /**
@@ -131,8 +159,14 @@ function buildPrintDocumentHtml(
  * ไม่ใส่ noopener ใน window.open — ถ้าใส่ เบราว์เซอร์ใหม่มักคืน null แล้วพิมพ์ไม่ทำงาน
  * หน้าต่างใหม่ใช้สคริปต์ปิดหลังพิมพ์; iframe สำรองใช้เอกสารแยกโดยไม่เรียก window.close
  */
-export function openPosTableBillPrintWindow(paper: PosTablePaperSize, innerHtml: string): boolean {
-  const htmlPopup = buildPrintDocumentHtml(paper, innerHtml, "closeWindow");
+export function openPosTableBillPrintWindow(
+  paper: PosTablePaperSize,
+  innerHtml: string,
+  documentTitle?: string,
+  pageOpts?: PosTablePrintPageOptions,
+): boolean {
+  const title = documentTitle ?? "บิลโต๊ะ";
+  const htmlPopup = buildPrintDocumentHtml(paper, innerHtml, "closeWindow", title, pageOpts);
   const w = window.open("about:blank", "_blank", "width=520,height=720");
   if (w) {
     try {
@@ -148,6 +182,6 @@ export function openPosTableBillPrintWindow(paper: PosTablePaperSize, innerHtml:
       }
     }
   }
-  const htmlIframe = buildPrintDocumentHtml(paper, innerHtml, "none");
+  const htmlIframe = buildPrintDocumentHtml(paper, innerHtml, "none", title, pageOpts);
   return printPrintableHtmlInHiddenIframe(htmlIframe);
 }

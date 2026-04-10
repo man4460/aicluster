@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { PageHeader } from "@/components/ui/page-container";
+import { VillageEmptyDashed, VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { normalizeVillageHouseNo } from "@/lib/village/house-no";
 import {
@@ -15,9 +15,12 @@ import {
 import {
   villageBtnPrimary,
   villageBtnSecondary,
-  villageCard,
   villageField,
-  villageToolbar,
+  villageHouseCardDivider,
+  villageHouseFieldLabel,
+  villageHouseListCard,
+  villageHouseMetaRow,
+  villageHouseNumber,
 } from "@/systems/village/village-ui";
 
 export function VillageResidentsClient() {
@@ -67,95 +70,159 @@ export function VillageResidentsClient() {
   }, [houses, needle]);
 
   return (
-    <div className="space-y-8">
-      <PageHeader title="ลูกบ้าน" description="แปลง บ้าน และผู้พักอาศัย — ค้นหา ส่งออก CSV และกำหนดรอบค่าส่วนกลางต่อหลัง" />
-      <div className={villageToolbar}>
-        <label className="min-w-[200px] flex-1 text-sm font-medium text-slate-700">
-          ค้นหา
-          <input
-            className={`mt-1.5 ${villageField}`}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="เลขบ้าน ชื่อ เบอร์…"
-          />
-        </label>
-        <a href={api.exportUrl("residents")} className={villageBtnSecondary}>
-          ดาวน์โหลด CSV
-        </a>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <button type="button" className={villageBtnPrimary} onClick={() => setHouseModal({ mode: "add" })}>
-          เพิ่มบ้าน
-        </button>
-        <button type="button" className={villageBtnSecondary} onClick={() => void load()}>
-          รีเฟรช
-        </button>
-        <Link href="/dashboard/village/reports" className={villageBtnSecondary}>
-          ส่งออก CSV
-        </Link>
-      </div>
+    <VillagePageStack>
+      <VillagePanelCard
+        title="ค้นหาและเครื่องมือ"
+        description="เพิ่มบ้าน รีเฟรช หรือดาวน์โหลดรายงาน"
+      >
+        <div className="flex flex-col gap-4">
+          <label className="min-w-[200px] flex-1 text-sm font-medium text-slate-700">
+            ค้นหา
+            <input
+              className={`mt-1.5 ${villageField}`}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="เลขบ้าน ชื่อ เบอร์…"
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={villageBtnPrimary} onClick={() => setHouseModal({ mode: "add" })}>
+              + เพิ่มบ้าน
+            </button>
+            <button type="button" className={villageBtnSecondary} onClick={() => void load()}>
+              รีเฟรช
+            </button>
+            <a href={api.exportUrl("residents")} className={villageBtnSecondary}>
+              ดาวน์โหลด CSV
+            </a>
+            <Link href="/dashboard/village/reports" className={villageBtnSecondary}>
+              ส่งออกอื่น ๆ
+            </Link>
+          </div>
+        </div>
+      </VillagePanelCard>
       {err ? <p className="text-sm text-rose-600">{err}</p> : null}
-      {loading ? <p className="text-sm text-slate-500">กำลังโหลด…</p> : null}
-      {needle ? (
-        <p className="text-xs text-slate-500">
-          แสดง {filteredHouses.length} จาก {houses.length} หลัง
-        </p>
+      {loading ? (
+        <VillagePanelCard>
+          <p className="text-center text-sm text-[#66638c]">กำลังโหลด…</p>
+        </VillagePanelCard>
       ) : null}
-      <ul className="space-y-4">
-        {filteredHouses.map((h) => (
-          <li key={h.id} className={`${villageCard} p-5`}>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-base font-semibold tracking-tight text-slate-900">
-                  บ้านเลขที่ {h.house_no}
-                  {h.plot_label ? <span className="font-normal text-slate-500"> ({h.plot_label})</span> : null}
-                </p>
-                <p className="mt-1 text-sm text-slate-600">
-                  {h.owner_name || "—"} {h.phone ? `· ${h.phone}` : ""}
-                </p>
-                <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                  ค่าส่วนกลาง: {villageFeeCycleLabelTh(h.fee_cycle)} ·{" "}
-                  {h.monthly_fee_override != null
-                    ? `${h.monthly_fee_override.toLocaleString("th-TH")} บาท/เดือน (เฉพาะหลังนี้)`
-                    : "อัตราต่อเดือนตามตั้งค่าโครงการ"}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:border-[#0000BF]/25"
-                  onClick={() => setHouseModal({ mode: "edit", house: h })}
-                >
-                  แก้ไขบ้าน
-                </button>
-                <button
-                  type="button"
-                  className="rounded-xl bg-[#0000BF]/10 px-3 py-2 text-xs font-semibold text-[#0000BF] hover:bg-[#0000BF]/15"
-                  onClick={() => setResidentModal({ houseId: h.id })}
-                >
-                  เพิ่มลูกบ้าน
-                </button>
-              </div>
-            </div>
-            <ul className="mt-4 space-y-1 border-t border-slate-100 pt-4">
-              {h.residents.length === 0 ? (
-                <li className="text-sm text-slate-500">ยังไม่มีรายชื่อในบ้านนี้</li>
-              ) : (
-                h.residents.map((r) => (
-                  <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                    <span>
-                      {r.name}
-                      {r.is_primary ? <span className="ml-1 text-xs text-[#0000BF]">(หลัก)</span> : null}
-                      {r.phone ? <span className="text-slate-500"> · {r.phone}</span> : null}
-                    </span>
-                    <ResidentActions api={api} resident={r} onDone={load} />
-                  </li>
-                ))
-              )}
+      {!loading ? (
+        <VillagePanelCard
+          title="รายการบ้าน"
+          description={
+            needle
+              ? `แสดง ${filteredHouses.length} จาก ${houses.length} หลังตามคำค้น`
+              : houses.length === 0
+                ? "เพิ่มบ้านได้จากแผงด้านบน — แสดงเป็นผังการ์ดเหมือนหน้าห้องพัก"
+                : `ผังการ์ด ${houses.length} หลัง · คลิกปุ่มในการ์ดเพื่อแก้ไขหรือเพิ่มลูกบ้าน`
+          }
+        >
+          {filteredHouses.length === 0 ? (
+            <VillageEmptyDashed>
+              {houses.length === 0
+                ? "ยังไม่มีบ้านในระบบ — กด «เพิ่มบ้าน» เพื่อเริ่มต้น"
+                : "ไม่พบตามคำค้น — ลองเปลี่ยนคำค้นหา"}
+            </VillageEmptyDashed>
+          ) : (
+            <ul className="mt-1 grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {filteredHouses.map((h) => (
+                <li key={h.id} className="min-w-0">
+                  <article className={villageHouseListCard}>
+                    <div className="min-w-0 pr-1">
+                      <div className="flex items-end justify-between gap-2">
+                        <div>
+                          <span className="text-[9px] font-semibold text-slate-400">เลขที่</span>
+                          <p className={`${villageHouseNumber} mt-0.5`}>{h.house_no}</p>
+                        </div>
+                      </div>
+                      {h.plot_label ? (
+                        <p className="mt-1 line-clamp-1 text-[10px] leading-tight text-slate-500">{h.plot_label}</p>
+                      ) : null}
+                    </div>
+
+                    <div className={`${villageHouseCardDivider} mt-2 space-y-1.5 border-slate-200/60 pt-2`}>
+                      <div className={villageHouseMetaRow}>
+                        <span className={villageHouseFieldLabel}>เจ้าบ้าน</span>
+                        <div className="min-w-0 flex-1 text-[11px] leading-snug">
+                          <span className="font-semibold text-slate-800">{h.owner_name?.trim() || "—"}</span>
+                          {h.phone?.trim() ? (
+                            <span className="text-slate-500 tabular-nums"> · {h.phone.trim()}</span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className={`${villageHouseMetaRow} items-center`}>
+                        <span className={villageHouseFieldLabel}>ผู้พัก</span>
+                        <span className="inline-flex rounded-md bg-slate-100/95 px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-slate-700 ring-1 ring-slate-200/80">
+                          {h.residents.length} คน
+                        </span>
+                      </div>
+                      <div className={villageHouseMetaRow}>
+                        <span className={villageHouseFieldLabel}>ค่าส่วนกลาง</span>
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <p className="text-[10px] leading-snug text-slate-600 line-clamp-2">
+                            {villageFeeCycleLabelTh(h.fee_cycle)}
+                          </p>
+                          <p className="text-[11px] font-semibold tabular-nums leading-tight text-slate-900">
+                            {h.monthly_fee_override != null
+                              ? `${h.monthly_fee_override.toLocaleString("th-TH")} บ./ด. (เฉพาะหลังนี้)`
+                              : "ตามโครงการ"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 flex-1">
+                      {h.residents.length === 0 ? (
+                        <p className="rounded-md border border-dashed border-slate-200/90 bg-slate-50/90 py-1.5 text-center text-[10px] font-medium leading-tight text-slate-500">
+                          ยังไม่มีรายชื่อ
+                        </p>
+                      ) : (
+                        <ul className="space-y-1">
+                          {h.residents.map((r) => (
+                            <li
+                              key={r.id}
+                              className="flex items-center justify-between gap-1.5 rounded-md bg-white/60 py-1 pl-1.5 pr-1 ring-1 ring-slate-100/90"
+                            >
+                              <span className="min-w-0 text-[10px] leading-tight sm:text-[11px]">
+                                <span className="font-semibold text-slate-800">{r.name}</span>
+                                {r.is_primary ? (
+                                  <span className="ml-0.5 text-[9px] font-bold text-[#4d47b6]">หลัก</span>
+                                ) : null}
+                                {r.phone ? (
+                                  <span className="ml-1 tabular-nums text-slate-500">{r.phone}</span>
+                                ) : null}
+                              </span>
+                              <ResidentActions api={api} resident={r} onDone={load} />
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className="mt-auto flex flex-wrap gap-1.5 border-t border-slate-200/60 pt-2">
+                      <button
+                        type="button"
+                        className="app-btn-soft rounded-lg px-2.5 py-1.5 text-[10px] font-semibold text-slate-800 sm:text-[11px]"
+                        onClick={() => setHouseModal({ mode: "edit", house: h })}
+                      >
+                        แก้ไขบ้าน
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-lg bg-[#ecebff] px-2.5 py-1.5 text-[10px] font-semibold text-[#4d47b6] ring-1 ring-[#4d47b6]/20 sm:text-[11px]"
+                        onClick={() => setResidentModal({ houseId: h.id })}
+                      >
+                        + ลูกบ้าน
+                      </button>
+                    </div>
+                  </article>
+                </li>
+              ))}
             </ul>
-          </li>
-        ))}
-      </ul>
+          )}
+        </VillagePanelCard>
+      ) : null}
 
       {houseModal ? (
         <HouseFormModal
@@ -180,7 +247,7 @@ export function VillageResidentsClient() {
           }}
         />
       ) : null}
-    </div>
+    </VillagePageStack>
   );
 }
 
@@ -195,11 +262,11 @@ function ResidentActions({
 }) {
   const [busy, setBusy] = useState(false);
   return (
-    <span className="flex gap-1">
+    <span className="flex shrink-0 flex-wrap justify-end gap-0.5">
       <button
         type="button"
         disabled={busy}
-        className="text-xs text-[#0000BF] hover:underline disabled:opacity-50"
+        className="text-[10px] font-semibold text-[#4d47b6] hover:underline disabled:opacity-50"
         onClick={async () => {
           const name = window.prompt("ชื่อ", resident.name);
           if (name == null) return;
@@ -219,7 +286,7 @@ function ResidentActions({
       <button
         type="button"
         disabled={busy}
-        className="text-xs text-rose-600 hover:underline disabled:opacity-50"
+        className="text-[10px] font-semibold text-rose-600 hover:underline disabled:opacity-50"
         onClick={async () => {
           if (!window.confirm("ลบรายชื่อนี้?")) return;
           setBusy(true);

@@ -11,10 +11,18 @@ export default async function BarberLayout({ children }: { children: React.React
   if (!session) return null;
 
   const trial = await getActiveTrialBanner(session.sub, BARBER_MODULE_SLUG);
+  const trialExpiresLabel =
+    trial == null
+      ? null
+      : trial.expiresAt.toLocaleString("th-TH", {
+          timeZone: "Asia/Bangkok",
+          dateStyle: "medium",
+          timeStyle: "short",
+        });
 
   return (
     <PageContainer>
-      <BarberLayoutChrome trialExpiresAtIso={trial?.expiresAt.toISOString() ?? null}>
+      <BarberLayoutChrome trialExpiresLabel={trialExpiresLabel}>
         {children}
       </BarberLayoutChrome>
     </PageContainer>

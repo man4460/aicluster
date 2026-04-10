@@ -1,14 +1,15 @@
-import { PageHeader } from "@/components/ui/page-container";
+import { DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
 import { DormSettingsClient } from "@/systems/dormitory/components/DormSettingsClient";
 
 export default function DormitorySettingsPage() {
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="ตั้งค่าหอพัก"
-        description="ใช้หน้านี้เป็นทางลัดไปโปรไฟล์ส่วนกลางสำหรับตั้งค่าบิล ใบเสร็จ และข้อมูลบริษัท/ร้าน"
-      />
-      <DormSettingsClient />
-    </div>
+    <DormPageStack>
+      <DormPanelCard
+        title="ตั้งค่า"
+        description="บิล ใบเสร็จ และข้อมูลร้าน — ตั้งค่าหลักอยู่ที่โปรไฟล์ส่วนกลาง"
+      >
+        <DormSettingsClient />
+      </DormPanelCard>
+    </DormPageStack>
   );
 }

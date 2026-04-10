@@ -2,8 +2,10 @@ import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 import {
   buildGoogleAuthorizationUrl,
+  createGooglePkcePair,
   getGoogleRedirectUri,
   isGoogleOAuthConfigured,
+  resolveGoogleOAuthOrigin,
 } from "@/lib/auth/google-oauth";
 import { setGoogleOauthCookies } from "@/lib/auth/google-oauth-cookies";
 
@@ -16,17 +18,20 @@ function safeNextPath(raw: string | null): string {
 
 export async function GET(req: Request) {
   if (!isGoogleOAuthConfigured()) {
-    return NextResponse.redirect(new URL("/login?error=google_not_configured", req.url));
+    return NextResponse.redirect(
+      new URL("/login?error=google_not_configured", resolveGoogleOAuthOrigin(req)),
+    );
   }
 
   const url = new URL(req.url);
-  const origin = url.origin;
+  const origin = resolveGoogleOAuthOrigin(req);
   const redirectUri = getGoogleRedirectUri(origin);
   const state = randomBytes(24).toString("hex");
   const next = safeNextPath(url.searchParams.get("next"));
+  const { verifier: pkceVerifier, challenge: pkceChallenge } = createGooglePkcePair();
 
-  await setGoogleOauthCookies(req, state, next);
+  await setGoogleOauthCookies(req, state, next, pkceVerifier);
 
-  const authUrl = buildGoogleAuthorizationUrl({ state, redirectUri });
+  const authUrl = buildGoogleAuthorizationUrl({ state, redirectUri, codeChallenge: pkceChallenge });
   return NextResponse.redirect(authUrl);
 }

@@ -12,6 +12,7 @@ import {
 } from "@/components/app-templates";
 import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
 import { cn } from "@/lib/cn";
+import { normalizeAppPublicBase } from "@/lib/url/normalize-app-public-base";
 import { BarberDashboardBackLink } from "@/systems/barber/components/BarberDashboardBackLink";
 import { BarberSellPackageModal } from "@/systems/barber/components/BarberSellPackageModal";
 import {
@@ -58,13 +59,17 @@ function formatPriceBaht(priceStr: string) {
 const slipThumbClassName =
   "self-start rounded-lg border border-[#ecebff] bg-[#f8f7ff] ring-[#ecebff] hover:ring-[#4d47b6]/35 sm:h-[4.5rem] sm:w-[4.5rem]";
 
-/** ไม่ผูกกับ baseUrl จากเซิร์ฟเวอร์ — กันโหลดรูปไปโฮสต์ผิด (proxy / NEXT_PUBLIC_APP_URL) */
+function publicAppOrigin(): string {
+  return normalizeAppPublicBase(process.env.NEXT_PUBLIC_APP_URL ?? "");
+}
+
+/** ใช้ NEXT_PUBLIC_APP_URL เท่านั้น — ห้ามใช้ window ใน render (กัน hydration mismatch) */
 function slipUrlForImg(src: string | null | undefined): string | null {
   if (!src?.trim()) return null;
   const u = src.trim();
   if (u.startsWith("http://") || u.startsWith("https://")) return u;
   if (u.startsWith("/")) return u;
-  return resolveAssetUrl(u, typeof window !== "undefined" ? window.location.origin : "");
+  return resolveAssetUrl(u, publicAppOrigin());
 }
 
 export function BarberPurchasesClient() {

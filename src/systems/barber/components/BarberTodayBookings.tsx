@@ -9,6 +9,7 @@ import { BarberBookingStatusBadge } from "./BarberBookingStatusBadge";
 export async function BarberTodayBookings({ ownerId }: { ownerId: string }) {
   const scope = await getBarberDataScope(ownerId);
   const { start, end } = bangkokDayStartEnd();
+  const referenceNow = new Date();
   const rows = await prisma.barberBooking.findMany({
     where: {
       ownerUserId: ownerId,
@@ -63,7 +64,11 @@ export async function BarberTodayBookings({ ownerId }: { ownerId: string }) {
                   })}
                 </p>
               </div>
-              <BarberBookingStatusBadge status={b.status} scheduledAt={b.scheduledAt} />
+              <BarberBookingStatusBadge
+                status={b.status}
+                scheduledAt={b.scheduledAt}
+                referenceNow={referenceNow}
+              />
             </li>
           ))}
         </ul>

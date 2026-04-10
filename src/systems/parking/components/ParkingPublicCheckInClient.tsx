@@ -114,7 +114,14 @@ export function ParkingPublicCheckInClient({ token }: { token: string }) {
         <p className="mt-2 text-sm text-slate-600">
           ช่อง <span className="font-bold tabular-nums">{done.spotCode}</span>
         </p>
-        <p className="mt-1 text-xs text-slate-500">เวลาเข้า {new Date(done.at).toLocaleString("th-TH")}</p>
+        <p className="mt-1 text-xs text-slate-500">
+          เวลาเข้า{" "}
+          {new Date(done.at).toLocaleString("th-TH", {
+            timeZone: "Asia/Bangkok",
+            dateStyle: "medium",
+            timeStyle: "medium",
+          })}
+        </p>
       </div>
     );
   }
