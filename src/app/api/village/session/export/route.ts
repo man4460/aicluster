@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/api-auth";
 import { villageOwnerFromAuth } from "@/lib/village/api-owner";
 import { getVillageDataScope } from "@/lib/trial/module-scopes";
 import { isPrismaSchemaMismatchError, PRISMA_SYNC_HINT_TH } from "@/lib/prisma-errors";
+import { villageCostTotalsByMonthForCalendarYear } from "@/lib/village/village-annual-cost-by-month";
 
 function csvEscape(s: string) {
   if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
@@ -206,24 +207,47 @@ export async function GET(req: Request) {
     for (let m = 1; m <= 12; m++) {
       months.push(`${year}-${String(m).padStart(2, "0")}`);
     }
-    const grouped = await prisma.villageCommonFeeRow.groupBy({
-      by: ["yearMonth"],
-      where: {
-        ownerUserId: own.ownerId,
-        trialSessionId: scope.trialSessionId,
-        yearMonth: { in: months },
-      },
-      _sum: { amountDue: true, amountPaid: true },
-      _count: { id: true },
-    });
+    let grouped;
+    let costByYm: Map<string, number>;
+    try {
+      [grouped, costByYm] = await Promise.all([
+        prisma.villageCommonFeeRow.groupBy({
+          by: ["yearMonth"],
+          where: {
+            ownerUserId: own.ownerId,
+            trialSessionId: scope.trialSessionId,
+            yearMonth: { in: months },
+          },
+          _sum: { amountDue: true, amountPaid: true },
+          _count: { id: true },
+        }),
+        villageCostTotalsByMonthForCalendarYear(own.ownerId, scope.trialSessionId, year, months),
+      ]);
+    } catch (e) {
+      if (isPrismaSchemaMismatchError(e)) {
+        return NextResponse.json({ error: PRISMA_SYNC_HINT_TH }, { status: 503 });
+      }
+      console.error("village export annual_summary", e);
+      return NextResponse.json({ error: "ส่งออกไม่สำเร็จ" }, { status: 500 });
+    }
     const byYm = new Map(grouped.map((g) => [g.yearMonth, g]));
-    const header = ["year_month", "bill_rows", "total_due", "total_paid", "collection_percent"];
+    const header = [
+      "year_month",
+      "bill_rows",
+      "total_due",
+      "total_paid",
+      "collection_percent",
+      "total_cost",
+      "net_paid_minus_cost",
+    ];
     const lines = months.map((ym) => {
       const g = byYm.get(ym);
       const due = Number(g?._sum.amountDue ?? 0);
       const paid = Number(g?._sum.amountPaid ?? 0);
       const pct = due > 0 ? Math.round(Math.min(100, (paid / due) * 100)) : "";
-      return [ym, g?._count.id ?? 0, due, paid, pct].map((c) => csvEscape(String(c))).join(",");
+      const cost = costByYm.get(ym) ?? 0;
+      const net = paid - cost;
+      return [ym, g?._count.id ?? 0, due, paid, pct, cost, net].map((c) => csvEscape(String(c))).join(",");
     });
     const bom = "\uFEFF";
     const body = bom + header.join(",") + "\n" + lines.join("\n") + "\n";

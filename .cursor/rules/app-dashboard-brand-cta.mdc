@@ -1,0 +1,11 @@
+---
+description: ปุ่ม CTA แบรนด์ MAWELL — ไล่สีฟ้า→ม่วง→ชมพู (เทมเพลตเดียวกับเติมโทเคน)
+globs: "**/dashboard/**/*.tsx,**/app-templates/**/*.ts,**/TokenTopupModal.tsx"
+alwaysApply: false
+---
+
+# ปุ่ม CTA แบรนด์ (gradient)
+
+- **ไล่สีมาตรฐาน** (แนวนอน): `from-[#0000BF]` → `via-[#8b5cf6]` → `to-[#ec4899]` พร้อม hover มืดลง — อยู่ที่ `appDashboardBrandGradientFillClass` ใน `src/components/app-templates/dashboard-tokens.ts`
+- **ปุ่ม pill ข้อความขาว** (เช่น «เติมโทเคน»): ใช้ `appDashboardBrandCtaPillButtonClass` จาก `@/components/app-templates` — ใส่ `w-full` ด้วย `cn(...)` เมื่ออยู่ในแถวเต็มความกว้าง
+- **การ์ดโมดูล** (เปิดแผนผัง / Subscribe): ใช้ `appDashboardBrandGradientFillClass` ร่วมกับ `dashboardModulePrimaryButtonCore` / `dashboardModuleSubscribeButtonClass` ใน `DashboardModuleHeroCard` — **ห้าม** คัดลอกชุด hex ไปกำหนด gradient ใหม่ในโมดูลอื่น

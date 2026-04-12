@@ -37,8 +37,9 @@ export default async function ModulesCatalogPage() {
     ? modules
     : modules.filter((m) => m.slug !== MQTT_SERVICE_MODULE_SLUG);
 
+  /** แผนผังระบบ — เฉพาะบัญชีที่ล็อกอินเป็นแอดมิน (ไม่ใช้สิทธิ์เจ้านายของพนักงาน) */
   const modulesWithDisplayTitles = [
-    { ...SYSTEM_MAP_CATALOG_ROW },
+    ...(session.role === "ADMIN" ? [{ ...SYSTEM_MAP_CATALOG_ROW }] : []),
     ...catalogModules.map((m) => ({
       ...m,
       title: displayAppModuleTitle(m.slug, m.title),
@@ -58,6 +59,7 @@ export default async function ModulesCatalogPage() {
       />
       <ModuleSubscriptionBrowser
         modules={modulesWithDisplayTitles}
+        showSystemMapCatalog={session.role === "ADMIN"}
         access={ctx.access}
         initialSubscribedIds={subscribedIds}
         initialTrialIds={trialIds}

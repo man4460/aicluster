@@ -6,6 +6,7 @@ import { setSessionCookie, signSessionToken } from "@/lib/auth/session";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { authRouteErrorResponse } from "@/lib/auth/route-error-response";
+import { SIGNUP_BONUS_TOKENS } from "@/lib/tokens/signup-bonus";
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
         username,
         passwordHash,
         role: "USER",
-        tokens: 7,
+        tokens: SIGNUP_BONUS_TOKENS,
         lastDeductionDate: null,
         subscriptionType: "DAILY",
         subscriptionTier: "NONE",

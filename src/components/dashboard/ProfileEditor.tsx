@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enums";
+import { appDashboardBrandCtaPillButtonClass } from "@/components/app-templates";
 import { TokenTopupModal } from "@/components/dashboard/TokenTopupModal";
+import { REFERRAL_BONUS_TOKENS } from "@/lib/tokens/signup-bonus";
 
 type Initial = {
   email: string;
@@ -23,6 +25,10 @@ type Initial = {
   paymentChannelsNote: string | null;
   defaultPaperSize: string;
   tokens: number;
+  referrerLocked: boolean;
+  referrerSummary: string | null;
+  /** บัญชีทดลอง — ห้ามกรอก/บันทึกเบอร์ผู้แนะนำ */
+  demoAccount?: boolean;
 };
 
 export function ProfileEditor({ initial }: { initial: Initial }) {
@@ -46,6 +52,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
+  const [referrerPhone, setReferrerPhone] = useState("");
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -69,6 +76,11 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
             latitude === "" || Number.isNaN(Number(latitude)) ? null : Number(latitude),
           longitude:
             longitude === "" || Number.isNaN(Number(longitude)) ? null : Number(longitude),
+          ...(!initial.referrerLocked &&
+          !initial.demoAccount &&
+          referrerPhone.trim()
+            ? { referrerPhone: referrerPhone.trim().slice(0, 32) }
+            : {}),
         }),
       });
       const data = (await res.json()) as { error?: string };
@@ -77,6 +89,38 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
         return;
       }
       setMsg("บันทึกแล้ว");
+      setReferrerPhone("");
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveReferrerOnly(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    setMsg(null);
+    if (initial.referrerLocked || initial.demoAccount) return;
+    const raw = referrerPhone.trim().slice(0, 32);
+    if (!raw) {
+      setErr("กรุณากรอกเบอร์ผู้แนะนำ");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ referrerPhone: raw }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setErr(data.error ?? "บันทึกไม่สำเร็จ");
+        return;
+      }
+      setMsg("บันทึกเบอร์ผู้แนะนำแล้ว");
+      setReferrerPhone("");
       router.refresh();
     } finally {
       setLoading(false);
@@ -145,7 +189,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
         <p className="text-center text-sm text-amber-800">โทเคน: {initial.tokens}</p>
         <TokenTopupModal
           triggerLabel="เติมโทเคน"
-          triggerClassName="inline-flex w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
+          triggerClassName={cn(appDashboardBrandCtaPillButtonClass, "w-full")}
           subscriptionTier={initial.subscriptionTier}
           subscriptionType={initial.subscriptionType}
         />
@@ -175,10 +219,63 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
           </button>
         </div>
         {tab === "account" ? (
-          <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-            <p>อีเมล: {initial.email}</p>
-            <p>ชื่อผู้ใช้: @{initial.username}</p>
-            <p>โทเคนคงเหลือ: {initial.tokens}</p>
+          <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            <div className="space-y-2">
+              <p>อีเมล: {initial.email}</p>
+              <p>ชื่อผู้ใช้: @{initial.username}</p>
+              <p>โทเคนคงเหลือ: {initial.tokens}</p>
+            </div>
+            <div className="border-t border-slate-200 pt-4">
+              <p className="text-sm font-semibold text-slate-800">เบอร์โทรผู้แนะนำ</p>
+              <p className="mt-1 text-xs text-slate-600">
+                บันทึกได้ครั้งเดียว — ต้องตรงเบอร์ในโปรไฟล์ของผู้แนะนำในระบบ ผู้แนะนำจะได้ {REFERRAL_BONUS_TOKENS} โทเคนเมื่อบันทึกสำเร็จ
+              </p>
+              {err ? (
+                <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+                  {err}
+                </p>
+              ) : null}
+              {msg ? (
+                <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{msg}</p>
+              ) : null}
+              {initial.demoAccount ? (
+                <p className="mt-2 rounded-lg border border-slate-200 bg-slate-100/90 px-3 py-2 text-sm text-slate-700">
+                  บัญชีทดลองใช้งาน — ไม่สามารถกรอกหรือบันทึกเบอร์ผู้แนะนำได้
+                </p>
+              ) : initial.referrerLocked ? (
+                <p className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-sm text-emerald-900">
+                  บันทึกแล้ว
+                  {initial.referrerSummary ? (
+                    <>
+                      {" "}
+                      — อ้างอิง: <span className="font-medium">{initial.referrerSummary}</span>
+                    </>
+                  ) : null}
+                </p>
+              ) : (
+                <form onSubmit={saveReferrerOnly} className="mt-2 space-y-2">
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="off"
+                    value={referrerPhone}
+                    onChange={(e) => setReferrerPhone(e.target.value)}
+                    className={input}
+                    placeholder="เช่น 0812345678"
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="rounded-lg bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:opacity-60"
+                  >
+                    {loading ? "กำลังบันทึก..." : "บันทึกเบอร์ผู้แนะนำ"}
+                  </button>
+                  <p className="text-[11px] text-slate-500">
+                    หรือบันทึกพร้อมข้อมูลร้านได้จากแท็บ &quot;ตั้งค่าบริษัท/ร้าน&quot;
+                  </p>
+                </form>
+              )}
+            </div>
             <p className="text-xs text-slate-500">ตั้งค่าบริษัท/ร้านอยู่ที่แท็บด้านบน</p>
           </div>
         ) : (

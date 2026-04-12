@@ -151,7 +151,7 @@ export function buildPosTableStaticDocumentHtml(
 ): string {
   const css = pageAndRootCss(paper, pageOpts);
   const safeTitle = escapeDocTitle(documentTitle);
-  return `<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"/><title>${safeTitle}</title><style>${css}</style></head><body><div class="root">${innerHtml}</div></body></html>`;
+  return `<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"/><title>${safeTitle}</title><style>${css}</style></head><body><div id="pos-pdf-root" class="root">${innerHtml}</div></body></html>`;
 }
 
 /**

@@ -2,9 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
+import {
+  applyReferrerFromProfileInTx,
+  referralProfileErrorMessage,
+} from "@/lib/auth/apply-profile-referral";
 import { getBusinessProfile } from "@/lib/profile/business-profile";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import { getBarberDataScope } from "@/lib/trial/module-scopes";
+import { isDemoSessionUsername } from "@/lib/auth/demo-account";
 
 const patchSchema = z.object({
   fullName: z.string().max(255).optional().nullable(),
@@ -16,6 +21,8 @@ const patchSchema = z.object({
   defaultPaperSize: z.enum(["SLIP_58", "SLIP_80", "A4"]).optional(),
   latitude: z.number().finite().optional().nullable(),
   longitude: z.number().finite().optional().nullable(),
+  /** เบอร์ผู้แนะนำ — บันทึกได้ครั้งเดียวต่อบัญชี (ตรงกับ phone ในโปรไฟล์ผู้แนะนำ) */
+  referrerPhone: z.string().max(32).optional(),
 });
 
 export async function GET() {
@@ -36,6 +43,8 @@ export async function GET() {
         avatarUrl: true,
         tokens: true,
         subscriptionTier: true,
+        referredByUserId: true,
+        referredBy: { select: { phone: true, username: true } },
       },
     }),
     prisma.dormitoryProfile.findUnique({
@@ -54,13 +63,21 @@ export async function GET() {
   const business = await getBusinessProfile(auth.session.sub, {
     barberTrialSessionId: barberScope.trialSessionId,
   });
+  const { referredBy, ...userRest } = user;
+  const referrerSummary =
+    user.referredByUserId && referredBy
+      ? referredBy.phone?.trim() || (referredBy.username ? `@${referredBy.username}` : null)
+      : null;
+
   return NextResponse.json({
     profile: {
-      ...user,
+      ...userRest,
       taxId: business?.taxId ?? null,
       promptPayPhone: prodDorm?.promptPayPhone ?? null,
       paymentChannelsNote: prodDorm?.paymentChannelsNote ?? null,
       defaultPaperSize: prodDorm?.defaultPaperSize ?? "SLIP_58",
+      referrerLocked: Boolean(user.referredByUserId),
+      referrerSummary,
     },
   });
 }
@@ -83,29 +100,90 @@ export async function PATCH(req: Request) {
 
   const data = parsed.data;
   const barberScope = await getBarberDataScope(auth.session.sub);
-  const user = await prisma.$transaction(async (tx) => {
-    const updated = await tx.user.update({
-      where: { id: auth.session.sub },
-      data: {
-        ...(data.fullName !== undefined && { fullName: data.fullName }),
-        ...(data.phone !== undefined && { phone: data.phone }),
-        ...(data.address !== undefined && { address: data.address }),
-        ...(data.latitude !== undefined && { latitude: data.latitude }),
-        ...(data.longitude !== undefined && { longitude: data.longitude }),
-      },
-      select: {
-        email: true,
-        username: true,
-        fullName: true,
-        phone: true,
-        address: true,
-        latitude: true,
-        longitude: true,
-        avatarUrl: true,
-        tokens: true,
-        subscriptionTier: true,
-      },
-    });
+
+  const me = await prisma.user.findUnique({
+    where: { id: auth.session.sub },
+    select: { referredByUserId: true, phone: true },
+  });
+  if (!me) return NextResponse.json({ error: "ไม่พบผู้ใช้" }, { status: 404 });
+
+  const referrerRaw =
+    data.referrerPhone !== undefined ? String(data.referrerPhone).trim() : "";
+  if (referrerRaw.length > 0 && isDemoSessionUsername(auth.session.username)) {
+    return NextResponse.json(
+      { error: "บัญชีทดลองใช้งานไม่สามารถบันทึกเบอร์ผู้แนะนำได้" },
+      { status: 403 },
+    );
+  }
+  if (referrerRaw.length > 0 && me.referredByUserId) {
+    return NextResponse.json({ error: referralProfileErrorMessage("REFERRER_ALREADY_SET") }, { status: 400 });
+  }
+
+  const refereePhoneForReferral =
+    data.phone !== undefined ? data.phone : me.phone;
+
+  const hasUserScalarUpdate =
+    data.fullName !== undefined ||
+    data.phone !== undefined ||
+    data.address !== undefined ||
+    data.latitude !== undefined ||
+    data.longitude !== undefined;
+
+  let user;
+  try {
+    user = await prisma.$transaction(async (tx) => {
+      let updated = await tx.user.findUnique({
+        where: { id: auth.session.sub },
+        select: {
+          email: true,
+          username: true,
+          fullName: true,
+          phone: true,
+          address: true,
+          latitude: true,
+          longitude: true,
+          avatarUrl: true,
+          tokens: true,
+          subscriptionTier: true,
+          referredByUserId: true,
+        },
+      });
+      if (!updated) throw new Error("USER_NOT_FOUND");
+
+      if (hasUserScalarUpdate) {
+        updated = await tx.user.update({
+          where: { id: auth.session.sub },
+          data: {
+            ...(data.fullName !== undefined && { fullName: data.fullName }),
+            ...(data.phone !== undefined && { phone: data.phone }),
+            ...(data.address !== undefined && { address: data.address }),
+            ...(data.latitude !== undefined && { latitude: data.latitude }),
+            ...(data.longitude !== undefined && { longitude: data.longitude }),
+          },
+          select: {
+            email: true,
+            username: true,
+            fullName: true,
+            phone: true,
+            address: true,
+            latitude: true,
+            longitude: true,
+            avatarUrl: true,
+            tokens: true,
+            subscriptionTier: true,
+            referredByUserId: true,
+          },
+        });
+      }
+
+      if (referrerRaw.length > 0) {
+        await applyReferrerFromProfileInTx(
+          tx,
+          auth.session.sub,
+          refereePhoneForReferral,
+          referrerRaw,
+        );
+      }
 
     if (data.taxId !== undefined) {
       await tx.barberShopProfile.upsert({
@@ -161,34 +239,66 @@ export async function PATCH(req: Request) {
       });
     }
 
-    const [tax, dorm] = await Promise.all([
-      tx.barberShopProfile.findUnique({
-        where: {
-          ownerUserId_trialSessionId: {
-            ownerUserId: auth.session.sub,
-            trialSessionId: barberScope.trialSessionId,
+      const [tax, dorm, referredBy] = await Promise.all([
+        tx.barberShopProfile.findUnique({
+          where: {
+            ownerUserId_trialSessionId: {
+              ownerUserId: auth.session.sub,
+              trialSessionId: barberScope.trialSessionId,
+            },
           },
-        },
-        select: { taxId: true },
-      }),
-      tx.dormitoryProfile.findUnique({
-        where: {
-          ownerUserId_trialSessionId: {
-            ownerUserId: auth.session.sub,
-            trialSessionId: TRIAL_PROD_SCOPE,
+          select: { taxId: true },
+        }),
+        tx.dormitoryProfile.findUnique({
+          where: {
+            ownerUserId_trialSessionId: {
+              ownerUserId: auth.session.sub,
+              trialSessionId: TRIAL_PROD_SCOPE,
+            },
           },
-        },
-        select: { promptPayPhone: true, paymentChannelsNote: true, defaultPaperSize: true },
-      }),
-    ]);
-    return {
-      ...updated,
-      taxId: tax?.taxId ?? null,
-      promptPayPhone: dorm?.promptPayPhone ?? null,
-      paymentChannelsNote: dorm?.paymentChannelsNote ?? null,
-      defaultPaperSize: dorm?.defaultPaperSize ?? "SLIP_58",
-    };
-  });
+          select: { promptPayPhone: true, paymentChannelsNote: true, defaultPaperSize: true },
+        }),
+        tx.user.findUnique({
+          where: { id: auth.session.sub },
+          select: {
+            referredByUserId: true,
+            referredBy: { select: { phone: true, username: true } },
+          },
+        }),
+      ]);
+
+      const refSummary =
+        referredBy?.referredByUserId && referredBy.referredBy
+          ? referredBy.referredBy.phone?.trim() ||
+            (referredBy.referredBy.username ? `@${referredBy.referredBy.username}` : null)
+          : null;
+
+      return {
+        ...updated,
+        referredByUserId: referredBy?.referredByUserId ?? updated.referredByUserId,
+        taxId: tax?.taxId ?? null,
+        promptPayPhone: dorm?.promptPayPhone ?? null,
+        paymentChannelsNote: dorm?.paymentChannelsNote ?? null,
+        defaultPaperSize: dorm?.defaultPaperSize ?? "SLIP_58",
+        referrerLocked: Boolean(referredBy?.referredByUserId),
+        referrerSummary: refSummary,
+      };
+    });
+  } catch (e) {
+    const code = e instanceof Error ? e.message : "";
+    if (code === "USER_NOT_FOUND") {
+      return NextResponse.json({ error: "ไม่พบผู้ใช้" }, { status: 404 });
+    }
+    if (
+      code === "REFERRER_NOT_FOUND" ||
+      code === "REFERRER_SELF" ||
+      code === "REFERRER_SAME_PHONE" ||
+      code === "REFERRER_ALREADY_SET"
+    ) {
+      return NextResponse.json({ error: referralProfileErrorMessage(code) }, { status: 400 });
+    }
+    throw e;
+  }
 
   return NextResponse.json({ profile: user });
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { AppRevenueCostColumnChart, AppSparkChartPanel, type AppRevenueCostBucket } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { formatBangkokDateTimeStable, formatDormAmountStable } from "@/lib/dormitory/format-display-stable";
 import { DormEmptyDashed, DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
@@ -110,6 +111,9 @@ export function DormPaymentHistoryClient() {
     paidAt: "",
   });
   const [saving, setSaving] = useState(false);
+  const [financeBuckets, setFinanceBuckets] = useState<AppRevenueCostBucket[]>([]);
+  const [financeLoading, setFinanceLoading] = useState(true);
+  const [financeErr, setFinanceErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setErr(null);
@@ -140,6 +144,39 @@ export function DormPaymentHistoryClient() {
       c = true;
     };
   }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setFinanceLoading(true);
+      setFinanceErr(null);
+      try {
+        const q =
+          dateFrom && dateTo ?
+            `?from=${encodeURIComponent(dateFrom)}&to=${encodeURIComponent(dateTo)}`
+          : "";
+        const res = await fetch(`/api/dorm/finance/monthly-revenue-cost${q}`, { cache: "no-store" });
+        const data = (await res.json().catch(() => ({}))) as { buckets?: AppRevenueCostBucket[]; error?: string };
+        if (cancelled) return;
+        if (!res.ok) {
+          setFinanceBuckets([]);
+          setFinanceErr(data.error ?? "โหลดสรุปรายได้/รายจ่ายไม่สำเร็จ");
+          return;
+        }
+        setFinanceBuckets(Array.isArray(data.buckets) ? data.buckets : []);
+      } catch {
+        if (!cancelled) {
+          setFinanceBuckets([]);
+          setFinanceErr("โหลดสรุปไม่สำเร็จ");
+        }
+      } finally {
+        if (!cancelled) setFinanceLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [dateFrom, dateTo]);
 
   const filtered = useMemo(() => {
     let list = rows;
@@ -226,6 +263,100 @@ export function DormPaymentHistoryClient() {
   return (
     <DormPageStack>
       {err ? <p className="text-sm text-rose-600">{err}</p> : null}
+
+      <DormPanelCard
+        title="รายได้หอพัก เทียบรายจ่าย/ต้นทุน (รายเดือน)"
+        description={
+          <>
+            รายได้นับจากรายการที่สถานะ «ชำระแล้ว» ตามวันที่ชำระ (paidAt) · รายจ่ายจากเมนู{" "}
+            <Link href="/dashboard/dormitory/costs" className="font-semibold text-[#4338ca] underline-offset-2 hover:underline">
+              ต้นทุน / รายจ่าย
+            </Link>{" "}
+            · ช่วงเวลาสอดคล้องกับการกรองวันที่ด้านล่าง (ถ้าไม่เลือกวันที่ แสดง 12 เดือนล่าสุด)
+          </>
+        }
+      >
+        {financeErr ? <p className="mb-3 text-sm text-amber-800">{financeErr}</p> : null}
+        {financeLoading ? (
+          <p className="text-center text-sm text-[#66638c]">กำลังโหลดกราฟสรุป…</p>
+        ) : (
+          <>
+            <AppSparkChartPanel>
+              <AppRevenueCostColumnChart
+                className="min-w-0"
+                compact
+                title=""
+                subtitle=""
+                emptyText="ไม่มีข้อมูลในช่วงที่เลือก"
+                buckets={financeBuckets}
+                formatTitle={(b) =>
+                  `รายได้ ${formatDormAmountStable(b.revenue)} · รายจ่าย ${formatDormAmountStable(b.cost)}`
+                }
+              />
+            </AppSparkChartPanel>
+            {financeBuckets.length > 0 ? (
+              <>
+              <ul className="mt-4 grid list-none gap-2 md:hidden">
+                {financeBuckets.map((b) => (
+                  <li
+                    key={b.key}
+                    className="rounded-xl border border-slate-200/90 bg-white/95 px-3 py-2.5 text-sm shadow-sm"
+                  >
+                    <p className="font-semibold text-slate-900">{b.label}</p>
+                    <p className="mt-1 text-xs text-slate-600">
+                      รายได้{" "}
+                      <span className="font-semibold tabular-nums text-emerald-800">
+                        {formatDormAmountStable(b.revenue)}
+                      </span>
+                      {" · "}รายจ่าย{" "}
+                      <span className="font-semibold tabular-nums text-rose-800">
+                        {formatDormAmountStable(b.cost)}
+                      </span>
+                    </p>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-800">
+                      ดุล {formatDormAmountStable(b.revenue - b.cost)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4 hidden overflow-x-auto rounded-xl border border-slate-200/90 md:block">
+                <table className="w-full min-w-[480px] text-left text-sm">
+                  <thead className="border-b border-slate-200 bg-slate-50/95 text-[11px] font-bold text-slate-600">
+                    <tr>
+                      <th className="px-3 py-2">เดือน (ปฏิทินไทย)</th>
+                      <th className="px-3 py-2 text-right">รายได้</th>
+                      <th className="px-3 py-2 text-right">รายจ่าย / ต้นทุน</th>
+                      <th className="px-3 py-2 text-right">คงเหลือ (ดุล)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {financeBuckets.map((b) => (
+                      <tr key={b.key} className="bg-white/90">
+                        <td className="px-3 py-2 font-medium text-slate-900">{b.label}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-emerald-800">
+                          {formatDormAmountStable(b.revenue)}
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums text-rose-800">
+                          {formatDormAmountStable(b.cost)}
+                        </td>
+                        <td
+                          className={cn(
+                            "px-3 py-2 text-right tabular-nums font-semibold",
+                            b.revenue - b.cost >= 0 ? "text-slate-900" : "text-rose-700",
+                          )}
+                        >
+                          {formatDormAmountStable(b.revenue - b.cost)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              </>
+            ) : null}
+          </>
+        )}
+      </DormPanelCard>
 
       <DormPanelCard
         title="ค้นหาและกรอง"

@@ -24,7 +24,7 @@ export function VillagePanelCard({
 }) {
   const hasHead = Boolean(title || description || action);
   return (
-    <div className={cn("app-surface p-4 sm:p-5", className)}>
+    <div className={cn("app-surface min-w-0 p-4 sm:p-5", className)}>
       {hasHead ? (
         <div className="mb-4 flex flex-col gap-3 border-b border-slate-200/80 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">

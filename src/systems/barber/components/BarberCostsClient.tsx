@@ -88,7 +88,7 @@ export function BarberCostsClient({ baseUrl }: Props) {
         description="บันทึกตามหมวด แนบสลิป — ยอดรวมในกราฟหน้ายอดขาย"
         action={
           <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-            <CostToolbarButtons toolbar={toolbar} />
+            <CostToolbarButtons toolbar={toolbar} busy={loading} />
             <BarberDashboardBackLink />
           </div>
         }

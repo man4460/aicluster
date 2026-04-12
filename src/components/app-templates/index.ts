@@ -10,6 +10,8 @@ export { AppImageThumb, type AppImageThumbProps } from "./AppImageThumb";
 export { useAppImageLightbox, type AppImageLightboxState } from "./useAppImageLightbox";
 
 export {
+  appDashboardBrandCtaPillButtonClass,
+  appDashboardBrandGradientFillClass,
   appDashboardSectionSlateClass,
   appDashboardSectionVioletClass,
   appDashboardHistoryListShellClass,

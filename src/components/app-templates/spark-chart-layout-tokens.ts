@@ -5,7 +5,7 @@
 
 /** การ์ดห่อกราฟแต่ละชุด (โทนม่วง MAWELL) */
 export const appSparkChartPanelClass =
-  "flex min-h-0 flex-col rounded-lg border border-[#d8d6ec] bg-[#faf9ff]/70 p-3 shadow-sm";
+  "flex min-h-0 w-full min-w-0 flex-col rounded-lg border border-[#d8d6ec] bg-[#faf9ff]/70 p-3 shadow-sm sm:p-4";
 
 /** Grid สองคอลัมน์ (มือถือสแต็ก) สำหรับวางกราฟคู่ข้างกัน */
 export const appSparkChartsTwoColumnGridClass =

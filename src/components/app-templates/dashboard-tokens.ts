@@ -1,6 +1,20 @@
 /**
  * คลาส Tailwind มาตรฐานแดชบอร์ด — ให้การ์ด/รายการสอดคล้องกันระหว่างโมดูล
  */
+import { cn } from "@/lib/cn";
+
+/**
+ * ไล่สีปุ่ม CTA แบรนด์ MAWELL — ฟ้า/น้ำเงิน → ม่วง → ชมพู (แนวนอน)
+ * เทมเพลตเดียวกับปุ่ม «เติมโทเคน» / Subscribe / เปิดแผนผัง — อย่าคัดลอก hex ไปจุดอื่น
+ */
+export const appDashboardBrandGradientFillClass =
+  "bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] hover:from-[#0000a3] hover:via-[#7c3aed] hover:to-[#db2777]";
+
+/** ปุ่ม pill เต็ม (ข้อความขาว) — ค่าเริ่มต้นของ `TokenTopupModal`; ใส่ `w-full` ตามบริบท */
+export const appDashboardBrandCtaPillButtonClass = cn(
+  "inline-flex min-h-[48px] shrink-0 items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/25 transition active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50 touch-manipulation",
+  appDashboardBrandGradientFillClass,
+);
 export const appDashboardSectionSlateClass =
   "space-y-4 sm:space-y-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5";
 

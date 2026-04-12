@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getBusinessProfile } from "@/lib/profile/business-profile";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import { getBarberDataScope } from "@/lib/trial/module-scopes";
+import { isDemoSessionUsername } from "@/lib/auth/demo-account";
 
 export const metadata: Metadata = {
   title: "โปรไฟล์ | MAWELL Buffet",
@@ -30,6 +31,8 @@ export default async function ProfilePage() {
         longitude: true,
         avatarUrl: true,
         tokens: true,
+        referredByUserId: true,
+        referredBy: { select: { phone: true, username: true } },
       },
     }),
     prisma.dormitoryProfile.findUnique({
@@ -49,6 +52,13 @@ export default async function ProfilePage() {
   const business = await getBusinessProfile(session.sub, {
     barberTrialSessionId: barberScope.trialSessionId,
   });
+
+  const { referredBy, ...userForEditor } = user;
+  const referrerSummary =
+    user.referredByUserId && referredBy
+      ? referredBy.phone?.trim() || (referredBy.username ? `@${referredBy.username}` : null)
+      : null;
+  const demoAccount = isDemoSessionUsername(user.username);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -71,11 +81,14 @@ export default async function ProfilePage() {
       </header>
       <ProfileEditor
         initial={{
-          ...user,
+          ...userForEditor,
           taxId: business?.taxId ?? null,
           promptPayPhone: prodDorm?.promptPayPhone ?? null,
           paymentChannelsNote: prodDorm?.paymentChannelsNote ?? null,
           defaultPaperSize: prodDorm?.defaultPaperSize ?? "SLIP_58",
+          referrerLocked: Boolean(user.referredByUserId),
+          referrerSummary,
+          demoAccount,
         }}
       />
     </div>

@@ -171,7 +171,7 @@ export function VillageReportsClient({ initialYear }: { initialYear: number }) {
             icon={<IconChart className="h-5 w-5 text-amber-800" />}
             tone="bg-amber-100/90"
             title="สรุป 12 เดือน"
-            hint="ยอดรวมรายเดือน จำนวนบิล และอัตราเก็บได้"
+            hint="ยอดรวมรายเดือน จำนวนบิล อัตราเก็บได้ รายจ่าย/ต้นทุน และดุล"
             href={api.exportUrl("annual_summary", year)}
             cta={`ดาวน์โหลด · ${year}`}
           />

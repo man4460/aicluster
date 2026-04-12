@@ -17,7 +17,7 @@ export function DormLayoutChrome({
         <div className="min-w-0">
           <h1 className="text-xl font-semibold tracking-tight text-[#2e2a58] sm:text-2xl">จัดการหอพัก</h1>
           <p className="mt-1 max-w-2xl text-sm leading-snug text-[#66638c]">
-            ผังห้อง · มิเตอร์ · แบ่งบิล · ประวัติชำระ · ตั้งค่า
+            ผังห้อง · มิเตอร์ · แบ่งบิล · ประวัติชำระ · ต้นทุน/รายจ่าย · ตั้งค่า
           </p>
         </div>
       </header>

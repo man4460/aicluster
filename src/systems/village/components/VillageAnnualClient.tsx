@@ -2,12 +2,24 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  AppRevenueCostColumnChart,
+  AppSparkChartPanel,
+  type AppRevenueCostBucket,
+} from "@/components/app-templates";
+import { cn } from "@/lib/cn";
+import { formatDormAmountStable } from "@/lib/dormitory/format-display-stable";
 import { VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
 import { createVillageSessionApiRepository } from "@/systems/village/village-service";
 import { villageBtnPrimary, villageBtnSecondary, villageField } from "@/systems/village/village-ui";
-import { cn } from "@/lib/cn";
 
-type MonthRow = { year_month: string; house_rows: number; total_due: number; total_paid: number };
+type MonthRow = {
+  year_month: string;
+  house_rows: number;
+  total_due: number;
+  total_paid: number;
+  total_cost: number;
+};
 
 const TH_MONTH_SHORT = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."] as const;
 
@@ -17,97 +29,32 @@ function sparkMonthLabel(ym: string) {
   return ym.slice(5);
 }
 
-/** กราฟแท่งซ้อน — เทา = เรียกเก็บ, เขียว = รับแล้ว (สเกลตามเดือนที่เรียกสูงสุดในปี) */
-function AnnualMonthBars({ data }: { data: { year_month: string; total_due: number; total_paid: number }[] }) {
-  const n = data.length;
-  const maxDue = Math.max(...data.map((d) => d.total_due), 1);
-  const vbW = 520;
-  const vbH = 220;
-  const padL = 40;
-  const padR = 14;
-  const padT = 18;
-  const padB = 44;
-  const chartW = vbW - padL - padR;
-  const chartH = vbH - padT - padB;
-  const slot = n > 0 ? chartW / n : 1;
-  const barW = Math.max(8, slot * 0.58);
-
-  return (
-    <div className="w-full">
-      <p className="mb-2 text-center text-[11px] leading-snug text-slate-500 sm:hidden">
-        แตะค้างที่แท่งเพื่อดูยอด · เลื่อนซ้าย-ขวาได้ถ้าจอแคบ
-      </p>
-      <div
-        className={cn(
-          "w-[calc(100%+2rem)] max-w-none -mx-4 touch-pan-x sm:-mx-5 sm:w-[calc(100%+2.5rem)]",
-          "overflow-x-auto overflow-y-hidden overscroll-x-contain [-webkit-overflow-scrolling:touch]",
-          "[scrollbar-width:thin] [scrollbar-color:rgb(203_213_225)_transparent]",
-        )}
-      >
-        <svg
-          viewBox={`0 0 ${vbW} ${vbH}`}
-          preserveAspectRatio="xMidYMid meet"
-          className="block aspect-[520/220] w-full min-w-[340px] max-w-none sm:min-w-full"
-          role="img"
-          aria-label="กราฟสรุปรายเดือน แท่งเทาเรียกเก็บ แท่งเขียวรับแล้ว"
-        >
-          {[0, 0.5, 1].map((t) => {
-            const y = padT + chartH * (1 - t);
-            return (
-              <line
-                key={t}
-                x1={padL}
-                x2={vbW - padR}
-                y1={y}
-                y2={y}
-                stroke="rgb(226 232 240)"
-                strokeWidth="0.75"
-                strokeDasharray={t === 0 ? undefined : "3 4"}
-              />
-            );
-          })}
-          <text x={padL - 6} y={padT + 5} fill="rgb(148 163 184)" fontSize={10} textAnchor="end">
-            สูงสุด
-          </text>
-          <text x={padL - 6} y={padT + chartH + 4} fill="rgb(148 163 184)" fontSize={10} textAnchor="end">
-            0
-          </text>
-          {data.map((d, i) => {
-            const cx = padL + i * slot + slot / 2;
-            const x = cx - barW / 2;
-            const dueH = (d.total_due / maxDue) * chartH;
-            const paidRatio = d.total_due > 0 ? Math.min(1, d.total_paid / d.total_due) : 0;
-            const paidH = dueH * paidRatio;
-            const baseY = padT + chartH;
-            const pct = d.total_due > 0 ? Math.round(Math.min(100, (d.total_paid / d.total_due) * 100)) : 0;
-            return (
-              <g key={d.year_month}>
-                <title>{`${d.year_month}: เรียก ${d.total_due.toLocaleString("th-TH")} บาท · รับ ${d.total_paid.toLocaleString("th-TH")} (${pct}%)`}</title>
-                <rect x={x} y={baseY - dueH} width={barW} height={dueH} rx={4} className="fill-slate-200/95" />
-                <rect x={x} y={baseY - paidH} width={barW} height={paidH} rx={4} className="fill-emerald-500" />
-                <text x={cx} y={vbH - 8} fill="rgb(100 116 139)" fontSize={10} textAnchor="middle">
-                  {sparkMonthLabel(d.year_month)}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-slate-600 sm:text-[13px]">
-        <span className="inline-flex items-center gap-2">
-          <span className="h-2.5 w-2.5 shrink-0 rounded-sm bg-slate-300" /> เรียกเก็บ
-        </span>
-        <span className="inline-flex items-center gap-2">
-          <span className="h-2.5 w-2.5 shrink-0 rounded-sm bg-emerald-500" /> รับแล้ว
-        </span>
-      </div>
-    </div>
-  );
+function bucketLabel(ym: string) {
+  const y = ym.slice(0, 4);
+  const mi = Number(ym.slice(5, 7));
+  const short = mi >= 1 && mi <= 12 ? TH_MONTH_SHORT[mi - 1] : ym.slice(5);
+  return `${short} ${y}`;
 }
 
 function monthPct(m: MonthRow) {
   if (m.total_due <= 0) return null;
   return Math.round(Math.min(100, (m.total_paid / m.total_due) * 100));
+}
+
+function normalizeRow(r: {
+  year_month: string;
+  house_rows: number;
+  total_due: number;
+  total_paid: number;
+  total_cost?: number;
+}): MonthRow {
+  return {
+    year_month: r.year_month,
+    house_rows: r.house_rows,
+    total_due: r.total_due,
+    total_paid: r.total_paid,
+    total_cost: r.total_cost ?? 0,
+  };
 }
 
 export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
@@ -120,8 +67,16 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
     let ok = true;
     void (async () => {
       try {
-        const r = (await api.getSummary(year)) as { months: MonthRow[] };
-        if (ok) setRows(r.months);
+        const r = (await api.getSummary(year)) as {
+          months: {
+            year_month: string;
+            house_rows: number;
+            total_due: number;
+            total_paid: number;
+            total_cost?: number;
+          }[];
+        };
+        if (ok) setRows((r.months ?? []).map(normalizeRow));
       } catch (e) {
         if (ok) setErr(e instanceof Error ? e.message : "โหลดไม่สำเร็จ");
       }
@@ -137,17 +92,26 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
         rows: acc.rows + m.house_rows,
         due: acc.due + m.total_due,
         paid: acc.paid + m.total_paid,
+        cost: acc.cost + m.total_cost,
       }),
-      { rows: 0, due: 0, paid: 0 },
+      { rows: 0, due: 0, paid: 0, cost: 0 },
     );
   }, [rows]);
 
-  const chartPoints = useMemo(
-    () => rows.map((m) => ({ year_month: m.year_month, total_due: m.total_due, total_paid: m.total_paid })),
-    [rows],
-  );
+  const financeBuckets = useMemo((): AppRevenueCostBucket[] => {
+    const maxVal = Math.max(1, ...rows.flatMap((m) => [m.total_paid, m.total_cost]));
+    return rows.map((m) => ({
+      key: m.year_month,
+      label: bucketLabel(m.year_month),
+      revenue: Math.round(m.total_paid),
+      cost: m.total_cost,
+      revenuePct: Math.round((m.total_paid / maxVal) * 100),
+      costPct: Math.round((m.total_cost / maxVal) * 100),
+    }));
+  }, [rows]);
 
   const totalPct = totals.due > 0 ? Math.round(Math.min(100, (totals.paid / totals.due) * 100)) : null;
+  const totalNet = totals.paid - totals.cost;
 
   return (
     <VillagePageStack>
@@ -177,7 +141,10 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
             />
           </label>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:flex-wrap sm:gap-2">
-            <a href={api.exportUrl("annual_summary", year)} className={cn(villageBtnPrimary, "w-full justify-center sm:w-auto sm:min-w-[9rem]")}>
+            <a
+              href={api.exportUrl("annual_summary", year)}
+              className={cn(villageBtnPrimary, "w-full justify-center sm:w-auto sm:min-w-[9rem]")}
+            >
               ดาวน์โหลด CSV
             </a>
             <Link
@@ -193,10 +160,90 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
       {err ? <p className="text-sm text-rose-600">{err}</p> : null}
 
       <VillagePanelCard
-        title="กราฟรายเดือน"
-        description="แท่งสูงตามยอดเรียกเก็บของเดือนนั้น · ส่วนเขียวคือยอดรับแล้ว (สเกลจากเดือนที่เรียกสูงสุดในปี)"
+        title="รายได้ค่าส่วนกลาง เทียบรายจ่าย/ต้นทุน (รายเดือน)"
+        description={
+          <>
+            รายได้ = ยอดรับแล้วของบิลในเดือนนั้น (งวดเดียวกับตารางด้านล่าง) · รายจ่ายจากเมนู{" "}
+            <Link href="/dashboard/village/costs" className="font-semibold text-[#4338ca] underline-offset-2 hover:underline">
+              ต้นทุน / รายจ่าย
+            </Link>{" "}
+            ตามวันจ่ายจริง (spentAt) ในปฏิทินไทย
+          </>
+        }
       >
-        {chartPoints.length > 0 ? <AnnualMonthBars data={chartPoints} /> : (
+        {rows.length > 0 ? (
+          <>
+            <AppSparkChartPanel className="w-full min-w-0">
+              <AppRevenueCostColumnChart
+                className="flex min-h-0 w-full min-w-0 flex-1 flex-col"
+                compact
+                title=""
+                subtitle=""
+                emptyText="ไม่มีข้อมูลในปีนี้"
+                buckets={financeBuckets}
+                formatTitle={(b) =>
+                  `รายได้ ${formatDormAmountStable(b.revenue)} · รายจ่าย ${formatDormAmountStable(b.cost)}`
+                }
+              />
+            </AppSparkChartPanel>
+            <ul className="mt-4 grid list-none gap-2 md:hidden">
+              {financeBuckets.map((b) => (
+                <li
+                  key={b.key}
+                  className="rounded-xl border border-slate-200/90 bg-white/95 px-3 py-2.5 text-sm shadow-sm"
+                >
+                  <p className="font-semibold text-slate-900">{b.label}</p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    รายได้{" "}
+                    <span className="font-semibold tabular-nums text-emerald-800">
+                      {formatDormAmountStable(b.revenue)}
+                    </span>
+                    {" · "}รายจ่าย{" "}
+                    <span className="font-semibold tabular-nums text-rose-800">
+                      {formatDormAmountStable(b.cost)}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-800">
+                    ดุล {formatDormAmountStable(b.revenue - b.cost)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 hidden overflow-x-auto rounded-xl border border-slate-200/90 md:block">
+              <table className="w-full min-w-[520px] text-left text-sm">
+                <thead className="border-b border-slate-200 bg-slate-50/95 text-[11px] font-bold text-slate-600">
+                  <tr>
+                    <th className="px-3 py-2">เดือน (ปฏิทินไทย)</th>
+                    <th className="px-3 py-2 text-right">รายได้ (รับแล้ว)</th>
+                    <th className="px-3 py-2 text-right">รายจ่าย / ต้นทุน</th>
+                    <th className="px-3 py-2 text-right">คงเหลือ (ดุล)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {financeBuckets.map((b) => (
+                    <tr key={b.key} className="bg-white/90">
+                      <td className="px-3 py-2 font-medium text-slate-900">{b.label}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-emerald-800">
+                        {formatDormAmountStable(b.revenue)}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-rose-800">
+                        {formatDormAmountStable(b.cost)}
+                      </td>
+                      <td
+                        className={cn(
+                          "px-3 py-2 text-right tabular-nums font-semibold",
+                          b.revenue - b.cost >= 0 ? "text-slate-900" : "text-rose-700",
+                        )}
+                      >
+                        {formatDormAmountStable(b.revenue - b.cost)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
           <p className="py-6 text-center text-sm text-slate-500">ไม่มีข้อมูล</p>
         )}
       </VillagePanelCard>
@@ -210,7 +257,71 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
           </>
         }
       >
-        <div className="hidden md:block">
+        <div className="hidden lg:block">
+          <div className="overflow-x-auto rounded-xl border border-slate-200/80 [-webkit-overflow-scrolling:touch]">
+            <table className="w-full min-w-[880px] text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50/95 text-[11px] font-bold tracking-wide text-slate-600">
+                <tr>
+                  <th className="whitespace-nowrap px-3 py-2.5">เดือน</th>
+                  <th className="whitespace-nowrap px-3 py-2.5">แถวบิล</th>
+                  <th className="whitespace-nowrap px-3 py-2.5">เรียกเก็บ</th>
+                  <th className="whitespace-nowrap px-3 py-2.5">รับแล้ว</th>
+                  <th className="whitespace-nowrap px-3 py-2.5">รายจ่าย / ต้นทุน</th>
+                  <th className="whitespace-nowrap px-3 py-2.5">ดุล</th>
+                  <th className="whitespace-nowrap px-3 py-2.5">% เก็บได้</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rows.map((m) => {
+                  const p = monthPct(m);
+                  const net = m.total_paid - m.total_cost;
+                  return (
+                    <tr key={m.year_month} className="bg-white/80 text-[13px] hover:bg-slate-50/80">
+                      <td className="whitespace-nowrap px-3 py-2 font-mono text-xs font-semibold text-slate-800">
+                        {m.year_month}
+                      </td>
+                      <td className="px-3 py-2 tabular-nums">{m.house_rows}</td>
+                      <td className="px-3 py-2 tabular-nums">{m.total_due.toLocaleString("th-TH")}</td>
+                      <td className="px-3 py-2 tabular-nums text-emerald-800/90">
+                        {m.total_paid.toLocaleString("th-TH")}
+                      </td>
+                      <td className="px-3 py-2 tabular-nums text-rose-800/90">
+                        {m.total_cost.toLocaleString("th-TH")}
+                      </td>
+                      <td
+                        className={cn(
+                          "px-3 py-2 font-semibold tabular-nums",
+                          net >= 0 ? "text-slate-900" : "text-rose-700",
+                        )}
+                      >
+                        {net.toLocaleString("th-TH")}
+                      </td>
+                      <td className="px-3 py-2 font-semibold tabular-nums">{p != null ? `${p}%` : "—"}</td>
+                    </tr>
+                  );
+                })}
+                <tr className="border-t-2 border-slate-200 bg-gradient-to-r from-slate-50 to-indigo-50/40 text-[13px] font-bold">
+                  <td className="px-3 py-2.5 text-slate-900">รวมทั้งปี</td>
+                  <td className="px-3 py-2.5 tabular-nums">{totals.rows}</td>
+                  <td className="px-3 py-2.5 tabular-nums">{totals.due.toLocaleString("th-TH")}</td>
+                  <td className="px-3 py-2.5 tabular-nums text-emerald-900">{totals.paid.toLocaleString("th-TH")}</td>
+                  <td className="px-3 py-2.5 tabular-nums text-rose-900">{totals.cost.toLocaleString("th-TH")}</td>
+                  <td
+                    className={cn(
+                      "px-3 py-2.5 tabular-nums",
+                      totalNet >= 0 ? "text-slate-900" : "text-rose-800",
+                    )}
+                  >
+                    {totalNet.toLocaleString("th-TH")}
+                  </td>
+                  <td className="px-3 py-2.5 tabular-nums">{totalPct != null ? `${totalPct}%` : "—"}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="hidden md:block lg:hidden">
           <div className="overflow-x-auto rounded-xl border border-slate-200/80 [-webkit-overflow-scrolling:touch]">
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50/95 text-[11px] font-bold tracking-wide text-slate-600">
@@ -227,10 +338,14 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
                   const p = monthPct(m);
                   return (
                     <tr key={m.year_month} className="bg-white/80 text-[13px] hover:bg-slate-50/80">
-                      <td className="whitespace-nowrap px-3 py-2 font-mono text-xs font-semibold text-slate-800">{m.year_month}</td>
+                      <td className="whitespace-nowrap px-3 py-2 font-mono text-xs font-semibold text-slate-800">
+                        {m.year_month}
+                      </td>
                       <td className="px-3 py-2 tabular-nums">{m.house_rows}</td>
                       <td className="px-3 py-2 tabular-nums">{m.total_due.toLocaleString("th-TH")}</td>
-                      <td className="px-3 py-2 tabular-nums text-emerald-800/90">{m.total_paid.toLocaleString("th-TH")}</td>
+                      <td className="px-3 py-2 tabular-nums text-emerald-800/90">
+                        {m.total_paid.toLocaleString("th-TH")}
+                      </td>
                       <td className="px-3 py-2 font-semibold tabular-nums">{p != null ? `${p}%` : "—"}</td>
                     </tr>
                   );
@@ -245,11 +360,15 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
               </tbody>
             </table>
           </div>
+          <p className="mt-2 text-center text-[11px] text-slate-500">
+            รายจ่ายและดุล — ดูได้จากกราฟด้านบนหรือขยายหน้าจอให้กว้างขึ้น
+          </p>
         </div>
 
         <ul className="grid list-none gap-2 md:hidden">
           {rows.map((m) => {
             const p = monthPct(m);
+            const net = m.total_paid - m.total_cost;
             return (
               <li
                 key={m.year_month}
@@ -276,6 +395,21 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
                   <div>
                     <span className="text-emerald-700/80">รับแล้ว</span>
                     <p className="font-bold tabular-nums text-emerald-900">{m.total_paid.toLocaleString("th-TH")}</p>
+                  </div>
+                  <div>
+                    <span className="text-rose-700/80">รายจ่าย</span>
+                    <p className="font-bold tabular-nums text-rose-900">{m.total_cost.toLocaleString("th-TH")}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">ดุล</span>
+                    <p
+                      className={cn(
+                        "font-bold tabular-nums",
+                        net >= 0 ? "text-slate-900" : "text-rose-700",
+                      )}
+                    >
+                      {net.toLocaleString("th-TH")}
+                    </p>
                   </div>
                   <div className="col-span-2 flex items-center justify-between border-t border-slate-100/90 pt-1.5">
                     <span className="text-[10px] font-semibold text-slate-500">% เก็บได้</span>
@@ -304,6 +438,21 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
                 <div>
                   <span className="text-emerald-800/80">รับแล้ว</span>
                   <p className="font-bold tabular-nums text-emerald-900">{totals.paid.toLocaleString("th-TH")}</p>
+                </div>
+                <div>
+                  <span className="text-rose-800/80">รายจ่าย</span>
+                  <p className="font-bold tabular-nums text-rose-900">{totals.cost.toLocaleString("th-TH")}</p>
+                </div>
+                <div>
+                  <span className="text-slate-600">ดุล</span>
+                  <p
+                    className={cn(
+                      "font-bold tabular-nums",
+                      totalNet >= 0 ? "text-slate-900" : "text-rose-700",
+                    )}
+                  >
+                    {totalNet.toLocaleString("th-TH")}
+                  </p>
                 </div>
               </div>
             </div>

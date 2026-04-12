@@ -16,6 +16,8 @@ const MODEL_LABELS: Record<string, string> = {
   Tenant: "ผู้เช่า",
   UtilityBill: "บิลค่าน้ำ/ไฟ",
   SplitBillPayment: "รายการจ่ายเงิน (หอพัก)",
+  DormitoryCostCategory: "หมวดต้นทุน (หอพัก)",
+  DormitoryCostEntry: "รายการต้นทุน (หอพัก)",
   BarberPackage: "แพ็กบริการ (ร้านตัดผม)",
   BarberCustomer: "ลูกค้า (ร้านตัดผม)",
   BarberBooking: "การจอง (ร้านตัดผม)",

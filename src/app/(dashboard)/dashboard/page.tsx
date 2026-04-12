@@ -4,7 +4,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
 import { canAccessAppModule } from "@/lib/modules/access";
+import { appDashboardBrandCtaPillButtonClass } from "@/components/app-templates";
 import { TokenTopupModal } from "@/components/dashboard/TokenTopupModal";
+import { cn } from "@/lib/cn";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import {
@@ -21,7 +23,8 @@ import {
   dashboardModuleCardDescription,
   dashboardSystemMapCardDescription,
 } from "@/lib/modules/dashboard-card-descriptions";
-import { SYSTEM_MAP_CATALOG_ROW } from "@/lib/modules/system-map-catalog";
+import { SYSTEM_MAP_CATALOG_ROW, SYSTEM_MAP_CATALOG_SLUG } from "@/lib/modules/system-map-catalog";
+import { DashboardDemoTryoutCta } from "@/components/dashboard/DashboardDemoTryoutCta";
 import { DashboardModuleHeroCard } from "@/components/dashboard/DashboardModuleHeroCard";
 
 export const metadata: Metadata = {
@@ -81,6 +84,7 @@ export default async function DashboardHomePage() {
     tokens: user.tokens,
   };
   const subscribedModules = modules
+    .filter((m) => m.slug !== SYSTEM_MAP_CATALOG_SLUG)
     .filter((m) => isMqttServiceModuleEnabled() || m.slug !== MQTT_SERVICE_MODULE_SLUG)
     .filter((m) => !user.employerUserId || STAFF_ALLOWED_MODULE_SLUGS.has(m.slug))
     .filter((m) => accessSet.has(m.id))
@@ -153,13 +157,13 @@ export default async function DashboardHomePage() {
             <p className="text-sm text-[#66638c]">
               พร้อมใช้งาน <span className="font-semibold text-[#2e2a58]">{subscribedModules.length}</span> ระบบ
               <span className="text-[#94a3b8]"> · </span>
-              Subscribe หรือทดลอง
+              Subscribe เพื่อเปิดระบบ
             </p>
           </div>
           <div className="flex w-full shrink-0 flex-col gap-3 sm:max-w-xs lg:w-auto lg:min-w-[220px]">
             <TokenTopupModal
               triggerLabel="เติมโทเคน"
-              triggerClassName="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-[#0000BF] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0000BF]/25 transition hover:bg-[#0000a3] active:scale-[0.99]"
+              triggerClassName={cn(appDashboardBrandCtaPillButtonClass, "w-full")}
               subscriptionTier={user.subscriptionTier}
               subscriptionType={user.subscriptionType}
             />
@@ -172,6 +176,7 @@ export default async function DashboardHomePage() {
               </svg>
               ดูแพ็กเกจ
             </Link>
+            <DashboardDemoTryoutCta username={user.username} />
           </div>
         </div>
       </section>
@@ -242,17 +247,21 @@ export default async function DashboardHomePage() {
                 โปรแกรมที่ใช้งานได้
               </h2>
               <p className="mt-1 max-w-xl text-sm text-[#66638c]">
-                เลือกการ์ดเพื่อเข้าใช้งาน หรือเปิดแผนผังเพื่อดูภาพรวมระบบ
+                {user.role === "ADMIN"
+                  ? "เลือกการ์ดเพื่อเข้าใช้งาน หรือเปิดแผนผังเพื่อดูภาพรวมระบบ"
+                  : "เลือกการ์ดเพื่อเข้าใช้งาน"}
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch sm:justify-end sm:gap-2">
               <div className="flex flex-wrap gap-2">
-                <Link
-                  href="/dashboard/explore"
-                  className="inline-flex min-h-[42px] items-center justify-center rounded-2xl border border-[#0000BF]/15 bg-white/90 px-4 py-2 text-sm font-semibold text-[#0000BF] shadow-sm backdrop-blur-sm transition hover:border-[#0000BF]/30 hover:bg-white"
-                >
-                  แผนผังระบบ
-                </Link>
+                {user.role === "ADMIN" ? (
+                  <Link
+                    href="/dashboard/explore"
+                    className="inline-flex min-h-[42px] items-center justify-center rounded-2xl border border-[#0000BF]/15 bg-white/90 px-4 py-2 text-sm font-semibold text-[#0000BF] shadow-sm backdrop-blur-sm transition hover:border-[#0000BF]/30 hover:bg-white"
+                  >
+                    แผนผังระบบ
+                  </Link>
+                ) : null}
                 <Link
                   href="/dashboard/modules"
                   className="inline-flex min-h-[42px] items-center justify-center rounded-2xl border border-slate-200/90 bg-white/80 px-4 py-2 text-sm font-semibold text-[#2e2a58] shadow-sm transition hover:border-[#c7d2fe] hover:bg-white"
@@ -279,14 +288,16 @@ export default async function DashboardHomePage() {
           </p>
         ) : null}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <DashboardModuleHeroCard
-            variant="systemMap"
-            groupId={SYSTEM_MAP_CATALOG_ROW.groupId}
-            title={SYSTEM_MAP_CATALOG_ROW.title}
-            description={dashboardSystemMapCardDescription()}
-            href="/dashboard/explore"
-            ctaLabel="เปิดแผนผังระบบ"
-          />
+          {user.role === "ADMIN" ? (
+            <DashboardModuleHeroCard
+              variant="systemMap"
+              groupId={SYSTEM_MAP_CATALOG_ROW.groupId}
+              title={SYSTEM_MAP_CATALOG_ROW.title}
+              description={dashboardSystemMapCardDescription()}
+              href="/dashboard/explore"
+              ctaLabel="เปิดแผนผังระบบ"
+            />
+          ) : null}
           {subscribedModules.map((m) => (
             <DashboardModuleHeroCard
               key={m.id}
@@ -301,7 +312,7 @@ export default async function DashboardHomePage() {
         </div>
         {subscribedModules.length === 0 ? (
           <div className="rounded-3xl border border-amber-200/80 bg-gradient-to-r from-amber-50/95 to-rose-50/70 px-4 py-3 text-sm text-amber-900 shadow-md backdrop-blur-sm">
-            ยังไม่มีระบบที่ Subscribe หรือทดลอง — กด{" "}
+            ยังไม่มีระบบที่เปิดใช้ — กด{" "}
             <Link href="/dashboard/modules" className="font-semibold underline">
               ดูระบบทั้งหมด
             </Link>{" "}

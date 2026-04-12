@@ -2,16 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { cn } from "@/lib/cn";
 import { useRouter } from "next/navigation";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
-import { canAccessAppModule, canStartTrialForModule, type UserAccessFields } from "@/lib/modules/access";
+import { canAccessAppModule, type UserAccessFields } from "@/lib/modules/access";
 import { MODULE_RESUBSCRIBE_COOLDOWN_MS } from "@/lib/modules/module-subscription-cooldown";
 import { isSystemMapCatalogSlug } from "@/lib/modules/system-map-catalog";
 import {
   DashboardModuleHeroCard,
-  dashboardModulePrimaryButtonCore,
   dashboardModulePrimaryCtaClass,
+  dashboardModuleSubscribeButtonClass,
 } from "@/components/dashboard/DashboardModuleHeroCard";
 import { formatBangkokDateTimeLong } from "@/lib/time/bangkok";
 
@@ -26,8 +25,11 @@ type ModuleCardDTO = {
 
 type Props = {
   modules: ModuleCardDTO[];
+  /** แสดงการ์ดแผนผังระบบ — ต้องตรงกับบัญชีแอดมินที่ล็อกอิน (ส่งจากเซิร์ฟเวอร์) */
+  showSystemMapCatalog?: boolean;
   access: UserAccessFields;
   initialSubscribedIds: string[];
+  /** โมดูลที่เคยเปิดทดลองแบบเก่า (ยังเหลือสิทธิ์จนกว่าจะหมดอายุ) — ไม่มีปุ่มเริ่มทดลองใหม่แล้ว */
   initialTrialIds?: string[];
   initialCooldownUnlocks?: Record<string, string>;
   /** Date.now() ตอน render บนเซิร์ฟเวอร์ — ใช้แทน Date.now() รอบแรกบนไคลเอนต์เพื่อกัน hydration mismatch ตอนเช็ค cooldown */
@@ -72,6 +74,7 @@ function groupTone(groupId: number): { header: string; chip: string; icon: strin
 
 export function ModuleSubscriptionBrowser({
   modules,
+  showSystemMapCatalog = false,
   access,
   initialSubscribedIds,
   initialTrialIds = [],
@@ -85,26 +88,47 @@ export function ModuleSubscriptionBrowser({
 
   const [q, setQ] = useState("");
   const [savedSubscribedIds, setSavedSubscribedIds] = useState<Set<string>>(() => new Set(initialSubscribedIds));
-  const [trialIds, setTrialIds] = useState<Set<string>>(() => new Set(initialTrialIds));
+  /** สิทธิ์เข้าโมดูลชั่วคราวจากระบบทดลองแบบเก่า (ไม่มีปุ่มเริ่มใหม่) */
+  const [legacyTrialAccessIds, setLegacyTrialAccessIds] = useState<Set<string>>(() => {
+    const sub = new Set(initialSubscribedIds);
+    return new Set(initialTrialIds.filter((id) => !sub.has(id)));
+  });
   const [cooldownUnlocks, setCooldownUnlocks] = useState<Record<string, string>>(() => ({ ...initialCooldownUnlocks }));
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [infoBanner, setInfoBanner] = useState<string | null>(null);
   const [pendingUnsubscribe, setPendingUnsubscribe] = useState<{ id: string; title: string } | null>(null);
 
+  const subSyncKey = useMemo(() => [...initialSubscribedIds].sort().join(","), [initialSubscribedIds]);
+  const trialSyncKey = useMemo(() => [...initialTrialIds].sort().join(","), [initialTrialIds]);
+
   useEffect(() => {
     setCooldownUnlocks({ ...initialCooldownUnlocks });
   }, [initialCooldownUnlocks]);
+
+  useEffect(() => {
+    setSavedSubscribedIds(new Set(initialSubscribedIds));
+    const sub = new Set(initialSubscribedIds);
+    setLegacyTrialAccessIds(new Set(initialTrialIds.filter((id) => !sub.has(id))));
+  }, [subSyncKey, trialSyncKey, initialSubscribedIds, initialTrialIds]);
 
   const isDailyPlan = access.role !== "ADMIN" && access.subscriptionType !== "BUFFET";
   const reachedDailyLimit = isDailyPlan && savedSubscribedIds.size >= 1;
   const upgradeMessage = "สายรายวันเลือกได้เพียง 1 ระบบ กรุณาเปลี่ยนแพ็กเกจเพื่อเพิ่มระบบ";
 
+  const modulesForUi = useMemo(
+    () =>
+      showSystemMapCatalog ? modules : modules.filter((m) => !isSystemMapCatalogSlug(m.slug)),
+    [modules, showSystemMapCatalog],
+  );
+
   const rows = useMemo(() => {
     const t = q.trim().toLowerCase();
-    if (!t) return modules;
-    return modules.filter((m) => m.title.toLowerCase().includes(t) || (m.description ?? "").toLowerCase().includes(t));
-  }, [modules, q]);
+    if (!t) return modulesForUi;
+    return modulesForUi.filter(
+      (m) => m.title.toLowerCase().includes(t) || (m.description ?? "").toLowerCase().includes(t),
+    );
+  }, [modulesForUi, q]);
 
   function activeCooldownUnlockIso(moduleId: string): string | null {
     const iso = cooldownUnlocks[moduleId];
@@ -133,7 +157,7 @@ export function ModuleSubscriptionBrowser({
         n.delete(moduleId);
         return n;
       });
-      setTrialIds((prev) => {
+      setLegacyTrialAccessIds((prev) => {
         const n = new Set(prev);
         n.delete(moduleId);
         return n;
@@ -141,7 +165,7 @@ export function ModuleSubscriptionBrowser({
       const unlockIso = new Date(Date.now() + MODULE_RESUBSCRIBE_COOLDOWN_MS).toISOString();
       setCooldownUnlocks((prev) => ({ ...prev, [moduleId]: unlockIso }));
       setInfoBanner(
-        `ยกเลิก Subscribe แล้ว — ปุ่ม Subscribe จะถูกล็อคจนถึง ${formatBangkokDateTimeLong(unlockIso)} (ครบ 1 เดือนนับจากนี้) ยังกด “ทดลองใช้งาน” ได้หากแพ็กเกจอนุญาต`,
+        `ยกเลิก Subscribe แล้ว — ปุ่ม Subscribe จะถูกล็อคจนถึง ${formatBangkokDateTimeLong(unlockIso)} (ครบ 1 เดือนนับจากนี้)`,
       );
       router.refresh();
     } finally {
@@ -169,7 +193,7 @@ export function ModuleSubscriptionBrowser({
         return;
       }
       setSavedSubscribedIds((prev) => new Set(prev).add(moduleId));
-      setTrialIds((prev) => {
+      setLegacyTrialAccessIds((prev) => {
         const n = new Set(prev);
         n.delete(moduleId);
         return n;
@@ -177,53 +201,6 @@ export function ModuleSubscriptionBrowser({
       setCooldownUnlocks((prev) => {
         const n = { ...prev };
         delete n[moduleId];
-        return n;
-      });
-      router.refresh();
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function startTrialMode(moduleId: string) {
-    setErr(null);
-    setInfoBanner(null);
-    setBusyId(moduleId);
-    try {
-      const res = await fetch("/api/modules/trial", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ moduleId }),
-      });
-      const j = (await res.json().catch(() => ({}))) as { error?: string; unlockAt?: string };
-      if (!res.ok) {
-        if (j.unlockAt) {
-          setCooldownUnlocks((prev) => ({ ...prev, [moduleId]: j.unlockAt! }));
-        }
-        setErr(j.error ?? "เปิดโหมดทดลองไม่สำเร็จ");
-        return;
-      }
-      setTrialIds((prev) => new Set(prev).add(moduleId));
-      router.refresh();
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function stopTrialMode(moduleId: string) {
-    setErr(null);
-    setBusyId(moduleId);
-    try {
-      const res = await fetch(`/api/modules/trial/${moduleId}`, { method: "DELETE", credentials: "include" });
-      const j = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        setErr(j.error ?? "หยุดโหมดทดลองไม่สำเร็จ");
-        return;
-      }
-      setTrialIds((prev) => {
-        const n = new Set(prev);
-        n.delete(moduleId);
         return n;
       });
       router.refresh();
@@ -243,7 +220,7 @@ export function ModuleSubscriptionBrowser({
             className="app-input w-full rounded-xl px-3 py-2 text-sm outline-none sm:max-w-xs"
           />
           <p className="text-xs text-slate-600">
-            สายรายวัน Subscribe ได้ 1 ระบบ — ระบบอื่นยังกด “ทดลองใช้งาน” เพื่อลองก่อนตัดสินใจอัปเกรดแพ็กเกจได้
+            สายรายวัน Subscribe ได้ 1 ระบบ — ต้องการลองก่อนสมัครใช้ปุ่ม &quot;ทดลองใช้งานระบบจริง&quot; บนแดชบอร์ดหลัก
           </p>
         </div>
         {infoBanner ? (
@@ -269,7 +246,7 @@ export function ModuleSubscriptionBrowser({
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {items.map((m) => {
-                  if (isSystemMapCatalogSlug(m.slug)) {
+                  if (showSystemMapCatalog && isSystemMapCatalogSlug(m.slug)) {
                     return (
                       <DashboardModuleHeroCard
                         key={m.id}
@@ -294,9 +271,9 @@ export function ModuleSubscriptionBrowser({
                   }
 
                   const subscribed = savedSubscribedIds.has(m.id);
-                  const trialing = !subscribed && trialIds.has(m.id);
+                  const legacyTrialAccess = !subscribed && legacyTrialAccessIds.has(m.id);
+                  const hasAccess = subscribed || legacyTrialAccess;
                   const unlocked = canAccessAppModule(access, { slug: m.slug, groupId: m.groupId });
-                  const trialAllowed = canStartTrialForModule(access, { slug: m.slug, groupId: m.groupId });
                   const cooldownIso = activeCooldownUnlockIso(m.id);
                   const lockedByCooldown = !subscribed && cooldownIso !== null;
                   const lockedByDailyLimit = !subscribed && !lockedByCooldown && reachedDailyLimit;
@@ -349,33 +326,12 @@ export function ModuleSubscriptionBrowser({
                                 type="button"
                                 disabled={busyId === m.id || !unlocked}
                                 onClick={() => void subscribeOnly(m.id)}
-                                className="flex-1 min-w-[6.5rem] rounded-xl bg-white px-3 py-2 text-xs font-semibold text-[#1e1b4b] shadow-md hover:bg-white/90 disabled:opacity-50"
+                                className={dashboardModuleSubscribeButtonClass}
                               >
                                 Subscribe
                               </button>
                             )}
-                            {!subscribed ? (
-                              trialing ? (
-                                <button
-                                  type="button"
-                                  disabled={busyId === m.id}
-                                  onClick={() => void stopTrialMode(m.id)}
-                                  className="rounded-xl border border-amber-400/45 bg-amber-950/35 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-950/50 disabled:opacity-50"
-                                >
-                                  หยุดทดลอง
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  disabled={busyId === m.id || !trialAllowed}
-                                  onClick={() => void startTrialMode(m.id)}
-                                  className="rounded-xl border border-sky-400/45 bg-sky-950/35 px-3 py-2 text-xs font-semibold text-sky-100 hover:bg-sky-950/50 disabled:opacity-50"
-                                >
-                                  ทดลองใช้งาน
-                                </button>
-                              )
-                            ) : null}
-                            {subscribed || trialing ? (
+                            {hasAccess ? (
                               <Link
                                 href={dashboardModuleHref(m.slug)}
                                 className="inline-flex flex-1 min-w-[6.5rem] items-center justify-center rounded-xl border border-white/40 bg-white/15 px-3 py-2 text-xs font-semibold text-white backdrop-blur-sm hover:bg-white/25"
@@ -384,18 +340,18 @@ export function ModuleSubscriptionBrowser({
                               </Link>
                             ) : null}
                           </div>
-                          {trialing ? (
+                          {legacyTrialAccess ? (
                             <p className="text-[11px] text-amber-800/90">
-                              โหมดทดลองใช้งาน: สิทธิ์ชั่วคราวในเมม — กด “เข้าใช้งาน” เพื่อเข้าระบบ
+                              สิทธิ์เข้าชมชั่วคราวจากระบบเก่า — Subscribe เพื่อใช้งานเต็มรูปแบบ
                             </p>
                           ) : null}
-                          {!subscribed && !trialing ? (
+                          {!hasAccess ? (
                             <p className="text-[11px] text-slate-500">
                               {showCooldownLock
-                                ? `Subscribe ถูกล็อคจนถึง ${formatBangkokDateTimeLong(cooldownIso!)} — ยังกด “ทดลองใช้งาน” ได้`
+                                ? `Subscribe ถูกล็อคจนถึง ${formatBangkokDateTimeLong(cooldownIso!)}`
                                 : showDailyLock
-                                  ? "Subscribe ได้อีกเมื่ออัปเกรดแพ็กเกจ — ยังทดลองระบบนี้ได้ด้านข้าง"
-                                  : "ต้อง Subscribe ก่อน หรือกดทดลองใช้งานเพื่อเปิดระบบชั่วคราว"}
+                                  ? "Subscribe ได้อีกเมื่ออัปเกรดแพ็กเกจ"
+                                  : "กด Subscribe เพื่อเปิดใช้งานระบบนี้"}
                             </p>
                           ) : null}
                         </>
@@ -425,9 +381,6 @@ export function ModuleSubscriptionBrowser({
             <p className="mt-3 text-sm leading-relaxed text-amber-900">
               หลังยกเลิกแล้ว คุณจะสามารถกลับมา Subscribe ระบบนี้ได้อีกครั้งเมื่อครบ{" "}
               <span className="font-semibold">1 เดือน (30 วัน)</span> นับจากวันที่ยกเลิก
-            </p>
-            <p className="mt-2 text-sm text-slate-600">
-              ระหว่างนี้ปุ่ม Subscribe จะถูกล็อคจนกว่าจะครบกำหนด — ยังทดลองใช้งานได้ (หากแพ็กเกจอนุญาต)
             </p>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button

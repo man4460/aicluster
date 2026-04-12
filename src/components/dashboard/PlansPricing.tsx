@@ -2,7 +2,7 @@
 
 import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enums";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import QRCode from "qrcode";
 import {
@@ -16,6 +16,7 @@ import {
   isBuffetTierOpenForPurchase,
   tierGroupBullets,
 } from "@/lib/module-permissions";
+import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 
 type Props = {
   showUpgradeHint?: boolean;
@@ -24,113 +25,210 @@ type Props = {
   tokens: number;
 };
 
+type TopUpState = {
+  planPrice: number;
+  shortfallTokens: number;
+  balance: number;
+  amountBaht: number;
+};
+
 export function PlansPricing({
   showUpgradeHint,
   subscriptionTier,
   subscriptionType,
+  tokens,
 }: Props) {
   const router = useRouter();
-  const [orderId, setOrderId] = useState<string | null>(null);
-  const [qrCodeContent, setQrCodeContent] = useState<string | null>(null);
-  const [qrImageDataUrl, setQrImageDataUrl] = useState<string | null>(null);
-  const [waitingPayment, setWaitingPayment] = useState(false);
   const [loading, setLoading] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
+  const [topUpOpen, setTopUpOpen] = useState(false);
+  const [topUp, setTopUp] = useState<TopUpState | null>(null);
+  const [topUpOrderId, setTopUpOrderId] = useState<string | null>(null);
+  const [topUpQr, setTopUpQr] = useState<string | null>(null);
+  const [topUpQrImg, setTopUpQrImg] = useState<string | null>(null);
+  const [topUpWaiting, setTopUpWaiting] = useState(false);
+  const [topUpBusy, setTopUpBusy] = useState(false);
+  const [topUpErr, setTopUpErr] = useState<string | null>(null);
+  const [amountBahtInput, setAmountBahtInput] = useState("");
+
+  const resetTopUpModal = useCallback(() => {
+    setTopUpOrderId(null);
+    setTopUpQr(null);
+    setTopUpQrImg(null);
+    setTopUpWaiting(false);
+    setTopUpErr(null);
+    setAmountBahtInput("");
+  }, []);
+
+  const closeTopUpModal = useCallback(() => {
+    setTopUpOpen(false);
+    setTopUp(null);
+    resetTopUpModal();
+  }, [resetTopUpModal]);
 
   async function selectPlan(price: number) {
     setErr(null);
     setLoading(price);
     try {
-      const res = await fetch("/api/payments/melody/create", {
+      const res = await fetch("/api/subscription/buffet/purchase-from-balance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ amountBaht: price }),
       });
       const data = (await res.json()) as {
+        ok?: boolean;
+        code?: string;
+        balance?: number;
+        requiredTokens?: number;
         error?: string;
-        orderId?: string;
-        qrCodeContent?: string | null;
       };
-      if (!res.ok) {
-        setErr(data.error ?? "สร้างคำสั่งซื้อไม่สำเร็จ");
+
+      if (res.ok && data.ok) {
+        router.refresh();
         return;
       }
-      const nextOrderId = data.orderId ?? null;
-      setOrderId(nextOrderId);
-      setQrCodeContent(data.qrCodeContent ?? null);
-      setQrImageDataUrl(null);
-      setWaitingPayment(Boolean(nextOrderId));
+
+      if (res.status === 402 && data.code === "INSUFFICIENT_TOKENS") {
+        const bal = data.balance ?? 0;
+        const req = data.requiredTokens ?? 0;
+        const short = Math.max(1, req - bal);
+        setTopUp({
+          planPrice: price,
+          shortfallTokens: short,
+          balance: bal,
+          amountBaht: short,
+        });
+        setAmountBahtInput(String(short));
+        setTopUpOpen(true);
+        setTopUpOrderId(null);
+        setTopUpQr(null);
+        setTopUpQrImg(null);
+        setTopUpWaiting(false);
+        setTopUpErr(null);
+        return;
+      }
+
+      setErr(data.error ?? "ดำเนินการไม่สำเร็จ");
     } finally {
       setLoading(null);
     }
   }
 
-  async function simulatePay() {
-    if (!orderId) return;
-    setErr(null);
-    const res = await fetch("/api/payments/melody/simulate-pay", {
+  async function createTopUpOrder() {
+    const n = Number.parseInt(amountBahtInput.trim(), 10);
+    if (!Number.isFinite(n) || n < 1 || n > 100_000) {
+      setTopUpErr("กรอกยอดเติม 1–100000 บาท (1 บาท = 1 โทเคน)");
+      return;
+    }
+    setTopUpBusy(true);
+    setTopUpErr(null);
+    try {
+      const res = await fetch("/api/payments/melody/topup/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ amountBaht: n }),
+      });
+      const data = (await res.json()) as { error?: string; orderId?: string; qrCodeContent?: string | null };
+      if (!res.ok) {
+        setTopUpErr(data.error ?? "สร้างคำสั่งเติมโทเคนไม่สำเร็จ");
+        return;
+      }
+      setTopUpOrderId(data.orderId ?? null);
+      setTopUpQr(data.qrCodeContent ?? null);
+      setTopUpQrImg(null);
+      setTopUpWaiting(Boolean(data.orderId));
+    } finally {
+      setTopUpBusy(false);
+    }
+  }
+
+  const tryFinishAfterTopUp = useCallback(async () => {
+    if (!topUp) return;
+    const res = await fetch("/api/subscription/buffet/purchase-from-balance", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ orderId }),
+      body: JSON.stringify({ amountBaht: topUp.planPrice }),
     });
-    const data = (await res.json()) as { error?: string };
-    if (!res.ok) {
-      setErr(data.error ?? "จำลองชำระไม่สำเร็จ");
+    const data = (await res.json()) as { ok?: boolean; error?: string };
+    if (res.ok && data.ok) {
+      closeTopUpModal();
+      router.refresh();
       return;
     }
-    setQrCodeContent(null);
-    setQrImageDataUrl(null);
-    setWaitingPayment(false);
-    setOrderId(null);
-    router.refresh();
-  }
+    setTopUpErr(data.error ?? "โทเคนยังไม่พอหรือยังไม่เข้า — ลองอีกครั้งหลังชำระสำเร็จ");
+  }, [topUp, router, closeTopUpModal]);
 
   const isDev = process.env.NODE_ENV === "development";
 
   useEffect(() => {
     let done = false;
-    if (!qrCodeContent) {
-      setQrImageDataUrl(null);
+    if (!topUpQr) {
+      setTopUpQrImg(null);
       return;
     }
     (async () => {
       try {
-        const dataUrl = await QRCode.toDataURL(qrCodeContent, { margin: 1, width: 280 });
-        if (!done) setQrImageDataUrl(dataUrl);
+        const dataUrl = await QRCode.toDataURL(topUpQr, { margin: 1, width: 260 });
+        if (!done) setTopUpQrImg(dataUrl);
       } catch {
-        if (!done) setQrImageDataUrl(null);
+        if (!done) setTopUpQrImg(null);
       }
     })();
     return () => {
       done = true;
     };
-  }, [qrCodeContent]);
+  }, [topUpQr]);
 
   useEffect(() => {
-    if (!orderId || !waitingPayment) return;
+    if (!topUpOrderId || !topUpWaiting) return;
     const timer = window.setInterval(async () => {
       try {
-        const res = await fetch(`/api/payments/melody/status/${orderId}`, { credentials: "include" });
-        const data = (await res.json().catch(() => ({}))) as { status?: string };
+        const res = await fetch(`/api/payments/melody/status/${topUpOrderId}`, { credentials: "include" });
+        const data = (await res.json().catch(() => ({}))) as { paid?: boolean; status?: string };
         if (!res.ok) return;
-        if (data.status === "PAID") {
-          setWaitingPayment(false);
-          setOrderId(null);
-          setQrCodeContent(null);
-          setQrImageDataUrl(null);
-          router.refresh();
+        if (data.paid || data.status === "PAID") {
+          setTopUpWaiting(false);
+          await tryFinishAfterTopUp();
         }
       } catch {
-        // ignore transient poll errors
+        // ignore
       }
     }, 3000);
     return () => window.clearInterval(timer);
-  }, [orderId, waitingPayment, router]);
+  }, [topUpOrderId, topUpWaiting, tryFinishAfterTopUp]);
+
+  async function simulateTopUpPay() {
+    if (!topUpOrderId) return;
+    setTopUpErr(null);
+    const res = await fetch("/api/payments/melody/simulate-pay", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ orderId: topUpOrderId }),
+    });
+    const data = (await res.json()) as { error?: string };
+    if (!res.ok) {
+      setTopUpErr(data.error ?? "จำลองชำระไม่สำเร็จ");
+      return;
+    }
+    setTopUpWaiting(false);
+    await tryFinishAfterTopUp();
+  }
 
   return (
     <div>
+      <div className="mb-4 rounded-xl border border-[#d8d6ec] bg-[#faf9ff]/80 px-4 py-3 text-sm text-[#2e2a58]">
+        <p className="font-semibold">โทเคนคงเหลือ</p>
+        <p className="mt-1 tabular-nums text-lg font-bold text-[#0000BF]">{tokens.toLocaleString("th-TH")} โทเคน</p>
+        <p className="mt-1 text-xs leading-relaxed text-[#66638c]">
+          สมัครแพ็กเหมา: ถ้าโทเคนพอ ระบบหักทันที · ถ้าไม่พอจะเปิดหน้าต่างเติมโทเคน (ชำระแล้วลองสมัครอัตโนมัติ)
+        </p>
+      </div>
+
       {showUpgradeHint ? (
         <div
           className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
@@ -180,6 +278,7 @@ export function PlansPricing({
             subscriptionType,
           });
           const canSelect = charge.ok && tierOpen;
+          const enough = charge.ok && tokens >= charge.tokensToDeduct;
           const disabledReason = !tierOpen
             ? "ปิดจำหน่ายชั่วคราว — เปิดเฉพาะแพ็ก 199 โทเคน"
             : !charge.ok
@@ -205,16 +304,26 @@ export function PlansPricing({
               {!tierOpen ? (
                 <p className="mt-2 text-xs font-medium text-amber-800">ปิดจำหน่ายชั่วคราว</p>
               ) : charge.ok ? (
-                <p
-                  className={cn(
-                    "mt-2 text-sm font-medium",
-                    charge.tokensToDeduct < fullCost ? "text-emerald-700" : "text-slate-800",
-                  )}
-                >
-                  {charge.tokensToDeduct < fullCost
-                    ? `อัปเกรด: หัก ${charge.tokensToDeduct} โทเคน (ส่วนต่าง)`
-                    : `สมัคร: หัก ${charge.tokensToDeduct} โทเคน`}
-                </p>
+                <>
+                  <p
+                    className={cn(
+                      "mt-2 text-sm font-medium",
+                      charge.tokensToDeduct < fullCost ? "text-emerald-700" : "text-slate-800",
+                    )}
+                  >
+                    {charge.tokensToDeduct < fullCost
+                      ? `อัปเกรด: หัก ${charge.tokensToDeduct} โทเคน (ส่วนต่าง)`
+                      : `สมัคร: หัก ${charge.tokensToDeduct} โทเคน`}
+                  </p>
+                  <p
+                    className={cn(
+                      "mt-1 text-xs font-medium",
+                      enough ? "text-emerald-700" : "text-amber-800",
+                    )}
+                  >
+                    {enough ? "โทเคนของคุณพอ — กดแล้วสมัครทันที" : `โทเคนไม่พอ — ขาด ${charge.tokensToDeduct - tokens} โทเคน (จะเปิดเติมโทเคน)`}
+                  </p>
+                </>
               ) : (
                 <p className="mt-2 text-xs leading-relaxed text-amber-800">{charge.error}</p>
               )}
@@ -236,52 +345,91 @@ export function PlansPricing({
                 )}
               >
                 {loading === price
-                  ? "กำลังสร้าง..."
+                  ? "กำลังดำเนินการ..."
                   : !tierOpen
                     ? "ไม่เปิดรับสมัคร"
-                    : "เลือกแพ็กเกจ"}
+                    : enough
+                      ? "สมัครด้วยโทเคน"
+                      : "สมัคร / เติมโทเคน"}
               </button>
             </div>
           );
         })}
       </div>
 
-      {orderId ? (
-        <div className="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-          <p className="font-medium">คำสั่งซื้อ: {orderId}</p>
-          {qrCodeContent ? (
-            <p className="mt-1 text-xs">
-              สแกน QR เพื่อชำระเงิน จากนั้นระบบจะอัปเดตสถานะและรีเฟรชโทเคนอัตโนมัติ
+      <FormModal
+        open={topUpOpen}
+        onClose={closeTopUpModal}
+        title="เติมโทเคน"
+        description={
+          topUp ?
+            `ต้องการอีกอย่างน้อย ${topUp.shortfallTokens} โทเคน (ยอดปัจจุบัน ${topUp.balance}) · 1 บาท = 1 โทเคน`
+          : undefined
+        }
+        footer={
+          <FormModalFooterActions
+            onCancel={closeTopUpModal}
+            submitLabel={topUpOrderId ? "ปิด" : "สร้าง QR ชำระ"}
+            submitDisabled={topUpBusy}
+            loading={topUpBusy}
+            onSubmit={() => {
+              if (topUpOrderId) closeTopUpModal();
+              else void createTopUpOrder();
+            }}
+          />
+        }
+      >
+        <div className="space-y-4 text-sm">
+          {!topUpOrderId ? (
+            <label className="block">
+              <span className="text-xs font-semibold text-slate-600">ยอดเติม (บาท)</span>
+              <input
+                type="number"
+                min={1}
+                max={100_000}
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 tabular-nums outline-none focus:border-[#4d47b6]/40 focus:ring-2 focus:ring-[#4d47b6]/15"
+                value={amountBahtInput}
+                onChange={(e) => setAmountBahtInput(e.target.value)}
+              />
+            </label>
+          ) : null}
+          {topUpErr ? (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+              {topUpErr}
             </p>
-          ) : (
-            <p className="mt-1 text-xs">
-              เมื่อชำระสำเร็จ ระบบจะหักโทเคนตามที่แสดงบนการ์ด — ในระบบจริงให้ส่ง callback เข้า{" "}
-              <code className="rounded bg-white px-1">POST /api/payments/melody/webhook</code>
-            </p>
-          )}
-          {qrCodeContent ? (
-            <div className="mt-3 rounded-lg border border-blue-200 bg-white p-3">
-              {qrImageDataUrl ? (
-                <img src={qrImageDataUrl} alt="Melody payment QR" className="mx-auto h-56 w-56 rounded-md" />
+          ) : null}
+          {topUpQr ? (
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              {topUpQrImg ? (
+                <img src={topUpQrImg} alt="QR เติมโทเคน" className="mx-auto h-52 w-52 rounded-md" />
               ) : (
-                <p className="text-xs text-slate-500">กำลังสร้างภาพ QR...</p>
+                <p className="text-center text-xs text-slate-500">กำลังสร้าง QR...</p>
               )}
-              <p className="mt-2 text-center text-xs text-slate-500">
-                {waitingPayment ? "รอยืนยันการชำระเงิน..." : "ชำระเงินแล้ว"}
+              <p className="mt-2 text-center text-xs text-slate-600">
+                {topUpWaiting ? "หลังชำระสำเร็จ ระบบจะลองสมัครแพ็กให้อัตโนมัติ" : "ชำระแล้ว"}
               </p>
+              <div className="mt-3 flex flex-col gap-2">
+                {isDev && topUpOrderId ? (
+                  <button
+                    type="button"
+                    onClick={() => void simulateTopUpPay()}
+                    className="w-full rounded-lg border border-blue-300 bg-blue-50 py-2 text-xs font-semibold text-blue-900"
+                  >
+                    จำลองชำระสำเร็จ (dev)
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => void tryFinishAfterTopUp()}
+                  className="w-full rounded-lg border border-slate-200 bg-white py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+                >
+                  ลองสมัครแพ็กอีกครั้ง (หลังเติมโทเคนแล้ว)
+                </button>
+              </div>
             </div>
           ) : null}
-          {isDev ? (
-            <button
-              type="button"
-              onClick={simulatePay}
-              className="mt-3 rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-xs font-medium text-blue-900 hover:bg-blue-100"
-            >
-              จำลองชำระเงินสำเร็จ (dev)
-            </button>
-          ) : null}
         </div>
-      ) : null}
+      </FormModal>
 
       {err ? (
         <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">

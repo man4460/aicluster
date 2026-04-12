@@ -31,6 +31,17 @@ import {
   type BarberCostCategory,
   type BarberCostEntry,
 } from "@/systems/barber/barber-cost-client";
+import type { ModuleCostPanelOps } from "@/systems/barber/module-cost-panel-ops";
+
+const defaultBarberCostPanelOps: ModuleCostPanelOps = {
+  createCategory: createBarberCostCategory,
+  updateCategory: updateBarberCostCategory,
+  deleteCategory: deleteBarberCostCategory,
+  createEntry: createBarberCostEntry,
+  updateEntry: updateBarberCostEntry,
+  deleteEntry: deleteBarberCostEntry,
+  uploadSlip: uploadBarberCostSlip,
+};
 
 export type BarberCostToolbarApi = {
   openRecordExpense: () => void;
@@ -149,6 +160,8 @@ export function BarberCostPanel({
   listLoading,
   fetchError,
   onToolbarReady,
+  costPanelOps,
+  formAriaIdPrefix = "barber-cost",
 }: {
   baseUrl: string;
   categories: BarberCostCategory[];
@@ -160,7 +173,13 @@ export function BarberCostPanel({
   fetchError?: string | null;
   /** ให้ parent แสดงปุ่มในหัวข้อหน้า (เช่น PageHeader) */
   onToolbarReady?: (api: BarberCostToolbarApi | null) => void;
+  /** หอพัก: ส่ง API client จาก dorm-cost-client */
+  costPanelOps?: ModuleCostPanelOps;
+  /** prefix id สำหรับ aria (กันซ้ำเมื่อมีหลายแผงในหน้า) */
+  formAriaIdPrefix?: string;
 }) {
+  const ops = costPanelOps ?? defaultBarberCostPanelOps;
+  const recordExpenseHeadingId = `${formAriaIdPrefix}-record-expense-details-heading`;
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -221,8 +240,8 @@ export function BarberCostPanel({
     setBusy(true);
     setErr(null);
     try {
-      if (editCat) await updateBarberCostCategory(editCat.id, n);
-      else await createBarberCostCategory(n);
+      if (editCat) await ops.updateCategory(editCat.id, n);
+      else await ops.createCategory(n);
       cancelCategoryForm();
       await onRefresh();
     } catch (e) {
@@ -230,7 +249,7 @@ export function BarberCostPanel({
     } finally {
       setBusy(false);
     }
-  }, [catName, cancelCategoryForm, editCat, onRefresh]);
+  }, [catName, cancelCategoryForm, editCat, onRefresh, ops]);
 
   const removeCategory = useCallback(
     async (c: BarberCostCategory) => {
@@ -238,7 +257,7 @@ export function BarberCostPanel({
       setBusy(true);
       setErr(null);
       try {
-        await deleteBarberCostCategory(c.id);
+        await ops.deleteCategory(c.id);
         await onRefresh();
       } catch (e) {
         setErr(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
@@ -246,7 +265,7 @@ export function BarberCostPanel({
         setBusy(false);
       }
     },
-    [onRefresh],
+    [onRefresh, ops],
   );
 
   const resetAddEntryForm = useCallback(() => {
@@ -278,7 +297,7 @@ export function BarberCostPanel({
     setErr(null);
     try {
       const prepared = await prepareBuildingPosSlipImageFile(file);
-      const url = await uploadBarberCostSlip(prepared);
+      const url = await ops.uploadSlip(prepared);
       if (target === "record") setEntrySlipUrl(url);
       else setEditEntryForm((s) => (s ? { ...s, slip_photo_url: url } : s));
     } catch (e) {
@@ -286,7 +305,7 @@ export function BarberCostPanel({
     } finally {
       setEntryPhotoBusy(false);
     }
-  }, []);
+  }, [ops]);
 
   const onSlipFileChange = useCallback(
     async (e: ChangeEvent<HTMLInputElement>, target: "record" | "edit") => {
@@ -326,7 +345,7 @@ export function BarberCostPanel({
     setBusy(true);
     setErr(null);
     try {
-      await createBarberCostEntry({
+      await ops.createEntry({
         category_id: cid,
         spent_at: bangkokDatetimeLocalToIso(entrySpentLocal),
         amount: Math.round(amt),
@@ -353,6 +372,7 @@ export function BarberCostPanel({
     entrySpentLocal,
     onRefresh,
     resetAddEntryForm,
+    ops,
   ]);
 
   const openEditEntry = useCallback((e: BarberCostEntry) => {
@@ -381,7 +401,7 @@ export function BarberCostPanel({
     setBusy(true);
     setErr(null);
     try {
-      await updateBarberCostEntry(editEntry.id, {
+      await ops.updateEntry(editEntry.id, {
         category_id: cid,
         spent_at: bangkokDatetimeLocalToIso(editEntryForm.spent_at_local),
         amount: Math.round(amt),
@@ -397,7 +417,7 @@ export function BarberCostPanel({
     } finally {
       setBusy(false);
     }
-  }, [editEntry, editEntryForm, onRefresh]);
+  }, [editEntry, editEntryForm, onRefresh, ops]);
 
   const removeEntry = useCallback(
     async (e: BarberCostEntry) => {
@@ -405,7 +425,7 @@ export function BarberCostPanel({
       setBusy(true);
       setErr(null);
       try {
-        await deleteBarberCostEntry(e.id);
+        await ops.deleteEntry(e.id);
         await onRefresh();
       } catch (er) {
         setErr(er instanceof Error ? er.message : "ลบไม่สำเร็จ");
@@ -413,7 +433,7 @@ export function BarberCostPanel({
         setBusy(false);
       }
     },
-    [onRefresh],
+    [onRefresh, ops],
   );
 
   const addSlipPreview = entrySlipUrl.trim() ? resolveAssetUrl(entrySlipUrl, baseUrl) : null;
@@ -612,7 +632,7 @@ export function BarberCostPanel({
           resetAddEntryForm();
         }}
         title="บันทึกรายจ่าย"
-        ariaDescribedBy="barber-cost-record-expense-details-heading"
+        ariaDescribedBy={recordExpenseHeadingId}
         size="lg"
         footer={
           <FormModalFooterActions
@@ -634,12 +654,12 @@ export function BarberCostPanel({
           <AppSectionHeader
             tone="slate"
             title="รายละเอียดรายจ่าย"
-            titleId="barber-cost-record-expense-details-heading"
+            titleId={recordExpenseHeadingId}
           />
           <div
             className="space-y-4"
             role="group"
-            aria-labelledby="barber-cost-record-expense-details-heading"
+            aria-labelledby={recordExpenseHeadingId}
           >
             <CostSlipAttachmentZone
               slipUrl={entrySlipUrl}

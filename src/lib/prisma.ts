@@ -11,7 +11,9 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 43: home_vehicle_profiles.attachment_urls (Json) — client เก่า reject update({ data: { attachmentUrls } }) */
 /** 44: ChatThread + ChatMessage.threadId — client เก่าไม่มี delegate chatThread แล้วแชท API ล้ม */
 /** 45: User.passwordHash optional + googleSub (ล็อกอิน Google) */
-const PRISMA_SINGLETON_VERSION = 45;
+/** 46: DormitoryCostCategory + DormitoryCostEntry — client เก่าไม่มี delegate แล้ว API ต้นทุนหอพักล้ม */
+/** 47: VillageCostCategory + VillageCostEntry — ต้นทุน/รายจ่ายหมู่บ้าน */
+const PRISMA_SINGLETON_VERSION = 47;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -28,6 +30,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     barberCostEntry?: { findMany?: unknown };
     barberStylist?: { findMany?: unknown };
     dormitoryProfile?: { findUnique?: unknown };
+    dormitoryCostCategory?: { findMany?: unknown };
+    dormitoryCostEntry?: { findMany?: unknown };
     barberShopProfile?: { findUnique?: unknown };
     barberBooking?: { findMany?: unknown };
     attendanceSettings?: { findUnique?: unknown };
@@ -55,6 +59,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     buildingPosMenuRecipeLine?: { findMany?: unknown };
     chatThread?: { findMany?: unknown };
     chatMessage?: { findMany?: unknown };
+    villageCostCategory?: { findMany?: unknown };
+    villageCostEntry?: { findMany?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -64,6 +70,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.barberCostEntry?.findMany === "function" &&
     typeof c.barberStylist?.findMany === "function" &&
     typeof c.dormitoryProfile?.findUnique === "function" &&
+    typeof c.dormitoryCostCategory?.findMany === "function" &&
+    typeof c.dormitoryCostEntry?.findMany === "function" &&
     typeof c.barberShopProfile?.findUnique === "function" &&
     typeof c.barberBooking?.findMany === "function" &&
     typeof c.attendanceSettings?.findUnique === "function" &&
@@ -90,7 +98,9 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.buildingPosPurchaseLine?.findMany === "function" &&
     typeof c.buildingPosMenuRecipeLine?.findMany === "function" &&
     typeof c.chatThread?.findMany === "function" &&
-    typeof c.chatMessage?.findMany === "function"
+    typeof c.chatMessage?.findMany === "function" &&
+    typeof c.villageCostCategory?.findMany === "function" &&
+    typeof c.villageCostEntry?.findMany === "function"
   );
 }
 
@@ -116,6 +126,12 @@ function getPrisma(): PrismaClient {
   }
 
   const base = new PrismaClient();
+  if (!prismaClientHasExpectedDelegates(base)) {
+    void base.$disconnect().catch(() => {});
+    throw new Error(
+      "Prisma client ไม่ครบโมเดลล่าสุด (เช่น ต้นทุนหอพัก) — รัน `npx prisma generate` ที่รากโปรเจกต์ แล้ว `npx prisma migrate deploy` (หรือ migrate dev) จากนั้นลบ `.next` และรีสตาร์ทเซิร์ฟเวอร์",
+    );
+  }
   const extended = base.$extends({
     query: {
       $allModels: {

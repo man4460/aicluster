@@ -13,6 +13,7 @@ const links = [
   { href: "/dashboard/village/residents", label: "ลูกบ้าน" },
   { href: "/dashboard/village/fees", label: "ค่าส่วนกลาง" },
   { href: "/dashboard/village/slips", label: "สลิป" },
+  { href: "/dashboard/village/costs", label: "ต้นทุน / รายจ่าย" },
   { href: "/dashboard/village/annual", label: "รายปี" },
   { href: "/dashboard/village/reports", label: "ส่งออก" },
   { href: "/dashboard/village/settings", label: "ตั้งค่า" },

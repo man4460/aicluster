@@ -25,7 +25,7 @@ module.exports = {
       cwd,
       interpreter: "node",
       script: nextBin,
-      args: "dev -H 0.0.0.0",
+      args: "dev -p 3000 -H 0.0.0.0",
       watch: false,
       env: {
         NODE_ENV: "development",
@@ -36,7 +36,7 @@ module.exports = {
       cwd,
       interpreter: "node",
       script: nextBin,
-      args: "start -H 0.0.0.0",
+      args: "start -p 3000 -H 0.0.0.0",
       watch: false,
       env: {
         NODE_ENV: "production",

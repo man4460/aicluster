@@ -17,7 +17,7 @@ export function VillageLayoutChrome({
         <div className="min-w-0">
           <h1 className="text-xl font-semibold tracking-tight text-[#2e2a58] sm:text-2xl">จัดการหมู่บ้าน</h1>
           <p className="mt-1 max-w-2xl text-sm leading-snug text-[#66638c]">
-            ค่าส่วนกลาง · ลูกบ้าน · สลิป · รายปี · ส่งออก
+            ค่าส่วนกลาง · ลูกบ้าน · สลิป · ต้นทุน/รายจ่าย · รายปี · ส่งออก
           </p>
         </div>
       </header>

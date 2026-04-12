@@ -11,7 +11,7 @@ import { MawellLogo } from "@/components/layout/MawellLogo";
 import { cn } from "@/lib/cn";
 import { parseJsonResponse } from "@/lib/parse-json-response";
 
-const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+const LOGIN_QUERY_ERROR_MESSAGES: Record<string, string> = {
   google_not_configured:
     "เข้าสู่ระบบด้วย Google ยังไม่พร้อม — แบบ redirect: ตั้ง GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET และ redirect URI ใน Google Cloud หรือแบบ Melody: ตั้ง NEXT_PUBLIC_GOOGLE_CLIENT_ID + JavaScript origins อย่างเดียว",
   google_state: "เซสชัน Google หมดอายุหรือไม่ถูกต้อง — ลองใหม่",
@@ -22,6 +22,11 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   google_account_conflict: "บัญชีนี้เชื่อมกับ Google คนละรายแล้ว — ติดต่อผู้ดูแลระบบ",
   google_create_failed: "สร้างบัญชีไม่สำเร็จ — ลองใหม่หรือสมัครด้วยอีเมล",
   google_auth_failed: "เข้าสู่ระบบด้วย Google ไม่สำเร็จ — ลองใหม่",
+  demo_not_configured: "บัญชีทดลองยังไม่เปิดใช้บนเซิร์ฟเวอร์ — ตั้ง NEXT_PUBLIC_DEMO_ENTRY=1 และ DEMO_ACCOUNT_USERNAME / DEMO_ACCOUNT_PASSWORD",
+  demo_user_missing: "ไม่พบผู้ใช้ทดลองในฐานข้อมูล — สร้าง user ให้ตรง DEMO_ACCOUNT_USERNAME และตั้งรหัสผ่าน",
+  demo_credentials_mismatch:
+    "รหัสใน .env ไม่ตรงกับรหัสผ่านในฐานข้อมูล — DEMO_ACCOUNT_PASSWORD ต้องเป็นรหัสแบบ plain ที่ใช้ตอนสร้างบัญชี (ระบบจะเทียบกับ hash ใน DB)",
+  demo_rate_limited: "กดทดลองบ่อยเกินไป — รอสักครู่แล้วลองใหม่",
 };
 
 type GoogleUiMode = "sdk" | "redirect" | "none";
@@ -39,14 +44,14 @@ function LoginFormInner({
   const [password, setPassword] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(
-    initialErrorKey ? (OAUTH_ERROR_MESSAGES[initialErrorKey] ?? initialErrorKey) : null,
+    initialErrorKey ? (LOGIN_QUERY_ERROR_MESSAGES[initialErrorKey] ?? initialErrorKey) : null,
   );
   const [loading, setLoading] = useState(false);
 
   const turnstileRequired = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
 
   const onGoogleSdkErrorKey = useCallback((key: string) => {
-    setError(OAUTH_ERROR_MESSAGES[key] ?? key);
+    setError(LOGIN_QUERY_ERROR_MESSAGES[key] ?? key);
   }, []);
 
   async function onSubmit(e: React.FormEvent) {
@@ -82,6 +87,8 @@ function LoginFormInner({
     }
   }
 
+  const googleOAuthParams = new URLSearchParams({ next: redirectTo }).toString();
+
   return (
     <AuthCard title="เข้าสู่ระบบ">
       <div className="mb-5 flex justify-start">
@@ -107,7 +114,7 @@ function LoginFormInner({
       ) : googleUiMode === "redirect" ? (
         <>
           <Link
-            href={`/api/auth/google?next=${encodeURIComponent(redirectTo)}`}
+            href={`/api/auth/google?${googleOAuthParams}`}
             className={cn(
               "mb-4 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50",
             )}
@@ -216,7 +223,11 @@ export function LoginForm({
   if (publicId) {
     return (
       <GoogleOAuthProvider clientId={publicId}>
-        <LoginFormInner redirectTo={redirectTo} initialErrorKey={initialErrorKey} googleUiMode="sdk" />
+        <LoginFormInner
+          redirectTo={redirectTo}
+          initialErrorKey={initialErrorKey}
+          googleUiMode="sdk"
+        />
       </GoogleOAuthProvider>
     );
   }

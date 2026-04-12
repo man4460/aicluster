@@ -6,6 +6,7 @@ import { PasswordInput } from "@/components/auth/PasswordInput";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
 import { cn } from "@/lib/cn";
 import { parseJsonResponse } from "@/lib/parse-json-response";
+import { SIGNUP_BONUS_TOKENS } from "@/lib/tokens/signup-bonus";
 
 export function RegisterForm() {
   const [email, setEmail] = useState("");
@@ -118,6 +119,10 @@ export function RegisterForm() {
             required
           />
         </div>
+
+        <p className="text-xs text-slate-600">
+          โบนัสสมัครใหม่ {SIGNUP_BONUS_TOKENS} โทเคน — กำหนดเบอร์ผู้แนะนำได้ครั้งเดียวที่หน้าโปรไฟล์หลังเข้าระบบ
+        </p>
 
         <TurnstileWidget onToken={setTurnstileToken} />
 

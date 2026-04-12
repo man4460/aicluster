@@ -26,7 +26,10 @@ export function GoogleSdkLoginButton({ redirectTo, onErrorKey, disabled }: Props
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ accessToken, next: redirectTo }),
+          body: JSON.stringify({
+            accessToken,
+            next: redirectTo,
+          }),
         });
         const data = await parseJsonResponse<{ ok?: boolean; next?: string; error?: string }>(res);
         if (!res.ok || !data.ok) {

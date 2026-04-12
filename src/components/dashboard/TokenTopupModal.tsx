@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enums";
+import { appDashboardBrandCtaPillButtonClass } from "@/components/app-templates";
 import { MawellLogo } from "@/components/layout/MawellLogo";
 
 type Props = {
@@ -220,10 +221,7 @@ export function TokenTopupModal({
     <>
       <button
         type="button"
-        className={
-          triggerClassName ??
-          "inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
-        }
+        className={triggerClassName ?? appDashboardBrandCtaPillButtonClass}
         onClick={() => setOpen(true)}
       >
         {triggerLabel}

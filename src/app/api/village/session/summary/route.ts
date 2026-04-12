@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { villageOwnerFromAuth } from "@/lib/village/api-owner";
 import { getVillageDataScope } from "@/lib/trial/module-scopes";
+import { villageCostTotalsByMonthForCalendarYear } from "@/lib/village/village-annual-cost-by-month";
 
 function padMonth(m: number): string {
   return `${m}`.padStart(2, "0");
@@ -37,6 +38,13 @@ export async function GET(req: Request) {
 
   const byYm = new Map(rows.map((r) => [r.yearMonth, r]));
 
+  const costByYm = await villageCostTotalsByMonthForCalendarYear(
+    own.ownerId,
+    scope.trialSessionId,
+    year,
+    months,
+  );
+
   const table = months.map((ym) => {
     const g = byYm.get(ym);
     return {
@@ -44,6 +52,7 @@ export async function GET(req: Request) {
       house_rows: g?._count.id ?? 0,
       total_due: Number(g?._sum.amountDue ?? 0),
       total_paid: Number(g?._sum.amountPaid ?? 0),
+      total_cost: costByYm.get(ym) ?? 0,
     };
   });
 

@@ -11,6 +11,7 @@ const links = [
   { href: "/dashboard/dormitory", label: "แดชบอร์ด" },
   { href: "/dashboard/dormitory/rooms", label: "ห้อง" },
   { href: "/dashboard/dormitory/history", label: "ประวัติ" },
+  { href: "/dashboard/dormitory/costs", label: "ต้นทุน / รายจ่าย" },
   { href: "/dashboard/dormitory/settings", label: "ตั้งค่า" },
 ] as const;
 

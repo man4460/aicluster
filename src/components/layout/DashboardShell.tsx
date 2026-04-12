@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { DemoSessionBanner } from "@/components/dashboard/DemoSessionBanner";
 import { LogoutButton, LogoutIconButton } from "@/components/layout/LogoutButton";
 import { dashboardNavIconForHref } from "@/components/layout/dashboard-nav-icons";
 import { MawellLogo } from "@/components/layout/MawellLogo";
@@ -225,6 +226,8 @@ type Props = {
   /** โมดูลที่ user มีสิทธิ์ — แสดงในกลุ่มระบบใช้บริการ */
   serviceModules: { slug: string; title: string; groupId: number }[];
   avatarUrl: string | null;
+  /** ล็อกอินเป็นบัญชีทดลองสาธารณะ — แสดงแบนเนอร์ออกจากโหมดทดลอง */
+  demoSession?: boolean;
   children: React.ReactNode;
 };
 
@@ -237,6 +240,7 @@ export function DashboardShell({
   subscriptionType,
   serviceModules,
   avatarUrl,
+  demoSession = false,
   children,
 }: Props) {
   const pathname = usePathname();
@@ -400,6 +404,8 @@ export function DashboardShell({
           </div>
         </div>
       </header>
+
+      {demoSession ? <DemoSessionBanner /> : null}
 
       <div className="flex min-h-0 flex-1 gap-3 px-3 pb-3 pt-2 sm:gap-4 sm:px-4 sm:pb-4">
         {/* Sidebar — แก้ว โค้งมน */}

@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { GoogleUserInfo } from "@/lib/auth/google-oauth";
+import { SIGNUP_BONUS_TOKENS } from "@/lib/tokens/signup-bonus";
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -19,6 +20,7 @@ export type GoogleUserResolveResult =
 
 /**
  * ค้นหาหรือสร้างผู้ใช้จากโปรไฟล์ Google — อีเมลเดียวกับบัญชีเดิมจะผูก googleSub อัตโนมัติ
+ * (เบอร์ผู้แนะนำตั้งได้ครั้งเดียวที่โปรไฟล์หลังสร้างบัญชี)
  */
 export async function findOrCreateUserFromGoogle(
   prisma: PrismaClient,
@@ -80,7 +82,7 @@ export async function findOrCreateUserFromGoogle(
           passwordHash: null,
           googleSub: info.sub,
           role: "USER",
-          tokens: 7,
+          tokens: SIGNUP_BONUS_TOKENS,
           lastDeductionDate: null,
           subscriptionType: "DAILY",
           subscriptionTier: "NONE",

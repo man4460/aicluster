@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { TokenGate } from "@/components/dashboard/TokenGate";
+import { isDemoSessionUsername } from "@/lib/auth/demo-account";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { STAFF_ALLOWED_MODULE_SLUGS } from "@/lib/modules/staff-policy";
@@ -14,6 +15,7 @@ import {
   filterAppModulesForDashboardUi,
   MQTT_SERVICE_MODULE_SLUG,
 } from "@/lib/modules/config";
+import { SYSTEM_MAP_CATALOG_SLUG } from "@/lib/modules/system-map-catalog";
 import { isMqttServiceModuleEnabled } from "@/lib/modules/mqtt-feature";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { listTrialModuleIds } from "@/lib/modules/trial-store";
@@ -67,15 +69,18 @@ export default async function DashboardLayout({
   const subscribedSet = new Set(subscribedIds);
   const trialSet = new Set(trialIds);
 
+  const demoUser = isDemoSessionUsername(user.username);
   const allowDashboard = user.employerUserId
     ? true
-    : computeDashboardAccessAllowed({
-        role: user.role,
-        subscriptionType: user.subscriptionType,
-        subscriptionTier: user.subscriptionTier,
-        tokens: user.tokens,
-        lastBuffetBillingMonth: user.lastBuffetBillingMonth,
-      });
+    : demoUser
+      ? true
+      : computeDashboardAccessAllowed({
+          role: user.role,
+          subscriptionType: user.subscriptionType,
+          subscriptionTier: user.subscriptionTier,
+          tokens: user.tokens,
+          lastBuffetBillingMonth: user.lastBuffetBillingMonth,
+        });
 
   const accessFields = {
     role: user.role,
@@ -85,6 +90,7 @@ export default async function DashboardLayout({
   };
 
   let serviceModules = allModules
+    .filter((m) => m.slug !== SYSTEM_MAP_CATALOG_SLUG)
     .filter((m) => !user.employerUserId || STAFF_ALLOWED_MODULE_SLUGS.has(m.slug))
     .filter((m) => subscribedSet.has(m.id) || trialSet.has(m.id))
     .filter(
@@ -110,6 +116,8 @@ export default async function DashboardLayout({
   const safeAvatar =
     user.avatarUrl && user.avatarUrl.startsWith("/uploads/") ? user.avatarUrl : null;
 
+  const demoSession = demoUser;
+
   return (
     <DashboardShell
       username={user.username}
@@ -120,6 +128,7 @@ export default async function DashboardLayout({
       subscriptionType={user.subscriptionType}
       serviceModules={serviceModules}
       avatarUrl={safeAvatar}
+      demoSession={demoSession}
     >
       <TokenGate allowDashboard={allowDashboard} role={user.role}>
         {children}

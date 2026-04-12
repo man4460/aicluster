@@ -71,6 +71,10 @@ model User {
   employerUserId           String?          @map("employer_user_id") @db.VarChar(191)
   employer                 User?            @relation("EmployerStaff", fields: [employerUserId], references: [id], onDelete: SetNull)
   staffMembers             User[]           @relation("EmployerStaff")
+  /** ผู้แนะนำสมัคร (เบอร์ผู้แนะนำตอน register) */
+  referredByUserId         String?          @map("referred_by_user_id") @db.VarChar(191)
+  referredBy               User?            @relation("UserReferrals", fields: [referredByUserId], references: [id], onDelete: SetNull)
+  referredUsers            User[]           @relation("UserReferrals")
   subscriptionTier         SubscriptionTier @default(NONE) @map("subscription_tier")
   subscriptionType         SubscriptionType @default(DAILY) @map("subscription_type")
   fullName                 String?          @db.VarChar(255)
@@ -85,7 +89,9 @@ model User {
   chatMessages           ChatMessage[]
   chatThreadsAuthored    ChatThread[]
   topUpOrders            TopUpOrder[]
-  dormitoryProfiles      DormitoryProfile[]
+  dormitoryProfiles         DormitoryProfile[]
+  dormitoryCostCategories   DormitoryCostCategory[]
+  dormitoryCostEntries      DormitoryCostEntry[]
   barberShopProfiles     BarberShopProfile[]
   rooms                  Room[]
   barberPackages         BarberPackage[]
@@ -128,10 +134,13 @@ model User {
   villageHouses             VillageHouse[]             @relation("VillageHouseToUser")
   villageCommonFeeRows      VillageCommonFeeRow[]      @relation("VillageFeeRowToUser")
   villageSlipSubmissions    VillageSlipSubmission[]    @relation("VillageSlipToUser")
+  villageCostCategories     VillageCostCategory[]
+  villageCostEntries        VillageCostEntry[]
   trialSessions            TrialSession[]
   parkingSites             ParkingSite[]
 
   @@index([employerUserId])
+  @@index([referredByUserId], map: "user_referred_by_idx")
 }
 
 /** ทดลองใช้โมดูล — แยกข้อมูล sandbox ใน DB เดียวกันด้วย trialSessionId บนแถวข้อมูล */
@@ -420,6 +429,40 @@ model SplitBillPayment {
   @@index([billId])
   @@index([paymentStatus])
   @@map("payments")
+}
+
+/** หมวดต้นทุน/รายจ่ายหอพัก — โครงเดียวกับร้านตัดผม */
+model DormitoryCostCategory {
+  id             Int                  @id @default(autoincrement())
+  ownerUserId    String               @map("owner_id") @db.VarChar(191)
+  owner          User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String               @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String               @db.VarChar(120)
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  entries        DormitoryCostEntry[]
+
+  @@index([ownerUserId, trialSessionId], map: "dorm_cost_cat_owner_trial_idx")
+  @@map("dormitory_cost_categories")
+}
+
+model DormitoryCostEntry {
+  id             Int                   @id @default(autoincrement())
+  ownerUserId    String                @map("owner_id") @db.VarChar(191)
+  owner          User                  @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String                @default("prod") @map("trial_session_id") @db.VarChar(36)
+  categoryId     Int                   @map("category_id")
+  category       DormitoryCostCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  spentAt        DateTime              @map("spent_at")
+  amount         Int
+  itemLabel      String                @default("") @map("item_label") @db.VarChar(200)
+  note           String                @default("") @map("note") @db.VarChar(500)
+  slipPhotoUrl   String                @default("") @map("slip_photo_url") @db.VarChar(512)
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, spentAt], map: "dorm_cost_ent_owner_trial_spent_idx")
+  @@map("dormitory_cost_entries")
 }
 
 // --- Barber / ร้านตัดผม (กลุ่ม 1) ---
@@ -1373,6 +1416,40 @@ model VillageSlipSubmission {
   @@index([ownerUserId, trialSessionId, yearMonth], map: "vslip_owner_trial_ym_idx")
   @@index([feeRowId], map: "vslip_fee_row_idx")
   @@map("village_slip_submissions")
+}
+
+/** หมวดต้นทุน/รายจ่ายหมู่บ้าน — โครงเดียวกับหอพัก */
+model VillageCostCategory {
+  id             Int                  @id @default(autoincrement())
+  ownerUserId    String               @map("owner_id") @db.VarChar(191)
+  owner          User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String               @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String               @db.VarChar(120)
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  entries        VillageCostEntry[]
+
+  @@index([ownerUserId, trialSessionId], map: "village_cost_cat_owner_trial_idx")
+  @@map("village_cost_categories")
+}
+
+model VillageCostEntry {
+  id             Int                  @id @default(autoincrement())
+  ownerUserId    String               @map("owner_id") @db.VarChar(191)
+  owner          User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String               @default("prod") @map("trial_session_id") @db.VarChar(36)
+  categoryId     Int                  @map("category_id")
+  category       VillageCostCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  spentAt        DateTime             @map("spent_at")
+  amount         Int
+  itemLabel      String               @default("") @map("item_label") @db.VarChar(200)
+  note           String               @default("") @map("note") @db.VarChar(500)
+  slipPhotoUrl   String               @default("") @map("slip_photo_url") @db.VarChar(512)
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, spentAt], map: "village_cost_ent_owner_trial_spent_idx")
+  @@map("village_cost_entries")
 }
 
 /** โหมดคิดเงินที่จอดรถ — รายชั่วโมง (ปัดขึ้น) หรือ เหมารายวันปฏิทิน (Bangkok) */
