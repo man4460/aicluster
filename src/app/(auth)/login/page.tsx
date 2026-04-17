@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { LoginFormClient } from "./LoginFormClient";
 import { getGoogleOAuthClientId } from "@/lib/auth/google-oauth";
+import { getSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "เข้าสู่ระบบ | MAWELL Buffet",
@@ -12,6 +14,11 @@ export const dynamic = "force-dynamic";
 type Props = { searchParams: Promise<{ next?: string; error?: string }> };
 
 export default async function LoginPage({ searchParams }: Props) {
+  const session = await getSession();
+  if (session) {
+    redirect("/dashboard");
+  }
+
   const q = await searchParams;
   const next = q.next?.startsWith("/") && !q.next.startsWith("//") ? q.next : "/dashboard";
   /** แสดงปุ่มเมื่อมี Client ID — การแลกโค้ดยังต้องมี GOOGLE_CLIENT_SECRET (API จะ redirect กลับพร้อมข้อความถ้ายังไม่ครบ) */
