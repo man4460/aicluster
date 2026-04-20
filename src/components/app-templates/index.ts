@@ -78,3 +78,4 @@ export {
   type AppTemplateIconProps,
   type AppIconToolbarButtonProps,
 } from "./AppTemplateIcons";
+export { AppUsageGuideModal } from "./AppUsageGuideModal";

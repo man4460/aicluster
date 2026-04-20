@@ -31,6 +31,20 @@ const LOGIN_QUERY_ERROR_MESSAGES: Record<string, string> = {
 
 type GoogleUiMode = "sdk" | "redirect" | "none";
 
+function AuthPolicyInlineText() {
+  return (
+    <>
+      <Link href="/legal#terms" className="font-semibold text-[#0000BF] hover:underline">
+        ข้อกำหนดการใช้งาน
+      </Link>{" "}
+      และ{" "}
+      <Link href="/legal#privacy" className="font-semibold text-[#0000BF] hover:underline">
+        นโยบายความเป็นส่วนตัว
+      </Link>
+    </>
+  );
+}
+
 function LoginFormInner({
   redirectTo = "/dashboard",
   initialErrorKey,
@@ -102,6 +116,9 @@ function LoginFormInner({
             onErrorKey={onGoogleSdkErrorKey}
             disabled={loading}
           />
+          <p className="mb-4 mt-2 text-center text-xs text-slate-600">
+            การเข้าสู่ระบบด้วย Google ถือว่าคุณยอมรับ <AuthPolicyInlineText />
+          </p>
           <div className="relative mb-4">
             <div className="absolute inset-0 flex items-center" aria-hidden>
               <div className="w-full border-t border-slate-200" />
@@ -139,6 +156,9 @@ function LoginFormInner({
             </svg>
             เข้าสู่ระบบด้วย Google
           </Link>
+          <p className="mb-4 mt-2 text-center text-xs text-slate-600">
+            การเข้าสู่ระบบด้วย Google ถือว่าคุณยอมรับ <AuthPolicyInlineText />
+          </p>
           <div className="relative mb-4">
             <div className="absolute inset-0 flex items-center" aria-hidden>
               <div className="w-full border-t border-slate-200" />

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { AuthCard, AuthFooterLink } from "@/components/auth/AuthCard";
 import { PasswordInput } from "@/components/auth/PasswordInput";
@@ -13,6 +14,7 @@ export function RegisterForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -24,6 +26,10 @@ export function RegisterForm() {
     setError(null);
     if (password !== password2) {
       setError("รหัสผ่านไม่ตรงกัน");
+      return;
+    }
+    if (!acceptedTerms) {
+      setError("กรุณายอมรับข้อกำหนดการใช้งานและนโยบายความเป็นส่วนตัว");
       return;
     }
     if (turnstileRequired && !turnstileToken) {
@@ -123,6 +129,25 @@ export function RegisterForm() {
         <p className="text-xs text-slate-600">
           โบนัสสมัครใหม่ {SIGNUP_BONUS_TOKENS} โทเคน — กำหนดเบอร์ผู้แนะนำได้ครั้งเดียวที่หน้าโปรไฟล์หลังเข้าระบบ
         </p>
+
+        <label className="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-700">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#0000BF] focus:ring-[#0000BF]"
+          />
+          <span>
+            ฉันยอมรับ{" "}
+            <Link href="/legal#terms" className="font-semibold text-[#0000BF] hover:underline">
+              ข้อกำหนดการใช้งาน
+            </Link>{" "}
+            และ{" "}
+            <Link href="/legal#privacy" className="font-semibold text-[#0000BF] hover:underline">
+              นโยบายความเป็นส่วนตัว
+            </Link>
+          </span>
+        </label>
 
         <TurnstileWidget onToken={setTurnstileToken} />
 

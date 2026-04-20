@@ -8,7 +8,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
 
   return (
     <AuthPageFrame>
-      <div className="w-full max-w-md">{children}</div>
+      <div className="w-full">{children}</div>
     </AuthPageFrame>
   );
 }

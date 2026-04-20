@@ -11,6 +11,7 @@ import {
   AppImagePickCameraButtons,
   AppImageThumb,
   AppSectionHeader,
+  AppUsageGuideModal,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import {
@@ -200,6 +201,7 @@ export function CarWashDashboard({
     isStaffLaneOnly ? "staff_qr" : (defaultTab ?? "overview"),
   );
   const [loading, setLoading] = useState(true);
+  const [usageGuideOpen, setUsageGuideOpen] = useState(false);
   const [packages, setPackages] = useState<ServicePackage[]>([]);
   const [bundles, setBundles] = useState<WashBundle[]>([]);
   const [visits, setVisits] = useState<ServiceVisit[]>([]);
@@ -1064,11 +1066,22 @@ export function CarWashDashboard({
       {!isStaffLaneOnly ?
         <>
           <header className="app-surface rounded-2xl px-4 py-4 sm:px-6 sm:py-5 print:hidden">
-            <div className="min-w-0">
-              <h1 className="text-xl font-semibold tracking-tight text-[#2e2a58] sm:text-2xl">คาร์แคร์</h1>
-              <p className="mt-1 max-w-2xl text-sm leading-snug text-[#66638c]">
-                แพ็กเกจ · บันทึกการล้าง — QR ลูกค้า
-              </p>
+            <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
+              <div className="min-w-0">
+                <h1 className="text-xl font-semibold tracking-tight text-[#2e2a58] sm:text-2xl">คาร์แคร์</h1>
+                <p className="mt-1 max-w-2xl text-sm leading-snug text-[#66638c]">
+                  แพ็กเกจ · บันทึกการล้าง — QR ลูกค้า
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUsageGuideOpen(true)}
+                className="app-btn-soft min-h-[44px] shrink-0 rounded-xl border border-[#dcd8f0] px-4 py-2.5 text-sm font-semibold text-[#4d47b6] hover:bg-[#f4f3ff]"
+                aria-haspopup="dialog"
+                aria-expanded={usageGuideOpen}
+              >
+                คู่มือการใช้งาน
+              </button>
             </div>
           </header>
 
@@ -1111,6 +1124,135 @@ export function CarWashDashboard({
           </div>
         </div>
       }
+
+      {!isStaffLaneOnly ? (
+        <AppUsageGuideModal
+          open={usageGuideOpen}
+          onClose={() => setUsageGuideOpen(false)}
+          title="คู่มือการใช้งาน — ระบบคาร์แคร์"
+          subtitle="วิธีใช้งานแบบละเอียดทุกเมนูในระบบคาร์แคร์"
+          sections={[
+            {
+              title: "ลำดับเริ่มต้นแนะนำ",
+              content: (
+                <>
+                  <p>
+                    เริ่มจากตั้ง <strong className="font-semibold text-[#2e2a58]">แพ็กเกจ</strong> และ{" "}
+                    <strong className="font-semibold text-[#2e2a58]">แพ็กเกจเหมา</strong> ก่อน แล้วใช้{" "}
+                    <strong className="font-semibold text-[#2e2a58]">แดชบอร์ด</strong> รับรถรายวัน และติดตามผลที่{" "}
+                    <strong className="font-semibold text-[#2e2a58]">ยอดขาย</strong>
+                  </p>
+                  <ol className="list-decimal space-y-1 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                    <li>เพิ่มแพ็กเกจบริการและราคา</li>
+                    <li>เปิดรับลูกค้าและบันทึกรายการล้าง</li>
+                    <li>ตรวจยอดขาย ต้นทุน และพิมพ์ใบรายการ</li>
+                  </ol>
+                </>
+              ),
+            },
+            {
+              title: "เมนู: แดชบอร์ด",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>ดูสถิติวันนี้ เช่น จำนวนคิว รายรับ และแพ็กเกจที่ใช้</li>
+                  <li>ติดตามสถานะรถในลาน (กำลังล้าง/รอชำระ/เสร็จแล้ว)</li>
+                  <li>ใช้เป็นหน้าหลักสำหรับพนักงานรับรถ</li>
+                </ul>
+              ),
+            },
+            {
+              title: "เมนู: ยอดขาย",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>ดูรายการขายย้อนหลังและยอดรวมตามช่วงเวลา</li>
+                  <li>แก้ไขข้อมูลบิล ยอดเงิน หรือรูปแนบเมื่อบันทึกผิด</li>
+                  <li>พิมพ์เอกสารรายการขายและตรวจประวัติรถลูกค้า</li>
+                </ul>
+              ),
+            },
+            {
+              title: "เมนู: ต้นทุน",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>บันทึกค่าน้ำยา ค่าแรง และค่าใช้จ่ายประจำวัน</li>
+                  <li>ดูสุทธิรายรับ-รายจ่ายจริงของกิจการคาร์แคร์</li>
+                  <li>ใช้ข้อมูลนี้วิเคราะห์กำไรและปรับราคาแพ็กเกจ</li>
+                </ul>
+              ),
+            },
+            {
+              title: "เมนู: แพ็กเกจ",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>สร้างบริการ เช่น ล้างธรรมดา เคลือบสี ดูดฝุ่น</li>
+                  <li>กำหนดราคา ระยะเวลา และสถานะเปิดใช้งาน</li>
+                  <li>แพ็กเกจที่ปิดใช้งานจะไม่ให้เลือกในงานรับรถใหม่</li>
+                </ul>
+              ),
+            },
+            {
+              title: "เมนู: แพ็กเกจเหมา",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>ขายแพ็กหลายครั้งให้ลูกค้าและติดตามสิทธิ์คงเหลือ</li>
+                  <li>บันทึกสลิปการชำระและแก้ข้อมูลลูกค้าได้</li>
+                  <li>ใช้กับลูกค้าประจำเพื่อลดเวลารับเงินสดหน้างาน</li>
+                </ul>
+              ),
+            },
+            {
+              title: "เมนู: QR พนักงาน",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>สร้างทางเข้าหน้าลานสำหรับพนักงานจากมือถือ</li>
+                  <li>คัดลอกลิงก์หรือดาวน์โหลดโปสเตอร์ QR ไปติดจุดทำงาน</li>
+                  <li>เหมาะสำหรับสาขาที่มีหลายจุดรับรถ</li>
+                </ul>
+              ),
+            },
+            {
+              title: "ปุ่ม: QR ลูกค้า",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>เปิดหน้าสร้าง QR ให้ลูกค้าเช็กสิทธิ์และใช้บริการสะดวกขึ้น</li>
+                  <li>มีปุ่มคัดลอกลิงก์ แสดง/ซ่อนลิงก์ และดาวน์โหลดโปสเตอร์</li>
+                  <li>แนะนำติด QR จุดรับรถเพื่อเร่งขั้นตอนหน้างาน</li>
+                </ul>
+              ),
+            },
+            {
+              title: "โหมดพนักงาน (staff lane)",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>เห็นเฉพาะงานในลานที่จำเป็นต่อการปฏิบัติงาน</li>
+                  <li>ใช้สำหรับอุปกรณ์หน้างานที่ไม่ต้องเข้าถึงเมนูผู้ดูแลทั้งหมด</li>
+                  <li>ลดความเสี่ยงการแก้ข้อมูลสำคัญโดยไม่ตั้งใจ</li>
+                </ul>
+              ),
+            },
+            {
+              title: "หมายเหตุการใช้งานประจำวัน",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>ก่อนปิดร้านให้ตรวจรถค้างลานและยอดชำระที่ยังไม่ครบ</li>
+                  <li>กดรีเฟรชข้อมูลเมื่อมีหลายเครื่องใช้งานพร้อมกัน</li>
+                  <li>สำรองข้อมูลสำคัญและทบทวนรายรับสุทธิทุกวัน</li>
+                </ul>
+              ),
+            },
+            {
+              title: "สรุปการใช้งาน",
+              content: (
+                <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>เปิดรับงานที่แดชบอร์ด จัดการขายที่ยอดขาย และคุมกำไรที่ต้นทุน</li>
+                  <li>ใช้แพ็กเกจเหมา/QR เพื่อลดเวลารับงานซ้ำและเพิ่มความเร็วบริการ</li>
+                  <li>ทบทวนข้อมูลทุกเมนูตอนสิ้นวันเพื่อให้ตัวเลขแม่นยำ</li>
+                </ul>
+              ),
+            },
+          ]}
+        />
+      ) : null}
 
       {isStaffLaneOnly ?
         <>
