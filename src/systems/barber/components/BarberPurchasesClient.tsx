@@ -10,9 +10,8 @@ import {
   AppSectionHeader,
   useAppImageLightbox,
 } from "@/components/app-templates";
-import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
 import { cn } from "@/lib/cn";
-import { normalizeAppPublicBase } from "@/lib/url/normalize-app-public-base";
+import { normalizeBarberSlipUrlForDashboard } from "@/lib/barber/receipt-display-url";
 import { BarberDashboardBackLink } from "@/systems/barber/components/BarberDashboardBackLink";
 import { BarberSellPackageModal } from "@/systems/barber/components/BarberSellPackageModal";
 import {
@@ -24,6 +23,7 @@ import {
   barberSectionFirstClass,
   barberSectionNextClass,
 } from "@/systems/barber/components/barber-ui-tokens";
+import { useBarberSubscriptionSaleReceiptBlobUrl } from "@/systems/barber/hooks/use-barber-subscription-sale-receipt-blob-url";
 
 type Row = {
   id: number;
@@ -59,17 +59,86 @@ function formatPriceBaht(priceStr: string) {
 const slipThumbClassName =
   "self-start rounded-lg border border-[#ecebff] bg-[#f8f7ff] ring-[#ecebff] hover:ring-[#4d47b6]/35 sm:h-[4.5rem] sm:w-[4.5rem]";
 
-function publicAppOrigin(): string {
-  return normalizeAppPublicBase(process.env.NEXT_PUBLIC_APP_URL ?? "");
+/** ใช้ origin จริงของแท็บเมื่อมี — แปลง absolute URL คนละโฮสต์ให้เป็นพาธ /uploads/... บน origin ปัจจุบัน */
+function slipUrlForImg(src: string | null | undefined): string | null {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  return normalizeBarberSlipUrlForDashboard(src, origin);
 }
 
-/** ใช้ NEXT_PUBLIC_APP_URL เท่านั้น — ห้ามใช้ window ใน render (กัน hydration mismatch) */
-function slipUrlForImg(src: string | null | undefined): string | null {
-  if (!src?.trim()) return null;
-  const u = src.trim();
-  if (u.startsWith("http://") || u.startsWith("https://")) return u;
-  if (u.startsWith("/")) return u;
-  return resolveAssetUrl(u, publicAppOrigin());
+function BarberPurchaseSlipCell(props: {
+  row: Row;
+  className: string;
+  onOpenLightbox: (src: string) => void;
+}) {
+  const { row, className, onOpenLightbox } = props;
+  const { displaySrc, loading } = useBarberSubscriptionSaleReceiptBlobUrl(row.id, row.saleReceiptImageUrl);
+  const hasHint = Boolean(row.saleReceiptImageUrl?.trim());
+
+  if (!hasHint) {
+    return <AppImageThumb src={null} emptyLabel="ไม่มีสลิป" className={className} />;
+  }
+
+  if (loading) {
+    return (
+      <div
+        className={cn(
+          className,
+          "flex items-center justify-center text-[11px] font-medium text-[#8b87ad]",
+        )}
+        aria-hidden
+      >
+        โหลด…
+      </div>
+    );
+  }
+
+  return (
+    <AppImageThumb
+      src={displaySrc}
+      alt={displaySrc ? "สลิปขายแพ็กเกจ" : ""}
+      emptyLabel="ไม่มีสลิป"
+      onOpen={displaySrc ? () => onOpenLightbox(displaySrc) : undefined}
+      className={className}
+    />
+  );
+}
+
+function BarberEditSlipPreview(props: {
+  subscriptionId: number;
+  saleReceiptImageUrl: string | null;
+  imgClassName: string;
+}) {
+  const { subscriptionId, saleReceiptImageUrl, imgClassName } = props;
+  const { displaySrc, loading } = useBarberSubscriptionSaleReceiptBlobUrl(
+    subscriptionId,
+    saleReceiptImageUrl,
+  );
+  const hasHint = Boolean(saleReceiptImageUrl?.trim());
+  if (!hasHint) return null;
+  if (loading) {
+    return (
+      <div
+        className={cn(imgClassName, "flex items-center justify-center bg-[#f8f7ff] text-[10px] text-[#8b87ad]")}
+      >
+        โหลด…
+      </div>
+    );
+  }
+  if (!displaySrc) {
+    return (
+      <div
+        className={cn(imgClassName, "flex items-center justify-center bg-amber-50 text-center text-[10px] text-amber-900")}
+      >
+        โหลดไม่สำเร็จ
+      </div>
+    );
+  }
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={displaySrc} alt="สลิปปัจจุบัน" className={imgClassName} />
+    </>
+  );
 }
 
 export function BarberPurchasesClient() {
@@ -112,7 +181,10 @@ export function BarberPurchasesClient() {
 
   const load = useCallback(async () => {
     setErr(null);
-    const res = await fetch("/api/barber/subscriptions?limit=150", { cache: "no-store" });
+    const res = await fetch("/api/barber/subscriptions?limit=150", {
+      cache: "no-store",
+      credentials: "include",
+    });
     const data = (await res.json().catch(() => ({}))) as { subscriptions?: Row[]; error?: string };
     if (!res.ok) {
       setErr(data.error ?? "โหลดไม่สำเร็จ");
@@ -175,7 +247,11 @@ export function BarberPurchasesClient() {
       } else if (editSlipFile) {
         const fd = new FormData();
         fd.append("file", editSlipFile);
-        const up = await fetch("/api/barber/cash-receipt/upload", { method: "POST", body: fd });
+        const up = await fetch("/api/barber/cash-receipt/upload", {
+          method: "POST",
+          body: fd,
+          credentials: "include",
+        });
         const upData = (await up.json().catch(() => ({}))) as { error?: string; imageUrl?: string };
         if (!up.ok) {
           setEditErr(upData.error ?? "อัปโหลดสลิปไม่สำเร็จ");
@@ -200,6 +276,7 @@ export function BarberPurchasesClient() {
       const res = await fetch(`/api/barber/subscriptions/${editTarget.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -219,7 +296,7 @@ export function BarberPurchasesClient() {
     const res = await fetch(`/api/barber/subscriptions/${r.id}`, {
       method: "DELETE",
       cache: "no-store",
-      credentials: "same-origin",
+      credentials: "include",
     });
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) {
@@ -356,9 +433,7 @@ export function BarberPurchasesClient() {
                 คอลัมน์ซ้ายเป็นสลิปตอนขายแพ็ก (เทมเพลตกลาง) — ถ้ามีรูป คลิกเพื่อเปิดดูขนาดเต็ม
               </p>
               <ul className="space-y-2">
-                {filteredRows.map((r) => {
-                  const slipResolved = slipUrlForImg(r.saleReceiptImageUrl);
-                  return (
+                {filteredRows.map((r) => (
                   <li
                     key={r.id}
                     className={cn(
@@ -366,14 +441,10 @@ export function BarberPurchasesClient() {
                       "flex min-w-0 gap-3 py-2.5 sm:items-start sm:gap-4",
                     )}
                   >
-                    <AppImageThumb
-                      src={slipResolved}
-                      alt={slipResolved ? "สลิปขายแพ็กเกจ" : ""}
-                      emptyLabel="ไม่มีสลิป"
-                      onOpen={
-                        slipResolved ? () => slipLightbox.open(slipResolved) : undefined
-                      }
+                    <BarberPurchaseSlipCell
+                      row={r}
                       className={slipThumbClassName}
+                      onOpenLightbox={(src) => slipLightbox.open(src)}
                     />
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -434,8 +505,7 @@ export function BarberPurchasesClient() {
                       </div>
                     </div>
                   </li>
-                  );
-                })}
+                ))}
               </ul>
             </section>
           )}
@@ -447,14 +517,21 @@ export function BarberPurchasesClient() {
       <BarberSellPackageModal
         open={sellModalOpen}
         onClose={() => setSellModalOpen(false)}
-        onSuccess={(r) => {
+        onSuccess={async (r) => {
           const warn = r.warning?.trim();
           setSellNotice(
             warn ?
               `เปิดแพ็กเกจให้ลูกค้าแล้ว — รหัสสมาชิก #${r.subscriptionId ?? ""} · ${warn}`
             : `เปิดแพ็กเกจให้ลูกค้าแล้ว — รหัสสมาชิก #${r.subscriptionId ?? ""}`,
           );
-          void load();
+          await load();
+          const slip = r.saleReceiptImageUrl?.trim();
+          const sid = r.subscriptionId;
+          if (sid != null && slip) {
+            setRows((prev) =>
+              prev.map((row) => (row.id === sid ? { ...row, saleReceiptImageUrl: slip } : row)),
+            );
+          }
         }}
       />
 
@@ -534,13 +611,12 @@ export function BarberPurchasesClient() {
                 <p className="mt-0.5 text-[11px] text-[#66638c]">
                   ถ้ารายการเดิมไม่มีรูป (ระบบเคยบันทึกผิดพลาด) แนบไฟล์ที่นี่ได้ — หรือติ๊กลบสลิป
                 </p>
-                {!editRemoveSlip && slipUrlForImg(editTarget.saleReceiptImageUrl) ? (
+                {!editRemoveSlip && editTarget.saleReceiptImageUrl?.trim() ? (
                   <div className="mt-2 flex items-center gap-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={slipUrlForImg(editTarget.saleReceiptImageUrl) ?? ""}
-                      alt="สลิปปัจจุบัน"
-                      className="h-16 w-16 rounded-lg border border-[#ecebff] object-cover"
+                    <BarberEditSlipPreview
+                      subscriptionId={editTarget.id}
+                      saleReceiptImageUrl={editTarget.saleReceiptImageUrl}
+                      imgClassName="h-16 w-16 shrink-0 rounded-lg border border-[#ecebff] object-cover"
                     />
                     <span className="text-[11px] text-[#5f5a8a]">มีสลิปในระบบ</span>
                   </div>

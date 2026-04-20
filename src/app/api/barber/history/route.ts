@@ -6,6 +6,7 @@ import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
 import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import { bangkokRangeForCalendarFilter } from "@/lib/barber/bangkok-day";
 import { resolveBarberHistoryCalendarFromSearchParams } from "@/lib/barber/history-calendar-query";
+import { normalizeBarberSlipUrlForDashboard } from "@/lib/barber/receipt-display-url";
 
 type BarberLogWithCustomer = Prisma.BarberServiceLogGetPayload<{
   include: { customer: true; stylist: true };
@@ -94,6 +95,7 @@ export async function GET(req: Request) {
 
   const scope = await getBarberDataScope(own.ownerId);
   const ownerId = own.ownerId;
+  const requestOrigin = new URL(req.url).origin;
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") ?? "").trim();
 
@@ -201,7 +203,7 @@ export async function GET(req: Request) {
         visitType: l.visitType,
         note: l.note,
         amountBaht: l.amountBaht != null ? String(l.amountBaht) : null,
-        receiptImageUrl: l.receiptImageUrl ?? null,
+        receiptImageUrl: normalizeBarberSlipUrlForDashboard(l.receiptImageUrl, requestOrigin),
         createdAt: l.createdAt.toISOString(),
         subscriptionId: l.subscriptionId,
         stylistName: l.stylist?.name ?? null,

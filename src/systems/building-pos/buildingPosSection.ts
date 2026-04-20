@@ -1,4 +1,4 @@
-export type BuildingPosSection = "dashboard" | "sales" | "staff-link";
+export type BuildingPosSection = "dashboard" | "sales" | "staff-link" | "costs";
 
 /**
  * อ่านจาก pathname — segment หลัง `building-pos` เท่านั้น
@@ -13,5 +13,6 @@ export function deriveBuildingPosSection(pathname: string): BuildingPosSection {
   const sub = segments[idx + 1];
   if (sub === "sales") return "sales";
   if (sub === "staff-link") return "staff-link";
+  if (sub === "costs") return "costs";
   return "dashboard";
 }

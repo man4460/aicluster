@@ -18,6 +18,18 @@ function encodeAuthSecret(): Uint8Array | null {
   return new TextEncoder().encode(s);
 }
 
+/** แชร์ session ข้ามโดเมนย่อย (เช่น `.ma-well.com` สำหรับ app. / buffet.) — ปล่อยว่าง = host-only */
+function sessionCookieDomain(): string | undefined {
+  const raw = process.env.COOKIE_DOMAIN?.trim();
+  if (!raw) return undefined;
+  const lower = raw.toLowerCase();
+  if (lower === "localhost" || lower.startsWith("127.")) return undefined;
+  const d = raw.startsWith(".") ? raw : `.${raw}`;
+  if (d.length < 3 || d.length > 253) return undefined;
+  if (!/^\.[a-z0-9][a-z0-9.-]*$/i.test(d)) return undefined;
+  return d;
+}
+
 export async function signSessionToken(user: {
   id: string;
   username: string;
@@ -64,23 +76,27 @@ export async function getSession(): Promise<SessionUser | null> {
 export async function setSessionCookie(token: string, req?: Request) {
   const store = await cookies();
   const secure = req ? sessionCookieSecureForIncomingRequest(req) : sessionCookieSecure();
+  const domain = sessionCookieDomain();
   store.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure,
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
+    ...(domain ? { domain } : {}),
   });
 }
 
 export async function clearSessionCookie(req?: Request) {
   const store = await cookies();
   const secure = req ? sessionCookieSecureForIncomingRequest(req) : sessionCookieSecure();
+  const domain = sessionCookieDomain();
   store.set(SESSION_COOKIE, "", {
     httpOnly: true,
     secure,
     sameSite: "lax",
     path: "/",
     maxAge: 0,
+    ...(domain ? { domain } : {}),
   });
 }

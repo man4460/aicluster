@@ -17,12 +17,14 @@ export function isBuffetTierOpenForPurchase(tier: SubscriptionTier): boolean {
 }
 
 /** กรองโมดูลในแคตตาล็อก/แดชบอร์ด — แอดมินเห็นทุกกลุ่ม */
-export function filterAppModulesForDashboardUi<T extends { groupId: number }>(
+export function filterAppModulesForDashboardUi<T extends { groupId: number; slug?: string }>(
   modules: T[],
   role: UserRole,
 ): T[] {
   if (role === "ADMIN") return modules;
-  return modules.filter((m) => m.groupId <= UI_VISIBLE_MAX_MODULE_GROUP);
+  return modules.filter(
+    (m) => m.groupId <= UI_VISIBLE_MAX_MODULE_GROUP && m.slug !== PARKING_MODULE_SLUG,
+  );
 }
 
 /**

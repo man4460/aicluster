@@ -16,6 +16,7 @@ import {
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { daysInBangkokMonth } from "@/lib/barber/bangkok-day";
+import { normalizeBarberSlipUrlForDashboard } from "@/lib/barber/receipt-display-url";
 import { BarberDashboardCharts } from "@/systems/barber/components/BarberDashboardCharts";
 import {
   barberIconToolbarGroupClass,
@@ -113,6 +114,11 @@ function bangkokDatetimeLocalToIso(local: string): string {
   const hh = Number(m[4]);
   const mm = Number(m[5]);
   return new Date(Date.UTC(y, mo - 1, da, hh - 7, mm, 0, 0)).toISOString();
+}
+
+function barberHistoryReceiptImgUrl(src: string | null | undefined): string | null {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  return normalizeBarberSlipUrlForDashboard(src, origin);
 }
 
 export function BarberHistoryClient() {
@@ -436,6 +442,9 @@ export function BarberHistoryClient() {
     setDay("all");
   }
 
+  const resolvedEditReceipt =
+    editTarget && !editReceiptRemoved ? barberHistoryReceiptImgUrl(editTarget.receiptImageUrl) : null;
+
   return (
     <div className={barberPageStackClass}>
       <section className={barberSectionFirstClass} aria-label="กราฟตามช่วงเวลา">
@@ -627,6 +636,7 @@ export function BarberHistoryClient() {
               {logs.map((l) => {
                 const isCash = l.visitType === "CASH_WALK_IN";
                 const amt = isCash && l.amountBaht != null ? Number(l.amountBaht) : null;
+                const receiptSrc = barberHistoryReceiptImgUrl(l.receiptImageUrl);
                 return (
                   <li
                     key={l.id}
@@ -635,11 +645,11 @@ export function BarberHistoryClient() {
                       "flex min-w-0 gap-3 py-2.5 sm:items-start sm:gap-4",
                     )}
                   >
-                    {l.receiptImageUrl ? (
+                    {receiptSrc ? (
                       <AppImageThumb
-                        src={l.receiptImageUrl}
+                        src={receiptSrc}
                         alt="สลิป"
-                        onOpen={() => receiptLightbox.open(l.receiptImageUrl!)}
+                        onOpen={() => receiptLightbox.open(receiptSrc)}
                         className="self-start rounded-lg border border-[#ecebff] bg-[#f8f7ff] ring-[#ecebff] hover:ring-[#4d47b6]/35 sm:h-[4.5rem] sm:w-[4.5rem]"
                       />
                     ) : null}
@@ -806,16 +816,16 @@ export function BarberHistoryClient() {
                         className="max-h-36 w-full rounded-lg border border-[#ecebff] object-contain"
                       />
                     </button>
-                  ) : !editReceiptRemoved && editTarget.receiptImageUrl ? (
+                  ) : resolvedEditReceipt ? (
                     <button
                       type="button"
                       className="mt-2 block w-full cursor-zoom-in rounded-lg border border-transparent p-0 text-left focus-visible:outline focus-visible:ring-2 focus-visible:ring-[#4d47b6]/40"
-                      onClick={() => receiptLightbox.open(editTarget.receiptImageUrl!)}
+                      onClick={() => receiptLightbox.open(resolvedEditReceipt)}
                       aria-label="ดูรูปสลิปปัจจุบันเต็มจอ"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={editTarget.receiptImageUrl}
+                        src={resolvedEditReceipt}
                         alt="สลิปปัจจุบัน"
                         className="max-h-36 w-full rounded-lg border border-[#ecebff] object-contain"
                       />

@@ -1,54 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ChangeEvent } from "react";
-import { AppCameraCaptureModal } from "@/components/app-templates";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
+import {
+  AppCameraCaptureModal,
+  AppPickGalleryImageButton,
+  AppTakePhotoButton,
+} from "@/components/app-templates";
 
 export type BarberSellPackagePkg = { id: number; name: string; price: number; totalSessions: number };
 
 type StylistBrief = { id: number; name: string };
 
-function IconImageUp({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
-  );
-}
-
-function IconCamera({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-      <circle cx="12" cy="13" r="4" />
-    </svg>
-  );
-}
-
 export type BarberSellPackageModalProps = {
   open: boolean;
   onClose: () => void;
   /** หลังบันทึกสำเร็จ — ปิดโมดัลเป็นหน้าที่ parent */
-  onSuccess?: (result: { subscriptionId?: number; warning?: string | null }) => void;
+  onSuccess?: (result: {
+    subscriptionId?: number;
+    warning?: string | null;
+    /** URL โหลดสลิปในรายการ (จาก API หลังบันทึกสำเร็จ) */
+    saleReceiptImageUrl?: string | null;
+  }) => void;
   /**
    * หน้าเช็กอิน: ส่ง stylist จากแถบบนหน้า (ไม่แสดง dropdown ในโมดัล)
    * ไม่ส่ง = โมดัลโหลดรายช่างเองและมี dropdown ในโมดัล
@@ -75,6 +47,7 @@ export function BarberSellPackageModal({
   const [sellFormErr, setSellFormErr] = useState<string | null>(null);
   const [sellReceipt, setSellReceipt] = useState<{ file: File; url: string } | null>(null);
   const [sellCameraOpen, setSellCameraOpen] = useState(false);
+  const sellSlipFileInputRef = useRef<HTMLInputElement>(null);
 
   const clearSellReceipt = useCallback(() => {
     setSellReceipt((prev) => {
@@ -179,7 +152,11 @@ export function BarberSellPackageModal({
       if (sellReceipt?.file) {
         const fd = new FormData();
         fd.append("file", sellReceipt.file);
-        const up = await fetch("/api/barber/cash-receipt/upload", { method: "POST", body: fd });
+        const up = await fetch("/api/barber/cash-receipt/upload", {
+          method: "POST",
+          body: fd,
+          credentials: "include",
+        });
         const upData = (await up.json().catch(() => ({}))) as { error?: string; imageUrl?: string };
         if (!up.ok) {
           setSellFormErr(upData.error ?? "อัปโหลดรูปไม่สำเร็จ");
@@ -198,6 +175,7 @@ export function BarberSellPackageModal({
       const res = await fetch("/api/barber/subscriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           packageId: pkgId,
           phone: digits,
@@ -209,7 +187,7 @@ export function BarberSellPackageModal({
       const data = (await res.json().catch(() => ({}))) as {
         error?: string;
         warning?: string;
-        subscription?: { id: number };
+        subscription?: { id: number; saleReceiptImageUrl?: string | null };
       };
       if (!res.ok) {
         setSellFormErr(data.error ?? "ขายแพ็กไม่สำเร็จ");
@@ -219,6 +197,7 @@ export function BarberSellPackageModal({
       onSuccess?.({
         subscriptionId: data.subscription?.id,
         warning: data.warning?.trim() ?? null,
+        saleReceiptImageUrl: data.subscription?.saleReceiptImageUrl ?? null,
       });
       onClose();
     } finally {
@@ -323,32 +302,40 @@ export function BarberSellPackageModal({
             />
             <div className="rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5">
               <p className="text-xs font-semibold text-slate-700">แนบรูปสลิป (ไม่บังคับ)</p>
+              <input
+                ref={sellSlipFileInputRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden
+                onChange={onSellReceiptSelected}
+              />
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <div className="relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="absolute inset-0 z-10 h-full min-h-[44px] w-full min-w-[44px] cursor-pointer opacity-0"
-                    onChange={onSellReceiptSelected}
-                    aria-label="อัปโหลดรูปสลิป"
-                  />
-                  <IconImageUp className="pointer-events-none h-5 w-5" aria-hidden />
-                </div>
-                <button
+                <AppPickGalleryImageButton
                   type="button"
-                  className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
-                  aria-label="ถ่ายรูปสลิปจากกล้อง"
+                  disabled={sellLoading}
+                  className="min-h-[44px]"
+                  onClick={() => {
+                    setSellFormErr(null);
+                    sellSlipFileInputRef.current?.click();
+                  }}
+                >
+                  อัปโหลดสลิป (ทดลอง)
+                </AppPickGalleryImageButton>
+                <AppTakePhotoButton
+                  type="button"
+                  disabled={sellLoading}
+                  className="min-h-[44px]"
                   onClick={() => {
                     setSellFormErr(null);
                     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-                      setSellFormErr("เบราว์เซอร์ไม่รองรับการเปิดกล้อง — ใช้ปุ่มอัปโหลดรูปแทน");
+                      setSellFormErr("เบราว์เซอร์ไม่รองรับการเปิดกล้อง — ใช้ปุ่มอัปโหลดสลิปแทน");
                       return;
                     }
                     setSellCameraOpen(true);
                   }}
-                >
-                  <IconCamera className="h-5 w-5" aria-hidden />
-                </button>
+                />
                 {sellReceipt ? (
                   <button
                     type="button"

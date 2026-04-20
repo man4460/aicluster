@@ -5,7 +5,7 @@ import { buildingPosOwnerFromAuth } from "@/lib/building-pos/api-owner";
 import { formatBuildingPosDbError, jsonBuildingPosError } from "@/lib/building-pos/route-errors";
 import { getBuildingPosDataScope } from "@/lib/trial/module-scopes";
 
-/** ราคาต่อหน่วยล่าสุดต่อรายการของ (จากบันทึกการจ่ายตลาด เรียงวันที่มากสุดก่อน) */
+/** ราคาต่อหน่วยล่าสุดต่อรายการของ (จากบันทึกรายจ่าย เรียงวันที่มากสุดก่อน) */
 export async function GET() {
   try {
   const auth = await requireSession();

@@ -31,7 +31,7 @@ export default async function ModulesCatalogPage() {
   const initialCooldownUnlocks = Object.fromEntries(cooldownRows.map((c) => [c.moduleId, c.unlockAtIso]));
   const hydrationReferenceMs = Date.now();
 
-  const modules = filterAppModulesForDashboardUi(modulesRaw, ctx.access.role);
+  const modules = filterAppModulesForDashboardUi(modulesRaw, session.role);
 
   const catalogModules = isMqttServiceModuleEnabled()
     ? modules

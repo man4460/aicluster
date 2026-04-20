@@ -1,15 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AppImageLightbox, useAppImageLightbox } from "@/components/app-templates";
+import {
+  AppEmptyState,
+  AppImageLightbox,
+  useAppImageLightbox,
+} from "@/components/app-templates";
+import { FormModal } from "@/components/ui/FormModal";
+import { PopupIconButton, popupIconBtnDanger } from "@/systems/car-wash/car-wash-popup-icon-buttons";
 import {
   createBuildingPosSessionApiRepository,
   uploadBuildingPosSessionImage,
   type PosIngredient,
   type PosPurchaseOrder,
 } from "@/systems/building-pos/building-pos-service";
-
-type Repo = ReturnType<typeof createBuildingPosSessionApiRepository>;
 
 export function BuildingPosIngredientsPanel({
   ingredients,
@@ -19,35 +23,21 @@ export function BuildingPosIngredientsPanel({
   onChanged: () => void | Promise<void>;
 }) {
   const repo = useMemo(() => createBuildingPosSessionApiRepository(), []);
+  const [manageOpen, setManageOpen] = useState(false);
   const [name, setName] = useState("");
   const [unitLabel, setUnitLabel] = useState("");
   const [sortOrder, setSortOrder] = useState("100");
-  const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [editUnitLabel, setEditUnitLabel] = useState("");
   const [editSortOrder, setEditSortOrder] = useState("100");
-  const [editSaving, setEditSaving] = useState(false);
 
-  async function addIngredient() {
-    if (!name.trim()) return;
-    setSaving(true);
-    try {
-      const so = Number(sortOrder);
-      await repo.createIngredient({
-        name: name.trim(),
-        unit_label: unitLabel.trim(),
-        sort_order: Number.isFinite(so) ? so : 100,
-      });
-      setName("");
-      setUnitLabel("");
-      setSortOrder("100");
-      await onChanged();
-    } catch (e) {
-      window.alert(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
-    } finally {
-      setSaving(false);
-    }
+  function cancelForm() {
+    setEditingId(null);
+    setName("");
+    setUnitLabel("");
+    setSortOrder("100");
   }
 
   function startEdit(ing: PosIngredient) {
@@ -55,174 +45,217 @@ export function BuildingPosIngredientsPanel({
     setEditName(ing.name);
     setEditUnitLabel(ing.unit_label);
     setEditSortOrder(String(ing.sort_order));
+    setName("");
+    setUnitLabel("");
+    setSortOrder("100");
   }
 
-  function cancelEdit() {
-    setEditingId(null);
-  }
-
-  async function saveEdit(id: number) {
-    if (!editName.trim()) return;
-    setEditSaving(true);
+  async function submitIngredient() {
+    const label = editingId != null ? editName.trim() : name.trim();
+    if (!label) return;
+    setBusy(true);
     try {
-      const so = Number(editSortOrder);
-      await repo.updateIngredient(id, {
-        name: editName.trim(),
-        unit_label: editUnitLabel.trim(),
-        sort_order: Number.isFinite(so) ? so : 100,
-      });
-      setEditingId(null);
+      const so = Number(editingId != null ? editSortOrder : sortOrder);
+      const orderVal = Number.isFinite(so) ? so : 100;
+      if (editingId != null) {
+        await repo.updateIngredient(editingId, {
+          name: editName.trim(),
+          unit_label: editUnitLabel.trim(),
+          sort_order: orderVal,
+        });
+      } else {
+        await repo.createIngredient({
+          name: name.trim(),
+          unit_label: unitLabel.trim(),
+          sort_order: orderVal,
+        });
+      }
+      cancelForm();
       await onChanged();
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
     } finally {
-      setEditSaving(false);
+      setBusy(false);
     }
   }
 
   async function removeIngredient(id: number, label: string) {
-    if (!window.confirm(`ลบรายการของ "${label}" ?`)) return;
+    if (!window.confirm(`ลบหมวด «${label}» ?`)) return;
+    setBusy(true);
     try {
       await repo.deleteIngredient(id);
-      if (editingId === id) setEditingId(null);
+      if (editingId === id) cancelForm();
       await onChanged();
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
+    } finally {
+      setBusy(false);
     }
   }
 
-  return (
-    <section className="app-surface rounded-2xl p-4 sm:p-5">
-      <div className="border-b border-[#ecebff] pb-4">
-        <h2 className="text-lg font-bold text-[#2e2a58]">รายการของ</h2>
-        <p className="mt-1 text-xs text-[#66638c]">
-          ของที่ซื้อจากตลาด — ตั้งชื่อและหน่วย (กก., กรัม, ml) ใช้ในบันทึกการจ่ายตลาดและสูตรอาหาร
-        </p>
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-12 sm:items-end">
-          <label className="sm:col-span-5">
-            <span className="text-xs font-medium text-[#4d47b6]">ชื่อ</span>
-            <input
-              className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="เช่น เนื้อหมูสับ"
-            />
-          </label>
-          <label className="sm:col-span-3">
-            <span className="text-xs font-medium text-[#4d47b6]">หน่วย</span>
-            <input
-              className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
-              value={unitLabel}
-              onChange={(e) => setUnitLabel(e.target.value)}
-              placeholder="กก."
-            />
-          </label>
-          <label className="sm:col-span-2">
-            <span className="text-xs font-medium text-[#4d47b6]">ลำดับ</span>
-            <input
-              className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
-              type="number"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-            />
-          </label>
-          <div className="sm:col-span-2">
+  const sorted = useMemo(
+    () => [...ingredients].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id),
+    [ingredients],
+  );
+
+  const modalBody = (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-3">
+        <label className="min-w-0 flex-1 text-xs font-medium text-slate-600">
+          {editingId != null ? "ชื่อหมวด" : "ชื่อหมวดใหม่"}
+          <input
+            className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
+            value={editingId != null ? editName : name}
+            onChange={(ev) => (editingId != null ? setEditName(ev.target.value) : setName(ev.target.value))}
+            placeholder="เช่น เนื้อหมูสับ ผัก น้ำมัน"
+          />
+        </label>
+        <label className="min-w-0 flex-1 text-xs font-medium text-slate-600 sm:max-w-[8rem]">
+          หน่วย
+          <input
+            className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm"
+            value={editingId != null ? editUnitLabel : unitLabel}
+            onChange={(ev) =>
+              editingId != null ? setEditUnitLabel(ev.target.value) : setUnitLabel(ev.target.value)
+            }
+            placeholder="กก."
+          />
+        </label>
+        <label className="min-w-0 text-xs font-medium text-slate-600 sm:max-w-[6.5rem]">
+          ลำดับ
+          <input
+            className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm tabular-nums"
+            type="number"
+            value={editingId != null ? editSortOrder : sortOrder}
+            onChange={(ev) =>
+              editingId != null ? setEditSortOrder(ev.target.value) : setSortOrder(ev.target.value)
+            }
+          />
+        </label>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {editingId != null ? (
+            <>
+              <button
+                type="button"
+                disabled={busy || !editName.trim()}
+                onClick={() => void submitIngredient()}
+                className="app-btn-primary rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              >
+                บันทึก
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={cancelForm}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              >
+                ยกเลิก
+              </button>
+            </>
+          ) : (
             <button
               type="button"
-              disabled={saving || !name.trim()}
-              onClick={() => void addIngredient()}
-              className="app-btn-primary w-full rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+              disabled={busy || !name.trim()}
+              onClick={() => void submitIngredient()}
+              className="app-btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50"
             >
-              เพิ่ม
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              เพิ่มหมวด
             </button>
-          </div>
+          )}
         </div>
       </div>
-      <ul className="mt-4 grid grid-cols-1 gap-2">
-        {ingredients.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-[#d8d6ec] bg-[#faf9ff] py-8 text-center text-sm text-[#66638c]">ยังไม่มีรายการของ</p>
-        ) : (
-          ingredients.map((ing) => (
-            <li
-              key={ing.id}
-              className="rounded-2xl border border-[#e1e3ff] bg-white px-3 py-3 text-sm shadow-sm"
-            >
-              {editingId === ing.id ? (
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-12 sm:items-end">
-                  <label className="sm:col-span-5">
-                    <span className="text-xs font-medium text-[#4d47b6]">ชื่อ</span>
-                    <input
-                      className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                    />
-                  </label>
-                  <label className="sm:col-span-3">
-                    <span className="text-xs font-medium text-[#4d47b6]">หน่วย</span>
-                    <input
-                      className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
-                      value={editUnitLabel}
-                      onChange={(e) => setEditUnitLabel(e.target.value)}
-                    />
-                  </label>
-                  <label className="sm:col-span-2">
-                    <span className="text-xs font-medium text-[#4d47b6]">ลำดับ</span>
-                    <input
-                      className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
-                      type="number"
-                      value={editSortOrder}
-                      onChange={(e) => setEditSortOrder(e.target.value)}
-                    />
-                  </label>
-                  <div className="flex flex-wrap gap-2 sm:col-span-2 sm:justify-end">
-                    <button
-                      type="button"
-                      disabled={editSaving || !editName.trim()}
-                      onClick={() => void saveEdit(ing.id)}
-                      className="app-btn-primary rounded-xl px-3 py-2 text-xs font-semibold disabled:opacity-50"
-                    >
-                      {editSaving ? "กำลังบันทึก…" : "บันทึก"}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={editSaving}
-                      onClick={cancelEdit}
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-                    >
-                      ยกเลิก
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="min-w-0 font-medium text-[#2e2a58]">
-                    {ing.name}
-                    <span className="mt-0.5 block text-xs font-normal text-[#66638c]">
-                      หน่วย {ing.unit_label || "—"} · ลำดับ {ing.sort_order}
-                    </span>
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => startEdit(ing)}
-                      className="rounded-xl border border-[#c8c4ff] bg-[#f4f3ff] px-3 py-2 text-xs font-semibold text-[#4d47b6] hover:bg-[#ecebff]"
-                    >
-                      แก้ไข
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void removeIngredient(ing.id, ing.name)}
-                      className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"
-                    >
-                      ลบ
-                    </button>
-                  </div>
-                </div>
-              )}
+
+      {sorted.length === 0 ?
+        <AppEmptyState>ยังไม่มีหมวด — กด «เพิ่มหมวด» ด้านบน</AppEmptyState>
+      : <ul className="max-h-[min(40vh,14rem)] divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200 bg-white">
+          {sorted.map((ing) => (
+            <li key={ing.id} className="flex items-center justify-between gap-2 px-3 py-2.5 sm:px-4">
+              <span className="min-w-0 truncate font-medium text-slate-900">
+                {ing.name}
+                <span className="block truncate text-[11px] font-normal text-slate-500">
+                  หน่วย {ing.unit_label || "—"} · ลำดับ {ing.sort_order}
+                </span>
+              </span>
+              <div className="flex shrink-0 items-center gap-1">
+                <PopupIconButton
+                  label="แก้ไขหมวด"
+                  disabled={busy || editingId != null}
+                  onClick={() => startEdit(ing)}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" aria-hidden>
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </PopupIconButton>
+                <PopupIconButton
+                  label="ลบหมวด"
+                  disabled={busy || editingId != null}
+                  className={popupIconBtnDanger}
+                  onClick={() => void removeIngredient(ing.id, ing.name)}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" aria-hidden>
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                </PopupIconButton>
+              </div>
             </li>
-          ))
-        )}
-      </ul>
+          ))}
+        </ul>
+      }
+    </div>
+  );
+
+  return (
+    <section className="app-surface rounded-2xl p-4 sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-lg font-bold text-[#2e2a58]">หมวดหมู่วัตถุดิบ</h2>
+          <p className="mt-1 text-xs text-[#66638c]">
+            รายชื่อและหน่วยซ่อนอยู่ในหน้าต่าง — กดปุ่มเพื่อเพิ่ม/แก้ไข (ตอนนี้{" "}
+            <span className="font-semibold tabular-nums text-[#2e2a58]">{ingredients.length}</span> หมวด)
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            cancelForm();
+            setManageOpen(true);
+          }}
+          className="app-btn-primary shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold"
+        >
+          จัดการหมวด
+        </button>
+      </div>
+
+      <FormModal
+        open={manageOpen}
+        onClose={() => {
+          setManageOpen(false);
+          cancelForm();
+        }}
+        title="หมวดหมู่วัตถุดิบ"
+        size="lg"
+        footer={
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setManageOpen(false);
+                cancelForm();
+              }}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              ปิด
+            </button>
+          </div>
+        }
+      >
+        {modalBody}
+      </FormModal>
     </section>
   );
 }
@@ -320,7 +353,7 @@ export function BuildingPosPurchasesPanel({
   async function submitEditPo() {
     if (editingPoId == null) return;
     if (ingredients.length === 0) {
-      window.alert("เพิ่มรายการของก่อนแก้ไข");
+      window.alert("เพิ่มหมวดก่อนแก้ไข");
       return;
     }
     const parsedLines = editLines
@@ -360,7 +393,7 @@ export function BuildingPosPurchasesPanel({
 
   async function submitPurchase() {
     if (ingredients.length === 0) {
-      window.alert("เพิ่มรายการของก่อนบันทึกการจ่ายตลาด");
+      window.alert("เพิ่มหมวดก่อนบันทึกรายจ่าย");
       return;
     }
     const parsedLines = lines
@@ -394,7 +427,7 @@ export function BuildingPosPurchasesPanel({
   }
 
   async function deletePo(id: number) {
-    if (!window.confirm("ลบบันทึกการจ่ายตลาดครั้งนี้? (รายการย่อยจะถูกลบด้วย)")) return;
+    if (!window.confirm("ลบบันทึกรายจ่ายครั้งนี้? (รายการย่อยจะถูกลบด้วย)")) return;
     try {
       await repo.deletePurchaseOrder(id);
       if (editingPoId === id) setEditingPoId(null);
@@ -407,14 +440,14 @@ export function BuildingPosPurchasesPanel({
   return (
     <section className="app-surface rounded-2xl p-4 sm:p-5">
       <div className="border-b border-[#ecebff] pb-4">
-        <h2 className="text-lg font-bold text-[#2e2a58]">บันทึกการจ่ายตลาด</h2>
+        <h2 className="text-lg font-bold text-[#2e2a58]">ต้นทุน / รายจ่าย</h2>
         <p className="mt-1 text-xs text-[#66638c]">
-          บันทึกแต่ละครั้งที่ไปจ่ายตลาด (วันที่ รายการ ราคา) — ระบบใช้ราคาซื้อล่าสุดคำนวณต้นทุนตามสูตร
+          บันทึกรายจ่ายแต่ละครั้ง (วันที่ หมวด/วัตถุดิบ ราคา) แนบสลิปได้ — ระบบใช้ราคาซื้อล่าสุดคำนวณต้นทุนตามสูตร
         </p>
         <div className="mt-3 space-y-3 rounded-2xl border border-[#e1e3ff] bg-[#faf9ff]/80 p-3 sm:p-4">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label className="text-xs font-medium text-[#4d47b6]">
-              วันที่ไปตลาด
+              วันที่จ่าย/ซื้อ
               <input
                 type="date"
                 className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
@@ -434,7 +467,7 @@ export function BuildingPosPurchasesPanel({
           </div>
           <div className="rounded-xl border border-[#e6e4fa] bg-white p-3">
             <p className="text-xs font-medium text-[#4d47b6]">
-              สลิปการจ่ายตลาด{" "}
+              สลิปรายจ่าย{" "}
               <span className="font-normal text-[#9b98c4]">(ไม่บังคับ — JPG PNG WEBP GIF)</span>
             </p>
             <input
@@ -490,13 +523,13 @@ export function BuildingPosPurchasesPanel({
             {lines.map((ln, i) => (
               <li key={i} className="flex flex-wrap items-end gap-2 rounded-xl border border-[#e6e4fa] bg-white p-2">
                 <label className="min-w-[140px] flex-1 text-[10px] font-medium text-[#66638c] sm:min-w-[180px]">
-                  รายการของ
+                  หมวด (วัตถุดิบ)
                   <select
                     className="app-input mt-1 w-full rounded-lg px-2 py-2 text-sm"
                     value={ln.ingredient_id || ""}
                     onChange={(e) => updateLine(i, { ingredient_id: Number(e.target.value) })}
                   >
-                    <option value="">เลือก</option>
+                    <option value="">เลือกหมวด</option>
                     {ingredients.map((g) => (
                       <option key={g.id} value={g.id}>
                         {g.name}
@@ -544,14 +577,14 @@ export function BuildingPosPurchasesPanel({
               onClick={() => void submitPurchase()}
               className="app-btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
             >
-              {saving ? "กำลังบันทึก…" : "บันทึกการจ่ายตลาด"}
+              {saving ? "กำลังบันทึก…" : "บันทึกรายจ่าย"}
             </button>
           </div>
         </div>
       </div>
       <ul className="mt-4 space-y-3">
         {purchaseOrders.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-[#d8d6ec] bg-[#faf9ff] py-8 text-center text-sm text-[#66638c]">ยังไม่มีประวัติการจ่ายตลาด</p>
+          <p className="rounded-2xl border border-dashed border-[#d8d6ec] bg-[#faf9ff] py-8 text-center text-sm text-[#66638c]">ยังไม่มีประวัติบันทึกรายจ่าย</p>
         ) : (
           purchaseOrders.map((po) => {
             const total = po.lines.reduce((s, l) => s + l.line_total_baht, 0);
@@ -563,7 +596,7 @@ export function BuildingPosPurchasesPanel({
                     <p className="text-xs font-semibold text-[#4d47b6]">แก้ไขบันทึกครั้งนี้</p>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <label className="text-xs font-medium text-[#4d47b6]">
-                        วันที่ไปตลาด
+                        วันที่จ่าย/ซื้อ
                         <input
                           type="date"
                           className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
@@ -583,7 +616,7 @@ export function BuildingPosPurchasesPanel({
                     </div>
                     <div className="rounded-xl border border-[#e6e4fa] bg-[#faf9ff]/80 p-3">
                       <p className="text-xs font-medium text-[#4d47b6]">
-                        สลิปการจ่ายตลาด{" "}
+                        สลิปรายจ่าย{" "}
                         <span className="font-normal text-[#9b98c4]">(ไม่บังคับ)</span>
                       </p>
                       <input
@@ -639,13 +672,13 @@ export function BuildingPosPurchasesPanel({
                       {editLines.map((ln, i) => (
                         <li key={`e-${po.id}-${i}`} className="flex flex-wrap items-end gap-2 rounded-xl border border-[#e6e4fa] bg-[#faf9ff]/80 p-2">
                           <label className="min-w-[140px] flex-1 text-[10px] font-medium text-[#66638c] sm:min-w-[180px]">
-                            รายการของ
+                            หมวด (วัตถุดิบ)
                             <select
                               className="app-input mt-1 w-full rounded-lg px-2 py-2 text-sm"
                               value={ln.ingredient_id || ""}
                               onChange={(e) => updateEditLine(i, { ingredient_id: Number(e.target.value) })}
                             >
-                              <option value="">เลือก</option>
+                              <option value="">เลือกหมวด</option>
                               {ingredients.map((g) => (
                                 <option key={g.id} value={g.id}>
                                   {g.name}
@@ -747,7 +780,7 @@ export function BuildingPosPurchasesPanel({
                           {/* eslint-disable-next-line @next/next/no-img-element -- สลิปจากระบบ */}
                           <img
                             src={slipPreview}
-                            alt="สลิปการจ่ายตลาด"
+                            alt="สลิปรายจ่าย"
                             className="max-h-24 max-w-[min(100%,12rem)] cursor-pointer rounded-lg border border-[#e1e3ff] object-contain hover:opacity-95"
                           />
                         </button>
@@ -781,7 +814,7 @@ export function BuildingPosPurchasesPanel({
       </ul>
       <AppImageLightbox
         src={marketSlipLb.src}
-        alt="สลิปการจ่ายตลาด"
+        alt="สลิปรายจ่าย"
         onClose={marketSlipLb.close}
       />
     </section>

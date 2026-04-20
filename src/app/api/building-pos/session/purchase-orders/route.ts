@@ -214,7 +214,7 @@ export async function PATCH(req: Request) {
     const existing = await prisma.buildingPosPurchaseOrder.findFirst({
       where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
     });
-    if (!existing) return NextResponse.json({ error: "ไม่พบบันทึกการจ่ายตลาด" }, { status: 404 });
+    if (!existing) return NextResponse.json({ error: "ไม่พบบันทึกรายจ่ายนี้" }, { status: 404 });
 
     if (parsed.data.lines) {
       const ingIds = [...new Set(parsed.data.lines.map((l) => l.ingredient_id))];
@@ -311,7 +311,7 @@ export async function DELETE(req: Request) {
     const n = await prisma.buildingPosPurchaseOrder.deleteMany({
       where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
     });
-    if (n.count === 0) return NextResponse.json({ error: "ไม่พบบันทึกการจ่ายตลาด" }, { status: 404 });
+    if (n.count === 0) return NextResponse.json({ error: "ไม่พบบันทึกรายจ่ายนี้" }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[building-pos/session/purchase-orders DELETE]", e);

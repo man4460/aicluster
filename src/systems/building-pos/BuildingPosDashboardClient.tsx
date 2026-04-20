@@ -19,10 +19,8 @@ import {
   type PosIngredient,
   type PosMenuItem,
   type PosOrder,
-  type PosPurchaseOrder,
   type PosRecipeLine,
 } from "@/systems/building-pos/building-pos-service";
-import { BuildingPosIngredientsPanel, BuildingPosPurchasesPanel } from "@/systems/building-pos/components/BuildingPosInventoryPanels";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { BuildingPosOpenTablesPanel } from "@/systems/building-pos/BuildingPosSalesAnalytics";
 import {
@@ -36,7 +34,7 @@ function tableQrStorageKey(ownerId: string) {
 }
 
 function parseBuildingPosTabQuery(q: string | null): BuildingPosDashTab {
-  if (q === "orders" || q === "menu" || q === "categories" || q === "ingredients" || q === "purchases") return q;
+  if (q === "orders" || q === "menu" || q === "categories") return q;
   return "overview";
 }
 
@@ -93,8 +91,12 @@ export function BuildingPosDashboardClient({
   const [tab, setTabState] = useState<BuildingPosDashTab>("overview");
 
   useLayoutEffect(() => {
+    if (tabQ === "ingredients" || tabQ === "purchases") {
+      router.replace("/dashboard/building-pos/costs");
+      return;
+    }
     setTabState(parseBuildingPosTabQuery(tabQ));
-  }, [tabQ]);
+  }, [tabQ, router]);
 
   const setTab = useCallback(
     (t: BuildingPosDashTab) => {
@@ -121,7 +123,6 @@ export function BuildingPosDashboardClient({
   const [tableQrCards, setTableQrCards] = useState<string[] | null>(null);
   const [newTableCardInput, setNewTableCardInput] = useState("");
   const [ingredients, setIngredients] = useState<PosIngredient[]>([]);
-  const [purchaseOrders, setPurchaseOrders] = useState<PosPurchaseOrder[]>([]);
   const [recipesByMenu, setRecipesByMenu] = useState<Record<string, PosRecipeLine[]>>({});
   const [estimatedCosts, setEstimatedCosts] = useState<PosEstimatedCosts>({
     estimated_cost_baht: {},
@@ -202,14 +203,12 @@ export function BuildingPosDashboardClient({
     };
     const inv = await Promise.allSettled([
       repo.listIngredients(),
-      repo.listPurchaseOrders(),
       repo.listRecipesByMenu(),
       repo.getEstimatedCosts(),
     ]);
     setIngredients(inv[0].status === "fulfilled" ? inv[0].value : []);
-    setPurchaseOrders(inv[1].status === "fulfilled" ? inv[1].value : []);
-    setRecipesByMenu(inv[2].status === "fulfilled" ? inv[2].value : {});
-    setEstimatedCosts(inv[3].status === "fulfilled" ? inv[3].value : emptyCosts);
+    setRecipesByMenu(inv[1].status === "fulfilled" ? inv[1].value : {});
+    setEstimatedCosts(inv[2].status === "fulfilled" ? inv[2].value : emptyCosts);
   }
 
   async function refreshData() {
@@ -741,7 +740,7 @@ export function BuildingPosDashboardClient({
             <div>
               <h2 className="text-lg font-bold text-[#2e2a58]">เมนูอาหาร</h2>
               <p className="mt-1 text-xs text-[#66638c]">
-                ราคาต่อ 1 ที่ — ต้นทุนจากสูตร × ราคาจากบันทึกจ่ายตลาดล่าสุด — ปุ่มดาวแสดงในแถวแนะนำหน้าลูกค้า
+                ราคาต่อ 1 ที่ — ต้นทุนจากสูตร × ราคาจากบันทึกรายจ่ายล่าสุด — ปุ่มดาวแสดงในแถวแนะนำหน้าลูกค้า
               </p>
             </div>
             <button type="button" onClick={() => openMenuCreate()} className="app-btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold">
@@ -806,18 +805,6 @@ export function BuildingPosDashboardClient({
             })}
           </ul>
         </section>
-      ) : null}
-
-      {tab === "ingredients" ? (
-        <BuildingPosIngredientsPanel ingredients={ingredients} onChanged={() => void loadAll()} />
-      ) : null}
-
-      {tab === "purchases" ? (
-        <BuildingPosPurchasesPanel
-          purchaseOrders={purchaseOrders}
-          ingredients={ingredients}
-          onChanged={() => void loadAll()}
-        />
       ) : null}
 
       {tab === "orders" ? (
@@ -1280,7 +1267,7 @@ export function BuildingPosDashboardClient({
             <div className="rounded-2xl border border-[#e6e4fa] bg-[#faf9ff]/80 p-3">
               <p className="text-xs font-semibold text-[#4d47b6]">สูตร / ต้นทุน (ต่อ 1 ที่ขาย)</p>
               <p className="mt-0.5 text-[11px] leading-snug text-[#66638c]">
-                เลือกของจากแท็บ &quot;รายการของ&quot; และจำนวนต่อจาน — ราคาต่อหน่วยใช้จากบันทึกจ่ายตลาดล่าสุด
+                เลือกหมวดหมู่วัตถุดิบจากหน้า &quot;ต้นทุน / รายจ่าย&quot; (จัดการหมวด) และจำนวนต่อจาน — ราคาต่อหน่วยใช้จากบันทึกรายจ่ายล่าสุด
               </p>
               {ingredients.length === 0 ? (
                 <p className="mt-2 text-xs text-amber-800">ยังไม่มีรายการของ — เพิ่มที่แท็บ &quot;รายการของ&quot; ก่อน</p>

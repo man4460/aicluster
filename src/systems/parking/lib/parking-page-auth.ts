@@ -11,6 +11,7 @@ export async function requireParkingPage() {
   const access = await loadParkingAccessState(session.sub);
   if (!access.ok) {
     if (access.reason === "staff") redirect("/dashboard");
+    if (access.reason === "admin_only") redirect("/dashboard");
     if (access.reason === "not_subscribed") redirect("/dashboard/modules");
     if (access.reason === "no_plan") redirect("/dashboard/plans?upgrade=1");
     notFound();

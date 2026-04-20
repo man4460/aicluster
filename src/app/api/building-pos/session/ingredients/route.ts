@@ -145,7 +145,7 @@ export async function DELETE(req: Request) {
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2003") {
       return NextResponse.json(
-        { error: "ลบไม่ได้ — รายการนี้ถูกใช้ในสูตรหรือบันทึกการจ่ายตลาด" },
+        { error: "ลบไม่ได้ — รายการนี้ถูกใช้ในสูตรหรือบันทึกรายจ่าย" },
         { status: 409 },
       );
     }

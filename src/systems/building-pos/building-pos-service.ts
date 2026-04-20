@@ -22,7 +22,7 @@ export type PosMenuItem = {
   sold_qty?: number;
 };
 
-/** รายการของที่ซื้อจากตลาด (ใช้ในบันทึกจ่ายตลาด + สูตร) */
+/** รายการของ / วัตถุดิบ (ใช้ในบันทึกรายจ่าย + สูตร) */
 export type PosIngredient = {
   id: number;
   name: string;
@@ -38,12 +38,12 @@ export type PosPurchaseLine = {
   line_total_baht: number;
 };
 
-/** หนึ่งครั้งของการบันทึกการจ่ายตลาด */
+/** หนึ่งครั้งของการบันทึกรายจ่าย (ซื้อของ) */
 export type PosPurchaseOrder = {
   id: number;
   purchased_on: string;
   note: string;
-  /** รูปสลิปโอน/หลักฐานการจ่ายตลาด */
+  /** รูปสลิปโอน / หลักฐานรายจ่าย */
   payment_slip_url?: string;
   created_at: string;
   lines: PosPurchaseLine[];

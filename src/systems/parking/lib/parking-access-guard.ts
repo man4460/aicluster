@@ -4,7 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { listTrialModuleIds } from "@/lib/modules/trial-store";
 
-export type ParkingAccessFailReason = "no_module" | "staff" | "not_subscribed" | "no_plan";
+export type ParkingAccessFailReason =
+  | "no_module"
+  | "staff"
+  | "admin_only"
+  | "not_subscribed"
+  | "no_plan";
 
 export async function loadParkingAccessState(userId: string): Promise<
   | { ok: true; mod: { id: string; slug: string; groupId: number } }
@@ -29,6 +34,7 @@ export async function loadParkingAccessState(userId: string): Promise<
   if (!user) return { ok: false, reason: "no_module" };
 
   if (user.employerUserId) return { ok: false, reason: "staff" };
+  if (user.role !== "ADMIN") return { ok: false, reason: "admin_only" };
 
   const [subscribedIds, trialIds] = await Promise.all([
     listSubscribedModuleIds(userId),

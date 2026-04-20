@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { deriveBuildingPosSection } from "@/systems/building-pos/buildingPosSection";
 
-export type BuildingPosDashTab = "overview" | "orders" | "menu" | "categories" | "ingredients" | "purchases";
+/** แท็บเฉพาะหน้าแดชบอร์ดหลัก — ต้นทุน/รายจ่ายอยู่ที่ `/dashboard/building-pos/costs` */
+export type BuildingPosDashTab = "overview" | "orders" | "menu" | "categories";
 
 /** มือถือ: กริด 2 คอลัมน์ แตะง่าย (min 44px) · จอใหญ่: แถบ wrap เหมือนเมนูรายรับ–รายจ่าย */
 const navItemBase =
@@ -79,7 +80,7 @@ export function BuildingPosUnifiedMenuBar({ activeTab, onTabChange, onRefresh, r
           </Link>
         </li>
 
-        {(["orders", "menu", "categories", "ingredients", "purchases"] as const).map((key) => (
+        {(["orders", "menu", "categories"] as const).map((key) => (
           <li key={key} className="min-w-0 sm:w-auto">
             {useTabButtons ? (
               <button
@@ -90,34 +91,30 @@ export function BuildingPosUnifiedMenuBar({ activeTab, onTabChange, onRefresh, r
                   activeTab === key ? "bg-[#ecebff] text-[#4d47b6] ring-1 ring-[#4d47b6]/20" : "app-btn-soft text-[#66638c]",
                 )}
               >
-                {key === "orders"
-                  ? "QR สั่งอาหาร"
-                  : key === "menu"
-                    ? "เมนูอาหาร"
-                    : key === "categories"
-                      ? "หมวดหมู่"
-                      : key === "ingredients"
-                        ? "รายการของ"
-                        : "บันทึกจ่ายตลาด"}
+                {key === "orders" ? "QR สั่งอาหาร" : key === "menu" ? "เมนูอาหาร" : "หมวดหมู่"}
               </button>
             ) : (
               <Link
                 href={buildingPosDashboardTabHref(key)}
                 className={cn(navItemBase, "app-btn-soft text-[#66638c]")}
               >
-                {key === "orders"
-                  ? "QR สั่งอาหาร"
-                  : key === "menu"
-                    ? "เมนูอาหาร"
-                    : key === "categories"
-                      ? "หมวดหมู่"
-                      : key === "ingredients"
-                        ? "รายการของ"
-                        : "บันทึกจ่ายตลาด"}
+                {key === "orders" ? "QR สั่งอาหาร" : key === "menu" ? "เมนูอาหาร" : "หมวดหมู่"}
               </Link>
             )}
           </li>
         ))}
+
+        <li className="min-w-0 sm:w-auto">
+          <Link
+            href="/dashboard/building-pos/costs"
+            className={cn(
+              navItemBase,
+              section === "costs" ? "bg-[#ecebff] text-[#4d47b6] ring-1 ring-[#4d47b6]/20" : "app-btn-soft text-[#66638c]",
+            )}
+          >
+            ต้นทุน / รายจ่าย
+          </Link>
+        </li>
 
         {onRefresh ? (
           <li className="col-span-2 min-w-0 sm:col-span-1 sm:ml-auto sm:w-auto">

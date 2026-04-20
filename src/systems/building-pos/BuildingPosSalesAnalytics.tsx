@@ -27,6 +27,8 @@ import {
   AppGalleryCameraFileInputs,
   AppImagePickCameraButtons,
   AppImageThumb,
+  type AppRevenueCostBucket,
+  AppRevenueCostColumnChart,
   AppSectionHeader,
   appDashboardHistoryListShellClass,
   appTemplateOutlineButtonClass,
@@ -34,6 +36,7 @@ import {
 import { shopQrTemplateGridPrimaryButtonClass } from "@/components/qr/shop-qr-template";
 import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import { buildingPosSalesFiltersToSparkParams } from "@/lib/building-pos/sales-spark-filter-params";
 import { HomeFinanceList } from "@/systems/home-finance/components/HomeFinanceUi";
 
 type OpenOrderStatus = "NEW" | "PREPARING" | "SERVED";
@@ -111,6 +114,15 @@ export const statusLabelTh: Record<PosOrder["status"], string> = {
   SERVED: "เสิร์ฟแล้ว",
   PAID: "ชำระแล้ว",
 };
+
+/** ปี–เดือนปัจจุบัน (เขตเวลาไทย) — ค่าเดือนเป็น "1".."12" ให้ตรงกับ `<option value={String(m)}>` */
+function initialBangkokSalesFilters(): { year: string; month: string } {
+  const key = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
+  const parts = key.split("-");
+  const y = parts[0] ?? "";
+  const mo = parts[1];
+  return { year: y, month: mo ? String(Number(mo)) : "" };
+}
 
 /** กรองแยกชั้น: ปี / เดือน / วัน — ช่องว่าง = ไม่ใช้เงื่อนไขนั้น (มีวันอย่างเดียว = วันที่นั้นของทุกเดือน) */
 function matchesPeriod(iso: string, year: string, month: string, day: string): boolean {
@@ -911,10 +923,69 @@ export function BuildingPosSalesHistoryPanel({
   categories = [],
   menuItems = [],
 }: HistoryProps) {
-  const [filterYear, setFilterYear] = useState("");
-  const [filterMonth, setFilterMonth] = useState("");
+  const [filterYear, setFilterYear] = useState(() => initialBangkokSalesFilters().year);
+  const [filterMonth, setFilterMonth] = useState(() => initialBangkokSalesFilters().month);
   const [filterDay, setFilterDay] = useState("");
   const [search, setSearch] = useState("");
+  const [sparkRevenueCost, setSparkRevenueCost] = useState<AppRevenueCostBucket[]>([]);
+  const [sparkLoading, setSparkLoading] = useState(false);
+  const [sparkErr, setSparkErr] = useState<string | null>(null);
+
+  const fallbackBangkokYear = useMemo(() => {
+    const key = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
+    const y = Number(key.slice(0, 4));
+    return Number.isFinite(y) ? y : new Date().getFullYear();
+  }, []);
+
+  const sparkCalendar = useMemo(
+    () => buildingPosSalesFiltersToSparkParams(filterYear, filterMonth, filterDay, fallbackBangkokYear),
+    [filterYear, filterMonth, filterDay, fallbackBangkokYear],
+  );
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set("year", String(sparkCalendar.year));
+    params.set("month", sparkCalendar.month === "all" ? "all" : String(sparkCalendar.month));
+    params.set("day", sparkCalendar.day === "all" ? "all" : String(sparkCalendar.day));
+
+    let cancelled = false;
+    setSparkLoading(true);
+    setSparkErr(null);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/building-pos/session/sales-spark?${params}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          revenueCost?: AppRevenueCostBucket[];
+          error?: string;
+        };
+        if (!res.ok) throw new Error(data.error ?? "โหลดกราฟไม่สำเร็จ");
+        if (!cancelled) setSparkRevenueCost(data.revenueCost ?? []);
+      } catch (e) {
+        if (!cancelled) {
+          setSparkErr(e instanceof Error ? e.message : "โหลดกราฟไม่สำเร็จ");
+          setSparkRevenueCost([]);
+        }
+      } finally {
+        if (!cancelled) setSparkLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sparkCalendar.year, sparkCalendar.month, sparkCalendar.day]);
+
+  const { periodTotalRevenue, periodTotalCost } = useMemo(() => {
+    let rev = 0;
+    let cost = 0;
+    for (const b of sparkRevenueCost) {
+      rev += b.revenue;
+      cost += b.cost;
+    }
+    return { periodTotalRevenue: rev, periodTotalCost: cost };
+  }, [sparkRevenueCost]);
 
   const yearOptions = useMemo(() => {
     const ys = new Set<number>();
@@ -1007,7 +1078,7 @@ export function BuildingPosSalesHistoryPanel({
         <div className="border-b border-[#ecebff] pb-3">
           <h2 className="text-lg font-bold text-[#2e2a58]">กรองประวัติและกราฟ</h2>
           <p className="mt-1 text-xs text-[#66638c]">
-            เลือกปี เดือน วันได้ทีละช่อง — วันใช้ได้ทันที (ไม่บังคับเดือน: กรอง &quot;วันที่ N&quot; ทุกเดือน) ร่วมกับเดือน/ปีได้
+            ค่าเริ่มต้นเป็นเดือนปัจจุบัน (เวลาไทย) — เลือกปี เดือน วันได้ทีละช่อง · วันใช้ได้ทันที (ไม่บังคับเดือน: กรอง &quot;วันที่ N&quot; ทุกเดือน)
           </p>
         </div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
@@ -1085,6 +1156,54 @@ export function BuildingPosSalesHistoryPanel({
             />
           </label>
         </div>
+
+        {sparkLoading ? (
+          <p className="mt-6 rounded-lg bg-[#f8f7ff] px-3 py-2 text-xs text-[#66638c]">กำลังโหลดกราฟรายรับ–รายจ่าย…</p>
+        ) : sparkErr ? (
+          <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{sparkErr}</p>
+        ) : (
+          <div className="mt-6 space-y-3 border-t border-[#ecebff] pt-6">
+            <AppRevenueCostColumnChart
+              compact
+              buckets={sparkRevenueCost}
+              title="กราฟรายรับเทียบรายจ่าย"
+              emptyText="ไม่มีข้อมูลรายรับหรือรายจ่ายในช่วงที่กรอง"
+              formatTitle={(b) =>
+                `${b.label}: รายรับ ฿${b.revenue.toLocaleString()} · รายจ่าย ฿${b.cost.toLocaleString()}`
+              }
+            />
+            <div className="flex flex-wrap gap-3 rounded-lg border border-[#ecebff] bg-[#faf9ff]/80 px-3 py-2 text-xs">
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-wide text-[#66638c]">รวมรายรับ (ช่วงที่กรอง)</p>
+                <p className="text-sm font-bold tabular-nums text-[#2e2a58]">฿{periodTotalRevenue.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-wide text-[#66638c]">รวมรายจ่าย</p>
+                <p className="text-sm font-bold tabular-nums text-rose-700">฿{periodTotalCost.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-wide text-[#66638c]">สุทธิ</p>
+                <p
+                  className={cn(
+                    "text-sm font-bold tabular-nums",
+                    periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-700" : "text-rose-800",
+                  )}
+                >
+                  ฿{(periodTotalRevenue - periodTotalCost).toLocaleString()}
+                </p>
+              </div>
+            </div>
+            <p className="text-[11px] text-[#5f5a8a]">
+              <Link
+                href="/dashboard/building-pos/costs"
+                className="font-semibold text-[#4d47b6] underline decoration-[#4d47b6]/40 underline-offset-2 hover:decoration-[#4d47b6]"
+              >
+                บันทึกรายจ่าย / ต้นทุน
+              </Link>
+              <span className="text-[#66638c]"> — หมวดวัตถุดิบและสลิป</span>
+            </p>
+          </div>
+        )}
 
         <AppColumnBarSparkChart
           className="mt-6"

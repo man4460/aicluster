@@ -16,6 +16,10 @@ import {
   isPrismaSchemaMismatch,
   THAI_PRISMA_SCHEMA_MISMATCH,
 } from "@/lib/prisma-schema-mismatch";
+import {
+  normalizeBarberSlipUrlForDashboard,
+  parseBarberCashReceiptBasenameFromStored,
+} from "@/lib/barber/receipt-display-url";
 
 export const dynamic = "force-dynamic";
 
@@ -33,31 +37,6 @@ const postSchema = z.object({
 
 function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "").slice(0, 20);
-}
-
-/**
- * URL สำหรับแสดงสลิปในหน้าแดชบอร์ด — สลิปที่อัปโหลดไปที่ barber-cash-receipts ใช้ API มี session
- * เพื่อให้โหลดได้แม้ static จาก public มีปัญหา และ origin ตรงกับคำขอจริง
- */
-function receiptImageForDashboard(
-  stored: string | null | undefined,
-  requestOrigin: string,
-): string | null {
-  if (!stored?.trim()) return null;
-  const u = stored.trim();
-  const m = u.match(/\/uploads\/barber-cash-receipts\/([^/?#]+)$/i);
-  if (m) {
-    const basename = decodeURIComponent(m[1]);
-    const qs = new URLSearchParams({ name: basename });
-    return `${requestOrigin}/api/barber/cash-receipt/file?${qs}`;
-  }
-  if (u.startsWith("http://") || u.startsWith("https://")) return u;
-  const pathPart = u.startsWith("/") ? u : `/${u}`;
-  try {
-    return new URL(pathPart, requestOrigin).href;
-  } catch {
-    return pathPart;
-  }
 }
 
 /**
@@ -116,7 +95,18 @@ export async function GET(req: Request) {
     createdAt: s.createdAt.toISOString(),
     status: s.status,
     remainingSessions: s.remainingSessions,
-    saleReceiptImageUrl: receiptImageForDashboard(s.saleReceiptImageUrl, requestOrigin),
+    saleReceiptImageUrl: (() => {
+      const raw = s.saleReceiptImageUrl?.trim() ?? null;
+      if (!raw) return null;
+      if (parseBarberCashReceiptBasenameFromStored(raw)) {
+        return `/api/barber/subscriptions/${s.id}/sale-receipt`;
+      }
+      const norm = normalizeBarberSlipUrlForDashboard(raw, requestOrigin);
+      if (norm && parseBarberCashReceiptBasenameFromStored(norm)) {
+        return `/api/barber/subscriptions/${s.id}/sale-receipt`;
+      }
+      return norm;
+    })(),
     package: {
       id: s.package.id,
       name: s.package.name,
@@ -379,6 +369,11 @@ export async function POST(req: Request) {
       }
     }
 
+    /** ถ้ามีการแนบสลิปในคำขอ ให้ส่ง URL โหลดรูปเสมอ (กัน GET รายการคืน null ชั่วคราว / client อัปเดตการ์ดได้ทันที) — ถ้าฐานข้อมูลยังไม่มีค่า endpoint จะ 404 */
+    const saleReceiptImageUrlForClient = receiptUrl?.trim()
+      ? `/api/barber/subscriptions/${sub.id}/sale-receipt`
+      : null;
+
     return NextResponse.json({
       subscription: {
         id: sub.id,
@@ -387,6 +382,7 @@ export async function POST(req: Request) {
         packageName: pkg.name,
         customerId: customer.id,
         phone: customer.phone,
+        saleReceiptImageUrl: saleReceiptImageUrlForClient,
       },
       ...(receiptSkipped ?
         {
