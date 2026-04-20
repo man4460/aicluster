@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     data: { resetToken: token, resetTokenExpires: expires },
   });
 
-  await sendPasswordResetEmail(user.email, token);
+  await sendPasswordResetEmail(user.email, token, req);
 
   return NextResponse.json(generic);
 }
