@@ -150,9 +150,15 @@ export function BuildingPosDashboardClient({
   const [refreshing, setRefreshing] = useState(false);
 
   const dashboardStats = useMemo(() => {
-    const paidRevenue = orders.filter((o) => o.status === "PAID").reduce((s, o) => s + o.total_amount, 0);
+    const todayKey = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
+    const ordersToday = orders.filter(
+      (o) =>
+        new Date(o.created_at).toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }) === todayKey,
+    );
+
+    const paidRevenue = ordersToday.filter((o) => o.status === "PAID").reduce((s, o) => s + o.total_amount, 0);
     const customerSet = new Set(
-      orders
+      ordersToday
         .map((o) => `${o.customer_name.trim()}|${o.table_no.trim()}`)
         .filter((x) => x !== "|"),
     );
@@ -160,7 +166,7 @@ export function BuildingPosDashboardClient({
     const menuToCategory = new Map<number, number>();
     menuItems.forEach((m) => menuToCategory.set(m.id, m.category_id));
     const qtyByCategory = new Map<number, number>();
-    orders.forEach((o) => {
+    ordersToday.forEach((o) => {
       o.items.forEach((it) => {
         const catId = menuToCategory.get(it.menu_item_id);
         if (!catId) return;
@@ -654,18 +660,19 @@ export function BuildingPosDashboardClient({
         <div className="space-y-5 sm:space-y-6">
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="app-surface rounded-2xl p-4 sm:p-5">
-              <p className="text-xs text-[#66638c]">รายรับ (ออเดอร์ที่ชำระแล้ว)</p>
+              <p className="text-xs text-[#66638c]">รายรับวันนี้ (ออเดอร์ที่ชำระแล้ว)</p>
               <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-700 sm:text-3xl">฿ {dashboardStats.paidRevenue.toLocaleString()}</p>
+              <p className="mt-1 text-[11px] text-[#8b87ad]">เขตเวลาไทย — ตามวันที่สร้างออเดอร์</p>
             </div>
             <div className="app-surface rounded-2xl p-4 sm:p-5">
-              <p className="text-xs text-[#66638c]">หมวดหมู่ขายดี</p>
+              <p className="text-xs text-[#66638c]">หมวดหมู่ขายดีวันนี้</p>
               <p className="mt-1 text-lg font-bold leading-snug text-[#2e2a58] sm:text-xl">{dashboardStats.bestCategoryLabel}</p>
               <p className="mt-1 text-xs text-[#66638c]">ขายรวม {dashboardStats.bestCategoryQty.toLocaleString()} จาน/แก้ว</p>
             </div>
             <div className="app-surface rounded-2xl p-4 sm:p-5">
-              <p className="text-xs text-[#66638c]">จำนวนลูกค้า</p>
+              <p className="text-xs text-[#66638c]">จำนวนลูกค้าวันนี้</p>
               <p className="mt-1 text-2xl font-bold tabular-nums text-[#4d47b6] sm:text-3xl">{dashboardStats.uniqueCustomers.toLocaleString()}</p>
-              <p className="mt-1 text-xs text-[#66638c]">นับจากชื่อ/โต๊ะที่มีออเดอร์</p>
+              <p className="mt-1 text-xs text-[#66638c]">นับจากชื่อ/โต๊ะที่มีออเดอร์ (วันนี้)</p>
             </div>
           </section>
 
