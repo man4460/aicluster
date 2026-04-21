@@ -5,13 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { getBusinessProfile } from "@/lib/profile/business-profile";
 import { getLaundryDataScope } from "@/lib/trial/module-scopes";
 import { LaundryDashboard } from "@/systems/laundry/LaundryDashboard";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "รับฝากซักผ้า | MAWELL",
-};
-
-export default async function LaundryDashboardPage() {
+export default async function LaundryStaffPage() {
   const session = await getSession();
   if (!session) redirect("/login");
   const [profile, baseUrl, userRow, scope] = await Promise.all([
@@ -33,6 +28,7 @@ export default async function LaundryDashboardPage() {
         recorderDisplayName={recorderDisplayName}
         trialSessionId={scope.trialSessionId}
         isTrialSandbox={scope.isTrialSandbox}
+        layoutVariant="staff_lane"
       />
     </div>
   );

@@ -120,6 +120,8 @@ model User {
   carWashComplaints        CarWashComplaint[]
   carWashCostCategories    CarWashCostCategory[]
   carWashCostEntries       CarWashCostEntry[]
+  laundryPackages          LaundryPackage[]
+  laundryOrders            LaundryOrder[]
   mqttTenantProfiles       MqttTenantProfile[]
   mqttCredentials          MqttCredential[]
   mqttAclRules             MqttAclRule[]
@@ -1075,6 +1077,58 @@ model CarWashCostEntry {
 
   @@index([ownerUserId, trialSessionId, spentAt], map: "cwash_cost_ent_owner_trial_spent_idx")
   @@map("car_wash_cost_entries")
+}
+
+/** แพ็กเกจราคา — รับฝากซักผ้า */
+model LaundryPackage {
+  id              Int      @id @default(autoincrement())
+  ownerUserId     String   @map("owner_id") @db.VarChar(191)
+  owner           User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId  String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name            String   @db.VarChar(160)
+  /** PER_KG | PER_ITEM | FLAT */
+  pricingModel    String   @map("pricing_model") @db.VarChar(16)
+  basePrice       Int      @map("base_price")
+  durationHours   Int      @default(24) @map("duration_hours")
+  description     String   @default("") @db.VarChar(800)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  orders          LaundryOrder[]
+
+  @@index([ownerUserId, trialSessionId, isActive], map: "laundry_pkg_owner_trial_active_idx")
+  @@index([ownerUserId], map: "laundry_pkg_owner_idx")
+  @@map("laundry_packages")
+}
+
+/** คิวงานรับ-ส่งผ้า */
+model LaundryOrder {
+  id              Int             @id @default(autoincrement())
+  ownerUserId     String          @map("owner_id") @db.VarChar(191)
+  owner           User            @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId  String          @default("prod") @map("trial_session_id") @db.VarChar(36)
+  orderAt         DateTime        @default(now()) @map("order_at")
+  customerName    String          @map("customer_name") @db.VarChar(160)
+  customerPhone   String          @default("") @map("customer_phone") @db.VarChar(32)
+  pickupAddress   String          @map("pickup_address") @db.VarChar(500)
+  dropoffAddress  String          @default("") @map("dropoff_address") @db.VarChar(500)
+  serviceType     String          @default("") @map("service_type") @db.VarChar(160)
+  packageId       Int?            @map("package_id")
+  package         LaundryPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  packageName     String          @default("") @map("package_name") @db.VarChar(160)
+  weightKg        Decimal         @default(0) @map("weight_kg") @db.Decimal(10, 3)
+  itemCount       Int             @default(0) @map("item_count")
+  finalPrice      Int             @default(0) @map("final_price")
+  note            String          @default("") @db.VarChar(1000)
+  recordedByName  String          @default("") @map("recorded_by_name") @db.VarChar(160)
+  /** PENDING_PICKUP | PICKED_UP | ... | CANCELLED */
+  status          String          @default("PENDING_PICKUP") @map("status") @db.VarChar(32)
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, orderAt], map: "laundry_ord_owner_trial_order_idx")
+  @@index([ownerUserId], map: "laundry_ord_owner_idx")
+  @@map("laundry_orders")
 }
 
 model MqttTenantProfile {

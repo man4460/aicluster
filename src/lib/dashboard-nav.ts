@@ -9,6 +9,7 @@ import {
   BUILDING_POS_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   HOME_FINANCE_BASIC_MODULE_SLUG,
+  LAUNDRY_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
@@ -31,6 +32,7 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === MQTT_SERVICE_MODULE_SLUG) return "/dashboard/mqtt-service";
   if (slug === BUILDING_POS_MODULE_SLUG) return "/dashboard/building-pos";
   if (slug === VILLAGE_MODULE_SLUG) return "/dashboard/village";
+  if (slug === LAUNDRY_MODULE_SLUG) return "/dashboard/laundry";
   if (slug === PARKING_MODULE_SLUG) return "/dashboard/parking";
   return `/dashboard/modules/${slug}`;
 }

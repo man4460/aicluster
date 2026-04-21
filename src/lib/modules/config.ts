@@ -53,6 +53,8 @@ export const BUILDING_POS_MODULE_SLUG = "building-pos" as const;
 export const BUILDING_POS_MODULE_GROUP_ID = 1 as const;
 export const VILLAGE_MODULE_SLUG = "village" as const;
 export const VILLAGE_MODULE_GROUP_ID = 1 as const;
+export const LAUNDRY_MODULE_SLUG = "laundry" as const;
+export const LAUNDRY_MODULE_GROUP_ID = 1 as const;
 
 /** ระบบเช่าที่จอดรถ — กลุ่ม 1 (Basic) ลูกค้าเลือก Subscribe/ทดลองจากแคตตาล็อกโมดูล */
 export const PARKING_MODULE_SLUG = "parking" as const;
@@ -68,6 +70,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === BUILDING_POS_MODULE_SLUG) return "POS ร้านอาหาร";
   if (slug === DORMITORY_MODULE_SLUG) return "จัดการหอพัก";
   if (slug === VILLAGE_MODULE_SLUG) return "จัดการหมู่บ้าน";
+  if (slug === LAUNDRY_MODULE_SLUG) return "รับฝากซักผ้า";
   if (slug === PARKING_MODULE_SLUG) return "ระบบเช่าที่จอดรถ";
   return title;
 }
@@ -86,7 +89,7 @@ export const MODULE_GROUP_TIER_NAME: Record<number, string> = {
 
 /** สรุปฟีเจอร์ต่อกลุ่ม (ใช้ในหน้าแพ็กเกจ / คำอธิบาย) — ข้อความกระชับ */
 export const MODULE_GROUP_FEATURE_SUMMARY: Record<number, string> = {
-  1: "กลุ่ม 1: เช็คอิน · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ตัดผม · คาร์แคร์ · จอดรถ · POS",
+  1: "กลุ่ม 1: เช็คอิน · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ตัดผม · คาร์แคร์ · ซักผ้า · จอดรถ · POS",
   2: "สต็อก · ใบเสร็จ",
   3: "วิเคราะห์ · แชทสาขา",
   4: "พนักงาน · เงินเดือน",

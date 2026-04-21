@@ -259,6 +259,7 @@ export async function POST(req: Request) {
       { status: 403 },
     );
   }
+  const billingCtx = ctx;
 
   let form: FormData;
   try {
@@ -301,15 +302,16 @@ export async function POST(req: Request) {
         : file.type === "image/gif"
           ? "gif"
           : "jpg";
+  const storedMimeType = file.type.trim() || (isPdf ? "application/pdf" : "image/jpeg");
   const dir = path.join(process.cwd(), "public", "uploads", "home-finance");
   await mkdir(dir, { recursive: true });
-  const filename = `${ctx.billingUserId.slice(0, 12)}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const filename = `${billingCtx.billingUserId.slice(0, 12)}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   await writeFile(path.join(dir, filename), fileBuffer);
   const imageUrl = `/uploads/home-finance/${filename}`;
 
   const ai = await callOpenClaw({
     fileBuffer,
-    mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
+    mimeType: storedMimeType,
     fallbackType,
     defaultCategoryKey,
   });
@@ -340,10 +342,10 @@ export async function POST(req: Request) {
   }) {
     await prisma.homeFinanceSlipExtraction.create({
       data: {
-        ownerUserId: ctx.billingUserId,
+        ownerUserId: billingCtx.billingUserId,
         entryId: args.entryId ?? null,
         sourceUrl: imageUrl,
-        mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
+        mimeType: storedMimeType,
         status: args.status,
         confidence: ai.confidence,
         predictedType: payload.type,
@@ -397,7 +399,7 @@ export async function POST(req: Request) {
 
   const duplicate = await prisma.homeFinanceEntry.findFirst({
     where: {
-      ownerUserId: ctx.billingUserId,
+      ownerUserId: billingCtx.billingUserId,
       type: parsed.data.type,
       entryDate,
       amount: parsed.data.amount,
@@ -432,7 +434,7 @@ export async function POST(req: Request) {
   const attachmentJson: Prisma.InputJsonValue = [imageUrl];
   const row = await prisma.homeFinanceEntry.create({
     data: {
-      ownerUserId: ctx.billingUserId,
+      ownerUserId: billingCtx.billingUserId,
       entryDate,
       type: parsed.data.type,
       categoryKey: parsed.data.categoryKey,
@@ -459,7 +461,7 @@ export async function POST(req: Request) {
     modelName: "HomeFinanceEntry",
     payload: {
       id: row.id,
-      ownerUserId: ctx.billingUserId,
+      ownerUserId: billingCtx.billingUserId,
       title: row.title,
       amount: Number(row.amount),
       via: "SLIP_AI_OPENCLAW",
