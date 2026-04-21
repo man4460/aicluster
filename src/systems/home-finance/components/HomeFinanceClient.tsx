@@ -507,6 +507,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   /** ฟอร์มเพิ่มรายการ — สลิปได้ 1 รูปเท่านั้น */
   const [entrySlipImageUrl, setEntrySlipImageUrl] = useState<string | null>(null);
   const [entrySlipUploading, setEntrySlipUploading] = useState(false);
+  const [entrySlipAiSaving, setEntrySlipAiSaving] = useState(false);
   const [linkedUtilityId, setLinkedUtilityId] = useState<number | "">("");
   const [linkedVehicleId, setLinkedVehicleId] = useState<number | "">("");
   const [saving, setSaving] = useState(false);
@@ -868,6 +869,92 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
       setEntrySlipImageUrl(url);
     } finally {
       setEntrySlipUploading(false);
+    }
+  }
+
+  async function ingestSlipWithAiAndSave(file: File) {
+    setEntrySlipAiSaving(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      fd.set("preferredType", type);
+      fd.set("defaultCategoryKey", categoryKey);
+      let res: Response;
+      try {
+        res = await homeFinanceFetch("/api/home-finance/entries/ingest-slip", {
+          method: "POST",
+          body: fd,
+        });
+      } catch (e) {
+        setError(fetchErrorMessage(e));
+        return;
+      }
+      const parsed = await readHomeFinanceJsonResponse(res);
+      const j = parsed.data as {
+        error?: string;
+        status?: "saved" | "needs_review";
+        confidence?: number;
+        imageUrl?: string;
+        entry?: { entryDate?: string };
+        suggestion?: {
+          entryDate?: string;
+          type?: "INCOME" | "EXPENSE";
+          categoryKey?: string;
+          title?: string;
+          amount?: number;
+          note?: string | null;
+          paymentMethod?: string | null;
+          billNumber?: string | null;
+        };
+      };
+      if (!parsed.ok) {
+        if (j.suggestion) {
+          if (typeof j.suggestion.entryDate === "string") setEntryDate(j.suggestion.entryDate);
+          if (j.suggestion.type === "INCOME" || j.suggestion.type === "EXPENSE") setType(j.suggestion.type);
+          if (typeof j.suggestion.categoryKey === "string" && j.suggestion.categoryKey) {
+            setCategoryKey(j.suggestion.categoryKey);
+          }
+          if (typeof j.suggestion.title === "string") setTitle(j.suggestion.title);
+          if (typeof j.suggestion.amount === "number" && Number.isFinite(j.suggestion.amount)) {
+            setAmount(String(j.suggestion.amount));
+          }
+          if (typeof j.suggestion.note === "string") setNote(j.suggestion.note);
+          if (typeof j.suggestion.paymentMethod === "string") setPaymentMethod(j.suggestion.paymentMethod);
+          if (typeof j.suggestion.billNumber === "string") setBillNumber(j.suggestion.billNumber);
+        }
+        if (typeof j.imageUrl === "string" && j.imageUrl) {
+          setEntrySlipImageUrl(j.imageUrl);
+        }
+        const msg =
+          typeof j.error === "string" && j.error.trim()
+            ? j.error.trim()
+            : metaEndpointFailureLine("อ่านสลิปด้วย AI", res, parsed.data);
+        setError(msg);
+        return;
+      }
+      if (typeof j.imageUrl === "string" && j.imageUrl) {
+        setEntrySlipImageUrl(j.imageUrl);
+      }
+      const savedDate = j.entry?.entryDate ?? entryDate;
+      setSaveNoticeAfterEntrySaved(savedDate);
+      if (j.status === "saved") {
+        setTitle("");
+        setAmount("");
+        setDueDate("");
+        setBillNumber("");
+        setVehicleType("");
+        setServiceCenter("");
+        setPaymentMethod("");
+        setNote("");
+        setEntrySlipImageUrl(null);
+        setLinkedUtilityId("");
+        setLinkedVehicleId("");
+        setEntryModalOpen(false);
+        void loadEntries();
+      }
+    } finally {
+      setEntrySlipAiSaving(false);
     }
   }
 
@@ -2048,14 +2135,22 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                       ) : null}
                       <HomeFinanceUploadTrigger
                         busy={entrySlipUploading}
-                        disabled={saving}
+                        disabled={saving || entrySlipAiSaving}
                         accept="image/jpeg,image/png,image/webp,image/gif"
                         onFile={(f) => void uploadEntrySlipFile(f)}
                       >
                         {entrySlipImageUrl ? "เปลี่ยนรูป" : "เลือกรูป"}
                       </HomeFinanceUploadTrigger>
+                      <HomeFinanceUploadTrigger
+                        busy={entrySlipAiSaving}
+                        disabled={saving || entrySlipUploading}
+                        accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+                        onFile={(f) => void ingestSlipWithAiAndSave(f)}
+                      >
+                        {entrySlipAiSaving ? "AI กำลังอ่าน..." : "AI อ่านแล้วบันทึกทันที"}
+                      </HomeFinanceUploadTrigger>
                       <span className="max-w-xs text-xs text-slate-500">
-                        JPG / PNG / WebP / GIF สูงสุด 3MB — แนบได้ทีละ 1 รูป
+                        ปุ่ม AI รองรับ JPG / PNG / WebP / GIF 3MB และ PDF 5MB
                       </span>
                     </div>
                   </Field>
@@ -2066,7 +2161,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                     </HomeFinanceSecondaryButton>
                     <HomeFinancePrimaryButton
                       type="submit"
-                      disabled={saving || entrySlipUploading}
+                      disabled={saving || entrySlipUploading || entrySlipAiSaving}
                       className="disabled:opacity-60"
                     >
                       {saving ? "กำลังบันทึก..." : "บันทึกรายการ"}

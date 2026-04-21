@@ -109,6 +109,7 @@ model User {
   attendanceRosterEntries  AttendanceRosterEntry[]
   attendanceLocations      AttendanceLocation[]
   homeFinanceEntries       HomeFinanceEntry[]
+  homeFinanceSlipExtractions HomeFinanceSlipExtraction[]
   homeFinanceCategories    HomeFinanceCategory[]
   homeUtilityProfiles      HomeUtilityProfile[]
   homeVehicleProfiles      HomeVehicleProfile[]
@@ -671,6 +672,13 @@ enum HomeVehicleType {
   MOTORCYCLE
 }
 
+enum HomeFinanceSlipExtractionStatus {
+  SAVED
+  NEEDS_REVIEW
+  FAILED
+  DUPLICATE
+}
+
 enum SystemActivityAction {
   CREATE
   UPDATE
@@ -817,6 +825,7 @@ model HomeFinanceEntry {
   linkedVehicleId  Int?                @map("linked_vehicle_id")
   linkedUtility    HomeUtilityProfile? @relation(fields: [linkedUtilityId], references: [id], onDelete: SetNull)
   linkedVehicle    HomeVehicleProfile? @relation(fields: [linkedVehicleId], references: [id], onDelete: SetNull)
+  slipExtractions  HomeFinanceSlipExtraction[]
   createdAt        DateTime            @default(now()) @map("created_at")
   updatedAt        DateTime            @updatedAt @map("updated_at")
 
@@ -825,6 +834,34 @@ model HomeFinanceEntry {
   @@index([linkedUtilityId])
   @@index([linkedVehicleId])
   @@map("home_finance_entries")
+}
+
+model HomeFinanceSlipExtraction {
+  id                   Int                             @id @default(autoincrement())
+  ownerUserId          String                          @map("owner_id") @db.VarChar(191)
+  owner                User                            @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  entryId              Int?                            @map("entry_id")
+  entry                HomeFinanceEntry?               @relation(fields: [entryId], references: [id], onDelete: SetNull)
+  sourceUrl            String                          @map("source_url") @db.VarChar(512)
+  mimeType             String                          @map("mime_type") @db.VarChar(80)
+  status               HomeFinanceSlipExtractionStatus @map("status")
+  confidence           Decimal?                        @db.Decimal(5, 4)
+  predictedType        HomeFinanceEntryType?           @map("predicted_type")
+  predictedAmount      Decimal?                        @map("predicted_amount") @db.Decimal(12, 2)
+  predictedEntryDate   DateTime?                       @map("predicted_entry_date") @db.Date
+  predictedTitle       String?                         @map("predicted_title") @db.VarChar(200)
+  predictedBillNumber  String?                         @map("predicted_bill_number") @db.VarChar(120)
+  predictedPaymentMethod String?                       @map("predicted_payment_method") @db.VarChar(60)
+  rawOcrText           String?                         @map("raw_ocr_text") @db.Text
+  rawAiJson            Json?                           @map("raw_ai_json")
+  errorMessage         String?                         @map("error_message") @db.VarChar(300)
+  createdAt            DateTime                        @default(now()) @map("created_at")
+  updatedAt            DateTime                        @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, createdAt], map: "hf_slip_extract_owner_created_idx")
+  @@index([entryId], map: "hf_slip_extract_entry_idx")
+  @@index([ownerUserId, status], map: "hf_slip_extract_owner_status_idx")
+  @@map("home_finance_slip_extractions")
 }
 
 /** หมวดแบบกำหนดเองของผู้ใช้ */
