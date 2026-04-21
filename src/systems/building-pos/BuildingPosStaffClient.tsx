@@ -38,11 +38,21 @@ export function BuildingPosStaffClient({
   const [view, setView] = useState<View>("tables");
   const [orders, setOrders] = useState<PosOrder[]>([]);
   const [menuItems, setMenuItems] = useState<PosMenuItem[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadOrders = useCallback(async () => {
     const list = await repo.listOrders();
     setOrders(list);
   }, [repo]);
+
+  const refreshOrders = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadOrders();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadOrders]);
 
   useEffect(() => {
     const q = new URLSearchParams({ ownerId, t: trialSessionId, k: staffKey });
@@ -69,6 +79,29 @@ export function BuildingPosStaffClient({
   useEffect(() => {
     if (bootOk !== true) return;
     void loadOrders();
+  }, [bootOk, loadOrders]);
+
+  useEffect(() => {
+    if (bootOk !== true) return;
+    const timer = window.setInterval(() => {
+      if (document.hidden) return;
+      void loadOrders();
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [bootOk, loadOrders]);
+
+  useEffect(() => {
+    if (bootOk !== true) return;
+    const onFocusOrVisible = () => {
+      if (document.hidden) return;
+      void loadOrders();
+    };
+    window.addEventListener("focus", onFocusOrVisible);
+    document.addEventListener("visibilitychange", onFocusOrVisible);
+    return () => {
+      window.removeEventListener("focus", onFocusOrVisible);
+      document.removeEventListener("visibilitychange", onFocusOrVisible);
+    };
   }, [bootOk, loadOrders]);
 
   useEffect(() => {
@@ -132,10 +165,11 @@ export function BuildingPosStaffClient({
           </div>
           <button
             type="button"
-            onClick={() => void loadOrders()}
+            onClick={() => void refreshOrders()}
+            disabled={refreshing}
             className="shrink-0 rounded-xl border border-[#4d47b6]/30 bg-[#ecebff] px-3 py-2 text-xs font-semibold text-[#4d47b6] touch-manipulation"
           >
-            รีเฟรช
+            {refreshing ? "กำลังรีเฟรช..." : "รีเฟรช"}
           </button>
         </div>
         <nav className="mx-auto mt-3 flex max-w-lg gap-2">

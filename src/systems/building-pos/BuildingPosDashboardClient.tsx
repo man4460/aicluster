@@ -231,6 +231,27 @@ export function BuildingPosDashboardClient({
   }, [repo]);
 
   useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.hidden) return;
+      void refreshData();
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [refreshData]);
+
+  useEffect(() => {
+    const onFocusOrVisible = () => {
+      if (document.hidden) return;
+      void refreshData();
+    };
+    window.addEventListener("focus", onFocusOrVisible);
+    document.addEventListener("visibilitychange", onFocusOrVisible);
+    return () => {
+      window.removeEventListener("focus", onFocusOrVisible);
+      document.removeEventListener("visibilitychange", onFocusOrVisible);
+    };
+  }, [refreshData]);
+
+  useEffect(() => {
     let cancelled = false;
     try {
       const raw = localStorage.getItem(tableQrStorageKey(ownerId));
@@ -652,8 +673,6 @@ export function BuildingPosDashboardClient({
       <BuildingPosUnifiedMenuBar
         activeTab={tab}
         onTabChange={setTab}
-        onRefresh={() => void refreshData()}
-        refreshing={refreshing}
       />
 
       {tab === "overview" ? (
@@ -685,13 +704,23 @@ export function BuildingPosDashboardClient({
             logoUrl={logoUrl}
             paymentChannelsNote={paymentChannelsNote ?? null}
             headerAction={
-              <button
-                type="button"
-                onClick={() => setTab("orders")}
-                className="inline-flex min-h-[40px] min-w-[5.5rem] items-center justify-center rounded-xl bg-[#ecebff] px-3 py-2 text-sm font-semibold text-[#4d47b6] ring-1 ring-[#4d47b6]/20 touch-manipulation transition-colors hover:bg-[#e0dcff] active:opacity-90 sm:min-h-[44px] sm:px-4"
-              >
-                QR สั่งอาหาร
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void refreshData()}
+                  disabled={refreshing}
+                  className="inline-flex min-h-[40px] min-w-[5.75rem] items-center justify-center rounded-xl border border-[#dcd8f0] bg-white px-3 py-2 text-sm font-semibold text-[#4d47b6] touch-manipulation transition-colors hover:bg-[#f4f3ff] active:opacity-90 disabled:opacity-60 sm:min-h-[44px] sm:px-4"
+                >
+                  {refreshing ? "กำลังรีเฟรช..." : "รีเฟรชออเดอร์"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTab("orders")}
+                  className="inline-flex min-h-[40px] min-w-[5.5rem] items-center justify-center rounded-xl bg-[#ecebff] px-3 py-2 text-sm font-semibold text-[#4d47b6] ring-1 ring-[#4d47b6]/20 touch-manipulation transition-colors hover:bg-[#e0dcff] active:opacity-90 sm:min-h-[44px] sm:px-4"
+                >
+                  QR สั่งอาหาร
+                </button>
+              </div>
             }
           />
         </div>

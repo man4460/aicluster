@@ -155,6 +155,8 @@ export function CarWashServiceLanePanel({
   onSetStatus,
   onVisitPhotoUpdate,
   onRecordVisit,
+  onRefresh,
+  refreshing = false,
 }: {
   visits: ServiceVisit[];
   packages: ServicePackage[];
@@ -166,6 +168,8 @@ export function CarWashServiceLanePanel({
   onSetStatus: (id: number, status: CarWashServiceStatus) => void | Promise<void>;
   onVisitPhotoUpdate: (id: number, photoUrl: string) => void | Promise<void>;
   onRecordVisit?: () => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }) {
   const lightbox = useAppImageLightbox();
   const [laneModalVisitId, setLaneModalVisitId] = useState<number | null>(null);
@@ -384,14 +388,28 @@ export function CarWashServiceLanePanel({
             คิวที่ยังอยู่ในลาน — แนบสลิปเมื่อเสร็จงาน แล้วเลือกสถานะ &quot;ชำระแล้ว&quot; ถึงจะออกจากลาน — แตะการ์ดเพื่อแนบรูป / บิลพร้อมเพย์
           </p>
         </div>
-        {onRecordVisit ?
-          <button
-            type="button"
-            onClick={onRecordVisit}
-            className="app-btn-primary shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold sm:self-center"
-          >
-            <span aria-hidden>➕</span> บันทึกรายการ
-          </button>
+        {onRecordVisit || onRefresh ?
+          <div className="flex shrink-0 items-center gap-2 sm:self-center">
+            {onRefresh ?
+              <button
+                type="button"
+                onClick={onRefresh}
+                disabled={refreshing}
+                className="app-btn-soft rounded-xl border border-[#dcd8f0] px-3.5 py-2.5 text-sm font-semibold text-[#4d47b6] hover:bg-[#f4f3ff] disabled:opacity-60"
+              >
+                {refreshing ? "กำลังรีเฟรช..." : "รีเฟรช"}
+              </button>
+            : null}
+            {onRecordVisit ?
+              <button
+                type="button"
+                onClick={onRecordVisit}
+                className="app-btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold"
+              >
+                <span aria-hidden>➕</span> บันทึกรายการ
+              </button>
+            : null}
+          </div>
         : null}
       </div>
       {active.length === 0 ? (

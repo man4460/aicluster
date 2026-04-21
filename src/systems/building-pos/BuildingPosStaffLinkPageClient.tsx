@@ -31,21 +31,48 @@ export function BuildingPosStaffLinkPageClient({
   const [staffLinkBusy, setStaffLinkBusy] = useState(false);
   const [staffDlBusy, setStaffDlBusy] = useState(false);
   const [linkLoadDone, setLinkLoadDone] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadStaffLink = useCallback(async () => {
+    const r = await fetch("/api/building-pos/session/staff-link", { credentials: "include" });
+    const d = (await r.json().catch(() => ({}))) as { configured?: boolean; url?: string | null };
+    setStaffLinkConfigured(!!d.configured);
+    if (typeof d.url === "string" && d.url.trim()) {
+      setStaffLinkUrl(d.url.trim());
+      return;
+    }
+    setStaffLinkUrl(null);
+  }, []);
 
   useEffect(() => {
-    void fetch("/api/building-pos/session/staff-link", { credentials: "include" })
-      .then(async (r) => {
-        const d = (await r.json().catch(() => ({}))) as { configured?: boolean; url?: string | null };
-        setStaffLinkConfigured(!!d.configured);
-        if (typeof d.url === "string" && d.url.trim()) {
-          setStaffLinkUrl(d.url.trim());
-        }
-      })
+    void loadStaffLink()
       .catch(() => {
         setStaffLinkConfigured(false);
+        setStaffLinkUrl(null);
       })
       .finally(() => setLinkLoadDone(true));
-  }, []);
+  }, [loadStaffLink]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.hidden) return;
+      void loadStaffLink().catch(() => undefined);
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [loadStaffLink]);
+
+  useEffect(() => {
+    const onFocusOrVisible = () => {
+      if (document.hidden) return;
+      void loadStaffLink().catch(() => undefined);
+    };
+    window.addEventListener("focus", onFocusOrVisible);
+    document.addEventListener("visibilitychange", onFocusOrVisible);
+    return () => {
+      window.removeEventListener("focus", onFocusOrVisible);
+      document.removeEventListener("visibilitychange", onFocusOrVisible);
+    };
+  }, [loadStaffLink]);
 
   useEffect(() => {
     if (!staffLinkUrl) {
@@ -86,6 +113,19 @@ export function BuildingPosStaffLinkPageClient({
       setStaffLinkBusy(false);
     }
   }, []);
+
+  const refreshStaffLink = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadStaffLink();
+    } catch {
+      setStaffLinkConfigured(false);
+      setStaffLinkUrl(null);
+    } finally {
+      setRefreshing(false);
+      setLinkLoadDone(true);
+    }
+  }, [loadStaffLink]);
 
   useEffect(() => {
     if (!staffLinkQr) {
@@ -175,6 +215,14 @@ export function BuildingPosStaffLinkPageClient({
               สร้างลิงก์ครั้งแรกหรือหมุนลิงก์ใหม่ — ลิงก์เก่าจะใช้ไม่ได้ทันที
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void refreshStaffLink()}
+                disabled={refreshing}
+                className="app-btn-soft rounded-xl px-4 py-2.5 text-sm font-semibold text-[#4d47b6] disabled:opacity-40"
+              >
+                {refreshing ? "กำลังรีเฟรช..." : "รีเฟรช"}
+              </button>
               <button
                 type="button"
                 onClick={() => void mintStaffLink()}

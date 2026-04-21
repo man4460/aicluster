@@ -285,6 +285,7 @@ export function CarWashDashboard({
   /** เข้าลานตอนบันทึก — แสดงบนแดชบอร์ด POS */
   const [visitLaneStatus, setVisitLaneStatus] = useState<CarWashServiceStatus>("WASHING");
   const [laneBusyVisitId, setLaneBusyVisitId] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const activeBundles = useMemo(
     () => bundles.filter((b) => b.is_active && b.used_uses < b.total_uses),
@@ -297,8 +298,9 @@ export function CarWashDashboard({
     [bundleTabRowDetailId, bundles],
   );
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
+  const loadAll = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const [pkgRows, bundleRows, visitRows, catRows, costRows] = await Promise.all([
@@ -316,12 +318,42 @@ export function CarWashDashboard({
     } catch (e) {
       setError(e instanceof Error ? e.message : "โหลดข้อมูลไม่สำเร็จ");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [repo]);
 
+  const refreshData = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadAll({ silent: true });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadAll]);
+
   useEffect(() => {
     void loadAll();
+  }, [loadAll]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.hidden) return;
+      void loadAll({ silent: true });
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [loadAll]);
+
+  useEffect(() => {
+    const onFocusOrVisible = () => {
+      if (document.hidden) return;
+      void loadAll({ silent: true });
+    };
+    window.addEventListener("focus", onFocusOrVisible);
+    document.addEventListener("visibilitychange", onFocusOrVisible);
+    return () => {
+      window.removeEventListener("focus", onFocusOrVisible);
+      document.removeEventListener("visibilitychange", onFocusOrVisible);
+    };
   }, [loadAll]);
 
   useEffect(() => {
@@ -1058,6 +1090,8 @@ export function CarWashDashboard({
       onSetStatus={handleVisitLaneStatus}
       onVisitPhotoUpdate={handleLaneVisitPhoto}
       onRecordVisit={openVisitModal}
+      onRefresh={() => void refreshData()}
+      refreshing={refreshing}
     />
   );
 
@@ -1118,9 +1152,19 @@ export function CarWashDashboard({
           </nav>
         </>
       : <div className="app-surface rounded-2xl px-4 py-4 sm:px-6 print:hidden">
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold text-[#2e2a58] sm:text-xl">ลานล้างวันนี้ (พนักงาน)</h1>
-            <p className="mt-0.5 text-xs text-[#66638c]">เฉพาะคิวในลาน — บันทึกรายการใหม่ได้</p>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold text-[#2e2a58] sm:text-xl">ลานล้างวันนี้ (พนักงาน)</h1>
+              <p className="mt-0.5 text-xs text-[#66638c]">เฉพาะคิวในลาน — บันทึกรายการใหม่ได้</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void refreshData()}
+              disabled={refreshing}
+              className="app-btn-soft min-h-[40px] shrink-0 rounded-xl border border-[#dcd8f0] px-3.5 py-2 text-xs font-semibold text-[#4d47b6] hover:bg-[#f4f3ff] disabled:opacity-60 sm:min-h-[44px] sm:text-sm"
+            >
+              {refreshing ? "กำลังรีเฟรช..." : "รีเฟรช"}
+            </button>
           </div>
         </div>
       }
