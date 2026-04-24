@@ -181,7 +181,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
           </div>
           <label className="cursor-pointer rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50">
             เปลี่ยนรูป
-            <input type="file" accept="image/*" className="hidden" onChange={onAvatarChange} />
+            <input suppressHydrationWarning type="file" accept="image/*" className="hidden" onChange={onAvatarChange} />
           </label>
         </div>
         <p className="text-center text-xs text-slate-500">{initial.email}</p>
@@ -197,7 +197,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
 
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap gap-2">
-          <button
+          <button suppressHydrationWarning
             type="button"
             onClick={() => setTab("business")}
             className={cn(
@@ -207,7 +207,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
           >
             ตั้งค่าบริษัท/ร้าน
           </button>
-          <button
+          <button suppressHydrationWarning
             type="button"
             onClick={() => setTab("account")}
             className={cn(
@@ -254,7 +254,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
                 </p>
               ) : (
                 <form onSubmit={saveReferrerOnly} className="mt-2 space-y-2">
-                  <input
+                  <input suppressHydrationWarning
                     type="tel"
                     inputMode="tel"
                     autoComplete="off"
@@ -263,7 +263,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
                     className={input}
                     placeholder="เช่น 0812345678"
                   />
-                  <button
+                  <button suppressHydrationWarning
                     type="submit"
                     disabled={loading}
                     className="rounded-lg bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:opacity-60"
@@ -282,7 +282,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
           <form onSubmit={saveProfile} className="space-y-4">
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">ชื่อบริษัท/ร้าน</label>
-          <input
+          <input suppressHydrationWarning
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             className={input}
@@ -291,7 +291,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">เลขกำกับภาษี</label>
-          <input
+          <input suppressHydrationWarning
             value={taxId}
             onChange={(e) => setTaxId(e.target.value)}
             className={input}
@@ -306,7 +306,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
           <div className="mt-3 space-y-3">
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">เบอร์พร้อมเพย์ (เฉพาะตัวเลข)</label>
-              <input
+              <input suppressHydrationWarning
                 value={promptPayPhone}
                 onChange={(e) => setPromptPayPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
                 className={input}
@@ -315,7 +315,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">ช่องทางชำระ (โอนธนาคาร ฯลฯ)</label>
-              <textarea
+              <textarea suppressHydrationWarning
                 value={paymentChannelsNote}
                 onChange={(e) => setPaymentChannelsNote(e.target.value)}
                 rows={3}
@@ -325,7 +325,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">ขนาดกระดาษเริ่มต้น</label>
-              <select
+              <select suppressHydrationWarning
                 value={defaultPaperSize}
                 onChange={(e) => setDefaultPaperSize(e.target.value)}
                 className={input}
@@ -339,7 +339,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">เบอร์โทร</label>
-          <input
+          <input suppressHydrationWarning
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             className={input}
@@ -348,7 +348,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">ที่อยู่</label>
-          <textarea
+          <textarea suppressHydrationWarning
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             rows={3}
@@ -359,7 +359,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">ละติจูด</label>
-            <input
+            <input suppressHydrationWarning
               value={latitude}
               onChange={(e) => setLatitude(e.target.value)}
               className={input}
@@ -368,7 +368,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">ลองจิจูด</label>
-            <input
+            <input suppressHydrationWarning
               value={longitude}
               onChange={(e) => setLongitude(e.target.value)}
               className={input}
@@ -376,7 +376,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
             />
           </div>
         </div>
-        <button
+        <button suppressHydrationWarning
           type="button"
           onClick={getLocation}
           disabled={geoLoading}
@@ -394,7 +394,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
           <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{msg}</p>
         ) : null}
 
-        <button
+        <button suppressHydrationWarning
           type="submit"
           disabled={loading}
           className={cn(

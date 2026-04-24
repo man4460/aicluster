@@ -219,7 +219,7 @@ export function TokenTopupModal({
 
   return (
     <>
-      <button
+      <button suppressHydrationWarning
         type="button"
         className={triggerClassName ?? appDashboardBrandCtaPillButtonClass}
         onClick={() => setOpen(true)}
@@ -236,7 +236,7 @@ export function TokenTopupModal({
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold">เติมโทเคนด้วยพร้อมเพย์</h3>
               {!orderId ? (
-                <button
+                <button suppressHydrationWarning
                   type="button"
                   className="rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-slate-100"
                   onClick={() => setOpen(false)}
@@ -262,7 +262,7 @@ export function TokenTopupModal({
                 />
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   {[100, 200, 500, 1000, 2000, 5000].map((preset) => (
-                    <button
+                    <button suppressHydrationWarning
                       key={preset}
                       type="button"
                       onClick={() => setAmountBaht(preset)}
@@ -273,7 +273,7 @@ export function TokenTopupModal({
                   ))}
                 </div>
                 <div className="mt-4 flex gap-2">
-                  <button
+                  <button suppressHydrationWarning
                     type="button"
                     disabled={loading}
                     onClick={() => void createOrder()}
@@ -281,7 +281,7 @@ export function TokenTopupModal({
                   >
                     {loading ? "กำลังสร้าง QR..." : "สร้าง QR Code"}
                   </button>
-                  <button
+                  <button suppressHydrationWarning
                     type="button"
                     onClick={() => setOpen(false)}
                     className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
@@ -296,7 +296,7 @@ export function TokenTopupModal({
             {orderId ? (
               <div className="mt-4">
                 <div className="mb-3 flex items-center justify-end gap-2">
-                  <button
+                  <button suppressHydrationWarning
                     type="button"
                     onClick={() => {
                       setOrderId(null);
@@ -311,7 +311,7 @@ export function TokenTopupModal({
                   >
                     ✎
                   </button>
-                  <button
+                  <button suppressHydrationWarning
                     type="button"
                     className="rounded-lg p-2 text-sky-600 transition-colors hover:bg-sky-50"
                     onClick={() => void downloadCard()}
@@ -320,7 +320,7 @@ export function TokenTopupModal({
                   >
                     ⬇
                   </button>
-                  <button
+                  <button suppressHydrationWarning
                     type="button"
                     className="rounded-lg p-2 text-rose-600 transition-colors hover:bg-rose-50"
                     onClick={() => setOpen(false)}
@@ -355,7 +355,7 @@ export function TokenTopupModal({
                   </p>
                 </div>
                 <div className="mt-3 flex gap-2">
-                  <button
+                  <button suppressHydrationWarning
                     type="button"
                     onClick={() => void downloadCard()}
                     disabled={downloading}
@@ -364,7 +364,7 @@ export function TokenTopupModal({
                     {downloading ? "กำลังดาวน์โหลด..." : "ดาวน์โหลดทั้งหน้าเป็นรูป"}
                   </button>
                 </div>
-                <button
+                <button suppressHydrationWarning
                   type="button"
                   onClick={() => setOpen(false)}
                   className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"

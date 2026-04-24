@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { isChatAiDashboardPath } from "@/lib/dashboard/chat-ai-href";
 
 function Svg({
   className,
@@ -60,7 +61,25 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
-  if (href.startsWith("/dashboard/chat")) {
+  if (isChatAiDashboardPath(href)) {
+    return (
+      <Svg>
+        <path
+          d="M12 3a6 6 0 00-3.8 10.6L4 22l4.3-1.1A6 6 0 1012 3z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M9.5 9.5h.01M12 8.5h.01M14.5 9.5h.01M8.5 12.5a3.5 3.5 0 007 0"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </Svg>
+    );
+  }
+  if (href === "/dashboard/chat" || href.startsWith("/dashboard/chat/")) {
     return (
       <Svg>
         <path

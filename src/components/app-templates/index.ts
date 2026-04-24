@@ -62,7 +62,7 @@ export {
   printDataUrlImagePoster,
   printPrintableHtmlInHiddenIframe,
 } from "./openPrintableHtml";
-export { prepareImageFileForUpload } from "./prepareImageFileForUpload";
+export { prepareImageFileForUpload, prepareImageFileForVisionOcr } from "./prepareImageFileForUpload";
 
 export {
   APP_TEMPLATE_ICON_STROKE,

@@ -16,6 +16,7 @@ import {
   type DashboardNavGroup,
   type DashboardNavGroupId,
 } from "@/lib/dashboard-nav";
+import { CHAT_AI_DASHBOARD_HREF, isChatAiDashboardPath } from "@/lib/dashboard/chat-ai-href";
 import {
   buffetTierMaxGroup,
   MODULE_GROUP_TIER_NAME,
@@ -39,6 +40,9 @@ function headerPackageLabel(
 
 function isNavActive(href: string, pathname: string) {
   if (href === "/dashboard") return pathname === "/dashboard";
+  if (href === CHAT_AI_DASHBOARD_HREF) {
+    return isChatAiDashboardPath(pathname);
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -151,6 +155,7 @@ function NavCollapsibleGroup({
     <div className={cn("rounded-2xl p-2.5", cardClass)}>
       <button
         type="button"
+        suppressHydrationWarning
         className={cn(
           "flex w-full items-center justify-between gap-2 rounded-xl px-2 py-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500/35",
           headerHoverClass,
@@ -304,6 +309,7 @@ export function DashboardShell({
         <div className="mawell-glass-panel flex h-14 w-full min-w-0 items-center gap-2 rounded-2xl px-3 shadow-lg sm:gap-3 sm:px-6 lg:px-8">
           <button
             type="button"
+            suppressHydrationWarning
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/60 bg-white/70 text-[#3730a3] shadow-sm hover:bg-white/90 md:hidden"
             aria-expanded={drawerOpen}
             aria-controls={menuId}
@@ -363,6 +369,7 @@ export function DashboardShell({
             <div className="relative shrink-0 md:hidden" ref={accountWrapRef}>
               <button
                 type="button"
+                suppressHydrationWarning
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/60 bg-white/75 p-1 shadow-sm hover:bg-white/95"
                 aria-expanded={accountOpen}
                 aria-label="เมนูบัญชี"
@@ -439,6 +446,7 @@ export function DashboardShell({
             <>
               <button
                 type="button"
+                suppressHydrationWarning
                 className="fixed inset-x-0 bottom-0 top-[4.25rem] z-40 bg-slate-900/25 backdrop-blur-[2px] md:hidden"
                 aria-label="ปิดเมนู"
                 onClick={closeDrawer}
@@ -451,6 +459,7 @@ export function DashboardShell({
                   <MawellLogo size="md" />
                   <button
                     type="button"
+                    suppressHydrationWarning
                     className="rounded-xl p-2 text-[#4c4a6e] hover:bg-white/45"
                     onClick={closeDrawer}
                     aria-label="ปิดเมนู"

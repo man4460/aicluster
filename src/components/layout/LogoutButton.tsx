@@ -46,6 +46,7 @@ export function LogoutButton({ className }: { className?: string }) {
   return (
     <button
       type="button"
+      suppressHydrationWarning
       onClick={handleLogout}
       disabled={pending}
       className={cn(
@@ -77,6 +78,7 @@ export function LogoutIconButton({ className }: { className?: string }) {
   return (
     <button
       type="button"
+      suppressHydrationWarning
       onClick={handleLogout}
       disabled={pending}
       title={pending ? "กำลังออกจากระบบ…" : "ออกจากระบบ"}

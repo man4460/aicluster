@@ -11,8 +11,8 @@ export type AppSectionHeaderProps = {
   action?: ReactNode;
   /** คลาสห่อ `action` (ค่าเริ่มต้น shrink-0) — ใช้ flex-1 เมื่อต้องการให้แถวปุ่มกินความกว้างที่เหลือ */
   actionWrapClassName?: string;
-  /** โทนหัวข้อ — violet ใช้กับ POS / แบรนด์ม่วง */
-  tone?: "slate" | "violet";
+  /** โทนหัวข้อ — violet ใช้กับ POS / แบรนด์ม่วง · glass = แดชบอร์ดมืดโปร่ง */
+  tone?: "slate" | "violet" | "glass";
   className?: string;
 };
 
@@ -27,8 +27,17 @@ export function AppSectionHeader({
   className,
 }: AppSectionHeaderProps) {
   const titleClass =
-    tone === "violet" ? "text-lg font-bold text-[#2e2a58]" : "text-sm font-semibold text-slate-900";
-  const descClass = tone === "violet" ? "mt-1 text-xs text-[#66638c]" : "mt-0.5 text-xs text-slate-500";
+    tone === "glass"
+      ? "text-sm font-semibold text-white/90"
+      : tone === "violet"
+        ? "text-lg font-bold text-[#2e2a58]"
+        : "text-sm font-semibold text-slate-900";
+  const descClass =
+    tone === "glass"
+      ? "mt-0.5 text-xs text-slate-400"
+      : tone === "violet"
+        ? "mt-1 text-xs text-[#66638c]"
+        : "mt-0.5 text-xs text-slate-500";
 
   return (
     <div className={cn("flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between", className)}>

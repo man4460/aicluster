@@ -1,11 +1,8 @@
 @import "tailwindcss";
 
-/* สแกนทั้ง src — Tailwind v4 ไม่เห็นคลาสนอก app/ ถ้าไม่ระบุ @source */
-/* แยกนามสกุล (บางเวอร์ชัน/บันเดิล parse กลุ่ม {js,ts,...} ไม่ได้ → utility หายหมด) */
+/* สแกนเฉพาะไฟล์ UI ใน src — เลี่ยงไปแตะ route.ts ฝั่ง API ที่ทำให้ Turbopack error path */
 @source "../**/*.tsx";
-@source "../**/*.ts";
 @source "../**/*.jsx";
-@source "../**/*.js";
 
 :root {
   --background: #f7f6ff;

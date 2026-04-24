@@ -20,6 +20,32 @@ import { isMqttServiceModuleEnabled } from "@/lib/modules/mqtt-feature";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { listTrialModuleIds } from "@/lib/modules/trial-store";
 
+function DashboardDataError({ message }: { message: string }) {
+  return (
+    <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 bg-gradient-to-b from-slate-50 to-white p-8 text-center">
+      <p className="max-w-md text-sm font-medium text-amber-950">{message}</p>
+      <p className="max-w-lg text-xs leading-relaxed text-slate-600">
+        ตรวจสอบว่า MySQL ทำงานและค่า <code className="rounded bg-slate-100 px-1">DATABASE_URL</code> ใน{" "}
+        <code className="rounded bg-slate-100 px-1">.env</code> ถูกต้อง จากนั้นรีสตาร์ทเซิร์ฟเวอร์ Next
+      </p>
+      <div className="flex flex-wrap justify-center gap-2">
+        <a
+          href="/dashboard"
+          className="rounded-xl bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#000098]"
+        >
+          ลองกลับแดชบอร์ด
+        </a>
+        <a
+          href="/login"
+          className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
+        >
+          เข้าสู่ระบบใหม่
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -35,36 +61,62 @@ export default async function DashboardLayout({
     console.error("[token billing]", e);
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.sub },
-    select: {
-      username: true,
-      fullName: true,
-      role: true,
-      tokens: true,
-      subscriptionTier: true,
-      subscriptionType: true,
-      lastBuffetBillingMonth: true,
-      avatarUrl: true,
-      employerUserId: true,
-    },
-  });
+  let user;
+  try {
+    user = await prisma.user.findUnique({
+      where: { id: session.sub },
+      select: {
+        username: true,
+        fullName: true,
+        role: true,
+        tokens: true,
+        subscriptionTier: true,
+        subscriptionType: true,
+        lastBuffetBillingMonth: true,
+        avatarUrl: true,
+        employerUserId: true,
+      },
+    });
+  } catch (e) {
+    console.error("[dashboard layout] user lookup", e);
+    return (
+      <DashboardDataError message="โหลดข้อมูลผู้ใช้ไม่สำเร็จ — อาจเชื่อมต่อฐานข้อมูลไม่ได้" />
+    );
+  }
 
   if (!user) redirect("/login");
 
-  const billCtx = await getModuleBillingContext(session.sub);
+  let billCtx;
+  try {
+    billCtx = await getModuleBillingContext(session.sub);
+  } catch (e) {
+    console.error("[dashboard layout] billing context", e);
+    return <DashboardDataError message="โหลดบริบทการสมัครใช้งานไม่สำเร็จ — ตรวจสอบฐานข้อมูล" />;
+  }
   if (!billCtx) redirect("/login");
 
-  const allModulesRaw = await prisma.appModule.findMany({
-    where: { isActive: true },
-    orderBy: [{ groupId: "asc" }, { sortOrder: "asc" }],
-    select: { id: true, slug: true, title: true, groupId: true },
-  });
+  let allModulesRaw;
+  try {
+    allModulesRaw = await prisma.appModule.findMany({
+      where: { isActive: true },
+      orderBy: [{ groupId: "asc" }, { sortOrder: "asc" }],
+      select: { id: true, slug: true, title: true, groupId: true },
+    });
+  } catch (e) {
+    console.error("[dashboard layout] app modules", e);
+    return <DashboardDataError message="โหลดรายการระบบไม่สำเร็จ — ตรวจสอบฐานข้อมูล" />;
+  }
   const allModules = filterAppModulesForDashboardUi(allModulesRaw, user.role);
 
   const [subscribedIds, trialIds] = await Promise.all([
-    listSubscribedModuleIds(session.sub),
-    listTrialModuleIds(session.sub),
+    listSubscribedModuleIds(session.sub).catch((e) => {
+      console.error("[dashboard layout] subscriptions", e);
+      return [] as string[];
+    }),
+    listTrialModuleIds(session.sub).catch((e) => {
+      console.error("[dashboard layout] trials", e);
+      return [] as string[];
+    }),
   ]);
   const subscribedSet = new Set(subscribedIds);
   const trialSet = new Set(trialIds);

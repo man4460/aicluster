@@ -14,6 +14,7 @@ import {
   PARKING_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
 } from "@/lib/modules/config";
+import { CHAT_AI_DASHBOARD_HREF } from "@/lib/dashboard/chat-ai-href";
 import { SYSTEM_MAP_CATALOG_SLUG } from "@/lib/modules/system-map-catalog";
 
 export type DashboardNavItem = {
@@ -48,6 +49,7 @@ export const DASHBOARD_NAV: DashboardNavItem[] = [
   { href: "/dashboard/profile", label: "โปรไฟล์" },
   { href: "/dashboard/plans", label: "แพ็กเกจ" },
   { href: "/dashboard/chat", label: "แชท" },
+  { href: CHAT_AI_DASHBOARD_HREF, label: "Chat AI · น้องมาเวล" },
   { href: "/dashboard/admin", label: "ศูนย์แอดมิน", adminOnly: true },
 ];
 

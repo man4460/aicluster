@@ -26,7 +26,7 @@ CREATE TABLE `home_finance_slip_extractions` (
 
 ALTER TABLE `home_finance_slip_extractions`
   ADD CONSTRAINT `home_finance_slip_extractions_owner_id_fkey`
-  FOREIGN KEY (`owner_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+  FOREIGN KEY (`owner_id`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `home_finance_slip_extractions`
   ADD CONSTRAINT `home_finance_slip_extractions_entry_id_fkey`

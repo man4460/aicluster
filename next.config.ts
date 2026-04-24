@@ -41,6 +41,25 @@ const nextConfig: NextConfig = {
   // ไม่ให้ bundle Prisma เข้า SSR — ใช้ Node process เต็มรูปแบบ (กัน process.once is not a function)
   serverExternalPackages: ["@prisma/client", "prisma"],
   allowedDevOrigins: parseAllowedDevOrigins(),
+  /** URL สั้น /dashboard/chatai → canonical /dashboard/chat-ai (กัน re-export page ซ้ำ / HMR สับสน) */
+  async redirects() {
+    return [
+      { source: "/dashboard/chatai", destination: "/dashboard/chat-ai", permanent: true },
+      { source: "/dashboard/chatai/:path*", destination: "/dashboard/chat-ai/:path*", permanent: true },
+    ];
+  },
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.watchOptions = {
+        ...(config.watchOptions ?? {}),
+        // ใช้ polling แทน native watch เพื่อให้เสถียรบน mapped drive / UNC path
+        poll: 1000,
+        aggregateTimeout: 300,
+        ignored: ["**/.git/**", "**/.next/**", "**/node_modules/**"],
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

@@ -8,6 +8,12 @@ import { writeSystemActivityLog } from "@/lib/audit-log";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { homeFinanceEntryPostSchema } from "@/lib/home-finance/entry-schema";
 import { formatDbDateToYmd, parseYmdToDbDate } from "@/lib/home-finance/entry-date";
+import {
+  OLLAMA_DEFAULT_SLIP_VISION_MODEL,
+  THAI_SLIP_VISION_OCR_BLOCK,
+  withThaiSlipOcrPreamble,
+} from "@/lib/home-finance/slip-vision-prompts";
+import { ollamaCallVisionText } from "@/lib/ollama/ollama-vision";
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
@@ -174,11 +180,11 @@ async function callOpenClaw(params: {
   mimeType: string;
   fallbackType: "INCOME" | "EXPENSE";
   defaultCategoryKey: string;
-}): Promise<AiSuggestion> {
+}): Promise<AiSuggestion | null> {
   const endpoint = process.env.OPENCLAW_URL?.trim() || process.env.OPENCLAW_API_URL?.trim() || "";
   const apiKey = process.env.OPENCLAW_API_KEY?.trim() || "";
   if (!endpoint) {
-    return normalizeAiSuggestion({}, params.fallbackType, params.defaultCategoryKey);
+    return null;
   }
   const timeout = AbortSignal.timeout(25_000);
   const payload = {
@@ -231,12 +237,94 @@ async function callOpenClaw(params: {
     });
     const data = (await res.json().catch(() => ({}))) as unknown;
     if (!res.ok) {
-      return normalizeAiSuggestion(data, params.fallbackType, params.defaultCategoryKey);
+      return null;
     }
     return normalizeAiSuggestion(data, params.fallbackType, params.defaultCategoryKey);
   } catch {
-    return normalizeAiSuggestion({}, params.fallbackType, params.defaultCategoryKey);
+    return null;
   }
+}
+
+function extractJsonObjectText(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const fence = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  const content = fence ? fence[1].trim() : trimmed;
+  if (content.startsWith("{") && content.endsWith("}")) return content;
+  const start = content.indexOf("{");
+  const end = content.lastIndexOf("}");
+  if (start >= 0 && end > start) return content.slice(start, end + 1);
+  return null;
+}
+
+async function callOllama(params: {
+  fileBuffer: Buffer;
+  mimeType: string;
+  fallbackType: "INCOME" | "EXPENSE";
+  defaultCategoryKey: string;
+}): Promise<AiSuggestion | null> {
+  const endpoint = process.env.OLLAMA_API_URL?.trim() || process.env.OLLAMA_URL?.trim() || "";
+  const model =
+    process.env.OLLAMA_VISION_MODEL?.trim() ||
+    process.env.OLLAMA_MODEL?.trim() ||
+    OLLAMA_DEFAULT_SLIP_VISION_MODEL;
+  if (!endpoint) {
+    return null;
+  }
+
+  const jsonPart = [
+    "อ่านข้อความจากสลิป/บิล แล้วสรุปข้อมูลรายรับรายจ่ายเป็น JSON เท่านั้น",
+    "ถ้าไม่แน่ใจ ให้ใส่ null หรือบอกใน note — ห้ามเดาตัวเลขหรือชื่อ",
+    "4. เมื่ออ่านเสร็จ: บันทึกสรุปการอ่านและจุดที่อ่านไม่ชัดในฟิลด์ text ของ JSON (ยังห้ามข้อความนอก JSON)",
+    "ห้ามมีข้อความนอก JSON",
+    "รูปแบบที่ต้องการ:",
+    "{",
+    '  "fields": {',
+    '    "amount": "number|string|null",',
+    '    "entryDate": "YYYY-MM-DD|null",',
+    '    "title": "string|null",',
+    '    "merchant": "string|null",',
+    '    "referenceNo": "string|null",',
+    '    "paymentMethod": "string|null",',
+    '    "note": "string|null",',
+    '    "type": "INCOME|EXPENSE|null",',
+    '    "categoryKey": "string|null",',
+    '    "confidence": "0..1"',
+    "  },",
+    '  "text": "raw ocr text"',
+    "}",
+  ].join("\n");
+  const prompt = withThaiSlipOcrPreamble(THAI_SLIP_VISION_OCR_BLOCK, jsonPart);
+  const timeout = AbortSignal.timeout(30_000);
+  try {
+    const rawResponse = await ollamaCallVisionText({
+      apiUrlFromEnv: endpoint,
+      model,
+      userPrompt: prompt,
+      imageBase64: params.fileBuffer.toString("base64"),
+      temperature: 0.1,
+      signal: timeout,
+    });
+    const jsonText = extractJsonObjectText(rawResponse);
+    if (!jsonText) return null;
+    const parsed = JSON.parse(jsonText) as unknown;
+    return normalizeAiSuggestion(parsed, params.fallbackType, params.defaultCategoryKey);
+  } catch {
+    return null;
+  }
+}
+
+async function callSlipAi(params: {
+  fileBuffer: Buffer;
+  mimeType: string;
+  fallbackType: "INCOME" | "EXPENSE";
+  defaultCategoryKey: string;
+}): Promise<AiSuggestion> {
+  const viaOpenClaw = await callOpenClaw(params);
+  if (viaOpenClaw) return viaOpenClaw;
+  const viaOllama = await callOllama(params);
+  if (viaOllama) return viaOllama;
+  return normalizeAiSuggestion({}, params.fallbackType, params.defaultCategoryKey);
 }
 
 function parseType(raw: FormDataEntryValue | null): "INCOME" | "EXPENSE" {
@@ -272,6 +360,7 @@ export async function POST(req: Request) {
   if (!file || !(file instanceof File)) {
     return NextResponse.json({ error: "ไม่มีไฟล์" }, { status: 400 });
   }
+  const uploadFile = file;
   const fallbackType = parseType(form.get("preferredType"));
   const defaultCategoryKey =
     typeof form.get("defaultCategoryKey") === "string" && form.get("defaultCategoryKey")!.toString().trim()
@@ -280,11 +369,11 @@ export async function POST(req: Request) {
         ? "GENERAL_INCOME"
         : "GENERAL_SHOPPING";
 
-  const isPdf = file.type === "application/pdf";
-  if (!isPdf && !ALLOWED_IMAGES.has(file.type)) {
+  const isPdf = uploadFile.type === "application/pdf";
+  if (!isPdf && !ALLOWED_IMAGES.has(uploadFile.type)) {
     return NextResponse.json({ error: "รองรับ JPG PNG WEBP GIF หรือ PDF" }, { status: 400 });
   }
-  const fileBuffer = Buffer.from(await file.arrayBuffer());
+  const fileBuffer = Buffer.from(await uploadFile.arrayBuffer());
   const maxBytes = isPdf ? MAX_PDF_BYTES : MAX_IMAGE_BYTES;
   if (fileBuffer.length > maxBytes) {
     return NextResponse.json(
@@ -295,11 +384,11 @@ export async function POST(req: Request) {
 
   const ext = isPdf
     ? "pdf"
-    : file.type === "image/png"
+    : uploadFile.type === "image/png"
       ? "png"
-      : file.type === "image/webp"
+      : uploadFile.type === "image/webp"
         ? "webp"
-        : file.type === "image/gif"
+        : uploadFile.type === "image/gif"
           ? "gif"
           : "jpg";
   const storedMimeType = file.type.trim() || (isPdf ? "application/pdf" : "image/jpeg");
@@ -309,7 +398,7 @@ export async function POST(req: Request) {
   await writeFile(path.join(dir, filename), fileBuffer);
   const imageUrl = `/uploads/home-finance/${filename}`;
 
-  const ai = await callOpenClaw({
+  const ai = await callSlipAi({
     fileBuffer,
     mimeType: storedMimeType,
     fallbackType,

@@ -2141,17 +2141,6 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                       >
                         {entrySlipImageUrl ? "เปลี่ยนรูป" : "เลือกรูป"}
                       </HomeFinanceUploadTrigger>
-                      <HomeFinanceUploadTrigger
-                        busy={entrySlipAiSaving}
-                        disabled={saving || entrySlipUploading}
-                        accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
-                        onFile={(f) => void ingestSlipWithAiAndSave(f)}
-                      >
-                        {entrySlipAiSaving ? "AI กำลังอ่าน..." : "AI อ่านแล้วบันทึกทันที"}
-                      </HomeFinanceUploadTrigger>
-                      <span className="max-w-xs text-xs text-slate-500">
-                        ปุ่ม AI รองรับ JPG / PNG / WebP / GIF 3MB และ PDF 5MB
-                      </span>
                     </div>
                   </Field>
                   <Field label="หมายเหตุ"><textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={inputClz} /></Field>

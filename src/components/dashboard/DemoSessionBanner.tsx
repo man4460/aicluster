@@ -12,6 +12,7 @@ export function DemoSessionBanner() {
         <form action="/api/auth/demo/exit" method="POST" className="shrink-0">
           <button
             type="submit"
+            suppressHydrationWarning
             className="w-full rounded-xl bg-amber-900 px-4 py-2.5 text-sm font-bold text-amber-50 shadow-md transition hover:bg-amber-950 sm:w-auto"
           >
             ออกจากบัญชีทดลอง
