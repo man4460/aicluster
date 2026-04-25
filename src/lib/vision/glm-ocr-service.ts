@@ -184,134 +184,8 @@ function applySlipJsonFieldAliases(j: GlmOcrJson & Record<string, unknown>): Glm
       const short = tm.match(/([01]?\d|2[0-3]):([0-5]\d)/);
       if (short) out.entryTime = `${short[1]!.padStart(2, "0")}:${short[2]}`;
     }
-  } else if (typeof out.entryTime === "string") {
-    const short = out.entryTime.match(/([01]?\d|2[0-3]):([0-5]\d)/);
-    if (short) out.entryTime = `${short[1]!.padStart(2, "0")}:${short[2]}`;
   }
   return out;
-}
-
-const BANK_CODE_TOKENS = new Set(
-  "ttb scb ktb ktbank kbank bbl bay gsb baac tmb tisco icbc uob cimbbank".split(/\s+/u),
-);
-
-function yPartThaiToCeYmd(yPart: string, mm: string, dd: string): string | null {
-  const pad = (s: string) => s.padStart(2, "0");
-  let yCe: number;
-  if (yPart.length === 2) {
-    yCe = 2500 + parseInt(yPart, 10) - 543;
-  } else {
-    yCe = parseInt(yPart, 10);
-    if (yCe >= 2500) yCe -= 543;
-  }
-  if (!Number.isFinite(yCe) || yCe < 1990 || yCe > 2110) return null;
-  return `${yCe}-${mm}-${pad(dd)}`;
-}
-
-/** ดึงวันที่จากข้อความบนสลิปรูปแบบไทย (เช่น 20 เม.ย. 69, 20/04/2569) — ลดกรณีปี ค.ศ. หลุดเพราะ model */
-function extractThaiSlipDateYmdFromRawText(t: string): string | null {
-  const s = t.replace(/\u00a0/g, " ");
-  const tryApr = s.match(/(\d{1,2})\s+เม\.?\s*ย\.?\s*,?\s*(\d{2,4})/u);
-  if (tryApr) {
-    const y = yPartThaiToCeYmd(tryApr[2]!, "04", tryApr[1]!);
-    if (y) return y;
-  }
-  const tryAprLong = s.match(/(\d{1,2})\s+เมษายน\s*,?\s*(\d{2,4})/u);
-  if (tryAprLong) {
-    const y = yPartThaiToCeYmd(tryAprLong[2]!, "04", tryAprLong[1]!);
-    if (y) return y;
-  }
-  const dmyBe = s.match(/\b(\d{1,2})[./-](\d{1,2})[./-](25\d{2})\b/);
-  if (dmyBe) {
-    const yCe = parseInt(dmyBe[3]!, 10) - 543;
-    if (yCe >= 1990 && yCe <= 2110) {
-      return `${yCe}-${dmyBe[2]!.padStart(2, "0")}-${dmyBe[1]!.padStart(2, "0")}`;
-    }
-  }
-  return null;
-}
-
-function extractTimeHhmmFromRawText(t: string): string | null {
-  const s = t.replace(/\u00a0/g, " ");
-  const m = s.match(/\b([01]?\d|2[0-3]):([0-5]\d)(?:\s*น\.?)?/u);
-  if (m) return `${m[1]!.padStart(2, "0")}:${m[2]}`;
-  return null;
-}
-
-function isLikelyBankCodeNotPersonName(s: string): boolean {
-  const t = s.replace(/\s+/g, " ").trim();
-  if (t.length <= 1 || t.length > 20) return false;
-  if (/[ก-๙]/.test(t)) return false;
-  const u = t.toLowerCase();
-  if (BANK_CODE_TOKENS.has(u)) return true;
-  return /^(ttb|scb|ktb|kbank|bbl|bay|gsb|kpay|truemoney|promptpay|พร้อมเพย์|ทีทีบี|ไทยพาณิชย์|กสิกร|กรุงเทพ)$/iu.test(t);
-}
-
-function isMaskLikeReference(s: string): boolean {
-  const t = s.trim();
-  if (t.length < 4) return true;
-  if (/^X[-\sX]+$/i.test(t)) return true;
-  if (/^X+([-/]X+)+$/i.test(t)) return true;
-  const xRatio = (t.match(/X/gi) || []).length / t.length;
-  if (t.length < 20 && xRatio > 0.3 && /\d/.test(t) === false) return true;
-  return false;
-}
-
-function bestNumericReferenceFromText(t: string): string | null {
-  const s = t.replace(/[\s,]/g, "");
-  const m = s.match(/(?:รหัสอ้างอิง|อ้างอิง|ref)[\s:]*([0-9]{12,20})/iu);
-  if (m?.[1]) return m[1]!.slice(0, 100);
-  const long = t.match(/\b([0-9]{12,20})\b/);
-  return long?.[1] ? long[1]!.slice(0, 100) : null;
-}
-
-/**
- * ปรับผลอ่านสลิปหลัง parse: วันที่/เวลาแบบไทยจาก raw, กันรหัสธนาคารไปช่องผู้โอน, เลขอ้างอิงจำลอง/หน้ากาก
- */
-export function refineSlipOcrResult(d: GlmOcrSlipResult): GlmOcrSlipResult {
-  const text = (d.rawText && d.rawText.trim()) || "";
-  if (!text) return d;
-
-  let entryDateYmd = d.entryDateYmd;
-  const fromThai = extractThaiSlipDateYmdFromRawText(text);
-  if (fromThai) {
-    entryDateYmd = fromThai;
-  }
-
-  let entryTime = d.entryTime;
-  const tHhmm = extractTimeHhmmFromRawText(text);
-  if (tHhmm) {
-    entryTime = tHhmm;
-  }
-
-  let transferFrom = d.transferFrom;
-  let transferTo = d.transferTo;
-  let bankName = d.bankName;
-  if (transferFrom && isLikelyBankCodeNotPersonName(transferFrom)) {
-    if (!bankName || bankName === transferFrom) {
-      bankName = transferFrom.slice(0, 100);
-    }
-    transferFrom = null;
-  }
-  if (transferTo && isLikelyBankCodeNotPersonName(transferTo) && !transferFrom) {
-    if (!bankName) bankName = transferTo.slice(0, 100);
-    transferTo = null;
-  }
-
-  let reference = d.reference;
-  if (reference && isMaskLikeReference(reference)) {
-    reference = bestNumericReferenceFromText(text) ?? null;
-  }
-
-  return {
-    ...d,
-    entryDateYmd,
-    entryTime,
-    transferFrom,
-    transferTo,
-    bankName,
-    reference,
-  };
 }
 
 function stripReasoningNoise(s: string): string {
@@ -548,7 +422,7 @@ export function buildGlmOcrResultFromModelText(rawText: string): GlmOcrSlipResul
   if (warning && slipHasAnySignal(draft)) {
     draft.parseWarning = undefined;
   }
-  return refineSlipOcrResult(draft);
+  return draft;
 }
 
 /**
