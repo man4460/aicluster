@@ -19,7 +19,7 @@ export default async function ChatAiPage() {
   const greetingName = userRow?.fullName?.trim() || userRow?.username || session.username;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden sm:gap-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 sm:gap-6">
       <header className="app-surface relative shrink-0 overflow-hidden rounded-3xl border border-white/70 px-5 py-6 shadow-[0_16px_48px_-24px_rgba(79,70,229,0.2)] sm:px-8 sm:py-7">
         <div
           className="pointer-events-none absolute -right-12 top-0 h-40 w-40 rounded-full bg-gradient-to-br from-[#c7d2fe]/50 to-fuchsia-200/35 blur-3xl"
@@ -31,7 +31,7 @@ export default async function ChatAiPage() {
           <p className="mt-2 max-w-2xl text-sm text-[#66638c]">แชท · โน้ต · สรุปรายวัน</p>
         </div>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col">
         <ChatAiClientRoot greetingName={greetingName} />
       </div>
     </div>

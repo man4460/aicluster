@@ -23,6 +23,12 @@ import {
   THAI_SLIP_VISION_OCR_BLOCK,
   withThaiSlipOcrPreamble,
 } from "@/lib/home-finance/slip-vision-prompts";
+import {
+  formatHitsForPrompt,
+  formatThaiDateHeader,
+  searchWithGoogleApi,
+  type GoogleSearchHit,
+} from "@/lib/chat-ai/google-search";
 
 type MemoryMessage = { role: "user" | "assistant"; content: string };
 type ChatProviderResult = {
@@ -342,10 +348,12 @@ function buildPrompt(messages: MemoryMessage[], userName: string): string {
     "2) **จดบันทึก** — จำสิ่งสำคัญที่พี่บอก และยืนยันสั้นๆ เมื่อบันทึกสำเร็จ",
     "3) **วางแผน** — ช่วยวางแผนงาน การเงิน ชีวิต แบบเป็นขั้นตอนทำต่อได้จริง",
     [
-      "4) **การค้นหาข้อมูล:**",
-      "   - ถ้าถามเรื่องข่าว/ข้อมูลปัจจุบัน → ค้นหาทันที ไม่ต้องถาม",
-      "   - ใช้ web search ได้เลยโดยไม่ต้องขออนุญาต",
-      "   - ทำให้เสร็จก่อน แล้วค่อยถามว่าต้องการอะไรเพิ่ม",
+      "4) **การค้นหาข้อมูล / ข่าว (Google Custom Search):**",
+      "   - ถ้าถามเรื่องข่าว/ข้อมูลปัจจุบัน ระบบจะแนบผลค้นจาก Google มาเป็น `[ผลการเรียกเครื่องมือ]`",
+      "   - ให้สรุป **เฉพาะจาก** ข้อมูลในผลค้นหาที่แนบมา ห้ามแต่งข้อมูลที่ไม่มี",
+      "   - **ข่าว**: ทำตามรูปแบบ news digest (หัวข้อวันที่ → หมวด+อิโมจิ → bullet \"• \" → ปิดท้ายชวนถาม)",
+      "   - **เว็บทั่วไป**: ตอบตรงคำถามเป็น bullet สั้น 4-8 ข้อ พร้อมเน้น **bold** ตัวเลข/ชื่อสำคัญ",
+      "   - ถ้าไม่มีบล็อก `[ผลการเรียกเครื่องมือ]` แต่ผู้ใช้ขอข่าว/ข้อมูล → บอกว่ายังค้นไม่ได้ (ตั้ง GOOGLE_CSE_ID) อย่าเดาข่าวเอง",
     ].join("\n"),
     "5) **คำนวณ** — คิดเลข เปรียบเทียบตัวเลข สรุปเป็นข้อๆ",
     "6) **แนะนำ** — ให้คำแนะนำที่มีเหตุผล และบอกข้อจำกัดเมื่อจำเป็น",
@@ -375,6 +383,29 @@ function buildPrompt(messages: MemoryMessage[], userName: string): string {
     "- ถามตรง → ตอบตรง",
     "- มีตัวเลข/รายการ → ใช้ bullet list",
     "- ประเด็นสำคัญ → เน้นด้วย **bold**",
+    "",
+    "## เทมเพลตเมื่อสรุปข่าวจาก Google (ใช้ก็ต่อเมื่อมีบล็อก `[ค้นข่าวผ่าน Google]` + `[ข้อมูลผลค้นหา]`)",
+    "```",
+    "ข่าวเด่นวันที่ <วัน เดือน ปี พ.ศ.> 📰",
+    "",
+    "💰 เศรษฐกิจไทย",
+    "• <สรุปข่าวสั้น 1 บรรทัด>",
+    "• <สรุปข่าวสั้น 1 บรรทัด>",
+    "",
+    "📈 หุ้น/การเงิน",
+    "• <สรุปข่าวสั้น>",
+    "",
+    "🏢 ธุรกิจ",
+    "• <สรุปข่าวสั้น>",
+    "",
+    "🏙️ อื่นๆ",
+    "• <สรุปข่าวสั้น>",
+    "",
+    "พี่สนใจข่าวเรื่องไหนเป็นพิเศษมั้ยครับ?",
+    "```",
+    "- จัดหมวด 3-6 หมวดตามเนื้อข่าวจริง (เช่น 🗾 ตะวันออกกลาง / 🌏 ต่างประเทศ / ⚽ กีฬา / 🎬 บันเทิง / 🚓 อาชญากรรม)",
+    "- ถ้าหมวดใดข้อมูลไม่พอ ตัดทิ้งได้ ไม่ต้องเติมเอง",
+    "- ห้ามใส่ลิงก์ดิบ/URL/ชื่อโดเมนในเนื้อข่าว",
     "",
     "## ตัวอย่างน้ำเสียง (ไม่ต้องลอกทุกครั้ง)",
     `- "ขอบคุณที่บอกนะ${userName} 😊"`,
@@ -449,6 +480,132 @@ function isPlanningAssistRequest(raw: string): boolean {
   }
   if (/^(?:ช่วย|ขอ)?(?:จัด|วาง|ทำ|สร้าง)(?:แผน|แผนงาน|ตาราง)/u.test(head)) return true;
   return false;
+}
+
+/** ผู้ใช้ขอ "ข่าว…" / "ข่าววันนี้" / "หาข่าว…" → ค้น Google + จัดเป็น news digest */
+function isNewsDigestRequest(raw: string): boolean {
+  const m = raw.trim().replace(/[\u200B-\u200D\uFEFF]/g, "");
+  if (!m || m.length > 4000) return false;
+  if (extractQuickNoteContent(m)) return false;
+  if (parseFinanceRecordCommand(m)) return false;
+  if (/^(ขอ|ช่วย)?(หาข่าว|สรุปข่าว|ขอข่าว|ค้นข่าว|ฟีดข่าว)/u.test(m)) return true;
+  if (/^ข่าว(วันนี้|เด่น|ด่วน|ล่าสุด|เช้านี้|ในประเทศ|ต่างประเทศ|ไทย|บ้านเรา|รอบโลก|กีฬา|บันเทิง|เศรษฐกิจ|การเมือง|หุ้น|เทคโนโลยี)?/u.test(m)) {
+    return true;
+  }
+  return false;
+}
+
+/** ผู้ใช้ขอค้นเว็บทั่วไป (ที่ไม่ใช่ข่าว/โน้ต) — ใช้ Google ก่อน แล้วให้ AI สรุป */
+function isWebSearchRequest(raw: string): boolean {
+  const m = raw.trim().replace(/[\u200B-\u200D\uFEFF]/g, "");
+  if (!m || m.length > 4000) return false;
+  if (extractQuickNoteContent(m)) return false;
+  if (parseFinanceRecordCommand(m)) return false;
+  if (isNewsDigestRequest(m)) return false;
+  if (
+    /(โน้ต|บันทึก).*?(ล่าสุด|ที่จด|ที่เคย|ทั้งหมด)/u.test(m) ||
+    /โน้ตที่เคยบันทึก/u.test(m)
+  ) {
+    return false;
+  }
+  if (/^(ค้นหา|หาข้อมูล|ค้นเว็บ|หาบนเว็บ|หาในเว็บ|หาในกูเกิล|หาในกู|หาให้หน่อย)/u.test(m)) return true;
+  if (/^(google|search|web)\s+/i.test(m)) return true;
+  if (/^(ใครคือ|อะไรคือ|มันคืออะไร)/u.test(m)) return true;
+  return false;
+}
+
+/** ดึงคิวรีจริงออกจากข้อความ (ตัดคำสั่งนำหน้าที่ใช้ trigger) */
+function extractWebSearchQuery(raw: string): string {
+  let q = raw.trim().replace(/[\u200B-\u200D\uFEFF]/g, "");
+  q = q.replace(/^(ขอ|ช่วย|ขอให้|รบกวน)\s*/u, "");
+  q = q.replace(
+    /^(ค้นหา|หาข้อมูล|ค้นเว็บ|หาบนเว็บ|หาในเว็บ|หาในกูเกิล|หาในกู|หาให้หน่อย|หาข่าว|สรุปข่าว|ขอข่าว|ค้นข่าว|ฟีดข่าว)\s*/u,
+    "",
+  );
+  q = q.replace(/^(google|search|web)\s+/i, "");
+  q = q.replace(/^ข่าว(วันนี้|เด่น|ด่วน|ล่าสุด|เช้านี้)?\s*/u, "");
+  q = q.replace(/^(เรื่อง|เกี่ยวกับ)\s+/u, "");
+  q = q.replace(/[?.!\u0e2f]+$/u, "").trim();
+  return q;
+}
+
+/** เรียก Google + สรุปเป็น tool result ใส่บริบทให้ AI สังเคราะห์ต่อ */
+async function runWebSearchTool(args: {
+  query: string;
+  mode: "news" | "web";
+}): Promise<ToolExecutionResult> {
+  const baseQuery = args.query.trim();
+  const isNews = args.mode === "news";
+  const queryFinal = isNews
+    ? (baseQuery || "ข่าวเด่นวันนี้ ประเทศไทย").includes("ข่าว")
+      ? baseQuery || "ข่าวเด่นวันนี้ ประเทศไทย"
+      : `${baseQuery} ข่าววันนี้ ประเทศไทย`
+    : baseQuery;
+  if (!queryFinal) {
+    return { used: true, summary: "ไม่ทราบหัวข้อที่ต้องการค้น — บอกหัวข้อให้น้องอีกครั้งนะคะ" };
+  }
+  let hits: GoogleSearchHit[] = [];
+  try {
+    hits = await searchWithGoogleApi({
+      query: queryFinal,
+      num: 10,
+      hl: "th",
+      gl: "th",
+      safe: "active",
+      dateRestrict: isNews ? "d2" : undefined,
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Google search error";
+    return { used: true, summary: `ค้นข้อมูลผ่าน Google ไม่สำเร็จ: ${msg}` };
+  }
+  if (hits.length === 0) {
+    return {
+      used: true,
+      summary: `ค้น Google สำหรับ "${queryFinal}" แล้วยังไม่พบผลลัพธ์ — ลองเปลี่ยนคำค้นหรือถามเฉพาะเจาะจงขึ้นได้ค่ะ`,
+    };
+  }
+  const block = formatHitsForPrompt(hits, 2400);
+  if (isNews) {
+    const dateHeader = formatThaiDateHeader();
+    const formatGuide = [
+      '[คำสั่งจัดรูปแบบสรุป — ใช้ "ข้อมูลผลค้นหา" ด้านล่างเท่านั้น ห้ามแต่งเพิ่ม]',
+      `1) บรรทัดแรก: "ข่าวเด่นวันที่ ${dateHeader} 📰"`,
+      "2) จัดเป็นหมวดหมู่ 3-6 หมวด (เช่น เศรษฐกิจไทย / ตะวันออกกลาง / หุ้น-การเงิน / ธุรกิจ / อื่นๆ ฯลฯ ปรับตามเนื้อข่าวจริง)",
+      "3) แต่ละหมวดขึ้นบรรทัดด้วยอิโมจิ + ชื่อหมวด (เช่น 💰 เศรษฐกิจไทย, 📈 หุ้น/การเงิน, 🏢 ธุรกิจ, 🏙️ อื่นๆ, 🗾 ตะวันออกกลาง)",
+      "4) ใต้แต่ละหมวดใช้ bullet \"• \" สรุปข่าวสั้น 1 บรรทัดต่อข่าว ไม่เกิน 2 บรรทัด",
+      "5) ห้ามใส่ลิงก์ดิบหรือชื่อเว็บไซต์ในเนื้อข่าว — สรุปสาระเป็นภาษาไทยกระชับ",
+      "6) ปิดท้ายด้วยประโยคชวนถาม เช่น \"พี่สนใจข่าวเรื่องไหนเป็นพิเศษมั้ยครับ?\"",
+      "7) ห้ามแต่งข่าวที่ไม่มีในผลค้นหา; ถ้าหมวดไหนข้อมูลไม่พอให้ตัดทิ้ง",
+    ].join("\n");
+    return {
+      used: true,
+      summary: [
+        `[ค้นข่าวผ่าน Google] คิวรี: "${queryFinal}"`,
+        formatGuide,
+        "",
+        "[ข้อมูลผลค้นหา]",
+        block,
+      ].join("\n"),
+    };
+  }
+  const formatGuide = [
+    '[คำสั่งจัดรูปแบบสรุป — ใช้ "ข้อมูลผลค้นหา" ด้านล่างเท่านั้น ห้ามแต่งเพิ่ม]',
+    "- สรุปสาระเป็นภาษาไทยกระชับ 4-8 bullet",
+    "- ใช้ **bold** เน้นชื่อ/ตัวเลขสำคัญ",
+    "- ถ้าผู้ใช้ถามเฉพาะเรื่อง ให้ตอบตรงคำถาม + ปิดท้ายด้วยข้อสรุปสั้น 1 ประโยค",
+    "- ห้ามแต่งข้อมูลที่ไม่มีในผลค้นหา; ถ้าไม่มั่นใจให้บอกตรงๆ",
+  ].join("\n");
+  return {
+    used: true,
+    summary: [
+      `[ค้นเว็บผ่าน Google] คิวรี: "${queryFinal}"`,
+      formatGuide,
+      "",
+      "[ข้อมูลผลค้นหา]",
+      block,
+    ].join("\n"),
+  };
 }
 
 async function maybeRunPersonalTool(args: {
@@ -558,39 +715,15 @@ async function maybeRunPersonalTool(args: {
     };
   }
 
-  if (/^(ค้นหา|หาข้อมูล)/.test(textForTools) || /^search /.test(lower)) {
-    const query = textForTools
-      .replace(/^(ค้นหา|หาข้อมูล)\s*/u, "")
-      .replace(/^search\s*/i, "")
-      .trim();
-    if (!query) return { used: false, summary: "" };
-    const [notes, plans] = await Promise.all([
-      prisma.personalAiNote.findMany({
-        where: { userId: args.userId, content: { contains: query } },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        select: { content: true },
-      }),
-      prisma.personalAiPlan.findMany({
-        where: { userId: args.userId, title: { contains: query } },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        select: { title: true },
-      }),
-    ]);
-    if (!notes.length && !plans.length) {
-      return {
-        used: true,
-        summary: `ไม่พบข้อมูล local ที่ตรงกับ "${query}" ในโน้ตหรือแผน`,
-      };
-    }
-    const noteLines = notes.map((n, i) => `- โน้ต ${i + 1}: ${n.content}`);
-    const planLines = plans.map((p, i) => `- แผน ${i + 1}: ${p.title}`);
-    const body = [...noteLines, ...planLines].join("\n");
-    return {
-      used: true,
-      summary: `ผลค้นหา local สำหรับ "${query}":\n${body}`,
-    };
+  if (isNewsDigestRequest(textForTools)) {
+    const baseQuery = extractWebSearchQuery(textForTools);
+    return await runWebSearchTool({ query: baseQuery, mode: "news" });
+  }
+
+  if (isWebSearchRequest(textForTools)) {
+    const q = extractWebSearchQuery(textForTools);
+    if (!q) return { used: false, summary: "" };
+    return await runWebSearchTool({ query: q, mode: "web" });
   }
 
   if (args.imageDataUrl && /(สลิป|ใบเสร็จ|อ่านรูป|อ่านสลิป)/.test(textForTools)) {
