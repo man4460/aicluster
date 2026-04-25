@@ -964,6 +964,7 @@ function pickReplyFromPayload(payload: unknown): string {
   if (!payload || typeof payload !== "object") return "";
   const obj = payload as Record<string, unknown>;
   if (typeof obj.result === "string") return obj.result.trim();
+  if (typeof obj.content === "string" && obj.content.trim()) return obj.content.trim();
   if (obj.result && typeof obj.result === "object") {
     const r = obj.result as Record<string, unknown>;
     if (typeof r.text === "string" && r.text.trim()) return r.text.trim();
@@ -1085,19 +1086,26 @@ async function callOpenClawAgent(args: {
   const apiKey = process.env.OPENCLAW_API_KEY?.trim() || process.env.OPENCLAW_AGENT_API_KEY?.trim() || "";
   if (httpEndpoint) {
     const model = process.env.OPENCLAW_AGENT_MODEL?.trim() || "openclaw";
+    const useMessageJsonPayload =
+      process.env.OPENCLAW_HTTP_MESSAGE_PAYLOAD === "1" ||
+      process.env.OPENCLAW_HTTP_MESSAGE_PAYLOAD?.toLowerCase() === "true" ||
+      /\/api\/openclaw\/ocr\b/i.test(httpEndpoint);
+    const httpBody = useMessageJsonPayload
+      ? { message: args.prompt }
+      : {
+          task: "chat" as const,
+          assistantId: args.assistantId,
+          model,
+          prompt: args.prompt,
+          messages: args.history.map((m) => ({ role: m.role, content: m.content })),
+        };
     const res = await fetch(httpEndpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
       },
-      body: JSON.stringify({
-        task: "chat",
-        assistantId: args.assistantId,
-        model,
-        prompt: args.prompt,
-        messages: args.history.map((m) => ({ role: m.role, content: m.content })),
-      }),
+      body: JSON.stringify(httpBody),
       signal: AbortSignal.timeout(Number(process.env.OPENCLAW_REQUEST_TIMEOUT_MS ?? "90000")),
     });
     const payload = (await res.json().catch(() => ({}))) as Record<string, unknown>;
@@ -1378,6 +1386,7 @@ async function readSlipWithOpenClaw(imageDataUrl: string): Promise<GlmOcrSlipRes
 
   async function postMultipart(): Promise<{ ok: boolean; raw: Record<string, unknown>; status: number }> {
     const form = new FormData();
+    form.set("message", prompt);
     form.set("prompt", prompt);
     // endpoint รับได้ทั้งไฟล์หรือ base64 string
     form.set("image", new Blob([Buffer.from(imageBase64, "base64")], { type: mimeType }), "slip-image");
@@ -1393,11 +1402,14 @@ async function readSlipWithOpenClaw(imageDataUrl: string): Promise<GlmOcrSlipRes
     return { ok: res.ok, raw, status: res.status };
   }
 
-  let probe = await postJson({ prompt, imageDataUrl });
-  if (!probe.ok || (!probe.raw.result && !probe.raw.fields && !probe.raw.text && !probe.raw.ocrText)) {
+  let probe = await postJson({ message: prompt, image: imageBase64 });
+  if (!probe.ok || (!probe.raw.result && !probe.raw.content && !probe.raw.fields && !probe.raw.text && !probe.raw.ocrText)) {
+    probe = await postJson({ prompt, imageDataUrl });
+  }
+  if (!probe.ok || (!probe.raw.result && !probe.raw.content && !probe.raw.fields && !probe.raw.text && !probe.raw.ocrText)) {
     probe = await postJson({ prompt, image: imageBase64, mimeType });
   }
-  if (!probe.ok || (!probe.raw.result && !probe.raw.fields && !probe.raw.text && !probe.raw.ocrText)) {
+  if (!probe.ok || (!probe.raw.result && !probe.raw.content && !probe.raw.fields && !probe.raw.text && !probe.raw.ocrText)) {
     probe = await postMultipart();
   }
   const raw = probe.raw;
@@ -1407,7 +1419,8 @@ async function readSlipWithOpenClaw(imageDataUrl: string): Promise<GlmOcrSlipRes
   }
   const fields =
     raw.fields && typeof raw.fields === "object" ? (raw.fields as Record<string, unknown>) : raw;
-  const resultText = typeof raw.result === "string" ? raw.result : "";
+  const resultText =
+    typeof raw.result === "string" ? raw.result : typeof raw.content === "string" ? raw.content : "";
   const parsedFromText = resultText ? buildGlmOcrResultFromModelText(resultText) : null;
   const parsedFromResultLabels = resultText ? parseOpenClawResultTextFields(resultText) : null;
   const entryDateYmd = normalizeOpenClawYmd(fields.entryDate ?? fields.date);
