@@ -2,6 +2,7 @@ import { createClient } from "openclaw-sdk";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Prisma } from "@/generated/prisma/client";
+import { POST as applySyncEventsPost } from "@/app/api/sync/openclaw/events/route";
 import { prisma } from "@/lib/prisma";
 import { getTelegramSlipForwardChatId, normalizeTelegramChatId } from "@/lib/telegram/slip-forward-chat";
 import { ollamaCallVisionText } from "@/lib/ollama/ollama-vision";
@@ -44,6 +45,11 @@ type ChatProviderResult = {
   model: string;
 };
 type ToolExecutionResult = { used: boolean; summary: string };
+type OpenClawSyncEventInput = {
+  type: "note" | "plan" | "finance";
+  externalId: string;
+  op?: "upsert" | "delete";
+} & Record<string, unknown>;
 
 /** คอลัมน์ `pending_slip_draft` มีใน DB — ถ้า TS ยังไม่รู้จักหลังแก้ schema ให้รัน `npx prisma generate` */
 function personalSessionPendingDraftData(
@@ -208,6 +214,95 @@ function financeCommandsFromUserMessage(message: string): ParsedFinanceChatComma
 function extractSavedEntryDateYmdFromToolSummary(summary: string): string | null {
   const m = summary.match(/วันที่\s*(\d{4}-\d{2}-\d{2})/u);
   return m?.[1] ?? null;
+}
+
+function buildConciseNoteSavedReply(summary: string): string | null {
+  const m = summary.match(/^บันทึกโน้ตแล้ว\s*\(#([^)]+)\):\s*([\s\S]+)$/u);
+  if (!m?.[2]) return null;
+  const content = m[2].trim().replace(/\s+/g, " ");
+  if (!content) return null;
+  return `ได้ค่ะ — บันทึกโน้ตว่า "${content}" เสร็จเรียบร้อยแล้วค่ะ ✅`;
+}
+
+function buildConciseScheduleSavedReply(summary: string): string | null {
+  const m = summary.match(/^ตั้งเตือนแล้ว:\s*([\s\S]+)$/u);
+  if (!m?.[1]) return null;
+  return `ได้ค่ะ — ${m[1].trim()} ✅`;
+}
+
+function replyClaimsDataSaved(reply: string): boolean {
+  const t = reply.trim();
+  if (!t) return false;
+  return /(จดไว้แล้ว|บันทึกไว้แล้ว|บันทึกแล้ว|ตั้งเตือน(?:ไว้)?แล้ว|ลงบัญชีแล้ว|บันทึกราย(?:รับ|จ่าย))/u.test(t);
+}
+
+function inferExpectedSyncKind(args: {
+  incomingMessage: string;
+  parsedFinanceCount: number;
+  reply: string;
+}): "note" | "plan" | "finance" | null {
+  if (args.parsedFinanceCount > 0) return "finance";
+  if (isImplicitScheduleNote(args.incomingMessage)) return "plan";
+  if (extractQuickNoteContent(args.incomingMessage)) return "note";
+  const r = args.reply;
+  if (/ลงบัญชีแล้ว|บันทึกราย(?:รับ|จ่าย)/u.test(r)) return "finance";
+  if (/ตั้งเตือน(?:ไว้)?แล้ว/u.test(r)) return "plan";
+  if (/จดไว้แล้ว|บันทึกไว้แล้ว/u.test(r)) return "note";
+  return null;
+}
+
+async function hasRecentOpenClawSyncEvidence(args: {
+  userId: string;
+  kind: "note" | "plan" | "finance";
+  incomingMessage: string;
+  parsedFinanceFromMessage: ParsedFinanceChatCommand[];
+}): Promise<boolean> {
+  const since = new Date(Date.now() - 3 * 60 * 1000);
+  if (args.kind === "note") {
+    const quick = extractQuickNoteContent(args.incomingMessage);
+    const n = await prisma.personalAiNote.count({
+      where: {
+        userId: args.userId,
+        externalSource: "openclaw",
+        lastSyncedAt: { gte: since },
+        ...(quick ? { content: { contains: quick.slice(0, 40) } } : {}),
+      },
+    });
+    return n > 0;
+  }
+  if (args.kind === "plan") {
+    const parsed = parseScheduleIntent(args.incomingMessage);
+    const n = await prisma.personalAiPlan.count({
+      where: {
+        userId: args.userId,
+        externalSource: "openclaw",
+        lastSyncedAt: { gte: since },
+        ...(parsed?.title ? { title: { contains: parsed.title.slice(0, 40) } } : {}),
+      },
+    });
+    return n > 0;
+  }
+  const first = args.parsedFinanceFromMessage[0] ?? null;
+  const n = await prisma.homeFinanceEntry.count({
+    where: {
+      ownerUserId: args.userId,
+      externalSource: "openclaw",
+      lastSyncedAt: { gte: since },
+      ...(first?.amount != null ? { amount: first.amount } : {}),
+      ...(first?.title ? { title: { contains: first.title.slice(0, 40) } } : {}),
+    },
+  });
+  return n > 0;
+}
+
+function buildPendingSyncReply(kind: "note" | "plan" | "finance"): string {
+  if (kind === "note") {
+    return "รับคำขอแล้วค่ะ — ตอนนี้ยังไม่พบผลซิงก์โน้ตจาก OpenClaw ในระบบ รอสักครู่แล้วลองใหม่อีกครั้งนะคะ";
+  }
+  if (kind === "plan") {
+    return "รับคำขอแล้วค่ะ — ตอนนี้ยังไม่พบผลซิงก์ตารางนัดหมายจาก OpenClaw ในระบบ รอสักครู่แล้วลองใหม่อีกครั้งนะคะ";
+  }
+  return "รับคำขอแล้วค่ะ — ตอนนี้ยังไม่พบผลซิงก์รายรับ-รายจ่ายจาก OpenClaw ในระบบ รอสักครู่แล้วลองใหม่อีกครั้งนะคะ";
 }
 
 async function createHomeFinanceEntriesFromParsedCommands(args: {
@@ -481,6 +576,57 @@ function extractQuickNoteContent(raw: string): string | null {
   return null;
 }
 
+/** ข้อความสั้นเชิงเตือน/นัดหมาย เช่น "พรุ่งนี้ 10.00 ออกเดินทาง..." ให้บันทึกเป็นโน้ตอัตโนมัติ */
+function isImplicitScheduleNote(raw: string): boolean {
+  const m = raw.trim().replace(/[\u200B-\u200D\uFEFF]/g, "");
+  if (!m || m.length > 220) return false;
+  if (/[?？]$/.test(m)) return false;
+  if (extractQuickNoteContent(m)) return false;
+  if (parseFinanceRecordCommand(m)) return false;
+  if (isNewsDigestRequest(m) || isWebSearchRequest(m)) return false;
+  const hasDateCue = /(วันนี้|พรุ่งนี้|มะรืน|เช้านี้|เย็นนี้|พรุ่งนี้เช้า|พรุ่งนี้เย็น)/u.test(m);
+  const hasTimeCue = /(?:^|\s)([01]?\d|2[0-3])[:.][0-5]\d(?:\s*น\.?)?/u.test(m);
+  const hasActionCue = /(ไป|เดินทาง|นัด|ประชุม|โทร|พบ|ออก|ทำ|ซื้อ|จ่าย|รับ|ส่ง|ถึง)/u.test(m);
+  return (hasDateCue && hasActionCue) || (hasDateCue && hasTimeCue);
+}
+
+function parseScheduleIntent(raw: string): { title: string; dueDate: Date } | null {
+  const m = raw.trim().replace(/[\u200B-\u200D\uFEFF]/g, "");
+  if (!isImplicitScheduleNote(m)) return null;
+  const todayYmd = todayYmdBangkok();
+  const baseYmd = /พรุ่งนี้/u.test(m)
+    ? (() => {
+        const [y, mo, d] = todayYmd.split("-").map((x) => Number(x));
+        const dt = new Date(Date.UTC(y, (mo || 1) - 1, d || 1));
+        dt.setUTCDate(dt.getUTCDate() + 1);
+        return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+      })()
+    : todayYmd;
+
+  const t = m.match(/([01]?\d|2[0-3])[:. ]([0-5]\d)\s*(?:น\.?)?/u);
+  let hh = "09";
+  let mm = "00";
+  if (t?.[1] && t?.[2]) {
+    hh = String(Number(t[1])).padStart(2, "0");
+    mm = String(Number(t[2])).padStart(2, "0");
+  } else if (/ข้าวเย็น|เย็นนี้|ตอนเย็น/u.test(m)) {
+    hh = "18";
+    mm = "00";
+  }
+
+  let title = m
+    .replace(/^(วันนี้|พรุ่งนี้|มะรืน)\s*/u, "")
+    .replace(/^(ช่วย)?\s*(เตือน|ปลุก)\s*/u, "")
+    .replace(/([01]?\d|2[0-3])[:. ]([0-5]\d)\s*(?:น\.?)?/u, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!title) title = m;
+  if (!/^เตือน/u.test(title)) title = `เตือน: ${title}`;
+  title = title.slice(0, 200);
+
+  return { title, dueDate: new Date(`${baseYmd}T${hh}:${mm}:00+07:00`) };
+}
+
 /** บรรทัดแรกขึ้นด้วย จดว่า/บันทึกว่า/... + เนื้อหา (ไม่รวม "บันทึก 100 บาท" แบบสั้นที่อาจเป็นบัญชี) */
 function isPairedPrefixQuickNoteLine(raw: string): boolean {
   const line = (raw.split(/\r?\n/)[0] ?? "")
@@ -644,6 +790,12 @@ async function runWebSearchTool(args: {
   };
 }
 
+function shouldRouteAllToOpenClaw(): boolean {
+  const raw = process.env.OPENCLAW_ROUTE_ALL?.trim().toLowerCase();
+  if (!raw) return true;
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+}
+
 async function maybeRunPersonalTool(args: {
   userId: string;
   message: string;
@@ -734,6 +886,36 @@ async function maybeRunPersonalTool(args: {
     return { used: true, summary: `บันทึกโน้ตแล้ว (#${note.id.slice(0, 8)}): ${note.content}` };
   }
 
+  if (isImplicitScheduleNote(textForTools)) {
+    const parsed = parseScheduleIntent(textForTools);
+    if (parsed) {
+      const plan = await prisma.personalAiPlan.create({
+        data: {
+          userId: args.userId,
+          title: parsed.title,
+          steps: [textForTools],
+          dueDate: parsed.dueDate,
+        },
+        select: { id: true, title: true, dueDate: true },
+      });
+      const dueYmd = plan.dueDate
+        ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(plan.dueDate)
+        : "";
+      const dueHm = plan.dueDate
+        ? new Intl.DateTimeFormat("th-TH", {
+            timeZone: "Asia/Bangkok",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          }).format(plan.dueDate)
+        : "";
+      return {
+        used: true,
+        summary: `ตั้งเตือนแล้ว: ${plan.title}${dueYmd ? ` (${dueYmd}${dueHm ? ` ${dueHm}` : ""})` : ""}`,
+      };
+    }
+  }
+
   if (
     /(โน้ต|บันทึก).*?(ล่าสุด|ที่จด|ที่เคย|ทั้งหมด)/.test(textForTools) ||
     /โน้ตที่เคยบันทึก/u.test(textForTools) ||
@@ -781,6 +963,20 @@ async function maybeRunPersonalTool(args: {
 function pickReplyFromPayload(payload: unknown): string {
   if (!payload || typeof payload !== "object") return "";
   const obj = payload as Record<string, unknown>;
+  if (typeof obj.result === "string") return obj.result.trim();
+  if (obj.result && typeof obj.result === "object") {
+    const r = obj.result as Record<string, unknown>;
+    if (typeof r.text === "string" && r.text.trim()) return r.text.trim();
+    if (typeof r.content === "string" && r.content.trim()) return r.content.trim();
+    if (typeof r.message === "string" && r.message.trim()) return r.message.trim();
+  }
+  if (Array.isArray(obj.result)) {
+    const joined = obj.result
+      .map((x) => (typeof x === "string" ? x : x && typeof x === "object" && "text" in x ? String((x as { text?: unknown }).text ?? "") : ""))
+      .join("\n")
+      .trim();
+    if (joined) return joined;
+  }
   if (typeof obj.reply === "string") return obj.reply.trim();
   if (typeof obj.response === "string") return obj.response.trim();
   if (typeof obj.output === "string") return obj.output.trim();
@@ -801,22 +997,130 @@ function pickReplyFromPayload(payload: unknown): string {
       }
     }
   }
+  try {
+    const compact = JSON.stringify(obj);
+    if (compact && compact !== "{}") return compact.slice(0, 1500);
+  } catch {
+    // ignore
+  }
   return "";
+}
+
+function extractOpenClawSyncEvents(payload: unknown): OpenClawSyncEventInput[] {
+  if (!payload || typeof payload !== "object") return [];
+  const root = payload as Record<string, unknown>;
+  const candidates: unknown[] = [];
+  if (Array.isArray(root.events)) candidates.push(root.events);
+  if (root.result && typeof root.result === "object" && !Array.isArray(root.result)) {
+    const resultObj = root.result as Record<string, unknown>;
+    if (Array.isArray(resultObj.events)) candidates.push(resultObj.events);
+  }
+  if (root.data && typeof root.data === "object" && !Array.isArray(root.data)) {
+    const dataObj = root.data as Record<string, unknown>;
+    if (Array.isArray(dataObj.events)) candidates.push(dataObj.events);
+  }
+  for (const c of candidates) {
+    if (!Array.isArray(c)) continue;
+    const mapped = c
+      .filter((x): x is Record<string, unknown> => Boolean(x && typeof x === "object" && !Array.isArray(x)))
+      .map((x) => {
+        const type = typeof x.type === "string" ? x.type.trim().toLowerCase() : "";
+        const externalId = typeof x.externalId === "string" ? x.externalId.trim() : "";
+        const opRaw = typeof x.op === "string" ? x.op.trim().toLowerCase() : "upsert";
+        if (!externalId) return null;
+        if (type !== "note" && type !== "plan" && type !== "finance") return null;
+        const op: "upsert" | "delete" = opRaw === "delete" ? "delete" : "upsert";
+        return { ...x, type, externalId, op } as OpenClawSyncEventInput;
+      })
+      .filter((x): x is OpenClawSyncEventInput => Boolean(x));
+    if (mapped.length > 0) return mapped;
+  }
+  return [];
+}
+
+async function syncEventsFromOpenClawPayload(args: {
+  userId: string;
+  payload: unknown;
+}): Promise<void> {
+  const events = extractOpenClawSyncEvents(args.payload);
+  if (!events.length) return;
+  const root = args.payload && typeof args.payload === "object" ? (args.payload as Record<string, unknown>) : {};
+  const requestIdRaw =
+    (typeof root.requestId === "string" && root.requestId.trim()) ||
+    `chat-agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const sourceRaw = typeof root.source === "string" && root.source.trim() ? root.source.trim() : "openclaw";
+  const localReq = new Request("http://127.0.0.1/api/sync/openclaw/events", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(process.env.OPENCLAW_SYNC_SECRET?.trim()
+        ? { "x-openclaw-sync-secret": process.env.OPENCLAW_SYNC_SECRET.trim() }
+        : {}),
+    },
+    body: JSON.stringify({
+      source: sourceRaw,
+      ownerUserId: args.userId,
+      requestId: requestIdRaw,
+      events,
+    }),
+  });
+  try {
+    const res = await applySyncEventsPost(localReq);
+    if (!res.ok) {
+      const body = await res.text();
+      console.warn("openclaw payload sync failed:", body.slice(0, 300));
+    }
+  } catch (error) {
+    console.warn("openclaw payload sync failed:", error);
+  }
 }
 
 async function callOpenClawAgent(args: {
   history: MemoryMessage[];
   prompt: string;
   assistantId: string;
+  userId: string;
 }): Promise<ChatProviderResult | null> {
+  const httpEndpoint = process.env.OPENCLAW_API_URL?.trim() || process.env.OPENCLAW_URL?.trim() || "";
+  const apiKey = process.env.OPENCLAW_API_KEY?.trim() || process.env.OPENCLAW_AGENT_API_KEY?.trim() || "";
+  if (httpEndpoint) {
+    const model = process.env.OPENCLAW_AGENT_MODEL?.trim() || "openclaw";
+    const res = await fetch(httpEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+      body: JSON.stringify({
+        task: "chat",
+        assistantId: args.assistantId,
+        model,
+        prompt: args.prompt,
+        messages: args.history.map((m) => ({ role: m.role, content: m.content })),
+      }),
+      signal: AbortSignal.timeout(Number(process.env.OPENCLAW_REQUEST_TIMEOUT_MS ?? "90000")),
+    });
+    const payload = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!res.ok) {
+      const msg = typeof payload.error === "string" ? payload.error : `HTTP ${res.status}`;
+      throw new Error(`เรียก OpenClaw HTTP ไม่สำเร็จ (${msg})`);
+    }
+    const reply = pickReplyFromPayload(payload);
+    if (!reply) {
+      throw new Error("OpenClaw HTTP ไม่ได้ส่งข้อความตอบกลับ");
+    }
+    await syncEventsFromOpenClawPayload({ userId: args.userId, payload });
+    return { reply, provider: "openclaw-agent", model };
+  }
+
   const wsUrl =
     process.env.OPENCLAW_AGENT_WS_URL?.trim() ||
     process.env.OPENCLAW_GATEWAY_WS_URL?.trim() ||
     process.env.OPENCLAW_WS_URL?.trim() ||
     "ws://127.0.0.1:18789";
   if (!wsUrl) return null;
-  const apiKey = process.env.OPENCLAW_API_KEY?.trim() || process.env.OPENCLAW_AGENT_API_KEY?.trim() || "";
-  if (!apiKey) return null;
+  const apiKeyWs = process.env.OPENCLAW_API_KEY?.trim() || process.env.OPENCLAW_AGENT_API_KEY?.trim() || "";
+  if (!apiKeyWs) return null;
   const model = process.env.OPENCLAW_AGENT_MODEL?.trim() || "openclaw-agent";
   const method = process.env.OPENCLAW_AGENT_METHOD?.trim() || "chat.completions";
   const clientId = process.env.OPENCLAW_CLIENT_ID?.trim() || "aicluster-chat-ai";
@@ -825,7 +1129,7 @@ async function callOpenClawAgent(args: {
   const client = createClient({
     url: wsUrl,
     clientId,
-    auth: { token: apiKey },
+    auth: { token: apiKeyWs },
     connectTimeoutMs: requestTimeoutMs,
     requestTimeoutMs,
     autoReconnect: false,
@@ -864,6 +1168,7 @@ async function callOpenClawAgent(args: {
   if (!reply) {
     throw new Error("OpenClaw Agent ไม่ได้ส่งข้อความตอบกลับ");
   }
+  await syncEventsFromOpenClawPayload({ userId: args.userId, payload });
   return { reply, provider: "openclaw-agent", model };
 }
 
@@ -1373,11 +1678,12 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
   }
 
   const hasOpenClaw = Boolean(
-    (process.env.OPENCLAW_AGENT_WS_URL?.trim() ||
-      process.env.OPENCLAW_GATEWAY_WS_URL?.trim() ||
-      process.env.OPENCLAW_WS_URL?.trim() ||
-      "ws://127.0.0.1:18789") &&
-      (process.env.OPENCLAW_API_KEY?.trim() || process.env.OPENCLAW_AGENT_API_KEY?.trim()),
+    process.env.OPENCLAW_API_URL?.trim() ||
+      process.env.OPENCLAW_URL?.trim() ||
+      ((process.env.OPENCLAW_AGENT_WS_URL?.trim() ||
+        process.env.OPENCLAW_GATEWAY_WS_URL?.trim() ||
+        process.env.OPENCLAW_WS_URL?.trim()) &&
+        (process.env.OPENCLAW_API_KEY?.trim() || process.env.OPENCLAW_AGENT_API_KEY?.trim())),
   );
   const hasOllama = Boolean(
     process.env.OLLAMA_API_URL?.trim() ||
@@ -1396,6 +1702,7 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
         "ยังไม่ได้ตั้งค่า OpenClaw SDK (WS URL + API key) หรือ OLLAMA_API_URL / สำหรับรูปยังใช้ได้ OLLAMA_VISION_API_URL (โมเดล: OLLAMA_VISION_MODEL)",
     };
   }
+  const routeAllToOpenClaw = shouldRouteAllToOpenClaw() && hasOpenClaw;
 
   try {
     const foundSession = sessionId ? await prisma.personalChatSession.findUnique({ where: { id: sessionId } }) : null;
@@ -1421,12 +1728,34 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
       .map((m) => ({ role: m.role === "ASSISTANT" ? "assistant" : "user", content: m.content }));
     const composedUserMessage =
       message && imageDataUrl ? `${message}\n\n[ผู้ใช้แนบรูปภาพ 1 รูป]` : message || "[ผู้ใช้แนบรูปภาพ 1 รูป]";
-    const toolResult = await maybeRunPersonalTool({
-      userId: input.userId,
-      message: message ?? "",
-      imageDataUrl,
-      sessionId: activeSessionId,
-    });
+    const incomingMessage = (message ?? "").trim();
+    const parsedFinanceFromMessage = financeCommandsFromUserMessage(
+      stripStoredUserMessageForFinanceParse(incomingMessage),
+    );
+    const shouldForceLocalFinanceTool =
+      Boolean(incomingMessage) &&
+      (
+        isSlipSaveConfirmation(incomingMessage) ||
+        parsedFinanceFromMessage.length > 0 ||
+        isImplicitScheduleNote(incomingMessage)
+      );
+    const toolResult =
+      routeAllToOpenClaw && !shouldForceLocalFinanceTool
+        ? { used: false, summary: "" }
+        : await maybeRunPersonalTool({
+            userId: input.userId,
+            message: message ?? "",
+            imageDataUrl,
+            sessionId: activeSessionId,
+          });
+    const conciseNoteReply =
+      toolResult.used && toolResult.summary.trim().startsWith("บันทึกโน้ตแล้ว")
+        ? buildConciseNoteSavedReply(toolResult.summary.trim())
+        : null;
+    const conciseScheduleReply =
+      toolResult.used && toolResult.summary.trim().startsWith("ตั้งเตือนแล้ว:")
+        ? buildConciseScheduleSavedReply(toolResult.summary.trim())
+        : null;
     const userMessageWithTool =
       toolResult.used && toolResult.summary
         ? `${composedUserMessage}\n\n[ผลการเรียกเครื่องมือ]\n${toolResult.summary}`
@@ -1441,10 +1770,23 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
       },
     });
     const prompt = buildPrompt(nextHistory, userLabel);
-    let result: ChatProviderResult | null = null;
+    let result: ChatProviderResult | null =
+      conciseNoteReply != null
+        ? {
+            reply: conciseNoteReply,
+            provider: "local-tools",
+            model: "note-save-ack",
+          }
+        : conciseScheduleReply != null
+          ? {
+              reply: conciseScheduleReply,
+              provider: "local-tools",
+              model: "schedule-save-ack",
+            }
+          : null;
     let lastError = "";
 
-    // รูปแนบสลิป: เรียก OpenClaw OCR ก่อน แล้ว fallback Kimi/GLM-OCR
+    // รูปแนบสลิป: เรียก OpenClaw OCR ก่อน แล้ว fallback Kimi/GLM-OCR (ถ้าไม่ได้บังคับ route-all)
     if (imageDataUrl) {
       let openClawError = "";
       try {
@@ -1493,7 +1835,7 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
       }
 
       try {
-        if (!result) {
+        if (!result && !routeAllToOpenClaw) {
           const imageBase64Raw = dataUrlToBase64Raw(imageDataUrl);
           if (!imageBase64Raw) {
             throw new Error("รูปแบบรูปภาพไม่ถูกต้อง (base64)");
@@ -1594,20 +1936,35 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
       }
     }
 
-    // ข้อความเท่านั้น: ยังใช้ Ollama
-    if (!result && hasOllama && !imageDataUrl) {
-      try {
-        result = await callOllama(prompt, undefined);
-      } catch (e) {
-        lastError = e instanceof Error ? e.message : "Ollama error";
-      }
-    }
+    // ข้อความเท่านั้น: route-all จะใช้ OpenClaw ก่อนทุกครั้ง
     if (!result && hasOpenClaw && !imageDataUrl) {
       try {
         result = await callOpenClawAgent({
           history: nextHistory,
           prompt,
           assistantId,
+          userId: input.userId,
+        });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error("OpenClaw SDK Error:", msg);
+        lastError = `OpenClaw: ${msg}`;
+      }
+    }
+    if (!result && hasOllama && !imageDataUrl && !routeAllToOpenClaw) {
+      try {
+        result = await callOllama(prompt, undefined);
+      } catch (e) {
+        lastError = e instanceof Error ? e.message : "Ollama error";
+      }
+    }
+    if (!result && hasOpenClaw && !imageDataUrl && !routeAllToOpenClaw) {
+      try {
+        result = await callOpenClawAgent({
+          history: nextHistory,
+          prompt,
+          assistantId,
+          userId: input.userId,
         });
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -1660,6 +2017,24 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
     }
 
     let reply = enforceThaiOnlyReplyText(result.reply);
+    if (!toolResult.used && message && replyClaimsDataSaved(reply)) {
+      const expectedKind = inferExpectedSyncKind({
+        incomingMessage,
+        parsedFinanceCount: parsedFinanceFromMessage.length,
+        reply,
+      });
+      if (expectedKind) {
+        const hasProof = await hasRecentOpenClawSyncEvidence({
+          userId: input.userId,
+          kind: expectedKind,
+          incomingMessage,
+          parsedFinanceFromMessage,
+        });
+        if (!hasProof) {
+          reply = buildPendingSyncReply(expectedKind);
+        }
+      }
+    }
     /** บันทึกลง home finance สำเร็จ (สลิปยืนยัน / คำสั่งบันทึก…บาท) — ให้ตอบชัด + บอกแถบสรุป */
     const homeFinanceToolSaved =
       toolResult.used &&

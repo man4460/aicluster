@@ -163,9 +163,23 @@ model User {
   parkingSites             ParkingSite[]
   laundryPackages          LaundryPackage[]
   laundryOrders            LaundryOrder[]
+  openClawSyncRequests     OpenClawSyncRequest[]
 
   @@index([employerUserId])
   @@index([referredByUserId], map: "user_referred_by_idx")
+}
+
+model OpenClawSyncRequest {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  ownerUserId String  @map("owner_user_id") @db.VarChar(191)
+  owner      User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  source     String   @db.VarChar(40)
+  requestId  String   @map("request_id") @db.VarChar(128)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([ownerUserId, source, requestId], map: "openclaw_sync_req_owner_source_req_uniq")
+  @@index([ownerUserId, createdAt], map: "openclaw_sync_req_owner_created_idx")
+  @@map("openclaw_sync_requests")
 }
 
 /** ทดลองใช้โมดูล — แยกข้อมูล sandbox ใน DB เดียวกันด้วย trialSessionId บนแถวข้อมูล */
@@ -348,12 +362,16 @@ model PersonalAiNote {
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   content            String   @db.Text
   tags               Json?
+  externalSource     String?  @map("external_source") @db.VarChar(40)
+  externalId         String?  @map("external_id") @db.VarChar(128)
+  lastSyncedAt       DateTime? @map("last_synced_at")
   /** ซ่อนจากแถบสรุป Chat AI / digest รายวัน (ยังเก็บในระบบ — แก้ได้จากโมดัลโน้ต) */
   hiddenFromDigest Boolean  @default(false) @map("hidden_from_digest")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@index([userId, createdAt], map: "ai_notes_user_created_idx")
+  @@index([userId, externalSource, externalId], map: "ai_notes_user_external_idx")
   @@map("ai_notes")
 }
 
@@ -366,11 +384,15 @@ model PersonalAiPlan {
   steps     Json
   status    PersonalAiPlanStatus @default(TODO)
   dueDate   DateTime?            @map("due_date")
+  externalSource String?         @map("external_source") @db.VarChar(40)
+  externalId String?             @map("external_id") @db.VarChar(128)
+  lastSyncedAt DateTime?         @map("last_synced_at")
   createdAt DateTime             @default(now()) @map("created_at")
   updatedAt DateTime             @updatedAt @map("updated_at")
 
   @@index([userId, createdAt], map: "ai_plans_user_created_idx")
   @@index([userId, status], map: "ai_plans_user_status_idx")
+  @@index([userId, externalSource, externalId], map: "ai_plans_user_external_idx")
   @@map("ai_plans")
 }
 
@@ -961,12 +983,16 @@ model HomeFinanceEntry {
   linkedVehicleId  Int?                @map("linked_vehicle_id")
   linkedUtility    HomeUtilityProfile? @relation(fields: [linkedUtilityId], references: [id], onDelete: SetNull)
   linkedVehicle    HomeVehicleProfile? @relation(fields: [linkedVehicleId], references: [id], onDelete: SetNull)
+  externalSource   String?             @map("external_source") @db.VarChar(40)
+  externalId       String?             @map("external_id") @db.VarChar(128)
+  lastSyncedAt     DateTime?           @map("last_synced_at")
   slipExtractions  HomeFinanceSlipExtraction[]
   createdAt        DateTime            @default(now()) @map("created_at")
   updatedAt        DateTime            @updatedAt @map("updated_at")
 
   @@index([ownerUserId, entryDate])
   @@index([ownerUserId, categoryKey])
+  @@index([ownerUserId, externalSource, externalId], map: "home_finance_entries_owner_external_idx")
   @@index([linkedUtilityId])
   @@index([linkedVehicleId])
   @@map("home_finance_entries")

@@ -1,0 +1,49 @@
+{
+  "source": "openclaw",
+  "ownerUserId": "cm123owneruserid",
+  "requestId": "sync-2026-04-25-001",
+  "events": [
+    {
+      "type": "note",
+      "externalId": "note-9001",
+      "op": "upsert",
+      "content": "วันนี้ป้อนข้าวลูก 22:00",
+      "tags": ["auto", "openclaw"],
+      "hiddenFromDigest": false,
+      "syncedAt": "2026-04-25T15:05:12.000Z"
+    },
+    {
+      "type": "plan",
+      "externalId": "plan-7722",
+      "op": "upsert",
+      "title": "ปลุกลูกตอน 23:50",
+      "steps": ["ปลุกลูก", "เตรียมนม"],
+      "status": "TODO",
+      "dueDate": "2026-04-25T16:50:00.000Z",
+      "syncedAt": "2026-04-25T15:05:12.000Z"
+    },
+    {
+      "type": "finance",
+      "externalId": "finance-5501",
+      "op": "upsert",
+      "entryDate": "2026-04-21",
+      "entryType": "EXPENSE",
+      "amount": 159,
+      "title": "ข้าวหมกไก่สยาม",
+      "categoryKey": "FOOD",
+      "categoryLabel": "อาหาร",
+      "paymentMethod": "TRANSFER",
+      "note": "sync from openclaw",
+      "slipImageUrl": "/uploads/home-finance/chat-slip-example.jpg",
+      "attachmentUrls": [
+        "/uploads/home-finance/chat-slip-example.jpg"
+      ],
+      "syncedAt": "2026-04-25T15:05:12.000Z"
+    },
+    {
+      "type": "note",
+      "externalId": "note-old-123",
+      "op": "delete"
+    }
+  ]
+}
