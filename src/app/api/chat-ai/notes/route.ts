@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     where: { userId: guard.user.id },
     orderBy: { createdAt: "desc" },
     take: limit,
-    select: { id: true, content: true, tags: true, createdAt: true },
+    select: { id: true, content: true, tags: true, createdAt: true, hiddenFromDigest: true },
   });
 
   const notes = rows.map((r) => {
@@ -26,6 +26,7 @@ export async function GET(req: Request) {
       id: r.id,
       content: r.content,
       tags,
+      hiddenFromDigest: Boolean(r.hiddenFromDigest),
       createdAt: r.createdAt.toISOString(),
     };
   });

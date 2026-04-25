@@ -14,6 +14,8 @@ export type DailyReminderItem = {
   /** นาทีก่อนถึงกำหนด — ยังไม่มีในฐานข้อมูลบางแหล่ง ใช้ 0 */
   notifyBefore: number;
   source: "home_finance_reminder" | "personal_plan" | "barber_booking" | "personal_note";
+  /** ข้อความโน้ตเต็ม (เฉพาะ source personal_note) — ใช้แก้ไขใน popup */
+  fullText?: string;
 };
 
 export type DailyDigestFinanceEntry = {

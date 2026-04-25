@@ -13,7 +13,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 45: User.passwordHash optional + googleSub (ล็อกอิน Google) */
 /** 46: DormitoryCostCategory + DormitoryCostEntry — client เก่าไม่มี delegate แล้ว API ต้นทุนหอพักล้ม */
 /** 47: VillageCostCategory + VillageCostEntry — ต้นทุน/รายจ่ายหมู่บ้าน */
-const PRISMA_SINGLETON_VERSION = 47;
+/** 48: PersonalAiNote.hiddenFromDigest — ซ่อนโน้ตจากแถบสรุป Chat AI */
+const PRISMA_SINGLETON_VERSION = 48;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;

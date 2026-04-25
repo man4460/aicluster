@@ -1,0 +1,18 @@
+---
+description: Chat AI — แถบซ้ายสรุปรายวัน (digest) โครง DOM และ shell ห้ามถอยกลับแบบเก่า
+globs: "**/systems/chat/**/*,**/dashboard/chat-ai/**/*,**/personal-ai-chat-shell.ts"
+alwaysApply: true
+---
+
+# Chat AI — แถบซ้าย (digest) ห้าม revert เป็นแบบเก่า
+
+- **แหล่งคลาสเดียว**: ปรับ layout แถบซ้าย/สเกเลตันแชทที่ `src/systems/chat/personal-ai-chat-shell.ts` เท่านั้น — ห้ามคัดลอกสตริงคลาสซ้ำไปไฟล์อื่นโดยไม่จำเป็น
+- **โครง DOM ต้องคงรูปนี้** (ห้ามเอา children ไปวางตรง `<aside>` โดยไม่มีชั้นใน):
+  - `aside#personal-ai-digest` + `aria-label` สรุปรายวัน
+  - ชั้นใน: `div` ด้วย **`PERSONAL_AI_CHAT_DIGEST_INNER_CLASS`** (`flex min-h-0 … flex-1 flex-col`)
+  - ลูกโดยตรงของชั้นใน: **`<header className="shrink-0 …">`** (หัวการ์ดสรุป) แล้ว **`<section … min-h-0 flex-1 overflow-y-auto … [scrollbar-gutter:stable]>`** (เนื้อหาเลื่อน) + `aria-label` โซนรายการ
+- **`PERSONAL_AI_CHAT_DIGEST_ASIDE_CLASS`**: ต้องมี **`min-h-0`**, **`w-full`**, **`min-w-0`** คู่กับ `flex flex-col overflow-hidden` — ห้ามถอดจน aside ล้น/สกอร์ลพังบน flex แนวนอน
+- **สเกเลตัน** `chat-ai-client.tsx`: ใช้ **header + section** ให้สอดคล้องกับ `PersonalAiDailyDigest` (ห้ามกลับไปแค่ `div` เดียวห่อ pulse)
+- **`PersonalAiDigestAsideFrame`**: ต้องห่อ children ด้วย inner `div` ตาม shell เสมอ — ห้ามลบ wrapper นี้
+
+ถ้ามี PR/รีแฟคเตอร์ที่ “คืนค่าเดิม” โครงข้างบน ให้ปฏิเสธหรือแก้ให้ยังสอดคล้องกับกฎนี้

@@ -121,12 +121,29 @@ export type ParsedFinanceChatCommand = {
   categoryLabel: string;
 };
 
+/** ตัดคำขอนำหน้าก่อนแยกคำสั่งบัญชี (เช่น "ผมให้บันทึกรายจ่าย...") */
+function normalizeFinanceChatCommandMessage(raw: string): string {
+  let m = raw.trim().replace(/[\u200B-\u200D\uFEFF]/g, "");
+  const thaiDigitMap = "๐๑๒๓๔๕๖๗๘๙";
+  m = m.replace(/[\u0E50-\u0E59]/g, (ch) => String(thaiDigitMap.indexOf(ch)));
+  m = m.replace(/^(?:ผม|ฉัน|ดิฉัน)\s*ให้\s*/u, "");
+  m = m.replace(/^(?:อยาก(?:ให้)?|ต้องการ(?:ให้)?)\s*/u, "");
+  m = m.replace(/^ให้\s+/u, "");
+  m = m.replace(/^ขอให้\s*/u, "");
+  m = m.replace(/^ช่วย(?:บันทึก|จด)?\s*/u, "");
+  m = m.replace(/^ช่วย\s+/u, "");
+  m = m.replace(/^กรุณา(?:บันทึก|จด)?\s*/u, "");
+  m = m.replace(/^กรุณา\s*/u, "");
+  m = m.replace(/^ฝาก(?:บันทึก|จด)?\s*/u, "");
+  return m.trim();
+}
+
 /** แยกคำสั่งแชท เช่น "บันทึกรายจ่าย 500 บาท ค่ากาแฟ" หรือ "บันทึก 100 บาท" (รูปแบบสั้น) */
 export function parseFinanceRecordCommand(raw: string): ParsedFinanceChatCommand | null {
-  const message = raw.trim().replace(/[\u200B-\u200D\uFEFF]/g, "");
+  const message = normalizeFinanceChatCommandMessage(raw);
 
   // รูปแบบสั้น: "บันทึก 100 บาท" / "บันทึก 1,200 บาท ค่ากาแฟ" (มีตัวเลข + บาท ชัดเจน — ต้องอยู่ก่อน "บันทึก ..." แบบโน้ตใน maybeRunPersonalTool)
-  const short = message.match(/^บันทึก\s+(?!ว่า)([\d,]+(?:\.\d+)?)\s*(?:บาท|บ\.?)(?:\s*(.*))?$/iu);
+  const short = message.match(/^บันทึก\s+(?!\s*ว่า)([\d,]+(?:\.\d+)?)\s*(?:บาท|บ\.?)(?:\s*(.*))?$/iu);
   if (short?.[1]) {
     const amount = Number(short[1].replace(/,/g, ""));
     if (Number.isFinite(amount) && amount > 0) {
@@ -145,40 +162,172 @@ export function parseFinanceRecordCommand(raw: string): ParsedFinanceChatCommand
     }
   }
 
-  const prefixRe = /^(บันทึกรายรับ|บันทึกรายจ่าย|เพิ่มรายรับ|เพิ่มรายจ่าย|จดรายรับ|จดรายจ่าย)\s+/u;
+  /** หลังคำว่า บันทึกรายจ่าย ผู้ใช้มักต่อทันทีโดยไม่เว้นวรรค เช่น "บันทึกรายจ่ายค่าขนม 100 บาท" */
+  const prefixRe =
+    /^(บันทึกรายรับ|บันทึกรายจ่าย|บันทึกค่าใช้จ่าย(?:รายวัน)?|เพิ่มรายรับ|เพิ่มรายจ่าย|จดรายรับ|จดรายจ่าย)\s*/u;
   const prefixMatch = message.match(prefixRe);
-  if (!prefixMatch?.[1]) return null;
-  const isIncome = /รายรับ/u.test(prefixMatch[1]);
-  let rest = message.slice(prefixMatch[0].length).trim();
+  if (prefixMatch?.[1]) {
+    const isIncome = /รายรับ/u.test(prefixMatch[1]);
+    let rest = message.slice(prefixMatch[0].length).trim();
 
-  let categoryLabel = "อื่นๆ";
-  const catM = rest.match(/\s+(?:หมวด|#)\s*[:：]?\s*(.+)$/u);
-  if (catM?.[1] != null && catM.index != null) {
-    categoryLabel = catM[1].trim().slice(0, 100) || categoryLabel;
-    rest = rest.slice(0, catM.index).trim();
+    let categoryLabel = "อื่นๆ";
+    const catM = rest.match(/\s+(?:หมวด|#)\s*[:：]?\s*(.+)$/u);
+    if (catM?.[1] != null && catM.index != null) {
+      categoryLabel = catM[1].trim().slice(0, 100) || categoryLabel;
+      rest = rest.slice(0, catM.index).trim();
+    }
+
+    const leadingAmount = rest.match(/^([\d,]+(?:\.\d+)?)\s*(?:บาท|บ\.?)?(?:\s+(.*))?$/iu);
+    let amountStr: string | undefined;
+    let titlePart = "";
+
+    if (leadingAmount?.[1]) {
+      amountStr = leadingAmount[1].replace(/,/g, "");
+      titlePart = (leadingAmount[2] ?? "").trim();
+    } else {
+      const anyAmount = rest.match(/([\d,]+(?:\.\d+)?)\s*(?:บาท|บ\.?)/iu);
+      if (anyAmount?.[1] != null && anyAmount.index != null) {
+        amountStr = anyAmount[1].replace(/,/g, "");
+        const before = rest.slice(0, anyAmount.index).trim();
+        const after = rest.slice(anyAmount.index + anyAmount[0].length).trim();
+        titlePart = `${before} ${after}`.trim();
+      }
+    }
+
+    if (amountStr != null) {
+      const amount = Number(amountStr);
+      if (Number.isFinite(amount) && amount > 0) {
+        const title = (titlePart ?? "").trim() || (isIncome ? "รายรับ" : "รายจ่าย");
+        return { isIncome, amount, title, categoryLabel };
+      }
+    }
   }
 
-  const leadingAmount = rest.match(/^([\d,]+(?:\.\d+)?)\s*(?:บาท|บ\.?)?(?:\s+(.*))?$/iu);
-  let amountStr: string | undefined;
-  let titlePart: string;
-
-  if (leadingAmount?.[1]) {
-    amountStr = leadingAmount[1].replace(/,/g, "");
-    titlePart = (leadingAmount[2] ?? "").trim();
-  } else {
-    const anyAmount = rest.match(/([\d,]+(?:\.\d+)?)\s*(?:บาท|บ\.?)/iu);
-    if (!anyAmount?.[1] || anyAmount.index == null) return null;
-    amountStr = anyAmount[1].replace(/,/g, "");
-    const before = rest.slice(0, anyAmount.index).trim();
-    const after = rest.slice(anyAmount.index + anyAmount[0].length).trim();
-    titlePart = `${before} ${after}`.trim();
+  /**
+   * "บันทึกค่าขนม 100 บาท" / "บันทึกซื้อของ 50 บาท" — ไม่รวม "บันทึกว่า" / "บันทึก ว่า" (โน้ต)
+   */
+  const recordItem = message.match(
+    /^บันทึก(?!\s*ว่า)(?:\s+|)(.+?)\s+([\d,]+(?:\.\d+)?)\s*(?:บาท|บ\.?)(?:\s+(.*))?$/iu,
+  );
+  if (recordItem?.[2]) {
+    const amount = Number(recordItem[2].replace(/,/g, ""));
+    if (Number.isFinite(amount) && amount > 0) {
+      let title = (recordItem[1] ?? "").trim();
+      const tail = (recordItem[3] ?? "").trim();
+      if (tail) title = `${title} ${tail}`.trim();
+      let categoryLabel = "อื่นๆ";
+      const catM = title.match(/\s+(?:หมวด|#)\s*[:：]?\s*(.+)$/u);
+      if (catM?.[1] != null && catM.index != null) {
+        categoryLabel = catM[1].trim().slice(0, 100) || categoryLabel;
+        title = title.slice(0, catM.index).trim();
+      }
+      const hasIncome = /รายรับ/u.test(message);
+      const hasExpense = /รายจ่าย/u.test(message);
+      const isIncome = hasIncome && !hasExpense;
+      return {
+        isIncome,
+        amount,
+        title: title || (isIncome ? "รายรับ" : "รายจ่าย"),
+        categoryLabel,
+      };
+    }
   }
 
-  const amount = Number(amountStr);
-  if (!Number.isFinite(amount) || amount <= 0) return null;
+  /** คำบอกรายจ่าย/รายรับแบบสนทนา (มีจำนวนเงิน) เช่น "รายจ่ายค่าขนม 100 บาท" "ซื้อกาแฟ 45 บาท" "ได้รับ 500 บาท" */
+  const looseExpense = message.match(
+    /^(รายจ่าย|ใช้จ่าย(?:ไป)?|จ่าย(?:ไป)?(?:ค่า)?|ค่าใช้จ่าย|ซื้อ(?:ของ)?|เสียค่า|หักเงิน|ออกเงิน|โอน(?:จ่าย)?)\s*(.*)$/iu,
+  );
+  const looseIncome = message.match(/^(รายรับ|รายได้|ได้รับ|รับเงิน|รับเข้า)\s*(.*)$/iu);
+  const loose = looseExpense?.[2] != null ? { isIncome: false, rest: looseExpense[2].trim() } : null;
+  const looseIn =
+    looseIncome?.[2] != null && looseIncome[2].trim()
+      ? { isIncome: true, rest: looseIncome[2].trim() }
+      : null;
+  const pickedLoose = loose?.rest ? loose : looseIn;
+  if (pickedLoose?.rest) {
+    let rest = pickedLoose.rest;
+    const isIncome = pickedLoose.isIncome;
+    let categoryLabel = "อื่นๆ";
+    const catM = rest.match(/\s+(?:หมวด|#)\s*[:：]?\s*(.+)$/u);
+    if (catM?.[1] != null && catM.index != null) {
+      categoryLabel = catM[1].trim().slice(0, 100) || categoryLabel;
+      rest = rest.slice(0, catM.index).trim();
+    }
+    if (!rest) return null;
 
-  const title = titlePart || (isIncome ? "รายรับ" : "รายจ่าย");
-  return { isIncome, amount, title, categoryLabel };
+    const leadingAmount = rest.match(/^([\d,]+(?:\.\d+)?)\s*(?:บาท|บ\.?)?(?:\s+(.*))?$/iu);
+    let amountStr: string | undefined;
+    let titlePart: string;
+
+    if (leadingAmount?.[1]) {
+      amountStr = leadingAmount[1].replace(/,/g, "");
+      titlePart = (leadingAmount[2] ?? "").trim();
+    } else {
+      const anyAmount = rest.match(/([\d,]+(?:\.\d+)?)\s*(?:บาท|บ\.?)/iu);
+      if (!anyAmount?.[1] || anyAmount.index == null) return null;
+      amountStr = anyAmount[1].replace(/,/g, "");
+      const before = rest.slice(0, anyAmount.index).trim();
+      const after = rest.slice(anyAmount.index + anyAmount[0].length).trim();
+      titlePart = `${before} ${after}`.trim();
+    }
+
+    const amount = Number(amountStr);
+    if (!Number.isFinite(amount) || amount <= 0) return null;
+
+    const title = titlePart || (isIncome ? "รายรับ" : "รายจ่าย");
+    return { isIncome, amount, title, categoryLabel };
+  }
+
+  /**
+   * รูปแบบสั้น: "ค่ายา 132 บาท" / "ค่ารถไฟ 45 บาท" (รายจ่ายโดยนัย)
+   * ไม่รวม "ค่าใช้จ่าย…" — ให้แมตช์กับ loose ด้านบน
+   */
+  const khaLine = message.match(
+    /^ค่า\s*(?!ใช้จ่าย\b)(.+?)\s+([\d,]+(?:\.\d+)?)\s*(?:บาท|บ\.?)(?:\s+(.*))?$/iu,
+  );
+  if (khaLine?.[2]) {
+    const body = (khaLine[1] ?? "").trim();
+    if (!body) return null;
+    const amount = Number(khaLine[2].replace(/,/g, ""));
+    if (Number.isFinite(amount) && amount > 0) {
+      let title = `ค่า${body}`;
+      const tail = (khaLine[3] ?? "").trim();
+      if (tail) title = `${title} ${tail}`.trim();
+      let categoryLabel = "อื่นๆ";
+      const catM = title.match(/\s+(?:หมวด|#)\s*[:：]?\s*(.+)$/u);
+      if (catM?.[1] != null && catM.index != null) {
+        categoryLabel = catM[1].trim().slice(0, 100) || categoryLabel;
+        title = title.slice(0, catM.index).trim();
+      }
+      return { isIncome: false, amount, title: title.slice(0, 160), categoryLabel };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * สรุปรายรับหลายบรรทัด (เช่น digest / มาร์กดาวน์) — บันทึกได้ทุกยอด
+ * ตัวอย่าง: `รายรับ` + `- วันนี้: 5600 บาท` + `- วันนี้ (เพิ่ม): 6700 บาท`
+ */
+export function parseFinanceIncomeDigestEntries(raw: string): ParsedFinanceChatCommand[] {
+  const message = normalizeFinanceChatCommandMessage(raw);
+  if (!/รายรับ/u.test(message) || /รายจ่าย/u.test(message)) return [];
+  const out: ParsedFinanceChatCommand[] = [];
+  for (const rawLine of message.split(/\r?\n/)) {
+    const line = rawLine.replace(/^\s*[-*•]+\s*/, "").trim();
+    const row = line.match(
+      /^(วันนี้|พรุ่งนี้)(?:\s*\([^)]*\))?\s*[:：]\s*([\d,]+(?:\.\d+)?)\s*(?:บาท|บ\.?)\s*$/iu,
+    );
+    if (row?.[2]) {
+      const n = Number(row[2].replace(/,/g, ""));
+      if (Number.isFinite(n) && n > 0) {
+        const title = String(row[1] ?? "รายรับ").slice(0, 160);
+        out.push({ isIncome: true, amount: n, title, categoryLabel: "อื่นๆ" });
+      }
+    }
+  }
+  return out;
 }
 
 export function todayYmdBangkok(): string {

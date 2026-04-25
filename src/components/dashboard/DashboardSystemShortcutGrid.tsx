@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ModuleCardCoverImage } from "@/components/dashboard/ModuleCardCoverImage";
 import type { DashboardSystemCard } from "@/lib/dashboard-system-catalog";
+import { resolveDashboardNavLinkHref } from "@/lib/dashboard/chat-ai-href";
 
 export function DashboardSystemShortcutGrid({ items }: { items: DashboardSystemCard[] }) {
   return (
@@ -8,7 +9,7 @@ export function DashboardSystemShortcutGrid({ items }: { items: DashboardSystemC
       {items.map((it) => (
         <li key={it.href}>
           <Link
-            href={it.href}
+            href={resolveDashboardNavLinkHref(it.href)}
             className="flex min-h-[4.5rem] flex-col gap-2 rounded-2xl border border-slate-200/90 bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-[#f6f4ff] hover:shadow-md sm:flex-row sm:items-center sm:gap-3 sm:p-4"
           >
             <ModuleCardCoverImage

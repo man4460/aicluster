@@ -134,6 +134,7 @@ function mapNoteToDigestReminder(args: {
     userId: args.userId,
     title,
     description: "จากบันทึกรวดเร็ว (จดว่า…)",
+    fullText: args.note.content,
     dueDate: args.dayYmd,
     dueTime: "",
     type: "reminder",
@@ -202,7 +203,7 @@ export async function GET() {
       select: { id: true, userId: true, title: true, steps: true, status: true, dueDate: true },
     }),
     prisma.personalAiNote.findMany({
-      where: { userId },
+      where: { userId, hiddenFromDigest: false },
       orderBy: { createdAt: "desc" },
       take: 24,
       select: { id: true, content: true, createdAt: true },

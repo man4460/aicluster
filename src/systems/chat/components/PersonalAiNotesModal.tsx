@@ -1,14 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { appTemplateOutlineButtonClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+
+const NOTES_MODAL_SOFT_BTN =
+  "app-btn-soft rounded-xl border border-[#dcd8f0] text-xs font-semibold text-[#4d47b6] shadow-sm transition hover:bg-[#f4f3ff] disabled:opacity-50";
 import { formatBangkokDigestDateTimeLabel } from "@/lib/reminders/bangkok-calendar";
 
 export type ChatAiNoteRow = {
   id: string;
   content: string;
   tags: string[];
+  /** ซ่อนจากแถบสรุป Chat AI — ยังอยู่ในรายการโน้ตทั้งหมด */
+  hiddenFromDigest: boolean;
   createdAt: string;
 };
 
@@ -34,13 +38,16 @@ export function PersonalAiNotesModal({ open, onClose, onNotesChanged }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [patchingId, setPatchingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/chat-ai/notes?_=${Date.now()}`, { credentials: "include", cache: "no-store" });
-      const parsed = await parseJson<{ notes: ChatAiNoteRow[]; error?: string }>(res);
+      const parsed = await parseJson<{ notes: Partial<ChatAiNoteRow>[]; error?: string }>(res);
       if (!parsed.ok) {
         setError(parsed.message);
         setNotes([]);
@@ -51,7 +58,16 @@ export function PersonalAiNotesModal({ open, onClose, onNotesChanged }: Props) {
         setNotes([]);
         return;
       }
-      setNotes(parsed.data.notes ?? []);
+      const raw = parsed.data.notes ?? [];
+      setNotes(
+        raw.map((r) => ({
+          id: String(r.id ?? ""),
+          content: String(r.content ?? ""),
+          tags: Array.isArray(r.tags) ? r.tags.filter((t): t is string => typeof t === "string") : [],
+          hiddenFromDigest: Boolean(r.hiddenFromDigest),
+          createdAt: String(r.createdAt ?? ""),
+        })),
+      );
     } catch {
       setError("เครือข่ายมีปัญหา");
       setNotes([]);
@@ -63,6 +79,46 @@ export function PersonalAiNotesModal({ open, onClose, onNotesChanged }: Props) {
   useEffect(() => {
     if (open) void load();
   }, [open, load]);
+
+  useEffect(() => {
+    if (!open) {
+      setEditingId(null);
+      setEditDraft("");
+      setPatchingId(null);
+    }
+  }, [open]);
+
+  async function patchNote(id: string, body: Record<string, unknown>) {
+    setPatchingId(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/chat-ai/notes/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const parsed = await parseJson<{ error?: string }>(res);
+      if (!res.ok) {
+        setError(parsed.ok ? parsed.data.error ?? "อัปเดตไม่สำเร็จ" : parsed.message);
+        return;
+      }
+      if (typeof body.content === "string") {
+        setNotes((prev) => prev.map((x) => (x.id === id ? { ...x, content: body.content as string } : x)));
+        setEditingId(null);
+      }
+      if (typeof body.hiddenFromDigest === "boolean") {
+        setNotes((prev) =>
+          prev.map((x) => (x.id === id ? { ...x, hiddenFromDigest: body.hiddenFromDigest as boolean } : x)),
+        );
+      }
+      onNotesChanged?.();
+    } catch {
+      setError("อัปเดตไม่สำเร็จ");
+    } finally {
+      setPatchingId(null);
+    }
+  }
 
   async function removeNote(id: string) {
     if (!confirm("ลบโน้ตนี้?")) return;
@@ -102,18 +158,11 @@ export function PersonalAiNotesModal({ open, onClose, onNotesChanged }: Props) {
               type="button"
               onClick={() => void load()}
               disabled={loading}
-              className={cn(
-                appTemplateOutlineButtonClass,
-                "px-2.5 py-1.5 text-xs font-medium disabled:opacity-50",
-              )}
+              className={cn(NOTES_MODAL_SOFT_BTN, "px-2.5 py-1.5")}
             >
               รีเฟรช
             </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className={cn(appTemplateOutlineButtonClass, "px-2.5 py-1.5 text-xs font-medium")}
-            >
+            <button type="button" onClick={onClose} className={cn(NOTES_MODAL_SOFT_BTN, "px-2.5 py-1.5")}>
               ปิด
             </button>
           </div>
@@ -125,26 +174,104 @@ export function PersonalAiNotesModal({ open, onClose, onNotesChanged }: Props) {
             <p className="text-center text-sm text-slate-500">ยังไม่มีโน้ต</p>
           ) : (
             <ul className="space-y-3">
-              {notes.map((n) => (
-                <li key={n.id} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-                  <p className="whitespace-pre-wrap text-sm text-slate-800">{n.content}</p>
-                  <p className="mt-2 text-[10px] text-slate-400">
-                    {formatBangkokDigestDateTimeLabel(n.createdAt)}
-                    {n.tags.length ? ` · ${n.tags.join(", ")}` : ""}
-                  </p>
-                  <button
-                    type="button"
-                    disabled={deletingId === n.id}
-                    onClick={() => void removeNote(n.id)}
-                    className={cn(
-                      "mt-2 rounded-lg border border-rose-200 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50",
-                      deletingId === n.id && "opacity-50",
+              {notes.map((n) => {
+                const isEditing = editingId === n.id;
+                const busy = patchingId === n.id;
+                return (
+                  <li key={n.id} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+                    {n.hiddenFromDigest ? (
+                      <p className="mb-2 inline-block rounded-full bg-slate-200/90 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                        ซ่อนจากแถบสรุปแล้ว
+                      </p>
+                    ) : null}
+                    {isEditing ? (
+                      <textarea
+                        value={editDraft}
+                        onChange={(e) => setEditDraft(e.target.value)}
+                        rows={5}
+                        maxLength={4000}
+                        disabled={busy}
+                        className="w-full resize-y rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-800 outline-none focus:border-[#0000BF]/35"
+                      />
+                    ) : (
+                      <p className="whitespace-pre-wrap text-sm text-slate-800">{n.content}</p>
                     )}
-                  >
-                    {deletingId === n.id ? "กำลังลบ…" : "ลบ"}
-                  </button>
-                </li>
-              ))}
+                    <p className="mt-2 text-[10px] text-slate-400">
+                      {formatBangkokDigestDateTimeLabel(n.createdAt)}
+                      {n.tags.length ? ` · ${n.tags.join(", ")}` : ""}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {isEditing ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void patchNote(n.id, { content: editDraft.trim() })}
+                            className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-2 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-50 disabled:opacity-50"
+                          >
+                            {busy ? "…" : "บันทึก"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => {
+                              setEditingId(null);
+                              setEditDraft("");
+                            }}
+                            className={cn(NOTES_MODAL_SOFT_BTN, "px-2 py-1")}
+                          >
+                            ยกเลิก
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busy || deletingId !== null}
+                            onClick={() => {
+                              setEditingId(n.id);
+                              setEditDraft(n.content);
+                            }}
+                            className={cn(NOTES_MODAL_SOFT_BTN, "px-2 py-1")}
+                          >
+                            แก้ไข
+                          </button>
+                          {n.hiddenFromDigest ? (
+                            <button
+                              type="button"
+                              disabled={busy || deletingId !== null}
+                              onClick={() => void patchNote(n.id, { hiddenFromDigest: false })}
+                              className={cn(NOTES_MODAL_SOFT_BTN, "px-2 py-1")}
+                            >
+                              แสดงในแถบสรุปอีกครั้ง
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={busy || deletingId !== null}
+                              onClick={() => void patchNote(n.id, { hiddenFromDigest: true })}
+                              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                            >
+                              ทำแล้ว (ซ่อนจากแถบสรุป)
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            disabled={deletingId === n.id || busy}
+                            onClick={() => void removeNote(n.id)}
+                            className={cn(
+                              "rounded-lg border border-rose-200 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50",
+                              deletingId === n.id && "opacity-50",
+                            )}
+                          >
+                            {deletingId === n.id ? "กำลังลบ…" : "ลบ"}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

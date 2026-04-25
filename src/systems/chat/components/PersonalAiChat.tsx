@@ -6,12 +6,15 @@ import {
   AppImageLightbox,
   AppImageThumb,
   AppPickGalleryImageButton,
-  appTemplateOutlineButtonClass,
   prepareImageFileForVisionOcr,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
-import { PERSONAL_AI_CHAT_ROOT_CLASS } from "@/systems/chat/personal-ai-chat-shell";
+import {
+  PERSONAL_AI_CHAT_CARD_SHELL_CLASS,
+  PERSONAL_AI_CHAT_MESSAGES_SCROLL_CLASS,
+  PERSONAL_AI_CHAT_ROOT_CLASS,
+} from "@/systems/chat/personal-ai-chat-shell";
 import { PersonalAiDailyDigest } from "@/systems/chat/components/PersonalAiDailyDigest";
 import { PersonalAiNotesModal } from "@/systems/chat/components/PersonalAiNotesModal";
 
@@ -53,6 +56,80 @@ function buildWelcomeMessage(displayName: string): ChatMessage {
   };
 }
 
+const PERSONAL_AI_CHAT_STORAGE_KEY = "mia-personal-ai-chat.v1";
+
+type PersistedChatStateV1 = {
+  v: 1;
+  activeSessionId: string;
+  sessions: ChatSession[];
+};
+
+function defaultChatSessions(greetingName?: string): ChatSession[] {
+  const name = (greetingName ?? "คุณ").trim() || "คุณ";
+  return [
+    {
+      id: "s-default",
+      serverSessionId: null,
+      title: "แชทใหม่",
+      messages: [buildWelcomeMessage(name)],
+      updatedAt: 0,
+    },
+  ];
+}
+
+function loadPersistedChatState(greetingName?: string): { sessions: ChatSession[]; activeSessionId: string } {
+  if (typeof window === "undefined") {
+    const s = defaultChatSessions(greetingName);
+    return { sessions: s, activeSessionId: s[0]!.id };
+  }
+  try {
+    const raw = localStorage.getItem(PERSONAL_AI_CHAT_STORAGE_KEY);
+    if (!raw) {
+      const s = defaultChatSessions(greetingName);
+      return { sessions: s, activeSessionId: s[0]!.id };
+    }
+    const data = JSON.parse(raw) as Partial<PersistedChatStateV1>;
+    if (data.v !== 1 || !Array.isArray(data.sessions) || data.sessions.length === 0) {
+      const s = defaultChatSessions(greetingName);
+      return { sessions: s, activeSessionId: s[0]!.id };
+    }
+    const sessions = data.sessions as ChatSession[];
+    const active =
+      data.activeSessionId && sessions.some((x) => x.id === data.activeSessionId)
+        ? data.activeSessionId
+        : sessions[0]!.id;
+    return { sessions, activeSessionId: active };
+  } catch {
+    const s = defaultChatSessions(greetingName);
+    return { sessions: s, activeSessionId: s[0]!.id };
+  }
+}
+
+function persistChatState(sessions: ChatSession[], activeSessionId: string): void {
+  if (typeof window === "undefined") return;
+  const tryWrite = (sessionsToWrite: ChatSession[]) => {
+    localStorage.setItem(
+      PERSONAL_AI_CHAT_STORAGE_KEY,
+      JSON.stringify({ v: 1, activeSessionId, sessions: sessionsToWrite } satisfies PersistedChatStateV1),
+    );
+  };
+  try {
+    tryWrite(sessions);
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "QuotaExceededError") {
+      const stripped = sessions.map((s) => ({
+        ...s,
+        messages: s.messages.map((m) => ({ ...m, imageDataUrl: null })),
+      }));
+      try {
+        tryWrite(stripped);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
+
 /** ตอบกลับจากเซิร์ฟเวอร์บ่งว่ามีการบันทึกโน้ต (รีเฟรชแผงสำรอง) */
 function replySuggestsNoteSaved(reply: string): boolean {
   const t = reply.trim();
@@ -60,6 +137,15 @@ function replySuggestsNoteSaved(reply: string): boolean {
   if (/บันทึกโน้ตแล้ว|จดโน้ตแล้ว/u.test(t)) return true;
   if (/บันทึกเรียบร้อย/u.test(t) && /#\w{6,}/u.test(t)) return true;
   if (/เก็บแผนนี้ใน\s*[*]*บันทึกล่าสุด/u.test(t)) return true;
+  return false;
+}
+
+/** ตอบกลับหลังบันทึกรายรับ–รายจ่ายจากสลิป / คำสั่งบันทึก */
+function replySuggestsFinanceSaved(reply: string): boolean {
+  const t = reply.trim();
+  if (!t) return false;
+  if (/ลงบัญชีแล้วค่ะ/u.test(t) && /รายการ\s*#\d+/u.test(t)) return true;
+  if (/บันทึก(?:รายรับ|รายจ่าย).*แล้วค่ะ/u.test(t) && /รายการ\s*#\d+/u.test(t)) return true;
   return false;
 }
 
@@ -108,21 +194,13 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const persistedOnceRef = useRef<{ sessions: ChatSession[]; activeSessionId: string } | null>(null);
+  if (!persistedOnceRef.current) {
+    persistedOnceRef.current = loadPersistedChatState(greetingName);
+  }
   const imageLightbox = useAppImageLightbox();
-  const [sessions, setSessions] = useState<ChatSession[]>(() => {
-    const name = (greetingName ?? "คุณ").trim() || "คุณ";
-    return [
-      {
-        id: "s-default",
-        serverSessionId: null,
-        title: "แชทใหม่",
-        messages: [buildWelcomeMessage(name)],
-        /** คงที่ระหว่าง SSR กับ client — หลีกเลี่ยง Date.now() ตอน hydrate */
-        updatedAt: 0,
-      },
-    ];
-  });
-  const [activeSessionId, setActiveSessionId] = useState("s-default");
+  const [sessions, setSessions] = useState<ChatSession[]>(() => persistedOnceRef.current!.sessions);
+  const [activeSessionId, setActiveSessionId] = useState(() => persistedOnceRef.current!.activeSessionId);
   const [input, setInput] = useState("");
   const [attachedImageDataUrl, setAttachedImageDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -141,6 +219,10 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, loading, activeSessionId]);
+
+  useEffect(() => {
+    persistChatState(sessions, activeSessionId);
+  }, [sessions, activeSessionId]);
 
   useEffect(() => {
     if (!toast) return;
@@ -278,7 +360,10 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
         updatedAt: Date.now(),
       }));
       setDigestRefreshKey((k) => k + 1);
-      if (replySuggestsNoteSaved(replyText)) {
+      if (replySuggestsFinanceSaved(replyText)) {
+        setToast("บันทึกลงบัญชีแล้ว");
+        window.setTimeout(() => setDigestRefreshKey((k) => k + 1), 400);
+      } else if (replySuggestsNoteSaved(replyText)) {
         setToast("บันทึกแล้ว");
         window.setTimeout(() => setDigestRefreshKey((k) => k + 1), 500);
       }
@@ -293,9 +378,9 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
   return (
     <div className={PERSONAL_AI_CHAT_ROOT_CLASS}>
       <PersonalAiDailyDigest
-        className="order-1 shrink-0 lg:h-full lg:max-h-none lg:min-h-0"
         refreshKey={digestRefreshKey}
         onOpenAllNotes={() => setNotesModalOpen(true)}
+        onNotesChanged={() => setDigestRefreshKey((k) => k + 1)}
       />
 
       <PersonalAiNotesModal
@@ -313,7 +398,7 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
         </div>
       ) : null}
 
-      <div className="order-2 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#e4e2f5] bg-white shadow-lg shadow-indigo-950/[0.08] ring-1 ring-white/80 lg:min-h-0 lg:max-h-none">
+      <div className={PERSONAL_AI_CHAT_CARD_SHELL_CLASS}>
         <div className="shrink-0 border-b border-[#e8e6fc] bg-gradient-to-r from-white via-[#faf9ff] to-[#f3f1fc]/90">
           <div className="px-3 py-3 sm:px-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
@@ -362,9 +447,10 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
                     }));
                     setError(null);
                   }}
-                  className={cn(appTemplateOutlineButtonClass, "px-2.5 py-1.5 text-xs font-medium")}
+                  className={cn(CHAT_BTN_SOFT, "px-2.5 py-1.5")}
+                  title="ล้างข้อความในแชทนี้ (บันทึกบนเครื่องจะอัปเดตตาม)"
                 >
-                  เริ่มใหม่
+                  ล้างแชท
                 </button>
               </div>
             </div>
@@ -401,11 +487,7 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
           </div>
         ) : null}
 
-        <div
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-gradient-to-b from-[#f8f7fd]/90 via-[#faf9ff]/50 to-slate-50/40 px-3 py-4 touch-pan-y [scrollbar-gutter:stable] sm:px-4 sm:py-5"
-          role="log"
-          aria-label="ข้อความแชท"
-        >
+        <div className={PERSONAL_AI_CHAT_MESSAGES_SCROLL_CLASS} role="log" aria-label="ข้อความแชท">
           <div className="mx-auto w-full max-w-3xl space-y-4">
             {messages.map((m) => (
               <div
@@ -416,7 +498,7 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
                   className={cn(
                     "max-w-[min(92%,36rem)] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed sm:max-w-[85%]",
                     m.role === "user"
-                      ? "bg-gradient-to-br from-[#0000BF] to-[#312e81] text-white shadow-md shadow-indigo-900/25"
+                      ? "app-btn-primary border-transparent text-white shadow-md shadow-fuchsia-500/20"
                       : "border border-[#e4e2f5] bg-white text-slate-800 shadow-md shadow-indigo-950/5",
                   )}
                 >

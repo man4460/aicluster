@@ -16,7 +16,11 @@ import {
   type DashboardNavGroup,
   type DashboardNavGroupId,
 } from "@/lib/dashboard-nav";
-import { CHAT_AI_DASHBOARD_HREF, isChatAiDashboardPath } from "@/lib/dashboard/chat-ai-href";
+import {
+  CHAT_AI_DASHBOARD_HREF,
+  isChatAiDashboardPath,
+  resolveDashboardNavLinkHref,
+} from "@/lib/dashboard/chat-ai-href";
 import {
   buffetTierMaxGroup,
   MODULE_GROUP_TIER_NAME,
@@ -55,10 +59,11 @@ function SidebarNavLink({
   pathname: string;
   label: string;
 }) {
-  const active = isNavActive(href, pathname);
+  const resolvedHref = resolveDashboardNavLinkHref(href);
+  const active = isNavActive(resolvedHref, pathname);
   return (
     <Link
-      href={href}
+      href={resolvedHref}
       className={cn(
         "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition",
         active
@@ -66,7 +71,7 @@ function SidebarNavLink({
           : "text-[#67638f] hover:bg-white/65 hover:text-[#2e2a58]",
       )}
     >
-      {dashboardNavIconForHref(href)}
+      {dashboardNavIconForHref(resolvedHref)}
       <span className="min-w-0 leading-snug">{label}</span>
     </Link>
   );
@@ -83,10 +88,11 @@ function DrawerNavLink({
   onNavigate: () => void;
   label: string;
 }) {
-  const active = isNavActive(href, pathname);
+  const resolvedHref = resolveDashboardNavLinkHref(href);
+  const active = isNavActive(resolvedHref, pathname);
   return (
     <Link
-      href={href}
+      href={resolvedHref}
       onClick={onNavigate}
       className={cn(
         "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition",
@@ -95,7 +101,7 @@ function DrawerNavLink({
           : "text-[#67638f] hover:bg-white/65 hover:text-[#2e2a58]",
       )}
     >
-      {dashboardNavIconForHref(href)}
+      {dashboardNavIconForHref(resolvedHref)}
       <span className="min-w-0 leading-snug">{label}</span>
     </Link>
   );

@@ -44,8 +44,8 @@ CREATE TABLE `laundry_orders` (
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-ALTER TABLE `laundry_packages` ADD CONSTRAINT `laundry_packages_owner_id_fkey` FOREIGN KEY (`owner_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `laundry_packages` ADD CONSTRAINT `laundry_packages_owner_id_fkey` FOREIGN KEY (`owner_id`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE `laundry_orders` ADD CONSTRAINT `laundry_orders_owner_id_fkey` FOREIGN KEY (`owner_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `laundry_orders` ADD CONSTRAINT `laundry_orders_owner_id_fkey` FOREIGN KEY (`owner_id`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `laundry_orders` ADD CONSTRAINT `laundry_orders_package_id_fkey` FOREIGN KEY (`package_id`) REFERENCES `laundry_packages`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;

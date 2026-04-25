@@ -9,13 +9,15 @@ import {
   BUILDING_POS_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   HOME_FINANCE_BASIC_MODULE_SLUG,
-  LAUNDRY_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
 } from "@/lib/modules/config";
-import { CHAT_AI_DASHBOARD_HREF } from "@/lib/dashboard/chat-ai-href";
 import { SYSTEM_MAP_CATALOG_SLUG } from "@/lib/modules/system-map-catalog";
+import { CHAT_AI_DASHBOARD_HREF, resolveDashboardNavLinkHref } from "@/lib/dashboard/chat-ai-href";
+
+/** slug ใน `module_list` ที่ชี้หน้า Chat AI — ต้องได้ href เดียวกับเมนูพื้นฐาน (กันซ้ำ / mismatch) */
+const CHAT_AI_MODULE_SLUGS = new Set(["chatai", "chat-ai", "personal-ai"]);
 
 export type DashboardNavItem = {
   href: string;
@@ -24,6 +26,7 @@ export type DashboardNavItem = {
 };
 
 export function dashboardModuleHref(slug: string): string {
+  if (CHAT_AI_MODULE_SLUGS.has(slug)) return CHAT_AI_DASHBOARD_HREF;
   if (slug === SYSTEM_MAP_CATALOG_SLUG) return "/dashboard/explore";
   if (slug === DORMITORY_MODULE_SLUG) return "/dashboard/dormitory";
   if (slug === ATTENDANCE_MODULE_SLUG) return "/dashboard/attendance";
@@ -33,7 +36,6 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === MQTT_SERVICE_MODULE_SLUG) return "/dashboard/mqtt-service";
   if (slug === BUILDING_POS_MODULE_SLUG) return "/dashboard/building-pos";
   if (slug === VILLAGE_MODULE_SLUG) return "/dashboard/village";
-  if (slug === LAUNDRY_MODULE_SLUG) return "/dashboard/laundry";
   if (slug === PARKING_MODULE_SLUG) return "/dashboard/parking";
   return `/dashboard/modules/${slug}`;
 }
@@ -49,7 +51,7 @@ export const DASHBOARD_NAV: DashboardNavItem[] = [
   { href: "/dashboard/profile", label: "โปรไฟล์" },
   { href: "/dashboard/plans", label: "แพ็กเกจ" },
   { href: "/dashboard/chat", label: "แชท" },
-  { href: CHAT_AI_DASHBOARD_HREF, label: "Chat AI · น้องมาเวล" },
+  { href: CHAT_AI_DASHBOARD_HREF, label: "Chat AI" },
   { href: "/dashboard/admin", label: "ศูนย์แอดมิน", adminOnly: true },
 ];
 
@@ -93,11 +95,14 @@ export function buildDashboardNavGroups(
     },
   ];
 
-  const serviceItems: SubscribedModuleLink[] = subscribedModules.map((m) => ({
-    href: dashboardModuleHref(m.slug),
-    label: m.title,
-    groupId: m.groupId,
-  }));
+  const basicResolved = new Set(basicItems.map((item) => resolveDashboardNavLinkHref(item.href)));
+  const serviceItems: SubscribedModuleLink[] = subscribedModules
+    .map((m) => ({
+      href: dashboardModuleHref(m.slug),
+      label: m.title,
+      groupId: m.groupId,
+    }))
+    .filter((item) => !basicResolved.has(resolveDashboardNavLinkHref(item.href)));
 
   if (serviceItems.length > 0) {
     groups.push({

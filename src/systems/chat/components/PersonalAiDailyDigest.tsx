@@ -1,46 +1,61 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { AppEmptyState, appTemplateOutlineButtonClass } from "@/components/app-templates";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { AppEmptyState } from "@/components/app-templates";
+import {
+  PERSONAL_AI_CHAT_DIGEST_ASIDE_CLASS,
+  PERSONAL_AI_CHAT_DIGEST_INNER_CLASS,
+  PERSONAL_AI_DIGEST_ASIDE_ARIA_LABEL,
+} from "@/systems/chat/personal-ai-chat-shell";
 import { cn } from "@/lib/cn";
-import type { DailyDigestResponse, DailyReminderItem } from "@/lib/reminders/daily-reminder-types";
+import type {
+  DailyDigestFinance,
+  DailyDigestNote,
+  DailyDigestResponse,
+  DailyReminderItem,
+} from "@/lib/reminders/daily-reminder-types";
+import {
+  DIGEST_HEADLINE_MAX,
+  digestReminderDisplay,
+  headlineWithoutDuplicateTime,
+  isGenericQuickNoteAttribution,
+  splitDigestText,
+  stripDigestNoise,
+} from "@/lib/reminders/personal-digest-text";
 import { formatActivityTimeThLabel } from "@/lib/reminders/activity-time-from-text";
-import { formatBangkokDigestDateLabel } from "@/lib/reminders/bangkok-calendar";
+import { formatBangkokDigestDateLabel, formatBangkokYmd } from "@/lib/reminders/bangkok-calendar";
+import { PersonalDigestItemDialog, type PersonalDigestItemDialogPayload } from "./PersonalDigestItemDialog";
 
 const NOTES_SIDEBAR_MAX = 5;
-const DIGEST_HEADLINE_MAX = 56;
-const DIGEST_DETAIL_MAX = 120;
-const GENERIC_NOTE_DESC = "จากบันทึกรวดเร็ว (จดว่า…)";
+
+const DIGEST_SESSION_STORAGE_KEY = "mia-personal-daily-digest.v1";
+
+function readCachedDigest(): DailyDigestResponse | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(DIGEST_SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { payload?: DailyDigestResponse };
+    const p = parsed?.payload;
+    if (!p || typeof p.todayYmd !== "string" || !Array.isArray(p.today)) return null;
+    if (p.todayYmd !== formatBangkokYmd()) return null;
+    return p;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedDigest(payload: DailyDigestResponse): void {
+  try {
+    sessionStorage.setItem(DIGEST_SESSION_STORAGE_KEY, JSON.stringify({ payload }));
+  } catch {
+    /* quota / private mode */
+  }
+}
 
 const DIGEST_BTN_SOFT =
   "app-btn-soft rounded-xl border border-[#dcd8f0] text-[11px] font-semibold text-[#4d47b6] shadow-sm transition hover:bg-[#f4f3ff] disabled:opacity-50";
-
-function isGenericQuickNoteAttribution(s: string): boolean {
-  const t = s.trim();
-  if (t === GENERIC_NOTE_DESC) return true;
-  return /จากบันทึกรวดเร็ว\s*\(จดว่า\.{1,3}\)/u.test(t);
-}
-
-/** ตัด ** และช่องว่างส่วนเกินสำหรับข้อความในแถบสรุป */
-function stripDigestNoise(s: string): string {
-  return s
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/** ถ้ามีแถวเวลาด้านบนแล้ว ตัดเลขเวลาซ้ำออกจากหัวข้อ */
-function headlineWithoutDuplicateTime(headline: string, timeLabel: string | null): string {
-  let h = stripDigestNoise(headline);
-  if (!timeLabel || !h) return h;
-  const hm = timeLabel.replace(/\s*น\.?$/u, "").trim();
-  if (!/^\d{1,2}:\d{2}$/.test(hm)) return h;
-  const re = new RegExp(`^${hm}\\s*น\\.?\\s*`, "iu");
-  h = h.replace(re, "").trim();
-  return h;
-}
 
 /**
  * โทนสีแยกหมวด — ใช้แถบซ้าย + หัวข้อ + พื้นการ์ดรายการเท่านั้น (ไม่ไล่ไล่หลายชั้น)
@@ -61,10 +76,11 @@ const DIGEST_VARIANT = {
     title: "text-amber-900",
     itemSurface: "border-amber-100/85 bg-gradient-to-br from-amber-50/80 to-white",
   },
-  finance: {
-    accent: "border-l-emerald-500",
-    title: "text-emerald-900",
-    itemSurface: "border-emerald-100/80 bg-gradient-to-br from-emerald-50/50 to-white",
+  /** สรุปจำนวนรายการรายรับ–รายจ่ายวันนี้ */
+  financeEntries: {
+    accent: "border-l-teal-500",
+    title: "text-teal-900",
+    itemSurface: "border-teal-100/75 bg-gradient-to-br from-teal-50/45 to-white",
   },
   notes: {
     accent: "border-l-[#0000BF]",
@@ -87,75 +103,139 @@ function formatBaht(n: number): string {
   return n.toLocaleString("th-TH", { maximumFractionDigits: 0 });
 }
 
-/** หัวข้อสั้น + รายละเอียดจาง (ตัด …) สำหรับข้อความยาว / โน้ตจากแชท */
-function splitDigestText(body: string | null | undefined): { headline: string; detail: string | null } {
-  const raw = String(body ?? "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
-  if (!raw) return { headline: "", detail: null };
-
-  const reqBlock =
-    raw.match(/คำขอ:\s*([\s\S]*?)(?:\r?\n\s*-{3,}|\r?\n\r?\n\s*-{3,})/u) ??
-    raw.match(/คำขอ:\s*([\s\S]*?)\s+-{3,}\s+/u);
-  if (reqBlock?.[1]) {
-    const head = reqBlock[1].replace(/\s+/g, " ").trim();
-    const headline =
-      head.length > DIGEST_HEADLINE_MAX ? `${head.slice(0, DIGEST_HEADLINE_MAX)}…` : head;
-    const dashIdx = raw.search(/\s+-{3,}\s+/u);
-    let tail =
-      dashIdx >= 0
-        ? raw
-            .slice(dashIdx)
-            .replace(/^\s*-{3,}\s*/u, "")
-            .trim()
-        : "";
-    tail = tail.replace(/\s+/g, " ").trim();
-    const detailRaw =
-      tail.length > DIGEST_DETAIL_MAX ? `${tail.slice(0, DIGEST_DETAIL_MAX).trim()}…` : tail.length ? tail : null;
-    const detail = detailRaw ? stripDigestNoise(detailRaw) : null;
-    return { headline: stripDigestNoise(headline), detail };
+/** สรุปจำนวนรายการรายรับ–รายจ่ายวันนี้ในแถบซ้าย */
+function FinanceTodayEntriesOverviewPanel({ finance }: { finance: DailyDigestFinance }) {
+  if (!finance.available) {
+    return (
+      <AppEmptyState className="rounded-xl border border-dashed border-teal-200/80 bg-white/75 px-3 py-4 text-center text-xs leading-relaxed text-slate-600 shadow-inner">
+        สรุปรายการใช้ได้เมื่อเข้าด้วยบัญชีเจ้าของ
+      </AppEmptyState>
+    );
   }
 
-  if (raw.includes("\n")) {
-    let lines = raw
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    if (lines[0] && /^แผนงานจากแชท AI$/u.test(lines[0])) {
-      lines = lines.slice(1);
-    }
-    lines = lines.filter((l) => !isGenericQuickNoteAttribution(l));
-    const first = lines[0] ?? "";
-    const headlineRaw =
-      first.length > DIGEST_HEADLINE_MAX ? `${first.slice(0, DIGEST_HEADLINE_MAX)}…` : first;
-    const headline = stripDigestNoise(headlineRaw);
-    const rest = stripDigestNoise(lines.slice(1).join(" ").trim());
-    const detailRaw =
-      rest.length > DIGEST_DETAIL_MAX ? `${rest.slice(0, DIGEST_DETAIL_MAX).trim()}…` : rest.length ? rest : null;
-    const detail = detailRaw ? stripDigestNoise(detailRaw) : null;
-    return { headline, detail };
-  }
+  const income = finance.incomeBaht;
+  const expense = finance.expenseBaht;
+  const entries = finance.entries ?? [];
+  const incomeEntryCount = entries.filter((e) => e.type === "INCOME").length;
+  const expenseEntryCount = entries.filter((e) => e.type === "EXPENSE").length;
 
-  const single = stripDigestNoise(raw.replace(/\s+/g, " ").trim());
-  if (single.length <= DIGEST_HEADLINE_MAX) return { headline: single, detail: null };
-  return {
-    headline: `${single.slice(0, DIGEST_HEADLINE_MAX)}…`,
-    detail: stripDigestNoise(`${single.slice(DIGEST_HEADLINE_MAX).trim()}…`),
-  };
+  return (
+    <div className="overflow-hidden rounded-2xl border border-teal-200/70 bg-gradient-to-br from-teal-50/45 via-white to-cyan-50/25 p-3 shadow-md shadow-teal-950/[0.04] ring-1 ring-white/80">
+      <div className="grid grid-cols-3 gap-1.5 text-center">
+        <div className="rounded-xl border border-white/80 bg-white/90 px-1.5 py-2 shadow-sm">
+          <p className="text-lg font-bold tabular-nums leading-none text-slate-800">{entries.length}</p>
+          <p className="mt-1 text-[9px] font-medium text-slate-500">ทั้งหมด</p>
+        </div>
+        <div className="rounded-xl border border-emerald-100/90 bg-emerald-50/50 px-1.5 py-2 shadow-sm">
+          <p className="text-lg font-bold tabular-nums leading-none text-emerald-700">{incomeEntryCount}</p>
+          <p className="mt-1 text-[9px] font-medium text-emerald-800/80">รายรับ</p>
+        </div>
+        <div className="rounded-xl border border-rose-100/90 bg-rose-50/40 px-1.5 py-2 shadow-sm">
+          <p className="text-lg font-bold tabular-nums leading-none text-rose-700">{expenseEntryCount}</p>
+          <p className="mt-1 text-[9px] font-medium text-rose-800/75">รายจ่าย</p>
+        </div>
+      </div>
+      {income > 0 ? (
+        <p className="mt-2.5 border-t border-teal-100/80 pt-2 text-center text-[11px] leading-snug text-slate-600">
+          ใช้จากรายรับวันนี้ไป{" "}
+          <span className="font-bold tabular-nums text-teal-800">
+            {Math.min(100, Math.round((expense / income) * 100))}%
+          </span>
+          {expense > income ? (
+            <span className="block text-[10px] font-medium text-amber-800/90">เกินรายรับ — ตรวจรายการหรือเปิดหน้าบัญชีจากเมนู</span>
+          ) : null}
+        </p>
+      ) : entries.length > 0 ? (
+        <p className="mt-2.5 border-t border-teal-100/80 pt-2 text-center text-[10px] text-slate-500">
+          ยังไม่มีรายรับวันนี้ — แสดงเฉพาะรายจ่าย
+        </p>
+      ) : (
+        <p className="mt-2.5 border-t border-teal-100/80 pt-2 text-center text-[10px] text-slate-500">
+          ลงรายการในบัญชีเพื่อดูสัดส่วนที่นี่
+        </p>
+      )}
+
+      {entries.length > 0 ? (
+        <div className="mt-2.5 border-t border-teal-100/80 pt-2">
+          <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-wide text-teal-900/70">รายละเอียดรายการ</p>
+          <ul className="m-0 max-h-[9.5rem] list-none space-y-1 overflow-y-auto overscroll-contain p-0 [scrollbar-gutter:stable] pr-0.5">
+            {entries.slice(0, 10).map((e) => {
+              const titleShort = e.title.length > 36 ? `${e.title.slice(0, 36)}…` : e.title;
+              return (
+                <li
+                  key={e.id}
+                  className="flex min-w-0 items-start justify-between gap-1.5 rounded-lg border border-teal-100/50 bg-white/70 px-2 py-1.5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-medium leading-snug text-slate-700" title={e.title}>
+                      {titleShort}
+                    </p>
+                    {e.categoryLabel && e.categoryLabel !== "อื่นๆ" ? (
+                      <p className="mt-0.5 line-clamp-1 text-[9px] text-slate-400">{e.categoryLabel}</p>
+                    ) : null}
+                  </div>
+                  <p
+                    className={cn(
+                      "shrink-0 text-[10px] font-bold tabular-nums leading-none",
+                      e.type === "INCOME" ? "text-emerald-700" : "text-rose-700",
+                    )}
+                  >
+                    {e.type === "INCOME" ? "+" : "−"}฿{formatBaht(e.amountBaht)}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
-function digestReminderDisplay(item: DailyReminderItem): { headline: string; detail: string | null } {
-  const titleSafe = String(item.title ?? "");
-  if (item.source === "personal_note") {
-    return splitDigestText(titleSafe);
-  }
-  const desc = String(item.description ?? "").trim();
-  if (desc && !isGenericQuickNoteAttribution(desc)) {
-    const th = titleSafe.trim();
-    const headline =
-      th.length > DIGEST_HEADLINE_MAX ? `${th.slice(0, DIGEST_HEADLINE_MAX)}…` : th;
-    const detail = desc.length > DIGEST_DETAIL_MAX ? `${desc.slice(0, DIGEST_DETAIL_MAX)}…` : desc;
-    return { headline, detail };
-  }
-  return splitDigestText(titleSafe);
+function DigestNoteCards({
+  notes,
+  onSelect,
+}: {
+  notes: DailyDigestNote[];
+  onSelect: (note: DailyDigestNote) => void;
+}) {
+  return (
+    <ul className="m-0 list-none space-y-2 p-0">
+      {notes.map((n) => {
+        const noteActivity = formatActivityTimeThLabel(n.content);
+        let { headline, detail } = splitDigestText(n.content);
+        headline = headlineWithoutDuplicateTime(headline, noteActivity);
+        if (!headline.trim()) {
+          headline = stripDigestNoise(String(n.content ?? "").slice(0, DIGEST_HEADLINE_MAX));
+        }
+        return (
+          <li key={n.id} className="list-none p-0">
+            <button
+              type="button"
+              onClick={() => onSelect(n)}
+              className={cn(
+                DIGEST_ITEM_CARD,
+                DIGEST_VARIANT.notes.itemSurface,
+                "w-full text-left",
+                "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#0000BF]/30",
+              )}
+            >
+              <div className="flex min-w-0 flex-col gap-1.5">
+                {noteActivity ? (
+                  <span className="inline-flex w-fit shrink-0 items-center rounded-md border border-slate-200/80 bg-white px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-slate-700">
+                    {noteActivity}
+                  </span>
+                ) : null}
+                <p className="break-words text-[13px] font-medium leading-snug text-slate-900">{headline}</p>
+                {detail ? <p className="line-clamp-2 text-[11px] leading-relaxed text-slate-500">{detail}</p> : null}
+                <p className="text-[10px] text-slate-500">{formatBangkokDigestDateLabel(n.createdAt)}</p>
+              </div>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 function SidebarSectionTitle({ children, className }: { children: ReactNode; className?: string }) {
@@ -177,26 +257,30 @@ function DigestSection({
   variant: keyof typeof DIGEST_VARIANT;
   title: string;
   titleExtra?: ReactNode;
-  /** เน้นหัวข้อหมวด (เช่น บัญชีวันนี้) ให้แยกจากเนื้อหาด้านล่าง */
+  /** เน้นหัวข้อหมวดให้แยกจากเนื้อหาด้านล่าง */
   titleClassName?: string;
   /** ปรับพื้น body รายหมวด */
   bodyClassName?: string;
   children: ReactNode;
 }) {
   const v = DIGEST_VARIANT[variant];
+  const dotBg =
+    variant === "today"
+      ? "bg-[#6366f1]"
+      : variant === "tomorrow"
+        ? "bg-[#4f46e5]"
+        : variant === "pending"
+          ? "bg-amber-500"
+          : variant === "financeEntries"
+            ? "bg-teal-500"
+            : "bg-[#0000BF]";
   return (
     <section className={cn(DIGEST_SECTION_SHELL, "border-l-[3px]", v.accent)}>
       <div className={DIGEST_SECTION_HEAD}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <span
-              className={cn("h-2 w-2 shrink-0 rounded-full ring-2 ring-white shadow-sm", {
-                "bg-[#6366f1]": variant === "today",
-                "bg-[#4f46e5]": variant === "tomorrow",
-                "bg-amber-500": variant === "pending",
-                "bg-emerald-500": variant === "finance",
-                "bg-[#0000BF]": variant === "notes",
-              })}
+              className={cn("h-2 w-2 shrink-0 rounded-full ring-2 ring-white shadow-sm", dotBg)}
               aria-hidden
             />
             <SidebarSectionTitle className={cn("min-w-0", v.title, titleClassName)}>{title}</SidebarSectionTitle>
@@ -213,11 +297,13 @@ function ReminderLine({
   item,
   showPersonalPlanDueRow,
   cardClassName,
+  onSelect,
 }: {
   item: DailyReminderItem;
   showPersonalPlanDueRow?: boolean;
   /** ถ้ามี แสดงเป็นการ์ดแยกรายการ (เช่น วันนี้ / พรุ่งนี้) */
   cardClassName?: string;
+  onSelect?: (item: DailyReminderItem) => void;
 }) {
   const titleSafe = String(item.title ?? "");
   const dueTimeSafe = String(item.dueTime ?? "").trim();
@@ -246,24 +332,44 @@ function ReminderLine({
 
   const surface = cardClassName?.trim() ? cardClassName : "border-slate-200/90 bg-white";
 
-  return (
-    <li className={cn(DIGEST_ITEM_CARD, surface)}>
-      <div className="flex min-w-0 flex-col gap-1.5">
-        {timeLabel ? (
-          <span className="inline-flex w-fit shrink-0 items-center rounded-md border border-slate-200/80 bg-white px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-slate-700">
-            {timeLabel}
-          </span>
+  const content = (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      {timeLabel ? (
+        <span className="inline-flex w-fit shrink-0 items-center rounded-md border border-slate-200/80 bg-white px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-slate-700">
+          {timeLabel}
+        </span>
+      ) : null}
+      <div className={cn("min-w-0", done && "text-slate-400 line-through")}>
+        <p className="break-words text-[13px] font-medium leading-snug text-slate-900">{headline}</p>
+        {detail ? (
+          <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-500">{detail}</p>
         ) : null}
-        <div className={cn("min-w-0", done && "text-slate-400 line-through")}>
-          <p className="break-words text-[13px] font-medium leading-snug text-slate-900">{headline}</p>
-          {detail ? (
-            <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-500">{detail}</p>
-          ) : null}
-        </div>
-        {planDueRow}
       </div>
-    </li>
+      {planDueRow}
+    </div>
   );
+
+  if (onSelect) {
+    return (
+      <li className="list-none p-0">
+        <button
+          type="button"
+          onClick={() => onSelect(item)}
+          className={cn(
+            DIGEST_ITEM_CARD,
+            surface,
+            "w-full text-left",
+            "cursor-pointer outline-none transition focus-visible:ring-2 focus-visible:ring-[#0000BF]/30",
+            done && "opacity-90",
+          )}
+        >
+          {content}
+        </button>
+      </li>
+    );
+  }
+
+  return <li className={cn(DIGEST_ITEM_CARD, surface)}>{content}</li>;
 }
 
 function ReminderList({
@@ -271,11 +377,13 @@ function ReminderList({
   emptyLabel,
   showPersonalPlanDueRow,
   itemCardClassName,
+  onItemSelect,
 }: {
   items: DailyReminderItem[];
   emptyLabel: string;
   showPersonalPlanDueRow?: boolean;
   itemCardClassName?: string;
+  onItemSelect?: (item: DailyReminderItem) => void;
 }) {
   if (!items.length) {
     return (
@@ -292,9 +400,32 @@ function ReminderList({
           item={item}
           showPersonalPlanDueRow={showPersonalPlanDueRow}
           cardClassName={itemCardClassName}
+          onSelect={onItemSelect}
         />
       ))}
     </ul>
+  );
+}
+
+/** แถบสรุปรายวัน (ซ้าย) — ใช้ร่วมกับ `ChatAiSkeleton` ให้ได้ `<aside id="personal-ai-digest">` ตัวเดียวกันทุกที่ */
+export function PersonalAiDigestAsideFrame({
+  className,
+  children,
+  suppressHydrationWarning,
+}: {
+  className?: string;
+  children: ReactNode;
+  suppressHydrationWarning?: boolean;
+}) {
+  return (
+    <aside
+      id="personal-ai-digest"
+      className={cn(PERSONAL_AI_CHAT_DIGEST_ASIDE_CLASS, className)}
+      aria-label={PERSONAL_AI_DIGEST_ASIDE_ARIA_LABEL}
+      suppressHydrationWarning={suppressHydrationWarning}
+    >
+      <div className={PERSONAL_AI_CHAT_DIGEST_INNER_CLASS}>{children}</div>
+    </aside>
   );
 }
 
@@ -303,69 +434,93 @@ export function PersonalAiDailyDigest({
   /** เพิ่มค่าทุกครั้งหลังแชทสำเร็จ เพื่อดึงบันทึก/ตารางใหม่ */
   refreshKey,
   onOpenAllNotes,
+  /** หลังแก้ไขโน้ตหรือซ่อนจากแถบสรุป — รีเฟรช digest */
+  onNotesChanged,
 }: {
   className?: string;
   refreshKey?: number;
   onOpenAllNotes?: () => void;
+  onNotesChanged?: () => void;
 }) {
-  const [hasMounted, setHasMounted] = useState(false);
+  /** SSR + เฟรม hydrate แรกต้องเป็น `null` เสมอ — อ่าน sessionStorage หลัง mount เท่านั้น (กัน mismatch) */
   const [data, setData] = useState<DailyDigestResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [digestDialog, setDigestDialog] = useState<PersonalDigestItemDialogPayload | null>(null);
+  const fetchAbortRef = useRef<AbortController | null>(null);
+  const loadGenerationRef = useRef(0);
+
+  const openDigestReminder = useCallback((item: DailyReminderItem) => {
+    setDigestDialog({ type: "reminder", item });
+  }, []);
+  const openDigestNote = useCallback((note: DailyDigestNote) => {
+    setDigestDialog({ type: "note", note });
+  }, []);
+
+  useLayoutEffect(() => {
+    const cached = readCachedDigest();
+    if (cached) setData(cached);
+  }, []);
 
   const load = useCallback(async () => {
+    fetchAbortRef.current?.abort();
+    const ac = new AbortController();
+    fetchAbortRef.current = ac;
+    const gen = ++loadGenerationRef.current;
+
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/reminders?_=${Date.now()}`, {
         credentials: "include",
         cache: "no-store",
+        signal: ac.signal,
       });
       const json = (await res.json()) as DailyDigestResponse & { error?: string };
+      if (gen !== loadGenerationRef.current) return;
       if (!res.ok) {
         setError(json.error ?? "โหลดไม่สำเร็จ");
-        setData(null);
         return;
       }
       setData(json);
-    } catch {
+      writeCachedDigest(json);
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      if (gen !== loadGenerationRef.current) return;
       setError("เครือข่ายมีปัญหา");
-      setData(null);
     } finally {
-      setLoading(false);
+      if (gen === loadGenerationRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    setHasMounted(true);
+    return () => {
+      fetchAbortRef.current?.abort();
+    };
   }, []);
 
   useEffect(() => {
-    if (!hasMounted) return;
     void load();
-  }, [hasMounted, load, refreshKey]);
+  }, [load, refreshKey]);
 
-  const showBodyLoading = !hasMounted || (loading && !data && !error);
+  const showBodyLoading = loading && !data && !error;
 
   return (
-    <aside
-      id="personal-ai-digest"
-      className={cn(
-        "flex max-h-[min(52vh,28rem)] shrink-0 flex-col overflow-hidden rounded-2xl border border-[#dcd7f0] bg-gradient-to-b from-[#faf9ff] via-[#f3f1fc] to-[#e8e4f7] shadow-xl shadow-indigo-950/[0.09] ring-1 ring-white/70 lg:h-full lg:max-h-none lg:min-h-0 lg:w-72 lg:min-w-[18rem] xl:w-80",
-        className,
-      )}
-    >
-      <div className="shrink-0 p-3 pb-2">
+    <>
+    <PersonalAiDigestAsideFrame className={className}>
+      <header className="shrink-0 p-3 pb-2">
         <div className="rounded-2xl border border-white/90 bg-white/92 px-3.5 py-3 shadow-lg shadow-indigo-950/[0.08] backdrop-blur-sm">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-[#2e2a58]">สรุปรายวัน</p>
-              <p className="mt-0.5 text-[10px] font-medium text-[#66638c]/90">งาน · บัญชี · โน้ต</p>
+              <p className="mt-0.5 text-[10px] font-medium text-[#66638c]/90">งาน · รายการ · โน้ต</p>
             </div>
             <button
               type="button"
               onClick={() => void load()}
-              disabled={!hasMounted || loading}
+              disabled={loading}
               className={cn(DIGEST_BTN_SOFT, "shrink-0 px-2.5 py-1.5")}
             >
               {loading ? "…" : "รีเฟรช"}
@@ -384,10 +539,17 @@ export function PersonalAiDailyDigest({
             </button>
           ) : null}
         </div>
-      </div>
+      </header>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 pb-3 pt-0">
-        {hasMounted && error ? (
+      <section
+        className={cn(
+          "min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 pb-3 pt-0 [scrollbar-gutter:stable] transition-opacity duration-150",
+          loading && data ? "opacity-90" : "opacity-100",
+        )}
+        aria-busy={loading && Boolean(data)}
+        aria-label="รายการสรุป รายการวันนี้ และโน้ต"
+      >
+        {error ? (
           <p className="rounded-2xl border border-amber-200/90 bg-amber-50/95 px-3 py-2.5 text-xs font-medium text-amber-950 shadow-sm">
             {error}
           </p>
@@ -405,6 +567,7 @@ export function PersonalAiDailyDigest({
                 emptyLabel="ว่าง"
                 showPersonalPlanDueRow={false}
                 itemCardClassName={DIGEST_VARIANT.today.itemSurface}
+                onItemSelect={openDigestReminder}
               />
             </DigestSection>
 
@@ -414,6 +577,7 @@ export function PersonalAiDailyDigest({
                 emptyLabel="ว่าง"
                 showPersonalPlanDueRow={false}
                 itemCardClassName={DIGEST_VARIANT.tomorrow.itemSurface}
+                onItemSelect={openDigestReminder}
               />
             </DigestSection>
 
@@ -423,104 +587,12 @@ export function PersonalAiDailyDigest({
                 emptyLabel="ไม่มีงานค้าง"
                 showPersonalPlanDueRow
                 itemCardClassName={DIGEST_VARIANT.pending.itemSurface}
+                onItemSelect={openDigestReminder}
               />
             </DigestSection>
 
-            <DigestSection
-              variant="finance"
-              title="บัญชีวันนี้"
-              titleClassName="!text-[14px] !font-bold !tracking-tight !text-emerald-950"
-              bodyClassName="border-t border-emerald-100/60 bg-gradient-to-b from-emerald-50/35 via-[#faf9ff]/50 to-[#f8f7fd]/30 pt-3.5"
-            >
-              <div className="flex flex-col gap-4">
-                {data.financeToday.available ? (
-                  <div className="flex flex-col gap-3.5">
-                    <div>
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-800/75">
-                        สรุปวันนี้
-                      </p>
-                      <div className="flex items-center justify-between gap-4 rounded-xl border border-emerald-200/80 bg-gradient-to-r from-emerald-50/90 via-white to-rose-50/50 px-4 py-3.5 text-sm text-slate-800 shadow-md shadow-emerald-900/[0.06]">
-                        <div className="min-w-0 text-left">
-                          <span className="text-[11px] font-medium text-slate-500">รับ</span>
-                          <span className="ml-1.5 text-base font-bold tabular-nums text-emerald-700">
-                            {formatBaht(data.financeToday.incomeBaht)}
-                          </span>
-                        </div>
-                        <div className="min-w-0 shrink-0 text-right">
-                          <span className="text-[11px] font-medium text-slate-500">จ่าย</span>
-                          <span className="ml-1.5 text-base font-bold tabular-nums text-rose-700">
-                            {formatBaht(data.financeToday.expenseBaht)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    {(data.financeToday.entries ?? []).length > 0 ? (
-                      <div>
-                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                          รายการ
-                        </p>
-                        <ul className="m-0 list-none space-y-3 p-0">
-                          {(data.financeToday.entries ?? []).map((e) => {
-                            const financeActivity = formatActivityTimeThLabel(`${e.title} ${e.categoryLabel}`);
-                            return (
-                              <li
-                                key={e.id}
-                                className={cn(
-                                  DIGEST_ITEM_CARD,
-                                  DIGEST_VARIANT.finance.itemSurface,
-                                  "border-slate-200/90 px-3.5 py-3 shadow-sm",
-                                )}
-                              >
-                                <div className="flex min-w-0 flex-col gap-1.5">
-                                  {financeActivity ? (
-                                    <span className="inline-flex w-fit shrink-0 items-center rounded-md border border-slate-200/70 bg-white/90 px-1.5 py-px font-mono text-[9px] font-medium tabular-nums text-slate-500">
-                                      {financeActivity}
-                                    </span>
-                                  ) : null}
-                                  <div
-                                    className={cn(
-                                      "text-[15px] font-bold tabular-nums leading-none tracking-tight",
-                                      e.type === "INCOME" ? "text-emerald-700" : "text-rose-700",
-                                    )}
-                                  >
-                                    {e.type === "INCOME" ? "+" : "−"}
-                                    {formatBaht(e.amountBaht)}
-                                  </div>
-                                  <p className="min-w-0 break-words text-[10px] font-normal leading-relaxed text-slate-600">
-                                    {e.title}
-                                  </p>
-                                  {e.categoryLabel && e.categoryLabel !== "อื่นๆ" ? (
-                                    <p className="line-clamp-1 text-[9px] font-normal leading-normal text-slate-400">
-                                      {e.categoryLabel}
-                                    </p>
-                                  ) : null}
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </div>
-                    ) : (
-                      <p className="rounded-xl border border-dashed border-slate-200/90 bg-white/60 px-3 py-4 text-center text-[11px] leading-relaxed text-slate-500 shadow-inner">
-                        ยังไม่มีรายการ
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <AppEmptyState className="rounded-xl border border-dashed border-slate-200/90 bg-white/60 px-3 py-5 text-center text-[11px] leading-relaxed shadow-inner">
-                    ไม่มีสิทธิ์บัญชี
-                  </AppEmptyState>
-                )}
-                <Link
-                  href="/dashboard/home-finance"
-                  className={cn(
-                    appTemplateOutlineButtonClass,
-                    "flex w-full items-center justify-center py-3 text-xs font-semibold",
-                  )}
-                >
-                  บัญชี
-                </Link>
-              </div>
+            <DigestSection variant="financeEntries" title="ภาพรวมรายการวันนี้">
+              <FinanceTodayEntriesOverviewPanel finance={data.financeToday} />
             </DigestSection>
 
             <DigestSection
@@ -539,37 +611,23 @@ export function PersonalAiDailyDigest({
                   ยังไม่มี — พิมพ์ <strong>จดว่า</strong> หรือขอช่วย <strong>วางแผน/จัดตาราง</strong> ในแชท
                 </AppEmptyState>
               ) : (
-                <ul className="m-0 list-none space-y-2 p-0">
-                  {data.notes.slice(0, NOTES_SIDEBAR_MAX).map((n) => {
-                    const noteActivity = formatActivityTimeThLabel(n.content);
-                    let { headline, detail } = splitDigestText(n.content);
-                    headline = headlineWithoutDuplicateTime(headline, noteActivity);
-                    if (!headline.trim()) {
-                      headline = stripDigestNoise(String(n.content ?? "").slice(0, DIGEST_HEADLINE_MAX));
-                    }
-                    return (
-                      <li key={n.id} className={cn(DIGEST_ITEM_CARD, DIGEST_VARIANT.notes.itemSurface)}>
-                        <div className="flex min-w-0 flex-col gap-1.5">
-                          {noteActivity ? (
-                            <span className="inline-flex w-fit shrink-0 items-center rounded-md border border-slate-200/80 bg-white px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-slate-700">
-                              {noteActivity}
-                            </span>
-                          ) : null}
-                          <p className="break-words text-[13px] font-medium leading-snug text-slate-900">{headline}</p>
-                          {detail ? (
-                            <p className="line-clamp-2 text-[11px] leading-relaxed text-slate-500">{detail}</p>
-                          ) : null}
-                          <p className="text-[10px] text-slate-500">{formatBangkokDigestDateLabel(n.createdAt)}</p>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <DigestNoteCards notes={data.notes.slice(0, NOTES_SIDEBAR_MAX)} onSelect={openDigestNote} />
               )}
             </DigestSection>
           </>
         ) : null}
-      </div>
-    </aside>
+      </section>
+    </PersonalAiDigestAsideFrame>
+    <PersonalDigestItemDialog
+      open={Boolean(digestDialog)}
+      payload={digestDialog}
+      onClose={() => setDigestDialog(null)}
+      onApplied={() => {
+        onNotesChanged?.();
+        void load();
+        setDigestDialog(null);
+      }}
+    />
+    </>
   );
 }

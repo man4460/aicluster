@@ -1,18 +1,27 @@
 /**
- * Chat AI (น้องมาเวล)
- *
- * - ใช้ `CHAT_AI_DASHBOARD_HREF` ใน `<Link>` / เมนู / การ์ด — นี่คือ URL หลัก
- * - `CHAT_AI_LEGACY_DASHBOARD_HREF` ยัง redirect มาที่หลัก (next.config) และยังอยู่ใน token exempt
+ * Chat AI (น้องมาเวล) — เส้นทางเดียว: `/dashboard/chat-ai`
  */
 export const CHAT_AI_DASHBOARD_HREF = "/dashboard/chat-ai" as const;
-export const CHAT_AI_LEGACY_DASHBOARD_HREF = "/dashboard/chatai" as const;
 
-/** pathname หรือ href ชี้หน้า Chat AI หรือไม่ (รวม path เก่า) */
+/** path เก่าที่อาจค้างใน cache — ไม่ใช้ในเมนู แต่ต้องจับให้ active / แปลง href */
+const LEGACY_CHATAI_PATH = /^\/dashboard\/chatai(\/|$)/;
+
+/** pathname หรือ href ชี้หน้า Chat AI (รวม URL สั้นเก่าที่อาจเหลือใน history) */
 export function isChatAiDashboardPath(pathOrHref: string): boolean {
-  return (
-    pathOrHref === CHAT_AI_DASHBOARD_HREF ||
-    pathOrHref.startsWith(`${CHAT_AI_DASHBOARD_HREF}/`) ||
-    pathOrHref === CHAT_AI_LEGACY_DASHBOARD_HREF ||
-    pathOrHref.startsWith(`${CHAT_AI_LEGACY_DASHBOARD_HREF}/`)
-  );
+  const h = pathOrHref.trim();
+  if (LEGACY_CHATAI_PATH.test(h)) return true;
+  return h === CHAT_AI_DASHBOARD_HREF || h.startsWith(`${CHAT_AI_DASHBOARD_HREF}/`);
+}
+
+/** ใช้กับ `<Link>` / การ์ด — trim แล้วคง canonical */
+export function resolveDashboardNavLinkHref(href: string): string {
+  const h = href.trim();
+  if (LEGACY_CHATAI_PATH.test(h)) return CHAT_AI_DASHBOARD_HREF;
+  if (isChatAiDashboardPath(h)) return CHAT_AI_DASHBOARD_HREF;
+  return h;
+}
+
+/** @deprecated ใช้ {@link resolveDashboardNavLinkHref} */
+export function canonicalDashboardNavHref(href: string): string {
+  return resolveDashboardNavLinkHref(href);
 }

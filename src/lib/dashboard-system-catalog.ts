@@ -22,7 +22,7 @@ export const DASHBOARD_LIVE_SYSTEMS: DashboardSystemCatalogEntry[] = [
   { href: "/dashboard/building-pos", label: "POS ร้านอาหาร", emoji: "🍽️", moduleSlug: "building-pos" },
   { href: "/dashboard/parking", label: "ระบบเช่าที่จอดรถ", emoji: "📍", moduleSlug: "parking" },
   { href: "/dashboard/chat", label: "แชท", emoji: "💬" },
-  { href: CHAT_AI_DASHBOARD_HREF, label: "น้องมาเวล — เลขาส่วนตัว", emoji: "🌟" },
+  { href: CHAT_AI_DASHBOARD_HREF, label: "Chat AI", emoji: "🌟" },
   { href: "/dashboard/modules", label: "โมดูล / ทดลอง", emoji: "🧩" },
 ];
 
