@@ -51,7 +51,7 @@ export const DASHBOARD_NAV: DashboardNavItem[] = [
   { href: "/dashboard/profile", label: "โปรไฟล์" },
   { href: "/dashboard/plans", label: "แพ็กเกจ" },
   { href: "/dashboard/chat", label: "แชท" },
-  { href: CHAT_AI_DASHBOARD_HREF, label: "Chat AI" },
+  { href: CHAT_AI_DASHBOARD_HREF, label: "เลขาส่วนตัว" },
   { href: "/dashboard/admin", label: "ศูนย์แอดมิน", adminOnly: true },
 ];
 
