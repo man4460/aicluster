@@ -121,73 +121,6 @@ function normalizeYmd(v: string | null | undefined): string | null {
   return null;
 }
 
-/** รองรับ เช่น 20/04/69 = 20 เม.ย. 2569, 20/04/2569, 20-04-23 (2 หลัก = พ.ศ. 25xx) */
-function normalizeYmdThaiSlipVariants(t: string): string | null {
-  const s = t.replace(/\s+/g, "").trim();
-  const m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/);
-  if (!m) return null;
-  const dd = m[1]!.padStart(2, "0");
-  const mm = m[2]!.padStart(2, "0");
-  const yPart = m[3]!;
-  let yCe: number;
-  if (yPart.length === 2) {
-    const n = parseInt(yPart, 10);
-    yCe = 2500 + n - 543;
-  } else {
-    yCe = parseInt(yPart, 10);
-    if (yCe >= 2400) yCe -= 543;
-  }
-  if (!Number.isFinite(yCe) || yCe < 1990 || yCe > 2110) return null;
-  return `${yCe}-${mm}-${dd}`;
-}
-
-/** แปลง JSON สลิปรูปแบบ OpenClaw/บุคคลทั่วไป (date/amount/sender/…) ให้ตรง GlmOcrJson */
-function applySlipJsonFieldAliases(j: GlmOcrJson & Record<string, unknown>): GlmOcrJson {
-  const o = j;
-  const out: GlmOcrJson = { ...o };
-  if (!out.entryDateYmd || String(out.entryDateYmd).trim() === "") {
-    const d = o.date ?? o.entryDate;
-    if (typeof d === "string" && d.trim()) {
-      out.entryDateYmd = normalizeYmd(d) ?? normalizeYmdThaiSlipVariants(d);
-    }
-  }
-  if (out.amountBaht == null || (typeof out.amountBaht === "number" && !Number.isFinite(out.amountBaht))) {
-    const a = o.amount ?? o.total;
-    if (a != null) {
-      const n = parseAmount(a);
-      if (n != null) out.amountBaht = n;
-    }
-  }
-  if (!out.transferFrom || !String(out.transferFrom).trim()) {
-    const t = o.sender ?? o.from;
-    if (typeof t === "string" && t.trim()) out.transferFrom = t.trim().slice(0, 200);
-  }
-  if (!out.transferTo || !String(out.transferTo).trim()) {
-    const t = o.receiver ?? o.to ?? o.recipient;
-    if (typeof t === "string" && t.trim()) out.transferTo = t.trim().slice(0, 200);
-  }
-  if (!out.bankName || !String(out.bankName).trim()) {
-    const b = o.bank ?? o.bankName;
-    if (typeof b === "string" && b.trim()) out.bankName = b.trim().slice(0, 100);
-  }
-  if (!out.reference || !String(out.reference).trim()) {
-    const r = o.ref ?? o.referenceNo;
-    if (typeof r === "string" && r.trim()) out.reference = r.trim().slice(0, 100);
-  }
-  if (!out.slipNote || !String(out.slipNote).trim()) {
-    const n = o.note ?? o.slipNote;
-    if (typeof n === "string" && n.trim()) out.slipNote = n.trim().slice(0, 500);
-  }
-  if (!out.entryTime || !String(out.entryTime).trim()) {
-    const tm = o.time ?? o.entryTime;
-    if (typeof tm === "string" && tm.trim()) {
-      const short = tm.match(/([01]?\d|2[0-3]):([0-5]\d)/);
-      if (short) out.entryTime = `${short[1]!.padStart(2, "0")}:${short[2]}`;
-    }
-  }
-  return out;
-}
-
 function stripReasoningNoise(s: string): string {
   let t = s;
   const tagPairs = [
@@ -218,17 +151,15 @@ function parseGlmJson(raw: string): { value: GlmOcrJson; warning?: string } {
   if (!jsonStr) {
     return { value: {}, warning: "ไม่พบ JSON ในคำตอบ — แสดงข้อความดิบให้แก้มือ" };
   }
-  let parsed: GlmOcrJson;
   try {
-    parsed = JSON.parse(jsonStr) as GlmOcrJson;
+    return { value: JSON.parse(jsonStr) as GlmOcrJson };
   } catch {
     try {
-      parsed = JSON.parse(tryRepairJsonObjectString(jsonStr)) as GlmOcrJson;
+      return { value: JSON.parse(tryRepairJsonObjectString(jsonStr)) as GlmOcrJson };
     } catch {
       return { value: {}, warning: "แปลง JSON ไม่สำเร็จ — กรุณาแก้มือ" };
     }
   }
-  return { value: applySlipJsonFieldAliases({ ...parsed } as GlmOcrJson & Record<string, unknown>) };
 }
 
 function heuristicExtractFromSlipText(raw: string): GlmOcrJson {
