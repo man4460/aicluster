@@ -237,7 +237,7 @@ export async function POST(req: Request) {
         select: { id: true },
       });
       const syncedAt = parseSyncedAt(event.syncedAt);
-      const data = {
+      const baseFinanceData = {
         entryDate,
         type: event.entryType,
         amount: event.amount,
@@ -256,10 +256,17 @@ export async function POST(req: Request) {
         linkedVehicleId: null,
         lastSyncedAt: syncedAt,
       };
+      const updateData: Prisma.HomeFinanceEntryUpdateInput = { ...baseFinanceData };
+      const createData: Prisma.HomeFinanceEntryUncheckedCreateInput = {
+        ownerUserId,
+        externalSource: source,
+        externalId: event.externalId,
+        ...baseFinanceData,
+      };
       const row = found
-        ? await prisma.homeFinanceEntry.update({ where: { id: found.id }, data, select: { id: true } })
+        ? await prisma.homeFinanceEntry.update({ where: { id: found.id }, data: updateData, select: { id: true } })
         : await prisma.homeFinanceEntry.create({
-            data: { ownerUserId, externalSource: source, externalId: event.externalId, ...data },
+            data: createData,
             select: { id: true },
           });
       results.push({ type: "finance", externalId: event.externalId, op: "upsert", status: "ok", localId: row.id });
