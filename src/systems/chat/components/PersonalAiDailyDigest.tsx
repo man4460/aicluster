@@ -476,10 +476,22 @@ export function PersonalAiDailyDigest({
         cache: "no-store",
         signal: ac.signal,
       });
-      const json = (await res.json()) as DailyDigestResponse & { error?: string };
+      const contentType = res.headers.get("content-type") ?? "";
+      const isJson = contentType.includes("application/json");
+      const json = isJson ? ((await res.json()) as (DailyDigestResponse & { error?: string }) | null) : null;
       if (gen !== loadGenerationRef.current) return;
       if (!res.ok) {
-        setError(json.error ?? "โหลดไม่สำเร็จ");
+        const fallbackError =
+          res.status === 401 || res.status === 403
+            ? "สิทธิ์ไม่พอหรือเซสชันหมดอายุ"
+            : res.status >= 500
+              ? "ระบบกำลังมีปัญหา ลองใหม่อีกครั้ง"
+              : `โหลดไม่สำเร็จ (${res.status})`;
+        setError(json?.error ?? fallbackError);
+        return;
+      }
+      if (!json) {
+        setError("ข้อมูลตอบกลับไม่ถูกต้อง");
         return;
       }
       setData(json);

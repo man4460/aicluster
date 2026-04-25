@@ -149,6 +149,25 @@ function replySuggestsFinanceSaved(reply: string): boolean {
   return false;
 }
 
+function replySuggestsSlipConfirmAction(reply: string): boolean {
+  const t = reply.trim();
+  if (!t) return false;
+  if (/ลงบัญชีแล้วค่ะ/u.test(t) || /รายการ\s*#\d+/u.test(t)) return false;
+  if (/ถ้าข้อมูลถูกต้อง.*ยืนยัน|พิมพ์\s*\*\*ยืนยัน\*\*|พิมพ์\s*ยืนยัน|บันทึกเลย/u.test(t)) return true;
+  // fallback: ถ้าเป็นข้อความสรุปอ่านสลิป (มีหัวข้อหลัก) ให้ขึ้นปุ่มยืนยันด้วย
+  const looksLikeSlipSummary =
+    /อ่านสลิปแล้ว/u.test(t) &&
+    /จำนวนเงิน|ยอดเงิน/u.test(t) &&
+    /วันที่/u.test(t);
+  return looksLikeSlipSummary;
+}
+
+function isConfirmMessage(text: string): boolean {
+  const t = text.trim().replace(/\s+/g, " ");
+  if (!t) return false;
+  return /^(ยืนยัน|ยืนยันครับ|ยืนยันค่ะ|บันทึกเลย|ตกลง|โอเค|ok|okay)$/iu.test(t);
+}
+
 export type PersonalAiChatProps = {
   /** แสดงในหัวข้อทักทาย (เช่น ชื่อจากโปรไฟล์) */
   greetingName?: string;
@@ -310,13 +329,22 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
       imageDataUrl,
     };
     const nextMessages = [...messages, userMessage];
+    const optimisticConfirm = !imageDataUrl && isConfirmMessage(content);
+    const optimisticAssistantMessage: ChatMessage | null = optimisticConfirm
+      ? {
+          id: `a-pending-${Date.now()}`,
+          role: "assistant",
+          content: "รับคำยืนยันแล้ว กำลังบันทึกให้ค่ะ…",
+          imageDataUrl: null,
+        }
+      : null;
     updateActiveSession((current) => ({
       ...current,
       title:
         current.title === "แชทใหม่" && (content || imageDataUrl)
           ? (content || "รูปภาพ").slice(0, 28) + ((content || "รูปภาพ").length > 28 ? "..." : "")
           : current.title,
-      messages: nextMessages,
+      messages: optimisticAssistantMessage ? [...nextMessages, optimisticAssistantMessage] : nextMessages,
       updatedAt: Date.now(),
     }));
     setInput("");
@@ -333,6 +361,77 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
           sessionId: activeSession.serverSessionId ?? undefined,
           message: content || undefined,
           imageDataUrl,
+        }),
+      });
+      const parsed = await parseJson<{ error?: string } & ReplyResponse>(res);
+      if (!parsed.ok) {
+        setError(parsed.message);
+        return;
+      }
+      if (!res.ok) {
+        setError(parsed.data.error ?? "ส่งข้อความไม่สำเร็จ");
+        return;
+      }
+      const replyText = parsed.data.reply || "ไม่ได้รับข้อความตอบกลับ";
+      updateActiveSession((current) => ({
+        ...current,
+        serverSessionId: parsed.data.sessionId ?? current.serverSessionId ?? null,
+        messages: [
+          ...current.messages,
+          {
+            id: `a-${Date.now()}`,
+            role: "assistant",
+            content: replyText,
+            imageDataUrl: null,
+          },
+        ],
+        updatedAt: Date.now(),
+      }));
+      setDigestRefreshKey((k) => k + 1);
+      if (replySuggestsFinanceSaved(replyText)) {
+        setToast("บันทึกลงบัญชีแล้ว");
+        window.setTimeout(() => setDigestRefreshKey((k) => k + 1), 400);
+      } else if (replySuggestsNoteSaved(replyText)) {
+        setToast("บันทึกแล้ว");
+        window.setTimeout(() => setDigestRefreshKey((k) => k + 1), 500);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function sendQuickConfirm() {
+    if (loading || !activeSession) return;
+    const userMessage: ChatMessage = {
+      id: `u-${Date.now()}`,
+      role: "user",
+      content: "ยืนยัน",
+      imageDataUrl: null,
+    };
+    updateActiveSession((current) => ({
+      ...current,
+      messages: [
+        ...current.messages,
+        userMessage,
+        {
+          id: `a-pending-${Date.now()}`,
+          role: "assistant",
+          content: "รับคำยืนยันแล้ว กำลังบันทึกให้ค่ะ…",
+          imageDataUrl: null,
+        },
+      ],
+      updatedAt: Date.now(),
+    }));
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/chat-ai/reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          sessionId: activeSession.serverSessionId ?? undefined,
+          message: "ยืนยัน",
         }),
       });
       const parsed = await parseJson<{ error?: string } & ReplyResponse>(res);
@@ -489,7 +588,7 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
 
         <div className={PERSONAL_AI_CHAT_MESSAGES_SCROLL_CLASS} role="log" aria-label="ข้อความแชท">
           <div className="mx-auto w-full max-w-3xl space-y-4">
-            {messages.map((m) => (
+            {messages.map((m, idx) => (
               <div
                 key={m.id}
                 className={cn("flex w-full flex-col gap-1.5", m.role === "user" ? "items-end" : "items-start")}
@@ -527,6 +626,18 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
                     className={cn(CHAT_BTN_SOFT, "ml-1 px-2.5 py-1 text-left")}
                   >
                     📝 ดูโน้ตทั้งหมด
+                  </button>
+                ) : null}
+                {m.role === "assistant" &&
+                idx === messages.length - 1 &&
+                replySuggestsSlipConfirmAction(m.content) ? (
+                  <button
+                    type="button"
+                    onClick={() => void sendQuickConfirm()}
+                    disabled={loading}
+                    className="app-btn-primary ml-1 rounded-xl px-3 py-1.5 text-xs font-semibold shadow-md transition hover:opacity-95 disabled:opacity-50"
+                  >
+                    ยืนยันบันทึก
                   </button>
                 ) : null}
               </div>

@@ -1,10 +1,17 @@
 import { createClient } from "openclaw-sdk";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getTelegramSlipForwardChatId, normalizeTelegramChatId } from "@/lib/telegram/slip-forward-chat";
 import { ollamaCallVisionText } from "@/lib/ollama/ollama-vision";
 import { sendTelegramPhotoFromDataUrl } from "@/lib/telegram/send-photo-from-data-url";
-import { dataUrlToBase64Raw, readSlipWithKimiThenGlmOcr, type GlmOcrSlipResult } from "@/lib/vision/glm-ocr-service";
+import {
+  buildGlmOcrResultFromModelText,
+  dataUrlToBase64Raw,
+  readSlipWithKimiThenGlmOcr,
+  type GlmOcrSlipResult,
+} from "@/lib/vision/glm-ocr-service";
 import {
   createHomeFinanceQuickEntry,
   parseFinanceIncomeDigestEntries,
@@ -62,6 +69,7 @@ type PendingSlipDraftV1 = {
   note?: string | null;
   billNumber?: string | null;
   paymentMethod?: string | null;
+  slipImageUrl?: string | null;
 };
 
 function parsePendingSlipDraft(raw: unknown): PendingSlipDraftV1 | null {
@@ -88,6 +96,8 @@ function parsePendingSlipDraft(raw: unknown): PendingSlipDraftV1 | null {
     typeof o.billNumber === "string" && o.billNumber.trim() ? o.billNumber.trim().slice(0, 100) : null;
   const paymentMethod =
     typeof o.paymentMethod === "string" && o.paymentMethod.trim() ? o.paymentMethod.trim().slice(0, 40) : null;
+  const slipImageUrl =
+    typeof o.slipImageUrl === "string" && o.slipImageUrl.trim() ? o.slipImageUrl.trim().slice(0, 2048) : null;
   return {
     v: 1,
     entryDateYmd: ymd,
@@ -98,10 +108,11 @@ function parsePendingSlipDraft(raw: unknown): PendingSlipDraftV1 | null {
     note,
     billNumber,
     paymentMethod,
+    slipImageUrl,
   };
 }
 
-function pendingDraftFromSlipResult(slip: GlmOcrSlipResult): PendingSlipDraftV1 | null {
+function pendingDraftFromSlipResult(slip: GlmOcrSlipResult, slipImageUrl?: string | null): PendingSlipDraftV1 | null {
   if (slip.amountBaht == null || !Number.isFinite(slip.amountBaht) || slip.amountBaht <= 0) return null;
   const ymdRaw = slip.entryDateYmd?.trim() ?? "";
   const entryDateYmd = /^\d{4}-\d{2}-\d{2}$/.test(ymdRaw) ? ymdRaw : todayYmdBangkok();
@@ -129,7 +140,27 @@ function pendingDraftFromSlipResult(slip: GlmOcrSlipResult): PendingSlipDraftV1 
     note: note || null,
     billNumber: slip.reference?.trim() ? slip.reference.trim().slice(0, 100) : null,
     paymentMethod: slip.bankName?.trim() ? slip.bankName.trim().slice(0, 40) : null,
+    slipImageUrl: slipImageUrl?.trim() ? slipImageUrl.trim().slice(0, 2048) : null,
   };
+}
+
+async function persistChatSlipImage(imageDataUrl: string, userId: string): Promise<string | null> {
+  const m = imageDataUrl.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,(.+)$/);
+  if (!m?.[2]) return null;
+  const subtype = (m[1] ?? "jpeg").toLowerCase();
+  const ext = subtype.includes("png")
+    ? "png"
+    : subtype.includes("webp")
+      ? "webp"
+      : subtype.includes("gif")
+        ? "gif"
+        : "jpg";
+  const dir = path.join(process.cwd(), "public", "uploads", "home-finance");
+  await mkdir(dir, { recursive: true });
+  const filename = `${userId.slice(0, 12)}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const buf = Buffer.from(m[2], "base64");
+  await writeFile(path.join(dir, filename), buf);
+  return `/uploads/home-finance/${filename}`;
 }
 
 /** ผู้ใช้ตอบสั้นๆ ว่าต้องการบันทึกรายการจากสลิปล่าสุดลงบัญชี */
@@ -172,6 +203,11 @@ function financeCommandsFromUserMessage(message: string): ParsedFinanceChatComma
   if (digest.length > 0) return digest;
   const one = parseFinanceRecordCommand(message);
   return one ? [one] : [];
+}
+
+function extractSavedEntryDateYmdFromToolSummary(summary: string): string | null {
+  const m = summary.match(/วันที่\s*(\d{4}-\d{2}-\d{2})/u);
+  return m?.[1] ?? null;
 }
 
 async function createHomeFinanceEntriesFromParsedCommands(args: {
@@ -647,6 +683,7 @@ async function maybeRunPersonalTool(args: {
       note: draft.note ?? null,
       billNumber: draft.billNumber ?? null,
       paymentMethod: draft.paymentMethod ?? null,
+      slipImageUrl: draft.slipImageUrl ?? null,
     });
     if (created.ok) {
       await prisma.personalChatSession.updateMany({
@@ -657,7 +694,7 @@ async function maybeRunPersonalTool(args: {
       const amt = draft.amountBaht.toLocaleString("th-TH");
       return {
         used: true,
-        summary: `บันทึก${kind}จากสลิป ${amt} บาท — ${draft.title} ลงบัญชีแล้วค่ะ ✅ (รายการ #${created.entryId})`,
+        summary: `บันทึก${kind}จากสลิป ${amt} บาท — ${draft.title} ลงบัญชีแล้วค่ะ ✅ (วันที่ ${draft.entryDateYmd}, รายการ #${created.entryId})`,
       };
     }
     return { used: true, summary: `บันทึกลงบัญชีไม่สำเร็จ: ${created.error}` };
@@ -835,6 +872,302 @@ function toOllamaBase64Image(imageDataUrl: string | undefined): string | null {
   const m = imageDataUrl.match(/^data:image\/[a-zA-Z0-9.+-]+;base64,(.+)$/);
   if (!m) return null;
   return m[1] ?? null;
+}
+
+function normalizeOpenClawYmd(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const t = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+  const slash = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!slash) return null;
+  const d = slash[1]!.padStart(2, "0");
+  const m = slash[2]!.padStart(2, "0");
+  return `${slash[3]}-${m}-${d}`;
+}
+
+function parseOpenClawAmount(raw: unknown): number | null {
+  if (typeof raw === "number") return Number.isFinite(raw) && raw > 0 ? raw : null;
+  if (typeof raw !== "string") return null;
+  const n = Number(raw.replace(/[,\s฿]/g, "").replace(/บาท/gi, "").trim());
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function parseOpenClawDirection(raw: unknown): "out" | "in" | "unknown" {
+  if (typeof raw !== "string") return "unknown";
+  const t = raw.trim().toUpperCase();
+  if (t === "INCOME" || t === "IN") return "in";
+  if (t === "EXPENSE" || t === "OUT") return "out";
+  if (t === "UNKNOWN") return "unknown";
+  return "unknown";
+}
+
+function parseOpenClawResultTextFields(raw: string): {
+  entryDateYmd: string | null;
+  entryTime: string | null;
+  amountBaht: number | null;
+  transferFrom: string | null;
+  transferTo: string | null;
+  bankName: string | null;
+  reference: string | null;
+} {
+  const clean = raw.replace(/\r/g, "");
+  const noMd = clean.replace(/[*_`]/g, "");
+  const lines = noMd.split("\n").map((s) => s.trim());
+  const tableMap = new Map<string, string>();
+  for (const line of lines) {
+    if (!line.includes("|")) continue;
+    const cols = line
+      .split("|")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (cols.length < 2) continue;
+    const key = cols[0]!.replace(/[：:]/g, "").trim().toLowerCase();
+    const val = cols[1]!.trim();
+    if (key && val && !/^[-]+$/.test(key)) {
+      tableMap.set(key, val);
+    }
+  }
+  const pickFromTable = (keys: string[]): string | null => {
+    for (const k of keys) {
+      const v = tableMap.get(k.toLowerCase());
+      if (v) return v;
+    }
+    return null;
+  };
+  const pickFromRegex = (re: RegExp): string | null => {
+    const m = noMd.match(re);
+    return m?.[1]?.trim() ? m[1].trim() : null;
+  };
+
+  const dateRaw =
+    pickFromTable(["วันที่", "date"]) ?? pickFromRegex(/(?:วันที่|date)\s*[:|]\s*([^\n|]+)/iu);
+  const timeRaw =
+    pickFromTable(["เวลา", "time"]) ?? pickFromRegex(/(?:เวลา|time)\s*[:|]\s*([^\n|]+)/iu);
+  const amountRaw =
+    pickFromTable(["จำนวนเงิน", "ยอดเงิน", "amount"]) ??
+    pickFromRegex(/(?:จำนวนเงิน|ยอดเงิน|amount)\s*[:|]\s*([^\n|]+)/iu);
+  const fromRaw =
+    pickFromTable(["ผู้โอน", "from", "sender"]) ??
+    pickFromRegex(/(?:ผู้โอน|from|sender)\s*[:|]\s*([^\n|]+)/iu);
+  const toRaw =
+    pickFromTable(["ผู้รับ", "to", "receiver"]) ??
+    pickFromRegex(/(?:ผู้รับ|to|receiver)\s*[:|]\s*([^\n|]+)/iu);
+  const bankRaw =
+    pickFromTable(["ธนาคาร", "ช่องทาง", "bank"]) ??
+    pickFromRegex(/(?:ธนาคาร|ช่องทาง|bank)\s*[:|]\s*([^\n|]+)/iu);
+  const refRaw =
+    pickFromTable(["รหัสอ้างอิง", "เลขอ้างอิง", "reference", "ref"]) ??
+    pickFromRegex(/(?:รหัสอ้างอิง|เลขอ้างอิง|reference|ref)\s*[:|]\s*([^\n|]+)/iu);
+
+  const parseThaiDateToYmd = (v: string | null): string | null => {
+    if (!v) return null;
+    const t = v.replace(/\s+/g, " ").trim();
+    const normalized = t.replace(/,/g, " ").replace(/\./g, "").replace(/\s+/g, " ").trim();
+    const m = normalized.match(
+      /^(\d{1,2})\s+(มกราคม|มกรา(?:คม)?|มค|กุมภาพันธ์|กุมภา(?:พันธ์)?|กพ|มีนาคม|มีนา(?:คม)?|มีค|เมษายน|เมษา(?:ยน)?|เมย|พฤษภาคม|พฤษภา(?:คม)?|พค|มิถุนายน|มิถุนา(?:ยน)?|มิย|กรกฎาคม|กรกฎา(?:คม)?|กค|สิงหาคม|สิงหา(?:คม)?|สค|กันยายน|กันยา(?:ยน)?|กย|ตุลาคม|ตุลา(?:คม)?|ตค|พฤศจิกายน|พฤศจิกา(?:ยน)?|พย|ธันวาคม|ธันวา(?:คม)?|ธค)\s+(\d{2,4})$/u,
+    );
+    if (!m) return null;
+    const monthMap: Record<string, string> = {
+      มกราคม: "01",
+      มกรา: "01",
+      มกราคม: "01",
+      มค: "01",
+      กุมภาพันธ์: "02",
+      กุมภา: "02",
+      กุมภาพันธ์: "02",
+      กพ: "02",
+      มีนาคม: "03",
+      มีนา: "03",
+      มีค: "03",
+      เมษายน: "04",
+      เมษา: "04",
+      เมย: "04",
+      พฤษภาคม: "05",
+      พฤษภา: "05",
+      พค: "05",
+      มิถุนายน: "06",
+      มิถุนา: "06",
+      มิย: "06",
+      กรกฎาคม: "07",
+      กรกฎา: "07",
+      กค: "07",
+      สิงหาคม: "08",
+      สิงหา: "08",
+      สค: "08",
+      กันยายน: "09",
+      กันยา: "09",
+      กย: "09",
+      ตุลาคม: "10",
+      ตุลา: "10",
+      ตค: "10",
+      พฤศจิกายน: "11",
+      พฤศจิกา: "11",
+      พย: "11",
+      ธันวาคม: "12",
+      ธันวา: "12",
+      ธค: "12",
+    };
+    const dd = m[1]!.padStart(2, "0");
+    const mm = monthMap[m[2]!] ?? null;
+    if (!mm) return null;
+    let yy = Number(m[3]);
+    if (!Number.isFinite(yy)) return null;
+    if (yy < 100) yy += 2500;
+    if (yy >= 2400) yy -= 543;
+    if (yy < 1990 || yy > 2110) return null;
+    return `${yy}-${mm}-${dd}`;
+  };
+
+  const amountBaht = parseOpenClawAmount(amountRaw ?? null);
+  const entryDateYmd = normalizeOpenClawYmd(dateRaw) ?? parseThaiDateToYmd(dateRaw);
+  const entryTime = (() => {
+    if (!timeRaw) return null;
+    const m = timeRaw.match(/([01]?\d|2[0-3]):([0-5]\d)/);
+    return m ? `${m[1]!.padStart(2, "0")}:${m[2]}` : null;
+  })();
+  const normalizeText = (v: string | null, max: number): string | null => {
+    if (!v) return null;
+    const t = v
+      .replace(/[*_`|]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    return t && !/^ไม่ชัด|ไม่พบ|unknown|null$/iu.test(t) ? t.slice(0, max) : null;
+  };
+
+  return {
+    entryDateYmd,
+    entryTime,
+    amountBaht,
+    transferFrom: normalizeText(fromRaw, 200),
+    transferTo: normalizeText(toRaw, 200),
+    bankName: normalizeText(bankRaw, 100),
+    reference: normalizeText(refRaw, 100),
+  };
+}
+
+async function readSlipWithOpenClaw(imageDataUrl: string): Promise<GlmOcrSlipResult | null> {
+  const endpoint = process.env.OPENCLAW_URL?.trim() || process.env.OPENCLAW_API_URL?.trim() || "";
+  if (!endpoint) return null;
+  const imageBase64 = dataUrlToBase64Raw(imageDataUrl);
+  if (!imageBase64) throw new Error("รูปแบบรูปภาพไม่ถูกต้อง (base64)");
+  const mimeTypeMatch = imageDataUrl.match(/^data:([^;]+);base64,/i);
+  const mimeType = mimeTypeMatch?.[1]?.trim() || "image/jpeg";
+  const apiKey = process.env.OPENCLAW_API_KEY?.trim() || "";
+  const prompt = "อ่านข้อความสลิปและสรุปข้อมูลสำคัญเป็นโครงสร้าง เช่น วันที่ เวลา จำนวนเงิน ผู้โอน ผู้รับ ธนาคาร และรหัสอ้างอิง";
+
+  const OCR_TIMEOUT_MS = Number(process.env.OPENCLAW_OCR_TIMEOUT_MS ?? "90000");
+
+  async function postJson(payload: Record<string, unknown>): Promise<{ ok: boolean; raw: Record<string, unknown>; status: number }> {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(OCR_TIMEOUT_MS),
+    });
+    const raw = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    return { ok: res.ok, raw, status: res.status };
+  }
+
+  async function postMultipart(): Promise<{ ok: boolean; raw: Record<string, unknown>; status: number }> {
+    const form = new FormData();
+    form.set("prompt", prompt);
+    // endpoint รับได้ทั้งไฟล์หรือ base64 string
+    form.set("image", new Blob([Buffer.from(imageBase64, "base64")], { type: mimeType }), "slip-image");
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+      body: form,
+      signal: AbortSignal.timeout(OCR_TIMEOUT_MS),
+    });
+    const raw = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    return { ok: res.ok, raw, status: res.status };
+  }
+
+  let probe = await postJson({ prompt, imageDataUrl });
+  if (!probe.ok || (!probe.raw.result && !probe.raw.fields && !probe.raw.text && !probe.raw.ocrText)) {
+    probe = await postJson({ prompt, image: imageBase64, mimeType });
+  }
+  if (!probe.ok || (!probe.raw.result && !probe.raw.fields && !probe.raw.text && !probe.raw.ocrText)) {
+    probe = await postMultipart();
+  }
+  const raw = probe.raw;
+  if (!probe.ok) {
+    const msg = typeof raw.error === "string" ? raw.error : `HTTP ${probe.status}`;
+    throw new Error(`OpenClaw OCR: ${msg}`);
+  }
+  const fields =
+    raw.fields && typeof raw.fields === "object" ? (raw.fields as Record<string, unknown>) : raw;
+  const resultText = typeof raw.result === "string" ? raw.result : "";
+  const parsedFromText = resultText ? buildGlmOcrResultFromModelText(resultText) : null;
+  const parsedFromResultLabels = resultText ? parseOpenClawResultTextFields(resultText) : null;
+  const entryDateYmd = normalizeOpenClawYmd(fields.entryDate ?? fields.date);
+  const amountBaht = parseOpenClawAmount(fields.amount ?? fields.total);
+  const entryTime = typeof fields.entryTime === "string" && fields.entryTime.trim() ? fields.entryTime.trim().slice(0, 5) : null;
+  const transferFrom = typeof fields.transferFrom === "string" && fields.transferFrom.trim() ? fields.transferFrom.trim().slice(0, 200) : null;
+  const transferTo = typeof fields.transferTo === "string" && fields.transferTo.trim() ? fields.transferTo.trim().slice(0, 200) : null;
+  const bankName = typeof fields.bankName === "string" && fields.bankName.trim() ? fields.bankName.trim().slice(0, 100) : null;
+  const reference = typeof fields.referenceNo === "string"
+    ? fields.referenceNo.trim().slice(0, 100)
+    : typeof fields.reference === "string" && fields.reference.trim()
+      ? fields.reference.trim().slice(0, 100)
+      : null;
+  const slipNote = typeof fields.note === "string" && fields.note.trim() ? fields.note.trim().slice(0, 500) : null;
+  const rawText =
+    typeof raw.text === "string"
+      ? raw.text
+      : typeof raw.ocrText === "string"
+        ? raw.ocrText
+        : typeof raw.rawText === "string"
+          ? raw.rawText
+          : resultText;
+  const directionGuess = parseOpenClawDirection(fields.directionGuess ?? fields.type);
+  const mergedEntryDateYmd =
+    entryDateYmd ?? parsedFromResultLabels?.entryDateYmd ?? parsedFromText?.entryDateYmd ?? null;
+  const mergedAmountBaht =
+    amountBaht ?? parsedFromResultLabels?.amountBaht ?? parsedFromText?.amountBaht ?? null;
+  const mergedEntryTime =
+    entryTime ?? parsedFromResultLabels?.entryTime ?? parsedFromText?.entryTime ?? null;
+  const mergedTransferFrom =
+    transferFrom ?? parsedFromResultLabels?.transferFrom ?? parsedFromText?.transferFrom ?? null;
+  const mergedTransferTo =
+    transferTo ?? parsedFromResultLabels?.transferTo ?? parsedFromText?.transferTo ?? null;
+  const mergedBankName = bankName ?? parsedFromResultLabels?.bankName ?? parsedFromText?.bankName ?? null;
+  const mergedReference =
+    reference ?? parsedFromResultLabels?.reference ?? parsedFromText?.reference ?? null;
+  const mergedSlipNote = slipNote ?? parsedFromText?.slipNote ?? null;
+  const mergedDirectionGuess =
+    directionGuess === "unknown" ? (parsedFromText?.directionGuess ?? "unknown") : directionGuess;
+
+  return {
+    entryDateYmd: mergedEntryDateYmd,
+    entryTime: mergedEntryTime,
+    amountBaht: mergedAmountBaht,
+    transferFrom: mergedTransferFrom,
+    transferTo: mergedTransferTo,
+    bankName: mergedBankName,
+    reference: mergedReference,
+    slipNote: mergedSlipNote,
+    directionGuess: mergedDirectionGuess,
+    rawText,
+    parseWarning:
+      mergedAmountBaht == null &&
+      !mergedEntryDateYmd &&
+      !mergedReference &&
+      !mergedBankName &&
+      !mergedTransferFrom &&
+      !mergedTransferTo
+        ? "OpenClaw อ่านข้อมูลสำคัญยังไม่ครบ"
+        : undefined,
+    readPipeline: {
+      primaryModel: "openclaw-slip-ocr",
+      usedGlmFallback: false,
+    },
+  };
 }
 
 async function callOllama(prompt: string, imageDataUrl?: string): Promise<ChatProviderResult | null> {
@@ -1111,49 +1444,104 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
     let result: ChatProviderResult | null = null;
     let lastError = "";
 
-    // รูปแนบสลิป: บังคับ Kimi K2.5 ก่อน แล้ว fallback GLM-OCR
+    // รูปแนบสลิป: เรียก OpenClaw OCR ก่อน แล้ว fallback Kimi/GLM-OCR
     if (imageDataUrl) {
+      let openClawError = "";
       try {
-        const imageBase64Raw = dataUrlToBase64Raw(imageDataUrl);
-        if (!imageBase64Raw) {
-          throw new Error("รูปแบบรูปภาพไม่ถูกต้อง (base64)");
-        }
-        const slip = await readSlipWithKimiThenGlmOcr(imageBase64Raw, AbortSignal.timeout(85_000));
-        const slipDraft = pendingDraftFromSlipResult(slip);
-        try {
-          await prisma.personalChatSession.update({
-            where: { id: activeSessionId },
-            data: personalSessionPendingDraftData({
-              pendingSlipDraft: slipDraft
-                ? ({ ...slipDraft } as unknown as Prisma.InputJsonValue)
-                : null,
+        const slipViaOpenClaw = await readSlipWithOpenClaw(imageDataUrl);
+        if (slipViaOpenClaw) {
+          let slipImageUrl: string | null = null;
+          try {
+            slipImageUrl = await persistChatSlipImage(imageDataUrl, input.userId);
+          } catch (e) {
+            console.warn("persistChatSlipImage failed:", e);
+          }
+          const slipDraft = pendingDraftFromSlipResult(slipViaOpenClaw, slipImageUrl);
+          try {
+            await prisma.personalChatSession.update({
+              where: { id: activeSessionId },
+              data: personalSessionPendingDraftData({
+                pendingSlipDraft: slipDraft
+                  ? ({ ...slipDraft } as unknown as Prisma.InputJsonValue)
+                  : null,
+              }),
+            });
+          } catch (e) {
+            console.warn("pendingSlipDraft update failed:", e);
+          }
+          result = {
+            reply: buildSlipAnalysisReply({
+              amountBaht: slipViaOpenClaw.amountBaht,
+              entryDateYmd: slipViaOpenClaw.entryDateYmd,
+              entryTime: slipViaOpenClaw.entryTime,
+              transferFrom: slipViaOpenClaw.transferFrom,
+              transferTo: slipViaOpenClaw.transferTo,
+              bankName: slipViaOpenClaw.bankName,
+              reference: slipViaOpenClaw.reference,
+              slipNote: slipViaOpenClaw.slipNote,
+              rawModelText: slipViaOpenClaw.rawText,
+              parseWarning: slipViaOpenClaw.parseWarning,
+              usedGlmFallback: false,
+              primaryModel: "openclaw-slip-ocr",
             }),
-          });
-        } catch (e) {
-          console.warn("pendingSlipDraft update failed:", e);
+            provider: "openclaw-agent",
+            model: "openclaw-slip-ocr",
+          };
         }
-        result = {
-          reply: buildSlipAnalysisReply({
-            amountBaht: slip.amountBaht,
-            entryDateYmd: slip.entryDateYmd,
-            entryTime: slip.entryTime,
-            transferFrom: slip.transferFrom,
-            transferTo: slip.transferTo,
-            bankName: slip.bankName,
-            reference: slip.reference,
-            slipNote: slip.slipNote,
-            rawModelText: slip.rawText,
-            parseWarning: slip.parseWarning,
-            usedGlmFallback: slip.readPipeline?.usedGlmFallback,
-            primaryModel: slip.readPipeline?.primaryModel,
-          }),
-          provider: "ollama",
-          model: slip.readPipeline?.usedGlmFallback
-            ? `${slip.readPipeline.primaryModel}->${process.env.OLLAMA_GLM_OCR_MODEL?.trim() || "glm-ocr:latest"}`
-            : ((slip.readPipeline?.primaryModel ?? process.env.OLLAMA_SLIP_VISION_PRIMARY_MODEL?.trim()) || "kimi-k2.5:cloud"),
-        };
       } catch (e) {
-        lastError = e instanceof Error ? e.message : "Slip OCR error";
+        openClawError = e instanceof Error ? e.message : "OpenClaw OCR error";
+      }
+
+      try {
+        if (!result) {
+          const imageBase64Raw = dataUrlToBase64Raw(imageDataUrl);
+          if (!imageBase64Raw) {
+            throw new Error("รูปแบบรูปภาพไม่ถูกต้อง (base64)");
+          }
+          const slip = await readSlipWithKimiThenGlmOcr(imageBase64Raw, AbortSignal.timeout(85_000));
+          let slipImageUrl: string | null = null;
+          try {
+            slipImageUrl = await persistChatSlipImage(imageDataUrl, input.userId);
+          } catch (e) {
+            console.warn("persistChatSlipImage failed:", e);
+          }
+          const slipDraft = pendingDraftFromSlipResult(slip, slipImageUrl);
+          try {
+            await prisma.personalChatSession.update({
+              where: { id: activeSessionId },
+              data: personalSessionPendingDraftData({
+                pendingSlipDraft: slipDraft
+                  ? ({ ...slipDraft } as unknown as Prisma.InputJsonValue)
+                  : null,
+              }),
+            });
+          } catch (e) {
+            console.warn("pendingSlipDraft update failed:", e);
+          }
+          result = {
+            reply: buildSlipAnalysisReply({
+              amountBaht: slip.amountBaht,
+              entryDateYmd: slip.entryDateYmd,
+              entryTime: slip.entryTime,
+              transferFrom: slip.transferFrom,
+              transferTo: slip.transferTo,
+              bankName: slip.bankName,
+              reference: slip.reference,
+              slipNote: slip.slipNote,
+              rawModelText: slip.rawText,
+              parseWarning: slip.parseWarning,
+              usedGlmFallback: slip.readPipeline?.usedGlmFallback,
+              primaryModel: slip.readPipeline?.primaryModel,
+            }),
+            provider: "ollama",
+            model: slip.readPipeline?.usedGlmFallback
+              ? `${slip.readPipeline.primaryModel}->${process.env.OLLAMA_GLM_OCR_MODEL?.trim() || "glm-ocr:latest"}`
+              : ((slip.readPipeline?.primaryModel ?? process.env.OLLAMA_SLIP_VISION_PRIMARY_MODEL?.trim()) || "kimi-k2.5:cloud"),
+          };
+        }
+      } catch (e) {
+        const fallbackError = e instanceof Error ? e.message : "Slip OCR error";
+        lastError = [openClawError, fallbackError].filter(Boolean).join(" | ") || fallbackError;
       }
     }
 
@@ -1240,6 +1628,22 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
           provider: "local-tools",
           model: "none",
         };
+      } else if (imageDataUrl) {
+        const reason = lastError?.trim() || "ยังอ่านข้อมูลจากรูปไม่ได้";
+        result = {
+          reply: [
+            "อ่านสลิปไม่สำเร็จในรอบนี้ครับ",
+            "",
+            `สาเหตุ: ${reason}`,
+            "",
+            "แนะนำให้ลองอีกครั้งโดย:",
+            "- ส่งรูปเดิมซ้ำอีกครั้ง (บางครั้งรอบถัดไปอ่านผ่าน)",
+            "- ใช้ภาพที่คมชัดขึ้น/ครอปเฉพาะสลิป/แสงไม่สะท้อน",
+            "- หากรีบ สามารถพิมพ์สั้นๆ เช่น \"ค่าน้ำ 450 บาท\" แล้วผมบันทึกให้ได้ทันที",
+          ].join("\n"),
+          provider: "local-tools",
+          model: "slip-ocr-failed",
+        };
       } else if (!hasOpenClaw && !hasOllama) {
         if (lastError.trim()) {
           return { ok: false, status: 502, error: lastError };
@@ -1264,13 +1668,7 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
         /บันทึกราย(รับ|จ่าย)/u.test(toolResult.summary));
     if (homeFinanceToolSaved && message) {
       const toolLine = toolResult.summary.trim();
-      const sidebarHint =
-        "รายการนี้อยู่ใน **บัญชีวันนี้** ที่แถบสรุปรายวันซ้ายแล้ว (กด **รีเฟรช** ที่หัวสรุปถ้ายังไม่เห็น) — ถ้าวันที่รายการไม่ใช่วันนี้ (เช่น จากสลิปวันก่อน) จะไปอยู่ในหน้าบัญชีตามวันที่รายการค่ะ";
-      if (!/ลงบัญชีแล้ว/u.test(reply) && !/บันทึกราย(รับ|จ่าย).*แล้ว/u.test(reply)) {
-        reply = `ได้ค่ะ — ${toolLine}\n\n${sidebarHint}${reply.trim() ? `\n\n${reply.trim()}` : ""}`.trim();
-      } else if (!/สรุปรายวัน|บัญชีวันนี้|รีเฟรช/u.test(reply)) {
-        reply = `${reply.trim()}\n\n${sidebarHint}`.trim();
-      }
+      reply = `ได้ค่ะ — ${toolLine}`;
     }
     const autoPlanNote =
       Boolean(message && !imageDataUrl && !toolResult.used && isPlanningAssistRequest(message));

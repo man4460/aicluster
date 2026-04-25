@@ -31,6 +31,7 @@ export async function createHomeFinanceQuickEntry(args: {
   note?: string | null;
   billNumber?: string | null;
   paymentMethod?: string | null;
+  slipImageUrl?: string | null;
 }): Promise<HomeFinanceQuickEntryResult> {
   console.log("📊 createHomeFinanceQuickEntry called:", {
     actorUserId: args.actorUserId,
@@ -67,7 +68,8 @@ export async function createHomeFinanceQuickEntry(args: {
   const title = args.title.trim().slice(0, 160) || (args.type === "INCOME" ? "รายรับ" : "รายจ่าย");
   const categoryLabel = (args.categoryLabel.trim().slice(0, 100) || "อื่นๆ").trim();
   const categoryKey = categoryKeyFromLabel(categoryLabel);
-  const attachmentJson: Prisma.InputJsonValue = [];
+  const normalizedSlipUrl = args.slipImageUrl?.trim() ? args.slipImageUrl.trim().slice(0, 2048) : null;
+  const attachmentJson: Prisma.InputJsonValue = normalizedSlipUrl ? [normalizedSlipUrl] : [];
   const noteRaw = args.note?.trim() ?? "";
   const note = noteRaw ? noteRaw.slice(0, 600) : null;
   const billNumber = args.billNumber?.trim() ? args.billNumber.trim().slice(0, 100) : null;
@@ -91,7 +93,7 @@ export async function createHomeFinanceQuickEntry(args: {
         serviceCenter: null,
         paymentMethod,
         note,
-        slipImageUrl: null,
+        slipImageUrl: normalizedSlipUrl,
         attachmentUrls: attachmentJson,
         linkedUtilityId: null,
         linkedVehicleId: null,
