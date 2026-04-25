@@ -1402,14 +1402,28 @@ async function readSlipWithOpenClaw(imageDataUrl: string): Promise<GlmOcrSlipRes
     return { ok: res.ok, raw, status: res.status };
   }
 
-  let probe = await postJson({ message: prompt, image: imageBase64 });
-  if (!probe.ok || (!probe.raw.result && !probe.raw.content && !probe.raw.fields && !probe.raw.text && !probe.raw.ocrText)) {
+  const hasOcrPayload = (p: { ok: boolean; raw: Record<string, unknown> }) =>
+    p.ok &&
+    Boolean(
+      p.raw.result ||
+        p.raw.content ||
+        p.raw.fields ||
+        p.raw.text ||
+        p.raw.ocrText,
+    );
+
+  // สเปก OpenClaw: 1) JSON + imageDataUrl ก่อน 2) JSON + image (base64) 3) multipart
+  let probe = await postJson({ message: prompt, imageDataUrl });
+  if (!hasOcrPayload(probe)) {
     probe = await postJson({ prompt, imageDataUrl });
   }
-  if (!probe.ok || (!probe.raw.result && !probe.raw.content && !probe.raw.fields && !probe.raw.text && !probe.raw.ocrText)) {
+  if (!hasOcrPayload(probe)) {
+    probe = await postJson({ message: prompt, image: imageBase64 });
+  }
+  if (!hasOcrPayload(probe)) {
     probe = await postJson({ prompt, image: imageBase64, mimeType });
   }
-  if (!probe.ok || (!probe.raw.result && !probe.raw.content && !probe.raw.fields && !probe.raw.text && !probe.raw.ocrText)) {
+  if (!hasOcrPayload(probe)) {
     probe = await postMultipart();
   }
   const raw = probe.raw;
