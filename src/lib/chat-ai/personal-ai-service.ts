@@ -11,6 +11,7 @@ import {
   buildGlmOcrResultFromModelText,
   dataUrlToBase64Raw,
   readSlipWithKimiThenGlmOcr,
+  refineSlipOcrResult,
   type GlmOcrSlipResult,
 } from "@/lib/vision/glm-ocr-service";
 import {
@@ -1475,7 +1476,7 @@ async function readSlipWithOpenClaw(imageDataUrl: string): Promise<GlmOcrSlipRes
   const mergedDirectionGuess =
     directionGuess === "unknown" ? (parsedFromText?.directionGuess ?? "unknown") : directionGuess;
 
-  return {
+  return refineSlipOcrResult({
     entryDateYmd: mergedEntryDateYmd,
     entryTime: mergedEntryTime,
     amountBaht: mergedAmountBaht,
@@ -1499,7 +1500,7 @@ async function readSlipWithOpenClaw(imageDataUrl: string): Promise<GlmOcrSlipRes
       primaryModel: "openclaw-slip-ocr",
       usedGlmFallback: false,
     },
-  };
+  });
 }
 
 async function callOllama(prompt: string, imageDataUrl?: string): Promise<ChatProviderResult | null> {
