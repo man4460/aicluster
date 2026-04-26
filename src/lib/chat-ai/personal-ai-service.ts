@@ -1208,8 +1208,8 @@ function parseOpenClawAmount(raw: unknown): number | null {
 function parseOpenClawDirection(raw: unknown): "out" | "in" | "unknown" {
   if (typeof raw !== "string") return "unknown";
   const t = raw.trim().toUpperCase();
-  if (t === "INCOME" || t === "IN") return "in";
-  if (t === "EXPENSE" || t === "OUT") return "out";
+  if (t === "INCOME" || t === "IN" || t === "INBOUND") return "in";
+  if (t === "EXPENSE" || t === "OUT" || t === "OUTBOUND") return "out";
   if (t === "UNKNOWN") return "unknown";
   return "unknown";
 }
@@ -1402,14 +1402,30 @@ async function readSlipWithOpenClaw(imageDataUrl: string): Promise<GlmOcrSlipRes
     return { ok: res.ok, raw, status: res.status };
   }
 
+  const hasUsefulPayload = (r: Record<string, unknown>): boolean =>
+    typeof r.rawText === "string" && r.rawText.trim().length > 0
+      ? true
+      : Boolean(
+          r.result ||
+            r.content ||
+            r.fields ||
+            r.text ||
+            r.ocrText ||
+            r.entryDateYmd ||
+            r.amountBaht ||
+            r.reference ||
+            r.transferFrom ||
+            r.transferTo,
+        );
+
   let probe = await postJson({ message: prompt, image: imageBase64 });
-  if (!probe.ok || (!probe.raw.result && !probe.raw.content && !probe.raw.fields && !probe.raw.text && !probe.raw.ocrText)) {
+  if (!probe.ok || !hasUsefulPayload(probe.raw)) {
     probe = await postJson({ prompt, imageDataUrl });
   }
-  if (!probe.ok || (!probe.raw.result && !probe.raw.content && !probe.raw.fields && !probe.raw.text && !probe.raw.ocrText)) {
+  if (!probe.ok || !hasUsefulPayload(probe.raw)) {
     probe = await postJson({ prompt, image: imageBase64, mimeType });
   }
-  if (!probe.ok || (!probe.raw.result && !probe.raw.content && !probe.raw.fields && !probe.raw.text && !probe.raw.ocrText)) {
+  if (!probe.ok || !hasUsefulPayload(probe.raw)) {
     probe = await postMultipart();
   }
   const raw = probe.raw;
@@ -1423,8 +1439,8 @@ async function readSlipWithOpenClaw(imageDataUrl: string): Promise<GlmOcrSlipRes
     typeof raw.result === "string" ? raw.result : typeof raw.content === "string" ? raw.content : "";
   const parsedFromText = resultText ? buildGlmOcrResultFromModelText(resultText) : null;
   const parsedFromResultLabels = resultText ? parseOpenClawResultTextFields(resultText) : null;
-  const entryDateYmd = normalizeOpenClawYmd(fields.entryDate ?? fields.date);
-  const amountBaht = parseOpenClawAmount(fields.amount ?? fields.total);
+  const entryDateYmd = normalizeOpenClawYmd(fields.entryDateYmd ?? fields.entryDate ?? fields.date);
+  const amountBaht = parseOpenClawAmount(fields.amountBaht ?? fields.amount ?? fields.total);
   const entryTime = typeof fields.entryTime === "string" && fields.entryTime.trim() ? fields.entryTime.trim().slice(0, 5) : null;
   const transferFrom = typeof fields.transferFrom === "string" && fields.transferFrom.trim() ? fields.transferFrom.trim().slice(0, 200) : null;
   const transferTo = typeof fields.transferTo === "string" && fields.transferTo.trim() ? fields.transferTo.trim().slice(0, 200) : null;
@@ -1434,7 +1450,12 @@ async function readSlipWithOpenClaw(imageDataUrl: string): Promise<GlmOcrSlipRes
     : typeof fields.reference === "string" && fields.reference.trim()
       ? fields.reference.trim().slice(0, 100)
       : null;
-  const slipNote = typeof fields.note === "string" && fields.note.trim() ? fields.note.trim().slice(0, 500) : null;
+  const slipNote =
+    typeof fields.slipNote === "string" && fields.slipNote.trim()
+      ? fields.slipNote.trim().slice(0, 500)
+      : typeof fields.note === "string" && fields.note.trim()
+        ? fields.note.trim().slice(0, 500)
+        : null;
   const rawText =
     typeof raw.text === "string"
       ? raw.text
