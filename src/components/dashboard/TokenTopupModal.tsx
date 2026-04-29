@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import NextImage from "next/image";
 import QRCode from "qrcode";
 import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enums";
 import { appDashboardBrandCtaPillButtonClass } from "@/components/app-templates";
@@ -181,7 +182,7 @@ export function TokenTopupModal({
       ctx.fillStyle = "#475569";
       ctx.fillText(line, w / 2 - ctx.measureText(line).width / 2, 215);
 
-      const qrImg = new Image();
+      const qrImg = new window.Image();
       qrImg.src = qrImageDataUrl;
       await new Promise<void>((resolve, reject) => {
         qrImg.onload = () => resolve();
@@ -221,7 +222,7 @@ export function TokenTopupModal({
     <>
       <button suppressHydrationWarning
         type="button"
-        className={triggerClassName ?? appDashboardBrandCtaPillButtonClass}
+        className={triggerClassName ?? `${appDashboardBrandCtaPillButtonClass} app-tap-feedback`}
         onClick={() => setOpen(true)}
       >
         {triggerLabel}
@@ -238,7 +239,7 @@ export function TokenTopupModal({
               {!orderId ? (
                 <button suppressHydrationWarning
                   type="button"
-                  className="rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-slate-100"
+                  className="app-tap-feedback rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-slate-100"
                   onClick={() => setOpen(false)}
                 >
                   ปิด
@@ -266,7 +267,7 @@ export function TokenTopupModal({
                       key={preset}
                       type="button"
                       onClick={() => setAmountBaht(preset)}
-                      className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                      className="app-tap-feedback rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
                     >
                       {preset}
                     </button>
@@ -277,14 +278,21 @@ export function TokenTopupModal({
                     type="button"
                     disabled={loading}
                     onClick={() => void createOrder()}
-                    className="flex-1 rounded-lg bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:opacity-60"
+                    className="app-tap-feedback flex-1 rounded-lg bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:opacity-60"
                   >
-                    {loading ? "กำลังสร้าง QR..." : "สร้าง QR Code"}
+                    {loading ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="app-inline-spinner" aria-hidden />
+                        กำลังสร้าง QR...
+                      </span>
+                    ) : (
+                      "สร้าง QR Code"
+                    )}
                   </button>
                   <button suppressHydrationWarning
                     type="button"
                     onClick={() => setOpen(false)}
-                    className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    className="app-tap-feedback rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
                   >
                     ยกเลิก
                   </button>
@@ -313,7 +321,7 @@ export function TokenTopupModal({
                   </button>
                   <button suppressHydrationWarning
                     type="button"
-                    className="rounded-lg p-2 text-sky-600 transition-colors hover:bg-sky-50"
+                    className="app-tap-feedback rounded-lg p-2 text-sky-600 transition-colors hover:bg-sky-50"
                     onClick={() => void downloadCard()}
                     disabled={downloading}
                     title="ดาวน์โหลดทั้งหน้าเป็นรูป"
@@ -322,7 +330,7 @@ export function TokenTopupModal({
                   </button>
                   <button suppressHydrationWarning
                     type="button"
-                    className="rounded-lg p-2 text-rose-600 transition-colors hover:bg-rose-50"
+                    className="app-tap-feedback rounded-lg p-2 text-rose-600 transition-colors hover:bg-rose-50"
                     onClick={() => setOpen(false)}
                     title="ปิด"
                   >
@@ -340,7 +348,14 @@ export function TokenTopupModal({
                   </p>
                   <div className="mt-4 flex justify-center">
                     {qrImageDataUrl ? (
-                      <img src={qrImageDataUrl} alt="Payment QR" className="h-60 w-60 rounded-lg border border-slate-300 bg-white p-2" />
+                      <NextImage
+                        src={qrImageDataUrl}
+                        alt="Payment QR"
+                        width={240}
+                        height={240}
+                        unoptimized
+                        className="h-60 w-60 rounded-lg border border-slate-300 bg-white p-2"
+                      />
                     ) : (
                       <div className="flex h-60 w-60 items-center justify-center rounded-lg border border-slate-300 bg-white text-sm text-slate-500">
                         กำลังสร้าง QR...
@@ -359,15 +374,22 @@ export function TokenTopupModal({
                     type="button"
                     onClick={() => void downloadCard()}
                     disabled={downloading}
-                    className="w-full rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
+                    className="app-tap-feedback w-full rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-500 disabled:opacity-60"
                   >
-                    {downloading ? "กำลังดาวน์โหลด..." : "ดาวน์โหลดทั้งหน้าเป็นรูป"}
+                    {downloading ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="app-inline-spinner" aria-hidden />
+                        กำลังดาวน์โหลด...
+                      </span>
+                    ) : (
+                      "ดาวน์โหลดทั้งหน้าเป็นรูป"
+                    )}
                   </button>
                 </div>
                 <button suppressHydrationWarning
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="app-tap-feedback mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   ปิด
                 </button>

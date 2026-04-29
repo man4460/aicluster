@@ -179,7 +179,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
               <div className="flex h-full items-center justify-center text-3xl text-slate-400">?</div>
             )}
           </div>
-          <label className="cursor-pointer rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50">
+          <label className="app-tap-feedback cursor-pointer rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium hover:bg-slate-50">
             เปลี่ยนรูป
             <input suppressHydrationWarning type="file" accept="image/*" className="hidden" onChange={onAvatarChange} />
           </label>
@@ -201,7 +201,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
             type="button"
             onClick={() => setTab("business")}
             className={cn(
-              "rounded-xl px-3.5 py-2 text-sm font-semibold",
+              "app-tap-feedback rounded-xl px-3.5 py-2 text-sm font-semibold",
               tab === "business" ? "bg-[#0000BF]/12 text-[#0000BF]" : "bg-slate-100 text-slate-700",
             )}
           >
@@ -211,7 +211,7 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
             type="button"
             onClick={() => setTab("account")}
             className={cn(
-              "rounded-xl px-3.5 py-2 text-sm font-semibold",
+              "app-tap-feedback rounded-xl px-3.5 py-2 text-sm font-semibold",
               tab === "account" ? "bg-[#0000BF]/12 text-[#0000BF]" : "bg-slate-100 text-slate-700",
             )}
           >
@@ -266,9 +266,16 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
                   <button suppressHydrationWarning
                     type="submit"
                     disabled={loading}
-                    className="rounded-lg bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:opacity-60"
+                    className="app-tap-feedback rounded-lg bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:opacity-60"
                   >
-                    {loading ? "กำลังบันทึก..." : "บันทึกเบอร์ผู้แนะนำ"}
+                    {loading ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="app-inline-spinner" aria-hidden />
+                        กำลังบันทึก...
+                      </span>
+                    ) : (
+                      "บันทึกเบอร์ผู้แนะนำ"
+                    )}
                   </button>
                   <p className="text-[11px] text-slate-500">
                     หรือบันทึกพร้อมข้อมูลร้านได้จากแท็บ &quot;ตั้งค่าบริษัท/ร้าน&quot;
@@ -279,130 +286,177 @@ export function ProfileEditor({ initial }: { initial: Initial }) {
             <p className="text-xs text-slate-500">ตั้งค่าบริษัท/ร้านอยู่ที่แท็บด้านบน</p>
           </div>
         ) : (
-          <form onSubmit={saveProfile} className="space-y-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">ชื่อบริษัท/ร้าน</label>
-          <input suppressHydrationWarning
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            className={input}
-            placeholder="ชื่อบริษัทหรือชื่อร้าน"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">เลขกำกับภาษี</label>
-          <input suppressHydrationWarning
-            value={taxId}
-            onChange={(e) => setTaxId(e.target.value)}
-            className={input}
-            placeholder="เลขประจำตัวผู้เสียภาษี"
-          />
-        </div>
-        <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-4">
-          <p className="text-sm font-semibold text-sky-900">การชำระเงิน & ใบเสร็จ / ใบแจ้งชำระ</p>
-          <p className="mt-1 text-xs text-sky-800/90">
-            ใช้ข้อมูลนี้ร่วมกันในระบบบิล ใบเสร็จ และใบแจ้งให้ชำระ
-          </p>
-          <div className="mt-3 space-y-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">เบอร์พร้อมเพย์ (เฉพาะตัวเลข)</label>
-              <input suppressHydrationWarning
-                value={promptPayPhone}
-                onChange={(e) => setPromptPayPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
-                className={input}
-                placeholder="0812345678"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">ช่องทางชำระ (โอนธนาคาร ฯลฯ)</label>
-              <textarea suppressHydrationWarning
-                value={paymentChannelsNote}
-                onChange={(e) => setPaymentChannelsNote(e.target.value)}
-                rows={3}
-                className={input}
-                placeholder="เช่น ธ.กสิกรไทย เลขที่ ..."
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">ขนาดกระดาษเริ่มต้น</label>
-              <select suppressHydrationWarning
-                value={defaultPaperSize}
-                onChange={(e) => setDefaultPaperSize(e.target.value)}
-                className={input}
+          <form onSubmit={saveProfile} className="space-y-3 pb-24 md:space-y-3.5 md:pb-0">
+            {err ? (
+              <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert" aria-live="polite">
+                {err}
+              </p>
+            ) : null}
+            {msg ? (
+              <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800" aria-live="polite">
+                {msg}
+              </p>
+            ) : null}
+
+            <section className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 md:p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">ข้อมูลบริษัท / ร้าน</p>
+              <div className="mt-2.5 grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-700">ชื่อบริษัท/ร้าน</label>
+                  <input suppressHydrationWarning
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className={input}
+                    placeholder="ชื่อบริษัทหรือชื่อร้าน"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-700">เลขกำกับภาษี</label>
+                  <input suppressHydrationWarning
+                    value={taxId}
+                    onChange={(e) => setTaxId(e.target.value)}
+                    className={input}
+                    placeholder="เลขประจำตัวผู้เสียภาษี"
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-sky-100 bg-sky-50/60 p-3.5 md:p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-sky-900">การชำระเงิน & เอกสาร</p>
+              <p className="mt-1 text-[11px] text-sky-800/90">ใช้ร่วมกันในบิล ใบเสร็จ และใบแจ้งชำระ</p>
+              <div className="mt-2.5 grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-700">เบอร์พร้อมเพย์ (เฉพาะตัวเลข)</label>
+                  <input suppressHydrationWarning
+                    value={promptPayPhone}
+                    onChange={(e) => setPromptPayPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
+                    className={input}
+                    placeholder="0812345678"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-slate-700">ช่องทางชำระ (โอนธนาคาร ฯลฯ)</label>
+                  <textarea suppressHydrationWarning
+                    value={paymentChannelsNote}
+                    onChange={(e) => setPaymentChannelsNote(e.target.value)}
+                    rows={2}
+                    className={input}
+                    placeholder="เช่น ธ.กสิกรไทย เลขที่ ..."
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-700">ขนาดกระดาษเริ่มต้น</label>
+                  <select suppressHydrationWarning
+                    value={defaultPaperSize}
+                    onChange={(e) => setDefaultPaperSize(e.target.value)}
+                    className={input}
+                  >
+                    <option value="SLIP_58">สลิป 58 mm</option>
+                    <option value="SLIP_80">สลิป 80 mm</option>
+                    <option value="A4">A4 (เอกสารเต็มแผ่น)</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-slate-200 bg-white p-3.5 md:p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">ข้อมูลติดต่อ & ตำแหน่ง</p>
+              <div className="mt-2.5 grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-700">เบอร์โทร</label>
+                  <input suppressHydrationWarning
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className={input}
+                    placeholder="08xxxxxxxx"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-slate-700">ที่อยู่</label>
+                  <textarea suppressHydrationWarning
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    rows={2}
+                    className={input}
+                    placeholder="ที่อยู่จัดส่ง / ที่ตั้งร้าน"
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 md:col-span-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-700">ละติจูด</label>
+                    <input suppressHydrationWarning
+                      value={latitude}
+                      onChange={(e) => setLatitude(e.target.value)}
+                      className={input}
+                      placeholder="จากปุ่มด้านล่าง"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-700">ลองจิจูด</label>
+                    <input suppressHydrationWarning
+                      value={longitude}
+                      onChange={(e) => setLongitude(e.target.value)}
+                      className={input}
+                      placeholder="จากปุ่มด้านล่าง"
+                    />
+                  </div>
+                </div>
+                <button suppressHydrationWarning
+                  type="button"
+                  onClick={getLocation}
+                  disabled={geoLoading}
+                  className="app-tap-feedback rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-medium text-slate-800 hover:bg-slate-100 disabled:opacity-60 md:col-span-2 md:w-fit"
+                >
+                  {geoLoading ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="app-inline-spinner" aria-hidden />
+                      กำลังดึงตำแหน่ง...
+                    </span>
+                  ) : (
+                    "ดึงตำแหน่งปัจจุบัน (Geolocation)"
+                  )}
+                </button>
+              </div>
+            </section>
+
+            <div className="hidden md:block">
+              <button suppressHydrationWarning
+                type="submit"
+                disabled={loading}
+                className={cn(
+                  "app-tap-feedback rounded-lg bg-[#0000BF] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:opacity-60",
+                )}
               >
-                <option value="SLIP_58">สลิป 58 mm</option>
-                <option value="SLIP_80">สลิป 80 mm</option>
-                <option value="A4">A4 (เอกสารเต็มแผ่น)</option>
-              </select>
+                {loading ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="app-inline-spinner" aria-hidden />
+                    กำลังบันทึก...
+                  </span>
+                ) : (
+                  "บันทึกโปรไฟล์"
+                )}
+              </button>
             </div>
-          </div>
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">เบอร์โทร</label>
-          <input suppressHydrationWarning
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className={input}
-            placeholder="08xxxxxxxx"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">ที่อยู่</label>
-          <textarea suppressHydrationWarning
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            rows={3}
-            className={input}
-            placeholder="ที่อยู่จัดส่ง / ที่ตั้งร้าน"
-          />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">ละติจูด</label>
-            <input suppressHydrationWarning
-              value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
-              className={input}
-              placeholder="จากปุ่มด้านล่าง"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">ลองจิจูด</label>
-            <input suppressHydrationWarning
-              value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
-              className={input}
-              placeholder="จากปุ่มด้านล่าง"
-            />
-          </div>
-        </div>
-        <button suppressHydrationWarning
-          type="button"
-          onClick={getLocation}
-          disabled={geoLoading}
-          className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-100 disabled:opacity-60"
-        >
-          {geoLoading ? "กำลังดึงตำแหน่ง..." : "ดึงตำแหน่งปัจจุบัน (Geolocation)"}
-        </button>
 
-        {err ? (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
-            {err}
-          </p>
-        ) : null}
-        {msg ? (
-          <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{msg}</p>
-        ) : null}
-
-        <button suppressHydrationWarning
-          type="submit"
-          disabled={loading}
-          className={cn(
-            "rounded-lg bg-[#0000BF] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:opacity-60",
-          )}
-        >
-          {loading ? "กำลังบันทึก..." : "บันทึกโปรไฟล์"}
-        </button>
+            <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/92 p-3 backdrop-blur md:hidden">
+              <button suppressHydrationWarning
+                type="submit"
+                disabled={loading}
+                className={cn(
+                  "app-tap-feedback inline-flex min-h-[46px] w-full items-center justify-center rounded-xl bg-[#0000BF] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:opacity-60",
+                )}
+              >
+                {loading ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="app-inline-spinner" aria-hidden />
+                    กำลังบันทึก...
+                  </span>
+                ) : (
+                  "บันทึกโปรไฟล์"
+                )}
+              </button>
+            </div>
           </form>
         )}
       </div>

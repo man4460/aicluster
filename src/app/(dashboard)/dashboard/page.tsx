@@ -4,7 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
 import { canAccessAppModule } from "@/lib/modules/access";
-import { appDashboardBrandCtaPillButtonClass } from "@/components/app-templates";
+import { appDashboardBrandCtaPillButtonClass, appDashboardBrandGradientFillClass } from "@/components/app-templates";
 import { TokenTopupModal } from "@/components/dashboard/TokenTopupModal";
 import { cn } from "@/lib/cn";
 import { getSession } from "@/lib/auth/session";
@@ -23,8 +23,11 @@ import {
   dashboardModuleCardDescription,
   dashboardSystemMapCardDescription,
 } from "@/lib/modules/dashboard-card-descriptions";
-import { SYSTEM_MAP_CATALOG_ROW, SYSTEM_MAP_CATALOG_SLUG } from "@/lib/modules/system-map-catalog";
-import { DashboardDemoTryoutCta } from "@/components/dashboard/DashboardDemoTryoutCta";
+import {
+  SYSTEM_MAP_CATALOG_ROW,
+  SYSTEM_MAP_CATALOG_SLUG,
+} from "@/lib/modules/system-map-catalog";
+import { CHAT_AI_DASHBOARD_HREF } from "@/lib/dashboard/chat-ai-href";
 import { DashboardModuleHeroCard } from "@/components/dashboard/DashboardModuleHeroCard";
 
 export const metadata: Metadata = {
@@ -97,229 +100,219 @@ export default async function DashboardHomePage() {
     .map((m) => ({ ...m, title: displayAppModuleTitle(m.slug, m.title) }));
 
   return (
-    <div className="space-y-8 sm:space-y-10">
-      <header className="app-surface relative overflow-hidden rounded-3xl border border-white/70 px-5 py-6 shadow-[0_16px_48px_-24px_rgba(79,70,229,0.2)] sm:px-8 sm:py-7">
+    <div className="mx-auto max-w-7xl space-y-6 sm:space-y-8 pb-10">
+      {/* Header Section - Bento Hero */}
+      <header className="group relative overflow-hidden rounded-[2.5rem] border border-white/80 bg-gradient-to-br from-[#f7f2ff] via-white to-[#ffeefa] p-6 shadow-[0_20px_50px_-20px_rgba(68,49,127,0.18)] ring-1 ring-white/70 sm:p-8">
         <div
-          className="pointer-events-none absolute -right-12 top-0 h-40 w-40 rounded-full bg-gradient-to-br from-[#c7d2fe]/50 to-fuchsia-200/35 blur-3xl"
+          className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-gradient-to-br from-[#c7d2fe]/40 to-fuchsia-200/30 blur-[80px] transition-transform duration-1000 group-hover:scale-110"
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute -bottom-8 left-1/4 h-32 w-32 rounded-full bg-[#0000BF]/10 blur-2xl"
+          className="pointer-events-none absolute -bottom-16 left-1/4 h-48 w-48 rounded-full bg-[#0000BF]/5 blur-[60px]"
           aria-hidden
         />
-        <div className="relative">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#0000BF]/75">MAWELL Buffet</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#2e2a58] sm:text-3xl">
-            สวัสดี, {user.fullName || user.username}
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#66638c]">
-            ยินดีต้อนรับกลับมา — เข้าระบบจากเมนูด้านข้างหรือการ์ดด้านล่าง โมดูลเพิ่มเติมดูได้ที่หน้า
-            <Link href="/dashboard/modules" className="font-medium text-[#0000BF] hover:underline">
-              ระบบทั้งหมด
+        <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-2">
+            <p className="inline-flex items-center rounded-full bg-[#5b61ff]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#5b61ff]">
+              Workspace
+            </p>
+            <h1 className="text-2xl font-bold tracking-tight text-[#2e2a58] sm:text-4xl">
+              สวัสดี, <span className="app-gradient-text">{user.fullName || user.username}</span>
+            </h1>
+            <p className="max-w-xl text-sm leading-relaxed text-[#66638c] sm:text-base">
+              ยินดีต้อนรับสู่ MAWELL Buffet — พื้นที่จัดการธุรกิจของคุณให้เป็นเรื่องง่ายและทันสมัย
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/dashboard/modules"
+              className="inline-flex h-11 items-center justify-center rounded-2xl bg-white/80 px-5 text-sm font-semibold text-[#5b61ff] shadow-sm ring-1 ring-[#5b61ff]/20 backdrop-blur-sm transition hover:bg-white"
+            >
+              ดูระบบทั้งหมด
             </Link>
-          </p>
+          </div>
         </div>
       </header>
 
-      <section className="relative overflow-hidden rounded-3xl border border-white/80 bg-gradient-to-br from-[#f4f2ff]/95 via-white to-[#fff8fc] p-6 shadow-[0_24px_64px_-28px_rgba(79,70,229,0.28)] ring-1 ring-[#e8e4ff]/60 sm:p-8">
-        <div
-          className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-gradient-to-br from-indigo-200/40 to-violet-100/30 blur-3xl"
-          aria-hidden
-        />
-        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
-          <div className="min-w-0 flex-1 space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full border border-[#0000BF]/20 bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[#0000BF] backdrop-blur-sm">
-                Token balance
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0000BF]/[0.08] px-3 py-1 text-xs font-semibold text-[#312e81]">
-                <span className="tabular-nums">{subscribedModules.length}</span>
-                <span className="text-[#66638c]">ระบบที่เปิดใช้</span>
-              </span>
-            </div>
-            <div className="flex flex-wrap items-end gap-3 sm:gap-4">
-              <span
-                aria-hidden
-                className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0000BF] to-[#6366f1] text-white shadow-lg shadow-indigo-500/30"
-              >
-                <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                  <circle cx="12" cy="12" r="9" />
-                  <circle cx="12" cy="12" r="5" />
-                </svg>
-              </span>
-              <div>
-                <p className="text-sm font-medium text-[#66638c]">ยอดโทเคนคงเหลือ</p>
-                <p className="mt-0.5 bg-gradient-to-r from-[#1e1b4b] via-[#312e81] to-[#4338ca] bg-clip-text text-4xl font-bold tabular-nums tracking-tight text-transparent sm:text-5xl">
+      {/* Main Bento Grid */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-12">
+        {/* Token Balance Card - Large (8 cols on LG, 2 cols on MD) */}
+        <section className="relative overflow-hidden rounded-[2.5rem] border border-[#e8e4ff]/90 bg-gradient-to-br from-[#f6efff] via-white to-[#ffeef8] p-6 shadow-[0_20px_50px_-20px_rgba(79,70,229,0.2)] ring-1 ring-white/90 md:col-span-2 lg:col-span-8 sm:p-8">
+          <div
+            className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-indigo-100/30 blur-[60px]"
+            aria-hidden
+          />
+          <div className="relative h-full flex flex-col justify-between gap-8">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-[#0000BF]/60">Token Balance</span>
+                <p className="text-4xl font-black tabular-nums tracking-tighter text-[#1e1b4b] sm:text-5xl">
                   {user.tokens.toLocaleString("en-US")}
                 </p>
               </div>
+              <div className="flex -space-x-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-10 w-10 rounded-full border-2 border-white bg-gradient-to-br from-indigo-100 to-violet-50 shadow-sm" />
+                ))}
+              </div>
             </div>
-            <p className="text-sm text-[#66638c]">
-              พร้อมใช้งาน <span className="font-semibold text-[#2e2a58]">{subscribedModules.length}</span> ระบบ
-              <span className="text-[#94a3b8]"> · </span>
-              Subscribe เพื่อเปิดระบบ
-            </p>
-          </div>
-          <div className="flex w-full shrink-0 flex-col gap-3 sm:max-w-xs lg:w-auto lg:min-w-[220px]">
-            <TokenTopupModal
-              triggerLabel="เติมโทเคน"
-              triggerClassName={cn(appDashboardBrandCtaPillButtonClass, "w-full")}
-              subscriptionTier={user.subscriptionTier}
-              subscriptionType={user.subscriptionType}
-            />
-            <Link
-              href="/dashboard/plans"
-              className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#0000BF]/20 bg-white/90 px-5 py-3 text-sm font-semibold text-[#0000BF] shadow-sm backdrop-blur-sm transition hover:border-[#0000BF]/35 hover:bg-white"
-            >
-              <svg className="h-4 w-4 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M4 7h16M4 12h16M4 17h10" strokeLinecap="round" />
-              </svg>
-              ดูแพ็กเกจ
-            </Link>
-            <DashboardDemoTryoutCta username={user.username} />
-          </div>
-        </div>
-      </section>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="app-surface-strong flex flex-col gap-3 rounded-2xl border border-[#e8e6f4]/70 p-5 shadow-sm transition hover:border-[#c7d2fe]/80 hover:shadow-md">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-indigo-50 text-[#4338ca]">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M4 7h16M6 7v12a2 2 0 002 2h8a2 2 0 002-2V7M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2" />
-            </svg>
-          </div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#66638c]">ประเภทแพ็กเกจ</p>
-          <p className="text-base font-semibold leading-snug text-[#2e2a58]">
-            {user.subscriptionType === "BUFFET" ? "แพ็กเกจเหมา (Buffet)" : "สายรายวัน (Pay-per-day)"}
-          </p>
-        </div>
-        <div className="app-surface-strong flex flex-col gap-3 rounded-2xl border border-[#e8e6f4]/70 p-5 shadow-sm transition hover:border-[#c7d2fe]/80 hover:shadow-md">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 text-amber-800">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-              <circle cx="12" cy="12" r="4" />
-            </svg>
-          </div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#66638c]">แพ็ก / ระดับปัจจุบัน</p>
-          <p className="text-base font-semibold leading-snug text-[#2e2a58]">{tierLine}</p>
-        </div>
-        <div className="app-surface-strong flex flex-col gap-3 rounded-2xl border border-[#e8e6f4]/70 p-5 shadow-sm transition hover:border-[#c7d2fe]/80 hover:shadow-md sm:col-span-3 lg:col-span-1">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 text-teal-800">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M4 6h16M4 10h16M4 14h10M4 18h8" strokeLinecap="round" />
-            </svg>
-          </div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#66638c]">ระบบที่เปิดสิทธิ์</p>
-          <p className="text-base font-semibold tabular-nums text-[#2e2a58]">{subscribedModules.length} ระบบ</p>
-          <p className="text-xs leading-relaxed text-[#66638c]">
-            จัดการรายการได้ที่{" "}
-            <Link href="/dashboard/modules" className="font-medium text-[#0000BF] hover:underline">
-              ระบบทั้งหมด
-            </Link>
-          </p>
-        </div>
-      </section>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2">
+              <div className="rounded-3xl bg-white/40 p-4 ring-1 ring-white/60 backdrop-blur-md">
+                <p className="text-xs font-medium text-[#66638c]">สถานะการใช้งาน</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-sm font-bold text-[#2e2a58]">{subscribedModules.length} ระบบที่เปิดใช้</span>
+                </div>
+              </div>
+              <div className="rounded-3xl bg-white/40 p-4 ring-1 ring-white/60 backdrop-blur-md">
+                <p className="text-xs font-medium text-[#66638c]">ระดับแพ็กเกจ</p>
+                <p className="mt-2 text-sm font-bold text-[#2e2a58]">{tierLine}</p>
+              </div>
+            </div>
 
-      {user.tokens <= 0 && user.role === "USER" ? (
-        <div className="rounded-3xl border border-amber-200/80 bg-gradient-to-r from-amber-50/95 via-white/90 to-rose-50/60 px-4 py-3 shadow-md backdrop-blur-sm">
-          <p className="text-sm font-medium text-amber-900">โทเคนของคุณหมดแล้ว กรุณาเติมโทเคนเพื่อใช้งานต่อ</p>
-          <div className="mt-3">
-            <Link
-              href="/dashboard/plans"
-              className="inline-flex rounded-2xl bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-[#0000a3]"
-            >
-              ดูแพ็กเกจเหมา
-            </Link>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <TokenTopupModal
+                triggerLabel="เติมโทเคน"
+                triggerClassName={cn(appDashboardBrandCtaPillButtonClass, "flex-1 rounded-2xl")}
+                subscriptionTier={user.subscriptionTier}
+                subscriptionType={user.subscriptionType}
+              />
+              <Link
+                href="/dashboard/plans"
+                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-[#5b61ff]/20 bg-white px-6 text-sm font-bold text-[#5b61ff] shadow-sm transition hover:bg-[#5b61ff]/5"
+              >
+                อัปเกรดแพ็กเกจ
+              </Link>
+            </div>
           </div>
-        </div>
-      ) : null}
+        </section>
 
-      <section className="space-y-5">
-        <div className="relative overflow-hidden rounded-3xl border border-[#e8e6f4]/90 bg-gradient-to-r from-white via-[#faf9ff] to-[#f5f3ff] px-5 py-4 shadow-sm ring-1 ring-white/80 sm:px-6 sm:py-5">
-          <div
-            className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-[#0000BF] via-[#6366f1] to-[#a78bfa]"
-            aria-hidden
-          />
-          <div className="flex flex-col gap-4 pl-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0000BF]/80">Your apps</p>
-              <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#2e2a58] sm:text-[1.35rem]">
-                โปรแกรมที่ใช้งานได้
-              </h2>
-              <p className="mt-1 max-w-xl text-sm text-[#66638c]">
-                {user.role === "ADMIN"
-                  ? "เลือกการ์ดเพื่อเข้าใช้งาน หรือเปิดแผนผังเพื่อดูภาพรวมระบบ"
-                  : "เลือกการ์ดเพื่อเข้าใช้งาน"}
+        {/* Quick Links - Medium (4 cols on LG, 1 col on MD) */}
+        <section className="flex flex-col gap-6 md:col-span-1 lg:col-span-4">
+          <div className="flex-1 rounded-[2.5rem] border border-[#e8e6f4]/70 bg-white/60 p-6 shadow-sm backdrop-blur-md ring-1 ring-white/80">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#66638c]">Shortcut</p>
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-2">
+              {[
+                { label: "โปรไฟล์", href: "/dashboard/profile", icon: "👤" },
+                { label: "แชท", href: "/dashboard/chat", icon: "💬" },
+                { label: "แพ็กเกจ", href: "/dashboard/plans", icon: "💎" },
+                { label: "เลขาส่วนตัว", href: CHAT_AI_DASHBOARD_HREF, icon: "🤖" },
+              ].map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="group flex flex-col items-center justify-center gap-2 rounded-3xl border border-slate-100 bg-white p-4 transition-all hover:-translate-y-1 hover:border-[#5b61ff]/30 hover:shadow-md"
+                >
+                  <span className="text-xl transition-transform group-hover:scale-110">{link.icon}</span>
+                  <span className="text-[11px] font-bold text-[#2e2a58]">{link.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Support Card - 1 col on MD, 4 cols on LG if needed or separate row */}
+        <section className="md:col-span-1 lg:col-span-12">
+          <div className="rounded-[2.5rem] border border-[#0000BF]/10 bg-gradient-to-br from-[#0000BF] to-[#6366f1] p-6 text-white shadow-lg shadow-indigo-500/20 lg:flex lg:items-center lg:justify-between">
+            <div className="lg:flex lg:items-center lg:gap-8">
+              <div className="flex items-center justify-between lg:block">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">Support</p>
+                <div className="h-2 w-2 rounded-full bg-white/40 lg:hidden" />
+              </div>
+              <p className="mt-3 text-sm font-medium leading-relaxed lg:mt-0 lg:text-base">
+                ต้องการความช่วยเหลือ? <br className="lg:hidden" />
+                <span className="text-lg font-bold lg:ml-2 lg:text-xl">คุยกับเลขา AI ของคุณได้ตลอด 24 ชม.</span>
               </p>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch sm:justify-end sm:gap-2">
-              <div className="flex flex-wrap gap-2">
-                {user.role === "ADMIN" ? (
-                  <Link
-                    href="/dashboard/explore"
-                    className="inline-flex min-h-[42px] items-center justify-center rounded-2xl border border-[#0000BF]/15 bg-white/90 px-4 py-2 text-sm font-semibold text-[#0000BF] shadow-sm backdrop-blur-sm transition hover:border-[#0000BF]/30 hover:bg-white"
-                  >
-                    แผนผังระบบ
-                  </Link>
-                ) : null}
-                <Link
-                  href="/dashboard/modules"
-                  className="inline-flex min-h-[42px] items-center justify-center rounded-2xl border border-slate-200/90 bg-white/80 px-4 py-2 text-sm font-semibold text-[#2e2a58] shadow-sm transition hover:border-[#c7d2fe] hover:bg-white"
-                >
-                  ดูระบบทั้งหมด
-                </Link>
-              </div>
-              {user.role === "ADMIN" ? (
-                <Link
-                  href="/dashboard/admin/module-cards"
-                  className="inline-flex min-h-[42px] w-full items-center justify-center rounded-2xl bg-[#0000BF] px-4 py-2 text-center text-sm font-semibold text-white shadow-md shadow-indigo-400/20 transition hover:bg-[#0000a3] sm:w-auto"
-                >
-                  อัปโหลดรูปการ์ดระบบ
-                </Link>
-              ) : null}
+            <Link
+              href={CHAT_AI_DASHBOARD_HREF}
+              className="mt-4 inline-flex h-11 items-center justify-center rounded-2xl bg-white px-6 text-sm font-bold text-[#0000BF] transition hover:bg-opacity-90 lg:mt-0"
+            >
+              เริ่มต้นแชท
+            </Link>
+          </div>
+        </section>
+      </div>
+
+      {/* Modules Section */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between px-2">
+          <h2 className="text-xl font-bold text-[#2e2a58]">โปรแกรมที่ใช้งานได้</h2>
+          <Link href="/dashboard/modules" className="text-sm font-semibold text-[#5b61ff] hover:underline">
+            ดูทั้งหมด
+          </Link>
+        </div>
+        
+        {subscribedModules.length > 0 ? (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {user.role === "ADMIN" && (
+              <DashboardModuleHeroCard
+                variant="systemMap"
+                groupId={SYSTEM_MAP_CATALOG_ROW.groupId}
+                title={SYSTEM_MAP_CATALOG_ROW.title}
+                description={dashboardSystemMapCardDescription()}
+                href="/dashboard/explore"
+                ctaLabel="เปิดแผนผังระบบ"
+              />
+            )}
+            {subscribedModules.map((m) => (
+              <DashboardModuleHeroCard
+                key={m.id}
+                href={dashboardModuleHref(m.slug)}
+                imageUrl={m.cardImageUrl}
+                title={m.title}
+                description={dashboardModuleCardDescription(m.slug)}
+                groupId={m.groupId}
+                ctaLabel="เข้าใช้งาน"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-[2.5rem] border border-dashed border-slate-300 bg-slate-50/50 p-12 text-center">
+            <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center text-2xl mb-4">
+              📦
             </div>
+            <h3 className="text-base font-bold text-[#2e2a58]">ยังไม่มีระบบที่เปิดใช้งาน</h3>
+            <p className="mt-1 text-sm text-[#66638c]">เลือกเปิดใช้งานระบบที่ต้องการได้จากหน้าระบบทั้งหมด</p>
+            <Link
+              href="/dashboard/modules"
+              className="mt-6 inline-flex h-11 items-center justify-center rounded-2xl bg-[#0000BF] px-6 text-sm font-bold text-white transition hover:bg-opacity-90"
+            >
+              ไปหน้าระบบทั้งหมด
+            </Link>
           </div>
-        </div>
-        {user.role === "ADMIN" ? (
-          <p className="rounded-2xl border border-[#c7d2fe] bg-gradient-to-r from-[#eef2ff] to-[#faf5ff] px-4 py-3 text-sm text-[#312e81]">
-            <span className="font-semibold">แอดมิน:</span> รูปบนการ์ดแต่ละระบบไม่ได้อัปโหลดจากการ์ดนี้ — กดปุ่ม{" "}
-            <strong>อัปโหลดรูปการ์ดระบบ</strong> ด้านบน หรือเข้า{" "}
-            <strong>ศูนย์แอดมิน</strong> จากเมนูกลุ่มพื้นฐาน แล้วเลือก «รูปการ์ดระบบ»
-          </p>
-        ) : null}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {user.role === "ADMIN" ? (
-            <DashboardModuleHeroCard
-              variant="systemMap"
-              groupId={SYSTEM_MAP_CATALOG_ROW.groupId}
-              title={SYSTEM_MAP_CATALOG_ROW.title}
-              description={dashboardSystemMapCardDescription()}
-              href="/dashboard/explore"
-              ctaLabel="เปิดแผนผังระบบ"
-            />
-          ) : null}
-          {subscribedModules.map((m) => (
-            <DashboardModuleHeroCard
-              key={m.id}
-              imageUrl={m.cardImageUrl}
-              groupId={m.groupId}
-              title={m.title}
-              description={dashboardModuleCardDescription(m.slug)}
-              href={dashboardModuleHref(m.slug)}
-              ctaLabel="เข้าใช้งาน"
-            />
-          ))}
-        </div>
-        {subscribedModules.length === 0 ? (
-          <div className="rounded-3xl border border-amber-200/80 bg-gradient-to-r from-amber-50/95 to-rose-50/70 px-4 py-3 text-sm text-amber-900 shadow-md backdrop-blur-sm">
-            ยังไม่มีระบบที่เปิดใช้ — กด{" "}
-            <Link href="/dashboard/modules" className="font-semibold underline">
-              ดูระบบทั้งหมด
-            </Link>{" "}
-            เพื่อเลือกใช้งาน
-          </div>
-        ) : null}
+        )}
       </section>
+
+      {user.role === "ADMIN" && (
+        <section className="rounded-[2.5rem] border border-[#c8c4ff]/50 bg-white/40 p-6 backdrop-blur-md ring-1 ring-white/60 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#5b61ff] text-white text-base shadow-lg shadow-[#5b61ff]/20">
+              🛡️
+            </span>
+            <h2 className="text-lg font-bold text-[#2e2a58]">แผงควบคุมผู้ดูแลระบบ</h2>
+          </div>
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <Link href="/dashboard/admin/users" className="group flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200 transition-all hover:-translate-y-1 hover:ring-[#5b61ff]/30">
+              <span className="text-lg transition-transform group-hover:scale-110">👥</span>
+              <span className="text-xs font-bold text-[#2e2a58]">จัดการผู้ใช้</span>
+            </Link>
+            <Link href="/dashboard/admin/activity-logs" className="group flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200 transition-all hover:-translate-y-1 hover:ring-[#5b61ff]/30">
+              <span className="text-lg transition-transform group-hover:scale-110">📝</span>
+              <span className="text-xs font-bold text-[#2e2a58]">Log กิจกรรม</span>
+            </Link>
+            <Link href="/dashboard/admin/mqtt" className="group flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200 transition-all hover:-translate-y-1 hover:ring-[#5b61ff]/30">
+              <span className="text-lg transition-transform group-hover:scale-110">📡</span>
+              <span className="text-xs font-bold text-[#2e2a58]">MQTT Status</span>
+            </Link>
+            <Link href="/dashboard/explore" className="group flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200 transition-all hover:-translate-y-1 hover:ring-[#5b61ff]/30">
+              <span className="text-lg transition-transform group-hover:scale-110">🗺️</span>
+              <span className="text-xs font-bold text-[#2e2a58]">แผนผังระบบ</span>
+            </Link>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

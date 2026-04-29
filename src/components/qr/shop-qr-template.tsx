@@ -116,11 +116,21 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 export function resolveAssetUrl(relativeOrAbsolute: string | null | undefined, baseUrl: string): string | null {
   if (!relativeOrAbsolute?.trim()) return null;
-  const u = relativeOrAbsolute.trim();
-  if (u.startsWith("http://") || u.startsWith("https://")) return u;
-  if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) return u.startsWith("/") ? u : `/${u}`;
+  const raw = relativeOrAbsolute.trim().replace(/\\/g, "/");
+  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+
+  // Normalize common persisted forms: "uploads/...", "public/uploads/...", "./uploads/..."
+  let p = raw.replace(/^\.?\//, "");
+  if (p.startsWith("public/")) p = p.slice("public/".length);
+  if (p.startsWith("uploads/")) return `/${p}`;
+
+  // Keep app-local absolute paths as-is.
+  if (raw.startsWith("/")) return raw;
+
+  // Fallback to baseUrl only for non-upload relative paths.
+  if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) return `/${p}`;
   const base = baseUrl.replace(/\/$/, "");
-  return u.startsWith("/") ? `${base}${u}` : u;
+  return `${base}/${p}`;
 }
 
 export async function createShopQrPosterCanvas(input: PosterCanvasInput): Promise<HTMLCanvasElement> {

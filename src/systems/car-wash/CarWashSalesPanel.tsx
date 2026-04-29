@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   AppCameraCaptureModal,
-  AppCompareBarList,
   type AppCompareBarRow,
   AppDashboardSection,
   AppEmptyState,
@@ -30,8 +29,14 @@ import {
   SalesRowOpenDetailButton,
 } from "@/systems/car-wash/car-wash-popup-icon-buttons";
 import {
+  AppPickGalleryImageButton,
+  AppTakePhotoButton,
+} from "@/components/app-templates";
+import {
   uploadCarWashSessionImage,
+  type CarWashRepository,
   type CarWashServiceStatus,
+  type CostCategory,
   type CostEntry,
   type ServicePackage,
   type ServiceVisit,
@@ -59,6 +64,21 @@ function entriesToBarRows(entries: [string, number][]): AppCompareBarRow[] {
     amount,
     pct: Math.round((amount / maxAmt) * 100),
   }));
+}
+
+function donutGradientFromRows(rows: AppCompareBarRow[]): string {
+  if (rows.length === 0) return "conic-gradient(#e5e7eb 0deg 360deg)";
+  const palette = ["#5b61ff", "#8d64ff", "#f06dc8", "#22c55e", "#f59e0b", "#ef4444"];
+  const total = rows.reduce((sum, row) => sum + row.amount, 0);
+  if (total <= 0) return "conic-gradient(#e5e7eb 0deg 360deg)";
+  let acc = 0;
+  const segments = rows.slice(0, 6).map((row, index) => {
+    const start = Math.round((acc / total) * 360);
+    acc += row.amount;
+    const end = Math.round((acc / total) * 360);
+    return `${palette[index % palette.length]} ${start}deg ${end}deg`;
+  });
+  return `conic-gradient(${segments.join(", ")})`;
 }
 
 /** รายการที่นับเป็นการใช้สิทธิ์เหมา (ยังมี bundle_id หรือปิดคิวแล้วแต่ชื่อแพ็กเป็นรูปแบบเหมาจ่าย) */
@@ -184,6 +204,135 @@ function datetimeLocalToIso(localValue: string): string {
   return Number.isFinite(d.getTime()) ? d.toISOString() : new Date().toISOString();
 }
 
+function CostSlipAttachmentZone({
+  slipUrl,
+  onSlipUrlChange,
+  photoBusy,
+  previewUrl,
+  galleryInputRef,
+  onFileInputChange,
+  onOpenModalCamera,
+  cameraOpen,
+  onCloseCamera,
+  onCameraCapture,
+  onRequestLegacyPicker,
+  disabled,
+}: {
+  slipUrl: string;
+  onSlipUrlChange: (url: string) => void;
+  photoBusy: boolean;
+  previewUrl: string | null;
+  galleryInputRef: React.RefObject<HTMLInputElement | null>;
+  onFileInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onOpenModalCamera: () => void;
+  cameraOpen: boolean;
+  onCloseCamera: () => void;
+  onCameraCapture: (file: File) => void;
+  onRequestLegacyPicker: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-violet-200/70 bg-gradient-to-br from-[#faf8ff] via-white to-rose-50/40 p-4 shadow-sm ring-1 ring-violet-100/60">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-violet-800/90">
+            แนบสลิป / บิล (ไม่บังคับ)
+          </p>
+          <p className="mt-0.5 text-xs text-slate-600">อัปโหลดหรือถ่ายรูป — สไตล์เดียวกับสลิป POS</p>
+        </div>
+        <div className="flex shrink-0 flex-wrap justify-end gap-2">
+          <AppPickGalleryImageButton
+            type="button"
+            disabled={disabled || photoBusy}
+            onClick={() => galleryInputRef.current?.click()}
+            className="inline-flex h-9 w-9 min-h-0 items-center justify-center !p-0"
+            aria-label="อัปโหลดรูปสลิป"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              aria-hidden
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+          </AppPickGalleryImageButton>
+          <AppTakePhotoButton
+            type="button"
+            disabled={disabled || photoBusy}
+            onClick={onOpenModalCamera}
+            className="inline-flex h-9 w-9 min-h-0 items-center justify-center !p-0"
+            aria-label="ถ่ายรูปสลิป"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              aria-hidden
+            >
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+          </AppTakePhotoButton>
+        </div>
+      </div>
+
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden
+        onChange={onFileInputChange}
+      />
+
+      {photoBusy ? (
+        <p className="mt-2 text-xs font-medium text-violet-700">กำลังอัปโหลดรูป…</p>
+      ) : null}
+
+      {slipUrl.trim() && previewUrl ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200/80 bg-white/80 p-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={previewUrl}
+            alt="สลิปแนบ"
+            className="h-20 w-auto max-w-[min(100%,12rem)] rounded-lg object-cover object-center ring-1 ring-slate-200"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-slate-700">แนบแล้ว</p>
+            <p className="truncate text-[11px] text-slate-500">
+              {slipUrl.slice(0, 80)}
+              {slipUrl.length > 80 ? "…" : ""}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={disabled || photoBusy}
+            onClick={() => onSlipUrlChange("")}
+            className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+          >
+            ลบรูป
+          </button>
+        </div>
+      ) : null}
+
+      <AppCameraCaptureModal
+        open={cameraOpen}
+        onClose={onCloseCamera}
+        onCapture={(file) => onCameraCapture(file)}
+        onRequestLegacyPicker={onRequestLegacyPicker}
+      />
+    </div>
+  );
+}
+
 type EditFormState = {
   customer_name: string;
   customer_phone: string;
@@ -248,11 +397,15 @@ export function CarWashSalesPanel({
   updateBundle,
   deleteBundle,
   costEntries = [],
+  costCategories = [],
+  repo,
 }: {
   visits: ServiceVisit[];
   bundles: WashBundle[];
   packages: ServicePackage[];
   costEntries?: CostEntry[];
+  costCategories?: CostCategory[];
+  repo: CarWashRepository;
   baseUrl: string;
   shopLabel: string;
   logoUrl?: string | null;
@@ -270,6 +423,7 @@ export function CarWashSalesPanel({
   const [filterMonth, setFilterMonth] = useState(bangkokFilterDefaults.month);
   const [filterDay, setFilterDay] = useState("");
   const [search, setSearch] = useState("");
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const photoTargetVisitIdRef = useRef<number | null>(null);
   const photoTargetBundleIdRef = useRef<number | null>(null);
@@ -282,9 +436,40 @@ export function CarWashSalesPanel({
   const [busyVisitId, setBusyVisitId] = useState<number | null>(null);
   const [busyBundleId, setBusyBundleId] = useState<number | null>(null);
   const [listError, setListError] = useState<string | null>(null);
+  const [activeListTab, setActiveListTab] = useState<"sales" | "costs">("sales");
   const [salesRowDetail, setSalesRowDetail] = useState<
     { kind: "visit"; id: number } | { kind: "bundle"; id: number } | null
   >(null);
+  const [costEntryDetail, setCostEntryDetail] = useState<CostEntry | null>(null);
+
+  const [busy, setBusy] = useState(false);
+  const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
+  const [catName, setCatName] = useState("");
+  const [editCat, setEditCat] = useState<CostCategory | null>(null);
+
+  const [showAddEntryModal, setShowAddEntryModal] = useState(false);
+  const [entryCategoryId, setEntryCategoryId] = useState("");
+  const [entrySpentLocal, setEntrySpentLocal] = useState(() =>
+    isoToDatetimeLocalInput(new Date().toISOString()),
+  );
+  const [entryAmount, setEntryAmount] = useState("");
+  const [entryItemLabel, setEntryItemLabel] = useState("");
+  const [entryNote, setEntryNote] = useState("");
+  const [entrySlipUrl, setEntrySlipUrl] = useState("");
+
+  const [editEntry, setEditEntry] = useState<CostEntry | null>(null);
+  const [editEntryForm, setEditEntryForm] = useState<{
+    category_id: string;
+    spent_at_local: string;
+    amount: string;
+    item_label: string;
+    note: string;
+    slip_photo_url: string;
+  } | null>(null);
+
+  const [entryCameraOpen, setEntryCameraOpen] = useState(false);
+  const [entryPhotoBusy, setEntryPhotoBusy] = useState(false);
+  const costGalleryInputRef = useRef<HTMLInputElement>(null);
 
   const [editVisit, setEditVisit] = useState<ServiceVisit | null>(null);
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
@@ -480,6 +665,217 @@ export function CarWashSalesPanel({
     },
     [finalizeListPhoto],
   );
+
+  const openManageCategories = useCallback(() => {
+    setCatName("");
+    setEditCat(null);
+    setManageCategoriesOpen(true);
+  }, []);
+
+  const openEditCategoryForm = useCallback((c: CostCategory) => {
+    setEditCat(c);
+    setCatName(c.name);
+  }, []);
+
+  const cancelCategoryForm = useCallback(() => {
+    setCatName("");
+    setEditCat(null);
+  }, []);
+
+  const submitCategory = useCallback(async () => {
+    const n = catName.trim();
+    if (!n) return;
+    setBusy(true);
+    setListError(null);
+    try {
+      if (editCat) await repo.updateCostCategory(editCat.id, { name: n });
+      else await repo.createCostCategory(n);
+      cancelCategoryForm();
+      await onRefresh();
+    } catch (e) {
+      setListError(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }, [catName, cancelCategoryForm, editCat, onRefresh, repo]);
+
+  const removeCategory = useCallback(
+    async (c: CostCategory) => {
+      if (!confirm(`ลบหมวด «${c.name}» และรายการต้นทุนที่ผูกไว้ทั้งหมด?`)) return;
+      setBusy(true);
+      setListError(null);
+      try {
+        await repo.deleteCostCategory(c.id);
+        await onRefresh();
+      } catch (e) {
+        setListError(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [onRefresh, repo],
+  );
+
+  const resetAddEntryForm = useCallback(() => {
+    setEntryCategoryId("");
+    setEntrySpentLocal(isoToDatetimeLocalInput(new Date().toISOString()));
+    setEntryAmount("");
+    setEntryItemLabel("");
+    setEntryNote("");
+    setEntrySlipUrl("");
+  }, []);
+
+  const openAddEntry = useCallback(() => {
+    resetAddEntryForm();
+    setShowAddEntryModal(true);
+  }, [resetAddEntryForm]);
+
+  const finalizeCostSlipFile = useCallback(async (file: File, target: "add" | "edit") => {
+    setEntryPhotoBusy(true);
+    setListError(null);
+    try {
+      const prepared = await prepareBuildingPosSlipImageFile(file);
+      const url = await uploadCarWashSessionImage(prepared);
+      if (target === "add") setEntrySlipUrl(url);
+      else setEditEntryForm((s) => (s ? { ...s, slip_photo_url: url } : s));
+    } catch (e) {
+      setListError(e instanceof Error ? e.message : "อัปโหลดรูปไม่สำเร็จ");
+    } finally {
+      setEntryPhotoBusy(false);
+    }
+  }, []);
+
+  const onCostSlipFileChange = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>, target: "add" | "edit") => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) return;
+      await finalizeCostSlipFile(file, target);
+    },
+    [finalizeCostSlipFile],
+  );
+
+  const onCostModalCameraCapture = useCallback(
+    async (file: File) => {
+      setEntryCameraOpen(false);
+      const target = editEntry != null && editEntryForm != null ? "edit" : "add";
+      await finalizeCostSlipFile(file, target);
+    },
+    [editEntry, editEntryForm, finalizeCostSlipFile],
+  );
+
+  const submitCostEntry = useCallback(async () => {
+    const cid = entryCategoryId ? Number(entryCategoryId) : NaN;
+    const amt = Number(entryAmount.replace(/,/g, ""));
+    if (!Number.isFinite(cid) || cid < 1) {
+      setListError("เลือกหมวด");
+      return;
+    }
+    if (!Number.isFinite(amt) || amt < 0) {
+      setListError("จำนวนเงินไม่ถูกต้อง");
+      return;
+    }
+    const item = entryItemLabel.trim();
+    if (!item) {
+      setListError("ระบุรายการค่าใช้จ่าย");
+      return;
+    }
+    setBusy(true);
+    setListError(null);
+    try {
+      await repo.createCostEntry({
+        category_id: cid,
+        spent_at: datetimeLocalToIso(entrySpentLocal),
+        amount: Math.round(amt),
+        item_label: item,
+        note: entryNote.trim(),
+        ...(entrySlipUrl.trim() ? { slip_photo_url: entrySlipUrl.trim() } : {}),
+      });
+      setShowAddEntryModal(false);
+      resetAddEntryForm();
+      await onRefresh();
+    } catch (e) {
+      setListError(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }, [
+    entryAmount,
+    entryCategoryId,
+    entryItemLabel,
+    entryNote,
+    entrySlipUrl,
+    entrySpentLocal,
+    onRefresh,
+    repo,
+    resetAddEntryForm,
+  ]);
+
+  const openEditCostEntry = useCallback((e: CostEntry) => {
+    setEditEntry(e);
+    setEditEntryForm({
+      category_id: String(e.category_id),
+      spent_at_local: isoToDatetimeLocalInput(e.spent_at),
+      amount: String(e.amount),
+      item_label: e.item_label ?? "",
+      note: e.note,
+      slip_photo_url: e.slip_photo_url ?? "",
+    });
+  }, []);
+
+  const submitEditCostEntry = useCallback(async () => {
+    if (!editEntry || !editEntryForm) return;
+    const cid = Number(editEntryForm.category_id);
+    const amt = Number(editEntryForm.amount.replace(/,/g, ""));
+    if (!Number.isFinite(cid) || cid < 1) return;
+    if (!Number.isFinite(amt) || amt < 0) return;
+    const item = editEntryForm.item_label.trim();
+    if (!item) {
+      setListError("ระบุรายการค่าใช้จ่าย");
+      return;
+    }
+    setBusy(true);
+    setListError(null);
+    try {
+      await repo.updateCostEntry(editEntry.id, {
+        category_id: cid,
+        spent_at: datetimeLocalToIso(editEntryForm.spent_at_local),
+        amount: Math.round(amt),
+        item_label: item,
+        note: editEntryForm.note.trim(),
+        slip_photo_url: editEntryForm.slip_photo_url.trim(),
+      });
+      setEditEntry(null);
+      setEditEntryForm(null);
+      await onRefresh();
+    } catch (e) {
+      setListError(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }, [editEntry, editEntryForm, onRefresh, repo]);
+
+  const removeCostEntry = useCallback(
+    async (e: CostEntry) => {
+      if (!confirm("ลบรายการต้นทุนนี้?")) return;
+      setBusy(true);
+      setListError(null);
+      try {
+        await repo.deleteCostEntry(e.id);
+        await onRefresh();
+      } catch (er) {
+        setListError(er instanceof Error ? er.message : "ลบไม่สำเร็จ");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [onRefresh, repo],
+  );
+
+  const addSlipPreview = entrySlipUrl.trim() ? resolveAssetUrl(entrySlipUrl, baseUrl) : null;
+  const editSlipPreview = editEntryForm?.slip_photo_url?.trim()
+    ? resolveAssetUrl(editEntryForm.slip_photo_url, baseUrl)
+    : null;
 
   const onListCameraCapture = useCallback(
     async (file: File) => {
@@ -707,292 +1103,709 @@ export function CarWashSalesPanel({
       <AppImageLightbox src={lightbox.src} onClose={lightbox.close} alt="รูปแนบรายการ" />
 
       <AppDashboardSection tone="violet">
-        <div className="border-b border-[#ecebff] pb-3">
-          <h2 className="text-lg font-bold text-[#2e2a58]">กรองและกราฟยอดขาย</h2>
-        </div>
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-xs font-medium text-[#4d47b6]" id="cw-sales-filter-year-lbl">
-              ปี
-            </span>
-            <select
-              id="cw-sales-filter-year"
-              aria-labelledby="cw-sales-filter-year-lbl"
-              className="app-input min-h-[44px] w-full min-w-[7rem] cursor-pointer touch-manipulation rounded-xl px-3 py-2 text-sm sm:w-auto"
-              value={filterYear}
-              onChange={(e) => {
-                setFilterYear(e.target.value);
-                setFilterMonth("");
-                setFilterDay("");
-              }}
-            >
-              <option value="">ทั้งหมด</option>
-              {yearOptions.map((y) => (
-                <option key={y} value={String(y)}>
-                  {y}
-                </option>
-              ))}
-            </select>
+        {/* Header & Mobile Filter Toggle */}
+        <div className="flex items-center justify-between gap-4 border-b border-violet-100 pb-4">
+          <div>
+            <h2 className="text-xl font-black tracking-tight text-[#1e1b4b]">ภาพรวมการเงิน</h2>
+            <p className="text-xs font-medium text-slate-500">วิเคราะห์รายได้และรายจ่ายของระบบคาร์แคร์</p>
           </div>
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-xs font-medium text-[#4d47b6]" id="cw-sales-filter-month-lbl">
-              เดือน
-            </span>
-            <select
-              id="cw-sales-filter-month"
-              aria-labelledby="cw-sales-filter-month-lbl"
-              className="app-input min-h-[44px] w-full min-w-[8rem] cursor-pointer touch-manipulation rounded-xl px-3 py-2 text-sm sm:w-auto"
-              value={filterMonth}
-              onChange={(e) => {
-                setFilterMonth(e.target.value);
-                setFilterDay("");
-              }}
-            >
-              <option value="">ทุกเดือน</option>
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                <option key={m} value={String(m)}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-xs font-medium text-[#4d47b6]" id="cw-sales-filter-day-lbl">
-              วัน
-            </span>
-            <select
-              id="cw-sales-filter-day"
-              aria-labelledby="cw-sales-filter-day-lbl"
-              className="app-input min-h-[44px] w-full min-w-[6rem] cursor-pointer touch-manipulation rounded-xl px-3 py-2 text-sm sm:w-auto"
-              value={dayNumbers.includes(Number(filterDay)) ? filterDay : ""}
-              onChange={(e) => setFilterDay(e.target.value)}
-            >
-              <option value="">ทุกวัน</option>
-              {dayNumbers.map((d) => (
-                <option key={d} value={String(d)}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
-          <label className="min-w-0 flex-1 text-xs font-medium text-[#4d47b6] sm:min-w-[200px]">
-            ค้นหา
-            <input
-              className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm touch-manipulation"
-              placeholder="ชื่อลูกค้า, ทะเบียน, แพ็กเกจ, หมายเหตุ…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </label>
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-violet-200 bg-white text-violet-600 shadow-sm transition-all active:scale-95 md:hidden"
+            onClick={() => setMobileFilterOpen(true)}
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+            </svg>
+          </button>
         </div>
 
-        <AppRevenueCostColumnChart
-          className="mt-6"
-          buckets={revenueCostBuckets}
-          title="กราฟรายได้เทียบต้นทุน / รายจ่าย"
-          emptyText="ไม่มีข้อมูลรายได้หรือต้นทุนในช่วงที่เลือก"
-          formatTitle={(b) =>
-            `${b.label}: รายได้ ฿${b.revenue.toLocaleString()} · รายจ่าย ฿${b.cost.toLocaleString()}`
-          }
-        />
-        <div className="mt-4 flex flex-wrap gap-4 rounded-xl border border-[#ecebff] bg-[#faf9ff]/80 px-4 py-3 text-sm">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#66638c]">รวมรายได้ (ช่วงที่กรอง)</p>
-            <p className="font-bold tabular-nums text-[#2e2a58]">฿{periodTotalRevenue.toLocaleString()}</p>
+        {/* Desktop Filter Bar */}
+        <div className="mt-5 hidden items-end gap-3 md:flex">
+          <div className="grid flex-1 grid-cols-4 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-y">ปี</label>
+              <select
+                id="cw-f-y"
+                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-violet-500"
+                value={filterYear}
+                onChange={(e) => { setFilterYear(e.target.value); setFilterMonth(""); setFilterDay(""); }}
+              >
+                <option value="">ทั้งหมด</option>
+                {yearOptions.map(y => <option key={y} value={String(y)}>{y}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-m">เดือน</label>
+              <select
+                id="cw-f-m"
+                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-violet-500"
+                value={filterMonth}
+                onChange={(e) => { setFilterMonth(e.target.value); setFilterDay(""); }}
+              >
+                <option value="">ทุกเดือน</option>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                  <option key={m} value={String(m)}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-d">วัน</label>
+              <select
+                id="cw-f-d"
+                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-violet-500"
+                value={dayNumbers.includes(Number(filterDay)) ? filterDay : ""}
+                onChange={(e) => setFilterDay(e.target.value)}
+              >
+                <option value="">ทุกวัน</option>
+                {dayNumbers.map(d => <option key={d} value={String(d)}>{d}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-s">ค้นหา</label>
+              <input
+                id="cw-f-s"
+                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold placeholder:text-slate-400 focus:ring-violet-500"
+                placeholder="ชื่อ, ทะเบียน..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#66638c]">รวมรายจ่าย / ต้นทุน</p>
-            <p className="font-bold tabular-nums text-rose-700">฿{periodTotalCost.toLocaleString()}</p>
+        </div>
+
+        {/* Stats Row (3 Columns on Mobile) */}
+        <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-4">
+          {/* Stat: Total Revenue */}
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-white to-violet-50/30 p-3 shadow-sm sm:p-5">
+            <div className="flex items-center justify-between gap-1">
+              <span className="truncate text-[8px] font-bold uppercase tracking-wider text-violet-500 sm:text-[10px]">รายได้รวม</span>
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-[10px] text-violet-600 sm:h-8 sm:w-8 sm:text-base">฿</span>
+            </div>
+            <p className="mt-2 text-sm font-black text-[#1e1b4b] sm:mt-3 sm:text-2xl">
+              ฿{periodTotalRevenue.toLocaleString()}
+            </p>
+            <div className="mt-1 hidden items-center gap-1.5 sm:flex">
+              <div className="h-1 w-1 rounded-full bg-emerald-500" />
+              <span className="text-[10px] font-medium text-slate-500">ยอดขายทั้งหมด</span>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#66638c]">สุทธิ</p>
-            <p
-              className={cn(
-                "font-bold tabular-nums",
-                periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-700" : "text-rose-800",
-              )}
-            >
+
+          {/* Stat: Total Cost */}
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-rose-100 bg-gradient-to-br from-white to-rose-50/30 p-3 shadow-sm sm:p-5">
+            <div className="flex items-center justify-between gap-1">
+              <span className="truncate text-[8px] font-bold uppercase tracking-wider text-rose-500 sm:text-[10px]">ต้นทุนรวม</span>
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-600 sm:h-8 sm:w-8">
+                <svg viewBox="0 0 24 24" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m19 9-7 7-7-7" /></svg>
+              </span>
+            </div>
+            <p className="mt-2 text-sm font-black text-rose-900 sm:mt-3 sm:text-2xl">
+              ฿{periodTotalCost.toLocaleString()}
+            </p>
+            <div className="mt-1 hidden items-center gap-1.5 sm:flex">
+              <div className="h-1 w-1 rounded-full bg-rose-500" />
+              <span className="text-[10px] font-medium text-slate-500">ค่าใช้จ่ายทั้งหมด</span>
+            </div>
+          </div>
+
+          {/* Stat: Net Profit */}
+          <div className={cn(
+            "relative flex flex-col justify-between overflow-hidden rounded-2xl border p-3 shadow-sm transition-colors sm:p-5",
+            periodTotalRevenue - periodTotalCost >= 0 
+              ? "border-emerald-100 bg-gradient-to-br from-white to-emerald-50/30" 
+              : "border-orange-100 bg-gradient-to-br from-white to-orange-50/30"
+          )}>
+            <div className="flex items-center justify-between gap-1">
+              <span className={cn(
+                "truncate text-[8px] font-bold uppercase tracking-wider sm:text-[10px]",
+                periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-600" : "text-orange-600"
+              )}>กำไรสุทธิ</span>
+              <span className={cn(
+                "flex h-5 w-5 shrink-0 items-center justify-center rounded-lg sm:h-8 sm:w-8",
+                periodTotalRevenue - periodTotalCost >= 0 ? "bg-emerald-100 text-emerald-600" : "bg-orange-100 text-orange-600"
+              )}>
+                <svg viewBox="0 0 24 24" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+              </span>
+            </div>
+            <p className={cn(
+              "mt-2 text-sm font-black sm:mt-3 sm:text-2xl",
+              periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-900" : "text-orange-900"
+            )}>
               ฿{(periodTotalRevenue - periodTotalCost).toLocaleString()}
             </p>
+            <div className="mt-1 hidden items-center gap-1.5 sm:flex">
+              <div className={cn("h-1 w-1 rounded-full", periodTotalRevenue - periodTotalCost >= 0 ? "bg-emerald-500" : "bg-orange-500")} />
+              <span className="text-[10px] font-medium text-slate-500">กำไรสุทธิ</span>
+            </div>
           </div>
         </div>
 
-        <div className="mt-6 space-y-6 border-t border-[#ecebff] pt-6">
-          <p className="text-xs font-medium text-[#4d47b6]">
-            สรุปเปรียบเทียบ — ซ้าย: รายได้ลานปกติตามแพ็กเกจ · ขวา: จำนวนครั้งใช้สิทธิ์เหมา (COMPLETED/PAID ในช่วงที่กรอง)
-          </p>
-          <div className="grid gap-8 lg:grid-cols-2 lg:gap-6">
-            <AppCompareBarList
-              variant="brand"
-              title="ยอดตามแพ็กเกจ (เข้าลานปกติ)"
-              subtitle="รวมยอดสุดท้ายต่อครั้ง (final) ตามชื่อแพ็กเกจ — ไม่รวมรายการเหมาจ่าย"
-              rows={packageCompareRows}
-              emptyText="ไม่มีรายได้ลานปกติในช่วงที่เลือก"
-              formatAmount={(a) => `฿ ${a.toLocaleString()}`}
-            />
-            <AppCompareBarList
-              variant="brand"
-              title="จำนวนตามแพ็กเกจเหมา"
-              subtitle="นับครั้งที่ใช้สิทธิ์แพ็กเหมา (รวมรายการที่ปิดคิวแล้ว) แยกตามชื่อแพ็กเกจบริการ"
-              rows={bundlePackageCompareRows}
-              emptyText="ไม่มีการเข้าใช้แบบเหมาในช่วงที่เลือก"
-              formatAmount={(a) => `${a.toLocaleString()} ครั้ง`}
-            />
+        {/* Charts & Analysis Row (Stack on Mobile, Grid on Large) */}
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {/* Main Chart: Revenue vs Cost */}
+          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5 lg:col-span-2">
+            <div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+              <h3 className="text-sm font-black text-[#1e1b4b] sm:text-base">แนวโน้มรายได้และรายจ่าย</h3>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-[#5b61ff]" />
+                  <span className="text-[10px] font-bold text-slate-400">รายได้</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-rose-400" />
+                  <span className="text-[10px] font-bold text-slate-400">รายจ่าย</span>
+                </div>
+              </div>
+            </div>
+            <div className="h-[220px] w-full sm:h-[280px]">
+              <AppRevenueCostColumnChart
+                className="h-full w-full"
+                buckets={revenueCostBuckets}
+                title=""
+                emptyText="ไม่มีข้อมูลในช่วงที่เลือก"
+                formatTitle={(b) =>
+                  `${b.label}: รายได้ ฿${b.revenue.toLocaleString()} · รายจ่าย ฿${b.cost.toLocaleString()}`
+                }
+              />
+            </div>
+          </div>
+
+          {/* Package Analysis Cards */}
+          <div className="flex flex-col gap-4">
+            {/* Package Revenue Donut */}
+            <div className="flex-1 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+              <h3 className="text-xs font-black text-[#1e1b4b] sm:text-sm">สัดส่วนตามแพ็กเกจ</h3>
+              {packageCompareRows.length > 0 ? (
+                <div className="mt-4 flex items-center gap-4">
+                  <div
+                    className="h-16 w-16 shrink-0 rounded-full ring-4 ring-slate-50 sm:h-20 sm:w-20"
+                    style={{ background: donutGradientFromRows(packageCompareRows) }}
+                  />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    {packageCompareRows.slice(0, 3).map((row, idx) => (
+                      <div key={row.key} className="flex items-center justify-between text-[10px] sm:text-[11px]">
+                        <span className="truncate font-medium text-slate-500">
+                          <span className={cn("mr-1.5 inline-block h-1.5 w-1.5 rounded-full", idx === 0 ? "bg-[#5b61ff]" : idx === 1 ? "bg-[#8d64ff]" : "bg-[#f06dc8]")} />
+                          {row.label}
+                        </span>
+                        <span className="font-bold text-[#1e1b4b]">฿{row.amount.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-4 text-center text-[10px] text-slate-400">ไม่มีข้อมูล</p>
+              )}
+            </div>
+
+            {/* Bundle Usage Donut */}
+            <div className="flex-1 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+              <h3 className="text-xs font-black text-[#1e1b4b] sm:text-sm">สัดส่วนตามแพ็กเหมา</h3>
+              {bundlePackageCompareRows.length > 0 ? (
+                <div className="mt-4 flex items-center gap-4">
+                  <div
+                    className="h-16 w-16 shrink-0 rounded-full ring-4 ring-slate-50 sm:h-20 sm:w-20"
+                    style={{ background: donutGradientFromRows(bundlePackageCompareRows) }}
+                  />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    {bundlePackageCompareRows.slice(0, 3).map((row, idx) => (
+                      <div key={row.key} className="flex items-center justify-between text-[10px] sm:text-[11px]">
+                        <span className="truncate font-medium text-slate-500">
+                          <span className={cn("mr-1.5 inline-block h-1.5 w-1.5 rounded-full", idx === 0 ? "bg-[#5b61ff]" : idx === 1 ? "bg-[#8d64ff]" : "bg-[#f06dc8]")} />
+                          {row.label}
+                        </span>
+                        <span className="font-bold text-[#1e1b4b]">{row.amount} ครั้ง</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-4 text-center text-[10px] text-slate-400">ไม่มีข้อมูล</p>
+              )}
+            </div>
           </div>
         </div>
+
       </AppDashboardSection>
 
+
       <AppDashboardSection tone="slate">
-        <AppSectionHeader
-          tone="slate"
-          title="รายการในช่วงที่กรอง"
-          description={
-            <>
-              แสดง {mergedSalesRows.length} รายการ (ลาน {filteredVisits.length} / เหมา {filteredBundles.length}) — กดไอคอน{" "}
-              <span className="font-semibold text-[#2e2a58]">รายละเอียด</span> มุมขวาเพื่อดำเนินการ อัปโหลดสลิป แก้ไข
-              พิมพ์ หรือลบ
-            </>
-          }
-        />
+        <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">รายการในช่วงที่กรอง</h2>
+            <p className="mt-0.5 text-xs font-medium text-slate-500">
+              {activeListTab === "sales" ?
+                `รวม ${mergedSalesRows.length} รายการ (ลาน ${filteredVisits.length} / เหมา ${filteredBundles.length})`
+              : `รวม ${filteredCostEntries.length} รายการต้นทุน`}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/50 p-1">
+
+            {activeListTab === "costs" ? (
+              <div className="mr-1.5 flex items-center gap-1 border-r border-slate-200 pr-1.5">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={openManageCategories}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-white px-2.5 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-50"
+                  aria-label="จัดการหมวด"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-3.5 w-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    aria-hidden
+                  >
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  </svg>
+                  <span className="hidden sm:inline">หมวด</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || costCategories.length === 0}
+                  onClick={openAddEntry}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#5b61ff] px-2.5 text-xs font-bold text-white shadow-sm ring-1 ring-[#5b61ff] hover:bg-[#4d47b6] disabled:opacity-50"
+                  aria-label="บันทึกรายการ"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-3.5 w-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    aria-hidden
+                  >
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  <span className="hidden sm:inline">เพิ่มรายการ</span>
+                </button>
+              </div>
+            ) : null}
+            <button
+              type="button"
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
+                activeListTab === "sales" ?
+                  "bg-white text-[#5b61ff] shadow-sm ring-1 ring-slate-200"
+                : "text-slate-500 hover:text-slate-700",
+              )}
+              onClick={() => setActiveListTab("sales")}
+            >
+              รายรับ
+            </button>
+            <button
+              type="button"
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
+                activeListTab === "costs" ?
+                  "bg-white text-rose-600 shadow-sm ring-1 ring-slate-200"
+                : "text-slate-500 hover:text-slate-700",
+              )}
+              onClick={() => setActiveListTab("costs")}
+            >
+              รายจ่าย
+            </button>
+          </div>
+        </div>
+
         {listError ? <p className="mb-2 text-sm text-red-600">{listError}</p> : null}
-        {mergedSalesRows.length === 0 ? (
-          <AppEmptyState>ไม่พบรายการตามเงื่อนไข</AppEmptyState>
-        ) : (
-          <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain rounded-xl border border-slate-200 bg-white [-webkit-overflow-scrolling:touch]">
-            <AppGalleryCameraFileInputs
-              galleryInputRef={galleryInputRef}
-              cameraInputRef={cameraInputRef}
-              onChange={onListGalleryChange}
-            />
-            <ul className="divide-y divide-slate-100" aria-label="ประวัติยอดขายคาร์แคร์">
-              {mergedSalesRows.map((row) => {
-                if (row.kind === "visit") {
-                  const v = row.v;
-                  const timeStr = new Date(v.visit_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
-                  const photoResolved = resolveAssetUrl(v.photo_url, baseUrl);
-                  const rowBusy = busyVisitId === v.id;
+
+        {activeListTab === "sales" ?
+          mergedSalesRows.length === 0 ?
+            <AppEmptyState>ไม่พบรายการตามเงื่อนไข</AppEmptyState>
+          : <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain rounded-xl border border-slate-200 bg-white [-webkit-overflow-scrolling:touch] lg:border-0 lg:bg-transparent">
+              <AppGalleryCameraFileInputs
+                galleryInputRef={galleryInputRef}
+                cameraInputRef={cameraInputRef}
+                onChange={onListGalleryChange}
+              />
+              <ul
+                className="divide-y divide-slate-100 lg:grid lg:grid-cols-4 lg:gap-3 lg:divide-y-0 lg:p-2"
+                aria-label="ประวัติยอดขายคาร์แคร์"
+              >
+                {mergedSalesRows.map((row) => {
+                  if (row.kind === "visit") {
+                    const v = row.v;
+                    const timeStr = new Date(v.visit_at).toLocaleString("th-TH", {
+                      timeZone: "Asia/Bangkok",
+                    });
+                    const photoResolved = resolveAssetUrl(v.photo_url, baseUrl);
+                    const rowBusy = busyVisitId === v.id;
+                    return (
+                      <li
+                        key={`v-${v.id}`}
+                        className="group/item relative flex flex-col gap-3 overflow-hidden px-3 py-3 transition-all duration-300 hover:bg-slate-50/80 sm:px-4 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:shadow-sm lg:hover:-translate-y-1 lg:hover:shadow-md"
+                      >
+                        {/* Left Indicator Bar — Gradient พริ้วๆ */}
+                        <span
+                          aria-hidden
+                          className="absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-gradient-to-b from-[#5b61ff] via-[#8d64ff] to-[#f06dc8] opacity-80 transition-all group-hover/item:w-1.5"
+                        />
+                        
+                        <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+                          {photoResolved ?
+                            <div className="relative shrink-0 transition-transform duration-300 group-hover/item:scale-105">
+                              <AppImageThumb
+                                className="h-14 w-14 rounded-xl shadow-sm ring-2 ring-slate-100"
+                                src={photoResolved}
+                                alt="รูปแนบ"
+                                onOpen={() => lightbox.open(photoResolved)}
+                              />
+                            </div>
+                          : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 text-[9px] font-medium leading-tight text-slate-400">
+                              NO PHOTO
+                            </div>
+                          }
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                              <time
+                                className="text-[10px] font-bold tabular-nums text-slate-400 uppercase tracking-tight"
+                                dateTime={v.visit_at}
+                              >
+                                {timeStr}
+                              </time>
+                              <span
+                                className={cn(
+                                  "shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black leading-tight shadow-sm ring-1 ring-inset",
+                                  visitStatusPillClass(v.service_status),
+                                )}
+                              >
+                                {carWashStatusLabelTh(v.service_status)}
+                              </span>
+                              <span className="shrink-0 rounded-md bg-slate-100/80 px-1.5 py-0.5 font-mono text-[9px] font-bold text-slate-500">
+                                #{v.id}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="truncate text-lg font-black tabular-nums tracking-tight text-[#1e1b4b]">
+                                {v.plate_number.trim() || "—"}
+                              </p>
+                              <div className="text-right">
+                                <span className="text-lg font-black tabular-nums text-[#0000BF]">
+                                  ฿{v.final_price.toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+
+                            <p className="line-clamp-1 text-xs font-bold text-slate-700">
+                              {v.package_name}
+                            </p>
+                            
+                            <div className="flex items-center gap-2 pt-0.5">
+                              <span className="text-[10px] text-slate-400">👤</span>
+                              <p className="truncate text-[11px] font-medium text-slate-500">
+                                {v.customer_name.trim() || "ลูกค้าทั่วไป"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex shrink-0 items-center justify-between border-t border-slate-100/60 pt-2">
+                          {v.note?.trim() ?
+                            <p className="line-clamp-1 flex-1 pr-4 text-[10px] italic text-slate-400">
+                              &quot;{v.note}&quot;
+                            </p>
+                          : <div className="flex-1" />}
+                          <SalesRowOpenDetailButton
+                            disabled={rowBusy}
+                            onClick={() => setSalesRowDetail({ kind: "visit", id: v.id })}
+                            className="!h-9 !w-9 rounded-xl bg-slate-50 hover:bg-white"
+                          />
+                        </div>
+                      </li>
+                    );
+                  }
+                  const b = row.b;
+                  const timeStr = new Date(b.created_at).toLocaleString("th-TH", {
+                    timeZone: "Asia/Bangkok",
+                  });
+                  const slipResolved = b.slip_photo_url?.trim() ?
+                    resolveAssetUrl(b.slip_photo_url, baseUrl)
+                  : null;
+                  const rowBusy = busyBundleId === b.id;
+                  const remaining = Math.max(0, b.total_uses - b.used_uses);
                   return (
                     <li
-                      key={`v-${v.id}`}
-                      className="flex flex-row items-stretch gap-2.5 px-2.5 py-2 sm:gap-3 sm:px-3 sm:py-2.5"
+                      key={`b-${b.id}`}
+                      className="group/item relative flex flex-col gap-3 overflow-hidden border-l-[4px] border-amber-300 bg-amber-50/20 px-3 py-3 transition-all duration-300 hover:bg-amber-50/40 sm:px-4 lg:rounded-2xl lg:border lg:border-amber-200/60 lg:bg-amber-50/15 lg:shadow-sm lg:hover:-translate-y-1 lg:hover:shadow-md"
                     >
-                      <div className="flex shrink-0 items-center">
-                        {photoResolved ?
-                          <AppImageThumb
-                            className="!h-12 !w-12 rounded-lg"
-                            src={photoResolved}
-                            alt="รูปแนบ"
-                            onOpen={() => lightbox.open(photoResolved)}
-                          />
-                        : <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-[8px] leading-tight text-slate-400">
-                            ไม่มีรูป
+                      <span
+                        aria-hidden
+                        className="absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-gradient-to-b from-[#f59e0b] via-[#fb7185] to-[#f06dc8] opacity-80"
+                      />
+                      <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+                        {slipResolved ?
+                          <div className="relative shrink-0 transition-transform duration-300 group-hover/item:scale-105">
+                            <AppImageThumb
+                              className="h-14 w-14 rounded-xl shadow-sm ring-2 ring-amber-100"
+                              src={slipResolved}
+                              alt="สลิปแพ็กเหมา"
+                              onOpen={() => lightbox.open(slipResolved)}
+                            />
+                          </div>
+                        : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-dashed border-amber-200 bg-white/50 text-[9px] font-medium leading-tight text-amber-600">
+                            NO SLIP
                           </div>
                         }
-                      </div>
-                      <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
-                        <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                          <time className="text-[10px] font-medium tabular-nums text-slate-500" dateTime={v.visit_at}>
-                            {timeStr}
-                          </time>
-                          <span
-                            className={cn(
-                              "shrink-0 rounded-full px-1.5 py-px text-[9px] font-semibold leading-tight",
-                              visitStatusPillClass(v.service_status),
-                            )}
-                          >
-                            {carWashStatusLabelTh(v.service_status)}
-                          </span>
-                          <span className="shrink-0 rounded bg-slate-100 px-1 py-px font-mono text-[9px] text-slate-600">
-                            #{v.id}
-                          </span>
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                            <time
+                              className="text-[10px] font-bold tabular-nums text-slate-400 uppercase tracking-tight"
+                              dateTime={b.created_at}
+                            >
+                              {timeStr}
+                            </time>
+                            <span className="shrink-0 rounded-lg bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-900 shadow-sm ring-1 ring-amber-200">
+                              เหมา
+                            </span>
+                            <span className="shrink-0 rounded-md bg-slate-100/80 px-1.5 py-0.5 font-mono text-[9px] font-bold text-slate-500">
+                              #{b.id}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="truncate text-lg font-black tabular-nums tracking-tight text-[#1e1b4b]">
+                              {b.plate_number.trim() || "—"}
+                            </p>
+                            <div className="text-right">
+                              <span className="text-lg font-black tabular-nums text-amber-700">
+                                ฿{b.paid_amount.toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+
+                          <p className="line-clamp-1 text-xs font-bold text-slate-700">
+                            {b.package_name}
+                          </p>
+                          
+                          <div className="flex items-center gap-3 pt-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-amber-400">👤</span>
+                              <p className="truncate text-[11px] font-medium text-slate-500">
+                                {b.customer_name.trim() || "ลูกค้าเหมา"}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5 rounded-full bg-amber-100/50 px-2 py-0.5 ring-1 ring-amber-200/50">
+                              <span className="text-[10px] text-amber-600">🎟️</span>
+                              <p className="text-[10px] font-black tabular-nums text-amber-700">
+                                {remaining}/{b.total_uses}
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                        <p className="truncate text-base font-bold tabular-nums leading-tight text-[#2e2a58]">
-                          {v.plate_number.trim() || "—"}
-                        </p>
-                        <p className="line-clamp-1 text-xs font-medium text-slate-800">{v.package_name}</p>
-                        <p className="truncate text-[10px] text-slate-600">{v.customer_name.trim() || "—"}</p>
-                        {v.note?.trim() ?
-                          <p className="line-clamp-1 text-[10px] text-slate-500">{v.note}</p>
-                        : null}
                       </div>
-                      <div className="flex shrink-0 flex-col items-end justify-center gap-1.5">
-                        <div className="text-right leading-tight">
-                          <span className="text-sm font-bold tabular-nums text-slate-900">
-                            ฿{v.final_price.toLocaleString()}
-                          </span>
-                          <span className="block text-[9px] font-normal text-slate-500">บาท</span>
-                        </div>
+                      <div className="flex shrink-0 items-center justify-end border-t border-amber-200/40 pt-2">
                         <SalesRowOpenDetailButton
                           disabled={rowBusy}
-                          onClick={() => setSalesRowDetail({ kind: "visit", id: v.id })}
+                          onClick={() => setSalesRowDetail({ kind: "bundle", id: b.id })}
+                          className="!h-9 !w-9 rounded-xl bg-amber-50/80 hover:bg-white"
                         />
                       </div>
                     </li>
                   );
-                }
-                const b = row.b;
-                const timeStr = new Date(b.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
-                const slipResolved = b.slip_photo_url?.trim() ? resolveAssetUrl(b.slip_photo_url, baseUrl) : null;
-                const rowBusy = busyBundleId === b.id;
-                const remaining = Math.max(0, b.total_uses - b.used_uses);
+                })}
+              </ul>
+            </div>
+        : filteredCostEntries.length === 0 ?
+          <AppEmptyState>ไม่พบรายการต้นทุนตามเงื่อนไข</AppEmptyState>
+        : <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain rounded-xl border border-slate-200 bg-white [-webkit-overflow-scrolling:touch] lg:border-0 lg:bg-transparent">
+            <ul
+              className="divide-y divide-slate-100 lg:grid lg:grid-cols-4 lg:gap-3 lg:divide-y-0 lg:p-2"
+              aria-label="ประวัติรายจ่ายคาร์แคร์"
+            >
+              {filteredCostEntries.map((e) => {
+                const timeStr = new Date(e.spent_at).toLocaleString("th-TH", {
+                  timeZone: "Asia/Bangkok",
+                });
+                const slipResolved = e.slip_photo_url?.trim() ?
+                  resolveAssetUrl(e.slip_photo_url, baseUrl)
+                : null;
                 return (
                   <li
-                    key={`b-${b.id}`}
-                    className="flex flex-row items-stretch gap-2.5 border-l-[3px] border-amber-300/90 bg-amber-50/35 px-2.5 py-2 sm:gap-3 sm:px-3 sm:py-2.5"
+                    key={`c-${e.id}`}
+                    className="group/item relative flex flex-col gap-3 overflow-hidden px-3 py-3 transition-all duration-300 hover:bg-rose-50/30 sm:px-4 lg:rounded-2xl lg:border lg:border-rose-100 lg:bg-rose-50/10 lg:shadow-sm lg:hover:-translate-y-1 lg:hover:shadow-md"
                   >
-                    <div className="flex shrink-0 items-center">
+                    <span
+                      aria-hidden
+                      className="absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-gradient-to-b from-[#fb7185] via-[#f43f5e] to-[#e11d48] opacity-80"
+                    />
+                    <div className="flex min-w-0 items-start gap-3 sm:gap-4">
                       {slipResolved ?
-                        <AppImageThumb
-                          className="!h-12 !w-12 rounded-lg"
-                          src={slipResolved}
-                          alt="สลิปแพ็กเหมา"
-                          onOpen={() => lightbox.open(slipResolved)}
-                        />
-                      : <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-amber-200 bg-white text-[8px] leading-tight text-amber-700/80">
-                          ไม่มีสลิป
+                        <div className="relative shrink-0 transition-transform duration-300 group-hover/item:scale-105">
+                          <AppImageThumb
+                            className="h-14 w-14 rounded-xl shadow-sm ring-2 ring-rose-100"
+                            src={slipResolved}
+                            alt="สลิปรายจ่าย"
+                            onOpen={() => lightbox.open(slipResolved)}
+                          />
+                        </div>
+                      : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-dashed border-rose-200 bg-rose-50/50 text-[9px] font-medium leading-tight text-rose-400">
+                          NO SLIP
                         </div>
                       }
-                    </div>
-                    <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
-                      <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                        <time className="text-[10px] font-medium tabular-nums text-slate-500" dateTime={b.created_at}>
-                          {timeStr}
-                        </time>
-                        <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-px text-[9px] font-semibold text-amber-950 ring-1 ring-amber-200/80">
-                          เหมา
-                        </span>
-                        <span className="shrink-0 rounded bg-slate-100 px-1 py-px font-mono text-[9px] text-slate-600">
-                          #{b.id}
-                        </span>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                          <time
+                            className="text-[10px] font-bold tabular-nums text-slate-400 uppercase tracking-tight"
+                            dateTime={e.spent_at}
+                          >
+                            {timeStr}
+                          </time>
+                          <span className="shrink-0 rounded-lg bg-rose-100 px-2 py-0.5 text-[10px] font-black text-rose-950 shadow-sm ring-1 ring-rose-200">
+                            รายจ่าย
+                          </span>
+                          <span className="shrink-0 rounded-md bg-slate-100/80 px-1.5 py-0.5 font-mono text-[9px] font-bold text-slate-500">
+                            #{e.id}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-lg font-black tabular-nums tracking-tight text-[#1e1b4b]">
+                            {e.item_label.trim() || "—"}
+                          </p>
+                          <div className="text-right">
+                            <span className="text-lg font-black tabular-nums text-rose-700">
+                              ฿{e.amount.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className="line-clamp-1 text-xs font-bold text-slate-600">
+                          {e.category_name}
+                        </p>
                       </div>
-                      <p className="truncate text-base font-bold tabular-nums leading-tight text-[#2e2a58]">
-                        {b.plate_number.trim() || "—"}
-                      </p>
-                      <p className="line-clamp-1 text-xs font-medium text-slate-800">{b.package_name}</p>
-                      <p className="truncate text-[10px] text-slate-600">{b.customer_name.trim() || "—"}</p>
-                      <p className="text-[10px] tabular-nums text-slate-500">
-                        สิทธิ์ {remaining}/{b.total_uses}
-                      </p>
                     </div>
-                    <div className="flex shrink-0 flex-col items-end justify-center gap-1.5">
-                      <div className="text-right leading-tight">
-                        <span className="text-sm font-bold tabular-nums text-amber-900">
-                          ฿{b.paid_amount.toLocaleString()}
-                        </span>
-                        <span className="block text-[9px] font-normal text-slate-500">ยอดแพ็ก</span>
+                    <div className="flex shrink-0 items-center justify-between border-t border-rose-100/40 pt-2">
+                      {e.note?.trim() ?
+                        <p className="line-clamp-1 flex-1 pr-4 text-[10px] italic text-slate-400">
+                          &quot;{e.note}&quot;
+                        </p>
+                      : <div className="flex-1" />}
+                      <div className="flex shrink-0 gap-1.5">
+                        <PopupIconButton
+                          label="แก้ไข"
+                          onClick={() => openEditCostEntry(e)}
+                          disabled={busy}
+                          className="!h-9 !w-9 rounded-xl bg-slate-50 hover:bg-white"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
+                        </PopupIconButton>
+                        <PopupIconButton
+                          label="ลบ"
+                          className={cn(popupIconBtnDanger, "!h-9 !w-9 rounded-xl")}
+                          onClick={() => void removeCostEntry(e)}
+                          disabled={busy}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </PopupIconButton>
+                        <SalesRowOpenDetailButton
+                          onClick={() => setCostEntryDetail(e)}
+                          className="!h-9 !w-9 rounded-xl bg-rose-50/80 hover:bg-white"
+                        />
                       </div>
-                      <SalesRowOpenDetailButton
-                        disabled={rowBusy}
-                        onClick={() => setSalesRowDetail({ kind: "bundle", id: b.id })}
-                      />
                     </div>
                   </li>
                 );
               })}
             </ul>
           </div>
-        )}
+        }
       </AppDashboardSection>
+
+      <FormModal
+        open={mobileFilterOpen}
+        onClose={() => setMobileFilterOpen(false)}
+        title="ตัวกรองข้อมูลการเงิน"
+        description="เลือกช่วงเวลาและคำค้นหาเพื่อดูผลลัพธ์"
+        size="md"
+        footer={
+          <FormModalFooterActions
+            onCancel={() => setMobileFilterOpen(false)}
+            onSubmit={() => setMobileFilterOpen(false)}
+            submitLabel="ดูผลลัพธ์"
+          />
+        }
+      >
+        <div className="space-y-4 md:hidden">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ปี</label>
+              <select
+                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-violet-500"
+                value={filterYear}
+                onChange={(e) => {
+                  setFilterYear(e.target.value);
+                  setFilterMonth("");
+                  setFilterDay("");
+                }}
+              >
+                <option value="">ทั้งหมด</option>
+                {yearOptions.map((y) => (
+                  <option key={y} value={String(y)}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">เดือน</label>
+              <select
+                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-violet-500"
+                value={filterMonth}
+                onChange={(e) => {
+                  setFilterMonth(e.target.value);
+                  setFilterDay("");
+                }}
+              >
+                <option value="">ทุกเดือน</option>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={String(m)}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">วัน</label>
+              <select
+                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-violet-500"
+                value={dayNumbers.includes(Number(filterDay)) ? filterDay : ""}
+                onChange={(e) => setFilterDay(e.target.value)}
+              >
+                <option value="">ทุกวัน</option>
+                {dayNumbers.map((d) => (
+                  <option key={d} value={String(d)}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ค้นหา</label>
+            <input
+              className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold placeholder:text-slate-400 focus:ring-violet-500"
+              placeholder="ชื่อลูกค้า, ทะเบียน, แพ็กเกจ..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+      </FormModal>
 
       <FormModal
         open={salesRowDetail != null}
@@ -1010,10 +1823,11 @@ export function CarWashSalesPanel({
           <div className="flex justify-end">
             <button
               type="button"
-              className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              className="cw-btn rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
               onClick={() => setSalesRowDetail(null)}
             >
-              ปิด
+              <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M18 6 6 18M6 6l12 12" /></svg>
+              <span className="cw-btn-label">ปิด</span>
             </button>
           </div>
         }
@@ -1238,6 +2052,397 @@ export function CarWashSalesPanel({
                     </svg>
                   </PopupIconButton>
                 </div>
+              </div>
+            );
+          })()
+        : <p className="text-sm text-slate-500">ไม่พบรายการ</p>}
+      </FormModal>
+
+      <FormModal
+        open={manageCategoriesOpen}
+        onClose={() => setManageCategoriesOpen(false)}
+        title="จัดการหมวดต้นทุน"
+        description="สร้างหรือลบหมวดหมู่สำหรับรายจ่าย"
+        size="md"
+        footer={
+          <FormModalFooterActions
+            onCancel={() => setManageCategoriesOpen(false)}
+            onSubmit={() => setManageCategoriesOpen(false)}
+            submitLabel="เสร็จสิ้น"
+          />
+        }
+      >
+        <div className="space-y-6">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submitCategory();
+            }}
+            className="flex items-end gap-2 rounded-2xl border border-slate-100 bg-slate-50/50 p-4"
+          >
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {editCat ? "แก้ไขชื่อหมวด" : "ชื่อหมวดใหม่"}
+              </label>
+              <input
+                className="w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 text-sm font-bold placeholder:text-slate-300 focus:ring-[#5b61ff]"
+                placeholder="เช่น ค่าไฟ, ค่าน้ำ"
+                value={catName}
+                onChange={(e) => setCatName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={busy || !catName.trim()}
+              className="flex h-[42px] shrink-0 items-center justify-center rounded-xl bg-[#5b61ff] px-6 text-sm font-black text-white shadow-lg shadow-indigo-100 transition-all hover:bg-[#4d47b6] active:scale-95 disabled:opacity-50"
+            >
+              {editCat ? "บันทึก" : "เพิ่ม"}
+            </button>
+            {editCat && (
+              <button
+                type="button"
+                className="flex h-[42px] shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-500 hover:bg-slate-50 active:scale-95"
+                onClick={cancelCategoryForm}
+              >
+                ยกเลิก
+              </button>
+            )}
+          </form>
+
+          <div className="space-y-3">
+            <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              หมวดที่มีอยู่ ({costCategories.length})
+            </p>
+            <div className="grid grid-cols-1 gap-2">
+              {costCategories.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-100 py-8 text-slate-400">
+                  <svg viewBox="0 0 24 24" className="mb-2 h-8 w-8 opacity-20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M3 3h18v18H3zM9 9h6M9 13h6M9 17h3" />
+                  </svg>
+                  <p className="text-xs font-medium">ยังไม่มีหมวดหมู่</p>
+                </div>
+              ) : (
+                costCategories.map((c) => (
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition-all hover:border-[#5b61ff]/30 hover:shadow-md"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-[#5b61ff]">
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                        </svg>
+                      </div>
+                      <span className="truncate text-sm font-black text-[#1e1b4b]">{c.name}</span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-indigo-50 hover:text-[#5b61ff]"
+                        onClick={() => openEditCategoryForm(c)}
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                        onClick={() => void removeCategory(c)}
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </FormModal>
+
+      <FormModal
+        open={showAddEntryModal}
+        onClose={() => setShowAddEntryModal(false)}
+        title="บันทึกต้นทุน / รายจ่าย"
+        description="กรอกข้อมูลรายจ่ายและเลือกหมวดหมู่ — รูปภาพสลิปจะถูกอัปโหลดทันที"
+        size="md"
+        footer={
+          <FormModalFooterActions
+            onCancel={() => setShowAddEntryModal(false)}
+            onSubmit={submitCostEntry}
+            submitLabel="บันทึกรายการ"
+            submitDisabled={busy || entryPhotoBusy || !entryCategoryId || !entryAmount || !entryItemLabel}
+            loading={busy}
+          />
+        }
+      >
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">หมวดหมู่</label>
+              <select
+                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-[#5b61ff]"
+                value={entryCategoryId}
+                onChange={(e) => setEntryCategoryId(e.target.value)}
+              >
+                <option value="">เลือกหมวด…</option>
+                {costCategories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">วันที่และเวลา</label>
+              <input
+                type="datetime-local"
+                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-[#5b61ff]"
+                value={entrySpentLocal}
+                onChange={(e) => setEntrySpentLocal(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/30 p-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">รายการ / ชื่อค่าใช้จ่าย</label>
+              <input
+                className="w-full rounded-xl border-slate-200 bg-white text-sm font-semibold placeholder:text-slate-400 focus:ring-[#5b61ff]"
+                placeholder="เช่น ค่าไฟเดือน เม.ย."
+                value={entryItemLabel}
+                onChange={(e) => setEntryItemLabel(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">จำนวนเงิน (บาท)</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-rose-500">฿</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  className="w-full rounded-xl border-slate-200 bg-white pl-10 pr-4 py-2.5 text-lg font-black tabular-nums text-rose-600 focus:ring-rose-500"
+                  placeholder="0.00"
+                  value={entryAmount}
+                  onChange={(e) => setEntryAmount(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">หมายเหตุ</label>
+            <textarea
+              className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-medium placeholder:text-slate-400 focus:ring-[#5b61ff]"
+              rows={2}
+              placeholder="ข้อมูลเพิ่มเติม (ถ้ามี)…"
+              value={entryNote}
+              onChange={(e) => setEntryNote(e.target.value)}
+            />
+          </div>
+
+          <CostSlipAttachmentZone
+            slipUrl={entrySlipUrl}
+            onSlipUrlChange={setEntrySlipUrl}
+            photoBusy={entryPhotoBusy}
+            previewUrl={addSlipPreview}
+            galleryInputRef={costGalleryInputRef}
+            onFileInputChange={(e) => void onCostSlipFileChange(e, "add")}
+            onOpenModalCamera={() => setEntryCameraOpen(true)}
+            cameraOpen={entryCameraOpen}
+            onCloseCamera={() => setEntryCameraOpen(false)}
+            onCameraCapture={onCostModalCameraCapture}
+            onRequestLegacyPicker={() => costGalleryInputRef.current?.click()}
+          />
+        </div>
+      </FormModal>
+
+      <FormModal
+        open={editEntry != null && editEntryForm != null}
+        onClose={() => {
+          setEditEntry(null);
+          setEditEntryForm(null);
+        }}
+        title={`แก้ไขรายการต้นทุน #${editEntry?.id}`}
+        description="อัปเดตข้อมูลรายจ่าย"
+        size="md"
+        footer={
+          <FormModalFooterActions
+            onCancel={() => {
+              setEditEntry(null);
+              setEditEntryForm(null);
+            }}
+            onSubmit={submitEditCostEntry}
+            submitLabel="บันทึกการแก้ไข"
+            submitDisabled={
+              busy ||
+              entryPhotoBusy ||
+              !editEntryForm?.category_id ||
+              !editEntryForm?.amount ||
+              !editEntryForm?.item_label
+            }
+            loading={busy}
+          />
+        }
+      >
+        {editEntryForm ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="text-xs font-medium text-slate-700">
+                หมวดหมู่
+                <select
+                  className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm"
+                  value={editEntryForm.category_id}
+                  onChange={(e) =>
+                    setEditEntryForm((s) => (s ? { ...s, category_id: e.target.value } : s))
+                  }
+                >
+                  <option value="">เลือกหมวด…</option>
+                  {costCategories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-medium text-slate-700">
+                วันที่และเวลาที่จ่าย
+                <input
+                  type="datetime-local"
+                  className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm"
+                  value={editEntryForm.spent_at_local}
+                  onChange={(e) =>
+                    setEditEntryForm((s) => (s ? { ...s, spent_at_local: e.target.value } : s))
+                  }
+                />
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="text-xs font-medium text-slate-700">
+                รายการ / ชื่อค่าใช้จ่าย
+                <input
+                  className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm"
+                  placeholder="เช่น ค่าไฟเดือน เม.ย."
+                  value={editEntryForm.item_label}
+                  onChange={(e) =>
+                    setEditEntryForm((s) => (s ? { ...s, item_label: e.target.value } : s))
+                  }
+                />
+              </label>
+              <label className="text-xs font-medium text-slate-700">
+                จำนวนเงิน (บาท)
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm font-bold tabular-nums text-rose-700"
+                  placeholder="0.00"
+                  value={editEntryForm.amount}
+                  onChange={(e) =>
+                    setEditEntryForm((s) => (s ? { ...s, amount: e.target.value } : s))
+                  }
+                />
+              </label>
+            </div>
+
+            <label className="block text-xs font-medium text-slate-700">
+              หมายเหตุ
+              <textarea
+                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                rows={2}
+                placeholder="ข้อมูลเพิ่มเติม…"
+                value={editEntryForm.note}
+                onChange={(e) => setEditEntryForm((s) => (s ? { ...s, note: e.target.value } : s))}
+              />
+            </label>
+
+            <CostSlipAttachmentZone
+              slipUrl={editEntryForm.slip_photo_url}
+              onSlipUrlChange={(url) =>
+                setEditEntryForm((s) => (s ? { ...s, slip_photo_url: url } : s))
+              }
+              photoBusy={entryPhotoBusy}
+              previewUrl={editSlipPreview}
+              galleryInputRef={costGalleryInputRef}
+              onFileInputChange={(e) => void onCostSlipFileChange(e, "edit")}
+              onOpenModalCamera={() => setEntryCameraOpen(true)}
+              cameraOpen={entryCameraOpen}
+              onCloseCamera={() => setEntryCameraOpen(false)}
+              onCameraCapture={onCostModalCameraCapture}
+              onRequestLegacyPicker={() => costGalleryInputRef.current?.click()}
+            />
+          </div>
+        ) : null}
+      </FormModal>
+
+      <FormModal
+        open={costEntryDetail != null}
+        onClose={() => setCostEntryDetail(null)}
+        title={costEntryDetail ? `รายการต้นทุน #${costEntryDetail.id}` : "ต้นทุน"}
+        description="รายละเอียดรายการรายจ่าย/ต้นทุน"
+        size="md"
+        footer={
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="cw-btn rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              onClick={() => setCostEntryDetail(null)}
+            >
+              <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M18 6 6 18M6 6l12 12" /></svg>
+              <span className="cw-btn-label">ปิด</span>
+            </button>
+          </div>
+        }
+      >
+        {costEntryDetail ?
+          (() => {
+            const e = costEntryDetail;
+            const slipResolved = e.slip_photo_url?.trim() ? resolveAssetUrl(e.slip_photo_url, baseUrl) : null;
+            const timeStr = new Date(e.spent_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
+            return (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-rose-100 bg-rose-50/60 px-3 py-3 text-sm">
+                  <p className="text-xs font-medium tabular-nums text-slate-500">{timeStr}</p>
+                  <p className="mt-1 text-lg font-bold tabular-nums text-[#2e2a58]">{e.item_label.trim() || "—"}</p>
+                  <p className="mt-1 font-medium text-slate-800">{e.category_name}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-950">
+                      รายจ่าย
+                    </span>
+                    <span className="text-sm font-bold tabular-nums text-rose-700">
+                      ฿{e.amount.toLocaleString()}
+                    </span>
+                  </div>
+                  {e.note?.trim() ?
+                    <p className="mt-2 text-xs text-slate-500">{e.note}</p>
+                  : null}
+                </div>
+                <div
+                  className="flex flex-wrap items-center justify-center gap-1.5 sm:justify-start"
+                  role="toolbar"
+                  aria-label="ดำเนินการรายการต้นทุน"
+                >
+                  <PopupIconButton
+                    label="ดูสลิป"
+                    disabled={!slipResolved}
+                    onClick={() => slipResolved && lightbox.open(slipResolved)}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" x2="8" y1="13" y2="13" />
+                      <line x1="16" x2="8" y1="17" y2="17" />
+                      <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                  </PopupIconButton>
+                </div>
+                <p className="text-[10px] text-slate-500 italic">
+                  * หากต้องการแก้ไขหรือลบรายการต้นทุน กรุณาไปที่แท็บ «ต้นทุน»
+                </p>
               </div>
             );
           })()

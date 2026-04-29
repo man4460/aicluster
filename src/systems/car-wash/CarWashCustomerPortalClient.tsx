@@ -205,25 +205,42 @@ export function CarWashCustomerPortalClient({
             title="คาร์แคร์สมาชิก"
             description="ค้นหาด้วยเบอร์โทรหรือทะเบียนรถ — ดูสถานะคิว สิทธิ์เหลือ แล้วกดชำระเพื่อหัก 1 ครั้ง"
           />
-          <form onSubmit={onSearch} className="space-y-3">
-            <label className="block text-xs font-medium text-[#66638c]" htmlFor="cw-member-query">
-              ค้นหาลูกค้า
-            </label>
-            <input
-              id="cw-member-query"
-              type="text"
-              className="app-surface-strong w-full rounded-xl border border-[#e8e6f4] px-3 py-2.5 text-sm text-[#2e2a58] shadow-sm outline-none ring-[#4d47b6]/20 focus:ring-2"
-              placeholder="เบอร์โทรลูกค้า หรือทะเบียนรถ"
-              value={query}
-              onChange={(e) => setQuery(e.target.value.slice(0, 64))}
-              autoComplete="tel"
-            />
+          <form onSubmit={onSearch} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-member-query">
+                ค้นหาลูกค้าสมาชิก
+              </label>
+              <div className="relative">
+                {!query && (
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+                    </svg>
+                  </span>
+                )}
+                <input
+                  id="cw-member-query"
+                  type="text"
+                  className={cn(
+                    "w-full rounded-2xl border-slate-200 bg-white pr-4 py-3 text-sm font-bold text-[#1e1b4b] shadow-sm outline-none focus:border-[#5b61ff] focus:ring-2 focus:ring-[#5b61ff]/10 transition-all",
+                    query ? "pl-4" : "pl-16"
+                  )}
+                  placeholder="เบอร์โทร หรือ ทะเบียนรถ"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value.slice(0, 64))}
+                  autoComplete="tel"
+                />
+              </div>
+            </div>
             <button
               type="submit"
               disabled={loading}
-              className="app-btn-primary w-full rounded-xl py-2.5 text-sm font-semibold disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#5b61ff] py-3.5 text-sm font-black text-white shadow-lg shadow-indigo-100 transition-all hover:bg-[#4d47b6] active:scale-[0.98] disabled:opacity-60"
             >
-              {loading ? "กำลังค้นหา..." : "ค้นหา"}
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="3">
+                <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+              </svg>
+              {loading ? "กำลังค้นหา..." : "ค้นหาข้อมูล"}
             </button>
           </form>
         </AppDashboardSection>
@@ -369,9 +386,12 @@ export function CarWashCustomerPortalClient({
                 type="button"
                 onClick={() => void onCheckIn()}
                 disabled={!canPay}
-                className="app-btn-primary w-full rounded-xl py-3 text-sm font-bold disabled:opacity-60"
+                className="cw-btn app-btn-primary w-full rounded-xl py-3 text-sm font-bold disabled:opacity-60"
               >
-                {checkInLoading ? "กำลังบันทึก..." : "ชำระและหักสิทธิ์ 1 ครั้ง"}
+                <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                  <path d="M20 7 9 18l-5-5" />
+                </svg>
+                <span className="cw-btn-label">{checkInLoading ? "กำลังบันทึก..." : "ชำระและหักสิทธิ์ 1 ครั้ง"}</span>
               </button>
               {!openLaneVisit ?
                 <p className="mt-2 text-center text-xs text-amber-800">รอให้มีข้อมูลคิวในลานก่อน จึงจะชำระได้</p>

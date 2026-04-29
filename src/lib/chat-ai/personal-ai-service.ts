@@ -204,11 +204,104 @@ function storedUserMessageAlreadySavedFinanceFromTool(content: string): boolean 
   return /\[\s*ผลการเรียกเครื่องมือ\s*\][\s\S]*รายการ\s*#\d+/u.test(content);
 }
 
+function parseQuickExpensePairs(message: string): ParsedFinanceChatCommand[] {
+  // รองรับรูปแบบสั้นหลายรายการในบรรทัดเดียว เช่น "ค่ากาแฟ 50 ค่ารถ 20 ค่าดูหนัง 150"
+  const out: ParsedFinanceChatCommand[] = [];
+  const re = /(ค่า[^\d\n]{1,80}?)\s*([\d,]+(?:\.\d+)?)(?:\s*(?:บาท|บ\.?))?(?=\s+ค่า|$)/giu;
+  let m: RegExpExecArray | null = null;
+  while ((m = re.exec(message)) !== null) {
+    const title = (m[1] ?? "").trim().slice(0, 160);
+    const amount = Number((m[2] ?? "").replace(/,/g, ""));
+    if (!title || !Number.isFinite(amount) || amount <= 0) continue;
+    out.push({ isIncome: false, amount, title, categoryLabel: "อื่นๆ" });
+  }
+  return out;
+}
+
 function financeCommandsFromUserMessage(message: string): ParsedFinanceChatCommand[] {
   const digest = parseFinanceIncomeDigestEntries(message);
   if (digest.length > 0) return digest;
+  const quickPairs = parseQuickExpensePairs(message);
+  if (quickPairs.length > 0) return quickPairs;
   const one = parseFinanceRecordCommand(message);
   return one ? [one] : [];
+}
+
+function isDeleteNoteCommand(message: string): boolean {
+  return /(?:^|\s)ลบ(?:โน้ต|บันทึก)(?:\s|$)/u.test(message);
+}
+
+function isDeletePlanCommand(message: string): boolean {
+  return /(?:^|\s)ลบ(?:แผน|เตือน|นัดหมาย|ตาราง)(?:\s|$)/u.test(message);
+}
+
+function isDeleteFinanceCommand(message: string): boolean {
+  return /(?:^|\s)ลบ(?:รายจ่าย|รายรับ|บัญชี|ค่า|รายการ)(?:\s|$)/u.test(message);
+}
+
+async function deleteLatestNoteForUser(userId: string): Promise<ToolExecutionResult> {
+  const row = await prisma.personalAiNote.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, content: true },
+  });
+  if (!row) return { used: true, summary: "ยังไม่มีโน้ตให้ลบค่ะ" };
+  await prisma.personalAiNote.deleteMany({ where: { id: row.id, userId } });
+  return { used: true, summary: `ลบโน้ตล่าสุดแล้วค่ะ ✅ ("${row.content.slice(0, 80)}")` };
+}
+
+async function deleteLatestPlanForUser(userId: string): Promise<ToolExecutionResult> {
+  const row = await prisma.personalAiPlan.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, title: true },
+  });
+  if (!row) return { used: true, summary: "ยังไม่มีแผนให้ลบค่ะ" };
+  await prisma.personalAiPlan.deleteMany({ where: { id: row.id, userId } });
+  return { used: true, summary: `ลบแผนล่าสุดแล้วค่ะ ✅ ("${row.title.slice(0, 80)}")` };
+}
+
+async function deleteFinanceEntriesForUser(args: {
+  userId: string;
+  message: string;
+}): Promise<ToolExecutionResult> {
+  const parsed = financeCommandsFromUserMessage(args.message);
+  const first = parsed[0] ?? null;
+  if (first) {
+    const found = await prisma.homeFinanceEntry.findMany({
+      where: {
+        ownerUserId: args.userId,
+        amount: first.amount,
+        title: { contains: first.title.slice(0, 80) },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, title: true, amount: true },
+    });
+    if (!found.length) return { used: true, summary: "ไม่พบรายการรายรับ-รายจ่ายที่ต้องการลบค่ะ" };
+    await prisma.homeFinanceEntry.deleteMany({
+      where: { id: { in: found.map((x) => x.id) }, ownerUserId: args.userId },
+    });
+    return {
+      used: true,
+      summary: `ลบรายการรายรับ-รายจ่ายแล้ว ${found.length} รายการ ✅ (${first.title} ${first.amount.toLocaleString("th-TH")} บาท)`,
+    };
+  }
+
+  const latest = await prisma.homeFinanceEntry.findFirst({
+    where: { ownerUserId: args.userId },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, title: true, amount: true, type: true },
+  });
+  if (!latest) return { used: true, summary: "ยังไม่มีรายการรายรับ-รายจ่ายให้ลบค่ะ" };
+  await prisma.homeFinanceEntry.deleteMany({
+    where: { id: latest.id, ownerUserId: args.userId },
+  });
+  const kind = latest.type === "INCOME" ? "รายรับ" : "รายจ่าย";
+  return {
+    used: true,
+    summary: `ลบ${kind}ล่าสุดแล้วค่ะ ✅ ("${latest.title}" ${Number(latest.amount).toLocaleString("th-TH")} บาท)`,
+  };
 }
 
 function extractSavedEntryDateYmdFromToolSummary(summary: string): string | null {
@@ -855,6 +948,16 @@ async function maybeRunPersonalTool(args: {
   const textForTools = stripStoredUserMessageForFinanceParse(message).trim();
   const lower = textForTools.toLowerCase();
 
+  if (isDeleteNoteCommand(textForTools)) {
+    return await deleteLatestNoteForUser(args.userId);
+  }
+  if (isDeletePlanCommand(textForTools)) {
+    return await deleteLatestPlanForUser(args.userId);
+  }
+  if (isDeleteFinanceCommand(textForTools)) {
+    return await deleteFinanceEntriesForUser({ userId: args.userId, message: textForTools });
+  }
+
   // โน้ต "จดว่า/บันทึกว่า/…" ต้องบันทึกลง personal_ai_note ก่อน — รายรับ-รายจ่าย ห้ามแย่งบรรทัดที่มี ค่า… N บาท
   if (isPairedPrefixQuickNoteLine(textForTools)) {
     const quickPaired = extractQuickNoteContent(textForTools);
@@ -1039,6 +1142,76 @@ function extractOpenClawSyncEvents(payload: unknown): OpenClawSyncEventInput[] {
   return [];
 }
 
+function stripMarkdownAndEmojiPrefix(text: string): string {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/^[•\-*]\s*/u, "")
+    .replace(/^[\p{Extended_Pictographic}\uFE0F]+\s*/u, "")
+    .trim();
+}
+
+function tinyStableId(input: string): string {
+  let h = 5381;
+  for (const ch of input) h = (h * 33) ^ ch.charCodeAt(0);
+  return Math.abs(h >>> 0).toString(36);
+}
+
+function extractOpenClawEventsFromReplyText(reply: string): OpenClawSyncEventInput[] {
+  const text = reply.trim();
+  if (!text) return [];
+  const lines = text
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (!lines.length) return [];
+
+  const events: OpenClawSyncEventInput[] = [];
+  const normalized = lines.map((line) => stripMarkdownAndEmojiPrefix(line));
+
+  // NOTE marker: e.g. "📝 NOTE: ..." or "NOTE: ..."
+  for (const line of normalized) {
+    const m = line.match(/^(?:NOTE|โน้ต)\s*:\s*(.+)$/iu);
+    if (!m?.[1]) continue;
+    const content = m[1].trim();
+    if (!content) continue;
+    events.push({
+      type: "note",
+      externalId: `chat-note-${tinyStableId(`note|${content}`)}`,
+      op: "upsert",
+      content,
+      tags: ["openclaw-chat"],
+      hiddenFromDigest: false,
+      syncedAt: new Date().toISOString(),
+    });
+  }
+
+  // PLAN marker/date block: e.g. "📅 30 เมษายน 2569" + bullet line "• 📦 ภารกิจ..."
+  const dateHeaderIndex = normalized.findIndex((line) => /^📅|^วัน(?:ที่)?\s*\d|^\d{1,2}\s+[ก-๙A-Za-z]+/u.test(line));
+  if (dateHeaderIndex >= 0) {
+    const rawAfterDate = lines.slice(dateHeaderIndex + 1);
+    const afterDate = normalized.slice(dateHeaderIndex + 1);
+    const explicitTask = afterDate.find((line) => /^(?:📦\s*)?(?:ภารกิจ|งาน|นัดหมาย|เตือน)/u.test(line));
+    const genericBullet = afterDate.find((line, idx) => rawAfterDate[idx]?.includes("•") && line.length >= 8);
+    const candidate = (explicitTask ?? genericBullet ?? "").replace(/^📦\s*/u, "").trim();
+    if (candidate) {
+      const title = candidate.slice(0, 180);
+      events.push({
+        type: "plan",
+        externalId: `chat-plan-${tinyStableId(`plan|${title}`)}`,
+        op: "upsert",
+        title,
+        steps: [title],
+        status: "TODO",
+        syncedAt: new Date().toISOString(),
+      });
+    }
+  }
+
+  return events;
+}
+
 async function syncEventsFromOpenClawPayload(args: {
   userId: string;
   payload: unknown;
@@ -1091,10 +1264,11 @@ async function callOpenClawAgent(args: {
       process.env.OPENCLAW_HTTP_MESSAGE_PAYLOAD?.toLowerCase() === "true" ||
       /\/api\/openclaw\/ocr\b/i.test(httpEndpoint);
     const httpBody = useMessageJsonPayload
-      ? { message: args.prompt }
+      ? { message: args.prompt, ownerUserId: args.userId }
       : {
           task: "chat" as const,
           assistantId: args.assistantId,
+          ownerUserId: args.userId,
           model,
           prompt: args.prompt,
           messages: args.history.map((m) => ({ role: m.role, content: m.content })),
@@ -1117,7 +1291,22 @@ async function callOpenClawAgent(args: {
     if (!reply) {
       throw new Error("OpenClaw HTTP ไม่ได้ส่งข้อความตอบกลับ");
     }
-    await syncEventsFromOpenClawPayload({ userId: args.userId, payload });
+    const replyEvents = extractOpenClawEventsFromReplyText(reply);
+    void syncEventsFromOpenClawPayload({ userId: args.userId, payload }).catch((error) => {
+      console.warn("openclaw payload sync failed:", error);
+    });
+    if (replyEvents.length > 0) {
+      void syncEventsFromOpenClawPayload({
+        userId: args.userId,
+        payload: {
+          source: "openclaw",
+          requestId: `chat-reply-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          events: replyEvents,
+        },
+      }).catch((error) => {
+        console.warn("openclaw reply-text sync failed:", error);
+      });
+    }
     return { reply, provider: "openclaw-agent", model };
   }
 
@@ -1154,6 +1343,7 @@ async function callOpenClawAgent(args: {
     payload = await client.request(method, {
       task: "chat",
       assistantId: args.assistantId,
+      ownerUserId: args.userId,
       model,
       messages: args.history.map((m) => ({
         role: m.role,
@@ -1176,7 +1366,22 @@ async function callOpenClawAgent(args: {
   if (!reply) {
     throw new Error("OpenClaw Agent ไม่ได้ส่งข้อความตอบกลับ");
   }
-  await syncEventsFromOpenClawPayload({ userId: args.userId, payload });
+  const replyEvents = extractOpenClawEventsFromReplyText(reply);
+  void syncEventsFromOpenClawPayload({ userId: args.userId, payload }).catch((error) => {
+    console.warn("openclaw payload sync failed:", error);
+  });
+  if (replyEvents.length > 0) {
+    void syncEventsFromOpenClawPayload({
+      userId: args.userId,
+      payload: {
+        source: "openclaw",
+        requestId: `chat-reply-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        events: replyEvents,
+      },
+    }).catch((error) => {
+      console.warn("openclaw reply-text sync failed:", error);
+    });
+  }
   return { reply, provider: "openclaw-agent", model };
 }
 
@@ -1283,11 +1488,9 @@ function parseOpenClawResultTextFields(raw: string): {
     const monthMap: Record<string, string> = {
       มกราคม: "01",
       มกรา: "01",
-      มกราคม: "01",
       มค: "01",
       กุมภาพันธ์: "02",
       กุมภา: "02",
-      กุมภาพันธ์: "02",
       กพ: "02",
       มีนาคม: "03",
       มีนา: "03",
@@ -1363,6 +1566,7 @@ async function readSlipWithOpenClaw(imageDataUrl: string): Promise<GlmOcrSlipRes
   if (!endpoint) return null;
   const imageBase64 = dataUrlToBase64Raw(imageDataUrl);
   if (!imageBase64) throw new Error("รูปแบบรูปภาพไม่ถูกต้อง (base64)");
+  const encodedImage = imageBase64;
   const mimeTypeMatch = imageDataUrl.match(/^data:([^;]+);base64,/i);
   const mimeType = mimeTypeMatch?.[1]?.trim() || "image/jpeg";
   const apiKey = process.env.OPENCLAW_API_KEY?.trim() || "";
@@ -1389,7 +1593,8 @@ async function readSlipWithOpenClaw(imageDataUrl: string): Promise<GlmOcrSlipRes
     form.set("message", prompt);
     form.set("prompt", prompt);
     // endpoint รับได้ทั้งไฟล์หรือ base64 string
-    form.set("image", new Blob([Buffer.from(imageBase64, "base64")], { type: mimeType }), "slip-image");
+    const imageBytes = Uint8Array.from(Buffer.from(encodedImage, "base64"));
+    form.set("image", new Blob([imageBytes], { type: mimeType }), "slip-image");
     const res = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -1418,12 +1623,12 @@ async function readSlipWithOpenClaw(imageDataUrl: string): Promise<GlmOcrSlipRes
             r.transferTo,
         );
 
-  let probe = await postJson({ message: prompt, image: imageBase64 });
+  let probe = await postJson({ message: prompt, image: encodedImage });
   if (!probe.ok || !hasUsefulPayload(probe.raw)) {
     probe = await postJson({ prompt, imageDataUrl });
   }
   if (!probe.ok || !hasUsefulPayload(probe.raw)) {
-    probe = await postJson({ prompt, image: imageBase64, mimeType });
+    probe = await postJson({ prompt, image: encodedImage, mimeType });
   }
   if (!probe.ok || !hasUsefulPayload(probe.raw)) {
     probe = await postMultipart();

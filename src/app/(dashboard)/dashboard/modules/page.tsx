@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-container";
+import { appTemplateOutlineButtonClass } from "@/components/app-templates";
+import { cn } from "@/lib/cn";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
@@ -29,7 +31,7 @@ export default async function ModulesCatalogPage() {
   ]);
 
   const initialCooldownUnlocks = Object.fromEntries(cooldownRows.map((c) => [c.moduleId, c.unlockAtIso]));
-  const hydrationReferenceMs = Date.now();
+  const hydrationReferenceMs = Number(new Date());
 
   const modules = filterAppModulesForDashboardUi(modulesRaw, session.role);
 
@@ -47,13 +49,24 @@ export default async function ModulesCatalogPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader
         title="ระบบทั้งหมด"
-        description="ค้นหาและเลือก Subscribe ระบบที่ต้องการใช้งาน"
+        description="เลือกเปิดใช้งานระบบที่ต้องการ พร้อมค้นหาและจัดการ Subscribe ได้ในหน้าเดียว"
+        className="rounded-3xl border border-white/80 bg-gradient-to-r from-white via-[#f8f7ff] to-[#fff3fb] p-4 shadow-sm sm:p-6"
         action={
-          <Link href="/dashboard" className="text-sm font-medium text-[#0000BF] hover:underline">
-            ← กลับหน้าแดชบอร์ด
+          <Link
+            href="/dashboard"
+            className={cn(
+              appTemplateOutlineButtonClass,
+              "inline-flex min-h-[40px] items-center rounded-2xl border-[#0000BF]/20 bg-white/85 px-3 text-xs text-[#0000BF] hover:border-[#0000BF]/35 hover:bg-white sm:min-h-[42px] sm:px-4 sm:text-sm",
+            )}
+            aria-label="กลับหน้าแดชบอร์ด"
+          >
+            <svg className="mr-1.5 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M15 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="hidden sm:inline">กลับหน้าแดชบอร์ด</span>
           </Link>
         }
       />

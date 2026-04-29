@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   AppCameraCaptureModal,
-  AppDashboardSection,
   AppEmptyState,
   AppImageLightbox,
   AppImageThumb,
@@ -187,6 +186,10 @@ export function CarWashCostPanel({
   const sortedEntries = useMemo(
     () => [...entries].sort((a, b) => new Date(b.spent_at).getTime() - new Date(a.spent_at).getTime()),
     [entries],
+  );
+  const totalCostAmount = useMemo(
+    () => sortedEntries.reduce((sum, entry) => sum + entry.amount, 0),
+    [sortedEntries],
   );
 
   const openManageCategories = useCallback(() => {
@@ -393,59 +396,69 @@ export function CarWashCostPanel({
     <div className="space-y-6">
       {err ? <p className="text-sm text-red-600">{err}</p> : null}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="flex items-start justify-between gap-3 sm:items-center sm:gap-4">
         <div className="min-w-0 text-xs text-slate-500">
           <p className="text-sm font-semibold text-slate-900">ต้นทุน</p>
-          <p className="mt-0.5 leading-relaxed">
-            หมวดค่าใช้จ่าย ({categories.length} หมวด) — ลบหมวดจะลบรายการในหมวดนั้นด้วย · บันทึกรายการจ่ายและแนบสลิปใน popup
+          <p className="mt-0.5 text-xs font-semibold tabular-nums text-rose-700">
+            รวมทั้งสิ้น ฿{totalCostAmount.toLocaleString("en-US")}
           </p>
           {categories.length === 0 ?
             <p className="mt-1 font-medium text-amber-800">สร้างหมวดก่อนจึงจะบันทึกรายการได้</p>
           : null}
         </div>
-        <div className="flex shrink-0 flex-nowrap gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
             disabled={busy}
             onClick={openManageCategories}
-            className="app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60"
+            className="app-btn-primary inline-flex h-9 w-9 items-center justify-center rounded-xl p-0 text-sm font-semibold disabled:opacity-60 sm:h-auto sm:w-auto sm:gap-2 sm:px-3 sm:py-2"
+            aria-label="จัดการหมวด"
           >
-            จัดการหมวด
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden>
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+            <span className="hidden sm:inline">จัดการหมวด</span>
           </button>
           <button
             type="button"
             disabled={busy || categories.length === 0}
             onClick={openAddEntry}
-            className="app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60"
+            className="app-btn-primary inline-flex h-9 w-9 items-center justify-center rounded-xl p-0 text-sm font-semibold disabled:opacity-60 sm:h-auto sm:w-auto sm:gap-2 sm:px-3 sm:py-2"
+            aria-label="บันทึกรายการ"
           >
-            บันทึกรายการ
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            <span className="hidden sm:inline">บันทึกรายการ</span>
           </button>
         </div>
       </div>
 
-      <AppDashboardSection tone="slate">
-        <AppSectionHeader tone="slate" title="รายการต้นทุนทั้งหมด" description={`${entries.length} รายการ`} />
+      <div>
         {sortedEntries.length === 0 ?
           <AppEmptyState>ยังไม่มีรายการต้นทุน</AppEmptyState>
-        : <div className="max-h-[min(60vh,28rem)] overflow-y-auto rounded-xl border border-slate-200 bg-white">
-            <ul className="divide-y divide-slate-100">
+        : <div className="max-h-[min(60vh,32rem)] overflow-y-auto rounded-xl border border-slate-200 bg-white lg:border-0 lg:bg-transparent">
+            <ul className="divide-y divide-slate-100 p-1 lg:grid lg:grid-cols-4 lg:gap-3 lg:divide-y-0 lg:p-2">
               {sortedEntries.map((e) => {
                 const slipResolved = e.slip_photo_url?.trim() ? resolveAssetUrl(e.slip_photo_url, baseUrl) : null;
                 return (
                   <li
                     key={e.id}
-                    className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-4"
+                    className="relative overflow-hidden flex flex-col gap-2 px-3 py-2.5 sm:px-4 lg:rounded-xl lg:border lg:border-slate-200 lg:bg-white lg:px-3 lg:py-3 lg:shadow-sm"
                   >
-                    <div className="flex min-w-0 flex-1 gap-3">
-                      {slipResolved ?
-                        <AppImageThumb
-                          src={slipResolved}
-                          alt="สลิป"
-                          onOpen={() => lightbox.open(slipResolved)}
-                          className="h-14 w-14 rounded-lg"
-                        />
-                      : null}
-                      <div className="min-w-0">
+                    <span
+                      aria-hidden
+                      className="absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-gradient-to-b from-[#5b61ff] via-[#8d64ff] to-[#f06dc8]"
+                    />
+                    <div className="flex min-w-0 items-start gap-3">
+                      <AppImageThumb
+                        src={slipResolved}
+                        alt="สลิป"
+                        onOpen={() => slipResolved && lightbox.open(slipResolved)}
+                        className="h-14 w-14 rounded-lg lg:h-16 lg:w-16"
+                      />
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs tabular-nums text-slate-500">
                           {new Date(e.spent_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
                         </p>
@@ -457,7 +470,7 @@ export function CarWashCostPanel({
                         {e.note?.trim() ? <p className="text-xs text-slate-600">{e.note}</p> : null}
                       </div>
                     </div>
-                    <div className="flex shrink-0 gap-1">
+                    <div className="flex shrink-0 justify-end gap-1 border-t border-slate-100 pt-2">
                       <PopupIconButton label="แก้ไขรายการ" disabled={busy} onClick={() => openEditEntry(e)}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" aria-hidden>
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -482,7 +495,7 @@ export function CarWashCostPanel({
             </ul>
           </div>
         }
-      </AppDashboardSection>
+      </div>
 
       <FormModal
         open={manageCategoriesOpen}
@@ -491,102 +504,108 @@ export function CarWashCostPanel({
           cancelCategoryForm();
         }}
         title="หมวดค่าใช้จ่ายต้นทุน"
-        description="เพิ่ม แก้ไข หรือลบหมวด — ลบหมวดจะลบรายการในหมวดนั้นด้วย"
-        size="lg"
+        description="สร้างหรือลบหมวดหมู่สำหรับรายจ่าย"
+        size="md"
         footer={
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                setManageCategoriesOpen(false);
-                cancelCategoryForm();
-              }}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-            >
-              ปิด
-            </button>
-          </div>
+          <FormModalFooterActions
+            onCancel={() => {
+              setManageCategoriesOpen(false);
+              cancelCategoryForm();
+            }}
+            onSubmit={() => setManageCategoriesOpen(false)}
+            submitLabel="เสร็จสิ้น"
+          />
         }
       >
-        <div className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-3">
-            <label className="min-w-0 flex-1 text-xs font-medium text-slate-600">
-              {editCat ? "แก้ไขชื่อหมวด" : "เพิ่มหมวดใหม่ — พิมพ์ชื่อแล้วกดเพิ่ม"}
+        <div className="space-y-6">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submitCategory();
+            }}
+            className="flex items-end gap-2 rounded-2xl border border-slate-100 bg-slate-50/50 p-4"
+          >
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {editCat ? "แก้ไขชื่อหมวด" : "ชื่อหมวดใหม่"}
+              </label>
               <input
-                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                className="w-full rounded-xl border-slate-200 bg-white px-4 py-2.5 text-sm font-bold placeholder:text-slate-300 focus:ring-[#5b61ff]"
+                placeholder="เช่น ค่าไฟ, ค่าน้ำ"
                 value={catName}
                 onChange={(ev) => setCatName(ev.target.value)}
-                placeholder="เช่น ค่าน้ำยาล้างรถ"
+                autoFocus
               />
-            </label>
-            <div className="flex shrink-0 flex-wrap gap-2">
-              {editCat ?
-                <>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void submitCategory()}
-                    className="app-btn-primary rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50"
-                  >
-                    บันทึก
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={cancelCategoryForm}
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                  >
-                    ยกเลิก
-                  </button>
-                </>
-              : <button
-                  type="button"
-                  disabled={busy || !catName.trim()}
-                  onClick={() => void submitCategory()}
-                  className="app-btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                    <path d="M12 5v14M5 12h14" />
+            </div>
+            <button
+              type="submit"
+              disabled={busy || !catName.trim()}
+              className="flex h-[42px] shrink-0 items-center justify-center rounded-xl bg-[#5b61ff] px-6 text-sm font-black text-white shadow-lg shadow-indigo-100 transition-all hover:bg-[#4d47b6] active:scale-95 disabled:opacity-50"
+            >
+              {editCat ? "บันทึก" : "เพิ่ม"}
+            </button>
+            {editCat && (
+              <button
+                type="button"
+                className="flex h-[42px] shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-500 hover:bg-slate-50 active:scale-95"
+                onClick={cancelCategoryForm}
+              >
+                ยกเลิก
+              </button>
+            )}
+          </form>
+
+          <div className="space-y-3">
+            <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              หมวดที่มีอยู่ ({categories.length})
+            </p>
+            <div className="grid grid-cols-1 gap-2">
+              {categories.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-100 py-8 text-slate-400">
+                  <svg viewBox="0 0 24 24" className="mb-2 h-8 w-8 opacity-20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M3 3h18v18H3zM9 9h6M9 13h6M9 17h3" />
                   </svg>
-                  เพิ่มหมวด
-                </button>
-              }
+                  <p className="text-xs font-medium">ยังไม่มีหมวดหมู่</p>
+                </div>
+              ) : (
+                categories.map((c) => (
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition-all hover:border-[#5b61ff]/30 hover:shadow-md"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-[#5b61ff]">
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                        </svg>
+                      </div>
+                      <span className="truncate text-sm font-black text-[#1e1b4b]">{c.name}</span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-indigo-50 hover:text-[#5b61ff]"
+                        onClick={() => openEditCategoryForm(c)}
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                        onClick={() => void removeCategory(c)}
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
-
-          {categories.length === 0 ?
-            <AppEmptyState>ยังไม่มีหมวด — กด «เพิ่มหมวด»</AppEmptyState>
-          : <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
-              {categories.map((c) => (
-                <li key={c.id} className="flex items-center justify-between gap-2 px-3 py-2.5 sm:px-4">
-                  <span className="min-w-0 truncate font-medium text-slate-900">{c.name}</span>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <PopupIconButton
-                      label="แก้ไขหมวด"
-                      disabled={busy || editCat != null}
-                      onClick={() => openEditCategoryForm(c)}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" aria-hidden>
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                      </svg>
-                    </PopupIconButton>
-                    <PopupIconButton
-                      label="ลบหมวด"
-                      disabled={busy || editCat != null}
-                      className={popupIconBtnDanger}
-                      onClick={() => void removeCategory(c)}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" aria-hidden>
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                      </svg>
-                    </PopupIconButton>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          }
         </div>
       </FormModal>
 
@@ -598,11 +617,10 @@ export function CarWashCostPanel({
           resetAddEntryForm();
         }}
         title="บันทึกรายการค่าใช้จ่าย"
-        description="กรอกข้อมูลและแนบสลิปหรือบิลได้ตามต้องการ"
-        size="lg"
+        description="กรอกข้อมูลรายจ่ายและเลือกหมวดหมู่ — รูปภาพสลิปจะถูกอัปโหลดทันที"
+        size="md"
         footer={
           <FormModalFooterActions
-            cancelLabel="ปิด"
             onCancel={() => {
               setEntryCameraOpen(false);
               setShowAddEntryModal(false);
@@ -614,7 +632,7 @@ export function CarWashCostPanel({
           />
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-6">
           <CostSlipAttachmentZone
             slipUrl={entrySlipUrl}
             onSlipUrlChange={setEntrySlipUrl}
@@ -633,59 +651,73 @@ export function CarWashCostPanel({
             disabled={busy}
           />
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-xs font-medium text-slate-600 sm:col-span-2">
-              รายการค่าใช้จ่าย
-              <input
-                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                placeholder="เช่น น้ำยาล้างรถ 5 ลิตร, ค่าไฟเดือนมีนา…"
-                value={entryItemLabel}
-                onChange={(ev) => setEntryItemLabel(ev.target.value)}
-              />
-            </label>
-            <label className="block text-xs font-medium text-slate-600">
-              หมวด
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">หมวดหมู่</label>
               <select
-                className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm"
+                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-[#5b61ff]"
                 value={entryCategoryId}
                 onChange={(ev) => setEntryCategoryId(ev.target.value)}
               >
-                <option value="">— เลือก —</option>
+                <option value="">เลือกหมวด…</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="block text-xs font-medium text-slate-600">
-              วันที่ / เวลาจ่าย
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">วันที่และเวลา</label>
               <input
                 type="datetime-local"
-                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-[#5b61ff]"
                 value={entrySpentLocal}
                 onChange={(ev) => setEntrySpentLocal(ev.target.value)}
               />
-            </label>
-            <label className="block text-xs font-medium text-slate-600">
-              จำนวนเงิน (บาท)
+            </div>
+          </div>
+
+          <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/30 p-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">รายการ / ชื่อค่าใช้จ่าย</label>
               <input
-                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                inputMode="decimal"
-                placeholder="0"
-                value={entryAmount}
-                onChange={(ev) => setEntryAmount(ev.target.value)}
+                className="w-full rounded-xl border-slate-200 bg-white text-sm font-semibold placeholder:text-slate-300 focus:ring-[#5b61ff]"
+                placeholder="เช่น น้ำยาล้างรถ 5 ลิตร, ค่าไฟเดือนมีนา…"
+                value={entryItemLabel}
+                onChange={(ev) => setEntryItemLabel(ev.target.value)}
               />
-            </label>
-            <label className="block text-xs font-medium text-slate-600 sm:col-span-2">
-              หมายเหตุ
-              <input
-                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                placeholder="เช่น บิลเลขที่…"
-                value={entryNote}
-                onChange={(ev) => setEntryNote(ev.target.value)}
-              />
-            </label>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">จำนวนเงิน (บาท)</label>
+              <div className="relative">
+                {!entryAmount && (
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-rose-500">฿</span>
+                )}
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  className={cn(
+                    "w-full rounded-xl border-slate-200 bg-white pr-4 py-2.5 text-lg font-black tabular-nums text-rose-600 focus:ring-rose-500 transition-all",
+                    entryAmount ? "pl-4" : "pl-10"
+                  )}
+                  placeholder="0.00"
+                  value={entryAmount}
+                  onChange={(ev) => setEntryAmount(ev.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">หมายเหตุ</label>
+            <textarea
+              className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-medium placeholder:text-slate-300 focus:ring-[#5b61ff]"
+              rows={2}
+              placeholder="ข้อมูลเพิ่มเติม (ถ้ามี)…"
+              value={entryNote}
+              onChange={(ev) => setEntryNote(ev.target.value)}
+            />
           </div>
         </div>
       </FormModal>
@@ -697,26 +729,26 @@ export function CarWashCostPanel({
           setEditEntry(null);
           setEditEntryForm(null);
         }}
-        title={editEntry ? `แก้ไขรายการ #${editEntry.id}` : "แก้ไข"}
-        size="lg"
+        title={editEntry ? `แก้ไขรายการต้นทุน #${editEntry.id}` : "แก้ไข"}
+        description="อัปเดตข้อมูลรายจ่าย"
+        size="md"
         footer={
-          editEntryForm ?
+          editEntryForm ? (
             <FormModalFooterActions
-              cancelLabel="ปิด"
               onCancel={() => {
                 setEntryCameraOpen(false);
                 setEditEntry(null);
                 setEditEntryForm(null);
               }}
-              submitLabel="บันทึก"
+              submitLabel="บันทึกการแก้ไข"
               loading={busy}
               onSubmit={() => void submitEditEntry()}
             />
-          : null
+          ) : null
         }
       >
-        {editEntry && editEntryForm ?
-          <div className="space-y-4">
+        {editEntry && editEntryForm ? (
+          <div className="space-y-6">
             <CostSlipAttachmentZone
               slipUrl={editEntryForm.slip_photo_url}
               onSlipUrlChange={(url) => setEditEntryForm((s) => (s ? { ...s, slip_photo_url: url } : s))}
@@ -734,20 +766,12 @@ export function CarWashCostPanel({
               }}
               disabled={busy}
             />
-            <div className="space-y-3">
-              <label className="block text-xs font-medium text-slate-600">
-                รายการค่าใช้จ่าย
-                <input
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                  placeholder="เช่น น้ำยาล้างรถ 5 ลิตร…"
-                  value={editEntryForm.item_label}
-                  onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, item_label: ev.target.value } : s))}
-                />
-              </label>
-              <label className="block text-xs font-medium text-slate-600">
-                หมวด
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">หมวดหมู่</label>
                 <select
-                  className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm"
+                  className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-[#5b61ff]"
                   value={editEntryForm.category_id}
                   onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, category_id: ev.target.value } : s))}
                 >
@@ -757,35 +781,56 @@ export function CarWashCostPanel({
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="block text-xs font-medium text-slate-600">
-                วันที่ / เวลา
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">วันที่และเวลา</label>
                 <input
                   type="datetime-local"
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                  className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-[#5b61ff]"
                   value={editEntryForm.spent_at_local}
                   onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, spent_at_local: ev.target.value } : s))}
                 />
-              </label>
-              <label className="block text-xs font-medium text-slate-600">
-                จำนวนเงิน (บาท)
+              </div>
+            </div>
+
+            <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/30 p-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">รายการ / ชื่อค่าใช้จ่าย</label>
                 <input
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                  value={editEntryForm.amount}
-                  onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, amount: ev.target.value } : s))}
+                  className="w-full rounded-xl border-slate-200 bg-white text-sm font-semibold placeholder:text-slate-300 focus:ring-[#5b61ff]"
+                  placeholder="เช่น น้ำยาล้างรถ 5 ลิตร…"
+                  value={editEntryForm.item_label}
+                  onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, item_label: ev.target.value } : s))}
                 />
-              </label>
-              <label className="block text-xs font-medium text-slate-600">
-                หมายเหตุ
-                <input
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                  value={editEntryForm.note}
-                  onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, note: ev.target.value } : s))}
-                />
-              </label>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">จำนวนเงิน (บาท)</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-rose-500">฿</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    className="w-full rounded-xl border-slate-200 bg-white pl-10 pr-4 py-2.5 text-lg font-black tabular-nums text-rose-600 focus:ring-rose-500"
+                    placeholder="0.00"
+                    value={editEntryForm.amount}
+                    onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, amount: ev.target.value } : s))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">หมายเหตุ</label>
+              <textarea
+                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-medium placeholder:text-slate-300 focus:ring-[#5b61ff]"
+                rows={2}
+                placeholder="ข้อมูลเพิ่มเติม (ถ้ามี)…"
+                value={editEntryForm.note}
+                onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, note: ev.target.value } : s))}
+              />
             </div>
           </div>
-        : null}
+        ) : null}
       </FormModal>
 
       <AppImageLightbox src={lightbox.src} alt="สลิปต้นทุน" onClose={lightbox.close} />

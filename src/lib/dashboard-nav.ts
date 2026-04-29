@@ -1,6 +1,4 @@
-export type DashboardNavRole = "USER" | "ADMIN";
-
-export type DashboardNavGroupId = "basic" | "services";
+export type DashboardNavGroupId = "basic" | "finance" | "services" | "property" | "admin";
 
 import {
   ATTENDANCE_MODULE_SLUG,
@@ -12,9 +10,11 @@ import {
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
+  LAUNDRY_MODULE_SLUG,
 } from "@/lib/modules/config";
 import { SYSTEM_MAP_CATALOG_SLUG } from "@/lib/modules/system-map-catalog";
 import { CHAT_AI_DASHBOARD_HREF, resolveDashboardNavLinkHref } from "@/lib/dashboard/chat-ai-href";
+import type { UserRole as DashboardNavRole } from "@/generated/prisma/enums";
 
 /** slug ใน `module_list` ที่ชี้หน้า Chat AI — ต้องได้ href เดียวกับเมนูพื้นฐาน (กันซ้ำ / mismatch) */
 const CHAT_AI_MODULE_SLUGS = new Set(["chatai", "chat-ai", "personal-ai"]);
@@ -37,12 +37,16 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === BUILDING_POS_MODULE_SLUG) return "/dashboard/building-pos";
   if (slug === VILLAGE_MODULE_SLUG) return "/dashboard/village";
   if (slug === PARKING_MODULE_SLUG) return "/dashboard/parking";
+  if (slug === LAUNDRY_MODULE_SLUG) return "/dashboard/laundry";
   return `/dashboard/modules/${slug}`;
 }
 
 export const DASHBOARD_NAV_GROUP_LABEL: Record<DashboardNavGroupId, string> = {
-  basic: "กลุ่มพื้นฐาน",
-  services: "กลุ่มระบบใช้บริการ",
+  basic: "เมนูหลัก",
+  finance: "การเงินและรายได้",
+  services: "บริการทางธุรกิจ",
+  property: "จัดการที่พักและอาคาร",
+  admin: "จัดการระบบ",
 };
 
 /** เมนูคงที่ทั้งหมดอยู่กลุ่มพื้นฐาน — กลุ่มระบบใช้บริการมาจากโมดูลที่สมัคร/มีสิทธิ์ (ส่งจาก layout) */
@@ -59,6 +63,7 @@ export type SubscribedModuleLink = {
   href: string;
   label: string;
   groupId: number;
+  slug: string;
 };
 
 export function isSubscribedModuleLink(
@@ -70,7 +75,7 @@ export function isSubscribedModuleLink(
 export type DashboardNavGroup = {
   id: DashboardNavGroupId;
   label: string;
-  items: DashboardNavItem[] | SubscribedModuleLink[];
+  items: (DashboardNavItem | SubscribedModuleLink)[];
 };
 
 /** เมนูพื้นฐานตามบทบาท */
@@ -96,33 +101,65 @@ export function buildDashboardNavGroups(
   ];
 
   const basicResolved = new Set(basicItems.map((item) => resolveDashboardNavLinkHref(item.href)));
-  const serviceItems: SubscribedModuleLink[] = subscribedModules
+  const serviceLinks: SubscribedModuleLink[] = subscribedModules
     .map((m) => ({
       href: dashboardModuleHref(m.slug),
       label: m.title,
       groupId: m.groupId,
+      slug: m.slug,
     }))
     .filter((item) => !basicResolved.has(resolveDashboardNavLinkHref(item.href)));
 
-  if (serviceItems.length > 0) {
-    groups.push({
-      id: "services",
-      label: DASHBOARD_NAV_GROUP_LABEL.services,
-      items: serviceItems,
-    });
+  if (serviceLinks.length > 0) {
+    // จัดกลุ่มตาม slug/ประเภท (ระบุเป็น Set<string> เพื่อให้ .has(string) ไม่ติด Type Error)
+    const financeSlugs = new Set<string>([HOME_FINANCE_BASIC_MODULE_SLUG]);
+    const serviceSlugs = new Set<string>([
+      BARBER_MODULE_SLUG,
+      CAR_WASH_MODULE_SLUG,
+      LAUNDRY_MODULE_SLUG,
+      BUILDING_POS_MODULE_SLUG,
+    ]);
+    const propertySlugs = new Set<string>([
+      DORMITORY_MODULE_SLUG,
+      VILLAGE_MODULE_SLUG,
+      PARKING_MODULE_SLUG,
+    ]);
+    const adminSlugs = new Set<string>([
+      ATTENDANCE_MODULE_SLUG,
+      MQTT_SERVICE_MODULE_SLUG,
+      SYSTEM_MAP_CATALOG_SLUG,
+    ]);
+
+    const financeItems = serviceLinks.filter((l) => financeSlugs.has(l.slug));
+    const businessItems = serviceLinks.filter((l) => serviceSlugs.has(l.slug));
+    const propertyItems = serviceLinks.filter((l) => propertySlugs.has(l.slug));
+    const systemItems = serviceLinks.filter((l) => adminSlugs.has(l.slug));
+    const otherItems = serviceLinks.filter(
+      (l) =>
+        !financeSlugs.has(l.slug) &&
+        !serviceSlugs.has(l.slug) &&
+        !propertySlugs.has(l.slug) &&
+        !adminSlugs.has(l.slug),
+    );
+
+    if (financeItems.length > 0) {
+      groups.push({ id: "finance", label: DASHBOARD_NAV_GROUP_LABEL.finance, items: financeItems });
+    }
+    if (businessItems.length > 0 || otherItems.length > 0) {
+      groups.push({
+        id: "services",
+        label: DASHBOARD_NAV_GROUP_LABEL.services,
+        items: [...businessItems, ...otherItems],
+      });
+    }
+    if (propertyItems.length > 0) {
+      groups.push({ id: "property", label: DASHBOARD_NAV_GROUP_LABEL.property, items: propertyItems });
+    }
+    if (systemItems.length > 0) {
+      groups.push({ id: "admin", label: DASHBOARD_NAV_GROUP_LABEL.admin, items: systemItems });
+    }
   }
 
   return groups;
 }
 
-/** รายการแบนเรียงเดียว (รวมลิงก์โมดูล) */
-export function navForRole(
-  role: DashboardNavRole,
-  subscribedModules: { slug: string; title: string; groupId: number }[],
-): { href: string; label: string }[] {
-  const mods = subscribedModules.map((m) => ({
-    href: dashboardModuleHref(m.slug),
-    label: m.title,
-  }));
-  return [...basicNavForRole(role), ...mods];
-}

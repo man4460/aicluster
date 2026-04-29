@@ -50,6 +50,19 @@ function isNavActive(href: string, pathname: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function shouldUseSystemFocusLayout(pathname: string): boolean {
+  const basicRoutes = [
+    "/dashboard",
+    "/dashboard/profile",
+    "/dashboard/plans",
+    "/dashboard/chat",
+    CHAT_AI_DASHBOARD_HREF,
+    "/dashboard/modules",
+    "/dashboard/admin",
+  ];
+  return !basicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+}
+
 function SidebarNavLink({
   href,
   pathname,
@@ -65,14 +78,19 @@ function SidebarNavLink({
     <Link
       href={resolvedHref}
       className={cn(
-        "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition",
+        "group relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-all duration-300",
         active
-          ? "bg-gradient-to-r from-[#8b9cff]/14 to-[#f9a8d4]/12 text-[#4d47b6] ring-1 ring-white/70"
-          : "text-[#67638f] hover:bg-white/65 hover:text-[#2e2a58]",
+          ? "bg-white/15 text-white shadow-[0_4px_12px_-2px_rgba(0,0,0,0.15)] ring-1 ring-white/30"
+          : "text-white/65 hover:bg-white/10 hover:text-white",
       )}
     >
-      {dashboardNavIconForHref(resolvedHref)}
-      <span className="min-w-0 leading-snug">{label}</span>
+      {active && (
+        <span className="absolute left-0 top-1/2 h-5 w-1.5 -translate-y-1/2 rounded-r-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+      )}
+      <div className={cn("transition-all duration-300 group-hover:scale-110 group-hover:rotate-3", active ? "text-white scale-110" : "text-white/50")}>
+        {dashboardNavIconForHref(resolvedHref)}
+      </div>
+      <span className="min-w-0 leading-tight">{label}</span>
     </Link>
   );
 }
@@ -95,14 +113,19 @@ function DrawerNavLink({
       href={resolvedHref}
       onClick={onNavigate}
       className={cn(
-        "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition",
+        "group relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-all duration-300",
         active
-          ? "bg-gradient-to-r from-[#8b9cff]/14 to-[#f9a8d4]/12 text-[#4d47b6] ring-1 ring-white/70"
-          : "text-[#67638f] hover:bg-white/65 hover:text-[#2e2a58]",
+          ? "bg-white/15 text-white shadow-[0_4px_12px_-2px_rgba(0,0,0,0.15)] ring-1 ring-white/30"
+          : "text-white/65 hover:bg-white/10 hover:text-white",
       )}
     >
-      {dashboardNavIconForHref(resolvedHref)}
-      <span className="min-w-0 leading-snug">{label}</span>
+      {active && (
+        <span className="absolute left-0 top-1/2 h-5 w-1.5 -translate-y-1/2 rounded-r-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+      )}
+      <div className={cn("transition-all duration-300 group-hover:scale-110 group-hover:rotate-3", active ? "text-white scale-110" : "text-white/50")}>
+        {dashboardNavIconForHref(resolvedHref)}
+      </div>
+      <span className="min-w-0 leading-tight">{label}</span>
     </Link>
   );
 }
@@ -147,72 +170,49 @@ function NavCollapsibleGroup({
   onDrawerNavigate?: () => void;
 }) {
   const isBasic = group.id === "basic";
-  const cardClass = isBasic
-    ? "mawell-card-surface border-white/60 shadow-md"
-    : "mawell-card-surface border-white/60 shadow-md";
-  const headerHoverClass = isBasic ? "hover:bg-white/35" : "hover:bg-white/35";
-  const titleClass = isBasic ? "text-[#312e81]" : "text-[#1e3a5f]";
-  const badgeClass = isBasic
-    ? "border border-[#d4dcff] bg-gradient-to-r from-[#eef1ff] to-[#f0e8ff] text-[#4d47b6]"
-    : "border border-[#f5d0e6] bg-gradient-to-r from-[#fff5fb] to-[#eef2ff] text-[#7c3a5c]";
-  const badgeLabel = isBasic ? "BASIC" : "SERVICES";
+  const cardClass = "border border-white/10 bg-white/10 backdrop-blur-xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.2)]";
+  const headerHoverClass = "hover:bg-white/15";
+  const titleClass = "text-white";
+  const badgeClass = "border border-white/30 bg-white/20 text-[10px] text-white/90 font-bold tracking-tight";
 
   return (
-    <div className={cn("rounded-2xl p-2.5", cardClass)}>
+    <div className={cn("rounded-2xl p-1.5 transition-all duration-300", cardClass)}>
       <button
         type="button"
         suppressHydrationWarning
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded-xl px-2 py-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500/35",
+          "flex w-full items-center justify-between gap-2 rounded-xl px-2.5 py-2.5 text-left outline-none transition-all duration-300 focus-visible:ring-2 focus-visible:ring-white/40",
           headerHoverClass,
         )}
         aria-expanded={open}
         onClick={onToggle}
       >
         <div className="min-w-0 flex-1">
-          <span className={cn("line-clamp-2 text-sm font-semibold leading-snug", titleClass)}>
-            {group.label}
-          </span>
-          <div className="mt-1">
-            <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold", badgeClass)}>
-              {badgeLabel}
+          <div className="flex items-center gap-2.5">
+            <span className={cn("line-clamp-1 text-[13.5px] font-bold leading-none tracking-tight", titleClass)}>
+              {group.label}
+            </span>
+            <span className={cn("inline-flex rounded-lg border px-2 py-0.5", badgeClass)}>
+              {group.items.length}
             </span>
           </div>
         </div>
-        <span className="sr-only">{open ? "ย่อกลุ่ม" : "ขยายกลุ่ม"}</span>
         <ChevronNavExpand expanded={open} />
       </button>
       {open ? (
-        <div className="mt-0.5 flex flex-col gap-0.5">
-          {group.items.map((item) => {
-            if (!isSubscribedModuleLink(item)) {
-              return variant === "sidebar" ? (
-                <SidebarNavLink
-                  key={item.href}
-                  href={item.href}
-                  pathname={pathname}
-                  label={item.label}
-                />
-              ) : (
-                <DrawerNavLink
-                  key={item.href}
-                  href={item.href}
-                  pathname={pathname}
-                  label={item.label}
-                  onNavigate={onDrawerNavigate ?? (() => {})}
-                />
-              );
-            }
+        <div className="mt-1.5 flex flex-col gap-1.5 px-0.5">
+          {group.items.map((item, idx) => {
+            const key = "href" in item ? item.href : `mod-${idx}`;
             return variant === "sidebar" ? (
               <SidebarNavLink
-                key={item.href}
+                key={key}
                 href={item.href}
                 pathname={pathname}
                 label={item.label}
               />
             ) : (
               <DrawerNavLink
-                key={item.href}
+                key={key}
                 href={item.href}
                 pathname={pathname}
                 label={item.label}
@@ -261,10 +261,41 @@ export function DashboardShell({
   const menuId = useId();
 
   const navGroups = buildDashboardNavGroups(role, serviceModules);
+  const systemFocusLayout = shouldUseSystemFocusLayout(pathname);
+  const mobileNavCandidates = navGroups
+    .flatMap((group) => group.items)
+    .map((item) => {
+      const resolvedHref = resolveDashboardNavLinkHref(item.href);
+      return { href: resolvedHref, label: item.label };
+    })
+    .filter((item, index, arr) => arr.findIndex((x) => x.href === item.href) === index);
+  const mobilePriorityHrefs = [
+    "/dashboard",
+    "/dashboard/chat",
+    CHAT_AI_DASHBOARD_HREF,
+    "/dashboard/profile",
+  ].map((href) => resolveDashboardNavLinkHref(href));
+  const mobileNavItems = [
+    ...mobilePriorityHrefs
+      .map((href) => mobileNavCandidates.find((item) => item.href === href))
+      .filter((x): x is { href: string; label: string } => Boolean(x)),
+    ...mobileNavCandidates.filter((item) => !mobilePriorityHrefs.includes(item.href)),
+  ].slice(0, 4);
+  const activeMobileNavItem = mobileNavCandidates.find((item) => isNavActive(item.href, pathname));
+  if (
+    activeMobileNavItem &&
+    !mobileNavItems.some((item) => item.href === activeMobileNavItem.href) &&
+    mobileNavItems.length > 0
+  ) {
+    mobileNavItems[mobileNavItems.length - 1] = activeMobileNavItem;
+  }
 
-  const [groupOpen, setGroupOpen] = useState<Record<DashboardNavGroupId, boolean>>({
+  const [groupOpen, setGroupOpen] = useState<Record<string, boolean>>({
     basic: true,
+    finance: true,
     services: true,
+    property: true,
+    admin: true,
   });
 
   const toggleGroup = useCallback((id: DashboardNavGroupId) => {
@@ -273,10 +304,6 @@ export function DashboardShell({
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
   const packageLabel = headerPackageLabel(subscriptionType, subscriptionTier);
-
-  useEffect(() => {
-    closeDrawer();
-  }, [pathname, closeDrawer]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -312,11 +339,14 @@ export function DashboardShell({
     <div className="flex min-h-screen flex-col text-[#2e2a58]">
       {/* แถบบน — แก้ว โค้งมน ไล่โทนเดียวกับการ์ด */}
       <header className="sticky top-0 z-30 w-full px-3 pt-3 sm:px-4 sm:pt-4">
-        <div className="mawell-glass-panel flex h-14 w-full min-w-0 items-center gap-2 rounded-2xl px-3 shadow-lg sm:gap-3 sm:px-6 lg:px-8">
+        <div className="flex h-14 w-full min-w-0 items-center gap-2 rounded-2xl border border-white/30 bg-gradient-to-r from-[#4f2f9a]/90 via-[#5b3ac2]/85 to-[#ec4899]/85 px-3 text-white shadow-[0_20px_40px_-15px_rgba(61,29,125,0.7)] backdrop-blur-xl sm:gap-3 sm:px-6 lg:px-8">
           <button
             type="button"
             suppressHydrationWarning
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/60 bg-white/70 text-[#3730a3] shadow-sm hover:bg-white/90 md:hidden"
+            className={cn(
+              "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/40 bg-white/20 text-white shadow-sm transition-all hover:bg-white/30 active:scale-95 md:hidden",
+              systemFocusLayout && "hidden",
+            )}
             aria-expanded={drawerOpen}
             aria-controls={menuId}
             onClick={() => setDrawerOpen((o) => !o)}
@@ -327,7 +357,7 @@ export function DashboardShell({
 
           <Link
             href="/dashboard"
-            className="shrink-0"
+            className="shrink-0 transition-transform hover:scale-105 active:scale-95"
             onClick={() => setDrawerOpen(false)}
           >
             <MawellLogo size="sm" />
@@ -336,37 +366,31 @@ export function DashboardShell({
           {/* กลาง: บรรทัดเดียว + truncate บนมือถือ — ไม่ดันกลุ่มปุ่มขวา */}
           <div className="min-w-0 flex-1 overflow-hidden px-0.5 sm:px-1">
             <p
-              className="truncate text-left text-[11px] leading-snug text-[#58547f] sm:text-sm sm:leading-normal md:text-right"
+              className="truncate text-left text-[11px] leading-snug text-white/95 sm:text-[13.5px] sm:leading-normal md:text-right"
               title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
             >
-              <span className="tabular-nums font-medium">{tokens}</span> โทเคน
-              <span className="text-slate-300/90" aria-hidden>
-                {" "}
-                ·{" "}
-              </span>
-              <span className="font-medium text-[#2e2a58]">{packageLabel}</span>
-              <span className="text-slate-300/90" aria-hidden>
-                {" "}
-                ·{" "}
-              </span>
-              <span className="text-[#67638f]">{displayName}</span>
+              <span className="tabular-nums font-black">{tokens.toLocaleString()}</span> <span className="font-medium text-white/70">โทเคน</span>
+              <span className="text-white/30 mx-1.5" aria-hidden>|</span>
+              <span className="font-bold text-white">{packageLabel}</span>
+              <span className="text-white/30 mx-1.5" aria-hidden>|</span>
+              <span className="font-medium text-white/90">{displayName}</span>
             </p>
           </div>
 
           {/* ขวา: ไม่ wrap — โปรไฟล์ + logout เรียงแนวนอนเสมอ */}
-          <div className="flex shrink-0 flex-nowrap items-center gap-1.5 border-l border-white/50 pl-2 sm:gap-2 sm:pl-3">
+          <div className="flex shrink-0 flex-nowrap items-center gap-2 border-l border-white/20 pl-2 sm:gap-3 sm:pl-4">
             <div className="hidden shrink-0 md:block">
               {avatarUrl ? (
                 <Image
                   src={avatarUrl}
                   alt=""
-                  width={32}
+                  width={36}
                   height={32}
-                  className="h-8 w-8 rounded-full border border-white/60 object-cover shadow-sm"
+                  className="h-8 w-8 rounded-full border-2 border-white/60 object-cover shadow-md"
                   unoptimized
                 />
               ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/60 bg-white/50 text-xs font-semibold text-[#4c4a6e] shadow-sm">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/40 bg-white/20 text-xs font-black text-white shadow-md">
                   {username.slice(0, 1).toUpperCase()}
                 </div>
               )}
@@ -376,7 +400,7 @@ export function DashboardShell({
               <button
                 type="button"
                 suppressHydrationWarning
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/60 bg-white/75 p-1 shadow-sm hover:bg-white/95"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/40 bg-white/20 p-1 text-white shadow-sm transition-all hover:bg-white/30"
                 aria-expanded={accountOpen}
                 aria-label="เมนูบัญชี"
                 onClick={() => setAccountOpen((o) => !o)}
@@ -391,42 +415,46 @@ export function DashboardShell({
                     unoptimized
                   />
                 ) : (
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/55 text-xs font-semibold text-[#4c4a6e]">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/30 text-[10px] font-black text-white">
                     {username.slice(0, 1).toUpperCase()}
                   </div>
                 )}
               </button>
               {accountOpen ? (
                 <div
-                  className="mawell-card-surface absolute right-0 z-40 mt-1 w-48 rounded-2xl py-1 shadow-lg"
+                  className="absolute right-0 z-40 mt-2 w-48 rounded-2xl border border-white/20 bg-white/95 p-1.5 shadow-2xl backdrop-blur-xl"
                   role="menu"
                 >
                   <Link
                     href="/dashboard/profile"
-                    className="block rounded-xl px-3 py-2 text-sm text-[#3730a3] hover:bg-white/60"
+                    className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-bold text-[#1e1b4b] transition-colors hover:bg-[#5b61ff]/10 hover:text-[#5b61ff]"
                     role="menuitem"
                     onClick={() => setAccountOpen(false)}
                   >
-                    โปรไฟล์
+                    <span className="text-lg">👤</span>
+                    โปรไฟล์ของคุณ
                   </Link>
                 </div>
               ) : null}
             </div>
 
-            <LogoutIconButton className="h-9 w-9 sm:h-10 sm:w-10" />
+            <LogoutIconButton className="h-9 w-9 sm:h-10 sm:w-10 transition-all hover:rotate-12" />
           </div>
         </div>
       </header>
 
       {demoSession ? <DemoSessionBanner /> : null}
 
-      <div className="flex min-h-0 flex-1 gap-3 px-3 pb-3 pt-2 sm:gap-4 sm:px-4 sm:pb-4">
+      <div className="flex min-h-0 flex-1 gap-3 px-3 pb-20 pt-2 sm:gap-4 sm:px-4 sm:pb-4">
         {/* Sidebar — แก้ว โค้งมน */}
         <aside
-          className="mawell-glass-panel hidden w-[15.5rem] shrink-0 flex-col overflow-hidden rounded-2xl md:flex"
+          className={cn(
+            "hidden w-[15.5rem] shrink-0 flex-col overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-b from-[#4f2f9a] via-[#5b3ac2] to-[#ec4899] text-white shadow-[0_18px_42px_-24px_rgba(40,16,97,0.75)] md:flex",
+            systemFocusLayout && "md:hidden",
+          )}
           aria-label="เมนูหลัก"
         >
-          <nav className="flex flex-1 flex-col gap-3 overflow-y-auto p-2.5 pt-3" aria-label="เมนูหลัก">
+          <nav className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-2.5 pt-3" aria-label="เมนูหลัก">
             {navGroups.map((group) => (
               <NavCollapsibleGroup
                 key={group.id}
@@ -438,8 +466,8 @@ export function DashboardShell({
               />
             ))}
           </nav>
-          <div className="border-t border-white/40 bg-white/20 p-3">
-            <p className="truncate text-xs text-slate-600" title={username}>
+          <div className="border-t border-white/20 bg-black/10 p-3">
+            <p className="truncate text-xs text-white/80" title={username}>
               {username}
             </p>
             <LogoutButton className="mt-2 w-full justify-center text-sm" />
@@ -448,7 +476,7 @@ export function DashboardShell({
 
         <div className="flex min-w-0 min-h-0 flex-1 flex-col">
           {/* Drawer มือถือ — เริ่มใต้แถบ header */}
-          {drawerOpen ? (
+          {drawerOpen && !systemFocusLayout ? (
             <>
               <button
                 type="button"
@@ -459,21 +487,21 @@ export function DashboardShell({
               />
               <div
                 id={menuId}
-                className="mawell-glass-panel fixed bottom-3 left-3 top-[4.25rem] z-50 flex w-[min(100vw-2.5rem,17.5rem)] flex-col overflow-hidden rounded-2xl shadow-2xl md:hidden"
+                className="fixed bottom-3 left-3 top-[4.25rem] z-50 flex w-[min(100vw-2.5rem,17.5rem)] flex-col overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-b from-[#4f2f9a] via-[#5b3ac2] to-[#ec4899] text-white shadow-2xl md:hidden"
               >
-                <div className="flex h-14 items-center justify-between border-b border-white/40 px-3">
+                <div className="flex h-12 items-center justify-between border-b border-white/25 px-3">
                   <MawellLogo size="md" />
                   <button
                     type="button"
                     suppressHydrationWarning
-                    className="rounded-xl p-2 text-[#4c4a6e] hover:bg-white/45"
+                    className="rounded-xl p-2 text-white hover:bg-white/20"
                     onClick={closeDrawer}
                     aria-label="ปิดเมนู"
                   >
                     <CloseIcon />
                   </button>
                 </div>
-                <nav className="flex flex-1 flex-col gap-3 overflow-y-auto p-2" aria-label="เมนู">
+                <nav className="flex flex-1 flex-col gap-3 overflow-y-auto p-2.5" aria-label="เมนู">
                   {navGroups.map((group) => (
                     <NavCollapsibleGroup
                       key={group.id}
@@ -486,24 +514,32 @@ export function DashboardShell({
                     />
                   ))}
                 </nav>
-                <div className="border-t border-white/40 bg-white/15 p-3">
-                  <p className="mb-2 truncate text-xs text-slate-600">{username}</p>
+                <div className="border-t border-white/25 bg-black/10 p-3">
+                  <p className="mb-2 truncate text-xs text-white/80">{username}</p>
                   <LogoutButton className="w-full justify-center" />
                 </div>
               </div>
             </>
           ) : null}
 
-          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden rounded-2xl">{children}</main>
+          <main
+            className={cn(
+              "flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden rounded-2xl",
+              systemFocusLayout && "md:rounded-none",
+            )}
+          >
+            {children}
+          </main>
         </div>
       </div>
+      
     </div>
   );
 }
 
 function MenuIcon({ open }: { open: boolean }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-[#3e3a73]" aria-hidden>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-current" aria-hidden>
       {open ? (
         <path
           d="M6 6l12 12M18 6L6 18"
@@ -522,7 +558,7 @@ function MenuIcon({ open }: { open: boolean }) {
 
 function CloseIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-[#67638f]" aria-hidden>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-current" aria-hidden>
       <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );

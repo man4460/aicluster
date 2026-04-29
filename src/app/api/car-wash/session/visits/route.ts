@@ -8,23 +8,45 @@ import { carWashServiceStatusZod, normalizeCarWashServiceStatus } from "@/lib/ca
 import { jsonCarWashSessionError } from "@/lib/car-wash/route-errors";
 import { getCarWashDataScope } from "@/lib/trial/module-scopes";
 
-const postSchema = z.object({
-  customer_name: z.string().min(1).max(160),
-  customer_phone: z.string().max(32),
-  plate_number: z.string().min(1).max(64),
-  package_id: z.number().int().positive().nullable(),
-  package_name: z.string().min(1).max(160),
-  listed_price: z.number().int().min(0).max(9_999_999),
-  final_price: z.number().int().min(0).max(9_999_999),
-  note: z.string().max(1000).optional().nullable(),
-  recorded_by_name: z.string().max(160).optional().nullable(),
-  visit_at: z.string().datetime().optional(),
-  /** จากแดชบอร์ด: ค่าเริ่ม WASHING ให้ขึ้นลานทันที */
-  service_status: carWashServiceStatusZod.optional(),
-  photo_url: z.string().max(512).optional().nullable(),
-  /** เหมาจ่าย: เก็บ id แพ็กไว้ — หักครั้งเมื่อสถานะเป็น PAID เท่านั้น */
-  bundle_id: z.number().int().positive().optional().nullable(),
-});
+const postSchema = z
+  .object({
+    customer_name: z.string().max(160),
+    customer_phone: z.string().max(32),
+    plate_number: z.string().max(64),
+    package_id: z.number().int().positive().nullable(),
+    package_name: z.string().min(1).max(160),
+    listed_price: z.number().int().min(0).max(9_999_999),
+    final_price: z.number().int().min(0).max(9_999_999),
+    note: z.string().max(1000).optional().nullable(),
+    recorded_by_name: z.string().max(160).optional().nullable(),
+    visit_at: z.string().datetime().optional(),
+    /** จากแดชบอร์ด: ค่าเริ่ม WASHING ให้ขึ้นลานทันที */
+    service_status: carWashServiceStatusZod.optional(),
+    photo_url: z.string().max(512).optional().nullable(),
+    /** เหมาจ่าย: เก็บ id แพ็กไว้ — หักครั้งเมื่อสถานะเป็น PAID เท่านั้น */
+    bundle_id: z.number().int().positive().optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.bundle_id != null) return;
+    const plate = data.plate_number.trim();
+    const phone = normalizePhone(data.customer_phone);
+    const hasPlate = plate.length > 0;
+    const hasPhone = phone.length > 0;
+    if (!hasPlate && !hasPhone) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "กรุณากรอกเบอร์โทรหรือทะเบียนรถอย่างน้อยหนึ่งอย่าง",
+        path: ["plate_number"],
+      });
+    }
+    if (hasPhone && phone.length < 9) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "เบอร์โทรต้องอย่างน้อย 9 หลัก",
+        path: ["customer_phone"],
+      });
+    }
+  });
 
 export async function GET() {
   try {

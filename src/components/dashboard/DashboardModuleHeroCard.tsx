@@ -21,12 +21,41 @@ export const dashboardModuleSubscribeButtonClass = cn(
   appDashboardBrandGradientFillClass,
 );
 
-function groupIcon(groupId: number): string {
-  if (groupId === 1) return "🧩";
-  if (groupId === 2) return "⚙️";
-  if (groupId === 3) return "📊";
-  if (groupId === 4) return "🛠️";
-  return "✨";
+function GroupIcon({ groupId, className }: { groupId: number; className?: string }) {
+  if (groupId === 1) {
+    return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+        <path d="M8 4h4v4H8zM4 8h4v4H4zM8 12h4v4H8zM12 8h4v4h-4z" />
+      </svg>
+    );
+  }
+  if (groupId === 2) {
+    return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+        <circle cx="12" cy="12" r="3.5" />
+        <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" />
+      </svg>
+    );
+  }
+  if (groupId === 3) {
+    return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+        <path d="M4 19V9M10 19V5M16 19v-8M22 19V7" />
+      </svg>
+    );
+  }
+  if (groupId === 4) {
+    return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+        <path d="M4 20l5-8 4 4 7-12" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+      <path d="M12 3l2.5 5.5L20 11l-5.5 2.5L12 19l-2.5-5.5L4 11l5.5-2.5z" />
+    </svg>
+  );
 }
 
 function groupToneDot(groupId: number): string {
@@ -79,30 +108,29 @@ export function DashboardModuleHeroCard(props: DashboardModuleHeroCardProps) {
   return (
     <div
       className={cn(
-        "group flex flex-col overflow-hidden rounded-3xl border border-white/80 bg-gradient-to-br from-white via-[#f7f6ff] to-[#fff8fc] shadow-[0_14px_44px_-18px_rgba(79,70,229,0.22)] ring-1 ring-[#e8e4ff]/55 transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_50px_-16px_rgba(79,70,229,0.28)]",
+        "group relative flex flex-col overflow-hidden rounded-[2rem] border border-white/80 bg-gradient-to-br from-white via-[#fcfbff] to-[#fffbfc] shadow-[0_12px_40px_-20px_rgba(79,70,229,0.15)] ring-1 ring-[#e8e4ff]/50 transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_30px_60px_-12px_rgba(79,70,229,0.25)]",
         variant === "systemMap" &&
-          "border-2 border-dashed border-[#c8c4ff]/70 ring-2 ring-[#ddd6fe]/40 ring-offset-2 ring-offset-[#f5f3ff]",
+          "border-2 border-dashed border-[#c8c4ff]/60 ring-2 ring-[#ddd6fe]/30 ring-offset-2 ring-offset-[#fbfaff]",
       )}
     >
+      {/* Decorative Blur — แสดงเฉพาะเมื่อ Hover */}
+      <div className="pointer-events-none absolute -right-20 -top-20 h-40 w-40 rounded-full bg-indigo-500/5 blur-[40px] transition-opacity duration-500 group-hover:opacity-100" />
+
       {/* พื้นที่รูป — object-contain ให้เห็นภาพเต็มคงสัดส่วน */}
       <div
         className={cn(
-          "relative flex w-full items-center justify-center overflow-hidden bg-gradient-to-b from-[#faf8ff] via-white to-[#fffcff] px-3 pt-4 pb-2",
-          tall ? "min-h-[11.5rem]" : "min-h-[10rem]",
+          "relative flex w-full items-center justify-center overflow-hidden bg-gradient-to-b from-[#faf9ff] via-white/80 to-[#fdfcff] px-4 pt-5 pb-3",
+          tall ? "min-h-[12rem]" : "min-h-[10.5rem]",
         )}
       >
-        <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-[#f7f4ff]/80"
-          aria-hidden
-        />
         {safe ? (
-          <div className="relative z-[1] w-full overflow-hidden rounded-2xl ring-1 ring-slate-200/60">
+          <div className="relative z-[1] w-full overflow-hidden rounded-2xl shadow-[0_8px_30px_-10px_rgba(0,0,0,0.1)] ring-1 ring-black/5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={safe}
               alt=""
               className={cn(
-                "w-full object-contain object-center transition duration-500 ease-out group-hover:scale-[1.02]",
+                "w-full object-contain object-center transition-transform duration-700 ease-out group-hover:scale-[1.05]",
                 imageMaxH,
               )}
               loading="lazy"
@@ -111,55 +139,60 @@ export function DashboardModuleHeroCard(props: DashboardModuleHeroCardProps) {
         ) : (
           <div
             className={cn(
-              "relative z-[1] flex w-full items-center justify-center rounded-2xl border border-white/70",
-              tall ? "min-h-[10rem]" : "min-h-[8.5rem]",
+              "relative z-[1] flex w-full items-center justify-center rounded-2xl border border-white bg-white/40 shadow-inner backdrop-blur-sm",
+              tall ? "min-h-[10.5rem]" : "min-h-[9rem]",
               fallbackPanelClass(groupId),
             )}
           >
-            <span
-              className="text-[4.5rem] leading-none opacity-[0.22] drop-shadow-sm select-none"
-              aria-hidden
-            >
-              {groupIcon(groupId)}
-            </span>
+            <div className="transition-transform duration-500 group-hover:scale-110">
+              <GroupIcon groupId={groupId} className="h-16 w-16 opacity-[0.25] drop-shadow-sm" />
+            </div>
           </div>
         )}
       </div>
 
       {/* โซนข้อความ — ไล่ขาวสว่างเข้ากับเฟรม */}
-      <div className="relative flex flex-col gap-2 border-t border-white/90 bg-gradient-to-b from-white via-[#fffefd] to-[#f4f2ff] px-4 pb-4 pt-3">
+      <div className="relative flex flex-col gap-2.5 border-t border-white/80 bg-white/60 px-5 pb-5 pt-4 backdrop-blur-md">
         <div className="flex items-start justify-between gap-2">
-          <span className="inline-flex items-center gap-1 rounded-full border border-[#0000BF]/18 bg-[#0000BF]/[0.07] px-2.5 py-1 text-[11px] font-semibold text-[#0000BF]">
-            <span className="opacity-80" aria-hidden>
-              {groupToneDot(groupId)}
-            </span>
-            กลุ่ม {groupId}
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-100 bg-indigo-50/50 px-3 py-1 text-[10px] font-bold tracking-wider text-indigo-600 uppercase">
+            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" aria-hidden />
+            Group {groupId}
           </span>
-          <span className="text-lg leading-none opacity-90" aria-hidden>
-            {groupIcon(groupId)}
-          </span>
+          <div className="rounded-full bg-slate-50 p-1.5 shadow-sm ring-1 ring-slate-100">
+            <GroupIcon groupId={groupId} className="h-4 w-4 text-slate-500" />
+          </div>
         </div>
-        <h3
-          className={cn(
-            "line-clamp-2 font-bold leading-snug tracking-tight text-slate-900",
-            tall ? "text-base" : "text-[1.05rem]",
-          )}
-        >
-          {title}
-        </h3>
-        <p
-          className={cn(
-            "line-clamp-2 whitespace-pre-line leading-relaxed text-slate-600",
-            tall ? "min-h-[2.5rem] text-xs" : "min-h-[2.875rem] text-sm",
-          )}
-        >
-          {description}
-        </p>
-        <div className={cn("space-y-2", tall ? "mt-1" : "mt-2")}>
+        
+        <div className="space-y-1">
+          <h3
+            className={cn(
+              "line-clamp-2 font-black leading-snug tracking-tight text-[#1e1b4b] transition-colors group-hover:text-[#0000BF]",
+              tall ? "text-base" : "text-[1.05rem]",
+            )}
+          >
+            {title}
+          </h3>
+          <p
+            className={cn(
+              "line-clamp-2 whitespace-pre-line leading-relaxed text-[#66638c]",
+              tall ? "min-h-[2.5rem] text-[11px]" : "min-h-[2.75rem] text-[13px]",
+            )}
+          >
+            {description}
+          </p>
+        </div>
+
+        <div className={cn("mt-2", tall ? "pt-1" : "pt-2")}>
           {hasFooter ? (
             props.footer
           ) : (
-            <Link href={(props as WithCta).href} className={dashboardModulePrimaryCtaClass}>
+            <Link 
+              href={(props as WithCta).href} 
+              className={cn(
+                dashboardModulePrimaryCtaClass,
+                "transition-all duration-300 hover:scale-[1.02] hover:brightness-105 active:scale-95"
+              )}
+            >
               {(props as WithCta).ctaLabel}
             </Link>
           )}

@@ -3,6 +3,7 @@
 /* สแกนเฉพาะไฟล์ UI ใน src — เลี่ยงไปแตะ route.ts ฝั่ง API ที่ทำให้ Turbopack error path */
 @source "../**/*.tsx";
 @source "../**/*.jsx";
+/* Design system source of truth: design-system/MASTER.md */
 
 :root {
   --background: #f7f6ff;
@@ -17,8 +18,9 @@
   --banner-bg: linear-gradient(125deg, #fff8ff 0%, #f3f6ff 45%, #fff5fb 100%);
   --banner-border: #e6cbff;
   --banner-text: #5a2a85;
-  /* เงานุ่มแบบเดิม — ไม่เข้ม */
-  --soft-shadow: 0 10px 30px -18px rgba(76, 58, 180, 0.28);
+  /* เงานุ่มแบบเดิม — ปรับให้ลึกและนุ่มขึ้น */
+  --soft-shadow: 0 10px 40px -20px rgba(76, 58, 180, 0.22);
+  --modern-shadow: 0 20px 50px -20px rgba(68, 49, 127, 0.18);
   /**
    * พื้นหลัง: โทนเก่า (ชมพูอ่อน / ฟ้าอ่อน / ม่วงลาเวนเดอร์) + ไล่สีนุ่มซ้อน
    * ไม่ใช้น้ำเงิน-แดงเข้ม — บานเย็น อ่านสบาย
@@ -85,14 +87,14 @@ body {
 .mawell-glass-panel {
   background: linear-gradient(
     150deg,
-    rgba(255, 255, 255, 0.72) 0%,
-    rgba(255, 255, 255, 0.55) 40%,
-    rgba(255, 252, 254, 0.5) 100%
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(255, 255, 255, 0.6) 40%,
+    rgba(255, 252, 254, 0.55) 100%
   );
-  border: 1px solid rgba(230, 228, 255, 0.9);
-  box-shadow: 0 10px 36px -20px rgba(76, 58, 180, 0.22), 0 4px 16px -12px rgba(255, 182, 220, 0.12);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 10px 40px -20px rgba(61, 29, 125, 0.2);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 button,
@@ -103,7 +105,43 @@ select {
 }
 
 button {
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-tap-feedback {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-tap-feedback:active {
+  transform: scale(0.96);
+  filter: brightness(0.96);
+}
+
+.app-inline-spinner {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 9999px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  display: inline-block;
+  animation: app-spin 0.8s linear infinite;
+}
+
+@keyframes app-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 button:focus-visible,
@@ -121,28 +159,39 @@ select {
   border: 1px solid var(--surface-border);
   background: #ffffff;
   color: var(--foreground);
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  transition: all 0.2s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--brand-600);
+  ring: 2px;
+  ring-color: var(--ring-soft);
 }
 
 .app-surface {
-  border: 1px solid var(--mawell-glass-border);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   background: var(--mawell-card-gradient);
-  border-radius: 1.25rem;
-  box-shadow: var(--soft-shadow);
+  border-radius: 1.5rem;
+  box-shadow: var(--modern-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app-surface-strong {
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: var(--mawell-card-gradient);
+  border-radius: 1.5rem;
+  box-shadow: var(--modern-shadow);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
-.app-surface-strong {
-  border: 1px solid var(--mawell-glass-border);
-  background: var(--mawell-card-gradient);
-  border-radius: 1.25rem;
-  box-shadow: var(--soft-shadow);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
 .app-gradient-text {
-  background: linear-gradient(105deg, var(--brand-600), #9f65ff 55%, #f072c6);
+  background: linear-gradient(105deg, var(--brand-600), var(--brand-500) 52%, var(--brand-400));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -150,7 +199,7 @@ select {
 
 .app-btn-primary {
   color: #fff;
-  background-image: linear-gradient(120deg, var(--brand-600), #8d64ff 52%, #f06dc8);
+  background-image: linear-gradient(120deg, var(--brand-600), var(--brand-500) 52%, var(--brand-400));
   box-shadow: 0 8px 18px -10px rgba(98, 80, 233, 0.65);
 }
 
@@ -162,6 +211,34 @@ select {
   color: #2d2759;
   border: 1px solid var(--surface-border);
   background: #ffffff;
+}
+
+/* Car-wash button standard: icon + label (mobile icon-only) */
+.cw-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.cw-btn-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 639px) {
+  .cw-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0 !important;
+  }
+
+  .cw-btn-label {
+    display: none;
+  }
 }
 
 .app-input {
@@ -181,7 +258,7 @@ select {
 
 /* Compatibility layer: map legacy blue utility classes to new palette */
 .bg-\[\#0000BF\] {
-  background-image: linear-gradient(120deg, var(--brand-600), #8d64ff 52%, #f06dc8);
+  background-image: linear-gradient(120deg, var(--brand-600), var(--brand-500) 52%, var(--brand-400));
   color: #fff;
 }
 

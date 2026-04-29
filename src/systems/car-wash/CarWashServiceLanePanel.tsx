@@ -210,6 +210,11 @@ export function CarWashServiceLanePanel({
     modalVisit.service_status === "COMPLETED" &&
     (hasLaneSlipPhoto(modalVisit) || isPendingBundleVisit(modalVisit));
 
+  const modalVisitPackageMinutes = useMemo(() => {
+    if (modalVisit == null) return null;
+    return packages.find((p) => p.id === modalVisit.package_id)?.duration_minutes ?? null;
+  }, [modalVisit, packages]);
+
   useEffect(() => {
     setLaneClockMs(Date.now());
     const id = window.setInterval(() => setLaneClockMs(Date.now()), 30_000);
@@ -367,46 +372,55 @@ export function CarWashServiceLanePanel({
 
   const printFooterRow = (
     <div className="flex flex-wrap gap-2">
-      <button type="button" className={appTemplateOutlineButtonClass} onClick={() => handlePrintBill("SLIP_58")}>
-        พิมพ์ 58 mm
+      <button type="button" className={cn("cw-btn", appTemplateOutlineButtonClass)} onClick={() => handlePrintBill("SLIP_58")}>
+        <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect width="12" height="8" x="6" y="14" /></svg>
+        <span className="cw-btn-label">พิมพ์ 58 mm</span>
       </button>
-      <button type="button" className={appTemplateOutlineButtonClass} onClick={() => handlePrintBill("SLIP_80")}>
-        พิมพ์ 80 mm
+      <button type="button" className={cn("cw-btn", appTemplateOutlineButtonClass)} onClick={() => handlePrintBill("SLIP_80")}>
+        <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect width="12" height="8" x="6" y="14" /></svg>
+        <span className="cw-btn-label">พิมพ์ 80 mm</span>
       </button>
-      <button type="button" className={appTemplateOutlineButtonClass} onClick={() => handlePrintBill("A4")}>
-        พิมพ์ A4
+      <button type="button" className={cn("cw-btn", appTemplateOutlineButtonClass)} onClick={() => handlePrintBill("A4")}>
+        <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+        <span className="cw-btn-label">พิมพ์ A4</span>
       </button>
     </div>
   );
 
   return (
     <AppDashboardSection tone="violet">
-      <div className="flex flex-col gap-3 border-b border-[#ecebff] pb-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex items-start justify-between gap-3 border-b border-[#ecebff] pb-3">
         <div className="min-w-0">
           <h2 className="text-lg font-bold text-[#2e2a58]">ลานล้างวันนี้</h2>
-          <p className="mt-1 text-xs text-[#66638c]">
-            คิวที่ยังอยู่ในลาน — แนบสลิปเมื่อเสร็จงาน แล้วเลือกสถานะ &quot;ชำระแล้ว&quot; ถึงจะออกจากลาน — แตะการ์ดเพื่อแนบรูป / บิลพร้อมเพย์
-          </p>
+          <p className="mt-1 text-xs text-[#66638c]">แตะการ์ดเพื่ออัปเดตสถานะ แนบรูป หรือเปิดบิลพร้อมเพย์</p>
         </div>
         {onRecordVisit || onRefresh ?
-          <div className="flex shrink-0 items-center gap-2 sm:self-center">
+          <div className="flex shrink-0 items-center gap-2 self-start">
             {onRefresh ?
               <button
                 type="button"
                 onClick={onRefresh}
                 disabled={refreshing}
-                className="app-btn-soft rounded-xl border border-[#dcd8f0] px-3.5 py-2.5 text-sm font-semibold text-[#4d47b6] hover:bg-[#f4f3ff] disabled:opacity-60"
+                className="cw-btn app-btn-soft app-tap-feedback inline-flex min-h-[42px] items-center justify-center rounded-xl border border-[#dcd8f0] px-3 py-2 text-[#4d47b6] hover:bg-[#f4f3ff] disabled:opacity-60 sm:px-3.5 sm:text-sm"
+                aria-label={refreshing ? "กำลังรีเฟรช" : "รีเฟรช"}
               >
-                {refreshing ? "กำลังรีเฟรช..." : "รีเฟรช"}
+                <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path d="M20 11a8 8 0 1 0 2.3 5.6M20 4v7h-7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="cw-btn-label">{refreshing ? "กำลังรีเฟรช..." : "รีเฟรช"}</span>
               </button>
             : null}
             {onRecordVisit ?
               <button
                 type="button"
                 onClick={onRecordVisit}
-                className="app-btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold"
+                className="cw-btn app-btn-primary app-tap-feedback inline-flex min-h-[42px] items-center justify-center rounded-xl px-3 py-2 sm:px-4 sm:text-sm"
+                aria-label="บันทึกรายการ"
               >
-                <span aria-hidden>➕</span> บันทึกรายการ
+                <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                </svg>
+                <span className="cw-btn-label">บันทึกรายการ</span>
               </button>
             : null}
           </div>
@@ -414,7 +428,7 @@ export function CarWashServiceLanePanel({
       </div>
       {active.length === 0 ? (
         <AppEmptyState tone="violet" className="mt-4 py-8">
-          ไม่มีรถในลาน — บันทึกรายการใหม่จะขึ้นที่นี่ ปิดคิวด้วยสถานะ &quot;ชำระแล้ว&quot; (หลังแนบสลิป) รายการจึงจะหายจากที่นี่
+          ไม่มีคิวในลานตอนนี้
         </AppEmptyState>
       ) : (
         <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -434,7 +448,7 @@ export function CarWashServiceLanePanel({
                   type="button"
                   onClick={() => setLaneModalVisitId(v.id)}
                   className={cn(
-                    "flex min-h-[148px] w-full flex-col rounded-2xl border-2 p-4 text-left shadow-sm ring-1 transition hover:shadow-md",
+                    "flex min-h-[124px] w-full flex-col rounded-xl border-2 p-2.5 text-left shadow-sm ring-1 transition hover:shadow-md sm:min-h-[148px] sm:rounded-2xl sm:p-4",
                     tone.border,
                     tone.bg,
                     tone.ring,
@@ -442,20 +456,20 @@ export function CarWashServiceLanePanel({
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-[#66638c]">ทะเบียน</span>
+                    <span className="text-[9px] font-semibold uppercase tracking-wide text-[#66638c] sm:text-[10px]">ทะเบียน</span>
                     <span
                       className={cn(
-                        "max-w-[55%] truncate rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1",
+                        "max-w-[58%] truncate rounded-full px-1.5 py-0.5 text-[9px] font-semibold ring-1 sm:px-2 sm:text-[10px]",
                         tone.badge,
                       )}
                     >
                       {badgeLabel}
                     </span>
                   </div>
-                  <span className="mt-1 line-clamp-2 text-xl font-bold tabular-nums text-[#2e2a58]">{v.plate_number}</span>
-                  <p className="mt-1 line-clamp-1 text-xs font-medium text-[#4d47b6]">{v.package_name}</p>
-                  <p className="mt-0.5 line-clamp-1 text-[11px] text-[#66638c]">{v.customer_name}</p>
-                  <p className="mt-1 text-[10px] tabular-nums text-slate-500">
+                  <span className="mt-0.5 line-clamp-2 text-base font-bold tabular-nums text-[#2e2a58] sm:mt-1 sm:text-xl">{v.plate_number}</span>
+                  <p className="mt-0.5 line-clamp-1 text-[11px] font-medium text-[#4d47b6] sm:mt-1 sm:text-xs">{v.package_name}</p>
+                  <p className="mt-0.5 line-clamp-1 text-[10px] text-[#66638c] sm:text-[11px]">{v.customer_name}</p>
+                  <p className="mt-0.5 text-[9px] tabular-nums text-slate-500 sm:mt-1 sm:text-[10px]">
                     {new Date(v.visit_at).toLocaleTimeString("th-TH", {
                       timeZone: "Asia/Bangkok",
                       hour: "2-digit",
@@ -464,11 +478,11 @@ export function CarWashServiceLanePanel({
                     · ผ่านมา{" "}
                     {elapsed} นาที
                   </p>
-                  {pkgMins != null ? <p className="text-[10px] text-slate-400">แพ็กเกจประมาณ {pkgMins} นาที</p> : null}
-                  <p className="mt-auto pt-2 text-sm font-bold tabular-nums text-emerald-700">
+                  {pkgMins != null ? <p className="text-[9px] text-slate-400 sm:text-[10px]">แพ็กเกจประมาณ {pkgMins} นาที</p> : null}
+                  <p className="mt-auto pt-1.5 text-xs font-bold tabular-nums text-emerald-700 sm:pt-2 sm:text-sm">
                     ฿{v.final_price.toLocaleString("th-TH")}
                   </p>
-                  <p className="mt-2 text-[10px] font-medium text-[#4d47b6]">แตะเพื่อดูรายละเอียด</p>
+                  <p className="mt-1 text-[9px] font-medium text-[#4d47b6] sm:mt-2 sm:text-[10px]">แตะเพื่อดูรายละเอียด</p>
                 </button>
               </li>
             );
@@ -483,47 +497,78 @@ export function CarWashServiceLanePanel({
         title={
           modalVisit ?
             laneModalView === "details" ?
-              `ทะเบียน ${modalVisit.plate_number} — รายละเอียด`
-            : `ทะเบียน ${modalVisit.plate_number} — บิลชำระเงิน`
+              `ทะเบียน ${modalVisit.plate_number}`
+            : `ทะเบียน ${modalVisit.plate_number}`
           : ""
         }
         description={
           laneModalView === "details" ?
-            "แนบสลิปเมื่อเสร็จงาน แล้วเลือกสถานะชำระแล้วเพื่อนำออกจากลาน — เปิดบิลพร้อมเพย์ได้เมื่อต้องการ"
-          : "ให้ลูกค้าสแกนจ่าย — พิมพ์บิลตามขนาดเครื่องพิมพ์ได้จากปุ่มด้านล่าง"
+            "ตรวจสอบข้อมูลลูกค้า อัปเดตสถานะ และแนบหลักฐานการชำระเงิน"
+          : "แสดงบิลสรุปยอดและสแกนจ่ายผ่านพร้อมเพย์"
         }
         footer={
           modalVisit ?
             laneModalView === "details" ?
-              <div className="flex w-full flex-wrap justify-end gap-2">
+              <div className="flex w-full items-center justify-between gap-3">
                 <button
                   type="button"
-                  className="rounded-xl border border-[#0000BF]/30 bg-[#eef0ff] px-4 py-2.5 text-sm font-semibold text-[#0000BF]"
+                  className="flex-1 rounded-2xl border border-indigo-100 bg-indigo-50/50 py-3 text-sm font-black text-[#5b61ff] transition-all hover:bg-indigo-100 active:scale-95"
                   onClick={() => setLaneModalView("bill")}
                 >
                   บิล & พร้อมเพย์
                 </button>
                 <button
                   type="button"
-                  className="app-btn-soft rounded-xl px-4 py-2.5 text-sm font-semibold text-[#4d47b6]"
+                  className="flex-1 rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-500 transition-all hover:bg-slate-50 active:scale-95"
                   onClick={() => setLaneModalVisitId(null)}
                 >
-                  ปิด
+                  ปิดหน้าต่าง
                 </button>
               </div>
-            : <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-                {printFooterRow}
-                <div className="flex flex-wrap justify-end gap-2 sm:ml-auto">
+            : <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    className="app-btn-soft rounded-xl px-4 py-2.5 text-sm font-semibold text-[#4d47b6]"
+                    className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 transition-all hover:bg-slate-50 active:scale-95"
+                    onClick={() => handlePrintBill("SLIP_58")}
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect width="12" height="8" x="6" y="14" />
+                    </svg>
+                    58mm
+                  </button>
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 transition-all hover:bg-slate-50 active:scale-95"
+                    onClick={() => handlePrintBill("SLIP_80")}
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect width="12" height="8" x="6" y="14" />
+                    </svg>
+                    80mm
+                  </button>
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 transition-all hover:bg-slate-50 active:scale-95"
+                    onClick={() => handlePrintBill("A4")}
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    A4
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="flex-1 rounded-2xl border border-slate-200 bg-white px-8 py-3 text-sm font-bold text-slate-500 transition-all hover:bg-slate-50 active:scale-95 sm:flex-none"
                     onClick={() => setLaneModalView("details")}
                   >
                     กลับ
                   </button>
                   <button
                     type="button"
-                    className="app-btn-soft rounded-xl px-4 py-2.5 text-sm font-semibold text-[#4d47b6]"
+                    className="flex-1 rounded-2xl bg-slate-900 px-8 py-3 text-sm font-bold text-white transition-all active:scale-95 sm:flex-none"
                     onClick={() => setLaneModalVisitId(null)}
                   >
                     ปิด
@@ -534,7 +579,7 @@ export function CarWashServiceLanePanel({
         }
       >
         {modalVisit ?
-          <div className="space-y-4">
+          <div className="space-y-5">
             {laneModalView === "details" ?
               <>
                 <AppGalleryCameraFileInputs
@@ -544,16 +589,16 @@ export function CarWashServiceLanePanel({
                 />
                 <div
                   className={cn(
-                    "rounded-xl border-2 p-4",
+                    "rounded-2xl border-2 p-4 sm:p-5",
                     modalLaneWaitingSlip ? waitingSlipModalBoxClass
                     : modalLaneWaitingPay ? waitingPayModalBoxClass
                     : modalDetailBoxClass(modalVisit.service_status),
                   )}
                 >
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                     <span
                       className={cn(
-                        "rounded-full px-2.5 py-0.5 text-xs font-bold ring-1",
+                        "inline-flex w-fit shrink-0 rounded-full px-3 py-1 text-xs font-bold ring-1",
                         modalLaneWaitingSlip ? waitingSlipModalBadgeClass
                         : modalLaneWaitingPay ? waitingPayModalBadgeClass
                         : modalBadgeClass(modalVisit.service_status),
@@ -563,35 +608,78 @@ export function CarWashServiceLanePanel({
                       : modalLaneWaitingPay ? "เสร็จแล้ว — รอชำระ"
                       : carWashStatusLabelTh(modalVisit.service_status)}
                     </span>
-                    <span className="text-xs text-[#66638c]">
+                    <p className="max-w-full text-xs leading-relaxed text-[#66638c] sm:max-w-[60%] sm:text-right">
                       เข้าเมื่อ{" "}
                       {new Date(modalVisit.visit_at).toLocaleString("th-TH", {
                         timeZone: "Asia/Bangkok",
                         dateStyle: "medium",
                         timeStyle: "short",
                       })}{" "}
-                      · ผ่านมา{" "}
-                      {laneClockMs != null ? minsSince(modalVisit.visit_at, laneClockMs) : 0}{" "}
-                      นาที
-                    </span>
+                      · ผ่านมา {laneClockMs != null ? minsSince(modalVisit.visit_at, laneClockMs) : 0} นาที
+                    </p>
                   </div>
+
                   {modalLaneWaitingSlip ?
-                    <p className="mt-2 rounded-lg border border-orange-200 bg-orange-100/90 px-3 py-2 text-xs font-medium text-orange-950">
-                      อัปโหลดหรือถ่ายสลิปด้านล่างก่อน จากนั้นเลือกสถานะ &quot;ชำระแล้ว&quot; เพื่อปิดคิว
+                    <p className="mt-3 rounded-xl border border-orange-200 bg-orange-100/90 px-3 py-2.5 text-xs font-medium leading-snug text-orange-950">
+                      อัปโหลดหรือถ่ายสลิปในส่วน &quot;สลิป / รูปแนบ&quot; ด้านล่าง จากนั้นเลือกสถานะ &quot;ชำระแล้ว&quot; เพื่อปิดคิว
                     </p>
                   : null}
                   {modalLaneWaitingPay ?
-                    <p className="mt-2 rounded-lg border border-emerald-200 bg-emerald-100/90 px-3 py-2 text-xs font-medium text-emerald-950">
+                    <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-100/90 px-3 py-2.5 text-xs font-medium leading-snug text-emerald-950">
                       {modalVisit && isPendingBundleVisit(modalVisit) ?
-                        'เลือกสถานะ "ชำระแล้ว" ด้านล่างเพื่อหักครั้งแพ็กเกจเหมาและนำรายการออกจากลาน'
-                      : 'เลือกสถานะ "ชำระแล้ว" ด้านล่างเพื่อนำรายการออกจาก "ลานล้างวันนี้"'}
+                        'เลือกสถานะ "ชำระแล้ว" เพื่อหักครั้งแพ็กเกจเหมาและนำรายการออกจากลาน'
+                      : 'เลือกสถานะ "ชำระแล้ว" เพื่อนำรายการออกจากลานล้างวันนี้'}
                     </p>
                   : null}
-                  <div className="mt-3 border-t border-[#e8e6f4] pt-3">
-                    <label className="block text-xs font-medium text-[#66638c]">
-                      สถานะ
+
+                  <div className="mt-4 rounded-xl border border-slate-200/90 bg-white/95 p-4 shadow-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ข้อมูลลูกค้าและแพ็กเกจ</p>
+                    <p className="mt-2 text-lg font-black leading-tight text-[#2e2a58]">
+                      {modalVisit.customer_name.trim() || "ไม่ระบุชื่อ"}
+                    </p>
+                    <dl className="mt-4 divide-y divide-slate-100 text-sm">
+                      <div className="flex justify-between gap-4 py-2.5 first:pt-0">
+                        <dt className="shrink-0 text-[#66638c]">เบอร์โทร</dt>
+                        <dd className="text-right font-medium tabular-nums text-[#2e2a58]">
+                          {modalVisit.customer_phone?.trim() ? modalVisit.customer_phone : "—"}
+                        </dd>
+                      </div>
+                      <div className="flex justify-between gap-4 py-2.5">
+                        <dt className="shrink-0 text-[#66638c]">แพ็กเกจ</dt>
+                        <dd className="max-w-[65%] text-right font-medium text-[#2e2a58]">{modalVisit.package_name}</dd>
+                      </div>
+                      {modalVisitPackageMinutes != null ?
+                        <div className="flex justify-between gap-4 py-2.5">
+                          <dt className="shrink-0 text-[#66638c]">ระยะเวลาแพ็กเกจ</dt>
+                          <dd className="font-medium tabular-nums text-[#2e2a58]">{modalVisitPackageMinutes} นาที</dd>
+                        </div>
+                      : null}
+                      <div className="flex justify-between gap-4 py-2.5">
+                        <dt className="shrink-0 text-[#66638c]">ราคา</dt>
+                        <dd className="text-lg font-bold tabular-nums text-emerald-700">
+                          ฿{modalVisit.final_price.toLocaleString("th-TH")}
+                        </dd>
+                      </div>
+                      {modalVisit.note?.trim() ?
+                        <div className="py-2.5">
+                          <dt className="text-[#66638c]">หมายเหตุ</dt>
+                          <dd className="mt-1 whitespace-pre-wrap text-[#2e2a58]">{modalVisit.note}</dd>
+                        </div>
+                      : null}
+                      {modalVisit.recorded_by_name?.trim() ?
+                        <div className="flex justify-between gap-4 py-2.5">
+                          <dt className="shrink-0 text-[#66638c]">ผู้บันทึก</dt>
+                          <dd className="text-right font-medium text-[#2e2a58]">{modalVisit.recorded_by_name}</dd>
+                        </div>
+                      : null}
+                    </dl>
+                  </div>
+
+                  <div className="mt-5">
+                    <label className="block">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#66638c]">สถานะ</span>
                       <select
-                        className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
+                        className="app-input mt-1.5 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
                         value={modalVisit.service_status}
                         disabled={rowBusy}
                         onChange={(e) => {
@@ -616,13 +704,13 @@ export function CarWashServiceLanePanel({
                     </label>
                   </div>
 
-                  <div className="mt-4 rounded-xl border border-[#e1e3ff] bg-white/80 p-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[#66638c]">สลิป / รูปแนบ</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">สลิป / รูปแนบ</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
                       {photoResolved ?
                         <>
                           <AppImageThumb
-                            className="!h-16 !w-16 rounded-lg ring-1 ring-[#e1e3ff]"
+                            className="!h-20 !w-20 shrink-0 rounded-xl ring-1 ring-slate-200"
                             src={photoResolved}
                             alt="สลิป"
                             onOpen={() => lightbox.open(photoResolved)}
@@ -630,13 +718,13 @@ export function CarWashServiceLanePanel({
                           <button
                             type="button"
                             disabled={rowBusy || lanePhotoBusy}
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
                             onClick={() => lightbox.open(photoResolved)}
                           >
                             ดูรูป
                           </button>
                         </>
-                      : <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-[#d8d6ec] bg-white text-[9px] text-[#9b98c4]">
+                      : <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50/80 text-center text-[10px] font-medium leading-tight text-slate-400">
                           ไม่มีรูป
                         </div>}
                       <AppImagePickCameraButtons
@@ -651,7 +739,7 @@ export function CarWashServiceLanePanel({
                         <button
                           type="button"
                           disabled={rowBusy || lanePhotoBusy}
-                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-100 disabled:opacity-50"
+                          className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-100 disabled:opacity-50"
                           onClick={() => void clearLanePhoto()}
                         >
                           ล้างรูป
@@ -659,44 +747,6 @@ export function CarWashServiceLanePanel({
                       : null}
                     </div>
                   </div>
-
-                  <p className="mt-3 text-lg font-bold text-[#2e2a58]">{modalVisit.customer_name}</p>
-                  <dl className="mt-3 space-y-2 text-sm">
-                    <div className="flex justify-between gap-4 border-b border-[#e8e6f4] py-2">
-                      <dt className="text-[#66638c]">เบอร์โทร</dt>
-                      <dd className="font-medium tabular-nums text-[#2e2a58]">{modalVisit.customer_phone || "—"}</dd>
-                    </div>
-                    <div className="flex justify-between gap-4 border-b border-[#e8e6f4] py-2">
-                      <dt className="text-[#66638c]">แพ็กเกจ</dt>
-                      <dd className="text-right font-medium text-[#2e2a58]">{modalVisit.package_name}</dd>
-                    </div>
-                    {packages.find((p) => p.id === modalVisit.package_id)?.duration_minutes != null ?
-                      <div className="flex justify-between gap-4 border-b border-[#e8e6f4] py-2">
-                        <dt className="text-[#66638c]">ระยะเวลาแพ็กเกจ</dt>
-                        <dd className="font-medium tabular-nums text-[#2e2a58]">
-                          {packages.find((p) => p.id === modalVisit.package_id)?.duration_minutes} นาที
-                        </dd>
-                      </div>
-                    : null}
-                    <div className="flex justify-between gap-4 border-b border-[#e8e6f4] py-2">
-                      <dt className="text-[#66638c]">ราคา</dt>
-                      <dd className="text-lg font-bold tabular-nums text-emerald-700">
-                        ฿{modalVisit.final_price.toLocaleString("th-TH")}
-                      </dd>
-                    </div>
-                    {modalVisit.note?.trim() ?
-                      <div className="py-2">
-                        <dt className="text-[#66638c]">หมายเหตุ</dt>
-                        <dd className="mt-1 text-[#2e2a58]">{modalVisit.note}</dd>
-                      </div>
-                    : null}
-                    {modalVisit.recorded_by_name?.trim() ?
-                      <div className="flex justify-between gap-4 py-2">
-                        <dt className="text-[#66638c]">ผู้บันทึก</dt>
-                        <dd className="font-medium text-[#2e2a58]">{modalVisit.recorded_by_name}</dd>
-                      </div>
-                    : null}
-                  </dl>
                 </div>
               </>
             : <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-slate-900 sm:bg-white">
