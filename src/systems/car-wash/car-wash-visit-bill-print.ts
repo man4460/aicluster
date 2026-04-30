@@ -50,10 +50,10 @@ ${noteBlock}
 
   const qrBlock =
     ppQrUrl ?
-      `<section class="qr-wrap"><h2 style="text-align:center;font-size:0.95em;">สแกนจ่าย พร้อมเพย์</h2>
-<img src="${escapeHtml(ppQrUrl)}" alt="PromptPay QR" />
+      `<section class="qr-wrap"><h2 style="text-align:center;font-size:0.95em;">สแกนจ่าย</h2>
+<img src="${escapeHtml(ppQrUrl)}" alt="QR ชำระเงิน" />
 <p style="margin:4px 0 0;text-align:center;color:#64748b;font-size:0.85em;">ยอด ${grandTotal.toLocaleString("th-TH")} บาท</p></section>`
-    : `<p style="margin-top:8px;text-align:center;color:#92400e;font-size:0.85em;">ยังไม่มี QR พร้อมเพย์ — ตั้งเบอร์ที่โปรไฟล์</p>`;
+    : `<p style="margin-top:8px;text-align:center;color:#92400e;font-size:0.85em;">ยังไม่มี QR ชำระเงิน — ตั้งเบอร์ที่โปรไฟล์</p>`;
 
   return `
 ${logoBlock}

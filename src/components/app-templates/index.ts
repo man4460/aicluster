@@ -32,6 +32,11 @@ export {
 } from "./AppSparkChartShell";
 
 export { AppDashboardSection, type AppDashboardSectionProps } from "./AppDashboardSection";
+export {
+  AppPublicCheckInGlassPage,
+  appPublicCheckInGlassCardClass,
+  appPublicCheckInGlassPageClass,
+} from "./AppPublicCheckInGlassTemplate";
 export { AppSectionHeader, type AppSectionHeaderProps } from "./AppSectionHeader";
 export { AppEmptyState, type AppEmptyStateProps } from "./AppEmptyState";
 export { AppCompareBarList, type AppCompareBarListProps, type AppCompareBarRow } from "./AppCompareBarList";

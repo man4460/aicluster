@@ -1104,14 +1104,14 @@ export function CarWashSalesPanel({
 
       <AppDashboardSection tone="violet">
         {/* Header & Mobile Filter Toggle */}
-        <div className="flex items-center justify-between gap-4 border-b border-violet-100 pb-4">
+        <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-white/55 bg-white/35 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
           <div>
             <h2 className="text-xl font-black tracking-tight text-[#1e1b4b]">ภาพรวมการเงิน</h2>
-            <p className="text-xs font-medium text-slate-500">วิเคราะห์รายได้และรายจ่ายของระบบคาร์แคร์</p>
+            <p className="text-xs font-medium text-slate-600">วิเคราะห์รายได้และรายจ่ายของระบบคาร์แคร์</p>
           </div>
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-violet-200 bg-white text-violet-600 shadow-sm transition-all active:scale-95 md:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/55 text-violet-600 shadow-sm backdrop-blur-md transition-all active:scale-95 md:hidden"
             onClick={() => setMobileFilterOpen(true)}
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -1121,13 +1121,13 @@ export function CarWashSalesPanel({
         </div>
 
         {/* Desktop Filter Bar */}
-        <div className="mt-5 hidden items-end gap-3 md:flex">
+        <div className="mt-5 hidden items-end gap-3 rounded-2xl border border-white/55 bg-white/30 p-3 backdrop-blur-xl md:flex">
           <div className="grid flex-1 grid-cols-4 gap-3">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-y">ปี</label>
               <select
                 id="cw-f-y"
-                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-violet-500"
+                className="w-full rounded-xl border-white/60 bg-white/55 text-sm font-semibold backdrop-blur-sm focus:ring-violet-500"
                 value={filterYear}
                 onChange={(e) => { setFilterYear(e.target.value); setFilterMonth(""); setFilterDay(""); }}
               >
@@ -1139,7 +1139,7 @@ export function CarWashSalesPanel({
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-m">เดือน</label>
               <select
                 id="cw-f-m"
-                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-violet-500"
+                className="w-full rounded-xl border-white/60 bg-white/55 text-sm font-semibold backdrop-blur-sm focus:ring-violet-500"
                 value={filterMonth}
                 onChange={(e) => { setFilterMonth(e.target.value); setFilterDay(""); }}
               >
@@ -1153,7 +1153,7 @@ export function CarWashSalesPanel({
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-d">วัน</label>
               <select
                 id="cw-f-d"
-                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-violet-500"
+                className="w-full rounded-xl border-white/60 bg-white/55 text-sm font-semibold backdrop-blur-sm focus:ring-violet-500"
                 value={dayNumbers.includes(Number(filterDay)) ? filterDay : ""}
                 onChange={(e) => setFilterDay(e.target.value)}
               >
@@ -1165,7 +1165,7 @@ export function CarWashSalesPanel({
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-s">ค้นหา</label>
               <input
                 id="cw-f-s"
-                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold placeholder:text-slate-400 focus:ring-violet-500"
+                className="w-full rounded-xl border-white/60 bg-white/55 text-sm font-semibold placeholder:text-slate-400 backdrop-blur-sm focus:ring-violet-500"
                 placeholder="ชื่อ, ทะเบียน..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -1177,7 +1177,7 @@ export function CarWashSalesPanel({
         {/* Stats Row (3 Columns on Mobile) */}
         <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-4">
           {/* Stat: Total Revenue */}
-          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-white to-violet-50/30 p-3 shadow-sm sm:p-5">
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/60 bg-gradient-to-br from-white/60 via-violet-50/35 to-indigo-100/30 p-3 shadow-[0_16px_34px_-24px_rgba(91,97,255,0.4)] backdrop-blur-xl sm:p-5">
             <div className="flex items-center justify-between gap-1">
               <span className="truncate text-[8px] font-bold uppercase tracking-wider text-violet-500 sm:text-[10px]">รายได้รวม</span>
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-[10px] text-violet-600 sm:h-8 sm:w-8 sm:text-base">฿</span>
@@ -1192,7 +1192,7 @@ export function CarWashSalesPanel({
           </div>
 
           {/* Stat: Total Cost */}
-          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-rose-100 bg-gradient-to-br from-white to-rose-50/30 p-3 shadow-sm sm:p-5">
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/60 bg-gradient-to-br from-white/60 via-rose-50/30 to-orange-100/25 p-3 shadow-[0_16px_34px_-24px_rgba(244,63,94,0.35)] backdrop-blur-xl sm:p-5">
             <div className="flex items-center justify-between gap-1">
               <span className="truncate text-[8px] font-bold uppercase tracking-wider text-rose-500 sm:text-[10px]">ต้นทุนรวม</span>
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-600 sm:h-8 sm:w-8">
@@ -1210,10 +1210,10 @@ export function CarWashSalesPanel({
 
           {/* Stat: Net Profit */}
           <div className={cn(
-            "relative flex flex-col justify-between overflow-hidden rounded-2xl border p-3 shadow-sm transition-colors sm:p-5",
+            "relative flex flex-col justify-between overflow-hidden rounded-2xl border p-3 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.32)] backdrop-blur-xl transition-colors sm:p-5",
             periodTotalRevenue - periodTotalCost >= 0 
-              ? "border-emerald-100 bg-gradient-to-br from-white to-emerald-50/30" 
-              : "border-orange-100 bg-gradient-to-br from-white to-orange-50/30"
+              ? "border-white/60 bg-gradient-to-br from-white/60 to-emerald-100/28" 
+              : "border-white/60 bg-gradient-to-br from-white/60 to-orange-100/28"
           )}>
             <div className="flex items-center justify-between gap-1">
               <span className={cn(
@@ -1245,7 +1245,7 @@ export function CarWashSalesPanel({
         {/* Charts & Analysis Row (Stack on Mobile, Grid on Large) */}
         <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
           {/* Main Chart: Revenue vs Cost */}
-          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5 lg:col-span-2">
+          <div className="rounded-2xl border border-white/60 bg-white/45 p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5 lg:col-span-2">
             <div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
               <h3 className="text-sm font-black text-[#1e1b4b] sm:text-base">แนวโน้มรายได้และรายจ่าย</h3>
               <div className="flex items-center gap-4">
@@ -1275,7 +1275,7 @@ export function CarWashSalesPanel({
           {/* Package Analysis Cards */}
           <div className="flex flex-col gap-4">
             {/* Package Revenue Donut */}
-            <div className="flex-1 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <div className="flex-1 rounded-2xl border border-white/60 bg-white/45 p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl">
               <h3 className="text-xs font-black text-[#1e1b4b] sm:text-sm">สัดส่วนตามแพ็กเกจ</h3>
               {packageCompareRows.length > 0 ? (
                 <div className="mt-4 flex items-center gap-4">
@@ -1301,7 +1301,7 @@ export function CarWashSalesPanel({
             </div>
 
             {/* Bundle Usage Donut */}
-            <div className="flex-1 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <div className="flex-1 rounded-2xl border border-white/60 bg-white/45 p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl">
               <h3 className="text-xs font-black text-[#1e1b4b] sm:text-sm">สัดส่วนตามแพ็กเหมา</h3>
               {bundlePackageCompareRows.length > 0 ? (
                 <div className="mt-4 flex items-center gap-4">
@@ -1332,7 +1332,7 @@ export function CarWashSalesPanel({
 
 
       <AppDashboardSection tone="slate">
-        <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 rounded-[2rem] border border-white/55 bg-white/35 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div>
             <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">รายการในช่วงที่กรอง</h2>
             <p className="mt-0.5 text-xs font-medium text-slate-500">
@@ -1341,7 +1341,7 @@ export function CarWashSalesPanel({
               : `รวม ${filteredCostEntries.length} รายการต้นทุน`}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/50 p-1">
+          <div className="flex shrink-0 items-center gap-1 rounded-xl border border-white/60 bg-white/40 p-1 backdrop-blur-md">
 
             {activeListTab === "costs" ? (
               <div className="mr-1.5 flex items-center gap-1 border-r border-slate-200 pr-1.5">
@@ -1349,7 +1349,7 @@ export function CarWashSalesPanel({
                   type="button"
                   disabled={busy}
                   onClick={openManageCategories}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-white px-2.5 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-50"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-white/80 px-2.5 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-white/80 hover:bg-white disabled:opacity-50"
                   aria-label="จัดการหมวด"
                 >
                   <svg
@@ -1391,8 +1391,8 @@ export function CarWashSalesPanel({
               className={cn(
                 "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
                 activeListTab === "sales" ?
-                  "bg-white text-[#5b61ff] shadow-sm ring-1 ring-slate-200"
-                : "text-slate-500 hover:text-slate-700",
+                  "bg-white/80 text-[#5b61ff] shadow-sm ring-1 ring-white/80"
+                : "text-slate-600 hover:bg-white/55 hover:text-slate-800",
               )}
               onClick={() => setActiveListTab("sales")}
             >
@@ -1403,8 +1403,8 @@ export function CarWashSalesPanel({
               className={cn(
                 "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
                 activeListTab === "costs" ?
-                  "bg-white text-rose-600 shadow-sm ring-1 ring-slate-200"
-                : "text-slate-500 hover:text-slate-700",
+                  "bg-white/80 text-rose-600 shadow-sm ring-1 ring-white/80"
+                : "text-slate-600 hover:bg-white/55 hover:text-slate-800",
               )}
               onClick={() => setActiveListTab("costs")}
             >
@@ -1417,8 +1417,8 @@ export function CarWashSalesPanel({
 
         {activeListTab === "sales" ?
           mergedSalesRows.length === 0 ?
-            <AppEmptyState>ไม่พบรายการตามเงื่อนไข</AppEmptyState>
-          : <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain rounded-xl border border-slate-200 bg-white [-webkit-overflow-scrolling:touch] lg:border-0 lg:bg-transparent">
+            <AppEmptyState tone="glass">ไม่พบรายการตามเงื่อนไข</AppEmptyState>
+          : <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain rounded-2xl border border-white/55 bg-white/35 shadow-[0_16px_38px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl [-webkit-overflow-scrolling:touch] lg:border-0 lg:bg-transparent lg:shadow-none lg:backdrop-blur-0">
               <AppGalleryCameraFileInputs
                 galleryInputRef={galleryInputRef}
                 cameraInputRef={cameraInputRef}
@@ -1439,7 +1439,7 @@ export function CarWashSalesPanel({
                     return (
                       <li
                         key={`v-${v.id}`}
-                        className="group/item relative flex flex-col gap-3 overflow-hidden px-3 py-3 transition-all duration-300 hover:bg-slate-50/80 sm:px-4 lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:shadow-sm lg:hover:-translate-y-1 lg:hover:shadow-md"
+                        className="group/item relative flex flex-col gap-3 overflow-hidden px-3 py-3 transition-all duration-300 hover:bg-white/45 sm:px-4 lg:rounded-2xl lg:border lg:border-white/60 lg:bg-white/50 lg:shadow-[0_16px_34px_-24px_rgba(30,27,75,0.42)] lg:backdrop-blur-xl lg:hover:-translate-y-1 lg:hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.45)]"
                       >
                         {/* Left Indicator Bar — Gradient พริ้วๆ */}
                         <span
@@ -1533,7 +1533,7 @@ export function CarWashSalesPanel({
                   return (
                     <li
                       key={`b-${b.id}`}
-                      className="group/item relative flex flex-col gap-3 overflow-hidden border-l-[4px] border-amber-300 bg-amber-50/20 px-3 py-3 transition-all duration-300 hover:bg-amber-50/40 sm:px-4 lg:rounded-2xl lg:border lg:border-amber-200/60 lg:bg-amber-50/15 lg:shadow-sm lg:hover:-translate-y-1 lg:hover:shadow-md"
+                      className="group/item relative flex flex-col gap-3 overflow-hidden border-l-[4px] border-amber-300/70 bg-white/40 px-3 py-3 transition-all duration-300 hover:bg-white/50 sm:px-4 lg:rounded-2xl lg:border lg:border-white/60 lg:bg-white/45 lg:shadow-[0_16px_34px_-24px_rgba(217,119,6,0.4)] lg:backdrop-blur-xl lg:hover:-translate-y-1 lg:hover:shadow-[0_24px_44px_-24px_rgba(217,119,6,0.44)]"
                     >
                       <span
                         aria-hidden
@@ -1613,8 +1613,8 @@ export function CarWashSalesPanel({
               </ul>
             </div>
         : filteredCostEntries.length === 0 ?
-          <AppEmptyState>ไม่พบรายการต้นทุนตามเงื่อนไข</AppEmptyState>
-        : <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain rounded-xl border border-slate-200 bg-white [-webkit-overflow-scrolling:touch] lg:border-0 lg:bg-transparent">
+          <AppEmptyState tone="glass">ไม่พบรายการต้นทุนตามเงื่อนไข</AppEmptyState>
+        : <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain rounded-2xl border border-white/55 bg-white/35 shadow-[0_16px_38px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl [-webkit-overflow-scrolling:touch] lg:border-0 lg:bg-transparent lg:shadow-none lg:backdrop-blur-0">
             <ul
               className="divide-y divide-slate-100 lg:grid lg:grid-cols-4 lg:gap-3 lg:divide-y-0 lg:p-2"
               aria-label="ประวัติรายจ่ายคาร์แคร์"
@@ -1629,7 +1629,7 @@ export function CarWashSalesPanel({
                 return (
                   <li
                     key={`c-${e.id}`}
-                    className="group/item relative flex flex-col gap-3 overflow-hidden px-3 py-3 transition-all duration-300 hover:bg-rose-50/30 sm:px-4 lg:rounded-2xl lg:border lg:border-rose-100 lg:bg-rose-50/10 lg:shadow-sm lg:hover:-translate-y-1 lg:hover:shadow-md"
+                    className="group/item relative flex flex-col gap-3 overflow-hidden px-3 py-3 transition-all duration-300 hover:bg-white/45 sm:px-4 lg:rounded-2xl lg:border lg:border-white/60 lg:bg-white/45 lg:shadow-[0_16px_34px_-24px_rgba(244,63,94,0.36)] lg:backdrop-blur-xl lg:hover:-translate-y-1 lg:hover:shadow-[0_24px_44px_-24px_rgba(244,63,94,0.4)]"
                   >
                     <span
                       aria-hidden

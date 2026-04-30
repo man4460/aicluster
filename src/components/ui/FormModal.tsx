@@ -24,6 +24,8 @@ export function FormModal({
   appearance = "default",
   /** เมื่อ `appearance="glass"` — ไล่สีเงา/ไฮไลต์ของแผง */
   glassTint = "violet",
+  /** โหมดมือถือให้อยู่กลางจอและเว้นขอบเล็กน้อย */
+  mobileCentered = false,
   children,
   footer,
 }: {
@@ -35,6 +37,7 @@ export function FormModal({
   size?: "sm" | "md" | "lg" | "xl";
   appearance?: "default" | "glass";
   glassTint?: "violet" | "amber";
+  mobileCentered?: boolean;
   children: ReactNode;
   footer?: ReactNode;
 }) {
@@ -72,20 +75,24 @@ export function FormModal({
   const glassPanel = cn(
     "relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden transition-all duration-500 ease-out animate-in fade-in slide-in-from-bottom-10",
     maxW,
-    "rounded-t-[2.5rem] sm:rounded-[2rem]",
+    mobileCentered ? "rounded-[2rem]" : "rounded-t-[2.5rem] sm:rounded-[2rem]",
     glassTint === "amber" ?
       "border border-white/50 bg-gradient-to-br from-white/50 via-amber-50/35 to-orange-100/22 shadow-[0_28px_80px_-18px_rgba(217,119,6,0.38)] backdrop-blur-2xl ring-1 ring-inset ring-white/55"
     : "border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/35 to-violet-200/22 shadow-[0_28px_80px_-18px_rgba(91,97,255,0.4)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
   );
 
   const defaultPanel = cn(
-    "relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[2.5rem] border border-white/20 bg-white/95 shadow-2xl backdrop-blur-2xl transition-all duration-500 ease-out animate-in fade-in slide-in-from-bottom-10 sm:rounded-[2rem] sm:border-slate-200/50 sm:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]",
+    "relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden border border-white/20 bg-white/95 shadow-2xl backdrop-blur-2xl transition-all duration-500 ease-out animate-in fade-in slide-in-from-bottom-10 sm:border-slate-200/50 sm:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]",
+    mobileCentered ? "rounded-[2rem]" : "rounded-t-[2.5rem] sm:rounded-[2rem]",
     maxW,
   );
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-end justify-center sm:items-center sm:p-4"
+      className={cn(
+        "fixed inset-0 z-[200] flex justify-center",
+        mobileCentered ? "items-center p-3 sm:p-4" : "items-end sm:items-center sm:p-4",
+      )}
       role="presentation"
     >
       <button

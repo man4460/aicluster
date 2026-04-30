@@ -28,18 +28,16 @@ export default async function CarWashStaffLanePage() {
   ]);
   const recorderDisplayName = userRow?.fullName?.trim() || userRow?.username || session.username;
   return (
-    <div className="space-y-6">
-      <CarWashDashboard
-        shopLabel={profile?.name?.trim() || "คาร์แคร์"}
-        logoUrl={profile?.logoUrl?.trim() || null}
-        baseUrl={baseUrl}
-        recorderDisplayName={recorderDisplayName}
-        ownerId={session.sub}
-        trialSessionId={scope.trialSessionId}
-        isTrialSandbox={scope.isTrialSandbox}
-        paymentChannelsNote={dormPay?.paymentChannelsNote?.trim() || null}
-        layoutVariant="staff_lane"
-      />
-    </div>
+    <CarWashDashboard
+      shopLabel={profile?.name?.trim() || "คาร์แคร์"}
+      logoUrl={profile?.logoUrl?.trim() || null}
+      baseUrl={baseUrl}
+      recorderDisplayName={recorderDisplayName}
+      ownerId={session.sub}
+      trialSessionId={scope.trialSessionId}
+      isTrialSandbox={scope.isTrialSandbox}
+      paymentChannelsNote={dormPay?.paymentChannelsNote?.trim() || null}
+      layoutVariant="staff_lane"
+    />
   );
 }

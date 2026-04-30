@@ -10,10 +10,11 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppPublicCheckInGlassPage,
   AppUsageGuideModal,
+  appPublicCheckInGlassCardClass,
   useAppImageLightbox,
 } from "@/components/app-templates";
-import { HomeFinanceEntityRow } from "@/systems/home-finance/components/HomeFinanceUi";
 import {
   createShopQrPosterCanvas,
   createShopQrPosterDataUrl,
@@ -37,7 +38,6 @@ import {
 import {
   PopupIconButton,
   popupIconBtnDanger,
-  SalesRowOpenDetailButton,
 } from "@/systems/car-wash/car-wash-popup-icon-buttons";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { CarWashSalesPanel } from "@/systems/car-wash/CarWashSalesPanel";
@@ -77,16 +77,16 @@ function CarWashStat({
   icon?: React.ReactNode;
 }) {
   const toneStyles = {
-    blue: "border-indigo-100 bg-gradient-to-br from-white to-indigo-50/50 text-indigo-700",
-    green: "border-emerald-100 bg-gradient-to-br from-white to-emerald-50/50 text-emerald-700",
-    red: "border-rose-100 bg-gradient-to-br from-white to-rose-50/50 text-rose-700",
-    amber: "border-amber-100 bg-gradient-to-br from-white to-amber-50/50 text-amber-700",
-    slate: "border-slate-100 bg-gradient-to-br from-white to-slate-50/50 text-slate-700",
+    blue: "border-white/60 bg-gradient-to-br from-white/60 via-indigo-50/35 to-indigo-100/30 text-indigo-700 shadow-[0_18px_38px_-26px_rgba(79,70,229,0.45)] backdrop-blur-xl",
+    green: "border-white/60 bg-gradient-to-br from-white/60 via-emerald-50/35 to-emerald-100/30 text-emerald-700 shadow-[0_18px_38px_-26px_rgba(16,185,129,0.35)] backdrop-blur-xl",
+    red: "border-white/60 bg-gradient-to-br from-white/60 via-rose-50/35 to-rose-100/30 text-rose-700 shadow-[0_18px_38px_-26px_rgba(244,63,94,0.35)] backdrop-blur-xl",
+    amber: "border-white/60 bg-gradient-to-br from-white/60 via-amber-50/35 to-orange-100/30 text-amber-700 shadow-[0_18px_38px_-26px_rgba(217,119,6,0.35)] backdrop-blur-xl",
+    slate: "border-white/60 bg-gradient-to-br from-white/60 via-slate-50/40 to-slate-100/35 text-slate-700 shadow-[0_18px_38px_-26px_rgba(51,65,85,0.35)] backdrop-blur-xl",
   };
 
   return (
     <div className={cn(
-      "relative overflow-hidden rounded-[2rem] border p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 sm:p-6",
+      "relative overflow-hidden rounded-[2rem] border p-5 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.4)] sm:p-6",
       toneStyles[tone]
     )}>
       <div className="relative z-10 flex flex-col justify-between h-full">
@@ -1120,14 +1120,27 @@ export function CarWashDashboard({
       onRecordVisit={openVisitModal}
       onRefresh={() => void refreshData()}
       refreshing={refreshing}
+      iconOnlyActions={isStaffLaneOnly}
+      staffLayout={isStaffLaneOnly}
     />
   );
 
   return (
-    <div className={cn("max-w-full space-y-4 sm:space-y-6", !isStaffLaneOnly && "pb-20 md:pb-0")}>
+    <div
+      className={cn(
+        "max-w-full space-y-4 sm:space-y-6",
+        !isStaffLaneOnly && "pb-20 md:pb-0",
+      )}
+    >
       {!isStaffLaneOnly ? (
-        <>
-          <header className="rounded-[2.5rem] border border-white/20 bg-white/40 p-4 shadow-sm backdrop-blur-xl sm:px-8 sm:py-6 print:hidden">
+        <div
+          className={cn(
+            "overflow-hidden rounded-[2.5rem] border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/25 to-violet-100/20",
+            "p-4 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.32),inset_0_1px_0_0_rgba(255,255,255,0.55)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
+            "sm:px-8 sm:py-6 print:hidden",
+          )}
+        >
+          <header>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="min-w-0">
                 <div className="flex items-center gap-3">
@@ -1141,9 +1154,7 @@ export function CarWashDashboard({
                   </div>
                   <div>
                     <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">คาร์แคร์</h1>
-                    <p className="hidden text-xs font-bold text-slate-400 md:block">
-                      ระบบจัดการลานล้างและแพ็กเกจสมาชิก
-                    </p>
+                    <p className="hidden text-xs font-bold text-slate-500 md:block">ระบบจัดการลานล้างและแพ็กเกจสมาชิก</p>
                   </div>
                 </div>
               </div>
@@ -1151,7 +1162,7 @@ export function CarWashDashboard({
                 <button
                   type="button"
                   onClick={() => setUsageGuideOpen(true)}
-                  className="flex h-10 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-95"
+                  className="flex h-10 items-center gap-2 rounded-2xl border border-white/60 bg-white/45 px-4 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-95"
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <circle cx="12" cy="12" r="9" />
@@ -1164,7 +1175,10 @@ export function CarWashDashboard({
             </div>
           </header>
 
-          <nav aria-label="เมนูคาร์แคร์" className="hidden rounded-[2rem] border border-slate-100 bg-slate-50/50 p-2 md:block print:hidden">
+          <nav
+            aria-label="เมนูคาร์แคร์"
+            className="mt-5 hidden border-t border-white/40 pt-5 md:block print:hidden"
+          >
             <ul className="flex gap-1">
               {tabItems.map((item) => {
                 const active = tab === item.key;
@@ -1176,8 +1190,8 @@ export function CarWashDashboard({
                       className={cn(
                         "flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-black transition-all",
                         active
-                          ? "bg-white text-[#5b61ff] shadow-sm"
-                          : "text-slate-400 hover:bg-white/50 hover:text-slate-600",
+                          ? "bg-white/75 text-[#5b61ff] shadow-md ring-1 ring-white/80 backdrop-blur-sm"
+                          : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
                       )}
                     >
                       <svg
@@ -1185,7 +1199,7 @@ export function CarWashDashboard({
                         fill="none"
                         stroke="currentColor"
                         strokeWidth={2.5}
-                        className={cn("h-4 w-4", active ? "text-[#5b61ff]" : "text-slate-300")}
+                        className={cn("h-4 w-4", active ? "text-[#5b61ff]" : "text-slate-400")}
                         aria-hidden
                       >
                         {carWashTabIcon(item.key)}
@@ -1197,34 +1211,8 @@ export function CarWashDashboard({
               })}
             </ul>
           </nav>
-        </>
-      ) : (
-        <div className="rounded-[2rem] border border-white/20 bg-white/40 p-6 shadow-sm backdrop-blur-xl print:hidden">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="min-w-0">
-              <h1 className="text-xl font-black text-[#1e1b4b] sm:text-2xl">ลานล้างวันนี้</h1>
-              <p className="text-xs font-bold text-slate-400">โหมดพนักงาน — จัดการคิวและบันทึกรายการ</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void refreshData()}
-              disabled={refreshing}
-              className="flex h-12 items-center gap-2 rounded-2xl bg-slate-900 px-6 text-sm font-black text-white shadow-lg transition-all active:scale-95 disabled:opacity-50"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className={cn("h-4 w-4", refreshing && "animate-spin")}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-              >
-                <path d="M20 11a8 8 0 1 0 2.3 5.6M20 4v7h-7" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              {refreshing ? "รีเฟรช..." : "รีเฟรช"}
-            </button>
-          </div>
         </div>
-      )}
+      ) : null}
 
       {!isStaffLaneOnly ? (
         <AppUsageGuideModal
@@ -1356,17 +1344,46 @@ export function CarWashDashboard({
       ) : null}
 
       {isStaffLaneOnly ?
-        <>
-          {loading ? <p className="text-sm text-[#66638c]">กำลังโหลด...</p> : null}
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
-          {!loading ? serviceLanePanelEl : null}
-        </>
+        <AppPublicCheckInGlassPage>
+          <div className="relative mx-auto max-w-md space-y-4">
+            <div className="mb-6 text-center">
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-[1.25rem] border border-white/70 bg-gradient-to-br from-white/80 to-violet-100/60 shadow-[0_8px_24px_-8px_rgba(91,97,255,0.35)] backdrop-blur-xl ring-1 ring-inset ring-white/70">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-7 w-7 text-[#5b61ff]"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M19 17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3l2-2h4l2 2h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2Z" />
+                  <circle cx="12" cy="11" r="2.5" />
+                  <path d="m8 19 4-2 4 2" />
+                </svg>
+              </div>
+              <h1 className="text-2xl font-black tracking-tight text-[#1e1b4b]">คาร์แคร์พนักงาน</h1>
+              <p className="mt-1 text-sm text-[#6b6894]">บันทึกรายการและจัดการคิววันนี้</p>
+              {shopLabel.trim() ?
+                <p className="mt-2 text-xs font-bold text-[#9490c0]">{shopLabel.trim()}</p>
+              : null}
+            </div>
+            {loading ? <p className="text-center text-sm text-[#66638c]">กำลังโหลด...</p> : null}
+            {error ? <p className="text-center text-sm text-red-600">{error}</p> : null}
+            {!loading ?
+              <div className={appPublicCheckInGlassCardClass}>
+                <div className="px-5 py-5 sm:px-6">{serviceLanePanelEl}</div>
+              </div>
+            : null}
+          </div>
+        </AppPublicCheckInGlassPage>
       : tab === "overview" ? (
         <div className="space-y-6">
-          <div className="space-y-4">
+          <div className="space-y-4 rounded-[2.5rem] border border-white/55 bg-white/28 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
             <div className="flex items-center justify-between px-2">
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">สถิติวันนี้</h3>
-              <div className="h-px flex-1 bg-slate-100 ml-4" />
+              <div className="ml-4 h-px flex-1 bg-white/65" />
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               <CarWashStat
@@ -1568,15 +1585,15 @@ export function CarWashDashboard({
               <>
                 <AppImageLightbox src={bundleTabLightbox.src} onClose={bundleTabLightbox.close} alt="สลิปแพ็กเหมา" />
 
-                <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-4 rounded-[2rem] border border-white/50 bg-white/35 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-5">
                   <div>
                     <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">แพ็กเกจและเหมาจ่าย</h2>
-                    <p className="mt-0.5 text-xs font-medium text-slate-500">
+                    <p className="mt-0.5 text-xs font-medium text-slate-600">
                       รวม {packages.length} แพ็กเกจบริการ · {bundles.length} รายการเหมาจ่าย
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-1">
-                    <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/50 p-1">
+                    <div className="flex items-center gap-1 rounded-xl border border-white/60 bg-white/40 p-1 backdrop-blur-md">
                       {offersListTab === "packages" ?
                         <div className="mr-1.5 flex items-center gap-1 border-r border-slate-200 pr-1.5">
                           <button
@@ -1624,8 +1641,8 @@ export function CarWashDashboard({
                         className={cn(
                           "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
                           offersListTab === "packages" ?
-                            "bg-white text-[#5b61ff] shadow-sm ring-1 ring-slate-200"
-                          : "text-slate-500 hover:text-slate-700",
+                            "bg-white/80 text-[#5b61ff] shadow-sm ring-1 ring-white/80"
+                          : "text-slate-600 hover:bg-white/55 hover:text-slate-800",
                         )}
                         onClick={() => setOffersListTab("packages")}
                       >
@@ -1636,8 +1653,8 @@ export function CarWashDashboard({
                         className={cn(
                           "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
                           offersListTab === "bundles" ?
-                            "bg-white text-amber-700 shadow-sm ring-1 ring-slate-200"
-                          : "text-slate-500 hover:text-slate-700",
+                            "bg-white/80 text-amber-700 shadow-sm ring-1 ring-white/80"
+                          : "text-slate-600 hover:bg-white/55 hover:text-slate-800",
                         )}
                         onClick={() => setOffersListTab("bundles")}
                       >
@@ -1649,8 +1666,8 @@ export function CarWashDashboard({
 
                 {offersListTab === "packages" ?
                   packages.length === 0 ?
-                    <AppEmptyState tone="slate">ยังไม่มีแพ็กเกจ — กด «เพิ่มแพ็กเกจ» เพื่อสร้างรายการแรก</AppEmptyState>
-                  : <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain rounded-xl border border-slate-200 bg-white [-webkit-overflow-scrolling:touch] lg:border-0 lg:bg-transparent">
+                    <AppEmptyState tone="glass">ยังไม่มีแพ็กเกจ — กด «เพิ่มแพ็กเกจ» เพื่อสร้างรายการแรก</AppEmptyState>
+                  : <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain rounded-2xl border border-white/55 bg-white/35 shadow-[0_16px_38px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl [-webkit-overflow-scrolling:touch] lg:border-0 lg:bg-transparent lg:shadow-none lg:backdrop-blur-0">
                       <ul
                         className="divide-y divide-slate-100 lg:grid lg:grid-cols-4 lg:gap-3 lg:divide-y-0 lg:p-2"
                         aria-label="แพ็กเกจบริการคาร์แคร์"
@@ -1658,13 +1675,13 @@ export function CarWashDashboard({
                         {packages.map((p) => (
                           <li
                             key={p.id}
-                            className="group/item relative flex min-h-0 flex-col gap-2 overflow-hidden px-3 py-3 transition-all duration-300 hover:bg-slate-50/80 sm:px-4 lg:min-h-[200px] lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:shadow-sm lg:hover:-translate-y-1 lg:hover:shadow-md"
+                            className="group/item relative flex min-h-0 flex-col gap-2 overflow-hidden px-3 py-3 transition-all duration-300 hover:bg-white/45 sm:px-4 lg:min-h-[200px] lg:rounded-2xl lg:border lg:border-white/60 lg:bg-white/50 lg:shadow-[0_16px_34px_-24px_rgba(30,27,75,0.42)] lg:backdrop-blur-xl lg:hover:-translate-y-1 lg:hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.45)]"
                           >
                             <span
                               aria-hidden
                               className="absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-gradient-to-b from-[#5b61ff] via-[#8d64ff] to-[#f06dc8] opacity-80 transition-all group-hover/item:w-1.5"
                             />
-                            <div className="relative flex min-w-0 items-start justify-between gap-2 border-b border-slate-100/80 pb-2">
+                            <div className="relative flex min-w-0 items-start justify-between gap-2 border-b border-white/70 pb-2">
                               <h3 className="min-w-0 text-xs font-bold text-[#2e2a58] sm:text-sm">{p.name}</h3>
                               <span
                                 className={`shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold sm:text-[11px] ${
@@ -1677,7 +1694,7 @@ export function CarWashDashboard({
                             {p.description?.trim() ?
                               <p className="relative line-clamp-3 text-[11px] leading-snug text-[#5f5a8a]">{p.description}</p>
                             : null}
-                            <div className="relative mt-auto flex items-baseline justify-between gap-2 border-t border-slate-100/80 pt-2 text-[11px] sm:text-xs">
+                            <div className="relative mt-auto flex items-baseline justify-between gap-2 border-t border-white/70 pt-2 text-[11px] sm:text-xs">
                               <span className="text-[#8b87ad]">ราคา / เวลา</span>
                               <span className="text-right">
                                 <span className="font-semibold text-[#4d47b6]">฿{p.price.toLocaleString()}</span>
@@ -1736,8 +1753,8 @@ export function CarWashDashboard({
                       onChange={onBundleTabGalleryChange}
                     />
                     {bundles.length === 0 ?
-                      <AppEmptyState tone="slate">ยังไม่มีแพ็กเหมา</AppEmptyState>
-                    : <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain rounded-xl border border-slate-200 bg-white [-webkit-overflow-scrolling:touch] lg:border-0 lg:bg-transparent">
+                      <AppEmptyState tone="glass">ยังไม่มีแพ็กเหมา</AppEmptyState>
+                    : <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain rounded-2xl border border-white/55 bg-white/35 shadow-[0_16px_38px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl [-webkit-overflow-scrolling:touch] lg:border-0 lg:bg-transparent lg:shadow-none lg:backdrop-blur-0">
                         <ul
                           className="divide-y divide-slate-100 lg:grid lg:grid-cols-4 lg:gap-3 lg:divide-y-0 lg:p-2"
                           aria-label="รายการเหมาจ่ายคาร์แคร์"
@@ -1749,62 +1766,66 @@ export function CarWashDashboard({
                             const phoneLine = b.customer_phone?.trim() || "—";
                             return (
                               <li key={b.id} className="lg:flex lg:min-h-0 lg:flex-col">
-                                <HomeFinanceEntityRow
+                                <button
+                                  type="button"
+                                  onClick={() => setBundleTabRowDetailId(b.id)}
                                   className={cn(
-                                    "h-full min-h-0 flex-1 items-stretch justify-between gap-0 border-l-[3px] border-amber-200/80 bg-amber-50/25 px-2.5 py-2.5 sm:px-3 sm:py-3",
-                                    "lg:rounded-2xl lg:border lg:border-amber-200/80 lg:shadow-sm lg:transition-all lg:duration-300 lg:hover:-translate-y-1 lg:hover:shadow-md",
+                                    "group/item relative flex w-full min-h-0 flex-1 flex-col gap-2 overflow-hidden border-l-[3px] border-amber-300/70 bg-white/45 px-3 py-3 text-left backdrop-blur-sm transition-all duration-300 hover:bg-white/60 sm:px-4",
+                                    "lg:min-h-[200px] lg:rounded-2xl lg:border lg:border-white/60 lg:shadow-[0_16px_34px_-24px_rgba(217,119,6,0.38)] lg:backdrop-blur-xl lg:hover:-translate-y-1 lg:hover:shadow-[0_24px_44px_-24px_rgba(217,119,6,0.42)]",
                                   )}
+                                  aria-label={`ดูรายละเอียดแพ็กเหมา #${b.id}`}
                                 >
-                              <div className="flex min-w-0 flex-1 flex-row items-center gap-2.5 sm:gap-3">
-                                <div className="flex shrink-0 items-center self-start pt-0.5">
-                                  {slipResolved ?
-                                    <AppImageThumb
-                                      className="!h-12 !w-12 rounded-lg sm:!h-14 sm:!w-14"
-                                      src={slipResolved}
-                                      alt="สลิป"
-                                      onOpen={() => bundleTabLightbox.open(slipResolved)}
-                                    />
-                                  : <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-amber-200 bg-amber-50/80 text-[8px] text-amber-800/80 sm:h-14 sm:w-14">
-                                      ไม่มีสลิป
+                                  <span
+                                    aria-hidden
+                                    className="absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-gradient-to-b from-[#f59e0b] via-[#fb7185] to-[#f06dc8] opacity-80 transition-all group-hover/item:w-1.5"
+                                  />
+                                  <div className="relative flex min-w-0 items-start justify-between gap-2 border-b border-white/70 pb-2">
+                                    <div className="min-w-0">
+                                      <h3 className="truncate text-xs font-bold text-[#2e2a58] sm:text-sm">{b.package_name.trim() || "—"}</h3>
+                                      <p className="mt-0.5 text-[10px] font-medium text-slate-500">รหัสแพ็กเหมา #{b.id}</p>
                                     </div>
-                                  }
-                                </div>
-                                <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
-                                  <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
                                     <span
-                                      className={`shrink-0 rounded-full px-1.5 py-px text-[9px] font-semibold ${
+                                      className={`shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold ${
                                         canUse ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-600"
                                       }`}
                                     >
-                                      {canUse ? "ใช้ได้" : "หมด"}
-                                    </span>
-                                    <span className="shrink-0 rounded bg-slate-100 px-1 py-px font-mono text-[9px] text-slate-600">
-                                      #{b.id}
+                                      {canUse ? "ใช้งานได้" : "ปิด/หมดสิทธิ์"}
                                     </span>
                                   </div>
-                                  <p className="truncate text-base font-bold tabular-nums leading-tight text-[#2e2a58] sm:text-lg">
-                                    {b.plate_number.trim() || "—"}
+
+                                  <div className="relative flex min-w-0 items-center gap-2.5">
+                                    {slipResolved ?
+                                      <AppImageThumb
+                                        className="!h-12 !w-12 rounded-lg sm:!h-14 sm:!w-14"
+                                        src={slipResolved}
+                                        alt="สลิป"
+                                        onOpen={() => bundleTabLightbox.open(slipResolved)}
+                                      />
+                                    : <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-amber-200 bg-amber-50/80 text-[8px] text-amber-800/80 sm:h-14 sm:w-14">
+                                        ไม่มีสลิป
+                                      </div>
+                                    }
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate text-sm font-bold text-slate-900">{b.customer_name.trim() || "—"}</p>
+                                      <p className="truncate text-sm font-bold tabular-nums text-[#2e2a58]">{b.plate_number.trim() || "—"}</p>
+                                      <p className="truncate text-[11px] text-slate-500">{phoneLine}</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="relative grid grid-cols-2 gap-2 border-t border-white/70 pt-2 text-[11px] sm:text-xs">
+                                    <div>
+                                      <p className="text-slate-500">ยอดซื้อ</p>
+                                      <p className="font-semibold tabular-nums text-amber-900">฿{b.paid_amount.toLocaleString("th-TH")}</p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-slate-500">สิทธิ์คงเหลือ</p>
+                                      <p className="font-semibold tabular-nums text-[#0000BF]">{remaining}/{b.total_uses}</p>
+                                    </div>
+                                  </div>
+                                  <p className="relative mt-auto text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                                    คลิกเพื่อดูรายละเอียดทั้งหมด
                                   </p>
-                                  <p className="truncate text-sm font-semibold text-slate-900">{b.customer_name.trim() || "—"}</p>
-                                  <p className="truncate text-[10px] text-slate-500 sm:text-[11px]">
-                                    {phoneLine} · {b.package_name.trim() || "—"}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="ml-2 flex shrink-0 flex-col items-end justify-between gap-2 self-stretch border-l border-amber-200/70 pl-2.5 sm:ml-3 sm:min-w-[5.25rem] sm:pl-3">
-                                <div className="w-full text-right leading-tight">
-                                  <p className="text-[10px] font-medium uppercase tracking-wide text-amber-800/70">ยอด</p>
-                                  <p className="text-base font-bold tabular-nums text-amber-900 sm:text-lg">
-                                    ฿{b.paid_amount.toLocaleString("th-TH")}
-                                  </p>
-                                  <p className="mt-0.5 text-[10px] font-medium text-slate-500">สิทธิ์คงเหลือ</p>
-                                  <p className="text-xs font-bold tabular-nums text-[#0000BF]">
-                                    {remaining}/{b.total_uses}
-                                  </p>
-                                </div>
-                          <SalesRowOpenDetailButton onClick={() => setBundleTabRowDetailId(b.id)} />
-                        </div>
-                      </HomeFinanceEntityRow>
+                                </button>
                               </li>
                             );
                           })}
@@ -1821,7 +1842,11 @@ export function CarWashDashboard({
 
       {!isStaffLaneOnly ? (
         <nav
-          className="fixed inset-x-4 bottom-6 z-40 rounded-[2rem] border border-white/30 bg-white/60 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.15)] backdrop-blur-2xl md:hidden print:hidden"
+          className={cn(
+            "fixed inset-x-4 bottom-6 z-40 overflow-hidden rounded-[2.5rem] border border-white/50 p-2 md:hidden print:hidden",
+            "bg-gradient-to-br from-white/55 via-white/40 to-indigo-50/30",
+            "shadow-[0_24px_55px_-18px_rgba(30,27,75,0.38)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
+          )}
           aria-label="เมนูล่างคาร์แคร์"
         >
           <ul className="grid grid-cols-4 gap-1">
@@ -1836,8 +1861,8 @@ export function CarWashDashboard({
                     className={cn(
                       "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl transition-all active:scale-90",
                       active
-                        ? "bg-slate-900 text-white shadow-lg"
-                        : "text-slate-400 hover:bg-white/50 hover:text-slate-600",
+                        ? "bg-white/80 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/20 backdrop-blur-sm"
+                        : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
                     )}
                   >
                     <svg
@@ -1862,7 +1887,7 @@ export function CarWashDashboard({
         open={bundleTabRowDetail != null}
         onClose={() => setBundleTabRowDetailId(null)}
         title={bundleTabRowDetail ? `แพ็กเหมา #${bundleTabRowDetail.id}` : "แพ็กเหมา"}
-        description="รายละเอียดและปุ่มไอคอน — ชี้ค้างที่ปุ่มเพื่อดูคำอธิบาย"
+        description="รายละเอียดแพ็กเหมาแบบเต็ม พร้อมปุ่มจัดการ"
         size="md"
         footer={
           <div className="flex justify-end">
@@ -1889,12 +1914,13 @@ export function CarWashDashboard({
                   <p className="mt-1 text-lg font-bold tabular-nums text-[#2e2a58]">{b.plate_number.trim() || "—"}</p>
                   <p className="mt-1 font-medium text-slate-800">{b.package_name}</p>
                   <p className="text-xs text-slate-600">{b.customer_name.trim() || "—"}</p>
-                  <p className="mt-2 text-xs text-slate-600">
-                    สิทธิ์ {remaining}/{b.total_uses} ครั้ง · ยอดซื้อ{" "}
-                    <span className="font-bold tabular-nums text-amber-900">
-                      ฿{b.paid_amount.toLocaleString()}
-                    </span>
-                  </p>
+                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-700">
+                    <p>เบอร์โทร: <span className="font-semibold">{b.customer_phone?.trim() || "—"}</span></p>
+                    <p className="text-right">สถานะ: <span className="font-semibold">{b.is_active ? "เปิดใช้งาน" : "ปิดใช้งาน"}</span></p>
+                    <p>ยอดซื้อ: <span className="font-bold tabular-nums text-amber-900">฿{b.paid_amount.toLocaleString()}</span></p>
+                    <p className="text-right">ใช้งาน: <span className="font-semibold tabular-nums">{b.used_uses}/{b.total_uses} ครั้ง</span></p>
+                    <p className="col-span-2">สิทธิ์คงเหลือ: <span className="font-bold tabular-nums text-[#0000BF]">{remaining} ครั้ง</span></p>
+                  </div>
                 </div>
                 <div
                   className="flex flex-wrap items-center justify-center gap-1.5 sm:justify-start"
@@ -2076,6 +2102,7 @@ export function CarWashDashboard({
       <FormModal
         open={showVisitModal}
         size="lg"
+        mobileCentered={isStaffLaneOnly}
         onClose={() => {
           setShowVisitModal(false);
           setVisitLookupHint(null);

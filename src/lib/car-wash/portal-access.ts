@@ -1,28 +1,7 @@
-import { prisma } from "@/lib/prisma";
-import { canAccessAppModule, type UserAccessFields } from "@/lib/modules/access";
-import { CAR_WASH_MODULE_SLUG } from "@/lib/modules/config";
-
-export async function isCarWashCustomerPortalOpenForOwner(ownerId: string): Promise<boolean> {
-  const [mod, user] = await Promise.all([
-    prisma.appModule.findFirst({
-      where: { slug: CAR_WASH_MODULE_SLUG, isActive: true },
-    }),
-    prisma.user.findUnique({
-      where: { id: ownerId },
-      select: {
-        role: true,
-        subscriptionType: true,
-        subscriptionTier: true,
-        tokens: true,
-      },
-    }),
-  ]);
-  if (!mod || !user) return false;
-  const access: UserAccessFields = {
-    role: user.role,
-    subscriptionType: user.subscriptionType,
-    subscriptionTier: user.subscriptionTier,
-    tokens: user.tokens,
-  };
-  return canAccessAppModule(access, { slug: mod.slug, groupId: mod.groupId });
+// พอร์ทัลลูกค้าเป็นจุดรับงานสาธารณะ — เปิดให้เข้าได้เสมอ
+// ไม่ต้องตรวจสิทธิ์ subscription/token เพราะลูกค้าหน้าร้านไม่มี session
+export async function isCarWashCustomerPortalOpenForOwner(
+  _ownerId: string,
+): Promise<boolean> {
+  return true;
 }

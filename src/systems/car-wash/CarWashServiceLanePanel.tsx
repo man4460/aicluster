@@ -157,6 +157,8 @@ export function CarWashServiceLanePanel({
   onRecordVisit,
   onRefresh,
   refreshing = false,
+  iconOnlyActions = false,
+  staffLayout = false,
 }: {
   visits: ServiceVisit[];
   packages: ServicePackage[];
@@ -170,6 +172,8 @@ export function CarWashServiceLanePanel({
   onRecordVisit?: () => void;
   onRefresh?: () => void;
   refreshing?: boolean;
+  iconOnlyActions?: boolean;
+  staffLayout?: boolean;
 }) {
   const lightbox = useAppImageLightbox();
   const [laneModalVisitId, setLaneModalVisitId] = useState<number | null>(null);
@@ -387,12 +391,12 @@ export function CarWashServiceLanePanel({
     </div>
   );
 
-  return (
-    <AppDashboardSection tone="violet">
+  const headerRow =
+    !staffLayout ?
       <div className="flex items-start justify-between gap-3 border-b border-[#ecebff] pb-3">
         <div className="min-w-0">
           <h2 className="text-lg font-bold text-[#2e2a58]">ลานล้างวันนี้</h2>
-          <p className="mt-1 text-xs text-[#66638c]">แตะการ์ดเพื่ออัปเดตสถานะ แนบรูป หรือเปิดบิลพร้อมเพย์</p>
+          <p className="mt-1 text-xs text-[#66638c]">แตะการ์ดเพื่ออัปเดตสถานะ แนบรูป หรือเปิดบิล</p>
         </div>
         {onRecordVisit || onRefresh ?
           <div className="flex shrink-0 items-center gap-2 self-start">
@@ -407,7 +411,7 @@ export function CarWashServiceLanePanel({
                 <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                   <path d="M20 11a8 8 0 1 0 2.3 5.6M20 4v7h-7" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                <span className="cw-btn-label">{refreshing ? "กำลังรีเฟรช..." : "รีเฟรช"}</span>
+                {!iconOnlyActions ? <span className="cw-btn-label">{refreshing ? "กำลังรีเฟรช..." : "รีเฟรช"}</span> : null}
               </button>
             : null}
             {onRecordVisit ?
@@ -420,18 +424,53 @@ export function CarWashServiceLanePanel({
                 <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                   <path d="M12 5v14M5 12h14" strokeLinecap="round" />
                 </svg>
-                <span className="cw-btn-label">บันทึกรายการ</span>
+                {!iconOnlyActions ? <span className="cw-btn-label">บันทึกรายการ</span> : null}
               </button>
             : null}
           </div>
         : null}
       </div>
-      {active.length === 0 ? (
-        <AppEmptyState tone="violet" className="mt-4 py-8">
-          ไม่มีคิวในลานตอนนี้
-        </AppEmptyState>
-      ) : (
-        <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+    : null;
+
+  /** มุมขวาบนของการ์ดลานล้าง (staff) — แทน FAB ลอยมุมล่าง */
+  const staffCardToolbar =
+    staffLayout && (onRefresh || onRecordVisit) ?
+      <div className="-mt-1 mb-3 flex shrink-0 items-center justify-end gap-2 sm:-mt-0.5 sm:mb-4">
+        {onRefresh ?
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#dcd8f0]/90 bg-white/90 text-[#4d47b6] shadow-sm ring-1 ring-white/70 transition hover:bg-[#f4f3ff] disabled:opacity-60"
+            aria-label={refreshing ? "กำลังรีเฟรช" : "รีเฟรช"}
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+              <path d="M20 11a8 8 0 1 0 2.3 5.6M20 4v7h-7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        : null}
+        {onRecordVisit ?
+          <button
+            type="button"
+            onClick={onRecordVisit}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#5b61ff] to-[#6a63ff] text-white shadow-md ring-1 ring-white/40 transition hover:opacity-95 active:scale-95"
+            aria-label="บันทึกรายการ"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+            </svg>
+          </button>
+        : null}
+      </div>
+    : null;
+
+  const listBlock =
+    active.length === 0 ?
+      <AppEmptyState tone="violet" className={cn(staffLayout ? "py-8" : "mt-4 py-8")}>
+        ไม่มีคิวในลานตอนนี้
+      </AppEmptyState>
+    : (
+      <ul className={cn("grid gap-3", staffLayout ? "grid-cols-1" : "mt-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4")}>
           {active.map((v) => {
             const waitingSlip =
               v.service_status === "COMPLETED" && !hasLaneSlipPhoto(v) && !isPendingBundleVisit(v);
@@ -448,52 +487,100 @@ export function CarWashServiceLanePanel({
                   type="button"
                   onClick={() => setLaneModalVisitId(v.id)}
                   className={cn(
-                    "flex min-h-[124px] w-full flex-col rounded-xl border-2 p-2.5 text-left shadow-sm ring-1 transition hover:shadow-md sm:min-h-[148px] sm:rounded-2xl sm:p-4",
+                    staffLayout
+                      ? "flex min-h-[132px] w-full flex-col rounded-xl border-2 p-3 text-left shadow-sm ring-1 transition hover:shadow-md sm:min-h-[150px] sm:rounded-2xl sm:p-4"
+                      : "flex min-h-[124px] w-full flex-col rounded-xl border-2 p-2.5 text-left shadow-sm ring-1 transition hover:shadow-md sm:min-h-[148px] sm:rounded-2xl sm:p-4",
                     tone.border,
                     tone.bg,
                     tone.ring,
                     tone.hoverBorder,
                   )}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-[9px] font-semibold uppercase tracking-wide text-[#66638c] sm:text-[10px]">ทะเบียน</span>
-                    <span
-                      className={cn(
-                        "max-w-[58%] truncate rounded-full px-1.5 py-0.5 text-[9px] font-semibold ring-1 sm:px-2 sm:text-[10px]",
-                        tone.badge,
-                      )}
-                    >
-                      {badgeLabel}
-                    </span>
-                  </div>
-                  <span className="mt-0.5 line-clamp-2 text-base font-bold tabular-nums text-[#2e2a58] sm:mt-1 sm:text-xl">{v.plate_number}</span>
-                  <p className="mt-0.5 line-clamp-1 text-[11px] font-medium text-[#4d47b6] sm:mt-1 sm:text-xs">{v.package_name}</p>
-                  <p className="mt-0.5 line-clamp-1 text-[10px] text-[#66638c] sm:text-[11px]">{v.customer_name}</p>
-                  <p className="mt-0.5 text-[9px] tabular-nums text-slate-500 sm:mt-1 sm:text-[10px]">
-                    {new Date(v.visit_at).toLocaleTimeString("th-TH", {
-                      timeZone: "Asia/Bangkok",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}{" "}
-                    · ผ่านมา{" "}
-                    {elapsed} นาที
-                  </p>
-                  {pkgMins != null ? <p className="text-[9px] text-slate-400 sm:text-[10px]">แพ็กเกจประมาณ {pkgMins} นาที</p> : null}
-                  <p className="mt-auto pt-1.5 text-xs font-bold tabular-nums text-emerald-700 sm:pt-2 sm:text-sm">
-                    ฿{v.final_price.toLocaleString("th-TH")}
-                  </p>
-                  <p className="mt-1 text-[9px] font-medium text-[#4d47b6] sm:mt-2 sm:text-[10px]">แตะเพื่อดูรายละเอียด</p>
+                  {staffLayout ? (
+                    <div className="flex min-h-[112px] items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#66638c]">ทะเบียนรถ</p>
+                        <span className="mt-1 block line-clamp-1 text-xl font-black tabular-nums leading-tight text-[#2e2a58]">
+                          {v.plate_number}
+                        </span>
+                        <p className="mt-1 text-[11px] tabular-nums text-slate-500">
+                          {new Date(v.visit_at).toLocaleTimeString("th-TH", {
+                            timeZone: "Asia/Bangkok",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}{" "}
+                          · ผ่านมา {elapsed} นาที
+                        </p>
+                        {pkgMins != null ? <p className="mt-1 text-[11px] text-slate-400">แพ็กเกจประมาณ {pkgMins} นาที</p> : null}
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className={cn("inline-flex max-w-[9rem] truncate rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", tone.badge)}>
+                          {badgeLabel}
+                        </span>
+                        <p className="mt-2 line-clamp-1 text-sm font-bold text-[#4d47b6]">{v.package_name}</p>
+                        <p className="mt-0.5 line-clamp-1 text-xs font-medium text-[#66638c]">{v.customer_name}</p>
+                        <p className="mt-2 text-sm font-black tabular-nums text-emerald-700">฿{v.final_price.toLocaleString("th-TH")}</p>
+                        <p className="mt-1 text-[10px] font-semibold text-[#4d47b6]">แตะเพื่อดูรายละเอียด</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-[9px] font-semibold uppercase tracking-wide text-[#66638c] sm:text-[10px]">ทะเบียน</span>
+                        <span
+                          className={cn(
+                            "max-w-[58%] truncate rounded-full px-1.5 py-0.5 text-[9px] font-semibold ring-1 sm:px-2 sm:text-[10px]",
+                            tone.badge,
+                          )}
+                        >
+                          {badgeLabel}
+                        </span>
+                      </div>
+                      <span className="mt-0.5 line-clamp-2 text-base font-bold tabular-nums text-[#2e2a58] sm:mt-1 sm:text-xl">{v.plate_number}</span>
+                      <p className="mt-0.5 line-clamp-1 text-[11px] font-medium text-[#4d47b6] sm:mt-1 sm:text-xs">{v.package_name}</p>
+                      <p className="mt-0.5 line-clamp-1 text-[10px] text-[#66638c] sm:text-[11px]">{v.customer_name}</p>
+                      <p className="mt-0.5 text-[9px] tabular-nums text-slate-500 sm:mt-1 sm:text-[10px]">
+                        {new Date(v.visit_at).toLocaleTimeString("th-TH", {
+                          timeZone: "Asia/Bangkok",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}{" "}
+                        · ผ่านมา{" "}
+                        {elapsed} นาที
+                      </p>
+                      {pkgMins != null ? <p className="text-[9px] text-slate-400 sm:text-[10px]">แพ็กเกจประมาณ {pkgMins} นาที</p> : null}
+                      <p className="mt-auto pt-1.5 text-xs font-bold tabular-nums text-emerald-700 sm:pt-2 sm:text-sm">
+                        ฿{v.final_price.toLocaleString("th-TH")}
+                      </p>
+                      <p className="mt-1 text-[9px] font-medium text-[#4d47b6] sm:mt-2 sm:text-[10px]">แตะเพื่อดูรายละเอียด</p>
+                    </>
+                  )}
                 </button>
               </li>
             );
           })}
         </ul>
-      )}
+    );
+
+  const laneMain = (
+    <>
+      {headerRow}
+      {staffCardToolbar}
+      {listBlock}
+    </>
+  );
+
+  return (
+    <>
+      {staffLayout ?
+        <div className="relative w-full">{laneMain}</div>
+      : <AppDashboardSection tone="violet">{laneMain}</AppDashboardSection>}
 
       <FormModal
         open={modalVisit != null}
         onClose={() => setLaneModalVisitId(null)}
         size="lg"
+        mobileCentered={staffLayout}
         title={
           modalVisit ?
             laneModalView === "details" ?
@@ -504,7 +591,7 @@ export function CarWashServiceLanePanel({
         description={
           laneModalView === "details" ?
             "ตรวจสอบข้อมูลลูกค้า อัปเดตสถานะ และแนบหลักฐานการชำระเงิน"
-          : "แสดงบิลสรุปยอดและสแกนจ่ายผ่านพร้อมเพย์"
+          : "แสดงบิลสรุปยอดและ QR ชำระเงิน"
         }
         footer={
           modalVisit ?
@@ -515,7 +602,7 @@ export function CarWashServiceLanePanel({
                   className="flex-1 rounded-2xl border border-indigo-100 bg-indigo-50/50 py-3 text-sm font-black text-[#5b61ff] transition-all hover:bg-indigo-100 active:scale-95"
                   onClick={() => setLaneModalView("bill")}
                 >
-                  บิล & พร้อมเพย์
+                  บิลและ QR ชำระเงิน
                 </button>
                 <button
                   type="button"
@@ -796,26 +883,26 @@ export function CarWashServiceLanePanel({
                 : null}
 
                 <section className="mt-5 flex flex-col items-center border-t border-dashed border-slate-200 pt-5">
-                  <h4 className="text-sm font-semibold text-slate-900">สแกนจ่าย พร้อมเพย์</h4>
+                  <h4 className="text-sm font-semibold text-slate-900">สแกนจ่าย</h4>
                   {ppQrLoading ?
                     <p className="mt-4 text-sm text-slate-500">กำลังสร้าง QR…</p>
                   : ppQrUrl ?
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={ppQrUrl} alt="PromptPay QR" className="mt-3 h-48 w-48 object-contain sm:h-52 sm:w-52" />
+                      <img src={ppQrUrl} alt="QR ชำระเงิน" className="mt-3 h-48 w-48 object-contain sm:h-52 sm:w-52" />
                       <p className="mt-2 text-xs text-slate-500">
                         ยอด {modalVisit.final_price.toLocaleString("th-TH")} บาท
                       </p>
                     </>
                   : !ppConfigured ?
                     <p className="mt-3 max-w-sm text-center text-sm text-amber-800">
-                      ยังไม่ได้ตั้งเบอร์พร้อมเพย์ — ตั้งได้ที่{" "}
+                      ยังไม่ได้ตั้งเบอร์สำหรับ QR ชำระเงิน — ตั้งได้ที่{" "}
                       <Link href="/dashboard/profile" className="font-semibold text-[#0000BF] underline">
                         โปรไฟล์
                       </Link>
                     </p>
                   : <p className="mt-3 text-center text-sm text-slate-500">
-                      ไม่สามารถสร้าง QR ได้ — ลองรีเฟรชหรือตรวจสอบเบอร์พร้อมเพย์
+                      ไม่สามารถสร้าง QR ได้ — ลองรีเฟรชหรือตรวจสอบเบอร์สำหรับ QR
                     </p>}
                 </section>
 
@@ -833,6 +920,6 @@ export function CarWashServiceLanePanel({
         title="ถ่ายรูปสลิป / หลักฐาน"
       />
       <AppImageLightbox src={lightbox.src} onClose={lightbox.close} alt="สลิป / รูปแนบ" />
-    </AppDashboardSection>
+    </>
   );
 }
