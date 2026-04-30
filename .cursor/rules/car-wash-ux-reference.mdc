@@ -1,0 +1,62 @@
+---
+description: ใช้คาร์แคร์เป็นต้นแบบ UX/UI เมื่อปรับโมดูลอื่น (พอร์ทัล/หน้า staff/แดชบอร์ด/ปุ่มมุมการ์ด)
+alwaysApply: false
+---
+
+# Car-wash = ต้นแบบ UX/UI สำหรับโมดูลอื่น
+
+ระบบคาร์แคร์ผ่านการปรับ UX/UI หลายรอบจน **ลายต่อระหว่างหน้า staff / portal ลูกค้า / ป๊อปอัป QR** ลงตัว — ใช้เป็น **reference** เมื่อปรับ **dormitory / building-pos / village / chat-ai-digest / module ใหม่** ในรอบถัดไป
+
+## ไฟล์อ้างอิงหลัก (อย่าคัดลอก JSX — import เทมเพลต)
+
+| รูปแบบ | ไฟล์ต้นแบบ |
+|--------|------------|
+| Layout กระจกพื้นม่วง (พอร์ทัล/หน้า staff) | `AppPublicCheckInGlassPage` + `appPublicCheckInGlassCardClass` ใน `@/components/app-templates` |
+| Header logo + ชื่อ + คำอธิบาย (กลาง, mobile-first) | `CarWashCustomerPortalClient` (lines ~180–195), `CarWashDashboard` สาขา `staff_lane` |
+| การ์ดเนื้อหาในกล่องกระจก | `<div className={appPublicCheckInGlassCardClass}><div className="px-5 py-5 sm:px-6">…</div></div>` |
+| รายการคิว + แอ็กชันมุมขวาบน | `CarWashServiceLanePanel.tsx` (`staffCardToolbar`, `headerRow`) |
+| โหมดสลับ full ↔ mobile lane | prop `layoutVariant: "full" | "staff_lane"` ใน `CarWashDashboard` |
+
+## หลักการเลย์เอาต์ที่ต้องคงไว้
+
+1. **พื้นหลังกระจกใช้ template กลางเสมอ**
+   - Wrap ด้วย `AppPublicCheckInGlassPage` (มี `px-4 pb-20 pt-8 sm:pt-12` แล้ว) — **ห้ามใส่ padding ขอบจอซ้ำ** ในคอนเทนเนอร์ลูก
+   - คอนเทนเนอร์ลูกใช้แค่ `relative mx-auto max-w-md space-y-4`
+
+2. **Header รูปแบบเดียวกันทั้ง portal และ staff**
+   - กล่องไอคอน `h-14 w-14 rounded-[1.25rem]` ขอบ/ไล่สีขาว–ม่วง (`from-white/80 to-violet-100/60`) เงา `shadow-[0_8px_24px_-8px_rgba(91,97,255,0.35)]`
+   - หัวข้อ `text-2xl font-black text-[#1e1b4b]` + คำอธิบาย `text-sm text-[#6b6894]`
+   - ถ้ามี `shopLabel` → บรรทัดเล็ก `text-xs font-bold text-[#9490c0]`
+
+3. **การ์ด/กล่องเนื้อหา**: ใช้ `appPublicCheckInGlassCardClass` แล้วเว้น **`px-5 py-5 sm:px-6`** ภายใน — สอดคล้องกับการ์ดค้นหา/สถานะของพอร์ทัล
+
+4. **ปุ่มแอ็กชัน (รีเฟรช / เพิ่ม) อยู่ "มุมขวาบนภายในการ์ด"** — ห้าม FAB ลอยมุมล่าง
+   - แถว `flex justify-end gap-2` ก่อนรายการ
+   - ขนาด `h-10 w-10`, ไอคอนล้วน, รีเฟรชใช้ขอบขาว `bg-white/90`, ปุ่มหลัก (เพิ่ม/บันทึก) ใช้ไล่สี `from-[#5b61ff] to-[#6a63ff]`
+   - ตัวอย่าง: `staffCardToolbar` ใน `CarWashServiceLanePanel`
+
+5. **ตัดส่วนซ้ำสำหรับ staff**
+   - **ห้าม** วาง header card ใหญ่ + ปุ่มรีเฟรชหัวตารางซ้ำ (เคยมีใน `CarWashDashboard` รอบเก่า)
+   - **ห้าม** wrapper `max-w-md` ในไฟล์ page — ใช้แค่ `<CarWashDashboard layoutVariant="staff_lane" … />`
+
+6. **คำพูดเกี่ยวกับการชำระเงินใช้คำกลาง**
+   - ใช้ **"QR ชำระเงิน" / "สแกนจ่าย" / "เบอร์สำหรับ QR"** แทนการระบุยี่ห้อ (เช่น "พร้อมเพย์") ใน UI ที่ลูกค้าเห็น
+   - เก็บคำเฉพาะแบรนด์ไว้ที่ **โปรไฟล์/ตั้งค่า** เท่านั้น (เช่น `ProfileEditor`)
+
+7. **โหมด `staff_lane` (mobile-first)**
+   - ใช้ flag เดียว (`layoutVariant`) สลับระหว่างเดสก์ท็อปเต็มและหน้า lane มือถือ
+   - หน้า staff ไม่มีลิงก์กลับไปแดชบอร์ดเต็ม (ออกแบบให้ใช้กับ QR เฉพาะ)
+
+## เมื่อแก้โมดูลอื่นในรอบถัดไป
+
+- ก่อนแก้ **เปิดดู** `CarWashCustomerPortalClient.tsx` + `CarWashDashboard.tsx` (สาขา `isStaffLaneOnly`) + `CarWashServiceLanePanel.tsx` (`staffCardToolbar` / `headerRow`) เพื่อเทียบโครง
+- ถ้าโมดูลอื่นมีหน้า portal/check-in/staff คล้ายกัน → **import เทมเพลตชุดเดียวกัน** อย่าสร้างกระจก/หัวข้อ/การ์ดใหม่
+- ถ้าต้อง pattern ใหม่ที่ใช้ซ้ำได้ → ขยายที่ `@/components/app-templates` แล้ว export ใน `index.ts` (ตามกฎ `app-templates-central.mdc`)
+
+## เช็กลิสต์ก่อน commit UI
+
+- [ ] ใช้ `AppPublicCheckInGlassPage` / `appPublicCheckInGlassCardClass` (ไม่ duplicate gradient/padding)
+- [ ] Header layout/spacing ตรงกับพอร์ทัลคาร์แคร์
+- [ ] ปุ่มแอ็กชันการ์ด อยู่มุมขวาบนของการ์ด ขนาด `h-10 w-10` icon-only
+- [ ] ไม่มี "พร้อมเพย์" หรือชื่อแบรนด์ผู้ให้บริการชำระเงินใน UI ลูกค้า
+- [ ] หน้า staff ใช้ `layoutVariant` เดียว ไม่มี wrapper หรือ header ซ้ำ
