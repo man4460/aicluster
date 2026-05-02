@@ -14,12 +14,18 @@ import {
 } from "@/components/app-templates";
 import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
+import { cn } from "@/lib/cn";
 import {
   bangkokDatetimeLocalToIso,
   isoToBangkokDatetimeLocal,
 } from "@/lib/barber/booking-datetime";
 import { prepareBuildingPosSlipImageFile } from "@/systems/building-pos/building-pos-slip-image";
 import { PopupIconButton, popupIconBtnDanger } from "@/systems/car-wash/car-wash-popup-icon-buttons";
+import {
+  barberCardBodyPaddingXClass,
+  barberCardSurfaceRadiusClass,
+  barberOffersListRowCardClass,
+} from "@/systems/barber/components/barber-ui-tokens";
 import {
   createBarberCostCategory,
   createBarberCostEntry,
@@ -124,7 +130,7 @@ function CostSlipAttachmentZone({
       {photoBusy ? <p className="mt-2 text-xs font-medium text-violet-700">กำลังอัปโหลดรูป…</p> : null}
 
       {slipUrl.trim() && previewUrl ?
-        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200/80 bg-white/80 p-3">
+        <div className={`mt-4 flex flex-wrap items-center gap-3 ${barberCardSurfaceRadiusClass} border border-slate-200/80 bg-white/80 p-3`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={previewUrl} alt="สลิปแนบ" className="h-20 w-auto max-w-[min(100%,12rem)] rounded-lg object-cover object-center ring-1 ring-slate-200" />
           <div className="min-w-0 flex-1">
@@ -459,7 +465,7 @@ export function BarberCostPanel({
                 type="button"
                 disabled={busy}
                 onClick={() => void submitCategory()}
-                className="app-btn-primary rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                className={`app-btn-primary ${barberCardSurfaceRadiusClass} px-4 py-2 text-sm font-semibold disabled:opacity-50`}
               >
                 บันทึก
               </button>
@@ -467,7 +473,7 @@ export function BarberCostPanel({
                 type="button"
                 disabled={busy}
                 onClick={cancelCategoryForm}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                className={`${barberCardSurfaceRadiusClass} border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50`}
               >
                 ยกเลิก
               </button>
@@ -476,7 +482,7 @@ export function BarberCostPanel({
               type="button"
               disabled={busy || !catName.trim()}
               onClick={() => void submitCategory()}
-              className="app-btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              className={`app-btn-primary inline-flex items-center gap-2 ${barberCardSurfaceRadiusClass} px-4 py-2 text-sm font-semibold disabled:opacity-50`}
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
                 <path d="M12 5v14M5 12h14" />
@@ -489,7 +495,7 @@ export function BarberCostPanel({
 
       {categories.length === 0 ?
         <AppEmptyState>ยังไม่มีหมวด — กด «เพิ่มหมวด» ด้านบน</AppEmptyState>
-      : <ul className="max-h-[min(40vh,14rem)] divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200 bg-white">
+      : <ul className={`max-h-[min(40vh,14rem)] divide-y divide-slate-100 overflow-y-auto ${barberCardSurfaceRadiusClass} border border-slate-200 bg-white`}>
           {categories.map((c) => (
             <li key={c.id} className="flex items-center justify-between gap-2 px-3 py-2.5 sm:px-4">
               <span className="min-w-0 truncate font-medium text-slate-900">{c.name}</span>
@@ -526,7 +532,7 @@ export function BarberCostPanel({
   return (
     <div className="space-y-6">
       {fetchError ? (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+        <p className={`${barberCardSurfaceRadiusClass} border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950`}>
           โหลดข้อมูลไม่สำเร็จ: {fetchError}
         </p>
       ) : null}
@@ -535,19 +541,24 @@ export function BarberCostPanel({
       <AppDashboardSection tone="slate">
         <AppSectionHeader tone="slate" title="รายการต้นทุนทั้งหมด" description={`${entries.length} รายการ`} />
         {listLoading ?
-          <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-6 text-center text-sm text-slate-600">
+          <p
+            className={`${barberCardSurfaceRadiusClass} border border-dashed border-[#e8e6f4]/90 bg-gradient-to-br from-[#faf9ff]/90 via-white to-[#fff7ed]/30 ${barberCardBodyPaddingXClass} py-6 text-center text-sm text-slate-600`}
+          >
             กำลังโหลดรายการ…
           </p>
         : sortedEntries.length === 0 ?
           <AppEmptyState>ยังไม่มีรายการต้นทุน</AppEmptyState>
         : <div className="max-h-[min(60vh,28rem)] overflow-y-auto">
-            <ul className="divide-y divide-slate-100">
+            <ul className="space-y-2 px-0.5 pb-1 pt-0.5">
               {sortedEntries.map((e) => {
                 const slipResolved = e.slip_photo_url?.trim() ? resolveAssetUrl(e.slip_photo_url, baseUrl) : null;
                 return (
                   <li
                     key={e.id}
-                    className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-4"
+                    className={cn(
+                      barberOffersListRowCardClass,
+                      "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between",
+                    )}
                   >
                     <div className="flex min-w-0 flex-1 gap-3">
                       {slipResolved ?
@@ -566,7 +577,9 @@ export function BarberCostPanel({
                           {e.item_label?.trim() || "—"}
                           <span className="ml-1.5 font-normal text-slate-500">({e.category_name})</span>
                         </p>
-                        <p className="text-lg font-bold tabular-nums text-rose-700">฿{e.amount.toLocaleString()}</p>
+                        <p className="bg-gradient-to-r from-rose-700 to-orange-600 bg-clip-text text-lg font-bold tabular-nums text-transparent">
+                          ฿{e.amount.toLocaleString()}
+                        </p>
                         {e.note?.trim() ? <p className="text-xs text-slate-600">{e.note}</p> : null}
                       </div>
                     </div>
@@ -613,7 +626,7 @@ export function BarberCostPanel({
                 setManageCategoriesOpen(false);
                 cancelCategoryForm();
               }}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              className={`${barberCardSurfaceRadiusClass} border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50`}
             >
               ปิด
             </button>

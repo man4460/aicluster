@@ -1,0 +1,79 @@
+# รวม MySQL + แอป — เหมาะกับย้ายไปรันบน Mac mini (Docker Desktop / OrbStack)
+#
+# Compose โหลด `.env` ที่ root อัตโนมัติเพื่อแทนค่า ${...} ในไฟล์นี้
+# service `app` ใช้ env_file: `.env` — ตัวแปรใน `.env` (OAuth, SMTP, …) เข้าคอนเทนเนอร์
+# DATABASE_URL ใน `.env` จะถูก override ให้ชี้ `db:3306` (ใน container ห้ามใช้ localhost ต่อ DB)
+#
+# เริ่มต้น:
+#   1) ใน `.env` ใส่ MYSQL_ROOT_PASSWORD (ดู `.env.docker.example`)
+#   2) docker compose up --build
+#   ถ้าเคยเปลี่ยนรหัสหลังสร้าง volume แล้วล็อกอินไม่ผ่าน (P1000): docker compose down -v แล้ว up ใหม่ (ล้างข้อมูล MySQL ใน Docker)
+#
+# เปิดเฉพาะฐานข้อมูล (รันแอปบนเครื่อง dev ปกติ — hot reload จาก npm run dev):
+#   docker compose up -d db
+#   แล้วตั้ง DATABASE_URL=mysql://root:รหัส@127.0.0.1:3306/mawell_buffet ใน .env / .env.local
+#   หรือ npm run dev:docker-db / dev:docker-db:ps1
+#
+# Next dev + hot reload ใน Docker (mount โค้ด — อย่ารันพร้อม npm run dev บนโฮสต์):
+#   npm run docker:dev
+#
+# seed ข้อมูลทดสอบ (ไม่บังคับ):
+#   docker compose run --rm --entrypoint "" app npx tsx prisma/seed.ts
+#
+# ย้ายข้อมูลจาก MySQL เดิม (เช่น localhost:3306) เข้า Docker db:
+#   PowerShell:  scripts/mysql-export-from-mysql.ps1 -OutPath .\mawell_dump.sql
+#                scripts/mysql-import-to-docker.ps1 -DumpPath .\mawell_dump.sql -RecreateDatabase
+#   Mac/Linux:   SOURCE_PASSWORD=... bash scripts/mysql-export-from-mysql.sh
+#                RECREATE=1 bash scripts/mysql-import-to-docker.sh ./mawell_buffet_dump.sql
+
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?ตั้ง MYSQL_ROOT_PASSWORD ใน .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mawell_buffet}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --lower-case-table-names=1
+    healthcheck:
+      # ต้องล็อกอินสำเร็จจริง (mysqladmin ping บางกรณีผ่านทั้งที่รหัสไม่ตรงกับที่บันทึกใน data dir)
+      test:
+        [
+          "CMD-SHELL",
+          'mysql -h 127.0.0.1 -uroot -p"$$MYSQL_ROOT_PASSWORD" --connect-timeout=5 -e "SELECT 1" >/dev/null 2>&1 || exit 1',
+        ]
+      interval: 8s
+      timeout: 5s
+      retries: 8
+      start_period: 25s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      # DATABASE_URL จาก .env ชี้ localhost — entrypoint สร้าง URL ใหม่ชี้ db + เข้ารหัสรหัสผ่าน
+      PRISMA_DOCKER_REBUILD_DATABASE_URL: "1"
+      DOCKER_MYSQL_HOST: db
+      DOCKER_MYSQL_PORT: "3306"
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?ตั้ง MYSQL_ROOT_PASSWORD ใน .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mawell_buffet}
+      # 0 = migrate deploy (production). 1/true = db push (เหมาะกับฐานว่างเมื่อลำดับ migration ไม่ตรง)
+      PRISMA_DB_PUSH: ${PRISMA_DB_PUSH:-0}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mysql_data:

@@ -418,9 +418,11 @@ export function PlansPricing({
                   </span>
                 ) : !plan.tierOpen
                     ? "ล็อกแพ็กเกจ"
-                    : plan.enough
-                      ? `สมัครทันที (หัก ${plan.charge.tokensToDeduct})`
-                      : `เติมอีก ${plan.neededTokens ?? 0} แล้วสมัคร`}
+                    : plan.charge.ok
+                      ? plan.enough
+                        ? `สมัครทันที (หัก ${plan.charge.tokensToDeduct})`
+                        : `เติมอีก ${plan.neededTokens ?? 0} แล้วสมัคร`
+                      : "คำนวณโทเคนไม่สำเร็จ"}
               </button>
             </div>
             ))}

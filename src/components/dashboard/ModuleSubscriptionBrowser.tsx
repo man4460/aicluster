@@ -13,6 +13,7 @@ import {
   dashboardModuleSubscribeButtonClass,
 } from "@/components/dashboard/DashboardModuleHeroCard";
 import { formatBangkokDateTimeLong } from "@/lib/time/bangkok";
+import { cn } from "@/lib/cn";
 
 type ModuleCardDTO = {
   id: string;

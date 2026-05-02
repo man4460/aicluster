@@ -10,11 +10,21 @@ import {
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { BarberDashboardBackLink } from "@/systems/barber/components/BarberDashboardBackLink";
+import { BarberModalPortal } from "@/systems/barber/components/BarberModalPortal";
 import {
+  barberCardSurfaceRadiusClass,
+  barberEmptyStateDashedPlainClass,
   barberIconToolbarGroupClass,
   barberInlineAlertErrorClass,
   barberInlineAlertSuccessClass,
   barberListRowCardClass,
+  barberMutedLoadingNoticeClass,
+  barberModalBackdropClass,
+  barberModalCloseBtnClass,
+  barberModalHeaderClass,
+  barberModalPanelLgClass,
+  barberModalSubtitleClass,
+  barberModalTitleClass,
   barberPageStackClass,
   barberSectionActionsRowClass,
   barberSectionFirstClass,
@@ -254,8 +264,9 @@ export function BarberBookingsClient({
                 {showDashboardBackLink ? <BarberDashboardBackLink /> : null}
                 <button
                   type="button"
+                  suppressHydrationWarning
                   onClick={openAddModal}
-                  className="app-btn-primary min-h-[44px] rounded-xl px-4 py-2.5 text-sm font-semibold"
+                  className={`app-btn-primary min-h-[44px] ${barberCardSurfaceRadiusClass} px-4 py-2.5 text-sm font-semibold`}
                 >
                   เพิ่มคิว
                 </button>
@@ -264,9 +275,9 @@ export function BarberBookingsClient({
           }
         />
         {listLoading ? (
-          <p className="rounded-lg bg-[#f8f7ff] px-4 py-3 text-center text-sm text-[#66638c]">กำลังโหลด…</p>
+          <p className={`${barberMutedLoadingNoticeClass} text-center`}>กำลังโหลด…</p>
         ) : bookings.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[#dcd8f0] py-10 text-center text-sm text-[#66638c]">
+          <div className={`${barberEmptyStateDashedPlainClass} text-center text-sm text-[#66638c]`}>
             ไม่มีคิวในวันนี้
           </div>
         ) : (
@@ -335,35 +346,33 @@ export function BarberBookingsClient({
       </section>
 
       {addOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
-          role="presentation"
-          onClick={() => closeAddModal()}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="barber-add-booking-title"
-            className="max-h-[min(92vh,640px)] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-[#ecebff] bg-white shadow-2xl sm:rounded-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 flex items-start justify-between gap-3 border-b border-[#ecebff] bg-white px-5 py-4">
-              <div>
-                <h2 id="barber-add-booking-title" className="text-lg font-bold text-[#2e2a58]">
-                  เพิ่มคิว
-                </h2>
-                <p className="mt-1 text-xs text-[#66638c]">กรอกเบอร์ วันเวลานัด แล้วบันทึก</p>
+        <BarberModalPortal>
+          <div className={barberModalBackdropClass} role="presentation" onClick={() => closeAddModal()}>
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="barber-add-booking-title"
+              className={barberModalPanelLgClass}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={barberModalHeaderClass}>
+                <div className="min-w-0">
+                  <h2 id="barber-add-booking-title" className={barberModalTitleClass}>
+                    เพิ่มคิว
+                  </h2>
+                  <p className={barberModalSubtitleClass}>กรอกเบอร์ วันเวลานัด แล้วบันทึก</p>
+                </div>
+                <button
+                  type="button"
+                  suppressHydrationWarning
+                  onClick={() => closeAddModal()}
+                  className={barberModalCloseBtnClass}
+                  aria-label="ปิด"
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => closeAddModal()}
-                className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-[#66638c] hover:bg-[#f4f3fb] hover:text-[#2e2a58]"
-                aria-label="ปิด"
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={onSave} className="grid gap-3 px-5 py-4">
+              <form onSubmit={onSave} className="grid gap-3 px-5 py-5">
               {err ? (
                 <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{err}</p>
               ) : null}
@@ -389,9 +398,10 @@ export function BarberBookingsClient({
                 </label>
                 <button
                   type="button"
+                  suppressHydrationWarning
                   onClick={() => void onSearchPhone()}
                   disabled={searchLoading}
-                  className="app-btn-soft min-h-[48px] shrink-0 rounded-xl px-4 text-sm font-semibold disabled:opacity-50"
+                  className={`app-btn-soft min-h-[48px] shrink-0 ${barberCardSurfaceRadiusClass} px-4 text-sm font-semibold disabled:opacity-50`}
                 >
                   {searchLoading ? "กำลังค้นหา…" : "ค้นหาในระบบ"}
                 </button>
@@ -421,22 +431,25 @@ export function BarberBookingsClient({
               <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
+                  suppressHydrationWarning
                   onClick={() => closeAddModal()}
-                  className="app-btn-soft min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold text-[#2e2a58]"
+                  className={`app-btn-soft min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-[#2e2a58]`}
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
+                  suppressHydrationWarning
                   disabled={saving}
-                  className="app-btn-primary min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold disabled:opacity-50"
+                  className={`app-btn-primary min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold disabled:opacity-50`}
                 >
                   {saving ? "กำลังบันทึก…" : "บันทึกคิว"}
                 </button>
               </div>
             </form>
+            </div>
           </div>
-        </div>
+        </BarberModalPortal>
       ) : null}
     </div>
   );

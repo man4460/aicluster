@@ -1,10 +1,5 @@
-import { BarberPackagesClient } from "@/systems/barber/components/BarberPackagesClient";
-import { barberPageStackClass } from "@/systems/barber/components/barber-ui-tokens";
+import { BarberPackagesHubClient } from "@/systems/barber/components/BarberPackagesHubClient";
 
 export default function BarberPackagesPage() {
-  return (
-    <div className={barberPageStackClass}>
-      <BarberPackagesClient />
-    </div>
-  );
+  return <BarberPackagesHubClient />;
 }

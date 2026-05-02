@@ -1,10 +1,5 @@
-import { BarberPurchasesClient } from "@/systems/barber/components/BarberPurchasesClient";
-import { barberPageStackClass } from "@/systems/barber/components/barber-ui-tokens";
+import { redirect } from "next/navigation";
 
 export default function BarberPurchasesPage() {
-  return (
-    <div className={barberPageStackClass}>
-      <BarberPurchasesClient />
-    </div>
-  );
+  redirect("/dashboard/barber/packages?tab=members");
 }

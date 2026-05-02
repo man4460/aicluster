@@ -7,12 +7,12 @@ import {
   AppImageLightbox,
   AppImageThumb,
   AppPickGalleryImageButton,
-  AppSectionHeader,
   AppTakePhotoButton,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
+import { cn } from "@/lib/cn";
 import { prepareBuildingPosSlipImageFile } from "@/systems/building-pos/building-pos-slip-image";
 import { PopupIconButton, popupIconBtnDanger } from "@/systems/car-wash/car-wash-popup-icon-buttons";
 import {

@@ -2,30 +2,41 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { AppColumnBarBucket, AppDualColumnBarBucket, AppRevenueCostBucket } from "@/components/app-templates";
 import {
+  AppDashboardSection,
   AppIconPencil,
   AppIconToolbarButton,
   AppIconTrash,
   AppImageLightbox,
   AppImageThumb,
   AppRevenueCostColumnChart,
-  AppSectionHeader,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { daysInBangkokMonth } from "@/lib/barber/bangkok-day";
 import { normalizeBarberSlipUrlForDashboard } from "@/lib/barber/receipt-display-url";
+import type { BarberCostToolbarApi } from "@/systems/barber/components/BarberCostPanel";
+import { BarberCostToolbarInline } from "@/systems/barber/components/BarberCostsClient";
 import { BarberDashboardCharts } from "@/systems/barber/components/BarberDashboardCharts";
 import {
+  barberCardSurfaceRadiusClass,
   barberIconToolbarGroupClass,
   barberInlineAlertErrorClass,
-  barberListRowCardClass,
+  barberModalBackdropClass,
+  barberModalCloseBtnClass,
+  barberModalHeaderClass,
+  barberModalPanelMdClass,
+  barberModalSubtitleClass,
+  barberModalTitleClass,
+  barberOffersEmptyStateClass,
+  barberOffersFilterBarClass,
+  barberOffersListRowCardClass,
+  barberOffersTabSegmentShellClass,
   barberPageStackClass,
-  barberSectionFirstClass,
-  barberSectionNextClass,
 } from "@/systems/barber/components/barber-ui-tokens";
+import { BarberModalPortal } from "@/systems/barber/components/BarberModalPortal";
 
 /** เดือนเดี่ยว 1–12 หรือทุกเดือนในปีที่เลือก */
 type MonthFilter = number | "all";
@@ -62,6 +73,24 @@ const MONTH_LABELS_TH = [
 ] as const;
 
 const MONTH_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
+
+const barberFinanceFilterSelectClass =
+  `w-full ${barberCardSurfaceRadiusClass} border border-[#e8e6f4]/90 bg-gradient-to-br from-white/95 to-[#f8f7ff]/60 px-3 py-2 text-sm font-semibold text-[#1e1b4b] shadow-sm outline-none transition focus:ring-2 focus:ring-violet-500/35`;
+const barberFinanceFilterInputClass =
+  `w-full ${barberCardSurfaceRadiusClass} border border-[#e8e6f4]/90 bg-gradient-to-br from-white/95 to-[#f8f7ff]/60 px-3 py-2 text-sm font-semibold text-[#1e1b4b] placeholder:text-slate-400 shadow-sm outline-none focus:ring-2 focus:ring-violet-500/35`;
+
+function financeListTabBtnClass(active: boolean, variant: "sales" | "costs") {
+  return cn(
+    `inline-flex items-center justify-center ${barberCardSurfaceRadiusClass} px-3 py-1.5 text-xs font-bold transition-all duration-200`,
+    active &&
+      variant === "sales" &&
+      "bg-gradient-to-br from-white via-indigo-50/95 to-violet-50/55 text-[#4338ca] shadow-sm ring-1 ring-indigo-200/55",
+    active &&
+      variant === "costs" &&
+      "bg-gradient-to-br from-white via-rose-50/90 to-orange-50/45 text-rose-800 shadow-sm ring-1 ring-rose-200/55",
+    !active && "text-slate-600 hover:bg-white/75 hover:text-slate-900",
+  );
+}
 
 function bangkokCalendarParts(): { year: number; month: number; day: number } {
   const key = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
@@ -121,8 +150,35 @@ function barberHistoryReceiptImgUrl(src: string | null | undefined): string | nu
   return normalizeBarberSlipUrlForDashboard(src, origin);
 }
 
-export function BarberHistoryClient() {
+export function BarberHistoryClient({
+  embedded = false,
+  onRequestCostsTab,
+  financeListTab = "sales",
+  onFinanceListTabChange,
+  costsPanel,
+  costToolbar = null,
+  costToolbarBusy = false,
+  financeFilterBeforeTitle,
+  financeFilterTitle,
+}: {
+  embedded?: boolean;
+  /** เมื่อไม่ได้ฝังรายจ่ายในหน้าเดียว — สลับไปแท็บต้นทุน/รายจ่าย */
+  onRequestCostsTab?: () => void;
+  /** โหมดการเงินรวม: แท็บรายการ (ซิงก์กับ ?tab=costs) */
+  financeListTab?: "sales" | "costs";
+  onFinanceListTabChange?: (tab: "sales" | "costs") => void;
+  /** แผงรายจ่าย (BarberCostsClient แบบ hideEmbeddedToolbar) */
+  costsPanel?: ReactNode;
+  costToolbar?: BarberCostToolbarApi | null;
+  costToolbarBusy?: boolean;
+  /** โหมดฝังหน้าการเงิน: แถวเหนือหัวข้อ (เช่น ปุ่มย้อนกลับ) */
+  financeFilterBeforeTitle?: ReactNode;
+  /** โหมดฝังหน้าการเงิน: หัวข้อซ้ายของแถวไอคอนกรอง (มือถือ) และคอลัมน์ซ้ายของแถบกรอง (เดสก์ท็อป) */
+  financeFilterTitle?: ReactNode;
+}) {
   const pathname = usePathname();
+  const financeUnified = Boolean(costsPanel && onFinanceListTabChange);
+  const activeListTab = financeUnified ? financeListTab : "sales";
   const receiptLightbox = useAppImageLightbox();
   const [year, setYear] = useState(() => bangkokCalendarParts().year);
   const [month, setMonth] = useState<MonthFilter>(() => bangkokCalendarParts().month);
@@ -133,6 +189,7 @@ export function BarberHistoryClient() {
   });
   const [draftQ, setDraftQ] = useState("");
   const [activeQ, setActiveQ] = useState("");
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -158,7 +215,10 @@ export function BarberHistoryClient() {
 
   /** เข้าหน้า — ค่าเริ่มต้น: ปีปัจจุบัน · เดือนปัจจุบัน · ทุกวันในเดือน (เวลาไทย) */
   useEffect(() => {
-    if (pathname !== "/dashboard/barber/history") return;
+    const onFinanceSales =
+      embedded && pathname === "/dashboard/barber/finance";
+    const onLegacyHistory = !embedded && pathname === "/dashboard/barber/history";
+    if (!onFinanceSales && !onLegacyHistory) return;
     const { year: y, month: m } = bangkokCalendarParts();
     setYear(y);
     setMonth(m);
@@ -166,7 +226,12 @@ export function BarberHistoryClient() {
     setDraftQ("");
     setActiveQ("");
     setAvailableYears([y]);
-  }, [pathname]);
+  }, [embedded, pathname]);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setActiveQ(draftQ.trim()), 350);
+    return () => window.clearTimeout(id);
+  }, [draftQ]);
 
   useEffect(() => {
     if (month === "all" || day === "all") return;
@@ -411,6 +476,15 @@ export function BarberHistoryClient() {
     void fetchHistory();
   }, [fetchHistory]);
 
+  useEffect(() => {
+    if (!mobileFilterOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileFilterOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileFilterOpen]);
+
   const { year: cy, month: cm, day: cd } = bangkokCalendarParts();
   const dayOptionsLen = month === "all" ? 0 : daysInBangkokMonth(year, month);
 
@@ -445,194 +519,593 @@ export function BarberHistoryClient() {
   const resolvedEditReceipt =
     editTarget && !editReceiptRemoved ? barberHistoryReceiptImgUrl(editTarget.receiptImageUrl) : null;
 
+  const presetBtnClass =
+    "rounded-full border border-indigo-100/90 bg-gradient-to-br from-white to-[#eef2ff]/85 px-3 py-1.5 text-xs font-bold text-[#4d47b6] shadow-sm backdrop-blur-sm transition hover:from-[#f8f7ff] hover:to-white hover:shadow";
+
+  const financeQuickPresetButtons = (
+    <>
+      <button type="button" className={presetBtnClass} onClick={applyPresetToday}>
+        วันนี้
+      </button>
+      <button type="button" className={presetBtnClass} onClick={applyPresetThisMonthAllDays}>
+        เดือนนี้ (ทุกวัน)
+      </button>
+      <button type="button" className={presetBtnClass} onClick={applyPresetThisYearAllMonths}>
+        ปีนี้ (ทุกเดือน)
+      </button>
+    </>
+  );
+
+  const financeEmbeddedHeaderPresets =
+    embedded && (financeFilterTitle != null || financeFilterBeforeTitle != null);
+
   return (
-    <div className={barberPageStackClass}>
-      <section className={barberSectionFirstClass} aria-label="กราฟตามช่วงเวลา">
-        {sparkLoading ? (
-          <p className="rounded-lg bg-[#f8f7ff] px-3 py-2 text-xs text-[#66638c]">กำลังโหลดกราฟ…</p>
-        ) : (
-          <div className="space-y-3">
-            <AppRevenueCostColumnChart
-              compact
-              buckets={sparkRevenueCost}
-              title="กราฟรายได้เทียบต้นทุน / รายจ่าย"
-              emptyText="ไม่มีข้อมูลรายได้หรือต้นทุนในช่วงที่เลือก"
-              formatTitle={(b) =>
-                `${b.label}: รายได้ ฿${b.revenue.toLocaleString()} · รายจ่าย ฿${b.cost.toLocaleString()}`
-              }
-            />
-            <div className="flex flex-wrap gap-3 rounded-lg border border-[#ecebff] bg-[#faf9ff]/80 px-3 py-2 text-xs">
-              <div>
-                <p className="text-[9px] font-semibold uppercase tracking-wide text-[#66638c]">
-                  รวมรายได้ (ช่วงที่กรอง)
-                </p>
-                <p className="text-sm font-bold tabular-nums text-[#2e2a58]">
-                  ฿{periodTotalRevenue.toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-[9px] font-semibold uppercase tracking-wide text-[#66638c]">
-                  รวมรายจ่าย / ต้นทุน
-                </p>
-                <p className="text-sm font-bold tabular-nums text-rose-700">
-                  ฿{periodTotalCost.toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-[9px] font-semibold uppercase tracking-wide text-[#66638c]">สุทธิ</p>
-                <p
-                  className={cn(
-                    "text-sm font-bold tabular-nums",
-                    periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-700" : "text-rose-800",
-                  )}
+    <div className={embedded ? "min-w-0 space-y-4" : barberPageStackClass}>
+      <AppDashboardSection tone="violet">
+        {embedded ?
+          financeFilterTitle != null || financeFilterBeforeTitle != null ?
+            <div className="flex flex-col gap-3 rounded-2xl border border-white/55 bg-gradient-to-br from-white/45 via-[#faf9ff]/40 to-[#ecfdf5]/25 p-3 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl md:hidden sm:p-4">
+              {financeFilterBeforeTitle ?
+                <div className="print:hidden">{financeFilterBeforeTitle}</div>
+              : null}
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">{financeFilterTitle}</div>
+                <button
+                  type="button"
+                  suppressHydrationWarning
+                  className={`inline-flex h-9 w-9 shrink-0 items-center justify-center ${barberCardSurfaceRadiusClass} border border-indigo-100/90 bg-gradient-to-br from-[#eef2ff] to-[#e0e7ff] text-violet-600 shadow-sm ring-1 ring-white/60 backdrop-blur-md transition-all active:scale-95`}
+                  onClick={() => setMobileFilterOpen(true)}
+                  aria-label="เปิดตัวกรองข้อมูลการเงิน"
                 >
-                  ฿{(periodTotalRevenue - periodTotalCost).toLocaleString()}
-                </p>
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                  </svg>
+                </button>
               </div>
             </div>
-            <p className="text-[11px] text-[#5f5a8a]">
-              <Link
-                href="/dashboard/barber/costs"
-                className="font-semibold text-[#4d47b6] underline decoration-[#4d47b6]/40 underline-offset-2 hover:decoration-[#4d47b6]"
-              >
-                บันทึกรายจ่าย / ต้นทุน
-              </Link>
-              <span className="text-[#66638c]"> — หมวดและสลิป</span>
-            </p>
-            <BarberDashboardCharts visitDualBuckets={sparkVisitDual} packageSalesBuckets={sparkPackageSales} />
-          </div>
-        )}
-      </section>
-      <section className={barberSectionNextClass} aria-label="กรองช่วงเวลา">
-        <AppSectionHeader
-          tone="violet"
-          title="ช่วงเวลา"
-          action={
-            <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
+          : <div className="flex justify-end rounded-2xl border border-white/55 bg-gradient-to-br from-white/45 via-[#faf9ff]/40 to-[#ecfdf5]/25 p-3 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl md:hidden sm:p-4">
               <button
                 type="button"
-                onClick={applyPresetToday}
-                className="rounded-full border border-[#d8d6ec] bg-white px-3 py-1.5 text-xs font-semibold text-[#4d47b6] hover:bg-[#f6f5ff]"
+                suppressHydrationWarning
+                className={`inline-flex h-9 w-9 shrink-0 items-center justify-center ${barberCardSurfaceRadiusClass} border border-indigo-100/90 bg-gradient-to-br from-[#eef2ff] to-[#e0e7ff] text-violet-600 shadow-sm ring-1 ring-white/60 backdrop-blur-md transition-all active:scale-95`}
+                onClick={() => setMobileFilterOpen(true)}
+                aria-label="เปิดตัวกรองข้อมูลการเงิน"
               >
-                วันนี้
-              </button>
-              <button
-                type="button"
-                onClick={applyPresetThisMonthAllDays}
-                className="rounded-full border border-[#d8d6ec] bg-white px-3 py-1.5 text-xs font-semibold text-[#4d47b6] hover:bg-[#f6f5ff]"
-              >
-                เดือนนี้ (ทุกวัน)
-              </button>
-              <button
-                type="button"
-                onClick={applyPresetThisYearAllMonths}
-                className="rounded-full border border-[#d8d6ec] bg-white px-3 py-1.5 text-xs font-semibold text-[#4d47b6] hover:bg-[#f6f5ff]"
-              >
-                ปีนี้ (ทุกเดือน)
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                </svg>
               </button>
             </div>
-          }
-        />
-        <div className="mt-4 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="flex flex-col gap-1 text-sm font-medium text-[#4d47b6]">
-            ปี
-            <select
-              className="app-input min-h-[48px] rounded-xl px-3 text-base"
-              value={String(year)}
-              onChange={(e) => setYear(Number(e.target.value))}
+        : <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/55 bg-gradient-to-br from-white/45 via-[#faf9ff]/40 to-[#ecfdf5]/25 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl md:rounded-[2rem] sm:p-5">
+            <div className="min-w-0">
+              <h2 className="text-xl font-black tracking-tight">
+                <span className="bg-gradient-to-r from-[#4338ca] via-[#6366f1] to-[#0d9488] bg-clip-text text-transparent">
+                  ภาพรวมการเงิน
+                </span>
+              </h2>
+              <p className="mt-1 text-xs font-medium leading-relaxed text-[#5f5a8a]">
+                <span className="text-[#6366f1]">กราฟรายได้</span>
+                <span className="mx-1.5 text-[#d4d0ec]" aria-hidden>
+                  ·
+                </span>
+                <span className="text-rose-600/85">ต้นทุน / รายจ่าย</span>
+              </p>
+            </div>
+            <button
+              type="button"
+              suppressHydrationWarning
+              className={`inline-flex h-9 w-9 shrink-0 items-center justify-center ${barberCardSurfaceRadiusClass} border border-indigo-100/90 bg-gradient-to-br from-[#eef2ff] to-[#e0e7ff] text-violet-600 shadow-sm ring-1 ring-white/60 backdrop-blur-md transition-all active:scale-95 md:hidden`}
+              onClick={() => setMobileFilterOpen(true)}
+              aria-label="เปิดตัวกรองข้อมูลการเงิน"
             >
-              {availableYears.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium text-[#4d47b6]">
-            เดือน
-            <select
-              className="app-input min-h-[48px] rounded-xl px-3 text-base"
-              value={month === "all" ? "all" : String(month)}
-              onChange={(e) => {
-                const v = e.target.value;
-                setMonth(v === "all" ? "all" : Number(v));
-                if (v === "all") setDay("all");
-              }}
-              aria-label="กรองตามเดือน หรือทุกเดือนในปี"
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
+            </button>
+          </div>
+        }
+
+        {financeEmbeddedHeaderPresets ?
+          <div className="hidden min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 md:flex print:hidden">
+            <div className="flex min-w-0 flex-col gap-2">
+              {financeFilterBeforeTitle}
+              {financeFilterTitle}
+            </div>
+            <div
+              className="flex shrink-0 flex-wrap items-center justify-end gap-2"
+              role="group"
+              aria-label="เลือกช่วงเวลาด่วน"
             >
-              <option value="all">ทุกเดือนในปีนี้</option>
-              {MONTH_NUMBERS.map((m) => (
-                <option key={m} value={String(m)}>
-                  {m} — {MONTH_LABELS_TH[m - 1]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium text-[#4d47b6]">
-            วันที่
-            <select
-              className="app-input min-h-[48px] rounded-xl px-3 text-base disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={month === "all"}
-              value={month === "all" ? "all" : day === "all" ? "all" : String(day)}
-              onChange={(e) => {
-                const v = e.target.value;
-                setDay(v === "all" ? "all" : Number(v));
-              }}
-              aria-label="กรองวันในปฏิทินไทย หรือทุกวันในเดือน"
-            >
-              <option value="all">ทุกวันในเดือน</option>
-              {month !== "all"
-                ? Array.from({ length: dayOptionsLen }, (_, i) => i + 1).map((d) => (
-                    <option key={d} value={String(d)}>
-                      {d}
-                    </option>
-                  ))
-                : null}
-            </select>
-          </label>
+              {financeQuickPresetButtons}
+            </div>
+          </div>
+        : null}
+
+        <div
+          className={cn(
+            barberOffersFilterBarClass,
+            financeFilterTitle != null || financeFilterBeforeTitle != null ? "mt-3" : "mt-5",
+            "hidden flex-wrap items-end gap-x-4 gap-y-3 backdrop-blur-sm md:flex md:py-3",
+          )}
+        >
+          <div className="grid min-w-0 w-full grid-cols-4 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="bb-fin-y">
+                ปี
+              </label>
+              <select
+                id="bb-fin-y"
+                className={barberFinanceFilterSelectClass}
+                value={String(year)}
+                onChange={(e) => setYear(Number(e.target.value))}
+              >
+                {availableYears.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="bb-fin-m">
+                เดือน
+              </label>
+              <select
+                id="bb-fin-m"
+                className={barberFinanceFilterSelectClass}
+                value={month === "all" ? "all" : String(month)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setMonth(v === "all" ? "all" : Number(v));
+                  if (v === "all") setDay("all");
+                }}
+                aria-label="กรองตามเดือน หรือทุกเดือนในปี"
+              >
+                <option value="all">ทุกเดือนในปีนี้</option>
+                {MONTH_NUMBERS.map((m) => (
+                  <option key={m} value={String(m)}>
+                    {m} — {MONTH_LABELS_TH[m - 1]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="bb-fin-d">
+                วัน
+              </label>
+              <select
+                id="bb-fin-d"
+                className={cn(barberFinanceFilterSelectClass, month === "all" && "cursor-not-allowed opacity-60")}
+                disabled={month === "all"}
+                value={month === "all" ? "all" : day === "all" ? "all" : String(day)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDay(v === "all" ? "all" : Number(v));
+                }}
+                aria-label="กรองวันในปฏิทินไทย หรือทุกวันในเดือน"
+              >
+                <option value="all">ทุกวันในเดือน</option>
+                {month !== "all"
+                  ? Array.from({ length: dayOptionsLen }, (_, i) => i + 1).map((d) => (
+                      <option key={d} value={String(d)}>
+                        {d}
+                      </option>
+                    ))
+                  : null}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="bb-fin-q">
+                ค้นหา
+              </label>
+              <input
+                id="bb-fin-q"
+                className={barberFinanceFilterInputClass}
+                placeholder="เบอร์หรือชื่อ"
+                value={draftQ}
+                onChange={(e) => setDraftQ(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
 
-      <form
-        className="mt-4 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-stretch"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setActiveQ(draftQ.trim());
-        }}
-      >
-        <input
-          className="app-input min-h-[48px] min-w-0 flex-1 rounded-xl px-3 text-base placeholder:text-[#8b87ad]"
-          placeholder="เบอร์หรือชื่อ (ว่าง = ทั้งหมด)"
-          value={draftQ}
-          onChange={(e) => setDraftQ(e.target.value)}
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="app-btn-primary min-h-[48px] w-full shrink-0 rounded-xl px-6 py-3 text-sm font-semibold text-white disabled:opacity-60 sm:w-auto"
+        <div
+          className={cn(
+            "mt-3 hidden flex-wrap gap-2 md:flex",
+            financeEmbeddedHeaderPresets && "md:hidden",
+          )}
         >
-          {loading ? "…" : "ค้นหา"}
-        </button>
-      </form>
-      </section>
+          {financeQuickPresetButtons}
+        </div>
+
+        <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-4">
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/60 bg-gradient-to-br from-white/60 via-violet-50/35 to-indigo-100/30 p-3 shadow-[0_16px_34px_-24px_rgba(91,97,255,0.4)] backdrop-blur-xl sm:p-5">
+            <div className="flex items-center justify-between gap-1">
+              <span className="truncate text-[8px] font-bold uppercase tracking-wider text-violet-500 sm:text-[10px]">
+                รายได้รวม
+              </span>
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-[10px] text-violet-600 sm:h-8 sm:w-8 sm:text-base">
+                ฿
+              </span>
+            </div>
+            <p className="mt-2 text-sm font-black text-[#1e1b4b] sm:mt-3 sm:text-2xl">
+              ฿{periodTotalRevenue.toLocaleString()}
+            </p>
+            <div className="mt-1 hidden items-center gap-1.5 sm:flex">
+              <div className="h-1 w-1 rounded-full bg-emerald-500" />
+              <span className="text-[10px] font-medium text-slate-500">ยอดขายในช่วงที่กรอง</span>
+            </div>
+          </div>
+
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/60 bg-gradient-to-br from-white/60 via-rose-50/30 to-orange-100/25 p-3 shadow-[0_16px_34px_-24px_rgba(244,63,94,0.35)] backdrop-blur-xl sm:p-5">
+            <div className="flex items-center justify-between gap-1">
+              <span className="truncate text-[8px] font-bold uppercase tracking-wider text-rose-500 sm:text-[10px]">
+                ต้นทุนรวม
+              </span>
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-600 sm:h-8 sm:w-8">
+                <svg viewBox="0 0 24 24" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="m19 9-7 7-7-7" />
+                </svg>
+              </span>
+            </div>
+            <p className="mt-2 text-sm font-black text-rose-900 sm:mt-3 sm:text-2xl">
+              ฿{periodTotalCost.toLocaleString()}
+            </p>
+            <div className="mt-1 hidden items-center gap-1.5 sm:flex">
+              <div className="h-1 w-1 rounded-full bg-rose-500" />
+              <span className="text-[10px] font-medium text-slate-500">จากกราฟช่วงเดียวกัน</span>
+            </div>
+          </div>
+
+          <div
+            className={cn(
+              "relative flex flex-col justify-between overflow-hidden rounded-2xl border p-3 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.32)] backdrop-blur-xl transition-colors sm:p-5",
+              periodTotalRevenue - periodTotalCost >= 0
+                ? "border-white/60 bg-gradient-to-br from-white/60 to-emerald-100/28"
+                : "border-white/60 bg-gradient-to-br from-white/60 to-orange-100/28",
+            )}
+          >
+            <div className="flex items-center justify-between gap-1">
+              <span
+                className={cn(
+                  "truncate text-[8px] font-bold uppercase tracking-wider sm:text-[10px]",
+                  periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-600" : "text-orange-600",
+                )}
+              >
+                กำไรสุทธิ
+              </span>
+              <span
+                className={cn(
+                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-lg sm:h-8 sm:w-8",
+                  periodTotalRevenue - periodTotalCost >= 0 ? "bg-emerald-100 text-emerald-600" : "bg-orange-100 text-orange-600",
+                )}
+              >
+                <svg viewBox="0 0 24 24" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+              </span>
+            </div>
+            <p
+              className={cn(
+                "mt-2 text-sm font-black sm:mt-3 sm:text-2xl",
+                periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-900" : "text-orange-900",
+              )}
+            >
+              ฿{(periodTotalRevenue - periodTotalCost).toLocaleString()}
+            </p>
+            <div className="mt-1 hidden items-center gap-1.5 sm:flex">
+              <div
+                className={cn(
+                  "h-1 w-1 rounded-full",
+                  periodTotalRevenue - periodTotalCost >= 0 ? "bg-emerald-500" : "bg-orange-500",
+                )}
+              />
+              <span className="text-[10px] font-medium text-slate-500">รายได้ − รายจ่าย</span>
+            </div>
+          </div>
+        </div>
+
+        {sparkLoading ? (
+          <p className="mt-5 rounded-2xl border border-[#e8e6f4]/80 bg-gradient-to-br from-[#faf9ff]/90 via-white to-[#f0fdf9]/40 px-4 py-6 text-center text-sm text-slate-600 shadow-sm backdrop-blur-md">
+            กำลังโหลดกราฟ…
+          </p>
+        ) : (
+          <>
+            <div className="mt-4 rounded-2xl border border-white/60 bg-gradient-to-br from-white/55 via-[#faf9ff]/35 to-indigo-50/25 p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
+              <div className="mb-2 sm:mb-3">
+                <h3 className="bg-gradient-to-r from-[#312e81] to-[#5b61ff] bg-clip-text text-sm font-black text-transparent sm:text-base">
+                  แนวโน้มรายได้และรายจ่าย
+                </h3>
+              </div>
+              <div className="h-[220px] w-full sm:h-[280px]">
+                <AppRevenueCostColumnChart
+                  className="h-full w-full"
+                  buckets={sparkRevenueCost}
+                  title=""
+                  emptyText="ไม่มีข้อมูลรายได้หรือต้นทุนในช่วงที่เลือก"
+                  formatTitle={(b) =>
+                    `${b.label}: รายได้ ฿${b.revenue.toLocaleString()} · รายจ่าย ฿${b.cost.toLocaleString()}`
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 min-w-0">
+              <BarberDashboardCharts visitDualBuckets={sparkVisitDual} packageSalesBuckets={sparkPackageSales} />
+            </div>
+          </>
+        )}
+      </AppDashboardSection>
+
+      {mobileFilterOpen ?
+        <BarberModalPortal>
+          <div
+            className={barberModalBackdropClass}
+            role="presentation"
+            onClick={() => setMobileFilterOpen(false)}
+          >
+            <div
+              id="barber-finance-filter-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="barber-finance-filter-dialog-title"
+              className={barberModalPanelMdClass}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={barberModalHeaderClass}>
+                <div className="min-w-0">
+                  <h2 id="barber-finance-filter-dialog-title" className={barberModalTitleClass}>
+                    ตัวกรองข้อมูลการเงิน
+                  </h2>
+                  <p className={barberModalSubtitleClass}>เลือกช่วงเวลาและคำค้นหาเพื่อดูผลลัพธ์</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileFilterOpen(false)}
+                  className={barberModalCloseBtnClass}
+                  aria-label="ปิด"
+                >
+                  ✕
+                </button>
+              </div>
+              <form
+                className="space-y-4 px-5 py-5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setMobileFilterOpen(false);
+                }}
+              >
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block text-xs font-semibold text-[#4d47b6]" htmlFor="bb-fin-popup-y">
+                    ปี
+                    <select
+                      id="bb-fin-popup-y"
+                      className={`app-input mt-1.5 min-h-[48px] w-full rounded-xl px-3 py-2 text-base ${barberCardSurfaceRadiusClass}`}
+                      value={String(year)}
+                      onChange={(e) => setYear(Number(e.target.value))}
+                    >
+                      {availableYears.map((y) => (
+                        <option key={y} value={y}>
+                          {y}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-xs font-semibold text-[#4d47b6]" htmlFor="bb-fin-popup-m">
+                    เดือน
+                    <select
+                      id="bb-fin-popup-m"
+                      className={`app-input mt-1.5 min-h-[48px] w-full rounded-xl px-3 py-2 text-base ${barberCardSurfaceRadiusClass}`}
+                      value={month === "all" ? "all" : String(month)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setMonth(v === "all" ? "all" : Number(v));
+                        if (v === "all") setDay("all");
+                      }}
+                      aria-label="กรองตามเดือน หรือทุกเดือนในปี"
+                    >
+                      <option value="all">ทุกเดือนในปีนี้</option>
+                      {MONTH_NUMBERS.map((m) => (
+                        <option key={m} value={String(m)}>
+                          {m} — {MONTH_LABELS_TH[m - 1]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <label className="block text-xs font-semibold text-[#4d47b6]" htmlFor="bb-fin-popup-d">
+                  วัน
+                  <select
+                    id="bb-fin-popup-d"
+                    className={cn(
+                      `app-input mt-1.5 min-h-[48px] w-full rounded-xl px-3 py-2 text-base ${barberCardSurfaceRadiusClass}`,
+                      month === "all" && "cursor-not-allowed opacity-60",
+                    )}
+                    disabled={month === "all"}
+                    value={month === "all" ? "all" : day === "all" ? "all" : String(day)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setDay(v === "all" ? "all" : Number(v));
+                    }}
+                    aria-label="กรองวันในปฏิทินไทย หรือทุกวันในเดือน"
+                  >
+                    <option value="all">ทุกวันในเดือน</option>
+                    {month !== "all"
+                      ? Array.from({ length: dayOptionsLen }, (_, i) => i + 1).map((d) => (
+                          <option key={d} value={String(d)}>
+                            {d}
+                          </option>
+                        ))
+                      : null}
+                  </select>
+                </label>
+                <label className="block text-xs font-semibold text-[#4d47b6]" htmlFor="bb-fin-popup-q">
+                  ค้นหา
+                  <input
+                    id="bb-fin-popup-q"
+                    className="app-input mt-1.5 min-h-[48px] w-full rounded-xl px-3 py-2 text-base placeholder:text-[#8b87ad]"
+                    placeholder="เบอร์หรือชื่อ"
+                    value={draftQ}
+                    onChange={(e) => setDraftQ(e.target.value)}
+                  />
+                </label>
+                <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+                  {financeQuickPresetButtons}
+                </div>
+                <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setMobileFilterOpen(false)}
+                    className={`app-btn-soft min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-[#2e2a58]`}
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="submit"
+                    className={`app-btn-primary min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-white`}
+                  >
+                    ใช้การกรอง
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </BarberModalPortal>
+      : null}
 
       {error ? <p className={barberInlineAlertErrorClass}>{error}</p> : null}
 
-      {!loading && logs.length === 0 && !error ? (
-        <section className={barberSectionNextClass} aria-label="ไม่มีรายการ">
-          <p className="rounded-xl border border-dashed border-[#dcd8f0] py-10 text-center text-sm text-[#66638c]">
+      <AppDashboardSection tone="slate">
+        <div className="flex flex-col gap-4 rounded-2xl border border-white/55 bg-gradient-to-br from-white/40 via-[#faf9ff]/35 to-[#fff7ed]/18 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl md:rounded-[2rem] sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-black tracking-tight">
+                <span className="bg-gradient-to-r from-[#312e81] via-[#5b61ff] to-[#0d9488] bg-clip-text text-transparent">
+                  รายการในช่วงที่กรอง
+                </span>
+              </h2>
+              {financeUnified && activeListTab === "sales" && loading ? (
+                <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700">
+                  กำลังอัปเดต…
+                </span>
+              ) : null}
+              {!financeUnified && loading ? (
+                <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700">
+                  กำลังอัปเดต…
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-0.5 text-xs font-medium text-slate-500">
+              {financeUnified && activeListTab === "costs"
+                ? "ต้นทุน · รายจ่าย · แถบขวาจัดการ"
+                : `${logs.length} รายการ`}
+            </p>
+          </div>
+          {financeUnified ? (
+            <div
+              className={cn(
+                barberOffersTabSegmentShellClass,
+                "flex max-w-full shrink-0 flex-wrap items-center gap-1 p-1 backdrop-blur-sm",
+              )}
+              role="group"
+              aria-label="สลับมุมมองรายรับและรายจ่าย"
+            >
+              {activeListTab === "costs" ? (
+                <BarberCostToolbarInline toolbar={costToolbar} busy={costToolbarBusy} />
+              ) : null}
+              <button
+                type="button"
+                suppressHydrationWarning
+                className={financeListTabBtnClass(activeListTab === "sales", "sales")}
+                onClick={() => onFinanceListTabChange?.("sales")}
+              >
+                รายรับ
+              </button>
+              <button
+                type="button"
+                suppressHydrationWarning
+                className={financeListTabBtnClass(activeListTab === "costs", "costs")}
+                onClick={() => onFinanceListTabChange?.("costs")}
+              >
+                รายจ่าย
+              </button>
+            </div>
+          ) : (
+            <div
+              className={cn(
+                barberOffersTabSegmentShellClass,
+                "flex shrink-0 items-center gap-1 p-1 backdrop-blur-sm",
+              )}
+              role="group"
+              aria-label="สลับมุมมองรายรับและรายจ่าย"
+            >
+              <span
+                className={financeListTabBtnClass(true, "sales")}
+                aria-current="page"
+              >
+                รายรับ
+              </span>
+              {onRequestCostsTab ? (
+                <button
+                  type="button"
+                  suppressHydrationWarning
+                  onClick={onRequestCostsTab}
+                  className={financeListTabBtnClass(false, "costs")}
+                >
+                  รายจ่าย
+                </button>
+              ) : (
+                <Link
+                  href="/dashboard/barber/finance?tab=costs"
+                  className={financeListTabBtnClass(false, "costs")}
+                >
+                  รายจ่าย
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
+
+        {activeListTab === "sales" && !loading && logs.length === 0 && !error ? (
+          <p className={`${barberOffersEmptyStateClass} mt-4 text-sm text-slate-600`}>
             ไม่มีรายการในช่วงนี้
           </p>
-        </section>
-      ) : null}
+        ) : null}
 
-      {logs.length > 0 ? (
-        <section className={barberSectionNextClass} aria-label="รายการยอดขาย">
+        {activeListTab === "sales" && logs.length > 0 ? (
           <div
-            className="max-h-[min(65vh,32rem)] min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain pr-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
+            className="mt-4 max-h-[min(70vh,40rem)] min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain rounded-2xl border border-white/55 bg-white/35 pr-0.5 shadow-[0_16px_38px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] lg:border-0 lg:bg-transparent lg:shadow-none lg:backdrop-blur-0"
             role="region"
             aria-label="รายการผู้มาใช้บริการ — เลื่อนดูเพิ่มเติม"
           >
-            <ul className="space-y-2 pb-1">
+            <ul className="space-y-2 p-3 pb-4 sm:p-4">
               {logs.map((l) => {
                 const isCash = l.visitType === "CASH_WALK_IN";
                 const amt = isCash && l.amountBaht != null ? Number(l.amountBaht) : null;
@@ -641,7 +1114,7 @@ export function BarberHistoryClient() {
                   <li
                     key={l.id}
                     className={cn(
-                      barberListRowCardClass,
+                      barberOffersListRowCardClass,
                       "flex min-w-0 gap-3 py-2.5 sm:items-start sm:gap-4",
                     )}
                   >
@@ -650,7 +1123,7 @@ export function BarberHistoryClient() {
                         src={receiptSrc}
                         alt="สลิป"
                         onOpen={() => receiptLightbox.open(receiptSrc)}
-                        className="self-start rounded-lg border border-[#ecebff] bg-[#f8f7ff] ring-[#ecebff] hover:ring-[#4d47b6]/35 sm:h-[4.5rem] sm:w-[4.5rem]"
+                        className="self-start rounded-lg border border-[#e0dcfa]/90 bg-gradient-to-br from-white via-[#faf9ff] to-[#eef2ff]/80 shadow-sm ring-1 ring-[#ecebff]/80 hover:ring-[#4d47b6]/35 sm:h-[4.5rem] sm:w-[4.5rem]"
                       />
                     ) : null}
                     <div className="min-w-0 flex-1 space-y-0.5">
@@ -719,41 +1192,49 @@ export function BarberHistoryClient() {
               })}
             </ul>
           </div>
-        </section>
-      ) : null}
+        ) : null}
+
+        {financeUnified && costsPanel ? (
+          <div
+            className={cn(
+              "mt-4 min-h-0 max-h-[min(70vh,40rem)] overflow-y-auto overflow-x-hidden overscroll-y-contain rounded-2xl border border-white/55 bg-white/35 shadow-[0_16px_38px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] lg:border-0 lg:bg-transparent lg:shadow-none lg:backdrop-blur-0",
+              activeListTab !== "costs" && "hidden",
+            )}
+            role="region"
+            aria-label="รายการต้นทุนและรายจ่าย"
+          >
+            {costsPanel}
+          </div>
+        ) : null}
+      </AppDashboardSection>
 
       {editTarget ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
-          role="presentation"
-          onClick={() => closeEditModal()}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="barber-history-edit-title"
-            className="max-h-[min(92vh,520px)] w-full max-w-md overflow-y-auto rounded-t-2xl border border-[#ecebff] bg-white shadow-2xl sm:rounded-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 flex items-start justify-between gap-3 border-b border-[#ecebff] bg-white px-4 py-3 sm:px-5">
-              <div className="min-w-0">
-                <h2 id="barber-history-edit-title" className="text-base font-bold text-[#2e2a58] sm:text-lg">
-                  แก้ไขรายการ
-                </h2>
-                <p className="mt-0.5 truncate text-xs text-[#66638c] tabular-nums">
-                  รายการ #{editTarget.id}
-                </p>
+        <BarberModalPortal>
+          <div className={barberModalBackdropClass} role="presentation" onClick={() => closeEditModal()}>
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="barber-history-edit-title"
+              className={barberModalPanelMdClass}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={barberModalHeaderClass}>
+                <div className="min-w-0">
+                  <h2 id="barber-history-edit-title" className={barberModalTitleClass}>
+                    แก้ไขรายการ
+                  </h2>
+                  <p className={cn(barberModalSubtitleClass, "truncate tabular-nums")}>รายการ #{editTarget.id}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => closeEditModal()}
+                  className={barberModalCloseBtnClass}
+                  aria-label="ปิด"
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => closeEditModal()}
-                className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-[#66638c] hover:bg-[#f4f3fb] hover:text-[#2e2a58]"
-                aria-label="ปิด"
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={(e) => void submitEdit(e)} className="grid gap-3 px-4 py-4 sm:px-5">
+              <form onSubmit={(e) => void submitEdit(e)} className="grid gap-3 px-5 py-5">
               {editErr ? (
                 <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{editErr}</p>
               ) : null}
@@ -787,7 +1268,7 @@ export function BarberHistoryClient() {
                 />
               </label>
               {editTarget.visitType === "CASH_WALK_IN" ? (
-                <div className="rounded-xl border border-[#ecebff] bg-[#faf9ff] px-3 py-2.5">
+                <div className={`${barberCardSurfaceRadiusClass} border border-[#ecebff] bg-[#faf9ff] px-3 py-2.5`}>
                   <p className="text-xs font-semibold text-[#4d47b6]">รูปสลิป</p>
                   <input
                     ref={editReceiptInputRef}
@@ -890,21 +1371,22 @@ export function BarberHistoryClient() {
                 <button
                   type="button"
                   onClick={() => closeEditModal()}
-                  className="app-btn-soft min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold text-[#2e2a58]"
+                  className={`app-btn-soft min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-[#2e2a58]`}
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
                   disabled={editSaving}
-                  className="app-btn-primary min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                  className={`app-btn-primary min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-white disabled:opacity-60`}
                 >
                   {editSaving ? "กำลังบันทึก…" : "บันทึก"}
                 </button>
               </div>
             </form>
+            </div>
           </div>
-        </div>
+        </BarberModalPortal>
       ) : null}
 
       <AppImageLightbox

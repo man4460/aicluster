@@ -37,10 +37,13 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 !.env.example
+!env.local.docker-db.example
 
 # local databases
 *.db
 *.db-journal
+# ad hoc MySQL dumps (may contain production-like data)
+mawell_buffet_from_host.sql
 
 # user uploads (keep .gitkeep)
 /public/uploads/avatars/*
@@ -83,3 +86,9 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+/src/generated/.prisma_stale_*
+
+# local build / tooling artifacts (ไม่อัปโหลด)
+/dist/
+.wrangler/
+.env copy

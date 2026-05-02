@@ -1,0 +1,64 @@
+---
+description: เทมเพลตแดชบอร์ดโมดูลร้านตัดผม — เลย์เอาต์ตามขนาดจอ สี การ์ด ขอบมน เมนูล่างมือถือ และแพทเทิร์นต่อยอดโมดูลอื่น
+globs:
+  - "**/systems/barber/**"
+  - "**/app/**/dashboard/barber/**"
+---
+
+# ร้านตัดผม (Barber) — เทมเพลตแดชบอร์ด & UI
+
+ใช้เป็นแบบอ้างอิงเมื่อสร้างโมดูลแดชบอร์ดใหม่ที่โทน MAWELL / glass / แยกเมนูมือถือ–เดสก์ท็อป
+
+## 1) เลย์เอาต์ตามขนาดจอ (Tailwind)
+
+| โซน | มือถือ (`max-md`, &lt;768px) | แท็บเล็ต/คอม (`md:` ขึ้นไป) |
+|-----|------------------------------|------------------------------|
+| **แถบนำทางโมดูล** | **`BarberModuleMobileDock`** — `fixed inset-x-0 bottom-0 z-[90]` กริด 4 คอลัมน์ ไอคอน + ป้ายสั้น | **`BarberModuleDesktopNav`** — ในการ์ดหัว (`BarberLayoutChrome`) ใต้เส้นแบ่ง `border-t border-white/40` |
+| **หัวโมดูล** | โลโก้ + ชื่อระบบ + ปุ่มคู่มือ; tagline ซ่อนบนมือถือ (`hidden md:block`) | เหมือนเดิม + แสดง tagline |
+| **พื้นที่เลื่อนเนื้อหา** | **`BarberLayoutChrome`** ใส่ `max-md:pb-[calc(4.85rem+env(safe-area-inset-bottom))]` เพื่อไม่ให้เนื้อหาถูก dock บัง | ไม่ต้องเว้น pb แบบ dock |
+| **Gutter แดชบอร์ด** | `DashboardShell` แถวหลัก: `max-md:px-2` เมื่ออยู่ใต้ `/dashboard/barber/*` | `sm:px-4` |
+| **PageContainer ชั้นแดชบอร์ด** | `DashboardPagesShell`: `max-md:!px-3 sm:!px-6` สำหรับ path barber | `sm:!px-6` |
+| **โมดูล Shell** | `BarberModuleShell` → `PageContainer` ใช้ `!px-0` (ไม่ซ้ำขอบแนวนอนกับชั้นแดชบอร์ด) | เหมือนกัน |
+
+**หมายเหตุแท็บเล็ต:** ในโค้ดปัจจุบันใช้ breakpoint **`md` (768px)** เป็นจุดสลับ dock ↔ เมนูในการ์ด — แท็บเล็ตแนวตั้งส่วนใหญ่จึงได้ **dock ล่าง**; แท็บเล็ตแนวนอน/หน้าจอกว้างพอได้ **เมนูในการ์ด**
+
+## 2) สี ขนาดการ์ด ขอบมน
+
+**แหล่ง token หลัก:** `@/systems/barber/components/barber-ui-tokens.ts`
+
+- **โทนแบรนด์ / ลิงก์ active:** `#5b61ff`, ไล่ข้อความหัวข้อ `#4338ca` → `#5b61ff` → `#0d9488`
+- **ข้อความหลักเข้ม:** `#1e1b4b`, รอง `#5f5a8a` / `#66638c`
+- **เปลือกโมดูล (glass):** `BarberLayoutChrome` — `rounded-[2.5rem] max-md:rounded-2xl`, เส้นขอบ `border-white/50`, พื้นไล่ `from-white/50 via-indigo-50/25 to-violet-100/20`, `backdrop-blur-2xl`, เงา inset ขาวอ่อน
+- **เปลือกเนื้อหาชั้นใน (ใช้เฉพาะบางหน้า):** `rounded-[2rem] max-md:rounded-2xl`, `border-white/45`, `bg-white/35` — หน้าที่มีการ์ดหนาแล้วใช้โหมด **plain inner** (ดูด้านล่าง)
+- **การ์ดย่อยในโมดูล:** `barberCardSurfaceRadiusClass` = `rounded-2xl sm:rounded-xl`; `barberCardBodyPaddingXClass` = `px-2.5 sm:px-4`
+- **เซกชันแดชบอร์มมาตรฐาน (การเงิน ฯลฯ):** `AppDashboardSection` tone **`violet`** → `appDashboardSectionVioletClass` ใน `@/components/app-templates/dashboard-tokens.ts`
+
+อย่าซ้อน glass card ทับ glass card โดยไม่จำเป็น — ถ้าหน้ามี `AppDashboardSection` หรือ hub header หนาแล้ว ให้ไม่ห่อด้วย `barberModuleContentShellClass` ซ้ำ
+
+## 3) ปุ่มเมนู — มือถืออยู่ด้านล่าง
+
+- **เมนูหลักโมดูล (แดชบอร์ด / การเงิน / แพ็กเกจ / QR):** ใช้ **`BarberModuleMobileDock`** เท่านั้นบนมือถือ — อย่าย้ายเป็นแถบบนหรือ hamburger สำหรับลิงก์เหล่านี้
+- Dock ต้องอยู่ **นอก** การ์ดหัวที่มี `overflow-hidden` เพื่อไม่ถูกตัด — เรียบง่าย: dock เรนเดอร์ถัดจากการ์ดหัวใน `BarberLayoutChrome`
+- **safe area:** `pb-[max(0.35rem,env(safe-area-inset-bottom))]` บน dock
+- **ช่องสัมผัส:** ลิงก์ dock `min-h-[52px]`; ปุ่มนำทางเดสก์ท็อป `min-h-[44px]` (`barberNavLinkClass`)
+
+## 4) แพทเทิร์นอื่นที่ควรคงไว้ในระบบต่อไป
+
+- **Staff kiosk (`/dashboard/barber/staff`):** ซ่อน header/sidebar แดชบอร์ด + ซ่อน chrome โมดูล — เนื้อหาแบบพอร์ทัล (`DashboardPagesShell` / `BarberModuleShell` เต็มความกว้าง `!p-0` ตามโค้ด) — ห้ามใส่ gutter ซ้ำ
+- **หน้า plain inner (ไม่ห่อ `barberModuleContentShellClass`):** `/dashboard/barber/staff`, `/finance`, `/packages`, `/qr` — ลดการ์ดซ้อน
+- **โมดัลที่ต้องลอยเหนือ dock:** ใช้ **`BarberModalPortal`** (portal ไป `document.body`, z เหนือ dock) สำหรับฟอร์ม/กรองมือถือ
+- **Hydration / ส่วนขยายเบราว์เซอร์:** ปุ่มที่โดน inject attribute (เช่น `fdprocessedid`) ใช้ `suppressHydrationWarning` ตามที่ทำใน clients ที่เกี่ยวข้อง
+- **หน้า hub แพ็กเกจบนมือถือ:** หัวข้อเต็มความกว้าง → แถบแท็บเต็มความกว้าง → ปุ่มหลักเต็มความกว้าง (ดู `BarberPackagesHubClient`)
+
+## ไฟล์อ้างอิงหลัก
+
+| บทบาท | ไฟล์ |
+|--------|------|
+| Shell + glass + plain inner | `src/systems/barber/components/BarberLayoutChrome.tsx` |
+| Dock / เดสก์ท็อป nav | `src/systems/barber/components/BarberModuleHeader.tsx` |
+| PageContainer โมดูล | `src/systems/barber/components/BarberModuleShell.tsx` |
+| Token การ์ด / ว่าง / modal | `src/systems/barber/components/barber-ui-tokens.ts` |
+| Gutter แดชบอร์ด | `src/components/dashboard/DashboardPagesShell.tsx`, `src/components/layout/DashboardShell.tsx` |
+| พอร์ทัลโมดัล | `src/systems/barber/components/BarberModalPortal.tsx` |
+
+เมื่อคัดลอกเทมเพลตไปโมดูลใหม่: แยก **`ModuleLayoutChrome`** (glass header + desktop nav + **fixed mobile dock**) + **`module-ui-tokens.ts`** + ผูก path ใน `DashboardShell` / `DashboardPagesShell` ให้ gutter ไม่ซ้ำชั้น

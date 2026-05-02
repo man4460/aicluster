@@ -13,10 +13,22 @@ import {
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { BarberDashboardBackLink } from "@/systems/barber/components/BarberDashboardBackLink";
+import { BarberModalPortal } from "@/systems/barber/components/BarberModalPortal";
 import {
+  barberCardSurfaceRadiusClass,
+  barberEmptyStateDashedClass,
   barberIconToolbarGroupClass,
   barberInlineAlertErrorClass,
+  barberMutedLoadingNoticeClass,
+  barberModalImagePreviewCloseBtnClass,
   barberListRowCardClass,
+  barberModalBackdropClass,
+  barberModalBackdropImagePreviewClass,
+  barberModalCloseBtnClass,
+  barberModalHeaderClass,
+  barberModalPanelLgClass,
+  barberModalSubtitleClass,
+  barberModalTitleClass,
   barberPageStackClass,
   barberSectionActionsRowClass,
   barberSectionFirstClass,
@@ -42,7 +54,7 @@ async function uploadStylistImage(file: File): Promise<string> {
   return url;
 }
 
-export function BarberStylistsClient() {
+export function BarberStylistsClient({ embedded = false }: { embedded?: boolean } = {}) {
   const router = useRouter();
   const [list, setList] = useState<Stylist[]>([]);
   const [loading, setLoading] = useState(true);
@@ -360,7 +372,7 @@ export function BarberStylistsClient() {
   const editDisplayPhoto = editPhotoPreview ?? editStylist?.photoUrl ?? null;
 
   return (
-    <div className={barberPageStackClass}>
+    <div className={embedded ? "space-y-4 sm:space-y-5" : barberPageStackClass}>
       <input
         ref={rowUploadRef}
         type="file"
@@ -381,11 +393,11 @@ export function BarberStylistsClient() {
           title="รายชื่อช่าง"
           action={
             <div className={barberSectionActionsRowClass}>
-              <BarberDashboardBackLink />
+              {!embedded ? <BarberDashboardBackLink /> : null}
               <button
                 type="button"
                 onClick={openAddModal}
-                className="app-btn-primary min-h-[44px] rounded-xl px-4 py-2.5 text-sm font-semibold"
+                className={`app-btn-primary min-h-[44px] ${barberCardSurfaceRadiusClass} px-4 py-2.5 text-sm font-semibold`}
               >
                 เพิ่มช่าง
               </button>
@@ -393,9 +405,9 @@ export function BarberStylistsClient() {
           }
         />
         {loading ? (
-          <p className="rounded-lg bg-[#f8f7ff] px-4 py-3 text-sm text-[#66638c]">กำลังโหลดรายการ…</p>
+          <p className={barberMutedLoadingNoticeClass}>กำลังโหลดรายการ…</p>
         ) : list.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[#dcd8f0] bg-[#faf9ff]/80 px-4 py-10 text-center">
+          <div className={`${barberEmptyStateDashedClass} text-center`}>
             <p className="text-sm font-medium text-[#2e2a58]">ยังไม่มีช่าง</p>
             <p className="mx-auto mt-2 max-w-sm text-xs leading-relaxed text-[#66638c]">
               กด &ldquo;เพิ่มช่าง&rdquo; เพื่อเพิ่มคนแรก — ใช้เลือกตอนเช็กอินและบันทึกการขายแพ็ก
@@ -485,35 +497,32 @@ export function BarberStylistsClient() {
       </section>
 
       {addOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
-          role="presentation"
-          onClick={() => closeAddModal()}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="barber-add-stylist-title"
-            className="max-h-[min(92vh,640px)] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-[#ecebff] bg-white shadow-2xl sm:rounded-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 flex items-start justify-between gap-3 border-b border-[#ecebff] bg-white px-5 py-4">
-              <div>
-                <h2 id="barber-add-stylist-title" className="text-lg font-bold text-[#2e2a58]">
-                  เพิ่มช่าง
-                </h2>
-                <p className="mt-1 text-xs text-[#66638c]">ชื่อบังคับ · เบอร์และรูปไม่บังคับ</p>
+        <BarberModalPortal>
+          <div className={barberModalBackdropClass} role="presentation" onClick={() => closeAddModal()}>
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="barber-add-stylist-title"
+              className={barberModalPanelLgClass}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={barberModalHeaderClass}>
+                <div className="min-w-0">
+                  <h2 id="barber-add-stylist-title" className={barberModalTitleClass}>
+                    เพิ่มช่าง
+                  </h2>
+                  <p className={barberModalSubtitleClass}>ชื่อบังคับ · เบอร์และรูปไม่บังคับ</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => closeAddModal()}
+                  className={barberModalCloseBtnClass}
+                  aria-label="ปิด"
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => closeAddModal()}
-                className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-[#66638c] hover:bg-[#f4f3fb] hover:text-[#2e2a58]"
-                aria-label="ปิด"
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={(e) => void onCreate(e)} className="grid gap-3 px-5 py-4">
+              <form onSubmit={(e) => void onCreate(e)} className="grid gap-3 px-5 py-5">
               {err ? (
                 <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{err}</p>
               ) : null}
@@ -550,7 +559,7 @@ export function BarberStylistsClient() {
                   <button
                     type="button"
                     onClick={() => addFileRef.current?.click()}
-                    className="inline-flex items-center gap-2 rounded-xl border border-[#ecebff] bg-[#f6f5ff] px-3 py-2 text-sm font-semibold text-[#4d47b6]"
+                    className={`inline-flex items-center gap-2 ${barberCardSurfaceRadiusClass} border border-[#ecebff] bg-[#f6f5ff] px-3 py-2 text-sm font-semibold text-[#4d47b6]`}
                   >
                     <AppIconUpload className="h-4 w-4" />
                     เลือกรูป
@@ -573,7 +582,7 @@ export function BarberStylistsClient() {
                   <img
                     src={addPhotoPreview}
                     alt=""
-                    className="mt-3 max-h-40 rounded-xl border border-[#ecebff] object-contain"
+                    className={`mt-3 max-h-40 ${barberCardSurfaceRadiusClass} border border-[#ecebff] object-contain`}
                   />
                 ) : null}
               </div>
@@ -581,53 +590,51 @@ export function BarberStylistsClient() {
                 <button
                   type="button"
                   onClick={() => closeAddModal()}
-                  className="app-btn-soft min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold text-[#2e2a58]"
+                  className={`app-btn-soft min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-[#2e2a58]`}
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="app-btn-primary min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold disabled:opacity-60"
+                  className={`app-btn-primary min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold disabled:opacity-60`}
                 >
                   {saving ? "กำลังบันทึก…" : "บันทึก"}
                 </button>
               </div>
             </form>
+            </div>
           </div>
-        </div>
+        </BarberModalPortal>
       ) : null}
 
       {editOpen && editStylist ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
-          role="presentation"
-          onClick={() => closeEditModal()}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="barber-edit-stylist-title"
-            className="max-h-[min(92vh,640px)] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-[#ecebff] bg-white shadow-2xl sm:rounded-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 flex items-start justify-between gap-3 border-b border-[#ecebff] bg-white px-5 py-4">
-              <div>
-                <h2 id="barber-edit-stylist-title" className="text-lg font-bold text-[#2e2a58]">
-                  แก้ไขช่าง
-                </h2>
-                <p className="mt-1 text-xs text-[#66638c]">{editStylist.name}</p>
+        <BarberModalPortal>
+          <div className={barberModalBackdropClass} role="presentation" onClick={() => closeEditModal()}>
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="barber-edit-stylist-title"
+              className={barberModalPanelLgClass}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={barberModalHeaderClass}>
+                <div className="min-w-0">
+                  <h2 id="barber-edit-stylist-title" className={barberModalTitleClass}>
+                    แก้ไขช่าง
+                  </h2>
+                  <p className={barberModalSubtitleClass}>{editStylist.name}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => closeEditModal()}
+                  className={barberModalCloseBtnClass}
+                  aria-label="ปิด"
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => closeEditModal()}
-                className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-[#66638c] hover:bg-[#f4f3fb] hover:text-[#2e2a58]"
-                aria-label="ปิด"
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={(e) => void onSaveEdit(e)} className="grid gap-3 px-5 py-4">
+              <form onSubmit={(e) => void onSaveEdit(e)} className="grid gap-3 px-5 py-5">
               {err ? (
                 <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{err}</p>
               ) : null}
@@ -662,7 +669,7 @@ export function BarberStylistsClient() {
                   <button
                     type="button"
                     onClick={() => editFileRef.current?.click()}
-                    className="inline-flex items-center gap-2 rounded-xl border border-[#ecebff] bg-[#f6f5ff] px-3 py-2 text-sm font-semibold text-[#4d47b6]"
+                    className={`inline-flex items-center gap-2 ${barberCardSurfaceRadiusClass} border border-[#ecebff] bg-[#f6f5ff] px-3 py-2 text-sm font-semibold text-[#4d47b6]`}
                   >
                     <AppIconUpload className="h-4 w-4" />
                     เปลี่ยนรูป
@@ -682,7 +689,7 @@ export function BarberStylistsClient() {
                   <img
                     src={editDisplayPhoto}
                     alt=""
-                    className="mt-3 max-h-40 rounded-xl border border-[#ecebff] object-contain"
+                    className={`mt-3 max-h-40 ${barberCardSurfaceRadiusClass} border border-[#ecebff] object-contain`}
                   />
                 ) : null}
               </div>
@@ -690,32 +697,34 @@ export function BarberStylistsClient() {
                 <button
                   type="button"
                   onClick={() => closeEditModal()}
-                  className="app-btn-soft min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold text-[#2e2a58]"
+                  className={`app-btn-soft min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-[#2e2a58]`}
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="app-btn-primary min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold disabled:opacity-60"
+                  className={`app-btn-primary min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold disabled:opacity-60`}
                 >
                   {saving ? "กำลังบันทึก…" : "บันทึก"}
                 </button>
               </div>
             </form>
+            </div>
           </div>
-        </div>
+        </BarberModalPortal>
       ) : null}
 
       {previewUrl ? (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4"
-          role="presentation"
-          onClick={() => setPreviewUrl(null)}
-        >
+        <BarberModalPortal>
+          <div
+            className={barberModalBackdropImagePreviewClass}
+            role="presentation"
+            onClick={() => setPreviewUrl(null)}
+          >
           <button
             type="button"
-            className="absolute right-4 top-4 rounded-lg bg-white/90 px-3 py-1 text-sm font-semibold text-[#2e2a58] shadow"
+            className={barberModalImagePreviewCloseBtnClass}
             onClick={() => setPreviewUrl(null)}
             aria-label="ปิด"
           >
@@ -728,7 +737,8 @@ export function BarberStylistsClient() {
             className="max-h-[min(88vh,720px)] max-w-full rounded-lg object-contain shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
-        </div>
+          </div>
+        </BarberModalPortal>
       ) : null}
     </div>
   );

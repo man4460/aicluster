@@ -1,10 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AppCameraCaptureModal } from "@/components/app-templates";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BarberModalPortal } from "@/systems/barber/components/BarberModalPortal";
+import { cn } from "@/lib/cn";
 import { BarberSellPackageModal } from "@/systems/barber/components/BarberSellPackageModal";
 import {
+  barberCardBodyPaddingXClass,
+  barberCardSurfaceRadiusClass,
+  barberModalBackdropClass,
+  barberModalCameraBackdropClass,
+  barberModalCloseBtnClass,
+  barberModalHeaderClass,
+  barberModalPanelLgClass,
+  barberModalPanelMdClass,
+  barberModalSubtitleClass,
+  barberModalTitleClass,
   barberPageStackClass,
   barberSectionFirstClass,
   barberSectionNextClass,
@@ -80,7 +91,44 @@ function IconCamera({ className }: { className?: string }) {
   );
 }
 
-export function BarberCheckInClient() {
+function IconSearch({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  );
+}
+
+function IconCoins({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <circle cx="8" cy="8" r="6" />
+      <circle cx="16" cy="16" r="6" />
+      <path d="M11.5 13.5 16 9" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconPackageSpark({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="m7.5 4.21 9 5.19M7.5 19.79V14.6L3 12M21 12l-4.5 2.6v5.19M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function BarberCheckInClient({ embedded = false }: { embedded?: boolean } = {}) {
   const router = useRouter();
 
   const [phone, setPhone] = useState("");
@@ -101,6 +149,7 @@ export function BarberCheckInClient() {
   const [packages, setPackages] = useState<Pkg[]>([]);
   const [stylists, setStylists] = useState<StylistBrief[]>([]);
   const [stylistId, setStylistId] = useState("");
+  const [stylistModalOpen, setStylistModalOpen] = useState(false);
   const [cashModalOpen, setCashModalOpen] = useState(false);
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const [cashFormErr, setCashFormErr] = useState<string | null>(null);
@@ -108,6 +157,13 @@ export function BarberCheckInClient() {
   const [cashCameraOpen, setCashCameraOpen] = useState(false);
   const [cashCameraErr, setCashCameraErr] = useState<string | null>(null);
   const cashVideoRef = useRef<HTMLVideoElement>(null);
+
+  const stylistPickSummary = useMemo(() => {
+    if (stylists.length === 0) return "ยังไม่มีช่าง · ตั้งที่เมนูช่าง";
+    if (!stylistId) return "ไม่ระบุช่าง";
+    const s = stylists.find((x) => String(x.id) === stylistId);
+    return s?.name ?? "ไม่ระบุช่าง";
+  }, [stylists, stylistId]);
 
   const clearCashReceipt = useCallback(() => {
     setCashReceipt((prev) => {
@@ -306,6 +362,19 @@ export function BarberCheckInClient() {
     };
   }, [cashModalOpen, cashCameraOpen, clearCashReceipt, closeCashCamera]);
 
+  useEffect(() => {
+    if (!stylistModalOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setStylistModalOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [stylistModalOpen]);
 
   async function onDeduct() {
     if (!selectedSubId) {
@@ -419,191 +488,330 @@ export function BarberCheckInClient() {
   }
 
   return (
-    <div className={barberPageStackClass}>
+    <div className={embedded ? "space-y-4 sm:space-y-5" : barberPageStackClass}>
       <section className={barberSectionFirstClass} aria-label="ช่างที่บันทึก">
-        <div className="relative overflow-hidden rounded-xl border border-[#ecebff] bg-gradient-to-br from-[#4d47b6]/[0.05] via-white to-[#f8f7ff] px-4 py-4 sm:px-5 sm:py-5">
-        <div
-          className="pointer-events-none absolute -right-6 -top-6 h-36 w-36 rounded-full bg-[#4d47b6]/[0.06]"
-          aria-hidden
-        />
-        <div className="pointer-events-none absolute bottom-0 left-0 h-20 w-20 rounded-tr-full bg-slate-200/30" aria-hidden />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-stretch lg:gap-8">
-          <div className="flex min-w-0 flex-1 gap-4">
-            <div
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#4d47b6] text-lg font-bold text-white shadow-lg shadow-[#4d47b6]/30"
-              aria-hidden
-            >
+        <button
+          type="button"
+          onClick={() => setStylistModalOpen(true)}
+          className={cn(
+            "flex w-full min-h-[52px] items-center justify-between gap-3 rounded-2xl border border-[#e4e2f5] bg-white/90 px-4 py-3 text-left shadow-sm outline-none ring-[#4d47b6]/20 transition hover:border-[#4d47b6]/35 hover:bg-white active:scale-[0.99] focus-visible:ring-2",
+            stylists.length === 0 && "border-amber-200/90 bg-amber-50/40",
+          )}
+          aria-expanded={stylistModalOpen}
+          aria-haspopup="dialog"
+          aria-controls="barber-stylist-modal"
+          suppressHydrationWarning
+        >
+          <span className="flex min-w-0 flex-1 items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#4d47b6] text-sm font-black text-white shadow-md shadow-[#4d47b6]/25">
               ช
-            </div>
-            <div className="min-w-0 pt-0.5">
-              <h2 className="text-lg font-bold tracking-tight text-[#2e2a58]">ช่างที่บันทึก</h2>
-              <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[#ecebff] bg-white/90 px-3 py-1 text-[11px] font-medium text-[#66638c]">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
-                {stylists.length > 0
-                  ? `ช่าง ${stylists.length} คน`
-                  : "ยังไม่มีช่าง — ตั้งที่เมนูช่าง"}
-              </p>
-            </div>
-          </div>
-          <div className="flex w-full flex-col justify-end lg:max-w-sm lg:flex-none">
-            <label htmlFor="barber-stylist-select" className="text-sm font-medium text-[#4d47b6]">
-              ช่าง
-            </label>
-            <select
-              id="barber-stylist-select"
-              className="app-input mt-2 min-h-[52px] w-full rounded-xl px-4 py-3 text-base shadow-sm focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/25"
-              value={stylistId}
-              onChange={(e) => setStylistId(e.target.value)}
-              aria-label="เลือกช่างที่บันทึก"
-            >
-              <option value="">— ไม่ระบุช่าง —</option>
-              {stylists.map((s) => (
-                <option key={s.id} value={String(s.id)}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-            <p className="mt-2 text-[11px] leading-snug text-[#8b87ad]">
-              ว่าง = ไม่บันทึกชื่อช่างในประวัติ
-            </p>
-          </div>
-        </div>
-        </div>
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-[#8b87ad]">
+                ช่างที่บันทึก
+              </span>
+              <span className="mt-0.5 block truncate text-sm font-bold text-[#2e2a58]">{stylistPickSummary}</span>
+              {stylists.length > 0 ? (
+                <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-[#66638c]">
+                  <span className="h-1 w-1 rounded-full bg-emerald-500" aria-hidden />
+                  {`มีช่าง ${stylists.length} คน · แตะเพื่อเลือก`}
+                </span>
+              ) : null}
+            </span>
+          </span>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="h-5 w-5 shrink-0 text-[#8b87ad]"
+            aria-hidden
+          >
+            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
       </section>
 
       <section className={barberSectionNextClass} aria-label="ค้นหาลูกค้า">
-        <h2 className="text-base font-bold text-[#2e2a58]">ค้นหาลูกค้า</h2>
-
-        <form
-          className="mt-4 flex flex-col gap-3 sm:flex-row"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void searchByPhone(phone);
-          }}
-        >
-          <input
-            className="app-input min-h-[48px] flex-1 rounded-xl px-3 py-2 text-base"
-            inputMode="numeric"
-            placeholder="เบอร์"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-200/85 bg-gradient-to-br from-emerald-50/95 via-white to-teal-50/45 p-4 shadow-[0_16px_40px_-24px_rgba(6,95,70,0.35)] sm:p-5">
+          <div
+            className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full bg-emerald-400/15"
+            aria-hidden
           />
-          <button
-            type="submit"
-            disabled={searching}
-            className="app-btn-primary min-h-[48px] rounded-xl px-6 py-3 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {searching ? "…" : "ค้นหา"}
-          </button>
-        </form>
+          <div className="pointer-events-none absolute bottom-0 left-0 h-24 w-24 rounded-tr-full bg-teal-100/40" aria-hidden />
+          <div className="relative">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-lg font-black tracking-tight text-emerald-950">ค้นหาลูกค้า</h2>
+                <p className="mt-1 max-w-md text-[13px] leading-snug text-emerald-900/70">
+                  กรอกเบอร์ 9 หลักขึ้นไป แล้วเลือกแพ็กเพื่อหัก 1 ครั้ง
+                </p>
+              </div>
+              <span
+                className="hidden shrink-0 rounded-full border border-emerald-200/80 bg-white/80 px-3 py-1 text-[11px] font-bold text-emerald-800 shadow-sm sm:inline-flex sm:items-center sm:gap-1.5"
+                aria-hidden
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                หลักทำงาน
+              </span>
+            </div>
+
+            <form
+              className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-stretch"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void searchByPhone(phone);
+              }}
+            >
+              <div className="relative min-w-0 flex-1">
+                {phone.length === 0 ? (
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-600/75">
+                    <IconSearch className="h-5 w-5" aria-hidden />
+                  </span>
+                ) : null}
+                <input
+                  className={cn(
+                    "app-input min-h-[52px] w-full rounded-xl border-emerald-200/90 bg-white/95 py-3 pr-3 text-base font-medium text-[#1e293b] shadow-inner shadow-emerald-950/5 placeholder:text-slate-400 focus:border-emerald-400 focus:ring-emerald-400/25",
+                    phone.length === 0 ? "pl-12" : "pl-3.5",
+                  )}
+                  inputMode="numeric"
+                  placeholder="เบอร์โทรลูกค้า"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
+                  aria-label="เบอร์โทรลูกค้า"
+                  suppressHydrationWarning
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={searching}
+                suppressHydrationWarning
+                className="app-btn-primary inline-flex min-h-[52px] shrink-0 items-center justify-center gap-2 rounded-xl px-8 py-3 text-sm font-bold text-white shadow-md shadow-emerald-900/15 disabled:opacity-60 sm:min-w-[7.5rem]"
+              >
+                <IconSearch className="h-4 w-4 opacity-90 sm:hidden" />
+                {searching ? "กำลังค้นหา…" : "ค้นหา"}
+              </button>
+            </form>
+          </div>
+        </div>
       </section>
 
       {(customerName !== null || subs.length > 0 || msg) && (
         <section className={barberSectionNextClass} aria-label="ผลค้นหา">
-          <h3 className="text-sm font-bold text-[#2e2a58]">ผลค้นหา</h3>
-          {customerName ? (
-            <p className="mt-1 text-sm text-[#5f5a8a]">ชื่อ: {customerName}</p>
-          ) : phone.length >= 9 ? (
-            <p className="mt-1 text-xs text-[#66638c]">ยังไม่มีชื่อ — ใส่ตอนขายแพ็ก/เงินสด</p>
-          ) : null}
+          <div className="rounded-2xl border border-[#e0dcf5] bg-gradient-to-b from-white to-[#faf9ff] p-4 shadow-sm sm:p-5">
+            <h3 className="text-base font-black text-[#2e2a58]">ผลค้นหา</h3>
+            {customerName ? (
+              <p className="mt-2 text-sm font-medium text-[#5f5a8a]">
+                ชื่อลูกค้า: <span className="text-[#2e2a58]">{customerName}</span>
+              </p>
+            ) : phone.length >= 9 ? (
+              <p className="mt-2 text-xs text-[#66638c]">ยังไม่มีชื่อ — ใส่ตอนขายแพ็กหรือบันทึกเงินสด</p>
+            ) : null}
 
-          {subs.length === 0 && phone.length >= 9 && !searching ? (
-            <p className="mt-3 text-sm text-amber-800">ไม่มีแพ็กใช้ได้ — ขายแพ็กด้านล่าง</p>
-          ) : null}
+            {subs.length === 0 && phone.length >= 9 && !searching ? (
+              <p className={`mt-4 ${barberCardSurfaceRadiusClass} border border-amber-200/90 bg-amber-50/90 px-3 py-2.5 text-sm font-medium text-amber-950`}>
+                ไม่มีแพ็กที่ใช้ได้ — ใช้ปุ่ม &quot;ขายแพ็ก&quot; ด้านล่าง
+              </p>
+            ) : null}
 
-          {subs.length > 0 ? (
-            <div className="mt-4 space-y-2.5">
-              {subs.map((s) => (
-                <label
-                  key={s.id}
-                  className={[
-                    "flex cursor-pointer items-center gap-3 rounded-xl border bg-white px-3 py-3 shadow-sm",
-                    selectedSubId === s.id ? "border-[#4d47b6] ring-1 ring-[#4d47b6]/20" : "border-[#ecebff]",
-                  ].join(" ")}
-                >
-                  <input
-                    type="radio"
-                    name="subpick"
-                    checked={selectedSubId === s.id}
-                    onChange={() => setSelectedSubId(s.id)}
-                    className="h-5 w-5"
-                  />
-                  <div className="flex-1">
-                    <p className="font-semibold text-[#2e2a58]">{s.packageName}</p>
-                    <p className="text-lg font-bold tabular-nums text-[#4d47b6]">
-                      เหลือ {s.remainingSessions} ครั้ง
-                    </p>
-                  </div>
-                </label>
-              ))}
-            </div>
-          ) : null}
+            {subs.length > 0 ? (
+              <div className="mt-4 space-y-3">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[#8b87ad]">เลือกแพ็กเพื่อหักครั้ง</p>
+                {subs.map((s) => (
+                  <label
+                    key={s.id}
+                    className={[
+                      "flex cursor-pointer items-center gap-3 rounded-2xl border-2 bg-white px-4 py-3.5 shadow-sm transition hover:border-[#4d47b6]/40",
+                      selectedSubId === s.id ? "border-[#4d47b6] ring-2 ring-[#4d47b6]/15" : "border-[#ecebff]",
+                    ].join(" ")}
+                  >
+                    <input
+                      type="radio"
+                      name="subpick"
+                      checked={selectedSubId === s.id}
+                      onChange={() => setSelectedSubId(s.id)}
+                      className="h-5 w-5 accent-[#4d47b6]"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-[#2e2a58]">{s.packageName}</p>
+                      <p className="mt-0.5 text-lg font-black tabular-nums text-[#4d47b6]">
+                        เหลือ {s.remainingSessions} ครั้ง
+                      </p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            ) : null}
 
-          <button
-            type="button"
-            disabled={deducting || !selectedSubId || subs.length === 0}
-            onClick={() => void onDeduct()}
-            className="mt-4 min-h-[52px] w-full rounded-xl bg-emerald-600 py-3 text-base font-bold text-white shadow-sm disabled:opacity-50"
-          >
-            {deducting ? "กำลังบันทึก…" : "หัก 1 ครั้ง"}
-          </button>
+            <button
+              type="button"
+              disabled={deducting || !selectedSubId || subs.length === 0}
+              onClick={() => void onDeduct()}
+              className="mt-5 flex min-h-[54px] w-full items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 text-base font-black text-white shadow-lg shadow-emerald-900/20 transition hover:brightness-[1.03] active:scale-[0.99] disabled:pointer-events-none disabled:opacity-45"
+            >
+              {deducting ? "กำลังบันทึก…" : "หัก 1 ครั้งจากแพ็ก"}
+            </button>
+          </div>
         </section>
       )}
 
       <section className={barberSectionNextClass} aria-label="บันทึกด่วน">
-        <h2 className="text-base font-bold text-[#2e2a58]">บันทึกด่วน</h2>
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-          <button
-            type="button"
-            onClick={() => {
-              setCashFormErr(null);
-              closeCashCamera();
-              clearCashReceipt();
-              setCashModalOpen(true);
-            }}
-            className="min-h-[52px] flex-1 rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-left text-sm font-bold text-amber-950 shadow-sm transition hover:bg-amber-100/90"
-          >
-            <span className="block">เงินสด</span>
-            <span className="mt-0.5 block text-xs font-normal text-amber-900/80">เบอร์ ชื่อ ยอด</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setSellModalOpen(true)}
-            disabled={packages.length === 0}
-            className="app-btn-primary min-h-[52px] flex-1 rounded-xl px-4 py-3 text-left text-sm font-semibold text-white shadow-md shadow-[#4d47b6]/25 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span className="block">ขายแพ็ก</span>
-            <span className="mt-0.5 block text-xs font-normal text-white/85">แพ็ก เบอร์ ชื่อ</span>
-          </button>
+        <div className="relative overflow-hidden rounded-2xl border border-violet-200/80 bg-gradient-to-br from-violet-50/90 via-white to-[#f5f3ff] p-4 shadow-[0_14px_36px_-22px_rgba(91,97,255,0.45)] sm:p-5">
+          <div
+            className="pointer-events-none absolute -left-6 bottom-0 h-32 w-32 rounded-full bg-[#5b61ff]/10"
+            aria-hidden
+          />
+          <div className="relative">
+            <h2 className="text-lg font-black tracking-tight text-[#2e2a58]">บันทึกด่วน</h2>
+            <p className="mt-1 text-[13px] text-[#66638c]">Walk-in หรือเปิดแพ็กใหม่ — ไม่ต้องค้นหาเบอร์ก่อน</p>
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCashFormErr(null);
+                  closeCashCamera();
+                  clearCashReceipt();
+                  setCashModalOpen(true);
+                }}
+                suppressHydrationWarning
+                className="flex min-h-[4.75rem] items-center gap-4 rounded-2xl border-2 border-amber-400/90 bg-gradient-to-br from-amber-50 to-orange-50/80 px-4 py-3 text-left shadow-md shadow-amber-900/10 transition hover:border-amber-500 hover:brightness-[1.02] active:scale-[0.99]"
+              >
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-400/35 text-amber-950">
+                  <IconCoins className="h-6 w-6" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-base font-black text-amber-950">เงินสด</span>
+                  <span className="mt-0.5 block text-xs font-medium text-amber-900/85">เบอร์ · ชื่อ · ยอด · สลิป</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSellModalOpen(true)}
+                disabled={packages.length === 0}
+                suppressHydrationWarning
+                className="app-btn-primary flex min-h-[4.75rem] items-center gap-4 rounded-2xl px-4 py-3 text-left shadow-lg shadow-[#4d47b6]/30 transition hover:brightness-[1.05] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100"
+              >
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/25 text-white">
+                  <IconPackageSpark className="h-6 w-6" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-base font-black">ขายแพ็ก</span>
+                  <span className="mt-0.5 block text-xs font-medium text-white/90">เลือกแพ็ก · เบอร์ · ชื่อ</span>
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
-      {cashModalOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
-          role="presentation"
-          onClick={() => {
-            if (cashCameraOpen) {
-              closeCashCamera();
-              return;
-            }
-            clearCashReceipt();
-            setCashModalOpen(false);
-          }}
-        >
+      {stylistModalOpen
+        ? (
+            <BarberModalPortal>
+            <div className={barberModalBackdropClass} role="presentation" onClick={() => setStylistModalOpen(false)}>
+              <div
+                id="barber-stylist-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="barber-stylist-modal-title"
+                className={barberModalPanelMdClass}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={barberModalHeaderClass}>
+                  <div className="min-w-0">
+                    <h2 id="barber-stylist-modal-title" className={barberModalTitleClass}>
+                      ช่างที่บันทึก
+                    </h2>
+                    <p className={barberModalSubtitleClass}>
+                      ใช้กับการหักแพ็ก เงินสด และขายแพ็ก — เลือกครั้งเดียวต่อเซสชัน
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStylistModalOpen(false)}
+                    className={barberModalCloseBtnClass}
+                    aria-label="ปิด"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="space-y-4 px-5 py-5">
+                  {stylists.length === 0 ? (
+                    <p className={`${barberCardSurfaceRadiusClass} border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950`}>
+                      ยังไม่มีรายชื่อช่าง — ไปที่เมนู <strong className="font-bold">ช่าง</strong> เพื่อเพิ่มก่อน
+                    </p>
+                  ) : (
+                    <>
+                      <p className="inline-flex items-center gap-1.5 rounded-full border border-[#ecebff] bg-[#f8f7ff] px-3 py-1 text-[11px] font-semibold text-[#5f5a8a]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
+                        {`ช่างในระบบ ${stylists.length} คน`}
+                      </p>
+                      <div>
+                        <label htmlFor="barber-stylist-select-modal" className="text-sm font-semibold text-[#4d47b6]">
+                          เลือกช่าง
+                        </label>
+                        <select
+                          id="barber-stylist-select-modal"
+                          className="app-input mt-2 min-h-[52px] w-full rounded-xl px-4 py-3 text-base shadow-sm focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/25"
+                          value={stylistId}
+                          onChange={(e) => setStylistId(e.target.value)}
+                          aria-label="เลือกช่างที่บันทึก"
+                        >
+                          <option value="">— ไม่ระบุช่าง —</option>
+                          {stylists.map((s) => (
+                            <option key={s.id} value={String(s.id)}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="mt-2 text-[11px] leading-snug text-[#8b87ad]">
+                          ว่าง = ไม่บันทึกชื่อช่างในประวัติ
+                        </p>
+                      </div>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setStylistModalOpen(false)}
+                    className="app-btn-primary min-h-[48px] w-full rounded-xl py-3 text-sm font-bold text-white"
+                  >
+                    เสร็จ
+                  </button>
+                </div>
+              </div>
+            </div>
+            </BarberModalPortal>
+          )
+        : null}
+
+      {cashModalOpen
+        ? (
+            <BarberModalPortal>
+            <div
+              className={barberModalBackdropClass}
+              role="presentation"
+              onClick={() => {
+                if (cashCameraOpen) {
+                  closeCashCamera();
+                  return;
+                }
+                clearCashReceipt();
+                setCashModalOpen(false);
+              }}
+            >
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="barber-cash-modal-title"
-            className="max-h-[min(92vh,720px)] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:rounded-2xl"
+            className={barberModalPanelLgClass}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 flex items-start justify-between gap-3 border-b border-slate-100 bg-white px-5 py-4">
-              <div>
-                <h2 id="barber-cash-modal-title" className="text-lg font-semibold text-slate-900">
+            <div className={barberModalHeaderClass}>
+              <div className="min-w-0">
+                <h2 id="barber-cash-modal-title" className={barberModalTitleClass}>
                   ลูกค้าเงินสด (Walk-in)
                 </h2>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className={barberModalSubtitleClass}>
                   แยกจากการหักแพ็ก — กรอกยอดเงินได้เพื่อสรุปรายได้ในประวัติ
                 </p>
               </div>
@@ -614,13 +822,13 @@ export function BarberCheckInClient() {
                   clearCashReceipt();
                   setCashModalOpen(false);
                 }}
-                className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                className={barberModalCloseBtnClass}
                 aria-label="ปิด"
               >
                 ✕
               </button>
             </div>
-            <form onSubmit={onCash} className="grid gap-3 px-5 py-4">
+            <form onSubmit={onCash} className="grid gap-3 px-5 py-5">
               {cashFormErr ? (
                 <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{cashFormErr}</p>
               ) : null}
@@ -722,7 +930,7 @@ export function BarberCheckInClient() {
 
           {cashCameraOpen ? (
             <div
-              className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-4 bg-black/95 p-4"
+              className={barberModalCameraBackdropClass}
               role="dialog"
               aria-modal="true"
               aria-label="ถ่ายรูปสลิป"
@@ -758,8 +966,10 @@ export function BarberCheckInClient() {
               </div>
             </div>
           ) : null}
-        </div>
-      ) : null}
+            </div>
+            </BarberModalPortal>
+          )
+        : null}
 
       <BarberSellPackageModal
         open={sellModalOpen}
@@ -777,8 +987,12 @@ export function BarberCheckInClient() {
         }}
       />
 
-      {msg ? <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{msg}</p> : null}
-      {err ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{err}</p> : null}
+      {msg ?
+        <p className={`${barberCardSurfaceRadiusClass} bg-emerald-50 ${barberCardBodyPaddingXClass} py-3 text-sm text-emerald-900`}>{msg}</p>
+      : null}
+      {err ?
+        <p className={`${barberCardSurfaceRadiusClass} bg-red-50 ${barberCardBodyPaddingXClass} py-3 text-sm text-red-800`}>{err}</p>
+      : null}
     </div>
   );
 }

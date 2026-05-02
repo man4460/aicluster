@@ -27,7 +27,7 @@ export function DashboardDemoTryoutCta({ username }: { username: string }) {
           </button>
         </form>
         <p className="mt-1.5 text-center text-[10px] leading-snug text-slate-600">
-          จะสลับเป็นบัญชีตัวอย่างชั่วคราว · ออกได้จากแบนเนอร์ด้านบน
+          จะสลับเป็นบัญชีตัวอย่างชั่วคราว · ออกได้จากแถบแดงด้านบน
         </p>
       </div>
     </div>

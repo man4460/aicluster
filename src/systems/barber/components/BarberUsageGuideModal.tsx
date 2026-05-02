@@ -2,6 +2,16 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { BarberModalPortal } from "@/systems/barber/components/BarberModalPortal";
+import {
+  barberCardSurfaceRadiusClass,
+  barberModalBackdropMutedClass,
+  barberModalCloseBtnClass,
+  barberModalHeaderClass,
+  barberModalPanel2xlFlexColClass,
+  barberModalSubtitleClass,
+  barberModalTitleClass,
+} from "@/systems/barber/components/barber-ui-tokens";
 
 function Section({
   title,
@@ -36,37 +46,34 @@ export function BarberUsageGuideModal({ open, onClose }: { open: boolean; onClos
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
-      role="presentation"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="barber-usage-guide-title"
-        className="flex max-h-[min(92dvh,720px)] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-[#ecebff] bg-white shadow-2xl sm:rounded-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#ecebff] bg-[#faf9ff] px-4 py-3 sm:px-5">
-          <div className="min-w-0">
-            <h2 id="barber-usage-guide-title" className="text-lg font-bold text-[#2e2a58]">
-              คู่มือการใช้งาน — ร้านตัดผม
-            </h2>
-            <p className="mt-0.5 text-xs text-[#66638c]">
-              สรุปทุกเมนูหลัก เรียงตามลำดับการตั้งค่าและใช้งานจริง
-            </p>
+    <BarberModalPortal>
+      <div className={barberModalBackdropMutedClass} role="presentation" onClick={onClose}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="barber-usage-guide-title"
+          className={barberModalPanel2xlFlexColClass}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className={barberModalHeaderClass}>
+            <div className="min-w-0">
+              <h2 id="barber-usage-guide-title" className={barberModalTitleClass}>
+                คู่มือการใช้งาน — ร้านตัดผม
+              </h2>
+              <p className={barberModalSubtitleClass}>
+                สรุปทุกเมนูหลัก เรียงตามลำดับการตั้งค่าและใช้งานจริง
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className={barberModalCloseBtnClass}
+              aria-label="ปิดคู่มือ"
+            >
+              ✕
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="shrink-0 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-[#66638c] hover:bg-white hover:text-[#2e2a58]"
-            aria-label="ปิดคู่มือ"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-4 sm:px-5 sm:py-5">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 py-5 [-webkit-overflow-scrolling:touch]">
           <div className="space-y-5">
             <Section title="แนะนำลำดับเริ่มต้น">
               <p>
@@ -74,22 +81,28 @@ export function BarberUsageGuideModal({ open, onClose }: { open: boolean; onClos
                 <strong className="font-semibold text-[#2e2a58]">เช็กอิน</strong> หรือ{" "}
                 <strong className="font-semibold text-[#2e2a58]">QR ลูกค้า</strong> รับลูกค้า ดูสรุปที่{" "}
                 <strong className="font-semibold text-[#2e2a58]">แดชบอร์ด</strong> และ{" "}
-                <strong className="font-semibold text-[#2e2a58]">ยอดขาย</strong> และบันทึก{" "}
-                <strong className="font-semibold text-[#2e2a58]">ต้นทุน / รายจ่าย</strong> จากเมนูหรือลิงก์ใต้กราฟในหน้ายอดขาย
+                <strong className="font-semibold text-[#2e2a58]">การเงิน</strong> (แท็บยอดขาย / ต้นทุนและรายจ่าย) รวมถึงลิงก์ใต้กราฟในแท็บยอดขาย
               </p>
               <ol className="list-decimal space-y-1 pl-5 marker:font-semibold marker:text-[#4d47b6]">
                 <li>โปรไฟล์ — รูป ชื่อร้าน ที่อยู่ เบอร์ เลขภาษี (แท็บตั้งค่าบริษัท/ร้าน)</li>
                 <li>แพ็กเกจ — สร้างแพ็กที่ขายจริง (ราคา จำนวนครั้ง)</li>
                 <li>ช่าง — เพิ่มช่าง (ใช้ผูกกับประวัติการบริการได้)</li>
-                <li>จัดการคิว / เช็กอิน / QR — ตาม workflow ร้าน</li>
+                <li>แดชบอร์ด (แท็บคิว / เช็กอิน / ช่าง) และเมนู QR — ตาม workflow ร้าน</li>
               </ol>
             </Section>
 
             <Section title="แดชบอร์ด">
-              <p>หน้าแรกของโมดูล — คิววันนี้และสถิติรายรับวันนี้ (เวลาไทย)</p>
+              <p>
+                หน้าแรกของโมดูล — โครงคล้ายคาร์แคร์: ด้านบนมีแท็บ{" "}
+                <strong className="font-semibold text-[#2e2a58]">ภาพรวม</strong> ·{" "}
+                <strong className="font-semibold text-[#2e2a58]">จัดการคิว</strong> ·{" "}
+                <strong className="font-semibold text-[#2e2a58]">เช็กอิน</strong> ·{" "}
+                <strong className="font-semibold text-[#2e2a58]">ช่าง</strong> — สลับได้โดยไม่ต้องออกจากหน้าหลัก
+              </p>
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
                 <li>
-                  <strong className="font-semibold text-[#2e2a58]">คิววันนี้</strong> — นัดวันนี้ สถานะคิว ปุ่มลัดไปเช็กอิน / จัดการคิว
+                  <strong className="font-semibold text-[#2e2a58]">ภาพรวม</strong> — สถิติวันนี้และการ์ด{" "}
+                  <strong className="font-semibold text-[#2e2a58]">คิววันนี้</strong> (ปุ่มลัดไปแท็บเช็กอิน / จัดการคิว)
                 </li>
                 <li>
                   <strong className="font-semibold text-[#2e2a58]">สถิติวันนี้</strong> — รายรับรวมนับเฉพาะ{" "}
@@ -101,7 +114,18 @@ export function BarberUsageGuideModal({ open, onClose }: { open: boolean; onClos
               </ul>
             </Section>
 
-            <Section title="ยอดขาย">
+            <Section title="การเงิน">
+              <p>
+                เปิดจากเมนู <strong className="font-semibold text-[#2e2a58]">การเงิน</strong> — มีแท็บ{" "}
+                <strong className="font-semibold text-[#2e2a58]">ยอดขาย</strong> และ{" "}
+                <strong className="font-semibold text-[#2e2a58]">ต้นทุน / รายจ่าย</strong> (รูปแบบเดียวกับเมนูการเงินในระบบคาร์แคร์)
+                URL ตรง:{" "}
+                <code className="rounded bg-[#f0eeff] px-1 py-0.5 text-xs">/dashboard/barber/finance</code>
+                {" · "}
+                แท็บต้นทุน:{" "}
+                <code className="rounded bg-[#f0eeff] px-1 py-0.5 text-xs">?tab=costs</code>
+              </p>
+              <p className="font-semibold text-[#2e2a58]">แท็บยอดขาย</p>
               <p>
                 ใช้ดูประวัติการบริการย้อนหลัง พร้อมกราฟสรุปตามช่วงที่เลือก (ปี เดือน วัน — ปฏิทินเวลาไทย) กราฟออกแบบให้แท่งชิดและเลื่อนแนวนอนได้ เพื่อดูหลายวันในจอเดียว
               </p>
@@ -144,26 +168,22 @@ export function BarberUsageGuideModal({ open, onClose }: { open: boolean; onClos
                   <strong className="font-semibold text-[#2e2a58]">ลบ</strong> — ลบรายการออกจากประวัติ (ใช้ด้วยความระมัดระวัง)
                 </li>
               </ul>
-            </Section>
-
-            <Section title="บันทึกรายจ่าย / ต้นทุน">
+              <p className="mt-4 font-semibold text-[#2e2a58]">แท็บต้นทุน / รายจ่าย</p>
               <p>
-                เปิดจากเมนูร้านตัดผมที่ปุ่ม <strong className="font-semibold text-[#2e2a58]">ต้นทุน / รายจ่าย</strong> หรือจากลิงก์ใต้กราฟในหน้า{" "}
-                <strong className="font-semibold text-[#2e2a58]">ยอดขาย</strong> หรือเข้าตรงที่ URL{" "}
-                <code className="rounded bg-[#f0eeff] px-1 py-0.5 text-xs">/dashboard/barber/costs</code>
+                เปิดจากแท็บในเมนู <strong className="font-semibold text-[#2e2a58]">การเงิน</strong> หรือจากลิงก์ใต้กราฟในแท็บยอดขาย
               </p>
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
                 <li>
                   <strong className="font-semibold text-[#2e2a58]">จัดการหมวด</strong> / <strong className="font-semibold text-[#2e2a58]">บันทึกรายจ่าย</strong>{" "}
-                  ที่หัวหน้าหน้า — ป๊อบอัปแยกกัน แนบสลิปได้
+                  ที่แถบด้านบนของแท็บต้นทุน — ป๊อบอัปแยกกัน แนบสลิปได้
                 </li>
-                <li>ยอดรายจ่ายรวมในกราฟหน้ายอดขายตามช่วงที่กรอง</li>
+                <li>ยอดรายจ่ายรวมในกราฟแท็บยอดขายตามช่วงที่กรอง</li>
                 <li>ลบหมวดจะลบรายการในหมวดนั้นด้วย</li>
               </ul>
             </Section>
 
-            <Section title="จัดการคิว">
-              <p>ใช้จองและติดตามคิวล่วงหน้าตามวันที่เลือก</p>
+            <Section title="แท็บในแดชบอร์ด: จัดการคิว">
+              <p>เปิดจากแท็บ <strong className="font-semibold text-[#2e2a58]">จัดการคิว</strong> ในหน้าแดชบอร์ด — จองและติดตามคิวตามวันที่เลือก</p>
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
                 <li>เลือกวันที่ด้านบน ระบบโหลดรายการคิวของวันนั้น</li>
                 <li>
@@ -175,11 +195,13 @@ export function BarberUsageGuideModal({ open, onClose }: { open: boolean; onClos
               </ul>
             </Section>
 
-            <Section title="เช็กอิน">
-              <p>ศูนย์กลางการรับลูกค้าหน้าร้าน: ค้นหาเบอร์ หักแพ็กเกจ บันทึกเงินสด ขายแพ็กใหม่</p>
+            <Section title="แท็บในแดชบอร์ด: เช็กอิน">
+              <p>
+                เปิดจากแท็บ <strong className="font-semibold text-[#2e2a58]">เช็กอิน</strong> — ศูนย์กลางรับลูกค้าหน้าร้าน: ค้นหาเบอร์ หักแพ็กเกจ บันทึกเงินสด ขายแพ็กใหม่
+              </p>
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
                 <li>
-                  <strong className="font-semibold text-[#2e2a58]">ช่างที่บันทึก</strong> — เลือกช่างจากรายการ (ตั้งได้ที่เมนูช่าง)
+                  <strong className="font-semibold text-[#2e2a58]">ช่างที่บันทึก</strong> — เลือกช่างจากรายการ (ตั้งได้ที่แท็บช่างในแดชบอร์ด)
                   ถ้าไม่เลือก ระบบจะไม่ผูกชื่อช่างในประวัติ
                 </li>
                 <li>
@@ -197,19 +219,10 @@ export function BarberUsageGuideModal({ open, onClose }: { open: boolean; onClos
               </ul>
             </Section>
 
-            <Section title="แพ็กเกจ">
-              <p>กำหนดแพ็กที่ร้านขาย เช่น ตัดผม 10 ครั้ง ราคาเท่าใด</p>
-              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>เพิ่มแพ็กใหม่: ชื่อ ราคา (บาท) จำนวนครั้งทั้งหมด</li>
-                <li>แก้ไขหรือลบแพ็กจากรายการ (ลบกระทบเฉพาะการตั้งค่าแพ็ก — สมาชิกที่ซื้อแล้วยังอยู่ในหน้าสมาชิกแพ็กเกจ)</li>
-                <li>
-                  แพ็กที่นี่ใช้ตอนขายแพ็กที่เช็กอิน — ราคาเต็มจะไปนับในรายรับตอนมีการเปิดสมาชิกแพ็ก (กราฟ/สรุป) ส่วนการหักครั้งใช้บริการใช้เฉพาะจำนวนครั้งจากแพ็ก ไม่สร้างรายรับซ้ำ
-                </li>
-              </ul>
-            </Section>
-
-            <Section title="ช่าง">
-              <p>จัดการรายชื่อช่างในร้าน</p>
+            <Section title="แท็บในแดชบอร์ด: ช่าง">
+              <p>
+                เปิดจากแท็บ <strong className="font-semibold text-[#2e2a58]">ช่าง</strong> — จัดการรายชื่อช่างในร้าน
+              </p>
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
                 <li>เพิ่มช่าง: ชื่อ เบอร์ (ถ้ามี) รูปประจำตัว (ถ้ามี)</li>
                 <li>แก้ไข ปิดการใช้งานชั่วคราว หรือลบตามนโยบายร้าน</li>
@@ -218,9 +231,23 @@ export function BarberUsageGuideModal({ open, onClose }: { open: boolean; onClos
               </ul>
             </Section>
 
-            <Section title="สมาชิกแพ็กเกจ">
-              <p>ดูรายการที่ลูกค้าซื้อแพ็กแล้ว สถานะคงเหลือ และแก้ไขเมื่อจำเป็น</p>
+            <Section title="เมนูแพ็กเกจ (แพ็กเกจ + สมาชิก)">
+              <p>
+                เมนู <strong className="font-semibold text-[#2e2a58]">แพ็กเกจ</strong> รวมสองแท็บในแผงเดียว (แบบคาร์แคร์): <strong className="font-semibold text-[#2e2a58]">แพ็กเกจ</strong>{" "}
+                กับ <strong className="font-semibold text-[#2e2a58]">สมาชิกแพ็กเกจ</strong>
+              </p>
+              <p className="font-semibold text-[#2e2a58]">แท็บแพ็กเกจ</p>
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>กำหนดแพ็กที่ร้านขาย เช่น ตัดผม 10 ครั้ง ราคาเท่าใด</li>
+                <li>เพิ่มแพ็กใหม่: ชื่อ ราคา (บาท) จำนวนครั้งทั้งหมด</li>
+                <li>แก้ไขหรือลบแพ็กจากรายการ (ลบกระทบเฉพาะการตั้งค่าแพ็ก — สมาชิกที่ซื้อแล้วยังอยู่ในแท็บสมาชิก)</li>
+                <li>
+                  แพ็กที่นี่ใช้ตอนขายแพ็กที่เช็กอิน — ราคาเต็มจะไปนับในรายรับตอนมีการเปิดสมาชิกแพ็ก (กราฟ/สรุป) ส่วนการหักครั้งใช้บริการใช้เฉพาะจำนวนครั้งจากแพ็ก ไม่สร้างรายรับซ้ำ
+                </li>
+              </ul>
+              <p className="mt-3 font-semibold text-[#2e2a58]">แท็บสมาชิกแพ็กเกจ</p>
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>ดูรายการที่ลูกค้าซื้อแพ็กแล้ว สถานะคงเหลือ และแก้ไขเมื่อจำเป็น</li>
                 <li>กรองตามเบอร์หรือชื่อลูกค้า</li>
                 <li>แต่ละแถวแสดงแพ็ก ราคา ครั้งที่เหลือ สถานะ (ใช้งาน / หมดแล้ว / ยกเลิก) ช่างที่ขาย (ถ้ามี)</li>
                 <li>
@@ -229,9 +256,14 @@ export function BarberUsageGuideModal({ open, onClose }: { open: boolean; onClos
               </ul>
             </Section>
 
-            <Section title="QR ลูกค้า">
-              <p>สร้าง QR ไปยังพอร์ทัลลูกค้าของร้าน ให้ลูกค้าสแกนแล้วกรอกเบอร์เพื่อหักแพ็กเอง</p>
+            <Section title="เมนู QR (ลูกค้า + พนักงาน)">
+              <p>
+                หน้าเดียวรวม <strong className="font-semibold text-[#2e2a58]">QR ลูกค้า</strong> และ{" "}
+                <strong className="font-semibold text-[#2e2a58]">QR พนักงาน</strong> — โครงคล้ายคาร์แคร์
+              </p>
+              <p className="font-semibold text-[#2e2a58]">QR ลูกค้า</p>
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>สร้าง QR ไปยังพอร์ทัลลูกค้าของร้าน ให้ลูกค้าสแกนแล้วกรอกเบอร์เพื่อหักแพ็กเอง</li>
                 <li>ดูตัวอย่างโปสเตอร์บนหน้าจอ มี QR และข้อความชวนใช้</li>
                 <li>
                   โลโก้บนโปสเตอร์ใช้ <strong className="font-semibold text-[#2e2a58]">รูปโปรไฟล์</strong> ที่ตั้งใน{" "}
@@ -245,11 +277,15 @@ export function BarberUsageGuideModal({ open, onClose }: { open: boolean; onClos
                   — แนะนำอัปโหลดก่อนพิมพ์
                 </li>
                 <li>ดาวน์โหลด PNG หรือ PDF (รูปแบบ A4/A5 ตามที่หน้าจอให้เลือก) เพื่อนำไปพิมพ์หน้าร้าน</li>
-                <li>
-                  <strong className="font-semibold text-[#2e2a58]">โหมดทดลอง</strong> — การดาวน์โหลดไฟล์โปสเตอร์อาจถูกปิด
-                  ตามแบนเนอร์ด้านบนของโมดูล
-                </li>
               </ul>
+              <p className="mt-3 font-semibold text-[#2e2a58]">QR พนักงาน</p>
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>ลิงก์และโปสเตอร์ไปหน้าพนักงาน (คิว / เช็กอิน) — พนักงานต้องล็อกอินร้านก่อนใช้งาน</li>
+                <li>คัดลอกลิงก์และดาวน์โหลด PDF (A4 / A5) หรือ PNG ได้จากแผงเดียวกับลูกค้า</li>
+              </ul>
+              <p className="mt-3">
+                <strong className="font-semibold text-[#2e2a58]">โหมดทดลอง</strong> — การดาวน์โหลดไฟล์โปสเตอร์อาจถูกปิดตามแบนเนอร์ด้านบนของโมดูล
+              </p>
             </Section>
 
             <Section title="โปรไฟล์ร้าน (ร่วมกับทุกระบบ)">
@@ -278,16 +314,17 @@ export function BarberUsageGuideModal({ open, onClose }: { open: boolean; onClos
             </Section>
           </div>
         </div>
-        <div className="shrink-0 border-t border-[#ecebff] bg-white px-4 py-3 sm:px-5">
+        <div className="shrink-0 border-t border-slate-100 bg-white px-5 py-4">
           <button
             type="button"
             onClick={onClose}
-            className="app-btn-primary min-h-[48px] w-full rounded-xl px-4 py-3 text-sm font-semibold text-white sm:w-auto"
+            className={`app-btn-primary min-h-[48px] w-full ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-white sm:w-auto`}
           >
             ปิด
           </button>
         </div>
       </div>
     </div>
+    </BarberModalPortal>
   );
 }

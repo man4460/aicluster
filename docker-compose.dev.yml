@@ -1,0 +1,38 @@
+# Next.js dev ใน Docker + hot reload (โค้ด bind mount จากเครื่อง)
+# อย่ารันพร้อม `npm run dev` บนโฮสต์ — ชนพอร์ต 3000
+#
+# รัน: npm run docker:dev
+# หยุดแค่แอป dev: npm run docker:dev:stop  (db ยังรันต่อได้)
+#
+services:
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${APP_DEV_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+      PRISMA_DOCKER_REBUILD_DATABASE_URL: "1"
+      DOCKER_MYSQL_HOST: db
+      DOCKER_MYSQL_PORT: "3306"
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?ตั้ง MYSQL_ROOT_PASSWORD ใน .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mawell_buffet}
+      PRISMA_DB_PUSH: ${PRISMA_DB_PUSH:-0}
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - .:/app
+      - app_dev_node_modules:/app/node_modules
+      - app_dev_next:/app/.next
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  app_dev_node_modules:
+  app_dev_next:

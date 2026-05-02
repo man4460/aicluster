@@ -5,7 +5,8 @@
 generator client {
   provider      = "prisma-client"
   output        = "../src/generated/prisma"
-  binaryTargets = ["native", "windows"]
+  // windows = dev บนเครื่อง Windows; debian-openssl = รันใน Docker (Linux / Mac Mini)
+  binaryTargets = ["native", "windows", "debian-openssl-3.0.x"]
 }
 
 datasource db {

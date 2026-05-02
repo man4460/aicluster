@@ -1,11 +1,5 @@
-import { bangkokDateKey } from "@/lib/time/bangkok";
-import { BarberBookingsClient } from "@/systems/barber/components/BarberBookingsClient";
-import { barberPageStackClass } from "@/systems/barber/components/barber-ui-tokens";
+import { redirect } from "next/navigation";
 
 export default function BarberBookingsPage() {
-  return (
-    <div className={barberPageStackClass}>
-      <BarberBookingsClient initialDateKey={bangkokDateKey()} />
-    </div>
-  );
+  redirect("/dashboard/barber?tab=queue");
 }

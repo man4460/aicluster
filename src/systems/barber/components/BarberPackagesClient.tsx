@@ -8,10 +8,20 @@ import {
   AppSectionHeader,
 } from "@/components/app-templates";
 import { BarberDashboardBackLink } from "@/systems/barber/components/BarberDashboardBackLink";
+import { BarberModalPortal } from "@/systems/barber/components/BarberModalPortal";
 import {
+  barberCardSurfaceRadiusClass,
+  barberOffersEmptyStateClass,
+  barberOffersListRowCardClass,
   barberIconToolbarGroupClass,
   barberInlineAlertErrorClass,
-  barberListRowCardClass,
+  barberMutedLoadingNoticeClass,
+  barberModalBackdropClass,
+  barberModalCloseBtnClass,
+  barberModalHeaderClass,
+  barberModalPanelLgClass,
+  barberModalSubtitleClass,
+  barberModalTitleClass,
   barberPageStackClass,
   barberSectionActionsRowClass,
   barberSectionFirstClass,
@@ -24,7 +34,20 @@ type Pkg = {
   totalSessions: number;
 };
 
-export function BarberPackagesClient() {
+export type BarberPackagesEmbeddedToolbarApi = {
+  openAddModal: () => void;
+};
+
+type BarberPackagesClientProps = {
+  embedded?: boolean;
+  /** เมื่อ embedded — ส่งปุ่ม «เพิ่มแพ็กเกจ» ไปแถบหัว Hub */
+  onEmbeddedToolbar?: (api: BarberPackagesEmbeddedToolbarApi | null) => void;
+};
+
+export function BarberPackagesClient({
+  embedded = false,
+  onEmbeddedToolbar,
+}: BarberPackagesClientProps = {}) {
   const router = useRouter();
   const [list, setList] = useState<Pkg[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,13 +102,19 @@ export function BarberPackagesClient() {
     };
   }, [addOpen, closeAddModal]);
 
-  function openAddModal() {
+  const openAddModal = useCallback(() => {
     setErr(null);
     setName("");
     setPrice("");
     setSessions("10");
     setAddOpen(true);
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!embedded || !onEmbeddedToolbar) return;
+    onEmbeddedToolbar({ openAddModal });
+    return () => onEmbeddedToolbar(null);
+  }, [embedded, onEmbeddedToolbar, openAddModal]);
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -134,31 +163,33 @@ export function BarberPackagesClient() {
   }
 
   return (
-    <div className={barberPageStackClass}>
+    <div className={embedded ? "space-y-4 sm:space-y-5" : barberPageStackClass}>
       {err && !addOpen ? <p className={barberInlineAlertErrorClass}>{err}</p> : null}
 
       <section className={barberSectionFirstClass} aria-label="แพ็กเกจทั้งหมด">
-        <AppSectionHeader
-          tone="violet"
-          title="แพ็กเกจทั้งหมด"
-          action={
-            <div className={barberSectionActionsRowClass}>
-              <BarberDashboardBackLink />
-              <button
-                type="button"
-                onClick={openAddModal}
-                className="app-btn-primary min-h-[44px] rounded-xl px-4 py-2.5 text-sm font-semibold"
-              >
-                เพิ่มแพ็กเกจ
-              </button>
-            </div>
-          }
-        />
+        {!embedded ? (
+          <AppSectionHeader
+            tone="violet"
+            title="แพ็กเกจทั้งหมด"
+            action={
+              <div className={barberSectionActionsRowClass}>
+                <BarberDashboardBackLink />
+                <button
+                  type="button"
+                  onClick={openAddModal}
+                  className={`app-btn-primary min-h-[44px] ${barberCardSurfaceRadiusClass} px-4 py-2.5 text-sm font-semibold`}
+                >
+                  เพิ่มแพ็กเกจ
+                </button>
+              </div>
+            }
+          />
+        ) : null}
         {loading ? (
-          <p className="rounded-lg bg-[#f8f7ff] px-4 py-3 text-sm text-[#66638c]">กำลังโหลดรายการ…</p>
+          <p className={barberMutedLoadingNoticeClass}>กำลังโหลดรายการ…</p>
         ) : list.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[#dcd8f0] bg-[#faf9ff]/80 px-4 py-10 text-center">
-            <p className="text-sm font-medium text-[#2e2a58]">ยังไม่มีแพ็กเกจ</p>
+          <div className={`${barberOffersEmptyStateClass} text-center`}>
+            <p className="text-sm font-semibold text-[#2e2a58]">ยังไม่มีแพ็กเกจ</p>
             <p className="mx-auto mt-2 max-w-sm text-xs leading-relaxed text-[#66638c]">
               เพิ่มแพ็กเกจเพื่อให้ขายจากหน้าเช็กอิน
             </p>
@@ -168,12 +199,16 @@ export function BarberPackagesClient() {
             {list.map((p) => (
               <li
                 key={p.id}
-                className={`flex flex-wrap items-center justify-between gap-3 ${barberListRowCardClass}`}
+                className={`flex flex-wrap items-center justify-between gap-3 ${barberOffersListRowCardClass}`}
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-semibold leading-snug text-[#2e2a58]">{p.name}</p>
-                  <p className="mt-1 text-xs tabular-nums text-[#7a7699]">
-                    {p.price.toLocaleString("th-TH", { maximumFractionDigits: 2 })} บาท · {p.totalSessions} ครั้ง
+                  <p className="mt-1 text-xs tabular-nums text-[#5f5a8a]">
+                    <span className="font-semibold text-[#5b61ff]">
+                      {p.price.toLocaleString("th-TH", { maximumFractionDigits: 2 })}
+                    </span>{" "}
+                    บาท ·{" "}
+                    <span className="font-semibold text-[#0d9488]/90">{p.totalSessions}</span> ครั้ง
                   </p>
                 </div>
                 <div className={barberIconToolbarGroupClass} role="group" aria-label="ลบแพ็กเกจ">
@@ -193,35 +228,32 @@ export function BarberPackagesClient() {
       </section>
 
       {addOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
-          role="presentation"
-          onClick={() => closeAddModal()}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="barber-add-package-title"
-            className="max-h-[min(92vh,640px)] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-[#ecebff] bg-white shadow-2xl sm:rounded-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 flex items-start justify-between gap-3 border-b border-[#ecebff] bg-white px-5 py-4">
-              <div>
-                <h2 id="barber-add-package-title" className="text-lg font-bold text-[#2e2a58]">
-                  รายละเอียดแพ็กเกจ
-                </h2>
-                <p className="mt-1 text-xs text-[#66638c]">เช่น ตัด 10 ครั้ง 1,200 บาท</p>
+        <BarberModalPortal>
+          <div className={barberModalBackdropClass} role="presentation" onClick={() => closeAddModal()}>
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="barber-add-package-title"
+              className={barberModalPanelLgClass}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={barberModalHeaderClass}>
+                <div className="min-w-0">
+                  <h2 id="barber-add-package-title" className={barberModalTitleClass}>
+                    รายละเอียดแพ็กเกจ
+                  </h2>
+                  <p className={barberModalSubtitleClass}>เช่น ตัด 10 ครั้ง 1,200 บาท</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => closeAddModal()}
+                  className={barberModalCloseBtnClass}
+                  aria-label="ปิด"
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => closeAddModal()}
-                className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-[#66638c] hover:bg-[#f4f3fb] hover:text-[#2e2a58]"
-                aria-label="ปิด"
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={onCreate} className="grid gap-3 px-5 py-4">
+              <form onSubmit={onCreate} className="grid gap-3 px-5 py-5">
               {err ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{err}</p> : null}
               <label className="block text-xs font-semibold text-[#4d47b6]">
                 ชื่อแพ็กเกจ
@@ -260,21 +292,22 @@ export function BarberPackagesClient() {
                 <button
                   type="button"
                   onClick={() => closeAddModal()}
-                  className="app-btn-soft min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold text-[#2e2a58]"
+                  className={`app-btn-soft min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-[#2e2a58]`}
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="app-btn-primary min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold disabled:opacity-60"
+                  className={`app-btn-primary min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold disabled:opacity-60`}
                 >
                   {saving ? "กำลังบันทึก…" : "บันทึก"}
                 </button>
               </div>
             </form>
+            </div>
           </div>
-        </div>
+        </BarberModalPortal>
       ) : null}
     </div>
   );

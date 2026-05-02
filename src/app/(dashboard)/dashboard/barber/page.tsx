@@ -1,8 +1,14 @@
+import { Suspense } from "react";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bangkokDayStartEnd } from "@/lib/barber/bangkok-day";
 import { getBarberRevenueBahtInRange } from "@/lib/barber/period-revenue";
 import { getBarberDataScope } from "@/lib/trial/module-scopes";
+import { bangkokDateKey } from "@/lib/time/bangkok";
+import {
+  BarberDashboardHubClient,
+  BarberDashboardTabToolbar,
+} from "@/systems/barber/components/BarberDashboardHubClient";
 import { BarberTodayBookings } from "@/systems/barber/components/BarberTodayBookings";
 import {
   barberPageStackClass,
@@ -50,14 +56,23 @@ export default async function BarberDashboardPage() {
     getBarberRevenueBahtInRange(session.sub, start, end, scope.trialSessionId),
   ]);
 
-  return (
-    <div className={barberPageStackClass}>
-      <BarberTodayBookings ownerId={session.sub} />
-
+  const overview = (
+    <>
       <section className={barberSectionNextClass} aria-label="สถิติวันนี้">
-        <div>
-          <h2 className="text-lg font-bold text-[#2e2a58]">สถิติวันนี้</h2>
-          <p className="mt-1 text-xs text-[#66638c]">รายรับและจำนวนครั้งวันนี้ (เวลาไทย)</p>
+        <div className="flex min-w-0 flex-row items-center justify-between gap-2 sm:items-start sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-bold text-[#2e2a58]">สถิติวันนี้</h2>
+            <p className="mt-1 hidden text-xs text-[#66638c] sm:block">
+              เวลาไทย · รายรับ + ครั้งใช้บริการ
+            </p>
+          </div>
+          <Suspense
+            fallback={
+              <div className="h-11 w-44 shrink-0 animate-pulse rounded-xl bg-white/30" aria-hidden />
+            }
+          >
+            <BarberDashboardTabToolbar className="shrink-0" />
+          </Suspense>
         </div>
         <div className="mt-4 rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/40 p-5 shadow-sm">
           <p className="text-xs font-semibold text-emerald-800/90">รายรับวันนี้</p>
@@ -80,12 +95,10 @@ export default async function BarberDashboardPage() {
             </span>
           </div>
           <p className="mt-2 text-[11px] leading-snug text-[#66638c]">
-            รายรับรวมนับเฉพาะเงินสดกับขายแพ็กใหม่ — การหักแพ็กหักแค่จำนวนครั้ง ไม่นับเป็นรายรับเพิ่ม
+            นับเฉพาะเงินสด + ขายแพ็กใหม่ · หักแพ็กไม่เพิ่มรายรับ
           </p>
           {revenue.cashSumOk === false ? (
-            <p className="mt-2 text-xs text-amber-800">
-              ไม่สามารถรวมยอดเงินสดได้ — ตรวจสอบ migration คอลัมน์ amount_baht
-            </p>
+            <p className="mt-2 text-xs text-amber-800">รวมเงินสดไม่ได้ — ตรวจคอลัมน์ amount_baht</p>
           ) : null}
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -110,10 +123,18 @@ export default async function BarberDashboardPage() {
           <div className={`${barberStatCardClass} col-span-2 sm:col-span-1`}>
             <p className="text-xs font-medium text-[#8b87ad]">แพ็กคงเหลือ</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-violet-800">{subActive}</p>
-            <p className="text-[10px] text-[#8b87ad]">ACTIVE &gt; 0 ครั้ง</p>
+            <p className="text-[10px] text-[#8b87ad]">มียอดคงเหลือ</p>
           </div>
         </div>
       </section>
+
+      <BarberTodayBookings ownerId={session.sub} />
+    </>
+  );
+
+  return (
+    <div className={barberPageStackClass}>
+      <BarberDashboardHubClient initialDateKey={bangkokDateKey()}>{overview}</BarberDashboardHubClient>
     </div>
   );
 }

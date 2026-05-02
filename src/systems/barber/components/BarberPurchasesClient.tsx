@@ -7,17 +7,27 @@ import {
   AppIconTrash,
   AppImageLightbox,
   AppImageThumb,
-  AppSectionHeader,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
-import { normalizeBarberSlipUrlForDashboard } from "@/lib/barber/receipt-display-url";
 import { BarberDashboardBackLink } from "@/systems/barber/components/BarberDashboardBackLink";
+import { BarberModalPortal } from "@/systems/barber/components/BarberModalPortal";
 import { BarberSellPackageModal } from "@/systems/barber/components/BarberSellPackageModal";
 import {
+  barberCardSurfaceRadiusClass,
+  barberCardBodyPaddingXClass,
   barberIconToolbarGroupClass,
   barberInlineAlertErrorClass,
-  barberListRowCardClass,
+  barberOffersEmptyStateClass,
+  barberOffersFilterBarClass,
+  barberOffersListRowCardClass,
+  barberMutedLoadingNoticeClass,
+  barberModalBackdropClass,
+  barberModalCloseBtnClass,
+  barberModalHeaderClass,
+  barberModalPanelMdClass,
+  barberModalSubtitleClass,
+  barberModalTitleClass,
   barberPageStackClass,
   barberSectionActionsRowClass,
   barberSectionFirstClass,
@@ -57,12 +67,23 @@ function formatPriceBaht(priceStr: string) {
 }
 
 const slipThumbClassName =
-  "self-start rounded-lg border border-[#ecebff] bg-[#f8f7ff] ring-[#ecebff] hover:ring-[#4d47b6]/35 sm:h-[4.5rem] sm:w-[4.5rem]";
+  `self-start ${barberCardSurfaceRadiusClass} border border-[#e0dcfa]/90 bg-gradient-to-br from-white via-[#faf9ff] to-[#eef2ff]/80 shadow-sm ring-1 ring-[#ecebff]/80 hover:ring-[#4d47b6]/35 sm:h-[4.5rem] sm:w-[4.5rem]`;
 
-/** ใช้ origin จริงของแท็บเมื่อมี — แปลง absolute URL คนละโฮสต์ให้เป็นพาธ /uploads/... บน origin ปัจจุบัน */
-function slipUrlForImg(src: string | null | undefined): string | null {
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  return normalizeBarberSlipUrlForDashboard(src, origin);
+function IconFilterFunnel({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+    </svg>
+  );
 }
 
 function BarberPurchaseSlipCell(props: {
@@ -141,7 +162,19 @@ function BarberEditSlipPreview(props: {
   );
 }
 
-export function BarberPurchasesClient() {
+export type BarberPurchasesEmbeddedToolbarApi = {
+  openSellModal: () => void;
+};
+
+type BarberPurchasesClientProps = {
+  embedded?: boolean;
+  onEmbeddedToolbar?: (api: BarberPurchasesEmbeddedToolbarApi | null) => void;
+};
+
+export function BarberPurchasesClient({
+  embedded = false,
+  onEmbeddedToolbar,
+}: BarberPurchasesClientProps = {}) {
   const slipLightbox = useAppImageLightbox();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,6 +192,9 @@ export function BarberPurchasesClient() {
   const [editRemoveSlip, setEditRemoveSlip] = useState(false);
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const [sellNotice, setSellNotice] = useState<string | null>(null);
+  const [filterPopupOpen, setFilterPopupOpen] = useState(false);
+  const [draftFilterPhone, setDraftFilterPhone] = useState("");
+  const [draftFilterName, setDraftFilterName] = useState("");
 
   const filteredRows = useMemo(() => {
     const phoneQ = filterPhone.replace(/\D/g, "");
@@ -229,6 +265,31 @@ export function BarberPurchasesClient() {
       window.removeEventListener("keydown", onKey);
     };
   }, [editTarget]);
+
+  const openFilterPopup = useCallback(() => {
+    setDraftFilterPhone(filterPhone);
+    setDraftFilterName(filterName);
+    setFilterPopupOpen(true);
+  }, [filterPhone, filterName]);
+
+  const closeFilterPopup = useCallback(() => {
+    setFilterPopupOpen(false);
+  }, []);
+
+  const applyFilterPopup = useCallback(() => {
+    setFilterPhone(draftFilterPhone.replace(/\D/g, "").slice(0, 15));
+    setFilterName(draftFilterName);
+    setFilterPopupOpen(false);
+  }, [draftFilterPhone, draftFilterName]);
+
+  useEffect(() => {
+    if (!filterPopupOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFilterPopupOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [filterPopupOpen]);
 
   async function submitEdit(e: FormEvent) {
     e.preventDefault();
@@ -323,121 +384,229 @@ export function BarberPurchasesClient() {
     setSellModalOpen(true);
   }, []);
 
+  useEffect(() => {
+    if (!embedded || !onEmbeddedToolbar) return;
+    onEmbeddedToolbar({ openSellModal });
+    return () => onEmbeddedToolbar(null);
+  }, [embedded, onEmbeddedToolbar, openSellModal]);
+
   return (
-    <div className={barberPageStackClass}>
+    <div className={embedded ? "space-y-4 sm:space-y-5" : barberPageStackClass}>
       {sellNotice ? (
-        <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{sellNotice}</p>
+        <p className={`${barberCardSurfaceRadiusClass} bg-emerald-50 ${barberCardBodyPaddingXClass} py-3 text-sm text-emerald-900`}>
+          {sellNotice}
+        </p>
       ) : null}
       {err ? <p className={barberInlineAlertErrorClass}>{err}</p> : null}
       {loading ? (
         <>
-          <section className={barberSectionFirstClass} aria-label="เครื่องมือ">
+          {!embedded ? (
+            <section className={barberSectionFirstClass} aria-label="เครื่องมือ">
+              <div className={cn(barberSectionActionsRowClass, "w-full justify-end sm:ml-auto sm:w-auto")}>
+                <BarberDashboardBackLink />
+                <button
+                  type="button"
+                  onClick={openSellModal}
+                  className={`app-btn-primary inline-flex min-h-[44px] items-center justify-center ${barberCardSurfaceRadiusClass} px-4 py-2.5 text-center text-sm font-semibold text-white`}
+                >
+                  ขายแพ็กเกจ
+                </button>
+              </div>
+            </section>
+          ) : null}
+          <p className={barberMutedLoadingNoticeClass}>กำลังโหลด…</p>
+        </>
+      ) : rows.length === 0 ? (
+        <section className={barberSectionFirstClass} aria-label="ว่าง">
+          {!embedded ? (
             <div className={cn(barberSectionActionsRowClass, "w-full justify-end sm:ml-auto sm:w-auto")}>
               <BarberDashboardBackLink />
               <button
                 type="button"
                 onClick={openSellModal}
-                className="app-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 py-2.5 text-center text-sm font-semibold text-white"
+                      className={`app-btn-primary inline-flex min-h-[44px] items-center justify-center ${barberCardSurfaceRadiusClass} px-4 py-2.5 text-center text-sm font-semibold text-white`}
               >
                 ขายแพ็กเกจ
               </button>
             </div>
-          </section>
-          <p className="rounded-lg bg-[#f8f7ff] px-4 py-3 text-sm text-[#66638c]">กำลังโหลด…</p>
-        </>
-      ) : rows.length === 0 ? (
-        <section className={barberSectionFirstClass} aria-label="ว่าง">
-          <div className={cn(barberSectionActionsRowClass, "w-full justify-end sm:ml-auto sm:w-auto")}>
-            <BarberDashboardBackLink />
-            <button
-              type="button"
-              onClick={openSellModal}
-              className="app-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 py-2.5 text-center text-sm font-semibold text-white"
-            >
-              ขายแพ็กเกจ
-            </button>
-          </div>
-          <p className="rounded-xl border border-dashed border-[#dcd8f0] py-10 text-center text-sm text-[#66638c]">
+          ) : null}
+          <p className={`${barberOffersEmptyStateClass} text-center text-sm text-[#66638c]`}>
             ยังไม่มีการซื้อแพ็ก
           </p>
         </section>
       ) : (
         <>
-          <section className={barberSectionFirstClass} aria-label="กรอง">
-            <AppSectionHeader
-              tone="violet"
-              title="กรอง"
-              description={
-                hasActiveFilters ? (
-                  <>
-                    แสดง{" "}
-                    <span className="font-semibold tabular-nums text-slate-700">{filteredRows.length}</span> จาก{" "}
-                    <span className="tabular-nums">{rows.length}</span> รายการ
-                  </>
-                ) : (
-                  <>ทั้งหมด {rows.length} รายการ</>
-                )
-              }
-              actionWrapClassName="flex min-w-0 flex-1 justify-end"
-              action={
-                <div className={barberSectionActionsRowClass}>
+          <section className={barberSectionFirstClass} aria-label="กรองรายการ">
+            <div
+              className={cn(
+                barberOffersFilterBarClass,
+                "flex flex-wrap items-center justify-between gap-3",
+              )}
+            >
+              <div className="flex min-w-0 items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={openFilterPopup}
+                  aria-haspopup="dialog"
+                  aria-expanded={filterPopupOpen}
+                  aria-controls="purchase-filter-dialog"
+                  title="เปิดตัวกรอง"
+                  className={cn(
+                    `flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center ${barberCardSurfaceRadiusClass} bg-gradient-to-br from-[#eef2ff] to-[#e0e7ff] text-[#5b61ff] shadow-sm outline-none ring-1 ring-indigo-100/80 transition hover:from-[#e8ecff] hover:to-[#dde4ff] active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-[#5b61ff]/35`,
+                    hasActiveFilters && "ring-2 ring-[#5b61ff]/40",
+                  )}
+                >
+                  <IconFilterFunnel className="h-[18px] w-[18px]" />
+                </button>
+                <p className="min-w-0 text-sm font-black tabular-nums text-[#2e2a58]">
+                  <span className="sr-only">
+                    {hasActiveFilters ?
+                      `แสดง ${filteredRows.length} จาก ${rows.length} รายการ`
+                    : `ทั้งหมด ${rows.length} รายการ`}
+                  </span>
+                  <span aria-hidden className="inline-flex items-baseline gap-0.5">
+                    {hasActiveFilters ?
+                      <>
+                        <span className="bg-gradient-to-r from-[#4338ca] to-[#5b61ff] bg-clip-text text-transparent">
+                          {filteredRows.length}
+                        </span>
+                        <span className="text-xs font-bold text-[#8b87ad]">/{rows.length}</span>
+                      </>
+                    : (
+                      <span className="bg-gradient-to-r from-[#4338ca] to-[#0d9488] bg-clip-text text-transparent">
+                        {rows.length}
+                      </span>
+                    )}
+                    <span className="ml-1 text-xs font-bold text-[#8b87ad]">รายการ</span>
+                  </span>
+                </p>
+              </div>
+              {!embedded ?
+                <div className={cn(barberSectionActionsRowClass, "shrink-0")}>
                   <BarberDashboardBackLink />
                   <button
                     type="button"
                     onClick={openSellModal}
-                    className="app-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 py-2.5 text-center text-sm font-semibold text-white"
+                    className={`app-btn-primary inline-flex min-h-[44px] items-center justify-center ${barberCardSurfaceRadiusClass} px-4 py-2.5 text-center text-sm font-semibold text-white`}
                   >
                     ขายแพ็กเกจ
                   </button>
                 </div>
-              }
-            />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <label htmlFor="purchase-filter-phone" className="sr-only">
-                  เบอร์
-                </label>
-                <input
-                  id="purchase-filter-phone"
-                  className="app-input min-h-[48px] w-full rounded-xl px-3 py-2 text-base placeholder:text-[#8b87ad]"
-                  inputMode="numeric"
-                  placeholder="เบอร์"
-                  value={filterPhone}
-                  onChange={(e) => setFilterPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
-                />
-              </div>
-              <div>
-                <label htmlFor="purchase-filter-name" className="sr-only">
-                  ชื่อ
-                </label>
-                <input
-                  id="purchase-filter-name"
-                  className="app-input min-h-[48px] w-full rounded-xl px-3 py-2 text-base placeholder:text-[#8b87ad]"
-                  placeholder="ชื่อลูกค้า"
-                  value={filterName}
-                  onChange={(e) => setFilterName(e.target.value)}
-                />
-              </div>
+              : null}
             </div>
           </section>
 
+          {filterPopupOpen ?
+            <BarberModalPortal>
+              <div
+                className={barberModalBackdropClass}
+                role="presentation"
+                onClick={closeFilterPopup}
+              >
+                <div
+                  id="purchase-filter-dialog"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="purchase-filter-dialog-title"
+                  className={barberModalPanelMdClass}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className={barberModalHeaderClass}>
+                    <div className="min-w-0">
+                      <h2 id="purchase-filter-dialog-title" className={barberModalTitleClass}>
+                        กรองรายการ
+                      </h2>
+                      <p className={barberModalSubtitleClass}>เบอร์ · ชื่อ (ว่างได้)</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={closeFilterPopup}
+                      className={barberModalCloseBtnClass}
+                      aria-label="ปิด"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <form
+                    className="space-y-4 px-5 py-5"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      applyFilterPopup();
+                    }}
+                  >
+                    <label className="block text-xs font-semibold text-[#4d47b6]" htmlFor="purchase-filter-phone-popup">
+                      เบอร์โทร
+                      <input
+                        id="purchase-filter-phone-popup"
+                        className="app-input mt-1.5 min-h-[48px] w-full rounded-xl px-3 py-2 text-base placeholder:text-[#8b87ad]"
+                        inputMode="numeric"
+                        placeholder="เช่น 081..."
+                        autoComplete="tel"
+                        value={draftFilterPhone}
+                        onChange={(e) => setDraftFilterPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
+                      />
+                    </label>
+                    <label className="block text-xs font-semibold text-[#4d47b6]" htmlFor="purchase-filter-name-popup">
+                      ชื่อลูกค้า
+                      <input
+                        id="purchase-filter-name-popup"
+                        className="app-input mt-1.5 min-h-[48px] w-full rounded-xl px-3 py-2 text-base placeholder:text-[#8b87ad]"
+                        placeholder="ค้นหาบางส่วนได้"
+                        autoComplete="name"
+                        value={draftFilterName}
+                        onChange={(e) => setDraftFilterName(e.target.value)}
+                      />
+                    </label>
+                    <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDraftFilterPhone("");
+                          setDraftFilterName("");
+                        }}
+                        className={`app-btn-soft min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-[#2e2a58]`}
+                      >
+                        ล้าง
+                      </button>
+                      <button
+                        type="button"
+                        onClick={closeFilterPopup}
+                        className={`app-btn-soft min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-[#2e2a58]`}
+                      >
+                        ยกเลิก
+                      </button>
+                      <button
+                        type="submit"
+                        className={`app-btn-primary min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-white`}
+                      >
+                        ใช้การกรอง
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </BarberModalPortal>
+          : null}
+
           {filteredRows.length === 0 ? (
             <section className={barberSectionNextClass} aria-label="ไม่พบ">
-              <p className="rounded-xl border border-dashed border-amber-200 bg-amber-50/50 py-8 text-center text-sm text-amber-900">
-                ไม่พบรายการ — ลองเปลี่ยนเบอร์หรือชื่อ
+              <p
+                className={`${barberCardSurfaceRadiusClass} border border-dashed border-amber-200/90 bg-gradient-to-br from-amber-50/95 via-white to-orange-50/40 ${barberCardBodyPaddingXClass} py-8 text-center text-sm font-medium text-amber-950`}
+              >
+                ไม่พบรายการ — ปรับตัวกรอง
               </p>
             </section>
           ) : (
             <section className={barberSectionNextClass} aria-label="รายการสมาชิก">
-              <p className="mb-3 text-xs leading-snug text-[#66638c]">
-                คอลัมน์ซ้ายเป็นสลิปตอนขายแพ็ก (เทมเพลตกลาง) — ถ้ามีรูป คลิกเพื่อเปิดดูขนาดเต็ม
+              <p className="mb-3 text-xs leading-snug text-[#5f5a8a]">
+                <span className="text-[#6366f1]">คลิกรูปสลิป</span> ซ้ายเพื่อขยาย
               </p>
               <ul className="space-y-2">
                 {filteredRows.map((r) => (
                   <li
                     key={r.id}
                     className={cn(
-                      barberListRowCardClass,
+                      barberOffersListRowCardClass,
                       "flex min-w-0 gap-3 py-2.5 sm:items-start sm:gap-4",
                     )}
                   >
@@ -461,7 +630,9 @@ export function BarberPurchasesClient() {
                       {r.customer.name ? (
                         <p className="truncate text-xs text-[#5f5a8a]">{r.customer.name}</p>
                       ) : null}
-                      <p className="truncate text-sm font-medium text-[#4d47b6]">{r.package.name}</p>
+                      <p className="truncate bg-gradient-to-r from-[#4338ca] to-[#6366f1] bg-clip-text text-sm font-semibold text-transparent">
+                        {r.package.name}
+                      </p>
                       <p className="text-[11px] leading-snug text-[#8b87ad]">
                         ซื้อ{" "}
                         {new Date(r.createdAt).toLocaleString("th-TH", {
@@ -536,36 +707,33 @@ export function BarberPurchasesClient() {
       />
 
       {editTarget ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
-          role="presentation"
-          onClick={() => closeEditModal()}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="barber-purchase-edit-title"
-            className="max-h-[min(92vh,560px)] w-full max-w-md overflow-y-auto rounded-t-2xl border border-[#ecebff] bg-white shadow-2xl sm:rounded-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 flex items-start justify-between gap-3 border-b border-[#ecebff] bg-white px-4 py-3 sm:px-5">
-              <div className="min-w-0">
-                <h2 id="barber-purchase-edit-title" className="text-base font-bold text-[#2e2a58] sm:text-lg">
-                  แก้ไขสมาชิกแพ็กเกจ
-                </h2>
-                <p className="mt-0.5 truncate text-xs text-[#66638c] tabular-nums">{editTarget.customer.phone}</p>
-                <p className="truncate text-xs font-medium text-[#4d47b6]">{editTarget.package.name}</p>
+        <BarberModalPortal>
+          <div className={barberModalBackdropClass} role="presentation" onClick={() => closeEditModal()}>
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="barber-purchase-edit-title"
+              className={barberModalPanelMdClass}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={barberModalHeaderClass}>
+                <div className="min-w-0">
+                  <h2 id="barber-purchase-edit-title" className={barberModalTitleClass}>
+                    แก้ไขสมาชิกแพ็กเกจ
+                  </h2>
+                  <p className={cn(barberModalSubtitleClass, "truncate tabular-nums")}>{editTarget.customer.phone}</p>
+                  <p className="truncate text-xs font-medium text-[#4d47b6]">{editTarget.package.name}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => closeEditModal()}
+                  className={barberModalCloseBtnClass}
+                  aria-label="ปิด"
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => closeEditModal()}
-                className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-[#66638c] hover:bg-[#f4f3fb] hover:text-[#2e2a58]"
-                aria-label="ปิด"
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={(e) => void submitEdit(e)} className="grid gap-3 px-4 py-4 sm:px-5">
+              <form onSubmit={(e) => void submitEdit(e)} className="grid gap-3 px-5 py-5">
               {editErr ? (
                 <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{editErr}</p>
               ) : null}
@@ -606,7 +774,7 @@ export function BarberPurchasesClient() {
               <p className="rounded-lg bg-[#f8f7ff] px-3 py-2 text-[11px] leading-relaxed text-[#5f5a8a]">
                 แพ็ก {editTarget.package.totalSessions} ครั้ง · ราคา ฿{formatPriceBaht(editTarget.package.price)} บาท (อ่านอย่างเดียว)
               </p>
-              <div className="rounded-xl border border-[#ecebff] bg-[#faf9ff] p-3">
+              <div className={`${barberCardSurfaceRadiusClass} border border-[#ecebff] bg-[#faf9ff] p-3`}>
                 <p className="text-xs font-semibold text-[#4d47b6]">สลิปตอนขายแพ็ก</p>
                 <p className="mt-0.5 text-[11px] text-[#66638c]">
                   ถ้ารายการเดิมไม่มีรูป (ระบบเคยบันทึกผิดพลาด) แนบไฟล์ที่นี่ได้ — หรือติ๊กลบสลิป
@@ -650,21 +818,22 @@ export function BarberPurchasesClient() {
                 <button
                   type="button"
                   onClick={() => closeEditModal()}
-                  className="app-btn-soft min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold text-[#2e2a58]"
+                  className={`app-btn-soft min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-[#2e2a58]`}
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
                   disabled={editSaving}
-                  className="app-btn-primary min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                  className={`app-btn-primary min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-white disabled:opacity-60`}
                 >
                   {editSaving ? "กำลังบันทึก…" : "บันทึก"}
                 </button>
               </div>
             </form>
+            </div>
           </div>
-        </div>
+        </BarberModalPortal>
       ) : null}
     </div>
   );

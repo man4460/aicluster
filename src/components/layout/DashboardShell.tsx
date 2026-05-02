@@ -255,6 +255,11 @@ export function DashboardShell({
   children,
 }: Props) {
   const pathname = usePathname();
+  /** หน้าพนักงานจาก QR — ไม่ใช้แถบแดชบอร์ดและ sidebar */
+  const barberStaffKiosk = pathname === "/dashboard/barber/staff";
+  /** โมดูลร้านตัดผมบนมือถือ — ลด padding แนวนอกซ้ำกับ PageContainer */
+  const barberDashboardCompact =
+    !barberStaffKiosk && (pathname === "/dashboard/barber" || pathname.startsWith("/dashboard/barber/"));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountWrapRef = useRef<HTMLDivElement>(null);
@@ -338,7 +343,8 @@ export function DashboardShell({
   return (
     <div className="flex min-h-screen flex-col text-[#2e2a58]">
       {/* แถบบน — แก้ว โค้งมน ไล่โทนเดียวกับการ์ด */}
-      <header className="sticky top-0 z-30 w-full px-3 pt-3 sm:px-4 sm:pt-4">
+      {!barberStaffKiosk ?
+        <header className="sticky top-0 z-30 w-full px-3 pt-3 sm:px-4 sm:pt-4">
         <div className="flex h-14 w-full min-w-0 items-center gap-2 rounded-2xl border border-white/30 bg-gradient-to-r from-[#4f2f9a]/90 via-[#5b3ac2]/85 to-[#ec4899]/85 px-3 text-white shadow-[0_20px_40px_-15px_rgba(61,29,125,0.7)] backdrop-blur-xl sm:gap-3 sm:px-6 lg:px-8">
           <button
             type="button"
@@ -442,15 +448,28 @@ export function DashboardShell({
           </div>
         </div>
       </header>
+      : null}
 
-      {demoSession ? <DemoSessionBanner /> : null}
+      {demoSession ?
+        <div className={cn("w-full shrink-0 px-3 pt-2 sm:px-4", barberStaffKiosk && "pt-3")}>
+          <DemoSessionBanner />
+        </div>
+      : null}
 
-      <div className="flex min-h-0 flex-1 gap-3 px-3 pb-20 pt-2 sm:gap-4 sm:px-4 sm:pb-4">
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 gap-3 pb-20 pt-2 sm:gap-4 sm:pb-4",
+          barberDashboardCompact ? "max-md:px-2 sm:px-4" : "px-3 sm:px-4",
+          barberStaffKiosk &&
+            "!gap-0 !px-0 !pt-0 !pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:!px-0 sm:!pb-4",
+        )}
+      >
         {/* Sidebar — แก้ว โค้งมน */}
         <aside
           className={cn(
             "hidden w-[15.5rem] shrink-0 flex-col overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-b from-[#4f2f9a] via-[#5b3ac2] to-[#ec4899] text-white shadow-[0_18px_42px_-24px_rgba(40,16,97,0.75)] md:flex",
-            systemFocusLayout && "md:hidden",
+            (systemFocusLayout || barberStaffKiosk) && "md:hidden",
+            barberStaffKiosk && "!hidden",
           )}
           aria-label="เมนูหลัก"
         >
@@ -476,7 +495,7 @@ export function DashboardShell({
 
         <div className="flex min-w-0 min-h-0 flex-1 flex-col">
           {/* Drawer มือถือ — เริ่มใต้แถบ header */}
-          {drawerOpen && !systemFocusLayout ? (
+          {drawerOpen && !systemFocusLayout && !barberStaffKiosk ?
             <>
               <button
                 type="button"
@@ -520,12 +539,13 @@ export function DashboardShell({
                 </div>
               </div>
             </>
-          ) : null}
+          : null}
 
           <main
             className={cn(
               "flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden rounded-2xl",
               systemFocusLayout && "md:rounded-none",
+              barberStaffKiosk && "!rounded-none",
             )}
           >
             {children}

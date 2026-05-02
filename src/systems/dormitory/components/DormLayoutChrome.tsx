@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { TrialSandboxStrip } from "@/components/dashboard/TrialSandboxStrip";
 import { AppUsageGuideModal } from "@/components/app-templates";
 import { DormModuleHeader } from "./DormModuleHeader";
 
@@ -116,10 +117,7 @@ export function DormLayoutChrome({
       <DormModuleHeader />
 
       {trialExpiresLabel ? (
-        <div className="app-banner rounded-xl px-4 py-3 text-sm">
-          <span className="font-semibold">โหมดทดลอง</span> — ข้อมูลในชุดนี้แยกจากข้อมูลจริงหลัง Subscribe วันหมดอายุ:{" "}
-          {trialExpiresLabel}
-        </div>
+        <TrialSandboxStrip>ทดลอง · ข้อมูลแยกจากจริง · หมด {trialExpiresLabel}</TrialSandboxStrip>
       ) : null}
 
       {children}

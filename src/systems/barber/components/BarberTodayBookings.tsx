@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { bangkokDayStartEnd } from "@/lib/barber/bangkok-day";
 import { getBarberDataScope } from "@/lib/trial/module-scopes";
@@ -21,27 +20,7 @@ export async function BarberTodayBookings({ ownerId }: { ownerId: string }) {
 
   return (
     <section className={barberSectionFirstClass} aria-label="คิววันนี้">
-      <AppSectionHeader
-        tone="violet"
-        title="คิววันนี้"
-        description="นัดวันนี้ตามเวลาไทย"
-        action={
-          <div className="flex flex-wrap gap-2 print:hidden">
-            <Link
-              href="/dashboard/barber/check-in"
-              className="app-btn-primary rounded-xl px-3 py-2 text-xs font-semibold sm:px-4 sm:py-2.5 sm:text-sm"
-            >
-              เช็กอิน
-            </Link>
-            <Link
-              href="/dashboard/barber/bookings"
-              className="app-btn-soft rounded-xl px-3 py-2 text-xs font-semibold sm:px-4 sm:py-2.5 sm:text-sm"
-            >
-              จัดการคิว
-            </Link>
-          </div>
-        }
-      />
+      <AppSectionHeader tone="violet" title="คิววันนี้" description="เวลาไทย · สลับแท็บด้านบน" />
       {rows.length === 0 ? (
         <AppEmptyState tone="violet" className="py-8 text-sm">
           ยังไม่มีคิววันนี้

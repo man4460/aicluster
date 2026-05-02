@@ -1,0 +1,29 @@
+# dependencies & build output
+node_modules
+.next
+dist
+out
+
+# git & IDE
+.git
+.cursor
+*.md
+!README.md
+
+# local env (ใช้ docker/env หรือส่งผ่าน compose แทน)
+.env
+.env.*
+!.env.example
+!.env.docker.example
+
+# cache / ทดสอบ
+.wrangler
+coverage
+.turbo
+*.log
+npm-debug.log*
+
+# ไม่ต้องส่งเข้า image
+terminals
+**/.DS_Store
+Thumbs.db

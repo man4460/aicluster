@@ -93,6 +93,26 @@ function roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w:
   ctx.closePath();
 }
 
+/** ตัดบรรทัดตามความกว้าง (รองรับไทยไม่มีช่องว่าง) — ต้องตั้ง ctx.font ก่อนเรียก */
+function wrapTextToLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const t = text.trim();
+  if (!t) return [];
+  const lines: string[] = [];
+  let line = "";
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i]!;
+    const test = line + ch;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = ch;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -144,77 +164,232 @@ export async function createShopQrPosterCanvas(input: PosterCanvasInput): Promis
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("no canvas ctx");
 
-  // page background
-  ctx.fillStyle = "#eef0f3";
+  // พื้นหลังหน้า: ไล่สีนุ่ม + แสงจุด (ไม่แตะโซน QR — contrast โค้ดยังชัดบนพื้นขาวในแผง)
+  const pageGrad = ctx.createLinearGradient(0, 0, width, height);
+  pageGrad.addColorStop(0, "#e8ecf8");
+  pageGrad.addColorStop(0.48, "#f3eef6");
+  pageGrad.addColorStop(1, "#e9f5f2");
+  ctx.fillStyle = pageGrad;
   ctx.fillRect(0, 0, width, height);
 
-  const cardX = 20;
-  const cardY = 12;
-  const cardW = width - 40;
-  const cardH = height - 52;
-  const cardR = 52;
-
-  // การ์ดใบเดียว: เงา + พื้น + ขอบ indigo ชั้นเดียว (ไม่ซ้อนการ์ดขาว/เทาสองใบ)
   ctx.save();
-  ctx.shadowColor = "rgba(15, 23, 42, 0.14)";
-  ctx.shadowBlur = 24;
-  ctx.shadowOffsetY = 8;
+  const orbTop = ctx.createRadialGradient(width * 0.88, height * 0.1, 0, width * 0.88, height * 0.1, 340);
+  orbTop.addColorStop(0, "rgba(129, 140, 248, 0.24)");
+  orbTop.addColorStop(1, "rgba(129, 140, 248, 0)");
+  ctx.fillStyle = orbTop;
+  ctx.fillRect(0, 0, width, height);
+  const orbBot = ctx.createRadialGradient(width * 0.06, height * 0.92, 0, width * 0.06, height * 0.92, 280);
+  orbBot.addColorStop(0, "rgba(45, 212, 191, 0.16)");
+  orbBot.addColorStop(1, "rgba(45, 212, 191, 0)");
+  ctx.fillStyle = orbBot;
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+
+  const cardX = 22;
+  const cardY = 18;
+  const cardW = width - cardX * 2;
+  const cardH = height - cardY - 48;
+  const cardR = 48;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(15, 23, 42, 0.16)";
+  ctx.shadowBlur = 28;
+  ctx.shadowOffsetY = 10;
   roundedRectPath(ctx, cardX, cardY, cardW, cardH, cardR);
+  ctx.fillStyle = "#fbfcff";
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  roundedRectPath(ctx, cardX, cardY, cardW, cardH, cardR);
+  ctx.clip();
+  const innerWash = ctx.createLinearGradient(0, cardY, 0, cardY + 440);
+  innerWash.addColorStop(0, "rgba(238, 242, 255, 0.72)");
+  innerWash.addColorStop(0.52, "rgba(255, 255, 255, 0)");
+  innerWash.addColorStop(1, "rgba(236, 253, 245, 0.38)");
+  ctx.fillStyle = innerWash;
+  ctx.fillRect(cardX, cardY, cardW, cardH);
+  ctx.restore();
+
+  roundedRectPath(ctx, cardX, cardY, cardW, cardH, cardR);
+  const edgeGrad = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + cardH);
+  edgeGrad.addColorStop(0, "#6366f1");
+  edgeGrad.addColorStop(0.48, "#a855f7");
+  edgeGrad.addColorStop(1, "#14b8a6");
+  ctx.strokeStyle = edgeGrad;
+  ctx.lineWidth = 5;
+  ctx.stroke();
+
+  /** ช่องไฟแบบ 8px — เนื้อหาเยื้องจากขอบการ์ดเท่ากันทุกบล็อก */
+  const contentInset = 36;
+  const padX = cardX + contentInset;
+  const headerTop = cardY + 42;
+  const logoMaxW = 100;
+  const logoMaxH = 100;
+  const logoToNameGap = 20;
+  const headerDividerGap = 24;
+  const dividerQrGap = 40;
+  const qrFramePad = 28;
+  const qrPanelR = 30;
+  const qrToInstructGap = 30;
+  const tagLineLead = 40;
+  const tagBlocksGap = 8;
+  const subtitleTopGap = 14;
+  const subLineLead = 28;
+  const footerReserve = 30;
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+
+  const logo = logoUrl ? await loadImage(logoUrl).catch(() => null) : null;
+  let logoW = 0;
+  let logoH = 0;
+  let textStartX = padX;
+
+  if (logo) {
+    const ratio = Math.min(logoMaxW / logo.width, logoMaxH / logo.height, 1);
+    logoW = Math.round(logo.width * ratio);
+    logoH = Math.round(logo.height * ratio);
+    ctx.drawImage(logo, padX, headerTop, logoW, logoH);
+    textStartX = padX + logoW + logoToNameGap;
+  }
+
+  const nameMaxW = width - textStartX - padX;
+  ctx.font = `700 31px ${QR_FONT_FAMILY}`;
+  const nameLabel = shopLabel.trim() || "ร้าน";
+  const nameLines = wrapTextToLines(ctx, nameLabel, Math.max(120, nameMaxW));
+  const nameLineH = 38;
+  const nameTotalH = nameLines.length * nameLineH;
+  let nameY = headerTop;
+  if (logo) {
+    nameY = headerTop + Math.max(0, (logoH - nameTotalH) / 2);
+  }
+
+  const nameGrad = ctx.createLinearGradient(textStartX, nameY, textStartX + nameMaxW, nameY + nameLineH);
+  nameGrad.addColorStop(0, "#4338ca");
+  nameGrad.addColorStop(0.52, "#7c3aed");
+  nameGrad.addColorStop(1, "#0f766e");
+  ctx.fillStyle = nameGrad;
+  let ny = nameY;
+  for (const ln of nameLines) {
+    ctx.fillText(ln, textStartX, ny);
+    ny += nameLineH;
+  }
+  const nameBottom = ny;
+
+  const headerBottom = Math.max(headerTop + logoH, nameBottom);
+  const dividerY = headerBottom + headerDividerGap;
+
+  const dividerGrad = ctx.createLinearGradient(padX, 0, width - padX, 0);
+  dividerGrad.addColorStop(0, "rgba(99, 102, 241, 0)");
+  dividerGrad.addColorStop(0.5, "rgba(168, 85, 247, 0.42)");
+  dividerGrad.addColorStop(1, "rgba(20, 184, 166, 0)");
+  ctx.strokeStyle = dividerGrad;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(padX, dividerY);
+  ctx.lineTo(width - padX, dividerY);
+  ctx.stroke();
+
+  const mainLine1 = tagline.includes("—") ? tagline.split("—")[0]?.trim() ?? tagline : tagline;
+  const mainLine2 = tagline.includes("—") ? tagline.split("—")[1]?.trim() ?? "" : "";
+  const instructMaxW = width - 2 * padX;
+  const footerSlot = footerText?.trim() ? footerReserve + 34 : footerReserve + 8;
+  const instructMaxBottom = cardY + cardH - footerSlot;
+
+  const measureInstructHeight = (): number => {
+    ctx.font = `700 29px ${QR_FONT_FAMILY}`;
+    let h = wrapTextToLines(ctx, mainLine1, instructMaxW).length * tagLineLead;
+    if (mainLine2) {
+      h += tagBlocksGap;
+      h += wrapTextToLines(ctx, mainLine2, instructMaxW).length * tagLineLead;
+    }
+    if (subtitle?.trim()) {
+      ctx.font = `600 18px ${QR_FONT_FAMILY}`;
+      h += subtitleTopGap;
+      h += wrapTextToLines(ctx, subtitle.trim(), instructMaxW).length * subLineLead;
+    }
+    return h;
+  };
+
+  const instructH = measureInstructHeight();
+  const maxQrPanelBottom = instructMaxBottom - qrToInstructGap - instructH;
+
+  const qrImg = await loadImage(qrDataUrl);
+  const qrPad = qrFramePad;
+  let qrSize = 452;
+  let qrY = dividerY + dividerQrGap;
+  while (qrY + qrSize + qrPad > maxQrPanelBottom && qrSize > 300) {
+    qrSize -= 10;
+  }
+  if (qrY + qrSize + qrPad > maxQrPanelBottom) {
+    qrY = Math.max(dividerY + Math.round(dividerQrGap * 0.65), maxQrPanelBottom - qrSize - qrPad);
+  }
+
+  const qrX = (width - qrSize) / 2;
+  const qrPanelX = qrX - qrPad;
+  const qrPanelY = qrY - qrPad;
+  const qrPanelW = qrSize + qrPad * 2;
+  const qrPanelH = qrSize + qrPad * 2;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(15, 23, 42, 0.1)";
+  ctx.shadowBlur = 22;
+  ctx.shadowOffsetY = 8;
+  roundedRectPath(ctx, qrPanelX, qrPanelY, qrPanelW, qrPanelH, qrPanelR);
   ctx.fillStyle = "#ffffff";
   ctx.fill();
   ctx.restore();
 
-  roundedRectPath(ctx, cardX, cardY, cardW, cardH, cardR);
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = "rgba(99, 102, 241, 0.5)";
+  roundedRectPath(ctx, qrPanelX, qrPanelY, qrPanelW, qrPanelH, qrPanelR);
+  ctx.strokeStyle = "rgba(99, 102, 241, 0.28)";
+  ctx.lineWidth = 2;
   ctx.stroke();
 
-  const logo = logoUrl ? await loadImage(logoUrl).catch(() => null) : null;
-  if (logo) {
-    const maxW = 200;
-    const maxH = 200;
-    const ratio = Math.min(maxW / logo.width, maxH / logo.height, 1);
-    const w = Math.round(logo.width * ratio);
-    const h = Math.round(logo.height * ratio);
-    ctx.drawImage(logo, Math.round((width - w) / 2), 70, w, h);
-  } else {
-    ctx.fillStyle = "#0f172a";
-    ctx.textAlign = "center";
-    ctx.font = `700 38px ${QR_FONT_FAMILY}`;
-    ctx.fillText(shopLabel, width / 2, 138);
-  }
-
-  ctx.fillStyle = "#1e293b";
-  ctx.textAlign = "center";
-  ctx.font = `700 34px ${QR_FONT_FAMILY}`;
-  const mainLine1 = tagline.includes("—") ? tagline.split("—")[0]?.trim() ?? tagline : tagline;
-  const mainLine2 = tagline.includes("—") ? tagline.split("—")[1]?.trim() ?? "" : "";
-  ctx.fillText(mainLine1, width / 2, 320);
-  if (mainLine2) ctx.fillText(mainLine2, width / 2, 364);
-  if (subtitle?.trim()) {
-    ctx.font = `600 20px ${QR_FONT_FAMILY}`;
-    ctx.fillStyle = "#334155";
-    ctx.fillText(subtitle.trim(), width / 2, mainLine2 ? 404 : 356);
-  }
-
-  const qrImg = await loadImage(qrDataUrl);
-  const qrSize = 470;
-  const qrX = (width - qrSize) / 2;
-  const qrY = 450;
-  // ไม่วาดกรอบซ้อนรอบ QR — โค้ดใน PNG มีขอบขาวอยู่แล้ว
   ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
 
-  if (logo && shopLabel.trim()) {
-    ctx.fillStyle = "#64748b";
-    ctx.textAlign = "center";
-    ctx.font = `700 30px ${QR_FONT_FAMILY}`;
-    ctx.fillText(shopLabel.trim(), width / 2, 1010);
+  let instructY = qrY + qrSize + qrPad + qrToInstructGap;
+  const cx = width / 2;
+  const gx0 = cx - instructMaxW / 2;
+  const gx1 = cx + instructMaxW / 2;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+
+  const drawTagLinesCentered = (raw: string, lineHeight: number) => {
+    ctx.font = `700 29px ${QR_FONT_FAMILY}`;
+    for (const ln of wrapTextToLines(ctx, raw, instructMaxW)) {
+      const g = ctx.createLinearGradient(gx0, instructY, gx1, instructY + 32);
+      g.addColorStop(0, "#4f46e5");
+      g.addColorStop(0.48, "#9333ea");
+      g.addColorStop(1, "#0d9488");
+      ctx.fillStyle = g;
+      ctx.fillText(ln, cx, instructY);
+      instructY += lineHeight;
+    }
+  };
+
+  drawTagLinesCentered(mainLine1, tagLineLead);
+  if (mainLine2) {
+    instructY += tagBlocksGap;
+    drawTagLinesCentered(mainLine2, tagLineLead);
   }
+
+  if (subtitle?.trim()) {
+    instructY += subtitleTopGap;
+    ctx.font = `600 18px ${QR_FONT_FAMILY}`;
+    ctx.fillStyle = "#475569";
+    for (const ln of wrapTextToLines(ctx, subtitle.trim(), instructMaxW)) {
+      ctx.fillText(ln, cx, instructY);
+      instructY += subLineLead;
+    }
+  }
+
   if (footerText?.trim()) {
-    ctx.fillStyle = "#64748b";
     ctx.textAlign = "center";
-    ctx.font = `500 20px ${QR_FONT_FAMILY}`;
-    ctx.fillText(footerText.trim(), width / 2, 1042);
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = `500 18px ${QR_FONT_FAMILY}`;
+    ctx.fillText(footerText.trim(), width / 2, cardY + cardH - footerReserve);
   }
 
   return canvas;
@@ -268,30 +443,45 @@ export function ShopQrPosterPreview({
 }) {
   return (
     <div
-      className="mx-auto w-[340px] rounded-[36px] border-[4px] border-indigo-300/70 bg-white p-5 shadow-xl shadow-slate-300/40"
+      className="mx-auto w-[340px] rounded-[36px] bg-gradient-to-br from-indigo-500 via-violet-500 to-teal-500 p-[3px] shadow-xl shadow-slate-900/12"
       style={{ fontFamily: '"Noto Sans Thai", "Noto Sans", sans-serif' }}
     >
-      <div className="flex flex-col items-center px-4 pb-5 pt-1">
-        {logoUrl ? (
-          <div className="flex h-[112px] w-full max-w-[280px] items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={logoUrl} alt="" className="max-h-[112px] max-w-full object-contain" />
+      <div className="rounded-[33px] bg-[#fbfcff] bg-gradient-to-b from-[#f4f6ff]/90 to-[#fafdfb] px-5 pb-7 pt-6 shadow-inner shadow-white/40">
+        <div className="flex flex-col">
+          <div className="flex w-full items-center gap-4">
+            {logoUrl ? (
+              <div className="flex h-[68px] w-[68px] shrink-0 items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={logoUrl} alt="" className="max-h-[68px] max-w-[68px] object-contain" />
+              </div>
+            ) : null}
+            <h1 className="min-w-0 flex-1 bg-gradient-to-r from-indigo-700 via-violet-600 to-teal-700 bg-clip-text text-left text-[17px] font-black leading-snug tracking-tight text-transparent">
+              {shopLabel}
+            </h1>
           </div>
-        ) : (
-          <h1 className="text-center text-[22px] font-black leading-tight tracking-tight text-slate-900">{shopLabel}</h1>
-        )}
-        <p className="mt-4 text-center text-[15px] font-bold leading-snug text-slate-800">{tagline}</p>
-        {subtitle?.trim() ? <p className="mt-1 text-center text-[10px] font-medium text-slate-600">{subtitle.trim()}</p> : null}
-        <div className="mt-5 flex justify-center">
-          {qrDataUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={qrDataUrl} alt="QR" width={232} height={232} className="h-[232px] w-[232px]" />
-          ) : (
-            <div className="flex h-[232px] w-[232px] items-center justify-center text-xs text-slate-400">กำลังสร้าง QR...</div>
-          )}
+          <div className="mt-5 h-px w-full shrink-0 bg-gradient-to-r from-transparent via-violet-400/45 to-transparent" />
+          <div className="mt-8 flex justify-center">
+            <div className="rounded-[26px] border border-indigo-300/35 bg-white p-4 shadow-md shadow-slate-400/12">
+              {qrDataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={qrDataUrl} alt="QR" width={228} height={228} className="h-[228px] w-[228px]" />
+              ) : (
+                <div className="flex h-[228px] w-[228px] items-center justify-center text-xs text-slate-400">กำลังสร้าง QR...</div>
+              )}
+            </div>
+          </div>
+          <div className="mt-8 w-full space-y-2 px-0.5 text-center">
+            <p className="text-[13px] font-bold leading-relaxed text-transparent bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-teal-600 bg-clip-text">
+              {tagline}
+            </p>
+            {subtitle?.trim() ? (
+              <p className="text-[10px] font-semibold leading-relaxed text-slate-600">{subtitle.trim()}</p>
+            ) : null}
+          </div>
+          {footerText?.trim() ? (
+            <p className="mt-8 text-center text-[10px] font-medium leading-relaxed text-slate-400">{footerText.trim()}</p>
+          ) : null}
         </div>
-        {logoUrl && shopLabel.trim() ? <p className="mt-6 text-center text-[17px] font-semibold tracking-tight text-slate-500">{shopLabel.trim()}</p> : null}
-        {footerText?.trim() ? <p className="mt-1 text-center text-[10px] font-medium text-slate-500">{footerText.trim()}</p> : null}
       </div>
     </div>
   );

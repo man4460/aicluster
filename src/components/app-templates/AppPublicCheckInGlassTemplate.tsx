@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 export const appPublicCheckInGlassPageClass =
-  "relative min-h-[100dvh] overflow-x-hidden bg-[radial-gradient(ellipse_120%_80%_at_60%_-10%,_#ddd6fe_0%,_#ede9fe_30%,_#f5f3ff_60%,_#faf9ff_100%)] px-4 pb-20 pt-8 sm:pt-12";
+  "relative min-h-[100dvh] overflow-x-hidden bg-[radial-gradient(ellipse_120%_80%_at_60%_-10%,_#ddd6fe_0%,_#ede9fe_30%,_#f5f3ff_60%,_#faf9ff_100%)] px-3 pb-20 pt-8 sm:px-4 sm:pt-12";
 
 export const appPublicCheckInGlassCardClass = cn(
   "overflow-hidden rounded-[2rem] border border-white/60",

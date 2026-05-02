@@ -6,6 +6,16 @@ import {
   AppPickGalleryImageButton,
   AppTakePhotoButton,
 } from "@/components/app-templates";
+import { BarberModalPortal } from "@/systems/barber/components/BarberModalPortal";
+import {
+  barberCardSurfaceRadiusClass,
+  barberModalBackdropClass,
+  barberModalCloseBtnClass,
+  barberModalHeaderClass,
+  barberModalPanelLgClass,
+  barberModalSubtitleClass,
+  barberModalTitleClass,
+} from "@/systems/barber/components/barber-ui-tokens";
 
 export type BarberSellPackagePkg = { id: number; name: string; price: number; totalSessions: number };
 
@@ -211,52 +221,53 @@ export function BarberSellPackageModal({
   if (!open) return null;
 
   return (
-    <>
-      <div
-        className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
-        role="presentation"
-        onClick={() => {
-          clearSellReceipt();
-          setSellCameraOpen(false);
-          onClose();
-        }}
-      >
+    <BarberModalPortal>
+      <>
         <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="barber-sell-modal-title"
-          className="max-h-[min(92vh,720px)] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:rounded-2xl"
-          onClick={(e) => e.stopPropagation()}
+          className={barberModalBackdropClass}
+          role="presentation"
+          onClick={() => {
+            clearSellReceipt();
+            setSellCameraOpen(false);
+            onClose();
+          }}
         >
-          <div className="sticky top-0 flex items-start justify-between gap-3 border-b border-slate-100 bg-white px-5 py-4">
-            <div>
-              <h2 id="barber-sell-modal-title" className="text-lg font-semibold text-slate-900">
-                ขายแพ็กเกจให้ลูกค้า
-              </h2>
-              <p className="mt-1 text-xs text-slate-500">
-                เลือกแพ็กเกจ กรอกเบอร์และชื่อ — แนบสลิปได้ (ไม่บังคับ)
-              </p>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="barber-sell-modal-title"
+            className={barberModalPanelLgClass}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={barberModalHeaderClass}>
+              <div className="min-w-0">
+                <h2 id="barber-sell-modal-title" className={barberModalTitleClass}>
+                  ขายแพ็กเกจให้ลูกค้า
+                </h2>
+                <p className={barberModalSubtitleClass}>
+                  เลือกแพ็กเกจ กรอกเบอร์และชื่อ — แนบสลิปได้ (ไม่บังคับ)
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  clearSellReceipt();
+                  setSellCameraOpen(false);
+                  onClose();
+                }}
+                className={barberModalCloseBtnClass}
+                aria-label="ปิด"
+              >
+                ✕
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                clearSellReceipt();
-                setSellCameraOpen(false);
-                onClose();
-              }}
-              className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-              aria-label="ปิด"
-            >
-              ✕
-            </button>
-          </div>
-          <form onSubmit={(e) => void onSell(e)} className="grid gap-3 px-5 py-4">
+          <form onSubmit={(e) => void onSell(e)} className="grid gap-3 px-5 py-5">
             {sellFormErr ? (
               <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{sellFormErr}</p>
             ) : null}
             {showInternalStylist ? (
               <div>
-                <label htmlFor="barber-sell-modal-stylist" className="text-xs font-semibold text-slate-600">
+                <label htmlFor="barber-sell-modal-stylist" className="text-sm font-semibold text-[#4d47b6]">
                   ช่างที่บันทึกการขาย (ไม่บังคับ)
                 </label>
                 <select
@@ -300,7 +311,7 @@ export function BarberSellPackageModal({
               value={sellName}
               onChange={(e) => setSellName(e.target.value)}
             />
-            <div className="rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5">
+            <div className={`${barberCardSurfaceRadiusClass} border border-slate-200 bg-slate-50/60 px-3 py-2.5`}>
               <p className="text-xs font-semibold text-slate-700">แนบรูปสลิป (ไม่บังคับ)</p>
               <input
                 ref={sellSlipFileInputRef}
@@ -363,14 +374,14 @@ export function BarberSellPackageModal({
                   setSellCameraOpen(false);
                   onClose();
                 }}
-                className="min-h-[48px] rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className={`min-h-[48px] ${barberCardSurfaceRadiusClass} border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50`}
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 disabled={sellLoading || pkgList.length === 0}
-                className="app-btn-primary min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+                className={`app-btn-primary min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-white disabled:opacity-50`}
               >
                 {sellLoading ? "…" : "เปิดแพ็กเกจ"}
               </button>
@@ -385,6 +396,7 @@ export function BarberSellPackageModal({
         onCapture={(file) => onSellCameraCapture(file)}
         title="ถ่ายรูปสลิป"
       />
-    </>
+      </>
+    </BarberModalPortal>
   );
 }
