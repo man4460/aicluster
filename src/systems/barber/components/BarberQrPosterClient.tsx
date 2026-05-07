@@ -30,13 +30,15 @@ type Props = {
   trialExportBlocked?: boolean;
   /** ใช้ในหน้ารวม QR — ไม่มีปุ่มกลับและไม่ห่อด้วย stack ชั้นนอก */
   embedded?: boolean;
+  /** ใน FormModal — ซ่อนหัวการ์ดซ้ำกับชื่อโมดัล + มีปุ่มแสดง/ซ่อนลิงก์ (แบบคาร์แคร์) */
+  compactForModal?: boolean;
 };
 
 function IconCustomerQrBadge({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-900/20",
+        "flex h-11 w-11 shrink-0 items-center justify-center rounded-[2rem] bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-900/20",
         className,
       )}
       aria-hidden
@@ -69,6 +71,7 @@ export function BarberQrPosterClient({
   baseUrl,
   trialExportBlocked = false,
   embedded = false,
+  compactForModal = false,
 }: Props) {
   const portalUrl =
     baseUrl.startsWith("http://") || baseUrl.startsWith("https://")
@@ -81,12 +84,15 @@ export function BarberQrPosterClient({
   const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copyMsg, setCopyMsg] = useState<string | null>(null);
+  const [linkVisible, setLinkVisible] = useState(false);
 
   const copyPortalLink = useCallback(async () => {
     if (!portalUrl) return;
+    let ok = false;
     try {
       await navigator.clipboard.writeText(portalUrl);
-      setCopied(true);
+      ok = true;
     } catch {
       try {
         const ta = document.createElement("textarea");
@@ -98,13 +104,20 @@ export function BarberQrPosterClient({
         ta.select();
         document.execCommand("copy");
         document.body.removeChild(ta);
-        setCopied(true);
+        ok = true;
       } catch {
         return;
       }
     }
-    window.setTimeout(() => setCopied(false), 2000);
-  }, [portalUrl]);
+    if (!ok) return;
+    if (compactForModal) {
+      setCopyMsg("คัดลอกลิงก์แล้ว");
+      window.setTimeout(() => setCopyMsg(null), 1800);
+    } else {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    }
+  }, [portalUrl, compactForModal]);
 
   useEffect(() => {
     if (!portalUrl) return;
@@ -175,36 +188,41 @@ export function BarberQrPosterClient({
 
   const panel = (
     <div className={barberQrHubPanelClass}>
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
-        <div className="flex min-w-0 gap-3.5">
-          <IconCustomerQrBadge />
-          <div className="min-w-0 pt-0.5">
-            <h3 className="text-lg font-black tracking-tight sm:text-xl">
-              <span className="bg-gradient-to-r from-emerald-700 via-teal-600 to-[#3730a3] bg-clip-text text-transparent">
-                พอร์ทัลลูกค้า
-              </span>
-            </h3>
-            <p className="mt-1 text-sm leading-relaxed text-[#66638c]">
-              สแกนเข้าหน้าลูกค้า · เช็กแพ็กได้เอง
-            </p>
-            <p className="mt-2 truncate text-xs font-semibold text-[#8b87ad]" title={headline}>
-              {headline}
-            </p>
+      {!compactForModal ?
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
+          <div className="flex min-w-0 gap-3.5">
+            <IconCustomerQrBadge />
+            <div className="min-w-0 pt-0.5">
+              <h3 className="text-lg font-black tracking-tight sm:text-xl">
+                <span className="bg-gradient-to-r from-emerald-700 via-teal-600 to-[#3730a3] bg-clip-text text-transparent">
+                  พอร์ทัลลูกค้า
+                </span>
+              </h3>
+              <p className="mt-1 text-sm leading-relaxed text-[#66638c]">
+                สแกนเข้าหน้าลูกค้า · เช็กแพ็กได้เอง
+              </p>
+              <p className="mt-2 truncate text-xs font-semibold text-[#8b87ad]" title={headline}>
+                {headline}
+              </p>
+            </div>
           </div>
+          {!embedded ?
+            <div className="shrink-0 sm:pt-1">
+              <BarberDashboardBackLink />
+            </div>
+          : null}
         </div>
-        {!embedded ?
-          <div className="shrink-0 sm:pt-1">
-            <BarberDashboardBackLink />
-          </div>
-        : null}
-      </div>
+      : <p className="truncate text-xs font-semibold text-[#8b87ad]" title={headline}>
+          {headline}
+        </p>
+      }
 
-      <div className="mt-6 space-y-3">
+      <div className={cn("space-y-3", compactForModal ? "mt-0" : "mt-6")}>
         {!portalUrl ?
           <p
             className={`${barberCardSurfaceRadiusClass} border border-amber-200/90 bg-amber-50/95 ${barberCardBodyPaddingXClass} py-3 text-sm leading-snug text-amber-950`}
           >
-            ตั้งค่า <code className="rounded-md bg-white/90 px-1.5 py-px text-xs">NEXT_PUBLIC_APP_URL</code>{" "}
+            ตั้งค่า <code className="rounded-[1rem] bg-white/90 px-1.5 py-px text-xs">NEXT_PUBLIC_APP_URL</code>{" "}
             เป็น URL จริง
           </p>
         : trialExportBlocked ?
@@ -215,44 +233,125 @@ export function BarberQrPosterClient({
           </p>
         : null}
 
-        <div className={barberQrHubToolbarClass}>
-          <button
-            type="button"
-            disabled={!portalUrl}
-            onClick={() => void copyPortalLink()}
-            className={cn(toolbarBtnSoft, "w-full sm:w-auto sm:min-w-[11rem]")}
-            aria-label="คัดลอกลิงก์พอร์ทัลลูกค้า"
-          >
-            {copied ? "คัดลอกแล้ว ✓" : "คัดลอกลิงก์"}
-          </button>
-          <button
-            type="button"
-            disabled={busy || !portalUrl || trialExportBlocked}
-            onClick={() => downloadPdf("a4")}
-            className={cn(toolbarBtnPrimary, "min-w-0 flex-1 sm:min-w-[5.75rem]")}
-          >
-            PDF · A4
-          </button>
-          <button
-            type="button"
-            disabled={busy || !portalUrl || trialExportBlocked}
-            onClick={() => downloadPdf("a5")}
-            className={cn(toolbarBtnSoft, "min-w-0 flex-1 sm:min-w-[5.75rem]")}
-          >
-            PDF · A5
-          </button>
-          <button
-            type="button"
-            disabled={busy || !portalUrl || trialExportBlocked}
-            onClick={downloadPng}
-            className={cn(toolbarBtnSoft, "min-w-0 flex-1 sm:min-w-[4.5rem]")}
-          >
-            PNG
-          </button>
-        </div>
+        {compactForModal ?
+          <>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={!portalUrl}
+                onClick={() => void copyPortalLink()}
+                className="cw-btn app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] shadow-sm ring-1 ring-white/40 disabled:opacity-45"
+                aria-label="คัดลอกลิงก์พอร์ทัลลูกค้า"
+              >
+                <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <rect x="9" y="9" width="13" height="13" rx="2" />
+                  <rect x="2" y="2" width="13" height="13" rx="2" />
+                </svg>
+                <span className="cw-btn-label">คัดลอกลิงก์</span>
+              </button>
+              <button
+                type="button"
+                disabled={!portalUrl}
+                onClick={() => setLinkVisible((v) => !v)}
+                className="cw-btn rounded-xl border border-white/55 bg-white/40 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/55 disabled:opacity-45"
+                aria-label={linkVisible ? "ซ่อนลิงก์" : "แสดงลิงก์"}
+              >
+                <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  {linkVisible ?
+                    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.84-2 2.2-3.75 3.94-5.06M9.9 4.24A10.94 10.94 0 0 1 12 4c5 0 9.27 3.89 11 8a10.96 10.96 0 0 1-4.07 5.09M1 1l22 22" />
+                  : (
+                    <>
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </>
+                  )}
+                </svg>
+                <span className="cw-btn-label">{linkVisible ? "ซ่อนลิงก์" : "แสดงลิงก์"}</span>
+              </button>
+              <button
+                type="button"
+                disabled={busy || !portalUrl || !qrDataUrl || trialExportBlocked}
+                onClick={() => void downloadPdf("a4")}
+                className="cw-btn app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60"
+                aria-label="ดาวน์โหลด PDF (A4)"
+              >
+                <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path d="M12 3v12" />
+                  <path d="m7 10 5 5 5-5" />
+                  <path d="M5 21h14" />
+                </svg>
+                <span className="cw-btn-label">ดาวน์โหลด PDF (A4)</span>
+              </button>
+              <button
+                type="button"
+                disabled={busy || !portalUrl || !qrDataUrl || trialExportBlocked}
+                onClick={() => void downloadPng()}
+                className="cw-btn app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] disabled:opacity-60"
+                aria-label="ดาวน์โหลด PNG"
+              >
+                <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <path d="m21 15-5-5L5 21" />
+                </svg>
+                <span className="cw-btn-label">ดาวน์โหลด PNG</span>
+              </button>
+            </div>
+            {copyMsg ?
+              <p className="rounded-xl border border-emerald-200/60 bg-emerald-50/70 px-3 py-2 text-xs font-medium text-emerald-900 backdrop-blur-sm">
+                {copyMsg}
+              </p>
+            : null}
+          </>
+        : <div className={barberQrHubToolbarClass}>
+            <button
+              type="button"
+              disabled={!portalUrl}
+              onClick={() => void copyPortalLink()}
+              className={cn(toolbarBtnSoft, "w-full sm:w-auto sm:min-w-[11rem]")}
+              aria-label="คัดลอกลิงก์พอร์ทัลลูกค้า"
+            >
+              {copied ? "คัดลอกแล้ว ✓" : "คัดลอกลิงก์"}
+            </button>
+            <button
+              type="button"
+              disabled={busy || !portalUrl || trialExportBlocked}
+              onClick={() => downloadPdf("a4")}
+              className={cn(toolbarBtnPrimary, "min-w-0 flex-1 sm:min-w-[5.75rem]")}
+            >
+              PDF · A4
+            </button>
+            <button
+              type="button"
+              disabled={busy || !portalUrl || trialExportBlocked}
+              onClick={() => downloadPdf("a5")}
+              className={cn(toolbarBtnSoft, "min-w-0 flex-1 sm:min-w-[5.75rem]")}
+            >
+              PDF · A5
+            </button>
+            <button
+              type="button"
+              disabled={busy || !portalUrl || trialExportBlocked}
+              onClick={downloadPng}
+              className={cn(toolbarBtnSoft, "min-w-0 flex-1 sm:min-w-[4.5rem]")}
+            >
+              PNG
+            </button>
+          </div>
+        }
+
+        {compactForModal && portalUrl ?
+            linkVisible ?
+              <p className="break-all rounded-xl border border-white/50 bg-white/45 px-3 py-2 text-xs font-medium text-[#4d47b6] backdrop-blur-md">
+                {portalUrl}
+              </p>
+            : <p className="rounded-xl border border-dashed border-white/45 bg-white/25 px-3 py-2 text-xs font-medium text-slate-600 backdrop-blur-sm">
+              ลิงก์ถูกซ่อน — กด &quot;แสดงลิงก์&quot; หรือ &quot;คัดลอกลิงก์&quot; เมื่อต้องการ
+            </p>
+        : null}
       </div>
 
-      <BarberQrPreviewFrame className="mt-8" accent="customer">
+      <BarberQrPreviewFrame className={compactForModal ? "mt-6" : "mt-8"} accent="customer">
         {!portalUrl ?
           <p className="px-2 text-center text-sm text-[#66638c]">ตั้งค่า URL แล้วจะมีตัวอย่างโปสเตอร์</p>
         : posterPreviewUrl ?

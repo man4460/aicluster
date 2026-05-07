@@ -2,8 +2,14 @@
  * โทน UI ร้านตัดผม — ให้สอดคล้องคาร์แคร์ / template กลาง (ม่วง MAWELL)
  */
 
-/** โค้งการ์ด/แผงในโมดูล — มือถือใช้ 2xl ให้เท่ากล่องหัว; desktop คง xl */
-export const barberCardSurfaceRadiusClass = "rounded-2xl sm:rounded-xl";
+/** โค้งการ์ด/แผงย่อยในโมดูล — เทียบ CarWashStat / แถวรายการคาร์แคร์ (rounded-[2rem]) */
+export const barberCardSurfaceRadiusClass = "rounded-[2rem]";
+
+/** แผงใหญ่ชั้นใน (คู่กับเปลือกโมดูล rounded-[2.5rem]) */
+export const barberCardLargeRadiusClass = "rounded-[2.5rem]";
+
+/** ช่องป้อนข้อมูล / แถบแจ้งเตือนเล็ก / รูปย่อ — โค้งรองจากการ์ดหลัก */
+export const barberInsetControlRadiusClass = "rounded-[1.25rem]";
 
 /** padding แนวนอนในการ์ด — มือถือแคบลงให้สัดส่วนจอเล็ก */
 export const barberCardBodyPaddingXClass = "px-2.5 sm:px-4";
@@ -21,7 +27,7 @@ export const barberMutedLoadingNoticeClass =
   `${barberCardSurfaceRadiusClass} bg-[#f8f7ff] ${barberCardBodyPaddingXClass} py-3 text-sm text-[#66638c]`;
 
 export const barberNavItemBase =
-  `flex min-h-[44px] min-w-0 touch-manipulation select-none items-center justify-center ${barberCardSurfaceRadiusClass} px-3 text-sm font-semibold transition-colors active:opacity-90 sm:min-h-0 sm:w-auto sm:justify-center sm:px-3.5 sm:py-2`;
+  `flex min-h-[44px] min-w-0 touch-manipulation select-none items-center justify-center rounded-xl px-3 text-sm font-semibold transition-colors active:opacity-90 sm:min-h-0 sm:w-auto sm:justify-center sm:px-3.5 sm:py-2`;
 
 /** สแต็กหลักใต้ PageHeader — ลดการซ้อนกับ app-surface ของเลย์เอาต์ */
 export const barberPageStackClass = "min-w-0 space-y-5";
@@ -44,22 +50,22 @@ export const barberInlineAlertSuccessClass =
 
 /** กลุ่มปุ่มไอคอนแนวร้านตัดผม */
 export const barberIconToolbarGroupClass =
-  `flex items-center gap-0.5 ${barberCardSurfaceRadiusClass} border border-[#e8e6f8] bg-[#f8f7ff] p-0.5`;
+  `flex items-center gap-0.5 rounded-[2rem] md:rounded-[1.25rem] border border-[#e8e6f8] bg-[#f8f7ff] p-0.5`;
 
 /** ปุ่มกลับแดชบอร์ด — สูงเท่าปุ่มหลัก MAWELL (app-btn-soft) */
 export const barberDashboardBackLinkClass =
-  `app-btn-soft inline-flex min-h-[44px] shrink-0 items-center justify-center ${barberCardSurfaceRadiusClass} px-4 py-2.5 text-sm font-semibold text-[#2e2a58] print:hidden`;
+  `app-btn-soft inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-[2rem] px-4 py-2.5 text-sm font-semibold text-[#2e2a58] md:rounded-[1.25rem] print:hidden`;
 
 /** แถวปุ่มหัวเซกชัน (ย้อนกลับ + ปุ่มหลัก) */
 export const barberSectionActionsRowClass = "flex flex-wrap items-center gap-2 sm:gap-3";
 
 /** แผงหน้ารวม QR — โทนเดียว ไม่ซ้อนกับกรอบพรีวิวหนัก */
 export const barberQrHubPanelClass =
-  "min-w-0 overflow-hidden rounded-2xl border border-white/45 bg-gradient-to-br from-white/48 via-white/32 to-indigo-50/[0.12] p-5 shadow-[0_18px_44px_-30px_rgba(30,27,75,0.28)] backdrop-blur-md sm:p-7 md:p-8";
+  `min-w-0 overflow-hidden ${barberCardLargeRadiusClass} border border-white/45 bg-gradient-to-br from-white/48 via-white/32 to-indigo-50/[0.12] p-5 shadow-[0_18px_44px_-30px_rgba(30,27,75,0.28)] backdrop-blur-md sm:p-7 md:p-8`;
 
 /** รูปโปสเตอร์ในหน้า QR hub — ไม่ใส่แหวนขาวหนา (ลดความรู้สึกการ์ดซ้อน) */
 export const barberQrHubPreviewImgClass =
-  "relative z-[1] mx-auto h-auto w-full max-w-[300px] rounded-xl shadow-[0_16px_40px_-16px_rgba(15,23,42,0.28)] sm:max-w-[340px] sm:rounded-2xl";
+  "relative z-[1] mx-auto h-auto w-full max-w-[300px] rounded-[1.25rem] shadow-[0_16px_40px_-16px_rgba(15,23,42,0.28)] sm:max-w-[340px] sm:rounded-[2rem]";
 
 /** แถบปุ่มเครื่องมือในหน้า QR */
 export const barberQrHubToolbarClass =
@@ -67,11 +73,11 @@ export const barberQrHubToolbarClass =
 
 /** การ์ดสถิติย่อยใต้แดชบอร์ด */
 export const barberStatCardClass =
-  "flex min-h-[100px] flex-col justify-center rounded-2xl border border-[#e8e6f4]/80 bg-white p-4 shadow-sm";
+  `flex min-h-[100px] flex-col justify-center ${barberCardSurfaceRadiusClass} border border-[#e8e6f4]/80 bg-white p-4 shadow-sm`;
 
 /** หัวหน้าแพ็กเกจ/สมาชิก — พื้นไล่สีนุ่ม */
 export const barberOffersHubHeaderShellClass =
-  "rounded-2xl border border-white/60 bg-gradient-to-br from-[#f5f3ff] via-white to-[#ecfdf5]/40 p-4 shadow-[0_14px_44px_-30px_rgba(79,70,229,0.2)] sm:p-5";
+  `${barberCardSurfaceRadiusClass} border border-white/60 bg-gradient-to-br from-[#f5f3ff] via-white to-[#ecfdf5]/40 p-4 shadow-[0_14px_44px_-30px_rgba(79,70,229,0.2)] sm:p-5`;
 
 /** แท็บแบ่งแพ็กเกจ / สมาชิก — กรอบชั้นเดียว */
 export const barberOffersTabSegmentShellClass =
@@ -98,7 +104,7 @@ const barberModalMaxHeightClass =
   "max-h-[calc(100dvh-max(0.75rem,env(safe-area-inset-top,0px))-max(0.75rem,env(safe-area-inset-bottom,0px)))] sm:max-h-[calc(100dvh-2rem)]";
 
 const barberModalPanelScrollableShell =
-  "w-full min-h-0 touch-pan-y overflow-y-auto overscroll-y-contain rounded-2xl border border-slate-200 bg-white shadow-2xl [-webkit-overflow-scrolling:touch]";
+  `w-full min-h-0 touch-pan-y overflow-y-auto overscroll-y-contain ${barberCardSurfaceRadiusClass} border border-slate-200 bg-white shadow-2xl [-webkit-overflow-scrolling:touch]`;
 
 /** พื้นหลังโมดัลทั่วไป (โทนเดียวกับ「ช่างที่บันทึก」) */
 export const barberModalBackdropClass =
@@ -123,7 +129,7 @@ export const barberModalPanelMdClass = `${barberModalMaxHeightClass} ${barberMod
 export const barberModalPanelLgClass = `${barberModalMaxHeightClass} ${barberModalPanelScrollableShell} max-w-lg`;
 
 /** คู่มือ — หัวติดบน เนื้อหาเลื่อนใน */
-export const barberModalPanel2xlFlexColClass = `${barberModalMaxHeightClass} flex w-full max-w-2xl min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl`;
+export const barberModalPanel2xlFlexColClass = `${barberModalMaxHeightClass} flex w-full max-w-2xl min-h-0 flex-col overflow-hidden ${barberCardSurfaceRadiusClass} border border-slate-200 bg-white shadow-2xl`;
 
 export const barberModalHeaderClass =
   "flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4";
@@ -133,8 +139,8 @@ export const barberModalTitleClass = "text-lg font-bold text-[#2e2a58]";
 export const barberModalSubtitleClass = "mt-1 text-xs text-[#66638c]";
 
 export const barberModalCloseBtnClass =
-  "shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800";
+  "shrink-0 rounded-[1.25rem] px-2 py-1 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800";
 
 /** ปิดพรีวิวรูป — เว้น safe area */
 export const barberModalImagePreviewCloseBtnClass =
-  "absolute right-[max(1rem,env(safe-area-inset-right,0px))] top-[max(1rem,env(safe-area-inset-top,0px))] rounded-lg bg-white/90 px-3 py-1 text-sm font-semibold text-[#2e2a58] shadow";
+  "absolute right-[max(1rem,env(safe-area-inset-right,0px))] top-[max(1rem,env(safe-area-inset-top,0px))] rounded-[1.25rem] bg-white/90 px-3 py-1 text-sm font-semibold text-[#2e2a58] shadow";

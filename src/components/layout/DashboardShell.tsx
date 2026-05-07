@@ -176,7 +176,7 @@ function NavCollapsibleGroup({
   const badgeClass = "border border-white/30 bg-white/20 text-[10px] text-white/90 font-bold tracking-tight";
 
   return (
-    <div className={cn("rounded-2xl p-1.5 transition-all duration-300", cardClass)}>
+    <div className={cn("rounded-[2rem] p-1.5 transition-all duration-300", cardClass)}>
       <button
         type="button"
         suppressHydrationWarning
@@ -257,9 +257,14 @@ export function DashboardShell({
   const pathname = usePathname();
   /** หน้าพนักงานจาก QR — ไม่ใช้แถบแดชบอร์ดและ sidebar */
   const barberStaffKiosk = pathname === "/dashboard/barber/staff";
-  /** โมดูลร้านตัดผมบนมือถือ — ลด padding แนวนอกซ้ำกับ PageContainer */
+  const laundryStaffKiosk = pathname === "/dashboard/laundry/staff";
+  const moduleStaffKiosk = barberStaffKiosk || laundryStaffKiosk;
+  /** โมดูลร้านตัดผม / ซักผ้าบนมือถือ — ลด padding แนวนอกซ้ำกับ PageContainer */
   const barberDashboardCompact =
-    !barberStaffKiosk && (pathname === "/dashboard/barber" || pathname.startsWith("/dashboard/barber/"));
+    !moduleStaffKiosk && (pathname === "/dashboard/barber" || pathname.startsWith("/dashboard/barber/"));
+  const laundryDashboardCompact =
+    !moduleStaffKiosk && (pathname === "/dashboard/laundry" || pathname.startsWith("/dashboard/laundry/"));
+  const moduleDashboardCompact = barberDashboardCompact || laundryDashboardCompact;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountWrapRef = useRef<HTMLDivElement>(null);
@@ -342,10 +347,10 @@ export function DashboardShell({
 
   return (
     <div className="flex min-h-screen flex-col text-[#2e2a58]">
-      {/* แถบบน — แก้ว โค้งมน ไล่โทนเดียวกับการ์ด */}
-      {!barberStaffKiosk ?
+      {/* แถบบน — แก้ว โค้งมนเทียบเปลือกโมดูล / drawer (rounded-[2.5rem]) */}
+      {!moduleStaffKiosk ?
         <header className="sticky top-0 z-30 w-full px-3 pt-3 sm:px-4 sm:pt-4">
-        <div className="flex h-14 w-full min-w-0 items-center gap-2 rounded-2xl border border-white/30 bg-gradient-to-r from-[#4f2f9a]/90 via-[#5b3ac2]/85 to-[#ec4899]/85 px-3 text-white shadow-[0_20px_40px_-15px_rgba(61,29,125,0.7)] backdrop-blur-xl sm:gap-3 sm:px-6 lg:px-8">
+        <div className="flex h-14 w-full min-w-0 items-center gap-2 rounded-[2.5rem] border border-white/30 bg-gradient-to-r from-[#4f2f9a]/90 via-[#5b3ac2]/85 to-[#ec4899]/85 px-3 text-white shadow-[0_20px_40px_-15px_rgba(61,29,125,0.7)] backdrop-blur-xl sm:gap-3 sm:px-6 lg:px-8">
           <button
             type="button"
             suppressHydrationWarning
@@ -451,7 +456,7 @@ export function DashboardShell({
       : null}
 
       {demoSession ?
-        <div className={cn("w-full shrink-0 px-3 pt-2 sm:px-4", barberStaffKiosk && "pt-3")}>
+        <div className={cn("w-full shrink-0 px-3 pt-2 sm:px-4", moduleStaffKiosk && "pt-3")}>
           <DemoSessionBanner />
         </div>
       : null}
@@ -459,17 +464,17 @@ export function DashboardShell({
       <div
         className={cn(
           "flex min-h-0 flex-1 gap-3 pb-20 pt-2 sm:gap-4 sm:pb-4",
-          barberDashboardCompact ? "max-md:px-2 sm:px-4" : "px-3 sm:px-4",
-          barberStaffKiosk &&
+          moduleDashboardCompact ? "max-md:px-2 sm:px-4" : "px-3 sm:px-4",
+          moduleStaffKiosk &&
             "!gap-0 !px-0 !pt-0 !pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:!px-0 sm:!pb-4",
         )}
       >
-        {/* Sidebar — แก้ว โค้งมน */}
+        {/* Sidebar — แก้ว โค้งมนเทียบแถบบน / drawer */}
         <aside
           className={cn(
-            "hidden w-[15.5rem] shrink-0 flex-col overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-b from-[#4f2f9a] via-[#5b3ac2] to-[#ec4899] text-white shadow-[0_18px_42px_-24px_rgba(40,16,97,0.75)] md:flex",
-            (systemFocusLayout || barberStaffKiosk) && "md:hidden",
-            barberStaffKiosk && "!hidden",
+            "hidden w-[15.5rem] shrink-0 flex-col overflow-hidden rounded-[2.5rem] border border-white/15 bg-gradient-to-b from-[#4f2f9a] via-[#5b3ac2] to-[#ec4899] text-white shadow-[0_18px_42px_-24px_rgba(40,16,97,0.75)] md:flex",
+            (systemFocusLayout || moduleStaffKiosk) && "md:hidden",
+            moduleStaffKiosk && "!hidden",
           )}
           aria-label="เมนูหลัก"
         >
@@ -495,18 +500,18 @@ export function DashboardShell({
 
         <div className="flex min-w-0 min-h-0 flex-1 flex-col">
           {/* Drawer มือถือ — เริ่มใต้แถบ header */}
-          {drawerOpen && !systemFocusLayout && !barberStaffKiosk ?
+          {drawerOpen && !systemFocusLayout && !moduleStaffKiosk ?
             <>
               <button
                 type="button"
                 suppressHydrationWarning
-                className="fixed inset-x-0 bottom-0 top-[4.25rem] z-40 bg-slate-900/25 backdrop-blur-[2px] md:hidden"
+                className="fixed inset-x-0 bottom-0 top-[4.25rem] z-[48] bg-slate-900/25 backdrop-blur-[2px] md:hidden"
                 aria-label="ปิดเมนู"
                 onClick={closeDrawer}
               />
               <div
                 id={menuId}
-                className="fixed bottom-3 left-3 top-[4.25rem] z-50 flex w-[min(100vw-2.5rem,17.5rem)] flex-col overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-b from-[#4f2f9a] via-[#5b3ac2] to-[#ec4899] text-white shadow-2xl md:hidden"
+                className="fixed bottom-3 left-3 top-[4.25rem] z-50 flex w-[min(100vw-2.5rem,17.5rem)] flex-col overflow-hidden rounded-[2.5rem] border border-white/15 bg-gradient-to-b from-[#4f2f9a] via-[#5b3ac2] to-[#ec4899] text-white shadow-2xl md:hidden"
               >
                 <div className="flex h-12 items-center justify-between border-b border-white/25 px-3">
                   <MawellLogo size="md" />
@@ -543,9 +548,9 @@ export function DashboardShell({
 
           <main
             className={cn(
-              "flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden rounded-2xl",
+              "flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden rounded-[2.5rem]",
               systemFocusLayout && "md:rounded-none",
-              barberStaffKiosk && "!rounded-none",
+              moduleStaffKiosk && "!rounded-none",
             )}
           >
             {children}

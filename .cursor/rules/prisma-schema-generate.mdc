@@ -1,0 +1,17 @@
+---
+description: Prisma — หลังแก้ schema หรือ migration ต้องรัน prisma generate ทุกครั้ง
+globs:
+  - "prisma/schema.prisma"
+  - "prisma/migrations/**"
+  - "prisma/**/*.sql"
+---
+
+# Prisma — generate หลังปรับฐานข้อมูล
+
+เมื่อแก้ไฟล์ใน **`prisma/`** ที่มีผลต่อโครงฐานข้อมูลหรือ client:
+
+1. **`npx prisma generate`** — **รันทุกครั้ง** หลังแก้ **`schema.prisma`** หรือ **`migrations`** (ไม่ว่าจะใช้ `migrate dev`, `migrate deploy`, หรือแก้ SQL ด้วยมือ) — เพื่อให้ `src/generated/prisma` และ delegate บน `PrismaClient` ตรงกับ schema ล่าสุด
+2. **รีเฟรช Next** — ลบ **`.next`** แล้วรีสตาร์ท dev server เมื่อมีการเปลี่ยน client (กันค้าง bundle)
+3. **`src/lib/prisma.ts`** — ถ้าเพิ่มโมเดลใหม่ที่ต้องบังคับ singleton ใหม่ ให้ตรวจ **`prismaClientHasExpectedDelegates`** และ bump **`PRISMA_SINGLETON_VERSION`** ตามคอมเมนต์ในไฟล์
+
+รายละเอียดการรันคำสั่งเอง: **`run-commands-proactively.mdc`**

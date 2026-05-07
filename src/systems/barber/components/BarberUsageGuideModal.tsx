@@ -120,10 +120,10 @@ export function BarberUsageGuideModal({ open, onClose }: { open: boolean; onClos
                 <strong className="font-semibold text-[#2e2a58]">ยอดขาย</strong> และ{" "}
                 <strong className="font-semibold text-[#2e2a58]">ต้นทุน / รายจ่าย</strong> (รูปแบบเดียวกับเมนูการเงินในระบบคาร์แคร์)
                 URL ตรง:{" "}
-                <code className="rounded bg-[#f0eeff] px-1 py-0.5 text-xs">/dashboard/barber/finance</code>
+                <code className="rounded-[1rem] bg-[#f0eeff] px-1 py-0.5 text-xs">/dashboard/barber/finance</code>
                 {" · "}
                 แท็บต้นทุน:{" "}
-                <code className="rounded bg-[#f0eeff] px-1 py-0.5 text-xs">?tab=costs</code>
+                <code className="rounded-[1rem] bg-[#f0eeff] px-1 py-0.5 text-xs">?tab=costs</code>
               </p>
               <p className="font-semibold text-[#2e2a58]">แท็บยอดขาย</p>
               <p>

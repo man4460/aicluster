@@ -544,7 +544,7 @@ export function BarberHistoryClient({
       <AppDashboardSection tone="violet">
         {embedded ?
           financeFilterTitle != null || financeFilterBeforeTitle != null ?
-            <div className="flex flex-col gap-3 rounded-2xl border border-white/55 bg-gradient-to-br from-white/45 via-[#faf9ff]/40 to-[#ecfdf5]/25 p-3 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl md:hidden sm:p-4">
+            <div className="flex flex-col gap-3 rounded-[2rem] border border-white/55 bg-gradient-to-br from-white/45 via-[#faf9ff]/40 to-[#ecfdf5]/25 p-3 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl md:hidden sm:p-4">
               {financeFilterBeforeTitle ?
                 <div className="print:hidden">{financeFilterBeforeTitle}</div>
               : null}
@@ -572,7 +572,7 @@ export function BarberHistoryClient({
                 </button>
               </div>
             </div>
-          : <div className="flex justify-end rounded-2xl border border-white/55 bg-gradient-to-br from-white/45 via-[#faf9ff]/40 to-[#ecfdf5]/25 p-3 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl md:hidden sm:p-4">
+          : <div className="flex justify-end rounded-[2rem] border border-white/55 bg-gradient-to-br from-white/45 via-[#faf9ff]/40 to-[#ecfdf5]/25 p-3 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl md:hidden sm:p-4">
               <button
                 type="button"
                 suppressHydrationWarning
@@ -594,7 +594,7 @@ export function BarberHistoryClient({
                 </svg>
               </button>
             </div>
-        : <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/55 bg-gradient-to-br from-white/45 via-[#faf9ff]/40 to-[#ecfdf5]/25 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl md:rounded-[2rem] sm:p-5">
+        : <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-white/55 bg-gradient-to-br from-white/45 via-[#faf9ff]/40 to-[#ecfdf5]/25 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
             <div className="min-w-0">
               <h2 className="text-xl font-black tracking-tight">
                 <span className="bg-gradient-to-r from-[#4338ca] via-[#6366f1] to-[#0d9488] bg-clip-text text-transparent">
@@ -746,12 +746,12 @@ export function BarberHistoryClient({
         </div>
 
         <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-4">
-          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/60 bg-gradient-to-br from-white/60 via-violet-50/35 to-indigo-100/30 p-3 shadow-[0_16px_34px_-24px_rgba(91,97,255,0.4)] backdrop-blur-xl sm:p-5">
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-[2rem] border border-white/60 bg-gradient-to-br from-white/60 via-violet-50/35 to-indigo-100/30 p-3 shadow-[0_16px_34px_-24px_rgba(91,97,255,0.4)] backdrop-blur-xl sm:p-5">
             <div className="flex items-center justify-between gap-1">
               <span className="truncate text-[8px] font-bold uppercase tracking-wider text-violet-500 sm:text-[10px]">
                 รายได้รวม
               </span>
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-[10px] text-violet-600 sm:h-8 sm:w-8 sm:text-base">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[1.25rem] bg-violet-100 text-[10px] text-violet-600 sm:h-8 sm:w-8 sm:text-base">
                 ฿
               </span>
             </div>
@@ -764,12 +764,12 @@ export function BarberHistoryClient({
             </div>
           </div>
 
-          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/60 bg-gradient-to-br from-white/60 via-rose-50/30 to-orange-100/25 p-3 shadow-[0_16px_34px_-24px_rgba(244,63,94,0.35)] backdrop-blur-xl sm:p-5">
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-[2rem] border border-white/60 bg-gradient-to-br from-white/60 via-rose-50/30 to-orange-100/25 p-3 shadow-[0_16px_34px_-24px_rgba(244,63,94,0.35)] backdrop-blur-xl sm:p-5">
             <div className="flex items-center justify-between gap-1">
               <span className="truncate text-[8px] font-bold uppercase tracking-wider text-rose-500 sm:text-[10px]">
                 ต้นทุนรวม
               </span>
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-600 sm:h-8 sm:w-8">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[1.25rem] bg-rose-100 text-rose-600 sm:h-8 sm:w-8">
                 <svg viewBox="0 0 24 24" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="m19 9-7 7-7-7" />
                 </svg>
@@ -786,7 +786,7 @@ export function BarberHistoryClient({
 
           <div
             className={cn(
-              "relative flex flex-col justify-between overflow-hidden rounded-2xl border p-3 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.32)] backdrop-blur-xl transition-colors sm:p-5",
+              "relative flex flex-col justify-between overflow-hidden rounded-[2rem] border p-3 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.32)] backdrop-blur-xl transition-colors sm:p-5",
               periodTotalRevenue - periodTotalCost >= 0
                 ? "border-white/60 bg-gradient-to-br from-white/60 to-emerald-100/28"
                 : "border-white/60 bg-gradient-to-br from-white/60 to-orange-100/28",
@@ -803,7 +803,7 @@ export function BarberHistoryClient({
               </span>
               <span
                 className={cn(
-                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-lg sm:h-8 sm:w-8",
+                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-[1.25rem] sm:h-8 sm:w-8",
                   periodTotalRevenue - periodTotalCost >= 0 ? "bg-emerald-100 text-emerald-600" : "bg-orange-100 text-orange-600",
                 )}
               >
@@ -833,12 +833,12 @@ export function BarberHistoryClient({
         </div>
 
         {sparkLoading ? (
-          <p className="mt-5 rounded-2xl border border-[#e8e6f4]/80 bg-gradient-to-br from-[#faf9ff]/90 via-white to-[#f0fdf9]/40 px-4 py-6 text-center text-sm text-slate-600 shadow-sm backdrop-blur-md">
+          <p className="mt-5 rounded-[2rem] border border-[#e8e6f4]/80 bg-gradient-to-br from-[#faf9ff]/90 via-white to-[#f0fdf9]/40 px-4 py-6 text-center text-sm text-slate-600 shadow-sm backdrop-blur-md">
             กำลังโหลดกราฟ…
           </p>
         ) : (
           <>
-            <div className="mt-4 rounded-2xl border border-white/60 bg-gradient-to-br from-white/55 via-[#faf9ff]/35 to-indigo-50/25 p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
+            <div className="mt-4 rounded-[2rem] border border-white/60 bg-gradient-to-br from-white/55 via-[#faf9ff]/35 to-indigo-50/25 p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
               <div className="mb-2 sm:mb-3">
                 <h3 className="bg-gradient-to-r from-[#312e81] to-[#5b61ff] bg-clip-text text-sm font-black text-transparent sm:text-base">
                   แนวโน้มรายได้และรายจ่าย
@@ -907,7 +907,7 @@ export function BarberHistoryClient({
                     ปี
                     <select
                       id="bb-fin-popup-y"
-                      className={`app-input mt-1.5 min-h-[48px] w-full rounded-xl px-3 py-2 text-base ${barberCardSurfaceRadiusClass}`}
+                      className="app-input mt-1.5 min-h-[48px] w-full rounded-[1.25rem] px-3 py-2 text-base"
                       value={String(year)}
                       onChange={(e) => setYear(Number(e.target.value))}
                     >
@@ -922,7 +922,7 @@ export function BarberHistoryClient({
                     เดือน
                     <select
                       id="bb-fin-popup-m"
-                      className={`app-input mt-1.5 min-h-[48px] w-full rounded-xl px-3 py-2 text-base ${barberCardSurfaceRadiusClass}`}
+                      className="app-input mt-1.5 min-h-[48px] w-full rounded-[1.25rem] px-3 py-2 text-base"
                       value={month === "all" ? "all" : String(month)}
                       onChange={(e) => {
                         const v = e.target.value;
@@ -945,7 +945,7 @@ export function BarberHistoryClient({
                   <select
                     id="bb-fin-popup-d"
                     className={cn(
-                      `app-input mt-1.5 min-h-[48px] w-full rounded-xl px-3 py-2 text-base ${barberCardSurfaceRadiusClass}`,
+                      "app-input mt-1.5 min-h-[48px] w-full rounded-[1.25rem] px-3 py-2 text-base",
                       month === "all" && "cursor-not-allowed opacity-60",
                     )}
                     disabled={month === "all"}
@@ -970,7 +970,7 @@ export function BarberHistoryClient({
                   ค้นหา
                   <input
                     id="bb-fin-popup-q"
-                    className="app-input mt-1.5 min-h-[48px] w-full rounded-xl px-3 py-2 text-base placeholder:text-[#8b87ad]"
+                    className="app-input mt-1.5 min-h-[48px] w-full rounded-[1.25rem] px-3 py-2 text-base placeholder:text-[#8b87ad]"
                     placeholder="เบอร์หรือชื่อ"
                     value={draftQ}
                     onChange={(e) => setDraftQ(e.target.value)}
@@ -1003,7 +1003,7 @@ export function BarberHistoryClient({
       {error ? <p className={barberInlineAlertErrorClass}>{error}</p> : null}
 
       <AppDashboardSection tone="slate">
-        <div className="flex flex-col gap-4 rounded-2xl border border-white/55 bg-gradient-to-br from-white/40 via-[#faf9ff]/35 to-[#fff7ed]/18 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl md:rounded-[2rem] sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="flex flex-col gap-4 rounded-[2rem] border border-white/55 bg-gradient-to-br from-white/40 via-[#faf9ff]/35 to-[#fff7ed]/18 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-lg font-black tracking-tight">
@@ -1101,7 +1101,7 @@ export function BarberHistoryClient({
 
         {activeListTab === "sales" && logs.length > 0 ? (
           <div
-            className="mt-4 max-h-[min(70vh,40rem)] min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain rounded-2xl border border-white/55 bg-white/35 pr-0.5 shadow-[0_16px_38px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] lg:border-0 lg:bg-transparent lg:shadow-none lg:backdrop-blur-0"
+            className="mt-4 max-h-[min(70vh,40rem)] min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain rounded-[2rem] border border-white/55 bg-white/35 pr-0.5 shadow-[0_16px_38px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] lg:border-0 lg:bg-transparent lg:shadow-none lg:backdrop-blur-0"
             role="region"
             aria-label="รายการผู้มาใช้บริการ — เลื่อนดูเพิ่มเติม"
           >
@@ -1123,7 +1123,7 @@ export function BarberHistoryClient({
                         src={receiptSrc}
                         alt="สลิป"
                         onOpen={() => receiptLightbox.open(receiptSrc)}
-                        className="self-start rounded-lg border border-[#e0dcfa]/90 bg-gradient-to-br from-white via-[#faf9ff] to-[#eef2ff]/80 shadow-sm ring-1 ring-[#ecebff]/80 hover:ring-[#4d47b6]/35 sm:h-[4.5rem] sm:w-[4.5rem]"
+                        className="self-start rounded-[1.25rem] border border-[#e0dcfa]/90 bg-gradient-to-br from-white via-[#faf9ff] to-[#eef2ff]/80 shadow-sm ring-1 ring-[#ecebff]/80 hover:ring-[#4d47b6]/35 sm:h-[4.5rem] sm:w-[4.5rem]"
                       />
                     ) : null}
                     <div className="min-w-0 flex-1 space-y-0.5">
@@ -1197,7 +1197,7 @@ export function BarberHistoryClient({
         {financeUnified && costsPanel ? (
           <div
             className={cn(
-              "mt-4 min-h-0 max-h-[min(70vh,40rem)] overflow-y-auto overflow-x-hidden overscroll-y-contain rounded-2xl border border-white/55 bg-white/35 shadow-[0_16px_38px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] lg:border-0 lg:bg-transparent lg:shadow-none lg:backdrop-blur-0",
+              "mt-4 min-h-0 max-h-[min(70vh,40rem)] overflow-y-auto overflow-x-hidden overscroll-y-contain rounded-[2rem] border border-white/55 bg-white/35 shadow-[0_16px_38px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] lg:border-0 lg:bg-transparent lg:shadow-none lg:backdrop-blur-0",
               activeListTab !== "costs" && "hidden",
             )}
             role="region"
@@ -1236,13 +1236,13 @@ export function BarberHistoryClient({
               </div>
               <form onSubmit={(e) => void submitEdit(e)} className="grid gap-3 px-5 py-5">
               {editErr ? (
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{editErr}</p>
+                <p className="rounded-[1.25rem] bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{editErr}</p>
               ) : null}
               <label className="block text-xs font-semibold text-[#4d47b6]">
                 เวลาทำรายการ (เวลาไทย)
                 <input
                   type="datetime-local"
-                  className="app-input mt-1 min-h-[48px] w-full rounded-xl px-3 py-2 text-sm"
+                  className="app-input mt-1 min-h-[48px] w-full rounded-[1.25rem] px-3 py-2 text-sm"
                   value={editCreatedLocal}
                   onChange={(e) => setEditCreatedLocal(e.target.value)}
                   required
@@ -1251,7 +1251,7 @@ export function BarberHistoryClient({
               <label className="block text-xs font-semibold text-[#4d47b6]">
                 เบอร์โทร
                 <input
-                  className="app-input mt-1 min-h-[48px] w-full rounded-xl px-3 py-2 text-base tabular-nums"
+                  className="app-input mt-1 min-h-[48px] w-full rounded-[1.25rem] px-3 py-2 text-base tabular-nums"
                   inputMode="numeric"
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
@@ -1261,7 +1261,7 @@ export function BarberHistoryClient({
               <label className="block text-xs font-semibold text-[#4d47b6]">
                 ชื่อลูกค้า
                 <input
-                  className="app-input mt-1 min-h-[48px] w-full rounded-xl px-3 py-2 text-sm"
+                  className="app-input mt-1 min-h-[48px] w-full rounded-[1.25rem] px-3 py-2 text-sm"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value.slice(0, 100))}
                   placeholder="ไม่บังคับ"
@@ -1286,7 +1286,7 @@ export function BarberHistoryClient({
                   {receiptPickUrl ? (
                     <button
                       type="button"
-                      className="mt-2 block w-full cursor-zoom-in rounded-lg border border-transparent p-0 text-left focus-visible:outline focus-visible:ring-2 focus-visible:ring-[#4d47b6]/40"
+                      className="mt-2 block w-full cursor-zoom-in rounded-[1.25rem] border border-transparent p-0 text-left focus-visible:outline focus-visible:ring-2 focus-visible:ring-[#4d47b6]/40"
                       onClick={() => receiptLightbox.open(receiptPickUrl)}
                       aria-label="ดูรูปสลิปใหม่เต็มจอ"
                     >
@@ -1294,13 +1294,13 @@ export function BarberHistoryClient({
                       <img
                         src={receiptPickUrl}
                         alt="ตัวอย่างสลิปใหม่"
-                        className="max-h-36 w-full rounded-lg border border-[#ecebff] object-contain"
+                        className="max-h-36 w-full rounded-[1.25rem] border border-[#ecebff] object-contain"
                       />
                     </button>
                   ) : resolvedEditReceipt ? (
                     <button
                       type="button"
-                      className="mt-2 block w-full cursor-zoom-in rounded-lg border border-transparent p-0 text-left focus-visible:outline focus-visible:ring-2 focus-visible:ring-[#4d47b6]/40"
+                      className="mt-2 block w-full cursor-zoom-in rounded-[1.25rem] border border-transparent p-0 text-left focus-visible:outline focus-visible:ring-2 focus-visible:ring-[#4d47b6]/40"
                       onClick={() => receiptLightbox.open(resolvedEditReceipt)}
                       aria-label="ดูรูปสลิปปัจจุบันเต็มจอ"
                     >
@@ -1308,7 +1308,7 @@ export function BarberHistoryClient({
                       <img
                         src={resolvedEditReceipt}
                         alt="สลิปปัจจุบัน"
-                        className="max-h-36 w-full rounded-lg border border-[#ecebff] object-contain"
+                        className="max-h-36 w-full rounded-[1.25rem] border border-[#ecebff] object-contain"
                       />
                     </button>
                   ) : (
@@ -1317,7 +1317,7 @@ export function BarberHistoryClient({
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      className="app-btn-soft rounded-lg px-3 py-2 text-xs font-semibold text-[#2e2a58]"
+                      className="app-btn-soft rounded-[1.25rem] px-3 py-2 text-xs font-semibold text-[#2e2a58]"
                       onClick={() => editReceiptInputRef.current?.click()}
                     >
                       เลือกรูปใหม่
@@ -1325,7 +1325,7 @@ export function BarberHistoryClient({
                     {(editTarget.receiptImageUrl || editReceiptFile) && !editReceiptRemoved ? (
                       <button
                         type="button"
-                        className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800"
+                        className="rounded-[1.25rem] border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800"
                         onClick={() => {
                           setEditReceiptFile(null);
                           setEditReceiptRemoved(true);
@@ -1340,7 +1340,7 @@ export function BarberHistoryClient({
               <label className="block text-xs font-semibold text-[#4d47b6]">
                 หมายเหตุ
                 <textarea
-                  className="app-input mt-1 min-h-[72px] w-full resize-y rounded-xl px-3 py-2 text-sm"
+                  className="app-input mt-1 min-h-[72px] w-full resize-y rounded-[1.25rem] px-3 py-2 text-sm"
                   value={editNote}
                   onChange={(e) => setEditNote(e.target.value.slice(0, 255))}
                   placeholder="ไม่บังคับ"
@@ -1356,14 +1356,14 @@ export function BarberHistoryClient({
                     min={0}
                     step={0.01}
                     inputMode="decimal"
-                    className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-base tabular-nums"
+                    className="app-input mt-1 w-full rounded-[1.25rem] px-3 py-2.5 text-base tabular-nums"
                     value={editAmount}
                     onChange={(e) => setEditAmount(e.target.value)}
                     placeholder="เว้นว่างได้"
                   />
                 </label>
               ) : (
-                <p className="rounded-lg bg-[#f8f7ff] px-3 py-2 text-xs text-[#5f5a8a]">
+                <p className="rounded-[1.25rem] bg-[#f8f7ff] px-3 py-2 text-xs text-[#5f5a8a]">
                   รายการหักแพ็กเกจ — แก้เวลา เบอร์ ชื่อ หมายเหตุได้ (ไม่มีสลิป/ยอดเงิน)
                 </p>
               )}

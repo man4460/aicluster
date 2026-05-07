@@ -9,7 +9,9 @@ alwaysApply: true
 - ถ้าคำสั่งล้มเหลว — ลองแก้หรือทางเลือกอื่น (เช่น permission, path) ก่อนสรุปให้ผู้ใช้
 - ไม่ต้องรอคำว่า “รันให้หน่อย” ในทุกครั้ง — ถือว่าผู้ใช้อนุญาตให้รันในโปรเจกต์นี้เมื่อจำเป็นต่อการทำงานให้จบ
 
-## หลังแก้ Prisma / schema / migration
+## หลังปรับฐานข้อมูล (Prisma) — **บังคับ `prisma generate` ทุกครั้ง**
 
-- เมื่อจบงานที่แตะ **`prisma/schema.prisma`**, โฟลเดอร์ **`prisma/migrations`**, หรือโค้ดที่อ้าง **โมเดล Prisma ใหม่** — **ทุกครั้งก่อนสรุปงาน** ให้รันที่รากโปรเจกต์: `npx prisma generate` แล้ว **`rm -rf .next`** (กัน Next ค้าง bundle / client เก่า)
-- ถ้าผู้ใช้บอกเรื่องคอลัมน์ MySQL / schema ไม่ตรง DB — รัน **`npx prisma migrate deploy`** เมื่อมี DB ต่ออยู่ หรือชี้ไปที่ **`prisma/repair-user-columns.sql`** ตามบริบท
+- เมื่อมีการ **ปรับฐานข้อมูล** — ได้แก่ แก้ **`prisma/schema.prisma`**, เพิ่ม/แก้ **`prisma/migrations`** (หรือ SQL ที่เกี่ยวกับโครงตาราง), หรือแตะโค้ดที่ต้องใช้ **delegate / โมเดล Prisma ใหม่** — **ทุกครั้งที่จบขั้น schema/migration** ต้องรันที่รากโปรเจกต์: **`npx prisma generate`** **ก่อนถือว่างานสมบูรณ์** (ไม่ข้าม — client เก่าจะทำให้ `undefined.findMany` / ValidationError ตอนรัน API)
+- หลัง generate แนะนำ **`rm -rf .next`** (หรือลบโฟลเดอร์ `.next` บน Windows) แล้วรีสตาร์ท **`next dev`** — กัน Next/Webpack ค้าง bundle หรือ Prisma client เก่า
+- ถ้า **`prisma generate` ล้มเหลวด้วย EPERM** (ไฟล์ DLL ถูกล็อก) — ให้หยุดเซิร์ฟเวอร์ที่รันอยู่แล้วรัน generate ใหม่
+- ถ้าผู้ใช้บอกเรื่องคอลัมน์ MySQL / schema ไม่ตรง DB — รัน **`npx prisma migrate deploy`** (หรือ `migrate dev`) เมื่อมี DB ต่ออยู่ หรือชี้ไปที่ **`prisma/repair-user-columns.sql`** ตามบริบท — **แล้วยังต้อง `prisma generate` หลัง migration เสมอ**

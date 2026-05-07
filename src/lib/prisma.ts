@@ -13,8 +13,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 45: User.passwordHash optional + googleSub (ล็อกอิน Google) */
 /** 46: DormitoryCostCategory + DormitoryCostEntry — client เก่าไม่มี delegate แล้ว API ต้นทุนหอพักล้ม */
 /** 47: VillageCostCategory + VillageCostEntry — ต้นทุน/รายจ่ายหมู่บ้าน */
-/** 48: PersonalAiNote.hiddenFromDigest — ซ่อนโน้ตจากแถบสรุป Chat AI */
-const PRISMA_SINGLETON_VERSION = 48;
+/** 49: LaundryCostCategory + LaundryCostEntry (+ laundryPackage/Order) — client เก่าไม่มี delegate แล้ว API การเงินซักผ้าล้มด้วย undefined.findMany */
+const PRISMA_SINGLETON_VERSION = 49;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -62,6 +62,10 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     chatMessage?: { findMany?: unknown };
     villageCostCategory?: { findMany?: unknown };
     villageCostEntry?: { findMany?: unknown };
+    laundryPackage?: { findMany?: unknown };
+    laundryOrder?: { findMany?: unknown };
+    laundryCostCategory?: { findMany?: unknown };
+    laundryCostEntry?: { findMany?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -101,7 +105,11 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.chatThread?.findMany === "function" &&
     typeof c.chatMessage?.findMany === "function" &&
     typeof c.villageCostCategory?.findMany === "function" &&
-    typeof c.villageCostEntry?.findMany === "function"
+    typeof c.villageCostEntry?.findMany === "function" &&
+    typeof c.laundryPackage?.findMany === "function" &&
+    typeof c.laundryOrder?.findMany === "function" &&
+    typeof c.laundryCostCategory?.findMany === "function" &&
+    typeof c.laundryCostEntry?.findMany === "function"
   );
 }
 

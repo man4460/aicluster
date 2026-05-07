@@ -8,6 +8,14 @@ import {
   PRISMA_SYNC_HINT_TH,
 } from "@/lib/prisma-errors";
 
+/** DB ยังไม่รัน migration ตารางต้นทุนซักผ้า — GET จะคืนค่าว่างแทน 500 */
+export function isLaundryCostTableMissingP2021(err: unknown): boolean {
+  if (!(err instanceof Prisma.PrismaClientKnownRequestError) || err.code !== "P2021") return false;
+  const meta = err.meta as { table?: string } | undefined;
+  const t = meta?.table;
+  return t === "laundry_cost_categories" || t === "laundry_cost_entries";
+}
+
 export function formatLaundrySessionDbError(err: unknown): string {
   if (isPrismaSchemaMismatchError(err)) return PRISMA_SYNC_HINT_TH;
   if (isPrismaClientValidationSyncError(err)) return PRISMA_GENERATE_HINT_TH;
@@ -46,7 +54,7 @@ export function formatLaundrySessionDbError(err: unknown): string {
   if (/ECONNREFUSED|Can't reach database server|P1001|P1017/i.test(msg)) {
     return "เชื่อมต่อฐานข้อมูลไม่ได้ — เปิด MySQL แล้วตรวจ DATABASE_URL";
   }
-  if (/laundry_orders|laundry_packages|Unknown column|ER_BAD_FIELD_ERROR|1054/i.test(msg)) {
+  if (/laundry_orders|laundry_packages|laundry_cost_|pickup_public_token|Unknown column|ER_BAD_FIELD_ERROR|1054/i.test(msg)) {
     return PRISMA_SYNC_HINT_TH;
   }
 

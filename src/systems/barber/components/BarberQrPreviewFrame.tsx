@@ -41,22 +41,22 @@ export function BarberQrPreviewFrame({
             previewLabelGradient(accent),
           )}
         >
-          ตัวอย่างโปสเตอร์
+          {accent === "staff" ? "โปสเตอร์ · พิมพ์ / ติดป้าย" : "ตัวอย่างโปสเตอร์"}
         </span>
-        <span className="max-w-xs text-xs font-medium leading-snug text-[#8b87ad]">
+        <span className="max-w-md text-xs font-medium leading-snug text-[#8b87ad]">
           {accent === "staff" ?
-            "สำหรับแชร์ในทีม — พิมพ์จากปุ่มดาวน์โหลด"
+            "ออกแบบให้พนักงานใช้บนมือถือเป็นหลัก — สแกน QR หรือเปิดลิงก์ · โปสเตอร์ด้านล่างสำหรับติดป้าย"
           : "สำหรับวางที่ร้าน — ลูกค้าสแกนเข้าพอร์ทัล"}
         </span>
       </div>
 
       <div
         className={cn(
-          "rounded-2xl p-[2px] shadow-[0_24px_60px_-36px_rgba(91,97,255,0.38)] sm:rounded-[1.35rem]",
+          "rounded-[2rem] p-[2px] shadow-[0_24px_60px_-36px_rgba(91,97,255,0.38)] sm:rounded-[2rem]",
           previewGradientBorder(accent),
         )}
       >
-        <div className="relative overflow-hidden rounded-[0.9rem] bg-white/35 px-4 py-6 backdrop-blur-md sm:rounded-[1.28rem] sm:px-7 sm:py-8">
+        <div className="relative overflow-hidden rounded-[1.25rem] bg-white/35 px-4 py-6 backdrop-blur-md sm:rounded-[2rem] sm:px-7 sm:py-8">
           <div
             className="pointer-events-none absolute -left-20 top-[22%] h-44 w-44 -translate-y-1/2 rounded-full bg-[#5b61ff]/14 blur-3xl"
             aria-hidden

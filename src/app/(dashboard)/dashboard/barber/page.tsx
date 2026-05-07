@@ -68,13 +68,13 @@ export default async function BarberDashboardPage() {
           </div>
           <Suspense
             fallback={
-              <div className="h-11 w-44 shrink-0 animate-pulse rounded-xl bg-white/30" aria-hidden />
+              <div className="h-11 w-44 shrink-0 animate-pulse rounded-[1.25rem] bg-white/30" aria-hidden />
             }
           >
             <BarberDashboardTabToolbar className="shrink-0" />
           </Suspense>
         </div>
-        <div className="mt-4 rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/40 p-5 shadow-sm">
+        <div className="mt-4 rounded-[2rem] border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/40 p-5 shadow-sm">
           <p className="text-xs font-semibold text-emerald-800/90">รายรับวันนี้</p>
           <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-emerald-950">
             {formatBaht(revenue.revenueTotalBaht)}

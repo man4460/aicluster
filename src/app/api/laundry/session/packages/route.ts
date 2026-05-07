@@ -1,20 +1,48 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { laundryOwnerFromAuth } from "@/lib/laundry/api-owner";
 import { jsonLaundrySessionError } from "@/lib/laundry/route-errors";
 import { getLaundryDataScope } from "@/lib/trial/module-scopes";
+import {
+  LAUNDRY_DURATION_HOURS_MAX,
+  LAUNDRY_DURATION_HOURS_MIN,
+  roundLaundryDurationHours,
+} from "@/systems/laundry/laundry-duration-hours";
 
 const pricingModelZod = z.enum(["PER_KG", "PER_ITEM", "FLAT"]);
+
+const durationHoursZod = z.number().refine(
+  (x) =>
+    Number.isFinite(x) &&
+    x + 1e-9 >= LAUNDRY_DURATION_HOURS_MIN &&
+    x <= LAUNDRY_DURATION_HOURS_MAX + 1e-9,
+  { message: `ชั่วโมงต้องอยู่ระหว่างประมาณ ${LAUNDRY_DURATION_HOURS_MIN.toFixed(3)}–${LAUNDRY_DURATION_HOURS_MAX}` },
+);
+
+const basketTierZod = z.object({
+  label: z.string().min(1).max(80).trim(),
+  price: z.number().int().min(0).max(9_999_999),
+});
+
+function normalizeBasketTiers(raw: unknown): { label: string; price: number }[] | null {
+  if (raw == null) return null;
+  if (!Array.isArray(raw)) return null;
+  const parsed = z.array(basketTierZod).safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
 
 const postSchema = z.object({
   name: z.string().min(1).max(160),
   pricing_model: pricingModelZod,
   base_price: z.number().int().min(0).max(9_999_999),
-  duration_hours: z.number().int().min(1).max(720),
+  duration_hours: durationHoursZod,
   description: z.string().max(800).optional().nullable(),
   is_active: z.boolean(),
+  image_url: z.string().max(500).optional().nullable(),
+  basket_tiers: z.array(basketTierZod).max(24).optional().nullable(),
 });
 
 export async function GET() {
@@ -35,9 +63,11 @@ export async function GET() {
         name: r.name,
         pricing_model: r.pricingModel,
         base_price: r.basePrice,
-        duration_hours: r.durationHours,
+        duration_hours: Number(r.durationHours),
         description: r.description,
         is_active: r.isActive,
+        image_url: r.imageUrl ?? null,
+        basket_tiers: normalizeBasketTiers(r.basketTiers),
       })),
     });
   } catch (e) {
@@ -60,7 +90,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "รูปแบบข้อมูลไม่ถูกต้อง" }, { status: 400 });
     }
     const parsed = postSchema.safeParse(json);
-    if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      const detail =
+        issue ?
+          [issue.path.join(".") || "ฟิลด์", issue.message].filter(Boolean).join(": ")
+        : "ข้อมูลไม่ถูกต้อง";
+      return NextResponse.json({ error: detail }, { status: 400 });
+    }
+
+    const img = parsed.data.image_url?.trim();
+    const tiers =
+      parsed.data.basket_tiers != null && parsed.data.basket_tiers.length > 0 ? parsed.data.basket_tiers : null;
+
+    const dh = roundLaundryDurationHours(parsed.data.duration_hours);
 
     const row = await prisma.laundryPackage.create({
       data: {
@@ -69,9 +112,11 @@ export async function POST(req: Request) {
         name: parsed.data.name.trim(),
         pricingModel: parsed.data.pricing_model,
         basePrice: parsed.data.base_price,
-        durationHours: parsed.data.duration_hours,
+        durationHours: new Prisma.Decimal(String(dh)),
         description: parsed.data.description?.trim() ?? "",
         isActive: parsed.data.is_active,
+        imageUrl: img && img.length > 0 ? img.slice(0, 500) : null,
+        basketTiers: tiers ?? Prisma.DbNull,
       },
     });
     return NextResponse.json({
@@ -80,9 +125,11 @@ export async function POST(req: Request) {
         name: row.name,
         pricing_model: row.pricingModel,
         base_price: row.basePrice,
-        duration_hours: row.durationHours,
+        duration_hours: Number(row.durationHours),
         description: row.description,
         is_active: row.isActive,
+        image_url: row.imageUrl ?? null,
+        basket_tiers: normalizeBasketTiers(row.basketTiers),
       },
     });
   } catch (e) {

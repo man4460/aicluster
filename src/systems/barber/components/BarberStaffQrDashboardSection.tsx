@@ -9,15 +9,13 @@ import {
   downloadPosterPng,
   resolveAssetUrl,
 } from "@/components/qr/shop-qr-template";
+import { ShopStaffQrPanel } from "@/components/qr/shop-staff-qr-panel";
 import { cn } from "@/lib/cn";
 import { BarberDashboardBackLink } from "@/systems/barber/components/BarberDashboardBackLink";
-import { BarberQrPreviewFrame } from "@/systems/barber/components/BarberQrPreviewFrame";
 import {
   barberCardBodyPaddingXClass,
   barberCardSurfaceRadiusClass,
   barberQrHubPanelClass,
-  barberQrHubPreviewImgClass,
-  barberQrHubToolbarClass,
 } from "@/systems/barber/components/barber-ui-tokens";
 
 const BARBER_STAFF_QR_TAGLINE =
@@ -33,13 +31,15 @@ type Props = {
   trialSessionId?: string;
   /** หน้ารวม QR — ซ่อนปุ่มกลับแดชบอร์ด */
   hideDashboardBackLink?: boolean;
+  /** ใน FormModal — ซ่อนหัวการ์ดซ้ำกับชื่อโมดัล + แสดง/ซ่อนลิงก์ */
+  compactForModal?: boolean;
 };
 
 function IconStaffQrBadge({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5b61ff] to-[#7c3aed] text-white shadow-md shadow-indigo-900/25",
+        "flex h-11 w-11 shrink-0 items-center justify-center rounded-[2rem] bg-gradient-to-br from-[#5b61ff] to-[#7c3aed] text-white shadow-md shadow-indigo-900/25",
         className,
       )}
       aria-hidden
@@ -53,17 +53,6 @@ function IconStaffQrBadge({ className }: { className?: string }) {
   );
 }
 
-const toolbarBtnSoft = cn(
-  barberCardSurfaceRadiusClass,
-  "inline-flex min-h-[44px] items-center justify-center px-3 py-2 text-sm font-semibold text-[#2e2a58]",
-  "border border-[#e8e6f4] bg-white/70 shadow-sm transition hover:bg-white active:scale-[0.99] disabled:pointer-events-none disabled:opacity-45",
-);
-
-const toolbarBtnPrimary = cn(
-  barberCardSurfaceRadiusClass,
-  "app-btn-primary inline-flex min-h-[44px] items-center justify-center px-3 py-2 text-sm font-semibold text-white disabled:opacity-45",
-);
-
 export function BarberStaffQrDashboardSection({
   ownerId,
   shopLabel,
@@ -73,6 +62,7 @@ export function BarberStaffQrDashboardSection({
   isTrialSandbox = false,
   trialSessionId = "",
   hideDashboardBackLink = false,
+  compactForModal = false,
 }: Props) {
   const headline = shopLabel.trim() || "ร้านตัดผม";
   const resolvedLogoUrl = useMemo(() => resolveAssetUrl(logoUrl, baseUrl), [logoUrl, baseUrl]);
@@ -89,7 +79,19 @@ export function BarberStaffQrDashboardSection({
   const [staffPortalQr, setStaffPortalQr] = useState<string | null>(null);
   const [staffPosterPreviewUrl, setStaffPosterPreviewUrl] = useState<string | null>(null);
   const [staffQrBusy, setStaffQrBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copyMsg, setCopyMsg] = useState<string | null>(null);
+  const [linkVisible, setLinkVisible] = useState(false);
+  /** บนมือถือใช้โมดูลใหญ่ขึ้นให้สแกนง่าย — สอดคล้องคาร์แคร์ */
+  const [qrModuleSize, setQrModuleSize] = useState(240);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 639px)");
+    const sync = () => setQrModuleSize(mq.matches ? 312 : 240);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   useEffect(() => {
     if (!staffPageUrl) {
@@ -98,7 +100,7 @@ export function BarberStaffQrDashboardSection({
     }
     let cancelled = false;
     void QRCode.toDataURL(staffPageUrl, {
-      width: 240,
+      width: qrModuleSize,
       margin: 2,
       errorCorrectionLevel: "M",
       color: { dark: "#0f172a", light: "#ffffff" },
@@ -112,7 +114,7 @@ export function BarberStaffQrDashboardSection({
     return () => {
       cancelled = true;
     };
-  }, [staffPageUrl]);
+  }, [staffPageUrl, qrModuleSize]);
 
   useEffect(() => {
     if (!staffPortalQr) {
@@ -139,9 +141,10 @@ export function BarberStaffQrDashboardSection({
 
   const copyStaffPageUrl = useCallback(async () => {
     if (!staffPageUrl) return;
+    let ok = false;
     try {
       await navigator.clipboard.writeText(staffPageUrl);
-      setCopied(true);
+      ok = true;
     } catch {
       try {
         const ta = document.createElement("textarea");
@@ -153,12 +156,14 @@ export function BarberStaffQrDashboardSection({
         ta.select();
         document.execCommand("copy");
         document.body.removeChild(ta);
-        setCopied(true);
+        ok = true;
       } catch {
         return;
       }
     }
-    window.setTimeout(() => setCopied(false), 2000);
+    if (!ok) return;
+    setCopyMsg("คัดลอกลิงก์แล้ว");
+    window.setTimeout(() => setCopyMsg(null), 2000);
   }, [staffPageUrl]);
 
   async function downloadStaffQrPng() {
@@ -196,34 +201,39 @@ export function BarberStaffQrDashboardSection({
   return (
     <section className="min-w-0" aria-label="QR พนักงาน">
       <div className={barberQrHubPanelClass}>
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
-          <div className="flex min-w-0 gap-3.5">
-            <IconStaffQrBadge />
-            <div className="min-w-0 pt-0.5">
-              <h3 className="text-lg font-black tracking-tight sm:text-xl">
-                <span className="bg-gradient-to-r from-[#5b61ff] via-[#9333ea] to-[#db2777] bg-clip-text text-transparent">
-                  พนักงาน
-                </span>
-              </h3>
-              <p className="mt-1 text-sm leading-relaxed text-[#66638c]">คิววันนี้ · เช็กอิน · ต้องล็อกอินร้าน</p>
-              <p className="mt-2 truncate text-xs font-semibold text-[#8b87ad]" title={headline}>
-                {headline}
-              </p>
+        {!compactForModal ?
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
+            <div className="flex min-w-0 gap-3.5">
+              <IconStaffQrBadge />
+              <div className="min-w-0 pt-0.5">
+                <h3 className="text-lg font-black tracking-tight sm:text-xl">
+                  <span className="bg-gradient-to-r from-[#5b61ff] via-[#9333ea] to-[#db2777] bg-clip-text text-transparent">
+                    พนักงาน
+                  </span>
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-[#66638c]">คิววันนี้ · เช็กอิน · ต้องล็อกอินร้าน</p>
+                <p className="mt-2 truncate text-xs font-semibold text-[#8b87ad]" title={headline}>
+                  {headline}
+                </p>
+              </div>
             </div>
+            {!hideDashboardBackLink ?
+              <div className="shrink-0 sm:pt-1">
+                <BarberDashboardBackLink />
+              </div>
+            : null}
           </div>
-          {!hideDashboardBackLink ?
-            <div className="shrink-0 sm:pt-1">
-              <BarberDashboardBackLink />
-            </div>
-          : null}
-        </div>
+        : <p className="truncate text-xs font-semibold text-[#8b87ad]" title={headline}>
+            {headline}
+          </p>
+        }
 
-        <div className="mt-6 space-y-3">
+        <div className={cn("space-y-3", compactForModal ? "mt-0" : "mt-6")}>
           {!staffPageUrl ?
             <p
               className={`${barberCardSurfaceRadiusClass} border border-amber-200/90 bg-amber-50/95 ${barberCardBodyPaddingXClass} py-3 text-sm leading-snug text-amber-950`}
             >
-              ตั้งค่า <code className="rounded-md bg-white/90 px-1.5 py-px text-xs">NEXT_PUBLIC_APP_URL</code>{" "}
+              ตั้งค่า <code className="rounded-[1rem] bg-white/90 px-1.5 py-px text-xs">NEXT_PUBLIC_APP_URL</code>{" "}
               เป็น URL จริง
             </p>
           : null}
@@ -235,63 +245,27 @@ export function BarberStaffQrDashboardSection({
             </p>
           : null}
 
-          <div className={barberQrHubToolbarClass}>
-            <button
-              type="button"
-              disabled={!staffPageUrl}
-              onClick={() => void copyStaffPageUrl()}
-              className={cn(toolbarBtnSoft, "w-full sm:w-auto sm:min-w-[11rem]")}
-              aria-label="คัดลอกลิงก์หน้าพนักงาน"
-            >
-              {copied ? "คัดลอกแล้ว ✓" : "คัดลอกลิงก์"}
-            </button>
-            <button
-              type="button"
-              disabled={staffQrBusy || !staffPageUrl || trialExportBlocked}
-              onClick={() => void downloadStaffQrPdf("a4")}
-              className={cn(toolbarBtnPrimary, "min-w-0 flex-1 sm:min-w-[5.75rem]")}
-            >
-              PDF · A4
-            </button>
-            <button
-              type="button"
-              disabled={staffQrBusy || !staffPageUrl || trialExportBlocked}
-              onClick={() => void downloadStaffQrPdf("a5")}
-              className={cn(toolbarBtnSoft, "min-w-0 flex-1 sm:min-w-[5.75rem]")}
-            >
-              PDF · A5
-            </button>
-            <button
-              type="button"
-              disabled={staffQrBusy || !staffPageUrl || trialExportBlocked}
-              onClick={() => void downloadStaffQrPng()}
-              className={cn(toolbarBtnSoft, "min-w-0 flex-1 sm:min-w-[4.5rem]")}
-            >
-              PNG
-            </button>
-          </div>
+          <ShopStaffQrPanel
+            pageUrl={staffPageUrl}
+            qrPng={staffPortalQr}
+            posterPreview={staffPosterPreviewUrl}
+            copyMsg={copyMsg}
+            linkVisible={linkVisible}
+            setLinkVisible={setLinkVisible}
+            onCopyLink={() => void copyStaffPageUrl()}
+            downloadBusy={staffQrBusy}
+            trialExportBlocked={trialExportBlocked}
+            onDownloadPdfA4={() => void downloadStaffQrPdf("a4")}
+            onDownloadPng={() => void downloadStaffQrPng()}
+            onDownloadPdfA5={() => void downloadStaffQrPdf("a5")}
+            posterTintClass="shadow-lg shadow-indigo-950/10"
+            mobileBannerText="เน้นมือถือ — พนักงานสแกน QR หรือกดเปิดหน้าพนักงานบนเครื่องตัวเอง"
+            qrAlt="QR เข้าหน้าพนักงานร้านตัดผม"
+            openPrimaryLabel="เปิดหน้าพนักงานบนเครื่องนี้"
+            openSecondaryLabel="เปิดหน้าพนักงาน"
+            posterAlt="ตัวอย่างโปสเตอร์ QR พนักงานร้านตัดผม"
+          />
         </div>
-
-        <BarberQrPreviewFrame className="mt-8" accent="staff">
-          {!staffPageUrl ?
-            <p className="px-2 text-center text-sm text-[#66638c]">ตั้งค่า URL แล้วจะมีตัวอย่างโปสเตอร์</p>
-          : staffPosterPreviewUrl ?
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={staffPosterPreviewUrl}
-              alt="ตัวอย่างโปสเตอร์ QR พนักงาน"
-              className={barberQrHubPreviewImgClass}
-            />
-          : <div
-              className={cn(
-                barberQrHubPreviewImgClass,
-                "flex h-[min(56vh,520px)] items-center justify-center bg-white/25 text-sm text-slate-500 backdrop-blur-[2px]",
-              )}
-            >
-              กำลังเรนเดอร์ตัวอย่าง…
-            </div>
-          }
-        </BarberQrPreviewFrame>
       </div>
     </section>
   );

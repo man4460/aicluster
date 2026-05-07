@@ -57,10 +57,13 @@ function defaultNextSlotBangkok(): string {
 export function BarberBookingsClient({
   initialDateKey,
   showDashboardBackLink = true,
+  /** หน้า QR พนักงาน — การ์ดคิวเรียงแนวตั้งเหมือนมือถือ (ไม่จัดแถวซ้าย-ขวาบนจอใหญ่) */
+  staffQrLanding = false,
 }: {
   initialDateKey: string;
   /** ปิดเมื่อหน้าพนักงานมีปุ่มกลับแดชบอร์ดอยู่แล้ว */
   showDashboardBackLink?: boolean;
+  staffQrLanding?: boolean;
 }) {
   const [dateKey, setDateKey] = useState(initialDateKey);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
@@ -244,36 +247,61 @@ export function BarberBookingsClient({
       {msg && !addOpen ? <p className={barberInlineAlertSuccessClass}>{msg}</p> : null}
 
       <section className={barberSectionFirstClass} aria-label="คิวตามวัน">
-        <AppSectionHeader
-          tone="violet"
-          title="คิวตามวัน"
-          description="เลือกวันที่แล้วดูหรือเพิ่มคิว"
-          actionWrapClassName="w-full min-w-0 sm:flex-1 sm:basis-0"
-          action={
-            <div className="flex w-full max-w-full flex-wrap items-end gap-2 sm:gap-3">
-              <label className="mr-auto min-w-0 text-xs font-medium text-[#4d47b6]">
-                วันที่
-                <input
-                  type="date"
-                  value={dateKey}
-                  onChange={(e) => setDateKey(e.target.value)}
-                  className="app-input ml-0 mt-1 block min-h-[44px] w-full max-w-[11.5rem] rounded-xl px-3 py-2 text-sm sm:ml-2 sm:mt-0 sm:inline-block sm:w-auto"
-                />
-              </label>
-              <div className={cn(barberSectionActionsRowClass, "shrink-0 justify-end")}>
-                {showDashboardBackLink ? <BarberDashboardBackLink /> : null}
-                <button
-                  type="button"
-                  suppressHydrationWarning
-                  onClick={openAddModal}
-                  className={`app-btn-primary min-h-[44px] ${barberCardSurfaceRadiusClass} px-4 py-2.5 text-sm font-semibold`}
-                >
-                  เพิ่มคิว
-                </button>
-              </div>
+        {staffQrLanding ?
+          <div className="flex min-w-0 flex-nowrap items-center justify-between gap-2 border-b border-[#ecebff] pb-3">
+            <h2 className="shrink-0 text-base font-bold leading-tight text-[#2e2a58] sm:text-lg">คิวตามวัน</h2>
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+              <input
+                type="date"
+                value={dateKey}
+                onChange={(e) => setDateKey(e.target.value)}
+                aria-label="วันที่"
+                className="app-input min-h-10 max-w-[min(100%,11.25rem)] flex-1 rounded-xl px-2.5 py-2 text-sm tabular-nums sm:max-w-[11.5rem] sm:flex-none"
+              />
+              <button
+                type="button"
+                suppressHydrationWarning
+                onClick={openAddModal}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#5b61ff] to-[#6a63ff] text-white shadow-md ring-1 ring-white/40 transition hover:opacity-95 active:scale-95"
+                aria-label="เพิ่มคิว"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                </svg>
+              </button>
             </div>
-          }
-        />
+          </div>
+        : <AppSectionHeader
+            tone="violet"
+            title="คิวตามวัน"
+            description="เลือกวันที่แล้วดูหรือเพิ่มคิว"
+            actionWrapClassName="w-full min-w-0 sm:flex-1 sm:basis-0"
+            action={
+              <div className="flex w-full max-w-full flex-wrap items-end gap-2 sm:gap-3">
+                <label className="mr-auto min-w-0 text-xs font-medium text-[#4d47b6]">
+                  วันที่
+                  <input
+                    type="date"
+                    value={dateKey}
+                    onChange={(e) => setDateKey(e.target.value)}
+                    className="app-input ml-0 mt-1 block min-h-[44px] w-full max-w-[11.5rem] rounded-[1.25rem] px-3 py-2 text-sm sm:ml-2 sm:mt-0 sm:inline-block sm:w-auto"
+                  />
+                </label>
+                <div className={cn(barberSectionActionsRowClass, "shrink-0 justify-end")}>
+                  {showDashboardBackLink ? <BarberDashboardBackLink /> : null}
+                  <button
+                    type="button"
+                    suppressHydrationWarning
+                    onClick={openAddModal}
+                    className={`app-btn-primary min-h-[44px] ${barberCardSurfaceRadiusClass} px-4 py-2.5 text-sm font-semibold`}
+                  >
+                    เพิ่มคิว
+                  </button>
+                </div>
+              </div>
+            }
+          />
+        }
         {listLoading ? (
           <p className={`${barberMutedLoadingNoticeClass} text-center`}>กำลังโหลด…</p>
         ) : bookings.length === 0 ? (
@@ -285,7 +313,10 @@ export function BarberBookingsClient({
             {bookings.map((b) => (
               <li
                 key={b.id}
-                className={cn(barberListRowCardClass, "sm:flex sm:items-start sm:justify-between sm:gap-4")}
+                className={cn(
+                  barberListRowCardClass,
+                  !staffQrLanding && "sm:flex sm:items-start sm:justify-between sm:gap-4",
+                )}
               >
                 <div className="min-w-0 flex-1">
                   <p className="font-mono text-sm font-semibold leading-snug text-[#2e2a58]">{b.phone}</p>
@@ -301,7 +332,12 @@ export function BarberBookingsClient({
                     })}
                   </p>
                 </div>
-                <div className="mt-3 flex flex-col items-stretch gap-2 sm:mt-0 sm:min-w-[140px] sm:items-end">
+                <div
+                  className={cn(
+                    "mt-3 flex flex-col items-stretch gap-2",
+                    !staffQrLanding && "sm:mt-0 sm:min-w-[140px] sm:items-end",
+                  )}
+                >
                   <BarberBookingStatusBadge status={b.status} scheduledAt={new Date(b.scheduledAt)} />
                   {b.status === "SCHEDULED" ? (
                     <div
@@ -374,10 +410,10 @@ export function BarberBookingsClient({
               </div>
               <form onSubmit={onSave} className="grid gap-3 px-5 py-5">
               {err ? (
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{err}</p>
+                <p className="rounded-[1.25rem] bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{err}</p>
               ) : null}
               {msg ? (
-                <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900 ring-1 ring-emerald-100">
+                <p className="rounded-[1.25rem] bg-emerald-50 px-3 py-2 text-sm text-emerald-900 ring-1 ring-emerald-100">
                   {msg}
                 </p>
               ) : null}
@@ -393,7 +429,7 @@ export function BarberBookingsClient({
                       setBarberCustomerId(null);
                     }}
                     placeholder="0812345678"
-                    className="app-input mt-1 min-h-[48px] w-full rounded-xl px-3 text-base"
+                    className="app-input mt-1 min-h-[48px] w-full rounded-[1.25rem] px-3 text-base"
                   />
                 </label>
                 <button
@@ -412,7 +448,7 @@ export function BarberBookingsClient({
                   type="text"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value.slice(0, 100))}
-                  className="app-input mt-1 min-h-[48px] w-full rounded-xl px-3 text-base"
+                  className="app-input mt-1 min-h-[48px] w-full rounded-[1.25rem] px-3 text-base"
                   placeholder="ชื่อลูกค้า"
                 />
               </label>
@@ -423,7 +459,7 @@ export function BarberBookingsClient({
                     type="datetime-local"
                     value={scheduledAtLocal}
                     onChange={(e) => setScheduledAtLocal(e.target.value)}
-                    className="app-input mt-1 min-h-[48px] w-full rounded-xl px-3 text-base"
+                    className="app-input mt-1 min-h-[48px] w-full rounded-[1.25rem] px-3 text-base"
                   />
                 </label>
                 <p className="mt-1 text-[11px] text-[#8b87ad]">บันทึกเป็นเวลาไทย — ตั้งค่าเครื่องให้ตรงร้าน</p>

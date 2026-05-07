@@ -128,7 +128,11 @@ function IconPackageSpark({ className }: { className?: string }) {
   );
 }
 
-export function BarberCheckInClient({ embedded = false }: { embedded?: boolean } = {}) {
+export function BarberCheckInClient({
+  embedded = false,
+  /** หน้า QR พนักงาน — เลย์เอาต์แบบมือถือ (คอลัมน์เดียว ไม่แยกแถวบน sm+) */
+  staffQrLanding = false,
+}: { embedded?: boolean; staffQrLanding?: boolean } = {}) {
   const router = useRouter();
 
   const [phone, setPhone] = useState("");
@@ -494,7 +498,7 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
           type="button"
           onClick={() => setStylistModalOpen(true)}
           className={cn(
-            "flex w-full min-h-[52px] items-center justify-between gap-3 rounded-2xl border border-[#e4e2f5] bg-white/90 px-4 py-3 text-left shadow-sm outline-none ring-[#4d47b6]/20 transition hover:border-[#4d47b6]/35 hover:bg-white active:scale-[0.99] focus-visible:ring-2",
+            "flex w-full min-h-[52px] items-center justify-between gap-3 rounded-[2rem] border border-[#e4e2f5] bg-white/90 px-4 py-3 text-left shadow-sm outline-none ring-[#4d47b6]/20 transition hover:border-[#4d47b6]/35 hover:bg-white active:scale-[0.99] focus-visible:ring-2",
             stylists.length === 0 && "border-amber-200/90 bg-amber-50/40",
           )}
           aria-expanded={stylistModalOpen}
@@ -503,7 +507,7 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
           suppressHydrationWarning
         >
           <span className="flex min-w-0 flex-1 items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#4d47b6] text-sm font-black text-white shadow-md shadow-[#4d47b6]/25">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1.25rem] bg-[#4d47b6] text-sm font-black text-white shadow-md shadow-[#4d47b6]/25">
               ช
             </span>
             <span className="min-w-0">
@@ -533,7 +537,7 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
       </section>
 
       <section className={barberSectionNextClass} aria-label="ค้นหาลูกค้า">
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-200/85 bg-gradient-to-br from-emerald-50/95 via-white to-teal-50/45 p-4 shadow-[0_16px_40px_-24px_rgba(6,95,70,0.35)] sm:p-5">
+        <div className="relative overflow-hidden rounded-[2rem] border border-emerald-200/85 bg-gradient-to-br from-emerald-50/95 via-white to-teal-50/45 p-4 shadow-[0_16px_40px_-24px_rgba(6,95,70,0.35)] sm:p-5">
           <div
             className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full bg-emerald-400/15"
             aria-hidden
@@ -543,21 +547,28 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="text-lg font-black tracking-tight text-emerald-950">ค้นหาลูกค้า</h2>
-                <p className="mt-1 max-w-md text-[13px] leading-snug text-emerald-900/70">
-                  กรอกเบอร์ 9 หลักขึ้นไป แล้วเลือกแพ็กเพื่อหัก 1 ครั้ง
-                </p>
+                {!staffQrLanding ?
+                  <p className="mt-1 max-w-md text-[13px] leading-snug text-emerald-900/70">
+                    กรอกเบอร์ 9 หลักขึ้นไป แล้วเลือกแพ็กเพื่อหัก 1 ครั้ง
+                  </p>
+                : null}
               </div>
-              <span
-                className="hidden shrink-0 rounded-full border border-emerald-200/80 bg-white/80 px-3 py-1 text-[11px] font-bold text-emerald-800 shadow-sm sm:inline-flex sm:items-center sm:gap-1.5"
-                aria-hidden
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                หลักทำงาน
-              </span>
+              {!staffQrLanding ?
+                <span
+                  className="hidden shrink-0 rounded-full border border-emerald-200/80 bg-white/80 px-3 py-1 text-[11px] font-bold text-emerald-800 shadow-sm sm:inline-flex sm:items-center sm:gap-1.5"
+                  aria-hidden
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  หลักทำงาน
+                </span>
+              : null}
             </div>
 
             <form
-              className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-stretch"
+              className={cn(
+                "mt-5 flex flex-col gap-3",
+                !staffQrLanding && "sm:flex-row sm:items-stretch",
+              )}
               onSubmit={(e) => {
                 e.preventDefault();
                 void searchByPhone(phone);
@@ -571,7 +582,7 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
                 ) : null}
                 <input
                   className={cn(
-                    "app-input min-h-[52px] w-full rounded-xl border-emerald-200/90 bg-white/95 py-3 pr-3 text-base font-medium text-[#1e293b] shadow-inner shadow-emerald-950/5 placeholder:text-slate-400 focus:border-emerald-400 focus:ring-emerald-400/25",
+                    "app-input min-h-[52px] w-full rounded-[1.25rem] border-emerald-200/90 bg-white/95 py-3 pr-3 text-base font-medium text-[#1e293b] shadow-inner shadow-emerald-950/5 placeholder:text-slate-400 focus:border-emerald-400 focus:ring-emerald-400/25",
                     phone.length === 0 ? "pl-12" : "pl-3.5",
                   )}
                   inputMode="numeric"
@@ -587,7 +598,7 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
                 type="submit"
                 disabled={searching}
                 suppressHydrationWarning
-                className="app-btn-primary inline-flex min-h-[52px] shrink-0 items-center justify-center gap-2 rounded-xl px-8 py-3 text-sm font-bold text-white shadow-md shadow-emerald-900/15 disabled:opacity-60 sm:min-w-[7.5rem]"
+                className="app-btn-primary inline-flex min-h-[52px] shrink-0 items-center justify-center gap-2 rounded-[1.25rem] px-8 py-3 text-sm font-bold text-white shadow-md shadow-emerald-900/15 disabled:opacity-60 sm:min-w-[7.5rem]"
               >
                 <IconSearch className="h-4 w-4 opacity-90 sm:hidden" />
                 {searching ? "กำลังค้นหา…" : "ค้นหา"}
@@ -599,7 +610,7 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
 
       {(customerName !== null || subs.length > 0 || msg) && (
         <section className={barberSectionNextClass} aria-label="ผลค้นหา">
-          <div className="rounded-2xl border border-[#e0dcf5] bg-gradient-to-b from-white to-[#faf9ff] p-4 shadow-sm sm:p-5">
+          <div className="rounded-[2rem] border border-[#e0dcf5] bg-gradient-to-b from-white to-[#faf9ff] p-4 shadow-sm sm:p-5">
             <h3 className="text-base font-black text-[#2e2a58]">ผลค้นหา</h3>
             {customerName ? (
               <p className="mt-2 text-sm font-medium text-[#5f5a8a]">
@@ -622,7 +633,7 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
                   <label
                     key={s.id}
                     className={[
-                      "flex cursor-pointer items-center gap-3 rounded-2xl border-2 bg-white px-4 py-3.5 shadow-sm transition hover:border-[#4d47b6]/40",
+                      "flex cursor-pointer items-center gap-3 rounded-[2rem] border-2 bg-white px-4 py-3.5 shadow-sm transition hover:border-[#4d47b6]/40",
                       selectedSubId === s.id ? "border-[#4d47b6] ring-2 ring-[#4d47b6]/15" : "border-[#ecebff]",
                     ].join(" ")}
                   >
@@ -648,7 +659,7 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
               type="button"
               disabled={deducting || !selectedSubId || subs.length === 0}
               onClick={() => void onDeduct()}
-              className="mt-5 flex min-h-[54px] w-full items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 text-base font-black text-white shadow-lg shadow-emerald-900/20 transition hover:brightness-[1.03] active:scale-[0.99] disabled:pointer-events-none disabled:opacity-45"
+              className="mt-5 flex min-h-[54px] w-full items-center justify-center rounded-[2rem] bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 text-base font-black text-white shadow-lg shadow-emerald-900/20 transition hover:brightness-[1.03] active:scale-[0.99] disabled:pointer-events-none disabled:opacity-45"
             >
               {deducting ? "กำลังบันทึก…" : "หัก 1 ครั้งจากแพ็ก"}
             </button>
@@ -657,15 +668,17 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
       )}
 
       <section className={barberSectionNextClass} aria-label="บันทึกด่วน">
-        <div className="relative overflow-hidden rounded-2xl border border-violet-200/80 bg-gradient-to-br from-violet-50/90 via-white to-[#f5f3ff] p-4 shadow-[0_14px_36px_-22px_rgba(91,97,255,0.45)] sm:p-5">
+        <div className="relative overflow-hidden rounded-[2rem] border border-violet-200/80 bg-gradient-to-br from-violet-50/90 via-white to-[#f5f3ff] p-4 shadow-[0_14px_36px_-22px_rgba(91,97,255,0.45)] sm:p-5">
           <div
             className="pointer-events-none absolute -left-6 bottom-0 h-32 w-32 rounded-full bg-[#5b61ff]/10"
             aria-hidden
           />
           <div className="relative">
             <h2 className="text-lg font-black tracking-tight text-[#2e2a58]">บันทึกด่วน</h2>
-            <p className="mt-1 text-[13px] text-[#66638c]">Walk-in หรือเปิดแพ็กใหม่ — ไม่ต้องค้นหาเบอร์ก่อน</p>
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {!staffQrLanding ?
+              <p className="mt-1 text-[13px] text-[#66638c]">Walk-in หรือเปิดแพ็กใหม่ — ไม่ต้องค้นหาเบอร์ก่อน</p>
+            : null}
+            <div className={cn("mt-5 grid grid-cols-1 gap-3", !staffQrLanding && "sm:grid-cols-2")}>
               <button
                 type="button"
                 onClick={() => {
@@ -675,9 +688,9 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
                   setCashModalOpen(true);
                 }}
                 suppressHydrationWarning
-                className="flex min-h-[4.75rem] items-center gap-4 rounded-2xl border-2 border-amber-400/90 bg-gradient-to-br from-amber-50 to-orange-50/80 px-4 py-3 text-left shadow-md shadow-amber-900/10 transition hover:border-amber-500 hover:brightness-[1.02] active:scale-[0.99]"
+                className="flex min-h-[4.75rem] items-center gap-4 rounded-[2rem] border-2 border-amber-400/90 bg-gradient-to-br from-amber-50 to-orange-50/80 px-4 py-3 text-left shadow-md shadow-amber-900/10 transition hover:border-amber-500 hover:brightness-[1.02] active:scale-[0.99]"
               >
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-400/35 text-amber-950">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.25rem] bg-amber-400/35 text-amber-950">
                   <IconCoins className="h-6 w-6" />
                 </span>
                 <span className="min-w-0">
@@ -690,9 +703,9 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
                 onClick={() => setSellModalOpen(true)}
                 disabled={packages.length === 0}
                 suppressHydrationWarning
-                className="app-btn-primary flex min-h-[4.75rem] items-center gap-4 rounded-2xl px-4 py-3 text-left shadow-lg shadow-[#4d47b6]/30 transition hover:brightness-[1.05] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100"
+                className="app-btn-primary flex min-h-[4.75rem] items-center gap-4 rounded-[2rem] px-4 py-3 text-left shadow-lg shadow-[#4d47b6]/30 transition hover:brightness-[1.05] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100"
               >
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/25 text-white">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.25rem] bg-white/25 text-white">
                   <IconPackageSpark className="h-6 w-6" />
                 </span>
                 <span className="min-w-0">
@@ -752,7 +765,7 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
                         </label>
                         <select
                           id="barber-stylist-select-modal"
-                          className="app-input mt-2 min-h-[52px] w-full rounded-xl px-4 py-3 text-base shadow-sm focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/25"
+                          className="app-input mt-2 min-h-[52px] w-full rounded-[1.25rem] px-4 py-3 text-base shadow-sm focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/25"
                           value={stylistId}
                           onChange={(e) => setStylistId(e.target.value)}
                           aria-label="เลือกช่างที่บันทึก"
@@ -773,7 +786,7 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
                   <button
                     type="button"
                     onClick={() => setStylistModalOpen(false)}
-                    className="app-btn-primary min-h-[48px] w-full rounded-xl py-3 text-sm font-bold text-white"
+                    className="app-btn-primary min-h-[48px] w-full rounded-[1.25rem] py-3 text-sm font-bold text-white"
                   >
                     เสร็จ
                   </button>
@@ -830,34 +843,34 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
             </div>
             <form onSubmit={onCash} className="grid gap-3 px-5 py-5">
               {cashFormErr ? (
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{cashFormErr}</p>
+                <p className="rounded-[1.25rem] bg-red-50 px-3 py-2 text-sm text-red-800">{cashFormErr}</p>
               ) : null}
               <input
-                className="min-h-[48px] rounded-xl border border-slate-200 px-3 text-base"
+                className="min-h-[48px] rounded-[1.25rem] border border-slate-200 px-3 text-base"
                 placeholder="เบอร์โทร"
                 inputMode="numeric"
                 value={cashPhone}
                 onChange={(e) => setCashPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
               />
               <input
-                className="min-h-[48px] rounded-xl border border-slate-200 px-3 text-base"
+                className="min-h-[48px] rounded-[1.25rem] border border-slate-200 px-3 text-base"
                 placeholder="ชื่อ (ไม่บังคับ)"
                 value={cashName}
                 onChange={(e) => setCashName(e.target.value)}
               />
               <input
-                className="min-h-[48px] rounded-xl border border-slate-200 px-3 text-base"
+                className="min-h-[48px] rounded-[1.25rem] border border-slate-200 px-3 text-base"
                 placeholder="หมายเหตุ (ไม่บังคับ)"
                 value={cashNote}
                 onChange={(e) => setCashNote(e.target.value)}
               />
-              <div className="rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5">
+              <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/60 px-3 py-2.5">
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
                   <IconReceipt className="h-4 w-4 shrink-0 text-amber-700" />
                   <span>ยอดเงิน (บาท, ไม่บังคับ)</span>
                 </div>
                 <input
-                  className="app-input mt-2 min-h-[48px] w-full rounded-xl border border-slate-200 bg-white px-3 text-base"
+                  className="app-input mt-2 min-h-[48px] w-full rounded-[1.25rem] border border-slate-200 bg-white px-3 text-base"
                   placeholder="0"
                   inputMode="decimal"
                   value={cashAmount}
@@ -865,10 +878,10 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
                   aria-label="ยอดเงินบาท"
                 />
               </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5">
+              <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/60 px-3 py-2.5">
                 <p className="text-xs font-semibold text-slate-700">แนบรูปบิล / สลิป (ไม่บังคับ)</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <div className="relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50">
+                  <div className="relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center overflow-hidden rounded-[1.25rem] border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50">
                     <input
                       type="file"
                       accept="image/*"
@@ -880,7 +893,7 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
                   </div>
                   <button
                     type="button"
-                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-[1.25rem] border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
                     aria-label="ถ่ายรูปจากกล้อง"
                     onClick={openCashCamera}
                   >
@@ -889,7 +902,7 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
                   {cashReceipt ? (
                     <button
                       type="button"
-                      className="rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-white hover:text-slate-800"
+                      className="rounded-[1.25rem] px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-white hover:text-slate-800"
                       onClick={clearCashReceipt}
                     >
                       ลบรูป
@@ -901,7 +914,7 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
                   <img
                     src={cashReceipt.url}
                     alt="ตัวอย่างสลิป"
-                    className="mt-2 max-h-40 w-full rounded-lg border border-slate-200 bg-white object-contain"
+                    className="mt-2 max-h-40 w-full rounded-[1.25rem] border border-slate-200 bg-white object-contain"
                   />
                 ) : null}
               </div>
@@ -913,14 +926,14 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
                     clearCashReceipt();
                     setCashModalOpen(false);
                   }}
-                  className="min-h-[48px] rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  className="min-h-[48px] rounded-[1.25rem] border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
                   disabled={cashLoading}
-                  className="min-h-[48px] rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950 disabled:opacity-60"
+                  className="min-h-[48px] rounded-[1.25rem] border-2 border-amber-400 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950 disabled:opacity-60"
                 >
                   {cashLoading ? "…" : "บันทึกเงินสด"}
                 </button>
@@ -938,7 +951,7 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
             >
               <video
                 ref={cashVideoRef}
-                className="max-h-[min(55vh,420px)] w-full max-w-lg rounded-xl bg-black object-contain"
+                className="max-h-[min(55vh,420px)] w-full max-w-lg rounded-[1.25rem] bg-black object-contain"
                 playsInline
                 muted
                 autoPlay
@@ -952,14 +965,14 @@ export function BarberCheckInClient({ embedded = false }: { embedded?: boolean }
                 <button
                   type="button"
                   onClick={closeCashCamera}
-                  className="min-h-[48px] rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-sm font-medium text-white hover:bg-white/20"
+                  className="min-h-[48px] rounded-[1.25rem] border border-white/30 bg-white/10 px-4 py-3 text-sm font-medium text-white hover:bg-white/20"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="button"
                   onClick={captureFromCashCamera}
-                  className="min-h-[48px] rounded-xl bg-white px-4 py-3 text-sm font-bold text-slate-900 hover:bg-slate-100"
+                  className="min-h-[48px] rounded-[1.25rem] bg-white px-4 py-3 text-sm font-bold text-slate-900 hover:bg-slate-100"
                 >
                   ถ่ายรูป
                 </button>

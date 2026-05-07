@@ -82,7 +82,7 @@ function CostSlipAttachmentZone({
   disabled?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-violet-200/70 bg-gradient-to-br from-[#faf8ff] via-white to-rose-50/40 p-4 shadow-sm ring-1 ring-violet-100/60">
+    <div className="rounded-[2rem] border border-violet-200/70 bg-gradient-to-br from-[#faf8ff] via-white to-rose-50/40 p-4 shadow-sm ring-1 ring-violet-100/60">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-violet-800/90">แนบสลิป / บิล (ไม่บังคับ)</p>
@@ -132,7 +132,7 @@ function CostSlipAttachmentZone({
       {slipUrl.trim() && previewUrl ?
         <div className={`mt-4 flex flex-wrap items-center gap-3 ${barberCardSurfaceRadiusClass} border border-slate-200/80 bg-white/80 p-3`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={previewUrl} alt="สลิปแนบ" className="h-20 w-auto max-w-[min(100%,12rem)] rounded-lg object-cover object-center ring-1 ring-slate-200" />
+          <img src={previewUrl} alt="สลิปแนบ" className="h-20 w-auto max-w-[min(100%,12rem)] rounded-[1.25rem] object-cover object-center ring-1 ring-slate-200" />
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-slate-700">แนบแล้ว</p>
             <p className="truncate text-[11px] text-slate-500">{slipUrl.slice(0, 80)}{slipUrl.length > 80 ? "…" : ""}</p>
@@ -141,7 +141,7 @@ function CostSlipAttachmentZone({
             type="button"
             disabled={disabled || photoBusy}
             onClick={() => onSlipUrlChange("")}
-            className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+            className="shrink-0 rounded-[1.25rem] border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
           >
             ลบรูป
           </button>
@@ -452,7 +452,7 @@ export function BarberCostPanel({
         <label className="min-w-0 flex-1 text-xs font-medium text-slate-600">
           {editCat ? "ชื่อหมวด" : "ชื่อหมวดใหม่"}
           <input
-            className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
+            className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-[1.25rem] px-3 py-2 text-sm"
             value={catName}
             onChange={(ev) => setCatName(ev.target.value)}
             placeholder="เช่น ค่าสีย้อม ค่าไฟ อุปกรณ์"
@@ -566,7 +566,7 @@ export function BarberCostPanel({
                           src={slipResolved}
                           alt="สลิป"
                           onOpen={() => lightbox.open(slipResolved)}
-                          className="h-14 w-14 rounded-lg"
+                          className="h-14 w-14 rounded-[1.25rem]"
                         />
                       : null}
                       <div className="min-w-0">
@@ -696,7 +696,7 @@ export function BarberCostPanel({
               <label className="block text-xs font-medium text-slate-600 sm:col-span-2">
                 รายการค่าใช้จ่าย
                 <input
-                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
+                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-[1.25rem] px-3 py-2 text-sm"
                   placeholder="เช่น สีย้อม ค่าไฟเดือนมีนา…"
                   value={entryItemLabel}
                   onChange={(ev) => setEntryItemLabel(ev.target.value)}
@@ -705,7 +705,7 @@ export function BarberCostPanel({
               <label className="block text-xs font-medium text-slate-600">
                 หมวด
                 <select
-                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
+                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-[1.25rem] px-3 py-2 text-sm"
                   value={entryCategoryId}
                   onChange={(ev) => setEntryCategoryId(ev.target.value)}
                   disabled={categories.length === 0}
@@ -723,7 +723,7 @@ export function BarberCostPanel({
                 <span className="mt-0.5 block text-[11px] font-normal text-slate-500">ตามเวลาไทย (Asia/Bangkok)</span>
                 <input
                   type="datetime-local"
-                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
+                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-[1.25rem] px-3 py-2 text-sm"
                   value={entrySpentLocal}
                   onChange={(ev) => setEntrySpentLocal(ev.target.value)}
                 />
@@ -731,7 +731,7 @@ export function BarberCostPanel({
               <label className="block text-xs font-medium text-slate-600">
                 จำนวนเงิน (บาท)
                 <input
-                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
+                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-[1.25rem] px-3 py-2 text-sm"
                   inputMode="decimal"
                   placeholder="0"
                   value={entryAmount}
@@ -741,7 +741,7 @@ export function BarberCostPanel({
               <label className="block text-xs font-medium text-slate-600 sm:col-span-2">
                 หมายเหตุ
                 <input
-                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
+                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-[1.25rem] px-3 py-2 text-sm"
                   placeholder="เช่น บิลเลขที่…"
                   value={entryNote}
                   onChange={(ev) => setEntryNote(ev.target.value)}
@@ -800,7 +800,7 @@ export function BarberCostPanel({
               <label className="block text-xs font-medium text-slate-600">
                 รายการค่าใช้จ่าย
                 <input
-                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
+                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-[1.25rem] px-3 py-2 text-sm"
                   placeholder="เช่น สีย้อม อุปกรณ์…"
                   value={editEntryForm.item_label}
                   onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, item_label: ev.target.value } : s))}
@@ -809,7 +809,7 @@ export function BarberCostPanel({
               <label className="block text-xs font-medium text-slate-600">
                 หมวด
                 <select
-                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
+                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-[1.25rem] px-3 py-2 text-sm"
                   value={editEntryForm.category_id}
                   onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, category_id: ev.target.value } : s))}
                 >
@@ -825,7 +825,7 @@ export function BarberCostPanel({
                 <span className="mt-0.5 block text-[11px] font-normal text-slate-500">ตามเวลาไทย (Asia/Bangkok)</span>
                 <input
                   type="datetime-local"
-                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
+                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-[1.25rem] px-3 py-2 text-sm"
                   value={editEntryForm.spent_at_local}
                   onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, spent_at_local: ev.target.value } : s))}
                 />
@@ -833,7 +833,7 @@ export function BarberCostPanel({
               <label className="block text-xs font-medium text-slate-600">
                 จำนวนเงิน (บาท)
                 <input
-                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
+                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-[1.25rem] px-3 py-2 text-sm"
                   value={editEntryForm.amount}
                   onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, amount: ev.target.value } : s))}
                 />
@@ -841,7 +841,7 @@ export function BarberCostPanel({
               <label className="block text-xs font-medium text-slate-600">
                 หมายเหตุ
                 <input
-                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
+                  className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-[1.25rem] px-3 py-2 text-sm"
                   value={editEntryForm.note}
                   onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, note: ev.target.value } : s))}
                 />

@@ -1,0 +1,54 @@
+---
+description: UX/UI มาตรฐาน QR พนักงาน (พอร์ทัลพนักงาน) — ให้เหมือนคาร์แคร์ · ใช้ ShopStaffQrPanel
+alwaysApply: false
+globs:
+  - "**/components/qr/shop-staff-qr-panel.tsx"
+  - "**/systems/car-wash/**"
+  - "**/systems/barber/**"
+  - "**/systems/laundry/**"
+---
+
+# QR พนักงาน — UX/UI เดียวกับคาร์แคร์
+
+อ้างอิง implementation: `src/components/qr/shop-staff-qr-panel.tsx` (`ShopStaffQrPanel`). โมดูลที่มีลิงก์/ป๊อปอัป QR พนักงาน (เช่น คาร์แคร์ ซักผ้า ร้านตัดผม) **ต้องใช้คอมโพเนนต์นี้** แทนการคัดลอก JSX ชุดใหม่ เพื่อให้มือถือ / เดสก์ท็อป / ข้อความ / `<details>` สอดคล้องกัน
+
+## โครงสร้าง UX (ห้ามแหวกโดยไม่ปรับทั้งคอมโพเนนต์กลาง)
+
+1. **มือถือ (`max-sm`)**
+   - แถบข้อความ indigo (`mobileBannerText`) — `sm:hidden`
+   - รูป QR จาก data URL — `max-w-[min(92vw,320px)]`, พื้นขาว + ขอบ — `sm:hidden`
+   - ปุ่มหลักเต็มความกว้าง `app-btn-primary` min-h 52px — `location.assign(pageUrl)` — `sm:hidden`
+   - คอลัมน์: คัดลอกลิงก์เต็มความกว้าง → กริด 2 ช่อง **แสดง/ซ่อนลิงก์** + **เปิดหน้า** (ข้อความปุ่มผ่าน props)
+   - `<details>` หัวข้อ **「ดาวน์โหลดและโปสเตอร์」**: PDF A4 → (ถ้ามี) PDF A5 → PNG → พื้นที่พรีวิวโปสเตอร์ในกล่อง scroll
+
+2. **เดสก์ท็อป (`sm+`)**
+   - แถวปุ่ม flex-wrap: คัดลอก · แสดงลิงก์ · PDF A4 · (A5 ถ้ามี) · PNG — class `cw-btn` / `app-btn-primary` / `app-btn-soft` ตามคาร์แคร์
+   - แถบคัดลอกสำเร็จ (emerald) เมื่อมี `copyMsg`
+   - แถบลิงก์ (แสดง URL หรือ dashed hint)
+   - พรีวิวโปสเตอร์กว้างคงที่ ~340px ในกล่อง `overflow-x-auto` + inset shadow — **`hidden sm:block`**
+
+3. **โทเค็นร่วม**
+   - `posterTintClass`: ส่งเงาโทนโมดูล (เช่น `shadow-amber-950/10`, `shadow-indigo-950/10`)
+   - ข้อความปุ่มเปิดหน้า: โมดูลที่เป็น «ลาน» ใช้ **เปิดหน้าลาน** — อื่น ๆ ใช้ **เปิดหน้าพนักงาน**
+
+4. **PDF A5**
+   - ถ้าโมดูลรองรับเท่านั้น — ส่ง `onDownloadPdfA5` เพื่อแสดปุ่มในมือถือและเดสก์ท็อป (คาร์แคร์ / ซักผ้าไม่ส่ง)
+
+5. **โหมดทดลอง**
+   - `trialExportBlocked` ส่งเข้า panel เพื่อ disable ปุ่มดาวน์โหลด — แถบเตือนโหมดทดลองวาง **ด้านนอก** panel ใน FormModal ได้ (ดูซักผ้า / บาร์เบอร์)
+
+## การเชื่อมในโปรเจกต์ปัจจุบัน
+
+- คาร์แคร์: `CarWashDashboard` — FormModal QR พนักงาน
+- ซักผ้า: `LaundryQrHubClient` — FormModal QR พนักงาน (+ แถบทดลองด้านบนเมื่อจำเป็น)
+- ร้านตัดผม: `BarberStaffQrDashboardSection` — แผงในหน้า/modal
+
+โปสเตอร์สร้างจาก `createShopQrPosterDataUrl` / ดาวน์โหลดจาก `shop-qr-template` เหมือนเดิม — panel รับเฉพาะ data URL และ callbacks
+
+หน้าปลายทางหลังสแกนลิงก์พนักงาน → `.cursor/rules/staff-qr-landing-page.mdc` (`StaffQrLandingShell`) · แถบเครื่องมือพนักงาน → `.cursor/rules/shop-staff-lane-toolbar.mdc`
+
+หน้าปลายทางหลังสแกน **QR ลูกค้า** (พอร์ทัลสาธารณะ check-in) → `.cursor/rules/shop-customer-qr-portal.mdc`
+
+## เกี่ยวกับการ์ด hub คู่
+
+ดู `.cursor/rules/shop-qr-hub-popup-pattern.mdc` — การ์ดเปิดป๊อปอัปยังแยกลูกค้า/พนักงานได้ แต่ **เนื้อใน QR พนักงาน** ต้องผ่าน `ShopStaffQrPanel`

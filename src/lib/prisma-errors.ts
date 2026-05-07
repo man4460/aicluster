@@ -9,7 +9,7 @@ export function isPrismaSchemaMismatchError(e: unknown): boolean {
   // MySQL driver บางเวอร์ชันส่งเป็น Error ธรรมดา — 1054 = unknown column
   if (
     /Unknown column/i.test(msg) &&
-    (/fee_cycle|village_houses|photo_url|slip_photo_url|bundle_id|attendance_roster|check_in_face|sale_receipt_image_url|customer_subscriptions|sold_by_stylist_id/i.test(
+    (/fee_cycle|village_houses|photo_url|slip_photo_url|bundle_id|attendance_roster|check_in_face|sale_receipt_image_url|customer_subscriptions|sold_by_stylist_id|pickup_public_token/i.test(
       msg,
     ) ||
       /\b1054\b/.test(msg))

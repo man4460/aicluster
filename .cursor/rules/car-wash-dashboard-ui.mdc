@@ -1,5 +1,5 @@
 ---
-description: คาร์แคร์ — เทมเพลตแดชบอร์ด เมนู ลานล้าง QR โปสเตอร์ ยอดขาย และคอมโพเนนต์ร่วม
+description: คาร์แคร์ — เทมเพลตแดชบอร์ด เมนู ลานล้าง QR โปสเตอร์ ยอดขาย และคอมโพเนนต์ร่วม (แม่แบบ UX/UI ระดับโปรเจกต์)
 globs:
   - "**/systems/car-wash/**"
   - "**/api/car-wash/**"
@@ -7,6 +7,10 @@ globs:
 ---
 
 # Car wash — แดชบอร์ด & UI
+
+**แม่แบบ UX/UI ทั้งโปรเจกต์:** เมนูมือถือล่างโค้งมน การ์ด glass มุมมน เฉดสี/ไอคอน/ตัวอักษร — ดูกฎรวม **`dashboard-ux-car-wash-baseline.mdc`** (`alwaysApply`)
+
+**ตารางเทียบคู่ขนานร้านตัดผม:** **`dashboard-module-car-wash-barber-reference.mdc`**
 
 ## โมดูลปุ่ม / การ์ดรายการ
 
@@ -18,7 +22,7 @@ globs:
 
 - แท็บ: **แพ็กเกจเหมา** (key `bundles`), **QR พนักงาน** (`staff_qr`)
 - ปุ่มเมนู: **QR ลูกค้า** → เปิด `FormModal` (ไม่ใช่แท็บ)
-- **บันทึกรายการ** อยู่ใน **`CarWashServiceLanePanel`** (หัวกล่องลานล้างวันนี้) ผ่าน `onRecordVisit` — ไม่วางมุมขวาหัวการ์ดหลัก
+- **`CarWashServiceLanePanel`** แถวหัวลานล้างวันนี้ — **รีเฟรช + บันทึกรายการ** อยู่ที่นี่ (`cw-btn`; บนมือถือไอคอนอย่างเดียวผ่าน `globals.css`) — **ไม่** อยู่หัวการ์ดหลักของโมดูล · โมดูลซักผ้าใช้แพทเทิร์นเดียวกันที่ `LaundryActiveOrdersPanelHeader` (ดู **`laundry-dashboard-ui.mdc`**)
 
 ## QR ลูกค้า & QR พนักงาน (โปสเตอร์กลาง MAWELL)
 
@@ -32,6 +36,10 @@ globs:
 
 - Route: **`/dashboard/car-wash/staff`** → `CarWashDashboard` + **`layoutVariant="staff_lane"`**
 - แสดงเฉพาะหัวข้อลาน + **`CarWashServiceLanePanel`** + modals ที่จำเป็นสำหรับบันทึก — **ไม่ใส่ลิงก์กลับหน้าหลักคาร์แคร์**
+
+## การ์ดสถิติ overview (แม่แบบโปรเจกต์)
+
+บล็อก **สถิติวันนี้** (ห่อกระจก `rounded-[2.5rem]` + กริด `CarWashStat`) ใช้เป็นแม่แบบให้โมดูลอื่นที่มีแดชบอร์ดคล้ายกัน — เช่น **รับฝากซักผ้า** (`LaundryStat` ใน `LaundryDashboard`) ตาม **`.cursor/rules/laundry-dashboard-ui.mdc`**
 
 ## พอร์ทัลลูกค้า (สมาชิก)
 

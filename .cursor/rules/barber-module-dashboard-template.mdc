@@ -7,15 +7,17 @@ globs:
 
 # ร้านตัดผม (Barber) — เทมเพลตแดชบอร์ด & UI
 
-ใช้เป็นแบบอ้างอิงเมื่อสร้างโมดูลแดชบอร์ดใหม่ที่โทน MAWELL / glass / แยกเมนูมือถือ–เดสก์ท็อป
+ใช้เป็นแบบอ้างอิงเมื่อสร้างโมดูลแดชบอร์ดใหม่ที่โทน MAWELL / glass / แยกเมนูมือถือ–เดสก์ท็อป — **หลักการ UX/UI ระดับโปรเจกต์ (เมนูล่าง มุมมน เฉดสี แม่แบบคาร์แคร์):** **`dashboard-ux-car-wash-baseline.mdc`**
+
+**ตารางเทียบคู่ขนานคาร์แคร์:** **`dashboard-module-car-wash-barber-reference.mdc`**
 
 ## 1) เลย์เอาต์ตามขนาดจอ (Tailwind)
 
 | โซน | มือถือ (`max-md`, &lt;768px) | แท็บเล็ต/คอม (`md:` ขึ้นไป) |
 |-----|------------------------------|------------------------------|
-| **แถบนำทางโมดูล** | **`BarberModuleMobileDock`** — `fixed inset-x-0 bottom-0 z-[90]` กริด 4 คอลัมน์ ไอคอน + ป้ายสั้น | **`BarberModuleDesktopNav`** — ในการ์ดหัว (`BarberLayoutChrome`) ใต้เส้นแบ่ง `border-t border-white/40` |
+| **แถบนำทางโมดูล** | **`BarberModuleMobileDock`** — `fixed inset-x-4 bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))] z-40` กริด 4 คอลัมน์ · `rounded-[2.5rem]` | **`BarberModuleDesktopNav`** — ในการ์ดหัว (`BarberLayoutChrome`) ใต้เส้นแบ่ง `border-t border-white/40` |
 | **หัวโมดูล** | โลโก้ + ชื่อระบบ + ปุ่มคู่มือ; tagline ซ่อนบนมือถือ (`hidden md:block`) | เหมือนเดิม + แสดง tagline |
-| **พื้นที่เลื่อนเนื้อหา** | **`BarberLayoutChrome`** ใส่ `max-md:pb-[calc(4.85rem+env(safe-area-inset-bottom))]` เพื่อไม่ให้เนื้อหาถูก dock บัง | ไม่ต้องเว้น pb แบบ dock |
+| **พื้นที่เลื่อนเนื้อหา** | **`BarberLayoutChrome`** ใส่ `max-md:pb-20 md:pb-0` เพื่อไม่ให้เนื้อหาถูก dock บัง | ไม่ต้องเว้น pb แบบ dock |
 | **Gutter แดชบอร์ด** | `DashboardShell` แถวหลัก: `max-md:px-2` เมื่ออยู่ใต้ `/dashboard/barber/*` | `sm:px-4` |
 | **PageContainer ชั้นแดชบอร์ด** | `DashboardPagesShell`: `max-md:!px-3 sm:!px-6` สำหรับ path barber | `sm:!px-6` |
 | **โมดูล Shell** | `BarberModuleShell` → `PageContainer` ใช้ `!px-0` (ไม่ซ้ำขอบแนวนอนกับชั้นแดชบอร์ด) | เหมือนกัน |

@@ -10,9 +10,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
-  AppPublicCheckInGlassPage,
   AppUsageGuideModal,
-  appPublicCheckInGlassCardClass,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import {
@@ -22,12 +20,14 @@ import {
   downloadPosterPng,
   resolveAssetUrl,
 } from "@/components/qr/shop-qr-template";
+import { StaffQrLandingShell } from "@/components/qr/staff-qr-landing-shell";
+import { ShopStaffQrPanel } from "@/components/qr/shop-staff-qr-panel";
+import { cn } from "@/lib/cn";
 
 const CAR_WASH_CUSTOMER_QR_TAGLINE =
   "สแกน กรอกเบอร์ ยืนยันใช้บริการ — หักสิทธิ์อัตโนมัติ";
 const CAR_WASH_STAFF_QR_TAGLINE =
   "สแกนเข้าหน้าลานพนักงาน — บันทึกรายการและจัดการคิววันนี้ (ต้องล็อกอินร้าน)";
-import { cn } from "@/lib/cn";
 import { CAR_WASH_SERVICE_STATUSES, carWashStatusLabelTh } from "@/lib/car-wash/service-status";
 import { prepareBuildingPosSlipImageFile } from "@/systems/building-pos/building-pos-slip-image";
 import {
@@ -232,6 +232,8 @@ export function CarWashDashboard({
   const [staffQrLinkVisible, setStaffQrLinkVisible] = useState(false);
   const [staffQrBusy, setStaffQrBusy] = useState(false);
   const [staffCopyMsg, setStaffCopyMsg] = useState<string | null>(null);
+  /** โมดูล QR พนักงานใหญ่ขึ้นบนจอแคบให้สแกนง่าย */
+  const [staffQrModuleSize, setStaffQrModuleSize] = useState(240);
   const [visitLookupHint, setVisitLookupHint] = useState<string | null>(null);
   const visitFormRef = useRef<HTMLFormElement>(null);
   const visitGalleryInputRef = useRef<HTMLInputElement>(null);
@@ -380,6 +382,15 @@ export function CarWashDashboard({
   }, [showStaffQrModal]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 639px)");
+    const sync = () => setStaffQrModuleSize(mq.matches ? 312 : 240);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
     if (tab !== "qr") {
       setStaffQrLinkVisible(false);
       setShowQrModal(false);
@@ -436,14 +447,14 @@ export function CarWashDashboard({
   }, [portalQr, resolvedLogoUrl, shopLabel]);
 
   useEffect(() => {
-    if (isStaffLaneOnly || tab !== "qr" || !staffPageUrl) {
+    if (isStaffLaneOnly || !staffPageUrl || (tab !== "qr" && !showStaffQrModal)) {
       setStaffPortalQr(null);
       setStaffPosterPreviewUrl(null);
       return;
     }
     let cancelled = false;
     void QRCode.toDataURL(staffPageUrl, {
-      width: 240,
+      width: staffQrModuleSize,
       margin: 2,
       errorCorrectionLevel: "M",
       color: { dark: "#0f172a", light: "#ffffff" },
@@ -457,7 +468,7 @@ export function CarWashDashboard({
     return () => {
       cancelled = true;
     };
-  }, [isStaffLaneOnly, tab, staffPageUrl]);
+  }, [isStaffLaneOnly, tab, staffPageUrl, showStaffQrModal, staffQrModuleSize]);
 
   useEffect(() => {
     if (!staffPortalQr) {
@@ -1344,40 +1355,15 @@ export function CarWashDashboard({
       ) : null}
 
       {isStaffLaneOnly ?
-        <AppPublicCheckInGlassPage>
-          <div className="relative mx-auto max-w-md space-y-4">
-            <div className="mb-6 text-center">
-              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-[1.25rem] border border-white/70 bg-gradient-to-br from-white/80 to-violet-100/60 shadow-[0_8px_24px_-8px_rgba(91,97,255,0.35)] backdrop-blur-xl ring-1 ring-inset ring-white/70">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-7 w-7 text-[#5b61ff]"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden
-                >
-                  <path d="M19 17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3l2-2h4l2 2h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2Z" />
-                  <circle cx="12" cy="11" r="2.5" />
-                  <path d="m8 19 4-2 4 2" />
-                </svg>
-              </div>
-              <h1 className="text-2xl font-black tracking-tight text-[#1e1b4b]">คาร์แคร์พนักงาน</h1>
-              <p className="mt-1 text-sm text-[#6b6894]">บันทึกรายการและจัดการคิววันนี้</p>
-              {shopLabel.trim() ?
-                <p className="mt-2 text-xs font-bold text-[#9490c0]">{shopLabel.trim()}</p>
-              : null}
-            </div>
-            {loading ? <p className="text-center text-sm text-[#66638c]">กำลังโหลด...</p> : null}
-            {error ? <p className="text-center text-sm text-red-600">{error}</p> : null}
-            {!loading ?
-              <div className={appPublicCheckInGlassCardClass}>
-                <div className="px-5 py-5 sm:px-6">{serviceLanePanelEl}</div>
-              </div>
-            : null}
-          </div>
-        </AppPublicCheckInGlassPage>
+        <StaffQrLandingShell
+          variant="car-wash"
+          title="คาร์แคร์พนักงาน"
+          shopLabel={shopLabel}
+          loading={loading}
+          error={error}
+        >
+          {serviceLanePanelEl}
+        </StaffQrLandingShell>
       : tab === "overview" ? (
         <div className="space-y-6">
           <div className="space-y-4 rounded-[2.5rem] border border-white/55 bg-white/28 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
@@ -1530,7 +1516,7 @@ export function CarWashDashboard({
                     <div className="min-w-0 flex-1 pt-0.5">
                       <h3 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">QR พนักงาน</h3>
                       <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-                        ลิงก์หน้าลานและโปสเตอร์สำหรับทีม — คัดลอก ดาวน์โหลด และดูตัวอย่างในป๊อปอัป
+                        หน้าลานบนมือถือเป็นหลัก — สแกน เปิดลิงก์ หรือดาวน์โหลดโปสเตอร์ในป๊อปอัป
                       </p>
                       <p className="mt-5 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-800">
                         <span>คลิกเพื่อเปิด</span>
@@ -2945,8 +2931,10 @@ export function CarWashDashboard({
         size="lg"
         appearance="glass"
         glassTint="amber"
+        mobileCentered
         onClose={() => setShowStaffQrModal(false)}
         title="QR พนักงาน"
+        description="เน้นมือถือ — สแกน QR หรือเปิดหน้าลานบนเครื่องพนักงาน"
         footer={
           <div className="flex justify-end">
             <button
@@ -2960,78 +2948,24 @@ export function CarWashDashboard({
           </div>
         }
       >
-        <div className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void copyStaffPageUrl()}
-              className="cw-btn app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] shadow-sm ring-1 ring-white/40"
-            >
-              <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><rect x="9" y="9" width="13" height="13" rx="2" /><rect x="2" y="2" width="13" height="13" rx="2" /></svg>
-              <span className="cw-btn-label">คัดลอกลิงก์</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setStaffQrLinkVisible((v) => !v)}
-              className="cw-btn rounded-xl border border-white/55 bg-white/40 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md hover:bg-white/55"
-            >
-              <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                {staffQrLinkVisible ? <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.84-2 2.2-3.75 3.94-5.06M9.9 4.24A10.94 10.94 0 0 1 12 4c5 0 9.27 3.89 11 8a10.96 10.96 0 0 1-4.07 5.09M1 1l22 22" /> : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" /><circle cx="12" cy="12" r="3" /></>}
-              </svg>
-              <span className="cw-btn-label">{staffQrLinkVisible ? "ซ่อนลิงก์" : "แสดงลิงก์"}</span>
-            </button>
-            <button
-              type="button"
-              disabled={staffQrBusy || !staffPortalQr}
-              onClick={() => void downloadStaffQrPdf()}
-              className="cw-btn app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-60"
-            >
-              <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>
-              <span className="cw-btn-label">ดาวน์โหลด PDF (A4)</span>
-            </button>
-            <button
-              type="button"
-              disabled={staffQrBusy || !staffPortalQr}
-              onClick={() => void downloadStaffQrPng()}
-              className="cw-btn app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] disabled:opacity-60"
-            >
-              <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
-              <span className="cw-btn-label">ดาวน์โหลด PNG</span>
-            </button>
-          </div>
-          {staffCopyMsg ?
-            <p className="rounded-xl border border-emerald-200/60 bg-emerald-50/70 px-3 py-2 text-xs font-medium text-emerald-900 backdrop-blur-sm">
-              {staffCopyMsg}
-            </p>
-          : null}
-          {staffQrLinkVisible ?
-            <p className="break-all rounded-xl border border-white/50 bg-white/45 px-3 py-2 text-xs font-medium text-[#4d47b6] backdrop-blur-md">
-              {staffPageUrl || "-"}
-            </p>
-          : (
-            <p className="rounded-xl border border-dashed border-white/45 bg-white/25 px-3 py-2 text-xs font-medium text-slate-600 backdrop-blur-sm">
-              ลิงก์ถูกซ่อน — กด &quot;แสดงลิงก์&quot; หรือ &quot;คัดลอกลิงก์&quot; เมื่อต้องการ
-            </p>
-          )}
-          <div className="overflow-x-auto rounded-2xl border border-white/50 bg-white/30 p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5)] backdrop-blur-md">
-            {staffPosterPreviewUrl ?
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={staffPosterPreviewUrl}
-                alt="ตัวอย่างโปสเตอร์ QR พนักงานคาร์แคร์"
-                className="mx-auto w-[340px] rounded-3xl shadow-lg shadow-amber-950/10"
-              />
-            : staffPageUrl ?
-              <div className="mx-auto flex h-[560px] w-[340px] items-center justify-center rounded-3xl border border-white/45 bg-white/40 text-xs font-medium text-slate-600 backdrop-blur-sm">
-                กำลังเรนเดอร์ตัวอย่าง...
-              </div>
-            : (
-              <div className="mx-auto flex min-h-[200px] max-w-md items-center justify-center rounded-3xl border border-amber-300/50 bg-amber-100/35 px-4 text-center text-xs font-medium text-amber-950 backdrop-blur-sm">
-                ตั้งค่า NEXT_PUBLIC_APP_URL ให้เป็น URL เว็บจริง เพื่อให้ลิงก์และโปสเตอร์ถูกต้อง
-              </div>
-            )}
-          </div>
-        </div>
+        <ShopStaffQrPanel
+          pageUrl={staffPageUrl}
+          qrPng={staffPortalQr}
+          posterPreview={staffPosterPreviewUrl}
+          copyMsg={staffCopyMsg}
+          linkVisible={staffQrLinkVisible}
+          setLinkVisible={setStaffQrLinkVisible}
+          onCopyLink={() => void copyStaffPageUrl()}
+          downloadBusy={staffQrBusy}
+          onDownloadPdfA4={() => void downloadStaffQrPdf()}
+          onDownloadPng={() => void downloadStaffQrPng()}
+          posterTintClass="shadow-lg shadow-amber-950/10"
+          mobileBannerText="เน้นมือถือ — พนักงานสแกน QR หรือกดเปิดหน้าลานบนเครื่องตัวเอง"
+          qrAlt="QR เข้าหน้าพนักงานคาร์แคร์"
+          openPrimaryLabel="เปิดหน้าลานบนเครื่องนี้"
+          openSecondaryLabel="เปิดหน้าลาน"
+          posterAlt="ตัวอย่างโปสเตอร์ QR พนักงานคาร์แคร์"
+        />
       </FormModal>
 
       <AppImageLightbox src={lightbox.src} onClose={lightbox.close} alt="ภาพแนบ" />

@@ -263,7 +263,7 @@ export function BarberSellPackageModal({
             </div>
           <form onSubmit={(e) => void onSell(e)} className="grid gap-3 px-5 py-5">
             {sellFormErr ? (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{sellFormErr}</p>
+              <p className="rounded-[1.25rem] bg-red-50 px-3 py-2 text-sm text-red-800">{sellFormErr}</p>
             ) : null}
             {showInternalStylist ? (
               <div>
@@ -272,7 +272,7 @@ export function BarberSellPackageModal({
                 </label>
                 <select
                   id="barber-sell-modal-stylist"
-                  className="app-input mt-1 min-h-[48px] w-full rounded-xl border border-slate-200 px-3 text-base"
+                  className="app-input mt-1 min-h-[48px] w-full rounded-[1.25rem] border border-slate-200 px-3 text-base"
                   value={internalStylistId}
                   onChange={(e) => setInternalStylistId(e.target.value)}
                 >
@@ -286,7 +286,7 @@ export function BarberSellPackageModal({
               </div>
             ) : null}
             <select
-              className="min-h-[48px] rounded-xl border border-slate-200 px-3 text-base"
+              className="min-h-[48px] rounded-[1.25rem] border border-slate-200 px-3 text-base"
               value={sellPkg}
               onChange={(e) => setSellPkg(e.target.value)}
               required
@@ -299,14 +299,14 @@ export function BarberSellPackageModal({
               ))}
             </select>
             <input
-              className="min-h-[48px] rounded-xl border border-slate-200 px-3 text-base"
+              className="min-h-[48px] rounded-[1.25rem] border border-slate-200 px-3 text-base"
               placeholder="เบอร์ลูกค้า"
               inputMode="numeric"
               value={sellPhone}
               onChange={(e) => setSellPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
             />
             <input
-              className="min-h-[48px] rounded-xl border border-slate-200 px-3 text-base"
+              className="min-h-[48px] rounded-[1.25rem] border border-slate-200 px-3 text-base"
               placeholder="ชื่อลูกค้า (ไม่บังคับ)"
               value={sellName}
               onChange={(e) => setSellName(e.target.value)}
@@ -350,7 +350,7 @@ export function BarberSellPackageModal({
                 {sellReceipt ? (
                   <button
                     type="button"
-                    className="rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-white hover:text-slate-800"
+                    className="rounded-[1.25rem] px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-white hover:text-slate-800"
                     onClick={clearSellReceipt}
                   >
                     ลบรูป
@@ -362,7 +362,7 @@ export function BarberSellPackageModal({
                 <img
                   src={sellReceipt.url}
                   alt="ตัวอย่างสลิป"
-                  className="mt-2 max-h-40 w-full rounded-lg border border-slate-200 bg-white object-contain"
+                  className="mt-2 max-h-40 w-full rounded-[1.25rem] border border-slate-200 bg-white object-contain"
                 />
               ) : null}
             </div>

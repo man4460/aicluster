@@ -254,11 +254,11 @@ export function BarberPackagesClient({
                 </button>
               </div>
               <form onSubmit={onCreate} className="grid gap-3 px-5 py-5">
-              {err ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{err}</p> : null}
+              {err ? <p className="rounded-[1.25rem] bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{err}</p> : null}
               <label className="block text-xs font-semibold text-[#4d47b6]">
                 ชื่อแพ็กเกจ
                 <input
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+                  className="app-input mt-1 w-full rounded-[1.25rem] px-3 py-2.5 text-sm"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="ตัดผม 10 ครั้ง"
@@ -271,7 +271,7 @@ export function BarberPackagesClient({
                   type="number"
                   min={0}
                   step={0.01}
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+                  className="app-input mt-1 w-full rounded-[1.25rem] px-3 py-2.5 text-sm"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   required
@@ -282,7 +282,7 @@ export function BarberPackagesClient({
                 <input
                   type="number"
                   min={1}
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+                  className="app-input mt-1 w-full rounded-[1.25rem] px-3 py-2.5 text-sm"
                   value={sessions}
                   onChange={(e) => setSessions(e.target.value)}
                   required

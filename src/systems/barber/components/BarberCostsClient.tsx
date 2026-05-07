@@ -93,7 +93,7 @@ export function BarberCostToolbarInline({
         type="button"
         disabled={busy}
         onClick={() => toolbar.openManageCategories()}
-        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-gradient-to-br from-white to-[#eef2ff]/90 px-2.5 text-xs font-bold text-[#3730a3] shadow-sm ring-1 ring-indigo-100/80 hover:from-[#f8f7ff] hover:to-white disabled:opacity-50"
+        className="inline-flex h-8 items-center gap-1.5 rounded-[1.25rem] bg-gradient-to-br from-white to-[#eef2ff]/90 px-2.5 text-xs font-bold text-[#3730a3] shadow-sm ring-1 ring-indigo-100/80 hover:from-[#f8f7ff] hover:to-white disabled:opacity-50"
         aria-label="จัดการหมวด"
       >
         <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -106,7 +106,7 @@ export function BarberCostToolbarInline({
         type="button"
         disabled={busy}
         onClick={() => toolbar.openRecordExpense()}
-        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-gradient-to-br from-[#6366f1] to-[#4f46e5] px-2.5 text-xs font-bold text-white shadow-sm ring-1 ring-indigo-400/40 hover:from-[#5b61ff] hover:to-[#4338ca] disabled:opacity-50"
+        className="inline-flex h-8 items-center gap-1.5 rounded-[1.25rem] bg-gradient-to-br from-[#6366f1] to-[#4f46e5] px-2.5 text-xs font-bold text-white shadow-sm ring-1 ring-indigo-400/40 hover:from-[#5b61ff] hover:to-[#4338ca] disabled:opacity-50"
         aria-label="บันทึกรายจ่าย"
       >
         <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>

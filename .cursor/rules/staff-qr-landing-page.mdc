@@ -1,0 +1,48 @@
+---
+description: หน้าเป้าหมายหลังสแกน QR พนักงาน — UX/UI เดียวกับคาร์แคร์ staff lane · ใช้ StaffQrLandingShell
+alwaysApply: false
+globs:
+  - "**/components/qr/staff-qr-landing-shell.tsx"
+  - "**/systems/car-wash/**"
+  - "**/systems/barber/**"
+  - "**/systems/laundry/**"
+  - "**/app/**/staff/page.tsx"
+---
+
+# หน้าพนักงาน (หลังเข้าตามลิงก์ QR พนักงาน)
+
+อ้างอิง canonical: คาร์แคร์ `layoutVariant="staff_lane"` (`/dashboard/car-wash/staff`) — พื้นหลัง **AppPublicCheckInGlassPage** · ไอคอนกลางในกล่องขอบขาว/violet · หัวเรื่องเข้ม · คำบรรยายเทา · ชื่อร้าน (`shopLabel`) · การ์ดเนื้อหา **`appPublicCheckInGlassCardClass`** + padding `px-5 py-5 sm:px-6`
+
+## คอมโพเนนต์กลาง
+
+ใช้ **`StaffQrLandingShell`** (`src/components/qr/staff-qr-landing-shell.tsx`) แทนการจัดเลย์เอาต์ใหม่:
+
+- `variant`: `"car-wash"` | `"laundry"` | `"barber"` — เลือกไอคอนหัวข้อให้สอดคล้องโมดูล (โทนและขนาดเดียวกับคาร์แคร์)
+- `title` — ภาษาไทย สั้น ชัด
+- `subtitle` — **ทางเลือก**; โหมดพนักงานแบบย่อไม่ส่ง (ไม่มีบรรทัดบรรยายใต้ชื่อหน้า) — ดู `.cursor/rules/shop-staff-lane-toolbar.mdc`
+- `shopLabel` — จาก `getBusinessProfile` (หรือสตริงว่าง)
+- `loading` / `error` — ถ้ามี state ระดับหน้า (เช่นโหลดข้อมูลก่อนแสดงแผง)
+- `children` — งานจริงของโมดูล **ภายในการ์ดเดียว** (อย่าซ้อน shell แบบพอร์ทัลแยกจากคาร์แคร์)
+
+## แถบเครื่องมือและคำบรรยายแผง
+
+ปุ่มในแผงพนักงาน = **ไอคอนอย่างเดียว** + ไม่มีคำบรรยายใต้หัวข้อแผง — **`.cursor/rules/shop-staff-lane-toolbar.mdc`**
+
+## รายการในการ์ด (จอใหญ่)
+
+บนหน้าพนักงาน QR **ให้รายการเป็นแบบมือถือ**: หนึ่งการ์ดต่อแถว (`grid-cols-1` เท่านั้น) — อย่าใช้ `sm:grid-cols-2` / `sm:flex` แยกซ้าย–ขวาสำหรับการ์ดคิวในโหมดนี้ (ดู `laundryStaffQrLandingCardGridClass`, props `staffQrLanding` ใน `BarberBookingsClient` / `BarberCheckInClient`)
+
+## การเชื่อมในโปรเจกต์
+
+| โมดูล | เส้นทาง | หมายเหตุ |
+|--------|---------|----------|
+| คาร์แคร์ | `(staff-lane)/dashboard/car-wash/staff` | `CarWashDashboard` + `StaffQrLandingShell` variant `car-wash` |
+| ซักผ้า | `(dashboard)/dashboard/laundry/staff` | `LaundryDashboard` early-return เมื่อ `staff_lane` |
+| บาร์เบอร์ | `(dashboard)/dashboard/barber/staff` | Server page ใช้ `StaffQrLandingShell` variant `barber` |
+
+## ความสัมพันธ์กับ QR พนักงานในแดชบอร์ด
+
+- ป๊อปอัป/แผง **สร้าง QR พนักงาน** → กฎ `shop-staff-qr-panel.mdc` (`ShopStaffQrPanel`)
+- **หน้าปลายทางหลังสแกน** → กฎไฟล์นี้ (`StaffQrLandingShell`)
+
+อย่าปนสองชั้น UX ที่ไม่ตรงกัน (เช่น header แบบแดชบอร์ดเต็ม + พื้นหลังไม่ glass บนหน้าพนักงาน QR)

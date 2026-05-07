@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { DashboardDataLoadError } from "@/components/dashboard/DashboardDataLoadError";
 import { TokenGate } from "@/components/dashboard/TokenGate";
 import { isDemoSessionUsername } from "@/lib/auth/demo-account";
 import { DashboardShell } from "@/components/layout/DashboardShell";
@@ -19,32 +20,6 @@ import { SYSTEM_MAP_CATALOG_SLUG } from "@/lib/modules/system-map-catalog";
 import { isMqttServiceModuleEnabled } from "@/lib/modules/mqtt-feature";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { listTrialModuleIds } from "@/lib/modules/trial-store";
-
-function DashboardDataError({ message }: { message: string }) {
-  return (
-    <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 bg-gradient-to-b from-slate-50 to-white p-8 text-center">
-      <p className="max-w-md text-sm font-medium text-amber-950">{message}</p>
-      <p className="max-w-lg text-xs leading-relaxed text-slate-600">
-        ตรวจสอบว่า MySQL ทำงานและค่า <code className="rounded bg-slate-100 px-1">DATABASE_URL</code> ใน{" "}
-        <code className="rounded bg-slate-100 px-1">.env</code> ถูกต้อง จากนั้นรีสตาร์ทเซิร์ฟเวอร์ Next
-      </p>
-      <div className="flex flex-wrap justify-center gap-2">
-        <a
-          href="/dashboard"
-          className="rounded-xl bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#000098]"
-        >
-          ลองกลับแดชบอร์ด
-        </a>
-        <a
-          href="/login"
-          className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
-        >
-          เข้าสู่ระบบใหม่
-        </a>
-      </div>
-    </div>
-  );
-}
 
 export default async function DashboardLayout({
   children,
@@ -80,7 +55,7 @@ export default async function DashboardLayout({
   } catch (e) {
     console.error("[dashboard layout] user lookup", e);
     return (
-      <DashboardDataError message="โหลดข้อมูลผู้ใช้ไม่สำเร็จ — อาจเชื่อมต่อฐานข้อมูลไม่ได้" />
+      <DashboardDataLoadError message="โหลดข้อมูลผู้ใช้ไม่สำเร็จ — อาจเชื่อมต่อฐานข้อมูลไม่ได้" />
     );
   }
 
@@ -91,7 +66,7 @@ export default async function DashboardLayout({
     billCtx = await getModuleBillingContext(session.sub);
   } catch (e) {
     console.error("[dashboard layout] billing context", e);
-    return <DashboardDataError message="โหลดบริบทการสมัครใช้งานไม่สำเร็จ — ตรวจสอบฐานข้อมูล" />;
+    return <DashboardDataLoadError message="โหลดบริบทการสมัครใช้งานไม่สำเร็จ — ตรวจสอบฐานข้อมูล" />;
   }
   if (!billCtx) redirect("/login");
 
@@ -104,7 +79,7 @@ export default async function DashboardLayout({
     });
   } catch (e) {
     console.error("[dashboard layout] app modules", e);
-    return <DashboardDataError message="โหลดรายการระบบไม่สำเร็จ — ตรวจสอบฐานข้อมูล" />;
+    return <DashboardDataLoadError message="โหลดรายการระบบไม่สำเร็จ — ตรวจสอบฐานข้อมูล" />;
   }
   const allModules = filterAppModulesForDashboardUi(allModulesRaw, user.role);
 

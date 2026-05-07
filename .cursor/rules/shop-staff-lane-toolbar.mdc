@@ -1,0 +1,45 @@
+---
+description: โหมดพนักงาน / staff lane / หน้า QR พนักงาน — แถบเครื่องมือไอคอนอย่างเดียว ไม่มีคำบรรยายใต้หัวข้อแผง
+alwaysApply: false
+globs:
+  - "**/systems/car-wash/**"
+  - "**/systems/barber/**"
+  - "**/systems/laundry/**"
+  - "**/systems/building-pos/**"
+  - "**/components/qr/staff-qr-landing-shell.tsx"
+  - "**/app/**/staff/**"
+---
+
+# แถบเครื่องมือพนักงาน (staff lane / หลังสแกน QR พนักงาน)
+
+ใช้แพทเทิร์นเดียวกับ **`CarWashServiceLanePanel`** เมื่อ `staffLayout` — อ้างอิง `staffCardToolbar` ใน `src/systems/car-wash/CarWashServiceLanePanel.tsx`
+
+## ปุ่มหลักในแผง (รีเฟรช · เพิ่มรายการ · ฯลฯ)
+
+1. **แสดงเฉพาะไอคอน** — ขนาดทัช ~40px (`h-10 w-10`), `rounded-xl`, ไม่มี `<span>` ข้อความบนปุ่ม
+2. **ต้องมี `aria-label`** ภาษาไทยสั้น ชัด (เช่น `"รีเฟรช"`, `"บันทึกรายการ"`, `"เพิ่มคิว"`)
+3. **โทนปุ่ม**
+   - ทุติยภูมิ (รีเฟรช): ขอบ `#dcd8f0`, พื้นขาว/โปร่ง — เทียบปุ่มรีเฟรชในลานคาร์แคร์
+   - หลัก (บันทึก/เพิ่ม): gradient `from-[#5b61ff] to-[#6a63ff]`, ไอคอนขาว — เทียบปุ่มบันทึกในลานคาร์แคร์
+4. **สถานะโหลด** — ไอคอนรีเฟรชใช้ `animate-spin` เมื่อกำลังรีเฟรช; `aria-label` ระบุ `"กำลังรีเฟรช"` เมื่อ disabled/โหลด
+
+อย่าใช้ชั้น `cw-btn` + `cw-btn-label` ในโหมดนี้บนจอใหญ่ — class นั้นซ่อนข้อความเฉพาะ `< sm` แต่โหมดพนักงานต้องการ **ไอคอนอย่างเดียวทุก breakpoint**
+
+## คำบรรยายใต้หัวข้อแผง
+
+ในโหมดพนักงาน QR / staff lane:
+
+- **ไม่แสดง** `<p>` บรรยายใต้หัวข้อแผง (เช่น «เลือกสถานะ · รีเฟรชเมื่อหลายเครื่อง»)
+- **`AppSectionHeader`** — ไม่ส่ง `description` (หรือส่ง `undefined`)
+- **`StaffQrLandingShell`** — `subtitle` เป็นทางเลือก; ถ้าไม่ต้องการบรรทัดบรรยายใต้ชื่อหน้า **ไม่ส่ง** `subtitle`
+- หัวข้อหลัก (`title` / `<h2>`) **เก็บได้** เพื่อบอกบริบทสั้น ๆ
+
+## การอ้างอิงใน repo
+
+| พื้นที่ | การใช้งาน |
+|---------|------------|
+| คาร์แคร์ staff lane | `CarWashServiceLanePanel` + `StaffQrLandingShell` (ไม่มี subtitle) |
+| ซักผ้า staff | `LaundryActiveOrdersPanelHeader` + `iconOnlyToolbar` |
+| บาร์เบอร์ staff | `BarberBookingsClient` / `BarberCheckInClient` + `staffQrLanding` · แถว «คิวตามวัน» = `flex-nowrap`: หัวข้อ \| `input[type=date]` (`aria-label="วันที่"`) \| ปุ่มเพิ่มไอคอน |
+
+โมดูลใหม่ที่มี «หน้าพนักงานแคบ» — ให้ทำตามกฎนี้และ `.cursor/rules/staff-qr-landing-page.mdc`

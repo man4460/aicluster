@@ -20,16 +20,15 @@ export default async function LaundryStaffPage() {
   ]);
   const recorderDisplayName = userRow?.fullName?.trim() || userRow?.username || session.username;
   return (
-    <div className="space-y-6">
-      <LaundryDashboard
-        shopLabel={profile?.name?.trim() || "ระบบซักผ้า"}
-        logoUrl={profile?.logoUrl?.trim() || null}
-        baseUrl={baseUrl}
-        recorderDisplayName={recorderDisplayName}
-        trialSessionId={scope.trialSessionId}
-        isTrialSandbox={scope.isTrialSandbox}
-        layoutVariant="staff_lane"
-      />
-    </div>
+    <LaundryDashboard
+      shopLabel={profile?.name?.trim() || "ระบบซักผ้า"}
+      logoUrl={profile?.logoUrl?.trim() || null}
+      baseUrl={baseUrl}
+      ownerUserId={session.sub}
+      recorderDisplayName={recorderDisplayName}
+      trialSessionId={scope.trialSessionId}
+      isTrialSandbox={scope.isTrialSandbox}
+      layoutVariant="staff_lane"
+    />
   );
 }

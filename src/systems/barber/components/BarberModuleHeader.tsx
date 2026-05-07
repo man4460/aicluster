@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { cn } from "@/lib/cn";
-import { barberCardSurfaceRadiusClass } from "@/systems/barber/components/barber-ui-tokens";
 
 const links = [
   { href: "/dashboard/barber", label: "แดชบอร์ด" },
@@ -47,7 +46,8 @@ function barberNavIcon(href: string) {
 
 function barberNavLinkClass(active: boolean) {
   return cn(
-    `flex min-h-[44px] w-full touch-manipulation items-center justify-center ${barberCardSurfaceRadiusClass} px-3 py-2.5 text-center text-xs font-black transition-all sm:min-h-0 sm:text-sm`,
+    /* เทียบแท็บคาร์แคร์ — rounded-xl */
+    "flex min-h-[44px] w-full touch-manipulation items-center justify-center rounded-xl px-3 py-2.5 text-center text-xs font-black transition-all sm:min-h-0 sm:text-sm",
     active
       ? "bg-white/75 text-[#5b61ff] shadow-md ring-1 ring-white/80 backdrop-blur-sm"
       : "text-slate-600 hover:bg-white/45 hover:text-slate-800",
@@ -92,20 +92,20 @@ export function BarberModuleDesktopNav({ pathname }: { pathname: string }) {
 }
 
 /**
- * แถบนำทางมือถือ — ติดขอบล่างจอ (อยู่นอกการ์ดหัว เพื่อไม่ถูก overflow/transform บัง)
+ * แถบนำทางมือถือ — ลอย inset-x / bottom โค้ง 2.5rem เหมือนเมนูล่างคาร์แคร์
  */
 export function BarberModuleMobileDock({ pathname }: { pathname: string }) {
   return (
     <nav
       className={cn(
-        "fixed inset-x-0 bottom-0 z-[90] md:hidden print:hidden",
-        "border-t border-white/50 bg-gradient-to-t from-white/95 via-white/90 to-white/82 backdrop-blur-xl",
-        "pt-1.5 shadow-[0_-10px_40px_-14px_rgba(30,27,75,0.18)]",
-        "pb-[max(0.35rem,env(safe-area-inset-bottom,0px))]",
+        "fixed inset-x-4 z-40 overflow-hidden rounded-[2.5rem] border border-white/50 p-2 md:hidden print:hidden",
+        "bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]",
+        "bg-gradient-to-br from-white/55 via-white/40 to-indigo-50/30",
+        "shadow-[0_24px_55px_-18px_rgba(30,27,75,0.38)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
       )}
       aria-label="เมนูล่างร้านตัดผม"
     >
-      <ul className="mx-auto grid max-w-lg grid-cols-4 gap-0.5 px-2">
+      <ul className="grid grid-cols-4 gap-1">
         {links.map((l) => {
           const active = isBarberLinkActive(pathname, l.href);
           return (
@@ -114,30 +114,23 @@ export function BarberModuleMobileDock({ pathname }: { pathname: string }) {
                 href={l.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex min-h-[52px] w-full flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1 transition-all active:scale-[0.97]",
+                  "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl transition-all active:scale-90",
                   active
-                    ? "text-[#5b61ff]"
-                    : "text-slate-500 hover:bg-white/50 hover:text-slate-800",
+                    ? "bg-white/80 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/20 backdrop-blur-sm"
+                    : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
                 )}
               >
-                <span
-                  className={cn(
-                    `flex h-10 w-10 items-center justify-center ${barberCardSurfaceRadiusClass} transition-colors`,
-                    active ? "bg-[#5b61ff]/12 ring-1 ring-[#5b61ff]/25" : "bg-transparent",
-                  )}
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  className="h-5 w-5 shrink-0"
+                  aria-hidden
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2.5}
-                    className="h-5 w-5"
-                    aria-hidden
-                  >
-                    {barberNavIcon(l.href)}
-                  </svg>
-                </span>
-                <span className="max-w-full truncate px-0.5 text-center text-[10px] font-black leading-none">
+                  {barberNavIcon(l.href)}
+                </svg>
+                <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">
                   {l.label}
                 </span>
               </Link>

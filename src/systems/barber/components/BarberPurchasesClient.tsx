@@ -538,7 +538,7 @@ export function BarberPurchasesClient({
                       เบอร์โทร
                       <input
                         id="purchase-filter-phone-popup"
-                        className="app-input mt-1.5 min-h-[48px] w-full rounded-xl px-3 py-2 text-base placeholder:text-[#8b87ad]"
+                        className="app-input mt-1.5 min-h-[48px] w-full rounded-[1.25rem] px-3 py-2 text-base placeholder:text-[#8b87ad]"
                         inputMode="numeric"
                         placeholder="เช่น 081..."
                         autoComplete="tel"
@@ -550,7 +550,7 @@ export function BarberPurchasesClient({
                       ชื่อลูกค้า
                       <input
                         id="purchase-filter-name-popup"
-                        className="app-input mt-1.5 min-h-[48px] w-full rounded-xl px-3 py-2 text-base placeholder:text-[#8b87ad]"
+                        className="app-input mt-1.5 min-h-[48px] w-full rounded-[1.25rem] px-3 py-2 text-base placeholder:text-[#8b87ad]"
                         placeholder="ค้นหาบางส่วนได้"
                         autoComplete="name"
                         value={draftFilterName}
@@ -735,12 +735,12 @@ export function BarberPurchasesClient({
               </div>
               <form onSubmit={(e) => void submitEdit(e)} className="grid gap-3 px-5 py-5">
               {editErr ? (
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{editErr}</p>
+                <p className="rounded-[1.25rem] bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{editErr}</p>
               ) : null}
               <label className="block text-xs font-semibold text-[#4d47b6]">
                 ชื่อลูกค้า (ไม่บังคับ)
                 <input
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+                  className="app-input mt-1 w-full rounded-[1.25rem] px-3 py-2.5 text-sm"
                   value={editCustomerName}
                   onChange={(e) => setEditCustomerName(e.target.value.slice(0, 100))}
                   placeholder="ชื่อที่แสดงในร้าน"
@@ -753,7 +753,7 @@ export function BarberPurchasesClient({
                   type="number"
                   min={0}
                   max={9999}
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-base tabular-nums"
+                  className="app-input mt-1 w-full rounded-[1.25rem] px-3 py-2.5 text-base tabular-nums"
                   value={editRemain}
                   onChange={(e) => setEditRemain(e.target.value)}
                   required
@@ -762,7 +762,7 @@ export function BarberPurchasesClient({
               <label className="block text-xs font-semibold text-[#4d47b6]">
                 สถานะ
                 <select
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+                  className="app-input mt-1 w-full rounded-[1.25rem] px-3 py-2.5 text-sm"
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value as typeof editStatus)}
                 >
@@ -771,7 +771,7 @@ export function BarberPurchasesClient({
                   <option value="CANCELLED">ยกเลิก</option>
                 </select>
               </label>
-              <p className="rounded-lg bg-[#f8f7ff] px-3 py-2 text-[11px] leading-relaxed text-[#5f5a8a]">
+              <p className="rounded-[1.25rem] bg-[#f8f7ff] px-3 py-2 text-[11px] leading-relaxed text-[#5f5a8a]">
                 แพ็ก {editTarget.package.totalSessions} ครั้ง · ราคา ฿{formatPriceBaht(editTarget.package.price)} บาท (อ่านอย่างเดียว)
               </p>
               <div className={`${barberCardSurfaceRadiusClass} border border-[#ecebff] bg-[#faf9ff] p-3`}>
@@ -784,7 +784,7 @@ export function BarberPurchasesClient({
                     <BarberEditSlipPreview
                       subscriptionId={editTarget.id}
                       saleReceiptImageUrl={editTarget.saleReceiptImageUrl}
-                      imgClassName="h-16 w-16 shrink-0 rounded-lg border border-[#ecebff] object-cover"
+                      imgClassName="h-16 w-16 shrink-0 rounded-[1.25rem] border border-[#ecebff] object-cover"
                     />
                     <span className="text-[11px] text-[#5f5a8a]">มีสลิปในระบบ</span>
                   </div>
@@ -808,7 +808,7 @@ export function BarberPurchasesClient({
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp,image/gif"
-                      className="mt-1 block w-full text-sm text-[#2e2a58] file:mr-2 file:rounded-lg file:border-0 file:bg-[#ecebff] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[#2e2a58]"
+                      className="mt-1 block w-full text-sm text-[#2e2a58] file:mr-2 file:rounded-[1.25rem] file:border-0 file:bg-[#ecebff] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[#2e2a58]"
                       onChange={(e) => setEditSlipFile(e.target.files?.[0] ?? null)}
                     />
                   </label>

@@ -175,7 +175,7 @@ export function AppCameraCaptureModal({
 
   return (
     <div
-      className={cn("fixed inset-0 z-[220] flex items-end justify-center sm:items-center sm:p-4", className)}
+      className={cn("fixed inset-0 z-[220] flex items-center justify-center p-3 sm:p-4", className)}
       role="presentation"
     >
       <button
@@ -188,7 +188,7 @@ export function AppCameraCaptureModal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative z-10 flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-3xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl"
+        className="relative z-10 flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="shrink-0 border-b border-slate-100 px-5 py-4">

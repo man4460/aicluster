@@ -196,8 +196,8 @@ export function CarWashCustomerPortalClient({
         {/* ── search card ── */}
         <div className={appPublicCheckInGlassCardClass}>
           <div className="px-5 py-5 sm:px-6">
-            <form onSubmit={onSearch} className="space-y-3">
-              <div className="relative">
+            <form onSubmit={onSearch} className="flex items-stretch gap-2">
+              <div className="relative min-w-0 flex-1">
                 <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#9490c0]">
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
@@ -218,18 +218,18 @@ export function CarWashCustomerPortalClient({
                 type="submit"
                 suppressHydrationWarning
                 disabled={loading}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#5b61ff]/30 bg-gradient-to-r from-[#5b61ff] to-[#6a63ff] py-3.5 text-sm font-black text-white shadow-[0_12px_28px_-10px_rgba(91,97,255,0.65)] transition-all active:scale-[0.98] disabled:opacity-60"
+                aria-label={loading ? "กำลังค้นหา" : "ค้นหาข้อมูล"}
+                className="inline-flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl border border-[#5b61ff]/30 bg-gradient-to-br from-[#5b61ff] to-[#6a63ff] text-white shadow-[0_12px_28px_-10px_rgba(91,97,255,0.65)] transition-all active:scale-[0.98] disabled:opacity-60"
               >
                 {loading ? (
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
                   </svg>
                 ) : (
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
                   </svg>
                 )}
-                {loading ? "กำลังค้นหา..." : "ค้นหาข้อมูล"}
               </button>
             </form>
           </div>
@@ -354,23 +354,23 @@ export function CarWashCustomerPortalClient({
                     type="button"
                     onClick={() => void onCheckIn()}
                     disabled={!canPay}
+                    aria-label={checkInLoading ? "กำลังบันทึก" : "ชำระและหักสิทธิ์ 1 ครั้ง"}
                     className={cn(
-                      "flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black transition-all",
+                      "flex min-h-[52px] w-full items-center justify-center rounded-2xl py-4 transition-all",
                       canPay
                         ? "border border-[#5b61ff]/30 bg-gradient-to-r from-[#5b61ff] to-[#6a63ff] text-white shadow-[0_14px_30px_-10px_rgba(91,97,255,0.65)] active:scale-[0.98]"
                         : "border border-white/60 bg-white/40 text-[#a8a5cc] backdrop-blur-sm",
                     )}
                   >
                     {checkInLoading ? (
-                      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <svg className="h-6 w-6 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
                       </svg>
                     ) : (
-                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <path d="M20 7 9 18l-5-5"/>
                       </svg>
                     )}
-                    {checkInLoading ? "กำลังบันทึก..." : "ชำระและหักสิทธิ์ 1 ครั้ง"}
                   </button>
 
                   {!openLaneVisit ? (
@@ -429,13 +429,15 @@ export function CarWashCustomerPortalClient({
               return (
                 <li
                   key={v.id}
-                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 rounded-xl border border-white/65 bg-white/55 px-3 py-2.5 text-[11px] shadow-sm backdrop-blur-sm"
+                  className="flex flex-col gap-1.5 rounded-xl border border-white/65 bg-white/55 px-3 py-2.5 text-[11px] shadow-sm backdrop-blur-sm"
                 >
-                  <span className="min-w-0 font-semibold text-[#2e2a58]">{v.package_name}</span>
-                  <span className="shrink-0 rounded-full bg-[#ede9fe] px-2 py-px text-[10px] font-bold text-[#4d47b6]">
-                    {carWashStatusLabelTh(v.service_status)}
-                  </span>
-                  <span className="w-full tabular-nums text-[#9490c0] sm:w-auto sm:text-right">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="min-w-0 font-semibold text-[#2e2a58]">{v.package_name}</span>
+                    <span className="shrink-0 rounded-full bg-[#ede9fe] px-2 py-px text-[10px] font-bold text-[#4d47b6]">
+                      {carWashStatusLabelTh(v.service_status)}
+                    </span>
+                  </div>
+                  <span className="tabular-nums text-[#9490c0]">
                     {new Date(v.visit_at).toLocaleString("th-TH", {
                       day: "numeric",
                       month: "short",

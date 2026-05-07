@@ -1,0 +1,194 @@
+---
+description: รับฝากซักผ้า — แดชบอร์ดการ์ดสถิติ (เทียบคาร์แคร์) และศูนย์ QR แบบ Hub
+globs:
+  - "**/systems/laundry/**"
+  - "**/app/**/dashboard/laundry/**"
+---
+
+# Laundry — แดชบอร์ด & การ์ดสถิติ & QR
+
+**แม่แบบ UX ระดับโมดูล:** เทียบ **`CarWashDashboard`** (`overview`) และ **`shop-qr-hub-popup-pattern.mdc`**
+
+**แม่แบบโครงสร้างโมดูลทั้งก้อน:** **`dashboard-module-car-wash-barber-reference.mdc`**
+
+---
+
+## มือถือ — หนึ่งการ์ดต่อแถว
+
+บน viewport **ต่ำกว่า `sm` (default Tailwind)** — กริด **`laundryDashboardCardGridClass`** (งานค้าง · การเงิน — ประวัติรายรับ) และการ์ดเลือกแพ็กเกจใน **`LaundryRecordOrderModal`** ใช้ **`grid-cols-1`** (**หนึ่งการ์ดเต็มความกว้างต่อแถว**) · **`sm+`** — **`grid-cols-2`** · **แถวสถิติวันนี้** ใช้ **`laundryDashboardStatsGridClass`** แยกต่างหาก (**`grid-cols-2`** ตลอด = **2×2** สำหรับการ์ดสถิติ 4 ใบ) · **แท็บ «แพ็กเกจ»** **`laundryPackageTabListGridClass`** (**`grid-cols-1` ตลอด**) — ไม่นับเมนูแท็บ/FAB
+
+---
+
+## การ์ดสถิติหน้าแดชบอร์ด (overview)
+
+ให้ใช้ **โครงเดียวกับคาร์แคร์** — แถวสถิติและกริดรายการแยกค่าคงที่ตามด้านล่าง:
+
+1. **ห่อชั้นนอก** — `rounded-[2.5rem] border border-white/55 bg-white/28 p-3 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5`
+2. **หัวแถว** — `สถิติวันนี้` · มือถือกระชับขึ้น: `text-[9px] tracking-[0.18em] sm:text-[10px] sm:tracking-[0.2em]` + เส้น `h-px flex-1 bg-white/65`
+3. **กริดการ์ดสถิติ (`LaundryStat` × 4)** — ใช้ **`laundryDashboardStatsGridClass`** จาก `src/systems/laundry/laundry-dashboard-layout.ts` — **`grid grid-cols-2 gap-2 sm:gap-3`** (**สองคอลัมน์ต่อแถวทุกขนาดจอ** · สี่การ์ด = สองแถว)
+4. **กริดการ์ดงาน (overview / คิว / การเงิน — ประวัติรายรับ)** — ใช้ **`laundryDashboardCardGridClass`** — **`grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3`**
+   - **มือถือ** — **หนึ่งการ์ดต่อแถว** (`grid-cols-1`) สำหรับ **`LaundryOrderCard`**
+   - **`sm+` (คอม)** — **สองคอลัมน์ต่อแถว** (`sm:grid-cols-2`)
+5. **แท็บ «แพ็กเกจ» — รายการแพ็กเกจ** — `<ul>` ใช้ **`laundryPackageTabListGridClass`** — **`grid grid-cols-1 gap-2 sm:gap-3`** (**หนึ่งการ์ดต่อแถวทุกขนาดจอ** รวมคอม) · **ไม่** ใช้ `laundryDashboardCardGridClass` ที่นี่ · **`LaundryPackageCard`** ตั้ง **`packagesTabRowLayout`** เพื่อบน **`sm+`** จัดเนื้อหาหลักเป็น **แถวแนวนอน** (ชื่อ · เวลา · ตะกร้าเป็น `<ul>` ข้อความ **`flex-wrap`** · ขวาเมตาข้อความ + ราคา + ปุ่ม · รูป **`sm:h-[4rem] sm:w-[4rem]`**) · **ไม่** ใช้กล่อง/pill ภายในการ์ด
+6. **รายการงานบนแดชบอร์ด** — ห่อด้วย **`<ul className={cn(laundryDashboardCardGridClass, "list-none p-0")} aria-label="…">`** · แต่การ์ดอยู่ใน **`<li className="min-w-0">`** — **ไม่** ใช้ `HomeFinanceList` แบบคอลัมน์เดียวเมื่อเป็นรายการบนแดชบอร์ดหลัก
+
+### `LaundryStat` — มือถือกระชับ / เดสก์ท็อปเต็ม
+
+- มุมมนเล็กลงบนมือถือ: `rounded-[1.35rem] sm:rounded-[2rem]`
+- Padding: `p-3 sm:p-5 lg:p-6` (ไม่ใช้ `p-5` เต็มบนมือถือ)
+- หัวข้อการ์ด: `text-[8px] leading-tight tracking-[0.12em] sm:text-[10px] sm:tracking-widest`
+- ตัวเลข: `text-lg sm:text-2xl lg:text-3xl` · `mt-2 sm:mt-4`
+- ไอคอนมุมขวา: `scale-[0.85] sm:scale-100`
+- โคลง gradient / hover เทียบ **`CarWashStat`** (`CarWashDashboard.tsx`)
+
+**Implementation:** `LaundryStat` + overview + กริดรายการใน `src/systems/laundry/LaundryDashboard.tsx`
+
+**ระยะห่างแนวตั้ง:** บล็อกสถิติกับเนื้อหาด้านล่างใช้ `space-y-4 sm:space-y-6`
+
+**ไม่มีการ์ดทางลัด QR บนแดชบอร์ด** — เข้าศูนย์ QR ผ่านแท็บเมนู **QR** เท่านั้น
+
+---
+
+## เมนูการเงิน (`finance`)
+
+แท็บ **การเงิน** ใน **`LaundryDashboard`** ให้สอดคล้อง **`CarWashDashboard`** แท็บ **`finance`** และ **`CarWashSalesPanel`**:
+
+1. **โครงรวม** — **`LaundryFinancePanel`** (`src/systems/laundry/components/LaundryFinancePanel.tsx`): หัว «ภาพรวมการเงิน» · ตัวกรองปี / เดือน / วัน / ค้นหา (เดสก์ท็อป **`grid-cols-2`** สองฟิลด์ต่อแถว · มือถือ **`FormModal`**) · การ์ดสามใบ **รายได้ · รายจ่าย · กำไร** เป็น **`grid-cols-2`** โดยการ์ดกำไร **`col-span-2`** (แถวล่างเต็มความกว้าง) · แถวกราฟ + โดนัต **`lg:grid-cols-2`** · **`AppRevenueCostColumnChart`** เปรียบเทียบรายได้กับรายจ่ายรายวัน (คีย์วันที่โซน **Asia/Bangkok**) · การ์ดโดนัตสัดส่วนรายได้ตามชื่อแพ็กเกจ
+2. **รายรับ** — ประวัติการให้บริการ = รายการ **`LaundryOrder`** ในช่วงที่กรอง · กริด **`laundryDashboardCardGridClass`** + **`LaundryOrderCard`** (`showOrderedAt`) · มีตัวกรองสถานะงานภายในแท็บ · **ไม่นับยอดเข้ารายได้** (กราฟ / การ์ดยอดรวม / โดนัต) เมื่อสถานะ **`CANCELLED`**
+3. **รายจ่าย / ต้นทุน** — **`LaundryCostPanel`** (`src/systems/laundry/components/LaundryCostPanel.tsx`) เทียบ **`CarWashCostPanel`**: จัดการหมวด · บันทึก / แก้ไข / ลบรายการ · แนบสลิปผ่าน **`uploadLaundrySessionImage`** · รายการที่ส่งเข้าแผงจะถูกกรองตามช่วงวันที่และคำค้นแล้วจาก **`LaundryFinancePanel`**
+4. **API และข้อมูล** — `GET`/`POST` **`/api/laundry/session/cost-categories`** · `PATCH`/`DELETE` **`…/cost-categories/[id]`** · `GET`/`POST` **`/api/laundry/session/cost-entries`** · `PATCH`/`DELETE` **`…/cost-entries/[id]`** — ตาราง **`laundry_cost_categories`** / **`laundry_cost_entries`** (คีย์ `trial_session_id` เดียวกับออเดอร์) · client ใช้ **`LaundryRepository`** ใน **`laundry-service.ts`** (`listCostCategories`, `createCostEntry`, …)
+
+**การโหลดแดชบอร์ด:** เรียก **`listCostCategories`** และ **`listCostEntries`** คู่กับแพ็กเกจและออเดอร์ใน **`loadAll`** เพื่อให้แท็บการเงินพร้อมใช้ทันที
+
+---
+
+## Responsive การ์ดรายการ (`LaundryOrderCard` / `LaundryPackageCard`)
+
+เมื่อแสดงในกริดแดชบอร์ด (มือถือ = **หนึ่งการ์ดเต็มความกว้างต่อแถว**):
+
+- **โครง**: `rounded-lg p-2 gap-2 sm:rounded-2xl sm:p-4 sm:gap-4`
+- **Typography มือถือ**: หัวข้อแพ็กเกจ `text-[9px] sm:text-[10px]` · ชื่อหลัก `text-sm sm:text-lg` · เบอร์/ราคา/สถานะลดขั้นหนึ่งบน `max-sm`
+- **คอลัมน์ขวา (ราคา/ปุ่ม)**: ใช้ **`min-w-[5.75rem] w-[30%] max-w-[8rem] sm:min-w-[9rem] sm:w-[9rem]`** เพื่อไม่แย่งพื้นที่ข้อความเมื่อกริดเป็น **หลายคอลัมน์ที่ `sm+`**
+- **ที่อยู่**: `line-clamp-1 sm:line-clamp-2`
+- **เวลารับงาน** (`showOrderedAt`): บนมือถือใช้รูปแบบสั้น (`day/month short` + เวลา) · `sm+` ใช้ `toLocaleString` เต็ม
+- **`LaundryToolbarIconButton`**: `h-8 w-8 rounded-lg sm:h-9 sm:w-9 sm:rounded-xl` · ไอคอนย่อบนมือถือ
+- **`LaundryOrderStatusIconStrip`**: `h-8 min-w-[2rem] rounded-lg sm:h-10 sm:min-w-[2.5rem] sm:rounded-xl` · glyph `15px → 18px` ที่ `sm`
+
+**การ์ดแพ็กเกจ (`LaundryPackageCard`)** — แท็บแพ็กเกจส่ง **`packagesTabRowLayout`** · **ข้อความล้วน** — ไม่ pill/กล่องภายใน · เมตาขวาแถวเดียวคั่น **`·`** · ตะกร้าเป็น `<ul>` แถวข้อความ · **มือถือระยะแนวตั้งกระชับ** — ดูหัวข้อ **«`LaundryPackageCard` — มือถือ (ระยะห่าง)»** ด้านล่าง
+
+---
+
+## คำบรรยาย (subtitle)
+
+- **กระชับ** — ประมาณหนึ่งบรรทัดหรือสั้นกว่า (ไม่ซ้ำความที่หัวข้อบอกแล้ว)
+- **มือถือ** — **ไม่แสดง** คำบรรยายใต้หัวข้อหลัก / ใต้หัวแผง / ใน **`FormModal`** (`hidden sm:block` ใน `AppSectionHeader` และ `FormModal`)
+- โมดูลซักผ้า: ข้อความช่วยใต้หัวแพ็กเกจ · หัวคิวงาน · โหมดพนักงาน — ใช้ **`hidden sm:block`** และข้อความสั้นบน `sm+` เท่านั้น
+
+---
+
+## แผง «งานที่กำลังดำเนินการ» (คิวงาน)
+
+เทียบ **`CarWashServiceLanePanel`** (`headerRow` + `onRefresh` / `onRecordVisit`):
+
+1. **อย่าวางปุ่มรีเฟรชที่หัวกระจกโมดูล** (`laundryGlassShellClass`) — คาร์แคร์ไม่มีรีเฟรชที่หัวการ์ดหลัก; รีเฟรชอยู่ที่แผงลาน/คิว
+2. **หัวแผง** — `flex` + ซ้าย: ไอคอนในกล่องมุมมน (`rounded-2xl border …`) + `h2` ชื่อแผง + คำอธิบายบรรทัดเดียว (`text-xs text-[#66638c]` · **`hidden sm:block`**); ขวา: ปุ่ม **`cw-btn`** คู่ **รีเฟรช** (`app-btn-soft`) + **บันทึกรายการ** (`app-btn-primary`) พร้อม `cw-btn-icon` / `cw-btn-label`
+3. **มือถือ (`max-width: 639px`)** — `globals.css` บังคับ `.cw-btn` เป็นปุ่มสี่เหลี่ยมไอคอนอย่างเดียวและซ่อน `.cw-btn-label` — พฤติกรรมเดียวกับคาร์แคร์เมื่อใช้ชุดปุ่มเดียวกัน
+4. **เส้นแบ่งใต้หัว** — `border-b border-[#ecebff] pb-3`
+5. **โหมดพนักงาน (`staff_lane`)** — ใช้หัวแผงชุดเดียวกัน (รีเฟรช + บันทึกในกล่องม่วง); หัวกระจกด้านบนมีแค่ชื่อเรื่อง — **ไม่** ใส่ปุ่มรีเฟรชซ้ำ
+
+**Implementation:** `LaundryActiveOrdersPanelHeader` ใน `LaundryDashboard.tsx`
+
+### การ์ดแต่ละรายการ (`LaundryOrderCard`)
+
+เทียบ **การ์ดคิวลานล้าง** ใน `CarWashServiceLanePanel` (ทะเบียน/แพ็ก/ราคา แยกคอลัมน์ · `border-2` · `ring-1` · พื้นหลังตามสถานะ):
+
+1. **โครงกล่อง** — `rounded-lg border-2 · sm:rounded-2xl` · `p-2 sm:p-4` · `ring-1` · `shadow-sm` · `hover:shadow-md` · พื้น/ขอบตาม `laundryOrderCardToneClasses(status)` ใน `src/systems/laundry/laundry-order-card-tone.ts` (amber / sky / violet / cyan / indigo / teal / emerald / slate / rose ตามสายงาน)
+2. **แถบไฮไลต์ซ้าย** — `absolute` แถบ `w-1` `bg-gradient-to-b` ตาม `ribbonGradient` · ขยายเมื่อ `group-hover/item` (เทียบแพ็กเหมาคาร์แคร์)
+3. **แบ่งซ้าย–ขวา** — `flex` · `gap-2 sm:gap-4`
+   - **ซ้าย (`flex-1`)** — หัว `แพ็กเกจ` ตัวพิมพ์เล็ก uppercase · **ชื่อบรรทัดหลัก** จาก `laundryOrderCardPackageLines(package_name, service_type)` — ถ้า `service_type` เป็นแค่ชื่อแพ็กเกจ + คำขยาย เช่น `(ตะกร้า S)` ให้แสดง **บรรทัดเดียว** (`service_type` เต็ม) · แสดงบรรทัดรองเฉพาะเมื่อสองฟิลด์ไม่เกี่ยวข้องกัน · gradient เดิม (`bg-clip-text`) · แถวข้อความ **ขนาด** (ไม่ใช้แคปซูลมีขอบ) · เบอร์ · ชื่อ · เวลา · ที่อยู่ (ตามกฎซ่อน placeholder)
+   - **ขวา** — คอลัมน์ย่อบนมือถือ (`min-w-[5.75rem] w-[30%] max-w-[8rem] sm:min-w-[9rem] sm:w-[9rem]`) — ข้อความสถานะ (สีตามขั้น · **ไม่** ใช้แคปซูล) · `#id` · ราคา · กลุ่มปุ่มดู/แก้ไข/ลบ — **ไม่** ใช้ `border-l` / พื้นหลังแถบปุ่ม (แยกด้วย `gap` / `pt`)
+4. **อัปเดตสถานะ (คิวงาน)** — **ไม่ใช้ `<select>`** — ใช้ **`LaundryOrderStatusIconStrip`** แถบเลื่อนแนวนอน · ปุ่ม **`h-8 min-w-[2rem]` บนมือถือ** · `sm:` ขยายเป็น ~40px · ไอคอนรายสถานะ + **`aria-label` / `title`** เป็นชื่อไทย (`laundryOrderStatusLabelTh`) · สถานะปัจจุบัน `aria-current="true"` + ขอบ/วงแหวนเน้น · แถบมี **`role="toolbar"`** + **`aria-label`** ระบุเลขรายการ · ซ่อนหัวข้อความรอง «อัปเดตสถานะ» บนมือถือ (`hidden sm:block`) — แก้สถานะในโมดัลแก้ไขออเดอร์ยังใช้ dropdown ได้ตามฟอร์ม · **บล็อกนี้ยังใช้ `border-t-2` + `dividerStrong` + `dimHorizontalStripRidge`** จาก `laundryDashboardCardDividerClasses` เพื่อคั่นจากเนื้อหาด้านบน (ส่วนเดียวที่มีเส้นคั่นแนวนอนในการ์ด)
+
+---
+
+## บันทึกรายการแบบ POS (`LaundryRecordOrderModal`)
+
+เทียบ flow **เลือกเมนูเป็นการ์ดมีรูป** (`BuildingPosCustomerOrderClient` / `MenuDishCardGrid`):
+
+- **ตำแหน่งโมดัล:** ใช้ **`FormModal` + `mobileCentered`** ทั้งโมดัลหลัก (เลือกแพ็กเกจ / ข้อมูลลูกค้า) และโมดัลจัดการแพ็กเกจ — ให้แผงอยู่ **กึ่งกลางจอบนมือถือ** (`items-center` + `p-3`) และมุมการ์ด `rounded-[2rem]` ไม่ใช้แบบชิดขอบล่าง (`items-end`)
+
+1. **ปุ่มบันทึกรายการ** → โมดัลขั้น **เลือกแพ็กเกจ** — กริดการ์ดรูปสูง `aspect-[4/3]` + ชื่อ + ช่วงราคา · **มือถือ `grid-cols-1` (หนึ่งการ์ดต่อแถว)** · `sm+` เป็น `grid-cols-3` · แตะเลือกมี overlay เช็ค (โทน indigo เดียวกับ POS template)
+2. **ปุ่มเฟือง** มุมการ์ด → โมดัลย่อย **จัดการ** — อัปโหลดรูป (`uploadLaundrySessionImage`) / URL รูป · แก้ชื่อ โมเดลราคา ราคาฐาน · **แถวตะกร้า × ราคา** (หลายขนาด)
+3. ถ้ามี `basket_tiers` — แสดงชิปเลือกขนาดใต้กริดก่อนไปขั้นถัดไป
+4. ขั้น **ข้อมูลลูกค้า** — เฉพาะ **เบอร์โทร** และ **ชื่อ** (ไม่บังคับ) · ที่อยู่/น้ำหนัก/หมายเหตุไม่มีในฟอร์ม — ระบบเก็บที่อยู่เป็น `-` และชื่อว่างเป็น `ลูกค้า` ที่ API
+
+**รายการงานบนแดชบอร์ด:** แต่ละแถวมีกลุ่มปุ่มไอคอน **ดู / แก้ไข / ลบ** (`LaundryToolbarIconButton`) — ดูรายละเอียด · แก้ชื่อ เบอร์ สถานะ หมายเหตุ (`LaundryOrderEditModal`) · ลบหลังยืนยัน
+
+ข้อมูลแพ็กเกจเก็บ `image_url` + `basket_tiers` (JSON) ในตาราง `laundry_packages` — แท็บ **แพ็กเกจ** มีปุ่ม **เพิ่มแพ็กเกจ** (`LaundryPackageEditorModal` โหมดสร้าง) + รายการสรุป · **ดู / แก้ไข / ลบ** เป็นไอคอนชุดเดียวกับรายการงาน · แก้เต็มที่ผ่าน `LaundryPackageEditorModal` และจัดการจากโมดัลย่อยในโฟลว์ POS (ปุ่มเฟืองบนการ์ดแพ็กเกจ)
+
+### การ์ดแพ็กเกจรายการ (`LaundryPackageCard`)
+
+- **ที่ใช้ในแดชบอร์ด:** เฉพาะแท็บ **«แพ็กเกจ»** (`LaundryDashboard.tsx`) — ส่ง **`packagesTabRowLayout`** คู่กับ **`laundryPackageTabListGridClass`** บน `<ul>`
+- **สไตล์หลัก — ข้อความล้วน (ไม่ใช้กล่องภายใน)** — **ไม่** ใช้ pill/badge พื้นสี · **ไม่** ใช้แถบเวลาแบบมี `bg`/`ring` · **ไม่** ใช้การ์ดย่อยรอบแต่ละตะกร้า — ใช้แค่ **`border`** เบาบน **`article`**, gradient แถบซ้าย, รูปสี่เหลี่ยมมน, และตัวอักษรจัดแถว
+- **เปลือกการ์ด** — **`rounded-xl sm:rounded-2xl`** · **`border border-indigo-200/70`** · **`bg-white/90`** · **ไม่** ใช้เงาหนัก · **`p-2.5 sm:p-4`** — มือถือ padding แนวตั้งรัดกว่า
+- **รูป** — **`rounded-lg sm:rounded-xl`** · **`bg-slate-100`** เมื่อว่าง · **ไม่** `ring` รอบรูป · **`packagesTabRowLayout`**: **`sm:h-[4rem] sm:w-[4rem]`**
+- **`labelKicker`** — **`text-[10px] sm:text-[11px]`** · **`font-semibold`** · **`uppercase`** · **`tracking-[0.14em]`** · **`text-slate-500`** — เฉพาะหัว **แพ็กเกจ** · **ไม่** แสดงหัวข้อ «ขนาดตะกร้า» ในการ์ด (ประหยัดพื้นที่) — รายการราคาตามขนาดใช้ **`aria-label="ราคาตามขนาดตะกร้า"`** บน `<ul>` แทน
+- **ชื่อ** — gradient **`from-indigo-700 to-violet-600`** · **`line-clamp-2`** · **`font-bold`** · คำอธิบาย **`text-slate-600`** **`leading-relaxed`**
+- **เวลาประมาณ + `basket_tiers`** — ชุด **`detailRowClass`** · **`text-[9px] sm:text-[10px]`** · **`leading-[1.45]`** · ซ้าย **`font-semibold text-slate-600`** · ขวา **`font-semibold tabular-nums text-slate-700`** · ห่อรวม **`flex flex-col gap-y-1 sm:gap-y-2`** — มือถือระยะแนวตั้งชิดกว่า · เส้นคั่นบน **`pt-1.5 sm:pt-2`** · **`packagesTabRowLayout`** **`sm:pt-0`** + **`border-l`**
+- **ขวา** — แถวเมตา **ข้อความเดียว** คั่นด้วย **`·`** (สีจาง **`text-slate-300`**, **`aria-hidden`**) — โมเดล · สถานะ · **`#id`** · บรรทัดถัดไปราคาฐาน **`font-bold`** **`tabular-nums`** **`text-emerald-700`** (**ไม่** badge) · **`packagesTabRowLayout`**: กลุ่มขวา **`sm:flex-row`** กับปุ่ม · **มือถือ**: คอลัมน์เมตา **`gap-y-0.5`** **`pb-1.5`** · แถวปุ่ม **`pt-1.5`** ( **`sm:`** ห่างขึ้นตามโค้ด)
+
+#### `LaundryPackageCard` — มือถือ (ระยะห่างกระชับ)
+
+เป้าหมาย: **บนจอ `< sm` ใช้ระยะแนวตั้งและ padding น้อยกว่า `sm+`** เพื่อประหยัดพื้นที่ — ค่าอ้างอิงใน **`src/systems/laundry/components/LaundryPackageCard.tsx`**:
+
+1. **เปลือก `article`** — **`p-2.5`** · **`sm:p-4`**
+2. **แถบไฮไลต์ซ้าย** — **`top-2 bottom-2`** · **`sm:top-3 sm:bottom-3`**
+3. **แถวหลัก (รูป + เนื้อหา + ขวา)** — **`gap-2`** · **`sm:gap-5`**
+4. **แถวรูป + คอลัมน์ข้อความ** — **`gap-2`** · **`sm:gap-4`**
+5. **คอลัมน์ข้อความ (หัวแพ็กเกจ / คำอธิบาย / บล็อกเวลา+ตะกร้า)** — **`space-y-1.5`** · **`sm:space-y-2`** · เมื่อ **`packagesTabRowLayout`**: **`sm:space-y-1.5`**
+6. **ระยะใต้ป้าย «แพ็กเกจ» ถึงชื่อ** — **`mt-px`** · **`sm:mt-0.5`**
+7. **บล็อกเวลา + ตะกร้า (`detailStackClass`)** — **`gap-y-1`** ระหว่างแถว · **`sm:gap-y-2`** · ใต้ **`border-t`** — **`pt-1.5`** · **`sm:pt-2`** · เมื่อ **`packagesTabRowLayout`** — **`sm:border-l`** **`sm:pt-0`** **`sm:pl-4`**
+8. **คอลัมน์ขวา (เมตา + ปุ่ม)** — **`pt-0`** · **`sm:pt-0.5`** · แถวเมตา/ราคา **`gap-y-0.5`** **`sm:gap-y-1`** · **`pb-1.5`** **`sm:pb-3`** · แถว **`LaundryToolbarIconButton`** **`pt-1.5`** **`sm:pt-3`**
+
+**ห้าม** ขยายระยะมือถือให้เท่าเดสก์ท็อปโดยไม่ตั้งใจ — ถ้าเพิ่มบล็อกใหม่ในการ์ด ให้ใช้ **`max-sm:`** / ค่าเริ่มต้นแคบแล้วค่อย **`sm:`** ขยาย
+
+**โมดัลดูข้อมูล (`LaundryPackageViewModal`)** — บล็อก **ตะกร้า × ราคา** ใช้รายการแถวเดียวกับการ์ด (ไม่รวมบรรทัดด้วย middot)
+
+---
+
+## ปุ่มเพิ่มข้อมูล / `+` กับหัวข้อ
+
+- **มือถือและเดสก์ท็อป** — ปุ่มเพิ่ม (หรือไอคอน `+` เมื่อ `cw-btn` ซ่อนข้อความ) อยู่ **แถวเดียวกับหัวข้อรายการ** — ซ้าย = ชื่อหัวข้อ (`HomeFinanceListHeading` ฯลฯ) · ขวา = ปุ่ม · ใช้ **`flex flex-row items-center justify-between gap-2`** ไม่ใช้ `flex-col` แล้วให้ปุ่มหล่นไปใต้หัวบนมือถือ
+- หัวข้อในแถวเดียวกับปุ่มใช้ **`mb-0`** (override `mb-2` ของ `HomeFinanceListHeading`) เพื่อไม่เว้นบรรทัดเกิน
+- มี **`aria-label`** ที่ปุ่มเมื่อบนมือถือเหลือแค่ไอคอน
+
+---
+
+## กลุ่มปุ่มรายการ (ดู / แก้ไข / ลบ)
+
+- **รายการออเดอร์** (งานค้าง · การเงิน — ประวัติรายรับ) และ **รายการแพ็กเกจ** — มุมขวาของการ์ด/แถว ใช้ปุ่มสี่เหลี่ยมมน **`LaundryToolbarIconButton`** ขนาด ~36px:
+  1. **ดูข้อมูล** — ไอคอนตา (`LaundryIconEye`) → โมดัลอ่านอย่างเดียว
+  2. **แก้ไข** — ไอคอนดินสอ (`LaundryIconPencil`) → โมดัลแก้ไข (ออเดอร์: ชื่อ เบอร์ สถานะ หมายเหตุ · แพ็กเกจ: `LaundryPackageEditorModal`)
+  3. **ลบ** — ไอคอนถัง (`LaundryIconTrash`) · `variant="danger"` → `window.confirm` แล้วเรียก `repo.deleteOrder` / `repo.deletePackage`
+- ทุกปุ่มต้องมี **`aria-label`** และ **`title`** (`label` prop เดียวกันในคอมโพเนนต์)
+
+---
+
+## ศูนย์ QR (แท็บ QR)
+- **`LaundryQrHubClient`** — การ์ดคู่ + `FormModal` (violet / amber) ตาม **`shop-qr-hub-popup-pattern.mdc`**
+- **ไม่** แผงโปสเตอร์ยาวใต้การ์ด — เนื้อหา QR อยู่ในโมดัลเท่านั้น
+- ลิงก์ลูกค้า: `/laundry/pickup/[ownerId]` (+ `t` ใน sandbox); พนักงาน: `/dashboard/laundry/staff` (+ `t`)
+
+---
+
+## เช็กลิสต์เมื่อแก้ UI ซักผ้า
+
+- [ ] การ์ดสถิติ overview ใช้ **`laundryDashboardStatsGridClass`** (`grid-cols-2` ตลอด) — รายการงานยัง **`laundryDashboardCardGridClass`** (`sm:grid-cols-2`)
+- [ ] แผงงานค้างใช้ `LaundryActiveOrdersPanelHeader` — รีเฟรชไม่อยู่หัวกระจกโมดูล
+- [ ] แท็บ QR ยังเป็น Hub การ์ดคู่ + modal เท่านั้น — **ไม่** เพิ่มการ์ดทางลัด QR กลับไปที่แดชบอร์ด overview
+- [ ] ปุ่มแถวเครื่องมือในโมดัล QR ใช้ `cw-btn` ชุดเดียวกับคาร์แคร์
+- [ ] โฟลว์บันทึกรายการยังเป็น POS สองขั้น (`LaundryRecordOrderModal`) — การ์ดแพ็กเกจ + จัดการรูป/ตะกร้า · แล้วเบอร์/ชื่อเล่น — โมดัลใช้ **`mobileCentered`** ให้อยู่กลางจอบนมือถือ · กริดเลือกแพ็กเกจสอดคล้องแดชบอร์ด：**มือถือ `grid-cols-1` · `sm+` `grid-cols-3`** (ไม่ขยาย 4 คอลัมน์ที่คอม)
+- [ ] **`LaundryPackageCard`** — แท็บแพ็กเกจ: **`laundryPackageTabListGridClass`** + **`packagesTabRowLayout`** · **ข้อความล้วน** · เมตาขวา **`·`** · **มือถือระยะกระชับ** (`p-2.5` · `gap-2` · `space-y-1.5` · `detailStackClass` **`gap-y-1 sm:gap-y-2`** · `pt-1.5` ใต้เส้นคั่น · ฯลฯ ตามหัวข้อย่อย **มือถือ (ระยะห่าง)** ในกฎ) · **`LaundryPackageViewModal`** สอดคล้องเมื่อแตะดู
+- [ ] แท็บ **การเงิน** — **`LaundryFinancePanel`** + **`LaundryCostPanel`** สอดคล้อง **`CarWashSalesPanel`** / **`CarWashCostPanel`** (กราฟคู่ · โหลด cost ใน `loadAll`)
+- [ ] รายการงาน (คิว + การเงิน) ใช้ **`LaundryOrderCard`** — ข้อความแพ็กเกจไม่ซ้ำ (`laundry-order-package-lines.ts`) · คิวงานอัปเดตสถานะด้วย **`LaundryOrderStatusIconStrip`** ไม่ใช้ dropdown บนการ์ด
+- [ ] คำบรรยาย subtitle / `FormModal` **สั้น** และ **ซ่อนบนมือถือ** (ตามกฎด้านบน)

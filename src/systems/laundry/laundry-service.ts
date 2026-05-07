@@ -1,64 +1,35 @@
 "use client";
 
-export type LaundryOrderStatus =
-  | "PENDING_PICKUP"
-  | "PICKED_UP"
-  | "SORTING"
-  | "WASHING"
-  | "DRYING"
-  | "IRONING"
-  | "READY_TO_DELIVER"
-  | "DELIVERING"
-  | "COMPLETED"
-  | "CANCELLED";
+import type { LaundryOrderStatus } from "@/systems/laundry/laundry-order-status";
+import {
+  LAUNDRY_DURATION_HOURS_MIN,
+  roundLaundryDurationHours,
+} from "@/systems/laundry/laundry-duration-hours";
 
-export const LAUNDRY_ORDER_STATUSES: LaundryOrderStatus[] = [
-  "PENDING_PICKUP",
-  "PICKED_UP",
-  "SORTING",
-  "WASHING",
-  "DRYING",
-  "IRONING",
-  "READY_TO_DELIVER",
-  "DELIVERING",
-  "COMPLETED",
-  "CANCELLED",
-];
+export type { LaundryOrderStatus };
+export {
+  LAUNDRY_ORDER_STATUSES,
+  laundryOrderStatusLabelTh,
+} from "@/systems/laundry/laundry-order-status";
 
-export function laundryOrderStatusLabelTh(status: LaundryOrderStatus): string {
-  switch (status) {
-    case "PENDING_PICKUP":
-      return "รอรับผ้า";
-    case "PICKED_UP":
-      return "รับผ้าแล้ว";
-    case "SORTING":
-      return "คัดแยกผ้า";
-    case "WASHING":
-      return "กำลังซัก";
-    case "DRYING":
-      return "กำลังอบ/ตาก";
-    case "IRONING":
-      return "กำลังรีด/พับ";
-    case "READY_TO_DELIVER":
-      return "พร้อมส่งคืน";
-    case "DELIVERING":
-      return "กำลังส่งคืน";
-    case "COMPLETED":
-      return "ส่งคืนสำเร็จ";
-    case "CANCELLED":
-      return "ยกเลิก";
-    default:
-      return status;
-  }
-}
+/** ราคาตามขนาดตะกร้า (แสดงบนการ์ด POS) */
+export type LaundryBasketTier = {
+  label: string;
+  price: number;
+};
 
 export type LaundryPackage = {
   id: number;
   name: string;
   pricing_model: "PER_KG" | "PER_ITEM" | "FLAT";
   base_price: number;
+  /** เวลาประมาณเป็นชั่วโมง (ทศนิยมได้ — เก็บปัดมิลลิชั่วโมง) */
   duration_hours: number;
   description: string;
+  /** URL รูปการ์ด — อัปโหลดผ่าน `uploadLaundrySessionImage` */
+  image_url?: string | null;
+  /** รายการตะกร้า×ราคา — ถ้ามี ให้เลือกขั้นตอนก่อนบันทึกออเดอร์ */
+  basket_tiers?: LaundryBasketTier[] | null;
   is_active: boolean;
 };
 
@@ -80,6 +51,44 @@ export type LaundryOrder = {
   status: LaundryOrderStatus;
 };
 
+/** หมวดรายจ่าย — เทียบ `CostCategory` คาร์แคร์ */
+export type LaundryCostCategory = {
+  id: number;
+  name: string;
+  created_at: string;
+};
+
+/** รายการรายจ่าย — เทียบ `CostEntry` คาร์แคร์ */
+export type LaundryCostEntry = {
+  id: number;
+  category_id: number;
+  category_name: string;
+  spent_at: string;
+  amount: number;
+  item_label: string;
+  note: string;
+  slip_photo_url: string;
+  created_at: string;
+};
+
+export type LaundryCostEntryInput = {
+  category_id: number;
+  spent_at: string;
+  amount: number;
+  item_label: string;
+  note?: string;
+  slip_photo_url?: string;
+};
+
+export type LaundryCostEntryPatch = Partial<{
+  category_id: number;
+  spent_at: string;
+  amount: number;
+  item_label: string;
+  note: string;
+  slip_photo_url: string;
+}>;
+
 export interface LaundryRepository {
   listPackages(): Promise<LaundryPackage[]>;
   createPackage(input: Omit<LaundryPackage, "id">): Promise<LaundryPackage>;
@@ -92,6 +101,16 @@ export interface LaundryRepository {
   ): Promise<LaundryOrder>;
   updateOrder(id: number, patch: Partial<Omit<LaundryOrder, "id" | "order_at">>): Promise<LaundryOrder | null>;
   deleteOrder(id: number): Promise<boolean>;
+
+  listCostCategories(): Promise<LaundryCostCategory[]>;
+  createCostCategory(name: string): Promise<LaundryCostCategory>;
+  updateCostCategory(id: number, patch: { name: string }): Promise<LaundryCostCategory | null>;
+  deleteCostCategory(id: number): Promise<boolean>;
+
+  listCostEntries(): Promise<LaundryCostEntry[]>;
+  createCostEntry(input: LaundryCostEntryInput): Promise<LaundryCostEntry>;
+  updateCostEntry(id: number, patch: LaundryCostEntryPatch): Promise<LaundryCostEntry | null>;
+  deleteCostEntry(id: number): Promise<boolean>;
 }
 
 type LaundryDB = {
@@ -121,6 +140,12 @@ const seedDB: LaundryDB = {
       base_price: 45,
       duration_hours: 24,
       description: "คิดราคาต่อกิโล เหมาะกับผ้าทั่วไป",
+      image_url: null,
+      basket_tiers: [
+        { label: "ตะกร้า S", price: 120 },
+        { label: "ตะกร้า M", price: 180 },
+        { label: "ตะกร้า L", price: 240 },
+      ],
       is_active: true,
     },
     {
@@ -130,6 +155,8 @@ const seedDB: LaundryDB = {
       base_price: 150,
       duration_hours: 36,
       description: "คิดราคาต่อชิ้นสำหรับผ้าห่ม/ผ้านวม",
+      image_url: null,
+      basket_tiers: [{ label: "ต่อชิ้น", price: 150 }],
       is_active: true,
     },
   ],
@@ -170,6 +197,28 @@ function loadDB(): LaundryDB {
     if (!Array.isArray(parsed.packages) || !Array.isArray(parsed.orders) || !parsed.seq) {
       localStorage.setItem(activeStorageKey(), JSON.stringify(seedDB));
       return clone(seedDB);
+    }
+    for (const p of parsed.packages) {
+      if (!("image_url" in p)) (p as LaundryPackage).image_url = null;
+      if (!("basket_tiers" in p)) (p as LaundryPackage).basket_tiers = null;
+      const rawPkg = p as Record<string, unknown>;
+      let hours: number | undefined;
+      if (
+        typeof rawPkg.duration_hours === "number" &&
+        Number.isFinite(rawPkg.duration_hours) &&
+        rawPkg.duration_hours >= LAUNDRY_DURATION_HOURS_MIN
+      ) {
+        hours = rawPkg.duration_hours as number;
+      } else if (
+        typeof rawPkg.duration_minutes === "number" &&
+        Number.isFinite(rawPkg.duration_minutes) &&
+        rawPkg.duration_minutes >= 1
+      ) {
+        hours = (rawPkg.duration_minutes as number) / 60;
+      }
+      if (hours == null || hours < LAUNDRY_DURATION_HOURS_MIN) hours = 24;
+      (p as LaundryPackage).duration_hours = roundLaundryDurationHours(hours);
+      delete rawPkg.duration_minutes;
     }
     return parsed;
   } catch {
@@ -252,6 +301,38 @@ export class LocalStorageLaundryRepository implements LaundryRepository {
     saveDB(db);
     return db.orders.length < prev;
   }
+
+  async listCostCategories(): Promise<LaundryCostCategory[]> {
+    return [];
+  }
+
+  async createCostCategory(_name: string): Promise<LaundryCostCategory> {
+    throw new Error("การเงินและต้นทุนต้องใช้ผ่านบัญชีที่เชื่อม API — โหมดทดสอบในเบราว์เซอร์เท่านั้นไม่รองรับรายจ่าย");
+  }
+
+  async updateCostCategory(_id: number, _patch: { name: string }): Promise<LaundryCostCategory | null> {
+    throw new Error("การเงินและต้นทุนต้องใช้ผ่านบัญชีที่เชื่อม API");
+  }
+
+  async deleteCostCategory(_id: number): Promise<boolean> {
+    throw new Error("การเงินและต้นทุนต้องใช้ผ่านบัญชีที่เชื่อม API");
+  }
+
+  async listCostEntries(): Promise<LaundryCostEntry[]> {
+    return [];
+  }
+
+  async createCostEntry(_input: LaundryCostEntryInput): Promise<LaundryCostEntry> {
+    throw new Error("การเงินและต้นทุนต้องใช้ผ่านบัญชีที่เชื่อม API");
+  }
+
+  async updateCostEntry(_id: number, _patch: LaundryCostEntryPatch): Promise<LaundryCostEntry | null> {
+    throw new Error("การเงินและต้นทุนต้องใช้ผ่านบัญชีที่เชื่อม API");
+  }
+
+  async deleteCostEntry(_id: number): Promise<boolean> {
+    throw new Error("การเงินและต้นทุนต้องใช้ผ่านบัญชีที่เชื่อม API");
+  }
 }
 
 function errorMessageFromApiBody(data: unknown, res: Response, rawText: string): string {
@@ -290,7 +371,10 @@ async function readJson<T>(res: Response): Promise<T> {
 
 async function sessionFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   try {
-    return await fetch(input, init);
+    return await fetch(input, {
+      ...init,
+      credentials: init?.credentials ?? "include",
+    });
   } catch (e) {
     if (e instanceof TypeError) {
       const m = (e.message || "").toLowerCase();
@@ -325,18 +409,20 @@ class SessionApiLaundryRepository implements LaundryRepository {
         duration_hours: input.duration_hours,
         description: input.description,
         is_active: input.is_active,
+        ...(input.image_url != null && input.image_url !== "" ? { image_url: input.image_url } : {}),
+        ...(input.basket_tiers != null && input.basket_tiers.length > 0 ? { basket_tiers: input.basket_tiers } : {}),
       }),
     });
     return (await readJson<{ package: LaundryPackage }>(res)).package;
   }
 
   async updatePackage(id: number, patch: Partial<Omit<LaundryPackage, "id">>): Promise<LaundryPackage | null> {
+    const body = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)) as Record<string, unknown>;
     const res = await sessionFetch(`/api/laundry/session/packages/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
+      body: JSON.stringify(body),
     });
-    if (res.status === 404) return null;
     return (await readJson<{ package: LaundryPackage }>(res)).package;
   }
 
@@ -389,6 +475,72 @@ class SessionApiLaundryRepository implements LaundryRepository {
 
   async deleteOrder(id: number): Promise<boolean> {
     const res = await sessionFetch(`/api/laundry/session/orders/${id}`, { method: "DELETE" });
+    return (await readJson<{ ok: boolean }>(res)).ok;
+  }
+
+  async listCostCategories(): Promise<LaundryCostCategory[]> {
+    const res = await sessionFetch("/api/laundry/session/cost-categories", { cache: "no-store" });
+    return (await readJson<{ categories: LaundryCostCategory[] }>(res)).categories;
+  }
+
+  async createCostCategory(name: string): Promise<LaundryCostCategory> {
+    const res = await sessionFetch("/api/laundry/session/cost-categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    return (await readJson<{ category: LaundryCostCategory }>(res)).category;
+  }
+
+  async updateCostCategory(id: number, patch: { name: string }): Promise<LaundryCostCategory | null> {
+    const res = await sessionFetch(`/api/laundry/session/cost-categories/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    return (await readJson<{ category: LaundryCostCategory }>(res)).category;
+  }
+
+  async deleteCostCategory(id: number): Promise<boolean> {
+    const res = await sessionFetch(`/api/laundry/session/cost-categories/${id}`, { method: "DELETE" });
+    return (await readJson<{ ok: boolean }>(res)).ok;
+  }
+
+  async listCostEntries(): Promise<LaundryCostEntry[]> {
+    const res = await sessionFetch("/api/laundry/session/cost-entries", { cache: "no-store" });
+    return (await readJson<{ entries: LaundryCostEntry[] }>(res)).entries;
+  }
+
+  async createCostEntry(input: LaundryCostEntryInput): Promise<LaundryCostEntry> {
+    const res = await sessionFetch("/api/laundry/session/cost-entries", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        category_id: input.category_id,
+        spent_at: input.spent_at,
+        amount: input.amount,
+        item_label: input.item_label,
+        note: input.note ?? "",
+        ...(input.slip_photo_url != null && input.slip_photo_url.trim() !== "" ?
+          { slip_photo_url: input.slip_photo_url.trim() }
+        : {}),
+      }),
+    });
+    return (await readJson<{ entry: LaundryCostEntry }>(res)).entry;
+  }
+
+  async updateCostEntry(id: number, patch: LaundryCostEntryPatch): Promise<LaundryCostEntry | null> {
+    const body = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)) as Record<string, unknown>;
+    const res = await sessionFetch(`/api/laundry/session/cost-entries/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return (await readJson<{ entry: LaundryCostEntry }>(res)).entry;
+  }
+
+  async deleteCostEntry(id: number): Promise<boolean> {
+    const res = await sessionFetch(`/api/laundry/session/cost-entries/${id}`, { method: "DELETE" });
     return (await readJson<{ ok: boolean }>(res)).ok;
   }
 }

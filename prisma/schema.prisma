@@ -164,6 +164,8 @@ model User {
   parkingSites             ParkingSite[]
   laundryPackages          LaundryPackage[]
   laundryOrders            LaundryOrder[]
+  laundryCostCategories    LaundryCostCategory[]
+  laundryCostEntries       LaundryCostEntry[]
   openClawSyncRequests     OpenClawSyncRequest[]
 
   @@index([employerUserId])
@@ -1744,8 +1746,12 @@ model LaundryPackage {
   name          String         @db.VarChar(160)
   pricingModel  String         @map("pricing_model") @db.VarChar(16)
   basePrice     Int            @map("base_price")
-  durationHours Int            @default(24) @map("duration_hours")
+  durationHours Decimal        @default(24) @map("duration_hours") @db.Decimal(10, 3)
   description   String         @default("") @db.VarChar(800)
+  /** URL รูปแสดงบนการ์ดเลือกแพ็กเกจ (POS) */
+  imageUrl      String?        @map("image_url") @db.VarChar(500)
+  /** JSON: label + price ต่อขนาดตะกร้า (array of objects) */
+  basketTiers   Json?          @map("basket_tiers")
   isActive      Boolean        @default(true) @map("is_active")
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
@@ -1777,12 +1783,49 @@ model LaundryOrder {
   note            String         @default("") @map("note") @db.VarChar(1000)
   recordedByName  String         @default("") @map("recorded_by_name") @db.VarChar(160)
   status          String         @default("PENDING_PICKUP") @map("status") @db.VarChar(32)
+  /** โทเค็นติดตามคำขอรับผ้าที่บ้าน (QR) — ไม่ซ้ำเมื่อมีค่า */
+  pickupPublicToken String?      @unique @map("pickup_public_token") @db.VarChar(36)
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt @map("updated_at")
 
   @@index([ownerUserId, trialSessionId, orderAt], map: "laundry_ord_owner_trial_order_idx")
   @@index([ownerUserId], map: "laundry_ord_owner_idx")
   @@map("laundry_orders")
+}
+
+/** หมวดค่าใช้จ่ายต้นทุนรับฝากซักผ้า */
+model LaundryCostCategory {
+  id             Int                @id @default(autoincrement())
+  ownerUserId    String             @map("owner_id") @db.VarChar(191)
+  owner          User               @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String             @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String             @db.VarChar(120)
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  entries        LaundryCostEntry[]
+
+  @@index([ownerUserId, trialSessionId], map: "laundry_cost_cat_owner_trial_idx")
+  @@map("laundry_cost_categories")
+}
+
+/** รายการจ่ายต้นทุนรับฝากซักผ้า */
+model LaundryCostEntry {
+  id             Int                 @id @default(autoincrement())
+  ownerUserId    String              @map("owner_id") @db.VarChar(191)
+  owner          User                @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String              @default("prod") @map("trial_session_id") @db.VarChar(36)
+  categoryId     Int                 @map("category_id")
+  category       LaundryCostCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  spentAt        DateTime            @map("spent_at")
+  amount         Int
+  itemLabel      String              @default("") @map("item_label") @db.VarChar(200)
+  note           String              @default("") @db.VarChar(500)
+  slipPhotoUrl   String              @default("") @map("slip_photo_url") @db.VarChar(512)
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, spentAt], map: "laundry_cost_ent_owner_trial_spent_idx")
+  @@map("laundry_cost_entries")
 }
 
 /** Log กลางทั้งระบบ (immutable) สำหรับตรวจสอบการจัดการข้อมูล */

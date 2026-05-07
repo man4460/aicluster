@@ -10,9 +10,9 @@ import { jsonLaundrySessionError } from "@/lib/laundry/route-errors";
 import { getLaundryDataScope } from "@/lib/trial/module-scopes";
 
 const postSchema = z.object({
-  customer_name: z.string().min(1).max(160),
-  customer_phone: z.string().max(32),
-  pickup_address: z.string().min(1).max(500),
+  customer_name: z.string().max(160).optional().nullable(),
+  customer_phone: z.string().max(32).optional().nullable(),
+  pickup_address: z.string().max(500).optional().nullable(),
   dropoff_address: z.string().max(500).optional().nullable(),
   service_type: z.string().max(160).optional().nullable(),
   package_id: z.number().int().positive().nullable(),
@@ -97,8 +97,10 @@ export async function POST(req: Request) {
     const parsed = postSchema.safeParse(json);
     if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
-    const phone = normalizePhone(parsed.data.customer_phone);
-    const dropoff = (parsed.data.dropoff_address?.trim() || parsed.data.pickup_address.trim()).slice(0, 500);
+    const phone = normalizePhone(parsed.data.customer_phone?.trim() ?? "");
+    const customerName = (parsed.data.customer_name?.trim() || "ลูกค้า").slice(0, 160);
+    const pickup = (parsed.data.pickup_address?.trim() || "-").slice(0, 500);
+    const dropoff = (parsed.data.dropoff_address?.trim() || pickup).slice(0, 500);
     const serviceType = parsed.data.service_type?.trim() ?? "";
     const status = parsed.data.status ?? "PENDING_PICKUP";
     const packageId = parsed.data.package_id ?? null;
@@ -116,9 +118,9 @@ export async function POST(req: Request) {
         ownerUserId: own.ownerId,
         trialSessionId: scope.trialSessionId,
         orderAt: parsed.data.order_at ? new Date(parsed.data.order_at) : new Date(),
-        customerName: parsed.data.customer_name.trim(),
+        customerName,
         customerPhone: phone,
-        pickupAddress: parsed.data.pickup_address.trim(),
+        pickupAddress: pickup,
         dropoffAddress: dropoff,
         serviceType,
         packageId,

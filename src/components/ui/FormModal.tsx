@@ -32,6 +32,7 @@ export function FormModal({
   open: boolean;
   onClose: () => void;
   title: string;
+  /** คำบรรยายใต้หัวข้อ — ให้สั้น (ประมาณหนึ่งบรรทัด); ซ่อนบนมือถือ (`hidden sm:block`) */
   description?: string;
   ariaDescribedBy?: string;
   size?: "sm" | "md" | "lg" | "xl";
@@ -124,7 +125,7 @@ export function FormModal({
             {title}
           </h2>
           {description ? (
-            <p className="mt-1.5 text-xs font-medium leading-relaxed text-slate-500">
+            <p className="mt-1.5 hidden text-xs font-medium leading-relaxed text-slate-500 sm:block">
               {description}
             </p>
           ) : null}

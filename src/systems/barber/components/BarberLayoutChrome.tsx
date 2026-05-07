@@ -12,17 +12,17 @@ const BARBER_MODULE_TITLE = "ร้านตัดผม";
 /** คำอธิบายสั้นใต้ชื่อระบบ */
 const BARBER_MODULE_TAGLINE = "คิว · แพ็กเกจ · การเงิน · QR";
 
-/** แผงหัว + เมนูแบบเดียวกับคาร์แคร์ (glass / rounded-[2.5rem]) */
+/** แผงหัว + เมนูแบบเดียวกับคาร์แคร์ (glass — มือถือใช้ rounded-[2.5rem] เหมือนกัน ไม่ลดเหลือ 2xl) */
 const barberModuleGlassShellClass = cn(
-  "overflow-hidden rounded-[2.5rem] max-md:rounded-2xl border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/25 to-violet-100/20",
-  "max-md:p-2.5 p-3 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.32),inset_0_1px_0_0_rgba(255,255,255,0.55)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
+  "overflow-hidden rounded-[2.5rem] border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/25 to-violet-100/20",
+  "p-4 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.32),inset_0_1px_0_0_rgba(255,255,255,0.55)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
   "sm:px-8 sm:py-6 print:hidden",
 );
 
-/** พื้นที่เนื้อหาโมดูล — โทนกระจกอ่อน ไม่ใช้ app-surface ทึบซ้ำ */
+/** พื้นที่เนื้อหาโมดูล — โทนกระจกอ่อน โค้งระดับแผงใหญ่คาร์แคร์ */
 const barberModuleContentShellClass = cn(
-  "min-w-0 overflow-hidden rounded-[2rem] max-md:rounded-2xl border border-white/45 bg-white/35 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.28)] backdrop-blur-xl ring-1 ring-inset ring-white/50",
-  "max-md:p-2.5 p-3 sm:p-5 md:p-6 print:border-0 print:shadow-none",
+  "min-w-0 overflow-hidden rounded-[2.5rem] border border-white/45 bg-white/35 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.28)] backdrop-blur-xl ring-1 ring-inset ring-white/50",
+  "p-4 sm:p-5 md:p-6 print:border-0 print:shadow-none",
 );
 
 export function BarberLayoutChrome({
@@ -50,9 +50,8 @@ export function BarberLayoutChrome({
     <div
       className={cn(
         "flex min-w-0 flex-col gap-4 sm:gap-6",
-        /* เว้นที่ให้แถบ dock ติดขอบล่างจอ + safe area */
-        !hideBarberChrome &&
-          "max-md:pb-[calc(4.85rem+env(safe-area-inset-bottom,0px))] md:pb-0",
+        /* เว้นที่ให้แถบ dock ลอยแบบคาร์แคร์ (pb-20 + bottom offset) */
+        !hideBarberChrome && "max-md:pb-20 md:pb-0",
       )}
     >
       {!hideBarberChrome ? (
@@ -90,7 +89,7 @@ export function BarberLayoutChrome({
                 <button
                   type="button"
                   onClick={() => setUsageGuideOpen(true)}
-                  className="flex h-10 shrink-0 items-center gap-2 rounded-2xl border border-white/60 bg-white/45 px-3 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-95 sm:px-4"
+                  className="flex h-10 shrink-0 items-center gap-2 rounded-2xl border border-white/60 bg-white/45 px-4 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-95"
                   aria-haspopup="dialog"
                   aria-expanded={usageGuideOpen}
                   aria-label="คู่มือการใช้งาน"

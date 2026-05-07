@@ -91,7 +91,7 @@ export function BarberDashboardTabToolbar({ className }: { className?: string })
               aria-current={active ? "page" : undefined}
               suppressHydrationWarning
               className={cn(
-                "flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-2xl px-2 py-2 transition-all sm:min-h-0 sm:min-w-0 sm:gap-1.5 sm:rounded-lg sm:px-3 sm:py-1.5",
+                "flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-[2rem] px-2 py-2 transition-all sm:min-h-0 sm:min-w-0 sm:gap-1.5 sm:rounded-[1.25rem] sm:px-3 sm:py-1.5",
                 active
                   ? "bg-white/80 text-[#5b61ff] shadow-sm ring-1 ring-white/80"
                   : "text-slate-600 hover:bg-white/55 hover:text-slate-900",

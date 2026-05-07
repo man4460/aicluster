@@ -438,7 +438,7 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <p className="truncate text-[15px] font-semibold leading-snug text-[#2e2a58]">{s.name}</p>
                       {!s.isActive ? (
-                        <span className="shrink-0 rounded-md bg-amber-100/90 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-amber-900">
+                        <span className="shrink-0 rounded-[1rem] bg-amber-100/90 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-amber-900">
                           ปิดใช้งาน
                         </span>
                       ) : null}
@@ -524,12 +524,12 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
               </div>
               <form onSubmit={(e) => void onCreate(e)} className="grid gap-3 px-5 py-5">
               {err ? (
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{err}</p>
+                <p className="rounded-[1.25rem] bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{err}</p>
               ) : null}
               <label className="block text-xs font-semibold text-[#4d47b6]">
                 ชื่อช่าง
                 <input
-                  className="app-input mt-1 min-h-[48px] w-full rounded-xl px-3 text-base"
+                  className="app-input mt-1 min-h-[48px] w-full rounded-[1.25rem] px-3 text-base"
                   placeholder="ชื่อ *"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -539,7 +539,7 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
               <label className="block text-xs font-semibold text-[#4d47b6]">
                 เบอร์โทร (ไม่บังคับ)
                 <input
-                  className="app-input mt-1 min-h-[48px] w-full rounded-xl px-3 text-base"
+                  className="app-input mt-1 min-h-[48px] w-full rounded-[1.25rem] px-3 text-base"
                   placeholder="0812345678"
                   inputMode="numeric"
                   value={phone}
@@ -636,12 +636,12 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
               </div>
               <form onSubmit={(e) => void onSaveEdit(e)} className="grid gap-3 px-5 py-5">
               {err ? (
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{err}</p>
+                <p className="rounded-[1.25rem] bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{err}</p>
               ) : null}
               <label className="block text-xs font-semibold text-[#4d47b6]">
                 ชื่อช่าง
                 <input
-                  className="app-input mt-1 min-h-[48px] w-full rounded-xl px-3 text-base"
+                  className="app-input mt-1 min-h-[48px] w-full rounded-[1.25rem] px-3 text-base"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   required
@@ -650,7 +650,7 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
               <label className="block text-xs font-semibold text-[#4d47b6]">
                 เบอร์โทร (ไม่บังคับ)
                 <input
-                  className="app-input mt-1 min-h-[48px] w-full rounded-xl px-3 text-base"
+                  className="app-input mt-1 min-h-[48px] w-full rounded-[1.25rem] px-3 text-base"
                   inputMode="numeric"
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
@@ -734,7 +734,7 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
           <img
             src={previewUrl}
             alt=""
-            className="max-h-[min(88vh,720px)] max-w-full rounded-lg object-contain shadow-2xl"
+            className="max-h-[min(88vh,720px)] max-w-full rounded-[1.25rem] object-contain shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
           </div>

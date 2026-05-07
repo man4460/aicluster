@@ -1,0 +1,58 @@
+---
+description: หน้าลิงก์ QR ลูกค้า (พอร์ทัลสาธารณะ) — เทียบคาร์แคร์ · เปลือก glass · ปุ่มไอคอน · การ์ดคอลัมน์เดียว
+alwaysApply: false
+globs:
+  - "**/systems/car-wash/CarWashCustomerPortalClient.tsx"
+  - "**/systems/barber/components/BarberCustomerPortalClient.tsx"
+  - "**/systems/laundry/components/LaundryPickupPublicClient.tsx"
+  - "**/app/car-wash/check-in/**"
+  - "**/app/m/**"
+  - "**/app/laundry/pickup/**"
+---
+
+# พอร์ทัลลูกค้า (หลังสแกน QR ลูกค้า)
+
+อ้างอิง canonical: **`CarWashCustomerPortalClient`** (`src/systems/car-wash/CarWashCustomerPortalClient.tsx`) — เส้นทาง `/car-wash/check-in/[ownerId]`
+
+## เปลือกและเลย์เอาต์
+
+1. **`AppPublicCheckInGlassPage`** + คอลัมน์กลาง **`max-w-md`** + `space-y-4` (หรือ flex column เทียบเท่าสำหรับหน้ามี fixed footer)
+2. **Hero หัวกลาง (บังคับ):** ก่อน `<h1>` / ชื่อโมดูล — กล่องไอคอนกึ่งกลางคัดลอกจากคาร์แคร์ (`CarWashCustomerPortalClient` บล็อก comment `header logo / title`):
+   - เปลือก: `mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-[1.25rem] border border-white/70 bg-gradient-to-br from-white/80 to-violet-100/60 shadow-[0_8px_24px_-8px_rgba(91,97,255,0.35)] backdrop-blur-xl ring-1 ring-inset ring-white/70`
+   - SVG ด้านใน: `h-7 w-7 text-[#5b61ff]` (หรือไอคอนโดเมนโทนใกล้เคียง — บาร์เบอร์ใช้กล่องเดียวกัน)
+   - ลำดับ: **กล่องไอคอน → หัวข้อย่อย/โมดูล (ถ้ามี) → `<h1>` เข้ม → บรรทัดบรรยาย** (`text-sm text-[#6b6894]`)
+   - หน้าที่มี fixed footer / hero ยาว (เช่น ซักผ้า) — ยังวางกล่องไอคอนนี้ในส่วนหัวคอลัมน์เดียวกับชื่อร้าน
+3. **การ์ดหลัก**: `appPublicCheckInGlassCardClass` · `px-5 py-5 sm:px-6`
+
+## แถวค้นหา (เบอร์ / ทะเบียน / query)
+
+- **`flex items-stretch gap-2`** — ช่อง `flex-1 min-w-0` + **ปุ่มค้นหาเป็นสี่เหลี่ยมไอคอนอย่างเดียว** `h-[52px] w-[52px] shrink-0 rounded-2xl` gradient ม่วง · `aria-label="ค้นหาข้อมูล"` (โหลด: `aria-label` ระบุกำลังค้นหา)
+- ช่องป้อน: class เดียวกับคาร์แคร์ (`rounded-2xl border border-white/70 bg-white/60 ...`)
+
+## ปุ่มดำเนินการหลัก (ชำระ / ยืนยันใช้บริการ / ส่งคำขอ)
+
+- **ไอคอนอย่างเดียว** ในแถบปุ่มใหญ่ (`min-h-[52px]`) · **`aria-label`** อธิบายการทำงาน (ภาษาไทย)
+- สถานะโหลด: `animate-spin` แทนข้อความบนปุ่ม
+
+## รายการการ์ด / ประวัติ
+
+- **`grid-cols-1` เท่านั้น** — ห้าม `sm:grid-cols-2` สำหรับการ์ดเลือกแพ็ก / รายการในโฟลว์เดียวกัน (ให้เหมือนมือถือบนจอใหญ่)
+- รายการในโมดัล (เช่นประวัติ): จัด **คอลัมน์เดียว** — หลีกเลี่ยง `flex-wrap` ที่ทำให้สามคอลัมน์บนเดสก์ท็อป
+
+## แถบเครื่องมือรอง (ประวัติ · อัปโหลดสลิป · ติดตาม)
+
+- ปุ่มทุติยภูมิ = **`h-10 w-10 rounded-xl`** + **`aria-label`** (ดู `.cursor/rules/shop-staff-lane-toolbar.mdc` โทนขอบ)
+
+## การเชื่อมใน repo
+
+| โมดูล | คอมโพเนนต์ | เส้นทางตัวอย่าง |
+|--------|------------|------------------|
+| คาร์แคร์ | `CarWashCustomerPortalClient` | `/car-wash/check-in/[ownerId]` |
+| บาร์เบอร์ | `BarberCustomerPortalClient` | `/m/[ownerId]` |
+| ซักผ้า | `LaundryPickupPublicClient` | `/laundry/pickup/[ownerId]` |
+
+โมดูลใหม่ที่มี QR ลูกค้า — คัดลอกโครงจาก `CarWashCustomerPortalClient` แล้วปรับข้อความ/ไอคอนตามโดเมน
+
+## ความสัมพันธ์กับ QR ในแดชบอร์ด
+
+การ์ด hub / โปสเตอร์ QR ลูกค้าในแดชบอร์ด → `.cursor/rules/shop-qr-hub-popup-pattern.mdc` — **ไม่สับสนกับ** พอร์ทัลสาธารณะนี้
