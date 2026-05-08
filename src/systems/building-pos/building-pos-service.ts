@@ -73,6 +73,8 @@ export type PosOrder = {
   created_at: string;
   customer_name: string;
   table_no: string;
+  /** ถ้ามีค่า แปลว่าสร้างจากหน้า QR ลูกค้า */
+  customer_session_id?: string;
   status: "NEW" | "PREPARING" | "SERVED" | "PAID";
   items: PosOrderItem[];
   total_amount: number;
@@ -238,6 +240,13 @@ export class LocalStorageBuildingPosRepository {
     saveDB(db);
     return db.orders[idx];
   }
+  async deleteOrder(id: number) {
+    const db = loadDB();
+    const prev = db.orders.length;
+    db.orders = db.orders.filter((x) => x.id !== id);
+    saveDB(db);
+    return db.orders.length < prev;
+  }
 }
 
 export function createBuildingPosRepository() {
@@ -311,12 +320,17 @@ async function readJson<T>(res: Response): Promise<T> {
 }
 
 class SessionApiBuildingPosRepository {
+  /** ส่งคุกกี้เซสชันเสมอ — กันกรณีโดเมน/ทางลัดที่ lax + default ไม่แนบคุกกี้ */
+  private fetchSession(input: string | URL, init?: RequestInit): Promise<Response> {
+    return fetch(input, { ...init, credentials: "include" });
+  }
+
   async listCategories() {
-    const res = await fetch("/api/building-pos/session/categories", { cache: "no-store" });
+    const res = await this.fetchSession("/api/building-pos/session/categories", { cache: "no-store" });
     return (await readJson<{ categories: PosCategory[] }>(res)).categories;
   }
   async createCategory(input: Omit<PosCategory, "id">) {
-    const res = await fetch("/api/building-pos/session/categories", {
+    const res = await this.fetchSession("/api/building-pos/session/categories", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
@@ -324,7 +338,7 @@ class SessionApiBuildingPosRepository {
     return (await readJson<{ category: PosCategory }>(res)).category;
   }
   async updateCategory(id: number, patch: Partial<Omit<PosCategory, "id">>) {
-    const res = await fetch(`/api/building-pos/session/categories?id=${id}`, {
+    const res = await this.fetchSession(`/api/building-pos/session/categories?id=${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
@@ -332,15 +346,15 @@ class SessionApiBuildingPosRepository {
     return (await readJson<{ category: PosCategory }>(res)).category;
   }
   async deleteCategory(id: number) {
-    const res = await fetch(`/api/building-pos/session/categories?id=${id}`, { method: "DELETE" });
+    const res = await this.fetchSession(`/api/building-pos/session/categories?id=${id}`, { method: "DELETE" });
     await readJson<{ ok: boolean }>(res);
   }
   async listMenuItems() {
-    const res = await fetch("/api/building-pos/session/menu-items", { cache: "no-store" });
+    const res = await this.fetchSession("/api/building-pos/session/menu-items", { cache: "no-store" });
     return (await readJson<{ menu_items: PosMenuItem[] }>(res)).menu_items;
   }
   async createMenuItem(input: Omit<PosMenuItem, "id" | "sold_qty">) {
-    const res = await fetch("/api/building-pos/session/menu-items", {
+    const res = await this.fetchSession("/api/building-pos/session/menu-items", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
@@ -359,7 +373,7 @@ class SessionApiBuildingPosRepository {
       is_featured: boolean;
     }>,
   ) {
-    const res = await fetch(`/api/building-pos/session/menu-items?id=${id}`, {
+    const res = await this.fetchSession(`/api/building-pos/session/menu-items?id=${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
@@ -370,16 +384,16 @@ class SessionApiBuildingPosRepository {
     return this.updateMenuItem(id, patch);
   }
   async deleteMenuItem(id: number) {
-    const res = await fetch(`/api/building-pos/session/menu-items?id=${id}`, { method: "DELETE" });
+    const res = await this.fetchSession(`/api/building-pos/session/menu-items?id=${id}`, { method: "DELETE" });
     await readJson<{ ok: boolean }>(res);
   }
 
   async listIngredients() {
-    const res = await fetch("/api/building-pos/session/ingredients", { cache: "no-store" });
+    const res = await this.fetchSession("/api/building-pos/session/ingredients", { cache: "no-store" });
     return (await readJson<{ ingredients: PosIngredient[] }>(res)).ingredients;
   }
   async createIngredient(input: Omit<PosIngredient, "id">) {
-    const res = await fetch("/api/building-pos/session/ingredients", {
+    const res = await this.fetchSession("/api/building-pos/session/ingredients", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -391,7 +405,7 @@ class SessionApiBuildingPosRepository {
     return (await readJson<{ ingredient: PosIngredient }>(res)).ingredient;
   }
   async updateIngredient(id: number, patch: Partial<Omit<PosIngredient, "id">>) {
-    const res = await fetch(`/api/building-pos/session/ingredients?id=${id}`, {
+    const res = await this.fetchSession(`/api/building-pos/session/ingredients?id=${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
@@ -399,12 +413,12 @@ class SessionApiBuildingPosRepository {
     return (await readJson<{ ingredient: PosIngredient }>(res)).ingredient;
   }
   async deleteIngredient(id: number) {
-    const res = await fetch(`/api/building-pos/session/ingredients?id=${id}`, { method: "DELETE" });
+    const res = await this.fetchSession(`/api/building-pos/session/ingredients?id=${id}`, { method: "DELETE" });
     await readJson<{ ok: boolean }>(res);
   }
 
   async listPurchaseOrders() {
-    const res = await fetch("/api/building-pos/session/purchase-orders", { cache: "no-store" });
+    const res = await this.fetchSession("/api/building-pos/session/purchase-orders", { cache: "no-store" });
     return (await readJson<{ purchase_orders: PosPurchaseOrder[] }>(res)).purchase_orders;
   }
   async createPurchaseOrder(input: {
@@ -413,7 +427,7 @@ class SessionApiBuildingPosRepository {
     payment_slip_url?: string | null;
     lines: Omit<PosPurchaseLine, "id" | "line_total_baht">[];
   }) {
-    const res = await fetch("/api/building-pos/session/purchase-orders", {
+    const res = await this.fetchSession("/api/building-pos/session/purchase-orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
@@ -429,7 +443,7 @@ class SessionApiBuildingPosRepository {
       lines?: Omit<PosPurchaseLine, "id" | "line_total_baht">[];
     },
   ) {
-    const res = await fetch(`/api/building-pos/session/purchase-orders?id=${id}`, {
+    const res = await this.fetchSession(`/api/building-pos/session/purchase-orders?id=${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
@@ -437,16 +451,16 @@ class SessionApiBuildingPosRepository {
     return (await readJson<{ purchase_order: PosPurchaseOrder }>(res)).purchase_order;
   }
   async deletePurchaseOrder(id: number) {
-    const res = await fetch(`/api/building-pos/session/purchase-orders?id=${id}`, { method: "DELETE" });
+    const res = await this.fetchSession(`/api/building-pos/session/purchase-orders?id=${id}`, { method: "DELETE" });
     await readJson<{ ok: boolean }>(res);
   }
 
   async listRecipesByMenu() {
-    const res = await fetch("/api/building-pos/session/menu-recipes", { cache: "no-store" });
+    const res = await this.fetchSession("/api/building-pos/session/menu-recipes", { cache: "no-store" });
     return (await readJson<{ recipes_by_menu: Record<string, PosRecipeLine[]> }>(res)).recipes_by_menu;
   }
   async putMenuRecipe(menuItemId: number, lines: PosRecipeLine[]) {
-    const res = await fetch(`/api/building-pos/session/menu-recipes?menu_item_id=${menuItemId}`, {
+    const res = await this.fetchSession(`/api/building-pos/session/menu-recipes?menu_item_id=${menuItemId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ lines }),
@@ -455,21 +469,25 @@ class SessionApiBuildingPosRepository {
   }
 
   async getEstimatedCosts() {
-    const res = await fetch("/api/building-pos/session/estimated-costs", { cache: "no-store" });
+    const res = await this.fetchSession("/api/building-pos/session/estimated-costs", { cache: "no-store" });
     return readJson<PosEstimatedCosts>(res);
   }
 
   async listOrders() {
-    const res = await fetch("/api/building-pos/session/orders", { cache: "no-store" });
+    const res = await this.fetchSession("/api/building-pos/session/orders", { cache: "no-store" });
     return (await readJson<{ orders: PosOrder[] }>(res)).orders;
   }
   async updateOrder(id: number, patch: Partial<Omit<PosOrder, "id" | "created_at">>) {
-    const res = await fetch(`/api/building-pos/session/orders?id=${id}`, {
+    const res = await this.fetchSession(`/api/building-pos/session/orders?id=${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
     return (await readJson<{ order: PosOrder }>(res)).order;
+  }
+  async deleteOrder(id: number) {
+    const res = await this.fetchSession(`/api/building-pos/session/orders?id=${id}`, { method: "DELETE" });
+    await readJson<{ ok: boolean }>(res);
   }
 }
 

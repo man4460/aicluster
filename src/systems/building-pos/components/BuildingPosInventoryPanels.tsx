@@ -14,6 +14,7 @@ import {
   type PosIngredient,
   type PosPurchaseOrder,
 } from "@/systems/building-pos/building-pos-service";
+import { buildingPosContentPanelClass } from "@/systems/building-pos/components/building-pos-ui-tokens";
 
 export function BuildingPosIngredientsPanel({
   ingredients,
@@ -170,7 +171,7 @@ export function BuildingPosIngredientsPanel({
 
       {sorted.length === 0 ?
         <AppEmptyState>ยังไม่มีหมวด — กด «เพิ่มหมวด» ด้านบน</AppEmptyState>
-      : <ul className="max-h-[min(40vh,14rem)] divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200 bg-white">
+      : <ul className="max-h-[min(40vh,14rem)] divide-y divide-slate-100/90 overflow-y-auto rounded-[1.25rem] border border-white/60 bg-white/80 shadow-inner backdrop-blur-sm">
           {sorted.map((ing) => (
             <li key={ing.id} className="flex items-center justify-between gap-2 px-3 py-2.5 sm:px-4">
               <span className="min-w-0 truncate font-medium text-slate-900">
@@ -210,10 +211,10 @@ export function BuildingPosIngredientsPanel({
   );
 
   return (
-    <section className="app-surface rounded-2xl p-4 sm:p-5">
+    <section className={buildingPosContentPanelClass}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h2 className="text-lg font-bold text-[#2e2a58]">หมวดหมู่วัตถุดิบ</h2>
+          <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">หมวดหมู่วัตถุดิบ</h2>
           <p className="mt-1 text-xs text-[#66638c]">
             รายชื่อและหน่วยซ่อนอยู่ในหน้าต่าง — กดปุ่มเพื่อเพิ่ม/แก้ไข (ตอนนี้{" "}
             <span className="font-semibold tabular-nums text-[#2e2a58]">{ingredients.length}</span> หมวด)
@@ -239,6 +240,7 @@ export function BuildingPosIngredientsPanel({
         }}
         title="หมวดหมู่วัตถุดิบ"
         size="lg"
+        mobileCentered
         footer={
           <div className="flex justify-end">
             <button
@@ -438,9 +440,9 @@ export function BuildingPosPurchasesPanel({
   }
 
   return (
-    <section className="app-surface rounded-2xl p-4 sm:p-5">
+    <section className={buildingPosContentPanelClass}>
       <div className="border-b border-[#ecebff] pb-4">
-        <h2 className="text-lg font-bold text-[#2e2a58]">ต้นทุน / รายจ่าย</h2>
+        <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">ต้นทุน / รายจ่าย</h2>
         <p className="mt-1 text-xs text-[#66638c]">
           บันทึกรายจ่ายแต่ละครั้ง (วันที่ หมวด/วัตถุดิบ ราคา) แนบสลิปได้ — ระบบใช้ราคาซื้อล่าสุดคำนวณต้นทุนตามสูตร
         </p>
@@ -590,7 +592,10 @@ export function BuildingPosPurchasesPanel({
             const total = po.lines.reduce((s, l) => s + l.line_total_baht, 0);
             const slipPreview = po.payment_slip_url?.trim() ?? "";
             return (
-              <li key={po.id} className="rounded-2xl border border-[#e1e3ff] bg-white p-3 shadow-sm sm:p-4">
+              <li
+                key={po.id}
+                className="relative overflow-hidden rounded-[2rem] border border-[#e8e6f4]/90 bg-gradient-to-br from-white via-white to-[#faf9ff]/95 p-3 shadow-[0_8px_26px_-18px_rgba(91,97,255,0.12)] sm:p-4"
+              >
                 {editingPoId === po.id ? (
                   <div className="space-y-3">
                     <p className="text-xs font-semibold text-[#4d47b6]">แก้ไขบันทึกครั้งนี้</p>

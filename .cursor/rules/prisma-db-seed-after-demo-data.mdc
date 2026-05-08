@@ -1,0 +1,26 @@
+---
+description: หลังแก้ Prisma seed / ข้อมูล demo Building POS — ต้องรัน npm run seed ทุกครั้ง
+globs: prisma/seed.ts,src/lib/trial/seed-building-pos.ts
+alwaysApply: false
+---
+
+# รัน DB seed หลังแก้ข้อมูลตัวอย่าง
+
+เมื่อแก้ไฟล์ใดไฟล์หนึ่งต่อไปนี้ (หรือเพิ่มข้อมูล demo ที่อิง `seed.ts`):
+
+- `prisma/seed.ts`
+- `src/lib/trial/seed-building-pos.ts`
+
+**ข้อบังคับ:** ให้รันคำสั่ง seed ในโปรเจกต์ **ทุกครั้ง** หลังจบการแก้ เพื่อให้ฐานข้อมูล local / สภาพแวดล้อมที่ใช้ `DATABASE_URL` เดียวกันสะท้อนการเปลี่ยนแปลง
+
+```bash
+npm run seed
+```
+
+ทางเลือกเทียบเท่า: `npx prisma db seed` (ต้องตั้งค่า seed command ใน Prisma แล้ว)
+
+**บัญชี demo POS (`user@mawell.local`, `user@mawell.local.com`):** ทุกครั้งที่รัน `npm run seed` ระบบจะ **ล้างข้อมูล Building POS ใน scope `prod`** ของ user เหล่านั้นแล้วแทรกชุดเมนู 20 รายการ + ออเดอร์/ต้นทุนตัวอย่างใหม่ (ดู `deleteBuildingPosScopeData` + `seedBuildingPosProdDemoForOwner` ใน `seed-building-pos.ts`)
+
+**Trial sandbox:** ยังสร้างชุดใหม่ตอนเริ่มทดลองเท่านั้น — ไม่ถูก seed ซ้ำจาก `prisma/seed.ts`
+
+**Building POS demo:** เมนูตัวอย่างคงที่ **5 หมวด × 4 เมนู = 20 เมนู** — ดูค่าคงที่ `BUILDING_POS_SEED_MENU_TOTAL` / `BUILDING_POS_SEED_MENUS_PER_CATEGORY` ใน `seed-building-pos.ts`

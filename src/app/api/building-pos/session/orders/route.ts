@@ -113,3 +113,26 @@ export async function PATCH(req: Request) {
     return jsonBuildingPosError(formatBuildingPosDbError(e), e, 503);
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const auth = await requireSession();
+    if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const own = await buildingPosOwnerFromAuth(auth.session.sub);
+    if (!own.ok) return own.response;
+    const scope = await getBuildingPosDataScope(own.ownerId);
+    const { searchParams } = new URL(req.url);
+    const id = Number(searchParams.get("id") || "");
+    if (!Number.isInteger(id) || id <= 0) return NextResponse.json({ error: "id ไม่ถูกต้อง" }, { status: 400 });
+    const row = await prisma.buildingPosOrder.findFirst({
+      where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
+      select: { id: true },
+    });
+    if (!row) return NextResponse.json({ error: "ไม่พบออเดอร์" }, { status: 404 });
+    await prisma.buildingPosOrder.delete({ where: { id: row.id } });
+    return NextResponse.json({ ok: true as const });
+  } catch (e) {
+    console.error("[building-pos/session/orders DELETE]", e);
+    return jsonBuildingPosError(formatBuildingPosDbError(e), e, 503);
+  }
+}

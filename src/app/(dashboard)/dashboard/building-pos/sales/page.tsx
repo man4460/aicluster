@@ -1,9 +1,9 @@
-import { BuildingPosSalesHistoryPageClient } from "@/systems/building-pos/BuildingPosSalesHistoryPageClient";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "ยอดขาย | POS ร้านอาหาร",
 };
 
 export default function BuildingPosSalesPage() {
-  return <BuildingPosSalesHistoryPageClient />;
+  redirect("/dashboard/building-pos?tab=finance&fin=sales");
 }

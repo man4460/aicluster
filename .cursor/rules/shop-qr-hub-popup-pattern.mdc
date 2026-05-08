@@ -22,6 +22,7 @@ globs:
    - `appearance="glass"`
    - `glassTint="violet"` สำหรับลูกค้า / พอร์ทัลลูกค้า
    - `glassTint="amber"` สำหรับพนักงาน / สตาฟ
+   - **`mobileCentered`** — บนมือถือให้แผงอยู่กึ่งกลางจอ (ไม่ชิดขอบล่าง); โมดูลที่มีฟอร์ม/กรองหลายจุดใช้ครบทุกโมดัล — เทียบ **`laundry-dashboard-ui.mdc`** / **`building-pos-dashboard-template.mdc`**
 5. **`footer`** — ปุ่มหลัก **ปิด** (ไอคอน X + ข้อความ) ชิดขวา; มีปุ่ม X มุมขวาบนของโมดัลอยู่แล้วจาก `FormModal`
 6. **เนื้อหาในโมดัล** — ใช้คอมโพเนนต์เดิมที่เรนเดอร์ QR / โปสเตอร์ / ดาวน์โหลด อย่าเขียน UI ซ้ำใน Hub — **โมดัล QR พนักงาน** ให้ใช้ **`ShopStaffQrPanel`** (ดู `.cursor/rules/shop-staff-qr-panel.mdc`)
 

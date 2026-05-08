@@ -5,6 +5,7 @@ export function mapBuildingPosOrderRow(r: {
   createdAt: Date;
   customerName: string;
   tableNo: string;
+  customerSessionId?: string | null;
   status: string;
   itemsJson: unknown;
   totalAmount: number;
@@ -21,6 +22,7 @@ export function mapBuildingPosOrderRow(r: {
     created_at: createdAt,
     customer_name: r.customerName,
     table_no: r.tableNo,
+    customer_session_id: (r.customerSessionId ?? "").trim(),
     status: r.status as "NEW" | "PREPARING" | "SERVED" | "PAID",
     items: Array.isArray(r.itemsJson) ? (r.itemsJson as PosOrderItem[]) : [],
     total_amount: r.totalAmount,

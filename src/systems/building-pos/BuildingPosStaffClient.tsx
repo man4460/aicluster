@@ -157,17 +157,17 @@ export function BuildingPosStaffClient({
 
   return (
     <div className={cn(shopQrTemplatePageBgClass, "min-h-[100dvh] pb-24")}>
-      <header className="sticky top-0 z-30 border-b border-[#e8e6fc] bg-white/90 px-4 py-3 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-white/50 bg-gradient-to-br from-white/70 via-white/55 to-indigo-50/25 px-4 py-3 shadow-[0_12px_40px_-24px_rgba(30,27,75,0.2)] backdrop-blur-2xl">
         <div className="mx-auto flex max-w-lg items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#4d47b6]">พนักงานเสิร์ฟ</p>
-            <p className="truncate text-sm font-bold text-[#2e2a58]">{shopLabel}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#5b61ff]">พนักงานเสิร์ฟ</p>
+            <p className="truncate text-sm font-black tracking-tight text-[#1e1b4b]">{shopLabel}</p>
           </div>
           <button
             type="button"
             onClick={() => void refreshOrders()}
             disabled={refreshing}
-            className="shrink-0 rounded-xl border border-[#4d47b6]/30 bg-[#ecebff] px-3 py-2 text-xs font-semibold text-[#4d47b6] touch-manipulation"
+            className="shrink-0 rounded-2xl border border-white/60 bg-white/70 px-3 py-2 text-xs font-bold text-[#5b61ff] shadow-sm backdrop-blur-sm touch-manipulation ring-1 ring-[#5b61ff]/15 hover:bg-white/90 disabled:opacity-60"
           >
             {refreshing ? "กำลังรีเฟรช..." : "รีเฟรช"}
           </button>
@@ -176,8 +176,10 @@ export function BuildingPosStaffClient({
           <button
             type="button"
             onClick={() => setView("tables")}
-            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold touch-manipulation ${
-              view === "tables" ? "bg-[#4d47b6] text-white" : "bg-white text-[#4d47b6] ring-1 ring-[#e1e3ff]"
+            className={`min-h-[48px] flex-1 rounded-2xl py-2.5 text-sm font-black touch-manipulation transition-all active:scale-[0.98] ${
+              view === "tables"
+                ? "bg-white/85 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/25 backdrop-blur-sm"
+                : "bg-white/40 text-slate-600 ring-1 ring-white/60 hover:bg-white/60"
             }`}
           >
             โต๊ะ / บิล
@@ -185,8 +187,10 @@ export function BuildingPosStaffClient({
           <button
             type="button"
             onClick={() => setView("order")}
-            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold touch-manipulation ${
-              view === "order" ? "bg-[#4d47b6] text-white" : "bg-white text-[#4d47b6] ring-1 ring-[#e1e3ff]"
+            className={`min-h-[48px] flex-1 rounded-2xl py-2.5 text-sm font-black touch-manipulation transition-all active:scale-[0.98] ${
+              view === "order"
+                ? "bg-white/85 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/25 backdrop-blur-sm"
+                : "bg-white/40 text-slate-600 ring-1 ring-white/60 hover:bg-white/60"
             }`}
           >
             สั่งเพิ่ม
@@ -210,7 +214,6 @@ export function BuildingPosStaffClient({
             ownerId={ownerId}
             trialSessionId={trialSessionId}
             variant="staff"
-            orderNoteTag="พนักงานเสิร์ฟ"
             onOrderSuccess={() => {
               setView("tables");
               void loadOrders();

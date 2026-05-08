@@ -83,9 +83,9 @@ export const barberOffersHubHeaderShellClass =
 export const barberOffersTabSegmentShellClass =
   `${barberCardSurfaceRadiusClass} flex shrink-0 items-center gap-1 border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-[#f0fdfa]/35 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]`;
 
-/** การ์ดแถวในหน้าแพ็กเกจ/สมาชิก — เฉดขาวถึงม่วงอมฟ้าอ่อน */
+/** การ์ดแถวในหน้าแพ็กเกจ/สมาชิก — เฉดขาวถึงม่วงอมฟ้าอ่อน (padding แนวนอนตามมาตรฐานการ์ดย่อย) */
 export const barberOffersListRowCardClass =
-  `${barberCardSurfaceRadiusClass} border border-[#e8e6f4]/90 bg-gradient-to-br from-white via-white to-[#faf9ff]/95 px-3 py-3 shadow-[0_8px_26px_-18px_rgba(91,97,255,0.16)] sm:py-2.5`;
+  `${barberCardSurfaceRadiusClass} relative overflow-hidden border border-[#e8e6f4]/90 bg-gradient-to-br from-white via-white to-[#faf9ff]/95 ${barberCardBodyPaddingXClass} py-3 shadow-[0_8px_26px_-18px_rgba(91,97,255,0.16)] transition-[box-shadow,border-color] duration-300 sm:py-2.5 hover:border-[#d4cff7]/95 hover:shadow-[0_14px_36px_-22px_rgba(79,70,229,0.18)]`;
 
 /** สถานะว่างแพ็กเกจ/สมาชิก — เส้นประ + ไล่สีพื้น */
 export const barberOffersEmptyStateClass =

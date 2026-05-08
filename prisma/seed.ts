@@ -2,6 +2,7 @@ import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import bcrypt from "bcryptjs";
 import { bangkokMonthKey } from "../src/lib/time/bangkok";
+import { seedBuildingPosProdDemoForOwner } from "../src/lib/trial/seed-building-pos";
 
 const prisma = new PrismaClient();
 
@@ -44,6 +45,30 @@ async function main() {
     create: {
       email: "user@mawell.local",
       username: "user",
+      passwordHash: userHash,
+      role: "USER",
+      tokens: 7,
+      lastDeductionDate: null,
+      subscriptionType: "DAILY",
+      subscriptionTier: "NONE",
+      lastBuffetBillingMonth: null,
+    },
+  });
+
+  /** บัญชี demo แบบใช้งานจริง (เดียวกับ user@mawell.local — อีเมล .com สำหรับลูกค้าทดลอง) */
+  await prisma.user.upsert({
+    where: { email: "user@mawell.local.com" },
+    update: {
+      passwordHash: userHash,
+      role: "USER",
+      tokens: 7,
+      subscriptionType: "DAILY",
+      subscriptionTier: "NONE",
+      lastBuffetBillingMonth: null,
+    },
+    create: {
+      email: "user@mawell.local.com",
+      username: "user_com",
       passwordHash: userHash,
       role: "USER",
       tokens: 7,
@@ -217,11 +242,23 @@ async function main() {
       },
     });
   }
+
+  /** POS ร้านอาหาร — หมวด+เมนู+รูป (scope prod) สำหรับบัญชี demo ถ้ายังไม่มีข้อมูล */
+  const demoPosOwnerEmails = ["user@mawell.local.com", "user@mawell.local"] as const;
+  for (const email of demoPosOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) await seedBuildingPosProdDemoForOwner(prisma, row.id);
+  }
 }
 
 main()
   .then(() => {
-    console.log("Seed OK — admin / admin4460 , user / User123!");
+    console.log(
+      "Seed OK — admin / admin4460 , user / User123! (user@mawell.local และ user@mawell.local.com)",
+    );
   })
   .catch((e) => {
     console.error(e);

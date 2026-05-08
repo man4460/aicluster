@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  AppUsageGuideModal,
   AppDashboardSection,
   AppEmptyState,
   AppSectionHeader,
@@ -242,6 +243,7 @@ export function LaundryDashboard({
   const [packages, setPackages] = useState<LaundryPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [usageGuideOpen, setUsageGuideOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [packageModal, setPackageModal] = useState<null | "create" | LaundryPackage>(null);
   const [viewOrder, setViewOrder] = useState<LaundryOrder | null>(null);
@@ -427,22 +429,39 @@ export function LaundryDashboard({
       <>
           <div className={cn(laundryGlassShellClass, "p-4 sm:px-8 sm:py-6 print:hidden")}>
             <header>
-              <div className="flex min-w-0 items-center gap-3">
-                <div
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-[#5b61ff] text-white shadow-lg shadow-indigo-100"
-                  aria-hidden
+              <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-[#5b61ff] text-white shadow-lg shadow-indigo-100"
+                    aria-hidden
+                  >
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                      <path d="M12 3v18M8 8l8 8M16 8l-8 8" strokeLinecap="round" />
+                      <circle cx="12" cy="12" r="9" opacity="0.35" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">รับฝากซักผ้า</h1>
+                    <p className="mt-0.5 hidden text-xs font-semibold text-slate-500 sm:block">
+                      รับผ้าที่บ้าน · ซัก/อบ/รีด · ส่งคืนลูกค้า
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setUsageGuideOpen(true)}
+                  className="flex h-10 min-h-[44px] w-10 shrink-0 items-center justify-center rounded-2xl border border-white/60 bg-white/45 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-95 sm:w-auto sm:gap-2 sm:px-4"
+                  aria-label="คู่มือการใช้งาน"
+                  aria-haspopup="dialog"
+                  aria-expanded={usageGuideOpen}
                 >
-                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                    <path d="M12 3v18M8 8l8 8M16 8l-8 8" strokeLinecap="round" />
-                    <circle cx="12" cy="12" r="9" opacity="0.35" />
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
+                    <circle cx="12" cy="17" r="1" />
                   </svg>
-                </div>
-                <div className="min-w-0">
-                  <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">รับฝากซักผ้า</h1>
-                  <p className="mt-0.5 hidden text-xs font-semibold text-slate-500 sm:block">
-                    รับผ้าที่บ้าน · ซัก/อบ/รีด · ส่งคืนลูกค้า
-                  </p>
-                </div>
+                  <span className="hidden sm:inline">คู่มือการใช้งาน</span>
+                </button>
               </div>
             </header>
 
@@ -688,6 +707,65 @@ export function LaundryDashboard({
       : null}
 
       {laundryModals}
+      <AppUsageGuideModal
+        open={usageGuideOpen}
+        onClose={() => setUsageGuideOpen(false)}
+        title="คู่มือการใช้งาน — ระบบรับฝากซักผ้า"
+        subtitle="วิธีใช้งานหลักสำหรับหน้าร้านและพนักงานรับงาน"
+        sections={[
+          {
+            title: "ลำดับเริ่มต้นแนะนำ",
+            content: (
+              <ol className="list-decimal space-y-1 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                <li>เพิ่มแพ็กเกจและกำหนดราคาตามขนาดตะกร้า</li>
+                <li>บันทึกรายการรับผ้าใหม่จากปุ่มบันทึกรายการ</li>
+                <li>ติดตามคิวงานและเปลี่ยนสถานะด้วยแถบไอคอน</li>
+                <li>สรุปรายรับ/รายจ่ายในเมนูการเงินทุกวัน</li>
+              </ol>
+            ),
+          },
+          {
+            title: "เมนู: แดชบอร์ด",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>ดูภาพรวมสถิติวันนี้และงานที่กำลังดำเนินการ</li>
+                <li>ใช้ปุ่มรีเฟรชเมื่อมีหลายเครื่องใช้งานพร้อมกัน</li>
+                <li>กดบันทึกรายการเพื่อเปิดฟอร์มรับงานใหม่แบบรวดเร็ว</li>
+              </ul>
+            ),
+          },
+          {
+            title: "เมนู: การเงิน",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>ดูกราฟรายรับเทียบรายจ่ายตามช่วงเวลา</li>
+                <li>ตรวจประวัติออเดอร์และแก้สถานะย้อนหลังได้</li>
+                <li>บันทึกรายจ่าย/แนบสลิปเพื่อคำนวณกำไรสุทธิ</li>
+              </ul>
+            ),
+          },
+          {
+            title: "เมนู: แพ็กเกจ",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>เพิ่ม/แก้ไขรูปแพ็กเกจ ราคา และเวลาประมาณ</li>
+                <li>จัดขนาดตะกร้าหลายระดับในแพ็กเกจเดียว</li>
+                <li>ปิดใช้งานแพ็กเกจชั่วคราวได้โดยไม่ต้องลบข้อมูล</li>
+              </ul>
+            ),
+          },
+          {
+            title: "เมนู: QR",
+            content: (
+              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                <li>เปิดการ์ด QR ลูกค้า/พนักงานผ่าน popup ตามบทบาท</li>
+                <li>ดาวน์โหลดโปสเตอร์หรือคัดลอกลิงก์ไปใช้งานหน้าร้าน</li>
+                <li>ลิงก์พนักงานใช้สำหรับเข้าหน้ารับงานโดยตรง</li>
+              </ul>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

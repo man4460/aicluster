@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
-import { printDataUrlImagePoster } from "@/components/app-templates";
+import { AppImageLightbox, printDataUrlImagePoster, useAppImageLightbox } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   createShopQrPosterCanvas,
@@ -19,49 +19,48 @@ import {
   type PosIngredient,
   type PosMenuItem,
   type PosOrder,
+  type PosPurchaseOrder,
   type PosRecipeLine,
 } from "@/systems/building-pos/building-pos-service";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
-import { BuildingPosOpenTablesPanel } from "@/systems/building-pos/BuildingPosSalesAnalytics";
+import { BuildingPosCustomerOrderClient } from "@/systems/building-pos/BuildingPosCustomerOrderClient";
+import { BuildingPosOpenTablesPanel, BuildingPosSalesHistoryPanel } from "@/systems/building-pos/BuildingPosSalesAnalytics";
+import { BuildingPosIngredientsPanel, BuildingPosPurchasesPanel } from "@/systems/building-pos/components/BuildingPosInventoryPanels";
+import { BuildingPosStaffQrSection } from "@/systems/building-pos/components/BuildingPosStaffQrSection";
+import { buildingPosHubUrl, parseBuildingPosNav, type BuildingPosNavState } from "@/systems/building-pos/building-pos-nav";
 import {
-  BuildingPosUnifiedMenuBar,
-  buildingPosDashboardTabHref,
-  type BuildingPosDashTab,
-} from "@/systems/building-pos/components/BuildingPosUnifiedMenuBar";
+  buildingPosContentPanelClass,
+  buildingPosListRowCardClass,
+  buildingPosQrHubOuterClass,
+  buildingPosStatCardEmeraldClass,
+  buildingPosStatCardIndigoClass,
+  buildingPosStatCardVioletClass,
+} from "@/systems/building-pos/components/building-pos-ui-tokens";
+import { BuildingPosRemoteImg } from "@/systems/building-pos/components/building-pos-remote-image";
 
 function tableQrStorageKey(ownerId: string) {
   return `mawell.buildingpos.tableQrLabels.${ownerId}`;
 }
 
-function parseBuildingPosTabQuery(q: string | null): BuildingPosDashTab {
-  if (q === "orders" || q === "menu" || q === "categories") return q;
-  return "overview";
-}
-
 function PosThumb({ url, size = "md" }: { url: string; size?: "sm" | "md" }) {
-  const src = url?.trim();
   const box =
     size === "sm"
-      ? "h-8 w-8 rounded-md text-[6px] leading-tight"
-      : "h-14 w-14 rounded-xl text-[9px] leading-tight";
-  if (src) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={src}
-        alt=""
-        className={`${box} shrink-0 border border-[#e1e3ff] bg-white object-cover`}
-        loading="lazy"
-      />
-    );
-  }
-  return (
+      ? "h-8 w-8 rounded-[0.65rem] text-[6px] leading-tight"
+      : "h-14 w-14 rounded-[1.25rem] text-[9px] leading-tight";
+  const placeholder = (
     <div
       className={`flex ${box} shrink-0 items-center justify-center border border-dashed border-[#d8d6ec] bg-[#f4f3ff] px-0.5 text-center text-[#9b98c4]`}
       aria-hidden
     >
       —
     </div>
+  );
+  return (
+    <BuildingPosRemoteImg
+      src={url}
+      className={`${box} shrink-0 border border-[#e1e3ff] bg-white object-cover`}
+      fallback={placeholder}
+    />
   );
 }
 
@@ -85,26 +84,38 @@ export function BuildingPosDashboardClient({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tabQ = searchParams.get("tab");
 
   const repo = useMemo(() => createBuildingPosSessionApiRepository(), []);
-  const [tab, setTabState] = useState<BuildingPosDashTab>("overview");
+  const slipLightbox = useAppImageLightbox();
+
+  const nav = useMemo(
+    () => parseBuildingPosNav(new URLSearchParams(searchParams.toString())),
+    [searchParams],
+  );
+
+  const goHub = useCallback(
+    (patch: Partial<BuildingPosNavState>) => {
+      const cur = parseBuildingPosNav(new URLSearchParams(searchParams.toString()));
+      router.replace(buildingPosHubUrl({ ...cur, ...patch }), { scroll: false });
+    },
+    [router, searchParams],
+  );
 
   useLayoutEffect(() => {
+    const tabQ = searchParams.get("tab");
     if (tabQ === "ingredients" || tabQ === "purchases") {
-      router.replace("/dashboard/building-pos/costs");
+      router.replace("/dashboard/building-pos?tab=finance&fin=costs");
       return;
     }
-    setTabState(parseBuildingPosTabQuery(tabQ));
-  }, [tabQ, router]);
-
-  const setTab = useCallback(
-    (t: BuildingPosDashTab) => {
-      setTabState(t);
-      router.replace(buildingPosDashboardTabHref(t), { scroll: false });
-    },
-    [router],
-  );
+    if (tabQ === "orders") {
+      router.replace("/dashboard/building-pos?tab=qr", { scroll: false });
+      return;
+    }
+    if (tabQ === "categories") {
+      router.replace("/dashboard/building-pos?tab=menu&menu=categories", { scroll: false });
+      return;
+    }
+  }, [searchParams, router]);
 
   const [categories, setCategories] = useState<PosCategory[]>([]);
   const [menuItems, setMenuItems] = useState<PosMenuItem[]>([]);
@@ -123,6 +134,7 @@ export function BuildingPosDashboardClient({
   const [tableQrCards, setTableQrCards] = useState<string[] | null>(null);
   const [newTableCardInput, setNewTableCardInput] = useState("");
   const [ingredients, setIngredients] = useState<PosIngredient[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PosPurchaseOrder[]>([]);
   const [recipesByMenu, setRecipesByMenu] = useState<Record<string, PosRecipeLine[]>>({});
   const [estimatedCosts, setEstimatedCosts] = useState<PosEstimatedCosts>({
     estimated_cost_baht: {},
@@ -148,6 +160,14 @@ export function BuildingPosDashboardClient({
   const [menuEditing, setMenuEditing] = useState<PosMenuItem | null>(null);
   const [menuSaving, setMenuSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [staffOrderModalOpen, setStaffOrderModalOpen] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [showStaffQrModal, setShowStaffQrModal] = useState(false);
+
+  useEffect(() => {
+    if (nav.main !== "overview") setStaffOrderModalOpen(false);
+  }, [nav.main]);
 
   const dashboardStats = useMemo(() => {
     const todayKey = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
@@ -197,24 +217,37 @@ export function BuildingPosDashboardClient({
   }, [menuItems]);
 
   async function loadAll() {
-    const [c, m, o] = await Promise.all([repo.listCategories(), repo.listMenuItems(), repo.listOrders()]);
-    setCategories(c);
-    setMenuItems(m);
-    setOrders(o);
+    try {
+      const [c, m, o] = await Promise.all([repo.listCategories(), repo.listMenuItems(), repo.listOrders()]);
+      setCategories(c);
+      setMenuItems(m);
+      setOrders(o);
 
-    const emptyCosts: PosEstimatedCosts = {
-      estimated_cost_baht: {},
-      margin_baht: {},
-      ingredient_last_unit_price_baht: {},
-    };
-    const inv = await Promise.allSettled([
-      repo.listIngredients(),
-      repo.listRecipesByMenu(),
-      repo.getEstimatedCosts(),
-    ]);
-    setIngredients(inv[0].status === "fulfilled" ? inv[0].value : []);
-    setRecipesByMenu(inv[1].status === "fulfilled" ? inv[1].value : {});
-    setEstimatedCosts(inv[2].status === "fulfilled" ? inv[2].value : emptyCosts);
+      const emptyCosts: PosEstimatedCosts = {
+        estimated_cost_baht: {},
+        margin_baht: {},
+        ingredient_last_unit_price_baht: {},
+      };
+      const inv = await Promise.allSettled([
+        repo.listIngredients(),
+        repo.listRecipesByMenu(),
+        repo.getEstimatedCosts(),
+        repo.listPurchaseOrders(),
+      ]);
+      setIngredients(inv[0].status === "fulfilled" ? inv[0].value : []);
+      setRecipesByMenu(inv[1].status === "fulfilled" ? inv[1].value : {});
+      setEstimatedCosts(inv[2].status === "fulfilled" ? inv[2].value : emptyCosts);
+      setPurchaseOrders(inv[3].status === "fulfilled" ? inv[3].value : []);
+      setSyncError(null);
+    } catch (e) {
+      console.error("[building-pos] loadAll", e);
+      const msg =
+        e instanceof TypeError ?
+          "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — ตรวจว่าแอปยังรันอยู่ ฐานข้อมูลพร้อม และลองรีเฟรชหน้า"
+        : e instanceof Error ? e.message
+        : "โหลดข้อมูลไม่สำเร็จ";
+      setSyncError(msg);
+    }
   }
 
   async function refreshData() {
@@ -650,6 +683,17 @@ export function BuildingPosDashboardClient({
     await loadAll();
   }
 
+  async function onSalesHistoryOrderStatusChange(id: number, status: PosOrder["status"]) {
+    await repo.updateOrder(id, { status });
+    await loadAll();
+  }
+
+  async function onSalesHistoryOrderDelete(id: number) {
+    if (!window.confirm(`ลบออเดอร์ #${id} ?`)) return;
+    await repo.deleteOrder(id);
+    await loadAll();
+  }
+
   function addTableQrCard() {
     const t = newTableCardInput.trim();
     if (!t || tableQrCards === null) return;
@@ -670,28 +714,50 @@ export function BuildingPosDashboardClient({
 
   return (
     <div className="max-w-full space-y-4 sm:space-y-6">
-      <BuildingPosUnifiedMenuBar
-        activeTab={tab}
-        onTabChange={setTab}
-      />
-
-      {tab === "overview" ? (
+      {syncError ? (
+        <div
+          role="alert"
+          className="rounded-2xl border border-rose-200 bg-rose-50/95 px-4 py-3 text-sm text-rose-900 shadow-sm"
+        >
+          <p className="font-semibold">ซิงค์ข้อมูล POS ไม่สำเร็จ</p>
+          <p className="mt-1 text-rose-800/90">{syncError}</p>
+          <button
+            type="button"
+            className="mt-3 rounded-xl bg-rose-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-800"
+            onClick={() => void loadAll()}
+          >
+            ลองอีกครั้ง
+          </button>
+        </div>
+      ) : null}
+      {nav.main === "overview" ? (
         <div className="space-y-5 sm:space-y-6">
-          <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="app-surface rounded-2xl p-4 sm:p-5">
-              <p className="text-xs text-[#66638c]">รายรับวันนี้ (ออเดอร์ที่ชำระแล้ว)</p>
-              <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-700 sm:text-3xl">฿ {dashboardStats.paidRevenue.toLocaleString()}</p>
-              <p className="mt-1 text-[11px] text-[#8b87ad]">เขตเวลาไทย — ตามวันที่สร้างออเดอร์</p>
+          <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className={buildingPosStatCardEmeraldClass}>
+              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800/70">รายรับวันนี้</p>
+              <p className="mt-3 text-2xl font-black tabular-nums tracking-tight text-emerald-800 sm:text-3xl">
+                ฿{dashboardStats.paidRevenue.toLocaleString()}
+              </p>
+              <p className="mt-2 hidden text-[11px] font-medium text-emerald-900/60 sm:block">ชำระแล้ว · เขตเวลาไทย</p>
+              <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-emerald-600 opacity-[0.06] blur-2xl" />
             </div>
-            <div className="app-surface rounded-2xl p-4 sm:p-5">
-              <p className="text-xs text-[#66638c]">หมวดหมู่ขายดีวันนี้</p>
-              <p className="mt-1 text-lg font-bold leading-snug text-[#2e2a58] sm:text-xl">{dashboardStats.bestCategoryLabel}</p>
-              <p className="mt-1 text-xs text-[#66638c]">ขายรวม {dashboardStats.bestCategoryQty.toLocaleString()} จาน/แก้ว</p>
+            <div className={buildingPosStatCardVioletClass}>
+              <p className="text-[10px] font-black uppercase tracking-widest text-violet-800/70">หมวดขายดี</p>
+              <p className="mt-3 text-lg font-black leading-snug tracking-tight text-[#1e1b4b] sm:text-xl">
+                {dashboardStats.bestCategoryLabel}
+              </p>
+              <p className="mt-2 hidden text-xs font-medium text-[#66638c] sm:block">
+                ขายรวม {dashboardStats.bestCategoryQty.toLocaleString()} จาน/แก้ว
+              </p>
+              <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-violet-600 opacity-[0.06] blur-2xl" />
             </div>
-            <div className="app-surface rounded-2xl p-4 sm:p-5">
-              <p className="text-xs text-[#66638c]">จำนวนลูกค้าวันนี้</p>
-              <p className="mt-1 text-2xl font-bold tabular-nums text-[#4d47b6] sm:text-3xl">{dashboardStats.uniqueCustomers.toLocaleString()}</p>
-              <p className="mt-1 text-xs text-[#66638c]">นับจากชื่อ/โต๊ะที่มีออเดอร์ (วันนี้)</p>
+            <div className={`${buildingPosStatCardIndigoClass} col-span-2 sm:col-span-1`}>
+              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-800/70">ลูกค้าวันนี้</p>
+              <p className="mt-3 text-2xl font-black tabular-nums tracking-tight text-indigo-900 sm:text-3xl">
+                {dashboardStats.uniqueCustomers.toLocaleString()}
+              </p>
+              <p className="mt-2 hidden text-xs font-medium text-indigo-900/65 sm:block">นับจากชื่อ/โต๊ะที่มีออเดอร์</p>
+              <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-indigo-600 opacity-[0.06] blur-2xl" />
             </div>
           </section>
 
@@ -699,6 +765,7 @@ export function BuildingPosDashboardClient({
             orders={orders}
             menuImageById={menuImageById}
             onOrderStatusChange={(id, status) => void moveOrderStatus(id, status)}
+            onOrderDelete={(id) => void onSalesHistoryOrderDelete(id)}
             onOrderPaymentSlipSaved={(id, url) => saveOrderPaymentSlip(id, url)}
             shopLabel={shopLabel}
             logoUrl={logoUrl}
@@ -709,31 +776,80 @@ export function BuildingPosDashboardClient({
                   type="button"
                   onClick={() => void refreshData()}
                   disabled={refreshing}
-                  className="inline-flex min-h-[40px] min-w-[5.75rem] items-center justify-center rounded-xl border border-[#dcd8f0] bg-white px-3 py-2 text-sm font-semibold text-[#4d47b6] touch-manipulation transition-colors hover:bg-[#f4f3ff] active:opacity-90 disabled:opacity-60 sm:min-h-[44px] sm:px-4"
+                  className={cn(
+                    "inline-flex touch-manipulation items-center justify-center rounded-xl border border-[#dcd8f0] bg-white transition-colors hover:bg-[#f4f3ff] active:opacity-90 disabled:opacity-60",
+                    "h-11 w-11 shrink-0 md:h-auto md:w-auto md:min-h-[44px] md:min-w-[7.5rem] md:gap-2 md:px-4 md:py-2",
+                  )}
+                  aria-label={refreshing ? "กำลังรีเฟรชออเดอร์" : "รีเฟรชออเดอร์"}
+                  title="รีเฟรชออเดอร์"
                 >
-                  {refreshing ? "กำลังรีเฟรช..." : "รีเฟรชออเดอร์"}
+                  <svg
+                    viewBox="0 0 24 24"
+                    className={cn("h-5 w-5 shrink-0 text-[#4d47b6]", refreshing && "animate-spin")}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.25}
+                    aria-hidden
+                  >
+                    <path
+                      d="M21 12a9 9 0 11-3.05-6.65M21 3v6h-6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span className="hidden text-sm font-semibold text-[#4d47b6] md:inline">
+                    {refreshing ? "กำลังรีเฟรช..." : "รีเฟรชออเดอร์"}
+                  </span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTab("orders")}
-                  className="inline-flex min-h-[40px] min-w-[5.5rem] items-center justify-center rounded-xl bg-[#ecebff] px-3 py-2 text-sm font-semibold text-[#4d47b6] ring-1 ring-[#4d47b6]/20 touch-manipulation transition-colors hover:bg-[#e0dcff] active:opacity-90 sm:min-h-[44px] sm:px-4"
+                  onClick={() => setStaffOrderModalOpen(true)}
+                  className="inline-flex min-h-[44px] min-w-[5.25rem] items-center justify-center rounded-xl bg-white/75 px-3 py-2 text-sm font-black text-[#5b61ff] shadow-sm ring-1 ring-[#5b61ff]/25 backdrop-blur-sm touch-manipulation transition-colors hover:bg-white active:opacity-90 sm:min-w-[6rem] sm:px-4"
                 >
-                  QR สั่งอาหาร
+                  ออเดอร์
                 </button>
               </div>
             }
           />
+
+          <FormModal
+            open={staffOrderModalOpen}
+            onClose={() => setStaffOrderModalOpen(false)}
+            title="สั่งอาหาร · พนักงาน"
+            description="เลือกช่องทางการสั่ง แล้วเลือกเมนูเหมือนหน้าลูกค้า"
+            appearance="glass"
+            glassTint="violet"
+            size="xl"
+            mobileCentered
+          >
+            <div className="max-h-[min(82dvh,640px)] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+              <BuildingPosCustomerOrderClient
+                ownerId={ownerId}
+                trialSessionId={trialSessionId}
+                variant="staff"
+                embeddedInModal
+                onOrderSuccess={() => {
+                  void refreshData();
+                  setStaffOrderModalOpen(false);
+                }}
+              />
+            </div>
+          </FormModal>
         </div>
       ) : null}
 
-      {tab === "categories" ? (
-        <section className="app-surface rounded-2xl p-4 sm:p-5">
+      {nav.main === "menu" && nav.menu === "categories" ? (
+        <section className={buildingPosContentPanelClass}>
           <div className="flex flex-col gap-3 border-b border-[#ecebff] pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-bold text-[#2e2a58]">จัดหมวดหมู่</h2>
+              <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">จัดหมวดหมู่</h2>
               <p className="mt-1 text-xs text-[#66638c]">ลำดับเลขน้อยแสดงก่อน — ลบหมวดได้เมื่อไม่มีเมนูในหมวด</p>
             </div>
-            <button type="button" onClick={() => openCatCreate()} className="app-btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold">
+            <button
+              type="button"
+              onClick={() => openCatCreate()}
+              className="app-btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold"
+            >
               + เพิ่มหมวดหมู่
             </button>
           </div>
@@ -741,10 +857,14 @@ export function BuildingPosDashboardClient({
             {categories.map((c) => (
               <li
                 key={c.id}
-                className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#e1e3ff] bg-[#faf9ff] px-3 py-3 text-sm shadow-sm sm:flex-nowrap sm:bg-white"
+                className={`group/item flex min-h-[52px] flex-wrap items-center gap-3 text-sm sm:flex-nowrap ${buildingPosListRowCardClass}`}
               >
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-gradient-to-b from-[#4338ca] via-[#5b61ff] to-[#0d9488] opacity-90 transition-[width] duration-300 group-hover/item:w-1.5"
+                />
                 <PosThumb url={c.image_url} />
-                <span className="min-w-0 flex-1 font-medium text-[#2e2a58]">
+                <span className="relative min-w-0 flex-1 font-semibold text-[#1e1b4b]">
                   <span className="text-[#66638c]">{c.sort_order}.</span> {c.name}
                   {c.is_active ? "" : <span className="mt-0.5 block text-xs font-normal text-amber-700">ปิดใช้งาน</span>}
                 </span>
@@ -770,16 +890,20 @@ export function BuildingPosDashboardClient({
         </section>
       ) : null}
 
-      {tab === "menu" ? (
-        <section className="app-surface rounded-2xl p-4 sm:p-5">
+      {nav.main === "menu" && nav.menu === "items" ? (
+        <section className={buildingPosContentPanelClass}>
           <div className="flex flex-col gap-3 border-b border-[#ecebff] pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-bold text-[#2e2a58]">เมนูอาหาร</h2>
+              <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">เมนูอาหาร</h2>
               <p className="mt-1 text-xs text-[#66638c]">
                 ราคาต่อ 1 ที่ — ต้นทุนจากสูตร × ราคาจากบันทึกรายจ่ายล่าสุด — ปุ่มดาวแสดงในแถวแนะนำหน้าลูกค้า
               </p>
             </div>
-            <button type="button" onClick={() => openMenuCreate()} className="app-btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold">
+            <button
+              type="button"
+              onClick={() => openMenuCreate()}
+              className="app-btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold"
+            >
               + เพิ่มเมนู
             </button>
           </div>
@@ -791,11 +915,15 @@ export function BuildingPosDashboardClient({
               return (
               <li
                 key={m.id}
-                className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#e1e3ff] bg-[#faf9ff] px-3 py-3 text-sm shadow-sm sm:flex-nowrap sm:bg-white"
+                className={`group/item flex min-h-[52px] flex-wrap items-center gap-3 text-sm sm:flex-nowrap ${buildingPosListRowCardClass}`}
               >
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-gradient-to-b from-[#4338ca] via-[#5b61ff] to-[#0d9488] opacity-90 transition-[width] duration-300 group-hover/item:w-1.5"
+                />
                 <PosThumb url={m.image_url} />
-                <span className="min-w-0 flex-1">
-                  <span className="font-semibold text-[#2e2a58]">{m.name}</span>
+                <span className="relative min-w-0 flex-1">
+                  <span className="font-black tracking-tight text-[#1e1b4b]">{m.name}</span>
                   <span className="mt-0.5 block text-xs text-[#66638c]">
                     ฿{m.price.toLocaleString()} · {categories.find((c) => c.id === m.category_id)?.name ?? "-"}
                     {hasRecipe ? (
@@ -843,35 +971,124 @@ export function BuildingPosDashboardClient({
         </section>
       ) : null}
 
-      {tab === "orders" ? (
-        <div className="space-y-5 sm:space-y-6">
-          <section className="overflow-hidden rounded-3xl border border-[#d4d2f0]/90 bg-gradient-to-br from-white via-[#faf9ff] to-[#ecebff]/90 shadow-[0_24px_60px_-28px_rgba(77,71,182,0.45)]">
-            <div className="border-b border-[#e6e4fa] bg-gradient-to-r from-[#4d47b6]/[0.07] via-transparent to-[#7c3aed]/[0.04] px-4 py-4 sm:px-6 sm:py-5">
-              <h2 className="text-lg font-bold tracking-tight text-[#2e2a58] sm:text-xl">QR สั่งอาหาร</h2>
+      {nav.main === "qr" && nav.qr === "customer" ? (
+        <div className="space-y-4">
+          <section className={buildingPosQrHubOuterClass}>
+            <div className="border-b border-white/50 bg-gradient-to-r from-[#4d47b6]/[0.08] via-transparent to-[#0d9488]/[0.06] px-4 py-4 sm:px-6 sm:py-5">
+              <h2 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">ศูนย์ QR</h2>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-[#66638c] sm:text-sm">
-                แตะการ์ดเหมือนผังห้องหอพัก — เลือก &quot;ร้าน&quot; หรือโต๊ะ แล้วดาวน์โหลด / พิมพ์ QR ได้ทันที
+                เลือกบทบาท แล้วเปิด popup จัดการ QR ตามงานที่ต้องการ
               </p>
             </div>
-            <div className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-6 sm:p-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowStaffQrModal(false);
+                  setShowQrModal(true);
+                }}
+                className={cn(
+                  "group relative w-full overflow-hidden rounded-[2.5rem] border border-white/50 text-left",
+                  "bg-gradient-to-br from-white/50 via-indigo-50/35 to-violet-200/25",
+                  "p-6 shadow-[0_28px_70px_-24px_rgba(91,97,255,0.42),inset_0_1px_0_0_rgba(255,255,255,0.65)] backdrop-blur-2xl",
+                  "ring-1 ring-inset ring-white/60 transition-all duration-300",
+                  "hover:-translate-y-1 hover:border-white/75 hover:shadow-[0_34px_85px_-22px_rgba(91,97,255,0.48)]",
+                  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5b61ff]",
+                )}
+                aria-label="เปิดจัดการ QR ลูกค้า"
+              >
+                <span className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[#5b61ff]/28 blur-3xl" aria-hidden />
+                <div className="relative flex items-start gap-4 sm:gap-5">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/55 ring-1 ring-white/75 backdrop-blur-md sm:h-16 sm:w-16">
+                    <svg viewBox="0 0 24 24" className="h-7 w-7 text-[#5b61ff] sm:h-8 sm:w-8" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      <rect x="3" y="3" width="7" height="7" rx="1" />
+                      <rect x="14" y="3" width="7" height="7" rx="1" />
+                      <rect x="3" y="14" width="7" height="7" rx="1" />
+                      <path d="M14 14h3v3h-3zM20 14h1v1h-1zM18 18h3v3h-3z" />
+                    </svg>
+                  </span>
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <h3 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">QR ลูกค้า</h3>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">สร้าง QR ร้านหรือโต๊ะ แล้วส่งออกเป็นลิงก์/ไฟล์ได้ทันที</p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowQrModal(false);
+                  setShowStaffQrModal(true);
+                }}
+                className={cn(
+                  "group relative w-full overflow-hidden rounded-[2.5rem] border border-white/50 text-left",
+                  "bg-gradient-to-br from-white/50 via-amber-50/35 to-orange-100/22",
+                  "p-6 shadow-[0_28px_70px_-24px_rgba(217,119,6,0.35),inset_0_1px_0_0_rgba(255,255,255,0.65)] backdrop-blur-2xl",
+                  "ring-1 ring-inset ring-white/60 transition-all duration-300",
+                  "hover:-translate-y-1 hover:border-white/75 hover:shadow-[0_34px_85px_-22px_rgba(217,119,6,0.4)]",
+                  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600",
+                )}
+                aria-label="เปิดจัดการ QR พนักงาน"
+              >
+                <span className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-amber-400/25 blur-3xl" aria-hidden />
+                <div className="relative flex items-start gap-4 sm:gap-5">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/55 ring-1 ring-white/75 backdrop-blur-md sm:h-16 sm:w-16">
+                    <svg viewBox="0 0 24 24" className="h-7 w-7 text-amber-700 sm:h-8 sm:w-8" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                  </span>
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <h3 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">QR พนักงาน</h3>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">ลิงก์คงที่สำหรับเข้าหน้าจัดการออเดอร์พนักงาน</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </section>
+
+          <FormModal
+            open={showQrModal}
+            onClose={() => setShowQrModal(false)}
+            title="QR ลูกค้า"
+            appearance="glass"
+            glassTint="violet"
+            size="lg"
+            mobileCentered
+            footer={
+              <div className="flex w-full justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowQrModal(false)}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-white/55 bg-white/70 px-4 text-sm font-black text-[#5b61ff] shadow-sm backdrop-blur-sm"
+                >
+                  <span aria-hidden>✕</span>
+                  ปิด
+                </button>
+              </div>
+            }
+          >
+            <div className="space-y-4">
               {tableQrCards === null ? (
                 <p className="text-sm text-[#66638c]">กำลังโหลดการ์ดโต๊ะ…</p>
               ) : (
                 <>
-                  <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                  <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                     <li>
                       <button
                         type="button"
                         onClick={() => setQrCardFocus("shop")}
-                        className={`flex h-full min-h-[132px] w-full flex-col rounded-2xl border p-4 text-left shadow-sm transition ${
+                        className={cn(
+                          "flex h-full min-h-[120px] w-full flex-col rounded-2xl border p-3 text-left shadow-sm transition",
                           qrCardFocus === "shop"
                             ? "border-[#4d47b6] bg-gradient-to-b from-[#ecebff] to-white ring-2 ring-[#4d47b6]/25"
-                            : "border-slate-200/90 bg-gradient-to-b from-white to-slate-50/90 hover:border-[#4d47b6]/35 hover:shadow-md"
-                        }`}
+                            : "border-slate-200/90 bg-gradient-to-b from-white to-slate-50/90 hover:border-[#4d47b6]/35",
+                        )}
                       >
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-[#4d47b6]">ทั่วไป</span>
-                        <span className="mt-2 text-center text-base font-bold leading-tight text-[#2e2a58]">QR ร้าน</span>
-                        <span className="mt-1 text-center text-[11px] leading-snug text-[#66638c]">ลูกค้ากรอกโต๊ะเอง</span>
-                        <span className="mt-auto pt-3 text-center text-[10px] font-medium text-[#4d47b6]">แตะ → ส่งออก QR</span>
+                        <span className="mt-2 text-center text-sm font-bold text-[#2e2a58]">QR ร้าน</span>
+                        <span className="mt-1 text-center text-[11px] text-[#66638c]">ลูกค้ากรอกโต๊ะเอง</span>
                       </button>
                     </li>
                     {tableQrCards.map((label) => (
@@ -879,22 +1096,19 @@ export function BuildingPosDashboardClient({
                         <button
                           type="button"
                           onClick={() => setQrCardFocus(label)}
-                          className={`flex h-full min-h-[132px] w-full flex-col rounded-2xl border p-4 pr-9 text-left shadow-sm transition ${
+                          className={cn(
+                            "flex h-full min-h-[120px] w-full flex-col rounded-2xl border p-3 pr-8 text-left shadow-sm transition",
                             qrCardFocus === label
                               ? "border-[#4d47b6] bg-gradient-to-b from-[#ecebff] to-white ring-2 ring-[#4d47b6]/25"
-                              : "border-slate-200/90 bg-gradient-to-b from-white to-slate-50/90 hover:border-[#4d47b6]/35 hover:shadow-md"
-                          }`}
+                              : "border-slate-200/90 bg-gradient-to-b from-white to-slate-50/90 hover:border-[#4d47b6]/35",
+                          )}
                         >
                           <span className="text-[10px] font-semibold uppercase tracking-wide text-[#66638c]">โต๊ะ</span>
-                          <span className="mt-2 line-clamp-2 text-center text-2xl font-bold tabular-nums text-[#2e2a58]">
-                            {label}
-                          </span>
-                          <span className="mt-1 text-center text-[11px] text-[#66638c]">ล็อกโต๊ะในลิงก์</span>
-                          <span className="mt-auto pt-3 text-center text-[10px] font-medium text-[#4d47b6]">แตะ → ส่งออก QR</span>
+                          <span className="mt-2 line-clamp-2 text-center text-xl font-bold tabular-nums text-[#2e2a58]">{label}</span>
                         </button>
                         <button
                           type="button"
-                          className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200/90 bg-white/95 text-sm font-bold leading-none text-slate-400 shadow-sm hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                          className="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200/90 bg-white/95 text-xs font-bold text-slate-400 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
                           aria-label={`ลบการ์ดโต๊ะ ${label}`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -906,7 +1120,7 @@ export function BuildingPosDashboardClient({
                       </li>
                     ))}
                   </ul>
-                  <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-dashed border-[#d8d6ec] bg-white/50 p-3 sm:flex-row sm:items-end sm:gap-3">
+                  <div className="flex flex-col gap-2 rounded-2xl border border-dashed border-[#d8d6ec] bg-white/50 p-3 sm:flex-row sm:items-end sm:gap-3">
                     <label className="min-w-0 flex-1 text-xs font-medium text-[#4d47b6]">
                       เพิ่มการ์ดโต๊ะ
                       <input
@@ -923,182 +1137,112 @@ export function BuildingPosDashboardClient({
                         autoComplete="off"
                       />
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => addTableQrCard()}
-                      className="app-btn-primary shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold"
-                    >
+                    <button type="button" onClick={() => addTableQrCard()} className="app-btn-primary shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold">
                       เพิ่มการ์ด
                     </button>
                   </div>
                 </>
               )}
-
-              <div className="mt-6 rounded-2xl border border-[#e1e3ff] bg-white/80 p-4 shadow-inner backdrop-blur-sm sm:p-5">
-                {!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://") ? (
-                  <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-100">
-                    ตั้งค่า URL โดเมนร้าน (https://…) ในระบบ เพื่อให้ QR แสกนได้จากมือถือลูกค้า
-                  </p>
-                ) : null}
-
+              <div className="rounded-2xl border border-[#e1e3ff] bg-white/80 p-4 shadow-inner backdrop-blur-sm sm:p-5">
                 {qrCardFocus === "shop" ? (
                   <>
                     <h3 className="text-sm font-semibold text-[#2e2a58] sm:text-base">ส่งออก QR — ร้านทั่วไป</h3>
-                    <p className="mt-1 text-xs text-[#66638c]">ลูกค้าเลือกเมนูและกรอกเลขโต๊ะเองหลังแสกน</p>
                     {baseUrl.startsWith("http") && orderQrUrl ? (
-                      <>
-                        <div className="mt-3">
-                          <button
-                            type="button"
-                            onClick={() => void copyOrderLink(orderQrUrl)}
-                            className="app-btn-soft rounded-xl px-4 py-2.5 text-sm font-semibold text-[#4d47b6]"
-                          >
-                            คัดลอกลิงก์
-                          </button>
+                      <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+                        {posterUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={posterUrl} alt="QR สั่งอาหารร้าน" className={cn(shopQrTemplateGeneratedPosterThumbClass, "shrink-0")} />
+                        ) : null}
+                        <div className="grid w-full max-w-md flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
+                          <button type="button" onClick={() => void copyOrderLink(orderQrUrl)} className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:col-span-2 sm:py-2">คัดลอกลิงก์</button>
+                          <button type="button" disabled={qrBusy || !orderQrUrl} onClick={() => void downloadQrPdf()} className="app-btn-primary rounded-xl px-4 py-3 text-sm font-semibold sm:py-2">ดาวน์โหลด PDF (A4)</button>
+                          <button type="button" disabled={qrBusy || !orderQrUrl} onClick={() => void downloadQrPng()} className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:py-2">ดาวน์โหลด PNG</button>
                         </div>
-                        <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-                          {posterUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={posterUrl}
-                              alt="QR สั่งอาหารร้าน"
-                              className={cn(shopQrTemplateGeneratedPosterThumbClass, "shrink-0")}
-                            />
-                          ) : (
-                            <div className="mx-auto flex min-h-[200px] w-full max-w-[280px] shrink-0 items-center justify-center rounded-2xl border border-dashed border-[#d8d6ec] bg-[#faf9ff] px-3">
-                              <span className="text-center text-xs text-[#9b98c4]">กำลังสร้างใบป้าย…</span>
-                            </div>
-                          )}
-                          <div className="grid w-full max-w-md flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
-                            <button
-                              type="button"
-                              disabled={qrBusy || !orderQrUrl}
-                              onClick={() => void downloadQrPdf()}
-                              className="app-btn-primary rounded-xl px-4 py-3 text-sm font-semibold sm:py-2"
-                            >
-                              ดาวน์โหลด PDF (A4)
-                            </button>
-                            <button
-                              type="button"
-                              disabled={qrBusy || !orderQrUrl}
-                              onClick={() => void downloadQrPdfA5()}
-                              className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:py-2"
-                            >
-                              ดาวน์โหลด PDF (A5)
-                            </button>
-                            <button
-                              type="button"
-                              disabled={qrBusy || !orderQrUrl}
-                              onClick={() => void downloadQrPng()}
-                              className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:py-2"
-                            >
-                              ดาวน์โหลด PNG
-                            </button>
-                            <button
-                              type="button"
-                              disabled={!posterUrl}
-                              onClick={() => printQrPoster("A4")}
-                              className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:py-2"
-                            >
-                              พิมพ์ A4
-                            </button>
-                            <button
-                              type="button"
-                              disabled={!posterUrl}
-                              onClick={() => printQrPoster("A5")}
-                              className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:col-span-2 sm:py-2"
-                            >
-                              พิมพ์ A5
-                            </button>
-                          </div>
-                        </div>
-                      </>
-                    ) : baseUrl.startsWith("http") ? (
-                      <p className="mt-3 text-xs text-[#66638c]">กำลังเตรียมลิงก์…</p>
+                      </div>
                     ) : null}
                   </>
                 ) : (
                   <>
-                    <h3 className="text-sm font-semibold text-[#2e2a58] sm:text-base">
-                      ส่งออก QR — โต๊ะ <span className="tabular-nums text-[#4d47b6]">{qrCardFocus}</span>
-                    </h3>
-                    <p className="mt-1 text-xs text-[#66638c]">ลูกค้าแสกนแล้วหน้าสั่งอาหารจะกรอกโต๊ะนี้ให้อัตโนมัติ</p>
+                    <h3 className="text-sm font-semibold text-[#2e2a58] sm:text-base">ส่งออก QR — โต๊ะ {qrCardFocus}</h3>
                     {baseUrl.startsWith("http") && posTableOrderUrl ? (
-                      <>
-                        <div className="mt-3">
-                          <button
-                            type="button"
-                            onClick={() => void copyOrderLink(posTableOrderUrl)}
-                            className="app-btn-soft rounded-xl px-4 py-2.5 text-sm font-semibold text-[#4d47b6]"
-                          >
-                            คัดลอกลิงก์
-                          </button>
+                      <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+                        {posTablePosterUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={posTablePosterUrl} alt={`QR โต๊ะ ${qrCardFocus}`} className={cn(shopQrTemplateGeneratedPosterThumbClass, "shrink-0")} />
+                        ) : null}
+                        <div className="grid w-full max-w-md flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
+                          <button type="button" onClick={() => void copyOrderLink(posTableOrderUrl)} className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:col-span-2 sm:py-2">คัดลอกลิงก์</button>
+                          <button type="button" disabled={posTableQrBusy || !posTableQrPng} onClick={() => void downloadPosTablePdf("a4")} className="app-btn-primary rounded-xl px-4 py-3 text-sm font-semibold sm:py-2">ดาวน์โหลด PDF (A4)</button>
+                          <button type="button" disabled={posTableQrBusy || !posTableQrPng} onClick={() => void downloadPosTablePng()} className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:py-2">ดาวน์โหลด PNG</button>
                         </div>
-                        <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-                          {posTablePosterUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={posTablePosterUrl}
-                              alt={`QR โต๊ะ ${qrCardFocus}`}
-                              className={cn(shopQrTemplateGeneratedPosterThumbClass, "shrink-0")}
-                            />
-                          ) : (
-                            <div className="mx-auto flex min-h-[200px] w-full max-w-[280px] shrink-0 items-center justify-center rounded-2xl border border-dashed border-[#d8d6ec] bg-[#faf9ff] px-3">
-                              <span className="text-center text-xs text-[#9b98c4]">กำลังสร้างใบป้าย…</span>
-                            </div>
-                          )}
-                          <div className="grid w-full max-w-md flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
-                            <button
-                              type="button"
-                              disabled={posTableQrBusy || !posTableQrPng}
-                              onClick={() => void downloadPosTablePdf("a4")}
-                              className="app-btn-primary rounded-xl px-4 py-3 text-sm font-semibold sm:py-2"
-                            >
-                              ดาวน์โหลด PDF (A4)
-                            </button>
-                            <button
-                              type="button"
-                              disabled={posTableQrBusy || !posTableQrPng}
-                              onClick={() => void downloadPosTablePdf("a5")}
-                              className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:py-2"
-                            >
-                              ดาวน์โหลด PDF (A5)
-                            </button>
-                            <button
-                              type="button"
-                              disabled={posTableQrBusy || !posTableQrPng}
-                              onClick={() => void downloadPosTablePng()}
-                              className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:py-2"
-                            >
-                              ดาวน์โหลด PNG
-                            </button>
-                            <button
-                              type="button"
-                              disabled={!posTablePosterUrl}
-                              onClick={() => printPosTablePoster("A4")}
-                              className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:py-2"
-                            >
-                              พิมพ์ A4
-                            </button>
-                            <button
-                              type="button"
-                              disabled={!posTablePosterUrl}
-                              onClick={() => printPosTablePoster("A5")}
-                              className="app-btn-soft rounded-xl px-4 py-3 text-sm font-semibold text-[#4d47b6] sm:col-span-2 sm:py-2"
-                            >
-                              พิมพ์ A5
-                            </button>
-                          </div>
-                        </div>
-                      </>
-                    ) : baseUrl.startsWith("http") ? (
-                      <p className="mt-3 text-xs text-[#66638c]">กำลังเตรียมลิงก์…</p>
+                      </div>
                     ) : null}
                   </>
                 )}
               </div>
             </div>
-          </section>
+          </FormModal>
+
+          <FormModal
+            open={showStaffQrModal}
+            onClose={() => setShowStaffQrModal(false)}
+            title="QR พนักงาน"
+            appearance="glass"
+            glassTint="amber"
+            size="lg"
+            mobileCentered
+            footer={
+              <div className="flex w-full justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowStaffQrModal(false)}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-white/55 bg-white/70 px-4 text-sm font-black text-amber-700 shadow-sm backdrop-blur-sm"
+                >
+                  <span aria-hidden>✕</span>
+                  ปิด
+                </button>
+              </div>
+            }
+          >
+            <BuildingPosStaffQrSection shopLabel={shopLabel} logoUrl={logoUrl} compactForModal />
+          </FormModal>
+        </div>
+      ) : null}
+
+      {nav.main === "finance" && nav.finance === "sales" ? (
+        <div className="space-y-4 sm:space-y-5">
+          <BuildingPosSalesHistoryPanel
+            orders={orders}
+            categories={categories}
+            menuItems={menuItems}
+            onOrderStatusChange={(id, s) => void onSalesHistoryOrderStatusChange(id, s)}
+            onOrderDelete={(id) => void onSalesHistoryOrderDelete(id)}
+            onRefresh={() => void refreshData()}
+            refreshing={refreshing}
+            onSlipImageOpen={(url) => slipLightbox.open(url)}
+          />
+          <AppImageLightbox src={slipLightbox.src} alt="สลิปโอน" onClose={slipLightbox.close} />
+        </div>
+      ) : null}
+
+      {nav.main === "finance" && nav.finance === "costs" ? (
+        <div className="min-w-0 space-y-5">
+          <div className="flex flex-wrap justify-end gap-2 print:hidden">
+            <button
+              type="button"
+              onClick={() => void refreshData()}
+              disabled={refreshing}
+              className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-white/55 bg-white/70 px-4 text-sm font-black text-[#5b61ff] shadow-sm backdrop-blur-sm hover:bg-white/90 disabled:opacity-60"
+            >
+              {refreshing ? "กำลังรีเฟรช…" : "รีเฟรชข้อมูล"}
+            </button>
+          </div>
+          <BuildingPosIngredientsPanel ingredients={ingredients} onChanged={() => void loadAll()} />
+          <BuildingPosPurchasesPanel
+            purchaseOrders={purchaseOrders}
+            ingredients={ingredients}
+            onChanged={() => void loadAll()}
+          />
         </div>
       ) : null}
 
@@ -1112,6 +1256,7 @@ export function BuildingPosDashboardClient({
         title={catEditing ? "แก้ไขหมวดหมู่" : "เพิ่มหมวดหมู่"}
         description="กรอกข้อมูลหมวดหมู่แล้วกดบันทึก — ลำดับเลขน้อยแสดงก่อนในหน้าลูกค้า"
         size="md"
+        mobileCentered
         footer={
           <FormModalFooterActions
             onCancel={() => {
@@ -1199,6 +1344,7 @@ export function BuildingPosDashboardClient({
         title={menuEditing ? "แก้ไขเมนู" : "เพิ่มเมนูอาหาร"}
         description="เลือกหมวดหมู่ ระบุชื่อและราคา — รายละเอียดจะแสดงหน้าลูกค้า"
         size="lg"
+        mobileCentered
         footer={
           <FormModalFooterActions
             onCancel={() => {
@@ -1303,7 +1449,7 @@ export function BuildingPosDashboardClient({
             <div className="rounded-2xl border border-[#e6e4fa] bg-[#faf9ff]/80 p-3">
               <p className="text-xs font-semibold text-[#4d47b6]">สูตร / ต้นทุน (ต่อ 1 ที่ขาย)</p>
               <p className="mt-0.5 text-[11px] leading-snug text-[#66638c]">
-                เลือกหมวดหมู่วัตถุดิบจากหน้า &quot;ต้นทุน / รายจ่าย&quot; (จัดการหมวด) และจำนวนต่อจาน — ราคาต่อหน่วยใช้จากบันทึกรายจ่ายล่าสุด
+                เลือกหมวดหมู่วัตถุดิบจากแท็บ &quot;การเงิน → ต้นทุน / รายจ่าย&quot; (จัดการหมวด) และจำนวนต่อจาน — ราคาต่อหน่วยใช้จากบันทึกรายจ่ายล่าสุด
               </p>
               {ingredients.length === 0 ? (
                 <p className="mt-2 text-xs text-amber-800">ยังไม่มีรายการของ — เพิ่มที่แท็บ &quot;รายการของ&quot; ก่อน</p>

@@ -211,6 +211,15 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  if (href.startsWith("/dashboard/laundry")) {
+    return (
+      <Svg>
+        <rect x="4" y="3" width="16" height="18" rx="3" stroke="currentColor" strokeWidth="2" />
+        <circle cx="12" cy="8" r="1.5" fill="currentColor" />
+        <circle cx="12" cy="14" r="4" stroke="currentColor" strokeWidth="2" />
+      </Svg>
+    );
+  }
   if (href === "/dashboard/admin" || href.startsWith("/dashboard/admin/")) {
     return (
       <Svg>

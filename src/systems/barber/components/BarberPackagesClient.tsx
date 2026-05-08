@@ -199,16 +199,25 @@ export function BarberPackagesClient({
             {list.map((p) => (
               <li
                 key={p.id}
-                className={`flex flex-wrap items-center justify-between gap-3 ${barberOffersListRowCardClass}`}
+                className={`group/item flex min-h-[52px] flex-wrap items-center justify-between gap-3 ${barberOffersListRowCardClass}`}
               >
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-semibold leading-snug text-[#2e2a58]">{p.name}</p>
-                  <p className="mt-1 text-xs tabular-nums text-[#5f5a8a]">
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-gradient-to-b from-[#4338ca] via-[#5b61ff] to-[#0d9488] opacity-90 transition-[width,opacity] duration-300 group-hover/item:w-1.5 group-hover/item:opacity-100"
+                />
+                <div className="relative min-w-0 flex-1">
+                  <p className="text-sm font-black leading-snug tracking-tight text-[#1e1b4b] sm:text-[15px]">
+                    {p.name}
+                  </p>
+                  <p className="mt-2 border-t border-[#ecebff]/90 pt-2 text-xs tabular-nums leading-snug text-[#5f5a8a]">
                     <span className="font-semibold text-[#5b61ff]">
                       {p.price.toLocaleString("th-TH", { maximumFractionDigits: 2 })}
                     </span>{" "}
-                    บาท ·{" "}
-                    <span className="font-semibold text-[#0d9488]/90">{p.totalSessions}</span> ครั้ง
+                    บาท
+                    <span className="mx-1.5 text-[#d4d0ec]" aria-hidden>
+                      ·
+                    </span>
+                    <span className="font-semibold text-[#0d9488]">{p.totalSessions}</span> ครั้ง
                   </p>
                 </div>
                 <div className={barberIconToolbarGroupClass} role="group" aria-label="ลบแพ็กเกจ">
@@ -218,7 +227,7 @@ export function BarberPackagesClient({
                     onClick={() => remove(p.id)}
                     className="text-[#9b97b8] hover:bg-red-50 hover:text-red-600"
                   >
-                    <AppIconTrash className="h-3.5 w-3.5" />
+                    <AppIconTrash className="h-3.5 w-3.5" aria-hidden />
                   </AppIconToolbarButton>
                 </div>
               </li>

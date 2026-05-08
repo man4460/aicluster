@@ -10,6 +10,7 @@ import {
   uploadBuildingPosStaffImage,
 } from "@/systems/building-pos/building-pos-service";
 import { prepareBuildingPosSlipImageFile } from "@/systems/building-pos/building-pos-slip-image";
+import { BuildingPosRemoteImg } from "@/systems/building-pos/components/building-pos-remote-image";
 import { downloadPosTableStaticHtmlAsA4Pdf } from "@/systems/building-pos/pos-table-bill-pdf-capture";
 import {
   buildPosTableBillInnerHtml,
@@ -115,6 +116,92 @@ export const statusLabelTh: Record<PosOrder["status"], string> = {
   PAID: "ชำระแล้ว",
 };
 
+const POS_ORDER_STATUSES: readonly PosOrder["status"][] = ["NEW", "PREPARING", "SERVED", "PAID"] as const;
+
+function PosOrderStatusGlyph({ status }: { status: PosOrder["status"] }) {
+  const cls = "h-[15px] w-[15px] sm:h-[18px] sm:w-[18px]";
+  switch (status) {
+    case "NEW":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3 2" strokeLinecap="round" />
+        </svg>
+      );
+    case "PREPARING":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <path d="M4 4v8a3 3 0 0 0 6 0V4M10 4v18" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M15 4v18M15 9h5M15 14h4" strokeLinecap="round" />
+        </svg>
+      );
+    case "SERVED":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <path d="M3 11h18M6 11a6 6 0 0 1 12 0" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M12 11v7M8 18h8" strokeLinecap="round" />
+        </svg>
+      );
+    case "PAID":
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M16.5 9.5 11 15l-3-3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+  }
+}
+
+function PosOrderStatusIconStrip({
+  orderId,
+  current,
+  onSelect,
+}: {
+  orderId: number;
+  current: PosOrder["status"];
+  onSelect: (status: PosOrder["status"]) => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "snap-x snap-mandatory",
+      )}
+      role="toolbar"
+      aria-label={`อัปเดตสถานะออเดอร์ ${orderId}`}
+    >
+      {POS_ORDER_STATUSES.map((s) => {
+        const active = s === current;
+        const label = statusLabelTh[s];
+        return (
+          <button
+            key={s}
+            type="button"
+            title={label}
+            aria-label={label}
+            aria-current={active ? "true" : undefined}
+            onClick={() => {
+              if (active) return;
+              onSelect(s);
+            }}
+            className={cn(
+              "snap-start flex h-8 min-w-[2rem] shrink-0 items-center justify-center rounded-lg border text-[#4d47b6] transition-all sm:h-10 sm:min-w-[2.5rem] sm:rounded-xl",
+              active
+                ? "cursor-default border-[#5b61ff] bg-white shadow-sm ring-2 ring-[#5b61ff]/30"
+                : cn(
+                    "border-transparent bg-white/35 opacity-[0.72] hover:bg-white/75 hover:opacity-100 active:scale-95",
+                    s === "PAID" ? "text-emerald-700 hover:text-emerald-800" : "hover:ring-1 hover:ring-white/50",
+                  ),
+            )}
+          >
+            <PosOrderStatusGlyph status={s} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** ปี–เดือนปัจจุบัน (เขตเวลาไทย) — ค่าเดือนเป็น "1".."12" ให้ตรงกับ `<option value={String(m)}>` */
 function initialBangkokSalesFilters(): { year: string; month: string } {
   const key = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
@@ -167,10 +254,38 @@ function matchesSearch(order: PosOrder, q: string): boolean {
   return blob.includes(s);
 }
 
+function isTakeawayOrder(order: Pick<PosOrder, "table_no">): boolean {
+  const t = (order.table_no || "").trim().toLowerCase();
+  if (!t) return true;
+  return t === "-" || t === "—" || t === "takeaway" || t === "to-go" || t.includes("กลับบ้าน");
+}
+
+function getOrderChannelMeta(
+  order: Pick<PosOrder, "table_no" | "customer_session_id">,
+): { label: "พนักงานสั่ง" | "ลูกค้าสั่ง" | "นำกลับบ้าน"; className: string } {
+  if (isTakeawayOrder(order)) {
+    return {
+      label: "นำกลับบ้าน",
+      className: "border-amber-200 bg-amber-50 text-amber-900",
+    };
+  }
+  if ((order.customer_session_id ?? "").trim()) {
+    return {
+      label: "ลูกค้าสั่ง",
+      className: "border-sky-200 bg-sky-50 text-sky-900",
+    };
+  }
+  return {
+    label: "พนักงานสั่ง",
+    className: "border-violet-200 bg-violet-50 text-violet-900",
+  };
+}
+
 type OpenTablesProps = {
   orders: PosOrder[];
   menuImageById: Map<number, string>;
   onOrderStatusChange: (id: number, status: PosOrder["status"]) => void;
+  onOrderDelete?: (id: number) => void | Promise<void>;
   /** บันทึก URL รูปสลิปหลังอัปโหลด — แสดงซ้ำในหน้าดูยอดขาย */
   onOrderPaymentSlipSaved?: (orderId: number, imageUrl: string) => Promise<void>;
   /** เช่น ปุ่มไปแท็บออเดอร์ — มุมบนขวาของหัวข้อ */
@@ -187,6 +302,7 @@ export function BuildingPosOpenTablesPanel({
   orders,
   menuImageById,
   onOrderStatusChange,
+  onOrderDelete,
   onOrderPaymentSlipSaved,
   headerAction,
   shopLabel,
@@ -455,7 +571,7 @@ export function BuildingPosOpenTablesPanel({
             </h2>
             {headerAction ? <div className="shrink-0 pt-0.5">{headerAction}</div> : null}
           </div>
-          <p className="mt-1 text-xs text-[#66638c]">
+          <p className="mt-1 hidden text-xs text-[#66638c] sm:block">
             แสดงเฉพาะออเดอร์ที่ยังไม่ชำระ — สีการ์ดบอกขั้นตอนหลัก (เหลือง = ใหม่, ฟ้า = กำลังทำ, เขียว = เสิร์ฟแล้ว) — พอชำระเงินแล้วโต๊ะจะหายจากที่นี่
           </p>
         </div>
@@ -464,10 +580,21 @@ export function BuildingPosOpenTablesPanel({
             ตอนนี้ไม่มีโต๊ะที่มีออเดอร์ค้าง
           </AppEmptyState>
         ) : (
-          <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {activeByTable.map(([tableKey, list]) => {
               const total = list.reduce((s, o) => s + o.total_amount, 0);
               const counts = statusCountsForOpenOrders(list);
+              const channelCounts = list.reduce(
+                (acc, order) => {
+                  const ch = getOrderChannelMeta(order).label;
+                  acc[ch] += 1;
+                  return acc;
+                },
+                { "พนักงานสั่ง": 0, "ลูกค้าสั่ง": 0, "นำกลับบ้าน": 0 } as Record<
+                  "พนักงานสั่ง" | "ลูกค้าสั่ง" | "นำกลับบ้าน",
+                  number
+                >,
+              );
               const dom = dominantOpenStatus(list);
               const tone = tableCardTone[dom];
               return (
@@ -476,47 +603,69 @@ export function BuildingPosOpenTablesPanel({
                     type="button"
                     onClick={() => setTableModalKey(tableKey)}
                     className={cn(
-                      "flex h-full min-h-[148px] w-full flex-col rounded-2xl border-2 p-4 text-left shadow-sm transition hover:shadow-md",
+                      "flex h-full min-h-[148px] w-full flex-col rounded-2xl border-2 p-4 text-left shadow-sm transition hover:shadow-md sm:flex-row sm:items-stretch sm:justify-between sm:gap-3",
                       tone.border,
                       tone.bg,
                       tone.hoverBorder,
                       tone.ring,
                     )}
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
                       <span className="text-[10px] font-semibold uppercase tracking-wide text-[#66638c]">โต๊ะ</span>
-                      <span
-                        className={cn(
-                          "max-w-[65%] truncate rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1",
-                          statusBadgeClass[dom],
-                        )}
-                        title={tone.stepLabel}
-                      >
-                        {tone.stepLabel}
-                      </span>
+                      <span className="mt-1 line-clamp-2 block text-xl font-bold tabular-nums text-[#2e2a58]">{tableKey}</span>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10px] font-semibold">
+                        {channelCounts["พนักงานสั่ง"] > 0 ? (
+                          <span className="rounded-md border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-violet-900">
+                            พนักงานสั่ง {channelCounts["พนักงานสั่ง"]}
+                          </span>
+                        ) : null}
+                        {channelCounts["ลูกค้าสั่ง"] > 0 ? (
+                          <span className="rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-sky-900">
+                            ลูกค้าสั่ง {channelCounts["ลูกค้าสั่ง"]}
+                          </span>
+                        ) : null}
+                        {channelCounts["นำกลับบ้าน"] > 0 ? (
+                          <span className="rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-amber-900">
+                            นำกลับบ้าน {channelCounts["นำกลับบ้าน"]}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
-                    <span className="mt-1 line-clamp-2 text-xl font-bold tabular-nums text-[#2e2a58]">{tableKey}</span>
-                    <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-semibold">
-                      {counts.NEW > 0 ? (
-                        <span className="rounded-md bg-amber-100/95 px-1.5 py-0.5 text-amber-900 ring-1 ring-amber-200/70">
-                          ใหม่ {counts.NEW}
+                    <div className="mt-2 border-t border-white/60 pt-2.5 sm:mt-0 sm:w-[44%] sm:max-w-[220px] sm:border-l sm:border-t-0 sm:pl-3 sm:pt-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-[#66638c]">สถานะรวม</span>
+                        <span
+                          className={cn(
+                            "max-w-[65%] truncate rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1",
+                            statusBadgeClass[dom],
+                          )}
+                          title={tone.stepLabel}
+                        >
+                          {tone.stepLabel}
                         </span>
-                      ) : null}
-                      {counts.PREPARING > 0 ? (
-                        <span className="rounded-md bg-sky-100/95 px-1.5 py-0.5 text-sky-900 ring-1 ring-sky-200/70">
-                          กำลังทำ {counts.PREPARING}
-                        </span>
-                      ) : null}
-                      {counts.SERVED > 0 ? (
-                        <span className="rounded-md bg-emerald-100/95 px-1.5 py-0.5 text-emerald-900 ring-1 ring-emerald-200/70">
-                          เสิร์ฟแล้ว {counts.SERVED}
-                        </span>
-                      ) : null}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-semibold">
+                        {counts.NEW > 0 ? (
+                          <span className="rounded-md bg-amber-100/95 px-1.5 py-0.5 text-amber-900 ring-1 ring-amber-200/70">
+                            ใหม่ {counts.NEW}
+                          </span>
+                        ) : null}
+                        {counts.PREPARING > 0 ? (
+                          <span className="rounded-md bg-sky-100/95 px-1.5 py-0.5 text-sky-900 ring-1 ring-sky-200/70">
+                            กำลังทำ {counts.PREPARING}
+                          </span>
+                        ) : null}
+                        {counts.SERVED > 0 ? (
+                          <span className="rounded-md bg-emerald-100/95 px-1.5 py-0.5 text-emerald-900 ring-1 ring-emerald-200/70">
+                            เสิร์ฟแล้ว {counts.SERVED}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-2 flex items-end justify-between">
+                        <span className="text-[11px] text-[#66638c]">รวม {list.length} ออเดอร์</span>
+                        <span className="text-sm font-semibold tabular-nums text-emerald-700">฿ {total.toLocaleString()}</span>
+                      </div>
                     </div>
-                    <span className="mt-1.5 text-[11px] text-[#66638c]">รวม {list.length} ออเดอร์</span>
-                    <span className="mt-auto pt-2 text-sm font-semibold tabular-nums text-emerald-700">
-                      ฿ {total.toLocaleString()}
-                    </span>
                   </button>
                 </li>
               );
@@ -527,6 +676,7 @@ export function BuildingPosOpenTablesPanel({
 
       <FormModal
         open={tableModalKey !== null}
+        mobileCentered
         title={
           tableModalKey ?
             tableModalView === "details" ?
@@ -616,19 +766,26 @@ export function BuildingPosOpenTablesPanel({
                   <p className="mt-2 text-sm font-medium text-[#2e2a58]">
                     {o.customer_name || "ลูกค้า"} · โต๊ะ {o.table_no || "—"}
                   </p>
+                  <p className="mt-1">
+                    <span
+                      className={cn(
+                        "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                        getOrderChannelMeta(o).className,
+                      )}
+                    >
+                      {getOrderChannelMeta(o).label}
+                    </span>
+                  </p>
                   <ul className="mt-2 space-y-1.5 text-sm text-[#66638c]">
                     {o.items.map((it, idx) => (
                       <li key={`${o.id}-${idx}`} className="flex gap-2">
-                        {menuImageById.get(it.menu_item_id) ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={menuImageById.get(it.menu_item_id)!}
-                            alt=""
-                            className="h-8 w-8 shrink-0 rounded-md border border-[#e1e3ff] object-cover"
-                          />
-                        ) : (
-                          <div className="h-8 w-8 shrink-0 rounded-md border border-dashed border-[#d8d6ec] bg-white" />
-                        )}
+                        <BuildingPosRemoteImg
+                          src={menuImageById.get(it.menu_item_id)}
+                          className="h-8 w-8 shrink-0 rounded-md border border-[#e1e3ff] object-cover"
+                          fallback={
+                            <div className="h-8 w-8 shrink-0 rounded-md border border-dashed border-[#d8d6ec] bg-white" />
+                          }
+                        />
                         <span>
                           {it.name} × {it.qty}
                           {it.note ? <span className="block text-xs text-[#9b98c4]">{it.note}</span> : null}
@@ -674,20 +831,48 @@ export function BuildingPosOpenTablesPanel({
                       </div>
                     </div>
                   : null}
-                  <label className="mt-2 block text-xs font-medium text-[#66638c]">
-                    สถานะ
-                    <select
-                      className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
-                      value={o.status}
-                      onChange={(e) => onOrderStatusChange(o.id, e.target.value as PosOrder["status"])}
-                    >
-                      {(Object.keys(statusLabelTh) as PosOrder["status"][]).map((s) => (
-                        <option key={s} value={s}>
-                          {statusLabelTh[s]} ({s})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <div className="mt-2 border-t border-[#dcd8f0] pt-2">
+                    <p className="mb-1 hidden text-[10px] font-bold uppercase tracking-[0.12em] text-[#66638c] sm:block">
+                      อัปเดตสถานะ
+                    </p>
+                    <div id={`pos-open-order-status-${o.id}`}>
+                      <PosOrderStatusIconStrip
+                        orderId={o.id}
+                        current={o.status}
+                        onSelect={(s) => onOrderStatusChange(o.id, s)}
+                      />
+                    </div>
+                    <div className="mt-2 flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-[#4d47b6]"
+                        aria-label="แก้ไขสถานะ"
+                        title="แก้ไขสถานะ"
+                        onClick={() => {
+                          const root = document.getElementById(`pos-open-order-status-${o.id}`);
+                          const btn = root?.querySelector("button");
+                          if (btn instanceof HTMLButtonElement) btn.focus();
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+                          <path d="m16.5 3.5 4 4L8 20H4v-4z" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                      {onOrderDelete ? (
+                        <button
+                          type="button"
+                          onClick={() => void onOrderDelete(o.id)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100 hover:text-rose-700"
+                          aria-label="ลบรายการ"
+                          title="ลบรายการ"
+                        >
+                          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+                            <path d="M4 7h16M9 7V5h6v2M7 7l1 13h8l1-13" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -823,15 +1008,18 @@ function posSalesStatusPillClass(s: PosOrder["status"]): string {
 function PosSalesHistoryCard({
   order: o,
   onStatusChange,
+  onDelete,
   onSlipImageOpen,
 }: {
   order: PosOrder;
   onStatusChange: (id: number, status: PosOrder["status"]) => void;
+  onDelete: (id: number) => void;
   onSlipImageOpen?: (imageUrl: string) => void;
 }) {
   const timeStr = new Date(o.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
   const itemsLine = o.items.map((i) => `${i.name}×${i.qty}`).join(", ");
   const slipUrl = o.payment_slip_url?.trim() ?? "";
+  const orderChannel = getOrderChannelMeta(o);
   return (
     <article className="rounded-xl border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm transition hover:border-slate-300">
       <div className="flex items-start justify-between gap-2">
@@ -859,6 +1047,11 @@ function PosSalesHistoryCard({
       <p className="mt-1 line-clamp-2 text-sm font-semibold leading-tight text-slate-900">{itemsLine || "—"}</p>
       <p className="truncate text-[11px] leading-tight text-slate-600">
         <span className="text-slate-400">ลูกค้า / โต๊ะ</span> · {o.customer_name || "—"} · {o.table_no || "—"}
+      </p>
+      <p className="mt-0.5">
+        <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold", orderChannel.className)}>
+          {orderChannel.label}
+        </span>
       </p>
       {o.note?.trim() ? (
         <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-slate-600">{o.note}</p>
@@ -889,20 +1082,146 @@ function PosSalesHistoryCard({
         </div>
       : null}
       <div className="mt-2 border-t border-slate-100 pt-2">
-        <label className="block text-[10px] font-medium text-slate-400">สถานะ</label>
+        <p className="mb-1 hidden text-[10px] font-medium text-slate-400 sm:block">สถานะ</p>
+        <PosOrderStatusIconStrip orderId={o.id} current={o.status} onSelect={(s) => onStatusChange(o.id, s)} />
+        <div className="mt-2 flex items-center justify-end gap-1.5">
+          <button
+            type="button"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-[#4d47b6]"
+            aria-label="แก้ไขสถานะ"
+            title="แก้ไขสถานะ"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+              <path d="m16.5 3.5 4 4L8 20H4v-4z" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(o.id)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100 hover:text-rose-700"
+            aria-label="ลบรายการ"
+            title="ลบรายการ"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+              <path d="M4 7h16M9 7V5h6v2M7 7l1 13h8l1-13" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+type BuildingPosSalesFilterFormFieldsProps = {
+  idPrefix: string;
+  layout: "toolbar" | "modal";
+  filterYear: string;
+  setFilterYear: (v: string) => void;
+  filterMonth: string;
+  setFilterMonth: (v: string) => void;
+  filterDay: string;
+  setFilterDay: (v: string) => void;
+  search: string;
+  setSearch: (v: string) => void;
+  yearOptions: number[];
+  dayNumbers: number[];
+};
+
+function BuildingPosSalesFilterFormFields({
+  idPrefix,
+  layout,
+  filterYear,
+  setFilterYear,
+  filterMonth,
+  setFilterMonth,
+  filterDay,
+  setFilterDay,
+  search,
+  setSearch,
+  yearOptions,
+  dayNumbers,
+}: BuildingPosSalesFilterFormFieldsProps) {
+  const wrap =
+    layout === "modal"
+      ? "flex flex-col gap-4"
+      : "flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end";
+
+  return (
+    <div className={wrap}>
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="text-xs font-medium text-[#4d47b6]" id={`${idPrefix}-year-lbl`}>
+          ปี
+        </span>
         <select
-          className="app-input mt-1 min-h-[44px] w-full touch-manipulation rounded-xl px-3 py-2 text-sm"
-          value={o.status}
-          onChange={(e) => onStatusChange(o.id, e.target.value as PosOrder["status"])}
+          id={`${idPrefix}-year`}
+          aria-labelledby={`${idPrefix}-year-lbl`}
+          className="app-input min-h-[44px] w-full min-w-[7rem] cursor-pointer touch-manipulation rounded-xl px-3 py-2 text-sm sm:w-auto"
+          value={filterYear}
+          onChange={(e) => {
+            setFilterYear(e.target.value);
+            setFilterMonth("");
+            setFilterDay("");
+          }}
         >
-          {(Object.keys(statusLabelTh) as PosOrder["status"][]).map((s) => (
-            <option key={s} value={s}>
-              {statusLabelTh[s]} ({s})
+          <option value="">ทั้งหมด</option>
+          {yearOptions.map((y) => (
+            <option key={y} value={String(y)}>
+              {y}
             </option>
           ))}
         </select>
       </div>
-    </article>
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="text-xs font-medium text-[#4d47b6]" id={`${idPrefix}-month-lbl`}>
+          เดือน
+        </span>
+        <select
+          id={`${idPrefix}-month`}
+          aria-labelledby={`${idPrefix}-month-lbl`}
+          className="app-input min-h-[44px] w-full min-w-[8rem] cursor-pointer touch-manipulation rounded-xl px-3 py-2 text-sm sm:w-auto"
+          value={filterMonth}
+          onChange={(e) => {
+            setFilterMonth(e.target.value);
+            setFilterDay("");
+          }}
+        >
+          <option value="">ทุกเดือน</option>
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+            <option key={m} value={String(m)}>
+              {m}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="text-xs font-medium text-[#4d47b6]" id={`${idPrefix}-day-lbl`}>
+          วัน
+        </span>
+        <select
+          id={`${idPrefix}-day`}
+          aria-labelledby={`${idPrefix}-day-lbl`}
+          className="app-input min-h-[44px] w-full min-w-[6rem] cursor-pointer touch-manipulation rounded-xl px-3 py-2 text-sm sm:w-auto"
+          value={dayNumbers.includes(Number(filterDay)) ? filterDay : ""}
+          onChange={(e) => setFilterDay(e.target.value)}
+        >
+          <option value="">ทุกวัน</option>
+          {dayNumbers.map((d) => (
+            <option key={d} value={String(d)}>
+              {d}
+            </option>
+          ))}
+        </select>
+      </div>
+      <label className="min-w-0 flex-1 text-xs font-medium text-[#4d47b6] sm:min-w-[200px]">
+        ค้นหา
+        <input
+          className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm touch-manipulation"
+          placeholder="ชื่อลูกค้า, โต๊ะ, เมนู, หมายเหตุ…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </label>
+    </div>
   );
 }
 
@@ -911,6 +1230,9 @@ type HistoryProps = {
   categories?: PosCategory[];
   menuItems?: PosMenuItem[];
   onOrderStatusChange: (id: number, status: PosOrder["status"]) => void;
+  onOrderDelete: (id: number) => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
   /** เปิดสลิปด้วย AppImageLightbox จาก @/components/app-templates */
   onSlipImageOpen?: (imageUrl: string) => void;
 };
@@ -919,6 +1241,9 @@ type HistoryProps = {
 export function BuildingPosSalesHistoryPanel({
   orders,
   onOrderStatusChange,
+  onOrderDelete,
+  onRefresh,
+  refreshing = false,
   onSlipImageOpen,
   categories = [],
   menuItems = [],
@@ -927,6 +1252,7 @@ export function BuildingPosSalesHistoryPanel({
   const [filterMonth, setFilterMonth] = useState(() => initialBangkokSalesFilters().month);
   const [filterDay, setFilterDay] = useState("");
   const [search, setSearch] = useState("");
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [sparkRevenueCost, setSparkRevenueCost] = useState<AppRevenueCostBucket[]>([]);
   const [sparkLoading, setSparkLoading] = useState(false);
   const [sparkErr, setSparkErr] = useState<string | null>(null);
@@ -1072,90 +1398,128 @@ export function BuildingPosSalesHistoryPanel({
     return entriesToBarRows(capLeaderboard(sorted, MAX_COMPARE_ROWS));
   }, [paidForChart]);
 
+  const filterFieldsToolbar = (
+    <BuildingPosSalesFilterFormFields
+      idPrefix="pos-sales-filter"
+      layout="toolbar"
+      filterYear={filterYear}
+      setFilterYear={setFilterYear}
+      filterMonth={filterMonth}
+      setFilterMonth={setFilterMonth}
+      filterDay={filterDay}
+      setFilterDay={setFilterDay}
+      search={search}
+      setSearch={setSearch}
+      yearOptions={yearOptions}
+      dayNumbers={dayNumbers}
+    />
+  );
+
+  const filterFieldsModal = (
+    <BuildingPosSalesFilterFormFields
+      idPrefix="pos-sales-filter-modal"
+      layout="modal"
+      filterYear={filterYear}
+      setFilterYear={setFilterYear}
+      filterMonth={filterMonth}
+      setFilterMonth={setFilterMonth}
+      filterDay={filterDay}
+      setFilterDay={setFilterDay}
+      search={search}
+      setSearch={setSearch}
+      yearOptions={yearOptions}
+      dayNumbers={dayNumbers}
+    />
+  );
+
   return (
     <div className="space-y-5 sm:space-y-6">
+      <FormModal
+        open={filterModalOpen}
+        onClose={() => setFilterModalOpen(false)}
+        title="กรองช่วงเวลาและค้นหา"
+        appearance="glass"
+        glassTint="violet"
+        size="lg"
+        mobileCentered
+        footer={
+          <div className="flex w-full justify-end">
+            <button
+              type="button"
+              onClick={() => setFilterModalOpen(false)}
+              className="rounded-2xl bg-[#5b61ff] px-6 py-3 text-sm font-black text-white shadow-md shadow-indigo-200/60 transition-all hover:bg-[#4f54e6] active:scale-[0.98]"
+            >
+              เสร็จสิ้น
+            </button>
+          </div>
+        }
+      >
+        {filterFieldsModal}
+      </FormModal>
+
       <AppDashboardSection tone="violet">
         <div className="border-b border-[#ecebff] pb-3">
-          <h2 className="text-lg font-bold text-[#2e2a58]">กรองประวัติและกราฟ</h2>
-          <p className="mt-1 text-xs text-[#66638c]">
-            ค่าเริ่มต้นเป็นเดือนปัจจุบัน (เวลาไทย) — เลือกปี เดือน วันได้ทีละช่อง · วันใช้ได้ทันที (ไม่บังคับเดือน: กรอง &quot;วันที่ N&quot; ทุกเดือน)
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg font-bold text-[#2e2a58]">กรองประวัติและกราฟ</h2>
+              <p className="mt-1 hidden text-xs text-[#66638c] md:block">
+                ค่าเริ่มต้นเป็นเดือนปัจจุบัน (เวลาไทย) — เลือกปี เดือน วันได้ทีละช่อง · วันใช้ได้ทันที (ไม่บังคับเดือน: กรอง
+                &quot;วันที่ N&quot; ทุกเดือน)
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {onRefresh ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={onRefresh}
+                    disabled={refreshing}
+                    className="hidden min-h-[44px] items-center justify-center rounded-2xl border border-white/55 bg-white/70 px-4 text-sm font-black text-[#5b61ff] shadow-sm backdrop-blur-sm transition hover:bg-white/90 disabled:opacity-60 md:inline-flex"
+                  >
+                    {refreshing ? "กำลังรีเฟรช…" : "รีเฟรชข้อมูล"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onRefresh}
+                    disabled={refreshing}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/60 bg-white/55 text-[#5b61ff] shadow-sm backdrop-blur-md transition-all hover:bg-white/75 active:scale-95 disabled:opacity-60 md:hidden"
+                    aria-label={refreshing ? "กำลังรีเฟรชข้อมูล" : "รีเฟรชข้อมูล"}
+                    title="รีเฟรชข้อมูล"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      className={cn("h-5 w-5", refreshing && "animate-spin")}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2.25}
+                      aria-hidden
+                    >
+                      <path d="M21 12a9 9 0 11-3.05-6.65M21 3v6h-6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setFilterModalOpen(true)}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/60 bg-white/55 text-[#5b61ff] shadow-sm backdrop-blur-md transition-all hover:bg-white/75 active:scale-95 md:hidden"
+                aria-label="กรองช่วงเวลาและค้นหา"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+                  <path
+                    d="M4 6h16M7 12h10M10 18h4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <circle cx="15" cy="6" r="1.5" fill="currentColor" stroke="none" />
+                  <circle cx="9" cy="12" r="1.5" fill="currentColor" stroke="none" />
+                  <circle cx="14" cy="18" r="1.5" fill="currentColor" stroke="none" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-xs font-medium text-[#4d47b6]" id="pos-sales-filter-year-lbl">
-              ปี
-            </span>
-            <select
-              id="pos-sales-filter-year"
-              aria-labelledby="pos-sales-filter-year-lbl"
-              className="app-input min-h-[44px] w-full min-w-[7rem] cursor-pointer touch-manipulation rounded-xl px-3 py-2 text-sm sm:w-auto"
-              value={filterYear}
-              onChange={(e) => {
-                setFilterYear(e.target.value);
-                setFilterMonth("");
-                setFilterDay("");
-              }}
-            >
-              <option value="">ทั้งหมด</option>
-              {yearOptions.map((y) => (
-                <option key={y} value={String(y)}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-xs font-medium text-[#4d47b6]" id="pos-sales-filter-month-lbl">
-              เดือน
-            </span>
-            <select
-              id="pos-sales-filter-month"
-              aria-labelledby="pos-sales-filter-month-lbl"
-              className="app-input min-h-[44px] w-full min-w-[8rem] cursor-pointer touch-manipulation rounded-xl px-3 py-2 text-sm sm:w-auto"
-              value={filterMonth}
-              onChange={(e) => {
-                setFilterMonth(e.target.value);
-                setFilterDay("");
-              }}
-            >
-              <option value="">ทุกเดือน</option>
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                <option key={m} value={String(m)}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-xs font-medium text-[#4d47b6]" id="pos-sales-filter-day-lbl">
-              วัน
-            </span>
-            <select
-              id="pos-sales-filter-day"
-              aria-labelledby="pos-sales-filter-day-lbl"
-              className="app-input min-h-[44px] w-full min-w-[6rem] cursor-pointer touch-manipulation rounded-xl px-3 py-2 text-sm sm:w-auto"
-              value={dayNumbers.includes(Number(filterDay)) ? filterDay : ""}
-              onChange={(e) => setFilterDay(e.target.value)}
-            >
-              <option value="">ทุกวัน</option>
-              {dayNumbers.map((d) => (
-                <option key={d} value={String(d)}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
-          <label className="min-w-0 flex-1 text-xs font-medium text-[#4d47b6] sm:min-w-[200px]">
-            ค้นหา
-            <input
-              className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm touch-manipulation"
-              placeholder="ชื่อลูกค้า, โต๊ะ, เมนู, หมายเหตุ…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </label>
-        </div>
+        <div className="mt-4 hidden md:block">{filterFieldsToolbar}</div>
 
         {sparkLoading ? (
           <p className="mt-6 rounded-lg bg-[#f8f7ff] px-3 py-2 text-xs text-[#66638c]">กำลังโหลดกราฟรายรับ–รายจ่าย…</p>
@@ -1195,7 +1559,7 @@ export function BuildingPosSalesHistoryPanel({
             </div>
             <p className="text-[11px] text-[#5f5a8a]">
               <Link
-                href="/dashboard/building-pos/costs"
+                href="/dashboard/building-pos?tab=finance&fin=costs"
                 className="font-semibold text-[#4d47b6] underline decoration-[#4d47b6]/40 underline-offset-2 hover:decoration-[#4d47b6]"
               >
                 บันทึกรายจ่าย / ต้นทุน
@@ -1255,6 +1619,7 @@ export function BuildingPosSalesHistoryPanel({
                     <PosSalesHistoryCard
                       order={o}
                       onStatusChange={onOrderStatusChange}
+                      onDelete={onOrderDelete}
                       onSlipImageOpen={onSlipImageOpen}
                     />
                   </li>

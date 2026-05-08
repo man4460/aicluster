@@ -1,138 +1,109 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { cn } from "@/lib/cn";
-import { deriveBuildingPosSection } from "@/systems/building-pos/buildingPosSection";
+import {
+  buildingPosMainTabHref,
+  parseBuildingPosNav,
+  type BuildingPosMainTab,
+} from "@/systems/building-pos/building-pos-nav";
+import { buildingPosModuleGlassShellClass } from "@/systems/building-pos/components/building-pos-ui-tokens";
 
-/** แท็บเฉพาะหน้าแดชบอร์ดหลัก — ต้นทุน/รายจ่ายอยู่ที่ `/dashboard/building-pos/costs` */
-export type BuildingPosDashTab = "overview" | "orders" | "menu" | "categories";
-
-/** มือถือ: กริด 2 คอลัมน์ แตะง่าย (min 44px) · จอใหญ่: แถบ wrap เหมือนเมนูรายรับ–รายจ่าย */
-const navItemBase =
-  "flex min-h-[44px] w-full min-w-0 touch-manipulation select-none items-center justify-center rounded-xl px-3 text-sm font-semibold transition-colors active:opacity-90 sm:w-auto sm:px-3.5 sm:py-2";
-
-/** ลิงก์ไปแดชบอร์ด POS พร้อมแท็บ (ใช้บนหน้ายอดขาย) */
-export function buildingPosDashboardTabHref(t: BuildingPosDashTab): string {
-  if (t === "overview") return "/dashboard/building-pos";
-  return `/dashboard/building-pos?tab=${t}`;
+function buildingPosMainTabIcon(key: BuildingPosMainTab) {
+  if (key === "overview")
+    return <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" />;
+  if (key === "qr")
+    return (
+      <>
+        <path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3z" />
+        <path d="M15 15h2v2M19 15h2v2M15 19h2M19 19h2" strokeLinecap="round" />
+      </>
+    );
+  if (key === "finance") return <path d="M4 18h16M7 14l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />;
+  return (
+    <>
+      <path d="M4 7h16v4H4zM6 11v8h12v-8M9 7V5h6v2" />
+    </>
+  );
 }
 
-type Props = {
-  activeTab?: BuildingPosDashTab;
-  onTabChange?: (tab: BuildingPosDashTab) => void;
-  onRefresh?: () => void;
-  refreshing?: boolean;
-};
+const navItemDesktopClass = (active: boolean) =>
+  cn(
+    "flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl py-3 text-sm font-black transition-all",
+    active
+      ? "bg-white/75 text-[#5b61ff] shadow-md ring-1 ring-white/80 backdrop-blur-sm"
+      : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
+  );
 
-export function BuildingPosUnifiedMenuBar({ activeTab, onTabChange, onRefresh, refreshing }: Props) {
-  const section = deriveBuildingPosSection(usePathname() ?? "");
-  const isDashboard = section === "dashboard";
-  const useTabButtons = isDashboard && onTabChange != null && activeTab != null;
+function BuildingPosUnifiedMenuBarInner({
+  variant,
+  className,
+}: {
+  variant: "standalone" | "embedded";
+  className?: string;
+}) {
+  const searchParams = useSearchParams();
+  const nav = parseBuildingPosNav(searchParams);
+
+  const tabs: { key: BuildingPosMainTab; label: string }[] = [
+    { key: "overview", label: "แดชบอร์ด" },
+    { key: "finance", label: "การเงิน" },
+    { key: "menu", label: "เมนู" },
+    { key: "qr", label: "QR" },
+  ];
+
+  const embedded = variant === "embedded";
 
   return (
-    <nav aria-label="เมนู POS ร้านอาหาร" className="app-surface rounded-2xl p-3 sm:p-4 print:hidden">
-      <p className="mb-2 text-xs font-medium text-[#66638c] sm:mb-3">เมนู</p>
-      <ul className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
-        <li className="min-w-0 sm:w-auto">
-          {useTabButtons ? (
-            <button
-              type="button"
-              onClick={() => onTabChange!("overview")}
-              className={cn(
-                navItemBase,
-                activeTab === "overview" ? "bg-[#ecebff] text-[#4d47b6] ring-1 ring-[#4d47b6]/20" : "app-btn-soft text-[#66638c]",
-              )}
-            >
-              แดชบอร์ด
-            </button>
-          ) : (
-            <Link
-              href={buildingPosDashboardTabHref("overview")}
-              className={cn(navItemBase, "app-btn-soft text-[#66638c]")}
-            >
-              แดชบอร์ด
-            </Link>
-          )}
-        </li>
-
-        <li className="min-w-0 sm:w-auto">
-          <Link
-            href="/dashboard/building-pos/sales"
-            className={cn(
-              navItemBase,
-              section === "sales" ? "bg-[#ecebff] text-[#4d47b6] ring-1 ring-[#4d47b6]/20" : "app-btn-soft text-[#66638c]",
-            )}
-          >
-            ยอดขาย
-          </Link>
-        </li>
-
-        <li className="min-w-0 sm:w-auto">
-          <Link
-            href="/dashboard/building-pos/staff-link"
-            className={cn(
-              navItemBase,
-              section === "staff-link" ? "bg-[#ecebff] text-[#4d47b6] ring-1 ring-[#4d47b6]/20" : "app-btn-soft text-[#66638c]",
-            )}
-          >
-            พนักงานเสิร์ฟ
-          </Link>
-        </li>
-
-        {(["orders", "menu", "categories"] as const).map((key) => (
-          <li key={key} className="min-w-0 sm:w-auto">
-            {useTabButtons ? (
-              <button
-                type="button"
-                onClick={() => onTabChange!(key)}
-                className={cn(
-                  navItemBase,
-                  activeTab === key ? "bg-[#ecebff] text-[#4d47b6] ring-1 ring-[#4d47b6]/20" : "app-btn-soft text-[#66638c]",
-                )}
-              >
-                {key === "orders" ? "QR สั่งอาหาร" : key === "menu" ? "เมนูอาหาร" : "หมวดหมู่"}
-              </button>
-            ) : (
-              <Link
-                href={buildingPosDashboardTabHref(key)}
-                className={cn(navItemBase, "app-btn-soft text-[#66638c]")}
-              >
-                {key === "orders" ? "QR สั่งอาหาร" : key === "menu" ? "เมนูอาหาร" : "หมวดหมู่"}
+    <nav
+      aria-label="เมนูหลัก POS ร้านอาหาร (แท็บเล็กขึ้นไป)"
+      className={cn(
+        "hidden md:block print:hidden",
+        embedded ?
+          "mt-5 border-t border-white/40 pt-5"
+        : `${buildingPosModuleGlassShellClass} p-3 sm:p-4`,
+        className,
+      )}
+    >
+      {!embedded ?
+        <p className="mb-2 text-xs font-black uppercase tracking-widest text-[#66638c] sm:mb-3">เมนูหลัก</p>
+      : null}
+      <ul className="flex gap-1">
+        {tabs.map(({ key, label }) => {
+          const active = nav.main === key;
+          const href = buildingPosMainTabHref(nav, key);
+          return (
+            <li key={key} className="min-w-0 flex-1">
+              <Link href={href} scroll={false} className={navItemDesktopClass(active)} aria-current={active ? "page" : undefined}>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  className={cn("h-4 w-4 shrink-0", active ? "text-[#5b61ff]" : "text-slate-400")}
+                  aria-hidden
+                >
+                  {buildingPosMainTabIcon(key)}
+                </svg>
+                {label}
               </Link>
-            )}
-          </li>
-        ))}
-
-        <li className="min-w-0 sm:w-auto">
-          <Link
-            href="/dashboard/building-pos/costs"
-            className={cn(
-              navItemBase,
-              section === "costs" ? "bg-[#ecebff] text-[#4d47b6] ring-1 ring-[#4d47b6]/20" : "app-btn-soft text-[#66638c]",
-            )}
-          >
-            ต้นทุน / รายจ่าย
-          </Link>
-        </li>
-
-        {onRefresh ? (
-          <li className="col-span-2 min-w-0 sm:col-span-1 sm:ml-auto sm:w-auto">
-            <button
-              type="button"
-              onClick={() => onRefresh()}
-              disabled={refreshing}
-              className={cn(
-                navItemBase,
-                "border border-[#c8c4ff] bg-white text-[#4d47b6] shadow-sm hover:bg-[#f4f3ff] disabled:cursor-not-allowed disabled:opacity-60",
-              )}
-              title="ดึงออเดอร์และเมนูล่าสุดจากเซิร์ฟเวอร์"
-            >
-              {refreshing ? "กำลังรีเฟรช…" : "รีเฟรชออเดอร์"}
-            </button>
-          </li>
-        ) : null}
+            </li>
+          );
+        })}
       </ul>
     </nav>
+  );
+}
+
+/** เมนูหลัก 4 กลุ่ม — มือถือใช้ `BuildingPosMobileDock` · `embedded` = อยู่ในการ์ดหัวระบบ (เทียบคาร์แคร์) */
+export function BuildingPosUnifiedMenuBar(props?: { variant?: "standalone" | "embedded"; className?: string }) {
+  const variant = props?.variant ?? "standalone";
+  const className = props?.className;
+  return (
+    <Suspense fallback={null}>
+      <BuildingPosUnifiedMenuBarInner variant={variant} className={className} />
+    </Suspense>
   );
 }

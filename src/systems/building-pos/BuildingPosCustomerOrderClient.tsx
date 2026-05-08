@@ -18,12 +18,18 @@ import {
   isCustomerOrderSessionUuid,
 } from "@/lib/building-pos/customer-order-session";
 import {
+  BUILDING_POS_STAFF_ORDER_CHANNELS,
+  type BuildingPosStaffOrderChannel,
+  buildingPosStaffOrderNoteLine,
+} from "@/lib/building-pos/staff-order-channel";
+import {
   createBuildingPosPublicApiRepository,
   type PosCategory,
   type PosMenuItem,
   type PosOrder,
   type PosOrderItem,
 } from "@/systems/building-pos/building-pos-service";
+import { BuildingPosRemoteImg } from "@/systems/building-pos/components/building-pos-remote-image";
 
 function buildingPosCustomerStatusLabel(st: PosOrder["status"]): string {
   switch (st) {
@@ -133,14 +139,15 @@ function MenuDishCard({
           useTemplate ? "from-slate-200 to-slate-300" : "from-slate-700 to-slate-900",
         )}
       >
-        {item.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
-        ) : (
-          <div className={cn("flex h-full w-full items-center justify-center", useTemplate ? "text-slate-400" : "text-slate-500")}>
-            <IconSparkles className="h-10 w-10 opacity-40" />
-          </div>
-        )}
+        <BuildingPosRemoteImg
+          src={item.image_url}
+          className="h-full w-full object-cover"
+          fallback={
+            <div className={cn("flex h-full w-full items-center justify-center", useTemplate ? "text-slate-400" : "text-slate-500")}>
+              <IconSparkles className="h-10 w-10 opacity-40" />
+            </div>
+          }
+        />
         <div
           className={cn(
             "pointer-events-none absolute inset-0 bg-gradient-to-t to-transparent",
@@ -292,14 +299,15 @@ function MenuDishCardGrid({
             useTemplate ? "from-slate-200 to-slate-300" : "from-slate-700 to-slate-900",
           )}
         >
-          {item.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
-          ) : (
-            <div className={cn("flex h-full w-full items-center justify-center", useTemplate ? "text-slate-400" : "text-slate-500")}>
-              <IconSparkles className="h-8 w-8 opacity-40" />
-            </div>
-          )}
+          <BuildingPosRemoteImg
+            src={item.image_url}
+            className="h-full w-full object-cover"
+            fallback={
+              <div className={cn("flex h-full w-full items-center justify-center", useTemplate ? "text-slate-400" : "text-slate-500")}>
+                <IconSparkles className="h-8 w-8 opacity-40" />
+              </div>
+            }
+          />
           {selected ? (
             <div
               className={cn(
@@ -409,6 +417,7 @@ export function BuildingPosCustomerOrderClient({
   initialTableNo,
   variant = "customer",
   orderNoteTag,
+  embeddedInModal = false,
   onOrderSuccess,
 }: {
   ownerId: string;
@@ -416,8 +425,10 @@ export function BuildingPosCustomerOrderClient({
   initialTableNo?: string;
   /** staff = หัวข้อ/หมายเหตุออเดอร์สำหรับพนักงานเสิร์ฟ */
   variant?: "customer" | "staff";
-  /** บันทึกใน note ออเดอร์ (เช่น "พนักงานเสิร์ฟ") — ว่างกับลูกค้าใช้ข้อความมาตรฐานจาก API */
+  /** บันทึกใน note ออเดอร์เพิ่มจากช่องทางพนักงาน (ถ้ามี) — ต่อท้ายข้อความช่องทาง */
   orderNoteTag?: string;
+  /** เปิดในโมดัลแดชบอร์ด — ไม่ใช้เต็มจอ + แถบตะกร้า sticky ในกล่องเลื่อน */
+  embeddedInModal?: boolean;
   onOrderSuccess?: () => void;
 }) {
   const repo = useMemo(() => createBuildingPosPublicApiRepository(ownerId, trialSessionId), [ownerId, trialSessionId]);
@@ -435,6 +446,7 @@ export function BuildingPosCustomerOrderClient({
   const [myOrders, setMyOrders] = useState<PosOrder[]>([]);
   const [customerSessionId, setCustomerSessionId] = useState("");
   const paidResetRef = useRef(false);
+  const [staffChannel, setStaffChannel] = useState<BuildingPosStaffOrderChannel>("floor");
 
   const isCustomer = variant === "customer";
   const customerReviewsBeforeSend = isCustomer;
@@ -604,6 +616,10 @@ export function BuildingPosCustomerOrderClient({
       sessionForOrder = sid;
     }
     try {
+      const staffNote =
+        variant === "staff" ?
+          [buildingPosStaffOrderNoteLine(staffChannel), orderNoteTag?.trim()].filter(Boolean).join(" · ")
+        : (orderNoteTag?.trim() ?? "");
       await repo.createOrder(
         {
           customer_name: customerName.trim(),
@@ -611,7 +627,7 @@ export function BuildingPosCustomerOrderClient({
           status: "NEW",
           items,
           total_amount: 0,
-          note: orderNoteTag?.trim() ?? "",
+          note: staffNote,
         },
         sessionForOrder ? { customerSessionId: sessionForOrder } : undefined,
       );
@@ -646,7 +662,7 @@ export function BuildingPosCustomerOrderClient({
   return (
     <div
       className={cn(
-        "min-h-[100dvh]",
+        embeddedInModal ? "min-h-0" : "min-h-[100dvh]",
         useTemplate ?
           cn(shopQrTemplatePageBgClass, "text-slate-800")
         : "bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100",
@@ -670,10 +686,43 @@ export function BuildingPosCustomerOrderClient({
             )}
           >
             {variant === "staff" ?
-              "ระบุโต๊ะ แล้วส่งออเดอร์เพิ่มเหมือนลูกค้าสั่งผ่าน QR"
+              "เลือกช่องทางการสั่ง · เลือกเมนูแบบหน้าลูกค้า — บันทึกในออเดอร์อัตโนมัติ"
             : "เลือกเมนู ระบุโต๊ะ แล้วส่งเข้าครัว"}
           </p>
         </header>
+
+        {variant === "staff" ?
+          <div
+            className={cn(
+              "mt-5 flex flex-wrap gap-2 rounded-2xl border p-1.5 shadow-sm",
+              useTemplate ?
+                "border-indigo-100/90 bg-white/90 ring-1 ring-indigo-100/70"
+              : "border-white/10 bg-white/[0.06]",
+            )}
+            role="group"
+            aria-label="ช่องทางบันทึกออเดอร์"
+          >
+            {BUILDING_POS_STAFF_ORDER_CHANNELS.map((ch) => (
+              <button
+                key={ch.key}
+                type="button"
+                onClick={() => setStaffChannel(ch.key)}
+                className={cn(
+                  "min-h-[40px] flex-1 rounded-xl px-2 py-2 text-center text-[11px] font-black transition sm:min-h-[44px] sm:text-xs",
+                  staffChannel === ch.key ?
+                    useTemplate ?
+                      "bg-[#5b61ff] text-white shadow-md shadow-indigo-400/25"
+                    : "bg-emerald-500 text-white shadow-lg"
+                  : useTemplate ?
+                    "bg-white text-slate-600 ring-1 ring-slate-200/90 hover:bg-indigo-50/80"
+                  : "bg-white/10 text-slate-300 hover:bg-white/15",
+                )}
+              >
+                {ch.label}
+              </button>
+            ))}
+          </div>
+        : null}
 
         <div
           className={cn(
@@ -816,10 +865,11 @@ export function BuildingPosCustomerOrderClient({
                   : "bg-white/10 text-slate-300 hover:bg-white/15",
                 )}
               >
-                {c.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={c.image_url} alt="" className="h-6 w-6 rounded-md object-cover" loading="lazy" />
-                ) : null}
+                <BuildingPosRemoteImg
+                  src={c.image_url}
+                  className="h-6 w-6 rounded-md object-cover"
+                  fallback={null}
+                />
                 {c.name}
               </button>
             ))}
@@ -892,27 +942,23 @@ export function BuildingPosCustomerOrderClient({
                   useTemplate ? "border-slate-200" : "border-white/10",
                 )}
               >
-                {c.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={c.image_url}
-                    alt=""
-                    className={cn(
-                      "h-12 w-12 rounded-xl object-cover sm:h-14 sm:w-14",
-                      useTemplate ? "border border-slate-200" : "border border-white/10",
-                    )}
-                    loading="lazy"
-                  />
-                ) : (
-                  <div
-                    className={cn(
-                      "flex h-12 w-12 items-center justify-center rounded-xl sm:h-14 sm:w-14",
-                      useTemplate ? "bg-slate-100 text-slate-400" : "bg-white/10 text-slate-500",
-                    )}
-                  >
-                    <IconSparkles className="h-6 w-6 opacity-50" />
-                  </div>
-                )}
+                <BuildingPosRemoteImg
+                  src={c.image_url}
+                  className={cn(
+                    "h-12 w-12 rounded-xl object-cover sm:h-14 sm:w-14",
+                    useTemplate ? "border border-slate-200" : "border border-white/10",
+                  )}
+                  fallback={
+                    <div
+                      className={cn(
+                        "flex h-12 w-12 items-center justify-center rounded-xl sm:h-14 sm:w-14",
+                        useTemplate ? "bg-slate-100 text-slate-400" : "bg-white/10 text-slate-500",
+                      )}
+                    >
+                      <IconSparkles className="h-6 w-6 opacity-50" />
+                    </div>
+                  }
+                />
                 <div>
                   <h2 className={cn("text-lg font-bold", useTemplate ? "text-slate-900" : "text-white")}>{c.name}</h2>
                   <p className="text-xs text-slate-500">{items.length} รายการ</p>
@@ -951,13 +997,15 @@ export function BuildingPosCustomerOrderClient({
 
       <div
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-50 border-t px-4 py-3 backdrop-blur-lg sm:px-6",
+          embeddedInModal ?
+            "sticky bottom-0 z-10 mt-6 border-t px-0 py-3 backdrop-blur-lg"
+          : "fixed bottom-0 left-0 right-0 z-50 border-t px-4 py-3 backdrop-blur-lg sm:px-6",
           useTemplate ?
             "border-slate-200 bg-white/95 shadow-[0_-8px_32px_rgba(15,23,42,0.08)]"
           : "border-white/10 bg-slate-950/95 shadow-[0_-8px_32px_rgba(0,0,0,0.4)]",
         )}
       >
-        <div className="mx-auto flex max-w-lg items-center justify-between gap-3 sm:max-w-xl">
+        <div className={cn("mx-auto flex max-w-lg items-center justify-between gap-3 sm:max-w-xl", embeddedInModal && "px-1")}>
           <div>
             <p className="text-xs text-slate-500">ยอดรวม</p>
             <p
@@ -992,7 +1040,13 @@ export function BuildingPosCustomerOrderClient({
       </div>
 
       {customerReviewsBeforeSend && reviewOpen ?
-        <div className="fixed inset-0 z-[60] flex flex-col justify-end sm:justify-center sm:p-4" role="presentation">
+        <div
+          className={cn(
+            "fixed inset-0 flex flex-col justify-end sm:justify-center sm:p-4",
+            embeddedInModal ? "z-[220]" : "z-[60]",
+          )}
+          role="presentation"
+        >
           <button
             type="button"
             className="absolute inset-0 bg-slate-900/45 backdrop-blur-[2px]"

@@ -22,6 +22,7 @@
     "lint": "eslint",
     "verify:hf-vehicle-attachments": "tsx scripts/verify-home-finance-vehicle-attachments-db.ts",
     "check:chat-ai-db": "node --import tsx scripts/check-personal-ai-tables.ts",
+    "seed": "tsx prisma/seed.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate": "prisma migrate deploy",
     "db:generate": "node scripts/prisma-generate-safe.cjs",

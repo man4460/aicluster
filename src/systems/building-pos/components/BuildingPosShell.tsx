@@ -1,31 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { AppUsageGuideModal } from "@/components/app-templates";
+import { BuildingPosMobileDock } from "@/systems/building-pos/components/BuildingPosMobileDock";
+import { BuildingPosUnifiedMenuBar } from "@/systems/building-pos/components/BuildingPosUnifiedMenuBar";
+import { buildingPosModuleGlassShellClass, buildingPosShellMainPaddingBottomClass } from "@/systems/building-pos/components/building-pos-ui-tokens";
 
 export function BuildingPosShell({ children }: { children: React.ReactNode }) {
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
 
   return (
     <div className="max-w-full space-y-4 sm:space-y-6">
-      <header className="app-surface rounded-2xl px-4 py-4 sm:px-6 sm:py-5 print:hidden">
+      <header
+        className={`${buildingPosModuleGlassShellClass} flex flex-col px-4 py-4 sm:px-8 sm:py-6 print:hidden`}
+      >
         <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-tight text-[#2e2a58] sm:text-2xl">POS ร้านอาหาร</h1>
-            <p className="mt-1 max-w-2xl text-sm leading-snug text-[#66638c]">
-              เมนู ออเดอร์ QR สั่งอาหาร — ใช้บัญชีเจ้าของ
-            </p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5b61ff] to-[#0d9488] text-white shadow-lg shadow-indigo-100">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5">
+                  <path d="M3 2v7c0 1.1.9 2 2 2h1v9c0 1.1.9 2 2 2h1c1.1 0 2-.9 2-2V11h1c1.1 0 2-.9 2-2V2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M7 2v5M17 2v5" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">POS ร้านอาหาร</h1>
+                <p className="mt-0.5 hidden max-w-2xl text-sm font-medium leading-snug text-[#66638c] sm:block">
+                  เมนู ออเดอร์ QR สั่งอาหาร — ใช้บัญชีเจ้าของ
+                </p>
+              </div>
+            </div>
           </div>
           <button
             type="button"
             onClick={() => setUsageGuideOpen(true)}
-            className="app-btn-soft min-h-[44px] shrink-0 rounded-xl border border-[#dcd8f0] px-4 py-2.5 text-sm font-semibold text-[#4d47b6] hover:bg-[#f4f3ff]"
+            className="flex h-10 min-h-[44px] w-10 shrink-0 items-center justify-center rounded-2xl border border-white/60 bg-white/45 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-95 sm:w-auto sm:gap-2 sm:px-4"
+            aria-label="คู่มือการใช้งาน"
             aria-haspopup="dialog"
             aria-expanded={usageGuideOpen}
           >
-            คู่มือการใช้งาน
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+              <circle cx="12" cy="12" r="9" />
+              <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
+              <circle cx="12" cy="17" r="1" />
+            </svg>
+            <span className="hidden sm:inline">คู่มือการใช้งาน</span>
           </button>
         </div>
+
+        {/* แท็บหลักในการ์ดหัว */}
+        <Suspense fallback={null}>
+          <BuildingPosUnifiedMenuBar variant="embedded" />
+        </Suspense>
       </header>
 
       <AppUsageGuideModal
@@ -136,7 +162,9 @@ export function BuildingPosShell({ children }: { children: React.ReactNode }) {
         ]}
       />
 
-      {children}
+      <div className={buildingPosShellMainPaddingBottomClass}>{children}</div>
+
+      <BuildingPosMobileDock />
     </div>
   );
 }

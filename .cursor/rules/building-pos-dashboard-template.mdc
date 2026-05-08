@@ -1,29 +1,51 @@
 ---
-description: เทมเพลตแดชบอร์ด POS ร้านอาหาร (building-pos ใต้ /dashboard) — ห้ามใส่พื้นหลังสีเทาเต็มแผงหรือดัดให้เหมือนหน้าลูกค้าโดยไม่ได้ขอ
+description: เทมเพลตแดชบอร์ด POS ร้านอาหาร (building-pos) — โครงเมนูเดียวกับคาร์แคร์ (แท็บหลัก 4 กลุ่ม + แท็บย่อย)
 globs:
   - "**/dashboard/building-pos/**"
   - "**/systems/building-pos/**"
 ---
 
-# Building POS — เทมเพลตแดชบอร์ด (ยึดแบบนี้)
+# Building POS — เทมเพลตแดชบอร์ด
 
-## Layout ชั้นนอก (`src/app/(dashboard)/dashboard/building-pos/layout.tsx`)
+**หลักการ UX ระดับโปรเจกต์:** `dashboard-ux-car-wash-baseline.mdc` — เมนูหลักมือถือล่าง (`BuildingPosMobileDock`), หัว glass (`BuildingPosShell`), ไอคอน/สี `#5b61ff` แบบคาร์แคร์
 
-- ห่อด้วย **`requireBuildingPosSection()`** แล้ว `div` แค่ **`flex min-h-0 flex-1 flex-col`** — ส่ง `BuildingPosShell` ห่อ `children`
-- **ห้าม** ใส่ `shopQrTemplatePageBgClass` / `bg-[#eef0f3]` / แผงพื้นหลังสีในชั้นนี้
-- **ห้าม** ใส่ `-mx-4 sm:-mx-6` + `rounded-2xl` เพื่อ bleed พื้นสีเทาเต็มคอลัมน์ (เลิกใช้แล้ว)
-- ความกว้างและระยะขอบแนวนอนยึด **`PageContainer`** ใน `dashboard/layout.tsx` อย่างเดียว
+## Layout ชั้นนอก (`layout.tsx`)
 
-## Shell (`BuildingPosShell.tsx`)
+- **`requireBuildingPosSection()`** + `BuildingPosShell` — **ห้าม** `shopQrTemplatePageBgClass` / พื้นเทาเต็มแผงในเลย์เอาต์นี้
+- ความกว้างยึด **`PageContainer`** ของแดชบอร์ดหลัก
 
-- หัวข้อหน้า: การ์ด **`app-surface rounded-2xl`** + หัวข้อ **`text-[#2e2a58]`** + คำอธิบาย **`text-[#66638c]`** (โทน MAWELL เดียวกับแดชบอร์ดอื่น)
-- **ห้าม** เปลี่ยนไปใช้หัวแบบ `shopQrTemplateHead*` (จัดกึ่งกลาง / indigo kicker) ใน shell แดชบอร์ดนี้ — นั่นใช้กับ **หน้าลูกค้า / ลิงก์พนักงาน** เท่านั้น
+## Hub หลัก (หน้าเดียว)
+
+- **ไฟล์:** `BuildingPosDashboardClient.tsx` + **`building-pos-nav.ts`**
+- **แท็บหลัก (4):** แดชบอร์ด · QR · การเงิน · เมนู — เทียบคาร์แคร์ (overview / qr / finance / offers+menu)
+- **แท็บย่อย:** `BuildingPosHubSubTabs.tsx`
+  - **QR:** ลูกค้าสแกนสั่ง | พนักงานเสิร์ฟ (`qr=customer` | `qr=staff`)
+  - **การเงิน:** ยอดขาย | ต้นทุน/รายจ่าย (`fin=sales` | `fin=costs`)
+  - **เมนู:** เมนูอาหาร | หมวดหมู่ (`menu=items` | `menu=categories`)
+- **URL เก่า:** `?tab=orders` → `?tab=qr` · `?tab=categories` → `?tab=menu&menu=categories` — normalize ใน client
+- **หน้าเดิมแยก:** `sales` / `costs` / `staff-link` → **redirect** ไป hub พร้อม query ที่ถูกต้อง
+
+## `FormModal` — ตำแหน่งบนมือถือ
+
+- **ทุก `FormModal`** ในโมดูลนี้ต้องใส่ **`mobileCentered`** — ให้แผงอยู่ **กึ่งกลางจอ** (`items-center` + `p-3`) · มุมการ์ด `rounded-[2rem]` · **ห้าม** โหมดชิดขอบล่าง (`items-end`) บนมือถือ — เทียบ **`laundry-dashboard-ui.mdc`** (ข้อ «ตำแหน่งโมดัล»)
+
+## Shell + เมนู (เทียบ `CarWashDashboard` การ์ดหัว)
+
+- **`BuildingPosShell`:** การ์ด glass **เดียว** (`buildingPosModuleGlassShellClass`) รวม **ชื่อระบบ + แท็บหลัก + แท็บย่อย (เมื่อไม่ใช่ overview)** — บน **แท็บเล็กขึ้นไป (`md+` รวม tablet/คอม)** แท็บหลักอยู่ใต้เส้นแบ่ง `border-t border-white/40 pt-5` แบบคาร์แคร์; แท็บย่อยอยู่ใต้เส้นแบ่งอีกชั้น
+- **`BuildingPosUnifiedMenuBar`:** `variant="embedded"` ใน `BuildingPosShell` — มือถือใช้ dock แทน (คอมโพเนนต์นี้ `hidden md:block`)
+- **`BuildingPosHubSubTabs`:** `variant="embedded"` ใน `BuildingPosShell` — ยังแสดงบนมือถือในการ์ดหัวเมื่ออยู่กลุ่มย่อย (QR / การเงิน / เมนู)
+- **`BuildingPosMobileDock`:** มือถือ — แถบล่าง pill glass (`rounded-[2.5rem]`) **ไอคอน + ชื่อเมนู** ใต้ไอคอน (`text-[9px] font-black`) เทียบ **`CarWashDashboard`** เมนูล่าง / **`BarberModuleMobileDock`** — ลำดับ แดชบอร์ด · การเงิน · เมนู · QR — แสดงเฉพาะ path `/dashboard/building-pos`
+- **แดชบอร์ดมือถือ (`overview`):** ปุ่มรีเฟรชในแถบ `BuildingPosOpenTablesPanel` ใช้ **ไอคอนอย่างเดียว** (`max-md`) และข้อความ `รีเฟรชออเดอร์` จาก `md` ขึ้นไป · ปุ่ม **ออเดอร์** เปิด `FormModal` + **`BuildingPosCustomerOrderClient`** (`variant="staff"`, `embeddedInModal`) — เลือกเมนูแบบหน้าลูกค้า · ช่องทางสั่ง (พนักงาน / แคชเชียร์ / กลับบ้าน) บันทึกใน `PosOrder.note` ผ่าน `@/lib/building-pos/staff-order-channel`
+- **ห้าม** ซ้อนการ์ด glass ใหม่รอบแถบเมนูใน client หลัก — นำทาง hub อยู่ที่ shell แล้ว (`BuildingPosDashboardClient` ไม่เรียก `UnifiedMenuBar` / `HubSubTabs` ซ้ำ)
+
+## โทเคน UI
+
+- **`components/building-pos-ui-tokens.ts`** — glass, การ์ดสถิติ, แถบแท็บย่อย, hub QR
 
 ## แยกจากหน้าสาธารณะ
 
-- **`@/components/qr/shop-qr-template`** (`shopQrTemplateCardClass`, หัว kicker/title ฯลฯ) ใช้กับ **หน้าสั่งอาหารลูกค้า** และ **หน้าลิงก์พนักงานในแดชบอร์ด** ที่ออกแบบเป็นโปสเตอร์/QR — **ไม่ใช่** shell หลักของแท็บแดชบอร์ด POS
-- แถบเมนูรวม: **`BuildingPosUnifiedMenuBar`** คง **`app-surface rounded-2xl`** ให้สอดคล้องกับการ์ดแดชบอร์ด
+- **`shop-qr-template`** ใช้กับ **หน้าลูกค้าสั่งอาหาร / พอร์ทัลพนักงาน** — ไม่ใช่ shell แท็บแดชบอร์ดหลัก
 
-## เนื้อหาในแท็บ
+## เนื้อหา
 
-- การ์ดย่อย / แผงข้อมูล: ยึด **`app-surface`** และ **`AppDashboardSection`** / โทเค็นใน `@/components/app-templates` ตามกฎ `app-templates-central.mdc`
+- ยึด **`AppDashboardSection`** / `app-templates` ตาม `app-templates-central.mdc` ในส่วนที่มีอยู่แล้ว
