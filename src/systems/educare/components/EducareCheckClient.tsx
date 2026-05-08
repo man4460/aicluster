@@ -245,7 +245,59 @@ export function EducareCheckClient() {
           description={`เลือกห้องและฟีเจอร์ — ระบบจะคำนวณค่าตั้งต้นจากผลเช็คเข้าแถวให้อัตโนมัติ`}
         />
 
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {/* มือถือ: ห้อง+วันที่ 2 คอลัมน์ + progress bar inline */}
+        <div className="mt-4 sm:hidden">
+          <div className="grid grid-cols-2 gap-2">
+            <CompactField label="🏫 ห้องเรียน">
+              <select
+                value={classroomId ?? ""}
+                onChange={(e) => setClassroomId(e.target.value ? Number(e.target.value) : null)}
+                className={compactInputCls}
+              >
+                {classrooms.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </CompactField>
+            <CompactField label="📅 วันที่">
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value || todayYmd())}
+                className={compactInputCls}
+                max={todayYmd()}
+              />
+            </CompactField>
+          </div>
+          <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/60 bg-white/70 px-3 py-2">
+            <span className="text-sm font-bold text-[#4d47b6]">{checkedCount}</span>
+            <span className="text-xs text-[#66638c]">/ {roster.length} คน</span>
+            <div className="mx-2 h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all",
+                  progressPct === 100
+                    ? "bg-gradient-to-r from-emerald-400 to-emerald-500"
+                    : "bg-gradient-to-r from-[#5b61ff] to-[#4d47b6]",
+                )}
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <span
+              className={cn(
+                "min-w-[2.5rem] text-right text-[11px] font-bold",
+                progressPct === 100 ? "text-emerald-600" : "text-[#4d47b6]",
+              )}
+            >
+              {progressPct}%
+            </span>
+          </div>
+        </div>
+
+        {/* เดสก์ท็อป: 3 คอลัมน์แบบเดิม */}
+        <div className="mt-4 hidden grid-cols-3 gap-3 sm:grid">
           <Field label="ห้องเรียน">
             <select
               value={classroomId ?? ""}
@@ -288,23 +340,23 @@ export function EducareCheckClient() {
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4d47b6]/80">
             ฟีเจอร์
           </p>
-          <ul className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible">
+          <ul className="-mx-1 flex snap-x snap-mandatory gap-1.5 overflow-x-auto px-1 pb-1.5 sm:flex-wrap sm:overflow-visible sm:gap-2">
             {EDUCARE_FEATURES.map((f) => {
               const active = f.key === feature;
               return (
-                <li key={f.key} className="snap-start">
+                <li key={f.key} className="shrink-0 snap-start">
                   <button
                     type="button"
                     onClick={() => setFeature(f.key)}
                     className={cn(
-                      "flex min-h-[44px] items-center gap-2 rounded-2xl border px-3.5 text-sm font-semibold transition",
+                      "flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-2xl border px-2.5 text-xs font-semibold transition sm:min-h-[44px] sm:gap-2 sm:px-3.5 sm:text-sm",
                       active
                         ? "border-[#4d47b6] bg-gradient-to-r from-[#5b61ff] to-[#4d47b6] text-white shadow-[0_12px_22px_-14px_rgba(91,97,255,0.95)]"
                         : "border-white/60 bg-white/70 text-[#66638c] hover:bg-white",
                     )}
                     aria-pressed={active}
                   >
-                    <span className="text-base" aria-hidden>
+                    <span className="text-sm sm:text-base" aria-hidden>
                       {f.emoji}
                     </span>
                     <span>{f.short}</span>
@@ -518,10 +570,24 @@ function SkeletonRoster() {
 const inputCls =
   "w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm text-[#2e2a58] placeholder:text-[#a3a0c0] shadow-inner focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30";
 
+const compactInputCls =
+  "w-full rounded-xl border border-white/60 bg-white/70 px-2.5 py-2 text-xs text-[#2e2a58] shadow-inner focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30";
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
       <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4d47b6]/80">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function CompactField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[10px] font-semibold text-[#4d47b6]/70">
         {label}
       </span>
       {children}

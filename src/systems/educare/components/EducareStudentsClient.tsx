@@ -56,6 +56,7 @@ export function EducareStudentsClient() {
   const [classrooms, setClassrooms] = useState<ClassroomOption[]>([]);
   const [items, setItems] = useState<StudentRow[]>([]);
   const [filter, setFilter] = useState<{ classroomId: number | ""; q: string }>({ classroomId: "", q: "" });
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -178,6 +179,7 @@ export function EducareStudentsClient() {
     }
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [items]);
+  const hasActiveFilter = filter.classroomId !== "" || filter.q.trim().length > 0;
 
   return (
     <div className="space-y-4">
@@ -187,18 +189,81 @@ export function EducareStudentsClient() {
           title="นักเรียน"
           description="เพิ่ม/แก้ไขข้อมูลนักเรียน รวมถึงรูป ผู้ปกครอง และห้องเรียน"
           action={
-            <button
-              type="button"
-              onClick={startCreate}
-              disabled={classrooms.length === 0}
-              className="app-btn-primary inline-flex min-h-[40px] items-center justify-center rounded-xl px-3.5 py-2 text-sm font-semibold disabled:opacity-50"
-            >
-              + เพิ่มนักเรียน
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={startCreate}
+                disabled={classrooms.length === 0}
+                className="app-btn-primary inline-flex min-h-[40px] items-center justify-center rounded-xl px-3.5 py-2 text-sm font-semibold disabled:opacity-50"
+              >
+                + เพิ่มนักเรียน
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileFilterOpen((v) => !v)}
+                className={cn(
+                  "relative inline-flex min-h-[40px] w-10 items-center justify-center rounded-xl border sm:hidden",
+                  hasActiveFilter
+                    ? "border-[#4d47b6]/40 bg-[#ede9ff] text-[#4d47b6]"
+                    : "border-white/60 bg-white/80 text-[#66638c]",
+                )}
+                aria-label="เปิดตัวกรอง"
+                aria-expanded={mobileFilterOpen}
+                aria-controls="educare-student-mobile-filter"
+              >
+                <FilterIcon className="h-4 w-4" />
+                {hasActiveFilter ? (
+                  <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#4d47b6]" aria-hidden />
+                ) : null}
+              </button>
+            </div>
           }
         />
 
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {mobileFilterOpen ? (
+          <div id="educare-student-mobile-filter" className={cn(appDashboardSectionSlateClass, "mt-3 space-y-2 !py-3 sm:hidden")}>
+            <select
+              value={filter.classroomId}
+              onChange={(e) =>
+                setFilter((f) => ({ ...f, classroomId: e.target.value === "" ? "" : Number(e.target.value) }))
+              }
+              className="rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm text-[#2e2a58]"
+              aria-label="กรองตามห้องเรียน"
+            >
+              <option value="">ทุกห้อง</option>
+              {classrooms.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <input
+              type="search"
+              placeholder="ค้นหาชื่อ/เลขที่"
+              value={filter.q}
+              onChange={(e) => setFilter((f) => ({ ...f, q: e.target.value }))}
+              className="rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm text-[#2e2a58] placeholder:text-[#a3a0c0]"
+            />
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                className="text-xs font-semibold text-[#4d47b6] hover:underline"
+                onClick={() => setFilter({ classroomId: "", q: "" })}
+              >
+                ล้างตัวกรอง
+              </button>
+              <button
+                type="button"
+                className="text-xs font-semibold text-[#66638c] hover:underline"
+                onClick={() => setMobileFilterOpen(false)}
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-3 hidden grid-cols-1 gap-2 sm:grid sm:grid-cols-3">
           <select
             value={filter.classroomId}
             onChange={(e) =>
@@ -225,6 +290,7 @@ export function EducareStudentsClient() {
             ทั้งหมด {items.length.toLocaleString("th-TH")} คน
           </p>
         </div>
+        <p className="mt-3 text-xs text-[#66638c] sm:hidden">ทั้งหมด {items.length.toLocaleString("th-TH")} คน</p>
 
         {error ? (
           <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
@@ -308,6 +374,14 @@ export function EducareStudentsClient() {
         />
       ) : null}
     </div>
+  );
+}
+
+function FilterIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden>
+      <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
+    </svg>
   );
 }
 

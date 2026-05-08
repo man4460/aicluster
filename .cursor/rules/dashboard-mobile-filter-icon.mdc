@@ -1,0 +1,29 @@
+---
+description: ฟอร์มกรองข้อมูลบนมือถือให้ย่อเป็นปุ่มไอคอน และเปิดตัวกรองแบบแผง/โมดัล
+alwaysApply: true
+---
+
+# Mobile filter pattern (dashboard modules)
+
+- เมื่อมี **ฟอร์มกรองข้อมูล** (เช่น วันที่, ห้องเรียน, สถานะ, keyword) ในหน้าแดชบอร์ด:
+  - บนจอเล็ก (`< sm` หรือ breakpoint โมดูล) ให้แสดงเป็น **ปุ่มไอคอนตัวกรอง** (เช่น funnel/sliders) แทนการโชว์ฟอร์มเต็มแถว
+  - เมื่อกดไอคอน ให้เปิดแผงกรอง (`sheet` / `popover` / `modal`) เพื่อแก้ค่า filter
+- บนจอใหญ่ (`sm+`) ให้แสดงฟอร์มกรองเต็มรูปแบบได้ตามปกติ
+- ปุ่มไอคอนต้องมี `aria-label` ชัดเจน เช่น `"เปิดตัวกรอง"` และมีขนาดแตะง่ายอย่างน้อย `min-h-[40px]`
+- ควรแสดงสถานะว่ามีการกรองอยู่ (badge จุด/ตัวเลข/สีปุ่ม) เพื่อให้ผู้ใช้มือถือรู้ว่าฟิลเตอร์กำลังทำงาน
+- ใช้ pattern นี้กับโมดูล `educare` และโมดูลใหม่ในอนาคตที่มี list/report/filter ลักษณะเดียวกัน
+
+## Example pattern
+
+```tsx
+<button
+  type="button"
+  aria-label="เปิดตัวกรอง"
+  className="sm:hidden min-h-[40px] rounded-xl px-3"
+  onClick={() => setFilterOpen(true)}
+>
+  <FilterIcon aria-hidden />
+</button>
+
+<div className="hidden sm:grid">{/* full filter form on desktop */}</div>
+```
