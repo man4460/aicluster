@@ -4,6 +4,7 @@ import {
   BUILDING_POS_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
+  EDUCARE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
@@ -45,4 +46,8 @@ export function getLaundryDataScope(userId: string): Promise<ModuleDataScope> {
 
 export function getParkingDataScope(userId: string): Promise<ModuleDataScope> {
   return resolveDataScopeBySlug(userId, PARKING_MODULE_SLUG);
+}
+
+export function getEducareDataScope(userId: string): Promise<ModuleDataScope> {
+  return resolveDataScopeBySlug(userId, EDUCARE_MODULE_SLUG);
 }

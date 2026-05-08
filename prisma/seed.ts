@@ -3,6 +3,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import bcrypt from "bcryptjs";
 import { bangkokMonthKey } from "../src/lib/time/bangkok";
 import { seedBuildingPosProdDemoForOwner } from "../src/lib/trial/seed-building-pos";
+import { seedEducareProdDemoForOwner } from "../src/lib/trial/seed-educare";
 
 const prisma = new PrismaClient();
 
@@ -165,6 +166,14 @@ async function main() {
       sortOrder: 26,
     },
     {
+      slug: "educare",
+      title: "EduCare เช็คนักเรียน",
+      description:
+        "กลุ่ม 1 (Basic) — เช็คเข้าแถว ความเรียบร้อย เข้าเรียน อาหาร นม แปรงฟัน รายวัน 6 ฟีเจอร์",
+      groupId: 1,
+      sortOrder: 28,
+    },
+    {
       slug: "stock-management",
       title: "ระบบจัดการสต็อกสินค้า",
       description: "กลุ่ม 2 (Silver)",
@@ -251,6 +260,15 @@ async function main() {
       select: { id: true },
     });
     if (row) await seedBuildingPosProdDemoForOwner(prisma, row.id);
+  }
+
+  /** EduCare — โรงเรียน + ห้อง + นักเรียน + บันทึกเช็ค 7 วัน (scope prod) สำหรับบัญชี demo ถ้ายังไม่มีข้อมูล */
+  for (const email of demoPosOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) await seedEducareProdDemoForOwner(prisma, row.id);
   }
 }
 

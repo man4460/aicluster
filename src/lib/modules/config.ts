@@ -55,6 +55,8 @@ export const VILLAGE_MODULE_SLUG = "village" as const;
 export const VILLAGE_MODULE_GROUP_ID = 1 as const;
 export const LAUNDRY_MODULE_SLUG = "laundry" as const;
 export const LAUNDRY_MODULE_GROUP_ID = 1 as const;
+export const EDUCARE_MODULE_SLUG = "educare" as const;
+export const EDUCARE_MODULE_GROUP_ID = 1 as const;
 
 /** ระบบเช่าที่จอดรถ — กลุ่ม 1 (Basic) ลูกค้าเลือก Subscribe/ทดลองจากแคตตาล็อกโมดูล */
 export const PARKING_MODULE_SLUG = "parking" as const;
@@ -72,6 +74,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === VILLAGE_MODULE_SLUG) return "จัดการหมู่บ้าน";
   if (slug === LAUNDRY_MODULE_SLUG) return "รับฝากซักผ้า";
   if (slug === PARKING_MODULE_SLUG) return "ระบบเช่าที่จอดรถ";
+  if (slug === EDUCARE_MODULE_SLUG) return "EduCare เช็คนักเรียน";
   return title;
 }
 

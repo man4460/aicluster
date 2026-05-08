@@ -6,6 +6,7 @@ import {
   BARBER_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
+  EDUCARE_MODULE_SLUG,
   HOME_FINANCE_BASIC_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
@@ -38,6 +39,7 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === VILLAGE_MODULE_SLUG) return "/dashboard/village";
   if (slug === PARKING_MODULE_SLUG) return "/dashboard/parking";
   if (slug === LAUNDRY_MODULE_SLUG) return "/dashboard/laundry";
+  if (slug === EDUCARE_MODULE_SLUG) return "/dashboard/educare";
   return `/dashboard/modules/${slug}`;
 }
 
@@ -126,6 +128,7 @@ export function buildDashboardNavGroups(
     ]);
     const adminSlugs = new Set<string>([
       ATTENDANCE_MODULE_SLUG,
+      EDUCARE_MODULE_SLUG,
       MQTT_SERVICE_MODULE_SLUG,
       SYSTEM_MAP_CATALOG_SLUG,
     ]);

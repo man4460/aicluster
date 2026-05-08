@@ -166,6 +166,11 @@ model User {
   laundryOrders            LaundryOrder[]
   laundryCostCategories    LaundryCostCategory[]
   laundryCostEntries       LaundryCostEntry[]
+  educareSchools           EducareSchool[]
+  educareClassrooms        EducareClassroom[]
+  educareStudents          EducareStudent[]
+  educareCheckRecords      EducareCheckRecord[]
+  educareSettings          EducareSettings[]
   openClawSyncRequests     OpenClawSyncRequest[]
 
   @@index([employerUserId])
@@ -1843,4 +1848,142 @@ model SystemActivityLog {
   @@index([actorUserId, createdAt])
   @@index([modelName, createdAt])
   @@map("system_activity_logs")
+}
+
+// --- EduCare / ระบบเช็คนักเรียนประจำวัน 6 ฟีเจอร์ (กลุ่ม 1) ---
+
+enum EducareCheckFeature {
+  ASSEMBLY
+  TIDINESS
+  CLASS_ATTENDANCE
+  MEAL
+  BRUSHING
+  MILK
+}
+
+/** สถานะรวม 3 ตระกูล: เข้าแถว/เข้าเรียน (PRESENT/LATE/ABSENT/EXCUSED), ความเรียบร้อย (PASS/FAIL/NA), กิจกรรม (DONE/PARTIAL/NOT_DONE/NA) */
+enum EducareCheckStatus {
+  PRESENT
+  LATE
+  ABSENT
+  EXCUSED
+  PASS
+  FAIL
+  DONE
+  PARTIAL
+  NOT_DONE
+  NA
+}
+
+model EducareSchool {
+  id             Int                @id @default(autoincrement())
+  ownerUserId    String             @map("owner_id") @db.VarChar(191)
+  owner          User               @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String             @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String             @db.VarChar(120)
+  address        String?            @db.Text
+  phone          String?            @db.VarChar(40)
+  isActive       Boolean            @default(true) @map("is_active")
+  classrooms     EducareClassroom[]
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId, name], map: "edu_sch_owner_trial_name_uidx")
+  @@index([ownerUserId, trialSessionId], map: "edu_sch_owner_trial_idx")
+  @@map("educare_schools")
+}
+
+model EducareClassroom {
+  id                  Int                  @id @default(autoincrement())
+  ownerUserId         String               @map("owner_id") @db.VarChar(191)
+  owner               User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId      String               @default("prod") @map("trial_session_id") @db.VarChar(36)
+  schoolId            Int                  @map("school_id")
+  school              EducareSchool        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name                String               @db.VarChar(60)
+  grade               String?              @db.VarChar(40)
+  level               String?              @db.VarChar(40)
+  homeroomTeacherName String?              @map("homeroom_teacher_name") @db.VarChar(120)
+  homeroomTeacherPhone String?             @map("homeroom_teacher_phone") @db.VarChar(40)
+  isActive            Boolean              @default(true) @map("is_active")
+  sortOrder           Int                  @default(0) @map("sort_order")
+  students            EducareStudent[]
+  records             EducareCheckRecord[]
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, schoolId, sortOrder], map: "edu_cls_owner_trial_school_sort_idx")
+  @@index([schoolId], map: "edu_cls_school_idx")
+  @@map("educare_classrooms")
+}
+
+model EducareStudent {
+  id             Int                  @id @default(autoincrement())
+  ownerUserId    String               @map("owner_id") @db.VarChar(191)
+  owner          User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String               @default("prod") @map("trial_session_id") @db.VarChar(36)
+  classroomId    Int                  @map("classroom_id")
+  classroom      EducareClassroom     @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  studentNo      String               @map("student_no") @db.VarChar(20)
+  fullName       String               @map("full_name") @db.VarChar(120)
+  nickname       String?              @db.VarChar(60)
+  gender         String?              @db.VarChar(2)
+  birthdate      DateTime?            @db.Date
+  photoUrl       String?              @map("photo_url") @db.VarChar(512)
+  parentName     String?              @map("parent_name") @db.VarChar(120)
+  parentPhone    String?              @map("parent_phone") @db.VarChar(40)
+  address        String?              @db.Text
+  isActive       Boolean              @default(true) @map("is_active")
+  records        EducareCheckRecord[]
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId, classroomId, studentNo], map: "edu_stu_owner_trial_room_no_uidx")
+  @@index([ownerUserId, trialSessionId, classroomId], map: "edu_stu_owner_trial_room_idx")
+  @@map("educare_students")
+}
+
+model EducareCheckRecord {
+  id             BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  ownerUserId    String              @map("owner_id") @db.VarChar(191)
+  owner          User                @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String              @default("prod") @map("trial_session_id") @db.VarChar(36)
+  studentId      Int                 @map("student_id")
+  student        EducareStudent      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classroomId    Int                 @map("classroom_id")
+  classroom      EducareClassroom    @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  date           DateTime            @db.Date
+  feature        EducareCheckFeature
+  status         EducareCheckStatus
+  /** metadata เก็บ period_no / meal_type / cascaded marker / ฯลฯ */
+  meta           Json?
+  note           String?             @db.Text
+  recordedAt     DateTime            @default(now()) @map("recorded_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  @@unique([studentId, date, feature], map: "edu_rec_student_date_feature_uidx")
+  @@index([ownerUserId, trialSessionId, date], map: "edu_rec_owner_trial_date_idx")
+  @@index([classroomId, date], map: "edu_rec_classroom_date_idx")
+  @@map("educare_check_records")
+}
+
+model EducareSettings {
+  id              Int      @id @default(autoincrement())
+  ownerUserId     String   @map("owner_id") @db.VarChar(191)
+  owner           User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId  String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  schoolName      String?  @map("school_name") @db.VarChar(120)
+  schoolAddress   String?  @map("school_address") @db.Text
+  schoolPhone     String?  @map("school_phone") @db.VarChar(40)
+  assemblyTime    String   @default("08:00") @map("assembly_time") @db.VarChar(5)
+  tidinessTime    String   @default("08:15") @map("tidiness_time") @db.VarChar(5)
+  milkTime        String   @default("09:30") @map("milk_time") @db.VarChar(5)
+  mealTime        String   @default("11:30") @map("meal_time") @db.VarChar(5)
+  brushingTime    String   @default("12:30") @map("brushing_time") @db.VarChar(5)
+  notifyAbsentEnabled Boolean @default(false) @map("notify_absent_enabled")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId], map: "edu_set_owner_trial_uidx")
+  @@map("educare_settings")
 }
