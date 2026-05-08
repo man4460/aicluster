@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
+import { VillageSettingsQuickTabs } from "@/systems/village/components/VillageSettingsQuickTabs";
 import { createVillageSessionApiRepository, type VillageProfile } from "@/systems/village/village-service";
-import { villageBtnPrimary, villageField } from "@/systems/village/village-ui";
+import { villageBtnPrimary, villageDivider, villageField, villageGlassCard } from "@/systems/village/village-ui";
 import { cn } from "@/lib/cn";
 
 function IconBuilding({ className }: { className?: string }) {
@@ -64,7 +65,7 @@ type SettingsBlockProps = {
 
 function SettingsBlock({ icon, tone, title, hint, children }: SettingsBlockProps) {
   return (
-    <div className="border-t border-slate-200/70 pt-4 first:border-t-0 first:pt-0">
+    <div className={cn("border-t pt-4 first:border-t-0 first:pt-0", villageDivider)}>
       <div className="flex gap-2.5">
         <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-inner", tone)} aria-hidden>
           {icon}
@@ -123,6 +124,7 @@ export function VillageSettingsClient() {
       <VillagePanelCard
         title="ตั้งค่าโครงการ"
         description="ข้อมูลนิติ ค่าส่วนกลางเริ่มต้น และช่องทางชำระเงิน — รอบเรียกเก็บต่อหลังตั้งที่หน้าลูกบ้าน"
+        action={<VillageSettingsQuickTabs />}
       >
         <form
           className="w-full"
@@ -243,7 +245,7 @@ export function VillageSettingsClient() {
 
           {err ? <p className="mt-3 text-sm text-rose-600">{err}</p> : null}
 
-          <div className="mt-5 border-t border-slate-200/70 pt-4">
+          <div className={cn("mt-5 border-t pt-4", villageDivider)}>
             <button
               type="submit"
               className={cn(villageBtnPrimary, "flex w-full min-h-[48px] items-center justify-center gap-2 sm:w-auto sm:min-w-[11rem]")}

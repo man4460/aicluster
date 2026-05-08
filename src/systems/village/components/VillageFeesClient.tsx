@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { VillageEmptyDashed, VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
+import { VillageFinanceQuickTabs } from "@/systems/village/components/VillageFinanceQuickTabs";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import {
   createVillageSessionApiRepository,
   villageFeeCycleLabelTh,
   type VillageFeeRow,
 } from "@/systems/village/village-service";
-import { villageBtnPrimary, villageBtnSecondary, villageField } from "@/systems/village/village-ui";
+import { villageBtnPrimary, villageBtnSecondary, villageDivider, villageField, villageGlassCard } from "@/systems/village/village-ui";
 
 type FeeStatus = "PENDING" | "PARTIAL" | "PAID" | "WAIVED";
 
@@ -82,6 +83,22 @@ function IconNoSymbol({ className }: { className?: string }) {
   );
 }
 
+function IconRefresh({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden>
+      <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconPlus({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function feeStatusBadgeClass(status: string) {
   switch (status) {
     case "PAID":
@@ -122,8 +139,9 @@ function VillageFeeRowCard({
   return (
     <article
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/90 p-3 shadow-sm transition",
-        "hover:border-[#4d47b6]/22 hover:shadow-md",
+        "relative flex flex-col overflow-hidden rounded-[1.4rem] p-3 transition",
+        villageGlassCard,
+        "hover:border-white/80 hover:shadow-[0_22px_44px_-24px_rgba(79,70,229,0.35)]",
       )}
     >
       <div
@@ -153,7 +171,7 @@ function VillageFeeRowCard({
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-white/90 px-2.5 py-2">
+        <div className="flex items-center gap-2 rounded-xl border border-white/70 bg-white/75 px-2.5 py-2">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
             <IconBanknote className="h-4 w-4" />
           </span>
@@ -162,7 +180,7 @@ function VillageFeeRowCard({
             <p className="truncate text-sm font-bold tabular-nums text-slate-900">{r.amount_due.toLocaleString("th-TH")}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-100/80 bg-emerald-50/40 px-2.5 py-2">
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-100/80 bg-emerald-50/60 px-2.5 py-2">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100/80 text-emerald-700">
             <IconBanknote className="h-4 w-4" />
           </span>
@@ -187,7 +205,7 @@ function VillageFeeRowCard({
       </div>
 
       {r.note?.trim() ? (
-        <p className="mt-2 line-clamp-2 rounded-lg bg-slate-100/80 px-2 py-1.5 text-[10px] leading-snug text-slate-600">
+        <p className="mt-2 line-clamp-2 rounded-lg border border-white/70 bg-white/70 px-2 py-1.5 text-[10px] leading-snug text-slate-600">
           {r.note.trim()}
         </p>
       ) : null}
@@ -375,7 +393,16 @@ export function VillageFeesClient({ initialYm }: { initialYm: string }) {
 
   return (
     <VillagePageStack>
-      <VillagePanelCard title="เดือนและการทำงาน">
+      <VillageFinanceQuickTabs />
+      <VillagePanelCard
+        title="ค่าส่วนกลาง"
+        description={
+          <>
+            <span className="sm:hidden">จัดการรอบบิลและสถานะการชำระ</span>
+            <span className="hidden sm:inline">จัดการรอบบิลรายเดือน กรองสถานะ และตรวจสอบรายการค่าส่วนกลางในกล่องเดียว</span>
+          </>
+        }
+      >
         <div className="flex flex-wrap gap-1.5">
           <span className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100/80 px-2.5 py-1 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200/80">
             <span className="text-slate-400">ค่ามาตรฐาน</span>
@@ -384,7 +411,7 @@ export function VillageFeesClient({ initialYm }: { initialYm: string }) {
           <span className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-indigo-50/90 to-violet-50/80 px-2.5 py-1 text-[10px] font-semibold text-indigo-900/90 ring-1 ring-indigo-200/60">
             ครบกำหนดวันที่ <span className="tabular-nums">{dueDay}</span>
           </span>
-          <span className="inline-flex items-center rounded-lg bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200/80">
+          <span className="hidden items-center rounded-lg bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200/80 sm:inline-flex">
             รอบเรียกเก็บต่อหลัง
           </span>
         </div>
@@ -403,8 +430,15 @@ export function VillageFeesClient({ initialYm }: { initialYm: string }) {
             />
           </label>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:w-auto sm:shrink-0 sm:gap-2">
-            <button type="button" className={cn(villageBtnSecondary, "w-full sm:w-auto sm:min-w-[5.5rem]")} onClick={() => void load()}>
-              โหลด
+            <button
+              type="button"
+              className={cn(villageBtnSecondary, "w-full sm:w-auto sm:min-w-[5.5rem]")}
+              onClick={() => void load()}
+              aria-label="โหลดรายการ"
+              title="โหลดรายการ"
+            >
+              <IconRefresh className="h-4 w-4 sm:hidden" />
+              <span className="hidden sm:inline">โหลด</span>
             </button>
             <button
               type="button"
@@ -418,13 +452,14 @@ export function VillageFeesClient({ initialYm }: { initialYm: string }) {
                 }
               }}
             >
-              <span className="sm:hidden">+ สร้าง/เติม</span>
+              <IconPlus className="h-4 w-4 sm:hidden" />
+              <span className="sm:hidden">สร้าง/เติม</span>
               <span className="hidden sm:inline">+ สร้าง/เติมทุกหลัง</span>
             </button>
           </div>
         </div>
 
-        <div className="mt-4 border-t border-slate-200/70 pt-3">
+        <div className={cn("mt-4 border-t pt-3", villageDivider)}>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <span className="shrink-0 text-[10px] font-bold tracking-wide text-slate-400">กรองสถานะ</span>
             <div
@@ -449,27 +484,23 @@ export function VillageFeesClient({ initialYm }: { initialYm: string }) {
             </div>
           </div>
         </div>
-      </VillagePanelCard>
-      {err ? <p className="text-sm text-rose-600">{err}</p> : null}
-      {loading ? (
-        <VillagePanelCard>
-          <p className="text-center text-sm text-[#66638c]">กำลังโหลด…</p>
-        </VillagePanelCard>
-      ) : null}
-      {!loading ? (
-        <VillagePanelCard
-          title="รายการบิลรายเดือน"
-          description={
-            <>
+        <div className={cn("mt-4 border-t pt-3.5", villageDivider)}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-black tracking-tight text-[#1e1b4b]">รายการบิลรายเดือน</h3>
+            <p className="text-xs text-[#66638c]">
               เดือน <span className="font-mono font-semibold text-slate-700">{ym}</span> ·{" "}
               <span className="tabular-nums">{rows.length}</span> รายการ
-            </>
-          }
-        >
-          {rows.length === 0 ? (
-            <VillageEmptyDashed>ยังไม่มีรายการ — กด «สร้าง/เติมทุกหลัง» เพื่อสร้างบิลทุกบ้าน</VillageEmptyDashed>
+            </p>
+          </div>
+          {err ? <p className="mt-2 text-sm text-rose-600">{err}</p> : null}
+          {loading ? (
+            <p className="mt-3 text-center text-sm text-[#66638c]">กำลังโหลด…</p>
+          ) : rows.length === 0 ? (
+            <div className="mt-3">
+              <VillageEmptyDashed>ยังไม่มีรายการ — กด «สร้าง/เติมทุกหลัง» เพื่อสร้างบิลทุกบ้าน</VillageEmptyDashed>
+            </div>
           ) : (
-            <ul className="grid list-none grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <ul className="mt-3 grid list-none grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {rows.map((r) => (
                 <li key={r.id}>
                   <VillageFeeRowCard
@@ -482,8 +513,8 @@ export function VillageFeesClient({ initialYm }: { initialYm: string }) {
               ))}
             </ul>
           )}
-        </VillagePanelCard>
-      ) : null}
+        </div>
+      </VillagePanelCard>
       {editRow ? (
         <FeeEditModal
           api={api}

@@ -10,8 +10,9 @@ import {
 import { cn } from "@/lib/cn";
 import { formatDormAmountStable } from "@/lib/dormitory/format-display-stable";
 import { VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
+import { VillageFinanceQuickTabs } from "@/systems/village/components/VillageFinanceQuickTabs";
 import { createVillageSessionApiRepository } from "@/systems/village/village-service";
-import { villageBtnPrimary, villageBtnSecondary, villageField } from "@/systems/village/village-ui";
+import { villageBtnPrimary, villageBtnSecondary, villageField, villageGlassCard } from "@/systems/village/village-ui";
 
 type MonthRow = {
   year_month: string;
@@ -115,7 +116,16 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
 
   return (
     <VillagePageStack>
-      <VillagePanelCard title="ปีและส่งออก">
+      <VillageFinanceQuickTabs />
+      <VillagePanelCard
+        title="สรุปรายปี"
+        description={
+          <>
+            <span className="sm:hidden">ภาพรวมรายได้ รายจ่าย และดุลทั้งปี</span>
+            <span className="hidden sm:inline">เลือกปี ดูกราฟเทียบรายได้-รายจ่าย และตารางสรุปทั้งหมดในกล่องเดียว</span>
+          </>
+        }
+      >
         <div className="flex flex-wrap gap-1.5">
           <span className="inline-flex items-center rounded-lg bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200/80">
             ปีปฏิทิน ค.ศ.
@@ -155,22 +165,17 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
             </Link>
           </div>
         </div>
-      </VillagePanelCard>
-
-      {err ? <p className="text-sm text-rose-600">{err}</p> : null}
-
-      <VillagePanelCard
-        title="รายได้ค่าส่วนกลาง เทียบรายจ่าย/ต้นทุน (รายเดือน)"
-        description={
-          <>
-            รายได้ = ยอดรับแล้วของบิลในเดือนนั้น (งวดเดียวกับตารางด้านล่าง) · รายจ่ายจากเมนู{" "}
+        {err ? <p className="mt-2 text-sm text-rose-600">{err}</p> : null}
+        <div className="mt-4 border-t border-white/55 pt-4">
+          <p className="text-sm font-black tracking-tight text-[#1e1b4b]">รายได้ค่าส่วนกลาง เทียบรายจ่าย/ต้นทุน (รายเดือน)</p>
+          <p className="mt-1 text-xs text-[#66638c]">
+            รายได้ = ยอดรับแล้วของบิลในเดือนนั้น · รายจ่ายจากเมนู{" "}
             <Link href="/dashboard/village/costs" className="font-semibold text-[#4338ca] underline-offset-2 hover:underline">
               ต้นทุน / รายจ่าย
             </Link>{" "}
             ตามวันจ่ายจริง (spentAt) ในปฏิทินไทย
-          </>
-        }
-      >
+          </p>
+          <div className="mt-3">
         {rows.length > 0 ? (
           <>
             <AppSparkChartPanel className="w-full min-w-0">
@@ -186,79 +191,24 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
                 }
               />
             </AppSparkChartPanel>
-            <ul className="mt-4 grid list-none gap-2 md:hidden">
-              {financeBuckets.map((b) => (
-                <li
-                  key={b.key}
-                  className="rounded-xl border border-slate-200/90 bg-white/95 px-3 py-2.5 text-sm shadow-sm"
-                >
-                  <p className="font-semibold text-slate-900">{b.label}</p>
-                  <p className="mt-1 text-xs text-slate-600">
-                    รายได้{" "}
-                    <span className="font-semibold tabular-nums text-emerald-800">
-                      {formatDormAmountStable(b.revenue)}
-                    </span>
-                    {" · "}รายจ่าย{" "}
-                    <span className="font-semibold tabular-nums text-rose-800">
-                      {formatDormAmountStable(b.cost)}
-                    </span>
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold text-slate-800">
-                    ดุล {formatDormAmountStable(b.revenue - b.cost)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-4 hidden overflow-x-auto rounded-xl border border-slate-200/90 md:block">
-              <table className="w-full min-w-[520px] text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50/95 text-[11px] font-bold text-slate-600">
-                  <tr>
-                    <th className="px-3 py-2">เดือน (ปฏิทินไทย)</th>
-                    <th className="px-3 py-2 text-right">รายได้ (รับแล้ว)</th>
-                    <th className="px-3 py-2 text-right">รายจ่าย / ต้นทุน</th>
-                    <th className="px-3 py-2 text-right">คงเหลือ (ดุล)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {financeBuckets.map((b) => (
-                    <tr key={b.key} className="bg-white/90">
-                      <td className="px-3 py-2 font-medium text-slate-900">{b.label}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-emerald-800">
-                        {formatDormAmountStable(b.revenue)}
-                      </td>
-                      <td className="px-3 py-2 text-right tabular-nums text-rose-800">
-                        {formatDormAmountStable(b.cost)}
-                      </td>
-                      <td
-                        className={cn(
-                          "px-3 py-2 text-right tabular-nums font-semibold",
-                          b.revenue - b.cost >= 0 ? "text-slate-900" : "text-rose-700",
-                        )}
-                      >
-                        {formatDormAmountStable(b.revenue - b.cost)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           </>
         ) : (
           <p className="py-6 text-center text-sm text-slate-500">ไม่มีข้อมูล</p>
         )}
-      </VillagePanelCard>
+          </div>
+        </div>
 
-      <VillagePanelCard
-        title="สรุปรายเดือน"
-        description={
-          <>
-            ปี <span className="font-bold tabular-nums text-slate-800">{year}</span> ·{" "}
-            <span className="tabular-nums">{rows.length}</span> เดือน
-          </>
-        }
-      >
+        <div className="mt-4 border-t border-white/55 pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-black tracking-tight text-[#1e1b4b]">สรุปรายเดือน</p>
+            <p className="text-xs text-[#66638c]">
+              ปี <span className="font-bold tabular-nums text-slate-800">{year}</span> ·{" "}
+              <span className="tabular-nums">{rows.length}</span> เดือน
+            </p>
+          </div>
+          <div className="mt-3">
         <div className="hidden lg:block">
-          <div className="overflow-x-auto rounded-xl border border-slate-200/80 [-webkit-overflow-scrolling:touch]">
+          <div className={cn("overflow-x-auto rounded-xl [-webkit-overflow-scrolling:touch]", villageGlassCard)}>
             <table className="w-full min-w-[880px] text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50/95 text-[11px] font-bold tracking-wide text-slate-600">
                 <tr>
@@ -322,7 +272,7 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
         </div>
 
         <div className="hidden md:block lg:hidden">
-          <div className="overflow-x-auto rounded-xl border border-slate-200/80 [-webkit-overflow-scrolling:touch]">
+          <div className={cn("overflow-x-auto rounded-xl [-webkit-overflow-scrolling:touch]", villageGlassCard)}>
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50/95 text-[11px] font-bold tracking-wide text-slate-600">
                 <tr>
@@ -370,10 +320,7 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
             const p = monthPct(m);
             const net = m.total_paid - m.total_cost;
             return (
-              <li
-                key={m.year_month}
-                className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50/95 p-2.5 shadow-sm ring-1 ring-slate-100/80"
-              >
+              <li key={m.year_month} className={cn("relative overflow-hidden rounded-2xl p-2.5", villageGlassCard)}>
                 <div
                   className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-indigo-400/85 via-violet-300/80 to-emerald-400/80"
                   aria-hidden
@@ -419,7 +366,7 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
               </li>
             );
           })}
-          <li className="rounded-2xl border-2 border-indigo-200/60 bg-gradient-to-br from-indigo-50/90 to-white p-3 shadow-sm">
+          <li className={cn("rounded-2xl border-2 border-indigo-200/60 bg-gradient-to-br from-indigo-50/90 to-white p-3 shadow-sm", "ring-1 ring-white/70")}>
             <p className="text-xs font-bold text-indigo-950">รวมทั้งปี {year}</p>
             <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
               <div>
@@ -458,6 +405,8 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
             </div>
           </li>
         </ul>
+          </div>
+        </div>
       </VillagePanelCard>
     </VillagePageStack>
   );

@@ -52,6 +52,7 @@ function logPrimaryLine(r: Row): { title: string; subId: string } {
 
 export function AttendanceLogsClient() {
   const imageLightbox = useAppImageLightbox();
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [from, setFrom] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
@@ -111,12 +112,25 @@ export function AttendanceLogsClient() {
       {loadErr ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">{loadErr}</p>
       ) : null}
-      <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-12 lg:items-end">
-        <label className="text-xs font-semibold text-slate-700 lg:col-span-2">
+      <div className="flex items-center justify-end sm:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileFilterOpen((prev) => !prev)}
+          className="app-btn-soft inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[#d8d6ec] px-3 py-2.5 text-[#4d47b6]"
+          aria-label={mobileFilterOpen ? "ซ่อนตัวกรองรายงาน" : "แสดงตัวกรองรายงาน"}
+          title={mobileFilterOpen ? "ซ่อนตัวกรองรายงาน" : "แสดงตัวกรองรายงาน"}
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M3 5h18M6 12h12M10 19h4" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+      <div className={cn(attendanceFilterBarClass, mobileFilterOpen ? "grid" : "hidden sm:grid")}>
+        <label className={cn(attendanceLabelClass, "lg:col-span-2")}>
           จาก
           <input
             type="date"
-            className="mt-1 min-h-[44px] w-full rounded-xl border border-slate-200 px-3 py-2 text-sm touch-manipulation sm:min-h-0"
+            className="mt-1 min-h-[44px] w-full rounded-xl border border-[#e1e3ff] bg-white px-3 py-2 text-sm touch-manipulation sm:min-h-0"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
           />
@@ -130,10 +144,10 @@ export function AttendanceLogsClient() {
             onChange={(e) => setTo(e.target.value)}
           />
         </label>
-        <label className="text-xs font-semibold text-slate-700 sm:col-span-2 lg:col-span-3">
+        <label className={cn(attendanceLabelClass, "sm:col-span-2 lg:col-span-3")}>
           ค้นหา
           <input
-            className="mt-1 min-h-[44px] w-full rounded-xl border border-slate-200 px-3 py-2 text-sm touch-manipulation sm:min-h-0"
+            className="mt-1 min-h-[44px] w-full rounded-xl border border-[#e1e3ff] bg-white px-3 py-2 text-sm touch-manipulation sm:min-h-0"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="เบอร์ / ชื่อ / ยูสเซอร์"
@@ -157,13 +171,13 @@ export function AttendanceLogsClient() {
           <button
             type="button"
             onClick={() => void load()}
-            className="min-h-[44px] w-full rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800 touch-manipulation sm:w-auto sm:min-h-0"
+            className={cn(attendanceSecondaryBtnClass, "w-full justify-center sm:w-auto")}
           >
             ค้นหา
           </button>
           <a
             href={exportUrl()}
-            className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-[#0000BF] px-4 py-2.5 text-sm font-semibold text-[#0000BF] touch-manipulation sm:w-auto sm:min-h-0"
+            className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-[#4d47b6]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#4d47b6] touch-manipulation hover:bg-[#f8f7ff] sm:w-auto sm:min-h-0"
           >
             Export CSV
           </a>

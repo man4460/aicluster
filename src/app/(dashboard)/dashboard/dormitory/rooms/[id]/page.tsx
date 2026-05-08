@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 import { DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
+import { DormRoomManageQuickTabs } from "@/systems/dormitory/components/DormRoomManageQuickTabs";
 import {
   RoomDetailClient,
   type DormOverdueRow,
@@ -18,7 +19,7 @@ import {
   overdueLines,
 } from "@/systems/dormitory/lib/compute";
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ month?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ month?: string; section?: string }> };
 
 function parseRoomId(raw: string): number | null {
   const n = Number(raw);
@@ -36,6 +37,8 @@ export default async function DormitoryRoomDetailPage({ params, searchParams }: 
   const sp = await searchParams;
   const focusMonth =
     typeof sp.month === "string" && /^\d{4}-\d{2}$/.test(sp.month) ? sp.month : null;
+  const focusSection =
+    typeof sp.section === "string" && (sp.section === "meter" || sp.section === "payment") ? sp.section : null;
   const roomId = parseRoomId(id);
   if (roomId === null) notFound();
 
@@ -130,6 +133,7 @@ export default async function DormitoryRoomDetailPage({ params, searchParams }: 
 
   return (
     <DormPageStack>
+      <DormRoomManageQuickTabs roomId={room.id} />
       <DormPanelCard
         title={`ห้อง ${room.roomNumber}`}
         description={`${room.roomType} · ชั้น ${room.floor} · ค่าเช่า ${Number(room.basePrice).toLocaleString("th-TH")} บาท/เดือน`}
@@ -149,6 +153,7 @@ export default async function DormitoryRoomDetailPage({ params, searchParams }: 
         overdueRows={overdueRows}
         initialPayMonth={focusMonth}
         initialBangkokYm={bangkokYearMonthYm()}
+        initialFocusSection={focusSection}
       />
     </DormPageStack>
   );

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { distanceMeters } from "@/lib/geo/haversine";
-import { MawellThBrandHeader } from "@/components/branding/MawellThBrandHeader";
 import { attendanceStepBoxClass } from "@/systems/attendance/attendance-ui";
 
 const statusTh: Record<string, string> = {
@@ -566,7 +565,6 @@ export function AttendanceCheckClient(props: Props) {
   }
   const canCheckOut = !!openLog;
 
-  const orgLine = isPublic ? props.orgName : props.orgName ?? "เช็คชื่อพนักงาน";
   const showAfterStep1 = !isPublic || publicFlow !== "pick";
 
   const phoneDigitsLen = phone.replace(/\D/g, "").length;
@@ -590,7 +588,10 @@ export function AttendanceCheckClient(props: Props) {
           locationLabel={props.locationLabel ?? null}
         />
       ) : (
-        <MawellThBrandHeader orgLine={orgLine} logoUrl={props.logoUrl ?? null} />
+        <header className="rounded-2xl border border-[#e8e6fc] bg-white/90 px-4 py-4 text-center shadow-sm">
+          <h1 className="text-lg font-black tracking-tight text-[#2e2a58] sm:text-xl">เช็คชื่อพนักงาน</h1>
+          <p className="mt-1 text-xs text-[#66638c]">ตรวจสอบตัวตนด้วยรูปและตำแหน่ง ก่อนบันทึกเวลาเข้า-ออก</p>
+        </header>
       )}
 
       {successBanner ? (

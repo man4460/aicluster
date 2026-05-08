@@ -5,6 +5,7 @@ import Link from "next/link";
 import { VillagePageStack, VillagePanelCard, VillageStatTile } from "@/systems/village/components/VillagePageChrome";
 import { createVillageSessionApiRepository, type VillageOverview } from "@/systems/village/village-service";
 import { cn } from "@/lib/cn";
+import { villageBtnSecondary, villageGlassCard } from "@/systems/village/village-ui";
 
 type SparkPoint = VillageOverview["twelve_month_sparkline"][number];
 
@@ -201,20 +202,40 @@ export function VillageDashboardClient() {
       {err ? <p className="text-sm text-rose-600">{err}</p> : null}
       {data ? (
         <>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-            <Link href="/dashboard/village/residents" className="block transition hover:opacity-95">
-              <VillageStatTile title="บ้านที่ใช้งาน" value={`${data.active_houses} หลัง`} tone="blue" />
-            </Link>
-            <Link href="/dashboard/village/residents" className="block transition hover:opacity-95">
-              <VillageStatTile title="ผู้พักในระบบ" value={`${data.resident_count} คน`} tone="slate" />
-            </Link>
-            <Link href="/dashboard/village/slips" className="block transition hover:opacity-95">
-              <VillageStatTile
-                title="สลิปรอตรวจ"
-                value={String(data.pending_slips)}
-                tone={data.pending_slips > 0 ? "amber" : "green"}
-              />
-            </Link>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+            {(
+              [
+              {
+                href: "/dashboard/village/residents",
+                title: "บ้านที่ใช้งาน",
+                value: `${data.active_houses} หลัง` as string,
+                tone: "blue" as "blue" | "green" | "red" | "slate" | "amber",
+              },
+              {
+                href: "/dashboard/village/residents",
+                title: "ผู้พักในระบบ",
+                value: `${data.resident_count} คน` as string,
+                tone: "slate" as "blue" | "green" | "red" | "slate" | "amber",
+              },
+              {
+                href: "/dashboard/village/slips",
+                title: "สลิปรอตรวจ",
+                value: String(data.pending_slips) as string,
+                tone: (data.pending_slips > 0 ? "amber" : "green") as "blue" | "green" | "red" | "slate" | "amber",
+              },
+              ]
+            ).map((card, idx, arr) => {
+              const isOddTail = arr.length % 2 === 1 && idx === arr.length - 1;
+              return (
+                <Link
+                  key={`${card.href}-${card.title}`}
+                  href={card.href}
+                  className={cn("block transition hover:opacity-95", isOddTail ? "col-span-2 sm:col-span-1" : undefined)}
+                >
+                  <VillageStatTile title={card.title} value={card.value} tone={card.tone} />
+                </Link>
+              );
+            })}
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
@@ -235,23 +256,23 @@ export function VillageDashboardClient() {
                   <CollectionDonut percent={data.month_collection_percent} />
                 </div>
                 <div className="grid w-full min-w-0 flex-1 grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+                  <div className={cn("rounded-xl px-3 py-2.5", villageGlassCard)}>
                     <p className="text-[11px] font-medium text-slate-500">เรียกเก็บ</p>
                     <p className="mt-0.5 font-semibold tabular-nums text-slate-900">
                       {data.month_total_due.toLocaleString("th-TH")} บาท
                     </p>
                   </div>
-                  <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 px-3 py-2.5">
+                  <div className="rounded-xl border border-emerald-100/80 bg-emerald-50/60 px-3 py-2.5 shadow-[0_10px_28px_-18px_rgba(16,185,129,0.35)]">
                     <p className="text-[11px] font-medium text-emerald-800/80">รับแล้ว</p>
                     <p className="mt-0.5 font-semibold tabular-nums text-emerald-900">
                       {data.month_total_paid.toLocaleString("th-TH")} บาท
                     </p>
                   </div>
-                  <div className="rounded-xl border border-slate-100 bg-white px-3 py-2.5">
+                  <div className={cn("rounded-xl px-3 py-2.5", villageGlassCard)}>
                     <p className="text-[11px] font-medium text-slate-500">แถวบิล</p>
                     <p className="mt-0.5 font-semibold tabular-nums text-slate-900">{data.month_fee_rows}</p>
                   </div>
-                  <div className="rounded-xl border border-slate-100 bg-white px-3 py-2.5">
+                  <div className={cn("rounded-xl px-3 py-2.5", villageGlassCard)}>
                     <p className="text-[11px] font-medium text-slate-500">ชำระครบ / ค้างบางส่วน</p>
                     <p className="mt-0.5 font-semibold tabular-nums text-slate-900">
                       {data.month_paid_houses} หลัง · {data.month_pending_or_partial_rows} แถว
@@ -319,7 +340,7 @@ export function VillageDashboardClient() {
             title={`กราฟรายเดือนทั้งปี ${data.bangkok_year}`}
             description="ม.ค. ถึง ธ.ค. ของปีนี้ — แต่ละแท่งสูงตามยอดเรียกเก็บของเดือนนั้น · ส่วนสีเขียวคือยอดที่รับแล้ว (เดือนที่ยังไม่มีบิลจะเป็นแท่งต่ำหรือว่าง)"
             action={
-              <Link href="/dashboard/village/annual" className="text-xs font-semibold text-[#0000BF] hover:underline">
+              <Link href="/dashboard/village/annual" className={cn(villageBtnSecondary, "min-h-[36px] px-3 py-1.5 text-xs font-semibold")}>
                 หน้าสรุปรายปี →
               </Link>
             }

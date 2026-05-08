@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AppRevenueCostColumnChart, AppSparkChartPanel, type AppRevenueCostBucket } from "@/components/app-templates";
+import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { formatBangkokDateTimeStable, formatDormAmountStable } from "@/lib/dormitory/format-display-stable";
+import { DormFinanceQuickTabs } from "@/systems/dormitory/components/DormFinanceQuickTabs";
 import { DormEmptyDashed, DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
 import { dormBtnSecondary } from "@/systems/dormitory/dorm-ui";
 
@@ -43,27 +45,64 @@ function PaymentHistoryRowActions({
   onEdit: (row: Row) => void;
   onRemove: (row: Row) => void;
 }) {
+  const iconBtnBase =
+    "inline-flex h-9 w-9 items-center justify-center rounded-xl border bg-white/90 shadow-sm transition active:scale-[0.98] sm:hidden";
   return (
     <div className="flex flex-wrap gap-2">
       {r.paymentStatus === "PAID" && r.receiptNumber ? (
-        <Link
-          href={`/dashboard/dormitory/receipt/${r.id}`}
-          className="min-h-[40px] rounded-lg bg-[#ecebff] px-2.5 py-1.5 text-[11px] font-bold text-[#4338ca] ring-1 ring-[#4d47b6]/20 hover:bg-[#e0dcff] sm:min-h-0"
-        >
-          ใบเสร็จ
-        </Link>
+        <>
+          <Link
+            href={`/dashboard/dormitory/receipt/${r.id}`}
+            className={cn(iconBtnBase, "border-[#4d47b6]/20 text-[#4338ca] hover:bg-[#eef0ff]")}
+            aria-label="เปิดใบเสร็จ"
+            title="ใบเสร็จ"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden>
+              <path d="M7 3h10v18l-2-1-2 1-2-1-2 1-2-1V3Z" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M9 8h6M9 12h6" strokeLinecap="round" />
+            </svg>
+          </Link>
+          <Link
+            href={`/dashboard/dormitory/receipt/${r.id}`}
+            className="hidden min-h-[40px] rounded-lg bg-[#ecebff] px-2.5 py-1.5 text-[11px] font-bold text-[#4338ca] ring-1 ring-[#4d47b6]/20 hover:bg-[#e0dcff] sm:inline-flex sm:min-h-0"
+          >
+            ใบเสร็จ
+          </Link>
+        </>
       ) : null}
       <button
         type="button"
         onClick={() => onEdit(r)}
-        className="min-h-[40px] rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-[#4338ca] hover:bg-slate-100 sm:min-h-0"
+        className={cn(iconBtnBase, "border-slate-200 text-[#4338ca] hover:bg-slate-50")}
+        aria-label="แก้ไขรายการ"
+        title="แก้ไข"
+      >
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden>
+          <path d="m16.5 3.5 4 4L8 20l-5 1 1-5 12.5-12.5Z" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        onClick={() => onEdit(r)}
+        className="hidden min-h-[40px] rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-[#4338ca] hover:bg-slate-100 sm:inline-flex sm:min-h-0"
       >
         แก้ไข
       </button>
       <button
         type="button"
         onClick={() => onRemove(r)}
-        className="min-h-[40px] rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-50 sm:min-h-0"
+        className={cn(iconBtnBase, "border-rose-200 text-rose-700 hover:bg-rose-50")}
+        aria-label="ลบรายการ"
+        title="ลบ"
+      >
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden>
+          <path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        onClick={() => onRemove(r)}
+        className="hidden min-h-[40px] rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-rose-700 hover:bg-rose-50 sm:inline-flex sm:min-h-0"
       >
         ลบ
       </button>
@@ -111,6 +150,7 @@ export function DormPaymentHistoryClient() {
     paidAt: "",
   });
   const [saving, setSaving] = useState(false);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [financeBuckets, setFinanceBuckets] = useState<AppRevenueCostBucket[]>([]);
   const [financeLoading, setFinanceLoading] = useState(true);
   const [financeErr, setFinanceErr] = useState<string | null>(null);
@@ -212,8 +252,7 @@ export function DormPaymentHistoryClient() {
     });
   }
 
-  async function saveEdit(e: React.FormEvent) {
-    e.preventDefault();
+  async function saveEdit() {
     if (!editing) return;
     const n = Number(form.amountToPay);
     if (!Number.isFinite(n) || n <= 0) {
@@ -262,6 +301,7 @@ export function DormPaymentHistoryClient() {
 
   return (
     <DormPageStack>
+      <DormFinanceQuickTabs />
       {err ? <p className="text-sm text-rose-600">{err}</p> : null}
 
       <DormPanelCard
@@ -359,48 +399,6 @@ export function DormPaymentHistoryClient() {
       </DormPanelCard>
 
       <DormPanelCard
-        title="ค้นหาและกรอง"
-        description="กรองตามวันที่อัปเดตล่าสุด (เวลาไทย) — ค้นหาห้อง ชื่อ เบอร์ หรืองวด"
-      >
-        <label className="block">
-          <span className="mb-1 block text-[11px] font-bold tracking-wide text-slate-500">ค้นหา</span>
-          <input
-            className={inputClz}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="เช่น 101 หรือ 08…"
-          />
-        </label>
-        <div
-          className={cn(
-            "mt-3 grid grid-cols-1 gap-3 sm:items-end",
-            dateFrom || dateTo ? "sm:grid-cols-[1fr_1fr_auto]" : "sm:grid-cols-2",
-          )}
-        >
-          <label className="min-w-0">
-            <span className="mb-1 block text-[11px] font-bold tracking-wide text-slate-500">อัปเดตตั้งแต่</span>
-            <input type="date" className={inputClz} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-          </label>
-          <label className="min-w-0">
-            <span className="mb-1 block text-[11px] font-bold tracking-wide text-slate-500">ถึง</span>
-            <input type="date" className={inputClz} value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-          </label>
-          {dateFrom || dateTo ? (
-            <button
-              type="button"
-              onClick={() => {
-                setDateFrom("");
-                setDateTo("");
-              }}
-              className={cn(dormBtnSecondary, "w-full shrink-0 sm:w-auto")}
-            >
-              ล้างวันที่
-            </button>
-          ) : null}
-        </div>
-      </DormPanelCard>
-
-      <DormPanelCard
         title="รายการ"
         description={
           loading ? (
@@ -411,7 +409,61 @@ export function DormPaymentHistoryClient() {
             </>
           )
         }
+        action={
+          <button
+            type="button"
+            onClick={() => setMobileFilterOpen((v) => !v)}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-[#4d47b6] shadow-sm md:hidden"
+            aria-label={mobileFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+            title={mobileFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden>
+              <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
+            </svg>
+          </button>
+        }
       >
+        <div className="space-y-3">
+          <div className={cn("rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 sm:p-4", !mobileFilterOpen && "hidden md:block")}>
+            <p className="mb-2 text-[11px] font-bold tracking-wide text-slate-500">ค้นหาและกรอง</p>
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-bold tracking-wide text-slate-500">ค้นหา</span>
+              <input
+                className={inputClz}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="เช่น 101 หรือ 08…"
+              />
+            </label>
+            <div
+              className={cn(
+                "mt-3 grid grid-cols-1 gap-3 sm:items-end",
+                dateFrom || dateTo ? "sm:grid-cols-[1fr_1fr_auto]" : "sm:grid-cols-2",
+              )}
+            >
+              <label className="min-w-0">
+                <span className="mb-1 block text-[11px] font-bold tracking-wide text-slate-500">อัปเดตตั้งแต่</span>
+                <input type="date" className={inputClz} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+              </label>
+              <label className="min-w-0">
+                <span className="mb-1 block text-[11px] font-bold tracking-wide text-slate-500">ถึง</span>
+                <input type="date" className={inputClz} value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+              </label>
+              {dateFrom || dateTo ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDateFrom("");
+                    setDateTo("");
+                  }}
+                  className={cn(dormBtnSecondary, "w-full shrink-0 sm:w-auto")}
+                >
+                  ล้างวันที่
+                </button>
+              ) : null}
+            </div>
+          </div>
+
         {loading ? (
           <p className="text-center text-sm text-[#66638c]">กำลังโหลด…</p>
         ) : filtered.length === 0 ? (
@@ -420,7 +472,7 @@ export function DormPaymentHistoryClient() {
           </DormEmptyDashed>
         ) : (
           <>
-            <ul className="grid list-none gap-2 md:hidden">
+            <ul className="grid list-none gap-2 md:grid-cols-2 md:gap-2.5 lg:hidden">
               {filtered.map((r) => (
                 <li
                   key={r.id}
@@ -499,59 +551,70 @@ export function DormPaymentHistoryClient() {
             </div>
           </>
         )}
+        </div>
       </DormPanelCard>
 
-      {editing ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-slate-900">แก้ไขรายการประวัติ</h2>
-              <button type="button" onClick={() => setEditing(null)} className="text-sm text-slate-500 hover:bg-slate-100 rounded-lg px-2 py-1">
-                ปิด
-              </button>
-            </div>
-            <p className="mb-3 text-xs text-slate-500">
-              ห้อง {editing.bill.room.roomNumber} · งวด {editing.bill.billingMonth}/{editing.bill.billingYear} · #{editing.id}
-            </p>
-            <form onSubmit={saveEdit} className="space-y-3">
+      <FormModal
+        open={editing != null}
+        onClose={() => setEditing(null)}
+        title="แก้ไขรายการประวัติ"
+        description={
+          editing ?
+            `ห้อง ${editing.bill.room.roomNumber} · งวด ${editing.bill.billingMonth}/${editing.bill.billingYear} · #${editing.id}`
+          : undefined
+        }
+        size="md"
+        footer={
+          <FormModalFooterActions
+            cancelLabel="ยกเลิก"
+            onCancel={() => setEditing(null)}
+            submitLabel={saving ? "กำลังบันทึก…" : "บันทึก"}
+            submitDisabled={saving || editing == null}
+            loading={saving}
+            onSubmit={() => {
+              if (!editing) return;
+              void saveEdit();
+            }}
+          />
+        }
+      >
+        {editing ?
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void saveEdit();
+            }}
+            className="space-y-3"
+          >
+            <label className="block text-xs font-medium text-slate-600">
+              จำนวนเงิน (บาท)
+              <input className={inputClz} value={form.amountToPay} onChange={(e) => setForm((s) => ({ ...s, amountToPay: e.target.value }))} inputMode="decimal" required />
+            </label>
+            <label className="block text-xs font-medium text-slate-600">
+              สถานะ
+              <select
+                className={inputClz}
+                value={form.paymentStatus}
+                onChange={(e) => setForm((s) => ({ ...s, paymentStatus: e.target.value as typeof s.paymentStatus }))}
+              >
+                <option value="PENDING">ค้างชำระ</option>
+                <option value="PAID">ชำระแล้ว</option>
+                <option value="OVERDUE">เกินกำหนด</option>
+              </select>
+            </label>
+            {form.paymentStatus === "PAID" ? (
               <label className="block text-xs font-medium text-slate-600">
-                จำนวนเงิน (บาท)
-                <input className={inputClz} value={form.amountToPay} onChange={(e) => setForm((s) => ({ ...s, amountToPay: e.target.value }))} inputMode="decimal" required />
+                วันที่ชำระ
+                <input type="date" className={inputClz} value={form.paidAt} onChange={(e) => setForm((s) => ({ ...s, paidAt: e.target.value }))} />
               </label>
-              <label className="block text-xs font-medium text-slate-600">
-                สถานะ
-                <select
-                  className={inputClz}
-                  value={form.paymentStatus}
-                  onChange={(e) => setForm((s) => ({ ...s, paymentStatus: e.target.value as typeof s.paymentStatus }))}
-                >
-                  <option value="PENDING">ค้างชำระ</option>
-                  <option value="PAID">ชำระแล้ว</option>
-                  <option value="OVERDUE">เกินกำหนด</option>
-                </select>
-              </label>
-              {form.paymentStatus === "PAID" ? (
-                <label className="block text-xs font-medium text-slate-600">
-                  วันที่ชำระ
-                  <input type="date" className={inputClz} value={form.paidAt} onChange={(e) => setForm((s) => ({ ...s, paidAt: e.target.value }))} />
-                </label>
-              ) : null}
-              <label className="block text-xs font-medium text-slate-600">
-                หมายเหตุ
-                <textarea className={inputClz} rows={2} value={form.note} onChange={(e) => setForm((s) => ({ ...s, note: e.target.value }))} />
-              </label>
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setEditing(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700">
-                  ยกเลิก
-                </button>
-                <button disabled={saving} type="submit" className="rounded-xl bg-[#0000BF] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
-                  {saving ? "กำลังบันทึก…" : "บันทึก"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
+            ) : null}
+            <label className="block text-xs font-medium text-slate-600">
+              หมายเหตุ
+              <textarea className={inputClz} rows={2} value={form.note} onChange={(e) => setForm((s) => ({ ...s, note: e.target.value }))} />
+            </label>
+          </form>
+        : null}
+      </FormModal>
     </DormPageStack>
   );
 }

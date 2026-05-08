@@ -8,14 +8,13 @@ import {
   AppImageThumb,
   useAppImageLightbox,
 } from "@/components/app-templates";
-import { FormModal } from "@/components/ui/FormModal";
+import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import {
   attendanceCardClass,
   attendanceEmptyStateClass,
   attendanceLabelClass,
   attendanceLabelMutedClass,
-  attendanceOutlineBtnClass,
 } from "@/systems/attendance/attendance-ui";
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 
@@ -317,25 +316,18 @@ export function AttendanceRosterClient() {
         title="เพิ่มรายชื่อพนักงาน"
         description="กรอกชื่อ เบอร์โทร และกะที่ปฏิบัติงาน — รูปโปรไฟล์ไม่บังคับ"
         size="md"
+        appearance="glass"
         footer={
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
-            <button
-              type="button"
-              onClick={closeAddModal}
-              disabled={busy}
-              className={cn(attendanceOutlineBtnClass, "px-4 py-2.5 disabled:opacity-50")}
-            >
-              ยกเลิก
-            </button>
-            <button
-              type="submit"
-              form="attendance-roster-add-form"
-              disabled={busy || shiftSlots.length === 0}
-              className="app-btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {busy ? "กำลังบันทึก…" : "บันทึกรายชื่อ"}
-            </button>
-          </div>
+          <FormModalFooterActions
+            onCancel={closeAddModal}
+            onSubmit={() => {
+              const form = document.getElementById("attendance-roster-add-form") as HTMLFormElement | null;
+              form?.requestSubmit();
+            }}
+            submitLabel="บันทึกรายชื่อ"
+            submitDisabled={busy || shiftSlots.length === 0}
+            loading={busy}
+          />
         }
       >
         <form id="attendance-roster-add-form" onSubmit={add} className="flex flex-col gap-4">

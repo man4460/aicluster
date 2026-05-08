@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
-import { RoomBillingStatusBadge } from "@/systems/dormitory/components/RoomBillingStatusBadge";
+import { DormDashboardRoomGrid } from "@/systems/dormitory/components/DormDashboardRoomGrid";
 import { DormEmptyDashed, DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
 import {
   buildRoomComputeInput,
@@ -13,14 +13,6 @@ import {
 import {
   dormBtnPrimary,
   dormBtnSecondary,
-  dormRoomCardDivider,
-  dormRoomFieldLabel,
-  dormRoomFloorPill,
-  dormRoomNumberHero,
-  dormRoomOccLine,
-  dormRoomTile,
-  dormRoomTileOverdueHint,
-  dormRoomTypeHint,
 } from "@/systems/dormitory/dorm-ui";
 import { cn } from "@/lib/cn";
 
@@ -43,6 +35,21 @@ export default async function DormitoryDashboardPage() {
   const allLines = rooms.flatMap((r) => computeAllBalanceLines(buildRoomComputeInput(r)));
   const overdue = overdueLines(allLines);
   const overdueRoomIds = new Set(overdue.map((o) => o.roomId));
+  const roomsForGrid = rooms.map((r) => {
+    const input = buildRoomComputeInput(r);
+    const billing = roomBillingUiStatus(input);
+    const activeN = r.tenants.filter((t) => t.status === "ACTIVE").length;
+    const occ = activeN === 0 ? "ว่าง" : activeN >= r.maxOccupants ? "เต็ม" : `พัก ${activeN}/${r.maxOccupants}`;
+    return {
+      id: r.id,
+      roomNumber: r.roomNumber,
+      floor: r.floor,
+      roomType: r.roomType,
+      occupancyLabel: occ,
+      billingStatus: billing,
+      showOverdueDot: overdueRoomIds.has(String(r.id)),
+    };
+  });
 
   return (
     <DormPageStack>
@@ -58,46 +65,7 @@ export default async function DormitoryDashboardPage() {
         {rooms.length === 0 ? (
           <DormEmptyDashed>ยังไม่มีห้อง — เพิ่มได้จากเมนู «ห้อง»</DormEmptyDashed>
         ) : (
-          <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {rooms.map((r) => {
-              const input = buildRoomComputeInput(r);
-              const billing = roomBillingUiStatus(input);
-              const activeN = r.tenants.filter((t) => t.status === "ACTIVE").length;
-              const occ =
-                activeN === 0 ? "ว่าง" : activeN >= r.maxOccupants ? "เต็ม" : `พัก ${activeN}/${r.maxOccupants}`;
-
-              const showOverdueDot = overdueRoomIds.has(String(r.id));
-              return (
-                <li key={r.id}>
-                  <Link
-                    href={`/dashboard/dormitory/rooms/${r.id}`}
-                    className={`${dormRoomTile}${showOverdueDot ? ` ${dormRoomTileOverdueHint}` : ""}`}
-                  >
-                    <div className="flex flex-col items-center">
-                      <span className={dormRoomFieldLabel}>เลขห้อง</span>
-                      <p className={`${dormRoomNumberHero} mt-1`}>{r.roomNumber}</p>
-                    </div>
-                    <div className="mt-2 flex flex-col items-center gap-1.5 sm:mt-3 sm:gap-2">
-                      <span className={dormRoomFloorPill}>ชั้น {r.floor}</span>
-                      <p className={dormRoomOccLine}>{occ}</p>
-                    </div>
-                    <div
-                      className={`${dormRoomCardDivider} mt-auto flex flex-1 flex-col items-center justify-end gap-2 pt-2.5 sm:gap-2.5 sm:pt-3`}
-                    >
-                      <div className="flex w-full flex-col items-center gap-0.5 sm:gap-1">
-                        <span className={dormRoomFieldLabel}>การเงิน</span>
-                        <RoomBillingStatusBadge status={billing} size="compact" />
-                      </div>
-                      <div className="flex w-full flex-col items-center gap-0.5 px-0.5 sm:gap-1">
-                        <span className={dormRoomFieldLabel}>ประเภท</span>
-                        <span className={dormRoomTypeHint}>{r.roomType}</span>
-                      </div>
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <DormDashboardRoomGrid rooms={roomsForGrid} />
         )}
       </DormPanelCard>
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/cn";
 import { VillageEmptyDashed, VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { normalizeVillageHouseNo } from "@/lib/village/house-no";
@@ -15,7 +16,9 @@ import {
 import {
   villageBtnPrimary,
   villageBtnSecondary,
+  villageDivider,
   villageField,
+  villageGlassCard,
   villageHouseCardDivider,
   villageHouseFieldLabel,
   villageHouseListCard,
@@ -125,7 +128,7 @@ export function VillageResidentsClient() {
                 : "ไม่พบตามคำค้น — ลองเปลี่ยนคำค้นหา"}
             </VillageEmptyDashed>
           ) : (
-            <ul className="mt-1 grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            <ul className="mt-1 grid grid-cols-1 gap-3.5 md:grid-cols-2">
               {filteredHouses.map((h) => (
                 <li key={h.id} className="min-w-0">
                   <article className={villageHouseListCard}>
@@ -174,7 +177,7 @@ export function VillageResidentsClient() {
 
                     <div className="mt-2 flex-1">
                       {h.residents.length === 0 ? (
-                        <p className="rounded-md border border-dashed border-slate-200/90 bg-slate-50/90 py-1.5 text-center text-[10px] font-medium leading-tight text-slate-500">
+                        <p className="rounded-md border border-dashed border-white/75 bg-white/65 py-1.5 text-center text-[10px] font-medium leading-tight text-slate-500">
                           ยังไม่มีรายชื่อ
                         </p>
                       ) : (
@@ -182,7 +185,7 @@ export function VillageResidentsClient() {
                           {h.residents.map((r) => (
                             <li
                               key={r.id}
-                              className="flex items-center justify-between gap-1.5 rounded-md bg-white/60 py-1 pl-1.5 pr-1 ring-1 ring-slate-100/90"
+                              className={cn("flex items-center justify-between gap-1.5 rounded-md py-1 pl-1.5 pr-1", villageGlassCard)}
                             >
                               <span className="min-w-0 text-[10px] leading-tight sm:text-[11px]">
                                 <span className="font-semibold text-slate-800">{r.name}</span>
@@ -200,7 +203,7 @@ export function VillageResidentsClient() {
                       )}
                     </div>
 
-                    <div className="mt-auto flex flex-wrap gap-1.5 border-t border-slate-200/60 pt-2">
+                    <div className={cn("mt-auto flex flex-wrap gap-1.5 border-t pt-2", villageDivider)}>
                       <button
                         type="button"
                         className="app-btn-soft rounded-lg px-2.5 py-1.5 text-[10px] font-semibold text-slate-800 sm:text-[11px]"
@@ -210,7 +213,7 @@ export function VillageResidentsClient() {
                       </button>
                       <button
                         type="button"
-                        className="rounded-lg bg-[#ecebff] px-2.5 py-1.5 text-[10px] font-semibold text-[#4d47b6] ring-1 ring-[#4d47b6]/20 sm:text-[11px]"
+                        className="rounded-lg border border-[#5b61ff]/25 bg-[#eef0ff] px-2.5 py-1.5 text-[10px] font-semibold text-[#4d47b6] sm:text-[11px]"
                         onClick={() => setResidentModal({ houseId: h.id })}
                       >
                         + ลูกบ้าน

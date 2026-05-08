@@ -7,10 +7,9 @@ import { AttendanceQrPosterClient } from "@/systems/attendance/components/Attend
 import { getServerAppBaseUrl } from "@/lib/url/server-app-base-url";
 import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
 import {
-  HomeFinanceListHeading,
-  HomeFinancePageSection,
-  HomeFinanceSectionHeader,
-} from "@/systems/home-finance/components/HomeFinanceUi";
+  AppDashboardSection,
+  AppSectionHeader,
+} from "@/components/app-templates";
 export default async function AttendanceQrPage() {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -36,8 +35,9 @@ export default async function AttendanceQrPage() {
   });
 
   return (
-    <HomeFinancePageSection>
-      <HomeFinanceSectionHeader
+    <AppDashboardSection tone="violet">
+      <AppSectionHeader
+        tone="violet"
         title="QR จุดเช็คอิน"
         description="คัดลอกลิงก์หรือดาวน์โหลดโปสเตอร์ — แยกตามจุดเช็ค"
       />
@@ -52,10 +52,11 @@ export default async function AttendanceQrPage() {
       ) : (
         <div className="space-y-10">
           {locations.map((loc) => (
-            <section key={loc.id} className="space-y-4 border-b border-slate-100 pb-8 last:border-0 last:pb-0">
-              <HomeFinanceListHeading>
-                {loc.name.trim() || `จุดเช็ค #${loc.id}`}
-              </HomeFinanceListHeading>
+            <section
+              key={loc.id}
+              className="space-y-4 rounded-[2rem] border border-[#e8e6fc]/80 bg-white/80 p-4 shadow-sm backdrop-blur-sm sm:p-5"
+            >
+              <h3 className="text-base font-bold tracking-tight text-[#2e2a58]">{loc.name.trim() || `จุดเช็ค #${loc.id}`}</h3>
               <AttendanceQrPosterClient
                 ownerId={session.sub}
                 sandboxTrialSessionId={scope.isTrialSandbox ? scope.trialSessionId : null}
@@ -69,6 +70,6 @@ export default async function AttendanceQrPage() {
           ))}
         </div>
       )}
-    </HomeFinancePageSection>
+    </AppDashboardSection>
   );
 }

@@ -168,6 +168,7 @@ export function BarberCostPanel({
   onToolbarReady,
   costPanelOps,
   formAriaIdPrefix = "barber-cost",
+  renderWithoutOuterSection = false,
 }: {
   baseUrl: string;
   categories: BarberCostCategory[];
@@ -183,6 +184,8 @@ export function BarberCostPanel({
   costPanelOps?: ModuleCostPanelOps;
   /** prefix id สำหรับ aria (กันซ้ำเมื่อมีหลายแผงในหน้า) */
   formAriaIdPrefix?: string;
+  /** true = ให้ parent เป็นคนห่อการ์ดหลัก */
+  renderWithoutOuterSection?: boolean;
 }) {
   const ops = costPanelOps ?? defaultBarberCostPanelOps;
   const recordExpenseHeadingId = `${formAriaIdPrefix}-record-expense-details-heading`;
@@ -538,9 +541,80 @@ export function BarberCostPanel({
       ) : null}
       {err && err.trim() !== fetchError?.trim() ? <p className="text-sm text-red-600">{err}</p> : null}
 
-      <AppDashboardSection tone="slate">
-        <AppSectionHeader tone="slate" title="รายการต้นทุนทั้งหมด" description={`${entries.length} รายการ`} />
-        {listLoading ?
+      {renderWithoutOuterSection ?
+        <>
+          {listLoading ?
+            <p
+              className={`${barberCardSurfaceRadiusClass} border border-dashed border-[#e8e6f4]/90 bg-gradient-to-br from-[#faf9ff]/90 via-white to-[#fff7ed]/30 ${barberCardBodyPaddingXClass} py-6 text-center text-sm text-slate-600`}
+            >
+              กำลังโหลดรายการ…
+            </p>
+          : sortedEntries.length === 0 ?
+            <AppEmptyState>ยังไม่มีรายการต้นทุน</AppEmptyState>
+          : <div className="max-h-[min(60vh,28rem)] overflow-y-auto">
+              <ul className="space-y-2 px-0.5 pb-1 pt-0.5">
+                {sortedEntries.map((e) => {
+                  const slipResolved = e.slip_photo_url?.trim() ? resolveAssetUrl(e.slip_photo_url, baseUrl) : null;
+                  return (
+                    <li
+                      key={e.id}
+                      className={cn(
+                        barberOffersListRowCardClass,
+                        "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between",
+                      )}
+                    >
+                      <div className="flex min-w-0 flex-1 gap-3">
+                        {slipResolved ?
+                          <AppImageThumb
+                            src={slipResolved}
+                            alt="สลิป"
+                            onOpen={() => lightbox.open(slipResolved)}
+                            className="h-14 w-14 rounded-[1.25rem]"
+                          />
+                        : null}
+                        <div className="min-w-0">
+                          <p className="text-xs tabular-nums text-slate-500">
+                            {new Date(e.spent_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
+                          </p>
+                          <p className="font-semibold text-slate-900">
+                            {e.item_label?.trim() || "—"}
+                            <span className="ml-1.5 font-normal text-slate-500">({e.category_name})</span>
+                          </p>
+                          <p className="bg-gradient-to-r from-rose-700 to-orange-600 bg-clip-text text-lg font-bold tabular-nums text-transparent">
+                            ฿{e.amount.toLocaleString()}
+                          </p>
+                          {e.note?.trim() ? <p className="text-xs text-slate-600">{e.note}</p> : null}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 gap-1">
+                        <PopupIconButton label="แก้ไขรายการ" disabled={busy} onClick={() => openEditEntry(e)}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" aria-hidden>
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
+                        </PopupIconButton>
+                        <PopupIconButton
+                          label="ลบรายการ"
+                          disabled={busy}
+                          className={popupIconBtnDanger}
+                          onClick={() => void removeEntry(e)}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" aria-hidden>
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </PopupIconButton>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          }
+        </>
+      : <AppDashboardSection tone="slate">
+          <AppSectionHeader tone="slate" title="รายการต้นทุนทั้งหมด" description={`${entries.length} รายการ`} />
+          {listLoading ?
           <p
             className={`${barberCardSurfaceRadiusClass} border border-dashed border-[#e8e6f4]/90 bg-gradient-to-br from-[#faf9ff]/90 via-white to-[#fff7ed]/30 ${barberCardBodyPaddingXClass} py-6 text-center text-sm text-slate-600`}
           >
@@ -607,8 +681,9 @@ export function BarberCostPanel({
               })}
             </ul>
           </div>
-        }
-      </AppDashboardSection>
+          }
+        </AppDashboardSection>
+      }
 
       <FormModal
         open={manageCategoriesOpen}

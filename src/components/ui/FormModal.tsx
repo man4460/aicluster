@@ -25,7 +25,7 @@ export function FormModal({
   /** เมื่อ `appearance="glass"` — ไล่สีเงา/ไฮไลต์ของแผง */
   glassTint = "violet",
   /** โหมดมือถือให้อยู่กลางจอและเว้นขอบเล็กน้อย */
-  mobileCentered = false,
+  mobileCentered = true,
   children,
   footer,
 }: {

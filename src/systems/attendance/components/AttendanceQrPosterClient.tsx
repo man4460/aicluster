@@ -163,6 +163,7 @@ export function AttendanceQrPosterClient({
 
   const actionBtnOutline =
     "rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50";
+  const actionBtnMobileIcon = "inline-flex min-h-[44px] items-center justify-center gap-2 px-3 py-2.5";
 
   return (
     <div className="space-y-6">
@@ -175,27 +176,63 @@ export function AttendanceQrPosterClient({
       {checkInUrl ? (
         <>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => void copyLink()} className={attendanceOutlineBtnClass}>
-              {copyDone ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
+            <button
+              type="button"
+              onClick={() => void copyLink()}
+              className={`${attendanceOutlineBtnClass} ${actionBtnMobileIcon}`}
+              title={copyDone ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
+              aria-label={copyDone ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <rect x="9" y="9" width="13" height="13" rx="2" />
+                <rect x="2" y="2" width="13" height="13" rx="2" />
+              </svg>
+              <span className="hidden sm:inline">{copyDone ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}</span>
             </button>
             <button
               type="button"
               disabled={busy}
               onClick={() => downloadPdf("a4")}
-              className="rounded-xl bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50"
+              className={`${actionBtnMobileIcon} rounded-xl bg-[#0000BF] text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50`}
+              title="ดาวน์โหลด PDF (A4)"
+              aria-label="ดาวน์โหลด PDF (A4)"
             >
-              ดาวน์โหลด PDF (A4)
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="M12 3v12" />
+                <path d="m7 10 5 5 5-5" />
+                <path d="M5 21h14" />
+              </svg>
+              <span className="hidden sm:inline">ดาวน์โหลด PDF (A4)</span>
             </button>
             <button
               type="button"
               disabled={busy}
               onClick={() => downloadPdf("a5")}
-              className={attendanceOutlineBtnClass}
+              className={`${attendanceOutlineBtnClass} ${actionBtnMobileIcon}`}
+              title="ดาวน์โหลด PDF (A5)"
+              aria-label="ดาวน์โหลด PDF (A5)"
             >
-              ดาวน์โหลด PDF (A5)
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="M12 3v12" />
+                <path d="m7 10 5 5 5-5" />
+                <path d="M5 21h14" />
+              </svg>
+              <span className="hidden sm:inline">ดาวน์โหลด PDF (A5)</span>
             </button>
-            <button type="button" disabled={busy} onClick={downloadPng} className={attendanceOutlineBtnClass}>
-              ดาวน์โหลด PNG
+            <button
+              type="button"
+              disabled={busy}
+              onClick={downloadPng}
+              className={`${attendanceOutlineBtnClass} ${actionBtnMobileIcon}`}
+              title="ดาวน์โหลด PNG"
+              aria-label="ดาวน์โหลด PNG"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="m21 15-5-5L5 21" />
+              </svg>
+              <span className="hidden sm:inline">ดาวน์โหลด PNG</span>
             </button>
           </div>
           {copyErr ? (

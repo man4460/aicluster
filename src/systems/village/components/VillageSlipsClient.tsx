@@ -2,11 +2,15 @@
 
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { VillageEmptyDashed, VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
+import { VillageFinanceQuickTabs } from "@/systems/village/components/VillageFinanceQuickTabs";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
 import { createVillageSessionApiRepository, type VillageHouse, type VillageSlip } from "@/systems/village/village-service";
-import { villageBtnPrimary, villageBtnSecondary, villageField } from "@/systems/village/village-ui";
+import { villageBtnPrimary, villageBtnSecondary, villageDivider, villageField, villageGlassCard } from "@/systems/village/village-ui";
 import { cn } from "@/lib/cn";
+
+const slipIconBtnBaseClass =
+  "inline-flex h-9 w-9 items-center justify-center rounded-xl border bg-white/90 shadow-sm transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50";
 
 function currentYm(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }).slice(0, 7);
@@ -47,6 +51,38 @@ function IconXMini({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
+function IconUploadMini({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path d="M12 16V6M8 10l4-4 4 4M5 19h14" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconRefreshMini({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden>
+      <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconPencilMini({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden>
+      <path d="m16.5 3.5 4 4L8 20l-5 1 1-5 12.5-12.5Z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconTrashMini({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden>
+      <path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -159,6 +195,106 @@ function VillageNewSlipModal({
   );
 }
 
+function VillageEditSlipModal({
+  open,
+  slip,
+  houses,
+  onClose,
+  onSaved,
+  api,
+}: {
+  open: boolean;
+  slip: VillageSlip | null;
+  houses: VillageHouse[];
+  onClose: () => void;
+  onSaved: () => void;
+  api: ReturnType<typeof createVillageSessionApiRepository>;
+}) {
+  const [houseId, setHouseId] = useState("");
+  const [ym, setYm] = useState("");
+  const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open || !slip) return;
+    setHouseId(String(slip.house_id));
+    setYm(slip.year_month);
+    setAmount(String(slip.amount));
+  }, [open, slip]);
+
+  const canSubmit = Boolean(slip && houseId && ym.trim() && amount.trim());
+
+  return (
+    <FormModal
+      open={open && slip != null}
+      title={slip ? `แก้ไขสลิป #${slip.id}` : "แก้ไขสลิป"}
+      description="แก้บ้าน เดือน และยอดเงินของสลิปรอตรวจ"
+      onClose={onClose}
+      size="md"
+      footer={
+        <FormModalFooterActions
+          cancelLabel="ยกเลิก"
+          onCancel={onClose}
+          submitLabel="บันทึกการแก้ไข"
+          submitDisabled={!canSubmit || busy}
+          loading={busy}
+          onSubmit={async () => {
+            if (!slip) return;
+            const parsedHouseId = Number.parseInt(houseId, 10);
+            const parsedAmount = Number.parseInt(amount, 10);
+            if (!Number.isInteger(parsedHouseId) || !Number.isInteger(parsedAmount) || parsedAmount < 1) {
+              alert("กรอกข้อมูลไม่ถูกต้อง");
+              return;
+            }
+            setBusy(true);
+            try {
+              await api.patchSlip(slip.id, {
+                house_id: parsedHouseId,
+                year_month: ym.trim(),
+                amount: parsedAmount,
+              });
+              onSaved();
+            } catch (e) {
+              alert(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+      }
+    >
+      <div className="grid gap-3 sm:gap-4">
+        <label className="text-sm font-semibold text-slate-700">
+          <span className="mb-1 block text-[11px] font-bold tracking-wide text-slate-500">บ้าน</span>
+          <select className={villageField} value={houseId} onChange={(e) => setHouseId(e.target.value)}>
+            <option value="">— เลือก —</option>
+            {houses.map((h) => (
+              <option key={h.id} value={h.id}>
+                {h.house_no}
+                {h.owner_name ? ` · ${h.owner_name}` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm font-semibold text-slate-700">
+          <span className="mb-1 block text-[11px] font-bold tracking-wide text-slate-500">เดือน</span>
+          <input type="month" className={`font-mono ${villageField}`} value={ym} onChange={(e) => setYm(e.target.value)} />
+        </label>
+        <label className="text-sm font-semibold text-slate-700">
+          <span className="mb-1 block text-[11px] font-bold tracking-wide text-slate-500">จำนวนเงิน (บาท)</span>
+          <input
+            className={villageField}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            inputMode="numeric"
+            placeholder="0"
+          />
+        </label>
+      </div>
+    </FormModal>
+  );
+}
+
 export function VillageSlipsClient({ baseUrl }: { baseUrl: string }) {
   const api = useMemo(() => createVillageSessionApiRepository(), []);
   const [houses, setHouses] = useState<VillageHouse[]>([]);
@@ -167,6 +303,7 @@ export function VillageSlipsClient({ baseUrl }: { baseUrl: string }) {
   const [filterYm, setFilterYm] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [newSlipOpen, setNewSlipOpen] = useState(false);
+  const [editSlip, setEditSlip] = useState<VillageSlip | null>(null);
 
   const load = useCallback(async () => {
     setErr(null);
@@ -202,20 +339,32 @@ export function VillageSlipsClient({ baseUrl }: { baseUrl: string }) {
 
   return (
     <VillagePageStack>
-      <VillagePanelCard title="สลิปโอนเงิน">
+      <VillageFinanceQuickTabs />
+      <VillagePanelCard
+        title="สลิปโอนเงิน"
+        description={
+          <>
+            <span className="sm:hidden">ตรวจสลิป อนุมัติ/ปฏิเสธ ในกล่องเดียว</span>
+            <span className="hidden sm:inline">แนบสลิปใหม่ กรองรายการ และตรวจอนุมัติได้จากการ์ดหลักเดียว</span>
+          </>
+        }
+      >
         <div className="flex flex-col gap-3">
           <button
             type="button"
             className={cn(villageBtnPrimary, "w-full justify-center gap-2 sm:w-auto sm:min-w-[12rem]")}
             onClick={() => setNewSlipOpen(true)}
+            aria-label="แนบสลิปใหม่"
+            title="แนบสลิปใหม่"
           >
-            <span className="text-lg leading-none" aria-hidden>
+            <IconUploadMini className="h-4 w-4 sm:hidden" />
+            <span className="text-lg leading-none max-sm:hidden" aria-hidden>
               +
             </span>
-            แนบสลิปใหม่
+            <span>แนบสลิปใหม่</span>
           </button>
 
-          <div className="border-t border-slate-200/70 pt-3">
+          <div className={cn("border-t pt-3", villageDivider)}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-3">
               <div className="min-w-0 flex-1">
                 <span className="mb-1.5 block text-[10px] font-bold tracking-wide text-slate-400">กรองรายการ</span>
@@ -240,27 +389,20 @@ export function VillageSlipsClient({ baseUrl }: { baseUrl: string }) {
                   onChange={(e) => setFilterYm(e.target.value)}
                 />
               </label>
-              <button type="button" className={cn(villageBtnSecondary, "w-full shrink-0 sm:w-auto sm:min-w-[7rem]")} onClick={() => void load()}>
-                โหลดรายการ
+              <button
+                type="button"
+                className={cn(villageBtnSecondary, "w-full shrink-0 sm:w-auto sm:min-w-[7rem]")}
+                onClick={() => void load()}
+                aria-label="โหลดรายการ"
+                title="โหลดรายการ"
+              >
+                <IconRefreshMini className="h-4 w-4 sm:hidden" />
+                <span className="hidden sm:inline">โหลดรายการ</span>
               </button>
             </div>
           </div>
         </div>
-      </VillagePanelCard>
-
-      <VillageNewSlipModal
-        open={newSlipOpen}
-        onClose={() => setNewSlipOpen(false)}
-        api={api}
-        houses={houses}
-        onUploaded={() => void load()}
-      />
-
-      {err ? <p className="text-sm text-rose-600">{err}</p> : null}
-
-      <VillagePanelCard
-        title="รายการสลิป"
-        description={
+        <div className={cn("mt-4 border-t pt-3.5", villageDivider)}>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-snug text-[#66638c]">
             <span className="inline-flex items-center gap-1 rounded-md bg-slate-100/90 px-2 py-0.5 font-medium text-slate-700 ring-1 ring-slate-200/80">
               <span className="tabular-nums font-bold">{slips.length}</span> รายการ
@@ -274,113 +416,165 @@ export function VillageSlipsClient({ baseUrl }: { baseUrl: string }) {
               <span className="font-mono text-[10px] font-semibold text-slate-600">เดือน {filterYm}</span>
             ) : null}
           </div>
-        }
-      >
-        <ul className="grid list-none gap-2 sm:gap-2.5">
-          {slips.map((s) => {
-            const src = resolveAssetUrl(s.slip_image_url, baseUrl);
-            const submitted = new Date(s.submitted_at).toLocaleString("th-TH", {
-              timeZone: "Asia/Bangkok",
-              dateStyle: "short",
-              timeStyle: "short",
-            });
-            return (
-              <li
-                key={s.id}
-                className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-white to-slate-50/95 p-2.5 shadow-sm ring-1 ring-slate-100/80 sm:p-3"
-              >
-                <div
-                  className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-violet-400/90 via-fuchsia-300/80 to-emerald-400/85"
-                  aria-hidden
-                />
-                <div className="flex gap-2.5 sm:gap-3">
-                  {src ? (
-                    <a
-                      href={src}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="relative h-[4.75rem] w-[3.85rem] shrink-0 overflow-hidden rounded-xl bg-slate-100 shadow-inner ring-1 ring-slate-200/90 sm:h-[5.25rem] sm:w-[4.15rem]"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element -- URL จาก API / blob ไดนามิก */}
-                      <img
-                        src={src}
-                        alt={`สลิปบ้าน ${s.house_no}`}
-                        className="h-full w-full object-cover transition hover:opacity-95"
-                      />
-                      <span className="absolute bottom-0.5 right-0.5 rounded bg-black/45 px-1 py-px text-[7px] font-bold text-white backdrop-blur-[2px]">
-                        ดู
-                      </span>
-                    </a>
-                  ) : (
-                    <div className="flex h-[4.75rem] w-[3.85rem] shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-[9px] font-medium text-slate-400 sm:h-[5.25rem] sm:w-[4.15rem]">
-                      ไม่มีรูป
-                    </div>
-                  )}
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-[13px] font-bold leading-tight text-slate-900 sm:text-sm">
-                          บ้าน {s.house_no}
-                        </p>
-                        <p className="mt-0.5 font-mono text-[10px] font-semibold text-slate-500">{s.year_month}</p>
-                      </div>
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold leading-none",
-                          slipStatusBadgeClass(s.status),
-                        )}
+          {err ? <p className="mt-2 text-sm text-rose-600">{err}</p> : null}
+          <ul className="mt-3 grid list-none gap-2 sm:gap-2.5 md:grid-cols-2">
+            {slips.map((s) => {
+              const src = resolveAssetUrl(s.slip_image_url, baseUrl);
+              const submitted = new Date(s.submitted_at).toLocaleString("th-TH", {
+                timeZone: "Asia/Bangkok",
+                dateStyle: "short",
+                timeStyle: "short",
+              });
+              return (
+                <li
+                  key={s.id}
+                  className={cn("relative overflow-hidden rounded-[1.4rem] p-2.5 sm:p-3", villageGlassCard)}
+                >
+                  <div
+                    className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-violet-400/90 via-fuchsia-300/80 to-emerald-400/85"
+                    aria-hidden
+                  />
+                  <div className="flex gap-2.5 sm:gap-3">
+                    {src ? (
+                      <a
+                        href={src}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="relative h-[4.75rem] w-[3.85rem] shrink-0 overflow-hidden rounded-xl bg-white/75 shadow-inner ring-1 ring-white/80 sm:h-[5.25rem] sm:w-[4.15rem]"
                       >
-                        {slipStatusLabel(s.status)}
-                      </span>
-                    </div>
-                    <p className="text-sm font-bold tabular-nums leading-tight text-emerald-800 sm:text-[15px]">
-                      {s.amount.toLocaleString("th-TH")}{" "}
-                      <span className="text-[11px] font-semibold text-emerald-700/90">บาท</span>
-                    </p>
-                    <p className="text-[10px] leading-tight text-slate-500">ส่ง {submitted}</p>
-                    {s.reviewer_note ? (
-                      <p className="line-clamp-2 rounded-md bg-slate-100/90 px-1.5 py-1 text-[10px] leading-snug text-slate-600 ring-1 ring-slate-200/60">
-                        {s.reviewer_note}
+                        {/* eslint-disable-next-line @next/next/no-img-element -- URL จาก API / blob ไดนามิก */}
+                        <img
+                          src={src}
+                          alt={`สลิปบ้าน ${s.house_no}`}
+                          className="h-full w-full object-cover transition hover:opacity-95"
+                        />
+                        <span className="absolute bottom-0.5 right-0.5 rounded bg-black/45 px-1 py-px text-[7px] font-bold text-white backdrop-blur-[2px]">
+                          ดู
+                        </span>
+                      </a>
+                    ) : (
+                      <div className="flex h-[4.75rem] w-[3.85rem] shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-[9px] font-medium text-slate-400 sm:h-[5.25rem] sm:w-[4.15rem]">
+                        ไม่มีรูป
+                      </div>
+                    )}
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-[13px] font-bold leading-tight text-slate-900 sm:text-sm">
+                            บ้าน {s.house_no}
+                          </p>
+                          <p className="mt-0.5 font-mono text-[10px] font-semibold text-slate-500">{s.year_month}</p>
+                        </div>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-bold leading-none",
+                            slipStatusBadgeClass(s.status),
+                          )}
+                        >
+                          {slipStatusLabel(s.status)}
+                        </span>
+                      </div>
+                      <p className="text-sm font-bold tabular-nums leading-tight text-emerald-800 sm:text-[15px]">
+                        {s.amount.toLocaleString("th-TH")}{" "}
+                        <span className="text-[11px] font-semibold text-emerald-700/90">บาท</span>
                       </p>
-                    ) : null}
-                    {s.status === "PENDING" ? (
-                      <div className="mt-1.5 grid grid-cols-2 gap-1.5 sm:mt-2 sm:max-w-xs">
+                      <p className="text-[10px] leading-tight text-slate-500">ส่ง {submitted}</p>
+                      {s.reviewer_note ? (
+                        <p className="line-clamp-2 rounded-md bg-slate-100/90 px-1.5 py-1 text-[10px] leading-snug text-slate-600 ring-1 ring-slate-200/60">
+                          {s.reviewer_note}
+                        </p>
+                      ) : null}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:mt-2">
+                        {s.status === "PENDING" ? (
+                          <button
+                            type="button"
+                            className={cn(slipIconBtnBaseClass, "border-emerald-200/90 text-emerald-700 hover:bg-emerald-50")}
+                            onClick={() => {
+                              setReviewNote("");
+                              setReview({ slip: s, action: "APPROVED" });
+                            }}
+                            aria-label="อนุมัติสลิป"
+                            title="อนุมัติ"
+                          >
+                            <IconCheckMini className="h-4 w-4 shrink-0" />
+                          </button>
+                        ) : null}
+                        {s.status === "PENDING" ? (
+                          <button
+                            type="button"
+                            className={cn(slipIconBtnBaseClass, "border-rose-200 text-rose-700 hover:bg-rose-50")}
+                            onClick={() => {
+                              setReviewNote("");
+                              setReview({ slip: s, action: "REJECTED" });
+                            }}
+                            aria-label="ปฏิเสธสลิป"
+                            title="ปฏิเสธ"
+                          >
+                            <IconXMini className="h-4 w-4 shrink-0" />
+                          </button>
+                        ) : null}
                         <button
                           type="button"
-                          className="inline-flex min-h-[42px] items-center justify-center gap-1 rounded-xl border border-emerald-200/90 bg-emerald-600 px-2 py-1.5 text-[11px] font-bold text-white shadow-sm transition active:scale-[0.98] hover:bg-emerald-700 sm:min-h-[40px]"
-                          onClick={() => {
-                            setReviewNote("");
-                            setReview({ slip: s, action: "APPROVED" });
-                          }}
+                          className={cn(slipIconBtnBaseClass, "border-indigo-200/90 text-indigo-700 hover:bg-indigo-50")}
+                          disabled={s.status !== "PENDING"}
+                          onClick={() => setEditSlip(s)}
+                          aria-label="แก้ไขสลิป"
+                          title={s.status !== "PENDING" ? "แก้ไขได้เฉพาะสลิปรอตรวจ" : "แก้ไขสลิป"}
                         >
-                          <IconCheckMini className="h-3.5 w-3.5 shrink-0" />
-                          อนุมัติ
+                          <IconPencilMini className="h-4 w-4 shrink-0" />
                         </button>
                         <button
                           type="button"
-                          className="inline-flex min-h-[42px] items-center justify-center gap-1 rounded-xl border border-rose-200 bg-white px-2 py-1.5 text-[11px] font-bold text-rose-700 shadow-sm transition active:scale-[0.98] hover:bg-rose-50 sm:min-h-[40px]"
-                          onClick={() => {
-                            setReviewNote("");
-                            setReview({ slip: s, action: "REJECTED" });
+                          className={cn(slipIconBtnBaseClass, "border-rose-200 text-rose-700 hover:bg-rose-50")}
+                          disabled={s.status === "APPROVED"}
+                          onClick={async () => {
+                            if (s.status === "APPROVED") return;
+                            if (!confirm("ลบสลิปรายการนี้?")) return;
+                            try {
+                              await api.deleteSlip(s.id);
+                              void load();
+                            } catch (e) {
+                              alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
+                            }
                           }}
+                          aria-label="ลบสลิป"
+                          title={s.status === "APPROVED" ? "สลิปอนุมัติแล้วลบไม่ได้" : "ลบสลิป"}
                         >
-                          <IconXMini className="h-3.5 w-3.5 shrink-0" />
-                          ปฏิเสธ
+                          <IconTrashMini className="h-4 w-4 shrink-0" />
                         </button>
                       </div>
-                    ) : null}
+                    </div>
                   </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-        {slips.length === 0 ? (
-          <div className="mt-2">
-            <VillageEmptyDashed>ไม่มีสลิปในชุดที่เลือก — กด «แนบสลิปใหม่» เพื่อเพิ่ม</VillageEmptyDashed>
-          </div>
-        ) : null}
+                </li>
+              );
+            })}
+          </ul>
+          {slips.length === 0 ? (
+            <div className="mt-2">
+              <VillageEmptyDashed>ไม่มีสลิปในชุดที่เลือก — กด «แนบสลิปใหม่» เพื่อเพิ่ม</VillageEmptyDashed>
+            </div>
+          ) : null}
+        </div>
       </VillagePanelCard>
+
+      <VillageNewSlipModal
+        open={newSlipOpen}
+        onClose={() => setNewSlipOpen(false)}
+        api={api}
+        houses={houses}
+        onUploaded={() => void load()}
+      />
+      <VillageEditSlipModal
+        open={editSlip != null}
+        slip={editSlip}
+        houses={houses}
+        onClose={() => setEditSlip(null)}
+        onSaved={() => {
+          setEditSlip(null);
+          void load();
+        }}
+        api={api}
+      />
 
       {review ? (
         <FormModal

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { PageHeader } from "@/components/ui/page-container";
 import {
   BarberCostPanel,
   type BarberCostToolbarApi,
@@ -13,8 +12,9 @@ import {
   fetchDormCostEntries,
 } from "@/systems/dormitory/dorm-cost-client";
 import type { BarberCostCategory, BarberCostEntry } from "@/systems/barber/barber-cost-client";
-import { DormPageStack } from "@/systems/dormitory/components/DormPageChrome";
-import { dormBtnSecondary } from "@/systems/dormitory/dorm-ui";
+import { DormFinanceQuickTabs } from "@/systems/dormitory/components/DormFinanceQuickTabs";
+import { DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
+import { dormBtnPrimary, dormBtnSecondary } from "@/systems/dormitory/dorm-ui";
 
 type Props = {
   baseUrl: string;
@@ -46,7 +46,7 @@ function CostToolbarButtons({
         type="button"
         disabled={busy}
         onClick={() => toolbar.openRecordExpense()}
-        className="min-h-[44px] rounded-xl bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+        className={`${dormBtnPrimary} px-4 py-2.5 text-sm font-semibold`}
       >
         บันทึกรายจ่าย
       </button>
@@ -83,8 +83,8 @@ export function DormCostsClient({ baseUrl }: Props) {
 
   return (
     <DormPageStack>
-      <PageHeader
-        compact
+      <DormFinanceQuickTabs />
+      <DormPanelCard
         title="ต้นทุน / รายจ่าย"
         description="บันทึกตามหมวด แนบสลิป — เปรียบเทียบกับรายรับได้ที่เมนูประวัติ"
         action={
@@ -98,18 +98,20 @@ export function DormCostsClient({ baseUrl }: Props) {
             </Link>
           </div>
         }
-      />
-      <BarberCostPanel
-        baseUrl={baseUrl}
-        categories={categories}
-        entries={entries}
-        onRefresh={load}
-        listLoading={loading}
-        fetchError={err}
-        onToolbarReady={setToolbar}
-        costPanelOps={dormCostPanelOps}
-        formAriaIdPrefix="dorm-cost"
-      />
+      >
+        <BarberCostPanel
+          baseUrl={baseUrl}
+          categories={categories}
+          entries={entries}
+          onRefresh={load}
+          listLoading={loading}
+          fetchError={err}
+          onToolbarReady={setToolbar}
+          costPanelOps={dormCostPanelOps}
+          formAriaIdPrefix="dorm-cost"
+          renderWithoutOuterSection
+        />
+      </DormPanelCard>
     </DormPageStack>
   );
 }

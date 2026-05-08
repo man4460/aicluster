@@ -91,12 +91,14 @@ export function RoomDetailClient({
   overdueRows = [],
   initialPayMonth = null,
   initialBangkokYm,
+  initialFocusSection = null,
 }: {
   room: DormRoomDetailJson;
   overdueRows?: DormOverdueRow[];
   initialPayMonth?: string | null;
   /** snapshot จาก Server Component — กัน hydration ของช่องงวด YYYY-MM */
   initialBangkokYm: string;
+  initialFocusSection?: "meter" | "payment" | null;
 }) {
   const router = useRouter();
 
@@ -412,6 +414,18 @@ export function RoomDetailClient({
   const [invoiceSheetPaymentId, setInvoiceSheetPaymentId] = useState<number | null>(null);
 
   useEffect(() => {
+    if (!initialFocusSection) return;
+    const targetId =
+      initialFocusSection === "meter" ? "dorm-meter-section" : "dorm-record-payment";
+    window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 220);
+  }, [initialFocusSection]);
+
+  useEffect(() => {
     if (!tenantModalOpen && !meterModalOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -433,9 +447,58 @@ export function RoomDetailClient({
           onClose={() => setInvoiceSheetPaymentId(null)}
         />
       ) : null}
+      <section id="dorm-meter-section" className="app-surface p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-slate-900">จัดการห้องแบบเร็ว</h2>
+            <p className="mt-1 text-xs text-slate-500">ลำดับแนะนำ: เพิ่มผู้พัก → บันทึกมิเตอร์ → บันทึกการชำระเงิน</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setTErr(null);
+                setTenantModalOpen(true);
+              }}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-[#0000BF] hover:bg-slate-50"
+            >
+              + ผู้พัก
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setBillFeedback(null);
+                setMeterModalOpen(true);
+              }}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-[#0000BF] hover:bg-slate-50"
+            >
+              บันทึกมิเตอร์
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                document.getElementById("dorm-record-payment")?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                })
+              }
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-[#0000BF] hover:bg-slate-50"
+            >
+              ไปชำระเงิน
+            </button>
+            <button
+              type="button"
+              onClick={deleteRoom}
+              className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100"
+            >
+              ลบห้องนี้
+            </button>
+          </div>
+        </div>
+      </section>
       {overdueRows.length > 0 ? (
         <section
-          className="rounded-2xl border-2 border-amber-200/90 bg-gradient-to-br from-amber-50/80 via-white to-white p-5 shadow-sm"
+          className="app-surface border-amber-200/90 bg-gradient-to-br from-amber-50/80 via-white to-white p-4 sm:p-5"
           aria-label="ค้างชำระ"
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -545,7 +608,7 @@ export function RoomDetailClient({
         </section>
       ) : null}
 
-      <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+      <section className="app-surface p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-slate-900">งวดปัจจุบัน ({dashboardYm})</h2>
         <p className="mt-1 text-xs text-slate-500">
           มิเตอร์และยอดรวมเป็นของทั้งห้อง — แต่ละคนชำระตามยอดที่หารจากผู้พัก ACTIVE
@@ -699,16 +762,7 @@ export function RoomDetailClient({
         </div>
       ) : null}
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={deleteRoom}
-          className="text-sm font-medium text-red-600 hover:text-red-800"
-        >
-          ลบห้องนี้
-        </button>
-      </div>
-      <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+      <section className="app-surface p-4 sm:p-5">
         <h2 className="text-sm font-semibold text-slate-900">ผู้เข้าพัก ({n}/{room.maxOccupants})</h2>
         <p className="mt-1 text-xs text-slate-500">
           ค่าเช่า {formatDormAmountStable(room.basePrice)} บาท — หาร {n > 0 ? n : "—"} คน ={" "}
@@ -774,7 +828,7 @@ export function RoomDetailClient({
         )}
       </section>
 
-      <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+      <section className="app-surface p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-sm font-semibold text-slate-900">มิเตอร์น้ำ / ไฟ &amp; ค่าคงที่</h2>
@@ -804,7 +858,7 @@ export function RoomDetailClient({
 
       <section
         id="dorm-record-payment"
-        className="scroll-mt-6 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm"
+        className="app-surface scroll-mt-6 overflow-hidden p-0"
       >
         <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-5 py-4">
           <h2 className="text-base font-semibold text-slate-900">บันทึกการชำระเงิน</h2>

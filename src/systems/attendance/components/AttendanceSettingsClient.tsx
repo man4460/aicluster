@@ -182,10 +182,10 @@ export function AttendanceSettingsClient() {
       {locations.map((loc, li) => (
         <section
           key={li}
-          className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+          className={attendancePanelClass}
         >
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-            <h2 className="text-sm font-bold text-slate-900">จุดเช็คอิน {li + 1}</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#ebe9fc] pb-3">
+            <h2 className="text-sm font-bold text-[#2e2a58]">จุดเช็คอิน {li + 1}</h2>
             {locations.length > 1 ? (
               <button
                 type="button"
@@ -213,12 +213,12 @@ export function AttendanceSettingsClient() {
               </label>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <label className="text-xs font-semibold text-slate-700">
+                <label className={attendanceLabelClass}>
                   ละติจูด
                   <input
                     type="number"
                     step="any"
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2"
+                    className="mt-1 w-full rounded-xl border border-[#e1e3ff] bg-white px-3 py-2"
                     value={loc.allowedLocationLat}
                     onChange={(e) => {
                       const n = Number(e.target.value);
@@ -304,10 +304,10 @@ export function AttendanceSettingsClient() {
                         }}
                       />
                     </label>
-                    <label className="text-[11px] font-medium text-slate-600">
+                    <label className="text-[11px] font-medium text-[#66638c]">
                       สิ้นสุด (HH:mm)
                       <input
-                        className="mt-0.5 block w-[100px] rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                        className="mt-0.5 block w-[100px] rounded-lg border border-[#e1e3ff] px-2 py-1.5 text-sm"
                         value={sh.endTime}
                         onChange={(e) => {
                           const v = e.target.value;

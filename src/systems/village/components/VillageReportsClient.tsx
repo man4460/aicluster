@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
+import { VillageSettingsQuickTabs } from "@/systems/village/components/VillageSettingsQuickTabs";
 import { createVillageSessionApiRepository } from "@/systems/village/village-service";
-import { villageField } from "@/systems/village/village-ui";
+import { villageDivider, villageField, villageGlassCard } from "@/systems/village/village-ui";
 import { cn } from "@/lib/cn";
 
 function IconTable({ className }: { className?: string }) {
@@ -62,8 +63,9 @@ function ExportRow({ icon, tone, title, hint, href, cta, primary }: ExportRowPro
   return (
     <li
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50/90 p-3 shadow-sm ring-1 ring-slate-100/80 transition",
-        "hover:border-[#4d47b6]/20 hover:shadow-md",
+        "relative overflow-hidden rounded-2xl p-3 transition",
+        villageGlassCard,
+        "hover:border-white/80 hover:shadow-[0_22px_44px_-24px_rgba(79,70,229,0.35)]",
       )}
     >
       <div
@@ -106,6 +108,7 @@ export function VillageReportsClient({ initialYear }: { initialYear: number }) {
       <VillagePanelCard
         title="ส่งออก CSV"
         description="ดาวน์โหลดจากลิงก์ด้านล่าง — ต้องล็อกอินในแท็บเดียวกับที่ใช้งานระบบ"
+        action={<VillageSettingsQuickTabs />}
       >
         <div className="flex flex-wrap gap-1.5">
           <span className="inline-flex items-center rounded-lg bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200/80">
@@ -137,7 +140,7 @@ export function VillageReportsClient({ initialYear }: { initialYear: number }) {
           </label>
         </div>
 
-        <p className="mt-3 border-t border-slate-200/70 pt-3 text-[10px] leading-relaxed text-slate-400">
+        <p className={cn("mt-3 border-t pt-3 text-[10px] leading-relaxed text-slate-400", villageDivider)}>
           รายการที่อ้างปี (บิล / สลิป / สรุป) ใช้ค่าปีด้านบน · ส่งออกลูกบ้านไม่กรองตามปี
         </p>
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { TrialSandboxStrip } from "@/components/dashboard/TrialSandboxStrip";
 import { AppUsageGuideModal } from "@/components/app-templates";
 import { VillageModuleHeader } from "./VillageModuleHeader";
+import { VillageMobileDock } from "./VillageMobileDock";
 
 /** สองการ์ดแยกกันแบบคาร์แวช: การ์ดชื่อระบบ · การ์ดเมนู (มีช่องว่างระหว่างการ์ด) */
 export function VillageLayoutChrome({
@@ -17,24 +18,37 @@ export function VillageLayoutChrome({
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
 
   return (
-    <div className="max-w-full space-y-4 sm:space-y-6">
-      <header className="app-surface rounded-2xl px-4 py-4 sm:px-6 sm:py-5 print:hidden">
+    <div className="-mt-2 max-w-full space-y-4 pb-28 sm:mt-0 sm:space-y-6 md:pb-0">
+      <header
+        className={
+          "-mx-3 overflow-hidden rounded-[2.5rem] border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/25 to-violet-100/20 p-4 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.32),inset_0_1px_0_0_rgba(255,255,255,0.55)] backdrop-blur-2xl ring-1 ring-inset ring-white/55 sm:mx-0 sm:px-8 sm:py-6 print:hidden"
+        }
+      >
         <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-tight text-[#2e2a58] sm:text-2xl">จัดการหมู่บ้าน</h1>
-            <p className="mt-1 max-w-2xl text-sm leading-snug text-[#66638c]">
+            <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">จัดการหมู่บ้าน</h1>
+            <p className="mt-1 hidden max-w-2xl text-sm leading-snug text-[#66638c] md:block">
               ค่าส่วนกลาง · ลูกบ้าน · สลิป · ต้นทุน/รายจ่าย · รายปี · ส่งออก
             </p>
           </div>
           <button
             type="button"
             onClick={() => setUsageGuideOpen(true)}
-            className="app-btn-soft min-h-[44px] shrink-0 rounded-xl border border-[#dcd8f0] px-4 py-2.5 text-sm font-semibold text-[#4d47b6] hover:bg-[#f4f3ff]"
+            className="flex h-10 items-center gap-2 rounded-2xl border border-white/60 bg-white/45 px-4 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-95"
             aria-haspopup="dialog"
             aria-expanded={usageGuideOpen}
+            aria-label="คู่มือการใช้งาน"
+            title="คู่มือการใช้งาน"
           >
-            คู่มือการใช้งาน
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.3" aria-hidden>
+              <path d="M12 17v.01M10 9.5a2 2 0 1 1 3.2 1.6c-.8.55-1.2 1-1.2 1.9" strokeLinecap="round" />
+              <circle cx="12" cy="12" r="9" />
+            </svg>
+            <span className="hidden sm:inline">คู่มือการใช้งาน</span>
           </button>
+        </div>
+        <div className="hidden md:block">
+          <VillageModuleHeader variant="embedded" />
         </div>
       </header>
 
@@ -144,13 +158,12 @@ export function VillageLayoutChrome({
         ]}
       />
 
-      <VillageModuleHeader />
-
       {trialExpiresLabel ? (
         <TrialSandboxStrip>ทดลอง · ข้อมูลแยกจากจริง · หมด {trialExpiresLabel}</TrialSandboxStrip>
       ) : null}
 
-      {children}
+      <div className="-mx-3 sm:mx-0">{children}</div>
+      <VillageMobileDock />
     </div>
   );
 }

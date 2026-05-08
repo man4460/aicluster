@@ -4,6 +4,7 @@ import { useState } from "react";
 import { TrialSandboxStrip } from "@/components/dashboard/TrialSandboxStrip";
 import { AppUsageGuideModal } from "@/components/app-templates";
 import { DormModuleHeader } from "./DormModuleHeader";
+import { DormMobileDock } from "./DormMobileDock";
 
 /** โครงเดียวกับ VillageLayoutChrome — หัวข้อระบบ · การ์ดเมนู · แบนเนอร์ทดลอง */
 export function DormLayoutChrome({
@@ -17,24 +18,33 @@ export function DormLayoutChrome({
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
 
   return (
-    <div className="max-w-full space-y-4 sm:space-y-6">
-      <header className="app-surface rounded-2xl px-4 py-4 sm:px-6 sm:py-5 print:hidden">
+    <div className="-mt-2 max-w-full space-y-4 sm:mt-0 sm:space-y-6">
+      <header className="-mx-3 app-surface rounded-2xl px-4 py-4 sm:mx-0 sm:px-6 sm:py-5 print:hidden">
         <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
           <div className="min-w-0">
             <h1 className="text-xl font-semibold tracking-tight text-[#2e2a58] sm:text-2xl">จัดการหอพัก</h1>
-            <p className="mt-1 max-w-2xl text-sm leading-snug text-[#66638c]">
+            <p className="mt-1 hidden max-w-2xl text-sm leading-snug text-[#66638c] md:block">
               ผังห้อง · มิเตอร์ · แบ่งบิล · ประวัติชำระ · ต้นทุน/รายจ่าย · ตั้งค่า
             </p>
           </div>
           <button
             type="button"
             onClick={() => setUsageGuideOpen(true)}
-            className="app-btn-soft min-h-[44px] shrink-0 rounded-xl border border-[#dcd8f0] px-4 py-2.5 text-sm font-semibold text-[#4d47b6] hover:bg-[#f4f3ff]"
+            className="flex h-10 items-center gap-2 rounded-2xl border border-white/60 bg-white/45 px-4 text-sm font-semibold text-[#4d47b6] shadow-sm backdrop-blur-md transition hover:bg-white/60"
             aria-haspopup="dialog"
             aria-expanded={usageGuideOpen}
+            aria-label="คู่มือการใช้งาน"
+            title="คู่มือการใช้งาน"
           >
-            คู่มือการใช้งาน
+            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden>
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" strokeLinecap="round" />
+              <path d="M6.5 17V5A2.5 2.5 0 0 1 9 2.5h11V21H9A2.5 2.5 0 0 1 6.5 18.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="hidden sm:inline">คู่มือการใช้งาน</span>
           </button>
+        </div>
+        <div className="mt-4 hidden md:block">
+          <DormModuleHeader />
         </div>
       </header>
 
@@ -114,13 +124,12 @@ export function DormLayoutChrome({
         ]}
       />
 
-      <DormModuleHeader />
-
       {trialExpiresLabel ? (
         <TrialSandboxStrip>ทดลอง · ข้อมูลแยกจากจริง · หมด {trialExpiresLabel}</TrialSandboxStrip>
       ) : null}
 
-      {children}
+      <div className="-mx-3 pb-24 sm:mx-0 sm:pb-0">{children}</div>
+      <DormMobileDock />
     </div>
   );
 }

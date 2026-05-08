@@ -92,12 +92,18 @@ export default async function AttendanceHomePage() {
           title="สรุปวันนี้"
           description="อัปเดตตามข้อมูลจริงของวันนี้ (เวลาไทย) สำหรับเจ้าของระบบ"
         />
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-5">
           <StatCard label="เข้างานแล้ว" value={checkedIn} hint="รวมผู้ที่เช็คชื่อเข้าแล้วทั้งหมด" accent="violet" />
           <StatCard label="มาสาย" value={late} hint="เข้าเกินเวลาเริ่มกะที่ตั้งไว้" accent="amber" />
           <StatCard label="ยังเหลือ" value={remaining} hint="คงเหลือจากรายชื่อพนักงาน QR ที่ยังไม่เข้า" accent="slate" />
           <StatCard label="กำลังทำงาน" value={stillWorking} hint="เข้าแล้วและยังไม่เช็คออก" accent="green" />
-          <StatCard label="ออกงานแล้ว" value={checkedOut} hint="เช็คออกเรียบร้อยแล้ววันนี้" accent="indigo" />
+          <StatCard
+            label="ออกงานแล้ว"
+            value={checkedOut}
+            hint="เช็คออกเรียบร้อยแล้ววันนี้"
+            accent="indigo"
+            className="col-span-2 xl:col-span-1"
+          />
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-2 sm:gap-3">
           <Link
@@ -181,11 +187,13 @@ function StatCard({
   value,
   hint,
   accent,
+  className,
 }: {
   label: string;
   value: number;
   hint: string;
   accent: "violet" | "amber" | "slate" | "green" | "indigo";
+  className?: string;
 }) {
   const valueTone =
     accent === "green"
@@ -199,7 +207,7 @@ function StatCard({
             : "text-[#2e2a58]";
 
   return (
-    <div className={cn(appDashboardSectionSlateClass, "space-y-0")}>
+    <div className={cn(appDashboardSectionSlateClass, "space-y-0", className)}>
       <p className="text-xs font-medium text-[#66638c]">{label}</p>
       <p className={cn("mt-1 text-2xl font-bold tabular-nums sm:text-3xl", valueTone)}>
         {value.toLocaleString("th-TH")}

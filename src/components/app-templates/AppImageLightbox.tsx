@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 export type AppImageLightboxProps = {
   src: string | null;
@@ -13,6 +14,12 @@ export type AppImageLightboxProps = {
  * ใช้ร่วมกับ AppImageThumb + useAppImageLightbox ในทุกโมดูล
  */
 export function AppImageLightbox({ src, alt = "ภาพ", onClose }: AppImageLightboxProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!src) return;
     const onKey = (e: KeyboardEvent) => {
@@ -27,11 +34,11 @@ export function AppImageLightbox({ src, alt = "ภาพ", onClose }: AppImageLi
     };
   }, [src, onClose]);
 
-  if (!src) return null;
+  if (!src || !mounted) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[240] flex items-center justify-center bg-slate-950/85 px-[max(12px,env(safe-area-inset-left))] pb-[max(12px,env(safe-area-inset-bottom))] pr-[max(12px,env(safe-area-inset-right))] pt-14 sm:px-5 sm:pb-5 sm:pt-16"
+      className="fixed inset-0 z-[240] flex items-center justify-center overflow-hidden bg-slate-950/85 p-[max(12px,env(safe-area-inset-top),env(safe-area-inset-bottom),env(safe-area-inset-left),env(safe-area-inset-right))] sm:p-5"
       role="dialog"
       aria-modal="true"
       aria-label={alt}
@@ -45,16 +52,18 @@ export function AppImageLightbox({ src, alt = "ภาพ", onClose }: AppImageLi
         ปิด
       </button>
       <div
-        className="flex min-h-0 min-w-0 max-h-full max-w-full items-center justify-center overflow-auto"
+        className="flex h-full w-full min-h-0 min-w-0 items-center justify-center overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}
           alt={alt}
-          className="h-auto w-auto max-h-[min(85dvh,calc(100dvh-7rem))] max-w-[min(92dvw,calc(100dvw-1.5rem))] rounded-xl object-contain shadow-2xl ring-1 ring-white/20"
+          className="h-auto w-auto max-h-[calc(100dvh-1.5rem)] max-w-[calc(100dvw-1.5rem)] rounded-xl object-contain shadow-2xl ring-1 ring-white/20 sm:max-h-[calc(100dvh-2.5rem)] sm:max-w-[calc(100dvw-2.5rem)]"
         />
       </div>
     </div>
+    ,
+    document.body,
   );
 }

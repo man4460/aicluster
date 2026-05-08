@@ -215,7 +215,12 @@ export function createVillageSessionApiRepository() {
       const res = await fetch("/api/village/session/slips", { method: "POST", credentials: "include", body: form });
       return parse(res);
     },
-    async patchSlip(id: number, body: { status: "APPROVED" | "REJECTED"; reviewer_note?: string | null }) {
+    async patchSlip(
+      id: number,
+      body:
+        | { status: "APPROVED" | "REJECTED"; reviewer_note?: string | null }
+        | { house_id: number; year_month: string; amount: number },
+    ) {
       const res = await fetch(`/api/village/session/slips/${id}`, {
         method: "PATCH",
         credentials: "include",
@@ -223,6 +228,10 @@ export function createVillageSessionApiRepository() {
         body: JSON.stringify(body),
       });
       return parse(res);
+    },
+    async deleteSlip(id: number): Promise<void> {
+      const res = await fetch(`/api/village/session/slips/${id}`, { method: "DELETE", credentials: "include" });
+      await parse(res);
     },
     async getOverview(): Promise<VillageOverview> {
       const res = await fetch("/api/village/session/overview", { credentials: "include" });

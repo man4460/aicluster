@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 import { AddRoomForm } from "@/systems/dormitory/components/AddRoomForm";
+import { DormRoomManageQuickTabs } from "@/systems/dormitory/components/DormRoomManageQuickTabs";
 import { DormEmptyDashed, DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
 import { RoomBillingStatusBadge } from "@/systems/dormitory/components/RoomBillingStatusBadge";
 import { buildRoomComputeInput, roomBillingUiStatus } from "@/systems/dormitory/lib/compute";
@@ -36,6 +37,7 @@ export default async function DormitoryRoomsPage() {
 
   return (
     <DormPageStack>
+      <DormRoomManageQuickTabs roomId={rooms[0]?.id ?? null} />
       <DormPanelCard
         title="ห้องพัก"
         description="เพิ่มห้อง มิเตอร์ระดับห้อง และแบ่งบิลตามผู้พัก ACTIVE"

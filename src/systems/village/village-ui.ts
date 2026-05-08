@@ -6,6 +6,13 @@ export const villageField =
 /** การ์ดย่อย / รายการ — ใช้ app-surface เหมือนแผงหลักคาร์แวช */
 export const villageCard = "app-surface p-4 sm:p-5";
 
+/** การ์ด glass โค้งมนแบบคาร์แคร์สำหรับบล็อกย่อย */
+export const villageGlassCard =
+  "rounded-[1.4rem] border border-white/60 bg-gradient-to-br from-white/60 via-white/42 to-indigo-50/28 shadow-[0_16px_36px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl ring-1 ring-inset ring-white/55";
+
+/** เส้นคั่นในโทน glass */
+export const villageDivider = "border-white/70";
+
 /** แถบเครื่องมือ — การ์ดแยกใต้หัวข้อ */
 export const villageToolbar = "app-surface flex flex-wrap items-end gap-3 p-3 sm:p-4";
 

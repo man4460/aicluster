@@ -1,0 +1,23 @@
+---
+description: รูปย่อ/ดูรูปเต็มต้องกึ่งกลางจอและไม่ล้นขอบ
+globs:
+  - "src/components/app-templates/**/*.{ts,tsx}"
+  - "src/systems/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Image Lightbox — Centered & Fit Viewport
+
+เมื่อเพิ่มหรือแก้ฟีเจอร์ “กดดูรูปเต็ม” (เช่น รูปพนักงาน, สลิป, รูปแนบ) ให้ยึดกฎนี้:
+
+1. ใช้ `AppImageThumb` + `AppImageLightbox` + `useAppImageLightbox` จาก `@/components/app-templates` เท่านั้น
+2. `AppImageLightbox` ต้อง render ผ่าน `createPortal(..., document.body)` เพื่อไม่ให้ตำแหน่งเพี้ยนจาก parent layout
+3. Overlay ต้องกึ่งกลางจอจริงเสมอ (`fixed inset-0`, `items-center justify-center`)
+4. รูปต้องไม่ล้นจอ: ใช้ `object-contain` และจำกัด `max-h/max-w` ตาม viewport (`dvh/dvw`)
+5. ชั้นครอบต้องกันล้น (`overflow-hidden`) และรองรับ safe-area มือถือ
+6. ปิดได้ 3 ทาง: ปุ่มปิด, คลิกพื้นหลัง, กด `Esc`
+7. ห้ามสร้าง lightbox แบบ ad-hoc ในโมดูลย่อย; ถ้าต้องเพิ่มพฤติกรรม ให้ขยายใน `AppImageLightbox`
+
+ตัวอย่าง pattern:
+- Thumb: `<AppImageThumb src={url} onOpen={() => lb.open(url)} />`
+- Lightbox: `<AppImageLightbox src={lb.src} onClose={lb.close} />`
