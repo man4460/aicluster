@@ -6,6 +6,7 @@ import { seedBuildingPosProdDemoForOwner } from "../src/lib/trial/seed-building-
 import { seedEducareProdDemoForOwner } from "../src/lib/trial/seed-educare";
 import { seedAssetProdDemoForOwner } from "../src/lib/trial/seed-asset";
 import { seedDocTransmissionProdDemoForOwner } from "../src/lib/trial/seed-doc-transmission";
+import { seedPromptLibraryProdDemoForOwner } from "../src/lib/trial/seed-prompt-library";
 
 const prisma = new PrismaClient();
 
@@ -187,6 +188,14 @@ async function main() {
       sortOrder: 30,
     },
     {
+      slug: "prompt-library",
+      title: "คลังคำสั่ง AI (Prompt)",
+      description:
+        "กลุ่ม 1 (Basic) — เก็บ จัดหมวด แท็ก ประวัติเวอร์ชัน prompt ส่วนตัว · นับการใช้ · ส่งออก/นำเข้า JSON",
+      groupId: 1,
+      sortOrder: 31,
+    },
+    {
       slug: "stock-management",
       title: "ระบบจัดการสต็อกสินค้า",
       description: "กลุ่ม 2 (Silver)",
@@ -300,6 +309,15 @@ async function main() {
       select: { id: true },
     });
     if (row) await seedDocTransmissionProdDemoForOwner(prisma, row.id);
+  }
+
+  /** คลังคำสั่ง AI — หมวด + prompt ตัวอย่างสำหรับบัญชีทดลอง (ข้ามถ้ามีคำสั่ง ACTIVE แล้ว) */
+  for (const email of demoPosOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) await seedPromptLibraryProdDemoForOwner(prisma, row.id);
   }
 }
 

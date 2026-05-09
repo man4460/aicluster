@@ -190,6 +190,9 @@ model User {
   openClawSyncRequests     OpenClawSyncRequest[]
   /** บันทึกหักโทเคนต่อโมดูลต่อวัน (สายรายวัน) — ป้องกันหักซ้ำ + ตรวจสอบย้อนหลัง */
   moduleDailyCharges       UserModuleDailyCharge[]
+  promptLibraryCategories  PromptLibraryCategory[]
+  promptLibraryPrompts     PromptLibraryPrompt[]
+  promptLibraryVersions    PromptLibraryVersion[]
 
   @@index([employerUserId])
   @@index([referredByUserId], map: "user_referred_by_idx")
@@ -2573,4 +2576,76 @@ model DocTransmissionSettings {
 
   @@unique([ownerUserId, trialSessionId], map: "doc_set_owner_trial_uidx")
   @@map("doc_transmission_settings")
+}
+
+/** คลัง prompt ส่วนตัว (แยกตามผู้ใช้ — อิงแนวคิด Prompt Master / Google Script pms) */
+enum PromptLibraryPromptStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model PromptLibraryCategory {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(100)
+  icon        String   @default("📁") @db.VarChar(12)
+  color       String   @default("#64748b") @db.VarChar(20)
+  description String?  @db.VarChar(300)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  prompts PromptLibraryPrompt[]
+
+  @@index([ownerUserId, sortOrder], map: "plc_owner_sort_idx")
+  @@map("prompt_library_categories")
+}
+
+model PromptLibraryPrompt {
+  id          String @id @default(cuid())
+  ownerUserId String @map("owner_user_id") @db.VarChar(191)
+  owner       User   @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  categoryId String?                @map("category_id") @db.VarChar(191)
+  category   PromptLibraryCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  title       String   @db.VarChar(200)
+  content     String   @db.Text
+  description String?  @db.VarChar(500)
+  /** เก็บแบบสตริงคั่นจุลภาค (เข้ากับฟอร์มเดิมจาก Prompt Master) */
+  tags        String   @default("") @db.VarChar(512)
+  language    String   @default("th") @db.VarChar(16)
+  modelHint   String?  @map("model_hint") @db.VarChar(120)
+  temperature Float    @default(0.7)
+  isFavorite  Boolean  @default(false) @map("is_favorite")
+  /** ต่อขยาย API / แชร์สาธารณะในอนาคต */
+  isPublic    Boolean  @default(false) @map("is_public")
+  usageCount  Int      @default(0) @map("usage_count")
+  status      PromptLibraryPromptStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  versions PromptLibraryVersion[]
+
+  @@index([ownerUserId, status, updatedAt], map: "plp_owner_status_upd_idx")
+  @@index([ownerUserId, categoryId], map: "plp_owner_cat_idx")
+  @@index([ownerUserId, isFavorite], map: "plp_owner_fav_idx")
+  @@map("prompt_library_prompts")
+}
+
+model PromptLibraryVersion {
+  id         String              @id @default(cuid())
+  promptId   String              @map("prompt_id") @db.VarChar(191)
+  prompt     PromptLibraryPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  content    String              @db.Text
+  versionNo  Int                 @map("version_no")
+  changeNote String?             @map("change_note") @db.VarChar(280)
+  createdById String             @map("created_by_id") @db.VarChar(191)
+  createdBy  User                @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt  DateTime            @default(now()) @map("created_at")
+
+  @@index([promptId, versionNo], map: "plv_prompt_ver_idx")
+  @@map("prompt_library_versions")
 }

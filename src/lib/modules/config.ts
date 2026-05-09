@@ -62,6 +62,10 @@ export const ASSET_MODULE_GROUP_ID = 1 as const;
 export const DOC_TRANSMISSION_MODULE_SLUG = "doc-transmission" as const;
 export const DOC_TRANSMISSION_MODULE_GROUP_ID = 1 as const;
 
+/** คลังจัดเก็บ prompt — อิง Prompt Master (Google Apps Script pms) */
+export const PROMPT_LIBRARY_MODULE_SLUG = "prompt-library" as const;
+export const PROMPT_LIBRARY_MODULE_GROUP_ID = 1 as const;
+
 /** ระบบเช่าที่จอดรถ — กลุ่ม 1 (Basic) ลูกค้าเลือก Subscribe/ทดลองจากแคตตาล็อกโมดูล */
 export const PARKING_MODULE_SLUG = "parking" as const;
 export const PARKING_MODULE_GROUP_ID = 1 as const;
@@ -81,6 +85,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === EDUCARE_MODULE_SLUG) return "EduCare เช็คนักเรียน";
   if (slug === ASSET_MODULE_SLUG) return "บริหารทรัพย์สิน";
   if (slug === DOC_TRANSMISSION_MODULE_SLUG) return "สารบรรณดิจิทัล";
+  if (slug === PROMPT_LIBRARY_MODULE_SLUG) return "คลังคำสั่ง AI (Prompt)";
   return title;
 }
 
@@ -98,7 +103,7 @@ export const MODULE_GROUP_TIER_NAME: Record<number, string> = {
 
 /** สรุปฟีเจอร์ต่อกลุ่ม (ใช้ในหน้าแพ็กเกจ / คำอธิบาย) — ข้อความกระชับ */
 export const MODULE_GROUP_FEATURE_SUMMARY: Record<number, string> = {
-  1: "กลุ่ม 1: เช็คอิน · EduCare · สารบรรณ · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ทรัพย์สิน · ตัดผม · คาร์แคร์ · ซักผ้า · จอดรถ · POS",
+  1: "กลุ่ม 1: เช็คอิน · EduCare · สารบรรณ · คลัง Prompt · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ทรัพย์สิน · ตัดผม · คาร์แคร์ · ซักผ้า · จอดรถ · POS",
   2: "สต็อก · ใบเสร็จ",
   3: "วิเคราะห์ · แชทสาขา",
   4: "พนักงาน · เงินเดือน",

@@ -309,6 +309,20 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  /** คลังคำสั่ง AI — ดาว (prompt templates) */
+  if (href.startsWith("/dashboard/prompt-library")) {
+    return (
+      <Svg>
+        <path
+          d="M12 2l2.88 7.26H22l-6.44 4.96 2.46 7.5L12 16.77l-6.02 4.95 2.46-7.5L2 9.26h7.12L12 2z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+          fill="none"
+        />
+      </Svg>
+    );
+  }
   /** บริหารทรัพย์สิน — กล่อง/แพ็กเกจซ้อน (สินค้าคงคลัง) */
   if (href.startsWith("/dashboard/asset")) {
     return (
