@@ -14,7 +14,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 46: DormitoryCostCategory + DormitoryCostEntry — client เก่าไม่มี delegate แล้ว API ต้นทุนหอพักล้ม */
 /** 47: VillageCostCategory + VillageCostEntry — ต้นทุน/รายจ่ายหมู่บ้าน */
 /** 50: PromptLibraryCategory + PromptLibraryPrompt + PromptLibraryVersion — client เก่าไม่มี delegate */
-const PRISMA_SINGLETON_VERSION = 50;
+/** 51: MediaRegistry* (ทะเบียนคุมสื่อ) — client เก่าไม่มี delegate */
+const PRISMA_SINGLETON_VERSION = 51;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -69,6 +70,11 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     promptLibraryCategory?: { findMany?: unknown };
     promptLibraryPrompt?: { findMany?: unknown };
     promptLibraryVersion?: { findMany?: unknown };
+    mediaRegistryMaster?: { findMany?: unknown };
+    mediaRegistryLocation?: { findMany?: unknown };
+    mediaRegistryItem?: { findMany?: unknown };
+    mediaRegistryBorrow?: { findMany?: unknown };
+    mediaRegistryIssue?: { findMany?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -115,7 +121,12 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.laundryCostEntry?.findMany === "function" &&
     typeof c.promptLibraryCategory?.findMany === "function" &&
     typeof c.promptLibraryPrompt?.findMany === "function" &&
-    typeof c.promptLibraryVersion?.findMany === "function"
+    typeof c.promptLibraryVersion?.findMany === "function" &&
+    typeof c.mediaRegistryMaster?.findMany === "function" &&
+    typeof c.mediaRegistryLocation?.findMany === "function" &&
+    typeof c.mediaRegistryItem?.findMany === "function" &&
+    typeof c.mediaRegistryBorrow?.findMany === "function" &&
+    typeof c.mediaRegistryIssue?.findMany === "function"
   );
 }
 

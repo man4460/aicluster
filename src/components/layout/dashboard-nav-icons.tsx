@@ -323,6 +323,26 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  /** ทะเบียนคุมสื่อ — ฟิล์ม / แผ่น */
+  if (href.startsWith("/dashboard/media-registry")) {
+    return (
+      <Svg>
+        <rect
+          x="2"
+          y="5"
+          width="20"
+          height="14"
+          rx="2"
+          stroke="currentColor"
+          strokeWidth="2"
+          fill="none"
+        />
+        <path d="M2 9h20" stroke="currentColor" strokeWidth="2" />
+        <circle cx="7" cy="15" r="2" fill="currentColor" />
+        <path d="M14 14h4M14 17h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </Svg>
+    );
+  }
   /** บริหารทรัพย์สิน — กล่อง/แพ็กเกจซ้อน (สินค้าคงคลัง) */
   if (href.startsWith("/dashboard/asset")) {
     return (

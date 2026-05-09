@@ -193,6 +193,11 @@ model User {
   promptLibraryCategories  PromptLibraryCategory[]
   promptLibraryPrompts     PromptLibraryPrompt[]
   promptLibraryVersions    PromptLibraryVersion[]
+  mediaRegistryMasters     MediaRegistryMaster[]
+  mediaRegistryLocations   MediaRegistryLocation[]
+  mediaRegistryItems       MediaRegistryItem[]
+  mediaRegistryBorrows     MediaRegistryBorrow[]
+  mediaRegistryIssues      MediaRegistryIssue[]
 
   @@index([employerUserId])
   @@index([referredByUserId], map: "user_referred_by_idx")
@@ -2648,4 +2653,151 @@ model PromptLibraryVersion {
 
   @@index([promptId, versionNo], map: "plv_prompt_ver_idx")
   @@map("prompt_library_versions")
+}
+
+/**
+ * ทะเบียนคุมสื่อ — อิง Google Apps Script media_system (โรงเรียน / ห้องสมุด)
+ * แยกข้อมูลต่อเจ้าของบัญชีแพลตฟอร์ม (owner_user_id)
+ */
+model MediaRegistryMaster {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  /** เช่น ประเภทสื่อ กลุ่มสาระ learning_area */
+  masterType  String   @map("master_type") @db.VarChar(64)
+  masterName  String   @map("master_name") @db.VarChar(200)
+  status      String   @default("ใช้งาน") @db.VarChar(32)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, masterType, sortOrder], map: "mrm_owner_type_sort_idx")
+  @@map("media_registry_masters")
+}
+
+model MediaRegistryLocation {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_user_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  building       String?  @db.VarChar(120)
+  room           String   @db.VarChar(120)
+  cabinet        String?  @db.VarChar(80)
+  shelf          String?  @db.VarChar(80)
+  locationDetail String  @map("location_detail") @db.VarChar(500)
+  status         String   @default("ใช้งาน") @db.VarChar(32)
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  items MediaRegistryItem[]
+
+  @@index([ownerUserId, sortOrder], map: "mrl_owner_sort_idx")
+  @@map("media_registry_locations")
+}
+
+model MediaRegistryItem {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  registerNo  String   @map("register_no") @db.VarChar(64)
+  mediaName   String   @map("media_name") @db.VarChar(255)
+  category    String   @db.VarChar(120)
+  subjectGroup String? @map("subject_group") @db.VarChar(120)
+  gradeLevel  String?  @map("grade_level") @db.VarChar(80)
+
+  quantityTotal     Int     @map("quantity_total")
+  quantityAvailable Int     @map("quantity_available")
+  unit              String  @default("ชุด") @db.VarChar(32)
+
+  pricePerUnit Decimal  @map("price_per_unit") @db.Decimal(12, 2)
+  totalPrice   Decimal  @map("total_price") @db.Decimal(14, 2)
+
+  /** พร้อมใช้งาน | ถูกยืม | ชำรุด | สูญหาย | จำหน่าย — ตรงกับ media_system */
+  mediaStatus   String   @map("media_status") @db.VarChar(40)
+  conditionNow  String?  @map("condition_now") @db.VarChar(80)
+  budgetYear    String?  @map("budget_year") @db.VarChar(8)
+
+  locationId String?                @map("location_id") @db.VarChar(191)
+  location   MediaRegistryLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  locationDetail       String? @map("location_detail") @db.VarChar(500)
+  responsibleTeacher   String? @map("responsible_teacher") @db.VarChar(200)
+  note                 String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  borrows MediaRegistryBorrow[]
+  issues  MediaRegistryIssue[]
+
+  @@unique([ownerUserId, registerNo], map: "mri_owner_reg_uidx")
+  @@index([ownerUserId, category], map: "mri_owner_cat_idx")
+  @@index([ownerUserId, mediaStatus], map: "mri_owner_status_idx")
+  @@map("media_registry_items")
+}
+
+model MediaRegistryBorrow {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  borrowNo  String   @map("borrow_no") @db.VarChar(64)
+  mediaId   String   @map("media_id") @db.VarChar(191)
+  media     MediaRegistryItem @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  mediaName    String  @map("media_name") @db.VarChar(255)
+  borrowerName String  @map("borrower_name") @db.VarChar(200)
+  borrowerId   String? @map("borrower_id") @db.VarChar(64)
+  borrowerType String  @default("ครู") @map("borrower_type") @db.VarChar(40)
+
+  quantityBorrow Int @map("quantity_borrow")
+  quantityReturn Int @default(0) @map("quantity_return")
+
+  borrowDate DateTime  @map("borrow_date") @db.Date
+  dueDate    DateTime? @map("due_date") @db.Date
+  returnDate DateTime? @map("return_date") @db.Date
+
+  purpose          String? @db.VarChar(500)
+  conditionBefore  String? @map("condition_before") @db.VarChar(80)
+  conditionAfter   String? @map("condition_after") @db.VarChar(80)
+  approveBy        String? @map("approve_by") @db.VarChar(120)
+  receiverName     String? @map("receiver_name") @db.VarChar(120)
+
+  /** กำลังยืม | คืนบางส่วน | คืนแล้ว | เกินกำหนด */
+  borrowStatus String  @map("borrow_status") @db.VarChar(40)
+  note         String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, borrowNo], map: "mrb_owner_borrow_uidx")
+  @@index([ownerUserId, borrowStatus], map: "mrb_owner_status_idx")
+  @@index([mediaId], map: "mrb_media_idx")
+  @@map("media_registry_borrows")
+}
+
+model MediaRegistryIssue {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  mediaId   String   @map("media_id") @db.VarChar(191)
+  media     MediaRegistryItem @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  mediaName String   @map("media_name") @db.VarChar(255)
+
+  /** ชำรุด | ซ่อมบำรุง | สูญหาย | จำหน่าย */
+  recordType       String   @map("record_type") @db.VarChar(40)
+  quantityAffected Int      @default(1) @map("quantity_affected")
+  cost             Decimal  @default(0) @db.Decimal(12, 2)
+  detail           String?  @db.Text
+  /** ซ่อมบำรุง: เช่น เสร็จสิ้น */
+  repairStatus     String?  @map("repair_status") @db.VarChar(40)
+  recordDate       DateTime @map("record_date") @db.Date
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([ownerUserId, recordType], map: "mris_owner_type_idx")
+  @@index([mediaId], map: "mris_media_idx")
+  @@map("media_registry_issues")
 }

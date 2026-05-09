@@ -13,6 +13,7 @@ import {
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
   PROMPT_LIBRARY_MODULE_SLUG,
+  MEDIA_REGISTRY_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
 } from "@/lib/modules/config";
@@ -46,6 +47,7 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === ASSET_MODULE_SLUG) return "/dashboard/asset";
   if (slug === DOC_TRANSMISSION_MODULE_SLUG) return "/dashboard/doc-transmission";
   if (slug === PROMPT_LIBRARY_MODULE_SLUG) return "/dashboard/prompt-library";
+  if (slug === MEDIA_REGISTRY_MODULE_SLUG) return "/dashboard/media-registry";
   return `/dashboard/modules/${slug}`;
 }
 
@@ -138,6 +140,7 @@ export function buildDashboardNavGroups(
       ASSET_MODULE_SLUG,
       DOC_TRANSMISSION_MODULE_SLUG,
       PROMPT_LIBRARY_MODULE_SLUG,
+      MEDIA_REGISTRY_MODULE_SLUG,
       MQTT_SERVICE_MODULE_SLUG,
       SYSTEM_MAP_CATALOG_SLUG,
     ]);

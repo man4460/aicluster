@@ -20,4 +20,4 @@ mysqldump -h "$SOURCE_HOST" -P "$SOURCE_PORT" -u "$SOURCE_USER" \
   --set-gtid-purged=OFF --column-statistics=0 \
   "$DATABASE" > "$OUT"
 unset MYSQL_PWD
-echo "[export] เขียน $OUT — นำเข้า: RECREATE=1 bash scripts/mysql-import-to-docker.sh $OUT"
+echo "[export] เขียน $OUT — นำเข้า: mysql -h 127.0.0.1 -u root -p < $OUT (หรือ mysql client อื่น)"

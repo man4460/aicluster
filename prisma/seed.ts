@@ -7,6 +7,7 @@ import { seedEducareProdDemoForOwner } from "../src/lib/trial/seed-educare";
 import { seedAssetProdDemoForOwner } from "../src/lib/trial/seed-asset";
 import { seedDocTransmissionProdDemoForOwner } from "../src/lib/trial/seed-doc-transmission";
 import { seedPromptLibraryProdDemoForOwner } from "../src/lib/trial/seed-prompt-library";
+import { seedMediaRegistryProdDemoForOwner } from "../src/lib/trial/seed-media-registry";
 
 const prisma = new PrismaClient();
 
@@ -196,6 +197,14 @@ async function main() {
       sortOrder: 31,
     },
     {
+      slug: "media-registry",
+      title: "ทะเบียนคุมสื่อ",
+      description:
+        "กลุ่ม 1 (Basic) — ทะเบียนสื่อการเรียนรู้ ยืม-คืน คุมจำนวน มูลค่า สถานที่เก็บ บันทึกชำรุด/ซ่อม/จำหน่าย · ข้อมูลหลัก (ประเภท/สถานที่)",
+      groupId: 1,
+      sortOrder: 32,
+    },
+    {
       slug: "stock-management",
       title: "ระบบจัดการสต็อกสินค้า",
       description: "กลุ่ม 2 (Silver)",
@@ -274,14 +283,31 @@ async function main() {
     });
   }
 
-  /** POS ร้านอาหาร — หมวด+เมนู+รูป (scope prod) สำหรับบัญชี demo ถ้ายังไม่มีข้อมูล */
+  /**
+   * ข้อมูล demo ต่อโมดูล — ต้องการตาราง migration ครบ
+   * ถ้า DB ใหม่ / migrate ค้าง / schema ไม่ตรง ให้ข้ามเฉพาะบล็อกนั้น อย่าให้ล้มก่อน module_list ถูก upsert แล้ว
+   * (ตาราง module_list upsert ไว้ด้านบนแล้วเสมอ)
+   */
   const demoPosOwnerEmails = ["user@mawell.local.com", "user@mawell.local"] as const;
+
+  async function tryDemoSeed(label: string, work: () => Promise<void>): Promise<void> {
+    try {
+      await work();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn(`[seed] ข้าม ${label}: ${msg}`);
+    }
+  }
+
+  /** POS ร้านอาหาร — หมวด+เมนู+รูป (scope prod) สำหรับบัญชี demo ถ้ายังไม่มีข้อมูล */
   for (const email of demoPosOwnerEmails) {
     const row = await prisma.user.findUnique({
       where: { email },
       select: { id: true },
     });
-    if (row) await seedBuildingPosProdDemoForOwner(prisma, row.id);
+    if (row) {
+      await tryDemoSeed(`building-pos (${email})`, () => seedBuildingPosProdDemoForOwner(prisma, row.id));
+    }
   }
 
   /** EduCare — โรงเรียน + ห้อง + นักเรียน + บันทึกเช็ค 7 วัน (scope prod) สำหรับบัญชี demo ถ้ายังไม่มีข้อมูล */
@@ -290,7 +316,9 @@ async function main() {
       where: { email },
       select: { id: true },
     });
-    if (row) await seedEducareProdDemoForOwner(prisma, row.id);
+    if (row) {
+      await tryDemoSeed(`educare (${email})`, () => seedEducareProdDemoForOwner(prisma, row.id));
+    }
   }
 
   /** Asset — ทรัพย์สิน + เคลื่อนไหว + ซ่อม + ตรวจนับ (scope prod) สำหรับบัญชี demo ถ้ายังไม่มีข้อมูล */
@@ -299,7 +327,9 @@ async function main() {
       where: { email },
       select: { id: true },
     });
-    if (row) await seedAssetProdDemoForOwner(prisma, row.id);
+    if (row) {
+      await tryDemoSeed(`asset (${email})`, () => seedAssetProdDemoForOwner(prisma, row.id));
+    }
   }
 
   /** Doc Transmission — สารบรรณดิจิทัล (scope prod) สำหรับบัญชี demo ถ้ายังไม่มีข้อมูล */
@@ -308,7 +338,9 @@ async function main() {
       where: { email },
       select: { id: true },
     });
-    if (row) await seedDocTransmissionProdDemoForOwner(prisma, row.id);
+    if (row) {
+      await tryDemoSeed(`doc-transmission (${email})`, () => seedDocTransmissionProdDemoForOwner(prisma, row.id));
+    }
   }
 
   /** คลังคำสั่ง AI — หมวด + prompt ตัวอย่างสำหรับบัญชีทดลอง (ข้ามถ้ามีคำสั่ง ACTIVE แล้ว) */
@@ -317,7 +349,20 @@ async function main() {
       where: { email },
       select: { id: true },
     });
-    if (row) await seedPromptLibraryProdDemoForOwner(prisma, row.id);
+    if (row) {
+      await tryDemoSeed(`prompt-library (${email})`, () => seedPromptLibraryProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** ทะเบียนคุมสื่อ — ตัวอย่างทะเบียน/ยืม/บันทึก (ข้ามถ้ามีรายการสื่อแล้ว) */
+  for (const email of demoPosOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`media-registry (${email})`, () => seedMediaRegistryProdDemoForOwner(prisma, row.id));
+    }
   }
 }
 

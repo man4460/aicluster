@@ -4,8 +4,8 @@
 #   powershell -ExecutionPolicy Bypass -File scripts/mysql-export-from-mysql.ps1
 #   powershell ... -SourcePort 3306 -OutPath .\mawell_buffet_backup.sql
 #
-# จากนั้นนำเข้า Docker:
-#   powershell ... -File scripts/mysql-import-to-docker.ps1 -DumpPath .\mawell_buffet_backup.sql -RecreateDatabase
+# จากนั้นนำเข้าเครื่องปลายทาง (ตัวอย่าง):
+#   mysql -h 127.0.0.1 -P 3306 -u root -p mawell_buffet < .\mawell_buffet_backup.sql
 
 param(
   [string] $SourceHost = "127.0.0.1",
@@ -52,4 +52,4 @@ try {
   Remove-Item Env:MYSQL_PWD -ErrorAction SilentlyContinue
 }
 
-Write-Host "[export] เสร็จ — ขั้นต่อไป: scripts/mysql-import-to-docker.ps1 -DumpPath $OutPath -RecreateDatabase"
+Write-Host "[export] เสร็จ — นำเข้า: mysql -h <host> -P <port> -u root -p $Database < $OutPath"

@@ -261,6 +261,7 @@ export function ModuleSubscriptionBrowser({
                 </svg>
               </div>
               <input
+                suppressHydrationWarning
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="ค้นหาระบบที่คุณสนใจ..."
@@ -368,6 +369,7 @@ export function ModuleSubscriptionBrowser({
                               {subscribed ? (
                                 <button
                                   type="button"
+                                  suppressHydrationWarning
                                   disabled={busyId === m.id}
                                   onClick={() => setPendingUnsubscribe({ id: m.id, title: m.title })}
                                   className="app-tap-feedback flex-1 min-w-[6.5rem] rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
@@ -387,6 +389,7 @@ export function ModuleSubscriptionBrowser({
                               ) : showCooldownLock || showDailyLock ? (
                                 <button
                                   type="button"
+                                  suppressHydrationWarning
                                   onClick={() =>
                                     setErr(showCooldownLock ? `ระบบถูกล็อคจนถึง ${formatBangkokDateTimeLong(cooldownIso!)}` : upgradeMessage)
                                   }
@@ -400,6 +403,7 @@ export function ModuleSubscriptionBrowser({
                               ) : (
                                 <button
                                   type="button"
+                                  suppressHydrationWarning
                                   disabled={busyId === m.id || !unlocked}
                                   onClick={() => void subscribeOnly(m.id)}
                                   className={cn(dashboardModuleSubscribeButtonClass, "app-tap-feedback !rounded-xl !py-2.5")}
@@ -482,6 +486,7 @@ export function ModuleSubscriptionBrowser({
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
+                suppressHydrationWarning
                 className="app-btn-soft app-tap-feedback rounded-lg px-4 py-2 text-sm font-semibold"
                 onClick={() => setPendingUnsubscribe(null)}
               >
@@ -489,6 +494,7 @@ export function ModuleSubscriptionBrowser({
               </button>
               <button
                 type="button"
+                suppressHydrationWarning
                 disabled={busyId === pendingUnsubscribe.id}
                 className="app-tap-feedback rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                 onClick={() => void performUnsubscribe(pendingUnsubscribe.id)}
