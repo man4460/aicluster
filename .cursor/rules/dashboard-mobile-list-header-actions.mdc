@@ -1,0 +1,48 @@
+---
+description: หน้ารายการ CRUD — มือถือให้หัวการ์ดเป็นแถวเดียว ปุ่มเพิ่มเป็นไอคอน + ไอคอนกรองมุมขวา
+alwaysApply: true
+---
+
+# Mobile list header — add + filter on card top-right (dashboard modules)
+
+ใช้กับหน้า **รายการ** ที่มี `AppDashboardSection` + `AppSectionHeader` + ปุ่ม **เพิ่มรายการ** และ **เปิดตัวกรอง** (ไอคอน) เช่น ทรัพย์สิน, รายการอื่นที่โครงเดียวกัน
+
+## บังคับบนมือถือ
+
+- **เลย์เอาต์หัวการ์ด**: หัวข้อ (`title`) **ซ้าย** · กลุ่มปุ่ม **ขวาบน** — ไม่ให้ `AppSectionHeader` ซ้อนเป็น `flex-col` จนปุ่มหล่นไปใต้หัวข้อ
+  - ส่ง `className` ให้ `AppSectionHeader` เช่น  
+    `className="flex flex-row items-start justify-between gap-3 sm:items-center"`
+  - ส่ง `actionWrapClassName` เช่น  
+    `actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"`
+- **ปุ่มเพิ่ม (primary)**:
+  - **ก่อน `sm`**: แสดง **ไอคอนอย่างเดียว** (เช่น `+`) พร้อม `aria-label` ชัดเจน (เช่น `"เพิ่มทรัพย์สิน"`)
+  - **`sm+`**: แสดง **ข้อความ** (เช่น `+ เพิ่มทรัพย์สิน`) — หลีกเลี่ยงไอคอน `+` ซ้ำกับข้อความที่มี `+` อยู่แล้ว
+  - ขนาดแตะ: `min-h-[40px]` และบนมือถือควร `min-w-[40px]` เมื่อเป็นไอคอนล้วน
+- **ปุ่มกรอง**:
+  - แสดงเฉพาะมือถือ (`sm:hidden`) ตามกฎ `dashboard-mobile-filter-icon.mdc`
+  - วางในกลุ่ม `action` **ก่อน** ปุ่มเพิ่ม (ปุ่มเพิ่มอยู่ **ขวาสุด**)
+  - ใช้ `gap-1.5 sm:gap-2` ระหว่างปุ่มในกลุ่ม
+
+## Pattern อ้างอิง
+
+`src/systems/asset/components/AssetAssetsClient.tsx` — หัวข้อ "ทรัพย์สิน" + ไอคอนกรอง + ไอคอนเพิ่ม (มือถือ)
+
+```tsx
+<AppSectionHeader
+  className="flex flex-row items-start justify-between gap-3 sm:items-center"
+  actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
+  action={
+    <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+      <button type="button" className="... sm:hidden" aria-label="เปิดตัวกรอง">
+        <FilterIcon />
+      </button>
+      <button type="button" aria-label="เพิ่ม…" className="app-btn-primary ... min-w-[40px] sm:min-w-0">
+        <IconPlus className="h-5 w-5 sm:hidden" aria-hidden />
+        <span className="hidden sm:inline">+ เพิ่ม…</span>
+      </button>
+    </div>
+  }
+/>
+```
+
+นำไปใช้กับโมดูลรายการอื่นที่มีฟอร์มกรองย่อบนมือถือ + ปุ่มสร้างรายการใหม่

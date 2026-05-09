@@ -8,17 +8,20 @@ export type DashboardAccessUser = {
   subscriptionTier: SubscriptionTier;
   tokens: number;
   lastBuffetBillingMonth: string | null;
+  /** สายรายวันที่หักโทเคนไปแล้วในวัน Bangkok นี้อย่างน้อย 1 โมดูล (จะอนุโลมแม้ tokens = 0) */
+  hasChargedModuleToday?: boolean;
 };
 
 /**
  * เข้าแดชบอร์ด/ฟีเจอร์หลักได้หรือไม่ (ไม่รวมเส้นทางยกเว้นเช่น refill, plans, profile)
- * - สายรายวัน: ต้องมีโทเคน > 0 (หลังหักรายวันแล้ว)
+ * - สายรายวัน: ต้องมีโทเคน > 0 หรือเคยหักโทเคนโมดูลในวันนี้แล้ว (ใช้โมดูลที่หักแล้วต่อจนถึงเที่ยงคืน Bangkok)
  * - แพ็กเกจ BUFFET: ต้องหักรายเดือนงวดปัจจุบันสำเร็จแล้ว หรือมีโทเคนพอสำหรับงวดนี้
  */
 export function computeDashboardAccessAllowed(user: DashboardAccessUser): boolean {
   if (user.role === "ADMIN") return true;
   if (user.subscriptionType === "DAILY") {
-    return user.tokens > 0;
+    if (user.tokens > 0) return true;
+    return Boolean(user.hasChargedModuleToday);
   }
   if (user.subscriptionType === "BUFFET") {
     if (user.subscriptionTier === "NONE") return user.tokens > 0;

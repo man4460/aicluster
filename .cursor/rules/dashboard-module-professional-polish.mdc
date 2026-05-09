@@ -1,0 +1,41 @@
+---
+description: Professional polish standard for dashboard modules
+globs: src/{app/(dashboard),systems}/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Dashboard Module Professional Polish
+
+ใช้กฎนี้กับโมดูลถัดไปเพื่อให้ UX/UI ดูเป็นเครื่องมือมืออาชีพ
+
+## Insight + Filter + Sticky Summary
+
+- มี insight chips อัตโนมัติจากข้อมูลฝั่ง client (ไม่บังคับแก้ API)
+- มี quick range chips: `7 วัน`, `30 วัน`, `ไตรมาส`, `ปีนี้`, `กำหนดเอง`
+- บนมือถือควรมี sticky summary bar (รับ/จ่าย/คงเหลือ) ระหว่างเลื่อนดูรายการ
+
+## Export / Print
+
+- รองรับ `ส่งออก CSV` ตามช่วงที่กรอง
+- รองรับ `พิมพ์/ส่งออก PDF` โดยใช้ `openPrintableHtml` จาก `@/components/app-templates`
+
+## Data-entry Productivity
+
+- ฟอร์มเพิ่มรายการควรมี smart suggestions จากรายการเดิมในช่วงล่าสุด
+- รองรับ keyboard shortcuts อย่างน้อย:
+  - `n` = เพิ่มรายการ
+  - `f` = โฟกัสตัวกรอง/ค้นหา
+  - `Esc` = ปิด modal
+
+## Financial UX Features
+
+- มี monthly budget card (ต่อหมวดหลัก) พร้อม progress และสีเตือน 80%/100%
+- หน้าประวัติรองรับ batch actions (เลือกหลายรายการแล้วลบ/จัดการพร้อมกัน)
+- มี density preset: `กระชับ` / `สบายตา`
+
+## Visual Language
+
+- จุดข้อมูลสำคัญใช้ semantic pastel (emerald/rose) เท่านั้น
+- พื้นการ์ดหลักใช้ neutral glass เพื่อคุมภาพรวมให้สะอาด
+- ค่าหลักใช้รูปแบบกระชับ เช่น `฿ 42,180` (คำว่า “บาท” ใช้เฉพาะที่จำเป็น)
+- รองรับ icon mapping ตามหมวด เพื่อ scan เร็วโดยไม่เพิ่ม noise

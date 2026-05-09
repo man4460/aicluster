@@ -1,0 +1,40 @@
+---
+description: หน้ารายงาน — ปุ่มรีเฟรชบนมือถือเป็นไอคอนมุมขวาของการ์ด
+alwaysApply: true
+---
+
+# Mobile refresh on report cards (dashboard modules)
+
+เมื่อหน้า **รายงาน** หรือแผงสรุปที่มีปุ่ม **รีเฟรช / โหลดข้อมูลใหม่** คู่กับ `AppSectionHeader` ภายใน `AppDashboardSection`:
+
+- **มือถือ (`default`, ก่อน `sm`)**: แสดงเฉพาะ **ไอคอนรีเฟรช** ที่มุมขวาบนของการ์ด — จัดแถวเดียวกับหัวข้อ (`title` ซ้าย / ปุ่มขวา) ไม่ให้ปุ่มข้อความยาวกินพื้นที่
+- **เดสก์ท็อป (`sm+`)**: แสดง **ไอคอน + ข้อความ** เช่น `รีเฟรช` หรือข้อความเทียบเท่า
+- ปุ่มต้องมี **`aria-label`** ชัดเจน (เช่น `"รีเฟรชข้อมูลรายงาน"`) เพราะบนมือถือไม่มี visible label
+- ขนาดแตะง่าย: **`min-h-[40px]`** และบนมือถือควรมี **`min-w-[40px]`** เมื่อเป็นไอคอนล้วน
+- ขณะโหลด: **`disabled`** และ/หรือ **`aria-busy`** + สปินไอคอน (`animate-spin`) ตามดีไซน์โมดูล
+- เลย์เอาต์หัวการ์ด: ส่ง **`className`** ให้ `AppSectionHeader` เป็นแนวนอนบนมือถือ เช่น  
+  `className="flex flex-row items-start justify-between gap-3 sm:items-center"`  
+  และ **`actionWrapClassName="shrink-0 self-start …"`** เพื่อให้ปุ่มชิดขวาบนเทียบกับหัวข้อ
+
+## Pattern อ้างอิง
+
+ดู `src/systems/asset/components/AssetReportsClient.tsx` — ปุ่มรีเฟรชภาพรวมทรัพย์สิน
+
+```tsx
+<AppSectionHeader
+  className="flex flex-row items-start justify-between gap-3 sm:items-center"
+  actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
+  action={
+    <button
+      type="button"
+      aria-label="รีเฟรชข้อมูลรายงาน"
+      className="... min-h-[40px] min-w-[40px] sm:min-w-0 ..."
+    >
+      <RefreshIcon className="h-5 w-5 sm:mr-1.5" aria-hidden />
+      <span className="hidden sm:inline">รีเฟรช</span>
+    </button>
+  }
+/>
+```
+
+ใช้ pattern เดียวกับโมดูลรายงานอื่นในอนาคต (educare, POS, ฯลฯ) เมื่อมีปุ่มรีเฟรชในการ์ดสรุป

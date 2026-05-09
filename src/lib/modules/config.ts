@@ -33,7 +33,7 @@ export function filterAppModulesForDashboardUi<T extends { groupId: number; slug
  */
 export const DAILY_ALLOWED_MODULE_SLUG = "attendance" as const;
 
-/** กลุ่ม 1 (Basic): สายรายวันหัก 1 โทเคน/วัน Bangkok เมื่อเข้าใช้ (ดู applyDormitoryModuleTokenDeduction) */
+/** กลุ่ม 1 (Basic): สายรายวันหัก 1 โทเคน/โมดูล/วัน Bangkok เมื่อเข้าใช้ (ดู applyModuleDailyTokenDeduction — กลาง) */
 export const DORMITORY_MODULE_SLUG = "dormitory" as const;
 export const DORMITORY_MODULE_GROUP_ID = 1 as const;
 
@@ -57,6 +57,10 @@ export const LAUNDRY_MODULE_SLUG = "laundry" as const;
 export const LAUNDRY_MODULE_GROUP_ID = 1 as const;
 export const EDUCARE_MODULE_SLUG = "educare" as const;
 export const EDUCARE_MODULE_GROUP_ID = 1 as const;
+export const ASSET_MODULE_SLUG = "asset" as const;
+export const ASSET_MODULE_GROUP_ID = 1 as const;
+export const DOC_TRANSMISSION_MODULE_SLUG = "doc-transmission" as const;
+export const DOC_TRANSMISSION_MODULE_GROUP_ID = 1 as const;
 
 /** ระบบเช่าที่จอดรถ — กลุ่ม 1 (Basic) ลูกค้าเลือก Subscribe/ทดลองจากแคตตาล็อกโมดูล */
 export const PARKING_MODULE_SLUG = "parking" as const;
@@ -75,6 +79,8 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === LAUNDRY_MODULE_SLUG) return "รับฝากซักผ้า";
   if (slug === PARKING_MODULE_SLUG) return "ระบบเช่าที่จอดรถ";
   if (slug === EDUCARE_MODULE_SLUG) return "EduCare เช็คนักเรียน";
+  if (slug === ASSET_MODULE_SLUG) return "บริหารทรัพย์สิน";
+  if (slug === DOC_TRANSMISSION_MODULE_SLUG) return "สารบรรณดิจิทัล";
   return title;
 }
 
@@ -92,7 +98,7 @@ export const MODULE_GROUP_TIER_NAME: Record<number, string> = {
 
 /** สรุปฟีเจอร์ต่อกลุ่ม (ใช้ในหน้าแพ็กเกจ / คำอธิบาย) — ข้อความกระชับ */
 export const MODULE_GROUP_FEATURE_SUMMARY: Record<number, string> = {
-  1: "กลุ่ม 1: เช็คอิน · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ตัดผม · คาร์แคร์ · ซักผ้า · จอดรถ · POS",
+  1: "กลุ่ม 1: เช็คอิน · EduCare · สารบรรณ · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ทรัพย์สิน · ตัดผม · คาร์แคร์ · ซักผ้า · จอดรถ · POS",
   2: "สต็อก · ใบเสร็จ",
   3: "วิเคราะห์ · แชทสาขา",
   4: "พนักงาน · เงินเดือน",
@@ -104,7 +110,8 @@ export const DAILY_LINE_PLAN_SUMMARY = {
   title: "สายรายวัน",
   subtitle: "ไม่สมัครแพ็กเหมา — ใช้เมื่อมีโทเคน",
   lines: [
-    "เปิดระบบกลุ่ม 1 ได้เมื่อมียอดโทเคน (โทเคนหมดใช้ไม่ได้)",
+    "Subscribe ได้หลายระบบในกลุ่ม 1 — ไม่จำกัดจำนวน",
+    "หัก 1 โทเคน ต่อ 1 ระบบ ต่อ 1 วัน (Bangkok) เมื่อเข้าใช้จริง",
     "เหมาะกับใช้ไม่ถี่หรือทดลองระบบพื้นฐาน",
   ],
 } as const;

@@ -9,7 +9,7 @@ import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { STAFF_ALLOWED_MODULE_SLUGS } from "@/lib/modules/staff-policy";
 import { computeDashboardAccessAllowed } from "@/lib/tokens/dashboard-access";
 import { applyBuffetMonthlyBilling } from "@/lib/tokens/buffet-monthly-billing";
-import { applyDailyTokenDeduction } from "@/lib/tokens/daily-deduction";
+import { listModuleSlugsChargedToday } from "@/lib/tokens/module-daily-deduction";
 import { canAccessAppModule } from "@/lib/modules/access";
 import {
   displayAppModuleTitle,
@@ -30,7 +30,9 @@ export default async function DashboardLayout({
   if (!session) redirect("/login");
 
   try {
-    await applyDailyTokenDeduction(session.sub);
+    // หมายเหตุ: ไม่หักโทเคนรายวันที่หน้าแดชบอร์ดหลักอีกต่อไป
+    // สายรายวัน (DAILY) จะถูกหัก 1 โทเคน/โมดูล/วัน เมื่อเข้าโมดูลกลุ่ม 1 จริง ๆ
+    // (ดู src/lib/modules/guard.ts → applyModuleDailyTokenDeduction)
     await applyBuffetMonthlyBilling(session.sub);
   } catch (e) {
     console.error("[token billing]", e);
@@ -83,7 +85,7 @@ export default async function DashboardLayout({
   }
   const allModules = filterAppModulesForDashboardUi(allModulesRaw, user.role);
 
-  const [subscribedIds, trialIds] = await Promise.all([
+  const [subscribedIds, trialIds, chargedTodaySlugs] = await Promise.all([
     listSubscribedModuleIds(session.sub).catch((e) => {
       console.error("[dashboard layout] subscriptions", e);
       return [] as string[];
@@ -91,6 +93,11 @@ export default async function DashboardLayout({
     listTrialModuleIds(session.sub).catch((e) => {
       console.error("[dashboard layout] trials", e);
       return [] as string[];
+    }),
+    // หักไปแล้ววันนี้ — DAILY ที่ tokens=0 ยังเข้าโมดูลที่หักแล้วได้จนถึงเที่ยงคืน Bangkok
+    listModuleSlugsChargedToday(billCtx.billingUserId).catch((e) => {
+      console.error("[dashboard layout] charged today", e);
+      return new Set<string>();
     }),
   ]);
   const subscribedSet = new Set(subscribedIds);
@@ -107,6 +114,7 @@ export default async function DashboardLayout({
           subscriptionTier: user.subscriptionTier,
           tokens: user.tokens,
           lastBuffetBillingMonth: user.lastBuffetBillingMonth,
+          hasChargedModuleToday: chargedTodaySlugs.size > 0,
         });
 
   const accessFields = {
@@ -124,7 +132,11 @@ export default async function DashboardLayout({
       (m) =>
         user.role === "ADMIN" ||
         user.employerUserId ||
-        canAccessAppModule(accessFields, { slug: m.slug, groupId: m.groupId }),
+        canAccessAppModule(
+          accessFields,
+          { slug: m.slug, groupId: m.groupId },
+          { chargedTodaySlugs },
+        ),
     )
     .map(({ slug, title, groupId }) => ({
       slug,

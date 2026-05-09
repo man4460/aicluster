@@ -33,10 +33,14 @@ export function canAccessModuleGroup(user: UserAccessFields, groupId: number): b
 
 /**
  * สิทธิ์เข้าโมดูลรายตัว — สายรายวัน + มีโทเคน: เข้าโมดูลกลุ่ม 1 ได้ทุกตัว (รวมหอพัก)
+ *
+ * `options.chargedTodaySlugs` — slug ที่หักโทเคนไปแล้วในวัน Bangkok นี้
+ * (สายรายวันที่ tokens = 0 แต่หักไปแล้ววันนี้ ยังเข้าใช้ได้จนถึงเที่ยงคืน Bangkok)
  */
 export function canAccessAppModule(
   user: UserAccessFields,
   mod: { slug: string; groupId: number },
+  options?: { chargedTodaySlugs?: ReadonlySet<string> | null },
 ): boolean {
   if (!Number.isInteger(mod.groupId) || mod.groupId < 1 || mod.groupId > MAX_MODULE_GROUP) {
     return false;
@@ -45,8 +49,10 @@ export function canAccessAppModule(
   if (user.subscriptionType === "BUFFET") {
     return mod.groupId <= effectiveBuffetMaxGroup(user.subscriptionTier);
   }
-  if (user.tokens <= 0) return false;
-  return mod.groupId === 1;
+  if (mod.groupId !== 1) return false;
+  if (user.tokens > 0) return true;
+  if (options?.chargedTodaySlugs?.has(mod.slug)) return true;
+  return false;
 }
 
 /**

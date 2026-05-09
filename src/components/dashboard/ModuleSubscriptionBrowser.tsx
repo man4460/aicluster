@@ -151,8 +151,9 @@ export function ModuleSubscriptionBrowser({
   }, [subSyncKey, trialSyncKey, initialSubscribedIds, initialTrialIds]);
 
   const isDailyPlan = access.role !== "ADMIN" && access.subscriptionType !== "BUFFET";
-  const reachedDailyLimit = isDailyPlan && savedSubscribedIds.size >= 1;
-  const upgradeMessage = "สายรายวันเลือกได้เพียง 1 ระบบ กรุณาเปลี่ยนแพ็กเกจเพื่อเพิ่มระบบ";
+  // สายรายวัน Subscribe ได้หลายโมดูลในกลุ่ม 1 — หัก 1 โทเคน/โมดูล/วัน Bangkok เมื่อเข้าใช้
+  const reachedDailyLimit = false;
+  const upgradeMessage = "ระบบนี้ยังไม่อยู่ในแผนของคุณ — กรุณาอัปเกรดแพ็กเกจเพื่อใช้งาน";
 
   const modulesForUi = useMemo(
     () =>
@@ -269,7 +270,9 @@ export function ModuleSubscriptionBrowser({
             <div className="flex items-center gap-3">
               <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               <p className="text-[11px] font-bold text-[#66638c] uppercase tracking-wider">
-                {isDailyPlan ? "Daily Plan: 1 Module Max" : "Buffet Plan: Unlimited Access"}
+                {isDailyPlan
+                  ? "Daily Plan: หัก 1 โทเคน/โมดูล/วัน"
+                  : "Buffet Plan: Unlimited Access"}
               </p>
             </div>
           </div>
@@ -442,7 +445,9 @@ export function ModuleSubscriptionBrowser({
                                   ? `ล็อคจนถึง ${formatBangkokDateTimeLong(cooldownIso!)}`
                                   : showDailyLock
                                     ? "สมัครเพิ่มได้เมื่ออัปเกรดแพ็กเกจ"
-                                    : "สมัครเพื่อเปิดใช้งานระบบนี้"}
+                                    : isDailyPlan
+                                      ? "สมัครเพื่อเปิดใช้งาน · หัก 1 โทเคน/วัน"
+                                      : "สมัครเพื่อเปิดใช้งานระบบนี้"}
                               </p>
                             )}
                           </div>

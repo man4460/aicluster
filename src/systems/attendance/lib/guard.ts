@@ -1,30 +1,10 @@
-import { notFound, redirect } from "next/navigation";
-import { getSession } from "@/lib/auth/session";
-import { prisma } from "@/lib/prisma";
-import { canAccessAppModule, type UserAccessFields } from "@/lib/modules/access";
-import { getModuleBillingContext } from "@/lib/modules/billing-context";
+import { requireModulePage } from "@/lib/modules/guard";
 import { ATTENDANCE_MODULE_SLUG } from "@/lib/modules/config";
-import { applyAttendanceModuleTokenDeduction } from "./attendance-module-deduction";
 
-/** Shell ใต้ /dashboard/attendance — สิทธิ์ตามเจ้าของ + หักโทเคนรายวันที่บัญชีเจ้าของ */
+/**
+ * Shell ใต้ /dashboard/attendance — สิทธิ์ตามเจ้าของ + หักโทเคนรายวันที่บัญชีเจ้าของ
+ * (หัก 1 โทเคน/วัน Bangkok ต่อโมดูล ผ่าน guard กลาง)
+ */
 export async function requireAttendanceSection() {
-  const session = await getSession();
-  if (!session) redirect("/login");
-
-  const mod = await prisma.appModule.findFirst({
-    where: { slug: ATTENDANCE_MODULE_SLUG, isActive: true },
-  });
-  if (!mod) notFound();
-
-  const ctx = await getModuleBillingContext(session.sub);
-  if (!ctx) redirect("/login");
-
-  if (!canAccessAppModule(ctx.access, { slug: mod.slug, groupId: mod.groupId })) {
-    redirect("/dashboard/plans?upgrade=1");
-  }
-
-  const tokenResult = await applyAttendanceModuleTokenDeduction(ctx.billingUserId);
-  if (!tokenResult.ok) {
-    redirect("/dashboard/refill");
-  }
+  await requireModulePage(ATTENDANCE_MODULE_SLUG);
 }

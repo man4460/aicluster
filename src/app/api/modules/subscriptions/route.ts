@@ -58,16 +58,9 @@ export async function POST(req: Request) {
   if (!canAccessAppModule(ctx.access, { slug: mod.slug, groupId: mod.groupId })) {
     return NextResponse.json({ error: "แพ็กเกจปัจจุบันยังเข้าใช้ระบบนี้ไม่ได้" }, { status: 403 });
   }
-  if (ctx.access.role !== "ADMIN" && ctx.access.subscriptionType !== "BUFFET") {
-    const current = await listSubscribedModuleIds(auth.session.sub);
-    const alreadyHasThisModule = current.includes(mod.id);
-    if (!alreadyHasThisModule && current.length >= 1) {
-      return NextResponse.json(
-        { error: "สายรายวันเลือกได้เพียง 1 ระบบ กรุณาเปลี่ยนแพ็กเกจเพื่อเพิ่มระบบ" },
-        { status: 403 },
-      );
-    }
-  }
+  // หมายเหตุ: สายรายวัน (DAILY) สามารถ Subscribe ได้หลายระบบในกลุ่ม 1
+  // (`canAccessAppModule` กรอง groupId === 1 + tokens > 0 ให้แล้ว)
+  // หักโทเคน 1 ดวง/โมดูล/วัน Bangkok เมื่อเข้าใช้จริง — ดู applyModuleDailyTokenDeduction
 
   const cd = await getModuleResubscribeCooldown(auth.session.sub, mod.id);
   if (cd.locked && cd.unlockAt) {

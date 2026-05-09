@@ -15,11 +15,22 @@ export type AppCompareBarListProps = {
   subtitle?: string;
   emptyText: string;
   rows: AppCompareBarRow[];
-  formatAmount: (amount: number) => string;
+  /**
+   * ฟอร์แมตยอดเงิน — ถ้าไม่ส่งจะใช้ค่าเริ่มต้น `Intl.NumberFormat("th-TH")` (เลขล้วน, ไม่มีหน่วย).
+   * หมายเหตุ: ห้ามส่งจาก Server Component ไปยังกราฟนี้ (เป็น Client Component) — ให้ pre-format ลงใน rows
+   * หรือยอมใช้ค่าเริ่มต้นแทน
+   */
+  formatAmount?: (amount: number) => string;
   /** brand = ม่วง POS, emerald = รายรับ, slate = นิวตรัล */
   variant?: "brand" | "emerald" | "slate";
   className?: string;
 };
+
+const defaultThaiFormatter = new Intl.NumberFormat("th-TH", {
+  maximumFractionDigits: 0,
+});
+
+const defaultFormatAmount = (n: number): string => defaultThaiFormatter.format(n);
 
 const track: Record<string, string> = {
   brand: "bg-[#ecebff]",
@@ -59,7 +70,7 @@ export function AppCompareBarList({
   subtitle,
   emptyText,
   rows,
-  formatAmount,
+  formatAmount = defaultFormatAmount,
   variant = "brand",
   className,
 }: AppCompareBarListProps) {

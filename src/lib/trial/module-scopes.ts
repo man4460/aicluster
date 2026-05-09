@@ -1,8 +1,10 @@
 import {
+  ASSET_MODULE_SLUG,
   ATTENDANCE_MODULE_SLUG,
   BARBER_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
+  DOC_TRANSMISSION_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   EDUCARE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
@@ -50,4 +52,12 @@ export function getParkingDataScope(userId: string): Promise<ModuleDataScope> {
 
 export function getEducareDataScope(userId: string): Promise<ModuleDataScope> {
   return resolveDataScopeBySlug(userId, EDUCARE_MODULE_SLUG);
+}
+
+export function getAssetDataScope(userId: string): Promise<ModuleDataScope> {
+  return resolveDataScopeBySlug(userId, ASSET_MODULE_SLUG);
+}
+
+export function getDocTransmissionDataScope(userId: string): Promise<ModuleDataScope> {
+  return resolveDataScopeBySlug(userId, DOC_TRANSMISSION_MODULE_SLUG);
 }

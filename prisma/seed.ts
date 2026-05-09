@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import { bangkokMonthKey } from "../src/lib/time/bangkok";
 import { seedBuildingPosProdDemoForOwner } from "../src/lib/trial/seed-building-pos";
 import { seedEducareProdDemoForOwner } from "../src/lib/trial/seed-educare";
+import { seedAssetProdDemoForOwner } from "../src/lib/trial/seed-asset";
+import { seedDocTransmissionProdDemoForOwner } from "../src/lib/trial/seed-doc-transmission";
 
 const prisma = new PrismaClient();
 
@@ -33,15 +35,14 @@ async function main() {
   });
 
   const userHash = await bcrypt.hash("User123!", 12);
+  // หมายเหตุสำคัญ: `update` ต้องไม่แตะ tokens / subscription* / lastBuffetBillingMonth
+  // เพราะ seed ถูกรันซ้ำได้ (deploy/CLI) — ถ้ารีเซ็ตจะทำให้บัญชีทดลองที่เติมโทเคน
+  // หรือสมัครแพ็ก 199 แล้ว ถูกเริ่มต้นใหม่ทุกครั้งที่ seed
   await prisma.user.upsert({
     where: { email: "user@mawell.local" },
     update: {
       passwordHash: userHash,
       role: "USER",
-      tokens: 7,
-      subscriptionType: "DAILY",
-      subscriptionTier: "NONE",
-      lastBuffetBillingMonth: null,
     },
     create: {
       email: "user@mawell.local",
@@ -62,10 +63,6 @@ async function main() {
     update: {
       passwordHash: userHash,
       role: "USER",
-      tokens: 7,
-      subscriptionType: "DAILY",
-      subscriptionTier: "NONE",
-      lastBuffetBillingMonth: null,
     },
     create: {
       email: "user@mawell.local.com",
@@ -174,6 +171,22 @@ async function main() {
       sortOrder: 28,
     },
     {
+      slug: "asset",
+      title: "บริหารทรัพย์สิน",
+      description:
+        "กลุ่ม 1 (Basic) — ทะเบียนทรัพย์สิน หมวด/แผนก/สถานที่ มอบหมาย-ยืม-ย้าย ซ่อมบำรุง จำหน่ายออก ตรวจนับ พร้อมรายงาน",
+      groupId: 1,
+      sortOrder: 29,
+    },
+    {
+      slug: "doc-transmission",
+      title: "สารบรรณดิจิทัล",
+      description:
+        "กลุ่ม 1 (Basic) — รับ-ส่งหนังสือ คำสั่ง บันทึกข้อความ หนังสือเวียน · timeline workflow · ไฟล์ PDF revision · Public share link",
+      groupId: 1,
+      sortOrder: 30,
+    },
+    {
       slug: "stock-management",
       title: "ระบบจัดการสต็อกสินค้า",
       description: "กลุ่ม 2 (Silver)",
@@ -269,6 +282,24 @@ async function main() {
       select: { id: true },
     });
     if (row) await seedEducareProdDemoForOwner(prisma, row.id);
+  }
+
+  /** Asset — ทรัพย์สิน + เคลื่อนไหว + ซ่อม + ตรวจนับ (scope prod) สำหรับบัญชี demo ถ้ายังไม่มีข้อมูล */
+  for (const email of demoPosOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) await seedAssetProdDemoForOwner(prisma, row.id);
+  }
+
+  /** Doc Transmission — สารบรรณดิจิทัล (scope prod) สำหรับบัญชี demo ถ้ายังไม่มีข้อมูล */
+  for (const email of demoPosOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) await seedDocTransmissionProdDemoForOwner(prisma, row.id);
   }
 }
 

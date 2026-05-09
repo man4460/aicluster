@@ -18,6 +18,8 @@ import { tierGroupLabel } from "@/lib/module-permissions";
 import { isMqttServiceModuleEnabled } from "@/lib/modules/mqtt-feature";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { listTrialModuleIds } from "@/lib/modules/trial-store";
+import { listModuleSlugsChargedToday } from "@/lib/tokens/module-daily-deduction";
+import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { STAFF_ALLOWED_MODULE_SLUGS } from "@/lib/modules/staff-policy";
 import {
   dashboardModuleCardDescription,
@@ -44,7 +46,7 @@ export default async function DashboardHomePage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const [user, modulesRaw, subscribedIds, trialIds] = await Promise.all([
+  const [user, modulesRaw, subscribedIds, trialIds, billCtx] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.sub },
       select: {
@@ -71,9 +73,14 @@ export default async function DashboardHomePage() {
     }),
     listSubscribedModuleIds(session.sub),
     listTrialModuleIds(session.sub),
+    getModuleBillingContext(session.sub),
   ]);
 
   if (!user) redirect("/login");
+
+  const chargedTodaySlugs = billCtx
+    ? await listModuleSlugsChargedToday(billCtx.billingUserId).catch(() => new Set<string>())
+    : new Set<string>();
 
   const modules = filterAppModulesForDashboardUi(modulesRaw, user.role);
 
@@ -95,7 +102,11 @@ export default async function DashboardHomePage() {
       (m) =>
         user.role === "ADMIN" ||
         user.employerUserId ||
-        canAccessAppModule(accessFields, { slug: m.slug, groupId: m.groupId }),
+        canAccessAppModule(
+          accessFields,
+          { slug: m.slug, groupId: m.groupId },
+          { chargedTodaySlugs },
+        ),
     )
     .map((m) => ({ ...m, title: displayAppModuleTitle(m.slug, m.title) }));
 

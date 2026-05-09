@@ -45,9 +45,9 @@ export function HomeFinanceInsetForm({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
+    <div className="rounded-[1.4rem] border border-white/65 bg-gradient-to-br from-white/85 via-white/70 to-[#eef1ff]/72 p-4 shadow-[0_16px_34px_-26px_rgba(38,28,116,0.45)] ring-1 ring-white/65 backdrop-blur-xl">
       {title ? (
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</h3>
+        <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#66638c]">{title}</h3>
       ) : null}
       {children}
     </div>
@@ -263,7 +263,7 @@ export function HomeFinancePrimaryButton({
     <button
       type={type}
       className={cn(
-        "rounded-xl bg-[#0000BF] px-5 py-2.5 text-sm font-semibold text-white hover:opacity-95",
+        "inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-gradient-to-b from-[#5f63ff] to-[#4d47b6] px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_26px_-18px_rgba(72,59,181,0.85)] transition active:scale-[0.98] hover:brightness-[1.03] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[44px]",
         className,
       )}
       {...props}
@@ -275,9 +275,31 @@ export function HomeFinanceSecondaryButton({ className, ...props }: React.Compon
   return (
     <button
       type="button"
-      className={cn("rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700", className)}
+      className={cn(
+        "inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-white/70 bg-white/72 px-5 py-3 text-sm font-semibold text-[#4d4a76] shadow-[0_14px_24px_-20px_rgba(35,28,94,0.55)] transition active:scale-[0.98] hover:bg-white/88 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[44px]",
+        className,
+      )}
       {...props}
     />
+  );
+}
+
+export function HomeFinanceModalActionBar({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "sticky bottom-0 -mx-1 mt-5 flex flex-col-reverse gap-2 rounded-[1.35rem] border border-white/70 bg-gradient-to-b from-white/80 to-white/65 p-2.5 backdrop-blur-xl sm:mx-0 sm:flex-row sm:justify-end sm:gap-2.5 sm:p-3",
+        className,
+      )}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -285,7 +307,10 @@ export function HomeFinanceModalCloseTextButton({ className, onClick, ...props }
   return (
     <button
       type="button"
-      className={cn("rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-slate-100", className)}
+      className={cn(
+        "rounded-xl border border-white/70 bg-white/65 px-2.5 py-1.5 text-sm font-medium text-[#585184] shadow-sm transition hover:bg-white/85",
+        className,
+      )}
       onClick={onClick}
       {...props}
     />
@@ -310,6 +335,7 @@ export function HomeFinanceHeroCta({
           type="button"
           onClick={onAddClick}
           className="h-12 w-full shrink-0 rounded-xl bg-[#0000BF] px-6 text-base font-semibold text-white shadow-sm hover:bg-[#0000a6] sm:h-11 sm:w-auto sm:min-w-[11rem] sm:text-sm"
+          suppressHydrationWarning
         >
           {buttonLabel}
         </button>
@@ -334,13 +360,26 @@ export function HomeFinanceModalBackdrop({
   children: ReactNode;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
-      onClick={onBackdropClick}
-      role="presentation"
-    >
-      {children}
-    </div>
+    <>
+      <style jsx global>{`
+        @keyframes hfModalBackdropIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes hfModalPanelIn {
+          from { opacity: 0; transform: translateY(10px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
+      <div
+        className="fixed inset-0 z-[210] flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(110,112,255,0.24),_transparent_52%),linear-gradient(to_bottom,rgba(18,12,54,0.5),rgba(12,10,28,0.58))] px-3 py-4 backdrop-blur-[3px] sm:p-5"
+        style={{ animation: "hfModalBackdropIn 180ms ease-out" }}
+        onClick={onBackdropClick}
+        role="presentation"
+      >
+        {children}
+      </div>
+    </>
   );
 }
 
@@ -364,16 +403,17 @@ export function HomeFinanceModalPanel({
   return (
     <div
       className={cn(
-        "max-h-[90vh] w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl",
+        "max-h-[90vh] w-full overflow-y-auto rounded-[2rem] border border-white/55 bg-gradient-to-br from-white/92 via-white/82 to-[#eef0ff]/84 p-5 shadow-[0_24px_70px_-28px_rgba(53,42,138,0.6)] ring-1 ring-white/65 backdrop-blur-2xl sm:rounded-[2.25rem] sm:p-6",
         maxWidthClassName,
       )}
+      style={{ animation: "hfModalPanelIn 200ms ease-out" }}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="mb-4 flex items-center justify-between gap-2">
-        <h2 id={titleId} className="text-base font-semibold text-slate-900">
+        <h2 id={titleId} className="text-base font-semibold text-[#232043] sm:text-lg">
           {title}
         </h2>
         <HomeFinanceModalCloseTextButton onClick={onClose}>ปิด</HomeFinanceModalCloseTextButton>
@@ -381,7 +421,7 @@ export function HomeFinanceModalPanel({
       {error ? (
         <div
           role="alert"
-          className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+          className="mb-4 rounded-2xl border border-red-200/85 bg-red-50/90 px-3.5 py-2.5 text-sm text-red-800"
         >
           {error}
         </div>

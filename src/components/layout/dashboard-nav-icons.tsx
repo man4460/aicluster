@@ -267,6 +267,68 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  /** EduCare — หนังสือ (เช็คนักเรียน / การศึกษา) */
+  if (href.startsWith("/dashboard/educare")) {
+    return (
+      <Svg>
+        <path
+          d="M4 19.5A2.5 2.5 0 016.5 17H20"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
+  /** สารบรรณดิจิทัล — ซอง+ลูกศรไปกลับ (รับ-ส่งหนังสือ) */
+  if (href.startsWith("/dashboard/doc-transmission")) {
+    return (
+      <Svg>
+        <path
+          d="M3 8l9-5 9 5M3 8v11a1 1 0 001 1h16a1 1 0 001-1V8M3 8l9 6 9-6"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M8 14l-2 2 2 2M16 14l2 2-2 2"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
+  /** บริหารทรัพย์สิน — กล่อง/แพ็กเกจซ้อน (สินค้าคงคลัง) */
+  if (href.startsWith("/dashboard/asset")) {
+    return (
+      <Svg>
+        <path
+          d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
   if (href.startsWith("/dashboard/home-finance") || href.startsWith("/dashboard/modules/income-expense-basic")) {
     return (
       <Svg>

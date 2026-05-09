@@ -1,10 +1,12 @@
 export type DashboardNavGroupId = "basic" | "finance" | "services" | "property" | "admin";
 
 import {
+  ASSET_MODULE_SLUG,
   ATTENDANCE_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
   BARBER_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
+  DOC_TRANSMISSION_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   EDUCARE_MODULE_SLUG,
   HOME_FINANCE_BASIC_MODULE_SLUG,
@@ -40,6 +42,8 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === PARKING_MODULE_SLUG) return "/dashboard/parking";
   if (slug === LAUNDRY_MODULE_SLUG) return "/dashboard/laundry";
   if (slug === EDUCARE_MODULE_SLUG) return "/dashboard/educare";
+  if (slug === ASSET_MODULE_SLUG) return "/dashboard/asset";
+  if (slug === DOC_TRANSMISSION_MODULE_SLUG) return "/dashboard/doc-transmission";
   return `/dashboard/modules/${slug}`;
 }
 
@@ -129,6 +133,8 @@ export function buildDashboardNavGroups(
     const adminSlugs = new Set<string>([
       ATTENDANCE_MODULE_SLUG,
       EDUCARE_MODULE_SLUG,
+      ASSET_MODULE_SLUG,
+      DOC_TRANSMISSION_MODULE_SLUG,
       MQTT_SERVICE_MODULE_SLUG,
       SYSTEM_MAP_CATALOG_SLUG,
     ]);

@@ -26,6 +26,7 @@ const MIME_BY_EXT: Record<string, string> = {
   ".png": "image/png",
   ".webp": "image/webp",
   ".gif": "image/gif",
+  ".svg": "image/svg+xml",
 };
 
 function safeSegment(raw: string, maxLen: number): string | null {

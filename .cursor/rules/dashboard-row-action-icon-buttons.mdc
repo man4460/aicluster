@@ -1,0 +1,53 @@
+---
+description: ปุ่มแก้ไข/ลบในแถวรายการ — ใช้ไอคอน + aria-label + โทเค็นคลาสมาตรฐาน
+alwaysApply: true
+---
+
+# Row action buttons — edit / delete as icons (dashboard lists)
+
+เมื่อมีปุ่ม **แก้ไข** และ **ลบ** (หรือ **ปิดการใช้งาน** / soft delete) ใน **แถวของรายการ** ภายใน `AppDashboardSection` หรือ list ลักษณะเดียวกัน:
+
+## บังคับ
+
+- แสดงเป็น **ไอคอนล้วน** (ไม่ใช้ข้อความ "แก้ไข" / "ลบ" บนปุ่ม) เพื่อประหยัดความกว้างแถวทั้งมือถือและเดสก์ท็อป
+- ทุกปุ่มต้องมี **`aria-label`** ชัดเจน ระบุการกระทำ + บริบท (เช่น ชื่อรายการ / รหัส) เพื่อผู้ใช้ screen reader
+- แนะนำ **`title`** เดียวกับคำอธิบายสั้น ๆ เพื่อ tooltip บนเดสก์ท็อป
+- ขนาดแตะง่าย: **`min-h-[40px] min-w-[40px]`** อย่างน้อย
+- **แก้ไข**: ไอคอนดินสอ/แผ่น — โทนกลาง `border-white/60 bg-white/80 text-[#4d47b6]`
+- **ลบ / ปิดใช้งาน**: ไอคอนถังขยะ — โทนเตือน `border-rose-200 bg-rose-50 text-rose-600` (หรือเทียบเท่าตามโมดูล)
+- ไอคอนภายในปุ่มใส่ **`aria-hidden`** (เพราะมี `aria-label` ที่ปุ่มแล้ว)
+- ใช้โทเค็นร่วมเมื่อเป็นโมดูลเดียวกัน — อ้างอิง `src/systems/asset/components/AssetRowActionIcons.tsx`:
+  - `IconRowEdit`, `IconRowRemove`
+  - `assetRowEditIconButtonClass`, `assetRowRemoveIconButtonClass`
+
+## Pattern อ้างอิง
+
+```tsx
+import {
+  assetRowEditIconButtonClass,
+  assetRowRemoveIconButtonClass,
+  IconRowEdit,
+  IconRowRemove,
+} from "@/systems/asset/components/AssetRowActionIcons";
+
+<div className="flex shrink-0 items-center gap-1">
+  <button
+    type="button"
+    className={assetRowEditIconButtonClass}
+    aria-label={`แก้ไข ${row.name}`}
+    title="แก้ไข"
+  >
+    <IconRowEdit className="h-4 w-4" />
+  </button>
+  <button
+    type="button"
+    className={assetRowRemoveIconButtonClass}
+    aria-label={`ลบ ${row.name}`}
+    title="ลบ"
+  >
+    <IconRowRemove className="h-4 w-4" />
+  </button>
+</div>
+```
+
+โมดูลอื่น (educare, POS, ฯลฯ) ให้คัดลอกโทเค็น/ไอคอนไปที่ `app-templates` หรือโฟลเดอร์โมดูลกลาง หากใช้ซ้ำหลายที่ — **ห้าม** คัดลอกบล็อก SVG ซ้ำในหลายไฟล์ถ้าจะขยายเป็นมาตรฐานโปรเจกต์

@@ -1,0 +1,33 @@
+---
+description: Dashboard analytics chart template (clean readable standard)
+globs: src/{app/(dashboard),systems}/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Dashboard Analytics Chart Standard (Clean + Readable)
+
+ใช้มาตรฐานนี้เมื่อทำกราฟในโมดูลแดชบอร์ดใหม่หรือรีแฟคเตอร์กราฟเดิม
+
+## บังคับใช้ template กลางจาก `@/components/app-templates`
+
+- รายรับ vs รายจ่ายรายช่วง: ใช้ `AppRevenueCostColumnChart` (compact เมื่อจุดข้อมูลเยอะ)
+- กราฟแท่งเดี่ยวแนวโน้ม: ใช้ `AppColumnBarSparkChart` (`variant="brand"`, `compact`)
+- สรุปตามหมวด: ใช้ `AppCompareBarList` (ลดแถวและอ่านง่าย)
+- โครงเลย์เอาต์กราฟ: ใช้ `AppSparkChartPanel` และ `AppSparkChartsTwoColumnGrid`
+
+## กฎลด noise
+
+- หัวกราฟต้องมีตัวเลขหลักเดียวที่เด่นที่สุด (เช่น คงเหลือสุทธิ)
+- หลีกเลี่ยง legend ยาวซ้ำซ้อน และข้อความอธิบายที่บังคับผู้ใช้ตีความหลายชั้น
+- ใช้เส้นกริดบาง / tick สั้น / spacing โปร่ง อ่านบนมือถือได้
+
+## สัดส่วนและหมวด
+
+- สัดส่วนรับ-จ่าย: ใช้ donut/ring ขนาดเล็ก + ค่า % และมูลค่ากำกับ
+- หมวดรายรับ/รายจ่าย: แสดง Top 5 + `อื่นๆ` เป็นค่าเริ่มต้น
+- หากมี “ดูทั้งหมด” ให้เป็น progressive disclosure ไม่ยัดยาวตั้งแต่แรก
+
+## Empty + Loading
+
+- ห้ามใช้ข้อความ `กำลังโหลด...` แบบลอยเดี่ยว ให้ใช้ skeleton ที่สะท้อน layout จริง
+- Empty state ต้องมี CTA ใช้งานต่อได้ทันที (เช่น “+ เพิ่มรายการแรก”)

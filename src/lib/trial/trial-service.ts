@@ -6,9 +6,11 @@ import {
   BARBER_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
+  DOC_TRANSMISSION_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
 } from "@/lib/modules/config";
+import { seedDocTransmissionDemoForUser } from "@/lib/trial/seed-doc-transmission";
 import { TRIAL_PROD_SCOPE, trialSessionDaysDefault } from "./constants";
 import { seedAttendanceTrialData } from "./seed-attendance";
 import { seedBarberTrialData } from "./seed-barber";
@@ -61,6 +63,11 @@ async function deleteSandboxRowsInTx(tx: Tx, ownerUserId: string, trialSessionId
   await tx.dormitoryCostCategory.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.room.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.dormitoryProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
+
+  await tx.docTransmissionAuditLog.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.docTransmissionRecord.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.docTransmissionDepartment.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.docTransmissionSettings.deleteMany({ where: { ownerUserId, trialSessionId } });
 }
 
 /**
@@ -180,6 +187,8 @@ export async function startTrial(userId: string, moduleId: string): Promise<void
       await seedCarWashTrialData(tx, userId, session.id);
     } else if (mod.slug === VILLAGE_MODULE_SLUG) {
       await seedVillageTrialData(tx, userId, session.id);
+    } else if (mod.slug === DOC_TRANSMISSION_MODULE_SLUG) {
+      await seedDocTransmissionDemoForUser(tx, userId, session.id);
     }
   });
 }
