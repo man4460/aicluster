@@ -22,9 +22,7 @@ export function filterAppModulesForDashboardUi<T extends { groupId: number; slug
   role: UserRole,
 ): T[] {
   if (role === "ADMIN") return modules;
-  return modules.filter(
-    (m) => m.groupId <= UI_VISIBLE_MAX_MODULE_GROUP && m.slug !== PARKING_MODULE_SLUG,
-  );
+  return modules.filter((m) => m.groupId <= UI_VISIBLE_MAX_MODULE_GROUP);
 }
 
 /**
@@ -70,7 +68,7 @@ export const PROMPT_LIBRARY_MODULE_GROUP_ID = 1 as const;
 export const MEDIA_REGISTRY_MODULE_SLUG = "media-registry" as const;
 export const MEDIA_REGISTRY_MODULE_GROUP_ID = 1 as const;
 
-/** ระบบเช่าที่จอดรถ — กลุ่ม 1 (Basic) ลูกค้าเลือก Subscribe/ทดลองจากแคตตาล็อกโมดูล */
+/** บริการรับฝากจอดรถ — กลุ่ม 1 (Basic) ลูกค้าเลือก Subscribe/ทดลองจากแคตตาล็อกโมดูล */
 export const PARKING_MODULE_SLUG = "parking" as const;
 export const PARKING_MODULE_GROUP_ID = 1 as const;
 
@@ -85,7 +83,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === DORMITORY_MODULE_SLUG) return "จัดการหอพัก";
   if (slug === VILLAGE_MODULE_SLUG) return "จัดการหมู่บ้าน";
   if (slug === LAUNDRY_MODULE_SLUG) return "รับฝากซักผ้า";
-  if (slug === PARKING_MODULE_SLUG) return "ระบบเช่าที่จอดรถ";
+  if (slug === PARKING_MODULE_SLUG) return "บริการรับฝากจอดรถ";
   if (slug === EDUCARE_MODULE_SLUG) return "EduCare เช็คนักเรียน";
   if (slug === ASSET_MODULE_SLUG) return "บริหารทรัพย์สิน";
   if (slug === DOC_TRANSMISSION_MODULE_SLUG) return "สารบรรณดิจิทัล";
