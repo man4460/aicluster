@@ -37,7 +37,13 @@
     "pm2:logs": "pm2 logs mawell-dev",
     "pm2:delete": "pm2 delete mawell-dev mawell-dev-3001 mawell-serve",
     "deploy": "bash scripts/deploy.sh",
-    "link:cli": "npm link --ignore-scripts"
+    "link:cli": "npm link --ignore-scripts",
+    "db:backup": "bash scripts/backup-db.sh",
+    "db:backup:setup": "bash scripts/backup-db-setup.sh all",
+    "db:backup:status": "bash scripts/backup-db-setup.sh status",
+    "db:backup:install": "bash scripts/backup-db-setup.sh install",
+    "db:backup:uninstall": "bash scripts/backup-db-setup.sh uninstall",
+    "db:restore": "bash scripts/backup-db-restore.sh"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
