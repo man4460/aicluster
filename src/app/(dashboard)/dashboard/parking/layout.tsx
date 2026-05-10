@@ -1,5 +1,7 @@
-import { PageContainer } from "@/components/ui/page-container";
+import { ParkingValetShell } from "@/systems/parking/components/ParkingValetShell";
+import { requireParkingPage } from "@/systems/parking/lib/parking-page-auth";
 
-export default function ParkingModuleLayout({ children }: { children: React.ReactNode }) {
-  return <PageContainer>{children}</PageContainer>;
+export default async function ParkingModuleLayout({ children }: { children: React.ReactNode }) {
+  const { site } = await requireParkingPage();
+  return <ParkingValetShell siteName={site.name}>{children}</ParkingValetShell>;
 }

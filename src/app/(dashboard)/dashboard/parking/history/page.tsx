@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { Prisma } from "@/generated/prisma/client";
-import { PageHeader } from "@/components/ui/page-container";
+import {
+  AppDashboardSection,
+  AppSectionHeader,
+  appTemplateOutlineButtonClass,
+} from "@/components/app-templates";
 import { prisma } from "@/lib/prisma";
-import { parkingBtnSecondary, parkingCard } from "@/systems/parking/parking-ui";
+import { cn } from "@/lib/cn";
+import { parkingField } from "@/systems/parking/parking-ui";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { requireParkingPage } from "@/systems/parking/lib/parking-page-auth";
 
 export const metadata: Metadata = {
-  title: "ประวัติการใช้งาน | ระบบเช่าที่จอดรถ",
+  title: "ประวัติการใช้งาน | บริการรับฝากจอดรถ",
 };
 
 type Props = {
@@ -48,18 +53,27 @@ export default async function ParkingHistoryPage({ searchParams }: Props) {
   });
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="ประวัติการใช้บริการ"
-        description="สืบค้นตามทะเบียน ช่วงเวลาเช็คอิน และสถานะ"
-        action={
-          <Link href="/dashboard/parking" className={parkingBtnSecondary}>
-            ← ผังที่จอด
-          </Link>
-        }
-      />
+    <div className="space-y-6">
+      <AppDashboardSection className="flex flex-col gap-4 p-5 sm:p-6">
+        <AppSectionHeader
+          tone="slate"
+          className="flex flex-row items-start justify-between gap-3 sm:items-center"
+          actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
+          title="ประวัติการใช้บริการ"
+          description="สืบค้นตามทะเบียน ช่วงเวลาเช็คอิน และสถานะ"
+          action={
+            <Link
+              href="/dashboard/parking"
+              className={cn(
+                appTemplateOutlineButtonClass,
+                "inline-flex min-h-[40px] items-center justify-center rounded-2xl px-4 text-sm font-semibold",
+              )}
+            >
+              ← ภาพรวม
+            </Link>
+          }
+        />
 
-      <section className={`${parkingCard} p-5`}>
         <form method="get" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label htmlFor="q" className="block text-xs font-semibold text-slate-700">
@@ -69,7 +83,7 @@ export default async function ParkingHistoryPage({ searchParams }: Props) {
               id="q"
               name="q"
               defaultValue={q}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              className={`${parkingField} mt-1`}
               placeholder="ค้นหา"
             />
           </div>
@@ -81,7 +95,7 @@ export default async function ParkingHistoryPage({ searchParams }: Props) {
               id="status"
               name="status"
               defaultValue={status}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              className={`${parkingField} mt-1`}
             >
               <option value="ALL">ทั้งหมด</option>
               <option value="ACTIVE">กำลังจอด</option>
@@ -98,7 +112,7 @@ export default async function ParkingHistoryPage({ searchParams }: Props) {
               name="from"
               type="datetime-local"
               defaultValue={from ?? ""}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              className={`${parkingField} mt-1`}
             />
           </div>
           <div>
@@ -110,22 +124,22 @@ export default async function ParkingHistoryPage({ searchParams }: Props) {
               name="to"
               type="datetime-local"
               defaultValue={to ?? ""}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              className={`${parkingField} mt-1`}
             />
           </div>
           <div className="sm:col-span-2 lg:col-span-4">
             <button
               type="submit"
-              className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+              className="rounded-2xl bg-gradient-to-r from-emerald-600 to-sky-500 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:brightness-105"
             >
               ค้นหา
             </button>
           </div>
         </form>
-      </section>
+      </AppDashboardSection>
 
-      <section className={`${parkingCard} overflow-x-auto p-5`}>
-        <p className="text-xs text-slate-500">
+      <AppDashboardSection className="overflow-x-auto p-5 sm:p-6">
+        <p className="text-xs text-[#66638c]">
           วันนี้ (Bangkok): {bangkokDateKey()} · แสดงสูงสุด 300 แถว
         </p>
         <table className="mt-4 min-w-full text-left text-sm">
@@ -175,7 +189,7 @@ export default async function ParkingHistoryPage({ searchParams }: Props) {
             )}
           </tbody>
         </table>
-      </section>
+      </AppDashboardSection>
     </div>
   );
 }

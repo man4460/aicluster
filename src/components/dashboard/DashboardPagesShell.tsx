@@ -17,6 +17,9 @@ export function DashboardPagesShell({ children }: { children: React.ReactNode })
   /** รับฝากซักผ้า — gutter เดียวกับบาร์เบอร์ */
   const laundryModule =
     !staffKiosk && (pathname === "/dashboard/laundry" || pathname.startsWith("/dashboard/laundry/"));
+  /** บริการรับฝากจอดรถ — gutter เดียวกับบาร์เบอร์ (โมดูลมีเมนูล่าง — ไม่ซ้ำ padding ชั้นใน) */
+  const parkingModule =
+    pathname === "/dashboard/parking" || pathname.startsWith("/dashboard/parking/");
 
   return (
     <PageContainer
@@ -24,7 +27,7 @@ export function DashboardPagesShell({ children }: { children: React.ReactNode })
       className={cn(
         "flex min-h-0 flex-1 flex-col",
         staffKiosk && "!mx-0 !max-w-none !w-full !px-0 !py-0",
-        (barberModule || laundryModule) && "max-md:!px-3 sm:!px-6",
+        (barberModule || laundryModule || parkingModule) && "max-md:!px-3 sm:!px-6",
       )}
     >
       {children}
