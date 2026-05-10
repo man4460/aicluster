@@ -9,6 +9,7 @@ import {
   DOC_TRANSMISSION_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
+  WAIT_QUEUE_MODULE_SLUG,
 } from "@/lib/modules/config";
 import { seedDocTransmissionDemoForUser } from "@/lib/trial/seed-doc-transmission";
 import { TRIAL_PROD_SCOPE, trialSessionDaysDefault } from "./constants";
@@ -18,6 +19,7 @@ import { seedBuildingPosTrialData } from "./seed-building-pos";
 import { seedCarWashTrialData } from "./seed-car-wash";
 import { seedDormitoryTrialData } from "./seed-dorm";
 import { seedVillageTrialData } from "./seed-village";
+import { seedWaitQueueTrialData } from "./seed-wait-queue";
 
 type Tx = Omit<
   PrismaClient,
@@ -63,6 +65,8 @@ async function deleteSandboxRowsInTx(tx: Tx, ownerUserId: string, trialSessionId
   await tx.dormitoryCostCategory.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.room.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.dormitoryProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
+
+  await tx.waitQueueSite.deleteMany({ where: { ownerUserId, trialSessionId } });
 
   await tx.docTransmissionAuditLog.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.docTransmissionRecord.deleteMany({ where: { ownerUserId, trialSessionId } });
@@ -189,6 +193,8 @@ export async function startTrial(userId: string, moduleId: string): Promise<void
       await seedVillageTrialData(tx, userId, session.id);
     } else if (mod.slug === DOC_TRANSMISSION_MODULE_SLUG) {
       await seedDocTransmissionDemoForUser(tx, userId, session.id);
+    } else if (mod.slug === WAIT_QUEUE_MODULE_SLUG) {
+      await seedWaitQueueTrialData(tx, userId, session.id);
     }
   });
 }

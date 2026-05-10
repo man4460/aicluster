@@ -162,6 +162,7 @@ model User {
   villageCostEntries        VillageCostEntry[]
   trialSessions            TrialSession[]
   parkingSites             ParkingSite[]
+  waitQueueSites           WaitQueueSite[]
   laundryPackages          LaundryPackage[]
   laundryOrders            LaundryOrder[]
   laundryCostCategories    LaundryCostCategory[]
@@ -1719,6 +1720,15 @@ enum ParkingSessionStatus {
   CANCELLED
 }
 
+/** สถานะคิวหน้าร้าน — walk-in / เรียกเข้าร้าน */
+enum WaitQueueTicketStatus {
+  WAITING
+  CALLED
+  SEATED
+  CANCELLED
+  SKIPPED
+}
+
 /** ลานจอดต่อเจ้าของ — ตั้งราคาและโหมดคิดเงิน */
 model ParkingSite {
   id               Int                @id @default(autoincrement())
@@ -1788,6 +1798,48 @@ model ParkingSession {
   @@index([checkInAt], map: "parking_sess_checkin_idx")
   @@index([licensePlate], map: "parking_sess_plate_idx")
   @@map("parking_sessions")
+}
+
+/** จุดบริการคิวหน้าร้าน — ต่อเจ้าของ + trial scope */
+model WaitQueueSite {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_user_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String   @db.VarChar(120)
+  /** ข้อความแสดงเมื่อเรียกคิว (หน้าจอพนักงาน / จอเรียกคิว) */
+  callMessage    String   @default("ถึงคิวแล้ว เชิญเข้าร้าน") @map("call_message") @db.VarChar(200)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tickets WaitQueueTicket[]
+
+  @@unique([ownerUserId, name, trialSessionId], map: "wait_queue_site_owner_name_trial_uniq")
+  @@index([ownerUserId], map: "wait_queue_site_owner_idx")
+  @@map("wait_queue_sites")
+}
+
+/** บัตรคิวรายวัน — dateKey = ปฏิทิน Asia/Bangkok YYYY-MM-DD */
+model WaitQueueTicket {
+  id           String                @id @default(cuid())
+  siteId       String                @map("site_id")
+  site         WaitQueueSite         @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  dateKey      String                @map("date_key") @db.VarChar(10)
+  ticketSeq    Int                   @map("ticket_seq")
+  ticketLabel  String                @map("ticket_label") @db.VarChar(16)
+  partySize    Int                   @default(1) @map("party_size")
+  customerName String?               @map("customer_name") @db.VarChar(120)
+  note         String?               @db.VarChar(500)
+  status       WaitQueueTicketStatus @default(WAITING)
+  calledAt     DateTime?             @map("called_at")
+  seatedAt     DateTime?             @map("seated_at")
+  createdAt    DateTime              @default(now()) @map("created_at")
+  updatedAt    DateTime              @updatedAt @map("updated_at")
+
+  @@unique([siteId, dateKey, ticketSeq], map: "wait_queue_ticket_site_date_seq_uniq")
+  @@index([siteId, dateKey, status], map: "wait_queue_ticket_site_date_status_idx")
+  @@index([siteId, status], map: "wait_queue_ticket_site_status_idx")
+  @@map("wait_queue_tickets")
 }
 
 /** แพ็กซักรีด — สอดคล้องกับ `laundry_packages` (migration) */

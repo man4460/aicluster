@@ -2,7 +2,7 @@
  * ตรวจสิทธิ์ก่อนเข้าโมดูล (แทน middleware ที่ต้องอ่าน DB)
  *
  * - สายรายวัน (DAILY) สามารถเข้าใช้ "หลายโมดูลในกลุ่ม 1 ได้" (ไม่จำกัดเฉพาะเช็คอิน)
- *   โดยหัก **1 โทเคน ต่อ 1 โมดูล ต่อ 1 วัน Bangkok** ผ่าน `applyModuleDailyTokenDeduction`
+ *   โดยหัก **1 โทเคน ต่อ 1 โมดูล ต่อ 1 วัน Bangkok** ผ่าน `applyModuleDailyTokenDeduction` (ยกเว้น slug ใน `DAILY_TOKEN_EXEMPT_MODULE_SLUGS` เช่น คิวหน้าร้าน)
  *   ถ้าโทเคนหมด → redirect /dashboard/refill
  * - แพ็กเหมา (BUFFET) / ADMIN / staff: ไม่หักโทเคน
  * - กลุ่มอื่น (ที่เกินสิทธิ์): redirect /dashboard/plans?upgrade=1

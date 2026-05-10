@@ -125,7 +125,7 @@ export function FormModal({
             {title}
           </h2>
           {description ? (
-            <p className="mt-1.5 hidden text-xs font-medium leading-relaxed text-slate-500 sm:block">
+            <p id="form-modal-description" className="mt-1.5 text-xs font-medium leading-relaxed text-slate-500">
               {description}
             </p>
           ) : null}

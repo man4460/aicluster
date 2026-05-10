@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { appDashboardBrandGradientFillClass } from "@/components/app-templates";
 import { isSafeModuleCardImageUrl } from "@/lib/module-card-image";
+import type { ModuleUsageBadge } from "@/lib/modules/module-usage-badge";
 import { cn } from "@/lib/cn";
 
 /** แกนรูปแบบปุ่มหลัก — เปิดแผนผังระบบ / เข้าใช้งาน */
@@ -82,6 +83,8 @@ type Base = {
   groupId: number;
   variant?: "module" | "systemMap";
   tall?: boolean;
+  /** ป้ายราคา/การใช้งาน (ฟรี · 1 ฿ / วัน · รวมแพ็กเกจ) — มุมขวาบนโซนข้อความ */
+  usageBadge?: ModuleUsageBadge | null;
 };
 
 type WithCta = Base & {
@@ -98,8 +101,18 @@ type WithFooter = Base & {
 
 export type DashboardModuleHeroCardProps = WithCta | WithFooter;
 
+function usageBadgeClass(tone: ModuleUsageBadge["tone"]): string {
+  if (tone === "free") {
+    return "border-emerald-400/80 bg-gradient-to-br from-emerald-50 via-white to-teal-50/90 text-emerald-950 ring-emerald-200/90 shadow-[0_4px_14px_-4px_rgba(5,150,105,0.35)]";
+  }
+  if (tone === "plan") {
+    return "border-slate-200/90 bg-slate-50/95 text-slate-800 ring-slate-100/80";
+  }
+  return "border-amber-300/95 bg-gradient-to-br from-amber-50 via-white to-orange-50/90 text-amber-950 ring-amber-200/90 shadow-[0_4px_14px_-4px_rgba(180,83,9,0.35)]";
+}
+
 export function DashboardModuleHeroCard(props: DashboardModuleHeroCardProps) {
-  const { imageUrl, title, description, groupId, variant = "module", tall = false } = props;
+  const { imageUrl, title, description, groupId, variant = "module", tall = false, usageBadge } = props;
   const safe = imageUrl && isSafeModuleCardImageUrl(imageUrl) ? imageUrl : null;
   const hasFooter = "footer" in props && props.footer != null;
 
@@ -158,8 +171,45 @@ export function DashboardModuleHeroCard(props: DashboardModuleHeroCardProps) {
             <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" aria-hidden />
             Group {groupId}
           </span>
-          <div className="rounded-full bg-slate-50 p-1.5 shadow-sm ring-1 ring-slate-100">
-            <GroupIcon groupId={groupId} className="h-4 w-4 text-slate-500" />
+          <div className="flex shrink-0 items-center gap-2">
+            {usageBadge ? (
+              usageBadge.tone === "free" ? (
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-full border px-3 py-1 ring-1",
+                    usageBadgeClass("free"),
+                  )}
+                  title="ไม่หักโทเคนเมื่อเข้าใช้"
+                >
+                  <span className="text-lg font-black leading-none tracking-tight sm:text-xl">ฟรี</span>
+                </span>
+              ) : usageBadge.tone === "daily" ? (
+                <span
+                  className={cn(
+                    "inline-flex items-baseline gap-0.5 rounded-full border px-3 py-1 ring-1",
+                    usageBadgeClass(usageBadge.tone),
+                  )}
+                  title="สายรายวัน: หัก 1 โทเคน ต่อวันต่อโมดูลเมื่อเข้าใช้ (แสดงเทียบ 1 บาท)"
+                >
+                  <span className="text-lg font-black tabular-nums leading-none tracking-tight sm:text-xl">1</span>
+                  <span className="text-xs font-black sm:text-sm">บาท</span>
+                  <span className="pl-0.5 text-[10px] font-bold text-amber-900/80 sm:text-[11px]">/ วัน</span>
+                </span>
+              ) : (
+                <span
+                  className={cn(
+                    "rounded-full border px-2.5 py-0.5 text-[10px] font-black tabular-nums tracking-wide shadow-sm ring-1",
+                    usageBadgeClass(usageBadge.tone),
+                  )}
+                  title="รวมในแพ็กเกจเหมา — ไม่หักโทเคนรายวันต่อโมดูล"
+                >
+                  {usageBadge.label}
+                </span>
+              )
+            ) : null}
+            <div className="rounded-full bg-slate-50 p-1.5 shadow-sm ring-1 ring-slate-100">
+              <GroupIcon groupId={groupId} className="h-4 w-4 text-slate-500" />
+            </div>
           </div>
         </div>
         

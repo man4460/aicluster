@@ -11,6 +11,7 @@ import {
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
+  WAIT_QUEUE_MODULE_SLUG,
 } from "@/lib/modules/config";
 import { resolveDataScopeBySlug, type ModuleDataScope } from "@/lib/trial/scope";
 
@@ -48,6 +49,10 @@ export function getLaundryDataScope(userId: string): Promise<ModuleDataScope> {
 
 export function getParkingDataScope(userId: string): Promise<ModuleDataScope> {
   return resolveDataScopeBySlug(userId, PARKING_MODULE_SLUG);
+}
+
+export function getWaitQueueDataScope(userId: string): Promise<ModuleDataScope> {
+  return resolveDataScopeBySlug(userId, WAIT_QUEUE_MODULE_SLUG);
 }
 
 export function getEducareDataScope(userId: string): Promise<ModuleDataScope> {

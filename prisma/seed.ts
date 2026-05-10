@@ -9,6 +9,9 @@ import { seedDocTransmissionProdDemoForOwner } from "../src/lib/trial/seed-doc-t
 import { seedPromptLibraryProdDemoForOwner } from "../src/lib/trial/seed-prompt-library";
 import { seedMediaRegistryProdDemoForOwner } from "../src/lib/trial/seed-media-registry";
 import { seedParkingProdDemoForOwner } from "../src/lib/trial/seed-parking";
+import { seedWaitQueueProdDemoForOwner } from "../src/lib/trial/seed-wait-queue";
+import { WAIT_QUEUE_MODULE_SLUG } from "../src/lib/modules/config";
+import { subscribeModule } from "../src/lib/modules/subscriptions-store";
 
 const prisma = new PrismaClient();
 
@@ -166,6 +169,14 @@ async function main() {
       sortOrder: 26,
     },
     {
+      slug: "wait-queue",
+      title: "คิวหน้าร้าน",
+      description:
+        "กลุ่ม 1 (Basic) — พนักงานลงคิวลูกค้า walk-in เรียกคิว แจ้งเมื่อถึงคิวเข้าร้าน",
+      groupId: 1,
+      sortOrder: 27,
+    },
+    {
       slug: "educare",
       title: "EduCare เช็คนักเรียน",
       description:
@@ -284,13 +295,30 @@ async function main() {
     });
   }
 
+  const demoPosOwnerEmails = ["user@mawell.local.com", "user@mawell.local"] as const;
+
+  /** คิวหน้าร้าน — ให้บัญชี demo สมัครโมดูลแล้วจึงเข้าแดชบอร์ดได้ (ไม่ต้องกดทดลองเอง) */
+  const waitQueueMod = await prisma.appModule.findUnique({
+    where: { slug: WAIT_QUEUE_MODULE_SLUG },
+    select: { id: true },
+  });
+  if (waitQueueMod) {
+    for (const email of demoPosOwnerEmails) {
+      const row = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true },
+      });
+      if (row) {
+        await subscribeModule(row.id, waitQueueMod.id);
+      }
+    }
+  }
+
   /**
    * ข้อมูล demo ต่อโมดูล — ต้องการตาราง migration ครบ
    * ถ้า DB ใหม่ / migrate ค้าง / schema ไม่ตรง ให้ข้ามเฉพาะบล็อกนั้น อย่าให้ล้มก่อน module_list ถูก upsert แล้ว
    * (ตาราง module_list upsert ไว้ด้านบนแล้วเสมอ)
    */
-  const demoPosOwnerEmails = ["user@mawell.local.com", "user@mawell.local"] as const;
-
   async function tryDemoSeed(label: string, work: () => Promise<void>): Promise<void> {
     try {
       await work();
@@ -374,6 +402,17 @@ async function main() {
     });
     if (row) {
       await tryDemoSeed(`parking (${email})`, () => seedParkingProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** คิวหน้าร้าน — คิววันนี้ตัวอย่าง (รอ / เรียกแล้ว / เข้าร้านแล้ว) */
+  for (const email of demoPosOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`wait-queue (${email})`, () => seedWaitQueueProdDemoForOwner(prisma, row.id));
     }
   }
 }

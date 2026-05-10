@@ -12,6 +12,7 @@ import {
   HOME_FINANCE_BASIC_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
+  WAIT_QUEUE_MODULE_SLUG,
   PROMPT_LIBRARY_MODULE_SLUG,
   MEDIA_REGISTRY_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
@@ -42,6 +43,7 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === BUILDING_POS_MODULE_SLUG) return "/dashboard/building-pos";
   if (slug === VILLAGE_MODULE_SLUG) return "/dashboard/village";
   if (slug === PARKING_MODULE_SLUG) return "/dashboard/parking";
+  if (slug === WAIT_QUEUE_MODULE_SLUG) return "/dashboard/wait-queue";
   if (slug === LAUNDRY_MODULE_SLUG) return "/dashboard/laundry";
   if (slug === EDUCARE_MODULE_SLUG) return "/dashboard/educare";
   if (slug === ASSET_MODULE_SLUG) return "/dashboard/asset";

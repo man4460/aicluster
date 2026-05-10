@@ -15,7 +15,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 47: VillageCostCategory + VillageCostEntry — ต้นทุน/รายจ่ายหมู่บ้าน */
 /** 50: PromptLibraryCategory + PromptLibraryPrompt + PromptLibraryVersion — client เก่าไม่มี delegate */
 /** 51: MediaRegistry* (ทะเบียนคุมสื่อ) — client เก่าไม่มี delegate */
-const PRISMA_SINGLETON_VERSION = 51;
+/** 52: WaitQueueSite + WaitQueueTicket — client เก่าไม่มี delegate แล้ว undefined.findFirst */
+const PRISMA_SINGLETON_VERSION = 52;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -75,6 +76,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     mediaRegistryItem?: { findMany?: unknown };
     mediaRegistryBorrow?: { findMany?: unknown };
     mediaRegistryIssue?: { findMany?: unknown };
+    waitQueueSite?: { findFirst?: unknown };
+    waitQueueTicket?: { findMany?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -126,7 +129,9 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.mediaRegistryLocation?.findMany === "function" &&
     typeof c.mediaRegistryItem?.findMany === "function" &&
     typeof c.mediaRegistryBorrow?.findMany === "function" &&
-    typeof c.mediaRegistryIssue?.findMany === "function"
+    typeof c.mediaRegistryIssue?.findMany === "function" &&
+    typeof c.waitQueueSite?.findFirst === "function" &&
+    typeof c.waitQueueTicket?.findMany === "function"
   );
 }
 

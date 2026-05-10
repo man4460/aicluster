@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
 import { canAccessAppModule, type UserAccessFields } from "@/lib/modules/access";
+import { isDailyTokenExemptModuleSlug } from "@/lib/modules/config";
+import { getModuleDailyUsageBadge } from "@/lib/modules/module-usage-badge";
 import { MODULE_RESUBSCRIBE_COOLDOWN_MS } from "@/lib/modules/module-subscription-cooldown";
 import { isSystemMapCatalogSlug } from "@/lib/modules/system-map-catalog";
 import {
@@ -318,7 +320,7 @@ export function ModuleSubscriptionBrowser({
                   <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent" />
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   {items.map((m) => {
                     if (showSystemMapCatalog && isSystemMapCatalogSlug(m.slug)) {
                       return (
@@ -330,6 +332,7 @@ export function ModuleSubscriptionBrowser({
                           groupId={m.groupId}
                           title={m.title}
                           description={m.description ?? ""}
+                          usageBadge={getModuleDailyUsageBadge(m.slug, m.groupId)}
                           footer={
                             <div className="space-y-3">
                               <Link href="/dashboard/explore" className={dashboardModulePrimaryCtaClass}>
@@ -363,6 +366,7 @@ export function ModuleSubscriptionBrowser({
                         groupId={m.groupId}
                         title={m.title}
                         description={m.description ?? "—"}
+                        usageBadge={getModuleDailyUsageBadge(m.slug, m.groupId)}
                         footer={
                           <div className="space-y-3">
                             <div className="flex flex-wrap gap-2">
@@ -450,7 +454,9 @@ export function ModuleSubscriptionBrowser({
                                   : showDailyLock
                                     ? "สมัครเพิ่มได้เมื่ออัปเกรดแพ็กเกจ"
                                     : isDailyPlan
-                                      ? "สมัครเพื่อเปิดใช้งาน · หัก 1 โทเคน/วัน"
+                                      ? isDailyTokenExemptModuleSlug(m.slug)
+                                        ? "สมัครเพื่อเปิดใช้งาน · ใช้งานฟรี"
+                                        : "สมัครเพื่อเปิดใช้งาน · 1 บาท / วัน (โทเคน)"
                                       : "สมัครเพื่อเปิดใช้งานระบบนี้"}
                               </p>
                             )}

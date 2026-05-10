@@ -72,6 +72,20 @@ export const MEDIA_REGISTRY_MODULE_GROUP_ID = 1 as const;
 export const PARKING_MODULE_SLUG = "parking" as const;
 export const PARKING_MODULE_GROUP_ID = 1 as const;
 
+/** คิวหน้าร้าน (walk-in) — พนักงานลงคิว / เรียกเข้าร้าน */
+export const WAIT_QUEUE_MODULE_SLUG = "wait-queue" as const;
+export const WAIT_QUEUE_MODULE_GROUP_ID = 1 as const;
+
+/**
+ * โมดูลที่ไม่หักโทเคนรายวันเมื่อเข้าใช้ (`applyModuleDailyTokenDeduction`)
+ * — แสดงบนการ์ดเป็น «ฟรี»
+ */
+export const DAILY_TOKEN_EXEMPT_MODULE_SLUGS: ReadonlySet<string> = new Set([WAIT_QUEUE_MODULE_SLUG]);
+
+export function isDailyTokenExemptModuleSlug(slug: string): boolean {
+  return DAILY_TOKEN_EXEMPT_MODULE_SLUGS.has(slug);
+}
+
 /** ชื่อแสดงในการ์ด/เมนู — ให้ตรงกันทุกที่แม้ DB เก่าจะยังเป็นชื่อสั้น */
 export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === ATTENDANCE_MODULE_SLUG) return "เช็คอินอัจฉริยะ";
@@ -84,6 +98,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === VILLAGE_MODULE_SLUG) return "จัดการหมู่บ้าน";
   if (slug === LAUNDRY_MODULE_SLUG) return "รับฝากซักผ้า";
   if (slug === PARKING_MODULE_SLUG) return "บริการรับฝากจอดรถ";
+  if (slug === WAIT_QUEUE_MODULE_SLUG) return "คิวหน้าร้าน";
   if (slug === EDUCARE_MODULE_SLUG) return "EduCare เช็คนักเรียน";
   if (slug === ASSET_MODULE_SLUG) return "บริหารทรัพย์สิน";
   if (slug === DOC_TRANSMISSION_MODULE_SLUG) return "สารบรรณดิจิทัล";
@@ -106,7 +121,7 @@ export const MODULE_GROUP_TIER_NAME: Record<number, string> = {
 
 /** สรุปฟีเจอร์ต่อกลุ่ม (ใช้ในหน้าแพ็กเกจ / คำอธิบาย) — ข้อความกระชับ */
 export const MODULE_GROUP_FEATURE_SUMMARY: Record<number, string> = {
-  1: "กลุ่ม 1: เช็คอิน · EduCare · สารบรรณ · คลัง Prompt · ทะเบียนสื่อ · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ทรัพย์สิน · ตัดผม · คาร์แคร์ · ซักผ้า · จอดรถ · POS",
+  1: "กลุ่ม 1: เช็คอิน · EduCare · สารบรรณ · คลัง Prompt · ทะเบียนสื่อ · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ทรัพย์สิน · ตัดผม · คาร์แคร์ · ซักผ้า · จอดรถ · คิวหน้าร้าน · POS",
   2: "สต็อก · ใบเสร็จ",
   3: "วิเคราะห์ · แชทสาขา",
   4: "พนักงาน · เงินเดือน",

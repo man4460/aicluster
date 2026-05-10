@@ -27,6 +27,9 @@ import {
   UI_VISIBLE_MAX_MODULE_GROUP,
 } from "@/lib/modules/config";
 
+/** localStorage — ซ่อนแถบเมนูซ้ายบนเดสก์ท็อป (ใช้ทุกหน้าแดชบอร์ดที่ผ่าน DashboardShell) */
+const DASHBOARD_SIDEBAR_COLLAPSED_KEY = "mawell-dashboard-sidebar-collapsed";
+
 function headerPackageLabel(
   subscriptionType: SubscriptionType,
   subscriptionTier: SubscriptionTier,
@@ -266,6 +269,8 @@ export function DashboardShell({
     !moduleStaffKiosk && (pathname === "/dashboard/laundry" || pathname.startsWith("/dashboard/laundry/"));
   const moduleDashboardCompact = barberDashboardCompact || laundryDashboardCompact;
   const [drawerOpen, setDrawerOpen] = useState(false);
+  /** เดสก์ท็อป: ซ่อน sidebar เพื่อให้พื้นที่เนื้อหากว้างขึ้น — โหลดจาก localStorage หลัง mount */
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountWrapRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -316,6 +321,31 @@ export function DashboardShell({
   const packageLabel = headerPackageLabel(subscriptionType, subscriptionTier);
 
   useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      if (window.localStorage.getItem(DASHBOARD_SIDEBAR_COLLAPSED_KEY) === "1") {
+        setSidebarCollapsed(true);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const toggleDesktopSidebar = useCallback(() => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(DASHBOARD_SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+        }
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
     if (!drawerOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -351,6 +381,23 @@ export function DashboardShell({
       {!moduleStaffKiosk ?
         <header className="sticky top-0 z-30 w-full px-3 pt-3 sm:px-4 sm:pt-4">
         <div className="flex h-14 w-full min-w-0 items-center gap-2 rounded-[2.5rem] border border-white/30 bg-gradient-to-r from-[#4f2f9a]/90 via-[#5b3ac2]/85 to-[#ec4899]/85 px-3 text-white shadow-[0_20px_40px_-15px_rgba(61,29,125,0.7)] backdrop-blur-xl sm:gap-3 sm:px-6 lg:px-8">
+          <button
+            type="button"
+            suppressHydrationWarning
+            className={cn(
+              "hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/40 bg-white/20 text-white shadow-sm transition-all hover:bg-white/30 active:scale-95 md:inline-flex",
+              systemFocusLayout && "!hidden",
+              moduleStaffKiosk && "!hidden",
+            )}
+            aria-pressed={sidebarCollapsed}
+            aria-label={sidebarCollapsed ? "แสดงเมนูด้านข้าง" : "ซ่อนเมนูด้านข้าง"}
+            title={sidebarCollapsed ? "แสดงเมนูด้านข้าง" : "ซ่อนเมนูด้านข้าง"}
+            onClick={toggleDesktopSidebar}
+          >
+            <span className="sr-only">{sidebarCollapsed ? "แสดงเมนูด้านข้าง" : "ซ่อนเมนูด้านข้าง"}</span>
+            <DesktopSidebarToggleGlyph collapsed={sidebarCollapsed} />
+          </button>
+
           <button
             type="button"
             suppressHydrationWarning
@@ -473,6 +520,7 @@ export function DashboardShell({
         <aside
           className={cn(
             "hidden w-[15.5rem] shrink-0 flex-col overflow-hidden rounded-[2.5rem] border border-white/15 bg-gradient-to-b from-[#4f2f9a] via-[#5b3ac2] to-[#ec4899] text-white shadow-[0_18px_42px_-24px_rgba(40,16,97,0.75)] md:flex",
+            sidebarCollapsed && "md:!hidden",
             (systemFocusLayout || moduleStaffKiosk) && "md:hidden",
             moduleStaffKiosk && "!hidden",
           )}
@@ -559,6 +607,19 @@ export function DashboardShell({
       </div>
       
     </div>
+  );
+}
+
+/** เดสก์ท็อป: สลับซ่อน sidebar — ลูกศรชี้ซ้ายเมื่อเมนูเปิดอยู่ (กดเพื่อซ่อน), ชี้ขวาเมื่อซ่อนแล้ว (กดเพื่อแสดง) */
+function DesktopSidebarToggleGlyph({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-current" aria-hidden>
+      {collapsed ? (
+        <path d="M10 7l5 5-5 5" strokeLinecap="round" strokeLinejoin="round" />
+      ) : (
+        <path d="M14 7l-5 5 5 5" strokeLinecap="round" strokeLinejoin="round" />
+      )}
+    </svg>
   );
 }
 

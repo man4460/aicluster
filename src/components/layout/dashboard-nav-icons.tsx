@@ -363,6 +363,43 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  /** บริการรับฝากจอดรถ — ซิลูเอตรถ + ล้อ (สอดคล้องโมดูลจอดรถ) */
+  if (href.startsWith("/dashboard/parking")) {
+    return (
+      <Svg>
+        <path
+          d="M3 14h2l2-3h10l2 3h2"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle cx="7" cy="17" r="2" stroke="currentColor" strokeWidth="2" />
+        <circle cx="17" cy="17" r="2" stroke="currentColor" strokeWidth="2" />
+        <path
+          d="M5 14l1.5-5h11L19 14"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
+  /** คิวหน้าร้าน — บัตรคิว + เส้นลำดับ */
+  if (href.startsWith("/dashboard/wait-queue")) {
+    return (
+      <Svg>
+        <path
+          d="M7 3h10a2 2 0 012 2v3a1.5 1.5 0 01-1 1.32V19a2 2 0 01-2 2H8a2 2 0 01-2-2v-9.68A1.5 1.5 0 015 10V5a2 2 0 012-2z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <path d="M9 9h6M9 13h5M9 17h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </Svg>
+    );
+  }
   if (href.startsWith("/dashboard/home-finance") || href.startsWith("/dashboard/modules/income-expense-basic")) {
     return (
       <Svg>

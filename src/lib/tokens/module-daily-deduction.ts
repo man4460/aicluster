@@ -1,3 +1,4 @@
+import { isDailyTokenExemptModuleSlug } from "@/lib/modules/config";
 import { prisma } from "@/lib/prisma";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 
@@ -31,6 +32,7 @@ export async function applyModuleDailyTokenDeduction(
   moduleSlug: string,
 ): Promise<ModuleDailyTokenResult> {
   if (!billingUserId || !moduleSlug) return { ok: true, charged: false, reason: "exempt" };
+  if (isDailyTokenExemptModuleSlug(moduleSlug)) return { ok: true, charged: false, reason: "exempt" };
 
   return prisma.$transaction(async (tx): Promise<ModuleDailyTokenResult> => {
     const user = await tx.user.findUnique({

@@ -1,5 +1,6 @@
 import type { SubscriptionTier, SubscriptionType, UserRole } from "@/generated/prisma/enums";
 import {
+  isDailyTokenExemptModuleSlug,
   MAX_MODULE_GROUP,
   UI_VISIBLE_MAX_MODULE_GROUP,
   buffetTierMaxGroup,
@@ -50,6 +51,8 @@ export function canAccessAppModule(
     return mod.groupId <= effectiveBuffetMaxGroup(user.subscriptionTier);
   }
   if (mod.groupId !== 1) return false;
+  /** โมดูลฟรี — ไม่หักโทเคน ไม่อาศัยบันทึกรายวัน */
+  if (isDailyTokenExemptModuleSlug(mod.slug)) return true;
   if (user.tokens > 0) return true;
   if (options?.chargedTodaySlugs?.has(mod.slug)) return true;
   return false;

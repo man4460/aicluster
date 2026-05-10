@@ -25,6 +25,7 @@
     "seed": "tsx prisma/seed.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate": "prisma migrate deploy",
+    "db:migrate-seed": "npm run db:migrate && npm run db:generate && npm run db:seed",
     "db:generate": "node scripts/prisma-generate-safe.cjs",
     "postinstall": "node scripts/prisma-generate-safe.cjs",
     "pm2:dev": "pm2 start ecosystem.config.cjs --only mawell-dev",

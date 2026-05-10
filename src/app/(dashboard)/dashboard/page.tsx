@@ -25,6 +25,7 @@ import {
   dashboardModuleCardDescription,
   dashboardSystemMapCardDescription,
 } from "@/lib/modules/dashboard-card-descriptions";
+import { getModuleDailyUsageBadge } from "@/lib/modules/module-usage-badge";
 import {
   SYSTEM_MAP_CATALOG_ROW,
   SYSTEM_MAP_CATALOG_SLUG,
@@ -111,7 +112,7 @@ export default async function DashboardHomePage() {
     .map((m) => ({ ...m, title: displayAppModuleTitle(m.slug, m.title) }));
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 sm:space-y-8 pb-10">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header Section - Bento Hero */}
       <header className="group relative overflow-hidden rounded-[2.5rem] border border-white/80 bg-gradient-to-br from-[#f7f2ff] via-white to-[#ffeefa] p-6 shadow-[0_20px_50px_-20px_rgba(68,49,127,0.18)] ring-1 ring-white/70 sm:p-8">
         <div
@@ -146,7 +147,7 @@ export default async function DashboardHomePage() {
       </header>
 
       {/* Main Bento Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-12">
         {/* Token Balance Card - Large (8 cols on LG, 2 cols on MD) */}
         <section className="relative overflow-hidden rounded-[2.5rem] border border-[#e8e4ff]/90 bg-gradient-to-br from-[#f6efff] via-white to-[#ffeef8] p-6 shadow-[0_20px_50px_-20px_rgba(79,70,229,0.2)] ring-1 ring-white/90 md:col-span-2 lg:col-span-8 sm:p-8">
           <div
@@ -248,7 +249,7 @@ export default async function DashboardHomePage() {
 
       {/* Modules Section */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between px-2">
+        <div className="flex items-center justify-between gap-3">
           <h2 className="text-xl font-bold text-[#2e2a58]">โปรแกรมที่ใช้งานได้</h2>
           <Link href="/dashboard/modules" className="text-sm font-semibold text-[#5b61ff] hover:underline">
             ดูทั้งหมด
@@ -256,7 +257,7 @@ export default async function DashboardHomePage() {
         </div>
         
         {subscribedModules.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
             {user.role === "ADMIN" && (
               <DashboardModuleHeroCard
                 variant="systemMap"
@@ -265,6 +266,7 @@ export default async function DashboardHomePage() {
                 description={dashboardSystemMapCardDescription()}
                 href="/dashboard/explore"
                 ctaLabel="เปิดแผนผังระบบ"
+                usageBadge={getModuleDailyUsageBadge(SYSTEM_MAP_CATALOG_ROW.slug, SYSTEM_MAP_CATALOG_ROW.groupId)}
               />
             )}
             {subscribedModules.map((m) => (
@@ -276,6 +278,7 @@ export default async function DashboardHomePage() {
                 description={dashboardModuleCardDescription(m.slug)}
                 groupId={m.groupId}
                 ctaLabel="เข้าใช้งาน"
+                usageBadge={getModuleDailyUsageBadge(m.slug, m.groupId)}
               />
             ))}
           </div>
