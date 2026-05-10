@@ -10,6 +10,8 @@ import { ParkingAddSpotForm } from "@/systems/parking/components/ParkingAddSpotF
 import { publicParkingCheckInUrl } from "@/systems/parking/lib/public-checkin-url";
 import { loadParkingSpotsWithActive } from "@/systems/parking/lib/load-dashboard";
 import { requireParkingPage } from "@/systems/parking/lib/parking-page-auth";
+import { ParkingSpotsGridList } from "@/systems/parking/components/ParkingSpotsGridList";
+import { parkingValetCardClass } from "@/systems/parking/parking-valet-ui";
 
 export const metadata: Metadata = {
   title: "จัดการช่องจอด | บริการรับฝากจอดรถ",
@@ -31,61 +33,55 @@ export default async function ParkingSpotsPage() {
           action={
             <Link
               href="/dashboard/parking"
+              aria-label="กลับภาพรวมลานจอด"
+              title="ภาพรวม"
               className={cn(
                 appTemplateOutlineButtonClass,
-                "inline-flex min-h-[40px] items-center justify-center rounded-2xl px-4 text-sm font-semibold",
+                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl px-4 text-sm font-semibold sm:min-w-0",
               )}
             >
-              ← ภาพรวม
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                className="h-5 w-5 sm:hidden"
+                aria-hidden
+              >
+                <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" />
+              </svg>
+              <span className="hidden sm:inline">← ภาพรวม</span>
             </Link>
           }
         />
-        <div>
-          <h2 className="text-sm font-semibold text-[#1e1b4b]">เพิ่มช่องใหม่</h2>
+        <div className={parkingValetCardClass}>
+          <h2 className="text-sm font-black tracking-tight text-[#1e1b4b]">เพิ่มช่องใหม่</h2>
           <div className="mt-3">
             <ParkingAddSpotForm />
           </div>
         </div>
       </AppDashboardSection>
 
-      <AppDashboardSection className="flex flex-col gap-3 p-5 sm:p-6">
-        <AppSectionHeader tone="slate" title="รายการช่อง" description="ลิงก์ลูกค้าเช็คอิน · สถานะจอด" />
-        <ul className="divide-y divide-slate-100">
-          {spots.map((s) => {
+      <AppDashboardSection className="flex flex-col gap-4 p-5 sm:p-6">
+        <AppSectionHeader
+          tone="slate"
+          title="รายการช่อง"
+          description="ลิงก์ลูกค้าเช็คอิน · สถานะจอด · มือถือ 1 คอลัมน์ · เดสก์ท็อป 2 คอลัมน์"
+        />
+        <ParkingSpotsGridList
+          spots={spots.map((s) => {
             const active = s.sessions[0];
-            const url = publicParkingCheckInUrl(s.checkInToken);
-            return (
-              <li
-                key={s.id}
-                className="flex flex-col gap-2 py-4 first:pt-0 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <Link
-                    href={`/dashboard/parking/spots/${s.id}`}
-                    className="text-lg font-bold text-emerald-800 hover:underline"
-                  >
-                    {s.spotCode}
-                  </Link>
-                  {s.zoneLabel ? <p className="text-xs text-[#66638c]">{s.zoneLabel}</p> : null}
-                  <p className="mt-1 font-mono text-[11px] text-[#66638c] break-all">{url}</p>
-                  {active ? (
-                    <p className="mt-1 text-xs font-medium text-amber-800">
-                      กำลังจอด: {active.licensePlate} · เข้า {active.checkInAt.toLocaleString("th-TH")}
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-xs text-emerald-700">ว่าง</p>
-                  )}
-                </div>
-                <Link
-                  href={`/dashboard/parking/spots/${s.id}`}
-                  className="shrink-0 text-sm font-semibold text-emerald-800 hover:text-emerald-950"
-                >
-                  รายละเอียด →
-                </Link>
-              </li>
-            );
+            return {
+              id: s.id,
+              spotCode: s.spotCode,
+              zoneLabel: s.zoneLabel,
+              checkInUrl: publicParkingCheckInUrl(s.checkInToken),
+              activeSession: active
+                ? { licensePlate: active.licensePlate, checkInAt: active.checkInAt }
+                : null,
+            };
           })}
-        </ul>
+        />
       </AppDashboardSection>
     </div>
   );

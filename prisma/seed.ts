@@ -8,6 +8,7 @@ import { seedAssetProdDemoForOwner } from "../src/lib/trial/seed-asset";
 import { seedDocTransmissionProdDemoForOwner } from "../src/lib/trial/seed-doc-transmission";
 import { seedPromptLibraryProdDemoForOwner } from "../src/lib/trial/seed-prompt-library";
 import { seedMediaRegistryProdDemoForOwner } from "../src/lib/trial/seed-media-registry";
+import { seedParkingProdDemoForOwner } from "../src/lib/trial/seed-parking";
 
 const prisma = new PrismaClient();
 
@@ -362,6 +363,17 @@ async function main() {
     });
     if (row) {
       await tryDemoSeed(`media-registry (${email})`, () => seedMediaRegistryProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** ที่จอดรถ — ประวัติตัวอย่าง 20 แถวต่อลาน (ข้ามถ้ามีแถว seed ครบแล้ว) */
+  for (const email of demoPosOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`parking (${email})`, () => seedParkingProdDemoForOwner(prisma, row.id));
     }
   }
 }

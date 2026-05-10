@@ -57,7 +57,7 @@ export function ParkingSiteSettingsForm({
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
-        <label className="block text-xs font-semibold text-slate-700">ชื่อลานจอด</label>
+        <label className="block text-xs font-semibold text-[#5f5a8a]">ชื่อลานจอด</label>
         <input
           className={`${parkingField} mt-1`}
           value={name}
@@ -67,7 +67,7 @@ export function ParkingSiteSettingsForm({
         />
       </div>
       <div>
-        <label className="block text-xs font-semibold text-slate-700">โหมดคิดเงิน</label>
+        <label className="block text-xs font-semibold text-[#5f5a8a]">โหมดคิดเงิน</label>
         <select
           className={`${parkingField} mt-1`}
           value={pricingMode}
@@ -79,7 +79,7 @@ export function ParkingSiteSettingsForm({
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="block text-xs font-semibold text-slate-700">บาท / ชั่วโมง</label>
+          <label className="block text-xs font-semibold text-[#5f5a8a]">บาท / ชั่วโมง</label>
           <input
             type="number"
             min={0}
@@ -91,7 +91,7 @@ export function ParkingSiteSettingsForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-700">บาท / วัน</label>
+          <label className="block text-xs font-semibold text-[#5f5a8a]">บาท / วัน</label>
           <input
             type="number"
             min={0}

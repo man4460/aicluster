@@ -1,18 +1,20 @@
-import { canAccessAppModule, type UserAccessFields } from "@/lib/modules/access";
+import { canAccessAppModule } from "@/lib/modules/access";
+import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { PARKING_MODULE_SLUG } from "@/lib/modules/config";
+import { STAFF_ALLOWED_MODULE_SLUGS } from "@/lib/modules/staff-policy";
 import { prisma } from "@/lib/prisma";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { listTrialModuleIds } from "@/lib/modules/trial-store";
+import { listModuleSlugsChargedToday } from "@/lib/tokens/module-daily-deduction";
 
 export type ParkingAccessFailReason =
   | "no_module"
   | "staff"
-  | "admin_only"
   | "not_subscribed"
   | "no_plan";
 
 export async function loadParkingAccessState(userId: string): Promise<
-  | { ok: true; mod: { id: string; slug: string; groupId: number } }
+  | { ok: true; mod: { id: string; slug: string; groupId: number }; billingUserId: string }
   | { ok: false; reason: ParkingAccessFailReason }
 > {
   const mod = await prisma.appModule.findFirst({
@@ -21,38 +23,30 @@ export async function loadParkingAccessState(userId: string): Promise<
   });
   if (!mod) return { ok: false, reason: "no_module" };
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      employerUserId: true,
-      role: true,
-      subscriptionType: true,
-      subscriptionTier: true,
-      tokens: true,
-    },
-  });
-  if (!user) return { ok: false, reason: "no_module" };
+  const ctx = await getModuleBillingContext(userId);
+  if (!ctx) return { ok: false, reason: "no_module" };
 
-  if (user.employerUserId) return { ok: false, reason: "staff" };
-  if (user.role !== "ADMIN") return { ok: false, reason: "admin_only" };
+  if (ctx.isStaff && !STAFF_ALLOWED_MODULE_SLUGS.has(PARKING_MODULE_SLUG)) {
+    return { ok: false, reason: "staff" };
+  }
 
-  const [subscribedIds, trialIds] = await Promise.all([
-    listSubscribedModuleIds(userId),
-    listTrialModuleIds(userId),
+  const [subscribedIds, trialIds, chargedTodaySlugs] = await Promise.all([
+    listSubscribedModuleIds(ctx.billingUserId),
+    listTrialModuleIds(ctx.billingUserId),
+    listModuleSlugsChargedToday(ctx.billingUserId),
   ]);
+
   const hasModule =
-    user.role === "ADMIN" || subscribedIds.includes(mod.id) || trialIds.includes(mod.id);
+    ctx.access.role === "ADMIN" ||
+    subscribedIds.includes(mod.id) ||
+    trialIds.includes(mod.id);
   if (!hasModule) return { ok: false, reason: "not_subscribed" };
 
-  const access: UserAccessFields = {
-    role: user.role,
-    subscriptionType: user.subscriptionType,
-    subscriptionTier: user.subscriptionTier,
-    tokens: user.tokens,
-  };
-  if (!canAccessAppModule(access, mod)) {
+  if (
+    !canAccessAppModule(ctx.access, { slug: mod.slug, groupId: mod.groupId }, { chargedTodaySlugs })
+  ) {
     return { ok: false, reason: "no_plan" };
   }
 
-  return { ok: true, mod };
+  return { ok: true, mod, billingUserId: ctx.billingUserId };
 }

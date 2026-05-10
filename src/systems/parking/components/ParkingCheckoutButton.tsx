@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { parkingBtnPrimary } from "@/systems/parking/parking-ui";
 
 export function ParkingCheckoutButton({
@@ -12,11 +13,11 @@ export function ParkingCheckoutButton({
   label?: string;
 }) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  async function checkout() {
-    if (!confirm("ยืนยันเช็คเอาต์และคำนวณค่าจอดตามอัตราที่บันทึกตอนเช็คอิน?")) return;
+  async function confirm() {
     setLoading(true);
     setErr(null);
     try {
@@ -26,6 +27,7 @@ export function ParkingCheckoutButton({
         setErr(data.error ?? "ไม่สำเร็จ");
         return;
       }
+      setOpen(false);
       router.refresh();
     } catch {
       setErr("เชื่อมต่อไม่สำเร็จ");
@@ -36,10 +38,28 @@ export function ParkingCheckoutButton({
 
   return (
     <div>
-      <button type="button" disabled={loading} onClick={checkout} className={parkingBtnPrimary}>
-        {loading ? "กำลังบันทึก…" : label}
+      <button type="button" className={parkingBtnPrimary} onClick={() => setOpen(true)} disabled={loading}>
+        {label}
       </button>
-      {err ? <p className="mt-2 text-sm text-red-700">{err}</p> : null}
+      <FormModal
+        open={open}
+        onClose={() => !loading && setOpen(false)}
+        title="ยืนยันเช็คเอาต์?"
+        description="คำนวณค่าจอดตามอัตราที่บันทึกตอนเช็คอิน และปิดเซสชันนี้"
+        appearance="glass"
+        footer={
+          <FormModalFooterActions
+            cancelLabel="ยกเลิก"
+            onCancel={() => setOpen(false)}
+            submitLabel="เช็คเอาต์"
+            onSubmit={confirm}
+            loading={loading}
+            submitDisabled={loading}
+          />
+        }
+      >
+        {err ? <p className="text-sm font-medium text-red-600">{err}</p> : null}
+      </FormModal>
     </div>
   );
 }

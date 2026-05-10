@@ -1,0 +1,45 @@
+---
+description: รายการแดชบอร์ดแบบการ์ด (ประวัติ / ช่องจอด ฯลฯ) — มือถือ 1 คอลัมน์ เดสก์ท็อป 2 คอลัมน์
+globs:
+  - "src/systems/parking/**/*.{ts,tsx}"
+  - "src/app/**/dashboard/**/parking/**/*.tsx"
+alwaysApply: false
+---
+
+# กริดการ์ดรายการแดชบอร์ด (ประวัติ / ช่องจอด — card grid)
+
+ใช้กับ **รายการที่แสดงเป็นการ์ดในกริด** เช่น ประวัติการจอดรถ (`ParkingHistorySessionList`) และ **รายการช่องจอด** (`ParkingSpotsGridList`) — โทนเดียวกับแผงรายการคาร์แคร์
+
+## บังคับ — breakpoint
+
+| Viewport | พฤติกรรม |
+|----------|----------|
+| **มือถือ / แคบ** (`default`, ก่อน `md`) | **`grid-cols-1`** — หนึ่งการ์ดต่อแถว (แนวตั้งคอลัมน์เดียว) |
+| **เดสก์ท็อป / แท็บเล็ตแนวนอน** (`md` ขึ้นไป) | **`md:grid-cols-2`** — **สองคอลัมน์** (สองการ์ดต่อแถว) |
+
+## ห้าม (ยกเว้นผู้ใช้ระบุชัด)
+
+- **ห้าม** ใส่ `xl:grid-cols-3` หรือเพิ่มคอลัมน์ที่ 3 ในรายการแบบนี้โดยไม่ได้ร้องขอ — ค่าเริ่มต้นโปรเจกต์คือ **2 คอลัมน์บนจอใหญ่** เพื่อให้การ์ดอ่านง่ายและสอดคล้องที่จอดรถ / คาร์แคร์
+
+## เทมเพลต Tailwind (รายการห่อ `ul`)
+
+```tsx
+<ul className="grid grid-cols-1 gap-3 p-1 md:grid-cols-2 md:gap-4" aria-label="…">
+```
+
+- ระยะห่าง: `gap-3` มือถือ · `md:gap-4` จอใหญ่
+- **ไม่ใช้** `divide-y` เป็นหลักเมื่อเป็นกริดการ์ด — ใช้ **`gap`** แทน
+
+## เปลือกเลื่อน (scroll shell) คู่กับกริด
+
+- มือถือ: อาจมี `max-h-[…] overflow-y-auto` + กรอบ glass (`rounded-2xl border-white/55 bg-white/35 backdrop-blur-xl`) เหมือน `CarWashSalesPanel`
+- ตั้งแต่ `md`: ถอดกรอบซ้ำของเปลือก (`md:border-0 md:bg-transparent md:max-h-none md:overflow-visible`) ให้การ์ดอยู่ใต้ `AppDashboardSection` โดยไม่การ์ดซ้อนการ์ด
+
+## อ้างอิงโค้ด
+
+- `src/systems/parking/components/ParkingHistorySessionList.tsx`
+- `src/systems/parking/components/ParkingSpotsGridList.tsx`
+
+## หมายเหตุ (OpenClaw / agent อื่น)
+
+ไฟล์นี้อยู่ใน `.cursor/rules/` — แก้เฉพาะเมื่อเปลี่ยนสัญญากริดประวัติโมดูลนี้หรือคัดลอกแพทเทิร์นไปโมดูลใหม่

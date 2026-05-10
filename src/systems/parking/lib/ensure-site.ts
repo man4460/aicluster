@@ -23,17 +23,31 @@ export async function ensureDefaultParkingSite(ownerUserId: string, trialSession
   return site;
 }
 
-/** สร้างช่องจอดตัวอย่างครั้งแรกถ้ายังไม่มีช่อง */
+const SAMPLE_SPOT_CODES = ["A-01", "A-02", "A-03"] as const;
+
+/** สร้างช่องจอดตัวอย่างครั้งแรกถ้ายังไม่มีช่อง — กันแข่งกันและคีย์ซ้ำที่ `(site_id, spot_code)` */
 export async function ensureSampleSpotsIfEmpty(siteId: number) {
   const n = await prisma.parkingSpot.count({ where: { siteId } });
   if (n > 0) return;
-  const rows = ["A-01", "A-02", "A-03"].map((code, i) => ({
+
+  const existing = await prisma.parkingSpot.findMany({
+    where: { siteId, spotCode: { in: [...SAMPLE_SPOT_CODES] } },
+    select: { spotCode: true },
+  });
+  const taken = new Set(existing.map((r) => r.spotCode));
+  const rows = SAMPLE_SPOT_CODES.filter((code) => !taken.has(code)).map((code) => ({
     siteId,
     spotCode: code,
     zoneLabel: "โซน A",
     sortFloor: 1,
-    sortOrder: i,
+    sortOrder: SAMPLE_SPOT_CODES.indexOf(code),
     checkInToken: newParkingCheckInToken(),
   }));
-  await prisma.parkingSpot.createMany({ data: rows });
+  if (rows.length === 0) return;
+
+  await prisma.parkingSpot.createMany({
+    data: rows,
+    /** MySQL: เทียบเท่า INSERT IGNORE ต่อ unique — กัน race สองคำขอพร้อมกัน */
+    skipDuplicates: true,
+  });
 }

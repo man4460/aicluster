@@ -28,12 +28,24 @@ export default async function ParkingSettingsPage() {
           action={
             <Link
               href="/dashboard/parking"
+              aria-label="กลับภาพรวมลานจอด"
+              title="ภาพรวม"
               className={cn(
                 appTemplateOutlineButtonClass,
-                "inline-flex min-h-[40px] items-center justify-center rounded-2xl px-4 text-sm font-semibold",
+                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl px-4 text-sm font-semibold sm:min-w-0",
               )}
             >
-              ← ภาพรวม
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                className="h-5 w-5 sm:hidden"
+                aria-hidden
+              >
+                <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" />
+              </svg>
+              <span className="hidden sm:inline">← ภาพรวม</span>
             </Link>
           }
         />

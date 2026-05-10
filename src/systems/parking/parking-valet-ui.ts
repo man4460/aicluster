@@ -1,24 +1,24 @@
-/** UI tokens — บริการรับฝากจอดรถ (Emerald + Sky) — ให้สอดคล้องแม่แบบ glass / dock */
-export const parkingValetGlassShellClass =
-  "rounded-[2.5rem] border border-white/55 bg-gradient-to-br from-emerald-50/90 via-sky-50/40 to-white/90 shadow-[0_18px_42px_-28px_rgba(5,150,105,0.35)] backdrop-blur-2xl ring-1 ring-white/70";
+import { cn } from "@/lib/cn";
 
-export const parkingValetDockClass =
-  "fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom,0px))] z-40 grid grid-cols-5 gap-1 rounded-[2.5rem] border border-emerald-200/80 bg-white/85 p-2 shadow-lg shadow-emerald-900/10 backdrop-blur-xl md:hidden";
+/** เปลือกการ์ดหัวโมดูล — เทียบ CarWashDashboard (เงา + inset ไฮไลต์) */
+export const parkingValetHeaderShellClass =
+  "overflow-hidden rounded-[2.5rem] border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/25 to-violet-100/20 p-4 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.32),inset_0_1px_0_0_rgba(255,255,255,0.55)] backdrop-blur-2xl ring-1 ring-inset ring-white/55 sm:px-8 sm:py-6 print:hidden";
 
-export const parkingValetNavBtnActive =
-  "bg-gradient-to-r from-emerald-600 to-sky-500 text-white shadow-md shadow-emerald-900/15";
-
-export const parkingValetNavBtnIdle =
-  "border border-slate-200/80 bg-white/90 text-slate-700 hover:border-emerald-300/80 hover:bg-emerald-50/60";
-
-export const parkingValetDesktopNavClass =
-  "hidden md:flex flex-wrap gap-2 border-t border-white/50 pt-4";
-
-export const parkingValetPrimaryBtnClass =
-  "inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-600 to-sky-500 px-5 text-sm font-bold text-white shadow-md transition hover:brightness-105 disabled:opacity-50";
-
-export const parkingValetSecondaryBtnClass =
-  "inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-emerald-200 bg-white/90 px-5 text-sm font-semibold text-emerald-900 shadow-sm transition hover:bg-emerald-50/80";
+/** การ์ดตัวเลขหัวข้อสถิติ — โทนเดียวกับ CarWashStat */
+export function parkingStatCardClass(tone: "indigo" | "slate" | "emerald") {
+  const toneStyles = {
+    indigo:
+      "border-white/60 bg-gradient-to-br from-white/60 via-indigo-50/35 to-indigo-100/30 text-indigo-800 shadow-[0_18px_38px_-26px_rgba(79,70,229,0.4)] backdrop-blur-xl",
+    slate:
+      "border-white/60 bg-gradient-to-br from-white/60 via-slate-50/40 to-slate-100/35 text-slate-800 shadow-[0_18px_38px_-26px_rgba(51,65,85,0.35)] backdrop-blur-xl",
+    emerald:
+      "border-white/60 bg-gradient-to-br from-white/60 via-emerald-50/35 to-emerald-100/30 text-emerald-800 shadow-[0_18px_38px_-26px_rgba(16,185,129,0.35)] backdrop-blur-xl",
+  };
+  return cn(
+    "relative overflow-hidden rounded-[2rem] border p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.4)] sm:p-5",
+    toneStyles[tone],
+  );
+}
 
 export const parkingValetCardClass =
-  "rounded-[2rem] border border-emerald-100/90 bg-white/75 p-5 shadow-sm backdrop-blur-sm ring-1 ring-white/80";
+  "rounded-[2rem] border border-white/55 bg-white/45 p-4 shadow-sm backdrop-blur-sm ring-1 ring-white/70 sm:p-5";

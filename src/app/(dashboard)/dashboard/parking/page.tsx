@@ -11,6 +11,7 @@ import {
   parkingSpotTile,
   parkingSpotTileOccupied,
 } from "@/systems/parking/parking-ui";
+import { ParkingStatCard } from "@/systems/parking/components/ParkingStatCard";
 import { loadParkingSessionStats, loadParkingSpotsWithActive } from "@/systems/parking/lib/load-dashboard";
 import { requireParkingPage } from "@/systems/parking/lib/parking-page-auth";
 
@@ -47,49 +48,117 @@ export default async function ParkingDashboardPage() {
               <Link
                 href="/dashboard/parking/settings"
                 aria-label="ตั้งค่าลานจอด"
+                title="ตั้งค่า"
                 className={cn(
                   appTemplateOutlineButtonClass,
-                  "inline-flex min-h-[40px] items-center justify-center rounded-2xl px-3 text-xs font-semibold sm:min-h-[42px] sm:px-4 sm:text-sm",
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl px-3 text-xs font-semibold sm:min-h-[42px] sm:min-w-0 sm:px-4 sm:text-sm",
                 )}
               >
-                ตั้งค่า
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  className="h-5 w-5 sm:hidden"
+                  aria-hidden
+                >
+                  <path
+                    d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 0 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 0 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.55V3a2 2 0 0 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9c0 .65.37 1.25.97 1.55z"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span className="hidden sm:inline">ตั้งค่า</span>
               </Link>
               <Link
                 href="/dashboard/parking/spots"
                 aria-label="จัดการช่องจอด"
+                title="ช่องจอด"
                 className={cn(
                   appTemplateOutlineButtonClass,
-                  "inline-flex min-h-[40px] items-center justify-center rounded-2xl px-3 text-xs font-semibold sm:min-h-[42px] sm:px-4 sm:text-sm",
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl px-3 text-xs font-semibold sm:min-h-[42px] sm:min-w-0 sm:px-4 sm:text-sm",
                 )}
               >
-                ช่องจอด
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  className="h-5 w-5 sm:hidden"
+                  aria-hidden
+                >
+                  <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" strokeLinejoin="round" />
+                </svg>
+                <span className="hidden sm:inline">ช่องจอด</span>
               </Link>
               <Link
                 href="/dashboard/parking/history"
                 aria-label="ประวัติการใช้บริการ"
+                title="ประวัติ"
                 className={cn(
                   appTemplateOutlineButtonClass,
-                  "inline-flex min-h-[40px] items-center justify-center rounded-2xl px-3 text-xs font-semibold sm:min-h-[42px] sm:px-4 sm:text-sm",
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl px-3 text-xs font-semibold sm:min-h-[42px] sm:min-w-0 sm:px-4 sm:text-sm",
                 )}
               >
-                ประวัติ
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  className="h-5 w-5 sm:hidden"
+                  aria-hidden
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 2" strokeLinecap="round" />
+                </svg>
+                <span className="hidden sm:inline">ประวัติ</span>
               </Link>
             </div>
           }
         />
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-[1.25rem] border border-white/60 bg-white/70 px-4 py-3 shadow-sm backdrop-blur-sm ring-1 ring-slate-200/40">
-            <p className="text-xs font-semibold text-[#66638c]">กำลังจอด</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-[#1e1b4b]">{stats.activeCount}</p>
+        <div className="space-y-3 border-t border-slate-200/70 pt-4">
+          <div className="flex items-center justify-between px-0.5 sm:px-1">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">สถิติลาน</h3>
+            <div className="ml-4 h-px flex-1 bg-slate-200/90" aria-hidden />
           </div>
-          <div className="rounded-[1.25rem] border border-white/60 bg-white/70 px-4 py-3 shadow-sm backdrop-blur-sm ring-1 ring-slate-200/40">
-            <p className="text-xs font-semibold text-[#66638c]">ช่องทั้งหมด</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-[#1e1b4b]">{spots.length}</p>
-          </div>
-          <div className="rounded-[1.25rem] border border-white/60 bg-white/70 px-4 py-3 shadow-sm backdrop-blur-sm ring-1 ring-slate-200/40">
-            <p className="text-xs font-semibold text-[#66638c]">เช็คเอาต์วันนี้ (Bangkok)</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-800">{stats.todayCompleted}</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+            <ParkingStatCard
+              title="กำลังจอด"
+              value={stats.activeCount.toLocaleString("en-US")}
+              tone="indigo"
+              icon={
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              }
+            />
+            <ParkingStatCard
+              title="ช่องทั้งหมด"
+              value={spots.length.toLocaleString("en-US")}
+              tone="slate"
+              icon={
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                  <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" strokeLinejoin="round" />
+                </svg>
+              }
+            />
+            <ParkingStatCard
+              title="เช็คเอาต์วันนี้"
+              value={stats.todayCompleted.toLocaleString("en-US")}
+              tone="emerald"
+              icon={
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+                  <path d="M12 18V6" />
+                </svg>
+              }
+            />
           </div>
         </div>
       </AppDashboardSection>
@@ -106,7 +175,7 @@ export default async function ParkingDashboardPage() {
             ยังไม่มีช่องจอด — เพิ่มได้ที่เมนูช่องจอดหรือตั้งค่าลาน
           </AppEmptyState>
         ) : (
-          <ul className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {spots.map((s) => {
               const active = s.sessions[0];
               const occupied = Boolean(active);
@@ -116,7 +185,7 @@ export default async function ParkingDashboardPage() {
                     href={`/dashboard/parking/spots/${s.id}`}
                     className={`${parkingSpotTile} ${occupied ? parkingSpotTileOccupied : ""}`}
                   >
-                    <p className="text-center text-xl font-bold tabular-nums text-slate-900 group-hover:text-emerald-800">
+                    <p className="text-center text-xl font-bold tabular-nums text-[#1e1b4b] group-hover:text-[#5b61ff]">
                       {s.spotCode}
                     </p>
                     {s.zoneLabel ? (
