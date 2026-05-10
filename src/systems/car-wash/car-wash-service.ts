@@ -666,7 +666,10 @@ async function readJson<T>(res: Response): Promise<T> {
 /** แปลง TypeError จาก fetch (เช่น เซิร์ฟเวอร์ไม่รัน) เป็นข้อความที่เข้าใจได้ */
 async function sessionFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   try {
-    return await fetch(input, init);
+    return await fetch(input, {
+      ...init,
+      credentials: init?.credentials ?? "include",
+    });
   } catch (e) {
     if (e instanceof TypeError) {
       const m = (e.message || "").toLowerCase();

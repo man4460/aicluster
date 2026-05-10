@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { carWashOwnerFromAuth } from "@/lib/car-wash/api-owner";
 import { getCarWashDataScope } from "@/lib/trial/module-scopes";
+import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 
 const postSchema = z.object({
   name: z.string().min(1).max(160),
@@ -20,10 +21,17 @@ export async function GET() {
   if (!own.ok) return own.response;
   const scope = await getCarWashDataScope(own.ownerId);
 
-  const rows = await prisma.carWashPackage.findMany({
+  let rows = await prisma.carWashPackage.findMany({
     where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
     orderBy: { id: "asc" },
   });
+  /** ถ้า scope ชี้ sandbox แต่ไม่มีแพ็ก — ดึงชุด prod อีกครั้ง (ข้อมูล seed / ข้อมูลจริงมักอยู่ที่ prod) */
+  if (rows.length === 0 && scope.trialSessionId !== TRIAL_PROD_SCOPE) {
+    rows = await prisma.carWashPackage.findMany({
+      where: { ownerUserId: own.ownerId, trialSessionId: TRIAL_PROD_SCOPE },
+      orderBy: { id: "asc" },
+    });
+  }
   return NextResponse.json({
     packages: rows.map((r) => ({
       id: r.id,

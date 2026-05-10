@@ -10,7 +10,38 @@ import { seedPromptLibraryProdDemoForOwner } from "../src/lib/trial/seed-prompt-
 import { seedMediaRegistryProdDemoForOwner } from "../src/lib/trial/seed-media-registry";
 import { seedParkingProdDemoForOwner } from "../src/lib/trial/seed-parking";
 import { seedWaitQueueProdDemoForOwner } from "../src/lib/trial/seed-wait-queue";
-import { WAIT_QUEUE_MODULE_SLUG } from "../src/lib/modules/config";
+import { seedSchoolBankProdDemoForOwner } from "../src/lib/trial/seed-school-bank";
+import { seedCommunityCoopProdDemoForOwner } from "../src/lib/trial/seed-community-coop";
+import { seedAttendanceProdDemoForOwner } from "../src/lib/trial/seed-attendance";
+import { seedDormitoryProdDemoForOwner } from "../src/lib/trial/seed-dorm";
+import { seedBarberProdDemoForOwner } from "../src/lib/trial/seed-barber";
+import { seedCarWashProdDemoForOwner } from "../src/lib/trial/seed-car-wash";
+import { seedVillageProdDemoForOwner } from "../src/lib/trial/seed-village";
+import { seedHomeFinanceProdDemoForOwner } from "../src/lib/trial/seed-home-finance";
+import {
+  seedLaundryProdDemoForOwner,
+  seedMqttProdDemoForOwner,
+} from "../src/lib/trial/seed-mqtt-laundry";
+import {
+  ASSET_MODULE_SLUG,
+  ATTENDANCE_MODULE_SLUG,
+  BARBER_MODULE_SLUG,
+  BUILDING_POS_MODULE_SLUG,
+  CAR_WASH_MODULE_SLUG,
+  COMMUNITY_COOP_MODULE_SLUG,
+  DOC_TRANSMISSION_MODULE_SLUG,
+  DORMITORY_MODULE_SLUG,
+  EDUCARE_MODULE_SLUG,
+  HOME_FINANCE_BASIC_MODULE_SLUG,
+  LAUNDRY_MODULE_SLUG,
+  MEDIA_REGISTRY_MODULE_SLUG,
+  MQTT_SERVICE_MODULE_SLUG,
+  PARKING_MODULE_SLUG,
+  PROMPT_LIBRARY_MODULE_SLUG,
+  SCHOOL_BANK_MODULE_SLUG,
+  VILLAGE_MODULE_SLUG,
+  WAIT_QUEUE_MODULE_SLUG,
+} from "../src/lib/modules/config";
 import { subscribeModule } from "../src/lib/modules/subscriptions-store";
 
 const prisma = new PrismaClient();
@@ -204,7 +235,7 @@ async function main() {
       slug: "prompt-library",
       title: "คลังคำสั่ง AI (Prompt)",
       description:
-        "กลุ่ม 1 (Basic) — เก็บ จัดหมวด แท็ก ประวัติเวอร์ชัน prompt ส่วนตัว · นับการใช้ · ส่งออก/นำเข้า JSON",
+        "กลุ่ม 1 (Basic) — เก็บ จัดหมวด แท็ก ประวัติเวอร์ชัน prompt ส่วนตัว · นับการใช้ · ส่งออก/นำเข้า JSON (ใช้งานฟรี ไม่หักโทเคนรายวัน)",
       groupId: 1,
       sortOrder: 31,
     },
@@ -215,6 +246,30 @@ async function main() {
         "กลุ่ม 1 (Basic) — ทะเบียนสื่อการเรียนรู้ ยืม-คืน คุมจำนวน มูลค่า สถานที่เก็บ บันทึกชำรุด/ซ่อม/จำหน่าย · ข้อมูลหลัก (ประเภท/สถานที่)",
       groupId: 1,
       sortOrder: 32,
+    },
+    {
+      slug: "school-bank",
+      title: "ธนาคารโรงเรียน",
+      description:
+        "กลุ่ม 1 (Basic) — บัญชีออมนักเรียน ฝาก–ถอน ประวัติรายการ สรุปยอด (ใช้งานฟรี ไม่หักโทเคนรายวัน)",
+      groupId: 1,
+      sortOrder: 33,
+    },
+    {
+      slug: "community-coop",
+      title: "สหกรณ์ชุมชน",
+      description:
+        "กลุ่ม 1 (Basic) — สมาชิก หุ้น เงินออม ปันผลจำลอง บันทึกรายการ (ใช้งานฟรี ไม่หักโทเคนรายวัน)",
+      groupId: 1,
+      sortOrder: 34,
+    },
+    {
+      slug: "laundry",
+      title: "รับฝากซักผ้า",
+      description:
+        "กลุ่ม 1 (Basic) — แพ็กเกจซักรีด ออเดอร์ รับ–ส่ง ติดตามสถานะ",
+      groupId: 1,
+      sortOrder: 35,
     },
     {
       slug: "stock-management",
@@ -295,21 +350,51 @@ async function main() {
     });
   }
 
-  const demoPosOwnerEmails = ["user@mawell.local.com", "user@mawell.local"] as const;
+  /**
+   * บัญชีที่ได้รับข้อมูลตัวอย่างจาก seed — รวมแอดมินเพื่อ dev/local
+   * (หน้าแดชบอร์ดหลักแสดงการ์ดโมดูลเฉพาะที่ subscribe / trial จึงต้องสมัครให้อัตโนมัติด้วย)
+   */
+  const demoSeedDataOwnerEmails = [
+    "user@mawell.local.com",
+    "user@mawell.local",
+    "admin@mawell.local",
+  ] as const;
 
-  /** คิวหน้าร้าน — ให้บัญชี demo สมัครโมดูลแล้วจึงเข้าแดชบอร์ดได้ (ไม่ต้องกดทดลองเอง) */
-  const waitQueueMod = await prisma.appModule.findUnique({
-    where: { slug: WAIT_QUEUE_MODULE_SLUG },
-    select: { id: true },
-  });
-  if (waitQueueMod) {
-    for (const email of demoPosOwnerEmails) {
+  /** โมดูลที่มี prod demo seed — subscribe ให้ครบเพื่อเห็นการ์ดบนแดชบอร์ดและเข้าใช้ได้ทันที */
+  const demoAutoSubscribeSlugs = [
+    WAIT_QUEUE_MODULE_SLUG,
+    SCHOOL_BANK_MODULE_SLUG,
+    COMMUNITY_COOP_MODULE_SLUG,
+    PROMPT_LIBRARY_MODULE_SLUG,
+    BUILDING_POS_MODULE_SLUG,
+    EDUCARE_MODULE_SLUG,
+    ASSET_MODULE_SLUG,
+    DOC_TRANSMISSION_MODULE_SLUG,
+    MEDIA_REGISTRY_MODULE_SLUG,
+    PARKING_MODULE_SLUG,
+    ATTENDANCE_MODULE_SLUG,
+    DORMITORY_MODULE_SLUG,
+    BARBER_MODULE_SLUG,
+    CAR_WASH_MODULE_SLUG,
+    VILLAGE_MODULE_SLUG,
+    HOME_FINANCE_BASIC_MODULE_SLUG,
+    MQTT_SERVICE_MODULE_SLUG,
+    LAUNDRY_MODULE_SLUG,
+  ] as const;
+
+  for (const slug of demoAutoSubscribeSlugs) {
+    const mod = await prisma.appModule.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    if (!mod) continue;
+    for (const email of demoSeedDataOwnerEmails) {
       const row = await prisma.user.findUnique({
         where: { email },
         select: { id: true },
       });
       if (row) {
-        await subscribeModule(row.id, waitQueueMod.id);
+        await subscribeModule(row.id, mod.id);
       }
     }
   }
@@ -329,7 +414,7 @@ async function main() {
   }
 
   /** POS ร้านอาหาร — หมวด+เมนู+รูป (scope prod) สำหรับบัญชี demo ถ้ายังไม่มีข้อมูล */
-  for (const email of demoPosOwnerEmails) {
+  for (const email of demoSeedDataOwnerEmails) {
     const row = await prisma.user.findUnique({
       where: { email },
       select: { id: true },
@@ -340,7 +425,7 @@ async function main() {
   }
 
   /** EduCare — โรงเรียน + ห้อง + นักเรียน + บันทึกเช็ค 7 วัน (scope prod) สำหรับบัญชี demo ถ้ายังไม่มีข้อมูล */
-  for (const email of demoPosOwnerEmails) {
+  for (const email of demoSeedDataOwnerEmails) {
     const row = await prisma.user.findUnique({
       where: { email },
       select: { id: true },
@@ -351,7 +436,7 @@ async function main() {
   }
 
   /** Asset — ทรัพย์สิน + เคลื่อนไหว + ซ่อม + ตรวจนับ (scope prod) สำหรับบัญชี demo ถ้ายังไม่มีข้อมูล */
-  for (const email of demoPosOwnerEmails) {
+  for (const email of demoSeedDataOwnerEmails) {
     const row = await prisma.user.findUnique({
       where: { email },
       select: { id: true },
@@ -362,7 +447,7 @@ async function main() {
   }
 
   /** Doc Transmission — สารบรรณดิจิทัล (scope prod) สำหรับบัญชี demo ถ้ายังไม่มีข้อมูล */
-  for (const email of demoPosOwnerEmails) {
+  for (const email of demoSeedDataOwnerEmails) {
     const row = await prisma.user.findUnique({
       where: { email },
       select: { id: true },
@@ -373,7 +458,7 @@ async function main() {
   }
 
   /** คลังคำสั่ง AI — หมวด + prompt ตัวอย่างสำหรับบัญชีทดลอง (ข้ามถ้ามีคำสั่ง ACTIVE แล้ว) */
-  for (const email of demoPosOwnerEmails) {
+  for (const email of demoSeedDataOwnerEmails) {
     const row = await prisma.user.findUnique({
       where: { email },
       select: { id: true },
@@ -384,7 +469,7 @@ async function main() {
   }
 
   /** ทะเบียนคุมสื่อ — ตัวอย่างทะเบียน/ยืม/บันทึก (ข้ามถ้ามีรายการสื่อแล้ว) */
-  for (const email of demoPosOwnerEmails) {
+  for (const email of demoSeedDataOwnerEmails) {
     const row = await prisma.user.findUnique({
       where: { email },
       select: { id: true },
@@ -395,7 +480,7 @@ async function main() {
   }
 
   /** ที่จอดรถ — ประวัติตัวอย่าง 20 แถวต่อลาน (ข้ามถ้ามีแถว seed ครบแล้ว) */
-  for (const email of demoPosOwnerEmails) {
+  for (const email of demoSeedDataOwnerEmails) {
     const row = await prisma.user.findUnique({
       where: { email },
       select: { id: true },
@@ -406,13 +491,123 @@ async function main() {
   }
 
   /** คิวหน้าร้าน — คิววันนี้ตัวอย่าง (รอ / เรียกแล้ว / เข้าร้านแล้ว) */
-  for (const email of demoPosOwnerEmails) {
+  for (const email of demoSeedDataOwnerEmails) {
     const row = await prisma.user.findUnique({
       where: { email },
       select: { id: true },
     });
     if (row) {
       await tryDemoSeed(`wait-queue (${email})`, () => seedWaitQueueProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** ธนาคารโรงเรียน — บัญชี + รายการตัวอย่าง */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`school-bank (${email})`, () => seedSchoolBankProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** สหกรณ์ชุมชน — สมาชิก + รายการตัวอย่าง */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`community-coop (${email})`, () => seedCommunityCoopProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** เช็คอิน — จุดเช็ค + กะ + รายชื่อตัวอย่าง */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`attendance (${email})`, () => seedAttendanceProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** หอพัก — ห้อง ผู้เข้าพัก บิลตัวอย่าง */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`dormitory (${email})`, () => seedDormitoryProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** ร้านตัดผม — โปรไฟล์ + เมนู + ตัวอย่าง */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`barber (${email})`, () => seedBarberProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** คาร์แคร์ — แพ็กตัวอย่าง */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`car-wash (${email})`, () => seedCarWashProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** หมู่บ้าน — โปรไฟล์ + ข้อมูลตัวอย่าง */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`village (${email})`, () => seedVillageProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** รายรับ–รายจ่ายบ้าน — รายการตัวอย่าง */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`home-finance (${email})`, () => seedHomeFinanceProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** MQTT — โปรไฟล์ tenant ตัวอย่าง */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`mqtt (${email})`, () => seedMqttProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** รับฝากซักผ้า — แพ็กตัวอย่าง */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`laundry (${email})`, () => seedLaundryProdDemoForOwner(prisma, row.id));
     }
   }
 }

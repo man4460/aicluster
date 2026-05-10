@@ -163,6 +163,10 @@ model User {
   trialSessions            TrialSession[]
   parkingSites             ParkingSite[]
   waitQueueSites           WaitQueueSite[]
+  schoolBankSettings       SchoolBankSettings[]
+  schoolBankAccounts       SchoolBankAccount[]
+  communityCoopSettings    CommunityCoopSettings[]
+  communityCoopAccounts    CommunityCoopAccount[]
   laundryPackages          LaundryPackage[]
   laundryOrders            LaundryOrder[]
   laundryCostCategories    LaundryCostCategory[]
@@ -1840,6 +1844,125 @@ model WaitQueueTicket {
   @@index([siteId, dateKey, status], map: "wait_queue_ticket_site_date_status_idx")
   @@index([siteId, status], map: "wait_queue_ticket_site_status_idx")
   @@map("wait_queue_tickets")
+}
+
+enum SchoolBankLedgerType {
+  DEPOSIT
+  WITHDRAW
+  ADJUST
+}
+
+/** ตั้งค่าธนาคารโรงเรียน — ต่อเจ้าของ + trial scope */
+model SchoolBankSettings {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_user_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  displayName    String   @map("display_name") @db.VarChar(120)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  accounts SchoolBankAccount[]
+
+  @@unique([ownerUserId, trialSessionId], map: "school_bank_settings_owner_trial_uniq")
+  @@index([ownerUserId], map: "school_bank_settings_owner_idx")
+  @@map("school_bank_settings")
+}
+
+model SchoolBankAccount {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_user_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  settingsId     String   @map("settings_id")
+  settings       SchoolBankSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+  memberCode     String   @map("member_code") @db.VarChar(32)
+  memberName     String   @map("member_name") @db.VarChar(120)
+  classroomLabel String?  @map("classroom_label") @db.VarChar(80)
+  balanceSatang  Int      @default(0) @map("balance_satang")
+  isActive       Boolean  @default(true) @map("is_active")
+  entries        SchoolBankLedgerEntry[]
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([settingsId, memberCode], map: "school_bank_acc_settings_code_uniq")
+  @@index([ownerUserId, trialSessionId], map: "school_bank_acc_owner_trial_idx")
+  @@map("school_bank_accounts")
+}
+
+model SchoolBankLedgerEntry {
+  id                 String              @id @default(cuid())
+  accountId          String              @map("account_id")
+  account            SchoolBankAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  type               SchoolBankLedgerType
+  amountSatang       Int                 @map("amount_satang")
+  balanceAfterSatang Int                 @map("balance_after_satang")
+  note               String?             @db.Text
+  createdAt          DateTime            @default(now()) @map("created_at")
+
+  @@index([accountId, createdAt], map: "school_bank_led_acc_created_idx")
+  @@map("school_bank_ledger_entries")
+}
+
+enum CommunityCoopLedgerType {
+  DEPOSIT
+  WITHDRAW
+  DIVIDEND
+  ADJUST
+}
+
+/** ตั้งค่าสหกรณ์ชุมชน — ต่อเจ้าของ + trial scope */
+model CommunityCoopSettings {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_user_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  displayName    String   @map("display_name") @db.VarChar(120)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  accounts CommunityCoopAccount[]
+
+  @@unique([ownerUserId, trialSessionId], map: "community_coop_settings_owner_trial_uniq")
+  @@index([ownerUserId], map: "community_coop_settings_owner_idx")
+  @@map("community_coop_settings")
+}
+
+model CommunityCoopAccount {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_user_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  settingsId     String   @map("settings_id")
+  settings       CommunityCoopSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+  memberCode     String   @map("member_code") @db.VarChar(32)
+  memberName     String   @map("member_name") @db.VarChar(120)
+  /** กลุ่ม/หมู่บ้าน/สาขา ฯลฯ */
+  groupLabel     String?  @map("group_label") @db.VarChar(80)
+  shareUnits     Int      @default(0) @map("share_units")
+  balanceSatang  Int      @default(0) @map("balance_satang")
+  isActive       Boolean  @default(true) @map("is_active")
+  entries        CommunityCoopLedgerEntry[]
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([settingsId, memberCode], map: "community_coop_acc_settings_code_uniq")
+  @@index([ownerUserId, trialSessionId], map: "community_coop_acc_owner_trial_idx")
+  @@map("community_coop_accounts")
+}
+
+model CommunityCoopLedgerEntry {
+  id                 String                 @id @default(cuid())
+  accountId          String                 @map("account_id")
+  account            CommunityCoopAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  type               CommunityCoopLedgerType
+  amountSatang       Int                    @map("amount_satang")
+  balanceAfterSatang Int                    @map("balance_after_satang")
+  note               String?                @db.Text
+  createdAt          DateTime               @default(now()) @map("created_at")
+
+  @@index([accountId, createdAt], map: "community_coop_led_acc_created_idx")
+  @@map("community_coop_ledger_entries")
 }
 
 /** แพ็กซักรีด — สอดคล้องกับ `laundry_packages` (migration) */

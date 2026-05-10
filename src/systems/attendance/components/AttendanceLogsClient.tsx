@@ -53,12 +53,9 @@ function logPrimaryLine(r: Row): { title: string; subId: string } {
 export function AttendanceLogsClient() {
   const imageLightbox = useAppImageLightbox();
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [from, setFrom] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
-  });
-  const [to, setTo] = useState(() => bangkokDateKey());
+  /** ตั้งค่าวันหลัง mount — กัน SSR/client คนละวันรอบเที่ยงคืนกรุงเทพ + ลด hydration noise */
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [q, setQ] = useState("");
   const [kind, setKind] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
@@ -66,6 +63,7 @@ export function AttendanceLogsClient() {
   const [loadErr, setLoadErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    if (!from || !to) return;
     setLoading(true);
     const sp = new URLSearchParams();
     sp.set("from", from);
@@ -85,8 +83,16 @@ export function AttendanceLogsClient() {
   }, [from, to, q, kind]);
 
   useEffect(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    setFrom(d.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }));
+    setTo(bangkokDateKey());
+  }, []);
+
+  useEffect(() => {
+    if (!from || !to) return;
     void load();
-  }, [load]);
+  }, [load, from, to]);
 
   useEffect(() => {
     const t = setInterval(() => void load(), 15000);
@@ -119,6 +125,7 @@ export function AttendanceLogsClient() {
           className="app-btn-soft inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[#d8d6ec] px-3 py-2.5 text-[#4d47b6]"
           aria-label={mobileFilterOpen ? "ซ่อนตัวกรองรายงาน" : "แสดงตัวกรองรายงาน"}
           title={mobileFilterOpen ? "ซ่อนตัวกรองรายงาน" : "แสดงตัวกรองรายงาน"}
+          suppressHydrationWarning
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <path d="M3 5h18M6 12h12M10 19h4" strokeLinecap="round" />
@@ -133,6 +140,7 @@ export function AttendanceLogsClient() {
             className="mt-1 min-h-[44px] w-full rounded-xl border border-[#e1e3ff] bg-white px-3 py-2 text-sm touch-manipulation sm:min-h-0"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
+            suppressHydrationWarning
           />
         </label>
         <label className={cn(attendanceLabelClass, "lg:col-span-2")}>
@@ -142,6 +150,7 @@ export function AttendanceLogsClient() {
             className="mt-1 min-h-[44px] w-full rounded-xl border border-[#e1e3ff] bg-white px-3 py-2 text-sm touch-manipulation sm:min-h-0"
             value={to}
             onChange={(e) => setTo(e.target.value)}
+            suppressHydrationWarning
           />
         </label>
         <label className={cn(attendanceLabelClass, "sm:col-span-2 lg:col-span-3")}>
@@ -151,6 +160,7 @@ export function AttendanceLogsClient() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="เบอร์ / ชื่อ / ยูสเซอร์"
+            suppressHydrationWarning
           />
         </label>
         <label className={cn(attendanceLabelClass, "sm:col-span-2 lg:col-span-2")}>
@@ -159,6 +169,7 @@ export function AttendanceLogsClient() {
             className="mt-1 min-h-[44px] w-full rounded-xl border border-[#e1e3ff] bg-white px-3 py-2 text-sm touch-manipulation sm:min-h-0"
             value={kind}
             onChange={(e) => setKind(e.target.value)}
+            suppressHydrationWarning
           >
             <option value="">ทั้งหมด</option>
             <option value="platform">พนักงาน (แอป)</option>
@@ -172,12 +183,15 @@ export function AttendanceLogsClient() {
             type="button"
             onClick={() => void load()}
             className={cn(attendanceSecondaryBtnClass, "w-full justify-center sm:w-auto")}
+            suppressHydrationWarning
           >
             ค้นหา
           </button>
           <a
-            href={exportUrl()}
+            href={from && to ? exportUrl() : "#"}
             className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-[#4d47b6]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#4d47b6] touch-manipulation hover:bg-[#f8f7ff] sm:w-auto sm:min-h-0"
+            aria-disabled={!from || !to}
+            suppressHydrationWarning
           >
             Export CSV
           </a>

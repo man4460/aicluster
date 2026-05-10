@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 
 type Tx = Omit<
   PrismaClient,
@@ -18,4 +19,12 @@ export async function seedCarWashTrialData(tx: Tx, ownerUserId: string, trialSes
       isActive: true,
     },
   });
+}
+
+export async function seedCarWashProdDemoForOwner(db: PrismaClient, ownerUserId: string): Promise<void> {
+  const n = await db.carWashPackage.count({
+    where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },
+  });
+  if (n > 0) return;
+  await db.$transaction((tx) => seedCarWashTrialData(tx, ownerUserId, TRIAL_PROD_SCOPE));
 }

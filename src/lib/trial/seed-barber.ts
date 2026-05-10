@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 
 type Tx = Omit<
   PrismaClient,
@@ -210,4 +211,33 @@ export async function seedBarberTrialData(tx: Tx, ownerUserId: string, trialSess
       });
     }),
   );
+}
+
+/** ลบชุดข้อมูลร้านตัดผมใน scope — ใช้ก่อน seed prod ใหม่เมื่อมีโปรไฟล์เปล่า */
+async function deleteBarberScopeRows(tx: Tx, ownerUserId: string, trialSessionId: string): Promise<void> {
+  await tx.barberServiceLog.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.barberBooking.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.barberCustomerSubscription.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.barberPortalStaffPing.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.barberCustomer.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.barberPackage.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.barberStylist.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.barberCostEntry.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.barberCostCategory.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.barberShopProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
+}
+
+/**
+ * ข้อมูลตัวอย่าง prod — ดูจากแพ็กเกจ (ไม่ใช้แค่โปรไฟล์ เพราะโปรไฟล์เปล่าจะทำให้ข้าม seed ผิด)
+ */
+export async function seedBarberProdDemoForOwner(db: PrismaClient, ownerUserId: string): Promise<void> {
+  const pkgCount = await db.barberPackage.count({
+    where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },
+  });
+  if (pkgCount > 0) return;
+
+  await db.$transaction(async (tx) => {
+    await deleteBarberScopeRows(tx, ownerUserId, TRIAL_PROD_SCOPE);
+    await seedBarberTrialData(tx, ownerUserId, TRIAL_PROD_SCOPE);
+  });
 }

@@ -12,6 +12,8 @@ import {
   PARKING_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
   WAIT_QUEUE_MODULE_SLUG,
+  SCHOOL_BANK_MODULE_SLUG,
+  COMMUNITY_COOP_MODULE_SLUG,
 } from "@/lib/modules/config";
 import { resolveDataScopeBySlug, type ModuleDataScope } from "@/lib/trial/scope";
 
@@ -53,6 +55,14 @@ export function getParkingDataScope(userId: string): Promise<ModuleDataScope> {
 
 export function getWaitQueueDataScope(userId: string): Promise<ModuleDataScope> {
   return resolveDataScopeBySlug(userId, WAIT_QUEUE_MODULE_SLUG);
+}
+
+export function getSchoolBankDataScope(userId: string): Promise<ModuleDataScope> {
+  return resolveDataScopeBySlug(userId, SCHOOL_BANK_MODULE_SLUG);
+}
+
+export function getCommunityCoopDataScope(userId: string): Promise<ModuleDataScope> {
+  return resolveDataScopeBySlug(userId, COMMUNITY_COOP_MODULE_SLUG);
 }
 
 export function getEducareDataScope(userId: string): Promise<ModuleDataScope> {

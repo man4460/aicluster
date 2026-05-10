@@ -76,11 +76,24 @@ export const PARKING_MODULE_GROUP_ID = 1 as const;
 export const WAIT_QUEUE_MODULE_SLUG = "wait-queue" as const;
 export const WAIT_QUEUE_MODULE_GROUP_ID = 1 as const;
 
+/** ธนาคารโรงเรียน — บัญชีออม ฝาก–ถอน ประวัติรายการ */
+export const SCHOOL_BANK_MODULE_SLUG = "school-bank" as const;
+export const SCHOOL_BANK_MODULE_GROUP_ID = 1 as const;
+
+/** สหกรณ์ชุมชน — สมาชิก หุ้น เงินออม ปันผลจำลอง */
+export const COMMUNITY_COOP_MODULE_SLUG = "community-coop" as const;
+export const COMMUNITY_COOP_MODULE_GROUP_ID = 1 as const;
+
 /**
  * โมดูลที่ไม่หักโทเคนรายวันเมื่อเข้าใช้ (`applyModuleDailyTokenDeduction`)
  * — แสดงบนการ์ดเป็น «ฟรี»
  */
-export const DAILY_TOKEN_EXEMPT_MODULE_SLUGS: ReadonlySet<string> = new Set([WAIT_QUEUE_MODULE_SLUG]);
+export const DAILY_TOKEN_EXEMPT_MODULE_SLUGS: ReadonlySet<string> = new Set([
+  WAIT_QUEUE_MODULE_SLUG,
+  SCHOOL_BANK_MODULE_SLUG,
+  COMMUNITY_COOP_MODULE_SLUG,
+  PROMPT_LIBRARY_MODULE_SLUG,
+]);
 
 export function isDailyTokenExemptModuleSlug(slug: string): boolean {
   return DAILY_TOKEN_EXEMPT_MODULE_SLUGS.has(slug);
@@ -99,6 +112,8 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === LAUNDRY_MODULE_SLUG) return "รับฝากซักผ้า";
   if (slug === PARKING_MODULE_SLUG) return "บริการรับฝากจอดรถ";
   if (slug === WAIT_QUEUE_MODULE_SLUG) return "คิวหน้าร้าน";
+  if (slug === SCHOOL_BANK_MODULE_SLUG) return "ธนาคารโรงเรียน";
+  if (slug === COMMUNITY_COOP_MODULE_SLUG) return "สหกรณ์ชุมชน";
   if (slug === EDUCARE_MODULE_SLUG) return "EduCare เช็คนักเรียน";
   if (slug === ASSET_MODULE_SLUG) return "บริหารทรัพย์สิน";
   if (slug === DOC_TRANSMISSION_MODULE_SLUG) return "สารบรรณดิจิทัล";

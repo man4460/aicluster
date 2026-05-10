@@ -10,6 +10,9 @@ import {
   DORMITORY_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
   WAIT_QUEUE_MODULE_SLUG,
+  SCHOOL_BANK_MODULE_SLUG,
+  COMMUNITY_COOP_MODULE_SLUG,
+  LAUNDRY_MODULE_SLUG,
 } from "@/lib/modules/config";
 import { seedDocTransmissionDemoForUser } from "@/lib/trial/seed-doc-transmission";
 import { TRIAL_PROD_SCOPE, trialSessionDaysDefault } from "./constants";
@@ -20,6 +23,9 @@ import { seedCarWashTrialData } from "./seed-car-wash";
 import { seedDormitoryTrialData } from "./seed-dorm";
 import { seedVillageTrialData } from "./seed-village";
 import { seedWaitQueueTrialData } from "./seed-wait-queue";
+import { seedSchoolBankTrialData } from "./seed-school-bank";
+import { seedCommunityCoopTrialData } from "./seed-community-coop";
+import { seedLaundryTrialData } from "./seed-mqtt-laundry";
 
 type Tx = Omit<
   PrismaClient,
@@ -46,6 +52,10 @@ async function deleteSandboxRowsInTx(tx: Tx, ownerUserId: string, trialSessionId
   await tx.carWashBundle.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.carWashComplaint.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.carWashPackage.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.laundryCostEntry.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.laundryCostCategory.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.laundryOrder.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.laundryPackage.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.mqttClientSessionLog.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.mqttMessageStatDaily.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.mqttAclRule.deleteMany({ where: { ownerUserId, trialSessionId } });
@@ -67,6 +77,9 @@ async function deleteSandboxRowsInTx(tx: Tx, ownerUserId: string, trialSessionId
   await tx.dormitoryProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
 
   await tx.waitQueueSite.deleteMany({ where: { ownerUserId, trialSessionId } });
+
+  await tx.schoolBankSettings.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.communityCoopSettings.deleteMany({ where: { ownerUserId, trialSessionId } });
 
   await tx.docTransmissionAuditLog.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.docTransmissionRecord.deleteMany({ where: { ownerUserId, trialSessionId } });
@@ -195,6 +208,12 @@ export async function startTrial(userId: string, moduleId: string): Promise<void
       await seedDocTransmissionDemoForUser(tx, userId, session.id);
     } else if (mod.slug === WAIT_QUEUE_MODULE_SLUG) {
       await seedWaitQueueTrialData(tx, userId, session.id);
+    } else if (mod.slug === SCHOOL_BANK_MODULE_SLUG) {
+      await seedSchoolBankTrialData(tx, userId, session.id);
+    } else if (mod.slug === COMMUNITY_COOP_MODULE_SLUG) {
+      await seedCommunityCoopTrialData(tx, userId, session.id);
+    } else if (mod.slug === LAUNDRY_MODULE_SLUG) {
+      await seedLaundryTrialData(tx, userId, session.id);
     }
   });
 }

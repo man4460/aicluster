@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 
 type Tx = Omit<
   PrismaClient,
@@ -56,4 +57,13 @@ export async function seedAttendanceTrialData(tx: Tx, ownerUserId: string, trial
       rosterShiftIndex: 0,
     },
   });
+}
+
+/** ข้อมูลตัวอย่าง scope prod สำหรับบัญชี demo — ข้ามถ้ามีการตั้งค่าแล้ว */
+export async function seedAttendanceProdDemoForOwner(db: PrismaClient, ownerUserId: string): Promise<void> {
+  const existing = await db.attendanceSettings.findFirst({
+    where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },
+  });
+  if (existing) return;
+  await db.$transaction((tx) => seedAttendanceTrialData(tx, ownerUserId, TRIAL_PROD_SCOPE));
 }

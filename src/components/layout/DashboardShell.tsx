@@ -12,6 +12,7 @@ import { cn } from "@/lib/cn";
 import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enums";
 import {
   buildDashboardNavGroups,
+  canonicalDashboardModuleLinkHref,
   isSubscribedModuleLink,
   type DashboardNavGroup,
   type DashboardNavGroupId,
@@ -75,7 +76,7 @@ function SidebarNavLink({
   pathname: string;
   label: string;
 }) {
-  const resolvedHref = resolveDashboardNavLinkHref(href);
+  const resolvedHref = canonicalDashboardModuleLinkHref(resolveDashboardNavLinkHref(href));
   const active = isNavActive(resolvedHref, pathname);
   return (
     <Link
@@ -109,7 +110,7 @@ function DrawerNavLink({
   onNavigate: () => void;
   label: string;
 }) {
-  const resolvedHref = resolveDashboardNavLinkHref(href);
+  const resolvedHref = canonicalDashboardModuleLinkHref(resolveDashboardNavLinkHref(href));
   const active = isNavActive(resolvedHref, pathname);
   return (
     <Link
@@ -280,7 +281,7 @@ export function DashboardShell({
   const mobileNavCandidates = navGroups
     .flatMap((group) => group.items)
     .map((item) => {
-      const resolvedHref = resolveDashboardNavLinkHref(item.href);
+      const resolvedHref = canonicalDashboardModuleLinkHref(resolveDashboardNavLinkHref(item.href));
       return { href: resolvedHref, label: item.label };
     })
     .filter((item, index, arr) => arr.findIndex((x) => x.href === item.href) === index);
@@ -289,7 +290,7 @@ export function DashboardShell({
     "/dashboard/chat",
     CHAT_AI_DASHBOARD_HREF,
     "/dashboard/profile",
-  ].map((href) => resolveDashboardNavLinkHref(href));
+  ].map((href) => canonicalDashboardModuleLinkHref(resolveDashboardNavLinkHref(href)));
   const mobileNavItems = [
     ...mobilePriorityHrefs
       .map((href) => mobileNavCandidates.find((item) => item.href === href))

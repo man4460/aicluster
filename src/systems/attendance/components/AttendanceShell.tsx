@@ -99,6 +99,7 @@ export function AttendanceShell({ children }: { children: React.ReactNode }) {
             aria-expanded={usageGuideOpen}
             aria-label="เปิดคู่มือการใช้งาน"
             title="คู่มือการใช้งาน"
+            suppressHydrationWarning
           >
             <span className="sm:hidden" aria-hidden>
               ?

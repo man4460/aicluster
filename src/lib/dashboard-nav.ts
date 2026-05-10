@@ -13,6 +13,8 @@ import {
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
   WAIT_QUEUE_MODULE_SLUG,
+  SCHOOL_BANK_MODULE_SLUG,
+  COMMUNITY_COOP_MODULE_SLUG,
   PROMPT_LIBRARY_MODULE_SLUG,
   MEDIA_REGISTRY_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
@@ -44,6 +46,8 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === VILLAGE_MODULE_SLUG) return "/dashboard/village";
   if (slug === PARKING_MODULE_SLUG) return "/dashboard/parking";
   if (slug === WAIT_QUEUE_MODULE_SLUG) return "/dashboard/wait-queue";
+  if (slug === SCHOOL_BANK_MODULE_SLUG) return "/dashboard/school-bank";
+  if (slug === COMMUNITY_COOP_MODULE_SLUG) return "/dashboard/community-coop";
   if (slug === LAUNDRY_MODULE_SLUG) return "/dashboard/laundry";
   if (slug === EDUCARE_MODULE_SLUG) return "/dashboard/educare";
   if (slug === ASSET_MODULE_SLUG) return "/dashboard/asset";
@@ -51,6 +55,19 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === PROMPT_LIBRARY_MODULE_SLUG) return "/dashboard/prompt-library";
   if (slug === MEDIA_REGISTRY_MODULE_SLUG) return "/dashboard/media-registry";
   return `/dashboard/modules/${slug}`;
+}
+
+/**
+ * แปลงลิงก์แบบ fallback `/dashboard/modules/:slug` ให้เป็นเส้นทางจริงของโมดูล
+ * — กัน hydration mismatch เมื่อ SSR/client ใช้ slug mapping คนละเวอร์ชัน หรือค่าเก่าค้าง
+ */
+export function canonicalDashboardModuleLinkHref(href: string): string {
+  const h = href.trim();
+  const m = /^\/dashboard\/modules\/([^/?#]+)/.exec(h);
+  if (m?.[1]) {
+    return dashboardModuleHref(m[1]);
+  }
+  return h;
 }
 
 export const DASHBOARD_NAV_GROUP_LABEL: Record<DashboardNavGroupId, string> = {

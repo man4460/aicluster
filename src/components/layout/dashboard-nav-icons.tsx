@@ -400,6 +400,29 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  /** ธนาคารโรงเรียน — ไม่พึ่ง `/dashboard/modules/school-bank` เพื่อให้ไอคอนตรงกับลิงก์ canonical */
+  if (href.startsWith("/dashboard/school-bank")) {
+    return (
+      <Svg>
+        <path
+          d="M4 10h16v10H4V10z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <path d="M7 10V7a5 5 0 0110 0v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M9 17h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </Svg>
+    );
+  }
+  if (href.startsWith("/dashboard/community-coop")) {
+    return (
+      <Svg>
+        <circle cx="9" cy="12" r="5" stroke="currentColor" strokeWidth="2" />
+        <circle cx="15" cy="12" r="5" stroke="currentColor" strokeWidth="2" />
+      </Svg>
+    );
+  }
   if (href.startsWith("/dashboard/home-finance") || href.startsWith("/dashboard/modules/income-expense-basic")) {
     return (
       <Svg>

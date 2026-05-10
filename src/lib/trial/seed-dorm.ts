@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 
 type Tx = Omit<
   PrismaClient,
@@ -83,4 +84,12 @@ export async function seedDormitoryTrialData(tx: Tx, ownerUserId: string, trialS
       paymentStatus: "PENDING",
     },
   });
+}
+
+export async function seedDormitoryProdDemoForOwner(db: PrismaClient, ownerUserId: string): Promise<void> {
+  const existing = await db.dormitoryProfile.findFirst({
+    where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },
+  });
+  if (existing) return;
+  await db.$transaction((tx) => seedDormitoryTrialData(tx, ownerUserId, TRIAL_PROD_SCOPE));
 }

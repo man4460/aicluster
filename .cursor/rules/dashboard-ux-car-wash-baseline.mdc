@@ -16,6 +16,7 @@ alwaysApply: true
 - รองรับ **safe area** ด้านล่าง: `env(safe-area-inset-bottom)` บนแถบเมนูหรือ padding ของมัน
 - **พื้นที่เลื่อนเนื้อหา** ต้องมี padding-bottom เพื่อไม่ให้ถูก dock บัง (ดูแม่แบบในโค้ดจริง)
 - **อ้างอิงโค้ด:** `src/systems/car-wash/CarWashDashboard.tsx` (แท็บล่าง / สลับโซน), `src/systems/barber/components/BarberLayoutChrome.tsx`, `BarberModuleMobileDock` / `BarberModuleHeader.tsx`
+- **แถวการ์ดสรุปตัวเลข (stat) บนมือถือ:** ต้องเป็น **2 คอลัมน์** (`grid-cols-2`) — ห้ามปล่อย `grid-cols-1` บน viewport แคบ — รายละเอียดการ์ดคี่/คู่: **`.cursor/rules/dashboard-mobile-summary-stat-grid.mdc`**
 
 ---
 

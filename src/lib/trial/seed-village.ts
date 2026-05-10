@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { bangkokMonthKey } from "@/lib/time/bangkok";
+import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 
 type Tx = Omit<
   PrismaClient,
@@ -262,4 +263,12 @@ export async function seedVillageTrialData(tx: Tx, ownerUserId: string, trialSes
       },
     ],
   });
+}
+
+export async function seedVillageProdDemoForOwner(db: PrismaClient, ownerUserId: string): Promise<void> {
+  const existing = await db.villageProfile.findFirst({
+    where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },
+  });
+  if (existing) return;
+  await db.$transaction((tx) => seedVillageTrialData(tx, ownerUserId, TRIAL_PROD_SCOPE));
 }

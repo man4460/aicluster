@@ -45,8 +45,9 @@ export async function listSubscribedModuleIds(userId: string): Promise<string[]>
   const rows = (await prisma.$queryRawUnsafe(
     "SELECT module_id AS moduleId FROM user_module_subscriptions WHERE user_id = ? ORDER BY id DESC",
     userId,
-  )) as Array<{ moduleId: string }>;
-  return rows.map((r) => r.moduleId);
+  )) as Array<{ moduleId: string | bigint | unknown }>;
+  /** Prisma/MySQL raw บางครั้งคืนชนิดไม่ตรงกับ `module_list.id` (cuid) — normalize ให้ `includes` กับ Prisma ไม่พลาด */
+  return rows.map((r) => String(r.moduleId));
 }
 
 export async function subscribeModule(userId: string, moduleId: string): Promise<void> {
