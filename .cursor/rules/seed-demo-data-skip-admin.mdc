@@ -1,0 +1,40 @@
+---
+description: ห้ามใส่ข้อมูล demo ของโมดูลให้แอดมิน — seed ใส่เฉพาะบัญชี user
+globs: prisma/seed.ts,src/lib/trial/**
+alwaysApply: false
+---
+
+# Seed demo data — แอดมินไม่ต้องใส่
+
+เวลา **เพิ่ม / แก้ไข seed ข้อมูลตัวอย่างของโมดูล** (ทุกไฟล์ใต้ `src/lib/trial/seed-*.ts` รวมถึง vault, inventory, asset, building-pos, educare, ฯลฯ) ให้ใช้รายชื่อบัญชี **เฉพาะ user demo** เท่านั้น
+
+## บังคับ
+
+- `prisma/seed.ts` → ตัวแปร **`demoSeedDataOwnerEmails`** ต้องมีแค่:
+ - `user@mawell.local.com`
+ - `user@mawell.local`
+- **ห้ามใส่ `admin@mawell.local`** ในลูปที่เรียก `seed*ProdDemoForOwner(prisma, row.id)`
+- **ห้ามสร้าง** ตัวแปรลูปแยกที่ใส่ admin ในการ insert demo data (เช่น `for (const email of [..., "admin@mawell.local"]) seedXxxProdDemoForOwner(...)`) — ถ้าต้องการบัญชีพิเศษ ให้แยก scope ออกชัดเจน ไม่ปนกับ demo data
+
+## เหตุผล
+
+- **แอดมิน** = บัญชีทดสอบสิทธิ์ / หลังบ้าน / debug — ไม่ใช่ผู้ใช้จริง การมีข้อมูลตัวอย่างทำให้สับสน + ใช้แอดมินทดสอบโฟลว์ owner ลำบาก
+- แอดมินมี `subscriptionType: BUFFET` + `tokens: 99999` อยู่แล้ว → **เข้าได้ทุกโมดูลโดยไม่ต้อง subscribe** (จึงไม่ต้องบังคับใส่ subscribe ให้ใน `demoAutoSubscribeSlugs` loop ด้วย — ถ้าใส่ก็ไม่ผิด แต่ไม่จำเป็น)
+
+## ถ้าเคย seed ใส่แอดมินไปแล้ว — ต้องล้าง
+
+ถ้ามี data ของ admin ค้างใน DB จาก seed รุ่นก่อน ให้ลบทิ้งด้วยสคริปต์ลบเฉพาะ owner = admin (ไม่กระทบ user demo) — ตัวอย่างฟิลด์ที่ใช้: `ownerUserId`, `userId`, `owner_id` ตามแต่ละโมดูล (ดูใน `prisma/schema.prisma`)
+
+## ตัวอย่าง pattern ที่ถูก
+
+```ts
+const demoSeedDataOwnerEmails = [
+ "user@mawell.local.com",
+ "user@mawell.local",
+] as const;
+
+for (const email of demoSeedDataOwnerEmails) {
+ const row = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+ if (row) await tryDemoSeed(`vault (${email})`, () => seedVaultProdDemoForOwner(prisma, row.id));
+}
+```

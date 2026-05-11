@@ -22,6 +22,8 @@ import {
   seedLaundryProdDemoForOwner,
   seedMqttProdDemoForOwner,
 } from "../src/lib/trial/seed-mqtt-laundry";
+import { seedVaultProdDemoForOwner } from "../src/lib/trial/seed-vault";
+import { seedInventoryProdDemoForOwner } from "../src/lib/trial/seed-inventory";
 import {
   ASSET_MODULE_SLUG,
   ATTENDANCE_MODULE_SLUG,
@@ -33,12 +35,14 @@ import {
   DORMITORY_MODULE_SLUG,
   EDUCARE_MODULE_SLUG,
   HOME_FINANCE_BASIC_MODULE_SLUG,
+  INVENTORY_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
   MEDIA_REGISTRY_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
   PROMPT_LIBRARY_MODULE_SLUG,
   SCHOOL_BANK_MODULE_SLUG,
+  VAULT_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
   WAIT_QUEUE_MODULE_SLUG,
 } from "../src/lib/modules/config";
@@ -272,6 +276,14 @@ async function main() {
       sortOrder: 36,
     },
     {
+      slug: "inventory",
+      title: "คลัง · สต๊อกสินค้า",
+      description:
+        "กลุ่ม 1 (Basic) — จัดการหลายคลัง/โกดัง ทะเบียนสินค้า SKU หมวดสินค้า รับเข้า–เบิกออก–โอนระหว่างคลัง ปรับยอด แจ้งของใกล้หมด พร้อมประวัติเคลื่อนไหว",
+      groupId: 1,
+      sortOrder: 37,
+    },
+    {
       slug: "laundry",
       title: "รับฝากซักผ้า",
       description:
@@ -359,13 +371,15 @@ async function main() {
   }
 
   /**
-   * บัญชีที่ได้รับข้อมูลตัวอย่างจาก seed — รวมแอดมินเพื่อ dev/local
-   * (หน้าแดชบอร์ดหลักแสดงการ์ดโมดูลเฉพาะที่ subscribe / trial จึงต้องสมัครให้อัตโนมัติด้วย)
+   * บัญชีที่ได้รับข้อมูลตัวอย่างจาก seed — **เฉพาะบัญชี user demo** เท่านั้น
+   * - **ห้ามใส่ `admin@mawell.local`** — แอดมินไม่ควรมีข้อมูลตัวอย่างของแต่ละโมดูล
+   *   เพราะแอดมินใช้ทดสอบสิทธิ์/หลังบ้าน ไม่ใช่ผู้ใช้จริง และเข้าได้ทุกโมดูลผ่าน BUFFET อยู่แล้ว
+   *   (ดูกฎ `.cursor/rules/seed-demo-data-skip-admin.mdc`)
+   * - หน้าแดชบอร์ดหลักของ user จะแสดงการ์ดโมดูลเฉพาะที่ subscribe → seed ต้องสมัครให้อัตโนมัติด้วย
    */
   const demoSeedDataOwnerEmails = [
     "user@mawell.local.com",
     "user@mawell.local",
-    "admin@mawell.local",
   ] as const;
 
   /** โมดูลที่มี prod demo seed — subscribe ให้ครบเพื่อเห็นการ์ดบนแดชบอร์ดและเข้าใช้ได้ทันที */
@@ -388,6 +402,8 @@ async function main() {
     HOME_FINANCE_BASIC_MODULE_SLUG,
     MQTT_SERVICE_MODULE_SLUG,
     LAUNDRY_MODULE_SLUG,
+    VAULT_MODULE_SLUG,
+    INVENTORY_MODULE_SLUG,
   ] as const;
 
   for (const slug of demoAutoSubscribeSlugs) {
@@ -616,6 +632,28 @@ async function main() {
     });
     if (row) {
       await tryDemoSeed(`laundry (${email})`, () => seedLaundryProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** คลังรหัสผ่าน — ตัวอย่าง 13 รายการ (Google, Facebook, LINE, GitHub ฯลฯ) */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`vault (${email})`, () => seedVaultProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** คลังสต๊อกสินค้า — 3 คลัง + 5 หมวด + 14 สินค้า + ประวัติเคลื่อนไหว 12 รายการ */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`inventory (${email})`, () => seedInventoryProdDemoForOwner(prisma, row.id));
     }
   }
 }

@@ -1,16 +1,10 @@
 import type { Metadata } from "next";
-import { ModuleRoadmapPage } from "@/components/dashboard/ModuleRoadmapPage";
+import { InventoryDashboardClient } from "@/systems/inventory/components/InventoryDashboardClient";
 
 export const metadata: Metadata = {
-  title: "สต็อก | MAWELL Buffet",
+  title: "คลัง · สต๊อกสินค้า",
 };
 
 export default function InventoryDashboardPage() {
-  return (
-    <ModuleRoadmapPage
-      emoji="📦"
-      title="ระบบคลังสินค้า"
-      description="รับ-จ่าย สต็อก หมวดหมู่ และใบโอน — วางโครง route แล้ว (แยกจากโมดูลกลุ่ม 2 ในแพ็กเกจ)"
-    />
-  );
+  return <InventoryDashboardClient />;
 }

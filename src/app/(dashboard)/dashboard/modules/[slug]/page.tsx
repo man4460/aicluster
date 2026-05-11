@@ -10,6 +10,7 @@ import {
   CAR_WASH_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   HOME_FINANCE_BASIC_MODULE_SLUG,
+  INVENTORY_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
@@ -58,6 +59,9 @@ export default async function ModuleEntryPage({ params }: Props) {
   }
   if (slug === VAULT_MODULE_SLUG) {
     redirect("/dashboard/vault");
+  }
+  if (slug === INVENTORY_MODULE_SLUG) {
+    redirect("/dashboard/inventory");
   }
   const { module: mod } = await requireModulePage(slug);
 

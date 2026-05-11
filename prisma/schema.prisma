@@ -135,6 +135,10 @@ model User {
   homeFinanceSlipExtractions HomeFinanceSlipExtraction[]
   homeFinanceCategories    HomeFinanceCategory[]
   vaultEntries             VaultEntry[]
+  inventoryWarehouses      InventoryWarehouse[]
+  inventoryCategories      InventoryCategory[]
+  inventoryItems           InventoryItem[]
+  inventoryMovements       InventoryMovement[]
   homeUtilityProfiles      HomeUtilityProfile[]
   homeVehicleProfiles      HomeVehicleProfile[]
   homeFinanceReminders     HomeFinanceReminder[]
@@ -1113,6 +1117,125 @@ model VaultEntry {
   @@index([ownerUserId, lastUsedAt])
   @@index([ownerUserId, category])
   @@map("vault_entries")
+}
+
+/** คลังสินค้า / โกดัง — โมดูล inventory */
+model InventoryWarehouse {
+  id          Int      @id @default(autoincrement())
+  ownerUserId String   @map("owner_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  code        String   @db.VarChar(32)
+  name        String   @db.VarChar(120)
+  address     String?  @db.VarChar(255)
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  stocks      InventoryStock[]
+  movementsFrom InventoryMovement[] @relation("InventoryMovementFromWarehouse")
+  movementsTo   InventoryMovement[] @relation("InventoryMovementToWarehouse")
+
+  @@unique([ownerUserId, code], map: "inventory_warehouses_owner_code_uq")
+  @@index([ownerUserId, isActive])
+  @@map("inventory_warehouses")
+}
+
+/** หมวดสินค้า — โมดูล inventory */
+model InventoryCategory {
+  id          Int      @id @default(autoincrement())
+  ownerUserId String   @map("owner_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(120)
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  items       InventoryItem[]
+
+  @@index([ownerUserId, isActive])
+  @@map("inventory_categories")
+}
+
+/** สินค้า — SKU/ราคาทุน/ราคาขาย/จุดสั่งซื้อ */
+model InventoryItem {
+  id          Int      @id @default(autoincrement())
+  ownerUserId String   @map("owner_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  sku         String   @db.VarChar(64)
+  name        String   @db.VarChar(160)
+  categoryId  Int?     @map("category_id")
+  category    InventoryCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  unit        String   @default("ชิ้น") @db.VarChar(24)
+  costPrice   Decimal  @default(0) @map("cost_price") @db.Decimal(12, 2)
+  salePrice   Decimal  @default(0) @map("sale_price") @db.Decimal(12, 2)
+  /** จุดสั่งซื้อ (reorder point) — แสดงเตือนเมื่อ stock รวมต่ำกว่าค่านี้ */
+  minStock    Int      @default(0) @map("min_stock")
+  imageUrl    String?  @map("image_url") @db.VarChar(500)
+  note        String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  stocks      InventoryStock[]
+  movements   InventoryMovement[]
+
+  @@unique([ownerUserId, sku], map: "inventory_items_owner_sku_uq")
+  @@index([ownerUserId, isActive])
+  @@index([ownerUserId, categoryId])
+  @@map("inventory_items")
+}
+
+/** สต๊อกคงเหลือต่อสินค้าต่อคลัง — atomic counter */
+model InventoryStock {
+  id          Int      @id @default(autoincrement())
+  ownerUserId String   @map("owner_id") @db.VarChar(191)
+  itemId      Int      @map("item_id")
+  item        InventoryItem      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  warehouseId Int      @map("warehouse_id")
+  warehouse   InventoryWarehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  quantity    Int      @default(0)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([itemId, warehouseId], map: "inventory_stock_item_warehouse_uq")
+  @@index([ownerUserId, warehouseId])
+  @@index([ownerUserId, itemId])
+  @@map("inventory_stocks")
+}
+
+enum InventoryMovementType {
+  IN
+  OUT
+  TRANSFER
+  ADJUST
+}
+
+/** ประวัติการเคลื่อนไหวสต๊อก */
+model InventoryMovement {
+  id              Int      @id @default(autoincrement())
+  ownerUserId     String   @map("owner_id") @db.VarChar(191)
+  owner           User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  type            InventoryMovementType
+  itemId          Int      @map("item_id")
+  item            InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  /** คลังต้นทาง (OUT/TRANSFER/ADJUST=ลด) */
+  fromWarehouseId Int?     @map("from_warehouse_id")
+  fromWarehouse   InventoryWarehouse? @relation("InventoryMovementFromWarehouse", fields: [fromWarehouseId], references: [id], onDelete: SetNull)
+  /** คลังปลายทาง (IN/TRANSFER/ADJUST=เพิ่ม) */
+  toWarehouseId   Int?     @map("to_warehouse_id")
+  toWarehouse     InventoryWarehouse? @relation("InventoryMovementToWarehouse", fields: [toWarehouseId], references: [id], onDelete: SetNull)
+  quantity        Int
+  /** ราคาทุนต่อหน่วยตอนเคลื่อนไหว (ถ้ามี) */
+  unitCost        Decimal? @map("unit_cost") @db.Decimal(12, 2)
+  reference       String?  @db.VarChar(120)
+  note            String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([ownerUserId, createdAt])
+  @@index([ownerUserId, itemId])
+  @@index([ownerUserId, type, createdAt])
+  @@map("inventory_movements")
 }
 
 /** หมวดของระบบรายรับ–รายจ่าย — รวมทั้ง built-in (isSystem=true, key=คงที่) และที่ผู้ใช้สร้างเอง (key=null) */
