@@ -806,11 +806,16 @@ export function CarWashCostPanel({
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">จำนวนเงิน (บาท)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-rose-500">฿</span>
+                  {!editEntryForm.amount && (
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-rose-500">฿</span>
+                  )}
                   <input
                     type="text"
                     inputMode="decimal"
-                    className="w-full rounded-xl border-slate-200 bg-white pl-10 pr-4 py-2.5 text-lg font-black tabular-nums text-rose-600 focus:ring-rose-500"
+                    className={cn(
+                      "w-full rounded-xl border-slate-200 bg-white pr-4 py-2.5 text-lg font-black tabular-nums text-rose-600 focus:ring-rose-500",
+                      editEntryForm.amount ? "pl-4" : "pl-10",
+                    )}
                     placeholder="0.00"
                     value={editEntryForm.amount}
                     onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, amount: ev.target.value } : s))}

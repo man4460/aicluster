@@ -264,6 +264,14 @@ async function main() {
       sortOrder: 34,
     },
     {
+      slug: "vault",
+      title: "คลังรหัสผ่าน",
+      description:
+        "กลุ่ม 1 (Basic) — เก็บ username/password ของบริการ Google · Facebook ฯลฯ แบบเข้ารหัส (ใช้งานฟรี ไม่หักโทเคนรายวัน)",
+      groupId: 1,
+      sortOrder: 36,
+    },
+    {
       slug: "laundry",
       title: "รับฝากซักผ้า",
       description:

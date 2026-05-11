@@ -84,6 +84,10 @@ export const SCHOOL_BANK_MODULE_GROUP_ID = 1 as const;
 export const COMMUNITY_COOP_MODULE_SLUG = "community-coop" as const;
 export const COMMUNITY_COOP_MODULE_GROUP_ID = 1 as const;
 
+/** คลังรหัสผ่าน — เก็บ username/password ของบริการต่าง ๆ ของผู้ใช้ */
+export const VAULT_MODULE_SLUG = "vault" as const;
+export const VAULT_MODULE_GROUP_ID = 1 as const;
+
 /**
  * โมดูลที่ไม่หักโทเคนรายวันเมื่อเข้าใช้ (`applyModuleDailyTokenDeduction`)
  * — แสดงบนการ์ดเป็น «ฟรี»
@@ -93,6 +97,7 @@ export const DAILY_TOKEN_EXEMPT_MODULE_SLUGS: ReadonlySet<string> = new Set([
   SCHOOL_BANK_MODULE_SLUG,
   COMMUNITY_COOP_MODULE_SLUG,
   PROMPT_LIBRARY_MODULE_SLUG,
+  VAULT_MODULE_SLUG,
 ]);
 
 export function isDailyTokenExemptModuleSlug(slug: string): boolean {
@@ -119,6 +124,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === DOC_TRANSMISSION_MODULE_SLUG) return "สารบรรณดิจิทัล";
   if (slug === PROMPT_LIBRARY_MODULE_SLUG) return "คลังคำสั่ง AI (Prompt)";
   if (slug === MEDIA_REGISTRY_MODULE_SLUG) return "ทะเบียนคุมสื่อ";
+  if (slug === VAULT_MODULE_SLUG) return "คลังรหัสผ่าน";
   return title;
 }
 
@@ -136,7 +142,7 @@ export const MODULE_GROUP_TIER_NAME: Record<number, string> = {
 
 /** สรุปฟีเจอร์ต่อกลุ่ม (ใช้ในหน้าแพ็กเกจ / คำอธิบาย) — ข้อความกระชับ */
 export const MODULE_GROUP_FEATURE_SUMMARY: Record<number, string> = {
-  1: "กลุ่ม 1: เช็คอิน · EduCare · สารบรรณ · คลัง Prompt · ทะเบียนสื่อ · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ทรัพย์สิน · ตัดผม · คาร์แคร์ · ซักผ้า · จอดรถ · คิวหน้าร้าน · POS",
+  1: "กลุ่ม 1: เช็คอิน · EduCare · สารบรรณ · คลัง Prompt · ทะเบียนสื่อ · คลังรหัสผ่าน · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ทรัพย์สิน · ตัดผม · คาร์แคร์ · ซักผ้า · จอดรถ · คิวหน้าร้าน · POS",
   2: "สต็อก · ใบเสร็จ",
   3: "วิเคราะห์ · แชทสาขา",
   4: "พนักงาน · เงินเดือน",

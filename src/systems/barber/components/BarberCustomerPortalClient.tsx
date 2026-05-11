@@ -242,12 +242,14 @@ export function BarberCustomerPortalClient({ ownerId }: { ownerId: string }) {
           <div className="px-5 py-5 sm:px-6">
             <form onSubmit={onSearch} className="flex items-stretch gap-2">
               <div className="relative min-w-0 flex-1">
-                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#9490c0]">
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
-                    <circle cx="11" cy="11" r="7" />
-                    <path d="m20 20-3.5-3.5" />
-                  </svg>
-                </span>
+                {!phone ? (
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#9490c0]">
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                      <circle cx="11" cy="11" r="7" />
+                      <path d="m20 20-3.5-3.5" />
+                    </svg>
+                  </span>
+                ) : null}
                 <input
                   type="tel"
                   inputMode="numeric"
@@ -255,7 +257,7 @@ export function BarberCustomerPortalClient({ ownerId }: { ownerId: string }) {
                   placeholder="เบอร์โทร เช่น 0812345678"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
-                  className="w-full rounded-2xl border border-white/70 bg-white/60 py-3.5 pl-11 pr-4 text-sm font-semibold text-[#1e1b4b] shadow-[inset_0_1px_2px_rgba(30,27,75,0.06)] backdrop-blur-sm outline-none transition-all placeholder:text-[#a8a5cc] focus:border-[#5b61ff]/50 focus:bg-white/80 focus:ring-2 focus:ring-[#5b61ff]/15"
+                  className={`w-full rounded-2xl border border-white/70 bg-white/60 py-3.5 ${phone ? "pl-4" : "pl-11"} pr-4 text-sm font-semibold text-[#1e1b4b] shadow-[inset_0_1px_2px_rgba(30,27,75,0.06)] backdrop-blur-sm outline-none transition-all placeholder:text-[#a8a5cc] focus:border-[#5b61ff]/50 focus:bg-white/80 focus:ring-2 focus:ring-[#5b61ff]/15`}
                 />
               </div>
               <button

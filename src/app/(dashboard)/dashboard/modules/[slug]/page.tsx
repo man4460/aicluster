@@ -13,6 +13,7 @@ import {
   LAUNDRY_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
+  VAULT_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
   MODULE_GROUP_TIER_NAME,
   displayAppModuleTitle,
@@ -54,6 +55,9 @@ export default async function ModuleEntryPage({ params }: Props) {
   }
   if (slug === PARKING_MODULE_SLUG) {
     redirect("/dashboard/parking");
+  }
+  if (slug === VAULT_MODULE_SLUG) {
+    redirect("/dashboard/vault");
   }
   const { module: mod } = await requireModulePage(slug);
 

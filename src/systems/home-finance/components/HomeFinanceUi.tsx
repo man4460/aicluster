@@ -32,6 +32,9 @@ export function HomeFinanceSectionHeader(props: {
   title: string;
   description?: ReactNode;
   action?: ReactNode;
+  /** ปรับเลย์เอาต์หัวการ์ดบนมือถือ (ตามกฎ dashboard-mobile-list-header-actions.mdc) */
+  className?: string;
+  actionWrapClassName?: string;
 }) {
   return <AppSectionHeader {...props} tone="slate" />;
 }

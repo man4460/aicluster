@@ -19,6 +19,7 @@ import {
   MEDIA_REGISTRY_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
+  VAULT_MODULE_SLUG,
 } from "@/lib/modules/config";
 import { SYSTEM_MAP_CATALOG_SLUG } from "@/lib/modules/system-map-catalog";
 import { CHAT_AI_DASHBOARD_HREF, resolveDashboardNavLinkHref } from "@/lib/dashboard/chat-ai-href";
@@ -54,6 +55,7 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === DOC_TRANSMISSION_MODULE_SLUG) return "/dashboard/doc-transmission";
   if (slug === PROMPT_LIBRARY_MODULE_SLUG) return "/dashboard/prompt-library";
   if (slug === MEDIA_REGISTRY_MODULE_SLUG) return "/dashboard/media-registry";
+  if (slug === VAULT_MODULE_SLUG) return "/dashboard/vault";
   return `/dashboard/modules/${slug}`;
 }
 

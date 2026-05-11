@@ -69,6 +69,7 @@ import {
   MAX_HOME_FINANCE_ATTACHMENTS,
   normalizeVehicleAttachmentUrls,
 } from "@/lib/home-finance/attachments";
+import { HOME_FINANCE_BUILTIN_CATEGORIES } from "@/lib/home-finance/builtin-categories";
 import { cn } from "@/lib/cn";
 import {
   deriveHomeFinanceSection,
@@ -105,7 +106,16 @@ type Entry = {
   linkedVehicle: { id: number; label: string; plateNumber: string | null; vehicleType: string } | null;
 };
 
-type Category = { id: number; name: string; isActive: boolean; sortOrder: number };
+type Category = {
+  id: number;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+  /** built-in key คงที่ (เช่น `UTILITIES_ELECTRIC`) — null สำหรับหมวดที่ผู้ใช้สร้างเอง */
+  systemKey: string | null;
+  /** ลบไม่ได้ ปิดใช้งานได้ */
+  isSystem: boolean;
+};
 type Utility = {
   id: number;
   utilityType: "ELECTRIC" | "WATER";
@@ -178,21 +188,11 @@ function entryAutoTitleFromVehicle(v: Vehicle): string {
   return `${v.label}${plate} (${kind})`;
 }
 
-const CATEGORIES = [
-  { key: "UTILITIES_ELECTRIC", label: "ค่าไฟฟ้า" },
-  { key: "UTILITIES_WATER", label: "ค่าน้ำประปา" },
-  { key: "VEHICLE_CAR", label: "รถยนต์" },
-  { key: "VEHICLE_MOTORCYCLE", label: "รถจักรยานยนต์" },
-  { key: "VEHICLE_SERVICE", label: "ซ่อม/เข้าศูนย์รถ" },
-  { key: "GENERAL_FOOD", label: "ค่าอาหาร" },
-  { key: "GENERAL_HOME_REPAIR", label: "ค่าซ่อมบ้าน" },
-  { key: "GENERAL_SHOPPING", label: "ของใช้ในบ้าน" },
-  { key: "GENERAL_HEALTH", label: "สุขภาพ/ยา" },
-  { key: "GENERAL_EDUCATION", label: "การศึกษา" },
-  { key: "GENERAL_TRAVEL", label: "เดินทาง" },
-  { key: "GENERAL_INCOME", label: "รายรับทั่วไป" },
-  { key: "OTHER", label: "อื่นๆ" },
-] as const;
+/**
+ * fallback ระหว่างรอ API — เมื่อโหลด `loadMeta()` เสร็จ ระบบจะใช้ `categories` จาก DB แทน
+ * (built-in ถูก seed ลง DB อัตโนมัติฝั่ง server)
+ */
+const CATEGORIES = HOME_FINANCE_BUILTIN_CATEGORIES.map((c) => ({ key: c.key, label: c.name }));
 
 /** โยนเมื่ออัปโหลดถูกยกเลิกเพราะหมดเวลา (ไฟล์ใหญ่/เน็ตช้า) */
 const HOME_FINANCE_UPLOAD_TIMEOUT = "HOME_FINANCE_UPLOAD_TIMEOUT";
@@ -586,8 +586,20 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
     }));
   }, []);
 
-  const [categoryAddModalOpen, setCategoryAddModalOpen] = useState(false);
-  const [customCategoryName, setCustomCategoryName] = useState("");
+  /** โมดัลเพิ่ม/แก้ไขหมวดกำหนดเอง — id=null คือโหมดเพิ่ม */
+  const [categoryFormModalOpen, setCategoryFormModalOpen] = useState(false);
+  const [categoryFormId, setCategoryFormId] = useState<number | null>(null);
+  const [categoryForm, setCategoryForm] = useState({
+    name: "",
+    sortOrder: "100",
+    isActive: true,
+  });
+  const [categoryFormError, setCategoryFormError] = useState<string | null>(null);
+  const [categoryFormBusy, setCategoryFormBusy] = useState(false);
+  /** โมดัลยืนยันการลบหมวด */
+  const [categoryDeleteTarget, setCategoryDeleteTarget] = useState<Category | null>(null);
+  const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null);
+  const [categoryDeleteBusy, setCategoryDeleteBusy] = useState(false);
   const [utilityForm, setUtilityForm] = useState({
     utilityType: "ELECTRIC" as "ELECTRIC" | "WATER",
     label: "",
@@ -759,13 +771,21 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
     }
   }, [vehicleEditModalId]);
 
-  const categoryOptions = useMemo(
-    () => [
-      ...CATEGORIES.map((c) => ({ key: c.key, label: c.label })),
-      ...categories.filter((c) => c.isActive).map((c) => ({ key: `CUSTOM_${c.id}`, label: c.name })),
-    ],
-    [categories],
-  );
+  /**
+   * ตัวเลือกหมวดในฟอร์มรายรับ–รายจ่าย — มาจาก DB เท่านั้น (built-in ถูก seed อัตโนมัติ)
+   * — ถ้า DB ยังไม่ตอบ ใช้ CATEGORIES (ค่าเริ่มต้นทั้ง 13) เป็น fallback ไม่ให้ dropdown ว่าง
+   */
+  const categoryOptions = useMemo(() => {
+    if (categories.length === 0) {
+      return CATEGORIES.map((c) => ({ key: c.key, label: c.label }));
+    }
+    return categories
+      .filter((c) => c.isActive)
+      .map((c) => ({
+        key: c.systemKey ?? `CUSTOM_${c.id}`,
+        label: c.name,
+      }));
+  }, [categories]);
   const showVehicleFields = categoryKey.startsWith("VEHICLE_");
   const showVehicleTypeField = showVehicleFields && !isStandaloneVehicleCategoryKey(categoryKey);
 
@@ -1326,57 +1346,125 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
     if (savedOk) void loadEntries();
   }
 
-  function openCategoryAddModal() {
-    setError(null);
-    setCustomCategoryName("");
-    setCategoryAddModalOpen(true);
+  function openCategoryCreateModal() {
+    setCategoryFormError(null);
+    setCategoryFormId(null);
+    setCategoryForm({ name: "", sortOrder: "100", isActive: true });
+    setCategoryFormModalOpen(true);
   }
 
-  function closeCategoryAddModal() {
-    setCategoryAddModalOpen(false);
-    setCustomCategoryName("");
-    setError(null);
-  }
-
-  async function addCategory() {
-    if (!customCategoryName.trim()) return;
-    setError(null);
-    let res: Response;
-    try {
-      res = await fetch("/api/home-finance/categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: customCategoryName.trim() }),
-      });
-    } catch (e) {
-      setError(fetchErrorMessage(e));
-      return;
-    }
-    const j = (await res.json().catch(() => ({}))) as { error?: string };
-    if (!res.ok) {
-      const msg = typeof j.error === "string" && j.error.trim() ? j.error.trim() : "";
-      setError(msg || `เพิ่มหมวดไม่สำเร็จ (รหัส ${res.status})`);
-      return;
-    }
-    closeCategoryAddModal();
-    await loadMeta();
-  }
-
-  async function renameCategory(id: number, current: string) {
-    const name = prompt("ชื่อหมวดใหม่", current);
-    if (!name || !name.trim()) return;
-    await fetch(`/api/home-finance/categories/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim() }),
+  function openCategoryEditModal(c: Category) {
+    setCategoryFormError(null);
+    setCategoryFormId(c.id);
+    setCategoryForm({
+      name: c.name,
+      sortOrder: String(c.sortOrder ?? 100),
+      isActive: c.isActive,
     });
-    await loadMeta();
+    setCategoryFormModalOpen(true);
   }
 
-  async function deleteCategory(id: number) {
-    if (!confirm("ลบหมวดนี้?")) return;
-    await fetch(`/api/home-finance/categories/${id}`, { method: "DELETE" });
-    await loadMeta();
+  function closeCategoryFormModal() {
+    if (categoryFormBusy) return;
+    setCategoryFormModalOpen(false);
+    setCategoryFormError(null);
+    setCategoryFormId(null);
+  }
+
+  async function submitCategoryForm() {
+    const name = categoryForm.name.trim();
+    if (!name) {
+      setCategoryFormError("กรอกชื่อหมวด");
+      return;
+    }
+    if (name.length > 100) {
+      setCategoryFormError("ชื่อหมวดยาวเกินไป (สูงสุด 100 ตัวอักษร)");
+      return;
+    }
+    const rawOrder = categoryForm.sortOrder.trim();
+    let sortOrder: number | undefined;
+    if (rawOrder !== "") {
+      const parsed = Number(rawOrder);
+      if (!Number.isInteger(parsed) || parsed < 1 || parsed > 999) {
+        setCategoryFormError("ลำดับต้องเป็นจำนวนเต็ม 1–999");
+        return;
+      }
+      sortOrder = parsed;
+    }
+
+    setCategoryFormError(null);
+    setCategoryFormBusy(true);
+    try {
+      const isEdit = categoryFormId !== null;
+      const url = isEdit
+        ? `/api/home-finance/categories/${categoryFormId}`
+        : "/api/home-finance/categories";
+      const body: Record<string, unknown> = { name };
+      if (sortOrder !== undefined) body.sortOrder = sortOrder;
+      if (isEdit) body.isActive = categoryForm.isActive;
+
+      let res: Response;
+      try {
+        res = await fetch(url, {
+          method: isEdit ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      } catch (e) {
+        setCategoryFormError(fetchErrorMessage(e));
+        return;
+      }
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        const msg = typeof j.error === "string" && j.error.trim() ? j.error.trim() : "";
+        setCategoryFormError(
+          msg || `${isEdit ? "แก้ไข" : "เพิ่ม"}หมวดไม่สำเร็จ (รหัส ${res.status})`,
+        );
+        return;
+      }
+      setCategoryFormModalOpen(false);
+      setCategoryFormId(null);
+      await loadMeta();
+    } finally {
+      setCategoryFormBusy(false);
+    }
+  }
+
+  function openCategoryDeleteModal(c: Category) {
+    setCategoryDeleteError(null);
+    setCategoryDeleteTarget(c);
+  }
+
+  function closeCategoryDeleteModal() {
+    if (categoryDeleteBusy) return;
+    setCategoryDeleteTarget(null);
+    setCategoryDeleteError(null);
+  }
+
+  async function confirmCategoryDelete() {
+    const target = categoryDeleteTarget;
+    if (!target) return;
+    setCategoryDeleteError(null);
+    setCategoryDeleteBusy(true);
+    try {
+      let res: Response;
+      try {
+        res = await fetch(`/api/home-finance/categories/${target.id}`, { method: "DELETE" });
+      } catch (e) {
+        setCategoryDeleteError(fetchErrorMessage(e));
+        return;
+      }
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        const msg = typeof j.error === "string" && j.error.trim() ? j.error.trim() : "";
+        setCategoryDeleteError(msg || `ลบหมวดไม่สำเร็จ (รหัส ${res.status})`);
+        return;
+      }
+      setCategoryDeleteTarget(null);
+      await loadMeta();
+    } finally {
+      setCategoryDeleteBusy(false);
+    }
   }
 
   async function addUtility() {
@@ -2042,7 +2130,8 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
       !utilityAddModalOpen &&
       vehicleEditModalId == null &&
       !vehicleAddModalOpen &&
-      !categoryAddModalOpen &&
+      !categoryFormModalOpen &&
+      !categoryDeleteTarget &&
       !reminderAddModalOpen ? (
         <div
           role="alert"
@@ -2357,6 +2446,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                       "rounded-xl border px-3 py-1.5 text-xs font-semibold",
                       densityMode === "compact" ? "border-[#4d47b6]/40 bg-[#ecebff] text-[#4d47b6]" : "border-slate-200 bg-white text-slate-700",
                     )}
+                    suppressHydrationWarning
                   >
                     กระชับ
                   </button>
@@ -2367,6 +2457,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                       "rounded-xl border px-3 py-1.5 text-xs font-semibold",
                       densityMode === "comfortable" ? "border-[#4d47b6]/40 bg-[#ecebff] text-[#4d47b6]" : "border-slate-200 bg-white text-slate-700",
                     )}
+                    suppressHydrationWarning
                   >
                     สบายตา
                   </button>
@@ -2386,6 +2477,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                       URL.revokeObjectURL(url);
                     }}
                     className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+                    suppressHydrationWarning
                   >
                     ส่งออก CSV
                   </button>
@@ -2396,6 +2488,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                       openPrintableHtml(html);
                     }}
                     className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+                    suppressHydrationWarning
                   >
                     พิมพ์/ส่งออก PDF
                   </button>
@@ -2797,17 +2890,27 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
         <HomeFinancePageSection>
           <HomeFinanceSectionHeader
             title="หมวดกำหนดเอง"
-            description="เพิ่มชื่อหมวดเพื่อใช้ในฟอร์มรายรับ–รายจ่าย"
+            description="เพิ่มชื่อหมวด ลำดับการแสดงผล และเปิด/ปิดใช้งาน เพื่อใช้ในฟอร์มรายรับ–รายจ่าย"
+            className="flex flex-row items-start justify-between gap-3 sm:items-center"
+            actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
             action={
-              <HomeFinanceToolbarButton type="button" onClick={() => openCategoryAddModal()}>
-                เพิ่มหมวด
-              </HomeFinanceToolbarButton>
+              <button
+                type="button"
+                onClick={() => openCategoryCreateModal()}
+                aria-label="เพิ่มหมวด"
+                className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl bg-[#0000BF] px-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0000a6] sm:min-w-0 sm:px-4"
+              >
+                <span className="text-lg leading-none sm:hidden" aria-hidden>
+                  +
+                </span>
+                <span className="hidden sm:inline">+ เพิ่มหมวด</span>
+              </button>
             }
           />
           <div>
             <HomeFinanceListHeading>รายการหมวด ({categories.length})</HomeFinanceListHeading>
             {categories.length === 0 ? (
-              <HomeFinanceEmptyState>ยังไม่มีหมวด — กด &quot;เพิ่มหมวด&quot;</HomeFinanceEmptyState>
+              <HomeFinanceEmptyState>ยังไม่มีหมวด — กดปุ่ม &quot;+ เพิ่มหมวด&quot;</HomeFinanceEmptyState>
             ) : (
               <HomeFinanceList as="ul" listRole="รายการหมวด">
                 {categories.map((c) => (
@@ -2815,6 +2918,14 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                     <HomeFinanceEntityRow>
                       <HomeFinanceEntityMain className="flex-wrap">
                         <p className="text-sm font-semibold text-slate-900">{c.name}</p>
+                        {c.isSystem ? (
+                          <span className="shrink-0 rounded-full bg-[#ecebff] px-2 py-0.5 text-[10px] font-semibold leading-tight text-[#4d47b6] ring-1 ring-[#4d47b6]/30">
+                            พื้นฐาน
+                          </span>
+                        ) : null}
+                        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium leading-tight text-slate-600 ring-1 ring-slate-200/80">
+                          ลำดับ {c.sortOrder}
+                        </span>
                         <span
                           className={cn(
                             "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold leading-tight",
@@ -2827,15 +2938,24 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                         </span>
                       </HomeFinanceEntityMain>
                       <HomeFinanceEntityActions>
-                        <HomeFinanceRowActionButton
+                        <HomeFinanceRowActionIconButton
                           variant="primary"
-                          onClick={() => void renameCategory(c.id, c.name)}
+                          title="แก้ไข"
+                          aria-label={`แก้ไขหมวด ${c.name}`}
+                          onClick={() => openCategoryEditModal(c)}
                         >
-                          แก้ไข
-                        </HomeFinanceRowActionButton>
-                        <HomeFinanceRowActionButton variant="danger" onClick={() => void deleteCategory(c.id)}>
-                          ลบ
-                        </HomeFinanceRowActionButton>
+                          <HomeFinanceRowIconEdit />
+                        </HomeFinanceRowActionIconButton>
+                        {c.isSystem ? null : (
+                          <HomeFinanceRowActionIconButton
+                            variant="danger"
+                            title="ลบ"
+                            aria-label={`ลบหมวด ${c.name}`}
+                            onClick={() => openCategoryDeleteModal(c)}
+                          >
+                            <HomeFinanceRowIconTrash />
+                          </HomeFinanceRowActionIconButton>
+                        )}
                       </HomeFinanceEntityActions>
                     </HomeFinanceEntityRow>
                   </li>
@@ -2944,39 +3064,131 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
         </HomeFinanceModalBackdrop>
       ) : null}
 
-      {categoryAddModalOpen ? (
-        <HomeFinanceModalBackdrop onBackdropClick={() => closeCategoryAddModal()}>
+      {categoryFormModalOpen ? (
+        <HomeFinanceModalBackdrop onBackdropClick={() => closeCategoryFormModal()}>
           <HomeFinanceModalPanel
-            title="เพิ่มหมวดใหม่"
-            titleId="category-add-title"
-            onClose={() => closeCategoryAddModal()}
-            error={error}
+            title={categoryFormId === null ? "เพิ่มหมวดใหม่" : "แก้ไขหมวด"}
+            titleId="category-form-title"
+            onClose={() => closeCategoryFormModal()}
+            error={categoryFormError}
           >
             <form
               noValidate
               className="space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
-                void addCategory();
+                void submitCategoryForm();
               }}
             >
+              {categoryFormId !== null &&
+              categories.find((c) => c.id === categoryFormId)?.isSystem ? (
+                <p className="rounded-2xl border border-[#4d47b6]/25 bg-[#ecebff]/80 px-3.5 py-2.5 text-xs leading-relaxed text-[#3d3795]">
+                  หมวดพื้นฐานของระบบ — เปลี่ยนชื่อ/ลำดับ/เปิด–ปิดใช้งานได้
+                  แต่ลบไม่ได้ (เพื่อรักษาความเชื่อมโยงกับบิลค่าน้ำ-ค่าไฟ-รถ
+                  และการอ่านสลิปอัตโนมัติ)
+                </p>
+              ) : null}
               <Field label="ชื่อหมวด">
                 <input
-                  value={customCategoryName}
-                  onChange={(e) => setCustomCategoryName(e.target.value)}
+                  value={categoryForm.name}
+                  onChange={(e) => setCategoryForm((s) => ({ ...s, name: e.target.value }))}
                   className={inputClz}
                   placeholder="เช่น เบ็ดเตล็ด / เงินเดือน"
+                  maxLength={100}
                   required
                   autoFocus
+                  disabled={categoryFormBusy}
                 />
               </Field>
+              <Field label="ลำดับการแสดง (1–999)">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={999}
+                  step={1}
+                  value={categoryForm.sortOrder}
+                  onChange={(e) => setCategoryForm((s) => ({ ...s, sortOrder: e.target.value }))}
+                  className={inputClz}
+                  placeholder="100"
+                  disabled={categoryFormBusy}
+                />
+              </Field>
+              {categoryFormId !== null ? (
+                <label className="flex items-center gap-2 rounded-2xl border border-white/70 bg-white/70 px-3.5 py-3 text-sm font-medium text-[#3a3666] shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300 text-[#0000BF] focus:ring-[#5a57d8]/30"
+                    checked={categoryForm.isActive}
+                    onChange={(e) =>
+                      setCategoryForm((s) => ({ ...s, isActive: e.target.checked }))
+                    }
+                    disabled={categoryFormBusy}
+                  />
+                  <span>เปิดใช้งาน (แสดงในตัวเลือกหมวดบนฟอร์มรายการ)</span>
+                </label>
+              ) : null}
               <HomeFinanceModalActionBar>
-                <HomeFinanceSecondaryButton type="button" onClick={() => closeCategoryAddModal()}>
+                <HomeFinanceSecondaryButton
+                  type="button"
+                  onClick={() => closeCategoryFormModal()}
+                  disabled={categoryFormBusy}
+                >
                   ยกเลิก
                 </HomeFinanceSecondaryButton>
-                <HomeFinancePrimaryButton type="submit">เพิ่มหมวด</HomeFinancePrimaryButton>
+                <HomeFinancePrimaryButton type="submit" disabled={categoryFormBusy}>
+                  {categoryFormBusy
+                    ? "กำลังบันทึก…"
+                    : categoryFormId === null
+                      ? "เพิ่มหมวด"
+                      : "บันทึก"}
+                </HomeFinancePrimaryButton>
               </HomeFinanceModalActionBar>
             </form>
+          </HomeFinanceModalPanel>
+        </HomeFinanceModalBackdrop>
+      ) : null}
+
+      {categoryDeleteTarget ? (
+        <HomeFinanceModalBackdrop onBackdropClick={() => closeCategoryDeleteModal()}>
+          <HomeFinanceModalPanel
+            title="ยืนยันลบหมวด"
+            titleId="category-delete-title"
+            onClose={() => closeCategoryDeleteModal()}
+            error={categoryDeleteError}
+            maxWidthClassName="max-w-md"
+          >
+            <div className="space-y-4">
+              <p className="text-sm text-[#3a3666]">
+                ต้องการลบหมวด{" "}
+                <span className="font-semibold text-[#0000BF]">
+                  &quot;{categoryDeleteTarget.name}&quot;
+                </span>{" "}
+                หรือไม่?
+              </p>
+              <p className="rounded-2xl border border-amber-200/70 bg-amber-50/80 px-3.5 py-2.5 text-xs leading-relaxed text-amber-800">
+                รายการรายรับ–รายจ่ายเดิมที่เคยใช้หมวดนี้จะยังคงอยู่
+                แต่จะไม่สามารถเลือกหมวดนี้ในการบันทึกรายการใหม่
+                หากต้องการเก็บประวัติแล้วซ่อนจากตัวเลือก แนะนำให้ &quot;แก้ไข&quot; แล้วปิดใช้งานแทน
+              </p>
+              <HomeFinanceModalActionBar>
+                <HomeFinanceSecondaryButton
+                  type="button"
+                  onClick={() => closeCategoryDeleteModal()}
+                  disabled={categoryDeleteBusy}
+                >
+                  ยกเลิก
+                </HomeFinanceSecondaryButton>
+                <HomeFinancePrimaryButton
+                  type="button"
+                  className="from-rose-500 to-rose-600 shadow-[0_16px_26px_-18px_rgba(190,18,60,0.7)]"
+                  onClick={() => void confirmCategoryDelete()}
+                  disabled={categoryDeleteBusy}
+                >
+                  {categoryDeleteBusy ? "กำลังลบ…" : "ลบหมวด"}
+                </HomeFinancePrimaryButton>
+              </HomeFinanceModalActionBar>
+            </div>
           </HomeFinanceModalPanel>
         </HomeFinanceModalBackdrop>
       ) : null}
@@ -4173,14 +4385,16 @@ function AmountField({
   return (
     <Field label={label}>
       <div className="relative">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#59558b]">
-          ฿
-        </span>
+        {!value ? (
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#59558b]">
+            ฿
+          </span>
+        ) : null}
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           inputMode="decimal"
-          className={cn(inputClz, "pl-8")}
+          className={cn(inputClz, value ? "pl-3" : "pl-8")}
           placeholder={placeholder}
         />
       </div>
@@ -4235,6 +4449,7 @@ function QuickChip({ active, onClick, children }: { active: boolean; onClick: ()
           ? "rounded-full bg-[#0000BF] px-3 py-1.5 text-xs font-semibold text-white"
           : "rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700"
       }
+      suppressHydrationWarning
     >
       {children}
     </button>

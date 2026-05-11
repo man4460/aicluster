@@ -66,6 +66,12 @@ export async function DELETE(_req: Request, ctx: Ctx) {
     where: { id, ownerUserId: mod.billingUserId },
   });
   if (!existing) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
+  if (existing.isSystem) {
+    return NextResponse.json(
+      { error: "ไม่สามารถลบหมวดพื้นฐาน — เลือก \"ปิดใช้งาน\" แทน" },
+      { status: 400 },
+    );
+  }
   await prisma.homeFinanceCategory.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

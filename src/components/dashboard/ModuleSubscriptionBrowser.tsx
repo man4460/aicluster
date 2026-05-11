@@ -257,17 +257,19 @@ export function ModuleSubscriptionBrowser({
         <div className="rounded-3xl border border-white/60 bg-white/70 p-4 shadow-[0_8px_30px_-10px_rgba(0,0,0,0.1)] backdrop-blur-xl ring-1 ring-slate-200/50">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="relative flex-1 max-w-md">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-                <svg className="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-                </svg>
-              </div>
+              {!q ? (
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                  <svg className="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+                  </svg>
+                </div>
+              ) : null}
               <input
                 suppressHydrationWarning
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="ค้นหาระบบที่คุณสนใจ..."
-                className="app-input w-full rounded-2xl border-slate-200/60 bg-white/50 pl-10 pr-4 py-2.5 text-sm transition-all focus:bg-white focus:ring-2 focus:ring-[#5b61ff]/20"
+                className={`app-input w-full rounded-2xl border-slate-200/60 bg-white/50 ${q ? "pl-4" : "pl-10"} pr-4 py-2.5 text-sm transition-all focus:bg-white focus:ring-2 focus:ring-[#5b61ff]/20`}
               />
             </div>
             <div className="flex items-center gap-3">

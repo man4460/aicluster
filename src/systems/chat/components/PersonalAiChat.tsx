@@ -715,9 +715,11 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
             </div>
             <div className="flex items-end gap-2">
               <div className="relative min-w-0 flex-1">
-                <div className="pointer-events-none absolute left-3 top-2.5 text-[#0000BF]/55 sm:top-3">
-                  <AiSparklesIcon className="h-4 w-4" />
-                </div>
+                {!input ? (
+                  <div className="pointer-events-none absolute left-3 top-2.5 text-[#0000BF]/55 sm:top-3">
+                    <AiSparklesIcon className="h-4 w-4" />
+                  </div>
+                ) : null}
                 <textarea
                   ref={textareaRef}
                   value={input}
@@ -726,7 +728,7 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
                   rows={2}
                   maxLength={4000}
                   placeholder="พิมพ์ข้อความ… (Enter ส่ง · Shift+Enter ขึ้นบรรทัด)"
-                  className="min-h-[48px] w-full resize-none rounded-xl border border-[#e4e2f5] bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 shadow-inner shadow-slate-900/5 outline-none placeholder:text-slate-400 focus:border-[#0000BF] focus:ring-2 focus:ring-[#0000BF]/25 sm:min-h-[52px] sm:py-3"
+                  className={`min-h-[48px] w-full resize-none rounded-xl border border-[#e4e2f5] bg-white py-2.5 ${input ? "pl-3" : "pl-10"} pr-3 text-sm text-slate-900 shadow-inner shadow-slate-900/5 outline-none placeholder:text-slate-400 focus:border-[#0000BF] focus:ring-2 focus:ring-[#0000BF]/25 sm:min-h-[52px] sm:py-3`}
                 />
               </div>
               <div className="flex shrink-0 gap-1.5 self-end pb-0.5 sm:gap-2 sm:pb-1">

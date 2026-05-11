@@ -134,6 +134,7 @@ model User {
   homeFinanceEntries       HomeFinanceEntry[]
   homeFinanceSlipExtractions HomeFinanceSlipExtraction[]
   homeFinanceCategories    HomeFinanceCategory[]
+  vaultEntries             VaultEntry[]
   homeUtilityProfiles      HomeUtilityProfile[]
   homeVehicleProfiles      HomeVehicleProfile[]
   homeFinanceReminders     HomeFinanceReminder[]
@@ -1087,11 +1088,42 @@ model HomeFinanceSlipExtraction {
   @@map("home_finance_slip_extractions")
 }
 
-/** หมวดแบบกำหนดเองของผู้ใช้ */
+/**
+ * คลังรหัสผ่าน (vault) — เก็บ username/password ของบริการต่าง ๆ ของผู้ใช้
+ * passwordEnc = AES-256-GCM blob (base64url) ใช้ key จาก AUTH_SECRET
+ */
+model VaultEntry {
+  id            Int       @id @default(autoincrement())
+  ownerUserId   String    @map("owner_id") @db.VarChar(191)
+  owner         User      @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  serviceName   String    @map("service_name") @db.VarChar(120)
+  username      String    @db.VarChar(255)
+  passwordEnc   String    @map("password_enc") @db.Text
+  websiteUrl    String?   @map("website_url") @db.VarChar(500)
+  category      String?   @db.VarChar(64)
+  /** preset ของ brand เช่น google/facebook/instagram — ใช้แสดงไอคอน/สี ในการ์ด */
+  brandKey      String?   @map("brand_key") @db.VarChar(64)
+  note          String?   @db.Text
+  isFavorite    Boolean   @default(false) @map("is_favorite")
+  lastUsedAt    DateTime? @map("last_used_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, isFavorite])
+  @@index([ownerUserId, lastUsedAt])
+  @@index([ownerUserId, category])
+  @@map("vault_entries")
+}
+
+/** หมวดของระบบรายรับ–รายจ่าย — รวมทั้ง built-in (isSystem=true, key=คงที่) และที่ผู้ใช้สร้างเอง (key=null) */
 model HomeFinanceCategory {
   id          Int      @id @default(autoincrement())
   ownerUserId String   @map("owner_id") @db.VarChar(191)
   owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  /** built-in key เช่น `UTILITIES_ELECTRIC` — null สำหรับหมวดที่ผู้ใช้สร้างเอง */
+  systemKey   String?  @map("system_key") @db.VarChar(64)
+  /** built-in หมวดหลัก ลบไม่ได้ ปิดใช้งานได้ */
+  isSystem    Boolean  @default(false) @map("is_system")
   name        String   @db.VarChar(100)
   sortOrder   Int      @default(100) @map("sort_order")
   isActive    Boolean  @default(true) @map("is_active")
@@ -1100,6 +1132,7 @@ model HomeFinanceCategory {
 
   @@index([ownerUserId, isActive])
   @@unique([ownerUserId, name])
+  @@unique([ownerUserId, systemKey])
   @@map("home_finance_categories")
 }
 
