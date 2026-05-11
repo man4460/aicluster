@@ -1,7 +1,11 @@
 "use client";
 
 import { useId, type ChangeEvent } from "react";
-import { isHomeFinancePdfUrl } from "@/lib/home-finance/attachments";
+import {
+  encodeHomeFinancePublicAssetHref,
+  isHomeFinancePdfUrl,
+  normalizeHomeFinanceStoredPath,
+} from "@/lib/home-finance/attachments";
 import { cn } from "@/lib/cn";
 
 /** แสดงในฟอร์มทันทีหลังเลือกไฟล์ — อัปโหลดเสร็จแล้วแทนที่ด้วย URL จากเซิร์ฟเวอร์ */
@@ -55,7 +59,9 @@ function fileBasename(url: string): string {
 
 /** ใช้ path เดียวกันบน SSR กับ client — ห้ามต่อ origin ตอน render (กัน hydration) */
 function resolvePublicUrl(u: string): string {
-  return u.trim();
+  const t = u.trim();
+  const canon = normalizeHomeFinanceStoredPath(t) ?? t;
+  return encodeHomeFinancePublicAssetHref(canon);
 }
 
 function pickSingleFile(

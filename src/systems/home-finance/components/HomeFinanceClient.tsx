@@ -64,6 +64,7 @@ import {
   type HomeFinancePendingUpload,
 } from "@/systems/home-finance/components/HomeFinanceEntryAttachmentsUi";
 import {
+  encodeHomeFinancePublicAssetHref,
   isHomeFinancePdfUrl,
   MAX_HOME_FINANCE_ATTACHMENTS,
   normalizeVehicleAttachmentUrls,
@@ -1905,8 +1906,8 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   }
 
   function openFinanceAttachmentUrl(url: string) {
-    if (isHomeFinancePdfUrl(url)) window.open(url, "_blank", "noopener,noreferrer");
-    else imageLightbox.open(url);
+    if (isHomeFinancePdfUrl(url)) window.open(encodeHomeFinancePublicAssetHref(url), "_blank", "noopener,noreferrer");
+    else imageLightbox.open(encodeHomeFinancePublicAssetHref(url));
   }
 
   const openLocalFinancePreview = useCallback((objectUrl: string, isPdf: boolean) => {
@@ -2597,8 +2598,8 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                       {entrySlipImageUrl ? (
                         <>
                           <AppImageThumb
-                            src={entrySlipImageUrl}
-                            onOpen={() => imageLightbox.open(entrySlipImageUrl)}
+                            src={encodeHomeFinancePublicAssetHref(entrySlipImageUrl)}
+                            onOpen={() => imageLightbox.open(encodeHomeFinancePublicAssetHref(entrySlipImageUrl))}
                           />
                           <HomeFinanceSecondaryButton type="button" onClick={() => setEntrySlipImageUrl(null)}>
                             ลบรูป

@@ -1,19 +1,48 @@
 /** จำนวนไฟล์แนบสูงสุดต่อรายการรายรับ–รายจ่าย */
 export const MAX_HOME_FINANCE_ATTACHMENTS = 20;
 
+const LEGACY_HOME_FINANCE_SLIP_PREFIX = "/uploads/home-finance-mawell/";
+
+function rewriteLegacyHomeFinancePath(path: string): string {
+  if (!path.startsWith(LEGACY_HOME_FINANCE_SLIP_PREFIX)) return path;
+  return `/uploads/home-finance/${path.slice(LEGACY_HOME_FINANCE_SLIP_PREFIX.length)}`;
+}
+
+/**
+ * สำหรับ `src` / `href` ของรูปใต้ `/uploads/` — เข้ารหัสทีละ segment กันโหลดไม่ขึ้นเมื่อชื่อไฟล์มีไทย/ช่องว่าง
+ * (เก็บ path ใน DB แบบ UTF-8 ธรรมดาได้ — แปลงตอนแสดงผลเท่านั้น)
+ */
+export function encodeHomeFinancePublicAssetHref(path: string): string {
+  const raw = path.trim();
+  if (!raw.startsWith("/uploads/")) return raw;
+  const q = raw.indexOf("?");
+  const pathOnly = q >= 0 ? raw.slice(0, q) : raw;
+  const query = q >= 0 ? raw.slice(q) : "";
+  const segments = pathOnly.split("/").map((seg) => {
+    if (!seg) return "";
+    try {
+      return encodeURIComponent(decodeURIComponent(seg));
+    } catch {
+      return encodeURIComponent(seg);
+    }
+  });
+  return segments.join("/") + query;
+}
+
 /**
  * แปลงค่าที่เก็บ/ส่งมา (path `/uploads/...` หรือ URL เต็ม) เป็น path มาตรฐานเดียวกัน
  * กันที่รายการไม่แสดงเพราะ client หรือ proxy เก็บเป็น https://host/uploads/...
  */
 export function normalizeHomeFinanceStoredPath(raw: string): string | null {
-  const s = raw.trim();
+  let s = raw.trim();
   if (!s || s.includes("..")) return null;
+  s = rewriteLegacyHomeFinancePath(s);
   if (s.length > 512) return null;
   if (s.startsWith("/uploads/home-finance/")) return s;
   try {
     if (/^https?:\/\//i.test(s)) {
       const u = new URL(s);
-      const p = u.pathname;
+      let p = rewriteLegacyHomeFinancePath(u.pathname);
       if (p.startsWith("/uploads/home-finance/") && !p.includes("..") && p.length <= 512) {
         return p;
       }
