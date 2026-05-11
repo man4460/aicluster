@@ -29,11 +29,24 @@ const MIME_BY_EXT: Record<string, string> = {
   ".svg": "image/svg+xml",
 };
 
+/**
+ * รับชื่อ segment ที่อาจมาแบบ URL-encoded (เช่น ชื่อไฟล์ภาษาไทย)
+ * - ปฏิเสธ path traversal, separator, null byte, hidden file, control char
+ * - อนุญาต Unicode (ไทย/อังกฤษ/ตัวเลข/`_-.()` ฯลฯ) เพราะ extension/bucket ถูกจำกัดที่ MIME/ALLOWED แล้ว
+ */
 function safeSegment(raw: string, maxLen: number): string | null {
-  const s = raw.trim();
+  let s = raw;
+  try {
+    s = decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+  s = s.trim();
   if (!s || s.length > maxLen) return null;
-  if (s.includes("..") || s.includes("/") || s.includes("\\")) return null;
-  if (!/^[a-zA-Z0-9._-]+$/.test(s)) return null;
+  if (s.startsWith(".")) return null;
+  if (s.includes("..") || s.includes("/") || s.includes("\\") || s.includes("\0")) return null;
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(s)) return null;
   return s;
 }
 

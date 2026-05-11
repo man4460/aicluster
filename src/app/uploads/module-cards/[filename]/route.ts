@@ -11,10 +11,18 @@ const MIME_BY_EXT: Record<string, string> = {
 };
 
 function safeFilename(raw: string): string | null {
-  const name = raw.trim();
+  let name = raw;
+  try {
+    name = decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+  name = name.trim();
   if (!name || name.length > 180) return null;
-  if (name.includes("..") || name.includes("/") || name.includes("\\")) return null;
-  if (!/^[a-zA-Z0-9._-]+$/.test(name)) return null;
+  if (name.startsWith(".")) return null;
+  if (name.includes("..") || name.includes("/") || name.includes("\\") || name.includes("\0")) return null;
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(name)) return null;
   return name;
 }
 
