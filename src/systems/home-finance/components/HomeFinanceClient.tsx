@@ -73,6 +73,14 @@ import {
   deriveHomeFinanceSection,
   type HomeFinanceSection,
 } from "@/systems/home-finance/homeFinanceSection";
+import {
+  DEFAULT_HOME_FINANCE_BUDGETS,
+  loadHomeFinanceBudgets,
+  loadHomeFinanceFilterPrefs,
+  saveHomeFinanceBudgets,
+  saveHomeFinanceFilterPrefs,
+  type HomeFinanceBudgetItem,
+} from "@/systems/home-finance/lib/home-finance-prefs";
 
 type Entry = {
   id: number;
@@ -516,6 +524,11 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   const [q, setQ] = useState("");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [densityMode, setDensityMode] = useState<"compact" | "comfortable">("comfortable");
+  /** เริ่ม false → กลายเป็น true หลัง read prefs จาก localStorage ครั้งแรก เพื่อกัน save ทับด้วย default ระหว่าง hydration */
+  const [filterPrefsHydrated, setFilterPrefsHydrated] = useState(false);
+  const [budgets, setBudgets] = useState<HomeFinanceBudgetItem[]>(DEFAULT_HOME_FINANCE_BUDGETS);
+  const [budgetEditOpen, setBudgetEditOpen] = useState(false);
+  const [budgetDraft, setBudgetDraft] = useState<HomeFinanceBudgetItem[]>(DEFAULT_HOME_FINANCE_BUDGETS);
   const [selectedHistoryIds, setSelectedHistoryIds] = useState<number[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [summary, setSummary] = useState({ count: 0, income: 0, expense: 0, balance: 0 });
@@ -639,6 +652,31 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   const [coverPhotoUploadingUtilityId, setCoverPhotoUploadingUtilityId] = useState<number | null>(null);
   const [vehicleFormSaving, setVehicleFormSaving] = useState(false);
   const filterSearchInputRef = useRef<HTMLInputElement | null>(null);
+
+  /** โหลดค่าตัวกรองที่จำไว้ — รันครั้งเดียวหลัง mount เพื่อกัน hydration mismatch */
+  useEffect(() => {
+    const prefs = loadHomeFinanceFilterPrefs();
+    if (prefs.from) setFrom(prefs.from);
+    if (prefs.to) setTo(prefs.to);
+    if (typeof prefs.typeFilter === "string") setTypeFilter(prefs.typeFilter);
+    if (typeof prefs.categoryFilter === "string") setCategoryFilter(prefs.categoryFilter);
+    if (typeof prefs.q === "string") setQ(prefs.q);
+    if (prefs.densityMode === "compact" || prefs.densityMode === "comfortable") {
+      setDensityMode(prefs.densityMode);
+    }
+    setFilterPrefsHydrated(true);
+  }, []);
+
+  /** บันทึกค่าตัวกรองทุกครั้งที่เปลี่ยน (หลัง hydrate แล้ว) */
+  useEffect(() => {
+    if (!filterPrefsHydrated) return;
+    saveHomeFinanceFilterPrefs({ from, to, typeFilter, categoryFilter, q, densityMode });
+  }, [filterPrefsHydrated, from, to, typeFilter, categoryFilter, q, densityMode]);
+
+  /** โหลดงบเดือนที่ผู้ใช้ตั้งไว้ */
+  useEffect(() => {
+    setBudgets(loadHomeFinanceBudgets());
+  }, []);
 
   useEffect(() => {
     if (!editingEntry) {
@@ -1957,23 +1995,34 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   }, [entries]);
 
   const monthlyBudgetRows = useMemo(() => {
-    const budgets: Record<string, number> = {
-      "ค่าไฟฟ้า": 3500,
-      "ค่าน้ำมันรถ": 5000,
-      "ค่าอาหาร": 7000,
-    };
-    return Object.entries(budgets).map(([label, budget]) => {
+    return budgets.map(({ label, amount }) => {
+      const stripped = label.replace(/^ค่า/, "").trim();
       const used = monthEntries
         .filter(
           (e) =>
             e.type === "EXPENSE" &&
-            (e.categoryLabel.includes(label.replace("ค่า", "")) || e.categoryLabel === label),
+            (e.categoryLabel === label ||
+              (stripped.length > 0 && e.categoryLabel.includes(stripped))),
         )
         .reduce((s, e) => s + e.amount, 0);
-      const pct = budget > 0 ? (used / budget) * 100 : 0;
-      return { label, budget, used, pct };
+      const pct = amount > 0 ? (used / amount) * 100 : 0;
+      return { label, budget: amount, used, pct };
     });
-  }, [monthEntries]);
+  }, [budgets, monthEntries]);
+
+  const openBudgetEditor = useCallback(() => {
+    setBudgetDraft(budgets.length > 0 ? budgets.map((b) => ({ ...b })) : DEFAULT_HOME_FINANCE_BUDGETS.map((b) => ({ ...b })));
+    setBudgetEditOpen(true);
+  }, [budgets]);
+
+  const saveBudgetDraft = useCallback(() => {
+    const cleaned = budgetDraft
+      .map((b) => ({ label: b.label.trim(), amount: Number.isFinite(b.amount) ? Math.max(0, b.amount) : 0 }))
+      .filter((b) => b.label.length > 0);
+    setBudgets(cleaned);
+    saveHomeFinanceBudgets(cleaned);
+    setBudgetEditOpen(false);
+  }, [budgetDraft]);
 
   return (
     <div className="space-y-6">
@@ -2087,26 +2136,47 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                 </div>
               ) : null}
               <section className="rounded-2xl border border-white/70 bg-white/75 p-3 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#66638c]">งบเดือนนี้</p>
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                  {monthlyBudgetRows.map((row) => (
-                    <div key={row.label} className="rounded-xl border border-slate-200/70 bg-white/80 p-2.5">
-                      <p className="text-[11px] font-medium text-slate-600">{row.label}</p>
-                      <p className="text-sm font-semibold text-slate-900">
-                        {formatMoneyCompact(thb, row.used)} / {formatMoneyCompact(thb, row.budget)}
-                      </p>
-                      <div className="mt-1 h-1.5 rounded-full bg-slate-100">
-                        <div
-                          className={cn(
-                            "h-full rounded-full",
-                            row.pct >= 100 ? "bg-rose-500" : row.pct >= 80 ? "bg-amber-500" : "bg-emerald-500",
-                          )}
-                          style={{ width: `${Math.min(100, Math.max(6, row.pct))}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#66638c]">งบเดือนนี้</p>
+                  <button
+                    type="button"
+                    onClick={openBudgetEditor}
+                    className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl border border-[#d8d6ec] bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-[#4d47b6] shadow-sm transition hover:border-[#4d47b6]/40 hover:bg-[#ecebff]"
+                    aria-label="ปรับงบเดือน"
+                    title="ปรับงบเดือน"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      <path d="M12 20h9" strokeLinecap="round" />
+                      <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" strokeLinejoin="round" strokeLinecap="round" />
+                    </svg>
+                    <span>ปรับงบ</span>
+                  </button>
                 </div>
+                {monthlyBudgetRows.length === 0 ? (
+                  <p className="mt-3 rounded-xl border border-dashed border-slate-200 bg-white/60 p-3 text-center text-xs text-slate-500">
+                    ยังไม่มีงบรายการ — กด «ปรับงบ» เพื่อเพิ่มหมวด
+                  </p>
+                ) : (
+                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                    {monthlyBudgetRows.map((row) => (
+                      <div key={row.label} className="rounded-xl border border-slate-200/70 bg-white/80 p-2.5">
+                        <p className="text-[11px] font-medium text-slate-600">{row.label}</p>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {formatMoneyCompact(thb, row.used)} / {formatMoneyCompact(thb, row.budget)}
+                        </p>
+                        <div className="mt-1 h-1.5 rounded-full bg-slate-100">
+                          <div
+                            className={cn(
+                              "h-full rounded-full",
+                              row.pct >= 100 ? "bg-rose-500" : row.pct >= 80 ? "bg-amber-500" : "bg-emerald-500",
+                            )}
+                            style={{ width: `${Math.min(100, Math.max(6, row.pct))}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
               <HomeFinanceAnalyticsSection
                 entries={entries}
@@ -2773,6 +2843,104 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
             )}
           </div>
         </HomeFinancePageSection>
+      ) : null}
+
+      {budgetEditOpen ? (
+        <HomeFinanceModalBackdrop onBackdropClick={() => setBudgetEditOpen(false)}>
+          <HomeFinanceModalPanel
+            title="ปรับงบเดือน"
+            titleId="hf-budget-edit-title"
+            onClose={() => setBudgetEditOpen(false)}
+          >
+            <form
+              noValidate
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveBudgetDraft();
+              }}
+            >
+              <p className="text-xs text-slate-600">
+                ตั้งวงเงินงบรายเดือนของแต่ละหมวด — ระบบจะใช้ <strong>label</strong> เทียบกับชื่อหมวดของรายการในเดือนปัจจุบัน
+              </p>
+              <div className="space-y-2">
+                {budgetDraft.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-center text-xs text-slate-500">
+                    ยังไม่มีงบ — กด «+ เพิ่มงบ» เพื่อเริ่มต้น
+                  </p>
+                ) : (
+                  budgetDraft.map((row, idx) => (
+                    <div
+                      key={idx}
+                      className="grid grid-cols-12 gap-2 rounded-xl border border-slate-200/70 bg-white/70 p-2"
+                    >
+                      <label className="col-span-7 block text-[11px] font-medium text-slate-600">
+                        ชื่อหมวด
+                        <input
+                          value={row.label}
+                          onChange={(e) =>
+                            setBudgetDraft((d) =>
+                              d.map((it, i) => (i === idx ? { ...it, label: e.target.value } : it)),
+                            )
+                          }
+                          className={`${inputClz} mt-1`}
+                          placeholder="เช่น ค่าไฟฟ้า"
+                        />
+                      </label>
+                      <label className="col-span-4 block text-[11px] font-medium text-slate-600">
+                        งบ/เดือน (บาท)
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          step="100"
+                          min={0}
+                          value={Number.isFinite(row.amount) ? row.amount : 0}
+                          onChange={(e) =>
+                            setBudgetDraft((d) =>
+                              d.map((it, i) =>
+                                i === idx
+                                  ? { ...it, amount: e.target.value === "" ? 0 : Number(e.target.value) }
+                                  : it,
+                              ),
+                            )
+                          }
+                          className={`${inputClz} mt-1`}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setBudgetDraft((d) => d.filter((_, i) => i !== idx))
+                        }
+                        aria-label={`ลบงบ ${row.label || "รายการ"}`}
+                        className="col-span-1 mt-[18px] inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                          <path d="M3 6h18" strokeLinecap="round" />
+                          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" strokeLinecap="round" />
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" strokeLinecap="round" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setBudgetDraft((d) => [...d, { label: "", amount: 0 }])}
+                className="inline-flex w-full items-center justify-center gap-1 rounded-xl border border-dashed border-[#0000BF]/40 bg-[#0000BF]/[0.04] px-3 py-2 text-xs font-semibold text-[#0000BF] hover:bg-[#0000BF]/[0.08]"
+              >
+                + เพิ่มงบ
+              </button>
+              <HomeFinanceModalActionBar>
+                <HomeFinanceSecondaryButton type="button" onClick={() => setBudgetEditOpen(false)}>
+                  ยกเลิก
+                </HomeFinanceSecondaryButton>
+                <HomeFinancePrimaryButton type="submit">บันทึกงบ</HomeFinancePrimaryButton>
+              </HomeFinanceModalActionBar>
+            </form>
+          </HomeFinanceModalPanel>
+        </HomeFinanceModalBackdrop>
       ) : null}
 
       {categoryAddModalOpen ? (
