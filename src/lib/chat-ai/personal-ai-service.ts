@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { getTelegramSlipForwardChatId, normalizeTelegramChatId } from "@/lib/telegram/slip-forward-chat";
 import { ollamaCallVisionText } from "@/lib/ollama/ollama-vision";
 import { sendTelegramPhotoFromDataUrl } from "@/lib/telegram/send-photo-from-data-url";
+import { resolveOwnerUploadSegment } from "@/lib/home-finance/user-upload-dir";
 import {
   buildGlmOcrResultFromModelText,
   dataUrlToBase64Raw,
@@ -161,12 +162,13 @@ async function persistChatSlipImage(imageDataUrl: string, userId: string): Promi
       : subtype.includes("gif")
         ? "gif"
         : "jpg";
-  const dir = path.join(process.cwd(), "public", "uploads", "home-finance");
+  const userSegment = await resolveOwnerUploadSegment(userId);
+  const dir = path.join(process.cwd(), "public", "uploads", "home-finance", userSegment);
   await mkdir(dir, { recursive: true });
-  const filename = `${userId.slice(0, 12)}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const buf = Buffer.from(m[2], "base64");
   await writeFile(path.join(dir, filename), buf);
-  return `/uploads/home-finance/${filename}`;
+  return `/uploads/home-finance/${userSegment}/${filename}`;
 }
 
 /** ผู้ใช้ตอบสั้นๆ ว่าต้องการบันทึกรายการจากสลิปล่าสุดลงบัญชี */

@@ -3,6 +3,7 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
+import { resolveOwnerUploadSegment } from "@/lib/home-finance/user-upload-dir";
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
@@ -55,11 +56,12 @@ export async function POST(req: Request) {
         : file.type === "image/gif"
           ? "gif"
           : "jpg";
-  const dir = path.join(process.cwd(), "public", "uploads", "home-finance");
+  const userSegment = await resolveOwnerUploadSegment(ctx.billingUserId);
+  const dir = path.join(process.cwd(), "public", "uploads", "home-finance", userSegment);
   await mkdir(dir, { recursive: true });
-  const filename = `${ctx.billingUserId.slice(0, 12)}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   await writeFile(path.join(dir, filename), buf);
 
-  const imageUrl = `/uploads/home-finance/${filename}`;
+  const imageUrl = `/uploads/home-finance/${userSegment}/${filename}`;
   return NextResponse.json({ imageUrl });
 }

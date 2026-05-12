@@ -8,6 +8,7 @@ import { writeSystemActivityLog } from "@/lib/audit-log";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { homeFinanceEntryPostSchema } from "@/lib/home-finance/entry-schema";
 import { formatDbDateToYmd, parseYmdToDbDate } from "@/lib/home-finance/entry-date";
+import { resolveOwnerUploadSegment } from "@/lib/home-finance/user-upload-dir";
 import {
   OLLAMA_DEFAULT_SLIP_VISION_MODEL,
   THAI_SLIP_VISION_OCR_BLOCK,
@@ -392,11 +393,12 @@ export async function POST(req: Request) {
           ? "gif"
           : "jpg";
   const storedMimeType = file.type.trim() || (isPdf ? "application/pdf" : "image/jpeg");
-  const dir = path.join(process.cwd(), "public", "uploads", "home-finance");
+  const userSegment = await resolveOwnerUploadSegment(billingCtx.billingUserId);
+  const dir = path.join(process.cwd(), "public", "uploads", "home-finance", userSegment);
   await mkdir(dir, { recursive: true });
-  const filename = `${billingCtx.billingUserId.slice(0, 12)}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   await writeFile(path.join(dir, filename), fileBuffer);
-  const imageUrl = `/uploads/home-finance/${filename}`;
+  const imageUrl = `/uploads/home-finance/${userSegment}/${filename}`;
 
   const ai = await callSlipAi({
     fileBuffer,

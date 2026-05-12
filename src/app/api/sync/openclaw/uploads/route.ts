@@ -21,6 +21,7 @@ import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { writeSystemActivityLog } from "@/lib/audit-log";
+import { resolveOwnerUploadSegment } from "@/lib/home-finance/user-upload-dir";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_PDF_BYTES = 8 * 1024 * 1024;
@@ -119,20 +120,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "ownerUserId not found" }, { status: 404 });
   }
 
-  const userPrefix = ownerUserId.slice(0, 12);
+  const userSegment = await resolveOwnerUploadSegment(ownerUserId);
   const externalToken = externalIdRaw ? safeIdToken(externalIdRaw, 40) : "";
   const ts = Date.now();
   const rand = randomBytes(3).toString("hex");
   const ext = extOf(file.type);
   const filename = externalToken
-    ? `${userPrefix}-${externalToken}-${ts}-${rand}.${ext}`
-    : `${userPrefix}-${ts}-${rand}.${ext}`;
+    ? `${externalToken}-${ts}-${rand}.${ext}`
+    : `${ts}-${rand}.${ext}`;
 
-  const dir = path.join(process.cwd(), "public", "uploads", "home-finance");
+  const dir = path.join(process.cwd(), "public", "uploads", "home-finance", userSegment);
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, filename), buf);
 
-  const imageUrl = `/uploads/home-finance/${filename}`;
+  const imageUrl = `/uploads/home-finance/${userSegment}/${filename}`;
 
   await writeSystemActivityLog({
     actorUserId: ownerUserId,
