@@ -1,13 +1,14 @@
 /**
  * Folder ย่อยสำหรับเก็บรูปสลิป / ไฟล์แนบของแต่ละผู้ใช้ภายใต้ `public/uploads/home-finance/`
  *
- * เป้าหมาย: ผู้ใช้แต่ละคนเก็บไฟล์ของตัวเองในโฟลเดอร์แยก (`/<username>/<filename>`)
+ * เป้าหมาย: ผู้ใช้แต่ละคนเก็บไฟล์ของตัวเองในโฟลเดอร์แยก (`/<userId>/<filename>`)
  * เพื่อให้ตรวจสอบ/แยก ownership ได้ง่าย และกัน collision ของชื่อไฟล์ข้ามผู้ใช้
+ *
+ * ใช้ `User.id` (cuid หรือ legacy `admin_001`) เป็นชื่อโฟลเดอร์ — เสถียร, unique, ไม่เปลี่ยนตาม
+ * username ที่ผู้ใช้แก้ได้ภายหลัง
  */
-import { prisma } from "@/lib/prisma";
 
-const FALLBACK_PREFIX_LEN = 12;
-const MAX_SEGMENT_LEN = 40;
+const MAX_SEGMENT_LEN = 64;
 
 /** sanitize ชื่อโฟลเดอร์ให้เป็น ASCII slug ตัวเล็ก ปลอดภัยกับทุก filesystem + URL */
 export function sanitizeUploadSegment(raw: string): string {
@@ -21,18 +22,11 @@ export function sanitizeUploadSegment(raw: string): string {
 }
 
 /**
- * คืน folder segment (เช่น `mawell`) สำหรับ owner ที่กำหนด
- * - ใช้ `User.username` ถ้ามี (เพราะ unique และอ่านง่าย)
- * - fallback: prefix 12 ตัวแรกของ userId
- * - fallback สุดท้าย: `user` (ไม่ควรเกิดในระบบ)
+ * คืน folder segment สำหรับ owner ที่กำหนด — ใช้ `userId` เป็นหลัก
+ * (sync — ไม่ต้องเข้า DB) เพื่อหลีกเลี่ยง collision ในกรณีที่ระบบในอนาคตอาจอนุญาตให้
+ * เปลี่ยน `username` ได้ — โฟลเดอร์/path จะคงที่ตามตัว user
  */
-export async function resolveOwnerUploadSegment(ownerUserId: string): Promise<string> {
-  const u = await prisma.user.findUnique({
-    where: { id: ownerUserId },
-    select: { username: true },
-  });
-  const fromName = sanitizeUploadSegment(u?.username ?? "");
-  if (fromName) return fromName;
-  const fromId = sanitizeUploadSegment(ownerUserId.slice(0, FALLBACK_PREFIX_LEN));
-  return fromId || "user";
+export function resolveOwnerUploadSegment(ownerUserId: string): string {
+  const slug = sanitizeUploadSegment(ownerUserId);
+  return slug || "user";
 }

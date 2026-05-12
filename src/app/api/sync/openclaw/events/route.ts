@@ -47,12 +47,20 @@ const financeItemSchema = z.object({
   syncedAt: z.string().datetime().optional(),
 });
 
-const bodySchema = z.object({
-  source: z.string().min(1).max(40).default("openclaw"),
-  ownerUserId: z.string().min(1).max(191),
-  requestId: z.string().max(128).optional(),
-  events: z.array(z.union([noteItemSchema, planItemSchema, financeItemSchema])).min(1).max(500),
-});
+const bodySchema = z
+  .object({
+    source: z.string().min(1).max(40).default("openclaw"),
+    /** User.id (cuid หรือ legacy id) — เลือกทางใดทางหนึ่งกับ ownerUsername */
+    ownerUserId: z.string().min(1).max(191).optional(),
+    /** User.username (อ่านง่ายกว่า เช่น "mawell") — เลือกทางใดทางหนึ่งกับ ownerUserId */
+    ownerUsername: z.string().min(1).max(64).optional(),
+    requestId: z.string().max(128).optional(),
+    events: z.array(z.union([noteItemSchema, planItemSchema, financeItemSchema])).min(1).max(500),
+  })
+  .refine((v) => Boolean(v.ownerUserId) || Boolean(v.ownerUsername), {
+    message: "ownerUserId or ownerUsername is required",
+    path: ["ownerUserId"],
+  });
 
 function readBearerToken(req: Request): string {
   const v = req.headers.get("authorization")?.trim() ?? "";
@@ -121,11 +129,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `invalid payload: ${issue?.message ?? "unknown error"}` }, { status: 400 });
   }
 
-  const { source, ownerUserId, events, requestId } = parsed.data;
-  const user = await prisma.user.findUnique({ where: { id: ownerUserId }, select: { id: true } });
+  const { source, ownerUserId: ownerUserIdRaw, ownerUsername, events, requestId } = parsed.data;
+  const user = await prisma.user.findFirst({
+    where: ownerUserIdRaw ? { id: ownerUserIdRaw } : { username: ownerUsername! },
+    select: { id: true },
+  });
   if (!user) {
-    return NextResponse.json({ error: "ownerUserId not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: ownerUserIdRaw ? "ownerUserId not found" : "ownerUsername not found" },
+      { status: 404 },
+    );
   }
+  const ownerUserId = user.id;
 
   if (requestId) {
     try {

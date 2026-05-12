@@ -178,7 +178,7 @@ async function main() {
   const dataRows = rows.slice(1);
   console.log(`[import] CSV rows: ${dataRows.length}`);
 
-  const userSegment = await resolveOwnerUploadSegment(OWNER_USER_ID);
+  const userSegment = resolveOwnerUploadSegment(OWNER_USER_ID);
   const uploadsAbs = path.join(process.cwd(), UPLOADS_REL_BASE, userSegment);
   const uploadsPublicPrefix = `${UPLOADS_PUBLIC_BASE}/${userSegment}`;
   await fs.mkdir(uploadsAbs, { recursive: true });

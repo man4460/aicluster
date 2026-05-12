@@ -162,7 +162,7 @@ async function persistChatSlipImage(imageDataUrl: string, userId: string): Promi
       : subtype.includes("gif")
         ? "gif"
         : "jpg";
-  const userSegment = await resolveOwnerUploadSegment(userId);
+  const userSegment = resolveOwnerUploadSegment(userId);
   const dir = path.join(process.cwd(), "public", "uploads", "home-finance", userSegment);
   await mkdir(dir, { recursive: true });
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;

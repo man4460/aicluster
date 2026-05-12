@@ -4,16 +4,18 @@
  * - ตรวจสิทธิ์ด้วย shared secret เดียวกับ /api/sync/openclaw/events
  *   ส่งผ่าน `X-OpenClaw-Sync-Secret: <token>` หรือ `Authorization: Bearer <token>`
  * - รับเป็น multipart/form-data:
- *     file       : ไฟล์ (image/* หรือ application/pdf)
- *     ownerUserId: User.id ที่จะเป็นเจ้าของรายการ (ต้องมีจริง)
- *     externalId : ID ฝั่ง openclaw (เช่น message_id/file_unique_id) — ใช้กันชนชื่อไฟล์ซ้ำ + ใช้เป็น externalId ตอน upsert event
+ *     file           : ไฟล์ (image/* หรือ application/pdf)
+ *     ownerUserId    : User.id (cuid หรือ legacy `admin_001`) — เลือกทางใดทางหนึ่ง
+ *     ownerUsername  : User.username (เช่น "mawell") — เลือกทางใดทางหนึ่ง (สะดวกกว่า)
+ *                       ถ้าส่งมาทั้งคู่ — ใช้ ownerUserId เป็นหลัก
+ *     externalId     : ID ฝั่ง openclaw (เช่น message_id/file_unique_id) — กันชนชื่อไฟล์ซ้ำ
+ *                       + ใช้เป็น externalId ตอน upsert event ต่อ
  *
- * - บันทึกลง public/uploads/home-finance/<filename> ที่มีรูปแบบ:
- *     <userPrefix>-<external>-<ts>-<rand>.<ext>
- *   เพื่อให้ /uploads/home-finance/[filename] route serve ได้และไม่มี collision
+ * - บันทึกลง public/uploads/home-finance/<userId>/<filename> โดย <filename> มีรูปแบบ:
+ *     <externalToken>-<ts>-<rand>.<ext>   (หรือ <ts>-<rand>.<ext> ถ้าไม่ส่ง externalId)
  *
- * - คืน { imageUrl: "/uploads/home-finance/..." } ให้ openclaw นำไปวางใน slipImageUrl/attachmentUrls
- *   ในคำขอ POST /api/sync/openclaw/events ต่อ
+ * - คืน { imageUrl: "/uploads/home-finance/<userId>/<filename>" } ให้ openclaw นำไปวางใน
+ *   slipImageUrl/attachmentUrls ของคำขอ POST /api/sync/openclaw/events ต่อ
  */
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
@@ -82,9 +84,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "missing field 'file'" }, { status: 400 });
   }
 
-  const ownerUserId = (form.get("ownerUserId") ?? "").toString().trim();
-  if (!ownerUserId || ownerUserId.length > 191) {
-    return NextResponse.json({ error: "missing or invalid ownerUserId" }, { status: 400 });
+  // รับ owner ได้สองทาง — `ownerUserId` (เสถียร) หรือ `ownerUsername` (อ่านง่ายกว่า)
+  const ownerUserIdRaw = (form.get("ownerUserId") ?? "").toString().trim();
+  const ownerUsernameRaw = (form.get("ownerUsername") ?? "").toString().trim();
+  if (!ownerUserIdRaw && !ownerUsernameRaw) {
+    return NextResponse.json(
+      { error: "missing ownerUserId or ownerUsername" },
+      { status: 400 },
+    );
+  }
+  if (ownerUserIdRaw.length > 191 || ownerUsernameRaw.length > 64) {
+    return NextResponse.json({ error: "owner id/username too long" }, { status: 400 });
   }
 
   const externalIdRaw = (form.get("externalId") ?? "").toString().trim();
@@ -112,15 +122,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "not a valid PDF" }, { status: 400 });
   }
 
-  const owner = await prisma.user.findUnique({
-    where: { id: ownerUserId },
-    select: { id: true },
+  const owner = await prisma.user.findFirst({
+    where: ownerUserIdRaw
+      ? { id: ownerUserIdRaw }
+      : { username: ownerUsernameRaw },
+    select: { id: true, username: true },
   });
   if (!owner) {
-    return NextResponse.json({ error: "ownerUserId not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: ownerUserIdRaw ? "ownerUserId not found" : "ownerUsername not found" },
+      { status: 404 },
+    );
   }
-
-  const userSegment = await resolveOwnerUploadSegment(ownerUserId);
+  const ownerUserId = owner.id;
+  const userSegment = resolveOwnerUploadSegment(ownerUserId);
   const externalToken = externalIdRaw ? safeIdToken(externalIdRaw, 40) : "";
   const ts = Date.now();
   const rand = randomBytes(3).toString("hex");

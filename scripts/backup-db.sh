@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # =============================================================================
-# MAWELL DB Backup — เครื่อง 4 (192.168.1.194) → เครื่อง 2 (192.168.1.192)
+# MAWELL Backup — เครื่อง 4 (192.168.1.194) → เครื่อง 2 (192.168.1.192)
 # -----------------------------------------------------------------------------
 # - mysqldump local (mawell_buffet) → gzip → stream ผ่าน SSH ไปเก็บที่เครื่อง 2
 # - ตั้งชื่อไฟล์ mawell_buffet-YYYYMMDD-HHMMSS.sql.gz ใต้ ~/mawell-backups/
 # - อัปเดต symlink latest.sql.gz ชี้ไฟล์ล่าสุด
-# - ลบไฟล์เก่าเกิน BACKUP_RETENTION_DAYS (default 30)
+# - ลบไฟล์ DB backup เก่าเกิน BACKUP_RETENTION_DAYS (default 30)
+# - rsync `public/uploads/` ไปเครื่อง 2 (mirror) — รูปสลิป/ไฟล์แนบทุก user
 # - log ลง ~/logs/db-backup.log บนเครื่องต้นทาง
 #
 # รัน manual:
@@ -13,6 +14,8 @@
 #
 # ตั้ง cron อัตโนมัติ:
 #   bash scripts/backup-db-setup.sh
+#
+# ปิด uploads sync ชั่วคราว: ตั้ง BACKUP_UPLOADS=false
 # =============================================================================
 set -euo pipefail
 
@@ -34,6 +37,10 @@ BACKUP_REMOTE_PATH="${BACKUP_REMOTE_PATH:-mawell-backups}" # relative to remote 
 BACKUP_REMOTE_PORT="${BACKUP_REMOTE_PORT:-22}"
 BACKUP_SSH_KEY="${BACKUP_SSH_KEY:-$HOME/.ssh/id_ed25519}"
 BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
+
+# uploads mirror (rsync)
+BACKUP_UPLOADS="${BACKUP_UPLOADS:-true}"
+BACKUP_UPLOADS_REMOTE_PATH="${BACKUP_UPLOADS_REMOTE_PATH:-mawell-uploads-mirror}" # relative ~/
 
 # ต้นทาง (เครื่อง 4 — local MySQL)
 SOURCE_HOST="${SOURCE_HOST:-127.0.0.1}"
@@ -131,3 +138,44 @@ ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "
 " | tee -a "$LOG_FILE"
 
 log "สำเร็จ → ${REMOTE_PATH} (size ${LOCAL_SIZE}, retention ${BACKUP_RETENTION_DAYS}d)"
+
+# =============================================================================
+# rsync mirror ของ public/uploads/  (รูปสลิป + ไฟล์แนบทุกโมดูล)
+# =============================================================================
+if [[ "${BACKUP_UPLOADS}" == "true" ]]; then
+  if ! command -v rsync >/dev/null 2>&1; then
+    log "WARN: ไม่มี rsync — ข้าม uploads mirror (brew install rsync)"
+  elif [[ ! -d "$ROOT_DIR/public/uploads" ]]; then
+    log "WARN: ไม่พบ $ROOT_DIR/public/uploads — ข้าม uploads mirror"
+  else
+    log "rsync uploads → ${SSH_TARGET}:~/${BACKUP_UPLOADS_REMOTE_PATH}/"
+    # ใช้ SSH key เดียวกับ DB backup
+    RSYNC_SSH_ARGS=(-o BatchMode=yes -o StrictHostKeyChecking=accept-new -p "$BACKUP_REMOTE_PORT")
+    if [[ -f "$BACKUP_SSH_KEY" ]]; then
+      RSYNC_SSH_ARGS+=(-i "$BACKUP_SSH_KEY")
+    fi
+    RSYNC_SSH_CMD="ssh ${RSYNC_SSH_ARGS[*]}"
+
+    # สร้างปลายทาง
+    ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "mkdir -p ~/${BACKUP_UPLOADS_REMOTE_PATH}" >/dev/null \
+      || { log "ERROR: สร้างโฟลเดอร์ปลายทาง mirror ไม่ได้"; exit 1; }
+
+    # -a archive (เก็บ time/perm), -h human, --delete ลบไฟล์ฝั่งปลายทางที่ฝั่งต้นทางลบ
+    # --partial-dir รองรับ resume ถ้าเชื่อมต่อหลุดกลางทาง
+    rsync -ah --delete --partial-dir=.rsync-partial \
+      -e "$RSYNC_SSH_CMD" \
+      "$ROOT_DIR/public/uploads/" \
+      "${SSH_TARGET}:~/${BACKUP_UPLOADS_REMOTE_PATH}/" \
+      2>&1 | tee -a "$LOG_FILE" | tail -5 \
+      || { log "ERROR: rsync uploads ล้มเหลว"; exit 1; }
+
+    # บันทึก timestamp/marker บนปลายทาง — ดูได้ว่า mirror ล่าสุดเมื่อไหร่
+    ssh "${SSH_OPTS[@]}" "$SSH_TARGET" \
+      "date '+%Y-%m-%d %H:%M:%S' > ~/${BACKUP_UPLOADS_REMOTE_PATH}/.last-mirror" >/dev/null 2>&1 || true
+
+    REMOTE_UPLOADS_SIZE="$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "du -sh ~/${BACKUP_UPLOADS_REMOTE_PATH} | awk '{print \$1}'" 2>/dev/null || echo "?")"
+    log "uploads mirror สำเร็จ — ปลายทาง ~/${BACKUP_UPLOADS_REMOTE_PATH}/ (size ${REMOTE_UPLOADS_SIZE})"
+  fi
+else
+  log "BACKUP_UPLOADS=false — ข้าม uploads mirror"
+fi

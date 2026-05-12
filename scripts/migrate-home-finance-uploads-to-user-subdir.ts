@@ -24,14 +24,20 @@ import { resolveOwnerUploadSegment } from "@/lib/home-finance/user-upload-dir";
 const BASE_PUBLIC_PREFIX = "/uploads/home-finance/";
 const BASE_FS_DIR = path.join(process.cwd(), "public", "uploads", "home-finance");
 
-function isAlreadyInSubdir(publicPath: string): boolean {
-  if (!publicPath.startsWith(BASE_PUBLIC_PREFIX)) return true; // ข้าม path ที่ไม่ตรงรูปแบบ
+/** คืน subdir segment ถ้า path อยู่ในโฟลเดอร์ย่อยอยู่แล้ว — null ถ้าอยู่ที่ root */
+function currentSubdirOf(publicPath: string): string | null {
+  if (!publicPath.startsWith(BASE_PUBLIC_PREFIX)) return null;
   const rest = publicPath.slice(BASE_PUBLIC_PREFIX.length);
-  return rest.includes("/");
+  const idx = rest.indexOf("/");
+  if (idx < 0) return null;
+  return rest.slice(0, idx);
 }
 
+/** คืน basename ของไฟล์ (ไม่รวม subdir) จาก public path */
 function basenameOfPublic(publicPath: string): string {
-  return publicPath.slice(BASE_PUBLIC_PREFIX.length);
+  const rest = publicPath.slice(BASE_PUBLIC_PREFIX.length);
+  const idx = rest.lastIndexOf("/");
+  return idx >= 0 ? rest.slice(idx + 1) : rest;
 }
 
 async function fileExists(p: string): Promise<boolean> {
@@ -51,18 +57,20 @@ async function fileExists(p: string): Promise<boolean> {
 async function migrateOneFile(
   oldPublic: string,
   userSegment: string,
+  currentSeg: string | null,
 ): Promise<{ newPublic: string | null; moved: boolean; missing: boolean }> {
   const base = basenameOfPublic(oldPublic);
   if (!base || base.includes("/") || base.includes("..")) {
     return { newPublic: null, moved: false, missing: true };
   }
   const newPublic = `${BASE_PUBLIC_PREFIX}${userSegment}/${base}`;
-  const oldAbs = path.join(BASE_FS_DIR, base);
+  const oldAbs = currentSeg
+    ? path.join(BASE_FS_DIR, currentSeg, base)
+    : path.join(BASE_FS_DIR, base);
   const newDirAbs = path.join(BASE_FS_DIR, userSegment);
   const newAbs = path.join(newDirAbs, base);
 
   if (await fileExists(newAbs)) {
-    // ปลายทางมีแล้ว — ลบต้นทาง (ถ้ามี)
     if (await fileExists(oldAbs)) {
       await fs.unlink(oldAbs);
     }
@@ -81,7 +89,7 @@ async function main() {
     where: {
       OR: [
         { slipImageUrl: { startsWith: BASE_PUBLIC_PREFIX } },
-        // attachment_urls เป็น JSON; กรองที่ระดับ JS หลังโหลด
+        { attachmentUrls: { not: undefined } },
       ],
     },
     select: {
@@ -93,12 +101,12 @@ async function main() {
   });
   console.log(`[migrate] candidates: ${entries.length} entries`);
 
-  // cache: ownerUserId → segment
+  // cache: ownerUserId → segment (sync — resolveOwnerUploadSegment ใช้ userId เป็น slug ตรงๆ)
   const segCache = new Map<string, string>();
-  async function getSegment(uid: string): Promise<string> {
+  function getSegment(uid: string): string {
     const cached = segCache.get(uid);
     if (cached) return cached;
-    const seg = await resolveOwnerUploadSegment(uid);
+    const seg = resolveOwnerUploadSegment(uid);
     segCache.set(uid, seg);
     return seg;
   }
@@ -111,18 +119,30 @@ async function main() {
 
   for (const e of entries) {
     try {
-      const seg = await getSegment(e.ownerUserId);
+      const seg = getSegment(e.ownerUserId);
 
       // —— slip_image_url ——
       let nextSlip: string | null = e.slipImageUrl;
       if (e.slipImageUrl && e.slipImageUrl.startsWith(BASE_PUBLIC_PREFIX)) {
-        if (isAlreadyInSubdir(e.slipImageUrl)) {
-          // อยู่ใน subdir แล้ว แต่อาจคนละ user — ตรวจให้แน่ใจอย่างน้อยไม่ใช่ภัยพิบัติ
-          // ไม่ย้ายข้ามโฟลเดอร์ — ถือว่าถูกต้องตามที่ DB เก็บ
-        } else {
+        const currentSeg = currentSubdirOf(e.slipImageUrl);
+        if (currentSeg && currentSeg !== seg) {
+          // อยู่ใน subdir อื่น (เช่น username เดิม) — ย้ายให้ตรงกับ seg ใหม่
           const { newPublic, moved: m, missing: mi } = await migrateOneFile(
             e.slipImageUrl,
             seg,
+            currentSeg,
+          );
+          if (newPublic) {
+            nextSlip = newPublic;
+            if (m) moved++;
+          } else if (mi) {
+            missing++;
+          }
+        } else if (!currentSeg) {
+          const { newPublic, moved: m, missing: mi } = await migrateOneFile(
+            e.slipImageUrl,
+            seg,
+            null,
           );
           if (newPublic) {
             nextSlip = newPublic;
@@ -140,14 +160,23 @@ async function main() {
         const out: string[] = [];
         for (const u of raw) {
           if (typeof u !== "string") continue;
-          if (u.startsWith(BASE_PUBLIC_PREFIX) && !isAlreadyInSubdir(u)) {
-            const { newPublic, moved: m, missing: mi } = await migrateOneFile(u, seg);
-            if (newPublic) {
-              out.push(newPublic);
-              if (m) moved++;
-            } else if (mi) {
-              missing++;
-              out.push(u); // คงค่าเดิมไว้ (จะ orphan)
+          if (u.startsWith(BASE_PUBLIC_PREFIX)) {
+            const currentSeg = currentSubdirOf(u);
+            if (currentSeg !== seg) {
+              const { newPublic, moved: m, missing: mi } = await migrateOneFile(
+                u,
+                seg,
+                currentSeg,
+              );
+              if (newPublic) {
+                out.push(newPublic);
+                if (m) moved++;
+              } else if (mi) {
+                missing++;
+                out.push(u);
+              } else {
+                out.push(u);
+              }
             } else {
               out.push(u);
             }
@@ -178,9 +207,10 @@ async function main() {
       } else {
         unchanged++;
       }
-    } catch (ex: any) {
+    } catch (ex: unknown) {
       err++;
-      console.error(`  [entry id=${e.id}] err: ${ex?.message || ex}`);
+      const msg = ex instanceof Error ? ex.message : String(ex);
+      console.error(`  [entry id=${e.id}] err: ${msg}`);
     }
   }
 

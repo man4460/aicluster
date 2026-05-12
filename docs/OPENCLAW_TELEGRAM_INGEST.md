@@ -1,328 +1,428 @@
-# OpenClaw — รับรูปจาก Telegram แล้วบันทึกใน home_finance_entries
+# OpenClaw — บันทึกสลิปจาก Telegram เข้าระบบรายรับ–รายจ่าย (MAWELL)
 
-วิธีให้ openclaw (หรือ agent ใด ๆ ที่อยู่ภายนอก) ดึงรูปสลิปจาก Telegram แล้วบันทึกเข้าระบบรายรับ-รายจ่ายของบ้าน
-ผ่าน HTTP เท่านั้น ไม่ต้องเข้าถึง filesystem ของเครื่องโฮสต์
+วิธีให้ openclaw (หรือ agent ใด ๆ ภายนอก) ดึงรูปสลิปจาก Telegram แล้วบันทึกเข้าระบบ
+รายรับ–รายจ่ายของบ้าน ผ่าน HTTP API เท่านั้น
 
----
+ทั้งสอง endpoint ใช้ shared secret เดียวกัน:
 
-## 1. ภาพรวม flow
-
-```
-Telegram user --(photo)--> Telegram Bot --(webhook)--> openclaw agent
-                                                          │
-                                                          │  (1) ดึง bytes ของรูปจาก Telegram (getFile + file/bot{token}/{path})
-                                                          │  (2) OCR / แยกข้อมูลสลิป (ฝั่ง openclaw)
-                                                          │
-                                                          ▼
-                                       POST /api/sync/openclaw/uploads     ← อัปโหลดรูปเข้า public/uploads/home-finance/
-                                       (multipart/form-data, sync secret)     คืน { imageUrl: "/uploads/home-finance/...jpg" }
-                                                          │
-                                                          ▼
-                                       POST /api/sync/openclaw/events      ← สร้าง/อัปเดต HomeFinanceEntry
-                                       (JSON, sync secret)                    ใส่ slipImageUrl / attachmentUrls = imageUrl จากขั้นที่แล้ว
-```
-
-ทั้งสอง endpoint ใช้ **shared secret เดียวกัน** ตั้งใน `.env` ของฝั่ง ma-well:
-
-```dotenv
+```env
+# .env ฝั่ง ma-well
 OPENCLAW_SYNC_SECRET=<random_long_token>
 ```
 
-ฝั่ง openclaw ต้องเก็บโทเค็นเดียวกัน — ส่งผ่านแบบใดแบบหนึ่ง:
+ส่งใน header ของทุก request (เลือกแบบใดแบบหนึ่ง):
 
-- `X-OpenClaw-Sync-Secret: <token>` (แนะนำ)
-- หรือ `Authorization: Bearer <token>`
-
-> ทุก endpoint อยู่ภายใต้ `https://app.ma-well.com` (หรือ origin ที่ deploy)
+```http
+X-OpenClaw-Sync-Secret: <token>
+# หรือ
+Authorization: Bearer <token>
+```
 
 ---
 
-## 2. หา `ownerUserId` ของผู้ใช้ Telegram
+## Flow มาตรฐาน
 
-`HomeFinanceEntry` ผูกกับ `ownerUserId` (User.id ใน ma-well) ไม่ได้ผูกกับ `telegramChatId` โดยตรง — openclaw ต้องแม็พก่อน
-
-วิธีหา:
-
-```sql
-SELECT id, username, fullName
-  FROM users
- WHERE telegramChatId = '<chat_id ของ user ใน Telegram>'
- LIMIT 1;
+```
+Telegram → openclaw agent
+              │
+              │  (1) ดาวน์โหลด bytes ของรูปจาก Telegram
+              │  (2) OCR / แยกข้อมูลสลิป
+              │
+              ▼
+   POST /api/sync/openclaw/uploads      ← อัปโหลดรูปเข้า public/uploads/home-finance/<userId>/
+   (multipart/form-data + secret)         คืน { imageUrl: "/uploads/home-finance/<userId>/<file>" }
+              │
+              ▼
+   POST /api/sync/openclaw/events       ← สร้าง/อัปเดต HomeFinanceEntry
+   (JSON + secret)                        ใส่ slipImageUrl / attachmentUrls = imageUrl จากขั้นที่แล้ว
 ```
 
-หรือถ้าฝั่ง openclaw ไม่มีสิทธิ์อ่าน DB ตรง ๆ สามารถสร้าง endpoint resolver ภายหลังได้ตามต้องการ ตอนนี้ส่ง `ownerUserId` มากับทุก request
-
-> `ownerUserId` ของผู้ใช้ `mawell` ในระบบนี้ปัจจุบันคือ `cmp0udptg00051t5p0hyecuvv`
+ทั้งสอง endpoint **idempotent** — รันซ้ำด้วย `externalId` เดิม จะ upsert ไม่ทำซ้ำ
 
 ---
 
-## 3. Endpoint: อัปโหลดรูป
+## ระบุเจ้าของรายการ — `ownerUserId` หรือ `ownerUsername`
 
-`POST /api/sync/openclaw/uploads`
+ส่งทางใดทางหนึ่ง (ไม่ต้องส่งทั้งคู่):
 
-- `Content-Type: multipart/form-data`
-- ฟิลด์:
-  | field | required | คำอธิบาย |
-  |---|---|---|
-  | `file` | yes | ไฟล์รูป (`image/jpeg|png|webp|gif` ≤ 5MB) หรือ PDF (≤ 8MB) |
-  | `ownerUserId` | yes | User.id (เช่น `cmp0udptg00051t5p0hyecuvv`) |
-  | `externalId` | recommended | ID ของฝั่ง openclaw/Telegram เช่น `tg-{chat_id}-{message_id}` หรือ `file_unique_id` — ใช้กันชนกับ event ภายหลัง |
+| field | ตัวอย่าง | หมายเหตุ |
+|---|---|---|
+| `ownerUserId` | `"cmp0udptg00051t5p0hyecuvv"` | เสถียร ไม่เปลี่ยน — ใช้กรณีฝั่ง openclaw แมป chat → userId ไว้แล้ว |
+| `ownerUsername` | `"mawell"` | อ่านง่าย — แต่ถ้า admin เปลี่ยน username ต้องอัปเดต mapping ฝั่ง agent |
 
-**ตัวอย่าง curl** (ฝั่ง openclaw หลังดึงรูปจาก Telegram มาเก็บใน `/tmp/slip.jpg` แล้ว):
+ถ้าส่งมาทั้งคู่ — ใช้ `ownerUserId` เป็นหลัก
 
-```bash
-curl -sf -X POST https://app.ma-well.com/api/sync/openclaw/uploads \
-  -H "X-OpenClaw-Sync-Secret: $OPENCLAW_SYNC_SECRET" \
-  -F "file=@/tmp/slip.jpg;type=image/jpeg" \
-  -F "ownerUserId=cmp0udptg00051t5p0hyecuvv" \
-  -F "externalId=tg-829304-105421"
-```
+ไฟล์รูปจะถูกเก็บใต้ `/uploads/home-finance/<userId>/` ของผู้นั้นเสมอ (folder = userId)
 
-**Response 200**:
+---
+
+## 1) `POST /api/sync/openclaw/uploads`
+
+อัปโหลดไฟล์รูปสลิป / PDF — รับเป็น **multipart/form-data**
+
+| field | ชนิด | ความยาว | คำอธิบาย |
+|---|---|---|---|
+| `file` | binary | ≤ 5 MB (รูป) / ≤ 8 MB (PDF) | JPG / PNG / WEBP / GIF / PDF |
+| `ownerUserId` หรือ `ownerUsername` | string | ≤ 191 / ≤ 64 | ระบุเจ้าของ |
+| `externalId` | string (optional) | ≤ 128 | ID ฝั่ง openclaw (เช่น `tg-<chat>-<message_id>`) — กันชนชื่อไฟล์ + ใช้ต่อใน event |
+
+**Response 200**
 
 ```json
 {
   "ok": true,
-  "imageUrl": "/uploads/home-finance/cmp0udptg000-tg-829304-105421-1715431200000-9af0c7.jpg",
-  "filename": "cmp0udptg000-tg-829304-105421-1715431200000-9af0c7.jpg",
-  "bytes": 268473,
+  "imageUrl": "/uploads/home-finance/cmp0udptg00051t5p0hyecuvv/tg-8283-12345-1778500000-a1b2c3.jpg",
+  "filename": "tg-8283-12345-1778500000-a1b2c3.jpg",
+  "bytes": 154321,
   "mime": "image/jpeg"
 }
 ```
 
-`imageUrl` ที่ได้คือ **path สำหรับใช้กับ event ในขั้นถัดไป** (ห้ามใช้ URL เต็ม — schema validate ว่าต้องขึ้นต้น `/uploads/home-finance/`)
-
-**Error codes**:
-
-| code | สาเหตุ |
-|---|---|
-| `400` | `file` ผิด, ขนาดเกิน, mime ไม่อนุญาต |
-| `401` | secret ไม่ถูก |
-| `404` | `ownerUserId` ไม่มีใน users |
-| `500` | ไม่ได้ตั้ง `OPENCLAW_SYNC_SECRET` ฝั่ง server |
+**Error** — 400 (validation), 401 (secret), 404 (owner ไม่พบ)
 
 ---
 
-## 4. Endpoint: บันทึก / อัปเดตรายการ
+## 2) `POST /api/sync/openclaw/events`
 
-`POST /api/sync/openclaw/events`
-
-- `Content-Type: application/json`
-- รับ batch ของ event ได้ใน 1 request
-
-**Schema สำหรับสร้างรายการรายรับ-รายจ่ายจากสลิป**:
-
-```jsonc
-{
-  "source": "openclaw",                                   // optional, default "openclaw"
-  "ownerUserId": "cmp0udptg00051t5p0hyecuvv",             // required
-  "requestId": "tg-829304-105421",                        // optional, idempotency key ทั้งคำขอ
-  "events": [
-    {
-      "type": "finance",
-      "externalId": "tg-829304-105421",                   // required, unique ต่อ user — ส่งซ้ำได้ จะกลายเป็น update
-      "op": "upsert",                                     // "upsert" (default) | "delete"
-
-      "entryDate": "2026-05-11",                          // YYYY-MM-DD
-      "entryType": "EXPENSE",                             // "INCOME" | "EXPENSE"
-      "amount": 1250.50,
-      "title": "ค่าวัสดุก่อสร้าง",                          // ≤ 160 chars
-      "categoryKey": "GENERAL_SHOPPING",                  // ดูตารางหมวดท้ายเอกสาร
-      "categoryLabel": "ของใช้ในบ้าน",                     // ≤ 100 chars
-
-      "billNumber": "REF20260511-001",                    // optional
-      "paymentMethod": "promptpay",                       // optional
-      "note": "OCR confidence 0.92",                      // optional, ≤ 600
-      "dueDate": null,                                    // optional
-
-      "slipImageUrl": "/uploads/home-finance/cmp0udptg000-tg-829304-105421-1715431200000-9af0c7.jpg",
-      "attachmentUrls": [
-        "/uploads/home-finance/cmp0udptg000-tg-829304-105421-1715431200000-9af0c7.jpg"
-      ]
-    }
-  ]
-}
-```
-
-> ทั้ง `slipImageUrl` และ `attachmentUrls[]` ต้องเป็น path ที่ได้คืนมาจาก `/api/sync/openclaw/uploads` เท่านั้น (ขึ้นต้น `/uploads/home-finance/`)
-
-**ตัวอย่าง curl**:
-
-```bash
-curl -sf -X POST https://app.ma-well.com/api/sync/openclaw/events \
-  -H "X-OpenClaw-Sync-Secret: $OPENCLAW_SYNC_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "source": "openclaw",
-    "ownerUserId": "cmp0udptg00051t5p0hyecuvv",
-    "requestId": "tg-829304-105421",
-    "events": [{
-      "type": "finance",
-      "externalId": "tg-829304-105421",
-      "op": "upsert",
-      "entryDate": "2026-05-11",
-      "entryType": "EXPENSE",
-      "amount": 1250.50,
-      "title": "ค่าวัสดุก่อสร้าง",
-      "categoryKey": "GENERAL_SHOPPING",
-      "categoryLabel": "ของใช้ในบ้าน",
-      "slipImageUrl": "/uploads/home-finance/cmp0udptg000-tg-829304-105421-1715431200000-9af0c7.jpg"
-    }]
-  }'
-```
-
-**Response 200**:
+สร้าง/อัปเดต/ลบรายการ — รับเป็น **JSON**
 
 ```json
 {
-  "ok": true,
   "source": "openclaw",
-  "ownerUserId": "cmp0udptg00051t5p0hyecuvv",
-  "requestId": "tg-829304-105421",
-  "summary": { "total": 1, "ok": 1, "error": 0 },
-  "results": [
+  "ownerUsername": "mawell",
+  "requestId": "tg-8283-batch-2026-05-12T07:00",
+  "events": [
     {
       "type": "finance",
-      "externalId": "tg-829304-105421",
       "op": "upsert",
-      "status": "ok",
-      "localId": 1234
+      "externalId": "tg-8283-12345",
+      "entry": {
+        "entryDate": "2026-05-12",
+        "type": "EXPENSE",
+        "categoryKey": "GENERAL_FOOD",
+        "categoryLabel": "ค่าอาหาร",
+        "title": "ก๋วยเตี๋ยวเรือ - ร้านป้าทิพย์",
+        "amount": 70,
+        "paymentMethod": "พร้อมเพย์",
+        "slipImageUrl": "/uploads/home-finance/cmp0udptg00051t5p0hyecuvv/tg-8283-12345-1778500000-a1b2c3.jpg",
+        "note": "อาหารกลางวัน"
+      }
     }
   ]
 }
 ```
 
-### Idempotency
+### Fields ของ event `type: "finance"`
 
-- `requestId` (ระดับคำขอ) — ถ้าส่ง requestId เดิมซ้ำ ระบบจะตอบ `deduped: true` ทันที ไม่ทำซ้ำ
-- `externalId` (ระดับ event) — ถ้ามี HomeFinanceEntry ที่ `externalSource = source` และ `externalId` ตรงกัน จะ **update** แทน create
+| field | ชนิด | required | คำอธิบาย |
+|---|---|---|---|
+| `externalId` | string | ✓ | unique ต่อ owner — รันซ้ำจะ upsert |
+| `op` | `"upsert"` หรือ `"delete"` | ✓ | |
+| `entry.entryDate` | `YYYY-MM-DD` | ✓ (upsert) | วันที่รายการ |
+| `entry.type` | `"INCOME"` หรือ `"EXPENSE"` | ✓ | |
+| `entry.categoryKey` | string | ✓ | เห็นตารางหมวดด้านล่าง |
+| `entry.categoryLabel` | string | ✓ | ข้อความ label ของหมวด |
+| `entry.title` | string ≤ 160 | ✓ | |
+| `entry.amount` | number (≥ 0) | ✓ | บาท (ทศนิยม 2 ตำแหน่ง) |
+| `entry.dueDate` | `YYYY-MM-DD` | ✗ | ครบกำหนด |
+| `entry.billNumber` | string ≤ 100 | ✗ | เลขที่ใบเสร็จ |
+| `entry.paymentMethod` | string ≤ 40 | ✗ | เช่น "พร้อมเพย์", "บัตรเครดิต" |
+| `entry.note` | string ≤ 600 | ✗ | |
+| `entry.slipImageUrl` | string | ✗ | path คืนจาก `/uploads` endpoint |
+| `entry.attachmentUrls` | string[] (≤ 20) | ✗ | หลายไฟล์ |
+| `entry.syncedAt` | ISO 8601 | ✗ | |
 
-แนะนำ:
+### หมวด (built-in keys)
 
-```
-requestId  = "tg-<chat_id>-<message_id>-<batch_seq>"
-externalId = "tg-<chat_id>-<message_id>"      (เพื่อให้แก้รายการเดิมได้เมื่อ OCR ใหม่)
+| key | label |
+|---|---|
+| `UTILITIES_ELECTRIC` | ค่าไฟฟ้า |
+| `UTILITIES_WATER` | ค่าน้ำประปา |
+| `VEHICLE_CAR` | รถยนต์ |
+| `VEHICLE_MOTORCYCLE` | รถจักรยานยนต์ |
+| `VEHICLE_SERVICE` | ซ่อม/เข้าศูนย์รถ |
+| `GENERAL_FOOD` | ค่าอาหาร |
+| `GENERAL_HOME_REPAIR` | ค่าซ่อมบ้าน |
+| `GENERAL_SHOPPING` | ของใช้ในบ้าน |
+| `GENERAL_HEALTH` | สุขภาพ/ยา |
+| `GENERAL_EDUCATION` | การศึกษา |
+| `GENERAL_TRAVEL` | เดินทาง |
+| `GENERAL_INCOME` | รายรับทั่วไป |
+| `OTHER` | อื่น ๆ |
+
+ถ้าใช้ key อื่นนอกตารางได้ — แต่ตาราง dropdown ในแอปจะแสดงเฉพาะ built-in + custom ของ owner
+
+---
+
+## ตัวอย่าง — curl (copy-paste ทันที)
+
+```bash
+HOST="https://app.ma-well.com"
+SECRET="<OPENCLAW_SYNC_SECRET>"
+USERNAME="mawell"          # หรือใช้ OWNER_USER_ID="cmp0udptg00051t5p0hyecuvv"
+EXT_ID="tg-8283-12345"
+
+# 1) อัปโหลดรูป
+UP=$(curl -sS -X POST "$HOST/api/sync/openclaw/uploads" \
+  -H "X-OpenClaw-Sync-Secret: $SECRET" \
+  -F "file=@/path/to/slip.jpg;type=image/jpeg" \
+  -F "ownerUsername=$USERNAME" \
+  -F "externalId=$EXT_ID")
+echo "$UP"
+IMAGE_URL=$(echo "$UP" | python3 -c "import sys,json; print(json.load(sys.stdin)['imageUrl'])")
+
+# 2) สร้าง entry (idempotent ผ่าน externalId)
+curl -sS -X POST "$HOST/api/sync/openclaw/events" \
+  -H "X-OpenClaw-Sync-Secret: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"source\": \"openclaw\",
+    \"ownerUsername\": \"$USERNAME\",
+    \"events\": [{
+      \"type\": \"finance\",
+      \"op\": \"upsert\",
+      \"externalId\": \"$EXT_ID\",
+      \"entry\": {
+        \"entryDate\": \"2026-05-12\",
+        \"type\": \"EXPENSE\",
+        \"categoryKey\": \"GENERAL_FOOD\",
+        \"categoryLabel\": \"ค่าอาหาร\",
+        \"title\": \"ก๋วยเตี๋ยวเรือ ป้าทิพย์\",
+        \"amount\": 70,
+        \"paymentMethod\": \"พร้อมเพย์\",
+        \"slipImageUrl\": \"$IMAGE_URL\"
+      }
+    }]
+  }"
 ```
 
 ---
 
-## 5. หมวด (`categoryKey` ↔ `categoryLabel`) มาตรฐาน
+## ตัวอย่าง — Python (copy-paste ทันที)
 
-```
-UTILITIES_ELECTRIC   → "ค่าไฟฟ้า"
-UTILITIES_WATER      → "ค่าน้ำประปา"
-VEHICLE_CAR          → "รถยนต์"
-VEHICLE_MOTORCYCLE   → "รถจักรยานยนต์"
-VEHICLE_SERVICE      → "ซ่อม/เข้าศูนย์รถ"
-GENERAL_FOOD         → "ค่าอาหาร"
-GENERAL_HOME_REPAIR  → "ค่าซ่อมบ้าน"
-GENERAL_SHOPPING     → "ของใช้ในบ้าน"
-GENERAL_HEALTH       → "สุขภาพ/ยา"
-GENERAL_EDUCATION    → "การศึกษา"
-GENERAL_TRAVEL       → "เดินทาง"
-GENERAL_INCOME       → "รายรับทั่วไป"
-OTHER                → "อื่นๆ"
-```
-
-openclaw จะใช้คีย์อื่นได้ แต่ถ้าจะให้กรองในแอปง่ายควรยึดชุดนี้
-
----
-
-## 6. ตรวจสอบและลบ
-
-- **ดูรายการล่าสุดที่ sync เข้ามา**:
-
-  ```bash
-  curl -s "https://app.ma-well.com/api/sync/openclaw/events?ownerUserId=cmp0udptg00051t5p0hyecuvv&type=finance&limit=20" \
-    -H "X-OpenClaw-Sync-Secret: $OPENCLAW_SYNC_SECRET"
-  ```
-
-- **ลบรายการ** (กรณีผู้ใช้บอก bot ว่าผิด):
-
-  ```bash
-  curl -sf -X POST https://app.ma-well.com/api/sync/openclaw/events \
-    -H "X-OpenClaw-Sync-Secret: $OPENCLAW_SYNC_SECRET" \
-    -H "Content-Type: application/json" \
-    -d '{
-      "ownerUserId": "cmp0udptg00051t5p0hyecuvv",
-      "events": [{
-        "type": "finance",
-        "externalId": "tg-829304-105421",
-        "op": "delete"
-      }]
-    }'
-  ```
-
-ไฟล์รูปบน disk ยังคงอยู่ — ถ้าต้องการลบไฟล์จริงด้วย ค่อยเพิ่ม endpoint cleanup ภายหลัง
-
----
-
-## 7. Pseudocode สำหรับ openclaw
+ต้องการแค่ `requests` (`pip install requests`) — ใช้ในงาน openclaw หรือ Telegram bot ทั่วไป:
 
 ```python
-def on_telegram_photo(update):
-    owner_user_id = resolve_owner_user_id(update.message.chat.id)
-    if not owner_user_id:
-        bot.reply(update, "ยังไม่ผูกบัญชี ma-well")
-        return
+"""
+openclaw → ma-well integration: ดาวน์โหลดรูปสลิปจาก Telegram แล้ว upsert HomeFinanceEntry
 
-    external_id = f"tg-{update.message.chat.id}-{update.message.message_id}"
+Usage:
+    from mawell_ingest import save_telegram_slip_to_mawell
 
-    photo = update.message.photo[-1]  # ใบที่ใหญ่สุด
-    img_bytes = telegram_download(photo.file_id)
-
-    # 1) อัปโหลดเข้า ma-well
-    up = requests.post(
-        f"{MA_WELL}/api/sync/openclaw/uploads",
-        headers={"X-OpenClaw-Sync-Secret": SECRET},
-        files={"file": ("slip.jpg", img_bytes, "image/jpeg")},
-        data={"ownerUserId": owner_user_id, "externalId": external_id},
-        timeout=30,
-    ).json()
-    image_url = up["imageUrl"]
-
-    # 2) OCR ฝั่ง openclaw
-    ocr = openclaw_ocr(img_bytes)
-    fields = ocr["fields"]  # amount, date, merchant, ...
-
-    # 3) สร้าง entry
-    requests.post(
-        f"{MA_WELL}/api/sync/openclaw/events",
-        headers={
-            "X-OpenClaw-Sync-Secret": SECRET,
-            "Content-Type": "application/json",
+    save_telegram_slip_to_mawell(
+        photo_bytes=b"...JPEG bytes...",
+        owner_username="mawell",
+        telegram_chat_id=8283294851,
+        telegram_message_id=12345,
+        slip_data={
+            "entryDate": "2026-05-12",
+            "type": "EXPENSE",
+            "categoryKey": "GENERAL_FOOD",
+            "categoryLabel": "ค่าอาหาร",
+            "title": "ก๋วยเตี๋ยวเรือ ป้าทิพย์",
+            "amount": 70.0,
+            "paymentMethod": "พร้อมเพย์",
         },
-        json={
-            "source": "openclaw",
-            "ownerUserId": owner_user_id,
-            "requestId": external_id,
-            "events": [{
+    )
+"""
+import os
+import requests
+
+MAWELL_HOST = os.environ.get("MAWELL_HOST", "https://app.ma-well.com")
+SYNC_SECRET = os.environ["OPENCLAW_SYNC_SECRET"]
+HEADERS_AUTH = {"X-OpenClaw-Sync-Secret": SYNC_SECRET}
+
+
+def upload_slip(
+    *,
+    photo_bytes: bytes,
+    owner_username: str | None = None,
+    owner_user_id: str | None = None,
+    external_id: str,
+    mime: str = "image/jpeg",
+    filename: str = "slip.jpg",
+) -> str:
+    """อัปโหลดไฟล์รูปสลิป → คืน imageUrl ที่ใช้ใน slipImageUrl ของ event"""
+    if not owner_username and not owner_user_id:
+        raise ValueError("ต้องระบุ owner_username หรือ owner_user_id อย่างน้อย 1 ตัว")
+
+    data = {"externalId": external_id}
+    if owner_user_id:
+        data["ownerUserId"] = owner_user_id
+    else:
+        data["ownerUsername"] = owner_username
+
+    res = requests.post(
+        f"{MAWELL_HOST}/api/sync/openclaw/uploads",
+        headers=HEADERS_AUTH,
+        files={"file": (filename, photo_bytes, mime)},
+        data=data,
+        timeout=30,
+    )
+    res.raise_for_status()
+    body = res.json()
+    return body["imageUrl"]
+
+
+def upsert_finance_event(
+    *,
+    owner_username: str | None = None,
+    owner_user_id: str | None = None,
+    external_id: str,
+    entry: dict,
+    request_id: str | None = None,
+) -> dict:
+    """สร้าง/อัปเดต HomeFinanceEntry — idempotent ตาม external_id"""
+    if not owner_username and not owner_user_id:
+        raise ValueError("ต้องระบุ owner_username หรือ owner_user_id อย่างน้อย 1 ตัว")
+
+    payload = {
+        "source": "openclaw",
+        "events": [
+            {
                 "type": "finance",
-                "externalId": external_id,
                 "op": "upsert",
-                "entryDate":  fields.get("date") or today_ymd(),
-                "entryType":  fields.get("type") or "EXPENSE",
-                "amount":     float(fields["amount"]),
-                "title":      fields.get("merchant") or "รายการจากสลิป",
-                "categoryKey":   fields.get("categoryKey")   or "GENERAL_SHOPPING",
-                "categoryLabel": fields.get("categoryLabel") or "ของใช้ในบ้าน",
-                "billNumber":    fields.get("referenceNo"),
-                "paymentMethod": fields.get("paymentMethod"),
-                "note":          f"OCR conf={ocr.get('confidence')}",
-                "slipImageUrl":  image_url,
-                "attachmentUrls": [image_url],
-            }],
-        },
+                "externalId": external_id,
+                "entry": entry,
+            }
+        ],
+    }
+    if owner_user_id:
+        payload["ownerUserId"] = owner_user_id
+    else:
+        payload["ownerUsername"] = owner_username
+    if request_id:
+        payload["requestId"] = request_id
+
+    res = requests.post(
+        f"{MAWELL_HOST}/api/sync/openclaw/events",
+        headers={**HEADERS_AUTH, "Content-Type": "application/json"},
+        json=payload,
         timeout=30,
+    )
+    res.raise_for_status()
+    return res.json()
+
+
+def save_telegram_slip_to_mawell(
+    *,
+    photo_bytes: bytes,
+    owner_username: str,
+    telegram_chat_id: int,
+    telegram_message_id: int,
+    slip_data: dict,
+) -> dict:
+    """One-shot helper — เรียกจาก Telegram bot handler ได้เลย"""
+    external_id = f"tg-{telegram_chat_id}-{telegram_message_id}"
+
+    image_url = upload_slip(
+        photo_bytes=photo_bytes,
+        owner_username=owner_username,
+        external_id=external_id,
+    )
+
+    entry = {**slip_data, "slipImageUrl": image_url}
+    return upsert_finance_event(
+        owner_username=owner_username,
+        external_id=external_id,
+        entry=entry,
     )
 ```
 
 ---
 
-## 8. Security checklist
+## ตัวอย่าง — Telegram bot handler ที่ใช้กับ python-telegram-bot
 
-- [ ] `OPENCLAW_SYNC_SECRET` ในไฟล์ `.env` ของ ma-well เป็น random ≥ 32 ตัว
-- [ ] ฝั่ง openclaw เก็บโทเค็นใน secret store (ไม่ commit ในโค้ด)
-- [ ] เรียกผ่าน HTTPS เท่านั้น (`app.ma-well.com` ผ่าน Cloudflare Tunnel)
-- [ ] log ที่ openclaw — mask `Authorization` / `X-OpenClaw-Sync-Secret`
-- [ ] rate limit ฝั่ง openclaw ก่อนยิง ma-well (เผื่อ Telegram ส่งภาพ burst)
+```python
+import os
+from telegram import Update
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+
+from mawell_ingest import save_telegram_slip_to_mawell
+
+# map chat_id → username ใน MA-WELL  (ดูแบบง่าย — production ใส่ใน DB)
+TELEGRAM_OWNER_MAP = {
+    8283294851: "mawell",
+    # 1234567890: "farm",
+}
+
+
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    owner = TELEGRAM_OWNER_MAP.get(chat_id)
+    if not owner:
+        await update.message.reply_text("chat นี้ยังไม่ได้แมปกับบัญชี MA-WELL")
+        return
+
+    photo = update.message.photo[-1]  # ความละเอียดสูงสุด
+    file = await context.bot.get_file(photo.file_id)
+    photo_bytes = await file.download_as_bytearray()
+
+    # *** ส่วน OCR / parse สลิป ปล่อยให้ฝั่ง openclaw ทำเอง ***
+    # ตัวอย่าง: ผลลัพธ์ OCR
+    parsed = {
+        "entryDate": "2026-05-12",
+        "type": "EXPENSE",
+        "categoryKey": "GENERAL_FOOD",
+        "categoryLabel": "ค่าอาหาร",
+        "title": "ก๋วยเตี๋ยวเรือ ป้าทิพย์",
+        "amount": 70.0,
+        "paymentMethod": "พร้อมเพย์",
+    }
+
+    result = save_telegram_slip_to_mawell(
+        photo_bytes=bytes(photo_bytes),
+        owner_username=owner,
+        telegram_chat_id=chat_id,
+        telegram_message_id=update.message.message_id,
+        slip_data=parsed,
+    )
+    await update.message.reply_text(
+        f"บันทึกแล้ว: {parsed['title']} {parsed['amount']:.2f} บาท\nผลลัพธ์: {result['summary']}"
+    )
+
+
+def main():
+    app = ApplicationBuilder().token(os.environ["TELEGRAM_BOT_TOKEN"]).build()
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    app.run_polling()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+## ทดสอบเร็ว ๆ จาก local
+
+```bash
+# ทดสอบ secret ถูก + รูปขึ้นจริง
+curl -sS "https://app.ma-well.com/api/sync/openclaw/uploads" \
+  -H "X-OpenClaw-Sync-Secret: $OPENCLAW_SYNC_SECRET" \
+  -F "file=@./sample-slip.jpg" \
+  -F "ownerUsername=mawell" \
+  -F "externalId=test-$(date +%s)" | jq .
+```
+
+ตอบกลับควรได้:
+
+```json
+{
+  "ok": true,
+  "imageUrl": "/uploads/home-finance/cmp0udptg00051t5p0hyecuvv/test-1778500000-1778500001-a1b2c3.jpg",
+  ...
+}
+```
+
+เปิด URL ได้ → ระบบพร้อมใช้งาน
+
+---
+
+## Security checklist
+
+- [ ] ตั้ง `OPENCLAW_SYNC_SECRET` ความยาว ≥ 32 ตัวอักษร และอย่า leak ลงใน repo
+- [ ] หมุน secret เป็นระยะ (rotate)
+- [ ] ฝั่ง openclaw — เก็บ secret ใน vault/env เท่านั้น ไม่ใส่ใน log
+- [ ] ระวัง chat อื่นแอบส่ง photo มา — bot ต้อง map `chat_id → owner` อย่างเข้มงวด
+- [ ] รายการที่ลงผิด — แก้โดยส่ง event เดิมที่ `op: "delete"` หรือ upsert ใหม่ด้วย `externalId` เดิมจะแทนที่ค่าเก่า

@@ -393,7 +393,7 @@ export async function POST(req: Request) {
           ? "gif"
           : "jpg";
   const storedMimeType = file.type.trim() || (isPdf ? "application/pdf" : "image/jpeg");
-  const userSegment = await resolveOwnerUploadSegment(billingCtx.billingUserId);
+  const userSegment = resolveOwnerUploadSegment(billingCtx.billingUserId);
   const dir = path.join(process.cwd(), "public", "uploads", "home-finance", userSegment);
   await mkdir(dir, { recursive: true });
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
