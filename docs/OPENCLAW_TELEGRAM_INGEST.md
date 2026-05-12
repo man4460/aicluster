@@ -86,6 +86,23 @@ Telegram → openclaw agent
 
 สร้าง/อัปเดต/ลบรายการ — รับเป็น **JSON**
 
+### สำคัญ: รูปแบบ finance ที่ API รับจริง
+
+- **แนะนำ (flat)** — ฟิลด์อยู่ระดับเดียวกับ `type` / `externalId` และใช้ **`entryType`** (`INCOME` / `EXPENSE`) **ไม่ใช่** `type` (เพราะ `type` ถูกใช้แล้วเป็น `"finance"`)
+- **`entryDate`** ต้องเป็น **`YYYY-MM-DD`** เท่านั้น (ไม่ใช่ ISO เต็ม ๆ ถ้าไม่ตรง regex จะ parse ไม่ผ่าน)
+- **รูปแบบ nested `entry`** (เช่น `entry.type`, `entry.entryDate`) — รองรับแล้วเพื่อความเข้ากันกับเอกสารเก่า / OpenClaw
+
+### `requestId` กับ `deduped: true`
+
+ถ้าส่ง **`requestId`** ซ้ำกับ request ที่ประมวลผลสำเร็จแล้ว — API จะตอบ **`deduped: true`** และ **ไม่รัน `events` อีกครั้ง** (กันส่งซ้ำจาก webhook/retry)
+
+- ต้องการ batch ใหม่ทุกครั้ง → ใส่ **`requestId` ที่ไม่ซ้ำ** (เช่น UUID หรือ `tg-{chat}-batch-{timestamp}`)
+- ถ้าใช้แค่ **`externalId` ต่อรายการ** เป็น idempotency → **ไม่ต้องส่ง `requestId`**
+
+---
+
+### ตัวอย่าง JSON (รูปแบบ flat — แนะนำ)
+
 ```json
 {
   "source": "openclaw",
@@ -96,41 +113,59 @@ Telegram → openclaw agent
       "type": "finance",
       "op": "upsert",
       "externalId": "tg-8283-12345",
-      "entry": {
-        "entryDate": "2026-05-12",
-        "type": "EXPENSE",
-        "categoryKey": "GENERAL_FOOD",
-        "categoryLabel": "ค่าอาหาร",
-        "title": "ก๋วยเตี๋ยวเรือ - ร้านป้าทิพย์",
-        "amount": 70,
-        "paymentMethod": "พร้อมเพย์",
-        "slipImageUrl": "/uploads/home-finance/cmp0udptg00051t5p0hyecuvv/tg-8283-12345-1778500000-a1b2c3.jpg",
-        "note": "อาหารกลางวัน"
-      }
+      "entryDate": "2026-05-12",
+      "entryType": "EXPENSE",
+      "categoryKey": "GENERAL_FOOD",
+      "categoryLabel": "ค่าอาหาร",
+      "title": "ก๋วยเตี๋ยวเรือ - ร้านป้าทิพย์",
+      "amount": 70,
+      "paymentMethod": "พร้อมเพย์",
+      "slipImageUrl": "/uploads/home-finance/cmp0udptg00051t5p0hyecuvv/tg-8283-12345-1778500000-a1b2c3.jpg",
+      "note": "อาหารกลางวัน"
     }
   ]
 }
 ```
 
-### Fields ของ event `type: "finance"`
+### ตัวอย่าง JSON (รูปแบบ nested — ยังใช้ได้)
+
+```json
+{
+  "type": "finance",
+  "op": "upsert",
+  "externalId": "tg-8283-12345",
+  "entry": {
+    "entryDate": "2026-05-12",
+    "type": "EXPENSE",
+    "categoryKey": "GENERAL_FOOD",
+    "categoryLabel": "ค่าอาหาร",
+    "title": "ก๋วยเตี๋ยวเรือ - ร้านป้าทิพย์",
+    "amount": 70,
+    "paymentMethod": "พร้อมเพย์",
+    "slipImageUrl": "/uploads/home-finance/..."
+  }
+}
+```
+
+### Fields ของ event `type: "finance"` (upsert)
 
 | field | ชนิด | required | คำอธิบาย |
 |---|---|---|---|
 | `externalId` | string | ✓ | unique ต่อ owner — รันซ้ำจะ upsert |
-| `op` | `"upsert"` หรือ `"delete"` | ✓ | |
-| `entry.entryDate` | `YYYY-MM-DD` | ✓ (upsert) | วันที่รายการ |
-| `entry.type` | `"INCOME"` หรือ `"EXPENSE"` | ✓ | |
-| `entry.categoryKey` | string | ✓ | เห็นตารางหมวดด้านล่าง |
-| `entry.categoryLabel` | string | ✓ | ข้อความ label ของหมวด |
-| `entry.title` | string ≤ 160 | ✓ | |
-| `entry.amount` | number (≥ 0) | ✓ | บาท (ทศนิยม 2 ตำแหน่ง) |
-| `entry.dueDate` | `YYYY-MM-DD` | ✗ | ครบกำหนด |
-| `entry.billNumber` | string ≤ 100 | ✗ | เลขที่ใบเสร็จ |
-| `entry.paymentMethod` | string ≤ 40 | ✗ | เช่น "พร้อมเพย์", "บัตรเครดิต" |
-| `entry.note` | string ≤ 600 | ✗ | |
-| `entry.slipImageUrl` | string | ✗ | path คืนจาก `/uploads` endpoint |
-| `entry.attachmentUrls` | string[] (≤ 20) | ✗ | หลายไฟล์ |
-| `entry.syncedAt` | ISO 8601 | ✗ | |
+| `op` | `"upsert"` หรือ `"delete"` | ✓ | ลบส่งแบบ flat แค่ `type`,`externalId`,`op:"delete"` |
+| `entryDate` | `YYYY-MM-DD` | ✓ (upsert) | วันที่รายการ (flat หรือใน `entry`) |
+| `entryType` | `"INCOME"` / `"EXPENSE"` | ✓ (flat) | ใน nested ใช้ `entry.type` แทน |
+| `categoryKey` | string | ✓ | |
+| `categoryLabel` | string | ✓ | |
+| `title` | string ≤ 160 | ✓ | |
+| `amount` | number (หรือ string ตัวเลข) | ✓ | บาท มากกว่า 0 |
+| `dueDate` | `YYYY-MM-DD` | ✗ | ครบกำหนด |
+| `billNumber` | string ≤ 100 | ✗ | เลขที่ใบเสร็จ |
+| `paymentMethod` | string ≤ 40 | ✗ | เช่น "พร้อมเพย์", "บัตรเครดิต" |
+| `note` | string ≤ 600 | ✗ | |
+| `slipImageUrl` | string | ✗ | path คืนจาก `/uploads` endpoint |
+| `attachmentUrls` | string[] (≤ 20) | ✗ | หลายไฟล์ |
+| `syncedAt` | ISO 8601 | ✗ | |
 
 ### หมวด (built-in keys)
 
@@ -272,7 +307,11 @@ def upsert_finance_event(
     entry: dict,
     request_id: str | None = None,
 ) -> dict:
-    """สร้าง/อัปเดต HomeFinanceEntry — idempotent ตาม external_id"""
+    """สร้าง/อัปเดต HomeFinanceEntry — idempotent ตาม external_id
+
+    `entry` ส่งแบบ nested ได้ (มี key `type` = INCOME/EXPENSE) — API รองรับแล้ว
+    หรือจะสร้าง payload แบบ flat เอง (ใช้ `entryType` แทน `type`) ก็ได้
+    """
     if not owner_username and not owner_user_id:
         raise ValueError("ต้องระบุ owner_username หรือ owner_user_id อย่างน้อย 1 ตัว")
 

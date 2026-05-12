@@ -45,25 +45,45 @@
 
 ---
 
-## 4. กฎ idempotency — รูปแบบ `externalId`
+## 4. กฎ idempotency — `externalId` และ `requestId`
 
-**ทุก event และ upload ต้องส่ง `externalId`** เพื่อให้รันซ้ำได้โดยไม่ duplicate:
-
+**`externalId`** (ต่อรายการ):
 ```
 externalId = "tg-{chat_id}-{message_id}"
-ตัวอย่าง   = "tg-8283294851-12345"
 ```
+- รันซ้ำด้วย `externalId` เดิม → ระบบ upsert รายการ (ไม่ซ้ำ)
 
-- รัน event ซ้ำด้วย `externalId` เดิม → ระบบ upsert (ไม่ซ้ำ)
-- ลบรายการ → ส่ง event เดิมที่ `op: "delete"` พร้อม `externalId` เดิม
-- รัน batch หลาย event ต่อ chat เดียวกัน → ใส่ `requestId` ระดับ batch ด้วย:
-  ```
-  requestId = "tg-{chat_id}-batch-{ISO8601 timestamp ของนาที}"
-  ```
+**`requestId`** (ต่อ HTTP request ทั้งก้อน — ไม่บังคับ):
+- ใช้กันส่ง **request เดียวกันซ้ำ** (webhook retry) — ถ้า `requestId` **ซ้ำกับที่เคยประมวลผลสำเร็จ** แล้ว API จะตอบ **`deduped: true`** และ **จะไม่รัน `events` เลย** (summary ว่างเป็นเรื่องปกติ)
+- **ต้องการให้รันจริงทุกครั้ง** → ใส่ `requestId` ที่ **ไม่ซ้ำ** ทุก batch (แนะนำ UUID) **หรือไม่ส่ง `requestId`** ถ้าใช้แค่ `externalId` ต่อรายการพอ
 
 ---
 
 ## 5. รูปแบบ payload `events[*]` สำหรับ finance
+
+**แนะนำ (flat)** — ใช้ **`entryType`** (`INCOME` / `EXPENSE`) ระดับเดียวกับ `externalId` (อย่าใช้ชื่อ `type` ที่ระดับนี้ เพราะ `type` ต้องเป็น `"finance"`)
+
+**รองรับ (nested)** — ใส่ข้อมูลใน `entry` และใช้ **`entry.type`** เป็น INCOME/EXPENSE (API จะแปลงให้เอง)
+
+```json
+{
+  "type": "finance",
+  "op": "upsert",
+  "externalId": "tg-8283294851-12345",
+  "entryDate": "2026-05-12",
+  "entryType": "EXPENSE",
+  "categoryKey": "GENERAL_FOOD",
+  "categoryLabel": "ค่าอาหาร",
+  "title": "...",
+  "amount": 70,
+  "paymentMethod": "พร้อมเพย์",
+  "billNumber": "...",
+  "note": "...",
+  "slipImageUrl": "/uploads/home-finance/<userId>/<file>"
+}
+```
+
+หรือแบบ nested (เทียบเท่า):
 
 ```json
 {
@@ -71,23 +91,20 @@ externalId = "tg-{chat_id}-{message_id}"
   "op": "upsert",
   "externalId": "tg-8283294851-12345",
   "entry": {
-    "entryDate": "YYYY-MM-DD",
+    "entryDate": "2026-05-12",
     "type": "EXPENSE",
     "categoryKey": "GENERAL_FOOD",
     "categoryLabel": "ค่าอาหาร",
     "title": "...",
-    "amount": 0.0,
-    "paymentMethod": "พร้อมเพย์",
-    "billNumber": "...",
-    "note": "...",
+    "amount": 70,
     "slipImageUrl": "/uploads/home-finance/<userId>/<file>"
   }
 }
 ```
 
-- `entryDate` คือวันที่ในสลิป — ไม่ใช่วันที่บันทึก
-- `type`: `"EXPENSE"` (รายจ่าย) หรือ `"INCOME"` (รายรับ)
-- `title` ≤ 160, `amount` ≥ 0, `paymentMethod` ≤ 40, `billNumber` ≤ 100, `note` ≤ 600
+- `entryDate` คือวันที่ในสลิป — รูปแบบ **`YYYY-MM-DD`** เท่านั้น
+- รายจ่าย/รายรับ: ใช้ **`entryType`** (flat) หรือ **`entry.type`** (nested) — ค่า `"EXPENSE"` หรือ `"INCOME"`
+- `title` ≤ 160, `amount` > 0, `paymentMethod` ≤ 40, `billNumber` ≤ 100, `note` ≤ 600
 
 ---
 
@@ -117,7 +134,7 @@ externalId = "tg-{chat_id}-{message_id}"
 
 - ไฟล์: รูป (JPG/PNG/WEBP/GIF) ≤ 5 MB, PDF ≤ 8 MB
 - ห้ามใช้ `externalId` ที่มีตัวอักษรพิเศษนอกจาก `[A-Za-z0-9_-]` — sanitize ก่อนส่ง
-- amount ≥ 0 เสมอ (ถ้าเป็น refund → ใช้ `type: "INCOME"`)
+- amount > 0 (API ใช้ validation มากกว่า 0 — ถ้าเป็น refund ให้ใช้ `entryType: "INCOME"`)
 - ห้ามส่ง event > 500 รายการต่อ request
 
 ---
@@ -152,7 +169,7 @@ curl -X POST "$HOST/api/sync/openclaw/uploads" \
   -F "externalId=tg-8283294851-12345"
 # → {"ok":true,"imageUrl":"/uploads/home-finance/<userId>/<file>.jpg"}
 
-# (4) upsert finance entry
+# (4) upsert finance entry (รูปแบบ flat — แนะนำ)
 curl -X POST "$HOST/api/sync/openclaw/events" \
   -H "X-OpenClaw-Sync-Secret: $SECRET" \
   -H "Content-Type: application/json" \
@@ -164,16 +181,14 @@ curl -X POST "$HOST/api/sync/openclaw/events" \
       "type": "finance",
       "op": "upsert",
       "externalId": "tg-8283294851-12345",
-      "entry": {
-        "entryDate": "2026-05-12",
-        "type": "EXPENSE",
-        "categoryKey": "GENERAL_FOOD",
-        "categoryLabel": "ค่าอาหาร",
-        "title": "ก๋วยเตี๋ยวเรือ ป้าทิพย์",
-        "amount": 70,
-        "paymentMethod": "พร้อมเพย์",
-        "slipImageUrl": "/uploads/home-finance/<userId>/<file>.jpg"
-      }
+      "entryDate": "2026-05-12",
+      "entryType": "EXPENSE",
+      "categoryKey": "GENERAL_FOOD",
+      "categoryLabel": "ค่าอาหาร",
+      "title": "ก๋วยเตี๋ยวเรือ ป้าทิพย์",
+      "amount": 70,
+      "paymentMethod": "พร้อมเพย์",
+      "slipImageUrl": "/uploads/home-finance/<userId>/<file>.jpg"
     }]
   }'
 ```
