@@ -9,6 +9,7 @@ import {
 } from "@/lib/dashboard-system-catalog";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { resolveModuleCardDisplayImageUrl } from "@/lib/modules/dashboard-module-cover-images";
 
 export const metadata: Metadata = {
   title: "แผนผังระบบ | MAWELL Buffet",
@@ -27,7 +28,9 @@ export default async function SystemsExplorePage() {
   const bySlug = Object.fromEntries(rows.map((r) => [r.slug, r.cardImageUrl]));
   const liveItems: DashboardSystemCard[] = DASHBOARD_LIVE_SYSTEMS.map(({ moduleSlug, ...card }) => ({
     ...card,
-    imageUrl: moduleSlug ? (bySlug[moduleSlug] ?? null) : card.imageUrl,
+    imageUrl: moduleSlug
+      ? resolveModuleCardDisplayImageUrl(moduleSlug, bySlug[moduleSlug] ?? null)
+      : card.imageUrl,
   }));
 
   return (
@@ -46,7 +49,15 @@ export default async function SystemsExplorePage() {
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
           วางโครง route แล้ว (รอพัฒนา)
         </h2>
-        <DashboardSystemShortcutGrid items={DASHBOARD_ROADMAP_SYSTEMS} />
+        <DashboardSystemShortcutGrid
+          items={DASHBOARD_ROADMAP_SYSTEMS.map((card) => ({
+            ...card,
+            imageUrl:
+              card.moduleSlug != null
+                ? resolveModuleCardDisplayImageUrl(card.moduleSlug, bySlug[card.moduleSlug] ?? null)
+                : card.imageUrl,
+          }))}
+        />
       </section>
     </PageContainer>
   );

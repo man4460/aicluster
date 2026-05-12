@@ -1,4 +1,5 @@
 import { CHAT_AI_DASHBOARD_HREF } from "@/lib/dashboard/chat-ai-href";
+import { resolveModuleCardDisplayImageUrl } from "@/lib/modules/dashboard-module-cover-images";
 
 /** การ์ดแผนผังระบบ — `imageUrl` มาจากแอดมิน (module_list.card_image_url) เมื่อมี `moduleSlug` */
 export type DashboardSystemCard = {
@@ -29,11 +30,11 @@ export const DASHBOARD_LIVE_SYSTEMS: DashboardSystemCatalogEntry[] = [
   { href: "/dashboard/modules", label: "โมดูล / ทดลอง", emoji: "🧩" },
 ];
 
-export const DASHBOARD_ROADMAP_SYSTEMS: DashboardSystemCard[] = [
+export const DASHBOARD_ROADMAP_SYSTEMS: DashboardSystemCatalogEntry[] = [
   { href: "/dashboard/analytics", label: "วิเคราะห์", emoji: "📊" },
   { href: "/dashboard/booking", label: "จองคิว", emoji: "📅" },
-  { href: "/dashboard/inventory", label: "คลัง / สต็อก", emoji: "📦" },
-  { href: "/dashboard/laundry", label: "ซักรีด", emoji: "🧺" },
+  { href: "/dashboard/inventory", label: "คลัง / สต็อก", emoji: "📦", moduleSlug: "inventory" },
+  { href: "/dashboard/laundry", label: "ซักรีด", emoji: "🧺", moduleSlug: "laundry" },
   { href: "/dashboard/line-integration", label: "LINE", emoji: "📱" },
   { href: "/dashboard/loan", label: "สินเชื่อ", emoji: "💳" },
   { href: "/dashboard/rental", label: "เช่าสื่อ", emoji: "📀" },
@@ -45,6 +46,6 @@ export function mergeLiveSystemCardImages(
 ): DashboardSystemCard[] {
   return DASHBOARD_LIVE_SYSTEMS.map(({ moduleSlug, ...card }) => ({
     ...card,
-    imageUrl: moduleSlug ? (bySlug[moduleSlug] ?? null) : card.imageUrl,
+    imageUrl: moduleSlug ? resolveModuleCardDisplayImageUrl(moduleSlug, bySlug[moduleSlug] ?? null) : card.imageUrl,
   }));
 }

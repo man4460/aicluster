@@ -1,0 +1,24 @@
+---
+description: โมดูลแดชบอร์ดใหม่ — ต้องเพิ่มไอคอน sidebar ใน dashboard-nav-icons ทุกครั้ง
+alwaysApply: true
+---
+
+# โมดูลใหม่ — ไอคอน sidebar (บังคับ)
+
+เมื่อเพิ่มหรือเปิดใช้ **โมดูลแดชบอร์ดใหม่** (เมนูใน `buildDashboardNavGroups` / ลิงก์ `/dashboard/...` / slug ใน `dashboard-nav.ts`):
+
+## บังคับ
+
+1. **เพิ่มเงื่อนไขไอคอน** ใน `src/components/layout/dashboard-nav-icons.tsx` ฟังก์ชัน `dashboardNavIconForHref(href)` ให้ครอบคลุม **พาธจริงที่ sidebar ส่งเข้ามา** (หลัง `resolveDashboardNavLinkHref` + `canonicalDashboardModuleLinkHref` — มักเป็น `/dashboard/{slug}` หรือตามที่ map ใน `src/lib/dashboard-nav.ts`)
+2. ใช้ `<Svg>...</Svg>` ชุดเดียวกับรายการอื่นในไฟล์: `stroke="currentColor"`, `strokeWidth="2"` (หรือใกล้เคียง), **ไม่** hardcode สี fill ยกเว้นจุดเล็ก decorative ที่ใช้ `currentColor`
+3. วางเงื่อนไข **ก่อน** บล็อก fallback `href.startsWith("/dashboard/modules/")` และ **ก่อน** `return` ท้ายไฟล์ (วงกลม +) — ไม่ให้โมดูลใหม่ตกไปไอคอนกริดหรือไอคอน default โดยไม่ตั้งใจ
+4. เลือกไอคอนที่ **ไม่ซ้ำ** โมดูลใกล้เคียง (เช่น คลังสต็อก vs ทรัพย์สิน vs คลังรหัสผ่าน)
+5. ถ้าโมดูลอยู่ในแคตตาล็อกหลัก — **เพิ่มรูปปก** ใน `src/app/landing/landing-module-showcase-data.ts` (หรือ map ที่ `getDefaultModuleCoverImageUrl` อ่านได้) เพื่อให้การ์ดแดชบอร์ดได้รูปเดียวกับ landing; รูป Unsplash ต้องผ่าน `isTrustedUnsplashModuleCoverUrl` (โฮสต์ `images.unsplash.com` เท่านั้น)
+
+## อ้างอิง
+
+- ไฟล์ไอคอน: `src/components/layout/dashboard-nav-icons.tsx`
+- รูปปกค่าเริ่ม (เดียวกับ landing): `src/lib/modules/dashboard-module-cover-images.ts` + `src/app/landing/landing-module-showcase-data.ts`
+- ลิงก์ canonical โมดูล: `src/lib/dashboard-nav.ts` (`subscribedModuleHrefForSlug` / `VAULT_MODULE_SLUG` แบบเดียวกัน)
+
+ถ้าเพิ่มโมดูลแล้วยังไม่แตะ `dashboard-nav-icons.tsx` — **ถือว่างานยังไม่ครบ**

@@ -382,6 +382,37 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  /** คลังรหัสผ่าน — แม่กุญแจ */
+  if (href.startsWith("/dashboard/vault")) {
+    return (
+      <Svg>
+        <circle cx="8" cy="11" r="3" stroke="currentColor" strokeWidth="2" />
+        <path d="M10.5 13L20 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path
+          d="M17 18l2 2M15.5 19.5L18 22M18.5 16.5L21 19"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+        />
+      </Svg>
+    );
+  }
+  /** คลังสต๊อกสินค้า — พาเลท/ชั้นวางสต๊อก */
+  if (href.startsWith("/dashboard/inventory")) {
+    return (
+      <Svg>
+        <path d="M3 7h18M3 12h18M3 17h15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M5 4v3M12 4v3M19 4v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path
+          d="M17 17v4h3"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
   /** บริการรับฝากจอดรถ — ซิลูเอตรถ + ล้อ (สอดคล้องโมดูลจอดรถ) */
   if (href.startsWith("/dashboard/parking")) {
     return (

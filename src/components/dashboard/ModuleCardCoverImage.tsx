@@ -1,4 +1,4 @@
-import { isSafeModuleCardImageUrl } from "@/lib/module-card-image";
+import { isSafeModuleCardDisplayUrl } from "@/lib/module-card-image";
 import { cn } from "@/lib/cn";
 
 export function ModuleCardCoverImage({
@@ -8,10 +8,10 @@ export function ModuleCardCoverImage({
   url: string | null | undefined;
   className?: string;
 }) {
-  const safe = url && isSafeModuleCardImageUrl(url) ? url : null;
+  const safe = url && isSafeModuleCardDisplayUrl(url) ? url : null;
   if (!safe) return null;
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- path จาก DB ภายใน public เท่านั้น
+    // eslint-disable-next-line @next/next/no-img-element -- local หรือ Unsplash ที่ไว้ใจผ่าน isSafeModuleCardDisplayUrl
     <img
       src={safe}
       alt=""

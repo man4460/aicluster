@@ -12,6 +12,7 @@ import { listActiveResubscribeCooldowns, listSubscribedModuleIds } from "@/lib/m
 import { listTrialModuleIds } from "@/lib/modules/trial-store";
 import { SYSTEM_MAP_CATALOG_ROW } from "@/lib/modules/system-map-catalog";
 import { isMqttServiceModuleEnabled } from "@/lib/modules/mqtt-feature";
+import { resolveModuleCardDisplayImageUrl } from "@/lib/modules/dashboard-module-cover-images";
 
 export default async function ModulesCatalogPage() {
   const session = await getSession();
@@ -41,10 +42,18 @@ export default async function ModulesCatalogPage() {
 
   /** แผนผังระบบ — เฉพาะบัญชีที่ล็อกอินเป็นแอดมิน (ไม่ใช้สิทธิ์เจ้านายของพนักงาน) */
   const modulesWithDisplayTitles = [
-    ...(session.role === "ADMIN" ? [{ ...SYSTEM_MAP_CATALOG_ROW }] : []),
+    ...(session.role === "ADMIN"
+      ? [
+          {
+            ...SYSTEM_MAP_CATALOG_ROW,
+            cardImageUrl: resolveModuleCardDisplayImageUrl(SYSTEM_MAP_CATALOG_ROW.slug, null),
+          },
+        ]
+      : []),
     ...catalogModules.map((m) => ({
       ...m,
       title: displayAppModuleTitle(m.slug, m.title),
+      cardImageUrl: resolveModuleCardDisplayImageUrl(m.slug, m.cardImageUrl),
     })),
   ];
 

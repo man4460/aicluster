@@ -32,6 +32,7 @@ import {
 } from "@/lib/modules/system-map-catalog";
 import { CHAT_AI_DASHBOARD_HREF } from "@/lib/dashboard/chat-ai-href";
 import { DashboardModuleHeroCard } from "@/components/dashboard/DashboardModuleHeroCard";
+import { resolveModuleCardDisplayImageUrl } from "@/lib/modules/dashboard-module-cover-images";
 
 export const metadata: Metadata = {
   title: "แดชบอร์ด | MAWELL Buffet",
@@ -110,6 +111,11 @@ export default async function DashboardHomePage() {
         ),
     )
     .map((m) => ({ ...m, title: displayAppModuleTitle(m.slug, m.title) }));
+
+  /** ยังไม่มีโปรแกรมที่เปิดใช้ได้ — พาไปเลือกระบบที่หน้ารวมก่อน */
+  if (subscribedModules.length === 0) {
+    redirect("/dashboard/modules");
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -264,6 +270,7 @@ export default async function DashboardHomePage() {
                 groupId={SYSTEM_MAP_CATALOG_ROW.groupId}
                 title={SYSTEM_MAP_CATALOG_ROW.title}
                 description={dashboardSystemMapCardDescription()}
+                imageUrl={resolveModuleCardDisplayImageUrl(SYSTEM_MAP_CATALOG_ROW.slug, null)}
                 href="/dashboard/explore"
                 ctaLabel="เปิดแผนผังระบบ"
                 usageBadge={getModuleDailyUsageBadge(SYSTEM_MAP_CATALOG_ROW.slug, SYSTEM_MAP_CATALOG_ROW.groupId)}
@@ -273,7 +280,7 @@ export default async function DashboardHomePage() {
               <DashboardModuleHeroCard
                 key={m.id}
                 href={dashboardModuleHref(m.slug)}
-                imageUrl={m.cardImageUrl}
+                imageUrl={resolveModuleCardDisplayImageUrl(m.slug, m.cardImageUrl)}
                 title={m.title}
                 description={dashboardModuleCardDescription(m.slug)}
                 groupId={m.groupId}

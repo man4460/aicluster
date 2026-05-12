@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
 import { canAccessAppModule, type UserAccessFields } from "@/lib/modules/access";
-import { isDailyTokenExemptModuleSlug } from "@/lib/modules/config";
+import { isDailyTokenExemptModuleSlug, MODULE_GROUP_TIER_NAME } from "@/lib/modules/config";
 import { getModuleDailyUsageBadge } from "@/lib/modules/module-usage-badge";
 import { MODULE_RESUBSCRIBE_COOLDOWN_MS } from "@/lib/modules/module-subscription-cooldown";
 import { isSystemMapCatalogSlug } from "@/lib/modules/system-map-catalog";
@@ -313,10 +313,10 @@ export function ModuleSubscriptionBrowser({
                   </div>
                   <div className="min-w-0 flex-1">
                     <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">
-                      Group {gid}
+                      {MODULE_GROUP_TIER_NAME[gid] ?? `กลุ่ม ${gid}`}
                     </h2>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-widest">
-                      {items.length} Modules Available
+                    <p className="text-xs font-medium uppercase tracking-widest text-slate-500">
+                      {items.length} ระบบในกลุ่มนี้
                     </p>
                   </div>
                   <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent" />

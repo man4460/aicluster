@@ -609,6 +609,57 @@ alwaysApply: false
 
 
 ================================================================================
+### .cursor/rules/dashboard-history-card-grid.mdc
+================================================================================
+
+---
+description: รายการแดชบอร์ดแบบการ์ด (ประวัติ / ช่องจอด ฯลฯ) — มือถือ 1 คอลัมน์ เดสก์ท็อป 2 คอลัมน์
+globs:
+  - "src/systems/parking/**/*.{ts,tsx}"
+  - "src/app/**/dashboard/**/parking/**/*.tsx"
+alwaysApply: false
+---
+
+# กริดการ์ดรายการแดชบอร์ด (ประวัติ / ช่องจอด — card grid)
+
+ใช้กับ **รายการที่แสดงเป็นการ์ดในกริด** เช่น ประวัติการจอดรถ (`ParkingHistorySessionList`) และ **รายการช่องจอด** (`ParkingSpotsGridList`) — โทนเดียวกับแผงรายการคาร์แคร์
+
+## บังคับ — breakpoint
+
+| Viewport | พฤติกรรม |
+|----------|----------|
+| **มือถือ / แคบ** (`default`, ก่อน `md`) | **`grid-cols-1`** — หนึ่งการ์ดต่อแถว (แนวตั้งคอลัมน์เดียว) |
+| **เดสก์ท็อป / แท็บเล็ตแนวนอน** (`md` ขึ้นไป) | **`md:grid-cols-2`** — **สองคอลัมน์** (สองการ์ดต่อแถว) |
+
+## ห้าม (ยกเว้นผู้ใช้ระบุชัด)
+
+- **ห้าม** ใส่ `xl:grid-cols-3` หรือเพิ่มคอลัมน์ที่ 3 ในรายการแบบนี้โดยไม่ได้ร้องขอ — ค่าเริ่มต้นโปรเจกต์คือ **2 คอลัมน์บนจอใหญ่** เพื่อให้การ์ดอ่านง่ายและสอดคล้องที่จอดรถ / คาร์แคร์
+
+## เทมเพลต Tailwind (รายการห่อ `ul`)
+
+```tsx
+<ul className="grid grid-cols-1 gap-3 p-1 md:grid-cols-2 md:gap-4" aria-label="…">
+```
+
+- ระยะห่าง: `gap-3` มือถือ · `md:gap-4` จอใหญ่
+- **ไม่ใช้** `divide-y` เป็นหลักเมื่อเป็นกริดการ์ด — ใช้ **`gap`** แทน
+
+## เปลือกเลื่อน (scroll shell) คู่กับกริด
+
+- มือถือ: อาจมี `max-h-[…] overflow-y-auto` + กรอบ glass (`rounded-2xl border-white/55 bg-white/35 backdrop-blur-xl`) เหมือน `CarWashSalesPanel`
+- ตั้งแต่ `md`: ถอดกรอบซ้ำของเปลือก (`md:border-0 md:bg-transparent md:max-h-none md:overflow-visible`) ให้การ์ดอยู่ใต้ `AppDashboardSection` โดยไม่การ์ดซ้อนการ์ด
+
+## อ้างอิงโค้ด
+
+- `src/systems/parking/components/ParkingHistorySessionList.tsx`
+- `src/systems/parking/components/ParkingSpotsGridList.tsx`
+
+## หมายเหตุ (OpenClaw / agent อื่น)
+
+ไฟล์นี้อยู่ใน `.cursor/rules/` — แก้เฉพาะเมื่อเปลี่ยนสัญญากริดประวัติโมดูลนี้หรือคัดลอกแพทเทิร์นไปโมดูลใหม่
+
+
+================================================================================
 ### .cursor/rules/dashboard-mobile-filter-icon.mdc
 ================================================================================
 
@@ -796,6 +847,35 @@ alwaysApply: true
 
 
 ================================================================================
+### .cursor/rules/dashboard-mobile-summary-stat-grid.mdc
+================================================================================
+
+---
+description: การ์ดสรุปตัวเลขหน้าแดชบอร์ดโมดูล — มือถือ 2 คอลัมน์เสมอ (ไม่ stack คอลัมน์เดียว)
+alwaysApply: true
+---
+
+# Dashboard — การ์ดสถิติหน้าแดชบอร์ดบนมือถือ (2 คอลัมน์)
+
+ใช้กับแถวการ์ดสรุปแบบ `parkingStatCardClass` / CarWash-style stat / ตัวเลขยอดรวม·จำนวน·รายการ (เช่น **ธนาคารโรงเรียน** `SchoolBankDashboardClient`, **สหกรณ์ชุมชน** `CommunityCoopDashboardClient`)
+
+## บังคับ
+
+1. **ก่อน `sm` (มือถือ viewport แคบ)** ห้ามใช้ `grid-cols-1` สำหรับแถวการ์ดสรุป — ใช้ **`grid-cols-2`** และ `gap-3` (หรือใกล้เคียง) ให้การ์ดเรียง 2 คอลัมน์สม่ำเสมอ
+2. **จำนวนการ์ดเป็นเลขคี่ (เช่น 3 ใบ)** — การ์ด**ใบสุดท้าย**ต้อง **`col-span-2 sm:col-span-1`** (หรือเทียบเท่าตาม breakpoint ถัดไป) เพื่อไม่ให้การ์ดลอยค้างคอลัมน์เดียวแปลก ๆ
+3. **จำนวนการ์ดคู่ (เช่น 4 ใบ)** — ใช้ `grid-cols-2` ล้วนได้ (ได้กริด 2×2) ไม่ต้อง `col-span` พิเศษ
+4. บน **`sm+`** คงเลย์เอาต์เดสก์ท็อปของโมดูล (เช่น `sm:grid-cols-3` สำหรับ 3 การ์ด · `lg:grid-cols-4` สำหรับ 4 การ์ด)
+
+## อ้างอิงเพิ่ม
+
+- แพทเทิร์นเดียวกับ `village-dashboard-mobile-stats-grid.mdc` (หมู่บ้าน — การ์ดคี่ + tail full width)
+
+## ห้ามพลาดซ้ำ
+
+- อย่ากลับไปใช้ `grid-cols-1` บน base สำหรับแถว stat สรุปโมดูลนี้ — ผู้ใช้ต้องการความหนาแน่น 2 คอลัมน์บนมือถือตามแนวคาร์แคร์/แดชบอร์ดอื่นใน repo
+
+
+================================================================================
 ### .cursor/rules/dashboard-module-car-wash-barber-reference.mdc
 ================================================================================
 
@@ -923,6 +1003,36 @@ alwaysApply: false
 
 
 ================================================================================
+### .cursor/rules/dashboard-new-module-sidebar-icon.mdc
+================================================================================
+
+---
+description: โมดูลแดชบอร์ดใหม่ — ต้องเพิ่มไอคอน sidebar ใน dashboard-nav-icons ทุกครั้ง
+alwaysApply: true
+---
+
+# โมดูลใหม่ — ไอคอน sidebar (บังคับ)
+
+เมื่อเพิ่มหรือเปิดใช้ **โมดูลแดชบอร์ดใหม่** (เมนูใน `buildDashboardNavGroups` / ลิงก์ `/dashboard/...` / slug ใน `dashboard-nav.ts`):
+
+## บังคับ
+
+1. **เพิ่มเงื่อนไขไอคอน** ใน `src/components/layout/dashboard-nav-icons.tsx` ฟังก์ชัน `dashboardNavIconForHref(href)` ให้ครอบคลุม **พาธจริงที่ sidebar ส่งเข้ามา** (หลัง `resolveDashboardNavLinkHref` + `canonicalDashboardModuleLinkHref` — มักเป็น `/dashboard/{slug}` หรือตามที่ map ใน `src/lib/dashboard-nav.ts`)
+2. ใช้ `<Svg>...</Svg>` ชุดเดียวกับรายการอื่นในไฟล์: `stroke="currentColor"`, `strokeWidth="2"` (หรือใกล้เคียง), **ไม่** hardcode สี fill ยกเว้นจุดเล็ก decorative ที่ใช้ `currentColor`
+3. วางเงื่อนไข **ก่อน** บล็อก fallback `href.startsWith("/dashboard/modules/")` และ **ก่อน** `return` ท้ายไฟล์ (วงกลม +) — ไม่ให้โมดูลใหม่ตกไปไอคอนกริดหรือไอคอน default โดยไม่ตั้งใจ
+4. เลือกไอคอนที่ **ไม่ซ้ำ** โมดูลใกล้เคียง (เช่น คลังสต็อก vs ทรัพย์สิน vs คลังรหัสผ่าน)
+5. ถ้าโมดูลอยู่ในแคตตาล็อกหลัก — **เพิ่มรูปปก** ใน `src/app/landing/landing-module-showcase-data.ts` (หรือ map ที่ `getDefaultModuleCoverImageUrl` อ่านได้) เพื่อให้การ์ดแดชบอร์ดได้รูปเดียวกับ landing; รูป Unsplash ต้องผ่าน `isTrustedUnsplashModuleCoverUrl` (โฮสต์ `images.unsplash.com` เท่านั้น)
+
+## อ้างอิง
+
+- ไฟล์ไอคอน: `src/components/layout/dashboard-nav-icons.tsx`
+- รูปปกค่าเริ่ม (เดียวกับ landing): `src/lib/modules/dashboard-module-cover-images.ts` + `src/app/landing/landing-module-showcase-data.ts`
+- ลิงก์ canonical โมดูล: `src/lib/dashboard-nav.ts` (`subscribedModuleHrefForSlug` / `VAULT_MODULE_SLUG` แบบเดียวกัน)
+
+ถ้าเพิ่มโมดูลแล้วยังไม่แตะ `dashboard-nav-icons.tsx` — **ถือว่างานยังไม่ครบ**
+
+
+================================================================================
 ### .cursor/rules/dashboard-page-width.mdc
 ================================================================================
 
@@ -933,7 +1043,8 @@ alwaysApply: true
 
 # Dashboard layout — ความกว้าง container ให้เท่ากัน
 
-- หน้าใต้ `src/app/(dashboard)/dashboard/` ถูกห่อด้วย `PageContainer` ใน `dashboard/layout.tsx` แล้ว — ใช้ **`max-w-6xl`** และ **`PAGE_GUTTER_X`** (`px-4 sm:px-6`) เป็นชั้นเดียวสำหรับจำกัดความกว้างและระยะขอบจากขอบ viewport
+- หน้าใต้ `src/app/(dashboard)/dashboard/` ถูกห่อด้วย **`PageContainer`** ผ่าน **`DashboardPagesShell`** ใน `dashboard/layout.tsx` แล้ว — ใช้ **`max-w-6xl`** และ **`PAGE_GUTTER_X`** (`px-4 sm:px-6`) เป็นชั้นเดียวสำหรับจำกัดความกว้างและระยะขอบจากขอบ viewport
+- **หน้าแดชบอร์ดหลัก** `src/app/(dashboard)/dashboard/page.tsx` — **ห้าม** ห่อ root ด้วย `max-w-7xl` / `max-w-*` ที่กว้างกว่าหรือซ้ำกับ shell, `mx-auto` เพื่อจำกัดความกว้าง, หรือ `pb-*` พิเศษที่ซ้อนกับแนวตั้งของ `PageContainer` (`PAGE_GUTTER_Y`). ให้ใช้ wrapper ภายในแบบ `space-y-4 sm:space-y-6` และ `gap-4 sm:gap-6` ให้ใกล้เคียงหน้าเช่น `dashboard/modules/page.tsx` — **ห้าม** ใส่ `px-2` แบบ ad-hoc ที่หัวข้อ section จนหัวข้อไม่เท่ากับขอบการ์ด; ถ้าต้องการ gutter ชั้นใน ใช้ **`PAGE_INNER_GUTTER_X`**
 - **ห้าม** ใส่ `max-w-6xl mx-auto` ซ้ำใน layout/shell ของโมดูลย่อย ยกเว้นมีเหตุผลชัด (เช่น หน้าเต็มจอที่ไม่อยู่ใต้ PageContainer)
 - โมดูลที่มีหลายหน้า ให้ยึดแบบเดียวกับ **รายรับ-รายจ่าย** (`*Shell` = หัวข้อ + แถบเมนู) หรือ **POS ร้านอาหาร** (`BuildingPosShell` = การ์ดหัว glass **รวม** แท็บหลัก/ย่อย hub แบบคาร์แคร์ — ดู `building-pos-dashboard-template.mdc`) — **ห้าม** ห่อ `children` ทั้งหน้าด้วยการ์ดใหญ่ `rounded-3xl border` อีกชั้น; เนื้อหาไหลต่อใต้ `PageContainer` โดยแต่ละการ์ดย่อยใช้ `app-surface` / border ตามจุดได้
 - ถ้าจำเป็นต้องจัด padding แนวนอนชั้นในเพิ่ม ใช้ **`PAGE_INNER_GUTTER_X`** จาก `@/components/ui/page-container` ให้สม่ำเสมอ ไม่ให้เมนูกับเนื้อหาหลุดจังหวะ
@@ -1021,6 +1132,7 @@ alwaysApply: true
 - รองรับ **safe area** ด้านล่าง: `env(safe-area-inset-bottom)` บนแถบเมนูหรือ padding ของมัน
 - **พื้นที่เลื่อนเนื้อหา** ต้องมี padding-bottom เพื่อไม่ให้ถูก dock บัง (ดูแม่แบบในโค้ดจริง)
 - **อ้างอิงโค้ด:** `src/systems/car-wash/CarWashDashboard.tsx` (แท็บล่าง / สลับโซน), `src/systems/barber/components/BarberLayoutChrome.tsx`, `BarberModuleMobileDock` / `BarberModuleHeader.tsx`
+- **แถวการ์ดสรุปตัวเลข (stat) บนมือถือ:** ต้องเป็น **2 คอลัมน์** (`grid-cols-2`) — ห้ามปล่อย `grid-cols-1` บน viewport แคบ — รายละเอียดการ์ดคี่/คู่: **`.cursor/rules/dashboard-mobile-summary-stat-grid.mdc`**
 
 ---
 
@@ -1097,6 +1209,45 @@ alwaysApply: false
 6. **การ์ดรายการห้อง** — แถว **ผู้พัก** / **ค่าเช่า** ใช้ `dormRoomStatRow` + ป้าย + `dormRoomStatValue`; ลิงก์ท้ายการ์ดใช้ `dormRoomCardCta`
 
 7. **ผังห้อง** — ห้องที่มีค้างชำระงวดเก่า ต่อท้ายคลาสการ์ดด้วย `dormRoomTileOverdueHint` (จุดส้ม) ให้สอดคล้องแดชบอร์ด
+
+
+================================================================================
+### .cursor/rules/general-store-pos-dashboard.mdc
+================================================================================
+
+---
+description: POS ร้านทั่วไป — shell เมนู คำอธิบาย คู่มือ แนะภาพสินค้า
+globs: src/systems/general-store-pos/**/*
+alwaysApply: false
+---
+
+# POS ร้านทั่วไป (`general-store-pos`)
+
+## Shell / เมนูเดสก์ท็อป (`GeneralStorePosShell.tsx`)
+
+- **หัวการ์ด:** แสดงเฉพาะหัวข้อ **POS ร้านทั่วไป** — **ห้าม** ใส่ย่อหน้าโปรโมท/คำอธิบายยาวใต้หัวข้อ (ใช้ **คู่มือการใช้งาน** แทน)
+- **เมนูหลัก (md+):** แบบคาร์แคร์ — `<nav>` + `<ul className="flex gap-1">` + แต่ละ `<li className="min-w-0 flex-1">` + ลิงก์ **`w-full`** จัดกึ่งกลาง มีไอคอนคู่ข้อความ
+- **ปุ่มคู่มือ:** มุมขวาของแถวหัว (เดียวกับ Building POS) — `AppUsageGuideModal` + สถานะ `usageGuideOpen` ใน shell
+
+## คำอธิบายในโมดูล
+
+- **ห้าม** ใส่ `description` ยาวใน `AppSectionHeader` / `FormModal` เพื่ออธิบายฟีเจอร์ — ย้ายไปคู่มือหรือใช้ `aria-label` / placeholder สั้น ๆ
+- ข้อความบนการ์ดสินค้า: **ห้าม** ใส่คำแนะนำการแตะแบบยาว (เช่น +1/+2) ใน UI — เก็บในโมดัลคู่มือได้
+
+## แนะภาพตัวอย่าง (`lib/suggest-stock-image.ts`)
+
+- ปุ่มในโมดัล: สินค้าใช้ข้อความ **แนะภาพตามสินค้า** (อิง `name` + `categoryName`); หมวดใช้ **แนะภาพตามหมวด**
+- ลำดับการจับคู่: **จับจากชื่อสินค้าและหมวดรวมกัน** — กฎเฉพาะ (กาแฟ ขนมปัง อิเล็กทรอนิกส์ ฯลฯ) มาก่อน กฎกว้าง (อาหาร เครื่องดื่ม) ทีหลัง สุดท้ายคือ default ร้านค้า
+- URL เป็น Unsplash ตัวอย่างเท่านั้น — ไม่บันทึกอัตโนมัติลงเซิร์ฟเวอร์
+
+## เลย์เอาต์ / scroll
+
+- เนื้อหาใต้ header ใช้ **`min-h-0 flex-1 overflow-y-auto`** ใน shell (คู่กับ layout `flex min-h-0 flex-1 flex-col`)
+
+## อ้างอิง
+
+- คู่มือ: `AppUsageGuideModal` จาก `@/components/app-templates`
+- แม่แบบปุ่มคู่มือ: `src/systems/building-pos/components/BuildingPosShell.tsx`
 
 
 ================================================================================
@@ -1424,6 +1575,52 @@ alwaysApply: true
 - หลัง generate แนะนำ **`rm -rf .next`** (หรือลบโฟลเดอร์ `.next` บน Windows) แล้วรีสตาร์ท **`next dev`** — กัน Next/Webpack ค้าง bundle หรือ Prisma client เก่า
 - ถ้า **`prisma generate` ล้มเหลวด้วย EPERM** (ไฟล์ DLL ถูกล็อก) — ให้หยุดเซิร์ฟเวอร์ที่รันอยู่แล้วรัน generate ใหม่
 - ถ้าผู้ใช้บอกเรื่องคอลัมน์ MySQL / schema ไม่ตรง DB — รัน **`npx prisma migrate deploy`** (หรือ `migrate dev`) เมื่อมี DB ต่ออยู่ หรือชี้ไปที่ **`prisma/repair-user-columns.sql`** ตามบริบท — **แล้วยังต้อง `prisma generate` หลัง migration เสมอ**
+
+
+================================================================================
+### .cursor/rules/seed-demo-data-skip-admin.mdc
+================================================================================
+
+---
+description: ห้ามใส่ข้อมูล demo ของโมดูลให้แอดมิน — seed ใส่เฉพาะบัญชี user
+globs: prisma/seed.ts,src/lib/trial/**
+alwaysApply: false
+---
+
+# Seed demo data — แอดมินไม่ต้องใส่
+
+เวลา **เพิ่ม / แก้ไข seed ข้อมูลตัวอย่างของโมดูล** (ทุกไฟล์ใต้ `src/lib/trial/seed-*.ts` รวมถึง vault, inventory, asset, building-pos, educare, ฯลฯ) ให้ใช้รายชื่อบัญชี **เฉพาะ user demo** เท่านั้น
+
+## บังคับ
+
+- `prisma/seed.ts` → ตัวแปร **`demoSeedDataOwnerEmails`** ต้องมีแค่:
+ - `user@mawell.local.com`
+ - `user@mawell.local`
+- **ห้ามใส่ `admin@mawell.local`** ในลูปที่เรียก `seed*ProdDemoForOwner(prisma, row.id)`
+- **ห้ามสร้าง** ตัวแปรลูปแยกที่ใส่ admin ในการ insert demo data (เช่น `for (const email of [..., "admin@mawell.local"]) seedXxxProdDemoForOwner(...)`) — ถ้าต้องการบัญชีพิเศษ ให้แยก scope ออกชัดเจน ไม่ปนกับ demo data
+
+## เหตุผล
+
+- **แอดมิน** = บัญชีทดสอบสิทธิ์ / หลังบ้าน / debug — ไม่ใช่ผู้ใช้จริง การมีข้อมูลตัวอย่างทำให้สับสน + ใช้แอดมินทดสอบโฟลว์ owner ลำบาก
+- แอดมินมี `subscriptionType: BUFFET` + `tokens: 99999` อยู่แล้ว → **เข้าได้ทุกโมดูลโดยไม่ต้อง subscribe** (จึงไม่ต้องบังคับใส่ subscribe ให้ใน `demoAutoSubscribeSlugs` loop ด้วย — ถ้าใส่ก็ไม่ผิด แต่ไม่จำเป็น)
+
+## ถ้าเคย seed ใส่แอดมินไปแล้ว — ต้องล้าง
+
+ถ้ามี data ของ admin ค้างใน DB จาก seed รุ่นก่อน ให้ลบทิ้งด้วยสคริปต์ลบเฉพาะ owner = admin (ไม่กระทบ user demo) — ตัวอย่างฟิลด์ที่ใช้: `ownerUserId`, `userId`, `owner_id` ตามแต่ละโมดูล (ดูใน `prisma/schema.prisma`)
+
+## ตัวอย่าง pattern ที่ถูก
+
+```ts
+const demoSeedDataOwnerEmails = [
+ "user@mawell.local.com",
+ "user@mawell.local",
+] as const;
+
+for (const email of demoSeedDataOwnerEmails) {
+ const row = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+ if (row) await tryDemoSeed(`vault (${email})`, () => seedVaultProdDemoForOwner(prisma, row.id));
+}
+```
 
 
 ================================================================================
