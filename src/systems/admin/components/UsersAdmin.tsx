@@ -1,14 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import {
-  AppCard,
-  AppCardFooter,
-  AppCardHeader,
-  DataRow,
-} from "@/components/ui/app-card";
+  AppDashboardSection,
+  AppEmptyState,
+  AppSectionHeader,
+  appDashboardBrandCtaPillButtonClass,
+  appTemplateOutlineButtonClass,
+} from "@/components/app-templates";
+import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import {
+  assetRowEditIconButtonClass,
+  assetRowRemoveIconButtonClass,
+  IconRowEdit,
+  IconRowRemove,
+} from "@/systems/asset/components/AssetRowActionIcons";
 
 type UserRow = {
   id: string;
@@ -22,10 +30,25 @@ type UserRow = {
   updatedAt: string;
 };
 
+const topUpIconBtnClass = cn(
+  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-emerald-200/90 bg-emerald-50/90 text-emerald-700 hover:bg-emerald-100 active:opacity-90",
+);
+
+const quickChipClass =
+  "rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 to-orange-50/50 px-2.5 py-1.5 text-[11px] font-black tabular-nums text-amber-900 shadow-sm transition hover:border-amber-300 hover:shadow active:scale-95 touch-manipulation";
+
+const inputClass =
+  "w-full rounded-xl border border-white/50 bg-white/70 px-3 py-2.5 text-sm text-[#1e1b4b] shadow-inner outline-none ring-1 ring-inset ring-white/40 backdrop-blur-sm placeholder:text-slate-400 focus:border-[#5b61ff]/40 focus:ring-2 focus:ring-[#5b61ff]/25";
+
+const passwordInputClass =
+  "w-full rounded-xl border border-white/50 bg-white/70 py-2.5 pl-3 pr-10 text-sm text-[#1e1b4b] shadow-inner outline-none ring-1 ring-inset ring-white/40 backdrop-blur-sm focus:border-[#5b61ff]/40 focus:ring-2 focus:ring-[#5b61ff]/25";
+
 export function UsersAdmin() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [listBanner, setListBanner] = useState<string | null>(null);
 
   const [createEmail, setCreateEmail] = useState("");
   const [createUsername, setCreateUsername] = useState("");
@@ -42,11 +65,51 @@ export function UsersAdmin() {
   const [editSubscriptionType, setEditSubscriptionType] = useState<"BUFFET" | "DAILY">("DAILY");
   const [editSubscriptionTier, setEditSubscriptionTier] = useState<string>("NONE");
   const [editError, setEditError] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
 
   const [topUpUser, setTopUpUser] = useState<UserRow | null>(null);
   const [topUpAmount, setTopUpAmount] = useState("10");
   const [topUpError, setTopUpError] = useState<string | null>(null);
   const [topUpLoading, setTopUpLoading] = useState(false);
+
+  /** ฟอร์มเพิ่ม / แผงกรอง — แสดงเมื่อกดปุ่มเท่านั้น */
+  const [createFormOpen, setCreateFormOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterQuery, setFilterQuery] = useState("");
+  const [filterRole, setFilterRole] = useState<"ALL" | "USER" | "ADMIN">("ALL");
+  const [filterSubType, setFilterSubType] = useState<"ALL" | "BUFFET" | "DAILY">("ALL");
+
+  const stats = useMemo(() => {
+    const total = users.length;
+    const admins = users.filter((u) => u.role === "ADMIN").length;
+    return { total, admins };
+  }, [users]);
+
+  const filtersActive = useMemo(
+    () => filterQuery.trim().length > 0 || filterRole !== "ALL" || filterSubType !== "ALL",
+    [filterQuery, filterRole, filterSubType],
+  );
+
+  const filteredUsers = useMemo(() => {
+    const q = filterQuery.trim().toLowerCase();
+    return users.filter((u) => {
+      if (filterRole !== "ALL" && u.role !== filterRole) return false;
+      const st = (u.subscriptionType ?? "DAILY") === "BUFFET" ? "BUFFET" : "DAILY";
+      if (filterSubType !== "ALL" && st !== filterSubType) return false;
+      if (!q) return true;
+      return (
+        u.username.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        (u.subscriptionTier ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [users, filterQuery, filterRole, filterSubType]);
+
+  function clearFilters() {
+    setFilterQuery("");
+    setFilterRole("ALL");
+    setFilterSubType("ALL");
+  }
 
   const load = useCallback(async () => {
     setLoadError(null);
@@ -59,6 +122,16 @@ export function UsersAdmin() {
     const data = (await res.json()) as { users: UserRow[] };
     setUsers(data.users);
   }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setListBanner(null);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load]);
 
   useEffect(() => {
     (async () => {
@@ -92,6 +165,7 @@ export function UsersAdmin() {
     setCreatePassword("");
     setCreateRole("USER");
     setCreateMsg("เพิ่มผู้ใช้แล้ว");
+    setCreateFormOpen(false);
     await load();
   }
 
@@ -103,9 +177,7 @@ export function UsersAdmin() {
     setEditPassword("");
     setEditRole(u.role as "USER" | "ADMIN");
     setEditTokens(u.tokens);
-    setEditSubscriptionType(
-      (u.subscriptionType ?? "DAILY") === "BUFFET" ? "BUFFET" : "DAILY",
-    );
+    setEditSubscriptionType((u.subscriptionType ?? "DAILY") === "BUFFET" ? "BUFFET" : "DAILY");
     setEditSubscriptionTier(u.subscriptionTier);
   }
 
@@ -129,19 +201,24 @@ export function UsersAdmin() {
     if (editPassword.trim()) body.password = editPassword;
     if (editTokens !== editing.tokens) body.tokens = editTokens;
 
-    const res = await fetch(`/api/admin/users/${editing.id}`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = (await res.json()) as { error?: string };
-    if (!res.ok) {
-      setEditError(data.error ?? "บันทึกไม่สำเร็จ");
-      return;
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/admin/users/${editing.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setEditError(data.error ?? "บันทึกไม่สำเร็จ");
+        return;
+      }
+      setEditing(null);
+      await load();
+    } finally {
+      setEditSaving(false);
     }
-    setEditing(null);
-    await load();
   }
 
   async function onSubmitTopUp(e: React.FormEvent) {
@@ -174,7 +251,7 @@ export function UsersAdmin() {
   }
 
   async function quickTopUp(u: UserRow, amount: number) {
-    setTopUpError(null);
+    setListBanner(null);
     const res = await fetch(`/api/admin/users/${u.id}`, {
       method: "PATCH",
       credentials: "include",
@@ -183,7 +260,7 @@ export function UsersAdmin() {
     });
     const data = (await res.json()) as { error?: string };
     if (!res.ok) {
-      alert(data.error ?? "เติมโทเคนไม่สำเร็จ");
+      setListBanner(data.error ?? "เติมโทเคนไม่สำเร็จ");
       return;
     }
     await load();
@@ -191,13 +268,14 @@ export function UsersAdmin() {
 
   async function onDelete(id: string) {
     if (!confirm("ลบผู้ใช้นี้?")) return;
+    setListBanner(null);
     const res = await fetch(`/api/admin/users/${id}`, {
       method: "DELETE",
       credentials: "include",
     });
     const data = (await res.json()) as { error?: string };
     if (!res.ok) {
-      alert(data.error ?? "ลบไม่สำเร็จ");
+      setListBanner(data.error ?? "ลบไม่สำเร็จ");
       return;
     }
     if (editing?.id === id) setEditing(null);
@@ -206,16 +284,454 @@ export function UsersAdmin() {
   }
 
   return (
-    <div className="space-y-8">
-      <AppCard>
-        <AppCardHeader title="เพิ่มผู้ใช้" />
-        <form onSubmit={onCreate} className="mt-4 grid gap-4 sm:grid-cols-2">
+    <div className="space-y-4 sm:space-y-6">
+      <section
+        className={cn(
+          "overflow-hidden rounded-[2.5rem] border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/25 to-violet-100/20",
+          "p-4 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.28),inset_0_1px_0_0_rgba(255,255,255,0.55)] backdrop-blur-2xl ring-1 ring-inset ring-white/55 sm:p-6",
+        )}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5b61ff] to-[#a855f7] text-white shadow-lg shadow-indigo-200/80"
+              aria-hidden
+            >
+              <IconUsersHero className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">
+                <span className="bg-gradient-to-r from-[#312e81] via-[#5b61ff] to-[#7c3aed] bg-clip-text text-transparent">
+                  จัดการผู้ใช้
+                </span>
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[#5f5a8a]">
+                สร้างบัญชี ปรับสิทธิ์ แพ็กเกจ และโทเคน — รายการด้านล่างซิงก์กับฐานข้อมูลทันที
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {!loading && !loadError ? (
+          <ul className="mt-5 grid grid-cols-2 gap-3 border-t border-white/40 pt-5">
+            <li>
+              <div
+                className={cn(
+                  "rounded-[1.25rem] border border-white/55 bg-white/50 p-4 shadow-sm backdrop-blur-md sm:rounded-[2rem] sm:p-5",
+                  "ring-1 ring-inset ring-white/45",
+                )}
+              >
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">ผู้ใช้ทั้งหมด</p>
+                <p className="mt-2 text-2xl font-black tabular-nums tracking-tight text-[#1e1b4b] sm:text-3xl">
+                  {stats.total}
+                </p>
+              </div>
+            </li>
+            <li>
+              <div
+                className={cn(
+                  "rounded-[1.25rem] border border-white/55 bg-white/50 p-4 shadow-sm backdrop-blur-md sm:rounded-[2rem] sm:p-5",
+                  "ring-1 ring-inset ring-white/45",
+                )}
+              >
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">แอดมิน</p>
+                <p className="mt-2 text-2xl font-black tabular-nums tracking-tight text-violet-700 sm:text-3xl">
+                  {stats.admins}
+                </p>
+              </div>
+            </li>
+          </ul>
+        ) : null}
+      </section>
+
+      {listBanner ? (
+        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-800">
+          {listBanner}
+        </p>
+      ) : null}
+
+      <AppDashboardSection tone="violet">
+        <AppSectionHeader
+          tone="violet"
+          className="flex flex-row items-start justify-between gap-3 sm:items-center"
+          actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
+          title="รายชื่อผู้ใช้"
+          description="กดปุ่มเพื่อเปิดฟอร์มเพิ่มหรือตัวกรอง — บนมือถือเป็นการ์ด เดสก์ท็อปเป็นตาราง"
+          action={
+            <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
+              <button
+                type="button"
+                onClick={() => setFilterOpen((o) => !o)}
+                aria-expanded={filterOpen}
+                aria-label={filterOpen ? "ปิดตัวกรอง" : "เปิดตัวกรอง"}
+                title={filterOpen ? "ปิดตัวกรอง" : "ตัวกรอง"}
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-0 px-0 sm:min-w-0 sm:gap-2 sm:px-3",
+                  "border-[#dcd8f0] bg-white/80 text-[#4d47b6] hover:bg-white",
+                  filterOpen && "border-[#5b61ff]/45 bg-[#ecebff]/90 ring-2 ring-[#5b61ff]/20",
+                  filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
+                )}
+              >
+                <IconFilter className="h-5 w-5 shrink-0 sm:mr-0" />
+                <span className="hidden sm:inline">ตัวกรอง</span>
+                {filtersActive ? (
+                  <span
+                    className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white sm:right-1.5 sm:top-1.5"
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
+              <button
+                type="button"
+                onClick={() => void onRefresh()}
+                disabled={refreshing || loading}
+                aria-busy={refreshing}
+                aria-label="รีเฟรชรายชื่อผู้ใช้"
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-0 px-0 sm:min-w-0 sm:gap-2 sm:px-4",
+                  "border-[#dcd8f0] bg-white/80 text-[#4d47b6] shadow-sm hover:bg-white disabled:opacity-50",
+                )}
+              >
+                <IconRefresh className={cn("h-5 w-5 shrink-0 sm:mr-0", refreshing && "animate-spin")} />
+                <span className="hidden sm:inline">รีเฟรช</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreateFormOpen((o) => !o)}
+                aria-expanded={createFormOpen}
+                aria-label={createFormOpen ? "ปิดฟอร์มเพิ่มผู้ใช้" : "เพิ่มผู้ใช้"}
+                title={createFormOpen ? "ปิดฟอร์ม" : "เพิ่มผู้ใช้"}
+                className={cn(
+                  appDashboardBrandCtaPillButtonClass,
+                  "min-h-[40px] min-w-[40px] rounded-xl px-0 sm:min-w-0 sm:rounded-full sm:px-5",
+                  createFormOpen && "ring-2 ring-white/80 ring-offset-2 ring-offset-violet-100",
+                )}
+              >
+                <IconPlus className="h-5 w-5 shrink-0 sm:mr-0" />
+                <span className="hidden sm:inline">{createFormOpen ? "ปิดฟอร์ม" : "เพิ่มผู้ใช้"}</span>
+              </button>
+            </div>
+          }
+        />
+
+        {filterOpen ? (
+          <div
+            className="mt-4 grid gap-4 rounded-[1.25rem] border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/15 to-violet-50/20 p-4 ring-1 ring-inset ring-white/45 backdrop-blur-md sm:grid-cols-2 sm:rounded-[2rem] sm:p-5"
+            id="admin-users-filter-panel"
+          >
+            <Field label="ค้นหา (ชื่อผู้ใช้ / อีเมล / tier)">
+              <input
+                type="search"
+                value={filterQuery}
+                onChange={(e) => setFilterQuery(e.target.value)}
+                className={inputClass}
+                placeholder="พิมพ์เพื่อกรอง…"
+                autoComplete="off"
+              />
+            </Field>
+            <Field label="บทบาท">
+              <select
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value as "ALL" | "USER" | "ADMIN")}
+                className={inputClass}
+              >
+                <option value="ALL">ทั้งหมด</option>
+                <option value="USER">USER</option>
+                <option value="ADMIN">ADMIN</option>
+              </select>
+            </Field>
+            <Field label="ประเภทสมัคร">
+              <select
+                value={filterSubType}
+                onChange={(e) => setFilterSubType(e.target.value as "ALL" | "BUFFET" | "DAILY")}
+                className={inputClass}
+              >
+                <option value="ALL">ทั้งหมด</option>
+                <option value="DAILY">DAILY</option>
+                <option value="BUFFET">BUFFET</option>
+              </select>
+            </Field>
+            <div className="flex flex-col justify-end gap-2 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs font-medium text-[#66638c]">
+                แสดง <span className="font-black tabular-nums text-[#1e1b4b]">{filteredUsers.length}</span> จาก{" "}
+                <span className="tabular-nums">{users.length}</span> รายการ
+              </p>
+              <button
+                type="button"
+                onClick={clearFilters}
+                disabled={!filtersActive}
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  "text-sm disabled:pointer-events-none disabled:opacity-40",
+                )}
+              >
+                ล้างตัวกรอง
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {createFormOpen ? (
+          <form
+            onSubmit={onCreate}
+            className="mt-4 grid gap-4 rounded-[1.25rem] border border-white/50 bg-gradient-to-br from-white/45 via-white/25 to-indigo-50/15 p-4 ring-1 ring-inset ring-white/40 backdrop-blur-md sm:grid-cols-2 sm:rounded-[2rem] sm:p-5"
+            id="admin-users-create-form"
+          >
+            <p className="text-sm font-bold text-[#1e1b4b] sm:col-span-2">เพิ่มผู้ใช้ใหม่</p>
+            <Field label="อีเมล">
+              <input
+                type="email"
+                required
+                value={createEmail}
+                onChange={(e) => setCreateEmail(e.target.value)}
+                className={inputClass}
+                autoComplete="off"
+              />
+            </Field>
+            <Field label="ชื่อผู้ใช้">
+              <input
+                required
+                minLength={2}
+                value={createUsername}
+                onChange={(e) => setCreateUsername(e.target.value)}
+                className={inputClass}
+                autoComplete="off"
+              />
+            </Field>
+            <Field label="รหัสผ่าน">
+              <PasswordInput
+                required
+                minLength={8}
+                value={createPassword}
+                onChange={(e) => setCreatePassword(e.target.value)}
+                inputClassName={passwordInputClass}
+                autoComplete="new-password"
+              />
+            </Field>
+            <Field label="บทบาท">
+              <select
+                value={createRole}
+                onChange={(e) => setCreateRole(e.target.value as "USER" | "ADMIN")}
+                className={inputClass}
+              >
+                <option value="USER">USER</option>
+                <option value="ADMIN">ADMIN</option>
+              </select>
+            </Field>
+            <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
+              <button type="submit" className={cn(appDashboardBrandCtaPillButtonClass, "w-full sm:w-auto")}>
+                <IconPlus className="h-4 w-4 shrink-0" />
+                สร้างบัญชี
+              </button>
+              {createMsg ? (
+                <span className="text-center text-sm font-semibold text-emerald-700 sm:text-left">{createMsg}</span>
+              ) : null}
+            </div>
+          </form>
+        ) : null}
+
+        {loadError ? <p className="text-sm font-medium text-rose-600">{loadError}</p> : null}
+
+        <div className="mt-2 hidden overflow-hidden rounded-[1.25rem] border border-[#e8e6fc] md:block md:rounded-[2rem]">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-[#e8e6fc] bg-[#faf9ff]/90 text-[11px] font-black uppercase tracking-wide text-[#66638c]">
+                  <th className="px-4 py-3 font-black">ผู้ใช้</th>
+                  <th className="px-4 py-3 font-black">อีเมล</th>
+                  <th className="px-4 py-3 font-black">โทเคน</th>
+                  <th className="px-4 py-3 font-black">แพ็กเกจ</th>
+                  <th className="px-4 py-3 font-black">บทบาท</th>
+                  <th className="px-4 py-3 font-black">สร้างเมื่อ</th>
+                  <th className="px-4 py-3 text-right font-black">การทำงาน</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-10">
+                      <TableSkeletonRows />
+                    </td>
+                  </tr>
+                ) : users.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-4">
+                      <AppEmptyState tone="violet">ยังไม่มีผู้ใช้ในระบบ</AppEmptyState>
+                    </td>
+                  </tr>
+                ) : filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-4">
+                      <div className="rounded-xl border border-dashed border-[#d8d6ec] bg-[#faf9ff] px-4 py-8 text-center">
+                        <p className="text-sm font-medium text-[#66638c]">ไม่พบผู้ใช้ตามตัวกรอง</p>
+                        <button
+                          type="button"
+                          onClick={clearFilters}
+                          className={cn(appTemplateOutlineButtonClass, "mt-4 inline-flex min-h-[40px] items-center px-4")}
+                        >
+                          ล้างตัวกรอง
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((u) => (
+                    <tr
+                      key={u.id}
+                      className="border-b border-[#f0eefc]/90 transition-colors last:border-0 hover:bg-white/60"
+                    >
+                      <td className="px-4 py-3 font-bold text-[#1e1b4b]">{u.username}</td>
+                      <td className="max-w-[200px] truncate px-4 py-3 text-[#5f5a8a]">{u.email}</td>
+                      <td className="px-4 py-3 font-black tabular-nums text-amber-800">{u.tokens}</td>
+                      <td className="px-4 py-3 text-xs">
+                        <div className="font-bold text-[#2e2a58]">{u.subscriptionType ?? "DAILY"}</div>
+                        <div className="text-[#66638c]">{u.subscriptionTier}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <RoleBadge role={u.role} />
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-[#66638c]">
+                        {new Date(u.createdAt).toLocaleString("th-TH")}
+                      </td>
+                      <td className="px-4 py-3">
+                        <UserRowActionsDesktop
+                          user={u}
+                          onEdit={() => openEdit(u)}
+                          onTopUp={() => openTopUp(u)}
+                          onQuick={(n) => quickTopUp(u, n)}
+                          onDelete={() => onDelete(u.id)}
+                        />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="mt-2 space-y-3 md:hidden">
+          {loading ? (
+            <MobileCardSkeleton />
+          ) : users.length === 0 ? (
+            <AppEmptyState tone="violet">ยังไม่มีผู้ใช้ในระบบ</AppEmptyState>
+          ) : filteredUsers.length === 0 ? (
+            <div className="rounded-[1.25rem] border border-dashed border-[#d8d6ec] bg-[#faf9ff] px-4 py-8 text-center">
+              <p className="text-sm font-medium text-[#66638c]">ไม่พบผู้ใช้ตามตัวกรอง</p>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className={cn(appTemplateOutlineButtonClass, "mt-4 inline-flex min-h-[40px] items-center px-4")}
+              >
+                ล้างตัวกรอง
+              </button>
+            </div>
+          ) : (
+            filteredUsers.map((u) => (
+              <article
+                key={u.id}
+                className={cn(
+                  "overflow-hidden rounded-[1.25rem] border border-white/55 bg-gradient-to-br from-white/55 via-white/30 to-indigo-50/20 p-4 shadow-[0_16px_40px_-28px_rgba(30,27,75,0.28)] backdrop-blur-xl ring-1 ring-inset ring-white/50",
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/60 bg-white/70 text-[#5b61ff] shadow-sm">
+                      <IconUserCard className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-black text-[#1e1b4b]">{u.username}</p>
+                      <p className="mt-0.5 truncate text-xs text-[#5f5a8a]">{u.email}</p>
+                    </div>
+                  </div>
+                  <RoleBadge role={u.role} />
+                </div>
+
+                <div className="mt-4 space-y-2 rounded-[1rem] border border-white/50 bg-white/40 px-3 py-3 backdrop-blur-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">โทเคน</span>
+                    <span className="text-lg font-black tabular-nums text-amber-800">{u.tokens}</span>
+                  </div>
+                  <div className="flex items-start justify-between gap-3 border-t border-white/50 pt-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">แพ็กเกจ</span>
+                    <span className="text-right text-xs font-semibold leading-snug text-[#2e2a58]">
+                      {u.subscriptionType ?? "DAILY"}
+                      <span className="block font-normal text-[#66638c]">{u.subscriptionTier}</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 border-t border-white/50 pt-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">สร้างเมื่อ</span>
+                    <span className="text-right text-[11px] font-semibold tabular-nums text-[#66638c]">
+                      {new Date(u.createdAt).toLocaleString("th-TH")}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
+                  {[10, 50, 100].map((n) => (
+                    <button key={n} type="button" onClick={() => quickTopUp(u, n)} className={quickChipClass}>
+                      +{n}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-3 flex items-center justify-end gap-1 border-t border-white/45 pt-3">
+                  <UserRowIconActions
+                    username={u.username}
+                    onTopUp={() => openTopUp(u)}
+                    onEdit={() => openEdit(u)}
+                    onDelete={() => onDelete(u.id)}
+                  />
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+      </AppDashboardSection>
+
+      <FormModal
+        open={editing != null}
+        onClose={() => {
+          if (!editSaving) setEditing(null);
+        }}
+        title="แก้ไขผู้ใช้"
+        description={editing ? `${editing.username} · ${editing.email}` : undefined}
+        appearance="glass"
+        glassTint="violet"
+        size="md"
+        footer={
+          <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              disabled={editSaving}
+              onClick={() => setEditing(null)}
+              className="flex-1 rounded-2xl border border-white/50 bg-white/50 px-6 py-3 text-sm font-bold text-[#5f5a8a] backdrop-blur-md transition hover:bg-white/80 disabled:opacity-50 sm:flex-none sm:px-8"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              form="admin-user-edit-form"
+              disabled={editSaving}
+              className={cn(appDashboardBrandCtaPillButtonClass, "w-full sm:w-auto")}
+            >
+              {editSaving ? "กำลังบันทึก…" : "บันทึก"}
+            </button>
+          </div>
+        }
+      >
+        <form id="admin-user-edit-form" onSubmit={onSaveEdit} className="space-y-3">
+          {editError ? (
+            <p className="rounded-xl border border-rose-200/80 bg-rose-50/90 px-3 py-2 text-sm text-rose-800">{editError}</p>
+          ) : null}
           <Field label="อีเมล">
             <input
               type="email"
               required
-              value={createEmail}
-              onChange={(e) => setCreateEmail(e.target.value)}
+              value={editEmail}
+              onChange={(e) => setEditEmail(e.target.value)}
               className={inputClass}
             />
           </Field>
@@ -223,338 +739,228 @@ export function UsersAdmin() {
             <input
               required
               minLength={2}
-              value={createUsername}
-              onChange={(e) => setCreateUsername(e.target.value)}
+              value={editUsername}
+              onChange={(e) => setEditUsername(e.target.value)}
               className={inputClass}
             />
           </Field>
-          <Field label="รหัสผ่าน">
-            <PasswordInput
+          <Field label="โทเคน (ยอดรวม)">
+            <input
+              type="number"
+              min={0}
+              max={999_999_999}
               required
+              value={editTokens}
+              onChange={(e) => setEditTokens(Number.parseInt(e.target.value, 10) || 0)}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="รหัสผ่านใหม่ (เว้นว่างถ้าไม่เปลี่ยน)">
+            <PasswordInput
               minLength={8}
-              value={createPassword}
-              onChange={(e) => setCreatePassword(e.target.value)}
+              value={editPassword}
+              onChange={(e) => setEditPassword(e.target.value)}
               inputClassName={passwordInputClass}
               autoComplete="new-password"
+              placeholder="••••••••"
             />
           </Field>
           <Field label="บทบาท">
             <select
-              value={createRole}
-              onChange={(e) => setCreateRole(e.target.value as "USER" | "ADMIN")}
+              value={editRole}
+              onChange={(e) => setEditRole(e.target.value as "USER" | "ADMIN")}
               className={inputClass}
             >
               <option value="USER">USER</option>
               <option value="ADMIN">ADMIN</option>
             </select>
           </Field>
-          <div className="sm:col-span-2">
-            <button
-              type="submit"
-              className="rounded-lg bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a3]"
+          <Field label="ประเภท (เหมา / รายวัน)">
+            <select
+              value={editSubscriptionType}
+              onChange={(e) => setEditSubscriptionType(e.target.value as "BUFFET" | "DAILY")}
+              className={inputClass}
             >
-              สร้าง
-            </button>
-            {createMsg ? (
-              <span className="ml-3 text-sm text-emerald-700">{createMsg}</span>
-            ) : null}
-          </div>
+              <option value="DAILY">DAILY — สายรายวัน</option>
+              <option value="BUFFET">BUFFET — แพ็กเหมา</option>
+            </select>
+          </Field>
+          <Field label="แพ็กเกจ tier">
+            <select
+              value={editSubscriptionTier}
+              onChange={(e) => setEditSubscriptionTier(e.target.value)}
+              className={inputClass}
+            >
+              <option value="NONE">NONE</option>
+              <option value="TIER_199">TIER_199</option>
+              <option value="TIER_299">TIER_299</option>
+              <option value="TIER_399">TIER_399</option>
+              <option value="TIER_499">TIER_499</option>
+              <option value="TIER_599">TIER_599</option>
+            </select>
+          </Field>
         </form>
-      </AppCard>
+      </FormModal>
 
-      <AppCard>
-        <AppCardHeader
-          title="รายชื่อผู้ใช้"
-          description="บนมือถือแสดงเป็นการ์ด — บนเดสก์ท็อปแสดงเป็นตาราง"
-          action={
+      <FormModal
+        open={topUpUser != null}
+        onClose={() => {
+          if (!topUpLoading) setTopUpUser(null);
+        }}
+        title="เติมโทเคน"
+        description={
+          topUpUser ? `${topUpUser.username} — คงเหลือ ${topUpUser.tokens}` : undefined
+        }
+        appearance="glass"
+        glassTint="violet"
+        size="sm"
+        footer={
+          <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <button
               type="button"
-              onClick={() => load()}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-[#0000BF] shadow-sm hover:bg-slate-50"
+              disabled={topUpLoading}
+              onClick={() => setTopUpUser(null)}
+              className="flex-1 rounded-2xl border border-white/50 bg-white/50 px-6 py-3 text-sm font-bold text-[#5f5a8a] backdrop-blur-md transition hover:bg-white/80 disabled:opacity-50 sm:flex-none sm:px-8"
             >
-              รีเฟรช
+              ยกเลิก
             </button>
-          }
-        />
-        {loadError ? <p className="mt-2 text-sm text-red-600">{loadError}</p> : null}
-
-        {/* Desktop table */}
-        <div className="mt-4 hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[720px] border-collapse text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-600">
-                <th className="py-2.5 pr-3 font-medium">ชื่อผู้ใช้</th>
-                <th className="py-2.5 pr-3 font-medium">อีเมล</th>
-                <th className="py-2.5 pr-3 font-medium">โทเคน</th>
-                <th className="py-2.5 pr-3 font-medium">แพ็กเกจ</th>
-                <th className="py-2.5 pr-3 font-medium">บทบาท</th>
-                <th className="py-2.5 pr-3 font-medium">สร้างเมื่อ</th>
-                <th className="py-2.5 font-medium">การทำงาน</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-500">
-                    กำลังโหลด...
-                  </td>
-                </tr>
-              ) : users.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-500">
-                    ไม่มีข้อมูล
-                  </td>
-                </tr>
-              ) : (
-                users.map((u) => (
-                  <tr key={u.id} className="border-b border-slate-100 transition hover:bg-slate-50/80">
-                    <td className="py-2.5 pr-3 font-medium text-slate-900">{u.username}</td>
-                    <td className="py-2.5 pr-3 text-slate-700">{u.email}</td>
-                    <td className="py-2.5 pr-3 font-medium tabular-nums text-amber-800">{u.tokens}</td>
-                    <td className="py-2.5 pr-3 text-xs text-slate-600">
-                      <div className="font-medium text-slate-800">{u.subscriptionType ?? "DAILY"}</div>
-                      <div className="text-slate-500">{u.subscriptionTier}</div>
-                    </td>
-                    <td className="py-2.5 pr-3">
-                      <RoleBadge role={u.role} />
-                    </td>
-                    <td className="py-2.5 pr-3 text-slate-600">
-                      {new Date(u.createdAt).toLocaleString("th-TH")}
-                    </td>
-                    <td className="py-2.5">
-                      <UserRowActions
-                        onEdit={() => openEdit(u)}
-                        onTopUp={() => openTopUp(u)}
-                        onQuick={(n) => quickTopUp(u, n)}
-                        onDelete={() => onDelete(u.id)}
-                      />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile cards */}
-        <div className="mt-4 space-y-3 md:hidden">
-          {loading ? (
-            <p className="py-6 text-center text-sm text-slate-500">กำลังโหลด...</p>
-          ) : users.length === 0 ? (
-            <p className="py-6 text-center text-sm text-slate-500">ไม่มีข้อมูล</p>
-          ) : (
-            users.map((u) => (
-              <AppCard key={u.id} padding="compact" className="border-slate-200/90 shadow-md">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-slate-900">{u.username}</p>
-                    <p className="mt-0.5 truncate text-xs text-slate-500">{u.email}</p>
-                  </div>
-                  <RoleBadge role={u.role} />
-                </div>
-                <div className="mt-3 rounded-xl bg-slate-50/90 px-3 py-2">
-                  <DataRow label="โทเคน">
-                    <span className="font-semibold tabular-nums text-amber-800">{u.tokens}</span>
-                  </DataRow>
-                  <DataRow label="สมัคร">
-                    <span className="text-xs text-slate-700">
-                      {u.subscriptionType ?? "DAILY"} · {u.subscriptionTier}
-                    </span>
-                  </DataRow>
-                  <DataRow label="สร้างเมื่อ">
-                    <span className="text-xs text-slate-600">
-                      {new Date(u.createdAt).toLocaleString("th-TH")}
-                    </span>
-                  </DataRow>
-                </div>
-                <AppCardFooter className="mt-3 border-t border-slate-100 pt-3">
-                  <UserRowActions
-                    stacked
-                    onEdit={() => openEdit(u)}
-                    onTopUp={() => openTopUp(u)}
-                    onQuick={(n) => quickTopUp(u, n)}
-                    onDelete={() => onDelete(u.id)}
-                  />
-                </AppCardFooter>
-              </AppCard>
-            ))
-          )}
-        </div>
-      </AppCard>
-
-      {editing ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-4 sm:items-center"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="edit-title"
-        >
-          <AppCard className="max-h-[90vh] w-full max-w-md overflow-y-auto shadow-xl">
-            <h2 id="edit-title" className="text-lg font-semibold text-slate-900">
-              แก้ไขผู้ใช้
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">{editing.username}</p>
-            <form onSubmit={onSaveEdit} className="mt-4 space-y-3">
-              {editError ? (
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{editError}</p>
-              ) : null}
-              <Field label="อีเมล">
-                <input
-                  type="email"
-                  required
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="ชื่อผู้ใช้">
-                <input
-                  required
-                  minLength={2}
-                  value={editUsername}
-                  onChange={(e) => setEditUsername(e.target.value)}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="โทเคน (ยอดรวม)">
-                <input
-                  type="number"
-                  min={0}
-                  max={999_999_999}
-                  required
-                  value={editTokens}
-                  onChange={(e) => setEditTokens(Number.parseInt(e.target.value, 10) || 0)}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="รหัสผ่านใหม่ (เว้นว่างถ้าไม่เปลี่ยน)">
-                <PasswordInput
-                  minLength={8}
-                  value={editPassword}
-                  onChange={(e) => setEditPassword(e.target.value)}
-                  inputClassName={passwordInputClass}
-                  autoComplete="new-password"
-                  placeholder="••••••••"
-                />
-              </Field>
-              <Field label="บทบาท">
-                <select
-                  value={editRole}
-                  onChange={(e) => setEditRole(e.target.value as "USER" | "ADMIN")}
-                  className={inputClass}
-                >
-                  <option value="USER">USER</option>
-                  <option value="ADMIN">ADMIN</option>
-                </select>
-              </Field>
-              <Field label="ประเภท (เหมา / รายวัน)">
-                <select
-                  value={editSubscriptionType}
-                  onChange={(e) =>
-                    setEditSubscriptionType(e.target.value as "BUFFET" | "DAILY")
-                  }
-                  className={inputClass}
-                >
-                  <option value="DAILY">DAILY — สายรายวัน</option>
-                  <option value="BUFFET">BUFFET — แพ็กเหมา</option>
-                </select>
-              </Field>
-              <Field label="แพ็กเกจ tier">
-                <select
-                  value={editSubscriptionTier}
-                  onChange={(e) => setEditSubscriptionTier(e.target.value)}
-                  className={inputClass}
-                >
-                  <option value="NONE">NONE</option>
-                  <option value="TIER_199">TIER_199</option>
-                  <option value="TIER_299">TIER_299</option>
-                  <option value="TIER_399">TIER_399</option>
-                  <option value="TIER_499">TIER_499</option>
-                  <option value="TIER_599">TIER_599</option>
-                </select>
-              </Field>
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="submit"
-                  className="flex-1 rounded-lg bg-[#0000BF] py-2 text-sm font-semibold text-white hover:bg-[#0000a3]"
-                >
-                  บันทึก
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditing(null)}
-                  className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-medium hover:bg-slate-50"
-                >
-                  ยกเลิก
-                </button>
-              </div>
-            </form>
-          </AppCard>
-        </div>
-      ) : null}
-
-      {topUpUser ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-4 sm:items-center"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="topup-title"
-        >
-          <AppCard className="w-full max-w-sm shadow-xl">
-            <h2 id="topup-title" className="text-lg font-semibold text-slate-900">
-              เติมโทเคน
-            </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              {topUpUser.username}{" "}
-              <span className="tabular-nums text-amber-800">({topUpUser.tokens})</span>
-            </p>
-            <form onSubmit={onSubmitTopUp} className="mt-4 space-y-3">
-              {topUpError ? (
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{topUpError}</p>
-              ) : null}
-              <Field label="จำนวนโทเคน (+ เติม / − หัก)">
-                <input
-                  type="number"
-                  required
-                  value={topUpAmount}
-                  onChange={(e) => setTopUpAmount(e.target.value)}
-                  className={inputClass}
-                  placeholder="เช่น 10 หรือ -5"
-                />
-              </Field>
-              <div className="flex flex-wrap gap-2">
-                {[10, 50, 100, 500].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setTopUpAmount(String(n))}
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
-                  >
-                    +{n}
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="submit"
-                  disabled={topUpLoading}
-                  className="flex-1 rounded-lg bg-[#0000BF] py-2 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:opacity-60"
-                >
-                  {topUpLoading ? "กำลังบันทึก..." : "ยืนยันเติม"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTopUpUser(null)}
-                  className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-medium hover:bg-slate-50"
-                >
-                  ยกเลิก
-                </button>
-              </div>
-            </form>
-          </AppCard>
-        </div>
-      ) : null}
+            <button
+              type="submit"
+              form="admin-user-topup-form"
+              disabled={topUpLoading}
+              className={cn(appDashboardBrandCtaPillButtonClass, "w-full sm:w-auto")}
+            >
+              {topUpLoading ? "กำลังบันทึก…" : "ยืนยันเติม"}
+            </button>
+          </div>
+        }
+      >
+        <form id="admin-user-topup-form" onSubmit={onSubmitTopUp} className="space-y-3">
+          {topUpError ? (
+            <p className="rounded-xl border border-rose-200/80 bg-rose-50/90 px-3 py-2 text-sm text-rose-800">{topUpError}</p>
+          ) : null}
+          <Field label="จำนวนโทเคน (+ เติม / − หัก)">
+            <input
+              type="number"
+              required
+              value={topUpAmount}
+              onChange={(e) => setTopUpAmount(e.target.value)}
+              className={inputClass}
+              placeholder="เช่น 10 หรือ -5"
+            />
+          </Field>
+          <div className="flex flex-wrap gap-2">
+            {[10, 50, 100, 500].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setTopUpAmount(String(n))}
+                className={quickChipClass}
+              >
+                +{n}
+              </button>
+            ))}
+          </div>
+        </form>
+      </FormModal>
     </div>
+  );
+}
+
+function UserRowActionsDesktop({
+  user,
+  onEdit,
+  onTopUp,
+  onQuick,
+  onDelete,
+}: {
+  user: UserRow;
+  onEdit: () => void;
+  onTopUp: () => void;
+  onQuick: (n: number) => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-1.5">
+      <div className="mr-1 flex flex-wrap justify-end gap-1">
+        {[10, 50, 100].map((n) => (
+          <button key={n} type="button" onClick={() => onQuick(n)} className={quickChipClass}>
+            +{n}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        className={topUpIconBtnClass}
+        aria-label={`เติมโทเคน ${user.username}`}
+        title="เติมโทเคน"
+        onClick={onTopUp}
+      >
+        <IconCoins className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        className={assetRowEditIconButtonClass}
+        aria-label={`แก้ไข ${user.username}`}
+        title="แก้ไข"
+        onClick={onEdit}
+      >
+        <IconRowEdit className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        className={assetRowRemoveIconButtonClass}
+        aria-label={`ลบ ${user.username}`}
+        title="ลบ"
+        onClick={onDelete}
+      >
+        <IconRowRemove className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+function UserRowIconActions({
+  username,
+  onTopUp,
+  onEdit,
+  onDelete,
+}: {
+  username: string;
+  onTopUp: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        className={topUpIconBtnClass}
+        aria-label={`เติมโทเคน ${username}`}
+        title="เติมโทเคน"
+        onClick={onTopUp}
+      >
+        <IconCoins className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        className={assetRowEditIconButtonClass}
+        aria-label={`แก้ไข ${username}`}
+        title="แก้ไข"
+        onClick={onEdit}
+      >
+        <IconRowEdit className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        className={assetRowRemoveIconButtonClass}
+        aria-label={`ลบ ${username}`}
+        title="ลบ"
+        onClick={onDelete}
+      >
+        <IconRowRemove className="h-4 w-4" />
+      </button>
+    </>
   );
 }
 
@@ -562,8 +968,8 @@ function RoleBadge({ role }: { role: string }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
-        role === "ADMIN" ? "bg-violet-100 text-violet-800" : "bg-slate-100 text-slate-700",
+        "inline-flex shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide",
+        role === "ADMIN" ? "bg-violet-500/15 text-violet-800 ring-1 ring-violet-300/50" : "bg-slate-500/10 text-slate-700 ring-1 ring-slate-200/80",
       )}
     >
       {role}
@@ -571,76 +977,88 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
-function UserRowActions({
-  onEdit,
-  onTopUp,
-  onQuick,
-  onDelete,
-  stacked,
-}: {
-  onEdit: () => void;
-  onTopUp: () => void;
-  onQuick: (n: number) => void;
-  onDelete: () => void;
-  stacked?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex flex-wrap gap-1.5",
-        stacked && "flex-col gap-2",
-      )}
-    >
-      <div className={cn("flex flex-wrap gap-1.5", stacked && "w-full")}>
-        {[10, 50, 100].map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onQuick(n)}
-            className="rounded-md border border-amber-200/80 bg-amber-50/90 px-2 py-1 text-[11px] font-semibold text-amber-900 hover:bg-amber-100"
-          >
-            +{n}
-          </button>
-        ))}
-      </div>
-      <div className={cn("flex flex-wrap gap-1.5", stacked && "w-full")}>
-        <button
-          type="button"
-          onClick={onTopUp}
-          className="rounded-md border border-[#0000BF]/30 bg-[#0000BF]/5 px-2 py-1 text-xs font-medium text-[#0000BF] hover:bg-[#0000BF]/10"
-        >
-          เติม…
-        </button>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium hover:bg-slate-50"
-        >
-          แก้ไข
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
-        >
-          ลบ
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
+      <label className="mb-1.5 block text-xs font-bold text-[#5f5a8a]">{label}</label>
       {children}
     </div>
   );
 }
 
-const inputClass =
-  "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-[#0000BF] focus:ring-2 focus:ring-[#0000BF]/20";
+function TableSkeletonRows() {
+  return (
+    <div className="space-y-2 p-2">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="h-10 animate-pulse rounded-lg bg-[#ecebff]/60" />
+      ))}
+    </div>
+  );
+}
 
-const passwordInputClass =
-  "w-full rounded-lg border border-slate-200 bg-white py-2 pl-3 pr-10 text-sm text-slate-900 shadow-sm outline-none focus:border-[#0000BF] focus:ring-2 focus:ring-[#0000BF]/20";
+function MobileCardSkeleton() {
+  return (
+    <div className="space-y-3">
+      {[0, 1].map((i) => (
+        <div
+          key={i}
+          className="h-40 animate-pulse rounded-[1.25rem] border border-white/40 bg-gradient-to-br from-white/40 to-indigo-50/20"
+        />
+      ))}
+    </div>
+  );
+}
+
+function IconUsersHero({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" strokeLinecap="round" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconUserCard({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" strokeLinecap="round" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function IconPlus({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconRefresh({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden="true">
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" strokeLinecap="round" />
+      <path d="M21 3v6h-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconFilter({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+      <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconCoins({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+      <circle cx="8" cy="8" r="6" />
+      <path d="M18.09 10.37A6 6 0 1 1 10.34 18" strokeLinecap="round" />
+      <path d="M14 14h6v6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
