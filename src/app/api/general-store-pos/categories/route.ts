@@ -1,0 +1,67 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { withGeneralStorePosOwnerContext } from "@/systems/general-store-pos/lib/api-auth";
+
+const createSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  imageUrl: z.string().trim().max(500).optional().nullable(),
+  sortOrder: z.number().int().min(0).max(999999).optional(),
+});
+
+export async function GET() {
+  const auth = await withGeneralStorePosOwnerContext();
+  if (!auth.ok) return auth.res;
+  const { ownerUserId } = auth.ctx;
+
+  const rows = await prisma.generalStorePosCategory.findMany({
+    where: { ownerUserId },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      imageUrl: true,
+      sortOrder: true,
+      _count: { select: { products: true } },
+    },
+  });
+
+  return NextResponse.json({
+    categories: rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      imageUrl: r.imageUrl,
+      sortOrder: r.sortOrder,
+      productCount: r._count.products,
+    })),
+  });
+}
+
+export async function POST(req: Request) {
+  const auth = await withGeneralStorePosOwnerContext();
+  if (!auth.ok) return auth.res;
+  const { ownerUserId } = auth.ctx;
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "JSON ไม่ถูกต้อง" }, { status: 400 });
+  }
+  const parsed = createSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง", issues: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const row = await prisma.generalStorePosCategory.create({
+    data: {
+      ownerUserId,
+      name: parsed.data.name,
+      imageUrl: parsed.data.imageUrl?.trim() || null,
+      sortOrder: parsed.data.sortOrder ?? 0,
+    },
+    select: { id: true, name: true, imageUrl: true, sortOrder: true },
+  });
+
+  return NextResponse.json({ category: { ...row, productCount: 0 } });
+}

@@ -1,0 +1,33 @@
+---
+description: POS ร้านทั่วไป — shell เมนู คำอธิบาย คู่มือ แนะภาพสินค้า
+globs: src/systems/general-store-pos/**/*
+alwaysApply: false
+---
+
+# POS ร้านทั่วไป (`general-store-pos`)
+
+## Shell / เมนูเดสก์ท็อป (`GeneralStorePosShell.tsx`)
+
+- **หัวการ์ด:** แสดงเฉพาะหัวข้อ **POS ร้านทั่วไป** — **ห้าม** ใส่ย่อหน้าโปรโมท/คำอธิบายยาวใต้หัวข้อ (ใช้ **คู่มือการใช้งาน** แทน)
+- **เมนูหลัก (md+):** แบบคาร์แคร์ — `<nav>` + `<ul className="flex gap-1">` + แต่ละ `<li className="min-w-0 flex-1">` + ลิงก์ **`w-full`** จัดกึ่งกลาง มีไอคอนคู่ข้อความ
+- **ปุ่มคู่มือ:** มุมขวาของแถวหัว (เดียวกับ Building POS) — `AppUsageGuideModal` + สถานะ `usageGuideOpen` ใน shell
+
+## คำอธิบายในโมดูล
+
+- **ห้าม** ใส่ `description` ยาวใน `AppSectionHeader` / `FormModal` เพื่ออธิบายฟีเจอร์ — ย้ายไปคู่มือหรือใช้ `aria-label` / placeholder สั้น ๆ
+- ข้อความบนการ์ดสินค้า: **ห้าม** ใส่คำแนะนำการแตะแบบยาว (เช่น +1/+2) ใน UI — เก็บในโมดัลคู่มือได้
+
+## แนะภาพตัวอย่าง (`lib/suggest-stock-image.ts`)
+
+- ปุ่มในโมดัล: สินค้าใช้ข้อความ **แนะภาพตามสินค้า** (อิง `name` + `categoryName`); หมวดใช้ **แนะภาพตามหมวด**
+- ลำดับการจับคู่: **จับจากชื่อสินค้าและหมวดรวมกัน** — กฎเฉพาะ (กาแฟ ขนมปัง อิเล็กทรอนิกส์ ฯลฯ) มาก่อน กฎกว้าง (อาหาร เครื่องดื่ม) ทีหลัง สุดท้ายคือ default ร้านค้า
+- URL เป็น Unsplash ตัวอย่างเท่านั้น — ไม่บันทึกอัตโนมัติลงเซิร์ฟเวอร์
+
+## เลย์เอาต์ / scroll
+
+- เนื้อหาใต้ header ใช้ **`min-h-0 flex-1 overflow-y-auto`** ใน shell (คู่กับ layout `flex min-h-0 flex-1 flex-col`)
+
+## อ้างอิง
+
+- คู่มือ: `AppUsageGuideModal` จาก `@/components/app-templates`
+- แม่แบบปุ่มคู่มือ: `src/systems/building-pos/components/BuildingPosShell.tsx`

@@ -208,6 +208,9 @@ model User {
   mediaRegistryItems       MediaRegistryItem[]
   mediaRegistryBorrows     MediaRegistryBorrow[]
   mediaRegistryIssues      MediaRegistryIssue[]
+  generalStorePosCategories GeneralStorePosCategory[]
+  generalStorePosProducts   GeneralStorePosProduct[]
+  generalStorePosSales      GeneralStorePosSale[]
 
   @@index([employerUserId])
   @@index([referredByUserId], map: "user_referred_by_idx")
@@ -2912,6 +2915,74 @@ model DocTransmissionSettings {
 
   @@unique([ownerUserId, trialSessionId], map: "doc_set_owner_trial_uidx")
   @@map("doc_transmission_settings")
+}
+
+/** POS ร้านทั่วไป (ง่าย) — หมวด สินค้า บันทึกขาย */
+model GeneralStorePosCategory {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(120)
+  imageUrl    String?  @map("image_url") @db.VarChar(500)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  products GeneralStorePosProduct[]
+
+  @@index([ownerUserId, sortOrder], map: "gsp_cat_owner_sort_idx")
+  @@map("general_store_pos_categories")
+}
+
+model GeneralStorePosProduct {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  categoryId  String   @map("category_id") @db.VarChar(191)
+  category    GeneralStorePosCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  name        String   @db.VarChar(160)
+  priceBaht   Int      @default(0) @map("price_baht")
+  imageUrl    String?  @map("image_url") @db.VarChar(500)
+  isFeatured  Boolean  @default(false) @map("is_featured")
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  saleLines GeneralStorePosSaleLine[]
+
+  @@index([ownerUserId, categoryId], map: "gsp_prod_owner_cat_idx")
+  @@index([ownerUserId, isActive, isFeatured], map: "gsp_prod_owner_act_feat_idx")
+  @@map("general_store_pos_products")
+}
+
+model GeneralStorePosSale {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  note        String?  @db.VarChar(500)
+  totalBaht   Int      @map("total_baht")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  lines GeneralStorePosSaleLine[]
+
+  @@index([ownerUserId, createdAt], map: "gsp_sale_owner_created_idx")
+  @@map("general_store_pos_sales")
+}
+
+model GeneralStorePosSaleLine {
+  id            String   @id @default(cuid())
+  saleId        String   @map("sale_id") @db.VarChar(191)
+  sale          GeneralStorePosSale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId     String?  @map("product_id") @db.VarChar(191)
+  product       GeneralStorePosProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productName   String   @map("product_name") @db.VarChar(160)
+  unitPriceBaht Int      @map("unit_price_baht")
+  quantity      Int      @default(1)
+  lineTotalBaht Int      @map("line_total_baht")
+
+  @@index([saleId], map: "gsp_saleline_sale_idx")
+  @@map("general_store_pos_sale_lines")
 }
 
 /** คลัง prompt ส่วนตัว (แยกตามผู้ใช้ — อิงแนวคิด Prompt Master / Google Script pms) */

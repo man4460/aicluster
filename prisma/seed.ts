@@ -24,6 +24,7 @@ import {
 } from "../src/lib/trial/seed-mqtt-laundry";
 import { seedVaultProdDemoForOwner } from "../src/lib/trial/seed-vault";
 import { seedInventoryProdDemoForOwner } from "../src/lib/trial/seed-inventory";
+import { seedGeneralStorePosProdDemoForOwner } from "../src/lib/trial/seed-general-store-pos";
 import {
   ASSET_MODULE_SLUG,
   ATTENDANCE_MODULE_SLUG,
@@ -36,6 +37,7 @@ import {
   EDUCARE_MODULE_SLUG,
   HOME_FINANCE_BASIC_MODULE_SLUG,
   INVENTORY_MODULE_SLUG,
+  GENERAL_STORE_POS_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
   MEDIA_REGISTRY_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
@@ -284,6 +286,14 @@ async function main() {
       sortOrder: 37,
     },
     {
+      slug: "general-store-pos",
+      title: "POS ร้านทั่วไป (ง่าย)",
+      description:
+        "กลุ่ม 1 (Basic) — หมวด สินค้า การ์ดทันสมัย บันทึกขายง่าย (ไม่หักโทเคนรายวัน)",
+      groupId: 1,
+      sortOrder: 38,
+    },
+    {
       slug: "laundry",
       title: "รับฝากซักผ้า",
       description:
@@ -404,6 +414,7 @@ async function main() {
     LAUNDRY_MODULE_SLUG,
     VAULT_MODULE_SLUG,
     INVENTORY_MODULE_SLUG,
+    GENERAL_STORE_POS_MODULE_SLUG,
   ] as const;
 
   for (const slug of demoAutoSubscribeSlugs) {
@@ -654,6 +665,17 @@ async function main() {
     });
     if (row) {
       await tryDemoSeed(`inventory (${email})`, () => seedInventoryProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** POS ร้านทั่วไป — ล้าง scope owner แล้วใส่หมวด 4 + สินค้า 20 (รูป) + บิลตัวอย่าง ~13 ใบ */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`general-store-pos (${email})`, () => seedGeneralStorePosProdDemoForOwner(prisma, row.id));
     }
   }
 }

@@ -21,6 +21,7 @@ import {
   LAUNDRY_MODULE_SLUG,
   VAULT_MODULE_SLUG,
   INVENTORY_MODULE_SLUG,
+  GENERAL_STORE_POS_MODULE_SLUG,
 } from "@/lib/modules/config";
 import { SYSTEM_MAP_CATALOG_SLUG } from "@/lib/modules/system-map-catalog";
 import { CHAT_AI_DASHBOARD_HREF, resolveDashboardNavLinkHref } from "@/lib/dashboard/chat-ai-href";
@@ -58,6 +59,7 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === MEDIA_REGISTRY_MODULE_SLUG) return "/dashboard/media-registry";
   if (slug === VAULT_MODULE_SLUG) return "/dashboard/vault";
   if (slug === INVENTORY_MODULE_SLUG) return "/dashboard/inventory";
+  if (slug === GENERAL_STORE_POS_MODULE_SLUG) return "/dashboard/general-store-pos";
   return `/dashboard/modules/${slug}`;
 }
 
@@ -151,6 +153,7 @@ export function buildDashboardNavGroups(
       CAR_WASH_MODULE_SLUG,
       LAUNDRY_MODULE_SLUG,
       BUILDING_POS_MODULE_SLUG,
+      GENERAL_STORE_POS_MODULE_SLUG,
     ]);
     const propertySlugs = new Set<string>([
       DORMITORY_MODULE_SLUG,

@@ -17,7 +17,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 51: MediaRegistry* (ทะเบียนคุมสื่อ) — client เก่าไม่มี delegate */
 /** 52: WaitQueueSite + WaitQueueTicket — client เก่าไม่มี delegate แล้ว undefined.findFirst */
 /** 53: SchoolBank* + CommunityCoop* — client เก่าไม่มี delegate แล้ว undefined.findUnique */
-const PRISMA_SINGLETON_VERSION = 53;
+/** 54: GeneralStorePos* (POS ร้านทั่วไปง่าย) */
+const PRISMA_SINGLETON_VERSION = 54;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -85,6 +86,10 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     communityCoopSettings?: { findUnique?: unknown };
     communityCoopAccount?: { findMany?: unknown };
     communityCoopLedgerEntry?: { findMany?: unknown };
+    generalStorePosCategory?: { findMany?: unknown };
+    generalStorePosProduct?: { findMany?: unknown };
+    generalStorePosSale?: { findMany?: unknown };
+    generalStorePosSaleLine?: { findMany?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -144,7 +149,11 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.schoolBankLedgerEntry?.findMany === "function" &&
     typeof c.communityCoopSettings?.findUnique === "function" &&
     typeof c.communityCoopAccount?.findMany === "function" &&
-    typeof c.communityCoopLedgerEntry?.findMany === "function"
+    typeof c.communityCoopLedgerEntry?.findMany === "function" &&
+    typeof c.generalStorePosCategory?.findMany === "function" &&
+    typeof c.generalStorePosProduct?.findMany === "function" &&
+    typeof c.generalStorePosSale?.findMany === "function" &&
+    typeof c.generalStorePosSaleLine?.findMany === "function"
   );
 }
 

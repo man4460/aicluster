@@ -116,6 +116,25 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  if (href.startsWith("/dashboard/general-store-pos")) {
+    return (
+      <Svg>
+        <path
+          d="M6 8h15l-1.5 9H7.5L6 8zM6 8L5 3H2M9 11v5M15 11v5"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M10 21a1 1 0 002 0M16 21a1 1 0 002 0"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </Svg>
+    );
+  }
   if (href.startsWith("/dashboard/village")) {
     return (
       <Svg>
