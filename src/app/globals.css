@@ -305,3 +305,39 @@ select:focus {
   --tw-shadow-color: rgba(109, 92, 233, 0.28);
   --tw-shadow: var(--tw-shadow-colored);
 }
+
+/* Landing page — micro-motion (respect reduced motion) */
+@keyframes landing-cta-nudge {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.landing-cta-micro {
+  animation: landing-cta-nudge 2.5s ease-in-out infinite;
+}
+
+@keyframes landing-float-slow {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(10px, -8px) scale(1.03);
+  }
+}
+
+.landing-float-slow {
+  animation: landing-float-slow 14s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-cta-micro,
+  .landing-float-slow {
+    animation: none !important;
+  }
+}

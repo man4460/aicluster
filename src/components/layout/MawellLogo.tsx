@@ -20,7 +20,7 @@ export function MawellLogo({ className, size = "md" }: Props) {
         aria-label="MAWELL"
       >
         <span className="font-extrabold">
-          M<span className="text-[#FF0000]">A</span>WELL
+          M<span className="text-red-600">A</span>WELL
         </span>
       </div>
     </div>

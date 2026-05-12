@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { LandingPageClient } from "@/app/landing/LandingPageClient";
-import { getSession } from "@/lib/auth/session";
+import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: "MAWELL — แพลตฟอร์มธุรกิจครบวงจร",
@@ -9,8 +7,6 @@ export const metadata: Metadata = {
     "แพลตฟอร์มเดียวครบระบบหลังบ้าน องค์กร ธุรกิจ โรงเรียน — โมดูลฟรีหลายระบบ และสายรายวัน 1 บาทต่อวันต่อระบบ",
 };
 
-export default async function Home() {
-  const session = await getSession();
-  if (session) redirect("/dashboard");
-  return <LandingPageClient />;
+export default function LandingLayout({ children }: { children: ReactNode }) {
+  return children;
 }
