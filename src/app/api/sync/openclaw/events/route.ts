@@ -26,16 +26,15 @@ const planItemSchema = z.object({
   syncedAt: z.string().datetime().optional(),
 });
 
-const financeItemSchema = z.object({
-  type: z.literal("finance"),
-  externalId: z.string().min(1).max(128),
-  op: z.enum(["upsert", "delete"]).default("upsert"),
-  entryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  entryType: z.enum(["INCOME", "EXPENSE"]).optional(),
-  amount: z.number().positive().optional(),
-  title: z.string().min(1).max(160).optional(),
-  categoryKey: z.string().min(1).max(64).optional(),
-  categoryLabel: z.string().min(1).max(100).optional(),
+/** ฟิลด์ร่วมของ finance upsert (รูปแบบ flat — ชื่อที่ handler ใช้) */
+const financeUpsertFlatShape = {
+  entryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  entryType: z.enum(["INCOME", "EXPENSE"]),
+  /** รองรับ JSON ที่ส่ง amount เป็นสตริงจากบาง client */
+  amount: z.coerce.number().positive(),
+  title: z.string().min(1).max(160),
+  categoryKey: z.string().min(1).max(64),
+  categoryLabel: z.string().min(1).max(100),
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   billNumber: z.string().max(100).nullable().optional(),
   vehicleType: z.string().max(40).nullable().optional(),
@@ -44,8 +43,76 @@ const financeItemSchema = z.object({
   note: z.string().max(600).nullable().optional(),
   slipImageUrl: z.string().max(512).nullable().optional(),
   attachmentUrls: z.array(z.string().max(512)).max(20).optional(),
+};
+
+/** รูปแบบ flat (แนะนำ) — ใช้ `entryType` ไม่ใช่ `type` */
+const financeItemFlatUpsertSchema = z.object({
+  type: z.literal("finance"),
+  externalId: z.string().min(1).max(128),
+  op: z.enum(["upsert", "delete"]).default("upsert"),
+  ...financeUpsertFlatShape,
   syncedAt: z.string().datetime().optional(),
 });
+
+/** รูปแบบ nested `entry` + `entry.type` (เอกสารเก่า) — แปลงเป็น flat ก่อน handler */
+const financeNestedEntryBody = z.object({
+  entryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  type: z.enum(["INCOME", "EXPENSE"]),
+  amount: z.coerce.number().positive(),
+  title: z.string().min(1).max(160),
+  categoryKey: z.string().min(1).max(64),
+  categoryLabel: z.string().min(1).max(100),
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  billNumber: z.string().max(100).nullable().optional(),
+  vehicleType: z.string().max(40).nullable().optional(),
+  serviceCenter: z.string().max(160).nullable().optional(),
+  paymentMethod: z.string().max(40).nullable().optional(),
+  note: z.string().max(600).nullable().optional(),
+  slipImageUrl: z.string().max(512).nullable().optional(),
+  attachmentUrls: z.array(z.string().max(512)).max(20).optional(),
+});
+
+const financeItemNestedUpsertSchema = z
+  .object({
+    type: z.literal("finance"),
+    externalId: z.string().min(1).max(128),
+    op: z.enum(["upsert", "delete"]).default("upsert"),
+    entry: financeNestedEntryBody,
+    syncedAt: z.string().datetime().optional(),
+  })
+  .transform((v) => ({
+    type: "finance" as const,
+    externalId: v.externalId,
+    op: v.op,
+    syncedAt: v.syncedAt,
+    entryDate: v.entry.entryDate,
+    entryType: v.entry.type,
+    amount: v.entry.amount,
+    title: v.entry.title,
+    categoryKey: v.entry.categoryKey,
+    categoryLabel: v.entry.categoryLabel,
+    dueDate: v.entry.dueDate,
+    billNumber: v.entry.billNumber,
+    vehicleType: v.entry.vehicleType,
+    serviceCenter: v.entry.serviceCenter,
+    paymentMethod: v.entry.paymentMethod,
+    note: v.entry.note,
+    slipImageUrl: v.entry.slipImageUrl,
+    attachmentUrls: v.entry.attachmentUrls,
+  }));
+
+const financeItemDeleteSchema = z.object({
+  type: z.literal("finance"),
+  externalId: z.string().min(1).max(128),
+  op: z.literal("delete"),
+  syncedAt: z.string().datetime().optional(),
+});
+
+const financeItemSchema = z.union([
+  financeItemDeleteSchema,
+  financeItemNestedUpsertSchema,
+  financeItemFlatUpsertSchema,
+]);
 
 const bodySchema = z
   .object({
@@ -152,6 +219,9 @@ export async function POST(req: Request) {
         return NextResponse.json({
           ok: true,
           deduped: true,
+          message:
+            "requestId นี้เคยประมวลผลแล้ว — ระบบไม่รัน events ซ้ำ (กันส่งซ้ำจาก retry/webhook). " +
+            "ใช้ requestId ใหม่ทุกครั้งที่เป็น batch ใหม่ หรือไม่ส่ง requestId ถ้าใช้แค่ externalId ต่อรายการเป็น idempotency",
           source,
           ownerUserId,
           requestId,
