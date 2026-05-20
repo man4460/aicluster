@@ -211,6 +211,11 @@ model User {
   generalStorePosCategories GeneralStorePosCategory[]
   generalStorePosProducts   GeneralStorePosProduct[]
   generalStorePosSales      GeneralStorePosSale[]
+  ecommerceStores           EcommerceStore[]
+  ecommerceCategories       EcommerceCategory[]
+  ecommerceProducts         EcommerceProduct[]
+  ecommerceOrders           EcommerceOrder[]
+  ecommerceBuyerCustomers   EcommerceBuyerCustomer[]
 
   @@index([employerUserId])
   @@index([referredByUserId], map: "user_referred_by_idx")
@@ -3202,4 +3207,192 @@ model MediaRegistryIssue {
   @@index([ownerUserId, recordType], map: "mris_owner_type_idx")
   @@index([mediaId], map: "mris_media_idx")
   @@map("media_registry_issues")
+}
+
+// ——— E-Commerce Store Builder (กลุ่ม 1 · 1 โทเคน/วัน) ———
+
+enum EcommerceOrderStatus {
+  PENDING_SLIP
+  VERIFYING
+  PREPARING
+  SHIPPED
+}
+
+/** ร้านค้าออนไลน์ของ Merchant — ผูก ownerUserId (เจ้าของร้าน) */
+model EcommerceStore {
+  id                    String   @id @default(cuid())
+  ownerUserId           String   @map("owner_id") @db.VarChar(191)
+  owner                 User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId        String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+
+  storeName             String   @map("store_name") @db.VarChar(200)
+  logoUrl               String?  @map("logo_url") @db.VarChar(512)
+  description           String?  @db.Text
+
+  promptPayPhone        String?  @map("prompt_pay_phone") @db.VarChar(20)
+  bankName              String?  @map("bank_name") @db.VarChar(120)
+  bankAccountName       String?  @map("bank_account_name") @db.VarChar(200)
+  bankAccountNumber     String?  @map("bank_account_number") @db.VarChar(64)
+  paymentNote           String?  @map("payment_note") @db.Text
+
+  /** โดเมนส่วนตัว (ชี้ DNS มาที่ MAWELL) — ยังไม่ verify ได้จนกว่าจะตั้งค่า middleware */
+  customDomain          String?  @map("custom_domain") @db.VarChar(255)
+  customDomainVerified  Boolean  @default(false) @map("custom_domain_verified")
+
+  /** โหมด Sale Page — สินค้าเด่นหน้าเดียว (TikTok/FB) */
+  salePageEnabled       Boolean  @default(false) @map("sale_page_enabled")
+  featuredProductId     String?  @map("featured_product_id") @db.VarChar(191)
+
+  /** แจ้งเตือนสต๊อกใกล้หมดเมื่อ stockBalance <= threshold */
+  lowStockThreshold     Int      @default(5) @map("low_stock_threshold")
+
+  /** Merchant ปิดหน้าร้องชั่วคราว (ไม่รวมกรณีโทเคนหมด) */
+  merchantPaused        Boolean  @default(false) @map("merchant_paused")
+
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  categories            EcommerceCategory[]
+  products              EcommerceProduct[]
+  orders                EcommerceOrder[]
+  buyerCustomers        EcommerceBuyerCustomer[]
+  featuredProduct       EcommerceProduct? @relation("EcommerceFeaturedProduct", fields: [featuredProductId], references: [id], onDelete: SetNull)
+
+  @@unique([ownerUserId, trialSessionId], map: "ecstore_owner_trial_uniq")
+  @@index([ownerUserId], map: "ecstore_owner_idx")
+  @@index([customDomain], map: "ecstore_custom_domain_idx")
+  @@map("ecommerce_stores")
+}
+
+/** หมวดหมู่สินค้าในร้าน */
+model EcommerceCategory {
+  id              String   @id @default(cuid())
+  storeId         String   @map("store_id") @db.VarChar(191)
+  store           EcommerceStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  ownerUserId     String   @map("owner_id") @db.VarChar(191)
+  owner           User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  name            String   @db.VarChar(120)
+  sortOrder       Int      @default(0) @map("sort_order")
+  isActive        Boolean  @default(true) @map("is_active")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  products        EcommerceProduct[]
+
+  @@unique([storeId, name], map: "eccat_store_name_uidx")
+  @@index([storeId, isActive, sortOrder], map: "eccat_store_active_sort_idx")
+  @@index([ownerUserId], map: "eccat_owner_idx")
+  @@map("ecommerce_categories")
+}
+
+model EcommerceProduct {
+  id              String   @id @default(cuid())
+  storeId         String   @map("store_id") @db.VarChar(191)
+  store           EcommerceStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  ownerUserId     String   @map("owner_id") @db.VarChar(191)
+  owner           User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  name            String   @db.VarChar(255)
+  imageUrl        String?  @map("image_url") @db.VarChar(512)
+  description     String?  @db.Text
+  priceBaht       Decimal  @map("price_baht") @db.Decimal(12, 2)
+  sku             String?  @db.VarChar(64)
+  stockBalance    Int      @default(0) @map("stock_balance")
+  isActive        Boolean  @default(true) @map("is_active")
+  /** แสดงป้าย/แถวสินค้าแนะนำบนหน้าร้อง */
+  isRecommended   Boolean  @default(false) @map("is_recommended")
+  /** แสดงป้าย/แถวขายดีบนหน้าร้อง */
+  isBestseller    Boolean  @default(false) @map("is_bestseller")
+  sortOrder       Int      @default(0) @map("sort_order")
+  categoryId      String?  @map("category_id") @db.VarChar(191)
+  category        EcommerceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  orderItems      EcommerceOrderItem[]
+  featuredInStore EcommerceStore[] @relation("EcommerceFeaturedProduct")
+
+  @@index([storeId, isActive, sortOrder], map: "ecprod_store_active_sort_idx")
+  @@index([storeId, isActive, isRecommended], map: "ecprod_store_recommended_idx")
+  @@index([storeId, isActive, isBestseller], map: "ecprod_store_bestseller_idx")
+  @@index([storeId, categoryId], map: "ecprod_store_category_idx")
+  @@index([ownerUserId], map: "ecprod_owner_idx")
+  @@unique([storeId, sku], map: "ecprod_store_sku_uidx")
+  @@map("ecommerce_products")
+}
+
+model EcommerceOrder {
+  id                String               @id @default(cuid())
+  storeId           String               @map("store_id") @db.VarChar(191)
+  store             EcommerceStore       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  ownerUserId       String               @map("owner_id") @db.VarChar(191)
+  owner             User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  referenceCode     String               @map("reference_code") @db.VarChar(32)
+  /** รหัสติดตามสาธารณะสำหรับผู้ซื้อ (ไม่ใช่ cuid) */
+  trackingCode      String               @map("tracking_code") @db.VarChar(24)
+
+  customerName      String               @map("customer_name") @db.VarChar(200)
+  customerPhone     String               @map("customer_phone") @db.VarChar(32)
+  customerAddress   String?              @map("customer_address") @db.Text
+
+  totalAmount       Decimal              @map("total_amount") @db.Decimal(14, 2)
+  paymentSlipUrl    String?              @map("payment_slip_url") @db.VarChar(512)
+  status            EcommerceOrderStatus @default(PENDING_SLIP)
+  buyerCustomerId   String?              @map("buyer_customer_id") @db.VarChar(191)
+  buyerCustomer     EcommerceBuyerCustomer? @relation(fields: [buyerCustomerId], references: [id], onDelete: SetNull)
+
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+
+  items             EcommerceOrderItem[]
+
+  @@unique([storeId, referenceCode], map: "ecord_store_ref_uidx")
+  @@unique([trackingCode], map: "ecord_tracking_uidx")
+  @@index([storeId, status, createdAt], map: "ecord_store_status_idx")
+  @@index([ownerUserId], map: "ecord_owner_idx")
+  @@map("ecommerce_orders")
+}
+
+model EcommerceOrderItem {
+  id              String          @id @default(cuid())
+  orderId         String          @map("order_id") @db.VarChar(191)
+  order           EcommerceOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId       String?         @map("product_id") @db.VarChar(191)
+  product         EcommerceProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  productName     String          @map("product_name") @db.VarChar(255)
+  quantity        Int
+  unitPriceBaht   Decimal         @map("unit_price_baht") @db.Decimal(12, 2)
+  lineTotalBaht   Decimal         @map("line_total_baht") @db.Decimal(14, 2)
+
+  @@index([orderId], map: "ecorditem_order_idx")
+  @@map("ecommerce_order_items")
+}
+
+/** CRM — ลูกค้าที่เคยซื้อจากร้านนี้ */
+model EcommerceBuyerCustomer {
+  id              String   @id @default(cuid())
+  storeId         String   @map("store_id") @db.VarChar(191)
+  store           EcommerceStore @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  ownerUserId     String   @map("owner_id") @db.VarChar(191)
+  owner           User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  name            String   @db.VarChar(200)
+  phone           String   @db.VarChar(32)
+  totalSpendBaht  Decimal  @default(0) @map("total_spend_baht") @db.Decimal(14, 2)
+  orderCount      Int      @default(0) @map("order_count")
+  lastOrderAt     DateTime? @map("last_order_at")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  orders          EcommerceOrder[]
+
+  @@unique([storeId, phone], map: "ecbuyer_store_phone_uidx")
+  @@index([ownerUserId], map: "ecbuyer_owner_idx")
+  @@map("ecommerce_buyer_customers")
 }

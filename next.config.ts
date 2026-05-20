@@ -41,6 +41,12 @@ const nextConfig: NextConfig = {
   // ไม่ให้ bundle Prisma เข้า SSR — ใช้ Node process เต็มรูปแบบ (กัน process.once is not a function)
   serverExternalPackages: ["@prisma/client", "prisma"],
   allowedDevOrigins: parseAllowedDevOrigins(),
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "picsum.photos", pathname: "/**" },
+      { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
+    ],
+  },
   async redirects() {
     return [
       {

@@ -1,0 +1,65 @@
+---
+description: ปุ่มเพิ่มรายการ/หมวด/สินค้าในแดชบอร์ด — เปิด FormModal ไม่ใช้ฟอร์ม inline
+globs: "**/dashboard/**/*.tsx,**/systems/**/*Client.tsx,**/systems/**/*Panel.tsx"
+alwaysApply: false
+---
+
+# แดชบอร์ด — เพิ่มข้อมูล / หมวด ผ่าน popup
+
+เมื่อหน้าแดชบอร์ดมีปุ่ม **เพิ่มรายการ**, **เพิ่มสินค้า**, **เพิ่มหมวดหมู่**, **เพิ่มลูกค้า** (หรือเทียบเท่า) ภายใน `AppDashboardSection`:
+
+## บังคับ
+
+1. **ห้าม** วางฟอร์มกรอกเต็มแถว/กล่อง dashed ถาวรใต้หัวการ์ด — ให้เหลือ **รายการ + สรุป** บนหน้าหลัก
+2. ปุ่มเพิ่มใน `AppSectionHeader` `action` (หรือปุ่มรองในส่วนหมวด) → **`setShowAddModal(true)`** เปิด **`FormModal`** เท่านั้น
+3. ใช้ **`FormModal`** + **`FormModalFooterActions`** จาก `@/components/ui/FormModal`
+   - `mobileCentered` (ค่าเริ่มของ component)
+   - `size="md"` สำหรับฟอร์มสั้น · `size="lg"` ถ้ามีหลายช่อง/อัปโหลดรูป
+   - `footer` = ยกเลิก + บันทึก/เพิ่ม (ไม่ส่งฟอร์มจากปุ่ม header โดยตรง)
+4. ปิดโมดัล (`onClose` / ยกเลิก) → **รีเซ็ต state ฟอร์ม** เพื่อไม่ให้ค่าค้างรอบถัดไป
+5. หลังบันทึกสำเร็จ → ปิดโมดัล → `reload()` รายการ
+
+## แพทเทิร์น
+
+```tsx
+const [showAddModal, setShowAddModal] = useState(false);
+
+<AppSectionHeader
+  action={
+    <button type="button" onClick={() => setShowAddModal(true)} className="app-btn-primary ...">
+      <span className="sm:hidden">+</span>
+      <span className="hidden sm:inline">+ เพิ่ม…</span>
+    </button>
+  }
+/>
+
+<FormModal
+  open={showAddModal}
+  onClose={() => { setShowAddModal(false); resetForm(); }}
+  title="เพิ่ม…"
+  description="คำอธิบายสั้น"
+  size="md"
+  footer={
+    <FormModalFooterActions
+      onCancel={() => { setShowAddModal(false); resetForm(); }}
+      onSubmit={handleAdd}
+      submitLabel="เพิ่ม"
+      submitDisabled={!name.trim()}
+      loading={busy}
+    />
+  }
+>
+  {/* ช่องกรอกในโมดัล */}
+</FormModal>
+```
+
+## ข้อยกเว้น
+
+- **แก้ไขแถว** (inline select / +/- สต๊อก / ไอคอนแถว) ไม่ต้องเป็นโมดัล — เฉพาะ **การสร้างรายการใหม่** หรือ **สร้างหมวดใหม่**
+- ฟิลเตอร์/ค้นหาบนหน้ารายการ — แสดง inline หรือ sheet ตาม `dashboard-mobile-filter-icon.mdc`
+
+## อ้างอิง
+
+- `src/components/ui/FormModal.tsx`
+- `src/systems/ecommerce-store/components/EcommerceProductsClient.tsx` (สินค้า + หมวด)
+- คาร์แคร์: `CarWashDashboard.tsx` (โมดัลฟอร์มหลายจุด)

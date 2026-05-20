@@ -18,7 +18,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 52: WaitQueueSite + WaitQueueTicket — client เก่าไม่มี delegate แล้ว undefined.findFirst */
 /** 53: SchoolBank* + CommunityCoop* — client เก่าไม่มี delegate แล้ว undefined.findUnique */
 /** 54: GeneralStorePos* (POS ร้านทั่วไปง่าย) */
-const PRISMA_SINGLETON_VERSION = 54;
+/** 55: EcommerceStore* (E-Commerce Store Builder) */
+const PRISMA_SINGLETON_VERSION = 55;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -90,6 +91,10 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     generalStorePosProduct?: { findMany?: unknown };
     generalStorePosSale?: { findMany?: unknown };
     generalStorePosSaleLine?: { findMany?: unknown };
+    ecommerceStore?: { findFirst?: unknown };
+    ecommerceProduct?: { findMany?: unknown };
+    ecommerceOrder?: { findMany?: unknown };
+    ecommerceBuyerCustomer?: { findMany?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -153,7 +158,11 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.generalStorePosCategory?.findMany === "function" &&
     typeof c.generalStorePosProduct?.findMany === "function" &&
     typeof c.generalStorePosSale?.findMany === "function" &&
-    typeof c.generalStorePosSaleLine?.findMany === "function"
+    typeof c.generalStorePosSaleLine?.findMany === "function" &&
+    typeof c.ecommerceStore?.findFirst === "function" &&
+    typeof c.ecommerceProduct?.findMany === "function" &&
+    typeof c.ecommerceOrder?.findMany === "function" &&
+    typeof c.ecommerceBuyerCustomer?.findMany === "function"
   );
 }
 

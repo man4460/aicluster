@@ -76,6 +76,10 @@ mawell_buffet_from_host.sql
 !/public/uploads/dorm-cost-slips/.gitkeep
 /public/uploads/laundry/*
 !/public/uploads/laundry/.gitkeep
+/public/uploads/ecommerce-slips/*
+!/public/uploads/ecommerce-slips/.gitkeep
+/public/uploads/ecommerce-store/*
+!/public/uploads/ecommerce-store/.gitkeep
 
 # Legacy duplicate tree — แอปจริงอยู่ราก repo (มี node_modules/.next ของ copy เก่า)
 /web/

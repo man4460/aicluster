@@ -9,7 +9,7 @@ globs:
 เมื่อแก้ `LaundryDashboard` ให้คงแพทเทิร์นคู่มือการใช้งานแบบเดียวกับคาร์แคร์:
 
 1. มีปุ่ม `คู่มือการใช้งาน` บริเวณหัวการ์ดโมดูล (ปุ่มไอคอน `?` + label บน `sm+`)
-2. ใช้ `AppUsageGuideModal` จาก `@/components/app-templates`
+2. ใช้ `AppUsageGuideModal` จาก `@/components/app-templates` — **กึ่งกลางจอบนมือถือ** (`FormModal` + `mobileCentered`) ตาม `.cursor/rules/app-usage-guide-modal.mdc`
 3. โครง modal:
    - `title`: "คู่มือการใช้งาน — ระบบรับฝากซักผ้า"
    - `subtitle`: คำอธิบายสั้น 1 บรรทัด

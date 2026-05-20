@@ -96,6 +96,10 @@ export const INVENTORY_MODULE_GROUP_ID = 1 as const;
 export const GENERAL_STORE_POS_MODULE_SLUG = "general-store-pos" as const;
 export const GENERAL_STORE_POS_MODULE_GROUP_ID = 1 as const;
 
+/** E-Commerce Store Builder — ร้านออนไลน์ + สต๊อก + หน้าร้องสาธารณะ */
+export const ECOMMERCE_STORE_MODULE_SLUG = "ecommerce-store" as const;
+export const ECOMMERCE_STORE_MODULE_GROUP_ID = 1 as const;
+
 /**
  * โมดูลที่ไม่หักโทเคนรายวันเมื่อเข้าใช้ (`applyModuleDailyTokenDeduction`)
  * — แสดงบนการ์ดเป็น «ฟรี»
@@ -136,6 +140,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === VAULT_MODULE_SLUG) return "คลังรหัสผ่าน";
   if (slug === INVENTORY_MODULE_SLUG) return "คลัง · สต๊อกสินค้า";
   if (slug === GENERAL_STORE_POS_MODULE_SLUG) return "POS ร้านทั่วไป (ง่าย)";
+  if (slug === ECOMMERCE_STORE_MODULE_SLUG) return "E-Commerce Store Builder";
   return title;
 }
 
@@ -153,7 +158,7 @@ export const MODULE_GROUP_TIER_NAME: Record<number, string> = {
 
 /** สรุปฟีเจอร์ต่อกลุ่ม (ใช้ในหน้าแพ็กเกจ / คำอธิบาย) — ข้อความกระชับ */
 export const MODULE_GROUP_FEATURE_SUMMARY: Record<number, string> = {
-  1: "กลุ่ม 1: เช็คอิน · EduCare · สารบรรณ · คลัง Prompt · ทะเบียนสื่อ · คลังรหัสผ่าน · คลังสต๊อก · POS ทั่วไป · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ทรัพย์สิน · ตัดผม · คาร์แคร์ · ซักผ้า · จอดรถ · คิวหน้าร้าน · POS ร้านอาหาร",
+  1: "กลุ่ม 1: เช็คอิน · EduCare · สารบรรณ · คลัง Prompt · ทะเบียนสื่อ · คลังรหัสผ่าน · คลังสต๊อก · POS ทั่วไป · ร้านออนไลน์ · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ทรัพย์สิน · ตัดผม · คาร์แคร์ · ซักผ้า · จอดรถ · คิวหน้าร้าน · POS ร้านอาหาร",
   2: "สต็อก · ใบเสร็จ",
   3: "วิเคราะห์ · แชทสาขา",
   4: "พนักงาน · เงินเดือน",

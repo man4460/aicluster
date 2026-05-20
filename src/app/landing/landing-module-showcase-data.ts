@@ -100,6 +100,12 @@ export const LANDING_DAILY_MODULE_SHOWCASE: LandingModuleShowcaseItem[] = [
       "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=900&q=78",
   },
   {
+    slug: "ecommerce-store",
+    blurb: "ร้านออนไลน์ สต๊อก หน้าร้อง แนบสลิป PromptPay",
+    coverSrc:
+      "https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=900&q=78",
+  },
+  {
     slug: "barber",
     blurb: "จองคิว ร้านตัดผม",
     coverSrc:

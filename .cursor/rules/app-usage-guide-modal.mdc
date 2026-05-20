@@ -1,0 +1,46 @@
+---
+description: โมดัลคู่มือการใช้งาน — กึ่งกลางจอบนมือถือ (FormModal mobileCentered)
+globs: "**/app-templates/AppUsageGuideModal.tsx,**/*Shell.tsx,**/*Dashboard.tsx"
+alwaysApply: false
+---
+
+# คู่มือการใช้งาน (`AppUsageGuideModal`)
+
+ปุ่ม **คู่มือ** / **คู่มือการใช้งาน** ในแดชบอร์ดโมดูล → เปิด **`AppUsageGuideModal`** จาก `@/components/app-templates` เท่านั้น
+
+## บังคับ
+
+1. **ห้าม** เขียน overlay เอง (`fixed inset-0` + `items-end` บนมือถือ) — component กลางใช้ **`FormModal`** จาก `@/components/ui/FormModal`
+2. **`mobileCentered`** — บนมือถือแผงอยู่ **กึ่งกลางจอ** (`items-center` + `p-3`) · **ไม่** ชิดขอบล่างแบบ bottom sheet (`items-end`)
+3. **`size="lg"`** (หรือ `xl` ถ้าเนื้อหายาวมาก) — ความกว้างสูงสุดเทียบ `max-w-2xl`
+4. **`rounded-[2rem]`** บนมือถือเมื่อ `mobileCentered` (มาจาก FormModal อัตโนมัติ)
+5. ปิดด้วย ESC / คลิกพื้นหลัง / ปุ่ม X หัวโมดัล / ปุ่ม **ปิด** ใน footer
+6. โครงเนื้อหา: `title` + `subtitle` (optional → `description` ของ FormModal) + `sections[]` (`title` + `content` ReactNode)
+
+## แพทเทิร์น
+
+```tsx
+import { AppUsageGuideModal } from "@/components/app-templates";
+
+const [usageGuideOpen, setUsageGuideOpen] = useState(false);
+
+<AppUsageGuideModal
+  open={usageGuideOpen}
+  onClose={() => setUsageGuideOpen(false)}
+  title="คู่มือการใช้งาน — ชื่อโมดูล"
+  subtitle="คำอธิบายสั้นหนึ่งบรรทัด (ถ้ามี)"
+  sections={[
+    { title: "เริ่มต้น", content: <>…</> },
+  ]}
+/>
+```
+
+## อ้างอิง
+
+- Implementation: `src/components/app-templates/AppUsageGuideModal.tsx`
+- โมดัลฟอร์มทั่วไป: `.cursor/rules/dashboard-add-form-modal.mdc`
+- โมดัลกึ่งกลางมือถือ (QR / ซักผ้า): `.cursor/rules/shop-qr-hub-popup-pattern.mdc` (`mobileCentered`)
+
+## ข้อยกเว้น
+
+- โมดูลที่มีคู่มือเฉพาะมาก (เช่น บาร์เบอร์ `BarberUsageGuideModal`) อาจใช้ portal ของโมดูล — ถ้า refactor ให้ยึด **`mobileCentered`** / กึ่งกลางจอบนมือถือเช่นกัน

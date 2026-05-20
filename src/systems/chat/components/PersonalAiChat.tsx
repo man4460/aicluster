@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AppImageLightbox,
   AppImageThumb,
-  AppPickGalleryImageButton,
-  prepareImageFileForVisionOcr,
+  appTemplateOutlineButtonClass,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
@@ -15,12 +13,6 @@ import {
   PERSONAL_AI_CHAT_MESSAGES_SCROLL_CLASS,
   PERSONAL_AI_CHAT_ROOT_CLASS,
 } from "@/systems/chat/personal-ai-chat-shell";
-import { PersonalAiDailyDigest } from "@/systems/chat/components/PersonalAiDailyDigest";
-import { PersonalAiNotesModal } from "@/systems/chat/components/PersonalAiNotesModal";
-
-/** ปุ่มรองแบบแดชบอร์ด (เดียวกับ car-wash / โมดูลอื่น) */
-const CHAT_BTN_SOFT =
-  "app-btn-soft rounded-xl border border-[#dcd8f0] text-xs font-semibold text-[#4d47b6] shadow-sm transition hover:bg-[#f4f3ff] disabled:opacity-50";
 
 type ChatRole = "user" | "assistant";
 type ChatMessage = {
@@ -50,9 +42,7 @@ function buildWelcomeMessage(displayName: string): ChatMessage {
     role: "assistant",
     content:
       `สวัสดีครับ คุณ${name}\n\n` +
-      "• ถามงาน / บัญชี / ทั่วไปได้เลย\n" +
-      "• แนบรูปส่งคู่ข้อความได้ถ้าต้องการ\n\n" +
-      "ให้ช่วยอะไรครับ?",
+      "พิมพ์ข้อความด้านล่างแล้วกดส่งได้เลย\n\n" + "ให้ช่วยอะไรครับ?",
   };
 }
 
@@ -94,11 +84,20 @@ function loadPersistedChatState(greetingName?: string): { sessions: ChatSession[
       return { sessions: s, activeSessionId: s[0]!.id };
     }
     const sessions = data.sessions as ChatSession[];
+    const name = (greetingName ?? "คุณ").trim() || "คุณ";
+    const sessionsSanitized = sessions.map((s) => ({
+      ...s,
+      messages: s.messages.map((m) =>
+        m.id === "welcome" && m.role === "assistant" && /แนบรูป|อัปโหลดรูป|แนบรูปส่ง/u.test(m.content)
+          ? { ...buildWelcomeMessage(name), id: "welcome" as const }
+          : m,
+      ),
+    }));
     const active =
-      data.activeSessionId && sessions.some((x) => x.id === data.activeSessionId)
+      data.activeSessionId && sessionsSanitized.some((x) => x.id === data.activeSessionId)
         ? data.activeSessionId
-        : sessions[0]!.id;
-    return { sessions, activeSessionId: active };
+        : sessionsSanitized[0]!.id;
+    return { sessions: sessionsSanitized, activeSessionId: active };
   } catch {
     const s = defaultChatSessions(greetingName);
     return { sessions: s, activeSessionId: s[0]!.id };
@@ -130,38 +129,6 @@ function persistChatState(sessions: ChatSession[], activeSessionId: string): voi
   }
 }
 
-/** ตอบกลับจากเซิร์ฟเวอร์บ่งว่ามีการบันทึกโน้ต (รีเฟรชแผงสำรอง) */
-function replySuggestsNoteSaved(reply: string): boolean {
-  const t = reply.trim();
-  if (!t) return false;
-  if (/บันทึกโน้ตแล้ว|จดโน้ตแล้ว/u.test(t)) return true;
-  if (/บันทึกเรียบร้อย/u.test(t) && /#\w{6,}/u.test(t)) return true;
-  if (/เก็บแผนนี้ใน\s*[*]*บันทึกล่าสุด/u.test(t)) return true;
-  return false;
-}
-
-/** ตอบกลับหลังบันทึกรายรับ–รายจ่ายจากสลิป / คำสั่งบันทึก */
-function replySuggestsFinanceSaved(reply: string): boolean {
-  const t = reply.trim();
-  if (!t) return false;
-  if (/ลงบัญชีแล้วค่ะ/u.test(t) && /รายการ\s*#\d+/u.test(t)) return true;
-  if (/บันทึก(?:รายรับ|รายจ่าย).*แล้วค่ะ/u.test(t) && /รายการ\s*#\d+/u.test(t)) return true;
-  return false;
-}
-
-function replySuggestsSlipConfirmAction(reply: string): boolean {
-  const t = reply.trim();
-  if (!t) return false;
-  if (/ลงบัญชีแล้วค่ะ/u.test(t) || /รายการ\s*#\d+/u.test(t)) return false;
-  if (/ถ้าข้อมูลถูกต้อง.*ยืนยัน|พิมพ์\s*\*\*ยืนยัน\*\*|พิมพ์\s*ยืนยัน|บันทึกเลย/u.test(t)) return true;
-  // fallback: ถ้าเป็นข้อความสรุปอ่านสลิป (มีหัวข้อหลัก) ให้ขึ้นปุ่มยืนยันด้วย
-  const looksLikeSlipSummary =
-    /อ่านสลิปแล้ว/u.test(t) &&
-    /จำนวนเงิน|ยอดเงิน/u.test(t) &&
-    /วันที่/u.test(t);
-  return looksLikeSlipSummary;
-}
-
 function isConfirmMessage(text: string): boolean {
   const t = text.trim().replace(/\s+/g, " ");
   if (!t) return false;
@@ -183,6 +150,44 @@ function AiSparklesIcon({ className }: { className?: string }) {
       />
     </svg>
   );
+}
+
+function IconChatNew({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+    </svg>
+  );
+}
+
+function IconChatClear({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14M10 11v6M14 11v6"
+      />
+    </svg>
+  );
+}
+
+/** เวลาในมุมฟอง (รูปแบบ id: u-173… / a-173… / a-pending-173…) */
+function telegramMetaFromMessageId(id: string): { label: string; iso: string } | null {
+  if (id === "welcome") return null;
+  const last = id.split("-").pop();
+  if (!last || !/^\d+$/.test(last)) return null;
+  const ms = Number(last);
+  if (ms < 1_000_000_000_000 || ms > 10_000_000_000_000) return null;
+  try {
+    const d = new Date(ms);
+    return {
+      label: d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false }),
+      iso: d.toISOString(),
+    };
+  } catch {
+    return null;
+  }
 }
 
 async function parseJson<T>(res: Response): Promise<{ ok: true; data: T } | { ok: false; message: string }> {
@@ -210,7 +215,6 @@ async function parseJson<T>(res: Response): Promise<{ ok: true; data: T } | { ok
 }
 
 export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const persistedOnceRef = useRef<{ sessions: ChatSession[]; activeSessionId: string } | null>(null);
@@ -221,19 +225,15 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
   const [sessions, setSessions] = useState<ChatSession[]>(() => persistedOnceRef.current!.sessions);
   const [activeSessionId, setActiveSessionId] = useState(() => persistedOnceRef.current!.activeSessionId);
   const [input, setInput] = useState("");
-  const [attachedImageDataUrl, setAttachedImageDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [digestRefreshKey, setDigestRefreshKey] = useState(0);
-  const [notesModalOpen, setNotesModalOpen] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
 
   const activeSession = useMemo(
     () => sessions.find((s) => s.id === activeSessionId) ?? sessions[0],
     [activeSessionId, sessions],
   );
   const messages = activeSession?.messages ?? [];
-  const canSend = useMemo(() => !loading && (input.trim().length > 0 || Boolean(attachedImageDataUrl)), [attachedImageDataUrl, input, loading]);
+  const canSend = useMemo(() => !loading && input.trim().length > 0, [input, loading]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -242,36 +242,6 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
   useEffect(() => {
     persistChatState(sessions, activeSessionId);
   }, [sessions, activeSessionId]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 3500);
-    return () => window.clearTimeout(id);
-  }, [toast]);
-
-  async function fileToDataUrl(file: File): Promise<string> {
-    return await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") resolve(reader.result);
-        else reject(new Error("ไม่สามารถอ่านไฟล์รูปได้"));
-      };
-      reader.onerror = () => reject(new Error("อ่านไฟล์รูปไม่สำเร็จ"));
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function onPickImage(file: File | null) {
-    if (!file) return;
-    try {
-      const prepared = await prepareImageFileForVisionOcr(file);
-      const dataUrl = await fileToDataUrl(prepared);
-      setAttachedImageDataUrl(dataUrl);
-      setError(null);
-    } catch {
-      setError("แนบรูปไม่สำเร็จ กรุณาลองใหม่");
-    }
-  }
 
   function onComposerKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -319,17 +289,16 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     const content = input.trim();
-    const imageDataUrl = attachedImageDataUrl;
-    if ((!content && !imageDataUrl) || loading || !activeSession) return;
+    if (!content || loading || !activeSession) return;
 
     const userMessage: ChatMessage = {
       id: `u-${Date.now()}`,
       role: "user",
-      content: content || "ส่งรูปภาพ",
-      imageDataUrl,
+      content,
+      imageDataUrl: null,
     };
     const nextMessages = [...messages, userMessage];
-    const optimisticConfirm = !imageDataUrl && isConfirmMessage(content);
+    const optimisticConfirm = isConfirmMessage(content);
     const optimisticAssistantMessage: ChatMessage | null = optimisticConfirm
       ? {
           id: `a-pending-${Date.now()}`,
@@ -341,14 +310,13 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
     updateActiveSession((current) => ({
       ...current,
       title:
-        current.title === "แชทใหม่" && (content || imageDataUrl)
-          ? (content || "รูปภาพ").slice(0, 28) + ((content || "รูปภาพ").length > 28 ? "..." : "")
+        current.title === "แชทใหม่" && content
+          ? content.slice(0, 28) + (content.length > 28 ? "..." : "")
           : current.title,
       messages: optimisticAssistantMessage ? [...nextMessages, optimisticAssistantMessage] : nextMessages,
       updatedAt: Date.now(),
     }));
     setInput("");
-    setAttachedImageDataUrl(null);
     setLoading(true);
     setError(null);
 
@@ -359,8 +327,7 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
         credentials: "include",
         body: JSON.stringify({
           sessionId: activeSession.serverSessionId ?? undefined,
-          message: content || undefined,
-          imageDataUrl,
+          message: content,
         }),
       });
       const parsed = await parseJson<{ error?: string } & ReplyResponse>(res);
@@ -387,85 +354,6 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
         ],
         updatedAt: Date.now(),
       }));
-      setDigestRefreshKey((k) => k + 1);
-      if (replySuggestsFinanceSaved(replyText)) {
-        setToast("บันทึกลงบัญชีแล้ว");
-        window.setTimeout(() => setDigestRefreshKey((k) => k + 1), 400);
-      } else if (replySuggestsNoteSaved(replyText)) {
-        setToast("บันทึกแล้ว");
-        window.setTimeout(() => setDigestRefreshKey((k) => k + 1), 500);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function sendQuickConfirm() {
-    if (loading || !activeSession) return;
-    const userMessage: ChatMessage = {
-      id: `u-${Date.now()}`,
-      role: "user",
-      content: "ยืนยัน",
-      imageDataUrl: null,
-    };
-    updateActiveSession((current) => ({
-      ...current,
-      messages: [
-        ...current.messages,
-        userMessage,
-        {
-          id: `a-pending-${Date.now()}`,
-          role: "assistant",
-          content: "รับคำยืนยันแล้ว กำลังบันทึกให้ค่ะ…",
-          imageDataUrl: null,
-        },
-      ],
-      updatedAt: Date.now(),
-    }));
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/chat-ai/reply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          sessionId: activeSession.serverSessionId ?? undefined,
-          message: "ยืนยัน",
-        }),
-      });
-      const parsed = await parseJson<{ error?: string } & ReplyResponse>(res);
-      if (!parsed.ok) {
-        setError(parsed.message);
-        return;
-      }
-      if (!res.ok) {
-        setError(parsed.data.error ?? "ส่งข้อความไม่สำเร็จ");
-        return;
-      }
-      const replyText = parsed.data.reply || "ไม่ได้รับข้อความตอบกลับ";
-      updateActiveSession((current) => ({
-        ...current,
-        serverSessionId: parsed.data.sessionId ?? current.serverSessionId ?? null,
-        messages: [
-          ...current.messages,
-          {
-            id: `a-${Date.now()}`,
-            role: "assistant",
-            content: replyText,
-            imageDataUrl: null,
-          },
-        ],
-        updatedAt: Date.now(),
-      }));
-      setDigestRefreshKey((k) => k + 1);
-      if (replySuggestsFinanceSaved(replyText)) {
-        setToast("บันทึกลงบัญชีแล้ว");
-        window.setTimeout(() => setDigestRefreshKey((k) => k + 1), 400);
-      } else if (replySuggestsNoteSaved(replyText)) {
-        setToast("บันทึกแล้ว");
-        window.setTimeout(() => setDigestRefreshKey((k) => k + 1), 500);
-      }
     } finally {
       setLoading(false);
     }
@@ -476,31 +364,10 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
 
   return (
     <div className={PERSONAL_AI_CHAT_ROOT_CLASS}>
-      <PersonalAiDailyDigest
-        refreshKey={digestRefreshKey}
-        onOpenAllNotes={() => setNotesModalOpen(true)}
-        onNotesChanged={() => setDigestRefreshKey((k) => k + 1)}
-      />
-
-      <PersonalAiNotesModal
-        open={notesModalOpen}
-        onClose={() => setNotesModalOpen(false)}
-        onNotesChanged={() => setDigestRefreshKey((k) => k + 1)}
-      />
-
-      {toast ? (
-        <div
-          className="pointer-events-none fixed bottom-6 left-1/2 z-[220] -translate-x-1/2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-900 shadow-md"
-          role="status"
-        >
-          {toast}
-        </div>
-      ) : null}
-
       <div className={PERSONAL_AI_CHAT_CARD_SHELL_CLASS}>
         <div className="shrink-0 border-b border-[#e8e6fc] bg-gradient-to-r from-white via-[#faf9ff] to-[#f3f1fc]/90">
           <div className="px-3 py-3 sm:px-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div className="flex flex-row items-start justify-between gap-3 sm:items-center">
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <div
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#e0e7ff] via-[#eef2ff] to-[#ddd6fe] text-sm font-bold text-[#0000BF] shadow-md shadow-indigo-900/10 ring-2 ring-white sm:h-11 sm:w-11"
@@ -516,24 +383,10 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
                       <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-[#1e1b4b] sm:text-[10px]">ผู้ช่วย AI</span>
                     </div>
                   </div>
+                  <p className="mt-0.5 text-[11px] font-medium leading-snug text-[#66638c]/90">พิมพ์ข้อความด้านล่างแล้วกดส่ง</p>
                 </div>
               </div>
-              <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end">
-                <button
-                  type="button"
-                  onClick={() => setNotesModalOpen(true)}
-                  className={cn(CHAT_BTN_SOFT, "px-2.5 py-1.5")}
-                  title="ดูโน้ตทั้งหมด"
-                >
-                  📝 บันทึก
-                </button>
-                <button
-                  type="button"
-                  onClick={createSession}
-                  className="app-btn-primary rounded-xl px-3 py-1.5 text-xs font-semibold shadow-md transition hover:opacity-95 disabled:opacity-50"
-                >
-                  + แชทใหม่
-                </button>
+              <div className="flex shrink-0 flex-nowrap items-center gap-1.5 self-start pt-0.5 sm:gap-2 sm:self-center sm:pt-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -546,36 +399,56 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
                     }));
                     setError(null);
                   }}
-                  className={cn(CHAT_BTN_SOFT, "px-2.5 py-1.5")}
-                  title="ล้างข้อความในแชทนี้ (บันทึกบนเครื่องจะอัปเดตตาม)"
+                  className={cn(
+                    appTemplateOutlineButtonClass,
+                    "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded-xl border-[#dcd8f0] bg-white/90 px-0 text-xs font-semibold text-[#4d47b6] shadow-sm transition hover:bg-[#f4f3ff] sm:min-w-0 sm:px-3.5",
+                  )}
+                  aria-label="ล้างข้อความในแชทนี้"
+                  title="ล้างแชท"
                 >
-                  ล้างแชท
+                  <IconChatClear className="h-4 w-4 shrink-0 sm:hidden" />
+                  <span className="hidden sm:inline">ล้างแชท</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={createSession}
+                  className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded-xl px-0 text-xs font-semibold shadow-md transition hover:opacity-95 disabled:opacity-50 sm:min-w-0 sm:px-3.5"
+                  aria-label="เริ่มแชทใหม่"
+                  title="แชทใหม่"
+                >
+                  <IconChatNew className="h-4 w-4 shrink-0 text-white sm:hidden" />
+                  <span className="hidden sm:inline">แชทใหม่</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <div className="flex shrink-0 gap-1.5 overflow-x-auto border-t border-[#ebe9f7] bg-white/70 px-2 py-2 [scrollbar-width:thin]">
-            {sessions.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => {
-                  setActiveSessionId(s.id);
-                  setError(null);
-                }}
-                className={cn(
-                  "shrink-0 max-w-[10rem] truncate rounded-full border px-2.5 py-1 text-left text-xs font-medium shadow-sm transition sm:max-w-[12rem] sm:px-3",
-                  s.id === activeSessionId
-                    ? "app-btn-primary border-transparent text-white shadow-md shadow-fuchsia-500/20"
-                    : "app-btn-soft border-[#dcd8f0] text-[#4d47b6] hover:bg-[#f4f3ff]",
-                )}
-                title={s.title}
-              >
-                {s.title}
-              </button>
-            ))}
-          </div>
+          {sessions.length > 1 ? (
+            <div className="border-t border-[#ebe9f7] bg-gradient-to-b from-white/80 to-[#faf9ff]/60 px-2 py-2 sm:px-3">
+              <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wide text-[#66638c]">ห้องแชท</p>
+              <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain rounded-2xl border border-white/55 bg-white/50 p-1.5 shadow-inner shadow-slate-900/[0.04] backdrop-blur-sm [scrollbar-width:thin]">
+                {sessions.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveSessionId(s.id);
+                      setError(null);
+                    }}
+                    className={cn(
+                      "shrink-0 max-w-[10rem] truncate rounded-xl border px-2.5 py-2 text-left text-xs font-semibold transition sm:max-w-[12rem] sm:px-3",
+                      s.id === activeSessionId
+                        ? "app-btn-primary border-transparent text-white shadow-md shadow-fuchsia-500/20"
+                        : "border-[#e8e4f7] bg-white/90 text-[#4d47b6] hover:bg-[#f4f3ff]",
+                    )}
+                    title={s.title}
+                  >
+                    {s.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {error ? (
@@ -587,66 +460,85 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
         ) : null}
 
         <div className={PERSONAL_AI_CHAT_MESSAGES_SCROLL_CLASS} role="log" aria-label="ข้อความแชท">
-          <div className="mx-auto w-full max-w-3xl space-y-4">
-            {messages.map((m, idx) => (
-              <div
-                key={m.id}
-                className={cn("flex w-full flex-col gap-1.5", m.role === "user" ? "items-end" : "items-start")}
-              >
+          <div className="mx-auto w-full max-w-3xl space-y-2.5 sm:space-y-3">
+            {messages.map((m) => {
+              const timeMeta = telegramMetaFromMessageId(m.id);
+              const isUser = m.role === "user";
+              return (
                 <div
-                  className={cn(
-                    "max-w-[min(92%,36rem)] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed sm:max-w-[85%]",
-                    m.role === "user"
-                      ? "app-btn-primary border-transparent text-white shadow-md shadow-fuchsia-500/20"
-                      : "border border-[#e4e2f5] bg-white text-slate-800 shadow-md shadow-indigo-950/5",
-                  )}
+                  key={m.id}
+                  className={cn("flex w-full", isUser ? "justify-end" : "justify-start")}
+                  aria-label={isUser ? "ข้อความของคุณ" : "ข้อความจากผู้ช่วย AI"}
                 >
-                  {m.role === "assistant" && m.id !== "welcome" ? (
-                    <div className="mb-2 flex items-center gap-1.5 border-b border-slate-200 pb-2 text-[11px] font-semibold uppercase tracking-wide text-[#0000BF]">
-                      <AiSparklesIcon className="h-3.5 w-3.5 shrink-0 text-[#0000BF]" />
-                      <span>คำตอบจาก AI</span>
+                  <div
+                    className={cn(
+                      "flex max-w-[min(94%,22rem)] items-end gap-2 sm:max-w-[min(90%,26rem)]",
+                      isUser ? "flex-row-reverse" : "flex-row",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full text-sm font-bold shadow-md ring-2 ring-white/90",
+                        isUser
+                          ? "bg-gradient-to-br from-[#e0e7ff] via-[#eef2ff] to-[#ddd6fe] text-[#0000BF]"
+                          : "bg-gradient-to-br from-[#6366f1] via-[#8b5cf6] to-[#a855f7] text-white",
+                      )}
+                      aria-label={isUser ? `ผู้ใช้ ${greet}` : "ผู้ช่วย AI"}
+                    >
+                      {isUser ? greetInitial : <AiSparklesIcon className="h-5 w-5 text-white" />}
                     </div>
-                  ) : null}
-                  {m.imageDataUrl ? (
-                    <div className="mb-2">
-                      <AppImageThumb
-                        src={m.imageDataUrl}
-                        alt="รูปแนบในการสนทนา"
-                        className="h-24 w-24 rounded-lg"
-                        onOpen={() => imageLightbox.open(m.imageDataUrl!)}
-                      />
+
+                    <div className="relative min-w-0 flex-1 pb-0.5">
+                      {!isUser ? (
+                        <div
+                          className="absolute bottom-[14px] -left-1 z-0 size-2.5 rotate-45 border-b border-l border-black/[0.07] bg-white"
+                          aria-hidden
+                        />
+                      ) : (
+                        <div
+                          className="absolute bottom-[14px] -right-1 z-0 size-2.5 rotate-45 border-r border-t border-[#b5d99a] bg-[#effdde]"
+                          aria-hidden
+                        />
+                      )}
+                      <div
+                        className={cn(
+                          "relative z-10 overflow-hidden rounded-2xl px-3 py-2 text-sm leading-relaxed shadow-[0_1px_0.5px_rgba(0,0,0,0.06)]",
+                          isUser
+                            ? "rounded-br-md border border-[#c5e89f]/90 bg-[#effdde] text-slate-900"
+                            : "rounded-bl-md border border-black/[0.07] bg-white text-slate-800",
+                        )}
+                      >
+                        {m.imageDataUrl ? (
+                          <div className="mb-2">
+                            <AppImageThumb
+                              src={m.imageDataUrl}
+                              alt="รูปแนบในการสนทนา"
+                              className="h-24 w-24 rounded-lg"
+                              onOpen={() => imageLightbox.open(m.imageDataUrl!)}
+                            />
+                          </div>
+                        ) : null}
+                        <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                        {timeMeta ? (
+                          <div className="mt-1 flex justify-end">
+                            <time className="text-[11px] font-medium tabular-nums text-slate-500/85" dateTime={timeMeta.iso}>
+                              {timeMeta.label}
+                            </time>
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
-                  ) : null}
-                  {m.content}
+                  </div>
                 </div>
-                {m.role === "assistant" && replySuggestsNoteSaved(m.content) ? (
-                  <button
-                    type="button"
-                    onClick={() => setNotesModalOpen(true)}
-                    className={cn(CHAT_BTN_SOFT, "ml-1 px-2.5 py-1 text-left")}
-                  >
-                    📝 ดูโน้ตทั้งหมด
-                  </button>
-                ) : null}
-                {m.role === "assistant" &&
-                idx === messages.length - 1 &&
-                replySuggestsSlipConfirmAction(m.content) ? (
-                  <button
-                    type="button"
-                    onClick={() => void sendQuickConfirm()}
-                    disabled={loading}
-                    className="app-btn-primary ml-1 rounded-xl px-3 py-1.5 text-xs font-semibold shadow-md transition hover:opacity-95 disabled:opacity-50"
-                  >
-                    ยืนยันบันทึก
-                  </button>
-                ) : null}
-              </div>
-            ))}
+              );
+            })}
             {loading ? (
-              <p className="flex items-center gap-2 text-xs text-slate-500">
-                <span className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#0000BF]" />
-                กำลังพิมพ์…
-              </p>
+              <div className="flex justify-start pl-1">
+                <div className="ml-12 flex items-center gap-2 rounded-2xl border border-black/[0.06] bg-white/95 px-3 py-2 text-xs text-slate-500 shadow-sm">
+                  <span className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-[#6366f1]" aria-hidden />
+                  กำลังพิมพ์…
+                </div>
+              </div>
             ) : null}
             <div ref={messagesEndRef} />
           </div>
@@ -656,112 +548,29 @@ export function PersonalAiChat({ greetingName }: PersonalAiChatProps) {
           onSubmit={sendMessage}
           className="shrink-0 border-t border-[#e8e6fc] bg-gradient-to-r from-white via-[#faf9ff] to-[#f5f4fc] px-3 py-2.5 shadow-[0_-4px_24px_-8px_rgba(79,70,229,0.12)] sm:px-4 sm:py-3"
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0] ?? null;
-              void onPickImage(file);
-              e.currentTarget.value = "";
-            }}
-          />
-          <div className="mx-auto w-full max-w-3xl space-y-2">
-            {attachedImageDataUrl ? (
-              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e4e2f5] bg-white px-2 py-2 shadow-md shadow-indigo-950/5">
-                <AppImageThumb
-                  src={attachedImageDataUrl}
-                  alt="รูปที่แนบ"
-                  className="h-12 w-12 rounded-md"
-                  onOpen={() => imageLightbox.open(attachedImageDataUrl)}
-                />
-                <button
-                  type="button"
-                  className="text-xs text-slate-600 underline hover:text-slate-900"
-                  onClick={() => setAttachedImageDataUrl(null)}
-                >
-                  ลบรูป
-                </button>
-              </div>
-            ) : null}
-            <div className="flex flex-wrap items-center gap-1.5">
+          <div className="mx-auto w-full max-w-3xl">
+            <div className="flex items-stretch gap-2 sm:gap-2.5">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={onComposerKeyDown}
+                rows={2}
+                maxLength={4000}
+                placeholder="พิมพ์ข้อความ… (Enter ส่ง · Shift+Enter ขึ้นบรรทัด)"
+                className="min-h-[52px] w-full min-w-0 flex-1 resize-none rounded-xl border border-[#e4e2f5] bg-white px-3 py-3 text-sm leading-snug text-slate-900 shadow-inner shadow-slate-900/5 outline-none placeholder:text-slate-400 focus:border-[#0000BF] focus:ring-2 focus:ring-[#0000BF]/25 sm:min-h-[56px] sm:py-3.5"
+              />
               <button
-                type="button"
-                onClick={() => {
-                  setInput("จดว่า ");
-                  textareaRef.current?.focus();
-                }}
-                disabled={loading}
-                className={cn(CHAT_BTN_SOFT, "inline-flex items-center px-2.5 py-1 text-[11px] sm:px-3 sm:text-xs")}
+                type="submit"
+                disabled={!canSend}
+                aria-label="ส่งข้อความ"
+                title="ส่ง"
+                className="app-btn-primary flex w-[52px] shrink-0 items-center justify-center self-stretch rounded-xl shadow-md transition hover:opacity-95 disabled:opacity-50 sm:w-14"
               >
-                📝 บันทึก
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 shrink-0">
+                  <path fill="currentColor" d="M3.4 20.4 22 12 3.4 3.6 3 10l13 2-13 2 .4 6.4Z" />
+                </svg>
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  document.getElementById("personal-ai-digest")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                }}
-                className={cn(CHAT_BTN_SOFT, "inline-flex items-center px-2.5 py-1 text-[11px] sm:px-3 sm:text-xs")}
-              >
-                📅 ตาราง
-              </button>
-              <Link
-                href="/dashboard/home-finance"
-                className={cn(CHAT_BTN_SOFT, "inline-flex items-center px-2.5 py-1 text-[11px] sm:px-3 sm:text-xs")}
-              >
-                💰 บัญชี
-              </Link>
-            </div>
-            <div className="flex items-end gap-2">
-              <div className="relative min-w-0 flex-1">
-                {!input ? (
-                  <div className="pointer-events-none absolute left-3 top-2.5 text-[#0000BF]/55 sm:top-3">
-                    <AiSparklesIcon className="h-4 w-4" />
-                  </div>
-                ) : null}
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={onComposerKeyDown}
-                  rows={2}
-                  maxLength={4000}
-                  placeholder="พิมพ์ข้อความ… (Enter ส่ง · Shift+Enter ขึ้นบรรทัด)"
-                  className={`min-h-[48px] w-full resize-none rounded-xl border border-[#e4e2f5] bg-white py-2.5 ${input ? "pl-3" : "pl-10"} pr-3 text-sm text-slate-900 shadow-inner shadow-slate-900/5 outline-none placeholder:text-slate-400 focus:border-[#0000BF] focus:ring-2 focus:ring-[#0000BF]/25 sm:min-h-[52px] sm:py-3`}
-                />
-              </div>
-              <div className="flex shrink-0 gap-1.5 self-end pb-0.5 sm:gap-2 sm:pb-1">
-                <AppPickGalleryImageButton
-                  type="button"
-                  aria-label="แนบรูป"
-                  title="แนบรูป"
-                  className={cn(
-                    CHAT_BTN_SOFT,
-                    "flex h-10 w-10 items-center justify-center px-0 py-0 text-[#4d47b6] sm:h-11 sm:w-11",
-                  )}
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={loading}
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
-                    <path
-                      fill="currentColor"
-                      d="M19 7h-3.17l-1.84-2H10L8.17 7H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Zm0 10H5V9h14v8Zm-7-1.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7Z"
-                    />
-                  </svg>
-                </AppPickGalleryImageButton>
-                <button
-                  type="submit"
-                  disabled={!canSend}
-                  aria-label="ส่งข้อความ"
-                  title="ส่ง"
-                  className="app-btn-primary flex h-10 w-10 items-center justify-center rounded-xl shadow-md transition hover:opacity-95 disabled:opacity-50 sm:h-11 sm:w-11"
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
-                    <path fill="currentColor" d="M3.4 20.4 22 12 3.4 3.6 3 10l13 2-13 2 .4 6.4Z" />
-                  </svg>
-                </button>
-              </div>
             </div>
           </div>
         </form>

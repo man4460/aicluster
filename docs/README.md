@@ -331,4 +331,6 @@ flowchart TD
 
 ## เอกสารอื่นใน `docs/`
 
+- [`openclaw-install-lan-machine-ollama.md`](./openclaw-install-lan-machine-ollama.md) — ติดตั้ง OpenClaw Gateway บนเครื่อง LAN (เช่น 192.168.1.193) + ผูก Ollama โลคัล + โมเดลเบา ๆ สำหรับเลขา
+- [`openclaw-gateway-lan-checklist.md`](./openclaw-gateway-lan-checklist.md) — เช็ค WebSocket / พอร์ต / `.env` ฝั่ง MAWELL
 - [`TEMPLATE-ระบบย่อย-dashboard.md`](./TEMPLATE-ระบบย่อย-dashboard.md) — เทมเพลตระบบย่อยใต้แดชบอร์ด (ไม่ใช่เฉพาะ Chat AI)

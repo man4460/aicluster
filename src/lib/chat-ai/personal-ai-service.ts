@@ -1251,15 +1251,49 @@ async function syncEventsFromOpenClawPayload(args: {
   }
 }
 
+function isOpenClawOcrHttpUrl(url: string): boolean {
+  return /\/api\/openclaw\/ocr\b/i.test(url);
+}
+
+/**
+ * URL สำหรับแชท agent ทาง HTTP — ไม่ใช้ endpoint OCR เป็นค่าเริ่มต้น (มักทำให้ fetch failed)
+ * ยกเว้นตั้ง OPENCLAW_HTTP_MESSAGE_PAYLOAD=1 แล้วตั้งใจใช้ endpoint เดียวกับ OCR
+ */
+function resolveOpenClawAgentHttpEndpoint(): string {
+  const forcePayload =
+    process.env.OPENCLAW_HTTP_MESSAGE_PAYLOAD === "1" ||
+    process.env.OPENCLAW_HTTP_MESSAGE_PAYLOAD?.toLowerCase() === "true";
+  const agent = process.env.OPENCLAW_AGENT_API_URL?.trim() ?? "";
+  if (agent) return agent;
+  const api = process.env.OPENCLAW_API_URL?.trim() ?? "";
+  if (api && (forcePayload || !isOpenClawOcrHttpUrl(api))) return api;
+  const url = process.env.OPENCLAW_URL?.trim() ?? "";
+  if (url && (forcePayload || !isOpenClawOcrHttpUrl(url))) return url;
+  return "";
+}
+
+/** มีช่องทางแชทข้อความกับ OpenClaw ได้จริง (HTTP agent ที่ไม่ใช่แค่ OCR โดยไม่มี WS — หรือมี WS + key) */
+function openClawTextChatConfigured(): boolean {
+  if (resolveOpenClawAgentHttpEndpoint()) return true;
+  const key = process.env.OPENCLAW_API_KEY?.trim() || process.env.OPENCLAW_AGENT_API_KEY?.trim() || "";
+  if (!key) return false;
+  return Boolean(
+    process.env.OPENCLAW_AGENT_WS_URL?.trim() ||
+      process.env.OPENCLAW_GATEWAY_WS_URL?.trim() ||
+      process.env.OPENCLAW_WS_URL?.trim(),
+  );
+}
+
 async function callOpenClawAgent(args: {
   history: MemoryMessage[];
   prompt: string;
   assistantId: string;
   userId: string;
 }): Promise<ChatProviderResult | null> {
-  const httpEndpoint = process.env.OPENCLAW_API_URL?.trim() || process.env.OPENCLAW_URL?.trim() || "";
+  const httpEndpoint = resolveOpenClawAgentHttpEndpoint();
   const apiKey = process.env.OPENCLAW_API_KEY?.trim() || process.env.OPENCLAW_AGENT_API_KEY?.trim() || "";
   if (httpEndpoint) {
+    /** แชท agent ทาง HTTP */
     const model = process.env.OPENCLAW_AGENT_MODEL?.trim() || "openclaw";
     const useMessageJsonPayload =
       process.env.OPENCLAW_HTTP_MESSAGE_PAYLOAD === "1" ||
@@ -1275,15 +1309,25 @@ async function callOpenClawAgent(args: {
           prompt: args.prompt,
           messages: args.history.map((m) => ({ role: m.role, content: m.content })),
         };
-    const res = await fetch(httpEndpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      },
-      body: JSON.stringify(httpBody),
-      signal: AbortSignal.timeout(Number(process.env.OPENCLAW_REQUEST_TIMEOUT_MS ?? "90000")),
-    });
+    let res: Response;
+    try {
+      res = await fetch(httpEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+        },
+        body: JSON.stringify(httpBody),
+        signal: AbortSignal.timeout(Number(process.env.OPENCLAW_REQUEST_TIMEOUT_MS ?? "90000")),
+      });
+    } catch (e) {
+      const raw = e instanceof Error ? e.message : String(e);
+      const hint =
+        raw === "fetch failed" || /fetch failed/i.test(raw)
+          ? " — เช็คว่า OpenClaw เปิดอยู่ URL ถูกต้อง และเครื่องรัน Next.js เข้าถึง host นั้นได้; แยก endpoint แชทกับ OCR (ตั้ง OPENCLAW_AGENT_API_URL สำหรับแชท หรือใช้ WS + OPENCLAW_AGENT_WS_URL)"
+          : "";
+      throw new Error(`เชื่อมต่อ OpenClaw (HTTP) ไม่สำเร็จ${hint}: ${raw}`);
+    }
     const payload = (await res.json().catch(() => ({}))) as Record<string, unknown>;
     if (!res.ok) {
       const msg = typeof payload.error === "string" ? payload.error : `HTTP ${res.status}`;
@@ -1316,7 +1360,7 @@ async function callOpenClawAgent(args: {
     process.env.OPENCLAW_AGENT_WS_URL?.trim() ||
     process.env.OPENCLAW_GATEWAY_WS_URL?.trim() ||
     process.env.OPENCLAW_WS_URL?.trim() ||
-    "ws://127.0.0.1:18789";
+    "";
   if (!wsUrl) return null;
   const apiKeyWs = process.env.OPENCLAW_API_KEY?.trim() || process.env.OPENCLAW_AGENT_API_KEY?.trim() || "";
   if (!apiKeyWs) return null;
@@ -1337,7 +1381,11 @@ async function callOpenClawAgent(args: {
     await client.connect();
   } catch (e) {
     const msg = e instanceof Error ? e.message : "connect failed";
-    throw new Error(`เชื่อมต่อ OpenClaw Gateway ไม่สำเร็จ (${msg})`);
+    const hint =
+      msg.includes("WebSocket error occurred") || /ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i.test(msg)
+        ? " — ตรวจ OPENCLAW_AGENT_WS_URL ว่าเป็น ws/wss ของ OpenClaw Gateway จริง พอร์ตเปิดจากเครื่องรัน Next.js (npm run openclaw:probe หรือ Test-NetConnection) และ API key ตรงกับ Gateway; ดู docs/openclaw-gateway-lan-checklist.md"
+        : "";
+    throw new Error(`เชื่อมต่อ OpenClaw Gateway ไม่สำเร็จ (${msg})${hint}`);
   }
 
   let payload: unknown;
@@ -1918,14 +1966,16 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
     return { ok: false, status: 400, error: "รูปแบบรูปภาพไม่ถูกต้อง" };
   }
 
-  const hasOpenClaw = Boolean(
-    process.env.OPENCLAW_API_URL?.trim() ||
+  const hasOpenClawAnyEndpoint = Boolean(
+    process.env.OPENCLAW_AGENT_API_URL?.trim() ||
+      process.env.OPENCLAW_API_URL?.trim() ||
       process.env.OPENCLAW_URL?.trim() ||
       ((process.env.OPENCLAW_AGENT_WS_URL?.trim() ||
         process.env.OPENCLAW_GATEWAY_WS_URL?.trim() ||
         process.env.OPENCLAW_WS_URL?.trim()) &&
         (process.env.OPENCLAW_API_KEY?.trim() || process.env.OPENCLAW_AGENT_API_KEY?.trim())),
   );
+  const hasOpenClawForTextChat = openClawTextChatConfigured();
   const hasOllama = Boolean(
     process.env.OLLAMA_API_URL?.trim() ||
       process.env.OLLAMA_URL?.trim() ||
@@ -1935,7 +1985,7 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
   const telegramSlipPathReady = Boolean(
     imageDataUrl && process.env.TELEGRAM_BOT_TOKEN?.trim() && slipForwardChatId,
   );
-  if (!hasOpenClaw && !hasOllama && !telegramSlipPathReady) {
+  if (!hasOpenClawAnyEndpoint && !hasOllama && !telegramSlipPathReady) {
     return {
       ok: false,
       status: 503,
@@ -1943,7 +1993,7 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
         "ยังไม่ได้ตั้งค่า OpenClaw SDK (WS URL + API key) หรือ OLLAMA_API_URL / สำหรับรูปยังใช้ได้ OLLAMA_VISION_API_URL (โมเดล: OLLAMA_VISION_MODEL)",
     };
   }
-  const routeAllToOpenClaw = shouldRouteAllToOpenClaw() && hasOpenClaw;
+  const routeAllToOpenClaw = shouldRouteAllToOpenClaw() && hasOpenClawForTextChat;
 
   try {
     const foundSession = sessionId ? await prisma.personalChatSession.findUnique({ where: { id: sessionId } }) : null;
@@ -2178,7 +2228,7 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
     }
 
     // ข้อความเท่านั้น: route-all จะใช้ OpenClaw ก่อนทุกครั้ง
-    if (!result && hasOpenClaw && !imageDataUrl) {
+    if (!result && hasOpenClawForTextChat && !imageDataUrl) {
       try {
         result = await callOpenClawAgent({
           history: nextHistory,
@@ -2199,7 +2249,7 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
         lastError = e instanceof Error ? e.message : "Ollama error";
       }
     }
-    if (!result && hasOpenClaw && !imageDataUrl && !routeAllToOpenClaw) {
+    if (!result && hasOpenClawForTextChat && !imageDataUrl && !routeAllToOpenClaw) {
       try {
         result = await callOpenClawAgent({
           history: nextHistory,
@@ -2215,7 +2265,7 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
     }
     if (!result) {
       if (toolResult.used && toolResult.summary.trim()) {
-        const noAi = !hasOpenClaw && !hasOllama;
+        const noAi = !hasOpenClawForTextChat && !hasOllama;
         const suffix = noAi
           ? "\n\n(ยังไม่ได้ตั้งค่า AI — ดำเนินการเฉพาะเครื่องมือในระบบให้แล้ว)"
           : lastError
@@ -2242,7 +2292,7 @@ export async function runPersonalAiChat(input: PersonalAiRequest): Promise<Perso
           provider: "local-tools",
           model: "slip-ocr-failed",
         };
-      } else if (!hasOpenClaw && !hasOllama) {
+      } else if (!hasOpenClawForTextChat && !hasOllama) {
         if (lastError.trim()) {
           return { ok: false, status: 502, error: lastError };
         }

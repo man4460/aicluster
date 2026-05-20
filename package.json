@@ -22,6 +22,7 @@
     "lint": "eslint",
     "verify:hf-vehicle-attachments": "tsx scripts/verify-home-finance-vehicle-attachments-db.ts",
     "check:chat-ai-db": "node --import tsx scripts/check-personal-ai-tables.ts",
+    "openclaw:probe": "node scripts/openclaw-probe.mjs",
     "seed": "tsx prisma/seed.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate": "prisma migrate deploy",

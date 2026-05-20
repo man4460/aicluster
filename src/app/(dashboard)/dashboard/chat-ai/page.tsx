@@ -20,19 +20,21 @@ export default async function ChatAiPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 sm:gap-4">
-      <header className="app-surface relative shrink-0 overflow-hidden rounded-3xl border border-white/70 px-4 py-4 shadow-[0_16px_48px_-24px_rgba(79,70,229,0.2)] sm:px-6 sm:py-5">
+      <header className="app-surface relative shrink-0 overflow-hidden rounded-2xl border border-white/70 px-3 py-3 shadow-[0_16px_48px_-24px_rgba(79,70,229,0.2)] sm:rounded-3xl sm:px-6 sm:py-5">
         <div
-          className="pointer-events-none absolute -right-12 top-0 h-40 w-40 rounded-full bg-gradient-to-br from-[#c7d2fe]/50 to-fuchsia-200/35 blur-3xl"
+          className="pointer-events-none absolute -right-12 top-0 hidden h-40 w-40 rounded-full bg-gradient-to-br from-[#c7d2fe]/50 to-fuchsia-200/35 blur-3xl sm:block"
           aria-hidden
         />
         <div className="relative">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#0000BF]/75">MAWELL Buffet</p>
-          <h1 className="mt-1.5 text-xl font-semibold tracking-tight text-[#2e2a58] sm:text-2xl">น้องมาเวล — เลขาส่วนตัว</h1>
-          <p className="mt-1 max-w-2xl text-xs text-[#66638c] sm:text-sm">แชท · โน้ต · สรุปรายวัน</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            <span className="rounded-full border border-[#0000BF]/15 bg-white/85 px-2.5 py-1 text-[11px] font-semibold text-[#0000BF]">AI Assistant</span>
-            <span className="rounded-full border border-[#0000BF]/15 bg-white/85 px-2.5 py-1 text-[11px] font-semibold text-[#0000BF]">Digest</span>
-            <span className="rounded-full border border-[#0000BF]/15 bg-white/85 px-2.5 py-1 text-[11px] font-semibold text-[#0000BF]">Notes</span>
+          <p className="hidden text-xs font-semibold uppercase tracking-[0.2em] text-[#0000BF]/75 sm:block">MAWELL Buffet</p>
+          <h1 className="text-lg font-semibold tracking-tight text-[#2e2a58] sm:mt-1.5 sm:text-2xl">น้องมาเวล — เลขาส่วนตัว</h1>
+          <p className="mt-1 hidden max-w-2xl text-xs text-[#66638c] sm:block sm:text-sm">
+            คุยกับ AI ด้านล่าง — ส่งข้อความได้เลย ไม่มีการอัปโหลดรูป
+          </p>
+          <div className="mt-2 hidden flex-wrap gap-1.5 sm:flex">
+            <span className="rounded-full border border-[#0000BF]/15 bg-white/85 px-2.5 py-1 text-[11px] font-semibold text-[#0000BF]">
+              แชทข้อความ
+            </span>
           </div>
         </div>
       </header>

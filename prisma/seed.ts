@@ -25,6 +25,7 @@ import {
 import { seedVaultProdDemoForOwner } from "../src/lib/trial/seed-vault";
 import { seedInventoryProdDemoForOwner } from "../src/lib/trial/seed-inventory";
 import { seedGeneralStorePosProdDemoForOwner } from "../src/lib/trial/seed-general-store-pos";
+import { seedEcommerceStoreProdDemoForOwner } from "../src/lib/trial/seed-ecommerce-store";
 import {
   ASSET_MODULE_SLUG,
   ATTENDANCE_MODULE_SLUG,
@@ -38,6 +39,7 @@ import {
   HOME_FINANCE_BASIC_MODULE_SLUG,
   INVENTORY_MODULE_SLUG,
   GENERAL_STORE_POS_MODULE_SLUG,
+  ECOMMERCE_STORE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
   MEDIA_REGISTRY_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
@@ -294,6 +296,14 @@ async function main() {
       sortOrder: 38,
     },
     {
+      slug: "ecommerce-store",
+      title: "E-Commerce Store Builder",
+      description:
+        "กลุ่ม 1 (Basic) — สร้างร้านออนไลน์ จัดการสต๊อก หน้าร้องสาธารณะ ลูกค้าแนบสลิป PromptPay QR",
+      groupId: 1,
+      sortOrder: 39,
+    },
+    {
       slug: "laundry",
       title: "รับฝากซักผ้า",
       description:
@@ -415,6 +425,7 @@ async function main() {
     VAULT_MODULE_SLUG,
     INVENTORY_MODULE_SLUG,
     GENERAL_STORE_POS_MODULE_SLUG,
+    ECOMMERCE_STORE_MODULE_SLUG,
   ] as const;
 
   for (const slug of demoAutoSubscribeSlugs) {
@@ -676,6 +687,19 @@ async function main() {
     });
     if (row) {
       await tryDemoSeed(`general-store-pos (${email})`, () => seedGeneralStorePosProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** E-Commerce Store Builder — ร้านตัวอย่าง 8 สินค้า + Sale Page + ออเดอร์รอตรวจ */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`ecommerce-store (${email})`, () =>
+        seedEcommerceStoreProdDemoForOwner(prisma, row.id),
+      );
     }
   }
 }
