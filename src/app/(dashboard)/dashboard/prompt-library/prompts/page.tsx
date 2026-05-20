@@ -1,7 +1,6 @@
-import { PromptLibraryPromptsClient } from "@/systems/prompt-library/components/PromptLibraryPromptsClient";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
+/** คลังคำสั่งรวมอยู่ที่หน้าแรกแล้ว */
 export default function PromptLibraryPromptsPage() {
-  return <PromptLibraryPromptsClient />;
+  redirect("/dashboard/prompt-library");
 }

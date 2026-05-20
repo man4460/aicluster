@@ -8,6 +8,7 @@ import { verifyTurnstileToken } from "@/lib/turnstile";
 import { applyBuffetMonthlyBilling } from "@/lib/tokens/buffet-monthly-billing";
 import { applyDailyTokenDeduction } from "@/lib/tokens/daily-deduction";
 import { authRouteErrorResponse } from "@/lib/auth/route-error-response";
+import { findUserByAuthEmail } from "@/lib/auth/user-email";
 
 const bodySchema = z.object({
   identifier: z.string().min(1),
@@ -44,11 +45,13 @@ export async function POST(req: Request) {
   }
 
   try {
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [{ email: identifier }, { username: identifier }],
-      },
-    });
+    const emailMatch =
+      identifier.includes("@") ? await findUserByAuthEmail(prisma, identifier) : null;
+    const user = emailMatch
+      ? await prisma.user.findUnique({ where: { id: emailMatch.id } })
+      : await prisma.user.findFirst({
+          where: { username: identifier },
+        });
 
     if (!user) {
       return NextResponse.json({ error: "อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" }, { status: 401 });

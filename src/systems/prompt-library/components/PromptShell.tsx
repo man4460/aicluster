@@ -38,8 +38,7 @@ function NavItem({
 }
 
 const navLinks = [
-  { href: "/dashboard/prompt-library", label: "ภาพรวม", icon: IconDash },
-  { href: "/dashboard/prompt-library/prompts", label: "คลังคำสั่ง", icon: IconLib },
+  { href: "/dashboard/prompt-library", label: "คลังคำสั่ง", icon: IconLib },
   { href: "/dashboard/prompt-library/categories", label: "หมวดหมู่", icon: IconCat },
 ] as const;
 
@@ -54,16 +53,17 @@ export function PromptShell({ children }: { children: React.ReactNode }) {
     <div className="-mt-1 max-w-full space-y-4 sm:mt-0 sm:space-y-6">
       <header className="-mx-3 app-surface rounded-[2rem] px-4 py-4 sm:mx-0 sm:rounded-[2.5rem] sm:px-6 sm:py-5 print:hidden">
         <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#8b87b8]">กลุ่ม 1 · 1 โทเคน/วัน</p>
           <h1 className="text-xl font-semibold tracking-tight text-[#2e2a58] sm:text-2xl">คลังคำสั่ง AI</h1>
           <p className="mt-1 hidden max-w-2xl text-sm leading-snug text-[#66638c] md:block">
-            เก็บ prompt พร้อมหมวด แท็ก โมเดล อุณหภูมิ · นับการใช้ · ประวัติเวอร์ชัน · ส่งออก/นำเข้า JSON
+            ค้นหา · การ์ดแยกหมวด · คัดลอกไปใช้กับ AI · ส่งออก/นำเข้า JSON
           </p>
         </div>
         <nav
           aria-label="เมนู คลังคำสั่ง AI"
           className="mt-3 hidden border-t border-white/60 pt-3 sm:mt-4 sm:pt-4 md:block"
         >
-          <ul className="grid grid-cols-3 gap-2">
+          <ul className="grid grid-cols-2 gap-2">
             {navLinks.map(({ href, label, icon }) => (
               <li key={href} className="min-w-0">
                 <NavItem href={href} icon={icon} active={navActive(pathname, href)}>
@@ -77,17 +77,6 @@ export function PromptShell({ children }: { children: React.ReactNode }) {
       <div className="-mx-3 pb-24 sm:mx-0 sm:pb-0">{children}</div>
       <PromptMobileDock />
     </div>
-  );
-}
-
-function IconDash({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-      <rect x="3" y="3" width="8" height="8" rx="1.5" />
-      <rect x="13" y="3" width="8" height="5" rx="1.5" />
-      <rect x="13" y="10" width="8" height="11" rx="1.5" />
-      <rect x="3" y="13" width="8" height="8" rx="1.5" />
-    </svg>
   );
 }
 

@@ -6,6 +6,7 @@ import { setSessionCookie, signSessionToken } from "@/lib/auth/session";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { authRouteErrorResponse } from "@/lib/auth/route-error-response";
+import { canonicalAuthEmailForStorage, findUserByAuthEmail } from "@/lib/auth/user-email";
 import { SIGNUP_BONUS_TOKENS } from "@/lib/tokens/signup-bonus";
 
 const bodySchema = z.object({
@@ -31,7 +32,8 @@ export async function POST(req: Request) {
     );
   }
 
-  const { email, username, password, turnstileToken } = parsed.data;
+  const { email: rawEmail, username, password, turnstileToken } = parsed.data;
+  const email = canonicalAuthEmailForStorage(rawEmail);
   const ip = clientIp(req.headers);
   const rl = rateLimit(`register:${ip}`, 5, 60 * 60 * 1000);
   if (!rl.ok) {
@@ -44,6 +46,14 @@ export async function POST(req: Request) {
   }
 
   const passwordHash = await hashPassword(password);
+
+  const existing = await findUserByAuthEmail(prisma, email);
+  if (existing) {
+    const hint = existing.passwordHash
+      ? "อีเมลนี้มีบัญชีแล้ว — เข้าสู่ระบบ หรือใช้ปุ่ม Google ด้วยอีเมลเดียวกัน"
+      : "อีเมลนี้มีบัญชีแล้ว — เข้าสู่ระบบด้วย Google";
+    return NextResponse.json({ error: hint }, { status: 409 });
+  }
 
   try {
     const user = await prisma.user.create({

@@ -30,6 +30,7 @@ import {
   SYSTEM_MAP_CATALOG_ROW,
   SYSTEM_MAP_CATALOG_SLUG,
 } from "@/lib/modules/system-map-catalog";
+import { isChatAiDisabled } from "@/lib/chat-ai/feature";
 import { CHAT_AI_DASHBOARD_HREF } from "@/lib/dashboard/chat-ai-href";
 import { DashboardModuleHeroCard } from "@/components/dashboard/DashboardModuleHeroCard";
 import { resolveModuleCardDisplayImageUrl } from "@/lib/modules/dashboard-module-cover-images";
@@ -116,6 +117,8 @@ export default async function DashboardHomePage() {
   if (subscribedModules.length === 0) {
     redirect("/dashboard/modules");
   }
+
+  const chatAiOff = isChatAiDisabled();
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -215,13 +218,23 @@ export default async function DashboardHomePage() {
                 { label: "โปรไฟล์", href: "/dashboard/profile", icon: "👤" },
                 { label: "แชท", href: "/dashboard/chat", icon: "💬" },
                 { label: "แพ็กเกจ", href: "/dashboard/plans", icon: "💎" },
-                { label: "เลขาส่วนตัว", href: CHAT_AI_DASHBOARD_HREF, icon: "🤖" },
+                {
+                  label: "เลขาส่วนตัว",
+                  href: CHAT_AI_DASHBOARD_HREF,
+                  icon: "🤖",
+                  badge: chatAiOff ? "พัฒนา" : undefined,
+                },
               ].map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="group flex flex-col items-center justify-center gap-2 rounded-3xl border border-slate-100 bg-white p-4 transition-all hover:-translate-y-1 hover:border-[#5b61ff]/30 hover:shadow-md"
+                  className="group relative flex flex-col items-center justify-center gap-2 rounded-3xl border border-slate-100 bg-white p-4 transition-all hover:-translate-y-1 hover:border-[#5b61ff]/30 hover:shadow-md"
                 >
+                  {"badge" in link && link.badge ? (
+                    <span className="absolute right-2 top-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">
+                      {link.badge}
+                    </span>
+                  ) : null}
                   <span className="text-xl transition-transform group-hover:scale-110">{link.icon}</span>
                   <span className="text-[11px] font-bold text-[#2e2a58]">{link.label}</span>
                 </Link>
@@ -239,16 +252,31 @@ export default async function DashboardHomePage() {
                 <div className="h-2 w-2 rounded-full bg-white/40 lg:hidden" />
               </div>
               <p className="mt-3 text-sm font-medium leading-relaxed lg:mt-0 lg:text-base">
-                ต้องการความช่วยเหลือ? <br className="lg:hidden" />
-                <span className="text-lg font-bold lg:ml-2 lg:text-xl">คุยกับเลขา AI ของคุณได้ตลอด 24 ชม.</span>
+                {chatAiOff ? (
+                  <>
+                    เลขาส่วนตัว (น้องมาเวล){" "}
+                    <span className="text-lg font-bold lg:ml-2 lg:text-xl">อยู่ระหว่างพัฒนา</span>
+                  </>
+                ) : (
+                  <>
+                    ต้องการความช่วยเหลือ? <br className="lg:hidden" />
+                    <span className="text-lg font-bold lg:ml-2 lg:text-xl">คุยกับเลขา AI ของคุณได้ตลอด 24 ชม.</span>
+                  </>
+                )}
               </p>
             </div>
-            <Link
-              href={CHAT_AI_DASHBOARD_HREF}
-              className="mt-4 inline-flex h-11 items-center justify-center rounded-2xl bg-white px-6 text-sm font-bold text-[#0000BF] transition hover:bg-opacity-90 lg:mt-0"
-            >
-              เริ่มต้นแชท
-            </Link>
+            {chatAiOff ? (
+              <span className="mt-4 inline-flex h-11 cursor-default items-center justify-center rounded-2xl border border-white/40 bg-white/20 px-6 text-sm font-bold text-white/90 lg:mt-0">
+                เร็ว ๆ นี้
+              </span>
+            ) : (
+              <Link
+                href={CHAT_AI_DASHBOARD_HREF}
+                className="mt-4 inline-flex h-11 items-center justify-center rounded-2xl bg-white px-6 text-sm font-bold text-[#0000BF] transition hover:bg-opacity-90 lg:mt-0"
+              >
+                เริ่มต้นแชท
+              </Link>
+            )}
           </div>
         </section>
       </div>

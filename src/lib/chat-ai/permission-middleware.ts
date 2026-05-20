@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
+import { chatAiDisabledResponse, isChatAiDisabled } from "@/lib/chat-ai/feature";
+import { prisma } from "@/lib/prisma";
 import { computeDashboardAccessAllowed } from "@/lib/tokens/dashboard-access";
 
 export type ChatAiAuthedUser = {
@@ -18,6 +19,10 @@ export type ChatAiAuthedUser = {
 export async function requireChatAiPermission(): Promise<
   { ok: true; user: ChatAiAuthedUser } | { ok: false; response: NextResponse }
 > {
+  if (isChatAiDisabled()) {
+    return { ok: false, response: chatAiDisabledResponse() };
+  }
+
   const auth = await requireSession();
   if (!auth.ok) {
     return { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };

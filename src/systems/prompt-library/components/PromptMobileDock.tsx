@@ -10,8 +10,7 @@ const base =
 type Item = { href: string; label: string; icon: (p: { className?: string }) => React.ReactNode };
 
 const items: Item[] = [
-  { href: "/dashboard/prompt-library", label: "ภาพรวม", icon: IconHome },
-  { href: "/dashboard/prompt-library/prompts", label: "คลัง", icon: IconSpark },
+  { href: "/dashboard/prompt-library", label: "คลัง", icon: IconSpark },
   { href: "/dashboard/prompt-library/categories", label: "หมวด", icon: IconFolders },
 ];
 
@@ -24,7 +23,7 @@ export function PromptMobileDock() {
   const pathname = usePathname() ?? "";
   return (
     <nav aria-label="เมนูล่าง คลังคำสั่ง AI" className={base}>
-      <ul className="mx-auto grid w-full max-w-6xl grid-cols-3 gap-1 rounded-[2rem] border border-white/60 bg-white/65 p-1.5 shadow-[0_12px_38px_-18px_rgba(76,70,178,0.55)] ring-1 ring-white/65">
+      <ul className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-1 rounded-[2rem] border border-white/60 bg-white/65 p-1.5 shadow-[0_12px_38px_-18px_rgba(76,70,178,0.55)] ring-1 ring-white/65">
         {items.map((item) => {
           const on = active(pathname, item.href);
           const Icon = item.icon;
@@ -48,15 +47,6 @@ export function PromptMobileDock() {
         })}
       </ul>
     </nav>
-  );
-}
-
-function IconHome({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-      <path d="m3 11 9-7 9 7" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M5 10.5V20h14v-9.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   );
 }
 

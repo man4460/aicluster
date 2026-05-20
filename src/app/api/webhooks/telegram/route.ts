@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { CHAT_AI_DISABLED_MESSAGE_TH, isChatAiDisabled } from "@/lib/chat-ai/feature";
 import { runPersonalAiChat } from "@/lib/chat-ai/personal-ai-service";
 import { tryDeliverMavelSlipReplyToChatUi } from "@/lib/telegram/mavel-slip-reply-to-chat-ui";
 import { prisma } from "@/lib/prisma";
@@ -222,6 +223,15 @@ export async function POST(req: Request) {
       text: "ได้รับรูปแล้ว แต่ดึงไฟล์จาก Telegram ไม่สำเร็จ กรุณาลองส่งรูปใหม่อีกครั้ง",
     });
     return NextResponse.json({ ok: true, photoFetchFailed: true });
+  }
+
+  if (isChatAiDisabled()) {
+    await sendTelegramMessage({
+      apiBase,
+      chatId: message.chat.id,
+      text: CHAT_AI_DISABLED_MESSAGE_TH,
+    });
+    return NextResponse.json({ ok: true, chatAiDisabled: true });
   }
 
   const reply = await runPersonalAiChat({

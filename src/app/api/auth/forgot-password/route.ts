@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { verifyTurnstileToken } from "@/lib/turnstile";
+import { findUserByAuthEmail } from "@/lib/auth/user-email";
 import { sendPasswordResetEmail } from "@/lib/mail";
 
 const bodySchema = z.object({
@@ -36,7 +37,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "การยืนยันตัวตนล้มเหลว" }, { status: 400 });
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const match = await findUserByAuthEmail(prisma, email);
+  const user = match ? await prisma.user.findUnique({ where: { id: match.id } }) : null;
 
   const generic = {
     message: "หากอีเมลมีอยู่ในระบบ จะได้รับลิงก์รีเซ็ตรหัสผ่าน",

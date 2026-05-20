@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { isChatAiDisabled } from "@/lib/chat-ai/feature";
 import { prisma } from "@/lib/prisma";
+import { ChatAiUnderDevelopment } from "@/systems/chat/components/ChatAiUnderDevelopment";
 import ChatAiClientRoot from "./chat-ai-client";
 
 export const metadata: Metadata = {
@@ -11,6 +13,24 @@ export const metadata: Metadata = {
 export default async function ChatAiPage() {
   const session = await getSession();
   if (!session) redirect("/login");
+
+  if (isChatAiDisabled()) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-3 sm:gap-4">
+        <header className="app-surface relative shrink-0 overflow-hidden rounded-2xl border border-white/70 px-3 py-3 shadow-[0_16px_48px_-24px_rgba(79,70,229,0.2)] sm:rounded-3xl sm:px-6 sm:py-5">
+          <div className="relative">
+            <p className="hidden text-xs font-semibold uppercase tracking-[0.2em] text-[#0000BF]/75 sm:block">
+              MAWELL Buffet
+            </p>
+            <h1 className="text-lg font-semibold tracking-tight text-[#2e2a58] sm:mt-1.5 sm:text-2xl">
+              น้องมาเวล — เลขาส่วนตัว
+            </h1>
+          </div>
+        </header>
+        <ChatAiUnderDevelopment />
+      </div>
+    );
+  }
 
   const userRow = await prisma.user.findUnique({
     where: { id: session.sub },
