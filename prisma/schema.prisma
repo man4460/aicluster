@@ -187,6 +187,9 @@ model User {
   appointmentQueueStaff        AppointmentQueueStaff[]
   appointmentQueueDaySchedules AppointmentQueueDaySchedule[]
   appointmentQueueBookings     AppointmentQueueBooking[]
+  loyaltyStampShopProfiles     LoyaltyStampShopProfile[]
+  loyaltyStampMembers          LoyaltyStampMember[]
+  loyaltyStampEvents           LoyaltyStampEvent[]
   schoolBankSettings       SchoolBankSettings[]
   schoolBankAccounts       SchoolBankAccount[]
   communityCoopSettings    CommunityCoopSettings[]
@@ -230,6 +233,12 @@ model User {
   generalStorePosCategories GeneralStorePosCategory[]
   generalStorePosProducts   GeneralStorePosProduct[]
   generalStorePosSales      GeneralStorePosSale[]
+  drinkPosShopProfiles      DrinkPosShopProfile[]
+  drinkPosCategories        DrinkPosCategory[]
+  drinkPosProducts          DrinkPosProduct[]
+  drinkPosSales             DrinkPosSale[]
+  drinkPosCostEntries       DrinkPosCostEntry[]
+  drinkPosMembers           DrinkPosMember[]
   ecommerceStores           EcommerceStore[]
   ecommerceCategories       EcommerceCategory[]
   ecommerceProducts         EcommerceProduct[]
@@ -2460,6 +2469,75 @@ model AppointmentQueueBooking {
   @@map("appointment_queue_bookings")
 }
 
+/** สะสมแต้มดิจิทัล — บัตรสมาชิกร้านค้าชุมชน */
+enum LoyaltyStampEventType {
+  STAMP_ADD
+  REDEEM
+}
+
+model LoyaltyStampShopProfile {
+  id                Int      @id @default(autoincrement())
+  ownerUserId       String   @map("owner_id") @db.VarChar(191)
+  owner             User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId    String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  displayName       String?  @map("display_name") @db.VarChar(200)
+  tagline           String?  @db.VarChar(300)
+  logoUrl           String?  @map("logo_url") @db.VarChar(512)
+  publicCardEnabled Boolean  @default(true) @map("public_card_enabled")
+  stampsPerReward   Int      @default(10) @map("stamps_per_reward")
+  rewardTitle       String   @default("ของรางวัล") @map("reward_title") @db.VarChar(160)
+  rewardDescription String?  @map("reward_description") @db.VarChar(500)
+  stampEmoji        String   @default("⭐") @map("stamp_emoji") @db.VarChar(8)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  members LoyaltyStampMember[]
+
+  @@unique([ownerUserId, trialSessionId])
+  @@index([ownerUserId])
+  @@map("loyalty_stamp_shop_profiles")
+}
+
+model LoyaltyStampMember {
+  id               Int      @id @default(autoincrement())
+  ownerUserId      String   @map("owner_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId        Int      @map("profile_id")
+  profile          LoyaltyStampShopProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  phone            String   @db.VarChar(20)
+  customerName     String?  @map("customer_name") @db.VarChar(120)
+  currentStamps    Int      @default(0) @map("current_stamps")
+  qrToken          String   @unique @map("qr_token") @db.VarChar(64)
+  totalRedemptions Int      @default(0) @map("total_redemptions")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  events LoyaltyStampEvent[]
+
+  @@unique([ownerUserId, trialSessionId, phone], map: "ls_member_owner_trial_phone_uq")
+  @@index([ownerUserId, trialSessionId], map: "ls_member_owner_trial_idx")
+  @@map("loyalty_stamp_members")
+}
+
+model LoyaltyStampEvent {
+  id            Int                   @id @default(autoincrement())
+  ownerUserId   String                @map("owner_id") @db.VarChar(191)
+  owner         User                  @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String               @default("prod") @map("trial_session_id") @db.VarChar(36)
+  memberId      Int                   @map("member_id")
+  member        LoyaltyStampMember    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  eventType     LoyaltyStampEventType @map("event_type")
+  stampsDelta   Int                   @map("stamps_delta")
+  balanceAfter  Int                   @map("balance_after")
+  note          String?               @db.VarChar(200)
+  createdAt     DateTime              @default(now()) @map("created_at")
+
+  @@index([memberId, createdAt], map: "ls_event_member_created_idx")
+  @@index([ownerUserId, trialSessionId, createdAt], map: "ls_event_owner_trial_idx")
+  @@map("loyalty_stamp_events")
+}
+
 enum SchoolBankLedgerType {
   DEPOSIT
   WITHDRAW
@@ -3438,6 +3516,125 @@ model GeneralStorePosSaleLine {
 
   @@index([saleId], map: "gsp_saleline_sale_idx")
   @@map("general_store_pos_sale_lines")
+}
+
+/** POS ร้านเครื่องดื่ม — การ์ดสินค้า บันทึกขาย สะสมแต้ม */
+model DrinkPosShopProfile {
+  id              String   @id @default(cuid())
+  ownerUserId     String   @map("owner_user_id") @db.VarChar(191)
+  owner           User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId  String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  stampsPerReward Int      @default(10) @map("stamps_per_reward")
+  rewardTitle     String   @default("เครื่องดื่มฟรี 1 แก้ว") @map("reward_title") @db.VarChar(160)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId], map: "dp_shop_owner_trial_uq")
+  @@map("drink_pos_shop_profiles")
+}
+
+model DrinkPosCategory {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(120)
+  imageUrl    String?  @map("image_url") @db.VarChar(500)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  products DrinkPosProduct[]
+
+  @@index([ownerUserId, sortOrder], map: "dp_cat_owner_sort_idx")
+  @@map("drink_pos_categories")
+}
+
+model DrinkPosProduct {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  categoryId  String   @map("category_id") @db.VarChar(191)
+  category    DrinkPosCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  name        String   @db.VarChar(160)
+  priceBaht   Int      @default(0) @map("price_baht")
+  imageUrl    String?  @map("image_url") @db.VarChar(500)
+  isFeatured  Boolean  @default(false) @map("is_featured")
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  saleLines DrinkPosSaleLine[]
+
+  @@index([ownerUserId, categoryId], map: "dp_prod_owner_cat_idx")
+  @@index([ownerUserId, isActive, isFeatured], map: "dp_prod_owner_act_feat_idx")
+  @@map("drink_pos_products")
+}
+
+model DrinkPosMember {
+  id               String   @id @default(cuid())
+  ownerUserId      String   @map("owner_user_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  phone            String   @db.VarChar(20)
+  customerName     String?  @map("customer_name") @db.VarChar(120)
+  currentStamps    Int      @default(0) @map("current_stamps")
+  totalRedemptions Int      @default(0) @map("total_redemptions")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  sales DrinkPosSale[]
+
+  @@unique([ownerUserId, trialSessionId, phone], map: "dp_member_owner_trial_phone_uq")
+  @@index([ownerUserId, trialSessionId], map: "dp_member_owner_trial_idx")
+  @@map("drink_pos_members")
+}
+
+model DrinkPosSale {
+  id                 String   @id @default(cuid())
+  ownerUserId        String   @map("owner_user_id") @db.VarChar(191)
+  owner              User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  memberId           String?  @map("member_id") @db.VarChar(191)
+  member             DrinkPosMember? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  memberPhone        String?  @map("member_phone") @db.VarChar(20)
+  isRewardRedemption Boolean  @default(false) @map("is_reward_redemption")
+  note               String?  @db.VarChar(500)
+  totalBaht          Int      @map("total_baht")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  lines DrinkPosSaleLine[]
+
+  @@index([ownerUserId, createdAt], map: "dp_sale_owner_created_idx")
+  @@map("drink_pos_sales")
+}
+
+model DrinkPosSaleLine {
+  id            String   @id @default(cuid())
+  saleId        String   @map("sale_id") @db.VarChar(191)
+  sale          DrinkPosSale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId     String?  @map("product_id") @db.VarChar(191)
+  product       DrinkPosProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productName   String   @map("product_name") @db.VarChar(160)
+  unitPriceBaht Int      @map("unit_price_baht")
+  quantity      Int      @default(1)
+  lineTotalBaht Int      @map("line_total_baht")
+
+  @@index([saleId], map: "dp_saleline_sale_idx")
+  @@map("drink_pos_sale_lines")
+}
+
+model DrinkPosCostEntry {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  label       String   @db.VarChar(160)
+  amountBaht  Int      @map("amount_baht")
+  spentAt     DateTime @default(now()) @map("spent_at")
+  note        String?  @db.VarChar(300)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([ownerUserId, spentAt], map: "dp_cost_owner_spent_idx")
+  @@map("drink_pos_cost_entries")
 }
 
 /** คลัง prompt ส่วนตัว (แยกตามผู้ใช้ — อิงแนวคิด Prompt Master / Google Script pms) */

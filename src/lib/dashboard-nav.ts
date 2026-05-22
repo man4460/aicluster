@@ -15,6 +15,7 @@ import {
   PARKING_MODULE_SLUG,
   WAIT_QUEUE_MODULE_SLUG,
   APPOINTMENT_QUEUE_MODULE_SLUG,
+  LOYALTY_STAMP_MODULE_SLUG,
   SCHOOL_BANK_MODULE_SLUG,
   COMMUNITY_COOP_MODULE_SLUG,
   PROMPT_LIBRARY_MODULE_SLUG,
@@ -24,6 +25,7 @@ import {
   VAULT_MODULE_SLUG,
   INVENTORY_MODULE_SLUG,
   GENERAL_STORE_POS_MODULE_SLUG,
+  DRINK_POS_MODULE_SLUG,
   ECOMMERCE_STORE_MODULE_SLUG,
   SMART_POLICE_MODULE_SLUG,
 } from "@/lib/modules/config";
@@ -55,6 +57,7 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === PARKING_MODULE_SLUG) return "/dashboard/parking";
   if (slug === WAIT_QUEUE_MODULE_SLUG) return "/dashboard/wait-queue";
   if (slug === APPOINTMENT_QUEUE_MODULE_SLUG) return "/dashboard/appointment-queue";
+  if (slug === LOYALTY_STAMP_MODULE_SLUG) return "/dashboard/loyalty-stamp";
   if (slug === SCHOOL_BANK_MODULE_SLUG) return "/dashboard/school-bank";
   if (slug === COMMUNITY_COOP_MODULE_SLUG) return "/dashboard/community-coop";
   if (slug === LAUNDRY_MODULE_SLUG) return "/dashboard/laundry";
@@ -66,6 +69,7 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === VAULT_MODULE_SLUG) return "/dashboard/vault";
   if (slug === INVENTORY_MODULE_SLUG) return "/dashboard/inventory";
   if (slug === GENERAL_STORE_POS_MODULE_SLUG) return "/dashboard/general-store-pos";
+  if (slug === DRINK_POS_MODULE_SLUG) return "/dashboard/drink-pos";
   if (slug === ECOMMERCE_STORE_MODULE_SLUG) return "/dashboard/ecommerce-store";
   if (slug === SMART_POLICE_MODULE_SLUG) return "/dashboard/smart-police";
   return `/dashboard/modules/${slug}`;
@@ -161,6 +165,7 @@ export function buildDashboardNavGroups(
       CAR_WASH_MODULE_SLUG,
       MASSAGE_MODULE_SLUG,
       APPOINTMENT_QUEUE_MODULE_SLUG,
+      LOYALTY_STAMP_MODULE_SLUG,
       LAUNDRY_MODULE_SLUG,
       BUILDING_POS_MODULE_SLUG,
       GENERAL_STORE_POS_MODULE_SLUG,

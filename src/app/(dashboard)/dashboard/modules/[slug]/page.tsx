@@ -10,12 +10,14 @@ import {
   CAR_WASH_MODULE_SLUG,
   MASSAGE_MODULE_SLUG,
   APPOINTMENT_QUEUE_MODULE_SLUG,
+  LOYALTY_STAMP_MODULE_SLUG,
   WAIT_QUEUE_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   HOME_FINANCE_BASIC_MODULE_SLUG,
   INVENTORY_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
   GENERAL_STORE_POS_MODULE_SLUG,
+  DRINK_POS_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
   VAULT_MODULE_SLUG,
@@ -58,6 +60,9 @@ export default async function ModuleEntryPage({ params }: Props) {
   if (slug === APPOINTMENT_QUEUE_MODULE_SLUG) {
     redirect("/dashboard/appointment-queue");
   }
+  if (slug === LOYALTY_STAMP_MODULE_SLUG) {
+    redirect("/dashboard/loyalty-stamp");
+  }
   if (slug === WAIT_QUEUE_MODULE_SLUG) {
     redirect("/dashboard/wait-queue");
   }
@@ -78,6 +83,9 @@ export default async function ModuleEntryPage({ params }: Props) {
   }
   if (slug === GENERAL_STORE_POS_MODULE_SLUG) {
     redirect("/dashboard/general-store-pos");
+  }
+  if (slug === DRINK_POS_MODULE_SLUG) {
+    redirect("/dashboard/drink-pos");
   }
   const { module: mod } = await requireModulePage(slug);
 

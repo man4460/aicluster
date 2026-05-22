@@ -25,6 +25,12 @@ export const LANDING_FREE_MODULE_SHOWCASE: LandingModuleShowcaseItem[] = [
       "https://images.unsplash.com/photo-1506784365847-bbad939e9335?auto=format&fit=crop&w=900&q=78",
   },
   {
+    slug: "loyalty-stamp",
+    blurb: "บัตรสะสมแต้มดิจิทัล ร้านกาแฟ/อาหาร",
+    coverSrc:
+      "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=78",
+  },
+  {
     slug: "school-bank",
     blurb: "บัญชีออม ฝาก–ถอน โรงเรียน",
     coverSrc:
@@ -146,5 +152,11 @@ export const LANDING_DAILY_MODULE_SHOWCASE: LandingModuleShowcaseItem[] = [
     blurb: "POS ร้านอาหาร QR สั่งอาหาร",
     coverSrc:
       "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=78",
+  },
+  {
+    slug: "drink-pos",
+    blurb: "POS เครื่องดื่ม สะสมแต้ม · 1 บาท/วัน",
+    coverSrc:
+      "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=78",
   },
 ];

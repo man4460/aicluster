@@ -81,6 +81,10 @@ export const WAIT_QUEUE_MODULE_GROUP_ID = 1 as const;
 export const APPOINTMENT_QUEUE_MODULE_SLUG = "appointment-queue" as const;
 export const APPOINTMENT_QUEUE_MODULE_GROUP_ID = 1 as const;
 
+/** สะสมแต้มดิจิทัล — บัตรสมาชิกร้านค้าชุมชน */
+export const LOYALTY_STAMP_MODULE_SLUG = "loyalty-stamp" as const;
+export const LOYALTY_STAMP_MODULE_GROUP_ID = 1 as const;
+
 /** ธนาคารโรงเรียน — บัญชีออม ฝาก–ถอน ประวัติรายการ */
 export const SCHOOL_BANK_MODULE_SLUG = "school-bank" as const;
 export const SCHOOL_BANK_MODULE_GROUP_ID = 1 as const;
@@ -100,6 +104,10 @@ export const INVENTORY_MODULE_GROUP_ID = 1 as const;
 /** POS ร้านทั่วไป — ง่าย การ์ดสินค้า บันทึกขาย (ไม่หักโทเคนรายวัน) */
 export const GENERAL_STORE_POS_MODULE_SLUG = "general-store-pos" as const;
 export const GENERAL_STORE_POS_MODULE_GROUP_ID = 1 as const;
+
+/** POS ร้านเครื่องดื่ม — การ์ดสินค้า สะสมแต้ม ยอดขาย/ต้นทุน (ไม่หักโทเคนรายวัน) */
+export const DRINK_POS_MODULE_SLUG = "drink-pos" as const;
+export const DRINK_POS_MODULE_GROUP_ID = 1 as const;
 
 /** E-Commerce Store Builder — ร้านออนไลน์ + สต๊อก + หน้าร้องสาธารณะ */
 export const ECOMMERCE_STORE_MODULE_SLUG = "ecommerce-store" as const;
@@ -142,6 +150,7 @@ export function isDashboardUiVisibleModule(
 export const DAILY_TOKEN_EXEMPT_MODULE_SLUGS: ReadonlySet<string> = new Set([
   WAIT_QUEUE_MODULE_SLUG,
   APPOINTMENT_QUEUE_MODULE_SLUG,
+  LOYALTY_STAMP_MODULE_SLUG,
   SCHOOL_BANK_MODULE_SLUG,
   COMMUNITY_COOP_MODULE_SLUG,
   PROMPT_LIBRARY_MODULE_SLUG,
@@ -168,6 +177,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === PARKING_MODULE_SLUG) return "บริการรับฝากจอดรถ";
   if (slug === WAIT_QUEUE_MODULE_SLUG) return "คิวหน้าร้าน";
   if (slug === APPOINTMENT_QUEUE_MODULE_SLUG) return "จองคิวอัจฉริยะ";
+  if (slug === LOYALTY_STAMP_MODULE_SLUG) return "สะสมแต้มดิจิทัล";
   if (slug === SCHOOL_BANK_MODULE_SLUG) return "ธนาคารโรงเรียน";
   if (slug === COMMUNITY_COOP_MODULE_SLUG) return "สหกรณ์ชุมชน";
   if (slug === EDUCARE_MODULE_SLUG) return "EduCare เช็คนักเรียน";
@@ -178,6 +188,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === VAULT_MODULE_SLUG) return "คลังรหัสผ่าน";
   if (slug === INVENTORY_MODULE_SLUG) return "คลัง · สต๊อกสินค้า";
   if (slug === GENERAL_STORE_POS_MODULE_SLUG) return "POS ร้านทั่วไป (ง่าย)";
+  if (slug === DRINK_POS_MODULE_SLUG) return "POS ร้านเครื่องดื่ม";
   if (slug === ECOMMERCE_STORE_MODULE_SLUG) return "E-Commerce Store Builder";
   if (slug === SMART_POLICE_MODULE_SLUG) return "Smart Police (สำนวนคดี)";
   return title;
@@ -197,7 +208,7 @@ export const MODULE_GROUP_TIER_NAME: Record<number, string> = {
 
 /** สรุปฟีเจอร์ต่อกลุ่ม (ใช้ในหน้าแพ็กเกจ / คำอธิบาย) — ข้อความกระชับ */
 export const MODULE_GROUP_FEATURE_SUMMARY: Record<number, string> = {
-  1: "กลุ่ม 1: เช็คอิน · EduCare · สารบรรณ · คลัง Prompt · ทะเบียนสื่อ · คลังรหัสผ่าน · คลังสต๊อก · POS ทั่วไป · ร้านออนไลน์ · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ทรัพย์สิน · ตัดผม · คาร์แคร์ · ซักผ้า · จอดรถ · คิวหน้าร้าน · POS ร้านอาหาร",
+  1: "กลุ่ม 1: เช็คอิน · EduCare · สารบรรณ · คลัง Prompt · ทะเบียนสื่อ · คลังรหัสผ่าน · คลังสต๊อก · POS ทั่วไป · POS เครื่องดื่ม · ร้านออนไลน์ · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ทรัพย์สิน · ตัดผม · คาร์แคร์ · ซักผ้า · จอดรถ · คิวหน้าร้าน · POS ร้านอาหาร",
   2: "Smart Police (สำนวนคดี) · สต็อก · ใบเสร็จ (เร็ว ๆ นี้)",
   3: "วิเคราะห์ · แชทสาขา",
   4: "พนักงาน · เงินเดือน",

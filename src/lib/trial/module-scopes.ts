@@ -14,6 +14,8 @@ import {
   VILLAGE_MODULE_SLUG,
   WAIT_QUEUE_MODULE_SLUG,
   APPOINTMENT_QUEUE_MODULE_SLUG,
+  LOYALTY_STAMP_MODULE_SLUG,
+  DRINK_POS_MODULE_SLUG,
   SCHOOL_BANK_MODULE_SLUG,
   COMMUNITY_COOP_MODULE_SLUG,
 } from "@/lib/modules/config";
@@ -65,6 +67,14 @@ export function getWaitQueueDataScope(userId: string): Promise<ModuleDataScope> 
 
 export function getAppointmentQueueDataScope(userId: string): Promise<ModuleDataScope> {
   return resolveDataScopeBySlug(userId, APPOINTMENT_QUEUE_MODULE_SLUG);
+}
+
+export function getLoyaltyStampDataScope(userId: string): Promise<ModuleDataScope> {
+  return resolveDataScopeBySlug(userId, LOYALTY_STAMP_MODULE_SLUG);
+}
+
+export function getDrinkPosDataScope(userId: string): Promise<ModuleDataScope> {
+  return resolveDataScopeBySlug(userId, DRINK_POS_MODULE_SLUG);
 }
 
 export function getSchoolBankDataScope(userId: string): Promise<ModuleDataScope> {

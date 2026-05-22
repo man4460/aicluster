@@ -61,6 +61,7 @@ export {
   type AppTakePhotoButtonProps,
 } from "./AppTemplateSlipImageButtons";
 export { AppCameraCaptureModal, type AppCameraCaptureModalProps } from "./AppCameraCaptureModal";
+export { AppQrScanModal, type AppQrScanModalProps } from "./AppQrScanModal";
 
 export {
   openPrintableHtml,

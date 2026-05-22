@@ -22,7 +22,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 56: SmartPolice* (สำนวนคดี / พิมพ์หมาย) */
 /** 57: SmartPoliceDocument partyId + wordFileUrl */
 /** 58: Massage* module tables */
-const PRISMA_SINGLETON_VERSION = 58;
+/** 59: AppointmentQueue* + LoyaltyStamp* — client เก่าไม่มี delegate แล้ว undefined.findUnique */
+const PRISMA_SINGLETON_VERSION = 60;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -94,6 +95,13 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     generalStorePosProduct?: { findMany?: unknown };
     generalStorePosSale?: { findMany?: unknown };
     generalStorePosSaleLine?: { findMany?: unknown };
+    drinkPosShopProfile?: { findUnique?: unknown };
+    drinkPosCategory?: { findMany?: unknown };
+    drinkPosProduct?: { findMany?: unknown };
+    drinkPosMember?: { findMany?: unknown };
+    drinkPosSale?: { findMany?: unknown };
+    drinkPosSaleLine?: { findMany?: unknown };
+    drinkPosCostEntry?: { findMany?: unknown };
     ecommerceStore?: { findFirst?: unknown };
     ecommerceProduct?: { findMany?: unknown };
     ecommerceOrder?: { findMany?: unknown };
@@ -115,6 +123,11 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     carWashShopProfile?: { findUnique?: unknown };
     carWashBooking?: { findMany?: unknown };
     carWashDaySchedule?: { findUnique?: unknown };
+    appointmentQueueShopProfile?: { findUnique?: unknown };
+    appointmentQueueBooking?: { findMany?: unknown };
+    loyaltyStampShopProfile?: { findUnique?: unknown };
+    loyaltyStampMember?: { findMany?: unknown };
+    loyaltyStampEvent?: { findMany?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -179,6 +192,13 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.generalStorePosProduct?.findMany === "function" &&
     typeof c.generalStorePosSale?.findMany === "function" &&
     typeof c.generalStorePosSaleLine?.findMany === "function" &&
+    typeof c.drinkPosShopProfile?.findUnique === "function" &&
+    typeof c.drinkPosCategory?.findMany === "function" &&
+    typeof c.drinkPosProduct?.findMany === "function" &&
+    typeof c.drinkPosMember?.findMany === "function" &&
+    typeof c.drinkPosSale?.findMany === "function" &&
+    typeof c.drinkPosSaleLine?.findMany === "function" &&
+    typeof c.drinkPosCostEntry?.findMany === "function" &&
     typeof c.ecommerceStore?.findFirst === "function" &&
     typeof c.ecommerceProduct?.findMany === "function" &&
     typeof c.ecommerceOrder?.findMany === "function" &&
@@ -199,7 +219,12 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.massagePortalStaffPing?.findMany === "function" &&
     typeof c.carWashShopProfile?.findUnique === "function" &&
     typeof c.carWashBooking?.findMany === "function" &&
-    typeof c.carWashDaySchedule?.findUnique === "function"
+    typeof c.carWashDaySchedule?.findUnique === "function" &&
+    typeof c.appointmentQueueShopProfile?.findUnique === "function" &&
+    typeof c.appointmentQueueBooking?.findMany === "function" &&
+    typeof c.loyaltyStampShopProfile?.findUnique === "function" &&
+    typeof c.loyaltyStampMember?.findMany === "function" &&
+    typeof c.loyaltyStampEvent?.findMany === "function"
   );
 }
 

@@ -11,6 +11,7 @@ import { seedMediaRegistryProdDemoForOwner } from "../src/lib/trial/seed-media-r
 import { seedParkingProdDemoForOwner } from "../src/lib/trial/seed-parking";
 import { seedWaitQueueProdDemoForOwner } from "../src/lib/trial/seed-wait-queue";
 import { seedAppointmentQueueProdDemoForOwner } from "../src/lib/trial/seed-appointment-queue";
+import { seedLoyaltyStampProdDemoForOwner } from "../src/lib/trial/seed-loyalty-stamp";
 import { seedSchoolBankProdDemoForOwner } from "../src/lib/trial/seed-school-bank";
 import { seedCommunityCoopProdDemoForOwner } from "../src/lib/trial/seed-community-coop";
 import { seedAttendanceProdDemoForOwner } from "../src/lib/trial/seed-attendance";
@@ -27,6 +28,7 @@ import {
 import { seedVaultProdDemoForOwner } from "../src/lib/trial/seed-vault";
 import { seedInventoryProdDemoForOwner } from "../src/lib/trial/seed-inventory";
 import { seedGeneralStorePosProdDemoForOwner } from "../src/lib/trial/seed-general-store-pos";
+import { seedDrinkPosProdDemoForOwner } from "../src/lib/trial/seed-drink-pos";
 import { seedEcommerceStoreProdDemoForOwner } from "../src/lib/trial/seed-ecommerce-store";
 import { seedSmartPoliceProdDemoForOwner } from "../src/lib/trial/seed-smart-police";
 import {
@@ -43,6 +45,7 @@ import {
   HOME_FINANCE_BASIC_MODULE_SLUG,
   INVENTORY_MODULE_SLUG,
   GENERAL_STORE_POS_MODULE_SLUG,
+  DRINK_POS_MODULE_SLUG,
   ECOMMERCE_STORE_MODULE_SLUG,
   SMART_POLICE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
@@ -236,6 +239,14 @@ async function main() {
       sortOrder: 28,
     },
     {
+      slug: "loyalty-stamp",
+      title: "สะสมแต้มดิจิทัล",
+      description:
+        "กลุ่ม 1 (Basic) — บัตรสะสมแต้มดิจิทัล ร้านกาแฟ/อาหาร ลูกค้าไม่ต้องโหลดแอป (ใช้งานฟรี)",
+      groupId: 1,
+      sortOrder: 29,
+    },
+    {
       slug: "educare",
       title: "EduCare เช็คนักเรียน",
       description:
@@ -314,6 +325,14 @@ async function main() {
         "กลุ่ม 1 (Basic) — หมวด สินค้า การ์ดทันสมัย บันทึกขายง่าย (ไม่หักโทเคนรายวัน)",
       groupId: 1,
       sortOrder: 38,
+    },
+    {
+      slug: "drink-pos",
+      title: "POS ร้านเครื่องดื่ม",
+      description:
+        "กลุ่ม 1 (Basic) — POS เครื่องดื่ม สะสมแต้ม ยอดขาย/ต้นทุน · สายรายวัน 1 บาท/วันต่อโมดูล",
+      groupId: 1,
+      sortOrder: 30,
     },
     {
       slug: "ecommerce-store",
@@ -454,6 +473,7 @@ async function main() {
     VAULT_MODULE_SLUG,
     INVENTORY_MODULE_SLUG,
     GENERAL_STORE_POS_MODULE_SLUG,
+    DRINK_POS_MODULE_SLUG,
     ECOMMERCE_STORE_MODULE_SLUG,
     SMART_POLICE_MODULE_SLUG,
   ] as const;
@@ -586,6 +606,9 @@ async function main() {
     if (row) {
       await tryDemoSeed(`appointment-queue (${email})`, () =>
         seedAppointmentQueueProdDemoForOwner(prisma, row.id),
+      );
+      await tryDemoSeed(`loyalty-stamp (${email})`, () =>
+        seedLoyaltyStampProdDemoForOwner(prisma, row.id),
       );
     }
   }
@@ -740,6 +763,17 @@ async function main() {
     });
     if (row) {
       await tryDemoSeed(`general-store-pos (${email})`, () => seedGeneralStorePosProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** POS ร้านเครื่องดื่ม — หมวด สินค้า สมาชิกสะสมแต้ม บิล+ต้นทุนตัวอย่าง */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`drink-pos (${email})`, () => seedDrinkPosProdDemoForOwner(prisma, row.id));
     }
   }
 
