@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import QRCode from "qrcode";
 import {
   AppCameraCaptureModal,
@@ -24,8 +24,7 @@ import { StaffQrLandingShell } from "@/components/qr/staff-qr-landing-shell";
 import { ShopStaffQrPanel } from "@/components/qr/shop-staff-qr-panel";
 import { cn } from "@/lib/cn";
 
-const CAR_WASH_CUSTOMER_QR_TAGLINE =
-  "สแกน กรอกเบอร์ ยืนยันใช้บริการ — หักสิทธิ์อัตโนมัติ";
+const CAR_WASH_CUSTOMER_QR_TAGLINE = "สแกน จองคิว · ใช้แพ็กเหมาได้เอง";
 const CAR_WASH_STAFF_QR_TAGLINE =
   "สแกนเข้าหน้าลานพนักงาน — บันทึกรายการและจัดการคิววันนี้ (ต้องล็อกอินร้าน)";
 import { CAR_WASH_SERVICE_STATUSES, carWashStatusLabelTh } from "@/lib/car-wash/service-status";
@@ -43,6 +42,12 @@ import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { CarWashSalesPanel } from "@/systems/car-wash/CarWashSalesPanel";
 import { CarWashServiceLanePanel } from "@/systems/car-wash/CarWashServiceLanePanel";
 import { CarWashCostPanel } from "@/systems/car-wash/CarWashCostPanel";
+import {
+  CarWashDashboardHubClient,
+  CarWashDashboardTabToolbar,
+} from "@/systems/car-wash/CarWashDashboardHubClient";
+import { CarWashBookingsClient } from "@/systems/car-wash/CarWashBookingsClient";
+import { bangkokDateKey } from "@/lib/time/bangkok";
 import {
   type CarWashServiceStatus,
   type CostCategory,
@@ -1111,11 +1116,13 @@ export function CarWashDashboard({
   }
 
   const tabItems: { key: TabKey; label: string }[] = [
-    { key: "overview", label: "แดชบอร์ดของระบบ" },
+    { key: "overview", label: "ภาพรวม" },
     { key: "finance", label: "การเงิน" },
     { key: "offers", label: "แพ็กเกจ" },
     { key: "qr", label: "QR" },
   ];
+
+  const bookingDateKey = bangkokDateKey();
 
   const serviceLanePanelEl = (
     <CarWashServiceLanePanel
@@ -1362,16 +1369,27 @@ export function CarWashDashboard({
           loading={loading}
           error={error}
         >
-          {serviceLanePanelEl}
+          <div className="space-y-6">
+            <CarWashBookingsClient initialDateKey={bookingDateKey} staffQrLanding />
+            {serviceLanePanelEl}
+          </div>
         </StaffQrLandingShell>
       : tab === "overview" ? (
-        <div className="space-y-6">
+        <CarWashDashboardHubClient initialDateKey={bookingDateKey}>
           <div className="space-y-4 rounded-[2.5rem] border border-white/55 bg-white/28 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">สถิติวันนี้</h3>
-              <div className="ml-4 h-px flex-1 bg-white/65" />
+            <div className="flex min-w-0 flex-row items-center justify-between gap-2 px-0 sm:items-start sm:gap-4">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">สถิติวันนี้</h3>
+              </div>
+              <Suspense
+                fallback={
+                  <div className="h-11 w-36 shrink-0 animate-pulse rounded-[1.25rem] bg-white/30" aria-hidden />
+                }
+              >
+                <CarWashDashboardTabToolbar className="shrink-0" />
+              </Suspense>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               <CarWashStat
                 title="ลูกค้าวันนี้"
                 value={todayStats.uniqueCustomers.toLocaleString("en-US")}
@@ -1415,7 +1433,7 @@ export function CarWashDashboard({
             </div>
           </div>
           {serviceLanePanelEl}
-        </div>
+        </CarWashDashboardHubClient>
       ) : tab === "qr" ?
         <div className="space-y-4">
           {loading ? <p className="text-sm font-medium text-[#66638c]">กำลังโหลด...</p> : null}

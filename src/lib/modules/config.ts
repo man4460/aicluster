@@ -5,7 +5,7 @@ export const MAX_MODULE_GROUP = 5 as const;
 
 /**
  * กลุ่มโมดูลสูงสุดที่เปิดใช้งาน/แสดงในแดชบอร์ดและแคตตาล็อก (ไม่นับแอดมิน)
- * — กลุ่มอื่นปิดชั่วคราวจนกว่าจะปรับค่านี้
+ * — กลุ่ม 3+ ยังปิด; กลุ่ม 2 เปิดเป็นรายตัวผ่าน `UI_VISIBLE_GROUP2_MODULE_SLUGS`
  */
 export const UI_VISIBLE_MAX_MODULE_GROUP = 1 as const;
 
@@ -21,8 +21,7 @@ export function filterAppModulesForDashboardUi<T extends { groupId: number; slug
   modules: T[],
   role: UserRole,
 ): T[] {
-  if (role === "ADMIN") return modules;
-  return modules.filter((m) => m.groupId <= UI_VISIBLE_MAX_MODULE_GROUP);
+  return modules.filter((m) => isDashboardUiVisibleModule(m, role));
 }
 
 /**
@@ -45,6 +44,8 @@ export const HOME_FINANCE_BASIC_MODULE_SLUG = "income-expense-basic" as const;
 export const HOME_FINANCE_BASIC_MODULE_GROUP_ID = 1 as const;
 export const CAR_WASH_MODULE_SLUG = "car-wash" as const;
 export const CAR_WASH_MODULE_GROUP_ID = 1 as const;
+export const MASSAGE_MODULE_SLUG = "massage" as const;
+export const MASSAGE_MODULE_GROUP_ID = 1 as const;
 export const MQTT_SERVICE_MODULE_SLUG = "mqtt-service" as const;
 export const MQTT_SERVICE_MODULE_GROUP_ID = 1 as const;
 export const BUILDING_POS_MODULE_SLUG = "building-pos" as const;
@@ -76,6 +77,10 @@ export const PARKING_MODULE_GROUP_ID = 1 as const;
 export const WAIT_QUEUE_MODULE_SLUG = "wait-queue" as const;
 export const WAIT_QUEUE_MODULE_GROUP_ID = 1 as const;
 
+/** จองคิวอัจฉริยะ — ลูกค้าจองเวลาล่วงหน้า มัดจำ บอร์ดคิวร้าน */
+export const APPOINTMENT_QUEUE_MODULE_SLUG = "appointment-queue" as const;
+export const APPOINTMENT_QUEUE_MODULE_GROUP_ID = 1 as const;
+
 /** ธนาคารโรงเรียน — บัญชีออม ฝาก–ถอน ประวัติรายการ */
 export const SCHOOL_BANK_MODULE_SLUG = "school-bank" as const;
 export const SCHOOL_BANK_MODULE_GROUP_ID = 1 as const;
@@ -100,12 +105,43 @@ export const GENERAL_STORE_POS_MODULE_GROUP_ID = 1 as const;
 export const ECOMMERCE_STORE_MODULE_SLUG = "ecommerce-store" as const;
 export const ECOMMERCE_STORE_MODULE_GROUP_ID = 1 as const;
 
+/** Smart Police — สำนวนคดี พิมพ์หมาย รายงาน (อิง SmartPolice desktop v7) */
+export const SMART_POLICE_MODULE_SLUG = "smart-police" as const;
+export const SMART_POLICE_MODULE_GROUP_ID = 2 as const;
+
+/**
+ * โมดูลที่ซ่อนจากแคตตาล็อก/แดชบอร์ด (รวม ADMIN) — ยังพัฒนาไม่สมบูรณ์
+ * เอา slug ออกเมื่อพร้อมเปิด แล้วใส่ใน `UI_VISIBLE_GROUP2_MODULE_SLUGS` ถ้าต้องการ early access
+ */
+export const UI_HIDDEN_MODULE_SLUGS: ReadonlySet<string> = new Set([SMART_POLICE_MODULE_SLUG]);
+
+/**
+ * โมดูลกลุ่ม 2 ที่แสดงในแคตตาล็อก/แดชบอร์ดแม้ `UI_VISIBLE_MAX_MODULE_GROUP` ยังเป็น 1
+ * — ไม่รวม placeholder อื่นในกลุ่ม 2 จนกว่าจะพร้อมเปิด
+ */
+export const UI_VISIBLE_GROUP2_MODULE_SLUGS: ReadonlySet<string> = new Set([]);
+
+export function isModuleHiddenFromDashboardUi(slug: string | undefined): boolean {
+  return Boolean(slug && UI_HIDDEN_MODULE_SLUGS.has(slug));
+}
+
+export function isDashboardUiVisibleModule(
+  mod: { groupId: number; slug?: string },
+  role: UserRole,
+): boolean {
+  if (isModuleHiddenFromDashboardUi(mod.slug)) return false;
+  if (role === "ADMIN") return true;
+  if (mod.groupId <= UI_VISIBLE_MAX_MODULE_GROUP) return true;
+  return Boolean(mod.slug && UI_VISIBLE_GROUP2_MODULE_SLUGS.has(mod.slug));
+}
+
 /**
  * โมดูลที่ไม่หักโทเคนรายวันเมื่อเข้าใช้ (`applyModuleDailyTokenDeduction`)
  * — แสดงบนการ์ดเป็น «ฟรี»
  */
 export const DAILY_TOKEN_EXEMPT_MODULE_SLUGS: ReadonlySet<string> = new Set([
   WAIT_QUEUE_MODULE_SLUG,
+  APPOINTMENT_QUEUE_MODULE_SLUG,
   SCHOOL_BANK_MODULE_SLUG,
   COMMUNITY_COOP_MODULE_SLUG,
   PROMPT_LIBRARY_MODULE_SLUG,
@@ -123,6 +159,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === HOME_FINANCE_BASIC_MODULE_SLUG) return "รายรับ–รายจ่าย";
   if (slug === BARBER_MODULE_SLUG) return "ร้านตัดผม";
   if (slug === CAR_WASH_MODULE_SLUG) return "คาร์แคร์";
+  if (slug === MASSAGE_MODULE_SLUG) return "ร้านนวด";
   if (slug === MQTT_SERVICE_MODULE_SLUG) return "ระบบบริการ MQTT";
   if (slug === BUILDING_POS_MODULE_SLUG) return "POS ร้านอาหาร";
   if (slug === DORMITORY_MODULE_SLUG) return "จัดการหอพัก";
@@ -130,6 +167,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === LAUNDRY_MODULE_SLUG) return "รับฝากซักผ้า";
   if (slug === PARKING_MODULE_SLUG) return "บริการรับฝากจอดรถ";
   if (slug === WAIT_QUEUE_MODULE_SLUG) return "คิวหน้าร้าน";
+  if (slug === APPOINTMENT_QUEUE_MODULE_SLUG) return "จองคิวอัจฉริยะ";
   if (slug === SCHOOL_BANK_MODULE_SLUG) return "ธนาคารโรงเรียน";
   if (slug === COMMUNITY_COOP_MODULE_SLUG) return "สหกรณ์ชุมชน";
   if (slug === EDUCARE_MODULE_SLUG) return "EduCare เช็คนักเรียน";
@@ -141,6 +179,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === INVENTORY_MODULE_SLUG) return "คลัง · สต๊อกสินค้า";
   if (slug === GENERAL_STORE_POS_MODULE_SLUG) return "POS ร้านทั่วไป (ง่าย)";
   if (slug === ECOMMERCE_STORE_MODULE_SLUG) return "E-Commerce Store Builder";
+  if (slug === SMART_POLICE_MODULE_SLUG) return "Smart Police (สำนวนคดี)";
   return title;
 }
 
@@ -159,7 +198,7 @@ export const MODULE_GROUP_TIER_NAME: Record<number, string> = {
 /** สรุปฟีเจอร์ต่อกลุ่ม (ใช้ในหน้าแพ็กเกจ / คำอธิบาย) — ข้อความกระชับ */
 export const MODULE_GROUP_FEATURE_SUMMARY: Record<number, string> = {
   1: "กลุ่ม 1: เช็คอิน · EduCare · สารบรรณ · คลัง Prompt · ทะเบียนสื่อ · คลังรหัสผ่าน · คลังสต๊อก · POS ทั่วไป · ร้านออนไลน์ · หอพัก · รายรับ–รายจ่าย · หมู่บ้าน · ทรัพย์สิน · ตัดผม · คาร์แคร์ · ซักผ้า · จอดรถ · คิวหน้าร้าน · POS ร้านอาหาร",
-  2: "สต็อก · ใบเสร็จ",
+  2: "Smart Police (สำนวนคดี) · สต็อก · ใบเสร็จ (เร็ว ๆ นี้)",
   3: "วิเคราะห์ · แชทสาขา",
   4: "พนักงาน · เงินเดือน",
   5: "API ภายนอก · Automation",
@@ -316,6 +355,11 @@ export function tierGroupBullets(tier: SubscriptionTier): string[] {
   }
   if (n > UI_VISIBLE_MAX_MODULE_GROUP) {
     lines.push("กลุ่มโมดูลสูงกว่านี้ปิดชั่วคราว — จะเปิดภายหลัง");
+  }
+  if (UI_VISIBLE_GROUP2_MODULE_SLUGS.size > 0) {
+    lines.push(
+      "กลุ่ม 2 (เปิดแล้ว): Smart Police — สำนวนคดี · พิมพ์หมาย · รายงาน (1 โทเคน/วัน สายรายวัน)",
+    );
   }
   return lines;
 }

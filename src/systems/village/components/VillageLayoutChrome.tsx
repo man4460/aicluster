@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { TrialSandboxStrip } from "@/components/dashboard/TrialSandboxStrip";
 import { AppUsageGuideModal } from "@/components/app-templates";
+import { cn } from "@/lib/cn";
+import { villageIconBadgeClass, villageModuleHeaderShellClass } from "@/systems/village/village-ui-tokens";
 import { VillageModuleHeader } from "./VillageModuleHeader";
 import { VillageMobileDock } from "./VillageMobileDock";
 
@@ -18,36 +20,42 @@ export function VillageLayoutChrome({
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
 
   return (
-    <div className="-mt-2 max-w-full space-y-4 pb-28 sm:mt-0 sm:space-y-6 md:pb-0">
-      <header
-        className={
-          "-mx-3 overflow-hidden rounded-[2.5rem] border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/25 to-violet-100/20 p-4 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.32),inset_0_1px_0_0_rgba(255,255,255,0.55)] backdrop-blur-2xl ring-1 ring-inset ring-white/55 sm:mx-0 sm:px-8 sm:py-6 print:hidden"
-        }
-      >
+    <div className="max-w-full space-y-4 pb-28 sm:space-y-6 sm:pb-6">
+      <header className={cn(villageModuleHeaderShellClass, "print:hidden")}>
         <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
-          <div className="min-w-0">
-            <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">จัดการหมู่บ้าน</h1>
-            <p className="mt-1 hidden max-w-2xl text-sm leading-snug text-[#66638c] md:block">
-              ค่าส่วนกลาง · ลูกบ้าน · สลิป · ต้นทุน/รายจ่าย · รายปี · ส่งออก
-            </p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start gap-3">
+              <div className={villageIconBadgeClass}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5" aria-hidden>
+                  <path d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z" strokeLinejoin="round" />
+                  <path d="M8.5 12.5h2M13.5 12.5h2" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">จัดการหมู่บ้าน</h1>
+                <p className="mt-1 hidden max-w-2xl text-sm leading-snug text-[#66638c] md:block">
+                  ค่าส่วนกลาง · ลูกบ้าน · สลิป · ต้นทุน/รายจ่าย · รายปี · ส่งออก
+                </p>
+              </div>
+            </div>
           </div>
           <button
             type="button"
             onClick={() => setUsageGuideOpen(true)}
-            className="flex h-10 items-center gap-2 rounded-2xl border border-white/60 bg-white/45 px-4 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-95"
+            className="flex h-10 min-h-[40px] items-center gap-2 rounded-2xl border border-white/60 bg-white/55 px-3 text-sm font-semibold text-[#4d47b6] shadow-sm backdrop-blur-md transition hover:bg-white/75 sm:px-4"
             aria-haspopup="dialog"
             aria-expanded={usageGuideOpen}
             aria-label="คู่มือการใช้งาน"
             title="คู่มือการใช้งาน"
           >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.3" aria-hidden>
+            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
               <path d="M12 17v.01M10 9.5a2 2 0 1 1 3.2 1.6c-.8.55-1.2 1-1.2 1.9" strokeLinecap="round" />
               <circle cx="12" cy="12" r="9" />
             </svg>
             <span className="hidden sm:inline">คู่มือการใช้งาน</span>
           </button>
         </div>
-        <div className="hidden md:block">
+        <div className="mt-4 hidden border-t border-white/50 pt-4 md:block">
           <VillageModuleHeader variant="embedded" />
         </div>
       </header>
@@ -162,7 +170,7 @@ export function VillageLayoutChrome({
         <TrialSandboxStrip>ทดลอง · ข้อมูลแยกจากจริง · หมด {trialExpiresLabel}</TrialSandboxStrip>
       ) : null}
 
-      <div className="-mx-3 sm:mx-0">{children}</div>
+      {children}
       <VillageMobileDock />
     </div>
   );

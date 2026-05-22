@@ -8,6 +8,7 @@ import {
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import { mrListRowCardClass } from "@/systems/media-registry/components/media-registry-ui-tokens";
 import {
   assetRowEditIconButtonClass,
   assetRowRemoveIconButtonClass,
@@ -38,6 +39,22 @@ type Loc = { id: string; locationDetail: string };
 
 const inputCls =
   "w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2 text-sm text-[#2e2a58] shadow-inner focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30";
+
+function FilterIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      <path d="M22 3H2l8 9.46V19l4 2v-6.54L22 3z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconPlus({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 const statusOptions = Object.values(MEDIA_REGISTRY_ITEM_STATUS);
 
@@ -212,24 +229,22 @@ export function MediaRegistryItemsClient() {
               <button
                 type="button"
                 className={cn(
-                  "sm:hidden min-h-[40px] min-w-[40px] rounded-xl border border-white/55 bg-white/75 px-2 text-[#4d47b6] shadow-inner",
-                  filterActive && "ring-2 ring-[#4d47b6]/35",
+                  "inline-flex items-center justify-center sm:hidden min-h-[40px] min-w-[40px] rounded-xl border border-white/55 bg-white/75 px-2 text-[#4d47b6] shadow-inner",
+                  filterActive && "ring-2 ring-[#5b61ff]/35",
                 )}
                 aria-label="เปิดตัวกรอง"
                 onClick={() => setFilterOpen(true)}
               >
-                ⛭
+                <FilterIcon className="h-5 w-5" />
               </button>
               <button
                 type="button"
-                className="app-btn-primary min-h-[40px] min-w-[40px] rounded-xl px-2 sm:min-w-0 sm:px-4"
+                className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2 sm:min-w-0 sm:px-4"
                 aria-label="เพิ่มรายการสื่อ"
                 onClick={startCreate}
               >
+                <IconPlus className="h-5 w-5 sm:hidden" />
                 <span className="hidden sm:inline">+ เพิ่มสื่อ</span>
-                <span className="sm:hidden text-lg" aria-hidden>
-                  +
-                </span>
               </button>
             </div>
           }
@@ -271,7 +286,7 @@ export function MediaRegistryItemsClient() {
             {items.map((it) => (
               <li
                 key={it.id}
-                className="flex gap-2 rounded-[1.25rem] border border-white/55 bg-white/75 px-3 py-2.5 sm:items-center sm:justify-between"
+                className={cn(mrListRowCardClass, "flex gap-2 sm:items-center sm:justify-between")}
               >
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-[#2e2a58]">

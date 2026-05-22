@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import {
   BARBER_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
+  MASSAGE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
 } from "@/lib/modules/config";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
@@ -24,6 +25,10 @@ async function trialSandboxHasPackages(ownerUserId: string, slug: string, trialS
     }
     case BARBER_MODULE_SLUG: {
       const n = await prisma.barberPackage.count({ where: { ownerUserId, trialSessionId } });
+      return n > 0;
+    }
+    case MASSAGE_MODULE_SLUG: {
+      const n = await prisma.massagePackage.count({ where: { ownerUserId, trialSessionId } });
       return n > 0;
     }
     case LAUNDRY_MODULE_SLUG: {

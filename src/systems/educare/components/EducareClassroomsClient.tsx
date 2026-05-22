@@ -9,6 +9,12 @@ import {
   appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import {
+  educareFieldClass,
+  educareLabelClass,
+  educareListRowCardClass,
+  educarePrimaryButtonClass,
+} from "@/systems/educare/educare-ui-tokens";
 
 type ClassroomRow = {
   id: number;
@@ -159,10 +165,10 @@ export function EducareClassroomsClient() {
           ) : (
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {items.map((c) => (
-                <li key={c.id} className={cn(appDashboardSectionSlateClass, "space-y-2")}>
+                <li key={c.id} className={cn(educareListRowCardClass, "space-y-2")}>
                   <div className="flex items-baseline justify-between gap-2">
                     <p className="text-sm font-semibold text-[#2e2a58]">{c.name}</p>
-                    <span className="rounded-full bg-[#ede9ff] px-2 py-0.5 text-[11px] font-bold text-[#4d47b6]">
+                    <span className="rounded-full bg-[#5b61ff]/10 px-2 py-0.5 text-[11px] font-bold text-[#5b61ff]">
                       {c.studentCount} คน
                     </span>
                   </div>
@@ -311,7 +317,7 @@ function ModalForm({
             <button
               type="submit"
               disabled={busy}
-              className="min-h-[48px] rounded-2xl bg-gradient-to-r from-[#5b61ff] to-[#4d47b6] px-5 text-sm font-bold text-white shadow-[0_18px_30px_-15px_rgba(91,97,255,0.85)] transition active:scale-[0.99] disabled:opacity-50"
+              className={cn(educarePrimaryButtonClass, "min-h-[48px] px-5")}
             >
               {busy ? "กำลังบันทึก…" : "บันทึก"}
             </button>
@@ -322,13 +328,12 @@ function ModalForm({
   );
 }
 
-const inputCls =
-  "w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm text-[#2e2a58] placeholder:text-[#a3a0c0] shadow-inner focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30";
+const inputCls = educareFieldClass;
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4d47b6]/80">
+      <span className={educareLabelClass}>
         {label}
       </span>
       {children}

@@ -6,6 +6,7 @@ import {
   BARBER_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
+  MASSAGE_MODULE_SLUG,
   DOC_TRANSMISSION_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
@@ -20,6 +21,7 @@ import { seedAttendanceTrialData } from "./seed-attendance";
 import { seedBarberTrialData } from "./seed-barber";
 import { seedBuildingPosTrialData } from "./seed-building-pos";
 import { seedCarWashTrialData } from "./seed-car-wash";
+import { seedMassageTrialData } from "./seed-massage";
 import { seedDormitoryTrialData } from "./seed-dorm";
 import { seedVillageTrialData } from "./seed-village";
 import { seedWaitQueueTrialData } from "./seed-wait-queue";
@@ -48,6 +50,8 @@ async function deleteSandboxRowsInTx(tx: Tx, ownerUserId: string, trialSessionId
   await tx.attendanceRosterEntry.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.attendanceLocation.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.attendanceSettings.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.carWashBooking.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.carWashDaySchedule.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.carWashVisit.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.carWashBundle.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.carWashComplaint.deleteMany({ where: { ownerUserId, trialSessionId } });
@@ -76,6 +80,11 @@ async function deleteSandboxRowsInTx(tx: Tx, ownerUserId: string, trialSessionId
   await tx.room.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.dormitoryProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
 
+  await tx.appointmentQueueBooking.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.appointmentQueueDaySchedule.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.appointmentQueueStaff.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.appointmentQueueService.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.appointmentQueueShopProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.waitQueueSite.deleteMany({ where: { ownerUserId, trialSessionId } });
 
   await tx.schoolBankSettings.deleteMany({ where: { ownerUserId, trialSessionId } });
@@ -202,6 +211,8 @@ export async function startTrial(userId: string, moduleId: string): Promise<void
       await seedBuildingPosTrialData(tx, userId, session.id);
     } else if (mod.slug === CAR_WASH_MODULE_SLUG) {
       await seedCarWashTrialData(tx, userId, session.id);
+    } else if (mod.slug === MASSAGE_MODULE_SLUG) {
+      await seedMassageTrialData(tx, userId, session.id);
     } else if (mod.slug === VILLAGE_MODULE_SLUG) {
       await seedVillageTrialData(tx, userId, session.id);
     } else if (mod.slug === DOC_TRANSMISSION_MODULE_SLUG) {

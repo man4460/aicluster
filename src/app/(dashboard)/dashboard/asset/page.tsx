@@ -12,6 +12,8 @@ import {
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { getSession } from "@/lib/auth/session";
+import { AssetStatCard } from "@/systems/asset/components/AssetStatCard";
+import { assetAlertToneClass, assetListRowCardClass } from "@/systems/asset/asset-ui-tokens";
 import { getAssetDataScope } from "@/lib/trial/module-scopes";
 import { loadAssetDashboard } from "@/systems/asset/lib/asset-data";
 import {
@@ -105,41 +107,45 @@ export default async function AssetHomePage() {
         />
 
         <div className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <StatCard
-            label="ทรัพย์สินทั้งหมด"
-            value={data.totalAssets}
-            hint={`รวมมูลค่า ${formatTHB(data.totalValue)} บาท`}
-            accent="violet"
+          <AssetStatCard
+            title="ทรัพย์สินทั้งหมด"
+            value={data.totalAssets.toLocaleString("th-TH")}
+            subtitle={`รวมมูลค่า ${formatTHB(data.totalValue)} บาท`}
+            tone="violet"
           />
-          <StatCard
-            label="กำลังใช้งาน"
-            value={inUse}
-            hint={`คิดเป็น ${inUsePct}% ของทั้งหมด`}
-            accent="green"
+          <AssetStatCard
+            title="กำลังใช้งาน"
+            value={inUse.toLocaleString("th-TH")}
+            subtitle={`คิดเป็น ${inUsePct}% ของทั้งหมด`}
+            tone="emerald"
           />
-          <StatCard
-            label="กำลังซ่อม"
-            value={data.byStatus.IN_REPAIR}
-            hint={`รอจำหน่ายออก ${data.byStatus.DISPOSED} รายการ`}
-            accent="amber"
+          <AssetStatCard
+            title="กำลังซ่อม"
+            value={data.byStatus.IN_REPAIR.toLocaleString("th-TH")}
+            subtitle={`รอจำหน่ายออก ${data.byStatus.DISPOSED} รายการ`}
+            tone="amber"
           />
-          <StatCard
-            label="มูลค่าคงเหลือ"
-            value={Math.round(data.currentValue / 1000)}
-            unit="K"
-            hint={`เสื่อมแล้ว ${depreciationPct}%`}
-            accent="indigo"
+          <AssetStatCard
+            title="มูลค่าคงเหลือ"
+            value={
+              <>
+                {Math.round(data.currentValue / 1000).toLocaleString("th-TH")}
+                <span className="ml-1 text-sm font-bold opacity-80">K</span>
+              </>
+            }
+            subtitle={`เสื่อมแล้ว ${depreciationPct}%`}
+            tone="indigo"
           />
         </div>
 
         {hasAnyData ? null : (
           <AppEmptyState tone="violet" className="mt-5">
             ยังไม่มีข้อมูลในระบบ — เริ่มจาก{" "}
-            <Link href="/dashboard/asset/master" className="font-semibold text-[#4d47b6] underline">
+            <Link href="/dashboard/asset/master" className="font-semibold text-[#5b61ff] underline">
               ตั้งข้อมูลหลัก
             </Link>{" "}
             แล้วเพิ่ม{" "}
-            <Link href="/dashboard/asset/assets" className="font-semibold text-[#4d47b6] underline">
+            <Link href="/dashboard/asset/assets" className="font-semibold text-[#5b61ff] underline">
               ทรัพย์สิน
             </Link>
           </AppEmptyState>
@@ -169,7 +175,7 @@ export default async function AssetHomePage() {
                 {(Object.keys(data.byCondition) as Array<keyof typeof data.byCondition>).map((c) => (
                   <div
                     key={c}
-                    className="flex flex-col rounded-xl border border-white/60 bg-white/65 px-3 py-2 text-xs text-[#2e2a58]"
+                    className={cn(assetListRowCardClass, "flex flex-col px-3 py-2 text-xs text-[#2e2a58]")}
                   >
                     <span className="text-[#66638c]">สภาพ {ASSET_CONDITION_LABEL[c]}</span>
                     <span className="text-base font-bold">{data.byCondition[c].toLocaleString("th-TH")}</span>
@@ -265,9 +271,12 @@ export default async function AssetHomePage() {
             {data.recentActivity.length === 0 ? (
               <AppEmptyState>ยังไม่มีรายการในระยะหลัง</AppEmptyState>
             ) : (
-              <ul className="mt-3 divide-y divide-white/60">
+              <ul className="mt-3 space-y-2">
                 {data.recentActivity.map((it) => (
-                  <li key={it.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <li
+                    key={it.id}
+                    className={cn(assetListRowCardClass, "flex items-center justify-between gap-3 py-2.5")}
+                  >
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-[#2e2a58]">{it.title}</p>
                       <p className="truncate text-xs text-[#66638c]">
@@ -295,7 +304,7 @@ function IconAssetBox({ className }: { className?: string }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.8}
+      strokeWidth={2.5}
       aria-hidden
     >
       <path d="M21 8 12 3 3 8l9 5 9-5Z" strokeLinejoin="round" />
@@ -312,7 +321,7 @@ function IconReportChart({ className }: { className?: string }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.8}
+      strokeWidth={2.5}
       aria-hidden
     >
       <path
@@ -323,49 +332,6 @@ function IconReportChart({ className }: { className?: string }) {
     </svg>
   );
 }
-
-const accentToken: Record<"violet" | "green" | "amber" | "indigo", string> = {
-  violet: "from-violet-500/10 via-white to-violet-50 text-[#4d47b6]",
-  green: "from-emerald-500/10 via-white to-emerald-50 text-emerald-700",
-  amber: "from-amber-500/10 via-white to-amber-50 text-amber-700",
-  indigo: "from-indigo-500/10 via-white to-indigo-50 text-indigo-700",
-};
-
-function StatCard({
-  label,
-  value,
-  hint,
-  accent,
-  unit,
-}: {
-  label: string;
-  value: number;
-  hint?: string;
-  accent: keyof typeof accentToken;
-  unit?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "rounded-2xl border border-white/55 bg-gradient-to-br p-4 shadow-[0_18px_40px_-30px_rgba(76,70,178,0.55)]",
-        accentToken[accent],
-      )}
-    >
-      <p className="text-xs font-semibold uppercase tracking-wider opacity-80">{label}</p>
-      <p className="mt-2 text-2xl font-black tracking-tight">
-        {value.toLocaleString("th-TH")}
-        {unit ? <span className="ml-1 text-sm font-bold opacity-80">{unit}</span> : null}
-      </p>
-      {hint ? <p className="mt-1 text-[11px] font-medium opacity-75">{hint}</p> : null}
-    </div>
-  );
-}
-
-const alertToneClass: Record<"rose" | "amber" | "slate", string> = {
-  rose: "border-rose-200 bg-rose-50/60",
-  amber: "border-amber-200 bg-amber-50/60",
-  slate: "border-zinc-200 bg-white/65",
-};
 
 function AlertCard({
   title,
@@ -391,7 +357,7 @@ function AlertCard({
           {items.map((it) => (
             <li
               key={it.key}
-              className={cn("rounded-xl border px-3 py-2 text-xs", alertToneClass[it.tone])}
+              className={cn("px-3 py-2 text-xs", assetAlertToneClass[it.tone])}
             >
               <p className="truncate font-semibold text-[#2e2a58]">{it.primary}</p>
               <p className="truncate text-[11px] text-[#66638c]">{it.secondary}</p>

@@ -10,6 +10,15 @@ import {
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
+  educareAvatarFallbackClass,
+  educareFieldClass,
+  educareFieldCompactClass,
+  educareFilterChipClass,
+  educareLabelClass,
+  educareListRowCardClass,
+  educarePrimaryButtonClass,
+} from "@/systems/educare/educare-ui-tokens";
+import {
   EDUCARE_FEATURES,
   EDUCARE_FEATURE_STATUS,
   EDUCARE_STATUS_LABEL,
@@ -272,7 +281,7 @@ export function EducareCheckClient() {
             </CompactField>
           </div>
           <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/60 bg-white/70 px-3 py-2">
-            <span className="text-sm font-bold text-[#4d47b6]">{checkedCount}</span>
+            <span className="text-sm font-bold text-[#5b61ff]">{checkedCount}</span>
             <span className="text-xs text-[#66638c]">/ {roster.length} คน</span>
             <div className="mx-2 h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
               <div
@@ -280,7 +289,7 @@ export function EducareCheckClient() {
                   "h-full rounded-full transition-all",
                   progressPct === 100
                     ? "bg-gradient-to-r from-emerald-400 to-emerald-500"
-                    : "bg-gradient-to-r from-[#5b61ff] to-[#4d47b6]",
+                    : "bg-gradient-to-r from-[#5b61ff] to-[#6a63ff]",
                 )}
                 style={{ width: `${progressPct}%` }}
               />
@@ -288,7 +297,7 @@ export function EducareCheckClient() {
             <span
               className={cn(
                 "min-w-[2.5rem] text-right text-[11px] font-bold",
-                progressPct === 100 ? "text-emerald-600" : "text-[#4d47b6]",
+                progressPct === 100 ? "text-emerald-600" : "text-[#5b61ff]",
               )}
             >
               {progressPct}%
@@ -323,23 +332,21 @@ export function EducareCheckClient() {
           </Field>
           <Field label="ความคืบหน้า">
             <div className={cn(inputCls, "flex items-center gap-3 !py-2.5")}>
-              <span className="text-sm font-bold text-[#4d47b6]">{checkedCount}</span>
+              <span className="text-sm font-bold text-[#5b61ff]">{checkedCount}</span>
               <span className="text-xs text-[#66638c]">/ {roster.length} คน</span>
               <div className="ml-auto h-2 w-24 overflow-hidden rounded-full bg-slate-200">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#5b61ff] to-[#4d47b6] transition-all"
+                  className="h-full rounded-full bg-gradient-to-r from-[#5b61ff] to-[#6a63ff] transition-all"
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
-              <span className="text-[11px] font-semibold text-[#4d47b6]">{progressPct}%</span>
+              <span className="text-[11px] font-semibold text-[#5b61ff]">{progressPct}%</span>
             </div>
           </Field>
         </div>
 
         <div className="mt-4">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4d47b6]/80">
-            ฟีเจอร์
-          </p>
+          <p className={cn(educareLabelClass, "mb-2")}>ฟีเจอร์</p>
           <ul className="-mx-1 flex snap-x snap-mandatory gap-1.5 overflow-x-auto px-1 pb-1.5 sm:flex-wrap sm:overflow-visible sm:gap-2">
             {EDUCARE_FEATURES.map((f) => {
               const active = f.key === feature;
@@ -349,10 +356,9 @@ export function EducareCheckClient() {
                     type="button"
                     onClick={() => setFeature(f.key)}
                     className={cn(
-                      "flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-2xl border px-2.5 text-xs font-semibold transition sm:min-h-[44px] sm:gap-2 sm:px-3.5 sm:text-sm",
-                      active
-                        ? "border-[#4d47b6] bg-gradient-to-r from-[#5b61ff] to-[#4d47b6] text-white shadow-[0_12px_22px_-14px_rgba(91,97,255,0.95)]"
-                        : "border-white/60 bg-white/70 text-[#66638c] hover:bg-white",
+                      "flex min-h-[40px] items-center gap-1.5 whitespace-nowrap px-2.5 sm:min-h-[44px] sm:gap-2 sm:px-3.5 sm:text-sm",
+                      educareFilterChipClass(active),
+                      !active && "text-[#66638c]",
                     )}
                     aria-pressed={active}
                   >
@@ -371,7 +377,7 @@ export function EducareCheckClient() {
       <AppDashboardSection tone="violet">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#4d47b6]/80">
+            <p className={educareLabelClass}>
               {featureMeta.emoji} {featureMeta.label}
             </p>
             <p className="mt-1 text-sm text-[#66638c]">
@@ -386,7 +392,7 @@ export function EducareCheckClient() {
               type="button"
               onClick={setAllToFirst}
               disabled={busy || roster.length === 0}
-              className="min-h-[40px] rounded-xl border border-[#dcd8f0] bg-white/70 px-3 text-xs font-semibold text-[#4d47b6] hover:bg-white disabled:opacity-50"
+              className="min-h-[40px] rounded-xl border border-white/55 bg-white/75 px-3 text-xs font-semibold text-[#5b61ff] hover:bg-white/90 disabled:opacity-50"
             >
               ทุกคน "{validStatuses[0] ? EDUCARE_STATUS_LABEL[validStatuses[0]] : "-"}"
             </button>
@@ -395,10 +401,8 @@ export function EducareCheckClient() {
               onClick={save}
               disabled={busy || roster.length === 0 || !dirty}
               className={cn(
-                "min-h-[44px] rounded-2xl px-5 text-sm font-bold text-white shadow-[0_18px_30px_-15px_rgba(91,97,255,0.85)] transition active:scale-[0.99] disabled:opacity-50",
-                dirty
-                  ? "bg-gradient-to-r from-[#5b61ff] to-[#4d47b6]"
-                  : "bg-slate-300 text-slate-500 shadow-none",
+                educarePrimaryButtonClass,
+                !dirty && "bg-slate-300 text-slate-500 shadow-none",
               )}
             >
               {busy ? "กำลังบันทึก…" : dirty ? "บันทึกผลเช็ค" : "บันทึกแล้ว"}
@@ -463,7 +467,7 @@ function RosterCard({
 }) {
   const [showNote, setShowNote] = useState(!!row.note);
   return (
-    <li className={cn(appDashboardSectionSlateClass, "!py-3")}>
+    <li className={educareListRowCardClass}>
       <div className="flex items-start gap-3">
         <Avatar src={row.photoUrl} name={row.fullName} />
         <div className="min-w-0 flex-1">
@@ -513,13 +517,13 @@ function RosterCard({
             value={row.note}
             onChange={(e) => onNote(e.target.value)}
             placeholder="หมายเหตุเพิ่มเติม (ไม่บังคับ)"
-            className="w-full rounded-xl border border-white/60 bg-white/70 px-2.5 py-1.5 text-xs text-[#2e2a58] placeholder:text-[#a3a0c0] focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30"
+            className={educareFieldCompactClass}
           />
         ) : (
           <button
             type="button"
             onClick={() => setShowNote(true)}
-            className="text-[11px] font-semibold text-[#4d47b6] hover:underline"
+            className="text-[11px] font-semibold text-[#5b61ff] hover:underline"
           >
             + เพิ่มหมายเหตุ
           </button>
@@ -532,14 +536,14 @@ function RosterCard({
 function Avatar({ src, name }: { src: string | null; name: string }) {
   if (src) {
     return (
-      <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-[#ede9ff] ring-2 ring-white">
+      <span className={cn(educareAvatarFallbackClass, "h-11 w-11 shrink-0 overflow-hidden")}>
         <Image src={src} alt={name} width={44} height={44} className="h-full w-full object-cover" unoptimized />
       </span>
     );
   }
   const fallback = name.trim().slice(0, 1).toUpperCase() || "·";
   return (
-    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#ede9ff] text-base font-bold text-[#4d47b6] ring-2 ring-white">
+    <span className={cn(educareAvatarFallbackClass, "h-11 w-11 shrink-0 text-base")}>
       {fallback}
     </span>
   );
@@ -567,16 +571,13 @@ function SkeletonRoster() {
   );
 }
 
-const inputCls =
-  "w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm text-[#2e2a58] placeholder:text-[#a3a0c0] shadow-inner focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30";
-
-const compactInputCls =
-  "w-full rounded-xl border border-white/60 bg-white/70 px-2.5 py-2 text-xs text-[#2e2a58] shadow-inner focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30";
+const inputCls = educareFieldClass;
+const compactInputCls = educareFieldCompactClass;
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4d47b6]/80">
+      <span className={educareLabelClass}>
         {label}
       </span>
       {children}
@@ -587,7 +588,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function CompactField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[10px] font-semibold text-[#4d47b6]/70">
+      <span className="mb-1 block text-[10px] font-semibold text-[#5b61ff]/70">
         {label}
       </span>
       {children}

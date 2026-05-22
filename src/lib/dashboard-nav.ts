@@ -5,6 +5,7 @@ import {
   ATTENDANCE_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
   BARBER_MODULE_SLUG,
+  MASSAGE_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
   DOC_TRANSMISSION_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
@@ -13,6 +14,7 @@ import {
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
   WAIT_QUEUE_MODULE_SLUG,
+  APPOINTMENT_QUEUE_MODULE_SLUG,
   SCHOOL_BANK_MODULE_SLUG,
   COMMUNITY_COOP_MODULE_SLUG,
   PROMPT_LIBRARY_MODULE_SLUG,
@@ -23,6 +25,7 @@ import {
   INVENTORY_MODULE_SLUG,
   GENERAL_STORE_POS_MODULE_SLUG,
   ECOMMERCE_STORE_MODULE_SLUG,
+  SMART_POLICE_MODULE_SLUG,
 } from "@/lib/modules/config";
 import { SYSTEM_MAP_CATALOG_SLUG } from "@/lib/modules/system-map-catalog";
 import { CHAT_AI_DASHBOARD_HREF, resolveDashboardNavLinkHref } from "@/lib/dashboard/chat-ai-href";
@@ -45,11 +48,13 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === BARBER_MODULE_SLUG) return "/dashboard/barber";
   if (slug === HOME_FINANCE_BASIC_MODULE_SLUG) return "/dashboard/home-finance";
   if (slug === CAR_WASH_MODULE_SLUG) return "/dashboard/car-wash";
+  if (slug === MASSAGE_MODULE_SLUG) return "/dashboard/massage";
   if (slug === MQTT_SERVICE_MODULE_SLUG) return "/dashboard/mqtt-service";
   if (slug === BUILDING_POS_MODULE_SLUG) return "/dashboard/building-pos";
   if (slug === VILLAGE_MODULE_SLUG) return "/dashboard/village";
   if (slug === PARKING_MODULE_SLUG) return "/dashboard/parking";
   if (slug === WAIT_QUEUE_MODULE_SLUG) return "/dashboard/wait-queue";
+  if (slug === APPOINTMENT_QUEUE_MODULE_SLUG) return "/dashboard/appointment-queue";
   if (slug === SCHOOL_BANK_MODULE_SLUG) return "/dashboard/school-bank";
   if (slug === COMMUNITY_COOP_MODULE_SLUG) return "/dashboard/community-coop";
   if (slug === LAUNDRY_MODULE_SLUG) return "/dashboard/laundry";
@@ -62,6 +67,7 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === INVENTORY_MODULE_SLUG) return "/dashboard/inventory";
   if (slug === GENERAL_STORE_POS_MODULE_SLUG) return "/dashboard/general-store-pos";
   if (slug === ECOMMERCE_STORE_MODULE_SLUG) return "/dashboard/ecommerce-store";
+  if (slug === SMART_POLICE_MODULE_SLUG) return "/dashboard/smart-police";
   return `/dashboard/modules/${slug}`;
 }
 
@@ -153,6 +159,8 @@ export function buildDashboardNavGroups(
     const serviceSlugs = new Set<string>([
       BARBER_MODULE_SLUG,
       CAR_WASH_MODULE_SLUG,
+      MASSAGE_MODULE_SLUG,
+      APPOINTMENT_QUEUE_MODULE_SLUG,
       LAUNDRY_MODULE_SLUG,
       BUILDING_POS_MODULE_SLUG,
       GENERAL_STORE_POS_MODULE_SLUG,
@@ -168,6 +176,7 @@ export function buildDashboardNavGroups(
       EDUCARE_MODULE_SLUG,
       ASSET_MODULE_SLUG,
       DOC_TRANSMISSION_MODULE_SLUG,
+      SMART_POLICE_MODULE_SLUG,
       PROMPT_LIBRARY_MODULE_SLUG,
       MEDIA_REGISTRY_MODULE_SLUG,
       MQTT_SERVICE_MODULE_SLUG,

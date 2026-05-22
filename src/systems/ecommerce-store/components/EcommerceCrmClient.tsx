@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppDashboardSection, AppSectionHeader } from "@/components/app-templates";
+import { ecommerceListRowCardClass } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
 
 type Customer = {
   id: string;
@@ -22,13 +23,13 @@ export function EcommerceCrmClient() {
   }, []);
 
   return (
-    <AppDashboardSection className="appDashboardSectionSlateClass">
+    <AppDashboardSection className="appDashboardSectionVioletClass">
       <AppSectionHeader title="ลูกค้า (CRM)" description="ยอดซื้อสะสมต่อเบอร์โทร" />
       <ul className="space-y-2">
         {customers.map((c) => (
           <li
             key={c.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/60 bg-white/70 px-4 py-3"
+            className={ecommerceListRowCardClass}
           >
             <div>
               <p className="font-bold text-[#1e1b4b]">{c.name}</p>

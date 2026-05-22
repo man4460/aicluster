@@ -19,7 +19,10 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 53: SchoolBank* + CommunityCoop* — client เก่าไม่มี delegate แล้ว undefined.findUnique */
 /** 54: GeneralStorePos* (POS ร้านทั่วไปง่าย) */
 /** 55: EcommerceStore* (E-Commerce Store Builder) */
-const PRISMA_SINGLETON_VERSION = 55;
+/** 56: SmartPolice* (สำนวนคดี / พิมพ์หมาย) */
+/** 57: SmartPoliceDocument partyId + wordFileUrl */
+/** 58: Massage* module tables */
+const PRISMA_SINGLETON_VERSION = 58;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -95,6 +98,23 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     ecommerceProduct?: { findMany?: unknown };
     ecommerceOrder?: { findMany?: unknown };
     ecommerceBuyerCustomer?: { findMany?: unknown };
+    smartPoliceProfile?: { findUnique?: unknown };
+    smartPoliceCase?: { findMany?: unknown };
+    smartPoliceTemplate?: { findMany?: unknown };
+    massageShopProfile?: { findUnique?: unknown };
+    massagePackage?: { findMany?: unknown };
+    massageCustomer?: { findMany?: unknown };
+    massageTherapist?: { findMany?: unknown };
+    massageBooking?: { findMany?: unknown };
+    massageDaySchedule?: { findUnique?: unknown };
+    massageServiceLog?: { findMany?: unknown };
+    massageCostCategory?: { findMany?: unknown };
+    massageCostEntry?: { findMany?: unknown };
+    massageCustomerSubscription?: { findMany?: unknown };
+    massagePortalStaffPing?: { findMany?: unknown };
+    carWashShopProfile?: { findUnique?: unknown };
+    carWashBooking?: { findMany?: unknown };
+    carWashDaySchedule?: { findUnique?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -162,7 +182,24 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.ecommerceStore?.findFirst === "function" &&
     typeof c.ecommerceProduct?.findMany === "function" &&
     typeof c.ecommerceOrder?.findMany === "function" &&
-    typeof c.ecommerceBuyerCustomer?.findMany === "function"
+    typeof c.ecommerceBuyerCustomer?.findMany === "function" &&
+    typeof c.smartPoliceProfile?.findUnique === "function" &&
+    typeof c.smartPoliceCase?.findMany === "function" &&
+    typeof c.smartPoliceTemplate?.findMany === "function" &&
+    typeof c.massageShopProfile?.findUnique === "function" &&
+    typeof c.massagePackage?.findMany === "function" &&
+    typeof c.massageCustomer?.findMany === "function" &&
+    typeof c.massageTherapist?.findMany === "function" &&
+    typeof c.massageBooking?.findMany === "function" &&
+    typeof c.massageDaySchedule?.findUnique === "function" &&
+    typeof c.massageServiceLog?.findMany === "function" &&
+    typeof c.massageCostCategory?.findMany === "function" &&
+    typeof c.massageCostEntry?.findMany === "function" &&
+    typeof c.massageCustomerSubscription?.findMany === "function" &&
+    typeof c.massagePortalStaffPing?.findMany === "function" &&
+    typeof c.carWashShopProfile?.findUnique === "function" &&
+    typeof c.carWashBooking?.findMany === "function" &&
+    typeof c.carWashDaySchedule?.findUnique === "function"
   );
 }
 

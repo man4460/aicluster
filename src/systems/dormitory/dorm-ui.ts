@@ -1,9 +1,9 @@
-/** คลาส UI ร่วมโมดูลหอพัก — โทนเดียวกับหมู่บ้าน/ตั้งค่า */
+/** คลาส UI ร่วมโมดูลหอพัก — โทนเดียวกับคาร์แคร์ / template กลาง */
 export const dormField =
-  "w-full rounded-2xl border border-white/70 bg-white/75 px-3 py-2.5 text-sm text-slate-900 outline-none transition backdrop-blur-sm focus:border-blue-400/50 focus:bg-white focus:ring-2 focus:ring-blue-500/20";
+  "w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm text-[#2e2a58] outline-none transition backdrop-blur-sm focus:border-[#4d47b6]/50 focus:bg-white focus:ring-2 focus:ring-[#5b61ff]/20";
 
 export const dormCard =
-  "mawell-card-surface rounded-3xl shadow-md";
+  "rounded-[2rem] border border-white/60 bg-white/55 shadow-sm backdrop-blur-sm ring-1 ring-inset ring-white/50";
 
 export const dormBtnPrimary =
   "app-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:opacity-95 disabled:opacity-50 sm:min-h-0";
@@ -13,7 +13,7 @@ export const dormBtnSecondary =
 
 /** การ์ดห้อง — ผังห้อง (แดชบอร์ด): เน้นเลขห้องกลาง แถบไฮไลต์ด้านบน */
 export const dormRoomTile =
-  "group relative mawell-card-surface flex h-full min-h-[160px] flex-col overflow-hidden rounded-3xl p-4 pt-[1.125rem] text-slate-900 antialiased shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-300/70 hover:shadow-lg hover:shadow-blue-500/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35 focus-visible:ring-offset-2 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1.5 before:rounded-b-full before:bg-gradient-to-r before:from-[#9cb0ff] before:via-[#f9a8c8] before:to-[#b8d4ff] before:content-['']";
+  "group relative flex h-full min-h-[160px] flex-col overflow-hidden rounded-[2rem] border border-white/60 bg-gradient-to-br from-white/60 via-indigo-50/20 to-violet-50/15 p-4 pt-[1.125rem] text-[#2e2a58] antialiased shadow-[0_18px_38px_-26px_rgba(30,27,75,0.35)] backdrop-blur-xl ring-1 ring-inset ring-white/50 transition-all duration-300 hover:-translate-y-1 hover:bg-white/70 hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.4)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/35 focus-visible:ring-offset-2 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1.5 before:rounded-b-full before:bg-gradient-to-r before:from-[#5b61ff]/75 before:via-[#a78bfa]/45 before:to-[#5b61ff]/35 before:content-['']";
 
 /** ห้องนี้มีรายการค้างชำระงวดเก่า (แดชบอร์ด) */
 export const dormRoomTileOverdueHint =
@@ -21,13 +21,13 @@ export const dormRoomTileOverdueHint =
 
 /** การ์ดห้อง — หน้าจัดการห้อง: ข้อมูลแนวแถว + CTA */
 export const dormRoomListCard =
-  "group relative mawell-card-surface flex h-full min-h-[168px] flex-col overflow-hidden rounded-3xl p-4 pt-[1.125rem] text-slate-900 antialiased shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-300/65 hover:shadow-lg hover:shadow-rose-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35 focus-visible:ring-offset-2 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1.5 before:rounded-b-full before:bg-gradient-to-r before:from-[#a8b0ff] before:via-[#f0abce] before:to-[#a5d8ff] before:content-['']";
+  "group relative flex h-full min-h-[168px] flex-col overflow-hidden rounded-[2rem] border border-white/60 bg-gradient-to-br from-white/60 via-indigo-50/20 to-violet-50/15 p-4 pt-[1.125rem] text-[#2e2a58] antialiased shadow-[0_18px_38px_-26px_rgba(30,27,75,0.35)] backdrop-blur-xl ring-1 ring-inset ring-white/50 transition-all duration-300 hover:-translate-y-1 hover:bg-white/70 hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.4)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/35 focus-visible:ring-offset-2 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1.5 before:rounded-b-full before:bg-gradient-to-r before:from-[#5b61ff]/70 before:via-[#c4b5fd]/40 before:to-[#5b61ff]/30 before:content-['']";
 
 export const dormRoomNumberHero =
-  "text-center text-[1.75rem] font-bold tabular-nums leading-none tracking-tight text-slate-900 antialiased transition-colors duration-200 group-hover:text-[#0000BF]";
+  "text-center text-[1.75rem] font-black tabular-nums leading-none tracking-tight text-[#1e1b4b] antialiased transition-colors duration-200 group-hover:text-[#5b61ff]";
 
 export const dormRoomNumberList =
-  "text-[1.35rem] font-bold tabular-nums leading-tight tracking-tight text-slate-900 antialiased transition-colors duration-200 group-hover:text-[#0000BF] sm:text-xl";
+  "text-[1.35rem] font-black tabular-nums leading-tight tracking-tight text-[#1e1b4b] antialiased transition-colors duration-200 group-hover:text-[#5b61ff] sm:text-xl";
 
 /** ป้ายชั้น / meta ในการ์ดผังห้อง */
 export const dormRoomFloorPill =
@@ -62,4 +62,4 @@ export const dormRoomStatValue =
 
 /** ลิงก์ CTA ท้ายการ์ดรายการห้อง */
 export const dormRoomCardCta =
-  "mt-auto inline-flex items-center gap-1.5 border-t border-slate-200/60 pt-3 text-[11px] font-semibold leading-none tracking-wide text-[#0000BF] antialiased transition-[gap] duration-200 group-hover:gap-2";
+  "mt-auto inline-flex items-center gap-1.5 border-t border-white/60 pt-3 text-[11px] font-semibold leading-none tracking-wide text-[#5b61ff] antialiased transition-[gap] duration-200 group-hover:gap-2";

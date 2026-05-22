@@ -8,6 +8,14 @@ import { cn } from "@/lib/cn";
 import { ECOMMERCE_NAV_LINKS, deriveEcommerceSection } from "@/systems/ecommerce-store/ecommerce-nav";
 import { EcommerceStoreMobileDock } from "@/systems/ecommerce-store/components/EcommerceStoreMobileDock";
 import {
+  ecommerceGuideButtonClass,
+  ecommerceIconBadgeClass,
+  ecommerceModuleHeaderShellClass,
+  ecommerceNavItemActiveClass,
+  ecommerceNavItemBase,
+  ecommerceNavItemIdleClass,
+} from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
+import {
   IconClipboard,
   IconPackage,
   IconSettings,
@@ -23,9 +31,6 @@ const navIcons = {
   settings: IconSettings,
 } as const;
 
-const navItemBase =
-  "flex min-h-[44px] min-w-0 touch-manipulation select-none items-center justify-center gap-2 rounded-2xl px-3 text-sm font-semibold transition-colors active:opacity-90 sm:min-h-0 sm:w-auto sm:justify-center sm:px-3.5 sm:py-2";
-
 export function EcommerceStoreShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
   const section = deriveEcommerceSection(pathname);
@@ -33,27 +38,34 @@ export function EcommerceStoreShell({ children }: { children: React.ReactNode })
 
   return (
     <div className="max-w-full space-y-4 pb-28 sm:space-y-6 sm:pb-6">
-      <header className="app-surface rounded-[2rem] px-4 py-4 sm:rounded-[2.5rem] sm:px-6 sm:py-5 print:hidden">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+      <header className={cn(ecommerceModuleHeaderShellClass, "print:hidden")}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#8b87b8]">กลุ่ม 1 · 1 โทเคน/วัน</p>
-            <h1 className="font-black tracking-tight text-[#1e1b4b] text-xl sm:text-2xl">
-              E-Commerce Store Builder
-            </h1>
-            <p className="mt-1 text-sm text-[#66638c]">สร้างร้าน · จัดการสต๊อก · รับออเดอร์และสลิป</p>
+            <div className="flex items-center gap-3">
+              <div className={ecommerceIconBadgeClass}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5" aria-hidden>
+                  <path d="M3 9l9-6 9 6v11a1 1 0 01-1 1H4a1 1 0 01-1-1V9z" strokeLinejoin="round" />
+                  <path d="M9 22V12h6v10" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#8b87b8]">กลุ่ม 1 · 1 โทเคน/วัน</p>
+                <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">ร้านออนไลน์</h1>
+                <p className="mt-0.5 hidden text-xs font-medium text-[#66638c] sm:block">
+                  สร้างร้าน · จัดการสต๊อก · รับออเดอร์และสลิป
+                </p>
+              </div>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setGuideOpen(true)}
-            className="min-h-[40px] shrink-0 rounded-xl border border-white/60 bg-white/80 px-3 text-sm font-semibold text-[#4d47b6]"
-          >
+          <button type="button" onClick={() => setGuideOpen(true)} className={ecommerceGuideButtonClass}>
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 11v5M12 7h.01" strokeLinecap="round" />
+            </svg>
             คู่มือ
           </button>
         </div>
-        <nav
-          className="mt-4 hidden gap-2 sm:grid sm:grid-cols-5"
-          aria-label="เมนูร้านออนไลน์"
-        >
+        <nav className="mt-4 hidden gap-2 sm:grid sm:grid-cols-5" aria-label="เมนูร้านออนไลน์">
           {ECOMMERCE_NAV_LINKS.map((item) => {
             const active = section === item.section;
             const Icon = navIcons[item.section];
@@ -61,16 +73,10 @@ export function EcommerceStoreShell({ children }: { children: React.ReactNode })
               <Link
                 key={item.href}
                 href={item.href}
-                className={cn(
-                  navItemBase,
-                  "w-full",
-                  active
-                    ? "bg-gradient-to-br from-[#ede9ff] via-white to-[#ecebff] text-[#4d47b6] ring-1 ring-[#4d47b6]/20"
-                    : "app-btn-soft text-[#66638c]",
-                )}
+                className={cn(ecommerceNavItemBase, "w-full", active ? ecommerceNavItemActiveClass : ecommerceNavItemIdleClass)}
                 aria-current={active ? "page" : undefined}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className={cn("h-4 w-4 shrink-0", active ? "text-[#5b61ff]" : "text-slate-400")} />
                 {item.label}
               </Link>
             );

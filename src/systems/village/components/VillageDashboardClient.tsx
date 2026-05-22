@@ -230,7 +230,7 @@ export function VillageDashboardClient() {
                 <Link
                   key={`${card.href}-${card.title}`}
                   href={card.href}
-                  className={cn("block transition hover:opacity-95", isOddTail ? "col-span-2 sm:col-span-1" : undefined)}
+                  className={cn("block transition hover:opacity-95 active:scale-[0.99]", isOddTail ? "col-span-2 sm:col-span-1" : undefined)}
                 >
                   <VillageStatTile title={card.title} value={card.value} tone={card.tone} />
                 </Link>
@@ -245,7 +245,7 @@ export function VillageDashboardClient() {
               action={
                 <Link
                   href="/dashboard/village/fees"
-                  className="text-xs font-semibold text-[#0000BF] hover:underline"
+                  className="text-xs font-semibold text-[#5b61ff] hover:underline"
                 >
                   จัดการบิล →
                 </Link>
@@ -288,7 +288,7 @@ export function VillageDashboardClient() {
               action={
                 <Link
                   href="/dashboard/village/annual"
-                  className="text-xs font-semibold text-[#0000BF] hover:underline"
+                  className="text-xs font-semibold text-[#5b61ff] hover:underline"
                 >
                   ดูรายละเอียด →
                 </Link>
@@ -303,7 +303,7 @@ export function VillageDashboardClient() {
                   <div className="h-3 overflow-hidden rounded-full bg-slate-100 shadow-inner">
                     <div
                       className={cn(
-                        "h-full rounded-full bg-gradient-to-r from-[#0000BF]/80 to-[#4f6fff]",
+                        "h-full rounded-full bg-gradient-to-r from-[#5b61ff]/85 to-[#6a63ff]",
                         "transition-[width] duration-500",
                       )}
                       style={{ width: `${Math.min(100, data.ytd_collection_percent)}%` }}

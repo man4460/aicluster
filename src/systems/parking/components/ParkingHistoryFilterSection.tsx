@@ -24,7 +24,7 @@ function filterActiveCount(q: string, status: string, from: string, to: string):
 
 function FilterIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path d="M22 3H2l8 9.46V19l4 2v-6.54L22 3z" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -59,8 +59,8 @@ export function ParkingHistoryFilterSection({
               className={cn(
                 "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl border sm:hidden",
                 activeFilters > 0
-                  ? "border-[#4d47b6]/45 bg-[#ede9ff] text-[#4d47b6]"
-                  : "border-white/60 bg-white/80 text-[#66638c]",
+                  ? "border-[#5b61ff]/40 bg-[#eef0ff] text-[#5b61ff] ring-2 ring-[#5b61ff]/25"
+                  : "border-white/60 bg-white/80 text-[#4d47b6]",
               )}
               aria-label="เปิดตัวกรอง"
               aria-expanded={sheetOpen}
@@ -68,7 +68,7 @@ export function ParkingHistoryFilterSection({
             >
               <FilterIcon className="h-5 w-5" />
               {activeFilters > 0 ? (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[#4d47b6] px-1 text-[10px] font-bold leading-none text-white">
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[#5b61ff] px-1 text-[10px] font-bold leading-none text-white">
                   {activeFilters > 9 ? "9+" : activeFilters}
                 </span>
               ) : null}

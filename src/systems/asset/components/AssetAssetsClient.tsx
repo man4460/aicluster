@@ -22,6 +22,7 @@ import {
   IconRowEdit,
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
+import { assetFieldClass, assetListRowCardClass } from "@/systems/asset/asset-ui-tokens";
 import type {
   AssetCondition,
   AssetStatus,
@@ -78,8 +79,7 @@ type AssetForm = {
 const STATUS_OPTIONS: AssetStatus[] = ["AVAILABLE", "IN_USE", "BORROWED", "IN_REPAIR", "DISPOSED"];
 const CONDITION_OPTIONS: AssetCondition[] = ["GOOD", "FAIR", "POOR", "BROKEN"];
 
-const inputCls =
-  "w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2 text-sm text-[#2e2a58] shadow-inner focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30";
+const inputCls = assetFieldClass;
 
 function emptyForm(): AssetForm {
   return {
@@ -269,8 +269,8 @@ export function AssetAssetsClient() {
               className={cn(
                 "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border sm:hidden",
                 hasActiveFilter
-                  ? "border-[#4d47b6]/40 bg-[#ede9ff] text-[#4d47b6]"
-                  : "border-white/60 bg-white/80 text-[#66638c]",
+                  ? "border-[#5b61ff]/40 bg-white/80 text-[#5b61ff] ring-2 ring-[#5b61ff]/25"
+                  : "border-white/55 bg-white/75 text-[#5b61ff]",
               )}
               aria-label="เปิดตัวกรอง"
               aria-expanded={mobileFilterOpen}
@@ -278,7 +278,7 @@ export function AssetAssetsClient() {
             >
               <FilterIcon className="h-4 w-4" />
               {hasActiveFilter ? (
-                <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#4d47b6]" aria-hidden />
+                <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#5b61ff]" aria-hidden />
               ) : null}
             </button>
             <button
@@ -367,7 +367,7 @@ export function AssetAssetsClient() {
               onClick={() =>
                 setFilter({ status: "", condition: "", categoryId: "", departmentId: "", q: "" })
               }
-              className="text-xs font-semibold text-[#4d47b6]"
+              className="text-xs font-semibold text-[#5b61ff]"
             >
               ล้างตัวกรอง
             </button>
@@ -449,9 +449,12 @@ export function AssetAssetsClient() {
             ยังไม่พบทรัพย์สิน — กด "+ เพิ่มทรัพย์สิน" เพื่อเริ่มต้น
           </AppEmptyState>
         ) : (
-          <ul className="divide-y divide-white/60">
+          <ul className="space-y-2">
             {items.map((it) => (
-              <li key={it.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
+              <li
+                key={it.id}
+                className={cn(assetListRowCardClass, "flex flex-wrap items-start justify-between gap-3")}
+              >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-xs text-[#66638c]">{it.assetCode}</span>

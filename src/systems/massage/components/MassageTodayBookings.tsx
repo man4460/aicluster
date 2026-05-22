@@ -1,0 +1,57 @@
+import { prisma } from "@/lib/prisma";
+import { bangkokDayStartEnd } from "@/lib/massage/bangkok-day";
+import { getMassageDataScope } from "@/lib/trial/module-scopes";
+import { AppEmptyState, AppSectionHeader } from "@/components/app-templates";
+import { massageListRowCardClass, massageSectionFirstClass } from "@/systems/massage/components/massage-ui-tokens";
+import { MassageBookingStatusBadge } from "./MassageBookingStatusBadge";
+
+export async function MassageTodayBookings({ ownerId }: { ownerId: string }) {
+  const scope = await getMassageDataScope(ownerId);
+  const { start, end } = bangkokDayStartEnd();
+  const referenceNow = new Date();
+  const rows = await prisma.massageBooking.findMany({
+    where: {
+      ownerUserId: ownerId,
+      trialSessionId: scope.trialSessionId,
+      scheduledAt: { gte: start, lt: end },
+    },
+    orderBy: { scheduledAt: "asc" },
+  });
+
+  return (
+    <section className={massageSectionFirstClass} aria-label="คิววันนี้">
+      <AppSectionHeader tone="violet" title="คิววันนี้" description="เวลาไทย · สลับแท็บด้านบน" />
+      {rows.length === 0 ? (
+        <AppEmptyState tone="violet" className="py-8 text-sm">
+          ยังไม่มีคิววันนี้
+        </AppEmptyState>
+      ) : (
+        <ul className="space-y-2.5">
+          {rows.map((b) => (
+            <li
+              key={b.id}
+              className={`flex flex-wrap items-center justify-between gap-3 ${massageListRowCardClass}`}
+            >
+              <div className="min-w-0">
+                <p className="font-mono text-sm font-semibold leading-snug text-[#2e2a58]">{b.phone}</p>
+                <p className="mt-0.5 text-xs text-[#5f5a8a]">{b.customerName?.trim() || "—"}</p>
+                <p className="mt-1 text-xs tabular-nums text-[#8b87ad]">
+                  {b.scheduledAt.toLocaleTimeString("th-TH", {
+                    timeZone: "Asia/Bangkok",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+              <MassageBookingStatusBadge
+                status={b.status}
+                scheduledAt={b.scheduledAt}
+                referenceNow={referenceNow}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}

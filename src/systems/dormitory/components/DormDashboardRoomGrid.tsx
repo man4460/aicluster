@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { RoomBillingStatusBadge } from "@/systems/dormitory/components/RoomBillingStatusBadge";
 import type { RoomBillingUiStatus } from "@/systems/dormitory/lib/compute";
+import { dormFilterChipClass } from "@/systems/dormitory/dorm-ui-tokens";
 import {
   dormRoomCardDivider,
   dormRoomFieldLabel,
@@ -42,12 +43,7 @@ export function DormDashboardRoomGrid({ rooms }: { rooms: RoomGridItem[] }) {
   }, [filter, rooms]);
 
   const pillClass = (active: boolean) =>
-    cn(
-      "inline-flex min-h-[40px] items-center justify-center rounded-full px-3 py-1.5 text-xs font-bold transition",
-      active
-        ? "bg-[#ecebff] text-[#4338ca] ring-1 ring-[#4d47b6]/20"
-        : "bg-white text-[#66638c] ring-1 ring-slate-200/80 hover:bg-slate-50",
-    );
+    cn("inline-flex items-center justify-center px-3 py-1.5 text-xs font-bold", dormFilterChipClass(active));
 
   return (
     <div className="space-y-3">

@@ -4,16 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 import { DormDashboardRoomGrid } from "@/systems/dormitory/components/DormDashboardRoomGrid";
 import { DormEmptyDashed, DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
+import { DormStatCard } from "@/systems/dormitory/components/DormStatCard";
 import {
   buildRoomComputeInput,
   computeAllBalanceLines,
   overdueLines,
   roomBillingUiStatus,
 } from "@/systems/dormitory/lib/compute";
-import {
-  dormBtnPrimary,
-  dormBtnSecondary,
-} from "@/systems/dormitory/dorm-ui";
+import { dormBtnPrimary, dormBtnSecondary } from "@/systems/dormitory/dorm-ui";
+import { dormListRowCardWarnClass } from "@/systems/dormitory/dorm-ui-tokens";
 import { cn } from "@/lib/cn";
 
 export default async function DormitoryDashboardPage() {
@@ -35,6 +34,9 @@ export default async function DormitoryDashboardPage() {
   const allLines = rooms.flatMap((r) => computeAllBalanceLines(buildRoomComputeInput(r)));
   const overdue = overdueLines(allLines);
   const overdueRoomIds = new Set(overdue.map((o) => o.roomId));
+  const vacantCount = rooms.filter((r) => r.tenants.every((t) => t.status !== "ACTIVE")).length;
+  const occupiedCount = rooms.length - vacantCount;
+
   const roomsForGrid = rooms.map((r) => {
     const input = buildRoomComputeInput(r);
     const billing = roomBillingUiStatus(input);
@@ -53,6 +55,23 @@ export default async function DormitoryDashboardPage() {
 
   return (
     <DormPageStack>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <DormStatCard title="ห้องทั้งหมด" value={rooms.length} tone="slate" />
+        <DormStatCard title="มีผู้พัก" value={occupiedCount} tone="blue" subtitle={vacantCount > 0 ? `ว่าง ${vacantCount} ห้อง` : undefined} />
+        <DormStatCard
+          title="ค้างชำระงวดก่อน"
+          value={overdue.length}
+          tone={overdue.length > 0 ? "rose" : "green"}
+          subtitle={overdue.length > 0 ? "รายการที่ต้องติดตาม" : "ไม่มีค้างจากงวดเก่า"}
+        />
+        <DormStatCard
+          title="รายการค้างรวม"
+          value={overdue.reduce((s, o) => s + o.balance, 0).toLocaleString("th-TH", { maximumFractionDigits: 0 })}
+          tone="violet"
+          subtitle="บาท (ประมาณ)"
+        />
+      </div>
+
       <DormPanelCard
         title="ผังห้องพัก"
         description="คลิกห้องเพื่อมิเตอร์ แบ่งบิล และแนบสลิป — สถานะการเงินอิงงวดเดือนปัจจุบัน (เวลาไทย)"
@@ -86,14 +105,7 @@ export default async function DormitoryDashboardPage() {
           <>
             <ul className="grid list-none gap-2 md:hidden">
               {overdue.map((row) => (
-                <li
-                  key={`${row.tenantId}-${row.month}`}
-                  className="relative overflow-hidden rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 to-white p-3 shadow-sm ring-1 ring-amber-100/80"
-                >
-                  <div
-                    className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-amber-400/90 to-orange-300/80"
-                    aria-hidden
-                  />
+                <li key={`${row.tenantId}-${row.month}`} className={dormListRowCardWarnClass}>
                   <div className="flex items-start justify-between gap-2 pt-0.5">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-amber-950">{row.tenantName}</p>
@@ -107,7 +119,7 @@ export default async function DormitoryDashboardPage() {
                   </div>
                   <Link
                     href={`/dashboard/dormitory/rooms/${row.roomId}?month=${encodeURIComponent(row.month)}`}
-                    className="mt-2 flex min-h-[40px] items-center justify-center rounded-xl bg-amber-600/95 py-2 text-center text-xs font-bold text-white shadow-sm active:scale-[0.99]"
+                    className="mt-2 flex min-h-[40px] items-center justify-center rounded-xl bg-[#5b61ff] py-2 text-center text-xs font-bold text-white shadow-sm active:scale-[0.99]"
                   >
                     ดำเนินการ
                   </Link>

@@ -7,6 +7,11 @@ import { cn } from "@/lib/cn";
 import { ecommercePublicShopUrl } from "@/lib/ecommerce/constants";
 import { formatEcommerceBaht } from "@/lib/ecommerce/sales-period";
 import { bangkokDateKey } from "@/lib/time/bangkok";
+import { EcommerceStatCard } from "@/systems/ecommerce-store/components/EcommerceStatCard";
+import {
+  ecommerceFilterChipClass,
+  ecommerceHeroRevenueCardClass,
+} from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
 import { IconCopy } from "@/systems/ecommerce-store/components/EcommerceStoreIcons";
 
 type SalesPeriod = "today" | "month" | "year" | "custom";
@@ -33,14 +38,6 @@ const PERIOD_OPTIONS: { key: SalesPeriod; label: string }[] = [
   { key: "year", label: "ปีนี้" },
   { key: "custom", label: "ย้อนหลัง" },
 ];
-
-const periodChipClass = (active: boolean) =>
-  cn(
-    "min-h-[40px] shrink-0 rounded-xl border px-3 text-sm font-semibold transition-colors",
-    active
-      ? "border-[#5b61ff]/40 bg-[#5b61ff] text-white shadow-sm"
-      : "border-white/60 bg-white/70 text-[#4d47b6] hover:bg-white/90",
-  );
 
 export function EcommerceDashboardClient() {
   const [data, setData] = useState<Summary | null>(null);
@@ -148,7 +145,7 @@ export function EcommerceDashboardClient() {
           action={
             <Link
               href="/dashboard/ecommerce-store/orders"
-              className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-white/60 bg-white/80 px-0 text-sm font-semibold text-[#4d47b6] sm:min-w-0 sm:px-4"
+              className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-white/60 bg-white/80 px-0 text-sm font-semibold text-[#4d47b6] shadow-sm backdrop-blur-sm transition hover:bg-white/95 sm:min-w-0 sm:px-4"
               aria-label="ดูรายการออเดอร์"
             >
               <span className="hidden sm:inline">ดูออเดอร์</span>
@@ -164,7 +161,7 @@ export function EcommerceDashboardClient() {
             <button
               key={p.key}
               type="button"
-              className={periodChipClass(salesPeriod === p.key)}
+              className={ecommerceFilterChipClass(salesPeriod === p.key)}
               aria-pressed={salesPeriod === p.key}
               onClick={() => {
                 if (p.key === "custom") {
@@ -182,7 +179,7 @@ export function EcommerceDashboardClient() {
         </div>
 
         {salesPeriod === "custom" ? (
-          <div className="mt-3 flex flex-wrap items-end gap-2 rounded-2xl border border-white/55 bg-white/50 p-3">
+          <div className="mt-3 flex flex-wrap items-end gap-2 rounded-[2rem] border border-white/55 bg-white/50 p-3 backdrop-blur-sm">
             <label className="flex min-w-[8.5rem] flex-1 flex-col gap-1 text-xs font-semibold text-[#66638c]">
               ตั้งแต่
               <input
@@ -204,7 +201,7 @@ export function EcommerceDashboardClient() {
             <button
               type="button"
               onClick={() => void applyCustomRange()}
-              className="min-h-[40px] rounded-xl bg-[#5b61ff] px-4 text-sm font-black text-white shadow-sm"
+              className="min-h-[40px] rounded-xl border border-[#5b61ff]/30 bg-gradient-to-br from-[#5b61ff] to-[#6a63ff] px-4 text-sm font-black text-white shadow-sm"
             >
               ดูยอด
             </button>
@@ -215,24 +212,33 @@ export function EcommerceDashboardClient() {
           <p className="mt-3 text-sm font-semibold text-rose-700">{salesError}</p>
         ) : null}
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="col-span-2 rounded-[1.25rem] border border-white/55 bg-gradient-to-br from-white/70 via-white/55 to-violet-50/80 px-4 py-4 ring-1 ring-[#5b61ff]/10 sm:col-span-1">
-            <p className="text-xs font-semibold text-[#8b87b8]">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4">
+          <div className={ecommerceHeroRevenueCardClass}>
+            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-700/70">
               {sales?.label ?? "—"}
               {salesRangeHint ? (
-                <span className="mt-0.5 block font-medium text-[#66638c]">{salesRangeHint}</span>
+                <span className="mt-0.5 block font-medium normal-case tracking-normal text-[#66638c]">
+                  {salesRangeHint}
+                </span>
               ) : null}
             </p>
             <p
-              className="mt-2 font-black text-3xl tracking-tight text-[#1e1b4b] tabular-nums sm:text-4xl"
+              className="mt-2 text-3xl font-black tracking-tight text-[#1e1b4b] tabular-nums sm:text-4xl"
               aria-busy={salesLoading}
             >
               {salesLoading ? "…" : `฿${formatEcommerceBaht(sales?.totalBaht ?? 0)}`}
             </p>
           </div>
-          <StatCard
-            label="จำนวนออเดอร์"
+          <EcommerceStatCard
+            title="จำนวนออเดอร์"
             value={salesLoading ? "—" : (sales?.orderCount ?? 0)}
+            tone="blue"
+            icon={
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                <rect x="5" y="4" width="14" height="17" rx="2" />
+                <path d="M8 12h8M8 16h5" strokeLinecap="round" />
+              </svg>
+            }
           />
         </div>
       </AppDashboardSection>
@@ -240,7 +246,7 @@ export function EcommerceDashboardClient() {
       <AppDashboardSection className="appDashboardSectionVioletClass">
         <AppSectionHeader
           title="ภาพรวมร้าน"
-          description="ลิงก์หน้าร้อง · ออเดอร์รอตรวจ · สต๊อกใกล้หมด"
+          description="ลิงก์หน้าร้าน · ออเดอร์รอตรวจ · สต๊อกใกล้หมด"
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           action={
@@ -248,7 +254,7 @@ export function EcommerceDashboardClient() {
               <button
                 type="button"
                 onClick={() => void copyLink()}
-                className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-white/60 bg-white/80 text-[#4d47b6] sm:min-w-0 sm:gap-2 sm:px-4"
+                className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-white/60 bg-white/80 text-[#4d47b6] shadow-sm backdrop-blur-sm transition hover:bg-white/95 sm:min-w-0 sm:gap-2 sm:px-4"
                 aria-label="คัดลอกลิงก์ร้าน"
                 title="คัดลอกลิงก์"
               >
@@ -259,13 +265,48 @@ export function EcommerceDashboardClient() {
           }
         />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          <StatCard label="สินค้า" value={data?.productCount ?? "—"} />
-          <StatCard label="รอตรวจสลิป" value={data?.pendingOrders ?? "—"} tone="warn" />
-          <StatCard label="ใกล้หมดสต๊อก" value={data?.lowStockCount ?? "—"} tone="warn" />
-          <StatCard
-            label="สถานะร้าน"
+          <EcommerceStatCard
+            title="สินค้า"
+            value={data?.productCount ?? "—"}
+            tone="slate"
+            icon={
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" strokeLinejoin="round" />
+              </svg>
+            }
+          />
+          <EcommerceStatCard
+            title="รอตรวจสลิป"
+            value={data?.pendingOrders ?? "—"}
+            tone="amber"
+            icon={
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                <path d="M12 9v4M12 17h.01" strokeLinecap="round" />
+                <circle cx="12" cy="12" r="9" />
+              </svg>
+            }
+          />
+          <EcommerceStatCard
+            title="ใกล้หมดสต๊อก"
+            value={data?.lowStockCount ?? "—"}
+            tone="rose"
+            icon={
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" strokeLinejoin="round" />
+              </svg>
+            }
+          />
+          <EcommerceStatCard
+            title="สถานะร้าน"
             value={data?.store.merchantPaused ? "ปิดชั่วคราว" : "เปิด"}
+            tone={data?.store.merchantPaused ? "amber" : "green"}
             className="col-span-2 sm:col-span-1"
+            icon={
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                <path d="M22 11.08V12a10 10 0 11-5.93-9.14" strokeLinecap="round" />
+                <path d="M22 4L12 14.01l-3-3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            }
           />
         </div>
         {shopPath ? (
@@ -277,27 +318,6 @@ export function EcommerceDashboardClient() {
           </p>
         ) : null}
       </AppDashboardSection>
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  tone,
-  className,
-}: {
-  label: string;
-  value: string | number;
-  tone?: "warn";
-  className?: string;
-}) {
-  return (
-    <div
-      className={`rounded-2xl border border-white/55 bg-white/60 px-4 py-3 ${tone === "warn" ? "ring-1 ring-amber-200/80" : ""} ${className ?? ""}`}
-    >
-      <p className="text-xs font-semibold text-[#8b87b8]">{label}</p>
-      <p className="mt-1 font-black text-2xl tracking-tight text-[#1e1b4b] tabular-nums">{value}</p>
     </div>
   );
 }

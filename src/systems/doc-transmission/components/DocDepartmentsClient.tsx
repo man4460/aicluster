@@ -8,6 +8,13 @@ import {
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import {
+  assetRowEditIconButtonClass,
+  assetRowRemoveIconButtonClass,
+  IconRowEdit,
+  IconRowRemove,
+} from "@/systems/asset/components/AssetRowActionIcons";
+import { docFieldClass, docListRowCardClass } from "@/systems/doc-transmission/doc-ui-tokens";
 
 type Department = {
   id: number;
@@ -32,8 +39,7 @@ type FormValues = {
   sortOrder: number;
 };
 
-const inputClass =
-  "w-full rounded-xl border border-[#dcd8f0] bg-white/85 px-3 py-2 text-sm text-[#2e2a58] outline-none focus:border-[#4d47b6] focus:ring-2 focus:ring-[#4d47b6]/20";
+const inputClass = docFieldClass;
 
 function blank(): FormValues {
   return {
@@ -134,13 +140,14 @@ export function DocDepartmentsClient({ initial }: { initial: Department[] }) {
             <article
               key={d.id}
               className={cn(
-                "flex flex-wrap items-center gap-2 rounded-2xl border bg-white/70 p-3 ring-1 ring-white/55",
-                d.isActive ? "border-white/60" : "border-rose-200 opacity-60",
+                docListRowCardClass,
+                "flex flex-wrap items-center gap-2",
+                !d.isActive && "border-rose-200/80 opacity-60",
               )}
             >
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-[#2e2a58]">
-                  <span className="font-mono text-[#4d47b6]">{d.code}</span> · {d.name}
+                  <span className="font-mono text-[#5b61ff]">{d.code}</span> · {d.name}
                 </p>
                 <p className="text-[11px] text-[#5f5a8a]">
                   {d.isInternal ? "ภายใน" : "ภายนอก"}
@@ -149,7 +156,7 @@ export function DocDepartmentsClient({ initial }: { initial: Department[] }) {
                   {d.email ? ` · ${d.email}` : ""}
                 </p>
               </div>
-              <div className="flex shrink-0 gap-1">
+              <div className="flex shrink-0 items-center gap-1">
                 <button
                   type="button"
                   aria-label={`แก้ไข ${d.name}`}
@@ -167,9 +174,9 @@ export function DocDepartmentsClient({ initial }: { initial: Department[] }) {
                     });
                     setOpen(true);
                   }}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/60 bg-white/80 text-[#4d47b6]"
+                  className={assetRowEditIconButtonClass}
                 >
-                  <IconEdit />
+                  <IconRowEdit className="h-4 w-4" />
                 </button>
                 {d.isActive ? (
                   <button
@@ -177,9 +184,9 @@ export function DocDepartmentsClient({ initial }: { initial: Department[] }) {
                     aria-label={`ปิดใช้งาน ${d.name}`}
                     title="ปิดใช้งาน"
                     onClick={() => void handleDelete(d)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-rose-600"
+                    className={assetRowRemoveIconButtonClass}
                   >
-                    <IconTrash />
+                    <IconRowRemove className="h-4 w-4" />
                   </button>
                 ) : null}
               </div>
@@ -290,18 +297,3 @@ export function DocDepartmentsClient({ initial }: { initial: Department[] }) {
   );
 }
 
-function IconEdit() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-      <path d="m12 20 9-9-3-3-9 9zM3 21h6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconTrash() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}

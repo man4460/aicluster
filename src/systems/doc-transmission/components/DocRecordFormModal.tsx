@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import { docFieldClass } from "@/systems/doc-transmission/doc-ui-tokens";
 import {
   DOC_PRIORITY_LIST,
   DOC_STATUS_LIST,
@@ -32,8 +33,7 @@ export type DocRecordFormValues = {
 
 export type DocRecordFormSubmit = (values: DocRecordFormValues) => Promise<void> | void;
 
-const inputClass =
-  "w-full rounded-xl border border-[#dcd8f0] bg-white/85 px-3 py-2 text-sm text-[#2e2a58] outline-none ring-0 transition focus:border-[#4d47b6] focus:ring-2 focus:ring-[#4d47b6]/20";
+const inputClass = docFieldClass;
 const labelClass = "text-[11px] font-bold uppercase tracking-wider text-[#66638c]";
 
 export function emptyFormValues(category: DocCategoryConfig["key"]): DocRecordFormValues {
@@ -313,7 +313,7 @@ export function DocRecordFormModal({
             />
             <button
               type="button"
-              className="app-btn-soft min-h-[40px] rounded-xl border border-[#dcd8f0] px-3 py-2 text-sm font-semibold text-[#4d47b6] hover:bg-white"
+              className="app-btn-soft min-h-[40px] rounded-xl border border-white/55 bg-white/75 px-3 py-2 text-sm font-semibold text-[#5b61ff] hover:bg-white/90"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
             >
@@ -325,7 +325,7 @@ export function DocRecordFormModal({
                   href={form.attachmentUrl ?? "#"}
                   target="_blank"
                   rel="noreferrer"
-                  className="block truncate font-semibold text-[#4d47b6] underline-offset-2 hover:underline"
+                  className="block truncate font-semibold text-[#5b61ff] underline-offset-2 hover:underline"
                 >
                   {form.attachmentName}
                 </a>

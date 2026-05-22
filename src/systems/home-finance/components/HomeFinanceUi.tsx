@@ -4,16 +4,19 @@ import type { ReactNode } from "react";
 import { AppEmptyState, AppSectionHeader } from "@/components/app-templates";
 import { appDashboardHistoryListShellClass } from "@/components/app-templates/dashboard-tokens";
 import { cn } from "@/lib/cn";
+import {
+  hfFilterCardClass,
+  hfHeroCtaClass,
+  hfListRowCardClass,
+  hfSectionClass,
+  hfSectionTightClass,
+} from "@/systems/home-finance/components/home-finance-ui-tokens";
 
 /** พื้นหลังรายการประวัติ (มือถือ/เดสก์ท็อป) — ค่าเดียวกับ `appDashboardHistoryListShellClass` */
 export const hfHistoryListShellClass = appDashboardHistoryListShellClass;
 
 /** การ์ดหน้าหลัก (หมวด / บิล / รถ / แจ้งเตือน) */
-export const hfSectionClass =
-  "space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
-
-export const hfSectionTightClass =
-  "space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
+export { hfSectionClass, hfSectionTightClass };
 
 export function HomeFinancePageSection({
   children,
@@ -36,7 +39,7 @@ export function HomeFinanceSectionHeader(props: {
   className?: string;
   actionWrapClassName?: string;
 }) {
-  return <AppSectionHeader {...props} tone="slate" />;
+  return <AppSectionHeader {...props} tone="violet" />;
 }
 
 /** กล่องฟอร์มย่อย (พื้นหลังอ่อน) */
@@ -92,12 +95,7 @@ export function HomeFinanceEmptyState({ children }: { children: ReactNode }) {
 /** แถวรายการ: เนื้อหาซ้าย + ปุ่มขวา (บิล / รถ / แจ้งเตือน) */
 export function HomeFinanceEntityRow({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div
-      className={cn(
-        "flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm",
-        className,
-      )}
-    >
+    <div className={cn("flex items-center justify-between gap-3", hfListRowCardClass, className)}>
       {children}
     </div>
   );
@@ -248,7 +246,7 @@ export function HomeFinanceToolbarButton({ className, ...props }: React.Componen
     <button
       type="button"
       className={cn(
-        "inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white touch-manipulation hover:opacity-95 sm:min-h-0",
+        "inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-[#5b61ff]/30 bg-gradient-to-br from-[#5b61ff] to-[#6a63ff] px-4 py-2.5 text-sm font-black text-white shadow-sm touch-manipulation transition active:scale-[0.98] hover:brightness-[1.03] sm:min-h-0",
         className,
       )}
       {...props}
@@ -331,13 +329,13 @@ export function HomeFinanceHeroCta({
   onAddClick: () => void;
 }) {
   return (
-    <div className="rounded-2xl border-2 border-[#0000BF]/25 bg-gradient-to-br from-[#f4f4ff] to-white p-4 shadow-md sm:p-5">
+    <div className={hfHeroCtaClass}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-center text-sm font-medium text-slate-800 sm:text-left">{hint}</p>
+        <p className="text-center text-sm font-semibold text-[#4d47b6] sm:text-left">{hint}</p>
         <button
           type="button"
           onClick={onAddClick}
-          className="h-12 w-full shrink-0 rounded-xl bg-[#0000BF] px-6 text-base font-semibold text-white shadow-sm hover:bg-[#0000a6] sm:h-11 sm:w-auto sm:min-w-[11rem] sm:text-sm"
+          className="flex h-12 w-full shrink-0 items-center justify-center rounded-2xl border border-[#5b61ff]/30 bg-gradient-to-br from-[#5b61ff] to-[#6a63ff] px-6 text-base font-black text-white shadow-[0_14px_30px_-10px_rgba(91,97,255,0.55)] transition active:scale-[0.98] sm:h-11 sm:w-auto sm:min-w-[11rem] sm:text-sm"
           suppressHydrationWarning
         >
           {buttonLabel}
@@ -349,9 +347,7 @@ export function HomeFinanceHeroCta({
 
 /** การ์ดกรองประวัติ */
 export function HomeFinanceFilterCard({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <div className={cn("rounded-2xl border border-slate-200 bg-white p-4 shadow-sm", className)}>{children}</div>
-  );
+  return <div className={cn(hfFilterCardClass, className)}>{children}</div>;
 }
 
 /** พื้นหลังโมดัล */

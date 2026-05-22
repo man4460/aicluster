@@ -8,6 +8,7 @@ import {
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import { assetFieldClass, assetListRowCardClass } from "@/systems/asset/asset-ui-tokens";
 import {
   ASSET_TRANSACTION_TYPE_EMOJI,
   ASSET_TRANSACTION_TYPE_LABEL,
@@ -46,8 +47,7 @@ type TxRow = {
 
 const TX_TYPES: AssetTransactionType[] = ["ASSIGN", "BORROW", "RETURN", "TRANSFER"];
 
-const inputCls =
-  "w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2 text-sm text-[#2e2a58] shadow-inner focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30";
+const inputCls = assetFieldClass;
 
 function todayYmd(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -167,7 +167,7 @@ export function AssetTransactionsClient() {
             key={t}
             type="button"
             onClick={() => startCreate(t)}
-            className="flex min-h-[52px] items-center justify-center gap-2 rounded-2xl border border-white/55 bg-gradient-to-br from-white/65 to-[#ede9ff]/55 px-3 py-2 text-sm font-bold text-[#2e2a58] shadow-[0_10px_24px_-18px_rgba(76,70,178,0.55)] transition hover:from-white/85 hover:to-[#ede9ff]/85"
+            className="flex min-h-[52px] items-center justify-center gap-2 rounded-[2rem] border border-white/60 bg-white/55 px-3 py-2 text-sm font-bold text-[#5b61ff] shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/70"
           >
             <span aria-hidden>{ASSET_TRANSACTION_TYPE_EMOJI[t]}</span>
             <span>{ASSET_TRANSACTION_TYPE_LABEL[t]}</span>
@@ -181,9 +181,9 @@ export function AssetTransactionsClient() {
         ) : items.length === 0 ? (
           <AppEmptyState>ยังไม่มีรายการเคลื่อนไหว — กดปุ่มด้านบนเพื่อสร้าง</AppEmptyState>
         ) : (
-          <ul className="divide-y divide-white/60">
+          <ul className="space-y-2">
             {items.map((it) => (
-              <li key={it.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
+              <li key={it.id} className={cn(assetListRowCardClass, "flex flex-wrap items-start justify-between gap-3")}>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-xs text-[#66638c]">{it.transactionCode}</span>

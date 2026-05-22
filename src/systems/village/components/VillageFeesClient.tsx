@@ -139,18 +139,18 @@ function VillageFeeRowCard({
   return (
     <article
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-[1.4rem] p-3 transition",
+        "relative flex flex-col overflow-hidden rounded-[2rem] p-3 transition",
         villageGlassCard,
-        "hover:border-white/80 hover:shadow-[0_22px_44px_-24px_rgba(79,70,229,0.35)]",
+        "hover:-translate-y-0.5 hover:border-white/80 hover:shadow-[0_22px_44px_-24px_rgba(79,70,229,0.35)]",
       )}
     >
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#818cf8] via-[#c4b5fd] to-[#7dd3fc]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#5b61ff]/80 via-[#c4b5fd]/70 to-[#5b61ff]/50"
         aria-hidden
       />
       <div className="flex items-start justify-between gap-2 pt-0.5">
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#4d47b6]/12 to-[#6366f1]/8 text-[#4338ca] shadow-inner">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#5b61ff]/15 to-[#6a63ff]/10 text-[#5b61ff] shadow-inner">
             <IconHome className="h-5 w-5" />
           </span>
           <div className="min-w-0">

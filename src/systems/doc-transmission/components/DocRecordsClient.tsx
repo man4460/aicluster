@@ -10,6 +10,13 @@ import {
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
+  assetRowEditIconButtonClass,
+  assetRowRemoveIconButtonClass,
+  IconRowEdit,
+  IconRowRemove,
+} from "@/systems/asset/components/AssetRowActionIcons";
+import { docEmptyDashedClass, docFieldClass, docListRowCardClass } from "@/systems/doc-transmission/doc-ui-tokens";
+import {
   DocRecordFormModal,
   emptyFormValues,
   type DocRecordFormValues,
@@ -47,8 +54,7 @@ type DocRecordRow = {
   note: string | null;
 };
 
-const inputClass =
-  "min-h-[40px] w-full rounded-xl border border-[#dcd8f0] bg-white/85 px-3 py-2 text-sm text-[#2e2a58] outline-none transition focus:border-[#4d47b6] focus:ring-2 focus:ring-[#4d47b6]/20";
+const inputClass = docFieldClass;
 
 export function DocRecordsClient({
   categorySlug,
@@ -250,12 +256,13 @@ export function DocRecordsClient({
                 aria-label="เปิดตัวกรอง"
                 onClick={() => setFilterOpen((v) => !v)}
                 className={cn(
-                  "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-[#dcd8f0] bg-white/80 px-2.5 text-[#4d47b6] transition hover:bg-[#f4f3ff] sm:hidden",
+                  "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-white/55 bg-white/75 px-2.5 text-[#5b61ff] transition hover:bg-white/90 sm:hidden",
+                  activeFilterCount > 0 && "ring-2 ring-[#5b61ff]/25",
                 )}
               >
                 <IconFilter />
                 {activeFilterCount > 0 ? (
-                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#4d47b6] px-1 text-[10px] font-bold text-white">
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#5b61ff] px-1 text-[10px] font-bold text-white">
                     {activeFilterCount}
                   </span>
                 ) : null}
@@ -355,7 +362,7 @@ export function DocRecordsClient({
 
         <div className="mt-4 space-y-2">
           {loading ? (
-            <div className="rounded-2xl border border-dashed border-[#d8d6ec] bg-[#faf9ff] p-6 text-center text-sm text-[#66638c]">
+            <div className={docEmptyDashedClass}>
               กำลังโหลด…
             </div>
           ) : items.length === 0 ? (
@@ -369,13 +376,13 @@ export function DocRecordsClient({
               return (
                 <article
                   key={r.id}
-                  className="flex flex-col gap-2 rounded-2xl border border-white/60 bg-white/80 p-3 ring-1 ring-white/55 sm:flex-row sm:items-center sm:gap-4 sm:p-4"
+                  className={cn(docListRowCardClass, "flex flex-col sm:flex-row sm:items-center sm:gap-4")}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                       <Link
                         href={`/dashboard/doc-transmission/records/${category.slug}/${r.id}`}
-                        className="truncate text-sm font-semibold text-[#2e2a58] hover:text-[#4d47b6] sm:text-base"
+                        className="truncate text-sm font-semibold text-[#2e2a58] hover:text-[#5b61ff] sm:text-base"
                       >
                         {r.subject}
                       </Link>
@@ -408,7 +415,7 @@ export function DocRecordsClient({
                         href={r.attachmentUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-1 inline-flex max-w-full items-center gap-1 truncate text-[11px] font-semibold text-[#4d47b6] underline decoration-[#c7c3ea] underline-offset-2 hover:text-[#3730a3]"
+                        className="mt-1 inline-flex max-w-full items-center gap-1 truncate text-[11px] font-semibold text-[#5b61ff] underline decoration-[#c7c3ea] underline-offset-2 hover:text-[#3730a3]"
                         aria-label={`เปิดไฟล์แนบ ${r.attachmentName ?? "PDF"} ในแท็บใหม่`}
                       >
                         <IconPaperclip /> {r.attachmentName ?? "เปิดไฟล์แนบ (PDF)"}
@@ -435,7 +442,7 @@ export function DocRecordsClient({
                       href={`/dashboard/doc-transmission/records/${category.slug}/${r.id}`}
                       aria-label="เปิดรายละเอียด"
                       title="เปิดรายละเอียด"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/60 bg-white/80 text-[#4d47b6] ring-1 ring-white/55 hover:bg-white"
+                      className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-white/60 bg-white/80 text-[#5b61ff] ring-1 ring-white/55 hover:bg-white"
                     >
                       <IconArrowRight />
                     </Link>
@@ -444,18 +451,18 @@ export function DocRecordsClient({
                       aria-label={`แก้ไข ${r.subject}`}
                       title="แก้ไข"
                       onClick={() => handleEdit(r)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/60 bg-white/80 text-[#4d47b6] ring-1 ring-white/55 hover:bg-white"
+                      className={assetRowEditIconButtonClass}
                     >
-                      <IconEdit />
+                      <IconRowEdit className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
                       aria-label={`ลบ ${r.subject}`}
                       title="ลบ"
                       onClick={() => void handleDelete(r)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100"
+                      className={assetRowRemoveIconButtonClass}
                     >
-                      <IconTrash />
+                      <IconRowRemove className="h-4 w-4" />
                     </button>
                   </div>
                 </article>
@@ -519,18 +526,3 @@ function IconArrowRight() {
   );
 }
 
-function IconEdit() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-      <path d="m12 20 9-9-3-3-9 9zM3 21h6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconTrash() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}

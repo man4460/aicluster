@@ -5,23 +5,16 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { AppUsageGuideModal } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
-import { parkingValetHeaderShellClass } from "@/systems/parking/parking-valet-ui";
-
-/** เทียบ CarWashDashboard — dock มือถือ + gradient เดียวกับคาร์แคร์ */
-const dockShellClass = cn(
-  "fixed inset-x-4 z-40 overflow-hidden rounded-[2.5rem] border border-white/50 p-2 md:hidden print:hidden",
-  "bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))] bg-gradient-to-br from-white/55 via-white/40 to-indigo-50/30",
-  "shadow-[0_24px_55px_-18px_rgba(30,27,75,0.38)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
-);
-
-function dockLinkClass(active: boolean) {
-  return cn(
-    "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-center transition-all active:scale-90",
-    active
-      ? "bg-white/80 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/20 backdrop-blur-sm"
-      : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
-  );
-}
+import {
+  parkingDockItemActiveClass,
+  parkingDockItemIdleClass,
+  parkingIconBadgeClass,
+  parkingMobileDockShellClass,
+  parkingModuleHeaderShellClass,
+  parkingNavItemActiveClass,
+  parkingNavItemBase,
+  parkingNavItemIdleClass,
+} from "@/systems/parking/parking-ui-tokens";
 
 function IconHome({ className }: { className?: string }) {
   return (
@@ -127,13 +120,13 @@ export function ParkingValetShell({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex min-h-0 flex-1 flex-col gap-4 pb-20 sm:gap-6 md:pb-0">
-        <div className={parkingValetHeaderShellClass}>
+      <div className="flex min-h-0 flex-1 flex-col gap-4 pb-24 sm:gap-6 sm:pb-6">
+        <div className={parkingModuleHeaderShellClass}>
           <header>
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5b61ff] to-[#f06dc8] text-white shadow-lg shadow-indigo-100">
+                  <div className={parkingIconBadgeClass}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5" aria-hidden>
                       <path d="M3 14h2l2-3h10l2 3h2" strokeLinecap="round" strokeLinejoin="round" />
                       <circle cx="7" cy="17" r="2" />
@@ -142,50 +135,40 @@ export function ParkingValetShell({
                     </svg>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">โมดูลจอดรถ</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">โมดูลจอดรถ</p>
                     <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">บริการรับฝากจอดรถ</h1>
-                    <p className="mt-0.5 truncate text-xs font-bold text-slate-500">{siteName}</p>
+                    <p className="mt-0.5 truncate text-xs font-semibold text-[#66638c]">{siteName}</p>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  suppressHydrationWarning
-                  onClick={() => setGuideOpen(true)}
-                  className="flex h-10 items-center gap-2 rounded-2xl border border-white/60 bg-white/45 px-4 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-95"
-                  aria-label="เปิดคู่มือการใช้งาน"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
-                    <circle cx="12" cy="17" r="1" />
-                  </svg>
-                  <span className="hidden sm:inline">คู่มือ</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                suppressHydrationWarning
+                onClick={() => setGuideOpen(true)}
+                className="flex h-10 min-h-[40px] items-center gap-2 rounded-2xl border border-white/60 bg-white/55 px-3 text-sm font-semibold text-[#4d47b6] shadow-sm backdrop-blur-md transition hover:bg-white/75 sm:px-4"
+                aria-label="เปิดคู่มือการใช้งาน"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
+                  <circle cx="12" cy="17" r="1" />
+                </svg>
+                <span className="hidden sm:inline">คู่มือ</span>
+              </button>
             </div>
           </header>
 
-          <nav
-            aria-label="เมนูโมดูลที่จอดรถ"
-            className="mt-5 hidden border-t border-white/40 pt-5 md:block print:hidden"
-          >
-            <ul className="flex gap-1">
+          <nav aria-label="เมนูโมดูลรับฝากจอดรถ" className="mt-5 hidden border-t border-white/50 pt-5 md:block">
+            <ul className="grid grid-cols-4 gap-1.5">
               {NAV.map((item) => {
                 const active = navActive(pathname, item.href);
                 const Icon = item.icon;
                 return (
-                  <li key={item.href} className="min-w-0 flex-1">
+                  <li key={item.href} className="min-w-0">
                     <Link
                       href={item.href}
                       aria-current={active ? "page" : undefined}
-                      className={cn(
-                        "flex w-full min-h-[48px] items-center justify-center gap-2 rounded-xl px-2 py-3 text-center text-sm font-black transition-all",
-                        active
-                          ? "bg-white/75 text-[#5b61ff] shadow-md ring-1 ring-white/80 backdrop-blur-sm"
-                          : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
-                      )}
+                      className={cn(parkingNavItemBase, active ? parkingNavItemActiveClass : parkingNavItemIdleClass)}
                     >
                       <Icon className={cn("h-4 w-4 shrink-0", active ? "text-[#5b61ff]" : "text-slate-400")} />
                       <span className="truncate">{item.label}</span>
@@ -200,7 +183,7 @@ export function ParkingValetShell({
         <div className="min-h-0 min-w-0 flex-1">{children}</div>
       </div>
 
-      <nav className={dockShellClass} aria-label="เมนูล่างที่จอดรถ">
+      <nav className={parkingMobileDockShellClass} aria-label="เมนูล่างรับฝากจอดรถ">
         <ul className="grid grid-cols-4 gap-1">
           {NAV.map((item) => {
             const active = navActive(pathname, item.href);
@@ -210,13 +193,14 @@ export function ParkingValetShell({
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={dockLinkClass(active)}
+                  className={cn(
+                    "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1 text-center transition-all active:scale-90",
+                    active ? parkingDockItemActiveClass : parkingDockItemIdleClass,
+                  )}
                   title={item.label}
                 >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">
-                    {item.label}
-                  </span>
+                  <Icon className={cn("h-5 w-5 shrink-0", active ? "text-[#5b61ff]" : "text-slate-400")} />
+                  <span className="max-w-full truncate px-0.5 text-[9px] font-black leading-none">{item.label}</span>
                 </Link>
               </li>
             );

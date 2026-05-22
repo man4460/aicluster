@@ -262,13 +262,17 @@ export function DashboardShell({
   /** หน้าพนักงานจาก QR — ไม่ใช้แถบแดชบอร์ดและ sidebar */
   const barberStaffKiosk = pathname === "/dashboard/barber/staff";
   const laundryStaffKiosk = pathname === "/dashboard/laundry/staff";
-  const moduleStaffKiosk = barberStaffKiosk || laundryStaffKiosk;
-  /** โมดูลร้านตัดผม / ซักผ้าบนมือถือ — ลด padding แนวนอกซ้ำกับ PageContainer */
+  const massageStaffKiosk = pathname === "/dashboard/massage/staff";
+  const moduleStaffKiosk = barberStaffKiosk || laundryStaffKiosk || massageStaffKiosk;
+  /** โมดูลร้านตัดผม / ซักผ้า / นวด บนมือถือ — ลด padding แนวนอกซ้ำกับ PageContainer */
   const barberDashboardCompact =
     !moduleStaffKiosk && (pathname === "/dashboard/barber" || pathname.startsWith("/dashboard/barber/"));
   const laundryDashboardCompact =
     !moduleStaffKiosk && (pathname === "/dashboard/laundry" || pathname.startsWith("/dashboard/laundry/"));
-  const moduleDashboardCompact = barberDashboardCompact || laundryDashboardCompact;
+  const massageDashboardCompact =
+    !moduleStaffKiosk && (pathname === "/dashboard/massage" || pathname.startsWith("/dashboard/massage/"));
+  const moduleDashboardCompact =
+    barberDashboardCompact || laundryDashboardCompact || massageDashboardCompact;
   const [drawerOpen, setDrawerOpen] = useState(false);
   /** เดสก์ท็อป: ซ่อน sidebar เพื่อให้พื้นที่เนื้อหากว้างขึ้น — โหลดจาก localStorage หลัง mount */
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

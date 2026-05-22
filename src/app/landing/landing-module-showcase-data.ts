@@ -19,6 +19,12 @@ export const LANDING_FREE_MODULE_SHOWCASE: LandingModuleShowcaseItem[] = [
       "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=900&q=78",
   },
   {
+    slug: "appointment-queue",
+    blurb: "จองเวลาล่วงหน้า มัดจำ บอร์ดคิว",
+    coverSrc:
+      "https://images.unsplash.com/photo-1506784365847-bbad939e9335?auto=format&fit=crop&w=900&q=78",
+  },
+  {
     slug: "school-bank",
     blurb: "บัญชีออม ฝาก–ถอน โรงเรียน",
     coverSrc:
@@ -116,6 +122,12 @@ export const LANDING_DAILY_MODULE_SHOWCASE: LandingModuleShowcaseItem[] = [
     blurb: "ลานล้าง แพ็กเกจ สมาชิก",
     coverSrc:
       "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?auto=format&fit=crop&w=900&q=78",
+  },
+  {
+    slug: "massage",
+    blurb: "คิวจอง walk-in แพ็กเกจ QR",
+    coverSrc:
+      "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=900&q=78",
   },
   {
     slug: "laundry",

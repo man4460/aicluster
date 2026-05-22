@@ -9,8 +9,11 @@ import {
   AppSectionHeader,
   useAppImageLightbox,
 } from "@/components/app-templates";
-import { cn } from "@/lib/cn";
 import { ECOMMERCE_ORDER_STATUS_LABELS } from "@/lib/ecommerce/constants";
+import {
+  ecommerceFilterChipClass,
+  ecommerceListRowCardClass,
+} from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
 
 type Order = {
   id: string;
@@ -80,12 +83,7 @@ export function EcommerceOrdersClient() {
             key={f.key}
             type="button"
             onClick={() => setFilter(f.key)}
-            className={cn(
-              "shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition",
-              filter === f.key
-                ? "bg-[#4d47b6] text-white shadow-md"
-                : "border border-white/60 bg-white/70 text-[#66638c]",
-            )}
+            className={ecommerceFilterChipClass(filter === f.key)}
           >
             {f.label}
           </button>
@@ -98,7 +96,7 @@ export function EcommerceOrdersClient() {
           {filtered.map((o) => {
             const next = NEXT_STATUS[o.status];
             return (
-              <li key={o.id} className="rounded-2xl border border-white/60 bg-white/75 p-4">
+              <li key={o.id} className={ecommerceListRowCardClass}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="font-bold text-[#1e1b4b]">{o.referenceCode}</p>

@@ -8,6 +8,7 @@ import {
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import { mrListRowCardClass } from "@/systems/media-registry/components/media-registry-ui-tokens";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { MEDIA_REGISTRY_BORROW_STATUS } from "@/systems/media-registry/lib/constants";
 
@@ -28,6 +29,14 @@ type BorrowRow = {
 
 const inputCls =
   "w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2 text-sm text-[#2e2a58] shadow-inner focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30";
+
+function IconPlus({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 function dayKeyFromIso(iso: string): string {
   try {
@@ -150,9 +159,9 @@ export function MediaRegistryBorrowClient() {
 
   return (
     <>
-      <AppDashboardSection tone="slate">
+      <AppDashboardSection tone="violet">
         <AppSectionHeader
-          tone="slate"
+          tone="violet"
           title="ยืม-คืนสื่อ"
           description="ลดจำนวนคงเหลืออัตโนมัติเวลายืม · คืนครบหรือบางส่วน"
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
@@ -160,14 +169,12 @@ export function MediaRegistryBorrowClient() {
           action={
             <button
               type="button"
-              className="app-btn-primary min-h-[40px] min-w-[40px] rounded-xl px-2 sm:min-w-0 sm:px-4"
+              className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2 sm:min-w-0 sm:px-4"
               aria-label="บันทึกการยืม"
               onClick={() => setBorrowOpen(true)}
             >
+              <IconPlus className="h-5 w-5 sm:hidden" />
               <span className="hidden sm:inline">+ ยืมสื่อ</span>
-              <span className="sm:hidden text-lg" aria-hidden>
-                +
-              </span>
             </button>
           }
         />
@@ -186,7 +193,7 @@ export function MediaRegistryBorrowClient() {
               return (
                 <li
                   key={b.id}
-                  className="rounded-[1.25rem] border border-white/55 bg-white/80 px-3 py-2.5 sm:flex sm:items-center sm:justify-between"
+                  className={cn(mrListRowCardClass, "sm:flex sm:items-center sm:justify-between")}
                 >
                   <div className="min-w-0">
                     <p className="font-semibold text-[#2e2a58]">

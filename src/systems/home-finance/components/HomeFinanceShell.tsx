@@ -7,10 +7,16 @@ import { AppUsageGuideModal } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { deriveHomeFinanceSection } from "@/systems/home-finance/homeFinanceSection";
 import { HomeFinanceMobileDock } from "@/systems/home-finance/components/HomeFinanceMobileDock";
-
-/** มือถือ: กริด 2 คอลัมน์ แตะง่าย (min 44px) · จอใหญ่: แถบแนวนอน wrap */
-const navItemBase =
-  "flex min-h-[44px] min-w-0 touch-manipulation select-none items-center justify-center gap-2 rounded-2xl px-3 text-sm font-semibold transition-colors active:opacity-90 sm:min-h-0 sm:w-auto sm:justify-center sm:px-3.5 sm:py-2";
+import {
+  hfFilterChipClass,
+  hfGuideButtonClass,
+  hfIconBadgeClass,
+  hfManageSubNavShellClass,
+  hfModuleHeaderShellClass,
+  hfNavItemActiveClass,
+  hfNavItemBase,
+  hfNavItemIdleClass,
+} from "@/systems/home-finance/components/home-finance-ui-tokens";
 
 function NavItem({
   href,
@@ -26,15 +32,10 @@ function NavItem({
   return (
     <Link
       href={href}
-      className={cn(
-        navItemBase,
-        "w-full",
-        active
-          ? "bg-gradient-to-br from-[#ede9ff] via-white to-[#ecebff] text-[#4d47b6] ring-1 ring-[#4d47b6]/20"
-          : "app-btn-soft text-[#66638c]",
-      )}
+      className={cn(hfNavItemBase, "w-full", active ? hfNavItemActiveClass : hfNavItemIdleClass)}
+      aria-current={active ? "page" : undefined}
     >
-      <Icon className="h-4 w-4 shrink-0" />
+      <Icon className={cn("h-4 w-4 shrink-0", active ? "text-[#5b61ff]" : "text-slate-400")} />
       {children}
     </Link>
   );
@@ -74,36 +75,44 @@ export function HomeFinanceShell({ children }: { children: React.ReactNode }) {
   const inManageGroup = section === "categories" || section === "utilities" || section === "vehicles";
 
   return (
-    <div className="-mt-1 max-w-full space-y-4 sm:mt-0 sm:space-y-6">
-      <header className="-mx-3 app-surface rounded-[2rem] px-4 py-4 sm:mx-0 sm:rounded-[2.5rem] sm:px-6 sm:py-5 print:hidden">
-        <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
+    <div className="max-w-full space-y-4 pb-28 sm:space-y-6 sm:pb-6">
+      <header className={cn(hfModuleHeaderShellClass, "print:hidden")}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-tight text-[#2e2a58] sm:text-2xl">ระบบรายรับรายจ่าย</h1>
-            <p className="mt-1 hidden max-w-2xl text-sm leading-snug text-[#66638c] md:block">
-              บันทึกรับ–จ่าย สรุปและกราฟ เชื่อมบิลไฟ/น้ำและรถ — ใช้บัญชีเจ้าของ
-            </p>
+            <div className="flex items-center gap-3">
+              <div className={hfIconBadgeClass}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5" aria-hidden>
+                  <path d="M4 18h16M7 14l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="12" cy="12" r="9" strokeOpacity="0.35" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">รายรับ–รายจ่าย</h1>
+                <p className="mt-0.5 hidden max-w-2xl text-sm text-[#66638c] md:block">
+                  บันทึกรับ–จ่าย สรุปและกราฟ เชื่อมบิลไฟ/น้ำและรถ
+                </p>
+              </div>
+            </div>
           </div>
           <button
             type="button"
             onClick={() => setUsageGuideOpen(true)}
-            className="app-btn-soft min-h-[44px] shrink-0 rounded-xl border border-[#dcd8f0] px-3 py-2 text-sm font-semibold text-[#4d47b6] hover:bg-[#f4f3ff] sm:px-4 sm:py-2.5"
+            className={hfGuideButtonClass}
             aria-haspopup="dialog"
             aria-expanded={usageGuideOpen}
             aria-label="เปิดคู่มือการใช้งาน"
             title="คู่มือการใช้งาน"
             suppressHydrationWarning
           >
-            <span className="sm:hidden" aria-hidden>
-              ?
-            </span>
-            <span className="hidden sm:inline">คู่มือการใช้งาน</span>
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 11v5M12 7h.01" strokeLinecap="round" />
+            </svg>
+            <span className="hidden sm:inline">คู่มือ</span>
           </button>
         </div>
 
-        <nav
-          aria-label="เมนูระบบรายรับรายจ่าย"
-          className="mt-3 hidden border-t border-white/60 pt-3 md:block sm:mt-4 sm:pt-4"
-        >
+        <nav aria-label="เมนูระบบรายรับรายจ่าย" className="mt-4 hidden border-t border-white/50 pt-4 md:block">
           <ul className="grid grid-cols-4 gap-2">
             {navLinks.map(({ href, section: key, label, icon, includes }) => (
               <li key={href} className="min-w-0">
@@ -121,20 +130,15 @@ export function HomeFinanceShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {inManageGroup ? (
-        <nav
-          aria-label="เมนูย่อยจัดการค่าใช้จ่าย"
-          className="-mx-3 app-surface rounded-[2rem] p-3 sm:mx-0 sm:rounded-[2.5rem] sm:p-4"
-        >
+        <nav aria-label="เมนูย่อยจัดการค่าใช้จ่าย" className={hfManageSubNavShellClass}>
           <ul className="grid grid-cols-3 gap-2">
             {manageSubLinks.map((item) => (
               <li key={item.href}>
                 <Link
                   href={item.href}
                   className={cn(
-                    "flex min-h-[42px] items-center justify-center rounded-xl px-3 text-xs font-semibold transition sm:text-sm",
-                    section === item.section
-                      ? "bg-[#4d47b6] text-white shadow-[0_10px_18px_-12px_rgba(77,71,182,0.95)]"
-                      : "app-btn-soft text-[#66638c]",
+                    "flex min-h-[42px] items-center justify-center rounded-xl px-3 text-xs font-bold transition sm:text-sm",
+                    hfFilterChipClass(section === item.section),
                   )}
                   aria-current={section === item.section ? "page" : undefined}
                 >
@@ -233,7 +237,7 @@ export function HomeFinanceShell({ children }: { children: React.ReactNode }) {
         ]}
       />
 
-      <div className="-mx-3 pb-24 sm:mx-0 sm:pb-0">{children}</div>
+      {children}
       <HomeFinanceMobileDock />
     </div>
   );
@@ -241,7 +245,7 @@ export function HomeFinanceShell({ children }: { children: React.ReactNode }) {
 
 function IconDashboard({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <rect x="3" y="3" width="8" height="8" rx="1.5" />
       <rect x="13" y="3" width="8" height="5" rx="1.5" />
       <rect x="13" y="10" width="8" height="11" rx="1.5" />
@@ -252,7 +256,7 @@ function IconDashboard({ className }: { className?: string }) {
 
 function IconHistory({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path d="M3 12a9 9 0 1 0 3-6.7" strokeLinecap="round" />
       <path d="M3 4v4h4M12 7v6l4 2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -261,7 +265,7 @@ function IconHistory({ className }: { className?: string }) {
 
 function IconCategories({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
       <circle cx="7" cy="7" r="1.5" />
       <circle cx="7" cy="12" r="1.5" />
@@ -270,27 +274,9 @@ function IconCategories({ className }: { className?: string }) {
   );
 }
 
-function IconUtility({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-      <path d="M13 2 6 14h5l-1 8 8-13h-5l1-7Z" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconVehicle({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-      <path d="M4 14h16l-1.5-5h-13L4 14Z" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="7.5" cy="16.5" r="1.8" />
-      <circle cx="16.5" cy="16.5" r="1.8" />
-    </svg>
-  );
-}
-
 function IconReminder({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M10 17a2 2 0 0 0 4 0" strokeLinecap="round" />
     </svg>

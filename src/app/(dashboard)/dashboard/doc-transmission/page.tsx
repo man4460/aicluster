@@ -11,6 +11,8 @@ import {
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { getSession } from "@/lib/auth/session";
+import { DocStatCard } from "@/systems/doc-transmission/components/DocStatCard";
+import { docListRowCardClass, docListRowCardWarnClass } from "@/systems/doc-transmission/doc-ui-tokens";
 import { getDocTransmissionDataScope } from "@/lib/trial/module-scopes";
 import { loadDocDashboard } from "@/systems/doc-transmission/lib/doc-data";
 import {
@@ -69,7 +71,7 @@ export default async function DocTransmissionHomePage() {
                 aria-label="จัดการเอกสาร"
                 className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2.5 py-2 text-sm font-semibold sm:min-h-0 sm:min-w-0 sm:px-4 sm:py-2.5"
               >
-                <IconDocStack className="h-5 w-5 shrink-0 sm:hidden" />
+                <IconDocStack className="h-5 w-5 sm:hidden" strokeWidth={2.5} />
                 <span className="hidden sm:inline">จัดการเอกสาร</span>
               </Link>
               <Link
@@ -89,30 +91,24 @@ export default async function DocTransmissionHomePage() {
 
         {hasAnyData ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatCard
-              label="ทั้งหมด"
-              value={data.totalAll}
-              hint="ฉบับ"
-              tone="from-[#ede9ff] to-[#dde0ff]"
+            <DocStatCard title="ทั้งหมด" value={data.totalAll.toLocaleString("th-TH")} subtitle="ฉบับ" tone="violet" />
+            <DocStatCard
+              title="กำลังดำเนินการ"
+              value={data.byStatus.IN_PROGRESS.toLocaleString("th-TH")}
+              subtitle="ฉบับ"
+              tone="amber"
             />
-            <StatCard
-              label="กำลังดำเนินการ"
-              value={data.byStatus.IN_PROGRESS}
-              hint="ฉบับ"
-              tone="from-amber-100 to-amber-50"
+            <DocStatCard
+              title="เสร็จสิ้น"
+              value={data.byStatus.DONE.toLocaleString("th-TH")}
+              subtitle="ฉบับ"
+              tone="emerald"
             />
-            <StatCard
-              label="เสร็จสิ้น"
-              value={data.byStatus.DONE}
-              hint="ฉบับ"
-              tone="from-emerald-100 to-emerald-50"
-            />
-            <StatCard
-              label="เลยกำหนด"
-              value={data.overdueCount}
-              hint="ฉบับ"
-              tone="from-rose-100 to-rose-50"
-              warn={data.overdueCount > 0}
+            <DocStatCard
+              title="เลยกำหนด"
+              value={data.overdueCount.toLocaleString("th-TH")}
+              subtitle="ฉบับ"
+              tone="rose"
             />
           </div>
         ) : (
@@ -175,11 +171,8 @@ export default async function DocTransmissionHomePage() {
                     const status = DOC_STATUS_BY_KEY[r.status];
                     const priority = DOC_PRIORITY_BY_KEY[r.priority];
                     return (
-                      <li
-                        key={r.id}
-                        className="flex items-start gap-3 rounded-2xl border border-white/60 bg-white/70 p-3 ring-1 ring-white/55"
-                      >
-                        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#ede9ff] text-[#4d47b6]">
+                      <li key={r.id} className={cn(docListRowCardClass, "flex items-start gap-3")}>
+                        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#5b61ff]/15 to-[#6a63ff]/10 text-[#5b61ff]">
                           <IconCategoryDot tone={cat.tone} />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -234,10 +227,7 @@ export default async function DocTransmissionHomePage() {
                 {data.overdue.map((r) => {
                   const cat = DOC_CATEGORY_BY_KEY[r.category];
                   return (
-                    <li
-                      key={r.id}
-                      className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50/80 p-3"
-                    >
+                    <li key={r.id} className={cn(docListRowCardWarnClass, "flex items-start gap-3")}>
                       <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-700">
                         <IconWarn />
                       </div>
@@ -265,39 +255,9 @@ export default async function DocTransmissionHomePage() {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  hint,
-  tone,
-  warn,
-}: {
-  label: string;
-  value: number;
-  hint?: string;
-  tone: string;
-  warn?: boolean;
-}) {
+function IconDocStack({ className, strokeWidth = 2.5 }: { className?: string; strokeWidth?: number }) {
   return (
-    <div
-      className={cn(
-        "rounded-2xl border bg-gradient-to-br p-4 ring-1 ring-white/65",
-        warn ? "border-rose-200" : "border-white/60",
-        tone,
-      )}
-    >
-      <p className="text-[11px] font-bold uppercase tracking-wider text-[#66638c]">{label}</p>
-      <p className={cn("mt-1 text-2xl font-black tracking-tight", warn ? "text-rose-700" : "text-[#2e2a58]")}>
-        {value.toLocaleString("th-TH")}
-      </p>
-      {hint ? <p className="text-[11px] text-[#5f5a8a]">{hint}</p> : null}
-    </div>
-  );
-}
-
-function IconDocStack({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} aria-hidden>
       <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" strokeLinejoin="round" />
       <path d="M14 3v5h5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -306,7 +266,7 @@ function IconDocStack({ className }: { className?: string }) {
 
 function IconReportChart({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path d="M4 19h16M7 15l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -325,7 +285,7 @@ function IconCategoryDot({ tone }: { tone: string }) {
 
 function IconWarn() {
   return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path d="M12 8v5M12 16.5h.01" strokeLinecap="round" />
       <path d="m12 3 10 18H2L12 3z" strokeLinejoin="round" />
     </svg>

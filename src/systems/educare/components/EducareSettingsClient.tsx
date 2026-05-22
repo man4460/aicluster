@@ -7,6 +7,11 @@ import {
   appDashboardSectionSlateClass,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import {
+  educareFieldClass,
+  educareLabelClass,
+  educarePrimaryButtonClass,
+} from "@/systems/educare/educare-ui-tokens";
 
 type SettingPayload = {
   schoolName: string | null;
@@ -231,7 +236,7 @@ export function EducareSettingsClient() {
         <button
           type="submit"
           disabled={busy}
-          className="min-h-[48px] rounded-2xl bg-gradient-to-r from-[#5b61ff] to-[#4d47b6] px-6 text-sm font-bold text-white shadow-[0_18px_30px_-15px_rgba(91,97,255,0.85)] transition active:scale-[0.99] disabled:opacity-50"
+          className={cn(educarePrimaryButtonClass, "min-h-[48px] px-6")}
         >
           {busy ? "กำลังบันทึก…" : "บันทึกตั้งค่า"}
         </button>
@@ -259,7 +264,7 @@ function Toggle({
       className={cn(
         "relative h-7 w-12 shrink-0 rounded-full border transition",
         on
-          ? "border-[#4d47b6] bg-gradient-to-r from-[#5b61ff] to-[#4d47b6]"
+          ? "border-[#5b61ff]/40 bg-[#5b61ff]"
           : "border-slate-300 bg-slate-200",
       )}
     >
@@ -273,13 +278,12 @@ function Toggle({
   );
 }
 
-const inputCls =
-  "w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm text-[#2e2a58] placeholder:text-[#a3a0c0] shadow-inner focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30";
+const inputCls = educareFieldClass;
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4d47b6]/80">
+      <span className={educareLabelClass}>
         {label}
       </span>
       {children}

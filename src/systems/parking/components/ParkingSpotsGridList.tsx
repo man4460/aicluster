@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { AppEmptyState } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import {
+  parkingListRowAccentClass,
+  parkingListRowCardClass,
+  parkingListScrollShellClass,
+} from "@/systems/parking/parking-ui-tokens";
 
 export type ParkingSpotGridRow = {
   id: number;
@@ -18,12 +23,7 @@ export function ParkingSpotsGridList({ spots }: { spots: ParkingSpotGridRow[] })
   }
 
   return (
-    <div
-      className={cn(
-        "max-h-[min(78vh,52rem)] overflow-y-auto overscroll-y-contain rounded-2xl border border-white/55 bg-white/35 shadow-[0_16px_38px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl [-webkit-overflow-scrolling:touch]",
-        "md:border-0 md:bg-transparent md:shadow-none md:backdrop-blur-none md:max-h-none md:overflow-visible",
-      )}
-    >
+    <div className={parkingListScrollShellClass}>
       <ul
         className="grid grid-cols-1 gap-3 p-1 md:grid-cols-2 md:gap-4"
         aria-label="รายการช่องจอด"
@@ -41,15 +41,11 @@ export function ParkingSpotsGridList({ spots }: { spots: ParkingSpotGridRow[] })
               <Link
                 href={href}
                 className={cn(
-                  "group/item relative flex min-h-0 flex-col gap-2 overflow-hidden rounded-[1.25rem] border border-white/55 bg-white/45 px-3 py-3 shadow-sm backdrop-blur-sm transition-all duration-300 outline-none sm:gap-3 sm:px-4 sm:py-4",
-                  "focus-visible:ring-2 focus-visible:ring-[#5b61ff]/35 focus-visible:ring-offset-2",
-                  "md:border-white/60 md:bg-white/50 md:shadow-[0_16px_34px_-24px_rgba(30,27,75,0.42)] md:backdrop-blur-xl md:hover:-translate-y-1 md:hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.45)]",
+                  parkingListRowCardClass,
+                  "outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/35 focus-visible:ring-offset-2",
                 )}
               >
-                <span
-                  aria-hidden
-                  className="absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-gradient-to-b from-[#5b61ff] via-[#8d64ff] to-[#f06dc8] opacity-80 transition-all group-hover/item:w-1.5"
-                />
+                <span aria-hidden className={parkingListRowAccentClass} />
 
                 <div className="flex min-w-0 flex-1 flex-col gap-2 pl-2 sm:pl-2.5">
                   <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">

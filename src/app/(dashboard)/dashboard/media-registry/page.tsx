@@ -10,9 +10,66 @@ import { cn } from "@/lib/cn";
 import { getSession } from "@/lib/auth/session";
 import { formatBangkokDateTimeLong } from "@/lib/time/bangkok";
 import { MediaRegistryCategoryChart } from "@/systems/media-registry/components/MediaRegistryCategoryChart";
+import { MediaRegistryStatCard } from "@/systems/media-registry/components/MediaRegistryStatCard";
+import { mrListRowCardCompactClass } from "@/systems/media-registry/components/media-registry-ui-tokens";
 import { loadMediaRegistryDashboard } from "@/systems/media-registry/lib/server-dashboard";
 
 export const dynamic = "force-dynamic";
+
+function IconClipboard({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      <path d="M9 4h6l1 3H8L9 4z" strokeLinejoin="round" />
+      <path d="M8 7h8v13a1 1 0 01-1 1H9a1 1 0 01-1-1V7z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconSwap({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      <path d="M7 8h11M7 8l3-3M7 8l3 3M17 16H6M17 16l-3 3M17 16l-3-3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconGrid({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+}
+
+function IconStack({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      <path d="M12 4L4 8l8 4 8-4-8-4z" strokeLinejoin="round" />
+      <path d="M4 12l8 4 8-4M4 16l8 4 8-4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconClock({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconCoin({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v10M9 10h4a2 2 0 100 4h-2a2 2 0 110 4h4" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 export default async function MediaRegistryHomePage() {
   const session = await getSession();
@@ -38,10 +95,8 @@ export default async function MediaRegistryHomePage() {
                 aria-label="เปิดทะเบียนสื่อ"
                 className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2.5 py-2 text-sm font-semibold sm:min-h-0 sm:min-w-0 sm:px-4 sm:py-2.5"
               >
+                <IconClipboard className="h-5 w-5 sm:hidden" />
                 <span className="hidden sm:inline">ทะเบียนสื่อ</span>
-                <span className="sm:hidden" aria-hidden>
-                  📋
-                </span>
               </Link>
               <Link
                 href="/dashboard/media-registry/borrow"
@@ -51,49 +106,57 @@ export default async function MediaRegistryHomePage() {
                   "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2.5 py-2 sm:min-h-0 sm:min-w-0 sm:px-4 sm:py-2.5",
                 )}
               >
+                <IconSwap className="h-5 w-5 sm:hidden" />
                 <span className="hidden sm:inline">ยืม-คืน</span>
-                <span className="sm:hidden" aria-hidden>
-                  🔄
-                </span>
               </Link>
             </div>
           }
         />
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-[1.25rem] border border-white/60 bg-white/70 px-4 py-3">
-            <p className="text-xs font-semibold text-[#66638c]">รายการในทะเบียน</p>
-            <p className="mt-1 text-2xl font-black tracking-tight text-[#1e1b4b]">{summary.totalRegisterRows}</p>
-          </div>
-          <div className="rounded-[1.25rem] border border-white/60 bg-white/70 px-4 py-3">
-            <p className="text-xs font-semibold text-[#66638c]">จำนวนรวม / คงเหลือ</p>
-            <p className="mt-1 text-2xl font-black tracking-tight text-[#1e1b4b]">
-              {summary.totalUnits}{" "}
-              <span className="text-base font-bold text-[#4d47b6]">/ {summary.availableUnits}</span>
-            </p>
-          </div>
-          <div className="rounded-[1.25rem] border border-white/60 bg-white/70 px-4 py-3">
-            <p className="text-xs font-semibold text-[#66638c]">กำลังถูกยืม · เกินกำหนด</p>
-            <p className="mt-1 text-2xl font-black tracking-tight text-[#1e1b4b]">
-              {summary.borrowedUnits}
-              <span className="ml-2 text-base font-bold text-rose-600">
-                {summary.overdueBorrowRecords > 0 ? `· ${summary.overdueBorrowRecords} เกิน` : ""}
-              </span>
-            </p>
-          </div>
-          <div className="rounded-[1.25rem] border border-white/60 bg-white/70 px-4 py-3">
-            <p className="text-xs font-semibold text-[#66638c]">มูลค่าตามทะเบียน (ประมาณ)</p>
-            <p className="mt-1 text-2xl font-black tracking-tight text-[#1e1b4b]">
-              {valueFmt.format(summary.valueBahtApprox)} ฿
-            </p>
-            <p className="mt-1 text-[11px] text-[#66638c]">
-              สื่อชำรุด/สูญหาย/จำหน่าย: {summary.damagedLostDisposedTitles} เรื่อง
-            </p>
-          </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <MediaRegistryStatCard
+            title="รายการในทะเบียน"
+            value={summary.totalRegisterRows}
+            tone="slate"
+            icon={<IconGrid className="h-5 w-5" />}
+          />
+          <MediaRegistryStatCard
+            title="จำนวนรวม / คงเหลือ"
+            value={
+              <>
+                {summary.totalUnits}{" "}
+                <span className="text-lg font-bold text-[#4d47b6] sm:text-xl">/ {summary.availableUnits}</span>
+              </>
+            }
+            tone="blue"
+            icon={<IconStack className="h-5 w-5" />}
+          />
+          <MediaRegistryStatCard
+            title="กำลังถูกยืม"
+            value={
+              <>
+                {summary.borrowedUnits}
+                {summary.overdueBorrowRecords > 0 ? (
+                  <span className="ml-1 text-lg font-bold text-rose-600 sm:text-xl">
+                    · {summary.overdueBorrowRecords} เกิน
+                  </span>
+                ) : null}
+              </>
+            }
+            tone={summary.overdueBorrowRecords > 0 ? "rose" : "amber"}
+            icon={<IconClock className="h-5 w-5" />}
+          />
+          <MediaRegistryStatCard
+            title="มูลค่าตามทะเบียน"
+            value={`${valueFmt.format(summary.valueBahtApprox)} ฿`}
+            subtitle={`ชำรุด/สูญหาย/จำหน่าย: ${summary.damagedLostDisposedTitles} เรื่อง`}
+            tone="violet"
+            icon={<IconCoin className="h-5 w-5" />}
+          />
         </div>
       </AppDashboardSection>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <AppDashboardSection tone="slate" className="min-h-0">
+        <AppDashboardSection tone="violet" className="min-h-0">
           <MediaRegistryCategoryChart rows={categoryBars} />
         </AppDashboardSection>
 
@@ -108,10 +171,7 @@ export default async function MediaRegistryHomePage() {
           ) : (
             <ul className="mt-3 space-y-2">
               {recentIssues.map((r) => (
-                <li
-                  key={r.id}
-                  className="rounded-2xl border border-white/55 bg-white/75 px-3 py-2 text-sm text-[#2e2a58]"
-                >
+                <li key={r.id} className={cn(mrListRowCardCompactClass, "text-sm text-[#2e2a58]")}>
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="font-semibold">
                       {r.recordType} · {r.mediaName}

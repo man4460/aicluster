@@ -8,9 +8,11 @@ import {
   AppImagePickCameraButtons,
   AppSectionHeader,
 } from "@/components/app-templates";
+import { cn } from "@/lib/cn";
 import { ecommercePublicShopUrl } from "@/lib/ecommerce/constants";
 import { validateEcommerceCustomDomainInput } from "@/lib/ecommerce/custom-domain";
 import { IconCopy } from "@/systems/ecommerce-store/components/EcommerceStoreIcons";
+import { ecommerceSettingsPanelClass } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
 
 type Store = {
   id: string;
@@ -131,7 +133,7 @@ export function EcommerceSettingsClient() {
   }
 
   if (!store) {
-    return <div className="h-32 animate-pulse rounded-2xl bg-[#ecebff]/40" aria-hidden />;
+    return <div className="h-32 animate-pulse rounded-[2rem] bg-white/30" aria-hidden />;
   }
 
   const customUrl = store.customDomainVerified && store.customDomain
@@ -142,10 +144,10 @@ export function EcommerceSettingsClient() {
     : null;
 
   return (
-    <AppDashboardSection className="appDashboardSectionSlateClass space-y-4">
+    <AppDashboardSection className="appDashboardSectionVioletClass space-y-4">
       <AppSectionHeader title="ตั้งค่าร้าน" description="ชื่อร้าน · ช่องทางรับเงิน · ลิงก์แชร์ · โดเมนส่วนตัว" />
 
-      <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/60 bg-white/50 p-4">
+      <div className={cn("flex flex-wrap items-center gap-4", ecommerceSettingsPanelClass)}>
         {store.logoUrl ? (
           <Image
             src={store.logoUrl}
@@ -248,7 +250,7 @@ export function EcommerceSettingsClient() {
         />
       </Field>
 
-      <div className="app-surface rounded-2xl p-4">
+      <div className={ecommerceSettingsPanelClass}>
         <p className="text-sm font-bold text-[#1e1b4b]">ลิงก์ร้าน (แชร์ Facebook / TikTok)</p>
         <p className="mt-1 break-all text-xs text-[#66638c]">{shopUrl}</p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -279,7 +281,7 @@ export function EcommerceSettingsClient() {
         </div>
       </div>
 
-      <div className="app-surface rounded-2xl p-4 space-y-3">
+      <div className={cn(ecommerceSettingsPanelClass, "space-y-3")}>
         <p className="text-sm font-bold text-[#1e1b4b]">Custom Domain</p>
         <ol className="list-decimal space-y-1 pl-5 text-xs text-[#66638c]">
           <li>ใส่โดเมนของคุณเอง (เช่น shop.mybrand.com) — ไม่ใช้ *.ma-well.com</li>
@@ -326,7 +328,7 @@ export function EcommerceSettingsClient() {
         </button>
       </div>
 
-      <div className="app-surface rounded-2xl p-4 space-y-3">
+      <div className={cn(ecommerceSettingsPanelClass, "space-y-3")}>
         <label className="flex items-center gap-2 text-sm font-semibold text-[#4d47b6]">
           <input
             type="checkbox"

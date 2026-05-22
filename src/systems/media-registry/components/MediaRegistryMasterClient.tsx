@@ -9,6 +9,11 @@ import {
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import {
+  mrFilterChipClass,
+  mrListRowCardCompactClass,
+  mrSegmentShellClass,
+} from "@/systems/media-registry/components/media-registry-ui-tokens";
+import {
   assetRowEditIconButtonClass,
   assetRowRemoveIconButtonClass,
   IconRowEdit,
@@ -191,27 +196,17 @@ export function MediaRegistryMasterClient() {
 
   return (
     <>
-      <div className="flex gap-2 rounded-2xl border border-white/50 bg-white/60 p-1 sm:inline-flex">
+      <div className={cn(mrSegmentShellClass, "sm:inline-flex")}>
         <button
           type="button"
-          className={cn(
-            "min-h-[40px] flex-1 rounded-xl px-4 text-sm font-semibold sm:flex-none",
-            tab === "master"
-              ? "bg-gradient-to-br from-[#ede9ff] to-white text-[#4d47b6]"
-              : "text-[#66638c]",
-          )}
+          className={cn("flex-1 sm:flex-none", mrFilterChipClass(tab === "master"))}
           onClick={() => setTab("master")}
         >
           ข้อมูลหลัก
         </button>
         <button
           type="button"
-          className={cn(
-            "min-h-[40px] flex-1 rounded-xl px-4 text-sm font-semibold sm:flex-none",
-            tab === "loc"
-              ? "bg-gradient-to-br from-[#ede9ff] to-white text-[#4d47b6]"
-              : "text-[#66638c]",
-          )}
+          className={cn("flex-1 sm:flex-none", mrFilterChipClass(tab === "loc"))}
           onClick={() => setTab("loc")}
         >
           สถานที่เก็บ
@@ -258,7 +253,7 @@ export function MediaRegistryMasterClient() {
               {masters.map((m) => (
                 <li
                   key={m.id}
-                  className="flex items-start justify-between gap-2 rounded-[1.25rem] border border-white/55 bg-white/75 px-3 py-2"
+                  className={cn(mrListRowCardCompactClass, "flex items-start justify-between gap-2")}
                 >
                   <div>
                     <p className="font-semibold text-[#2e2a58]">{m.masterName}</p>
@@ -343,7 +338,7 @@ export function MediaRegistryMasterClient() {
               {locs.map((l) => (
                 <li
                   key={l.id}
-                  className="flex items-start justify-between gap-2 rounded-[1.25rem] border border-white/55 bg-white/75 px-3 py-2"
+                  className={cn(mrListRowCardCompactClass, "flex items-start justify-between gap-2")}
                 >
                   <div>
                     <p className="font-semibold text-[#2e2a58]">{l.locationDetail}</p>

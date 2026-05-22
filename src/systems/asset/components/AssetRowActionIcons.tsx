@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 
 /** คลาสมาตรฐานปุ่มไอคอนแก้ไขในแถว */
 export const assetRowEditIconButtonClass = cn(
-  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-white/60 bg-white/80 text-[#4d47b6] hover:bg-white active:opacity-90",
+  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-white/60 bg-white/80 text-[#5b61ff] hover:bg-white active:opacity-90",
 );
 
 /** คลาสมาตรฐานปุ่มไอคอนลบ / ปิดใช้งานในแถว */

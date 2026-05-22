@@ -9,6 +9,7 @@ import { formatBangkokDateTimeStable, formatDormAmountStable } from "@/lib/dormi
 import { DormFinanceQuickTabs } from "@/systems/dormitory/components/DormFinanceQuickTabs";
 import { DormEmptyDashed, DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
 import { dormBtnSecondary } from "@/systems/dormitory/dorm-ui";
+import { dormListRowCardClass, dormListRowCardCompactClass } from "@/systems/dormitory/dorm-ui-tokens";
 
 type Row = {
   id: number;
@@ -340,7 +341,7 @@ export function DormPaymentHistoryClient() {
                 {financeBuckets.map((b) => (
                   <li
                     key={b.key}
-                    className="rounded-xl border border-slate-200/90 bg-white/95 px-3 py-2.5 text-sm shadow-sm"
+                    className={cn(dormListRowCardCompactClass, "text-sm")}
                   >
                     <p className="font-semibold text-slate-900">{b.label}</p>
                     <p className="mt-1 text-xs text-slate-600">
@@ -413,12 +414,12 @@ export function DormPaymentHistoryClient() {
           <button
             type="button"
             onClick={() => setMobileFilterOpen((v) => !v)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-[#4d47b6] shadow-sm md:hidden"
+            className="inline-flex h-10 min-h-[40px] w-10 min-w-[40px] items-center justify-center rounded-xl border border-white/55 bg-white/75 text-[#5b61ff] shadow-inner md:hidden"
             aria-label={mobileFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
             title={mobileFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
           >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden>
-              <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+              <path d="M22 3H2l8 9.46V19l4 2v-6.54L22 3z" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         }
@@ -476,12 +477,8 @@ export function DormPaymentHistoryClient() {
               {filtered.map((r) => (
                 <li
                   key={r.id}
-                  className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50/95 p-3 shadow-sm ring-1 ring-slate-100/80"
+                  className={dormListRowCardClass}
                 >
-                  <div
-                    className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-indigo-400/85 via-violet-300/75 to-emerald-400/80"
-                    aria-hidden
-                  />
                   <div className="flex items-start justify-between gap-2 pt-0.5">
                     <div className="min-w-0">
                       <p className="text-sm font-bold tabular-nums text-slate-900">ห้อง {r.bill.room.roomNumber}</p>

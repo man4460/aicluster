@@ -6,10 +6,16 @@ import { useState } from "react";
 import { AppUsageGuideModal } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { DocMobileDock } from "@/systems/doc-transmission/components/DocMobileDock";
+import {
+  docFilterChipClass,
+  docIconBadgeClass,
+  docModuleHeaderShellClass,
+  docNavItemActiveClass,
+  docNavItemBase,
+  docNavItemIdleClass,
+  docSegmentShellClass,
+} from "@/systems/doc-transmission/doc-ui-tokens";
 import { DOC_CATEGORY_LIST } from "@/systems/doc-transmission/lib/doc-types";
-
-const navItemBase =
-  "flex min-h-[44px] min-w-0 touch-manipulation select-none items-center justify-center gap-2 rounded-2xl px-3 text-sm font-semibold transition-colors active:opacity-90 sm:min-h-0 sm:w-auto sm:justify-center sm:px-3.5 sm:py-2";
 
 function NavItem({
   href,
@@ -25,16 +31,10 @@ function NavItem({
   return (
     <Link
       href={href}
-      className={cn(
-        navItemBase,
-        "w-full sm:w-auto",
-        active
-          ? "bg-gradient-to-br from-[#ede9ff] via-white to-[#ecebff] text-[#4d47b6] ring-1 ring-[#4d47b6]/20"
-          : "app-btn-soft text-[#66638c]",
-      )}
+      className={cn(docNavItemBase, "w-full sm:w-auto", active ? docNavItemActiveClass : docNavItemIdleClass)}
       aria-current={active ? "page" : undefined}
     >
-      <Icon className="h-4 w-4 shrink-0" />
+      <Icon className={cn("h-4 w-4 shrink-0", active ? "text-[#5b61ff]" : "text-slate-400")} />
       {children}
     </Link>
   );
@@ -94,38 +94,44 @@ export function DocShell({ children }: { children: React.ReactNode }) {
   ]);
 
   return (
-    <div className="-mt-1 max-w-full space-y-4 sm:mt-0 sm:space-y-6">
-      <header className="-mx-3 app-surface rounded-[2rem] px-4 py-4 sm:mx-0 sm:rounded-[2.5rem] sm:px-6 sm:py-5 print:hidden">
+    <div className="max-w-full space-y-4 pb-28 sm:space-y-6 sm:pb-6">
+      <header className={cn(docModuleHeaderShellClass, "print:hidden")}>
         <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
-          <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-tight text-[#2e2a58] sm:text-2xl">
-              สารบรรณดิจิทัล
-            </h1>
-            <p className="mt-1 hidden max-w-2xl text-sm leading-snug text-[#66638c] md:block">
-              คำสั่ง · บันทึกข้อความ · หนังสือรับ–ส่ง · หนังสือเวียน — พร้อม timeline ติดตามสถานะ
-              และ public share link สำหรับนอกระบบ
-            </p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start gap-3">
+              <div className={docIconBadgeClass}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5" aria-hidden>
+                  <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" strokeLinejoin="round" />
+                  <path d="M14 3v5h5M9 13h6M9 17h6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">สารบรรณดิจิทัล</h1>
+                <p className="mt-1 hidden max-w-2xl text-sm leading-snug text-[#66638c] md:block">
+                  คำสั่ง · บันทึกข้อความ · หนังสือรับ–ส่ง · หนังสือเวียน — timeline และ public share link
+                </p>
+              </div>
+            </div>
           </div>
           <button
             type="button"
             onClick={() => setUsageGuideOpen(true)}
-            className="app-btn-soft min-h-[44px] shrink-0 rounded-xl border border-[#dcd8f0] px-3 py-2 text-sm font-semibold text-[#4d47b6] hover:bg-[#f4f3ff] sm:px-4 sm:py-2.5"
+            className="flex h-10 min-h-[40px] items-center gap-2 rounded-2xl border border-white/60 bg-white/55 px-3 text-sm font-semibold text-[#5b61ff] shadow-sm backdrop-blur-md transition hover:bg-white/75 sm:px-4"
             aria-haspopup="dialog"
             aria-expanded={usageGuideOpen}
             aria-label="เปิดคู่มือการใช้งาน"
             title="คู่มือการใช้งาน"
           >
-            <span className="sm:hidden" aria-hidden>
-              ?
-            </span>
+            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+              <circle cx="12" cy="12" r="9" />
+              <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
+              <circle cx="12" cy="17" r="1" />
+            </svg>
             <span className="hidden sm:inline">คู่มือการใช้งาน</span>
           </button>
         </div>
 
-        <nav
-          aria-label="เมนู สารบรรณดิจิทัล"
-          className="mt-3 hidden border-t border-white/60 pt-3 md:block sm:mt-4 sm:pt-4"
-        >
+        <nav aria-label="เมนู สารบรรณดิจิทัล" className="mt-4 hidden border-t border-white/50 pt-4 md:block">
           <ul className="grid grid-cols-4 gap-2">
             {navLinks.map(({ href, label, icon, includes }) => (
               <li key={href} className="min-w-0">
@@ -139,23 +145,15 @@ export function DocShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {inRecordsGroup ? (
-        <nav
-          aria-label="เมนูย่อยหมวดหมู่เอกสาร"
-          className="-mx-3 rounded-[2rem] p-3 sm:mx-0 sm:rounded-[2.5rem] sm:p-4 app-surface"
-        >
-          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+        <nav aria-label="เมนูย่อยหมวดหมู่เอกสาร" className={docSegmentShellClass}>
+          <ul className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
             {recordsSubLinks.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className={cn(
-                      "flex min-h-[42px] items-center justify-center rounded-xl px-3 text-xs font-semibold transition sm:text-sm",
-                      active
-                        ? "bg-[#4d47b6] text-white shadow-[0_10px_18px_-12px_rgba(77,71,182,0.95)]"
-                        : "app-btn-soft text-[#66638c]",
-                    )}
+                    className={cn("flex w-full items-center justify-center", docFilterChipClass(active))}
                     aria-current={active ? "page" : undefined}
                   >
                     {item.label}
@@ -168,11 +166,8 @@ export function DocShell({ children }: { children: React.ReactNode }) {
       ) : null}
 
       {inMasterGroup ? (
-        <nav
-          aria-label="เมนูย่อยข้อมูลหลัก"
-          className="-mx-3 rounded-[2rem] p-3 sm:mx-0 sm:rounded-[2.5rem] sm:p-4 app-surface"
-        >
-          <ul className="grid grid-cols-2 gap-2">
+        <nav aria-label="เมนูย่อยข้อมูลหลัก" className={docSegmentShellClass}>
+          <ul className="grid grid-cols-2 gap-1.5">
             {masterSubLinks.map((item) => {
               const active =
                 item.href === "/dashboard/doc-transmission/master"
@@ -182,12 +177,7 @@ export function DocShell({ children }: { children: React.ReactNode }) {
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className={cn(
-                      "flex min-h-[42px] items-center justify-center rounded-xl px-3 text-xs font-semibold transition sm:text-sm",
-                      active
-                        ? "bg-[#4d47b6] text-white shadow-[0_10px_18px_-12px_rgba(77,71,182,0.95)]"
-                        : "app-btn-soft text-[#66638c]",
-                    )}
+                    className={cn("flex w-full items-center justify-center", docFilterChipClass(active))}
                     aria-current={active ? "page" : undefined}
                   >
                     {item.label}
@@ -236,7 +226,7 @@ export function DocShell({ children }: { children: React.ReactNode }) {
         ]}
       />
 
-      <div className="-mx-3 pb-24 sm:mx-0 sm:pb-0">{children}</div>
+      {children}
       <DocMobileDock />
     </div>
   );
@@ -244,7 +234,7 @@ export function DocShell({ children }: { children: React.ReactNode }) {
 
 function IconDashboard({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <rect x="3" y="3" width="8" height="8" rx="1.5" />
       <rect x="13" y="3" width="8" height="5" rx="1.5" />
       <rect x="13" y="10" width="8" height="11" rx="1.5" />
@@ -255,7 +245,7 @@ function IconDashboard({ className }: { className?: string }) {
 
 function IconDoc({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" strokeLinejoin="round" />
       <path d="M14 3v5h5M9 13h6M9 17h6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -264,7 +254,7 @@ function IconDoc({ className }: { className?: string }) {
 
 function IconStack({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path d="M12 3 3 7l9 4 9-4-9-4Z" strokeLinejoin="round" />
       <path d="m3 12 9 4 9-4M3 17l9 4 9-4" strokeLinejoin="round" />
     </svg>
@@ -273,7 +263,7 @@ function IconStack({ className }: { className?: string }) {
 
 function IconReport({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path d="M4 19h16M7 15l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );

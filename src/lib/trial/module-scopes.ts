@@ -4,6 +4,7 @@ import {
   BARBER_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
+  MASSAGE_MODULE_SLUG,
   DOC_TRANSMISSION_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   EDUCARE_MODULE_SLUG,
@@ -12,6 +13,7 @@ import {
   PARKING_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
   WAIT_QUEUE_MODULE_SLUG,
+  APPOINTMENT_QUEUE_MODULE_SLUG,
   SCHOOL_BANK_MODULE_SLUG,
   COMMUNITY_COOP_MODULE_SLUG,
 } from "@/lib/modules/config";
@@ -23,6 +25,10 @@ export function getDormitoryDataScope(userId: string): Promise<ModuleDataScope> 
 
 export function getBarberDataScope(userId: string): Promise<ModuleDataScope> {
   return resolveDataScopeBySlug(userId, BARBER_MODULE_SLUG);
+}
+
+export function getMassageDataScope(userId: string): Promise<ModuleDataScope> {
+  return resolveDataScopeBySlug(userId, MASSAGE_MODULE_SLUG);
 }
 
 export function getAttendanceDataScope(userId: string): Promise<ModuleDataScope> {
@@ -55,6 +61,10 @@ export function getParkingDataScope(userId: string): Promise<ModuleDataScope> {
 
 export function getWaitQueueDataScope(userId: string): Promise<ModuleDataScope> {
   return resolveDataScopeBySlug(userId, WAIT_QUEUE_MODULE_SLUG);
+}
+
+export function getAppointmentQueueDataScope(userId: string): Promise<ModuleDataScope> {
+  return resolveDataScopeBySlug(userId, APPOINTMENT_QUEUE_MODULE_SLUG);
 }
 
 export function getSchoolBankDataScope(userId: string): Promise<ModuleDataScope> {

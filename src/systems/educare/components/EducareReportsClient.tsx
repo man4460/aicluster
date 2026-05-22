@@ -15,6 +15,7 @@ import {
   type AppColumnBarBucket,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { educareFieldClass, educareLabelClass } from "@/systems/educare/educare-ui-tokens";
 import { EDUCARE_FEATURES, EDUCARE_STATUS_LABEL } from "@/systems/educare/lib/educare-types";
 import type { EducareCheckStatus } from "@/generated/prisma/enums";
 
@@ -224,7 +225,7 @@ export function EducareReportsClient() {
             </select>
           </Field>
           <div className="col-span-2 sm:col-span-1">
-            <p className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4d47b6]/80">
+            <p className={educareLabelClass}>
               ลัด
             </p>
             <ul className="flex flex-wrap gap-1.5">
@@ -233,7 +234,7 @@ export function EducareReportsClient() {
                   <button
                     type="button"
                     onClick={() => useQuickRange(q.days)}
-                    className="min-h-[36px] rounded-xl border border-white/60 bg-white/70 px-2.5 text-[11px] font-semibold text-[#4d47b6] hover:bg-white"
+                    className="min-h-[36px] rounded-xl border border-white/55 bg-white/75 px-2.5 text-[11px] font-semibold text-[#5b61ff] hover:bg-white/90"
                   >
                     {q.label}
                   </button>
@@ -299,7 +300,7 @@ export function EducareReportsClient() {
             <div className="mt-3 overflow-x-auto">
               <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-[0.12em] text-[#4d47b6]/80">
+                  <tr className={cn("text-left", educareLabelClass)}>
                     <th className="py-2 pr-3">ฟีเจอร์</th>
                     <th className="px-3">รวม</th>
                     <th className="px-3">บวก (+)</th>
@@ -346,13 +347,12 @@ function sumStatus(stats: Record<string, number>, keys: EducareCheckStatus[]) {
   return keys.reduce((sum, k) => sum + (stats[k] ?? 0), 0);
 }
 
-const inputCls =
-  "w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm text-[#2e2a58] placeholder:text-[#a3a0c0] shadow-inner focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30";
+const inputCls = educareFieldClass;
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4d47b6]/80">
+      <span className={educareLabelClass}>
         {label}
       </span>
       {children}

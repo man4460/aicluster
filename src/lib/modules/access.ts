@@ -1,7 +1,9 @@
 import type { SubscriptionTier, SubscriptionType, UserRole } from "@/generated/prisma/enums";
 import {
   isDailyTokenExemptModuleSlug,
+  isModuleHiddenFromDashboardUi,
   MAX_MODULE_GROUP,
+  UI_VISIBLE_GROUP2_MODULE_SLUGS,
   UI_VISIBLE_MAX_MODULE_GROUP,
   buffetTierMaxGroup,
 } from "@/lib/modules/config";
@@ -17,6 +19,11 @@ function effectiveBuffetMaxGroup(tier: SubscriptionTier): number {
   return Math.min(buffetTierMaxGroup(tier), UI_VISIBLE_MAX_MODULE_GROUP);
 }
 
+/** โมดูลกลุ่ม 2 ที่เปิดให้สมัคร/เข้าใช้ก่อน (แพ็ก 199 + สายรายวันมีโทเคน) */
+function isEarlyAccessGroup2Module(slug: string): boolean {
+  return UI_VISIBLE_GROUP2_MODULE_SLUGS.has(slug);
+}
+
 /** สูงสุดถึงกลุ่มไหนที่ user เข้าได้ (0 = ไม่มีโมดูล) */
 export function userMaxModuleGroup(user: UserAccessFields): number {
   if (user.role === "ADMIN") return MAX_MODULE_GROUP;
@@ -29,7 +36,14 @@ export function userMaxModuleGroup(user: UserAccessFields): number {
 
 export function canAccessModuleGroup(user: UserAccessFields, groupId: number): boolean {
   if (!Number.isInteger(groupId) || groupId < 1 || groupId > MAX_MODULE_GROUP) return false;
-  return groupId <= userMaxModuleGroup(user);
+  if (groupId <= userMaxModuleGroup(user)) return true;
+  /** กลุ่ม 2 — เปิดเฉพาะโมดูลใน whitelist (เช่น smart-police) */
+  if (groupId === 2 && UI_VISIBLE_GROUP2_MODULE_SLUGS.size > 0) {
+    if (user.role === "ADMIN") return true;
+    if (user.subscriptionType === "BUFFET") return true;
+    return user.tokens > 0;
+  }
+  return false;
 }
 
 /**
@@ -47,6 +61,14 @@ export function canAccessAppModule(
     return false;
   }
   if (user.role === "ADMIN") return true;
+  if (isModuleHiddenFromDashboardUi(mod.slug)) return false;
+  if (mod.slug && isEarlyAccessGroup2Module(mod.slug)) {
+    if (user.subscriptionType === "BUFFET") return true;
+    if (isDailyTokenExemptModuleSlug(mod.slug)) return true;
+    if (user.tokens > 0) return true;
+    if (options?.chargedTodaySlugs?.has(mod.slug)) return true;
+    return false;
+  }
   if (user.subscriptionType === "BUFFET") {
     return mod.groupId <= effectiveBuffetMaxGroup(user.subscriptionTier);
   }

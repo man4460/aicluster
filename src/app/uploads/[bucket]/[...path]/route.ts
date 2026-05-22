@@ -27,6 +27,7 @@ const ALLOWED_BUCKETS = new Set([
   "module-cards",
   "village-cost-slips",
   "village-slips",
+  "smart-police",
 ]);
 
 const MIME_BY_EXT: Record<string, string> = {
@@ -37,6 +38,7 @@ const MIME_BY_EXT: Record<string, string> = {
   ".gif": "image/gif",
   ".svg": "image/svg+xml",
   ".pdf": "application/pdf",
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 };
 
 const MAX_FILENAME = 180;

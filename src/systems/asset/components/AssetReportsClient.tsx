@@ -10,6 +10,7 @@ import {
   type AppCompareBarRow,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { AssetStatCard } from "@/systems/asset/components/AssetStatCard";
 import { formatTHB } from "@/systems/asset/lib/asset-types";
 
 type ReportPayload = {
@@ -94,7 +95,7 @@ export function AssetReportsClient() {
               aria-label="รีเฟรชข้อมูลรายงาน"
               aria-busy={loading}
               className={cn(
-                "app-btn-soft inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2.5 py-2 text-sm font-semibold sm:min-h-0 sm:min-w-0 sm:px-3.5",
+                "app-btn-soft inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-white/55 bg-white/75 px-2.5 py-2 text-sm font-semibold text-[#5b61ff] hover:bg-white/90 sm:min-h-0 sm:min-w-0 sm:px-3.5",
                 loading && "pointer-events-none opacity-60",
               )}
             >
@@ -113,10 +114,10 @@ export function AssetReportsClient() {
         ) : (
           <>
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Stat label="ทรัพย์สิน" value={`${data.totalAssets} รายการ`} />
-              <Stat label="มูลค่าซื้อรวม" value={formatTHB(data.totalPurchase)} />
-              <Stat label="มูลค่าคงเหลือ" value={formatTHB(data.totalCurrent)} />
-              <Stat label="เสื่อมราคารวม" value={formatTHB(data.depreciation)} />
+              <AssetStatCard title="ทรัพย์สิน" value={`${data.totalAssets.toLocaleString("th-TH")} รายการ`} tone="violet" />
+              <AssetStatCard title="มูลค่าซื้อรวม" value={formatTHB(data.totalPurchase)} tone="indigo" />
+              <AssetStatCard title="มูลค่าคงเหลือ" value={formatTHB(data.totalCurrent)} tone="emerald" />
+              <AssetStatCard title="เสื่อมราคารวม" value={formatTHB(data.depreciation)} tone="amber" />
             </div>
 
             <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -167,7 +168,7 @@ export function AssetReportsClient() {
 
 function IconRefresh({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -177,11 +178,3 @@ function IconRefresh({ className }: { className?: string }) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/60 bg-white/60 px-3 py-3 shadow-inner">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#66638c]">{label}</p>
-      <p className="mt-1 truncate text-base font-black text-[#2e2a58]">{value}</p>
-    </div>
-  );
-}

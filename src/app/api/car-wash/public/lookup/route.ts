@@ -5,6 +5,10 @@ import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { normalizePhone } from "@/lib/car-wash/http";
 import { isCarWashCustomerPortalOpenForOwner } from "@/lib/car-wash/portal-access";
 import { resolvePublicCarWashTrialSessionId } from "@/lib/car-wash/public-trial-scope";
+import {
+  bangkokDateKeyFromScheduledAt,
+  bangkokTimeHHmmFromScheduledAt,
+} from "@/lib/car-wash/booking-slot-availability";
 
 const bodySchema = z.object({
   ownerId: z.string().min(10).max(64),
@@ -125,7 +129,42 @@ export async function POST(req: Request) {
     }
   }
 
+  const phoneForBookings =
+    digits.length >= 9 ? digits : rows[0]?.customerPhone?.replace(/\D/g, "").slice(0, 20) ?? "";
+
+  let upcoming_bookings: {
+    id: number;
+    status: string;
+    scheduled_at: string;
+    date_label: string;
+    time_label: string;
+  }[] = [];
+
+  if (phoneForBookings.length >= 9) {
+    const now = new Date();
+    const upcomingRows = await prisma.carWashBooking.findMany({
+      where: {
+        ownerUserId: ownerId,
+        trialSessionId,
+        phone: phoneForBookings,
+        status: { in: ["SCHEDULED", "ARRIVED", "IN_SERVICE"] },
+        scheduledAt: { gte: now },
+      },
+      orderBy: { scheduledAt: "asc" },
+      take: 8,
+      select: { id: true, scheduledAt: true, status: true },
+    });
+    upcoming_bookings = upcomingRows.map((b) => ({
+      id: b.id,
+      status: b.status,
+      scheduled_at: b.scheduledAt.toISOString(),
+      date_label: bangkokDateKeyFromScheduledAt(b.scheduledAt),
+      time_label: bangkokTimeHHmmFromScheduledAt(b.scheduledAt),
+    }));
+  }
+
   return NextResponse.json({
+    upcoming_bookings,
     bundles: rows.map((r) => ({
       id: r.id,
       customer_name: r.customerName,

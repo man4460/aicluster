@@ -7,7 +7,7 @@ import {
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 
-export type StaffQrLandingVariant = "car-wash" | "laundry" | "barber";
+export type StaffQrLandingVariant = "car-wash" | "laundry" | "barber" | "massage";
 
 function StaffQrLandingHeroIcon({ variant }: { variant: StaffQrLandingVariant }) {
   const cls = "h-7 w-7 text-[#5b61ff]";
@@ -62,6 +62,22 @@ function StaffQrLandingHeroIcon({ variant }: { variant: StaffQrLandingVariant })
           <line x1="20" y1="4" x2="8.12" y2="15.88" />
           <line x1="14.47" y1="14.48" x2="20" y2="20" />
           <line x1="8.12" y1="8.12" x2="12" y2="12" />
+        </svg>
+      );
+    case "massage":
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          className={cls}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <path d="M8 12c2-2 6-2 8 0M7 16c3-3 7-3 10 0" />
+          <circle cx="12" cy="5" r="2" />
         </svg>
       );
   }

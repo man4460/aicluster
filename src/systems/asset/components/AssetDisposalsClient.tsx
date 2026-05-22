@@ -8,6 +8,7 @@ import {
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import { assetFieldClass, assetListRowCardClass } from "@/systems/asset/asset-ui-tokens";
 import {
   ASSET_DISPOSAL_METHOD_LABEL,
   ASSET_DISPOSAL_STATUS_LABEL,
@@ -39,8 +40,7 @@ type Row = {
 const METHODS: AssetDisposalMethod[] = ["SALE", "DONATION", "WRITE_OFF", "RECYCLE"];
 const STATUSES: AssetDisposalStatus[] = ["COMPLETED", "PENDING", "CANCELLED"];
 
-const inputCls =
-  "w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2 text-sm text-[#2e2a58] shadow-inner focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30";
+const inputCls = assetFieldClass;
 
 function todayYmd(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -186,9 +186,9 @@ export function AssetDisposalsClient() {
         ) : items.length === 0 ? (
           <AppEmptyState>ยังไม่มีรายการจำหน่ายออก</AppEmptyState>
         ) : (
-          <ul className="divide-y divide-white/60">
+          <ul className="space-y-2">
             {items.map((it) => (
-              <li key={it.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
+              <li key={it.id} className={cn(assetListRowCardClass, "flex flex-wrap items-start justify-between gap-3")}>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-xs text-[#66638c]">{it.disposalCode}</span>

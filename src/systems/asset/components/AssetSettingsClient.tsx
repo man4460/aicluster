@@ -6,6 +6,7 @@ import {
   AppSectionHeader,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { assetFieldClass } from "@/systems/asset/asset-ui-tokens";
 
 type Settings = {
   orgName: string | null;
@@ -20,8 +21,7 @@ type Settings = {
   currency: string;
 };
 
-const inputCls =
-  "w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2 text-sm text-[#2e2a58] shadow-inner focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30";
+const inputCls = assetFieldClass;
 
 export function AssetSettingsClient() {
   const [form, setForm] = useState<Settings>({

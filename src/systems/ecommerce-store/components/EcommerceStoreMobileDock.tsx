@@ -5,6 +5,11 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { deriveEcommerceSection } from "@/systems/ecommerce-store/ecommerce-nav";
 import {
+  ecommerceDockItemActiveClass,
+  ecommerceDockItemIdleClass,
+  ecommerceMobileDockShellClass,
+} from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
+import {
   IconClipboard,
   IconPackage,
   IconSettings,
@@ -25,17 +30,8 @@ export function EcommerceStoreMobileDock() {
   const section = deriveEcommerceSection(pathname);
 
   return (
-    <nav
-      aria-label="เมนูล่างร้านออนไลน์"
-      className={cn(
-        "fixed inset-x-3 z-40 md:hidden print:hidden",
-        "bottom-[max(0.75rem,env(safe-area-inset-bottom,0px))]",
-        "rounded-[2.5rem] border border-white/50 p-1.5",
-        "bg-gradient-to-br from-white/55 via-white/40 to-indigo-50/30",
-        "shadow-[0_24px_55px_-18px_rgba(30,27,75,0.38)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
-      )}
-    >
-      <ul className="grid grid-cols-5 gap-0.5">
+    <nav aria-label="เมนูล่างร้านออนไลน์" className={ecommerceMobileDockShellClass}>
+      <ul className="grid grid-cols-5 gap-1">
         {items.map(({ href, section: sec, label, Icon }) => {
           const active = section === sec;
           return (
@@ -43,15 +39,13 @@ export function EcommerceStoreMobileDock() {
               <Link
                 href={href}
                 className={cn(
-                  "flex min-h-[50px] w-full flex-col items-center justify-center gap-0.5 rounded-2xl px-0.5 py-1 text-center transition active:scale-95",
-                  active
-                    ? "bg-white/85 text-[#4d47b6] shadow-md ring-1 ring-[#4d47b6]/20"
-                    : "text-[#66638c] hover:bg-white/50",
+                  "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-0.5 py-1 text-center transition-all active:scale-90",
+                  active ? ecommerceDockItemActiveClass : ecommerceDockItemIdleClass,
                 )}
                 aria-current={active ? "page" : undefined}
               >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="text-[9px] font-bold leading-none">{label}</span>
+                <Icon className={cn("h-5 w-5 shrink-0", active ? "text-[#5b61ff]" : "text-slate-400")} />
+                <span className="text-[9px] font-black leading-none">{label}</span>
               </Link>
             </li>
           );

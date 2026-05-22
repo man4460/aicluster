@@ -8,6 +8,9 @@ import {
   BARBER_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
+  MASSAGE_MODULE_SLUG,
+  APPOINTMENT_QUEUE_MODULE_SLUG,
+  WAIT_QUEUE_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
   HOME_FINANCE_BASIC_MODULE_SLUG,
   INVENTORY_MODULE_SLUG,
@@ -48,6 +51,15 @@ export default async function ModuleEntryPage({ params }: Props) {
   }
   if (slug === CAR_WASH_MODULE_SLUG) {
     redirect("/dashboard/car-wash");
+  }
+  if (slug === MASSAGE_MODULE_SLUG) {
+    redirect("/dashboard/massage");
+  }
+  if (slug === APPOINTMENT_QUEUE_MODULE_SLUG) {
+    redirect("/dashboard/appointment-queue");
+  }
+  if (slug === WAIT_QUEUE_MODULE_SLUG) {
+    redirect("/dashboard/wait-queue");
   }
   if (slug === VILLAGE_MODULE_SLUG) {
     redirect("/dashboard/village");

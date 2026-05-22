@@ -1,21 +1,23 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { parkingStatCardClass } from "@/systems/parking/parking-valet-ui";
+import { parkingStatCardClass } from "@/systems/parking/parking-ui-tokens";
 
-/** เทียบ `CarWashStat` ใน CarWashDashboard — การ์ดตัวเลข + ไอคอนมุมขวาบน */
+/** เทียบ CarWashStat — การ์ดตัวเลข + ไอคอน */
 export function ParkingStatCard({
   title,
   value,
   tone,
   icon,
+  className,
 }: {
   title: string;
   value: string;
-  tone: "indigo" | "slate" | "emerald";
+  tone: "indigo" | "slate" | "emerald" | "amber" | "violet";
   icon?: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className={cn(parkingStatCardClass(tone), "min-w-0 sm:p-6")}>
+    <div className={cn(parkingStatCardClass(tone), "min-w-0", className)}>
       <div className="relative z-10 flex h-full flex-col justify-between">
         <div className="flex min-w-0 items-center justify-between gap-1.5 sm:gap-2">
           <p className="min-w-0 text-[9px] font-black uppercase leading-tight tracking-widest opacity-60 sm:text-[10px]">

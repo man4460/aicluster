@@ -6,6 +6,7 @@ import {
   AppSectionHeader,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { docFieldClass } from "@/systems/doc-transmission/doc-ui-tokens";
 
 type Settings = {
   orgName: string | null;
@@ -21,8 +22,7 @@ type Settings = {
   publicShareEnabled: boolean;
 };
 
-const inputClass =
-  "w-full rounded-xl border border-[#dcd8f0] bg-white/85 px-3 py-2 text-sm text-[#2e2a58] outline-none focus:border-[#4d47b6] focus:ring-2 focus:ring-[#4d47b6]/20";
+const inputClass = docFieldClass;
 const labelClass = "text-[11px] font-bold uppercase tracking-wider text-[#66638c]";
 
 export function DocSettingsClient({ initial }: { initial: Settings }) {
@@ -181,7 +181,7 @@ export function DocSettingsClient({ initial }: { initial: Settings }) {
           >
             {busy ? "กำลังบันทึก…" : "บันทึกการตั้งค่า"}
           </button>
-          {msg ? <span className="text-sm text-[#4d47b6]">{msg}</span> : null}
+          {msg ? <span className="text-sm text-[#5b61ff]">{msg}</span> : null}
         </div>
       </form>
     </AppDashboardSection>
@@ -206,7 +206,7 @@ function PrefixField({
         required
         value={value}
         onChange={(e) => onChange(e.target.value.toUpperCase().slice(0, 10))}
-        className="w-full rounded-xl border border-[#dcd8f0] bg-white/85 px-3 py-2 font-mono text-sm text-[#2e2a58] outline-none focus:border-[#4d47b6] focus:ring-2 focus:ring-[#4d47b6]/20"
+        className={cn(inputClass, "font-mono")}
       />
     </div>
   );

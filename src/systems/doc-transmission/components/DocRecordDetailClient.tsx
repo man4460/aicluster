@@ -289,7 +289,7 @@ export function DocRecordDetailClient({
     <div className="space-y-4">
       <Link
         href={`/dashboard/doc-transmission/records/${categorySlug}`}
-        className="inline-flex items-center gap-1 text-sm font-semibold text-[#4d47b6] hover:underline"
+        className="inline-flex items-center gap-1 text-sm font-semibold text-[#5b61ff] hover:underline"
       >
         ← กลับ {category.title}
       </Link>
@@ -304,7 +304,7 @@ export function DocRecordDetailClient({
               <h2 className="mt-1 text-lg font-bold tracking-tight text-[#2e2a58] sm:text-xl">
                 {record.subject}
               </h2>
-              <p className="mt-1 text-sm text-[#4d47b6]">{record.docNumber}</p>
+              <p className="mt-1 text-sm text-[#5b61ff]">{record.docNumber}</p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-1.5">
               <span className={cn("rounded-full px-2 py-1 text-xs font-bold ring-1", status.badge)}>
@@ -370,12 +370,12 @@ export function DocRecordDetailClient({
               <dt className="text-[10px] font-bold uppercase tracking-wider text-[#66638c]">
                 Tracking Code
               </dt>
-              <dd className="font-mono text-[#4d47b6]">{record.trackingCode}</dd>
+              <dd className="font-mono text-[#5b61ff]">{record.trackingCode}</dd>
             </div>
           </dl>
 
           {record.note ? (
-            <div className="rounded-xl border border-white/60 bg-white/60 p-3 text-sm text-[#2e2a58]">
+            <div className="rounded-[1.25rem] border border-white/60 bg-white/55 p-3 text-sm text-[#2e2a58] backdrop-blur-sm">
               <p className="text-[10px] font-bold uppercase tracking-wider text-[#66638c]">หมายเหตุ</p>
               <p className="mt-1 whitespace-pre-wrap">{record.note}</p>
             </div>
@@ -385,7 +385,7 @@ export function DocRecordDetailClient({
             <button
               type="button"
               onClick={() => setEditOpen(true)}
-              className="app-btn-soft inline-flex min-h-[40px] items-center gap-1 rounded-xl border border-[#dcd8f0] px-3 text-sm font-semibold text-[#4d47b6] hover:bg-[#f4f3ff]"
+              className="app-btn-soft inline-flex min-h-[40px] items-center gap-1 rounded-xl border border-white/55 bg-white/75 px-3 text-sm font-semibold text-[#5b61ff] hover:bg-white/90"
             >
               แก้ไขเอกสาร
             </button>

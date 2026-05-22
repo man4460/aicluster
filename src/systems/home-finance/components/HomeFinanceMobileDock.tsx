@@ -4,6 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { deriveHomeFinanceSection } from "@/systems/home-finance/homeFinanceSection";
+import {
+  hfDockItemActiveClass,
+  hfDockItemIdleClass,
+  hfMobileDockShellClass,
+} from "@/systems/home-finance/components/home-finance-ui-tokens";
 
 type HomeFinanceDockItem = {
   href: string;
@@ -31,11 +36,8 @@ export function HomeFinanceMobileDock() {
   const section = deriveHomeFinanceSection(pathname);
 
   return (
-    <nav
-      aria-label="เมนูล่างระบบรายรับรายจ่าย"
-      className="fixed inset-x-0 bottom-0 z-[70] border-t border-white/45 bg-gradient-to-r from-white/80 via-white/70 to-[#eef2ff]/75 px-3 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 backdrop-blur-2xl md:hidden"
-    >
-      <ul className="mx-auto grid w-full max-w-6xl grid-cols-4 gap-1 rounded-[2rem] border border-white/60 bg-white/65 p-1.5 shadow-[0_12px_38px_-18px_rgba(76,70,178,0.55)] ring-1 ring-white/65">
+    <nav aria-label="เมนูล่างระบบรายรับรายจ่าย" className={hfMobileDockShellClass}>
+      <ul className="grid grid-cols-4 gap-1">
         {items.map((item) => {
           const active = section === item.section || Boolean(item.includes?.some((s) => s === section));
           const Icon = item.icon;
@@ -44,15 +46,13 @@ export function HomeFinanceMobileDock() {
               <Link
                 href={item.href}
                 className={cn(
-                  "flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-bold tracking-tight transition",
-                  active
-                    ? "bg-gradient-to-b from-[#5b61ff] to-[#4d47b6] text-white shadow-[0_10px_20px_-12px_rgba(77,71,182,0.9)]"
-                    : "text-[#66638c] hover:bg-white/70",
+                  "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-0.5 py-1 text-center transition-all active:scale-90",
+                  active ? hfDockItemActiveClass : hfDockItemIdleClass,
                 )}
                 aria-current={active ? "page" : undefined}
               >
-                <Icon className="h-4 w-4" />
-                <span className="leading-none">{item.label}</span>
+                <Icon className={cn("h-5 w-5 shrink-0", active ? "text-[#5b61ff]" : "text-slate-400")} />
+                <span className="text-[9px] font-black leading-none">{item.label}</span>
               </Link>
             </li>
           );
@@ -64,7 +64,7 @@ export function HomeFinanceMobileDock() {
 
 function IconDashboard({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <rect x="3" y="3" width="8" height="8" rx="1.5" />
       <rect x="13" y="3" width="8" height="5" rx="1.5" />
       <rect x="13" y="10" width="8" height="11" rx="1.5" />
@@ -75,7 +75,7 @@ function IconDashboard({ className }: { className?: string }) {
 
 function IconHistory({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path d="M3 12a9 9 0 1 0 3-6.7" strokeLinecap="round" />
       <path d="M3 4v4h4M12 7v6l4 2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -84,7 +84,7 @@ function IconHistory({ className }: { className?: string }) {
 
 function IconCategories({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
       <circle cx="7" cy="7" r="1.5" />
       <circle cx="7" cy="12" r="1.5" />
@@ -95,10 +95,9 @@ function IconCategories({ className }: { className?: string }) {
 
 function IconReminder({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M10 17a2 2 0 0 0 4 0" strokeLinecap="round" />
     </svg>
   );
 }
-

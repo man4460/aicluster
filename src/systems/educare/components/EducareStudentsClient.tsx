@@ -10,6 +10,13 @@ import {
   appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import {
+  educareAvatarFallbackClass,
+  educareFieldClass,
+  educareLabelClass,
+  educareListRowCardClass,
+  educarePrimaryButtonClass,
+} from "@/systems/educare/educare-ui-tokens";
 
 type ClassroomOption = { id: number; name: string };
 type StudentRow = {
@@ -204,7 +211,7 @@ export function EducareStudentsClient() {
                 className={cn(
                   "relative inline-flex min-h-[40px] w-10 items-center justify-center rounded-xl border sm:hidden",
                   hasActiveFilter
-                    ? "border-[#4d47b6]/40 bg-[#ede9ff] text-[#4d47b6]"
+                    ? "border-[#5b61ff]/40 bg-white/80 text-[#5b61ff] ring-2 ring-[#5b61ff]/25"
                     : "border-white/60 bg-white/80 text-[#66638c]",
                 )}
                 aria-label="เปิดตัวกรอง"
@@ -213,7 +220,7 @@ export function EducareStudentsClient() {
               >
                 <FilterIcon className="h-4 w-4" />
                 {hasActiveFilter ? (
-                  <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#4d47b6]" aria-hidden />
+                  <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#5b61ff]" aria-hidden />
                 ) : null}
               </button>
             </div>
@@ -247,7 +254,7 @@ export function EducareStudentsClient() {
             <div className="flex items-center justify-between">
               <button
                 type="button"
-                className="text-xs font-semibold text-[#4d47b6] hover:underline"
+                className="text-xs font-semibold text-[#5b61ff] hover:underline"
                 onClick={() => setFilter({ classroomId: "", q: "" })}
               >
                 ล้างตัวกรอง
@@ -312,14 +319,14 @@ export function EducareStudentsClient() {
           ) : (
             groupedByRoom.map(([roomName, rows]) => (
               <div key={roomName} className="space-y-2">
-                <h3 className="text-sm font-bold text-[#4d47b6]">
+                <h3 className="text-sm font-bold text-[#5b61ff]">
                   {roomName} <span className="font-normal text-[#66638c]">· {rows.length} คน</span>
                 </h3>
                 <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {rows.map((s) => (
                     <li
                       key={s.id}
-                      className={cn(appDashboardSectionSlateClass, "flex items-center gap-3 !py-3")}
+                      className={cn(educareListRowCardClass, "flex items-center gap-3")}
                     >
                       <Avatar src={s.photoUrl} name={s.fullName} />
                       <div className="min-w-0 flex-1">
@@ -533,7 +540,7 @@ function StudentModalForm({
             <button
               type="submit"
               disabled={busy}
-              className="min-h-[48px] rounded-2xl bg-gradient-to-r from-[#5b61ff] to-[#4d47b6] px-5 text-sm font-bold text-white shadow-[0_18px_30px_-15px_rgba(91,97,255,0.85)] transition active:scale-[0.99] disabled:opacity-50"
+              className={cn(educarePrimaryButtonClass, "min-h-[48px] px-5")}
             >
               {busy ? "กำลังบันทึก…" : "บันทึก"}
             </button>
@@ -554,7 +561,7 @@ function Avatar({ src, name }: { src: string | null; name: string }) {
   }
   const fallback = name.trim().slice(0, 1).toUpperCase() || "·";
   return (
-    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#ede9ff] text-base font-bold text-[#4d47b6] ring-2 ring-white">
+    <span className={cn(educareAvatarFallbackClass, "h-12 w-12 shrink-0 text-base")}>
       {fallback}
     </span>
   );
@@ -576,13 +583,12 @@ function SkeletonStudentsList() {
   );
 }
 
-const inputCls =
-  "w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-sm text-[#2e2a58] placeholder:text-[#a3a0c0] shadow-inner focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30";
+const inputCls = educareFieldClass;
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4d47b6]/80">
+      <span className={educareLabelClass}>
         {label}
       </span>
       {children}

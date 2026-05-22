@@ -10,12 +10,14 @@ import { seedPromptLibraryProdDemoForOwner } from "../src/lib/trial/seed-prompt-
 import { seedMediaRegistryProdDemoForOwner } from "../src/lib/trial/seed-media-registry";
 import { seedParkingProdDemoForOwner } from "../src/lib/trial/seed-parking";
 import { seedWaitQueueProdDemoForOwner } from "../src/lib/trial/seed-wait-queue";
+import { seedAppointmentQueueProdDemoForOwner } from "../src/lib/trial/seed-appointment-queue";
 import { seedSchoolBankProdDemoForOwner } from "../src/lib/trial/seed-school-bank";
 import { seedCommunityCoopProdDemoForOwner } from "../src/lib/trial/seed-community-coop";
 import { seedAttendanceProdDemoForOwner } from "../src/lib/trial/seed-attendance";
 import { seedDormitoryProdDemoForOwner } from "../src/lib/trial/seed-dorm";
 import { seedBarberProdDemoForOwner } from "../src/lib/trial/seed-barber";
 import { seedCarWashProdDemoForOwner } from "../src/lib/trial/seed-car-wash";
+import { seedMassageProdDemoForOwner } from "../src/lib/trial/seed-massage";
 import { seedVillageProdDemoForOwner } from "../src/lib/trial/seed-village";
 import { seedHomeFinanceProdDemoForOwner } from "../src/lib/trial/seed-home-finance";
 import {
@@ -26,12 +28,14 @@ import { seedVaultProdDemoForOwner } from "../src/lib/trial/seed-vault";
 import { seedInventoryProdDemoForOwner } from "../src/lib/trial/seed-inventory";
 import { seedGeneralStorePosProdDemoForOwner } from "../src/lib/trial/seed-general-store-pos";
 import { seedEcommerceStoreProdDemoForOwner } from "../src/lib/trial/seed-ecommerce-store";
+import { seedSmartPoliceProdDemoForOwner } from "../src/lib/trial/seed-smart-police";
 import {
   ASSET_MODULE_SLUG,
   ATTENDANCE_MODULE_SLUG,
   BARBER_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
+  MASSAGE_MODULE_SLUG,
   COMMUNITY_COOP_MODULE_SLUG,
   DOC_TRANSMISSION_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
@@ -40,6 +44,7 @@ import {
   INVENTORY_MODULE_SLUG,
   GENERAL_STORE_POS_MODULE_SLUG,
   ECOMMERCE_STORE_MODULE_SLUG,
+  SMART_POLICE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
   MEDIA_REGISTRY_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
@@ -169,6 +174,13 @@ async function main() {
       sortOrder: 16,
     },
     {
+      slug: "massage",
+      title: "ระบบจัดการร้านนวด",
+      description: "กลุ่ม 1 (Basic) — คิวจอง walk-in แพ็กเกจ รายรับ-รายจ่าย QR ลูกค้า/พนักงาน",
+      groupId: 1,
+      sortOrder: 17,
+    },
+    {
       slug: "village",
       title: "ระบบจัดการหมู่บ้าน",
       description:
@@ -214,6 +226,14 @@ async function main() {
         "กลุ่ม 1 (Basic) — พนักงานลงคิวลูกค้า walk-in เรียกคิว แจ้งเมื่อถึงคิวเข้าร้าน",
       groupId: 1,
       sortOrder: 27,
+    },
+    {
+      slug: "appointment-queue",
+      title: "จองคิวอัจฉริยะ",
+      description:
+        "กลุ่ม 1 (Basic) — ลูกค้าจองเวลาล่วงหน้า มัดจำสลิป บอร์ดคิวลากสถานะ แปะลิงก์ Facebook/TikTok (ใช้งานฟรี)",
+      groupId: 1,
+      sortOrder: 28,
     },
     {
       slug: "educare",
@@ -310,6 +330,14 @@ async function main() {
         "กลุ่ม 1 (Basic) — แพ็กเกจซักรีด ออเดอร์ รับ–ส่ง ติดตามสถานะ",
       groupId: 1,
       sortOrder: 35,
+    },
+    {
+      slug: "smart-police",
+      title: "Smart Police (สำนวนคดี)",
+      description:
+        "กลุ่ม 2 (Silver) — สำนวนคดี คำให้การ หมายเรียก แม่แบบเอกสาร พิมพ์ A4 รายงานสรุป (อิง SmartPolice desktop)",
+      groupId: 2,
+      sortOrder: 28,
     },
     {
       slug: "stock-management",
@@ -418,6 +446,7 @@ async function main() {
     DORMITORY_MODULE_SLUG,
     BARBER_MODULE_SLUG,
     CAR_WASH_MODULE_SLUG,
+  MASSAGE_MODULE_SLUG,
     VILLAGE_MODULE_SLUG,
     HOME_FINANCE_BASIC_MODULE_SLUG,
     MQTT_SERVICE_MODULE_SLUG,
@@ -426,6 +455,7 @@ async function main() {
     INVENTORY_MODULE_SLUG,
     GENERAL_STORE_POS_MODULE_SLUG,
     ECOMMERCE_STORE_MODULE_SLUG,
+    SMART_POLICE_MODULE_SLUG,
   ] as const;
 
   for (const slug of demoAutoSubscribeSlugs) {
@@ -547,6 +577,19 @@ async function main() {
     }
   }
 
+  /** จองคิวอัจฉริยะ — บริการ ช่าง ตารางเวลา คิวตัวอย่างวันนี้ */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`appointment-queue (${email})`, () =>
+        seedAppointmentQueueProdDemoForOwner(prisma, row.id),
+      );
+    }
+  }
+
   /** ธนาคารโรงเรียน — บัญชี + รายการตัวอย่าง */
   for (const email of demoSeedDataOwnerEmails) {
     const row = await prisma.user.findUnique({
@@ -610,6 +653,16 @@ async function main() {
     });
     if (row) {
       await tryDemoSeed(`car-wash (${email})`, () => seedCarWashProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`massage (${email})`, () => seedMassageProdDemoForOwner(prisma, row.id));
     }
   }
 
@@ -699,6 +752,18 @@ async function main() {
     if (row) {
       await tryDemoSeed(`ecommerce-store (${email})`, () =>
         seedEcommerceStoreProdDemoForOwner(prisma, row.id),
+      );
+    }
+  }
+
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`smart-police (${email})`, () =>
+        seedSmartPoliceProdDemoForOwner(prisma, row.id),
       );
     }
   }

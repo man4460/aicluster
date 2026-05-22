@@ -12,6 +12,8 @@ import {
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { getSession } from "@/lib/auth/session";
+import { EducareStatCard } from "@/systems/educare/components/EducareStatCard";
+import { educareAvatarFallbackClass, educareListRowCardClass } from "@/systems/educare/educare-ui-tokens";
 import { getEducareDataScope } from "@/lib/trial/module-scopes";
 import { loadEducareDashboard } from "@/systems/educare/lib/educare-data";
 import {
@@ -60,56 +62,61 @@ export default async function EducareHomePage() {
           tone="violet"
           title="สรุปวันนี้"
           description={`ภาพรวมการเช็ค ${formatThaiDateLong(data.date)} (เวลาไทย)`}
+          className="flex flex-row items-start justify-between gap-3 sm:items-center"
+          actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           action={
             hasAnyData ? (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
                 <Link
                   href="/dashboard/educare/check"
-                  className="app-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold sm:min-h-0"
+                  aria-label="เปิดเช็คประจำวัน"
+                  className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2.5 py-2 text-sm font-semibold sm:min-h-0 sm:min-w-0 sm:px-4 sm:py-2.5"
                 >
-                  เปิดเช็คประจำวัน
+                  <IconCheck className="h-5 w-5 sm:hidden" />
+                  <span className="hidden sm:inline">เปิดเช็คประจำวัน</span>
                 </Link>
                 <Link
                   href="/dashboard/educare/reports"
+                  aria-label="ดูรายงาน"
                   className={cn(
                     appTemplateOutlineButtonClass,
-                    "inline-flex min-h-[44px] items-center justify-center sm:min-h-0",
+                    "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2.5 py-2 sm:min-h-0 sm:min-w-0 sm:px-4 sm:py-2.5",
                   )}
                 >
-                  ดูรายงาน
+                  <IconReport className="h-5 w-5 sm:hidden" />
+                  <span className="hidden sm:inline">ดูรายงาน</span>
                 </Link>
               </div>
             ) : null
           }
-          actionWrapClassName="shrink-0 self-start"
         />
 
         <div className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <StatCard
-            label="นักเรียนทั้งหมด"
-            value={data.studentCount}
-            hint={`${data.classroomCount} ห้องเรียน`}
-            accent="violet"
+          <EducareStatCard
+            title="นักเรียนทั้งหมด"
+            value={data.studentCount.toLocaleString("th-TH")}
+            subtitle={`${data.classroomCount} ห้องเรียน`}
+            tone="violet"
           />
-          <StatCard
-            label="มาเรียนวันนี้"
-            value={totalAttended}
-            hint={`คิดเป็น ${attendancePct}% ของนักเรียน`}
-            accent="green"
+          <EducareStatCard
+            title="มาเรียนวันนี้"
+            value={totalAttended.toLocaleString("th-TH")}
+            subtitle={`คิดเป็น ${attendancePct}% ของนักเรียน`}
+            tone="emerald"
             delta={data.delta.present}
           />
-          <StatCard
-            label="ขาด/ลา"
-            value={data.assembly.absent + data.assembly.excused}
-            hint={`ขาด ${data.assembly.absent} · ลา ${data.assembly.excused}`}
-            accent="amber"
+          <EducareStatCard
+            title="ขาด/ลา"
+            value={(data.assembly.absent + data.assembly.excused).toLocaleString("th-TH")}
+            subtitle={`ขาด ${data.assembly.absent} · ลา ${data.assembly.excused}`}
+            tone="amber"
             delta={-data.delta.absent}
           />
-          <StatCard
-            label="ความเรียบร้อย"
-            value={tidinessPct}
-            hint={`เช็คแล้ว ${data.tidiness.checked} คน`}
-            accent="indigo"
+          <EducareStatCard
+            title="ความเรียบร้อย"
+            value={tidinessPct.toLocaleString("th-TH")}
+            subtitle={`เช็คแล้ว ${data.tidiness.checked} คน`}
+            tone="indigo"
             unit="%"
           />
         </div>
@@ -117,11 +124,11 @@ export default async function EducareHomePage() {
         {hasAnyData ? null : (
           <AppEmptyState tone="violet" className="mt-5">
             ยังไม่มีข้อมูลในระบบ — เริ่มจาก{" "}
-            <Link href="/dashboard/educare/classrooms" className="font-semibold text-[#4d47b6] underline">
+            <Link href="/dashboard/educare/classrooms" className="font-semibold text-[#5b61ff] underline">
               เพิ่มห้องเรียน
             </Link>{" "}
             แล้ว{" "}
-            <Link href="/dashboard/educare/students" className="font-semibold text-[#4d47b6] underline">
+            <Link href="/dashboard/educare/students" className="font-semibold text-[#5b61ff] underline">
               เพิ่มนักเรียน
             </Link>{" "}
             จากนั้นเปิดเมนูเช็คประจำวัน
@@ -146,7 +153,7 @@ export default async function EducareHomePage() {
                 data.classrooms.map((c) => {
                   const pct = c.totalStudents > 0 ? Math.round((c.assembly.checked / c.totalStudents) * 100) : 0;
                   return (
-                    <div key={c.id} className={cn(appDashboardSectionSlateClass, "space-y-2")}>
+                    <div key={c.id} className={cn(educareListRowCardClass, "space-y-2")}>
                       <div className="flex items-baseline justify-between gap-2">
                         <p className="text-sm font-semibold text-[#2e2a58]">{c.name}</p>
                         <span
@@ -167,7 +174,7 @@ export default async function EducareHomePage() {
                       </p>
                       <div className="h-2 overflow-hidden rounded-full bg-[#ecebff]">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-[#4d47b6] to-[#7c3aed]/90"
+                          className="h-full rounded-full bg-gradient-to-r from-[#5b61ff] to-[#6a63ff]"
                           style={{ width: `${Math.min(100, pct)}%` }}
                         />
                       </div>
@@ -221,7 +228,7 @@ export default async function EducareHomePage() {
                   </li>
                 ) : (
                   data.topPerformers.map((p) => (
-                    <li key={p.studentId} className={cn(appDashboardSectionSlateClass, "flex items-center gap-3 !py-2.5")}>
+                    <li key={p.studentId} className={cn(educareListRowCardClass, "flex items-center gap-3")}>
                       <Avatar src={p.photoUrl} name={p.fullName} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-[#2e2a58]">
@@ -251,7 +258,7 @@ export default async function EducareHomePage() {
                   </li>
                 ) : (
                   data.concerns.map((p) => (
-                    <li key={p.studentId} className={cn(appDashboardSectionSlateClass, "flex items-center gap-3 !py-2.5")}>
+                    <li key={p.studentId} className={cn(educareListRowCardClass, "flex items-center gap-3")}>
                       <Avatar src={p.photoUrl} name={p.fullName} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-[#2e2a58]">
@@ -287,7 +294,7 @@ export default async function EducareHomePage() {
                   return (
                     <li
                       key={`${r.recordedAt.toISOString()}-${idx}`}
-                      className={cn(appDashboardSectionSlateClass, "flex items-center gap-3 !py-2.5")}
+                      className={cn(educareListRowCardClass, "flex items-center gap-3")}
                     >
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-lg ring-1 ring-[#dcd8f0]">
                         {meta.emoji}
@@ -326,53 +333,20 @@ export default async function EducareHomePage() {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  hint,
-  accent,
-  unit,
-  delta,
-  className,
-}: {
-  label: string;
-  value: number;
-  hint: string;
-  accent: "violet" | "amber" | "slate" | "green" | "indigo";
-  unit?: string;
-  delta?: number;
-  className?: string;
-}) {
-  const valueTone =
-    accent === "green"
-      ? "text-emerald-700"
-      : accent === "amber"
-        ? "text-amber-800"
-        : accent === "indigo"
-          ? "text-indigo-700"
-          : accent === "violet"
-            ? "text-[#4d47b6]"
-            : "text-[#2e2a58]";
-
+function IconCheck({ className }: { className?: string }) {
   return (
-    <div className={cn(appDashboardSectionSlateClass, "space-y-0", className)}>
-      <p className="text-xs font-medium text-[#66638c]">{label}</p>
-      <p className={cn("mt-1 flex items-baseline gap-1 text-2xl font-bold tabular-nums sm:text-3xl", valueTone)}>
-        <span>{value.toLocaleString("th-TH")}</span>
-        {unit ? <span className="text-base font-semibold text-[#66638c]">{unit}</span> : null}
-        {typeof delta === "number" && delta !== 0 ? (
-          <span
-            className={cn(
-              "ml-1 self-center rounded-full px-1.5 py-0.5 text-[10px] font-bold",
-              delta > 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
-            )}
-          >
-            {delta > 0 ? "▲" : "▼"} {Math.abs(delta)}
-          </span>
-        ) : null}
-      </p>
-      <p className="mt-1 text-xs leading-snug text-[#66638c]">{hint}</p>
-    </div>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      <path d="M9 11l3 3 8-8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconReport({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      <path d="M4 19h16M7 15l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
@@ -397,7 +371,7 @@ function ActivityRows({
       {rows.map(({ meta, data }) => {
         const pct = total > 0 ? Math.round((data.done / total) * 100) : 0;
         return (
-          <div key={meta.key} className={cn(appDashboardSectionSlateClass, "space-y-2 !py-3")}>
+          <div key={meta.key} className={cn(educareListRowCardClass, "space-y-2")}>
             <div className="flex items-baseline justify-between gap-2">
               <p className="text-sm font-semibold text-[#2e2a58]">
                 {meta.emoji} {meta.label}
@@ -426,7 +400,7 @@ function Avatar({ src, name }: { src: string | null; name: string }) {
   const fallback = name.trim().slice(0, 1).toUpperCase() || "·";
   if (src) {
     return (
-      <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[#ede9ff] ring-2 ring-white">
+      <span className={cn(educareAvatarFallbackClass, "h-10 w-10 shrink-0 overflow-hidden")}>
         <Image
           src={src}
           alt={name}
@@ -439,7 +413,7 @@ function Avatar({ src, name }: { src: string | null; name: string }) {
     );
   }
   return (
-    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#ede9ff] text-sm font-bold text-[#4d47b6] ring-2 ring-white">
+    <span className={cn(educareAvatarFallbackClass, "h-10 w-10 shrink-0 text-sm")}>
       {fallback}
     </span>
   );

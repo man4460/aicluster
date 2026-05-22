@@ -8,6 +8,7 @@ import {
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import { assetFieldClass, assetListRowCardClass } from "@/systems/asset/asset-ui-tokens";
 import {
   assetRowEditIconButtonClass,
   assetRowRemoveIconButtonClass,
@@ -27,8 +28,7 @@ type Row = {
   sortOrder: number;
 };
 
-const inputCls =
-  "w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2 text-sm text-[#2e2a58] shadow-inner focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/30";
+const inputCls = assetFieldClass;
 
 export function AssetLocationsClient() {
   const [items, setItems] = useState<Row[]>([]);
@@ -160,9 +160,9 @@ export function AssetLocationsClient() {
         ) : items.length === 0 ? (
           <AppEmptyState>ยังไม่มีสถานที่</AppEmptyState>
         ) : (
-          <ul className="divide-y divide-white/60">
+          <ul className="space-y-2">
             {items.map((it) => (
-              <li key={it.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+              <li key={it.id} className={cn(assetListRowCardClass, "flex flex-wrap items-center justify-between gap-3")}>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-xs text-[#66638c]">{it.code}</span>

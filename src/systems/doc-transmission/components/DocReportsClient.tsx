@@ -8,6 +8,8 @@ import {
   AppSectionHeader,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { DocStatCard } from "@/systems/doc-transmission/components/DocStatCard";
+import { docFieldClass, docListRowCardClass } from "@/systems/doc-transmission/doc-ui-tokens";
 import {
   DOC_CATEGORY_BY_KEY,
   DOC_CATEGORY_LIST,
@@ -27,8 +29,7 @@ type Overview = {
   daily: Array<{ date: string; count: number }>;
 };
 
-const inputClass =
-  "min-h-[40px] w-full rounded-xl border border-[#dcd8f0] bg-white/85 px-3 py-2 text-sm text-[#2e2a58] outline-none focus:border-[#4d47b6] focus:ring-2 focus:ring-[#4d47b6]/20";
+const inputClass = docFieldClass;
 
 export function DocReportsClient() {
   const [filterYear, setFilterYear] = useState("");
@@ -100,7 +101,7 @@ export function DocReportsClient() {
               aria-label="รีเฟรชข้อมูลรายงาน"
               onClick={() => void fetchData()}
               disabled={loading}
-              className="app-btn-soft inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-[#dcd8f0] px-2.5 text-[#4d47b6] hover:bg-[#f4f3ff] sm:min-w-0 sm:px-4"
+              className="app-btn-soft inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-white/55 bg-white/75 px-2.5 text-[#5b61ff] hover:bg-white/90 sm:min-w-0 sm:px-4"
             >
               <IconRefresh className={cn("h-5 w-5", loading && "animate-spin", "sm:mr-1.5")} />
               <span className="hidden sm:inline">รีเฟรช</span>
@@ -178,21 +179,24 @@ export function DocReportsClient() {
           <AppDashboardSection tone="slate">
             <AppSectionHeader tone="slate" title="ภาพรวม" />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Stat label="ทั้งหมด" value={data.totalAll} tone="from-[#ede9ff] to-[#dde0ff]" />
-              <Stat
-                label="มีไฟล์แนบ"
-                value={data.withAttachment}
-                tone="from-emerald-100 to-emerald-50"
+              <DocStatCard title="ทั้งหมด" value={data.totalAll.toLocaleString("th-TH")} subtitle="ฉบับ" tone="violet" />
+              <DocStatCard
+                title="มีไฟล์แนบ"
+                value={data.withAttachment.toLocaleString("th-TH")}
+                subtitle="ฉบับ"
+                tone="emerald"
               />
-              <Stat
-                label="แชร์สาธารณะ"
-                value={data.sharedCount}
-                tone="from-amber-100 to-amber-50"
+              <DocStatCard
+                title="แชร์สาธารณะ"
+                value={data.sharedCount.toLocaleString("th-TH")}
+                subtitle="ฉบับ"
+                tone="amber"
               />
-              <Stat
-                label="ดำเนินการ"
-                value={data.byStatus.find((s) => s.status === "IN_PROGRESS")?.count ?? 0}
-                tone="from-orange-100 to-orange-50"
+              <DocStatCard
+                title="ดำเนินการ"
+                value={(data.byStatus.find((s) => s.status === "IN_PROGRESS")?.count ?? 0).toLocaleString("th-TH")}
+                subtitle="ฉบับ"
+                tone="indigo"
               />
             </div>
           </AppDashboardSection>
@@ -218,7 +222,7 @@ export function DocReportsClient() {
                     return (
                       <li
                         key={s.status}
-                        className="flex items-center justify-between rounded-xl border border-white/60 bg-white/70 px-3 py-2"
+                        className={cn(docListRowCardClass, "flex items-center justify-between px-3 py-2")}
                       >
                         <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold ring-1", cfg.badge)}>
                           {cfg.label}
@@ -242,7 +246,7 @@ export function DocReportsClient() {
                     return (
                       <li
                         key={p.priority}
-                        className="flex items-center justify-between rounded-xl border border-white/60 bg-white/70 px-3 py-2"
+                        className={cn(docListRowCardClass, "flex items-center justify-between px-3 py-2")}
                       >
                         <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold ring-1", cfg.tone)}>
                           {cfg.label}
@@ -261,20 +265,9 @@ export function DocReportsClient() {
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: number; tone: string }) {
-  return (
-    <div className={cn("rounded-2xl border border-white/60 bg-gradient-to-br p-4 ring-1 ring-white/65", tone)}>
-      <p className="text-[11px] font-bold uppercase tracking-wider text-[#66638c]">{label}</p>
-      <p className="mt-1 text-2xl font-black tracking-tight text-[#2e2a58]">
-        {value.toLocaleString("th-TH")}
-      </p>
-    </div>
-  );
-}
-
 function IconRefresh({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 4v4h-4M21 12a9 9 0 0 1-15 6.7L3 16M3 20v-4h4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );

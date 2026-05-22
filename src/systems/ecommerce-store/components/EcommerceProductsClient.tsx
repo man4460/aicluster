@@ -18,6 +18,10 @@ import {
   IconRowEdit,
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
+import {
+  ecommerceListRowCardClass,
+  ecommerceListRowCardWarnClass,
+} from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
 
 type Category = {
   id: string;
@@ -499,9 +503,11 @@ export function EcommerceProductsClient() {
           return (
             <li
               key={p.id}
-              className={`flex flex-wrap items-center gap-3 rounded-2xl border px-3 py-3 sm:px-4 ${
-                low ? "border-amber-200 bg-amber-50/80" : "border-white/60 bg-white/70"
-              } ${!p.isActive ? "opacity-60" : ""}`}
+              className={cn(
+                "flex flex-wrap items-center gap-3",
+                low ? ecommerceListRowCardWarnClass : ecommerceListRowCardClass,
+                !p.isActive && "opacity-60",
+              )}
             >
               {p.imageUrl ? (
                 <AppImageThumb
