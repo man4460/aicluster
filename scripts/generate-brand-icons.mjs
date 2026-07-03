@@ -72,4 +72,17 @@ await sharp({
   .png()
   .toFile(path.join(brandDir, "mawell-og.png"));
 
+const ogSquare = 1200;
+const ogSquareInner = Math.round(ogSquare * 0.62);
+const ogSquareLogo = await sharp(src)
+  .resize(ogSquareInner, ogSquareInner, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  .png()
+  .toBuffer();
+await sharp({
+  create: { width: ogSquare, height: ogSquare, channels: 3, background: { r: 247, g: 246, b: 255 } },
+})
+  .composite([{ input: ogSquareLogo, gravity: "centre" }])
+  .png()
+  .toFile(path.join(brandDir, "mawell-og-square.png"));
+
 console.log("Brand icons generated from:", src);

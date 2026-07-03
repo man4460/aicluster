@@ -3,6 +3,7 @@ import { Noto_Sans_Thai } from "next/font/google";
 import { PwaInstallShell } from "@/components/pwa/PwaInstallShell";
 import {
   MAWELL_OG_IMAGE,
+  MAWELL_OG_IMAGE_SQUARE,
   MAWELL_PWA_ICON_192,
   MAWELL_PWA_ICON_APPLE,
 } from "@/lib/pwa/brand-assets";
@@ -56,13 +57,16 @@ export const metadata: Metadata = {
     siteName: "MAWELL",
     title: "MAWELL Buffet",
     description: siteDescription,
-    images: [{ url: MAWELL_OG_IMAGE, width: 1200, height: 630, alt: "MAWELL" }],
+    images: [
+      { url: MAWELL_OG_IMAGE_SQUARE, width: 1200, height: 1200, alt: "MAWELL" },
+      { url: MAWELL_OG_IMAGE, width: 1200, height: 630, alt: "MAWELL" },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "MAWELL Buffet",
     description: siteDescription,
-    images: [MAWELL_OG_IMAGE],
+    images: [MAWELL_OG_IMAGE_SQUARE, MAWELL_OG_IMAGE],
   },
   other: {
     "mobile-web-app-capable": "yes",
