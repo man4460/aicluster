@@ -1,0 +1,52 @@
+---
+description: จบงานให้ครบ — prisma generate, migrate, tsc, dev และ git commit checkpoint
+alwaysApply: true
+---
+
+# จบงานให้ครบ + บันทึกย้อนกลับได้
+
+ใช้คู่กับ `run-commands-proactively.mdc` — หลังแก้โค้ด/สคีมา **อย่าจบเทิร์นแค่สรุป** ถ้ายังไม่รันขั้นตอนด้านล่างที่เกี่ยวข้อง
+
+## Checklist ก่อนถือว่างานจบ (รันเอง ไม่ส่งต่อผู้ใช้)
+
+| สถานการณ์ | คำสั่งที่ต้องรัน (ที่รากโปรเจกต์) |
+|-----------|-----------------------------------|
+| แก้ `prisma/schema.prisma` หรือ `prisma/migrations/**` | `npx prisma migrate deploy` (หรือ `migrate dev` ถ้าสร้าง migration ใหม่) → **`npx prisma generate`** |
+| แตะ API/โค้ดที่ใช้โมเดล Prisma ใหม่ | **`npx prisma generate`** (แม้ไม่มี migration) |
+| แก้ TypeScript/React หลัก | **`npx tsc --noEmit`** — แก้จนกว่าผ่าน |
+| เปลี่ยน env / schema / route สำคัญ | รีสตาร์ท **`npm run dev`** หรือยืนยันว่า dev ยังรันและ HMR โหลดได้ |
+| `prisma generate` EPERM (Windows) | หยุด process ที่ล็อก `query_engine-windows.dll.node` (มักคือ `next dev`) → generate ใหม่ → เปิด dev ใหม่ |
+| หลัง generate + แก้ schema | ลบ `.next` แล้วรัน dev ใหม่ถ้าเจอ client เก่า / API 404 แปลก ๆ |
+
+## Dev server
+
+- ถ้า **ไม่มี** `next dev` รันอยู่และงานต้องทดสอบบนเบราว์เซอร์ — **เปิด `npm run dev` ใน background** หลัง generate/migrate
+- ถ้า dev รันอยู่แล้วหลัง schema change — **รีสตาร์ท** dev หนึ่งรอบ (หยุดแล้วรันใหม่) ดีกว่าคาดหวัง HMR อย่างเดียว
+
+## Git checkpoint — บันทึกทุกครั้งที่แก้โค้ดจบช่วงงาน
+
+หลังจบชุดการแก้ที่ **สมบูรณ์ในบริบทงาน** (feature/fix ย่อย หรือจบเทิร์น):
+
+1. `git status` + `git diff` — อย่า commit `.env`, `.next`, credentials
+2. **สร้าง commit** ด้วยข้อความสั้น ชัด (ภาษาไทยหรืออังกฤษตามสไตล์ repo) — **ไม่ต้องรอผู้ใช้บอก "commit"** ในโปรเจกต์นี้
+3. **อย่า** `git push` เว้นแต่ผู้ใช้ขอ
+4. **อย่า** commit ไฟล์ build/cache (` .next/** `) หรือ secret
+
+**ข้อยกเว้นไม่ commit:** งานค้างกลางทางชัดเจน (โค้ดพัง / tsc ไม่ผ่าน / migration ล้มเหลว) — แก้ให้ผ่าน checklist ก่อนแล้วค่อย commit
+
+## ลำดับมาตรฐานหลังแก้ schema
+
+```
+npx prisma migrate deploy   # ถ้ามี migration ใหม่
+npx prisma generate
+npx tsc --noEmit
+# หยุด dev ถ้าจำเป็น → ลบ .next ถ้าจำเป็น → npm run dev
+git add <ไฟล์ที่เกี่ยวข้อง>
+git commit -m "..."
+```
+
+## ห้ามพลาดซ้ำ
+
+- อย่าจบด้วย "รัน prisma generate เองนะ" หลังแก้ schema
+- อย่าทิ้ง diff ค้างหลายเทิร์นโดยไม่ commit เมื่องานย่อยนั้นจบแล้ว
+- อย่า commit เฉพาะ rule/doc โดยไม่ generate/tsc เมื่องานนั้นแตะ Prisma หรือ TS

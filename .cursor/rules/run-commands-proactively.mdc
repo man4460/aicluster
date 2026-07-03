@@ -18,3 +18,5 @@ alwaysApply: true
 - หลัง generate แนะนำ **`rm -rf .next`** (หรือลบโฟลเดอร์ `.next` บน Windows) แล้วรีสตาร์ท **`next dev`** — กัน Next/Webpack ค้าง bundle หรือ Prisma client เก่า
 - ถ้า **`prisma generate` ล้มเหลวด้วย EPERM** (ไฟล์ DLL ถูกล็อก) — ให้หยุดเซิร์ฟเวอร์ที่รันอยู่แล้วรัน generate ใหม่
 - ถ้าผู้ใช้บอกเรื่องคอลัมน์ MySQL / schema ไม่ตรง DB — รัน **`npx prisma migrate deploy`** (หรือ `migrate dev`) เมื่อมี DB ต่ออยู่ หรือชี้ไปที่ **`prisma/repair-user-columns.sql`** ตามบริบท — **แล้วยังต้อง `prisma generate` หลัง migration เสมอ**
+
+รายละเอียด checklist เต็ม (dev, tsc, git commit): **`agent-finish-checkpoint.mdc`**
