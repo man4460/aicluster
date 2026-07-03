@@ -19,18 +19,18 @@ function ModuleShowcaseCard({ item, tier }: { item: LandingModuleShowcaseItem; t
         href="/login"
         aria-label={`${title} — เข้าสู่ระบบเพื่อทดลองใช้`}
         className={cn(
-          "group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-white/55 bg-white/75 shadow-[0_22px_55px_-30px_rgba(30,27,75,0.35)] ring-1 ring-inset ring-white/55 backdrop-blur-xl transition duration-500",
+          "group relative flex h-full flex-col overflow-hidden rounded-xl border border-white/55 bg-white/75 shadow-[0_22px_55px_-30px_rgba(30,27,75,0.35)] ring-1 ring-inset ring-white/55 backdrop-blur-xl transition duration-500",
           "hover:-translate-y-1 hover:border-[#5b61ff]/30 hover:shadow-[0_28px_64px_-26px_rgba(91,97,255,0.38)]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f4ff]",
           "sm:rounded-[1.75rem]",
         )}
       >
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-gradient-to-br from-[#ecebff] to-indigo-100/40">
+      <div className="relative aspect-[16/10] min-h-[6.5rem] w-full overflow-hidden bg-gradient-to-br from-[#ecebff] to-indigo-100/40 sm:min-h-[10rem]">
         <img
           src={item.coverSrc}
           alt=""
-          className="h-full w-full object-cover object-center transition duration-700 ease-out will-change-transform group-hover:scale-[1.045]"
-          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover object-center transition duration-700 ease-out will-change-transform group-hover:scale-[1.045]"
+          loading="eager"
           decoding="async"
           width={900}
           height={563}
@@ -41,7 +41,7 @@ function ModuleShowcaseCard({ item, tier }: { item: LandingModuleShowcaseItem; t
         />
         <span
           className={cn(
-            "absolute right-3 top-3 z-10 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide shadow-md backdrop-blur-md sm:right-4 sm:top-4 sm:text-xs",
+            "absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide shadow-md backdrop-blur-md sm:right-4 sm:top-4 sm:px-2.5 sm:py-1 sm:text-xs",
             tier === "free"
               ? "border border-emerald-300/50 bg-emerald-500/90 text-white"
               : "border border-amber-200/60 bg-amber-400/95 text-[#1a0d3a]",
@@ -49,13 +49,13 @@ function ModuleShowcaseCard({ item, tier }: { item: LandingModuleShowcaseItem; t
         >
           {tier === "free" ? "ฟรี" : "1 บาท/วัน"}
         </span>
-        <div className="absolute inset-x-0 bottom-0 z-10 p-4 sm:p-5">
-          <p className="text-pretty text-base font-black leading-snug text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.45)] sm:text-lg">
+        <div className="absolute inset-x-0 bottom-0 z-10 p-2.5 sm:p-5">
+          <p className="text-pretty text-xs font-black leading-snug text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.45)] sm:text-lg">
             {title}
           </p>
         </div>
       </div>
-      <div className="border-t border-white/50 bg-gradient-to-br from-white/90 to-indigo-50/20 px-4 py-3.5 sm:px-5 sm:py-4">
+      <div className="hidden border-t border-white/50 bg-gradient-to-br from-white/90 to-indigo-50/20 px-3 py-2.5 sm:block sm:px-5 sm:py-4">
         <p className="text-pretty text-xs font-semibold leading-relaxed text-[#5f5a8a] sm:text-sm">{item.blurb}</p>
       </div>
       </Link>
@@ -73,7 +73,8 @@ function useReveal<T extends HTMLElement>() {
       ([e]) => {
         if (e.isIntersecting) setVisible(true);
       },
-      { threshold: 0.12, rootMargin: "0px 0px -6% 0px" },
+      // threshold สูง + section สูง (การ์ดโมดูลจำนวนมาก) ทำให้มือถือไม่เคย intersect — ค้าง opacity-0
+      { threshold: 0, rootMargin: "0px 0px 8% 0px" },
     );
     io.observe(el);
     return () => io.disconnect();
@@ -172,20 +173,20 @@ export function LandingPageClient() {
               <strong className="font-black text-[#059669]"> ใช้งานฟรี </strong>
               ไม่หักโทเคนรายวัน ส่วนสายรายวันเริ่ม
               <strong className="font-black text-[#b45309]"> 1 บาทต่อวัน </strong>
-              ต่อระบบเมื่อเข้าใช้ (กทม.) — ไม่ต้องต่อหลาย SaaS
+              ต่อระบบเมื่อเข้าใช้
             </p>
 
             <div
               ref={heroCta.ref}
               className={cn(
-                "mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4",
+                "mt-10 flex flex-row flex-wrap items-stretch justify-center gap-2 sm:gap-4",
                 heroCta.visible && "landing-cta-micro",
               )}
             >
               <Link
                 href="/login"
                 className={cn(
-                  "landing-cta-primary inline-flex min-h-[48px] min-w-[200px] items-center justify-center rounded-[1.25rem] px-8 py-3.5 text-base font-black shadow-lg transition",
+                  "landing-cta-primary inline-flex min-h-[48px] min-w-0 flex-1 items-center justify-center rounded-[1.25rem] px-4 py-3 text-sm font-black shadow-lg transition sm:min-w-[200px] sm:px-8 sm:py-3.5 sm:text-base",
                   "bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 text-[#1a0d3a]",
                   "ring-2 ring-white/90 ring-offset-2 ring-offset-transparent hover:brightness-105 hover:shadow-xl",
                 )}
@@ -195,7 +196,7 @@ export function LandingPageClient() {
               <Link
                 href="/login"
                 className={cn(
-                  "inline-flex min-h-[48px] min-w-[200px] items-center justify-center rounded-[1.25rem] border-2 border-[#5b61ff]/35 bg-white/80 px-8 py-3.5 text-base font-black text-[#4d47b6] backdrop-blur-sm",
+                  "inline-flex min-h-[48px] min-w-0 flex-1 items-center justify-center rounded-[1.25rem] border-2 border-[#5b61ff]/35 bg-white/80 px-4 py-3 text-sm font-black text-[#4d47b6] backdrop-blur-sm sm:min-w-[200px] sm:px-8 sm:py-3.5 sm:text-base",
                   "transition hover:border-[#5b61ff]/55 hover:bg-white",
                 )}
               >
@@ -225,7 +226,7 @@ export function LandingPageClient() {
                 },
                 {
                   t: "1 บาทต่อวัน",
-                  d: "โมดูลสายรายวัน: เข้าใช้แต่ละระบบวันละ 1 โทเคน (เทียบ 1 บาท) ต่อวันกรุงเทพ — จ่ายเท่าที่เปิด",
+                  d: "โมดูลสายรายวัน: เข้าใช้แต่ละระบบวันละ 1 โทเคน (เทียบ 1 บาท) ต่อวัน",
                 },
                 {
                   t: "หนึ่งแพลตฟอร์ม",
@@ -245,36 +246,40 @@ export function LandingPageClient() {
         </section>
 
         <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-          <div
-            ref={moduleShowcase.ref}
-            className={cn(
-              "transition duration-700",
-              moduleShowcase.visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0 motion-reduce:translate-y-0 motion-reduce:opacity-100",
-            )}
-          >
-            <h2 className="text-center text-2xl font-black text-[#1e1b4b] sm:text-3xl">โมดูลในแพลตฟอร์ม</h2>
-            <p className="mx-auto mt-2 max-w-2xl text-center text-sm font-medium text-[#66638c] sm:text-base">
+          <div ref={moduleShowcase.ref} className="text-center">
+            <h2 className="text-2xl font-black text-[#1e1b4b] sm:text-3xl">โมดูลในแพลตฟอร์ม</h2>
+            <p className="mx-auto mt-2 max-w-2xl text-sm font-medium text-[#66638c] sm:text-base">
               แถวบน: ระบบที่<strong className="text-[#059669]"> ไม่หักโทเคนรายวัน</strong> — แถวล่าง: สายรายวัน{" "}
               <strong className="text-[#b45309]">1 บาทต่อวัน</strong> ต่อ 1 โมดูล เมื่อเข้าใช้
             </p>
+          </div>
 
-            <div className="mt-10">
+          <div
+            className={cn(
+              "mt-10 transition duration-700",
+              moduleShowcase.visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0 motion-reduce:translate-y-0 motion-reduce:opacity-100",
+            )}
+          >
               <h3 className="text-sm font-black uppercase tracking-widest text-emerald-700">ใช้งานฟรี — ไม่หักรายวัน</h3>
-              <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+              <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
                 {LANDING_FREE_MODULE_SHOWCASE.map((item) => (
                   <ModuleShowcaseCard key={item.slug} item={item} tier="free" />
                 ))}
               </ul>
-            </div>
+          </div>
 
-            <div className="mt-12 border-t border-[#5b61ff]/15 pt-12">
-              <h3 className="text-sm font-black uppercase tracking-widest text-amber-800">สายรายวัน — 1 บาทต่อวันต่อระบบ</h3>
-              <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
-                {LANDING_DAILY_MODULE_SHOWCASE.map((item) => (
-                  <ModuleShowcaseCard key={item.slug} item={item} tier="daily" />
-                ))}
-              </ul>
-            </div>
+          <div
+            className={cn(
+              "mt-12 border-t border-[#5b61ff]/15 pt-12 transition duration-700",
+              moduleShowcase.visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0 motion-reduce:translate-y-0 motion-reduce:opacity-100",
+            )}
+          >
+            <h3 className="text-sm font-black uppercase tracking-widest text-amber-800">สายรายวัน — 1 บาทต่อวันต่อระบบ</h3>
+            <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+              {LANDING_DAILY_MODULE_SHOWCASE.map((item) => (
+                <ModuleShowcaseCard key={item.slug} item={item} tier="daily" />
+              ))}
+            </ul>
           </div>
         </section>
 
