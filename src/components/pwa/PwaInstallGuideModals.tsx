@@ -40,7 +40,7 @@ function GuideShell({
             alt=""
             width={56}
             height={56}
-            className="h-14 w-14 shrink-0 rounded-2xl shadow-lg"
+            className="h-14 w-14 shrink-0 rounded-full shadow-lg"
             unoptimized
           />
           <div className="min-w-0">

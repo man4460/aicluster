@@ -33,7 +33,7 @@ export function PwaInstallBanner({ className }: { className?: string }) {
           alt=""
           width={44}
           height={44}
-          className="h-11 w-11 shrink-0 rounded-xl shadow-md"
+          className="h-11 w-11 shrink-0 rounded-full shadow-md"
           unoptimized
         />
         <div className="min-w-0">

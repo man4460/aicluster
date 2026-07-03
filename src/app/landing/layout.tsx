@@ -1,10 +1,24 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { MAWELL_OG_IMAGE } from "@/lib/pwa/brand-assets";
+
+const landingDescription =
+  "แพลตฟอร์มเดียวครบระบบหลังบ้าน องค์กร ธุรกิจ โรงเรียน — โมดูลฟรีหลายระบบ และสายรายวัน 1 บาทต่อวันต่อระบบ";
 
 export const metadata: Metadata = {
   title: "MAWELL — แพลตฟอร์มธุรกิจครบวงจร",
-  description:
-    "แพลตฟอร์มเดียวครบระบบหลังบ้าน องค์กร ธุรกิจ โรงเรียน — โมดูลฟรีหลายระบบ และสายรายวัน 1 บาทต่อวันต่อระบบ",
+  description: landingDescription,
+  openGraph: {
+    title: "MAWELL — แพลตฟอร์มธุรกิจครบวงจร",
+    description: landingDescription,
+    images: [{ url: MAWELL_OG_IMAGE, width: 1200, height: 630, alt: "MAWELL" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MAWELL — แพลตฟอร์มธุรกิจครบวงจร",
+    description: landingDescription,
+    images: [MAWELL_OG_IMAGE],
+  },
 };
 
 export default function LandingLayout({ children }: { children: ReactNode }) {
