@@ -153,6 +153,7 @@ model User {
   homeUtilityProfiles      HomeUtilityProfile[]
   homeVehicleProfiles      HomeVehicleProfile[]
   homeFinanceReminders     HomeFinanceReminder[]
+  homeFinancePersonalDocuments HomeFinancePersonalDocument[]
   carWashPackages          CarWashPackage[]
   carWashBundles           CarWashBundle[]
   carWashVisits            CarWashVisit[]
@@ -234,11 +235,18 @@ model User {
   generalStorePosProducts   GeneralStorePosProduct[]
   generalStorePosSales      GeneralStorePosSale[]
   drinkPosShopProfiles      DrinkPosShopProfile[]
+  moduleShopBrandings       ModuleShopBranding[]
   drinkPosCategories        DrinkPosCategory[]
   drinkPosProducts          DrinkPosProduct[]
   drinkPosSales             DrinkPosSale[]
   drinkPosCostEntries       DrinkPosCostEntry[]
   drinkPosMembers           DrinkPosMember[]
+  hotelResortProfiles       HotelResortProfile[]
+  hotelResortRoomTypes      HotelResortRoomType[]
+  hotelResortRooms          HotelResortRoom[]
+  hotelResortGuests         HotelResortGuest[]
+  hotelResortBookings       HotelResortBooking[]
+  hotelResortCostEntries    HotelResortCostEntry[]
   ecommerceStores           EcommerceStore[]
   ecommerceCategories       EcommerceCategory[]
   ecommerceProducts         EcommerceProduct[]
@@ -582,6 +590,10 @@ model BarberShopProfile {
   taxId        String?  @map("tax_id") @db.VarChar(30)
   address      String?  @db.Text
   contactPhone String?  @map("contact_phone") @db.VarChar(32)
+  promptPayPhone String? @map("prompt_pay_phone") @db.VarChar(20)
+  bankName     String?  @map("bank_name") @db.VarChar(120)
+  bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
+  bankAccountName String? @map("bank_account_name") @db.VarChar(200)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -936,6 +948,10 @@ model MassageShopProfile {
   taxId          String?  @map("tax_id") @db.VarChar(30)
   address        String?  @db.Text
   contactPhone   String?  @map("contact_phone") @db.VarChar(32)
+  promptPayPhone String?  @map("prompt_pay_phone") @db.VarChar(20)
+  bankName       String?  @map("bank_name") @db.VarChar(120)
+  bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
+  bankAccountName String? @map("bank_account_name") @db.VarChar(200)
   /** ระยะเวลานวดเริ่มต้น (นาที) เมื่อไม่ได้ตั้งตารางรายวัน */
   defaultSlotMinutes Int  @default(60) @map("default_slot_minutes")
   createdAt      DateTime @default(now()) @map("created_at")
@@ -1607,6 +1623,23 @@ model HomeFinanceReminder {
 
   @@index([ownerUserId, dueDate, isDone])
   @@map("home_finance_reminders")
+}
+
+/** เอกสารส่วนตัว — เก็บไฟล์แยกจากสลิปรายการรายรับ–รายจ่าย */
+model HomeFinancePersonalDocument {
+  id          Int      @id @default(autoincrement())
+  ownerUserId String   @map("owner_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  title       String   @db.VarChar(160)
+  category    String?  @db.VarChar(80)
+  fileUrl     String   @map("file_url") @db.VarChar(512)
+  mimeType    String?  @map("mime_type") @db.VarChar(80)
+  note        String?  @db.VarChar(600)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, createdAt])
+  @@map("home_finance_personal_documents")
 }
 
 enum CarWashBookingStatus {
@@ -2374,6 +2407,11 @@ model AppointmentQueueShopProfile {
   promptPayId         String?  @map("prompt_pay_id") @db.VarChar(32)
   promptPayName       String?  @map("prompt_pay_name") @db.VarChar(120)
   bankAccountNote     String?  @map("bank_account_note") @db.VarChar(500)
+  promptPayPhone      String?  @map("prompt_pay_phone") @db.VarChar(20)
+  bankName            String?  @map("bank_name") @db.VarChar(120)
+  bankAccountNumber   String?  @map("bank_account_number") @db.VarChar(32)
+  bankAccountName     String?  @map("bank_account_name") @db.VarChar(200)
+  taxId               String?  @map("tax_id") @db.VarChar(30)
   defaultSlotMinutes  Int      @default(60) @map("default_slot_minutes")
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
@@ -2488,6 +2526,12 @@ model LoyaltyStampShopProfile {
   rewardTitle       String   @default("ของรางวัล") @map("reward_title") @db.VarChar(160)
   rewardDescription String?  @map("reward_description") @db.VarChar(500)
   stampEmoji        String   @default("⭐") @map("stamp_emoji") @db.VarChar(8)
+  contactPhone      String?  @map("contact_phone") @db.VarChar(32)
+  promptPayPhone    String?  @map("prompt_pay_phone") @db.VarChar(20)
+  bankName          String?  @map("bank_name") @db.VarChar(120)
+  bankAccountNumber String?  @map("bank_account_number") @db.VarChar(32)
+  bankAccountName   String?  @map("bank_account_name") @db.VarChar(200)
+  taxId             String?  @map("tax_id") @db.VarChar(30)
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
@@ -3524,6 +3568,15 @@ model DrinkPosShopProfile {
   ownerUserId     String   @map("owner_user_id") @db.VarChar(191)
   owner           User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   trialSessionId  String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  displayName     String?  @map("display_name") @db.VarChar(200)
+  logoUrl         String?  @map("logo_url") @db.VarChar(512)
+  tagline         String?  @db.VarChar(300)
+  contactPhone    String?  @map("contact_phone") @db.VarChar(32)
+  promptPayPhone  String?  @map("prompt_pay_phone") @db.VarChar(20)
+  bankName        String?  @map("bank_name") @db.VarChar(120)
+  bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
+  bankAccountName String?  @map("bank_account_name") @db.VarChar(200)
+  taxId           String?  @map("tax_id") @db.VarChar(30)
   stampsPerReward Int      @default(10) @map("stamps_per_reward")
   rewardTitle     String   @default("เครื่องดื่มฟรี 1 แก้ว") @map("reward_title") @db.VarChar(160)
   createdAt       DateTime @default(now()) @map("created_at")
@@ -3557,6 +3610,8 @@ model DrinkPosProduct {
   category    DrinkPosCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   name        String   @db.VarChar(160)
   priceBaht   Int      @default(0) @map("price_baht")
+  /** ราคาตามขนาด [{ size: "S"|"M"|"L", priceBaht, enabled }] — ว่าง = ราคาเดียวจาก priceBaht */
+  sizePrices  Json?    @map("size_prices")
   imageUrl    String?  @map("image_url") @db.VarChar(500)
   isFeatured  Boolean  @default(false) @map("is_featured")
   isActive    Boolean  @default(true) @map("is_active")
@@ -3615,6 +3670,7 @@ model DrinkPosSaleLine {
   productId     String?  @map("product_id") @db.VarChar(191)
   product       DrinkPosProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
   productName   String   @map("product_name") @db.VarChar(160)
+  sizeLabel     String?  @map("size_label") @db.VarChar(8)
   unitPriceBaht Int      @map("unit_price_baht")
   quantity      Int      @default(1)
   lineTotalBaht Int      @map("line_total_baht")
@@ -3635,6 +3691,178 @@ model DrinkPosCostEntry {
 
   @@index([ownerUserId, spentAt], map: "dp_cost_owner_spent_idx")
   @@map("drink_pos_cost_entries")
+}
+
+/** โรงแรม / รีสอร์ท — ห้องพัก การจอง เช็คอิน บิล PromptPay */
+enum HotelResortRoomStatus {
+  VACANT
+  OCCUPIED
+  RESERVED
+  MAINTENANCE
+}
+
+enum HotelResortBookingStatus {
+  RESERVED
+  CHECKED_IN
+  CHECKED_OUT
+  NO_SHOW
+  CANCELLED
+}
+
+enum HotelResortPaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+model HotelResortProfile {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_user_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  propertyName   String   @default("โรงแรม") @map("property_name") @db.VarChar(160)
+  logoUrl        String?  @map("logo_url") @db.VarChar(512)
+  tagline        String?  @db.VarChar(300)
+  contactPhone   String?  @map("contact_phone") @db.VarChar(32)
+  promptPayPhone String?  @map("prompt_pay_phone") @db.VarChar(20)
+  bankName       String?  @map("bank_name") @db.VarChar(120)
+  bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
+  bankAccountName String? @map("bank_account_name") @db.VarChar(200)
+  taxId          String?  @map("tax_id") @db.VarChar(30)
+  checkInTime    String   @default("14:00") @map("check_in_time") @db.VarChar(8)
+  checkOutTime   String   @default("12:00") @map("check_out_time") @db.VarChar(8)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId], map: "hr_profile_owner_trial_uq")
+  @@map("hotel_resort_profiles")
+}
+
+/** ชื่อร้าน/โลโก้เฉพาะโมดูล — สำหรับ QR และแสดงผล (คาร์แคร์ ซักผ้า POS อาหาร ฯลฯ) */
+model ModuleShopBranding {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_user_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  moduleSlug     String   @map("module_slug") @db.VarChar(64)
+  displayName    String?  @map("display_name") @db.VarChar(200)
+  logoUrl        String?  @map("logo_url") @db.VarChar(512)
+  tagline        String?  @db.VarChar(300)
+  contactPhone   String?  @map("contact_phone") @db.VarChar(32)
+  promptPayPhone String?  @map("prompt_pay_phone") @db.VarChar(20)
+  bankName       String?  @map("bank_name") @db.VarChar(120)
+  bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
+  bankAccountName String? @map("bank_account_name") @db.VarChar(200)
+  taxId          String?  @map("tax_id") @db.VarChar(30)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId, moduleSlug], map: "msb_owner_trial_slug_uq")
+  @@index([ownerUserId, moduleSlug], map: "msb_owner_slug_idx")
+  @@map("module_shop_brandings")
+}
+
+model HotelResortRoomType {
+  id           String   @id @default(cuid())
+  ownerUserId  String   @map("owner_user_id") @db.VarChar(191)
+  owner        User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name         String   @db.VarChar(120)
+  basePriceBaht Int     @default(0) @map("base_price_baht")
+  maxGuests    Int      @default(2) @map("max_guests")
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  rooms    HotelResortRoom[]
+  bookings HotelResortBooking[]
+
+  @@index([ownerUserId, sortOrder], map: "hr_rtype_owner_sort_idx")
+  @@map("hotel_resort_room_types")
+}
+
+model HotelResortRoom {
+  id           String               @id @default(cuid())
+  ownerUserId  String               @map("owner_user_id") @db.VarChar(191)
+  owner        User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  roomTypeId   String               @map("room_type_id") @db.VarChar(191)
+  roomType     HotelResortRoomType  @relation(fields: [roomTypeId], references: [id], onDelete: Restrict)
+  roomNumber   String               @map("room_number") @db.VarChar(20)
+  floor        Int                  @default(1)
+  status       HotelResortRoomStatus @default(VACANT)
+  note         String?              @db.VarChar(300)
+  sortOrder    Int                  @default(0) @map("sort_order")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+
+  bookings HotelResortBooking[]
+
+  @@unique([ownerUserId, roomNumber], map: "hr_room_owner_number_uq")
+  @@index([ownerUserId, status], map: "hr_room_owner_status_idx")
+  @@map("hotel_resort_rooms")
+}
+
+model HotelResortGuest {
+  id              String   @id @default(cuid())
+  ownerUserId     String   @map("owner_user_id") @db.VarChar(191)
+  owner           User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId  String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  fullName        String   @map("full_name") @db.VarChar(160)
+  phone           String   @db.VarChar(20)
+  nationalId      String?  @map("national_id") @db.VarChar(30)
+  nationality     String?  @db.VarChar(80)
+  idCardImageUrl  String?  @map("id_card_image_url") @db.VarChar(500)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  bookings HotelResortBooking[]
+
+  @@index([ownerUserId, trialSessionId, phone], map: "hr_guest_owner_trial_phone_idx")
+  @@map("hotel_resort_guests")
+}
+
+model HotelResortBooking {
+  id              String                   @id @default(cuid())
+  ownerUserId     String                   @map("owner_user_id") @db.VarChar(191)
+  owner           User                     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId  String                   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  guestId         String?                  @map("guest_id") @db.VarChar(191)
+  guest           HotelResortGuest?        @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  roomId          String?                  @map("room_id") @db.VarChar(191)
+  room            HotelResortRoom?         @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  roomTypeId      String?                  @map("room_type_id") @db.VarChar(191)
+  roomType        HotelResortRoomType?     @relation(fields: [roomTypeId], references: [id], onDelete: SetNull)
+  guestName       String                   @map("guest_name") @db.VarChar(160)
+  guestPhone      String                   @map("guest_phone") @db.VarChar(20)
+  checkInAt       DateTime                 @map("check_in_at")
+  checkOutAt      DateTime                 @map("check_out_at")
+  status          HotelResortBookingStatus @default(RESERVED)
+  isWalkIn        Boolean                  @default(false) @map("is_walk_in")
+  totalBaht       Int                      @default(0) @map("total_baht")
+  amountPaidBaht  Int                      @default(0) @map("amount_paid_baht")
+  paymentStatus   HotelResortPaymentStatus @default(UNPAID) @map("payment_status")
+  idCardImageUrl  String?                  @map("id_card_image_url") @db.VarChar(500)
+  note            String?                  @db.VarChar(500)
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, status, checkInAt], map: "hr_book_owner_status_in_idx")
+  @@index([ownerUserId, guestPhone], map: "hr_book_owner_phone_idx")
+  @@index([roomId], map: "hr_book_room_idx")
+  @@map("hotel_resort_bookings")
+}
+
+model HotelResortCostEntry {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  label       String   @db.VarChar(160)
+  amountBaht  Int      @map("amount_baht")
+  spentAt     DateTime @default(now()) @map("spent_at")
+  note        String?  @db.VarChar(300)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([ownerUserId, spentAt], map: "hr_cost_owner_spent_idx")
+  @@map("hotel_resort_cost_entries")
 }
 
 /** คลัง prompt ส่วนตัว (แยกตามผู้ใช้ — อิงแนวคิด Prompt Master / Google Script pms) */

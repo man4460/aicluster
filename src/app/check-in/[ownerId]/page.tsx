@@ -62,7 +62,7 @@ export default async function PublicAttendancePage({ params, searchParams }: Pro
     throw e;
   }
 
-  const profile = await getBusinessProfile(ownerId);
+  const profile = await getBusinessProfile(ownerId, { ownerOnly: true });
   const orgName = profile?.name?.trim() || "องค์กร";
 
   const locRow =

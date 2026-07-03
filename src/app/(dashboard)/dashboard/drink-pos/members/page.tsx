@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import { getRequestBaseUrl } from "@/lib/app/request-base-url";
 import { getSession } from "@/lib/auth/session";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
+import { getQrDrinkPosBranding } from "@/lib/profile/qr-branding";
 import { getDrinkPosDataScope } from "@/lib/trial/module-scopes";
-import { prisma } from "@/lib/prisma";
 import { DrinkPosLoyaltyHubClient } from "@/systems/drink-pos/components/DrinkPosLoyaltyHubClient";
 
 export default async function DrinkPosMembersPage() {
@@ -15,11 +15,7 @@ export default async function DrinkPosMembersPage() {
 
   const scope = await getDrinkPosDataScope(ctx.billingUserId);
   const baseUrl = await getRequestBaseUrl();
-  const owner = await prisma.user.findUnique({
-    where: { id: ctx.billingUserId },
-    select: { username: true, email: true },
-  });
-  const shopLabel = owner?.username?.trim() || owner?.email?.split("@")[0]?.trim() || "ร้านเครื่องดื่ม";
+  const branding = await getQrDrinkPosBranding(ctx.billingUserId, scope.trialSessionId);
 
   return (
     <Suspense fallback={<div className="h-24 animate-pulse rounded-2xl bg-[#ecebff]/40" aria-hidden />}>
@@ -27,7 +23,8 @@ export default async function DrinkPosMembersPage() {
         ownerId={ctx.billingUserId}
         trialSessionId={scope.trialSessionId}
         baseUrl={baseUrl}
-        shopLabel={shopLabel}
+        shopLabel={branding.label}
+        logoUrl={branding.logoUrl}
         trialExportBlocked={scope.isTrialSandbox}
       />
     </Suspense>

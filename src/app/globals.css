@@ -56,12 +56,30 @@
   --font-sans: var(--font-noto-sans-thai), "Noto Sans Thai", ui-sans-serif, system-ui, sans-serif;
 }
 
+/* มือถือ / iPad: ความสูงเต็มจอจริง (เทียบ MelodyWebapp) */
+html {
+  height: 100%;
+  height: 100dvh;
+}
+
 body {
   color: var(--foreground);
   background-color: var(--background);
   background-image: var(--mawell-page-gradient);
   background-attachment: fixed;
+  min-height: 100%;
   min-height: 100dvh;
+}
+
+.app-shell {
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
+/* โหมดติดตั้งบนหน้าจอโฮม (standalone) — safe-area บนอยู่ที่ header backdrop */
+html.pwa-standalone body {
+  min-height: 100dvh;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /**

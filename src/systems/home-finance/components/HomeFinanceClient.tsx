@@ -18,7 +18,6 @@ import {
   AppCompareBarList,
   AppEmptyState,
   AppImageLightbox,
-  AppImageThumb,
   AppRevenueCostColumnChart,
   AppSparkChartPanel,
   AppSparkChartsTwoColumnGrid,
@@ -29,20 +28,16 @@ import {
   type AppRevenueCostBucket,
 } from "@/components/app-templates";
 import {
-  hfHistoryListShellClass,
   HomeFinanceEmptyState,
   HomeFinanceEntityActions,
   HomeFinanceEntityMain,
   HomeFinanceEntityRow,
-  HomeFinanceFilterCard,
-  HomeFinanceHeroCta,
   HomeFinanceList,
   HomeFinanceListHeading,
   HomeFinanceModalActionBar,
   HomeFinanceModalBackdrop,
   HomeFinanceModalPanel,
   HomeFinancePageSection,
-  HomeFinancePanelHeading,
   HomeFinancePrimaryButton,
   HomeFinanceRowActionButton,
   HomeFinanceRowActionIconButton,
@@ -53,30 +48,28 @@ import {
   HomeFinanceSecondaryButton,
   HomeFinanceSectionHeader,
   HomeFinanceToolbarButton,
-  HomeFinanceUploadTrigger,
   HomeFinanceVehicleCoverUpload,
 } from "@/systems/home-finance/components/HomeFinanceUi";
 import { HomeFinanceStatCard } from "@/systems/home-finance/components/HomeFinanceStatCard";
 import {
   hfFilterChipClass,
-  hfListRowCardClass,
   hfPanelGlassClass,
-  hfStatsPanelClass,
 } from "@/systems/home-finance/components/home-finance-ui-tokens";
 import {
   HomeFinanceFormAttachmentsBlock,
-  HomeFinanceHistoryAttachmentStrip,
   HomeFinanceVehicleRowAttachments,
   revokeHomeFinancePendingObjectUrls,
   type HomeFinancePendingUpload,
 } from "@/systems/home-finance/components/HomeFinanceEntryAttachmentsUi";
+import { HomeFinanceSlipUploadField } from "@/systems/home-finance/components/HomeFinanceSlipUploadField";
+import { HomeFinanceEntryRowCard } from "@/systems/home-finance/components/HomeFinanceEntryRowCard";
+import { HomeFinanceRemindersSection } from "@/systems/home-finance/components/HomeFinanceRemindersSection";
 import {
   encodeHomeFinancePublicAssetHref,
   isHomeFinancePdfUrl,
   MAX_HOME_FINANCE_ATTACHMENTS,
   normalizeVehicleAttachmentUrls,
 } from "@/lib/home-finance/attachments";
-import { HOME_FINANCE_BUILTIN_CATEGORIES } from "@/lib/home-finance/builtin-categories";
 import { cn } from "@/lib/cn";
 import {
   deriveHomeFinanceSection,
@@ -169,22 +162,6 @@ function mergeVehicleWithHomeFinanceApiItem(prev: Vehicle, item: unknown): Vehic
   return { ...prev, ...next, attachmentUrls: next.attachmentUrls };
 }
 
-function homeFinanceEntryLinkLabel(e: Entry): string {
-  if (e.linkedUtility != null) {
-    return `${e.linkedUtility.utilityType === "ELECTRIC" ? "ค่าไฟ" : "ค่าน้ำ"} · ${e.linkedUtility.label}`;
-  }
-  if (e.linkedVehicle != null) {
-    return `${e.linkedVehicle.vehicleType === "CAR" ? "รถยนต์" : "จยย."} · ${e.linkedVehicle.label}${e.linkedVehicle.plateNumber ? ` (${e.linkedVehicle.plateNumber})` : ""}`;
-  }
-  return "";
-}
-
-function homeFinanceTypePillClass(type: "INCOME" | "EXPENSE"): string {
-  return type === "INCOME"
-    ? "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200/70"
-    : "bg-rose-100 text-rose-800 ring-1 ring-rose-200/70";
-}
-
 function entryAutoTitleFromUtility(u: Utility): string {
   return `${u.label} (${u.utilityType === "ELECTRIC" ? "ค่าไฟ" : "ค่าน้ำ"})`;
 }
@@ -196,10 +173,16 @@ function entryAutoTitleFromVehicle(v: Vehicle): string {
 }
 
 /**
- * fallback ระหว่างรอ API — เมื่อโหลด `loadMeta()` เสร็จ ระบบจะใช้ `categories` จาก DB แทน
- * (built-in ถูก seed ลง DB อัตโนมัติฝั่ง server)
+ * ตัวเลือกหมวด — จากหมวดที่ผู้ใช้สร้างเองเท่านั้น
  */
-const CATEGORIES = HOME_FINANCE_BUILTIN_CATEGORIES.map((c) => ({ key: c.key, label: c.name }));
+function categoryKeyFromRow(c: Category): string {
+  return c.systemKey ?? `CUSTOM_${c.id}`;
+}
+
+function firstActiveCategoryKey(rows: Category[]): string {
+  const active = rows.filter((c) => c.isActive);
+  return active[0] ? categoryKeyFromRow(active[0]) : "";
+}
 
 /** โยนเมื่ออัปโหลดถูกยกเลิกเพราะหมดเวลา (ไฟล์ใหญ่/เน็ตช้า) */
 const HOME_FINANCE_UPLOAD_TIMEOUT = "HOME_FINANCE_UPLOAD_TIMEOUT";
@@ -284,15 +267,6 @@ function parseAmountInput(raw: string): number {
 
 function formatMoneyCompact(thb: (n: number) => string, amount: number): string {
   return `฿ ${thb(amount)}`;
-}
-
-function categoryIcon(categoryLabel: string): string {
-  const s = categoryLabel.toLowerCase();
-  if (s.includes("ไฟ")) return "⚡";
-  if (s.includes("น้ำ")) return "💧";
-  if (s.includes("น้ำมัน")) return "⛽";
-  if (s.includes("เงินเดือน")) return "💼";
-  return "•";
 }
 
 const HOME_FINANCE_FETCH_MS = 45_000;
@@ -522,7 +496,6 @@ type HomeFinanceClientProps = {
 export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults }: HomeFinanceClientProps) {
   const pathname = usePathname() ?? "";
   const section = sectionFromRoute ?? deriveHomeFinanceSection(pathname);
-  const editSlipFileInputId = useId();
   const vehicleAddAttachInputId = useId();
   const vehicleEditAttachInputId = useId();
   const [from, setFrom] = useState(calendarDefaults.monthStartYmd);
@@ -530,8 +503,8 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   const [typeFilter, setTypeFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [q, setQ] = useState("");
-  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [densityMode, setDensityMode] = useState<"compact" | "comfortable">("comfortable");
+  const [historyTab, setHistoryTab] = useState<"list" | "filter" | "charts">("list");
+  const [dashboardTab, setDashboardTab] = useState<"list" | "charts" | "budget">("list");
   /** เริ่ม false → กลายเป็น true หลัง read prefs จาก localStorage ครั้งแรก เพื่อกัน save ทับด้วย default ระหว่าง hydration */
   const [filterPrefsHydrated, setFilterPrefsHydrated] = useState(false);
   const [budgets, setBudgets] = useState<HomeFinanceBudgetItem[]>(DEFAULT_HOME_FINANCE_BUDGETS);
@@ -555,7 +528,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
 
   const [entryDate, setEntryDate] = useState(calendarDefaults.todayYmd);
   const [type, setType] = useState<"INCOME" | "EXPENSE">("EXPENSE");
-  const [categoryKey, setCategoryKey] = useState<string>("UTILITIES_ELECTRIC");
+  const [categoryKey, setCategoryKey] = useState<string>("");
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -577,21 +550,13 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   const [editForm, setEditForm] = useState({
     entryDate: calendarDefaults.todayYmd,
     type: "EXPENSE" as "INCOME" | "EXPENSE",
-    categoryKey: "UTILITIES_ELECTRIC",
+    categoryKey: "",
     title: "",
     amount: "",
     note: "",
-    attachmentUrls: [] as string[],
-    linkedUtilityId: null as number | null,
-    linkedVehicleId: null as number | null,
+    slipImageUrl: null as string | null,
   });
-
-  const setEditEntryAttachmentUrls = useCallback((action: SetStateAction<string[]>) => {
-    setEditForm((s) => ({
-      ...s,
-      attachmentUrls: typeof action === "function" ? action(s.attachmentUrls) : action,
-    }));
-  }, []);
+  const [editSlipUploading, setEditSlipUploading] = useState(false);
 
   /** โมดัลเพิ่ม/แก้ไขหมวดกำหนดเอง — id=null คือโหมดเพิ่ม */
   const [categoryFormModalOpen, setCategoryFormModalOpen] = useState(false);
@@ -652,21 +617,16 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
     current: number;
     total: number;
   } | null>(null);
-  const [editEntryAttachmentPending, setEditEntryAttachmentPending] = useState<HomeFinancePendingUpload[]>([]);
   const [vehicleAddAttachmentPending, setVehicleAddAttachmentPending] = useState<HomeFinancePendingUpload[]>([]);
   const [vehicleEditAttachmentPending, setVehicleEditAttachmentPending] = useState<HomeFinancePendingUpload[]>([]);
   /** แยก epoch ต่อบริบท — อย่าใช้ตัวเดียวกันทั้งหมด เดี๋ยวปิดฟอร์มหนึ่งแล้วอัปโหลดในอีกฟอร์มถูกยกเลิก */
-  const hfAttachEpochEntryRef = useRef(0);
   const hfAttachEpochVehicleAddRef = useRef(0);
   const hfAttachEpochVehicleEditRef = useRef(0);
   /** อัปเดตทุก render — appendFilesToList อ่านตอนเริ่มคลิกเลือกไฟล์ กันค่า length จาก closure เก่า (หลายไฟล์ + แก้ไขรถ) */
-  const hfAttachEntryUrlCountRef = useRef(0);
-  const hfAttachEntryPendingCountRef = useRef(0);
   const hfAttachVehicleAddUrlCountRef = useRef(0);
   const hfAttachVehicleAddPendingCountRef = useRef(0);
   const hfAttachVehicleEditUrlCountRef = useRef(0);
   const hfAttachVehicleEditPendingCountRef = useRef(0);
-  const lastEditEntryIdRef = useRef<number | null>(null);
   const lastVehicleEditIdRef = useRef<number | null>(null);
   const [coverPhotoUploadingVehicleId, setCoverPhotoUploadingVehicleId] = useState<number | null>(null);
   const [coverPhotoUploadingUtilityId, setCoverPhotoUploadingUtilityId] = useState<number | null>(null);
@@ -681,53 +641,19 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
     if (typeof prefs.typeFilter === "string") setTypeFilter(prefs.typeFilter);
     if (typeof prefs.categoryFilter === "string") setCategoryFilter(prefs.categoryFilter);
     if (typeof prefs.q === "string") setQ(prefs.q);
-    if (prefs.densityMode === "compact" || prefs.densityMode === "comfortable") {
-      setDensityMode(prefs.densityMode);
-    }
     setFilterPrefsHydrated(true);
   }, []);
 
   /** บันทึกค่าตัวกรองทุกครั้งที่เปลี่ยน (หลัง hydrate แล้ว) */
   useEffect(() => {
     if (!filterPrefsHydrated) return;
-    saveHomeFinanceFilterPrefs({ from, to, typeFilter, categoryFilter, q, densityMode });
-  }, [filterPrefsHydrated, from, to, typeFilter, categoryFilter, q, densityMode]);
+    saveHomeFinanceFilterPrefs({ from, to, typeFilter, categoryFilter, q });
+  }, [filterPrefsHydrated, from, to, typeFilter, categoryFilter, q]);
 
   /** โหลดงบเดือนที่ผู้ใช้ตั้งไว้ */
   useEffect(() => {
     setBudgets(loadHomeFinanceBudgets());
   }, []);
-
-  useEffect(() => {
-    if (!editingEntry) {
-      if (lastEditEntryIdRef.current != null) {
-        hfAttachEpochEntryRef.current += 1;
-        lastEditEntryIdRef.current = null;
-        setEditEntryAttachmentPending((p) => {
-          revokeHomeFinancePendingObjectUrls(p);
-          return [];
-        });
-      }
-      return;
-    }
-    const id = editingEntry.id;
-    if (lastEditEntryIdRef.current === null) {
-      setEditEntryAttachmentPending((p) => {
-        revokeHomeFinancePendingObjectUrls(p);
-        return [];
-      });
-      lastEditEntryIdRef.current = id;
-      return;
-    }
-    if (lastEditEntryIdRef.current !== id) {
-      hfAttachEpochEntryRef.current += 1;
-      setEditEntryAttachmentPending((p) => {
-        revokeHomeFinancePendingObjectUrls(p);
-        return [];
-      });
-      lastEditEntryIdRef.current = id;
-    }
-  }, [editingEntry]);
 
   const prevVehicleAddOpenRef = useRef(false);
   useEffect(() => {
@@ -778,21 +704,21 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
     }
   }, [vehicleEditModalId]);
 
-  /**
-   * ตัวเลือกหมวดในฟอร์มรายรับ–รายจ่าย — มาจาก DB เท่านั้น (built-in ถูก seed อัตโนมัติ)
-   * — ถ้า DB ยังไม่ตอบ ใช้ CATEGORIES (ค่าเริ่มต้นทั้ง 13) เป็น fallback ไม่ให้ dropdown ว่าง
-   */
   const categoryOptions = useMemo(() => {
-    if (categories.length === 0) {
-      return CATEGORIES.map((c) => ({ key: c.key, label: c.label }));
-    }
     return categories
       .filter((c) => c.isActive)
       .map((c) => ({
-        key: c.systemKey ?? `CUSTOM_${c.id}`,
+        key: categoryKeyFromRow(c),
         label: c.name,
       }));
   }, [categories]);
+
+  useEffect(() => {
+    if (categoryOptions.length === 0) return;
+    if (!categoryOptions.some((c) => c.key === categoryKey)) {
+      setCategoryKey(categoryOptions[0]!.key);
+    }
+  }, [categoryOptions, categoryKey]);
   const showVehicleFields = categoryKey.startsWith("VEHICLE_");
   const showVehicleTypeField = showVehicleFields && !isStandaloneVehicleCategoryKey(categoryKey);
 
@@ -850,7 +776,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
       }
       if (ev.key.toLowerCase() === "f" && section === "history") {
         ev.preventDefault();
-        setMobileFilterOpen(true);
+        setHistoryTab("filter");
         window.setTimeout(() => filterSearchInputRef.current?.focus(), 0);
       }
     };
@@ -931,43 +857,24 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
 
   const loadMeta = useCallback(async () => {
     try {
-      const [cRes, uRes, vRes, rRes] = await Promise.all([
+      const [cRes, rRes] = await Promise.all([
         homeFinanceFetch("/api/home-finance/categories"),
-        homeFinanceFetch("/api/home-finance/utilities"),
-        homeFinanceFetch("/api/home-finance/vehicles"),
         homeFinanceFetch("/api/home-finance/reminders"),
       ]);
-      const [cP, uP, vP, rP] = await Promise.all([
+      const [cP, rP] = await Promise.all([
         readHomeFinanceJsonResponse(cRes),
-        readHomeFinanceJsonResponse(uRes),
-        readHomeFinanceJsonResponse(vRes),
         readHomeFinanceJsonResponse(rRes),
       ]);
       const failures: string[] = [];
       if (cP.ok) {
-        setCategories((cP.data.categories as Category[] | undefined) ?? []);
+        const loaded = (cP.data.categories as Category[] | undefined) ?? [];
+        setCategories(loaded);
+        const firstKey = firstActiveCategoryKey(loaded);
+        if (firstKey) {
+          setCategoryKey((prev) => (prev && loaded.some((c) => categoryKeyFromRow(c) === prev && c.isActive) ? prev : firstKey));
+        }
       } else {
-        failures.push(metaEndpointFailureLine("หมวดกำหนดเอง", cRes, cP.data));
-      }
-      if (uP.ok) {
-        setUtilities((uP.data.items as Utility[] | undefined) ?? []);
-      } else {
-        failures.push(metaEndpointFailureLine("ค่าไฟ/ค่าน้ำ", uRes, uP.data));
-      }
-      if (vP.ok) {
-        const rawItems = (vP.data.items as Array<Vehicle & { attachmentUrls?: unknown }> | undefined) ?? [];
-        const items: Vehicle[] = rawItems.map((row) => ({
-          ...row,
-          attachmentUrls: normalizeVehicleAttachmentUrls(row),
-        }));
-        const counts = (vP.data.counts as { cars: number; motorcycles: number } | undefined) ?? {
-          cars: 0,
-          motorcycles: 0,
-        };
-        setVehicles(items);
-        setVehicleCounts(counts);
-      } else {
-        failures.push(metaEndpointFailureLine("ยานพาหนะ", vRes, vP.data));
+        failures.push(metaEndpointFailureLine("หมวดหมู่", cRes, cP.data));
       }
       if (rP.ok) {
         setReminders((rP.data.items as Reminder[] | undefined) ?? []);
@@ -1030,6 +937,31 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
       setEntrySlipImageUrl(url);
     } finally {
       setEntrySlipUploading(false);
+    }
+  }
+
+  async function uploadEditSlipFile(file: File) {
+    setEditSlipUploading(true);
+    setError(null);
+    try {
+      let url: string | null;
+      try {
+        url = await uploadHomeFinanceFile(file);
+      } catch (err) {
+        setError(
+          err instanceof Error && err.message === HOME_FINANCE_UPLOAD_TIMEOUT
+            ? "อัปโหลดรูปหมดเวลา — ลองรูปเล็กลงหรือเน็ตที่เร็วขึ้น"
+            : "อัปโหลดรูปไม่สำเร็จ",
+        );
+        return;
+      }
+      if (!url) {
+        setError("อัปโหลดรูปไม่สำเร็จ — ใช้ JPG/PNG/WebP/GIF ไม่เกิน 3MB");
+        return;
+      }
+      setEditForm((s) => ({ ...s, slipImageUrl: url }));
+    } finally {
+      setEditSlipUploading(false);
     }
   }
 
@@ -1138,13 +1070,17 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
         setError("กรุณากรอกชื่อรายการ");
         return;
       }
+      if (!categoryKey) {
+        setError("กรุณาสร้างหมวดหมู่ก่อน — ไปที่เมนู «หมวดหมู่»");
+        return;
+      }
       const n = parseAmountInput(amount);
       if (!Number.isFinite(n) || n <= 0) {
         setError("จำนวนเงินต้องเป็นตัวเลขมากกว่า 0 (ใช้จุดทศนิยมได้ ไม่บังคับคั่นหลักพัน)");
         return;
       }
-      const uLink = isUtilityCategoryKey(categoryKey) && linkedUtilityId !== "" ? Number(linkedUtilityId) : null;
-      const vLink = isVehicleCategoryKey(categoryKey) && linkedVehicleId !== "" ? Number(linkedVehicleId) : null;
+      const uLink = null;
+      const vLink = null;
       let res: Response;
       try {
         res = await homeFinanceFetch("/api/home-finance/entries", {
@@ -1157,11 +1093,11 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
           categoryLabel: categoryOptions.find((c) => c.key === categoryKey)?.label ?? categoryKey,
           title: title.trim(),
             amount: n,
-            dueDate: dueDate || null,
-            billNumber: billNumber || null,
-            vehicleType: showVehicleTypeField ? vehicleType || null : null,
-            serviceCenter: showVehicleFields ? serviceCenter || null : null,
-            paymentMethod: paymentMethod || null,
+            dueDate: null,
+            billNumber: null,
+            vehicleType: null,
+            serviceCenter: null,
+            paymentMethod: null,
             note: note || null,
             attachmentUrls: entrySlipImageUrl ? [entrySlipImageUrl] : [],
             linkedUtilityId: uLink,
@@ -1241,7 +1177,12 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
 
   function openEdit(entry: Entry) {
     setError(null);
+    setEditSlipUploading(false);
     setEditingEntry(entry);
+    const slip =
+      entry.attachmentUrls?.length > 0
+        ? entry.attachmentUrls[0]
+        : entry.slipImageUrl ?? null;
     setEditForm({
       entryDate: entry.entryDate,
       type: entry.type,
@@ -1249,14 +1190,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
       title: entry.title,
       amount: String(entry.amount),
       note: entry.note ?? "",
-      attachmentUrls:
-        entry.attachmentUrls?.length > 0
-          ? entry.attachmentUrls
-          : entry.slipImageUrl
-            ? [entry.slipImageUrl]
-            : [],
-      linkedUtilityId: entry.linkedUtilityId,
-      linkedVehicleId: entry.linkedVehicleId,
+      slipImageUrl: slip,
     });
   }
 
@@ -1282,14 +1216,14 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
       setTo(today);
       return;
     }
-    setMobileFilterOpen(true);
+    setHistoryTab("filter");
   }
 
   async function onSubmitEdit(e: React.FormEvent) {
     e.preventDefault();
     if (!editingEntry) return;
-    if (editEntryAttachmentPending.length > 0) {
-      setError("รอให้อัปโหลดไฟล์แนบให้เสร็จก่อน แล้วค่อยบันทึก");
+    if (editSlipUploading) {
+      setError("รอให้อัปโหลดรูปสลิปให้เสร็จก่อน แล้วค่อยบันทึก");
       return;
     }
     setSaving(true);
@@ -1305,13 +1239,17 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
         setError("กรุณากรอกชื่อรายการ");
         return;
       }
+      if (!editForm.categoryKey) {
+        setError("กรุณาสร้างหมวดหมู่ก่อน — ไปที่เมนู «หมวดหมู่»");
+        return;
+      }
       const n = parseAmountInput(editForm.amount);
       if (!Number.isFinite(n) || n <= 0) {
         setError("จำนวนเงินต้องเป็นตัวเลขมากกว่า 0 (ใช้จุดทศนิยมได้ ไม่บังคับคั่นหลักพัน)");
         return;
       }
-      const uLink = isUtilityCategoryKey(editForm.categoryKey) ? editForm.linkedUtilityId : null;
-      const vLink = isVehicleCategoryKey(editForm.categoryKey) ? editForm.linkedVehicleId : null;
+      const uLink = null;
+      const vLink = null;
       let res: Response;
       try {
         res = await homeFinanceFetch(`/api/home-finance/entries/${editingEntry.id}`, {
@@ -1325,7 +1263,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
             title: editForm.title.trim(),
             amount: n,
             note: editForm.note.trim() || null,
-            attachmentUrls: editForm.attachmentUrls,
+            attachmentUrls: editForm.slipImageUrl ? [editForm.slipImageUrl] : [],
             linkedUtilityId: uLink,
             linkedVehicleId: vLink,
           }),
@@ -1914,8 +1852,6 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   const thb = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const today = todayKey();
 
-  hfAttachEntryUrlCountRef.current = editForm.attachmentUrls.length;
-  hfAttachEntryPendingCountRef.current = editEntryAttachmentPending.length;
   hfAttachVehicleAddUrlCountRef.current = vehicleAddAttachmentUrls.length;
   hfAttachVehicleAddPendingCountRef.current = vehicleAddAttachmentPending.length;
   hfAttachVehicleEditUrlCountRef.current = vehicleEditAttachmentUrls.length;
@@ -2033,14 +1969,12 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
   const dashboardFrom = monthStartKey();
   const dashboardTo = todayKey();
 
-  const dashboardRecentEntries = useMemo(() => {
+  const dashboardSortedEntries = useMemo(() => {
     if (section !== "dashboard") return [];
-    return [...entries]
-      .sort((a, b) => {
-        if (a.entryDate !== b.entryDate) return a.entryDate < b.entryDate ? 1 : -1;
-        return b.id - a.id;
-      })
-      .slice(0, 15);
+    return [...entries].sort((a, b) => {
+      if (a.entryDate !== b.entryDate) return a.entryDate < b.entryDate ? 1 : -1;
+      return b.id - a.id;
+    });
   }, [entries, section]);
 
   const filterMatchesThisMonth = from === monthStartKey() && to === todayKey();
@@ -2120,6 +2054,31 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
     setBudgetEditOpen(false);
   }, [budgetDraft]);
 
+  const openAddEntryModal = useCallback(() => {
+    setError(null);
+    setEntrySlipImageUrl(null);
+    setLinkedUtilityId("");
+    setLinkedVehicleId("");
+    setEntryModalOpen(true);
+  }, []);
+
+  const exportHistoryCsv = useCallback(() => {
+    const rows = entries.map((e) => `${e.entryDate},${e.type},${e.categoryLabel},${e.title},${e.amount}`).join("\n");
+    const csv = `date,type,category,title,amount\n${rows}`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `home-finance-${from}-to-${to}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [entries, from, to]);
+
+  const exportHistoryPdf = useCallback(() => {
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>รายรับรายจ่าย</title><style>body{font-family:Arial,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;font-size:12px}th{background:#f4f4ff}</style></head><body><h2>รายรับรายจ่าย ${from} - ${to}</h2><table><thead><tr><th>วันที่</th><th>ประเภท</th><th>หมวด</th><th>รายการ</th><th>จำนวน</th></tr></thead><tbody>${entries.map((e) => `<tr><td>${e.entryDate}</td><td>${e.type === "INCOME" ? "รายรับ" : "รายจ่าย"}</td><td>${e.categoryLabel}</td><td>${e.title}</td><td style="text-align:right">${thb(e.amount)}</td></tr>`).join("")}</tbody></table></body></html>`;
+    openPrintableHtml(html);
+  }, [entries, from, to, thb]);
+
   return (
     <div className="space-y-6">
       {saveNotice ? (
@@ -2146,7 +2105,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
         >
           {metaError ? (
             <div className={error ? "border-b border-amber-200/80 pb-3" : ""}>
-              <p className="font-semibold">หมวด / บิล / รถ / แจ้งเตือน โหลดไม่ครบ</p>
+              <p className="font-semibold">หมวด / แจ้งเตือน โหลดไม่ครบ</p>
               <p className="mt-1">{metaError}</p>
               {showFinanceMain ? (
                 <p className="mt-2 text-xs text-amber-900/85">
@@ -2175,378 +2134,337 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
       {showFinanceMain ? (
         <>
           {section === "dashboard" ? (
-            <>
-              <HomeFinanceHeroCta
-                hint="เพิ่มรายการ · ประวัติเต็มที่เมนู «ประวัติ»"
-                buttonLabel="+ เพิ่มรายการ"
-                onAddClick={() => {
-                  setError(null);
-                  setEntrySlipImageUrl(null);
-                  setLinkedUtilityId("");
-                  setLinkedVehicleId("");
-                  setEntryModalOpen(true);
-                }}
-              />
-              <div className={hfStatsPanelClass}>
-                <div className="flex items-center justify-between px-0 sm:px-1">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">สถิติวันนี้</h3>
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-6 sm:gap-4">
-                  <div className="col-span-2 sm:col-span-2">
-                    <Stat
-                      title="รายการวันนี้"
-                      value={String(summary.count)}
-                      icon={<IconUsers className="h-4 w-4" />}
-                    />
-                  </div>
-                  <div className="col-span-1 sm:col-span-2">
-                    <Stat
-                      title="รายรับ"
-                      value={formatMoneyCompact(thb, summary.income)}
-                      tone="green"
-                      icon={<IconRevenue className="h-4 w-4" />}
-                    />
-                  </div>
-                  <div className="col-span-1 sm:col-span-2">
-                    <Stat
-                      title="รายจ่าย"
-                      value={formatMoneyCompact(thb, summary.expense)}
-                      tone="red"
-                      icon={<IconExpense className="h-4 w-4" />}
-                    />
-                  </div>
-                  <div className="col-span-2 sm:col-span-6">
-                    <Stat
-                      title="คงเหลือสุทธิ"
-                      value={formatMoneyCompact(thb, summary.balance)}
-                      tone={summary.balance >= 0 ? "blue" : "red"}
-                      icon={<IconPackage className="h-4 w-4" />}
-                    />
-                  </div>
-                </div>
-              </div>
-              {insightChips.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {insightChips.map((chip) => (
-                    <span
-                      key={chip}
-                      className="rounded-full border border-white/75 bg-white/75 px-3 py-1 text-[11px] font-medium text-[#4f4a7a] shadow-sm"
-                    >
-                      {chip}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-              <section className={cn(hfPanelGlassClass, "p-3 sm:p-4")}>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#66638c]">งบเดือนนี้</p>
-                  <button
-                    type="button"
-                    onClick={openBudgetEditor}
-                    className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl border border-[#d8d6ec] bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-[#4d47b6] shadow-sm transition hover:border-[#4d47b6]/40 hover:bg-[#ecebff]"
-                    aria-label="ปรับงบเดือน"
-                    title="ปรับงบเดือน"
-                  >
-                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                      <path d="M12 20h9" strokeLinecap="round" />
-                      <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" strokeLinejoin="round" strokeLinecap="round" />
-                    </svg>
-                    <span>ปรับงบ</span>
-                  </button>
-                </div>
-                {monthlyBudgetRows.length === 0 ? (
-                  <p className="mt-3 rounded-xl border border-dashed border-slate-200 bg-white/60 p-3 text-center text-xs text-slate-500">
-                    ยังไม่มีงบรายการ — กด «ปรับงบ» เพื่อเพิ่มหมวด
+            <section className={hfPanelGlassClass}>
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/50 pb-3">
+                <div className="min-w-0">
+                  <h2 className="text-base font-black tracking-tight text-[#1e1b4b]">สรุปเดือนนี้</h2>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {dashboardFrom} – {dashboardTo} · {summary.count} รายการ
                   </p>
-                ) : (
-                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                    {monthlyBudgetRows.map((row) => (
-                      <div key={row.label} className="rounded-xl border border-slate-200/70 bg-white/80 p-2.5">
-                        <p className="text-[11px] font-medium text-slate-600">{row.label}</p>
-                        <p className="text-sm font-semibold text-slate-900">
-                          {formatMoneyCompact(thb, row.used)} / {formatMoneyCompact(thb, row.budget)}
-                        </p>
-                        <div className="mt-1 h-1.5 rounded-full bg-slate-100">
-                          <div
-                            className={cn(
-                              "h-full rounded-full",
-                              row.pct >= 100 ? "bg-rose-500" : row.pct >= 80 ? "bg-amber-500" : "bg-emerald-500",
-                            )}
-                            style={{ width: `${Math.min(100, Math.max(6, row.pct))}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-              <HomeFinanceAnalyticsSection
-                entries={entries}
-                from={dashboardFrom}
-                to={dashboardTo}
-                loading={loading}
-                thb={thb}
-                context="dashboard"
-                previousBalance={previousPeriodBalance}
-                onAddFirstEntry={() => setEntryModalOpen(true)}
-              />
-              {!loading ? (
-                <HomeFinanceRecentSummary entries={dashboardRecentEntries} thb={thb} />
-              ) : null}
-            </>
-          ) : (
-            <>
-              <HomeFinanceHeroCta
-                hint="เพิ่ม/แก้ไข · สลิปและเชื่อมบิล/รถในตาราง"
-                buttonLabel="+ เพิ่มรายการ"
-                onAddClick={() => {
-                  setError(null);
-                  setEntrySlipImageUrl(null);
-                  setLinkedUtilityId("");
-                  setLinkedVehicleId("");
-                  setEntryModalOpen(true);
-                }}
-              />
-              <div className="flex items-center justify-end sm:hidden">
-                <button
-                  type="button"
-                  onClick={() => setMobileFilterOpen((prev) => !prev)}
-                  className="app-btn-soft inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[#d8d6ec] px-3 py-2.5 text-[#4d47b6]"
-                  aria-label={mobileFilterOpen ? "ซ่อนตัวกรองประวัติ" : "แสดงตัวกรองประวัติ"}
-                  title={mobileFilterOpen ? "ซ่อนตัวกรองประวัติ" : "แสดงตัวกรองประวัติ"}
-                >
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                    <path d="M3 5h18M6 12h12M10 19h4" strokeLinecap="round" />
-                  </svg>
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <QuickChip active={filterMatches7d} onClick={() => applyQuickRange("7d")}>7 วัน</QuickChip>
-                <QuickChip active={filterMatches30d} onClick={() => applyQuickRange("30d")}>30 วัน</QuickChip>
-                <QuickChip active={filterMatchesQuarter} onClick={() => applyQuickRange("quarter")}>ไตรมาส</QuickChip>
-                <QuickChip active={filterMatchesThisYear} onClick={() => applyQuickRange("year")}>ปีนี้</QuickChip>
-                <QuickChip active={!filterMatches7d && !filterMatches30d && !filterMatchesQuarter && !filterMatchesThisYear && !filterMatchesThisMonth} onClick={() => applyQuickRange("custom")}>กำหนดเอง</QuickChip>
-              </div>
-              <HomeFinanceFilterCard className={mobileFilterOpen ? "block" : "hidden sm:block"}>
-                <HomeFinancePanelHeading
-                  title="กรองช่วงและรายการ"
-                  description="กราฟ/ตารางตามช่วงและตัวกรอง — ไม่เห็นรายการใหม่ ลอง «เดือนนี้» หรือขยายช่วง"
-                  aside={
-                    <>
-                      <span className="text-[11px] font-medium text-slate-500">ด่วน:</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFrom(monthStartKey());
-                          setTo(todayKey());
-                        }}
-                        className={cn(
-                          "rounded-xl border px-3 py-2 text-xs font-semibold transition-colors",
-                          filterMatchesThisMonth
-                            ? "border-[#4d47b6]/40 bg-[#ecebff] text-[#4d47b6]"
-                            : "border-[#0000BF]/25 bg-[#0000BF]/[0.06] text-[#0000BF] hover:bg-[#0000BF]/10",
-                        )}
-                        suppressHydrationWarning
-                      >
-                        เดือนนี้
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFrom(yearStartKeyBangkok());
-                          setTo(todayKey());
-                        }}
-                        className={cn(
-                          "rounded-xl border px-3 py-2 text-xs font-semibold transition-colors",
-                          filterMatchesThisYear
-                            ? "border-[#4d47b6]/40 bg-[#ecebff] text-[#4d47b6]"
-                            : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
-                        )}
-                        suppressHydrationWarning
-                      >
-                        ปีนี้
-                      </button>
-                    </>
-                  }
-                />
-                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                  <label className="block text-xs font-medium text-slate-600">
-                    ตั้งแต่วันที่
-                    <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputClz} mt-1`} suppressHydrationWarning />
-                  </label>
-                  <label className="block text-xs font-medium text-slate-600">
-                    ถึงวันที่
-                    <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={`${inputClz} mt-1`} suppressHydrationWarning />
-                  </label>
-                  <label className="block text-xs font-medium text-slate-600">
-                    ประเภท
-                    <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className={`${inputClz} mt-1`} suppressHydrationWarning>
-                      <option value="">ทุกประเภท</option>
-                      <option value="INCOME">รายรับ</option>
-                      <option value="EXPENSE">รายจ่าย</option>
-                    </select>
-                  </label>
-                  <label className="block text-xs font-medium text-slate-600">
-                    หมวด
-                    <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={`${inputClz} mt-1`} suppressHydrationWarning>
-                      <option value="">ทุกหมวด</option>
-                      {categoryOptions.map((c) => (
-                        <option key={c.key} value={c.key}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block text-xs font-medium text-slate-600">
-                    ค้นหา (พิมพ์)
-                    <input
-                      ref={filterSearchInputRef}
-                      value={q}
-                      onChange={(e) => setQ(e.target.value)}
-                      className={`${inputClz} mt-1`}
-                      placeholder="ชื่อรายการ / หมวด / เลขบิล / หมายเหตุ"
-                      suppressHydrationWarning
-                    />
-                  </label>
                 </div>
-              </HomeFinanceFilterCard>
-              <div className="sticky top-2 z-20 rounded-2xl border border-white/75 bg-white/80 p-2 shadow-[0_12px_30px_-20px_rgba(38,28,112,0.55)] backdrop-blur-xl sm:hidden">
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.1em] text-slate-500">รับ</p>
-                    <p className="text-sm font-bold text-emerald-700">{formatMoneyCompact(thb, summary.income)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.1em] text-slate-500">จ่าย</p>
-                    <p className="text-sm font-bold text-rose-700">{formatMoneyCompact(thb, summary.expense)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.1em] text-slate-500">คงเหลือ</p>
-                    <p className="text-sm font-bold text-[#2f2b58]">{formatMoneyCompact(thb, summary.balance)}</p>
-                  </div>
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                  <HistoryToolbarButton
+                    active={dashboardTab === "charts"}
+                    onClick={() => setDashboardTab((t) => (t === "charts" ? "list" : "charts"))}
+                    ariaLabel="ดูกราฟสรุป"
+                  >
+                    กราฟ
+                  </HistoryToolbarButton>
+                  <HistoryToolbarButton
+                    active={dashboardTab === "budget"}
+                    onClick={() => setDashboardTab((t) => (t === "budget" ? "list" : "budget"))}
+                    ariaLabel="ดูงบเดือน"
+                  >
+                    งบ
+                  </HistoryToolbarButton>
+                  <Link
+                    href="/dashboard/home-finance/history"
+                    className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-slate-200 bg-white/90 px-3 text-xs font-semibold text-slate-700 transition hover:border-[#4d47b6]/25 hover:bg-white"
+                    aria-label="ดูประวัติเต็ม"
+                  >
+                    ประวัติ
+                  </Link>
+                  <HomeFinancePrimaryButton type="button" onClick={openAddEntryModal} className="min-h-[40px] px-3 text-xs sm:px-4">
+                    + เพิ่ม
+                  </HomeFinancePrimaryButton>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
                 <Stat title="รายการ" value={String(summary.count)} />
                 <Stat title="รายรับ" value={formatMoneyCompact(thb, summary.income)} tone="green" />
                 <Stat title="รายจ่าย" value={formatMoneyCompact(thb, summary.expense)} tone="red" />
                 <Stat title="คงเหลือ" value={formatMoneyCompact(thb, summary.balance)} tone={summary.balance >= 0 ? "blue" : "red"} />
               </div>
 
-              <HomeFinanceAnalyticsSection
-                entries={entries}
-                from={from}
-                to={to}
-                loading={loading}
-                thb={thb}
-                context="history"
-                previousBalance={null}
-                onAddFirstEntry={() => setEntryModalOpen(true)}
-              />
-            </>
-          )}
-
-          {section === "history" ? (
-            <div className={hfHistoryListShellClass}>
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setDensityMode("compact")}
-                    className={cn(
-                      "rounded-xl border px-3 py-1.5 text-xs font-semibold",
-                      hfFilterChipClass(densityMode === "compact"),
-                    )}
-                    suppressHydrationWarning
-                  >
-                    กระชับ
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDensityMode("comfortable")}
-                    className={cn(
-                      "rounded-xl border px-3 py-1.5 text-xs font-semibold",
-                      hfFilterChipClass(densityMode === "comfortable"),
-                    )}
-                    suppressHydrationWarning
-                  >
-                    สบายตา
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const rows = entries.map((e) => `${e.entryDate},${e.type},${e.categoryLabel},${e.title},${e.amount}`).join("\n");
-                      const csv = `date,type,category,title,amount\n${rows}`;
-                      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = `home-finance-${from}-to-${to}.csv`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
-                    suppressHydrationWarning
-                  >
-                    ส่งออก CSV
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const html = `<!doctype html><html><head><meta charset="utf-8"><title>รายรับรายจ่าย</title><style>body{font-family:Arial,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;font-size:12px}th{background:#f4f4ff}</style></head><body><h2>รายรับรายจ่าย ${from} - ${to}</h2><table><thead><tr><th>วันที่</th><th>ประเภท</th><th>หมวด</th><th>รายการ</th><th>จำนวน</th></tr></thead><tbody>${entries.map((e)=>`<tr><td>${e.entryDate}</td><td>${e.type==="INCOME"?"รายรับ":"รายจ่าย"}</td><td>${e.categoryLabel}</td><td>${e.title}</td><td style="text-align:right">${thb(e.amount)}</td></tr>`).join("")}</tbody></table></body></html>`;
-                      openPrintableHtml(html);
-                    }}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
-                    suppressHydrationWarning
-                  >
-                    พิมพ์/ส่งออก PDF
-                  </button>
-                </div>
-              </div>
-              {selectedHistoryIds.length > 0 ? (
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#4d47b6]/20 bg-[#f5f4ff] p-2.5">
-                  <span className="text-xs font-semibold text-[#4d47b6]">เลือกแล้ว {selectedHistoryIds.length} รายการ</span>
-                  <button
-                    type="button"
-                    onClick={() => void removeEntriesBulk(selectedHistoryIds)}
-                    className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white"
-                  >
-                    ลบที่เลือก
-                  </button>
+              {dashboardTab === "list" ? (
+                <div className="mt-3" role="tabpanel">
+                  {loading ? (
+                    <p className="py-8 text-center text-sm text-slate-500">กำลังโหลด…</p>
+                  ) : entries.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-slate-500">ยังไม่มีรายการในเดือนนี้ — กด «+ เพิ่ม» เพื่อบันทึก</p>
+                  ) : (
+                    <div className="max-h-[min(65vh,36rem)] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+                      <ul className="grid grid-cols-1 gap-1" aria-label="รายการเดือนนี้">
+                        {dashboardSortedEntries.map((e) => (
+                          <li key={e.id}>
+                            <HomeFinanceEntryRowCard
+                              variant="dashboard"
+                              entry={e}
+                              thb={thb}
+                              onOpenSlip={(url) => openFinanceAttachmentUrl(url)}
+                              onEdit={() => openEdit(e)}
+                              onDelete={() => void removeEntry(e.id)}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               ) : null}
-              {loading ? (
-                <p className="p-6 text-center text-sm text-slate-500">กำลังโหลด…</p>
-              ) : entries.length === 0 ? (
-                <p className="p-6 text-center text-sm text-slate-500">ยังไม่มีรายการในช่วงที่เลือก</p>
-              ) : (
-                <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] pr-0.5">
-                  <ul className="grid grid-cols-1 gap-2" aria-label="รายการในช่วงที่เลือก">
-                    {entries.map((e) => (
-                      <li key={e.id}>
-                        <HomeFinanceEntryHistoryCard
-                          entry={e}
-                          thb={thb}
-                          densityMode={densityMode}
-                          selected={selectedHistoryIds.includes(e.id)}
-                          onToggleSelected={() =>
-                            setSelectedHistoryIds((prev) =>
-                              prev.includes(e.id) ? prev.filter((id) => id !== e.id) : [...prev, e.id],
-                            )
-                          }
-                          onOpenImage={(url) => openFinanceAttachmentUrl(url)}
-                          onEdit={() => openEdit(e)}
-                          onDelete={() => void removeEntry(e.id)}
-                        />
-                      </li>
-                    ))}
-                  </ul>
+
+              {dashboardTab === "charts" ? (
+                <div className="mt-3" role="tabpanel">
+                  <HomeFinanceAnalyticsSection
+                    entries={entries}
+                    from={dashboardFrom}
+                    to={dashboardTo}
+                    loading={loading}
+                    thb={thb}
+                    context="dashboard"
+                    placement="history-tab"
+                    previousBalance={previousPeriodBalance}
+                    onAddFirstEntry={openAddEntryModal}
+                  />
                 </div>
-              )}
-            </div>
+              ) : null}
+
+              {dashboardTab === "budget" ? (
+                <div className="mt-3 space-y-3" role="tabpanel">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#66638c]">งบเดือนนี้</p>
+                    <button
+                      type="button"
+                      onClick={openBudgetEditor}
+                      className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl border border-[#d8d6ec] bg-white/80 px-3 py-1.5 text-[11px] font-semibold text-[#4d47b6] shadow-sm transition hover:border-[#4d47b6]/40 hover:bg-[#ecebff]"
+                      aria-label="ปรับงบเดือน"
+                      title="ปรับงบเดือน"
+                    >
+                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                        <path d="M12 20h9" strokeLinecap="round" />
+                        <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" strokeLinejoin="round" strokeLinecap="round" />
+                      </svg>
+                      <span>ปรับงบ</span>
+                    </button>
+                  </div>
+                  {monthlyBudgetRows.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-slate-200 bg-white/60 p-3 text-center text-xs text-slate-500">
+                      ยังไม่มีงบรายการ — กด «ปรับงบ» เพื่อเพิ่มหมวด
+                    </p>
+                  ) : (
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {monthlyBudgetRows.map((row) => (
+                        <div key={row.label} className="rounded-xl border border-slate-200/70 bg-white/80 p-2.5">
+                          <p className="text-[11px] font-medium text-slate-600">{row.label}</p>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {formatMoneyCompact(thb, row.used)} / {formatMoneyCompact(thb, row.budget)}
+                          </p>
+                          <div className="mt-1 h-1.5 rounded-full bg-slate-100">
+                            <div
+                              className={cn(
+                                "h-full rounded-full",
+                                row.pct >= 100 ? "bg-rose-500" : row.pct >= 80 ? "bg-amber-500" : "bg-emerald-500",
+                              )}
+                              style={{ width: `${Math.min(100, Math.max(6, row.pct))}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {insightChips.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+                      {insightChips.map((chip) => (
+                        <span
+                          key={chip}
+                          className="rounded-full border border-white/75 bg-white/75 px-3 py-1 text-[11px] font-medium text-[#4f4a7a] shadow-sm"
+                        >
+                          {chip}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          {section === "history" ? (
+            <section className={hfPanelGlassClass}>
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/50 pb-3">
+                <div className="min-w-0">
+                  <h2 className="text-base font-black tracking-tight text-[#1e1b4b]">ประวัติรายการ</h2>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {from} – {to} · {summary.count} รายการ
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                  <HistoryToolbarButton
+                    active={historyTab === "filter"}
+                    onClick={() => setHistoryTab((t) => (t === "filter" ? "list" : "filter"))}
+                    ariaLabel="กรองรายการ"
+                  >
+                    กรอง
+                  </HistoryToolbarButton>
+                  <HistoryToolbarButton
+                    active={historyTab === "charts"}
+                    onClick={() => setHistoryTab((t) => (t === "charts" ? "list" : "charts"))}
+                    ariaLabel="ดูกราฟสรุป"
+                  >
+                    กราฟ
+                  </HistoryToolbarButton>
+                  <HistoryToolbarButton onClick={exportHistoryCsv} ariaLabel="ส่งออก CSV">
+                    CSV
+                  </HistoryToolbarButton>
+                  <HistoryToolbarButton onClick={exportHistoryPdf} ariaLabel="พิมพ์หรือส่งออก PDF">
+                    PDF
+                  </HistoryToolbarButton>
+                  <HomeFinancePrimaryButton type="button" onClick={openAddEntryModal} className="min-h-[40px] px-3 text-xs sm:px-4">
+                    + เพิ่ม
+                  </HomeFinancePrimaryButton>
+                </div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+                <Stat title="รายการ" value={String(summary.count)} />
+                <Stat title="รายรับ" value={formatMoneyCompact(thb, summary.income)} tone="green" />
+                <Stat title="รายจ่าย" value={formatMoneyCompact(thb, summary.expense)} tone="red" />
+                <Stat title="คงเหลือ" value={formatMoneyCompact(thb, summary.balance)} tone={summary.balance >= 0 ? "blue" : "red"} />
+              </div>
+
+              {historyTab === "list" ? (
+                <div className="mt-3" role="tabpanel">
+                  {selectedHistoryIds.length > 0 ? (
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#4d47b6]/20 bg-[#f5f4ff] p-2">
+                      <span className="text-xs font-semibold text-[#4d47b6]">เลือกแล้ว {selectedHistoryIds.length} รายการ</span>
+                      <button
+                        type="button"
+                        onClick={() => void removeEntriesBulk(selectedHistoryIds)}
+                        className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white"
+                      >
+                        ลบที่เลือก
+                      </button>
+                    </div>
+                  ) : null}
+                  {loading ? (
+                    <p className="py-8 text-center text-sm text-slate-500">กำลังโหลด…</p>
+                  ) : entries.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-slate-500">ยังไม่มีรายการในช่วงที่เลือก — ลองขยายช่วงที่ปุ่ม «กรอง»</p>
+                  ) : (
+                    <div className="max-h-[min(65vh,36rem)] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+                      <ul className="grid grid-cols-1 gap-1" aria-label="รายการในช่วงที่เลือก">
+                        {entries.map((e) => (
+                          <li key={e.id}>
+                            <HomeFinanceEntryRowCard
+                              variant="history"
+                              entry={e}
+                              thb={thb}
+                              selected={selectedHistoryIds.includes(e.id)}
+                              onToggleSelected={() =>
+                                setSelectedHistoryIds((prev) =>
+                                  prev.includes(e.id) ? prev.filter((id) => id !== e.id) : [...prev, e.id],
+                                )
+                              }
+                              onOpenSlip={(url) => openFinanceAttachmentUrl(url)}
+                              onEdit={() => openEdit(e)}
+                              onDelete={() => void removeEntry(e.id)}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              {historyTab === "filter" ? (
+                <div className="mt-3 space-y-3" role="tabpanel">
+                  <div className="flex flex-wrap gap-1.5">
+                    <QuickChip active={filterMatches7d} onClick={() => applyQuickRange("7d")}>
+                      7 วัน
+                    </QuickChip>
+                    <QuickChip active={filterMatches30d} onClick={() => applyQuickRange("30d")}>
+                      30 วัน
+                    </QuickChip>
+                    <QuickChip active={filterMatchesQuarter} onClick={() => applyQuickRange("quarter")}>
+                      ไตรมาส
+                    </QuickChip>
+                    <QuickChip active={filterMatchesThisYear} onClick={() => applyQuickRange("year")}>
+                      ปีนี้
+                    </QuickChip>
+                    <QuickChip
+                      active={filterMatchesThisMonth}
+                      onClick={() => {
+                        setFrom(monthStartKey());
+                        setTo(todayKey());
+                      }}
+                    >
+                      เดือนนี้
+                    </QuickChip>
+                    <QuickChip
+                      active={
+                        !filterMatches7d &&
+                        !filterMatches30d &&
+                        !filterMatchesQuarter &&
+                        !filterMatchesThisYear &&
+                        !filterMatchesThisMonth
+                      }
+                      onClick={() => applyQuickRange("custom")}
+                    >
+                      กำหนดเอง
+                    </QuickChip>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                    <label className="block text-xs font-medium text-slate-600">
+                      ตั้งแต่วันที่
+                      <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputClz} mt-1`} suppressHydrationWarning />
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      ถึงวันที่
+                      <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={`${inputClz} mt-1`} suppressHydrationWarning />
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      ประเภท
+                      <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className={`${inputClz} mt-1`} suppressHydrationWarning>
+                        <option value="">ทุกประเภท</option>
+                        <option value="INCOME">รายรับ</option>
+                        <option value="EXPENSE">รายจ่าย</option>
+                      </select>
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      หมวด
+                      <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={`${inputClz} mt-1`} suppressHydrationWarning>
+                        <option value="">ทุกหมวด</option>
+                        {categoryOptions.map((c) => (
+                          <option key={c.key} value={c.key}>
+                            {c.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      ค้นหา
+                      <input
+                        ref={filterSearchInputRef}
+                        value={q}
+                        onChange={(e) => setQ(e.target.value)}
+                        className={`${inputClz} mt-1`}
+                        placeholder="ชื่อ / หมวด / หมายเหตุ"
+                        suppressHydrationWarning
+                      />
+                    </label>
+                  </div>
+                  <p className="text-[11px] text-slate-500">ลัด: กด F เพื่อเปิดกรอง · ดูกราฟที่ปุ่ม «กราฟ»</p>
+                </div>
+              ) : null}
+
+              {historyTab === "charts" ? (
+                <div className="mt-3" role="tabpanel">
+                  <HomeFinanceAnalyticsSection
+                    entries={entries}
+                    from={from}
+                    to={to}
+                    loading={loading}
+                    thb={thb}
+                    context="history"
+                    placement="history-tab"
+                    previousBalance={null}
+                    onAddFirstEntry={openAddEntryModal}
+                  />
+                </div>
+              ) : null}
+            </section>
           ) : null}
         </>
       ) : null}
@@ -2569,160 +2487,59 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
             maxWidthClassName="max-w-4xl"
           >
             <form noValidate onSubmit={onSubmit} className="space-y-4">
-                <FormGroup title="ข้อมูลหลัก">
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <Field label="วันที่รายการ"><input type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} className={inputClz} /></Field>
-                    <Field label="ประเภท">
-                      <select value={type} onChange={(e) => setType(e.target.value as "INCOME" | "EXPENSE")} className={inputClz}>
-                        <option value="EXPENSE">รายจ่าย</option><option value="INCOME">รายรับ</option>
-                      </select>
-                    </Field>
-                    <Field label="หมวด">
-                      <select
-                        value={categoryKey}
-                        onChange={(e) => {
-                          const k = e.target.value;
-                          setCategoryKey(k);
-                          if (isStandaloneVehicleCategoryKey(k)) setVehicleType("");
-                        }}
-                        className={inputClz}
-                      >
-                        {categoryOptions.map((c) => (
-                          <option key={c.key} value={c.key}>
-                            {c.label}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <AmountField label="จำนวนเงิน" value={amount} onChange={setAmount} />
-                  </div>
-                </FormGroup>
-                <FormGroup title="รายละเอียดรายการ">
-                  <Field label="ชื่อรายการ">
-                    <input
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="วันที่">
+                    <input type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} className={inputClz} />
+                  </Field>
+                  <AmountField label="จำนวนเงิน (บาท)" value={amount} onChange={setAmount} />
+                </div>
+                <Field label="ประเภท">
+                  <select value={type} onChange={(e) => setType(e.target.value as "INCOME" | "EXPENSE")} className={inputClz}>
+                    <option value="EXPENSE">รายจ่าย</option>
+                    <option value="INCOME">รายรับ</option>
+                  </select>
+                </Field>
+                <Field label="หมวดหมู่">
+                  {categoryOptions.length === 0 ? (
+                    <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                      ยังไม่มีหมวด — ไปที่เมนู «หมวดหมู่» เพื่อสร้างก่อนบันทึก
+                    </p>
+                  ) : (
+                    <select
+                      value={categoryKey}
+                      onChange={(e) => setCategoryKey(e.target.value)}
                       className={inputClz}
-                      placeholder={
-                        isStandaloneVehicleCategoryKey(categoryKey)
-                          ? "เช่น ค่าน้ำมัน / ค่าประกัน / ค่าจอดรถ"
-                          : "เช่น ค่าไฟฟ้าเดือนนี้ / ค่าเข้าศูนย์รถ"
-                      }
-                      required
-                    />
-                  </Field>
-                  {suggestedEntries.length > 0 ? (
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6b6792]">แนะนำจากเดือนนี้</p>
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {suggestedEntries.map((s) => (
-                          <button
-                            key={`${s.id}-${s.title}`}
-                            type="button"
-                            className="rounded-full border border-[#d8d6ec] bg-white/80 px-3 py-1 text-xs font-medium text-[#4d47b6]"
-                            onClick={() => {
-                              setType(s.type);
-                              setCategoryKey(s.categoryKey);
-                              setTitle(s.title);
-                              setAmount(String(s.amount));
-                            }}
-                          >
-                            {s.title} · {formatMoneyCompact(thb, s.amount)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {showVehicleTypeField ? (
-                      <Field label="ประเภทรถ">
-                        <input
-                          value={vehicleType}
-                          onChange={(e) => setVehicleType(e.target.value)}
-                          className={inputClz}
-                          placeholder="รถยนต์/มอเตอร์ไซค์"
-                        />
-                      </Field>
-                    ) : null}
-                  </div>
-                  {showVehicleFields ? <Field label="ศูนย์บริการ/อู่"><input value={serviceCenter} onChange={(e) => setServiceCenter(e.target.value)} className={inputClz} /></Field> : null}
-                </FormGroup>
-                <FormGroup title="การเชื่อมโยงและเอกสาร">
-                  {isUtilityCategoryKey(categoryKey) ? (
-                    <Field label="เชื่อมบิลค่าไฟ/ค่าน้ำ">
-                      <select
-                        value={linkedUtilityId === "" ? "" : String(linkedUtilityId)}
-                        onChange={(e) => {
-                          const raw = e.target.value;
-                          const id = raw === "" ? "" : Number(raw);
-                          setLinkedUtilityId(id);
-                          if (id === "") return;
-                          const u = utilitiesForCategory.find((x) => x.id === id);
-                          if (u) setTitle(entryAutoTitleFromUtility(u));
-                        }}
-                        className={inputClz}
-                      >
-                        <option value="">— ไม่ระบุ —</option>
-                        {utilitiesForCategory.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.label} ({u.utilityType === "ELECTRIC" ? "ค่าไฟ" : "ค่าน้ำ"})
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                  ) : null}
-                  {isVehicleCategoryKey(categoryKey) ? (
-                    <Field label="เชื่อมยานพาหนะ">
-                      <select
-                        value={linkedVehicleId === "" ? "" : String(linkedVehicleId)}
-                        onChange={(e) => {
-                          const raw = e.target.value;
-                          const id = raw === "" ? "" : Number(raw);
-                          setLinkedVehicleId(id);
-                          if (id === "") return;
-                          const v = vehiclesForCategory.find((x) => x.id === id);
-                          if (v && !isStandaloneVehicleCategoryKey(categoryKey)) {
-                            setTitle(entryAutoTitleFromVehicle(v));
-                          }
-                        }}
-                        className={inputClz}
-                      >
-                        <option value="">— ไม่ระบุ —</option>
-                        {vehiclesForCategory.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.label}
-                            {v.plateNumber ? ` · ${v.plateNumber}` : ""} (
-                            {v.vehicleType === "CAR" ? "รถยนต์" : "จยย."})
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                  ) : null}
-                  <Field label="สลิป / รูปแนบ (ได้ 1 รูป)">
-                    <div className="flex flex-wrap items-center gap-3">
-                      {entrySlipImageUrl ? (
-                        <>
-                          <AppImageThumb
-                            src={encodeHomeFinancePublicAssetHref(entrySlipImageUrl)}
-                            onOpen={() => imageLightbox.open(encodeHomeFinancePublicAssetHref(entrySlipImageUrl))}
-                          />
-                          <HomeFinanceSecondaryButton type="button" onClick={() => setEntrySlipImageUrl(null)}>
-                            ลบรูป
-                          </HomeFinanceSecondaryButton>
-                        </>
-                      ) : null}
-                      <HomeFinanceUploadTrigger
-                        busy={entrySlipUploading}
-                        disabled={saving || entrySlipAiSaving}
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        onFile={(f) => void uploadEntrySlipFile(f)}
-                      >
-                        {entrySlipImageUrl ? "เปลี่ยนรูป" : "เลือกรูป"}
-                      </HomeFinanceUploadTrigger>
-                    </div>
-                  </Field>
-                  <Field label="หมายเหตุ"><textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={inputClz} /></Field>
-                </FormGroup>
+                    >
+                      {categoryOptions.map((c) => (
+                        <option key={c.key} value={c.key}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </Field>
+                <Field label="ชื่อรายการ">
+                  <input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className={inputClz}
+                    placeholder="เช่น ค่าอาหารกลางวัน / เงินเดือน"
+                    required
+                  />
+                </Field>
+                <Field label="อัปโหลดสลิป">
+                  <HomeFinanceSlipUploadField
+                    slipUrl={entrySlipImageUrl}
+                    onSlipUrlChange={setEntrySlipImageUrl}
+                    onFile={uploadEntrySlipFile}
+                    uploading={entrySlipUploading}
+                    disabled={saving}
+                    onOpenPreview={(url) => imageLightbox.open(url)}
+                  />
+                </Field>
+                <Field label="หมายเหตุ">
+                  <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={inputClz} placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)" />
+                </Field>
                   <HomeFinanceModalActionBar>
                     <HomeFinanceSecondaryButton type="button" onClick={() => setEntryModalOpen(false)}>
                       ยกเลิก
@@ -2755,28 +2572,43 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
               setEditingEntry(null);
             }}
             error={error}
-            maxWidthClassName="max-w-3xl"
+            maxWidthClassName="max-w-lg"
           >
                 <form noValidate onSubmit={onSubmitEdit} className="space-y-4">
-                  <FormGroup title="ข้อมูลหลัก">
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <Field label="วันที่รายการ"><input type="date" value={editForm.entryDate} onChange={(e) => setEditForm((s) => ({ ...s, entryDate: e.target.value }))} className={inputClz} /></Field>
-                    <Field label="ประเภท">
-                      <select value={editForm.type} onChange={(e) => setEditForm((s) => ({ ...s, type: e.target.value as "INCOME" | "EXPENSE" }))} className={inputClz}>
-                        <option value="EXPENSE">รายจ่าย</option><option value="INCOME">รายรับ</option>
-                      </select>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="วันที่">
+                      <input
+                        type="date"
+                        value={editForm.entryDate}
+                        onChange={(e) => setEditForm((s) => ({ ...s, entryDate: e.target.value }))}
+                        className={inputClz}
+                      />
                     </Field>
-                    <Field label="หมวด">
+                    <AmountField
+                      label="จำนวนเงิน (บาท)"
+                      value={editForm.amount}
+                      onChange={(value) => setEditForm((s) => ({ ...s, amount: value }))}
+                    />
+                  </div>
+                  <Field label="ประเภท">
+                    <select
+                      value={editForm.type}
+                      onChange={(e) => setEditForm((s) => ({ ...s, type: e.target.value as "INCOME" | "EXPENSE" }))}
+                      className={inputClz}
+                    >
+                      <option value="EXPENSE">รายจ่าย</option>
+                      <option value="INCOME">รายรับ</option>
+                    </select>
+                  </Field>
+                  <Field label="หมวดหมู่">
+                    {categoryOptions.length === 0 ? (
+                      <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                        ยังไม่มีหมวด — ไปที่เมนู «หมวดหมู่» เพื่อสร้างก่อนบันทึก
+                      </p>
+                    ) : (
                       <select
                         value={editForm.categoryKey}
-                        onChange={(e) =>
-                          setEditForm((s) => ({
-                            ...s,
-                            categoryKey: e.target.value,
-                            linkedUtilityId: null,
-                            linkedVehicleId: null,
-                          }))
-                        }
+                        onChange={(e) => setEditForm((s) => ({ ...s, categoryKey: e.target.value }))}
                         className={inputClz}
                       >
                         {categoryOptions.map((c) => (
@@ -2785,107 +2617,43 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                           </option>
                         ))}
                       </select>
-                    </Field>
-                    <AmountField
-                      label="จำนวนเงิน"
-                      value={editForm.amount}
-                      onChange={(value) => setEditForm((s) => ({ ...s, amount: value }))}
-                    />
-                  </div>
-                  </FormGroup>
-                  <FormGroup title="รายละเอียดรายการ">
-                  <Field label="ชื่อรายการ"><input value={editForm.title} onChange={(e) => setEditForm((s) => ({ ...s, title: e.target.value }))} className={inputClz} required /></Field>
-                  {isUtilityCategoryKey(editForm.categoryKey) ? (
-                    <Field label="เชื่อมบิลค่าไฟ/ค่าน้ำ">
-                      <select
-                        value={editForm.linkedUtilityId == null ? "" : String(editForm.linkedUtilityId)}
-                        onChange={(e) => {
-                          const raw = e.target.value;
-                          const id = raw === "" ? null : Number(raw);
-                          const u = id != null ? editUtilitiesForCategory.find((x) => x.id === id) : undefined;
-                          setEditForm((s) => ({
-                            ...s,
-                            linkedUtilityId: id,
-                            linkedVehicleId: null,
-                            title: u ? entryAutoTitleFromUtility(u) : s.title,
-                          }));
-                        }}
-                        className={inputClz}
-                      >
-                        <option value="">— ไม่ระบุ —</option>
-                        {editUtilitiesForCategory.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.label} ({u.utilityType === "ELECTRIC" ? "ค่าไฟ" : "ค่าน้ำ"})
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                  ) : null}
-                  {isVehicleCategoryKey(editForm.categoryKey) ? (
-                    <Field label="เชื่อมยานพาหนะ">
-                      <select
-                        value={editForm.linkedVehicleId == null ? "" : String(editForm.linkedVehicleId)}
-                        onChange={(e) => {
-                          const raw = e.target.value;
-                          const id = raw === "" ? null : Number(raw);
-                          const v = id != null ? editVehiclesForCategory.find((x) => x.id === id) : undefined;
-                          setEditForm((s) => ({
-                            ...s,
-                            linkedVehicleId: id,
-                            linkedUtilityId: null,
-                            title:
-                              v && !isStandaloneVehicleCategoryKey(editForm.categoryKey)
-                                ? entryAutoTitleFromVehicle(v)
-                                : s.title,
-                          }));
-                        }}
-                        className={inputClz}
-                      >
-                        <option value="">— ไม่ระบุ —</option>
-                        {editVehiclesForCategory.map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.label}
-                            {v.plateNumber ? ` · ${v.plateNumber}` : ""} (
-                            {v.vehicleType === "CAR" ? "รถยนต์" : "จยย."})
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                  ) : null}
-                  </FormGroup>
-                  <FormGroup title="เอกสารและหมายเหตุ">
-                  <Field label="แนบเอกสาร / สลิป (หลายไฟล์)">
-                    <HomeFinanceFormAttachmentsBlock
-                      urls={editForm.attachmentUrls}
-                      pendingUploads={editEntryAttachmentPending}
-                      onChange={(next) => setEditForm((s) => ({ ...s, attachmentUrls: next }))}
-                      inputId={editSlipFileInputId}
-                      accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
-                      hint="รูป JPG/PNG/WebP/GIF สูงสุด 3MB ต่อไฟล์ · PDF สูงสุด 5MB · สูงสุด 20 ไฟล์"
-                      uploadProgress={attachmentUploadProgress}
-                      onUploadFiles={(files) =>
-                        appendFilesToList(
-                          files,
-                          setEditEntryAttachmentUrls,
-                          setEditEntryAttachmentPending,
-                          () => hfAttachEntryUrlCountRef.current,
-                          () => hfAttachEntryPendingCountRef.current,
-                          hfAttachEpochEntryRef,
-                        )
-                      }
-                      onOpenUrl={openFinanceAttachmentUrl}
-                      onOpenLocalPreview={openLocalFinancePreview}
+                    )}
+                  </Field>
+                  <Field label="ชื่อรายการ">
+                    <input
+                      value={editForm.title}
+                      onChange={(e) => setEditForm((s) => ({ ...s, title: e.target.value }))}
+                      className={inputClz}
+                      placeholder="เช่น ค่าอาหารกลางวัน / เงินเดือน"
+                      required
                     />
                   </Field>
-                  <Field label="หมายเหตุ"><textarea value={editForm.note} onChange={(e) => setEditForm((s) => ({ ...s, note: e.target.value }))} rows={2} className={inputClz} /></Field>
-                  </FormGroup>
+                  <Field label="อัปโหลดสลิป">
+                    <HomeFinanceSlipUploadField
+                      slipUrl={editForm.slipImageUrl}
+                      onSlipUrlChange={(url) => setEditForm((s) => ({ ...s, slipImageUrl: url }))}
+                      onFile={uploadEditSlipFile}
+                      uploading={editSlipUploading}
+                      disabled={saving}
+                      onOpenPreview={(url) => imageLightbox.open(url)}
+                    />
+                  </Field>
+                  <Field label="หมายเหตุ">
+                    <textarea
+                      value={editForm.note}
+                      onChange={(e) => setEditForm((s) => ({ ...s, note: e.target.value }))}
+                      rows={2}
+                      className={inputClz}
+                      placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)"
+                    />
+                  </Field>
                   <HomeFinanceModalActionBar>
                     <HomeFinanceSecondaryButton type="button" onClick={() => setEditingEntry(null)}>
                       ยกเลิก
                     </HomeFinanceSecondaryButton>
                     <HomeFinancePrimaryButton
                       type="submit"
-                      disabled={saving || editEntryAttachmentPending.length > 0 || attachmentUploadProgress != null}
+                      disabled={saving || editSlipUploading}
                       className="disabled:opacity-60"
                     >
                       {saving ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
@@ -2901,8 +2669,8 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
       {section === "categories" ? (
         <HomeFinancePageSection>
           <HomeFinanceSectionHeader
-            title="หมวดกำหนดเอง"
-            description="เพิ่มชื่อหมวด ลำดับการแสดงผล และเปิด/ปิดใช้งาน เพื่อใช้ในฟอร์มรายรับ–รายจ่าย"
+            title="หมวดหมู่"
+            description="สร้างและจัดการหมวดรายรับ–รายจ่ายเองทั้งหมด — ไม่มีหมวดบังคับจากระบบ"
             className="flex flex-row items-start justify-between gap-3 sm:items-center"
             actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
             action={
@@ -2930,11 +2698,6 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                     <HomeFinanceEntityRow>
                       <HomeFinanceEntityMain className="flex-wrap">
                         <p className="text-sm font-semibold text-slate-900">{c.name}</p>
-                        {c.isSystem ? (
-                          <span className="shrink-0 rounded-full bg-[#ecebff] px-2 py-0.5 text-[10px] font-semibold leading-tight text-[#4d47b6] ring-1 ring-[#4d47b6]/30">
-                            พื้นฐาน
-                          </span>
-                        ) : null}
                         <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium leading-tight text-slate-600 ring-1 ring-slate-200/80">
                           ลำดับ {c.sortOrder}
                         </span>
@@ -2958,16 +2721,14 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                         >
                           <HomeFinanceRowIconEdit />
                         </HomeFinanceRowActionIconButton>
-                        {c.isSystem ? null : (
-                          <HomeFinanceRowActionIconButton
-                            variant="danger"
-                            title="ลบ"
-                            aria-label={`ลบหมวด ${c.name}`}
-                            onClick={() => openCategoryDeleteModal(c)}
-                          >
-                            <HomeFinanceRowIconTrash />
-                          </HomeFinanceRowActionIconButton>
-                        )}
+                        <HomeFinanceRowActionIconButton
+                          variant="danger"
+                          title="ลบ"
+                          aria-label={`ลบหมวด ${c.name}`}
+                          onClick={() => openCategoryDeleteModal(c)}
+                        >
+                          <HomeFinanceRowIconTrash />
+                        </HomeFinanceRowActionIconButton>
                       </HomeFinanceEntityActions>
                     </HomeFinanceEntityRow>
                   </li>
@@ -3092,14 +2853,6 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                 void submitCategoryForm();
               }}
             >
-              {categoryFormId !== null &&
-              categories.find((c) => c.id === categoryFormId)?.isSystem ? (
-                <p className="rounded-2xl border border-[#4d47b6]/25 bg-[#ecebff]/80 px-3.5 py-2.5 text-xs leading-relaxed text-[#3d3795]">
-                  หมวดพื้นฐานของระบบ — เปลี่ยนชื่อ/ลำดับ/เปิด–ปิดใช้งานได้
-                  แต่ลบไม่ได้ (เพื่อรักษาความเชื่อมโยงกับบิลค่าน้ำ-ค่าไฟ-รถ
-                  และการอ่านสลิปอัตโนมัติ)
-                </p>
-              ) : null}
               <Field label="ชื่อหมวด">
                 <input
                   value={categoryForm.name}
@@ -3788,77 +3541,14 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
       ) : null}
 
       {section === "reminders" ? (
-        <HomeFinancePageSection>
-          <HomeFinanceSectionHeader
-            title="แจ้งเตือน"
-            description="เตือนความจำที่บันทึกเอง · ด้านล่างรวมรายการใกล้ครบจากบิลและรถด้วย"
-            action={
-              <HomeFinanceToolbarButton type="button" onClick={() => openReminderAddModal()}>
-                เพิ่มแจ้งเตือน
-              </HomeFinanceToolbarButton>
-            }
-          />
-          <div>
-            <HomeFinanceListHeading>ใกล้ครบกำหนด (7 วัน)</HomeFinanceListHeading>
-            <HomeFinanceList>
-              {dueAlerts.length === 0 ? (
-                <HomeFinanceEmptyState>ยังไม่มีรายการครบกำหนดในช่วงนี้</HomeFinanceEmptyState>
-              ) : (
-                dueAlerts.map((a, i) => (
-                  <HomeFinanceEntityRow key={`${a.kind}-${a.title}-${a.dueDate}-${i}`}>
-                    <div className="min-w-0 flex-1 text-sm text-slate-800">
-                      <span className="font-semibold text-[#0000BF]">{a.kind}</span>
-                      <span className="text-slate-400"> · </span>
-                      <span className="font-medium text-slate-900">{a.title}</span>
-                      <span className="mt-0.5 block text-xs text-slate-500 tabular-nums">
-                        ครบกำหนด {a.dueDate}{" "}
-                        {a.diff < 0
-                          ? `(เกินกำหนด ${Math.abs(a.diff)} วัน)`
-                          : a.diff === 0
-                            ? "(ครบวันนี้)"
-                            : `(อีก ${a.diff} วัน)`}
-                      </span>
-                    </div>
-                  </HomeFinanceEntityRow>
-                ))
-              )}
-            </HomeFinanceList>
-          </div>
-          <div>
-            <HomeFinanceListHeading>รายการแจ้งเตือน ({reminders.length})</HomeFinanceListHeading>
-            <HomeFinanceList>
-              {reminders.length === 0 ? (
-                <HomeFinanceEmptyState>ยังไม่มีรายการ — กด &quot;เพิ่มแจ้งเตือน&quot;</HomeFinanceEmptyState>
-              ) : (
-                reminders.map((r) => (
-                  <HomeFinanceEntityRow key={r.id}>
-                    <HomeFinanceEntityMain className="items-start">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-slate-900">{r.title}</p>
-                        <p className="text-xs text-slate-500">
-                          ครบกำหนด {r.dueDate.slice(0, 10)}
-                          {r.note ? ` · ${r.note}` : ""}
-                          {r.isDone ? " · เสร็จแล้ว" : ""}
-                        </p>
-                      </div>
-                    </HomeFinanceEntityMain>
-                    <HomeFinanceEntityActions>
-                      <HomeFinanceRowActionButton
-                        variant="primary"
-                        onClick={() => void toggleReminderDone(r.id, r.isDone)}
-                      >
-                        {r.isDone ? "เปิดใหม่" : "ทำเสร็จแล้ว"}
-                      </HomeFinanceRowActionButton>
-                      <HomeFinanceRowActionButton variant="danger" onClick={() => void removeReminder(r.id)}>
-                        ลบ
-                      </HomeFinanceRowActionButton>
-                    </HomeFinanceEntityActions>
-                  </HomeFinanceEntityRow>
-                ))
-              )}
-            </HomeFinanceList>
-          </div>
-        </HomeFinancePageSection>
+        <HomeFinanceRemindersSection
+          reminders={reminders}
+          dueAlerts={dueAlerts}
+          todayYmd={today}
+          onAdd={() => openReminderAddModal()}
+          onToggleDone={(id, isDone) => void toggleReminderDone(id, isDone)}
+          onRemove={(id) => void removeReminder(id)}
+        />
       ) : null}
 
       {reminderAddModalOpen ? (
@@ -3927,24 +3617,29 @@ type HomeFinanceAnalyticsSectionProps = {
   context: "dashboard" | "history";
   previousBalance: number | null;
   onAddFirstEntry: () => void;
+  /** หน้าประวัติ — ฝังในการ์ดกรองแทนการ์ดแยก */
+  placement?: "standalone" | "filter-card" | "history-tab";
 };
 
 function HomeFinanceIncomeExpenseRing({
   income,
   expense,
   thb,
+  layout = "horizontal",
 }: {
   income: number;
   expense: number;
   thb: (n: number) => string;
+  layout?: "horizontal" | "vertical";
 }) {
   const total = Math.max(0, income + expense);
   const incomePct = total > 0 ? (income / total) * 100 : 0;
   const expensePct = 100 - incomePct;
+  const vertical = layout === "vertical";
   return (
     <AppSparkChartPanel>
       <h4 className="text-xs font-semibold uppercase tracking-wide text-[#2e2a58]">สัดส่วนรายรับ/รายจ่าย</h4>
-      <div className="mt-3 flex items-center gap-4">
+      <div className={cn("mt-3", vertical ? "flex flex-col items-center gap-3 text-center" : "flex items-center gap-4")}>
         <div
           className="relative h-24 w-24 shrink-0 rounded-full"
           style={{
@@ -3957,18 +3652,57 @@ function HomeFinanceIncomeExpenseRing({
             <span className="text-xs font-bold text-[#2e2a58]">{thb(total)} ฿</span>
           </div>
         </div>
-        <div className="space-y-2 text-xs">
-          <div className="flex items-center gap-2 text-emerald-800">
+        <div className={cn("space-y-2 text-xs", vertical && "w-full max-w-xs")}>
+          <div className={cn("flex items-center gap-2 text-emerald-800", vertical && "justify-center")}>
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden />
             <span>รายรับ {incomePct.toFixed(1)}% · {thb(income)} ฿</span>
           </div>
-          <div className="flex items-center gap-2 text-rose-700">
+          <div className={cn("flex items-center gap-2 text-rose-700", vertical && "justify-center")}>
             <span className="h-2.5 w-2.5 rounded-full bg-rose-500" aria-hidden />
             <span>รายจ่าย {expensePct.toFixed(1)}% · {thb(expense)} ฿</span>
           </div>
         </div>
       </div>
     </AppSparkChartPanel>
+  );
+}
+
+function HomeFinanceChartSectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#66638c]">{children}</p>
+  );
+}
+
+function HomeFinanceChartsToggleButton({
+  open,
+  onClick,
+  disabled,
+}: {
+  open: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-expanded={open}
+      aria-label={open ? "ซ่อนกราฟ" : "แสดงกราฟ"}
+      className="inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-xl border border-[#d8d6ec] bg-white/85 px-3 py-2 text-xs font-semibold text-[#4d47b6] shadow-sm transition hover:border-[#4d47b6]/35 hover:bg-[#ecebff]/60 disabled:opacity-60 sm:px-4"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className={cn("h-4 w-4 transition-transform", open && "rotate-180")}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        aria-hidden
+      >
+        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <span>{open ? "ซ่อนกราฟ" : "แสดงกราฟ"}</span>
+    </button>
   );
 }
 
@@ -3981,7 +3715,35 @@ function HomeFinanceAnalyticsSection({
   context,
   previousBalance,
   onAddFirstEntry,
+  placement = "standalone",
 }: HomeFinanceAnalyticsSectionProps) {
+  const isHistory = context === "history";
+  const embeddedInFilter = isHistory && placement === "filter-card";
+  const tabChartsPlacement = placement === "history-tab";
+  const [historyChartsOpen, setHistoryChartsOpen] = useState(false);
+  const [chartsPrefsHydrated, setChartsPrefsHydrated] = useState(false);
+
+  useEffect(() => {
+    if (!isHistory) {
+      setChartsPrefsHydrated(true);
+      return;
+    }
+    const prefs = loadHomeFinanceFilterPrefs();
+    setHistoryChartsOpen(prefs.historyChartsOpen === true);
+    setChartsPrefsHydrated(true);
+  }, [isHistory]);
+
+  const toggleHistoryCharts = useCallback(() => {
+    setHistoryChartsOpen((prev) => {
+      const next = !prev;
+      const prefs = loadHomeFinanceFilterPrefs();
+      saveHomeFinanceFilterPrefs({ ...prefs, historyChartsOpen: next });
+      return next;
+    });
+  }, []);
+
+  const chartsVisible = tabChartsPlacement || !isHistory || historyChartsOpen;
+
   const totals = useMemo(() => {
     let income = 0;
     let expense = 0;
@@ -4065,14 +3827,37 @@ function HomeFinanceAnalyticsSection({
     previousBalance == null || previousBalance === 0 ? null : ((net - previousBalance) / Math.abs(previousBalance)) * 100;
 
   if (loading) {
+    if (embeddedInFilter) {
+      return (
+        <div className="mt-4 border-t border-slate-200/80 pt-4">
+          <div className="flex flex-row items-center justify-between gap-3">
+            <p className="text-xs font-bold text-[#1e1b4b]">กราฟสรุป</p>
+            <HomeFinanceChartsToggleButton open={false} onClick={() => {}} disabled />
+          </div>
+          {chartsVisible ? (
+            <div className="mt-3 grid gap-3">
+              <div className="h-32 animate-pulse rounded-2xl bg-slate-200/55" />
+              <div className="h-32 animate-pulse rounded-2xl bg-slate-200/55" />
+            </div>
+          ) : null}
+        </div>
+      );
+    }
     return (
       <section className={hfPanelGlassClass}>
-        <div className="h-5 w-40 animate-pulse rounded bg-white/40" />
-        <div className="mt-2 h-3 w-56 animate-pulse rounded bg-slate-200/60" />
-        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-          <div className="h-40 animate-pulse rounded-2xl bg-slate-200/55" />
-          <div className="h-40 animate-pulse rounded-2xl bg-slate-200/55" />
+        <div className="flex flex-row items-start justify-between gap-3 border-b border-white/50 pb-3">
+          <div className="min-w-0 flex-1">
+            <div className="h-5 w-40 animate-pulse rounded bg-white/40" />
+            <div className="mt-2 h-3 w-56 animate-pulse rounded bg-slate-200/60" />
+          </div>
+          {isHistory ? <HomeFinanceChartsToggleButton open={false} onClick={() => {}} disabled /> : null}
         </div>
+        {chartsVisible ? (
+          <div className="mt-4 grid gap-3">
+            <div className="h-40 animate-pulse rounded-2xl bg-slate-200/55" />
+            <div className="h-40 animate-pulse rounded-2xl bg-slate-200/55" />
+          </div>
+        ) : null}
       </section>
     );
   }
@@ -4101,21 +3886,232 @@ function HomeFinanceAnalyticsSection({
   const compareTitle =
     context === "dashboard" ? "เปรียบเทียบรับ–จ่าย (เดือนนี้)" : "เปรียบเทียบรับ–จ่าย (ช่วงที่เลือก)";
 
+  const formatBucketTitle = (b: AppColumnBarBucket) => `${b.label}: ${thb(b.amount)} ฿`;
+
+  const historyCharts = (
+    <div className={cn(embeddedInFilter ? "mt-3 space-y-4" : "mt-4 space-y-5")}>
+      <div className="space-y-2">
+        <HomeFinanceChartSectionLabel>แนวโน้มรับ–จ่าย</HomeFinanceChartSectionLabel>
+        <AppSparkChartPanel>
+          <AppRevenueCostColumnChart
+            buckets={revenueCostBuckets}
+            title={compareTitle}
+            subtitle={trend.mode === "day" ? "รายวัน" : trend.mode === "week" ? "รายสัปดาห์" : "รายเดือน"}
+            emptyText="ไม่มีข้อมูลรายรับ/รายจ่ายในช่วงนี้"
+            compact
+          />
+        </AppSparkChartPanel>
+      </div>
+
+      <div className="space-y-2">
+        <HomeFinanceChartSectionLabel>ภาพรวมช่วง</HomeFinanceChartSectionLabel>
+        <div className="space-y-3">
+          <HomeFinanceIncomeExpenseRing income={totals.income} expense={totals.expense} thb={thb} layout="vertical" />
+          <AppSparkChartPanel>
+            <AppColumnBarSparkChart
+              buckets={sparkBuckets}
+              title="มูลค่ารวมต่อช่วง"
+              subtitle={trend.mode === "day" ? "รายวัน" : trend.mode === "week" ? "รายสัปดาห์" : "รายเดือน"}
+              emptyText="ไม่มีแนวโน้มให้แสดง"
+              variant="brand"
+              compact
+            />
+          </AppSparkChartPanel>
+        </div>
+      </div>
+
+      <div className="space-y-2 border-t border-slate-100 pt-4">
+        <HomeFinanceChartSectionLabel>ตามหมวดหมู่ (Top 5)</HomeFinanceChartSectionLabel>
+        <div className="space-y-3">
+          <AppSparkChartPanel>
+            <AppColumnBarSparkChart
+              buckets={incomeRowsTop5}
+              title="รายรับ"
+              subtitle="หมวดที่มีมูลค่าสูงสุด"
+              emptyText="ไม่มีรายรับในช่วงนี้"
+              formatTitle={formatBucketTitle}
+              variant="emerald"
+              evenDistribution
+            />
+          </AppSparkChartPanel>
+          <AppSparkChartPanel>
+            <AppColumnBarSparkChart
+              buckets={expenseRowsTop5}
+              title="รายจ่าย"
+              subtitle="หมวดที่มีมูลค่าสูงสุด"
+              emptyText="ไม่มีรายจ่ายในช่วงนี้"
+              formatTitle={formatBucketTitle}
+              variant="brand"
+              evenDistribution
+            />
+          </AppSparkChartPanel>
+        </div>
+      </div>
+    </div>
+  );
+
+  const dashboardCharts = (
+    <>
+      <div className="mt-4 space-y-3">
+        <AppSparkChartPanel>
+          <AppRevenueCostColumnChart
+            buckets={revenueCostBuckets}
+            title={compareTitle}
+            subtitle="แท่งคู่รายวัน/รายช่วง พร้อมเส้นกริดบางและ tick สั้น"
+            emptyText="ไม่มีข้อมูลรายรับ/รายจ่ายในช่วงนี้"
+            compact
+          />
+        </AppSparkChartPanel>
+
+        <AppSparkChartsTwoColumnGrid>
+          <HomeFinanceIncomeExpenseRing income={totals.income} expense={totals.expense} thb={thb} />
+          <AppSparkChartPanel>
+            <AppColumnBarSparkChart
+              buckets={sparkBuckets}
+              title="แนวโน้มมูลค่ารวมต่อช่วง"
+              subtitle={trend.mode === "day" ? "รายวัน" : trend.mode === "week" ? "รายสัปดาห์" : "รายเดือน"}
+              emptyText="ไม่มีแนวโน้มให้แสดง"
+              variant="brand"
+              compact
+            />
+          </AppSparkChartPanel>
+        </AppSparkChartsTwoColumnGrid>
+      </div>
+
+      <div className="mt-4 border-t border-slate-100 pt-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">สรุปตามหมวดหมู่ (Top 5 + อื่นๆ)</p>
+        <AppSparkChartsTwoColumnGrid className="mt-3">
+          <AppSparkChartPanel>
+            <AppCompareBarList
+              title="รายรับ"
+              subtitle="หมวดที่มีมูลค่าสูงสุดเพื่ออ่านเร็ว"
+              emptyText="ไม่มีรายรับในช่วงนี้"
+              rows={incomeRowsTop5}
+              formatAmount={(amount) => `${thb(amount)} ฿`}
+              variant="emerald"
+            />
+          </AppSparkChartPanel>
+          <AppSparkChartPanel>
+            <AppCompareBarList
+              title="รายจ่าย"
+              subtitle="หมวดที่มีมูลค่าสูงสุดเพื่ออ่านเร็ว"
+              emptyText="ไม่มีรายจ่ายในช่วงนี้"
+              rows={expenseRowsTop5}
+              formatAmount={(amount) => `${thb(amount)} ฿`}
+              variant="brand"
+            />
+          </AppSparkChartPanel>
+        </AppSparkChartsTwoColumnGrid>
+      </div>
+    </>
+  );
+
+  const historyChartsBody =
+    empty ? (
+      <div className={embeddedInFilter ? "mt-3" : "mt-4"}>
+        {embeddedInFilter ? (
+          <p className="rounded-xl border border-dashed border-[#d8d6ec] bg-[#faf9ff]/80 px-3 py-6 text-center text-xs text-[#66638c]">
+            {emptyHint}
+          </p>
+        ) : (
+          <AppEmptyState tone="violet" className="py-8">
+            <span className="block text-2xl" aria-hidden>📊</span>
+            <span className="mt-2 block">{emptyHint}</span>
+            <button
+              type="button"
+              onClick={onAddFirstEntry}
+              className="mt-3 inline-flex min-h-[42px] items-center rounded-xl bg-[#4d47b6] px-4 text-sm font-semibold text-white"
+            >
+              + เพิ่มรายการแรก
+            </button>
+          </AppEmptyState>
+        )}
+      </div>
+    ) : (
+      historyCharts
+    );
+
+  if (embeddedInFilter) {
+    return (
+      <div className="mt-4 border-t border-slate-200/80 pt-4">
+        <div className="flex flex-row items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-[#1e1b4b]">กราฟสรุป</p>
+            <p className="mt-0.5 text-[11px] text-slate-500">ตามช่วงและตัวกรองด้านบน · คงเหลือ {thb(net)} ฿</p>
+          </div>
+          {chartsPrefsHydrated ? (
+            <HomeFinanceChartsToggleButton open={historyChartsOpen} onClick={toggleHistoryCharts} />
+          ) : null}
+        </div>
+        {!chartsVisible ? (
+          <p className="mt-2 text-xs text-slate-500">กด «แสดงกราฟ» เพื่อดูแนวโน้มและหมวดหมู่</p>
+        ) : (
+          historyChartsBody
+        )}
+      </div>
+    );
+  }
+
+  if (tabChartsPlacement) {
+    if (loading) {
+      return (
+        <div className="grid gap-3">
+          <div className="h-32 animate-pulse rounded-2xl bg-slate-200/55" />
+          <div className="h-32 animate-pulse rounded-2xl bg-slate-200/55" />
+        </div>
+      );
+    }
+    const net = totals.income - totals.expense;
+    return (
+      <div>
+        <p className="text-[11px] text-slate-500">
+          {context === "dashboard" ? (
+            <>
+              สรุปเดือนนี้ · คงเหลือ <span className="font-semibold text-[#2e2a58]">{thb(net)} ฿</span>
+            </>
+          ) : (
+            <>
+              สรุปตามช่วงที่กรอง · คงเหลือ <span className="font-semibold text-[#2e2a58]">{thb(net)} ฿</span>
+            </>
+          )}
+        </p>
+        {historyChartsBody}
+      </div>
+    );
+  }
+
   return (
     <section className={hfPanelGlassClass}>
       <div className="border-b border-white/50 pb-3">
-        <h3 className="text-base font-black tracking-tight text-[#1e1b4b]">กราฟและสรุป</h3>
-        <p className="mt-0.5 text-sm text-slate-600">{rangeLine}</p>
-        <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
-          <p className="text-xs text-slate-500">มุมมองสะอาด: แท่งรายวัน + สัดส่วน + Top 5 หมวด</p>
-          <div className="rounded-2xl border border-white/75 bg-white/75 px-3 py-2 text-right shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#66638c]">คงเหลือสุทธิ</p>
-            <p className="text-lg font-black tracking-tight text-[#2e2a58]">{thb(net)} ฿</p>
-            <p className={cn("text-[11px] font-semibold", deltaPct != null && deltaPct >= 0 ? "text-emerald-700" : "text-rose-700")}>
-              {deltaPct == null ? "เทียบเดือนก่อน: —" : `${deltaPct >= 0 ? "▲" : "▼"} ${Math.abs(deltaPct).toFixed(1)}% เทียบเดือนก่อน`}
-            </p>
+        <div className="flex flex-row items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-black tracking-tight text-[#1e1b4b]">กราฟและสรุป</h3>
+            <p className="mt-0.5 text-sm text-slate-600">{rangeLine}</p>
+            {isHistory ? (
+              <p className="mt-2 text-xs text-slate-500">
+                คงเหลือสุทธิ <span className="font-bold text-[#2e2a58]">{thb(net)} ฿</span>
+              </p>
+            ) : null}
           </div>
+          {isHistory && chartsPrefsHydrated && !empty ? (
+            <HomeFinanceChartsToggleButton open={historyChartsOpen} onClick={toggleHistoryCharts} />
+          ) : null}
         </div>
+        {isHistory && !chartsVisible && !empty ? (
+          <p className="mt-2 text-xs text-slate-500">กด «แสดงกราฟ» เพื่อดูแนวโน้มและหมวดหมู่</p>
+        ) : null}
+        {!isHistory ? (
+          <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
+            <p className="text-xs text-slate-500">มุมมองสะอาด: แท่งรายวัน + สัดส่วน + Top 5 หมวด</p>
+            <div className="rounded-2xl border border-white/75 bg-white/75 px-3 py-2 text-right shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#66638c]">คงเหลือสุทธิ</p>
+              <p className="text-lg font-black tracking-tight text-[#2e2a58]">{thb(net)} ฿</p>
+              <p className={cn("text-[11px] font-semibold", deltaPct != null && deltaPct >= 0 ? "text-emerald-700" : "text-rose-700")}>
+                {deltaPct == null ? "เทียบเดือนก่อน: —" : `${deltaPct >= 0 ? "▲" : "▼"} ${Math.abs(deltaPct).toFixed(1)}% เทียบเดือนก่อน`}
+              </p>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {empty ? (
@@ -4132,220 +4128,10 @@ function HomeFinanceAnalyticsSection({
             </button>
           </AppEmptyState>
         </div>
+      ) : !chartsVisible ? null : isHistory ? (
+        historyCharts
       ) : (
-        <>
-          <div className="mt-4 space-y-3">
-            <AppSparkChartPanel>
-              <AppRevenueCostColumnChart
-                buckets={revenueCostBuckets}
-                title={compareTitle}
-                subtitle="แท่งคู่รายวัน/รายช่วง พร้อมเส้นกริดบางและ tick สั้น"
-                emptyText="ไม่มีข้อมูลรายรับ/รายจ่ายในช่วงนี้"
-                compact
-              />
-            </AppSparkChartPanel>
-
-            <AppSparkChartsTwoColumnGrid>
-              <HomeFinanceIncomeExpenseRing income={totals.income} expense={totals.expense} thb={thb} />
-              <AppSparkChartPanel>
-                <AppColumnBarSparkChart
-                  buckets={sparkBuckets}
-                  title="แนวโน้มมูลค่ารวมต่อช่วง"
-                  subtitle={trend.mode === "day" ? "รายวัน" : trend.mode === "week" ? "รายสัปดาห์" : "รายเดือน"}
-                  emptyText="ไม่มีแนวโน้มให้แสดง"
-                  variant="brand"
-                  compact
-                />
-              </AppSparkChartPanel>
-            </AppSparkChartsTwoColumnGrid>
-          </div>
-
-          <div className="mt-4 border-t border-slate-100 pt-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">สรุปตามหมวดหมู่ (Top 5 + อื่นๆ)</p>
-            <AppSparkChartsTwoColumnGrid className="mt-3">
-              <AppSparkChartPanel>
-                <AppCompareBarList
-                  title="รายรับ"
-                  subtitle="หมวดที่มีมูลค่าสูงสุดเพื่ออ่านเร็ว"
-                  emptyText="ไม่มีรายรับในช่วงนี้"
-                  rows={incomeRowsTop5}
-                  formatAmount={(amount) => `${thb(amount)} ฿`}
-                  variant="emerald"
-                />
-              </AppSparkChartPanel>
-              <AppSparkChartPanel>
-                <AppCompareBarList
-                  title="รายจ่าย"
-                  subtitle="หมวดที่มีมูลค่าสูงสุดเพื่ออ่านเร็ว"
-                  emptyText="ไม่มีรายจ่ายในช่วงนี้"
-                  rows={expenseRowsTop5}
-                  formatAmount={(amount) => `${thb(amount)} ฿`}
-                  variant="brand"
-                />
-              </AppSparkChartPanel>
-            </AppSparkChartsTwoColumnGrid>
-          </div>
-        </>
-      )}
-    </section>
-  );
-}
-
-/** การ์ดรายการแบบเต็ม — หน้าประวัติ */
-function HomeFinanceEntryHistoryCard({
-  entry: e,
-  thb,
-  densityMode,
-  selected,
-  onToggleSelected,
-  onOpenImage,
-  onEdit,
-  onDelete,
-}: {
-  entry: Entry;
-  thb: (n: number) => string;
-  densityMode: "compact" | "comfortable";
-  selected: boolean;
-  onToggleSelected: () => void;
-  onOpenImage: (url: string) => void;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  const link = homeFinanceEntryLinkLabel(e);
-  const attachmentList =
-    e.attachmentUrls?.length > 0
-      ? e.attachmentUrls
-      : e.slipImageUrl
-        ? [e.slipImageUrl]
-        : [];
-  return (
-    <article
-      className={cn(
-        hfListRowCardClass,
-        densityMode === "compact" ? "px-3 py-2" : "px-3 py-2.5",
-        selected && "ring-2 ring-[#4d47b6]/30",
-      )}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-          <input type="checkbox" checked={selected} onChange={onToggleSelected} className="h-4 w-4 rounded border-slate-300" />
-          <time
-            className="text-[11px] font-medium tabular-nums text-slate-500"
-            dateTime={e.entryDate}
-          >
-            {e.entryDate}
-          </time>
-          <span
-            className={cn(
-              "shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold leading-tight",
-              homeFinanceTypePillClass(e.type),
-            )}
-          >
-            {e.type === "INCOME" ? "รายรับ" : "รายจ่าย"}
-          </span>
-        </div>
-        <span className="shrink-0 text-sm font-bold tabular-nums text-slate-900">
-          {formatMoneyCompact(thb, e.amount)}
-        </span>
-      </div>
-      <p className="mt-1 truncate text-sm font-semibold leading-tight text-slate-900">{e.title}</p>
-      <p className="truncate text-[11px] leading-tight text-slate-600">
-        <span className="text-slate-400">หมวด</span> · {categoryIcon(e.categoryLabel)} {e.categoryLabel}
-      </p>
-      {link ? (
-        <p className="truncate text-[11px] leading-tight text-slate-600">
-          <span className="text-slate-400">เชื่อม</span> · {link}
-        </p>
-      ) : null}
-      {e.note ? (
-        <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-slate-600">{e.note}</p>
-      ) : null}
-      <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
-        <div className="flex min-w-0 items-start gap-2">
-          <span className="shrink-0 pt-0.5 text-[10px] font-medium text-slate-400">เอกสาร</span>
-          <HomeFinanceHistoryAttachmentStrip urls={attachmentList} onOpenImage={onOpenImage} />
-        </div>
-        <div className="flex shrink-0 gap-1">
-          <button
-            type="button"
-            onClick={onEdit}
-            className="touch-manipulation rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-[#0000BF] hover:bg-[#0000BF]/10"
-          >
-            แก้ไข
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="touch-manipulation rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-red-700 hover:bg-red-50"
-          >
-            ลบ
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-/** การ์ดรายการแบบย่อ — แดชบอร์ด (แนวยาว คอลัมน์เดียว กระชับ) */
-function HomeFinanceEntryRecentCard({ entry: e, thb }: { entry: Entry; thb: (n: number) => string }) {
-  return (
-    <article className={cn("flex items-start justify-between gap-3 py-2", hfListRowCardClass)}>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <time
-            className="text-[11px] font-medium tabular-nums text-slate-500"
-            dateTime={e.entryDate}
-          >
-            {e.entryDate}
-          </time>
-          <span
-            className={cn(
-              "shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold leading-tight",
-              homeFinanceTypePillClass(e.type),
-            )}
-          >
-            {e.type === "INCOME" ? "รายรับ" : "รายจ่าย"}
-          </span>
-        </div>
-        <p className="mt-0.5 truncate text-sm font-semibold leading-tight text-slate-900">{e.title}</p>
-        <p className="truncate text-[11px] leading-tight text-slate-500">
-          {categoryIcon(e.categoryLabel)} {e.categoryLabel}
-        </p>
-      </div>
-      <div className="shrink-0 text-right">
-        <span className="text-sm font-bold tabular-nums tracking-tight text-slate-900">
-          {formatMoneyCompact(thb, e.amount)}
-        </span>
-      </div>
-    </article>
-  );
-}
-
-function HomeFinanceRecentSummary({ entries, thb }: { entries: Entry[]; thb: (n: number) => string }) {
-  return (
-    <section className={hfPanelGlassClass}>
-      <div className="flex flex-col gap-2 border-b border-white/50 pb-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h3 className="text-base font-black tracking-tight text-[#1e1b4b]">รายการล่าสุด (เดือนนี้)</h3>
-          <p className="mt-0.5 text-xs text-slate-500">ล่าสุดก่อน · สูงสุด 15 รายการ</p>
-        </div>
-        <Link
-          href="/dashboard/home-finance/history"
-          className="inline-flex min-h-[44px] items-center text-xs font-semibold text-[#0000BF] touch-manipulation hover:underline sm:min-h-0"
-        >
-          ประวัติเต็ม →
-        </Link>
-      </div>
-      {entries.length === 0 ? (
-        <p className="mt-6 text-center text-sm text-slate-500">ยังไม่มีรายการในเดือนนี้</p>
-      ) : (
-        <ul className="mt-3 grid grid-cols-1 gap-2" aria-label="รายการล่าสุด">
-          {entries.map((e) => (
-            <li key={e.id}>
-              <HomeFinanceEntryRecentCard entry={e} thb={thb} />
-            </li>
-          ))}
-        </ul>
+        dashboardCharts
       )}
     </section>
   );
@@ -4429,6 +4215,36 @@ function Stat({
   return <HomeFinanceStatCard title={title} value={value} tone={toneMap[tone]} icon={icon} />;
 }
 
+function HistoryToolbarButton({
+  active = false,
+  onClick,
+  children,
+  ariaLabel,
+}: {
+  active?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  ariaLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      aria-pressed={active}
+      className={cn(
+        "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border px-3 text-xs font-semibold transition",
+        active
+          ? "border-[#4d47b6]/40 bg-[#ecebff] text-[#4d47b6]"
+          : "border-slate-200 bg-white/90 text-slate-700 hover:border-[#4d47b6]/25 hover:bg-white",
+      )}
+      suppressHydrationWarning
+    >
+      {children}
+    </button>
+  );
+}
+
 function QuickChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
@@ -4439,46 +4255,5 @@ function QuickChip({ active, onClick, children }: { active: boolean; onClick: ()
     >
       {children}
     </button>
-  );
-}
-
-function IconUsers({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-      <path d="M16 19a4 4 0 0 0-8 0" strokeLinecap="round" />
-      <circle cx="12" cy="11" r="3" />
-      <path d="M18 19a3 3 0 0 0-3-3" strokeLinecap="round" />
-      <path d="M6 16a3 3 0 0 0-3 3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconRevenue({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-      <path d="M4 18h16" strokeLinecap="round" />
-      <path d="M7 14l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M17 8h2v2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconExpense({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-      <path d="M4 18h16" strokeLinecap="round" />
-      <path d="M7 9l3 3 3-2 4 5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M17 16h2v-2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconPackage({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-      <path d="M4 7.5 12 4l8 3.5-8 3.5L4 7.5Z" strokeLinejoin="round" />
-      <path d="M4 7.5V16.5L12 20l8-3.5V7.5" strokeLinejoin="round" />
-      <path d="M12 11v9" strokeLinecap="round" />
-    </svg>
   );
 }

@@ -8,6 +8,7 @@ import {
   AppRevenueCostColumnChart,
   AppSectionHeader,
   AppSparkChartPanel,
+  appDashboardInnerScrollClass,
   appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
@@ -21,8 +22,13 @@ import {
 } from "@/systems/drink-pos/lib/client-data";
 import { DrinkPosButton } from "@/systems/drink-pos/components/DrinkPosButton";
 import { formatThb } from "@/systems/inventory/lib/inventory-client-data";
+import {
+  drinkPosActiveSizePrices,
+  drinkPosProductHasSizes,
+  type DrinkPosSizeCode,
+} from "@/systems/drink-pos/lib/size-prices";
 
-type DraftLine = { key: string; productId: string; quantity: number };
+type DraftLine = { key: string; productId: string; size: DrinkPosSizeCode | null; quantity: number };
 
 function newKey() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -78,7 +84,7 @@ export function DrinkPosSalesClient() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [note, setNote] = useState("");
-  const [lines, setLines] = useState<DraftLine[]>([{ key: newKey(), productId: "", quantity: 1 }]);
+  const [lines, setLines] = useState<DraftLine[]>([{ key: newKey(), productId: "", size: null, quantity: 1 }]);
   const [busy, setBusy] = useState(false);
   const [formErr, setFormErr] = useState<string | null>(null);
 
@@ -192,7 +198,7 @@ export function DrinkPosSalesClient() {
   function openModal() {
     const first = products[0]?.id ?? "";
     setNote("");
-    setLines([{ key: newKey(), productId: first, quantity: 1 }]);
+    setLines([{ key: newKey(), productId: first, size: null, quantity: 1 }]);
     setFormErr(null);
     setModalOpen(true);
   }
@@ -203,7 +209,15 @@ export function DrinkPosSalesClient() {
     try {
       const clean = lines
         .filter((l) => l.productId)
-        .map((l) => ({ productId: l.productId, quantity: l.quantity }));
+        .map((l) => {
+          const p = products.find((x) => x.id === l.productId);
+          const needsSize = p ? drinkPosProductHasSizes(p.sizePrices) : false;
+          return {
+            productId: l.productId,
+            quantity: l.quantity,
+            size: needsSize ? l.size : null,
+          };
+        });
       if (clean.length === 0) {
         setFormErr("เลือกสินค้าอย่างน้อย 1 รายการ");
         return;
@@ -211,6 +225,11 @@ export function DrinkPosSalesClient() {
       for (const l of clean) {
         if (l.quantity < 1) {
           setFormErr("จำนวนต้องเป็นบวก");
+          return;
+        }
+        const p = products.find((x) => x.id === l.productId);
+        if (p && drinkPosProductHasSizes(p.sizePrices) && !l.size) {
+          setFormErr(`เลือกขนาดสำหรับ ${p.name}`);
           return;
         }
       }
@@ -513,7 +532,7 @@ export function DrinkPosSalesClient() {
           </AppEmptyState>
         ) : (
           <div
-            className="mt-4 max-h-[min(70vh,44rem)] min-h-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]"
+            className={cn("mt-4 max-h-[min(70vh,44rem)] min-h-0", appDashboardInnerScrollClass)}
             role="region"
             aria-label="รายการบิล"
           >
@@ -585,7 +604,10 @@ export function DrinkPosSalesClient() {
           </label>
           <div className="space-y-2">
             <span className="sr-only">รายการสินค้า</span>
-            {lines.map((l) => (
+            {lines.map((l) => {
+              const selected = products.find((p) => p.id === l.productId);
+              const sizeOptions = selected ? drinkPosActiveSizePrices(selected.sizePrices) : [];
+              return (
               <div key={l.key} className="flex flex-wrap items-end gap-2 rounded-2xl border border-white/50 bg-white/50 p-2">
                 <label className="min-w-[140px] flex-1">
                   <span className="sr-only">สินค้า</span>
@@ -593,7 +615,9 @@ export function DrinkPosSalesClient() {
                     value={l.productId}
                     onChange={(e) => {
                       const v = e.target.value;
-                      setLines((prev) => prev.map((x) => (x.key === l.key ? { ...x, productId: v } : x)));
+                      setLines((prev) =>
+                        prev.map((x) => (x.key === l.key ? { ...x, productId: v, size: null } : x)),
+                      );
                     }}
                     aria-label="สินค้า"
                     className="mt-0 w-full rounded-xl border border-white/60 bg-white px-2 py-2 text-sm font-semibold"
@@ -606,6 +630,29 @@ export function DrinkPosSalesClient() {
                     ))}
                   </select>
                 </label>
+                {sizeOptions.length > 0 ? (
+                  <label className="w-20">
+                    <span className="sr-only">ขนาด</span>
+                    <select
+                      value={l.size ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value as DrinkPosSizeCode | "";
+                        setLines((prev) =>
+                          prev.map((x) => (x.key === l.key ? { ...x, size: v || null } : x)),
+                        );
+                      }}
+                      aria-label="ขนาด"
+                      className="mt-0 w-full rounded-xl border border-white/60 bg-white px-2 py-2 text-sm font-semibold"
+                    >
+                      <option value="">ขนาด</option>
+                      {sizeOptions.map((row) => (
+                        <option key={row.size} value={row.size}>
+                          {row.size} (฿{formatThb(row.priceBaht)})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
                 <label className="w-24">
                   <span className="sr-only">จำนวน</span>
                   <input
@@ -630,11 +677,17 @@ export function DrinkPosSalesClient() {
                   </DrinkPosButton>
                 ) : null}
               </div>
-            ))}
+            );
+            })}
             <DrinkPosButton
               type="button"
               className={cn(appTemplateOutlineButtonClass, "w-full rounded-2xl py-2 text-xs font-black")}
-              onClick={() => setLines((prev) => [...prev, { key: newKey(), productId: products[0]?.id ?? "", quantity: 1 }])}
+              onClick={() =>
+                setLines((prev) => [
+                  ...prev,
+                  { key: newKey(), productId: products[0]?.id ?? "", size: null, quantity: 1 },
+                ])
+              }
             >
               + แถวสินค้า
             </DrinkPosButton>

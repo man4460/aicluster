@@ -10,6 +10,7 @@ import {
   AppImagePickCameraButtons,
   AppSectionHeader,
   appTemplateOutlineButtonClass,
+  appDashboardInnerScrollClass,
   prepareImageFileForUpload,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
@@ -647,7 +648,7 @@ export function GeneralStorePosDashboardClient() {
         />
 
         <div
-          className="mt-4 min-w-0 overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth pb-2 pt-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]"
+          className="mt-4 min-w-0 overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth pb-2 pt-0.5 [-webkit-overflow-scrolling:touch]"
           role="group"
           aria-label="หมวดหมู่ — เลื่อนซ้ายขวาได้"
         >

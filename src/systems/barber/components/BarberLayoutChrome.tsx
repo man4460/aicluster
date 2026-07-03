@@ -51,7 +51,7 @@ export function BarberLayoutChrome({
       className={cn(
         "flex min-w-0 flex-col gap-4 sm:gap-6",
         /* เว้นที่ให้แถบ dock ลอยแบบคาร์แคร์ (pb-20 + bottom offset) */
-        !hideBarberChrome && "max-md:pb-20 md:pb-0",
+        !hideBarberChrome && "max-lg:pb-24 lg:pb-0",
       )}
     >
       {!hideBarberChrome ? (

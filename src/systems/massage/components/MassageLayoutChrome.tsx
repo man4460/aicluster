@@ -51,7 +51,7 @@ export function MassageLayoutChrome({
       className={cn(
         "flex min-w-0 flex-col gap-4 sm:gap-6",
         /* เว้นที่ให้แถบ dock ลอยแบบคาร์แคร์ (pb-20 + bottom offset) */
-        !hideMassageChrome && "max-md:pb-20 md:pb-0",
+        !hideMassageChrome && "max-lg:pb-24 lg:pb-0",
       )}
     >
       {!hideMassageChrome ? (

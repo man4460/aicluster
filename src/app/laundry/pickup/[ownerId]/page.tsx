@@ -2,7 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { isLaundryPickupPortalOpenForOwner } from "@/lib/laundry/portal-access";
-import { getBusinessProfile } from "@/lib/profile/business-profile";
+import { getQrLaundryBranding } from "@/lib/profile/qr-branding";
+import { getLaundryDataScope } from "@/lib/trial/module-scopes";
+import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import { LaundryPickupPublicClient } from "@/systems/laundry/components/LaundryPickupPublicClient";
 
 type Props = { params: Promise<{ ownerId: string }> };
@@ -25,8 +27,12 @@ export default async function LaundryPickupPage({ params }: Props) {
   const open = await isLaundryPickupPortalOpenForOwner(ownerId);
   if (!open) notFound();
 
-  const profile = await getBusinessProfile(ownerId);
-  const shopLabel = profile?.name?.trim() || "รับฝากซักผ้า";
+  const scope = await getLaundryDataScope(ownerId).catch(() => ({
+    trialSessionId: TRIAL_PROD_SCOPE,
+    isTrialSandbox: false,
+  }));
+  const branding = await getQrLaundryBranding(ownerId, scope.trialSessionId);
+  const shopLabel = branding.label;
 
   return (
     <Suspense

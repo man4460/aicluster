@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { buildPromptPayQrDataUrl } from "@/lib/dormitory/promptpay-qr-image";
 import { resolveBuildingPosStaffFromUrl } from "@/lib/building-pos/staff-request";
-import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
+import { resolveModulePayment } from "@/lib/module-shop/resolve-module-payment";
 
 const bodySchema = z.object({
   amount: z.number().finite().positive().max(9_999_999.99),
@@ -24,13 +24,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "จำนวนเงินไม่ถูกต้อง" }, { status: 400 });
   }
 
-  const dorm = await prisma.dormitoryProfile.findUnique({
-    where: {
-      ownerUserId_trialSessionId: { ownerUserId: ctx.ownerId, trialSessionId: TRIAL_PROD_SCOPE },
-    },
-    select: { promptPayPhone: true },
-  });
-  const phone = dorm?.promptPayPhone?.trim() ?? "";
+  const payment = await resolveModulePayment(ctx.ownerId, ctx.trialSessionId, BUILDING_POS_MODULE_SLUG);
+  const phone = payment.promptPayPhone?.trim() ?? "";
   const digits = phone.replace(/\D/g, "");
   if (digits.length < 9) {
     return NextResponse.json({

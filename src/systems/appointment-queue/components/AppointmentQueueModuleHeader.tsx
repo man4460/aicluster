@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { AppMobileDockShell, appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import {
+  aqDockItemActiveClass,
+  aqDockItemIdleClass,
+} from "@/systems/appointment-queue/appointment-queue-ui-tokens";
 
 const links = [
   { href: "/dashboard/appointment-queue", tab: "overview", label: "ภาพรวม", labelShort: "ภาพรวม" },
@@ -68,7 +73,7 @@ export function AppointmentQueueModuleDesktopNav() {
   return (
     <nav
       aria-label="เมนูจองคิว"
-      className="mt-5 hidden border-t border-white/40 pt-5 md:block print:hidden"
+      className="mt-5 hidden border-t border-white/40 pt-5 lg:block print:hidden"
     >
       <ul className="grid grid-cols-4 gap-1">
         {links.map((l) => {
@@ -101,16 +106,8 @@ export function AppointmentQueueModuleMobileDock() {
   const sp = useSearchParams();
 
   return (
-    <nav
-      className={cn(
-        "fixed inset-x-3 z-40 overflow-hidden rounded-[2.5rem] border border-white/50 p-1.5 md:hidden print:hidden",
-        "bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]",
-        "bg-gradient-to-br from-white/55 via-white/40 to-indigo-50/30",
-        "shadow-[0_24px_55px_-18px_rgba(30,27,75,0.38)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
-      )}
-      aria-label="เมนูล่างจองคิว"
-    >
-      <ul className="grid grid-cols-4 gap-0.5">
+    <AppMobileDockShell ariaLabel="เมนูล่างจองคิว">
+      <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
         {links.map((l) => {
           const active = isActive(pathname, l.tab, sp);
           return (
@@ -120,16 +117,14 @@ export function AppointmentQueueModuleMobileDock() {
                 aria-current={active ? "page" : undefined}
                 aria-label={l.label}
                 className={cn(
-                  "flex min-h-[50px] w-full flex-col items-center justify-center gap-0.5 rounded-2xl px-0.5 transition-all active:scale-90",
-                  active
-                    ? "bg-white/80 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/20 backdrop-blur-sm"
-                    : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
+                  "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1 text-center transition-all active:scale-90",
+                  active ? aqDockItemActiveClass : aqDockItemIdleClass,
                 )}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5 shrink-0" aria-hidden>
                   {navIcon(l.tab)}
                 </svg>
-                <span className="max-w-full truncate text-[8px] font-black leading-none sm:text-[9px]">
+                <span className="max-w-full truncate px-0.5 text-[9px] font-black leading-none">
                   {l.labelShort}
                 </span>
               </Link>
@@ -137,6 +132,6 @@ export function AppointmentQueueModuleMobileDock() {
           );
         })}
       </ul>
-    </nav>
+    </AppMobileDockShell>
   );
 }

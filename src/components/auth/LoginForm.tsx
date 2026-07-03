@@ -217,9 +217,11 @@ function LoginFormInner({
           {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
         </button>
       </form>
-      <p className="mt-6 flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-center sm:gap-4">
+      <p className="mt-6 flex flex-row flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
         <AuthFooterLink href="/register">สมัครสมาชิก</AuthFooterLink>
-        <span className="hidden text-slate-300 sm:inline">|</span>
+        <span className="text-slate-300" aria-hidden>
+          |
+        </span>
         <AuthFooterLink href="/forgot-password">ลืมรหัสผ่าน</AuthFooterLink>
       </p>
     </AuthCard>

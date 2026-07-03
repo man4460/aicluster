@@ -1,8 +1,8 @@
 "use client";
 
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  AppUsageGuideModal,
   AppDashboardSection,
   AppEmptyState,
   AppSectionHeader,
@@ -18,6 +18,8 @@ import { LaundryPackageCard } from "@/systems/laundry/components/LaundryPackageC
 import { LaundryPackageEditorModal } from "@/systems/laundry/components/LaundryPackageEditorModal";
 import { LaundryPackageViewModal } from "@/systems/laundry/components/LaundryPackageViewModal";
 import { LaundryRecordOrderModal } from "@/systems/laundry/components/LaundryRecordOrderModal";
+import { ModuleShopSettingsLink } from "@/systems/module-shop/ModuleShopSettingsLink";
+import { parseLaundryTab, type LaundryTabKey } from "@/systems/laundry/laundry-module-nav";
 import {
   laundryDashboardCardGridClass,
   laundryDashboardStatsGridClass,
@@ -237,13 +239,17 @@ export function LaundryDashboard({
 }) {
   const repo = useMemo(() => createLaundrySessionApiRepository(), []);
   const isStaffLaneOnly = layoutVariant === "staff_lane";
-
-  const [tab, setTab] = useState<TabKey>(isStaffLaneOnly ? "overview" : "overview");
+  const searchParams = useSearchParams();
+  const tabFromUrl = useMemo(() => parseLaundryTab(searchParams.get("tab")), [searchParams]);
+  const [tab, setTab] = useState<TabKey>(isStaffLaneOnly ? "overview" : tabFromUrl);
   const [orders, setOrders] = useState<LaundryOrder[]>([]);
   const [packages, setPackages] = useState<LaundryPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [usageGuideOpen, setUsageGuideOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isStaffLaneOnly) setTab(tabFromUrl);
+  }, [tabFromUrl, isStaffLaneOnly]);
   const [showCreate, setShowCreate] = useState(false);
   const [packageModal, setPackageModal] = useState<null | "create" | LaundryPackage>(null);
   const [viewOrder, setViewOrder] = useState<LaundryOrder | null>(null);
@@ -425,9 +431,8 @@ export function LaundryDashboard({
   }
 
   return (
-    <div className={cn("max-w-full space-y-4 sm:space-y-6", "pb-[5.75rem] md:pb-6")}>
-      <>
-          <div className={cn(laundryGlassShellClass, "p-4 sm:px-8 sm:py-6 print:hidden")}>
+    <div className={cn("max-w-full space-y-4 sm:space-y-6")}>
+      <div className={cn(laundryGlassShellClass, "p-4 sm:px-8 sm:py-6 print:hidden")}>
             <header>
               <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
                 <div className="flex min-w-0 items-center gap-3">
@@ -465,7 +470,7 @@ export function LaundryDashboard({
               </div>
             </header>
 
-            <nav aria-label="เมนูซักผ้า" className="mt-5 hidden border-t border-white/40 pt-5 md:block print:hidden">
+            <nav aria-label="เมนูซักผ้า" className="mt-5 hidden border-t border-white/40 pt-5 lg:block print:hidden">
               <ul className="-mx-1 flex gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {TAB_ITEMS.map((item) => {
                   const active = tab === item.key;
@@ -489,49 +494,12 @@ export function LaundryDashboard({
                     </li>
                   );
                 })}
+                {moduleShopSettingsDesktopNavItem(
+                  <ModuleShopSettingsDesktopNavLink href="/dashboard/laundry/settings" active={false} />,
+                )}
               </ul>
             </nav>
           </div>
-
-          <nav
-            className={cn(
-              "fixed inset-x-4 z-40 overflow-hidden rounded-[2.5rem] border border-white/50 p-2 md:hidden print:hidden",
-              "bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]",
-              "bg-gradient-to-br from-white/55 via-white/40 to-indigo-50/30",
-              "shadow-[0_24px_55px_-18px_rgba(30,27,75,0.38)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
-            )}
-            aria-label="เมนูล่างรับฝากซักผ้า"
-          >
-            <ul className="grid grid-cols-4 gap-1">
-              {TAB_ITEMS.map((item) => {
-                const active = tab === item.key;
-                return (
-                  <li key={item.key} className="min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => setTab(item.key)}
-                      aria-current={active ? "page" : undefined}
-                      aria-label={item.label}
-                      className={cn(
-                        "flex min-h-[48px] w-full flex-col items-center justify-center gap-0.5 rounded-2xl px-0.5 transition-all active:scale-90",
-                        active
-                          ? "bg-white/80 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/20 backdrop-blur-sm"
-                          : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
-                      )}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-[18px] w-[18px] shrink-0" aria-hidden>
-                        <LaundryTabIcon tabKey={item.key} />
-                      </svg>
-                      <span className="max-w-full truncate px-0.5 text-center text-[8px] font-black leading-tight">
-                        {item.shortLabel}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-      </>
 
       {tab === "overview" && (
         <div className={cn("space-y-4", "sm:space-y-6")}>
@@ -693,6 +661,9 @@ export function LaundryDashboard({
             tone="slate"
             title="QR / โปสเตอร์"
             description="โปสเตอร์และลิงก์ QR"
+            className="flex flex-row items-start justify-between gap-3 sm:items-center"
+            actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
+            action={<ModuleShopSettingsLink href="/dashboard/laundry/settings" />}
           />
           <LaundryQrHubClient
             ownerUserId={ownerUserId}
@@ -766,6 +737,35 @@ export function LaundryDashboard({
           },
         ]}
       />
+
+      <AppMobileDockShell ariaLabel="เมนูล่างรับฝากซักผ้า">
+        <ul className={cn(appMobileDockGridClass, "grid-cols-5")}>
+          {TAB_ITEMS.map((item) => {
+            const active = tab === item.key;
+            return (
+              <li key={item.key} className="min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setTab(item.key)}
+                  aria-current={active ? "page" : undefined}
+                  aria-label={item.label}
+                  className={appMobileDockLinkClass(active)}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5 shrink-0" aria-hidden>
+                    <LaundryTabIcon tabKey={item.key} />
+                  </svg>
+                  <span className="max-w-full truncate px-0.5 text-[9px] font-black leading-none">
+                    {item.shortLabel}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+          <li className="min-w-0">
+            <ModuleShopSettingsDockLink href="/dashboard/laundry/settings" active={false} />
+          </li>
+        </ul>
+      </AppMobileDockShell>
     </div>
   );
 }

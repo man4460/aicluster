@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isAppointmentQueuePortalOpenForOwner } from "@/lib/appointment-queue/portal-access";
+import { appointmentQueuePaymentFromRow, formatPortalPaymentLines } from "@/lib/module-shop/appointment-queue-payment";
 import { APPOINTMENT_QUEUE_MODULE_SLUG } from "@/lib/modules/config";
 import { resolveDataScopeBySlug } from "@/lib/trial/scope";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
@@ -44,6 +45,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "ปิดรับจองชั่วคราว" }, { status: 403 });
   }
 
+  const payment = appointmentQueuePaymentFromRow(profile);
+  const paymentLines = formatPortalPaymentLines(payment);
+
   return NextResponse.json({
     shop: {
       displayName: profile.displayName ?? "จองคิวออนไลน์",
@@ -52,9 +56,10 @@ export async function GET(req: Request) {
       depositRequired: profile.depositRequired,
       depositAmountBaht:
         profile.depositAmountBaht != null ? Number(profile.depositAmountBaht) : null,
-      promptPayId: profile.promptPayId,
-      promptPayName: profile.promptPayName,
-      bankAccountNote: profile.bankAccountNote,
+      promptPayId: payment.promptPayPhone,
+      promptPayName: payment.bankAccountName,
+      bankAccountNote: paymentLines.join("\n") || profile.bankAccountNote,
+      paymentLines,
     },
     services: services.map((s) => ({
       id: s.id,

@@ -80,6 +80,8 @@ mawell_buffet_from_host.sql
 !/public/uploads/ecommerce-slips/.gitkeep
 /public/uploads/ecommerce-store/*
 !/public/uploads/ecommerce-store/.gitkeep
+/public/uploads/hotel-resort/*
+!/public/uploads/hotel-resort/.gitkeep
 
 # Legacy duplicate tree — แอปจริงอยู่ราก repo (มี node_modules/.next ของ copy เก่า)
 /web/

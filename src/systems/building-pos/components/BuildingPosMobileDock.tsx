@@ -3,8 +3,16 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { AppMobileDockShell, appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { buildingPosMainTabHref, parseBuildingPosNav, type BuildingPosMainTab } from "@/systems/building-pos/building-pos-nav";
+import {
+  IconModuleShopSettings,
+  MODULE_SHOP_SETTINGS_SHORT_LABEL,
+} from "@/systems/module-shop/module-shop-settings-nav";
+
+const BUILDING_POS_BASE = "/dashboard/building-pos";
+const BUILDING_POS_SETTINGS_HREF = `${BUILDING_POS_BASE}/settings`;
 
 function IconOverview({ className }: { className?: string }) {
   return (
@@ -49,13 +57,13 @@ const dockLinkClass = (active: boolean) =>
   );
 
 function BuildingPosMobileDockInner() {
-  const pathname = usePathname() ?? "";
+  const pathname = (usePathname() ?? "").replace(/\/+$/, "");
   const searchParams = useSearchParams();
   const nav = parseBuildingPosNav(searchParams);
-  /** ซ่อน dock ถ้าไม่ใช่หน้า hub (เช่น redirect กำลังทำงาน) */
-  const onHub = pathname.replace(/\/+$/, "").endsWith("/dashboard/building-pos");
+  const onHub = pathname === BUILDING_POS_BASE;
+  const onSettings = pathname === BUILDING_POS_SETTINGS_HREF;
 
-  if (!onHub) return null;
+  if (!onHub && !onSettings) return null;
 
   const items: { main: BuildingPosMainTab; label: string; icon: typeof IconOverview }[] = [
     { main: "overview", label: "แดชบอร์ด", icon: IconOverview },
@@ -65,19 +73,10 @@ function BuildingPosMobileDockInner() {
   ];
 
   return (
-    <nav
-      className={cn(
-        "fixed inset-x-4 z-40 overflow-hidden rounded-[2.5rem] border border-white/50 p-2 md:hidden print:hidden",
-        "bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]",
-        "bg-gradient-to-br from-white/55 via-white/40 to-indigo-50/30",
-        "shadow-[0_24px_55px_-18px_rgba(30,27,75,0.38)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
-        "pb-[max(0.35rem,env(safe-area-inset-bottom,0px))]",
-      )}
-      aria-label="เมนูล่าง POS ร้านอาหาร"
-    >
-      <ul className="grid grid-cols-4 gap-1">
+    <AppMobileDockShell ariaLabel="เมนูล่าง POS ร้านอาหาร">
+      <ul className={cn(appMobileDockGridClass, "grid-cols-5")}>
         {items.map(({ main, label, icon: Icon }) => {
-          const active = nav.main === main;
+          const active = !onSettings && nav.main === main;
           const href = buildingPosMainTabHref(nav, main);
           return (
             <li key={main} className="min-w-0">
@@ -96,8 +95,22 @@ function BuildingPosMobileDockInner() {
             </li>
           );
         })}
+        <li className="min-w-0">
+          <Link
+            href={BUILDING_POS_SETTINGS_HREF}
+            className={dockLinkClass(onSettings)}
+            aria-current={onSettings ? "page" : undefined}
+            aria-label="ตั้งค่าร้าน"
+            title="ตั้งค่าร้าน"
+          >
+            <IconModuleShopSettings className="h-5 w-5 shrink-0" />
+            <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">
+              {MODULE_SHOP_SETTINGS_SHORT_LABEL}
+            </span>
+          </Link>
+        </li>
       </ul>
-    </nav>
+    </AppMobileDockShell>
   );
 }
 

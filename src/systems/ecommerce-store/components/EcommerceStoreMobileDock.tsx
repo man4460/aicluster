@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AppMobileDockShell, appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { deriveEcommerceSection } from "@/systems/ecommerce-store/ecommerce-nav";
 import {
   ecommerceDockItemActiveClass,
   ecommerceDockItemIdleClass,
-  ecommerceMobileDockShellClass,
 } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
 import {
   IconClipboard,
@@ -30,8 +30,8 @@ export function EcommerceStoreMobileDock() {
   const section = deriveEcommerceSection(pathname);
 
   return (
-    <nav aria-label="เมนูล่างร้านออนไลน์" className={ecommerceMobileDockShellClass}>
-      <ul className="grid grid-cols-5 gap-1">
+    <AppMobileDockShell ariaLabel="เมนูล่างร้านออนไลน์">
+      <ul className={cn(appMobileDockGridClass, "grid-cols-5")}>
         {items.map(({ href, section: sec, label, Icon }) => {
           const active = section === sec;
           return (
@@ -51,6 +51,6 @@ export function EcommerceStoreMobileDock() {
           );
         })}
       </ul>
-    </nav>
+    </AppMobileDockShell>
   );
 }

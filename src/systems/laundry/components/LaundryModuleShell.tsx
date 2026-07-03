@@ -21,7 +21,7 @@ export function LaundryModuleShell({
     <PageContainer
       size={staffKiosk ? "full" : "default"}
       className={cn(
-        "!px-0",
+        "!px-0 !pb-0",
         staffKiosk && "max-w-none flex min-h-0 flex-1 flex-col !p-0",
       )}
     >

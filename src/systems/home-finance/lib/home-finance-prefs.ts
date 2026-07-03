@@ -17,8 +17,8 @@ export type HomeFinanceFilterPrefs = {
   categoryFilter?: string;
   /** keyword */
   q?: string;
-  /** ความหนาแน่นตาราง */
-  densityMode?: "compact" | "comfortable";
+  /** หน้าประวัติ — แสดงกราฟหรือไม่ */
+  historyChartsOpen?: boolean;
 };
 
 export type HomeFinanceBudgetItem = {
@@ -50,8 +50,8 @@ export function loadHomeFinanceFilterPrefs(): HomeFinanceFilterPrefs {
     if (typeof p.typeFilter === "string") out.typeFilter = p.typeFilter;
     if (typeof p.categoryFilter === "string") out.categoryFilter = p.categoryFilter;
     if (typeof p.q === "string") out.q = p.q;
-    if (p.densityMode === "compact" || p.densityMode === "comfortable") {
-      out.densityMode = p.densityMode;
+    if (typeof p.historyChartsOpen === "boolean") {
+      out.historyChartsOpen = p.historyChartsOpen;
     }
     return out;
   } catch {

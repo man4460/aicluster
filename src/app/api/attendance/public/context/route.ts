@@ -48,7 +48,7 @@ export async function GET(req: Request) {
     throw e;
   }
 
-  const profile = await getBusinessProfile(ownerId);
+  const profile = await getBusinessProfile(ownerId, { ownerOnly: true });
   const orgName = profile?.name?.trim() || "องค์กร";
 
   const locations = await prisma.attendanceLocation.findMany({

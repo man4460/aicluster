@@ -4,15 +4,20 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { AppUsageGuideModal } from "@/components/app-templates";
+import { AppUsageGuideModal, appModuleShellMainScrollClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   drinkPosGlassShellClass,
   drinkPosMainPaddingBottomClass,
 } from "@/systems/drink-pos/lib/ui-tokens";
 import { DrinkPosMobileBottomProvider } from "@/systems/drink-pos/components/DrinkPosMobileBottomChrome";
+import {
+  ModuleShopSettingsDesktopNavLink,
+  moduleShopSettingsDesktopNavItem,
+} from "@/systems/module-shop/module-shop-settings-nav";
 
 const base = "/dashboard/drink-pos";
+const settingsHref = `${base}/settings`;
 
 function IconTabProducts({ className }: { className?: string }) {
   return (
@@ -76,7 +81,8 @@ export function DrinkPosShell({ children }: { children: React.ReactNode }) {
   const pathNorm = pathname.replace(/\/+$/, "");
   const isFinance = pathNorm.endsWith(`${base}/finance`) || pathNorm.endsWith(`${base}/sales`);
   const isMembers = pathNorm.endsWith(`${base}/members`);
-  const isProducts = onModule && !isFinance && !isMembers;
+  const isSettings = pathNorm.endsWith(settingsHref);
+  const isProducts = onModule && !isFinance && !isMembers && !isSettings;
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
 
   return (
@@ -114,10 +120,10 @@ export function DrinkPosShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <nav
-            className="mt-5 hidden border-t border-white/40 pt-5 md:block print:hidden"
+            className="mt-5 hidden border-t border-white/40 pt-5 lg:block print:hidden"
             aria-label="เมนูโมดูล POS ร้านเครื่องดื่ม"
           >
-            <ul className="grid grid-cols-3 gap-1">
+            <ul className="grid grid-cols-4 gap-1">
               <li className="min-w-0">
                 <TabLink href={base} label="สินค้า" active={isProducts} icon={<IconTabProducts className="h-4 w-4" />} />
               </li>
@@ -132,6 +138,9 @@ export function DrinkPosShell({ children }: { children: React.ReactNode }) {
               <li className="min-w-0">
                 <TabLink href={`${base}/finance`} label="การเงิน" active={isFinance} icon={<IconTabSales className="h-4 w-4" />} />
               </li>
+              {moduleShopSettingsDesktopNavItem(
+                <ModuleShopSettingsDesktopNavLink href={settingsHref} active={isSettings} />,
+              )}
             </ul>
           </nav>
         </header>
@@ -197,7 +206,7 @@ export function DrinkPosShell({ children }: { children: React.ReactNode }) {
         <div
           className={cn(
             drinkPosMainPaddingBottomClass,
-            "min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]",
+            appModuleShellMainScrollClass,
           )}
         >
           {children}

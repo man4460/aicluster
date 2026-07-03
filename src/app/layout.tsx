@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Noto_Sans_Thai } from "next/font/google";
+import { PwaInstallShell } from "@/components/pwa/PwaInstallShell";
 import "./globals.css";
 
 const notoSansThai = Noto_Sans_Thai({
@@ -9,12 +10,33 @@ const notoSansThai = Noto_Sans_Thai({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#4f2f9a",
+};
+
 export const metadata: Metadata = {
   title: {
     default: "MAWELL Buffet",
     template: "%s",
   },
-  description: "MAWELL Buffet — ระบบจัดการบุฟเฟต์",
+  description: "MAWELL Buffet — ระบบจัดการธุรกิจและโมดูลแดชบอร์ด",
+  manifest: "/manifest.webmanifest",
+  applicationName: "MAWELL",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "MAWELL",
+  },
+  icons: {
+    icon: [{ url: "/icon", type: "image/png" }],
+    apple: [{ url: "/apple-icon", type: "image/png" }],
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export default function RootLayout({
@@ -23,12 +45,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="th" className={`${notoSansThai.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="th" className={`${notoSansThai.variable} app-shell h-full antialiased`} suppressHydrationWarning>
       <body
-        className={`${notoSansThai.className} min-h-full flex flex-col font-sans`}
+        className={`${notoSansThai.className} app-shell min-h-full flex flex-col font-sans`}
         suppressHydrationWarning
       >
-        {children}
+        <PwaInstallShell>{children}</PwaInstallShell>
       </body>
     </html>
   );

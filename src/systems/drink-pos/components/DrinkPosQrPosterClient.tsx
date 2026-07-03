@@ -11,6 +11,7 @@ import {
   createShopQrPosterDataUrl,
   downloadPosterPdf,
   downloadPosterPng,
+  resolveAssetUrl,
 } from "@/components/qr/shop-qr-template";
 import {
   lsQrHubPanelClass,
@@ -23,6 +24,7 @@ const TAGLINE = "สแกน ตรวจสอบแต้มสะสม";
 type Props = {
   ownerId: string;
   shopLabel: string;
+  logoUrl?: string | null;
   baseUrl: string;
   trialSessionId: string;
   trialExportBlocked?: boolean;
@@ -36,6 +38,7 @@ const toolbarBtnSoft =
 export function DrinkPosQrPosterClient({
   ownerId,
   shopLabel,
+  logoUrl = null,
   baseUrl,
   trialSessionId,
   trialExportBlocked = false,
@@ -47,6 +50,7 @@ export function DrinkPosQrPosterClient({
   }, [baseUrl, ownerId, trialSessionId]);
 
   const headline = shopLabel.trim() || "สะสมแต้มเครื่องดื่ม";
+  const resolvedLogoUrl = useMemo(() => resolveAssetUrl(logoUrl, baseUrl), [logoUrl, baseUrl]);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -99,7 +103,7 @@ export function DrinkPosQrPosterClient({
     void createShopQrPosterDataUrl({
       qrDataUrl,
       shopLabel: headline,
-      logoUrl: null,
+      logoUrl: resolvedLogoUrl,
       tagline: TAGLINE,
     })
       .then((url) => {
@@ -111,7 +115,7 @@ export function DrinkPosQrPosterClient({
     return () => {
       cancelled = true;
     };
-  }, [qrDataUrl, headline]);
+  }, [qrDataUrl, headline, resolvedLogoUrl]);
 
   const downloadPng = useCallback(async () => {
     if (!portalUrl || trialExportBlocked || !qrDataUrl) return;
@@ -120,14 +124,14 @@ export function DrinkPosQrPosterClient({
       const canvas = await createShopQrPosterCanvas({
         qrDataUrl,
         shopLabel: headline,
-        logoUrl: null,
+        logoUrl: resolvedLogoUrl,
         tagline: TAGLINE,
       });
       await downloadPosterPng(canvas, `drink-pos-qr-${ownerId.slice(0, 8)}.png`);
     } finally {
       setBusy(false);
     }
-  }, [portalUrl, trialExportBlocked, qrDataUrl, headline, ownerId]);
+  }, [portalUrl, trialExportBlocked, qrDataUrl, headline, resolvedLogoUrl, ownerId]);
 
   const downloadPdf = useCallback(async () => {
     if (!portalUrl || trialExportBlocked || !qrDataUrl) return;
@@ -136,14 +140,14 @@ export function DrinkPosQrPosterClient({
       const canvas = await createShopQrPosterCanvas({
         qrDataUrl,
         shopLabel: headline,
-        logoUrl: null,
+        logoUrl: resolvedLogoUrl,
         tagline: TAGLINE,
       });
       await downloadPosterPdf(canvas, `drink-pos-qr-a4-${ownerId.slice(0, 8)}.pdf`, "a4");
     } finally {
       setBusy(false);
     }
-  }, [portalUrl, trialExportBlocked, qrDataUrl, headline, ownerId]);
+  }, [portalUrl, trialExportBlocked, qrDataUrl, headline, resolvedLogoUrl, ownerId]);
 
   return (
     <div className={cn(lsQrHubPanelClass, compactForModal && "border-0 bg-transparent p-0 shadow-none ring-0")}>

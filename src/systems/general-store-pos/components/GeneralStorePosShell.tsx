@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { AppUsageGuideModal } from "@/components/app-templates";
+import { AppUsageGuideModal, appModuleShellMainScrollClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   generalStorePosGlassShellClass,
@@ -102,7 +102,7 @@ export function GeneralStorePosShell({ children }: { children: React.ReactNode }
           </div>
 
           <nav
-            className="mt-5 hidden border-t border-white/40 pt-5 md:block print:hidden"
+            className="mt-5 hidden border-t border-white/40 pt-5 lg:block print:hidden"
             aria-label="เมนูโมดูล POS ร้านทั่วไป"
           >
             <ul className="flex gap-1">
@@ -177,7 +177,7 @@ export function GeneralStorePosShell({ children }: { children: React.ReactNode }
         <div
           className={cn(
             generalStorePosMainPaddingBottomClass,
-            "min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]",
+            appModuleShellMainScrollClass,
           )}
         >
           {children}

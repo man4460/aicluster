@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AppMobileDockShell, appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   mrDockItemActiveClass,
   mrDockItemIdleClass,
-  mrMobileDockShellClass,
 } from "@/systems/media-registry/components/media-registry-ui-tokens";
 
 type DockItem = { href: string; label: string; icon: (p: { className?: string }) => React.ReactNode };
@@ -27,8 +27,8 @@ function active(path: string, href: string) {
 export function MediaRegistryMobileDock() {
   const pathname = usePathname() ?? "";
   return (
-    <nav aria-label="เมนูล่าง ทะเบียนคุมสื่อ" className={mrMobileDockShellClass}>
-      <ul className="grid grid-cols-5 gap-1">
+    <AppMobileDockShell ariaLabel="เมนูล่าง ทะเบียนคุมสื่อ">
+      <ul className={cn(appMobileDockGridClass, "grid-cols-5")}>
         {items.map((item) => {
           const on = active(pathname, item.href);
           const Icon = item.icon;
@@ -49,7 +49,7 @@ export function MediaRegistryMobileDock() {
           );
         })}
       </ul>
-    </nav>
+    </AppMobileDockShell>
   );
 }
 

@@ -10,7 +10,7 @@ import { lsModuleHeaderShellClass } from "@/systems/loyalty-stamp/loyalty-stamp-
 
 export function LoyaltyStampModuleShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="max-w-full space-y-4 pb-20 sm:space-y-6 md:pb-0">
+    <div className="max-w-full space-y-4 pb-24 sm:space-y-6 lg:pb-0">
       <header className={cn(lsModuleHeaderShellClass, "print:hidden")}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-0">

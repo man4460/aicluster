@@ -22,6 +22,7 @@ export const DASHBOARD_LIVE_SYSTEMS: DashboardSystemCatalogEntry[] = [
   { href: "/dashboard/car-wash", label: "คาร์แคร์", emoji: "🚿", moduleSlug: "car-wash" },
   { href: "/dashboard/building-pos", label: "POS ร้านอาหาร", emoji: "🍽️", moduleSlug: "building-pos" },
   { href: "/dashboard/drink-pos", label: "POS ร้านเครื่องดื่ม", emoji: "🥤", moduleSlug: "drink-pos" },
+  { href: "/dashboard/hotel-resort", label: "โรงแรม / รีสอร์ท", emoji: "🏨", moduleSlug: "hotel-resort" },
   { href: "/dashboard/parking", label: "ระบบเช่าที่จอดรถ", emoji: "📍", moduleSlug: "parking" },
   { href: "/dashboard/wait-queue", label: "คิวหน้าร้าน", emoji: "🎟️", moduleSlug: "wait-queue" },
   { href: "/dashboard/school-bank", label: "ธนาคารโรงเรียน", emoji: "🏦", moduleSlug: "school-bank" },

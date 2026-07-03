@@ -6,6 +6,7 @@ import {
   AppDashboardSection,
   AppEmptyState,
   AppSectionHeader,
+  appDashboardInnerScrollClass,
   appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
@@ -367,7 +368,7 @@ export function GeneralStorePosSalesClient() {
           </AppEmptyState>
         ) : (
           <div
-            className="mt-4 max-h-[min(70vh,44rem)] min-h-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]"
+            className={cn("mt-4 max-h-[min(70vh,44rem)] min-h-0", appDashboardInnerScrollClass)}
             role="region"
             aria-label="รายการบิล"
           >

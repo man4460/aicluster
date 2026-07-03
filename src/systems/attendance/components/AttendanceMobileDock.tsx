@@ -2,6 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  AppMobileDockShell,
+  appMobileDockGridClass,
+  appMobileDockItemActiveClass,
+  appMobileDockItemIdleClass,
+} from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 
 type DockItem = {
@@ -32,11 +38,8 @@ function isActive(pathname: string, href: string, includes?: readonly string[]) 
 export function AttendanceMobileDock() {
   const pathname = usePathname() ?? "";
   return (
-    <nav
-      aria-label="เมนูล่างเช็คอินอัจฉริยะ"
-      className="fixed inset-x-0 bottom-0 z-[70] border-t border-white/45 bg-gradient-to-r from-white/80 via-white/70 to-[#eef2ff]/75 px-3 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 backdrop-blur-2xl md:hidden"
-    >
-      <ul className="mx-auto grid w-full max-w-6xl grid-cols-4 gap-1 rounded-[2rem] border border-white/60 bg-white/65 p-1.5 shadow-[0_12px_38px_-18px_rgba(76,70,178,0.55)] ring-1 ring-white/65">
+    <AppMobileDockShell ariaLabel="เมนูล่างเช็คอินอัจฉริยะ">
+      <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
         {items.map((item) => {
           const active = isActive(pathname, item.href, item.includes);
           const Icon = item.icon;
@@ -45,21 +48,19 @@ export function AttendanceMobileDock() {
               <Link
                 href={item.href}
                 className={cn(
-                  "flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-bold tracking-tight transition",
-                  active
-                    ? "bg-gradient-to-b from-[#5b61ff] to-[#4d47b6] text-white shadow-[0_10px_20px_-12px_rgba(77,71,182,0.9)]"
-                    : "text-[#66638c] hover:bg-white/70",
+                  "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1 text-center transition-all active:scale-90",
+                  active ? appMobileDockItemActiveClass : appMobileDockItemIdleClass,
                 )}
                 aria-current={active ? "page" : undefined}
               >
-                <Icon className="h-4 w-4" />
-                <span className="leading-none">{item.label}</span>
+                <Icon className={cn("h-5 w-5 shrink-0", active ? "text-[#5b61ff]" : "text-slate-400")} />
+                <span className="max-w-full truncate px-0.5 text-[9px] font-black leading-none">{item.label}</span>
               </Link>
             </li>
           );
         })}
       </ul>
-    </nav>
+    </AppMobileDockShell>
   );
 }
 
@@ -99,4 +100,3 @@ function IconSettings({ className }: { className?: string }) {
     </svg>
   );
 }
-

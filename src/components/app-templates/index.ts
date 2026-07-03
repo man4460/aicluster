@@ -12,9 +12,11 @@ export { useAppImageLightbox, type AppImageLightboxState } from "./useAppImageLi
 export {
   appDashboardBrandCtaPillButtonClass,
   appDashboardBrandGradientFillClass,
+  appDashboardInnerScrollClass,
   appDashboardSectionSlateClass,
   appDashboardSectionVioletClass,
   appDashboardHistoryListShellClass,
+  appModuleShellMainScrollClass,
   appTemplateOutlineButtonClass,
   appTemplatePickGalleryImageButtonClass,
   appTemplateTakePhotoButtonClass,
@@ -54,6 +56,13 @@ export {
 export { AppWindowPrintButton, type AppWindowPrintButtonProps } from "./AppWindowPrintButton";
 export { AppGalleryCameraFileInputs, type AppGalleryCameraFileInputsProps } from "./AppGalleryCameraFileInputs";
 export { AppImagePickCameraButtons, type AppImagePickCameraButtonsProps } from "./AppImagePickCameraButtons";
+export { AppShopLogoField, type AppShopLogoFieldProps } from "./AppShopLogoField";
+export {
+  AppModuleShopSettingsClient,
+  type AppModuleShopSettingsClientProps,
+} from "./AppModuleShopSettingsClient";
+export { AppModuleShopPaymentFields } from "./AppModuleShopPaymentFields";
+export { AppModuleOwnerAccountSection } from "./AppModuleOwnerAccountSection";
 export {
   AppPickGalleryImageButton,
   type AppPickGalleryImageButtonProps,
@@ -69,6 +78,18 @@ export {
   printPrintableHtmlInHiddenIframe,
 } from "./openPrintableHtml";
 export { prepareImageFileForUpload, prepareImageFileForVisionOcr } from "./prepareImageFileForUpload";
+
+export {
+  appMobileDockBackdropClass,
+  appMobileDockContentClearanceClass,
+  appMobileDockGridClass,
+  appMobileDockItemActiveClass,
+  appMobileDockItemIdleClass,
+  appMobileDockLinkClass,
+  appMobileDockPillClass,
+  appMobileDockUnifiedSlotClass,
+} from "./mobile-dock-tokens";
+export { AppMobileDockShell, AppMobileDockUnifiedBar } from "./AppMobileDockShell";
 
 export {
   APP_TEMPLATE_ICON_STROKE,

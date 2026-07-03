@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AppMobileDockShell, appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   dormDockItemActiveClass,
   dormDockItemIdleClass,
-  dormMobileDockShellClass,
 } from "@/systems/dormitory/dorm-ui-tokens";
 
 const items = [
@@ -34,8 +34,8 @@ function isActive(pathname: string, href: string) {
 export function DormMobileDock() {
   const pathname = usePathname() ?? "";
   return (
-    <nav aria-label="เมนูล่างหอพัก" className={dormMobileDockShellClass}>
-      <ul className="grid grid-cols-3 gap-1">
+    <AppMobileDockShell ariaLabel="เมนูล่างหอพัก">
+      <ul className={cn(appMobileDockGridClass, "grid-cols-3")}>
         {items.map((item) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;
@@ -56,7 +56,7 @@ export function DormMobileDock() {
           );
         })}
       </ul>
-    </nav>
+    </AppMobileDockShell>
   );
 }
 

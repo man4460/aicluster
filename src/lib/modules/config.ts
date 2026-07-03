@@ -109,6 +109,10 @@ export const GENERAL_STORE_POS_MODULE_GROUP_ID = 1 as const;
 export const DRINK_POS_MODULE_SLUG = "drink-pos" as const;
 export const DRINK_POS_MODULE_GROUP_ID = 1 as const;
 
+/** โรงแรม / รีสอร์ท — ห้องพัก จอง เช็คอิน บิล QR */
+export const HOTEL_RESORT_MODULE_SLUG = "hotel-resort" as const;
+export const HOTEL_RESORT_MODULE_GROUP_ID = 1 as const;
+
 /** E-Commerce Store Builder — ร้านออนไลน์ + สต๊อก + หน้าร้องสาธารณะ */
 export const ECOMMERCE_STORE_MODULE_SLUG = "ecommerce-store" as const;
 export const ECOMMERCE_STORE_MODULE_GROUP_ID = 1 as const;
@@ -189,6 +193,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === INVENTORY_MODULE_SLUG) return "คลัง · สต๊อกสินค้า";
   if (slug === GENERAL_STORE_POS_MODULE_SLUG) return "POS ร้านทั่วไป (ง่าย)";
   if (slug === DRINK_POS_MODULE_SLUG) return "POS ร้านเครื่องดื่ม";
+  if (slug === HOTEL_RESORT_MODULE_SLUG) return "โรงแรม / รีสอร์ท";
   if (slug === ECOMMERCE_STORE_MODULE_SLUG) return "E-Commerce Store Builder";
   if (slug === SMART_POLICE_MODULE_SLUG) return "Smart Police (สำนวนคดี)";
   return title;

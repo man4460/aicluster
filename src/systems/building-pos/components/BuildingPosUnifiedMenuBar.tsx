@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { cn } from "@/lib/cn";
 import {
@@ -10,6 +10,12 @@ import {
   type BuildingPosMainTab,
 } from "@/systems/building-pos/building-pos-nav";
 import { buildingPosModuleGlassShellClass } from "@/systems/building-pos/components/building-pos-ui-tokens";
+import {
+  ModuleShopSettingsDesktopNavLink,
+  moduleShopSettingsDesktopNavItem,
+} from "@/systems/module-shop/module-shop-settings-nav";
+
+const BUILDING_POS_SETTINGS_HREF = "/dashboard/building-pos/settings";
 
 function buildingPosMainTabIcon(key: BuildingPosMainTab) {
   if (key === "overview")
@@ -45,7 +51,9 @@ function BuildingPosUnifiedMenuBarInner({
   className?: string;
 }) {
   const searchParams = useSearchParams();
+  const pathname = (usePathname() ?? "").replace(/\/+$/, "");
   const nav = parseBuildingPosNav(searchParams);
+  const onSettings = pathname === BUILDING_POS_SETTINGS_HREF;
 
   const tabs: { key: BuildingPosMainTab; label: string }[] = [
     { key: "overview", label: "แดชบอร์ด" },
@@ -60,7 +68,7 @@ function BuildingPosUnifiedMenuBarInner({
     <nav
       aria-label="เมนูหลัก POS ร้านอาหาร (แท็บเล็กขึ้นไป)"
       className={cn(
-        "hidden md:block print:hidden",
+        "hidden lg:block print:hidden",
         embedded ?
           "mt-5 border-t border-white/40 pt-5"
         : `${buildingPosModuleGlassShellClass} p-3 sm:p-4`,
@@ -72,7 +80,7 @@ function BuildingPosUnifiedMenuBarInner({
       : null}
       <ul className="flex gap-1">
         {tabs.map(({ key, label }) => {
-          const active = nav.main === key;
+          const active = !onSettings && nav.main === key;
           const href = buildingPosMainTabHref(nav, key);
           return (
             <li key={key} className="min-w-0 flex-1">
@@ -92,6 +100,9 @@ function BuildingPosUnifiedMenuBarInner({
             </li>
           );
         })}
+        {moduleShopSettingsDesktopNavItem(
+          <ModuleShopSettingsDesktopNavLink href={BUILDING_POS_SETTINGS_HREF} active={onSettings} />,
+        )}
       </ul>
     </nav>
   );

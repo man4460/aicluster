@@ -22,15 +22,9 @@ type HubProps = {
   initial: LoyaltyStampDashboardDto;
   baseUrl: string;
   trialExportBlocked: boolean;
-  settingsInitial: {
-    displayName: string | null;
-    tagline: string | null;
-    publicCardEnabled: boolean;
-    stampsPerReward: number;
-    rewardTitle: string;
-    rewardDescription: string | null;
-    stampEmoji: string;
-  };
+  qrLogoUrl?: string | null;
+  qrShopLabel?: string;
+  settingsInitial: React.ComponentProps<typeof LoyaltyStampSettingsClient>["initial"];
   children: React.ReactNode;
 };
 
@@ -40,12 +34,14 @@ function HubTabs({
   initial,
   baseUrl,
   trialExportBlocked,
+  qrLogoUrl = null,
+  qrShopLabel,
   settingsInitial,
   children,
 }: HubProps) {
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab") ?? "overview";
-  const shopLabel = initial.profile.displayName?.trim() || "สะสมแต้มดิจิทัล";
+  const shopLabel = qrShopLabel?.trim() || initial.profile.displayName?.trim() || "สะสมแต้มดิจิทัล";
 
   return (
     <>
@@ -56,14 +52,16 @@ function HubTabs({
           <LoyaltyStampQrHubCard
             ownerId={ownerId}
             shopLabel={shopLabel}
-            logoUrl={null}
+            logoUrl={qrLogoUrl}
             baseUrl={baseUrl}
             trialSessionId={trialSessionId}
             trialExportBlocked={trialExportBlocked}
           />
         </section>
       ) : null}
-      {tab === "settings" ? <LoyaltyStampSettingsClient initial={settingsInitial} /> : null}
+      {tab === "settings" ? (
+        <LoyaltyStampSettingsClient initial={settingsInitial} />
+      ) : null}
     </>
   );
 }

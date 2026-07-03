@@ -9,7 +9,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/cn";
 import { getRequestBaseUrl } from "@/lib/app/request-base-url";
-import { getBusinessProfile } from "@/lib/profile/business-profile";
+import { getQrOwnerBranding } from "@/lib/profile/qr-branding";
 import { ParkingCheckoutButton } from "@/systems/parking/components/ParkingCheckoutButton";
 import { ParkingExpandableDashboardSection } from "@/systems/parking/components/ParkingExpandableDashboardSection";
 import { ParkingSpotCustomerQrPanel } from "@/systems/parking/components/ParkingSpotCustomerQrPanel";
@@ -31,7 +31,7 @@ export default async function ParkingSpotDetailPage({ params }: Props) {
   const id = Number((await params).id);
   if (!Number.isInteger(id) || id < 1) notFound();
 
-  const [spot, profile, baseUrl] = await Promise.all([
+  const [spot, branding, baseUrl] = await Promise.all([
     prisma.parkingSpot.findFirst({
       where: { id, siteId: site.id },
       include: {
@@ -42,7 +42,7 @@ export default async function ParkingSpotDetailPage({ params }: Props) {
         },
       },
     }),
-    getBusinessProfile(session.sub),
+    getQrOwnerBranding(session.sub, "บริการรับฝากจอดรถ"),
     getRequestBaseUrl(),
   ]);
   if (!spot) notFound();
@@ -182,8 +182,8 @@ export default async function ParkingSpotDetailPage({ params }: Props) {
             spotCode={spot.spotCode}
             zoneLabel={spot.zoneLabel}
             siteName={site.name}
-            businessName={profile?.name?.trim() || null}
-            logoUrl={profile?.logoUrl?.trim() || null}
+            businessName={branding.label}
+            logoUrl={branding.logoUrl}
             baseUrl={baseUrl}
           />
           <div className="mt-6 flex flex-wrap gap-2 border-t border-white/40 pt-4">

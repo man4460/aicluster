@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AppMobileDockShell, appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   villageDockItemActiveClass,
   villageDockItemIdleClass,
-  villageMobileDockShellClass,
 } from "@/systems/village/village-ui-tokens";
 import { villageMainKeyFromPathname, villageMainMenuItems, type VillageMainMenuKey } from "@/systems/village/village-nav";
 
@@ -36,8 +36,8 @@ export function VillageMobileDock() {
   const activeMain = villageMainKeyFromPathname(pathname);
 
   return (
-    <nav className={villageMobileDockShellClass} aria-label="เมนูล่างจัดการหมู่บ้าน">
-      <ul className="grid grid-cols-4 gap-1">
+    <AppMobileDockShell ariaLabel="เมนูล่างจัดการหมู่บ้าน">
+      <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
         {villageMainMenuItems.map((item) => {
           const active = activeMain === item.key;
           return (
@@ -59,6 +59,6 @@ export function VillageMobileDock() {
           );
         })}
       </ul>
-    </nav>
+    </AppMobileDockShell>
   );
 }

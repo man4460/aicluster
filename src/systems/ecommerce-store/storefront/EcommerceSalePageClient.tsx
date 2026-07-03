@@ -10,6 +10,7 @@ import {
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { useMounted } from "@/systems/ecommerce-store/hooks/useMounted";
+import { fetchEcommercePromptPayQr } from "@/systems/ecommerce-store/lib/fetch-promptpay-qr";
 
 type Product = {
   id: string;
@@ -59,6 +60,7 @@ export function EcommerceSalePageClient({
   const [address, setAddress] = useState("");
   const [slipUrl, setSlipUrl] = useState<string | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [qrError, setQrError] = useState<string | null>(null);
   const [tracking, setTracking] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -71,13 +73,15 @@ export function EcommerceSalePageClient({
 
   useEffect(() => {
     if (!mounted || !store.promptPayPhone || total <= 0) return;
-    void fetch(`/api/ecommerce-store/public/${store.id}/promptpay-qr`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amountBaht: total }),
-    })
-      .then((r) => r.json())
-      .then((j) => setQrUrl(typeof j.qrDataUrl === "string" ? j.qrDataUrl : null));
+    let cancelled = false;
+    void fetchEcommercePromptPayQr(store.id, total).then(({ qrDataUrl, error }) => {
+      if (cancelled) return;
+      setQrUrl(qrDataUrl);
+      setQrError(error);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [mounted, store.id, store.promptPayPhone, total]);
 
   async function onSlip(file: File) {
@@ -184,6 +188,8 @@ export function EcommerceSalePageClient({
           {qrUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={qrUrl} alt="QR PromptPay" className="mx-auto mt-2 h-40 w-40 rounded-2xl" />
+          ) : qrError ? (
+            <p className="mt-2 text-sm text-rose-600">{qrError}</p>
           ) : null}
         </section>
 

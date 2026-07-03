@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppMobileDockShell, appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 
 const links = [
@@ -6,6 +7,7 @@ const links = [
   { href: "/dashboard/massage/finance", label: "การเงิน" },
   { href: "/dashboard/massage/packages", label: "แพ็กเกจ" },
   { href: "/dashboard/massage/qr", label: "QR" },
+  { href: "/dashboard/massage/settings", label: "ตั้งค่าร้าน" },
 ] as const;
 
 function isMassageLinkActive(pathname: string, href: string): boolean {
@@ -18,6 +20,9 @@ function isMassageLinkActive(pathname: string, href: string): boolean {
   }
   if (href === "/dashboard/massage/qr") {
     return pathname === "/dashboard/massage/qr" || pathname.startsWith("/dashboard/massage/qr/");
+  }
+  if (href === "/dashboard/massage/settings") {
+    return pathname === "/dashboard/massage/settings";
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -39,6 +44,16 @@ function massageNavIcon(href: string) {
           <rect x="3" y="14" width="7" height="7" rx="1" />
         </g>
       );
+    case "/dashboard/massage/settings":
+      return (
+        <>
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+            strokeLinecap="round"
+          />
+        </>
+      );
     default:
       return <circle cx="12" cy="12" r="9" />;
   }
@@ -59,7 +74,7 @@ export function MassageModuleDesktopNav({ pathname }: { pathname: string }) {
   return (
     <nav
       aria-label="เมนูร้านนวด"
-      className="mt-5 hidden border-t border-white/40 pt-5 md:block print:hidden"
+      className="mt-5 hidden border-t border-white/40 pt-5 lg:block print:hidden"
     >
       <ul className="flex gap-1">
         {links.map((l) => {
@@ -96,16 +111,8 @@ export function MassageModuleDesktopNav({ pathname }: { pathname: string }) {
  */
 export function MassageModuleMobileDock({ pathname }: { pathname: string }) {
   return (
-    <nav
-      className={cn(
-        "fixed inset-x-4 z-40 overflow-hidden rounded-[2.5rem] border border-white/50 p-2 md:hidden print:hidden",
-        "bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))]",
-        "bg-gradient-to-br from-white/55 via-white/40 to-indigo-50/30",
-        "shadow-[0_24px_55px_-18px_rgba(30,27,75,0.38)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
-      )}
-      aria-label="เมนูล่างร้านนวด"
-    >
-      <ul className="grid grid-cols-4 gap-1">
+    <AppMobileDockShell ariaLabel="เมนูล่างร้านนวด">
+      <ul className={cn(appMobileDockGridClass, "grid-cols-5")}>
         {links.map((l) => {
           const active = isMassageLinkActive(pathname, l.href);
           return (
@@ -138,6 +145,6 @@ export function MassageModuleMobileDock({ pathname }: { pathname: string }) {
           );
         })}
       </ul>
-    </nav>
+    </AppMobileDockShell>
   );
 }

@@ -11,6 +11,7 @@ import {
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { useMounted } from "@/systems/ecommerce-store/hooks/useMounted";
+import { fetchEcommercePromptPayQr } from "@/systems/ecommerce-store/lib/fetch-promptpay-qr";
 import { useEcommerceCart } from "@/systems/ecommerce-store/storefront/useEcommerceCart";
 import { useEcommerceBuyerPhone } from "@/systems/ecommerce-store/storefront/useEcommerceBuyerPhone";
 
@@ -35,6 +36,7 @@ export function EcommerceCheckoutClient({ store }: { store: StorePay }) {
   const [address, setAddress] = useState("");
   const [slipUrl, setSlipUrl] = useState<string | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [qrError, setQrError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -44,16 +46,18 @@ export function EcommerceCheckoutClient({ store }: { store: StorePay }) {
     if (!mounted || cart.totalBaht <= 0) return;
     if (!store.promptPayPhone?.trim()) {
       setQrUrl(null);
+      setQrError(null);
       return;
     }
-    void fetch(`/api/ecommerce-store/public/${store.id}/promptpay-qr`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amountBaht: cart.totalBaht }),
-    })
-      .then((r) => r.json())
-      .then((j) => setQrUrl(typeof j.qrDataUrl === "string" ? j.qrDataUrl : null))
-      .catch(() => setQrUrl(null));
+    let cancelled = false;
+    void fetchEcommercePromptPayQr(store.id, cart.totalBaht).then(({ qrDataUrl, error }) => {
+      if (cancelled) return;
+      setQrUrl(qrDataUrl);
+      setQrError(error);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [mounted, store.id, store.promptPayPhone, cart.totalBaht]);
 
   if (!mounted) {
@@ -156,6 +160,8 @@ export function EcommerceCheckoutClient({ store }: { store: StorePay }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={qrUrl} alt="QR PromptPay" className="h-48 w-48 rounded-2xl ring-2 ring-white" />
             </div>
+          ) : qrError ? (
+            <p className="mt-2 text-sm text-rose-600">{qrError}</p>
           ) : null}
           {store.promptPayPhone ? (
             <p className="mt-2 text-sm">

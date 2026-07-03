@@ -1,26 +1,23 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getBusinessProfile } from "@/lib/profile/business-profile";
+import { getQrBuildingPosBranding } from "@/lib/profile/qr-branding";
+import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
+import { resolveModulePayment } from "@/lib/module-shop/resolve-module-payment";
+import { getBuildingPosDataScope } from "@/lib/trial/module-scopes";
 import { resolveBuildingPosStaffFromUrl } from "@/lib/building-pos/staff-request";
-import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const ctx = await resolveBuildingPosStaffFromUrl(url);
   if (!ctx) return NextResponse.json({ error: "ลิงก์ไม่ถูกต้องหรือหมดอายุ" }, { status: 401 });
-  const [profile, dormPay] = await Promise.all([
-    getBusinessProfile(ctx.ownerId),
-    prisma.dormitoryProfile.findUnique({
-      where: {
-        ownerUserId_trialSessionId: { ownerUserId: ctx.ownerId, trialSessionId: TRIAL_PROD_SCOPE },
-      },
-      select: { paymentChannelsNote: true },
-    }),
+  const scope = await getBuildingPosDataScope(ctx.ownerId);
+  const [branding, modulePayment] = await Promise.all([
+    getQrBuildingPosBranding(ctx.ownerId, scope.trialSessionId),
+    resolveModulePayment(ctx.ownerId, ctx.trialSessionId, BUILDING_POS_MODULE_SLUG),
   ]);
   return NextResponse.json({
     ok: true,
-    shopLabel: profile?.name?.trim() || "POS ร้านอาหาร",
-    logoUrl: profile?.logoUrl?.trim() || null,
-    paymentChannelsNote: dormPay?.paymentChannelsNote?.trim() || null,
+    shopLabel: branding.label,
+    logoUrl: branding.logoUrl,
+    paymentChannelsNote: modulePayment.paymentChannelsNote,
   });
 }

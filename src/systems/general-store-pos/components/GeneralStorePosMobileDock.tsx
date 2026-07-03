@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 
 const base = "/dashboard/general-store-pos";
@@ -48,7 +49,7 @@ export function GeneralStorePosMobileDockNav() {
   ] as const;
 
   return (
-    <ul className="grid grid-cols-2 gap-1" aria-label="แท็บนำทาง POS ร้านทั่วไป">
+    <ul className={cn(appMobileDockGridClass, "grid-cols-2")} aria-label="แท็บนำทาง POS ร้านทั่วไป">
       {items.map(({ href, label, icon: Icon, active }) => (
         <li key={href} className="min-w-0">
           <Link href={href} className={dockLinkClass(active)} aria-current={active ? "page" : undefined} title={label}>

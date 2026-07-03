@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AppMobileDockShell, appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   assetDockItemActiveClass,
   assetDockItemIdleClass,
-  assetMobileDockShellClass,
 } from "@/systems/asset/asset-ui-tokens";
 
 type DockItem = {
@@ -41,8 +41,8 @@ function isActive(pathname: string, href: string, includes?: readonly string[]) 
 export function AssetMobileDock() {
   const pathname = usePathname() ?? "";
   return (
-    <nav aria-label="เมนูล่าง บริหารทรัพย์สิน" className={assetMobileDockShellClass}>
-      <ul className="grid grid-cols-4 gap-1">
+    <AppMobileDockShell ariaLabel="เมนูล่าง บริหารทรัพย์สิน">
+      <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
         {items.map((item) => {
           const active = isActive(pathname, item.href, item.includes);
           const Icon = item.icon;
@@ -63,7 +63,7 @@ export function AssetMobileDock() {
           );
         })}
       </ul>
-    </nav>
+    </AppMobileDockShell>
   );
 }
 

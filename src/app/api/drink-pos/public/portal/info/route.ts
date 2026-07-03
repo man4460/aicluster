@@ -22,11 +22,15 @@ export async function GET(req: Request) {
     select: { username: true, email: true },
   });
   const displayName =
-    owner?.username?.trim() || owner?.email?.split("@")[0]?.trim() || "ร้านเครื่องดื่ม";
+    profile.displayName?.trim() ||
+    owner?.username?.trim() ||
+    owner?.email?.split("@")[0]?.trim() ||
+    "ร้านเครื่องดื่ม";
 
   return NextResponse.json({
     shop: {
       displayName,
+      logoUrl: profile.logoUrl,
       stampsPerReward: profile.stampsPerReward,
       rewardTitle: profile.rewardTitle,
       stampEmoji: "☕",

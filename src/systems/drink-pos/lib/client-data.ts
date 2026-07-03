@@ -12,6 +12,8 @@ export type DrinkPosProductRow = {
   categoryName: string;
   name: string;
   priceBaht: number;
+  basePriceBaht: number;
+  sizePrices: import("@/systems/drink-pos/lib/size-prices").DrinkPosSizePrice[] | null;
   imageUrl: string | null;
   isFeatured: boolean;
   isActive: boolean;
@@ -21,6 +23,7 @@ export type DrinkPosProductRow = {
 export type DrinkPosSaleLineRow = {
   id: string;
   productName: string;
+  sizeLabel: string | null;
   unitPriceBaht: number;
   quantity: number;
   lineTotalBaht: number;

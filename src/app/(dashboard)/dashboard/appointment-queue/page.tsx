@@ -8,6 +8,8 @@ import { AppointmentQueueStatCard } from "@/systems/appointment-queue/components
 import { loadAppointmentQueueDashboard } from "@/systems/appointment-queue/lib/load-dashboard";
 import { loadAppointmentQueueServices } from "@/systems/appointment-queue/lib/load-services";
 import { requireAppointmentQueuePage } from "@/systems/appointment-queue/lib/page-auth";
+import { appointmentQueuePaymentFromRow } from "@/lib/module-shop/appointment-queue-payment";
+import { getQrAppointmentQueueBranding } from "@/lib/profile/qr-branding";
 import { aqPageStackClass, aqSectionFirstClass, aqSectionNextClass } from "@/systems/appointment-queue/appointment-queue-ui-tokens";
 
 export const metadata: Metadata = {
@@ -25,20 +27,19 @@ export default async function AppointmentQueueDashboardPage() {
   }
 
   const baseUrl = await getRequestBaseUrl();
-  const shopLabel = profile.displayName?.trim() || "จองคิวออนไลน์";
+  const branding = await getQrAppointmentQueueBranding(userId, scope.trialSessionId);
 
   const settingsInitial = {
     displayName: profile.displayName,
+    logoUrl: profile.logoUrl,
     tagline: profile.tagline,
     contactPhone: profile.contactPhone,
     address: profile.address,
     publicBookingEnabled: profile.publicBookingEnabled,
     depositRequired: profile.depositRequired,
     depositAmountBaht: profile.depositAmountBaht != null ? Number(profile.depositAmountBaht) : null,
-    promptPayId: profile.promptPayId,
-    promptPayName: profile.promptPayName,
-    bankAccountNote: profile.bankAccountNote,
     defaultSlotMinutes: profile.defaultSlotMinutes,
+    ...appointmentQueuePaymentFromRow(profile),
   };
 
   const overview = (
@@ -71,8 +72,8 @@ export default async function AppointmentQueueDashboardPage() {
       <section className={aqSectionNextClass} aria-label="QR ลูกค้า">
         <AppointmentQueueQrHubCard
           ownerId={userId}
-          shopLabel={shopLabel}
-          logoUrl={null}
+          shopLabel={branding.label}
+          logoUrl={branding.logoUrl}
           baseUrl={baseUrl}
           trialSessionId={scope.trialSessionId}
           trialExportBlocked={scope.isTrialSandbox}

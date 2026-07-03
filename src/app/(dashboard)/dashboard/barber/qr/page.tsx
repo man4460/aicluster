@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getRequestBaseUrl } from "@/lib/app/request-base-url";
 import { getSession } from "@/lib/auth/session";
-import { getBusinessProfile } from "@/lib/profile/business-profile";
+import { getQrBarberBranding } from "@/lib/profile/qr-branding";
 import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import { BarberQrHubClient } from "@/systems/barber/components/BarberQrHubClient";
 import { barberPageStackClass } from "@/systems/barber/components/barber-ui-tokens";
@@ -11,12 +11,12 @@ export default async function BarberQrHubPage() {
   if (!session) redirect("/login");
 
   const scope = await getBarberDataScope(session.sub);
-  const [profile, baseUrl] = await Promise.all([
-    getBusinessProfile(session.sub, { barberTrialSessionId: scope.trialSessionId }),
+  const [branding, baseUrl] = await Promise.all([
+    getQrBarberBranding(session.sub, scope.trialSessionId),
     getRequestBaseUrl(),
   ]);
-  const shopLabel = profile?.name?.trim() || "ร้านตัดผม";
-  const logoUrl = profile?.logoUrl?.trim() || null;
+  const shopLabel = branding.label;
+  const logoUrl = branding.logoUrl;
 
   return (
     <div className={barberPageStackClass}>

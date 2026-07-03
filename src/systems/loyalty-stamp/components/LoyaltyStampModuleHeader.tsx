@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { AppMobileDockShell, appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   loyaltyStampTabIcon,
@@ -46,7 +47,7 @@ export function LoyaltyStampModuleDesktopNav() {
   return (
     <nav
       aria-label="เมนูสะสมแต้ม"
-      className="mt-5 hidden border-t border-white/40 pt-5 md:block print:hidden"
+      className="mt-5 hidden border-t border-white/40 pt-5 lg:block print:hidden"
     >
       <ul className="flex gap-1">
         {NAV.map((item) => {
@@ -84,15 +85,8 @@ export function LoyaltyStampModuleMobileDock() {
   const tab = searchParams.get("tab");
 
   return (
-    <nav
-      className={cn(
-        "fixed inset-x-4 bottom-6 z-40 overflow-hidden rounded-[2.5rem] border border-white/50 p-2 md:hidden print:hidden",
-        "bg-gradient-to-br from-white/55 via-white/40 to-indigo-50/30",
-        "shadow-[0_24px_55px_-18px_rgba(30,27,75,0.38)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
-      )}
-      aria-label="เมนูล่างสะสมแต้ม"
-    >
-      <ul className="grid grid-cols-4 gap-1">
+    <AppMobileDockShell ariaLabel="เมนูล่างสะสมแต้ม">
+      <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
         {NAV.map((item) => {
           const active = isActive(pathname, tab, item.key);
           return (
@@ -119,6 +113,6 @@ export function LoyaltyStampModuleMobileDock() {
           );
         })}
       </ul>
-    </nav>
+    </AppMobileDockShell>
   );
 }

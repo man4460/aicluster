@@ -23,7 +23,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 57: SmartPoliceDocument partyId + wordFileUrl */
 /** 58: Massage* module tables */
 /** 59: AppointmentQueue* + LoyaltyStamp* — client เก่าไม่มี delegate แล้ว undefined.findUnique */
-const PRISMA_SINGLETON_VERSION = 60;
+/** 61: HotelResort* module tables */
+const PRISMA_SINGLETON_VERSION = 62;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -54,6 +55,7 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     homeUtilityProfile?: { findMany?: unknown };
     homeVehicleProfile?: { findMany?: unknown };
     homeFinanceReminder?: { findMany?: unknown };
+    homeFinancePersonalDocument?: { findMany?: unknown };
     barberPortalStaffPing?: { findMany?: unknown };
     systemActivityLog?: { findMany?: unknown };
     parkingSite?: { findFirst?: unknown };
@@ -102,6 +104,12 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     drinkPosSale?: { findMany?: unknown };
     drinkPosSaleLine?: { findMany?: unknown };
     drinkPosCostEntry?: { findMany?: unknown };
+    hotelResortProfile?: { findUnique?: unknown };
+    hotelResortRoomType?: { findMany?: unknown };
+    hotelResortRoom?: { findMany?: unknown };
+    hotelResortGuest?: { findMany?: unknown };
+    hotelResortBooking?: { findMany?: unknown };
+    hotelResortCostEntry?: { findMany?: unknown };
     ecommerceStore?: { findFirst?: unknown };
     ecommerceProduct?: { findMany?: unknown };
     ecommerceOrder?: { findMany?: unknown };
@@ -151,6 +159,7 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.homeUtilityProfile?.findMany === "function" &&
     typeof c.homeVehicleProfile?.findMany === "function" &&
     typeof c.homeFinanceReminder?.findMany === "function" &&
+    typeof c.homeFinancePersonalDocument?.findMany === "function" &&
     typeof c.barberPortalStaffPing?.findMany === "function" &&
     typeof c.systemActivityLog?.findMany === "function" &&
     typeof c.parkingSite?.findFirst === "function" &&

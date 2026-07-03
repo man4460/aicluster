@@ -9,6 +9,7 @@ import {
   AppGalleryCameraFileInputs,
   AppImagePickCameraButtons,
   AppSectionHeader,
+  appDashboardInnerScrollClass,
   appTemplateOutlineButtonClass,
   prepareImageFileForUpload,
 } from "@/components/app-templates";
@@ -35,6 +36,15 @@ import { useDrinkPosMobileDraftSlot } from "@/systems/drink-pos/components/Drink
 import { DrinkPosButton } from "@/systems/drink-pos/components/DrinkPosButton";
 import { DrinkPosLoyaltyBar } from "@/systems/drink-pos/components/DrinkPosLoyaltyBar";
 import type { DrinkPosMemberDto } from "@/systems/drink-pos/lib/member-service";
+import {
+  defaultDrinkPosSizePrices,
+  drinkPosActiveSizePrices,
+  drinkPosDisplayPriceLabel,
+  drinkPosProductHasSizes,
+  drinkPosResolveUnitPrice,
+  type DrinkPosSizeCode,
+  type DrinkPosSizePrice,
+} from "@/systems/drink-pos/lib/size-prices";
 
 const statCardClass =
   "relative overflow-hidden rounded-[1.25rem] border border-white/55 bg-gradient-to-br from-white/60 via-indigo-50/25 to-violet-100/15 p-4 shadow-[0_16px_40px_-28px_rgba(30,27,75,0.28)] backdrop-blur-xl ring-1 ring-inset ring-white/50 sm:rounded-[2rem] sm:p-5";
@@ -66,11 +76,27 @@ function IconDraftQtyPlus({ className }: { className?: string }) {
 }
 
 type SaleDraftLine = {
+  lineKey: string;
   productId: string;
+  size: DrinkPosSizeCode | null;
   name: string;
   unitPriceBaht: number;
   quantity: number;
 };
+
+function draftLineKey(productId: string, size: DrinkPosSizeCode | null): string {
+  return size ? `${productId}:${size}` : productId;
+}
+
+function formatDrinkPosCardPrice(product: DrinkPosProductRow): string {
+  const label = drinkPosDisplayPriceLabel({
+    priceBaht: product.basePriceBaht ?? product.priceBaht,
+    sizePrices: product.sizePrices,
+  });
+  if (!label.includes("–")) return formatThb(Number(label));
+  const [a, b] = label.split("–");
+  return `${formatThb(Number(a))}–${formatThb(Number(b))}`;
+}
 
 function bangkokDayKey(iso: string): string {
   const d = new Date(iso);
@@ -107,6 +133,8 @@ export function DrinkPosDashboardClient() {
   const [prodPrice, setProdPrice] = useState("");
   const [prodImageUrl, setProdImageUrl] = useState("");
   const [prodFeatured, setProdFeatured] = useState(false);
+  const [prodSizesEnabled, setProdSizesEnabled] = useState(false);
+  const [prodSizePrices, setProdSizePrices] = useState<DrinkPosSizePrice[]>(defaultDrinkPosSizePrices());
   const [prodBusy, setProdBusy] = useState(false);
   const [prodErr, setProdErr] = useState<string | null>(null);
   const [prodUploadBusy, setProdUploadBusy] = useState(false);
@@ -120,6 +148,7 @@ export function DrinkPosDashboardClient() {
   const [billReviewOpen, setBillReviewOpen] = useState(false);
   const [loyaltyMember, setLoyaltyMember] = useState<DrinkPosMemberDto | null>(null);
   const [redeemMode, setRedeemMode] = useState(false);
+  const [sizePick, setSizePick] = useState<{ product: DrinkPosProductRow; quantity: number } | null>(null);
 
   const setMobileDraftSlot = useDrinkPosMobileDraftSlot();
 
@@ -304,6 +333,8 @@ export function DrinkPosDashboardClient() {
     setProdPrice("");
     setProdImageUrl("");
     setProdFeatured(false);
+    setProdSizesEnabled(false);
+    setProdSizePrices(defaultDrinkPosSizePrices());
     setProdErr(null);
     setProdModalOpen(true);
   }
@@ -312,9 +343,15 @@ export function DrinkPosDashboardClient() {
     setProdEdit(p);
     setProdCategoryId(p.categoryId);
     setProdName(p.name);
-    setProdPrice(String(p.priceBaht));
+    setProdPrice(String(p.basePriceBaht ?? p.priceBaht));
     setProdImageUrl(p.imageUrl ?? "");
     setProdFeatured(p.isFeatured);
+    setProdSizesEnabled(drinkPosProductHasSizes(p.sizePrices));
+    setProdSizePrices(
+      p.sizePrices?.length ?
+        p.sizePrices.map((row) => ({ ...row }))
+      : defaultDrinkPosSizePrices(p.basePriceBaht ?? p.priceBaht),
+    );
     setProdErr(null);
     setProdModalOpen(true);
   }
@@ -332,6 +369,19 @@ export function DrinkPosDashboardClient() {
         setProdErr("ราคาไม่ถูกต้อง");
         return;
       }
+      if (prodSizesEnabled) {
+        const enabled = prodSizePrices.filter((x) => x.enabled);
+        if (enabled.length === 0) {
+          setProdErr("เปิดอย่างน้อย 1 ขนาด (S / M / L)");
+          return;
+        }
+        for (const row of enabled) {
+          if (!Number.isFinite(row.priceBaht) || row.priceBaht < 0) {
+            setProdErr(`ราคาขนาด ${row.size} ไม่ถูกต้อง`);
+            return;
+          }
+        }
+      }
       if (!prodCategoryId) {
         setProdErr("เลือกหมวดก่อน — เพิ่มหมวดจากปุ่ม + หมวด");
         return;
@@ -339,7 +389,13 @@ export function DrinkPosDashboardClient() {
       const payload = {
         categoryId: prodCategoryId,
         name: prodName.trim(),
-        priceBaht: price,
+        priceBaht: prodSizesEnabled ?
+          (prodSizePrices.find((x) => x.size === "M" && x.enabled)?.priceBaht ??
+            prodSizePrices.find((x) => x.enabled)?.priceBaht ??
+            price)
+        : price,
+        sizesEnabled: prodSizesEnabled,
+        sizePrices: prodSizesEnabled ? prodSizePrices : null,
         imageUrl: prodImageUrl.trim() || null,
         isFeatured: prodFeatured,
       };
@@ -386,10 +442,17 @@ export function DrinkPosDashboardClient() {
     await reload();
   }
 
-  function addProductToDraft(p: DrinkPosProductRow, delta: number) {
+  function addProductToDraft(p: DrinkPosProductRow, delta: number, size: DrinkPosSizeCode | null = null) {
     if (delta <= 0) return;
+    const unitPriceBaht = drinkPosResolveUnitPrice(
+      { priceBaht: p.basePriceBaht ?? p.priceBaht, sizePrices: p.sizePrices },
+      size,
+    );
+    if (unitPriceBaht == null) return;
+    const lineKey = draftLineKey(p.id, size);
+    const displayName = size ? `${p.name} (${size})` : p.name;
     setDraftLines((prev) => {
-      const i = prev.findIndex((x) => x.productId === p.id);
+      const i = prev.findIndex((x) => x.lineKey === lineKey);
       if (i >= 0) {
         const next = [...prev];
         next[i] = { ...next[i], quantity: next[i].quantity + delta };
@@ -398,36 +461,61 @@ export function DrinkPosDashboardClient() {
       return [
         ...prev,
         {
+          lineKey,
           productId: p.id,
-          name: p.name,
-          unitPriceBaht: p.priceBaht,
+          size,
+          name: displayName,
+          unitPriceBaht,
           quantity: delta,
         },
       ];
     });
   }
 
-  function incrementDraftLineQty(productId: string) {
+  function incrementDraftLineQty(lineKey: string) {
     setDraftLines((prev) =>
-      prev.map((x) => (x.productId === productId ? { ...x, quantity: x.quantity + 1 } : x)),
+      prev.map((x) => (x.lineKey === lineKey ? { ...x, quantity: x.quantity + 1 } : x)),
     );
   }
 
-  function decrementDraftLineQty(productId: string) {
+  function decrementDraftLineQty(lineKey: string) {
     setDraftLines((prev) => {
-      const i = prev.findIndex((x) => x.productId === productId);
+      const i = prev.findIndex((x) => x.lineKey === lineKey);
       if (i < 0) return prev;
       const q = prev[i].quantity - 1;
-      if (q <= 0) return prev.filter((x) => x.productId !== productId);
+      if (q <= 0) return prev.filter((x) => x.lineKey !== lineKey);
       return prev.map((x, j) => (j === i ? { ...x, quantity: q } : x));
     });
   }
 
-  function removeDraftLine(productId: string) {
-    setDraftLines((prev) => prev.filter((x) => x.productId !== productId));
+  function removeDraftLine(lineKey: string) {
+    setDraftLines((prev) => prev.filter((x) => x.lineKey !== lineKey));
   }
 
   function handleProductCardTap(p: DrinkPosProductRow) {
+    if (drinkPosProductHasSizes(p.sizePrices)) {
+      const prev = cardTapRef.current;
+      if (prev && prev.productId === p.id) {
+        clearTimeout(prev.timeoutId);
+        cardTapRef.current = null;
+        setSizePick({ product: p, quantity: 2 });
+        return;
+      }
+      if (prev && prev.productId !== p.id) {
+        clearTimeout(prev.timeoutId);
+        cardTapRef.current = null;
+        const prevP = products.find((x) => x.id === prev.productId);
+        if (prevP && !drinkPosProductHasSizes(prevP.sizePrices)) addProductToDraft(prevP, 1);
+        else if (prevP) setSizePick({ product: prevP, quantity: 1 });
+      }
+      const timeoutId = setTimeout(() => {
+        cardTapRef.current = null;
+        setSizePick({ product: p, quantity: 1 });
+      }, DRINK_POS_CARD_DOUBLE_TAP_MS);
+      cardTapRef.current = { productId: p.id, timeoutId };
+      return;
+    }
+
     const prev = cardTapRef.current;
     if (prev && prev.productId === p.id) {
       clearTimeout(prev.timeoutId);
@@ -455,7 +543,7 @@ export function DrinkPosDashboardClient() {
     };
   }, []);
 
-  async function postSaleLines(lines: { productId: string; quantity: number }[]) {
+  async function postSaleLines(lines: { productId: string; quantity: number; size?: DrinkPosSizeCode | null }[]) {
     const res = await fetch("/api/drink-pos/sales", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -477,7 +565,13 @@ export function DrinkPosDashboardClient() {
     if (draftLines.length === 0) return;
     setDraftBusy(true);
     try {
-      await postSaleLines(draftLines.map((l) => ({ productId: l.productId, quantity: l.quantity })));
+      await postSaleLines(
+        draftLines.map((l) => ({
+          productId: l.productId,
+          quantity: l.quantity,
+          size: l.size,
+        })),
+      );
       setDraftLines([]);
       setBillReviewOpen(false);
       if (loyaltyMember?.phone) {
@@ -506,7 +600,7 @@ export function DrinkPosDashboardClient() {
 
   const draftQtyByProductId = useMemo(() => {
     const m = new Map<string, number>();
-    for (const l of draftLines) m.set(l.productId, l.quantity);
+    for (const l of draftLines) m.set(l.productId, (m.get(l.productId) ?? 0) + l.quantity);
     return m;
   }, [draftLines]);
 
@@ -551,7 +645,7 @@ export function DrinkPosDashboardClient() {
         </div>
         <ul className="max-h-[5.5rem] space-y-0.5 overflow-y-auto overscroll-contain text-xs font-semibold text-[#66638c] [-webkit-overflow-scrolling:touch]">
           {draftLines.map((l) => (
-            <li key={l.productId} className="flex justify-between gap-2 px-0.5">
+            <li key={l.lineKey} className="flex justify-between gap-2 px-0.5">
               <span className="min-w-0 truncate">
                 {l.name} × {l.quantity}
               </span>
@@ -675,7 +769,7 @@ export function DrinkPosDashboardClient() {
         />
 
         <div
-          className="mt-4 min-w-0 overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth pb-2 pt-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]"
+          className="mt-4 min-w-0 overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth pb-2 pt-0.5 [-webkit-overflow-scrolling:touch]"
           role="group"
           aria-label="หมวดหมู่ — เลื่อนซ้ายขวาได้"
         >
@@ -729,7 +823,7 @@ export function DrinkPosDashboardClient() {
                     "flex min-h-0 flex-1 flex-col text-left outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white/80",
                     inDraftQty > 0 && "ring-2 ring-[#5b61ff]/35 ring-offset-2 ring-offset-white/90",
                   )}
-                  aria-label={`${p.name} ราคา ${formatThb(p.priceBaht)} บาท${inDraftQty > 0 ? ` ในบิล ${inDraftQty} ชิ้น` : ""}`}
+                  aria-label={`${p.name} ราคา ${formatDrinkPosCardPrice(p)} บาท${inDraftQty > 0 ? ` ในบิล ${inDraftQty} ชิ้น` : ""}${drinkPosProductHasSizes(p.sizePrices) ? " มีหลายขนาด" : ""}`}
                 >
                   <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#ecebff]/40">
                     {p.imageUrl ? (
@@ -760,7 +854,12 @@ export function DrinkPosDashboardClient() {
                       <p className="mt-1 line-clamp-2 text-base font-black leading-snug text-[#1e1b4b]">{p.name}</p>
                     </div>
                     <div className="border-t border-white/50 pt-3">
-                      <p className="text-xl font-black tabular-nums text-[#4d47b6] sm:text-2xl">฿{formatThb(p.priceBaht)}</p>
+                      <p className="text-xl font-black tabular-nums text-[#4d47b6] sm:text-2xl">
+                        ฿{formatDrinkPosCardPrice(p)}
+                      </p>
+                      {drinkPosProductHasSizes(p.sizePrices) ? (
+                        <p className="mt-0.5 text-[10px] font-black uppercase tracking-widest text-[#66638c]">S / M / L</p>
+                      ) : null}
                     </div>
                   </div>
                 </DrinkPosButton>
@@ -840,7 +939,7 @@ export function DrinkPosDashboardClient() {
           </div>
           <ul className="mt-2 max-h-24 space-y-0.5 overflow-y-auto text-xs font-semibold text-[#66638c]">
             {draftLines.map((l) => (
-              <li key={l.productId} className="flex justify-between gap-2">
+              <li key={l.lineKey} className="flex justify-between gap-2">
                 <span className="min-w-0 truncate">
                   {l.name} × {l.quantity}
                 </span>
@@ -874,7 +973,7 @@ export function DrinkPosDashboardClient() {
             <ul className="max-h-[min(22rem,50vh)] space-y-2 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
               {draftLines.map((l) => (
                 <li
-                  key={l.productId}
+                  key={l.lineKey}
                   className="flex flex-col gap-3 rounded-2xl border border-white/55 bg-white/55 p-3 text-sm shadow-sm ring-1 ring-inset ring-white/40 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3"
                 >
                   <div className="min-w-0 flex-1">
@@ -887,7 +986,7 @@ export function DrinkPosDashboardClient() {
                         type="button"
                         className={draftQtyStepButtonClass}
                         disabled={draftBusy}
-                        onClick={() => decrementDraftLineQty(l.productId)}
+                        onClick={() => decrementDraftLineQty(l.lineKey)}
                         aria-label={`ลดจำนวน ${l.name}`}
                         title="ลด"
                       >
@@ -900,7 +999,7 @@ export function DrinkPosDashboardClient() {
                         type="button"
                         className={draftQtyStepButtonClass}
                         disabled={draftBusy}
-                        onClick={() => incrementDraftLineQty(l.productId)}
+                        onClick={() => incrementDraftLineQty(l.lineKey)}
                         aria-label={`เพิ่มจำนวน ${l.name}`}
                         title="เพิ่ม"
                       >
@@ -915,7 +1014,7 @@ export function DrinkPosDashboardClient() {
                         disabled={draftBusy}
                         aria-label={`ลบ ${l.name} ออกจากบิล`}
                         title="ลบรายการ"
-                        onClick={() => removeDraftLine(l.productId)}
+                        onClick={() => removeDraftLine(l.lineKey)}
                       >
                         <IconRowRemove className="h-4 w-4" aria-hidden />
                       </DrinkPosButton>
@@ -1108,10 +1207,70 @@ export function DrinkPosDashboardClient() {
               inputMode="numeric"
               value={prodPrice}
               onChange={(e) => setProdPrice(e.target.value)}
-              className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2.5 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:ring-2"
+              disabled={prodSizesEnabled}
+              className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2.5 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:ring-2 disabled:opacity-50"
               placeholder="0"
             />
           </label>
+          <div className="rounded-2xl border border-white/55 bg-white/45 p-3 ring-1 ring-inset ring-white/40">
+            <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-bold text-[#1e1b4b]">
+              <input
+                type="checkbox"
+                checked={prodSizesEnabled}
+                onChange={(e) => {
+                  const on = e.target.checked;
+                  setProdSizesEnabled(on);
+                  if (on) {
+                    const base = Number.parseInt(prodPrice.replace(/\D/g, ""), 10);
+                    setProdSizePrices(defaultDrinkPosSizePrices(Number.isFinite(base) ? base : 0));
+                  }
+                }}
+                className="h-4 w-4 rounded"
+              />
+              มีหลายขนาด (S / M / L)
+            </label>
+            {prodSizesEnabled ? (
+              <ul className="mt-3 space-y-2">
+                {prodSizePrices.map((row, idx) => (
+                  <li key={row.size} className="flex flex-wrap items-center gap-2">
+                    <label className="inline-flex min-w-[4.5rem] items-center gap-2 text-sm font-black text-[#4d47b6]">
+                      <input
+                        type="checkbox"
+                        checked={row.enabled}
+                        onChange={(e) => {
+                          const enabled = e.target.checked;
+                          setProdSizePrices((prev) =>
+                            prev.map((x, i) => (i === idx ? { ...x, enabled } : x)),
+                          );
+                        }}
+                        className="h-4 w-4 rounded"
+                      />
+                      {row.size}
+                    </label>
+                    <input
+                      inputMode="numeric"
+                      value={String(row.priceBaht)}
+                      disabled={!row.enabled}
+                      onChange={(e) => {
+                        const v = Number.parseInt(e.target.value.replace(/\D/g, ""), 10);
+                        setProdSizePrices((prev) =>
+                          prev.map((x, i) =>
+                            i === idx ? { ...x, priceBaht: Number.isFinite(v) ? v : 0 } : x,
+                          ),
+                        );
+                      }}
+                      className="min-w-0 flex-1 rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:ring-2 disabled:opacity-45"
+                      placeholder="ราคา"
+                      aria-label={`ราคาขนาด ${row.size}`}
+                    />
+                    <span className="text-xs font-semibold text-[#66638c]">บาท</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-xs font-medium text-[#66638c]">ปิดอยู่ — ใช้ราคาเดียวตามช่องด้านบน</p>
+            )}
+          </div>
           <div className="space-y-2">
             <span className="text-xs font-bold text-[#66638c]">รูปสินค้า</span>
             <div className="flex flex-wrap items-center gap-2">
@@ -1176,6 +1335,39 @@ export function DrinkPosDashboardClient() {
             </DrinkPosButton>
           </div>
         </div>
+      </FormModal>
+
+      <FormModal
+        open={sizePick != null}
+        onClose={() => setSizePick(null)}
+        title="เลือกขนาด"
+        size="sm"
+        footer={null}
+      >
+        {sizePick ? (
+          <div className="space-y-3">
+            <p className="text-sm font-bold text-[#1e1b4b]">{sizePick.product.name}</p>
+            <p className="text-xs font-medium text-[#66638c]">
+              {sizePick.quantity > 1 ? `เพิ่ม ${sizePick.quantity} ชิ้น` : "เลือกขนาดเพื่อเพิ่มในบิล"}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {drinkPosActiveSizePrices(sizePick.product.sizePrices).map((row) => (
+                <DrinkPosButton
+                  key={row.size}
+                  type="button"
+                  className="flex min-h-[72px] flex-col items-center justify-center rounded-2xl border border-white/60 bg-white/80 px-2 py-3 text-center shadow-sm transition hover:border-[#5b61ff]/35 hover:bg-indigo-50/60"
+                  onClick={() => {
+                    addProductToDraft(sizePick.product, sizePick.quantity, row.size);
+                    setSizePick(null);
+                  }}
+                >
+                  <span className="text-lg font-black text-[#4d47b6]">{row.size}</span>
+                  <span className="mt-1 text-xs font-bold tabular-nums text-[#1e1b4b]">฿{formatThb(row.priceBaht)}</span>
+                </DrinkPosButton>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </FormModal>
     </div>
   );

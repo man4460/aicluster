@@ -2,8 +2,9 @@ import { redirect } from "next/navigation";
 import { getRequestBaseUrl } from "@/lib/app/request-base-url";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { getBusinessProfile } from "@/lib/profile/business-profile";
-import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import { getQrCarWashBranding } from "@/lib/profile/qr-branding";
+import { CAR_WASH_MODULE_SLUG } from "@/lib/modules/config";
+import { resolveModulePayment } from "@/lib/module-shop/resolve-module-payment";
 import { getCarWashDataScope } from "@/lib/trial/module-scopes";
 import { CarWashDashboard } from "@/systems/car-wash/CarWashDashboard";
 
@@ -11,32 +12,27 @@ import { CarWashDashboard } from "@/systems/car-wash/CarWashDashboard";
 export default async function CarWashStaffLanePage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  const [profile, baseUrl, userRow, scope, dormPay] = await Promise.all([
-    getBusinessProfile(session.sub),
+  const scope = await getCarWashDataScope(session.sub);
+  const [branding, baseUrl, userRow, modulePayment] = await Promise.all([
+    getQrCarWashBranding(session.sub, scope.trialSessionId),
     getRequestBaseUrl(),
     prisma.user.findUnique({
       where: { id: session.sub },
       select: { fullName: true, username: true },
     }),
-    getCarWashDataScope(session.sub),
-    prisma.dormitoryProfile.findUnique({
-      where: {
-        ownerUserId_trialSessionId: { ownerUserId: session.sub, trialSessionId: TRIAL_PROD_SCOPE },
-      },
-      select: { paymentChannelsNote: true },
-    }),
+    resolveModulePayment(session.sub, scope.trialSessionId, CAR_WASH_MODULE_SLUG),
   ]);
   const recorderDisplayName = userRow?.fullName?.trim() || userRow?.username || session.username;
   return (
     <CarWashDashboard
-      shopLabel={profile?.name?.trim() || "คาร์แคร์"}
-      logoUrl={profile?.logoUrl?.trim() || null}
+      shopLabel={branding.label}
+      logoUrl={branding.logoUrl}
       baseUrl={baseUrl}
       recorderDisplayName={recorderDisplayName}
       ownerId={session.sub}
       trialSessionId={scope.trialSessionId}
       isTrialSandbox={scope.isTrialSandbox}
-      paymentChannelsNote={dormPay?.paymentChannelsNote?.trim() || null}
+      paymentChannelsNote={modulePayment.paymentChannelsNote}
       layoutVariant="staff_lane"
     />
   );

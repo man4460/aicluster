@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AppMobileDockShell, appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   educareDockItemActiveClass,
   educareDockItemIdleClass,
-  educareMobileDockShellClass,
 } from "@/systems/educare/educare-ui-tokens";
 
 type DockItem = {
@@ -37,8 +37,8 @@ function isActive(pathname: string, href: string, includes?: readonly string[]) 
 export function EducareMobileDock() {
   const pathname = usePathname() ?? "";
   return (
-    <nav aria-label="เมนูล่าง EduCare" className={educareMobileDockShellClass}>
-      <ul className="grid grid-cols-4 gap-1">
+    <AppMobileDockShell ariaLabel="เมนูล่าง EduCare">
+      <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
         {items.map((item) => {
           const active = isActive(pathname, item.href, item.includes);
           const Icon = item.icon;
@@ -59,7 +59,7 @@ export function EducareMobileDock() {
           );
         })}
       </ul>
-    </nav>
+    </AppMobileDockShell>
   );
 }
 

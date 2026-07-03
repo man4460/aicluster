@@ -2,9 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import {
+  IconModuleShopSettings,
+  MODULE_SHOP_SETTINGS_SHORT_LABEL,
+} from "@/systems/module-shop/module-shop-settings-nav";
 
 const base = "/dashboard/drink-pos";
+const settingsHref = `${base}/settings`;
 
 function IconGrid({ className }: { className?: string }) {
   return (
@@ -42,7 +48,8 @@ export function DrinkPosMobileDockNav() {
   const pathNorm = pathname.replace(/\/+$/, "");
   const isFinance = pathNorm.endsWith(`${base}/finance`) || pathNorm.endsWith(`${base}/sales`);
   const isMembers = pathNorm.endsWith(`${base}/members`);
-  const isProducts = !isFinance && !isMembers;
+  const isSettings = pathNorm.endsWith(settingsHref);
+  const isProducts = !isFinance && !isMembers && !isSettings;
 
   const items = [
     { href: base, label: "สินค้า", icon: IconGrid, active: isProducts },
@@ -59,7 +66,7 @@ export function DrinkPosMobileDockNav() {
   }
 
   return (
-    <ul className="grid grid-cols-3 gap-1" aria-label="แท็บนำทาง POS ร้านเครื่องดื่ม">
+    <ul className={cn(appMobileDockGridClass, "grid-cols-4")} aria-label="แท็บนำทาง POS ร้านเครื่องดื่ม">
       {items.map(({ href, label, icon: Icon, active }) => (
         <li key={href} className="min-w-0">
           <Link href={href} className={dockLinkClass(active)} aria-current={active ? "page" : undefined} title={label}>
@@ -68,6 +75,20 @@ export function DrinkPosMobileDockNav() {
           </Link>
         </li>
       ))}
+      <li className="min-w-0">
+        <Link
+          href={settingsHref}
+          className={dockLinkClass(isSettings)}
+          aria-current={isSettings ? "page" : undefined}
+          aria-label="ตั้งค่าร้าน"
+          title="ตั้งค่าร้าน"
+        >
+          <IconModuleShopSettings className="h-5 w-5 shrink-0" />
+          <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">
+            {MODULE_SHOP_SETTINGS_SHORT_LABEL}
+          </span>
+        </Link>
+      </li>
     </ul>
   );
 }

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { DemoSessionBanner } from "@/components/dashboard/DemoSessionBanner";
 import { LogoutButton, LogoutIconButton } from "@/components/layout/LogoutButton";
+import { PwaInstallHelpButton } from "@/components/pwa/PwaInstallHelpButton";
 import { dashboardNavIconForHref } from "@/components/layout/dashboard-nav-icons";
 import { MawellLogo } from "@/components/layout/MawellLogo";
 import { cn } from "@/lib/cn";
@@ -381,10 +382,15 @@ export function DashboardShell({
   }, [accountOpen]);
 
   return (
-    <div className="flex min-h-screen flex-col text-[#2e2a58]">
+    <div className="flex min-h-[100dvh] flex-col text-[#2e2a58]">
       {/* แถบบน — แก้ว โค้งมนเทียบเปลือกโมดูล / drawer (rounded-[2.5rem]) */}
       {!moduleStaffKiosk ?
-        <header className="sticky top-0 z-30 w-full px-3 pt-3 sm:px-4 sm:pt-4">
+        <header className="sticky top-0 z-30 w-full">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 bottom-0 border-b border-slate-200/60 bg-gradient-to-b from-white/98 via-slate-50/96 to-slate-100/90 shadow-[0_10px_28px_-20px_rgba(51,65,85,0.28)] backdrop-blur-2xl"
+          aria-hidden
+        />
+        <div className="relative z-[1] w-full px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-4 sm:pb-3 sm:pt-4">
         <div className="flex h-14 w-full min-w-0 items-center gap-2 rounded-[2.5rem] border border-white/30 bg-gradient-to-r from-[#4f2f9a]/90 via-[#5b3ac2]/85 to-[#ec4899]/85 px-3 text-white shadow-[0_20px_40px_-15px_rgba(61,29,125,0.7)] backdrop-blur-xl sm:gap-3 sm:px-6 lg:px-8">
           <button
             type="button"
@@ -441,7 +447,8 @@ export function DashboardShell({
           </div>
 
           {/* ขวา: ไม่ wrap — โปรไฟล์ + logout เรียงแนวนอนเสมอ */}
-          <div className="flex shrink-0 flex-nowrap items-center gap-2 border-l border-white/20 pl-2 sm:gap-3 sm:pl-4">
+          <div className="flex shrink-0 flex-nowrap items-center gap-1.5 border-l border-white/20 pl-2 sm:gap-2 sm:pl-4">
+            <PwaInstallHelpButton />
             <div className="hidden shrink-0 md:block">
               {avatarUrl ? (
                 <Image
@@ -504,6 +511,7 @@ export function DashboardShell({
             <LogoutIconButton className="h-9 w-9 sm:h-10 sm:w-10 transition-all hover:rotate-12" />
           </div>
         </div>
+        </div>
       </header>
       : null}
 
@@ -515,7 +523,7 @@ export function DashboardShell({
 
       <div
         className={cn(
-          "flex min-h-0 flex-1 gap-3 pb-20 pt-2 sm:gap-4 sm:pb-4",
+          "flex min-h-0 flex-1 gap-3 pb-[max(5rem,calc(5rem+env(safe-area-inset-bottom,0px)))] pt-2 sm:gap-4 sm:pb-4",
           moduleDashboardCompact ? "max-md:px-2 sm:px-4" : "px-3 sm:px-4",
           moduleStaffKiosk &&
             "!gap-0 !px-0 !pt-0 !pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:!px-0 sm:!pb-4",

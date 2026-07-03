@@ -1,5 +1,6 @@
 import { cn } from "@/lib/cn";
 import { PAGE_GUTTER_X } from "@/components/ui/page-container";
+import { PwaInstallBanner } from "@/components/pwa/PwaInstallBanner";
 
 export function AuthCard({
   title,
@@ -25,10 +26,13 @@ export function AuthPageFrame({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={cn(
-        "flex min-h-screen flex-col items-center justify-center bg-transparent py-10",
+        "flex min-h-[100dvh] flex-col items-center justify-center bg-transparent py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]",
         PAGE_GUTTER_X,
       )}
     >
+      <div className="mb-4 w-full max-w-md">
+        <PwaInstallBanner />
+      </div>
       {children}
     </div>
   );

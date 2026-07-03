@@ -26,6 +26,14 @@ export const appDashboardSectionVioletClass =
 export const appDashboardHistoryListShellClass =
   "rounded-xl border border-slate-200 bg-slate-50/40 p-2 shadow-sm sm:bg-white sm:p-3";
 
+/** พื้นที่เลื่อนเนื้อหาใต้หัวโมดูล — ห้ามใส่ scrollbar-gutter ชั้นนี้ (ทำขอบขวาไม่ตรงกับ header) */
+export const appModuleShellMainScrollClass =
+  "min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]";
+
+/** เลื่อนรายการภายในการ์ด — ใช้ scrollbar-gutter ได้เฉพาะชั้นใน */
+export const appDashboardInnerScrollClass =
+  "overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]";
+
 /** ปุ่มขอบเขตรอง (แถวพิมพ์ขนาดกระดาษ ฯลฯ) */
 export const appTemplateOutlineButtonClass =
   "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 touch-manipulation";

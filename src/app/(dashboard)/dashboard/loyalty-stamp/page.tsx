@@ -6,6 +6,8 @@ import {
 } from "@/systems/loyalty-stamp/components/LoyaltyStampDashboardHubClient";
 import { loadLoyaltyStampDashboard } from "@/systems/loyalty-stamp/lib/load-dashboard";
 import { requireLoyaltyStampPage } from "@/systems/loyalty-stamp/lib/page-auth";
+import { paymentRowToDto } from "@/lib/module-shop/payment";
+import { getQrLoyaltyStampBranding } from "@/lib/profile/qr-branding";
 import { lsPageStackClass } from "@/systems/loyalty-stamp/loyalty-stamp-ui-tokens";
 
 export const metadata: Metadata = {
@@ -20,14 +22,18 @@ export default async function LoyaltyStampDashboardPage() {
   }
 
   const baseUrl = await getRequestBaseUrl();
+  const branding = await getQrLoyaltyStampBranding(userId, scope.trialSessionId);
   const settingsInitial = {
     displayName: profile.displayName,
+    logoUrl: profile.logoUrl,
     tagline: profile.tagline,
+    contactPhone: profile.contactPhone,
     publicCardEnabled: profile.publicCardEnabled,
     stampsPerReward: profile.stampsPerReward,
     rewardTitle: profile.rewardTitle,
     rewardDescription: profile.rewardDescription,
     stampEmoji: profile.stampEmoji,
+    ...paymentRowToDto(profile),
   };
 
   const overview = (
@@ -48,6 +54,8 @@ export default async function LoyaltyStampDashboardPage() {
         initial={initial}
         baseUrl={baseUrl}
         trialExportBlocked={scope.isTrialSandbox}
+        qrLogoUrl={branding.logoUrl}
+        qrShopLabel={branding.label}
         settingsInitial={settingsInitial}
       >
         {overview}

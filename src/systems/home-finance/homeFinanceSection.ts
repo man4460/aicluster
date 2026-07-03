@@ -2,13 +2,13 @@ export type HomeFinanceSection =
   | "dashboard"
   | "history"
   | "categories"
+  | "documents"
   | "utilities"
   | "vehicles"
   | "reminders";
 
 /**
  * อ่านจาก pathname — ใช้ segment หลัง `home-finance` เท่านั้น
- * (ไม่ใช้ `includes("/history")` เพราะอาจไปชน path อื่นที่มีคำว่า history)
  */
 export function deriveHomeFinanceSection(pathname: string): HomeFinanceSection {
   const pathOnly = (pathname.split("?")[0] ?? "").replace(/\/+$/, "") || "/";
@@ -22,6 +22,8 @@ export function deriveHomeFinanceSection(pathname: string): HomeFinanceSection {
       return "history";
     case "categories":
       return "categories";
+    case "documents":
+      return "documents";
     case "utilities":
       return "utilities";
     case "vehicles":

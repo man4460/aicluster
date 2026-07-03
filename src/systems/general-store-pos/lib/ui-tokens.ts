@@ -4,4 +4,4 @@ export const generalStorePosGlassShellClass =
 
 /** รองรับการ์ดล่างเดียว (รายการรอ + dock) แบบคาร์แคร์ — `bottom-6` + ความสูงโซนรวม ~11–12rem */
 export const generalStorePosMainPaddingBottomClass =
-  "max-md:pb-[calc(12rem+env(safe-area-inset-bottom,0px))] md:pb-0";
+  "max-lg:pb-[calc(12rem+env(safe-area-inset-bottom,0px))] lg:pb-0";

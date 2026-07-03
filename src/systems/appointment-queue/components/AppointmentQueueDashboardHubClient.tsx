@@ -89,7 +89,9 @@ function AppointmentQueueDashboardHubTabs({
       {tab === "services" ? (
         <AppointmentQueueServicesClient embedded initial={initialServices} />
       ) : null}
-      {tab === "settings" ? <AppointmentQueueSettingsClient initial={settingsInitial} /> : null}
+      {tab === "settings" ? (
+        <AppointmentQueueSettingsClient initial={settingsInitial} />
+      ) : null}
     </div>
   );
 }

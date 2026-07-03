@@ -18,6 +18,7 @@ import {
   LAUNDRY_MODULE_SLUG,
   GENERAL_STORE_POS_MODULE_SLUG,
   DRINK_POS_MODULE_SLUG,
+  HOTEL_RESORT_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
   VAULT_MODULE_SLUG,
@@ -86,6 +87,9 @@ export default async function ModuleEntryPage({ params }: Props) {
   }
   if (slug === DRINK_POS_MODULE_SLUG) {
     redirect("/dashboard/drink-pos");
+  }
+  if (slug === HOTEL_RESORT_MODULE_SLUG) {
+    redirect("/dashboard/hotel-resort");
   }
   const { module: mod } = await requireModulePage(slug);
 

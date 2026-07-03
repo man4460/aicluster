@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { StaffQrLandingShell } from "@/components/qr/staff-qr-landing-shell";
 import { getSession } from "@/lib/auth/session";
-import { getBusinessProfile } from "@/lib/profile/business-profile";
+import { getQrMassageBranding } from "@/lib/profile/qr-branding";
+import { getMassageDataScope } from "@/lib/trial/module-scopes";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { MassageBookingsClient } from "@/systems/massage/components/MassageBookingsClient";
 import { MassageCheckInClient } from "@/systems/massage/components/MassageCheckInClient";
@@ -11,8 +12,9 @@ export default async function MassageStaffPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const profile = await getBusinessProfile(session.sub);
-  const shopLabel = profile?.name?.trim() || null;
+  const scope = await getMassageDataScope(session.sub);
+  const branding = await getQrMassageBranding(session.sub, scope.trialSessionId);
+  const shopLabel = branding.label;
 
   return (
     <StaffQrLandingShell variant="massage" title="ร้านนวดพนักงาน" shopLabel={shopLabel}>

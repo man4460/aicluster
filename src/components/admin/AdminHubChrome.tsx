@@ -3,14 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AdminHubMenuIcon } from "@/components/admin/AdminHubMenuIcons";
+import { AppMobileDockShell, appMobileDockGridClass } from "@/components/app-templates";
 import { ADMIN_HUB_MENU_ORDER } from "@/lib/admin-hub-nav";
 import { cn } from "@/lib/cn";
-
-const dockShell =
-  "fixed inset-x-4 bottom-6 z-40 overflow-hidden rounded-[2.5rem] border border-white/50 p-2 md:hidden print:hidden " +
-  "bg-gradient-to-br from-white/55 via-indigo-50/30 to-violet-100/25 " +
-  "shadow-[0_24px_55px_-18px_rgba(30,27,75,0.38)] backdrop-blur-2xl ring-1 ring-inset ring-white/55 " +
-  "pb-[max(0.5rem,env(safe-area-inset-bottom))]";
 
 const desktopNavLinkBase =
   "flex min-h-0 w-full items-center justify-center gap-2 rounded-xl px-2 py-3 text-center text-xs font-black transition-all sm:text-sm " +
@@ -91,8 +86,8 @@ export function AdminHubChrome() {
         </nav>
       </div>
 
-      <nav className={dockShell} aria-label="เมนูล่างศูนย์แอดมิน">
-        <ul className="grid grid-cols-3 gap-1">
+      <AppMobileDockShell ariaLabel="เมนูล่างศูนย์แอดมิน">
+        <ul className={cn(appMobileDockGridClass, "grid-cols-3")}>
           {ADMIN_HUB_MENU_ORDER.map((item) => {
             const active = isActive(item.href);
             return (
@@ -115,7 +110,7 @@ export function AdminHubChrome() {
             );
           })}
         </ul>
-      </nav>
+      </AppMobileDockShell>
     </>
   );
 }

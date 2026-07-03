@@ -16,6 +16,7 @@ import {
   APPOINTMENT_QUEUE_MODULE_SLUG,
   LOYALTY_STAMP_MODULE_SLUG,
   DRINK_POS_MODULE_SLUG,
+  HOTEL_RESORT_MODULE_SLUG,
   SCHOOL_BANK_MODULE_SLUG,
   COMMUNITY_COOP_MODULE_SLUG,
 } from "@/lib/modules/config";
@@ -75,6 +76,10 @@ export function getLoyaltyStampDataScope(userId: string): Promise<ModuleDataScop
 
 export function getDrinkPosDataScope(userId: string): Promise<ModuleDataScope> {
   return resolveDataScopeBySlug(userId, DRINK_POS_MODULE_SLUG);
+}
+
+export function getHotelResortDataScope(userId: string): Promise<ModuleDataScope> {
+  return resolveDataScopeBySlug(userId, HOTEL_RESORT_MODULE_SLUG);
 }
 
 export function getSchoolBankDataScope(userId: string): Promise<ModuleDataScope> {

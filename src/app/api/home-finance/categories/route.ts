@@ -3,7 +3,6 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
-import { ensureHomeFinanceBuiltinCategories } from "@/lib/home-finance/ensure-builtin-categories";
 
 const postSchema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -29,7 +28,6 @@ export async function GET() {
   }
 
   try {
-    await ensureHomeFinanceBuiltinCategories(prisma, ctx.billingUserId);
     const rows = await prisma.homeFinanceCategory.findMany({
       where: { ownerUserId: ctx.billingUserId },
       orderBy: [{ isActive: "desc" }, { sortOrder: "asc" }, { id: "asc" }],

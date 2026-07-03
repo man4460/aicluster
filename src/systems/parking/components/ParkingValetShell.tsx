@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { AppUsageGuideModal } from "@/components/app-templates";
+import { AppMobileDockShell, appMobileDockGridClass, AppUsageGuideModal } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   parkingDockItemActiveClass,
   parkingDockItemIdleClass,
   parkingIconBadgeClass,
-  parkingMobileDockShellClass,
   parkingModuleHeaderShellClass,
   parkingNavItemActiveClass,
   parkingNavItemBase,
@@ -183,8 +182,8 @@ export function ParkingValetShell({
         <div className="min-h-0 min-w-0 flex-1">{children}</div>
       </div>
 
-      <nav className={parkingMobileDockShellClass} aria-label="เมนูล่างรับฝากจอดรถ">
-        <ul className="grid grid-cols-4 gap-1">
+      <AppMobileDockShell ariaLabel="เมนูล่างรับฝากจอดรถ">
+        <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
           {NAV.map((item) => {
             const active = navActive(pathname, item.href);
             const Icon = item.icon;
@@ -206,7 +205,7 @@ export function ParkingValetShell({
             );
           })}
         </ul>
-      </nav>
+      </AppMobileDockShell>
 
       <AppUsageGuideModal
         open={guideOpen}

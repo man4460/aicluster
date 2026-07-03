@@ -22,7 +22,7 @@ export default async function AttendanceQrPage() {
 
   const [baseUrl, profile, scope] = await Promise.all([
     getServerAppBaseUrl(),
-    getBusinessProfile(session.sub),
+    getBusinessProfile(session.sub, { ownerOnly: true }),
     getAttendanceDataScope(session.sub),
   ]);
   const orgLabel = profile?.name?.trim() || "องค์กร";
@@ -39,7 +39,7 @@ export default async function AttendanceQrPage() {
       <AppSectionHeader
         tone="violet"
         title="QR จุดเช็คอิน"
-        description="คัดลอกลิงก์หรือดาวน์โหลดโปสเตอร์ — แยกตามจุดเช็ค"
+        description="คัดลอกลิงก์หรือดาวน์โหลดโปสเตอร์ — ชื่อและโลโก้มาจากหน้าโปรไฟล์"
       />
       {locations.length === 0 ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">

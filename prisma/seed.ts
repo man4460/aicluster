@@ -29,6 +29,7 @@ import { seedVaultProdDemoForOwner } from "../src/lib/trial/seed-vault";
 import { seedInventoryProdDemoForOwner } from "../src/lib/trial/seed-inventory";
 import { seedGeneralStorePosProdDemoForOwner } from "../src/lib/trial/seed-general-store-pos";
 import { seedDrinkPosProdDemoForOwner } from "../src/lib/trial/seed-drink-pos";
+import { seedHotelResortProdDemoForOwner } from "../src/lib/trial/seed-hotel-resort";
 import { seedEcommerceStoreProdDemoForOwner } from "../src/lib/trial/seed-ecommerce-store";
 import { seedSmartPoliceProdDemoForOwner } from "../src/lib/trial/seed-smart-police";
 import {
@@ -46,6 +47,7 @@ import {
   INVENTORY_MODULE_SLUG,
   GENERAL_STORE_POS_MODULE_SLUG,
   DRINK_POS_MODULE_SLUG,
+  HOTEL_RESORT_MODULE_SLUG,
   ECOMMERCE_STORE_MODULE_SLUG,
   SMART_POLICE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
@@ -59,6 +61,7 @@ import {
   WAIT_QUEUE_MODULE_SLUG,
 } from "../src/lib/modules/config";
 import { subscribeModule } from "../src/lib/modules/subscriptions-store";
+import { DEMO_USER_PROFILE_SEED } from "../src/lib/seed/demo-user-profile";
 
 const prisma = new PrismaClient();
 
@@ -96,6 +99,7 @@ async function main() {
     update: {
       passwordHash: userHash,
       role: "USER",
+      ...DEMO_USER_PROFILE_SEED,
     },
     create: {
       email: "user@mawell.local",
@@ -107,6 +111,7 @@ async function main() {
       subscriptionType: "DAILY",
       subscriptionTier: "NONE",
       lastBuffetBillingMonth: null,
+      ...DEMO_USER_PROFILE_SEED,
     },
   });
 
@@ -116,6 +121,7 @@ async function main() {
     update: {
       passwordHash: userHash,
       role: "USER",
+      ...DEMO_USER_PROFILE_SEED,
     },
     create: {
       email: "user@mawell.local.com",
@@ -127,6 +133,7 @@ async function main() {
       subscriptionType: "DAILY",
       subscriptionTier: "NONE",
       lastBuffetBillingMonth: null,
+      ...DEMO_USER_PROFILE_SEED,
     },
   });
 
@@ -335,6 +342,14 @@ async function main() {
       sortOrder: 30,
     },
     {
+      slug: "hotel-resort",
+      title: "โรงแรม / รีสอร์ท",
+      description:
+        "กลุ่ม 1 (Basic) — ห้องพัก จอง เช็คอิน walk-in บิล QR · สายรายวัน 1 บาท/วันต่อโมดูล",
+      groupId: 1,
+      sortOrder: 31,
+    },
+    {
       slug: "ecommerce-store",
       title: "E-Commerce Store Builder",
       description:
@@ -474,6 +489,7 @@ async function main() {
     INVENTORY_MODULE_SLUG,
     GENERAL_STORE_POS_MODULE_SLUG,
     DRINK_POS_MODULE_SLUG,
+    HOTEL_RESORT_MODULE_SLUG,
     ECOMMERCE_STORE_MODULE_SLUG,
     SMART_POLICE_MODULE_SLUG,
   ] as const;
@@ -774,6 +790,17 @@ async function main() {
     });
     if (row) {
       await tryDemoSeed(`drink-pos (${email})`, () => seedDrinkPosProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** โรงแรม / รีสอร์ท — ห้องพัก จอง เช็คอิน ต้นทุนตัวอย่าง */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`hotel-resort (${email})`, () => seedHotelResortProdDemoForOwner(prisma, row.id));
     }
   }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import QRCode from "qrcode";
 import {
@@ -10,9 +12,18 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppMobileDockShell,
   AppUsageGuideModal,
+  appMobileDockGridClass,
   useAppImageLightbox,
 } from "@/components/app-templates";
+import {
+  CAR_WASH_SETTINGS_PATH,
+  CAR_WASH_TAB_ITEMS,
+  carWashTabIcon,
+  parseCarWashTab,
+  type CarWashTabKey,
+} from "@/systems/car-wash/car-wash-module-nav";
 import {
   createShopQrPosterCanvas,
   createShopQrPosterDataUrl,
@@ -59,16 +70,14 @@ import {
   type WashBundle,
   type WashBundlePatch,
 } from "@/systems/car-wash/car-wash-service";
+import {
+  ModuleShopSettingsDesktopNavLink,
+  ModuleShopSettingsDockLink,
+  moduleShopSettingsDesktopNavItem,
+} from "@/systems/module-shop/module-shop-settings-nav";
 
-type TabKey = "overview" | "finance" | "offers" | "qr";
+type TabKey = CarWashTabKey;
 type OffersListTabKey = "packages" | "bundles";
-
-function carWashTabIcon(key: TabKey) {
-  if (key === "overview") return <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" />;
-  if (key === "finance") return <path d="M4 18h16M7 14l3-3 3 2 4-5" />;
-  if (key === "offers") return <path d="M4 7h16v4H4zM6 11v8h12v-8M9 7V5h6v2" />;
-  return <path d="M12 3v3M12 18v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M3 12h3M18 12h3M4.9 19.1 7 17M17 7l2.1-2.1" />;
-}
 
 function CarWashStat({
   title,
@@ -197,11 +206,32 @@ export function CarWashDashboard({
   const lightbox = useAppImageLightbox();
 
   const isStaffLaneOnly = layoutVariant === "staff_lane";
-  const [tab, setTab] = useState<TabKey>(
-    isStaffLaneOnly ? "qr" : (defaultTab ?? "overview"),
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname() ?? "";
+  const tabFromUrl = useMemo(() => parseCarWashTab(searchParams.get("tab")), [searchParams]);
+  const [tab, setTabState] = useState<TabKey>(
+    isStaffLaneOnly ? "qr" : (defaultTab ?? tabFromUrl),
   );
   const [loading, setLoading] = useState(true);
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isStaffLaneOnly) setTabState(tabFromUrl);
+  }, [tabFromUrl, isStaffLaneOnly]);
+
+  const setTab = useCallback(
+    (key: TabKey) => {
+      setTabState(key);
+      if (isStaffLaneOnly) return;
+      const q = new URLSearchParams(searchParams.toString());
+      if (key === "overview") q.delete("tab");
+      else q.set("tab", key);
+      const qs = q.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [isStaffLaneOnly, pathname, router, searchParams],
+  );
   const [packages, setPackages] = useState<ServicePackage[]>([]);
   const [bundles, setBundles] = useState<WashBundle[]>([]);
   const [visits, setVisits] = useState<ServiceVisit[]>([]);
@@ -1115,12 +1145,7 @@ export function CarWashDashboard({
     }
   }
 
-  const tabItems: { key: TabKey; label: string }[] = [
-    { key: "overview", label: "ภาพรวม" },
-    { key: "finance", label: "การเงิน" },
-    { key: "offers", label: "แพ็กเกจ" },
-    { key: "qr", label: "QR" },
-  ];
+  const tabItems = CAR_WASH_TAB_ITEMS;
 
   const bookingDateKey = bangkokDateKey();
 
@@ -1147,7 +1172,7 @@ export function CarWashDashboard({
     <div
       className={cn(
         "max-w-full space-y-4 sm:space-y-6",
-        !isStaffLaneOnly && "pb-20 md:pb-0",
+        !isStaffLaneOnly && "pb-24 lg:pb-0",
       )}
     >
       {!isStaffLaneOnly ? (
@@ -1195,7 +1220,7 @@ export function CarWashDashboard({
 
           <nav
             aria-label="เมนูคาร์แคร์"
-            className="mt-5 hidden border-t border-white/40 pt-5 md:block print:hidden"
+            className="mt-5 hidden border-t border-white/40 pt-5 lg:block print:hidden"
           >
             <ul className="flex gap-1">
               {tabItems.map((item) => {
@@ -1227,6 +1252,9 @@ export function CarWashDashboard({
                   </li>
                 );
               })}
+              {moduleShopSettingsDesktopNavItem(
+                <ModuleShopSettingsDesktopNavLink href={CAR_WASH_SETTINGS_PATH} active={false} />,
+              )}
             </ul>
           </nav>
         </div>
@@ -1845,19 +1873,12 @@ export function CarWashDashboard({
       ) : null}
 
       {!isStaffLaneOnly ? (
-        <nav
-          className={cn(
-            "fixed inset-x-4 bottom-6 z-40 overflow-hidden rounded-[2.5rem] border border-white/50 p-2 md:hidden print:hidden",
-            "bg-gradient-to-br from-white/55 via-white/40 to-indigo-50/30",
-            "shadow-[0_24px_55px_-18px_rgba(30,27,75,0.38)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
-          )}
-          aria-label="เมนูล่างคาร์แคร์"
-        >
-          <ul className="grid grid-cols-4 gap-1">
+        <AppMobileDockShell ariaLabel="เมนูล่างคาร์แคร์">
+          <ul className={cn(appMobileDockGridClass, "grid-cols-5")}>
             {tabItems.map((item) => {
               const active = tab === item.key;
               return (
-                <li key={item.key}>
+                <li key={item.key} className="min-w-0">
                   <button
                     type="button"
                     onClick={() => setTab(item.key)}
@@ -1874,18 +1895,23 @@ export function CarWashDashboard({
                       fill="none"
                       stroke="currentColor"
                       strokeWidth={2.5}
-                      className="h-5 w-5"
+                      className="h-5 w-5 shrink-0"
                       aria-hidden
                     >
                       {carWashTabIcon(item.key)}
                     </svg>
-                    <span className="text-[9px] font-black">{item.label}</span>
+                    <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">
+                      {item.label}
+                    </span>
                   </button>
                 </li>
               );
             })}
+            <li className="min-w-0">
+              <ModuleShopSettingsDockLink href={CAR_WASH_SETTINGS_PATH} active={false} />
+            </li>
           </ul>
-        </nav>
+        </AppMobileDockShell>
       ) : null}
       <FormModal
         open={bundleTabRowDetail != null}

@@ -2,11 +2,24 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withDrinkPosOwnerContext } from "@/systems/drink-pos/lib/api-auth";
+import {
+  drinkPosSizePricesDbValue,
+  mapDrinkPosProductRow,
+} from "@/systems/drink-pos/lib/product-map";
+import { DRINK_POS_SIZE_CODES } from "@/systems/drink-pos/lib/size-prices";
+
+const sizePriceInputZod = z.object({
+  size: z.enum(DRINK_POS_SIZE_CODES),
+  priceBaht: z.number().int().min(0).max(99999999),
+  enabled: z.boolean().optional(),
+});
 
 const createSchema = z.object({
   categoryId: z.string().trim().min(1).max(191),
   name: z.string().trim().min(1).max(160),
   priceBaht: z.number().int().min(0).max(99999999),
+  sizesEnabled: z.boolean().optional(),
+  sizePrices: z.array(sizePriceInputZod).max(3).optional().nullable(),
   imageUrl: z.string().trim().max(500).optional().nullable(),
   isFeatured: z.boolean().optional(),
   sortOrder: z.number().int().min(0).max(999999).optional(),
@@ -24,17 +37,7 @@ export async function GET() {
   });
 
   return NextResponse.json({
-    products: rows.map((r) => ({
-      id: r.id,
-      categoryId: r.categoryId,
-      categoryName: r.category.name,
-      name: r.name,
-      priceBaht: r.priceBaht,
-      imageUrl: r.imageUrl,
-      isFeatured: r.isFeatured,
-      isActive: r.isActive,
-      sortOrder: r.sortOrder,
-    })),
+    products: rows.map(mapDrinkPosProductRow),
   });
 }
 
@@ -60,12 +63,14 @@ export async function POST(req: Request) {
   });
   if (!cat) return NextResponse.json({ error: "ไม่พบหมวด" }, { status: 404 });
 
+  const sizesEnabled = Boolean(parsed.data.sizesEnabled);
   const row = await prisma.drinkPosProduct.create({
     data: {
       ownerUserId,
       categoryId: parsed.data.categoryId,
       name: parsed.data.name,
       priceBaht: parsed.data.priceBaht,
+      sizePrices: drinkPosSizePricesDbValue(sizesEnabled, parsed.data.sizePrices, parsed.data.priceBaht),
       imageUrl: parsed.data.imageUrl?.trim() || null,
       isFeatured: parsed.data.isFeatured ?? false,
       sortOrder: parsed.data.sortOrder ?? 0,
@@ -73,17 +78,5 @@ export async function POST(req: Request) {
     include: { category: { select: { name: true } } },
   });
 
-  return NextResponse.json({
-    product: {
-      id: row.id,
-      categoryId: row.categoryId,
-      categoryName: row.category.name,
-      name: row.name,
-      priceBaht: row.priceBaht,
-      imageUrl: row.imageUrl,
-      isFeatured: row.isFeatured,
-      isActive: row.isActive,
-      sortOrder: row.sortOrder,
-    },
-  });
+  return NextResponse.json({ product: mapDrinkPosProductRow(row) });
 }

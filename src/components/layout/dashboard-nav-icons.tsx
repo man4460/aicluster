@@ -129,6 +129,16 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  if (href.startsWith("/dashboard/hotel-resort")) {
+    return (
+      <Svg>
+        <path d="M4 10V20h16V10" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        <path d="M2 20h20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M6 10V6a2 2 0 012-2h8a2 2 0 012 2v4" stroke="currentColor" strokeWidth="2" />
+        <path d="M10 14h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </Svg>
+    );
+  }
   if (href.startsWith("/dashboard/general-store-pos")) {
     return (
       <Svg>

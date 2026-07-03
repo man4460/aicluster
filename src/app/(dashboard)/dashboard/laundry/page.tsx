@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getRequestBaseUrl } from "@/lib/app/request-base-url";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { getBusinessProfile } from "@/lib/profile/business-profile";
+import { getQrLaundryBranding } from "@/lib/profile/qr-branding";
 import { getLaundryDataScope } from "@/lib/trial/module-scopes";
 import { LaundryDashboard } from "@/systems/laundry/LaundryDashboard";
 import type { Metadata } from "next";
@@ -14,20 +14,20 @@ export const metadata: Metadata = {
 export default async function LaundryDashboardPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  const [profile, baseUrl, userRow, scope] = await Promise.all([
-    getBusinessProfile(session.sub),
+  const scope = await getLaundryDataScope(session.sub);
+  const [branding, baseUrl, userRow] = await Promise.all([
+    getQrLaundryBranding(session.sub, scope.trialSessionId),
     getRequestBaseUrl(),
     prisma.user.findUnique({
       where: { id: session.sub },
       select: { fullName: true, username: true },
     }),
-    getLaundryDataScope(session.sub),
   ]);
   const recorderDisplayName = userRow?.fullName?.trim() || userRow?.username || session.username;
   return (
     <LaundryDashboard
-      shopLabel={profile?.name?.trim() || "ระบบซักผ้า"}
-      logoUrl={profile?.logoUrl?.trim() || null}
+      shopLabel={branding.label}
+      logoUrl={branding.logoUrl}
       baseUrl={baseUrl}
       ownerUserId={session.sub}
       recorderDisplayName={recorderDisplayName}

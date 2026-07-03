@@ -8,7 +8,7 @@ export const buildingPosModuleGlassShellClass =
 
 /** พื้นที่เลื่อนเนื้อหา — ไม่ให้ถูก dock บัง (มือถือ) */
 export const buildingPosShellMainPaddingBottomClass =
-  "max-md:pb-[max(8.5rem,6rem+env(safe-area-inset-bottom,0px))] md:pb-0";
+  "max-lg:pb-[max(8.5rem,6rem+env(safe-area-inset-bottom,0px))] lg:pb-0";
 
 /** การ์ดสถิติแดชบอร์ด — เทียบ CarWashStat */
 export const buildingPosStatCardEmeraldClass =

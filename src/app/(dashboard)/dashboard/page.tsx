@@ -32,6 +32,7 @@ import {
 } from "@/lib/modules/system-map-catalog";
 import { isChatAiDisabled } from "@/lib/chat-ai/feature";
 import { CHAT_AI_DASHBOARD_HREF } from "@/lib/dashboard/chat-ai-href";
+import { DashboardPwaInstallBanner } from "@/components/pwa/DashboardPwaInstallBanner";
 import { DashboardModuleHeroCard } from "@/components/dashboard/DashboardModuleHeroCard";
 import { resolveModuleCardDisplayImageUrl } from "@/lib/modules/dashboard-module-cover-images";
 
@@ -122,6 +123,8 @@ export default async function DashboardHomePage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <DashboardPwaInstallBanner />
+
       {/* Header Section - Bento Hero */}
       <header className="group relative overflow-hidden rounded-[2.5rem] border border-white/80 bg-gradient-to-br from-[#f7f2ff] via-white to-[#ffeefa] p-6 shadow-[0_20px_50px_-20px_rgba(68,49,127,0.18)] ring-1 ring-white/70 sm:p-8">
         <div

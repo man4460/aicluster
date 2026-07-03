@@ -3,15 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { AppUsageGuideModal } from "@/components/app-templates";
+import { AppMobileDockShell, AppUsageGuideModal, appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { parkingValetHeaderShellClass } from "@/systems/parking/parking-valet-ui";
-
-const dockShellClass = cn(
-  "fixed inset-x-4 z-40 overflow-hidden rounded-[2.5rem] border border-white/50 p-2 md:hidden print:hidden",
-  "bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))] bg-gradient-to-br from-white/55 via-white/40 to-indigo-50/30",
-  "shadow-[0_24px_55px_-18px_rgba(30,27,75,0.38)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
-);
 
 function dockLinkClass(active: boolean) {
   return cn(
@@ -92,7 +86,7 @@ export function WaitQueueShell({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex min-h-0 flex-1 flex-col gap-4 pb-24 sm:gap-6 md:pb-0">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 pb-24 sm:gap-6 lg:pb-0">
         <div className={parkingValetHeaderShellClass}>
           <header>
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -127,7 +121,7 @@ export function WaitQueueShell({
             </div>
           </header>
 
-          <nav aria-label="เมนูคิวหน้าร้าน" className="mt-5 hidden border-t border-white/40 pt-5 md:block print:hidden">
+          <nav aria-label="เมนูคิวหน้าร้าน" className="mt-5 hidden border-t border-white/40 pt-5 lg:block print:hidden">
             <ul className="flex gap-1">
               {NAV.map((item) => {
                 const active = navActive(pathname, item.href);
@@ -157,8 +151,8 @@ export function WaitQueueShell({
         <div className="min-h-0 min-w-0 flex-1">{children}</div>
       </div>
 
-      <nav className={dockShellClass} aria-label="เมนูล่างคิวหน้าร้าน">
-        <ul className="grid grid-cols-2 gap-1">
+      <AppMobileDockShell ariaLabel="เมนูล่างคิวหน้าร้าน">
+        <ul className={cn(appMobileDockGridClass, "grid-cols-2")}>
           {NAV.map((item) => {
             const active = navActive(pathname, item.href);
             const Icon = item.icon;
@@ -177,7 +171,7 @@ export function WaitQueueShell({
             );
           })}
         </ul>
-      </nav>
+      </AppMobileDockShell>
 
       <AppUsageGuideModal
         open={guideOpen}

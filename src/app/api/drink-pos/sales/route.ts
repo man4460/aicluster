@@ -10,9 +10,17 @@ import {
   findDrinkPosMemberByPhoneQuery,
 } from "@/systems/drink-pos/lib/member-service";
 
+import {
+  drinkPosResolveUnitPrice,
+  drinkPosSaleLineDisplayName,
+  DRINK_POS_SIZE_CODES,
+  normalizeDrinkPosSizePrices,
+} from "@/systems/drink-pos/lib/size-prices";
+
 const lineSchema = z.object({
   productId: z.string().trim().min(1).max(191),
   quantity: z.number().int().min(1).max(9999),
+  size: z.enum(DRINK_POS_SIZE_CODES).optional().nullable(),
 });
 
 const createSaleSchema = z.object({
@@ -40,6 +48,7 @@ export async function GET(req: Request) {
         select: {
           id: true,
           productName: true,
+          sizeLabel: true,
           unitPriceBaht: true,
           quantity: true,
           lineTotalBaht: true,
@@ -84,22 +93,37 @@ export async function POST(req: Request) {
   const productIds = [...new Set(parsed.data.lines.map((l) => l.productId))];
   const products = await prisma.drinkPosProduct.findMany({
     where: { ownerUserId, id: { in: productIds }, isActive: true },
-    select: { id: true, name: true, priceBaht: true },
+    select: { id: true, name: true, priceBaht: true, sizePrices: true },
   });
-  const pmap = new Map(products.map((p) => [p.id, p]));
+  const pmap = new Map(
+    products.map((p) => [
+      p.id,
+      {
+        ...p,
+        sizePrices: normalizeDrinkPosSizePrices(p.sizePrices),
+      },
+    ]),
+  );
   for (const l of parsed.data.lines) {
     if (!pmap.has(l.productId)) {
       return NextResponse.json({ error: `ไม่พบสินค้า: ${l.productId}` }, { status: 400 });
+    }
+    const p = pmap.get(l.productId)!;
+    const unit = drinkPosResolveUnitPrice(p, l.size ?? null);
+    if (unit == null) {
+      return NextResponse.json({ error: `กรุณาเลือกขนาดสำหรับ ${p.name}` }, { status: 400 });
     }
   }
 
   const lineCreates = parsed.data.lines.map((l) => {
     const p = pmap.get(l.productId)!;
-    const lineTotalBaht = p.priceBaht * l.quantity;
+    const unitPriceBaht = drinkPosResolveUnitPrice(p, l.size ?? null)!;
+    const lineTotalBaht = unitPriceBaht * l.quantity;
     return {
       productId: p.id,
-      productName: p.name,
-      unitPriceBaht: p.priceBaht,
+      productName: drinkPosSaleLineDisplayName(p.name, l.size ?? null),
+      sizeLabel: l.size?.trim() || null,
+      unitPriceBaht,
       quantity: l.quantity,
       lineTotalBaht,
     };
@@ -143,6 +167,7 @@ export async function POST(req: Request) {
         select: {
           id: true,
           productName: true,
+          sizeLabel: true,
           unitPriceBaht: true,
           quantity: true,
           lineTotalBaht: true,

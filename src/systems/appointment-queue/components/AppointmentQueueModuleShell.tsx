@@ -10,7 +10,7 @@ import { aqIconBadgeClass, aqModuleHeaderShellClass } from "@/systems/appointmen
 
 export function AppointmentQueueModuleShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="max-w-full space-y-4 pb-28 sm:space-y-6 sm:pb-6">
+    <div className="max-w-full space-y-4 pb-28 sm:space-y-6 lg:pb-0">
       <header className={cn(aqModuleHeaderShellClass, "print:hidden")}>
         <div className="flex items-start gap-3">
           <div className={aqIconBadgeClass}>

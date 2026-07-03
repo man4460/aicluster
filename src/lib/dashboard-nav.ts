@@ -26,6 +26,7 @@ import {
   INVENTORY_MODULE_SLUG,
   GENERAL_STORE_POS_MODULE_SLUG,
   DRINK_POS_MODULE_SLUG,
+  HOTEL_RESORT_MODULE_SLUG,
   ECOMMERCE_STORE_MODULE_SLUG,
   SMART_POLICE_MODULE_SLUG,
 } from "@/lib/modules/config";
@@ -70,6 +71,7 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === INVENTORY_MODULE_SLUG) return "/dashboard/inventory";
   if (slug === GENERAL_STORE_POS_MODULE_SLUG) return "/dashboard/general-store-pos";
   if (slug === DRINK_POS_MODULE_SLUG) return "/dashboard/drink-pos";
+  if (slug === HOTEL_RESORT_MODULE_SLUG) return "/dashboard/hotel-resort";
   if (slug === ECOMMERCE_STORE_MODULE_SLUG) return "/dashboard/ecommerce-store";
   if (slug === SMART_POLICE_MODULE_SLUG) return "/dashboard/smart-police";
   return `/dashboard/modules/${slug}`;

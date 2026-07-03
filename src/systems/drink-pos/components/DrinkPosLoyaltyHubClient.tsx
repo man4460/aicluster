@@ -13,6 +13,7 @@ type Props = {
   trialSessionId: string;
   baseUrl: string;
   shopLabel: string;
+  logoUrl?: string | null;
   trialExportBlocked?: boolean;
 };
 
@@ -55,6 +56,7 @@ export function DrinkPosLoyaltyHubClient({
   trialSessionId,
   baseUrl,
   shopLabel,
+  logoUrl = null,
   trialExportBlocked = false,
 }: Props) {
   const [showQrModal, setShowQrModal] = useState(false);
@@ -188,6 +190,7 @@ export function DrinkPosLoyaltyHubClient({
         <DrinkPosQrPosterClient
           ownerId={ownerId}
           shopLabel={shopLabel}
+          logoUrl={logoUrl}
           baseUrl={baseUrl}
           trialSessionId={trialSessionId}
           trialExportBlocked={trialExportBlocked}

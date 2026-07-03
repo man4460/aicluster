@@ -53,19 +53,13 @@ export const aqNavItemIdleClass = "app-btn-soft text-[#66638c] hover:bg-white/55
 
 
 
-export const aqMobileDockShellClass =
-
-  "fixed inset-x-4 z-40 overflow-hidden rounded-[2.5rem] border border-white/50 p-2 md:hidden print:hidden bottom-[max(0.75rem,env(safe-area-inset-bottom,0px))] bg-gradient-to-br from-white/55 via-white/40 to-indigo-50/30 shadow-[0_24px_55px_-18px_rgba(30,27,75,0.38)] backdrop-blur-2xl ring-1 ring-inset ring-white/55";
-
-
-
-export const aqDockItemActiveClass =
-
-  "bg-white/80 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/20 backdrop-blur-sm";
-
-
-
-export const aqDockItemIdleClass = "text-slate-500 hover:bg-white/45 hover:text-slate-700";
+export {
+  appMobileDockBackdropClass as aqMobileDockShellClass,
+  appMobileDockPillClass as aqMobileDockPillClass,
+  appMobileDockGridClass as aqMobileDockGridClass,
+  appMobileDockItemActiveClass as aqDockItemActiveClass,
+  appMobileDockItemIdleClass as aqDockItemIdleClass,
+} from "@/components/app-templates/mobile-dock-tokens";
 
 
 

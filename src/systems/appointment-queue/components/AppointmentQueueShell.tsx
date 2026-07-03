@@ -29,7 +29,7 @@ export function AppointmentQueueShell({ children }: { children: React.ReactNode 
   const pathname = usePathname() ?? "";
 
   return (
-    <div className="max-w-full space-y-4 pb-28 sm:space-y-6 sm:pb-6">
+    <div className="max-w-full space-y-4 pb-28 sm:space-y-6 lg:pb-0">
       <header className={cn(aqModuleHeaderShellClass, "print:hidden")}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
@@ -51,7 +51,7 @@ export function AppointmentQueueShell({ children }: { children: React.ReactNode 
             </div>
           </div>
         </div>
-        <nav aria-label="เมนูจองคิว" className="mt-4 hidden border-t border-white/50 pt-4 md:block">
+        <nav aria-label="เมนูจองคิว" className="mt-4 hidden border-t border-white/50 pt-4 lg:block">
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
             {navLinks.map(({ href, label, icon: Icon }) => (
               <li key={href}>
