@@ -18,6 +18,7 @@ import { seedAttendanceProdDemoForOwner } from "../src/lib/trial/seed-attendance
 import { seedDormitoryProdDemoForOwner } from "../src/lib/trial/seed-dorm";
 import { seedBarberProdDemoForOwner } from "../src/lib/trial/seed-barber";
 import { seedCarWashProdDemoForOwner } from "../src/lib/trial/seed-car-wash";
+import { seedFootballTurfProdDemoForOwner } from "../src/lib/trial/seed-football-turf";
 import { seedMassageProdDemoForOwner } from "../src/lib/trial/seed-massage";
 import { seedVillageProdDemoForOwner } from "../src/lib/trial/seed-village";
 import { seedHomeFinanceProdDemoForOwner } from "../src/lib/trial/seed-home-finance";
@@ -180,6 +181,14 @@ async function main() {
       slug: "car-wash",
       title: "ระบบจัดการคาร์แคร์",
       description: "กลุ่ม 1 (Basic) — แพ็กเกจบริการ บันทึกเข้ารับบริการ และติดตามร้องเรียน",
+      groupId: 1,
+      sortOrder: 16,
+    },
+    {
+      slug: "football-turf",
+      title: "สนามฟุตบอล",
+      description:
+        "กลุ่ม 1 (Basic) — แดชบอร์ดสนาม คิวจอง walk-in โปรโมชั่น รายรับ–รายจ่าย และลิงก์/QR ลูกค้า",
       groupId: 1,
       sortOrder: 16,
     },
@@ -480,6 +489,7 @@ async function main() {
     DORMITORY_MODULE_SLUG,
     BARBER_MODULE_SLUG,
     CAR_WASH_MODULE_SLUG,
+    "football-turf",
   MASSAGE_MODULE_SLUG,
     VILLAGE_MODULE_SLUG,
     HOME_FINANCE_BASIC_MODULE_SLUG,
@@ -692,6 +702,16 @@ async function main() {
     });
     if (row) {
       await tryDemoSeed(`car-wash (${email})`, () => seedCarWashProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`football-turf (${email})`, () => seedFootballTurfProdDemoForOwner(prisma, row.id));
     }
   }
 

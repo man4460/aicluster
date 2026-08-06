@@ -18,7 +18,7 @@ type ShopInfo = {
 };
 
 const inputClass =
-  "w-full rounded-2xl border border-white/70 bg-white/60 py-3.5 pl-11 pr-4 text-sm font-semibold text-[#1e1b4b] shadow-[inset_0_1px_2px_rgba(30,27,75,0.06)] backdrop-blur-sm outline-none transition-all placeholder:text-[#a8a5cc] focus:border-[#5b61ff]/50 focus:bg-white/80 focus:ring-2 focus:ring-[#5b61ff]/15";
+  "w-full rounded-2xl border border-white/70 bg-white/60 py-3.5 pl-11 pr-4 text-sm font-semibold text-[#1e1b4b] shadow-[inset_0_1px_2px_rgba(30,27,75,0.06)] backdrop-blur-sm outline-none transition-all placeholder:text-[#a8a5cc] focus:border-[#0000BF]/50 focus:bg-white/80 focus:ring-2 focus:ring-[#0000BF]/15";
 
 export function DrinkPosPortalClient({
   ownerId,
@@ -113,7 +113,7 @@ export function DrinkPosPortalClient({
             เบอร์ 10 หลัก หรือ 4 หลักท้าย (ถ้ามีสมาชิกแล้ว)
           </p>
           <div className="relative px-5 pb-5 pt-3 sm:px-6">
-            <span className="pointer-events-none absolute left-8 top-[calc(50%-2px)] -translate-y-1/2 text-[#5b61ff]" aria-hidden>
+            <span className="pointer-events-none absolute left-8 top-[calc(50%-2px)] -translate-y-1/2 text-[#0000BF]" aria-hidden>
               📱
             </span>
             <input

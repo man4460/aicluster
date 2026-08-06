@@ -163,6 +163,14 @@ model User {
   carWashShopProfiles      CarWashShopProfile[]
   carWashDaySchedules      CarWashDaySchedule[]
   carWashBookings          CarWashBooking[]
+  footballTurfShopProfiles FootballTurfShopProfile[]
+  footballTurfCourts       FootballTurfCourt[]
+  footballTurfCustomers    FootballTurfCustomer[]
+  footballTurfBookings     FootballTurfBooking[]
+  footballTurfPromotions   FootballTurfPromotion[]
+  footballTurfPromotionSales FootballTurfPromotionSale[]
+  footballTurfCostCategories FootballTurfCostCategory[]
+  footballTurfCostEntries  FootballTurfCostEntry[]
   mqttTenantProfiles       MqttTenantProfile[]
   mqttCredentials          MqttCredential[]
   mqttAclRules             MqttAclRule[]
@@ -3653,6 +3661,12 @@ model DrinkPosSale {
   member             DrinkPosMember? @relation(fields: [memberId], references: [id], onDelete: SetNull)
   memberPhone        String?  @map("member_phone") @db.VarChar(20)
   isRewardRedemption Boolean  @default(false) @map("is_reward_redemption")
+  /** CASH | PROMPTPAY | TRANSFER */
+  paymentMethod      String   @default("CASH") @map("payment_method") @db.VarChar(20)
+  paymentSlipUrl     String?  @map("payment_slip_url") @db.VarChar(512)
+  /** RECEIVED | MAKING | DONE */
+  fulfillmentStatus  String   @default("RECEIVED") @map("fulfillment_status") @db.VarChar(20)
+  statusUpdatedAt    DateTime @default(now()) @map("status_updated_at")
   note               String?  @db.VarChar(500)
   totalBaht          Int      @map("total_baht")
   createdAt          DateTime @default(now()) @map("created_at")
@@ -3660,6 +3674,7 @@ model DrinkPosSale {
   lines DrinkPosSaleLine[]
 
   @@index([ownerUserId, createdAt], map: "dp_sale_owner_created_idx")
+  @@index([ownerUserId, fulfillmentStatus, statusUpdatedAt], map: "dp_sale_owner_fulfill_idx")
   @@map("drink_pos_sales")
 }
 
@@ -4394,4 +4409,181 @@ model SmartPoliceTemplate {
 
   @@index([ownerUserId, kind, isActive], map: "sptpl_owner_kind_idx")
   @@map("smart_police_templates")
+}
+
+model FootballTurfShopProfile {
+  id              Int      @id @default(autoincrement())
+  ownerUserId     String   @map("owner_id") @db.VarChar(191)
+  owner           User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId  String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  venueName       String   @default("") @map("venue_name") @db.VarChar(200)
+  venueSubtitle   String   @default("") @map("venue_subtitle") @db.VarChar(300)
+  promptpayNumber String   @default("") @map("promptpay_number") @db.VarChar(32)
+  bankName        String   @default("") @map("bank_name") @db.VarChar(120)
+  accountName     String   @default("") @map("account_name") @db.VarChar(200)
+  accountNumber   String   @default("") @map("account_number") @db.VarChar(32)
+  venueAddress    String   @default("") @map("venue_address") @db.Text
+  taxId           String   @default("") @map("tax_id") @db.VarChar(30)
+  contactPhone    String   @default("") @map("contact_phone") @db.VarChar(32)
+  contactLine     String   @default("") @map("contact_line") @db.VarChar(120)
+  note            String   @default("") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId])
+  @@index([ownerUserId])
+  @@map("football_turf_shop_profiles")
+}
+
+model FootballTurfCourt {
+  id             Int      @id @default(autoincrement())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String   @db.VarChar(120)
+  openTime       String   @map("open_time") @db.VarChar(5)
+  closeTime      String   @map("close_time") @db.VarChar(5)
+  slotMinutes    Int      @default(60) @map("slot_minutes")
+  weekdayPrice   Int      @default(0) @map("weekday_price")
+  weekendPrice   Int      @default(0) @map("weekend_price")
+  isActive       Boolean  @default(true) @map("is_active")
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  bookings FootballTurfBooking[]
+
+  @@index([ownerUserId, trialSessionId])
+  @@map("football_turf_courts")
+}
+
+model FootballTurfCustomer {
+  id             Int      @id @default(autoincrement())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String   @default("") @db.VarChar(160)
+  phone          String   @db.VarChar(32)
+  teamName       String   @default("") @map("team_name") @db.VarChar(160)
+  note           String   @default("") @db.VarChar(500)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId, phone], map: "ft_cust_owner_trial_phone_uq")
+  @@index([ownerUserId, trialSessionId], map: "ft_cust_owner_trial_idx")
+  @@map("football_turf_customers")
+}
+
+model FootballTurfBooking {
+  id                 Int               @id @default(autoincrement())
+  ownerUserId        String            @map("owner_id") @db.VarChar(191)
+  owner              User              @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId     String            @default("prod") @map("trial_session_id") @db.VarChar(36)
+  courtId            Int               @map("court_id")
+  court              FootballTurfCourt @relation(fields: [courtId], references: [id], onDelete: Restrict)
+  bookingDate        DateTime          @map("booking_date") @db.Date
+  startTime          String            @map("start_time") @db.VarChar(5)
+  endTime            String            @map("end_time") @db.VarChar(5)
+  customerName       String            @map("customer_name") @db.VarChar(160)
+  customerPhone      String            @map("customer_phone") @db.VarChar(32)
+  teamName           String            @default("") @map("team_name") @db.VarChar(160)
+  playerCount        Int               @default(0) @map("player_count")
+  source             String            @db.VarChar(20)
+  status             String            @db.VarChar(20)
+  listedPrice        Int               @default(0) @map("listed_price")
+  finalPrice         Int               @default(0) @map("final_price")
+  promotionSaleId    Int?              @map("promotion_sale_id")
+  note               String            @default("") @db.VarChar(500)
+  paymentMethod      String            @default("UNPAID") @map("payment_method") @db.VarChar(20)
+  paymentStatus      String            @default("UNPAID") @map("payment_status") @db.VarChar(20)
+  paymentSlipDataUrl String?           @map("payment_slip_data_url") @db.VarChar(512)
+  paymentReference   String            @default("") @map("payment_reference") @db.VarChar(120)
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, bookingDate], map: "ft_book_owner_trial_date_idx")
+  @@index([courtId])
+  @@map("football_turf_bookings")
+}
+
+model FootballTurfPromotion {
+  id              Int      @id @default(autoincrement())
+  ownerUserId     String   @map("owner_id") @db.VarChar(191)
+  owner           User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId  String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name            String   @db.VarChar(200)
+  kind            String   @db.VarChar(20)
+  totalUses       Int      @map("total_uses")
+  durationMinutes Int      @default(60) @map("duration_minutes")
+  price           Int
+  isActive        Boolean  @default(true) @map("is_active")
+  note            String   @default("") @db.VarChar(500)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  sales FootballTurfPromotionSale[]
+
+  @@index([ownerUserId, trialSessionId])
+  @@map("football_turf_promotions")
+}
+
+model FootballTurfPromotionSale {
+  id                 Int                   @id @default(autoincrement())
+  ownerUserId        String                @map("owner_id") @db.VarChar(191)
+  owner              User                  @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId     String                @default("prod") @map("trial_session_id") @db.VarChar(36)
+  promotionId        Int                   @map("promotion_id")
+  promotion          FootballTurfPromotion @relation(fields: [promotionId], references: [id], onDelete: Restrict)
+  promotionName      String                @map("promotion_name") @db.VarChar(200)
+  customerName       String                @map("customer_name") @db.VarChar(160)
+  customerPhone      String                @map("customer_phone") @db.VarChar(32)
+  teamName           String                @default("") @map("team_name") @db.VarChar(160)
+  totalUses          Int                   @map("total_uses")
+  remainingUses      Int                   @map("remaining_uses")
+  price              Int
+  status             String                @db.VarChar(20)
+  paymentMethod      String                @default("ONSITE") @map("payment_method") @db.VarChar(20)
+  paymentStatus      String                @default("PAID") @map("payment_status") @db.VarChar(20)
+  paymentSlipDataUrl String?               @map("payment_slip_data_url") @db.VarChar(512)
+  paymentReference   String                @default("") @map("payment_reference") @db.VarChar(120)
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId])
+  @@index([promotionId])
+  @@map("football_turf_promotion_sales")
+}
+
+model FootballTurfCostCategory {
+  id             Int      @id @default(autoincrement())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String   @db.VarChar(120)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  entries FootballTurfCostEntry[]
+
+  @@index([ownerUserId, trialSessionId])
+  @@map("football_turf_cost_categories")
+}
+
+model FootballTurfCostEntry {
+  id             Int                      @id @default(autoincrement())
+  ownerUserId    String                   @map("owner_id") @db.VarChar(191)
+  owner          User                     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String                   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  categoryId     Int                      @map("category_id")
+  category       FootballTurfCostCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  spentAt        DateTime                 @map("spent_at")
+  amount         Int
+  itemLabel      String                   @default("") @map("item_label") @db.VarChar(200)
+  note           String                   @default("") @db.VarChar(500)
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, spentAt], map: "ft_cost_ent_owner_trial_spent_idx")
+  @@map("football_turf_cost_entries")
 }

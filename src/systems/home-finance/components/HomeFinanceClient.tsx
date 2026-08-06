@@ -22,6 +22,7 @@ import {
   AppSparkChartPanel,
   AppSparkChartsTwoColumnGrid,
   openPrintableHtml,
+  prepareUploadFile,
   useAppImageLightbox,
   type AppColumnBarBucket,
   type AppCompareBarRow,
@@ -202,8 +203,9 @@ function newHomeFinancePendingRow(file: File): HomeFinancePendingUpload {
 }
 
 async function uploadHomeFinanceFile(file: File): Promise<string | null> {
+  const toSend = await prepareUploadFile(file, { accept: "image-or-pdf", maxPdfBytes: 5 * 1024 * 1024 });
   const fd = new FormData();
-  fd.set("file", file);
+  fd.set("file", toSend);
   const ctrl = new AbortController();
   const tid = window.setTimeout(() => ctrl.abort(), HOME_FINANCE_UPLOAD_MS);
   try {
@@ -970,7 +972,8 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
     setError(null);
     try {
       const fd = new FormData();
-      fd.set("file", file);
+      const prepared = await prepareUploadFile(file, { accept: "image-or-pdf", maxPdfBytes: 5 * 1024 * 1024 });
+      fd.set("file", prepared);
       fd.set("preferredType", type);
       fd.set("defaultCategoryKey", categoryKey);
       let res: Response;

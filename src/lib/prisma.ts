@@ -24,7 +24,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 58: Massage* module tables */
 /** 59: AppointmentQueue* + LoyaltyStamp* — client เก่าไม่มี delegate แล้ว undefined.findUnique */
 /** 61: HotelResort* module tables */
-const PRISMA_SINGLETON_VERSION = 62;
+/** 63: FootballTurf* module tables */
+const PRISMA_SINGLETON_VERSION = 64;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -136,6 +137,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     loyaltyStampShopProfile?: { findUnique?: unknown };
     loyaltyStampMember?: { findMany?: unknown };
     loyaltyStampEvent?: { findMany?: unknown };
+    footballTurfShopProfile?: { findUnique?: unknown };
+    footballTurfBooking?: { findMany?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -233,7 +236,9 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.appointmentQueueBooking?.findMany === "function" &&
     typeof c.loyaltyStampShopProfile?.findUnique === "function" &&
     typeof c.loyaltyStampMember?.findMany === "function" &&
-    typeof c.loyaltyStampEvent?.findMany === "function"
+    typeof c.loyaltyStampEvent?.findMany === "function" &&
+    typeof c.footballTurfShopProfile?.findUnique === "function" &&
+    typeof c.footballTurfBooking?.findMany === "function"
   );
 }
 

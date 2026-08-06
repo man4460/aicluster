@@ -1,26 +1,57 @@
 "use client";
 
-const MAX_PREPARED_BYTES = 1.85 * 1024 * 1024;
-const MAX_DIMENSION = 2048;
+/** ขอบยาวสูงสุดหลังย่อ — สลิป/หลักฐานทุกระบบใช้ค่าเดียวกัน */
+export const PREPARED_IMAGE_MAX_DIMENSION = 1600;
+/** ขนาดไฟล์เป้าหมายหลังบีบ JPEG */
+export const PREPARED_IMAGE_MAX_BYTES = 1.85 * 1024 * 1024;
+
+const MAX_PREPARED_BYTES = PREPARED_IMAGE_MAX_BYTES;
+const MAX_DIMENSION = PREPARED_IMAGE_MAX_DIMENSION;
+
+function isJpegType(type: string | undefined): boolean {
+  return Boolean(type && /^image\/(jpeg|jpg|pjpeg)$/i.test(type));
+}
+
+function readFileAsDataUrl(file: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      if (!result) {
+        reject(new Error("ไม่สามารถอ่านไฟล์รูปได้"));
+        return;
+      }
+      resolve(result);
+    };
+    reader.onerror = () => reject(new Error("ไม่สามารถอ่านไฟล์รูปได้"));
+    reader.readAsDataURL(file);
+  });
+}
 
 /**
  * ย่อ/บีบเป็น JPEG ก่อนอัปโหลด — ใช้ร่วมกับสลิป หลักฐาน รูปแนบทั่วแอป
+ * รูปที่ยาวเกิน PREPARED_IMAGE_MAX_DIMENSION หรือไม่ใช่ JPEG / ใหญ่เกินเพดาน จะถูกปรับให้มาตรฐานเดียวกัน
  */
 export async function prepareImageFileForUpload(file: File): Promise<File> {
-  if (file.size <= MAX_PREPARED_BYTES && file.type && /^image\/(jpeg|jpg|pjpeg|png|webp)$/i.test(file.type)) {
-    return file;
-  }
-
   try {
     const bmp = await createImageBitmap(file);
     try {
+      const needsResize = bmp.width > MAX_DIMENSION || bmp.height > MAX_DIMENSION;
+      const needsReencode =
+        needsResize || file.size > MAX_PREPARED_BYTES || !isJpegType(file.type);
+
+      if (!needsReencode) {
+        return file;
+      }
+
       let w = bmp.width;
       let h = bmp.height;
-      if (w > MAX_DIMENSION || h > MAX_DIMENSION) {
+      if (needsResize) {
         const s = MAX_DIMENSION / Math.max(w, h);
         w = Math.max(1, Math.round(w * s));
         h = Math.max(1, Math.round(h * s));
       }
+
       const canvas = document.createElement("canvas");
       canvas.width = w;
       canvas.height = h;
@@ -43,6 +74,14 @@ export async function prepareImageFileForUpload(file: File): Promise<File> {
   } catch {
     return file;
   }
+}
+
+/**
+ * ย่อรูปด้วยมาตรฐานกลาง แล้วคืนเป็น data URL (สำหรับโมดูลที่เก็บสลิปเป็น data URL)
+ */
+export async function prepareImageFileAsDataUrl(file: File): Promise<string> {
+  const prepared = await prepareImageFileForUpload(file);
+  return readFileAsDataUrl(prepared);
 }
 
 const MAX_VISION_OCR_BYTES = 4 * 1024 * 1024;

@@ -193,24 +193,36 @@ export function BuildingPosStaffQrSection({
     if (!staffLinkPosterUrl) return;
     const ok = printDataUrlImagePoster({
       dataUrl: staffLinkPosterUrl,
-      documentTitle: "พิมพ์ QR พนักงานเสิร์ฟ",
+      documentTitle: "พิมพ์ QR พนักงาน",
       pageSize: printSize,
     });
     if (!ok) window.alert("เปิดหน้าต่างพิมพ์ไม่ได้ — ลองอนุญาตป๊อปอัปหรือใช้ดาวน์โหลด PDF แทน");
   }
 
   const body = (
-    <div className={cn("rounded-[1.25rem] border border-white/55 bg-white/75 p-4 shadow-inner backdrop-blur-sm sm:p-5", compactForModal && "rounded-2xl")}>
-          <p className="text-xs font-bold uppercase tracking-wide text-[#5b61ff]">ลิงก์พนักงานเสิร์ฟ</p>
-          <p className="mt-1 text-xs text-[#66638c]">สร้างลิงก์ครั้งแรกครั้งเดียว แล้วใช้ลิงก์เดิมต่อเนื่องแบบคาร์แคร์</p>
+    <div className={cn("rounded-[1.25rem] border border-white/55 bg-white/75 p-4 shadow-inner backdrop-blur-sm sm:p-5", compactForModal && "rounded-[1.25rem]")}>
+          <p className="text-xs font-bold uppercase tracking-wide text-[#4d47b6]">ลิงก์พนักงาน</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => void refreshStaffLink()}
               disabled={refreshing}
-              className="flex h-10 min-h-[44px] items-center rounded-2xl border border-white/60 bg-white/60 px-4 text-sm font-black text-slate-700 shadow-sm backdrop-blur-sm hover:bg-white/80 disabled:opacity-40"
+              aria-busy={refreshing}
+              aria-label="รีเฟรชลิงก์พนักงาน"
+              title="รีเฟรช"
+              className="inline-flex h-10 min-h-[40px] min-w-[40px] items-center justify-center gap-0 rounded-2xl border border-white/60 bg-white/60 px-0 text-sm font-black text-slate-700 shadow-sm backdrop-blur-sm hover:bg-white/80 disabled:opacity-40 sm:min-w-0 sm:gap-1.5 sm:px-4"
             >
-              {refreshing ? "กำลังรีเฟรช..." : "รีเฟรช"}
+              <svg
+                viewBox="0 0 24 24"
+                className={cn("h-5 w-5 shrink-0", refreshing && "animate-spin")}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.25}
+                aria-hidden
+              >
+                <path d="M21 12a9 9 0 11-3.05-6.65M21 3v6h-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="hidden sm:inline">{refreshing ? "กำลังรีเฟรช..." : "รีเฟรช"}</span>
             </button>
             {!staffLinkConfigured ? (
               <button
@@ -226,7 +238,7 @@ export function BuildingPosStaffQrSection({
               <button
                 type="button"
                 onClick={() => void copyStaffLink()}
-                className="flex h-10 min-h-[44px] items-center rounded-2xl border border-white/60 bg-white/60 px-4 text-sm font-black text-[#5b61ff] shadow-sm backdrop-blur-sm hover:bg-white/85"
+                className="flex h-10 min-h-[44px] items-center rounded-2xl border border-white/60 bg-white/60 px-4 text-sm font-black text-[#4d47b6] shadow-sm backdrop-blur-sm hover:bg-white/85"
               >
                 คัดลอกลิงก์
               </button>
@@ -245,7 +257,7 @@ export function BuildingPosStaffQrSection({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={staffLinkPosterUrl}
-                  alt="QR พนักงานเสิร์ฟ"
+                  alt="QR พนักงาน"
                   className={cn(shopQrTemplateGeneratedPosterThumbClass, "shrink-0")}
                 />
               ) : (
@@ -266,7 +278,7 @@ export function BuildingPosStaffQrSection({
                   type="button"
                   disabled={staffDlBusy || !staffLinkQr}
                   onClick={() => void downloadStaffPdf("a5")}
-                  className="flex min-h-[44px] items-center justify-center rounded-2xl border border-white/55 bg-white/70 px-4 py-3 text-sm font-black text-[#5b61ff] shadow-sm backdrop-blur-sm sm:py-2"
+                  className="flex min-h-[44px] items-center justify-center rounded-2xl border border-white/55 bg-white/70 px-4 py-3 text-sm font-black text-[#4d47b6] shadow-sm backdrop-blur-sm sm:py-2"
                 >
                   ดาวน์โหลด PDF (A5)
                 </button>
@@ -274,7 +286,7 @@ export function BuildingPosStaffQrSection({
                   type="button"
                   disabled={staffDlBusy || !staffLinkQr}
                   onClick={() => void downloadStaffPng()}
-                  className="flex min-h-[44px] items-center justify-center rounded-2xl border border-white/55 bg-white/70 px-4 py-3 text-sm font-black text-[#5b61ff] shadow-sm backdrop-blur-sm sm:py-2"
+                  className="flex min-h-[44px] items-center justify-center rounded-2xl border border-white/55 bg-white/70 px-4 py-3 text-sm font-black text-[#4d47b6] shadow-sm backdrop-blur-sm sm:py-2"
                 >
                   ดาวน์โหลด PNG
                 </button>
@@ -282,7 +294,7 @@ export function BuildingPosStaffQrSection({
                   type="button"
                   disabled={!staffLinkPosterUrl}
                   onClick={() => printStaffPoster("A4")}
-                  className="flex min-h-[44px] items-center justify-center rounded-2xl border border-white/55 bg-white/70 px-4 py-3 text-sm font-black text-[#5b61ff] shadow-sm backdrop-blur-sm sm:py-2"
+                  className="flex min-h-[44px] items-center justify-center rounded-2xl border border-white/55 bg-white/70 px-4 py-3 text-sm font-black text-[#4d47b6] shadow-sm backdrop-blur-sm sm:py-2"
                 >
                   พิมพ์ A4
                 </button>
@@ -290,7 +302,7 @@ export function BuildingPosStaffQrSection({
                   type="button"
                   disabled={!staffLinkPosterUrl}
                   onClick={() => printStaffPoster("A5")}
-                  className="flex min-h-[44px] items-center justify-center rounded-2xl border border-white/55 bg-white/70 px-4 py-3 text-sm font-black text-[#5b61ff] shadow-sm backdrop-blur-sm sm:col-span-2 sm:py-2"
+                  className="flex min-h-[44px] items-center justify-center rounded-2xl border border-white/55 bg-white/70 px-4 py-3 text-sm font-black text-[#4d47b6] shadow-sm backdrop-blur-sm sm:col-span-2 sm:py-2"
                 >
                   พิมพ์ A5
                 </button>
@@ -309,7 +321,7 @@ export function BuildingPosStaffQrSection({
   return (
     <section className={buildingPosQrHubOuterClass}>
       <div className="border-b border-white/50 bg-gradient-to-r from-[#4d47b6]/[0.08] via-transparent to-[#0d9488]/[0.06] px-4 py-4 sm:px-6 sm:py-5">
-        <h2 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">QR พนักงานเสิร์ฟ</h2>
+        <h2 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">QR พนักงาน</h2>
         <p className="mt-1 max-w-2xl text-xs leading-relaxed text-[#66638c] sm:text-sm">
           สแกนเข้าจัดการโต๊ะโดยไม่ล็อกอิน — ใช้ลิงก์เดิมคงที่หลังสร้างครั้งแรก · ใบป้ายเทมเพลตเดียวกับ QR ลูกค้า
         </p>

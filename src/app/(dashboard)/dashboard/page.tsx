@@ -4,7 +4,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
 import { canAccessAppModule } from "@/lib/modules/access";
-import { appDashboardBrandCtaPillButtonClass, appDashboardBrandGradientFillClass } from "@/components/app-templates";
+import {
+  appDashboardBrandCtaPillButtonClass,
+  appDashboardBrandGradientBarClass,
+  appDashboardBrandGradientFillClass,
+} from "@/components/app-templates";
 import { TokenTopupModal } from "@/components/dashboard/TokenTopupModal";
 import { cn } from "@/lib/cn";
 import { getSession } from "@/lib/auth/session";
@@ -21,10 +25,6 @@ import { listTrialModuleIds } from "@/lib/modules/trial-store";
 import { listModuleSlugsChargedToday } from "@/lib/tokens/module-daily-deduction";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { STAFF_ALLOWED_MODULE_SLUGS } from "@/lib/modules/staff-policy";
-import {
-  dashboardModuleCardDescription,
-  dashboardSystemMapCardDescription,
-} from "@/lib/modules/dashboard-card-descriptions";
 import { getModuleDailyUsageBadge } from "@/lib/modules/module-usage-badge";
 import {
   SYSTEM_MAP_CATALOG_ROW,
@@ -33,8 +33,8 @@ import {
 import { isChatAiDisabled } from "@/lib/chat-ai/feature";
 import { CHAT_AI_DASHBOARD_HREF } from "@/lib/dashboard/chat-ai-href";
 import { DashboardPwaInstallBanner } from "@/components/pwa/DashboardPwaInstallBanner";
-import { DashboardModuleHeroCard } from "@/components/dashboard/DashboardModuleHeroCard";
 import { resolveModuleCardDisplayImageUrl } from "@/lib/modules/dashboard-module-cover-images";
+import { DashboardHomeModuleShelf } from "@/components/dashboard/DashboardHomeModuleShelf";
 
 export const metadata: Metadata = {
   title: "แดชบอร์ด | MAWELL Buffet",
@@ -122,89 +122,58 @@ export default async function DashboardHomePage() {
   const chatAiOff = isChatAiDisabled();
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-3 sm:space-y-5">
       <DashboardPwaInstallBanner />
 
-      {/* Header Section - Bento Hero */}
-      <header className="group relative overflow-hidden rounded-[2.5rem] border border-white/80 bg-gradient-to-br from-[#f7f2ff] via-white to-[#ffeefa] p-6 shadow-[0_20px_50px_-20px_rgba(68,49,127,0.18)] ring-1 ring-white/70 sm:p-8">
-        <div
-          className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-gradient-to-br from-[#c7d2fe]/40 to-fuchsia-200/30 blur-[80px] transition-transform duration-1000 group-hover:scale-110"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute -bottom-16 left-1/4 h-48 w-48 rounded-full bg-[#0000BF]/5 blur-[60px]"
-          aria-hidden
-        />
-        <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-2">
-            <p className="inline-flex items-center rounded-full bg-[#5b61ff]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#5b61ff]">
-              Workspace
-            </p>
-            <h1 className="text-2xl font-bold tracking-tight text-[#2e2a58] sm:text-4xl">
+      <header className="app-surface overflow-hidden rounded-[1.35rem] border border-[#e8e6fc]/80 p-4 sm:p-5">
+        <div className={cn("h-1.5 w-full rounded-full", appDashboardBrandGradientBarClass)} aria-hidden />
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 pl-0.5 sm:pl-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">Workspace</p>
+            <h1 className="mt-1 truncate text-xl font-black tracking-tight text-[#2e2a58] sm:text-2xl">
               สวัสดี, <span className="app-gradient-text">{user.fullName || user.username}</span>
             </h1>
-            <p className="max-w-xl text-sm leading-relaxed text-[#66638c] sm:text-base">
-              ยินดีต้อนรับสู่ MAWELL Buffet — พื้นที่จัดการธุรกิจของคุณให้เป็นเรื่องง่ายและทันสมัย
-            </p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/dashboard/modules"
-              className="inline-flex h-11 items-center justify-center rounded-2xl bg-white/80 px-5 text-sm font-semibold text-[#5b61ff] shadow-sm ring-1 ring-[#5b61ff]/20 backdrop-blur-sm transition hover:bg-white"
-            >
-              ดูระบบทั้งหมด
-            </Link>
-          </div>
+          <Link
+            href="/dashboard/modules"
+            className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-[#0000BF]/20 bg-[#0000BF]/10 px-4 text-xs font-black text-[#2e2a58] shadow-sm transition hover:bg-[#0000BF]/12 active:scale-[0.99]"
+          >
+            ดูระบบทั้งหมด
+          </Link>
         </div>
       </header>
 
       {/* Main Bento Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-12">
-        {/* Token Balance Card - Large (8 cols on LG, 2 cols on MD) */}
-        <section className="relative overflow-hidden rounded-[2.5rem] border border-[#e8e4ff]/90 bg-gradient-to-br from-[#f6efff] via-white to-[#ffeef8] p-6 shadow-[0_20px_50px_-20px_rgba(79,70,229,0.2)] ring-1 ring-white/90 md:col-span-2 lg:col-span-8 sm:p-8">
-          <div
-            className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-indigo-100/30 blur-[60px]"
-            aria-hidden
-          />
-          <div className="relative h-full flex flex-col justify-between gap-8">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-[11px] font-bold uppercase tracking-widest text-[#0000BF]/60">Token Balance</span>
-                <p className="text-4xl font-black tabular-nums tracking-tighter text-[#1e1b4b] sm:text-5xl">
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-12">
+        <section className="app-surface overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-4 md:col-span-2 lg:col-span-8 sm:p-5">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-end justify-between gap-3 pl-0.5 sm:pl-0">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">Token</p>
+                <p className="mt-1 text-3xl font-black tabular-nums tracking-tight text-[#1e1b4b] sm:text-4xl">
                   {user.tokens.toLocaleString("en-US")}
                 </p>
               </div>
-              <div className="flex -space-x-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-10 w-10 rounded-full border-2 border-white bg-gradient-to-br from-indigo-100 to-violet-50 shadow-sm" />
-                ))}
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-lg border border-[#0000BF]/20 bg-[#0000BF]/10 px-3 py-1 text-xs font-black text-[#2e2a58]">
+                  {subscribedModules.length} ระบบ
+                </span>
+                <span className="rounded-lg border border-white/70 bg-white/80 px-3 py-1 text-xs font-black text-[#2e2a58]">
+                  {tierLine}
+                </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2">
-              <div className="rounded-3xl bg-white/40 p-4 ring-1 ring-white/60 backdrop-blur-md">
-                <p className="text-xs font-medium text-[#66638c]">สถานะการใช้งาน</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-sm font-bold text-[#2e2a58]">{subscribedModules.length} ระบบที่เปิดใช้</span>
-                </div>
-              </div>
-              <div className="rounded-3xl bg-white/40 p-4 ring-1 ring-white/60 backdrop-blur-md">
-                <p className="text-xs font-medium text-[#66638c]">ระดับแพ็กเกจ</p>
-                <p className="mt-2 text-sm font-bold text-[#2e2a58]">{tierLine}</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="grid gap-3 sm:grid-cols-2">
               <TokenTopupModal
                 triggerLabel="เติมโทเคน"
-                triggerClassName={cn(appDashboardBrandCtaPillButtonClass, "flex-1 rounded-2xl")}
+                triggerClassName="app-btn-primary inline-flex min-h-[44px] w-full items-center justify-center rounded-lg px-5 text-sm font-black shadow-lg transition active:scale-[0.99]"
                 subscriptionTier={user.subscriptionTier}
                 subscriptionType={user.subscriptionType}
               />
               <Link
                 href="/dashboard/plans"
-                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-[#5b61ff]/20 bg-white px-6 text-sm font-bold text-[#5b61ff] shadow-sm transition hover:bg-[#5b61ff]/5"
+                className="inline-flex min-h-[44px] w-full items-center justify-center rounded-lg border border-[#0000BF]/20 bg-[#0000BF]/10 px-5 text-sm font-black text-[#2e2a58] shadow-sm transition hover:bg-[#0000BF]/12 active:scale-[0.99]"
               >
                 อัปเกรดแพ็กเกจ
               </Link>
@@ -213,10 +182,10 @@ export default async function DashboardHomePage() {
         </section>
 
         {/* Quick Links - Medium (4 cols on LG, 1 col on MD) */}
-        <section className="flex flex-col gap-6 md:col-span-1 lg:col-span-4">
-          <div className="flex-1 rounded-[2.5rem] border border-[#e8e6f4]/70 bg-white/60 p-6 shadow-sm backdrop-blur-md ring-1 ring-white/80">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#66638c]">Shortcut</p>
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-2">
+        <section className="flex flex-col gap-4 sm:gap-5 md:col-span-1 lg:col-span-4">
+          <div className="app-surface flex-1 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-4 sm:p-5">
+            <p className="pl-0.5 text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c] sm:pl-0">Shortcut</p>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-2">
               {[
                 { label: "โปรไฟล์", href: "/dashboard/profile", icon: "👤" },
                 { label: "แชท", href: "/dashboard/chat", icon: "💬" },
@@ -231,7 +200,7 @@ export default async function DashboardHomePage() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="group relative flex flex-col items-center justify-center gap-2 rounded-3xl border border-slate-100 bg-white p-4 transition-all hover:-translate-y-1 hover:border-[#5b61ff]/30 hover:shadow-md"
+                  className="group relative flex flex-col items-center justify-center gap-2 rounded-lg border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/20 hover:bg-white active:scale-[0.99]"
                 >
                   {"badge" in link && link.badge ? (
                     <span className="absolute right-2 top-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">
@@ -246,122 +215,95 @@ export default async function DashboardHomePage() {
           </div>
         </section>
 
-        {/* Support Card - 1 col on MD, 4 cols on LG if needed or separate row */}
         <section className="md:col-span-1 lg:col-span-12">
-          <div className="rounded-[2.5rem] border border-[#0000BF]/10 bg-gradient-to-br from-[#0000BF] to-[#6366f1] p-6 text-white shadow-lg shadow-indigo-500/20 lg:flex lg:items-center lg:justify-between">
-            <div className="lg:flex lg:items-center lg:gap-8">
-              <div className="flex items-center justify-between lg:block">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">Support</p>
-                <div className="h-2 w-2 rounded-full bg-white/40 lg:hidden" />
+          <div className="app-surface overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-4 sm:p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0 pl-0.5 sm:pl-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">Support</p>
+                <p className="mt-1 truncate text-sm font-black text-[#2e2a58]">
+                  {chatAiOff ? "เลขาส่วนตัว (น้องมาเวล) · อยู่ระหว่างพัฒนา" : "คุยกับเลขา AI ของคุณได้ตลอด 24 ชม."}
+                </p>
               </div>
-              <p className="mt-3 text-sm font-medium leading-relaxed lg:mt-0 lg:text-base">
-                {chatAiOff ? (
-                  <>
-                    เลขาส่วนตัว (น้องมาเวล){" "}
-                    <span className="text-lg font-bold lg:ml-2 lg:text-xl">อยู่ระหว่างพัฒนา</span>
-                  </>
-                ) : (
-                  <>
-                    ต้องการความช่วยเหลือ? <br className="lg:hidden" />
-                    <span className="text-lg font-bold lg:ml-2 lg:text-xl">คุยกับเลขา AI ของคุณได้ตลอด 24 ชม.</span>
-                  </>
-                )}
-              </p>
+              {chatAiOff ? (
+                <span className="inline-flex h-10 shrink-0 cursor-default items-center justify-center rounded-lg border border-[#0000BF]/20 bg-[#0000BF]/10 px-5 text-xs font-black text-[#2e2a58]">
+                  เร็ว ๆ นี้
+                </span>
+              ) : (
+                <Link
+                  href={CHAT_AI_DASHBOARD_HREF}
+                  className={cn(
+                    "inline-flex h-10 shrink-0 items-center justify-center rounded-lg px-5 text-xs font-black text-white shadow-sm transition active:scale-[0.99]",
+                    appDashboardBrandGradientFillClass,
+                  )}
+                >
+                  เริ่มต้นแชท
+                </Link>
+              )}
             </div>
-            {chatAiOff ? (
-              <span className="mt-4 inline-flex h-11 cursor-default items-center justify-center rounded-2xl border border-white/40 bg-white/20 px-6 text-sm font-bold text-white/90 lg:mt-0">
-                เร็ว ๆ นี้
-              </span>
-            ) : (
-              <Link
-                href={CHAT_AI_DASHBOARD_HREF}
-                className="mt-4 inline-flex h-11 items-center justify-center rounded-2xl bg-white px-6 text-sm font-bold text-[#0000BF] transition hover:bg-opacity-90 lg:mt-0"
-              >
-                เริ่มต้นแชท
-              </Link>
-            )}
           </div>
         </section>
       </div>
 
-      {/* Modules Section */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-bold text-[#2e2a58]">โปรแกรมที่ใช้งานได้</h2>
-          <Link href="/dashboard/modules" className="text-sm font-semibold text-[#5b61ff] hover:underline">
-            ดูทั้งหมด
-          </Link>
-        </div>
-        
-        {subscribedModules.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
-            {user.role === "ADMIN" && (
-              <DashboardModuleHeroCard
-                variant="systemMap"
-                groupId={SYSTEM_MAP_CATALOG_ROW.groupId}
-                title={SYSTEM_MAP_CATALOG_ROW.title}
-                description={dashboardSystemMapCardDescription()}
-                imageUrl={resolveModuleCardDisplayImageUrl(SYSTEM_MAP_CATALOG_ROW.slug, null)}
-                href="/dashboard/explore"
-                ctaLabel="เปิดแผนผังระบบ"
-                usageBadge={getModuleDailyUsageBadge(SYSTEM_MAP_CATALOG_ROW.slug, SYSTEM_MAP_CATALOG_ROW.groupId)}
-              />
-            )}
-            {subscribedModules.map((m) => (
-              <DashboardModuleHeroCard
-                key={m.id}
-                href={dashboardModuleHref(m.slug)}
-                imageUrl={resolveModuleCardDisplayImageUrl(m.slug, m.cardImageUrl)}
-                title={m.title}
-                description={dashboardModuleCardDescription(m.slug)}
-                groupId={m.groupId}
-                ctaLabel="เข้าใช้งาน"
-                usageBadge={getModuleDailyUsageBadge(m.slug, m.groupId)}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center rounded-[2.5rem] border border-dashed border-slate-300 bg-slate-50/50 p-12 text-center">
-            <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center text-2xl mb-4">
-              📦
-            </div>
-            <h3 className="text-base font-bold text-[#2e2a58]">ยังไม่มีระบบที่เปิดใช้งาน</h3>
-            <p className="mt-1 text-sm text-[#66638c]">เลือกเปิดใช้งานระบบที่ต้องการได้จากหน้าระบบทั้งหมด</p>
-            <Link
-              href="/dashboard/modules"
-              className="mt-6 inline-flex h-11 items-center justify-center rounded-2xl bg-[#0000BF] px-6 text-sm font-bold text-white transition hover:bg-opacity-90"
-            >
-              ไปหน้าระบบทั้งหมด
-            </Link>
-          </div>
-        )}
-      </section>
+      <DashboardHomeModuleShelf
+        modules={[
+          ...(user.role === "ADMIN"
+            ? [
+                {
+                  id: 0,
+                  slug: SYSTEM_MAP_CATALOG_ROW.slug,
+                  title: SYSTEM_MAP_CATALOG_ROW.title,
+                  groupId: SYSTEM_MAP_CATALOG_ROW.groupId,
+                  imageUrl: resolveModuleCardDisplayImageUrl(SYSTEM_MAP_CATALOG_ROW.slug, null),
+                  href: "/dashboard/explore",
+                  usageBadge: getModuleDailyUsageBadge(SYSTEM_MAP_CATALOG_ROW.slug, SYSTEM_MAP_CATALOG_ROW.groupId),
+                  systemMap: true,
+                },
+              ]
+            : []),
+          ...subscribedModules.map((m) => ({
+            id: m.id,
+            slug: m.slug,
+            title: m.title,
+            groupId: m.groupId,
+            imageUrl: resolveModuleCardDisplayImageUrl(m.slug, m.cardImageUrl),
+            href: dashboardModuleHref(m.slug),
+            usageBadge: getModuleDailyUsageBadge(m.slug, m.groupId),
+          })),
+        ]}
+      />
 
       {user.role === "ADMIN" && (
-        <section className="rounded-[2.5rem] border border-[#c8c4ff]/50 bg-white/40 p-6 backdrop-blur-md ring-1 ring-white/60 shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#5b61ff] text-white text-base shadow-lg shadow-[#5b61ff]/20">
-              🛡️
+        <section className="app-surface overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0000BF]/10 text-base text-[#2e2a58] ring-1 ring-[#0000BF]/15">
+                🛡️
+              </span>
+              <h2 className="text-base font-black tracking-tight text-[#2e2a58] sm:text-lg">แผงควบคุมผู้ดูแลระบบ</h2>
+            </div>
+            <span className="hidden rounded-lg border border-[#0000BF]/20 bg-[#0000BF]/10 px-3 py-1 text-xs font-black text-[#2e2a58] sm:inline-flex">
+              Admin
             </span>
-            <h2 className="text-lg font-bold text-[#2e2a58]">แผงควบคุมผู้ดูแลระบบ</h2>
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Link href="/dashboard/admin/users" className="group flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200 transition-all hover:-translate-y-1 hover:ring-[#5b61ff]/30">
-              <span className="text-lg transition-transform group-hover:scale-110">👥</span>
-              <span className="text-xs font-bold text-[#2e2a58]">จัดการผู้ใช้</span>
-            </Link>
-            <Link href="/dashboard/admin/activity-logs" className="group flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200 transition-all hover:-translate-y-1 hover:ring-[#5b61ff]/30">
-              <span className="text-lg transition-transform group-hover:scale-110">📝</span>
-              <span className="text-xs font-bold text-[#2e2a58]">Log กิจกรรม</span>
-            </Link>
-            <Link href="/dashboard/admin/mqtt" className="group flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200 transition-all hover:-translate-y-1 hover:ring-[#5b61ff]/30">
-              <span className="text-lg transition-transform group-hover:scale-110">📡</span>
-              <span className="text-xs font-bold text-[#2e2a58]">MQTT Status</span>
-            </Link>
-            <Link href="/dashboard/explore" className="group flex items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200 transition-all hover:-translate-y-1 hover:ring-[#5b61ff]/30">
-              <span className="text-lg transition-transform group-hover:scale-110">🗺️</span>
-              <span className="text-xs font-bold text-[#2e2a58]">แผนผังระบบ</span>
-            </Link>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { href: "/dashboard/admin/users", icon: "👥", label: "จัดการผู้ใช้" },
+              { href: "/dashboard/admin/activity-logs", icon: "📝", label: "Log กิจกรรม" },
+              { href: "/dashboard/admin/mqtt", icon: "📡", label: "MQTT Status" },
+              { href: "/dashboard/explore", icon: "🗺️", label: "แผนผังระบบ" },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="group relative flex flex-col items-start gap-2 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/20 hover:bg-white active:scale-[0.99]"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-lg ring-1 ring-slate-200 transition-transform group-hover:scale-105">
+                  {item.icon}
+                </span>
+                <span className="text-[11px] font-black text-[#2e2a58] sm:text-xs">{item.label}</span>
+              </Link>
+            ))}
           </div>
         </section>
       )}

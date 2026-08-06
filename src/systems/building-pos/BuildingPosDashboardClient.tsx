@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
-import { AppImageLightbox, printDataUrlImagePoster, useAppImageLightbox } from "@/components/app-templates";
+import { AppEmptyState, AppImageLightbox, appTemplateOutlineButtonClass, printDataUrlImagePoster, useAppImageLightbox } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   createShopQrPosterCanvas,
@@ -15,20 +16,23 @@ import {
 import {
   createBuildingPosSessionApiRepository,
   type PosCategory,
-  type PosEstimatedCosts,
   type PosIngredient,
   type PosMenuItem,
   type PosOrder,
   type PosPurchaseOrder,
-  type PosRecipeLine,
 } from "@/systems/building-pos/building-pos-service";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
-import { BuildingPosCustomerOrderClient } from "@/systems/building-pos/BuildingPosCustomerOrderClient";
 import { BuildingPosOpenTablesPanel, BuildingPosSalesHistoryPanel } from "@/systems/building-pos/BuildingPosSalesAnalytics";
 import { BuildingPosIngredientsPanel, BuildingPosPurchasesPanel } from "@/systems/building-pos/components/BuildingPosInventoryPanels";
 import { BuildingPosStaffQrSection } from "@/systems/building-pos/components/BuildingPosStaffQrSection";
-import { buildingPosHubUrl, parseBuildingPosNav, type BuildingPosNavState } from "@/systems/building-pos/building-pos-nav";
+import { BUILDING_POS_ORDER_HREF, parseBuildingPosNav } from "@/systems/building-pos/building-pos-nav";
 import {
+  buildingPosStationPublicUrl,
+  type BuildingPosStationRole,
+} from "@/systems/building-pos/lib/station-role";
+import {
+  buildingPosChipActiveClass,
+  buildingPosChipIdleClass,
   buildingPosContentPanelClass,
   buildingPosListRowCardClass,
   buildingPosQrHubOuterClass,
@@ -37,6 +41,12 @@ import {
   buildingPosStatCardVioletClass,
 } from "@/systems/building-pos/components/building-pos-ui-tokens";
 import { BuildingPosRemoteImg } from "@/systems/building-pos/components/building-pos-remote-image";
+import {
+  assetRowEditIconButtonClass,
+  assetRowRemoveIconButtonClass,
+  IconRowEdit,
+  IconRowRemove,
+} from "@/systems/asset/components/AssetRowActionIcons";
 
 function tableQrStorageKey(ownerId: string) {
   return `mawell.buildingpos.tableQrLabels.${ownerId}`;
@@ -93,14 +103,6 @@ export function BuildingPosDashboardClient({
     [searchParams],
   );
 
-  const goHub = useCallback(
-    (patch: Partial<BuildingPosNavState>) => {
-      const cur = parseBuildingPosNav(new URLSearchParams(searchParams.toString()));
-      router.replace(buildingPosHubUrl({ ...cur, ...patch }), { scroll: false });
-    },
-    [router, searchParams],
-  );
-
   useLayoutEffect(() => {
     const tabQ = searchParams.get("tab");
     if (tabQ === "ingredients" || tabQ === "purchases") {
@@ -112,7 +114,7 @@ export function BuildingPosDashboardClient({
       return;
     }
     if (tabQ === "categories") {
-      router.replace("/dashboard/building-pos?tab=menu&menu=categories", { scroll: false });
+      router.replace("/dashboard/building-pos?tab=menu", { scroll: false });
       return;
     }
   }, [searchParams, router]);
@@ -135,13 +137,6 @@ export function BuildingPosDashboardClient({
   const [newTableCardInput, setNewTableCardInput] = useState("");
   const [ingredients, setIngredients] = useState<PosIngredient[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PosPurchaseOrder[]>([]);
-  const [recipesByMenu, setRecipesByMenu] = useState<Record<string, PosRecipeLine[]>>({});
-  const [estimatedCosts, setEstimatedCosts] = useState<PosEstimatedCosts>({
-    estimated_cost_baht: {},
-    margin_baht: {},
-    ingredient_last_unit_price_baht: {},
-  });
-  const [recipeLinesDraft, setRecipeLinesDraft] = useState<PosRecipeLine[]>([]);
 
   const [catForm, setCatForm] = useState({ name: "", image_url: "", sort_order: "1", is_active: true });
   const [menuForm, setMenuForm] = useState({
@@ -153,21 +148,39 @@ export function BuildingPosDashboardClient({
     is_active: true,
     is_featured: false,
   });
-  const [catModalOpen, setCatModalOpen] = useState(false);
+  const [catManageOpen, setCatManageOpen] = useState(false);
+  const [catFormOpen, setCatFormOpen] = useState(false);
   const [catEditing, setCatEditing] = useState<PosCategory | null>(null);
   const [catSaving, setCatSaving] = useState(false);
+  const [filterCat, setFilterCat] = useState<number | "all">("all");
   const [menuModalOpen, setMenuModalOpen] = useState(false);
   const [menuEditing, setMenuEditing] = useState<PosMenuItem | null>(null);
   const [menuSaving, setMenuSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [staffOrderModalOpen, setStaffOrderModalOpen] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
   const [showStaffQrModal, setShowStaffQrModal] = useState(false);
+  const [stationModal, setStationModal] = useState<BuildingPosStationRole | null>(null);
+  const [stationCopied, setStationCopied] = useState<BuildingPosStationRole | null>(null);
 
-  useEffect(() => {
-    if (nav.main !== "overview") setStaffOrderModalOpen(false);
-  }, [nav.main]);
+  const kitchenUrl = useMemo(
+    () => buildingPosStationPublicUrl(baseUrl, "kitchen", ownerId, trialSessionId),
+    [baseUrl, ownerId, trialSessionId],
+  );
+  const serveUrl = useMemo(
+    () => buildingPosStationPublicUrl(baseUrl, "serve", ownerId, trialSessionId),
+    [baseUrl, ownerId, trialSessionId],
+  );
+
+  async function copyStationLink(role: BuildingPosStationRole, url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setStationCopied(role);
+      window.setTimeout(() => setStationCopied(null), 1600);
+    } catch {
+      window.prompt("คัดลอกลิงก์:", url);
+    }
+  }
 
   const dashboardStats = useMemo(() => {
     const todayKey = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
@@ -216,6 +229,11 @@ export function BuildingPosDashboardClient({
     return m;
   }, [menuItems]);
 
+  const filteredMenuItems = useMemo(() => {
+    if (filterCat === "all") return menuItems;
+    return menuItems.filter((m) => m.category_id === filterCat);
+  }, [menuItems, filterCat]);
+
   async function loadAll() {
     try {
       const [c, m, o] = await Promise.all([repo.listCategories(), repo.listMenuItems(), repo.listOrders()]);
@@ -223,21 +241,9 @@ export function BuildingPosDashboardClient({
       setMenuItems(m);
       setOrders(o);
 
-      const emptyCosts: PosEstimatedCosts = {
-        estimated_cost_baht: {},
-        margin_baht: {},
-        ingredient_last_unit_price_baht: {},
-      };
-      const inv = await Promise.allSettled([
-        repo.listIngredients(),
-        repo.listRecipesByMenu(),
-        repo.getEstimatedCosts(),
-        repo.listPurchaseOrders(),
-      ]);
+      const inv = await Promise.allSettled([repo.listIngredients(), repo.listPurchaseOrders()]);
       setIngredients(inv[0].status === "fulfilled" ? inv[0].value : []);
-      setRecipesByMenu(inv[1].status === "fulfilled" ? inv[1].value : {});
-      setEstimatedCosts(inv[2].status === "fulfilled" ? inv[2].value : emptyCosts);
-      setPurchaseOrders(inv[3].status === "fulfilled" ? inv[3].value : []);
+      setPurchaseOrders(inv[1].status === "fulfilled" ? inv[1].value : []);
       setSyncError(null);
     } catch (e) {
       console.error("[building-pos] loadAll", e);
@@ -261,6 +267,23 @@ export function BuildingPosDashboardClient({
 
   useEffect(() => {
     void loadAll();
+  }, [repo]);
+
+  /** SSE — อัปเดตโต๊ะค้างเมื่อคิวเปลี่ยนจากออร์เดอร์ / ครัว / จัดส่ง */
+  useEffect(() => {
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource("/api/building-pos/session/orders/board/stream");
+      es.onmessage = () => {
+        if (document.hidden) return;
+        void loadAll();
+      };
+    } catch {
+      /* SSE ไม่พร้อม — คงโพลตามช่วงเวลา */
+    }
+    return () => {
+      es?.close();
+    };
   }, [repo]);
 
   useEffect(() => {
@@ -403,10 +426,17 @@ export function BuildingPosDashboardClient({
       .catch(() => setPosTablePosterUrl(null));
   }, [posTableQrPng, posTableQrLabel, shopLabel, logoUrl]);
 
+  function openCatManage() {
+    setCatFormOpen(false);
+    setCatEditing(null);
+    setCatManageOpen(true);
+  }
+
   function openCatCreate() {
     setCatEditing(null);
     setCatForm({ name: "", image_url: "", sort_order: "1", is_active: true });
-    setCatModalOpen(true);
+    setCatFormOpen(true);
+    setCatManageOpen(true);
   }
 
   function openCatEdit(c: PosCategory) {
@@ -417,7 +447,14 @@ export function BuildingPosDashboardClient({
       sort_order: String(c.sort_order),
       is_active: c.is_active,
     });
-    setCatModalOpen(true);
+    setCatFormOpen(true);
+    setCatManageOpen(true);
+  }
+
+  function closeCatForm() {
+    if (catSaving) return;
+    setCatFormOpen(false);
+    setCatEditing(null);
   }
 
   async function submitCatModal() {
@@ -437,7 +474,7 @@ export function BuildingPosDashboardClient({
       } else {
         await repo.createCategory(payload);
       }
-      setCatModalOpen(false);
+      setCatFormOpen(false);
       setCatEditing(null);
       await loadAll();
     } catch (e) {
@@ -451,6 +488,7 @@ export function BuildingPosDashboardClient({
     if (!window.confirm(`ลบหมวดหมู่ "${c.name}" ?\n(ถ้ามีเมนูในหมวดนี้ต้องลบหรือย้ายเมนูก่อน)`)) return;
     try {
       await repo.deleteCategory(c.id);
+      if (filterCat === c.id) setFilterCat("all");
       await loadAll();
     } catch (e) {
       alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
@@ -468,7 +506,6 @@ export function BuildingPosDashboardClient({
       is_active: true,
       is_featured: false,
     });
-    setRecipeLinesDraft([]);
     setMenuModalOpen(true);
   }
 
@@ -483,8 +520,6 @@ export function BuildingPosDashboardClient({
       is_active: m.is_active,
       is_featured: !!m.is_featured,
     });
-    const existing = recipesByMenu[String(m.id)] ?? [];
-    setRecipeLinesDraft(existing.map((x) => ({ ...x })));
     setMenuModalOpen(true);
   }
 
@@ -503,18 +538,11 @@ export function BuildingPosDashboardClient({
         is_active: menuForm.is_active,
         is_featured: menuForm.is_featured,
       };
-      let menuId: number;
       if (menuEditing) {
         await repo.updateMenuItem(menuEditing.id, payload);
-        menuId = menuEditing.id;
       } else {
-        const created = await repo.createMenuItem(payload);
-        menuId = created.id;
+        await repo.createMenuItem(payload);
       }
-      const recipePayload = recipeLinesDraft.filter(
-        (l) => l.ingredient_id > 0 && Number.isFinite(l.qty_per_portion) && l.qty_per_portion > 0,
-      );
-      await repo.putMenuRecipe(menuId, recipePayload);
       setMenuModalOpen(false);
       setMenuEditing(null);
       await loadAll();
@@ -717,7 +745,7 @@ export function BuildingPosDashboardClient({
       {syncError ? (
         <div
           role="alert"
-          className="rounded-2xl border border-rose-200 bg-rose-50/95 px-4 py-3 text-sm text-rose-900 shadow-sm"
+          className="rounded-[1.25rem] border border-rose-200 bg-rose-50/95 px-4 py-3 text-sm text-rose-900 shadow-sm"
         >
           <p className="font-semibold">ซิงค์ข้อมูล POS ไม่สำเร็จ</p>
           <p className="mt-1 text-rose-800/90">{syncError}</p>
@@ -776,16 +804,18 @@ export function BuildingPosDashboardClient({
                   type="button"
                   onClick={() => void refreshData()}
                   disabled={refreshing}
+                  aria-busy={refreshing}
                   className={cn(
-                    "inline-flex touch-manipulation items-center justify-center rounded-xl border border-[#dcd8f0] bg-white transition-colors hover:bg-[#f4f3ff] active:opacity-90 disabled:opacity-60",
-                    "h-11 w-11 shrink-0 md:h-auto md:w-auto md:min-h-[44px] md:min-w-[7.5rem] md:gap-2 md:px-4 md:py-2",
+                    appTemplateOutlineButtonClass,
+                    "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-0 px-0 sm:min-w-0 sm:gap-1.5 sm:px-4",
+                    "border-[#dcd8f0] bg-white/80 text-[#4d47b6] disabled:opacity-60",
                   )}
                   aria-label={refreshing ? "กำลังรีเฟรชออเดอร์" : "รีเฟรชออเดอร์"}
                   title="รีเฟรชออเดอร์"
                 >
                   <svg
                     viewBox="0 0 24 24"
-                    className={cn("h-5 w-5 shrink-0 text-[#4d47b6]", refreshing && "animate-spin")}
+                    className={cn("h-5 w-5 shrink-0", refreshing && "animate-spin")}
                     fill="none"
                     stroke="currentColor"
                     strokeWidth={2.25}
@@ -797,177 +827,155 @@ export function BuildingPosDashboardClient({
                       strokeLinejoin="round"
                     />
                   </svg>
-                  <span className="hidden text-sm font-semibold text-[#4d47b6] md:inline">
-                    {refreshing ? "กำลังรีเฟรช..." : "รีเฟรชออเดอร์"}
+                  <span className="hidden text-sm font-semibold sm:inline">
+                    {refreshing ? "กำลังรีเฟรช…" : "รีเฟรช"}
                   </span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setStaffOrderModalOpen(true)}
-                  className="inline-flex min-h-[44px] min-w-[5.25rem] items-center justify-center rounded-xl bg-white/75 px-3 py-2 text-sm font-black text-[#5b61ff] shadow-sm ring-1 ring-[#5b61ff]/25 backdrop-blur-sm touch-manipulation transition-colors hover:bg-white active:opacity-90 sm:min-w-[6rem] sm:px-4"
+                <Link
+                  href={BUILDING_POS_ORDER_HREF}
+                  className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl bg-white/75 px-0 text-sm font-black text-[#5b61ff] shadow-sm ring-1 ring-[#5b61ff]/25 backdrop-blur-sm touch-manipulation transition-colors hover:bg-white active:opacity-90 sm:min-w-[6rem] sm:px-4"
+                  aria-label="ไปหน้าออร์เดอร์"
                 >
-                  ออเดอร์
-                </button>
+                  <span className="sm:hidden" aria-hidden>
+                    +
+                  </span>
+                  <span className="hidden sm:inline">ออเดอร์</span>
+                </Link>
               </div>
             }
           />
-
-          <FormModal
-            open={staffOrderModalOpen}
-            onClose={() => setStaffOrderModalOpen(false)}
-            title="สั่งอาหาร · พนักงาน"
-            description="เลือกช่องทางการสั่ง แล้วเลือกเมนูเหมือนหน้าลูกค้า"
-            appearance="glass"
-            glassTint="violet"
-            size="xl"
-            mobileCentered
-          >
-            <div className="max-h-[min(82dvh,640px)] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-              <BuildingPosCustomerOrderClient
-                ownerId={ownerId}
-                trialSessionId={trialSessionId}
-                variant="staff"
-                embeddedInModal
-                onOrderSuccess={() => {
-                  void refreshData();
-                  setStaffOrderModalOpen(false);
-                }}
-              />
-            </div>
-          </FormModal>
         </div>
       ) : null}
 
-      {nav.main === "menu" && nav.menu === "categories" ? (
+      {nav.main === "menu" ? (
         <section className={buildingPosContentPanelClass}>
-          <div className="flex flex-col gap-3 border-b border-[#ecebff] pb-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">จัดหมวดหมู่</h2>
-              <p className="mt-1 text-xs text-[#66638c]">ลำดับเลขน้อยแสดงก่อน — ลบหมวดได้เมื่อไม่มีเมนูในหมวด</p>
+          <div className="flex flex-row items-start justify-between gap-3 border-b border-[#ecebff] pb-4">
+            <h2 className="min-w-0 text-lg font-black tracking-tight text-[#1e1b4b]">เมนูอาหาร</h2>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:gap-2">
+              <button
+                type="button"
+                onClick={() => openCatManage()}
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  "inline-flex min-h-[40px] items-center justify-center rounded-xl px-3 text-xs font-semibold text-[#4d47b6] sm:px-4 sm:text-sm",
+                )}
+                aria-label="จัดการหมวดหมู่"
+                title="หมวดหมู่ — เพิ่ม แก้ไข ลบ"
+              >
+                หมวดหมู่
+              </button>
+              <button
+                type="button"
+                onClick={() => openMenuCreate()}
+                className="app-btn-primary inline-flex min-h-[40px] items-center justify-center gap-1 rounded-xl px-3 text-sm font-semibold sm:px-4 sm:py-2.5"
+                aria-label="เพิ่มเมนู"
+              >
+                <span aria-hidden>+</span>
+                <span>เพิ่มเมนู</span>
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => openCatCreate()}
-              className="app-btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold"
-            >
-              + เพิ่มหมวดหมู่
-            </button>
           </div>
-          <ul className="mt-4 grid grid-cols-1 gap-2 sm:gap-3">
-            {categories.map((c) => (
+
+          <div
+            className="mt-4 min-w-0 overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth pb-1 [-webkit-overflow-scrolling:touch]"
+            role="group"
+            aria-label="กรองตามหมวดหมู่ — เลื่อนซ้ายขวาได้"
+          >
+            <div className="flex w-max touch-pan-x gap-2 pr-1 sm:flex-wrap sm:pr-0">
+              <button
+                type="button"
+                onClick={() => setFilterCat("all")}
+                className={cn(
+                  "shrink-0 snap-start transition",
+                  filterCat === "all" ? buildingPosChipActiveClass : buildingPosChipIdleClass,
+                )}
+                aria-pressed={filterCat === "all"}
+              >
+                ทั้งหมด
+              </button>
+              {categories.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setFilterCat(c.id)}
+                  className={cn(
+                    "shrink-0 snap-start transition",
+                    filterCat === c.id ? buildingPosChipActiveClass : buildingPosChipIdleClass,
+                  )}
+                  aria-pressed={filterCat === c.id}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filteredMenuItems.length === 0 ? (
+            <AppEmptyState tone="violet" className="mt-4">
+              {categories.length === 0
+                ? "เริ่มจากเพิ่มหมวด แล้วเพิ่มเมนู"
+                : filterCat === "all"
+                  ? "ยังไม่มีเมนูอาหาร"
+                  : "ไม่มีเมนูในหมวดนี้"}
+            </AppEmptyState>
+          ) : (
+          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredMenuItems.map((m) => (
               <li
-                key={c.id}
-                className={`group/item flex min-h-[52px] flex-wrap items-center gap-3 text-sm sm:flex-nowrap ${buildingPosListRowCardClass}`}
+                key={m.id}
+                className={`group/item flex min-h-[72px] items-center gap-3 p-3 sm:p-4 ${buildingPosListRowCardClass}`}
               >
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-gradient-to-b from-[#4338ca] via-[#5b61ff] to-[#0d9488] opacity-90 transition-[width] duration-300 group-hover/item:w-1.5"
+                  className="pointer-events-none absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-gradient-to-b from-[#4338ca] via-[#5b61ff] to-[#0d9488] opacity-90"
                 />
-                <PosThumb url={c.image_url} />
-                <span className="relative min-w-0 flex-1 font-semibold text-[#1e1b4b]">
-                  <span className="text-[#66638c]">{c.sort_order}.</span> {c.name}
-                  {c.is_active ? "" : <span className="mt-0.5 block text-xs font-normal text-amber-700">ปิดใช้งาน</span>}
-                </span>
-                <div className="flex w-full shrink-0 gap-2 sm:w-auto sm:justify-end">
+                <PosThumb url={m.image_url} />
+                <div className="relative min-w-0 flex-1">
+                  <p className="font-black tracking-tight text-[#1e1b4b]">{m.name}</p>
+                  <p className="mt-0.5 text-xs text-[#66638c]">
+                    ฿{m.price.toLocaleString()} · {categories.find((c) => c.id === m.category_id)?.name ?? "-"}
+                  </p>
+                  {!m.is_active ? <span className="mt-1 inline-block text-xs text-amber-700">ปิดใช้งาน</span> : null}
+                </div>
+                <div className="relative flex shrink-0 items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => openCatEdit(c)}
-                    className="app-btn-soft flex-1 rounded-xl px-3 py-2 text-xs font-semibold text-[#4d47b6] sm:flex-none"
+                    onClick={() => void toggleMenuFeatured(m)}
+                    className={cn(
+                      "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border text-sm",
+                      m.is_featured
+                        ? "border-amber-300 bg-amber-50 text-amber-900"
+                        : "border-[#e1e3ff] bg-white text-[#66638c]",
+                    )}
+                    aria-label={m.is_featured ? `ยกเลิกแนะนำ ${m.name}` : `ตั้งแนะนำ ${m.name}`}
+                    title={m.is_featured ? "ยกเลิกแนะนำ" : "ตั้งเป็นแนะนำ"}
+                    aria-pressed={m.is_featured}
                   >
-                    แก้ไข
+                    <span aria-hidden>{m.is_featured ? "★" : "☆"}</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => void deleteCategoryRow(c)}
-                    className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                    onClick={() => openMenuEdit(m)}
+                    className={assetRowEditIconButtonClass}
+                    aria-label={`แก้ไขเมนู ${m.name}`}
+                    title="แก้ไข"
                   >
-                    ลบ
+                    <IconRowEdit className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void deleteMenuRow(m)}
+                    className={assetRowRemoveIconButtonClass}
+                    aria-label={`ลบเมนู ${m.name}`}
+                    title="ลบ"
+                  >
+                    <IconRowRemove className="h-4 w-4" />
                   </button>
                 </div>
               </li>
             ))}
           </ul>
-        </section>
-      ) : null}
-
-      {nav.main === "menu" && nav.menu === "items" ? (
-        <section className={buildingPosContentPanelClass}>
-          <div className="flex flex-col gap-3 border-b border-[#ecebff] pb-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">เมนูอาหาร</h2>
-              <p className="mt-1 text-xs text-[#66638c]">
-                ราคาต่อ 1 ที่ — ต้นทุนจากสูตร × ราคาจากบันทึกรายจ่ายล่าสุด — ปุ่มดาวแสดงในแถวแนะนำหน้าลูกค้า
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => openMenuCreate()}
-              className="app-btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold"
-            >
-              + เพิ่มเมนู
-            </button>
-          </div>
-          <ul className="mt-4 grid grid-cols-1 gap-2 sm:gap-3">
-            {menuItems.map((m) => {
-              const hasRecipe = (recipesByMenu[String(m.id)]?.length ?? 0) > 0;
-              const ec = estimatedCosts.estimated_cost_baht[String(m.id)] ?? 0;
-              const mg = estimatedCosts.margin_baht[String(m.id)];
-              return (
-              <li
-                key={m.id}
-                className={`group/item flex min-h-[52px] flex-wrap items-center gap-3 text-sm sm:flex-nowrap ${buildingPosListRowCardClass}`}
-              >
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-gradient-to-b from-[#4338ca] via-[#5b61ff] to-[#0d9488] opacity-90 transition-[width] duration-300 group-hover/item:w-1.5"
-                />
-                <PosThumb url={m.image_url} />
-                <span className="relative min-w-0 flex-1">
-                  <span className="font-black tracking-tight text-[#1e1b4b]">{m.name}</span>
-                  <span className="mt-0.5 block text-xs text-[#66638c]">
-                    ฿{m.price.toLocaleString()} · {categories.find((c) => c.id === m.category_id)?.name ?? "-"}
-                    {hasRecipe ? (
-                      <>
-                        {" "}
-                        · ต้นทุน ~฿{ec.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                        {mg != null ? ` · กำไร ~฿${mg.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : ""}
-                      </>
-                    ) : null}
-                  </span>
-                  {!m.is_active ? <span className="mt-1 inline-block text-xs text-amber-700">ปิดใช้งาน</span> : null}
-                </span>
-                <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-                  <button
-                    type="button"
-                    onClick={() => void toggleMenuFeatured(m)}
-                    className={`rounded-xl border px-2.5 py-1.5 text-xs font-semibold ${
-                      m.is_featured
-                        ? "border-amber-300 bg-amber-50 text-amber-900"
-                        : "border-[#e1e3ff] bg-white text-[#66638c]"
-                    }`}
-                    title="สลับเมนูแนะนำหน้าลูกค้า"
-                  >
-                    {m.is_featured ? "★ แนะนำ" : "☆ แนะนำ"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openMenuEdit(m)}
-                    className="app-btn-soft rounded-xl px-3 py-2 text-xs font-semibold text-[#4d47b6]"
-                  >
-                    แก้ไข
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void deleteMenuRow(m)}
-                    className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"
-                  >
-                    ลบ
-                  </button>
-                </div>
-              </li>
-            );
-            })}
-          </ul>
+          )}
         </section>
       ) : null}
 
@@ -976,9 +984,6 @@ export function BuildingPosDashboardClient({
           <section className={buildingPosQrHubOuterClass}>
             <div className="border-b border-white/50 bg-gradient-to-r from-[#4d47b6]/[0.08] via-transparent to-[#0d9488]/[0.06] px-4 py-4 sm:px-6 sm:py-5">
               <h2 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">ศูนย์ QR</h2>
-              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-[#66638c] sm:text-sm">
-                เลือกบทบาท แล้วเปิด popup จัดการ QR ตามงานที่ต้องการ
-              </p>
             </div>
             <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:gap-6 sm:p-6">
               <button
@@ -1045,6 +1050,73 @@ export function BuildingPosDashboardClient({
                   </div>
                 </div>
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowQrModal(false);
+                  setShowStaffQrModal(false);
+                  setStationModal("kitchen");
+                }}
+                className={cn(
+                  "group relative w-full overflow-hidden rounded-[2.5rem] border border-white/50 text-left",
+                  "bg-gradient-to-br from-white/50 via-sky-50/50 to-cyan-100/30",
+                  "p-6 shadow-[0_28px_70px_-24px_rgba(14,165,233,0.35),inset_0_1px_0_0_rgba(255,255,255,0.65)] backdrop-blur-2xl",
+                  "ring-1 ring-inset ring-white/60 transition-all duration-300",
+                  "hover:-translate-y-1 hover:border-white/75 hover:shadow-[0_34px_85px_-22px_rgba(14,165,233,0.42)]",
+                  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600",
+                )}
+                aria-label="เปิดลิงก์แผนกครัว"
+              >
+                <span className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-sky-400/25 blur-3xl" aria-hidden />
+                <div className="relative flex items-start gap-4 sm:gap-5">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/55 ring-1 ring-white/75 backdrop-blur-md sm:h-16 sm:w-16">
+                    <svg viewBox="0 0 24 24" className="h-7 w-7 text-sky-700 sm:h-8 sm:w-8" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      <path d="M4 10h16v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z" strokeLinejoin="round" />
+                      <path d="M8 10V7a4 4 0 018 0v3M8 14h.01M12 14h.01M16 14h.01" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <h3 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">แผนกครัว</h3>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+                      รับออเดอร์ · กำลังทำ · กด «ทำเสร็จแล้ว» เพื่อส่งต่อแผนกเสิร์ฟ
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowQrModal(false);
+                  setShowStaffQrModal(false);
+                  setStationModal("serve");
+                }}
+                className={cn(
+                  "group relative w-full overflow-hidden rounded-[2.5rem] border border-white/50 text-left",
+                  "bg-gradient-to-br from-white/50 via-emerald-50/45 to-teal-100/28",
+                  "p-6 shadow-[0_28px_70px_-24px_rgba(16,185,129,0.35),inset_0_1px_0_0_rgba(255,255,255,0.65)] backdrop-blur-2xl",
+                  "ring-1 ring-inset ring-white/60 transition-all duration-300",
+                  "hover:-translate-y-1 hover:border-white/75 hover:shadow-[0_34px_85px_-22px_rgba(16,185,129,0.42)]",
+                  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600",
+                )}
+                aria-label="เปิดลิงก์แผนกเสิร์ฟ"
+              >
+                <span className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-emerald-400/22 blur-3xl" aria-hidden />
+                <div className="relative flex items-start gap-4 sm:gap-5">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/55 ring-1 ring-white/75 backdrop-blur-md sm:h-16 sm:w-16">
+                    <svg viewBox="0 0 24 24" className="h-7 w-7 text-emerald-700 sm:h-8 sm:w-8" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <h3 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">แผนกเสิร์ฟ</h3>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+                      ทำเสร็จแล้ว · กำลังเสิร์ฟ · เสิร์ฟเรียบร้อย
+                    </p>
+                  </div>
+                </div>
+              </button>
             </div>
           </section>
 
@@ -1080,7 +1152,7 @@ export function BuildingPosDashboardClient({
                         type="button"
                         onClick={() => setQrCardFocus("shop")}
                         className={cn(
-                          "flex h-full min-h-[120px] w-full flex-col rounded-2xl border p-3 text-left shadow-sm transition",
+                          "flex h-full min-h-[120px] w-full flex-col rounded-[1.25rem] border p-3 text-left shadow-sm transition",
                           qrCardFocus === "shop"
                             ? "border-[#4d47b6] bg-gradient-to-b from-[#ecebff] to-white ring-2 ring-[#4d47b6]/25"
                             : "border-slate-200/90 bg-gradient-to-b from-white to-slate-50/90 hover:border-[#4d47b6]/35",
@@ -1097,7 +1169,7 @@ export function BuildingPosDashboardClient({
                           type="button"
                           onClick={() => setQrCardFocus(label)}
                           className={cn(
-                            "flex h-full min-h-[120px] w-full flex-col rounded-2xl border p-3 pr-8 text-left shadow-sm transition",
+                            "flex h-full min-h-[120px] w-full flex-col rounded-[1.25rem] border p-3 pr-8 text-left shadow-sm transition",
                             qrCardFocus === label
                               ? "border-[#4d47b6] bg-gradient-to-b from-[#ecebff] to-white ring-2 ring-[#4d47b6]/25"
                               : "border-slate-200/90 bg-gradient-to-b from-white to-slate-50/90 hover:border-[#4d47b6]/35",
@@ -1120,7 +1192,7 @@ export function BuildingPosDashboardClient({
                       </li>
                     ))}
                   </ul>
-                  <div className="flex flex-col gap-2 rounded-2xl border border-dashed border-[#d8d6ec] bg-white/50 p-3 sm:flex-row sm:items-end sm:gap-3">
+                  <div className="flex flex-col gap-2 rounded-[1.25rem] border border-dashed border-[#d8d6ec] bg-white/50 p-3 sm:flex-row sm:items-end sm:gap-3">
                     <label className="min-w-0 flex-1 text-xs font-medium text-[#4d47b6]">
                       เพิ่มการ์ดโต๊ะ
                       <input
@@ -1143,7 +1215,7 @@ export function BuildingPosDashboardClient({
                   </div>
                 </>
               )}
-              <div className="rounded-2xl border border-[#e1e3ff] bg-white/80 p-4 shadow-inner backdrop-blur-sm sm:p-5">
+              <div className="rounded-[1.25rem] border border-[#e1e3ff] bg-white/80 p-4 shadow-inner backdrop-blur-sm sm:p-5">
                 {qrCardFocus === "shop" ? (
                   <>
                     <h3 className="text-sm font-semibold text-[#2e2a58] sm:text-base">ส่งออก QR — ร้านทั่วไป</h3>
@@ -1206,6 +1278,70 @@ export function BuildingPosDashboardClient({
           >
             <BuildingPosStaffQrSection shopLabel={shopLabel} logoUrl={logoUrl} compactForModal />
           </FormModal>
+
+          <FormModal
+            open={stationModal !== null}
+            onClose={() => setStationModal(null)}
+            title={stationModal === "serve" ? "ลิงก์แผนกเสิร์ฟ" : "ลิงก์แผนกครัว"}
+            description={
+              stationModal === "serve"
+                ? "เปิดบนมือถือ/แท็บเล็ตเสิร์ฟ — ทำเสร็จแล้ว · กำลังเสิร์ฟ · เสิร์ฟเรียบร้อย"
+                : "เปิดบนครัว — กด «ทำเสร็จแล้ว · ส่งต่อแผนกเสิร์ฟ» เมื่อทำอาหารเสร็จ"
+            }
+            appearance="glass"
+            glassTint="violet"
+            size="md"
+            mobileCentered
+            footer={
+              <div className="flex w-full justify-end">
+                <button
+                  type="button"
+                  onClick={() => setStationModal(null)}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-white/55 bg-white/70 px-4 text-sm font-black text-[#5b61ff] shadow-sm backdrop-blur-sm"
+                >
+                  ปิด
+                </button>
+              </div>
+            }
+          >
+            {stationModal ? (
+              <div className="space-y-3">
+                <p className="break-all rounded-[1.25rem] border border-[#e1e3ff] bg-[#faf9ff] px-3 py-2.5 text-xs font-semibold text-[#2e2a58]">
+                  {stationModal === "serve" ? serveUrl : kitchenUrl}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="app-btn-primary min-h-[44px] flex-1 rounded-xl px-4 text-sm font-black"
+                    onClick={() =>
+                      window.open(
+                        stationModal === "serve" ? serveUrl : kitchenUrl,
+                        "_blank",
+                        "noopener,noreferrer",
+                      )
+                    }
+                  >
+                    เปิดลิงก์
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      appTemplateOutlineButtonClass,
+                      "min-h-[44px] flex-1 rounded-xl px-4 text-sm font-black text-[#4d47b6]",
+                    )}
+                    onClick={() =>
+                      void copyStationLink(
+                        stationModal,
+                        stationModal === "serve" ? serveUrl : kitchenUrl,
+                      )
+                    }
+                  >
+                    {stationCopied === stationModal ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </FormModal>
         </div>
       ) : null}
 
@@ -1232,9 +1368,26 @@ export function BuildingPosDashboardClient({
               type="button"
               onClick={() => void refreshData()}
               disabled={refreshing}
-              className="inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-white/55 bg-white/70 px-4 text-sm font-black text-[#5b61ff] shadow-sm backdrop-blur-sm hover:bg-white/90 disabled:opacity-60"
+              aria-busy={refreshing}
+              aria-label="รีเฟรชข้อมูลต้นทุน"
+              title="รีเฟรช"
+              className={cn(
+                appTemplateOutlineButtonClass,
+                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-0 px-0 sm:min-w-0 sm:gap-1.5 sm:px-4",
+                "border-[#dcd8f0] bg-white/80 text-[#4d47b6] disabled:opacity-60",
+              )}
             >
-              {refreshing ? "กำลังรีเฟรช…" : "รีเฟรชข้อมูล"}
+              <svg
+                viewBox="0 0 24 24"
+                className={cn("h-5 w-5 shrink-0", refreshing && "animate-spin")}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.25}
+                aria-hidden
+              >
+                <path d="M21 12a9 9 0 11-3.05-6.65M21 3v6h-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="hidden sm:inline">{refreshing ? "กำลังรีเฟรช…" : "รีเฟรช"}</span>
             </button>
           </div>
           <BuildingPosIngredientsPanel ingredients={ingredients} onChanged={() => void loadAll()} />
@@ -1247,91 +1400,159 @@ export function BuildingPosDashboardClient({
       ) : null}
 
       <FormModal
-        open={catModalOpen}
+        open={catManageOpen}
         onClose={() => {
           if (catSaving) return;
-          setCatModalOpen(false);
+          setCatManageOpen(false);
+          setCatFormOpen(false);
           setCatEditing(null);
         }}
-        title={catEditing ? "แก้ไขหมวดหมู่" : "เพิ่มหมวดหมู่"}
-        description="กรอกข้อมูลหมวดหมู่แล้วกดบันทึก — ลำดับเลขน้อยแสดงก่อนในหน้าลูกค้า"
-        size="md"
+        title={catFormOpen ? (catEditing ? "แก้ไขหมวดหมู่" : "เพิ่มหมวดหมู่") : "หมวดหมู่"}
+        description={catFormOpen ? "ลำดับเลขน้อยแสดงก่อนหน้าลูกค้า" : "เพิ่ม แก้ไข หรือลบหมวดทั้งหมด"}
+        size="lg"
         mobileCentered
         footer={
-          <FormModalFooterActions
-            onCancel={() => {
-              if (catSaving) return;
-              setCatModalOpen(false);
-              setCatEditing(null);
-            }}
-            onSubmit={() => void submitCatModal()}
-            submitLabel={catEditing ? "บันทึกการแก้ไข" : "เพิ่มหมวดหมู่"}
-            loading={catSaving}
-            submitDisabled={!catForm.name.trim() || !Number.isFinite(Number(catForm.sort_order))}
-          />
+          catFormOpen ? (
+            <FormModalFooterActions
+              onCancel={closeCatForm}
+              onSubmit={() => void submitCatModal()}
+              submitLabel={catEditing ? "บันทึกการแก้ไข" : "เพิ่มหมวดหมู่"}
+              loading={catSaving}
+              submitDisabled={!catForm.name.trim() || !Number.isFinite(Number(catForm.sort_order))}
+            />
+          ) : (
+            <div className="flex w-full flex-wrap items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => openCatCreate()}
+                className="app-btn-primary inline-flex min-h-[44px] items-center gap-1 rounded-xl px-4 text-sm font-semibold"
+              >
+                <span aria-hidden>+</span>
+                เพิ่มหมวดหมู่
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCatManageOpen(false);
+                  setCatFormOpen(false);
+                  setCatEditing(null);
+                }}
+                className="inline-flex min-h-[44px] items-center rounded-xl border border-white/55 bg-white/70 px-4 text-sm font-black text-[#5b61ff] shadow-sm backdrop-blur-sm"
+              >
+                ปิด
+              </button>
+            </div>
+          )
         }
       >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-          <div className="mx-auto shrink-0 sm:mx-0">
-            <p className="mb-1 text-xs font-medium text-[#4d47b6]">ตัวอย่างรูปหมวด</p>
-            <PosThumb url={catForm.image_url} />
+        {catFormOpen ? (
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+            <div className="mx-auto shrink-0 sm:mx-0">
+              <p className="mb-1 text-xs font-medium text-[#4d47b6]">ตัวอย่างรูปหมวด</p>
+              <PosThumb url={catForm.image_url} />
+            </div>
+            <div className="min-w-0 flex-1 space-y-3">
+              <label className="block text-xs font-medium text-[#4d47b6]">
+                ชื่อหมวดหมู่
+                <input
+                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                  placeholder="เช่น อาหารจานเดียว"
+                  value={catForm.name}
+                  onChange={(e) => setCatForm((s) => ({ ...s, name: e.target.value }))}
+                  autoComplete="off"
+                />
+              </label>
+              <label className="block text-xs font-medium text-[#4d47b6]">
+                URL รูปหมวด <span className="font-normal text-[#9b98c4]">(ไม่บังคับ)</span>
+                <input
+                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                  placeholder="https://..."
+                  value={catForm.image_url}
+                  onChange={(e) => setCatForm((s) => ({ ...s, image_url: e.target.value }))}
+                  autoComplete="off"
+                />
+              </label>
+              <label className="block text-xs font-medium text-[#4d47b6]">
+                อัปโหลดรูปจากเครื่อง
+                <input
+                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-[#ecebff] file:px-2 file:py-1 file:text-xs file:font-medium file:text-[#4d47b6]"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setCatUploading(true);
+                    void uploadImage(file)
+                      .then((url) => {
+                        if (url) setCatForm((s) => ({ ...s, image_url: url }));
+                      })
+                      .finally(() => setCatUploading(false));
+                  }}
+                />
+              </label>
+              {catUploading ? <p className="text-xs text-[#66638c]">กำลังอัปโหลดรูป…</p> : null}
+              <label className="block text-xs font-medium text-[#4d47b6]">
+                ลำดับแสดงผล
+                <input
+                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                  placeholder="ตัวเลข — น้อยขึ้นก่อน"
+                  type="number"
+                  value={catForm.sort_order}
+                  onChange={(e) => setCatForm((s) => ({ ...s, sort_order: e.target.value }))}
+                />
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#4d47b6]">
+                <input
+                  type="checkbox"
+                  checked={catForm.is_active}
+                  onChange={(e) => setCatForm((s) => ({ ...s, is_active: e.target.checked }))}
+                />
+                เปิดใช้งานหมวดนี้
+              </label>
+            </div>
           </div>
-          <div className="min-w-0 flex-1 space-y-3">
-            <label className="block text-xs font-medium text-[#4d47b6]">
-              ชื่อหมวดหมู่
-              <input
-                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                placeholder="เช่น อาหารจานเดียว"
-                value={catForm.name}
-                onChange={(e) => setCatForm((s) => ({ ...s, name: e.target.value }))}
-                autoComplete="off"
-              />
-            </label>
-            <label className="block text-xs font-medium text-[#4d47b6]">
-              URL รูปหมวด <span className="font-normal text-[#9b98c4]">(ไม่บังคับ)</span>
-              <input
-                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                placeholder="https://..."
-                value={catForm.image_url}
-                onChange={(e) => setCatForm((s) => ({ ...s, image_url: e.target.value }))}
-                autoComplete="off"
-              />
-            </label>
-            <label className="block text-xs font-medium text-[#4d47b6]">
-              อัปโหลดรูปจากเครื่อง
-              <input
-                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm file:mr-2 file:rounded-lg file:border-0 file:bg-[#ecebff] file:px-2 file:py-1 file:text-xs file:font-medium file:text-[#4d47b6]"
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setCatUploading(true);
-                  void uploadImage(file)
-                    .then((url) => {
-                      if (url) setCatForm((s) => ({ ...s, image_url: url }));
-                    })
-                    .finally(() => setCatUploading(false));
-                }}
-              />
-            </label>
-            {catUploading ? <p className="text-xs text-[#66638c]">กำลังอัปโหลดรูป…</p> : null}
-            <label className="block text-xs font-medium text-[#4d47b6]">
-              ลำดับแสดงผล
-              <input
-                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                placeholder="ตัวเลข — น้อยขึ้นก่อน"
-                type="number"
-                value={catForm.sort_order}
-                onChange={(e) => setCatForm((s) => ({ ...s, sort_order: e.target.value }))}
-              />
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#4d47b6]">
-              <input type="checkbox" checked={catForm.is_active} onChange={(e) => setCatForm((s) => ({ ...s, is_active: e.target.checked }))} />
-              เปิดใช้งานหมวดนี้
-            </label>
-          </div>
-        </div>
+        ) : categories.length === 0 ? (
+          <p className="rounded-[1.25rem] border border-dashed border-[#d8d6ec] bg-[#faf9ff]/70 px-3 py-8 text-center text-sm font-semibold text-[#66638c]">
+            ยังไม่มีหมวด — กด «เพิ่มหมวดหมู่»
+          </p>
+        ) : (
+          <ul className="max-h-[min(60vh,28rem)] space-y-2 overflow-y-auto overscroll-contain pr-0.5">
+            {categories.map((c) => (
+              <li
+                key={c.id}
+                className="flex min-h-[56px] items-center gap-3 rounded-[1.25rem] border border-[#e8e6f4]/90 bg-white/80 px-3 py-2.5"
+              >
+                <PosThumb url={c.image_url} size="sm" />
+                <span className="min-w-0 flex-1 text-sm font-semibold text-[#1e1b4b]">
+                  <span className="text-[#66638c]">{c.sort_order}.</span> {c.name}
+                  {c.is_active ? null : (
+                    <span className="mt-0.5 block text-xs font-normal text-amber-700">ปิดใช้งาน</span>
+                  )}
+                </span>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => openCatEdit(c)}
+                    className={assetRowEditIconButtonClass}
+                    aria-label={`แก้ไขหมวด ${c.name}`}
+                    title="แก้ไข"
+                  >
+                    <IconRowEdit className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void deleteCategoryRow(c)}
+                    className={assetRowRemoveIconButtonClass}
+                    aria-label={`ลบหมวด ${c.name}`}
+                    title="ลบ"
+                  >
+                    <IconRowRemove className="h-4 w-4" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </FormModal>
 
       <FormModal
@@ -1342,7 +1563,7 @@ export function BuildingPosDashboardClient({
           setMenuEditing(null);
         }}
         title={menuEditing ? "แก้ไขเมนู" : "เพิ่มเมนูอาหาร"}
-        description="เลือกหมวดหมู่ ระบุชื่อและราคา — รายละเอียดจะแสดงหน้าลูกค้า"
+        description="เลือกหมวด ชื่อ และราคา"
         size="lg"
         mobileCentered
         footer={
@@ -1446,78 +1667,6 @@ export function BuildingPosDashboardClient({
                 onChange={(e) => setMenuForm((s) => ({ ...s, description: e.target.value }))}
               />
             </label>
-            <div className="rounded-2xl border border-[#e6e4fa] bg-[#faf9ff]/80 p-3">
-              <p className="text-xs font-semibold text-[#4d47b6]">สูตร / ต้นทุน (ต่อ 1 ที่ขาย)</p>
-              <p className="mt-0.5 text-[11px] leading-snug text-[#66638c]">
-                เลือกหมวดหมู่วัตถุดิบจากแท็บ &quot;การเงิน → ต้นทุน / รายจ่าย&quot; (จัดการหมวด) และจำนวนต่อจาน — ราคาต่อหน่วยใช้จากบันทึกรายจ่ายล่าสุด
-              </p>
-              {ingredients.length === 0 ? (
-                <p className="mt-2 text-xs text-amber-800">ยังไม่มีรายการของ — เพิ่มที่แท็บ &quot;รายการของ&quot; ก่อน</p>
-              ) : (
-                <ul className="mt-2 space-y-2">
-                  {recipeLinesDraft.map((row, idx) => (
-                    <li key={idx} className="flex flex-wrap items-end gap-2 rounded-xl border border-[#e1e3ff] bg-white p-2">
-                      <label className="min-w-[160px] flex-1 text-[10px] font-medium text-[#66638c]">
-                        รายการของ
-                        <select
-                          className="app-input mt-1 w-full rounded-lg px-2 py-2 text-sm"
-                          value={row.ingredient_id || ""}
-                          onChange={(e) => {
-                            const v = Number(e.target.value);
-                            setRecipeLinesDraft((prev) =>
-                              prev.map((r, j) => (j === idx ? { ...r, ingredient_id: v } : r)),
-                            );
-                          }}
-                        >
-                          <option value="">เลือก</option>
-                          {ingredients.map((g) => (
-                            <option key={g.id} value={g.id}>
-                              {g.name}
-                              {g.unit_label ? ` (${g.unit_label})` : ""}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="w-[100px] text-[10px] font-medium text-[#66638c]">
-                        จำนวน/จาน
-                        <input
-                          className="app-input mt-1 w-full rounded-lg px-2 py-2 text-sm tabular-nums"
-                          inputMode="decimal"
-                          value={Number.isFinite(row.qty_per_portion) ? String(row.qty_per_portion) : ""}
-                          onChange={(e) => {
-                            const n = Number(e.target.value);
-                            setRecipeLinesDraft((prev) =>
-                              prev.map((r, j) =>
-                                j === idx ? { ...r, qty_per_portion: Number.isFinite(n) ? n : 0 } : r,
-                              ),
-                            );
-                          }}
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        className="mb-0.5 rounded-lg border border-slate-200 px-2 py-2 text-xs text-slate-500 hover:bg-slate-50"
-                        aria-label="ลบแถวสูตร"
-                        onClick={() =>
-                          setRecipeLinesDraft((prev) => (prev.length <= 1 ? prev : prev.filter((_, j) => j !== idx)))
-                        }
-                      >
-                        ×
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {ingredients.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => setRecipeLinesDraft((prev) => [...prev, { ingredient_id: 0, qty_per_portion: 0.01 }])}
-                  className="mt-2 app-btn-soft rounded-xl px-3 py-2 text-xs font-semibold text-[#4d47b6]"
-                >
-                  + เพิ่มของในสูตร
-                </button>
-              ) : null}
-            </div>
             <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#4d47b6]">
               <input
                 type="checkbox"
@@ -1532,7 +1681,7 @@ export function BuildingPosDashboardClient({
                 checked={menuForm.is_featured}
                 onChange={(e) => setMenuForm((s) => ({ ...s, is_featured: e.target.checked }))}
               />
-              แสดงในแถว &quot;เมนูแนะนำ&quot; หน้าลูกค้า
+              แนะนำหน้าลูกค้า
             </label>
           </div>
         </div>

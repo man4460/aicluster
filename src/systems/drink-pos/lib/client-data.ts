@@ -33,6 +33,11 @@ export type DrinkPosSaleRow = {
   id: string;
   note: string | null;
   totalBaht: number;
+  paymentMethod?: string;
+  paymentSlipUrl?: string | null;
+  fulfillmentStatus?: string;
+  statusUpdatedAt?: string;
+  isRewardRedemption?: boolean;
   createdAt: string;
   lines: DrinkPosSaleLineRow[];
 };

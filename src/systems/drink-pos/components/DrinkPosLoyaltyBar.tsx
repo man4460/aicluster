@@ -1,13 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { cn } from "@/lib/cn";
 import { appTemplateOutlineButtonClass } from "@/components/app-templates";
 import { DrinkPosButton } from "@/systems/drink-pos/components/DrinkPosButton";
 import { isLoyaltyPhoneSearchReady } from "@/lib/loyalty-stamp/member-qr";
 import type { DrinkPosMemberDto } from "@/systems/drink-pos/lib/member-service";
+import { formatDrinkPosLoyaltyRule } from "@/systems/drink-pos/lib/loyalty-rule";
 import { lsFieldClass } from "@/systems/loyalty-stamp/loyalty-stamp-ui-tokens";
+
+type LoyaltyRule = {
+  stampsPerReward: number;
+  rewardTitle: string;
+};
 
 type Props = {
   member: DrinkPosMemberDto | null;
@@ -16,6 +22,8 @@ type Props = {
   onRedeemModeChange: (v: boolean) => void;
   /** บนหน้าสมาชิกแล้ว — ไม่แสดงลิงก์กลับ hub */
   hideMembersLink?: boolean;
+  /** ถ้าส่งมาแล้วไม่ต้องโหลดจาก profile API */
+  loyaltyRule?: LoyaltyRule | null;
 };
 
 export function DrinkPosLoyaltyBar({
@@ -24,10 +32,46 @@ export function DrinkPosLoyaltyBar({
   redeemMode,
   onRedeemModeChange,
   hideMembersLink = false,
+  loyaltyRule: loyaltyRuleProp = null,
 }: Props) {
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [loadedRule, setLoadedRule] = useState<LoyaltyRule | null>(null);
+
+  useEffect(() => {
+    if (loyaltyRuleProp) {
+      setLoadedRule(loyaltyRuleProp);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/drink-pos/profile", { credentials: "include" });
+        const j = (await res.json().catch(() => ({}))) as {
+          profile?: { stampsPerReward?: number; rewardTitle?: string };
+        };
+        if (cancelled || !res.ok || !j.profile) return;
+        setLoadedRule({
+          stampsPerReward: j.profile.stampsPerReward ?? 10,
+          rewardTitle: j.profile.rewardTitle ?? "เครื่องดื่มฟรี 1 แก้ว",
+        });
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loyaltyRuleProp]);
+
+  const ruleFromMember = member
+    ? { stampsPerReward: member.stampsPerReward, rewardTitle: member.rewardTitle }
+    : null;
+  const rule = loyaltyRuleProp ?? loadedRule ?? ruleFromMember;
+  const ruleLabel = rule
+    ? formatDrinkPosLoyaltyRule(rule.stampsPerReward, rule.rewardTitle)
+    : "สะสมแต้ม";
 
   const lookup = useCallback(async () => {
     if (!isLoyaltyPhoneSearchReady(phone)) return;
@@ -59,17 +103,32 @@ export function DrinkPosLoyaltyBar({
   };
 
   return (
-    <div className="rounded-[2rem] border border-white/55 bg-gradient-to-br from-white/55 via-amber-50/20 to-violet-50/15 p-4 backdrop-blur-xl ring-1 ring-inset ring-white/50 sm:p-5">
+    <div className="rounded-xl border border-[#e8e6fc]/80 bg-gradient-to-br from-white/80 via-[#f5f3ff]/70 to-[#fdf2f8]/55 p-4 shadow-sm ring-1 ring-inset ring-white/55">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-left text-xs font-bold text-[#4d47b6]">สะสมแต้ม (ซื้อ 10 แก้ว ฟรี 1 แก้ว)</p>
-        {hideMembersLink ? null : (
+        <p className="text-left text-xs font-bold text-[#4d47b6]">สะสมแต้ม ({ruleLabel})</p>
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+          {hideMembersLink ? null : (
+            <Link
+              href="/dashboard/drink-pos/members"
+              className={cn(
+                appTemplateOutlineButtonClass,
+                "rounded-xl px-3 py-1.5 text-[10px] font-black text-[#4d47b6]",
+              )}
+            >
+              QR / ลิงก์
+            </Link>
+          )}
           <Link
-            href="/dashboard/drink-pos/members"
-            className={cn(appTemplateOutlineButtonClass, "shrink-0 rounded-xl px-3 py-1.5 text-[10px] font-black text-[#4d47b6]")}
+            href="/dashboard/drink-pos/settings"
+            className={cn(
+              appTemplateOutlineButtonClass,
+              "rounded-xl px-3 py-1.5 text-[10px] font-black text-[#4d47b6]",
+            )}
+            aria-label="ตั้งค่าสะสมแต้ม"
           >
-            QR / ลิงก์ลูกค้า
+            ตั้งค่าแต้ม
           </Link>
-        )}
+        </div>
       </div>
       <form onSubmit={onSubmit} className="mt-2 flex items-stretch gap-2">
         <input

@@ -289,6 +289,19 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  if (href.startsWith("/dashboard/football-turf")) {
+    return (
+      <Svg>
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+        <path
+          d="M12 3v18M3 12h18M5.5 6.5c2 1.5 4.2 2.3 6.5 2.3s4.5-.8 6.5-2.3M5.5 17.5c2-1.5 4.2-2.3 6.5-2.3s4.5.8 6.5 2.3"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </Svg>
+    );
+  }
   if (href.startsWith("/dashboard/laundry")) {
     return (
       <Svg>
@@ -585,6 +598,16 @@ export function dashboardNavIconForHref(href: string): ReactNode {
         <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
         <path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         <path d="M8 3v3M16 3v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </Svg>
+    );
+  }
+  if (href === "/dashboard/modules") {
+    return (
+      <Svg>
+        <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
+        <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
+        <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
+        <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
       </Svg>
     );
   }

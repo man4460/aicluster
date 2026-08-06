@@ -23,7 +23,7 @@ export function mapBuildingPosOrderRow(r: {
     customer_name: r.customerName,
     table_no: r.tableNo,
     customer_session_id: (r.customerSessionId ?? "").trim(),
-    status: r.status as "NEW" | "PREPARING" | "SERVED" | "PAID",
+    status: r.status as "NEW" | "PREPARING" | "SERVED" | "SERVING" | "DELIVERED" | "PAID",
     items: Array.isArray(r.itemsJson) ? (r.itemsJson as PosOrderItem[]) : [],
     total_amount: r.totalAmount,
     note: r.note,

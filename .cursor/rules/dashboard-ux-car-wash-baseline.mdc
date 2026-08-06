@@ -55,3 +55,8 @@ alwaysApply: true
 - **แผนที่ไฟล์คู่ขนาน (คาร์แคร์ × ร้านตัดผม):** **`.cursor/rules/dashboard-module-car-wash-barber-reference.mdc`**
 
 เมื่อแม่แบบคาร์แคร์กับโมดูลใหม่ขัดกันเรื่องโดเมน ให้คง **โครงสร้าง UX** (เมนูล่าง, มุมมน, glass, โมดัล) แล้วปรับสีคัดลอก/ข้อความให้เข้าธีมโดเมน
+
+- **สนามฟุตบอล (ตัวอย่างโมดูลครบชุด — UX/UI · ขอบซ้ายขวา · อัปโหลด · QR · ปุ่ม · ซ่อม):** `.cursor/rules/football-turf-module-dashboard-template.mdc`
+- **ศูนย์แอดมิน (การ์ดรายการ · ตัดคำอธิบาย · Export Excel):** `.cursor/rules/admin-hub-dashboard-template.mdc`
+- **ความกว้าง / gutter ซ้าย–ขวา (ทุกชั้น):** `.cursor/rules/dashboard-page-width.mdc`
+- **ซ่อน/แสดงกลุ่มเมนู · ซ่อนเมนูหลักล่าง · ย่อ sidebar:** `.cursor/rules/dashboard-nav-menu-groups.mdc`

@@ -35,7 +35,12 @@ import { suggestDrinkPosStockImageUrl } from "@/systems/drink-pos/lib/suggest-st
 import { useDrinkPosMobileDraftSlot } from "@/systems/drink-pos/components/DrinkPosMobileBottomChrome";
 import { DrinkPosButton } from "@/systems/drink-pos/components/DrinkPosButton";
 import { DrinkPosLoyaltyBar } from "@/systems/drink-pos/components/DrinkPosLoyaltyBar";
+import {
+  DrinkPosPaymentPanel,
+  drinkPosPaymentSubmitBlocked,
+} from "@/systems/drink-pos/components/DrinkPosPaymentPanel";
 import type { DrinkPosMemberDto } from "@/systems/drink-pos/lib/member-service";
+import type { DrinkPosPaymentMethod } from "@/systems/drink-pos/lib/payment-method";
 import {
   defaultDrinkPosSizePrices,
   drinkPosActiveSizePrices,
@@ -45,18 +50,27 @@ import {
   type DrinkPosSizeCode,
   type DrinkPosSizePrice,
 } from "@/systems/drink-pos/lib/size-prices";
+import {
+  drinkPosChipActiveClass,
+  drinkPosChipIdleClass,
+  drinkPosCtaClass,
+  drinkPosDraftPanelClass,
+  drinkPosFieldClass,
+  drinkPosContentStackClass,
+  drinkPosOutlineIconButtonClass,
+  drinkPosProductCardClass,
+  drinkPosPulseWashClass,
+  drinkPosStatCardClass,
+  drinkPosStatGridClass,
+} from "@/systems/drink-pos/lib/ui-tokens";
 
-const statCardClass =
-  "relative overflow-hidden rounded-[1.25rem] border border-white/55 bg-gradient-to-br from-white/60 via-indigo-50/25 to-violet-100/15 p-4 shadow-[0_16px_40px_-28px_rgba(30,27,75,0.28)] backdrop-blur-xl ring-1 ring-inset ring-white/50 sm:rounded-[2rem] sm:p-5";
-
-const productCardClass =
-  "group relative flex flex-col overflow-hidden rounded-[1.25rem] border border-white/55 bg-gradient-to-br from-white/65 via-white/40 to-indigo-50/20 shadow-sm ring-1 ring-inset ring-white/45 backdrop-blur-md transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-[2rem]";
-
-/** ช่วงเวลาแตะซ้ำบนการ์ดเดิมเพื่อนับเป็น «แตะคู่» (+2) — ใกล้เคียงพฤติกรรมสั่งผ่าน QR */
+/** กริดสินค้าหน้าจัดการ — มือถือ 3 คอลัมน์ · เดสก์ท็อป 8 */
+const drinkPosManageProductGridClass =
+  "mt-4 grid grid-cols-3 gap-1.5 sm:grid-cols-3 sm:gap-2 lg:grid-cols-8 lg:gap-2";
 const DRINK_POS_CARD_DOUBLE_TAP_MS = 280;
 
 const draftQtyStepButtonClass = cn(
-  "flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded-full border border-white/60 bg-white/85 text-[#4d47b6] shadow-sm transition hover:bg-white active:scale-95 disabled:pointer-events-none disabled:opacity-35",
+  "flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded-full border border-[#0000BF]/25 bg-white/85 text-[#4d47b6] shadow-sm transition hover:bg-white active:scale-95 disabled:pointer-events-none disabled:opacity-35",
 );
 
 function IconDraftQtyMinus({ className }: { className?: string }) {
@@ -149,6 +163,8 @@ export function DrinkPosDashboardClient() {
   const [loyaltyMember, setLoyaltyMember] = useState<DrinkPosMemberDto | null>(null);
   const [redeemMode, setRedeemMode] = useState(false);
   const [sizePick, setSizePick] = useState<{ product: DrinkPosProductRow; quantity: number } | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<DrinkPosPaymentMethod>("CASH");
+  const [paymentSlipUrl, setPaymentSlipUrl] = useState<string | null>(null);
 
   const setMobileDraftSlot = useDrinkPosMobileDraftSlot();
 
@@ -543,7 +559,10 @@ export function DrinkPosDashboardClient() {
     };
   }, []);
 
-  async function postSaleLines(lines: { productId: string; quantity: number; size?: DrinkPosSizeCode | null }[]) {
+  async function postSaleLines(
+    lines: { productId: string; quantity: number; size?: DrinkPosSizeCode | null }[],
+    payment?: { paymentMethod: DrinkPosPaymentMethod; paymentSlipUrl: string | null },
+  ) {
     const res = await fetch("/api/drink-pos/sales", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -552,6 +571,8 @@ export function DrinkPosDashboardClient() {
         note: redeemMode ? "แลกแต้มฟรี" : null,
         memberPhone: loyaltyMember?.phone ?? null,
         isRewardRedemption: redeemMode && Boolean(loyaltyMember),
+        paymentMethod: payment?.paymentMethod ?? "CASH",
+        paymentSlipUrl: payment?.paymentSlipUrl ?? null,
         lines,
       }),
     });
@@ -561,8 +582,24 @@ export function DrinkPosDashboardClient() {
     }
   }
 
+  const resetPayment = useCallback(() => {
+    setPaymentMethod("CASH");
+    setPaymentSlipUrl(null);
+  }, []);
+
   const submitDraftBill = useCallback(async () => {
     if (draftLines.length === 0) return;
+    const payTotal =
+      redeemMode && loyaltyMember
+        ? 0
+        : draftLines.reduce((s, l) => s + l.unitPriceBaht * l.quantity, 0);
+    if (drinkPosPaymentSubmitBlocked(paymentMethod, payTotal, paymentSlipUrl)) {
+      setBillReviewOpen(true);
+      window.alert(
+        paymentMethod === "PROMPTPAY" ? "กรุณาแนบสลิปหลังโอนพร้อมเพย์" : "กรุณาแนบสลิปการโอน",
+      );
+      return;
+    }
     setDraftBusy(true);
     try {
       await postSaleLines(
@@ -571,9 +608,14 @@ export function DrinkPosDashboardClient() {
           quantity: l.quantity,
           size: l.size,
         })),
+        {
+          paymentMethod: payTotal <= 0 ? "CASH" : paymentMethod,
+          paymentSlipUrl: payTotal <= 0 || paymentMethod === "CASH" ? null : paymentSlipUrl,
+        },
       );
       setDraftLines([]);
       setBillReviewOpen(false);
+      resetPayment();
       if (loyaltyMember?.phone) {
         const lookupRes = await fetch("/api/drink-pos/members/lookup", {
           method: "POST",
@@ -591,7 +633,7 @@ export function DrinkPosDashboardClient() {
     } finally {
       setDraftBusy(false);
     }
-  }, [draftLines, reload, loyaltyMember, redeemMode]);
+  }, [draftLines, reload, loyaltyMember, redeemMode, paymentMethod, paymentSlipUrl, resetPayment]);
 
   const draftTotalBaht = useMemo(() => {
     if (redeemMode && loyaltyMember) return 0;
@@ -616,7 +658,7 @@ export function DrinkPosDashboardClient() {
             type="button"
             disabled={draftBusy}
             onClick={() => setBillReviewOpen(true)}
-            className="min-w-0 flex-1 rounded-2xl border border-transparent px-1 py-0.5 text-left outline-none transition hover:border-white/50 hover:bg-white/30 focus-visible:ring-2 focus-visible:ring-[#5b61ff]/35 disabled:opacity-50"
+            className="min-w-0 flex-1 rounded-2xl border border-transparent px-1 py-0.5 text-left outline-none transition hover:border-white/50 hover:bg-white/30 focus-visible:ring-2 focus-visible:ring-[#0000BF]/35 disabled:opacity-50"
             aria-label="ดูสรุปรายการก่อนบันทึกบิล"
           >
             <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">รายการรอบันทึก</p>
@@ -628,18 +670,21 @@ export function DrinkPosDashboardClient() {
             <DrinkPosButton
               type="button"
               className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-3 py-2 text-xs font-black")}
-              onClick={() => setDraftLines([])}
+              onClick={() => {
+                setDraftLines([]);
+                resetPayment();
+              }}
               disabled={draftBusy}
             >
               ล้าง
             </DrinkPosButton>
             <DrinkPosButton
               type="button"
-              className="min-h-[40px] rounded-xl bg-[#5b61ff] px-3 py-2 text-xs font-black text-white shadow-md disabled:opacity-50"
-              onClick={() => void submitDraftBill()}
+              className={drinkPosCtaClass}
+              onClick={() => setBillReviewOpen(true)}
               disabled={draftBusy}
             >
-              {draftBusy ? "กำลังบันทึก…" : "บันทึกบิล"}
+              ชำระ / บันทึก
             </DrinkPosButton>
           </div>
         </div>
@@ -656,14 +701,16 @@ export function DrinkPosDashboardClient() {
       </div>,
     );
     return () => setMobileDraftSlot(null);
-  }, [draftLines, draftTotalBaht, draftBusy, setMobileDraftSlot, submitDraftBill]);
+  }, [draftLines, draftTotalBaht, draftBusy, setMobileDraftSlot, resetPayment]);
 
   useEffect(() => {
     if (draftLines.length === 0 && billReviewOpen) setBillReviewOpen(false);
   }, [draftLines.length, billReviewOpen]);
 
+  const paymentBlocked = drinkPosPaymentSubmitBlocked(paymentMethod, draftTotalBaht, paymentSlipUrl);
+
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className={drinkPosContentStackClass}>
       {error ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm font-semibold text-rose-800">
           {error}
@@ -671,20 +718,20 @@ export function DrinkPosDashboardClient() {
       ) : null}
 
       <section aria-label="สรุป">
-        <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          <li className={statCardClass}>
+        <ul className={cn(drinkPosStatGridClass, "lg:grid-cols-4")}>
+          <li className={drinkPosStatCardClass}>
             <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">หมวดหมู่</p>
             <p className="mt-2 text-2xl font-black tabular-nums text-[#4d47b6] sm:text-3xl">{stats.categories}</p>
           </li>
-          <li className={statCardClass}>
+          <li className={drinkPosStatCardClass}>
             <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">สินค้าเปิดขาย</p>
             <p className="mt-2 text-2xl font-black tabular-nums text-[#4d47b6] sm:text-3xl">{stats.products}</p>
           </li>
-          <li className={statCardClass}>
+          <li className={drinkPosStatCardClass}>
             <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">แนะนำ</p>
             <p className="mt-2 text-2xl font-black tabular-nums text-emerald-700 sm:text-3xl">{stats.featured}</p>
           </li>
-          <li className={statCardClass}>
+          <li className={drinkPosStatCardClass}>
             <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">ยอดขายวันนี้ (กทม.)</p>
             <p className="mt-2 text-2xl font-black tabular-nums text-[#1e1b4b] sm:text-3xl">
               ฿{formatThb(stats.todayTotal)}
@@ -713,7 +760,7 @@ export function DrinkPosDashboardClient() {
                 aria-label="ดูยอดขาย"
                 className={cn(
                   appTemplateOutlineButtonClass,
-                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl border-[#5b61ff]/25 bg-white/80 px-0 text-[#4d47b6] sm:min-w-0 sm:px-4",
+                  drinkPosOutlineIconButtonClass,
                 )}
                 title="ยอดขาย"
               >
@@ -728,7 +775,7 @@ export function DrinkPosDashboardClient() {
                 aria-label="จัดการหมวดหมู่"
                 className={cn(
                   appTemplateOutlineButtonClass,
-                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl border-[#5b61ff]/25 bg-white/80 px-0 text-[#4d47b6] sm:min-w-0 sm:px-3",
+                  drinkPosOutlineIconButtonClass,
                 )}
                 title="จัดการหมวด"
               >
@@ -743,7 +790,7 @@ export function DrinkPosDashboardClient() {
                 aria-label="เพิ่มหมวดหมู่"
                 className={cn(
                   appTemplateOutlineButtonClass,
-                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl border-[#5b61ff]/25 bg-white/80 px-0 text-[#4d47b6] sm:min-w-0 sm:px-3",
+                  drinkPosOutlineIconButtonClass,
                 )}
                 title="เพิ่มหมวด"
               >
@@ -778,10 +825,8 @@ export function DrinkPosDashboardClient() {
               type="button"
               onClick={() => setFilterCat("all")}
               className={cn(
-                "shrink-0 snap-start rounded-full border px-4 py-2 text-xs font-black transition",
-                filterCat === "all"
-                  ? "border-[#5b61ff]/40 bg-[#5b61ff] text-white shadow-md"
-                  : "border-white/60 bg-white/50 text-[#66638c] hover:bg-white/80",
+                "shrink-0 snap-start transition",
+                filterCat === "all" ? drinkPosChipActiveClass : drinkPosChipIdleClass,
               )}
             >
               ทั้งหมด
@@ -792,10 +837,8 @@ export function DrinkPosDashboardClient() {
                 type="button"
                 onClick={() => setFilterCat(c.id)}
                 className={cn(
-                  "shrink-0 snap-start rounded-full border px-4 py-2 text-xs font-black transition",
-                  filterCat === c.id
-                    ? "border-[#5b61ff]/40 bg-[#5b61ff] text-white shadow-md"
-                    : "border-white/60 bg-white/50 text-[#66638c] hover:bg-white/80",
+                  "shrink-0 snap-start transition",
+                  filterCat === c.id ? drinkPosChipActiveClass : drinkPosChipIdleClass,
                 )}
               >
                 {c.name}
@@ -805,32 +848,32 @@ export function DrinkPosDashboardClient() {
         </div>
 
         {loading ? (
-          <div className="mt-6 h-40 animate-pulse rounded-[2rem] bg-[#ecebff]/50" aria-hidden />
+          <div className={cn("mt-4 h-40 animate-pulse rounded-xl", drinkPosPulseWashClass)} aria-hidden />
         ) : filteredProducts.length === 0 ? (
-          <AppEmptyState tone="violet" className="mt-6">
+          <AppEmptyState tone="violet" className="mt-4">
             {categories.length === 0 ? "เริ่มจากเพิ่มหมวด แล้วเพิ่มสินค้า" : "ไม่มีสินค้าในหมวดนี้"}
           </AppEmptyState>
         ) : (
-          <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+          <ul className={drinkPosManageProductGridClass}>
             {filteredProducts.map((p) => {
               const inDraftQty = draftQtyByProductId.get(p.id) ?? 0;
               return (
-              <li key={p.id} className={cn(productCardClass, "flex flex-col")}>
+              <li key={p.id} className={cn(drinkPosProductCardClass, "flex flex-col")}>
                 <DrinkPosButton
                   type="button"
                   onClick={() => handleProductCardTap(p)}
                   className={cn(
-                    "flex min-h-0 flex-1 flex-col text-left outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white/80",
-                    inDraftQty > 0 && "ring-2 ring-[#5b61ff]/35 ring-offset-2 ring-offset-white/90",
+                    "flex min-h-0 flex-1 flex-col text-left outline-none focus-visible:ring-2 focus-visible:ring-[#0000BF]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white/80",
+                    inDraftQty > 0 && "ring-2 ring-[#0000BF]/35 ring-offset-2 ring-offset-white/90",
                   )}
                   aria-label={`${p.name} ราคา ${formatDrinkPosCardPrice(p)} บาท${inDraftQty > 0 ? ` ในบิล ${inDraftQty} ชิ้น` : ""}${drinkPosProductHasSizes(p.sizePrices) ? " มีหลายขนาด" : ""}`}
                 >
-                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#ecebff]/40">
+                  <div className="relative aspect-square w-full overflow-hidden bg-[#0000BF]/08 sm:aspect-[4/3] lg:aspect-square">
                     {p.imageUrl ? (
                       <img src={p.imageUrl} alt="" className="h-full w-full object-cover object-center transition duration-500 group-hover:scale-[1.03]" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-[#66638c]">
-                        <svg className="h-12 w-12 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+                        <svg className="h-5 w-5 opacity-40 sm:h-12 sm:w-12 lg:h-7 lg:w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
                           <rect x="4" y="5" width="16" height="14" rx="2" />
                           <circle cx="9" cy="10" r="1.2" fill="currentColor" />
                           <path d="M4 17l4-4 3 3 5-6 4 4" strokeLinecap="round" strokeLinejoin="round" />
@@ -838,35 +881,41 @@ export function DrinkPosDashboardClient() {
                       </div>
                     )}
                     {inDraftQty > 0 ? (
-                      <span className="absolute right-3 top-3 flex h-9 min-w-[2.25rem] items-center justify-center rounded-full border border-[#5b61ff]/30 bg-[#5b61ff] px-2 text-sm font-black tabular-nums text-white shadow-md backdrop-blur-sm">
+                      <span className="absolute right-1 top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full border border-transparent bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] px-1 text-[9px] font-black tabular-nums text-white shadow-md backdrop-blur-sm sm:right-3 sm:top-3 sm:h-9 sm:min-w-[2.25rem] sm:px-2 sm:text-sm lg:right-1 lg:top-1 lg:h-6 lg:min-w-[1.5rem] lg:text-[10px]">
                         ×{inDraftQty}
                       </span>
                     ) : null}
                     {p.isFeatured ? (
-                      <span className="absolute left-3 top-3 rounded-full border border-amber-200/80 bg-amber-50/95 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-800 shadow-sm backdrop-blur-sm">
+                      <span className="absolute left-1 top-1 rounded-full border border-amber-200/80 bg-amber-50/95 px-1 py-0.5 text-[7px] font-black uppercase tracking-wide text-amber-800 shadow-sm backdrop-blur-sm sm:left-3 sm:top-3 sm:px-2.5 sm:text-[10px] lg:left-1 lg:top-1 lg:px-1.5 lg:text-[8px]">
                         แนะนำ
                       </span>
                     ) : null}
                   </div>
-                  <div className="flex min-h-0 flex-1 flex-col justify-between gap-2 p-4 sm:p-5">
+                  <div className="flex min-h-0 flex-1 flex-col justify-between gap-0.5 p-1.5 sm:gap-2 sm:p-4 lg:gap-1 lg:p-2">
                     <div className="min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">{p.categoryName}</p>
-                      <p className="mt-1 line-clamp-2 text-base font-black leading-snug text-[#1e1b4b]">{p.name}</p>
+                      <p className="truncate text-[8px] font-black uppercase tracking-widest text-[#66638c] sm:text-[10px] lg:text-[8px]">
+                        {p.categoryName}
+                      </p>
+                      <p className="mt-0.5 line-clamp-2 text-[10px] font-black leading-tight text-[#1e1b4b] sm:mt-1 sm:text-base lg:text-[11px] lg:leading-tight">
+                        {p.name}
+                      </p>
                     </div>
-                    <div className="border-t border-white/50 pt-3">
-                      <p className="text-xl font-black tabular-nums text-[#4d47b6] sm:text-2xl">
+                    <div className="border-t border-white/50 pt-1 sm:pt-3 lg:pt-1.5">
+                      <p className="text-[11px] font-black tabular-nums text-[#4d47b6] sm:text-xl lg:text-sm">
                         ฿{formatDrinkPosCardPrice(p)}
                       </p>
                       {drinkPosProductHasSizes(p.sizePrices) ? (
-                        <p className="mt-0.5 text-[10px] font-black uppercase tracking-widest text-[#66638c]">S / M / L</p>
+                        <p className="mt-0.5 text-[8px] font-black uppercase tracking-widest text-[#66638c] sm:text-[10px] lg:text-[8px]">
+                          S / M / L
+                        </p>
                       ) : null}
                     </div>
                   </div>
                 </DrinkPosButton>
-                <div className="flex justify-end gap-1 border-t border-white/50 px-3 py-2.5 sm:px-4">
+                <div className="flex justify-end gap-0.5 border-t border-white/50 px-1 py-1 sm:gap-1 sm:px-4 sm:py-2.5 lg:px-1.5 lg:py-1">
                   <DrinkPosButton
                     type="button"
-                    className={assetRowEditIconButtonClass}
+                    className={cn(assetRowEditIconButtonClass, "min-h-[32px] min-w-[32px] sm:min-h-[36px] sm:min-w-[36px] lg:min-h-[32px] lg:min-w-[32px]")}
                     aria-label={`แก้ไข ${p.name}`}
                     title="แก้ไข"
                     onClick={(e) => {
@@ -874,11 +923,11 @@ export function DrinkPosDashboardClient() {
                       openEditProduct(p);
                     }}
                   >
-                    <IconRowEdit className="h-4 w-4" aria-hidden />
+                    <IconRowEdit className="h-3 w-3 sm:h-3.5 sm:w-3.5 lg:h-3 lg:w-3" aria-hidden />
                   </DrinkPosButton>
                   <DrinkPosButton
                     type="button"
-                    className={assetRowRemoveIconButtonClass}
+                    className={cn(assetRowRemoveIconButtonClass, "min-h-[32px] min-w-[32px] sm:min-h-[36px] sm:min-w-[36px] lg:min-h-[32px] lg:min-w-[32px]")}
                     aria-label={`ลบ ${p.name}`}
                     title="ลบ"
                     onClick={(e) => {
@@ -886,7 +935,7 @@ export function DrinkPosDashboardClient() {
                       void deleteProduct(p);
                     }}
                   >
-                    <IconRowRemove className="h-4 w-4" aria-hidden />
+                    <IconRowRemove className="h-3 w-3 sm:h-3.5 sm:w-3.5 lg:h-3 lg:w-3" aria-hidden />
                   </DrinkPosButton>
                 </div>
               </li>
@@ -900,7 +949,7 @@ export function DrinkPosDashboardClient() {
         <div
           className={cn(
             "fixed left-4 right-4 z-[38] hidden md:bottom-8 md:left-auto md:right-8 md:block md:max-w-md",
-            "rounded-[1.5rem] border border-white/55 bg-gradient-to-br from-white/90 via-indigo-50/40 to-violet-100/25 p-3 shadow-[0_20px_50px_-20px_rgba(30,27,75,0.45)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
+            drinkPosDraftPanelClass,
           )}
           role="status"
           aria-live="polite"
@@ -910,7 +959,7 @@ export function DrinkPosDashboardClient() {
               type="button"
               disabled={draftBusy}
               onClick={() => setBillReviewOpen(true)}
-              className="min-w-0 flex-1 rounded-2xl border border-transparent px-1 py-0.5 text-left outline-none transition hover:border-white/55 hover:bg-white/40 focus-visible:ring-2 focus-visible:ring-[#5b61ff]/35 disabled:opacity-50"
+              className="min-w-0 flex-1 rounded-2xl border border-transparent px-1 py-0.5 text-left outline-none transition hover:border-white/55 hover:bg-white/40 focus-visible:ring-2 focus-visible:ring-[#0000BF]/35 disabled:opacity-50"
               aria-label="ดูสรุปรายการก่อนบันทึกบิล"
             >
               <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">รายการรอบันทึก</p>
@@ -922,18 +971,21 @@ export function DrinkPosDashboardClient() {
               <DrinkPosButton
                 type="button"
                 className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-3 py-2 text-xs font-black")}
-                onClick={() => setDraftLines([])}
+                onClick={() => {
+                  setDraftLines([]);
+                  resetPayment();
+                }}
                 disabled={draftBusy}
               >
                 ล้าง
               </DrinkPosButton>
               <DrinkPosButton
                 type="button"
-                className="min-h-[40px] rounded-xl bg-[#5b61ff] px-3 py-2 text-xs font-black text-white shadow-md disabled:opacity-50"
-                onClick={() => void submitDraftBill()}
+                className={drinkPosCtaClass}
+                onClick={() => setBillReviewOpen(true)}
                 disabled={draftBusy}
               >
-                {draftBusy ? "กำลังบันทึก…" : "บันทึกบิล"}
+                ชำระ / บันทึก
               </DrinkPosButton>
             </div>
           </div>
@@ -961,6 +1013,7 @@ export function DrinkPosDashboardClient() {
             onSubmit={() => void submitDraftBill()}
             submitLabel="บันทึกบิล"
             loading={draftBusy}
+            submitDisabled={draftLines.length === 0 || paymentBlocked}
           />
         }
       >
@@ -970,7 +1023,7 @@ export function DrinkPosDashboardClient() {
           </AppEmptyState>
         ) : (
           <div className="space-y-3">
-            <ul className="max-h-[min(22rem,50vh)] space-y-2 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
+            <ul className="max-h-[min(16rem,40vh)] space-y-2 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
               {draftLines.map((l) => (
                 <li
                   key={l.lineKey}
@@ -1023,10 +1076,18 @@ export function DrinkPosDashboardClient() {
                 </li>
               ))}
             </ul>
-            <div className="flex items-center justify-between gap-2 rounded-2xl border border-[#5b61ff]/20 bg-[#5b61ff]/10 px-4 py-3">
+            <div className="flex items-center justify-between gap-2 rounded-2xl border border-[#0000BF]/20 bg-gradient-to-r from-[#0000BF]/10 via-[#8b5cf6]/10 to-[#ec4899]/10 px-4 py-3">
               <span className="text-sm font-black text-[#1e1b4b]">ยอดรวม</span>
               <span className="text-lg font-black tabular-nums text-[#1e1b4b]">฿{formatThb(draftTotalBaht)}</span>
             </div>
+            <DrinkPosPaymentPanel
+              amountBaht={draftTotalBaht}
+              method={paymentMethod}
+              slipUrl={paymentSlipUrl}
+              onMethodChange={setPaymentMethod}
+              onSlipUrlChange={setPaymentSlipUrl}
+              disabled={draftBusy}
+            />
           </div>
         )}
       </FormModal>
@@ -1107,7 +1168,7 @@ export function DrinkPosDashboardClient() {
             <input
               value={catName}
               onChange={(e) => setCatName(e.target.value)}
-              className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2.5 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:ring-2"
+              className={cn("mt-1", drinkPosFieldClass)}
               placeholder="เช่น เครื่องดื่ม"
             />
           </label>
@@ -1138,7 +1199,7 @@ export function DrinkPosDashboardClient() {
               </DrinkPosButton>
             </div>
             {catImageUrl.trim() ? (
-              <div className="overflow-hidden rounded-2xl border border-white/60 bg-[#ecebff]/30 ring-1 ring-inset ring-white/40">
+              <div className="overflow-hidden rounded-2xl border border-white/60 bg-[#0000BF]/08 ring-1 ring-inset ring-white/40">
                 <img
                   src={catImageUrl.trim()}
                   alt=""
@@ -1151,7 +1212,7 @@ export function DrinkPosDashboardClient() {
               <input
                 value={catImageUrl}
                 onChange={(e) => setCatImageUrl(e.target.value)}
-                className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2.5 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:ring-2"
+                className={cn("mt-1", drinkPosFieldClass)}
                 placeholder="https://… หรือ /uploads/…"
               />
             </label>
@@ -1184,7 +1245,7 @@ export function DrinkPosDashboardClient() {
             <select
               value={prodCategoryId}
               onChange={(e) => setProdCategoryId(e.target.value)}
-              className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2.5 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:ring-2"
+              className={cn("mt-1", drinkPosFieldClass)}
             >
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -1198,7 +1259,7 @@ export function DrinkPosDashboardClient() {
             <input
               value={prodName}
               onChange={(e) => setProdName(e.target.value)}
-              className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2.5 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:ring-2"
+              className={cn("mt-1", drinkPosFieldClass)}
             />
           </label>
           <label className="block">
@@ -1208,7 +1269,7 @@ export function DrinkPosDashboardClient() {
               value={prodPrice}
               onChange={(e) => setProdPrice(e.target.value)}
               disabled={prodSizesEnabled}
-              className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2.5 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:ring-2 disabled:opacity-50"
+              className={cn("mt-1", drinkPosFieldClass, "disabled:opacity-50")}
               placeholder="0"
             />
           </label>
@@ -1259,7 +1320,7 @@ export function DrinkPosDashboardClient() {
                           ),
                         );
                       }}
-                      className="min-w-0 flex-1 rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:ring-2 disabled:opacity-45"
+                      className="min-w-0 flex-1 rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#0000BF]/20 focus:ring-2 disabled:opacity-45"
                       placeholder="ราคา"
                       aria-label={`ราคาขนาด ${row.size}`}
                     />
@@ -1303,7 +1364,7 @@ export function DrinkPosDashboardClient() {
               </DrinkPosButton>
             </div>
             {prodImageUrl.trim() ? (
-              <div className="overflow-hidden rounded-2xl border border-white/60 bg-[#ecebff]/30 ring-1 ring-inset ring-white/40">
+              <div className="overflow-hidden rounded-2xl border border-white/60 bg-[#0000BF]/08 ring-1 ring-inset ring-white/40">
                 <img
                   src={prodImageUrl.trim()}
                   alt=""
@@ -1316,7 +1377,7 @@ export function DrinkPosDashboardClient() {
               <input
                 value={prodImageUrl}
                 onChange={(e) => setProdImageUrl(e.target.value)}
-                className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2.5 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:ring-2"
+                className={cn("mt-1", drinkPosFieldClass)}
                 placeholder="https://… หรือ /uploads/…"
               />
             </label>
@@ -1355,7 +1416,7 @@ export function DrinkPosDashboardClient() {
                 <DrinkPosButton
                   key={row.size}
                   type="button"
-                  className="flex min-h-[72px] flex-col items-center justify-center rounded-2xl border border-white/60 bg-white/80 px-2 py-3 text-center shadow-sm transition hover:border-[#5b61ff]/35 hover:bg-indigo-50/60"
+                  className="flex min-h-[72px] flex-col items-center justify-center rounded-2xl border border-white/60 bg-white/80 px-2 py-3 text-center shadow-sm transition hover:border-[#0000BF]/35 hover:bg-violet-50/70"
                   onClick={() => {
                     addProductToDraft(sizePick.product, sizePick.quantity, row.size);
                     setSizePick(null);

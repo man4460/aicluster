@@ -8,6 +8,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  prepareImageFileForUpload,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { useMounted } from "@/systems/ecommerce-store/hooks/useMounted";
@@ -73,9 +74,10 @@ export function EcommerceCheckoutClient({ store }: { store: StorePay }) {
 
   async function onSlipFile(file: File) {
     setErr(null);
+    const prepared = await prepareImageFileForUpload(file);
     const fd = new FormData();
     fd.set("storeId", store.id);
-    fd.set("file", file);
+    fd.set("file", prepared);
     const res = await fetch("/api/ecommerce-store/public/upload-slip", { method: "POST", body: fd });
     const j = (await res.json()) as { imageUrl?: string; error?: string };
     if (!res.ok) {

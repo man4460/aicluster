@@ -4,6 +4,7 @@ import {
   ASSET_MODULE_SLUG,
   ATTENDANCE_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
+  FOOTBALL_TURF_MODULE_SLUG,
   BARBER_MODULE_SLUG,
   MASSAGE_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
@@ -51,6 +52,7 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === BARBER_MODULE_SLUG) return "/dashboard/barber";
   if (slug === HOME_FINANCE_BASIC_MODULE_SLUG) return "/dashboard/home-finance";
   if (slug === CAR_WASH_MODULE_SLUG) return "/dashboard/car-wash";
+  if (slug === FOOTBALL_TURF_MODULE_SLUG) return "/dashboard/football-turf";
   if (slug === MASSAGE_MODULE_SLUG) return "/dashboard/massage";
   if (slug === MQTT_SERVICE_MODULE_SLUG) return "/dashboard/mqtt-service";
   if (slug === BUILDING_POS_MODULE_SLUG) return "/dashboard/building-pos";
@@ -101,6 +103,7 @@ export const DASHBOARD_NAV_GROUP_LABEL: Record<DashboardNavGroupId, string> = {
 /** เมนูคงที่ทั้งหมดอยู่กลุ่มพื้นฐาน — กลุ่มระบบใช้บริการมาจากโมดูลที่สมัคร/มีสิทธิ์ (ส่งจาก layout) */
 export const DASHBOARD_NAV: DashboardNavItem[] = [
   { href: "/dashboard", label: "แดชบอร์ด" },
+  { href: "/dashboard/modules", label: "ระบบทั้งหมด" },
   { href: "/dashboard/profile", label: "โปรไฟล์" },
   { href: "/dashboard/plans", label: "แพ็กเกจ" },
   { href: "/dashboard/chat", label: "แชท" },
@@ -165,6 +168,7 @@ export function buildDashboardNavGroups(
     const serviceSlugs = new Set<string>([
       BARBER_MODULE_SLUG,
       CAR_WASH_MODULE_SLUG,
+      FOOTBALL_TURF_MODULE_SLUG,
       MASSAGE_MODULE_SLUG,
       APPOINTMENT_QUEUE_MODULE_SLUG,
       LOYALTY_STAMP_MODULE_SLUG,
@@ -222,4 +226,3 @@ export function buildDashboardNavGroups(
 
   return groups;
 }
-

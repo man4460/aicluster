@@ -12,6 +12,7 @@ export { useAppImageLightbox, type AppImageLightboxState } from "./useAppImageLi
 export {
   appDashboardBrandCtaPillButtonClass,
   appDashboardBrandGradientFillClass,
+  appDashboardBrandGradientBarClass,
   appDashboardInnerScrollClass,
   appDashboardSectionSlateClass,
   appDashboardSectionVioletClass,
@@ -71,13 +72,37 @@ export {
 } from "./AppTemplateSlipImageButtons";
 export { AppCameraCaptureModal, type AppCameraCaptureModalProps } from "./AppCameraCaptureModal";
 export { AppQrScanModal, type AppQrScanModalProps } from "./AppQrScanModal";
+export {
+  AppNoticePopup,
+  useAppNoticePopup,
+  type AppNoticePopupProps,
+  type AppNoticePopupTone,
+  type UseAppNoticePopupOptions,
+} from "./AppNoticePopup";
 
 export {
   openPrintableHtml,
   printDataUrlImagePoster,
   printPrintableHtmlInHiddenIframe,
 } from "./openPrintableHtml";
-export { prepareImageFileForUpload, prepareImageFileForVisionOcr } from "./prepareImageFileForUpload";
+export {
+  PREPARED_IMAGE_MAX_BYTES,
+  PREPARED_IMAGE_MAX_DIMENSION,
+  prepareImageFileAsDataUrl,
+  prepareImageFileForUpload,
+  prepareImageFileForVisionOcr,
+} from "./prepareImageFileForUpload";
+export {
+  CLIENT_UPLOAD_MAX_IMAGE_BYTES,
+  CLIENT_UPLOAD_MAX_PDF_BYTES,
+  isImageUploadFile,
+  isPdfUploadFile,
+  normalizeUploadDisplayName,
+  prepareUploadFile,
+  prepareUploadFileAsDataUrl,
+  suggestUploadDisplayName,
+  UPLOAD_DISPLAY_NAME_MAX,
+} from "./prepareUploadFile";
 
 export {
   appMobileDockBackdropClass,

@@ -1,0 +1,89 @@
+---
+description: ศูนย์แอดมิน — รายการเป็นการ์ด (แบบระบบทั้งหมด) · ตัดคำอธิบายหัวข้อ · Export Excel · gutters
+globs: src/systems/admin/**/*.tsx,src/systems/activity-logs/**/*.tsx,src/components/admin/**/*.tsx,src/app/(dashboard)/dashboard/admin/**/*
+alwaysApply: false
+---
+
+# ศูนย์แอดมิน — การ์ดรายการ · คำอธิบาย · Excel
+
+เมื่อทำหรือแก้หน้าใต้ `/dashboard/admin/*` ให้ยึดแพทเทิร์นเดียวกับ **ลิงก์ทดลอง / ผู้ใช้ / หน้าระบบทั้งหมด**
+
+## 1) ตัดคำอธิบายหัวข้อ (บังคับ)
+
+- **ห้าม**ใส่ `description` บน `AppSectionHeader` ของหน้าแอดมินรายการ
+- **ห้าม**ใส่ย่อหน้าคำอธิบายยาวใต้หัวข้อฮีโร่ (`h1`) — เหลือชื่อหัวข้อ (+ ไอคอน) พอ
+- รายละเอียดวิธีใช้ถ้าจำเป็น: ซ่อนหลังปุ่มคู่มือ / แผงกรอง — ไม่โชว์ใต้หัวตลอดเวลา
+
+## 2) รายการเป็นกริดการ์ด (ไม่ใช้ตารางเดสก์ท็อปคู่กับมือถือแยก)
+
+| Viewport | กริด |
+|----------|------|
+| มือถือ | `grid-cols-1 gap-3` |
+| `sm+` | `sm:grid-cols-3 sm:gap-5` |
+| **กิจกรรม** | **`grid-cols-1 gap-3` เสมอ** (ข้อความสรุปยาว — ไม่ใช้ 3 คอลัมน์) |
+
+การ์ดแนวนอนสไตล์แคตตาล็อกโมดูล:
+
+```
+rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm
+flex items-center gap-3
+[รูปย่อ 44×44 rounded-2xl] [ชื่อ + บรรทัดรอง] [ปุ่มไอคอน]
+```
+
+- **รูปการ์ดโมดูล / ลิงก์ทดลอง:** ใช้ `resolveModuleCardDisplayImageUrl` (หรือรูปอัปโหลดที่ปลอดภัย)
+- **ผู้ใช้:** ใช้ `avatarUrl` (`/uploads/…` หรือ `https://`) — ไม่มีรูปใช้ตัวอักษรย่อ
+- **ปลดล็อค / กิจกรรม / MQTT events:** ไอคอนในกรอบ `h-11 w-11 rounded-2xl` แทนรูปถ้าไม่มีรูป
+
+**ห้าม** คงเลย์เอาต์คู่ `hidden md:table` + `md:hidden` การ์ดคนละแบบ — รวมเป็นกริดเดียวทุก breakpoint
+
+## 3) ตัวกรอง
+
+- ปุ่มซ่อน/แสดงตัวกรองมุมขวาหัวการ์ด (`aria-label` ชัด · จุดสีเมื่อกรองอยู่)
+- ตาม `dashboard-mobile-filter-icon.mdc` / แพทเทิร์นลิงก์ทดลอง
+
+## 4) Export Excel (บังคับบนหน้ารายการ)
+
+หน้าที่มีรายการส่งออกได้ (อย่างน้อย): **รูปการ์ด · ปลดล็อค · กิจกรรม · MQTT (events)** — และหน้ารายการอื่นที่สมเหตุสมผล
+
+- ใช้ **`downloadAdminExcel`** จาก `@/lib/admin/export-excel` (SpreadsheetML `.xls` — ไม่ต้องติดตั้ง `xlsx`)
+- ปุ่มในกลุ่ม `action` ของ `AppSectionHeader`: ไอคอนบนมือถือ · ข้อความ `Excel` บน `sm+`
+- Export **แถวที่กำลังแสดงหลังกรอง** (ไม่บังคับทั้งฐานถ้าหน้าเป็น pagination — อย่างน้อยหน้าปัจจุบัน + ระบุในชื่อไฟล์)
+
+```ts
+import { downloadAdminExcel } from "@/lib/admin/export-excel";
+
+downloadAdminExcel({
+  filename: "admin-module-cooldowns",
+  sheetName: "ปลดล็อค",
+  headers: ["Email", "ผู้ใช้", "ระบบ", ...],
+  rows: filtered.map((r) => [r.email, r.username, ...]),
+});
+```
+
+## 5) ระยะขอบซ้าย–ขวา
+
+ชุดเดียวกับสนามฟุตบอลใน `DashboardPagesShell`:
+
+`size="full"` + `max-w-none !px-3 sm:!px-4 lg:!px-6`
+
+รายละเอียดชั้น gutter: `.cursor/rules/dashboard-page-width.mdc`  
+ยุบหัวศูนย์แอดมิน: `.cursor/rules/dashboard-nav-menu-groups.mdc` §5
+
+## 6) ไฟล์อ้างอิง
+
+| หน้า | คอมโพเนนต์ |
+|------|------------|
+| ลิงก์ทดลอง | `ModuleTryLinksAdmin.tsx` |
+| ผู้ใช้ | `UsersAdmin.tsx` |
+| รูปการ์ด | `ModuleCardImagesAdmin.tsx` |
+| ปลดล็อค | `ModuleCooldownAdminClient.tsx` |
+| กิจกรรม | `ActivityLogsClient.tsx` |
+| MQTT | `MqttHealthClient.tsx` |
+| Export | `src/lib/admin/export-excel.ts` |
+
+## เช็กลิสต์หน้าแอดมินใหม่
+
+- [ ] ไม่มี `description` บนหัวข้อรายการ / ไม่มีย่อหน้าใต้ฮีโร่
+- [ ] กริดการ์ด `grid-cols-1 sm:grid-cols-3` (กิจกรรมใช้ `grid-cols-1` อย่างเดียว) — ไม่แยกตารางเดสก์ท็อป
+- [ ] มีปุ่ม Export Excel ผ่าน `downloadAdminExcel` (ถ้ารายการส่งออกได้)
+- [ ] gutter ผ่าน `DashboardPagesShell` ชุด admin/football

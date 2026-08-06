@@ -21,8 +21,8 @@ export default async function AdminSectionLayout({
     <div
       className={cn(
         "max-w-full space-y-4 sm:space-y-6",
-        /* ช่องว่างให้ dock มือถือ (2 แถว) ไม่บังเนื้อหา — เทียบคาร์แคร์ */
-        "pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))] lg:pb-0",
+        /* dock แถวเดียวเลื่อนได้ — เว้นที่แบบโมดูลสนามฟุตบอล */
+        "pb-24 lg:pb-0",
       )}
     >
       <AdminHubChrome />

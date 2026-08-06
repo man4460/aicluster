@@ -7,6 +7,7 @@ import {
   AppSectionHeader,
   appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
+import { downloadAdminExcel } from "@/lib/admin/export-excel";
 import { cn } from "@/lib/cn";
 
 type MqttHealth = {
@@ -56,6 +57,19 @@ export function MqttHealthClient() {
   const branchCount = data?.branchTopics?.length ?? 0;
   const pendingCount = data?.pendingByTopic?.length ?? 0;
 
+  function onExportExcel() {
+    downloadAdminExcel({
+      filename: "admin-mqtt-events",
+      sheetName: "เหตุการณ์",
+      headers: ["เวลา", "Topic", "ข้อความ"],
+      rows: events.map((e) => [
+        new Date(e.at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" }),
+        e.topic,
+        e.raw,
+      ]),
+    });
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <section
@@ -77,9 +91,6 @@ export function MqttHealthClient() {
                 สถานะ MQTT
               </span>
             </h1>
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[#5f5a8a]">
-              ตรวจว่า backend ฟัง broker อยู่หรือไม่ topic ที่แนบ และเหตุการณ์ล่าสุด — รีเฟรชอัตโนมัติทุก 5 วินาที
-            </p>
           </div>
         </div>
       </section>
@@ -96,26 +107,42 @@ export function MqttHealthClient() {
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           title="สรุปการเชื่อมต่อ"
-          description="สถานะหลักของบริการ MQTT ฝั่งเซิร์ฟเวอร์"
           action={
-            <button
-              type="button"
-              onClick={() => {
-                setLoading(true);
-                setManualRefresh((x) => x + 1);
-              }}
-              disabled={loading}
-              aria-busy={loading}
-              aria-label="รีเฟรชสถานะ MQTT"
-              className={cn(
-                appTemplateOutlineButtonClass,
-                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-0 px-0 sm:min-w-0 sm:gap-2 sm:px-4",
-                "border-[#dcd8f0] bg-white/80 text-[#4d47b6] shadow-sm hover:bg-white disabled:opacity-50",
-              )}
-            >
-              <IconRefresh className={cn("h-5 w-5 shrink-0", loading && "animate-spin")} />
-              <span className="hidden sm:inline">รีเฟรช</span>
-            </button>
+            <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
+              <button
+                type="button"
+                onClick={onExportExcel}
+                disabled={!data || events.length === 0}
+                aria-label="Export Excel"
+                title="Export Excel"
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-0 px-0 sm:min-w-0 sm:gap-1.5 sm:px-3",
+                  "border-[#dcd8f0] bg-white/80 text-[#4d47b6] disabled:opacity-50",
+                )}
+              >
+                <IconExcel className="h-5 w-5 shrink-0" />
+                <span className="hidden sm:inline">Excel</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoading(true);
+                  setManualRefresh((x) => x + 1);
+                }}
+                disabled={loading}
+                aria-busy={loading}
+                aria-label="รีเฟรชสถานะ MQTT"
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-0 px-0 sm:min-w-0 sm:gap-2 sm:px-4",
+                  "border-[#dcd8f0] bg-white/80 text-[#4d47b6] shadow-sm hover:bg-white disabled:opacity-50",
+                )}
+              >
+                <IconRefresh className={cn("h-5 w-5 shrink-0", loading && "animate-spin")} />
+                <span className="hidden sm:inline">รีเฟรช</span>
+              </button>
+            </div>
           }
         />
 
@@ -188,81 +215,33 @@ export function MqttHealthClient() {
       </AppDashboardSection>
 
       <AppDashboardSection tone="violet">
-        <AppSectionHeader
-          tone="violet"
-          title="เหตุการณ์ล่าสุด"
-          description="ข้อความดิบจาก broker (อ่านอย่างระมัดระวัง)"
-        />
-        <div className="mt-2 hidden overflow-hidden rounded-[1.25rem] border border-[#e8e6fc] md:block md:rounded-[2rem]">
-          {events.length === 0 ? (
-            <div className="p-4">
-              <AppEmptyState tone="violet">ยังไม่มี event ล่าสุด</AppEmptyState>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] border-collapse text-left text-sm">
-                <thead>
-                  <tr className="border-b border-[#e8e6fc] bg-[#faf9ff]/90 text-[11px] font-black uppercase tracking-wide text-[#66638c]">
-                    <th className="px-4 py-3 font-black">เวลา</th>
-                    <th className="px-4 py-3 font-black">Topic</th>
-                    <th className="min-w-[280px] px-4 py-3 font-black">ข้อความ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {events.map((e, idx) => (
-                    <tr key={`${e.at}-${idx}`} className="border-b border-[#f0eefc]/90 align-top last:border-0 hover:bg-white/60">
-                      <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-[#66638c]">
-                        {new Date(e.at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs font-semibold text-[#4d47b6]">{e.topic}</td>
-                      <td className="px-4 py-3">
-                        <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono text-xs text-[#1e1b4b]">
-                          {e.raw}
-                        </pre>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-2 space-y-3 md:hidden">
+        <AppSectionHeader tone="violet" title="เหตุการณ์ล่าสุด" />
+        <div className="mt-4">
           {events.length === 0 ? (
             <AppEmptyState tone="violet">ยังไม่มี event ล่าสุด</AppEmptyState>
           ) : (
-            events.map((e, idx) => (
-              <article
-                key={`${e.at}-${idx}`}
-                className={cn(
-                  "overflow-hidden rounded-[1.25rem] border border-white/55 bg-gradient-to-br from-white/55 via-white/30 to-indigo-50/20 p-4 shadow-[0_16px_40px_-28px_rgba(30,27,75,0.28)] backdrop-blur-xl ring-1 ring-inset ring-white/50",
-                )}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 flex-1 items-start gap-2.5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/60 bg-white/70 text-[#5b61ff] shadow-sm">
-                      <IconPulse className="h-5 w-5" />
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
+              {events.map((e, idx) => (
+                <li key={`${e.at}-${idx}`}>
+                  <article className="group flex min-w-0 max-w-full flex-col gap-2 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-gradient-to-br from-[#ecebff] to-indigo-100/40 text-[#5b61ff] shadow-sm">
+                        <IconPulse className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold tabular-nums text-[#1e1b4b]">
+                          {new Date(e.at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
+                        </p>
+                        <p className="mt-0.5 truncate font-mono text-xs font-bold text-[#4d47b6]">{e.topic}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">เวลา</p>
-                      <p className="mt-0.5 text-xs font-semibold tabular-nums text-[#1e1b4b]">
-                        {new Date(e.at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3 border-t border-white/45 pt-3">
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">Topic</p>
-                  <p className="mt-1 break-all font-mono text-xs font-bold text-[#4d47b6]">{e.topic}</p>
-                </div>
-                <div className="mt-3 rounded-[1rem] border border-white/50 bg-white/45 p-3 backdrop-blur-sm">
-                  <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-[#1e1b4b]">
-                    {e.raw}
-                  </pre>
-                </div>
-              </article>
-            ))
+                    <pre className="max-h-28 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] leading-relaxed text-[#5f5a8a]">
+                      {e.raw}
+                    </pre>
+                  </article>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </AppDashboardSection>
@@ -285,6 +264,15 @@ function IconRefresh({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
       <path d="M21 12a9 9 0 1 1-2.64-6.36" strokeLinecap="round" />
       <path d="M21 3v6h-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconExcel({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" strokeLinejoin="round" />
+      <path d="M14 3v5h5M8.5 17l3-4-3-4M12.5 9H15M12.5 17H15" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

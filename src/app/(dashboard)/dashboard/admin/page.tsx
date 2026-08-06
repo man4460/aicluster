@@ -16,7 +16,6 @@ export default function AdminHubHomePage() {
     <div className="space-y-5">
       <div>
         <h2 className="text-base font-black tracking-tight text-[#1e1b4b] sm:text-lg">เครื่องมือหลัก</h2>
-        <p className="mt-1 text-sm text-[#5f5a8a]">แตะการ์ดเพื่อเปิดหน้าจัดการ — อ่านคำอธิบายสั้น ๆ ก่อนเข้าเมนู</p>
       </div>
 
       <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3">
@@ -25,8 +24,9 @@ export default function AdminHubHomePage() {
             key={item.href}
             className={cn(
               "min-w-0",
-              /* การ์ดคี่ (5 ใบ): ใบสุดท้ายเต็มความกว้างบนมือถือ — dashboard-mobile-summary-stat-grid */
-              index === ADMIN_HUB_NAV_ITEMS.length - 1 && "col-span-2 lg:col-span-1",
+              ADMIN_HUB_NAV_ITEMS.length % 2 === 1 &&
+                index === ADMIN_HUB_NAV_ITEMS.length - 1 &&
+                "col-span-2 lg:col-span-1",
             )}
           >
             <Link

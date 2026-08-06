@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import {
   AppDashboardSection,
@@ -26,9 +27,18 @@ type UserRow = {
   tokens: number;
   subscriptionTier: string;
   subscriptionType: string;
+  avatarUrl: string | null;
   createdAt: string;
   updatedAt: string;
 };
+
+function safeAvatarSrc(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const t = url.trim();
+  if (t.startsWith("/uploads/")) return t;
+  if (t.startsWith("https://") && t.length < 512) return t;
+  return null;
+}
 
 const topUpIconBtnClass = cn(
   "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-emerald-200/90 bg-emerald-50/90 text-emerald-700 hover:bg-emerald-100 active:opacity-90",
@@ -305,9 +315,6 @@ export function UsersAdmin() {
                   จัดการผู้ใช้
                 </span>
               </h1>
-              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[#5f5a8a]">
-                สร้างบัญชี ปรับสิทธิ์ แพ็กเกจ และโทเคน — รายการด้านล่างซิงก์กับฐานข้อมูลทันที
-              </p>
             </div>
           </div>
         </div>
@@ -356,7 +363,6 @@ export function UsersAdmin() {
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           title="รายชื่อผู้ใช้"
-          description="กดปุ่มเพื่อเปิดฟอร์มเพิ่มหรือตัวกรอง — บนมือถือเป็นการ์ด เดสก์ท็อปเป็นตาราง"
           action={
             <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
               <button
@@ -532,89 +538,15 @@ export function UsersAdmin() {
           </form>
         ) : null}
 
-        {loadError ? <p className="text-sm font-medium text-rose-600">{loadError}</p> : null}
+        {loadError ? <p className="mt-4 text-sm font-medium text-rose-600">{loadError}</p> : null}
 
-        <div className="mt-2 hidden overflow-hidden rounded-[1.25rem] border border-[#e8e6fc] md:block md:rounded-[2rem]">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-[#e8e6fc] bg-[#faf9ff]/90 text-[11px] font-black uppercase tracking-wide text-[#66638c]">
-                  <th className="px-4 py-3 font-black">ผู้ใช้</th>
-                  <th className="px-4 py-3 font-black">อีเมล</th>
-                  <th className="px-4 py-3 font-black">โทเคน</th>
-                  <th className="px-4 py-3 font-black">แพ็กเกจ</th>
-                  <th className="px-4 py-3 font-black">บทบาท</th>
-                  <th className="px-4 py-3 font-black">สร้างเมื่อ</th>
-                  <th className="px-4 py-3 text-right font-black">การทำงาน</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-10">
-                      <TableSkeletonRows />
-                    </td>
-                  </tr>
-                ) : users.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="p-4">
-                      <AppEmptyState tone="violet">ยังไม่มีผู้ใช้ในระบบ</AppEmptyState>
-                    </td>
-                  </tr>
-                ) : filteredUsers.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="p-4">
-                      <div className="rounded-xl border border-dashed border-[#d8d6ec] bg-[#faf9ff] px-4 py-8 text-center">
-                        <p className="text-sm font-medium text-[#66638c]">ไม่พบผู้ใช้ตามตัวกรอง</p>
-                        <button
-                          type="button"
-                          onClick={clearFilters}
-                          className={cn(appTemplateOutlineButtonClass, "mt-4 inline-flex min-h-[40px] items-center px-4")}
-                        >
-                          ล้างตัวกรอง
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredUsers.map((u) => (
-                    <tr
-                      key={u.id}
-                      className="border-b border-[#f0eefc]/90 transition-colors last:border-0 hover:bg-white/60"
-                    >
-                      <td className="px-4 py-3 font-bold text-[#1e1b4b]">{u.username}</td>
-                      <td className="max-w-[200px] truncate px-4 py-3 text-[#5f5a8a]">{u.email}</td>
-                      <td className="px-4 py-3 font-black tabular-nums text-amber-800">{u.tokens}</td>
-                      <td className="px-4 py-3 text-xs">
-                        <div className="font-bold text-[#2e2a58]">{u.subscriptionType ?? "DAILY"}</div>
-                        <div className="text-[#66638c]">{u.subscriptionTier}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <RoleBadge role={u.role} />
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-[#66638c]">
-                        {new Date(u.createdAt).toLocaleString("th-TH")}
-                      </td>
-                      <td className="px-4 py-3">
-                        <UserRowActionsDesktop
-                          user={u}
-                          onEdit={() => openEdit(u)}
-                          onTopUp={() => openTopUp(u)}
-                          onQuick={(n) => quickTopUp(u, n)}
-                          onDelete={() => onDelete(u.id)}
-                        />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="mt-2 space-y-3 md:hidden">
+        <div className="mt-4">
           {loading ? (
-            <MobileCardSkeleton />
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <li key={i} className="h-14 animate-pulse rounded-xl bg-[#ecebff]/70" />
+              ))}
+            </ul>
           ) : users.length === 0 ? (
             <AppEmptyState tone="violet">ยังไม่มีผู้ใช้ในระบบ</AppEmptyState>
           ) : filteredUsers.length === 0 ? (
@@ -629,64 +561,48 @@ export function UsersAdmin() {
               </button>
             </div>
           ) : (
-            filteredUsers.map((u) => (
-              <article
-                key={u.id}
-                className={cn(
-                  "overflow-hidden rounded-[1.25rem] border border-white/55 bg-gradient-to-br from-white/55 via-white/30 to-indigo-50/20 p-4 shadow-[0_16px_40px_-28px_rgba(30,27,75,0.28)] backdrop-blur-xl ring-1 ring-inset ring-white/50",
-                )}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/60 bg-white/70 text-[#5b61ff] shadow-sm">
-                      <IconUserCard className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-black text-[#1e1b4b]">{u.username}</p>
-                      <p className="mt-0.5 truncate text-xs text-[#5f5a8a]">{u.email}</p>
-                    </div>
-                  </div>
-                  <RoleBadge role={u.role} />
-                </div>
-
-                <div className="mt-4 space-y-2 rounded-[1rem] border border-white/50 bg-white/40 px-3 py-3 backdrop-blur-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">โทเคน</span>
-                    <span className="text-lg font-black tabular-nums text-amber-800">{u.tokens}</span>
-                  </div>
-                  <div className="flex items-start justify-between gap-3 border-t border-white/50 pt-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">แพ็กเกจ</span>
-                    <span className="text-right text-xs font-semibold leading-snug text-[#2e2a58]">
-                      {u.subscriptionType ?? "DAILY"}
-                      <span className="block font-normal text-[#66638c]">{u.subscriptionTier}</span>
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 border-t border-white/50 pt-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">สร้างเมื่อ</span>
-                    <span className="text-right text-[11px] font-semibold tabular-nums text-[#66638c]">
-                      {new Date(u.createdAt).toLocaleString("th-TH")}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-3 flex flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
-                  {[10, 50, 100].map((n) => (
-                    <button key={n} type="button" onClick={() => quickTopUp(u, n)} className={quickChipClass}>
-                      +{n}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-3 flex items-center justify-end gap-1 border-t border-white/45 pt-3">
-                  <UserRowIconActions
-                    username={u.username}
-                    onTopUp={() => openTopUp(u)}
-                    onEdit={() => openEdit(u)}
-                    onDelete={() => onDelete(u.id)}
-                  />
-                </div>
-              </article>
-            ))
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
+              {filteredUsers.map((u) => {
+                const avatar = safeAvatarSrc(u.avatarUrl);
+                const subType = u.subscriptionType ?? "DAILY";
+                return (
+                  <li key={u.id}>
+                    <article className="group flex min-w-0 max-w-full flex-col gap-2 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <UserAvatarThumb src={avatar} username={u.username} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <p className="truncate text-sm font-black text-[#1e1b4b]">{u.username}</p>
+                            <RoleBadge role={u.role} />
+                          </div>
+                          <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{u.email}</p>
+                          <p className="mt-0.5 truncate text-[11px] font-bold tabular-nums text-amber-800">
+                            {u.tokens.toLocaleString()} โทเคน · {subType} · {u.subscriptionTier}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 border-t border-[#f0eefc]/90 pt-2">
+                        <div className="flex flex-wrap gap-1">
+                          {[10, 50, 100].map((n) => (
+                            <button key={n} type="button" onClick={() => void quickTopUp(u, n)} className={quickChipClass}>
+                              +{n}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <UserRowIconActions
+                            username={u.username}
+                            onTopUp={() => openTopUp(u)}
+                            onEdit={() => openEdit(u)}
+                            onDelete={() => void onDelete(u.id)}
+                          />
+                        </div>
+                      </div>
+                    </article>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
       </AppDashboardSection>
@@ -867,55 +783,17 @@ export function UsersAdmin() {
   );
 }
 
-function UserRowActionsDesktop({
-  user,
-  onEdit,
-  onTopUp,
-  onQuick,
-  onDelete,
-}: {
-  user: UserRow;
-  onEdit: () => void;
-  onTopUp: () => void;
-  onQuick: (n: number) => void;
-  onDelete: () => void;
-}) {
+function UserAvatarThumb({ src, username }: { src: string | null; username: string }) {
+  const initial = username.trim().charAt(0).toUpperCase() || "?";
   return (
-    <div className="flex flex-wrap items-center justify-end gap-1.5">
-      <div className="mr-1 flex flex-wrap justify-end gap-1">
-        {[10, 50, 100].map((n) => (
-          <button key={n} type="button" onClick={() => onQuick(n)} className={quickChipClass}>
-            +{n}
-          </button>
-        ))}
-      </div>
-      <button
-        type="button"
-        className={topUpIconBtnClass}
-        aria-label={`เติมโทเคน ${user.username}`}
-        title="เติมโทเคน"
-        onClick={onTopUp}
-      >
-        <IconCoins className="h-4 w-4" />
-      </button>
-      <button
-        type="button"
-        className={assetRowEditIconButtonClass}
-        aria-label={`แก้ไข ${user.username}`}
-        title="แก้ไข"
-        onClick={onEdit}
-      >
-        <IconRowEdit className="h-4 w-4" />
-      </button>
-      <button
-        type="button"
-        className={assetRowRemoveIconButtonClass}
-        aria-label={`ลบ ${user.username}`}
-        title="ลบ"
-        onClick={onDelete}
-      >
-        <IconRowRemove className="h-4 w-4" />
-      </button>
+    <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-white/70 bg-gradient-to-br from-[#ecebff] to-indigo-100/40 shadow-sm">
+      {src ? (
+        <Image src={src} alt="" fill sizes="44px" className="object-cover" unoptimized />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-sm font-black text-[#4d47b6]" aria-hidden>
+          {initial}
+        </div>
+      )}
     </div>
   );
 }
@@ -986,44 +864,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function TableSkeletonRows() {
-  return (
-    <div className="space-y-2 p-2">
-      {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="h-10 animate-pulse rounded-lg bg-[#ecebff]/60" />
-      ))}
-    </div>
-  );
-}
-
-function MobileCardSkeleton() {
-  return (
-    <div className="space-y-3">
-      {[0, 1].map((i) => (
-        <div
-          key={i}
-          className="h-40 animate-pulse rounded-[1.25rem] border border-white/40 bg-gradient-to-br from-white/40 to-indigo-50/20"
-        />
-      ))}
-    </div>
-  );
-}
-
 function IconUsersHero({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" strokeLinecap="round" />
       <circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconUserCard({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" strokeLinecap="round" />
-      <circle cx="12" cy="7" r="4" />
     </svg>
   );
 }

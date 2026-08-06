@@ -158,7 +158,7 @@ export function DrinkPosQrPosterClient({
             ลูกค้าสแกนแล้วกรอกเบอร์ — ดูจำนวนแต้มและของรางวัล (แลกฟรีที่เคาน์เตอร์)
           </p>
           {portalUrl ? (
-            <p className="mt-2 break-all text-left text-[10px] font-semibold text-[#5b61ff]">{portalUrl}</p>
+            <p className="mt-2 break-all text-left text-[10px] font-semibold text-[#0000BF]">{portalUrl}</p>
           ) : null}
         </>
       ) : (

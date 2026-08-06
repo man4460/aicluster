@@ -3,18 +3,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState, Suspense } from "react";
 import { DemoSessionBanner } from "@/components/dashboard/DemoSessionBanner";
 import { LogoutButton, LogoutIconButton } from "@/components/layout/LogoutButton";
 import { PwaInstallHelpButton } from "@/components/pwa/PwaInstallHelpButton";
 import { dashboardNavIconForHref } from "@/components/layout/dashboard-nav-icons";
 import { MawellLogo } from "@/components/layout/MawellLogo";
+import { appDashboardBrandGradientBarClass, appDashboardBrandGradientFillClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enums";
 import {
   buildDashboardNavGroups,
   canonicalDashboardModuleLinkHref,
-  isSubscribedModuleLink,
   type DashboardNavGroup,
   type DashboardNavGroupId,
 } from "@/lib/dashboard-nav";
@@ -28,6 +28,40 @@ import {
   MODULE_GROUP_TIER_NAME,
   UI_VISIBLE_MAX_MODULE_GROUP,
 } from "@/lib/modules/config";
+import { BuildingPosHeaderBarNav, BuildingPosHeaderExpandButton } from "@/systems/building-pos/components/BuildingPosHeaderBarNav";
+import {
+  BUILDING_POS_HEADER_COLLAPSE_EVENT,
+  isBuildingPosModulePath,
+  readBuildingPosHeaderCollapsed,
+  writeBuildingPosHeaderCollapsed,
+} from "@/systems/building-pos/building-pos-nav";
+import { DrinkPosHeaderBarNav, DrinkPosHeaderExpandButton } from "@/systems/drink-pos/components/DrinkPosHeaderBarNav";
+import {
+  DRINK_POS_HEADER_COLLAPSE_EVENT,
+  isDrinkPosModulePath,
+  readDrinkPosHeaderCollapsed,
+  writeDrinkPosHeaderCollapsed,
+} from "@/systems/drink-pos/lib/drink-pos-module-nav";
+import {
+  FootballTurfHeaderBarNav,
+  FootballTurfHeaderExpandButton,
+} from "@/systems/football-turf/components/FootballTurfHeaderBarNav";
+import {
+  FOOTBALL_TURF_HEADER_COLLAPSE_EVENT,
+  isFootballTurfModulePath,
+  readFootballTurfHeaderCollapsed,
+  writeFootballTurfHeaderCollapsed,
+} from "@/systems/football-turf/football-turf-module-nav";
+import {
+  AdminHubHeaderBarNav,
+  AdminHubHeaderExpandButton,
+} from "@/components/admin/AdminHubHeaderBarNav";
+import {
+  ADMIN_HUB_HEADER_COLLAPSE_EVENT,
+  isAdminHubPath,
+  readAdminHubHeaderCollapsed,
+  writeAdminHubHeaderCollapsed,
+} from "@/lib/admin-hub-nav";
 
 /** localStorage — ซ่อนแถบเมนูซ้ายบนเดสก์ท็อป (ใช้ทุกหน้าแดชบอร์ดที่ผ่าน DashboardShell) */
 const DASHBOARD_SIDEBAR_COLLAPSED_KEY = "mawell-dashboard-sidebar-collapsed";
@@ -55,17 +89,32 @@ function isNavActive(href: string, pathname: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function shouldUseSystemFocusLayout(pathname: string): boolean {
-  const basicRoutes = [
-    "/dashboard",
+/**
+ * อยู่หน้าโมดูลงาน (ไม่ใช่หน้าแกนระบบ) — ใช้ย่อ sidebar หลัก
+ * สำคัญ: `/dashboard` ต้องเทียบ exact เท่านั้น
+ */
+function isModuleWorkspacePath(pathname: string): boolean {
+  if (pathname === "/dashboard") return false;
+  if (isChatAiDashboardPath(pathname)) return false;
+
+  const basicPrefixes = [
     "/dashboard/profile",
     "/dashboard/plans",
     "/dashboard/chat",
-    CHAT_AI_DASHBOARD_HREF,
     "/dashboard/modules",
     "/dashboard/admin",
-  ];
-  return !basicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+  ] as const;
+
+  for (const route of basicPrefixes) {
+    if (pathname === route || pathname.startsWith(`${route}/`)) return false;
+  }
+
+  return pathname.startsWith("/dashboard/");
+}
+
+/** เลย์เอาต์โฟกัสเต็ม (ซ่อนปุ่ม sidebar + ใช้เมนู dropdown) — ปิดไว้ ให้รูปแบบเดิม + ย่อ sidebar พอ */
+function shouldUseSystemFocusLayout(_pathname: string): boolean {
+  return false;
 }
 
 function SidebarNavLink({
@@ -83,19 +132,22 @@ function SidebarNavLink({
     <Link
       href={resolvedHref}
       className={cn(
-        "group relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-all duration-300",
+        "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[13px] font-black transition-all duration-300",
         active
-          ? "bg-white/15 text-white shadow-[0_4px_12px_-2px_rgba(0,0,0,0.15)] ring-1 ring-white/30"
-          : "text-white/65 hover:bg-white/10 hover:text-white",
+          ? cn(appDashboardBrandGradientFillClass, "text-white shadow-[0_18px_30px_-22px_rgba(91,97,255,0.55)]")
+          : "bg-white/70 text-slate-600 ring-1 ring-slate-200/60 hover:bg-white",
       )}
     >
-      {active && (
-        <span className="absolute left-0 top-1/2 h-5 w-1.5 -translate-y-1/2 rounded-r-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
-      )}
-      <div className={cn("transition-all duration-300 group-hover:scale-110 group-hover:rotate-3", active ? "text-white scale-110" : "text-white/50")}>
+      <span
+        className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1",
+          active ? "bg-white/15 ring-white/20" : "bg-slate-50 text-slate-500 ring-slate-200",
+        )}
+        aria-hidden
+      >
         {dashboardNavIconForHref(resolvedHref)}
-      </div>
-      <span className="min-w-0 leading-tight">{label}</span>
+      </span>
+      <span className="min-w-0 flex-1 truncate leading-tight">{label}</span>
     </Link>
   );
 }
@@ -118,7 +170,7 @@ function DrawerNavLink({
       href={resolvedHref}
       onClick={onNavigate}
       className={cn(
-        "group relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-all duration-300",
+        "group relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[12.5px] font-semibold transition-all duration-300",
         active
           ? "bg-white/15 text-white shadow-[0_4px_12px_-2px_rgba(0,0,0,0.15)] ring-1 ring-white/30"
           : "text-white/65 hover:bg-white/10 hover:text-white",
@@ -174,27 +226,33 @@ function NavCollapsibleGroup({
   variant: "sidebar" | "drawer";
   onDrawerNavigate?: () => void;
 }) {
-  const isBasic = group.id === "basic";
-  const cardClass = "border border-white/10 bg-white/10 backdrop-blur-xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.2)]";
-  const headerHoverClass = "hover:bg-white/15";
-  const titleClass = "text-white";
-  const badgeClass = "border border-white/30 bg-white/20 text-[10px] text-white/90 font-bold tracking-tight";
+  const isDrawer = variant === "drawer";
+  const cardClass = isDrawer
+    ? "border border-white/10 bg-white/10 backdrop-blur-xl shadow-[0_4px_20px_-10px_rgba(0,0,0,0.2)]"
+    : "border border-[#e8e6fc]/70 bg-gradient-to-br from-white/70 via-white/50 to-[#f5f3ff]/45 shadow-[0_10px_28px_-20px_rgba(30,27,75,0.22)] backdrop-blur-xl";
+  const headerHoverClass = isDrawer ? "hover:bg-white/15" : "hover:bg-white/75";
+  const titleClass = isDrawer ? "text-white" : "text-[#2e2a58]";
+  const badgeClass = isDrawer
+    ? "border border-white/30 bg-white/20 text-[10px] text-white/90 font-bold tracking-tight"
+    : "border border-[#0000BF]/20 bg-[#0000BF]/10 text-[10px] text-[#2e2a58] font-bold tracking-tight";
+  const ringFocus = isDrawer ? "focus-visible:ring-white/40" : "focus-visible:ring-[#5b61ff]/30";
 
   return (
-    <div className={cn("rounded-[2rem] p-1.5 transition-all duration-300", cardClass)}>
+    <div className={cn("rounded-[1.15rem] p-1.5 transition-all duration-300", cardClass)}>
       <button
         type="button"
         suppressHydrationWarning
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded-xl px-2.5 py-2.5 text-left outline-none transition-all duration-300 focus-visible:ring-2 focus-visible:ring-white/40",
+          "flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left outline-none transition-all duration-300 focus-visible:ring-2",
           headerHoverClass,
+          ringFocus,
         )}
         aria-expanded={open}
         onClick={onToggle}
       >
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5">
-            <span className={cn("line-clamp-1 text-[13.5px] font-bold leading-none tracking-tight", titleClass)}>
+            <span className={cn("line-clamp-1 text-[13px] font-bold leading-none tracking-tight", titleClass)}>
               {group.label}
             </span>
             <span className={cn("inline-flex rounded-lg border px-2 py-0.5", badgeClass)}>
@@ -202,10 +260,18 @@ function NavCollapsibleGroup({
             </span>
           </div>
         </div>
-        <ChevronNavExpand expanded={open} />
+        <span
+          className={cn(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all",
+            isDrawer ? "bg-white/10" : "bg-white/80 ring-1 ring-[#e8e6fc]/80",
+          )}
+          aria-hidden
+        >
+          <ChevronNavExpand expanded={open} />
+        </span>
       </button>
       {open ? (
-        <div className="mt-1.5 flex flex-col gap-1.5 px-0.5">
+        <div className="mt-2 flex flex-col gap-1.5 px-1">
           {group.items.map((item, idx) => {
             const key = "href" in item ? item.href : `mod-${idx}`;
             return variant === "sidebar" ? (
@@ -274,42 +340,58 @@ export function DashboardShell({
     !moduleStaffKiosk && (pathname === "/dashboard/massage" || pathname.startsWith("/dashboard/massage/"));
   const moduleDashboardCompact =
     barberDashboardCompact || laundryDashboardCompact || massageDashboardCompact;
+  /** มือถือ: ในโมดูลหรือศูนย์แอดมิน ซ่อนเมนูหลักด้านล่าง — ให้ใช้เมนูโมดูล/แอดมินแทน */
+  const onAdminHub = isAdminHubPath(pathname);
+  const hideMainMobileBottomNav =
+    moduleStaffKiosk || isModuleWorkspacePath(pathname) || onAdminHub;
   const [drawerOpen, setDrawerOpen] = useState(false);
   /** เดสก์ท็อป: ซ่อน sidebar เพื่อให้พื้นที่เนื้อหากว้างขึ้น — โหลดจาก localStorage หลัง mount */
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [moduleMenuOpen, setModuleMenuOpen] = useState(false);
+  const [drinkPosHeaderCollapsed, setDrinkPosHeaderCollapsed] = useState(false);
+  const [buildingPosHeaderCollapsed, setBuildingPosHeaderCollapsed] = useState(false);
+  const [footballTurfHeaderCollapsed, setFootballTurfHeaderCollapsed] = useState(false);
+  const [adminHubHeaderCollapsed, setAdminHubHeaderCollapsed] = useState(false);
   const accountWrapRef = useRef<HTMLDivElement>(null);
+  const moduleMenuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
 
   const navGroups = buildDashboardNavGroups(role, serviceModules);
   const systemFocusLayout = shouldUseSystemFocusLayout(pathname);
-  const mobileNavCandidates = navGroups
-    .flatMap((group) => group.items)
+  const onDrinkPosModule = isDrinkPosModulePath(pathname);
+  const onBuildingPosModule = isBuildingPosModulePath(pathname);
+  const onFootballTurfModule = isFootballTurfModulePath(pathname);
+  const showDrinkPosHeaderBar = onDrinkPosModule && drinkPosHeaderCollapsed;
+  const showBuildingPosHeaderBar = onBuildingPosModule && buildingPosHeaderCollapsed;
+  const showFootballTurfHeaderBar = onFootballTurfModule && footballTurfHeaderCollapsed;
+  const showAdminHubHeaderBar = onAdminHub && adminHubHeaderCollapsed;
+  const mainNavGroups = navGroups.filter((group) => group.id === "basic");
+  const mainMenuItems = mainNavGroups[0]?.items ?? [];
+  const mobileNavCandidates = mainMenuItems
     .map((item) => {
       const resolvedHref = canonicalDashboardModuleLinkHref(resolveDashboardNavLinkHref(item.href));
       return { href: resolvedHref, label: item.label };
     })
     .filter((item, index, arr) => arr.findIndex((x) => x.href === item.href) === index);
-  const mobilePriorityHrefs = [
-    "/dashboard",
-    "/dashboard/chat",
-    CHAT_AI_DASHBOARD_HREF,
-    "/dashboard/profile",
-  ].map((href) => canonicalDashboardModuleLinkHref(resolveDashboardNavLinkHref(href)));
-  const mobileNavItems = [
-    ...mobilePriorityHrefs
-      .map((href) => mobileNavCandidates.find((item) => item.href === href))
-      .filter((x): x is { href: string; label: string } => Boolean(x)),
-    ...mobileNavCandidates.filter((item) => !mobilePriorityHrefs.includes(item.href)),
-  ].slice(0, 4);
+  /** เมนูล่างมือถือ — ครบเมนูหลักสูงสุด 6 รายการ (ลำดับเดียวกับ sidebar) */
+  const mobileNavItems = [...mobileNavCandidates].slice(0, 6);
   const activeMobileNavItem = mobileNavCandidates.find((item) => isNavActive(item.href, pathname));
-  if (
-    activeMobileNavItem &&
-    !mobileNavItems.some((item) => item.href === activeMobileNavItem.href) &&
-    mobileNavItems.length > 0
-  ) {
-    mobileNavItems[mobileNavItems.length - 1] = activeMobileNavItem;
+  if (activeMobileNavItem && !mobileNavItems.some((item) => item.href === activeMobileNavItem.href)) {
+    if (mobileNavItems.length >= 6) {
+      mobileNavItems[mobileNavItems.length - 1] = activeMobileNavItem;
+    } else {
+      mobileNavItems.push(activeMobileNavItem);
+    }
   }
+  const moduleMenuGroups = navGroups.filter((group) => group.items.length > 0);
+  const activeModuleMenuItem =
+    moduleMenuGroups
+      .flatMap((group) => group.items)
+      .find((item) =>
+        isNavActive(canonicalDashboardModuleLinkHref(resolveDashboardNavLinkHref(item.href)), pathname),
+      ) ?? null;
+  const moduleMenuLabel = activeModuleMenuItem?.label ?? "เมนูหลัก";
 
   const [groupOpen, setGroupOpen] = useState<Record<string, boolean>>({
     basic: true,
@@ -326,17 +408,6 @@ export function DashboardShell({
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
   const packageLabel = headerPackageLabel(subscriptionType, subscriptionTier);
 
-  useEffect(() => {
-    try {
-      if (typeof window === "undefined") return;
-      if (window.localStorage.getItem(DASHBOARD_SIDEBAR_COLLAPSED_KEY) === "1") {
-        setSidebarCollapsed(true);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   const toggleDesktopSidebar = useCallback(() => {
     setSidebarCollapsed((prev) => {
       const next = !prev;
@@ -350,6 +421,88 @@ export function DashboardShell({
       return next;
     });
   }, []);
+
+  useEffect(() => {
+    if (pathname === "/dashboard") {
+      setSidebarCollapsed(false);
+      try {
+        window.localStorage.setItem(DASHBOARD_SIDEBAR_COLLAPSED_KEY, "0");
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    /** เข้าโมดูล — ย่อ sidebar หลักไว้ก่อน (ยังกดปุ่มเปิดได้อยู่) */
+    if (isModuleWorkspacePath(pathname)) {
+      setSidebarCollapsed(true);
+      return;
+    }
+    try {
+      setSidebarCollapsed(window.localStorage.getItem(DASHBOARD_SIDEBAR_COLLAPSED_KEY) === "1");
+    } catch {
+      setSidebarCollapsed(false);
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!onDrinkPosModule) {
+      setDrinkPosHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setDrinkPosHeaderCollapsed(readDrinkPosHeaderCollapsed());
+    sync();
+    window.addEventListener(DRINK_POS_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(DRINK_POS_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onDrinkPosModule]);
+
+  useEffect(() => {
+    if (!onBuildingPosModule) {
+      setBuildingPosHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setBuildingPosHeaderCollapsed(readBuildingPosHeaderCollapsed());
+    sync();
+    window.addEventListener(BUILDING_POS_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(BUILDING_POS_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onBuildingPosModule]);
+
+  useEffect(() => {
+    if (!onFootballTurfModule) {
+      setFootballTurfHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setFootballTurfHeaderCollapsed(readFootballTurfHeaderCollapsed());
+    sync();
+    window.addEventListener(FOOTBALL_TURF_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(FOOTBALL_TURF_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onFootballTurfModule]);
+
+  useEffect(() => {
+    if (!onAdminHub) {
+      setAdminHubHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setAdminHubHeaderCollapsed(readAdminHubHeaderCollapsed());
+    sync();
+    window.addEventListener(ADMIN_HUB_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(ADMIN_HUB_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onAdminHub]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -381,6 +534,22 @@ export function DashboardShell({
     };
   }, [accountOpen]);
 
+  useEffect(() => {
+    if (!moduleMenuOpen) return;
+    function onDoc(e: MouseEvent) {
+      if (!moduleMenuRef.current?.contains(e.target as Node)) setModuleMenuOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setModuleMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [moduleMenuOpen]);
+
   return (
     <div className="flex min-h-[100dvh] flex-col text-[#2e2a58]">
       {/* แถบบน — แก้ว โค้งมนเทียบเปลือกโมดูล / drawer (rounded-[2.5rem]) */}
@@ -391,7 +560,7 @@ export function DashboardShell({
           aria-hidden
         />
         <div className="relative z-[1] w-full px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-4 sm:pb-3 sm:pt-4">
-        <div className="flex h-14 w-full min-w-0 items-center gap-2 rounded-[2.5rem] border border-white/30 bg-gradient-to-r from-[#4f2f9a]/90 via-[#5b3ac2]/85 to-[#ec4899]/85 px-3 text-white shadow-[0_20px_40px_-15px_rgba(61,29,125,0.7)] backdrop-blur-xl sm:gap-3 sm:px-6 lg:px-8">
+        <div className="flex h-12 w-full min-w-0 items-center gap-2 rounded-[1.15rem] border border-white/30 bg-gradient-to-r from-[#4f2f9a]/90 via-[#5b3ac2]/85 to-[#ec4899]/85 px-3 text-white shadow-[0_20px_40px_-15px_rgba(61,29,125,0.7)] backdrop-blur-xl sm:h-14 sm:gap-2.5 sm:px-5 lg:px-6">
           <button
             type="button"
             suppressHydrationWarning
@@ -432,22 +601,189 @@ export function DashboardShell({
             <MawellLogo size="sm" />
           </Link>
 
-          {/* กลาง: บรรทัดเดียว + truncate บนมือถือ — ไม่ดันกลุ่มปุ่มขวา */}
+          {systemFocusLayout ? (
+            <div className="relative hidden shrink-0 md:block" ref={moduleMenuRef}>
+              <button
+                type="button"
+                suppressHydrationWarning
+                className="inline-flex h-10 max-w-[14rem] items-center gap-2 rounded-lg border border-white/35 bg-white/14 px-3 text-sm font-black text-white shadow-sm transition-all hover:bg-white/22 active:scale-95"
+                aria-expanded={moduleMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => setModuleMenuOpen((open) => !open)}
+              >
+                <span className="truncate">{moduleMenuLabel}</span>
+                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              {moduleMenuOpen ? (
+                <div
+                  className="absolute left-0 top-full z-40 mt-2 w-[min(24rem,calc(100vw-3rem))] overflow-hidden rounded-xl border border-slate-200 bg-white/96 p-2 shadow-[0_24px_60px_-36px_rgba(15,23,42,0.38)] backdrop-blur-2xl"
+                  role="menu"
+                >
+                  <div className="max-h-[70vh] overflow-y-auto pr-1">
+                    {moduleMenuGroups.map((group) => (
+                      <div key={group.id} className="pb-2 last:pb-0">
+                        <p className="px-2.5 pb-1 pt-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                          {group.label}
+                        </p>
+                        <div className="space-y-1">
+                          {group.items.map((item) => {
+                            const href = canonicalDashboardModuleLinkHref(resolveDashboardNavLinkHref(item.href));
+                            const active = isNavActive(href, pathname);
+                            return (
+                              <Link
+                                key={`${group.id}-${href}`}
+                                href={href}
+                                role="menuitem"
+                                className={cn(
+                                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition-colors",
+                                  active
+                                    ? cn(appDashboardBrandGradientFillClass, "text-white")
+                                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                                )}
+                                onClick={() => setModuleMenuOpen(false)}
+                              >
+                                <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1", active ? "bg-white/10 ring-white/15" : "bg-slate-50 text-slate-500 ring-slate-200")}>
+                                  {dashboardNavIconForHref(href)}
+                                </span>
+                                <span className="truncate">{item.label}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* กลาง: เมนูโมดูลเมื่อย่อหัว (เดสก์ท็อป) / โทเคน · มือถือไม่โชว์แท็บใน header */}
           <div className="min-w-0 flex-1 overflow-hidden px-0.5 sm:px-1">
-            <p
-              className="truncate text-left text-[11px] leading-snug text-white/95 sm:text-[13.5px] sm:leading-normal md:text-right"
-              title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-            >
-              <span className="tabular-nums font-black">{tokens.toLocaleString()}</span> <span className="font-medium text-white/70">โทเคน</span>
-              <span className="text-white/30 mx-1.5" aria-hidden>|</span>
-              <span className="font-bold text-white">{packageLabel}</span>
-              <span className="text-white/30 mx-1.5" aria-hidden>|</span>
-              <span className="font-medium text-white/90">{displayName}</span>
-            </p>
+            {showDrinkPosHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <DrinkPosHeaderBarNav
+                    pathname={pathname}
+                    onExpand={() => writeDrinkPosHeaderCollapsed(false)}
+                  />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <DrinkPosHeaderExpandButton onExpand={() => writeDrinkPosHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showBuildingPosHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <BuildingPosHeaderBarNav onExpand={() => writeBuildingPosHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <BuildingPosHeaderExpandButton onExpand={() => writeBuildingPosHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showFootballTurfHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <Suspense fallback={null}>
+                    <FootballTurfHeaderBarNav onExpand={() => writeFootballTurfHeaderCollapsed(false)} />
+                  </Suspense>
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <FootballTurfHeaderExpandButton onExpand={() => writeFootballTurfHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showAdminHubHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <AdminHubHeaderBarNav onExpand={() => writeAdminHubHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <AdminHubHeaderExpandButton onExpand={() => writeAdminHubHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : (
+              <p
+                className="truncate text-left text-[11px] leading-snug text-white/95 sm:text-[13.5px] sm:leading-normal md:text-right"
+                title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+              >
+                <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                <span className="font-medium text-white/70">โทเคน</span>
+                <span className="mx-1.5 text-white/30" aria-hidden>
+                  |
+                </span>
+                <span className="font-bold text-white">{packageLabel}</span>
+                <span className="mx-1.5 text-white/30" aria-hidden>
+                  |
+                </span>
+                <span className="font-medium text-white/90">{displayName}</span>
+              </p>
+            )}
           </div>
 
           {/* ขวา: ไม่ wrap — โปรไฟล์ + logout เรียงแนวนอนเสมอ */}
-          <div className="flex shrink-0 flex-nowrap items-center gap-1.5 border-l border-white/20 pl-2 sm:gap-2 sm:pl-4">
+          <div className="flex shrink-0 flex-nowrap items-center gap-1.5 border-l border-white/20 pl-2.5 sm:gap-2 sm:pl-3.5">
             <PwaInstallHelpButton />
             <div className="hidden shrink-0 md:block">
               {avatarUrl ? (
@@ -523,7 +859,7 @@ export function DashboardShell({
 
       <div
         className={cn(
-          "flex min-h-0 flex-1 gap-3 pb-[max(5rem,calc(5rem+env(safe-area-inset-bottom,0px)))] pt-2 sm:gap-4 sm:pb-4",
+          "flex min-h-0 flex-1 gap-0 pb-[max(5.75rem,calc(5.75rem+env(safe-area-inset-bottom,0px)))] pt-2 md:pb-4",
           moduleDashboardCompact ? "max-md:px-2 sm:px-4" : "px-3 sm:px-4",
           moduleStaffKiosk &&
             "!gap-0 !px-0 !pt-0 !pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:!px-0 sm:!pb-4",
@@ -532,27 +868,30 @@ export function DashboardShell({
         {/* Sidebar — แก้ว โค้งมนเทียบแถบบน / drawer */}
         <aside
           className={cn(
-            "hidden w-[15.5rem] shrink-0 flex-col overflow-hidden rounded-[2.5rem] border border-white/15 bg-gradient-to-b from-[#4f2f9a] via-[#5b3ac2] to-[#ec4899] text-white shadow-[0_18px_42px_-24px_rgba(40,16,97,0.75)] md:flex",
+            "hidden w-[264px] shrink-0 flex-col overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 bg-white/78 text-[#2e2a58] shadow-[0_20px_48px_-30px_rgba(30,27,75,0.18)] ring-1 ring-white/60 backdrop-blur-2xl md:flex md:my-6 lg:my-8",
             sidebarCollapsed && "md:!hidden",
             (systemFocusLayout || moduleStaffKiosk) && "md:hidden",
-            moduleStaffKiosk && "!hidden",
+            moduleStaffKiosk && "!hidden !my-0",
           )}
           aria-label="เมนูหลัก"
         >
-          <nav className="flex flex-1 flex-col gap-3.5 overflow-y-auto p-2.5 pt-3" aria-label="เมนูหลัก">
-            {navGroups.map((group) => (
-              <NavCollapsibleGroup
-                key={group.id}
-                group={group}
-                open={groupOpen[group.id] ?? true}
-                onToggle={() => toggleGroup(group.id)}
-                pathname={pathname}
-                variant="sidebar"
-              />
+          <div className="p-3">
+            <div className={cn("h-1.5 w-full rounded-full", appDashboardBrandGradientBarClass)} aria-hidden />
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <p className="text-[11px] font-black tracking-tight text-[#2e2a58]">เมนูหลัก</p>
+              <span className="inline-flex h-6 items-center rounded-lg border border-[#0000BF]/15 bg-[#0000BF]/10 px-2 text-[11px] font-black text-[#2e2a58]">
+                {mainMenuItems.length}
+              </span>
+            </div>
+          </div>
+
+          <nav className="flex flex-1 flex-col gap-2 overflow-y-auto px-3 pb-3" aria-label="เมนูหลัก">
+            {mainMenuItems.map((item) => (
+              <SidebarNavLink key={item.href} href={item.href} pathname={pathname} label={item.label} />
             ))}
           </nav>
-          <div className="border-t border-white/20 bg-black/10 p-3">
-            <p className="truncate text-xs text-white/80" title={username}>
+          <div className="border-t border-slate-200/70 bg-white/70 p-3">
+            <p className="truncate text-xs text-slate-500" title={username}>
               {username}
             </p>
             <LogoutButton className="mt-2 w-full justify-center text-sm" />
@@ -572,7 +911,7 @@ export function DashboardShell({
               />
               <div
                 id={menuId}
-                className="fixed bottom-3 left-3 top-[4.25rem] z-50 flex w-[min(100vw-2.5rem,17.5rem)] flex-col overflow-hidden rounded-[2.5rem] border border-white/15 bg-gradient-to-b from-[#4f2f9a] via-[#5b3ac2] to-[#ec4899] text-white shadow-2xl md:hidden"
+                className="fixed bottom-3 left-3 top-[4.25rem] z-50 flex w-[min(100vw-2.5rem,17.5rem)] flex-col overflow-hidden rounded-[1.15rem] border border-white/15 bg-gradient-to-b from-[#4f2f9a] via-[#5b3ac2] to-[#ec4899] text-white shadow-2xl md:hidden"
               >
                 <div className="flex h-12 items-center justify-between border-b border-white/25 px-3">
                   <MawellLogo size="md" />
@@ -587,7 +926,7 @@ export function DashboardShell({
                   </button>
                 </div>
                 <nav className="flex flex-1 flex-col gap-3 overflow-y-auto p-2.5" aria-label="เมนู">
-                  {navGroups.map((group) => (
+                  {mainNavGroups.map((group) => (
                     <NavCollapsibleGroup
                       key={group.id}
                       group={group}
@@ -609,7 +948,7 @@ export function DashboardShell({
 
           <main
             className={cn(
-              "flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden rounded-[2.5rem]",
+              "flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden rounded-[1.15rem]",
               systemFocusLayout && "md:rounded-none",
               moduleStaffKiosk && "!rounded-none",
             )}
@@ -618,8 +957,71 @@ export function DashboardShell({
           </main>
         </div>
       </div>
-      
+      {!hideMainMobileBottomNav ? (
+        <MobileBottomNav pathname={pathname} items={mobileNavItems} />
+      ) : null}
     </div>
+  );
+}
+
+function MobileBottomNav({
+  pathname,
+  items,
+}: {
+  pathname: string;
+  items: { href: string; label: string }[];
+}) {
+  if (items.length === 0) return null;
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-40 md:hidden" aria-label="เมนูด้านล่าง">
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white via-white/80 to-transparent"
+        aria-hidden
+      />
+      <div className="relative mx-auto w-full max-w-[36rem] px-3 pb-[max(calc(env(safe-area-inset-bottom,0px)+0.55rem),0.85rem)] pt-2">
+        <div className="flex items-stretch justify-between gap-0.5 rounded-[1.35rem] border border-slate-200/70 bg-white/92 p-1.5 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.35)] backdrop-blur-2xl">
+          {items.map((item) => (
+            <MobileBottomNavLink key={item.href} href={item.href} label={item.label} pathname={pathname} />
+          ))}
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+function MobileBottomNavLink({
+  href,
+  label,
+  pathname,
+}: {
+  href: string;
+  label: string;
+  pathname: string;
+}) {
+  const active = isNavActive(href, pathname);
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex min-h-[3.35rem] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1.5 text-center transition sm:px-1",
+        active ? "bg-[#0000BF]/10 text-[#2e2a58]" : "text-slate-500 hover:bg-slate-100",
+      )}
+    >
+      <span
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ring-1 transition",
+          active
+            ? cn(appDashboardBrandGradientFillClass, "text-white ring-0 shadow-[0_10px_18px_-14px_rgba(91,97,255,0.9)]")
+            : "bg-white text-slate-500 ring-slate-200",
+        )}
+        aria-hidden
+      >
+        {dashboardNavIconForHref(href)}
+      </span>
+      <span className="max-w-full px-0.5 text-[9px] font-black leading-tight tracking-tight line-clamp-2">
+        {label}
+      </span>
+    </Link>
   );
 }
 
@@ -662,4 +1064,3 @@ function CloseIcon() {
     </svg>
   );
 }
-

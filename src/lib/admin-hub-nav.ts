@@ -3,10 +3,11 @@
 export type AdminHubIconKey =
   | "overview"
   | "users"
-  | "activity"
-  | "mqtt"
+  | "tryLinks"
+  | "cards"
   | "cooldowns"
-  | "cards";
+  | "activity"
+  | "mqtt";
 
 export type AdminHubNavItem = {
   href: string;
@@ -17,51 +18,95 @@ export type AdminHubNavItem = {
   icon: AdminHubIconKey;
 };
 
+export const ADMIN_HUB_HEADER_COLLAPSE_KEY = "mawell-admin-hub-header-collapsed";
+export const ADMIN_HUB_HEADER_COLLAPSE_EVENT = "mawell-admin-hub-header-collapse";
+export const ADMIN_HUB_DISPLAY_NAME = "ศูนย์แอดมิน";
+
+export function isAdminHubPath(pathname: string): boolean {
+  return pathname === "/dashboard/admin" || pathname.startsWith("/dashboard/admin/");
+}
+
+export function readAdminHubHeaderCollapsed(): boolean {
+  try {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(ADMIN_HUB_HEADER_COLLAPSE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function writeAdminHubHeaderCollapsed(collapsed: boolean): void {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(ADMIN_HUB_HEADER_COLLAPSE_KEY, collapsed ? "1" : "0");
+    window.dispatchEvent(new Event(ADMIN_HUB_HEADER_COLLAPSE_EVENT));
+  } catch {
+    /* ignore */
+  }
+}
+
 export const ADMIN_HUB_OVERVIEW: AdminHubNavItem = {
   href: "/dashboard/admin",
   label: "ภาพรวม",
   dockLabel: "ภาพรวม",
-  description: "ทางลัดไปทุกเครื่องมือ — จัดการผู้ใช้ บันทึกระบบ และรูปการ์ด",
+  description: "ทางลัดไปทุกเครื่องมือแอดมิน",
   icon: "overview",
 };
 
+/**
+ * ลำดับใช้งานจริง: ผู้ใช้ · ลิงก์ทดลอง · การ์ด มาก่อน
+ * แล้วค่อยคูลดาวน์ · บันทึก · MQTT
+ */
 export const ADMIN_HUB_NAV_ITEMS: AdminHubNavItem[] = [
   {
     href: "/dashboard/admin/users",
-    label: "จัดการผู้ใช้",
+    label: "ผู้ใช้",
     dockLabel: "ผู้ใช้",
-    description: "สิทธิ์ บทบาท และสถานะบัญชีในระบบ",
+    description: "สิทธิ์ บทบาท และสถานะบัญชี",
     icon: "users",
   },
   {
+    href: "/dashboard/admin/module-try-links",
+    label: "ลิงก์ทดลอง",
+    dockLabel: "ลิงก์",
+    description: "คัดลอกลิงก์หรือ QR ให้ลูกค้าทดลองโมดูล",
+    icon: "tryLinks",
+  },
+  {
+    href: "/dashboard/admin/module-cards",
+    label: "รูปการ์ด",
+    dockLabel: "การ์ด",
+    description: "ภาพการ์ดบนแดชบอร์ดและแคตตาล็อก",
+    icon: "cards",
+  },
+  {
+    href: "/dashboard/admin/module-cooldowns",
+    label: "ปลดล็อค",
+    dockLabel: "ปลดล็อค",
+    description: "คูลดาวน์การสมัครโมดูลของผู้ใช้",
+    icon: "cooldowns",
+  },
+  {
     href: "/dashboard/admin/activity-logs",
-    label: "ความเคลื่อนไหวระบบ",
+    label: "กิจกรรม",
     dockLabel: "กิจกรรม",
-    description: "ตรวจบันทึกการใช้งานและเหตุการณ์สำคัญ",
+    description: "บันทึกการใช้งานและเหตุการณ์สำคัญ",
     icon: "activity",
   },
   {
     href: "/dashboard/admin/mqtt",
-    label: "สถานะ MQTT",
+    label: "MQTT",
     dockLabel: "MQTT",
-    description: "การเชื่อมต่อ ข้อความ และสุขภาพบริการแบบเรียลไทม์",
+    description: "สถานะการเชื่อมต่อแบบเรียลไทม์",
     icon: "mqtt",
-  },
-  {
-    href: "/dashboard/admin/module-cooldowns",
-    label: "ปลดล็อค Subscribe",
-    dockLabel: "ปลดล็อค",
-    description: "จัดการคูลดาวน์การสมัครโมดูลของผู้ใช้",
-    icon: "cooldowns",
-  },
-  {
-    href: "/dashboard/admin/module-cards",
-    label: "รูปการ์ดระบบ",
-    dockLabel: "การ์ด",
-    description: "อัปโหลดและจัดการภาพการ์ดบนแดชบอร์ดหลัก",
-    icon: "cards",
   },
 ];
 
 /** ลำดับเมนูทั้งหมดรวมภาพรวม — ใช้เรนเดอร์ dock / แถบเดสก์ท็อป */
 export const ADMIN_HUB_MENU_ORDER: AdminHubNavItem[] = [ADMIN_HUB_OVERVIEW, ...ADMIN_HUB_NAV_ITEMS];
+
+export function isAdminHubNavActive(pathname: string, href: string): boolean {
+  return href === "/dashboard/admin"
+    ? pathname === href
+    : pathname === href || pathname.startsWith(`${href}/`);
+}

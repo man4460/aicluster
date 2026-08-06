@@ -1,0 +1,59 @@
+---
+description: เมนูแดชบอร์ด — sidebar เมนูหลักแบบรายการเดียว · ซ่อนเมนูหลักล่างเมื่อเข้าโมดูล/แอดมิน · ย่อ sidebar เมื่อเข้าโมดูล
+alwaysApply: true
+---
+
+# เมนูแดชบอร์ด — sidebar / ซ่อนแถบนำทาง
+
+## 1) Sidebar ซ้าย (เดสก์ท็อป) — แบบเดิม
+
+| สิ่ง | รายละเอียด |
+|-----|------------|
+| เนื้อหา | **เฉพาะกลุ่ม `basic` (เมนูหลัก)** เป็นรายการลิงก์แบน (`SidebarNavLink`) |
+| **ห้าม** | ใส่กลุ่มย่อยพับได้ (finance / services / property / admin) ใน sidebar ซ้าย |
+| โมดูลที่สมัคร | เข้าผ่านหน้า «ระบบทั้งหมด» / ลิงก์อื่น — ไม่โชว์เป็นกลุ่มใน sidebar |
+
+## 2) Drawer มือถือ
+
+- ใช้ `NavCollapsibleGroup` กับ **`mainNavGroups` (basic)** เท่านั้น — สอดคล้อง sidebar
+- โทนแก้วม่วงของ drawer
+
+## 3) ซ่อน / แสดงแถบเมนูซ้ายทั้งแท่ง
+
+| สถานะ | พฤติกรรม |
+|--------|----------|
+| ปุ่มใน header | สลับ `sidebarCollapsed` · จำ `mawell-dashboard-sidebar-collapsed` |
+| เข้า `/dashboard` | **บังคับแสดง** sidebar |
+| เข้าโมดูลงาน (`isModuleWorkspacePath`) | **ย่อ sidebar** อัตโนมัติ (ยังกดเปิดได้) |
+
+`isModuleWorkspacePath` ไม่รวม: หน้าบ้าน · chat-ai · profile · plans · chat · modules · **admin**
+
+## 4) ซ่อนเมนูหลักล่างมือถือ (`MobileBottomNav`)
+
+ซ่อนเมื่อ:
+
+1. staff kiosk  
+2. `isModuleWorkspacePath`  
+3. **ศูนย์แอดมิน** `/dashboard/admin/*` — ใช้ dock แอดมินแทน  
+
+## 5) ยุบหัวโมดูล / หัวศูนย์แอดมิน (กลุ่มเมนูส่วนหัว)
+
+แยกจาก sidebar — ซ่อน/แสดง **การ์ดหัว + แถบเมนูในหัว** (dock มือถือยังอยู่)
+
+| พื้นที่ | localStorage / event | ซ่อนที่ | เมื่อยุบแล้วเมนูไปอยู่ |
+|--------|----------------------|---------|------------------------|
+| สนามฟุตบอล | `mawell-football-turf-header-collapsed` · `FOOTBALL_TURF_HEADER_COLLAPSE_*` | `FootballTurfShell` | `FootballTurfHeaderBarNav` ใน header ม่วง `DashboardShell` |
+| drink-pos | `*DRINK_POS_HEADER_COLLAPSE*` | `DrinkPosShell` | `DrinkPosHeaderBarNav` |
+| **ศูนย์แอดมิน** | `mawell-admin-hub-header-collapsed` · `ADMIN_HUB_HEADER_COLLAPSE_*` ใน `admin-hub-nav.ts` | `AdminHubChrome` (การ์ดหัว + กริดแท็บ) | `AdminHubHeaderBarNav` / `AdminHubHeaderExpandButton` ใน `DashboardShell` |
+
+- ปุ่มซ่อนชิดขวาสุดของหัว · จำค่าใน `localStorage` · sync ผ่าน `CustomEvent` + `storage`
+- มือถือเมื่อยุบ: แถบม่วงแสดงโทเคน + ปุ่มขยาย · เดสก์ท็อป: แท็บในแถบม่วง + ปุ่มขยาย
+- ขอบซ้าย–ขวาของหน้าแอดมิน: ชุดเดียวกับสนามฟุตบอล — `dashboard-page-width.mdc`
+- รายการหน้าแอดมิน (การ์ด · ตัดคำอธิบาย · Export Excel): `.cursor/rules/admin-hub-dashboard-template.mdc`
+
+## อ้างอิง
+
+- `DashboardShell.tsx` — `mainMenuItems` · `hideMainMobileBottomNav` · `showAdminHubHeaderBar`
+- `AdminHubChrome.tsx` · `AdminHubHeaderBarNav.tsx` · `src/lib/admin-hub-nav.ts`
+- ขอบซ้าย–ขวา: `dashboard-page-width.mdc`
+- เทมเพลตรายการแอดมิน: `admin-hub-dashboard-template.mdc`

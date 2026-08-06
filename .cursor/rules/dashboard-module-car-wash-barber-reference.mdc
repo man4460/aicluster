@@ -1,17 +1,21 @@
 ---
-description: แผนที่ไฟล์และแพทเทิร์นคู่ขนาน — คาร์แคร์ · ร้านตัดผม · ซักผ้า — อ้างอิงตอนสร้างโมดูลแดชบอร์ดใหม่
+description: แผนที่ไฟล์และแพทเทิร์นคู่ขนาน — คาร์แคร์ · ร้านตัดผม · ซักผ้า · สนามฟุตบอล · POS เครื่องดื่ม — อ้างอิงตอนสร้างโมดูลแดชบอร์ดใหม่
 globs:
   - "**/systems/car-wash/**"
   - "**/systems/barber/**"
   - "**/systems/laundry/**"
+  - "**/systems/football-turf/**"
+  - "**/systems/drink-pos/**"
   - "**/app/**/dashboard/car-wash/**"
   - "**/app/**/dashboard/barber/**"
   - "**/app/**/dashboard/laundry/**"
+  - "**/app/**/dashboard/football-turf/**"
+  - "**/app/**/dashboard/drink-pos/**"
   - "**/components/layout/DashboardShell.tsx"
   - "**/components/dashboard/DashboardPagesShell.tsx"
 ---
 
-# โมดูลแดชบอร์ด — อ้างอิงคู่ขนาน (คาร์แคร์ × ร้านตัดผม × ซักผ้า)
+# โมดูลแดชบอร์ด — อ้างอิงคู่ขนาน (คาร์แคร์ × ร้านตัดผม × ซักผ้า × สนามฟุตบอล × POS เครื่องดื่ม)
 
 ใช้เมื่อสร้างโมดูลใหม่หรือทำให้ UX/UI / โครงสร้างไฟล์ใกล้เคียงแม่แบบ
 
@@ -21,33 +25,40 @@ globs:
 
 **ซักผ้า — การ์ดสถิติแดชบอร์ด + QR:** `.cursor/rules/laundry-dashboard-ui.mdc`
 
+**สนามฟุตบอล — ตัวอย่างโมดูลครบชุด (เลย์เอาต์ · สี · ปุ่ม · QR · อัปโหลด · ยืนยัน · ซ่อม · พอร์ทัล · คู่มือ):** `.cursor/rules/football-turf-module-dashboard-template.mdc`
+
+**POS เครื่องดื่ม — หัวยุบ / ออเดอร์ / กริด 3 คอลัมน์ / แต้มตั้งค่าได้ / การเงินช่วงเวลา:** `.cursor/rules/drink-pos-module-dashboard-template.mdc`
+
 **ความกว้าง PageContainer / gutter:** `.cursor/rules/dashboard-page-width.mdc`
 
 ---
 
 ## 1) โครงสร้างไฟล์ — เปรียบเทียบหน้าที่
 
-| หัวข้อ | คาร์แคร์ | ร้านตัดผม |
-|--------|----------|-----------|
-| **หน้าหลักโมดูล (Server)** | `src/app/(dashboard)/dashboard/car-wash/page.tsx` | หลายหน้าใต้ `.../dashboard/barber/*/page.tsx` |
-| **เลย์เอาต์โมดูล + guard + trial label** | (ไม่มี `layout.tsx` ระดับโมดูล — trial ส่งจาก page เข้า client) | `src/app/(dashboard)/dashboard/barber/layout.tsx` → `requireBarberSection` + `getActiveTrialBanner` + `DashboardDataLoadError` |
-| **Client shell / chrome** | `CarWashDashboard.tsx` (หัวแก้ว + แท็บเดสก์ท็อป + แท็บล่างมือถือ + เนื้อหาตาม tab) | `BarberModuleShell.tsx` → `BarberLayoutChrome.tsx` + `BarberModuleHeader.tsx` (dock / desktop nav แยกไฟล์) |
-| **โทเคนมุมมน / การ์ด** | ค่าในไฟล์ client (ดู `rounded-[2.5rem]` ใน `CarWashDashboard`) | `src/systems/barber/components/barber-ui-tokens.ts` |
-| **พื้นที่แดชบอร์ดหลัก** | `DashboardShell` — แถบบน / sidebar / main โค้ง `rounded-[2.5rem]` | เหมือนกัน + `DashboardPagesShell` ลด gutter เมื่อ path barber **หรือ laundry** |
-| **หน้าพนักงาน / kiosk** | `/dashboard/car-wash/staff` — `CarWashDashboard` + `layoutVariant="staff_lane"` | `/dashboard/barber/staff` — ซ่อน chrome โมดูล + เต็มจอ (`BarberModuleShell` / `DashboardPagesShell`) |
-| **แถบทดลองสีแดง** | ส่ง `isTrialSandbox` / `trialSessionId` เข้า logic ลิงก์ — แถบแดงใช้ร่วมกันผ่าน `TrialSandboxStrip` ในเลย์เอาต์ที่เกี่ยวข้อง | `trialExpiresLabel` จาก `barber/layout.tsx` → `BarberLayoutChrome` → `TrialSandboxStrip` |
-| **โมดัลลอยเหนือ dock** | `FormModal` (portal), z สูง | เพิ่ม `BarberModalPortal` เมื่อต้องลอยเหนือ dock มือถือ |
+| หัวข้อ | คาร์แคร์ | ร้านตัดผม | สนามฟุตบอล |
+|--------|----------|-----------|------------|
+| **หน้าหลักโมดูล (Server)** | `.../dashboard/car-wash/page.tsx` | หลายหน้าใต้ `.../dashboard/barber/*` | `.../dashboard/football-turf/page.tsx` |
+| **Client shell / chrome** | `CarWashDashboard.tsx` (หัวแก้ว + แท็บ + dock) | `BarberModuleShell` → `BarberLayoutChrome` | `FootballTurfDashboard.tsx` (sidebar `lg` + dock มือถือ) |
+| **เมนูแท็บ** | ในแดชบอร์ด | `BarberModuleHeader` | `football-turf-module-nav.tsx` |
+| **พอร์ทัลสาธารณะ** | check-in / customer portal | staff / packages ตามหน้า | `/football-turf/book|check-in/[ownerId]` |
+| **ยืนยันลบ/ตั้งค่า** | ตามโมดูล | ตามโมดูล | **`useAppNoticePopup` เท่านั้น** (ไม่ toast หลังยืนยัน) |
+| **โทเคนมุมมน / การ์ด** | ในไฟล์ client | `barber-ui-tokens.ts` | ใช้ `app-templates` + คลาสในแดชบอร์ด |
+| **Guard / trial** | trial ใน page/client | `barber/layout.tsx` | trial query `t=` บนลิงก์สาธารณะ |
 
 ---
 
 ## 2) พฤติกรรมที่ควรทำซ้ำในโมดูลใหม่
 
 1. **หัวแก้วชั้นนอก:** `rounded-[2.5rem]`, glass gradient, `backdrop-blur-2xl`, `border-white/50`, เงา inset ขาว — เทียบบล็อกหัวใน `CarWashDashboard` และ `BarberLayoutChrome` (`barberModuleGlassShellClass`)
-2. **เมนูมือถือ:** แถบล่าง `fixed`, `rounded-[2.5rem]`, `inset-x-4`, safe-area — เทียบ dock คาร์แคร์และ `BarberModuleMobileDock`
-3. **เมนูเดสก์ท็อป:** แถบใต้เส้นแบ่งในการ์ดหัว — แท็บคาร์แคร์ใช้ `rounded-xl`; บาร์เบอร์ใช้ `rounded-xl` ใน `barberNavLinkClass`
-4. **หน้า plain inner:** หลีกเลี่ยงการ์ดกระจกซ้อนซ้ำ — บาร์เบอร์ใช้ flag `plainInnerContent` ใน `BarberLayoutChrome` (finance / packages / qr / staff)
-5. **โหมดทดลอง:** URL พนักงาน/porter — ใส่ query `t=` เมื่อ sandbox (ดู `isTrialSandbox && trialSessionId` ในทั้งสองระบบ)
+2. **เมนูมือถือ:** แถบล่าง `fixed`, `rounded-[2.5rem]`, safe-area — เทียบ dock คาร์แคร์ / `BarberModuleMobileDock` / สนามฟุตบอล (pill เลื่อนได้เมื่อแท็บเยอะ)
+3. **เมนูเดสก์ท็อป:** แท็บในการ์ดหัว **หรือ** sidebar ซ้ายแบบสนามฟุตบอล (`lg:grid-cols-[264px_…]`) **หรือ** แท็บหัว + ยุบขึ้น header ม่วงแบบ POS เครื่องดื่ม
+4. **หน้า plain inner:** หลีกเลี่ยงการ์ดกระจกซ้อนซ้ำ — บาร์เบอร์ใช้ flag `plainInnerContent`
+5. **โหมดทดลอง:** URL สาธารณะ/พนักงาน — ใส่ query `t=` เมื่อ sandbox
 6. **ปุ่มแนวคาร์แคร์ในโมดัล:** `cw-btn` + ไอคอน + `cw-btn-label` (`globals.css`)
+7. **ยืนยันก่อนลบ/ตั้งค่าสำคัญ:** `useAppNoticePopup().confirm` — **ห้าม** toast สำเร็จหลังยืนยัน และห้าม `window.confirm` (ดูกฎสนามฟุตบอล)
+8. **เส้น accent หัวการ์ด:** หลัง `h-1.5` gradient bar ต้องมี **`mt-5`** ก่อนไอคอน/ปุ่ม/ข้อความ
+9. **มือถือในโมดูล:** ซ่อนเมนูหลักแดชบอร์ดล่าง — ใช้ dock โมดูลอย่างเดียว (`DashboardShell` + `isModuleWorkspacePath`)
+10. **POS / ออเดอร์:** ตะกร้ามือถือ = สล็อตเหนือ dock + `FormModal` · กริด `grid-cols-3` · การเงิน default เดือนนี้ · แต้มตั้งค่าได้ (ดูกฎ drink-pos)
 
 ---
 
@@ -58,6 +69,8 @@ globs:
 - [ ] Gutter ไม่ซ้ำกับ `PageContainer` / `DashboardPagesShell` (ดู `dashboard-page-width.mdc`)
 - [ ] หน้า staff/kiosk แยก UX — ไม่บังคับเมนูหลักโมดูลเต็มชุด
 - [ ] Trial / sandbox — ลิงก์ภายนอก + แถบ `TrialSandboxStrip` หรือข้อความใน client สอดคล้องกัน
+- [ ] ไอคอน sidebar + (ถ้าในแคตตาล็อก) รูปปก landing
+- [ ] ยืนยันลบผ่าน `AppNoticePopup` · ข้อมูลลง DB/API จริงถ้าไม่ใช่ preview
 
 ---
 
@@ -72,3 +85,34 @@ globs:
 | Staff kiosk | `/dashboard/laundry/staff` — `layoutVariant="staff_lane"`; ซ่อนแถบ MAWELL หลักเหมือน barber staff |
 
 พฤติกรรม UX เทียบคาร์แคร์ (หัวแก้ว + แท็บเดสก์ท็อป + dock) และ **การ์ดสถิติ overview + ศูนย์ QR** — ดู **`.cursor/rules/laundry-dashboard-ui.mdc`** และ **`shop-qr-hub-popup-pattern.mdc`**
+
+---
+
+## 5) สนามฟุตบอล — ไฟล์อ้างอิง
+
+| บทบาท | ไฟล์ |
+|--------|------|
+| แดชบอร์ด + sidebar + dock + ฟอร์ม | `src/systems/football-turf/FootballTurfDashboard.tsx` |
+| แท็บ / ไอคอนเมนู | `src/systems/football-turf/football-turf-module-nav.tsx` |
+| Client repo + API | `src/systems/football-turf/football-turf-service.ts` · `lib/*` |
+| พอร์ทัลจอง / เช็กอิน | `FootballTurfBookingPortalClient.tsx` · `FootballTurfCheckInClient.tsx` |
+| ป๊อปอัปยืนยันกลาง | `@/components/app-templates` → `AppNoticePopup` / `useAppNoticePopup` |
+
+รายละเอียด UI + เช็กลิสต์เต็ม: **`.cursor/rules/football-turf-module-dashboard-template.mdc`**
+
+---
+
+## 6) POS ร้านเครื่องดื่ม — ไฟล์อ้างอิง
+
+| บทบาท | ไฟล์ |
+|--------|------|
+| Shell + ยุบหัว + คู่มือ | `src/systems/drink-pos/components/DrinkPosShell.tsx` |
+| Nav / collapse localStorage | `src/systems/drink-pos/lib/drink-pos-module-nav.ts` |
+| แท็บใน header ม่วง (เดสก์ท็อปเมื่อยุบ) | `DrinkPosHeaderBarNav.tsx` |
+| Dock + สล็อตสรุปบิล | `DrinkPosMobileBottomChrome.tsx` · `DrinkPosMobileDock.tsx` |
+| ออเดอร์ (คอมแผงซ้าย · มือถือ popup) | `DrinkPosOrderClient.tsx` |
+| การเงิน (วันนี้/เดือนนี้/ปีนี้) | `DrinkPosSalesClient.tsx` · `api/drink-pos/finance-summary` |
+| สะสมแต้มตั้งค่าได้ | `DrinkPosShopSettingsClient.tsx` · `lib/loyalty-rule.ts` |
+| โทเค็น UI / กริด 3 คอลัมน์ | `src/systems/drink-pos/lib/ui-tokens.ts` |
+
+รายละเอียด UI + เช็กลิสต์เต็ม: **`.cursor/rules/drink-pos-module-dashboard-template.mdc`**

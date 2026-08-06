@@ -4,6 +4,7 @@ import { startTransition, useCallback, useEffect, useMemo, useState } from "reac
 import { VillageEmptyDashed, VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
 import { VillageFinanceQuickTabs } from "@/systems/village/components/VillageFinanceQuickTabs";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
+import { prepareImageFileForUpload } from "@/components/app-templates";
 import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
 import { createVillageSessionApiRepository, type VillageHouse, type VillageSlip } from "@/systems/village/village-service";
 import { villageBtnPrimary, villageBtnSecondary, villageDivider, villageField, villageGlassCard } from "@/systems/village/village-ui";
@@ -136,11 +137,12 @@ function VillageNewSlipModal({
             if (!file || !houseId) return;
             setBusy(true);
             try {
+              const prepared = await prepareImageFileForUpload(file);
               const fd = new FormData();
               fd.set("house_id", houseId);
               fd.set("year_month", ym.trim());
               fd.set("amount", amount.trim());
-              fd.set("file", file);
+              fd.set("file", prepared);
               await api.postSlip(fd);
               onUploaded();
               onClose();

@@ -12,19 +12,34 @@ import path from "path";
 import { NextResponse } from "next/server";
 
 const ALLOWED_BUCKETS = new Set([
+  "appointment-queue",
   "attendance-faces",
   "attendance-roster",
   "avatars",
+  "barber",
   "barber-cash-receipts",
   "barber-portal-slips",
   "barber-stylists",
   "building-pos",
   "car-wash",
+  "doc-transmission",
   "dorm-cost-slips",
   "dorm-logos",
   "dorm-payment-proofs",
+  "drink-pos",
+  "ecommerce-store",
+  "football-turf",
+  "general-store-pos",
   "home-finance",
+  "hotel-resort",
+  "laundry",
+  "loyalty-stamp",
+  "massage",
+  "massage-cash-receipts",
+  "massage-portal-slips",
+  "massage-therapists",
   "module-cards",
+  "module-shop-car-wash",
   "village-cost-slips",
   "village-slips",
   "smart-police",
@@ -41,8 +56,8 @@ const MIME_BY_EXT: Record<string, string> = {
   ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 };
 
-const MAX_FILENAME = 180;
-const MAX_SUBDIR = 40;
+const MAX_FILENAME = 200;
+const MAX_SUBDIR = 48;
 
 function safeSegment(raw: string, maxLen: number): string | null {
   let s = raw;

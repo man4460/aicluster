@@ -1,0 +1,361 @@
+---
+description: ตัวอย่างโมดูลแดชบอร์ดครบชุด (สนามฟุตบอล) — เลย์เอาต์ UX/UI สี ปุ่ม QR อัปโหลด ยืนยัน ซ่อมบั๊ก พอร์ทัลลูกค้า คู่มือ — อ้างอิงเมื่อสร้างหรือปรับโมดูลใหม่
+globs:
+  - "**/systems/football-turf/**"
+  - "**/app/**/dashboard/football-turf/**"
+  - "**/app/football-turf/**"
+  - "**/app/api/football-turf/**"
+  - "**/systems/**/components/*Shell*.tsx"
+  - "**/lib/upload/**"
+alwaysApply: false
+---
+
+# สนามฟุตบอล — ตัวอย่างโมดูลแดชบอร์ดแบบละเอียด (Golden Example)
+
+ใช้เมื่อ **สร้างโมดูลแดชบอร์ดใหม่** หรือปรับโมดูลเดิมให้ครบมาตรฐานโปรเจกต์ — ยึดสนามฟุตบอลเป็นต้นแบบโครงสร้าง + UX/UI + อัปโหลด + QR + ปุ่ม + การซ่อม
+
+**กฎโปรเจกต์ที่ต้องคู่ด้วย:**  
+`dashboard-ux-car-wash-baseline.mdc` · `app-templates-central.mdc` · `app-templates-media.mdc` · `module-chrome-no-branding.mdc` · `dashboard-new-module-sidebar-icon.mdc` · `dashboard-page-width.mdc` · `dashboard-mobile-summary-stat-grid.mdc` · `dashboard-row-action-icon-buttons.mdc` · `shop-qr-hub-popup-pattern.mdc` · `shop-customer-qr-portal.mdc` · `agent-finish-checkpoint.mdc`
+
+**คู่ขนาน chrome:** `drink-pos-module-dashboard-template.mdc` (หัวยุบ · dock) · `dashboard-module-car-wash-barber-reference.mdc`
+
+---
+
+## 0) หลักคิดสั้น ๆ
+
+1. **โครงสร้างไฟล์แยกชั้น** — shell/nav/dock ≠ เนื้อหาแดชบอร์ด ≠ service ≠ API ≠ พอร์ทัลสาธารณะ  
+2. **UX มือถือ = dock ล่าง** · เดสก์ท็อป = แท็บหัว · ยุบหัวได้  
+3. **ยืนยันทำลายข้อมูล = `AppNoticePopup` เท่านั้น** — ห้าม `window.confirm` / `alert`  
+4. **อัปโหลดรูป = ฟังก์ชันกลาง** · ชื่อไฟล์บนดิสก์มาตรฐาน · ชื่อแสดงให้คนตั้งเอง  
+5. **ห้ามซ้ำแบรนด์ / ห้ามซ้ำ `max-w-*` / `px-*`** กับ `PageContainer` — ดู §2b ขอบซ้าย–ขวา  
+6. **หัวข้อการ์ดห้าม `description` ยาว** — ย้ายไปคู่มือการใช้งาน  
+
+---
+
+## 1) แผนที่ไฟล์ (คัดลอกโครงนี้)
+
+| บทบาท | พาธอ้างอิงสนามฟุตบอล |
+|--------|---------------------|
+| Layout + guard | `src/app/(dashboard)/dashboard/football-turf/layout.tsx` → `FootballTurfShell` |
+| หน้า server บาง | `.../football-turf/page.tsx` → client dashboard |
+| Shell (หัวแก้ว · ยุบหัว · คู่มือ · dock) | `components/FootballTurfShell.tsx` |
+| Nav keys / collapse storage | `football-turf-module-nav.tsx` |
+| แท็บเมื่อหัวยุบ (เดสก์ท็อป) | `FootballTurfHeaderBarNav.tsx` · `FootballTurfHeaderExpandButton` |
+| Dock มือถือ | `FootballTurfMobileBottomChrome.tsx` · `FootballTurfMobileDock.tsx` |
+| เนื้อหาทุกแท็บ + ฟอร์ม | `FootballTurfDashboard.tsx` |
+| Client repo (API / public / local) | `football-turf-service.ts` |
+| Server helpers | `lib/api-auth.ts` · `guard.ts` · `server-repo.ts` · `persist-slip.ts` · `mappers.ts` · `types.ts` · `time-queue.ts` · `ui-tokens.ts` |
+| API เจ้าของ | `GET/POST /api/football-turf/state` · `action` · `promptpay-qr` |
+| API สาธารณะ | `/api/football-turf/public/state` · `action` |
+| พอร์ทัลลูกค้า | `/football-turf/book/[ownerId]` · `/football-turf/check-in/[ownerId]` |
+| อัปโหลดกลาง | `src/lib/upload/*` · `prepareUploadFile` / `prepareImageFileForUpload` ใน `app-templates` |
+
+**โมดูลใหม่:** แยก **nav + shell + dock + dashboard client + service + `lib/` + API + พอร์ทัล** — อย่ายัดเมนู/เลย์เอาต์ยาวใน `page.tsx`
+
+---
+
+## 2) เลย์เอาต์แดชบอร์ด · ความกว้าง · เมนูหลักระบบ
+
+| โซน | มือถือ | เดสก์ท็อป (`lg+`) |
+|-----|--------|-------------------|
+| เมนูโมดูล | **dock ล่าง** (`AppMobileDockUnifiedBar`) · `rounded-[2.5rem]` · safe-area · เลื่อนแนวนอนถ้าแท็บเยอะ | **แท็บแนวนอน** ในการ์ดหัว (ไม่ใช้ sidebar ซ้ายของโมดูล) |
+| หัวชื่อโมดูล | การ์ดแก้ว `footballTurfGlassShellClass` | เหมือนกัน (ยุบได้) |
+| เนื้อหา | `pb-24` (`footballTurfMainPaddingBottomClass`) | `lg:pb-0` |
+| การ์ดสถิติสรุป | **`grid-cols-2`** เสมอ | `sm:` / `xl:` ตามจำนวน |
+| ความกว้างหน้า | เต็มช่วงโมดูล | `DashboardPagesShell`: `max-w-none lg:!px-6` |
+
+**บังคับใน `DashboardShell`:**  
+- เข้าโมดูล → ย่อ sidebar หลัก (`isModuleWorkspacePath`)  
+- มือถือ → **ซ่อน** `MobileBottomNav` หลัก — เหลือแค่ dock โมดูล  
+
+**บังคับ:** ห้าม `MawellLogo` / wordmark ใน chrome โมดูล  
+
+**เส้น accent:** หลังแถบ `h-1.5` gradient ต้องมี **`mt-5`** ก่อนไอคอน/ปุ่ม/ข้อความ  
+
+**จุดต่อหัวยุบ:** `DashboardShell` — `showFootballTurfHeaderBar` คู่กับ drink-pos  
+
+---
+
+## 2b) ระยะขอบซ้าย–ขวา (บังคับบันทึกเมื่อคัดลอกโมดูล)
+
+ขอบซ้ายขวา **ไม่ได้อยู่ชั้นเดียว** — ดูตารางเต็มใน `dashboard-page-width.mdc`
+
+### ลำดับชั้นของสนามฟุตบอล / drink-pos
+
+| # | ชั้น | คลาสขอบซ้าย–ขวา | ไฟล์ |
+|---|------|-----------------|------|
+| 1 | ห่อ `main` ใน `DashboardShell` | `px-3 sm:px-4` | ไม่ใช้ `moduleDashboardCompact` (ต่างจากบาร์เบอร์ที่ใช้ `max-md:px-2`) |
+| 2 | `PageContainer` ผ่าน `DashboardPagesShell` | `size="full"` + **`max-w-none !px-3 sm:!px-4 lg:!px-6`** | `DashboardPagesShell.tsx` — เงื่อนไข `footballTurfModule \|\| drinkPosModule` |
+| 3 | การ์ดหัว Shell | `px-4 py-4 sm:px-8 sm:py-6` | `FootballTurfShell.tsx` |
+| 4 | เนื้อหาใต้หัว (`children`) | **ห้าม** ห่อด้วย `px-*` / `max-w-*` ซ้ำทั้งหน้า | ไหลตรงจาก PageContainer |
+| 5 | การ์ดย่อยในแท็บ | padding ในการ์ดเอง (`p-4` / `px-5` ฯลฯ) | `FootballTurfDashboard.tsx` |
+| 6 | พอร์ทัลสาธารณะ (นอกแดชบอร์ด) | คอลัมน์ `max-w-md` + gutter ของหน้า public | `book` / `check-in` — ไม่ใช้ PageContainer แดชบอร์ด |
+
+### ค่าคงที่กลาง (`@/components/ui/page-container`)
+
+| โทเค็น | ค่า | ใช้เมื่อ |
+|--------|-----|---------|
+| `PAGE_GUTTER_X` | `px-4 sm:px-6` | ขอบมาตรฐาน PageContainer |
+| `PAGE_GUTTER_Y` | `py-6 sm:py-8` | ขอบบน–ล่างหน้า |
+| `PAGE_INNER_GUTTER_X` | `px-4 sm:px-6 md:px-8` | ชั้นในภายใต้ PageContainer ให้เมนูกับเนื้อหาเส้นตรงกัน |
+
+### เทียบโมดูลอื่น (อย่าสลับชุดโดยไม่ตั้งใจ)
+
+| โมดูล | Shell นอก (มือถือ) | PageContainer |
+|-------|-------------------|---------------|
+| สนามฟุตบอล · drink-pos | `px-3 sm:px-4` | `full` + `max-w-none !px-3 sm:!px-4 lg:!px-6` |
+| บาร์เบอร์ · ซักผ้า · นวด · จอด | `max-md:px-2 sm:px-4` | `max-md:!px-3 sm:!px-6` |
+| ศูนย์แอดมิน | `px-3 sm:px-4` | `full` + `max-w-none !px-3 sm:!px-4 lg:!px-6` |
+| หน้าบ้าน / modules / plans | ตาม Shell ปกติ | `full` + `max-w-[1680px] lg:!px-8` |
+
+### ห้ามพลาดเรื่องขอบ
+
+- อย่าใส่ `px-2` / `px-4` ที่หัวข้อ section จน **หัวข้อไม่เท่าขอบการ์ด**
+- อย่าซ้อน `max-w-6xl mx-auto` ใน Shell โมดูล
+- อย่าลด/เพิ่มแค่ชั้นเดียวแล้วลืมคู่ใน `DashboardPagesShell` + `DashboardShell`
+- มือถือ: ขอบซ้ายขวาแคบลงได้ (บาร์เบอร์) แต่สนามฟุตบอลตั้งใจ **กว้างเต็ม** + `lg:!px-6`
+
+---
+
+## 3) ยุบ / ขยายหัวโมดูล
+
+สถานะ: `localStorage` + `CustomEvent`  
+(`FOOTBALL_TURF_HEADER_COLLAPSE_KEY` / `FOOTBALL_TURF_HEADER_COLLAPSE_EVENT` ใน `football-turf-module-nav.tsx`)
+
+| สถานะ | มือถือ | เดสก์ท็อป |
+|-------|--------|----------|
+| **หัวเปิด** | การ์ดหัว · คู่มือ · ปุ่มซ่อนขวาสุด · **ไม่มีแท็บในหัว** (ใช้ dock) | การ์ดหัว + กริดแท็บ · ปุ่มซ่อนหลังคู่มือ |
+| **หัวยุบ** | โทเคน + **ปุ่มขยาย** — ห้ามแท็บใน header ม่วง | `FootballTurfHeaderBarNav` · ชื่อโมดูลข้อความล้วน · ปุ่มขยายขวาสุด |
+
+โมดูลใหม่: คัดลอก key/event **แยกต่อ slug** — อย่าให้แท็บซ้ำกับ dock บนมือถือ
+
+---
+
+## 4) สี · โทเค็น · ตัวอักษร · ความโค้ง
+
+**ไฟล์โทเค็น:** `lib/ui-tokens.ts`
+
+| โทเค็น | ใช้ทำอะไร |
+|--------|-----------|
+| `footballTurfGlassShellClass` | เปลือกหัวโมดูล — `rounded-[2.5rem]` · glass · `backdrop-blur-2xl` · เงานุ่ม |
+| `footballTurfAccentBarClass` | แถบไล่สีหัว (`appDashboardBrandGradientBarClass`) |
+| `footballTurfNavActiveClass` | แท็บ active = `appDashboardBrandGradientFillClass` + ข้อความขาว |
+| `footballTurfNavIdleClass` | แท็บ idle = slate + hover ขาวโปร่ง |
+| `footballTurfMainPaddingBottomClass` | `pb-24 lg:pb-0` |
+
+**สีข้อความมาตรฐานโปรเจกต์**  
+- หัวข้อเข้ม: `#1e1b4b` / `text-slate-900` · `font-black tracking-tight`  
+- รอง: `#66638c` / `#5f5a8a` / `text-slate-500`  
+- เน้นแบรนด์: `#4d47b6` · `#5b61ff` · gradient จาก `appDashboardBrandGradient*`  
+- สถานะ: emerald (ว่าง/สำเร็จ) · amber (รอ) · rose (ยกเลิก/ลบ) · violet (โปร/สิทธิ์) · cyan (ลิงก์จอง)
+
+**ลำดับความโค้ง**  
+| ชั้น | คลาส |
+|------|------|
+| เปลือกโมดูล / การ์ดใหญ่ | `rounded-[2.5rem]` (มือถือบางจุด `rounded-2xl`) |
+| การ์ดย่อย / แผง | `rounded-[2rem]` / `rounded-[1.25rem]` / `rounded-2xl` |
+| ปุ่ม / input / chip | `rounded-xl` ~ `rounded-2xl` |
+
+**พื้น:** glass `from-white/… via-violet/indigo อ่อน to-…` — อย่าพื้นทึบทั้งโมดูล  
+
+**ไอคอน:** `stroke="currentColor"` · คู่ปุ่มมี `aria-label` · decorative = `aria-hidden`
+
+---
+
+## 5) การ์ดสรุป · กริด · รายการ
+
+### สถิติมือถือ
+- แถวสรุปตัวเลข: **`grid-cols-2`** ห้าม `grid-cols-1`  
+- จำนวนคี่: การ์ดสุดท้าย `col-span-2 sm:col-span-1`  
+- กฎเต็ม: `dashboard-mobile-summary-stat-grid.mdc`
+
+### หัวการ์ดรายการ
+- `AppDashboardSection` + `AppSectionHeader` — **ห้าม** ส่ง `description` อธิบายฟีเจอร์  
+- มือถือ: หัวข้อซ้าย · ปุ่มขวา (`flex-row` + `actionWrapClassName="shrink-0 self-start…"`)  
+- เพิ่ม / กรอง / รีเฟรช: ไอคอนบนมือถือ · ข้อความบน `sm+` — ดูกฎ `dashboard-mobile-*`
+
+### แถวรายการ + แก้ไข/ลบ
+- ปุ่ม **ไอคอนล้วน** · `min-h/w-[40px]` · `aria-label` + `title`  
+- ใช้ `assetRowEditIconButtonClass` / `assetRowRemoveIconButtonClass` (+ `IconRowEdit` / `IconRowRemove`)  
+- กลุ่มปุ่ม `gap-2` · ลบผ่าน `notice.confirm`  
+
+---
+
+## 6) ปุ่ม — แบบที่ต้องทำตาม
+
+| ชนิด | รูปแบบ |
+|------|--------|
+| Primary ในโมดูล | gradient แบรนด์ / `app-btn-primary` · `min-h-[40px]`–`52px` · `rounded-xl`/`2xl` · `font-black` |
+| Soft / secondary | `app-btn-soft` · ขอบขาวโปร่ง · ข้อความ `#5b61ff` / `#4d47b6` |
+| แถบในโมดัลแนวคาร์แคร์ | `cw-btn` + `cw-btn-icon` + `cw-btn-label` — มือถือซ่อนป้าย |
+| แก้/ลบในแถว | ไอคอนอย่างเดียว (ข้อ 5) |
+| ยืนยัน/ยกเลิกโมดัล | `FormModalFooterActions` |
+| คู่มือในหัว | ปุ่มวงกลม/แคบมือถือ · ข้อความ `hidden sm:inline` |
+| พอร์ทัลลูกค้า CTA | ปุ่มใหญ่ `min-h-[52px]` · บางจุดไอคอนอย่างเดียว + `aria-label` |
+
+**ห้าม:** ปุ่มข้อความยาวบนมือถือในแถวแคบ · ปุ่มไม่มี `aria-label` เมื่อไม่มีข้อความ visible  
+
+---
+
+## 7) โมดัล · ฟอร์ม · ตัวกรอง
+
+- ใช้ **`FormModal`** — `size` ตามงาน · `appearance="glass"` / `glassTint` เมื่อเป็น hub QR  
+- มือถือแนะนำ **`mobileCentered`** (แผงกลางจอ ไม่ชิดล่าง)  
+- ฟิลด์: `rounded-2xl` · `border-white/70` · `bg-white/85` · ข้อความ `font-bold`  
+- ตัวกรอง: แถบไล่สี + **`mt-5`** + ไอคอนกรอง · มือถือยุบ/ขยายได้  
+- หลังบันทึกฟอร์มปกติ: ปิดโมดัล + `refresh()` — **ไม่** เด้ง toast สำเร็จซ้ำถ้ามีป๊อปอัปยืนยันแล้ว  
+
+---
+
+## 8) แจ้งเตือน / ยืนยัน (ซ่อมบั๊กที่พบบ่อย)
+
+ใช้ **`useAppNoticePopup()` + `AppNoticePopup`** จาก `@/components/app-templates` เท่านั้น
+
+| กรณี | ทำอย่างไร |
+|------|-----------|
+| ลบจอง / ลบลูกค้า / ลบโปร / ลบรายจ่าย / ยกเลิกจอง | `await notice.confirm("…?", { … })` |
+| บันทึกตั้งค่าสนาม | `confirm` ก่อนบันทึก |
+| บันทึกฟอร์มทั่วไป | ไม่ต้อง confirm — ปิดโมดัล + refresh |
+| error ในฟอร์ม | ข้อความใน UI / `console.error` — ไม่ใช้ `alert` |
+
+**ห้าม:** `window.confirm` · `window.alert` · toast สำเร็จหลัง confirm ที่ผู้ใช้กดไปแล้ว  
+
+---
+
+## 9) อัปโหลดรูป / สลิป / เอกสาร (มาตรฐานกลาง)
+
+### Client
+| ฟังก์ชัน | เมื่อใช้ |
+|----------|---------|
+| `prepareImageFileForUpload` | ย่อรูป → JPEG · ขอบยาวสูงสุด 1600 · ~1.85MB |
+| `prepareImageFileAsDataUrl` | โมดูลเก็บสลิปเป็น data URL ชั่วคราว (เช่นจอง/ขายโปรฟุตบอล) ก่อน persist |
+| `prepareUploadFile` | รูป+PDF: รูปย่อ · PDF ส่งตรง (ตรวจขนาด) |
+| `normalizeUploadDisplayName` | ทำความสะอาดชื่อที่แสดง |
+
+ไฟล์: `src/components/app-templates/prepareImageFileForUpload.ts` · `prepareUploadFile.ts`
+
+### Server
+| ฟังก์ชัน | เมื่อใช้ |
+|----------|---------|
+| `saveModuleUpload` | บันทึกไฟล์มาตรฐานทุกโมดูล |
+| `buildStoredUploadFileName` | ชื่อบนดิสก์ |
+| `saveOwnerModuleUploadImage` | โลโก้/รูปโมดูล (ห่อ `saveModuleUpload`) |
+
+ไฟล์: `src/lib/upload/save-module-upload.ts` · `stored-filename.ts` · `upload-segments.ts` · `display-name.ts`
+
+### รูปแบบชื่อไฟล์บนดิสก์ (บังคับ)
+```
+/uploads/{module}/{user}/{module}-{user}-[{kind}-]{timestamp}-{rand}.{ext}
+```
+ตัวอย่าง: `/uploads/football-turf/cmn1…/football-turf-cmn1…-slip-1722…-a1b2c3.jpg`
+
+- **ชื่อที่แสดง** (UI/DB เช่น `attachmentName` / `title`) = **ให้ผู้ใช้ตั้งเอง** — ห้ามบังคับใช้ชื่อไฟล์จากเครื่องลูกค้า  
+- สนามฟุตบอล: `persistFootballTurfSlipUrl` แปลง data URL → ไฟล์ใต้ `public/uploads/football-turf/{user}/…` — **ห้าม** เก็บ data URL ยาวในคอลัมน์ `VarChar` สั้น  
+
+### แสดงรูป
+- ย่อ: **`AppImageThumb`** · เต็มจอ: **`AppImageLightbox` + `useAppImageLightbox`**  
+- ห้ามคัดลอก lightbox เอง  
+
+---
+
+## 10) QR · ลิงก์ · พอร์ทัลสาธารณะ
+
+### ในแดชบอร์ด (แท็บ QR / ลิงก์)
+- กรองมุมมอง: ทั้งหมด · เฉพาะลูกค้า · เฉพาะพนักงาน  
+- การ์ดลิงก์จอง / เช็กอิน: คัดลอกลิงก์ · เปิดหน้า · (ถ้ามี) โปสเตอร์/QR  
+- Hub แบบการ์ดคู่ + `FormModal`: ตาม `shop-qr-hub-popup-pattern.mdc` · พนักงานใช้ `ShopStaffQrPanel` เมื่อเป็นแพทเทิร์นนั้น  
+- Trial: ลิงก์สาธารณะใส่ query `t=` เมื่อ sandbox  
+
+### พอร์ทัลลูกค้า — จอง (`/football-turf/book/[ownerId]`)
+- เปลือก: `AppPublicCheckInGlassPage` + `appPublicCheckInGlassCardClass` · `max-w-md`  
+- เลือกวัน · สนาม · สล็อตว่างที่ **ยังไม่ผ่านเวลา**  
+- ฟอร์ม: ชื่อ · เบอร์ · ทีม · **จำนวนผู้เล่นว่างให้กรอกเอง** (ห้าม default เช่น 10)  
+- ชำระ: โอน+สลิป (`prepareImageFileAsDataUrl`) หรือหน้างาน  
+- กฎ UX พอร์ทัล: `shop-customer-qr-portal.mdc`
+
+### พอร์ทัลลูกค้า — เช็กอิน (`/football-turf/check-in/[ownerId]`)
+- ค้นหาด้วยเบอร์โทรตัวเลขล้วน  
+- การ์ดสรุป: คิวที่ใช้ได้ · **สิทธิ์ที่ใช้ได้ = รวม `remainingUses`** (ไม่ใช่นับจำนวนแพ็กโปร) · เบอร์ที่ค้นหา  
+- รายการโปร: แสดง `เหลือ X/Y สิทธิ์`  
+- ใช้สิทธิ์กับคิวที่ยังไม่หมดเวลาและยังไม่ผูกโปร — ตัด 1 ต่อ 1 คิว  
+- คิวหมดเวลา / ผูกโปรแล้ว → ปิดปุ่มใช้สิทธิ์  
+
+---
+
+## 11) แท็บเนื้อหา (โดเมนสนาม — แพทเทิร์นที่โมดูลอื่นเทียบได้)
+
+| แท็บ | สิ่งที่ต้องมี / เทียบ |
+|------|----------------------|
+| ภาพรวม | สถิติ · ตารางสนามตามวัน · เพิ่มจอง/walk-in · จัดการสนาม |
+| คิว | สถานะจอง→เช็กอิน→เล่น→จบ · ปุ่มเปลี่ยนสถานะ · กันคิวหมดเวลา |
+| การเงิน | สรุปรายรับ/จ่าย · กรองช่วง · **ดูกราฟ** (`AppRevenueCostColumnChart` จาก app-templates) · ขายโปร+สลิป |
+| โปรโมชั่น | CRUD แพ็ก · จำนวนสิทธิ์ · ขาย/ตัดใช้ |
+| ลูกค้า | เบอร์+ชื่อ · ค้นหาเชื่อมจอง/โปร |
+| QR / ลิงก์ | ลิงก์จอง · เช็กอิน · คู่มือพนักงาน |
+| ตั้งค่า | ชื่อสนาม · พร้อมเพย์/บัญชี · ติดต่อ — ยืนยันก่อนบันทึก |
+
+**กราฟ:** ห้ามเขียนแท่งใหม่ — ใช้ `AppRevenueCostColumnChart` / `AppSparkChartPanel` ตาม `app-templates-spark-charts.mdc`
+
+---
+
+## 12) API · ข้อมูล · Prisma
+
+1. เจ้าของ: `GET state` รวมข้อมูลหน้า · `POST action` แยกชนิดงาน  
+2. สาธารณะ: `public/state` + `public/action` — scope ตาม `ownerId` (+ trial)  
+3. PromptPay: `/api/football-turf/promptpay-qr`  
+4. แตะ schema → **`npx prisma migrate deploy` (ถ้ามี) → `npx prisma generate`** ทุกครั้ง (`agent-finish-checkpoint.mdc`)  
+5. สลิป: persist เป็น path ใต้ `/uploads/…` ก่อนใส่ DB  
+
+---
+
+## 13) คู่มือการใช้งานในโมดูล
+
+- ปุ่มในหัว shell → **`AppUsageGuideModal`**  
+- เนื้อหาต้อง **ละเอียดรายแท็บ** + ลำดับเริ่มต้น + ลิงก์ลูกค้า + ความหมายตัวเลขสิทธิ์ + สลิป + เคล็ดลับหน้างาน  
+- อ้างอิงตัวอย่างยาว: `FootballTurfShell.tsx` sections ของคู่มือ  
+- **ห้าม** ใส่คำอธิบายฟีเจอร์ยาวใน `AppSectionHeader.description` — ย้ายมาที่คู่มือ  
+
+---
+
+## 14) การซ่อม / บั๊กที่เคยเจอ (checklist ซ่อม)
+
+| อาการ | สาเหตุที่พบบ่อย | แก้แบบมาตรฐาน |
+|--------|----------------|----------------|
+| สิทธิ์สรุปเป็น 1 แต่การ์ดโปรเหลือ 10 | นับจำนวนแพ็ก ไม่ใช่รวม `remainingUses` | `reduce` รวม `remainingUses` ของโปร ACTIVE |
+| จำนวนผู้เล่นเต็ม 10 ตลอด | state เริ่มต้น `"10"` | เริ่ม `""` · validate ก่อน submit |
+| สลิปใหญ่ / DB พัง / คอลัมน์สั้น | เก็บ data URL ดิบ | `prepare*` + `persist*` เป็นไฟล์ path |
+| ล้อเลื่อนหน้าไม่ได้ตรงกลาง | `overflow-y-auto` บน main โดยไม่มีความสูงจริง | อย่าดัก scroll ที่ main โดยไม่จำเป็น — ดู `appModuleShellMainScrollClass` |
+| เมนูหลักแดชบอร์ดทับ dock โมดูล | ไม่ซ่อน `MobileBottomNav` | `hideMainMobileBottomNav` เมื่อ `isModuleWorkspacePath` |
+| หัวโมดูลชิดแถบสี | ลืม `mt-5` หลัง accent bar | ใส่ `mt-5` เสมอ |
+| ยืนยันลบแล้วเด้งแปลก | ใช้ `window.confirm` / toast ซ้อน | `useAppNoticePopup` อย่างเดียว |
+| Prisma `undefined.findMany` | ไม่ `generate` หลัง schema | รัน `prisma generate` (+ ลบ `.next` ถ้าค้าง) |
+| ไอคอน sidebar เป็นกริดเปล่า | ไม่เพิ่มใน `dashboard-nav-icons.tsx` | เพิ่มเงื่อนไขก่อน fallback modules |
+| รูปสลิปคนละขนาดใน UI | ไม่ใช้ `AppImageThumb` | ใช้ template กลาง |
+
+---
+
+## 15) เช็กลิสต์โมดูลใหม่ (คัดลอกจากสนามฟุตบอล)
+
+- [ ] เลือกชุด gutter ซ้าย–ขวาใน `DashboardPagesShell` + ไม่ซ้ำ `px` ใน Shell (ดู §2b)
+- [ ] `layout` → Shell · guard/trial  
+- [ ] Shell: หัวแก้ว · accent+`mt-5` · คู่มือละเอียด · ยุบหัว · dock มือถือ  
+- [ ] Nav keys + localStorage collapse แยก slug  
+- [ ] ต่อ `DashboardShell` / `DashboardPagesShell` (ความกว้าง · ซ่อนเมนูหลักมือถือ · header bar เมื่อยุบ)  
+- [ ] ไอคอน sidebar + รูปปก landing ถ้าอยู่ในแคตตาล็อก  
+- [ ] สถิติมือถือ `grid-cols-2` · ปุ่มแถวเป็นไอคอน · ไม่มี `description` บนหัวข้อ  
+- [ ] `useAppNoticePopup` สำหรับลบ/ตั้งค่าสำคัญ  
+- [ ] อัปโหลดผ่าน `prepare*` / `saveModuleUpload` · ชื่อไฟล์ module-user · ชื่อแสดงให้คนตั้ง  
+- [ ] พอร์ทัลสาธารณะใช้ `AppPublicCheckInGlassPage` (+ trial `t=`)  
+- [ ] กราฟจาก app-templates เท่านั้น  
+- [ ] `tsc` ผ่าน · schema แล้ว `prisma generate` · commit ตาม checkpoint เมื่องานจบ  
+
+---
+
+## 16) ไฟล์อ่านก่อนลงมือโมดูลใหม่
+
+1. `FootballTurfShell.tsx` — chrome + คู่มือ  
+2. `football-turf-module-nav.tsx` — แท็บ + collapse  
+3. `FootballTurfDashboard.tsx` — แท็บเนื้อหา · ฟิลเตอร์ · โมดัล · QR · ยืนยัน  
+4. `FootballTurfBookingPortalClient.tsx` · `FootballTurfCheckInClient.tsx` — พอร์ทัล  
+5. `lib/ui-tokens.ts` · `lib/persist-slip.ts`  
+6. `src/lib/upload/save-module-upload.ts` · `prepareUploadFile.ts`  

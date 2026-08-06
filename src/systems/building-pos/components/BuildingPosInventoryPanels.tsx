@@ -9,6 +9,12 @@ import {
 import { FormModal } from "@/components/ui/FormModal";
 import { PopupIconButton, popupIconBtnDanger } from "@/systems/car-wash/car-wash-popup-icon-buttons";
 import {
+  assetRowEditIconButtonClass,
+  assetRowRemoveIconButtonClass,
+  IconRowEdit,
+  IconRowRemove,
+} from "@/systems/asset/components/AssetRowActionIcons";
+import {
   createBuildingPosSessionApiRepository,
   uploadBuildingPosSessionImage,
   type PosIngredient,
@@ -212,23 +218,23 @@ export function BuildingPosIngredientsPanel({
 
   return (
     <section className={buildingPosContentPanelClass}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">หมวดหมู่วัตถุดิบ</h2>
-          <p className="mt-1 text-xs text-[#66638c]">
-            รายชื่อและหน่วยซ่อนอยู่ในหน้าต่าง — กดปุ่มเพื่อเพิ่ม/แก้ไข (ตอนนี้{" "}
-            <span className="font-semibold tabular-nums text-[#2e2a58]">{ingredients.length}</span> หมวด)
-          </p>
-        </div>
+      <div className="flex flex-row items-start justify-between gap-3">
+        <h2 className="min-w-0 text-lg font-black tracking-tight text-[#1e1b4b]">หมวดหมู่วัตถุดิบ</h2>
         <button
           type="button"
           onClick={() => {
             cancelForm();
             setManageOpen(true);
           }}
-          className="app-btn-primary shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold"
+          className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded-xl px-0 sm:min-w-0 sm:px-4 sm:py-2.5"
+          aria-label="จัดการหมวดหมู่วัตถุดิบ"
+          title="จัดการหมวด"
         >
-          จัดการหมวด
+          <svg viewBox="0 0 24 24" className="h-5 w-5 sm:hidden" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+          </svg>
+          <span className="hidden sm:inline text-sm font-semibold">จัดการหมวด</span>
         </button>
       </div>
 
@@ -443,10 +449,7 @@ export function BuildingPosPurchasesPanel({
     <section className={buildingPosContentPanelClass}>
       <div className="border-b border-[#ecebff] pb-4">
         <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">ต้นทุน / รายจ่าย</h2>
-        <p className="mt-1 text-xs text-[#66638c]">
-          บันทึกรายจ่ายแต่ละครั้ง (วันที่ หมวด/วัตถุดิบ ราคา) แนบสลิปได้ — ระบบใช้ราคาซื้อล่าสุดคำนวณต้นทุนตามสูตร
-        </p>
-        <div className="mt-3 space-y-3 rounded-2xl border border-[#e1e3ff] bg-[#faf9ff]/80 p-3 sm:p-4">
+        <div className="mt-3 space-y-3 rounded-[1.25rem] border border-[#e1e3ff] bg-[#faf9ff]/80 p-3 sm:p-4">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label className="text-xs font-medium text-[#4d47b6]">
               วันที่จ่าย/ซื้อ
@@ -586,7 +589,7 @@ export function BuildingPosPurchasesPanel({
       </div>
       <ul className="mt-4 space-y-3">
         {purchaseOrders.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-[#d8d6ec] bg-[#faf9ff] py-8 text-center text-sm text-[#66638c]">ยังไม่มีประวัติบันทึกรายจ่าย</p>
+          <p className="rounded-[1.25rem] border border-dashed border-[#d8d6ec] bg-[#faf9ff] py-8 text-center text-sm text-[#66638c]">ยังไม่มีประวัติบันทึกรายจ่าย</p>
         ) : (
           purchaseOrders.map((po) => {
             const total = po.lines.reduce((s, l) => s + l.line_total_baht, 0);
@@ -594,7 +597,7 @@ export function BuildingPosPurchasesPanel({
             return (
               <li
                 key={po.id}
-                className="relative overflow-hidden rounded-[2rem] border border-[#e8e6f4]/90 bg-gradient-to-br from-white via-white to-[#faf9ff]/95 p-3 shadow-[0_8px_26px_-18px_rgba(91,97,255,0.12)] sm:p-4"
+                className="relative overflow-hidden rounded-[1.25rem] border border-[#e8e6f4]/90 bg-gradient-to-br from-white via-white to-[#faf9ff]/95 p-3 shadow-[0_8px_26px_-18px_rgba(91,97,255,0.12)] sm:p-4"
               >
                 {editingPoId === po.id ? (
                   <div className="space-y-3">
@@ -757,20 +760,24 @@ export function BuildingPosPurchasesPanel({
                           {po.note ? ` · ${po.note}` : ""}
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex shrink-0 items-center gap-1">
                         <button
                           type="button"
                           onClick={() => startEditPo(po)}
-                          className="rounded-xl border border-[#c8c4ff] bg-[#f4f3ff] px-3 py-1.5 text-xs font-semibold text-[#4d47b6] hover:bg-[#ecebff]"
+                          className={assetRowEditIconButtonClass}
+                          aria-label={`แก้ไขบันทึกวันที่ ${po.purchased_on}`}
+                          title="แก้ไข"
                         >
-                          แก้ไข
+                          <IconRowEdit className="h-4 w-4" />
                         </button>
                         <button
                           type="button"
                           onClick={() => void deletePo(po.id)}
-                          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700"
+                          className={assetRowRemoveIconButtonClass}
+                          aria-label={`ลบบันทึกวันที่ ${po.purchased_on}`}
+                          title="ลบ"
                         >
-                          ลบครั้งนี้
+                          <IconRowRemove className="h-4 w-4" />
                         </button>
                       </div>
                     </div>

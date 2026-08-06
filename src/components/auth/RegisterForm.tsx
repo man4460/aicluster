@@ -9,7 +9,7 @@ import { cn } from "@/lib/cn";
 import { parseJsonResponse } from "@/lib/parse-json-response";
 import { SIGNUP_BONUS_TOKENS } from "@/lib/tokens/signup-bonus";
 
-export function RegisterForm() {
+export function RegisterForm({ redirectTo = "/dashboard" }: { redirectTo?: string }) {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -56,7 +56,7 @@ export function RegisterForm() {
         );
         return;
       }
-      window.location.assign("/dashboard");
+      window.location.assign(redirectTo);
     } finally {
       setLoading(false);
     }

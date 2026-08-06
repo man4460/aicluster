@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { prepareUploadFile } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { docFieldClass } from "@/systems/doc-transmission/doc-ui-tokens";
@@ -92,11 +93,21 @@ export function DocRecordFormModal({
     setUploading(true);
     setUploadError(null);
     try {
+      const prepared = await prepareUploadFile(file, { accept: "pdf" });
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", prepared);
+      if (form.attachmentName?.trim()) {
+        fd.append("displayName", form.attachmentName.trim());
+      }
       const res = await fetch("/api/doc-transmission/upload", { method: "POST", body: fd });
       const json = (await res.json().catch(() => null)) as
-        | { fileUrl?: string; fileName?: string; fileSize?: number; error?: string }
+        | {
+            fileUrl?: string;
+            displayName?: string;
+            fileName?: string;
+            fileSize?: number;
+            error?: string;
+          }
         | null;
       if (!res.ok || !json?.fileUrl) {
         throw new Error(json?.error ?? "อัปโหลดไม่สำเร็จ");
@@ -104,8 +115,11 @@ export function DocRecordFormModal({
       setForm((p) => ({
         ...p,
         attachmentUrl: json.fileUrl ?? null,
-        attachmentName: json.fileName ?? file.name,
-        attachmentSize: json.fileSize ?? file.size,
+        // ชื่อที่แสดง — ให้ผู้ใช้ตั้ง; ถ้าเคยกรอกไว้แล้วคงค่าเดิม ไม่ดึงจากชื่อไฟล์ OS
+        attachmentName: p.attachmentName?.trim()
+          ? p.attachmentName.trim()
+          : (json.displayName?.trim() || ""),
+        attachmentSize: json.fileSize ?? prepared.size,
       }));
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ");
@@ -116,9 +130,16 @@ export function DocRecordFormModal({
 
   async function handleSubmit() {
     if (!form.subject.trim() || !form.recordDate) return;
+    if (form.attachmentUrl && !form.attachmentName?.trim()) {
+      setUploadError("กรุณาตั้งชื่อไฟล์ที่แสดง");
+      return;
+    }
     setSubmitting(true);
     try {
-      await onSubmit(form);
+      await onSubmit({
+        ...form,
+        attachmentName: form.attachmentName?.trim() || null,
+      });
     } finally {
       setSubmitting(false);
     }
@@ -139,7 +160,11 @@ export function DocRecordFormModal({
         <FormModalFooterActions
           submitLabel={isEdit ? "บันทึกการแก้ไข" : "บันทึกเอกสาร"}
           loading={busy || uploading || submitting}
-          submitDisabled={!form.subject.trim() || !form.recordDate}
+          submitDisabled={
+            !form.subject.trim() ||
+            !form.recordDate ||
+            Boolean(form.attachmentUrl && !form.attachmentName?.trim())
+          }
           onCancel={onClose}
           onSubmit={handleSubmit}
         />
@@ -320,14 +345,14 @@ export function DocRecordFormModal({
               {uploading ? "กำลังอัปโหลด…" : form.attachmentUrl ? "เปลี่ยนไฟล์" : "เลือกไฟล์ PDF"}
             </button>
             <div className="min-w-0 flex-1 text-xs text-[#5f5a8a]">
-              {form.attachmentName ? (
+              {form.attachmentUrl ? (
                 <a
-                  href={form.attachmentUrl ?? "#"}
+                  href={form.attachmentUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="block truncate font-semibold text-[#5b61ff] underline-offset-2 hover:underline"
                 >
-                  {form.attachmentName}
+                  {form.attachmentName?.trim() || "เปิดไฟล์ที่อัปโหลด"}
                 </a>
               ) : (
                 <span>ยังไม่ได้แนบไฟล์</span>
@@ -345,6 +370,21 @@ export function DocRecordFormModal({
                 ลบไฟล์
               </button>
             ) : null}
+          </div>
+          <div className="space-y-1 pt-1">
+            <label className={labelClass} htmlFor="doc-attachment-display-name">
+              ชื่อไฟล์ที่แสดง
+            </label>
+            <input
+              id="doc-attachment-display-name"
+              type="text"
+              maxLength={160}
+              placeholder="ตั้งชื่อเอง เช่น หนังสือสั่งการ 1/2568"
+              value={form.attachmentName ?? ""}
+              onChange={(e) => setForm((p) => ({ ...p, attachmentName: e.target.value }))}
+              className={inputClass}
+            />
+            <p className="text-[11px] text-[#8b87b0]">ชื่อนี้ใช้แสดงในระบบ — ไม่ใช่ชื่อไฟล์บนเซิร์ฟเวอร์</p>
           </div>
         </div>
 

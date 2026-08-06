@@ -8,6 +8,7 @@ import {
   appDashboardBrandCtaPillButtonClass,
   appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
+import { downloadAdminExcel } from "@/lib/admin/export-excel";
 import { cn } from "@/lib/cn";
 
 type CooldownRow = {
@@ -157,6 +158,22 @@ export function ModuleCooldownAdminClient() {
     void unlockByUserId(user.id, moduleId);
   }
 
+  function onExportExcel() {
+    downloadAdminExcel({
+      filename: "admin-module-cooldowns",
+      sheetName: "ปลดล็อค",
+      headers: ["Email", "ผู้ใช้", "ระบบ", "slug", "ยกเลิกเมื่อ", "ปลดล็อคได้เมื่อ"],
+      rows: filteredAll.map((e) => [
+        e.email,
+        e.username,
+        e.moduleTitle,
+        e.slug,
+        formatTh(e.unsubscribedAtIso),
+        formatTh(e.unlockAtIso),
+      ]),
+    });
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <section
@@ -178,9 +195,6 @@ export function ModuleCooldownAdminClient() {
                 ปลดล็อค Subscribe
               </span>
             </h1>
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[#5f5a8a]">
-              หลัง Unsubscribe ระบบล็อคการ Subscribe โมดูลเดิมประมาณ 1 เดือน — แอดมินสามารถปลดล็อคให้ผู้ใช้กด Subscribe ได้ทันที
-            </p>
           </div>
         </div>
       </section>
@@ -197,28 +211,42 @@ export function ModuleCooldownAdminClient() {
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           title="รายการล็อคทั้งหมด"
-          description="กรองตาม email ชื่อผู้ใช้ หรือชื่อระบบ — ปลดล็อคทีละรายการ"
           action={
             <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() => setFilterOpen((o) => !o)}
                 aria-expanded={filterOpen}
-                aria-label={filterOpen ? "ปิดตัวกรอง" : "เปิดตัวกรอง"}
-                title="ตัวกรอง"
+                aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                title={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
                 className={cn(
                   appTemplateOutlineButtonClass,
-                  "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-0 px-0 md:hidden sm:min-w-0 sm:gap-2 sm:px-3",
+                  "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center px-0 sm:px-3",
                   "border-[#dcd8f0] bg-white/80 text-[#4d47b6]",
                   filterOpen && "border-[#5b61ff]/45 bg-[#ecebff]/90 ring-2 ring-[#5b61ff]/20",
                   filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
                 )}
               >
                 <IconFilter className="h-5 w-5 shrink-0" />
-                <span className="hidden sm:inline">ตัวกรอง</span>
+                <span className="hidden sm:ml-1 sm:inline">{filterOpen ? "ซ่อนกรอง" : "กรอง"}</span>
                 {filtersActive ? (
                   <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white" aria-hidden />
                 ) : null}
+              </button>
+              <button
+                type="button"
+                onClick={onExportExcel}
+                disabled={loadingAll || filteredAll.length === 0}
+                aria-label="Export Excel"
+                title="Export Excel"
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-0 px-0 sm:min-w-0 sm:gap-1.5 sm:px-3",
+                  "border-[#dcd8f0] bg-white/80 text-[#4d47b6] disabled:opacity-50",
+                )}
+              >
+                <IconExcel className="h-5 w-5 shrink-0" />
+                <span className="hidden sm:inline">Excel</span>
               </button>
               <button
                 type="button"
@@ -239,167 +267,82 @@ export function ModuleCooldownAdminClient() {
           }
         />
 
-        <div
-          className={cn(
-            "mt-4 flex flex-col gap-2 rounded-[1.25rem] border border-white/50 bg-gradient-to-br from-white/45 to-indigo-50/15 p-4 ring-1 ring-inset ring-white/40 backdrop-blur-md sm:rounded-[2rem]",
-            filterOpen ? "flex" : "hidden md:flex",
-          )}
-        >
-          <label className="text-xs font-bold text-[#5f5a8a]" htmlFor="cooldown-filter-input">
-            กรองรายการ (email / ชื่อผู้ใช้ / ระบบ)
-          </label>
-          <input
-            id="cooldown-filter-input"
-            type="search"
-            value={filterText}
-            onChange={(e) => setFilterText(e.target.value)}
-            placeholder="พิมพ์เพื่อกรอง…"
-            className={inputClass}
-            autoComplete="off"
-          />
-          <p className="text-xs text-[#66638c]">
-            {loadingAll ? "กำลังโหลด…" : `ทั้งหมด ${allEntries.length} รายการ · แสดง ${filteredAll.length} รายการ`}
-          </p>
-        </div>
-
-        {!loadingAll ? (
-          <>
-            <div className="mt-4 hidden overflow-hidden rounded-[1.25rem] border border-[#e8e6fc] md:block md:rounded-[2rem]">
-              {filteredAll.length === 0 ? (
-                <div className="p-4">
-                  <AppEmptyState tone="violet">
-                    {allEntries.length === 0 ? "ไม่มีรายการล็อคในขณะนี้" : "ไม่พบรายการที่ตรงกับการกรอง"}
-                  </AppEmptyState>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[720px] border-collapse text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-[#e8e6fc] bg-[#faf9ff]/90 text-[11px] font-black uppercase tracking-wide text-[#66638c]">
-                        <th className="px-4 py-3 font-black">Email</th>
-                        <th className="px-4 py-3 font-black">ผู้ใช้</th>
-                        <th className="px-4 py-3 font-black">ระบบ</th>
-                        <th className="px-4 py-3 font-black">ยกเลิกเมื่อ</th>
-                        <th className="px-4 py-3 font-black">ปลดล็อคได้เมื่อ</th>
-                        <th className="px-4 py-3 text-right font-black">การทำงาน</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredAll.map((e) => {
-                        const key = `${e.userId}:${e.moduleId}`;
-                        return (
-                          <tr key={key} className="border-b border-[#f0eefc]/90 transition-colors last:border-0 hover:bg-white/60">
-                            <td className="px-4 py-3 text-[#1e1b4b]">{e.email}</td>
-                            <td className="px-4 py-3 text-[#5f5a8a]">{e.username}</td>
-                            <td className="px-4 py-3">
-                              <span className="font-bold text-[#2e2a58]">{e.moduleTitle}</span>
-                              <span className="mt-0.5 block font-mono text-[10px] text-[#66638c]">{e.slug}</span>
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-[#66638c]">
-                              {formatTh(e.unsubscribedAtIso)}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-[#66638c]">
-                              {formatTh(e.unlockAtIso)}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <button
-                                type="button"
-                                disabled={unlocking === key}
-                                onClick={() => void unlockByUserId(e.userId, e.moduleId)}
-                                className={unlockIconBtnClass}
-                                aria-label={`ปลดล็อค ${e.moduleTitle} ของ ${e.username}`}
-                                title="ปลดล็อค"
-                              >
-                                {unlocking === key ? (
-                                  <IconSpinner className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <IconKeyUnlock className="h-4 w-4" />
-                                )}
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-4 space-y-3 md:hidden">
-              {filteredAll.length === 0 ? (
-                <AppEmptyState tone="violet">
-                  {allEntries.length === 0 ? "ไม่มีรายการล็อคในขณะนี้" : "ไม่พบรายการที่ตรงกับการกรอง"}
-                </AppEmptyState>
-              ) : (
-                filteredAll.map((e) => {
-                  const key = `${e.userId}:${e.moduleId}`;
-                  return (
-                    <article
-                      key={key}
-                      className={cn(
-                        "overflow-hidden rounded-[1.25rem] border border-white/55 bg-gradient-to-br from-white/55 via-white/30 to-indigo-50/20 p-4 shadow-[0_16px_40px_-28px_rgba(30,27,75,0.28)] backdrop-blur-xl ring-1 ring-inset ring-white/50",
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-black text-[#1e1b4b]">{e.moduleTitle}</p>
-                          <p className="mt-0.5 font-mono text-xs text-[#66638c]">{e.slug}</p>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={unlocking === key}
-                          onClick={() => void unlockByUserId(e.userId, e.moduleId)}
-                          className={unlockIconBtnClass}
-                          aria-label={`ปลดล็อค ${e.moduleTitle} ของ ${e.username}`}
-                          title="ปลดล็อค"
-                        >
-                          {unlocking === key ? (
-                            <IconSpinner className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <IconKeyUnlock className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
-                      <div className="mt-3 space-y-2 rounded-[1rem] border border-white/50 bg-white/40 px-3 py-3 text-sm backdrop-blur-sm">
-                        <div className="flex justify-between gap-3">
-                          <span className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">ผู้ใช้</span>
-                          <span className="truncate text-right font-semibold text-[#2e2a58]">{e.username}</span>
-                        </div>
-                        <div className="flex justify-between gap-3 border-t border-white/50 pt-2">
-                          <span className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">Email</span>
-                          <span className="truncate text-right text-xs text-[#5f5a8a]">{e.email}</span>
-                        </div>
-                        <div className="flex justify-between gap-3 border-t border-white/50 pt-2">
-                          <span className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">ยกเลิกเมื่อ</span>
-                          <span className="text-right text-[11px] tabular-nums text-[#66638c]">{formatTh(e.unsubscribedAtIso)}</span>
-                        </div>
-                        <div className="flex justify-between gap-3 border-t border-white/50 pt-2">
-                          <span className="text-[11px] font-bold uppercase tracking-wide text-[#66638c]">ปลดได้เมื่อ</span>
-                          <span className="text-right text-[11px] tabular-nums text-[#4d47b6]">{formatTh(e.unlockAtIso)}</span>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="h-28 animate-pulse rounded-[1.25rem] bg-[#ecebff]/70" />
-            ))}
+        {filterOpen ? (
+          <div className="mt-4 flex flex-col gap-2 rounded-[1.25rem] border border-white/50 bg-gradient-to-br from-white/45 to-indigo-50/15 p-4 ring-1 ring-inset ring-white/40 backdrop-blur-md sm:rounded-[2rem]">
+            <label className="text-xs font-bold text-[#5f5a8a]" htmlFor="cooldown-filter-input">
+              กรองรายการ (email / ชื่อผู้ใช้ / ระบบ)
+            </label>
+            <input
+              id="cooldown-filter-input"
+              type="search"
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              placeholder="พิมพ์เพื่อกรอง…"
+              className={inputClass}
+              autoComplete="off"
+            />
+            <p className="text-xs text-[#66638c]">
+              {loadingAll ? "กำลังโหลด…" : `ทั้งหมด ${allEntries.length} รายการ · แสดง ${filteredAll.length} รายการ`}
+            </p>
           </div>
-        )}
+        ) : null}
+
+        <div className="mt-4">
+          {loadingAll ? (
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <li key={i} className="h-14 animate-pulse rounded-xl bg-[#ecebff]/70" />
+              ))}
+            </ul>
+          ) : filteredAll.length === 0 ? (
+            <AppEmptyState tone="violet">
+              {allEntries.length === 0 ? "ไม่มีรายการล็อคในขณะนี้" : "ไม่พบรายการที่ตรงกับการกรอง"}
+            </AppEmptyState>
+          ) : (
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
+              {filteredAll.map((e) => {
+                const key = `${e.userId}:${e.moduleId}`;
+                const letter = (e.moduleTitle.trim().charAt(0) || "?").toUpperCase();
+                return (
+                  <li key={key}>
+                    <article className="group flex min-w-0 max-w-full items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-gradient-to-br from-[#ecebff] to-indigo-100/40 text-sm font-black text-[#4d47b6] shadow-sm">
+                        {letter}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-black text-[#1e1b4b]">{e.moduleTitle}</p>
+                        <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
+                          {e.username} · {e.email}
+                        </p>
+                        <p className="mt-0.5 truncate text-[10px] tabular-nums text-[#66638c]">
+                          ยกเลิก {formatTh(e.unsubscribedAtIso)} · ปลดได้ {formatTh(e.unlockAtIso)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={unlocking === key}
+                        onClick={() => void unlockByUserId(e.userId, e.moduleId)}
+                        className={unlockIconBtnClass}
+                        aria-label={`ปลดล็อค ${e.moduleTitle} ของ ${e.username}`}
+                        title="ปลดล็อค"
+                      >
+                        {unlocking === key ? (
+                          <IconSpinner className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <IconKeyUnlock className="h-4 w-4" />
+                        )}
+                      </button>
+                    </article>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </AppDashboardSection>
 
       <AppDashboardSection tone="violet">
-        <AppSectionHeader
-          tone="violet"
-          title="ค้นหาตามผู้ใช้"
-          description="ใส่ email แล้วกดค้นหา — แสดงเฉพาะล็อคของผู้ใช้นั้น"
-        />
+        <AppSectionHeader tone="violet" title="ค้นหาตามผู้ใช้" />
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="min-w-0 flex-1">
             <label className="mb-1.5 block text-xs font-bold text-[#5f5a8a]" htmlFor="cooldown-email-search">
@@ -509,6 +452,15 @@ function IconRefresh({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
       <path d="M21 12a9 9 0 1 1-2.64-6.36" strokeLinecap="round" />
       <path d="M21 3v6h-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconExcel({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" strokeLinejoin="round" />
+      <path d="M14 3v5h5M8.5 17l3-4-3-4M12.5 9H15M12.5 17H15" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

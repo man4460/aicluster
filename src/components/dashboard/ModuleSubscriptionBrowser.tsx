@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
 import { canAccessAppModule, type UserAccessFields } from "@/lib/modules/access";
-import { isDailyTokenExemptModuleSlug, MODULE_GROUP_TIER_NAME } from "@/lib/modules/config";
+import { MODULE_GROUP_TIER_NAME } from "@/lib/modules/config";
+import { dashboardModuleCardDescription } from "@/lib/modules/dashboard-card-descriptions";
 import { getModuleDailyUsageBadge } from "@/lib/modules/module-usage-badge";
 import { MODULE_RESUBSCRIBE_COOLDOWN_MS } from "@/lib/modules/module-subscription-cooldown";
+import { isSafeModuleCardDisplayUrl } from "@/lib/module-card-image";
 import { isSystemMapCatalogSlug } from "@/lib/modules/system-map-catalog";
+import { appDashboardBrandGradientBarClass, appDashboardBrandGradientFillClass } from "@/components/app-templates";
 import {
   DashboardModuleHeroCard,
   dashboardModulePrimaryCtaClass,
@@ -30,6 +34,8 @@ type Props = {
   modules: ModuleCardDTO[];
   /** แสดงการ์ดแผนผังระบบ — ต้องตรงกับบัญชีแอดมินที่ล็อกอิน (ส่งจากเซิร์ฟเวอร์) */
   showSystemMapCatalog?: boolean;
+  showCatalogHeader?: boolean;
+  backHref?: string;
   access: UserAccessFields;
   initialSubscribedIds: string[];
   /** โมดูลที่เคยเปิดทดลองแบบเก่า (ยังเหลือสิทธิ์จนกว่าจะหมดอายุ) — ไม่มีปุ่มเริ่มทดลองใหม่แล้ว */
@@ -112,9 +118,48 @@ function groupTone(groupId: number): { header: string; chip: string; icon: React
   };
 }
 
+/** หัวข้อกลุ่มในแคตตาล็อก เช่น Basic 1 บาท/วัน */
+function moduleGroupCatalogHeading(groupId: number): string {
+  const name = MODULE_GROUP_TIER_NAME[groupId] ?? `กลุ่ม ${groupId}`;
+  if (groupId === 1) return `${name} 1 บาท/วัน`;
+  return `${name} รวมแพ็กเกจ`;
+}
+
+/** คำอธิบายบรรทัดเดียวใต้ชื่อโมดูล — ตัดคำนำหน้ากลุ่มที่ซ้ำกับหัวข้อส่วน */
+function catalogModuleDescription(m: { slug: string; description: string | null }): string {
+  const fromDb = m.description?.trim();
+  const raw = fromDb || dashboardModuleCardDescription(m.slug);
+  const line = raw
+    .split("\n")[0]
+    ?.trim()
+    .replace(/^กลุ่ม\s*\d+\s*\([^)]*\)\s*[—–\-:]?\s*/u, "")
+    .trim();
+  if (line) return line;
+  const fallback = dashboardModuleCardDescription(m.slug).split("\n")[0]?.trim();
+  return fallback || "—";
+}
+
+function ModuleThumb({
+  url,
+  fallback,
+}: {
+  url: string | null | undefined;
+  fallback: ReactNode;
+}) {
+  const safe = url && isSafeModuleCardDisplayUrl(url) ? url : null;
+  return (
+    <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-white/70 bg-gradient-to-br from-[#ecebff] to-indigo-100/40 shadow-sm">
+      {safe ? <Image src={safe} alt="" fill sizes="44px" className="object-cover" unoptimized /> : null}
+      {!safe ? <div className="flex h-full w-full items-center justify-center text-[#4d47b6]">{fallback}</div> : null}
+    </div>
+  );
+}
+
 export function ModuleSubscriptionBrowser({
   modules,
   showSystemMapCatalog = false,
+  showCatalogHeader = false,
+  backHref = "/dashboard",
   access,
   initialSubscribedIds,
   initialTrialIds = [],
@@ -127,6 +172,8 @@ export function ModuleSubscriptionBrowser({
   const cooldownNowMs = cooldownClockMounted ? Date.now() : hydrationReferenceMs;
 
   const [q, setQ] = useState("");
+  const [catalogMode, setCatalogMode] = useState<"ALL" | "FREE">("ALL");
+  const [groupFilter, setGroupFilter] = useState<number | "ALL">("ALL");
   const [savedSubscribedIds, setSavedSubscribedIds] = useState<Set<string>>(() => new Set(initialSubscribedIds));
   /** สิทธิ์เข้าโมดูลชั่วคราวจากระบบทดลองแบบเก่า (ไม่มีปุ่มเริ่มใหม่) */
   const [legacyTrialAccessIds, setLegacyTrialAccessIds] = useState<Set<string>>(() => {
@@ -152,8 +199,6 @@ export function ModuleSubscriptionBrowser({
     setLegacyTrialAccessIds(new Set(initialTrialIds.filter((id) => !sub.has(id))));
   }, [subSyncKey, trialSyncKey, initialSubscribedIds, initialTrialIds]);
 
-  const isDailyPlan = access.role !== "ADMIN" && access.subscriptionType !== "BUFFET";
-  // สายรายวัน Subscribe ได้หลายโมดูลในกลุ่ม 1 — หัก 1 โทเคน/โมดูล/วัน Bangkok เมื่อเข้าใช้
   const reachedDailyLimit = false;
   const upgradeMessage = "ระบบนี้ยังไม่อยู่ในแผนของคุณ — กรุณาอัปเกรดแพ็กเกจเพื่อใช้งาน";
 
@@ -170,6 +215,60 @@ export function ModuleSubscriptionBrowser({
       (m) => m.title.toLowerCase().includes(t) || (m.description ?? "").toLowerCase().includes(t),
     );
   }, [modulesForUi, q]);
+
+  const toneRows = useMemo(() => {
+    if (catalogMode === "FREE") {
+      return rows.filter((m) => getModuleDailyUsageBadge(m.slug, m.groupId)?.tone === "free");
+    }
+    return rows;
+  }, [catalogMode, rows]);
+
+  const groupIds = useMemo(
+    () => Array.from(new Set(toneRows.map((m) => m.groupId))).sort((a, b) => a - b),
+    [toneRows],
+  );
+
+  const filteredRows = useMemo(() => {
+    if (groupFilter === "ALL") return toneRows;
+    return toneRows.filter((m) => m.groupId === groupFilter);
+  }, [groupFilter, toneRows]);
+
+  useEffect(() => {
+    if (groupFilter === "ALL") return;
+    if (toneRows.some((m) => m.groupId === groupFilter)) return;
+    setGroupFilter("ALL");
+  }, [groupFilter, toneRows]);
+
+  const featuredModules = useMemo(() => {
+    if (catalogMode !== "ALL") return [];
+    if (rows.length === 0) return [];
+    const preferred = rows.filter((m) => savedSubscribedIds.has(m.id) || legacyTrialAccessIds.has(m.id));
+    const seen = new Set<string>();
+    const picked: ModuleCardDTO[] = [];
+    for (const m of [...preferred, ...rows]) {
+      if (picked.length >= 3) break;
+      if (seen.has(m.slug)) continue;
+      seen.add(m.slug);
+      picked.push(m);
+    }
+    return picked;
+  }, [catalogMode, legacyTrialAccessIds, rows, savedSubscribedIds]);
+
+  const freeModules = useMemo(
+    () => rows.filter((m) => getModuleDailyUsageBadge(m.slug, m.groupId)?.tone === "free").slice(0, 12),
+    [rows],
+  );
+
+  const compactRows = useMemo(() => {
+    const isSearch = q.trim().length > 0;
+    if (isSearch) return filteredRows;
+    if (catalogMode !== "ALL") return filteredRows;
+    const hidden = new Set<string>([
+      ...featuredModules.map((m) => m.slug),
+      ...freeModules.map((m) => m.slug),
+    ]);
+    return filteredRows.filter((m) => !hidden.has(m.slug));
+  }, [catalogMode, featuredModules, filteredRows, freeModules, q]);
 
   function activeCooldownUnlockIso(moduleId: string): string | null {
     const iso = cooldownUnlocks[moduleId];
@@ -251,227 +350,406 @@ export function ModuleSubscriptionBrowser({
   }
 
   return (
-    <div className="space-y-8">
-      {/* Search and Info Header */}
-      <div className="sticky top-0 z-10 -mx-1 px-1 pt-2 pb-4">
-        <div className="rounded-3xl border border-white/60 bg-white/70 p-4 shadow-[0_8px_30px_-10px_rgba(0,0,0,0.1)] backdrop-blur-xl ring-1 ring-slate-200/50">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="relative flex-1 max-w-md">
-              {!q ? (
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-                  <svg className="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-                  </svg>
-                </div>
-              ) : null}
+    <div className="min-w-0 max-w-full space-y-4 sm:space-y-6">
+      <section className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5">
+        <div className={cn("h-1.5 w-full rounded-full", appDashboardBrandGradientBarClass)} aria-hidden />
+        {showCatalogHeader ? (
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">Catalog</p>
+              <h1 className="mt-1 truncate text-xl font-black tracking-tight text-[#2e2a58] sm:text-2xl">ระบบทั้งหมด</h1>
+            </div>
+            <Link
+              href={backHref}
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-[#0000BF]/20 bg-[#0000BF]/10 px-4 text-xs font-black text-[#2e2a58] shadow-sm transition hover:bg-[#0000BF]/12 active:scale-[0.99]"
+              aria-label="กลับ"
+            >
+              <svg className="mr-1.5 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              กลับ
+            </Link>
+          </div>
+        ) : null}
+
+        <div className="mt-4 flex min-w-0 flex-col gap-3">
+          <label className="flex h-10 w-full min-w-0 cursor-text items-center gap-2.5 rounded-xl bg-[#f3f2fa]/90 px-3 transition focus-within:bg-[#eeedf8] focus-within:ring-2 focus-within:ring-[#5b61ff]/20">
+              <svg
+                className="h-4 w-4 shrink-0 text-slate-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                aria-hidden
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
               <input
                 suppressHydrationWarning
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="ค้นหาระบบที่คุณสนใจ..."
-                className={`app-input w-full rounded-2xl border-slate-200/60 bg-white/50 ${q ? "pl-4" : "pl-10"} pr-4 py-2.5 text-sm transition-all focus:bg-white focus:ring-2 focus:ring-[#5b61ff]/20`}
+                placeholder="ค้นหาระบบ..."
+                aria-label="ค้นหาระบบ"
+                className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-bold text-[#2e2a58] outline-none placeholder:text-slate-400 focus:ring-0"
               />
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <p className="text-[11px] font-bold text-[#66638c] uppercase tracking-wider">
-                {isDailyPlan
-                  ? "Daily Plan: หัก 1 โทเคน/โมดูล/วัน"
-                  : "Buffet Plan: Unlimited Access"}
-              </p>
+            </label>
+
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <div className="inline-flex shrink-0 rounded-xl bg-[#f3f2fa]/90 p-1">
+                <button
+                  type="button"
+                  suppressHydrationWarning
+                  onClick={() => setCatalogMode("ALL")}
+                  className={cn(
+                    "inline-flex h-9 items-center justify-center rounded-lg px-3 text-xs font-black transition",
+                    catalogMode === "ALL"
+                      ? cn(appDashboardBrandGradientFillClass, "text-white")
+                      : "text-slate-600 hover:bg-white/80",
+                  )}
+                >
+                  ทั้งหมด
+                </button>
+                <button
+                  type="button"
+                  suppressHydrationWarning
+                  onClick={() => setCatalogMode("FREE")}
+                  className={cn(
+                    "inline-flex h-9 items-center justify-center rounded-lg px-3 text-xs font-black transition",
+                    catalogMode === "FREE"
+                      ? cn(appDashboardBrandGradientFillClass, "text-white")
+                      : "text-slate-600 hover:bg-white/80",
+                  )}
+                >
+                  ฟรี
+                </button>
+              </div>
+
+              <select
+                value={groupFilter === "ALL" ? "ALL" : String(groupFilter)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "ALL") setGroupFilter("ALL");
+                  else setGroupFilter(Number(v));
+                }}
+                aria-label="กรองตามกลุ่ม"
+                className="h-10 min-w-0 flex-1 rounded-xl border-0 bg-[#f3f2fa]/90 px-3 text-xs font-black text-[#2e2a58] outline-none transition focus:bg-[#eeedf8] focus:ring-2 focus:ring-[#5b61ff]/20 sm:min-w-[10.5rem] sm:flex-none"
+              >
+                <option value="ALL">{`ทุกกลุ่ม (${toneRows.length})`}</option>
+                {groupIds.map((gid) => {
+                  const count = toneRows.filter((m) => m.groupId === gid).length;
+                  return (
+                    <option key={`group-opt-${gid}`} value={String(gid)}>
+                      {`${moduleGroupCatalogHeading(gid)} (${count})`}
+                    </option>
+                  );
+                })}
+              </select>
+
+              {catalogMode === "ALL" ? (
+                <span className="inline-flex h-10 items-center rounded-lg border border-[#0000BF]/15 bg-[#0000BF]/10 px-3 text-xs font-black text-[#2e2a58]">
+                  {rows.length} ระบบ
+                </span>
+              ) : (
+                <span className="inline-flex h-10 items-center rounded-lg border border-emerald-200/70 bg-emerald-50/80 px-3 text-xs font-black text-emerald-800">
+                  {toneRows.length} ฟรี
+                </span>
+              )}
             </div>
           </div>
-          
-          {infoBanner ? (
-            <div className="mt-4 flex items-start gap-3 rounded-2xl border border-sky-100 bg-sky-50/50 p-3 text-[13px] text-sky-800 backdrop-blur-sm">
-              <span className="mt-0.5 text-lg">ℹ️</span>
-              <p className="leading-relaxed">{infoBanner}</p>
-            </div>
-          ) : null}
-          
-          {err ? (
-            <div className="mt-4 flex items-start gap-3 rounded-2xl border border-red-100 bg-red-50/50 p-3 text-[13px] text-red-800 backdrop-blur-sm">
-              <span className="mt-0.5 text-lg">⚠️</span>
-              <p className="leading-relaxed">{err}</p>
-            </div>
-          ) : null}
-        </div>
-      </div>
 
-      {/* Grouped Modules */}
-      <div className="space-y-12">
-        {Array.from(new Set(rows.map((m) => m.groupId)))
-          .sort((a, b) => a - b)
-          .map((gid) => {
-            const items = rows.filter((m) => m.groupId === gid);
-            const tone = groupTone(gid);
-            return (
-              <section key={gid} className="relative space-y-6">
-                <div className="flex items-center gap-4 px-2">
-                  <div className={cn("flex h-10 w-10 items-center justify-center rounded-2xl shadow-sm ring-1 ring-white/80 backdrop-blur-md", tone.chip)}>
-                    {tone.icon}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">
-                      {MODULE_GROUP_TIER_NAME[gid] ?? `กลุ่ม ${gid}`}
-                    </h2>
-                    <p className="text-xs font-medium uppercase tracking-widest text-slate-500">
-                      {items.length} ระบบในกลุ่มนี้
-                    </p>
-                  </div>
-                  <div className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent" />
-                </div>
+        {infoBanner ? (
+          <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50/60 px-3 py-2 text-xs font-bold text-sky-800">
+            {infoBanner}
+          </div>
+        ) : null}
 
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  {items.map((m) => {
-                    if (showSystemMapCatalog && isSystemMapCatalogSlug(m.slug)) {
-                      return (
-                        <DashboardModuleHeroCard
-                          key={m.id}
-                          variant="systemMap"
-                          tall
-                          imageUrl={m.cardImageUrl}
-                          groupId={m.groupId}
-                          title={m.title}
-                          description={m.description ?? ""}
-                          usageBadge={getModuleDailyUsageBadge(m.slug, m.groupId)}
-                          footer={
-                            <div className="space-y-3">
-                              <Link href="/dashboard/explore" className={dashboardModulePrimaryCtaClass}>
-                                เปิดแผนผังระบบ
-                              </Link>
-                              <p className="text-center text-[10px] font-medium text-slate-500 italic">
-                                * ไม่ต้อง Subscribe — ดูภาพรวมและทางลัดเข้าระบบ
-                              </p>
-                            </div>
+        {err ? (
+          <div className="mt-2 rounded-xl border border-red-100 bg-red-50/60 px-3 py-2 text-xs font-bold text-red-800">
+            {err}
+          </div>
+        ) : null}
+      </section>
+
+      {q.trim().length === 0 && catalogMode === "ALL" && featuredModules.length > 0 ? (
+        <section className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">ปัจจุบัน</p>
+            <span className="rounded-lg border border-white/70 bg-white/80 px-2 py-0.5 text-[10px] font-black text-[#2e2a58]">
+              {featuredModules.length}
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
+            {featuredModules.map((m) => {
+              const subscribed = savedSubscribedIds.has(m.id);
+              const legacyTrialAccess = !subscribed && legacyTrialAccessIds.has(m.id);
+              const hasAccess = subscribed || legacyTrialAccess;
+              const unlocked = canAccessAppModule(access, { slug: m.slug, groupId: m.groupId });
+              const cooldownIso = activeCooldownUnlockIso(m.id);
+              const lockedByCooldown = !subscribed && cooldownIso !== null;
+              const lockedByDailyLimit = !subscribed && !lockedByCooldown && reachedDailyLimit;
+              const showCooldownLock = lockedByCooldown;
+              const showDailyLock = lockedByDailyLimit;
+
+              return (
+                <DashboardModuleHeroCard
+                  key={`featured-${m.id}`}
+                  tall={false}
+                  imageUrl={m.cardImageUrl}
+                  groupId={m.groupId}
+                  title={m.title}
+                  description={catalogModuleDescription(m)}
+                  usageBadge={getModuleDailyUsageBadge(m.slug, m.groupId)}
+                  footer={
+                    <div className="space-y-2">
+                      {hasAccess ? (
+                        <Link
+                          href={dashboardModuleHref(m.slug)}
+                          className={cn(dashboardModulePrimaryCtaClass, "!min-h-[40px] !rounded-xl !text-sm")}
+                        >
+                          เข้าใช้งาน
+                        </Link>
+                      ) : showCooldownLock || showDailyLock ? (
+                        <button
+                          type="button"
+                          suppressHydrationWarning
+                          onClick={() =>
+                            setErr(
+                              showCooldownLock
+                                ? `ระบบถูกล็อคจนถึง ${formatBangkokDateTimeLong(cooldownIso!)}`
+                                : upgradeMessage,
+                            )
                           }
-                        />
-                      );
-                    }
+                          className="app-tap-feedback w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100"
+                        >
+                          Locked
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          suppressHydrationWarning
+                          disabled={busyId === m.id || !unlocked}
+                          onClick={() => void subscribeOnly(m.id)}
+                          className={cn(dashboardModuleSubscribeButtonClass, "app-tap-feedback !min-h-[40px] !rounded-xl !py-2")}
+                        >
+                          {busyId === m.id ? (
+                            <span className="inline-flex items-center gap-2">
+                              <span className="app-inline-spinner !h-3 !w-3" aria-hidden />
+                              <span>กำลังสมัคร...</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 justify-center">
+                              <span className="text-sm">+</span>
+                              <span>Subscribe</span>
+                            </span>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  }
+                />
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
-                    const subscribed = savedSubscribedIds.has(m.id);
-                    const legacyTrialAccess = !subscribed && legacyTrialAccessIds.has(m.id);
-                    const hasAccess = subscribed || legacyTrialAccess;
-                    const unlocked = canAccessAppModule(access, { slug: m.slug, groupId: m.groupId });
-                    const cooldownIso = activeCooldownUnlockIso(m.id);
-                    const lockedByCooldown = !subscribed && cooldownIso !== null;
-                    const lockedByDailyLimit = !subscribed && !lockedByCooldown && reachedDailyLimit;
+          {q.trim().length === 0 && catalogMode === "ALL" && freeModules.length > 0 ? (
+            <section className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">โมดูลฟรี</p>
+                <span className="rounded-lg border border-emerald-200/60 bg-emerald-50/80 px-2 py-0.5 text-[10px] font-black text-emerald-800">
+                  {freeModules.length}
+                </span>
+              </div>
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
+                {freeModules.slice(0, 6).map((m) => (
+                  <Link
+                    key={`free-${m.id}`}
+                    href={dashboardModuleHref(m.slug)}
+                    className="group flex min-w-0 max-w-full items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-200/70 hover:bg-white active:scale-[0.99]"
+                  >
+                    <ModuleThumb
+                      url={m.cardImageUrl}
+                      fallback={<GroupIcon groupId={m.groupId} className="h-5 w-5" />}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-black text-[#1e1b4b]">{m.title}</p>
+                      <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
+                        {catalogModuleDescription(m)}
+                      </p>
+                    </div>
+                    <span className="text-slate-300 transition group-hover:text-emerald-500" aria-hidden>
+                      →
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
-                    const showCooldownLock = lockedByCooldown;
-                    const showDailyLock = lockedByDailyLimit;
+          {catalogMode === "FREE" && q.trim().length === 0 ? (
+            <section className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">โมดูลฟรี</p>
+                <span className="rounded-lg border border-emerald-200/60 bg-emerald-50/80 px-2 py-0.5 text-[10px] font-black text-emerald-800">
+                  {toneRows.length}
+                </span>
+              </div>
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
+                {filteredRows.map((m) => (
+                  <Link
+                    key={`free-grid-${m.id}`}
+                    href={dashboardModuleHref(m.slug)}
+                    className="group flex min-w-0 max-w-full items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-200/70 hover:bg-white active:scale-[0.99]"
+                  >
+                    <ModuleThumb
+                      url={m.cardImageUrl}
+                      fallback={<GroupIcon groupId={m.groupId} className="h-5 w-5" />}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-black text-[#1e1b4b]">{m.title}</p>
+                      <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
+                        {catalogModuleDescription(m)}
+                      </p>
+                    </div>
+                    <span className="text-slate-300 transition group-hover:text-emerald-500" aria-hidden>
+                      →
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
-                    return (
-                      <DashboardModuleHeroCard
-                        key={m.id}
-                        tall
-                        imageUrl={m.cardImageUrl}
-                        groupId={m.groupId}
-                        title={m.title}
-                        description={m.description ?? "—"}
-                        usageBadge={getModuleDailyUsageBadge(m.slug, m.groupId)}
-                        footer={
-                          <div className="space-y-3">
-                            <div className="flex flex-wrap gap-2">
-                              {subscribed ? (
-                                <button
-                                  type="button"
-                                  suppressHydrationWarning
-                                  disabled={busyId === m.id}
-                                  onClick={() => setPendingUnsubscribe({ id: m.id, title: m.title })}
-                                  className="app-tap-feedback flex-1 min-w-[6.5rem] rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
-                                >
-                                  {busyId === m.id ? (
-                                    <span className="inline-flex items-center gap-2">
-                                      <span className="app-inline-spinner !h-3 !w-3" aria-hidden />
-                                      <span>ยกเลิก...</span>
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex items-center gap-1.5 justify-center">
-                                      <span className="text-sm">✕</span>
-                                      <span>Unsubscribe</span>
-                                    </span>
-                                  )}
-                                </button>
-                              ) : showCooldownLock || showDailyLock ? (
-                                <button
-                                  type="button"
-                                  suppressHydrationWarning
-                                  onClick={() =>
-                                    setErr(showCooldownLock ? `ระบบถูกล็อคจนถึง ${formatBangkokDateTimeLong(cooldownIso!)}` : upgradeMessage)
-                                  }
-                                  className="app-tap-feedback flex-1 min-w-[6.5rem] rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100"
-                                >
-                                  <span className="inline-flex items-center gap-1.5 justify-center">
-                                    <span className="text-sm">🔒</span>
-                                    <span>Locked</span>
-                                  </span>
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  suppressHydrationWarning
-                                  disabled={busyId === m.id || !unlocked}
-                                  onClick={() => void subscribeOnly(m.id)}
-                                  className={cn(dashboardModuleSubscribeButtonClass, "app-tap-feedback !rounded-xl !py-2.5")}
-                                >
-                                  {busyId === m.id ? (
-                                    <span className="inline-flex items-center gap-2">
-                                      <span className="app-inline-spinner !h-3 !w-3" aria-hidden />
-                                      <span>กำลังสมัคร...</span>
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex items-center gap-1.5 justify-center">
-                                      <span className="text-sm">+</span>
-                                      <span>Subscribe</span>
-                                    </span>
-                                  )}
-                                </button>
-                              )}
-                              
-                              {hasAccess && (
-                                <Link
-                                  href={dashboardModuleHref(m.slug)}
-                                  className="app-tap-feedback flex-1 min-w-[6.5rem] inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 transition-all hover:bg-slate-50 hover:shadow-sm"
-                                >
-                                  <span className="inline-flex items-center gap-1.5">
-                                    <span className="text-sm">↗</span>
-                                    <span>เข้าใช้งาน</span>
-                                  </span>
-                                </Link>
-                              )}
-                            </div>
-                            
-                            {legacyTrialAccess && (
-                              <div className="rounded-lg bg-amber-50/80 px-2.5 py-1.5 ring-1 ring-amber-100">
-                                <p className="text-[10px] leading-tight font-medium text-amber-800">
-                                  ⚠️ สิทธิ์เข้าชมชั่วคราวจากระบบเก่า — Subscribe เพื่อใช้งานเต็มรูปแบบ
-                                </p>
+          {!(catalogMode === "FREE" && q.trim().length === 0) ? (
+            <div className="space-y-4 sm:space-y-6">
+              {Array.from(new Set(compactRows.map((m) => m.groupId)))
+                .sort((a, b) => a - b)
+                .map((gid) => {
+                  const items = compactRows.filter((m) => m.groupId === gid);
+                  const tone = groupTone(gid);
+                  return (
+                    <section
+                      key={gid}
+                      className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="min-w-0 truncate text-[10px] font-black tracking-[0.12em] text-[#66638c]">
+                          <span className="uppercase tracking-[0.2em]">
+                            {MODULE_GROUP_TIER_NAME[gid] ?? `กลุ่ม ${gid}`}
+                          </span>
+                          <span className="ml-1.5 font-black normal-case tracking-normal text-[#5f5a8a]">
+                            {gid === 1 ? "1 บาท/วัน" : "รวมแพ็กเกจ"}
+                          </span>
+                        </p>
+                        <span className={cn("shrink-0 rounded-lg border px-2 py-0.5 text-[10px] font-black", tone.chip)}>
+                          {items.length}
+                        </span>
+                      </div>
+                      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
+                        {items.map((m) => {
+                          if (showSystemMapCatalog && isSystemMapCatalogSlug(m.slug)) {
+                            return (
+                              <Link
+                                key={m.id}
+                                href="/dashboard/explore"
+                                className="group flex min-w-0 max-w-full items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white active:scale-[0.99]"
+                              >
+                                <ModuleThumb
+                                  url={m.cardImageUrl}
+                                  fallback={<GroupIcon groupId={m.groupId} className="h-5 w-5" />}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-black text-[#1e1b4b]">{m.title}</p>
+                                  <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
+                                    {catalogModuleDescription(m)}
+                                  </p>
+                                </div>
+                                <span className="text-slate-300 transition group-hover:text-[#5b61ff]" aria-hidden>
+                                  →
+                                </span>
+                              </Link>
+                            );
+                          }
+
+                          const subscribed = savedSubscribedIds.has(m.id);
+                          const legacyTrialAccess = !subscribed && legacyTrialAccessIds.has(m.id);
+                          const hasAccess = subscribed || legacyTrialAccess;
+                          const unlocked = canAccessAppModule(access, { slug: m.slug, groupId: m.groupId });
+                          const cooldownIso = activeCooldownUnlockIso(m.id);
+                          const lockedByCooldown = !subscribed && cooldownIso !== null;
+                          const lockedByDailyLimit = !subscribed && !lockedByCooldown && reachedDailyLimit;
+                          const rowClass =
+                            "group flex w-full min-w-0 max-w-full items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white active:scale-[0.99]";
+                          const subtitle = catalogModuleDescription(m);
+
+                          const thumb = (
+                            <ModuleThumb
+                              url={m.cardImageUrl}
+                              fallback={<GroupIcon groupId={m.groupId} className="h-5 w-5" />}
+                            />
+                          );
+                          const body = (
+                            <>
+                              {thumb}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-black text-[#1e1b4b]">{m.title}</p>
+                                <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{subtitle}</p>
                               </div>
-                            )}
+                              <span className="text-slate-300 transition group-hover:text-[#5b61ff]" aria-hidden>
+                                →
+                              </span>
+                            </>
+                          );
 
-                            {!hasAccess && (
-                              <p className="text-center text-[11px] font-medium text-slate-400">
-                                {showCooldownLock
-                                  ? `ล็อคจนถึง ${formatBangkokDateTimeLong(cooldownIso!)}`
-                                  : showDailyLock
-                                    ? "สมัครเพิ่มได้เมื่ออัปเกรดแพ็กเกจ"
-                                    : isDailyPlan
-                                      ? isDailyTokenExemptModuleSlug(m.slug)
-                                        ? "สมัครเพื่อเปิดใช้งาน · ใช้งานฟรี"
-                                        : "สมัครเพื่อเปิดใช้งาน · 1 บาท / วัน (โทเคน)"
-                                      : "สมัครเพื่อเปิดใช้งานระบบนี้"}
-                              </p>
-                            )}
-                          </div>
-                        }
-                      />
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
-      </div>
+                          if (hasAccess) {
+                            return (
+                              <Link key={m.id} href={dashboardModuleHref(m.slug)} className={rowClass}>
+                                {body}
+                              </Link>
+                            );
+                          }
+
+                          if (lockedByCooldown || lockedByDailyLimit) {
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                suppressHydrationWarning
+                                className={rowClass}
+                                onClick={() =>
+                                  setErr(
+                                    lockedByCooldown
+                                      ? `ระบบถูกล็อคจนถึง ${formatBangkokDateTimeLong(cooldownIso!)}`
+                                      : upgradeMessage,
+                                  )
+                                }
+                              >
+                                {body}
+                              </button>
+                            );
+                          }
+
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              suppressHydrationWarning
+                              disabled={busyId === m.id || !unlocked}
+                              className={cn(rowClass, "disabled:opacity-50")}
+                              onClick={() => void subscribeOnly(m.id)}
+                            >
+                              {body}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  );
+                })}
+            </div>
+          ) : null}
 
       {pendingUnsubscribe ? (
         <div

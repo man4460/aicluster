@@ -5,6 +5,7 @@ import type {
   BarberCostEntryInput,
   BarberCostEntryPatch,
 } from "@/systems/barber/barber-cost-client";
+import { prepareImageFileForUpload } from "@/components/app-templates";
 
 async function parseErr(res: Response): Promise<string> {
   const status = res.status;
@@ -102,8 +103,9 @@ export async function deleteDormCostEntry(id: number): Promise<void> {
 }
 
 export async function uploadDormCostSlip(file: File): Promise<string> {
+  const prepared = await prepareImageFileForUpload(file);
   const form = new FormData();
-  form.append("file", file);
+  form.append("file", prepared);
   const res = await fetch("/api/dorm/cost-slip/upload", {
     method: "POST",
     body: form,

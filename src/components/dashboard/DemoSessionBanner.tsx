@@ -1,3 +1,7 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { TrialSandboxStrip } from "@/components/dashboard/TrialSandboxStrip";
 
 function ExitTrialIcon({ className }: { className?: string }) {
@@ -20,22 +24,46 @@ function ExitTrialIcon({ className }: { className?: string }) {
   );
 }
 
-/** แถบแจ้งเมื่อล็อกอินเป็นบัญชีทดลองสาธารณะ — ออกแล้วคืนเซสชันเดิมถ้ามี */
+const bannerLinkClass =
+  "inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-bold text-white transition hover:bg-white/15 focus-visible:outline focus-visible:ring-2 focus-visible:ring-white/80 sm:text-xs";
+
+/** แถบแจ้งเมื่อล็อกอินเป็นบัญชีทดลองสาธารณะ — ล็อกอิน / สมัคร / ออก */
 export function DemoSessionBanner() {
+  const pathname = usePathname() || "/dashboard";
+  const nextQ = encodeURIComponent(pathname.startsWith("/") ? pathname : "/dashboard");
+  const loginNext = encodeURIComponent(`/login?next=${nextQ}`);
+  const registerNext = encodeURIComponent(`/register?next=${nextQ}`);
+
   return (
     <TrialSandboxStrip
       trailing={
-        <form action="/api/auth/demo/exit" method="POST">
-          <button
-            type="submit"
-            suppressHydrationWarning
-            title="ออกจากบัญชีทดลอง"
-            aria-label="ออกจากบัญชีทดลอง"
-            className="inline-flex h-8 w-8 touch-manipulation items-center justify-center rounded-md text-white transition hover:bg-white/15 focus-visible:outline focus-visible:ring-2 focus-visible:ring-white/80 active:scale-95"
+        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+          <Link
+            href={`/api/auth/demo/exit?next=${loginNext}`}
+            className={bannerLinkClass}
+            title="เข้าสู่ระบบด้วยบัญชีของคุณ"
           >
-            <ExitTrialIcon className="h-4 w-4" />
-          </button>
-        </form>
+            เข้าสู่ระบบ
+          </Link>
+          <Link
+            href={`/api/auth/demo/exit?next=${registerNext}`}
+            className={bannerLinkClass}
+            title="สมัครสมาชิกใหม่"
+          >
+            สมัคร
+          </Link>
+          <form action="/api/auth/demo/exit" method="POST">
+            <button
+              type="submit"
+              suppressHydrationWarning
+              title="ออกจากบัญชีทดลอง"
+              aria-label="ออกจากบัญชีทดลอง"
+              className="inline-flex h-8 w-8 touch-manipulation items-center justify-center rounded-md text-white transition hover:bg-white/15 focus-visible:outline focus-visible:ring-2 focus-visible:ring-white/80 active:scale-95"
+            >
+              <ExitTrialIcon className="h-4 w-4" />
+            </button>
+          </form>
+        </div>
       }
     >
       ทดลองใช้งาน · ข้อมูลตัวอย่าง

@@ -30,6 +30,11 @@ import {
   type PosOrderItem,
 } from "@/systems/building-pos/building-pos-service";
 import { BuildingPosRemoteImg } from "@/systems/building-pos/components/building-pos-remote-image";
+import {
+  buildingPosChipActiveClass,
+  buildingPosChipIdleClass,
+  buildingPosNavActiveClass,
+} from "@/systems/building-pos/components/building-pos-ui-tokens";
 
 function buildingPosCustomerStatusLabel(st: PosOrder["status"]): string {
   switch (st) {
@@ -38,7 +43,11 @@ function buildingPosCustomerStatusLabel(st: PosOrder["status"]): string {
     case "PREPARING":
       return "กำลังทำ";
     case "SERVED":
-      return "นำเสิร์ฟแล้ว";
+      return "ทำเสร็จแล้ว · รอเสิร์ฟ";
+    case "SERVING":
+      return "กำลังเสิร์ฟ";
+    case "DELIVERED":
+      return "เสิร์ฟเรียบร้อย";
     case "PAID":
       return "ชำระเงินแล้ว";
     default:
@@ -662,16 +671,24 @@ export function BuildingPosCustomerOrderClient({
   return (
     <div
       className={cn(
-        embeddedInModal ? "min-h-0" : "min-h-[100dvh]",
-        useTemplate ?
-          cn(shopQrTemplatePageBgClass, "text-slate-800")
-        : "bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100",
+        embeddedInModal ? "min-h-0 text-slate-800" : "min-h-[100dvh]",
+        !embeddedInModal &&
+          (useTemplate ?
+            cn(shopQrTemplatePageBgClass, "text-slate-800")
+          : "bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100"),
       )}
     >
-      <div className={cn(shopQrTemplateMaxWidthClass, shopQrTemplateOrderPagePaddingClass)}>
+      <div
+        className={cn(
+          embeddedInModal
+            ? "w-full min-w-0 pb-28 pt-1"
+            : cn(shopQrTemplateMaxWidthClass, shopQrTemplateOrderPagePaddingClass),
+        )}
+      >
+        {embeddedInModal && variant === "staff" ? null : (
         <header>
           <p className={cn(useTemplate ? shopQrTemplateHeadKickerClass : "text-center text-[11px] font-medium uppercase tracking-[0.2em] text-emerald-400/90")}>
-            {variant === "staff" ? "พนักงานเสิร์ฟ" : "สแกน · สั่ง"}
+            {variant === "staff" ? "พนักงาน" : "สแกน · สั่ง"}
           </p>
           <h1
             className={cn(
@@ -690,11 +707,12 @@ export function BuildingPosCustomerOrderClient({
             : "เลือกเมนู ระบุโต๊ะ แล้วส่งเข้าครัว"}
           </p>
         </header>
+        )}
 
         {variant === "staff" ?
           <div
             className={cn(
-              "mt-5 flex flex-wrap gap-2 rounded-2xl border p-1.5 shadow-sm",
+              embeddedInModal ? "mt-1 flex flex-wrap gap-2 rounded-xl border p-1 sm:mt-2 sm:rounded-2xl sm:p-1.5" : "mt-5 flex flex-wrap gap-2 rounded-2xl border p-1.5 shadow-sm",
               useTemplate ?
                 "border-indigo-100/90 bg-white/90 ring-1 ring-indigo-100/70"
               : "border-white/10 bg-white/[0.06]",
@@ -711,7 +729,7 @@ export function BuildingPosCustomerOrderClient({
                   "min-h-[40px] flex-1 rounded-xl px-2 py-2 text-center text-[11px] font-black transition sm:min-h-[44px] sm:text-xs",
                   staffChannel === ch.key ?
                     useTemplate ?
-                      "bg-[#5b61ff] text-white shadow-md shadow-indigo-400/25"
+                      cn(buildingPosNavActiveClass, "shadow-md shadow-indigo-400/25")
                     : "bg-emerald-500 text-white shadow-lg"
                   : useTemplate ?
                     "bg-white text-slate-600 ring-1 ring-slate-200/90 hover:bg-indigo-50/80"
@@ -799,6 +817,8 @@ export function BuildingPosCustomerOrderClient({
                         className={cn(
                           "rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
                           o.status === "PAID" ? "bg-emerald-100 text-emerald-900"
+                          : o.status === "DELIVERED" ? "bg-violet-100 text-violet-900"
+                          : o.status === "SERVING" ? "bg-cyan-100 text-cyan-900"
                           : o.status === "SERVED" ? "bg-sky-100 text-sky-900"
                           : o.status === "PREPARING" ? "bg-amber-100 text-amber-900"
                           : "bg-slate-100 text-slate-800",
@@ -832,47 +852,45 @@ export function BuildingPosCustomerOrderClient({
 
         <div className="mt-5">
           <p className="mb-2 text-xs font-medium text-slate-500">หมวดหมู่</p>
-          <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
-            <button
-              type="button"
-              onClick={() => setFilterCat("all")}
-              className={cn(
-                "shrink-0 snap-start rounded-full px-4 py-2 text-sm font-semibold transition",
-                filterCat === "all" ?
-                  useTemplate ?
-                    "bg-indigo-600 text-white shadow-lg shadow-indigo-600/25"
-                  : "bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
-                : useTemplate ?
-                  "border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-indigo-200"
-                : "bg-white/10 text-slate-300 hover:bg-white/15",
-              )}
-            >
-              ทั้งหมด
-            </button>
-            {sortedCategories.map((c) => (
+          <div className="-mx-4 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] sm:-mx-5">
+            <div className="flex w-max gap-2 px-4 sm:px-5">
               <button
-                key={c.id}
                 type="button"
-                onClick={() => setFilterCat(c.id)}
+                onClick={() => setFilterCat("all")}
                 className={cn(
-                  "flex shrink-0 snap-start items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition",
-                  filterCat === c.id ?
+                  "shrink-0 snap-start transition",
+                  filterCat === "all" ?
                     useTemplate ?
-                      "bg-indigo-600 text-white shadow-lg shadow-indigo-600/25"
+                      buildingPosChipActiveClass
                     : "bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
                   : useTemplate ?
-                    "border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-indigo-200"
+                    buildingPosChipIdleClass
                   : "bg-white/10 text-slate-300 hover:bg-white/15",
                 )}
               >
-                <BuildingPosRemoteImg
-                  src={c.image_url}
-                  className="h-6 w-6 rounded-md object-cover"
-                  fallback={null}
-                />
-                {c.name}
+                ทั้งหมด
               </button>
-            ))}
+              {sortedCategories.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setFilterCat(c.id)}
+                  className={cn(
+                    "flex shrink-0 snap-start items-center gap-2 transition",
+                    filterCat === c.id ?
+                      useTemplate ?
+                        buildingPosChipActiveClass
+                      : "bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
+                    : useTemplate ?
+                      buildingPosChipIdleClass
+                    : "bg-white/10 text-slate-300 hover:bg-white/15",
+                  )}
+                >
+                  <BuildingPosRemoteImg src={c.image_url} className="h-6 w-6 rounded-md object-cover" fallback={null} />
+                  {c.name}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -882,19 +900,21 @@ export function BuildingPosCustomerOrderClient({
               <IconSparkles className={cn("h-5 w-5", useTemplate ? "text-amber-500" : "text-amber-400")} />
               <h2 className={cn("text-lg font-bold", useTemplate ? "text-slate-900" : "text-white")}>เมนูแนะนำ</h2>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] snap-x snap-mandatory">
-              {featuredItems.map((m) => (
-                <MenuDishCard
-                  key={`feat-${m.id}`}
-                  item={m}
-                  qty={getQty(m.id)}
-                  onAdd={() => addItem(m)}
-                  onDec={() => decItem(m)}
-                  compact
-                  showHotBadge={topHotIds.has(m.id)}
-                  useTemplate={useTemplate}
-                />
-              ))}
+            <div className="-mx-4 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] snap-x snap-mandatory sm:-mx-5">
+              <div className="flex w-max gap-3 px-4 sm:px-5">
+                {featuredItems.map((m) => (
+                  <MenuDishCard
+                    key={`feat-${m.id}`}
+                    item={m}
+                    qty={getQty(m.id)}
+                    onAdd={() => addItem(m)}
+                    onDec={() => decItem(m)}
+                    compact
+                    showHotBadge={topHotIds.has(m.id)}
+                    useTemplate={useTemplate}
+                  />
+                ))}
+              </div>
             </div>
           </section>
         ) : null}
@@ -913,19 +933,21 @@ export function BuildingPosCustomerOrderClient({
                 จากยอดสั่งจริง
               </span>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] snap-x snap-mandatory">
-              {bestsellerItems.map((m) => (
-                <MenuDishCard
-                  key={`hot-${m.id}`}
-                  item={m}
-                  qty={getQty(m.id)}
-                  onAdd={() => addItem(m)}
-                  onDec={() => decItem(m)}
-                  compact
-                  showHotBadge={topHotIds.has(m.id)}
-                  useTemplate={useTemplate}
-                />
-              ))}
+            <div className="-mx-4 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] snap-x snap-mandatory sm:-mx-5">
+              <div className="flex w-max gap-3 px-4 sm:px-5">
+                {bestsellerItems.map((m) => (
+                  <MenuDishCard
+                    key={`hot-${m.id}`}
+                    item={m}
+                    qty={getQty(m.id)}
+                    onAdd={() => addItem(m)}
+                    onDec={() => decItem(m)}
+                    compact
+                    showHotBadge={topHotIds.has(m.id)}
+                    useTemplate={useTemplate}
+                  />
+                ))}
+              </div>
             </div>
           </section>
         ) : null}
@@ -998,14 +1020,14 @@ export function BuildingPosCustomerOrderClient({
       <div
         className={cn(
           embeddedInModal ?
-            "sticky bottom-0 z-10 mt-6 border-t px-0 py-3 backdrop-blur-lg"
-          : "fixed bottom-0 left-0 right-0 z-50 border-t px-4 py-3 backdrop-blur-lg sm:px-6",
+            "sticky bottom-0 z-10 mt-6 border-t px-4 py-3 backdrop-blur-lg sm:px-5"
+          : "fixed bottom-0 left-0 right-0 z-50 border-t px-4 py-3 backdrop-blur-lg sm:px-5",
           useTemplate ?
             "border-slate-200 bg-white/95 shadow-[0_-8px_32px_rgba(15,23,42,0.08)]"
           : "border-white/10 bg-slate-950/95 shadow-[0_-8px_32px_rgba(0,0,0,0.4)]",
         )}
       >
-        <div className={cn("mx-auto flex max-w-lg items-center justify-between gap-3 sm:max-w-xl", embeddedInModal && "px-1")}>
+        <div className="mx-auto flex max-w-lg items-center justify-between gap-3 sm:max-w-xl">
           <div>
             <p className="text-xs text-slate-500">ยอดรวม</p>
             <p

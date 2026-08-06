@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { mapBuildingPosOrderRow } from "@/lib/building-pos/order-map";
 import { resolveBuildingPosStaffFromUrl } from "@/lib/building-pos/staff-request";
 import { formatBuildingPosDbError, jsonBuildingPosError } from "@/lib/building-pos/route-errors";
+import { notifyBuildingPosOrderBoard } from "@/systems/building-pos/lib/order-board-sse";
 
 const patchSchema = z.object({
-  status: z.enum(["NEW", "PREPARING", "SERVED", "PAID"]).optional(),
+  status: z.enum(["NEW", "PREPARING", "SERVED", "SERVING", "DELIVERED", "PAID"]).optional(),
   payment_slip_url: z.string().max(2048).optional().nullable(),
 });
 
@@ -56,6 +57,7 @@ export async function PATCH(req: Request) {
         : {}),
       },
     });
+    notifyBuildingPosOrderBoard(ctx.ownerId);
     return NextResponse.json({ order: mapBuildingPosOrderRow(updated) });
   } catch (e) {
     console.error("[building-pos/staff/orders PATCH]", e);

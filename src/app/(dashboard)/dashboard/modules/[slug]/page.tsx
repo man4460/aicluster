@@ -8,6 +8,7 @@ import {
   BARBER_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
+  FOOTBALL_TURF_MODULE_SLUG,
   MASSAGE_MODULE_SLUG,
   APPOINTMENT_QUEUE_MODULE_SLUG,
   LOYALTY_STAMP_MODULE_SLUG,
@@ -54,6 +55,9 @@ export default async function ModuleEntryPage({ params }: Props) {
   }
   if (slug === CAR_WASH_MODULE_SLUG) {
     redirect("/dashboard/car-wash");
+  }
+  if (slug === FOOTBALL_TURF_MODULE_SLUG) {
+    redirect("/dashboard/football-turf");
   }
   if (slug === MASSAGE_MODULE_SLUG) {
     redirect("/dashboard/massage");

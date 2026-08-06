@@ -1,28 +1,8 @@
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
+import { saveModuleUpload } from "@/lib/upload/save-module-upload";
 import { withDocOwnerContext } from "@/systems/doc-transmission/lib/doc-api";
 
 export const dynamic = "force-dynamic";
-
-const MAX_BYTES = 12 * 1024 * 1024; // 12 MB ต่อไฟล์ — เผื่อ PDF สแกน
-
-const ALLOWED_MIME = new Set(["application/pdf"]);
-
-function isPdfBuffer(buf: Buffer): boolean {
-  return buf.length >= 5 && buf.toString("ascii", 0, 5) === "%PDF-";
-}
-
-function safeFileBaseName(rawName: string): string {
-  const base = rawName.replace(/\\/g, "/").split("/").pop() ?? rawName;
-  // ตัดอักขระอันตราย เก็บเฉพาะ a-z, 0-9, ._-
-  const cleaned = base
-    .normalize("NFC")
-    .replace(/\s+/g, "_")
-    .replace(/[^a-zA-Z0-9._\u0E00-\u0E7F-]/gu, "")
-    .slice(0, 80);
-  return cleaned || "document";
-}
 
 export async function POST(req: Request) {
   try {
@@ -42,36 +22,33 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "ไม่มีไฟล์" }, { status: 400 });
     }
 
-    const buf = Buffer.from(await file.arrayBuffer());
-    if (buf.length === 0) {
-      return NextResponse.json({ error: "ไฟล์ว่าง" }, { status: 400 });
-    }
-    if (buf.length > MAX_BYTES) {
-      return NextResponse.json(
-        { error: `ไฟล์ใหญ่เกิน ${(MAX_BYTES / 1024 / 1024).toFixed(0)}MB` },
-        { status: 400 },
-      );
+    const displayNameRaw = form.get("displayName");
+    const displayName =
+      typeof displayNameRaw === "string" ? displayNameRaw : null;
+
+    const saved = await saveModuleUpload({
+      file,
+      moduleSlug: "doc-transmission",
+      ownerUserId,
+      accept: "pdf",
+      kind: "doc",
+      displayName,
+      maxPdfBytes: 12 * 1024 * 1024,
+    });
+
+    if (!saved.ok) {
+      return NextResponse.json({ error: saved.error }, { status: saved.status });
     }
 
-    const rawType = (file.type ?? "").trim().toLowerCase();
-    if (!ALLOWED_MIME.has(rawType) || !isPdfBuffer(buf)) {
-      return NextResponse.json(
-        { error: "รองรับเฉพาะไฟล์ PDF" },
-        { status: 400 },
-      );
-    }
-
-    const baseName = safeFileBaseName(file.name || "document.pdf");
-    const baseNoExt = baseName.replace(/\.pdf$/i, "");
-    const dir = path.join(process.cwd(), "public", "uploads", "doc-transmission");
-    await mkdir(dir, { recursive: true });
-    const filename = `${ownerUserId.slice(0, 8)}-${Date.now()}-${baseNoExt}.pdf`;
-    await writeFile(path.join(dir, filename), buf);
     return NextResponse.json({
-      fileUrl: `/uploads/doc-transmission/${filename}`,
-      fileName: file.name || filename,
-      fileSize: buf.length,
-      mimeType: "application/pdf",
+      fileUrl: saved.fileUrl,
+      /** ชื่อบนดิสก์ — ไม่ใช้แสดงใน UI */
+      storedFileName: saved.storedFileName,
+      /** ชื่อที่แสดง — ผู้ใช้ตั้งเอง (อาจว่าง ถ้ายังไม่ส่งมา) */
+      displayName: saved.displayName,
+      fileName: saved.displayName,
+      fileSize: saved.fileSize,
+      mimeType: saved.mimeType,
     });
   } catch (e) {
     console.error("[doc-transmission/upload]", e);

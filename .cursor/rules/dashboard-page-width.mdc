@@ -1,13 +1,55 @@
 ---
-description: ความกว้างและ gutter หน้าแดชบอร์ดให้สม่ำเสมอ — ห้ามซ้อน max-width หรือ padding แนวนอนคนละชุดโดยไม่จำเป็น
+description: ความกว้างและ gutter (ขอบซ้าย–ขวา) หน้าแดชบอร์ด — ชั้น DashboardShell · PageContainer · โมดูล — ห้ามซ้อน padding คนละชุด
 alwaysApply: true
 ---
 
-# Dashboard layout — ความกว้าง container ให้เท่ากัน
+# Dashboard layout — ความกว้าง + ระยะขอบซ้ายขวา
 
-- หน้าใต้ `src/app/(dashboard)/dashboard/` ถูกห่อด้วย **`PageContainer`** ผ่าน **`DashboardPagesShell`** ใน `dashboard/layout.tsx` แล้ว — ใช้ **`max-w-6xl`** และ **`PAGE_GUTTER_X`** (`px-4 sm:px-6`) เป็นชั้นเดียวสำหรับจำกัดความกว้างและระยะขอบจากขอบ viewport
-- **หน้าแดชบอร์ดหลัก** `src/app/(dashboard)/dashboard/page.tsx` — **ห้าม** ห่อ root ด้วย `max-w-7xl` / `max-w-*` ที่กว้างกว่าหรือซ้ำกับ shell, `mx-auto` เพื่อจำกัดความกว้าง, หรือ `pb-*` พิเศษที่ซ้อนกับแนวตั้งของ `PageContainer` (`PAGE_GUTTER_Y`). ให้ใช้ wrapper ภายในแบบ `space-y-4 sm:space-y-6` และ `gap-4 sm:gap-6` ให้ใกล้เคียงหน้าเช่น `dashboard/modules/page.tsx` — **ห้าม** ใส่ `px-2` แบบ ad-hoc ที่หัวข้อ section จนหัวข้อไม่เท่ากับขอบการ์ด; ถ้าต้องการ gutter ชั้นใน ใช้ **`PAGE_INNER_GUTTER_X`**
-- **ห้าม** ใส่ `max-w-6xl mx-auto` ซ้ำใน layout/shell ของโมดูลย่อย ยกเว้นมีเหตุผลชัด (เช่น หน้าเต็มจอที่ไม่อยู่ใต้ PageContainer)
-- โมดูลที่มีหลายหน้า ให้ยึดแบบเดียวกับ **รายรับ-รายจ่าย** (`*Shell` = หัวข้อ + แถบเมนู) หรือ **POS ร้านอาหาร** (`BuildingPosShell` = การ์ดหัว glass **รวม** แท็บหลัก/ย่อย hub แบบคาร์แคร์ — ดู `building-pos-dashboard-template.mdc`) — **ห้าม** ห่อ `children` ทั้งหน้าด้วยการ์ดใหญ่ `rounded-3xl border` อีกชั้น; เนื้อหาไหลต่อใต้ `PageContainer` โดยแต่ละการ์ดย่อยใช้ `app-surface` / border ตามจุดได้
-- ถ้าจำเป็นต้องจัด padding แนวนอนชั้นในเพิ่ม ใช้ **`PAGE_INNER_GUTTER_X`** จาก `@/components/ui/page-container` ให้สม่ำเสมอ ไม่ให้เมนูกับเนื้อหาหลุดจังหวะ
-- เมื่อเพิ่มหน้า/โมดูลแดชบอร์ดใหม่ ให้เช็คว่าไม่ทำให้ content แคบหรือกว้างกว่าหน้าอื่นที่ใช้ `PageContainer` อย่างผิดลิขสิทธิ์
+หน้าใต้ `src/app/(dashboard)/dashboard/` ถูกห่อหลายชั้น — **ต้องรู้ว่าขอบซ้าย–ขวามาจากชั้นไหน** อย่าใส่ `px-*` / `max-w-*` ซ้ำจนเนื้อหาแคบหรือไม่เท่าการ์ด
+
+## ชั้นระยะขอบ (นอก → ใน)
+
+| ชั้น | ไฟล์ | ขอบซ้าย–ขวา (ค่าเริ่ม) | หมายเหตุ |
+|------|------|------------------------|----------|
+| 1. แถวเนื้อหาใต้ header | `DashboardShell.tsx` ห่อ `main` | ปกติ `px-3 sm:px-4` · บาร์เบอร์/ซักผ้า/นวดมือถือ `max-md:px-2 sm:px-4` | ช่องว่างระหว่างขอบจอกับการ์ดหลัก |
+| 2. `PageContainer` | `DashboardPagesShell` → `page-container.tsx` | **`PAGE_GUTTER_X`** = `px-4 sm:px-6` | ชั้นหลักของเนื้อหาหน้า |
+| 3. Shell / การ์ดโมดูล | เช่น `FootballTurfShell` | padding ในหัว `px-4 sm:px-8` — **ห้าม** ห่อ `children` ด้วย `px-*` ซ้ำทั้งหน้า | เนื้อหาไหลใต้ PageContainer |
+| 4. ชั้นในของการ์ด | เนื้อหาในการ์ด | ถ้าต้อง gutter ใน: **`PAGE_INNER_GUTTER_X`** = `px-4 sm:px-6 md:px-8` | ให้หัวข้อกับการ์ดเส้นตั้งเดียวกัน |
+
+**ค่าคงที่กลาง:** `@/components/ui/page-container` — `PAGE_GUTTER_X` · `PAGE_GUTTER_Y` · `PAGE_INNER_GUTTER_X`
+
+## ตารางโมดูล / หน้า — override ใน `DashboardPagesShell`
+
+| พาธ | `size` | class เพิ่ม (ขอบซ้าย–ขวา / ความกว้าง) |
+|-----|--------|----------------------------------------|
+| หน้าปกติ | `default` (`max-w-6xl`) | `PAGE_GUTTER_X` อย่างเดียว |
+| **สนามฟุตบอล** · **drink-pos** · **building-pos** · **ศูนย์แอดมิน** | `full` | **`max-w-none !px-3 sm:!px-4 lg:!px-6`** — ชุด gutter มาตรฐานโมดูลเต็มความกว้าง (มือถือขอบแคบ · เดสก์ท็อป `px-6`) |
+| หน้าบ้าน / ระบบทั้งหมด / โปรไฟล์ / แพ็กเกจ / แชท | `full` | `max-w-[1680px] lg:!px-8` |
+| บาร์เบอร์ · ซักผ้า · นวด · จอดรถ | `default` | `max-md:!px-3 sm:!px-6` (มือถือแคบลง ไม่ซ้ำกับ Shell `px-2`) |
+| staff kiosk | `full` | `!px-0 !py-0 !max-w-none` |
+
+**ศูนย์แอดมินเพิ่มเติม:** ซ่อน `MobileBottomNav` หลัก · ยุบหัว+กลุ่มเมนูส่วนหัวได้เหมือนสนามฟุตบอล (`ADMIN_HUB_HEADER_COLLAPSE_*` · `dashboard-nav-menu-groups.mdc` §5)
+
+## บังคับ / ห้าม
+
+- **หน้าแดชบอร์ดหลัก** `dashboard/page.tsx` — ห้ามห่อ root ด้วย `max-w-7xl` / `max-w-*` / `mx-auto` / `pb-*` ซ้ำกับ `PageContainer` · ห้าม `px-2` ad-hoc ที่หัวข้อจนไม่เท่าขอบการ์ด · ใช้ `PAGE_INNER_GUTTER_X` ถ้าต้องการ gutter ชั้นใน
+- **ห้าม** ใส่ `max-w-6xl mx-auto` ซ้ำใน layout/shell โมดูลย่อย (ยกเว้นหน้าเต็มจอที่ไม่อยู่ใต้ PageContainer)
+- **ห้าม** ห่อ `children` ทั้งหน้าด้วยการ์ดใหญ่ `rounded-3xl border` + `px-*` อีกชั้น — เนื้อหาไหลต่อใต้ PageContainer · การ์ดย่อยใช้ `app-surface` ตามจุด
+- โมดูลหลายหน้า: แบบรายรับ–รายจ่าย / Building POS / **สนามฟุตบอล** — Shell = หัว+เมนู · เนื้อหาไม่ซ้ำขอบ
+- เข้าโมดูลงาน → ย่อ sidebar (`isModuleWorkspacePath`) — **แอดมิน / โปรไฟล์ / modules ไม่ถือเป็นโมดูลงาน** (อยู่ใน basicPrefixes)
+
+## ตัวอย่างสนามฟุตบอล (ครบชั้น)
+
+1. `DashboardShell` แถว main: `px-3 sm:px-4` (ไม่ compact)
+2. `DashboardPagesShell`: `size="full"` + `max-w-none lg:!px-6`
+3. `FootballTurfShell` หัว: `px-4 sm:px-8` · เนื้อหา **ไม่มี** `px` ซ้ำทั้งหน้า
+4. ล่างมือถือ: `pb-24` (`footballTurfMainPaddingBottomClass`) ให้พ้น dock — **ไม่เกี่ยวกับ** ขอบซ้ายขวา
+
+รายละเอียดเต็ม: `.cursor/rules/football-turf-module-dashboard-template.mdc` §2b
+
+## เช็กลิสต์เมื่อเพิ่มโมดูล
+
+- [ ] เลือกชุด gutter ใน `DashboardPagesShell` (คัดลอก football/drink หรือ barber)
+- [ ] ไม่ใส่ `px-*` ซ้ำใน Shell รอบ `children`
+- [ ] หัวข้อกับการ์ดชิดขอบเดียวกัน — ใช้ `PAGE_INNER_GUTTER_X` ถ้าต้องชั้นใน
+- [ ] มือถือมี dock → มี `pb-24` (หรือเทียบเท่า) ที่เนื้อหา

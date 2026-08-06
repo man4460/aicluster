@@ -1,51 +1,165 @@
 ---
-description: เทมเพลตแดชบอร์ด POS ร้านอาหาร (building-pos) — โครงเมนูเดียวกับคาร์แคร์ (แท็บหลัก 4 กลุ่ม + แท็บย่อย)
+description: เทมเพลตแดชบอร์ด POS ร้านอาหาร (building-pos) — เมนู · ความมน · ออร์เดอร์ · คิว SSE
 globs:
   - "**/dashboard/building-pos/**"
   - "**/systems/building-pos/**"
+  - "**/api/building-pos/**"
+  - "**/app/building-pos/**"
 ---
 
 # Building POS — เทมเพลตแดชบอร์ด
 
-**หลักการ UX ระดับโปรเจกต์:** `dashboard-ux-car-wash-baseline.mdc` — เมนูหลักมือถือล่าง (`BuildingPosMobileDock`), หัว glass (`BuildingPosShell`), ไอคอน/สี `#5b61ff` แบบคาร์แคร์
+**หลักการ UX ระดับโปรเจกต์:** `dashboard-ux-car-wash-baseline.mdc` — เมนูหลักมือถือล่าง · หัว glass · ไอคอน/สี `#5b61ff`
+
+**คู่ขนาน POS:** `drink-pos-module-dashboard-template.mdc` (ยุบหัว · gutter · dock · ออร์เดอร์ · คิว SSE)
+
+---
 
 ## Layout ชั้นนอก (`layout.tsx`)
 
 - **`requireBuildingPosSection()`** + `BuildingPosShell` — **ห้าม** `shopQrTemplatePageBgClass` / พื้นเทาเต็มแผงในเลย์เอาต์นี้
-- ความกว้างยึด **`PageContainer`** ของแดชบอร์ดหลัก
+- ความกว้าง: `DashboardPagesShell` — `size="full"` + **`max-w-none !px-3 sm:!px-4 lg:!px-6`** — ดู `dashboard-page-width.mdc`
 
-## Hub หลัก (หน้าเดียว)
+---
 
-- **ไฟล์:** `BuildingPosDashboardClient.tsx` + **`building-pos-nav.ts`**
-- **แท็บหลัก (4):** แดชบอร์ด · QR · การเงิน · เมนู — เทียบคาร์แคร์ (overview / qr / finance / offers+menu)
-- **แท็บย่อย:** `BuildingPosHubSubTabs.tsx`
-  - **QR:** ลูกค้าสแกนสั่ง | พนักงานเสิร์ฟ (`qr=customer` | `qr=staff`)
-  - **การเงิน:** ยอดขาย | ต้นทุน/รายจ่าย (`fin=sales` | `fin=costs`)
-  - **เมนู:** เมนูอาหาร | หมวดหมู่ (`menu=items` | `menu=categories`)
-- **URL เก่า:** `?tab=orders` → `?tab=qr` · `?tab=categories` → `?tab=menu&menu=categories` — normalize ใน client
-- **หน้าเดิมแยก:** `sales` / `costs` / `staff-link` → **redirect** ไป hub พร้อม query ที่ถูกต้อง
+## เมนูหลัก (ลำดับบังคับ)
 
-## `FormModal` — ตำแหน่งบนมือถือ
+ลำดับใน `BUILDING_POS_MAIN_TABS` (`building-pos-nav.ts`) + dock + header bar:
 
-- **ทุก `FormModal`** ในโมดูลนี้ต้องใส่ **`mobileCentered`** — ให้แผงอยู่ **กึ่งกลางจอ** (`items-center` + `p-3`) · มุมการ์ด `rounded-[2rem]` · **ห้าม** โหมดชิดขอบล่าง (`items-end`) บนมือถือ — เทียบ **`laundry-dashboard-ui.mdc`** (ข้อ «ตำแหน่งโมดัล»)
+1. **แดชบอร์ด** (ซ้ายสุด) → `/dashboard/building-pos`
+2. **ออร์เดอร์** → `/dashboard/building-pos/order`
+3. **คิวออเดอร์** → `/dashboard/building-pos/orders`
+4. **การเงิน** → `?tab=finance`
+5. **เมนู** → `?tab=menu`
+6. **QR** → `?tab=qr`
+7. **ตั้งค่า** → `/dashboard/building-pos/settings`
 
-## Shell + เมนู (เทียบ `CarWashDashboard` การ์ดหัว)
+---
 
-- **`BuildingPosShell`:** การ์ด glass **เดียว** (`buildingPosModuleGlassShellClass`) รวม **ชื่อระบบ + แท็บหลัก + แท็บย่อย (เมื่อไม่ใช่ overview)** — บน **แท็บเล็กขึ้นไป (`md+` รวม tablet/คอม)** แท็บหลักอยู่ใต้เส้นแบ่ง `border-t border-white/40 pt-5` แบบคาร์แคร์; แท็บย่อยอยู่ใต้เส้นแบ่งอีกชั้น
-- **`BuildingPosUnifiedMenuBar`:** `variant="embedded"` ใน `BuildingPosShell` — มือถือใช้ dock แทน (คอมโพเนนต์นี้ `hidden md:block`)
-- **`BuildingPosHubSubTabs`:** `variant="embedded"` ใน `BuildingPosShell` — ยังแสดงบนมือถือในการ์ดหัวเมื่ออยู่กลุ่มย่อย (QR / การเงิน / เมนู)
-- **`BuildingPosMobileDock`:** มือถือ — แถบล่าง pill glass (`rounded-[2.5rem]`) **ไอคอน + ชื่อเมนู** ใต้ไอคอน (`text-[9px] font-black`) เทียบ **`CarWashDashboard`** เมนูล่าง / **`BarberModuleMobileDock`** — ลำดับ แดชบอร์ด · การเงิน · เมนู · QR — แสดงเฉพาะ path `/dashboard/building-pos`
-- **แดชบอร์ดมือถือ (`overview`):** ปุ่มรีเฟรชในแถบ `BuildingPosOpenTablesPanel` ใช้ **ไอคอนอย่างเดียว** (`max-md`) และข้อความ `รีเฟรชออเดอร์` จาก `md` ขึ้นไป · ปุ่ม **ออเดอร์** เปิด `FormModal` + **`BuildingPosCustomerOrderClient`** (`variant="staff"`, `embeddedInModal`) — เลือกเมนูแบบหน้าลูกค้า · ช่องทางสั่ง (พนักงาน / แคชเชียร์ / กลับบ้าน) บันทึกใน `PosOrder.note` ผ่าน `@/lib/building-pos/staff-order-channel`
-- **ห้าม** ซ้อนการ์ด glass ใหม่รอบแถบเมนูใน client หลัก — นำทาง hub อยู่ที่ shell แล้ว (`BuildingPosDashboardClient` ไม่เรียก `UnifiedMenuBar` / `HubSubTabs` ซ้ำ)
+## ความมนการ์ด (บังคับ — อย่าทำให้มนเกิน)
 
-## โทเคน UI
+| ระดับ | คลาส | ใช้กับ |
+|--------|------|--------|
+| เปลือกโมดูล / dock pill / hub QR นอก | `rounded-[2.5rem]` (มือถือบางจุด `rounded-2xl`) | `BuildingPosShell` · dock · `buildingPosQrHubOuterClass` |
+| **การ์ดเนื้อหาทุกเมนู** (แดชบอร์ด · ออร์เดอร์ · คิว · การเงิน · เมนู · QR แผงใน · ตั้งค่าแผง) | **`rounded-[1.25rem]`** | สถิติ · โต๊ะ · คอลัมน์คิว · list · content panel · แผงออร์เดอร์ซ้าย/ขวา · ประวัติขาย · ต้นทุน |
+| ปุ่ม / chip / input | `rounded-xl` ~ `rounded-2xl` / `rounded-full` (chip) | ตามโทเค็นที่มี |
 
-- **`components/building-pos-ui-tokens.ts`** — glass, การ์ดสถิติ, แถบแท็บย่อย, hub QR
+**ห้าม** ใช้ `rounded-[2rem]` กับการ์ดย่อย/สถิติ/โต๊ะในโมดูลนี้
 
-## แยกจากหน้าสาธารณะ
+**โทเค็น:** `buildingPosInnerCardRadiusClass` · `buildingPosStatCard*Class` · `buildingPosContentPanelClass` ใน `components/building-pos-ui-tokens.ts`
 
-- **`shop-qr-template`** ใช้กับ **หน้าลูกค้าสั่งอาหาร / พอร์ทัลพนักงาน** — ไม่ใช่ shell แท็บแดชบอร์ดหลัก
+---
 
-## เนื้อหา
+## หน้าแดชบอร์ด
 
-- ยึด **`AppDashboardSection`** / `app-templates` ตาม `app-templates-central.mdc` ในส่วนที่มีอยู่แล้ว
+- การ์ดสถิติ: `grid-cols-2` มือถือ · `sm:grid-cols-3` (การ์ดคี่ใบสุดท้าย `col-span-2 sm:col-span-1`)
+- การ์ดโต๊ะค้าง: **`lg:grid-cols-3`** · ความมน `rounded-[1.25rem]`
+- ปุ่มออเดอร์บนหัวแผงโต๊ะ → ลิงก์ `/order` (ไม่เปิดโมดัลสั่ง)
+- ฟัง SSE `/api/building-pos/session/orders/board/stream` แล้ว `loadAll()` เมื่อคิวเปลี่ยน (โต๊ะค้างอัปเดตร่วมกับคิว)
+
+---
+
+## หน้าออร์เดอร์ (`/order`) — แบบ drink-pos
+
+- **เดสก์ท็อป (`lg+`):** กริด `lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)]`
+  - **ซ้าย:** ช่องทางสั่ง · โต๊ะ/ชื่อ · รายการที่เลือก + ส่งออเดอร์
+  - **ขวา:** ชิปหมวด + กริดเมนู (`buildingPosProductGridClass` — มือถือ 3 คอลัมน์)
+- **มือถือ:** เมนูเต็มจอ · สรุปรายการในสล็อตบน dock (`BuildingPosMobileBottomProvider` / `useBuildingPosMobileDraftSlot`) · ยืนยันใน `FormModal`
+- **ห้าม** ใช้เลย์เอาต์หน้าลูกค้าเต็มจอ (`BuildingPosCustomerOrderClient` แบบ portal) เป็นหน้าแดชบอร์ดออร์เดอร์
+
+---
+
+## หน้าคิวออเดอร์ + แผนกครัว/จัดส่ง (บังคับ)
+
+### UI
+
+- **ห้าม** ส่วนหัวชื่อร้าน / หัวข้อ «คิวออเดอร์» / ปุ่มรีเฟรชแยกบนหัวกระดาน — เหลือเฉพาะคอลัมน์สถานะ
+- คอมโพเนนต์เดียว: `BuildingPosStationBoardClient`
+  - แดชบอร์ด: `mode="dashboard"` → `/dashboard/building-pos/orders`
+  - ครัว: `mode="station"` `role="kitchen"` → `/building-pos/kitchen/[ownerId]`
+  - จัดส่ง: `mode="station"` `role="serve"` → `/building-pos/serve/[ownerId]`
+- คอลัมน์: รับออเดอร์ (`NEW`) · กำลังทำ (`PREPARING`) · จัดส่ง (`SERVED`) — ความมนคอลัมน์ `rounded-[1.25rem]`
+
+### SSE realtime (แบบ drink-pos — ผู้เกี่ยวข้องทั้งหมด)
+
+ไฟล์กลาง:
+
+| ไฟล์ | บทบาท |
+|------|--------|
+| `lib/order-board-bus.ts` | pub/sub ในโปรเซสตาม `ownerUserId` |
+| `lib/order-board-sse.ts` | `createBuildingPosOrderBoardSseResponse` · `notifyBuildingPosOrderBoard` |
+
+สตรีม:
+
+| ผู้ฟัง | URL |
+|--------|-----|
+| แดชบอร์ดคิว + โต๊ะค้าง (session) | `GET /api/building-pos/session/orders/board/stream` |
+| ครัว / จัดส่ง (สาธารณะ) | `GET /api/building-pos/public/station/orders/stream?ownerId=…` |
+
+พฤติกรรม client (`BuildingPosStationBoardClient`):
+
+- เปิด `EventSource` → `onmessage` แล้วโหลดคิวใหม่
+- สำรอง: SSE หลุด → โพลทุก 3 วินาที · SSE ติด → โพลเบาทุก 20 วินาที
+
+**บังคับเรียก `notifyBuildingPosOrderBoard(ownerId)` หลัง** สร้าง / เปลี่ยนสถานะ / ลบออเดอร์ ใน:
+
+- `session/orders` (POST · PATCH · DELETE)
+- `public/orders` (POST — ลูกค้า QR / พนักงานสั่งผ่าน public)
+- `public/station/orders` (PATCH)
+- `staff/orders` (PATCH)
+- `session/seed-demo` (หลังใส่ข้อมูลตัวอย่าง)
+
+**ห้าม** พึ่งพาแค่ polling ช้าบนหน้าคิวเมื่อมี SSE ของโมดูลอยู่แล้ว
+
+---
+
+## Hub อื่น
+
+- **แท็บย่อย:** `BuildingPosHubSubTabs.tsx` (QR / การเงิน เท่านั้น — **เมนูไม่มีแท็บย่อย**)
+- **หมวดหมู่เมนู:** ปุ่ม «หมวดหมู่» → popup + ชิปกรอง — **`dashboard-menu-categories-popup.mdc`**
+- **การเงิน (ยอดขาย):** การ์ดเดียว «ช่วงเวลาและกราฟ» · ปุ่มแสดง/ซ่อนกรอง **คนละปุ่ม** กับแสดง/ซ่อนกราฟ — **`dashboard-finance-filter-charts-toggle.mdc`**
+- **URL เก่า:** normalize ใน client
+
+---
+
+## ยุบ/ขยายหัวโมดูล (แบบ drink-pos)
+
+สถานะ: `localStorage` + `CustomEvent` (`BUILDING_POS_HEADER_COLLAPSE_*`)
+
+| สถานะ | มือถือ | เดสก์ท็อป (`lg+`) |
+|-------|--------|-------------------|
+| **หัวเปิด** | การ์ดหัว · คู่มือ · ปุ่มซ่อน · dock | การ์ดหัว + แท็บกริด |
+| **หัวยุบ** | โทเคน + ปุ่มขยายใน header ม่วง | `BuildingPosHeaderBarNav` + ปุ่มขยาย |
+
+จุดต่อ `DashboardShell.tsx`: `showBuildingPosHeaderBar`
+
+มือถือ: `BuildingPosMobileBottomProvider` ห่อ shell — dock รวมสล็อตร่างบิล
+
+## `FormModal`
+
+- ทุกโมดัลใส่ **`mobileCentered`**
+
+## Shell
+
+- **`BuildingPosShell`:** การ์ด glass · `hidden` เมื่อยุบหัว
+- **`BuildingPosUnifiedMenuBar`:** `embedded` · `hidden lg:block`
+- **ห้าม** ซ้อนการ์ด glass รอบเมนูใน client หลัก
+- **ห้าม** ย่อหน้ายาวใต้ `h1` ของ shell (ใช้คู่มือ)
+
+## โทเค็น UI
+
+- `components/building-pos-ui-tokens.ts`
+
+## เช็กลิสต์
+
+- [ ] ลำดับเมนู: แดชบอร์ดซ้ายสุด
+- [ ] การ์ดเนื้อหา**ทุกเมนู** = `rounded-[1.25rem]` (ไม่ใช้ `2rem` · ปุ่มยัง `xl`/`2xl` ได้ · hub QR นอกยัง `2.5rem`)
+- [ ] แดชบอร์ดโต๊ะ `lg:grid-cols-3`
+- [ ] ออร์เดอร์ซ้าย–ขวาบนคอม + สล็อตมือถือ
+- [ ] คิวออเดอร์ไม่มีส่วนหัวซ้ำ
+- [ ] SSE + `notifyBuildingPosOrderBoard` ครบทุกจุดสร้าง/แก้/ลบออเดอร์
+- [ ] ครัว/จัดส่ง/คิวแดชบอร์ด/โต๊ะค้างอัปเดตร่วมกัน
+- [ ] ยุบหัว + sync `DashboardShell`
+- [ ] `FormModal` มี `mobileCentered`
+- [ ] หมวดหมู่ผ่าน popup
+- [ ] การเงิน: กรอง+กราฟการ์ดเดียว คนละปุ่มซ่อน/แสดง

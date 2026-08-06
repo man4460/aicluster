@@ -10,9 +10,10 @@ export async function GET(req: Request) {
   const ctx = await resolveBuildingPosStaffFromUrl(url);
   if (!ctx) return NextResponse.json({ error: "ลิงก์ไม่ถูกต้องหรือหมดอายุ" }, { status: 401 });
   const scope = await getBuildingPosDataScope(ctx.ownerId);
+  const trialSessionId = ctx.trialSessionId || scope.trialSessionId;
   const [branding, modulePayment] = await Promise.all([
-    getQrBuildingPosBranding(ctx.ownerId, scope.trialSessionId),
-    resolveModulePayment(ctx.ownerId, ctx.trialSessionId, BUILDING_POS_MODULE_SLUG),
+    getQrBuildingPosBranding(ctx.ownerId, trialSessionId),
+    resolveModulePayment(ctx.ownerId, trialSessionId, BUILDING_POS_MODULE_SLUG),
   ]);
   return NextResponse.json({
     ok: true,

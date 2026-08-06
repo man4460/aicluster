@@ -1,10 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { shopQrTemplatePageBgClass } from "@/lib/shop-qr-template-theme";
+import { shopQrTemplatePageBgClass } from "@/components/qr/shop-qr-template";
 import { cn } from "@/lib/cn";
-import { BuildingPosCustomerOrderClient } from "@/systems/building-pos/BuildingPosCustomerOrderClient";
+import { BuildingPosOrderClient } from "@/systems/building-pos/BuildingPosOrderClient";
 import { BuildingPosOpenTablesPanel } from "@/systems/building-pos/BuildingPosSalesAnalytics";
+import {
+  buildingPosNavActiveClass,
+  buildingPosNavIdleClass,
+} from "@/systems/building-pos/components/building-pos-ui-tokens";
 import {
   createBuildingPosStaffApiRepository,
   type PosMenuItem,
@@ -69,7 +73,7 @@ export function BuildingPosStaffClient({
           paymentChannelsNote?: string | null;
         };
         setBootOk(d.ok === true);
-        if (d.shopLabel) setShopLabel(d.shopLabel);
+        setShopLabel(d.shopLabel?.trim() || "POS ร้านอาหาร");
         setLogoUrl(d.logoUrl ?? null);
         setPaymentChannelsNote(d.paymentChannelsNote ?? null);
       })
@@ -140,14 +144,14 @@ export function BuildingPosStaffClient({
 
   if (bootOk === null) {
     return (
-      <div className="flex min-h-[50dvh] items-center justify-center bg-[#faf9ff] text-[#66638c]">กำลังโหลด…</div>
+      <div className="flex h-dvh items-center justify-center bg-[#faf9ff] text-[#66638c]">กำลังโหลด…</div>
     );
   }
 
   if (bootOk === false) {
     return (
-      <div className={cn(shopQrTemplatePageBgClass, "min-h-[100dvh] px-4 py-16")}>
-        <div className="mx-auto max-w-md text-center">
+      <div className={cn(shopQrTemplatePageBgClass, "flex h-dvh items-center justify-center px-4")}>
+        <div className="w-full max-w-md rounded-[1.25rem] border border-white/60 bg-white/80 p-6 text-center shadow-lg backdrop-blur-xl">
           <h1 className="text-lg font-bold text-slate-900">ลิงก์ไม่ถูกต้อง</h1>
           <p className="mt-2 text-sm text-slate-600">ขอลิงก์หรือ QR ล่าสุดจากเจ้าของร้าน</p>
         </div>
@@ -155,71 +159,83 @@ export function BuildingPosStaffClient({
     );
   }
 
-  return (
-    <div className={cn(shopQrTemplatePageBgClass, "min-h-[100dvh] pb-24")}>
-      <header className="sticky top-0 z-30 border-b border-white/50 bg-gradient-to-br from-white/70 via-white/55 to-indigo-50/25 px-4 py-3 shadow-[0_12px_40px_-24px_rgba(30,27,75,0.2)] backdrop-blur-2xl">
-        <div className="mx-auto flex max-w-lg items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#5b61ff]">พนักงานเสิร์ฟ</p>
-            <p className="truncate text-sm font-black tracking-tight text-[#1e1b4b]">{shopLabel}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => void refreshOrders()}
-            disabled={refreshing}
-            className="shrink-0 rounded-2xl border border-white/60 bg-white/70 px-3 py-2 text-xs font-bold text-[#5b61ff] shadow-sm backdrop-blur-sm touch-manipulation ring-1 ring-[#5b61ff]/15 hover:bg-white/90 disabled:opacity-60"
-          >
-            {refreshing ? "กำลังรีเฟรช..." : "รีเฟรช"}
-          </button>
-        </div>
-        <nav className="mx-auto mt-3 flex max-w-lg gap-2">
-          <button
-            type="button"
-            onClick={() => setView("tables")}
-            className={`min-h-[48px] flex-1 rounded-2xl py-2.5 text-sm font-black touch-manipulation transition-all active:scale-[0.98] ${
-              view === "tables"
-                ? "bg-white/85 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/25 backdrop-blur-sm"
-                : "bg-white/40 text-slate-600 ring-1 ring-white/60 hover:bg-white/60"
-            }`}
-          >
-            โต๊ะ / บิล
-          </button>
-          <button
-            type="button"
-            onClick={() => setView("order")}
-            className={`min-h-[48px] flex-1 rounded-2xl py-2.5 text-sm font-black touch-manipulation transition-all active:scale-[0.98] ${
-              view === "order"
-                ? "bg-white/85 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/25 backdrop-blur-sm"
-                : "bg-white/40 text-slate-600 ring-1 ring-white/60 hover:bg-white/60"
-            }`}
-          >
-            สั่งเพิ่ม
-          </button>
-        </nav>
-      </header>
+  const tabBtn = (active: boolean) =>
+    cn(
+      "min-h-[40px] flex-1 rounded-xl px-1 py-2 text-[11px] font-black touch-manipulation transition-all active:scale-[0.98] sm:min-h-[44px] sm:rounded-2xl sm:px-2 sm:text-sm",
+      "ring-1 backdrop-blur-sm",
+      active ? cn(buildingPosNavActiveClass, "ring-white/55") : cn("bg-white/50 ring-white/60", buildingPosNavIdleClass),
+    );
 
-      <div className="mx-auto max-w-2xl px-4 pt-4">
-        {view === "tables" ?
-          <BuildingPosOpenTablesPanel
-            staffAuth={staffAuth}
-            orders={orders}
-            menuImageById={menuImageById}
-            onOrderStatusChange={(id, st) => void moveOrderStatus(id, st)}
-            onOrderPaymentSlipSaved={(id, url) => saveSlip(id, url)}
-            shopLabel={shopLabel}
-            logoUrl={logoUrl}
-            paymentChannelsNote={paymentChannelsNote}
-          />
-        : <BuildingPosCustomerOrderClient
-            ownerId={ownerId}
-            trialSessionId={trialSessionId}
-            variant="staff"
-            onOrderSuccess={() => {
-              setView("tables");
-              void loadOrders();
-            }}
-          />
-        }
+  return (
+    <div
+      className={cn(
+        shopQrTemplatePageBgClass,
+        "flex h-dvh max-h-dvh w-full flex-col overflow-hidden p-1.5 sm:p-3 md:p-4",
+      )}
+    >
+      <div
+        className={cn(
+          "flex min-h-0 w-full flex-1 flex-col overflow-hidden",
+          "rounded-[1.25rem] border border-white/60 bg-white/75 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.28)] backdrop-blur-2xl",
+          "ring-1 ring-inset ring-white/50 sm:rounded-[1.5rem] md:rounded-[2rem]",
+        )}
+      >
+        <header className="shrink-0 border-b border-[#e8e6fc]/80 bg-gradient-to-br from-white/90 via-white/70 to-indigo-50/30 px-3 py-2.5 sm:px-5 sm:py-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#4d47b6]">พนักงาน</p>
+              <p className="truncate text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">{shopLabel}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void refreshOrders()}
+              disabled={refreshing}
+              className="shrink-0 rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-xs font-bold text-[#4d47b6] shadow-sm touch-manipulation ring-1 ring-[#0000BF]/15 hover:bg-white disabled:opacity-60 sm:rounded-2xl"
+            >
+              {refreshing ? "…" : "รีเฟรช"}
+            </button>
+          </div>
+          <nav className="mt-2.5 flex gap-1.5 sm:mt-3 sm:gap-2" aria-label="เมนูพนักงาน">
+            <button type="button" onClick={() => setView("tables")} className={tabBtn(view === "tables")}>
+              โต๊ะ / บิล
+            </button>
+            <button type="button" onClick={() => setView("order")} className={tabBtn(view === "order")}>
+              สั่งเพิ่ม
+            </button>
+          </nav>
+        </header>
+
+        <div
+          className={cn(
+            "min-h-0 flex-1",
+            view === "order"
+              ? "flex flex-col overflow-hidden p-2 sm:p-3 md:p-4"
+              : "overflow-y-auto overscroll-contain px-3 py-3 sm:px-5 sm:py-4 [-webkit-overflow-scrolling:touch]",
+          )}
+        >
+          {view === "tables" ? (
+            <BuildingPosOpenTablesPanel
+              staffAuth={staffAuth}
+              orders={orders}
+              menuImageById={menuImageById}
+              onOrderStatusChange={(id, st) => void moveOrderStatus(id, st)}
+              onOrderPaymentSlipSaved={(id, url) => saveSlip(id, url)}
+              shopLabel={shopLabel}
+              logoUrl={logoUrl}
+              paymentChannelsNote={paymentChannelsNote}
+            />
+          ) : (
+            <BuildingPosOrderClient
+              ownerId={ownerId}
+              trialSessionId={trialSessionId}
+              portalMode
+              onOrderSuccess={() => {
+                setView("tables");
+                void loadOrders();
+              }}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

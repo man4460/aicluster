@@ -16,6 +16,12 @@ import {
   DRINK_POS_SIZE_CODES,
   normalizeDrinkPosSizePrices,
 } from "@/systems/drink-pos/lib/size-prices";
+import {
+  DRINK_POS_PAYMENT_METHODS,
+  drinkPosPaymentRequiresSlip,
+  type DrinkPosPaymentMethod,
+} from "@/systems/drink-pos/lib/payment-method";
+import { notifyDrinkPosOrderBoard } from "@/systems/drink-pos/lib/order-board-sse";
 
 const lineSchema = z.object({
   productId: z.string().trim().min(1).max(191),
@@ -27,6 +33,8 @@ const createSaleSchema = z.object({
   note: z.string().trim().max(500).optional().nullable(),
   memberPhone: z.string().trim().max(20).optional().nullable(),
   isRewardRedemption: z.boolean().optional(),
+  paymentMethod: z.enum(DRINK_POS_PAYMENT_METHODS).optional(),
+  paymentSlipUrl: z.string().trim().max(512).optional().nullable(),
   lines: z.array(lineSchema).min(1).max(50),
 });
 
@@ -62,6 +70,11 @@ export async function GET(req: Request) {
       id: s.id,
       note: s.note,
       totalBaht: s.totalBaht,
+      paymentMethod: s.paymentMethod,
+      paymentSlipUrl: s.paymentSlipUrl,
+      fulfillmentStatus: s.fulfillmentStatus,
+      statusUpdatedAt: s.statusUpdatedAt.toISOString(),
+      isRewardRedemption: s.isRewardRedemption,
       createdAt: s.createdAt.toISOString(),
       lines: s.lines,
     })),
@@ -132,6 +145,16 @@ export async function POST(req: Request) {
   const isRewardRedemption = Boolean(parsed.data.isRewardRedemption);
   if (isRewardRedemption) totalBaht = 0;
 
+  const paymentMethod: DrinkPosPaymentMethod =
+    isRewardRedemption || totalBaht <= 0 ? "CASH" : (parsed.data.paymentMethod ?? "CASH");
+  const paymentSlipUrl = parsed.data.paymentSlipUrl?.trim() || null;
+  if (drinkPosPaymentRequiresSlip(paymentMethod, totalBaht) && !paymentSlipUrl) {
+    return NextResponse.json(
+      { error: paymentMethod === "PROMPTPAY" ? "กรุณาแนบสลิปหลังโอนพร้อมเพย์" : "กรุณาแนบสลิปการโอน" },
+      { status: 400 },
+    );
+  }
+
   let memberId: string | null = null;
   let memberPhone: string | null = null;
   if (parsed.data.memberPhone?.trim()) {
@@ -157,6 +180,10 @@ export async function POST(req: Request) {
       memberId,
       memberPhone,
       isRewardRedemption,
+      paymentMethod,
+      paymentSlipUrl: drinkPosPaymentRequiresSlip(paymentMethod, totalBaht) ? paymentSlipUrl : null,
+      fulfillmentStatus: "RECEIVED",
+      statusUpdatedAt: new Date(),
       note: parsed.data.note?.trim() || null,
       totalBaht,
       lines: { create: lineCreates },
@@ -180,11 +207,18 @@ export async function POST(req: Request) {
     await applyDrinkPosSaleLoyalty(prisma, ownerUserId, trialSessionId, memberId, isRewardRedemption);
   }
 
+  notifyDrinkPosOrderBoard(ownerUserId);
+
   return NextResponse.json({
     sale: {
       id: sale.id,
       note: sale.note,
       totalBaht: sale.totalBaht,
+      paymentMethod: sale.paymentMethod,
+      paymentSlipUrl: sale.paymentSlipUrl,
+      fulfillmentStatus: sale.fulfillmentStatus,
+      statusUpdatedAt: sale.statusUpdatedAt.toISOString(),
+      isRewardRedemption: sale.isRewardRedemption,
       createdAt: sale.createdAt.toISOString(),
       lines: sale.lines,
     },

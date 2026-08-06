@@ -124,7 +124,7 @@ function HeroUsagePill({ badge }: { badge: ModuleUsageBadge }) {
 }
 
 export function DashboardModuleHeroCard(props: DashboardModuleHeroCardProps) {
-  const { imageUrl, title, description, groupId, variant = "module", usageBadge } = props;
+  const { imageUrl, title, description, groupId, variant = "module", usageBadge, tall = false } = props;
   const safe = imageUrl && isSafeModuleCardDisplayUrl(imageUrl) ? imageUrl : null;
   const hasFooter = "footer" in props && props.footer != null;
 
@@ -138,7 +138,12 @@ export function DashboardModuleHeroCard(props: DashboardModuleHeroCardProps) {
   );
 
   const hero = (
-    <div className="relative aspect-[16/10] w-full overflow-hidden bg-gradient-to-br from-[#ecebff] to-indigo-100/40">
+    <div
+      className={cn(
+        "relative w-full overflow-hidden bg-gradient-to-br from-[#ecebff] to-indigo-100/40",
+        tall ? "aspect-[16/10]" : "aspect-[16/7]",
+      )}
+    >
       {safe ? (
         // eslint-disable-next-line @next/next/no-img-element -- URL ผ่าน isSafeModuleCardDisplayUrl (local หรือ Unsplash ที่ไว้ใจ)
         <img
@@ -161,8 +166,13 @@ export function DashboardModuleHeroCard(props: DashboardModuleHeroCardProps) {
           <HeroUsagePill badge={usageBadge} />
         </div>
       ) : null}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] p-4 sm:p-5">
-        <h3 className="text-pretty text-base font-black leading-snug text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.45)] sm:text-lg">
+      <div className={cn("pointer-events-none absolute inset-x-0 bottom-0 z-[1]", tall ? "p-4 sm:p-5" : "p-3 sm:p-4")}>
+        <h3
+          className={cn(
+            "line-clamp-2 text-pretty font-black leading-snug text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.45)]",
+            tall ? "text-base sm:text-lg" : "text-[13px] sm:text-base",
+          )}
+        >
           {title}
         </h3>
       </div>
@@ -170,11 +180,16 @@ export function DashboardModuleHeroCard(props: DashboardModuleHeroCardProps) {
   );
 
   const body = (
-    <div className="border-t border-white/50 bg-gradient-to-br from-white/90 to-indigo-50/20 px-4 py-3.5 sm:px-5 sm:py-4">
-      <p className="line-clamp-4 text-pretty text-xs font-semibold leading-relaxed whitespace-pre-line text-[#5f5a8a] sm:text-sm">
+    <div className={cn("border-t border-white/50 bg-gradient-to-br from-white/90 to-indigo-50/20", tall ? "px-4 py-3.5 sm:px-5 sm:py-4" : "px-4 py-3")}>
+      <p
+        className={cn(
+          "text-pretty text-xs font-semibold leading-relaxed whitespace-pre-line text-[#5f5a8a] sm:text-sm",
+          tall ? "line-clamp-4" : "line-clamp-2",
+        )}
+      >
         {description}
       </p>
-      <div className="mt-3">
+      <div className={cn(tall ? "mt-3" : "mt-2")}>
         {hasFooter ? (
           props.footer
         ) : (

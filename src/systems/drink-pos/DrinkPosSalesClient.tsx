@@ -5,14 +5,26 @@ import {
   AppColumnBarSparkChart,
   AppDashboardSection,
   AppEmptyState,
+  AppImageLightbox,
+  AppImageThumb,
   AppRevenueCostColumnChart,
   AppSectionHeader,
   AppSparkChartPanel,
   appDashboardInnerScrollClass,
   appTemplateOutlineButtonClass,
+  useAppImageLightbox,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import {
+  drinkPosContentStackClass,
+  drinkPosFieldClass,
+  drinkPosOutlineIconButtonClass,
+  drinkPosPulseWashClass,
+  drinkPosStatCardClass,
+  drinkPosStatGridClass,
+} from "@/systems/drink-pos/lib/ui-tokens";
+import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import {
   fetchDrinkPosProducts,
   fetchDrinkPosSales,
@@ -21,14 +33,21 @@ import {
   type DrinkPosSaleRow,
 } from "@/systems/drink-pos/lib/client-data";
 import { DrinkPosButton } from "@/systems/drink-pos/components/DrinkPosButton";
+import {
+  DrinkPosPaymentPanel,
+  drinkPosPaymentSubmitBlocked,
+} from "@/systems/drink-pos/components/DrinkPosPaymentPanel";
+import { drinkPosPaymentMethodLabel, type DrinkPosPaymentMethod } from "@/systems/drink-pos/lib/payment-method";
 import { formatThb } from "@/systems/inventory/lib/inventory-client-data";
 import {
   drinkPosActiveSizePrices,
   drinkPosProductHasSizes,
+  drinkPosResolveUnitPrice,
   type DrinkPosSizeCode,
 } from "@/systems/drink-pos/lib/size-prices";
 
 type DraftLine = { key: string; productId: string; size: DrinkPosSizeCode | null; quantity: number };
+type FinanceRange = "TODAY" | "MONTH" | "YEAR" | "CUSTOM";
 
 function newKey() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -40,8 +59,63 @@ function bangkokDateKey(iso: string): string {
   return d.toLocaleString("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" });
 }
 
-const salesFilterFieldClass =
-  "w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2.5 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:ring-2";
+function bangkokTodayKey(): string {
+  return new Date().toLocaleString("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+function dateKeyInFinanceRange(
+  day: string,
+  range: FinanceRange,
+  today: string,
+  startDate: string,
+  endDate: string,
+): boolean {
+  if (!day) return false;
+  if (range === "TODAY") return day === today;
+  if (range === "MONTH") return day.slice(0, 7) === today.slice(0, 7);
+  if (range === "YEAR") return day.slice(0, 4) === today.slice(0, 4);
+  const rawStart = startDate || endDate;
+  const rawEnd = endDate || startDate;
+  const start = rawStart && rawEnd && rawStart > rawEnd ? rawEnd : rawStart;
+  const end = rawStart && rawEnd && rawStart > rawEnd ? rawStart : rawEnd;
+  if (!start && !end) return true;
+  if (start && day < start) return false;
+  if (end && day > end) return false;
+  return true;
+}
+
+function FinanceRangeChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <DrinkPosButton
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-10 items-center justify-center rounded-full px-3.5 text-xs font-black transition-all sm:px-4",
+        active
+          ? cn(appDashboardBrandGradientFillClass, "text-white shadow-[0_18px_30px_-22px_rgba(91,97,255,0.55)]")
+          : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50",
+      )}
+      aria-pressed={active}
+    >
+      {label}
+    </DrinkPosButton>
+  );
+}
+
+const salesFilterFieldClass = drinkPosFieldClass;
 
 function IconFilter({ className }: { className?: string }) {
   return (
@@ -71,8 +145,9 @@ export function DrinkPosSalesClient() {
   const [sales, setSales] = useState<DrinkPosSaleRow[]>([]);
   const [products, setProducts] = useState<DrinkPosProductRow[]>([]);
   const [financeBuckets, setFinanceBuckets] = useState<FinanceBucket[]>([]);
-  const [totalRevenue7d, setTotalRevenue7d] = useState(0);
-  const [totalCost7d, setTotalCost7d] = useState(0);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalCost, setTotalCost] = useState(0);
+  const [financeRangeLabel, setFinanceRangeLabel] = useState("เดือนนี้");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,20 +162,31 @@ export function DrinkPosSalesClient() {
   const [lines, setLines] = useState<DraftLine[]>([{ key: newKey(), productId: "", size: null, quantity: 1 }]);
   const [busy, setBusy] = useState(false);
   const [formErr, setFormErr] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<DrinkPosPaymentMethod>("CASH");
+  const [paymentSlipUrl, setPaymentSlipUrl] = useState<string | null>(null);
+  const slipLb = useAppImageLightbox();
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
+  /** ค่าเริ่มต้น: เดือนนี้ */
+  const [financeRange, setFinanceRange] = useState<FinanceRange>("MONTH");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const todayKey = useMemo(() => bangkokTodayKey(), []);
 
   const reload = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
+      const qs = new URLSearchParams({ range: financeRange });
+      if (financeRange === "CUSTOM") {
+        if (dateFrom.trim()) qs.set("from", dateFrom.trim());
+        if (dateTo.trim()) qs.set("to", dateTo.trim());
+      }
       const [s, p, finRes] = await Promise.all([
         fetchDrinkPosSales(400),
         fetchDrinkPosProducts(),
-        fetch("/api/drink-pos/finance-summary", { credentials: "include" }),
+        fetch(`/api/drink-pos/finance-summary?${qs.toString()}`, { credentials: "include" }),
       ]);
       if (!s.ok) {
         setError(s.error);
@@ -114,94 +200,108 @@ export function DrinkPosSalesClient() {
       setProducts(p.products.filter((x) => x.isActive));
       const fin = (await finRes.json().catch(() => ({}))) as {
         buckets?: FinanceBucket[];
+        totalRevenue?: number;
+        totalCost?: number;
         totalRevenue7d?: number;
         totalCost7d?: number;
+        rangeLabel?: string;
       };
       if (finRes.ok && fin.buckets) {
         setFinanceBuckets(fin.buckets);
-        setTotalRevenue7d(fin.totalRevenue7d ?? 0);
-        setTotalCost7d(fin.totalCost7d ?? 0);
+        setTotalRevenue(fin.totalRevenue ?? fin.totalRevenue7d ?? 0);
+        setTotalCost(fin.totalCost ?? fin.totalCost7d ?? 0);
+        setFinanceRangeLabel(fin.rangeLabel ?? "ช่วงที่เลือก");
       }
     } catch (e) {
       setError(drinkPosFetchErrorMessage(e));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [financeRange, dateFrom, dateTo]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
 
-  const filtersActive = useMemo(
-    () => Boolean(keyword.trim() || dateFrom.trim() || dateTo.trim()),
-    [keyword, dateFrom, dateTo],
-  );
+  const filtersActive = useMemo(() => {
+    if (keyword.trim()) return true;
+    return financeRange !== "MONTH";
+  }, [keyword, financeRange]);
 
   const filteredSales = useMemo(() => {
     const kw = keyword.trim().toLowerCase();
-    const from = dateFrom.trim();
-    const to = dateTo.trim();
     return sales.filter((s) => {
       const day = bangkokDateKey(s.createdAt);
-      if (from && day && day < from) return false;
-      if (to && day && day > to) return false;
+      if (!dateKeyInFinanceRange(day, financeRange, todayKey, dateFrom.trim(), dateTo.trim())) return false;
       if (kw) {
         const blob = [s.note ?? "", ...s.lines.map((l) => l.productName)].join(" ").toLowerCase();
         if (!blob.includes(kw)) return false;
       }
       return true;
     });
-  }, [sales, keyword, dateFrom, dateTo]);
+  }, [sales, keyword, financeRange, todayKey, dateFrom, dateTo]);
 
-  const { chartBuckets, chartFiltered7dTotalBaht } = useMemo(() => {
-    const keys: string[] = [];
-    const now = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const k = d.toLocaleString("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" });
-      keys.push(k);
-    }
+  const { chartBuckets, chartPeriodTotalBaht } = useMemo(() => {
     const totals = new Map<string, number>();
-    for (const k of keys) totals.set(k, 0);
+    for (const b of financeBuckets) totals.set(b.dateKey, 0);
     for (const s of filteredSales) {
-      const day = new Date(s.createdAt).toLocaleString("en-CA", {
-        timeZone: "Asia/Bangkok",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      });
-      if (totals.has(day)) totals.set(day, (totals.get(day) ?? 0) + s.totalBaht);
+      const day = bangkokDateKey(s.createdAt);
+      if (!day) continue;
+      const key = financeRange === "YEAR" ? day.slice(0, 7) : day;
+      if (totals.has(key)) totals.set(key, (totals.get(key) ?? 0) + s.totalBaht);
     }
-    const max = Math.max(1, ...keys.map((k) => totals.get(k) ?? 0));
-    const buckets = keys.map((k) => {
-      const amount = totals.get(k) ?? 0;
-      const [, m, d] = k.split("-");
+    const max = Math.max(1, ...[...totals.values()]);
+    const buckets = financeBuckets.map((b) => {
+      const amount = totals.get(b.dateKey) ?? b.revenueBaht;
       return {
-        key: k,
-        label: `${d}/${m}`,
+        key: b.dateKey,
+        label: b.label,
         amount,
         pct: (amount / max) * 100,
       };
     });
-    const total7d = keys.reduce((acc, k) => acc + (totals.get(k) ?? 0), 0);
-    return { chartBuckets: buckets, chartFiltered7dTotalBaht: total7d };
-  }, [filteredSales]);
+    const total = buckets.reduce((acc, b) => acc + b.amount, 0);
+    return { chartBuckets: buckets, chartPeriodTotalBaht: total };
+  }, [filteredSales, financeBuckets, financeRange]);
 
   function resetSalesFilters() {
     setKeyword("");
+    setFinanceRange("MONTH");
     setDateFrom("");
     setDateTo("");
+  }
+
+  function selectFinanceRange(next: FinanceRange) {
+    setFinanceRange(next);
+    if (next !== "CUSTOM") {
+      setDateFrom("");
+      setDateTo("");
+    }
   }
 
   function openModal() {
     const first = products[0]?.id ?? "";
     setNote("");
     setLines([{ key: newKey(), productId: first, size: null, quantity: 1 }]);
+    setPaymentMethod("CASH");
+    setPaymentSlipUrl(null);
     setFormErr(null);
     setModalOpen(true);
   }
+
+  const saleDraftTotalBaht = useMemo(() => {
+    return lines.reduce((sum, l) => {
+      if (!l.productId || l.quantity < 1) return sum;
+      const p = products.find((x) => x.id === l.productId);
+      if (!p) return sum;
+      const unit = drinkPosResolveUnitPrice(
+        { priceBaht: p.basePriceBaht ?? p.priceBaht, sizePrices: p.sizePrices },
+        drinkPosProductHasSizes(p.sizePrices) ? l.size : null,
+      );
+      if (unit == null) return sum;
+      return sum + unit * l.quantity;
+    }, 0);
+  }, [lines, products]);
 
   async function submitSale() {
     setBusy(true);
@@ -233,11 +333,23 @@ export function DrinkPosSalesClient() {
           return;
         }
       }
+      if (drinkPosPaymentSubmitBlocked(paymentMethod, saleDraftTotalBaht, paymentSlipUrl)) {
+        setFormErr(
+          paymentMethod === "PROMPTPAY" ? "กรุณาแนบสลิปหลังโอนพร้อมเพย์" : "กรุณาแนบสลิปการโอน",
+        );
+        return;
+      }
       const res = await fetch("/api/drink-pos/sales", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ note: note.trim() || null, lines: clean }),
+        body: JSON.stringify({
+          note: note.trim() || null,
+          lines: clean,
+          paymentMethod: saleDraftTotalBaht <= 0 ? "CASH" : paymentMethod,
+          paymentSlipUrl:
+            saleDraftTotalBaht <= 0 || paymentMethod === "CASH" ? null : paymentSlipUrl,
+        }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -280,7 +392,7 @@ export function DrinkPosSalesClient() {
     }
   }
 
-  const profit7d = totalRevenue7d - totalCost7d;
+  const profitTotal = totalRevenue - totalCost;
 
   const revenueCostChartBuckets = useMemo(() => {
     const max = Math.max(
@@ -296,35 +408,77 @@ export function DrinkPosSalesClient() {
       costPct: (b.costBaht / max) * 100,
     }));
   }, [financeBuckets]);
-  const financeStatClass =
-    "rounded-[1.25rem] border border-white/55 bg-gradient-to-br from-white/60 via-indigo-50/25 to-violet-100/15 p-4 backdrop-blur-xl ring-1 ring-inset ring-white/50 sm:rounded-[2rem] sm:p-5";
+  const financeStatClass = drinkPosStatCardClass;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className={drinkPosContentStackClass}>
       {error ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm font-semibold text-rose-800">
           {error}
         </div>
       ) : null}
 
-      <section aria-label="สรุปการเงิน 7 วัน">
-        <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+      <AppDashboardSection tone="violet">
+        <AppSectionHeader tone="violet" title="ช่วงเวลา" />
+        <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="กรองช่วงเวลาการเงิน">
+          <FinanceRangeChip label="วันนี้" active={financeRange === "TODAY"} onClick={() => selectFinanceRange("TODAY")} />
+          <FinanceRangeChip label="เดือนนี้" active={financeRange === "MONTH"} onClick={() => selectFinanceRange("MONTH")} />
+          <FinanceRangeChip label="ปีนี้" active={financeRange === "YEAR"} onClick={() => selectFinanceRange("YEAR")} />
+          <FinanceRangeChip
+            label="กำหนดเอง"
+            active={financeRange === "CUSTOM"}
+            onClick={() => selectFinanceRange("CUSTOM")}
+          />
+        </div>
+        {financeRange === "CUSTOM" ? (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="min-w-0">
+              <span className="text-xs font-bold text-[#4d47b6]">ตั้งแต่วันที่</span>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                aria-label="ตั้งแต่วันที่ กรุงเทพ"
+                className={cn(salesFilterFieldClass, "mt-1")}
+              />
+            </label>
+            <label className="min-w-0">
+              <span className="text-xs font-bold text-[#4d47b6]">ถึงวันที่</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                aria-label="ถึงวันที่ กรุงเทพ"
+                className={cn(salesFilterFieldClass, "mt-1")}
+              />
+            </label>
+          </div>
+        ) : null}
+        <p className="mt-3 text-xs font-semibold text-[#66638c]">กำลังดู: {financeRangeLabel}</p>
+      </AppDashboardSection>
+
+      <section aria-label={`สรุปการเงิน ${financeRangeLabel}`}>
+        <ul className={cn(drinkPosStatGridClass, "lg:grid-cols-3")}>
           <li className={financeStatClass}>
-            <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">รายได้ 7 วัน</p>
+            <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">
+              รายได้ · {financeRangeLabel}
+            </p>
             <p className="mt-2 text-left text-2xl font-black tabular-nums text-emerald-700 sm:text-3xl">
-              ฿{formatThb(totalRevenue7d)}
+              ฿{formatThb(totalRevenue)}
             </p>
           </li>
           <li className={financeStatClass}>
-            <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">ต้นทุน 7 วัน</p>
+            <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">
+              ต้นทุน · {financeRangeLabel}
+            </p>
             <p className="mt-2 text-left text-2xl font-black tabular-nums text-rose-600 sm:text-3xl">
-              ฿{formatThb(totalCost7d)}
+              ฿{formatThb(totalCost)}
             </p>
           </li>
           <li className={cn(financeStatClass, "col-span-2 lg:col-span-1")}>
             <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">กำไรโดยประมาณ</p>
             <p className="mt-2 text-left text-2xl font-black tabular-nums text-[#1e1b4b] sm:text-3xl">
-              ฿{formatThb(profit7d)}
+              ฿{formatThb(profitTotal)}
             </p>
           </li>
         </ul>
@@ -333,7 +487,7 @@ export function DrinkPosSalesClient() {
       <AppDashboardSection tone="violet">
         <AppSectionHeader
           tone="violet"
-          title="รายได้เทียบต้นทุน (7 วัน)"
+          title={`รายได้เทียบต้นทุน (${financeRangeLabel})`}
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           action={
@@ -354,7 +508,7 @@ export function DrinkPosSalesClient() {
           }
         />
         {loading ? (
-          <div className="mt-4 h-40 animate-pulse rounded-2xl bg-[#ecebff]/50" aria-hidden />
+          <div className={cn("mt-4 h-40 animate-pulse rounded-2xl", drinkPosPulseWashClass)} aria-hidden />
         ) : (
           <AppSparkChartPanel className="mt-4 w-full min-w-0">
             <AppRevenueCostColumnChart
@@ -375,11 +529,11 @@ export function DrinkPosSalesClient() {
       <AppDashboardSection tone="violet">
         <AppSectionHeader
           tone="violet"
-          title="ยอดขาย 7 วันล่าสุด"
+          title={`ยอดขาย (${financeRangeLabel})`}
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
         />
         {loading ? (
-          <div className="mt-4 h-36 animate-pulse rounded-2xl bg-[#ecebff]/50" aria-hidden />
+          <div className={cn("mt-4 h-36 animate-pulse rounded-2xl", drinkPosPulseWashClass)} aria-hidden />
         ) : (
           <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-stretch sm:gap-5">
             <div className="min-h-[10rem] min-w-0 flex-1">
@@ -394,17 +548,19 @@ export function DrinkPosSalesClient() {
             </div>
             <aside
               className={cn(
-                "flex shrink-0 flex-col justify-center rounded-[1.25rem] border border-white/55 bg-gradient-to-br from-white/70 via-white/50 to-indigo-50/25 px-4 py-3 shadow-sm ring-1 ring-inset ring-white/45 sm:w-[11rem] sm:rounded-2xl sm:px-4 sm:py-4",
+                "flex shrink-0 flex-col justify-center rounded-[1.25rem] border border-white/55 bg-gradient-to-br from-white/70 via-white/50 to-violet-50/40 px-4 py-3 shadow-sm ring-1 ring-inset ring-white/45 sm:w-[11rem] sm:rounded-2xl sm:px-4 sm:py-4",
                 "sm:text-center",
               )}
-              aria-label={`ยอดรวม 7 วันกรุงเทพ ฿${formatThb(chartFiltered7dTotalBaht)}`}
+              aria-label={`ยอดรวม ${financeRangeLabel} ฿${formatThb(chartPeriodTotalBaht)}`}
             >
-              <p className="text-[10px] font-black uppercase tracking-wider text-[#66638c] sm:text-center">7 วัน (กทม.)</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-[#66638c] sm:text-center">
+                รวม · {financeRangeLabel}
+              </p>
               <p className="mt-1 text-2xl font-black leading-tight tabular-nums text-[#4d47b6] sm:text-center sm:text-3xl">
-                ฿{formatThb(chartFiltered7dTotalBaht)}
+                ฿{formatThb(chartPeriodTotalBaht)}
               </p>
               {filtersActive ? (
-                <p className="mt-1.5 text-[10px] font-semibold text-[#5b61ff]/90 sm:text-center">กรองแล้ว</p>
+                <p className="mt-1.5 text-[10px] font-semibold text-[#0000BF] sm:text-center">กรองแล้ว</p>
               ) : null}
             </aside>
           </div>
@@ -429,13 +585,13 @@ export function DrinkPosSalesClient() {
                   appTemplateOutlineButtonClass,
                   "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center px-0 sm:hidden",
                   "border-[#dcd8f0] bg-white/80 text-[#4d47b6]",
-                  filterOpen && "border-[#5b61ff]/45 bg-[#ecebff]/90 ring-2 ring-[#5b61ff]/20",
+                  filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
                   filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
                 )}
               >
                 <IconFilter className="h-5 w-5 shrink-0" />
                 {filtersActive ? (
-                  <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white" aria-hidden />
+                  <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] ring-2 ring-white" aria-hidden />
                 ) : null}
               </DrinkPosButton>
               <DrinkPosButton
@@ -447,7 +603,8 @@ export function DrinkPosSalesClient() {
                 title="รีเฟรช"
                 className={cn(
                   appTemplateOutlineButtonClass,
-                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl border-[#5b61ff]/25 bg-white/85 px-0 text-[#4d47b6] disabled:opacity-50 sm:min-w-0 sm:px-3",
+                  drinkPosOutlineIconButtonClass,
+                  "disabled:opacity-50",
                 )}
               >
                 <IconRefresh className={cn("h-5 w-5 shrink-0 sm:mr-1.5", loading && "animate-spin")} />
@@ -473,33 +630,13 @@ export function DrinkPosSalesClient() {
             filterOpen ? "grid" : "hidden sm:grid",
           )}
         >
-          <label className="min-w-0 sm:col-span-2 lg:col-span-4">
+          <label className="min-w-0 sm:col-span-2 lg:col-span-10">
             <span className="sr-only">ค้นหาโน้ตหรือชื่อสินค้า</span>
             <input
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder="ค้นหา…"
+              placeholder="ค้นหาโน้ตหรือชื่อสินค้า…"
               aria-label="ค้นหาโน้ตหรือชื่อสินค้า"
-              className={cn(salesFilterFieldClass, "mt-0 sm:mt-0")}
-            />
-          </label>
-          <label className="min-w-0 sm:col-span-1 lg:col-span-3">
-            <span className="sr-only">ตั้งแต่วันที่ กรุงเทพ</span>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              aria-label="ตั้งแต่วันที่ กรุงเทพ"
-              className={cn(salesFilterFieldClass, "mt-0 sm:mt-0")}
-            />
-          </label>
-          <label className="min-w-0 sm:col-span-1 lg:col-span-3">
-            <span className="sr-only">ถึงวันที่ กรุงเทพ</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              aria-label="ถึงวันที่ กรุงเทพ"
               className={cn(salesFilterFieldClass, "mt-0 sm:mt-0")}
             />
           </label>
@@ -510,13 +647,13 @@ export function DrinkPosSalesClient() {
                 resetSalesFilters();
                 setFilterOpen(false);
               }}
-              disabled={!filtersActive}
+              disabled={!filtersActive && !keyword.trim()}
               className={cn(
                 appTemplateOutlineButtonClass,
                 "h-[42px] w-full rounded-2xl text-xs font-black text-[#4d47b6] disabled:opacity-40",
               )}
             >
-              ล้างตัวกรอง
+              รีเซ็ตช่วง · เดือนนี้
             </DrinkPosButton>
           </div>
         </div>
@@ -554,8 +691,22 @@ export function DrinkPosSalesClient() {
                         })}
                       </p>
                       {s.note ? <p className="mt-0.5 text-sm font-semibold text-[#1e1b4b]">{s.note}</p> : null}
+                      <p className="mt-0.5 text-[11px] font-bold text-[#4d47b6]">
+                        {drinkPosPaymentMethodLabel(s.paymentMethod)}
+                        {s.isRewardRedemption ? " · แลกแต้ม" : ""}
+                      </p>
                     </div>
-                    <p className="text-lg font-black tabular-nums text-emerald-700">฿{formatThb(s.totalBaht)}</p>
+                    <div className="flex items-start gap-2">
+                      {s.paymentSlipUrl ? (
+                        <AppImageThumb
+                          src={s.paymentSlipUrl}
+                          alt="สลิปชำระเงิน"
+                          onOpen={() => s.paymentSlipUrl && slipLb.open(s.paymentSlipUrl)}
+                          className="h-12 w-12"
+                        />
+                      ) : null}
+                      <p className="text-lg font-black tabular-nums text-emerald-700">฿{formatThb(s.totalBaht)}</p>
+                    </div>
                   </div>
                   <ul className="mt-2 space-y-1 border-t border-white/40 pt-2 text-xs font-medium text-[#66638c]">
                     {s.lines.map((l) => (
@@ -584,6 +735,7 @@ export function DrinkPosSalesClient() {
             onSubmit={() => void submitSale()}
             submitLabel="บันทึก"
             loading={busy}
+            submitDisabled={drinkPosPaymentSubmitBlocked(paymentMethod, saleDraftTotalBaht, paymentSlipUrl)}
           />
         }
       >
@@ -599,7 +751,7 @@ export function DrinkPosSalesClient() {
               onChange={(e) => setNote(e.target.value)}
               placeholder="โน้ต (ถ้ามี)"
               aria-label="โน้ต"
-              className="mt-0 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#5b61ff]/30"
+              className={cn("mt-0", drinkPosFieldClass)}
             />
           </label>
           <div className="space-y-2">
@@ -692,8 +844,18 @@ export function DrinkPosSalesClient() {
               + แถวสินค้า
             </DrinkPosButton>
           </div>
+          <DrinkPosPaymentPanel
+            amountBaht={saleDraftTotalBaht}
+            method={paymentMethod}
+            slipUrl={paymentSlipUrl}
+            onMethodChange={setPaymentMethod}
+            onSlipUrlChange={setPaymentSlipUrl}
+            disabled={busy}
+          />
         </div>
       </FormModal>
+
+      <AppImageLightbox src={slipLb.src} onClose={slipLb.close} alt="สลิปชำระเงิน" />
 
       <FormModal
         open={costModalOpen}

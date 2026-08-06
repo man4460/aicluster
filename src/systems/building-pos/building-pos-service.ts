@@ -75,7 +75,7 @@ export type PosOrder = {
   table_no: string;
   /** ถ้ามีค่า แปลว่าสร้างจากหน้า QR ลูกค้า */
   customer_session_id?: string;
-  status: "NEW" | "PREPARING" | "SERVED" | "PAID";
+  status: "NEW" | "PREPARING" | "SERVED" | "SERVING" | "DELIVERED" | "PAID";
   items: PosOrderItem[];
   total_amount: number;
   note: string;

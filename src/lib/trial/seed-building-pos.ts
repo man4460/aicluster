@@ -412,6 +412,8 @@ export async function seedBuildingPosDemoFinanceData(
     { n: "นมปั่นมะม่วง", q: 1 },
   ]);
   pushOrder(d(0), 18, 20, "SERVED", "โต๊ะ 4", "4", [{ n: "แกงมัสมั่นเนื้อ", q: 1 }, { n: "น้ำเปล่า", q: 2 }]);
+  pushOrder(d(0), 19, 5, "NEW", "คิวครัว", "8", [{ n: "ผัดกะเพราไก่ไข่ดาว", q: 1 }, { n: "ชาเย็น", q: 1 }]);
+  pushOrder(d(0), 19, 25, "PREPARING", "กำลังทำ", "9", [{ n: "ข้าวผัดกุ้ง", q: 2 }]);
 
   pushOrder(d(1), 10, 30, "PAID", "ครอบครัวส.", "5", [
     { n: "ต้มข่าไก่", q: 2 },
@@ -449,6 +451,42 @@ export async function seedBuildingPosDemoFinanceData(
   pushOrder(d(6), 19, 50, "NEW", "จองล่วงหน้า", "VIP", [{ n: "ข้าวหน้าหมูทงคatsu", q: 2 }]);
 
   await db.buildingPosOrder.createMany({ data: ordersData });
+}
+
+/**
+ * เติม/รีเซ็ตข้อมูลตัวอย่างสำหรับแดชบอร์ด (เมนูถ้ายังไม่มี + ออเดอร์/ต้นทุน)
+ * `force` = ล้างออเดอร์+รายจ่ายใน scope แล้วใส่ตัวอย่างใหม่ (คงหมวด/เมนูถ้ามีแล้ว)
+ */
+export async function ensureBuildingPosDemoDataForOwner(
+  db: DbLike,
+  ownerUserId: string,
+  trialSessionId: string,
+  opts?: { force?: boolean },
+): Promise<{ catalogSeeded: boolean; financeSeeded: boolean }> {
+  const force = opts?.force === true;
+  let catalogSeeded = false;
+  const catCount = await db.buildingPosCategory.count({ where: { ownerUserId, trialSessionId } });
+  if (catCount === 0) {
+    const suffix = trialSessionId === TRIAL_PROD_SCOPE ? "" : " (ทดลอง)";
+    await insertCatalog(db, ownerUserId, trialSessionId, suffix);
+    catalogSeeded = true;
+  }
+
+  const orderCount = await db.buildingPosOrder.count({ where: { ownerUserId, trialSessionId } });
+  if (orderCount > 0 && !force) {
+    return { catalogSeeded, financeSeeded: false };
+  }
+
+  if (force && orderCount > 0) {
+    await db.buildingPosOrder.deleteMany({ where: { ownerUserId, trialSessionId } });
+    await db.buildingPosMenuRecipeLine.deleteMany({
+      where: { menuItem: { ownerUserId, trialSessionId } },
+    });
+    await db.buildingPosPurchaseOrder.deleteMany({ where: { ownerUserId, trialSessionId } });
+  }
+
+  await seedBuildingPosDemoFinanceData(db, ownerUserId, trialSessionId);
+  return { catalogSeeded, financeSeeded: true };
 }
 
 /** ลบข้อมูล Building POS ทั้งหมดใน scope หนึ่ง (ลำดับ FK / ตารางที่อ้างอิง) */

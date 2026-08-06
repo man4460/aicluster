@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
   AppDashboardSection,
   AppEmptyState,
@@ -8,8 +9,11 @@ import {
   appDashboardBrandCtaPillButtonClass,
   appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
-import { isSafeModuleCardImageUrl } from "@/lib/module-card-image";
+import { downloadAdminExcel } from "@/lib/admin/export-excel";
 import { cn } from "@/lib/cn";
+import { isSafeModuleCardDisplayUrl } from "@/lib/module-card-image";
+import { MODULE_GROUP_TIER_NAME } from "@/lib/modules/config";
+import { resolveModuleCardDisplayImageUrl } from "@/lib/modules/dashboard-module-cover-images";
 import {
   assetRowRemoveIconButtonClass,
   IconRowRemove,
@@ -44,7 +48,7 @@ function UploadControls({
   const safeDomId = `module-card-upload-${rowId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <>
       <input
         id={safeDomId}
         type="file"
@@ -64,15 +68,15 @@ function UploadControls({
         onClick={() => document.getElementById(safeDomId)?.click()}
         className={cn(
           appDashboardBrandCtaPillButtonClass,
-          "min-h-[40px] min-w-[40px] rounded-xl px-0 sm:min-w-0 sm:rounded-full sm:px-5",
+          "min-h-[36px] min-w-[36px] rounded-lg px-0 sm:min-w-0 sm:rounded-xl sm:px-3",
         )}
         aria-label="อัปโหลดรูปการ์ด"
         title="อัปโหลดรูป"
       >
-        <UploadIcon className="h-5 w-5 shrink-0 sm:mr-1" />
-        <span className="hidden sm:inline">{disabled ? "กำลังอัปโหลด…" : "อัปโหลดรูป"}</span>
+        <UploadIcon className="h-4 w-4 shrink-0" />
+        <span className="hidden sm:ml-1 sm:inline">{disabled ? "…" : "อัปโหลด"}</span>
       </button>
-    </div>
+    </>
   );
 }
 
@@ -82,6 +86,8 @@ export function ModuleCardImagesAdmin() {
   const [err, setErr] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [q, setQ] = useState("");
   const [refreshTick, setRefreshTick] = useState(0);
 
   const load = useCallback(async () => {
@@ -111,6 +117,17 @@ export function ModuleCardImagesAdmin() {
       cancelled = true;
     };
   }, [load, refreshTick]);
+
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return rows;
+    return rows.filter(
+      (r) =>
+        r.title.toLowerCase().includes(needle) ||
+        r.slug.toLowerCase().includes(needle) ||
+        String(r.groupId).includes(needle),
+    );
+  }, [rows, q]);
 
   async function uploadFile(id: string, file: File) {
     setErr(null);
@@ -157,6 +174,22 @@ export function ModuleCardImagesAdmin() {
     }
   }
 
+  function onExportExcel() {
+    downloadAdminExcel({
+      filename: "admin-module-cards",
+      sheetName: "รูปการ์ด",
+      headers: ["ชื่อ", "slug", "กลุ่ม", "มีรูปอัปโหลด", "URL รูป", "สถานะ"],
+      rows: filtered.map((r) => [
+        r.title,
+        r.slug,
+        MODULE_GROUP_TIER_NAME[r.groupId] ?? r.groupId,
+        r.cardImageUrl ? "ใช่" : "ไม่",
+        r.cardImageUrl ?? "",
+        r.isActive ? "เปิด" : "ปิด",
+      ]),
+    });
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <section
@@ -178,9 +211,6 @@ export function ModuleCardImagesAdmin() {
                 รูปการ์ดระบบ
               </span>
             </h1>
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[#5f5a8a]">
-              อัปโหลดภาพแนวนอนประมาณ 16:9 — แสดงบนการ์ดแดชบอร์ด หน้าระบบทั้งหมด และแผนผังระบบ (JPG / PNG / WebP / GIF ไม่เกิน 4MB)
-            </p>
           </div>
         </div>
       </section>
@@ -191,9 +221,26 @@ export function ModuleCardImagesAdmin() {
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           title="โมดูลและรูปการ์ด"
-          description="เลือกระบบแล้วอัปโหลดหรือล้างรูป — กดไอคอนคู่มือเพื่อดูขั้นตอน"
           action={
             <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
+              <button
+                type="button"
+                onClick={() => setFilterOpen((o) => !o)}
+                aria-expanded={filterOpen}
+                aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                title={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center px-0 sm:px-3",
+                  filterOpen && "border-[#5b61ff]/45 bg-[#ecebff]/90 ring-2 ring-[#5b61ff]/20",
+                )}
+              >
+                <IconFilter className="h-5 w-5 shrink-0" />
+                <span className="hidden sm:ml-1 sm:inline">กรอง</span>
+                {q.trim() ? (
+                  <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#5b61ff]" aria-hidden />
+                ) : null}
+              </button>
               <button
                 type="button"
                 onClick={() => setHelpOpen((o) => !o)}
@@ -208,6 +255,21 @@ export function ModuleCardImagesAdmin() {
               >
                 <IconBook className="h-5 w-5 shrink-0" />
                 <span className="hidden sm:ml-1 sm:inline">วิธีใช้</span>
+              </button>
+              <button
+                type="button"
+                onClick={onExportExcel}
+                disabled={loading || filtered.length === 0}
+                aria-label="Export Excel"
+                title="Export Excel"
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-0 px-0 sm:min-w-0 sm:gap-1.5 sm:px-3",
+                  "border-[#dcd8f0] bg-white/80 text-[#4d47b6] disabled:opacity-50",
+                )}
+              >
+                <IconExcel className="h-5 w-5 shrink-0" />
+                <span className="hidden sm:inline">Excel</span>
               </button>
               <button
                 type="button"
@@ -231,12 +293,27 @@ export function ModuleCardImagesAdmin() {
           }
         />
 
+        {filterOpen ? (
+          <div className="mt-4">
+            <label className="block">
+              <span className="sr-only">ค้นหาโมดูล</span>
+              <input
+                type="search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="ค้นหาชื่อหรือ slug…"
+                className="w-full rounded-xl border-0 bg-[#f3f2fa]/90 px-3 py-2.5 text-sm text-[#1e1b4b] outline-none ring-[#5b61ff]/20 focus:bg-[#eeedf8] focus:ring-2"
+              />
+            </label>
+          </div>
+        ) : null}
+
         {helpOpen ? (
           <div className="mt-4 rounded-[1.25rem] border border-sky-200/70 bg-gradient-to-br from-sky-50/90 to-indigo-50/40 p-4 text-sm text-sky-950 ring-1 ring-inset ring-white/50 sm:rounded-[2rem] sm:p-5">
             <p className="font-black text-sky-900">วิธีใช้</p>
             <ol className="mt-2 list-decimal space-y-1.5 pl-5 marker:font-bold marker:text-[#4d47b6]">
-              <li>หาแถวของระบบที่ต้องการ (ชื่อหรือ slug)</li>
-              <li>กดอัปโหลดแล้วเลือกไฟล์ภาพ</li>
+              <li>หาการ์ดของระบบที่ต้องการ</li>
+              <li>กดอัปโหลดแล้วเลือกไฟล์ภาพ (JPG / PNG / WebP / GIF)</li>
               <li>รูปจะขึ้นที่การ์ดแดชบอร์ดและหน้าระบบทันทีหลังสำเร็จ</li>
             </ol>
           </div>
@@ -248,135 +325,71 @@ export function ModuleCardImagesAdmin() {
           </p>
         ) : null}
 
-        {loading && rows.length === 0 ? (
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-40 animate-pulse rounded-[1.25rem] bg-[#ecebff]/70" />
-            ))}
-          </div>
-        ) : !err && rows.length === 0 ? (
-          <div className="mt-4">
-            <AppEmptyState tone="violet">ไม่พบรายการโมดูลในฐานข้อมูล</AppEmptyState>
-          </div>
-        ) : (
-          <>
-            <div className="mt-4 flex flex-col gap-3 md:hidden">
-              {rows.map((r) => {
-                const preview = r.cardImageUrl && isSafeModuleCardImageUrl(r.cardImageUrl) ? r.cardImageUrl : null;
+        <div className="mt-4">
+          {loading && rows.length === 0 ? (
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <li key={i} className="h-14 animate-pulse rounded-xl bg-[#ecebff]/70" />
+              ))}
+            </ul>
+          ) : !err && filtered.length === 0 ? (
+            <AppEmptyState tone="violet">
+              {rows.length === 0 ? "ไม่พบรายการโมดูลในฐานข้อมูล" : "ไม่พบโมดูลตามคำค้น"}
+            </AppEmptyState>
+          ) : (
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
+              {filtered.map((r) => {
+                const cover = resolveModuleCardDisplayImageUrl(r.slug, r.cardImageUrl);
+                const safe = cover && isSafeModuleCardDisplayUrl(cover) ? cover : null;
                 const disabled = busyId === r.id;
+                const hasUpload = Boolean(r.cardImageUrl && isSafeModuleCardDisplayUrl(r.cardImageUrl));
                 return (
-                  <article
-                    key={r.id}
-                    className={cn(
-                      "overflow-hidden rounded-[1.25rem] border border-white/55 bg-gradient-to-br from-white/55 via-white/30 to-indigo-50/20 p-4 shadow-[0_16px_40px_-28px_rgba(30,27,75,0.28)] backdrop-blur-xl ring-1 ring-inset ring-white/50",
-                      !r.isActive && "opacity-60",
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-black text-[#1e1b4b]">{r.title}</p>
-                        <p className="mt-0.5 font-mono text-xs text-[#66638c]">{r.slug}</p>
-                        <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-[#66638c]">
-                          กลุ่ม {r.groupId}
+                  <li key={r.id}>
+                    <article
+                      className={cn(
+                        "group flex min-w-0 max-w-full items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white",
+                        !r.isActive && "opacity-60",
+                      )}
+                    >
+                      <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-white/70 bg-gradient-to-br from-[#ecebff] to-indigo-100/40 shadow-sm">
+                        {safe ? (
+                          <Image src={safe} alt="" fill sizes="44px" className="object-cover" unoptimized />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[#4d47b6]">
+                            <IconImageCards className="h-5 w-5" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-black text-[#1e1b4b]">{r.title}</p>
+                        <p className="mt-0.5 truncate font-mono text-[10px] text-[#66638c]">{r.slug}</p>
+                        <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500">
+                          {MODULE_GROUP_TIER_NAME[r.groupId] ?? `กลุ่ม ${r.groupId}`}
+                          {hasUpload ? " · มีรูปอัปโหลด" : " · ใช้รูปค่าเริ่ม"}
                         </p>
                       </div>
-                    </div>
-                    <div className="mt-3">
-                      {preview ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={preview}
-                          alt=""
-                          className="h-36 w-full rounded-[1rem] border border-white/50 object-cover shadow-inner"
-                        />
-                      ) : (
-                        <div className="flex h-32 items-center justify-center rounded-[1rem] border border-dashed border-white/60 bg-white/35 text-xs font-medium text-[#66638c]">
-                          ยังไม่มีรูป
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-3 flex items-center justify-end gap-1.5 border-t border-white/45 pt-3">
-                      <UploadControls rowId={r.id} disabled={disabled} onFile={(f) => void uploadFile(r.id, f)} />
-                      {preview ? (
-                        <button
-                          type="button"
-                          disabled={disabled}
-                          onClick={() => void clearImage(r.id)}
-                          className={assetRowRemoveIconButtonClass}
-                          aria-label={`ล้างรูป ${r.title}`}
-                          title="ล้างรูป"
-                        >
-                          <IconRowRemove className="h-4 w-4" />
-                        </button>
-                      ) : null}
-                    </div>
-                  </article>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <UploadControls rowId={r.id} disabled={disabled} onFile={(f) => void uploadFile(r.id, f)} />
+                        {hasUpload ? (
+                          <button
+                            type="button"
+                            disabled={disabled}
+                            onClick={() => void clearImage(r.id)}
+                            className={assetRowRemoveIconButtonClass}
+                            aria-label={`ล้างรูป ${r.title}`}
+                            title="ล้างรูป"
+                          >
+                            <IconRowRemove className="h-4 w-4" />
+                          </button>
+                        ) : null}
+                      </div>
+                    </article>
+                  </li>
                 );
               })}
-            </div>
-
-            <div className="mt-4 hidden overflow-hidden rounded-[1.25rem] border border-[#e8e6fc] md:block md:rounded-[2rem]">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-[#e8e6fc] bg-[#faf9ff]/90 text-[11px] font-black uppercase tracking-wide text-[#66638c]">
-                      <th className="px-4 py-3 font-black">โมดูล</th>
-                      <th className="px-4 py-3 font-black">slug</th>
-                      <th className="px-4 py-3 font-black">กลุ่ม</th>
-                      <th className="px-4 py-3 font-black">ตัวอย่าง</th>
-                      <th className="min-w-[200px] px-4 py-3 text-right font-black">การทำงาน</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((r) => {
-                      const preview = r.cardImageUrl && isSafeModuleCardImageUrl(r.cardImageUrl) ? r.cardImageUrl : null;
-                      const disabled = busyId === r.id;
-                      return (
-                        <tr
-                          key={r.id}
-                          className={cn("border-b border-[#f0eefc]/90 transition-colors last:border-0 hover:bg-white/60", !r.isActive && "opacity-60")}
-                        >
-                          <td className="px-4 py-3 font-bold text-[#1e1b4b]">{r.title}</td>
-                          <td className="px-4 py-3 font-mono text-xs text-[#66638c]">{r.slug}</td>
-                          <td className="px-4 py-3 tabular-nums text-[#5f5a8a]">{r.groupId}</td>
-                          <td className="px-4 py-3">
-                            {preview ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={preview}
-                                alt=""
-                                className="h-14 w-24 rounded-xl border border-white/60 object-cover shadow-sm"
-                              />
-                            ) : (
-                              <span className="text-xs text-[#66638c]">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-wrap items-center justify-end gap-1.5">
-                              <UploadControls rowId={r.id} disabled={disabled} onFile={(f) => void uploadFile(r.id, f)} />
-                              {preview ? (
-                                <button
-                                  type="button"
-                                  disabled={disabled}
-                                  onClick={() => void clearImage(r.id)}
-                                  className={assetRowRemoveIconButtonClass}
-                                  aria-label={`ล้างรูป ${r.title}`}
-                                  title="ล้างรูป"
-                                >
-                                  <IconRowRemove className="h-4 w-4" />
-                                </button>
-                              ) : null}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </>
-        )}
+            </ul>
+          )}
+        </div>
       </AppDashboardSection>
     </div>
   );
@@ -406,6 +419,23 @@ function IconRefresh({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
       <path d="M21 12a9 9 0 1 1-2.64-6.36" strokeLinecap="round" />
       <path d="M21 3v6h-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconFilter({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+      <path d="M4 5h16l-5.5 7.2V19l-5 2v-8.8L4 5z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconExcel({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" strokeLinejoin="round" />
+      <path d="M14 3v5h5M8.5 17l3-4-3-4M12.5 9H15M12.5 17H15" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

@@ -12,6 +12,11 @@ import { publicRedirectOriginFromRequest } from "@/lib/http/public-redirect-orig
 
 export const dynamic = "force-dynamic";
 
+function safeNextPath(raw: string | null | undefined): string | null {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
+  return raw;
+}
+
 async function clearDemoReturnCookie(req: Request): Promise<void> {
   const store = await cookies();
   const secure = sessionCookieSecureForIncomingRequest(req);
@@ -24,13 +29,20 @@ async function clearDemoReturnCookie(req: Request): Promise<void> {
   });
 }
 
-/** ออกจากบัญชีทดลอง — คืนเซสชันเดิมถ้ามี ไม่มีให้ไปหน้าเข้าสู่ระบบ */
-export async function POST(req: Request) {
+async function exitDemo(req: Request, nextRaw: string | null): Promise<NextResponse> {
   const store = await cookies();
   const ret = store.get(DEMO_RETURN_SESSION_COOKIE)?.value ?? null;
-  await clearDemoReturnCookie(req);
-
   const origin = publicRedirectOriginFromRequest(req);
+  const forcedNext = safeNextPath(nextRaw);
+
+  /** ออกไปล็อกอิน/สมัคร — ไม่คืนเซสชันเดิม */
+  if (forcedNext) {
+    await clearDemoReturnCookie(req);
+    await clearSessionCookie(req);
+    return NextResponse.redirect(new URL(forcedNext, origin), 303);
+  }
+
+  await clearDemoReturnCookie(req);
 
   if (ret) {
     const prev = await verifySessionToken(ret);
@@ -42,4 +54,37 @@ export async function POST(req: Request) {
 
   await clearSessionCookie(req);
   return NextResponse.redirect(new URL("/login", origin), 303);
+}
+
+async function readNextFromRequest(req: Request): Promise<string | null> {
+  const url = new URL(req.url);
+  const fromQuery = url.searchParams.get("next");
+  if (fromQuery) return fromQuery;
+
+  if (req.method === "GET") return null;
+
+  const ct = req.headers.get("content-type") ?? "";
+  if (ct.includes("application/json")) {
+    try {
+      const j = (await req.json()) as { next?: string };
+      return typeof j.next === "string" ? j.next : null;
+    } catch {
+      return null;
+    }
+  }
+  const fd = await req.formData().catch(() => null);
+  if (fd && typeof fd.get("next") === "string") return String(fd.get("next"));
+  return null;
+}
+
+/** GET — เช่นลิงก์ออกจากทดลองแล้วไปล็อกอิน */
+export async function GET(req: Request) {
+  const next = await readNextFromRequest(req);
+  return exitDemo(req, next);
+}
+
+/** ออกจากบัญชีทดลอง — คืนเซสชันเดิมถ้ามี ไม่มีให้ไปหน้าเข้าสู่ระบบ */
+export async function POST(req: Request) {
+  const next = await readNextFromRequest(req);
+  return exitDemo(req, next);
 }

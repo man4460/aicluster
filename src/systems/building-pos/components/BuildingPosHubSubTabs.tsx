@@ -9,15 +9,18 @@ import {
   buildingPosHubUrlMerge,
   parseBuildingPosNav,
 } from "@/systems/building-pos/building-pos-nav";
-import { buildingPosSubTabSegmentShellClass } from "@/systems/building-pos/components/building-pos-ui-tokens";
+import {
+  buildingPosNavActiveClass,
+  buildingPosNavIdleClass,
+  buildingPosSubTabSegmentShellClass,
+} from "@/systems/building-pos/components/building-pos-ui-tokens";
 
 function pillClass(active: boolean) {
   return cn(
-    /** มือถือ: ไอคอน + ข้อความแนวตั้ง — เทียบ barber dock (`BarberModuleMobileDock`) */
     "flex min-h-[50px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[1.25rem] px-1.5 py-2 text-center font-black transition-all sm:min-h-[44px] sm:flex-row sm:gap-2 sm:px-3 sm:py-3 sm:text-sm",
     active
-      ? "bg-white/85 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/25 backdrop-blur-sm"
-      : "text-slate-600 hover:bg-white/55 hover:text-slate-800",
+      ? cn(buildingPosNavActiveClass, "ring-1 ring-white/55 backdrop-blur-sm")
+      : cn("ring-1 ring-transparent", buildingPosNavIdleClass),
   );
 }
 
@@ -57,22 +60,6 @@ function IconFinCosts({ className }: { className?: string }) {
   );
 }
 
-function IconMenuFood({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} className={className} aria-hidden>
-      <path d="M6 3v7a4 4 0 008 0V3M6 11c0 4 4 7 4 7s4-3 4-7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconMenuCategories({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} className={className} aria-hidden>
-      <path d="M4 6h7v7H4zM13 6h7v4h-7zM13 13h7v7h-7zM4 15h7v5H4z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function BuildingPosHubSubTabsInner({
   variant,
   className,
@@ -84,6 +71,8 @@ function BuildingPosHubSubTabsInner({
   const nav = parseBuildingPosNav(searchParams);
 
   if (nav.main === "overview") return null;
+  /** เมนู: ไม่มีแท็บย่อย — หมวดหมู่จัดการผ่าน popup จากปุ่มในหน้าเมนู */
+  if (nav.main === "menu") return null;
 
   const embedded = variant === "embedded";
 
@@ -98,13 +87,12 @@ function BuildingPosHubSubTabsInner({
           },
           {
             href: buildingPosHubUrlMerge(nav, { main: "qr", qr: "staff" }),
-            label: "พนักงานเสิร์ฟ",
+            label: "พนักงาน",
             active: nav.qr === "staff",
             Icon: IconQrStaff,
           },
         ]
-      : nav.main === "finance"
-        ? [
+      : [
             {
               href: buildingPosHubUrlMerge(nav, { main: "finance", finance: "sales" }),
               label: "ยอดขาย",
@@ -117,20 +105,6 @@ function BuildingPosHubSubTabsInner({
               active: nav.finance === "costs",
               Icon: IconFinCosts,
             },
-          ]
-        : [
-            {
-              href: buildingPosHubUrlMerge(nav, { main: "menu", menu: "items" }),
-              label: "เมนูอาหาร",
-              active: nav.menu === "items",
-              Icon: IconMenuFood,
-            },
-            {
-              href: buildingPosHubUrlMerge(nav, { main: "menu", menu: "categories" }),
-              label: "หมวดหมู่",
-              active: nav.menu === "categories",
-              Icon: IconMenuCategories,
-            },
           ];
 
   const navBody = (
@@ -138,7 +112,7 @@ function BuildingPosHubSubTabsInner({
       aria-label="แท็บย่อย POS"
       className={cn(
         "print:hidden",
-        embedded ? "rounded-[2rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)] md:rounded-xl md:border-white/45 md:bg-white/35 md:shadow-none" : buildingPosSubTabSegmentShellClass,
+        embedded ? "rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)] md:rounded-xl md:border-white/45 md:bg-white/35 md:shadow-none" : buildingPosSubTabSegmentShellClass,
         className,
       )}
     >

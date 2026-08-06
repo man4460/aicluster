@@ -10,6 +10,8 @@ import { cn } from "@/lib/cn";
 export const appDashboardBrandGradientFillClass =
   "bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] hover:from-[#0000a3] hover:via-[#7c3aed] hover:to-[#db2777]";
 
+export const appDashboardBrandGradientBarClass = "bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899]";
+
 /** ปุ่ม pill เต็ม (ข้อความขาว) — ค่าเริ่มต้นของ `TokenTopupModal`; ใส่ `w-full` ตามบริบท */
 export const appDashboardBrandCtaPillButtonClass = cn(
   "inline-flex min-h-[48px] shrink-0 items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-fuchsia-500/25 transition active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50 touch-manipulation",
@@ -26,9 +28,8 @@ export const appDashboardSectionVioletClass =
 export const appDashboardHistoryListShellClass =
   "rounded-xl border border-slate-200 bg-slate-50/40 p-2 shadow-sm sm:bg-white sm:p-3";
 
-/** พื้นที่เลื่อนเนื้อหาใต้หัวโมดูล — ห้ามใส่ scrollbar-gutter ชั้นนี้ (ทำขอบขวาไม่ตรงกับ header) */
-export const appModuleShellMainScrollClass =
-  "min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]";
+/** พื้นที่เนื้อหาใต้หัวโมดูล — ไม่ใส่ overflow-y/overscroll ที่นี่ (เลื่อนทั้งหน้า) กันล้อเมาส์ติดกลางหน้า */
+export const appModuleShellMainScrollClass = "min-h-0 w-full flex-1";
 
 /** เลื่อนรายการภายในการ์ด — ใช้ scrollbar-gutter ได้เฉพาะชั้นใน */
 export const appDashboardInnerScrollClass =

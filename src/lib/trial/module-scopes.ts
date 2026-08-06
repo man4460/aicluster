@@ -4,6 +4,7 @@ import {
   BARBER_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
+  FOOTBALL_TURF_MODULE_SLUG,
   MASSAGE_MODULE_SLUG,
   DOC_TRANSMISSION_MODULE_SLUG,
   DORMITORY_MODULE_SLUG,
@@ -40,6 +41,10 @@ export function getAttendanceDataScope(userId: string): Promise<ModuleDataScope>
 
 export function getCarWashDataScope(userId: string): Promise<ModuleDataScope> {
   return resolveDataScopeBySlug(userId, CAR_WASH_MODULE_SLUG);
+}
+
+export function getFootballTurfDataScope(userId: string): Promise<ModuleDataScope> {
+  return resolveDataScopeBySlug(userId, FOOTBALL_TURF_MODULE_SLUG);
 }
 
 export function getMqttDataScope(userId: string): Promise<ModuleDataScope> {

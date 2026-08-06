@@ -5,6 +5,7 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  prepareUploadFile,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import {
@@ -46,8 +47,9 @@ type PersonalDocument = {
 const HOME_FINANCE_UPLOAD_MS = 120_000;
 
 async function uploadHomeFinanceFile(file: File): Promise<string | null> {
+  const toSend = await prepareUploadFile(file, { accept: "image-or-pdf", maxPdfBytes: 5 * 1024 * 1024 });
   const fd = new FormData();
-  fd.set("file", file);
+  fd.set("file", toSend);
   const ctrl = new AbortController();
   const tid = window.setTimeout(() => ctrl.abort(), HOME_FINANCE_UPLOAD_MS);
   try {
@@ -150,7 +152,7 @@ export function HomeFinanceDocumentsClient() {
       setForm((s) => ({
         ...s,
         fileUrl: url,
-        title: s.title.trim() || file.name.replace(/\.[^.]+$/, "").slice(0, 160),
+        // ชื่อเอกสารให้ผู้ใช้ตั้งเอง — ไม่ดึงจากชื่อไฟล์ OS
       }));
     } finally {
       setUploading(false);

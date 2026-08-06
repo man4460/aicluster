@@ -13,7 +13,7 @@ type DrinkPosMobileBottomContextValue = {
 
 const DrinkPosMobileBottomContext = createContext<DrinkPosMobileBottomContextValue | null>(null);
 
-/** ฝังรายการสรุปบิล (มือถือ) ในการ์ดล่างเดียวกับเมนู — ใช้ใน `DrinkPosDashboardClient` เท่านั้น */
+/** ฝังรายการสรุปบิล (มือถือ) ในการ์ดล่างเดียวกับเมนู — ใช้ในแดชบอร์ด / หน้าออเดอร์ */
 export function useDrinkPosMobileDraftSlot() {
   const ctx = useContext(DrinkPosMobileBottomContext);
   return ctx?.setMobileBottomSlot ?? ((_n: ReactNode | null) => {});

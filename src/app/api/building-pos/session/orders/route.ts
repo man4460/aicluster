@@ -6,6 +6,7 @@ import { buildingPosOwnerFromAuth } from "@/lib/building-pos/api-owner";
 import { mapBuildingPosOrderRow } from "@/lib/building-pos/order-map";
 import { formatBuildingPosDbError, jsonBuildingPosError } from "@/lib/building-pos/route-errors";
 import { getBuildingPosDataScope } from "@/lib/trial/module-scopes";
+import { notifyBuildingPosOrderBoard } from "@/systems/building-pos/lib/order-board-sse";
 
 const orderItemSchema = z.object({
   menu_item_id: z.number().int().positive(),
@@ -18,13 +19,13 @@ const orderItemSchema = z.object({
 const postSchema = z.object({
   customer_name: z.string().max(160).optional().nullable(),
   table_no: z.string().max(40).optional().nullable(),
-  status: z.enum(["NEW", "PREPARING", "SERVED", "PAID"]),
+  status: z.enum(["NEW", "PREPARING", "SERVED", "SERVING", "DELIVERED", "PAID"]),
   items: z.array(orderItemSchema).min(1),
   note: z.string().max(1000).optional().nullable(),
 });
 
 const patchSchema = z.object({
-  status: z.enum(["NEW", "PREPARING", "SERVED", "PAID"]).optional(),
+  status: z.enum(["NEW", "PREPARING", "SERVED", "SERVING", "DELIVERED", "PAID"]).optional(),
   payment_slip_url: z.string().max(2048).optional().nullable(),
 });
 
@@ -70,6 +71,7 @@ export async function POST(req: Request) {
         note: parsed.data.note?.trim() ?? "",
       },
     });
+    notifyBuildingPosOrderBoard(own.ownerId);
     return NextResponse.json({ order: mapBuildingPosOrderRow(row) });
   } catch (e) {
     console.error("[building-pos/session/orders POST]", e);
@@ -107,6 +109,7 @@ export async function PATCH(req: Request) {
         : {}),
       },
     });
+    notifyBuildingPosOrderBoard(own.ownerId);
     return NextResponse.json({ order: mapBuildingPosOrderRow(updated) });
   } catch (e) {
     console.error("[building-pos/session/orders PATCH]", e);
@@ -130,6 +133,7 @@ export async function DELETE(req: Request) {
     });
     if (!row) return NextResponse.json({ error: "ไม่พบออเดอร์" }, { status: 404 });
     await prisma.buildingPosOrder.delete({ where: { id: row.id } });
+    notifyBuildingPosOrderBoard(own.ownerId);
     return NextResponse.json({ ok: true as const });
   } catch (e) {
     console.error("[building-pos/session/orders DELETE]", e);

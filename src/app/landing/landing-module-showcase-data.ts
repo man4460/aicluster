@@ -130,6 +130,12 @@ export const LANDING_DAILY_MODULE_SHOWCASE: LandingModuleShowcaseItem[] = [
       "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?auto=format&fit=crop&w=900&q=78",
   },
   {
+    slug: "football-turf",
+    blurb: "สนามฟุตบอล จองคิว โปร รายรับ",
+    coverSrc:
+      "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=900&q=78",
+  },
+  {
     slug: "massage",
     blurb: "คิวจอง walk-in แพ็กเกจ QR",
     coverSrc:

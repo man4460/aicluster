@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { resolvePublicBuildingPosTrialSessionId } from "@/lib/building-pos/public-trial-scope";
+import { notifyBuildingPosOrderBoard } from "@/systems/building-pos/lib/order-board-sse";
 
 const uuidSchema = z.string().uuid();
 
@@ -71,6 +72,7 @@ export async function POST(req: Request) {
         throw e;
       }
     }
+    notifyBuildingPosOrderBoard(parsed.data.ownerId);
     return NextResponse.json({ ok: true, orderId: row.id });
   } catch (e) {
     console.error("[building-pos/public/orders POST]", e);

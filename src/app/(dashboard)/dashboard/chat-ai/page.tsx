@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { isChatAiDisabled } from "@/lib/chat-ai/feature";
 import { prisma } from "@/lib/prisma";
+import { appDashboardBrandGradientBarClass } from "@/components/app-templates";
+import { cn } from "@/lib/cn";
 import { ChatAiUnderDevelopment } from "@/systems/chat/components/ChatAiUnderDevelopment";
 import ChatAiClientRoot from "./chat-ai-client";
 
@@ -18,13 +20,10 @@ export default async function ChatAiPage() {
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-3 sm:gap-4">
         <header className="app-surface relative shrink-0 overflow-hidden rounded-2xl border border-white/70 px-3 py-3 shadow-[0_16px_48px_-24px_rgba(79,70,229,0.2)] sm:rounded-3xl sm:px-6 sm:py-5">
-          <div className="relative">
-            <p className="hidden text-xs font-semibold uppercase tracking-[0.2em] text-[#0000BF]/75 sm:block">
-              MAWELL Buffet
-            </p>
-            <h1 className="text-lg font-semibold tracking-tight text-[#2e2a58] sm:mt-1.5 sm:text-2xl">
-              น้องมาเวล — เลขาส่วนตัว
-            </h1>
+          <div className={cn("h-1.5 w-full rounded-full relative z-[2]", appDashboardBrandGradientBarClass)} aria-hidden />
+          <div className="relative mt-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">Personal AI</p>
+            <h1 className="mt-1 text-lg font-black tracking-tight text-[#2e2a58] sm:text-2xl">น้องมาเวล — เลขาส่วนตัว</h1>
           </div>
         </header>
         <ChatAiUnderDevelopment />
@@ -41,16 +40,14 @@ export default async function ChatAiPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 sm:gap-4">
       <header className="app-surface relative shrink-0 overflow-hidden rounded-2xl border border-white/70 px-3 py-3 shadow-[0_16px_48px_-24px_rgba(79,70,229,0.2)] sm:rounded-3xl sm:px-6 sm:py-5">
+        <div className={cn("h-1.5 w-full rounded-full relative z-[2]", appDashboardBrandGradientBarClass)} aria-hidden />
         <div
           className="pointer-events-none absolute -right-12 top-0 hidden h-40 w-40 rounded-full bg-gradient-to-br from-[#c7d2fe]/50 to-fuchsia-200/35 blur-3xl sm:block"
           aria-hidden
         />
-        <div className="relative">
-          <p className="hidden text-xs font-semibold uppercase tracking-[0.2em] text-[#0000BF]/75 sm:block">MAWELL Buffet</p>
-          <h1 className="text-lg font-semibold tracking-tight text-[#2e2a58] sm:mt-1.5 sm:text-2xl">น้องมาเวล — เลขาส่วนตัว</h1>
-          <p className="mt-1 hidden max-w-2xl text-xs text-[#66638c] sm:block sm:text-sm">
-            คุยกับ AI ด้านล่าง — ส่งข้อความได้เลย ไม่มีการอัปโหลดรูป
-          </p>
+        <div className="relative mt-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">Personal AI</p>
+          <h1 className="mt-1 text-lg font-black tracking-tight text-[#2e2a58] sm:text-2xl">น้องมาเวล — เลขาส่วนตัว</h1>
           <div className="mt-2 hidden flex-wrap gap-1.5 sm:flex">
             <span className="rounded-full border border-[#0000BF]/15 bg-white/85 px-2.5 py-1 text-[11px] font-semibold text-[#0000BF]">
               แชทข้อความ
