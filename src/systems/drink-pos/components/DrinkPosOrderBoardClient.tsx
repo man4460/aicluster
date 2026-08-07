@@ -1,18 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppEmptyState } from "@/components/app-templates";
+import { AppEmptyState, AppSlipPrintIconButton, alertSlipPrintRequiresMonthlyPlan } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { DrinkPosButton } from "@/systems/drink-pos/components/DrinkPosButton";
 import {
   drinkPosFulfillmentLabel,
   drinkPosFulfillmentTone,
   drinkPosOrderTicketLabel,
-  DRINK_POS_FULFILLMENT_STATUSES,
   type DrinkPosFulfillmentStatus,
   type DrinkPosStationRole,
 } from "@/systems/drink-pos/lib/fulfillment-status";
 import type { DrinkPosOrderBoardRow } from "@/systems/drink-pos/lib/order-board";
+import { printDrinkPosOrderTicket } from "@/systems/drink-pos/lib/drink-pos-order-ticket-print";
 import { drinkPosCtaClass } from "@/systems/drink-pos/lib/ui-tokens";
 
 const FALLBACK_POLL_MS = 20_000;
@@ -30,19 +30,33 @@ type Props = {
 function sameBoard(a: DrinkPosOrderBoardRow[], b: DrinkPosOrderBoardRow[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
-    if (a[i].id !== b[i].id || a[i].fulfillmentStatus !== b[i].fulfillmentStatus || a[i].statusUpdatedAt !== b[i].statusUpdatedAt) {
+    if (
+      a[i].id !== b[i].id ||
+      a[i].fulfillmentStatus !== b[i].fulfillmentStatus ||
+      a[i].statusUpdatedAt !== b[i].statusUpdatedAt ||
+      Boolean(a[i].fromPreviousDay) !== Boolean(b[i].fromPreviousDay)
+    ) {
       return false;
     }
   }
   return true;
 }
 
-export function DrinkPosOrderBoardClient({ mode, role = "kitchen", ownerId, trialParam, className }: Props) {
+export function DrinkPosOrderBoardClient({
+  mode,
+  role = "kitchen",
+  ownerId,
+  trialParam,
+  shopName: shopNameProp,
+  className,
+}: Props) {
   const [orders, setOrders] = useState<DrinkPosOrderBoardRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [liveMode, setLiveMode] = useState<"sse" | "poll">("poll");
+  const [shopName, setShopName] = useState<string | null>(shopNameProp?.trim() || null);
+  const [slipPrintEnabled, setSlipPrintEnabled] = useState(false);
   const mounted = useRef(true);
   const liveModeRef = useRef<"sse" | "poll">("poll");
 
@@ -59,6 +73,7 @@ export function DrinkPosOrderBoardClient({ mode, role = "kitchen", ownerId, tria
         orders?: DrinkPosOrderBoardRow[];
         serverTime?: string;
         shopName?: string;
+        features?: { slipPrint?: boolean };
         error?: string;
       };
       if (!res.ok) throw new Error(typeof j.error === "string" ? j.error : "โหลดคิวไม่สำเร็จ");
@@ -66,6 +81,8 @@ export function DrinkPosOrderBoardClient({ mode, role = "kitchen", ownerId, tria
       const next = Array.isArray(j.orders) ? j.orders : [];
       setOrders((prev) => (sameBoard(prev, next) ? prev : next));
       setLastSync(j.serverTime ?? new Date().toISOString());
+      if (typeof j.shopName === "string" && j.shopName.trim()) setShopName(j.shopName.trim());
+      setSlipPrintEnabled(j.features?.slipPrint === true);
       setError(null);
     } catch (e) {
       if (!mounted.current) return;
@@ -134,23 +151,22 @@ export function DrinkPosOrderBoardClient({ mode, role = "kitchen", ownerId, tria
   }, [load, mode, ownerId]);
 
   const grouped = useMemo(() => {
-    const map: Record<DrinkPosFulfillmentStatus, DrinkPosOrderBoardRow[]> = {
+    const map: Record<"RECEIVED" | "MAKING" | "DONE", DrinkPosOrderBoardRow[]> = {
       RECEIVED: [],
       MAKING: [],
       DONE: [],
     };
     for (const o of orders) {
-      const key = (DRINK_POS_FULFILLMENT_STATUSES.includes(o.fulfillmentStatus as DrinkPosFulfillmentStatus)
-        ? o.fulfillmentStatus
-        : "RECEIVED") as DrinkPosFulfillmentStatus;
+      if (o.fulfillmentStatus === "SERVED") continue;
+      const key =
+        o.fulfillmentStatus === "MAKING" || o.fulfillmentStatus === "DONE" ? o.fulfillmentStatus : "RECEIVED";
       map[key].push(o);
     }
-    // รับออเดอร์ / กำลังทำ — มาก่อนอยู่ด้านบน
     const oldestFirst = (a: DrinkPosOrderBoardRow, b: DrinkPosOrderBoardRow) =>
-      +new Date(a.statusUpdatedAt) - +new Date(b.statusUpdatedAt) || +new Date(a.createdAt) - +new Date(b.createdAt);
+      +new Date(a.statusUpdatedAt) - +new Date(b.statusUpdatedAt) ||
+      +new Date(a.createdAt) - +new Date(b.createdAt);
     map.RECEIVED.sort(oldestFirst);
     map.MAKING.sort(oldestFirst);
-    // เสร็จแล้ว — พึ่งเสร็จอยู่ด้านบน
     map.DONE.sort((a, b) => +new Date(b.statusUpdatedAt) - +new Date(a.statusUpdatedAt));
     return map;
   }, [orders]);
@@ -180,14 +196,20 @@ export function DrinkPosOrderBoardClient({ mode, role = "kitchen", ownerId, tria
       const j = (await res.json().catch(() => ({}))) as { order?: DrinkPosOrderBoardRow; error?: string };
       if (!res.ok) throw new Error(typeof j.error === "string" ? j.error : "อัปเดตไม่สำเร็จ");
       if (j.order) {
-        setOrders((prev) =>
-          prev.map((o) => {
-            if (o.id !== j.order!.id) return o;
-            const next = j.order!;
-            // กันกรณี API คืน lines ว่าง — คงรายการเมนูเดิมไว้
-            return next.lines.length > 0 ? next : { ...next, lines: o.lines };
-          }),
-        );
+        setOrders((prev) => {
+          const next = j.order!;
+          if (next.fulfillmentStatus === "SERVED") {
+            return prev.filter((o) => o.id !== next.id);
+          }
+          return prev.map((o) => {
+            if (o.id !== next.id) return o;
+            const merged = next.lines.length > 0 ? next : { ...next, lines: o.lines };
+            return {
+              ...merged,
+              fromPreviousDay: merged.fromPreviousDay ?? o.fromPreviousDay,
+            };
+          });
+        });
       } else {
         await load();
       }
@@ -204,37 +226,46 @@ export function DrinkPosOrderBoardClient({ mode, role = "kitchen", ownerId, tria
     ? new Date(lastSync).toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok" })
     : null;
 
-  const columns: { status: DrinkPosFulfillmentStatus; borderClass: string }[] = [
+  const columns: { status: "RECEIVED" | "MAKING" | "DONE"; borderClass: string }[] = [
     { status: "RECEIVED", borderClass: "border-sky-300/80" },
     { status: "MAKING", borderClass: "border-amber-300/80" },
     { status: "DONE", borderClass: "border-emerald-300/80" },
   ];
 
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn(mode === "station" ? "flex min-h-0 flex-1 flex-col gap-2" : "space-y-3", className)}>
       {error ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm font-semibold text-rose-800" role="alert">
+        <div className="shrink-0 rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm font-semibold text-rose-800" role="alert">
           {error}
         </div>
       ) : null}
 
-      {/* มือถือเรียงแนวตั้ง ความสูงต่อคอลัมน์พอเห็นรายการ · เดสก์ท็อป 3 คอลัมน์สูงพอดีจอ */}
-      <div className="grid gap-3 md:h-[calc(100dvh-8.5rem)] md:min-h-[22rem] md:grid-cols-3 md:gap-4">
+      {/* สถานี: เต็มจอ · แดชบอร์ด: สูงตามหน้า */}
+      <div
+        className={cn(
+          "grid min-h-0 gap-2 sm:gap-3",
+          mode === "station"
+            ? "h-full flex-1 grid-rows-3 md:grid-rows-1 md:grid-cols-3"
+            : "gap-3 md:h-[calc(100dvh-8.5rem)] md:min-h-[22rem] md:grid-cols-3 md:gap-4",
+        )}
+      >
         {columns.map(({ status, borderClass }) => {
           const list = grouped[status];
           const tone = drinkPosFulfillmentTone(status);
           const isDone = status === "DONE";
+          const showRefreshChrome = mode === "dashboard" && isDone;
           return (
             <section
               key={status}
               className={cn(
-                "relative flex min-h-[20rem] flex-col overflow-hidden rounded-[1.75rem] border-2 p-3 shadow-md ring-1 ring-inset ring-white/50 sm:rounded-[2rem] sm:p-4 md:h-full md:min-h-0",
+                "relative flex min-h-0 flex-col overflow-hidden rounded-[1.75rem] border-2 p-3 shadow-md ring-1 ring-inset ring-white/50 sm:rounded-[2rem] sm:p-4",
+                mode === "station" ? "h-full" : "min-h-[20rem] md:h-full md:min-h-0",
                 tone.card,
                 borderClass,
               )}
               aria-label={drinkPosFulfillmentLabel(status)}
             >
-              <div className="mb-3 flex shrink-0 items-center justify-between gap-2 border-b border-white/50 pb-3">
+              <div className="mb-2 flex shrink-0 items-center justify-between gap-2 border-b border-white/50 pb-2 sm:mb-3 sm:pb-3">
                 <div className="flex items-center gap-2.5">
                   <span className={cn("h-3.5 w-3.5 rounded-full shadow-sm", tone.bar)} aria-hidden />
                   <h3 className="text-base font-black tracking-tight text-[#1e1b4b] sm:text-lg">
@@ -249,19 +280,21 @@ export function DrinkPosOrderBoardClient({ mode, role = "kitchen", ownerId, tria
               {list.length === 0 ? (
                 <div
                   className={cn(
-                    "flex min-h-[12rem] flex-1 flex-col justify-center md:min-h-0",
-                    isDone && "pb-16",
+                    "flex min-h-0 flex-1 flex-col justify-center",
+                    showRefreshChrome && "pb-16",
+                    mode !== "station" && "min-h-[12rem] md:min-h-0",
                   )}
                 >
-                  <AppEmptyState tone="violet" className="py-10 text-xs">
+                  <AppEmptyState tone="violet" className="py-6 text-xs sm:py-10">
                     ยังไม่มีรายการ
                   </AppEmptyState>
                 </div>
               ) : (
                 <ul
                   className={cn(
-                    "min-h-[12rem] flex-1 space-y-2.5 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch] md:min-h-0",
-                    isDone && "pb-16",
+                    "min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]",
+                    showRefreshChrome && "pb-16",
+                    mode !== "station" && "min-h-[12rem] md:min-h-0",
                   )}
                 >
                   {list.map((order) => (
@@ -270,13 +303,15 @@ export function DrinkPosOrderBoardClient({ mode, role = "kitchen", ownerId, tria
                       order={order}
                       busy={busyId === order.id}
                       role={role}
+                      shopLabel={shopName}
+                      slipPrintEnabled={slipPrintEnabled}
                       onSetStatus={(s) => void setStatus(order.id, s)}
                     />
                   ))}
                 </ul>
               )}
 
-              {isDone ? (
+              {showRefreshChrome ? (
                 <div className="pointer-events-none absolute bottom-3 right-3 z-10 flex flex-col items-end gap-1 sm:bottom-4 sm:right-4">
                   <p className="max-w-[11rem] rounded-lg bg-white/85 px-2 py-0.5 text-right text-[10px] font-semibold text-[#66638c] shadow-sm backdrop-blur-sm">
                     {liveLabel}
@@ -307,15 +342,28 @@ export function DrinkPosOrderBoardClient({ mode, role = "kitchen", ownerId, tria
   );
 }
 
+function formatOrderBoardDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("th-TH", {
+    timeZone: "Asia/Bangkok",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function OrderCard({
   order,
   busy,
   role,
+  shopLabel,
+  slipPrintEnabled,
   onSetStatus,
 }: {
   order: DrinkPosOrderBoardRow;
   busy: boolean;
   role: DrinkPosStationRole;
+  shopLabel?: string | null;
+  slipPrintEnabled: boolean;
   onSetStatus: (status: DrinkPosFulfillmentStatus) => void;
 }) {
   const tone = drinkPosFulfillmentTone(order.fulfillmentStatus);
@@ -329,29 +377,76 @@ function OrderCard({
     secondaryActions.push({ status: "MAKING", label: "กำลังทำ" });
   }
   if (order.fulfillmentStatus !== "DONE") {
-    secondaryActions.push({ status: "DONE", label: "เสร็จแล้ว" });
+    secondaryActions.push({ status: "DONE", label: "พร้อมรับ" });
+  }
+  if (order.fulfillmentStatus !== "SERVED") {
+    secondaryActions.push({ status: "SERVED", label: "ส่งมอบแล้ว" });
   }
 
   const primary =
-    role === "serve" && order.fulfillmentStatus !== "DONE"
-      ? { status: "DONE" as const, label: "เสร็จแล้ว / พร้อมเสิร์ฟ" }
-      : quickNext
-        ? { status: quickNext, label: tone.nextLabel ?? drinkPosFulfillmentLabel(quickNext) }
-        : null;
+    order.fulfillmentStatus === "DONE"
+      ? { status: "SERVED" as const, label: "ส่งมอบแล้ว" }
+      : role === "serve" && order.fulfillmentStatus !== "SERVED"
+        ? { status: "DONE" as const, label: "พร้อมรับ" }
+        : quickNext
+          ? { status: quickNext, label: tone.nextLabel ?? drinkPosFulfillmentLabel(quickNext) }
+          : null;
 
   return (
-    <li className="rounded-2xl border border-white/70 bg-white/90 p-3.5 shadow-sm backdrop-blur-sm">
+    <li
+      className={cn(
+        "rounded-2xl border bg-white/90 p-3.5 shadow-sm backdrop-blur-sm",
+        order.fromPreviousDay ? "border-amber-300/90 ring-1 ring-amber-200/70" : "border-white/70",
+      )}
+    >
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-sm font-black text-[#1e1b4b] sm:text-base">{drinkPosOrderTicketLabel(order.id, order.createdAt)}</p>
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-1.5">
+            {order.fromPreviousDay ? (
+              <span
+                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 text-[11px] font-black text-white shadow-sm ring-2 ring-amber-200"
+                title={`ออเดอร์วันที่ ${formatOrderBoardDate(order.createdAt)}`}
+                aria-label={`แจ้งเตือน ออเดอร์วันที่ ${formatOrderBoardDate(order.createdAt)} ยังไม่ได้ส่งมอบ`}
+              >
+                !
+              </span>
+            ) : null}
+            <p className="truncate text-sm font-black text-[#1e1b4b] sm:text-base">
+              {drinkPosOrderTicketLabel(order.id, order.createdAt)}
+            </p>
+          </div>
+          {order.fromPreviousDay ? (
+            <p className="mt-0.5 inline-flex rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-900 ring-1 ring-amber-400/40">
+              {formatOrderBoardDate(order.createdAt)}
+            </p>
+          ) : null}
           {order.memberPhone ? (
             <p className="mt-0.5 text-[11px] font-semibold text-[#66638c]">ลูกค้า {order.memberPhone}</p>
           ) : null}
           {order.note ? <p className="mt-0.5 text-[11px] font-semibold text-[#4d47b6]">{order.note}</p> : null}
         </div>
-        <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black", tone.badge)}>
-          {drinkPosFulfillmentLabel(order.fulfillmentStatus)}
-        </span>
+        <div className="flex shrink-0 items-center gap-1">
+          <AppSlipPrintIconButton
+            aria-label={
+              slipPrintEnabled
+                ? `พิมพ์สลิปออเดอร์ ${order.id.slice(-6)}`
+                : `พิมพ์สลิปต้องแพ็กเหมา 199 — ${order.id.slice(-6)}`
+            }
+            title={slipPrintEnabled ? "พิมพ์สลิป" : "ต้องแพ็กเหมารายเดือน 199"}
+            disabled={busy}
+            className={cn(!slipPrintEnabled && "opacity-45")}
+            onClick={() => {
+              if (!slipPrintEnabled) {
+                alertSlipPrintRequiresMonthlyPlan();
+                return;
+              }
+              printDrinkPosOrderTicket(order, { shopLabel });
+            }}
+          />
+          <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-black", tone.badge)}>
+            {drinkPosFulfillmentLabel(order.fulfillmentStatus)}
+          </span>
+        </div>
       </div>
       <ul className="mt-2 space-y-1 border-t border-[#e8e6fc]/80 pt-2 text-xs font-semibold text-[#2e2a58] sm:text-sm">
         {order.lines.map((l) => (

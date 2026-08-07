@@ -8,6 +8,7 @@ import { getBuildingPosDataScope } from "@/lib/trial/module-scopes";
 
 const postSchema = z.object({
   category_id: z.number().int().positive(),
+  kitchen_department_id: z.number().int().positive().nullable().optional(),
   name: z.string().min(1).max(160),
   image_url: z.string().max(512).optional().nullable(),
   price: z.number().int().min(0).max(999999),
@@ -19,6 +20,7 @@ const postSchema = z.object({
 const patchSchema = z
   .object({
     category_id: z.number().int().positive().optional(),
+    kitchen_department_id: z.number().int().positive().nullable().optional(),
     name: z.string().min(1).max(160).optional(),
     image_url: z.string().max(512).optional().nullable(),
     price: z.number().int().min(0).max(999999).optional(),
@@ -27,6 +29,46 @@ const patchSchema = z
     is_featured: z.boolean().optional(),
   })
   .refine((o) => Object.keys(o).length > 0, { message: "empty" });
+
+function mapMenuItem(r: {
+  id: number;
+  categoryId: number;
+  kitchenDepartmentId: number | null;
+  name: string;
+  imageUrl: string;
+  price: number;
+  description: string;
+  isActive: boolean;
+  isFeatured: boolean;
+}) {
+  return {
+    id: r.id,
+    category_id: r.categoryId,
+    kitchen_department_id: r.kitchenDepartmentId,
+    name: r.name,
+    image_url: r.imageUrl,
+    price: r.price,
+    description: r.description,
+    is_active: r.isActive,
+    is_featured: r.isFeatured,
+  };
+}
+
+async function assertKitchenDeptOwned(
+  ownerId: string,
+  trialSessionId: string,
+  kitchenDepartmentId: number | null | undefined,
+): Promise<{ ok: true; kitchenDepartmentId: number | null } | { ok: false; response: NextResponse }> {
+  if (kitchenDepartmentId == null) return { ok: true, kitchenDepartmentId: null };
+  const row = await prisma.buildingPosKitchenDepartment.findFirst({
+    where: { id: kitchenDepartmentId, ownerUserId: ownerId, trialSessionId },
+    select: { id: true },
+  });
+  if (!row) {
+    return { ok: false, response: NextResponse.json({ error: "ไม่พบแผนกครัว" }, { status: 400 }) };
+  }
+  return { ok: true, kitchenDepartmentId: row.id };
+}
 
 export async function GET() {
   try {
@@ -40,16 +82,7 @@ export async function GET() {
       orderBy: { id: "asc" },
     });
     return NextResponse.json({
-      menu_items: rows.map((r) => ({
-        id: r.id,
-        category_id: r.categoryId,
-        name: r.name,
-        image_url: r.imageUrl,
-        price: r.price,
-        description: r.description,
-        is_active: r.isActive,
-        is_featured: r.isFeatured,
-      })),
+      menu_items: rows.map(mapMenuItem),
     });
   } catch (e) {
     console.error("[building-pos/session/menu-items GET]", e);
@@ -67,11 +100,18 @@ export async function POST(req: Request) {
   try { json = await req.json(); } catch { return NextResponse.json({ error: "รูปแบบข้อมูลไม่ถูกต้อง" }, { status: 400 }); }
   const parsed = postSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
+  const dept = await assertKitchenDeptOwned(
+    own.ownerId,
+    scope.trialSessionId,
+    parsed.data.kitchen_department_id === undefined ? null : parsed.data.kitchen_department_id,
+  );
+  if (!dept.ok) return dept.response;
   const row = await prisma.buildingPosMenuItem.create({
     data: {
       ownerUserId: own.ownerId,
       trialSessionId: scope.trialSessionId,
       categoryId: parsed.data.category_id,
+      kitchenDepartmentId: dept.kitchenDepartmentId,
       name: parsed.data.name.trim(),
       imageUrl: parsed.data.image_url?.trim() ?? "",
       price: parsed.data.price,
@@ -81,16 +121,7 @@ export async function POST(req: Request) {
     },
   });
   return NextResponse.json({
-    menu_item: {
-      id: row.id,
-      category_id: row.categoryId,
-      name: row.name,
-      image_url: row.imageUrl,
-      price: row.price,
-      description: row.description,
-      is_active: row.isActive,
-      is_featured: row.isFeatured,
-    },
+    menu_item: mapMenuItem(row),
   });
 }
 
@@ -113,6 +144,7 @@ export async function PATCH(req: Request) {
     if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
     const data: {
       categoryId?: number;
+      kitchenDepartmentId?: number | null;
       name?: string;
       imageUrl?: string;
       price?: number;
@@ -121,6 +153,15 @@ export async function PATCH(req: Request) {
       isFeatured?: boolean;
     } = {};
     if (parsed.data.category_id !== undefined) data.categoryId = parsed.data.category_id;
+    if (parsed.data.kitchen_department_id !== undefined) {
+      const dept = await assertKitchenDeptOwned(
+        own.ownerId,
+        scope.trialSessionId,
+        parsed.data.kitchen_department_id,
+      );
+      if (!dept.ok) return dept.response;
+      data.kitchenDepartmentId = dept.kitchenDepartmentId;
+    }
     if (parsed.data.name !== undefined) data.name = parsed.data.name.trim();
     if (parsed.data.image_url !== undefined) data.imageUrl = parsed.data.image_url?.trim() ?? "";
     if (parsed.data.price !== undefined) data.price = parsed.data.price;
@@ -137,16 +178,7 @@ export async function PATCH(req: Request) {
     });
     if (!updated) return NextResponse.json({ error: "ไม่พบเมนู" }, { status: 404 });
     return NextResponse.json({
-      menu_item: {
-        id: updated.id,
-        category_id: updated.categoryId,
-        name: updated.name,
-        image_url: updated.imageUrl,
-        price: updated.price,
-        description: updated.description,
-        is_active: updated.isActive,
-        is_featured: updated.isFeatured,
-      },
+      menu_item: mapMenuItem(updated),
     });
   } catch (e) {
     console.error("[building-pos/session/menu-items PATCH]", e);

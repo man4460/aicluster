@@ -1,0 +1,95 @@
+---
+description: สะสมคะแนน POS (ร้านอาหาร · เครื่องดื่ม) — กฎแต้ม รายการแลก รูปอัปโหลด ย่อรูปก่อนส่ง
+globs:
+  - "**/systems/building-pos/**/*oyalty*"
+  - "**/systems/drink-pos/**/*oyalty*"
+  - "**/systems/building-pos/lib/loyalty*"
+  - "**/systems/drink-pos/lib/loyalty*"
+  - "**/api/building-pos/**/loyalty/**"
+  - "**/api/drink-pos/**/loyalty/**"
+  - "**/DrinkPosLoyaltySettingsClient.tsx"
+  - "**/BuildingPosLoyaltySettingsClient.tsx"
+alwaysApply: false
+---
+
+# POS — ระบบสะสมคะแนน / แลกคะแนน
+
+ใช้กับ **ร้านอาหาร** (`building-pos`) และ **ร้านเครื่องดื่ม** (`drink-pos`)  
+ลิงก์ลูกค้า (เมนู · ป้ายเบอร์) → `pos-customer-order-link-ux.mdc`  
+อัปโหลดรูปทั่วไป → `app-templates-media.mdc` · `football-turf-module-dashboard-template.mdc` §9
+
+---
+
+## 1) กฎสะสม (บาท → คะแนน)
+
+| | เครื่องดื่ม | ร้านอาหาร |
+|--|-------------|-----------|
+| Settings | `DrinkPosLoyaltySettings` | `BuildingPosLoyaltySettings` |
+| ฟิลด์หลัก | `enabled` · `baht_per_point` · `points_per_unit` | เหมือนกัน |
+| ข้อความกฎ | `formatDrinkPosLoyaltyEarnRule` | `formatBuildingPosLoyaltyEarnRule` |
+| UI ตั้งค่า | `/dashboard/drink-pos/settings` · `DrinkPosLoyaltySettingsClient` | settings ร้านอาหาร · `BuildingPosLoyaltySettingsClient` |
+
+- ให้คะแนนเมื่อ**บิลชำระแล้ว** + มีเบอร์สมาชิกครบ
+- **ห้าม** hardcode ข้อความกฎใน UI — อ่านจาก settings เสมอ
+
+---
+
+## 2) รายการแลกคะแนน
+
+- ผูก **สินค้า/เมนู** ได้ (ไม่บังคับ) → แลกแล้วสร้างรายการฟรีเข้าคิว (ถ้าโมดูลรองรับ)
+- **ไม่ผูกสินค้า** → กำหนดชื่อเองได้
+- แสดงผลแลก: **แถวเดียว** + รูปย่อ — `LoyaltyRewardMenuCard` / `LoyaltyRewardMenuGrid` (`app-templates`)
+- Popup พนักงาน: กระชับ — เบอร์+คะแนนบรรทัดเดียว · ไม่ซ้อนกรอบ/หัวข้อซ้ำ
+
+### ใครแลกได้ (เฟสปัจจุบัน)
+
+| ช่องทาง | แลกได้? |
+|---------|---------|
+| **ลิงก์ลูกค้า / public** (`POST …/public/loyalty`) | **ไม่ได้** — ดูคะแนน+รายการอย่างเดียว · แจ้งพนักงาน (`REDEEM_STAFF_ONLY`) |
+| พนักงาน / แดชบอร์ด (session · staff) | **ได้** |
+
+เฟสถัดไป: OTP SMS บนลิงก์ลูกค้า — ดูแผนในแชท / `src/lib/phone-otp/` (ยังไม่ทำ)
+
+### รูปของรายการแลก
+
+| กรณี | รูปที่ใช้ |
+|------|----------|
+| ผูกสินค้า/เมนู | รูปจากสินค้า/เมนูอัตโนมัติ |
+| ไม่ผูก | **อัปโหลดรูปกำหนดเอง** (`image_url` บนตาราง reward) |
+
+- เครื่องดื่ม: คอลัมน์ `DrinkPosLoyaltyReward.imageUrl` · API `image_url` ใน `POST/PATCH …/loyalty/rewards`
+- แสดงผล: **รูปกำหนดเองก่อน** · ไม่มีค่อยใช้รูปสินค้า (`listDrinkPosLoyaltyRewards` / `enrichDrinkPosLoyaltyRewardImage`)
+- ผูกสินค้าแล้ว → เคลียร์ `image_url` กำหนดเอง (ใช้รูปเมนู)
+
+---
+
+## 3) อัปโหลดรูป — **ต้องย่อก่อนส่ง (บังคับ)**
+
+ใช่ — ตามมาตรฐานโปรเจกต์ **ทุกอัปโหลดรูปจาก client** (รวมรูปแลกคะแนน · สินค้า · สลิป · โลโก้):
+
+1. Client: **`prepareImageFileForUpload(file)`** จาก `@/components/app-templates` ก่อนใส่ `FormData`
+2. จากนั้น `POST` ไป endpoint อัปโหลดโมดูล (เช่น `/api/drink-pos/upload`)
+3. UI ปุ่มแกลเลอรี/กล้อง: `AppGalleryCameraFileInputs` + `AppImagePickCameraButtons`
+
+**ห้าม** ส่ง `File` ดิบจาก `<input type="file">` โดยไม่ผ่าน `prepareImageFileForUpload`
+
+อ้างอิงโค้ด: `DrinkPosLoyaltySettingsClient` · `DrinkPosDashboardClient` · football-turf §9
+
+---
+
+## 4) สมาชิก / เบอร์
+
+- ค้นหาเบอร์เต็มหรือ 4 หลักท้าย — ถ้าซ้ำโชว์รายการเลือกเบอร์เต็ม
+- ป้ายช่องบนลิงก์ลูกค้า: **เบอร์โทรสะสมคะแนน**
+- ชำระครบแล้วล้างเบอร์/เซสชันได้ — **ห้าม** toast อธิบายยาว
+
+---
+
+## ห้ามพลาด
+
+| ผิด | ถูก |
+|-----|-----|
+| อัปโหลดรูปแลกโดยไม่ `prepareImageFileForUpload` | ย่อแล้วค่อย `fetch` upload |
+| รายการแลกไม่มีรูปเมื่อไม่ผูกเมนู | ช่องอัปโหลด + เก็บ `image_url` |
+| hardcode «ซื้อ 100 ได้ 1» | อ่านจาก settings |
+| การ์ดแลกแบบกริดใหญ่ใน popup | แถว `LoyaltyRewardMenuCard` |

@@ -34,10 +34,27 @@ import {
 import { StaffQrLandingShell } from "@/components/qr/staff-qr-landing-shell";
 import { ShopStaffQrPanel } from "@/components/qr/shop-staff-qr-panel";
 import { cn } from "@/lib/cn";
+import {
+  CAR_WASH_HEADER_COLLAPSED_KEY,
+  carWashAccentBarClass,
+  carWashContentStackClass,
+  carWashCtaClass,
+  carWashHeaderCollapseBtnClass,
+  carWashHeaderEnLabelClass,
+  carWashHeaderToolbarGroupClass,
+  carWashMainPaddingBottomClass,
+  carWashModuleIconBadgeClass,
+  carWashNavActiveClass,
+  carWashNavIdleClass,
+  carWashShellWrapperClass,
+  carWashStatGridClass,
+  carWashSubTabSegmentShellClass,
+} from "@/systems/car-wash/car-wash-ui-tokens";
 
 const CAR_WASH_CUSTOMER_QR_TAGLINE = "สแกน จองคิว · ใช้แพ็กเหมาได้เอง";
 const CAR_WASH_STAFF_QR_TAGLINE =
   "สแกนเข้าหน้าลานพนักงาน — บันทึกรายการและจัดการคิววันนี้ (ต้องล็อกอินร้าน)";
+const CAR_WASH_MODULE_EN_LABEL = "CAR WASH";
 import { CAR_WASH_SERVICE_STATUSES, carWashStatusLabelTh } from "@/lib/car-wash/service-status";
 import { prepareBuildingPosSlipImageFile } from "@/systems/building-pos/building-pos-slip-image";
 import {
@@ -215,10 +232,22 @@ export function CarWashDashboard({
   );
   const [loading, setLoading] = useState(true);
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const [headerPrefHydrated, setHeaderPrefHydrated] = useState(false);
 
   useEffect(() => {
     if (!isStaffLaneOnly) setTabState(tabFromUrl);
   }, [tabFromUrl, isStaffLaneOnly]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CAR_WASH_HEADER_COLLAPSED_KEY);
+      if (raw === "1") setHeaderCollapsed(true);
+    } catch {
+      /* no-op */
+    }
+    setHeaderPrefHydrated(true);
+  }, []);
 
   const setTab = useCallback(
     (key: TabKey) => {
@@ -1171,23 +1200,18 @@ export function CarWashDashboard({
   return (
     <div
       className={cn(
-        "max-w-full space-y-4 sm:space-y-6",
-        !isStaffLaneOnly && "pb-24 lg:pb-0",
+        "max-w-full",
+        carWashContentStackClass,
+        !isStaffLaneOnly && carWashMainPaddingBottomClass,
       )}
     >
       {!isStaffLaneOnly ? (
-        <div
-          className={cn(
-            "overflow-hidden rounded-[2.5rem] border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/25 to-violet-100/20",
-            "p-4 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.32),inset_0_1px_0_0_rgba(255,255,255,0.55)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
-            "sm:px-8 sm:py-6 print:hidden",
-          )}
-        >
+        <div className={carWashShellWrapperClass}>
           <header>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5b61ff] to-[#f06dc8] text-white shadow-lg shadow-indigo-100">
+                  <div className={carWashModuleIconBadgeClass} aria-hidden>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5">
                       <path d="M3 14h2l2-3h10l2 3h2" strokeLinecap="round" strokeLinejoin="round" />
                       <circle cx="7" cy="17" r="2" />
@@ -1195,17 +1219,60 @@ export function CarWashDashboard({
                       <path d="M5 14l1.5-5h11L19 14" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
-                  <div>
+                  <div className="min-w-0">
+                    <p className={cn(carWashHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
+                      {CAR_WASH_MODULE_EN_LABEL}
+                    </p>
                     <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">คาร์แคร์</h1>
-                    <p className="hidden text-xs font-bold text-slate-500 md:block">ระบบจัดการลานล้างและแพ็กเกจสมาชิก</p>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className={carWashHeaderToolbarGroupClass}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !headerCollapsed;
+                    setHeaderCollapsed(next);
+                    try { localStorage.setItem(CAR_WASH_HEADER_COLLAPSED_KEY, next ? "1" : "0"); } catch { /* no-op */ }
+                  }}
+                  className={cn("inline-flex", carWashHeaderCollapseBtnClass)}
+                  aria-label={headerCollapsed ? "แสดงเมนูหัวโมดูล" : "ซ่อนเมนูหัวโมดูล"}
+                  aria-expanded={headerCollapsed ? "false" : "true"}
+                  aria-controls="cw-desktop-nav-section"
+                  suppressHydrationWarning
+                >
+                  {headerPrefHydrated ? (
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className={cn("h-4 w-4 transition-transform duration-200", headerCollapsed ? "rotate-180" : "")}
+                      aria-hidden
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  ) : (
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-4 w-4"
+                      aria-hidden
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  )}
+                </button>
                 <button
                   type="button"
                   onClick={() => setUsageGuideOpen(true)}
-                  className="flex h-10 items-center gap-2 rounded-2xl border border-white/60 bg-white/45 px-4 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-95"
+                  className="flex h-10 items-center gap-2 rounded-2xl border border-white/60 bg-white/45 px-4 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-[0.98]"
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <circle cx="12" cy="12" r="9" />
@@ -1218,45 +1285,50 @@ export function CarWashDashboard({
             </div>
           </header>
 
-          <nav
-            aria-label="เมนูคาร์แคร์"
-            className="mt-5 hidden border-t border-white/40 pt-5 lg:block print:hidden"
-          >
-            <ul className="flex gap-1">
-              {tabItems.map((item) => {
-                const active = tab === item.key;
-                return (
-                  <li key={item.key} className="flex-1">
-                    <button
-                      type="button"
-                      onClick={() => setTab(item.key)}
-                      className={cn(
-                        "flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-black transition-all",
-                        active
-                          ? "bg-white/75 text-[#5b61ff] shadow-md ring-1 ring-white/80 backdrop-blur-sm"
-                          : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
-                      )}
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2.5}
-                        className={cn("h-4 w-4", active ? "text-[#5b61ff]" : "text-slate-400")}
-                        aria-hidden
+          <div className="mt-5">
+            <div className={carWashAccentBarClass} aria-hidden />
+          </div>
+
+          {!headerCollapsed ? (
+            <nav
+              id="cw-desktop-nav-section"
+              aria-label="เมนูคาร์แคร์"
+              className="mt-5 hidden border-t border-white/40 pt-5 lg:block print:hidden"
+            >
+              <ul className="flex gap-1">
+                {tabItems.map((item) => {
+                  const active = tab === item.key;
+                  return (
+                    <li key={item.key} className="flex-1">
+                      <button
+                        type="button"
+                        onClick={() => setTab(item.key)}
+                        className={cn(
+                          "flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-black transition-all min-h-[44px]",
+                          active ? carWashNavActiveClass : carWashNavIdleClass,
+                        )}
                       >
-                        {carWashTabIcon(item.key)}
-                      </svg>
-                      {item.label}
-                    </button>
-                  </li>
-                );
-              })}
-              {moduleShopSettingsDesktopNavItem(
-                <ModuleShopSettingsDesktopNavLink href={CAR_WASH_SETTINGS_PATH} active={false} />,
-              )}
-            </ul>
-          </nav>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                          className={cn("h-4 w-4", active ? "text-white/95" : "text-slate-400")}
+                          aria-hidden
+                        >
+                          {carWashTabIcon(item.key)}
+                        </svg>
+                        {item.label}
+                      </button>
+                    </li>
+                  );
+                })}
+                {moduleShopSettingsDesktopNavItem(
+                  <ModuleShopSettingsDesktopNavLink href={CAR_WASH_SETTINGS_PATH} active={false} />,
+                )}
+              </ul>
+            </nav>
+          ) : null}
         </div>
       ) : null}
 
@@ -1407,7 +1479,10 @@ export function CarWashDashboard({
           <div className="space-y-4 rounded-[2.5rem] border border-white/55 bg-white/28 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
             <div className="flex min-w-0 flex-row items-center justify-between gap-2 px-0 sm:items-start sm:gap-4">
               <div className="min-w-0 flex-1">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">สถิติวันนี้</h3>
+                <p className={cn(carWashHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
+                  TODAY&apos;S STATS
+                </p>
+                <h3 className="text-lg font-bold text-[#2e2a58]">สถิติวันนี้</h3>
               </div>
               <Suspense
                 fallback={
@@ -1417,7 +1492,7 @@ export function CarWashDashboard({
                 <CarWashDashboardTabToolbar className="shrink-0" />
               </Suspense>
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+            <div className={cn("mt-4 grid grid-cols-2 gap-3", carWashStatGridClass)}>
               <CarWashStat
                 title="ลูกค้าวันนี้"
                 value={todayStats.uniqueCustomers.toLocaleString("en-US")}
@@ -1618,20 +1693,20 @@ export function CarWashDashboard({
                 <AppImageLightbox src={bundleTabLightbox.src} onClose={bundleTabLightbox.close} alt="สลิปแพ็กเหมา" />
 
                 <div className="flex flex-col gap-4 rounded-[2rem] border border-white/50 bg-white/35 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                  <div>
-                    <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">แพ็กเกจและเหมาจ่าย</h2>
-                    <p className="mt-0.5 text-xs font-medium text-slate-600">
-                      รวม {packages.length} แพ็กเกจบริการ · {bundles.length} รายการเหมาจ่าย
+                  <div className="min-w-0 flex-1">
+                    <p className={cn(carWashHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
+                      PACKAGES &amp; BUNDLES
                     </p>
+                    <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">แพ็กเกจและเหมาจ่าย</h2>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-1">
-                    <div className="flex items-center gap-1 rounded-xl border border-white/60 bg-white/40 p-1 backdrop-blur-md">
+                    <div className={cn(carWashSubTabSegmentShellClass, "rounded-xl")}>
                       {offersListTab === "packages" ?
                         <div className="mr-1.5 flex items-center gap-1 border-r border-slate-200 pr-1.5">
                           <button
                             type="button"
                             onClick={openCreatePackage}
-                            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#5b61ff] px-2.5 text-xs font-bold text-white shadow-sm ring-1 ring-[#5b61ff] hover:bg-[#4d47b6]"
+                            className={cn("inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-bold shadow-sm ring-1", carWashCtaClass)}
                             aria-label="เพิ่มแพ็กเกจ"
                           >
                             <svg
@@ -1651,7 +1726,7 @@ export function CarWashDashboard({
                           <button
                             type="button"
                             onClick={() => setShowBundleModal(true)}
-                            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#5b61ff] px-2.5 text-xs font-bold text-white shadow-sm ring-1 ring-[#5b61ff] hover:bg-[#4d47b6]"
+                            className={cn("inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-bold shadow-sm ring-1", carWashCtaClass)}
                             aria-label="เพิ่มเหมาจ่าย"
                           >
                             <svg
@@ -1672,25 +1747,21 @@ export function CarWashDashboard({
                         type="button"
                         className={cn(
                           "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
-                          offersListTab === "packages" ?
-                            "bg-white/80 text-[#5b61ff] shadow-sm ring-1 ring-white/80"
-                          : "text-slate-600 hover:bg-white/55 hover:text-slate-800",
+                          offersListTab === "packages" ? carWashNavActiveClass : carWashNavIdleClass,
                         )}
                         onClick={() => setOffersListTab("packages")}
                       >
-                        แพ็กเกจ
+                        <span className={cn(offersListTab === "packages" ? "text-white" : "")}>แพ็กเกจ</span>
                       </button>
                       <button
                         type="button"
                         className={cn(
                           "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
-                          offersListTab === "bundles" ?
-                            "bg-white/80 text-amber-700 shadow-sm ring-1 ring-white/80"
-                          : "text-slate-600 hover:bg-white/55 hover:text-slate-800",
+                          offersListTab === "bundles" ? carWashNavActiveClass : carWashNavIdleClass,
                         )}
                         onClick={() => setOffersListTab("bundles")}
                       >
-                        เหมาจ่าย
+                        <span className={cn(offersListTab === "bundles" ? "text-white" : "")}>เหมาจ่าย</span>
                       </button>
                     </div>
                   </div>
@@ -1885,9 +1956,7 @@ export function CarWashDashboard({
                     aria-label={item.label}
                     className={cn(
                       "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl transition-all active:scale-90",
-                      active
-                        ? "bg-white/80 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/20 backdrop-blur-sm"
-                        : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
+                      active ? carWashNavActiveClass : carWashNavIdleClass,
                     )}
                   >
                     <svg
@@ -1895,12 +1964,17 @@ export function CarWashDashboard({
                       fill="none"
                       stroke="currentColor"
                       strokeWidth={2.5}
-                      className="h-5 w-5 shrink-0"
+                      className={cn("h-5 w-5 shrink-0", active ? "text-white/95" : "")}
                       aria-hidden
                     >
                       {carWashTabIcon(item.key)}
                     </svg>
-                    <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">
+                    <span
+                      className={cn(
+                        "max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none",
+                        active ? "text-white" : "",
+                      )}
+                    >
                       {item.label}
                     </span>
                   </button>

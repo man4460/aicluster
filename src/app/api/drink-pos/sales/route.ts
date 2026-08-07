@@ -5,11 +5,7 @@ import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { getDrinkPosDataScope } from "@/lib/trial/module-scopes";
 import { requireSession } from "@/lib/api-auth";
 import { withDrinkPosOwnerContext } from "@/systems/drink-pos/lib/api-auth";
-import {
-  applyDrinkPosSaleLoyalty,
-  findDrinkPosMemberByPhoneQuery,
-} from "@/systems/drink-pos/lib/member-service";
-
+import { findDrinkPosMemberByPhoneQuery } from "@/systems/drink-pos/lib/member-service";
 import {
   drinkPosResolveUnitPrice,
   drinkPosSaleLineDisplayName,
@@ -22,6 +18,12 @@ import {
   type DrinkPosPaymentMethod,
 } from "@/systems/drink-pos/lib/payment-method";
 import { notifyDrinkPosOrderBoard } from "@/systems/drink-pos/lib/order-board-sse";
+import {
+  applyDrinkPosLoyaltyEarnOnSale,
+  ensureDrinkPosLoyaltySettings,
+  redeemDrinkPosLoyaltyReward,
+} from "@/systems/drink-pos/lib/loyalty";
+import { normalizeMemberPhone } from "@/lib/loyalty-stamp/member-qr";
 
 const lineSchema = z.object({
   productId: z.string().trim().min(1).max(191),
@@ -32,7 +34,9 @@ const lineSchema = z.object({
 const createSaleSchema = z.object({
   note: z.string().trim().max(500).optional().nullable(),
   memberPhone: z.string().trim().max(20).optional().nullable(),
+  /** @deprecated ใช้ loyaltyRewardId */
   isRewardRedemption: z.boolean().optional(),
+  loyaltyRewardId: z.number().int().positive().optional().nullable(),
   paymentMethod: z.enum(DRINK_POS_PAYMENT_METHODS).optional(),
   paymentSlipUrl: z.string().trim().max(512).optional().nullable(),
   lines: z.array(lineSchema).min(1).max(50),
@@ -44,10 +48,15 @@ export async function GET(req: Request) {
   const { ownerUserId } = auth.ctx;
 
   const { searchParams } = new URL(req.url);
-  const take = Math.min(100, Math.max(1, Number(searchParams.get("take") || "40") || 40));
+  const takeRaw = Number(searchParams.get("take") || "40") || 40;
+  const phoneDigits = normalizeMemberPhone(searchParams.get("phone") ?? "");
+  const take = Math.min(phoneDigits.length >= 3 ? 300 : 100, Math.max(1, takeRaw));
 
   const rows = await prisma.drinkPosSale.findMany({
-    where: { ownerUserId },
+    where: {
+      ownerUserId,
+      ...(phoneDigits.length >= 3 ? { memberPhone: { contains: phoneDigits } } : {}),
+    },
     orderBy: { createdAt: "desc" },
     take,
     include: {
@@ -75,6 +84,9 @@ export async function GET(req: Request) {
       fulfillmentStatus: s.fulfillmentStatus,
       statusUpdatedAt: s.statusUpdatedAt.toISOString(),
       isRewardRedemption: s.isRewardRedemption,
+      pointsEarned: s.pointsEarned,
+      pointsRedeemed: s.pointsRedeemed,
+      memberPhone: s.memberPhone,
       createdAt: s.createdAt.toISOString(),
       lines: s.lines,
     })),
@@ -141,8 +153,10 @@ export async function POST(req: Request) {
       lineTotalBaht,
     };
   });
+
+  const loyaltyRewardId = parsed.data.loyaltyRewardId ?? null;
+  const isRewardRedemption = Boolean(loyaltyRewardId) || Boolean(parsed.data.isRewardRedemption);
   let totalBaht = lineCreates.reduce((s, x) => s + x.lineTotalBaht, 0);
-  const isRewardRedemption = Boolean(parsed.data.isRewardRedemption);
   if (isRewardRedemption) totalBaht = 0;
 
   const paymentMethod: DrinkPosPaymentMethod =
@@ -157,21 +171,29 @@ export async function POST(req: Request) {
 
   let memberId: string | null = null;
   let memberPhone: string | null = null;
-  if (parsed.data.memberPhone?.trim()) {
+  const phoneRaw = parsed.data.memberPhone?.trim() || "";
+  if (phoneRaw) {
     const memberResult = await findDrinkPosMemberByPhoneQuery(
       prisma,
       ownerUserId,
       trialSessionId,
-      parsed.data.memberPhone,
+      phoneRaw,
     );
     if ("error" in memberResult) {
       return NextResponse.json({ error: memberResult.error }, { status: 400 });
     }
-    if (isRewardRedemption && !memberResult.readyToRedeem) {
-      return NextResponse.json({ error: "ยังสะสมแต้มไม่ครบเพื่อแลกฟรี" }, { status: 400 });
-    }
     memberId = memberResult.id;
     memberPhone = memberResult.phone;
+  }
+
+  if (loyaltyRewardId != null) {
+    if (!memberPhone) {
+      return NextResponse.json({ error: "กรอกเบอร์สมาชิกก่อนแลกคะแนน" }, { status: 400 });
+    }
+    const settings = await ensureDrinkPosLoyaltySettings(ownerUserId, trialSessionId);
+    if (!settings.enabled) {
+      return NextResponse.json({ error: "ยังไม่เปิดระบบสะสมคะแนน" }, { status: 400 });
+    }
   }
 
   const sale = await prisma.drinkPosSale.create({
@@ -184,7 +206,7 @@ export async function POST(req: Request) {
       paymentSlipUrl: drinkPosPaymentRequiresSlip(paymentMethod, totalBaht) ? paymentSlipUrl : null,
       fulfillmentStatus: "RECEIVED",
       statusUpdatedAt: new Date(),
-      note: parsed.data.note?.trim() || null,
+      note: parsed.data.note?.trim() || (loyaltyRewardId ? "แลกคะแนน" : null),
       totalBaht,
       lines: { create: lineCreates },
     },
@@ -203,24 +225,72 @@ export async function POST(req: Request) {
     },
   });
 
-  if (memberId) {
-    await applyDrinkPosSaleLoyalty(prisma, ownerUserId, trialSessionId, memberId, isRewardRedemption);
+  if (loyaltyRewardId != null && memberPhone) {
+    const redeem = await redeemDrinkPosLoyaltyReward({
+      ownerUserId,
+      trialSessionId,
+      phoneRaw: memberPhone,
+      rewardId: loyaltyRewardId,
+      saleId: sale.id,
+      createSale: false,
+    });
+    if (!redeem.ok) {
+      await prisma.drinkPosSale.delete({ where: { id: sale.id } });
+      return NextResponse.json({ error: redeem.error }, { status: 400 });
+    }
+  } else if (memberPhone && totalBaht > 0 && !isRewardRedemption) {
+    await applyDrinkPosLoyaltyEarnOnSale({
+      ownerUserId,
+      trialSessionId,
+      saleId: sale.id,
+      totalAmount: totalBaht,
+      memberPhone,
+      previousPointsEarned: 0,
+    });
+  } else if (memberPhone && !isRewardRedemption) {
+    const digits = normalizeMemberPhone(memberPhone);
+    if (digits.length >= 9) {
+      await prisma.drinkPosSale.update({
+        where: { id: sale.id },
+        data: { memberPhone: digits, memberId },
+      });
+    }
   }
 
   notifyDrinkPosOrderBoard(ownerUserId);
 
+  const fresh = await prisma.drinkPosSale.findUnique({
+    where: { id: sale.id },
+    include: {
+      lines: {
+        orderBy: { id: "asc" },
+        select: {
+          id: true,
+          productName: true,
+          sizeLabel: true,
+          unitPriceBaht: true,
+          quantity: true,
+          lineTotalBaht: true,
+        },
+      },
+    },
+  });
+
   return NextResponse.json({
     sale: {
-      id: sale.id,
-      note: sale.note,
-      totalBaht: sale.totalBaht,
-      paymentMethod: sale.paymentMethod,
-      paymentSlipUrl: sale.paymentSlipUrl,
-      fulfillmentStatus: sale.fulfillmentStatus,
-      statusUpdatedAt: sale.statusUpdatedAt.toISOString(),
-      isRewardRedemption: sale.isRewardRedemption,
-      createdAt: sale.createdAt.toISOString(),
-      lines: sale.lines,
+      id: fresh!.id,
+      note: fresh!.note,
+      totalBaht: fresh!.totalBaht,
+      paymentMethod: fresh!.paymentMethod,
+      paymentSlipUrl: fresh!.paymentSlipUrl,
+      fulfillmentStatus: fresh!.fulfillmentStatus,
+      statusUpdatedAt: fresh!.statusUpdatedAt.toISOString(),
+      isRewardRedemption: fresh!.isRewardRedemption,
+      pointsEarned: fresh!.pointsEarned,
+      pointsRedeemed: fresh!.pointsRedeemed,
+      memberPhone: fresh!.memberPhone,
+      createdAt: fresh!.createdAt.toISOString(),
+      lines: fresh!.lines,
     },
   });
 }

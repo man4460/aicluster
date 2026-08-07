@@ -56,3 +56,4 @@ export async function PATCH(req: Request, ctx: Ctx) {
 
   return NextResponse.json({ order: mapDrinkPosOrderBoardRow(sale) });
 }
+

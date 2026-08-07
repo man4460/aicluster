@@ -39,6 +39,7 @@ export function BuildingPosStaffClient({
   const [shopLabel, setShopLabel] = useState("POS ร้านอาหาร");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [paymentChannelsNote, setPaymentChannelsNote] = useState<string | null>(null);
+  const [slipPrintEnabled, setSlipPrintEnabled] = useState(false);
   const [view, setView] = useState<View>("tables");
   const [orders, setOrders] = useState<PosOrder[]>([]);
   const [menuItems, setMenuItems] = useState<PosMenuItem[]>([]);
@@ -71,11 +72,13 @@ export function BuildingPosStaffClient({
           shopLabel?: string;
           logoUrl?: string | null;
           paymentChannelsNote?: string | null;
+          features?: { slipPrint?: boolean };
         };
         setBootOk(d.ok === true);
         setShopLabel(d.shopLabel?.trim() || "POS ร้านอาหาร");
         setLogoUrl(d.logoUrl ?? null);
         setPaymentChannelsNote(d.paymentChannelsNote ?? null);
+        setSlipPrintEnabled(d.features?.slipPrint === true);
       })
       .catch(() => setBootOk(false));
   }, [ownerId, trialSessionId, staffKey]);
@@ -127,8 +130,11 @@ export function BuildingPosStaffClient({
   }, [menuItems]);
 
   const moveOrderStatus = useCallback(
-    async (id: number, status: PosOrder["status"]) => {
-      await repo.updateOrder(id, { status });
+    async (id: number, status: PosOrder["status"], extra?: { member_phone?: string }) => {
+      await repo.updateOrder(id, {
+        status,
+        ...(extra?.member_phone ? { member_phone: extra.member_phone } : {}),
+      });
       await loadOrders();
     },
     [repo, loadOrders],
@@ -218,7 +224,7 @@ export function BuildingPosStaffClient({
               staffAuth={staffAuth}
               orders={orders}
               menuImageById={menuImageById}
-              onOrderStatusChange={(id, st) => void moveOrderStatus(id, st)}
+              onOrderStatusChange={(id, st, extra) => void moveOrderStatus(id, st, extra)}
               onOrderPaymentSlipSaved={(id, url) => saveSlip(id, url)}
               shopLabel={shopLabel}
               logoUrl={logoUrl}
@@ -229,6 +235,8 @@ export function BuildingPosStaffClient({
               ownerId={ownerId}
               trialSessionId={trialSessionId}
               portalMode
+              staffAuth={staffAuth}
+              slipPrintEnabled={slipPrintEnabled}
               onOrderSuccess={() => {
                 setView("tables");
                 void loadOrders();

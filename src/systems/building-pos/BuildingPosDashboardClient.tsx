@@ -17,6 +17,7 @@ import {
   createBuildingPosSessionApiRepository,
   type PosCategory,
   type PosIngredient,
+  type PosKitchenDepartment,
   type PosMenuItem,
   type PosOrder,
   type PosPurchaseOrder,
@@ -28,7 +29,6 @@ import { BuildingPosStaffQrSection } from "@/systems/building-pos/components/Bui
 import { BUILDING_POS_ORDER_HREF, parseBuildingPosNav } from "@/systems/building-pos/building-pos-nav";
 import {
   buildingPosStationPublicUrl,
-  type BuildingPosStationRole,
 } from "@/systems/building-pos/lib/station-role";
 import {
   buildingPosChipActiveClass,
@@ -120,6 +120,8 @@ export function BuildingPosDashboardClient({
   }, [searchParams, router]);
 
   const [categories, setCategories] = useState<PosCategory[]>([]);
+  const [kitchenDepartments, setKitchenDepartments] = useState<PosKitchenDepartment[]>([]);
+  const [multiKitchenEnabled, setMultiKitchenEnabled] = useState(false);
   const [menuItems, setMenuItems] = useState<PosMenuItem[]>([]);
   const [orders, setOrders] = useState<PosOrder[]>([]);
   const [orderQrUrl, setOrderQrUrl] = useState("");
@@ -141,6 +143,7 @@ export function BuildingPosDashboardClient({
   const [catForm, setCatForm] = useState({ name: "", image_url: "", sort_order: "1", is_active: true });
   const [menuForm, setMenuForm] = useState({
     category_id: "",
+    kitchen_department_id: "",
     name: "",
     image_url: "",
     price: "",
@@ -152,6 +155,11 @@ export function BuildingPosDashboardClient({
   const [catFormOpen, setCatFormOpen] = useState(false);
   const [catEditing, setCatEditing] = useState<PosCategory | null>(null);
   const [catSaving, setCatSaving] = useState(false);
+  const [kitchenManageOpen, setKitchenManageOpen] = useState(false);
+  const [kitchenFormOpen, setKitchenFormOpen] = useState(false);
+  const [kitchenEditing, setKitchenEditing] = useState<PosKitchenDepartment | null>(null);
+  const [kitchenSaving, setKitchenSaving] = useState(false);
+  const [kitchenForm, setKitchenForm] = useState({ name: "", sort_order: "1", is_active: true });
   const [filterCat, setFilterCat] = useState<number | "all">("all");
   const [menuModalOpen, setMenuModalOpen] = useState(false);
   const [menuEditing, setMenuEditing] = useState<PosMenuItem | null>(null);
@@ -160,8 +168,9 @@ export function BuildingPosDashboardClient({
   const [syncError, setSyncError] = useState<string | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
   const [showStaffQrModal, setShowStaffQrModal] = useState(false);
-  const [stationModal, setStationModal] = useState<BuildingPosStationRole | null>(null);
-  const [stationCopied, setStationCopied] = useState<BuildingPosStationRole | null>(null);
+  const [stationModal, setStationModal] = useState<"serve" | "kitchen" | null>(null);
+  const [kitchenLinkDeptId, setKitchenLinkDeptId] = useState<number | null>(null);
+  const [stationCopied, setStationCopied] = useState<string | null>(null);
 
   const kitchenUrl = useMemo(
     () => buildingPosStationPublicUrl(baseUrl, "kitchen", ownerId, trialSessionId),
@@ -171,11 +180,37 @@ export function BuildingPosDashboardClient({
     () => buildingPosStationPublicUrl(baseUrl, "serve", ownerId, trialSessionId),
     [baseUrl, ownerId, trialSessionId],
   );
+  const activeKitchenDepartments = useMemo(
+    () => kitchenDepartments.filter((d) => d.is_active),
+    [kitchenDepartments],
+  );
+  const kitchenDeptNameById = useMemo(() => {
+    const m = new Map<number, string>();
+    kitchenDepartments.forEach((d) => m.set(d.id, d.name));
+    return m;
+  }, [kitchenDepartments]);
 
-  async function copyStationLink(role: BuildingPosStationRole, url: string) {
+  const stationModalUrl = useMemo(() => {
+    if (stationModal === "serve") return serveUrl;
+    if (stationModal === "kitchen" && kitchenLinkDeptId != null) {
+      return buildingPosStationPublicUrl(baseUrl, "kitchen", ownerId, trialSessionId, kitchenLinkDeptId);
+    }
+    return kitchenUrl;
+  }, [baseUrl, kitchenLinkDeptId, kitchenUrl, ownerId, serveUrl, stationModal, trialSessionId]);
+
+  const stationModalTitle = useMemo(() => {
+    if (stationModal === "serve") return "ลิงก์แผนกเสิร์ฟ";
+    if (kitchenLinkDeptId != null) {
+      const name = kitchenDeptNameById.get(kitchenLinkDeptId) ?? "แผนกครัว";
+      return `ลิงก์ครัว · ${name}`;
+    }
+    return "ลิงก์แผนกครัว";
+  }, [kitchenDeptNameById, kitchenLinkDeptId, stationModal]);
+
+  async function copyStationLink(copyKey: string, url: string) {
     try {
       await navigator.clipboard.writeText(url);
-      setStationCopied(role);
+      setStationCopied(copyKey);
       window.setTimeout(() => setStationCopied(null), 1600);
     } catch {
       window.prompt("คัดลอกลิงก์:", url);
@@ -236,10 +271,17 @@ export function BuildingPosDashboardClient({
 
   async function loadAll() {
     try {
-      const [c, m, o] = await Promise.all([repo.listCategories(), repo.listMenuItems(), repo.listOrders()]);
+      const [c, m, o, k] = await Promise.all([
+        repo.listCategories(),
+        repo.listMenuItems(),
+        repo.listOrders(),
+        repo.listKitchenDepartments().catch(() => ({ departments: [] as PosKitchenDepartment[], features: { multiKitchen: false } })),
+      ]);
       setCategories(c);
       setMenuItems(m);
       setOrders(o);
+      setKitchenDepartments(k.departments ?? []);
+      setMultiKitchenEnabled(k.features?.multiKitchen === true);
 
       const inv = await Promise.allSettled([repo.listIngredients(), repo.listPurchaseOrders()]);
       setIngredients(inv[0].status === "fulfilled" ? inv[0].value : []);
@@ -498,7 +540,8 @@ export function BuildingPosDashboardClient({
   function openMenuCreate() {
     setMenuEditing(null);
     setMenuForm({
-      category_id: "",
+      category_id: filterCat === "all" ? "" : String(filterCat),
+      kitchen_department_id: "",
       name: "",
       image_url: "",
       price: "",
@@ -513,6 +556,7 @@ export function BuildingPosDashboardClient({
     setMenuEditing(m);
     setMenuForm({
       category_id: String(m.category_id),
+      kitchen_department_id: m.kitchen_department_id != null ? String(m.kitchen_department_id) : "",
       name: m.name,
       image_url: m.image_url ?? "",
       price: String(m.price),
@@ -529,8 +573,14 @@ export function BuildingPosDashboardClient({
     if (!categoryId || !menuForm.name.trim() || !Number.isFinite(price)) return;
     setMenuSaving(true);
     try {
+      const kitchenDeptRaw = menuForm.kitchen_department_id.trim();
+      const kitchenDepartmentId =
+        kitchenDeptRaw && Number.isFinite(Number(kitchenDeptRaw)) && Number(kitchenDeptRaw) > 0
+          ? Number(kitchenDeptRaw)
+          : null;
       const payload = {
         category_id: categoryId,
+        kitchen_department_id: multiKitchenEnabled ? kitchenDepartmentId : null,
         name: menuForm.name.trim(),
         image_url: menuForm.image_url.trim(),
         price,
@@ -550,6 +600,58 @@ export function BuildingPosDashboardClient({
       alert(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
     } finally {
       setMenuSaving(false);
+    }
+  }
+
+  function openKitchenCreate() {
+    setKitchenEditing(null);
+    setKitchenForm({ name: "", sort_order: String(kitchenDepartments.length + 1), is_active: true });
+    setKitchenFormOpen(true);
+  }
+
+  function openKitchenEdit(d: PosKitchenDepartment) {
+    setKitchenEditing(d);
+    setKitchenForm({
+      name: d.name,
+      sort_order: String(d.sort_order),
+      is_active: d.is_active,
+    });
+    setKitchenFormOpen(true);
+  }
+
+  async function submitKitchenModal() {
+    if (!kitchenForm.name.trim()) return;
+    const sortOrder = Number(kitchenForm.sort_order);
+    if (!Number.isFinite(sortOrder)) return;
+    setKitchenSaving(true);
+    try {
+      const payload = {
+        name: kitchenForm.name.trim(),
+        sort_order: sortOrder,
+        is_active: kitchenForm.is_active,
+      };
+      if (kitchenEditing) {
+        await repo.updateKitchenDepartment(kitchenEditing.id, payload);
+      } else {
+        await repo.createKitchenDepartment(payload);
+      }
+      setKitchenFormOpen(false);
+      setKitchenEditing(null);
+      await loadAll();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
+    } finally {
+      setKitchenSaving(false);
+    }
+  }
+
+  async function deleteKitchenRow(d: PosKitchenDepartment) {
+    if (!window.confirm(`ลบแผนกครัว "${d.name}" ?\nเมนูที่ผูกแผนกนี้จะถูกยกเลิกการผูก`)) return;
+    try {
+      await repo.deleteKitchenDepartment(d.id);
+      await loadAll();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
     }
   }
 
@@ -701,8 +803,15 @@ export function BuildingPosDashboardClient({
     return data.imageUrl ?? null;
   }
 
-  async function moveOrderStatus(id: number, status: PosOrder["status"]) {
-    await repo.updateOrder(id, { status });
+  async function moveOrderStatus(
+    id: number,
+    status: PosOrder["status"],
+    extra?: { member_phone?: string },
+  ) {
+    await repo.updateOrder(id, {
+      status,
+      ...(extra?.member_phone ? { member_phone: extra.member_phone } : {}),
+    });
     await loadAll();
   }
 
@@ -711,8 +820,15 @@ export function BuildingPosDashboardClient({
     await loadAll();
   }
 
-  async function onSalesHistoryOrderStatusChange(id: number, status: PosOrder["status"]) {
-    await repo.updateOrder(id, { status });
+  async function onSalesHistoryOrderStatusChange(
+    id: number,
+    status: PosOrder["status"],
+    extra?: { member_phone?: string },
+  ) {
+    await repo.updateOrder(id, {
+      status,
+      ...(extra?.member_phone ? { member_phone: extra.member_phone } : {}),
+    });
     await loadAll();
   }
 
@@ -864,6 +980,24 @@ export function BuildingPosDashboardClient({
               >
                 หมวดหมู่
               </button>
+              {multiKitchenEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setKitchenFormOpen(false);
+                    setKitchenEditing(null);
+                    setKitchenManageOpen(true);
+                  }}
+                  className={cn(
+                    appTemplateOutlineButtonClass,
+                    "inline-flex min-h-[40px] items-center justify-center rounded-xl px-3 text-xs font-semibold text-[#4d47b6] sm:px-4 sm:text-sm",
+                  )}
+                  aria-label="จัดการแผนกครัว"
+                  title="แผนกครัว — เพิ่ม แก้ไข ลบ"
+                >
+                  แผนกครัว
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => openMenuCreate()}
@@ -934,6 +1068,9 @@ export function BuildingPosDashboardClient({
                   <p className="font-black tracking-tight text-[#1e1b4b]">{m.name}</p>
                   <p className="mt-0.5 text-xs text-[#66638c]">
                     ฿{m.price.toLocaleString()} · {categories.find((c) => c.id === m.category_id)?.name ?? "-"}
+                    {multiKitchenEnabled && m.kitchen_department_id
+                      ? ` · ครัว ${kitchenDeptNameById.get(m.kitchen_department_id) ?? m.kitchen_department_id}`
+                      : ""}
                   </p>
                   {!m.is_active ? <span className="mt-1 inline-block text-xs text-amber-700">ปิดใช้งาน</span> : null}
                 </div>
@@ -1051,39 +1188,87 @@ export function BuildingPosDashboardClient({
                 </div>
               </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setShowQrModal(false);
-                  setShowStaffQrModal(false);
-                  setStationModal("kitchen");
-                }}
-                className={cn(
-                  "group relative w-full overflow-hidden rounded-[2.5rem] border border-white/50 text-left",
-                  "bg-gradient-to-br from-white/50 via-sky-50/50 to-cyan-100/30",
-                  "p-6 shadow-[0_28px_70px_-24px_rgba(14,165,233,0.35),inset_0_1px_0_0_rgba(255,255,255,0.65)] backdrop-blur-2xl",
-                  "ring-1 ring-inset ring-white/60 transition-all duration-300",
-                  "hover:-translate-y-1 hover:border-white/75 hover:shadow-[0_34px_85px_-22px_rgba(14,165,233,0.42)]",
-                  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600",
-                )}
-                aria-label="เปิดลิงก์แผนกครัว"
-              >
-                <span className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-sky-400/25 blur-3xl" aria-hidden />
-                <div className="relative flex items-start gap-4 sm:gap-5">
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/55 ring-1 ring-white/75 backdrop-blur-md sm:h-16 sm:w-16">
-                    <svg viewBox="0 0 24 24" className="h-7 w-7 text-sky-700 sm:h-8 sm:w-8" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                      <path d="M4 10h16v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z" strokeLinejoin="round" />
-                      <path d="M8 10V7a4 4 0 018 0v3M8 14h.01M12 14h.01M16 14h.01" strokeLinecap="round" />
-                    </svg>
-                  </span>
-                  <div className="min-w-0 flex-1 pt-0.5">
-                    <h3 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">แผนกครัว</h3>
-                    <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-                      รับออเดอร์ · กำลังทำ · กด «ทำเสร็จแล้ว» เพื่อส่งต่อแผนกเสิร์ฟ
-                    </p>
+              {multiKitchenEnabled && activeKitchenDepartments.length > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-xs font-black uppercase tracking-wide text-[#66638c]">ลิงก์ครัวตามแผนก</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {activeKitchenDepartments.map((d) => (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => {
+                          setShowQrModal(false);
+                          setShowStaffQrModal(false);
+                          setKitchenLinkDeptId(d.id);
+                          setStationModal("kitchen");
+                        }}
+                        className={cn(
+                          "group relative w-full overflow-hidden rounded-[2rem] border border-white/50 text-left",
+                          "bg-gradient-to-br from-white/50 via-sky-50/50 to-cyan-100/30",
+                          "p-5 shadow-md backdrop-blur-2xl ring-1 ring-inset ring-white/60 transition",
+                          "hover:-translate-y-0.5 hover:border-white/75",
+                        )}
+                        aria-label={`เปิดลิงก์ครัว ${d.name}`}
+                      >
+                        <h3 className="text-base font-black tracking-tight text-[#1e1b4b]">{d.name}</h3>
+                        <p className="mt-1 text-xs font-medium text-slate-600">เฉพาะเมนูที่จำแนกไว้แผนกนี้</p>
+                      </button>
+                    ))}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowQrModal(false);
+                      setShowStaffQrModal(false);
+                      setKitchenLinkDeptId(null);
+                      setStationModal("kitchen");
+                    }}
+                    className={cn(
+                      appTemplateOutlineButtonClass,
+                      "w-full min-h-[44px] rounded-xl text-sm font-black text-[#4d47b6]",
+                    )}
+                  >
+                    ลิงก์ครัวรวม (ทุกเมนู)
+                  </button>
                 </div>
-              </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowQrModal(false);
+                    setShowStaffQrModal(false);
+                    setKitchenLinkDeptId(null);
+                    setStationModal("kitchen");
+                  }}
+                  className={cn(
+                    "group relative w-full overflow-hidden rounded-[2.5rem] border border-white/50 text-left",
+                    "bg-gradient-to-br from-white/50 via-sky-50/50 to-cyan-100/30",
+                    "p-6 shadow-[0_28px_70px_-24px_rgba(14,165,233,0.35),inset_0_1px_0_0_rgba(255,255,255,0.65)] backdrop-blur-2xl",
+                    "ring-1 ring-inset ring-white/60 transition-all duration-300",
+                    "hover:-translate-y-1 hover:border-white/75 hover:shadow-[0_34px_85px_-22px_rgba(14,165,233,0.42)]",
+                    "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600",
+                  )}
+                  aria-label="เปิดลิงก์แผนกครัว"
+                >
+                  <span className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-sky-400/25 blur-3xl" aria-hidden />
+                  <div className="relative flex items-start gap-4 sm:gap-5">
+                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/55 ring-1 ring-white/75 backdrop-blur-md sm:h-16 sm:w-16">
+                      <svg viewBox="0 0 24 24" className="h-7 w-7 text-sky-700 sm:h-8 sm:w-8" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                        <path d="M4 10h16v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-8z" strokeLinejoin="round" />
+                        <path d="M8 10V7a4 4 0 018 0v3M8 14h.01M12 14h.01M16 14h.01" strokeLinecap="round" />
+                      </svg>
+                    </span>
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <h3 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">แผนกครัว</h3>
+                      <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+                        {multiKitchenEnabled
+                          ? "ยังไม่มีแผนก — ไปที่แท็บเมนู → แผนกครัว เพื่อเพิ่ม แล้วจะได้ลิงก์แยกตามแผนก"
+                          : "รับออเดอร์ · กำลังทำ · กด «ทำเสร็จแล้ว» เพื่อส่งต่อแผนกเสิร์ฟ"}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -1281,12 +1466,17 @@ export function BuildingPosDashboardClient({
 
           <FormModal
             open={stationModal !== null}
-            onClose={() => setStationModal(null)}
-            title={stationModal === "serve" ? "ลิงก์แผนกเสิร์ฟ" : "ลิงก์แผนกครัว"}
+            onClose={() => {
+              setStationModal(null);
+              setKitchenLinkDeptId(null);
+            }}
+            title={stationModalTitle}
             description={
               stationModal === "serve"
                 ? "เปิดบนมือถือ/แท็บเล็ตเสิร์ฟ — ทำเสร็จแล้ว · กำลังเสิร์ฟ · เสิร์ฟเรียบร้อย"
-                : "เปิดบนครัว — กด «ทำเสร็จแล้ว · ส่งต่อแผนกเสิร์ฟ» เมื่อทำอาหารเสร็จ"
+                : kitchenLinkDeptId != null
+                  ? "เปิดบนครัวแผนกนี้ — เห็นเฉพาะเมนูที่จำแนกไว้แผนกนี้"
+                  : "เปิดบนครัว — กด «ทำเสร็จแล้ว · ส่งต่อแผนกเสิร์ฟ» เมื่อทำอาหารเสร็จ"
             }
             appearance="glass"
             glassTint="violet"
@@ -1296,7 +1486,10 @@ export function BuildingPosDashboardClient({
               <div className="flex w-full justify-end">
                 <button
                   type="button"
-                  onClick={() => setStationModal(null)}
+                  onClick={() => {
+                    setStationModal(null);
+                    setKitchenLinkDeptId(null);
+                  }}
                   className="inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-white/55 bg-white/70 px-4 text-sm font-black text-[#5b61ff] shadow-sm backdrop-blur-sm"
                 >
                   ปิด
@@ -1307,19 +1500,13 @@ export function BuildingPosDashboardClient({
             {stationModal ? (
               <div className="space-y-3">
                 <p className="break-all rounded-[1.25rem] border border-[#e1e3ff] bg-[#faf9ff] px-3 py-2.5 text-xs font-semibold text-[#2e2a58]">
-                  {stationModal === "serve" ? serveUrl : kitchenUrl}
+                  {stationModalUrl}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     className="app-btn-primary min-h-[44px] flex-1 rounded-xl px-4 text-sm font-black"
-                    onClick={() =>
-                      window.open(
-                        stationModal === "serve" ? serveUrl : kitchenUrl,
-                        "_blank",
-                        "noopener,noreferrer",
-                      )
-                    }
+                    onClick={() => window.open(stationModalUrl, "_blank", "noopener,noreferrer")}
                   >
                     เปิดลิงก์
                   </button>
@@ -1331,12 +1518,17 @@ export function BuildingPosDashboardClient({
                     )}
                     onClick={() =>
                       void copyStationLink(
-                        stationModal,
-                        stationModal === "serve" ? serveUrl : kitchenUrl,
+                        kitchenLinkDeptId != null
+                          ? `kitchen-${kitchenLinkDeptId}`
+                          : stationModal,
+                        stationModalUrl,
                       )
                     }
                   >
-                    {stationCopied === stationModal ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
+                    {stationCopied ===
+                    (kitchenLinkDeptId != null ? `kitchen-${kitchenLinkDeptId}` : stationModal)
+                      ? "คัดลอกแล้ว"
+                      : "คัดลอกลิงก์"}
                   </button>
                 </div>
               </div>
@@ -1556,6 +1748,132 @@ export function BuildingPosDashboardClient({
       </FormModal>
 
       <FormModal
+        open={kitchenManageOpen}
+        onClose={() => {
+          if (kitchenSaving) return;
+          setKitchenManageOpen(false);
+          setKitchenFormOpen(false);
+          setKitchenEditing(null);
+        }}
+        title={kitchenFormOpen ? (kitchenEditing ? "แก้ไขแผนกครัว" : "เพิ่มแผนกครัว") : "แผนกครัว"}
+        description={
+          kitchenFormOpen
+            ? "ตั้งชื่อแผนก เช่น ครัวร้อน · ครัวเย็น · บาร์ — เมนูจะส่งไปลิงก์ครัวของแผนกนั้น"
+            : "เพิ่ม แก้ไข หรือลบแผนกครัว (แพ็ก 299+)"
+        }
+        size="lg"
+        mobileCentered
+        footer={
+          kitchenFormOpen ? (
+            <FormModalFooterActions
+              onCancel={() => {
+                if (kitchenSaving) return;
+                setKitchenFormOpen(false);
+                setKitchenEditing(null);
+              }}
+              onSubmit={() => void submitKitchenModal()}
+              submitLabel={kitchenEditing ? "บันทึกการแก้ไข" : "เพิ่มแผนกครัว"}
+              loading={kitchenSaving}
+              submitDisabled={!kitchenForm.name.trim() || !Number.isFinite(Number(kitchenForm.sort_order))}
+            />
+          ) : (
+            <div className="flex w-full flex-wrap justify-between gap-2">
+              <button
+                type="button"
+                className="app-btn-primary min-h-[44px] rounded-xl px-4 text-sm font-black"
+                onClick={() => openKitchenCreate()}
+              >
+                เพิ่มแผนกครัว
+              </button>
+              <button
+                type="button"
+                className={cn(appTemplateOutlineButtonClass, "min-h-[44px] rounded-xl px-4 text-sm font-black")}
+                onClick={() => {
+                  setKitchenManageOpen(false);
+                  setKitchenFormOpen(false);
+                  setKitchenEditing(null);
+                }}
+              >
+                ปิด
+              </button>
+            </div>
+          )
+        }
+      >
+        {kitchenFormOpen ? (
+          <div className="space-y-3">
+            <label className="block text-xs font-medium text-[#4d47b6]">
+              ชื่อแผนกครัว
+              <input
+                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                placeholder="เช่น ครัวร้อน"
+                value={kitchenForm.name}
+                onChange={(e) => setKitchenForm((s) => ({ ...s, name: e.target.value }))}
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-xs font-medium text-[#4d47b6]">
+              ลำดับแสดง
+              <input
+                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                type="number"
+                value={kitchenForm.sort_order}
+                onChange={(e) => setKitchenForm((s) => ({ ...s, sort_order: e.target.value }))}
+              />
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#4d47b6]">
+              <input
+                type="checkbox"
+                checked={kitchenForm.is_active}
+                onChange={(e) => setKitchenForm((s) => ({ ...s, is_active: e.target.checked }))}
+              />
+              เปิดใช้งานแผนกนี้
+            </label>
+          </div>
+        ) : kitchenDepartments.length === 0 ? (
+          <p className="rounded-[1.25rem] border border-dashed border-[#d8d6ec] bg-[#faf9ff]/70 px-3 py-8 text-center text-sm font-semibold text-[#66638c]">
+            ยังไม่มีแผนกครัว — กด «เพิ่มแผนกครัว»
+          </p>
+        ) : (
+          <ul className="max-h-[min(60vh,28rem)] space-y-2 overflow-y-auto overscroll-contain pr-0.5">
+            {kitchenDepartments.map((d) => (
+              <li
+                key={d.id}
+                className="flex min-h-[56px] items-center gap-3 rounded-[1.25rem] border border-[#e8e6f4]/90 bg-white/80 px-3 py-2.5"
+              >
+                <span className="min-w-0 flex-1 text-sm font-semibold text-[#1e1b4b]">
+                  <span className="text-[#66638c]">{d.sort_order}.</span> {d.name}
+                  {d.is_active ? null : (
+                    <span className="mt-0.5 block text-xs font-normal text-amber-700">ปิดใช้งาน</span>
+                  )}
+                </span>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => openKitchenEdit(d)}
+                    className={assetRowEditIconButtonClass}
+                    aria-label={`แก้ไขแผนก ${d.name}`}
+                    title="แก้ไข"
+                  >
+                    <IconRowEdit className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void deleteKitchenRow(d)}
+                    className={assetRowRemoveIconButtonClass}
+                    aria-label={`ลบแผนก ${d.name}`}
+                    title="ลบ"
+                  >
+                    <IconRowRemove className="h-4 w-4" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </FormModal>
+
+      <FormModal
         open={menuModalOpen}
         onClose={() => {
           if (menuSaving) return;
@@ -1607,6 +1925,24 @@ export function BuildingPosDashboardClient({
                 ))}
               </select>
             </label>
+            {multiKitchenEnabled ? (
+              <label className="block text-xs font-medium text-[#4d47b6]">
+                แผนกครัว
+                <select
+                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                  value={menuForm.kitchen_department_id}
+                  onChange={(e) => setMenuForm((s) => ({ ...s, kitchen_department_id: e.target.value }))}
+                >
+                  <option value="">ไม่ระบุ (แสดงทุกครัว)</option>
+                  {(menuEditing ? kitchenDepartments : activeKitchenDepartments).map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                      {!d.is_active ? " (ปิดใช้งาน)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <label className="block text-xs font-medium text-[#4d47b6]">
               ชื่อเมนู
               <input

@@ -802,7 +802,7 @@ async function main() {
     }
   }
 
-  /** POS ร้านเครื่องดื่ม — หมวด สินค้า สมาชิกสะสมแต้ม บิล+ต้นทุนตัวอย่าง */
+  /** POS ร้านเครื่องดื่ม — หมวด สินค้า สมาชิกสะสมคะแนน บิล+ต้นทุนตัวอย่าง */
   for (const email of demoSeedDataOwnerEmails) {
     const row = await prisma.user.findUnique({
       where: { email },
@@ -810,6 +810,22 @@ async function main() {
     });
     if (row) {
       await tryDemoSeed(`drink-pos (${email})`, () => seedDrinkPosProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /**
+   * POS เครื่องดื่ม — ตัวอย่างให้แอดมินดูภาพรวมโมดูล (ยกเว้นกฎ skip-admin ตามคำขอ)
+   * แอดมิน BUFFET เข้าโมดูลได้โดยไม่ต้อง subscribe
+   */
+  {
+    const adminRow = await prisma.user.findUnique({
+      where: { email: "admin@mawell.local" },
+      select: { id: true },
+    });
+    if (adminRow) {
+      await tryDemoSeed(`drink-pos (admin@mawell.local)`, () =>
+        seedDrinkPosProdDemoForOwner(prisma, adminRow.id),
+      );
     }
   }
 

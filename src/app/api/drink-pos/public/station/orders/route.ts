@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { isDrinkPosPortalOpenForOwner } from "@/lib/drink-pos/portal-access";
+import { planFeaturesApiPayload } from "@/lib/modules/plan-entitlements";
+import { getPlanFeaturePolicy } from "@/lib/modules/plan-feature-policy";
 import { ensureDrinkPosShopProfile } from "@/systems/drink-pos/lib/member-service";
 import {
-  fetchDrinkPosOrderBoardRows,
+  fetchDrinkPosOrderBoardPayload,
   mapDrinkPosOrderBoardRow,
 } from "@/systems/drink-pos/lib/order-board";
 import { DRINK_POS_FULFILLMENT_STATUSES } from "@/systems/drink-pos/lib/fulfillment-status";
@@ -38,12 +40,26 @@ export async function GET(req: Request) {
   const trialSessionId = trialParam && trialParam.length > 0 ? trialParam : scope.trialSessionId;
   const profile = await ensureDrinkPosShopProfile(prisma, ownerId, trialSessionId);
 
-  const orders = await fetchDrinkPosOrderBoardRows(ownerId);
+  const board = await fetchDrinkPosOrderBoardPayload(ownerId);
+  const [owner, policy] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { role: true, subscriptionType: true, subscriptionTier: true },
+    }),
+    getPlanFeaturePolicy(),
+  ]);
 
   return NextResponse.json({
     serverTime: new Date().toISOString(),
     shopName: profile.displayName?.trim() || "ร้านเครื่องดื่ม",
-    orders,
+    orders: board.orders,
+    staleUnclearedCount: board.staleUnclearedCount,
+    features: owner
+      ? planFeaturesApiPayload(owner, policy)
+      : planFeaturesApiPayload(
+          { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE" },
+          policy,
+        ),
   });
 }
 

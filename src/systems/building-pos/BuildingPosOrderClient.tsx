@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   AppEmptyState,
+  alertSlipPrintRequiresMonthlyPlan,
   appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
@@ -19,6 +20,7 @@ import {
   type PosMenuItem,
   type PosOrderItem,
 } from "@/systems/building-pos/building-pos-service";
+import { printBuildingPosOrderTicket } from "@/systems/building-pos/building-pos-order-ticket-print";
 import { useBuildingPosMobileDraftSlot } from "@/systems/building-pos/components/BuildingPosMobileBottomChrome";
 import { BuildingPosRemoteImg } from "@/systems/building-pos/components/building-pos-remote-image";
 import {
@@ -31,6 +33,8 @@ import {
   buildingPosProductGridClass,
   buildingPosPulseWashClass,
 } from "@/systems/building-pos/components/building-pos-ui-tokens";
+import { BuildingPosOrderLoyaltyStrip } from "@/systems/building-pos/components/BuildingPosOrderLoyaltyStrip";
+import { normalizeBuildingPosMemberPhone } from "@/systems/building-pos/lib/loyalty-rule";
 
 const qtyBtnClass =
   "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#5b61ff]/25 bg-white text-[#4d47b6] shadow-sm transition hover:bg-violet-50 active:scale-95 disabled:opacity-35";
@@ -58,13 +62,19 @@ export function BuildingPosOrderClient({
   ownerId,
   trialSessionId,
   portalMode = false,
+  staffAuth,
   onOrderSuccess,
+  slipPrintEnabled: slipPrintEnabledProp,
 }: {
   ownerId: string;
   trialSessionId?: string;
   /** ลิงก์พนักงาน — ซ้าย/ขวาเหมือนแดชบอร์ด */
   portalMode?: boolean;
+  /** คีย์ลิงก์พนักงาน — ใช้ API staff สำหรับแลกคะแนน */
+  staffAuth?: { ownerId: string; trialSessionId: string; k: string };
   onOrderSuccess?: () => void;
+  /** แพ็กเหมารายเดือน 199 — เปิดพิมพ์สลิป (ถ้าไม่ส่ง จะลองโหลดจาก bootstrap พนักงาน) */
+  slipPrintEnabled?: boolean;
 }) {
   const repo = useMemo(
     () => createBuildingPosPublicApiRepository(ownerId, trialSessionId),
@@ -80,11 +90,23 @@ export function BuildingPosOrderClient({
   const [cart, setCart] = useState<Record<number, PosOrderItem>>({});
   const [customerName, setCustomerName] = useState("");
   const [tableNo, setTableNo] = useState("");
+  const [memberPhone, setMemberPhone] = useState("");
+  const [loyaltyEnabled, setLoyaltyEnabled] = useState(false);
   const [staffChannel, setStaffChannel] = useState<BuildingPosStaffOrderChannel>("floor");
   const [submitErr, setSubmitErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  /** พิมพ์สลิปครัวหลังส่งออเดอร์สำเร็จ — ใช้ได้เมื่อแพ็กเหมาเปิดสิทธิ์ */
+  const [slipPrintEnabled, setSlipPrintEnabled] = useState(slipPrintEnabledProp === true);
+  const [printSlipAfterSubmit, setPrintSlipAfterSubmit] = useState(slipPrintEnabledProp === true);
   const menuScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (typeof slipPrintEnabledProp === "boolean") {
+      setSlipPrintEnabled(slipPrintEnabledProp);
+      setPrintSlipAfterSubmit(slipPrintEnabledProp);
+    }
+  }, [slipPrintEnabledProp]);
 
   const onCategoryStripWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
     // overflow-x-auto ดักล้อแนวตั้ง — ส่งไปรายการเมนูถ้าเลื่อนได้ ไม่งั้นเลื่อนหน้า
@@ -101,11 +123,20 @@ export function BuildingPosOrderClient({
     setLoading(true);
     setError(null);
     try {
-      const [cats, items] = await Promise.all([repo.listCategories(), repo.listMenuItems()]);
-      setCategories(cats.filter((c) => c.is_active).sort((a, b) => a.sort_order - b.sort_order || a.id - b.id));
-      setMenuItems(items.filter((m) => m.is_active));
+      const boot = await repo.getPublicMenuBootstrap();
+      setCategories(
+        (boot.categories ?? []).filter((c) => c.is_active).sort((a, b) => a.sort_order - b.sort_order || a.id - b.id),
+      );
+      setMenuItems((boot.menu_items ?? []).filter((m) => m.is_active));
+      setLoyaltyEnabled(Boolean(boot.loyalty?.enabled));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "โหลดเมนูไม่สำเร็จ");
+      try {
+        const [cats, items] = await Promise.all([repo.listCategories(), repo.listMenuItems()]);
+        setCategories(cats.filter((c) => c.is_active).sort((a, b) => a.sort_order - b.sort_order || a.id - b.id));
+        setMenuItems(items.filter((m) => m.is_active));
+      } catch {
+        setError(e instanceof Error ? e.message : "โหลดเมนูไม่สำเร็จ");
+      }
     } finally {
       setLoading(false);
     }
@@ -168,17 +199,30 @@ export function BuildingPosOrderClient({
     setBusy(true);
     setSubmitErr(null);
     try {
-      await repo.createOrder({
+      const phoneDigits = normalizeBuildingPosMemberPhone(memberPhone);
+      const created = await repo.createOrder({
         customer_name: customerName.trim(),
         table_no: tableNo.trim(),
+        member_phone: phoneDigits.length >= 9 ? phoneDigits : "",
         status: "NEW",
         items: cartList,
         note: buildingPosStaffOrderNoteLine(staffChannel),
         total_amount: cartTotal,
       });
+      if (printSlipAfterSubmit) {
+        if (!slipPrintEnabled) {
+          alertSlipPrintRequiresMonthlyPlan();
+        } else {
+          printBuildingPosOrderTicket(created, {
+            variant: "kitchen",
+            subtitle: "สลิปครัว · ส่งโต๊ะ",
+          });
+        }
+      }
       clearCart();
       setCustomerName("");
       setTableNo("");
+      setMemberPhone("");
       setReviewOpen(false);
       onOrderSuccess?.();
     } catch (e) {
@@ -292,6 +336,15 @@ export function BuildingPosOrderClient({
             placeholder="ไม่บังคับ"
           />
         </label>
+        {loyaltyEnabled ?
+          <div className="sm:col-span-2">
+            <BuildingPosOrderLoyaltyStrip
+              staffAuth={staffAuth}
+              phone={memberPhone}
+              onPhoneChange={setMemberPhone}
+            />
+          </div>
+        : null}
       </div>
     </div>
   );
@@ -374,6 +427,22 @@ export function BuildingPosOrderClient({
 
       <div className="shrink-0 space-y-2 border-t border-[#e8e6fc]/80 bg-white/80 p-3">
         {submitErr ? <p className="text-xs font-semibold text-rose-600">{submitErr}</p> : null}
+        <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-[#4d47b6]">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-[#5b61ff]/35 text-[#0000bf] focus:ring-[#5b61ff]/40"
+            checked={printSlipAfterSubmit && slipPrintEnabled}
+            onChange={(e) => {
+              if (!slipPrintEnabled) {
+                alertSlipPrintRequiresMonthlyPlan();
+                return;
+              }
+              setPrintSlipAfterSubmit(e.target.checked);
+            }}
+            disabled={busy}
+          />
+          {slipPrintEnabled ? "พิมพ์สลิปหลังส่งออเดอร์" : "พิมพ์สลิป (ต้องแพ็กเหมา 199)"}
+        </label>
         <div className="flex items-end justify-between gap-2">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">ยอดรวม</p>
@@ -593,6 +662,22 @@ export function BuildingPosOrderClient({
             <span className="text-xs font-black uppercase tracking-widest text-[#66638c]">ยอดรวม</span>
             <span className="text-lg font-black tabular-nums text-[#1e1b4b]">฿{formatDormAmountStable(cartTotal)}</span>
           </div>
+          <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-[#4d47b6]">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-[#5b61ff]/35 text-[#0000bf] focus:ring-[#5b61ff]/40"
+              checked={printSlipAfterSubmit && slipPrintEnabled}
+              onChange={(e) => {
+                if (!slipPrintEnabled) {
+                  alertSlipPrintRequiresMonthlyPlan();
+                  return;
+                }
+                setPrintSlipAfterSubmit(e.target.checked);
+              }}
+              disabled={busy}
+            />
+            {slipPrintEnabled ? "พิมพ์สลิปหลังส่งออเดอร์" : "พิมพ์สลิป (ต้องแพ็กเหมา 199)"}
+          </label>
         </div>
       </FormModal>
     </div>

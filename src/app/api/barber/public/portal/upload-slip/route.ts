@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { barberPortalSlipOwnerTag, barberPortalSlipPathPrefix } from "@/lib/barber/portal-slip-filename";
 import { isBarberCustomerPortalOpenForOwner } from "@/lib/barber/portal-access";
+import { assertOwnerPlanUpload } from "@/lib/modules/plan-entitlements";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 const MAX_BYTES = 3 * 1024 * 1024;
@@ -38,6 +39,11 @@ export async function POST(req: Request) {
   const portalOk = await isBarberCustomerPortalOpenForOwner(ownerId);
   if (!portalOk) {
     return NextResponse.json({ error: "ไม่สามารถใช้งานได้ในขณะนี้" }, { status: 403 });
+  }
+
+  const planGate = await assertOwnerPlanUpload(ownerId, "slip");
+  if (!planGate.ok) {
+    return NextResponse.json({ error: planGate.error, code: planGate.code }, { status: 402 });
   }
 
   const file = form.get("file");

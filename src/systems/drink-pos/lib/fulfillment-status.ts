@@ -1,5 +1,8 @@
-export const DRINK_POS_FULFILLMENT_STATUSES = ["RECEIVED", "MAKING", "DONE"] as const;
+export const DRINK_POS_FULFILLMENT_STATUSES = ["RECEIVED", "MAKING", "DONE", "SERVED"] as const;
 export type DrinkPosFulfillmentStatus = (typeof DRINK_POS_FULFILLMENT_STATUSES)[number];
+
+/** สถานะที่ยังแสดงบนกระดานคิว (ยังไม่ส่งมอบ) */
+export const DRINK_POS_BOARD_FULFILLMENT_STATUSES = ["RECEIVED", "MAKING", "DONE"] as const;
 
 export type DrinkPosStationRole = "kitchen" | "serve";
 
@@ -12,7 +15,9 @@ export function drinkPosFulfillmentLabel(status: string | null | undefined): str
     case "MAKING":
       return "กำลังทำ";
     case "DONE":
-      return "เสร็จแล้ว";
+      return "พร้อมรับ";
+    case "SERVED":
+      return "ส่งมอบแล้ว";
     case "RECEIVED":
     default:
       return "รับออเดอร์";
@@ -33,7 +38,7 @@ export function drinkPosFulfillmentTone(status: string | null | undefined): {
         card: "border-amber-300/70 bg-gradient-to-br from-amber-50/95 via-orange-50/70 to-white/80",
         badge: "bg-amber-500 text-white",
         bar: "bg-amber-400",
-        nextLabel: "เสร็จแล้ว",
+        nextLabel: "พร้อมรับ",
         nextStatus: "DONE",
       };
     case "DONE":
@@ -41,6 +46,14 @@ export function drinkPosFulfillmentTone(status: string | null | undefined): {
         card: "border-emerald-300/70 bg-gradient-to-br from-emerald-50/95 via-teal-50/60 to-white/80",
         badge: "bg-emerald-600 text-white",
         bar: "bg-emerald-500",
+        nextLabel: "ส่งมอบแล้ว",
+        nextStatus: "SERVED",
+      };
+    case "SERVED":
+      return {
+        card: "border-slate-200/80 bg-gradient-to-br from-slate-50/95 via-white to-white/80",
+        badge: "bg-slate-600 text-white",
+        bar: "bg-slate-400",
         nextLabel: null,
         nextStatus: null,
       };
@@ -60,7 +73,12 @@ export function drinkPosOrderTicketLabel(id: string, createdAt: string | Date): 
   const d = typeof createdAt === "string" ? new Date(createdAt) : createdAt;
   const hh = Number.isNaN(d.getTime())
     ? "--"
-    : d.toLocaleString("th-TH", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit", hour12: false });
+    : d.toLocaleString("th-TH", {
+        timeZone: "Asia/Bangkok",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
   const short = id.slice(-4).toUpperCase();
   return `#${short} · ${hh}`;
 }

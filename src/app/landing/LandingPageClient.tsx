@@ -47,7 +47,7 @@ function ModuleShowcaseCard({ item, tier }: { item: LandingModuleShowcaseItem; t
               : "border border-amber-200/60 bg-amber-400/95 text-[#1a0d3a]",
           )}
         >
-          {tier === "free" ? "ฟรี" : "1 บาท/วัน"}
+          {tier === "free" ? "ฟรี" : "199 / เดือน"}
         </span>
         <div className="absolute inset-x-0 bottom-0 z-10 p-2.5 sm:p-5">
           <p className="text-pretty text-xs font-black leading-snug text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.45)] sm:text-lg">
@@ -159,7 +159,7 @@ export function LandingPageClient() {
           <div className="mx-auto max-w-4xl text-center">
             <p className="inline-flex items-center gap-2 rounded-full border border-[#5b61ff]/25 bg-white/70 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-[#4d47b6] shadow-sm backdrop-blur-sm sm:text-sm">
               <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" aria-hidden />
-              โมดูลฟรีหลายระบบ · สายรายวัน 1 บาท/วันต่อระบบ
+              โมดูลฟรีหลายระบบ · แพ็กเหมารายเดือน 199
             </p>
             <h1 className="mt-6 text-2xl font-black leading-[1.12] tracking-tight sm:text-5xl sm:leading-[1.08]">
               <span className="bg-gradient-to-r from-[#312e81] via-[#5b61ff] to-[#a855f7] bg-clip-text text-transparent">
@@ -171,9 +171,9 @@ export function LandingPageClient() {
             <p className="mx-auto mt-5 max-w-3xl text-base font-medium leading-relaxed text-[#5f5a8a] sm:text-lg">
               ทรัพย์สิน การเงิน หอพัก POS คิว พาร์จ คาร์แคร์ สารบรรณ คลัง โรงเรียน และอื่น ๆ — บางโมดูล
               <strong className="font-black text-[#059669]"> ใช้งานฟรี </strong>
-              ไม่หักโทเคนรายวัน ส่วนสายรายวันเริ่ม
-              <strong className="font-black text-[#b45309]"> 1 บาทต่อวัน </strong>
-              ต่อระบบเมื่อเข้าใช้
+              ไม่หักโทเคนรายวัน ส่วนแพ็กเหมา
+              <strong className="font-black text-[#b45309]"> 199 / เดือน </strong>
+              เปิดข้อมูลมากกว่า 10,000 แถว และพิมพ์สลิปทุกโมดูล
             </p>
 
             <div
@@ -225,8 +225,8 @@ export function LandingPageClient() {
                   d: "หลายระบบไม่หักโทเคนรายวัน — เริ่มใช้งานจริงได้ทันทีหลังเปิดสิทธิ์โมดูล",
                 },
                 {
-                  t: "1 บาทต่อวัน",
-                  d: "โมดูลสายรายวัน: เข้าใช้แต่ละระบบวันละ 1 โทเคน (เทียบ 1 บาท) ต่อวัน",
+                  t: "199 / เดือน",
+                  d: "แพ็กเหมา: ข้อมูลได้มากกว่า 10,000 แถว · เปิดพิมพ์สลิปทุกโมดูล · ไม่หักโทเคนรายวันต่อระบบ",
                 },
                 {
                   t: "หนึ่งแพลตฟอร์ม",
@@ -249,8 +249,8 @@ export function LandingPageClient() {
           <div ref={moduleShowcase.ref} className="text-center">
             <h2 className="text-2xl font-black text-[#1e1b4b] sm:text-3xl">โมดูลในแพลตฟอร์ม</h2>
             <p className="mx-auto mt-2 max-w-2xl text-sm font-medium text-[#66638c] sm:text-base">
-              แถวบน: ระบบที่<strong className="text-[#059669]"> ไม่หักโทเคนรายวัน</strong> — แถวล่าง: สายรายวัน{" "}
-              <strong className="text-[#b45309]">1 บาทต่อวัน</strong> ต่อ 1 โมดูล เมื่อเข้าใช้
+              แถวบน: ระบบที่<strong className="text-[#059669]"> ไม่หักโทเคนรายวัน</strong> — แถวล่าง: แพ็กเหมา{" "}
+              <strong className="text-[#b45309]">199 / เดือน</strong> (ข้อมูล &gt; 10,000 แถว · พิมพ์สลิป)
             </p>
           </div>
 
@@ -274,7 +274,7 @@ export function LandingPageClient() {
               moduleShowcase.visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0 motion-reduce:translate-y-0 motion-reduce:opacity-100",
             )}
           >
-            <h3 className="text-sm font-black uppercase tracking-widest text-amber-800">สายรายวัน — 1 บาทต่อวันต่อระบบ</h3>
+            <h3 className="text-sm font-black uppercase tracking-widest text-amber-800">แพ็กเหมา — 199 / เดือน</h3>
             <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
               {LANDING_DAILY_MODULE_SHOWCASE.map((item) => (
                 <ModuleShowcaseCard key={item.slug} item={item} tier="daily" />

@@ -1,4 +1,4 @@
-/** ลิงก์สาธารณะให้ลูกค้าดูแต้มสะสม — POS ร้านเครื่องดื่ม */
+/** ลิงก์สาธารณะให้ลูกค้าสั่งเครื่องดื่ม + สะสม/แลกคะแนน */
 export function drinkPosPublicPortalUrl(
   baseUrl: string,
   ownerId: string,
@@ -11,3 +11,6 @@ export function drinkPosPublicPortalUrl(
   }
   return `${base}${path}`;
 }
+
+/** alias — ลิงก์สั่งออเดอร์ลูกค้า */
+export const drinkPosPublicOrderUrl = drinkPosPublicPortalUrl;

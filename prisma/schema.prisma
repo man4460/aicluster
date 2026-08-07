@@ -178,10 +178,15 @@ model User {
   mqttMessageStatDailies   MqttMessageStatDaily[]
   buildingPosCategories     BuildingPosCategory[]
   buildingPosMenuItems      BuildingPosMenuItem[]
+  buildingPosKitchenDepartments BuildingPosKitchenDepartment[]
   buildingPosOrders         BuildingPosOrder[]
   buildingPosStaffLinks     BuildingPosStaffLink[]
   buildingPosIngredients    BuildingPosIngredient[]
   buildingPosPurchaseOrders BuildingPosPurchaseOrder[]
+  buildingPosLoyaltySettings BuildingPosLoyaltySettings[]
+  buildingPosLoyaltyMembers  BuildingPosLoyaltyMember[]
+  buildingPosLoyaltyRewards  BuildingPosLoyaltyReward[]
+  buildingPosLoyaltyLedgers  BuildingPosLoyaltyLedger[]
   villageProfiles           VillageProfile[]           @relation("VillageProfileToUser")
   villageHouses             VillageHouse[]             @relation("VillageHouseToUser")
   villageCommonFeeRows      VillageCommonFeeRow[]      @relation("VillageFeeRowToUser")
@@ -249,6 +254,9 @@ model User {
   drinkPosSales             DrinkPosSale[]
   drinkPosCostEntries       DrinkPosCostEntry[]
   drinkPosMembers           DrinkPosMember[]
+  drinkPosLoyaltySettings   DrinkPosLoyaltySettings[]
+  drinkPosLoyaltyRewards    DrinkPosLoyaltyReward[]
+  drinkPosLoyaltyLedgers    DrinkPosLoyaltyLedger[]
   hotelResortProfiles       HotelResortProfile[]
   hotelResortRoomTypes      HotelResortRoomType[]
   hotelResortRooms          HotelResortRoom[]
@@ -385,6 +393,29 @@ model AppModule {
   @@index([groupId])
   @@index([isActive, sortOrder])
   @@map("module_list")
+}
+
+/**
+ * นโยบายเงื่อนไขแพ็กเกจ (แอดมินตั้งได้) — แถวเดียว id = default
+ * - dataRowLimitEnabled: เปิดบังคับโควต้าแถว (สายรายวันจำกัด / รายเดือนเกินเกณฑ์)
+ * - slipPrintGateEnabled: เปิดบังคับพิมพ์สลิปเฉพาะแพ็กเหมา
+ * - slipUploadGateEnabled: เปิดบังคับอัปโหลดสลิปชำระเฉพาะแพ็กเหมา
+ * - documentUploadGateEnabled: เปิดบังคับอัปโหลดเอกสารเฉพาะแพ็กเหมา
+ */
+model PlanFeaturePolicy {
+  id                         String   @id @default("default") @db.VarChar(32)
+  dataRowLimitEnabled        Boolean  @default(true) @map("data_row_limit_enabled")
+  dailyMaxDataRows           Int      @default(10000) @map("daily_max_data_rows")
+  monthlyDataRowsThreshold   Int      @default(10000) @map("monthly_data_rows_threshold")
+  slipPrintGateEnabled       Boolean  @default(true) @map("slip_print_gate_enabled")
+  slipUploadGateEnabled      Boolean  @default(true) @map("slip_upload_gate_enabled")
+  documentUploadGateEnabled  Boolean  @default(true) @map("document_upload_gate_enabled")
+  /** เปิด = หลายแผนกครัว (POS ร้านอาหาร) เฉพาะแพ็ก 299+ */
+  multiKitchenGateEnabled    Boolean  @default(true) @map("multi_kitchen_gate_enabled")
+  updatedAt                  DateTime @updatedAt @map("updated_at")
+  updatedByUserId            String?  @map("updated_by_user_id") @db.VarChar(191)
+
+  @@map("plan_feature_policy")
 }
 
 model ChatThread {
@@ -1958,23 +1989,44 @@ model BuildingPosCategory {
   @@map("building_pos_categories")
 }
 
-model BuildingPosMenuItem {
+/** แผนกครัวหลายจุด (ร้านใหญ่) — แพ็ก 299+ ตามเงื่อนไขแอดมิน */
+model BuildingPosKitchenDepartment {
   id             Int      @id @default(autoincrement())
   ownerUserId    String   @map("owner_id") @db.VarChar(191)
   owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
-  categoryId     Int      @map("category_id")
   name           String   @db.VarChar(160)
-  imageUrl       String   @default("") @map("image_url") @db.VarChar(512)
-  price          Int
-  description    String   @default("") @db.VarChar(800)
+  sortOrder      Int      @default(100) @map("sort_order")
   isActive       Boolean  @default(true) @map("is_active")
-  isFeatured     Boolean  @default(false) @map("is_featured")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
-  recipeLines    BuildingPosMenuRecipeLine[]
+  menuItems      BuildingPosMenuItem[]
+
+  @@index([ownerUserId, trialSessionId, sortOrder], map: "bpos_kdept_owner_trial_sort_idx")
+  @@index([ownerUserId], map: "bpos_kdept_owner_idx")
+  @@map("building_pos_kitchen_departments")
+}
+
+model BuildingPosMenuItem {
+  id                   Int      @id @default(autoincrement())
+  ownerUserId          String   @map("owner_id") @db.VarChar(191)
+  owner                User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId       String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  categoryId           Int      @map("category_id")
+  kitchenDepartmentId  Int?     @map("kitchen_department_id")
+  kitchenDepartment    BuildingPosKitchenDepartment? @relation(fields: [kitchenDepartmentId], references: [id], onDelete: SetNull)
+  name                 String   @db.VarChar(160)
+  imageUrl             String   @default("") @map("image_url") @db.VarChar(512)
+  price                Int
+  description          String   @default("") @db.VarChar(800)
+  isActive             Boolean  @default(true) @map("is_active")
+  isFeatured           Boolean  @default(false) @map("is_featured")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  recipeLines          BuildingPosMenuRecipeLine[]
 
   @@index([ownerUserId, trialSessionId, categoryId], map: "bpos_menu_owner_trial_cat_idx")
+  @@index([ownerUserId, trialSessionId, kitchenDepartmentId], map: "bpos_menu_owner_trial_kdept_idx")
   @@index([ownerUserId], map: "bpos_menu_owner_idx")
   @@map("building_pos_menu_items")
 }
@@ -2060,13 +2112,100 @@ model BuildingPosOrder {
   paymentSlipUrl String   @default("") @map("payment_slip_url") @db.VarChar(2048)
   /** ลูกค้า QR — รอบสั่งต่อโต๊ะ (รีเซ็ตหลังออเดอร์ในรอบนี้ชำระครบ) */
   customerSessionId String @default("") @map("customer_session_id") @db.VarChar(40)
+  /** สมาชิกสะสมคะแนน (เบอร์) */
+  memberPhone    String   @default("") @map("member_phone") @db.VarChar(20)
+  pointsEarned   Int      @default(0) @map("points_earned")
+  pointsRedeemed Int      @default(0) @map("points_redeemed")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@index([ownerUserId, trialSessionId, tableNo, customerSessionId], map: "bpos_order_owner_trial_table_custsess_idx")
   @@index([ownerUserId, trialSessionId, createdAt], map: "bpos_order_owner_trial_created_idx")
+  @@index([ownerUserId, trialSessionId, memberPhone], map: "bpos_order_owner_trial_phone_idx")
   @@index([ownerUserId], map: "bpos_order_owner_idx")
   @@map("building_pos_orders")
+}
+
+/** ตั้งค่าสะสมคะแนน POS ร้านอาหาร — เช่น ทุก 100 บาท = 1 คะแนน */
+model BuildingPosLoyaltySettings {
+  id               Int      @id @default(autoincrement())
+  ownerUserId      String   @map("owner_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  enabled          Boolean  @default(false) @map("is_enabled")
+  /** ยอดบาทต่อหน่วยคะแนน เช่น 100 */
+  bahtPerPoint     Int      @default(100) @map("baht_per_point")
+  /** คะแนนที่ได้ต่อหน่วย เช่น 1 */
+  pointsPerUnit    Int      @default(1) @map("points_per_unit")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId], map: "bpos_loyalty_settings_owner_trial_uniq")
+  @@index([ownerUserId], map: "bpos_loyalty_settings_owner_idx")
+  @@map("building_pos_loyalty_settings")
+}
+
+model BuildingPosLoyaltyMember {
+  id               Int      @id @default(autoincrement())
+  ownerUserId      String   @map("owner_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  phone            String   @db.VarChar(20)
+  customerName     String   @default("") @map("customer_name") @db.VarChar(160)
+  pointsBalance    Int      @default(0) @map("points_balance")
+  totalEarned      Int      @default(0) @map("total_earned")
+  totalRedeemed    Int      @default(0) @map("total_redeemed")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  ledger           BuildingPosLoyaltyLedger[]
+
+  @@unique([ownerUserId, trialSessionId, phone], map: "bpos_loyalty_member_owner_trial_phone_uniq")
+  @@index([ownerUserId, trialSessionId], map: "bpos_loyalty_member_owner_trial_idx")
+  @@index([ownerUserId], map: "bpos_loyalty_member_owner_idx")
+  @@map("building_pos_loyalty_members")
+}
+
+/** รายการแลกคะแนน — ผูกเมนูหรือชื่อกำหนดเอง */
+model BuildingPosLoyaltyReward {
+  id               Int      @id @default(autoincrement())
+  ownerUserId      String   @map("owner_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  title            String   @db.VarChar(160)
+  menuItemId       Int?     @map("menu_item_id")
+  pointsCost       Int      @map("points_cost")
+  sortOrder        Int      @default(100) @map("sort_order")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  ledger           BuildingPosLoyaltyLedger[]
+
+  @@index([ownerUserId, trialSessionId, sortOrder], map: "bpos_loyalty_reward_owner_trial_sort_idx")
+  @@index([ownerUserId], map: "bpos_loyalty_reward_owner_idx")
+  @@map("building_pos_loyalty_rewards")
+}
+
+model BuildingPosLoyaltyLedger {
+  id               Int      @id @default(autoincrement())
+  ownerUserId      String   @map("owner_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  memberId         Int      @map("member_id")
+  member           BuildingPosLoyaltyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  /** EARN | REDEEM */
+  kind             String   @db.VarChar(16)
+  pointsDelta      Int      @map("points_delta")
+  balanceAfter     Int      @map("balance_after")
+  orderId          Int?     @map("order_id")
+  rewardId         Int?     @map("reward_id")
+  reward           BuildingPosLoyaltyReward? @relation(fields: [rewardId], references: [id], onDelete: SetNull)
+  note             String   @default("") @db.VarChar(300)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([ownerUserId, trialSessionId, createdAt], map: "bpos_loyalty_ledger_owner_trial_created_idx")
+  @@index([memberId, createdAt], map: "bpos_loyalty_ledger_member_created_idx")
+  @@index([orderId], map: "bpos_loyalty_ledger_order_idx")
+  @@map("building_pos_loyalty_ledgers")
 }
 
 /** ลิงก์/QR พนักงานเสิร์ฟ — ยืนยันด้วยโทเค็น (hash) + cipher สำหรับให้เจ้าของดึงลิงก์แสดง QR ค้าง */
@@ -3601,6 +3740,7 @@ model DrinkPosCategory {
   name        String   @db.VarChar(120)
   imageUrl    String?  @map("image_url") @db.VarChar(500)
   sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -3641,16 +3781,81 @@ model DrinkPosMember {
   trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
   phone            String   @db.VarChar(20)
   customerName     String?  @map("customer_name") @db.VarChar(120)
+  /** แบบเก่า (แสตมป์) — คงไว้เพื่อ migration */
   currentStamps    Int      @default(0) @map("current_stamps")
   totalRedemptions Int      @default(0) @map("total_redemptions")
+  pointsBalance    Int      @default(0) @map("points_balance")
+  totalEarned      Int      @default(0) @map("total_earned")
+  totalRedeemed    Int      @default(0) @map("total_redeemed")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  sales DrinkPosSale[]
+  sales  DrinkPosSale[]
+  ledger DrinkPosLoyaltyLedger[]
 
   @@unique([ownerUserId, trialSessionId, phone], map: "dp_member_owner_trial_phone_uq")
   @@index([ownerUserId, trialSessionId], map: "dp_member_owner_trial_idx")
   @@map("drink_pos_members")
+}
+
+model DrinkPosLoyaltySettings {
+  id             Int      @id @default(autoincrement())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  enabled        Boolean  @default(false) @map("is_enabled")
+  bahtPerPoint   Int      @default(100) @map("baht_per_point")
+  pointsPerUnit  Int      @default(1) @map("points_per_unit")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId], map: "dp_loyalty_settings_owner_trial_uniq")
+  @@index([ownerUserId], map: "dp_loyalty_settings_owner_idx")
+  @@map("drink_pos_loyalty_settings")
+}
+
+model DrinkPosLoyaltyReward {
+  id             Int      @id @default(autoincrement())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  title          String   @db.VarChar(160)
+  productId      String?  @map("product_id") @db.VarChar(191)
+  /** รูปกำหนดเองเมื่อไม่ได้ผูกสินค้า — ถ้ามีสินค้าให้ใช้รูปสินค้าเป็นหลักเมื่อฟิลด์นี้ว่าง */
+  imageUrl       String?  @map("image_url") @db.VarChar(500)
+  pointsCost     Int      @map("points_cost")
+  sortOrder      Int      @default(100) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  ledger         DrinkPosLoyaltyLedger[]
+
+  @@index([ownerUserId, trialSessionId, sortOrder], map: "dp_loyalty_reward_owner_trial_sort_idx")
+  @@index([ownerUserId], map: "dp_loyalty_reward_owner_idx")
+  @@map("drink_pos_loyalty_rewards")
+}
+
+model DrinkPosLoyaltyLedger {
+  id             Int      @id @default(autoincrement())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  memberId       String   @map("member_id") @db.VarChar(191)
+  member         DrinkPosMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  /** EARN | REDEEM */
+  kind           String   @db.VarChar(16)
+  pointsDelta    Int      @map("points_delta")
+  balanceAfter   Int      @map("balance_after")
+  saleId         String?  @map("sale_id") @db.VarChar(191)
+  rewardId       Int?     @map("reward_id")
+  reward         DrinkPosLoyaltyReward? @relation(fields: [rewardId], references: [id], onDelete: SetNull)
+  note           String   @default("") @db.VarChar(300)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([ownerUserId, trialSessionId, createdAt], map: "dp_loyalty_ledger_owner_trial_created_idx")
+  @@index([memberId, createdAt], map: "dp_loyalty_ledger_member_created_idx")
+  @@index([saleId], map: "dp_loyalty_ledger_sale_idx")
+  @@map("drink_pos_loyalty_ledgers")
 }
 
 model DrinkPosSale {
@@ -3660,7 +3865,11 @@ model DrinkPosSale {
   memberId           String?  @map("member_id") @db.VarChar(191)
   member             DrinkPosMember? @relation(fields: [memberId], references: [id], onDelete: SetNull)
   memberPhone        String?  @map("member_phone") @db.VarChar(20)
+  /** เซสชันลูกค้าสั่งผ่าน QR */
+  customerSessionId  String?  @map("customer_session_id") @db.VarChar(40)
   isRewardRedemption Boolean  @default(false) @map("is_reward_redemption")
+  pointsEarned       Int      @default(0) @map("points_earned")
+  pointsRedeemed     Int      @default(0) @map("points_redeemed")
   /** CASH | PROMPTPAY | TRANSFER */
   paymentMethod      String   @default("CASH") @map("payment_method") @db.VarChar(20)
   paymentSlipUrl     String?  @map("payment_slip_url") @db.VarChar(512)
@@ -3675,6 +3884,7 @@ model DrinkPosSale {
 
   @@index([ownerUserId, createdAt], map: "dp_sale_owner_created_idx")
   @@index([ownerUserId, fulfillmentStatus, statusUpdatedAt], map: "dp_sale_owner_fulfill_idx")
+  @@index([ownerUserId, customerSessionId, createdAt], map: "dp_sale_owner_custsess_created_idx")
   @@map("drink_pos_sales")
 }
 

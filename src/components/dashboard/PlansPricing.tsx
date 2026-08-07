@@ -9,6 +9,8 @@ import QRCode from "qrcode";
 import {
   DAILY_LINE_PLAN_SUMMARY,
   MODULE_GROUP_TIER_NAME,
+  MONTHLY_199_PLAN_FEATURE_LINES,
+  MONTHLY_299_PLAN_FEATURE_LINES,
   PLAN_PRICES,
   PRICE_TO_TIER,
   TIER_SUBSCRIPTION_TOKEN_COST,
@@ -44,8 +46,10 @@ function buffetPlanBullets({
   const groupLine = maxG <= 1 ? "กลุ่ม 1 (Basic)" : `กลุ่ม 1–${maxG} (${packTierName || "Buffet"})`;
   return [
     `เหมาจ่ายรายเดือน ${fullCost} โทเคน`,
+    ...MONTHLY_199_PLAN_FEATURE_LINES,
+    ...(maxG >= 2 ? MONTHLY_299_PLAN_FEATURE_LINES : []),
     `สิทธิ์: ${groupLine}`,
-    maxG > 1 ? "หมายเหตุ: กลุ่ม 2+ ยังปิดชั่วคราว" : "ตัวอย่างระบบ: เช็คอิน, คาร์แคร์, สนามฟุตบอล, รายรับ–รายจ่าย, POS",
+    maxG > 1 ? "หมายเหตุ: กลุ่ม 2+ ยังปิดชั่วคราว" : "ใช้ได้ทุกโมดูลกลุ่ม 1 ที่เปิดแล้ว",
     "โทเคนไม่พอ ระบบจะให้เติมก่อนสมัคร",
   ];
 }

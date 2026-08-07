@@ -19,7 +19,7 @@ import {
   lsQrHubToolbarClass,
 } from "@/systems/loyalty-stamp/loyalty-stamp-ui-tokens";
 
-const TAGLINE = "สแกน ตรวจสอบแต้มสะสม";
+const TAGLINE = "สแกนเพื่อสั่งเครื่องดื่ม";
 
 type Props = {
   ownerId: string;
@@ -49,7 +49,7 @@ export function DrinkPosQrPosterClient({
     return drinkPosPublicPortalUrl(baseUrl.replace(/\/$/, ""), ownerId, trialSessionId);
   }, [baseUrl, ownerId, trialSessionId]);
 
-  const headline = shopLabel.trim() || "สะสมแต้มเครื่องดื่ม";
+  const headline = shopLabel.trim() || "สั่งเครื่องดื่ม";
   const resolvedLogoUrl = useMemo(() => resolveAssetUrl(logoUrl, baseUrl), [logoUrl, baseUrl]);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [posterPreviewUrl, setPosterPreviewUrl] = useState<string | null>(null);
@@ -153,9 +153,9 @@ export function DrinkPosQrPosterClient({
     <div className={cn(lsQrHubPanelClass, compactForModal && "border-0 bg-transparent p-0 shadow-none ring-0")}>
       {!compactForModal ? (
         <>
-          <p className="text-left text-sm font-black text-[#1e1b4b]">QR ให้ลูกค้าตรวจสอบแต้ม</p>
+          <p className="text-left text-sm font-black text-[#1e1b4b]">QR ให้ลูกค้าสั่งเครื่องดื่ม</p>
           <p className="mt-1 text-left text-xs text-[#66638c]">
-            ลูกค้าสแกนแล้วกรอกเบอร์ — ดูจำนวนแต้มและของรางวัล (แลกฟรีที่เคาน์เตอร์)
+            สั่งเครื่องดื่ม · สะสมคะแนน · แลกของรางวัล
           </p>
           {portalUrl ? (
             <p className="mt-2 break-all text-left text-[10px] font-semibold text-[#0000BF]">{portalUrl}</p>

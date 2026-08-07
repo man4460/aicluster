@@ -103,13 +103,13 @@ function HeroUsagePill({ badge }: { badge: ModuleUsageBadge }) {
       </span>
     );
   }
-  if (badge.tone === "daily") {
+  if (badge.tone === "monthly") {
     return (
       <span
         className="rounded-full border border-amber-200/60 bg-amber-400/95 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#1a0d3a] shadow-md backdrop-blur-md sm:text-xs"
-        title="สายรายวัน: หัก 1 โทเคน ต่อวันต่อโมดูลเมื่อเข้าใช้ (แสดงเทียบ 1 บาท)"
+        title="แพ็กเหมารายเดือน 199 — ข้อมูลมากกว่า 10,000 แถว · เปิดพิมพ์สลิป"
       >
-        1 บาท/วัน
+        199 / เดือน
       </span>
     );
   }

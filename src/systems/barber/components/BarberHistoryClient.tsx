@@ -22,6 +22,10 @@ import { BarberCostToolbarInline } from "@/systems/barber/components/BarberCosts
 import { BarberDashboardCharts } from "@/systems/barber/components/BarberDashboardCharts";
 import {
   barberCardSurfaceRadiusClass,
+  barberCtaClass,
+  barberFieldClass,
+  barberFilterFieldGridClass,
+  barberHeaderEnLabelClass,
   barberIconToolbarGroupClass,
   barberInlineAlertErrorClass,
   barberModalBackdropClass,
@@ -30,6 +34,8 @@ import {
   barberModalPanelMdClass,
   barberModalSubtitleClass,
   barberModalTitleClass,
+  barberNavActiveClass,
+  barberNavIdleClass,
   barberOffersEmptyStateClass,
   barberOffersFilterBarClass,
   barberOffersListRowCardClass,
@@ -74,21 +80,25 @@ const MONTH_LABELS_TH = [
 
 const MONTH_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 
-const barberFinanceFilterSelectClass =
-  `w-full ${barberCardSurfaceRadiusClass} border border-[#e8e6f4]/90 bg-gradient-to-br from-white/95 to-[#f8f7ff]/60 px-3 py-2 text-sm font-semibold text-[#1e1b4b] shadow-sm outline-none transition focus:ring-2 focus:ring-violet-500/35`;
-const barberFinanceFilterInputClass =
-  `w-full ${barberCardSurfaceRadiusClass} border border-[#e8e6f4]/90 bg-gradient-to-br from-white/95 to-[#f8f7ff]/60 px-3 py-2 text-sm font-semibold text-[#1e1b4b] placeholder:text-slate-400 shadow-sm outline-none focus:ring-2 focus:ring-violet-500/35`;
+const barberFinanceFilterSelectClass = cn(
+  barberFieldClass,
+  barberCardSurfaceRadiusClass,
+  "border-[#e8e6f4]/90 bg-gradient-to-br from-white/95 to-[#f8f7ff]/60 shadow-sm",
+);
+const barberFinanceFilterInputClass = cn(
+  barberFieldClass,
+  barberCardSurfaceRadiusClass,
+  "border-[#e8e6f4]/90 bg-gradient-to-br from-white/95 to-[#f8f7ff]/60 placeholder:text-slate-400 shadow-sm",
+);
 
-function financeListTabBtnClass(active: boolean, variant: "sales" | "costs") {
+/**
+ * finance segment tabs: active state ใช้ brand gradient ตายตัว (MASTER.md §4)
+ * — variant "costs" ไม่ต้องใช้โทนแยก (กฎว่า active = brand gradient text-white เท่านั้น)
+ */
+function financeListTabBtnClass(active: boolean, _variant: "sales" | "costs") {
   return cn(
     `inline-flex items-center justify-center ${barberCardSurfaceRadiusClass} px-3 py-1.5 text-xs font-bold transition-all duration-200`,
-    active &&
-      variant === "sales" &&
-      "bg-gradient-to-br from-white via-indigo-50/95 to-violet-50/55 text-[#4338ca] shadow-sm ring-1 ring-indigo-200/55",
-    active &&
-      variant === "costs" &&
-      "bg-gradient-to-br from-white via-rose-50/90 to-orange-50/45 text-rose-800 shadow-sm ring-1 ring-rose-200/55",
-    !active && "text-slate-600 hover:bg-white/75 hover:text-slate-900",
+    active ? barberNavActiveClass : barberNavIdleClass,
   );
 }
 
@@ -553,7 +563,7 @@ export function BarberHistoryClient({
                 <button
                   type="button"
                   suppressHydrationWarning
-                  className={`inline-flex h-9 w-9 shrink-0 items-center justify-center ${barberCardSurfaceRadiusClass} border border-indigo-100/90 bg-gradient-to-br from-[#eef2ff] to-[#e0e7ff] text-violet-600 shadow-sm ring-1 ring-white/60 backdrop-blur-md transition-all active:scale-95`}
+                  className={`inline-flex h-9 w-9 shrink-0 items-center justify-center ${barberCardSurfaceRadiusClass} border border-indigo-100/90 bg-gradient-to-br from-[#eef2ff] to-[#e0e7ff] text-violet-600 shadow-sm ring-1 ring-white/60 backdrop-blur-md transition-all active:scale-[0.98]`}
                   onClick={() => setMobileFilterOpen(true)}
                   aria-label="เปิดตัวกรองข้อมูลการเงิน"
                 >
@@ -576,7 +586,7 @@ export function BarberHistoryClient({
               <button
                 type="button"
                 suppressHydrationWarning
-                className={`inline-flex h-9 w-9 shrink-0 items-center justify-center ${barberCardSurfaceRadiusClass} border border-indigo-100/90 bg-gradient-to-br from-[#eef2ff] to-[#e0e7ff] text-violet-600 shadow-sm ring-1 ring-white/60 backdrop-blur-md transition-all active:scale-95`}
+                className={`inline-flex h-9 w-9 shrink-0 items-center justify-center ${barberCardSurfaceRadiusClass} border border-indigo-100/90 bg-gradient-to-br from-[#eef2ff] to-[#e0e7ff] text-violet-600 shadow-sm ring-1 ring-white/60 backdrop-blur-md transition-all active:scale-[0.98]`}
                 onClick={() => setMobileFilterOpen(true)}
                 aria-label="เปิดตัวกรองข้อมูลการเงิน"
               >
@@ -596,23 +606,15 @@ export function BarberHistoryClient({
             </div>
         : <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-white/55 bg-gradient-to-br from-white/45 via-[#faf9ff]/40 to-[#ecfdf5]/25 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
             <div className="min-w-0">
-              <h2 className="text-xl font-black tracking-tight">
-                <span className="bg-gradient-to-r from-[#4338ca] via-[#6366f1] to-[#0d9488] bg-clip-text text-transparent">
-                  ภาพรวมการเงิน
-                </span>
-              </h2>
-              <p className="mt-1 text-xs font-medium leading-relaxed text-[#5f5a8a]">
-                <span className="text-[#6366f1]">กราฟรายได้</span>
-                <span className="mx-1.5 text-[#d4d0ec]" aria-hidden>
-                  ·
-                </span>
-                <span className="text-rose-600/85">ต้นทุน / รายจ่าย</span>
+              <p className={cn(barberHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
+                FINANCE OVERVIEW
               </p>
+              <h2 className="text-xl font-black tracking-tight text-[#1e1b4b]">ภาพรวมการเงิน</h2>
             </div>
             <button
               type="button"
               suppressHydrationWarning
-              className={`inline-flex h-9 w-9 shrink-0 items-center justify-center ${barberCardSurfaceRadiusClass} border border-indigo-100/90 bg-gradient-to-br from-[#eef2ff] to-[#e0e7ff] text-violet-600 shadow-sm ring-1 ring-white/60 backdrop-blur-md transition-all active:scale-95 md:hidden`}
+              className={`inline-flex h-9 w-9 shrink-0 items-center justify-center ${barberCardSurfaceRadiusClass} border border-indigo-100/90 bg-gradient-to-br from-[#eef2ff] to-[#e0e7ff] text-violet-600 shadow-sm ring-1 ring-white/60 backdrop-blur-md transition-all active:scale-[0.98] md:hidden`}
               onClick={() => setMobileFilterOpen(true)}
               aria-label="เปิดตัวกรองข้อมูลการเงิน"
             >

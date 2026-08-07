@@ -6,6 +6,7 @@ import { MODULE_SHOP_PAYMENT_SELECT, paymentRowToDto } from "@/lib/module-shop/p
 import { getDrinkPosDataScope } from "@/lib/trial/module-scopes";
 import { ensureDrinkPosShopProfile } from "@/systems/drink-pos/lib/member-service";
 import { DrinkPosShopSettingsClient } from "@/systems/drink-pos/components/DrinkPosShopSettingsClient";
+import { DrinkPosLoyaltySettingsClient } from "@/systems/drink-pos/components/DrinkPosLoyaltySettingsClient";
 
 export default async function DrinkPosSettingsPage() {
   const session = await getSession();
@@ -22,8 +23,6 @@ export default async function DrinkPosSettingsPage() {
       logoUrl: true,
       tagline: true,
       contactPhone: true,
-      stampsPerReward: true,
-      rewardTitle: true,
       ...MODULE_SHOP_PAYMENT_SELECT,
     },
   });
@@ -37,11 +36,10 @@ export default async function DrinkPosSettingsPage() {
           logoUrl: p.logoUrl,
           tagline: p.tagline,
           contactPhone: p.contactPhone,
-          stampsPerReward: p.stampsPerReward,
-          rewardTitle: p.rewardTitle,
           ...paymentRowToDto(p),
         }}
       />
+      <DrinkPosLoyaltySettingsClient />
     </div>
   );
 }

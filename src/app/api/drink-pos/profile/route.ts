@@ -17,8 +17,6 @@ const patchSchema = z
     logoUrl: z.string().max(512).optional().nullable(),
     tagline: z.string().max(300).optional().nullable(),
     contactPhone: z.string().max(32).optional().nullable(),
-    stampsPerReward: z.number().int().min(1).max(30).optional(),
-    rewardTitle: z.string().max(160).optional(),
   })
   .merge(moduleShopPaymentPatchSchema);
 
@@ -27,8 +25,6 @@ function profileFromRow(row: {
   logoUrl: string | null;
   tagline: string | null;
   contactPhone: string | null;
-  stampsPerReward: number;
-  rewardTitle: string;
   promptPayPhone?: string | null;
   bankName?: string | null;
   bankAccountNumber?: string | null;
@@ -40,8 +36,6 @@ function profileFromRow(row: {
     logoUrl: row.logoUrl,
     tagline: row.tagline,
     contactPhone: row.contactPhone,
-    stampsPerReward: row.stampsPerReward,
-    rewardTitle: row.rewardTitle,
     ...paymentRowToDto(row),
   };
 }
@@ -51,8 +45,6 @@ const select = {
   logoUrl: true,
   tagline: true,
   contactPhone: true,
-  stampsPerReward: true,
-  rewardTitle: true,
   ...MODULE_SHOP_PAYMENT_SELECT,
 } as const;
 
@@ -91,8 +83,6 @@ export async function PATCH(req: Request) {
       ...(d.logoUrl !== undefined ? { logoUrl: d.logoUrl } : {}),
       ...(d.tagline !== undefined ? { tagline: d.tagline } : {}),
       ...(d.contactPhone !== undefined ? { contactPhone: d.contactPhone } : {}),
-      ...(d.stampsPerReward !== undefined ? { stampsPerReward: d.stampsPerReward } : {}),
-      ...(d.rewardTitle !== undefined ? { rewardTitle: d.rewardTitle } : {}),
       ...moduleShopPaymentPatchData(d),
     },
     select,

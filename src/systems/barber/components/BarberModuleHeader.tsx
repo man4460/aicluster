@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppMobileDockShell, appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { barberNavActiveClass, barberNavIdleClass } from "@/systems/barber/components/barber-ui-tokens";
 
 const links = [
   { href: "/dashboard/barber", label: "แดชบอร์ด" },
@@ -61,11 +62,9 @@ function barberNavIcon(href: string) {
 
 function barberNavLinkClass(active: boolean) {
   return cn(
-    /* เทียบแท็บคาร์แคร์ — rounded-xl */
+    /* เทียบแท็บ drink-pos/football-turf — rounded-xl + brand gradient เมื่อ active (MASTER.md §4) */
     "flex min-h-[44px] w-full touch-manipulation items-center justify-center rounded-xl px-3 py-2.5 text-center text-xs font-black transition-all sm:min-h-0 sm:text-sm",
-    active
-      ? "bg-white/75 text-[#5b61ff] shadow-md ring-1 ring-white/80 backdrop-blur-sm"
-      : "text-slate-600 hover:bg-white/45 hover:text-slate-800",
+    active ? barberNavActiveClass : barberNavIdleClass,
   );
 }
 
@@ -91,7 +90,7 @@ export function BarberModuleDesktopNav({ pathname }: { pathname: string }) {
                   fill="none"
                   stroke="currentColor"
                   strokeWidth={2.5}
-                  className={cn("h-4 w-4 shrink-0", active ? "text-[#5b61ff]" : "text-slate-400")}
+                  className={cn("h-4 w-4 shrink-0", active ? "text-white/95" : "text-slate-400")}
                   aria-hidden
                 >
                   {barberNavIcon(l.href)}
@@ -108,6 +107,7 @@ export function BarberModuleDesktopNav({ pathname }: { pathname: string }) {
 
 /**
  * แถบนำทางมือถือ — ลอย inset-x / bottom โค้ง 2.5rem เหมือนเมนูล่างคาร์แคร์
+ * Active state ใช้ brand gradient + ข้อความขาว (MASTER.md §4 — ห้ามโทนดำ/ hardcode สีม่วง)
  */
 export function BarberModuleMobileDock({ pathname }: { pathname: string }) {
   return (
@@ -122,9 +122,7 @@ export function BarberModuleMobileDock({ pathname }: { pathname: string }) {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl transition-all active:scale-90",
-                  active
-                    ? "bg-white/80 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/20 backdrop-blur-sm"
-                    : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
+                  active ? barberNavActiveClass : barberNavIdleClass,
                 )}
               >
                 <svg
@@ -132,12 +130,12 @@ export function BarberModuleMobileDock({ pathname }: { pathname: string }) {
                   fill="none"
                   stroke="currentColor"
                   strokeWidth={2.5}
-                  className="h-5 w-5 shrink-0"
+                  className={cn("h-5 w-5 shrink-0", active ? "text-white/95" : "text-slate-400")}
                   aria-hidden
                 >
                   {barberNavIcon(l.href)}
                 </svg>
-                <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">
+                <span className={cn("max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none", active ? "text-white" : "")}>
                   {l.label}
                 </span>
               </Link>

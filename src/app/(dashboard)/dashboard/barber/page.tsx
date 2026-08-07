@@ -5,15 +5,18 @@ import { bangkokDayStartEnd } from "@/lib/barber/bangkok-day";
 import { getBarberRevenueBahtInRange } from "@/lib/barber/period-revenue";
 import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import { bangkokDateKey } from "@/lib/time/bangkok";
+import { cn } from "@/lib/cn";
 import {
   BarberDashboardHubClient,
   BarberDashboardTabToolbar,
 } from "@/systems/barber/components/BarberDashboardHubClient";
 import { BarberTodayBookings } from "@/systems/barber/components/BarberTodayBookings";
 import {
+  barberHeaderEnLabelClass,
   barberPageStackClass,
   barberSectionNextClass,
   barberStatCardClass,
+  barberStatGridClass,
 } from "@/systems/barber/components/barber-ui-tokens";
 
 function formatBaht(n: number) {
@@ -61,10 +64,10 @@ export default async function BarberDashboardPage() {
       <section className={barberSectionNextClass} aria-label="สถิติวันนี้">
         <div className="flex min-w-0 flex-row items-center justify-between gap-2 sm:items-start sm:gap-4">
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-bold text-[#2e2a58]">สถิติวันนี้</h2>
-            <p className="mt-1 hidden text-xs text-[#66638c] sm:block">
-              เวลาไทย · รายรับ + ครั้งใช้บริการ
+            <p className={cn(barberHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
+              TODAY&apos;S STATS
             </p>
+            <h2 className="text-lg font-bold text-[#2e2a58]">สถิติวันนี้</h2>
           </div>
           <Suspense
             fallback={
@@ -101,7 +104,7 @@ export default async function BarberDashboardPage() {
             <p className="mt-2 text-xs text-amber-800">รวมเงินสดไม่ได้ — ตรวจคอลัมน์ amount_baht</p>
           ) : null}
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className={cn("mt-4 grid grid-cols-2", barberStatGridClass)}>
           <div className={barberStatCardClass}>
             <p className="text-xs font-medium text-[#8b87ad]">ลูกค้า (ไม่ซ้ำ)</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-[#2e2a58]">{uniqueCustomers}</p>
@@ -120,7 +123,7 @@ export default async function BarberDashboardPage() {
             <p className="text-xs font-medium text-[#8b87ad]">เข้าใช้รวม</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-[#4d47b6]">{logs.length}</p>
           </div>
-          <div className={`${barberStatCardClass} col-span-2 sm:col-span-1`}>
+          <div className={barberStatCardClass}>
             <p className="text-xs font-medium text-[#8b87ad]">แพ็กคงเหลือ</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-violet-800">{subActive}</p>
             <p className="text-[10px] text-[#8b87ad]">มียอดคงเหลือ</p>

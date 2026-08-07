@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppEmptyState } from "@/components/app-templates";
+import { AppEmptyState, AppSlipPrintIconButton, alertSlipPrintRequiresMonthlyPlan } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import type { PosOrder } from "@/systems/building-pos/building-pos-service";
+import { printBuildingPosOrderTicket } from "@/systems/building-pos/building-pos-order-ticket-print";
 import {
   buildingPosColumnStatusesForRole,
   buildingPosDashboardQueueColumnTone,
@@ -26,6 +27,9 @@ type Props = {
   role?: BuildingPosStationRole;
   ownerId?: string;
   trialParam?: string | null;
+  /** แผนกครัวย่อย — กรองรายการอาหารของแผนกนั้น */
+  departmentId?: number | null;
+  departmentName?: string | null;
   className?: string;
 };
 
@@ -48,12 +52,22 @@ function sameBoard(a: PosOrder[], b: PosOrder[]): boolean {
   for (let i = 0; i < a.length; i++) {
     if (
       a[i].id !== b[i].id ||
+      a[i].board_key !== b[i].board_key ||
       a[i].status !== b[i].status ||
       a[i].total_amount !== b[i].total_amount ||
       a[i].note !== b[i].note ||
       a[i].items.length !== b[i].items.length
     ) {
       return false;
+    }
+    for (let j = 0; j < a[i].items.length; j++) {
+      if (
+        a[i].items[j].kitchen_status !== b[i].items[j].kitchen_status ||
+        a[i].items[j].serve_status !== b[i].items[j].serve_status ||
+        a[i].items[j].qty !== b[i].items[j].qty
+      ) {
+        return false;
+      }
     }
   }
   return true;
@@ -68,11 +82,14 @@ export function BuildingPosStationBoardClient({
   role = "kitchen",
   ownerId,
   trialParam,
+  departmentId = null,
+  departmentName = null,
   className,
 }: Props) {
   const [orders, setOrders] = useState<PosOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [slipPrintEnabled, setSlipPrintEnabled] = useState(false);
   const mounted = useRef(true);
   const liveModeRef = useRef<"sse" | "poll">("poll");
 
@@ -84,6 +101,10 @@ export function BuildingPosStationBoardClient({
           : (() => {
               const qs = new URLSearchParams({ ownerId: ownerId ?? "" });
               if (trialParam) qs.set("t", trialParam);
+              if (departmentId != null && departmentId > 0) {
+                qs.set("departmentId", String(departmentId));
+              }
+              if (role === "serve") qs.set("stationRole", "serve");
               return `/api/building-pos/public/station/orders?${qs}`;
             })();
       const res = await fetch(url, {
@@ -93,6 +114,7 @@ export function BuildingPosStationBoardClient({
       const j = (await res.json().catch(() => ({}))) as {
         orders?: PosOrder[];
         serverTime?: string;
+        features?: { slipPrint?: boolean };
         error?: string;
       };
       if (!res.ok) throw new Error(typeof j.error === "string" ? j.error : "โหลดคิวไม่สำเร็จ");
@@ -104,12 +126,13 @@ export function BuildingPosStationBoardClient({
           ? list.filter((o) => columnSet.has(o.status))
           : list.filter((o) => columnSet.has(o.status));
       setOrders((prev) => (sameBoard(prev, next) ? prev : next));
+      setSlipPrintEnabled(j.features?.slipPrint === true);
       setError(null);
     } catch (e) {
       if (!mounted.current) return;
       setError(e instanceof Error ? e.message : "โหลดคิวไม่สำเร็จ");
     }
-  }, [mode, ownerId, role, trialParam]);
+  }, [departmentId, mode, ownerId, role, trialParam]);
 
   useEffect(() => {
     mounted.current = true;
@@ -168,7 +191,11 @@ export function BuildingPosStationBoardClient({
     };
   }, [load, mode, ownerId]);
 
-  async function setStatus(orderId: number, status: BuildingPosStationStatus) {
+  async function setStatus(
+    orderId: number,
+    status: BuildingPosStationStatus,
+    fromStatus?: BuildingPosStationStatus,
+  ) {
     setBusyId(orderId);
     setError(null);
     try {
@@ -187,12 +214,20 @@ export function BuildingPosStationBoardClient({
                 ownerId,
                 orderId,
                 status,
+                departmentId: departmentId && departmentId > 0 ? departmentId : undefined,
+                fromServeStatus: role === "serve" ? fromStatus ?? status : undefined,
                 t: trialParam || undefined,
               }),
             });
-      const j = (await res.json().catch(() => ({}))) as { order?: PosOrder; error?: string };
+      const j = (await res.json().catch(() => ({}))) as {
+        order?: PosOrder;
+        reloadBoard?: boolean;
+        error?: string;
+      };
       if (!res.ok) throw new Error(typeof j.error === "string" ? j.error : "อัปเดตไม่สำเร็จ");
-      if (j.order) {
+      if (role === "serve" || j.reloadBoard) {
+        await load();
+      } else if (j.order) {
         const columnSet = new Set<string>(buildingPosColumnStatusesForRole(role));
         setOrders((prev) => {
           let next = prev.map((o) => (o.id === orderId ? j.order! : o));
@@ -247,6 +282,11 @@ export function BuildingPosStationBoardClient({
 
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col gap-2 sm:gap-3", className)}>
+      {departmentName?.trim() ? (
+        <p className="shrink-0 rounded-2xl border border-sky-200/80 bg-sky-50/90 px-3 py-1.5 text-xs font-black text-sky-900 sm:rounded-[1.25rem] sm:text-sm">
+          ครัว · {departmentName.trim()}
+        </p>
+      ) : null}
       {error ? (
         <p className="shrink-0 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-800 sm:rounded-[1.25rem] sm:py-2 sm:text-sm" role="alert">
           {error}
@@ -303,11 +343,34 @@ export function BuildingPosStationBoardClient({
                 <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain sm:space-y-2.5 [-webkit-overflow-scrolling:touch]">
                   {list.map((order) => (
                     <StationOrderCard
-                      key={order.id}
+                      key={order.board_key ?? `${order.id}-${order.status}`}
                       order={order}
                       busy={busyId === order.id}
                       role={role}
-                      onSetStatus={(st) => void setStatus(order.id, st)}
+                      onSetStatus={(st) =>
+                        void setStatus(
+                          order.id,
+                          st,
+                          isStationBoardStatus(order.status) ? order.status : undefined,
+                        )
+                      }
+                      onPrintSlip={() => {
+                        if (!slipPrintEnabled) {
+                          alertSlipPrintRequiresMonthlyPlan();
+                          return;
+                        }
+                        const kitchenLike = role === "kitchen" || role === "serve";
+                        printBuildingPosOrderTicket(order, {
+                          variant: kitchenLike ? "kitchen" : "receipt",
+                          subtitle:
+                            role === "serve"
+                              ? "สลิปเสิร์ฟ · ส่งโต๊ะ"
+                              : role === "kitchen"
+                                ? "สลิปครัว · ส่งโต๊ะ"
+                                : "ใบออเดอร์",
+                        });
+                      }}
+                      slipPrintEnabled={slipPrintEnabled}
                     />
                   ))}
                 </ul>
@@ -325,11 +388,15 @@ function StationOrderCard({
   busy,
   role,
   onSetStatus,
+  onPrintSlip,
+  slipPrintEnabled,
 }: {
   order: PosOrder;
   busy: boolean;
   role: BuildingPosStationRole;
   onSetStatus: (status: BuildingPosStationStatus) => void;
+  onPrintSlip: () => void;
+  slipPrintEnabled: boolean;
 }) {
   const tone = buildingPosStationStatusTone(order.status);
   const roleStatuses =
@@ -381,6 +448,8 @@ function StationOrderCard({
             ? "เริ่มเสิร์ฟ"
             : primary?.label ?? null;
 
+  const table = order.table_no.trim() || "—";
+
   return (
     <li className={cn("rounded-2xl border p-2 shadow-sm sm:rounded-[1.25rem] sm:p-3", tone.card)}>
       <div className="flex items-center justify-between gap-1.5 sm:items-start sm:gap-2">
@@ -397,14 +466,30 @@ function StationOrderCard({
             </p>
           ) : null}
         </div>
-        <span
-          className={cn(
-            "shrink-0 rounded-full px-1.5 py-px text-[9px] font-black sm:px-2 sm:py-0.5 sm:text-[10px]",
-            tone.badge,
-          )}
-        >
-          {buildingPosStationStatusLabel(order.status, role)}
-        </span>
+        <div className="flex shrink-0 items-center gap-1">
+          <AppSlipPrintIconButton
+            aria-label={
+              slipPrintEnabled
+                ? `พิมพ์สลิปโต๊ะ ${table} ออเดอร์ ${order.id}`
+                : `พิมพ์สลิปต้องแพ็กเหมา 199 — โต๊ะ ${table}`
+            }
+            title={slipPrintEnabled ? "พิมพ์สลิป" : "ต้องแพ็กเหมารายเดือน 199"}
+            disabled={busy}
+            className={cn(
+              "min-h-[32px] min-w-[32px] sm:min-h-[36px] sm:min-w-[36px]",
+              !slipPrintEnabled && "opacity-45",
+            )}
+            onClick={onPrintSlip}
+          />
+          <span
+            className={cn(
+              "rounded-full px-1.5 py-px text-[9px] font-black sm:px-2 sm:py-0.5 sm:text-[10px]",
+              tone.badge,
+            )}
+          >
+            {buildingPosStationStatusLabel(order.status, role)}
+          </span>
+        </div>
       </div>
       <ul className="mt-1 space-y-0.5 border-t border-white/50 pt-1 text-[11px] font-semibold leading-snug text-[#2e2a58] sm:mt-2 sm:space-y-1 sm:pt-2 sm:text-xs">
         {order.items.map((it, idx) => (

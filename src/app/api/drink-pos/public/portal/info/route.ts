@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { isDrinkPosPortalOpenForOwner } from "@/lib/drink-pos/portal-access";
 import { ensureDrinkPosShopProfile } from "@/systems/drink-pos/lib/member-service";
 import { getDrinkPosDataScope } from "@/lib/trial/module-scopes";
+import {
+  ensureDrinkPosLoyaltySettings,
+  formatDrinkPosLoyaltyEarnRule,
+} from "@/systems/drink-pos/lib/loyalty";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -16,6 +20,7 @@ export async function GET(req: Request) {
   const scope = await getDrinkPosDataScope(ownerId);
   const trialSessionId = trialParam && trialParam.length > 0 ? trialParam : scope.trialSessionId;
   const profile = await ensureDrinkPosShopProfile(prisma, ownerId, trialSessionId);
+  const loyalty = await ensureDrinkPosLoyaltySettings(ownerId, trialSessionId);
 
   const owner = await prisma.user.findUnique({
     where: { id: ownerId },
@@ -31,9 +36,8 @@ export async function GET(req: Request) {
     shop: {
       displayName,
       logoUrl: profile.logoUrl,
-      stampsPerReward: profile.stampsPerReward,
-      rewardTitle: profile.rewardTitle,
-      stampEmoji: "☕",
+      loyaltyEnabled: loyalty.enabled,
+      rulePreview: formatDrinkPosLoyaltyEarnRule(loyalty.baht_per_point, loyalty.points_per_unit),
     },
   });
 }

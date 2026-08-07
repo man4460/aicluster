@@ -7,6 +7,7 @@ const createSchema = z.object({
   name: z.string().trim().min(1).max(120),
   imageUrl: z.string().trim().max(500).optional().nullable(),
   sortOrder: z.number().int().min(0).max(999999).optional(),
+  isActive: z.boolean().optional(),
 });
 
 export async function GET() {
@@ -22,6 +23,7 @@ export async function GET() {
       name: true,
       imageUrl: true,
       sortOrder: true,
+      isActive: true,
       _count: { select: { products: true } },
     },
   });
@@ -32,6 +34,7 @@ export async function GET() {
       name: r.name,
       imageUrl: r.imageUrl,
       sortOrder: r.sortOrder,
+      isActive: r.isActive,
       productCount: r._count.products,
     })),
   });
@@ -53,14 +56,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง", issues: parsed.error.flatten() }, { status: 400 });
   }
 
+  const maxSort = await prisma.drinkPosCategory.aggregate({
+    where: { ownerUserId },
+    _max: { sortOrder: true },
+  });
+
   const row = await prisma.drinkPosCategory.create({
     data: {
       ownerUserId,
       name: parsed.data.name,
       imageUrl: parsed.data.imageUrl?.trim() || null,
-      sortOrder: parsed.data.sortOrder ?? 0,
+      sortOrder: parsed.data.sortOrder ?? (maxSort._max.sortOrder ?? 0) + 1,
+      isActive: parsed.data.isActive ?? true,
     },
-    select: { id: true, name: true, imageUrl: true, sortOrder: true },
+    select: { id: true, name: true, imageUrl: true, sortOrder: true, isActive: true },
   });
 
   return NextResponse.json({ category: { ...row, productCount: 0 } });

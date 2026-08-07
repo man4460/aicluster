@@ -47,6 +47,14 @@ export function AdminHubMenuIcon({ name, className }: Props) {
           <path d="m15 5 1 2M8 17l1 2" strokeLinecap="round" />
         </svg>
       );
+    case "planFeatures":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} className={common} aria-hidden>
+          <path d="M12 3v3M12 18v3M3 12h3M18 12h3" strokeLinecap="round" />
+          <circle cx="12" cy="12" r="4" />
+          <path d="M5.6 5.6l2 2M16.4 16.4l2 2M16.4 5.6l-2 2M5.6 16.4l2-2" strokeLinecap="round" />
+        </svg>
+      );
     case "cards":
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} className={common} aria-hidden>

@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { resolvePublicBuildingPosTrialSessionId } from "@/lib/building-pos/public-trial-scope";
+import { assertPlanDataRowAllowance } from "@/lib/modules/plan-entitlements";
+import { getPlanFeaturePolicy } from "@/lib/modules/plan-feature-policy";
 import { notifyBuildingPosOrderBoard } from "@/systems/building-pos/lib/order-board-sse";
+import { stampBuildingPosOrderItemsKitchenDept } from "@/lib/building-pos/stamp-order-kitchen";
+import { normalizeMemberPhone } from "@/lib/loyalty-stamp/member-qr";
 
 const uuidSchema = z.string().uuid();
 
@@ -19,6 +23,8 @@ const postSchema = z.object({
   trialSessionId: z.string().max(36).optional().nullable(),
   customer_name: z.string().max(160).optional().nullable(),
   table_no: z.string().max(40).optional().nullable(),
+  /** คีย์สมาชิกสะสมคะแนน — เบอร์โทร */
+  member_phone: z.string().max(20).optional().nullable(),
   items: z.array(orderItemSchema).min(1),
   /** ว่าง = ใช้ข้อความมาตรฐาน “ลูกค้าสั่งผ่าน QR” */
   note: z.string().max(1000).optional().nullable(),
@@ -42,19 +48,40 @@ export async function POST(req: Request) {
     const parsed = postSchema.safeParse(json);
     if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
     const { trialSessionId } = await resolvePublicBuildingPosTrialSessionId(parsed.data.ownerId, parsed.data.trialSessionId);
+    const memberPhone = normalizeMemberPhone(parsed.data.member_phone ?? "");
+    const owner = await prisma.user.findUnique({
+      where: { id: parsed.data.ownerId },
+      select: { role: true, subscriptionType: true, subscriptionTier: true },
+    });
+    if (owner) {
+      const policy = await getPlanFeaturePolicy();
+      const existingCount = await prisma.buildingPosOrder.count({
+        where: { ownerUserId: parsed.data.ownerId, trialSessionId },
+      });
+      const allowance = assertPlanDataRowAllowance(owner, existingCount, 1, policy);
+      if (!allowance.ok) {
+        return NextResponse.json({ error: allowance.error, code: allowance.code }, { status: 402 });
+      }
+    }
     const total = parsed.data.items.reduce((s, x) => s + x.price * x.qty, 0);
     const noteCustom = parsed.data.note?.trim() ?? "";
     const note = noteCustom.length > 0 ? noteCustom : "ลูกค้าสั่งผ่าน QR";
     const rawSess = parsed.data.customer_session_id?.trim() ?? "";
     const customerSessionId = rawSess && uuidSchema.safeParse(rawSess).success ? rawSess : "";
+    const stampedItems = await stampBuildingPosOrderItemsKitchenDept(
+      parsed.data.ownerId,
+      trialSessionId,
+      parsed.data.items,
+    );
 
     const base = {
       ownerUserId: parsed.data.ownerId,
       trialSessionId,
       customerName: parsed.data.customer_name?.trim() ?? "",
       tableNo: parsed.data.table_no?.trim() ?? "",
+      memberPhone: memberPhone.length >= 9 ? memberPhone : "",
       status: "NEW" as const,
-      itemsJson: parsed.data.items,
+      itemsJson: stampedItems,
       totalAmount: total,
       note,
     };

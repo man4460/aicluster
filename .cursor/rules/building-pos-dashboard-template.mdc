@@ -11,7 +11,7 @@ globs:
 
 **หลักการ UX ระดับโปรเจกต์:** `dashboard-ux-car-wash-baseline.mdc` — เมนูหลักมือถือล่าง · หัว glass · ไอคอน/สี `#5b61ff`
 
-**คู่ขนาน POS:** `drink-pos-module-dashboard-template.mdc` (ยุบหัว · gutter · dock · ออร์เดอร์ · คิว SSE)
+**คู่ขนาน POS:** `drink-pos-module-dashboard-template.mdc` (ยุบหัว · gutter · dock · ออร์เดอร์ · คิว SSE) · **ลิงก์ลูกค้า** `pos-customer-order-link-ux.mdc` · **สะสมคะแนน** `pos-loyalty-points.mdc`
 
 ---
 

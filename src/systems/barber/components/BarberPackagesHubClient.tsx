@@ -12,8 +12,11 @@ import {
   type BarberPurchasesEmbeddedToolbarApi,
 } from "@/systems/barber/components/BarberPurchasesClient";
 import {
-  barberCardSurfaceRadiusClass,
+  barberCtaClass,
+  barberHeaderEnLabelClass,
   barberMutedLoadingNoticeClass,
+  barberNavActiveClass,
+  barberNavIdleClass,
   barberOffersHubHeaderShellClass,
   barberOffersTabSegmentShellClass,
   barberPageStackClass,
@@ -23,16 +26,14 @@ type OffersTab = "packages" | "members";
 
 const tabBtnClass = (active: boolean) =>
   cn(
-    `inline-flex flex-1 items-center justify-center gap-1.5 ${barberCardSurfaceRadiusClass} font-bold transition-all duration-200`,
+    "inline-flex flex-1 items-center justify-center gap-1.5 rounded-[2rem] font-bold transition-all duration-200 sm:rounded-[1.25rem]",
     "min-h-[46px] min-w-0 px-2 text-[11px] leading-tight sm:min-h-0 sm:flex-initial sm:px-4 sm:py-2 sm:text-xs sm:text-sm",
-    active
-      ? "bg-gradient-to-br from-white via-indigo-50/90 to-violet-50/50 text-[#4338ca] shadow-sm ring-1 ring-indigo-200/55"
-      : "text-[#5f5a8a] hover:bg-white/75 hover:text-[#2e2a58]",
+    active ? barberNavActiveClass : barberNavIdleClass,
   );
 
 const hubPrimaryBtnClass = cn(
-  "app-btn-primary min-h-[48px] w-full justify-center whitespace-nowrap shadow-md shadow-indigo-600/15 font-semibold text-white sm:min-h-[44px] sm:w-auto",
-  barberCardSurfaceRadiusClass,
+  barberCtaClass,
+  "min-h-[48px] w-full justify-center whitespace-nowrap sm:min-h-[44px] sm:w-auto",
   "px-4 py-2.5 text-sm sm:px-4 sm:py-2.5 sm:text-sm",
 );
 
@@ -108,18 +109,12 @@ function BarberPackagesHubTabs() {
       <div className={`print:hidden ${barberOffersHubHeaderShellClass}`}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-black leading-snug tracking-tight sm:truncate sm:text-xl">
-              <span className="bg-gradient-to-r from-[#4338ca] via-[#5b61ff] to-[#0d9488] bg-clip-text text-transparent">
-                แพ็กเกจและสมาชิก
-              </span>
-            </h2>
-            <p className="mt-2 text-xs font-medium leading-relaxed text-[#5f5a8a] sm:text-[13px]">
-              <span className="text-[#6366f1]">ราคาแพ็ก</span>
-              <span className="mx-2 text-[#d4d0ec]" aria-hidden>
-                ·
-              </span>
-              <span className="text-[#0d9488]">สมาชิกที่ซื้อแล้ว</span>
+            <p className={cn(barberHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
+              PACKAGES &amp; MEMBERSHIPS
             </p>
+            <h2 className="text-lg font-black leading-snug tracking-tight text-[#1e1b4b] sm:truncate sm:text-xl">
+              แพ็กเกจและสมาชิก
+            </h2>
           </div>
 
           {/*
@@ -142,10 +137,12 @@ function BarberPackagesHubTabs() {
                 <IconPackageTab
                   className={cn(
                     "h-5 w-5 shrink-0 sm:h-5 sm:w-5",
-                    tab === "packages" ? "text-[#5b61ff]" : "text-[#9b97b8]",
+                    tab === "packages" ? "text-white/95" : "text-[#9b97b8]",
                   )}
                 />
-                <span className="max-w-[5.5rem] text-center sm:max-w-none">แพ็กเกจ</span>
+                <span className={cn("max-w-[5.5rem] text-center sm:max-w-none", tab === "packages" ? "text-white" : "")}>
+                  แพ็กเกจ
+                </span>
               </button>
               <button
                 type="button"
@@ -158,10 +155,12 @@ function BarberPackagesHubTabs() {
                 <IconMembersTab
                   className={cn(
                     "h-5 w-5 shrink-0 sm:h-5 sm:w-5",
-                    tab === "members" ? "text-[#6366f1]" : "text-[#9b97b8]",
+                    tab === "members" ? "text-white/95" : "text-[#9b97b8]",
                   )}
                 />
-                <span className="max-w-[5.5rem] text-center sm:max-w-none">สมาชิก</span>
+                <span className={cn("max-w-[5.5rem] text-center sm:max-w-none", tab === "members" ? "text-white" : "")}>
+                  สมาชิก
+                </span>
               </button>
             </nav>
 

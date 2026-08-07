@@ -8,10 +8,11 @@ const CATEGORY_DEFS = [
   { name: "กาแฟ", sortOrder: 0 },
   { name: "ชา & นม", sortOrder: 1 },
   { name: "ท็อปปิ้ง", sortOrder: 2 },
+  { name: "สมูทตี้", sortOrder: 3 },
 ] as const;
 
 const PRODUCT_DEFS: ReadonlyArray<{
-  cat: 0 | 1 | 2;
+  cat: 0 | 1 | 2 | 3;
   name: string;
   priceBaht: number;
   isFeatured: boolean;
@@ -28,6 +29,8 @@ const PRODUCT_DEFS: ReadonlyArray<{
   { cat: 2, name: "ไข่มุก", priceBaht: 15, isFeatured: false, sortOrder: 0 },
   { cat: 2, name: "วิปครีม", priceBaht: 10, isFeatured: false, sortOrder: 1 },
   { cat: 2, name: "ช็อตเอสเปรสโซ่", priceBaht: 15, isFeatured: false, sortOrder: 2 },
+  { cat: 3, name: "สมูทตี้มะม่วง", priceBaht: 65, isFeatured: true, sortOrder: 0 },
+  { cat: 3, name: "สมูทตี้เบอร์รี", priceBaht: 70, isFeatured: false, sortOrder: 1 },
 ];
 
 const SALE_BLUEPRINTS: ReadonlyArray<{
@@ -44,17 +47,20 @@ const SALE_BLUEPRINTS: ReadonlyArray<{
   { daysAgo: 4, note: "สมาชิก", memberPhone: "0898765432", lines: [{ productIndex: 0, qty: 1 }] },
   { daysAgo: 5, note: null, lines: [{ productIndex: 6, qty: 5 }] },
   { daysAgo: 6, note: "เช้า", lines: [{ productIndex: 3, qty: 2 }, { productIndex: 7, qty: 2 }] },
+  { daysAgo: 0, note: "สมูทตี้", lines: [{ productIndex: 11, qty: 2 }] },
 ];
 
 const COST_BLUEPRINTS = [
   { daysAgo: 1, label: "วัตถุดิบกาแฟ", amountBaht: 1200 },
   { daysAgo: 3, label: "นม & ชา", amountBaht: 850 },
   { daysAgo: 5, label: "ค่าเช่าพื้นที่ (รายสัปดาห์)", amountBaht: 3500 },
+  { daysAgo: 2, label: "ผลไม้สมูทตี้", amountBaht: 600 },
 ];
 
-export async function seedDrinkPosProdDemoForOwner(prisma: PrismaClient, ownerUserId: string) {
-  const trialSessionId = "prod";
-
+async function wipeDrinkPosOwnerData(prisma: PrismaClient, ownerUserId: string, trialSessionId: string) {
+  await prisma.drinkPosLoyaltyLedger.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await prisma.drinkPosLoyaltyReward.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await prisma.drinkPosLoyaltySettings.deleteMany({ where: { ownerUserId, trialSessionId } });
   await prisma.drinkPosSaleLine.deleteMany({ where: { sale: { ownerUserId } } });
   await prisma.drinkPosSale.deleteMany({ where: { ownerUserId } });
   await prisma.drinkPosCostEntry.deleteMany({ where: { ownerUserId } });
@@ -62,13 +68,34 @@ export async function seedDrinkPosProdDemoForOwner(prisma: PrismaClient, ownerUs
   await prisma.drinkPosProduct.deleteMany({ where: { ownerUserId } });
   await prisma.drinkPosCategory.deleteMany({ where: { ownerUserId } });
   await prisma.drinkPosShopProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
+}
+
+/** ใส่ข้อมูลตัวอย่าง POS เครื่องดื่ม (ล้างแล้วใส่ใหม่) */
+export async function seedDrinkPosProdDemoForOwner(prisma: PrismaClient, ownerUserId: string) {
+  const trialSessionId = "prod";
+
+  await wipeDrinkPosOwnerData(prisma, ownerUserId, trialSessionId);
 
   await prisma.drinkPosShopProfile.create({
     data: {
       ownerUserId,
       trialSessionId,
+      displayName: "Café MAWELL Demo",
+      tagline: "กาแฟสด · สมูทตี้ · สะสมคะแนน",
+      contactPhone: "021234567",
       stampsPerReward: 10,
       rewardTitle: "เครื่องดื่มฟรี 1 แก้ว",
+      promptPayPhone: "0812345678",
+    },
+  });
+
+  await prisma.drinkPosLoyaltySettings.create({
+    data: {
+      ownerUserId,
+      trialSessionId,
+      enabled: true,
+      bahtPerPoint: 100,
+      pointsPerUnit: 1,
     },
   });
 
@@ -79,12 +106,36 @@ export async function seedDrinkPosProdDemoForOwner(prisma: PrismaClient, ownerUs
           ownerUserId,
           name: c.name,
           sortOrder: c.sortOrder,
+          isActive: true,
           imageUrl: DRINK_POS_CATEGORY_IMAGES[i] ?? DRINK_POS_CATEGORY_IMAGES[0],
         },
       }),
     ),
   );
   const catIds = categories.map((c) => c.id);
+
+  await prisma.drinkPosLoyaltyReward.createMany({
+    data: [
+      {
+        ownerUserId,
+        trialSessionId,
+        title: "เครื่องดื่มฟรี 1 แก้ว",
+        productId: null,
+        pointsCost: 10,
+        sortOrder: 100,
+        isActive: true,
+      },
+      {
+        ownerUserId,
+        trialSessionId,
+        title: "ท็อปปิ้งฟรี",
+        productId: null,
+        pointsCost: 5,
+        sortOrder: 110,
+        isActive: true,
+      },
+    ],
+  });
 
   const productsOrdered: { id: string; name: string; priceBaht: number }[] = [];
   for (let i = 0; i < PRODUCT_DEFS.length; i++) {
@@ -112,6 +163,9 @@ export async function seedDrinkPosProdDemoForOwner(prisma: PrismaClient, ownerUs
       phone: "0812345678",
       customerName: "คุณมิ้น",
       currentStamps: 7,
+      pointsBalance: 12,
+      totalEarned: 12,
+      totalRedeemed: 0,
     },
   });
   const memberB = await prisma.drinkPosMember.create({
@@ -121,6 +175,9 @@ export async function seedDrinkPosProdDemoForOwner(prisma: PrismaClient, ownerUs
       phone: "0898765432",
       customerName: "คุณบี",
       currentStamps: 9,
+      pointsBalance: 5,
+      totalEarned: 15,
+      totalRedeemed: 10,
     },
   });
 
@@ -146,6 +203,8 @@ export async function seedDrinkPosProdDemoForOwner(prisma: PrismaClient, ownerUs
     const createdAt = new Date(now - bill.daysAgo * 86400000);
     createdAt.setHours(11, 0, 0, 0);
     const memberId = bill.memberPhone ? phoneToMember.get(bill.memberPhone) ?? null : null;
+    const pointsEarned =
+      memberId && totalBaht >= 100 ? Math.floor(totalBaht / 100) : 0;
 
     await prisma.drinkPosSale.create({
       data: {
@@ -154,6 +213,7 @@ export async function seedDrinkPosProdDemoForOwner(prisma: PrismaClient, ownerUs
         memberPhone: bill.memberPhone ?? null,
         note: bill.note,
         totalBaht,
+        pointsEarned,
         createdAt,
         lines: { create: lines },
       },
@@ -172,4 +232,19 @@ export async function seedDrinkPosProdDemoForOwner(prisma: PrismaClient, ownerUs
       },
     });
   }
+}
+
+/** ใส่ข้อมูลตัวอย่างถ้ายังไม่มีหมวด (ไม่ล้างของเดิม) */
+export async function ensureDrinkPosDemoDataForOwner(
+  prisma: PrismaClient,
+  ownerUserId: string,
+  opts?: { force?: boolean },
+): Promise<{ seeded: boolean }> {
+  const force = opts?.force === true;
+  if (!force) {
+    const count = await prisma.drinkPosCategory.count({ where: { ownerUserId } });
+    if (count > 0) return { seeded: false };
+  }
+  await seedDrinkPosProdDemoForOwner(prisma, ownerUserId);
+  return { seeded: true };
 }

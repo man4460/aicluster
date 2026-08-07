@@ -16,7 +16,7 @@ alwaysApply: false
 
 **หลักการโปรเจกต์:** `dashboard-ux-car-wash-baseline.mdc` · `app-templates-central.mdc` · `module-chrome-no-branding.mdc` · `dashboard-new-module-sidebar-icon.mdc` · `dashboard-page-width.mdc` · `dashboard-mobile-summary-stat-grid.mdc`
 
-**คู่ขนาน:** `dashboard-module-car-wash-barber-reference.mdc` · สนามฟุตบอล `football-turf-module-dashboard-template.mdc` · QR hub `shop-qr-hub-popup-pattern.mdc`
+**คู่ขนาน:** `dashboard-module-car-wash-barber-reference.mdc` · สนามฟุตบอล `football-turf-module-dashboard-template.mdc` · QR hub `shop-qr-hub-popup-pattern.mdc` · **ลิงก์ลูกค้า** `pos-customer-order-link-ux.mdc` · **สะสมคะแนน** `pos-loyalty-points.mdc`
 
 ---
 
@@ -32,7 +32,7 @@ alwaysApply: false
 | หน้าออเดอร์ | `DrinkPosOrderClient.tsx` · `/order` |
 | คิวออเดอร์ + ลิงก์แผนก | `DrinkPosOrdersClient.tsx` · `/orders` · `DrinkPosOrderBoardClient` |
 | แผนกทำ / เสิร์ฟ (สาธารณะ) | `/drink-pos/kitchen/[ownerId]` · `/drink-pos/serve/[ownerId]` |
-| สถานะออเดอร์ | `lib/fulfillment-status.ts` · `RECEIVED` / `MAKING` / `DONE` |
+| สถานะออเดอร์ | `lib/fulfillment-status.ts` · `RECEIVED` → `MAKING` → `DONE` (พร้อมรับ) → `SERVED` (ส่งมอบแล้ว · ออกจากกระดาน) |
 | หน้าสินค้า / draft | `DrinkPosDashboardClient.tsx` |
 | การเงิน (ช่วงเวลา + กราฟ + บิล) | `DrinkPosSalesClient.tsx` · `GET /api/drink-pos/finance-summary` |
 | สมาชิก / QR hub | `DrinkPosLoyaltyHubClient.tsx` · `DrinkPosLoyaltyBar.tsx` · `DrinkPosQrPosterClient.tsx` · เมนู «ลิงก์» รวม QR ลูกค้า · ค้นหาสมาชิก · แผนกทำ · แผนกเสิร์ฟ |
@@ -128,18 +128,19 @@ alwaysApply: false
 
 ---
 
-## 6) สะสมแต้ม (ตั้งค่าได้)
+## 6) สะสมคะแนน (บาท → คะแนน)
+
+ดูรายละเอียดบังคับที่ **`pos-loyalty-points.mdc`** (กฎแต้ม · รายการแลก · รูปกำหนดเอง · ย่อรูปก่อนอัปโหลด)
 
 | รายการ | ค่า / ที่อยู่ |
 |--------|----------------|
-| Schema | `DrinkPosShopProfile.stampsPerReward` (1–30) · `rewardTitle` |
-| API | `GET/PATCH /api/drink-pos/profile` รับฟิลด์ทั้งสอง |
-| UI ตั้งค่า | `/dashboard/drink-pos/settings` — บล็อก «สะสมแต้ม» + ตัวอย่างกฎสด |
-| ข้อความกฎ | `formatDrinkPosLoyaltyRule(n, title)` → เช่น `ซื้อ 10 ครั้ง แลกเครื่องดื่มฟรี 1 แก้ว` |
-| แสดงผล | `DrinkPosLoyaltyBar` · hub สมาชิก · พอร์ทัลลูกค้า |
-| พฤติกรรมขาย | บิลปกติ +1 แต้ม · ครบแล้วติ๊กแลกฟรี (`isRewardRedemption`) ยอด 0 |
+| Schema | `DrinkPosLoyaltySettings` · `DrinkPosLoyaltyReward` (+ `imageUrl` เมื่อไม่ผูกสินค้า) |
+| API | `GET/PATCH /api/drink-pos/session/loyalty` · `…/loyalty/rewards` |
+| UI ตั้งค่า | `/dashboard/drink-pos/settings` — `DrinkPosLoyaltySettingsClient` |
+| ข้อความกฎ | `formatDrinkPosLoyaltyEarnRule(baht, points)` |
+| แสดงผล | `DrinkPosLoyaltyBar` · hub สมาชิก · ลิงก์ลูกค้า / พอร์ทัล |
 
-**ห้าม** hardcode «ซื้อ 10 ฟรี 1» ใน UI — อ่านจากโปรไฟล์ร้านเสมอ
+**ห้าม** hardcode ข้อความกฎใน UI — อ่านจาก settings เสมอ
 
 สมาชิก / QR: การ์ดคู่ + `FormModal` ตาม `shop-qr-hub-popup-pattern.mdc`
 
@@ -147,7 +148,7 @@ alwaysApply: false
 
 ## 7) การเงิน — ช่วงเวลา (ค่าเริ่มต้นเดือนนี้)
 
-อ้างอิง `DrinkPosSalesClient.tsx` + `GET /api/drink-pos/finance-summary?range=`
+อ้างอิง `DrinkPosSalesClient.tsx` + `GET /api/drink-pos/finance-summary?range=` + **`dashboard-finance-filter-charts-toggle.mdc`**
 
 | ช่วง | `range` | กราฟ |
 |------|---------|------|
@@ -156,12 +157,12 @@ alwaysApply: false
 | ปีนี้ | `YEAR` | **รายเดือน** |
 | กำหนดเอง | `CUSTOM` + `from`/`to` | รายวันในช่วง |
 
-UI:
+UI (2 การ์ด):
 
-- Chip ช่วง: วันนี้ · เดือนนี้ · ปีนี้ · กำหนดเอง (โทนเดียวสนามฟุตบอล / brand gradient เมื่อ active)
-- CUSTOM เท่านั้นที่โชว์ `input type="date"` คู่
-- สรุปการ์ด + หัวกราฟ + รายการบิล **ตามช่วง** (อย่าติดข้อความ «7 วัน» ถาวร)
-- รีเซ็ตตัวกรอง → กลับ **เดือนนี้**
+1. **ช่วงเวลาและกราฟ** — ปุ่ม **แสดง/ซ่อนกรอง** · **แสดง/ซ่อนกราฟ** คนละปุ่ม · รีเฟรช (ค่าเริ่ม: กรองเปิด · กราฟซ่อน)
+   - แผงกรอง: chip วันนี้·เดือนนี้·ปีนี้·กำหนดเอง · ค้นหาโน้ต/สินค้า/เบอร์ · รีเซ็ต → เดือนนี้
+   - แผงกราฟ: สถิติรายได้/ต้นทุน/กำไร · รายได้เทียบต้นทุน · ยอดขาย · บันทึกต้นทุน
+2. **บิลล่าสุด** — รายการตามตัวกรอง · บันทึกขาย
 
 API response: `buckets` · `totalRevenue` · `totalCost` · `rangeLabel` · (คง `totalRevenue7d`/`totalCost7d` alias ได้)
 

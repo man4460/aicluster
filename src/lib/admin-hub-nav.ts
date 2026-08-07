@@ -6,6 +6,7 @@ export type AdminHubIconKey =
   | "tryLinks"
   | "cards"
   | "cooldowns"
+  | "planFeatures"
   | "activity"
   | "mqtt";
 
@@ -85,6 +86,13 @@ export const ADMIN_HUB_NAV_ITEMS: AdminHubNavItem[] = [
     dockLabel: "ปลดล็อค",
     description: "คูลดาวน์การสมัครโมดูลของผู้ใช้",
     icon: "cooldowns",
+  },
+  {
+    href: "/dashboard/admin/plan-features",
+    label: "เงื่อนไขแพ็ก",
+    dockLabel: "เงื่อนไข",
+    description: "เปิด/ปิดโควต้าแถว พิมพ์สลิป อัปโหลดสลิป/เอกสาร",
+    icon: "planFeatures",
   },
   {
     href: "/dashboard/admin/activity-logs",

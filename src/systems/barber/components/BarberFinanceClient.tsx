@@ -37,11 +37,12 @@ export function BarberFinanceClient({ baseUrl }: { baseUrl: string }) {
     <BarberHistoryClient
       embedded
       financeFilterTitle={
-        <h2 className="text-lg font-black leading-tight tracking-tight sm:text-xl">
-          <span className="bg-gradient-to-r from-[#4338ca] via-[#5b61ff] to-[#0d9488] bg-clip-text text-transparent">
-            การเงิน
-          </span>
-        </h2>
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c] hidden sm:block" aria-hidden>
+            FINANCE
+          </p>
+          <h2 className="text-lg font-black leading-tight tracking-tight text-[#1e1b4b] sm:text-xl">การเงิน</h2>
+        </div>
       }
       financeListTab={listTab}
       onFinanceListTabChange={setFinanceListTab}

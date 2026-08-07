@@ -44,6 +44,15 @@ import {
   type WashBundle,
   type WashBundlePatch,
 } from "@/systems/car-wash/car-wash-service";
+import {
+  carWashContentStackClass,
+  carWashCtaClass,
+  carWashFieldClass,
+  carWashHeaderEnLabelClass,
+  carWashNavActiveClass,
+  carWashNavIdleClass,
+  carWashSubTabSegmentShellClass,
+} from "@/systems/car-wash/car-wash-ui-tokens";
 
 const MAX_COMPARE_ROWS = 18;
 
@@ -1099,19 +1108,21 @@ export function CarWashSalesPanel({
   }
 
   return (
-    <div className="space-y-5 sm:space-y-6">
+    <div className={carWashContentStackClass}>
       <AppImageLightbox src={lightbox.src} onClose={lightbox.close} alt="รูปแนบรายการ" />
 
       <AppDashboardSection tone="violet">
         {/* Header & Mobile Filter Toggle */}
         <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-white/55 bg-white/35 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
-          <div>
+          <div className="min-w-0 flex-1">
+            <p className={cn(carWashHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
+              FINANCE OVERVIEW
+            </p>
             <h2 className="text-xl font-black tracking-tight text-[#1e1b4b]">ภาพรวมการเงิน</h2>
-            <p className="text-xs font-medium text-slate-600">วิเคราะห์รายได้และรายจ่ายของระบบคาร์แคร์</p>
           </div>
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/55 text-violet-600 shadow-sm backdrop-blur-md transition-all active:scale-95 md:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/55 text-violet-600 shadow-sm backdrop-blur-md transition-all active:scale-[0.98] md:hidden"
             onClick={() => setMobileFilterOpen(true)}
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -1127,7 +1138,7 @@ export function CarWashSalesPanel({
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-y">ปี</label>
               <select
                 id="cw-f-y"
-                className="w-full rounded-xl border-white/60 bg-white/55 text-sm font-semibold backdrop-blur-sm focus:ring-violet-500"
+                className={cn(carWashFieldClass, "rounded-xl")}
                 value={filterYear}
                 onChange={(e) => { setFilterYear(e.target.value); setFilterMonth(""); setFilterDay(""); }}
               >
@@ -1139,7 +1150,7 @@ export function CarWashSalesPanel({
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-m">เดือน</label>
               <select
                 id="cw-f-m"
-                className="w-full rounded-xl border-white/60 bg-white/55 text-sm font-semibold backdrop-blur-sm focus:ring-violet-500"
+                className={cn(carWashFieldClass, "rounded-xl")}
                 value={filterMonth}
                 onChange={(e) => { setFilterMonth(e.target.value); setFilterDay(""); }}
               >
@@ -1153,7 +1164,7 @@ export function CarWashSalesPanel({
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-d">วัน</label>
               <select
                 id="cw-f-d"
-                className="w-full rounded-xl border-white/60 bg-white/55 text-sm font-semibold backdrop-blur-sm focus:ring-violet-500"
+                className={cn(carWashFieldClass, "rounded-xl")}
                 value={dayNumbers.includes(Number(filterDay)) ? filterDay : ""}
                 onChange={(e) => setFilterDay(e.target.value)}
               >
@@ -1165,7 +1176,7 @@ export function CarWashSalesPanel({
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-s">ค้นหา</label>
               <input
                 id="cw-f-s"
-                className="w-full rounded-xl border-white/60 bg-white/55 text-sm font-semibold placeholder:text-slate-400 backdrop-blur-sm focus:ring-violet-500"
+                className={cn(carWashFieldClass, "rounded-xl")}
                 placeholder="ชื่อ, ทะเบียน..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -1333,15 +1344,13 @@ export function CarWashSalesPanel({
 
       <AppDashboardSection tone="slate">
         <div className="flex flex-col gap-4 rounded-[2rem] border border-white/55 bg-white/35 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <div>
-            <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">รายการในช่วงที่กรอง</h2>
-            <p className="mt-0.5 text-xs font-medium text-slate-500">
-              {activeListTab === "sales" ?
-                `รวม ${mergedSalesRows.length} รายการ (ลาน ${filteredVisits.length} / เหมา ${filteredBundles.length})`
-              : `รวม ${filteredCostEntries.length} รายการต้นทุน`}
+          <div className="min-w-0 flex-1">
+            <p className={cn(carWashHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
+              FILTERED LEDGER
             </p>
+            <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">รายการในช่วงที่กรอง</h2>
           </div>
-          <div className="flex shrink-0 items-center gap-1 rounded-xl border border-white/60 bg-white/40 p-1 backdrop-blur-md">
+          <div className={cn(carWashSubTabSegmentShellClass, "flex shrink-0 items-center gap-1 rounded-xl p-1 backdrop-blur-md")}>
 
             {activeListTab === "costs" ? (
               <div className="mr-1.5 flex items-center gap-1 border-r border-slate-200 pr-1.5">
@@ -1369,7 +1378,10 @@ export function CarWashSalesPanel({
                   type="button"
                   disabled={busy || costCategories.length === 0}
                   onClick={openAddEntry}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#5b61ff] px-2.5 text-xs font-bold text-white shadow-sm ring-1 ring-[#5b61ff] hover:bg-[#4d47b6] disabled:opacity-50"
+                  className={cn(
+                    carWashCtaClass,
+                    "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-bold disabled:opacity-50",
+                  )}
                   aria-label="บันทึกรายการ"
                 >
                   <svg
@@ -1391,8 +1403,8 @@ export function CarWashSalesPanel({
               className={cn(
                 "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
                 activeListTab === "sales" ?
-                  "bg-white/80 text-[#5b61ff] shadow-sm ring-1 ring-white/80"
-                : "text-slate-600 hover:bg-white/55 hover:text-slate-800",
+                  carWashNavActiveClass
+                : carWashNavIdleClass,
               )}
               onClick={() => setActiveListTab("sales")}
             >
@@ -1403,8 +1415,8 @@ export function CarWashSalesPanel({
               className={cn(
                 "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
                 activeListTab === "costs" ?
-                  "bg-white/80 text-rose-600 shadow-sm ring-1 ring-white/80"
-                : "text-slate-600 hover:bg-white/55 hover:text-slate-800",
+                  carWashNavActiveClass
+                : carWashNavIdleClass,
               )}
               onClick={() => setActiveListTab("costs")}
             >
@@ -1743,7 +1755,7 @@ export function CarWashSalesPanel({
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ปี</label>
               <select
-                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-violet-500"
+                className={cn(carWashFieldClass, "rounded-xl")}
                 value={filterYear}
                 onChange={(e) => {
                   setFilterYear(e.target.value);
@@ -1762,7 +1774,7 @@ export function CarWashSalesPanel({
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">เดือน</label>
               <select
-                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-violet-500"
+                className={cn(carWashFieldClass, "rounded-xl")}
                 value={filterMonth}
                 onChange={(e) => {
                   setFilterMonth(e.target.value);
@@ -1782,7 +1794,7 @@ export function CarWashSalesPanel({
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">วัน</label>
               <select
-                className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold focus:ring-violet-500"
+                className={cn(carWashFieldClass, "rounded-xl")}
                 value={dayNumbers.includes(Number(filterDay)) ? filterDay : ""}
                 onChange={(e) => setFilterDay(e.target.value)}
               >
@@ -1798,7 +1810,7 @@ export function CarWashSalesPanel({
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ค้นหา</label>
             <input
-              className="w-full rounded-xl border-slate-200 bg-slate-50/50 text-sm font-semibold placeholder:text-slate-400 focus:ring-violet-500"
+              className={cn(carWashFieldClass, "rounded-xl")}
               placeholder="ชื่อลูกค้า, ทะเบียน, แพ็กเกจ..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}

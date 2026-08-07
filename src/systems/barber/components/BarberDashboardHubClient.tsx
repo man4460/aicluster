@@ -3,7 +3,12 @@
 import { Suspense, useCallback, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { barberCardSurfaceRadiusClass } from "@/systems/barber/components/barber-ui-tokens";
+import {
+  barberCardSurfaceRadiusClass,
+  barberNavActiveClass,
+  barberNavIdleClass,
+  barberSubTabSegmentShellClass,
+} from "@/systems/barber/components/barber-ui-tokens";
 import { BarberBookingsClient } from "@/systems/barber/components/BarberBookingsClient";
 import { BarberCheckInClient } from "@/systems/barber/components/BarberCheckInClient";
 import { BarberStylistsClient } from "@/systems/barber/components/BarberStylistsClient";
@@ -77,7 +82,10 @@ export function BarberDashboardTabToolbar({ className }: { className?: string })
       aria-label="แท็บแดชบอร์ดร้านตัดผม"
     >
       <div
-        className={`inline-flex max-w-full flex-nowrap items-center justify-end gap-1 overflow-x-auto ${barberCardSurfaceRadiusClass} border border-white/60 bg-white/40 p-1 backdrop-blur-md max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden sm:flex-wrap`}
+        className={cn(
+          barberSubTabSegmentShellClass,
+          "inline-flex max-w-full flex-nowrap items-center justify-end gap-1 overflow-x-auto max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden sm:flex-wrap",
+        )}
         role="group"
       >
         {TAB_ITEMS.map((item) => {
@@ -92,9 +100,7 @@ export function BarberDashboardTabToolbar({ className }: { className?: string })
               suppressHydrationWarning
               className={cn(
                 "flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-[2rem] px-2 py-2 transition-all sm:min-h-0 sm:min-w-0 sm:gap-1.5 sm:rounded-[1.25rem] sm:px-3 sm:py-1.5",
-                active
-                  ? "bg-white/80 text-[#5b61ff] shadow-sm ring-1 ring-white/80"
-                  : "text-slate-600 hover:bg-white/55 hover:text-slate-900",
+                active ? barberNavActiveClass : barberNavIdleClass,
               )}
             >
               <svg
@@ -102,12 +108,14 @@ export function BarberDashboardTabToolbar({ className }: { className?: string })
                 fill="none"
                 stroke="currentColor"
                 strokeWidth={2.5}
-                className={cn("h-5 w-5 shrink-0 sm:h-4 sm:w-4", active ? "text-[#5b61ff]" : "text-slate-400")}
+                className={cn("h-5 w-5 shrink-0 sm:h-4 sm:w-4", active ? "text-white/95" : "text-slate-400")}
                 aria-hidden
               >
                 {hubTabIcon(item.key)}
               </svg>
-              <span className="hidden text-xs font-bold sm:inline">{item.label}</span>
+              <span className={cn("hidden text-xs font-bold sm:inline", active ? "text-white" : "")}>
+                {item.label}
+              </span>
             </button>
           );
         })}

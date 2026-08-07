@@ -118,10 +118,10 @@ function groupTone(groupId: number): { header: string; chip: string; icon: React
   };
 }
 
-/** หัวข้อกลุ่มในแคตตาล็อก เช่น Basic 1 บาท/วัน */
+/** หัวข้อกลุ่มในแคตตาล็อก เช่น Basic 199 / เดือน */
 function moduleGroupCatalogHeading(groupId: number): string {
   const name = MODULE_GROUP_TIER_NAME[groupId] ?? `กลุ่ม ${groupId}`;
-  if (groupId === 1) return `${name} 1 บาท/วัน`;
+  if (groupId === 1) return `${name} 199 / เดือน`;
   return `${name} รวมแพ็กเกจ`;
 }
 
@@ -640,7 +640,7 @@ export function ModuleSubscriptionBrowser({
                             {MODULE_GROUP_TIER_NAME[gid] ?? `กลุ่ม ${gid}`}
                           </span>
                           <span className="ml-1.5 font-black normal-case tracking-normal text-[#5f5a8a]">
-                            {gid === 1 ? "1 บาท/วัน" : "รวมแพ็กเกจ"}
+                            {gid === 1 ? "199 / เดือน" : "รวมแพ็กเกจ"}
                           </span>
                         </p>
                         <span className={cn("shrink-0 rounded-lg border px-2 py-0.5 text-[10px] font-black", tone.chip)}>

@@ -5,7 +5,6 @@ import {
   shopQrTemplateCardClass,
   shopQrTemplateCtaButtonClass,
   shopQrTemplateHeadKickerClass,
-  shopQrTemplateHeadSubtitleClass,
   shopQrTemplateHeadTitleClass,
   shopQrTemplateMaxWidthClass,
   shopQrTemplateOrderPagePaddingClass,
@@ -35,6 +34,17 @@ import {
   buildingPosChipIdleClass,
   buildingPosNavActiveClass,
 } from "@/systems/building-pos/components/building-pos-ui-tokens";
+import {
+  isBuildingPosMemberPhoneReady,
+  normalizeBuildingPosMemberPhone,
+  type BuildingPosLoyaltyRewardDto,
+} from "@/systems/building-pos/lib/loyalty-rule";
+import { BuildingPosCustomerLoyaltyPanel } from "@/systems/building-pos/components/BuildingPosCustomerLoyaltyPanel";
+import { appTemplateOutlineButtonClass } from "@/components/app-templates";
+
+function buildingPosCustomerPhoneStorageKey(ownerId: string, trialSessionId: string) {
+  return `mawell.building-pos.loyalty-phone.${ownerId}.${trialSessionId}`;
+}
 
 function buildingPosCustomerStatusLabel(st: PosOrder["status"]): string {
   switch (st) {
@@ -127,12 +137,13 @@ function MenuDishCard({
   useTemplate: boolean;
 }) {
   const selected = qty > 0;
-  const imgH = compact ? "h-28" : "h-36";
+  const imgH = compact ? "h-14" : "h-28";
 
   return (
     <article
       className={cn(
-        "group relative flex w-[min(100%,220px)] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border transition-all duration-200",
+        "group relative flex shrink-0 snap-start flex-col overflow-hidden border transition-all duration-200",
+        compact ? "w-[6.75rem] rounded-lg sm:w-[7.25rem]" : "w-[min(100%,11.5rem)] rounded-2xl",
         useTemplate ?
           selected ?
             "border-indigo-400 bg-indigo-50/90 shadow-[0_0_0_1px_rgba(99,102,241,0.35)]"
@@ -153,7 +164,7 @@ function MenuDishCard({
           className="h-full w-full object-cover"
           fallback={
             <div className={cn("flex h-full w-full items-center justify-center", useTemplate ? "text-slate-400" : "text-slate-500")}>
-              <IconSparkles className="h-10 w-10 opacity-40" />
+              <IconSparkles className={cn(compact ? "h-5 w-5" : "h-8 w-8", "opacity-40")} />
             </div>
           }
         />
@@ -163,16 +174,14 @@ function MenuDishCard({
             useTemplate ? "from-slate-900/55 via-slate-900/15" : "from-slate-950/90 via-slate-950/20",
           )}
         />
-        <div className="absolute left-2 top-2 flex flex-wrap gap-1">
+        <div className="absolute left-0.5 top-0.5 flex flex-wrap gap-0.5">
           {item.is_featured ? (
-            <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-400/95 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-950 shadow-sm">
-              <IconSparkles className="h-3 w-3" />
+            <span className="inline-flex items-center rounded bg-amber-400/95 px-1 py-px text-[8px] font-bold text-amber-950 shadow-sm">
               แนะนำ
             </span>
           ) : null}
           {showHotBadge ? (
-            <span className="inline-flex items-center gap-0.5 rounded-full bg-rose-500/95 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
-              <IconFlame className="h-3 w-3" />
+            <span className="inline-flex items-center rounded bg-rose-500/95 px-1 py-px text-[8px] font-bold text-white shadow-sm">
               ขายดี
             </span>
           ) : null}
@@ -180,38 +189,41 @@ function MenuDishCard({
         {selected ? (
           <div
             className={cn(
-              "absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full text-white shadow-lg ring-2",
+              "absolute right-0.5 top-0.5 flex items-center justify-center rounded-full text-white shadow ring-1",
+              compact ? "h-5 w-5" : "h-8 w-8",
               useTemplate ? "bg-indigo-600 ring-white" : "bg-emerald-500 ring-slate-950",
             )}
             aria-hidden
           >
-            <IconCheck className="h-5 w-5" />
+            <IconCheck className={compact ? "h-3 w-3" : "h-4 w-4"} />
           </div>
         ) : null}
       </div>
-      <div className="flex min-h-0 flex-1 flex-col p-3">
+      <div className={cn("flex min-h-0 flex-1 flex-col", compact ? "p-1.5" : "p-2.5")}>
         <h3
           className={cn(
-            "line-clamp-2 text-sm font-semibold leading-snug",
+            "line-clamp-2 font-semibold leading-snug",
+            compact ? "text-[10px]" : "text-xs",
             useTemplate ? "text-slate-900" : "text-white",
           )}
         >
           {item.name}
         </h3>
-        {item.description ? (
+        {!compact && item.description ? (
           <p
             className={cn(
-              "mt-1 line-clamp-2 text-[11px] leading-relaxed",
+              "mt-0.5 line-clamp-1 text-[10px] leading-relaxed",
               useTemplate ? "text-slate-600" : "text-slate-400",
             )}
           >
             {item.description}
           </p>
         ) : null}
-        <div className="mt-auto flex items-end justify-between gap-2 pt-3">
+        <div className={cn("mt-auto flex items-end justify-between gap-0.5", compact ? "pt-1" : "pt-2")}>
           <p
             className={cn(
-              "text-base font-bold tabular-nums",
+              "font-bold tabular-nums",
+              compact ? "text-[11px]" : "text-sm",
               useTemplate ? "text-indigo-700" : "text-emerald-400",
             )}
           >
@@ -219,7 +231,7 @@ function MenuDishCard({
           </p>
           <div
             className={cn(
-              "flex shrink-0 items-center gap-0 rounded-full p-0.5 shadow-lg ring-1",
+              "flex shrink-0 items-center gap-0 rounded-full p-px shadow-md ring-1",
               useTemplate ?
                 "bg-slate-100 ring-slate-200/90"
               : "bg-slate-950/90 ring-white/15",
@@ -234,20 +246,22 @@ function MenuDishCard({
                 type="button"
                 onClick={onDec}
                 className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-full transition",
+                  "flex items-center justify-center rounded-full transition",
+                  compact ? "h-6 w-6" : "h-8 w-8",
                   useTemplate ?
                     "text-slate-700 hover:bg-slate-200/90"
                   : "text-white hover:bg-white/10",
                 )}
                 aria-label="ลดจำนวน"
               >
-                <IconMinus className="h-4 w-4" />
+                <IconMinus className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
               </button>
             ) : null}
             {selected ? (
               <span
                 className={cn(
-                  "min-w-[1.5rem] px-1 text-center text-sm font-bold tabular-nums",
+                  "text-center font-bold tabular-nums",
+                  compact ? "min-w-[0.9rem] px-px text-[10px]" : "min-w-[1.1rem] px-0.5 text-xs",
                   useTemplate ? "text-slate-900" : "text-white",
                 )}
               >
@@ -258,12 +272,13 @@ function MenuDishCard({
               type="button"
               onClick={onAdd}
               className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-full text-white transition",
+                "flex items-center justify-center rounded-full text-white transition",
+                compact ? "h-6 w-6" : "h-8 w-8",
                 useTemplate ? "bg-indigo-600 hover:bg-indigo-500" : "bg-emerald-500 hover:bg-emerald-400",
               )}
               aria-label={selected ? "เพิ่มจำนวน" : "เพิ่มลงตะกร้า"}
             >
-              <IconPlus className="h-4 w-4" />
+              <IconPlus className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
             </button>
           </div>
         </div>
@@ -291,7 +306,7 @@ function MenuDishCardGrid({
   return (
     <article
       className={cn(
-        "relative overflow-hidden rounded-2xl border transition-all duration-200",
+        "relative overflow-hidden rounded-lg border transition-all duration-200",
         useTemplate ?
           selected ?
             "border-indigo-400 bg-indigo-50/90 shadow-[0_0_0_1px_rgba(99,102,241,0.35)]"
@@ -301,10 +316,10 @@ function MenuDishCardGrid({
         : "border-white/10 bg-white/[0.06] hover:border-white/20",
       )}
     >
-      <div className="flex gap-3 p-3 sm:gap-4">
+      <div className="flex items-center gap-2 px-2 py-1.5">
         <div
           className={cn(
-            "relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br sm:h-28 sm:w-28",
+            "relative h-11 w-11 shrink-0 overflow-hidden rounded-md bg-gradient-to-br",
             useTemplate ? "from-slate-200 to-slate-300" : "from-slate-700 to-slate-900",
           )}
         >
@@ -313,60 +328,49 @@ function MenuDishCardGrid({
             className="h-full w-full object-cover"
             fallback={
               <div className={cn("flex h-full w-full items-center justify-center", useTemplate ? "text-slate-400" : "text-slate-500")}>
-                <IconSparkles className="h-8 w-8 opacity-40" />
+                <IconSparkles className="h-4 w-4 opacity-40" />
               </div>
             }
           />
           {selected ? (
             <div
               className={cn(
-                "absolute inset-0 flex items-center justify-center backdrop-blur-[2px]",
-                useTemplate ? "bg-indigo-600/30" : "bg-emerald-600/35",
+                "absolute inset-0 flex items-center justify-center",
+                useTemplate ? "bg-indigo-600/35" : "bg-emerald-600/40",
               )}
             >
               <div
                 className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-full text-white shadow-lg ring-2",
-                  useTemplate ? "bg-indigo-600 ring-white/50" : "bg-emerald-500 ring-white/30",
+                  "flex h-5 w-5 items-center justify-center rounded-full text-white ring-1",
+                  useTemplate ? "bg-indigo-600 ring-white/60" : "bg-emerald-500 ring-white/40",
                 )}
               >
-                <IconCheck className="h-5 w-5" />
+                <IconCheck className="h-3 w-3" />
               </div>
             </div>
           ) : null}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap gap-1">
+          <div className="flex items-center gap-1">
+            <h3
+              className={cn(
+                "min-w-0 flex-1 truncate text-xs font-semibold leading-tight",
+                useTemplate ? "text-slate-900" : "text-white",
+              )}
+            >
+              {item.name}
+            </h3>
             {item.is_featured ? (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-400/90 px-2 py-0.5 text-[10px] font-bold text-amber-950">
-                <IconSparkles className="h-3 w-3" />
-                แนะนำ
-              </span>
+              <span className="shrink-0 rounded bg-amber-400/90 px-1 py-px text-[8px] font-bold text-amber-950">แนะนำ</span>
             ) : null}
             {showHotBadge ? (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-rose-500/90 px-2 py-0.5 text-[10px] font-bold text-white">
-                <IconFlame className="h-3 w-3" />
-                ขายดี
-              </span>
+              <span className="shrink-0 rounded bg-rose-500/90 px-1 py-px text-[8px] font-bold text-white">ขายดี</span>
             ) : null}
           </div>
-          <h3
-            className={cn(
-              "mt-1 text-sm font-semibold leading-snug sm:text-base",
-              useTemplate ? "text-slate-900" : "text-white",
-            )}
-          >
-            {item.name}
-          </h3>
-          {item.description ? (
-            <p className={cn("mt-0.5 line-clamp-2 text-xs", useTemplate ? "text-slate-600" : "text-slate-400")}>
-              {item.description}
-            </p>
-          ) : null}
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="mt-0.5 flex items-center justify-between gap-1.5">
             <p
               className={cn(
-                "text-lg font-bold tabular-nums",
+                "text-xs font-bold tabular-nums",
                 useTemplate ? "text-indigo-700" : "text-emerald-400",
               )}
             >
@@ -374,7 +378,7 @@ function MenuDishCardGrid({
             </p>
             <div
               className={cn(
-                "flex items-center gap-0 rounded-full p-0.5 ring-1",
+                "flex items-center gap-0 rounded-full p-px ring-1",
                 useTemplate ? "bg-slate-100 ring-slate-200/90" : "bg-slate-950/90 ring-white/15",
               )}
             >
@@ -383,18 +387,18 @@ function MenuDishCardGrid({
                   type="button"
                   onClick={onDec}
                   className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-full",
+                    "flex h-7 w-7 items-center justify-center rounded-full",
                     useTemplate ? "text-slate-700 hover:bg-slate-200/90" : "text-white hover:bg-white/10",
                   )}
                   aria-label="ลดจำนวน"
                 >
-                  <IconMinus className="h-4 w-4" />
+                  <IconMinus className="h-3 w-3" />
                 </button>
               ) : null}
               {selected ? (
                 <span
                   className={cn(
-                    "min-w-[1.5rem] px-1 text-center text-sm font-bold tabular-nums",
+                    "min-w-[1rem] px-0.5 text-center text-[11px] font-bold tabular-nums",
                     useTemplate ? "text-slate-900" : "text-white",
                   )}
                 >
@@ -405,12 +409,12 @@ function MenuDishCardGrid({
                 type="button"
                 onClick={onAdd}
                 className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-full text-white",
+                  "flex h-7 w-7 items-center justify-center rounded-full text-white",
                   useTemplate ? "bg-indigo-600 hover:bg-indigo-500" : "bg-emerald-500 hover:bg-emerald-400",
                 )}
                 aria-label={selected ? "เพิ่มจำนวน" : "เพิ่มลงตะกร้า"}
               >
-                <IconPlus className="h-4 w-4" />
+                <IconPlus className="h-3 w-3" />
               </button>
             </div>
           </div>
@@ -447,6 +451,12 @@ export function BuildingPosCustomerOrderClient({
   const [cart, setCart] = useState<Record<number, PosOrderItem>>({});
   const [customerName, setCustomerName] = useState("");
   const [tableNo, setTableNo] = useState("");
+  const [memberPhone, setMemberPhone] = useState("");
+  const [loyaltyEnabled, setLoyaltyEnabled] = useState(false);
+  const [loyaltyRewards, setLoyaltyRewards] = useState<BuildingPosLoyaltyRewardDto[]>([]);
+  /** คะแนนจากเบอร์ในแท็บข้อมูล — ใช้โชว์ปุ่มไปแลกเมื่อแลกได้ */
+  const [infoLoyaltyBalance, setInfoLoyaltyBalance] = useState<number | null>(null);
+  const [loyaltyLookupTick, setLoyaltyLookupTick] = useState(0);
   const [msg, setMsg] = useState<string | null>(null);
   const [filterCat, setFilterCat] = useState<number | "all">("all");
   /** ลูกค้า: เปิดโมดัลสรุปก่อนยืนยันส่ง */
@@ -456,9 +466,17 @@ export function BuildingPosCustomerOrderClient({
   const [customerSessionId, setCustomerSessionId] = useState("");
   const paidResetRef = useRef(false);
   const [staffChannel, setStaffChannel] = useState<BuildingPosStaffOrderChannel>("floor");
+  /** ลูกค้า: แถบข้อมูล → ออเดอร์ → สั่งอาหาร */
+  const [customerTab, setCustomerTab] = useState<"info" | "orders" | "menu" | "redeem">("info");
 
   const isCustomer = variant === "customer";
   const customerReviewsBeforeSend = isCustomer;
+  const showMenuPanel = !isCustomer || customerTab === "menu";
+  const showCartBar = !isCustomer || customerTab === "menu";
+  const phoneStorageKey = useMemo(
+    () => buildingPosCustomerPhoneStorageKey(ownerId, trialSessionId ?? "prod"),
+    [ownerId, trialSessionId],
+  );
 
   const sessionStorageKey = useMemo(
     () => buildingPosCustomerSessionStorageKey(ownerId, trialSessionId ?? "prod", tableNo),
@@ -467,9 +485,29 @@ export function BuildingPosCustomerOrderClient({
 
   useEffect(() => {
     void (async () => {
-      const [c, m] = await Promise.all([repo.listCategories(), repo.listMenuItems()]);
-      setCategories(c.filter((x) => x.is_active));
-      setMenuItems(m.filter((x) => x.is_active));
+      try {
+        const boot = await repo.getPublicMenuBootstrap();
+        setCategories((boot.categories ?? []).filter((x) => x.is_active));
+        setMenuItems((boot.menu_items ?? []).filter((x) => x.is_active));
+        setLoyaltyEnabled(Boolean(boot.loyalty?.enabled));
+        setLoyaltyRewards(
+          Array.isArray(boot.loyalty?.rewards)
+            ? boot.loyalty.rewards.map((r) => ({
+                id: r.id,
+                title: r.title,
+                menu_item_id: r.menu_item_id ?? null,
+                points_cost: r.points_cost,
+                sort_order: r.sort_order,
+                is_active: r.is_active,
+                image_url: typeof r.image_url === "string" ? r.image_url : "",
+              }))
+            : [],
+        );
+      } catch {
+        const [c, m] = await Promise.all([repo.listCategories(), repo.listMenuItems()]);
+        setCategories(c.filter((x) => x.is_active));
+        setMenuItems(m.filter((x) => x.is_active));
+      }
     })();
   }, [repo]);
 
@@ -477,6 +515,12 @@ export function BuildingPosCustomerOrderClient({
     const t = initialTableNo?.trim();
     if (t) setTableNo(t);
   }, [initialTableNo]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = localStorage.getItem(phoneStorageKey);
+    if (saved) setMemberPhone(normalizeBuildingPosMemberPhone(saved));
+  }, [phoneStorageKey]);
 
   useEffect(() => {
     if (!isCustomer) return;
@@ -532,8 +576,64 @@ export function BuildingPosCustomerOrderClient({
     localStorage.setItem(sessionStorageKey, next);
     setCustomerSessionId(next);
     setMyOrders([]);
-    setMsg("โต๊ะนี้ชำระเงินครบแล้ว — สั่งรอบใหม่ได้");
-  }, [isCustomer, myOrders, sessionStorageKey]);
+    setMemberPhone("");
+    setInfoLoyaltyBalance(null);
+    localStorage.removeItem(phoneStorageKey);
+  }, [isCustomer, myOrders, sessionStorageKey, phoneStorageKey]);
+
+  const clearMemberPhone = useCallback(() => {
+    setMemberPhone("");
+    setInfoLoyaltyBalance(null);
+    if (typeof window !== "undefined") localStorage.removeItem(phoneStorageKey);
+  }, [phoneStorageKey]);
+
+  useEffect(() => {
+    if (!loyaltyEnabled && customerTab === "redeem") setCustomerTab("info");
+  }, [loyaltyEnabled, customerTab]);
+
+  useEffect(() => {
+    if (!isCustomer || !loyaltyEnabled) {
+      setInfoLoyaltyBalance(null);
+      return;
+    }
+    if (!isBuildingPosMemberPhoneReady(memberPhone)) {
+      setInfoLoyaltyBalance(null);
+      return;
+    }
+    const digits = normalizeBuildingPosMemberPhone(memberPhone);
+    const t = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const params = new URLSearchParams({ ownerId, phone: digits });
+          if (trialSessionId) params.set("t", trialSessionId);
+          const res = await fetch(`/api/building-pos/public/loyalty?${params}`, { cache: "no-store" });
+          const j = (await res.json().catch(() => ({}))) as {
+            member?: { points_balance?: number } | null;
+            rewards?: BuildingPosLoyaltyRewardDto[];
+          };
+          if (!res.ok) {
+            setInfoLoyaltyBalance(null);
+            return;
+          }
+          if (Array.isArray(j.rewards) && j.rewards.length > 0) {
+            setLoyaltyRewards(j.rewards);
+          }
+          const bal = j.member?.points_balance;
+          setInfoLoyaltyBalance(typeof bal === "number" ? bal : 0);
+        } catch {
+          setInfoLoyaltyBalance(null);
+        }
+      })();
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [isCustomer, loyaltyEnabled, memberPhone, ownerId, trialSessionId, loyaltyLookupTick]);
+
+  const infoCanRedeem = useMemo(() => {
+    if (infoLoyaltyBalance == null || infoLoyaltyBalance <= 0) return false;
+    return loyaltyRewards.some(
+      (r) => r.is_active !== false && infoLoyaltyBalance >= r.points_cost,
+    );
+  }, [infoLoyaltyBalance, loyaltyRewards]);
 
   useEffect(() => {
     if (!reviewOpen) return;
@@ -585,6 +685,22 @@ export function BuildingPosCustomerOrderClient({
   const cartTotal = useMemo(() => cartList.reduce((s, x) => s + x.qty * x.price, 0), [cartList]);
   const cartCount = useMemo(() => cartList.reduce((s, x) => s + x.qty, 0), [cartList]);
 
+  const customerTabs = useMemo(() => {
+    const tabs: Array<{
+      id: "info" | "menu" | "redeem" | "orders";
+      label: string;
+      badge: number | null;
+    }> = [
+      { id: "info", label: "ข้อมูล", badge: null },
+      { id: "menu", label: "สั่งอาหาร", badge: cartCount > 0 ? cartCount : null },
+      { id: "orders", label: "ออเดอร์", badge: myOrders.length > 0 ? myOrders.length : null },
+    ];
+    if (loyaltyEnabled) {
+      tabs.push({ id: "redeem", label: "แลกคะแนน", badge: null });
+    }
+    return tabs;
+  }, [cartCount, loyaltyEnabled, myOrders.length]);
+
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id),
     [categories],
@@ -610,6 +726,7 @@ export function BuildingPosCustomerOrderClient({
   async function submitOrder(): Promise<boolean> {
     const items = cartList;
     if (items.length === 0) return false;
+    const phoneDigits = normalizeBuildingPosMemberPhone(memberPhone);
     let sessionForOrder: string | undefined;
     if (isCustomer) {
       let sid = customerSessionId;
@@ -629,10 +746,14 @@ export function BuildingPosCustomerOrderClient({
         variant === "staff" ?
           [buildingPosStaffOrderNoteLine(staffChannel), orderNoteTag?.trim()].filter(Boolean).join(" · ")
         : (orderNoteTag?.trim() ?? "");
+      if (phoneDigits.length >= 9 && typeof window !== "undefined") {
+        localStorage.setItem(phoneStorageKey, phoneDigits);
+      }
       await repo.createOrder(
         {
           customer_name: customerName.trim(),
           table_no: tableNo.trim(),
+          member_phone: phoneDigits.length >= 9 ? phoneDigits : "",
           status: "NEW",
           items,
           total_amount: 0,
@@ -642,6 +763,7 @@ export function BuildingPosCustomerOrderClient({
       );
       setCart({});
       setMsg("ส่งออเดอร์เรียบร้อยแล้ว");
+      if (isCustomer) setCustomerTab("orders");
       onOrderSuccess?.();
       if (isCustomer && sessionForOrder) {
         const list = await repo.listMyOrders(tableNo, sessionForOrder);
@@ -682,7 +804,11 @@ export function BuildingPosCustomerOrderClient({
         className={cn(
           embeddedInModal
             ? "w-full min-w-0 pb-28 pt-1"
-            : cn(shopQrTemplateMaxWidthClass, shopQrTemplateOrderPagePaddingClass),
+            : cn(
+                shopQrTemplateMaxWidthClass,
+                shopQrTemplateOrderPagePaddingClass,
+                isCustomer && customerTab !== "menu" ? "!pb-6" : null,
+              ),
         )}
       >
         {embeddedInModal && variant === "staff" ? null : (
@@ -697,17 +823,47 @@ export function BuildingPosCustomerOrderClient({
           >
             {variant === "staff" ? "สั่งอาหารแทนลูกค้า" : "สั่งอาหาร"}
           </h1>
-          <p
-            className={cn(
-              useTemplate ? shopQrTemplateHeadSubtitleClass : "mt-2 text-center text-sm text-slate-400",
-            )}
-          >
-            {variant === "staff" ?
-              "เลือกช่องทางการสั่ง · เลือกเมนูแบบหน้าลูกค้า — บันทึกในออเดอร์อัตโนมัติ"
-            : "เลือกเมนู ระบุโต๊ะ แล้วส่งเข้าครัว"}
-          </p>
         </header>
         )}
+
+        {isCustomer ?
+          <div
+            className="mt-4 flex gap-1 rounded-2xl border border-indigo-100/90 bg-white/90 p-1 shadow-sm ring-1 ring-indigo-100/60"
+            role="tablist"
+            aria-label="เมนูหน้าสั่งอาหาร"
+          >
+            {customerTabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={customerTab === tab.id}
+                onClick={() => {
+                  setCustomerTab(tab.id);
+                  if (tab.id === "orders") void loadMyOrders();
+                }}
+                className={cn(
+                  "relative min-h-[42px] flex-1 rounded-xl px-1.5 text-center text-[11px] font-black transition sm:px-2 sm:text-xs",
+                  customerTab === tab.id ?
+                    cn(buildingPosNavActiveClass, "shadow-md shadow-indigo-400/25")
+                  : "bg-transparent text-slate-600 hover:bg-indigo-50/80",
+                )}
+              >
+                {tab.label}
+                {tab.badge != null ?
+                  <span
+                    className={cn(
+                      "ml-0.5 inline-flex min-w-[1.15rem] items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums sm:ml-1",
+                      customerTab === tab.id ? "bg-white/25 text-white" : "bg-indigo-100 text-indigo-800",
+                    )}
+                  >
+                    {tab.badge}
+                  </span>
+                : null}
+              </button>
+            ))}
+          </div>
+        : null}
 
         {variant === "staff" ?
           <div
@@ -742,57 +898,178 @@ export function BuildingPosCustomerOrderClient({
           </div>
         : null}
 
-        <div
-          className={cn(
-            "mt-6 p-4",
-            useTemplate ? shopQrTemplateCardClass : "rounded-2xl border border-white/10 bg-white/[0.05] shadow-xl backdrop-blur-md",
-          )}
-        >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label
-              className={cn("block text-xs font-medium", useTemplate ? "text-slate-600" : "text-slate-400")}
-            >
-              ชื่อ (ไม่บังคับ)
-              <input
-                className={cn(
-                  "mt-1 w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2",
-                  useTemplate ?
-                    "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/25"
-                  : "border-white/10 bg-slate-950/50 text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/40",
-                )}
-                placeholder="ชื่อลูกค้า"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-              />
-            </label>
-            <label
-              className={cn("block text-xs font-medium", useTemplate ? "text-slate-600" : "text-slate-400")}
-            >
-              โต๊ะ
-              <input
-                className={cn(
-                  "mt-1 w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2",
-                  useTemplate ?
-                    "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/25"
-                  : "border-white/10 bg-slate-950/50 text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/40",
-                )}
-                placeholder="เลขโต๊ะ"
-                value={tableNo}
-                onChange={(e) => setTableNo(e.target.value)}
-              />
-            </label>
+        {(!isCustomer || customerTab === "info") ?
+          <div
+            className={cn(
+              "mt-5 p-4",
+              useTemplate ? shopQrTemplateCardClass : "rounded-2xl border border-white/10 bg-white/[0.05] shadow-xl backdrop-blur-md",
+            )}
+          >
+            {isCustomer ?
+              <div className="mb-3">
+                <h2 className="text-sm font-bold text-slate-900">ข้อมูล</h2>
+              </div>
+            : null}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label
+                className={cn("block text-xs font-medium", useTemplate ? "text-slate-600" : "text-slate-400")}
+              >
+                ชื่อ
+                <input
+                  className={cn(
+                    "mt-1 w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2",
+                    useTemplate ?
+                      "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/25"
+                    : "border-white/10 bg-slate-950/50 text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/40",
+                  )}
+                  placeholder="ชื่อลูกค้า"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                />
+              </label>
+              <label
+                className={cn("block text-xs font-medium", useTemplate ? "text-slate-600" : "text-slate-400")}
+              >
+                โต๊ะ
+                <input
+                  className={cn(
+                    "mt-1 w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2",
+                    useTemplate ?
+                      "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/25"
+                    : "border-white/10 bg-slate-950/50 text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/40",
+                  )}
+                  placeholder="เลขโต๊ะ"
+                  value={tableNo}
+                  onChange={(e) => setTableNo(e.target.value)}
+                />
+              </label>
+              {isCustomer && loyaltyEnabled ?
+                <label
+                  className={cn(
+                    "block text-xs font-medium sm:col-span-2",
+                    useTemplate ? "text-slate-600" : "text-slate-400",
+                  )}
+                >
+                  เบอร์โทรสะสมคะแนน
+                  <span className="relative mt-1 block">
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      name="loyalty-phone"
+                      className={cn(
+                        "w-full rounded-xl border py-2.5 pl-3 text-sm tabular-nums focus:outline-none focus:ring-2",
+                        memberPhone ? "pr-11" : "pr-3",
+                        useTemplate ?
+                          "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/25"
+                        : "border-white/10 bg-slate-950/50 text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/40",
+                      )}
+                      placeholder="08xxxxxxxx"
+                      value={memberPhone}
+                      onChange={(e) => {
+                        const digits = normalizeBuildingPosMemberPhone(e.target.value);
+                        setMemberPhone(digits);
+                        if (typeof window === "undefined") return;
+                        if (digits.length >= 9) localStorage.setItem(phoneStorageKey, digits);
+                        else localStorage.removeItem(phoneStorageKey);
+                      }}
+                    />
+                    {memberPhone ?
+                      <button
+                        type="button"
+                        className={cn(
+                          "absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-sm font-bold",
+                          useTemplate ?
+                            "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                          : "text-slate-400 hover:bg-white/10 hover:text-white",
+                        )}
+                        aria-label="ล้างเบอร์โทร"
+                        title="ล้างเบอร์"
+                        onClick={clearMemberPhone}
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+                          <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
+                        </svg>
+                      </button>
+                    : null}
+                  </span>
+                </label>
+              : null}
+              {(!isCustomer && loyaltyEnabled) ?
+                <div className="sm:col-span-2">
+                  <BuildingPosCustomerLoyaltyPanel
+                    ownerId={ownerId}
+                    trialSessionId={trialSessionId}
+                    phone={memberPhone}
+                    onPhoneChange={setMemberPhone}
+                    tableNo={tableNo}
+                    customerName={customerName}
+                    customerSessionId={customerSessionId}
+                    initialRewards={loyaltyRewards}
+                    onRedeemed={() => {
+                      void loadMyOrders();
+                      setMsg("แลกคะแนนแล้ว");
+                    }}
+                  />
+                </div>
+              : null}
+            </div>
+            {isCustomer ?
+              <div className="mt-4 space-y-2">
+                {infoCanRedeem ?
+                  <button
+                    type="button"
+                    onClick={() => setCustomerTab("redeem")}
+                    className={cn(
+                      appTemplateOutlineButtonClass,
+                      "flex w-full min-h-[48px] items-center justify-center gap-2 rounded-2xl px-4 text-sm font-black text-indigo-800",
+                    )}
+                  >
+                    ดูรายการแลก
+                    {infoLoyaltyBalance != null ?
+                      <span className="tabular-nums text-indigo-600">
+                        · {infoLoyaltyBalance.toLocaleString("th-TH")}
+                      </span>
+                    : null}
+                  </button>
+                : null}
+                <button
+                  type="button"
+                  onClick={() => setCustomerTab("menu")}
+                  className={cn(shopQrTemplateCtaButtonClass, "w-full min-h-[48px]")}
+                >
+                  ไปสั่งอาหาร
+                </button>
+              </div>
+            : null}
           </div>
-        </div>
+        : null}
 
-        {isCustomer ?
+        {isCustomer && loyaltyEnabled && customerTab === "redeem" ?
+          <div className="mt-5">
+            <BuildingPosCustomerLoyaltyPanel
+              ownerId={ownerId}
+              trialSessionId={trialSessionId}
+              phone={memberPhone}
+              hidePhoneInput
+              tableNo={tableNo}
+              customerName={customerName}
+              customerSessionId={customerSessionId}
+              initialRewards={loyaltyRewards}
+              onRedeemed={() => {
+                void loadMyOrders();
+                setMsg("แลกคะแนนแล้ว");
+                setCustomerTab("orders");
+                setLoyaltyLookupTick((n) => n + 1);
+              }}
+            />
+          </div>
+        : null}
+
+        {isCustomer && customerTab === "orders" ?
           <section className={cn("mt-5 p-4", shopQrTemplateCardClass)}>
             <div className="flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">ออเดอร์ของฉัน</h2>
-                <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
-                  โต๊ะ {tableNo.trim() || "—"} · เมื่อรายการในรอบนี้ชำระเงินครบ ระบบจะเริ่มรอบใหม่ให้อัตโนมัติ
-                </p>
-              </div>
+              <h2 className="text-sm font-bold text-slate-900">ออเดอร์</h2>
               <button
                 type="button"
                 onClick={() => void loadMyOrders()}
@@ -804,7 +1081,16 @@ export function BuildingPosCustomerOrderClient({
             {!customerSessionId ?
               <p className="mt-3 text-xs text-slate-500">กำลังเตรียมเซสชัน…</p>
             : myOrders.length === 0 ?
-              <p className="mt-3 text-sm text-slate-600">ยังไม่มีออเดอร์ในรอบนี้</p>
+              <div className="mt-4 space-y-3 text-center">
+                <p className="text-sm text-slate-600">ยังไม่มีออเดอร์ในรอบนี้</p>
+                <button
+                  type="button"
+                  onClick={() => setCustomerTab("menu")}
+                  className={cn(shopQrTemplateCtaButtonClass, "mx-auto min-h-[44px] px-5")}
+                >
+                  ไปสั่งอาหาร
+                </button>
+              </div>
             : <ul className="mt-3 space-y-3">
                 {myOrders.map((o) => (
                   <li
@@ -850,6 +1136,8 @@ export function BuildingPosCustomerOrderClient({
           </section>
         : null}
 
+        {showMenuPanel ?
+          <>
         <div className="mt-5">
           <p className="mb-2 text-xs font-medium text-slate-500">หมวดหมู่</p>
           <div className="-mx-4 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] sm:-mx-5">
@@ -895,13 +1183,13 @@ export function BuildingPosCustomerOrderClient({
         </div>
 
         {filterCat === "all" && featuredItems.length > 0 ? (
-          <section className="mt-8">
-            <div className="mb-3 flex items-center gap-2">
-              <IconSparkles className={cn("h-5 w-5", useTemplate ? "text-amber-500" : "text-amber-400")} />
-              <h2 className={cn("text-lg font-bold", useTemplate ? "text-slate-900" : "text-white")}>เมนูแนะนำ</h2>
+          <section className="mt-5">
+            <div className="mb-2 flex items-center gap-2">
+              <IconSparkles className={cn("h-4 w-4", useTemplate ? "text-amber-500" : "text-amber-400")} />
+              <h2 className={cn("text-base font-bold", useTemplate ? "text-slate-900" : "text-white")}>เมนูแนะนำ</h2>
             </div>
-            <div className="-mx-4 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] snap-x snap-mandatory sm:-mx-5">
-              <div className="flex w-max gap-3 px-4 sm:px-5">
+            <div className="-mx-4 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] snap-x snap-mandatory sm:-mx-5">
+              <div className="flex w-max gap-1.5 px-4 sm:px-5">
                 {featuredItems.map((m) => (
                   <MenuDishCard
                     key={`feat-${m.id}`}
@@ -920,21 +1208,13 @@ export function BuildingPosCustomerOrderClient({
         ) : null}
 
         {filterCat === "all" && bestsellerItems.length > 0 ? (
-          <section className="mt-8">
-            <div className="mb-3 flex items-center gap-2">
-              <IconFlame className={cn("h-5 w-5", useTemplate ? "text-rose-500" : "text-rose-400")} />
-              <h2 className={cn("text-lg font-bold", useTemplate ? "text-slate-900" : "text-white")}>ขายดี</h2>
-              <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px]",
-                  useTemplate ? "bg-slate-200/90 text-slate-600" : "bg-white/10 text-slate-400",
-                )}
-              >
-                จากยอดสั่งจริง
-              </span>
+          <section className="mt-5">
+            <div className="mb-2 flex items-center gap-2">
+              <IconFlame className={cn("h-4 w-4", useTemplate ? "text-rose-500" : "text-rose-400")} />
+              <h2 className={cn("text-base font-bold", useTemplate ? "text-slate-900" : "text-white")}>ขายดี</h2>
             </div>
-            <div className="-mx-4 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] snap-x snap-mandatory sm:-mx-5">
-              <div className="flex w-max gap-3 px-4 sm:px-5">
+            <div className="-mx-4 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] snap-x snap-mandatory sm:-mx-5">
+              <div className="flex w-max gap-1.5 px-4 sm:px-5">
                 {bestsellerItems.map((m) => (
                   <MenuDishCard
                     key={`hot-${m.id}`}
@@ -957,36 +1237,35 @@ export function BuildingPosCustomerOrderClient({
           const items = itemsForCategory(c.id);
           if (items.length === 0) return null;
           return (
-            <section key={c.id} className="mt-10">
+            <section key={c.id} className="mt-7">
               <div
                 className={cn(
-                  "mb-4 flex items-center gap-3 border-b pb-3",
+                  "mb-2.5 flex items-center gap-2.5 border-b pb-2",
                   useTemplate ? "border-slate-200" : "border-white/10",
                 )}
               >
                 <BuildingPosRemoteImg
                   src={c.image_url}
                   className={cn(
-                    "h-12 w-12 rounded-xl object-cover sm:h-14 sm:w-14",
+                    "h-9 w-9 rounded-lg object-cover sm:h-10 sm:w-10",
                     useTemplate ? "border border-slate-200" : "border border-white/10",
                   )}
                   fallback={
                     <div
                       className={cn(
-                        "flex h-12 w-12 items-center justify-center rounded-xl sm:h-14 sm:w-14",
+                        "flex h-9 w-9 items-center justify-center rounded-lg sm:h-10 sm:w-10",
                         useTemplate ? "bg-slate-100 text-slate-400" : "bg-white/10 text-slate-500",
                       )}
                     >
-                      <IconSparkles className="h-6 w-6 opacity-50" />
+                      <IconSparkles className="h-4 w-4 opacity-50" />
                     </div>
                   }
                 />
                 <div>
-                  <h2 className={cn("text-lg font-bold", useTemplate ? "text-slate-900" : "text-white")}>{c.name}</h2>
-                  <p className="text-xs text-slate-500">{items.length} รายการ</p>
+                  <h2 className={cn("text-base font-bold", useTemplate ? "text-slate-900" : "text-white")}>{c.name}</h2>
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 gap-1.5">
                 {items.map((m) => (
                   <MenuDishCardGrid
                     key={m.id}
@@ -1002,6 +1281,8 @@ export function BuildingPosCustomerOrderClient({
             </section>
           );
         })}
+          </>
+        : null}
 
         {msg ? (
           <p
@@ -1017,6 +1298,7 @@ export function BuildingPosCustomerOrderClient({
         ) : null}
       </div>
 
+      {showCartBar ?
       <div
         className={cn(
           embeddedInModal ?
@@ -1060,6 +1342,7 @@ export function BuildingPosCustomerOrderClient({
         </div>
         <div className="pb-[max(0.25rem,env(safe-area-inset-bottom))]" aria-hidden />
       </div>
+      : null}
 
       {customerReviewsBeforeSend && reviewOpen ?
         <div
@@ -1083,9 +1366,8 @@ export function BuildingPosCustomerOrderClient({
           >
             <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-5 sm:px-5 sm:pt-6">
               <h2 id="pos-order-review-title" className="text-lg font-bold text-slate-900">
-                สรุปรายการก่อนส่ง
+                สรุปรายการ
               </h2>
-              <p className="mt-1 text-xs text-slate-500">ตรวจสอบเมนูและโต๊ะแล้วกดยืนยัน</p>
 
               <ul className="mt-4 space-y-3 border-t border-slate-100 pt-4">
                 {cartList.map((line) => (
@@ -1120,6 +1402,19 @@ export function BuildingPosCustomerOrderClient({
                     {tableNo.trim() || <span className="text-amber-700">ยังไม่ระบุ</span>}
                   </dd>
                 </div>
+                {loyaltyEnabled && normalizeBuildingPosMemberPhone(memberPhone).length >= 9 ?
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-slate-500">เบอร์สะสมคะแนน</dt>
+                    <dd className="text-right font-medium tabular-nums text-slate-800">
+                      {normalizeBuildingPosMemberPhone(memberPhone)}
+                    </dd>
+                  </div>
+                : loyaltyEnabled ?
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-slate-500">เบอร์สะสมคะแนน</dt>
+                    <dd className="text-right text-xs text-slate-500">—</dd>
+                  </div>
+                : null}
                 <div className="flex justify-between gap-2 border-t border-slate-200/80 pt-2">
                   <dt className="font-semibold text-slate-700">ยอดรวม</dt>
                   <dd className="text-lg font-bold tabular-nums text-indigo-800">฿{formatDormAmountStable(cartTotal)}</dd>

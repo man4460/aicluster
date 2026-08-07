@@ -12,6 +12,11 @@ export const UI_VISIBLE_MAX_MODULE_GROUP = 1 as const;
 /** แพ็กเหมาที่เปิดให้สมัครใหม่ได้ — ตอนนี้เฉพาะ 199 (กลุ่ม 1) */
 export const BUFFET_TIERS_OPEN_FOR_PURCHASE: ReadonlySet<SubscriptionTier> = new Set(["TIER_199"]);
 
+/** สายรายวัน (เดิม) — จำกัดจำนวนแถวข้อมูล */
+export const PLAN_DAILY_MAX_DATA_ROWS = 10_000 as const;
+/** แพ็กเหมารายเดือน — รองรับข้อมูลมากกว่าเกณฑ์นี้ + เปิดพิมพ์สลิป */
+export const PLAN_MONTHLY_DATA_ROWS_THRESHOLD = 10_000 as const;
+
 export function isBuffetTierOpenForPurchase(tier: SubscriptionTier): boolean {
   return tier !== "NONE" && BUFFET_TIERS_OPEN_FOR_PURCHASE.has(tier);
 }
@@ -223,16 +228,29 @@ export const MODULE_GROUP_FEATURE_SUMMARY: Record<number, string> = {
   5: "API ภายนอก · Automation",
 };
 
-/** ข้อความการ์ด «สายรายวัน» ในหน้าแพ็กเกจ */
+/** ข้อความการ์ดสายรายวัน (เดิม) ในหน้าแพ็กเกจ — แนะนำอัปเกรดรายเดือน 199 */
 export const DAILY_LINE_PLAN_SUMMARY = {
-  title: "สายรายวัน",
-  subtitle: "ไม่สมัครแพ็กเหมา — ใช้เมื่อมีโทเคน",
+  title: "สายรายวัน (เดิม)",
+  subtitle: "แนะนำอัปเกรดเป็นรายเดือน 199",
   lines: [
-    "Subscribe ได้หลายระบบในกลุ่ม 1 — ไม่จำกัดจำนวน",
     "หัก 1 โทเคน ต่อ 1 ระบบ ต่อ 1 วัน (Bangkok) เมื่อเข้าใช้จริง",
-    "เหมาะกับใช้ไม่ถี่หรือทดลองระบบพื้นฐาน",
+    `ข้อมูลสูงสุด ${PLAN_DAILY_MAX_DATA_ROWS.toLocaleString("th-TH")} แถว · ยังไม่เปิดพิมพ์สลิป`,
+    "อัปเกรดแพ็กเหมา 199 เพื่อใช้ได้ทุกโมดูลกลุ่ม 1 โดยไม่หักรายวัน",
   ],
 } as const;
+
+/** สิทธิ์หลักของแพ็กเหมารายเดือน 199 (กลุ่ม 1) — ใช้ในการ์ดแพ็กเกจ */
+export const MONTHLY_199_PLAN_FEATURE_LINES = [
+  `ข้อมูลได้มากกว่า ${PLAN_MONTHLY_DATA_ROWS_THRESHOLD.toLocaleString("th-TH")} แถว`,
+  "เปิดฟังก์ชันพิมพ์สลิปทุกโมดูล",
+  "อัปโหลดสลิปชำระและเอกสาร (ตามเงื่อนไขที่แอดมินเปิด)",
+  "สิทธิ์กลุ่ม 1 (Basic) ทุกโมดูลที่เปิดแล้ว — ไม่หักโทเคนรายวันต่อโมดูล",
+] as const;
+
+/** ฟีเจอร์เด่นแพ็ก 299 (กลุ่ม 2) — ใช้ในการ์ดแพ็กเกจ */
+export const MONTHLY_299_PLAN_FEATURE_LINES = [
+  "หลายแผนกครัว POS ร้านอาหาร — จำแนกเมนู · ลิงก์ครัวแยกตามแผนก (ตามเงื่อนไขแอดมิน)",
+] as const;
 
 export function moduleGroupLine(groupId: number): string {
   const tier = MODULE_GROUP_TIER_NAME[groupId];

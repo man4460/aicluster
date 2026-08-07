@@ -39,7 +39,7 @@ import {
   DrinkPosPaymentPanel,
   drinkPosPaymentSubmitBlocked,
 } from "@/systems/drink-pos/components/DrinkPosPaymentPanel";
-import type { DrinkPosMemberDto } from "@/systems/drink-pos/lib/member-service";
+import type { DrinkPosLoyaltyMemberDto } from "@/systems/drink-pos/lib/loyalty-rule";
 import type { DrinkPosPaymentMethod } from "@/systems/drink-pos/lib/payment-method";
 import {
   defaultDrinkPosSizePrices,
@@ -130,10 +130,13 @@ export function DrinkPosDashboardClient() {
   const [error, setError] = useState<string | null>(null);
   const [filterCat, setFilterCat] = useState<string | "all">("all");
 
-  const [catModalOpen, setCatModalOpen] = useState(false);
+  const [catManageOpen, setCatManageOpen] = useState(false);
+  const [catFormOpen, setCatFormOpen] = useState(false);
   const [catEdit, setCatEdit] = useState<DrinkPosCategoryRow | null>(null);
   const [catName, setCatName] = useState("");
   const [catImageUrl, setCatImageUrl] = useState("");
+  const [catSortOrder, setCatSortOrder] = useState("1");
+  const [catIsActive, setCatIsActive] = useState(true);
   const [catBusy, setCatBusy] = useState(false);
   const [catErr, setCatErr] = useState<string | null>(null);
   const [catUploadBusy, setCatUploadBusy] = useState(false);
@@ -155,13 +158,10 @@ export function DrinkPosDashboardClient() {
   const prodGalleryRef = useRef<HTMLInputElement>(null);
   const prodCameraRef = useRef<HTMLInputElement>(null);
 
-  const [catManageOpen, setCatManageOpen] = useState(false);
-
   const [draftLines, setDraftLines] = useState<SaleDraftLine[]>([]);
   const [draftBusy, setDraftBusy] = useState(false);
   const [billReviewOpen, setBillReviewOpen] = useState(false);
-  const [loyaltyMember, setLoyaltyMember] = useState<DrinkPosMemberDto | null>(null);
-  const [redeemMode, setRedeemMode] = useState(false);
+  const [loyaltyMember, setLoyaltyMember] = useState<DrinkPosLoyaltyMemberDto | null>(null);
   const [sizePick, setSizePick] = useState<{ product: DrinkPosProductRow; quantity: number } | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<DrinkPosPaymentMethod>("CASH");
   const [paymentSlipUrl, setPaymentSlipUrl] = useState<string | null>(null);
@@ -224,6 +224,11 @@ export function DrinkPosDashboardClient() {
     return list.filter((x) => x.categoryId === filterCat);
   }, [products, filterCat]);
 
+  const chipCategories = useMemo(
+    () => categories.filter((c) => c.isActive !== false),
+    [categories],
+  );
+
   const prodCategoryName = useMemo(
     () => categories.find((c) => c.id === prodCategoryId)?.name ?? null,
     [categories, prodCategoryId],
@@ -273,27 +278,53 @@ export function DrinkPosDashboardClient() {
     }
   }
 
+  function openCatManage() {
+    setCatFormOpen(false);
+    setCatEdit(null);
+    setCatErr(null);
+    setCatManageOpen(true);
+  }
+
   function openCreateCategory() {
     setCatEdit(null);
     setCatName("");
     setCatImageUrl("");
+    setCatSortOrder(String((categories[categories.length - 1]?.sortOrder ?? 0) + 1));
+    setCatIsActive(true);
     setCatErr(null);
-    setCatModalOpen(true);
+    setCatFormOpen(true);
+    setCatManageOpen(true);
   }
 
   function openEditCategory(c: DrinkPosCategoryRow) {
     setCatEdit(c);
     setCatName(c.name);
     setCatImageUrl(c.imageUrl ?? "");
+    setCatSortOrder(String(c.sortOrder));
+    setCatIsActive(c.isActive !== false);
     setCatErr(null);
-    setCatModalOpen(true);
+    setCatFormOpen(true);
+    setCatManageOpen(true);
+  }
+
+  function closeCatForm() {
+    if (catBusy || catUploadBusy) return;
+    setCatFormOpen(false);
+    setCatEdit(null);
+    setCatErr(null);
   }
 
   async function submitCategory() {
     setCatBusy(true);
     setCatErr(null);
     try {
-      const payload = { name: catName.trim(), imageUrl: catImageUrl.trim() || null };
+      const sort = Number(catSortOrder);
+      const payload = {
+        name: catName.trim(),
+        imageUrl: catImageUrl.trim() || null,
+        sortOrder: Number.isFinite(sort) ? sort : 0,
+        isActive: catIsActive,
+      };
       if (!payload.name) {
         setCatErr("กรุณากรอกชื่อหมวด");
         return;
@@ -323,7 +354,8 @@ export function DrinkPosDashboardClient() {
           return;
         }
       }
-      setCatModalOpen(false);
+      setCatFormOpen(false);
+      setCatEdit(null);
       await reload();
     } finally {
       setCatBusy(false);
@@ -331,7 +363,7 @@ export function DrinkPosDashboardClient() {
   }
 
   async function deleteCategory(c: DrinkPosCategoryRow) {
-    if (!window.confirm(`ลบหมวด «${c.name}»?`)) return;
+    if (!window.confirm(`ลบหมวดหมู่ "${c.name}" ?\n(ถ้ามีสินค้าในหมวดนี้ต้องลบหรือย้ายสินค้าก่อน)`)) return;
     const res = await fetch(`/api/drink-pos/categories/${c.id}`, { method: "DELETE", credentials: "include" });
     const j = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -568,9 +600,8 @@ export function DrinkPosDashboardClient() {
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
-        note: redeemMode ? "แลกแต้มฟรี" : null,
+        note: null,
         memberPhone: loyaltyMember?.phone ?? null,
-        isRewardRedemption: redeemMode && Boolean(loyaltyMember),
         paymentMethod: payment?.paymentMethod ?? "CASH",
         paymentSlipUrl: payment?.paymentSlipUrl ?? null,
         lines,
@@ -589,10 +620,7 @@ export function DrinkPosDashboardClient() {
 
   const submitDraftBill = useCallback(async () => {
     if (draftLines.length === 0) return;
-    const payTotal =
-      redeemMode && loyaltyMember
-        ? 0
-        : draftLines.reduce((s, l) => s + l.unitPriceBaht * l.quantity, 0);
+    const payTotal = draftLines.reduce((s, l) => s + l.unitPriceBaht * l.quantity, 0);
     if (drinkPosPaymentSubmitBlocked(paymentMethod, payTotal, paymentSlipUrl)) {
       setBillReviewOpen(true);
       window.alert(
@@ -617,28 +645,26 @@ export function DrinkPosDashboardClient() {
       setBillReviewOpen(false);
       resetPayment();
       if (loyaltyMember?.phone) {
-        const lookupRes = await fetch("/api/drink-pos/members/lookup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ phone: loyaltyMember.phone }),
-        });
-        const lj = (await lookupRes.json().catch(() => ({}))) as { member?: DrinkPosMemberDto };
+        const lookupRes = await fetch(
+          `/api/drink-pos/session/loyalty/members?phone=${encodeURIComponent(loyaltyMember.phone)}`,
+          { credentials: "include", cache: "no-store" },
+        );
+        const lj = (await lookupRes.json().catch(() => ({}))) as {
+          member?: DrinkPosLoyaltyMemberDto | null;
+        };
         if (lookupRes.ok && lj.member) setLoyaltyMember(lj.member);
       }
-      setRedeemMode(false);
       await reload();
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
     } finally {
       setDraftBusy(false);
     }
-  }, [draftLines, reload, loyaltyMember, redeemMode, paymentMethod, paymentSlipUrl, resetPayment]);
+  }, [draftLines, reload, loyaltyMember, paymentMethod, paymentSlipUrl, resetPayment]);
 
   const draftTotalBaht = useMemo(() => {
-    if (redeemMode && loyaltyMember) return 0;
     return draftLines.reduce((s, l) => s + l.unitPriceBaht * l.quantity, 0);
-  }, [draftLines, redeemMode, loyaltyMember]);
+  }, [draftLines]);
 
   const draftQtyByProductId = useMemo(() => {
     const m = new Map<string, number>();
@@ -740,12 +766,7 @@ export function DrinkPosDashboardClient() {
         </ul>
       </section>
 
-      <DrinkPosLoyaltyBar
-        member={loyaltyMember}
-        onMemberChange={setLoyaltyMember}
-        redeemMode={redeemMode}
-        onRedeemModeChange={setRedeemMode}
-      />
+      <DrinkPosLoyaltyBar member={loyaltyMember} onMemberChange={setLoyaltyMember} />
 
       <AppDashboardSection tone="violet">
         <AppSectionHeader
@@ -771,33 +792,18 @@ export function DrinkPosDashboardClient() {
               </Link>
               <DrinkPosButton
                 type="button"
-                onClick={() => setCatManageOpen(true)}
+                onClick={() => openCatManage()}
                 aria-label="จัดการหมวดหมู่"
                 className={cn(
                   appTemplateOutlineButtonClass,
                   drinkPosOutlineIconButtonClass,
                 )}
-                title="จัดการหมวด"
+                title="หมวดหมู่ — เพิ่ม แก้ไข ลบ"
               >
                 <svg className="h-5 w-5 sm:mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
                   <path d="M4 6h16M4 12h10M4 18h14" strokeLinecap="round" />
                 </svg>
-                <span className="hidden sm:inline">จัดการหมวด</span>
-              </DrinkPosButton>
-              <DrinkPosButton
-                type="button"
-                onClick={openCreateCategory}
-                aria-label="เพิ่มหมวดหมู่"
-                className={cn(
-                  appTemplateOutlineButtonClass,
-                  drinkPosOutlineIconButtonClass,
-                )}
-                title="เพิ่มหมวด"
-              >
-                <svg className="h-5 w-5 sm:mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-                </svg>
-                <span className="hidden sm:inline">หมวด</span>
+                <span className="hidden sm:inline">หมวดหมู่</span>
               </DrinkPosButton>
               <DrinkPosButton
                 type="button"
@@ -818,12 +824,13 @@ export function DrinkPosDashboardClient() {
         <div
           className="mt-4 min-w-0 overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth pb-2 pt-0.5 [-webkit-overflow-scrolling:touch]"
           role="group"
-          aria-label="หมวดหมู่ — เลื่อนซ้ายขวาได้"
+          aria-label="กรองตามหมวดหมู่ — เลื่อนซ้ายขวาได้"
         >
           <div className="flex w-max touch-pan-x gap-2 pr-1 sm:flex-wrap sm:pr-0">
             <DrinkPosButton
               type="button"
               onClick={() => setFilterCat("all")}
+              aria-pressed={filterCat === "all"}
               className={cn(
                 "shrink-0 snap-start transition",
                 filterCat === "all" ? drinkPosChipActiveClass : drinkPosChipIdleClass,
@@ -831,11 +838,12 @@ export function DrinkPosDashboardClient() {
             >
               ทั้งหมด
             </DrinkPosButton>
-            {categories.map((c) => (
+            {chipCategories.map((c) => (
               <DrinkPosButton
                 key={c.id}
                 type="button"
                 onClick={() => setFilterCat(c.id)}
+                aria-pressed={filterCat === c.id}
                 className={cn(
                   "shrink-0 snap-start transition",
                   filterCat === c.id ? drinkPosChipActiveClass : drinkPosChipIdleClass,
@@ -1094,36 +1102,169 @@ export function DrinkPosDashboardClient() {
 
       <FormModal
         open={catManageOpen}
-        onClose={() => setCatManageOpen(false)}
-        title="จัดการหมวดหมู่"
-        size="md"
-        footer={null}
+        onClose={() => {
+          if (catBusy || catUploadBusy) return;
+          setCatManageOpen(false);
+          setCatFormOpen(false);
+          setCatEdit(null);
+          setCatErr(null);
+        }}
+        title={catFormOpen ? (catEdit ? "แก้ไขหมวดหมู่" : "เพิ่มหมวดหมู่") : "หมวดหมู่"}
+        description={catFormOpen ? "ลำดับเลขน้อยแสดงก่อน" : "เพิ่ม แก้ไข หรือลบหมวดทั้งหมด"}
+        size="lg"
+        mobileCentered
+        footer={
+          catFormOpen ? (
+            <FormModalFooterActions
+              onCancel={closeCatForm}
+              onSubmit={() => void submitCategory()}
+              submitLabel={catEdit ? "บันทึกการแก้ไข" : "เพิ่มหมวดหมู่"}
+              loading={catBusy}
+              submitDisabled={!catName.trim() || !Number.isFinite(Number(catSortOrder))}
+            />
+          ) : (
+            <div className="flex w-full flex-wrap items-center justify-between gap-2">
+              <DrinkPosButton
+                type="button"
+                onClick={() => openCreateCategory()}
+                className="app-btn-primary inline-flex min-h-[44px] items-center gap-1 rounded-xl px-4 text-sm font-semibold"
+              >
+                <span aria-hidden>+</span>
+                เพิ่มหมวดหมู่
+              </DrinkPosButton>
+              <DrinkPosButton
+                type="button"
+                onClick={() => {
+                  setCatManageOpen(false);
+                  setCatFormOpen(false);
+                  setCatEdit(null);
+                }}
+                className="inline-flex min-h-[44px] items-center rounded-xl border border-white/55 bg-white/70 px-4 text-sm font-black text-[#5b61ff] shadow-sm backdrop-blur-sm"
+              >
+                ปิด
+              </DrinkPosButton>
+            </div>
+          )
+        }
       >
-        {categories.length === 0 ? (
-          <AppEmptyState tone="slate" className="py-4">
-            ยังไม่มีหมวด
-          </AppEmptyState>
+        <AppGalleryCameraFileInputs
+          galleryInputRef={catGalleryRef}
+          cameraInputRef={catCameraRef}
+          onChange={(e) => void onCatImageFileChange(e)}
+        />
+        {catFormOpen ? (
+          <div className="space-y-3">
+            {catErr ? <p className="text-sm font-semibold text-rose-600">{catErr}</p> : null}
+            <label className="block">
+              <span className="text-xs font-bold text-[#66638c]">ชื่อหมวดหมู่</span>
+              <input
+                value={catName}
+                onChange={(e) => setCatName(e.target.value)}
+                className={cn("mt-1", drinkPosFieldClass)}
+                placeholder="เช่น กาแฟ"
+                autoComplete="off"
+              />
+            </label>
+            <div className="space-y-2">
+              <span className="text-xs font-bold text-[#66638c]">รูปหมวด</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <AppImagePickCameraButtons
+                  onPickGallery={() => catGalleryRef.current?.click()}
+                  onPickCamera={() => catCameraRef.current?.click()}
+                  disabled={catBusy}
+                  busy={catUploadBusy}
+                  labels={{ busy: "กำลังอัปโหลด…" }}
+                  className="justify-start"
+                />
+                <DrinkPosButton
+                  type="button"
+                  disabled={catBusy || catUploadBusy}
+                  onClick={() => {
+                    setCatErr(null);
+                    setCatImageUrl(suggestDrinkPosStockImageUrl({ name: catName, categoryName: catName }));
+                  }}
+                  className={cn(
+                    appTemplateOutlineButtonClass,
+                    "rounded-2xl px-3 py-2 text-xs font-black text-[#4d47b6] disabled:opacity-50",
+                  )}
+                >
+                  แนะภาพตามหมวด
+                </DrinkPosButton>
+              </div>
+              {catImageUrl.trim() ? (
+                <div className="overflow-hidden rounded-2xl border border-white/60 bg-[#0000BF]/08 ring-1 ring-inset ring-white/40">
+                  <img
+                    src={catImageUrl.trim()}
+                    alt=""
+                    className="h-28 w-full object-cover object-center"
+                  />
+                </div>
+              ) : null}
+              <label className="block">
+                <span className="text-xs font-bold text-[#66638c]">ลิงก์รูป (URL)</span>
+                <input
+                  value={catImageUrl}
+                  onChange={(e) => setCatImageUrl(e.target.value)}
+                  className={cn("mt-1", drinkPosFieldClass)}
+                  placeholder="https://… หรือ /uploads/…"
+                />
+              </label>
+            </div>
+            <label className="block">
+              <span className="text-xs font-bold text-[#66638c]">ลำดับแสดงผล</span>
+              <input
+                type="number"
+                value={catSortOrder}
+                onChange={(e) => setCatSortOrder(e.target.value)}
+                className={cn("mt-1", drinkPosFieldClass)}
+                placeholder="ตัวเลข — น้อยขึ้นก่อน"
+              />
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#4d47b6]">
+              <input
+                type="checkbox"
+                checked={catIsActive}
+                onChange={(e) => setCatIsActive(e.target.checked)}
+              />
+              เปิดใช้งานหมวดนี้
+            </label>
+          </div>
+        ) : categories.length === 0 ? (
+          <p className="rounded-[1.25rem] border border-dashed border-[#d8d6ec] bg-[#faf9ff]/70 px-3 py-8 text-center text-sm font-semibold text-[#66638c]">
+            ยังไม่มีหมวด — กด «เพิ่มหมวดหมู่»
+          </p>
         ) : (
-          <ul className="max-h-[min(24rem,60vh)] space-y-2 overflow-y-auto pr-1">
+          <ul className="max-h-[min(60vh,28rem)] space-y-2 overflow-y-auto overscroll-contain pr-0.5">
             {categories.map((c) => (
               <li
                 key={c.id}
-                className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-white/50 bg-gradient-to-br from-white/55 to-slate-50/20 px-3 py-3 shadow-sm ring-1 ring-inset ring-white/40 backdrop-blur-sm sm:rounded-[2rem] sm:px-4"
+                className="flex min-h-[56px] items-center gap-3 rounded-[1.25rem] border border-[#e8e6f4]/90 bg-white/80 px-3 py-2.5"
               >
-                <div className="min-w-0">
-                  <p className="truncate font-black text-[#1e1b4b]">{c.name}</p>
-                  <p className="text-xs font-semibold text-[#66638c]">{c.productCount} รายการในหมวด</p>
-                </div>
+                {c.imageUrl ? (
+                  <img
+                    src={c.imageUrl}
+                    alt=""
+                    className="h-10 w-10 shrink-0 rounded-xl object-cover"
+                  />
+                ) : (
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ecebff] text-xs font-black text-[#4d47b6]">
+                    {c.sortOrder}
+                  </span>
+                )}
+                <span className="min-w-0 flex-1 text-sm font-semibold text-[#1e1b4b]">
+                  <span className="text-[#66638c]">{c.sortOrder}.</span> {c.name}
+                  <span className="mt-0.5 block text-xs font-medium text-[#66638c]">
+                    {c.productCount} รายการ
+                    {c.isActive === false ? " · ปิดใช้งาน" : ""}
+                  </span>
+                </span>
                 <div className="flex shrink-0 items-center gap-1">
                   <DrinkPosButton
                     type="button"
                     className={assetRowEditIconButtonClass}
                     aria-label={`แก้ไขหมวด ${c.name}`}
                     title="แก้ไข"
-                    onClick={() => {
-                      setCatManageOpen(false);
-                      openEditCategory(c);
-                    }}
+                    onClick={() => openEditCategory(c)}
                   >
                     <IconRowEdit className="h-4 w-4" aria-hidden />
                   </DrinkPosButton>
@@ -1141,83 +1282,6 @@ export function DrinkPosDashboardClient() {
             ))}
           </ul>
         )}
-      </FormModal>
-
-      <FormModal
-        open={catModalOpen}
-        onClose={() => !catBusy && !catUploadBusy && setCatModalOpen(false)}
-        title={catEdit ? "แก้ไขหมวด" : "เพิ่มหมวดหมู่"}
-        footer={
-          <FormModalFooterActions
-            onCancel={() => !catBusy && !catUploadBusy && setCatModalOpen(false)}
-            onSubmit={() => void submitCategory()}
-            submitLabel="บันทึก"
-            loading={catBusy}
-          />
-        }
-      >
-        <div className="space-y-3">
-          <AppGalleryCameraFileInputs
-            galleryInputRef={catGalleryRef}
-            cameraInputRef={catCameraRef}
-            onChange={(e) => void onCatImageFileChange(e)}
-          />
-          {catErr ? <p className="text-sm font-semibold text-rose-600">{catErr}</p> : null}
-          <label className="block">
-            <span className="text-xs font-bold text-[#66638c]">ชื่อหมวด</span>
-            <input
-              value={catName}
-              onChange={(e) => setCatName(e.target.value)}
-              className={cn("mt-1", drinkPosFieldClass)}
-              placeholder="เช่น เครื่องดื่ม"
-            />
-          </label>
-          <div className="space-y-2">
-            <span className="text-xs font-bold text-[#66638c]">รูปหมวด</span>
-            <div className="flex flex-wrap items-center gap-2">
-              <AppImagePickCameraButtons
-                onPickGallery={() => catGalleryRef.current?.click()}
-                onPickCamera={() => catCameraRef.current?.click()}
-                disabled={catBusy}
-                busy={catUploadBusy}
-                labels={{ busy: "กำลังอัปโหลด…" }}
-                className="justify-start"
-              />
-              <DrinkPosButton
-                type="button"
-                disabled={catBusy || catUploadBusy}
-                onClick={() => {
-                  setCatErr(null);
-                  setCatImageUrl(suggestDrinkPosStockImageUrl({ name: catName, categoryName: catName }));
-                }}
-                className={cn(
-                  appTemplateOutlineButtonClass,
-                  "rounded-2xl px-3 py-2 text-xs font-black text-[#4d47b6] disabled:opacity-50",
-                )}
-              >
-                แนะภาพตามหมวด
-              </DrinkPosButton>
-            </div>
-            {catImageUrl.trim() ? (
-              <div className="overflow-hidden rounded-2xl border border-white/60 bg-[#0000BF]/08 ring-1 ring-inset ring-white/40">
-                <img
-                  src={catImageUrl.trim()}
-                  alt=""
-                  className="h-28 w-full object-cover object-center"
-                />
-              </div>
-            ) : null}
-            <label className="block">
-              <span className="text-xs font-bold text-[#66638c]">ลิงก์รูป (URL) — ทับหลังอัปโหลดได้</span>
-              <input
-                value={catImageUrl}
-                onChange={(e) => setCatImageUrl(e.target.value)}
-                className={cn("mt-1", drinkPosFieldClass)}
-                placeholder="https://… หรือ /uploads/…"
-              />
-            </label>
-          </div>
-        </div>
       </FormModal>
 
       <FormModal

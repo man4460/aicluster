@@ -53,10 +53,10 @@ function UsagePill({ badge }: { badge: ModuleUsageBadge }) {
       </span>
     );
   }
-  if (badge.tone === "daily") {
+  if (badge.tone === "monthly") {
     return (
       <span className="rounded-lg border border-amber-200/70 bg-amber-300/90 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#1a0d3a] shadow-sm">
-        1 บาท/วัน
+        199 / เดือน
       </span>
     );
   }

@@ -1,14 +1,24 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { parseLoyaltyPhoneQuery } from "@/lib/loyalty-stamp/member-qr";
+import {
+  ensureDrinkPosLoyaltySettings,
+  formatDrinkPosLoyaltyEarnRule,
+  listDrinkPosLoyaltyRewards,
+  mapDrinkPosLoyaltyMember,
+  type DrinkPosLoyaltyMemberDto,
+  type DrinkPosLoyaltyRewardDto,
+  type DrinkPosLoyaltySettingsDto,
+} from "@/systems/drink-pos/lib/loyalty";
 
-export type DrinkPosMemberDto = {
-  id: string;
-  phone: string;
-  customerName: string | null;
-  currentStamps: number;
-  stampsPerReward: number;
-  rewardTitle: string;
-  readyToRedeem: boolean;
+export type DrinkPosMemberDto = DrinkPosLoyaltyMemberDto & {
+  /** @deprecated ใช้ points_balance */
+  currentStamps?: number;
+  /** @deprecated */
+  stampsPerReward?: number;
+  /** @deprecated */
+  rewardTitle?: string;
+  /** มีรายการแลกที่คะแนนพออย่างน้อย 1 รายการ */
+  readyToRedeem?: boolean;
 };
 
 export async function ensureDrinkPosShopProfile(
@@ -30,12 +40,13 @@ export async function findDrinkPosMemberByPhoneQuery(
   ownerUserId: string,
   trialSessionId: string,
   phoneRaw: string,
+  opts?: { createIfMissing?: boolean },
 ): Promise<DrinkPosMemberDto | { error: string }> {
   const parsed = parseLoyaltyPhoneQuery(phoneRaw);
   if ("error" in parsed) return { error: parsed.error };
 
-  const profile = await ensureDrinkPosShopProfile(db, ownerUserId, trialSessionId);
-  const cap = Math.max(1, Math.min(profile.stampsPerReward, 30));
+  const settings = await ensureDrinkPosLoyaltySettings(ownerUserId, trialSessionId);
+  const createIfMissing = opts?.createIfMissing !== false;
 
   if (parsed.kind === "full") {
     let member = await db.drinkPosMember.findUnique({
@@ -48,11 +59,14 @@ export async function findDrinkPosMemberByPhoneQuery(
       },
     });
     if (!member) {
+      if (!createIfMissing) {
+        return { error: "ยังไม่มีคะแนนบนเบอร์นี้" };
+      }
       member = await db.drinkPosMember.create({
         data: { ownerUserId, trialSessionId, phone: parsed.phone },
       });
     }
-    return mapMember(member, profile);
+    return enrichMemberDto(mapDrinkPosLoyaltyMember(member), settings);
   }
 
   const matches = await db.drinkPosMember.findMany({
@@ -66,53 +80,36 @@ export async function findDrinkPosMemberByPhoneQuery(
   if (matches.length > 1) {
     return { error: `พบ ${matches.length} สมาชิก — กรอกเบอร์ครบ 10 หลัก` };
   }
-  return mapMember(matches[0]!, profile);
+  return enrichMemberDto(mapDrinkPosLoyaltyMember(matches[0]!), settings);
 }
 
-function mapMember(
-  member: { id: string; phone: string; customerName: string | null; currentStamps: number },
-  profile: { stampsPerReward: number; rewardTitle: string },
+function enrichMemberDto(
+  member: DrinkPosLoyaltyMemberDto,
+  settings: DrinkPosLoyaltySettingsDto,
 ): DrinkPosMemberDto {
-  const stampsPerReward = Math.max(1, Math.min(profile.stampsPerReward, 30));
-  const currentStamps = Math.min(member.currentStamps, stampsPerReward);
   return {
-    id: member.id,
-    phone: member.phone,
-    customerName: member.customerName,
-    currentStamps,
-    stampsPerReward,
-    rewardTitle: profile.rewardTitle,
-    readyToRedeem: currentStamps >= stampsPerReward,
+    ...member,
+    currentStamps: member.points_balance,
+    stampsPerReward: settings.baht_per_point,
+    rewardTitle: formatDrinkPosLoyaltyEarnRule(settings.baht_per_point, settings.points_per_unit),
+    readyToRedeem: member.points_balance > 0,
   };
 }
 
-export async function applyDrinkPosSaleLoyalty(
-  db: PrismaClient,
+export async function listActiveDrinkPosLoyaltyRewards(
   ownerUserId: string,
   trialSessionId: string,
-  memberId: string | null,
-  isRewardRedemption: boolean,
+): Promise<DrinkPosLoyaltyRewardDto[]> {
+  return listDrinkPosLoyaltyRewards(ownerUserId, trialSessionId, { activeOnly: true });
+}
+
+/** @deprecated ใช้ applyDrinkPosLoyaltyEarnOnSale / redeemDrinkPosLoyaltyReward */
+export async function applyDrinkPosSaleLoyalty(
+  _db: PrismaClient,
+  _ownerUserId: string,
+  _trialSessionId: string,
+  _memberId: string | null,
+  _isRewardRedemption: boolean,
 ): Promise<void> {
-  if (!memberId) return;
-  const profile = await ensureDrinkPosShopProfile(db, ownerUserId, trialSessionId);
-  const cap = Math.max(1, Math.min(profile.stampsPerReward, 30));
-  const member = await db.drinkPosMember.findFirst({
-    where: { id: memberId, ownerUserId, trialSessionId },
-  });
-  if (!member) return;
-
-  if (isRewardRedemption) {
-    if (member.currentStamps < cap) return;
-    await db.drinkPosMember.update({
-      where: { id: member.id },
-      data: { currentStamps: 0, totalRedemptions: { increment: 1 } },
-    });
-    return;
-  }
-
-  if (member.currentStamps >= cap) return;
-  await db.drinkPosMember.update({
-    where: { id: member.id },
-    data: { currentStamps: { increment: 1 } },
-  });
+  /* no-op — จุดสะสม/แลกย้ายไป lib/loyalty.ts */
 }

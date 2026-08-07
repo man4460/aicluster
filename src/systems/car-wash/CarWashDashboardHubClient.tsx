@@ -5,6 +5,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { CarWashBookingsClient } from "@/systems/car-wash/CarWashBookingsClient";
 import { CarWashDayScheduleClient } from "@/systems/car-wash/CarWashDayScheduleClient";
+import {
+  carWashContentStackClass,
+  carWashNavActiveClass,
+  carWashNavIdleClass,
+  carWashSubTabSegmentShellClass,
+} from "@/systems/car-wash/car-wash-ui-tokens";
 
 export type CarWashHubTabKey = "overview" | "queue" | "schedule";
 
@@ -44,7 +50,7 @@ function hubTabIcon(key: CarWashHubTabKey) {
   }
 }
 
-/** ปุ่มสลับภาพรวม / จัดการคิว / ตารางเวลา — วางคู่หัวข้อสถิติ (แบบร้านนวด) */
+/** ปุ่มสลับภาพรวม / จัดการคิว / ตารางเวลา — วางคู่หัวข้อสถิติ */
 export function CarWashDashboardTabToolbar({ className }: { className?: string }) {
   const router = useRouter();
   const pathname = usePathname() ?? "/dashboard/car-wash";
@@ -69,7 +75,10 @@ export function CarWashDashboardTabToolbar({ className }: { className?: string }
       aria-label="แท็บภาพรวมคาร์แคร์"
     >
       <div
-        className="inline-flex max-w-full flex-nowrap items-center justify-end gap-1 overflow-x-auto rounded-[2rem] border border-white/60 bg-white/40 p-1 backdrop-blur-md max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden sm:flex-wrap"
+        className={cn(
+          carWashSubTabSegmentShellClass,
+          "inline-flex max-w-full flex-nowrap items-center justify-end gap-1 overflow-x-auto backdrop-blur-md max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden sm:flex-wrap",
+        )}
         role="group"
       >
         {HUB_TAB_ITEMS.map((item) => {
@@ -83,10 +92,9 @@ export function CarWashDashboardTabToolbar({ className }: { className?: string }
               aria-current={active ? "page" : undefined}
               suppressHydrationWarning
               className={cn(
-                "flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-[2rem] px-2 py-2 transition-all sm:min-h-0 sm:min-w-0 sm:gap-1.5 sm:rounded-[1.25rem] sm:px-3 sm:py-1.5",
-                active
-                  ? "bg-white/80 text-[#5b61ff] shadow-sm ring-1 ring-white/80"
-                  : "text-slate-600 hover:bg-white/55 hover:text-slate-900",
+                "flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center px-2 py-2 transition-all sm:min-h-0 sm:min-w-0 sm:gap-1.5 sm:px-3 sm:py-1.5",
+                "rounded-[2rem] sm:rounded-[1.25rem]",
+                active ? carWashNavActiveClass : carWashNavIdleClass,
               )}
             >
               <svg
@@ -94,12 +102,17 @@ export function CarWashDashboardTabToolbar({ className }: { className?: string }
                 fill="none"
                 stroke="currentColor"
                 strokeWidth={2.5}
-                className={cn("h-5 w-5 shrink-0 sm:h-4 sm:w-4", active ? "text-[#5b61ff]" : "text-slate-400")}
+                className={cn(
+                  "h-5 w-5 shrink-0 sm:h-4 sm:w-4",
+                  active ? "text-white/95" : "text-slate-400",
+                )}
                 aria-hidden
               >
                 {hubTabIcon(item.key)}
               </svg>
-              <span className="hidden text-xs font-bold sm:inline">{item.label}</span>
+              <span className={cn("hidden text-xs font-bold sm:inline", active ? "text-white" : "")}>
+                {item.label}
+              </span>
             </button>
           );
         })}
@@ -119,14 +132,14 @@ function CarWashDashboardHubPanels({
   const hubTab = useMemo(() => parseHubTab(searchParams.get("tab")), [searchParams]);
 
   return (
-    <div className="space-y-4 sm:space-y-5">
+    <div className={carWashContentStackClass}>
       {hubTab !== "overview" ? (
         <div className="flex justify-end print:hidden">
           <CarWashDashboardTabToolbar />
         </div>
       ) : null}
 
-      {hubTab === "overview" ? <div className="space-y-4 sm:space-y-6">{children}</div> : null}
+      {hubTab === "overview" ? <div className={carWashContentStackClass}>{children}</div> : null}
       {hubTab === "queue" ? (
         <CarWashBookingsClient initialDateKey={initialDateKey} />
       ) : null}
@@ -139,7 +152,7 @@ function CarWashDashboardHubPanels({
 
 function HubPanelsFallback() {
   return (
-    <div className="space-y-4 sm:space-y-5" aria-busy>
+    <div className={carWashContentStackClass} aria-busy>
       <div className="h-16 animate-pulse rounded-[2rem] bg-white/25 sm:h-14" />
     </div>
   );

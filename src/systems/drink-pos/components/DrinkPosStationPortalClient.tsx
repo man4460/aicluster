@@ -15,16 +15,15 @@ export function DrinkPosStationPortalClient({
   shopName: string;
 }) {
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-[#f5f3ff] via-white to-[#fdf2f8] px-3 py-4 sm:px-6 sm:py-6">
-      <div className="mx-auto w-full max-w-6xl">
-        <DrinkPosOrderBoardClient
-          mode="station"
-          role={role}
-          ownerId={ownerId}
-          trialParam={trialParam}
-          shopName={shopName}
-        />
-      </div>
+    <div className="h-dvh max-h-dvh overflow-hidden bg-gradient-to-b from-[#f5f3ff] via-white to-[#fdf2f8] p-1.5 sm:p-2">
+      <DrinkPosOrderBoardClient
+        mode="station"
+        role={role}
+        ownerId={ownerId}
+        trialParam={trialParam}
+        shopName={shopName}
+        className="flex h-full min-h-0 flex-col"
+      />
     </div>
   );
 }

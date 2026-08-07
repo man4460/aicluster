@@ -8,9 +8,10 @@ export const DRINK_POS_CATEGORY_IMAGES = [
   `https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?${Q}&w=640&h=400`,
   `https://images.unsplash.com/photo-1544787219-7f47ccb76574?${Q}&w=640&h=400`,
   `https://images.unsplash.com/photo-1563805042-7684c019e1cb?${Q}&w=640&h=400`,
+  `https://images.unsplash.com/photo-1623065425237-9c1a4c4f0d0f?${Q}&w=640&h=400`,
 ] as const;
 
-/** ลาเต้ · อเมริกาโน่ · คาปูชิโน่ · มอคค่า · ชาเขียว · ชาไทย · โกโก้ · นม · ท็อปปิ้ง · วิป · เอสเปรสโซ่ */
+/** ลาเต้ · อเมริกาโน่ · คาปูชิโน่ · มอคค่า · ชาเขียว · ชาไทย · โกโก้ · นม · ท็อปปิ้ง · วิป · เอสเปรสโซ่ · สมูทตี้×2 */
 export const DRINK_POS_PRODUCT_IMAGES = [
   `https://images.unsplash.com/photo-1572442388796-11668a67e53d?${Q}&w=800&h=600`,
   `https://images.unsplash.com/photo-1509042239860-f550ce710b93?${Q}&w=800&h=600`,
@@ -23,6 +24,8 @@ export const DRINK_POS_PRODUCT_IMAGES = [
   `https://images.unsplash.com/photo-1621939514649-280e2ee25f60?${Q}&w=800&h=600`,
   `https://images.unsplash.com/photo-1563805042-7684c019e1cb?${Q}&w=800&h=600`,
   `https://images.unsplash.com/photo-1509042239860-f550ce710b93?${Q}&w=800&h=600`,
+  `https://images.unsplash.com/photo-1505252585461-04db1eb84625?${Q}&w=800&h=600`,
+  `https://images.unsplash.com/photo-1638176066666-ffb2f013c7dd?${Q}&w=800&h=600`,
 ] as const;
 
 export const DRINK_POS_DEFAULT_IMAGE = `https://images.unsplash.com/photo-1604719312566-8912e9227c6a?${Q}&w=800&h=600`;

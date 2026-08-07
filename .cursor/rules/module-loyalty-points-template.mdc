@@ -1,0 +1,148 @@
+---
+description: แม่แบบระบบสะสม/แลกคะแนนโมดูล (คีย์=เบอร์ · earn เมื่อ PAID · พอร์ทัลลูกค้า · staff/session API) — ใช้เมื่อทำ loyalty ให้โมดูลใหม่
+globs:
+  - "**/systems/**/lib/loyalty*.ts"
+  - "**/systems/**/components/**Loyalty*.tsx"
+  - "**/app/api/**/loyalty/**"
+  - "**/app/api/**/members/**"
+  - "**/prisma/schema.prisma"
+alwaysApply: false
+---
+
+# ระบบสะสมคะแนนโมดูล (แม่แบบ)
+
+เมื่อเพิ่มหรือปรับ **สะสมคะแนน / แลกของรางวัล** ในโมดูลแดชบอร์ดใด ๆ ให้ยึดแพทเทิร์นนี้ (อ้างอิงหลัก: **POS ร้านอาหาร** · คู่ใกล้: drink-pos)
+
+**คู่กับ:** `customer-portal-no-description-copy.mdc` (หน้าลูกค้าไม่ใส่คำอธิบายยาว) · `agent-finish-checkpoint.mdc` (หลังแตะ Prisma → `prisma generate`)
+
+---
+
+## 0) หลักคิดสั้น ๆ
+
+1. **คีย์สมาชิก = เบอร์โทร** — เก็บตัวเลขล้วน (`normalize` ตัดอักษร) · ไม่บังคับกรอกถ้าลูกค้าไม่สะดวก  
+2. **ขอบเขตข้อมูล** = `ownerUserId` + `trialSessionId` (หรือเทียบเท่า trial scope ของโมดูล)  
+3. **สะสมเมื่อชำระสำเร็จ** — มักตอนสถานะออเดอร์/บิลเป็น **PAID** (ครั้งเดียวต่อออเดอร์)  
+4. **กฎคำนวณบริสุทธิ์** อยู่ใน `lib/loyalty-rule.ts` (ใช้ client ได้) · เขียน DB ใน `lib/loyalty.ts` (server)  
+5. **ตั้งค่าร้าน / แคตตาล็อกแลก** อยู่แดชบอร์ด · หน้าลูกค้าโชว์แค่หัวข้อสั้น + คะแนน + ปุ่มแลก  
+
+---
+
+## 1) โมเดลข้อมูล (Prisma — โครงมาตรฐาน)
+
+ต่อโมดูลหนึ่งชุด (เปลี่ยน prefix ตามโมดูล เช่น `BuildingPos` / `DrinkPos`):
+
+| โมเดล | หน้าที่ |
+|--------|---------|
+| `*LoyaltySettings` | `enabled`, `bahtPerPoint`, `pointsPerUnit` · unique `(owner, trial)` |
+| `*LoyaltyMember` | `phone`, `pointsBalance`, `totalEarned`, `totalRedeemed` · unique `(owner, trial, phone)` |
+| `*LoyaltyReward` | `title`, `pointsCost`, optional `menuItemId`, `isActive`, `sortOrder` |
+| `*LoyaltyLedger` | `kind` = `EARN` \| `REDEEM`, `pointsDelta`, `balanceAfter`, optional `orderId` / `rewardId` |
+
+บน **ออเดอร์/บิล** (ถ้ามี):
+
+- `memberPhone` (varchar)  
+- `pointsEarned` / `pointsRedeemed` (int, default 0) — กันให้คะแนนซ้ำ  
+
+**เบอร์:** ความยาวเก็บ ~9–10 หลักหลัง normalize · ค้นหา staff อาจรองรับ 4 หลักท้ายผ่าน `parseLoyaltyPhoneQuery` (`@/lib/loyalty-stamp/member-qr`)
+
+---
+
+## 2) กฎสะสม (สูตร)
+
+```
+points = floor(ยอดชำระบาท / bahtPerPoint) * pointsPerUnit
+```
+
+- ถ้า `points <= 0` หรือไม่มีเบอร์ครบ → ไม่สร้างสมาชิก / ไม่ให้คะแนน  
+- ให้คะแนนเฉพาะเมื่อ **เปลี่ยนเข้า PAID ครั้งแรก** (`previousPointsEarned === 0`)  
+- อัปเดตสมาชิก + ledger + ติด `pointsEarned` บนออเดอร์ ใน **ธุรกรรมเดียว**
+
+อ้างอิง: `src/systems/building-pos/lib/loyalty-rule.ts` · `applyBuildingPosLoyaltyEarnOnPaid` ใน `lib/loyalty.ts`
+
+---
+
+## 3) แลกคะแนน (Redeem)
+
+1. ตรวจ `enabled` + เบอร์ครบ + คะแนนพอ + reward `isActive`  
+2. หักคะแนน + ledger `REDEEM`  
+3. **ลูกค้า self-serve:** สร้างออเดอร์ของแถม (ราคา 0) ในธุรกรรมเดียวถ้าเป็นไปได้ — ส่งเข้าครัว/คิว  
+4. **พนักงาน/แดชบอร์ด:** แลกผูก `orderId` โต๊ะได้ หรือแค่หักคะแนนแล้วแจ้งพนักงาน  
+
+อย่าหักคะแนนก่อนสร้างออเดอร์แล้วปล่อยค้างถ้าสร้างออเดอร์ล้ม — รวมใน `$transaction`
+
+---
+
+## 4) API ชั้น (บังคับแยกสิทธิ์)
+
+| ชั้น | ใช้เมื่อ | ตัวอย่างพาธ (building-pos) |
+|------|----------|---------------------------|
+| **session** | เจ้าของล็อกอินแดชบอร์ด | `/api/{module}/session/loyalty` · `.../members` · `.../rewards` |
+| **staff** | ลิงก์/QR พนักงาน (โทเค็น) | `/api/{module}/staff/loyalty` · `.../members` |
+| **public** | ลูกค้า QR (ownerId + trial) | `/api/{module}/public/loyalty` (GET ดูคะแนน · POST แลก) |
+
+- Public lookup: **เบอร์เต็ม 9–10** (ไม่เปิด suffix4 เพื่อลดการเดา)  
+- Staff/session: ใช้ `parseLoyaltyPhoneQuery` ได้ (เต็ม หรือ 4 หลักท้าย)  
+- PATCH สถานะออเดอร์เป็น PAID ต้องรับ `member_phone` optional แล้วเรียก earn  
+
+แผง UI เดียวรองรับสองโหมด: ส่ง `staffAuth` → ยิง staff API · ไม่ส่ง → session (`credentials: "include"`)
+
+อ้างอิง: `BuildingPosLoyaltyCheckoutPanel`
+
+---
+
+## 5) UX หน้าลูกค้า (QR สั่ง / พอร์ทัล)
+
+เมื่อมีหลายแถบ:
+
+| แถบ | เนื้อหา |
+|------|---------|
+| **ข้อมูล** (เปิดก่อน) | ชื่อ · โต๊ะ/อ้างอิง · **เบอร์โทรสะสมคะแนน** (ไม่บังคับ) |
+| สั่ง / เมนู | … |
+| ออเดอร์ | สถานะรายการ |
+| **แลกคะแนน** (ขวาสุด · โชว์เมื่อ `enabled`) | คะแนนของเบอร์ที่กรอก + รายการแลก — **ไม่มีช่องเบอร์ซ้ำ** |
+
+- กรอกเบอร์แล้ว → สั่งปกติ → ได้แต้มเมื่อร้านยืนยันชำระ  
+- ไม่กรอก = สั่งได้ · ไม่สะสม  
+- ข้อความ UI: หัวข้อสั้นเท่านั้น — ดู `customer-portal-no-description-copy.mdc`  
+- จำเบอร์ใน `localStorage` ต่อร้านได้  
+
+อ้างอิง: `BuildingPosCustomerOrderClient` · `BuildingPosCustomerLoyaltyPanel` (`hidePhoneInput`)
+
+---
+
+## 6) UX พนักงาน / แดชบอร์ด
+
+- โมดัลโต๊ะ / ก่อนกด **ชำระแล้ว**: แผงค้นหาเบอร์ · ผูกเบอร์ · แลก · ส่ง `member_phone` ตอน PAID  
+- หน้าสั่งของพนักงาน: ช่อง **เบอร์โทรสะสมคะแนน** ตอนสร้างออเดอร์ (ถ้าเปิดระบบ)  
+- ตั้งค่ากฎ + แคตตาล็อกแลก: หน้า settings โมดูล (ไม่โชว์สูตรยาวบนพอร์ทัลลูกค้า)
+
+อ้างอิง: `BuildingPosLoyaltySettingsClient` · `BuildingPosOpenTablesPanel` · `BuildingPosOrderClient` · `BuildingPosStaffClient`
+
+---
+
+## 7) Checklist โมดูลใหม่
+
+1. Schema + migration + **`npx prisma generate`**  
+2. `lib/loyalty-rule.ts` (สูตร + DTO) + `lib/loyalty.ts` (ensure / earn / redeem / map)  
+3. API: session (settings+rewards+members) · public (lookup+redeem) · staff (ถ้ามีลิงก์พนักงาน)  
+4. อัปเดต PATCH ออเดอร์ → earn on PAID  
+5. UI ตั้งค่า · แผง checkout · พอร์ทัลลูกค้า (เบอร์ที่ข้อมูล · แถบแลกขวาสุด)  
+6. ผ่าน `tsc` · ไม่ commit secret  
+
+---
+
+## 8) ไฟล์อ้างอิง (building-pos)
+
+| บทบาท | พาธ |
+|--------|-----|
+| สูตร | `src/systems/building-pos/lib/loyalty-rule.ts` |
+| Server | `src/systems/building-pos/lib/loyalty.ts` |
+| Settings UI | `.../components/BuildingPosLoyaltySettingsClient.tsx` |
+| Checkout staff/owner | `.../components/BuildingPosLoyaltyCheckoutPanel.tsx` |
+| ลูกค้าแลก | `.../components/BuildingPosCustomerLoyaltyPanel.tsx` |
+| Public API | `src/app/api/building-pos/public/loyalty/route.ts` |
+| Session API | `src/app/api/building-pos/session/loyalty/**` |
+| Staff API | `src/app/api/building-pos/staff/loyalty/**` |
+| Normalize ร่วม | `src/lib/loyalty-stamp/member-qr.ts` |
+
+drink-pos: `src/systems/drink-pos/lib/loyalty-rule.ts` + portal สมาชิก — โครงสร้างคล้ายกัน ปรับโดเมน (แสตมป์ vs คะแนนบาท) ให้เข้าธีมโมดูล แต่คง **คีย์เบอร์ + scope ร้าน + แยก public/session**

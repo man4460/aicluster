@@ -7,6 +7,7 @@ const patchSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   imageUrl: z.string().trim().max(500).optional().nullable(),
   sortOrder: z.number().int().min(0).max(999999).optional(),
+  isActive: z.boolean().optional(),
 });
 
 type RouteCtx = { params: Promise<{ id: string }> };
@@ -40,8 +41,9 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
       ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
       ...(parsed.data.imageUrl !== undefined ? { imageUrl: parsed.data.imageUrl?.trim() || null } : {}),
       ...(parsed.data.sortOrder !== undefined ? { sortOrder: parsed.data.sortOrder } : {}),
+      ...(parsed.data.isActive !== undefined ? { isActive: parsed.data.isActive } : {}),
     },
-    select: { id: true, name: true, imageUrl: true, sortOrder: true },
+    select: { id: true, name: true, imageUrl: true, sortOrder: true, isActive: true },
   });
 
   return NextResponse.json({ category: row });

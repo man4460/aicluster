@@ -11,6 +11,7 @@ import {
 } from "@/systems/building-pos/building-pos-service";
 import { prepareBuildingPosSlipImageFile } from "@/systems/building-pos/building-pos-slip-image";
 import { BuildingPosRemoteImg } from "@/systems/building-pos/components/building-pos-remote-image";
+import { BuildingPosLoyaltyCheckoutPanel } from "@/systems/building-pos/components/BuildingPosLoyaltyCheckoutPanel";
 import { downloadPosTableStaticHtmlAsA4Pdf } from "@/systems/building-pos/pos-table-bill-pdf-capture";
 import {
   buildPosTableBillInnerHtml,
@@ -347,7 +348,11 @@ function getOrderChannelMeta(
 type OpenTablesProps = {
   orders: PosOrder[];
   menuImageById: Map<number, string>;
-  onOrderStatusChange: (id: number, status: PosOrder["status"]) => void;
+  onOrderStatusChange: (
+    id: number,
+    status: PosOrder["status"],
+    extra?: { member_phone?: string },
+  ) => void;
   onOrderDelete?: (id: number) => void | Promise<void>;
   /** บันทึก URL รูปสลิปหลังอัปโหลด — แสดงซ้ำในหน้าดูยอดขาย */
   onOrderPaymentSlipSaved?: (orderId: number, imageUrl: string) => Promise<void>;
@@ -377,7 +382,10 @@ export function BuildingPosOpenTablesPanel({
   const slipCameraInputRef = useRef<HTMLInputElement>(null);
   const slipTargetOrderIdRef = useRef<number | null>(null);
   const [slipBusyOrderId, setSlipBusyOrderId] = useState<number | null>(null);
+  const [loyaltyPhone, setLoyaltyPhone] = useState("");
   const [slipCameraOpen, setSlipCameraOpen] = useState(false);
+  /** กัน SSE/รีเฟรชทับเบอร์ที่พนักงานพิมพ์ระหว่างเปิดโมดัล */
+  const loyaltySeededModalKeyRef = useRef<string | null>(null);
 
   const [tableModalKey, setTableModalKey] = useState<string | null>(null);
   const [tableModalView, setTableModalView] = useState<"details" | "bill">("details");
@@ -406,6 +414,44 @@ export function BuildingPosOpenTablesPanel({
     return activeByTable.find(([k]) => k === tableModalKey)?.[1] ?? [];
   }, [tableModalKey, activeByTable]);
 
+  /** เบอร์ที่ลูกค้ากรอกตอนสั่ง — ใช้ตอนเรียกเก็บโดยไม่ต้องพิมพ์ใหม่ */
+  const linkedLoyaltyPhone = useMemo(() => {
+    for (const o of modalOrders) {
+      const digits = (o.member_phone ?? "").replace(/\D/g, "").slice(0, 20);
+      if (digits.length >= 9) return digits;
+    }
+    return "";
+  }, [modalOrders]);
+
+  const closeTableModal = useCallback(() => {
+    setTableModalKey(null);
+    setTableModalView("details");
+    setLoyaltyPhone("");
+    loyaltySeededModalKeyRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    if (!tableModalKey) {
+      loyaltySeededModalKeyRef.current = null;
+      return;
+    }
+    if (linkedLoyaltyPhone) {
+      setLoyaltyPhone(linkedLoyaltyPhone);
+      loyaltySeededModalKeyRef.current = tableModalKey;
+      return;
+    }
+    if (loyaltySeededModalKeyRef.current !== tableModalKey) {
+      loyaltySeededModalKeyRef.current = tableModalKey;
+      setLoyaltyPhone("");
+    }
+  }, [tableModalKey, linkedLoyaltyPhone]);
+
+  /** โต๊ะว่างหลังชำระครบ — ปิดโมดัลและล้างเบอร์สะสม */
+  useEffect(() => {
+    if (tableModalKey && modalOrders.length === 0) {
+      closeTableModal();
+    }
+  }, [tableModalKey, modalOrders.length, closeTableModal]);
   const modalGrandTotal = useMemo(
     () => Math.round(modalOrders.reduce((s, o) => s + o.total_amount, 0)),
     [modalOrders],
@@ -879,7 +925,7 @@ export function BuildingPosOpenTablesPanel({
         description={
           tableModalView === "details" ? "แก้สถานะออเดอร์ หรือเปิดบิลพร้อมเพย์" : "สแกนจ่าย · พิมพ์หรือดาวน์โหลดบิล"
         }
-        onClose={() => setTableModalKey(null)}
+        onClose={closeTableModal}
         size="lg"
         footer={
           tableModalView === "details" ?
@@ -894,7 +940,7 @@ export function BuildingPosOpenTablesPanel({
               <button
                 type="button"
                 className="app-btn-soft rounded-xl px-4 py-2.5 text-sm font-semibold text-[#4d47b6]"
-                onClick={() => setTableModalKey(null)}
+                onClick={closeTableModal}
               >
                 ปิด
               </button>
@@ -912,7 +958,7 @@ export function BuildingPosOpenTablesPanel({
                 <button
                   type="button"
                   className="app-btn-soft rounded-xl px-4 py-2.5 text-sm font-semibold text-[#4d47b6]"
-                  onClick={() => setTableModalKey(null)}
+                  onClick={closeTableModal}
                 >
                   ปิด
                 </button>
@@ -923,6 +969,12 @@ export function BuildingPosOpenTablesPanel({
         <div className="space-y-4">
           {tableModalView === "details" ?
             <div className="space-y-4">
+            <BuildingPosLoyaltyCheckoutPanel
+              orderId={modalOrders[0]?.id ?? null}
+              staffAuth={staffAuth}
+              linkedPhone={linkedLoyaltyPhone}
+              onMemberPhoneChange={setLoyaltyPhone}
+            />
             <AppGalleryCameraFileInputs
               galleryInputRef={slipGalleryInputRef}
               cameraInputRef={slipCameraInputRef}
@@ -963,6 +1015,11 @@ export function BuildingPosOpenTablesPanel({
                   <p className="mt-2 text-sm font-medium text-[#2e2a58]">
                     {o.customer_name || "ลูกค้า"} · โต๊ะ {o.table_no || "—"}
                   </p>
+                  {(o.member_phone ?? "").replace(/\D/g, "").length >= 9 ? (
+                    <p className="mt-0.5 text-xs font-semibold tabular-nums text-[#4d47b6]">
+                      สะสมคะแนน · {(o.member_phone ?? "").replace(/\D/g, "")}
+                    </p>
+                  ) : null}
                   <p className="mt-1">
                     <span
                       className={cn(
@@ -1036,7 +1093,27 @@ export function BuildingPosOpenTablesPanel({
                       <PosOrderStatusIconStrip
                         orderId={o.id}
                         current={o.status}
-                        onSelect={(s) => onOrderStatusChange(o.id, s)}
+                        onSelect={(s) => {
+                          const fromOrder = (o.member_phone ?? "").replace(/\D/g, "");
+                          const fromPanel = loyaltyPhone.replace(/\D/g, "");
+                          const phoneForPay =
+                            fromOrder.length >= 9 ? fromOrder
+                            : fromPanel.length >= 9 ? fromPanel
+                            : "";
+                          onOrderStatusChange(
+                            o.id,
+                            s,
+                            s === "PAID" && phoneForPay ? { member_phone: phoneForPay } : undefined,
+                          );
+                          if (s === "PAID") {
+                            // หลังชำระ — เคลียร์เบอร์ถ้าออเดอร์นี้เป็นใบสุดท้ายของโต๊ะ (effect ปิดโมดัลจะเคลียร์อีกครั้ง)
+                            const remaining = modalOrders.filter((x) => x.id !== o.id);
+                            if (remaining.length === 0) {
+                              setLoyaltyPhone("");
+                              loyaltySeededModalKeyRef.current = null;
+                            }
+                          }
+                        }}
                       />
                     </div>
                     <div className="mt-2 flex items-center justify-end gap-1.5">
@@ -1430,7 +1507,11 @@ type HistoryProps = {
   orders: PosOrder[];
   categories?: PosCategory[];
   menuItems?: PosMenuItem[];
-  onOrderStatusChange: (id: number, status: PosOrder["status"]) => void;
+  onOrderStatusChange: (
+    id: number,
+    status: PosOrder["status"],
+    extra?: { member_phone?: string },
+  ) => void;
   onOrderDelete: (id: number) => void;
   onRefresh?: () => void;
   refreshing?: boolean;
@@ -1455,8 +1536,6 @@ export function BuildingPosSalesHistoryPanel({
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(true);
   const [chartsOpen, setChartsOpen] = useState(false);
-  const [seedingDemo, setSeedingDemo] = useState(false);
-  const [seedMsg, setSeedMsg] = useState<string | null>(null);
   const [sparkRevenueCost, setSparkRevenueCost] = useState<AppRevenueCostBucket[]>([]);
   const [sparkLoading, setSparkLoading] = useState(false);
   const [sparkErr, setSparkErr] = useState<string | null>(null);
@@ -1641,27 +1720,6 @@ export function BuildingPosSalesHistoryPanel({
     setFilterDay("");
   }
 
-  async function seedDemoData() {
-    setSeedingDemo(true);
-    setSeedMsg(null);
-    try {
-      const res = await fetch("/api/building-pos/session/seed-demo", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ force: true }),
-      });
-      const j = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
-      if (!res.ok) throw new Error(typeof j.error === "string" ? j.error : "ใส่ข้อมูลตัวอย่างไม่สำเร็จ");
-      setSeedMsg(j.message ?? "ใส่ข้อมูลตัวอย่างแล้ว");
-      onRefresh?.();
-    } catch (e) {
-      setSeedMsg(e instanceof Error ? e.message : "ใส่ข้อมูลตัวอย่างไม่สำเร็จ");
-    } finally {
-      setSeedingDemo(false);
-    }
-  }
-
   const filterFieldsToolbar = (
     <BuildingPosSalesFilterFormFields
       idPrefix="pos-sales-filter"
@@ -1753,17 +1811,6 @@ export function BuildingPosSalesHistoryPanel({
                   <span className="hidden sm:inline">{refreshing ? "กำลังรีเฟรช…" : "รีเฟรช"}</span>
                 </button>
               ) : null}
-              <button
-                type="button"
-                onClick={() => void seedDemoData()}
-                disabled={seedingDemo}
-                className={cn(
-                  appTemplateOutlineButtonClass,
-                  "inline-flex min-h-[40px] items-center justify-center px-3 text-xs font-black text-[#4d47b6] disabled:opacity-50",
-                )}
-              >
-                {seedingDemo ? "กำลังใส่…" : "ใส่ข้อมูลตัวอย่าง"}
-              </button>
             </div>
           }
         />
@@ -1792,7 +1839,6 @@ export function BuildingPosSalesHistoryPanel({
             ))}
           </div>
           {filterFieldsToolbar}
-          {seedMsg ? <p className="text-xs font-semibold text-[#4d47b6]">{seedMsg}</p> : null}
         </div>
         {!filterOpen ? (
           <p className="mt-3 text-xs font-semibold text-[#66638c]">

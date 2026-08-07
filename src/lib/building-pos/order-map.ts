@@ -11,6 +11,9 @@ export function mapBuildingPosOrderRow(r: {
   totalAmount: number;
   note: string;
   paymentSlipUrl?: string | null;
+  memberPhone?: string | null;
+  pointsEarned?: number | null;
+  pointsRedeemed?: number | null;
 }) {
   const slip = typeof r.paymentSlipUrl === "string" ? r.paymentSlipUrl.trim() : "";
   const createdAt =
@@ -28,5 +31,8 @@ export function mapBuildingPosOrderRow(r: {
     total_amount: r.totalAmount,
     note: r.note,
     payment_slip_url: slip,
+    member_phone: typeof r.memberPhone === "string" ? r.memberPhone.trim() : "",
+    points_earned: typeof r.pointsEarned === "number" ? r.pointsEarned : 0,
+    points_redeemed: typeof r.pointsRedeemed === "number" ? r.pointsRedeemed : 0,
   };
 }

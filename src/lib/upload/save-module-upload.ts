@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { assertOwnerPlanUpload, type PlanUploadKind } from "@/lib/modules/plan-entitlements";
 import { detectImageKind, extensionForImageKind } from "@/lib/upload/detect-image-kind";
 import { normalizeUploadDisplayName } from "@/lib/upload/display-name";
 import { buildStoredUploadFileName } from "@/lib/upload/stored-filename";
@@ -38,7 +39,25 @@ export type SaveModuleUploadInput = {
   displayName?: string | null;
   maxImageBytes?: number;
   maxPdfBytes?: number;
+  /**
+   * ข้ามเกตแพ็กเกจ (โลโก้ / รูปโปรไฟล์ ฯลฯ)
+   * ค่าเริ่มต้น: อนุมานจาก kind — slip → สลิป · doc/attach → เอกสาร
+   */
+  skipPlanGate?: boolean;
+  /** บังคับชนิดเกตแพ็กเกจ */
+  planGate?: PlanUploadKind;
 };
+
+function resolvePlanUploadGate(input: SaveModuleUploadInput): PlanUploadKind | null {
+  if (input.skipPlanGate) return null;
+  if (input.planGate) return input.planGate;
+  const k = (input.kind || input.subdir || "").trim().toLowerCase();
+  if (!k) return null;
+  if (k.includes("logo") || k === "image" || k === "avatar" || k === "poster") return null;
+  if (k.includes("slip") || k === "receipt") return "slip";
+  if (k === "doc" || k.includes("document") || k === "attach" || k === "pdf") return "document";
+  return null;
+}
 
 export type SaveModuleUploadSuccess = {
   ok: true;
@@ -97,6 +116,14 @@ function resolveImageExt(buf: Buffer, rawType: string): { ext: string; mimeType:
 export async function saveModuleUpload(
   input: SaveModuleUploadInput,
 ): Promise<SaveModuleUploadSuccess | SaveModuleUploadFailure> {
+  const planGate = resolvePlanUploadGate(input);
+  if (planGate) {
+    const gate = await assertOwnerPlanUpload(input.ownerUserId, planGate);
+    if (!gate.ok) {
+      return { ok: false, error: gate.error, status: 402 };
+    }
+  }
+
   const maxImage = input.maxImageBytes ?? UPLOAD_MAX_IMAGE_BYTES;
   const maxPdf = input.maxPdfBytes ?? UPLOAD_MAX_PDF_BYTES;
 

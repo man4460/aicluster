@@ -8,8 +8,8 @@ import { appTemplateOutlineButtonClass } from "@/components/app-templates";
 import { DrinkPosButton } from "@/systems/drink-pos/components/DrinkPosButton";
 import { DrinkPosLoyaltyBar } from "@/systems/drink-pos/components/DrinkPosLoyaltyBar";
 import { DrinkPosQrPosterClient } from "@/systems/drink-pos/components/DrinkPosQrPosterClient";
-import type { DrinkPosMemberDto } from "@/systems/drink-pos/lib/member-service";
-import { formatDrinkPosLoyaltyRule } from "@/systems/drink-pos/lib/loyalty-rule";
+import type { DrinkPosLoyaltyMemberDto } from "@/systems/drink-pos/lib/loyalty-rule";
+import { formatDrinkPosLoyaltyEarnRule } from "@/systems/drink-pos/lib/loyalty-rule";
 import {
   drinkPosStationPublicUrl,
   type DrinkPosStationRole,
@@ -23,8 +23,9 @@ type Props = {
   shopLabel: string;
   logoUrl?: string | null;
   trialExportBlocked?: boolean;
-  stampsPerReward?: number;
-  rewardTitle?: string;
+  loyaltyEnabled?: boolean;
+  bahtPerPoint?: number;
+  pointsPerUnit?: number;
 };
 
 type HubModal = "qr" | "lookup" | "kitchen" | "serve" | null;
@@ -73,15 +74,14 @@ export function DrinkPosLoyaltyHubClient({
   shopLabel,
   logoUrl = null,
   trialExportBlocked = false,
-  stampsPerReward = 10,
-  rewardTitle = "เครื่องดื่มฟรี 1 แก้ว",
+  loyaltyEnabled = false,
+  bahtPerPoint = 100,
+  pointsPerUnit = 1,
 }: Props) {
   const [modal, setModal] = useState<HubModal>(null);
-  const [member, setMember] = useState<DrinkPosMemberDto | null>(null);
-  const [redeemMode, setRedeemMode] = useState(false);
+  const [member, setMember] = useState<DrinkPosLoyaltyMemberDto | null>(null);
   const [copied, setCopied] = useState<"kitchen" | "serve" | null>(null);
-  const loyaltyRule = { stampsPerReward, rewardTitle };
-  const ruleLabel = formatDrinkPosLoyaltyRule(stampsPerReward, rewardTitle);
+  const ruleLabel = formatDrinkPosLoyaltyEarnRule(bahtPerPoint, pointsPerUnit);
 
   const kitchenUrl = useMemo(
     () => drinkPosStationPublicUrl(baseUrl, "kitchen", ownerId, trialSessionId),
@@ -135,7 +135,7 @@ export function DrinkPosLoyaltyHubClient({
             <div className="min-w-0 flex-1 pt-0.5">
               <h2 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">QR ลูกค้า</h2>
               <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-                สแกนตรวจแต้ม · คัดลอกลิงก์ ดาวน์โหลดโปสเตอร์
+                สแกนสั่งเครื่องดื่ม · คัดลอกลิงก์ ดาวน์โหลดโปสเตอร์
               </p>
               <p className="mt-5 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#0000BF]">
                 <span>คลิกเพื่อเปิด</span>
@@ -169,7 +169,7 @@ export function DrinkPosLoyaltyHubClient({
             <div className="min-w-0 flex-1 pt-0.5">
               <h2 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">ค้นหาสมาชิก</h2>
               <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-                เบอร์ 10 หลักหรือ 4 หลักท้าย — ดูแต้มก่อนบันทึกบิล
+                เบอร์ 10 หลักหรือ 4 หลักท้าย — ดูคะแนนก่อนบันทึกบิล
               </p>
               <p className="mt-5 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-800">
                 <span>คลิกเพื่อเปิด</span>
@@ -202,7 +202,7 @@ export function DrinkPosLoyaltyHubClient({
             <div className="min-w-0 flex-1 pt-0.5">
               <h2 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">แผนกทำ</h2>
               <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-                ลิงก์สำหรับครัว — รับออเดอร์ · กำลังทำ · เสร็จแล้ว
+                ลิงก์สำหรับครัว — รับออเดอร์ · กำลังทำ · พร้อมรับ
               </p>
               <p className="mt-5 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-sky-800">
                 <span>คลิกเพื่อเปิด</span>
@@ -234,7 +234,7 @@ export function DrinkPosLoyaltyHubClient({
             <div className="min-w-0 flex-1 pt-0.5">
               <h2 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">แผนกเสิร์ฟ</h2>
               <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-                ลิงก์สำหรับเสิร์ฟ — เน้นออเดอร์เสร็จแล้ว / พร้อมส่ง
+                ลิงก์สำหรับเสิร์ฟ — พร้อมรับ · กดส่งมอบแล้วเพื่อออกจากคิว
               </p>
               <p className="mt-5 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-800">
                 <span>คลิกเพื่อเปิด</span>
@@ -247,12 +247,14 @@ export function DrinkPosLoyaltyHubClient({
 
       <section
         className="rounded-[2rem] border border-white/50 bg-white/35 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.28)] backdrop-blur-xl sm:p-5"
-        aria-label="วิธีสะสมแต้ม"
+        aria-label="วิธีสะสมคะแนน"
       >
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
-            <h3 className="text-sm font-black text-[#1e1b4b]">วิธีสะสมแต้ม</h3>
-            <p className="mt-1 text-xs font-bold text-[#4d47b6]">{ruleLabel}</p>
+            <h3 className="text-sm font-black text-[#1e1b4b]">วิธีสะสมคะแนน</h3>
+            <p className="mt-1 text-xs font-bold text-[#4d47b6]">
+              {loyaltyEnabled ? ruleLabel : "ยังไม่เปิดระบบสะสมคะแนน"}
+            </p>
           </div>
           <Link
             href="/dashboard/drink-pos/settings"
@@ -261,17 +263,15 @@ export function DrinkPosLoyaltyHubClient({
               "shrink-0 rounded-xl px-3 py-1.5 text-[10px] font-black text-[#4d47b6]",
             )}
           >
-            ตั้งค่าแต้ม
+            ตั้งค่าคะแนน
           </Link>
         </div>
         <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-left text-xs font-semibold text-[#2e2a58] marker:text-[#0000BF] sm:text-sm">
           <li>
-            หน้า <strong className="text-[#1e1b4b]">ออร์เดอร์ / สินค้า</strong> — ค้นหาเบอร์ในแถบสะสมแต้ม แล้วบันทึกบิล
+            หน้า <strong className="text-[#1e1b4b]">ออร์เดอร์ / สินค้า</strong> — กรอกเบอร์ในแถบคะแนน แล้วบันทึกบิล
           </li>
-          <li>
-            ครบ {stampsPerReward} แต้ม — ติ๊ก <strong className="text-[#1e1b4b]">แลก{rewardTitle}</strong> แล้วบันทึกบิล
-          </li>
-          <li>ลูกค้าเปิด QR ลูกค้า · พนักงานใช้ลิงก์แผนกทำ / เสิร์ฟ จากบัตรด้านบน</li>
+          <li>แลกของรางวัลจากรายการในแถบคะแนน หรือให้ลูกค้าแลกเองผ่าน QR</li>
+          <li>ลูกค้าเปิด QR สั่งเครื่องดื่ม · พนักงานใช้ลิงก์แผนกทำ / เสิร์ฟ จากบัตรด้านบน</li>
         </ol>
       </section>
 
@@ -303,16 +303,13 @@ export function DrinkPosLoyaltyHubClient({
         mobileCentered
         onClose={() => setModal(null)}
         title="ค้นหาสมาชิก"
-        description="ใช้ก่อนบันทึกบิลที่หน้าสินค้า — บันทึกจริงอยู่ที่แถบสะสมแต้มบนหน้าขาย"
+        description="ใช้ก่อนบันทึกบิลที่หน้าสินค้า — บันทึกจริงอยู่ที่แถบคะแนนบนหน้าขาย"
         footer={<ModalCloseFooter onClose={() => setModal(null)} />}
       >
         <DrinkPosLoyaltyBar
           member={member}
           onMemberChange={setMember}
-          redeemMode={redeemMode}
-          onRedeemModeChange={setRedeemMode}
           hideMembersLink
-          loyaltyRule={loyaltyRule}
         />
       </FormModal>
 
@@ -344,7 +341,7 @@ export function DrinkPosLoyaltyHubClient({
         footer={<ModalCloseFooter onClose={() => setModal(null)} />}
       >
         <StationLinkBody
-          hint="เปิดบนมือถือ/แท็บเล็ตเสิร์ฟ — เน้นออเดอร์เสร็จแล้ว พร้อมอัปเดตสถานะทันที"
+          hint="เปิดบนมือถือ/แท็บเล็ตเสิร์ฟ — กดพร้อมรับ แล้วกดส่งมอบแล้วเมื่อลูกค้ารับเครื่องดื่ม"
           url={serveUrl}
           copied={copied === "serve"}
           onCopy={() => void copyStation("serve", serveUrl)}

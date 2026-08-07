@@ -5,8 +5,14 @@ import { requireSession } from "@/lib/api-auth";
 import { buildingPosOwnerFromAuth } from "@/lib/building-pos/api-owner";
 import { mapBuildingPosOrderRow } from "@/lib/building-pos/order-map";
 import { formatBuildingPosDbError, jsonBuildingPosError } from "@/lib/building-pos/route-errors";
+import { getModuleBillingContext } from "@/lib/modules/billing-context";
+import { assertPlanDataRowAllowance, planFeaturesApiPayload } from "@/lib/modules/plan-entitlements";
+import { getPlanFeaturePolicy } from "@/lib/modules/plan-feature-policy";
 import { getBuildingPosDataScope } from "@/lib/trial/module-scopes";
 import { notifyBuildingPosOrderBoard } from "@/systems/building-pos/lib/order-board-sse";
+import { stampBuildingPosOrderItemsKitchenDept } from "@/lib/building-pos/stamp-order-kitchen";
+import { applyBuildingPosLoyaltyEarnOnPaid } from "@/systems/building-pos/lib/loyalty";
+import { normalizeMemberPhone } from "@/lib/loyalty-stamp/member-qr";
 
 const orderItemSchema = z.object({
   menu_item_id: z.number().int().positive(),
@@ -27,6 +33,7 @@ const postSchema = z.object({
 const patchSchema = z.object({
   status: z.enum(["NEW", "PREPARING", "SERVED", "SERVING", "DELIVERED", "PAID"]).optional(),
   payment_slip_url: z.string().max(2048).optional().nullable(),
+  member_phone: z.string().max(20).optional().nullable(),
 });
 
 export async function GET() {
@@ -36,11 +43,21 @@ export async function GET() {
     const own = await buildingPosOwnerFromAuth(auth.session.sub);
     if (!own.ok) return own.response;
     const scope = await getBuildingPosDataScope(own.ownerId);
+    const bill = await getModuleBillingContext(auth.session.sub);
+    const policy = await getPlanFeaturePolicy();
     const rows = await prisma.buildingPosOrder.findMany({
       where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json({ orders: rows.map(mapBuildingPosOrderRow) });
+    return NextResponse.json({
+      orders: rows.map(mapBuildingPosOrderRow),
+      features: bill
+        ? planFeaturesApiPayload(bill.access, policy)
+        : planFeaturesApiPayload(
+            { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE" },
+            policy,
+          ),
+    });
   } catch (e) {
     console.error("[building-pos/session/orders GET]", e);
     return jsonBuildingPosError(formatBuildingPosDbError(e), e, 503);
@@ -58,7 +75,23 @@ export async function POST(req: Request) {
     try { json = await req.json(); } catch { return NextResponse.json({ error: "รูปแบบข้อมูลไม่ถูกต้อง" }, { status: 400 }); }
     const parsed = postSchema.safeParse(json);
     if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
+    const bill = await getModuleBillingContext(auth.session.sub);
+    if (bill) {
+      const policy = await getPlanFeaturePolicy();
+      const existingCount = await prisma.buildingPosOrder.count({
+        where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
+      });
+      const allowance = assertPlanDataRowAllowance(bill.access, existingCount, 1, policy);
+      if (!allowance.ok) {
+        return NextResponse.json({ error: allowance.error, code: allowance.code }, { status: 402 });
+      }
+    }
     const total = parsed.data.items.reduce((s, x) => s + x.price * x.qty, 0);
+    const stampedItems = await stampBuildingPosOrderItemsKitchenDept(
+      own.ownerId,
+      scope.trialSessionId,
+      parsed.data.items,
+    );
     const row = await prisma.buildingPosOrder.create({
       data: {
         ownerUserId: own.ownerId,
@@ -66,7 +99,7 @@ export async function POST(req: Request) {
         customerName: parsed.data.customer_name?.trim() ?? "",
         tableNo: parsed.data.table_no?.trim() ?? "",
         status: parsed.data.status,
-        itemsJson: parsed.data.items,
+        itemsJson: stampedItems,
         totalAmount: total,
         note: parsed.data.note?.trim() ?? "",
       },
@@ -93,22 +126,50 @@ export async function PATCH(req: Request) {
     try { json = await req.json(); } catch { return NextResponse.json({ error: "รูปแบบข้อมูลไม่ถูกต้อง" }, { status: 400 }); }
     const parsed = patchSchema.safeParse(json);
     if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
-    if (parsed.data.status === undefined && parsed.data.payment_slip_url === undefined) {
+    if (
+      parsed.data.status === undefined &&
+      parsed.data.payment_slip_url === undefined &&
+      parsed.data.member_phone === undefined
+    ) {
       return NextResponse.json({ error: "ไม่มีข้อมูลที่อัปเดต" }, { status: 400 });
     }
     const row = await prisma.buildingPosOrder.findFirst({
       where: { id, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
     });
     if (!row) return NextResponse.json({ error: "ไม่พบออเดอร์" }, { status: 404 });
-    const updated = await prisma.buildingPosOrder.update({
+
+    const memberPhonePatch =
+      parsed.data.member_phone !== undefined
+        ? normalizeMemberPhone(parsed.data.member_phone ?? "")
+        : undefined;
+
+    let updated = await prisma.buildingPosOrder.update({
       where: { id: row.id },
       data: {
         ...(parsed.data.status !== undefined ? { status: parsed.data.status } : {}),
         ...(parsed.data.payment_slip_url !== undefined ?
           { paymentSlipUrl: parsed.data.payment_slip_url?.trim() ?? "" }
         : {}),
+        ...(memberPhonePatch !== undefined ? { memberPhone: memberPhonePatch } : {}),
       },
     });
+
+    if (parsed.data.status === "PAID" && row.status !== "PAID") {
+      const phone = (memberPhonePatch ?? updated.memberPhone ?? "").trim();
+      const earn = await applyBuildingPosLoyaltyEarnOnPaid({
+        ownerUserId: own.ownerId,
+        trialSessionId: scope.trialSessionId,
+        orderId: updated.id,
+        totalAmount: updated.totalAmount,
+        memberPhone: phone,
+        customerName: updated.customerName,
+        previousPointsEarned: updated.pointsEarned,
+      });
+      if (earn.pointsEarned > 0 || earn.memberPhone) {
+        updated = await prisma.buildingPosOrder.findFirstOrThrow({ where: { id: updated.id } });
+      }
+    }
+
     notifyBuildingPosOrderBoard(own.ownerId);
     return NextResponse.json({ order: mapBuildingPosOrderRow(updated) });
   } catch (e) {

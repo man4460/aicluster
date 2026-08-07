@@ -1,6 +1,12 @@
 /**
- * โทน UI ร้านตัดผม — ให้สอดคล้องคาร์แคร์ / template กลาง (ม่วง MAWELL)
+ * โทน UI ร้านตัดผม — ให้สอดคล้องร้านเครื่องดื่ม / สนามฟุตบอล / template กลาง (ม่วง MAWELL)
+ * Baseline: drink-pos · football-turf (MASTER.md §Module Workspace UX/UI Rules)
  */
+import { cn } from "@/lib/cn";
+import {
+  appDashboardBrandGradientBarClass,
+  appDashboardBrandGradientFillClass,
+} from "@/components/app-templates/dashboard-tokens";
 
 /** โค้งการ์ด/แผงย่อยในโมดูล — เทียบ CarWashStat / แถวรายการคาร์แคร์ (rounded-[2rem]) */
 export const barberCardSurfaceRadiusClass = "rounded-[2rem]";
@@ -97,6 +103,97 @@ export const barberOffersFilterBarClass =
 
 /** หัวหน้าหน้าการเงิน — โทนเดียวกับแพ็กเกจ/สมาชิก */
 export const barberFinanceHubHeaderShellClass = barberOffersHubHeaderShellClass;
+
+// --- Design System tokens (baseline drink-pos · football-turf — MASTER.md) ---
+
+/** เปลือกหัวโมดูล glass shell — baseline: drinkPosGlassShellClass / footballTurfGlassShellClass */
+export const barberGlassShellClass = cn(
+  "app-surface overflow-hidden rounded-[2.5rem] max-md:rounded-2xl border border-[#e8e6fc]/80",
+  "bg-gradient-to-br from-white/80 via-[#f5f3ff]/70 to-[#fdf2f8]/55",
+  "shadow-[0_24px_60px_-28px_rgba(30,27,75,0.28)] backdrop-blur-2xl",
+);
+
+/** Accent bar ในหัวหลักเท่านั้น — หลังเส้นต้องมี `mt-5` ก่อนเนื้อหาใต้ */
+export const barberAccentBarClass = cn("h-1.5 w-full rounded-full", appDashboardBrandGradientBarClass);
+
+/** padding-bottom safe area เมื่อมี bottom dock — baseline: football-turf */
+export const barberMainPaddingBottomClass = "pb-24 lg:pb-0";
+
+/** Nav active state — ใช้ brand gradient + text-white (ห้ามโทนดำ) */
+export const barberNavActiveClass = cn("text-white shadow-md", appDashboardBrandGradientFillClass);
+
+/** Nav idle state — baseline drink-pos/football-turf */
+export const barberNavIdleClass = "text-slate-500 hover:bg-white/55 hover:text-slate-700";
+
+/** Chip active state — rounded-full gradient white text */
+export const barberChipActiveClass = cn(
+  "rounded-full border-transparent px-4 py-2 text-xs font-black text-white shadow-md",
+  appDashboardBrandGradientFillClass,
+);
+
+/** Chip idle state — white bg + muted text */
+export const barberChipIdleClass =
+  "text-slate-500 bg-white/55 hover:bg-white/80 rounded-full border border-[#0000BF]/25 px-4 py-2 text-xs font-black shadow-sm text-[#2e2a58]";
+
+/** Edge-to-edge chip scroller — -mx offset matching shell padding */
+export const barberChipScrollerClass =
+  "overflow-x-auto pb-2 pt-0.5 -mx-4 px-4 sm:-mx-8 sm:px-8";
+
+/** Row class inside chip scroller */
+export const barberChipRowClass = "flex w-max gap-2";
+
+/** Sub-tab segment shell — ใช้ครอบ tab group ปุ่ม */
+export const barberSubTabSegmentShellClass = cn(
+  `${barberCardSurfaceRadiusClass} flex shrink-0 items-center gap-1 border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-[#f0fdfa]/35 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]`,
+);
+
+/** ระยะ content stack แนวตั้งภายใน shell — gap-4 mobile / gap-6 desktop */
+export const barberContentStackClass = "space-y-4 sm:space-y-6";
+
+/** Spacing cadence: top spacing ก่อนกราฟ (compact) */
+export const barberChartTopSpacingClass = "mt-4";
+
+/** Spacing cadence: section divider ก่อนกราฟ (มีเส้นคั่น) */
+export const barberChartSectionDividerClass = "mt-6 border-t border-[#ecebff] pt-6";
+
+/** Filter field grid layout — 1 col mobile, 2 col desktop */
+export const barberFilterFieldGridClass = "grid gap-3 sm:grid-cols-2";
+
+/** Field / input class — baseline drinkPosFieldClass */
+export const barberFieldClass =
+  "w-full rounded-2xl border border-white/60 bg-white/85 px-3 py-2.5 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#0000BF]/20 focus:ring-2";
+
+/** Stat card grid — ตั้งแต่ md ขึ้นไปต้อง 3 คอลัมน์ (MASTER.md §8) */
+export const barberStatGridClass = "grid gap-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3";
+
+/** Booking / check-in card grid — ตั้งแต่ sm ขึ้นไป 3 คอลัมน์ */
+export const barberBookingGridClass = "grid gap-4 sm:grid-cols-3";
+
+/** Product / list grid — md 3 col */
+export const barberProductGridClass = "grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3";
+
+/** Module icon gradient wrapper — h-10 w-10 rounded-2xl (baseline shell header) */
+export const barberModuleIconBadgeClass = cn(
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg shadow-indigo-100",
+  appDashboardBrandGradientFillClass,
+);
+
+/** Header collapse ปุ่ม (ซ่อน/แสดงหัวโมดูล) — icon-only h-10 w-10 */
+export const barberHeaderCollapseBtnClass =
+  "h-10 min-h-[44px] w-10 items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/80 text-[#4d47b6] shadow-sm backdrop-blur-md transition-all hover:bg-white active:scale-[0.98]";
+
+/** Small-caps English label บนหัวข้อ header (MASTER.md §7) */
+export const barberHeaderEnLabelClass =
+  "text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]";
+
+/** CTA button class — brand gradient white text rounded-xl shadow-md */
+export const barberCtaClass = cn(
+  "inline-flex min-h-[40px] items-center justify-center rounded-xl px-3 py-2 text-xs font-black text-white shadow-md transition active:scale-[0.99] disabled:opacity-50",
+  appDashboardBrandGradientFillClass,
+);
+
+/** Header toolbar group ครอบ ปุ่มซ่อนหัว + คู่มือ — gap ระหว่างปุ่ม */
+export const barberHeaderToolbarGroupClass = "flex shrink-0 items-center gap-2";
 
 // --- Modal (พอร์ทัลที่ document.body — กึ่งกลางจอ + safe area + z เหนือ dock) ---
 

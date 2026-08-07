@@ -26,7 +26,7 @@ import {
   type DrinkPosCategoryRow,
   type DrinkPosProductRow,
 } from "@/systems/drink-pos/lib/client-data";
-import type { DrinkPosMemberDto } from "@/systems/drink-pos/lib/member-service";
+import type { DrinkPosLoyaltyMemberDto } from "@/systems/drink-pos/lib/loyalty-rule";
 import type { DrinkPosPaymentMethod } from "@/systems/drink-pos/lib/payment-method";
 import {
   drinkPosActiveSizePrices,
@@ -102,8 +102,7 @@ export function DrinkPosOrderClient() {
   const [draftLines, setDraftLines] = useState<SaleDraftLine[]>([]);
   const [draftBusy, setDraftBusy] = useState(false);
   const [billReviewOpen, setBillReviewOpen] = useState(false);
-  const [loyaltyMember, setLoyaltyMember] = useState<DrinkPosMemberDto | null>(null);
-  const [redeemMode, setRedeemMode] = useState(false);
+  const [loyaltyMember, setLoyaltyMember] = useState<DrinkPosLoyaltyMemberDto | null>(null);
   const [sizePick, setSizePick] = useState<{ product: DrinkPosProductRow; quantity: number } | null>(null);
   const [submitErr, setSubmitErr] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<DrinkPosPaymentMethod>("CASH");
@@ -151,9 +150,8 @@ export function DrinkPosOrderClient() {
   }, [products, filterCat]);
 
   const draftTotalBaht = useMemo(() => {
-    if (redeemMode && loyaltyMember) return 0;
     return draftLines.reduce((s, l) => s + l.unitPriceBaht * l.quantity, 0);
-  }, [draftLines, redeemMode, loyaltyMember]);
+  }, [draftLines]);
 
   const draftQtyByProductId = useMemo(() => {
     const m = new Map<string, number>();
@@ -254,10 +252,7 @@ export function DrinkPosOrderClient() {
 
   const submitDraftBill = useCallback(async () => {
     if (draftLines.length === 0) return;
-    const payTotal =
-      redeemMode && loyaltyMember
-        ? 0
-        : draftLines.reduce((s, l) => s + l.unitPriceBaht * l.quantity, 0);
+    const payTotal = draftLines.reduce((s, l) => s + l.unitPriceBaht * l.quantity, 0);
     if (drinkPosPaymentSubmitBlocked(paymentMethod, payTotal, paymentSlipUrl)) {
       setSubmitErr(
         paymentMethod === "PROMPTPAY" ? "กรุณาแนบสลิปหลังโอนพร้อมเพย์" : "กรุณาแนบสลิปการโอน",
@@ -273,9 +268,8 @@ export function DrinkPosOrderClient() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          note: redeemMode ? "แลกแต้มฟรี" : null,
+          note: null,
           memberPhone: loyaltyMember?.phone ?? null,
-          isRewardRedemption: redeemMode && Boolean(loyaltyMember),
           paymentMethod: payTotal <= 0 ? "CASH" : paymentMethod,
           paymentSlipUrl: payTotal <= 0 || paymentMethod === "CASH" ? null : paymentSlipUrl,
           lines: draftLines.map((l) => ({
@@ -293,22 +287,21 @@ export function DrinkPosOrderClient() {
       setBillReviewOpen(false);
       resetPayment();
       if (loyaltyMember?.phone) {
-        const lookupRes = await fetch("/api/drink-pos/members/lookup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ phone: loyaltyMember.phone }),
-        });
-        const lj = (await lookupRes.json().catch(() => ({}))) as { member?: DrinkPosMemberDto };
+        const lookupRes = await fetch(
+          `/api/drink-pos/session/loyalty/members?phone=${encodeURIComponent(loyaltyMember.phone)}`,
+          { credentials: "include", cache: "no-store" },
+        );
+        const lj = (await lookupRes.json().catch(() => ({}))) as {
+          member?: DrinkPosLoyaltyMemberDto | null;
+        };
         if (lookupRes.ok && lj.member) setLoyaltyMember(lj.member);
       }
-      setRedeemMode(false);
     } catch (e) {
       setSubmitErr(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
     } finally {
       setDraftBusy(false);
     }
-  }, [draftLines, loyaltyMember, redeemMode, paymentMethod, paymentSlipUrl, resetPayment]);
+  }, [draftLines, loyaltyMember, paymentMethod, paymentSlipUrl, resetPayment]);
 
   useLayoutEffect(() => {
     if (draftLines.length === 0) {
@@ -383,23 +376,13 @@ export function DrinkPosOrderClient() {
 
       {/* มือถือ: สมาชิกอยู่เหนือเมนู — รายการใช้ popup + แถบล่าง */}
       <div className="lg:hidden">
-        <DrinkPosLoyaltyBar
-          member={loyaltyMember}
-          onMemberChange={setLoyaltyMember}
-          redeemMode={redeemMode}
-          onRedeemModeChange={setRedeemMode}
-        />
+        <DrinkPosLoyaltyBar member={loyaltyMember} onMemberChange={setLoyaltyMember} compact />
       </div>
 
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)] lg:gap-4">
         {/* เดสก์ท็อป — สมาชิก + รายการที่เลือก */}
         <aside className="hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl border border-[#e8e6fc]/80 bg-gradient-to-br from-white/90 via-[#f5f3ff]/75 to-[#fdf2f8]/55 p-4 shadow-sm lg:flex">
-          <DrinkPosLoyaltyBar
-            member={loyaltyMember}
-            onMemberChange={setLoyaltyMember}
-            redeemMode={redeemMode}
-            onRedeemModeChange={setRedeemMode}
-          />
+          <DrinkPosLoyaltyBar member={loyaltyMember} onMemberChange={setLoyaltyMember} compact />
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/70 bg-white/70">
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[#e8e6fc]/80 px-3 py-2.5">
@@ -492,9 +475,6 @@ export function DrinkPosOrderClient() {
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">ยอดรวม</p>
                   <p className="text-2xl font-black tabular-nums text-[#1e1b4b]">฿{formatThb(draftTotalBaht)}</p>
-                  {redeemMode && loyaltyMember ? (
-                    <p className="text-[10px] font-bold text-emerald-700">แลกแต้มฟรี</p>
-                  ) : null}
                 </div>
                 <DrinkPosButton
                   type="button"
@@ -524,11 +504,12 @@ export function DrinkPosOrderClient() {
               >
                 ทั้งหมด
               </DrinkPosButton>
-              {categories.map((c) => (
+              {categories.filter((c) => c.isActive !== false).map((c) => (
                 <DrinkPosButton
                   key={c.id}
                   type="button"
                   onClick={() => setFilterCat(c.id)}
+                  aria-pressed={filterCat === c.id}
                   className={cn(
                     "shrink-0 transition",
                     filterCat === c.id ? drinkPosChipActiveClass : drinkPosChipIdleClass,

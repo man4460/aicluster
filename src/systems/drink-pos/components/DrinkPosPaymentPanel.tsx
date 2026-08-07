@@ -2,6 +2,7 @@
 
 import type { ChangeEvent } from "react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   AppGalleryCameraFileInputs,
   AppImageLightbox,
@@ -18,7 +19,11 @@ import {
   drinkPosPaymentRequiresSlip,
   type DrinkPosPaymentMethod,
 } from "@/systems/drink-pos/lib/payment-method";
-import { drinkPosChipActiveClass, drinkPosChipIdleClass } from "@/systems/drink-pos/lib/ui-tokens";
+import {
+  drinkPosChipActiveClass,
+  drinkPosChipIdleClass,
+  drinkPosCtaClass,
+} from "@/systems/drink-pos/lib/ui-tokens";
 
 type PromptPayInfo = {
   qrDataUrl: string | null;
@@ -30,7 +35,8 @@ type PromptPayInfo = {
   shopName: string | null;
 };
 
-const METHODS: DrinkPosPaymentMethod[] = ["CASH", "PROMPTPAY", "TRANSFER"];
+const STAFF_METHODS: DrinkPosPaymentMethod[] = ["CASH", "PROMPTPAY", "TRANSFER"];
+const PUBLIC_METHODS: DrinkPosPaymentMethod[] = ["CASH", "PROMPTPAY", "TRANSFER"];
 
 export type DrinkPosPaymentPanelProps = {
   amountBaht: number;
@@ -40,7 +46,16 @@ export type DrinkPosPaymentPanelProps = {
   onSlipUrlChange: (url: string | null) => void;
   disabled?: boolean;
   className?: string;
+  /** ลิงก์ลูกค้า — ใช้ API สาธารณะ */
+  variant?: "staff" | "public";
+  ownerId?: string;
+  trialParam?: string | null;
 };
+
+function methodLabel(m: DrinkPosPaymentMethod, variant: "staff" | "public"): string {
+  if (variant === "public" && m === "CASH") return "จ่ายที่ร้าน";
+  return drinkPosPaymentMethodLabel(m);
+}
 
 export function DrinkPosPaymentPanel({
   amountBaht,
@@ -50,16 +65,22 @@ export function DrinkPosPaymentPanel({
   onSlipUrlChange,
   disabled,
   className,
+  variant = "staff",
+  ownerId,
+  trialParam,
 }: DrinkPosPaymentPanelProps) {
   const galleryRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const lb = useAppImageLightbox();
+  const methods = variant === "public" ? PUBLIC_METHODS : STAFF_METHODS;
+  const isPublic = variant === "public";
 
   const [info, setInfo] = useState<PromptPayInfo | null>(null);
   const [qrBusy, setQrBusy] = useState(false);
   const [qrErr, setQrErr] = useState<string | null>(null);
   const [slipBusy, setSlipBusy] = useState(false);
   const [slipErr, setSlipErr] = useState<string | null>(null);
+  const [customerQrOpen, setCustomerQrOpen] = useState(false);
 
   const needsPayUi = amountBaht > 0;
   const needsSlip = drinkPosPaymentRequiresSlip(method, amountBaht);
@@ -67,9 +88,32 @@ export function DrinkPosPaymentPanel({
   const showTransfer = needsPayUi && method === "TRANSFER";
 
   useEffect(() => {
+    if (!showPromptPay) setCustomerQrOpen(false);
+  }, [showPromptPay]);
+
+  useEffect(() => {
+    if (!customerQrOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setCustomerQrOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [customerQrOpen]);
+
+  useEffect(() => {
     if (!needsPayUi || (method !== "PROMPTPAY" && method !== "TRANSFER")) {
       setInfo(null);
       setQrErr(null);
+      return;
+    }
+    if (isPublic && (!ownerId || ownerId.length < 10)) {
+      setInfo(null);
+      setQrErr("ไม่พบร้าน");
       return;
     }
     let cancelled = false;
@@ -77,12 +121,19 @@ export function DrinkPosPaymentPanel({
     setQrErr(null);
     void (async () => {
       try {
-        const res = await fetch("/api/drink-pos/promptpay-qr", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ amountBaht }),
-        });
+        const res = await fetch(
+          isPublic ? "/api/drink-pos/public/promptpay-qr" : "/api/drink-pos/promptpay-qr",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: isPublic ? "omit" : "include",
+            body: JSON.stringify(
+              isPublic
+                ? { ownerId, amountBaht, t: trialParam ?? null }
+                : { amountBaht },
+            ),
+          },
+        );
         const j = (await res.json().catch(() => ({}))) as Partial<PromptPayInfo> & { error?: string };
         if (cancelled) return;
         if (!res.ok) {
@@ -111,17 +162,26 @@ export function DrinkPosPaymentPanel({
     return () => {
       cancelled = true;
     };
-  }, [amountBaht, method, needsPayUi]);
+  }, [amountBaht, method, needsPayUi, isPublic, ownerId, trialParam]);
 
   async function uploadSlip(file: File | null) {
     if (!file || disabled) return;
+    if (isPublic && (!ownerId || ownerId.length < 10)) {
+      setSlipErr("ไม่พบร้าน");
+      return;
+    }
     setSlipBusy(true);
     setSlipErr(null);
     try {
       const prepared = await prepareImageFileForUpload(file);
       const fd = new FormData();
       fd.append("file", prepared);
-      const res = await fetch("/api/drink-pos/upload", { method: "POST", body: fd, credentials: "include" });
+      if (isPublic) fd.append("ownerId", ownerId!);
+      const res = await fetch(isPublic ? "/api/drink-pos/public/upload-slip" : "/api/drink-pos/upload", {
+        method: "POST",
+        body: fd,
+        credentials: isPublic ? "omit" : "include",
+      });
       const j = (await res.json().catch(() => null)) as { imageUrl?: string; error?: string } | null;
       if (!res.ok || typeof j?.imageUrl !== "string") {
         throw new Error(typeof j?.error === "string" ? j.error : "อัปโหลดสลิปไม่สำเร็จ");
@@ -153,7 +213,7 @@ export function DrinkPosPaymentPanel({
       <div>
         <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">ช่องทางชำระ</p>
         <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="ช่องทางชำระเงิน">
-          {METHODS.map((m) => (
+          {methods.map((m) => (
             <DrinkPosButton
               key={m}
               type="button"
@@ -165,7 +225,7 @@ export function DrinkPosPaymentPanel({
               className={cn("shrink-0 transition", method === m ? drinkPosChipActiveClass : drinkPosChipIdleClass)}
               aria-pressed={method === m}
             >
-              {drinkPosPaymentMethodLabel(m)}
+              {methodLabel(m, variant)}
             </DrinkPosButton>
           ))}
         </div>
@@ -190,7 +250,9 @@ export function DrinkPosPaymentPanel({
               <p className="py-8 text-center text-xs font-bold text-rose-600">
                 {qrErr ||
                   (info?.configured === false
-                    ? "ยังไม่ได้ตั้งเบอร์พร้อมเพย์ — ไปที่ตั้งค่าร้าน"
+                    ? isPublic
+                      ? "ร้านยังไม่ได้ตั้งเบอร์พร้อมเพย์ — เลือกโอนเงินหรือจ่ายที่ร้าน"
+                      : "ยังไม่ได้ตั้งเบอร์พร้อมเพย์ — ไปที่ตั้งค่าร้าน"
                     : "สร้าง QR ไม่สำเร็จ")}
               </p>
             )}
@@ -200,8 +262,72 @@ export function DrinkPosPaymentPanel({
               พร้อมเพย์: <span className="font-black text-[#1e1b4b]">{info.promptPayPhone}</span>
             </p>
           ) : null}
+          {info?.qrDataUrl ? (
+            <DrinkPosButton
+              type="button"
+              disabled={disabled}
+              className={cn(drinkPosCtaClass, "w-full min-h-[44px] rounded-2xl text-sm")}
+              onClick={() => setCustomerQrOpen(true)}
+              aria-label={isPublic ? "ขยาย QR พร้อมเพย์" : "แสดง QR พร้อมเพย์ให้ลูกค้าสแกน"}
+            >
+              {isPublic ? "ขยาย QR ให้สแกนง่าย" : "แสดงให้ลูกค้าสแกน"}
+            </DrinkPosButton>
+          ) : null}
         </div>
       ) : null}
+
+      {customerQrOpen && info?.qrDataUrl && typeof document !== "undefined"
+        ? createPortal(
+            <div className="fixed inset-0 z-[230] flex items-center justify-center p-4 sm:p-6" role="presentation">
+              <button
+                type="button"
+                className="absolute inset-0 bg-slate-950/70 backdrop-blur-md"
+                aria-label="ปิด QR ให้ลูกค้าสแกน"
+                onClick={() => setCustomerQrOpen(false)}
+              />
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="drink-pos-customer-pp-qr-title"
+                className="relative z-10 flex w-full max-w-md flex-col items-center rounded-[2rem] border border-white/60 bg-white px-5 py-6 shadow-[0_28px_80px_-18px_rgba(30,27,75,0.45)] sm:px-8 sm:py-8"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p
+                  id="drink-pos-customer-pp-qr-title"
+                  className="text-center text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl"
+                >
+                  สแกนพร้อมเพย์
+                </p>
+                {(info.shopName || info.promptPayPhone) ? (
+                  <p className="mt-1 text-center text-sm font-semibold text-[#66638c]">
+                    {info.shopName?.trim() || "ร้านเครื่องดื่ม"}
+                    {info.promptPayPhone ? ` · ${info.promptPayPhone}` : ""}
+                  </p>
+                ) : null}
+                <p className="mt-3 text-center text-2xl font-black tabular-nums text-[#4d47b6] sm:text-3xl">
+                  ฿{formatThb(amountBaht)}
+                </p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={info.qrDataUrl}
+                  alt="QR พร้อมเพย์สำหรับลูกค้าสแกน"
+                  className="mt-5 h-[min(72vw,320px)] w-[min(72vw,320px)] rounded-3xl bg-white p-3 object-contain ring-1 ring-[#e8e6fc]"
+                />
+                <p className="mt-4 text-center text-xs font-semibold text-[#66638c]">
+                  {isPublic ? "สแกนด้วยแอปธนาคารเพื่อโอนยอดนี้" : "หันจอให้ลูกค้าสแกนด้วยแอปธนาคาร"}
+                </p>
+                <DrinkPosButton
+                  type="button"
+                  className="mt-5 min-h-[44px] w-full rounded-2xl border border-white/70 bg-[#f5f3ff] px-4 text-sm font-black text-[#4d47b6]"
+                  onClick={() => setCustomerQrOpen(false)}
+                >
+                  ปิด
+                </DrinkPosButton>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
 
       {showTransfer ? (
         <div className="space-y-1.5 rounded-[1.25rem] border border-[#e8e6fc]/90 bg-white/80 p-3 text-xs font-semibold text-[#66638c]">
@@ -222,7 +348,10 @@ export function DrinkPosPaymentPanel({
             </>
           ) : (
             <p className="font-bold text-rose-600">
-              {qrErr || "ยังไม่ได้ตั้งบัญชีโอน — ไปที่ตั้งค่าร้าน"}
+              {qrErr ||
+                (isPublic
+                  ? "ร้านยังไม่ได้ตั้งบัญชีโอน — เลือกพร้อมเพย์หรือจ่ายที่ร้าน"
+                  : "ยังไม่ได้ตั้งบัญชีโอน — ไปที่ตั้งค่าร้าน")}
             </p>
           )}
         </div>

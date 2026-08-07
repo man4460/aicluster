@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { MAWELL_OG_IMAGE, MAWELL_OG_IMAGE_SQUARE } from "@/lib/pwa/brand-assets";
 
 const landingDescription =
-  "แพลตฟอร์มเดียวครบระบบหลังบ้าน องค์กร ธุรกิจ โรงเรียน — โมดูลฟรีหลายระบบ และสายรายวัน 1 บาทต่อวันต่อระบบ";
+  "แพลตฟอร์มเดียวครบระบบหลังบ้าน องค์กร ธุรกิจ โรงเรียน — โมดูลฟรีหลายระบบ และแพ็กเหมารายเดือน 199 (ข้อมูลมากกว่า 10,000 แถว · พิมพ์สลิป)";
 
 export const metadata: Metadata = {
   title: "MAWELL — แพลตฟอร์มธุรกิจครบวงจร",

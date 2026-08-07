@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { resolvePublicBuildingPosTrialSessionId } from "@/lib/building-pos/public-trial-scope";
+import {
+  ensureBuildingPosLoyaltySettings,
+  formatBuildingPosLoyaltyEarnRule,
+  listBuildingPosLoyaltyRewards,
+} from "@/systems/building-pos/lib/loyalty";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -9,7 +14,7 @@ export async function GET(req: Request) {
   const trialParam = searchParams.get("t")?.trim() ?? searchParams.get("trialSessionId")?.trim() ?? "";
   const { trialSessionId } = await resolvePublicBuildingPosTrialSessionId(ownerId, trialParam || null);
 
-  const [cats, menus, ordersForStats] = await Promise.all([
+  const [cats, menus, ordersForStats, loyaltySettings, loyaltyRewards] = await Promise.all([
     prisma.buildingPosCategory.findMany({
       where: { ownerUserId: ownerId, trialSessionId, isActive: true },
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
@@ -22,6 +27,12 @@ export async function GET(req: Request) {
       where: { ownerUserId: ownerId, trialSessionId },
       select: { itemsJson: true },
     }),
+    ensureBuildingPosLoyaltySettings(ownerId, trialSessionId).catch(() => ({
+      enabled: false,
+      baht_per_point: 100,
+      points_per_unit: 1,
+    })),
+    listBuildingPosLoyaltyRewards(ownerId, trialSessionId, { activeOnly: true }).catch(() => []),
   ]);
 
   const soldByMenuId = new Map<number, number>();
@@ -40,7 +51,21 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     trialSessionId,
-    categories: cats.map((c) => ({ id: c.id, name: c.name, image_url: c.imageUrl, sort_order: c.sortOrder, is_active: c.isActive })),
+    loyalty: {
+      enabled: loyaltySettings.enabled,
+      rule_preview: formatBuildingPosLoyaltyEarnRule(
+        loyaltySettings.baht_per_point,
+        loyaltySettings.points_per_unit,
+      ),
+      rewards: loyaltyRewards,
+    },
+    categories: cats.map((c) => ({
+      id: c.id,
+      name: c.name,
+      image_url: c.imageUrl,
+      sort_order: c.sortOrder,
+      is_active: c.isActive,
+    })),
     menu_items: menus.map((m) => ({
       id: m.id,
       category_id: m.categoryId,

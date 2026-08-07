@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { massagePortalSlipOwnerTag, massagePortalSlipPathPrefix } from "@/lib/massage/portal-slip-filename";
 import { isMassageCustomerPortalOpenForOwner } from "@/lib/massage/portal-access";
+import { assertOwnerPlanUpload } from "@/lib/modules/plan-entitlements";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 const MAX_BYTES = 3 * 1024 * 1024;
@@ -38,6 +39,11 @@ export async function POST(req: Request) {
   const portalOk = await isMassageCustomerPortalOpenForOwner(ownerId);
   if (!portalOk) {
     return NextResponse.json({ error: "ไม่สามารถใช้งานได้ในขณะนี้" }, { status: 403 });
+  }
+
+  const planGate = await assertOwnerPlanUpload(ownerId, "slip");
+  if (!planGate.ok) {
+    return NextResponse.json({ error: planGate.error, code: planGate.code }, { status: 402 });
   }
 
   const file = form.get("file");

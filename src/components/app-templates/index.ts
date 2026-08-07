@@ -55,6 +55,22 @@ export {
   type AppRevenueCostBucket,
 } from "./AppRevenueCostColumnChart";
 export { AppWindowPrintButton, type AppWindowPrintButtonProps } from "./AppWindowPrintButton";
+export { AppSlipPrintIconButton, type AppSlipPrintIconButtonProps } from "./AppSlipPrintIconButton";
+export {
+  alertIfSlipPrintFailed,
+  alertSlipPrintRequiresMonthlyPlan,
+  appSlipPageAndRootCss,
+  buildAppOrderTicketSlipInnerHtml,
+  buildAppSlipStaticDocumentHtml,
+  escapeSlipHtml,
+  openAppSlipPrintWindow,
+  printAppOrderTicketSlip,
+  type AppOrderTicketSlipVariant,
+  type AppSlipLineItem,
+  type AppSlipPaperSize,
+  type AppSlipPrintPageOptions,
+  type PrintAppOrderTicketSlipParams,
+} from "./slip-print";
 export { AppGalleryCameraFileInputs, type AppGalleryCameraFileInputsProps } from "./AppGalleryCameraFileInputs";
 export { AppImagePickCameraButtons, type AppImagePickCameraButtonsProps } from "./AppImagePickCameraButtons";
 export { AppShopLogoField, type AppShopLogoFieldProps } from "./AppShopLogoField";
@@ -79,6 +95,10 @@ export {
   type AppNoticePopupTone,
   type UseAppNoticePopupOptions,
 } from "./AppNoticePopup";
+export {
+  LoyaltyRewardMenuCard,
+  LoyaltyRewardMenuGrid,
+} from "./LoyaltyRewardMenuCard";
 
 export {
   openPrintableHtml,
@@ -126,6 +146,7 @@ export {
   AppIconCheck,
   AppIconUserX,
   AppIconClose,
+  AppIconPrint,
   AppIconToolbarButton,
   type AppTemplateIconProps,
   type AppIconToolbarButtonProps,

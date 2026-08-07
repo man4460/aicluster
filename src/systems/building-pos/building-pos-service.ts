@@ -11,6 +11,8 @@ export type PosCategory = {
 export type PosMenuItem = {
   id: number;
   category_id: number;
+  /** แผนกครัวที่รับเมนูนี้ (หลายครัว — แพ็ก 299+) */
+  kitchen_department_id?: number | null;
   name: string;
   price: number;
   description: string;
@@ -66,6 +68,17 @@ export type PosOrderItem = {
   price: number;
   qty: number;
   note: string;
+  kitchen_department_id?: number | null;
+  kitchen_status?: "NEW" | "PREPARING" | "SERVED";
+  /** พร้อมเสิร์ฟ / กำลังเสิร์ฟ / เสิร์ฟแล้ว — ขึ้นแผนกเสิร์ฟได้ทันทีเมื่อครัวทำเสร็จ */
+  serve_status?: "READY" | "SERVING" | "DELIVERED";
+};
+
+export type PosKitchenDepartment = {
+  id: number;
+  name: string;
+  sort_order: number;
+  is_active: boolean;
 };
 
 export type PosOrder = {
@@ -81,6 +94,11 @@ export type PosOrder = {
   note: string;
   /** รูปสลิปโอน — อัปโหลดจากแดชบอร์ด */
   payment_slip_url?: string;
+  /** คีย์การ์ดบนกระดานเสิร์ฟ (ออเดอร์เดียวแยกหลายการ์ดตามชุดเมนูที่พร้อม) */
+  board_key?: string;
+  member_phone?: string;
+  points_earned?: number;
+  points_redeemed?: number;
 };
 
 type PosDB = {
@@ -365,6 +383,7 @@ class SessionApiBuildingPosRepository {
     id: number,
     patch: Partial<{
       category_id: number;
+      kitchen_department_id: number | null;
       name: string;
       image_url: string;
       price: number;
@@ -385,6 +404,33 @@ class SessionApiBuildingPosRepository {
   }
   async deleteMenuItem(id: number) {
     const res = await this.fetchSession(`/api/building-pos/session/menu-items?id=${id}`, { method: "DELETE" });
+    await readJson<{ ok: boolean }>(res);
+  }
+
+  async listKitchenDepartments() {
+    const res = await this.fetchSession("/api/building-pos/session/kitchen-departments", { cache: "no-store" });
+    return readJson<{ departments: PosKitchenDepartment[]; features?: { multiKitchen?: boolean } }>(res);
+  }
+  async createKitchenDepartment(input: Omit<PosKitchenDepartment, "id">) {
+    const res = await this.fetchSession("/api/building-pos/session/kitchen-departments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    return (await readJson<{ department: PosKitchenDepartment }>(res)).department;
+  }
+  async updateKitchenDepartment(id: number, patch: Partial<Omit<PosKitchenDepartment, "id">>) {
+    const res = await this.fetchSession(`/api/building-pos/session/kitchen-departments?id=${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    return (await readJson<{ department: PosKitchenDepartment }>(res)).department;
+  }
+  async deleteKitchenDepartment(id: number) {
+    const res = await this.fetchSession(`/api/building-pos/session/kitchen-departments?id=${id}`, {
+      method: "DELETE",
+    });
     await readJson<{ ok: boolean }>(res);
   }
 
@@ -519,17 +565,40 @@ class StaffApiBuildingPosRepository {
 
 class PublicApiBuildingPosRepository {
   constructor(private readonly ownerId: string, private readonly trialSessionId?: string) {}
-  async listCategories() {
+
+  private menuParams() {
     const params = new URLSearchParams({ ownerId: this.ownerId });
     if (this.trialSessionId) params.set("t", this.trialSessionId);
-    const res = await fetch(`/api/building-pos/public/menu?${params.toString()}`, { cache: "no-store" });
+    return params;
+  }
+
+  async listCategories() {
+    const res = await fetch(`/api/building-pos/public/menu?${this.menuParams().toString()}`, { cache: "no-store" });
     return (await readJson<{ categories: PosCategory[] }>(res)).categories;
   }
   async listMenuItems() {
-    const params = new URLSearchParams({ ownerId: this.ownerId });
-    if (this.trialSessionId) params.set("t", this.trialSessionId);
-    const res = await fetch(`/api/building-pos/public/menu?${params.toString()}`, { cache: "no-store" });
+    const res = await fetch(`/api/building-pos/public/menu?${this.menuParams().toString()}`, { cache: "no-store" });
     return (await readJson<{ menu_items: PosMenuItem[] }>(res)).menu_items;
+  }
+  async getPublicMenuBootstrap() {
+    const res = await fetch(`/api/building-pos/public/menu?${this.menuParams().toString()}`, { cache: "no-store" });
+    return readJson<{
+      categories: PosCategory[];
+      menu_items: PosMenuItem[];
+      loyalty?: {
+        enabled?: boolean;
+        rule_preview?: string;
+        rewards?: Array<{
+          id: number;
+          title: string;
+          menu_item_id: number | null;
+          points_cost: number;
+          sort_order: number;
+          is_active: boolean;
+          image_url?: string;
+        }>;
+      };
+    }>(res);
   }
   async createOrder(
     input: Omit<PosOrder, "id" | "created_at">,
@@ -544,6 +613,7 @@ class PublicApiBuildingPosRepository {
         trialSessionId: this.trialSessionId ?? null,
         customer_name: input.customer_name,
         table_no: input.table_no,
+        member_phone: input.member_phone?.trim() || null,
         items: input.items,
         note: input.note?.trim() ? input.note.trim() : null,
         customer_session_id: opts?.customerSessionId?.trim() || null,

@@ -3,6 +3,7 @@ export type DrinkPosCategoryRow = {
   name: string;
   imageUrl: string | null;
   sortOrder: number;
+  isActive: boolean;
   productCount: number;
 };
 
@@ -38,6 +39,7 @@ export type DrinkPosSaleRow = {
   fulfillmentStatus?: string;
   statusUpdatedAt?: string;
   isRewardRedemption?: boolean;
+  memberPhone?: string | null;
   createdAt: string;
   lines: DrinkPosSaleLineRow[];
 };
@@ -83,10 +85,14 @@ export async function fetchDrinkPosProducts(): Promise<
   return { ok: true, products: d.products ?? [] };
 }
 
-export async function fetchDrinkPosSales(take = 60): Promise<
-  { ok: true; sales: DrinkPosSaleRow[] } | { ok: false; error: string }
-> {
-  const res = await fetch(`/api/drink-pos/sales?take=${take}`, { credentials: "include" });
+export async function fetchDrinkPosSales(
+  take = 60,
+  opts?: { phone?: string | null },
+): Promise<{ ok: true; sales: DrinkPosSaleRow[] } | { ok: false; error: string }> {
+  const qs = new URLSearchParams({ take: String(take) });
+  const phone = opts?.phone?.trim();
+  if (phone) qs.set("phone", phone);
+  const res = await fetch(`/api/drink-pos/sales?${qs}`, { credentials: "include" });
   const p = await parseJson(res);
   if (!p.ok) return p;
   const d = p.data as { sales?: DrinkPosSaleRow[] };

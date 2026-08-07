@@ -140,7 +140,7 @@ export function buildingPosStationColumnHint(
     return "อยู่ระหว่างรอเสิร์ฟ · ส่งต่อแผนกเสิร์ฟ";
   }
   if (role === "serve" && status === "SERVED") {
-    return "ครัวทำเสร็จแล้ว — รอเริ่มเสิร์ฟ";
+    return "ครัวทำเสร็จแล้ว (ทีละชุด) — รอเริ่มเสิร์ฟ · มีโต๊ะบนการ์ด";
   }
   if (role === "serve" && status === "SERVING") {
     return "กำลังนำไปเสิร์ฟที่โต๊ะ";
@@ -231,8 +231,13 @@ export function buildingPosDashboardQueueColumnTone(columnKey: BuildingPosDashbo
 export function buildingPosStationPublicPath(
   role: Exclude<BuildingPosStationRole, "queue">,
   ownerId: string,
+  departmentId?: number | null,
 ): string {
-  return `/building-pos/${role}/${encodeURIComponent(ownerId)}`;
+  const base = `/building-pos/${role}/${encodeURIComponent(ownerId)}`;
+  if (role === "kitchen" && departmentId != null && departmentId > 0) {
+    return `${base}/${departmentId}`;
+  }
+  return base;
 }
 
 export function buildingPosStationPublicUrl(
@@ -240,9 +245,10 @@ export function buildingPosStationPublicUrl(
   role: Exclude<BuildingPosStationRole, "queue">,
   ownerId: string,
   trialSessionId?: string,
+  departmentId?: number | null,
 ): string {
   const base = baseUrl.replace(/\/$/, "");
-  const path = buildingPosStationPublicPath(role, ownerId);
+  const path = buildingPosStationPublicPath(role, ownerId, departmentId);
   if (trialSessionId && trialSessionId !== "prod") {
     return `${base}${path}?t=${encodeURIComponent(trialSessionId)}`;
   }
