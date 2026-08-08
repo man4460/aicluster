@@ -3,10 +3,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   AppEmptyState,
+  alertSlipPrintRequiresMonthlyPlan,
   appTemplateOutlineButtonClass,
+  useAppSlipPaperSize,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import { staffDailyUnlockHeaders, readStoredStaffDailyUnlock } from "@/lib/modules/staff-daily-pin";
 import {
   assetRowRemoveIconButtonClass,
   IconRowRemove,
@@ -26,6 +29,10 @@ import {
   type DrinkPosCategoryRow,
   type DrinkPosProductRow,
 } from "@/systems/drink-pos/lib/client-data";
+import {
+  printDrinkPosSaleReceipt,
+  type DrinkPosShopReceiptMeta,
+} from "@/systems/drink-pos/lib/drink-pos-order-ticket-print";
 import type { DrinkPosLoyaltyMemberDto } from "@/systems/drink-pos/lib/loyalty-rule";
 import type { DrinkPosPaymentMethod } from "@/systems/drink-pos/lib/payment-method";
 import {
@@ -92,7 +99,34 @@ function IconQtyPlus({ className }: { className?: string }) {
   );
 }
 
-export function DrinkPosOrderClient() {
+export function DrinkPosOrderClient({
+  staffAuth = null,
+  layout = "dashboard",
+  refreshNonce = 0,
+  enableMobileDraft = true,
+  slipPrintEnabled: slipPrintEnabledProp,
+  shopLabel = null,
+  shopReceipt: shopReceiptProp = null,
+  defaultPaperSize: defaultPaperSizeProp = null,
+}: {
+  /** โหมดลิงก์พนักงาน — เมนู/บันทึกผ่าน /api/drink-pos/staff/* */
+  staffAuth?: { ownerId: string; trialSessionId: string; k: string } | null;
+  /** staffPortal = เต็มความกว้างพอร์ทัล · กริด/สกรอลล์ใน viewport */
+  layout?: "dashboard" | "staffPortal";
+  /** เพิ่มค่าเมื่อกดรีเฟรชที่หัวพอร์ทัล — โหลดเมนูใหม่ */
+  refreshNonce?: number;
+  /** ปิดแถบล่างสรุปบิล (เช่นตอนอยู่แท็บคิว) */
+  enableMobileDraft?: boolean;
+  /** แพ็กเหมารายเดือน — เปิดพิมพ์สลิป */
+  slipPrintEnabled?: boolean;
+  /** ชื่อร้านบนสลิป (พอร์ทัลพนักงาน) */
+  shopLabel?: string | null;
+  /** หัวใบเสร็จ (ที่อยู่ · เลขภาษี · เบอร์) — จาก bootstrap / โปรไฟล์ */
+  shopReceipt?: DrinkPosShopReceiptMeta | null;
+  /** ขนาดกระดาษจาก staff bootstrap — ไม่ส่ง = โหลดจากโปรไฟล์ */
+  defaultPaperSize?: string | null;
+} = {}) {
+  const isStaffPortal = layout === "staffPortal" || Boolean(staffAuth);
   const [categories, setCategories] = useState<DrinkPosCategoryRow[]>([]);
   const [products, setProducts] = useState<DrinkPosProductRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,13 +141,94 @@ export function DrinkPosOrderClient() {
   const [submitErr, setSubmitErr] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<DrinkPosPaymentMethod>("CASH");
   const [paymentSlipUrl, setPaymentSlipUrl] = useState<string | null>(null);
+  const [slipPrintEnabled, setSlipPrintEnabled] = useState(slipPrintEnabledProp === true);
+  const [printSlipAfterSubmit, setPrintSlipAfterSubmit] = useState(slipPrintEnabledProp === true);
+  const [shopReceipt, setShopReceipt] = useState<DrinkPosShopReceiptMeta | null>(shopReceiptProp);
+  const { paper: slipPaper } = useAppSlipPaperSize(
+    defaultPaperSizeProp ?? shopReceiptProp?.slipPaperSize ?? shopReceipt?.slipPaperSize,
+  );
 
   const setMobileDraftSlot = useDrinkPosMobileDraftSlot();
   const cardTapRef = useRef<{ productId: string; timeoutId: ReturnType<typeof setTimeout> } | null>(null);
 
+  useEffect(() => {
+    if (typeof slipPrintEnabledProp === "boolean") {
+      setSlipPrintEnabled(slipPrintEnabledProp);
+      setPrintSlipAfterSubmit(slipPrintEnabledProp);
+    }
+  }, [slipPrintEnabledProp]);
+
+  useEffect(() => {
+    if (shopReceiptProp) setShopReceipt(shopReceiptProp);
+  }, [shopReceiptProp]);
+
+  useEffect(() => {
+    if (staffAuth || shopReceiptProp) return;
+    let cancelled = false;
+    void fetch("/api/drink-pos/profile", { credentials: "include", cache: "no-store" })
+      .then(async (r) => {
+        const j = (await r.json().catch(() => ({}))) as {
+          profile?: {
+            displayName?: string | null;
+            logoUrl?: string | null;
+            address?: string | null;
+            taxId?: string | null;
+            contactPhone?: string | null;
+            bankName?: string | null;
+            bankAccountNumber?: string | null;
+            bankAccountName?: string | null;
+            slipPaperSize?: string | null;
+          };
+        };
+        if (cancelled || !r.ok || !j.profile) return;
+        setShopReceipt({
+          shopLabel: j.profile.displayName?.trim() || shopLabel || "ร้านเครื่องดื่ม",
+          logoUrl: j.profile.logoUrl,
+          address: j.profile.address,
+          taxId: j.profile.taxId,
+          contactPhone: j.profile.contactPhone,
+          bankName: j.profile.bankName,
+          bankAccountNumber: j.profile.bankAccountNumber,
+          bankAccountName: j.profile.bankAccountName,
+          slipPaperSize: j.profile.slipPaperSize,
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [staffAuth, shopReceiptProp, shopLabel]);
+
+  const staffQs = useMemo(() => {
+    if (!staffAuth) return "";
+    return new URLSearchParams({
+      ownerId: staffAuth.ownerId,
+      t: staffAuth.trialSessionId,
+      k: staffAuth.k,
+    }).toString();
+  }, [staffAuth]);
+
   const reload = useCallback(async () => {
     setError(null);
     try {
+      if (staffAuth) {
+        const res = await fetch(`/api/drink-pos/staff/menu?${staffQs}`, {
+          cache: "no-store",
+          headers: staffDailyUnlockHeaders("drink-pos", staffAuth.ownerId),
+        });
+        const j = (await res.json().catch(() => ({}))) as {
+          categories?: DrinkPosCategoryRow[];
+          products?: DrinkPosProductRow[];
+          error?: string;
+        };
+        if (!res.ok) {
+          setError(j.error ?? "โหลดเมนูไม่สำเร็จ");
+          return;
+        }
+        setCategories(j.categories ?? []);
+        setProducts(j.products ?? []);
+        return;
+      }
       const [c, p] = await Promise.all([fetchDrinkPosCategories(), fetchDrinkPosProducts()]);
       if (!c.ok) {
         setError(c.error);
@@ -130,11 +245,17 @@ export function DrinkPosOrderClient() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [staffAuth, staffQs]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    if (refreshNonce <= 0) return;
+    setLoading(true);
+    void reload();
+  }, [refreshNonce, reload]);
 
   useEffect(() => {
     return () => {
@@ -263,10 +384,14 @@ export function DrinkPosOrderClient() {
     setDraftBusy(true);
     setSubmitErr(null);
     try {
-      const res = await fetch("/api/drink-pos/sales", {
+      const salesUrl = staffAuth ? `/api/drink-pos/staff/orders?${staffQs}` : "/api/drink-pos/sales";
+      const res = await fetch(salesUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...(staffAuth ? staffDailyUnlockHeaders("drink-pos", staffAuth.ownerId) : {}),
+        },
+        credentials: staffAuth ? "omit" : "include",
         body: JSON.stringify({
           note: null,
           memberPhone: loyaltyMember?.phone ?? null,
@@ -279,18 +404,70 @@ export function DrinkPosOrderClient() {
           })),
         }),
       });
-      const j = await res.json().catch(() => ({}));
+      const j = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        sale?: {
+          id: string;
+          note?: string | null;
+          totalBaht: number;
+          paymentMethod?: string | null;
+          fulfillmentStatus?: string | null;
+          statusUpdatedAt?: string | null;
+          createdAt: string;
+          memberPhone?: string | null;
+          isRewardRedemption?: boolean | null;
+          lines: Array<{
+            id?: string;
+            productName: string;
+            sizeLabel?: string | null;
+            quantity: number;
+            unitPriceBaht?: number | null;
+            lineTotalBaht?: number | null;
+          }>;
+        };
+      };
       if (!res.ok) {
         throw new Error(typeof j.error === "string" ? j.error : "บันทึกขายไม่สำเร็จ");
+      }
+      if (printSlipAfterSubmit) {
+        if (!slipPrintEnabled) {
+          alertSlipPrintRequiresMonthlyPlan();
+        } else if (j.sale) {
+          printDrinkPosSaleReceipt(
+            {
+              ...j.sale,
+              paymentMethod: j.sale.paymentMethod ?? paymentMethod,
+            },
+            {
+              shopLabel:
+                shopReceipt?.shopLabel?.trim() ||
+                shopLabel?.trim() ||
+                "ร้านเครื่องดื่ม",
+              logoUrl: shopReceipt?.logoUrl,
+              address: shopReceipt?.address,
+              taxId: shopReceipt?.taxId,
+              contactPhone: shopReceipt?.contactPhone,
+              bankName: shopReceipt?.bankName,
+              bankAccountNumber: shopReceipt?.bankAccountNumber,
+              bankAccountName: shopReceipt?.bankAccountName,
+              slipPaperSize: shopReceipt?.slipPaperSize ?? slipPaper,
+            },
+            { paper: slipPaper },
+          );
+        }
       }
       setDraftLines([]);
       setBillReviewOpen(false);
       resetPayment();
       if (loyaltyMember?.phone) {
-        const lookupRes = await fetch(
-          `/api/drink-pos/session/loyalty/members?phone=${encodeURIComponent(loyaltyMember.phone)}`,
-          { credentials: "include", cache: "no-store" },
-        );
+        const lookupUrl = staffAuth
+          ? `/api/drink-pos/staff/loyalty/members?${staffQs}&phone=${encodeURIComponent(loyaltyMember.phone)}`
+          : `/api/drink-pos/session/loyalty/members?phone=${encodeURIComponent(loyaltyMember.phone)}`;
+        const lookupRes = await fetch(lookupUrl, {
+          credentials: staffAuth ? "omit" : "include",
+          cache: "no-store",
+          headers: staffAuth ? staffDailyUnlockHeaders("drink-pos", staffAuth.ownerId) : undefined,
+        });
         const lj = (await lookupRes.json().catch(() => ({}))) as {
           member?: DrinkPosLoyaltyMemberDto | null;
         };
@@ -301,10 +478,42 @@ export function DrinkPosOrderClient() {
     } finally {
       setDraftBusy(false);
     }
-  }, [draftLines, loyaltyMember, paymentMethod, paymentSlipUrl, resetPayment]);
+  }, [
+    draftLines,
+    loyaltyMember,
+    paymentMethod,
+    paymentSlipUrl,
+    printSlipAfterSubmit,
+    resetPayment,
+    shopLabel,
+    shopReceipt,
+    slipPaper,
+    slipPrintEnabled,
+    staffAuth,
+    staffQs,
+  ]);
+
+  const printSlipCheckbox = (
+    <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-[#4d47b6]">
+      <input
+        type="checkbox"
+        className="h-4 w-4 rounded border-[#0000BF]/35 text-[#0000bf] focus:ring-[#0000BF]/40"
+        checked={printSlipAfterSubmit && slipPrintEnabled}
+        onChange={(e) => {
+          if (!slipPrintEnabled) {
+            alertSlipPrintRequiresMonthlyPlan();
+            return;
+          }
+          setPrintSlipAfterSubmit(e.target.checked);
+        }}
+        disabled={draftBusy}
+      />
+          {slipPrintEnabled ? "พิมพ์ใบเสร็จหลังออเดอร์" : "พิมพ์ใบเสร็จ (ต้องแพ็กเหมา 199)"}
+    </label>
+  );
 
   useLayoutEffect(() => {
-    if (draftLines.length === 0) {
+    if (!enableMobileDraft || draftLines.length === 0) {
       setMobileDraftSlot(null);
       return () => setMobileDraftSlot(null);
     }
@@ -358,33 +567,86 @@ export function DrinkPosOrderClient() {
       </div>,
     );
     return () => setMobileDraftSlot(null);
-  }, [draftLines, draftTotalBaht, draftBusy, setMobileDraftSlot, resetPayment]);
+  }, [draftLines, draftTotalBaht, draftBusy, setMobileDraftSlot, resetPayment, enableMobileDraft]);
 
   useEffect(() => {
     if (draftLines.length === 0 && billReviewOpen) setBillReviewOpen(false);
   }, [draftLines.length, billReviewOpen]);
 
   const paymentBlocked = drinkPosPaymentSubmitBlocked(paymentMethod, draftTotalBaht, paymentSlipUrl);
+  /** แดชบอร์ดเดสก์ท็อป: คอลัมน์ซ้าย/ขวาเลื่อนอิสระเมื่อเกินขอบล่าง (มือถือยังเลื่อนทั้งหน้า) */
+  const dashboardDesktopSplit = !isStaffPortal;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 lg:gap-4">
+    <div
+      className={cn(
+        "flex min-h-0 w-full flex-1 flex-col gap-3 lg:gap-4",
+        isStaffPortal && "h-full overflow-hidden",
+        dashboardDesktopSplit && "lg:h-full lg:min-h-0 lg:overflow-hidden",
+      )}
+    >
       {error ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm font-semibold text-rose-800">
+        <div className="shrink-0 rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm font-semibold text-rose-800">
           {error}
         </div>
       ) : null}
 
-      {/* มือถือ: สมาชิกอยู่เหนือเมนู — รายการใช้ popup + แถบล่าง */}
-      <div className="lg:hidden">
-        <DrinkPosLoyaltyBar member={loyaltyMember} onMemberChange={setLoyaltyMember} compact />
-      </div>
+      {/* มือถือแดชบอร์ด: สมาชิกเหนือกริด (เลื่อนทั้งหน้า) — ยังไม่ปรับ UX มือถือตามคำขอ */}
+      {!isStaffPortal ? (
+        <div className="shrink-0 lg:hidden">
+          <DrinkPosLoyaltyBar
+            member={loyaltyMember}
+            onMemberChange={setLoyaltyMember}
+            compact
+            hideMembersLink={Boolean(staffAuth)}
+            staffAuth={staffAuth}
+          />
+        </div>
+      ) : null}
 
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)] lg:gap-4">
-        {/* เดสก์ท็อป — สมาชิก + รายการที่เลือก */}
-        <aside className="hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl border border-[#e8e6fc]/80 bg-gradient-to-br from-white/90 via-[#f5f3ff]/75 to-[#fdf2f8]/55 p-4 shadow-sm lg:flex">
-          <DrinkPosLoyaltyBar member={loyaltyMember} onMemberChange={setLoyaltyMember} compact />
+      <div
+        className={cn(
+          "min-h-0 flex-1 gap-3 lg:gap-4",
+          isStaffPortal
+            ? "flex flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] lg:grid lg:grid-rows-1 lg:overflow-hidden"
+            : "grid",
+          /** แดชบอร์ดเดสก์ท็อป: กรอกความสูงที่เหลือใต้หัวโมดูล — ไม่ใช้ max-h จาก 100dvh ที่ล้นขอบล่างจอ */
+          dashboardDesktopSplit && "lg:min-h-0 lg:grid-rows-1 lg:overflow-hidden",
+          isStaffPortal
+            ? "lg:grid-cols-[minmax(260px,22rem)_minmax(0,1fr)]"
+            : "lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)]",
+        )}
+      >
+        {/* พอร์ทัลพนักงานมือถือ: เบอร์โทรเลื่อนรวมกับเมนู · หัวร้านคงที่นอกนี้ */}
+        {isStaffPortal ? (
+          <div className="shrink-0 lg:hidden">
+            <DrinkPosLoyaltyBar
+              member={loyaltyMember}
+              onMemberChange={setLoyaltyMember}
+              compact
+              hideMembersLink={Boolean(staffAuth)}
+              staffAuth={staffAuth}
+            />
+          </div>
+        ) : null}
+        {/* เดสก์ท็อป — ซ้ายเลื่อนทั้งคอลัมน์เมื่อเกินขอบล่าง */}
+        <aside
+          className={cn(
+            "hidden min-h-0 flex-col gap-3 p-4 lg:flex",
+            isStaffPortal
+              ? "h-full min-h-0 overflow-y-auto overscroll-contain rounded-xl border border-white/70 bg-white/55 [-webkit-overflow-scrolling:touch]"
+              : "rounded-2xl border border-[#e8e6fc]/80 bg-gradient-to-br from-white/90 via-[#f5f3ff]/75 to-[#fdf2f8]/55 shadow-sm lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain [-webkit-overflow-scrolling:touch]",
+          )}
+        >
+          <DrinkPosLoyaltyBar
+            member={loyaltyMember}
+            onMemberChange={setLoyaltyMember}
+            compact
+            hideMembersLink={Boolean(staffAuth)}
+            staffAuth={staffAuth}
+          />
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/70 bg-white/70">
+          <div className="flex shrink-0 flex-col rounded-xl border border-white/70 bg-white/70">
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[#e8e6fc]/80 px-3 py-2.5">
               <p className="text-xs font-black text-[#1e1b4b]">
                 รายการที่เลือก
@@ -405,11 +667,11 @@ export function DrinkPosOrderClient() {
             </div>
 
             {draftLines.length === 0 ? (
-              <div className="flex flex-1 items-center justify-center p-4">
+              <div className="flex items-center justify-center p-4">
                 <p className="text-center text-sm font-semibold text-[#66638c]">แตะเมนูด้านขวาเพื่อเพิ่มรายการ</p>
               </div>
             ) : (
-              <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-2.5 [-webkit-overflow-scrolling:touch]">
+              <ul className="space-y-2 p-2.5">
                 {draftLines.map((l) => (
                   <li
                     key={l.lineKey}
@@ -470,7 +732,11 @@ export function DrinkPosOrderClient() {
                 onMethodChange={setPaymentMethod}
                 onSlipUrlChange={setPaymentSlipUrl}
                 disabled={draftBusy}
+                variant={staffAuth ? "public" : "staff"}
+                ownerId={staffAuth?.ownerId}
+                trialParam={staffAuth?.trialSessionId}
               />
+              {printSlipCheckbox}
               <div className="flex items-end justify-between gap-2">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">ยอดรวม</p>
@@ -489,8 +755,15 @@ export function DrinkPosOrderClient() {
           </div>
         </aside>
 
-        {/* เมนูสินค้า — มือถือเต็มจอ · เดสก์ท็อปคอลัมน์ขวา */}
-        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#e8e6fc]/80 bg-white/60 p-3 shadow-sm lg:p-4">
+        {/* เมนูสินค้า — เดสก์ท็อปเลื่อนคอลัมน์ขวาอิสระเมื่อเกินขอบล่าง · มือถือแดชบอร์ดยังไม่ปรับ */}
+        <section
+          className={cn(
+            "flex flex-col p-3 lg:p-4",
+            isStaffPortal
+              ? "min-h-0 shrink-0 rounded-xl border border-white/70 bg-white/55 lg:min-h-0 lg:flex-1 lg:shrink lg:overflow-hidden"
+              : "min-h-0 rounded-2xl border border-[#e8e6fc]/80 bg-white/60 shadow-sm lg:h-full lg:min-h-0 lg:overflow-hidden",
+          )}
+        >
           <div
             className="shrink-0 overflow-x-auto overflow-y-hidden pb-2 [-webkit-overflow-scrolling:touch]"
             role="group"
@@ -521,15 +794,32 @@ export function DrinkPosOrderClient() {
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pt-1 [-webkit-overflow-scrolling:touch]">
+          <div
+            className={cn(
+              "pt-1",
+              (isStaffPortal || dashboardDesktopSplit) &&
+                "lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:[-webkit-overflow-scrolling:touch]",
+            )}
+          >
             {loading ? (
               <div className={cn("h-40 animate-pulse rounded-xl", drinkPosPulseWashClass)} aria-hidden />
             ) : filteredProducts.length === 0 ? (
               <AppEmptyState tone="violet" className="mt-2">
-                {categories.length === 0 ? "ยังไม่มีสินค้า — ไปที่จัดการสินค้าเพื่อเพิ่ม" : "ไม่มีสินค้าในหมวดนี้"}
+                {categories.length === 0
+                  ? staffAuth
+                    ? "ยังไม่มีสินค้าในร้าน — รอเจ้าของร้านเพิ่มเมนู"
+                    : "ยังไม่มีสินค้า — ไปที่จัดการสินค้าเพื่อเพิ่ม"
+                  : "ไม่มีสินค้าในหมวดนี้"}
               </AppEmptyState>
             ) : (
-              <ul className={drinkPosProductGridClass}>
+              <ul
+                className={cn(
+                  drinkPosProductGridClass,
+                  /* สำรองให้ Tailwind สแกนเจอใน .tsx — มือถือ 3 คอลัมน์ */
+                  "grid-cols-3",
+                  isStaffPortal && "xl:grid-cols-7 2xl:grid-cols-9",
+                )}
+              >
                 {filteredProducts.map((p) => {
                   const inDraftQty = draftQtyByProductId.get(p.id) ?? 0;
                   return (
@@ -604,7 +894,10 @@ export function DrinkPosOrderClient() {
         open={billReviewOpen}
         onClose={() => !draftBusy && setBillReviewOpen(false)}
         title="สรุปรายการ"
-        size="md"
+        size={staffAuth ? "full" : "lg"}
+        appearance={staffAuth ? "glass" : "default"}
+        glassTint="amber"
+        mobileCentered
         footer={
           <FormModalFooterActions
             onCancel={() => !draftBusy && setBillReviewOpen(false)}
@@ -688,7 +981,11 @@ export function DrinkPosOrderClient() {
               onMethodChange={setPaymentMethod}
               onSlipUrlChange={setPaymentSlipUrl}
               disabled={draftBusy}
+              variant={staffAuth ? "public" : "staff"}
+              ownerId={staffAuth?.ownerId}
+              trialParam={staffAuth?.trialSessionId}
             />
+            {printSlipCheckbox}
           </div>
         )}
       </FormModal>

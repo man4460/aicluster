@@ -70,6 +70,9 @@ function defaultVenueSettings(): FootballTurfVenueSettings {
     contactPhone: "0812345678",
     contactLine: "",
     note: "",
+    slipPaperSize: "SLIP_58",
+    portalBookingPaymentMode: "NONE",
+    depositAmountBaht: null,
   };
 }
 
@@ -83,8 +86,8 @@ const seedToday = new Date();
 const seedDB: FootballTurfDB = {
   settings: defaultVenueSettings(),
   courts: [
-    { id: 1, name: "สนาม A", openTime: "16:00", closeTime: "23:00", slotMinutes: 60, weekdayPrice: 900, weekendPrice: 1200, isActive: true },
-    { id: 2, name: "สนาม B", openTime: "16:00", closeTime: "23:00", slotMinutes: 90, weekdayPrice: 1200, weekendPrice: 1500, isActive: true },
+    { id: 1, name: "สนาม A", openTime: "16:00", closeTime: "23:00", slotMinutes: 60, weekdayPrice: 900, weekendPrice: 1200, imageUrl: "", isActive: true },
+    { id: 2, name: "สนาม B", openTime: "16:00", closeTime: "23:00", slotMinutes: 90, weekdayPrice: 1200, weekendPrice: 1500, imageUrl: "", isActive: true },
   ],
   bookings: [
     {
@@ -150,7 +153,7 @@ const seedDB: FootballTurfDB = {
       finalPrice: 900,
       promotionSaleId: null,
       note: "",
-      paymentMethod: "PROMPTPAY",
+      paymentMethod: "TRANSFER",
       paymentStatus: "PAID",
       paymentSlipDataUrl: "",
       paymentReference: "",
@@ -219,7 +222,7 @@ const seedDB: FootballTurfDB = {
       finalPrice: 900,
       promotionSaleId: null,
       note: "",
-      paymentMethod: "PROMPTPAY",
+      paymentMethod: "TRANSFER",
       paymentStatus: "PAID",
       paymentSlipDataUrl: "",
       paymentReference: "",
@@ -332,7 +335,10 @@ function normalizeDB(parsed: Partial<FootballTurfDB>): FootballTurfDB {
     ...base,
     ...parsed,
     settings: { ...defaultVenueSettings(), ...(parsed.settings ?? {}) },
-    courts: parsed.courts ?? base.courts,
+    courts: (parsed.courts ?? base.courts).map((item) => ({
+      ...item,
+      imageUrl: item.imageUrl ?? "",
+    })),
     bookings: (parsed.bookings ?? base.bookings).map((item) => ({
       ...item,
       paymentMethod: item.paymentMethod ?? "UNPAID",

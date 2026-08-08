@@ -1,4 +1,4 @@
-import { persistFootballTurfSlipUrl } from "@/systems/football-turf/lib/persist-slip";
+import { persistFootballTurfCourtImageUrl, persistFootballTurfSlipUrl } from "@/systems/football-turf/lib/persist-slip";
 import { prisma } from "@/lib/prisma";
 import {
   formatBookingDate,
@@ -148,6 +148,7 @@ export class FootballTurfServerRepo {
       where: scopeWhere(scope),
       _max: { sortOrder: true },
     });
+    const imageUrl = await persistFootballTurfCourtImageUrl(scope.ownerUserId, input.imageUrl || null);
     const row = await prisma.footballTurfCourt.create({
       data: {
         ownerUserId: scope.ownerUserId,
@@ -158,6 +159,7 @@ export class FootballTurfServerRepo {
         slotMinutes: input.slotMinutes,
         weekdayPrice: input.weekdayPrice,
         weekendPrice: input.weekendPrice,
+        imageUrl,
         isActive: input.isActive,
         sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
       },
@@ -170,7 +172,14 @@ export class FootballTurfServerRepo {
       where: { id, ...scopeWhere(this.scope()) },
     });
     if (!existing) return null;
-    const row = await prisma.footballTurfCourt.update({ where: { id }, data: patch });
+    const data: Record<string, unknown> = { ...patch };
+    if (patch.imageUrl !== undefined) {
+      data.imageUrl = await persistFootballTurfCourtImageUrl(
+        this.scope().ownerUserId,
+        patch.imageUrl || null,
+      );
+    }
+    const row = await prisma.footballTurfCourt.update({ where: { id }, data });
     return mapCourt(row);
   }
 

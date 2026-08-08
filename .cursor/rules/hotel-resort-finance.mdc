@@ -1,0 +1,46 @@
+---
+description: โรงแรมรีสอร์ท — หน้าการเงิน (โดเมนเฉพาะ · ยึดแม่แบบกลางการเงินครบชุด)
+globs:
+  - "**/systems/hotel-resort/**Finance*"
+  - "**/app/**/dashboard/hotel-resort/finance/**"
+  - "**/app/api/hotel-resort/finance-summary/**"
+  - "**/app/api/hotel-resort/costs/**"
+  - "**/app/api/hotel-resort/cost-categories/**"
+alwaysApply: false
+---
+
+# โรงแรมรีสอร์ท — หน้าการเงิน
+
+**กฎกลาง (บังคับ · อ่านแม่แบบครบชุดก่อน):**
+
+- แม่แบบครบ → **`dashboard-finance-module-template.mdc`**
+- โครงหน้า → **`dashboard-finance-page-layout.mdc`**
+- กรอง/กราฟ → **`dashboard-finance-filter-charts-toggle.mdc`**
+- แถบรายละเอียด → **`dashboard-finance-detail-tabs.mdc`**
+- หมวดรายจ่าย → **`dashboard-expense-cost-categories.mdc`**
+
+คู่กับ: `hotel-resort-module-dashboard-template.mdc`
+
+---
+
+## โดเมนเฉพาะ
+
+| ชั้น | โรงแรม |
+|------|--------|
+| สรุปบนสุด | รายได้ (emerald) · ต้นทุน (rose) · กำไรโดยประมาณ |
+| แท็บ | ประวัติ / รายรับ · รายจ่าย — สลิปเฉพาะเมื่อมี + lightbox · ราคาขวาสุด · **ทุกแถวประวัติ/รายรับมีแก้ไข+ลบ** · ลบยืนยันด้วย `useAppNoticePopup` |
+| API | `GET /api/hotel-resort/finance-summary?range=&from=&to=` (รวม `paymentSlipUrl` ใน stays/costs) |
+| กรอง | ชิป pill วันนี้·เดือนนี้·ปีนี้·กำหนดเอง (ไม่เต็มจอ) + ค้นหาแขก/ห้อง + รีเซ็ตเมื่อกรองค้าง |
+| รายจ่าย | ฟอร์มต้นแบบร้านอาหาร (หมวด·รายละเอียด·ยอด·หมายเหตุ·สลิป) · หมวด CRUD · PATCH/DELETE `/api/hotel-resort/costs/[id]` · ลบผ่าน `notice.confirm` |
+
+โค้ด: `HotelResortFinanceClient.tsx`
+
+## เช็กลิสต์
+
+- [ ] ตาม `dashboard-finance-module-template.mdc`
+- [ ] ชิปช่วงเวลาเป็นปุ่มเล็ก · รีเซ็ตเฉพาะเมื่อกรองค้าง
+- [ ] **ประวัติ / รายรับ:** ทุกแถวแก้ไข + ลบได้
+- [ ] แถว: ราคาขวา emerald/rose · สลิปเฉพาะเมื่อมี
+- [ ] ลบใช้ `useAppNoticePopup().confirm` — ห้าม `window.confirm`
+- [ ] ฟอร์มรายจ่ายครบตามต้นแบบร้านอาหาร
+- [ ] API/ค้นหาแขกตามโดเมนโรงแรม

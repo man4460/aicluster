@@ -1,0 +1,205 @@
+---
+description: ลิงก์พนักงานแบบโทเค็น — พอร์ทัลเต็มจอ · หัวคงที่ · เดสก์ท็อปซ้าย/ขวาเลื่อนอิสระ · มือถือแท็บล่าง + สกอลล์รวมเบอร์กับเมนู
+alwaysApply: false
+globs:
+  - "**/components/qr/module-staff-token-qr-panel.tsx"
+  - "**/components/qr/shop-staff-qr-panel.tsx"
+  - "**/components/ui/FormModal.tsx"
+  - "**/app/**/staff/**"
+  - "**/api/**/staff/**"
+  - "**/api/**/staff-link/**"
+  - "**/systems/drink-pos/**Staff*"
+  - "**/systems/drink-pos/DrinkPosOrderClient.tsx"
+  - "**/systems/hotel-resort/**Staff*"
+  - "**/systems/building-pos/**Staff*"
+---
+
+# ลิงก์พนักงาน (โทเค็น) — สร้าง + หน้าปลายทาง
+
+ใช้เมื่อโมดูลมี **ลิงก์/QR พนักงานแบบลับ** (`?t=&k=`) ให้บันทึกงานโดยไม่ล็อกอินเจ้าของ — แยกจาก staff lane ที่ต้องล็อกอิน (คาร์แคร์ / บาร์เบอร์ → `staff-qr-landing-page.mdc`)
+
+**แม่แบบอ้างอิง (ร้านเครื่องดื่ม):**  
+`DrinkPosLoyaltyHubClient` → `ModuleStaffTokenQrPanel` → `/drink-pos/staff/{ownerId}?t=&k=` → `DrinkPosStaffClient` + `DrinkPosOrderClient layout="staffPortal"`
+
+**แยกจากแดชบอร์ดเจ้าของ:** หน้า `/dashboard/…/order` เลื่อนทั้งหน้าแบบร้านอาหาร (`BuildingPosShell`) — **อย่า** เอาเชน `h-dvh` / คอลัมน์เลื่อนอิสระของพอร์ทัลไปใส่แดชบอร์ด
+
+---
+
+## 1) สร้าง / จัดการลิงก์ในแดชบอร์ด
+
+| ข้อ | บังคับ |
+|-----|--------|
+| คอมโพเนนต์ | `ModuleStaffTokenQrPanel` หรือ `ShopStaffQrPanel` — ห้ามคัดลอก UI QR ใหม่ |
+| โมดัล | `FormModal` **`size="full"`** · `appearance="glass"` · `glassTint="amber"` · `mobileCentered` |
+| ห้าม | `size="lg"` / `md` สำหรับโมดัลสร้างลิงก์พนักงาน |
+| API | `GET/POST /api/{module}/session/staff-link` (หรือเทียบเท่า) — โทเค็นเข้ารหัสตาม building-pos |
+
+รายละเอียดแผง QR / ดาวน์โหลด → `.cursor/rules/shop-staff-qr-panel.mdc`  
+แพทเทิร์นการ์ด hub คู่ → `.cursor/rules/shop-qr-hub-popup-pattern.mdc`
+
+---
+
+## 2) หน้าปลายทาง — โครงพอร์ทัล (บังคับ)
+
+### เปลือกนอก
+
+1. **เต็มจอซ้าย–ขวา** — `w-full` · **ห้าม** `max-w-7xl` / `max-w-6xl` / `mx-auto` ที่เหลือ gutter กว้าง
+2. Wrapper นอก: `shopQrTemplatePageBgClass` + **`h-dvh max-h-dvh overflow-hidden`** + ขอบบาง `p-2 sm:p-3`
+3. **การ์ดใบเดียว** ห่อทั้งหน้า (`h-full min-h-0 overflow-hidden` · มุมมน ~`rounded-[1.75rem]`–`rounded-[2rem]` · glass): **หัวร้าน + แท็บ + เนื้อหางาน** ในกรอบเดียวกัน
+4. **ห้าม** `overflow-y-auto` ที่การ์ดทั้งใบ — จะทำให้หัวเลื่อนหาย
+
+### ส่วนหัวคงที่ (`shrink-0`)
+
+- แถบบทบาท เช่น `พนักงาน · บันทึกออเดอร์`
+- ชื่อร้าน (`shopLabel`) จาก bootstrap
+- **ปุ่มรีเฟรช** มุมขวา — bootstrap + โหลดเมนู/คิวใหม่ · `aria-label` · ข้อความ `รีเฟรช` / `…`
+- **แท็บสลับ** `ออเดอร์` / `คิวออเดอร์`:
+  - **เดสก์ท็อป `lg+`:** ใต้หัวในการ์ด
+  - **มือถือ:** แถบล่าง (ดู §4) — **ห้าม** ใส่แท็บในหัวบนมือถือ
+  - สลับแท็บแล้ว**คงตะกร้า** (ซ่อนด้วย `hidden` ไม่ unmount) · ปิด dock สรุปบิลตอนแท็บคิว (`enableMobileDraft={false}`)
+- หัว **ไม่เลื่อนไปกับเนื้อหา** — อยู่บนสุดของการ์ดเสมอ
+
+### โซนเนื้อหาใต้หัว
+
+- `flex min-h-0 flex-1 flex-col overflow-hidden` + padding ใน (`px-2 py-3` ฯลฯ)
+- กัน dock มือถือบัง: `drinkPosMainPaddingBottomClass` เสมอ (มีแท็บล่าง)
+
+---
+
+## 3) แท็บออเดอร์ — เดสก์ท็อป `lg+`: ซ้าย / ขวา เลื่อนอิสระ (บังคับ)
+
+นี่คือ UX หลักของลิงก์พนักงานบนจอใหญ่ — **แม่แบบ = drink-pos staff**
+
+### เชนความสูง (อย่าตัด)
+
+```
+h-dvh (นอก)
+  └─ การ์ด h-full overflow-hidden
+       ├─ header shrink-0
+       └─ เนื้อหา min-h-0 flex-1 overflow-hidden
+            └─ OrderClient: h-full overflow-hidden
+                 └─ grid: min-h-0 flex-1 grid-rows-1 overflow-hidden
+                      ├─ aside ซ้าย: h-full min-h-0 overflow-y-auto
+                      └─ section ขวา: min-h-0 overflow-hidden
+                           ├─ หมวด shrink-0
+                           └─ กริดสินค้า: min-h-0 flex-1 overflow-y-auto
+```
+
+### คอลัมน์ซ้าย (สมาชิก · รายการ · ชำระ · ยอด · บันทึก)
+
+- `lg:flex` · `h-full min-h-0 overflow-y-auto overscroll-contain`
+- เลื่อน**ทั้งคอลัมน์** รวมแผง PromptPay / สลิป / ปุ่มบันทึก — **ห้าม** `overflow-hidden` ที่ตัดส่วนชำระโดยไม่มีสกอลล์คอลัมน์
+- การ์ดรายการภายในเป็น `shrink-0` (สูงตามเนื้อหา) — ให้สกอลล์อยู่ที่ aside ไม่ใช่กล่องย่อยแยก
+
+### คอลัมน์ขวา (หมวด + เมนู)
+
+- หมวดหมู่แถบแนวนอน: `shrink-0` · เลื่อนแนวนอนได้ · **ไม่** เลื่อนแนวตั้งแทนเมนู
+- กริดสินค้า: `min-h-0 flex-1 overflow-y-auto overscroll-contain` — **อิสระจากฝั่งซ้าย**
+- กริดสินค้ากว้างขึ้นบนจอใหญ่ได้ (เช่น `xl:grid-cols-7`)
+
+### ห้าม (เดสก์ท็อปพอร์ทัล)
+
+- เลื่อนทั้งหน้า / ทั้งการ์ดแทนคอลัมน์
+- ล็อกความสูงพอร์ทัลแล้วยังให้ parent ยืดตามเนื้อหาจน `overflow-y-auto` ของคอลัมน์ไม่ทำงาน
+- คัดลอกเลย์เอาต์พอร์ทัลไปหน้าแดชบอร์ดเจ้าของ
+
+### อ้างอิงโค้ด
+
+| ส่วน | ไฟล์ / prop |
+|------|-------------|
+| พอร์ทัล | `DrinkPosStaffClient.tsx` |
+| ออเดอร์ | `DrinkPosOrderClient` · `layout="staffPortal"` · `staffAuth` |
+| กริดสองคอลัมน์ | `lg:grid-cols-[minmax(260px,22rem)_minmax(0,1fr)]` |
+
+---
+
+## 4) มือถือ (ลิงก์พนักงาน) — บังคับ
+
+แม่แบบ = drink-pos staff บน viewport แคบ (ก่อน `lg`)
+
+### โครงหน้า
+
+| ชั้น | พฤติกรรม |
+|------|----------|
+| ส่วนหัวการ์ด | **คงที่** (`shrink-0`) — บทบาท · ชื่อร้าน · ปุ่มรีเฟรช เท่านั้น |
+| แท็บ `ออเดอร์` / `คิวออเดอร์` | **แถบล่าง** ใน pill ของ `AppMobileDockUnifiedBar` — **ห้าม** วางในหัวบนมือถือ |
+| สรุปบิล (เมื่อมีรายการ) | สล็อตเหนือ pill เมนู (dock เดิม) |
+| เดสก์ท็อป `lg+` | แท็บกลับไปอยู่ใต้หัว · dock ซ่อน (`lg:hidden` จากโทเค็น dock) |
+
+### สกอลล์แท็บออเดอร์ (บังคับ)
+
+```
+หัวร้าน (คงที่)
+  └─ โซนเลื่อนเดียว (overflow-y-auto)
+       ├─ แถบเบอร์โทร / สมาชิก (DrinkPosLoyaltyBar)
+       ├─ ชิปหมวดหมู่
+       └─ กริดเมนูอาหาร (สูงตามเนื้อหา — ไม่มี overflow-y แยก)
+แถบเมนูล่าง (fixed dock)
+```
+
+- รวม **เบอร์โทร + หมวด + เมนู** ในสกอลล์เดียวใต้หัว
+- หัวร้าน **ไม่** เลื่อนตาม
+- **ห้าม** แยกสกอลล์เฉพาะเมนูจนเบอร์โทรค้างติดหัว
+- คลาสอ้างอิง: `flex flex-col overflow-y-auto … lg:grid lg:overflow-hidden` ใน `DrinkPosOrderClient` `layout="staffPortal"`
+
+### แท็บคิวออเดอร์
+
+- หัวคงที่เหมือนกัน · แท็บล่างเหมือนกัน
+- เนื้อหาคิวเลื่อนในโซนใต้หัว (board) · ไม่ใส่สรุปบิลใน dock (`enableMobileDraft={false}`)
+
+### ชำระ / บันทึก
+
+- ปุ่มจากสล็อต dock เปิด `FormModal` **`size="full"`**
+- แผงชำระในโมดัลต้องเลื่อนถึงแนบสลิป + CTA ได้ครบ
+
+### เว้นที่ + โทเค็น
+
+- `drinkPosMainPaddingBottomClass` (`pb-24 lg:pb-0`) บนการ์ดพอร์ทัลเสมอ — กัน dock บังเนื้อหา
+- แท็บล่างส่งผ่าน `DrinkPosMobileBottomProvider` prop **`staffFooterNav`**
+
+### ห้าม (มือถือพอร์ทัล)
+
+- แท็บออเดอร์/คิวในส่วนหัวบนมือถือ
+- สกอลล์ซ้อน: เบอร์ตรึง + เมนูเลื่อนแยก
+- เลื่อนทั้งการ์ดรวมหัวร้าน
+- ลืม padding ก้นจนเมนูล่างบังรายการสุดท้าย
+
+### อ้างอิงโค้ดมือถือ
+
+| ส่วน | ที่อยู่ |
+|------|--------|
+| พอร์ทัล + แท็บล่าง | `DrinkPosStaffClient.tsx` → `staffFooterNav` |
+| Dock / สล็อตบิล | `DrinkPosMobileBottomChrome.tsx` |
+| สกอลล์รวมเบอร์+เมนู | `DrinkPosOrderClient` · `layout="staffPortal"` |
+
+---
+
+## 5) เนื้อหา + API
+
+- **ใช้ UI งานจริงของโมดูล** เมื่อเป็นไปได้ — ห้ามสร้างตะกร้า/เมนูคนละชุดโดยไม่มีเหตุผลโดเมน
+- เรียก `/api/{module}/staff/*` ด้วย `ownerId` + `t` + `k` · `credentials: "omit"`
+- คิว: `GET/PATCH …/staff/orders/board` · SSE `…/board/stream` (ตรวจโทเค็น `k`)
+- โมดัลชำระ: `FormModal size="full"` เมื่อมี QR + สลิป — ห้ามตัดส่วนล่าง
+
+---
+
+## 6) Checklist โมดูลใหม่
+
+1. [ ] staff-link + migrate + `prisma generate`
+2. [ ] API `session/staff-link` + `staff/bootstrap` + API งานที่จำเป็น
+3. [ ] Hub: QR พนักงาน + `FormModal size="full"` + `ModuleStaffTokenQrPanel` / `ShopStaffQrPanel`
+4. [ ] หน้า `/…/staff/[ownerId]?t=&k=` — เต็มจอ · การ์ดเดียว · หัวคงที่ · รีเฟรช · **เดสก์ท็อปซ้าย/ขวาเลื่อนอิสระ** · **มือถือแท็บล่าง + สกอลล์รวมเบอร์+เมนู**
+5. [ ] เนื้อหา = UI งานจริง · คิวผ่าน board + API staff
+6. [ ] มือถือครบตาม §4 (หัวคงที่ · แท็บล่าง · สกอลล์เดียว · dock สรุปบิล · `FormModal size="full"`)
+7. [ ] ไม่ใส่แบรนด์ MAWELL ซ้ำใน chrome พอร์ทัล
+
+---
+
+## ความสัมพันธ์กับกฎอื่น
+
+| หัวข้อ | กฎ |
+|--------|-----|
+| แผง QR / ดาวน์โหลดในโมดัล | `shop-staff-qr-panel.mdc` |
+| Hub การ์ดคู่ลูกค้า–พนักงาน | `shop-qr-hub-popup-pattern.mdc` |
+| Staff lane หลังล็อกอิน | `staff-qr-landing-page.mdc` |
+| drink-pos แดชบอร์ด (เลื่อนทั้งหน้า) | `drink-pos-module-dashboard-template.mdc` |

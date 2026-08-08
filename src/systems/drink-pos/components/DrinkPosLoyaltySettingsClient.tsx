@@ -9,6 +9,7 @@ import {
   appDashboardBrandCtaPillButtonClass,
   appTemplateOutlineButtonClass,
   prepareImageFileForUpload,
+  useAppCameraCapture,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
@@ -53,7 +54,11 @@ export function DrinkPosLoyaltySettingsClient() {
   const [rewardSaving, setRewardSaving] = useState(false);
   const [imageUploadBusy, setImageUploadBusy] = useState(false);
   const rewardGalleryRef = useRef<HTMLInputElement>(null);
-  const rewardCameraRef = useRef<HTMLInputElement>(null);
+  const {
+    openCamera: openRewardCamera,
+    cameraInputRef: rewardCameraInputRef,
+    cameraModal: rewardCameraModal,
+  } = useAppCameraCapture({ title: "ถ่ายรูปของรางวัล" });
 
   const rulePreview = useMemo(
     () => formatDrinkPosLoyaltyEarnRule(bahtPerPoint, pointsPerUnit),
@@ -166,20 +171,24 @@ export function DrinkPosLoyaltySettingsClient() {
     return j.imageUrl;
   }
 
-  async function onRewardImageFileChange(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    e.target.value = "";
-    if (!f) return;
+  async function applyRewardImage(file: File) {
     setErr(null);
     setImageUploadBusy(true);
     try {
-      const url = await uploadRewardImage(f);
+      const url = await uploadRewardImage(file);
       setRewardForm((s) => ({ ...s, image_url: url, product_id: "" }));
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "อัปโหลดไม่สำเร็จ");
     } finally {
       setImageUploadBusy(false);
     }
+  }
+
+  async function onRewardImageFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    await applyRewardImage(f);
   }
 
   async function saveReward() {
@@ -373,13 +382,13 @@ export function DrinkPosLoyaltySettingsClient() {
               <p className="text-xs font-bold text-[#4d47b6]">รูปประกอบ (เมื่อไม่ได้เลือกสินค้า)</p>
               <AppGalleryCameraFileInputs
                 galleryInputRef={rewardGalleryRef}
-                cameraInputRef={rewardCameraRef}
+                cameraInputRef={rewardCameraInputRef}
                 onChange={(e) => void onRewardImageFileChange(e)}
               />
               <div className="flex flex-wrap items-center gap-2">
                 <AppImagePickCameraButtons
                   onPickGallery={() => rewardGalleryRef.current?.click()}
-                  onPickCamera={() => rewardCameraRef.current?.click()}
+                  onPickCamera={() => openRewardCamera((file) => void applyRewardImage(file))}
                   disabled={rewardSaving || imageUploadBusy}
                   busy={imageUploadBusy}
                   labels={{ busy: "กำลังอัปโหลด…" }}
@@ -395,6 +404,7 @@ export function DrinkPosLoyaltySettingsClient() {
                   </button>
                 : null}
               </div>
+              {rewardCameraModal}
               {rewardForm.image_url.trim() ?
                 <div className="h-28 w-28 overflow-hidden rounded-2xl border border-white/60 bg-[#0000BF]/08 ring-1 ring-inset ring-white/40">
                   {/* eslint-disable-next-line @next/next/no-img-element */}

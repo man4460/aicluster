@@ -9,20 +9,22 @@ import type { ModuleUsageBadge } from "@/lib/modules/module-usage-badge";
 import { cn } from "@/lib/cn";
 
 type HomeModule = {
-  id: number;
+  id: string;
   slug: string;
   title: string;
   groupId: number;
   imageUrl: string | null;
   href: string;
   usageBadge: ModuleUsageBadge | null;
-  systemMap?: boolean;
 };
 
 const PINNED_KEY = "mawell.dashboard.home.pinned.v1";
 const RECENT_KEY = "mawell.dashboard.home.recent.v1";
 const DEFAULT_PINNED_COUNT = 4;
-const RECENT_LIMIT = 12;
+const RECENT_LIMIT = 10;
+const PINNED_LIMIT = 24;
+
+type ShelfTab = "recent" | "pinned";
 
 function safeReadJson(key: string): unknown {
   try {
@@ -56,7 +58,7 @@ function UsagePill({ badge }: { badge: ModuleUsageBadge }) {
   if (badge.tone === "monthly") {
     return (
       <span className="rounded-lg border border-amber-200/70 bg-amber-300/90 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#1a0d3a] shadow-sm">
-        199 / เดือน
+        {badge.label}
       </span>
     );
   }
@@ -95,7 +97,7 @@ function CompactModuleCard({
               <Image src={safeImage} alt="" fill sizes="48px" className="object-cover" unoptimized />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-[#4d47b6]">
-                <span className="text-sm font-black">{module.systemMap ? "🗺️" : "⚡"}</span>
+                <span className="text-sm font-black">⚡</span>
               </div>
             )}
           </div>
@@ -135,159 +137,138 @@ function buildDefaultPinned(all: HomeModule[]) {
   return all.slice(0, DEFAULT_PINNED_COUNT).map((m) => m.slug);
 }
 
-function buildDefaultRecent(all: HomeModule[], pinnedSlugs: string[], count: number) {
-  const pinnedSet = new Set(pinnedSlugs);
-  return all
-    .filter((m) => !pinnedSet.has(m.slug))
-    .slice(0, count)
-    .map((m) => m.slug);
+function buildDefaultRecent(all: HomeModule[], count: number) {
+  return all.slice(0, count).map((m) => m.slug);
 }
 
 export function DashboardHomeModuleShelf({ modules }: { modules: HomeModule[] }) {
   const bySlug = useMemo(() => new Map(modules.map((m) => [m.slug, m])), [modules]);
-  const allSlugs = useMemo(() => modules.map((m) => m.slug), [modules]);
+  const [shelfTab, setShelfTab] = useState<ShelfTab>("recent");
   const [pinnedSlugs, setPinnedSlugs] = useState<string[]>(() => buildDefaultPinned(modules));
   const [recentSlugs, setRecentSlugs] = useState<string[]>(() =>
-    buildDefaultRecent(modules, buildDefaultPinned(modules), DEFAULT_PINNED_COUNT),
+    buildDefaultRecent(modules, RECENT_LIMIT),
   );
 
   useEffect(() => {
     const pinnedSaved = parseSlugList(safeReadJson(PINNED_KEY));
-    const pinned = pinnedSaved.length ? pinnedSaved.filter((slug) => bySlug.has(slug)) : buildDefaultPinned(modules);
+    const pinned = pinnedSaved.length
+      ? pinnedSaved.filter((slug) => bySlug.has(slug)).slice(0, PINNED_LIMIT)
+      : buildDefaultPinned(modules);
     setPinnedSlugs(pinned);
+
     const recentSaved = parseSlugList(safeReadJson(RECENT_KEY));
-    const targetCount = pinned.length > 0 ? pinned.length : DEFAULT_PINNED_COUNT;
     const recent = recentSaved.length
-      ? recentSaved
-          .filter((slug) => bySlug.has(slug) && !pinned.includes(slug))
-          .slice(0, Math.max(RECENT_LIMIT, targetCount))
-      : buildDefaultRecent(modules, pinned, targetCount);
+      ? recentSaved.filter((slug) => bySlug.has(slug)).slice(0, RECENT_LIMIT)
+      : buildDefaultRecent(modules, RECENT_LIMIT);
     setRecentSlugs(recent);
+
     safeWriteJson(PINNED_KEY, pinned);
     safeWriteJson(RECENT_KEY, recent);
   }, [bySlug, modules]);
 
-  const togglePinned = useCallback(
-    (slug: string) => {
-      setPinnedSlugs((current) => {
-        const next = current.includes(slug) ? current.filter((x) => x !== slug) : [slug, ...current].slice(0, 12);
-        safeWriteJson(PINNED_KEY, next);
-        setRecentSlugs((prev) => {
-          const pinnedSet = new Set(next);
-          const targetCount = next.length > 0 ? next.length : DEFAULT_PINNED_COUNT;
-          const filled: string[] = [];
-          const seen = new Set<string>();
+  const togglePinned = useCallback((slug: string) => {
+    setPinnedSlugs((current) => {
+      const next = current.includes(slug)
+        ? current.filter((x) => x !== slug)
+        : [slug, ...current.filter((x) => x !== slug)].slice(0, PINNED_LIMIT);
+      safeWriteJson(PINNED_KEY, next);
+      return next;
+    });
+  }, []);
 
-          for (const key of prev) {
-            if (filled.length >= targetCount) break;
-            if (!bySlug.has(key) || pinnedSet.has(key) || seen.has(key)) continue;
-            filled.push(key);
-            seen.add(key);
-          }
-
-          if (filled.length < targetCount) {
-            for (const key of allSlugs) {
-              if (filled.length >= targetCount) break;
-              if (pinnedSet.has(key) || seen.has(key)) continue;
-              if (!bySlug.has(key)) continue;
-              filled.push(key);
-              seen.add(key);
-            }
-          }
-
-          const nextRecent = filled.length > 0 ? filled : buildDefaultRecent(modules, next, targetCount);
-          safeWriteJson(RECENT_KEY, nextRecent);
-          return nextRecent;
-        });
-        return next;
-      });
-    },
-    [allSlugs, bySlug, modules],
-  );
-
-  const onVisit = useCallback(
-    (slug: string) => {
-      setRecentSlugs((current) => {
-        const pinnedSet = new Set(pinnedSlugs);
-        if (pinnedSet.has(slug)) return current;
-        const next = [slug, ...current.filter((x) => x !== slug)].slice(0, RECENT_LIMIT);
-        safeWriteJson(RECENT_KEY, next);
-        return next;
-      });
-    },
-    [pinnedSlugs],
-  );
+  const onVisit = useCallback((slug: string) => {
+    setRecentSlugs((current) => {
+      const next = [slug, ...current.filter((x) => x !== slug)].slice(0, RECENT_LIMIT);
+      safeWriteJson(RECENT_KEY, next);
+      return next;
+    });
+  }, []);
 
   const pinnedModules = useMemo(
     () => pinnedSlugs.map((slug) => bySlug.get(slug)).filter(Boolean) as HomeModule[],
     [bySlug, pinnedSlugs],
   );
-  const shelfCount = Math.max(DEFAULT_PINNED_COUNT, pinnedModules.length);
+
   const recentModules = useMemo(() => {
-    const pinnedSet = new Set(pinnedSlugs);
-    const fromStorage = recentSlugs.map((slug) => bySlug.get(slug)).filter(Boolean) as HomeModule[];
-    const filled = [...fromStorage];
-    if (filled.length >= shelfCount) return filled.slice(0, shelfCount);
-    for (const slug of allSlugs) {
-      if (filled.length >= shelfCount) break;
-      if (pinnedSet.has(slug)) continue;
-      if (filled.some((m) => m.slug === slug)) continue;
-      const item = bySlug.get(slug);
-      if (item) filled.push(item);
-    }
-    return filled.slice(0, shelfCount);
-  }, [allSlugs, bySlug, pinnedSlugs, recentSlugs, shelfCount]);
+    const fromStorage = recentSlugs
+      .map((slug) => bySlug.get(slug))
+      .filter(Boolean) as HomeModule[];
+    if (fromStorage.length > 0) return fromStorage.slice(0, RECENT_LIMIT);
+    return modules.slice(0, RECENT_LIMIT);
+  }, [bySlug, modules, recentSlugs]);
+
+  const visibleModules = shelfTab === "pinned" ? pinnedModules : recentModules;
+  const emptyLabel =
+    shelfTab === "pinned"
+      ? "ยังไม่มีโปรแกรมปักหมุด — กดดาวบนการ์ดเพื่อปักหมุด"
+      : "ยังไม่มีรายการล่าสุด — เปิดโปรแกรมจากดูทั้งหมด";
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between gap-3 pl-0.5 sm:pl-0">
+      <div className="flex flex-wrap items-center justify-between gap-3 pl-0.5 sm:pl-0">
         <h2 className="text-xl font-bold text-[#2e2a58]">โปรแกรม</h2>
         <Link href="/dashboard/modules" className="text-sm font-semibold text-[#5b61ff] hover:underline">
           ดูทั้งหมด
         </Link>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3 pl-0.5 sm:pl-0">
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#66638c]">ปักหมุด</p>
-            <span className="rounded-lg border border-[#0000BF]/20 bg-[#0000BF]/10 px-2 py-0.5 text-[10px] font-black text-[#2e2a58]">
-              {pinnedModules.length}
-            </span>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {pinnedModules.map((m) => (
-              <CompactModuleCard
-                key={`pinned-${m.slug}`}
-                module={m}
-                pinned
-                onTogglePinned={togglePinned}
-                onVisit={onVisit}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3 pl-0.5 sm:pl-0">
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#66638c]">ล่าสุด</p>
-            <span className="rounded-lg border border-white/70 bg-white/80 px-2 py-0.5 text-[10px] font-black text-[#2e2a58]">
-              {recentModules.length}
-            </span>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {recentModules.map((m) => (
-              <CompactModuleCard
-                key={`recent-${m.slug}`}
-                module={m}
-                pinned={pinnedSlugs.includes(m.slug)}
-                onTogglePinned={togglePinned}
-                onVisit={onVisit}
-              />
-            ))}
-          </div>
-        </div>
+      <div
+        className="flex gap-1 rounded-2xl border border-indigo-100/90 bg-white/90 p-1 shadow-sm ring-1 ring-indigo-100/60"
+        role="tablist"
+        aria-label="เลือกมุมมองโปรแกรม"
+      >
+        {(
+          [
+            { id: "recent" as const, label: "ล่าสุด", count: recentModules.length },
+            { id: "pinned" as const, label: "ปักหมุด", count: pinnedModules.length },
+          ] as const
+        ).map((tab) => {
+          const active = shelfTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setShelfTab(tab.id)}
+              className={cn(
+                "relative flex min-h-[42px] flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm font-black transition",
+                active
+                  ? cn(appDashboardBrandGradientFillClass, "text-white shadow-md shadow-indigo-400/25")
+                  : "bg-transparent text-slate-600 hover:bg-indigo-50/80",
+              )}
+            >
+              <span>{tab.label}</span>
+              <span
+                className={cn(
+                  "rounded-md px-1.5 py-0.5 text-[10px] font-black tabular-nums",
+                  active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500",
+                )}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
+
+      {visibleModules.length === 0 ? (
+        <p className="rounded-[1.35rem] border border-dashed border-[#d8d6ec] bg-white/60 px-4 py-8 text-center text-sm font-semibold text-[#66638c]">
+          {emptyLabel}
+        </p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {visibleModules.map((m) => (
+            <CompactModuleCard
+              key={`${shelfTab}-${m.slug}`}
+              module={m}
+              pinned={pinnedSlugs.includes(m.slug)}
+              onTogglePinned={togglePinned}
+              onVisit={onVisit}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

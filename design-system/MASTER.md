@@ -255,8 +255,306 @@ When building order-heavy modules, follow `.cursor/rules/drink-pos-module-dashbo
 - **Stat cards (ภาพรวม dashboard)**: `grid gap-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3` — ตั้งแต่ md (768px) ขึ้นไปต้องเป็น 3 คอลัมน์เสมอ
 - **Product / service list grid (คอม)**: `grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3`
 - **Booking / Check-in cards**: `grid gap-4 sm:grid-cols-3` (ตั้งแต่ sm ขึ้นไปต้องเป็น 3 คอลัมน์ — ตัวอย่าง football-turf check-in)
-- **Card height standard**: ห้ามมีการ์ดหนึ่งใบสูง/เตี้ยมมากเกินไป; ใช้ pattern `group relative overflow-hidden rounded-[2rem] ...` + `flex flex-col` + `mt-auto` บน footer ของการ์ดเพื่อให้ footer จัดแนวกัน
+- **Card height standard**: ห้ามมีการ์ดหนึ่งใบสูง/เตี้ยมมากเกินไป; ใช้ pattern `group relative overflow-hidden rounded-[1.5rem] ...` + `flex flex-col` + `mt-auto` บน footer ของการ์ดเพื่อให้ footer จัดแนวกัน
 - **Quick links / shortcut (dashboard home)**: `grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-2 lg:grid-cols-4` — สามารถปรับได้ แต่ต้องแน่นบน desktop (ห้าม 1 คอลัมน์ยาวบน xl)
+
+### 9. ระเบียบความโค้งมน (Radius system 1.5 / 2.0)
+
+- **ระดับชั้นความโค้งมนมาตรฐาน — ใช้ทุกโมดูล คงที่ ไม่ผสมผสาน**:
+  1. **Shell glass / เปลือกโมดูลหลัก (ชั้นนอกสุด)**: `rounded-[2rem]` สำหรับ md+, `max-md:rounded-[1.5rem]` — โค้งมนใหญ่สุด 1 ชั้น
+  2. **Surface cards / การ์ดเนื้อหา (แถวรายการ, สถิติ, product/service)**: `rounded-[1.5rem]` (24px) — มาตรฐานคงที่ทุกใบ
+  3. **Shell ใน / Large inner panel (คู่กับเปลือก)**: `rounded-[2rem]` — เท่ากับ shell นอกเพื่อ stack ออกไม่ซ้อนทับมุม
+  4. **Input field / ฟิลด์กรอก / select / filter pill**: `rounded-[1rem]` หรือ `rounded-2xl` (16px) — โค้งมนเล็กกลาง
+  5. **Pill / Badge / Status chip เล็ก**: `rounded-full` — โค้งเต็มวง
+  6. **Control เล็ก (checkbox, radio, icon-only `<h-8`)**: `rounded-lg` (8px) — กระชับ
+- **ห้ามผสมโค้ง**: ห้ามมี `rounded-[2.5rem]`, `rounded-3xl`, หรือ `rounded-[2rem]` บนการ์ดเนื้อหาทั่วไป — ต้องยึด 1.5rem เสมอ (จนกว่ากฎจะเปลี่ยน)
+- **ห้ามคม**: ห้ามใช้ `rounded-none` หรือ `rounded-sm` กับ panel / card / field — ทุกสิ่งที่ผู้ใช้สัมผัสต้องมีมุมโค้ง
+
+### 10. ซ้าย-ขวา เต็มจอ (Full-width edge-to-screen)
+
+- **ซ่อนขอบเฟรม — ให้เนื้อหาสัมผัสขอบหน้าจอทั้ง 2 ด้าน (มือถือ & คอม)**:
+  - Shell หลักของโมดูลทั้งหมด: outer padding **ต้องผ่อนคลาย** ด้วย pattern `-mx-4 sm:-mx-8` บนเนื้อหา child ที่ต้องการสัมผัสขอบหน้าจอจริงๆ (ไม่ใช่แค่ขอบ shell)
+  - **Rule ทั่วไป**: ถ้า content section ต้องการ "ชิดขอบเต็มจอจริง" (ไม่ใช่แค่ขอบใน shell padding) → ใช้ `w-screen relative left-1/2 -translate-x-1/2 !max-w-none` ถ้ายังไม่พอ แต่สำหรับเบ็ดเสร็จขอบ shell ธรรมดาใช้ `-mx-4 px-4 sm:-mx-8 sm:px-8` ตาม §1
+- **Row scroll แนวนอน (Chip scroller / Shelf / Product band)**:
+  - ต้องใช้ token `{Module}ChipScrollerClass` = `-mx-4 px-4 sm:-mx-8 sm:px-8 overflow-x-auto overscroll-x-contain [scrollbar-width:none]`
+  - Shell inner spacing ก่อนและหลัง scroller: `mt-5 mb-5` คงที่ ไม่ผสมกับ `mt-4 / mt-6`
+- **Full-width banner / strip (เช่น ส่วนแจ้งเตือนรอบระบบ)**:
+  - ใช้ `w-screen left-1/2 -translate-x-1/2 relative !max-w-none` + `px-4 sm:px-8` สำหรับเนื้อหา ภายใน
+  - Background ยืดออกเต็มความกว้างหน้าจอ ไม่ถูกจำกัดโดย max-width ของ shell
+- **ห้าม**: ห้ามยก content ทั่วไปมาใช้ `w-screen` โดยไม่มีเหตุผล; ใช้เฉพาะส่วนที่ต้องการ **ความรู้สึกเต็มจอ** (hero strip, product shelf, banners เท่านั้น)
+
+### 11. Page Width ที่ระดับ Dashboard Shell (Full-width Module Layout — เหมือนโรงแรม)
+
+- **สาเหตุสำคัญ (Critical Root Cause)**: PageContainer ชั้นนอก (DashboardPagesShell) default ใช้ `max-w-6xl` — ถ้าไม่ใส่ path โมดูลงานเข้า WIDE_MODULE_PREFIXES → shell ทั้งโมดูลจะแคบอยู่กลางจอ (แม้จะตั้งค่า `-mx-4` ใน shell ในก็ไม่ช่วย เพราะ parent ถูกจำกัด width แล้ว)
+- **กฎตายตัว — ทุกโมดูลงานต้องทำทันทีเมื่อสร้างโมดูลใหม่**:
+  1. เปิดไฟล์ [DashboardPagesShell.tsx](file:///d:/Ai%20Cluster/src/components/dashboard/DashboardPagesShell.tsx)
+  2. เพิ่ม path โมดูล (`/dashboard/xxx`) เข้า 2 รายการ:
+     - **`WIDE_MODULE_PREFIXES`**: ถ้าโมดูลเป็นงานแบบ full-app (มี nav, stats, grid) — ให้ขยายเต็มจอ `PageContainer size="full"` = `max-w-none` + padding `!px-3 sm:!px-4 lg:!px-6` (baseline โรงแรม, สนามฟุตบอล, ร้านเครื่องดื่ม)
+     - **`DOCKED_MODULE_PREFIXES`**: ถ้าโมดูลมี bottom dock mobile (AppMobileDockShell) ต้องเพิ่ม path ที่นี่ด้วย เพื่อ gutter `max-md:!px-3 sm:!px-6` ไม่ซ้อน padding ของ shell ชั้นใน
+  3. **ไม่ต้องแก้ทุกครั้งใน PageContainer level** — สิ่งที่เกินขอบ shell ภายในโมดูลใช้ `-mx-4 px-4 sm:-mx-8 sm:px-8` ตาม §10
+- **List baseline ของโมดูลที่ต้องเต็มจอ size=full (WIDE_MODULE_PREFIXES)**:
+  football-turf, drink-pos, building-pos, **hotel-resort, car-wash, spa, rental, refill, loan, mqtt-service, line-integration, coop, booking, analytics, community-coop, dormitory, village, ecommerce-store, general-store-pos, school-bank, inventory, asset, doc-transmission, educare, smart-police, parking, media-registry, prompt-library, attendance, loyalty-stamp, appointment-queue, wait-queue, home-finance, vault, admin**
+- **Special ระดับหน้า (ไม่ใช่โมดูลงาน)**:
+  - Staff Kiosk pages (`/barber/staff`, `/massage/staff`, `/laundry/staff`): `!mx-0 !max-w-none !w-full !px-0 !py-0` (เต็มจอ 100% ไม่มี padding)
+  - Dashboard Home, Modules, Profile, Plans, Chat: `max-w-[1680px] lg:!px-8` (กว้างแต่มีจำกัด ไม่เต็มจอ 100%)
+  - Drink/Building POS order pages: `lg:min-h-0 lg:overflow-hidden lg:!py-3`
+
+---
+
+### §12 Header Collapse Standard Pattern (baseline โรงแรม — hide ทั้งใบ header, ไม่ใช่แค่ nav; global nav fallback bar)
+
+**ต้องทำตาม baseline โรงแรม (HotelResortShell + DashboardShell global header) 1:1 ทุกโมดูล — ห้ามทำ chevron ซ่อนแค่ nav section เก่า**
+
+1. **Naming Convention** (centralize ในไฟล์ `{module}-module-nav.tsx` ห้ามกระจายอยู่ใน tokens):
+   - localStorage key: `mawell-{module}-module-header-collapsed` (เช่น `mawell-car-wash-module-header-collapsed`)
+   - Custom event name: `mawell-{module}-header-collapse` (เช่น `mawell-car-wash-header-collapse`)
+   - ตัวแปร: `{MODULE}_HEADER_COLLAPSE_KEY`, `{MODULE}_HEADER_COLLAPSE_EVENT` (const export จาก module-nav)
+
+2. **Helpers sync function (ใน module-nav)**:
+   ```ts
+   export function read{Module}HeaderCollapsed(): boolean {
+     try {
+       if (typeof window === "undefined") return false;
+       return window.localStorage.getItem({MODULE}_HEADER_COLLAPSE_KEY) === "1";
+     } catch { return false; }
+   }
+   export function write{Module}HeaderCollapsed(collapsed: boolean): void {
+     try {
+       if (typeof window === "undefined") return;
+       window.localStorage.setItem({MODULE}_HEADER_COLLAPSE_KEY, collapsed ? "1" : "0");
+       window.dispatchEvent(new Event({MODULE}_HEADER_COLLAPSE_EVENT));
+     } catch { /* ignore */ }
+   }
+   ```
+
+3. **Icon = 3-line hamburger (ห้ามใช้ chevron)**:
+   - เมื่อยังไม่ซ่อน (ปุ่ม collapse): เส้น 3 เส้นเต็ม `M4 8h16 M4 12h16 M4 16h16` (หัวขวาเต็ม)
+   - เมื่อซ่อนแล้ว (ปุ่ม expand ใน global header bar): เส้นสุดท้ายสั้นลง `M4 8h16 M4 12h16 M4 16h10` (visual cue = compact)
+   - Glyph stroke: `strokeWidth 2.25`, `strokeLinecap="round"`, `strokeLinejoin="round"`
+
+4. **Level of hiding = ซ่อนทั้งใบ shell header (ห้ามซ่อนแค่ nav)**:
+   - Module shell root element (ปกติเป็น `<header className={cn({module}ShellWrapperClass, ...)}>`) ต้องเพิ่ม conditional class:
+     `headerCollapsed && "hidden"` — ซ่อน header ใบทั้งหมด (ไม่ใช่แค่ nav block ข้างใน)
+   - ปุ่มซ่อนอยู่บน shell header นี้ด้วย; เมื่อกด → state เปลี่ยน → header ทั้งใบหายไป
+
+5. **State sync architecture (ทั้ง Module shell และ DashboardShell global header)**:
+   - ใช้ `useState(false)` initial value (SSR-safe default false, ห้ามอ่าน localStorage ก่อน mount)
+   - Sync ผ่าน 2 channel ใน `useEffect` dependency on-module-flag:
+     1. Custom event: `window.addEventListener({MODULE}_HEADER_COLLAPSE_EVENT, sync)`
+     2. Native storage event: `window.addEventListener("storage", sync)` (sync กระเป๋าแท็บข้ามแท็บ)
+   - ไม่ต้องใช้ `headerPrefHydrated` / hydration flag; **ทุกครั้ง render placeholder glyph** (`<Glyph collapsed={false}>` เสมอ ไม่ขึ้นกับ state) ในปุ่มซ่อน เพื่อป้องกัน hydration mismatch
+   - เมื่อออกจากโมดูล (onModule flag เปลี่ยนเป็น false): reset ค่า `set{Module}HeaderCollapsed(false)` ทันที (ไม่คงสถานะซ่อนไว้ข้ามโมดูล)
+
+6. **Global DashboardShell HeaderBar fallback (สำคัญ — user ซ่อนหัวแล้วต้องยังมี nav tab อยู่)**:
+   - ต้องสร้าง component ชื่อ `{Module}HeaderBarNav.tsx` (path: `src/systems/{module}/components/{Module}HeaderBarNav.tsx`) mirror โครงสร้าง `HotelResortHeaderBarNav` 1:1
+   - Export 2 ส่วน:
+     - `{Module}HeaderExpandButton({onExpand})` — button 3-line expand glyph บน global header
+     - `{Module}HeaderBarNav({onExpand})` — Suspense wrapper + inner component ใช้ `usePathname` + `useSearchParams` render nav tab list link จาก `{MODULE}_NAV_ITEMS` (รวม settings tab ด้วย); ต้องมีชื่อโมดูลขวาสุดทาง desktop md+ และ mobile split view
+   - Tab active styling (บนสีม่วง global header — INVERSE ห้ามใช้ gradient เน้น):
+     - Active: `bg-white text-[#4d47b6] shadow-md shadow-black/25 ring-1 ring-white/50`
+     - Idle: `text-white/85 hover:bg-white/15 hover:text-white`
+   - Icon size = `h-3.5 w-3.5`; label `hidden xl:inline`
+   - **DashboardShell integration** (ทุกโมดูลทำซ้ำ 3 จุด):
+     1. State + flag: `const [{module}HeaderCollapsed, set{Module}HeaderCollapsed] = useState(false);` + `const show{Module}HeaderBar = on{Module}Module && {module}HeaderCollapsed;`
+     2. Sync useEffect block (ห้ามลืม cleanup listener) + reset เมื่อออกโมดูล
+     3. Rendering block: `show{Module}HeaderBar ? (<> ... </>)` — desktop lg+: แสดง full `{Module}HeaderBarNav`; mobile: แสดง tokens/package/user label text + `{Module}HeaderExpandButton` (mobile ห้ามแสดง nav tab ใน global header bar — ให้เปิดหัวโมดูลถ้าจะกด tab)
+   - Order ใน rendering fallback chain: Drink → Building → Football → Hotel → **(โมดูลใหม่เพิ่มตรงนี้ตามลำดับชื่อ)** → Admin
+
+7. **Aria / accessibility attributes**:
+   - ปุ่มซ่อนบน shell header: `title="ซ่อนส่วนหัวโมดูล"` หรือ `title="ย่อส่วนหัว"` + `aria-pressed={headerCollapsed}` (แทนที่จะใช้ aria-expanded เพราะเป็น toggle hide แทนที่จะเป็น open/close)
+   - ปุ่ม expand บน global header: `title="แสดงส่วนหัวโมดูล"` + `aria-pressed`
+
+---
+
+### §13 Short Summary Report Standard (เวลา report งานให้สรุปสั้นๆ — ห้ามเขียนยาวรีเด็ดขาด)
+
+> **หลักการเดียว**: user อ่าน 10 วิ ต้องรู้ทันทีว่า "ทำอะไรเสร็จ / ไฟล์ไหนเปลี่ยน / มี error ไหม"
+
+#### 1. Report structure (4 ส่วนเท่านั้น — ห้ามเกิน):
+```
+✅ เสร็จแล้ว: [หัวข้อสั้น 1 บรรทัด]
+
+📝 สิ่งที่ทำ (max 5 bullet, ไม่เกิน 1 บรรทัดต่อจุด):
+- [file1](link): [การเปลี่ยนแปลงสั้นๆ]
+- [file2](link): [การเปลี่ยนแปลงสั้นๆ]
+...
+
+🔍 ตรวจสอบ:
+- Diagnostics: [PASS 0 error / FAIL จำนวน error]
+```
+
+#### 2. Rules ห้ามทำเด็ดขาด:
+- ❌ **ห้าม**เขียนบรรยายยาวเกิน 1 บรรทัดต่อ bullet (ใช้คำย่อ ตัดข้อความซ้ำ)
+- ❌ **ห้าม**เขียน step-by-step วิธีทำ / reason ยาวๆ (ถ้าถามอธิบายถึงจะตอบ)
+- ❌ **ห้าม**ซ้ำรายละเอียดไฟล์เดิมหลายรอบ (รวม change ในไฟล์เดียวให้เป็น 1 bullet)
+- ❌ **ห้าม**พูดถึง intermediate / Todo steps ว่า "เปลี่ยน state เป็น in_progress แล้ว" — user ไม่สนใจ workflow ภายใน
+- ❌ **ห้าม**ใช้ข้อความ redundant เช่น "สำเร็จสมบูรณ์ครบทุกขั้นตอนครับ" — ใช้แค่ `✅ เสร็จแล้ว` พอ
+
+#### 3. Link & file reference rules:
+- 📎 ทุก bullet ต้องมี **clickable link ไปยังไฟล์จริง** (ไม่ต้องระบุ path แบบข้อความธรรมดา)
+- 📎 ถ้ามีหลาย change ในไฟล์เดียวกัน → 1 link ไฟล์เดียวพอ (ต่อท้ายด้วยรายการสั้นๆ)
+- 📎 ใช้ basename ชื่อไฟล์เป็น display name: `[car-wash-ui-tokens.ts](file:///...)` — ห้ามใส่ path full เป็นข้อความ
+
+#### 4. Diagnostics / status report:
+- PASS (0 error): เขียนแค่ `Diagnostics: PASS 0 error`
+- FAIL (มี error): เขียน `Diagnostics: FAIL N errors` + **1 สรุปสั้นๆ ต่อท้ายว่า error เรื่องอะไร** (ไม่ต้อง paste log ยาว)
+- Seed/scripts: ถ้าต้องรันเพิ่ม เขียนแค่ `Run: npm.cmd run db:seed` — 1 บรรทัด
+
+#### 5. ตัวอย่างที่ถูกต้อง (เป็นแบบอย่าง):
+```
+✅ ปรับโมดูลคาร์แคร์ 4 col stat grid
+
+📝 สิ่งที่ทำ:
+- [car-wash-ui-tokens.ts](file:///d:/Ai%20Cluster/src/systems/car-wash/car-wash-ui-tokens.ts#L100-L101): `carWashStatGridClass` → `md/lg/xl:grid-cols-4` (4 ใบ 1 แถว)
+
+🔍 ตรวจสอบ:
+- Diagnostics: PASS 0 error
+```
+
+---
+
+### §14 Finance Layout Standard (หน้าการเงินทุกโมดูล — ให้ตรงรูปแบบโรงแรมมาตรฐานเดียว)
+
+> **Single source of truth = โรงแรม (HotelResortFinanceClient.tsx)** — ทุกโมดูล (massage, car-wash, barber, spa, rental, drink-pos ฯลฯ) หน้าการเงินต้องทำตามรูปแบบนี้เท่านั้น ห้าม deviate แบบเดี่ยว
+
+#### 1. Top 3 Stat Cards (มีส่วนนี้ก่อนอื่นเสมอ — อยู่นอก AppDashboardSection):
+- Grid class (4 tokens export ในทุกโมดูล `{module}FinanceStatsGridClass` + `{module}FinanceStatTailClass`):
+  - Structure: `mt-4 grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3` (มือถือ 2-col → L-shape ด้วย `StatTailClass`; เดสก์ท็อป sm+ 3-col พอดี 1 แถว)
+  - `{module}FinanceStatTailClass = col-span-2 sm:col-span-1` (ใบสุดท้าย = กำไร: mobile full-width ล่างเดียว)
+- 3 ใบ พอดี (ห้ามเกิน/ขาด):
+  1. **รายได้ · ช่วงเวลา** → สีเขียว `text-emerald-700` / `tablenum-2xl-sm3xl`
+  2. **ต้นทุน · ช่วงเวลา** → สีแดง `text-rose-600`
+  3. **กำไรโดยประมาณ** → สีน้ำเงินเข้ม `text-[#1e1b4b]`
+- Style การ์ดทั้ง 3: `rounded-xl border border-white/55 bg-white/50 px-3 py-3 shadow-sm ring-1 ring-inset ring-white/40` (glass soft — ขนาดเล็ก, ไม่หนาเกิน)
+- Label: uppercase tracking-widest `text-[10px] font-black text-[#66638c]`
+
+#### 2. Main wrapper: `AppDashboardSection tone="violet"` (ตรงโรงแรม ไม่ใช่ slate/indigo):
+- Radius ครอบนอก: `rounded-[2rem]`
+- Header ขวา action 3 ปุ่ม (ห้ามขาด 1 ปุ่ม):
+  | ลำดับ | ปุ่ม | ปุ่มคู่มือ hotel รูปแบบ | Style | Aria | Extra Rule |
+  |---|---|---|---|---|---|
+  | 1 | ซ่อน/แสดงกรอง | filter funnel icon stroke 2.25 + 2 state label | appTemplateOutlineButtonClass rounded-xl text-xs font-black text-[#4d47b6] | aria-expanded/controls/title | filtersActive=true และ ซ่อนอยู่ → `border-amber-300/80 bg-amber-50/90` (สีเหลืองเตือนว่ามี filter อยู่) · filtersActive=true แสดง **dot indicator gradient 3 สี [indigo→violet→pink] absolute -right-1 -top-1** |
+  | 2 | ซ่อน/แสดงกราฟ | text only (ไม่จำเป็นต้องมี icon) | outline button `[#0000BF]/10 ring 2 เมื่อเปิด | aria-expanded/controls/title | |
+  | 3 | รีเฟรช | refresh rotate 2.25 stroke icon | mobile icon-only h40 w40, desktop + "รีเฟรช" text | disabled เมื่อ refreshing (opacity 50) + icon animate-spin | className="disabled:opacity-50" |
+
+#### 3. Filter Panel (collapse id="{module}-finance-filter-panel"):
+- **Range Chips 4 ใบ** (ห้ามขาด): วันนี้ (TODAY) · เดือนนี้ (MONTH default) · ปีนี้ (YEAR) · กำหนดเอง (CUSTOM)
+  - Chip class: `{module}FilterChipClass(active)` function returns 2 state:
+    - Active: `rounded-full border-[#5b61ff]/40 bg-[#5b61ff] px-4 py-2 text-xs font-black text-white shadow-md` (solid pill สี #5b61ff)
+    - Idle: `rounded-full border-[#dedbf0]/90 bg-white/70 px-4 py-2 text-xs font-bold text-[#5b61ff] hover:bg-white` (white soft border)
+  - Button wrapper: `inline-flex h-10 shrink-0 items-center justify-center px-3.5 sm:px-4`
+- **CUSTOM date inputs (เฉพาะเมื่อ range=CUSTOM เท่านั้น)**: sm grid 2-col, label xs font-bold text-[#4d47b6], class `{module}FinanceFieldClass` + `mt-1`
+  - FinanceFieldClass spec: `min-h-[44px] w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-left text-sm text-[#2e2a58] outline-none transition backdrop-blur-sm focus:border-[#4d47b6]/50 focus:bg-white focus:ring-2 focus:ring-[#5b61ff]/20`
+- **Keyword search**: `sm:col-span-9` เมื่อ filtersActive=true (ไม่ใช่ MONTH หรือ มี keyword)
+- **Reset button (เฉพาะเมื่อ filtersActive=true)**: `sm:col-span-3`, text-sm font-black rounded-2xl outline button, label = "รีเซ็ต · เดือนนี้"
+- **กำลังดู Label**: `text-xs font-semibold text-[#66638c]` "กำลังดู: {ช่วง}"
+- **Default state เสมอ MONTH (เดือนนี้)** — ไม่ใช่ TODAY / CUSTOM
+
+#### 4. Charts Panel (collapse id="{module}-finance-charts" — default close = chartsOpen=false):
+- Section label: `text-sm font-black text-[#1e1b4b]` "รายได้เทียบต้นทุน · {ช่วง}"
+- Chart structure (ห้ามเปลี่ยน component):
+  - `<AppSparkChartPanel>` wrapper
+  - Inner: `<AppRevenueCostColumnChart compact title="" subtitle="" emptyText="ยังไม่มีข้อมูลในช่วงนี้" buckets={...} formatTitle={(b)=>`${b.label}: รายได้ ฿{format(b.revenue)} · ต้นทุน ฿{format(b.cost)}`} />`
+- Bucket type standard: `{ key, label, revenueBaht: number, costBaht: number }`
+
+#### 5. Finance SubTabs (2 ใบพอดี — ไม่รวม/ไม่แยก):
+- Shell class: `{module}FinanceSubTabShellClass = rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]` (gradient white→indigo inset shadow white-top)
+- 2 Tabs พอดี (ห้ามเกิน):
+  1. `ประวัติ / รายรับ` (id = "sales" หรือ "history")
+  2. `รายจ่าย` (id = "costs" หรือ "expenses")
+- Tab pill active class (แต่ละโมดูลต้องใช้ Brand Gradient §4 single source of truth ไม่ใช่ white solid):
+  - Active = `bg-gradient-to-r from-[#4338ca]/95 via-[#5b61ff]/95 to-[#ec4899]/85 text-white shadow-[0_10px_28px_-18px_rgba(124,58,237,0.55)] ring-1 ring-white/50` (3 สี ไล่ ม่วง-น้ำเงิน-ชมพู ตรง nav active §4)
+  - Idle = `text-[#5b61ff]/90 hover:bg-white/50 hover:text-[#1e1b4b]`
+  - Size: `flex-1 min-w-0 rounded-[1.25rem]`, mobile 11px, desktop sm text-sm, font-black
+  - Aria role=tab, aria-selected, aria-labelledby, aria-controls + id naming pattern: `{module}-finance-tab-{id}` / `{module}-finance-panel-{id}`
+
+#### 6. Finance List Item Cards (history rows + cost rows — share same base class):
+- `{module}FinanceListItemCardClass = rounded-[1.25rem] sm:rounded-[2rem] px-3 sm:px-4 py-3` mobile radius ย่อ, desktop radius ใหญ่
+- Base style: `border border-white/50 bg-gradient-to-br from-white/55 to-slate-50/15 shadow-sm ring-1 ring-inset ring-white/40 backdrop-blur-sm` (glass soft)
+
+#### 7. Data Fetch / Defaults:
+- **Default finance range = MONTH (เดือนนี้)** ห้าม TODAY เป็น default (โรงแรม MONTH)
+- Stat ใบสุดท้าย (กำไร) ไม่ต้อง fetch ใหม่ คำนวณใน JSX ได้เลย: `totalRevenue - totalCost`
+- Chart buckets ต้องมี 7+ จุด (weekly = 7 วัน / monthly = 30 วัน / yearly = 12 เดือน) ห้ามน้อยกว่า 2 จุด ไม่งั้นกราฟจะดูแปลก
+
+#### 8. Token Naming Convention (ทุกโมดูลต้อง export 6 tokens นี้ใน ui-tokens):
+```ts
+// Base 6 Finance tokens (ตรงกันทุกโมดูล แค่เปลี่ยน prefix):
+export const massageFinanceStatsGridClass = "mt-4 grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3";
+export const massageFinanceStatTailClass = "col-span-2 sm:col-span-1";
+export const massageFinanceSubTabShellClass = "rounded-[1.25rem] ... p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]";
+export const massageFinanceListItemCardClass = "rounded-[1.25rem] sm:rounded-[2rem] ...";
+export const massageFilterChipClass = (active: boolean) => active ? "rounded-full ..." : "rounded-full ...";
+export const massageFinanceFieldClass = "min-h-[44px] w-full rounded-xl ... focus:ring-2 focus:ring-[#5b61ff]/20";
+```
+
+---
+
+### §15 Car-Wash Finance — โรงแรม Pattern Rules (คาร์แคร์ 4 การเงินกฎจากคำสั่ง 2569-08-08)
+
+> Baseline = โรงแรม (§14) + 4 ข้อเฉพาะโมดูลคาร์แคร์จากคำสั่ง user: "1. เมนูเงิน → การเงิน 2. ซ่อนกรอง/กราฟ 3. แถบเมนู 4. รายละเอียด/แก้ไข/ลบ/หมวดหมู่"
+
+#### §15.1 Nav Label (เมนู "เงิน" → "การเงิน" — Label Full Name All Levels
+- **หลักการ**: ห้ามใช้ชื่อย่อ "เงิน" เป็น shortLabel อีกต่อไป (ผู้ใช้ต้องการชื่อเต็ม)
+- **ทุก nav item (CAR_WASH_TAB_ITEMS + CAR_WASH_NAV_ITEMS) ต้องมี:
+  - `label: "การเงิน"` (ยังคงเดิม)
+  - `shortLabel: "การเงิน"` (เปลี่ยนจาก `"เงิน"` → `"การเงิน"`)
+
+#### §15.2 Filter Toggle + Charts Toggle Pattern (โรงแรม exact)
+- **State ที่ต้องมี 3 ตัวแปร**:
+  1. `filterOpen = useState(true)` — default = open เหมือนโรงแรม
+  2. `chartsOpen = useState(false)` — default = **CLOSE (ซ่อน)** ตรงโรงแรม
+  3. `filtersActive = useMemo(...)` — true เมื่อกรองไม่ใช่ค่า default (เดือนปัจจุบัน + search ว่าง)
+- **3 Action Buttons ใน AppSectionHeader action**:
+  1. **Filter Toggle**:
+     - class= `appTemplateOutlineButtonClass` + `relative` (สำหรับจุด dot indicator
+     - เมื่อ `filterOpen=true`: `border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20` (น้ำเงินเข้ม active)
+     - เมื่อ `filtersActive=true และ `filterOpen=false`: **`border-amber-300/80 bg-amber-50/90** (สีส้ม/แอมเบอร์ — แจ้งว่ามี filter แคบแต่ซ่อนอยู่ — MAE)
+     - Dot indicator เมื่อ `filtersActive`: จุดสี gradient 3 สี `from-[#4338ca]/95 via-[#5b61ff]/95 to-[#ec4899]/85` + white ring 2 — absolute top-right
+     - Icon= IconFilter SVG 2.2 stroke
+  2. **Charts Toggle**:
+     - class= `appTemplateOutlineButtonClass` — ไม่มี dot indicator
+     - Default text: `chartsOpen=true → ซ่อนกราฟ / false → แสดงกราฟ`
+     - Active state: `border-[#0000BF]/45 bg-[#0000BF]/10` (เหมือน filter open)
+  3. **Refresh Button**:
+     - class= `appTemplateOutlineButtonClass` + `rounded-[1rem]` (control 1.0)
+     - Icon= `svg refresh` stroke 2.2 — `loading=animate-spin (disabled opacity-50)
+- **Filter Panel**: `filterOpen ? "block" : "hidden"` on div wrapper with id= `car-wash-finance-filter-panel`
+- **Charts Panel**: `chartsOpen ? render AppSparkChartPanel > AppRevenueCostColumnChart compact` (ซ่อนทั้งหมดเมื่อ close)
+
+#### §15.3 2 SubTabs Finance Nav Pattern (โรงแรม exact gradient inset shadow)
+- **Wrapper class ต้องใช้**: `carWashFinanceSubTabShellClass` (§14 export)
+  - Spec: `rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]` (gradient inset shadow
+- **Nav semantic structure**:
+  - `<nav aria-label="เมนูการเงินคาร์แคร์">`
+  - `<div role="tablist">` flex gap-1
+- **Buttons 2 ใบ + Cost Tab Extra Actions Left Side**:
+  - **ถ้า activeListTab = "costs"** → ซ้ายสุด มี `<div>` `border-r border-[#e4e0f5]/90 pr-1.5` (แบ่ง 2 ปุ่มหมวดหมู่ + เพิ่มรายจ่าย ด้านซ้ายก่อน tab buttons
+  - **หมวดหมู่ Button** (จัดการหมวดหมู่):
+    - `rounded-full border-white/60 bg-white/60 text-[#4d47b6] ring-1` idle style
+    - label sm:inline `หมวดหมู่` (ไม่ใช่ "หมวด")
+  - **เพิ่มรายจ่าย Button**:
+    - `carWashCtaClass` + `rounded-full`
+    - label sm:inline `+ เพิ่มรายจ่าย` (ไม่ใช่ "เพิ่มรายการ")
+- **Tab Buttons Spec**:
+  - label: `ประวัติรายรับ` (เปลี่ยนจาก "รายรับ") | `รายจ่าย`
+  - `role="tab"` + `aria-selected` + `id=car-wash-finance-tab-*` + `aria-controls=car-wash-finance-panel-*`
+  - **Active pill**: 3 สี Brand Gradient §4: `from-[#4338ca]/95 via-[#5b61ff]/95 to-[#ec4899]/85` + `text-white shadow-md ring-1 ring-white/40`
+  - **Idle**: `text-slate-500 hover:bg-white/45 hover:text-slate-700`
+  - Radius: `rounded-[1.25rem]` (tab shell hybrid)
+
+#### §15.4 Costs UI Pattern (รายละเอียด / แก้ไข / ลบ / จัดการหมวดหมู่)
+- **Costs Tab Opening Buttons (§15.3 แล้ว)
+- **จัดการหมวดหมู่ Modal Button (Gear Icon):
+  - เปิด FormModal same as โรงแรม
+  - Inside modal: list categories list → สร้าง/แก้ไข/ลบ หมวด (same functions `openManageCategories`
+- **เพิ่ม/แก้ไข Cost Entry Modal**:
+  - Category dropdown หมวดหมู่ required (validate ไหม? alert ถ้าไม่มี category ให้สร้างก่อน
+  - spent_at date local + amount currency + item_label text + note + slip photo (optional)
+- **Cost List Row Action Buttons (3 action right side):
+  - ✅ **รายละเอียด (SalesRowOpenDetailButton → detail modal)
+  - ✏️ **แก้ไข (edit pencil icon PopupIconButton `border-[#4d47b6]/35 bg-[#ecebff] text-[#4d47b6]
+  - 🗑️ **ลบ (trash icon danger popupIconBtnDanger red rose) confirm delete confirm dialog
 
 ---
 

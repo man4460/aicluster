@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
-/* สแกนเฉพาะไฟล์ UI ใน src — เลี่ยงไปแตะ route.ts ฝั่ง API ที่ทำให้ Turbopack error path */
+/* สแกนไฟล์ UI รวม .ts ใน systems และ components (โทเค็นคลาส) — ไม่สแกน app/api เพื่อเลี่ยง Turbopack error path */
 @source "../**/*.tsx";
 @source "../**/*.jsx";
+@source "../systems/**/*.ts";
+@source "../components/**/*.ts";
 /* Design system source of truth: design-system/MASTER.md */
 
 :root {
@@ -256,6 +258,57 @@ select:focus {
 
   .cw-btn-label {
     display: none;
+  }
+}
+
+/**
+ * กริดเมนูหน้าออเดอร์ POS ร้านอาหาร — บังคับคอลัมน์ด้วย CSS ตรง
+ * (ไม่พึ่ง utility Tailwind · ทับทั้ง inline style บนมือถือด้วย !important ตาม breakpoint)
+ */
+ul.bp-order-menu-grid {
+  display: grid !important;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 0.375rem;
+  /* มือถือ — บังคับ 3 คอลัมน์เสมอ · minmax(0,1fr) ให้รูปย่อตามกรอบ ไม่ดันล้นขอบ */
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+ul.bp-order-menu-grid > li {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+ul.bp-order-menu-grid img {
+  max-width: 100%;
+  max-height: 100%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+@media (min-width: 640px) {
+  ul.bp-order-menu-grid {
+    gap: 0.5rem;
+  }
+}
+@media (min-width: 768px) {
+  ul.bp-order-menu-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+@media (min-width: 1280px) {
+  ul.bp-order-menu-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  }
+}
+@media (min-width: 1536px) {
+  ul.bp-order-menu-grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
   }
 }
 

@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Template กลาง — ตรวจก่อนเขียน UI
 
-ก่อนเพิ่มหรือแก้ UI ที่เกี่ยวกับ **รูป / lightbox / แดชบอร์ด / กราฟแท่ง / พิมพ์เอกสาร / อัปโหลดสลิป / กล้องถ่ายรูป**:
+ก่อนเพิ่มหรือแก้ UI ที่เกี่ยวกับ **รูป / lightbox / แดชบอร์ด / กราฟแท่ง / พิมพ์เอกสาร / ใบเสร็จสลิป / อัปโหลดสลิป / กล้องถ่ายรูป**:
 
 ## บังคับ
 
@@ -19,6 +19,7 @@ alwaysApply: true
 - การ์ดแดชบอร์ด / หัวข้อ / ว่าง → `AppDashboardSection`, `AppSectionHeader`, `AppEmptyState`, โทเค็น `appDashboard*`
 - กราฟแท่งเปรียบเทียบ / แท่งรายวัน / แท่งคู่ต่อช่วง / รายได้เทียบต้นทุนรายวัน → `AppCompareBarList`, `AppColumnBarSparkChart`, `AppColumnBarDualSparkChart`, `AppRevenueCostColumnChart`, เลย์เอาต์ `AppSparkChartPanel`, `AppSparkChartsTwoColumnGrid` (รายละเอียดกฎ `app-templates-spark-charts.mdc`)
 - พิมพ์ HTML / ย่อรูปก่อนอัปโหลด → `openPrintableHtml`, `printPrintableHtmlInHiddenIframe`, `prepareImageFileForUpload`
+- **ใบเสร็จ / สลิปขนาดโปรไฟล์** → `printAppReceiptSlip` · `printAppOrderTicketSlip` · `useAppSlipPaperSize` · `AppSlipPaperSizeToolbar` · **ตั้งค่าต่อโมดูล:** `AppSlipPaperSizeSettingsField` + `slipPaperSize` (รายละเอียด `app-templates-slip-receipt.mdc`)
 - สลิป เลือกรูป ถ่ายกล้อง → `AppGalleryCameraFileInputs`, `AppImagePickCameraButtons`, `AppPickGalleryImageButton`, `AppTakePhotoButton`, `AppCameraCaptureModal`
 
 ## ข้อยกเว้น

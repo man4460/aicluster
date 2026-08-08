@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { resolveBuildingPosStaffFromUrl } from "@/lib/building-pos/staff-request";
+import { requireBuildingPosStaff } from "@/lib/building-pos/staff-auth";
 import { formatBuildingPosDbError, jsonBuildingPosError } from "@/lib/building-pos/route-errors";
 import {
   ensureBuildingPosLoyaltySettings,
@@ -10,8 +10,9 @@ import {
 /** GET — ตั้งค่าคะแนน + รายการแลก (ลิงก์พนักงาน) */
 export async function GET(req: Request) {
   try {
-    const ctx = await resolveBuildingPosStaffFromUrl(new URL(req.url));
-    if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await requireBuildingPosStaff(req);
+    if ("error" in auth) return auth.error;
+    const { ctx } = auth;
     const settings = await ensureBuildingPosLoyaltySettings(ctx.ownerId, ctx.trialSessionId);
     const rewards = await listBuildingPosLoyaltyRewards(ctx.ownerId, ctx.trialSessionId, {
       activeOnly: true,

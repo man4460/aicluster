@@ -19,7 +19,14 @@ export function useDrinkPosMobileDraftSlot() {
   return ctx?.setMobileBottomSlot ?? ((_n: ReactNode | null) => {});
 }
 
-export function DrinkPosMobileBottomProvider({ children }: { children: ReactNode }) {
+export function DrinkPosMobileBottomProvider({
+  children,
+  /** แถบเมนูพอร์ทัลพนักงาน (มือถือ) — แสดงใน pill ล่าง */
+  staffFooterNav,
+}: {
+  children: ReactNode;
+  staffFooterNav?: ReactNode;
+}) {
   const [slot, setSlot] = useState<ReactNode | null>(null);
   const setMobileBottomSlot = useCallback((n: ReactNode | null) => {
     setSlot(n);
@@ -29,16 +36,32 @@ export function DrinkPosMobileBottomProvider({ children }: { children: ReactNode
   return (
     <DrinkPosMobileBottomContext.Provider value={api}>
       {children}
-      <DrinkPosMobileUnifiedBar slot={slot} />
+      <DrinkPosMobileUnifiedBar slot={slot} staffFooterNav={staffFooterNav} />
     </DrinkPosMobileBottomContext.Provider>
   );
 }
 
 /** การ์ดล่างเดียว: โซนสล็อต (รายการรอ) + เมนู — อิงระยะ `bottom-6` + `inset-x-4` แบบคาร์แคร์ */
-function DrinkPosMobileUnifiedBar({ slot }: { slot: ReactNode | null }) {
+function DrinkPosMobileUnifiedBar({
+  slot,
+  staffFooterNav,
+}: {
+  slot: ReactNode | null;
+  staffFooterNav?: ReactNode;
+}) {
   const pathname = usePathname() ?? "";
-  const onModule = pathname.startsWith(base);
-  if (!onModule) return null;
+  const onDashboard = pathname.startsWith(base);
+  const onStaffPortal = pathname.startsWith("/drink-pos/staff");
+  if (!onDashboard && !onStaffPortal) return null;
+
+  if (onStaffPortal) {
+    if (!staffFooterNav && !slot) return null;
+    return (
+      <AppMobileDockUnifiedBar ariaLabel="เมนูพนักงานร้านเครื่องดื่ม" slot={slot}>
+        {staffFooterNav ?? <span className="sr-only">พนักงานร้านเครื่องดื่ม</span>}
+      </AppMobileDockUnifiedBar>
+    );
+  }
 
   return (
     <AppMobileDockUnifiedBar ariaLabel="เมนูล่าง POS ร้านเครื่องดื่ม" slot={slot}>

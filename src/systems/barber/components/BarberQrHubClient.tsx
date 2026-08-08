@@ -186,7 +186,7 @@ export function BarberQrHubClient({
 
       <FormModal
         open={showStaffQrModal}
-        size="lg"
+        size="full"
         appearance="glass"
         glassTint="amber"
         mobileCentered

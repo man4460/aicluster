@@ -12,6 +12,7 @@ import {
   appDashboardInnerScrollClass,
   appTemplateOutlineButtonClass,
   prepareImageFileForUpload,
+  useAppCameraCapture,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
@@ -141,7 +142,11 @@ export function DrinkPosDashboardClient() {
   const [catErr, setCatErr] = useState<string | null>(null);
   const [catUploadBusy, setCatUploadBusy] = useState(false);
   const catGalleryRef = useRef<HTMLInputElement>(null);
-  const catCameraRef = useRef<HTMLInputElement>(null);
+  const {
+    openCamera: openCatCamera,
+    cameraInputRef: catCameraInputRef,
+    cameraModal: catCameraModal,
+  } = useAppCameraCapture({ title: "ถ่ายรูปหมวด" });
 
   const [prodModalOpen, setProdModalOpen] = useState(false);
   const [prodEdit, setProdEdit] = useState<DrinkPosProductRow | null>(null);
@@ -156,7 +161,11 @@ export function DrinkPosDashboardClient() {
   const [prodErr, setProdErr] = useState<string | null>(null);
   const [prodUploadBusy, setProdUploadBusy] = useState(false);
   const prodGalleryRef = useRef<HTMLInputElement>(null);
-  const prodCameraRef = useRef<HTMLInputElement>(null);
+  const {
+    openCamera: openProdCamera,
+    cameraInputRef: prodCameraInputRef,
+    cameraModal: prodCameraModal,
+  } = useAppCameraCapture({ title: "ถ่ายรูปสินค้า" });
 
   const [draftLines, setDraftLines] = useState<SaleDraftLine[]>([]);
   const [draftBusy, setDraftBusy] = useState(false);
@@ -246,14 +255,11 @@ export function DrinkPosDashboardClient() {
     return j.imageUrl;
   }
 
-  async function onCatImageFileChange(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    e.target.value = "";
-    if (!f) return;
+  async function uploadCatImage(file: File) {
     setCatErr(null);
     setCatUploadBusy(true);
     try {
-      const url = await uploadDrinkPosImageFile(f);
+      const url = await uploadDrinkPosImageFile(file);
       setCatImageUrl(url);
     } catch (err) {
       setCatErr(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
@@ -262,20 +268,31 @@ export function DrinkPosDashboardClient() {
     }
   }
 
-  async function onProdImageFileChange(e: ChangeEvent<HTMLInputElement>) {
+  async function onCatImageFileChange(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     e.target.value = "";
     if (!f) return;
+    await uploadCatImage(f);
+  }
+
+  async function uploadProdImage(file: File) {
     setProdErr(null);
     setProdUploadBusy(true);
     try {
-      const url = await uploadDrinkPosImageFile(f);
+      const url = await uploadDrinkPosImageFile(file);
       setProdImageUrl(url);
     } catch (err) {
       setProdErr(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
     } finally {
       setProdUploadBusy(false);
     }
+  }
+
+  async function onProdImageFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    await uploadProdImage(f);
   }
 
   function openCatManage() {
@@ -1149,7 +1166,7 @@ export function DrinkPosDashboardClient() {
       >
         <AppGalleryCameraFileInputs
           galleryInputRef={catGalleryRef}
-          cameraInputRef={catCameraRef}
+          cameraInputRef={catCameraInputRef}
           onChange={(e) => void onCatImageFileChange(e)}
         />
         {catFormOpen ? (
@@ -1170,7 +1187,7 @@ export function DrinkPosDashboardClient() {
               <div className="flex flex-wrap items-center gap-2">
                 <AppImagePickCameraButtons
                   onPickGallery={() => catGalleryRef.current?.click()}
-                  onPickCamera={() => catCameraRef.current?.click()}
+                  onPickCamera={() => openCatCamera((file) => void uploadCatImage(file))}
                   disabled={catBusy}
                   busy={catUploadBusy}
                   labels={{ busy: "กำลังอัปโหลด…" }}
@@ -1191,6 +1208,7 @@ export function DrinkPosDashboardClient() {
                   แนะภาพตามหมวด
                 </DrinkPosButton>
               </div>
+              {catCameraModal}
               {catImageUrl.trim() ? (
                 <div className="overflow-hidden rounded-2xl border border-white/60 bg-[#0000BF]/08 ring-1 ring-inset ring-white/40">
                   <img
@@ -1300,7 +1318,7 @@ export function DrinkPosDashboardClient() {
         <div className="space-y-3">
           <AppGalleryCameraFileInputs
             galleryInputRef={prodGalleryRef}
-            cameraInputRef={prodCameraRef}
+            cameraInputRef={prodCameraInputRef}
             onChange={(e) => void onProdImageFileChange(e)}
           />
           {prodErr ? <p className="text-sm font-semibold text-rose-600">{prodErr}</p> : null}
@@ -1401,7 +1419,7 @@ export function DrinkPosDashboardClient() {
             <div className="flex flex-wrap items-center gap-2">
               <AppImagePickCameraButtons
                 onPickGallery={() => prodGalleryRef.current?.click()}
-                onPickCamera={() => prodCameraRef.current?.click()}
+                onPickCamera={() => openProdCamera((file) => void uploadProdImage(file))}
                 disabled={prodBusy}
                 busy={prodUploadBusy}
                 labels={{ busy: "กำลังอัปโหลด…" }}
@@ -1427,6 +1445,7 @@ export function DrinkPosDashboardClient() {
                 แนะภาพตามสินค้า
               </DrinkPosButton>
             </div>
+            {prodCameraModal}
             {prodImageUrl.trim() ? (
               <div className="overflow-hidden rounded-2xl border border-white/60 bg-[#0000BF]/08 ring-1 ring-inset ring-white/40">
                 <img

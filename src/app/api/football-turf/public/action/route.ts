@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import { runFootballTurfAction } from "@/systems/football-turf/lib/run-action";
+import { isFootballTurfPortalOpenForOwner } from "@/lib/football-turf/portal-access";
 import { resolvePublicFootballTurfTrialSessionId } from "@/lib/football-turf/public-trial-scope";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { ensureFootballTurfProfile } from "@/systems/football-turf/lib/ensure-profile";
 import { createFootballTurfServerRepo } from "@/systems/football-turf/lib/server-repo";
-import { prisma } from "@/lib/prisma";
-import { canAccessAppModule, type UserAccessFields } from "@/lib/modules/access";
-import { FOOTBALL_TURF_MODULE_SLUG } from "@/lib/modules/config";
 
 type PublicActionBody = {
   ownerId: string;
@@ -17,31 +15,6 @@ type PublicActionBody = {
 };
 
 const PUBLIC_OPS = new Set(["createBooking", "updateBooking", "usePromotionSale"]);
-
-async function isFootballTurfPortalOpenForOwner(ownerId: string): Promise<boolean> {
-  const [mod, user] = await Promise.all([
-    prisma.appModule.findFirst({
-      where: { slug: FOOTBALL_TURF_MODULE_SLUG, isActive: true },
-    }),
-    prisma.user.findUnique({
-      where: { id: ownerId },
-      select: {
-        role: true,
-        subscriptionType: true,
-        subscriptionTier: true,
-        tokens: true,
-      },
-    }),
-  ]);
-  if (!mod || !user) return false;
-  const access: UserAccessFields = {
-    role: user.role,
-    subscriptionType: user.subscriptionType,
-    subscriptionTier: user.subscriptionTier,
-    tokens: user.tokens,
-  };
-  return canAccessAppModule(access, { slug: mod.slug, groupId: mod.groupId });
-}
 
 export async function POST(req: Request) {
   const ip = clientIp(req.headers);

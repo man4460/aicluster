@@ -1,22 +1,39 @@
 ---
-description: UX/UI มาตรฐาน QR พนักงาน (พอร์ทัลพนักงาน) — ให้เหมือนคาร์แคร์ · ใช้ ShopStaffQrPanel
+description: UX/UI มาตรฐาน QR พนักงาน (พอร์ทัลพนักงาน) — ให้เหมือนคาร์แคร์ · ใช้ ShopStaffQrPanel · โมดัลสร้างลิงก์เต็มจอ
 alwaysApply: false
 globs:
   - "**/components/qr/shop-staff-qr-panel.tsx"
+  - "**/components/qr/module-staff-token-qr-panel.tsx"
+  - "**/components/ui/FormModal.tsx"
   - "**/systems/car-wash/**"
   - "**/systems/barber/**"
   - "**/systems/laundry/**"
+  - "**/systems/drink-pos/**"
+  - "**/systems/building-pos/**"
+  - "**/systems/hotel-resort/**"
+  - "**/systems/massage/**"
 ---
 
 # QR พนักงาน — UX/UI เดียวกับคาร์แคร์
 
-อ้างอิง implementation: `src/components/qr/shop-staff-qr-panel.tsx` (`ShopStaffQrPanel`). โมดูลที่มีลิงก์/ป๊อปอัป QR พนักงาน (เช่น คาร์แคร์ ซักผ้า ร้านตัดผม) **ต้องใช้คอมโพเนนต์นี้** แทนการคัดลอก JSX ชุดใหม่ เพื่อให้มือถือ / เดสก์ท็อป / ข้อความ / `<details>` สอดคล้องกัน
+อ้างอิง implementation: `src/components/qr/shop-staff-qr-panel.tsx` (`ShopStaffQrPanel`). โมดูลที่มีลิงก์/ป๊อปอัป QR พนักงาน (เช่น คาร์แคร์ ซักผ้า ร้านตัดผม ร้านเครื่องดื่ม โรงแรม ร้านอาหาร) **ต้องใช้คอมโพเนนต์นี้** (หรือ `ModuleStaffTokenQrPanel` ที่ห่อ panel นี้) แทนการคัดลอก JSX ชุดใหม่ เพื่อให้มือถือ / เดสก์ท็อป / ข้อความ / `<details>` สอดคล้องกัน
+
+## โมดัลสร้าง/จัดการลิงก์ — เต็มจอ (บังคับ)
+
+เมื่อเปิดป๊อปอัป **สร้าง / แสดง QR พนักงาน** จาก hub:
+
+- ใช้ **`FormModal`** ด้วย **`size="full"`** — แผงกว้างและสูงเกือบเต็ม viewport (`max-w-none` + ความสูง ~`100dvh` หักขอบบาง)
+- `appearance="glass"` · `glassTint="amber"` · `mobileCentered`
+- **ห้าม** ใช้ `size="lg"` / `md` สำหรับโมดัลสร้างลิงก์พนักงานใหม่ — สงวน `lg` ให้ QR ลูกค้าหรือโมดัลสั้นอื่น
+- รูป QR ใน panel มือถือ: `max-w-[min(96vw,440px)]` (ใหญ่พอสแกนในโมดัลเต็มจอ)
+
+อ้างอิงขนาด: `src/components/ui/FormModal.tsx` (`size: "full"`)
 
 ## โครงสร้าง UX (ห้ามแหวกโดยไม่ปรับทั้งคอมโพเนนต์กลาง)
 
 1. **มือถือ (`max-sm`)**
    - แถบข้อความ indigo (`mobileBannerText`) — `sm:hidden`
-   - รูป QR จาก data URL — `max-w-[min(92vw,320px)]`, พื้นขาว + ขอบ — `sm:hidden`
+   - รูป QR จาก data URL — `max-w-[min(96vw,440px)]`, พื้นขาว + ขอบ — `sm:hidden`
    - ปุ่มหลักเต็มความกว้าง `app-btn-primary` min-h 52px — `location.assign(pageUrl)` — `sm:hidden`
    - คอลัมน์: คัดลอกลิงก์เต็มความกว้าง → กริด 2 ช่อง **แสดง/ซ่อนลิงก์** + **เปิดหน้า** (ข้อความปุ่มผ่าน props)
    - `<details>` หัวข้อ **「ดาวน์โหลดและโปสเตอร์」**: PDF A4 → (ถ้ามี) PDF A5 → PNG → พื้นที่พรีวิวโปสเตอร์ในกล่อง scroll
@@ -39,16 +56,20 @@ globs:
 
 ## การเชื่อมในโปรเจกต์ปัจจุบัน
 
-- คาร์แคร์: `CarWashDashboard` — FormModal QR พนักงาน
+- คาร์แคร์: `CarWashDashboard` — FormModal QR พนักงาน `size="full"`
 - ซักผ้า: `LaundryQrHubClient` — FormModal QR พนักงาน (+ แถบทดลองด้านบนเมื่อจำเป็น)
-- ร้านตัดผม: `BarberStaffQrDashboardSection` — แผงในหน้า/modal
+- ร้านตัดผม / นวด: `BarberQrHubClient` / `MassageQrHubClient`
+- ร้านเครื่องดื่ม / โรงแรม: `ModuleStaffTokenQrPanel` ใน hub · `size="full"`
+- ร้านอาหาร: `BuildingPosDashboardClient` · `BuildingPosStaffQrSection` · `size="full"`
 
 โปสเตอร์สร้างจาก `createShopQrPosterDataUrl` / ดาวน์โหลดจาก `shop-qr-template` เหมือนเดิม — panel รับเฉพาะ data URL และ callbacks
 
-หน้าปลายทางหลังสแกนลิงก์พนักงาน → `.cursor/rules/staff-qr-landing-page.mdc` (`StaffQrLandingShell`) · แถบเครื่องมือพนักงาน → `.cursor/rules/shop-staff-lane-toolbar.mdc`
+หน้าปลายทางหลังสแกน **ลิงก์พนักงานแบบโทเค็น** (drink-pos / hotel / building-pos ฯลฯ — การ์ดเดียว · เต็มจอ · scroll) → **`.cursor/rules/module-staff-token-link-portal.mdc`**
+
+หน้าปลายทางหลังสแกนลิงก์พนักงานแบบ **staff lane ล็อกอิน** (คาร์แคร์ ฯลฯ) → `.cursor/rules/staff-qr-landing-page.mdc` (`StaffQrLandingShell`) · แถบเครื่องมือพนักงาน → `.cursor/rules/shop-staff-lane-toolbar.mdc`
 
 หน้าปลายทางหลังสแกน **QR ลูกค้า** (พอร์ทัลสาธารณะ check-in) → `.cursor/rules/shop-customer-qr-portal.mdc`
 
 ## เกี่ยวกับการ์ด hub คู่
 
-ดู `.cursor/rules/shop-qr-hub-popup-pattern.mdc` — การ์ดเปิดป๊อปอัปยังแยกลูกค้า/พนักงานได้ แต่ **เนื้อใน QR พนักงาน** ต้องผ่าน `ShopStaffQrPanel`
+ดู `.cursor/rules/shop-qr-hub-popup-pattern.mdc` — การ์ดเปิดป๊อปอัปยังแยกลูกค้า/พนักงานได้ แต่ **เนื้อใน QR พนักงาน** ต้องผ่าน `ShopStaffQrPanel` และ **โมดัลพนักงานต้อง `size="full"`**

@@ -201,7 +201,7 @@ export function BuildingPosStaffQrSection({
 
   const body = (
     <div className={cn("rounded-[1.25rem] border border-white/55 bg-white/75 p-4 shadow-inner backdrop-blur-sm sm:p-5", compactForModal && "rounded-[1.25rem]")}>
-          <p className="text-xs font-bold uppercase tracking-wide text-[#4d47b6]">ลิงก์พนักงาน</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-[#4d47b6]">ลิงก์พนักงาน (ไม่มีวันหมดอายุ)</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"

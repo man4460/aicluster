@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppEmptyState, AppSlipPrintIconButton, alertSlipPrintRequiresMonthlyPlan } from "@/components/app-templates";
+import { AppEmptyState, AppSlipPrintIconButton, alertSlipPrintRequiresMonthlyPlan, resolveAppSlipPaperSize, useAppSlipPaperSize, type AppSlipPaperSize } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import type { PosOrder } from "@/systems/building-pos/building-pos-service";
 import { printBuildingPosOrderTicket } from "@/systems/building-pos/building-pos-order-ticket-print";
@@ -90,6 +90,9 @@ export function BuildingPosStationBoardClient({
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [slipPrintEnabled, setSlipPrintEnabled] = useState(false);
+  const { paper: profileSlipPaper } = useAppSlipPaperSize();
+  const [orderTicketPaper, setOrderTicketPaper] = useState<AppSlipPaperSize | null>(null);
+  const slipPaper = orderTicketPaper ?? profileSlipPaper;
   const mounted = useRef(true);
   const liveModeRef = useRef<"sse" | "poll">("poll");
 
@@ -114,6 +117,7 @@ export function BuildingPosStationBoardClient({
       const j = (await res.json().catch(() => ({}))) as {
         orders?: PosOrder[];
         serverTime?: string;
+        orderTicketSlipPaperSize?: string | null;
         features?: { slipPrint?: boolean };
         error?: string;
       };
@@ -126,6 +130,9 @@ export function BuildingPosStationBoardClient({
           ? list.filter((o) => columnSet.has(o.status))
           : list.filter((o) => columnSet.has(o.status));
       setOrders((prev) => (sameBoard(prev, next) ? prev : next));
+      if (j.orderTicketSlipPaperSize) {
+        setOrderTicketPaper(resolveAppSlipPaperSize(j.orderTicketSlipPaperSize));
+      }
       setSlipPrintEnabled(j.features?.slipPrint === true);
       setError(null);
     } catch (e) {
@@ -368,6 +375,7 @@ export function BuildingPosStationBoardClient({
                               : role === "kitchen"
                                 ? "สลิปครัว · ส่งโต๊ะ"
                                 : "ใบออเดอร์",
+                          paper: slipPaper,
                         });
                       }}
                       slipPrintEnabled={slipPrintEnabled}

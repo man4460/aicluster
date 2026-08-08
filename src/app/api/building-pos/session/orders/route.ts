@@ -8,11 +8,13 @@ import { formatBuildingPosDbError, jsonBuildingPosError } from "@/lib/building-p
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { assertPlanDataRowAllowance, planFeaturesApiPayload } from "@/lib/modules/plan-entitlements";
 import { getPlanFeaturePolicy } from "@/lib/modules/plan-feature-policy";
+import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
 import { getBuildingPosDataScope } from "@/lib/trial/module-scopes";
 import { notifyBuildingPosOrderBoard } from "@/systems/building-pos/lib/order-board-sse";
 import { stampBuildingPosOrderItemsKitchenDept } from "@/lib/building-pos/stamp-order-kitchen";
 import { applyBuildingPosLoyaltyEarnOnPaid } from "@/systems/building-pos/lib/loyalty";
 import { normalizeMemberPhone } from "@/lib/loyalty-stamp/member-qr";
+import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
 
 const orderItemSchema = z.object({
   menu_item_id: z.number().int().positive(),
@@ -34,6 +36,11 @@ const patchSchema = z.object({
   status: z.enum(["NEW", "PREPARING", "SERVED", "SERVING", "DELIVERED", "PAID"]).optional(),
   payment_slip_url: z.string().max(2048).optional().nullable(),
   member_phone: z.string().max(20).optional().nullable(),
+  customer_name: z.string().max(160).optional().nullable(),
+  table_no: z.string().max(40).optional().nullable(),
+  note: z.string().max(1000).optional().nullable(),
+  created_at: z.string().datetime().optional(),
+  items: z.array(orderItemSchema).min(1).optional(),
 });
 
 export async function GET() {
@@ -49,8 +56,19 @@ export async function GET() {
       where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
       orderBy: { createdAt: "desc" },
     });
+    const branding = await prisma.moduleShopBranding.findUnique({
+      where: {
+        ownerUserId_trialSessionId_moduleSlug: {
+          ownerUserId: own.ownerId,
+          trialSessionId: scope.trialSessionId,
+          moduleSlug: BUILDING_POS_MODULE_SLUG,
+        },
+      },
+      select: { orderTicketSlipPaperSize: true },
+    });
     return NextResponse.json({
       orders: rows.map(mapBuildingPosOrderRow),
+      orderTicketSlipPaperSize: normalizeModuleSlipPaperSize(branding?.orderTicketSlipPaperSize),
       features: bill
         ? planFeaturesApiPayload(bill.access, policy)
         : planFeaturesApiPayload(
@@ -129,7 +147,12 @@ export async function PATCH(req: Request) {
     if (
       parsed.data.status === undefined &&
       parsed.data.payment_slip_url === undefined &&
-      parsed.data.member_phone === undefined
+      parsed.data.member_phone === undefined &&
+      parsed.data.customer_name === undefined &&
+      parsed.data.table_no === undefined &&
+      parsed.data.note === undefined &&
+      parsed.data.created_at === undefined &&
+      parsed.data.items === undefined
     ) {
       return NextResponse.json({ error: "ไม่มีข้อมูลที่อัปเดต" }, { status: 400 });
     }
@@ -143,6 +166,17 @@ export async function PATCH(req: Request) {
         ? normalizeMemberPhone(parsed.data.member_phone ?? "")
         : undefined;
 
+    let stampedItems = undefined as Awaited<ReturnType<typeof stampBuildingPosOrderItemsKitchenDept>> | undefined;
+    let nextTotal: number | undefined;
+    if (parsed.data.items) {
+      stampedItems = await stampBuildingPosOrderItemsKitchenDept(
+        own.ownerId,
+        scope.trialSessionId,
+        parsed.data.items,
+      );
+      nextTotal = stampedItems.reduce((s, x) => s + x.price * x.qty, 0);
+    }
+
     let updated = await prisma.buildingPosOrder.update({
       where: { id: row.id },
       data: {
@@ -151,6 +185,13 @@ export async function PATCH(req: Request) {
           { paymentSlipUrl: parsed.data.payment_slip_url?.trim() ?? "" }
         : {}),
         ...(memberPhonePatch !== undefined ? { memberPhone: memberPhonePatch } : {}),
+        ...(parsed.data.customer_name !== undefined
+          ? { customerName: parsed.data.customer_name?.trim() ?? "" }
+          : {}),
+        ...(parsed.data.table_no !== undefined ? { tableNo: parsed.data.table_no?.trim() ?? "" } : {}),
+        ...(parsed.data.note !== undefined ? { note: parsed.data.note?.trim() ?? "" } : {}),
+        ...(parsed.data.created_at !== undefined ? { createdAt: new Date(parsed.data.created_at) } : {}),
+        ...(stampedItems !== undefined ? { itemsJson: stampedItems, totalAmount: nextTotal ?? 0 } : {}),
       },
     });
 

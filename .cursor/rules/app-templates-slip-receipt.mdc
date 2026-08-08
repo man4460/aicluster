@@ -1,0 +1,50 @@
+---
+description: Template กลางใบเสร็จ/สลิป — ใช้ slip-print + ขนาดกระดาษจากโปรไฟล์ทุกโมดูล
+globs: "**/slip-print.ts,**/AppSlipPaperSizeToolbar.tsx,**/AppSlipPaperSizeSettingsField.tsx,**/useAppSlipPaperSize.ts,**/*Settings*,**/*receipt*,**/*slip*print*,**/pos-*-print.ts,**/*order-ticket-print*"
+alwaysApply: false
+---
+
+# ใบเสร็จ / สลิปพิมพ์ — template กลาง
+
+## บังคับ
+
+1. **ใบเสร็จลูกค้า (มีราคา · หัวร้าน · ที่อยู่ · เลขภาษี · เบอร์)**  
+   → `printAppReceiptSlip` / `buildAppReceiptSlipInnerHtml` จาก `@/components/app-templates`  
+   **ห้าม** คัดลอก HTML ใบเสร็จในโมดูลย่อย
+
+2. **สลิปครัว / คิว (โต๊ะเด่น · ไม่เน้นราคา)**  
+   → `printAppOrderTicketSlip` (`variant: "kitchen"`)
+
+3. **ขนาดกระดาษ**  
+   - **แหล่งความจริงต่อโมดูล:** `slipPaperSize` บนโปรไฟล์ร้านของโมดูล (หรือ `defaultPaperSize` ของหอพัก)  
+   - **ตั้งค่า:** `AppSlipPaperSizeSettingsField` ในหน้าตั้งค่าโมดูล — บันทึกร่วมฟอร์มร้าน  
+   - พิมพ์: ส่ง `paper` จากตั้งค่าโมดูล — **ห้าม** hardcode `SLIP_80`  
+   - ค่า fallback: `DEFAULT_APP_SLIP_PAPER_SIZE` (`SLIP_58`)
+
+4. **เลย์เอาต์ใบเสร็จ (บังคับ)**  
+   - **58 mm** → กึ่งกลาง (`buildAppReceiptSlipCenteredHtml`)  
+   - **80 mm / A4** → ชิดซ้ายแบบใบเสร็จทางการ (`buildAppReceiptSlipFormalLeftHtml`)  
+   - เรียก `printAppReceiptSlip` / `buildAppReceiptSlipInnerHtml` จาก `@/components/app-templates` เท่านั้น
+
+5. ปุ่มเลือกขนาดชั่วคราวตอนพิมพ์: `AppSlipPaperSizeToolbar`  
+   - `AppModuleShopSettingsClient` มีช่องขนาดสลิปในตัว (`showSlipPaperSizeSettings`)
+
+## แพทเทิร์น
+
+```ts
+import { printAppReceiptSlip, useAppSlipPaperSize } from "@/components/app-templates";
+
+const { paper } = useAppSlipPaperSize(); // หรือจาก bootstrap พนักงาน
+
+printAppReceiptSlip({
+  shopLabel, logoUrl, address, taxId, contactPhone,
+  orderRef, printedAt, items: [{ name, qty, unitPrice }],
+  grandTotal, paymentMethodLabel,
+  paper, // จากโปรไฟล์
+});
+```
+
+## ชื่อเก่า
+
+- `printAppShortReceiptSlip` / `buildAppShortReceiptSlipInnerHtml` = alias ของ receipt กลาง (ยังใช้ได้)
+---

@@ -11,8 +11,10 @@ import {
   AppImageThumb,
   AppRevenueCostColumnChart,
   AppSectionHeader,
+  AppSparkChartPanel,
   useAppImageLightbox,
 } from "@/components/app-templates";
+import { appTemplateOutlineButtonClass } from "@/components/app-templates/dashboard-tokens";
 import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
 import { cn } from "@/lib/cn";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
@@ -31,6 +33,7 @@ import {
 import {
   AppPickGalleryImageButton,
   AppTakePhotoButton,
+  useAppSlipPaperSize,
 } from "@/components/app-templates";
 import {
   uploadCarWashSessionImage,
@@ -52,6 +55,11 @@ import {
   carWashNavActiveClass,
   carWashNavIdleClass,
   carWashSubTabSegmentShellClass,
+  carWashFinanceStatsGridClass,
+  carWashFinanceStatTailClass,
+  carWashFinanceSubTabShellClass,
+  carWashFinanceListItemCardClass,
+  carWashFilterChipClass,
 } from "@/systems/car-wash/car-wash-ui-tokens";
 
 const MAX_COMPARE_ROWS = 18;
@@ -433,6 +441,18 @@ export function CarWashSalesPanel({
   const [filterDay, setFilterDay] = useState("");
   const [search, setSearch] = useState("");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  /** §15 โรงแรม pattern: Filter toggle + Charts toggle state */
+  const [filterOpen, setFilterOpen] = useState(true);
+  const [chartsOpen, setChartsOpen] = useState(false);
+
+  const filtersActive = useMemo(() => {
+    return (
+      filterYear !== bangkokFilterDefaults.year ||
+      filterMonth !== bangkokFilterDefaults.month ||
+      filterDay !== "" ||
+      search.trim() !== ""
+    );
+  }, [filterYear, filterMonth, filterDay, search, bangkokFilterDefaults]);
 
   const photoTargetVisitIdRef = useRef<number | null>(null);
   const photoTargetBundleIdRef = useRef<number | null>(null);
@@ -635,6 +655,7 @@ export function CarWashSalesPanel({
   }, [filteredVisits, filteredBundles]);
 
   const resolvedLogoForPrint = useMemo(() => resolveAssetUrl(logoUrl, baseUrl), [logoUrl, baseUrl]);
+  const { paper: slipPaper } = useAppSlipPaperSize();
 
   const finalizeListPhoto = useCallback(
     async (file: File) => {
@@ -976,7 +997,7 @@ export function CarWashSalesPanel({
     }
   }
 
-  function printBundleSlip(b: WashBundle, paper: PosTablePaperSize) {
+  function printBundleSlip(b: WashBundle, paper: PosTablePaperSize = slipPaper) {
     const printedAt = new Date().toLocaleString("th-TH", {
       timeZone: "Asia/Bangkok",
       hour12: false,
@@ -1111,34 +1132,129 @@ export function CarWashSalesPanel({
     <div className={carWashContentStackClass}>
       <AppImageLightbox src={lightbox.src} onClose={lightbox.close} alt="รูปแนบรายการ" />
 
-      <AppDashboardSection tone="violet">
-        {/* Header & Mobile Filter Toggle */}
-        <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-white/55 bg-white/35 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
-          <div className="min-w-0 flex-1">
-            <p className={cn(carWashHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
-              FINANCE OVERVIEW
-            </p>
-            <h2 className="text-xl font-black tracking-tight text-[#1e1b4b]">ภาพรวมการเงิน</h2>
-          </div>
-          <button
-            type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/55 text-violet-600 shadow-sm backdrop-blur-md transition-all active:scale-[0.98] md:hidden"
-            onClick={() => setMobileFilterOpen(true)}
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-            </svg>
-          </button>
-        </div>
+      <AppDashboardSection tone="violet" className="!rounded-[2rem]">
+        <AppSectionHeader
+          tone="violet"
+          title="การเงิน"
+          className="flex flex-row items-start justify-between gap-3 sm:items-center"
+          actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
+          action={
+            <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
+              <button
+                type="button"
+                onClick={() => setFilterOpen((o) => !o)}
+                aria-expanded={filterOpen}
+                aria-controls="car-wash-finance-filter-panel"
+                aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  "relative inline-flex min-h-[40px] items-center justify-center gap-1.5 px-3 text-xs font-black text-[#4d47b6]",
+                  filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
+                  filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
+                )}
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                </svg>
+                <span>{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+                {filtersActive ? (
+                  <span
+                    className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-[#4338ca]/95 via-[#5b61ff]/95 to-[#ec4899]/85 ring-2 ring-white"
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartsOpen((o) => !o)}
+                aria-expanded={chartsOpen}
+                aria-controls="car-wash-finance-charts"
+                aria-label={chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
+                title={chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  "inline-flex min-h-[40px] items-center justify-center px-3 text-xs font-black text-[#4d47b6]",
+                  chartsOpen && "border-[#0000BF]/45 bg-[#0000BF]/10",
+                )}
+              >
+                {chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void onRefresh()}
+                aria-busy={false}
+                aria-label="รีเฟรชข้อมูลรายงาน"
+                title="รีเฟรช"
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-[1rem] px-0 text-[#4d47b6] sm:min-w-0 sm:px-3",
+                )}
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 sm:mr-1.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M23 4v6h-6" />
+                  <path d="M1 20v-6h6" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
+                <span className="hidden sm:inline">รีเฟรช</span>
+              </button>
+            </div>
+          }
+        />
 
-        {/* Desktop Filter Bar */}
-        <div className="mt-5 hidden items-end gap-3 rounded-2xl border border-white/55 bg-white/30 p-3 backdrop-blur-xl md:flex">
-          <div className="grid flex-1 grid-cols-4 gap-3">
+        <div
+          id="car-wash-finance-filter-panel"
+          className={cn("mt-4 space-y-3", filterOpen ? "block" : "hidden")}
+        >
+          <div className="flex flex-wrap gap-2" role="group" aria-label="กรองช่วงเวลาการเงิน">
+            <button
+              type="button"
+              onClick={() => {
+                setFilterYear(bangkokFilterDefaults.year);
+                setFilterMonth(bangkokFilterDefaults.month);
+                setFilterDay(bangkokFilterDefaults.day ?? "");
+              }}
+              className={carWashFilterChipClass(filtersActive ? false : true)}
+            >
+              เดือนนี้
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFilterYear(bangkokFilterDefaults.year);
+                setFilterMonth(bangkokFilterDefaults.month);
+                setFilterDay(bangkokFilterDefaults.day);
+              }}
+              className={carWashFilterChipClass(false)}
+            >
+              วันนี้
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFilterYear(bangkokFilterDefaults.year);
+                setFilterMonth("");
+                setFilterDay("");
+              }}
+              className={carWashFilterChipClass(false)}
+            >
+              ปีนี้
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterDay("")}
+              className={carWashFilterChipClass(false)}
+            >
+              กำหนดเอง
+            </button>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-4">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-y">ปี</label>
               <select
                 id="cw-f-y"
-                className={cn(carWashFieldClass, "rounded-xl")}
+                className={carWashFieldClass}
                 value={filterYear}
                 onChange={(e) => { setFilterYear(e.target.value); setFilterMonth(""); setFilterDay(""); }}
               >
@@ -1150,7 +1266,7 @@ export function CarWashSalesPanel({
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-m">เดือน</label>
               <select
                 id="cw-f-m"
-                className={cn(carWashFieldClass, "rounded-xl")}
+                className={carWashFieldClass}
                 value={filterMonth}
                 onChange={(e) => { setFilterMonth(e.target.value); setFilterDay(""); }}
               >
@@ -1164,7 +1280,7 @@ export function CarWashSalesPanel({
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-d">วัน</label>
               <select
                 id="cw-f-d"
-                className={cn(carWashFieldClass, "rounded-xl")}
+                className={carWashFieldClass}
                 value={dayNumbers.includes(Number(filterDay)) ? filterDay : ""}
                 onChange={(e) => setFilterDay(e.target.value)}
               >
@@ -1176,169 +1292,104 @@ export function CarWashSalesPanel({
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-s">ค้นหา</label>
               <input
                 id="cw-f-s"
-                className={cn(carWashFieldClass, "rounded-xl")}
+                className={carWashFieldClass}
                 placeholder="ชื่อ, ทะเบียน..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
           </div>
+
+          {filtersActive ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterYear(bangkokFilterDefaults.year);
+                  setFilterMonth(bangkokFilterDefaults.month);
+                  setFilterDay("");
+                  setSearch("");
+                }}
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  "inline-flex h-10 min-h-[40px] items-center justify-center rounded-[1rem] px-4 text-xs font-black text-[#4d47b6]",
+                )}
+                aria-label="รีเซ็ตตัวกรองเป็นเดือนนี้"
+              >
+                รีเซ็ต · เดือนนี้
+              </button>
+            </div>
+          ) : null}
+
+          <p className="text-xs font-semibold text-[#66638c]">
+            กำลังดู: ช่วง
+            {filterYear ? ` ปี ${filterYear}` : ""}
+            {filterMonth ? ` เดือน ${filterMonth}` : ""}
+            {filterDay ? ` วันที่ ${filterDay}` : " ทุกช่วง"}
+          </p>
         </div>
 
-        {/* Stats Row (3 Columns on Mobile) */}
-        <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-4">
-          {/* Stat: Total Revenue */}
-          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/60 bg-gradient-to-br from-white/60 via-violet-50/35 to-indigo-100/30 p-3 shadow-[0_16px_34px_-24px_rgba(91,97,255,0.4)] backdrop-blur-xl sm:p-5">
-            <div className="flex items-center justify-between gap-1">
-              <span className="truncate text-[8px] font-bold uppercase tracking-wider text-violet-500 sm:text-[10px]">รายได้รวม</span>
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-[10px] text-violet-600 sm:h-8 sm:w-8 sm:text-base">฿</span>
-            </div>
-            <p className="mt-2 text-sm font-black text-[#1e1b4b] sm:mt-3 sm:text-2xl">
-              ฿{periodTotalRevenue.toLocaleString()}
-            </p>
-            <div className="mt-1 hidden items-center gap-1.5 sm:flex">
-              <div className="h-1 w-1 rounded-full bg-emerald-500" />
-              <span className="text-[10px] font-medium text-slate-500">ยอดขายทั้งหมด</span>
-            </div>
-          </div>
-
-          {/* Stat: Total Cost */}
-          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/60 bg-gradient-to-br from-white/60 via-rose-50/30 to-orange-100/25 p-3 shadow-[0_16px_34px_-24px_rgba(244,63,94,0.35)] backdrop-blur-xl sm:p-5">
-            <div className="flex items-center justify-between gap-1">
-              <span className="truncate text-[8px] font-bold uppercase tracking-wider text-rose-500 sm:text-[10px]">ต้นทุนรวม</span>
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-600 sm:h-8 sm:w-8">
-                <svg viewBox="0 0 24 24" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m19 9-7 7-7-7" /></svg>
-              </span>
-            </div>
-            <p className="mt-2 text-sm font-black text-rose-900 sm:mt-3 sm:text-2xl">
-              ฿{periodTotalCost.toLocaleString()}
-            </p>
-            <div className="mt-1 hidden items-center gap-1.5 sm:flex">
-              <div className="h-1 w-1 rounded-full bg-rose-500" />
-              <span className="text-[10px] font-medium text-slate-500">ค่าใช้จ่ายทั้งหมด</span>
-            </div>
-          </div>
-
-          {/* Stat: Net Profit */}
-          <div className={cn(
-            "relative flex flex-col justify-between overflow-hidden rounded-2xl border p-3 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.32)] backdrop-blur-xl transition-colors sm:p-5",
-            periodTotalRevenue - periodTotalCost >= 0 
-              ? "border-white/60 bg-gradient-to-br from-white/60 to-emerald-100/28" 
-              : "border-white/60 bg-gradient-to-br from-white/60 to-orange-100/28"
-          )}>
-            <div className="flex items-center justify-between gap-1">
-              <span className={cn(
-                "truncate text-[8px] font-bold uppercase tracking-wider sm:text-[10px]",
+        <section aria-label={`สรุปการเงิน · ช่วงที่เลือก`}>
+          <ul className={carWashFinanceStatsGridClass}>
+            <li className="rounded-[1.5rem] border border-white/55 bg-gradient-to-br from-white/60 via-violet-50/35 to-indigo-100/30 px-3 py-3 shadow-[0_16px_34px_-24px_rgba(91,97,255,0.4)] ring-1 ring-inset ring-white/40 backdrop-blur-xl sm:p-5">
+              <p className="text-left text-[10px] font-black uppercase tracking-widest text-violet-500">
+                รายได้รวม
+              </p>
+              <p className="mt-2 text-left text-2xl font-black tabular-nums text-emerald-700 sm:text-3xl">
+                ฿{periodTotalRevenue.toLocaleString()}
+              </p>
+            </li>
+            <li className="rounded-[1.5rem] border border-white/55 bg-gradient-to-br from-white/60 via-rose-50/30 to-orange-100/25 px-3 py-3 shadow-[0_16px_34px_-24px_rgba(244,63,94,0.35)] ring-1 ring-inset ring-white/40 backdrop-blur-xl sm:p-5">
+              <p className="text-left text-[10px] font-black uppercase tracking-widest text-rose-500">
+                ต้นทุนรวม
+              </p>
+              <p className="mt-2 text-left text-2xl font-black tabular-nums text-rose-600 sm:text-3xl">
+                ฿{periodTotalCost.toLocaleString()}
+              </p>
+            </li>
+            <li
+              className={cn(
+                carWashFinanceStatTailClass,
+                "rounded-[1.5rem] border border-white/55 px-3 py-3 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.32)] ring-1 ring-inset ring-white/40 backdrop-blur-xl sm:p-5",
+                periodTotalRevenue - periodTotalCost >= 0
+                  ? "bg-gradient-to-br from-white/60 via-emerald-50/35 to-emerald-100/28"
+                  : "bg-gradient-to-br from-white/60 via-amber-50/35 to-orange-100/28",
+              )}
+            >
+              <p className={cn(
+                "text-left text-[10px] font-black uppercase tracking-widest",
                 periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-600" : "text-orange-600"
-              )}>กำไรสุทธิ</span>
-              <span className={cn(
-                "flex h-5 w-5 shrink-0 items-center justify-center rounded-lg sm:h-8 sm:w-8",
-                periodTotalRevenue - periodTotalCost >= 0 ? "bg-emerald-100 text-emerald-600" : "bg-orange-100 text-orange-600"
               )}>
-                <svg viewBox="0 0 24 24" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                </svg>
-              </span>
-            </div>
-            <p className={cn(
-              "mt-2 text-sm font-black sm:mt-3 sm:text-2xl",
-              periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-900" : "text-orange-900"
-            )}>
-              ฿{(periodTotalRevenue - periodTotalCost).toLocaleString()}
-            </p>
-            <div className="mt-1 hidden items-center gap-1.5 sm:flex">
-              <div className={cn("h-1 w-1 rounded-full", periodTotalRevenue - periodTotalCost >= 0 ? "bg-emerald-500" : "bg-orange-500")} />
-              <span className="text-[10px] font-medium text-slate-500">กำไรสุทธิ</span>
-            </div>
-          </div>
-        </div>
+                กำไรสุทธิ
+              </p>
+              <p className={cn(
+                "mt-2 text-left text-2xl font-black tabular-nums sm:text-3xl",
+                periodTotalRevenue - periodTotalCost >= 0 ? "text-[#1e1b4b]" : "text-orange-900"
+              )}>
+                ฿{(periodTotalRevenue - periodTotalCost).toLocaleString()}
+              </p>
+            </li>
+          </ul>
+        </section>
 
-        {/* Charts & Analysis Row (Stack on Mobile, Grid on Large) */}
-        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {/* Main Chart: Revenue vs Cost */}
-          <div className="rounded-2xl border border-white/60 bg-white/45 p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5 lg:col-span-2">
-            <div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-              <h3 className="text-sm font-black text-[#1e1b4b] sm:text-base">แนวโน้มรายได้และรายจ่าย</h3>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-[#5b61ff]" />
-                  <span className="text-[10px] font-bold text-slate-400">รายได้</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-rose-400" />
-                  <span className="text-[10px] font-bold text-slate-400">รายจ่าย</span>
-                </div>
-              </div>
-            </div>
-            <div className="h-[220px] w-full sm:h-[280px]">
+        {chartsOpen ? (
+          <div id="car-wash-finance-charts" className="mt-4 space-y-4">
+            <p className="text-sm font-black text-[#1e1b4b]">รายได้เทียบต้นทุน · ช่วงที่เลือก</p>
+            <AppSparkChartPanel className="w-full min-w-0">
               <AppRevenueCostColumnChart
-                className="h-full w-full"
-                buckets={revenueCostBuckets}
+                className="flex min-h-0 w-full min-w-0 flex-1 flex-col"
+                compact
                 title=""
-                emptyText="ไม่มีข้อมูลในช่วงที่เลือก"
+                subtitle=""
+                emptyText="ยังไม่มีข้อมูลในช่วงนี้"
+                buckets={revenueCostBuckets}
                 formatTitle={(b) =>
-                  `${b.label}: รายได้ ฿${b.revenue.toLocaleString()} · รายจ่าย ฿${b.cost.toLocaleString()}`
+                  `${b.label}: รายได้ ฿${b.revenue.toLocaleString()} · ต้นทุน ฿${b.cost.toLocaleString()}`
                 }
               />
-            </div>
+            </AppSparkChartPanel>
           </div>
-
-          {/* Package Analysis Cards */}
-          <div className="flex flex-col gap-4">
-            {/* Package Revenue Donut */}
-            <div className="flex-1 rounded-2xl border border-white/60 bg-white/45 p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl">
-              <h3 className="text-xs font-black text-[#1e1b4b] sm:text-sm">สัดส่วนตามแพ็กเกจ</h3>
-              {packageCompareRows.length > 0 ? (
-                <div className="mt-4 flex items-center gap-4">
-                  <div
-                    className="h-16 w-16 shrink-0 rounded-full ring-4 ring-slate-50 sm:h-20 sm:w-20"
-                    style={{ background: donutGradientFromRows(packageCompareRows) }}
-                  />
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    {packageCompareRows.slice(0, 3).map((row, idx) => (
-                      <div key={row.key} className="flex items-center justify-between text-[10px] sm:text-[11px]">
-                        <span className="truncate font-medium text-slate-500">
-                          <span className={cn("mr-1.5 inline-block h-1.5 w-1.5 rounded-full", idx === 0 ? "bg-[#5b61ff]" : idx === 1 ? "bg-[#8d64ff]" : "bg-[#f06dc8]")} />
-                          {row.label}
-                        </span>
-                        <span className="font-bold text-[#1e1b4b]">฿{row.amount.toLocaleString()}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="mt-4 text-center text-[10px] text-slate-400">ไม่มีข้อมูล</p>
-              )}
-            </div>
-
-            {/* Bundle Usage Donut */}
-            <div className="flex-1 rounded-2xl border border-white/60 bg-white/45 p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl">
-              <h3 className="text-xs font-black text-[#1e1b4b] sm:text-sm">สัดส่วนตามแพ็กเหมา</h3>
-              {bundlePackageCompareRows.length > 0 ? (
-                <div className="mt-4 flex items-center gap-4">
-                  <div
-                    className="h-16 w-16 shrink-0 rounded-full ring-4 ring-slate-50 sm:h-20 sm:w-20"
-                    style={{ background: donutGradientFromRows(bundlePackageCompareRows) }}
-                  />
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    {bundlePackageCompareRows.slice(0, 3).map((row, idx) => (
-                      <div key={row.key} className="flex items-center justify-between text-[10px] sm:text-[11px]">
-                        <span className="truncate font-medium text-slate-500">
-                          <span className={cn("mr-1.5 inline-block h-1.5 w-1.5 rounded-full", idx === 0 ? "bg-[#5b61ff]" : idx === 1 ? "bg-[#8d64ff]" : "bg-[#f06dc8]")} />
-                          {row.label}
-                        </span>
-                        <span className="font-bold text-[#1e1b4b]">{row.amount} ครั้ง</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="mt-4 text-center text-[10px] text-slate-400">ไม่มีข้อมูล</p>
-              )}
-            </div>
-          </div>
-        </div>
-
+        ) : null}
       </AppDashboardSection>
 
 
@@ -1350,79 +1401,84 @@ export function CarWashSalesPanel({
             </p>
             <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">รายการในช่วงที่กรอง</h2>
           </div>
-          <div className={cn(carWashSubTabSegmentShellClass, "flex shrink-0 items-center gap-1 rounded-xl p-1 backdrop-blur-md")}>
 
-            {activeListTab === "costs" ? (
-              <div className="mr-1.5 flex items-center gap-1 border-r border-slate-200 pr-1.5">
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={openManageCategories}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-white/80 px-2.5 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-white/80 hover:bg-white disabled:opacity-50"
-                  aria-label="จัดการหมวด"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-3.5 w-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    aria-hidden
+          <nav className={carWashFinanceSubTabShellClass} aria-label="เมนูการเงินคาร์แคร์">
+            <div className="flex w-full min-w-0 gap-1" role="tablist">
+              {activeListTab === "costs" ? (
+                <div className="mr-1.5 flex items-center gap-1 border-r border-[#e4e0f5]/90 pr-1.5">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={openManageCategories}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/60 bg-white/60 px-2.5 text-xs font-bold text-[#4d47b6] shadow-sm ring-1 ring-white/80 hover:bg-white/80 disabled:opacity-50"
+                    aria-label="จัดการหมวดหมู่รายจ่าย"
                   >
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                  </svg>
-                  <span className="hidden sm:inline">หมวด</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={busy || costCategories.length === 0}
-                  onClick={openAddEntry}
-                  className={cn(
-                    carWashCtaClass,
-                    "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-bold disabled:opacity-50",
-                  )}
-                  aria-label="บันทึกรายการ"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-3.5 w-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    aria-hidden
+                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                    <span className="hidden sm:inline">หมวดหมู่</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || costCategories.length === 0}
+                    onClick={openAddEntry}
+                    className={cn(
+                      carWashCtaClass,
+                      "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-bold disabled:opacity-50",
+                    )}
+                    aria-label="เพิ่มรายจ่าย"
                   >
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                  <span className="hidden sm:inline">เพิ่มรายการ</span>
-                </button>
-              </div>
-            ) : null}
-            <button
-              type="button"
-              className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
-                activeListTab === "sales" ?
-                  carWashNavActiveClass
-                : carWashNavIdleClass,
-              )}
-              onClick={() => setActiveListTab("sales")}
-            >
-              รายรับ
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
-                activeListTab === "costs" ?
-                  carWashNavActiveClass
-                : carWashNavIdleClass,
-              )}
-              onClick={() => setActiveListTab("costs")}
-            >
-              รายจ่าย
-            </button>
-          </div>
+                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    <span className="hidden sm:inline">+ เพิ่มรายจ่าย</span>
+                  </button>
+                </div>
+              ) : null}
+
+              <button
+                key="sales"
+                type="button"
+                role="tab"
+                aria-selected={activeListTab === "sales"}
+                id="car-wash-finance-tab-sales"
+                aria-controls="car-wash-finance-panel-sales"
+                onClick={() => setActiveListTab("sales")}
+                className={cn(
+                  "inline-flex min-h-[36px] flex-1 items-center justify-center rounded-[1.25rem] px-3 py-1.5 text-xs font-black transition-all sm:flex-none",
+                  activeListTab === "sales"
+                    ? cn(
+                        "bg-gradient-to-r from-[#4338ca]/95 via-[#5b61ff]/95 to-[#ec4899]/85",
+                        "text-white shadow-md ring-1 ring-white/40",
+                      )
+                    : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
+                )}
+              >
+                ประวัติรายรับ
+              </button>
+              <button
+                key="costs"
+                type="button"
+                role="tab"
+                aria-selected={activeListTab === "costs"}
+                id="car-wash-finance-tab-costs"
+                aria-controls="car-wash-finance-panel-costs"
+                onClick={() => setActiveListTab("costs")}
+                className={cn(
+                  "inline-flex min-h-[36px] flex-1 items-center justify-center rounded-[1.25rem] px-3 py-1.5 text-xs font-black transition-all sm:flex-none",
+                  activeListTab === "costs"
+                    ? cn(
+                        "bg-gradient-to-r from-[#4338ca]/95 via-[#5b61ff]/95 to-[#ec4899]/85",
+                        "text-white shadow-md ring-1 ring-white/40",
+                      )
+                    : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
+                )}
+              >
+                รายจ่าย
+              </button>
+            </div>
+          </nav>
         </div>
 
         {listError ? <p className="mb-2 text-sm text-red-600">{listError}</p> : null}
@@ -1996,7 +2052,7 @@ export function CarWashSalesPanel({
                   <PopupIconButton
                     label="พิมพ์ใบ"
                     disabled={rowBusy}
-                    onClick={() => printBundleSlip(b, "SLIP_80")}
+                    onClick={() => printBundleSlip(b)}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                       <polyline points="6 9 6 2 18 2 18 9" />

@@ -18,6 +18,7 @@ import { DrinkPosMobileBottomProvider } from "@/systems/drink-pos/components/Dri
 import {
   DRINK_POS_HEADER_COLLAPSE_EVENT,
   DRINK_POS_NAV_ITEMS,
+  DRINK_POS_ORDER_HREF,
   isDrinkPosNavItemActive,
   readDrinkPosHeaderCollapsed,
   writeDrinkPosHeaderCollapsed,
@@ -143,6 +144,7 @@ export function DrinkPosShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const onOrderPage = pathname === DRINK_POS_ORDER_HREF || pathname.startsWith(`${DRINK_POS_ORDER_HREF}/`);
 
   useEffect(() => {
     const sync = () => setHeaderCollapsed(readDrinkPosHeaderCollapsed());
@@ -161,7 +163,12 @@ export function DrinkPosShell({ children }: { children: React.ReactNode }) {
 
   return (
     <DrinkPosMobileBottomProvider>
-      <div className="flex min-h-0 max-w-full flex-1 flex-col gap-4 sm:gap-6">
+      <div
+        className={cn(
+          "flex min-h-0 max-w-full flex-1 flex-col gap-4 sm:gap-6",
+          onOrderPage && "lg:h-full lg:max-h-full lg:overflow-hidden lg:gap-3",
+        )}
+      >
         <header
           className={cn(
             drinkPosGlassShellClass,
@@ -284,7 +291,15 @@ export function DrinkPosShell({ children }: { children: React.ReactNode }) {
           ]}
         />
 
-        <div className={cn(drinkPosMainPaddingBottomClass, appModuleShellMainScrollClass)}>{children}</div>
+        <div
+          className={cn(
+            drinkPosMainPaddingBottomClass,
+            appModuleShellMainScrollClass,
+            onOrderPage && "lg:min-h-0 lg:flex-1 lg:overflow-hidden lg:pb-0",
+          )}
+        >
+          {children}
+        </div>
       </div>
     </DrinkPosMobileBottomProvider>
   );

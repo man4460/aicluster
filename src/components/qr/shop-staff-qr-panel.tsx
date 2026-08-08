@@ -69,7 +69,7 @@ export function ShopStaffQrPanel({
           <img
             src={qrPng}
             alt={qrAlt}
-            className="mx-auto block w-full max-w-[min(92vw,320px)] rounded-2xl border border-white/70 bg-white p-3 shadow-lg shadow-amber-950/10 sm:hidden"
+            className="mx-auto block w-full max-w-[min(96vw,440px)] rounded-2xl border border-white/70 bg-white p-3 shadow-lg shadow-amber-950/10 sm:hidden"
           />
           <button
             type="button"

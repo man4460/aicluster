@@ -183,6 +183,8 @@ model User {
   buildingPosStaffLinks     BuildingPosStaffLink[]
   buildingPosIngredients    BuildingPosIngredient[]
   buildingPosPurchaseOrders BuildingPosPurchaseOrder[]
+  buildingPosCostCategories BuildingPosCostCategory[]
+  buildingPosCostEntries    BuildingPosCostEntry[]
   buildingPosLoyaltySettings BuildingPosLoyaltySettings[]
   buildingPosLoyaltyMembers  BuildingPosLoyaltyMember[]
   buildingPosLoyaltyRewards  BuildingPosLoyaltyReward[]
@@ -252,17 +254,25 @@ model User {
   drinkPosCategories        DrinkPosCategory[]
   drinkPosProducts          DrinkPosProduct[]
   drinkPosSales             DrinkPosSale[]
+  drinkPosCostCategories    DrinkPosCostCategory[]
   drinkPosCostEntries       DrinkPosCostEntry[]
   drinkPosMembers           DrinkPosMember[]
   drinkPosLoyaltySettings   DrinkPosLoyaltySettings[]
   drinkPosLoyaltyRewards    DrinkPosLoyaltyReward[]
   drinkPosLoyaltyLedgers    DrinkPosLoyaltyLedger[]
+  drinkPosStaffLinks        DrinkPosStaffLink[]
   hotelResortProfiles       HotelResortProfile[]
+  hotelResortBuildings      HotelResortBuilding[]
+  hotelResortBedTypes       HotelResortBedTypeOption[]
+  hotelResortAmenities      HotelResortAmenityOption[]
   hotelResortRoomTypes      HotelResortRoomType[]
   hotelResortRooms          HotelResortRoom[]
   hotelResortGuests         HotelResortGuest[]
   hotelResortBookings       HotelResortBooking[]
+  hotelResortCostCategories HotelResortCostCategory[]
   hotelResortCostEntries    HotelResortCostEntry[]
+  hotelResortStaffLinks     HotelResortStaffLink[]
+  hotelResortReviews        HotelResortReview[]
   ecommerceStores           EcommerceStore[]
   ecommerceCategories       EcommerceCategory[]
   ecommerceProducts         EcommerceProduct[]
@@ -633,6 +643,8 @@ model BarberShopProfile {
   bankName     String?  @map("bank_name") @db.VarChar(120)
   bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
   bankAccountName String? @map("bank_account_name") @db.VarChar(200)
+  /** ขนาดสลิปใบเสร็จของโมดูลนี้: SLIP_58 | SLIP_80 | A4 */
+  slipPaperSize String @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -991,6 +1003,8 @@ model MassageShopProfile {
   bankName       String?  @map("bank_name") @db.VarChar(120)
   bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
   bankAccountName String? @map("bank_account_name") @db.VarChar(200)
+  /** ขนาดสลิปใบเสร็จของโมดูลนี้: SLIP_58 | SLIP_80 | A4 */
+  slipPaperSize  String   @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
   /** ระยะเวลานวดเริ่มต้น (นาที) เมื่อไม่ได้ตั้งตารางรายวัน */
   defaultSlotMinutes Int  @default(60) @map("default_slot_minutes")
   createdAt      DateTime @default(now()) @map("created_at")
@@ -2066,6 +2080,43 @@ model BuildingPosPurchaseOrder {
   @@index([ownerUserId, trialSessionId, purchasedOn], map: "bpos_po_owner_trial_date_idx")
   @@index([ownerUserId], map: "bpos_po_owner_idx")
   @@map("building_pos_purchase_orders")
+}
+
+/** หมวดรายจ่าย POS ร้านอาหาร (ค่าใช้จ่ายทั่วไป — คู่กับบันทึกตลาด) */
+model BuildingPosCostCategory {
+  id             Int                     @id @default(autoincrement())
+  ownerUserId    String                  @map("owner_id") @db.VarChar(191)
+  owner          User                    @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String                  @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String                  @db.VarChar(120)
+  sortOrder      Int                     @default(0) @map("sort_order")
+  createdAt      DateTime                @default(now()) @map("created_at")
+  updatedAt      DateTime                @updatedAt @map("updated_at")
+  entries        BuildingPosCostEntry[]
+
+  @@index([ownerUserId, trialSessionId, sortOrder], map: "bpos_cost_cat_owner_trial_sort_idx")
+  @@map("building_pos_cost_categories")
+}
+
+/** รายจ่ายทั่วไป (ยอดรวมต่อรายการ) — แยกจากบันทึกซื้อวัตถุดิบ */
+model BuildingPosCostEntry {
+  id             Int                     @id @default(autoincrement())
+  ownerUserId    String                  @map("owner_id") @db.VarChar(191)
+  owner          User                    @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String                  @default("prod") @map("trial_session_id") @db.VarChar(36)
+  categoryId     Int?                    @map("category_id")
+  category       BuildingPosCostCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  label          String                  @db.VarChar(160)
+  amountBaht     Int                     @map("amount_baht")
+  spentAt        DateTime                @default(now()) @map("spent_at")
+  note           String                  @default("") @db.VarChar(300)
+  /** รูปสลิป/หลักฐานรายจ่าย — ไม่บังคับ */
+  paymentSlipUrl String                  @default("") @map("payment_slip_url") @db.VarChar(2048)
+  createdAt      DateTime                @default(now()) @map("created_at")
+
+  @@index([ownerUserId, trialSessionId, spentAt], map: "bpos_cost_ent_owner_trial_spent_idx")
+  @@index([categoryId], map: "bpos_cost_ent_category_idx")
+  @@map("building_pos_cost_entries")
 }
 
 model BuildingPosPurchaseLine {
@@ -3718,12 +3769,19 @@ model DrinkPosShopProfile {
   displayName     String?  @map("display_name") @db.VarChar(200)
   logoUrl         String?  @map("logo_url") @db.VarChar(512)
   tagline         String?  @db.VarChar(300)
+  address         String?  @db.Text
   contactPhone    String?  @map("contact_phone") @db.VarChar(32)
   promptPayPhone  String?  @map("prompt_pay_phone") @db.VarChar(20)
   bankName        String?  @map("bank_name") @db.VarChar(120)
   bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
   bankAccountName String?  @map("bank_account_name") @db.VarChar(200)
   taxId           String?  @map("tax_id") @db.VarChar(30)
+  /** ขนาดสลิปใบเสร็จของโมดูลนี้: SLIP_58 | SLIP_80 | A4 */
+  slipPaperSize   String   @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
+  /** ขนาดสลิปคิวออเดอร์ (ครัว / พร้อมเสิร์ฟ): SLIP_58 | SLIP_80 | A4 */
+  orderTicketSlipPaperSize String @default("SLIP_58") @map("order_ticket_slip_paper_size") @db.VarChar(16)
+  /** รหัสเข้าลิงก์พนักงานรายวัน (bcrypt) — ว่าง = ไม่บังคับ */
+  staffDailyPinHash String? @map("staff_daily_pin_hash") @db.VarChar(255)
   stampsPerReward Int      @default(10) @map("stamps_per_reward")
   rewardTitle     String   @default("เครื่องดื่มฟรี 1 แก้ว") @map("reward_title") @db.VarChar(160)
   createdAt       DateTime @default(now()) @map("created_at")
@@ -3904,18 +3962,52 @@ model DrinkPosSaleLine {
   @@map("drink_pos_sale_lines")
 }
 
+model DrinkPosCostCategory {
+  id          String              @id @default(cuid())
+  ownerUserId String              @map("owner_user_id") @db.VarChar(191)
+  owner       User                @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String              @db.VarChar(120)
+  sortOrder   Int                 @default(0) @map("sort_order")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  entries     DrinkPosCostEntry[]
+
+  @@index([ownerUserId, sortOrder], map: "dp_cost_cat_owner_sort_idx")
+  @@map("drink_pos_cost_categories")
+}
+
 model DrinkPosCostEntry {
-  id          String   @id @default(cuid())
-  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
-  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
-  label       String   @db.VarChar(160)
-  amountBaht  Int      @map("amount_baht")
-  spentAt     DateTime @default(now()) @map("spent_at")
-  note        String?  @db.VarChar(300)
-  createdAt   DateTime @default(now()) @map("created_at")
+  id             String                @id @default(cuid())
+  ownerUserId    String                @map("owner_user_id") @db.VarChar(191)
+  owner          User                  @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  categoryId     String?               @map("category_id") @db.VarChar(191)
+  category       DrinkPosCostCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  label          String                @db.VarChar(160)
+  amountBaht     Int                   @map("amount_baht")
+  spentAt        DateTime              @default(now()) @map("spent_at")
+  note           String?               @db.VarChar(300)
+  paymentSlipUrl String?               @map("payment_slip_url") @db.VarChar(512)
+  createdAt      DateTime              @default(now()) @map("created_at")
 
   @@index([ownerUserId, spentAt], map: "dp_cost_owner_spent_idx")
+  @@index([categoryId], map: "dp_cost_category_idx")
   @@map("drink_pos_cost_entries")
+}
+
+/** ลิงก์/QR พนักงานร้านเครื่องดื่ม — โทเค็น + cipher สำหรับ QR ค้าง */
+model DrinkPosStaffLink {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  tokenHash      String   @map("token_hash") @db.VarChar(128)
+  tokenCipher    String?  @map("token_cipher") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId], map: "drink_pos_staff_link_owner_trial_uniq")
+  @@index([ownerUserId], map: "drink_pos_staff_link_owner_idx")
+  @@map("drink_pos_staff_links")
 }
 
 /** โรงแรม / รีสอร์ท — ห้องพัก การจอง เช็คอิน บิล PromptPay */
@@ -3946,6 +4038,8 @@ model HotelResortProfile {
   owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
   propertyName   String   @default("โรงแรม") @map("property_name") @db.VarChar(160)
+  /** ชื่อผู้จัดการ — ใช้ในลายเซ็นผู้รับเงินบนใบเสร็จ/ใบกำกับ/โฟลิโอ */
+  managerName    String?  @map("manager_name") @db.VarChar(160)
   logoUrl        String?  @map("logo_url") @db.VarChar(512)
   tagline        String?  @db.VarChar(300)
   contactPhone   String?  @map("contact_phone") @db.VarChar(32)
@@ -3954,13 +4048,53 @@ model HotelResortProfile {
   bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
   bankAccountName String? @map("bank_account_name") @db.VarChar(200)
   taxId          String?  @map("tax_id") @db.VarChar(30)
+  /** ขนาดสลิปใบเสร็จของโมดูลนี้: SLIP_58 | SLIP_80 | A4 */
+  slipPaperSize  String   @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
   checkInTime    String   @default("14:00") @map("check_in_time") @db.VarChar(8)
   checkOutTime   String   @default("12:00") @map("check_out_time") @db.VarChar(8)
+  /** รหัสเข้าลิงก์พนักงานรายวัน (bcrypt) — ว่าง = ไม่บังคับ */
+  staffDailyPinHash String? @map("staff_daily_pin_hash") @db.VarChar(255)
+  /** ปุ่มลัดค่าใช้จ่ายเพิ่มตอนเช็คเอาต์ [{label, amountBaht}] */
+  checkoutExtraPresets Json? @map("checkout_extra_presets")
+  /** แบนเนอร์หน้าเว็บลิงก์ลูกค้า */
+  portalBannerUrl String? @map("portal_banner_url") @db.VarChar(512)
+  /** JSON string[] รูปภาพรวมโรงแรมบนพอร์ทัลลูกค้า */
+  portalGalleryJson Json? @map("portal_gallery_json")
+  /** ที่อยู่ที่พัก — แสดงบนหน้าลิงก์ลูกค้า */
+  address        String?  @db.Text
+  lineId         String?  @map("line_id") @db.VarChar(120)
+  facebookUrl    String?  @map("facebook_url") @db.VarChar(512)
+  mapUrl         String?  @map("map_url") @db.VarChar(512)
+  /**
+   * การชำระตอนจองจากลิงก์ลูกค้า: NONE | DEPOSIT | FULL
+   * NONE = จองอย่างเดียว · DEPOSIT = มัดจำ · FULL = ชำระเต็มยอดพัก
+   */
+  portalBookingPaymentMode String @default("NONE") @map("portal_booking_payment_mode") @db.VarChar(16)
+  /** จำนวนมัดจำ (บาท) เมื่อโหมด DEPOSIT */
+  depositAmountBaht Int? @map("deposit_amount_baht")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@unique([ownerUserId, trialSessionId], map: "hr_profile_owner_trial_uq")
   @@map("hotel_resort_profiles")
+}
+
+/** รีวิวที่แสดงบนหน้าลิงก์ลูกค้า (เจ้าของเพิ่ม / อนุมัติ) */
+model HotelResortReview {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_user_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  guestName      String   @map("guest_name") @db.VarChar(120)
+  rating         Int      @default(5)
+  comment        String   @db.VarChar(800)
+  isPublished    Boolean  @default(true) @map("is_published")
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, isPublished, sortOrder], map: "hr_review_owner_pub_sort_idx")
+  @@map("hotel_resort_reviews")
 }
 
 /** ชื่อร้าน/โลโก้เฉพาะโมดูล — สำหรับ QR และแสดงผล (คาร์แคร์ ซักผ้า POS อาหาร ฯลฯ) */
@@ -3979,12 +4113,70 @@ model ModuleShopBranding {
   bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
   bankAccountName String? @map("bank_account_name") @db.VarChar(200)
   taxId          String?  @map("tax_id") @db.VarChar(30)
+  /** ขนาดสลิปใบเสร็จของโมดูลนี้: SLIP_58 | SLIP_80 | A4 */
+  slipPaperSize  String   @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
+  /** ขนาดสลิปคิวออเดอร์ (ครัว / พร้อมเสิร์ฟ) — ใช้กับ POS */
+  orderTicketSlipPaperSize String @default("SLIP_58") @map("order_ticket_slip_paper_size") @db.VarChar(16)
+  /** รหัสเข้าลิงก์พนักงานรายวัน (bcrypt) — ว่าง = ไม่บังคับ */
+  staffDailyPinHash String? @map("staff_daily_pin_hash") @db.VarChar(255)
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@unique([ownerUserId, trialSessionId, moduleSlug], map: "msb_owner_trial_slug_uq")
   @@index([ownerUserId, moduleSlug], map: "msb_owner_slug_idx")
   @@map("module_shop_brandings")
+}
+
+/** ตึก / อาคาร — รองรับหลายอาคารในที่พักเดียว */
+model HotelResortBuilding {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(120)
+  code        String?  @db.VarChar(40)
+  sortOrder   Int      @default(0) @map("sort_order")
+  note        String?  @db.VarChar(300)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  rooms HotelResortRoom[]
+
+  @@index([ownerUserId, sortOrder], map: "hr_building_owner_sort_idx")
+  @@unique([ownerUserId, name], map: "hr_building_owner_name_uq")
+  @@map("hotel_resort_buildings")
+}
+
+/** รูปแบบ/ขนาดเตียง — เจ้าของจัดการเอง (เพิ่ม แก้ไข ลบ) */
+model HotelResortBedTypeOption {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(80)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, name], map: "hr_bed_owner_name_uq")
+  @@index([ownerUserId, sortOrder], map: "hr_bed_owner_sort_idx")
+  @@map("hotel_resort_bed_types")
+}
+
+/** สิ่งอำนวยความสะดวกในห้อง — เจ้าของจัดการเอง (เพิ่ม แก้ไข ลบ) */
+model HotelResortAmenityOption {
+  id          String   @id @default(cuid())
+  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  /** คีย์คงที่ใน amenities_json ของห้อง */
+  key         String   @db.VarChar(40)
+  label       String   @db.VarChar(80)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, key], map: "hr_amenity_owner_key_uq")
+  @@unique([ownerUserId, label], map: "hr_amenity_owner_label_uq")
+  @@index([ownerUserId, sortOrder], map: "hr_amenity_owner_sort_idx")
+  @@map("hotel_resort_amenities")
 }
 
 model HotelResortRoomType {
@@ -4009,11 +4201,23 @@ model HotelResortRoom {
   id           String               @id @default(cuid())
   ownerUserId  String               @map("owner_user_id") @db.VarChar(191)
   owner        User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  buildingId   String               @map("building_id") @db.VarChar(191)
+  building     HotelResortBuilding  @relation(fields: [buildingId], references: [id], onDelete: Restrict)
   roomTypeId   String               @map("room_type_id") @db.VarChar(191)
   roomType     HotelResortRoomType  @relation(fields: [roomTypeId], references: [id], onDelete: Restrict)
   roomNumber   String               @map("room_number") @db.VarChar(20)
   floor        Int                  @default(1)
   status       HotelResortRoomStatus @default(VACANT)
+  /** เช่น คิงไซส์ · ทวิน · ควีน */
+  bedType      String?              @map("bed_type") @db.VarChar(80)
+  /** พื้นที่ห้อง ตร.ม. */
+  roomSizeSqm  Int?                 @map("room_size_sqm")
+  /** มุมมอง เช่น ทะเล · สระ · เมือง */
+  viewType     String?              @map("view_type") @db.VarChar(80)
+  /** JSON array ของรหัสสิ่งอำนวยความสะดวก เช่น ["WIFI","TV"] */
+  amenitiesJson String?             @map("amenities_json") @db.VarChar(1000)
+  /** JSON string[] URL รูปห้อง — สูงสุด 10 รูป */
+  imageUrlsJson Json?               @map("image_urls_json")
   note         String?              @db.VarChar(300)
   sortOrder    Int                  @default(0) @map("sort_order")
   createdAt    DateTime             @default(now()) @map("created_at")
@@ -4021,8 +4225,9 @@ model HotelResortRoom {
 
   bookings HotelResortBooking[]
 
-  @@unique([ownerUserId, roomNumber], map: "hr_room_owner_number_uq")
+  @@unique([buildingId, roomNumber], map: "hr_room_building_number_uq")
   @@index([ownerUserId, status], map: "hr_room_owner_status_idx")
+  @@index([ownerUserId, buildingId], map: "hr_room_owner_building_idx")
   @@map("hotel_resort_rooms")
 }
 
@@ -4035,6 +4240,10 @@ model HotelResortGuest {
   phone           String   @db.VarChar(20)
   nationalId      String?  @map("national_id") @db.VarChar(30)
   nationality     String?  @db.VarChar(80)
+  /** ที่อยู่ลูกค้า — ใช้ใบกำกับภาษี / โฟลิโอ */
+  address         String?  @db.Text
+  /** เลขประจำตัวผู้เสียภาษีลูกค้า */
+  taxId           String?  @map("tax_id") @db.VarChar(30)
   idCardImageUrl  String?  @map("id_card_image_url") @db.VarChar(500)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -4065,6 +4274,11 @@ model HotelResortBooking {
   totalBaht       Int                      @default(0) @map("total_baht")
   amountPaidBaht  Int                      @default(0) @map("amount_paid_baht")
   paymentStatus   HotelResortPaymentStatus @default(UNPAID) @map("payment_status")
+  /** CASH | PROMPTPAY | TRANSFER — ช่องทางชำระตอนเช็คอิน */
+  paymentMethod   String                   @default("CASH") @map("payment_method") @db.VarChar(20)
+  paymentSlipUrl  String?                  @map("payment_slip_url") @db.VarChar(512)
+  /** มัดจำ/ยอดที่ต้องชำระตอนจองจากพอร์ทัล (null = ไม่บังคับชำระตอนจอง) */
+  depositAmountBaht Int?                   @map("deposit_amount_baht")
   idCardImageUrl  String?                  @map("id_card_image_url") @db.VarChar(500)
   note            String?                  @db.VarChar(500)
   createdAt       DateTime                 @default(now()) @map("created_at")
@@ -4076,18 +4290,52 @@ model HotelResortBooking {
   @@map("hotel_resort_bookings")
 }
 
+model HotelResortCostCategory {
+  id          String                 @id @default(cuid())
+  ownerUserId String                 @map("owner_user_id") @db.VarChar(191)
+  owner       User                   @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String                 @db.VarChar(120)
+  sortOrder   Int                    @default(0) @map("sort_order")
+  createdAt   DateTime               @default(now()) @map("created_at")
+  updatedAt   DateTime               @updatedAt @map("updated_at")
+  entries     HotelResortCostEntry[]
+
+  @@index([ownerUserId, sortOrder], map: "hr_cost_cat_owner_sort_idx")
+  @@map("hotel_resort_cost_categories")
+}
+
 model HotelResortCostEntry {
-  id          String   @id @default(cuid())
-  ownerUserId String   @map("owner_user_id") @db.VarChar(191)
-  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
-  label       String   @db.VarChar(160)
-  amountBaht  Int      @map("amount_baht")
-  spentAt     DateTime @default(now()) @map("spent_at")
-  note        String?  @db.VarChar(300)
-  createdAt   DateTime @default(now()) @map("created_at")
+  id             String                   @id @default(cuid())
+  ownerUserId    String                   @map("owner_user_id") @db.VarChar(191)
+  owner          User                     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  categoryId     String?                  @map("category_id") @db.VarChar(191)
+  category       HotelResortCostCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  label          String                   @db.VarChar(160)
+  amountBaht     Int                      @map("amount_baht")
+  spentAt        DateTime                 @default(now()) @map("spent_at")
+  note           String?                  @db.VarChar(300)
+  paymentSlipUrl String?                  @map("payment_slip_url") @db.VarChar(512)
+  createdAt      DateTime                 @default(now()) @map("created_at")
 
   @@index([ownerUserId, spentAt], map: "hr_cost_owner_spent_idx")
+  @@index([categoryId], map: "hr_cost_category_idx")
   @@map("hotel_resort_cost_entries")
+}
+
+/** ลิงก์/QR พนักงานโรงแรม — โทเค็น + cipher สำหรับ QR ค้าง */
+model HotelResortStaffLink {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  tokenHash      String   @map("token_hash") @db.VarChar(128)
+  tokenCipher    String?  @map("token_cipher") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId], map: "hotel_resort_staff_link_owner_trial_uniq")
+  @@index([ownerUserId], map: "hotel_resort_staff_link_owner_idx")
+  @@map("hotel_resort_staff_links")
 }
 
 /** คลัง prompt ส่วนตัว (แยกตามผู้ใช้ — อิงแนวคิด Prompt Master / Google Script pms) */
@@ -4637,6 +4885,14 @@ model FootballTurfShopProfile {
   contactPhone    String   @default("") @map("contact_phone") @db.VarChar(32)
   contactLine     String   @default("") @map("contact_line") @db.VarChar(120)
   note            String   @default("") @db.Text
+  /** ขนาดสลิปใบเสร็จของโมดูลนี้: SLIP_58 | SLIP_80 | A4 */
+  slipPaperSize   String   @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
+  /**
+   * การชำระตอนจองจากลิงก์ลูกค้า: NONE | DEPOSIT | FULL
+   */
+  portalBookingPaymentMode String @default("NONE") @map("portal_booking_payment_mode") @db.VarChar(16)
+  /** จำนวนมัดจำ (บาท) เมื่อโหมด DEPOSIT */
+  depositAmountBaht Int? @map("deposit_amount_baht")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -4656,6 +4912,8 @@ model FootballTurfCourt {
   slotMinutes    Int      @default(60) @map("slot_minutes")
   weekdayPrice   Int      @default(0) @map("weekday_price")
   weekendPrice   Int      @default(0) @map("weekend_price")
+  /** รูปปกสนาม — path ใต้ public เช่น /uploads/football-turf/... */
+  imageUrl       String?  @map("image_url") @db.VarChar(512)
   isActive       Boolean  @default(true) @map("is_active")
   sortOrder      Int      @default(0) @map("sort_order")
   createdAt      DateTime @default(now()) @map("created_at")

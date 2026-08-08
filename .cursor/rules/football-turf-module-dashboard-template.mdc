@@ -15,7 +15,7 @@ alwaysApply: false
 ใช้เมื่อ **สร้างโมดูลแดชบอร์ดใหม่** หรือปรับโมดูลเดิมให้ครบมาตรฐานโปรเจกต์ — ยึดสนามฟุตบอลเป็นต้นแบบโครงสร้าง + UX/UI + อัปโหลด + QR + ปุ่ม + การซ่อม
 
 **กฎโปรเจกต์ที่ต้องคู่ด้วย:**  
-`dashboard-ux-car-wash-baseline.mdc` · `app-templates-central.mdc` · `app-templates-media.mdc` · `module-chrome-no-branding.mdc` · `dashboard-new-module-sidebar-icon.mdc` · `dashboard-page-width.mdc` · `dashboard-mobile-summary-stat-grid.mdc` · `dashboard-row-action-icon-buttons.mdc` · `shop-qr-hub-popup-pattern.mdc` · `shop-customer-qr-portal.mdc` · `agent-finish-checkpoint.mdc`
+`dashboard-ux-car-wash-baseline.mdc` · `app-templates-central.mdc` · `app-templates-media.mdc` · `module-chrome-no-branding.mdc` · `dashboard-new-module-sidebar-icon.mdc` · `dashboard-page-width.mdc` · `dashboard-mobile-summary-stat-grid.mdc` · `dashboard-row-action-icon-buttons.mdc` · `shop-qr-hub-popup-pattern.mdc` · `shop-customer-qr-portal.mdc` · `module-customer-booking-website-portal.mdc` · `agent-finish-checkpoint.mdc`
 
 **คู่ขนาน chrome:** `drink-pos-module-dashboard-template.mdc` (หัวยุบ · dock) · `dashboard-module-car-wash-barber-reference.mdc`
 
@@ -267,11 +267,20 @@ alwaysApply: false
 - Trial: ลิงก์สาธารณะใส่ query `t=` เมื่อ sandbox  
 
 ### พอร์ทัลลูกค้า — จอง (`/football-turf/book/[ownerId]`)
-- เปลือก: `AppPublicCheckInGlassPage` + `appPublicCheckInGlassCardClass` · `max-w-md`  
-- เลือกวัน · สนาม · สล็อตว่างที่ **ยังไม่ผ่านเวลา**  
-- ฟอร์ม: ชื่อ · เบอร์ · ทีม · **จำนวนผู้เล่นว่างให้กรอกเอง** (ห้าม default เช่น 10)  
-- ชำระ: โอน+สลิป (`prepareImageFileAsDataUrl`) หรือหน้างาน  
-- กฎ UX พอร์ทัล: `shop-customer-qr-portal.mdc`
+- เปลือก: `AppPublicCheckInGlassPage` + `appPublicCheckInGlassCardClass` · กว้าง `max-w-6xl` (โฟลว์สนาม × วัน × สล็อต — ไม่ต้องเป็นเว็บไซต์ marketing แบบโรงแรมเต็มชุด)
+- เลือกวัน · สนาม · สล็อตว่างที่ **ยังไม่ผ่านเวลา**
+- ฟอร์ม: ชื่อ · เบอร์ · ทีม · **จำนวนผู้เล่นว่างให้กรอกเอง** (ห้าม default เช่น 10)
+- ชำระ: `TRANSFER` | `ONSITE`
+  - **โอน:** แสดง **QR พร้อมเพย์** จาก `POST /api/football-turf/public/promptpay-qr` + บัญชีธนาคาร · แนบสลิปด้วย `useAppCameraCapture` + `AppGalleryCameraFileInputs` / `AppImagePickCameraButtons` · ย่อด้วย `prepareImageFileAsDataUrl` · ข้อความบังคับ: `กรุณาอัปโหลดสลิป เพื่อเป็นหลักฐานการชำระเงินจอง` · รูปย่อ `AppImageThumb` + lightbox
+  - **หน้าสนาม:** ไม่บังคับสลิป
+- หลังจองสำเร็จ: `router.push` → `/football-turf/book/[ownerId]/booking/[bookingId]?phone=&t=` (`footballTurfPublicBookingUrl`)
+- URL helpers: `src/lib/football-turf/public-url.ts` · gate: `isFootballTurfPortalOpenForOwner`
+- กฎ UX พอร์ทัล QR กะทัดรัด: `shop-customer-qr-portal.mdc` · แพทเทิร์นชำระ/สลิป/หน้ารายละเอียดเทียบโรงแรม: `module-customer-booking-website-portal.mdc` §สื่อ/สลิป + §หน้ารายละเอียดหลังจอง
+
+### พอร์ทัลลูกค้า — รายละเอียดหลังจอง (`/football-turf/book/.../booking/[bookingId]`)
+- `FootballTurfPortalBookingClient` + `GET /api/football-turf/public/booking`
+- แสดง **ยอดจอง** · **ชำระแล้ว** (+ สถานะ) · **คงเหลือ** · วิธีชำระ
+- มีสลิป → `AppImageThumb` กดดู lightbox
 
 ### พอร์ทัลลูกค้า — เช็กอิน (`/football-turf/check-in/[ownerId]`)
 - ค้นหาด้วยเบอร์โทรตัวเลขล้วน  
@@ -286,13 +295,14 @@ alwaysApply: false
 
 | แท็บ | สิ่งที่ต้องมี / เทียบ |
 |------|----------------------|
-| ภาพรวม | สถิติ · ตารางสนามตามวัน · เพิ่มจอง/walk-in · จัดการสนาม |
-| คิว | สถานะจอง→เช็กอิน→เล่น→จบ · ปุ่มเปลี่ยนสถานะ · กันคิวหมดเวลา |
-| การเงิน | สรุปรายรับ/จ่าย · กรองช่วง · **ดูกราฟ** (`AppRevenueCostColumnChart` จาก app-templates) · ขายโปร+สลิป |
+| ภาพรวม | สถิติ · สนามตามเวลาปัจจุบัน · นอกชั่วโมง → สนามปิด · คิวถัดไป · ว่างมี **จอง + เช็กอิน** (ไม่มีปุ่มบนหัว) · ตารางว่างมีปุ่มจอง |
+| จอง | รายการแบบโรงแรม · กรองชิปวัน/ต้องปิดงาน · สถานะ จอง/เช็กอิน/เช็กเอาท์ · + เพิ่มการจอง |
+| จัดการสนาม | เพิ่ม · แก้ไข · ลบ · รูปปก · เวลา · รอบ · ราคา |
+| การเงิน | สรุปรายรับ/จ่าย · กรองช่วง · **ดูกราฟ** · ประวัติรายรับ (จอง/โปร) **แก้ไข+ลบ** · รายจ่ายลบด้วย `useAppNoticePopup` · ขายโปร+สลิป |
 | โปรโมชั่น | CRUD แพ็ก · จำนวนสิทธิ์ · ขาย/ตัดใช้ |
 | ลูกค้า | เบอร์+ชื่อ · ค้นหาเชื่อมจอง/โปร |
 | QR / ลิงก์ | ลิงก์จอง · เช็กอิน · คู่มือพนักงาน |
-| ตั้งค่า | ชื่อสนาม · พร้อมเพย์/บัญชี · ติดต่อ — ยืนยันก่อนบันทึก |
+| ตั้งค่า | ชื่อสนาม · พร้อมเพย์/บัญชี · **ชำระลิงก์ลูกค้า NONE/มัดจำ/เต็ม** · ติดต่อ — ยืนยันก่อนบันทึก |
 
 **กราฟ:** ห้ามเขียนแท่งใหม่ — ใช้ `AppRevenueCostColumnChart` / `AppSparkChartPanel` ตาม `app-templates-spark-charts.mdc`
 
@@ -301,10 +311,11 @@ alwaysApply: false
 ## 12) API · ข้อมูล · Prisma
 
 1. เจ้าของ: `GET state` รวมข้อมูลหน้า · `POST action` แยกชนิดงาน  
-2. สาธารณะ: `public/state` + `public/action` — scope ตาม `ownerId` (+ trial)  
-3. PromptPay: `/api/football-turf/promptpay-qr`  
-4. แตะ schema → **`npx prisma migrate deploy` (ถ้ามี) → `npx prisma generate`** ทุกครั้ง (`agent-finish-checkpoint.mdc`)  
-5. สลิป: persist เป็น path ใต้ `/uploads/…` ก่อนใส่ DB  
+2. สาธารณะ: `public/state` + `public/action` — scope ตาม `ownerId` (+ trial) · gate `portal-access`  
+3. PromptPay เจ้าของ: `/api/football-turf/promptpay-qr` · **ลูกค้า:** `/api/football-turf/public/promptpay-qr`  
+4. รายละเอียดจองสาธารณะ: `GET /api/football-turf/public/booking?ownerId&bookingId&phone&t=`  
+5. แตะ schema → **`npx prisma migrate deploy` (ถ้ามี) → `npx prisma generate`** ทุกครั้ง (`agent-finish-checkpoint.mdc`)  
+6. สลิป: persist เป็น path ใต้ `/uploads/…` ก่อนใส่ DB  
 
 ---
 

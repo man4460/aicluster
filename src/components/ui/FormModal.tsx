@@ -35,7 +35,7 @@ export function FormModal({
   /** คำบรรยายใต้หัวข้อ — ให้สั้น (ประมาณหนึ่งบรรทัด); ซ่อนบนมือถือ (`hidden sm:block`) */
   description?: string;
   ariaDescribedBy?: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "full";
   appearance?: "default" | "glass";
   glassTint?: "violet" | "amber";
   mobileCentered?: boolean;
@@ -43,6 +43,7 @@ export function FormModal({
   footer?: ReactNode;
 }) {
   const isClient = useSyncExternalStore(subscribeToClient, () => true, () => false);
+  const isFull = size === "full";
 
   useEffect(() => {
     if (!open) return;
@@ -69,22 +70,29 @@ export function FormModal({
     size === "sm" ? "max-w-md"
     : size === "lg" ? "max-w-2xl"
     : size === "xl" ? "max-w-4xl"
+    : size === "full" ? "max-w-none"
     : "max-w-lg";
+
+  const heightClass = isFull
+    ? "h-[calc(100dvh-0.75rem)] max-h-[calc(100dvh-0.75rem)] sm:h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-1rem)]"
+    : "max-h-[92dvh]";
 
   const isGlass = appearance === "glass";
 
   const glassPanel = cn(
-    "relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden transition-all duration-500 ease-out animate-in fade-in slide-in-from-bottom-10",
+    "relative z-10 flex w-full flex-col overflow-hidden transition-all duration-500 ease-out animate-in fade-in slide-in-from-bottom-10",
+    heightClass,
     maxW,
-    mobileCentered ? "rounded-[2rem]" : "rounded-t-[2.5rem] sm:rounded-[2rem]",
+    isFull ? "rounded-[1.25rem] sm:rounded-[1.75rem]" : mobileCentered ? "rounded-[2rem]" : "rounded-t-[2.5rem] sm:rounded-[2rem]",
     glassTint === "amber" ?
       "border border-white/50 bg-gradient-to-br from-white/50 via-amber-50/35 to-orange-100/22 shadow-[0_28px_80px_-18px_rgba(217,119,6,0.38)] backdrop-blur-2xl ring-1 ring-inset ring-white/55"
     : "border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/35 to-violet-200/22 shadow-[0_28px_80px_-18px_rgba(91,97,255,0.4)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
   );
 
   const defaultPanel = cn(
-    "relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden border border-white/20 bg-white/95 shadow-2xl backdrop-blur-2xl transition-all duration-500 ease-out animate-in fade-in slide-in-from-bottom-10 sm:border-slate-200/50 sm:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]",
-    mobileCentered ? "rounded-[2rem]" : "rounded-t-[2.5rem] sm:rounded-[2rem]",
+    "relative z-10 flex w-full flex-col overflow-hidden border border-white/20 bg-white/95 shadow-2xl backdrop-blur-2xl transition-all duration-500 ease-out animate-in fade-in slide-in-from-bottom-10 sm:border-slate-200/50 sm:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)]",
+    heightClass,
+    isFull ? "rounded-[1.25rem] sm:rounded-[1.75rem]" : mobileCentered ? "rounded-[2rem]" : "rounded-t-[2.5rem] sm:rounded-[2rem]",
     maxW,
   );
 
@@ -92,7 +100,11 @@ export function FormModal({
     <div
       className={cn(
         "fixed inset-0 z-[200] flex justify-center",
-        mobileCentered ? "items-center p-3 sm:p-4" : "items-end sm:items-center sm:p-4",
+        isFull
+          ? "items-stretch p-1.5 sm:items-center sm:p-2"
+          : mobileCentered
+            ? "items-center p-3 sm:p-4"
+            : "items-end sm:items-center sm:p-4",
       )}
       role="presentation"
     >

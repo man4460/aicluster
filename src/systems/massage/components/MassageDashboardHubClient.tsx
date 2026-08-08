@@ -1,84 +1,43 @@
 "use client";
 
-import { Suspense, useCallback, useMemo } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useMemo } from "react";
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { massageCardSurfaceRadiusClass } from "@/systems/massage/components/massage-ui-tokens";
+import {
+  massageCardSurfaceRadiusClass,
+  massageHorizontalScrollerClass,
+  massageNavActiveGradientClass,
+  massageNavIdleClass,
+} from "@/systems/massage/components/massage-ui-tokens";
+import {
+  MASSAGE_DASHBOARD_TAB_ITEMS,
+  isMassageDashboardTabActive,
+  massageDashboardTabIcon,
+  massageTabHref,
+  parseMassageDashboardTab,
+  type MassageDashboardTabKey,
+} from "@/systems/massage/massage-module-nav";
 import { MassageBookingsClient } from "@/systems/massage/components/MassageBookingsClient";
 import { MassageCheckInClient } from "@/systems/massage/components/MassageCheckInClient";
 import { MassageTherapistsClient } from "@/systems/massage/components/MassageTherapistsClient";
 import { MassageDayScheduleClient } from "@/systems/massage/components/MassageDayScheduleClient";
 
-export type MassageDashboardTabKey = "overview" | "queue" | "checkin" | "therapists" | "schedule";
+export type { MassageDashboardTabKey };
 
-const TAB_KEYS = new Set<string>(["overview", "queue", "checkin", "therapists", "schedule"]);
-
-function parseTab(raw: string | null): MassageDashboardTabKey {
-  if (raw && TAB_KEYS.has(raw)) return raw as MassageDashboardTabKey;
-  return "overview";
-}
-
-const TAB_ITEMS: { key: MassageDashboardTabKey; label: string }[] = [
-  { key: "overview", label: "ภาพรวม" },
-  { key: "queue", label: "จัดการคิว" },
-  { key: "checkin", label: "เช็กอิน" },
-  { key: "therapists", label: "หมอนวด" },
-  { key: "schedule", label: "ตารางเวลา" },
-];
-
-function hubTabIcon(key: MassageDashboardTabKey) {
-  switch (key) {
-    case "overview":
-      return <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" />;
-    case "queue":
-      return (
-        <g>
-          <rect x="3" y="4" width="18" height="18" rx="2" />
-          <path d="M16 2v4M8 2v4M3 10h18" />
-        </g>
-      );
-    case "checkin":
-      return <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />;
-    case "therapists":
-      return (
-        <g>
-          <circle cx="9" cy="7" r="3" />
-          <path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2M16 11a3 3 0 106-3 3 3 0 00-3 3" />
-        </g>
-      );
-    case "schedule":
-      return (
-        <g>
-          <rect x="3" y="4" width="18" height="18" rx="2" />
-          <path d="M16 2v4M8 2v4M3 10h18" />
-        </g>
-      );
-    default:
-      return <circle cx="12" cy="12" r="9" />;
-  }
-}
-
-/** ปุ่มสลับแท็บแดชบอร์ด — ใช้คู่แถวหัวข้อสถิติ (ภาพรวม) หรือมุมขวาด้านบนเมื่ออยู่แท็บอื่น */
+/**
+ * §12 Dashboard hub TAB TOOLBAR (query params ?tab= queue/checkin/therapists/schedule/overview)
+ * เปลี่ยนจาก onClick → `<Link href>` (ตรง hotel/car-wash pattern)
+ * Active = brand gradient §4 single source of truth
+ */
 export function MassageDashboardTabToolbar({ className }: { className?: string }) {
-  const router = useRouter();
   const pathname = usePathname() ?? "/dashboard/massage";
   const searchParams = useSearchParams();
-
   const tab = useMemo(
-    () => parseTab(searchParams.get("tab")),
+    () => parseMassageDashboardTab(searchParams.get("tab")),
     [searchParams],
   );
-
-  const setTab = useCallback(
-    (next: MassageDashboardTabKey) => {
-      const q = new URLSearchParams(searchParams.toString());
-      if (next === "overview") q.delete("tab");
-      else q.set("tab", next);
-      const qs = q.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    },
-    [pathname, router, searchParams],
-  );
+  void tab;
 
   return (
     <nav
@@ -86,24 +45,30 @@ export function MassageDashboardTabToolbar({ className }: { className?: string }
       aria-label="แท็บแดชบอร์ดร้านนวด"
     >
       <div
-        className={`inline-flex max-w-full flex-nowrap items-center justify-end gap-1 overflow-x-auto ${massageCardSurfaceRadiusClass} border border-white/60 bg-white/40 p-1 backdrop-blur-md max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden sm:flex-wrap`}
+        className={cn(
+          massageHorizontalScrollerClass,
+          `${massageCardSurfaceRadiusClass} border border-white/60 bg-white/40 p-1 backdrop-blur-md sm:flex-wrap justify-end`,
+        )}
         role="group"
       >
-        {TAB_ITEMS.map((item) => {
-          const active = tab === item.key;
+        {MASSAGE_DASHBOARD_TAB_ITEMS.map((item) => {
+          const active = isMassageDashboardTabActive(
+            pathname,
+            item.key,
+            searchParams.get("tab"),
+            "overview",
+          );
+          const icon = massageDashboardTabIcon(item.key);
           return (
-            <button
+            <Link
               key={item.key}
-              type="button"
-              onClick={() => setTab(item.key)}
+              href={massageTabHref("dashboard", item.key)}
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               suppressHydrationWarning
               className={cn(
-                "flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-[2rem] px-2 py-2 transition-all sm:min-h-0 sm:min-w-0 sm:gap-1.5 sm:rounded-[1.25rem] sm:px-3 sm:py-1.5",
-                active
-                  ? "bg-white/80 text-[#5b61ff] shadow-sm ring-1 ring-white/80"
-                  : "text-slate-600 hover:bg-white/55 hover:text-slate-900",
+                "inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-[2rem] px-2 py-2 transition-all sm:min-h-0 sm:min-w-0 sm:gap-1.5 sm:rounded-[1rem] sm:px-3 sm:py-1.5",
+                active ? massageNavActiveGradientClass : massageNavIdleClass,
               )}
             >
               <svg
@@ -111,13 +76,15 @@ export function MassageDashboardTabToolbar({ className }: { className?: string }
                 fill="none"
                 stroke="currentColor"
                 strokeWidth={2.5}
-                className={cn("h-5 w-5 shrink-0 sm:h-4 sm:w-4", active ? "text-[#5b61ff]" : "text-slate-400")}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={cn("h-5 w-5 shrink-0 sm:h-4 sm:w-4")}
                 aria-hidden
               >
-                {hubTabIcon(item.key)}
+                {icon}
               </svg>
               <span className="hidden text-xs font-bold sm:inline">{item.label}</span>
-            </button>
+            </Link>
           );
         })}
       </div>
@@ -134,7 +101,7 @@ function MassageDashboardHubTabs({
 }) {
   const searchParams = useSearchParams();
   const tab = useMemo(
-    () => parseTab(searchParams.get("tab")),
+    () => parseMassageDashboardTab(searchParams.get("tab")),
     [searchParams],
   );
 
@@ -172,7 +139,6 @@ export function MassageDashboardHubClient({
   children,
 }: {
   initialDateKey: string;
-  /** ภาพรวม: สถิติ + คิววันนี้ (ส่งจากหน้าเซิร์ฟเวอร์) */
   children: React.ReactNode;
 }) {
   return (

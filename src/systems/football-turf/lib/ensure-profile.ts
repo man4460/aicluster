@@ -13,6 +13,9 @@ function defaultVenueSettings() {
     contactPhone: "0812345678",
     contactLine: "",
     note: "",
+    slipPaperSize: "SLIP_58",
+    portalBookingPaymentMode: "NONE",
+    depositAmountBaht: null as number | null,
   };
 }
 

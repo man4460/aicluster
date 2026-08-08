@@ -29,6 +29,8 @@ globs:
 
 **POS เครื่องดื่ม — หัวยุบ / ออเดอร์ / กริด 3 คอลัมน์ / แต้มตั้งค่าได้ / การเงินช่วงเวลา:** `.cursor/rules/drink-pos-module-dashboard-template.mdc`
 
+**หน้าการเงินข้ามโมดูล (สรุป · กรอง · กราฟ · แท็บ · สลิป · แก้ไข/ลบ + `useAppNoticePopup` · รายจ่าย):** `.cursor/rules/dashboard-finance-module-template.mdc`
+
 **ความกว้าง PageContainer / gutter:** `.cursor/rules/dashboard-page-width.mdc`
 
 ---

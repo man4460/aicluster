@@ -14,6 +14,9 @@ import {
   massagePageStackClass,
   massageSectionNextClass,
   massageStatCardClass,
+  massageStatGridClass,
+  massageSurfaceRadiusClass,
+  massageEnEyebrowLabelClass,
 } from "@/systems/massage/components/massage-ui-tokens";
 
 function formatBaht(n: number) {
@@ -61,69 +64,58 @@ export default async function MassageDashboardPage() {
       <section className={massageSectionNextClass} aria-label="สถิติวันนี้">
         <div className="flex min-w-0 flex-row items-center justify-between gap-2 sm:items-start sm:gap-4">
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-bold text-[#2e2a58]">สถิติวันนี้</h2>
-            <p className="mt-1 hidden text-xs text-[#66638c] sm:block">
-              เวลาไทย · รายรับ + ครั้งใช้บริการ
-            </p>
+            <p className={massageEnEyebrowLabelClass}>TODAY'S STATS</p>
+            <h2 className="mt-0.5 text-lg font-black text-[#2e2a58] sm:text-xl">สถิติวันนี้</h2>
           </div>
           <Suspense
             fallback={
-              <div className="h-11 w-44 shrink-0 animate-pulse rounded-[1.25rem] bg-white/30" aria-hidden />
+              <div className="h-11 w-44 shrink-0 animate-pulse rounded-[1.5rem] bg-white/30" aria-hidden />
             }
           >
             <MassageDashboardTabToolbar className="shrink-0" />
           </Suspense>
         </div>
-        <div className="mt-4 rounded-[2rem] border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/40 p-5 shadow-sm">
-          <p className="text-xs font-semibold text-emerald-800/90">รายรับวันนี้</p>
-          <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-emerald-950">
+        <div
+          className={`mt-4 ${massageSurfaceRadiusClass} border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/40 p-5 shadow-sm`}
+        >
+          <p className="text-xs font-bold text-emerald-800/90">รายรับวันนี้</p>
+          <p className="mt-2 text-3xl font-black tabular-nums tracking-tight text-emerald-950">
             {formatBaht(revenue.revenueTotalBaht)}
           </p>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#66638c]">
             <span>
               เงินสด walk-in:{" "}
-              <span className="font-semibold tabular-nums text-[#2e2a58]">{formatBaht(revenue.revenueCashBaht)}</span>
+              <span className="font-bold tabular-nums text-[#2e2a58]">{formatBaht(revenue.revenueCashBaht)}</span>
             </span>
-            <span className="hidden text-[#d8d6ec] sm:inline" aria-hidden>
-              |
-            </span>
+            <span className="hidden text-[#d8d6ec] sm:inline" aria-hidden>|</span>
             <span>
               ขายแพ็กใหม่:{" "}
-              <span className="font-semibold tabular-nums text-[#2e2a58]">
+              <span className="font-bold tabular-nums text-[#2e2a58]">
                 {formatBaht(revenue.revenueNewPackageBaht)}
               </span>
             </span>
           </div>
-          <p className="mt-2 text-[11px] leading-snug text-[#66638c]">
-            นับเฉพาะเงินสด + ขายแพ็กใหม่ · หักแพ็กไม่เพิ่มรายรับ
-          </p>
-          {revenue.cashSumOk === false ? (
-            <p className="mt-2 text-xs text-amber-800">รวมเงินสดไม่ได้ — ตรวจคอลัมน์ amount_baht</p>
-          ) : null}
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className={`mt-4 ${massageStatGridClass}`}>
           <div className={massageStatCardClass}>
-            <p className="text-xs font-medium text-[#8b87ad]">ลูกค้า (ไม่ซ้ำ)</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-[#2e2a58]">{uniqueCustomers}</p>
+            <p className="text-xs font-bold text-[#8b87ad]">ลูกค้า (ไม่ซ้ำ)</p>
+            <p className="mt-1 text-2xl font-black tabular-nums text-[#2e2a58]">{uniqueCustomers}</p>
           </div>
           <div className={massageStatCardClass}>
-            <p className="text-xs font-medium text-[#8b87ad]">ใช้แพ็ก</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-700">{packageUses}</p>
-            <p className="text-[10px] text-[#8b87ad]">หักจากแพ็ก</p>
+            <p className="text-xs font-bold text-[#8b87ad]">ใช้แพ็ก</p>
+            <p className="mt-1 text-2xl font-black tabular-nums text-emerald-700">{packageUses}</p>
           </div>
           <div className={massageStatCardClass}>
-            <p className="text-xs font-medium text-[#8b87ad]">เงินสด</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-amber-800">{cashWalkIns}</p>
-            <p className="text-[10px] text-[#8b87ad]">Walk-in</p>
+            <p className="text-xs font-bold text-[#8b87ad]">เงินสด</p>
+            <p className="mt-1 text-2xl font-black tabular-nums text-amber-800">{cashWalkIns}</p>
           </div>
           <div className={massageStatCardClass}>
-            <p className="text-xs font-medium text-[#8b87ad]">เข้าใช้รวม</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-[#4d47b6]">{logs.length}</p>
+            <p className="text-xs font-bold text-[#8b87ad]">เข้าใช้รวม</p>
+            <p className="mt-1 text-2xl font-black tabular-nums text-[#4d47b6]">{logs.length}</p>
           </div>
-          <div className={`${massageStatCardClass} col-span-2 sm:col-span-1`}>
-            <p className="text-xs font-medium text-[#8b87ad]">แพ็กคงเหลือ</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-violet-800">{subActive}</p>
-            <p className="text-[10px] text-[#8b87ad]">มียอดคงเหลือ</p>
+          <div className={`${massageStatCardClass}`}>
+            <p className="text-xs font-bold text-[#8b87ad]">แพ็กคงเหลือ</p>
+            <p className="mt-1 text-2xl font-black tabular-nums text-violet-800">{subActive}</p>
           </div>
         </div>
       </section>

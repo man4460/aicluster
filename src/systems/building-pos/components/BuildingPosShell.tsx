@@ -1,11 +1,13 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { AppUsageGuideModal } from "@/components/app-templates";
 import { appDashboardBrandGradientFillClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   BUILDING_POS_HEADER_COLLAPSE_EVENT,
+  BUILDING_POS_ORDER_HREF,
   readBuildingPosHeaderCollapsed,
   writeBuildingPosHeaderCollapsed,
 } from "@/systems/building-pos/building-pos-nav";
@@ -30,8 +32,11 @@ function HeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
 }
 
 export function BuildingPosShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname() ?? "";
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const onOrderPage =
+    pathname === BUILDING_POS_ORDER_HREF || pathname.startsWith(`${BUILDING_POS_ORDER_HREF}/`);
 
   useEffect(() => {
     const sync = () => setHeaderCollapsed(readBuildingPosHeaderCollapsed());
@@ -50,7 +55,12 @@ export function BuildingPosShell({ children }: { children: React.ReactNode }) {
 
   return (
     <BuildingPosMobileBottomProvider>
-    <div className="flex min-h-0 max-w-full flex-1 flex-col space-y-4 sm:space-y-6">
+    <div
+      className={cn(
+        "flex min-h-0 max-w-full flex-1 flex-col space-y-4 sm:space-y-6",
+        onOrderPage && "lg:h-full lg:max-h-full lg:overflow-hidden lg:space-y-3",
+      )}
+    >
       <header
         className={cn(
           buildingPosModuleGlassShellClass,
@@ -225,12 +235,12 @@ export function BuildingPosShell({ children }: { children: React.ReactNode }) {
             ),
           },
           {
-            title: "เมนู: ต้นทุน / รายจ่าย",
+            title: "เมนู: การเงิน",
             content: (
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>บันทึกค่าใช้จ่าย เช่น วัตถุดิบ ค่าแรง ค่าแพลตฟอร์ม</li>
-                <li>เทียบรายรับกับต้นทุนเพื่อดูผลกำไรจริงของร้าน</li>
-                <li>แนบหลักฐานจ่ายเงินเพื่อให้ตรวจสอบย้อนหลังได้ชัดเจน</li>
+                <li>กรองช่วงเวลาและดูกราฟรายรับเทียบรายจ่าย</li>
+                <li>สรุปตัวเลขด้านบน · การ์ดเดียวมีกรอง กราฟ และแถบประวัติ / รายรับ · รายจ่าย</li>
+                <li>แท็บรายจ่าย — จัดการหมวด บันทึกยอด หมายเหตุ และสลิป</li>
               </ul>
             ),
           },
@@ -247,7 +257,15 @@ export function BuildingPosShell({ children }: { children: React.ReactNode }) {
         ]}
       />
 
-      <div className={cn(buildingPosShellMainPaddingBottomClass, "flex min-h-0 flex-1 flex-col")}>{children}</div>
+      <div
+        className={cn(
+          buildingPosShellMainPaddingBottomClass,
+          "flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col",
+          onOrderPage && "lg:min-h-0 lg:overflow-hidden lg:pb-0",
+        )}
+      >
+        {children}
+      </div>
     </div>
     </BuildingPosMobileBottomProvider>
   );

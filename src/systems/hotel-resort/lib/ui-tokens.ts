@@ -1,14 +1,48 @@
 import { cn } from "@/lib/cn";
+import {
+  appDashboardBrandGradientBarClass,
+  appDashboardBrandGradientFillClass,
+} from "@/components/app-templates/dashboard-tokens";
 
+/**
+ * §9 Radius System 2.0 / 1.5 / 1.0 — โรงแรมมาตรฐานเดียวกันกับทุกโมดูล
+ * 3 ระดับ:
+ *   - Shell (เปลือกหลัก / Section radius): 2.0rem = rounded-[2rem]
+ *   - Surface (การ์ดย่อยๆ / stat / list): 1.5rem = rounded-[1.5rem]
+ *   - Control (input / button / badge): 1.0rem = rounded-[1rem]
+ */
+
+/** §9 Shell = 2.0rem (เปลือกหลัก — ใช้กับ Module shell / main section) */
 export const hotelResortGlassShellClass =
-  "overflow-hidden rounded-[2.5rem] max-md:rounded-2xl border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/25 to-violet-100/20 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.32),inset_0_1px_0_0_rgba(255,255,255,0.55)] backdrop-blur-2xl ring-1 ring-inset ring-white/55";
+  "overflow-hidden rounded-[2rem] border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/25 to-violet-100/20 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.32),inset_0_1px_0_0_rgba(255,255,255,0.55)] backdrop-blur-2xl ring-1 ring-inset ring-white/55";
 
-export const hotelResortMainPaddingBottomClass =
-  "max-lg:pb-[calc(12rem+env(safe-area-inset-bottom,0px))] lg:pb-0";
+/** เส้นไล่สีหัวการ์ด — ต้องมี `mt-5` ก่อนเนื้อหาใต้เส้น */
+export const hotelResortAccentBarClass = cn("h-1.5 w-full rounded-full", appDashboardBrandGradientBarClass);
 
-/** ห่อแถวสถิติ — glass เทียบคาร์แคร์ / ซักผ้า */
+/** กันเมนูล่างบังเนื้อหา — แบบ drink-pos / สนามฟุตบอล */
+export const hotelResortMainPaddingBottomClass = "pb-24 lg:pb-0";
+
+/** §9 Shell = 2.0rem (ทับ AppDashboardSection rounded-2xl ให้โค้งมาตรฐานโมดูลนี้) */
+export const hotelResortSectionRadiusClass = "!rounded-[2rem]";
+
+/** dock pill มือถือ — §9 Surface = 1.5rem (เป็น surface ไม่ใช่ shell) */
+export const hotelResortDockPillClass = "!rounded-[1.5rem]";
+
+export const hotelResortNavActiveClass = cn(
+  appDashboardBrandGradientFillClass,
+  "text-white shadow-md ring-1 ring-white/40",
+);
+
+export const hotelResortNavIdleClass =
+  "text-slate-500 hover:bg-white/45 hover:text-slate-700";
+
+/** §9 SubTabs shell: 1.25rem (control hybrid — ขนาดระหว่าง 1.0 กับ 1.5) */
+export const hotelResortFinanceSubTabShellClass =
+  "rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]";
+
+/** §9 Surface = 1.5rem (shell stats wrapper) */
 export const hotelResortStatsShellClass =
-  "rounded-[2.5rem] border border-white/55 bg-white/28 p-3 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5";
+  "rounded-[1.5rem] border border-white/55 bg-white/28 p-3 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5";
 
 export const hotelResortStatsHeaderClass =
   "text-[10px] font-black uppercase tracking-[0.2em] text-slate-400";
@@ -23,18 +57,21 @@ export const hotelResortFinanceStatsGridClass = "mt-4 grid grid-cols-2 gap-2 sm:
 
 export const hotelResortFinanceStatTailClass = "col-span-2 sm:col-span-1";
 
-/** การ์ดรายการ (ห้อง · จอง) — โทนเดียวกันทุกหน้า */
+/** §9 Surface = 1.5rem (การ์ดรายการ ห้อง / จอง — เปลี่ยนจาก rounded-xl (0.75rem) เก่า → 1.5rem ตรงกฎ */
 export const hotelResortContentCardClass =
-  "relative overflow-hidden rounded-[1.35rem] border border-white/60 bg-gradient-to-br from-white/65 via-indigo-50/25 to-violet-100/20 p-3 shadow-[0_14px_32px_-24px_rgba(30,27,75,0.28)] ring-1 ring-inset ring-white/55 backdrop-blur-xl transition-all duration-300 sm:rounded-[2rem] sm:p-4";
+  "relative overflow-hidden rounded-[1.5rem] border border-white/60 bg-gradient-to-br from-white/65 via-indigo-50/25 to-violet-100/20 p-3 shadow-[0_14px_32px_-24px_rgba(30,27,75,0.28)] ring-1 ring-inset ring-white/55 backdrop-blur-xl transition-all duration-300 sm:p-4";
 
 export const hotelResortContentCardInteractiveClass =
   "hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-22px_rgba(30,27,75,0.32)] active:scale-[0.99]";
 
 export const hotelResortContentCardSelectedClass = "border-[#5b61ff]/45 ring-[#5b61ff]/25";
 
-/** การ์ด hub QR / ลูกค้า */
+/** §9 Surface = 1.5rem (การ์ด hub QR / ลูกค้า) */
 export const hotelResortHubCardBaseClass =
-  "group w-full rounded-[2.5rem] border border-white/50 p-6 text-left shadow-[0_28px_70px_-24px_rgba(30,27,75,0.35)] backdrop-blur-2xl ring-1 ring-inset ring-white/60 transition-all duration-300 hover:-translate-y-1 sm:p-8";
+  "group w-full rounded-[1.5rem] border border-white/50 p-6 text-left shadow-[0_28px_70px_-24px_rgba(30,27,75,0.35)] backdrop-blur-2xl ring-1 ring-inset ring-white/60 transition-all duration-300 hover:-translate-y-1 sm:p-8";
+
+/** §9 Control = 1.0rem (การ์ดสถิติเดี่ยว / control level) — เปลี่ยนจาก rounded-xl (0.75rem) → 1rem */
+export const hotelResortStatCardRadiusClass = "rounded-[1rem]";
 
 export const hotelResortHubCardVioletClass = cn(
   hotelResortHubCardBaseClass,
@@ -46,28 +83,47 @@ export const hotelResortHubCardAmberClass = cn(
   "bg-gradient-to-br from-white/55 via-amber-50/35 to-orange-100/25",
 );
 
+/** §9 Control = 1.0rem (field input) — เปลี่ยนจาก rounded-xl (0.75rem) → rounded-[1rem] */
 export const hotelResortFieldClass =
-  "min-h-[44px] w-full rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 text-left text-sm text-[#2e2a58] outline-none transition backdrop-blur-sm focus:border-[#4d47b6]/50 focus:bg-white focus:ring-2 focus:ring-[#5b61ff]/20";
+  "min-h-[44px] w-full rounded-[1rem] border border-white/60 bg-white/70 px-3 py-2.5 text-left text-sm text-[#2e2a58] outline-none transition backdrop-blur-sm focus:border-[#4d47b6]/50 focus:bg-white focus:ring-2 focus:ring-[#5b61ff]/20";
 
+/** Filter chips = rounded-full (ไม่อยู่ใน control 1.0 ไม่ขัดกฎ ไม่ต้องเปลี่ยน — pill style) */
 export const hotelResortFilterChipClass = (active: boolean) =>
   active
     ? "rounded-full border border-[#5b61ff]/40 bg-[#5b61ff] px-4 py-2 text-xs font-black text-white shadow-md"
     : "rounded-full border border-white/60 bg-white/50 px-4 py-2 text-xs font-black text-[#66638c] hover:bg-white/80";
 
+/** Payment chips idle = rounded-full (ไม่ขัด) */
+export const hotelResortPaymentChipIdleClass =
+  "rounded-full border border-[#0000BF]/25 bg-white/85 px-4 py-2 text-xs font-black text-[#2e2a58] shadow-sm";
+
+export const hotelResortPaymentChipActiveClass = cn(
+  "rounded-full border-transparent px-4 py-2 text-xs font-black text-white shadow-md",
+  appDashboardBrandGradientFillClass,
+);
+
+/** §9 Control = 1.0rem (payment CTA button) — เปลี่ยนจาก rounded-xl (0.75rem) → rounded-[1rem] */
+export const hotelResortPaymentCtaClass = cn(
+  "inline-flex min-h-[40px] items-center justify-center rounded-[1rem] px-3 py-2 text-xs font-black text-white shadow-md transition active:scale-[0.99] disabled:opacity-50",
+  appDashboardBrandGradientFillClass,
+);
+
+/** §9 Control = 1.0rem (banner error/success) */
 export const hotelResortErrorBannerClass =
-  "rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm font-semibold text-rose-700";
+  "rounded-[1rem] border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm font-semibold text-rose-700";
 
 export const hotelResortSuccessBannerClass =
-  "rounded-2xl border border-emerald-200 bg-emerald-50/90 px-4 py-3 text-sm font-semibold text-emerald-800";
+  "rounded-[1rem] border border-emerald-200 bg-emerald-50/90 px-4 py-3 text-sm font-semibold text-emerald-800";
 
 export const hotelResortFormLabelClass =
   "text-[11px] font-black uppercase tracking-[0.12em] text-[#5b61ff]";
 
-/** ปุ่มไอคอนล้วนในแถวการ์ด (ไม่มีขอบ) */
+/** §9 Control = 1.0rem (icon action button) — เปลี่ยนจาก rounded-xl (0.75rem) → rounded-[1rem] */
 export const hotelResortPlainIconActionClass =
-  "inline-flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded-xl text-[#5b61ff] transition hover:bg-[#5b61ff]/[0.08] active:opacity-80";
+  "inline-flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded-[1rem] text-[#5b61ff] transition hover:bg-[#5b61ff]/[0.08] active:opacity-80";
 
-export const hotelResortSkeletonClass = "animate-pulse rounded-2xl bg-[#ecebff]/40";
+/** Skeleton = 1.0rem (เปลี่ยนจาก rounded-2xl (1rem) อยู่แล้วตรงกฎ ไม่ต้องเปลี่ยน) */
+export const hotelResortSkeletonClass = "animate-pulse rounded-[1rem] bg-[#ecebff]/40";
 
 export const hotelResortListGridClass =
   "grid grid-cols-1 items-stretch gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4";
@@ -81,7 +137,7 @@ export const hotelResortGradientPriceClass =
 export const hotelResortGradientTitleClass =
   "bg-gradient-to-r from-[#1e1b4b] via-[#4d47b6] to-[#7c66ff] bg-clip-text text-transparent";
 
-/** แถบสีซ้ายการ์ด */
+/** แถบสีซ้ายการ์ดห้อง / การจอง */
 export function hotelResortCardAccentBarClass(
   tone: "emerald" | "indigo" | "amber" | "rose" | "violet" | "sky" | "slate",
 ): string {
@@ -109,7 +165,9 @@ export const hotelResortMetaChipClass =
   "inline-flex items-center gap-1 rounded-full border border-white/60 bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-[#4d47b6] shadow-sm backdrop-blur-sm";
 
 /** อวาตาร์อักษรย่อ */
-export function hotelResortInitialAvatarClass(tone: "violet" | "amber" | "emerald" | "rose" | "sky" = "violet"): string {
+export function hotelResortInitialAvatarClass(
+  tone: "violet" | "amber" | "emerald" | "rose" | "sky" = "violet",
+): string {
   const base =
     "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-black uppercase tracking-wide text-white shadow-[0_10px_24px_-14px_rgba(30,27,75,0.55)] ring-2 ring-white/70";
   switch (tone) {
@@ -161,8 +219,10 @@ export function hotelResortPaymentStatusBadgeClass(status: "UNPAID" | "PARTIAL" 
   }
 }
 
-/** ไอคon badge ใน stat card */
-export function hotelResortStatIconBadgeClass(tone: "slate" | "indigo" | "violet" | "emerald" | "amber" | "rose"): string {
+/** ไอคอน badge ใน stat card */
+export function hotelResortStatIconBadgeClass(
+  tone: "slate" | "indigo" | "violet" | "emerald" | "amber" | "rose" | string = "indigo",
+): string {
   const base = "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-md";
   switch (tone) {
     case "slate":
@@ -177,5 +237,7 @@ export function hotelResortStatIconBadgeClass(tone: "slate" | "indigo" | "violet
       return `${base} bg-gradient-to-br from-amber-400 to-orange-500 shadow-amber-200/50`;
     case "rose":
       return `${base} bg-gradient-to-br from-rose-400 to-pink-500 shadow-rose-200/50`;
+    default:
+      return `${base} bg-gradient-to-br from-[#5b61ff] to-indigo-600 shadow-indigo-200/50`;
   }
 }

@@ -33,14 +33,17 @@ const EMPTY_SETTINGS: FootballTurfVenueSettings = {
   contactPhone: "",
   contactLine: "",
   note: "",
+  slipPaperSize: "SLIP_58",
+  portalBookingPaymentMode: "NONE",
+  depositAmountBaht: null,
 };
 
 function bookingStatusLabel(status: FootballTurfBooking["status"]) {
-  if (status === "CHECKED_IN") return "เช็กอินแล้ว";
-  if (status === "PLAYING") return "กำลังใช้งาน";
-  if (status === "COMPLETED") return "ปิดรอบแล้ว";
+  if (status === "CHECKED_IN") return "เช็กอิน";
+  if (status === "PLAYING") return "เช็กอิน";
+  if (status === "COMPLETED") return "เช็กเอาท์";
   if (status === "CANCELLED") return "ยกเลิก";
-  return "จองแล้ว";
+  return "จอง";
 }
 
 function bookingStatusTone(status: FootballTurfBooking["status"]) {

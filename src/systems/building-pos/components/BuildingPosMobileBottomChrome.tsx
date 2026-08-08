@@ -18,7 +18,14 @@ export function useBuildingPosMobileDraftSlot() {
   return ctx?.setMobileBottomSlot ?? ((_n: ReactNode | null) => {});
 }
 
-export function BuildingPosMobileBottomProvider({ children }: { children: ReactNode }) {
+export function BuildingPosMobileBottomProvider({
+  children,
+  /** แถบเมนูพอร์ทัลพนักงาน (มือถือ) — แสดงใน pill ล่าง */
+  staffFooterNav,
+}: {
+  children: ReactNode;
+  staffFooterNav?: ReactNode;
+}) {
   const [slot, setSlot] = useState<ReactNode | null>(null);
   const setMobileBottomSlot = useCallback((n: ReactNode | null) => {
     setSlot(n);
@@ -28,14 +35,32 @@ export function BuildingPosMobileBottomProvider({ children }: { children: ReactN
   return (
     <BuildingPosMobileBottomContext.Provider value={api}>
       {children}
-      <BuildingPosMobileUnifiedBar slot={slot} />
+      <BuildingPosMobileUnifiedBar slot={slot} staffFooterNav={staffFooterNav} />
     </BuildingPosMobileBottomContext.Provider>
   );
 }
 
-function BuildingPosMobileUnifiedBar({ slot }: { slot: ReactNode | null }) {
+/** การ์ดล่างเดียว: โซนสล็อต (รายการรอ) + เมนู — อิงระยะแบบคาร์แคร์ / drink-pos */
+function BuildingPosMobileUnifiedBar({
+  slot,
+  staffFooterNav,
+}: {
+  slot: ReactNode | null;
+  staffFooterNav?: ReactNode;
+}) {
   const pathname = usePathname() ?? "";
-  if (!isBuildingPosModulePath(pathname)) return null;
+  const onDashboard = isBuildingPosModulePath(pathname);
+  const onStaffPortal = pathname.startsWith("/building-pos/staff");
+  if (!onDashboard && !onStaffPortal) return null;
+
+  if (onStaffPortal) {
+    if (!staffFooterNav && !slot) return null;
+    return (
+      <AppMobileDockUnifiedBar ariaLabel="เมนูพนักงานร้านอาหาร" slot={slot}>
+        {staffFooterNav ?? <span className="sr-only">พนักงานร้านอาหาร</span>}
+      </AppMobileDockUnifiedBar>
+    );
+  }
 
   return (
     <AppMobileDockUnifiedBar ariaLabel="เมนูล่าง POS ร้านอาหาร" slot={slot}>

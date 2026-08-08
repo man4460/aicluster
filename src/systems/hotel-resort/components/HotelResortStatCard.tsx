@@ -37,7 +37,7 @@ export function HotelResortStatCard({
   return (
     <li
       className={cn(
-        "relative list-none overflow-hidden rounded-[1.35rem] border p-3 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.38)] sm:rounded-[2rem] sm:p-5",
+        "relative list-none overflow-hidden rounded-xl border p-3 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.38)] sm:p-5",
         toneStyles[tone],
         className,
       )}

@@ -1,3 +1,5 @@
+import type { AppSlipPaperSize } from "@/components/app-templates/slip-print";
+
 export type FootballTurfBookingStatus =
   | "BOOKED"
   | "CHECKED_IN"
@@ -18,6 +20,7 @@ export type FootballTurfCourt = {
   slotMinutes: number;
   weekdayPrice: number;
   weekendPrice: number;
+  imageUrl: string;
   isActive: boolean;
 };
 
@@ -45,6 +48,8 @@ export type FootballTurfBooking = {
   createdAt: string;
 };
 
+export type FootballTurfPortalBookingPaymentMode = "NONE" | "DEPOSIT" | "FULL";
+
 export type FootballTurfVenueSettings = {
   venueName: string;
   venueSubtitle: string;
@@ -57,6 +62,11 @@ export type FootballTurfVenueSettings = {
   contactPhone: string;
   contactLine: string;
   note: string;
+  slipPaperSize: AppSlipPaperSize;
+  /** การชำระตอนจองจากลิงก์ลูกค้า */
+  portalBookingPaymentMode: FootballTurfPortalBookingPaymentMode;
+  /** จำนวนมัดจำ (บาท) เมื่อโหมด DEPOSIT */
+  depositAmountBaht: number | null;
 };
 
 export type FootballTurfPromotion = {

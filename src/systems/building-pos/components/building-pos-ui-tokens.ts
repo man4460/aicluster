@@ -33,16 +33,19 @@ export const buildingPosChipActiveClass = cn(
   appDashboardBrandGradientFillClass,
 );
 
-/** พื้นที่เลื่อนเนื้อหา — ไม่ให้ถูก dock (+ สล็อตร่างบิล) บัง (มือถือ) */
+/** พื้นที่เลื่อนเนื้อหาแดชบอร์ด — ไม่ให้ถูก dock (+ สล็อตร่างบิล) บัง (มือถือ) */
 export const buildingPosShellMainPaddingBottomClass =
   "max-lg:pb-[max(11rem,8rem+env(safe-area-inset-bottom,0px))] lg:pb-0";
 
-/** กริดการ์ดเมนูหน้าออร์เดอร์ — มือถือ 3 คอลัมน์ แบบ drink-pos */
-export const buildingPosProductGridClass =
-  "grid grid-cols-3 gap-1.5 sm:grid-cols-3 sm:gap-2 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8";
+/** พอร์ทัลพนักงาน — เคลียร์แค่แถบแท็บล่าง (เทียบ drink-pos `pb-24`) ไม่เว้นที่สล็อตร่างบิลแดชบอร์ด */
+export const buildingPosStaffPortalPaddingBottomClass = "pb-24 lg:pb-0";
 
+/** กริดการ์ดเมนูหน้าออร์เดอร์ — ใช้คู่กับคลาส `bp-order-menu-grid` ใน globals.css (มือถือ 3 คอลัมน์บังคับ) */
+export const buildingPosProductGridClass = "bp-order-menu-grid";
+
+/** การ์ดเมนู — มือถือแน่น (3 คอลัมน์) · มุมโค้งเล็กลง · เดสก์ท็อปมนขึ้น */
 export const buildingPosProductCardClass =
-  "group relative flex flex-col overflow-hidden rounded-[1.25rem] border border-white/70 bg-gradient-to-br from-white/85 via-white/70 to-violet-50/45 shadow-sm ring-1 ring-inset ring-white/55 backdrop-blur-md transition hover:-translate-y-0.5 hover:shadow-md";
+  "group relative flex min-w-0 flex-col overflow-hidden rounded-lg border border-white/70 bg-gradient-to-br from-white/85 via-white/70 to-violet-50/45 shadow-sm ring-1 ring-inset ring-white/55 backdrop-blur-md transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-xl lg:rounded-[1.25rem]";
 
 export const buildingPosCtaClass = cn(
   "inline-flex min-h-[40px] items-center justify-center rounded-xl px-3 py-2 text-xs font-black text-white shadow-md transition active:scale-[0.99] disabled:opacity-50",
@@ -76,6 +79,9 @@ export const buildingPosContentPanelClass =
 /** แถบแท็บย่อย (เทียบแพ็กเกจ/สมาชิกบาร์เบอร์ / offers คาร์แคร์) */
 export const buildingPosSubTabSegmentShellClass =
   "rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]";
+
+/** แถบเมนูการเงินในการ์ดรายละเอียด (ประวัติ · รายรับ · รายจ่าย) — แบบโรงแรม */
+export const buildingPosFinanceSubTabShellClass = buildingPosSubTabSegmentShellClass;
 
 /** การ์ดย่อยในแดชบอร์ด (โต๊ะค้าง ฯลฯ) */
 export const buildingPosInnerCardRadiusClass = "rounded-[1.25rem]";

@@ -3,21 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { buildingPosOwnerFromAuth } from "@/lib/building-pos/api-owner";
 import { formatBuildingPosDbError, jsonBuildingPosError } from "@/lib/building-pos/route-errors";
+import { STAFF_LINK_PERMANENT_SESSION_ID } from "@/lib/modules/permanent-staff-link";
 import { decryptStaffTokenFromStorage, encryptStaffTokenForStorage } from "@/lib/building-pos/staff-token-cipher";
 import { generatePlainStaffToken, hashStaffToken } from "@/lib/building-pos/staff-token";
-import { getBuildingPosDataScope } from "@/lib/trial/module-scopes";
-import { normalizeAppPublicBase } from "@/lib/url/normalize-app-public-base";
-
-function absoluteOrigin(req: Request): string {
-  const envRaw = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
-  if (envRaw && (envRaw.startsWith("http://") || envRaw.startsWith("https://"))) {
-    return normalizeAppPublicBase(envRaw);
-  }
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-  if (!host) return "";
-  const proto = req.headers.get("x-forwarded-proto") ?? "https";
-  return `${proto}://${host}`;
-}
+import { buildStaffPortalUrl } from "@/lib/url/staff-link-origin";
 
 export async function GET(req: Request) {
   try {
@@ -25,13 +14,44 @@ export async function GET(req: Request) {
     if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const own = await buildingPosOwnerFromAuth(auth.session.sub);
     if (!own.ok) return own.response;
-    const scope = await getBuildingPosDataScope(own.ownerId);
-    const row = await prisma.buildingPosStaffLink.findUnique({
+    const ownerId = own.ownerId;
+    let row = await prisma.buildingPosStaffLink.findUnique({
       where: {
-        ownerUserId_trialSessionId: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
+        ownerUserId_trialSessionId: {
+          ownerUserId: ownerId,
+          trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID,
+        },
       },
-      select: { id: true, tokenCipher: true },
+      select: { id: true, tokenCipher: true, tokenHash: true },
     });
+    if (!row) {
+      const legacy = await prisma.buildingPosStaffLink.findFirst({
+        where: { ownerUserId: ownerId, NOT: { trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID } },
+        orderBy: { updatedAt: "desc" },
+        select: { tokenCipher: true, tokenHash: true },
+      });
+      if (legacy?.tokenHash) {
+        row = await prisma.buildingPosStaffLink.upsert({
+          where: {
+            ownerUserId_trialSessionId: {
+              ownerUserId: ownerId,
+              trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID,
+            },
+          },
+          create: {
+            ownerUserId: ownerId,
+            trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID,
+            tokenHash: legacy.tokenHash,
+            tokenCipher: legacy.tokenCipher,
+          },
+          update: {
+            tokenHash: legacy.tokenHash,
+            tokenCipher: legacy.tokenCipher,
+          },
+          select: { id: true, tokenCipher: true, tokenHash: true },
+        });
+      }
+    }
     if (!row) {
       return NextResponse.json({ configured: false as const, url: null as string | null });
     }
@@ -40,10 +60,12 @@ export async function GET(req: Request) {
       try {
         const plain = decryptStaffTokenFromStorage(row.tokenCipher.trim());
         if (plain) {
-          const origin = absoluteOrigin(req);
-          const qs = new URLSearchParams({ t: scope.trialSessionId, k: plain });
-          const path = `/building-pos/staff/${encodeURIComponent(own.ownerId)}?${qs.toString()}`;
-          url = origin ? `${origin}${path}` : path;
+          url = buildStaffPortalUrl({
+            req,
+            pathPrefix: "/building-pos/staff",
+            ownerId,
+            plainToken: plain,
+          });
         }
       } catch {
         /* cipher ไม่พร้อม (เช่น ไม่มี AUTH_SECRET) — ไม่ส่ง url */
@@ -56,14 +78,14 @@ export async function GET(req: Request) {
   }
 }
 
-/** สร้างหรือหมุนโทเค็น — ส่งกลับ URL + โทเค็นแบบ plain ครั้งเดียว */
+/** สร้างหรือหมุนโทเค็น — ส่งกลับ URL ถาวร (ไม่มีวันหมดอายุ) */
 export async function POST(req: Request) {
   try {
     const auth = await requireSession();
     if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const own = await buildingPosOwnerFromAuth(auth.session.sub);
     if (!own.ok) return own.response;
-    const scope = await getBuildingPosDataScope(own.ownerId);
+    const ownerId = own.ownerId;
     const plain = generatePlainStaffToken();
     const tokenHash = hashStaffToken(plain);
     let tokenCipher: string;
@@ -78,23 +100,25 @@ export async function POST(req: Request) {
     }
     await prisma.buildingPosStaffLink.upsert({
       where: {
-        ownerUserId_trialSessionId: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
+        ownerUserId_trialSessionId: {
+          ownerUserId: ownerId,
+          trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID,
+        },
       },
       create: {
-        ownerUserId: own.ownerId,
-        trialSessionId: scope.trialSessionId,
+        ownerUserId: ownerId,
+        trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID,
         tokenHash,
         tokenCipher,
       },
       update: { tokenHash, tokenCipher },
     });
-    const origin = absoluteOrigin(req);
-    const qs = new URLSearchParams({
-      t: scope.trialSessionId,
-      k: plain,
+    const url = buildStaffPortalUrl({
+      req,
+      pathPrefix: "/building-pos/staff",
+      ownerId,
+      plainToken: plain,
     });
-    const path = `/building-pos/staff/${encodeURIComponent(own.ownerId)}?${qs.toString()}`;
-    const url = origin ? `${origin}${path}` : path;
     return NextResponse.json({ url });
   } catch (e) {
     console.error("[building-pos/session/staff-link POST]", e);

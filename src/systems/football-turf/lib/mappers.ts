@@ -13,6 +13,8 @@ import type {
   FootballTurfPromotionSale,
   FootballTurfVenueSettings,
 } from "@/systems/football-turf/lib/types";
+import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
+import { normalizeFootballTurfPortalPaymentMode } from "@/systems/football-turf/lib/portal-booking";
 import type {
   FootballTurfBooking as DbBooking,
   FootballTurfCostCategory as DbCostCategory,
@@ -45,6 +47,9 @@ export function mapProfileToSettings(row: DbProfile): FootballTurfVenueSettings 
     contactPhone: row.contactPhone,
     contactLine: row.contactLine,
     note: row.note,
+    slipPaperSize: normalizeModuleSlipPaperSize(row.slipPaperSize),
+    portalBookingPaymentMode: normalizeFootballTurfPortalPaymentMode(row.portalBookingPaymentMode),
+    depositAmountBaht: row.depositAmountBaht ?? null,
   };
 }
 
@@ -57,6 +62,7 @@ export function mapCourt(row: DbCourt): FootballTurfCourt {
     slotMinutes: row.slotMinutes,
     weekdayPrice: row.weekdayPrice,
     weekendPrice: row.weekendPrice,
+    imageUrl: row.imageUrl ?? "",
     isActive: row.isActive,
   };
 }

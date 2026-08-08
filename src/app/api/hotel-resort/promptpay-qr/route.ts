@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildPromptPayQrDataUrl } from "@/lib/dormitory/promptpay-qr-image";
-import { HOTEL_RESORT_MODULE_SLUG } from "@/lib/modules/config";
-import { resolveModulePayment } from "@/lib/module-shop/resolve-module-payment";
-import { withHotelResortOwnerContext } from "@/systems/hotel-resort/lib/api-auth";
+import { prisma } from "@/lib/prisma";
+import { withHotelResortOwnerOrStaffContext } from "@/systems/hotel-resort/lib/api-auth";
+import { ensureHotelResortProfile } from "@/systems/hotel-resort/lib/ensure-profile";
 
 const bodySchema = z.object({
-  amount: z.number().finite().positive().max(9_999_999.99),
+  amount: z.number().finite().positive().max(9_999_999.99).optional(),
+  amountBaht: z.number().finite().positive().max(9_999_999.99).optional(),
 });
 
+/** QR พร้อมเพย์ + ข้อมูลบัญชีโอนจากโปรไฟล์โรงแรม */
 export async function POST(req: Request) {
-  const auth = await withHotelResortOwnerContext();
+  const auth = await withHotelResortOwnerOrStaffContext(req);
   if (!auth.ok) return auth.res;
+  const { ownerUserId, trialSessionId } = auth.ctx;
 
   let json: unknown;
   try {
@@ -23,17 +26,45 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "จำนวนเงินไม่ถูกต้อง" }, { status: 400 });
   }
-
-  const payment = await resolveModulePayment(
-    auth.ctx.ownerUserId,
-    auth.ctx.trialSessionId,
-    HOTEL_RESORT_MODULE_SLUG,
-  );
-  const phone = payment.promptPayPhone?.trim() ?? "";
-  if (phone.replace(/\D/g, "").length < 9) {
-    return NextResponse.json({ qrDataUrl: null, configured: false });
+  const amount = parsed.data.amountBaht ?? parsed.data.amount;
+  if (amount == null) {
+    return NextResponse.json({ error: "จำนวนเงินไม่ถูกต้อง" }, { status: 400 });
   }
 
-  const qrDataUrl = await buildPromptPayQrDataUrl(phone, parsed.data.amount);
-  return NextResponse.json({ qrDataUrl, configured: true });
+  await ensureHotelResortProfile(prisma, ownerUserId, trialSessionId);
+  const profile = await prisma.hotelResortProfile.findUnique({
+    where: { ownerUserId_trialSessionId: { ownerUserId, trialSessionId } },
+    select: {
+      propertyName: true,
+      promptPayPhone: true,
+      bankName: true,
+      bankAccountNumber: true,
+      bankAccountName: true,
+    },
+  });
+
+  const phone = profile?.promptPayPhone?.trim() ?? "";
+  const digits = phone.replace(/\D/g, "");
+  const bankPayload = {
+    promptPayPhone: phone || null,
+    bankName: profile?.bankName ?? null,
+    bankAccountNumber: profile?.bankAccountNumber ?? null,
+    bankAccountName: profile?.bankAccountName ?? null,
+    shopName: profile?.propertyName ?? null,
+  };
+
+  if (digits.length < 9) {
+    return NextResponse.json({
+      qrDataUrl: null as string | null,
+      configured: false,
+      ...bankPayload,
+    });
+  }
+
+  const qrDataUrl = await buildPromptPayQrDataUrl(phone, amount);
+  return NextResponse.json({
+    qrDataUrl,
+    configured: Boolean(qrDataUrl),
+    ...bankPayload,
+  });
 }

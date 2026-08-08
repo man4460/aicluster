@@ -462,13 +462,15 @@ async function main() {
   }
 
   /**
-   * บัญชีที่ได้รับข้อมูลตัวอย่างจาก seed — **เฉพาะบัญชี user demo** เท่านั้น
-   * - **ห้ามใส่ `admin@mawell.local`** — แอดมินไม่ควรมีข้อมูลตัวอย่างของแต่ละโมดูล
-   *   เพราะแอดมินใช้ทดสอบสิทธิ์/หลังบ้าน ไม่ใช่ผู้ใช้จริง และเข้าได้ทุกโมดูลผ่าน BUFFET อยู่แล้ว
-   *   (ดูกฎ `.cursor/rules/seed-demo-data-skip-admin.mdc`)
+   * บัญชีที่ได้รับข้อมูลตัวอย่างจาก seed — บัญชี demo user + **แอดมิน dev account**
+   * - [2026-08-07 UPDATE ตามคำขอ user โดยตรง: "ช่วยเพิ่มข้อมูลตัวอย่างให้แอดมินหน่อย"]
+   *   เพิ่ม `admin@mawell.local` เข้า list — ให้แอดมินเข้า preview UI ทุกโมดูลแล้ว stat cards ไม่เป็น 0 หมด
+   *   (เหมาะสำหรับ dev/local seed เท่านั้น ใช้ design / UX signoff;
+   *    หากย้ายไป production ควรเอา admin ออกจาก list นี้ 1 ค่า)
    * - หน้าแดชบอร์ดหลักของ user จะแสดงการ์ดโมดูลเฉพาะที่ subscribe → seed ต้องสมัครให้อัตโนมัติด้วย
    */
   const demoSeedDataOwnerEmails = [
+    "admin@mawell.local",
     "user@mawell.local.com",
     "user@mawell.local",
   ] as const;
@@ -837,6 +839,22 @@ async function main() {
     });
     if (row) {
       await tryDemoSeed(`hotel-resort (${email})`, () => seedHotelResortProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /**
+   * โรงแรม / รีสอร์ท — ตัวอย่างให้แอดมินดูภาพรวมโมดูล
+   * แอดมิน BUFFET เข้าโมดูลได้โดยไม่ต้อง subscribe
+   */
+  {
+    const adminRow = await prisma.user.findUnique({
+      where: { email: "admin@mawell.local" },
+      select: { id: true },
+    });
+    if (adminRow) {
+      await tryDemoSeed(`hotel-resort (admin@mawell.local)`, () =>
+        seedHotelResortProdDemoForOwner(prisma, adminRow.id),
+      );
     }
   }
 

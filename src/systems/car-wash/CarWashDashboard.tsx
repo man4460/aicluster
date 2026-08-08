@@ -16,13 +16,19 @@ import {
   AppUsageGuideModal,
   appMobileDockGridClass,
   useAppImageLightbox,
+  useAppSlipPaperSize,
 } from "@/components/app-templates";
 import {
+  CAR_WASH_HEADER_COLLAPSE_EVENT,
   CAR_WASH_SETTINGS_PATH,
   CAR_WASH_TAB_ITEMS,
+  carWashTabHref,
   carWashTabIcon,
+  isCarWashTabActive,
   parseCarWashTab,
+  readCarWashHeaderCollapsed,
   type CarWashTabKey,
+  writeCarWashHeaderCollapsed,
 } from "@/systems/car-wash/car-wash-module-nav";
 import {
   createShopQrPosterCanvas,
@@ -35,7 +41,6 @@ import { StaffQrLandingShell } from "@/components/qr/staff-qr-landing-shell";
 import { ShopStaffQrPanel } from "@/components/qr/shop-staff-qr-panel";
 import { cn } from "@/lib/cn";
 import {
-  CAR_WASH_HEADER_COLLAPSED_KEY,
   carWashAccentBarClass,
   carWashContentStackClass,
   carWashCtaClass,
@@ -95,6 +100,18 @@ import {
 
 type TabKey = CarWashTabKey;
 type OffersListTabKey = "packages" | "bundles";
+
+function CarWashHeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
+      {collapsed ? (
+        <path d="M4 8h16M4 12h16M4 16h10" strokeLinecap="round" />
+      ) : (
+        <path d="M4 6h16M4 12h16M4 18h10" strokeLinecap="round" />
+      )}
+    </svg>
+  );
+}
 
 function CarWashStat({
   title,
@@ -233,21 +250,25 @@ export function CarWashDashboard({
   const [loading, setLoading] = useState(true);
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
-  const [headerPrefHydrated, setHeaderPrefHydrated] = useState(false);
 
   useEffect(() => {
     if (!isStaffLaneOnly) setTabState(tabFromUrl);
   }, [tabFromUrl, isStaffLaneOnly]);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(CAR_WASH_HEADER_COLLAPSED_KEY);
-      if (raw === "1") setHeaderCollapsed(true);
-    } catch {
-      /* no-op */
-    }
-    setHeaderPrefHydrated(true);
+    const sync = () => setHeaderCollapsed(readCarWashHeaderCollapsed());
+    sync();
+    window.addEventListener(CAR_WASH_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(CAR_WASH_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
   }, []);
+
+  const toggleHeader = useCallback(() => {
+    writeCarWashHeaderCollapsed(!headerCollapsed);
+  }, [headerCollapsed]);
 
   const setTab = useCallback(
     (key: TabKey) => {
@@ -1007,8 +1028,9 @@ export function CarWashDashboard({
   }
 
   const resolvedLogoForBundlePrint = useMemo(() => resolveAssetUrl(logoUrl, baseUrl), [logoUrl, baseUrl]);
+  const { paper: slipPaper } = useAppSlipPaperSize();
 
-  function printBundleSlipDashboard(b: WashBundle, paper: PosTablePaperSize) {
+  function printBundleSlipDashboard(b: WashBundle, paper: PosTablePaperSize = slipPaper) {
     const printedAt = new Date().toLocaleString("th-TH", {
       timeZone: "Asia/Bangkok",
       hour12: false,
@@ -1206,8 +1228,8 @@ export function CarWashDashboard({
       )}
     >
       {!isStaffLaneOnly ? (
-        <div className={carWashShellWrapperClass}>
-          <header>
+        <header className={cn(carWashShellWrapperClass, headerCollapsed && "hidden")}>
+          <div>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3">
@@ -1230,44 +1252,14 @@ export function CarWashDashboard({
               <div className={carWashHeaderToolbarGroupClass}>
                 <button
                   type="button"
-                  onClick={() => {
-                    const next = !headerCollapsed;
-                    setHeaderCollapsed(next);
-                    try { localStorage.setItem(CAR_WASH_HEADER_COLLAPSED_KEY, next ? "1" : "0"); } catch { /* no-op */ }
-                  }}
+                  onClick={toggleHeader}
                   className={cn("inline-flex", carWashHeaderCollapseBtnClass)}
-                  aria-label={headerCollapsed ? "แสดงเมนูหัวโมดูล" : "ซ่อนเมนูหัวโมดูล"}
-                  aria-expanded={headerCollapsed ? "false" : "true"}
-                  aria-controls="cw-desktop-nav-section"
+                  aria-label={headerCollapsed ? "แสดงหัวโมดูล" : "ซ่อนหัวโมดูล"}
+                  aria-pressed={headerCollapsed}
+                  title={headerCollapsed ? "แสดงหัวโมดูล" : "ซ่อนหัวโมดูล"}
                   suppressHydrationWarning
                 >
-                  {headerPrefHydrated ? (
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className={cn("h-4 w-4 transition-transform duration-200", headerCollapsed ? "rotate-180" : "")}
-                      aria-hidden
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  ) : (
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-4 w-4"
-                      aria-hidden
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  )}
+                  <CarWashHeaderCollapseGlyph collapsed={false} />
                 </button>
                 <button
                   type="button"
@@ -1283,53 +1275,50 @@ export function CarWashDashboard({
                 </button>
               </div>
             </div>
-          </header>
+          </div>
 
           <div className="mt-5">
             <div className={carWashAccentBarClass} aria-hidden />
           </div>
 
-          {!headerCollapsed ? (
-            <nav
-              id="cw-desktop-nav-section"
-              aria-label="เมนูคาร์แคร์"
-              className="mt-5 hidden border-t border-white/40 pt-5 lg:block print:hidden"
-            >
-              <ul className="flex gap-1">
-                {tabItems.map((item) => {
-                  const active = tab === item.key;
-                  return (
-                    <li key={item.key} className="flex-1">
-                      <button
-                        type="button"
-                        onClick={() => setTab(item.key)}
-                        className={cn(
-                          "flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-black transition-all min-h-[44px]",
-                          active ? carWashNavActiveClass : carWashNavIdleClass,
-                        )}
+          <nav
+            aria-label="เมนูคาร์แคร์"
+            className="mt-5 hidden border-t border-white/40 pt-5 lg:block print:hidden"
+          >
+            <ul className="flex gap-1">
+              {tabItems.map((item) => {
+                const active = isCarWashTabActive(pathname, item.key, searchParams.get("tab")) || tab === item.key;
+                return (
+                  <li key={item.key} className="flex-1 min-w-0">
+                    <Link
+                      href={carWashTabHref(item.key)}
+                      className={cn(
+                        "flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-black transition-all min-h-[44px]",
+                        active ? carWashNavActiveClass : carWashNavIdleClass,
+                      )}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                        className={cn("h-4 w-4 shrink-0", active ? "text-white/95" : "text-slate-400")}
+                        aria-hidden
                       >
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth={2.5}
-                          className={cn("h-4 w-4", active ? "text-white/95" : "text-slate-400")}
-                          aria-hidden
-                        >
-                          {carWashTabIcon(item.key)}
-                        </svg>
-                        {item.label}
-                      </button>
-                    </li>
-                  );
-                })}
-                {moduleShopSettingsDesktopNavItem(
-                  <ModuleShopSettingsDesktopNavLink href={CAR_WASH_SETTINGS_PATH} active={false} />,
-                )}
-              </ul>
-            </nav>
-          ) : null}
-        </div>
+                        {carWashTabIcon(item.key)}
+                      </svg>
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
+              {moduleShopSettingsDesktopNavItem(
+                <ModuleShopSettingsDesktopNavLink href={CAR_WASH_SETTINGS_PATH} active={false} />,
+              )}
+            </ul>
+          </nav>
+        </header>
       ) : null}
 
       {!isStaffLaneOnly ? (
@@ -2046,7 +2035,7 @@ export function CarWashDashboard({
                   </PopupIconButton>
                   <PopupIconButton
                     label="พิมพ์ใบ"
-                    onClick={() => printBundleSlipDashboard(b, "SLIP_80")}
+                    onClick={() => printBundleSlipDashboard(b)}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                       <polyline points="6 9 6 2 18 2 18 9" />
@@ -3046,7 +3035,7 @@ export function CarWashDashboard({
 
       <FormModal
         open={showStaffQrModal}
-        size="lg"
+        size="full"
         appearance="glass"
         glassTint="amber"
         mobileCentered

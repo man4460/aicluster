@@ -1,21 +1,30 @@
 "use client";
 
-import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarDays, CheckCircle2, Clock3, CreditCard, Landmark, Phone, ReceiptText, Upload, Users } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CalendarDays, CheckCircle2, Clock3, CreditCard, Landmark, Phone, ReceiptText, Users } from "lucide-react";
 import {
+  AppGalleryCameraFileInputs,
+  AppImageLightbox,
+  AppImagePickCameraButtons,
+  AppImageThumb,
   AppPublicCheckInGlassPage,
   appPublicCheckInGlassCardClass,
   prepareImageFileAsDataUrl,
+  useAppCameraCapture,
+  useAppImageLightbox,
 } from "@/components/app-templates";
 import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import { cn } from "@/lib/cn";
+import { footballTurfPublicBookingUrl } from "@/lib/football-turf/public-url";
 import {
   type FootballTurfBooking,
   type FootballTurfCourt,
   type FootballTurfVenueSettings,
   createFootballTurfRepository,
 } from "@/systems/football-turf/football-turf-service";
+import { footballTurfComputePortalPayDue } from "@/systems/football-turf/lib/portal-booking";
 import {
   isBookingTimePassed,
   isSlotOpenForBooking,
@@ -27,6 +36,18 @@ import {
   minutesToTime,
   timeToMinutes,
 } from "@/systems/football-turf/lib/time-queue";
+
+type PortalPayQr = {
+  qrDataUrl: string | null;
+  configured: boolean;
+  promptpayNumber?: string | null;
+  bankName?: string | null;
+  accountNumber?: string | null;
+  accountName?: string | null;
+  shopName?: string | null;
+};
+
+const SLIP_PROOF_MESSAGE = "กรุณาอัปโหลดสลิป เพื่อเป็นหลักฐานการชำระเงินจอง";
 
 function buildCourtTimeline(
   court: FootballTurfCourt,
@@ -77,6 +98,9 @@ const EMPTY_SETTINGS: FootballTurfVenueSettings = {
   contactPhone: "",
   contactLine: "",
   note: "",
+  slipPaperSize: "SLIP_58",
+  portalBookingPaymentMode: "NONE",
+  depositAmountBaht: null,
 };
 
 const FOOTBALL_TURF_MODULE_NAME = "สนามฟุตบอล";
@@ -92,12 +116,20 @@ export function FootballTurfBookingPortalClient({
     () => createFootballTurfRepository({ mode: "public", ownerId, trialSessionId }),
     [ownerId, trialSessionId],
   );
+  const router = useRouter();
   const [courts, setCourts] = useState<FootballTurfCourt[]>([]);
   const [bookings, setBookings] = useState<FootballTurfBooking[]>([]);
   const [settings, setSettings] = useState<FootballTurfVenueSettings>(EMPTY_SETTINGS);
   const [message, setMessage] = useState("");
   const [uploadingSlip, setUploadingSlip] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [liveClockMs, setLiveClockMs] = useState(() => Date.now());
+  const [payQr, setPayQr] = useState<PortalPayQr | null>(null);
+  const [payQrBusy, setPayQrBusy] = useState(false);
+  const [payQrErr, setPayQrErr] = useState<string | null>(null);
+  const slipGalleryRef = useRef<HTMLInputElement>(null);
+  const { openCamera, cameraInputRef, cameraModal } = useAppCameraCapture({ title: "ถ่ายรูปสลิป" });
+  const lb = useAppImageLightbox();
   const [form, setForm] = useState({
     courtId: "1",
     bookingDate: localDateKey(),
@@ -198,18 +230,83 @@ export function FootballTurfBookingPortalClient({
     const isWeekend = [0, 6].includes(day.getDay());
     return isWeekend ? selectedCourt.weekendPrice : selectedCourt.weekdayPrice;
   }, [form.bookingDate, selectedCourt]);
+  const payDueBaht = useMemo(
+    () =>
+      footballTurfComputePortalPayDue({
+        mode: settings.portalBookingPaymentMode ?? "NONE",
+        depositAmountBaht: settings.depositAmountBaht,
+        totalBaht: bookingPrice,
+      }),
+    [bookingPrice, settings.depositAmountBaht, settings.portalBookingPaymentMode],
+  );
+  const requiresPortalPay = payDueBaht != null && payDueBaht > 0;
   const moduleVenueLine = settings.venueName.trim() || settings.venueSubtitle.trim() || "สนามหญ้าเทียม";
-  const transferSavedForPreviousBooking =
-    form.paymentMethod === "TRANSFER" &&
-    !form.paymentSlipDataUrl &&
-    message.includes("แนบสลิปเรียบร้อยแล้ว");
   const canSubmit = Boolean(
     selectedCourt &&
       selectedSlot &&
       form.customerName.trim() &&
       form.customerPhone.trim() &&
-      (form.paymentMethod !== "TRANSFER" || form.paymentSlipDataUrl),
+      (!requiresPortalPay || (form.paymentMethod === "TRANSFER" && form.paymentSlipDataUrl)) &&
+      !submitting &&
+      !uploadingSlip,
   );
+
+  useEffect(() => {
+    if (!requiresPortalPay || form.paymentMethod !== "TRANSFER" || !payDueBaht) {
+      setPayQr(null);
+      setPayQrErr(null);
+      return;
+    }
+    let cancelled = false;
+    setPayQrBusy(true);
+    setPayQrErr(null);
+    void (async () => {
+      try {
+        const res = await fetch("/api/football-turf/public/promptpay-qr", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ownerId,
+            amountBaht: payDueBaht,
+            t: trialSessionId || undefined,
+          }),
+        });
+        const j = (await res.json().catch(() => ({}))) as Partial<PortalPayQr> & { error?: string };
+        if (cancelled) return;
+        if (!res.ok) {
+          setPayQr(null);
+          setPayQrErr(typeof j.error === "string" ? j.error : "โหลด QR ไม่สำเร็จ");
+          return;
+        }
+        setPayQr({
+          qrDataUrl: j.qrDataUrl ?? null,
+          configured: Boolean(j.configured),
+          promptpayNumber: j.promptpayNumber ?? null,
+          bankName: j.bankName ?? null,
+          accountNumber: j.accountNumber ?? null,
+          accountName: j.accountName ?? null,
+          shopName: j.shopName ?? null,
+        });
+      } catch {
+        if (!cancelled) {
+          setPayQr(null);
+          setPayQrErr("เชื่อมต่อไม่สำเร็จ");
+        }
+      } finally {
+        if (!cancelled) setPayQrBusy(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [form.paymentMethod, ownerId, payDueBaht, requiresPortalPay, trialSessionId]);
+
+  useEffect(() => {
+    if (!requiresPortalPay) return;
+    setForm((state) =>
+      state.paymentMethod === "TRANSFER" ? state : { ...state, paymentMethod: "TRANSFER" },
+    );
+  }, [requiresPortalPay]);
 
   useEffect(() => {
     const nextSlot = availableSlots[0] ?? null;
@@ -239,10 +336,10 @@ export function FootballTurfBookingPortalClient({
   async function onSlipSelected(file: File | null) {
     if (!file) return;
     setUploadingSlip(true);
+    setMessage("");
     try {
       const dataUrl = await prepareImageFileAsDataUrl(file);
       setForm((state) => ({ ...state, paymentSlipDataUrl: dataUrl, paymentMethod: "TRANSFER" }));
-      setMessage("แนบสลิปเรียบร้อย");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "แนบสลิปไม่สำเร็จ");
     } finally {
@@ -252,10 +349,6 @@ export function FootballTurfBookingPortalClient({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const scrollTop = window.scrollY;
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
     if (!selectedCourt || !selectedSlot) {
       setMessage("กรุณาเลือกช่วงเวลาที่ว่างก่อนยืนยันการจอง");
       return;
@@ -264,8 +357,8 @@ export function FootballTurfBookingPortalClient({
       setMessage("ช่วงเวลานี้หมดแล้ว กรุณาเลือกคิวว่างที่ยังไม่ผ่านเวลา");
       return;
     }
-    if (form.paymentMethod === "TRANSFER" && !form.paymentSlipDataUrl) {
-      setMessage("กรุณาแนบสลิปการโอนก่อนยืนยันการจอง");
+    if (requiresPortalPay && (form.paymentMethod !== "TRANSFER" || !form.paymentSlipDataUrl)) {
+      setMessage(SLIP_PROOF_MESSAGE);
       return;
     }
     const playerCount = Number(form.playerCount);
@@ -273,41 +366,50 @@ export function FootballTurfBookingPortalClient({
       setMessage("กรุณากรอกจำนวนผู้เล่น");
       return;
     }
-    await repo.createBooking({
-      courtId: selectedCourt.id,
-      courtName: selectedCourt.name,
-      bookingDate: form.bookingDate,
-      startTime: selectedSlot.startTime,
-      endTime: selectedSlot.endTime,
-      customerName: form.customerName.trim(),
-      customerPhone: form.customerPhone.trim(),
-      teamName: form.teamName.trim(),
-      playerCount,
-      source: "ONLINE",
-      status: "BOOKED",
-      listedPrice: bookingPrice,
-      finalPrice: bookingPrice,
-      promotionSaleId: null,
-      note: "ลูกค้าจองผ่านลิงก์สนาม",
-      paymentMethod: form.paymentMethod,
-      paymentStatus: form.paymentMethod === "TRANSFER" ? "PENDING_REVIEW" : "UNPAID",
-      paymentSlipDataUrl: form.paymentSlipDataUrl,
-      paymentReference: form.paymentReference.trim(),
-    });
-    setMessage(form.paymentMethod === "TRANSFER" ? "บันทึกการจองและแนบสลิปเรียบร้อยแล้ว" : "บันทึกการจองเรียบร้อยแล้ว");
-    setForm((state) => ({
-      ...state,
-      customerName: "",
-      teamName: "",
-      playerCount: "",
-      paymentReference: "",
-      paymentSlipDataUrl: "",
-      paymentMethod: "TRANSFER",
-    }));
-    await refresh();
-    window.requestAnimationFrame(() => {
-      window.scrollTo({ top: scrollTop });
-    });
+    setSubmitting(true);
+    setMessage("");
+    try {
+      const created = await repo.createBooking({
+        courtId: selectedCourt.id,
+        courtName: selectedCourt.name,
+        bookingDate: form.bookingDate,
+        startTime: selectedSlot.startTime,
+        endTime: selectedSlot.endTime,
+        customerName: form.customerName.trim(),
+        customerPhone: form.customerPhone.trim(),
+        teamName: form.teamName.trim(),
+        playerCount,
+        source: "ONLINE",
+        status: "BOOKED",
+        listedPrice: bookingPrice,
+        finalPrice: bookingPrice,
+        promotionSaleId: null,
+        note:
+          requiresPortalPay && settings.portalBookingPaymentMode === "DEPOSIT"
+            ? `ลูกค้าจองผ่านลิงก์ · มัดจำ ${payDueBaht} บาท`
+            : requiresPortalPay && settings.portalBookingPaymentMode === "FULL"
+              ? "ลูกค้าจองผ่านลิงก์ · ชำระเต็มยอด"
+              : "ลูกค้าจองผ่านลิงก์สนาม",
+        paymentMethod: requiresPortalPay ? "TRANSFER" : form.paymentMethod,
+        paymentStatus: requiresPortalPay ? "PENDING_REVIEW" : "UNPAID",
+        paymentSlipDataUrl: requiresPortalPay ? form.paymentSlipDataUrl : "",
+        paymentReference: form.paymentReference.trim(),
+      });
+      const phoneDigits = (created.customerPhone || form.customerPhone).replace(/\D/g, "");
+      router.push(
+        footballTurfPublicBookingUrl(
+          "",
+          ownerId,
+          created.id,
+          phoneDigits,
+          trialSessionId?.trim() || "prod",
+        ),
+      );
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "จองไม่สำเร็จ");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -522,49 +624,105 @@ export function FootballTurfBookingPortalClient({
               </div>
 
               <div className="rounded-[1.5rem] border border-white/70 bg-white/50 p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setForm((state) => ({ ...state, paymentMethod: "TRANSFER" }))}
-                    className={cn(
-                      "rounded-full px-4 py-2 text-xs font-black transition",
-                      form.paymentMethod === "TRANSFER"
-                        ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
-                        : "bg-white text-slate-500 ring-1 ring-slate-200",
-                    )}
-                  >
-                    โอนเงินค่าจอง
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setForm((state) => ({ ...state, paymentMethod: "ONSITE", paymentSlipDataUrl: "" }))}
-                    className={cn(
-                      "rounded-full px-4 py-2 text-xs font-black transition",
-                      form.paymentMethod === "ONSITE"
-                        ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
-                        : "bg-white text-slate-500 ring-1 ring-slate-200",
-                    )}
-                  >
-                    ชำระหน้าสนาม
-                  </button>
-                </div>
+                <p className="text-xs font-black text-[#1e1b4b]">
+                  {settings.portalBookingPaymentMode === "DEPOSIT"
+                    ? `มัดจำตอนจอง · ${formatMoney(payDueBaht ?? 0)}`
+                    : settings.portalBookingPaymentMode === "FULL"
+                      ? `ชำระเต็มยอด · ${formatMoney(payDueBaht ?? bookingPrice)}`
+                      : "ไม่ต้องชำระตอนจอง — ชำระหน้าสนามได้"}
+                </p>
+                {requiresPortalPay ? (
+                  <>
+                    <p className="mt-1 text-[11px] font-semibold text-[#66638c]">
+                      ยอดรวมรอบ {formatMoney(bookingPrice)}
+                      {settings.portalBookingPaymentMode === "DEPOSIT"
+                        ? " · ชำระส่วนที่เหลือหน้าสนาม"
+                        : ""}
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span
+                        className={cn(
+                          "rounded-full px-4 py-2 text-xs font-black text-white shadow-sm",
+                          appDashboardBrandGradientFillClass,
+                        )}
+                      >
+                        โอนเงินค่าจอง
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setForm((state) => ({ ...state, paymentMethod: "ONSITE", paymentSlipDataUrl: "" }))}
+                      className={cn(
+                        "rounded-full px-4 py-2 text-xs font-black transition",
+                        form.paymentMethod === "ONSITE"
+                          ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
+                          : "bg-white text-slate-500 ring-1 ring-slate-200",
+                      )}
+                    >
+                      ชำระหน้าสนาม
+                    </button>
+                  </div>
+                )}
 
-                {form.paymentMethod === "TRANSFER" ? (
+                {requiresPortalPay ? (
                 <div className="mt-4 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
                   <div className="rounded-[1.25rem] border border-white/80 bg-white/80 p-4">
                     <div className="flex items-center gap-3">
                       <CreditCard className="h-5 w-5 text-slate-500" />
-                      <p className="text-sm font-black text-slate-900">ข้อมูลรับโอน</p>
+                      <p className="text-sm font-black text-slate-900">ชำระค่าจอง</p>
                     </div>
-                    <div className="mt-4 grid gap-3">
-                      <div className="rounded-[1rem] border border-slate-100 bg-slate-50/80 p-3">
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">พร้อมเพย์</p>
-                        <p className="mt-1 text-sm font-black text-slate-900">{settings.promptpayNumber || "-"}</p>
+                    <div className="mt-4 space-y-3">
+                      <div className="space-y-2 rounded-[1.25rem] border border-white/70 bg-white/80 p-3">
+                        <p className="text-xs font-black text-[#1e1b4b]">QR พร้อมเพย์ · {formatMoney(payDueBaht ?? 0)}</p>
+                        <div className="flex flex-col items-center justify-center rounded-2xl bg-[#f8f7ff] p-3 ring-1 ring-[#e8e6fc]">
+                          {payQrBusy ? (
+                            <p className="py-12 text-xs font-bold text-[#66638c]">กำลังสร้าง QR…</p>
+                          ) : payQr?.qrDataUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={payQr.qrDataUrl}
+                              alt="QR พร้อมเพย์"
+                              className="h-[200px] w-[200px] rounded-2xl bg-white p-2 object-contain"
+                            />
+                          ) : (
+                            <p className="py-8 text-center text-xs font-bold text-rose-600">
+                              {payQrErr ||
+                                (payQr?.configured === false
+                                  ? "สนามยังไม่ได้ตั้งเบอร์พร้อมเพย์"
+                                  : "สร้าง QR ไม่สำเร็จ")}
+                            </p>
+                          )}
+                        </div>
+                        <p className="text-xs font-semibold text-[#66638c]">
+                          พร้อมเพย์:{" "}
+                          <span className="font-black text-[#1e1b4b]">
+                            {payQr?.promptpayNumber || settings.promptpayNumber || "—"}
+                          </span>
+                        </p>
                       </div>
-                      <div className="rounded-[1rem] border border-slate-100 bg-slate-50/80 p-3">
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">บัญชีธนาคาร</p>
-                        <p className="mt-1 text-sm font-black text-slate-900">{settings.accountNumber || "-"}</p>
-                        <p className="mt-1 text-xs font-medium text-slate-500">{settings.bankName || settings.accountName ? `${settings.bankName} · ${settings.accountName}` : "-"}</p>
+                      <div className="space-y-1 rounded-[1.25rem] border border-white/70 bg-white/80 p-3 text-xs font-semibold text-[#66638c]">
+                        <p className="font-black text-[#1e1b4b]">โอนเข้าบัญชี</p>
+                        <p>
+                          ธนาคาร:{" "}
+                          <span className="font-black text-[#1e1b4b]">
+                            {payQr?.bankName || settings.bankName || "—"}
+                          </span>
+                        </p>
+                        <p>
+                          เลขบัญชี:{" "}
+                          <span className="font-black text-[#1e1b4b]">
+                            {payQr?.accountNumber || settings.accountNumber || "—"}
+                          </span>
+                        </p>
+                        <p>
+                          ชื่อบัญชี:{" "}
+                          <span className="font-black text-[#1e1b4b]">
+                            {payQr?.accountName || settings.accountName || "—"}
+                          </span>
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -572,8 +730,9 @@ export function FootballTurfBookingPortalClient({
                   <div className="rounded-[1.25rem] border border-white/80 bg-white/80 p-4">
                     <div className="flex items-center gap-3">
                       <ReceiptText className="h-5 w-5 text-slate-500" />
-                      <p className="text-sm font-black text-slate-900">สลิปการชำระเงิน</p>
+                      <p className="text-sm font-black text-slate-900">แนบสลิป</p>
                     </div>
+                    <p className="mt-2 text-[11px] font-semibold leading-snug text-[#66638c]">{SLIP_PROOF_MESSAGE}</p>
                     <div className="mt-4 grid gap-3">
                       <input
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800"
@@ -581,32 +740,38 @@ export function FootballTurfBookingPortalClient({
                         value={form.paymentReference}
                         onChange={(e) => setForm((state) => ({ ...state, paymentReference: e.target.value }))}
                       />
-                      <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-black text-slate-600 transition hover:bg-slate-100">
-                        <Upload className="h-4 w-4" />
-                        {uploadingSlip ? "กำลังแนบสลิป..." : "เลือกไฟล์สลิป"}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => void onSlipSelected(e.target.files?.[0] ?? null)}
-                        />
-                      </label>
+                      <AppGalleryCameraFileInputs
+                        galleryInputRef={slipGalleryRef}
+                        cameraInputRef={cameraInputRef}
+                        onChange={(ev) => {
+                          const f = ev.target.files?.[0];
+                          ev.target.value = "";
+                          if (!f) return;
+                          void onSlipSelected(f);
+                        }}
+                      />
+                      <AppImagePickCameraButtons
+                        onPickGallery={() => slipGalleryRef.current?.click()}
+                        onPickCamera={() =>
+                          openCamera((file) => {
+                            void onSlipSelected(file);
+                          })
+                        }
+                        busy={uploadingSlip || submitting}
+                        labels={{ gallery: "แนบสลิป", camera: "ถ่ายสลิป" }}
+                      />
                       {form.paymentSlipDataUrl ? (
                         <div className="rounded-[1rem] border border-emerald-100 bg-emerald-50/70 p-3">
-                          <Image
+                          <AppImageThumb
                             src={form.paymentSlipDataUrl}
                             alt="สลิปการโอน"
-                            width={640}
-                            height={360}
-                            className="h-40 w-full rounded-2xl object-cover ring-1 ring-emerald-100"
-                            unoptimized
+                            onOpen={() => lb.open(form.paymentSlipDataUrl)}
+                            className="h-24 w-24"
                           />
-                          <p className="mt-3 text-xs font-bold text-emerald-700">แนบสลิปแล้ว ระบบจะบันทึกไปพร้อมรายการจอง</p>
+                          <p className="mt-3 text-xs font-bold text-emerald-700">แนบสลิปแล้ว — กดยืนยันเพื่อบันทึกการจอง</p>
                         </div>
                       ) : (
-                        <p className={cn("text-xs font-bold", transferSavedForPreviousBooking ? "text-emerald-700" : "text-slate-400")}>
-                          {transferSavedForPreviousBooking ? "สลิปรายการก่อนหน้าถูกบันทึกแล้ว ฟอร์มนี้พร้อมสำหรับรายการใหม่" : "ยังไม่ได้แนบสลิป"}
-                        </p>
+                        <p className="text-xs font-bold text-amber-700">ยังไม่ได้แนบสลิป</p>
                       )}
                     </div>
                   </div>
@@ -624,9 +789,9 @@ export function FootballTurfBookingPortalClient({
                 disabled={!canSubmit}
                 className="app-btn-primary rounded-2xl px-5 py-3 text-sm font-black shadow-lg transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
               >
-                ยืนยันการจองสนาม
+                {submitting ? "กำลังจอง…" : "ยืนยันการจองสนาม"}
               </button>
-              {message ? <p className="text-sm font-bold text-[#4d47b6]">{message}</p> : null}
+              {message ? <p className="text-sm font-bold text-rose-600">{message}</p> : null}
             </div>
           </form>
 
@@ -666,6 +831,13 @@ export function FootballTurfBookingPortalClient({
                 ) : (
                   myBookings.map((item) => {
                     const past = isBookingTimePassed(item, liveNow);
+                    const detailHref = footballTurfPublicBookingUrl(
+                      "",
+                      ownerId,
+                      item.id,
+                      (item.customerPhone || phoneDigits).replace(/\D/g, ""),
+                      trialSessionId?.trim() || "prod",
+                    );
                     return (
                     <div
                       key={item.id}
@@ -701,6 +873,12 @@ export function FootballTurfBookingPortalClient({
                         <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[11px] font-black text-cyan-700 ring-1 ring-cyan-200">
                           {item.paymentStatus === "PENDING_REVIEW" ? "รอตรวจสลิป" : item.paymentStatus === "PAID" ? "ชำระแล้ว" : "ยังไม่ชำระ"}
                         </span>
+                        <Link
+                          href={detailHref}
+                          className="rounded-full bg-[#5b61ff]/10 px-2.5 py-1 text-[11px] font-black text-[#4d47b6] ring-1 ring-[#5b61ff]/25"
+                        >
+                          ดูรายละเอียด
+                        </Link>
                       </div>
                       ) : null}
                     </div>
@@ -725,6 +903,8 @@ export function FootballTurfBookingPortalClient({
           </div>
         </div>
       </div>
+      <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิป" />
+      {cameraModal}
     </AppPublicCheckInGlassPage>
   );
 }

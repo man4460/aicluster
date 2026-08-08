@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { mapBuildingPosOrderRow } from "@/lib/building-pos/order-map";
-import { resolveBuildingPosStaffFromUrl } from "@/lib/building-pos/staff-request";
+import { requireBuildingPosStaff } from "@/lib/building-pos/staff-auth";
 import { formatBuildingPosDbError, jsonBuildingPosError } from "@/lib/building-pos/route-errors";
 import { normalizeMemberPhone } from "@/lib/loyalty-stamp/member-qr";
 import { applyBuildingPosLoyaltyEarnOnPaid } from "@/systems/building-pos/lib/loyalty";
@@ -16,8 +16,9 @@ const patchSchema = z.object({
 
 export async function GET(req: Request) {
   try {
-    const ctx = await resolveBuildingPosStaffFromUrl(new URL(req.url));
-    if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await requireBuildingPosStaff(req);
+    if ("error" in auth) return auth.error;
+    const ctx = auth.ctx;
     const rows = await prisma.buildingPosOrder.findMany({
       where: { ownerUserId: ctx.ownerId, trialSessionId: ctx.trialSessionId },
       orderBy: { createdAt: "desc" },
@@ -30,8 +31,9 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const ctx = await resolveBuildingPosStaffFromUrl(new URL(req.url));
-  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireBuildingPosStaff(req);
+  if ("error" in auth) return auth.error;
+  const ctx = auth.ctx;
   const { searchParams } = new URL(req.url);
   const id = Number(searchParams.get("id") || "");
   if (!Number.isInteger(id) || id <= 0) return NextResponse.json({ error: "id ไม่ถูกต้อง" }, { status: 400 });

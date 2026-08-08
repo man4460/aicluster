@@ -5,6 +5,7 @@ import {
   AppEmptyState,
   alertSlipPrintRequiresMonthlyPlan,
   appTemplateOutlineButtonClass,
+  useAppSlipPaperSize,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
@@ -56,7 +57,7 @@ function IconQtyPlus({ className }: { className?: string }) {
 }
 
 /** หน้าออร์เดอร์ในแดชบอร์ด — ซ้ายรายการ / ขวาเมนู (เดสก์ท็อป) · มือถือแบบ drink-pos
- *  portalMode = ฝังในลิงก์พนักงาน (เลย์เอาต์เดียวกัน · ไม่ใช้แถบล่างแดชบอร์ด)
+ *  portalMode = ลิงก์พนักงาน (มือถือ: สกอลล์รวม meta+เมนู · สรุปบิลใน dock ล่าง · เดสก์ท็อปซ้าย/ขวาเลื่อนอิสระ)
  */
 export function BuildingPosOrderClient({
   ownerId,
@@ -65,16 +66,22 @@ export function BuildingPosOrderClient({
   staffAuth,
   onOrderSuccess,
   slipPrintEnabled: slipPrintEnabledProp,
+  enableMobileDraft = true,
+  refreshNonce = 0,
 }: {
   ownerId: string;
   trialSessionId?: string;
-  /** ลิงก์พนักงาน — ซ้าย/ขวาเหมือนแดชบอร์ด */
+  /** ลิงก์พนักงาน — เลย์เอาต์พอร์ทัลแบบ drink-pos staffPortal */
   portalMode?: boolean;
   /** คีย์ลิงก์พนักงาน — ใช้ API staff สำหรับแลกคะแนน */
   staffAuth?: { ownerId: string; trialSessionId: string; k: string };
   onOrderSuccess?: () => void;
   /** แพ็กเหมารายเดือน 199 — เปิดพิมพ์สลิป (ถ้าไม่ส่ง จะลองโหลดจาก bootstrap พนักงาน) */
   slipPrintEnabled?: boolean;
+  /** แสดงสรุปบิลใน dock มือถือ (ปิดเมื่อสลับแท็บคิว/โต๊ะ) */
+  enableMobileDraft?: boolean;
+  /** รีเฟรชเมนูจากพอร์ทัลพนักงานโดยไม่ unmount ตะกร้า */
+  refreshNonce?: number;
 }) {
   const repo = useMemo(
     () => createBuildingPosPublicApiRepository(ownerId, trialSessionId),
@@ -99,7 +106,9 @@ export function BuildingPosOrderClient({
   /** พิมพ์สลิปครัวหลังส่งออเดอร์สำเร็จ — ใช้ได้เมื่อแพ็กเหมาเปิดสิทธิ์ */
   const [slipPrintEnabled, setSlipPrintEnabled] = useState(slipPrintEnabledProp === true);
   const [printSlipAfterSubmit, setPrintSlipAfterSubmit] = useState(slipPrintEnabledProp === true);
+  const { paper: slipPaper } = useAppSlipPaperSize();
   const menuScrollRef = useRef<HTMLDivElement>(null);
+  const productGridRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
     if (typeof slipPrintEnabledProp === "boolean") {
@@ -146,6 +155,11 @@ export function BuildingPosOrderClient({
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (refreshNonce <= 0) return;
+    void load();
+  }, [refreshNonce, load]);
+
   const cartList = useMemo(() => Object.values(cart).filter((x) => x.qty > 0), [cart]);
   const cartTotal = useMemo(() => cartList.reduce((s, x) => s + x.price * x.qty, 0), [cartList]);
   const cartCount = useMemo(() => cartList.reduce((s, x) => s + x.qty, 0), [cartList]);
@@ -159,6 +173,22 @@ export function BuildingPosOrderClient({
       return a.id - b.id;
     });
   }, [menuItems, filterCat]);
+
+  /** บังคับจำนวนคอลัมน์เมนู — มือถือต้อง 3 (ไม่พึ่ง Tailwind cascade) */
+  useLayoutEffect(() => {
+    const el = productGridRef.current;
+    if (!el) return;
+    const applyCols = () => {
+      const w = window.innerWidth;
+      const cols = w >= 1536 ? 8 : w >= 1280 ? 6 : w >= 768 ? 4 : 3;
+      el.style.setProperty("display", "grid", "important");
+      el.style.setProperty("grid-template-columns", `repeat(${cols}, minmax(0, 1fr))`, "important");
+      el.style.setProperty("gap", w >= 640 ? "0.5rem" : "0.375rem", "important");
+    };
+    applyCols();
+    window.addEventListener("resize", applyCols);
+    return () => window.removeEventListener("resize", applyCols);
+  }, [filteredProducts.length, loading]);
 
   function addItem(item: PosMenuItem) {
     setCart((prev) => {
@@ -216,6 +246,7 @@ export function BuildingPosOrderClient({
           printBuildingPosOrderTicket(created, {
             variant: "kitchen",
             subtitle: "สลิปครัว · ส่งโต๊ะ",
+            paper: slipPaper,
           });
         }
       }
@@ -233,11 +264,7 @@ export function BuildingPosOrderClient({
   }
 
   useLayoutEffect(() => {
-    if (portalMode) {
-      setMobileDraftSlot(null);
-      return;
-    }
-    if (cartList.length === 0) {
+    if (!enableMobileDraft || cartList.length === 0) {
       setMobileDraftSlot(null);
       return () => setMobileDraftSlot(null);
     }
@@ -288,7 +315,7 @@ export function BuildingPosOrderClient({
       </div>,
     );
     return () => setMobileDraftSlot(null);
-  }, [portalMode, cartList, cartCount, cartTotal, busy, setMobileDraftSlot]);
+  }, [enableMobileDraft, cartList, cartCount, cartTotal, busy, setMobileDraftSlot]);
 
   useEffect(() => {
     if (cartList.length === 0 && reviewOpen) setReviewOpen(false);
@@ -350,7 +377,7 @@ export function BuildingPosOrderClient({
   );
 
   const draftPanel = (
-    <div className="flex min-h-0 flex-1 flex-col rounded-[1.25rem] border border-white/70 bg-white/70">
+    <div className="flex shrink-0 flex-col rounded-[1.25rem] border border-white/70 bg-white/70">
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[#e8e6fc]/80 px-3 py-2.5">
         <p className="text-xs font-black text-[#1e1b4b]">
           รายการที่เลือก
@@ -369,11 +396,11 @@ export function BuildingPosOrderClient({
       </div>
 
       {cartList.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center p-4">
+        <div className="flex items-center justify-center p-4">
           <p className="text-center text-sm font-semibold text-[#66638c]">แตะเมนูด้านขวาเพื่อเพิ่มรายการ</p>
         </div>
       ) : (
-        <ul className="min-h-0 flex-1 space-y-2 p-2.5">
+        <ul className="space-y-2 p-2.5">
           {cartList.map((l) => (
             <li
               key={l.menu_item_id}
@@ -462,37 +489,55 @@ export function BuildingPosOrderClient({
   );
 
   return (
-    <div className={cn("flex min-h-0 flex-1 flex-col gap-3 lg:gap-4", portalMode && "h-full")}>
+    <div
+      className={cn(
+        "flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col gap-3 lg:gap-4",
+        portalMode && "h-full overflow-hidden",
+        !portalMode && "lg:h-full lg:min-h-0 lg:overflow-hidden",
+      )}
+    >
       {error ? (
-        <div className="rounded-[1.25rem] border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm font-semibold text-rose-800">
+        <div className="shrink-0 rounded-[1.25rem] border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm font-semibold text-rose-800">
           {error}
         </div>
       ) : null}
 
-      <div className={cn("space-y-3 lg:hidden", portalMode && "shrink-0")}>
-        {metaFields}
-        {portalMode ? <div className="max-h-[40vh] overflow-y-auto">{draftPanel}</div> : null}
-      </div>
+      {/* มือถือแดชบอร์ด: meta เหนือกริด (เลื่อนทั้งหน้า) */}
+      {!portalMode ? <div className="min-w-0 shrink-0 space-y-3 lg:hidden">{metaFields}</div> : null}
 
       <div
         className={cn(
-          "grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)] lg:gap-4",
-          portalMode && "min-h-0 overflow-hidden",
+          "min-h-0 min-w-0 w-full max-w-full flex-1 gap-3 lg:gap-4",
+          portalMode
+            ? "flex flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] lg:grid lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)] lg:grid-rows-1 lg:overflow-hidden"
+            : "grid lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)] lg:min-h-0 lg:grid-rows-1 lg:overflow-hidden",
         )}
       >
-        <aside className="hidden min-h-0 flex-col gap-3 overflow-hidden rounded-[1.25rem] border border-[#e8e6fc]/80 bg-gradient-to-br from-white/90 via-[#f5f3ff]/75 to-[#fdf2f8]/55 p-4 shadow-sm lg:flex">
+        {/* พอร์ทัลพนักงานมือถือ: ช่องทาง/โต๊ะ/เบอร์เลื่อนรวมกับเมนู · หัวร้านคงที่นอกนี้ */}
+        {portalMode ? <div className="min-w-0 shrink-0 space-y-3 lg:hidden">{metaFields}</div> : null}
+
+        <aside
+          className={cn(
+            "hidden min-h-0 min-w-0 flex-col gap-3 p-4 lg:flex",
+            portalMode
+              ? "h-full overflow-y-auto overscroll-contain rounded-[1.25rem] border border-white/70 bg-white/55 [-webkit-overflow-scrolling:touch]"
+              : "rounded-[1.25rem] border border-[#e8e6fc]/80 bg-gradient-to-br from-white/90 via-[#f5f3ff]/75 to-[#fdf2f8]/55 shadow-sm lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain [-webkit-overflow-scrolling:touch]",
+          )}
+        >
           <div className="shrink-0">{metaFields}</div>
-          <div className="min-h-0 flex-1 overflow-hidden">{draftPanel}</div>
+          {draftPanel}
         </aside>
 
         <section
           className={cn(
-            "flex min-h-0 flex-1 flex-col rounded-[1.25rem] border border-[#e8e6fc]/80 bg-white/60 p-3 shadow-sm lg:p-4",
-            portalMode && "overflow-hidden",
+            "flex min-h-0 min-w-0 w-full max-w-full flex-col overflow-x-hidden p-3 lg:p-4",
+            portalMode
+              ? "shrink-0 rounded-[1.25rem] border border-white/70 bg-white/55 lg:min-h-0 lg:flex-1 lg:shrink lg:overflow-hidden"
+              : "flex-1 rounded-[1.25rem] border border-[#e8e6fc]/80 bg-white/60 shadow-sm lg:h-full lg:min-h-0 lg:overflow-hidden",
           )}
         >
           <div
-            className="shrink-0 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch]"
+            className="min-w-0 shrink-0 overflow-x-auto overflow-y-hidden pb-2 [-webkit-overflow-scrolling:touch]"
             role="group"
             aria-label="หมวดหมู่"
             onWheel={onCategoryStripWheel}
@@ -523,7 +568,11 @@ export function BuildingPosOrderClient({
 
           <div
             ref={menuScrollRef}
-            className={cn("pt-1", portalMode && "min-h-0 flex-1 overflow-y-auto overscroll-contain")}
+            className={cn(
+              "min-w-0 w-full max-w-full pt-1",
+              /** พอร์ทัลมือถือ: ไม่แยกสกอลล์เมนู — รวมกับ meta ใน parent · เดสก์ท็อปเลื่อนคอลัมน์ขวาอิสระ */
+              "lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:[-webkit-overflow-scrolling:touch]",
+            )}
           >
             {loading ? (
               <div className={cn("h-40 animate-pulse rounded-xl", buildingPosPulseWashClass)} aria-hidden />
@@ -532,25 +581,31 @@ export function BuildingPosOrderClient({
                 {categories.length === 0 ? "ยังไม่มีเมนู — ไปที่แท็บเมนูเพื่อเพิ่ม" : "ไม่มีเมนูในหมวดนี้"}
               </AppEmptyState>
             ) : (
-              <ul className={buildingPosProductGridClass}>
+              <ul
+                ref={productGridRef}
+                className={cn(
+                  buildingPosProductGridClass,
+                  "grid w-full min-w-0 max-w-full grid-cols-3 gap-1.5 sm:gap-2 md:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8",
+                )}
+              >
                 {filteredProducts.map((p) => {
                   const inCartQty = cart[p.id]?.qty ?? 0;
                   return (
-                    <li key={p.id} className={buildingPosProductCardClass}>
+                    <li key={p.id} className={cn(buildingPosProductCardClass, "min-w-0 max-w-full")}>
                       <button
                         type="button"
                         onClick={() => addItem(p)}
                         className={cn(
-                          "flex w-full flex-col text-left outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/35",
+                          "flex w-full min-w-0 max-w-full flex-col text-left outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/35",
                           inCartQty > 0 && "ring-2 ring-[#5b61ff]/35 ring-offset-1",
                         )}
                         aria-label={`${p.name} ราคา ${p.price} บาท`}
                       >
-                        <div className="relative aspect-square w-full overflow-hidden bg-[#5b61ff]/08">
+                        <div className="relative aspect-square w-full max-w-full overflow-hidden bg-[#5b61ff]/08">
                           {p.image_url ? (
                             <BuildingPosRemoteImg
                               src={p.image_url}
-                              className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
+                              className="h-full w-full max-h-full max-w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
                             />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center text-[#66638c]">

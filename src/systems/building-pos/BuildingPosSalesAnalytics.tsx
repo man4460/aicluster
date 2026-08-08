@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import {
   type PosCategory,
+  type PosCostCategory,
+  type PosCostEntry,
   type PosMenuItem,
   type PosOrder,
   uploadBuildingPosSessionImage,
@@ -11,6 +13,7 @@ import {
 } from "@/systems/building-pos/building-pos-service";
 import { prepareBuildingPosSlipImageFile } from "@/systems/building-pos/building-pos-slip-image";
 import { BuildingPosRemoteImg } from "@/systems/building-pos/components/building-pos-remote-image";
+import { BuildingPosCostsPanel } from "@/systems/building-pos/components/BuildingPosCostsPanel";
 import { BuildingPosLoyaltyCheckoutPanel } from "@/systems/building-pos/components/BuildingPosLoyaltyCheckoutPanel";
 import { downloadPosTableStaticHtmlAsA4Pdf } from "@/systems/building-pos/pos-table-bill-pdf-capture";
 import {
@@ -22,8 +25,7 @@ import {
 import {
   AppCameraCaptureModal,
   AppColumnBarSparkChart,
-  AppCompareBarList,
-  type AppCompareBarRow,
+  type AppColumnBarBucket,
   AppDashboardSection,
   AppEmptyState,
   AppGalleryCameraFileInputs,
@@ -32,23 +34,44 @@ import {
   type AppRevenueCostBucket,
   AppRevenueCostColumnChart,
   AppSectionHeader,
-  AppSparkChartsTwoColumnGrid,
+  AppSparkChartPanel,
   appDashboardHistoryListShellClass,
   appTemplateOutlineButtonClass,
+  AppSlipPaperSizeToolbar,
+  useAppCameraCapture,
+  useAppSlipPaperSize,
 } from "@/components/app-templates";
 import { shopQrTemplateGridPrimaryButtonClass } from "@/components/qr/shop-qr-template";
-import { FormModal } from "@/components/ui/FormModal";
+import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
-import { buildingPosSalesFiltersToSparkParams } from "@/lib/building-pos/sales-spark-filter-params";
+import {
+  assetRowEditIconButtonClass,
+  assetRowRemoveIconButtonClass,
+  IconRowEdit,
+  IconRowRemove,
+} from "@/systems/asset/components/AssetRowActionIcons";
 import { HomeFinanceList } from "@/systems/home-finance/components/HomeFinanceUi";
 import {
   buildingPosChipActiveClass,
   buildingPosChipIdleClass,
   buildingPosContentStackClass,
   buildingPosFieldClass,
+  buildingPosFinanceSubTabShellClass,
   buildingPosNavActiveClass,
+  buildingPosNavIdleClass,
+  buildingPosPulseWashClass,
   buildingPosSelectFieldClass,
+  buildingPosStatCardEmeraldClass,
+  buildingPosStatCardIndigoClass,
+  buildingPosStatCardVioletClass,
 } from "@/systems/building-pos/components/building-pos-ui-tokens";
+
+type FinanceDetailPanel = "history" | "expenses";
+
+const FINANCE_DETAIL_TABS: { id: FinanceDetailPanel; label: string }[] = [
+  { id: "history", label: "ประวัติ / รายรับ" },
+  { id: "expenses", label: "รายจ่าย" },
+];
 
 type OpenOrderStatus = "NEW" | "PREPARING" | "SERVED" | "SERVING" | "DELIVERED";
 
@@ -143,12 +166,6 @@ const statusBadgeClass: Record<OpenOrderStatus, string> = {
 
 function orderDateKeyBangkok(iso: string): string {
   return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
-}
-
-function orderPartsBangkok(iso: string): { y: number; m: number; d: number } {
-  const key = orderDateKeyBangkok(iso);
-  const [y, m, d] = key.split("-").map((x) => Number(x));
-  return { y, m, d };
 }
 
 export const statusLabelTh: Record<PosOrder["status"], string> = {
@@ -266,42 +283,70 @@ function PosOrderStatusIconStrip({
   );
 }
 
-/** ปี–เดือนปัจจุบัน (เขตเวลาไทย) — ค่าเดือนเป็น "1".."12" ให้ตรงกับ `<option value={String(m)}>` */
-function initialBangkokSalesFilters(): { year: string; month: string } {
-  const key = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
-  const parts = key.split("-");
-  const y = parts[0] ?? "";
-  const mo = parts[1];
-  return { year: y, month: mo ? String(Number(mo)) : "" };
+/** ปี–เดือนปัจจุบัน (เขตเวลาไทย) */
+function bangkokTodayKey(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
 }
 
-/** กรองแยกชั้น: ปี / เดือน / วัน — ช่องว่าง = ไม่ใช้เงื่อนไขนั้น (มีวันอย่างเดียว = วันที่นั้นของทุกเดือน) */
-function matchesPeriod(iso: string, year: string, month: string, day: string): boolean {
-  const { y, m, d } = orderPartsBangkok(iso);
-  if (year) {
-    const yN = Number(year);
-    if (!Number.isFinite(yN) || y !== yN) return false;
-  }
-  if (month) {
-    const mN = Number(month);
-    if (!Number.isFinite(mN) || m !== mN) return false;
-  }
-  if (day) {
-    const dN = Number(day);
-    if (!Number.isFinite(dN) || d !== dN) return false;
-  }
+function bangkokDateKeyFromIso(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
+}
+
+type BuildingPosFinanceRange = "TODAY" | "MONTH" | "YEAR" | "CUSTOM";
+
+function dateKeyInFinanceRange(
+  day: string,
+  range: BuildingPosFinanceRange,
+  today: string,
+  startDate: string,
+  endDate: string,
+): boolean {
+  if (!day) return false;
+  if (range === "TODAY") return day === today;
+  if (range === "MONTH") return day.slice(0, 7) === today.slice(0, 7);
+  if (range === "YEAR") return day.slice(0, 4) === today.slice(0, 4);
+  const rawStart = startDate || endDate;
+  const rawEnd = endDate || startDate;
+  const start = rawStart && rawEnd && rawStart > rawEnd ? rawEnd : rawStart;
+  const end = rawStart && rawEnd && rawStart > rawEnd ? rawStart : rawEnd;
+  if (!start && !end) return true;
+  if (start && day < start) return false;
+  if (end && day > end) return false;
   return true;
 }
 
-/** จำนวนวันสูงสุดในเดือนที่เลือก (ใช้ปีจริงถ้ามี; ไม่มีปีแต่มีเดือน → ใช้ปีอธิกสุรทินเพื่อให้กุมภามี 29) */
-function maxDayInMonthForFilter(yearStr: string, monthStr: string): number {
-  const m = Number(monthStr);
-  if (!monthStr || !Number.isFinite(m) || m < 1 || m > 12) return 31;
-  const y =
-    yearStr && Number.isFinite(Number(yearStr)) && Number(yearStr) >= 1900
-      ? Number(yearStr)
-      : 2024;
-  return new Date(y, m, 0).getDate();
+function sparkParamsFromFinanceRange(
+  range: BuildingPosFinanceRange,
+  dateFrom: string,
+  dateTo: string,
+  todayKey: string,
+  fallbackYear: number,
+): { year: number; month: number | "all"; day: number | "all" } {
+  const [ty, tm, td] = todayKey.split("-").map((x) => Number(x));
+  const year = Number.isFinite(ty) ? ty : fallbackYear;
+  const month = Number.isFinite(tm) ? tm : 1;
+  const day = Number.isFinite(td) ? td : 1;
+  if (range === "TODAY") return { year, month, day };
+  if (range === "MONTH") return { year, month, day: "all" };
+  if (range === "YEAR") return { year, month: "all", day: "all" };
+  const rawStart = dateFrom.trim() || dateTo.trim() || todayKey;
+  const rawEnd = dateTo.trim() || dateFrom.trim() || todayKey;
+  const start = rawStart <= rawEnd ? rawStart : rawEnd;
+  const end = rawStart <= rawEnd ? rawEnd : rawStart;
+  const [sy, sm, sd] = start.split("-").map((x) => Number(x));
+  const [ey, em] = end.split("-").map((x) => Number(x));
+  if (start === end && Number.isFinite(sy) && Number.isFinite(sm) && Number.isFinite(sd)) {
+    return { year: sy, month: sm, day: sd };
+  }
+  if (sy === ey && sm === em && Number.isFinite(sy) && Number.isFinite(sm)) {
+    return { year: sy, month: sm, day: "all" };
+  }
+  if (sy === ey && Number.isFinite(sy)) {
+    return { year: sy, month: "all", day: "all" };
+  }
+  return { year: Number.isFinite(ey) ? ey : fallbackYear, month: "all", day: "all" };
 }
 
 function matchesSearch(order: PosOrder, q: string): boolean {
@@ -394,6 +439,7 @@ export function BuildingPosOpenTablesPanel({
   const [ppQrUrl, setPpQrUrl] = useState<string | null>(null);
   const [ppQrLoading, setPpQrLoading] = useState(false);
   const [ppConfigured, setPpConfigured] = useState(true);
+  const { paper: slipPaper, setPaper: setSlipPaper } = useAppSlipPaperSize();
 
   const activeByTable = useMemo(() => {
     const open = orders.filter((o) => o.status !== "PAID");
@@ -649,15 +695,19 @@ export function BuildingPosOpenTablesPanel({
   }, []);
 
   const printFooterRow = (
-    <div className="flex flex-wrap gap-2">
-      <button type="button" className={appTemplateOutlineButtonClass} onClick={() => handlePrintBill("SLIP_58")}>
-        พิมพ์ 58 mm
-      </button>
-      <button type="button" className={appTemplateOutlineButtonClass} onClick={() => handlePrintBill("SLIP_80")}>
-        พิมพ์ 80 mm
-      </button>
-      <button type="button" className={appTemplateOutlineButtonClass} onClick={() => handlePrintBill("A4")}>
-        พิมพ์ A4
+    <div className="flex flex-wrap items-center gap-2">
+      <AppSlipPaperSizeToolbar
+        value={slipPaper}
+        onChange={setSlipPaper}
+        sizes={["SLIP_58", "SLIP_80", "A4"]}
+        aria-label="ขนาดกระดาษบิลโต๊ะ"
+      />
+      <button
+        type="button"
+        className={appTemplateOutlineButtonClass}
+        onClick={() => handlePrintBill(slipPaper)}
+      >
+        พิมพ์บิล
       </button>
       <button
         type="button"
@@ -1181,16 +1231,16 @@ export function BuildingPosOpenTablesPanel({
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-1 text-right text-sm font-semibold tabular-nums text-slate-900">
+                  <p className="mt-1 text-right text-sm font-semibold tabular-nums text-emerald-700">
                     รวม ฿{o.total_amount.toLocaleString()}
                   </p>
                 </div>
               ))}
             </div>
 
-            <div className="mt-4 rounded-xl bg-slate-50 px-3 py-4 text-center">
-              <p className="text-xs font-medium text-slate-600">ยอดรวมทั้งหมด (บาท)</p>
-              <p className="mt-1 text-3xl font-bold tabular-nums text-[#0000BF]">
+            <div className="mt-4 rounded-xl bg-emerald-50/80 px-3 py-4 text-center">
+              <p className="text-xs font-medium text-emerald-800/80">ยอดรวมทั้งหมด (บาท)</p>
+              <p className="mt-1 text-3xl font-bold tabular-nums text-emerald-700">
                 {modalGrandTotal.toLocaleString("th-TH")}
               </p>
             </div>
@@ -1252,7 +1302,7 @@ function capLeaderboard(entries: [string, number][], max: number): [string, numb
   return [...head, ["อื่น ๆ รวม", restSum]];
 }
 
-function entriesToBarRows(entries: [string, number][]): AppCompareBarRow[] {
+function entriesToColumnBuckets(entries: [string, number][]): AppColumnBarBucket[] {
   if (entries.length === 0) return [];
   const maxAmt = Math.max(...entries.map(([, a]) => a), 1);
   return entries.map(([label, amount], i) => ({
@@ -1286,11 +1336,13 @@ function posSalesStatusPillClass(s: PosOrder["status"]): string {
 function PosSalesHistoryCard({
   order: o,
   onStatusChange,
+  onEdit,
   onDelete,
   onSlipImageOpen,
 }: {
   order: PosOrder;
   onStatusChange: (id: number, status: PosOrder["status"]) => void;
+  onEdit: (order: PosOrder) => void;
   onDelete: (id: number) => void;
   onSlipImageOpen?: (imageUrl: string) => void;
 }) {
@@ -1300,206 +1352,81 @@ function PosSalesHistoryCard({
   const orderChannel = getOrderChannelMeta(o);
   return (
     <article className="rounded-[1.25rem] border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm transition hover:border-slate-300">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-          <time className="text-[11px] font-medium tabular-nums text-slate-500" dateTime={o.created_at}>
-            {timeStr}
-          </time>
-          <span
-            className={cn(
-              "shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold leading-tight",
-              posSalesStatusPillClass(o.status),
-            )}
-          >
-            {statusLabelTh[o.status]}
-          </span>
-          <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-px font-mono text-[10px] text-slate-600">
-            #{o.id}
-          </span>
-        </div>
-        <span className="shrink-0 text-sm font-bold tabular-nums text-slate-900">
-          ฿{o.total_amount.toLocaleString()}{" "}
-          <span className="text-[11px] font-light text-slate-500">บาท</span>
-        </span>
-      </div>
-      <p className="mt-1 line-clamp-2 text-sm font-semibold leading-tight text-slate-900">{itemsLine || "—"}</p>
-      <p className="truncate text-[11px] leading-tight text-slate-600">
-        <span className="text-slate-400">ลูกค้า / โต๊ะ</span> · {o.customer_name || "—"} · {o.table_no || "—"}
-      </p>
-      <p className="mt-0.5">
-        <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold", orderChannel.className)}>
-          {orderChannel.label}
-        </span>
-      </p>
-      {o.note?.trim() ? (
-        <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-slate-600">{o.note}</p>
-      ) : null}
-      {slipUrl ?
-        <div className="mt-2 flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/90 p-2">
+      <div className="flex items-start gap-2">
+        {slipUrl ? (
           <AppImageThumb
             src={slipUrl}
-            alt="สลิปโอน"
+            alt={`สลิปออเดอร์ #${o.id}`}
+            className="h-14 w-14 shrink-0"
             onOpen={() => {
               if (onSlipImageOpen) onSlipImageOpen(slipUrl);
               else window.open(slipUrl, "_blank", "noopener,noreferrer");
             }}
           />
-          <div className="min-w-0 text-[11px]">
-            <p className="font-semibold text-slate-800">สลิปโอน</p>
-            <button
-              type="button"
-              onClick={() => {
-                if (onSlipImageOpen) onSlipImageOpen(slipUrl);
-                else window.open(slipUrl, "_blank", "noopener,noreferrer");
-              }}
-              className="text-left text-[#0000BF] underline touch-manipulation"
-            >
-              เปิดดูเต็ม
-            </button>
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+              <time className="text-[11px] font-medium tabular-nums text-slate-500" dateTime={o.created_at}>
+                {timeStr}
+              </time>
+              <span
+                className={cn(
+                  "shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold leading-tight",
+                  posSalesStatusPillClass(o.status),
+                )}
+              >
+                {statusLabelTh[o.status]}
+              </span>
+              <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-px font-mono text-[10px] text-slate-600">
+                #{o.id}
+              </span>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <span className="text-right text-lg font-black tabular-nums text-emerald-700">
+                ฿{o.total_amount.toLocaleString()}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onEdit(o)}
+                  className={assetRowEditIconButtonClass}
+                  aria-label={`แก้ไขออเดอร์ #${o.id}`}
+                  title="แก้ไข"
+                >
+                  <IconRowEdit className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(o.id)}
+                  className={assetRowRemoveIconButtonClass}
+                  aria-label={`ลบออเดอร์ #${o.id}`}
+                  title="ลบ"
+                >
+                  <IconRowRemove className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           </div>
+          <p className="mt-1 line-clamp-2 text-sm font-semibold leading-tight text-slate-900">{itemsLine || "—"}</p>
+          <p className="truncate text-[11px] leading-tight text-slate-600">
+            <span className="text-slate-400">ลูกค้า / โต๊ะ</span> · {o.customer_name || "—"} · {o.table_no || "—"}
+          </p>
+          <p className="mt-0.5">
+            <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold", orderChannel.className)}>
+              {orderChannel.label}
+            </span>
+          </p>
+          {o.note?.trim() ? (
+            <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-slate-600">{o.note}</p>
+          ) : null}
         </div>
-      : null}
+      </div>
       <div className="mt-2 border-t border-slate-100 pt-2">
         <p className="mb-1 hidden text-[10px] font-medium text-slate-400 sm:block">สถานะ</p>
         <PosOrderStatusIconStrip orderId={o.id} current={o.status} onSelect={(s) => onStatusChange(o.id, s)} />
-        <div className="mt-2 flex items-center justify-end gap-1.5">
-          <button
-            type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-[#4d47b6]"
-            aria-label="แก้ไขสถานะ"
-            title="แก้ไขสถานะ"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-              <path d="m16.5 3.5 4 4L8 20H4v-4z" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() => onDelete(o.id)}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100 hover:text-rose-700"
-            aria-label="ลบรายการ"
-            title="ลบรายการ"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-              <path d="M4 7h16M9 7V5h6v2M7 7l1 13h8l1-13" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        </div>
       </div>
     </article>
-  );
-}
-
-type BuildingPosSalesFilterFormFieldsProps = {
-  idPrefix: string;
-  layout: "toolbar" | "modal";
-  filterYear: string;
-  setFilterYear: (v: string) => void;
-  filterMonth: string;
-  setFilterMonth: (v: string) => void;
-  filterDay: string;
-  setFilterDay: (v: string) => void;
-  search: string;
-  setSearch: (v: string) => void;
-  yearOptions: number[];
-  dayNumbers: number[];
-};
-
-function BuildingPosSalesFilterFormFields({
-  idPrefix,
-  layout,
-  filterYear,
-  setFilterYear,
-  filterMonth,
-  setFilterMonth,
-  filterDay,
-  setFilterDay,
-  search,
-  setSearch,
-  yearOptions,
-  dayNumbers,
-}: BuildingPosSalesFilterFormFieldsProps) {
-  const wrap =
-    layout === "modal"
-      ? "flex flex-col gap-4"
-      : "flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end";
-
-  return (
-    <div className={wrap}>
-      <div className="flex min-w-0 flex-col gap-1">
-        <span className="text-xs font-medium text-[#4d47b6]" id={`${idPrefix}-year-lbl`}>
-          ปี
-        </span>
-        <select
-          id={`${idPrefix}-year`}
-          aria-labelledby={`${idPrefix}-year-lbl`}
-          className={cn(buildingPosSelectFieldClass, "min-w-[7rem] sm:w-auto")}
-          value={filterYear}
-          onChange={(e) => {
-            setFilterYear(e.target.value);
-            setFilterMonth("");
-            setFilterDay("");
-          }}
-        >
-          <option value="">ทั้งหมด</option>
-          {yearOptions.map((y) => (
-            <option key={y} value={String(y)}>
-              {y}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex min-w-0 flex-col gap-1">
-        <span className="text-xs font-medium text-[#4d47b6]" id={`${idPrefix}-month-lbl`}>
-          เดือน
-        </span>
-        <select
-          id={`${idPrefix}-month`}
-          aria-labelledby={`${idPrefix}-month-lbl`}
-          className={cn(buildingPosSelectFieldClass, "min-w-[8rem] sm:w-auto")}
-          value={filterMonth}
-          onChange={(e) => {
-            setFilterMonth(e.target.value);
-            setFilterDay("");
-          }}
-        >
-          <option value="">ทุกเดือน</option>
-          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-            <option key={m} value={String(m)}>
-              {m}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex min-w-0 flex-col gap-1">
-        <span className="text-xs font-medium text-[#4d47b6]" id={`${idPrefix}-day-lbl`}>
-          วัน
-        </span>
-        <select
-          id={`${idPrefix}-day`}
-          aria-labelledby={`${idPrefix}-day-lbl`}
-          className={cn(buildingPosSelectFieldClass, "min-w-[6rem] sm:w-auto")}
-          value={dayNumbers.includes(Number(filterDay)) ? filterDay : ""}
-          onChange={(e) => setFilterDay(e.target.value)}
-        >
-          <option value="">ทุกวัน</option>
-          {dayNumbers.map((d) => (
-            <option key={d} value={String(d)}>
-              {d}
-            </option>
-          ))}
-        </select>
-      </div>
-      <label className="min-w-0 flex-1 text-xs font-medium text-[#4d47b6] sm:min-w-[200px]">
-        ค้นหา
-        <input
-          className={cn(buildingPosFieldClass, "mt-1")}
-          placeholder="ชื่อลูกค้า, โต๊ะ, เมนู, หมายเหตุ…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </label>
-    </div>
   );
 }
 
@@ -1507,11 +1434,25 @@ type HistoryProps = {
   orders: PosOrder[];
   categories?: PosCategory[];
   menuItems?: PosMenuItem[];
+  costCategories?: PosCostCategory[];
+  costEntries?: PosCostEntry[];
+  onCostsChanged?: () => void | Promise<void>;
+  /** เปิดแท็บรายจ่ายเมื่อมาจาก URL เก่า `?fin=costs` */
+  initialDetailPanel?: FinanceDetailPanel;
   onOrderStatusChange: (
     id: number,
     status: PosOrder["status"],
     extra?: { member_phone?: string },
   ) => void;
+  onOrderUpdate: (
+    id: number,
+    patch: Partial<
+      Pick<
+        PosOrder,
+        "customer_name" | "table_no" | "note" | "status" | "payment_slip_url" | "member_phone" | "items" | "created_at"
+      >
+    >,
+  ) => void | Promise<void>;
   onOrderDelete: (id: number) => void;
   onRefresh?: () => void;
   refreshing?: boolean;
@@ -1519,36 +1460,185 @@ type HistoryProps = {
   onSlipImageOpen?: (imageUrl: string) => void;
 };
 
-/** หน้ายอดขาย — กรอง กราฟ ประวัติ */
+/** หน้าการเงิน — กรอง กราฟ + แถบประวัติ/รายรับ · รายจ่าย */
 export function BuildingPosSalesHistoryPanel({
   orders,
   onOrderStatusChange,
+  onOrderUpdate,
   onOrderDelete,
   onRefresh,
   refreshing = false,
   onSlipImageOpen,
   categories = [],
   menuItems = [],
+  costCategories = [],
+  costEntries = [],
+  onCostsChanged,
+  initialDetailPanel = "history",
 }: HistoryProps) {
-  const [filterYear, setFilterYear] = useState(() => initialBangkokSalesFilters().year);
-  const [filterMonth, setFilterMonth] = useState(() => initialBangkokSalesFilters().month);
-  const [filterDay, setFilterDay] = useState("");
+  const [detailPanel, setDetailPanel] = useState<FinanceDetailPanel>(initialDetailPanel);
+  const [financeRange, setFinanceRange] = useState<BuildingPosFinanceRange>("MONTH");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(true);
   const [chartsOpen, setChartsOpen] = useState(false);
+  const [categoryCompareOpen, setCategoryCompareOpen] = useState(true);
+  const [tableCompareOpen, setTableCompareOpen] = useState(true);
   const [sparkRevenueCost, setSparkRevenueCost] = useState<AppRevenueCostBucket[]>([]);
   const [sparkLoading, setSparkLoading] = useState(false);
   const [sparkErr, setSparkErr] = useState<string | null>(null);
+  const [editOrder, setEditOrder] = useState<PosOrder | null>(null);
+  const [editCustomer, setEditCustomer] = useState("");
+  const [editTable, setEditTable] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editCreatedAt, setEditCreatedAt] = useState("");
+  const [editNote, setEditNote] = useState("");
+  const [editStatus, setEditStatus] = useState<PosOrder["status"]>("NEW");
+  const [editItems, setEditItems] = useState<PosOrder["items"]>([]);
+  const [editAddMenuId, setEditAddMenuId] = useState("");
+  const [editSlipUrl, setEditSlipUrl] = useState("");
+  const [editSlipBusy, setEditSlipBusy] = useState(false);
+  const [editBusy, setEditBusy] = useState(false);
+  const [editErr, setEditErr] = useState<string | null>(null);
+  const editGalleryRef = useRef<HTMLInputElement>(null);
+  const {
+    openCamera: openEditSlipCamera,
+    cameraInputRef: editCameraInputRef,
+    cameraModal: editSlipCameraModal,
+  } = useAppCameraCapture({ title: "ถ่ายรูปสลิป" });
+
+  useEffect(() => {
+    setDetailPanel(initialDetailPanel);
+  }, [initialDetailPanel]);
+
+  function isoToDatetimeLocalBangkok(iso: string): string {
+    const d = new Date(iso);
+    if (!Number.isFinite(d.getTime())) return "";
+    const parts = Object.fromEntries(
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Bangkok",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      })
+        .formatToParts(d)
+        .map((p) => [p.type, p.value]),
+    );
+    return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+  }
+
+  function datetimeLocalBangkokToIso(local: string): string {
+    const m = local.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (!m) return new Date(local).toISOString();
+    return new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:00+07:00`).toISOString();
+  }
+
+  function openOrderEdit(o: PosOrder) {
+    setEditOrder(o);
+    setEditCustomer(o.customer_name ?? "");
+    setEditTable(o.table_no ?? "");
+    setEditPhone((o.member_phone ?? "").replace(/\D/g, "").slice(0, 20));
+    setEditCreatedAt(isoToDatetimeLocalBangkok(o.created_at));
+    setEditNote(o.note ?? "");
+    setEditStatus(o.status);
+    setEditItems(
+      (o.items ?? []).map((it) => ({
+        menu_item_id: it.menu_item_id,
+        name: it.name,
+        price: it.price,
+        qty: it.qty,
+        note: it.note ?? "",
+        kitchen_department_id: it.kitchen_department_id,
+        kitchen_status: it.kitchen_status,
+        serve_status: it.serve_status,
+      })),
+    );
+    setEditAddMenuId("");
+    setEditSlipUrl(o.payment_slip_url?.trim() ?? "");
+    setEditErr(null);
+  }
+
+  const editItemsTotal = useMemo(
+    () => editItems.reduce((s, it) => s + it.price * it.qty, 0),
+    [editItems],
+  );
+
+  const activeMenuForEdit = useMemo(
+    () => menuItems.filter((m) => m.is_active !== false),
+    [menuItems],
+  );
+
+  async function uploadEditSlip(file: File) {
+    setEditSlipBusy(true);
+    setEditErr(null);
+    try {
+      const prepared = await prepareBuildingPosSlipImageFile(file);
+      const url = await uploadBuildingPosSessionImage(prepared);
+      setEditSlipUrl(url);
+    } catch (err) {
+      setEditErr(err instanceof Error ? err.message : "อัปโหลดสลิปไม่สำเร็จ");
+    } finally {
+      setEditSlipBusy(false);
+    }
+  }
+
+  async function onPickEditSlip(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    await uploadEditSlip(file);
+  }
+
+  async function submitOrderEdit() {
+    if (!editOrder) return;
+    if (editItems.length === 0) {
+      setEditErr("ต้องมีเมนูอย่างน้อย 1 รายการ");
+      return;
+    }
+    setEditBusy(true);
+    setEditErr(null);
+    try {
+      const createdIso = editCreatedAt.trim()
+        ? datetimeLocalBangkokToIso(editCreatedAt.trim())
+        : editOrder.created_at;
+      await onOrderUpdate(editOrder.id, {
+        customer_name: editCustomer.trim(),
+        table_no: editTable.trim(),
+        member_phone: editPhone.trim() || "",
+        note: editNote.trim(),
+        status: editStatus,
+        payment_slip_url: editSlipUrl.trim() || "",
+        created_at: createdIso,
+        items: editItems.map((it) => ({
+          menu_item_id: it.menu_item_id,
+          name: it.name,
+          price: it.price,
+          qty: it.qty,
+          note: it.note ?? "",
+        })),
+      });
+      setEditOrder(null);
+    } catch (e) {
+      setEditErr(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
+    } finally {
+      setEditBusy(false);
+    }
+  }
+
+  const todayKey = useMemo(() => bangkokTodayKey(), []);
 
   const fallbackBangkokYear = useMemo(() => {
-    const key = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
-    const y = Number(key.slice(0, 4));
+    const y = Number(todayKey.slice(0, 4));
     return Number.isFinite(y) ? y : new Date().getFullYear();
-  }, []);
+  }, [todayKey]);
 
   const sparkCalendar = useMemo(
-    () => buildingPosSalesFiltersToSparkParams(filterYear, filterMonth, filterDay, fallbackBangkokYear),
-    [filterYear, filterMonth, filterDay, fallbackBangkokYear],
+    () => sparkParamsFromFinanceRange(financeRange, dateFrom, dateTo, todayKey, fallbackBangkokYear),
+    [financeRange, dateFrom, dateTo, todayKey, fallbackBangkokYear],
   );
 
   useEffect(() => {
@@ -1596,31 +1686,32 @@ export function BuildingPosSalesHistoryPanel({
     return { periodTotalRevenue: rev, periodTotalCost: cost };
   }, [sparkRevenueCost]);
 
-  const yearOptions = useMemo(() => {
-    const ys = new Set<number>();
-    const nowKey = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
-    ys.add(Number(nowKey.slice(0, 4)));
-    orders.forEach((o) => ys.add(orderPartsBangkok(o.created_at).y));
-    return Array.from(ys).sort((a, b) => b - a);
-  }, [orders]);
-
-  const dayNumbers = useMemo(() => {
-    const max = maxDayInMonthForFilter(filterYear, filterMonth);
-    return Array.from({ length: max }, (_, i) => i + 1);
-  }, [filterYear, filterMonth]);
-
-  useEffect(() => {
-    if (!filterDay) return;
-    const max = maxDayInMonthForFilter(filterYear, filterMonth);
-    if (Number(filterDay) > max) setFilterDay("");
-  }, [filterYear, filterMonth, filterDay]);
-
   const filteredOrders = useMemo(() => {
     return orders.filter(
       (o) =>
-        matchesPeriod(o.created_at, filterYear, filterMonth, filterDay) && matchesSearch(o, search),
+        dateKeyInFinanceRange(
+          bangkokDateKeyFromIso(o.created_at),
+          financeRange,
+          todayKey,
+          dateFrom.trim(),
+          dateTo.trim(),
+        ) && matchesSearch(o, search),
     );
-  }, [orders, filterYear, filterMonth, filterDay, search]);
+  }, [orders, financeRange, todayKey, dateFrom, dateTo, search]);
+
+  const periodCostEntries = useMemo(
+    () =>
+      costEntries.filter((e) =>
+        dateKeyInFinanceRange(
+          bangkokDateKeyFromIso(e.spent_at),
+          financeRange,
+          todayKey,
+          dateFrom.trim(),
+          dateTo.trim(),
+        ),
+      ),
+    [costEntries, financeRange, todayKey, dateFrom, dateTo],
+  );
 
   const paidForChart = useMemo(() => {
     return filteredOrders.filter((o) => o.status === "PAID");
@@ -1656,7 +1747,7 @@ export function BuildingPosSalesHistoryPanel({
     return m;
   }, [categories]);
 
-  const categoryCompareRows = useMemo(() => {
+  const categoryCompareBuckets = useMemo(() => {
     const totals = new Map<string, number>();
     for (const o of paidForChart) {
       for (const it of o.items) {
@@ -1668,81 +1759,83 @@ export function BuildingPosSalesHistoryPanel({
       }
     }
     const sorted = Array.from(totals.entries()).sort((a, b) => b[1] - a[1]);
-    return entriesToBarRows(capLeaderboard(sorted, MAX_COMPARE_ROWS));
+    return entriesToColumnBuckets(capLeaderboard(sorted, MAX_COMPARE_ROWS));
   }, [paidForChart, menuItemToCategoryId, categoryIdToName]);
 
-  const tableCompareRows = useMemo(() => {
+  const tableCompareBuckets = useMemo(() => {
     const totals = new Map<string, number>();
     for (const o of paidForChart) {
       const key = o.table_no.trim() || "ไม่ระบุโต๊ะ";
       totals.set(key, (totals.get(key) ?? 0) + o.total_amount);
     }
     const sorted = Array.from(totals.entries()).sort((a, b) => b[1] - a[1]);
-    return entriesToBarRows(capLeaderboard(sorted, MAX_COMPARE_ROWS));
+    return entriesToColumnBuckets(capLeaderboard(sorted, MAX_COMPARE_ROWS));
   }, [paidForChart]);
 
   const filtersActive = useMemo(() => {
-    const init = initialBangkokSalesFilters();
-    return (
-      filterYear !== init.year ||
-      filterMonth !== init.month ||
-      filterDay.trim().length > 0 ||
-      search.trim().length > 0
-    );
-  }, [filterYear, filterMonth, filterDay, search]);
+    return financeRange !== "MONTH" || search.trim().length > 0;
+  }, [financeRange, search]);
 
-  const quickRange = useMemo((): "TODAY" | "MONTH" | "YEAR" | "CUSTOM" => {
-    const init = initialBangkokSalesFilters();
-    const dayNow = String(Number(new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }).slice(8, 10)));
-    if (filterYear === init.year && filterMonth === init.month && filterDay === dayNow) return "TODAY";
-    if (filterYear === init.year && filterMonth === init.month && !filterDay) return "MONTH";
-    if (filterYear === init.year && !filterMonth && !filterDay) return "YEAR";
-    return "CUSTOM";
-  }, [filterYear, filterMonth, filterDay]);
+  const periodLabel = useMemo(() => {
+    if (financeRange === "TODAY") return "วันนี้";
+    if (financeRange === "MONTH") return "เดือนนี้";
+    if (financeRange === "YEAR") return "ปีนี้";
+    const start = dateFrom.trim() || dateTo.trim();
+    const end = dateTo.trim() || dateFrom.trim();
+    if (start && end && start !== end) return `${start} ถึง ${end}`;
+    if (start) return `วันที่ ${start}`;
+    return "กำหนดเอง";
+  }, [financeRange, dateFrom, dateTo]);
 
-  function selectQuickRange(next: "TODAY" | "MONTH" | "YEAR") {
-    const init = initialBangkokSalesFilters();
-    const dayNow = String(Number(new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }).slice(8, 10)));
-    if (next === "TODAY") {
-      setFilterYear(init.year);
-      setFilterMonth(init.month);
-      setFilterDay(dayNow);
-      return;
+  function selectFinanceRange(next: BuildingPosFinanceRange) {
+    setFinanceRange(next);
+    if (next !== "CUSTOM") {
+      setDateFrom("");
+      setDateTo("");
     }
-    if (next === "MONTH") {
-      setFilterYear(init.year);
-      setFilterMonth(init.month);
-      setFilterDay("");
-      return;
-    }
-    setFilterYear(init.year);
-    setFilterMonth("");
-    setFilterDay("");
   }
 
-  const filterFieldsToolbar = (
-    <BuildingPosSalesFilterFormFields
-      idPrefix="pos-sales-filter"
-      layout="toolbar"
-      filterYear={filterYear}
-      setFilterYear={setFilterYear}
-      filterMonth={filterMonth}
-      setFilterMonth={setFilterMonth}
-      filterDay={filterDay}
-      setFilterDay={setFilterDay}
-      search={search}
-      setSearch={setSearch}
-      yearOptions={yearOptions}
-      dayNumbers={dayNumbers}
-    />
-  );
+  function resetFinanceFilters() {
+    setFinanceRange("MONTH");
+    setDateFrom("");
+    setDateTo("");
+    setSearch("");
+  }
 
   return (
     <div className={buildingPosContentStackClass}>
+      <section aria-label="สรุปการเงินช่วงที่กรอง">
+        <ul className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3">
+          <li className={cn(buildingPosStatCardEmeraldClass, "p-3 sm:p-4")}>
+            <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">รายรับ</p>
+            <p className="mt-2 text-left text-2xl font-black tabular-nums text-emerald-700 sm:text-3xl">
+              ฿{periodTotalRevenue.toLocaleString()}
+            </p>
+          </li>
+          <li className={cn(buildingPosStatCardIndigoClass, "p-3 sm:p-4")}>
+            <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">รายจ่าย</p>
+            <p className="mt-2 text-left text-2xl font-black tabular-nums text-rose-600 sm:text-3xl">
+              ฿{periodTotalCost.toLocaleString()}
+            </p>
+          </li>
+          <li className={cn(buildingPosStatCardVioletClass, "col-span-2 p-3 sm:col-span-1 sm:p-4")}>
+            <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">สุทธิ</p>
+            <p
+              className={cn(
+                "mt-2 text-left text-2xl font-black tabular-nums sm:text-3xl",
+                periodTotalRevenue - periodTotalCost >= 0 ? "text-[#1e1b4b]" : "text-rose-800",
+              )}
+            >
+              ฿{(periodTotalRevenue - periodTotalCost).toLocaleString()}
+            </p>
+          </li>
+        </ul>
+      </section>
+
       <AppDashboardSection tone="violet" className="rounded-[1.25rem]">
         <AppSectionHeader
           tone="violet"
-          title="ช่วงเวลาและกราฟ"
+          title="การเงิน"
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           action={
@@ -1819,145 +1912,519 @@ export function BuildingPosSalesHistoryPanel({
           id="building-pos-sales-filter-panel"
           className={cn("mt-4 space-y-3", filterOpen ? "block" : "hidden")}
         >
-          <div className="flex flex-wrap gap-2" role="group" aria-label="กรองด่วน วันนี้ เดือนนี้ ปีนี้">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="กรองช่วงเวลาการเงิน">
             {(
               [
                 { key: "TODAY" as const, label: "วันนี้" },
                 { key: "MONTH" as const, label: "เดือนนี้" },
                 { key: "YEAR" as const, label: "ปีนี้" },
+                { key: "CUSTOM" as const, label: "กำหนดเอง" },
               ] as const
             ).map((chip) => (
               <button
                 key={chip.key}
                 type="button"
-                onClick={() => selectQuickRange(chip.key)}
-                className={quickRange === chip.key ? buildingPosChipActiveClass : buildingPosChipIdleClass}
-                aria-pressed={quickRange === chip.key}
+                onClick={() => selectFinanceRange(chip.key)}
+                className={cn(
+                  "inline-flex h-10 shrink-0 items-center justify-center",
+                  financeRange === chip.key ? buildingPosChipActiveClass : buildingPosChipIdleClass,
+                )}
+                aria-pressed={financeRange === chip.key}
               >
                 {chip.label}
               </button>
             ))}
           </div>
-          {filterFieldsToolbar}
-        </div>
-        {!filterOpen ? (
-          <p className="mt-3 text-xs font-semibold text-[#66638c]">
-            ตัวกรองถูกซ่อนไว้
-            {filtersActive ? " · มีเงื่อนไขกรองอยู่" : ""} — กด «แสดงกรอง» เพื่อเปิด
-          </p>
-        ) : null}
-
-        {chartsOpen ? (
-          <div id="building-pos-sales-charts" className="mt-4 border-t border-[#ecebff] pt-4">
-            {sparkLoading ? (
-              <p className="rounded-lg bg-[#f8f7ff] px-3 py-2 text-xs text-[#66638c]">กำลังโหลดกราฟรายรับ–รายจ่าย…</p>
-            ) : sparkErr ? (
-              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{sparkErr}</p>
-            ) : (
-              <div className="space-y-3">
-                <AppRevenueCostColumnChart
-                  compact
-                  buckets={sparkRevenueCost}
-                  title="กราฟรายรับเทียบรายจ่าย"
-                  emptyText="ไม่มีข้อมูลรายรับหรือรายจ่ายในช่วงที่กรอง"
-                  formatTitle={(b) =>
-                    `${b.label}: รายรับ ฿${b.revenue.toLocaleString()} · รายจ่าย ฿${b.cost.toLocaleString()}`
-                  }
+          {financeRange === "CUSTOM" ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="min-w-0">
+                <span className="text-xs font-bold text-[#4d47b6]">ตั้งแต่วันที่</span>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  aria-label="ตั้งแต่วันที่ กรุงเทพ"
+                  className={cn(buildingPosFieldClass, "mt-1")}
                 />
-                <div className="flex flex-wrap gap-3 rounded-lg border border-[#ecebff] bg-[#faf9ff]/80 px-3 py-2 text-xs">
-                  <div>
-                    <p className="text-[9px] font-semibold uppercase tracking-wide text-[#66638c]">รวมรายรับ (ช่วงที่กรอง)</p>
-                    <p className="text-sm font-bold tabular-nums text-[#2e2a58]">฿{periodTotalRevenue.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-semibold uppercase tracking-wide text-[#66638c]">รวมรายจ่าย</p>
-                    <p className="text-sm font-bold tabular-nums text-rose-700">฿{periodTotalCost.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-semibold uppercase tracking-wide text-[#66638c]">สุทธิ</p>
-                    <p
-                      className={cn(
-                        "text-sm font-bold tabular-nums",
-                        periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-700" : "text-rose-800",
-                      )}
+              </label>
+              <label className="min-w-0">
+                <span className="text-xs font-bold text-[#4d47b6]">ถึงวันที่</span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  aria-label="ถึงวันที่ กรุงเทพ"
+                  className={cn(buildingPosFieldClass, "mt-1")}
+                />
+              </label>
+            </div>
+          ) : null}
+          <div className={cn("grid gap-3", filtersActive ? "sm:grid-cols-12" : undefined)}>
+            <label className={cn("min-w-0", filtersActive ? "sm:col-span-9" : undefined)}>
+              <span className="sr-only">ค้นหาชื่อลูกค้า โต๊ะ เมนู หรือหมายเหตุ</span>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="ค้นหาชื่อลูกค้า โต๊ะ เมนู หรือหมายเหตุ…"
+                aria-label="ค้นหาชื่อลูกค้า โต๊ะ เมนู หรือหมายเหตุ"
+                inputMode="search"
+                className={cn(buildingPosFieldClass, "mt-0")}
+              />
+            </label>
+            {filtersActive ? (
+              <div className="flex items-stretch sm:col-span-3">
+                <button
+                  type="button"
+                  onClick={() => resetFinanceFilters()}
+                  className={cn(
+                    appTemplateOutlineButtonClass,
+                    "inline-flex h-11 w-full min-h-[44px] items-center justify-center rounded-2xl px-3 text-sm font-black text-[#4d47b6]",
+                  )}
+                  aria-label="รีเซ็ตตัวกรองเป็นเดือนนี้"
+                >
+                  รีเซ็ต · เดือนนี้
+                </button>
+              </div>
+            ) : null}
+          </div>
+          <p className="text-xs font-semibold text-[#66638c]">กำลังดู: {periodLabel}</p>
+        </div>
+
+          {chartsOpen ? (
+            <div id="building-pos-sales-charts" className="space-y-4">
+              <p className="text-sm font-black text-[#1e1b4b]">รายรับเทียบรายจ่าย</p>
+              {sparkLoading ? (
+                <div className={cn("h-40 animate-pulse rounded-[1.25rem]", buildingPosPulseWashClass)} aria-hidden />
+              ) : sparkErr ? (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{sparkErr}</p>
+              ) : (
+                <AppSparkChartPanel className="w-full min-w-0">
+                  <AppRevenueCostColumnChart
+                    className="flex min-h-0 w-full min-w-0 flex-1 flex-col"
+                    compact
+                    title=""
+                    subtitle=""
+                    buckets={sparkRevenueCost}
+                    emptyText="ไม่มีข้อมูลรายรับหรือรายจ่ายในช่วงที่กรอง"
+                    formatTitle={(b) =>
+                      `${b.label}: รายรับ ฿${b.revenue.toLocaleString()} · รายจ่าย ฿${b.cost.toLocaleString()}`
+                    }
+                  />
+                </AppSparkChartPanel>
+              )}
+
+              <p className="text-sm font-black text-[#1e1b4b]">ยอดขาย</p>
+              <AppSparkChartPanel className="w-full min-w-0">
+                <AppColumnBarSparkChart
+                  className="flex min-h-0 w-full min-w-0 flex-1 flex-col"
+                  variant="brand"
+                  compact
+                  buckets={chartBuckets}
+                  title=""
+                  emptyText="ไม่มีข้อมูลยอดขายในช่วงที่เลือก"
+                  formatTitle={(b) => `${b.label}: ฿${b.amount.toLocaleString()}`}
+                />
+              </AppSparkChartPanel>
+
+              <div className="space-y-3 border-t border-[#ecebff] pt-4">
+                <p className="text-sm font-black text-[#1e1b4b]">สรุปเปรียบเทียบ</p>
+
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-start">
+                  <div className="rounded-[1.25rem] border border-white/55 bg-white/40 p-3 ring-1 ring-inset ring-white/40 sm:p-4">
+                    <button
+                      type="button"
+                      onClick={() => setCategoryCompareOpen((o) => !o)}
+                      aria-expanded={categoryCompareOpen}
+                      aria-controls="building-pos-compare-category"
+                      className="flex w-full min-h-[40px] items-center justify-between gap-2 text-left"
                     >
-                      ฿{(periodTotalRevenue - periodTotalCost).toLocaleString()}
-                    </p>
+                      <span className="text-sm font-black text-[#1e1b4b]">ยอดตามหมวด</span>
+                      <span
+                        className={cn(
+                          appTemplateOutlineButtonClass,
+                          "inline-flex min-h-[36px] shrink-0 items-center rounded-xl px-3 text-xs font-black text-[#4d47b6]",
+                          categoryCompareOpen && "border-[#5b61ff]/45 bg-[#ecebff]/90",
+                        )}
+                      >
+                        {categoryCompareOpen ? "ย่อ" : "ขยาย"}
+                      </span>
+                    </button>
+                    {categoryCompareOpen ? (
+                      <div id="building-pos-compare-category" className="mt-3">
+                        <AppColumnBarSparkChart
+                          className="flex min-h-0 w-full min-w-0 flex-1 flex-col"
+                          variant="brand"
+                          compact
+                          buckets={categoryCompareBuckets}
+                          title=""
+                          emptyText="ไม่มีออเดอร์ชำระแล้วในช่วงที่เลือก"
+                          formatTitle={(b) => `${b.label}: ฿${b.amount.toLocaleString()}`}
+                        />
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-xs font-semibold text-[#66638c]">ย่อไว้ — กดขยายเพื่อดูกราฟ</p>
+                    )}
+                  </div>
+
+                  <div className="rounded-[1.25rem] border border-white/55 bg-white/40 p-3 ring-1 ring-inset ring-white/40 sm:p-4">
+                    <button
+                      type="button"
+                      onClick={() => setTableCompareOpen((o) => !o)}
+                      aria-expanded={tableCompareOpen}
+                      aria-controls="building-pos-compare-table"
+                      className="flex w-full min-h-[40px] items-center justify-between gap-2 text-left"
+                    >
+                      <span className="text-sm font-black text-[#1e1b4b]">ยอดตามโต๊ะ</span>
+                      <span
+                        className={cn(
+                          appTemplateOutlineButtonClass,
+                          "inline-flex min-h-[36px] shrink-0 items-center rounded-xl px-3 text-xs font-black text-[#4d47b6]",
+                          tableCompareOpen && "border-[#5b61ff]/45 bg-[#ecebff]/90",
+                        )}
+                      >
+                        {tableCompareOpen ? "ย่อ" : "ขยาย"}
+                      </span>
+                    </button>
+                    {tableCompareOpen ? (
+                      <div id="building-pos-compare-table" className="mt-3">
+                        <AppColumnBarSparkChart
+                          className="flex min-h-0 w-full min-w-0 flex-1 flex-col"
+                          variant="brand"
+                          compact
+                          buckets={tableCompareBuckets}
+                          title=""
+                          emptyText="ไม่มีออเดอร์ชำระแล้วในช่วงที่เลือก"
+                          formatTitle={(b) => `${b.label}: ฿${b.amount.toLocaleString()}`}
+                        />
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-xs font-semibold text-[#66638c]">ย่อไว้ — กดขยายเพื่อดูกราฟ</p>
+                    )}
                   </div>
                 </div>
-                <p className="text-[11px] text-[#5f5a8a]">
-                  <Link
-                    href="/dashboard/building-pos?tab=finance&fin=costs"
-                    className="font-semibold text-[#4d47b6] underline decoration-[#4d47b6]/40 underline-offset-2 hover:decoration-[#4d47b6]"
-                  >
-                    บันทึกรายจ่าย / ต้นทุน
-                  </Link>
-                </p>
               </div>
-            )}
+            </div>
+          ) : null}
 
-            <AppColumnBarSparkChart
-              className="mt-4 flex min-h-0 flex-1 flex-col"
-              variant="brand"
-              compact
-              buckets={chartBuckets}
-              title="กราฟยอดขาย"
-              emptyText="ไม่มีข้อมูลยอดขายในช่วงที่เลือก"
-              formatTitle={(b) => `${b.label}: ฿${b.amount.toLocaleString()}`}
+        <div className="mt-4 space-y-4 border-t border-[#ecebff] pt-4">
+          <nav className={buildingPosFinanceSubTabShellClass} aria-label="เมนูการเงิน">
+          <div className="flex w-full min-w-0 gap-1" role="tablist">
+            {FINANCE_DETAIL_TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={detailPanel === t.id}
+                id={`building-pos-finance-tab-${t.id}`}
+                aria-controls={`building-pos-finance-panel-${t.id}`}
+                onClick={() => setDetailPanel(t.id)}
+                className={cn(
+                  "flex min-h-[44px] min-w-0 flex-1 items-center justify-center rounded-[1.25rem] px-2 py-2 text-center text-[11px] font-black leading-tight transition-all sm:px-3 sm:text-sm",
+                  detailPanel === t.id
+                    ? cn(buildingPosNavActiveClass, "ring-1 ring-white/55")
+                    : cn("ring-1 ring-transparent", buildingPosNavIdleClass),
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </nav>
+
+        <div className="mt-4">
+          {detailPanel === "history" ? (
+            <div
+              id="building-pos-finance-panel-history"
+              role="tabpanel"
+              aria-labelledby="building-pos-finance-tab-history"
+            >
+              <AppSectionHeader tone="slate" title="ประวัติ / รายรับ" />
+              <p className="mt-2 text-xs font-semibold text-[#66638c]">
+                ตามช่วง · {periodLabel}
+                {search.trim() ? ` · ค้นหา «${search.trim()}»` : ""}
+              </p>
+              {filteredOrders.length === 0 ? (
+                <AppEmptyState className="mt-4">ไม่พบรายการตามเงื่อนไข</AppEmptyState>
+              ) : (
+                <div className={cn("mt-4", appDashboardHistoryListShellClass)}>
+                  <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] pr-0.5">
+                    <HomeFinanceList as="ul" listRole="ประวัติรายรับ">
+                      {filteredOrders.map((o) => (
+                        <li key={o.id}>
+                          <PosSalesHistoryCard
+                            order={o}
+                            onStatusChange={onOrderStatusChange}
+                            onEdit={openOrderEdit}
+                            onDelete={onOrderDelete}
+                            onSlipImageOpen={onSlipImageOpen}
+                          />
+                        </li>
+                      ))}
+                    </HomeFinanceList>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {detailPanel === "expenses" ? (
+            <div
+              id="building-pos-finance-panel-expenses"
+              role="tabpanel"
+              aria-labelledby="building-pos-finance-tab-expenses"
+            >
+              <p className="mb-2 text-xs font-semibold text-[#66638c]">ต้นทุน · {periodLabel}</p>
+              <BuildingPosCostsPanel
+                embedded
+                costCategories={costCategories}
+                costEntries={periodCostEntries}
+                emptyWhenFilteredMessage="ยังไม่มีรายจ่ายในช่วงนี้ — กด «+ เพิ่มรายจ่าย»"
+                onChanged={() => void onCostsChanged?.()}
+              />
+            </div>
+          ) : null}
+        </div>
+      </div>
+      </AppDashboardSection>
+
+      <FormModal
+        open={editOrder != null}
+        onClose={() => {
+          if (!editBusy) setEditOrder(null);
+        }}
+        title={editOrder ? `แก้ไขออเดอร์ #${editOrder.id}` : "แก้ไขออเดอร์"}
+        description="แก้ลูกค้า · โต๊ะ · เมนู · วันที่ · สถานะ และสลิป"
+        size="lg"
+        mobileCentered
+        footer={
+          <FormModalFooterActions
+            onCancel={() => setEditOrder(null)}
+            onSubmit={() => void submitOrderEdit()}
+            submitLabel={editBusy ? "กำลังบันทึก…" : "บันทึก"}
+            submitDisabled={editBusy || editSlipBusy}
+            loading={editBusy}
+          />
+        }
+      >
+        <div className="space-y-3">
+          {editErr ? <p className="text-sm font-semibold text-rose-600">{editErr}</p> : null}
+          <label className="block">
+            <span className="text-xs font-bold text-[#4d47b6]">ชื่อลูกค้า</span>
+            <input
+              value={editCustomer}
+              onChange={(e) => setEditCustomer(e.target.value)}
+              className={cn(buildingPosFieldClass, "mt-1")}
+              autoComplete="name"
             />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-xs font-bold text-[#4d47b6]">โต๊ะ</span>
+              <input
+                value={editTable}
+                onChange={(e) => setEditTable(e.target.value)}
+                className={cn(buildingPosFieldClass, "mt-1")}
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold text-[#4d47b6]">เบอร์โทร</span>
+              <input
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 20))}
+                className={cn(buildingPosFieldClass, "mt-1")}
+                inputMode="tel"
+                autoComplete="tel"
+              />
+            </label>
+          </div>
+          <label className="block">
+            <span className="text-xs font-bold text-[#4d47b6]">วัน–เวลาออเดอร์</span>
+            <input
+              type="datetime-local"
+              value={editCreatedAt}
+              onChange={(e) => setEditCreatedAt(e.target.value)}
+              className={cn(buildingPosFieldClass, "mt-1")}
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-bold text-[#4d47b6]">สถานะ</span>
+            <select
+              value={editStatus}
+              onChange={(e) => setEditStatus(e.target.value as PosOrder["status"])}
+              className={cn(buildingPosSelectFieldClass, "mt-1")}
+            >
+              {POS_ORDER_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {statusLabelTh[s]}
+                </option>
+              ))}
+            </select>
+          </label>
 
-            <div className="mt-4 space-y-3 border-t border-[#ecebff] pt-4">
-              <p className="text-xs font-black text-[#4d47b6]">สรุปเปรียบเทียบ</p>
-              <AppSparkChartsTwoColumnGrid>
-                <AppCompareBarList
-                  className="flex min-h-0 flex-1 flex-col"
-                  variant="brand"
-                  title="ยอดตามหมวดหมู่"
-                  rows={categoryCompareRows}
-                  emptyText="ไม่มีรายการขายในช่วงที่เลือก"
-                  formatAmount={(a) => `฿ ${a.toLocaleString()}`}
-                />
-                <AppCompareBarList
-                  className="flex min-h-0 flex-1 flex-col"
-                  variant="brand"
-                  title="ยอดตามโต๊ะ"
-                  rows={tableCompareRows}
-                  emptyText="ไม่มีออเดอร์ชำระแล้วในช่วงที่เลือก"
-                  formatAmount={(a) => `฿ ${a.toLocaleString()}`}
-                />
-              </AppSparkChartsTwoColumnGrid>
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-bold text-[#4d47b6]">เมนูอาหาร</p>
+              <p className="text-xs font-black tabular-nums text-emerald-700">
+                รวม ฿{editItemsTotal.toLocaleString("th-TH")}
+              </p>
+            </div>
+            <ul className="mt-2 space-y-2">
+              {editItems.map((it, idx) => (
+                <li
+                  key={`${it.menu_item_id}-${idx}`}
+                  className="flex flex-wrap items-center gap-2 rounded-xl border border-white/50 bg-white/70 px-3 py-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-[#1e1b4b]">{it.name}</p>
+                    <p className="text-[11px] font-medium text-[#66638c]">
+                      ฿{it.price.toLocaleString("th-TH")} / รายการ
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/60 bg-white text-lg font-black text-[#4d47b6]"
+                      aria-label={`ลดจำนวน ${it.name}`}
+                      onClick={() =>
+                        setEditItems((prev) =>
+                          prev.flatMap((row, i) => {
+                            if (i !== idx) return [row];
+                            if (row.qty <= 1) return [];
+                            return [{ ...row, qty: row.qty - 1 }];
+                          }),
+                        )
+                      }
+                    >
+                      −
+                    </button>
+                    <span className="min-w-[2rem] text-center text-sm font-black tabular-nums text-[#1e1b4b]">
+                      {it.qty}
+                    </span>
+                    <button
+                      type="button"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/60 bg-white text-lg font-black text-[#4d47b6]"
+                      aria-label={`เพิ่มจำนวน ${it.name}`}
+                      onClick={() =>
+                        setEditItems((prev) =>
+                          prev.map((row, i) => (i === idx ? { ...row, qty: Math.min(100, row.qty + 1) } : row)),
+                        )
+                      }
+                    >
+                      +
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className={assetRowRemoveIconButtonClass}
+                    aria-label={`ลบเมนู ${it.name}`}
+                    title="ลบเมนู"
+                    onClick={() => setEditItems((prev) => prev.filter((_, i) => i !== idx))}
+                  >
+                    <IconRowRemove className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-2 flex flex-wrap items-end gap-2">
+              <label className="min-w-0 flex-1">
+                <span className="text-[11px] font-bold text-[#4d47b6]">เพิ่มเมนู</span>
+                <select
+                  value={editAddMenuId}
+                  onChange={(e) => setEditAddMenuId(e.target.value)}
+                  className={cn(buildingPosSelectFieldClass, "mt-1")}
+                >
+                  <option value="">— เลือกเมนู —</option>
+                  {activeMenuForEdit.map((m) => (
+                    <option key={m.id} value={String(m.id)}>
+                      {m.name} · ฿{m.price.toLocaleString("th-TH")}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className={cn(appTemplateOutlineButtonClass, "rounded-xl px-3 py-2 text-xs font-bold")}
+                disabled={!editAddMenuId}
+                onClick={() => {
+                  const id = Number(editAddMenuId);
+                  const m = activeMenuForEdit.find((x) => x.id === id);
+                  if (!m) return;
+                  setEditItems((prev) => {
+                    const exist = prev.findIndex((x) => x.menu_item_id === m.id);
+                    if (exist >= 0) {
+                      return prev.map((row, i) =>
+                        i === exist ? { ...row, qty: Math.min(100, row.qty + 1) } : row,
+                      );
+                    }
+                    return [
+                      ...prev,
+                      {
+                        menu_item_id: m.id,
+                        name: m.name,
+                        price: m.price,
+                        qty: 1,
+                        note: "",
+                        kitchen_department_id: m.kitchen_department_id ?? null,
+                      },
+                    ];
+                  });
+                  setEditAddMenuId("");
+                }}
+              >
+                เพิ่ม
+              </button>
             </div>
           </div>
-        ) : (
-          <p className="mt-4 rounded-[1.25rem] border border-dashed border-[#d8d6ec] bg-[#faf9ff]/70 px-3 py-4 text-center text-xs font-semibold text-[#66638c]">
-            กราฟถูกซ่อนไว้ — กด «แสดงกราฟ» เพื่อเปิดดู
-          </p>
-        )}
-      </AppDashboardSection>
 
-      <AppDashboardSection tone="slate" className="rounded-[1.25rem]">
-        <AppSectionHeader tone="slate" title="ประวัติการขาย" />
-        {filteredOrders.length === 0 ? (
-          <AppEmptyState>ไม่พบออเดอร์ตามเงื่อนไข</AppEmptyState>
-        ) : (
-          <div className={appDashboardHistoryListShellClass}>
-            <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] pr-0.5">
-              <HomeFinanceList as="ul" listRole="ประวัติการขาย">
-                {filteredOrders.map((o) => (
-                  <li key={o.id}>
-                    <PosSalesHistoryCard
-                      order={o}
-                      onStatusChange={onOrderStatusChange}
-                      onDelete={onOrderDelete}
-                      onSlipImageOpen={onSlipImageOpen}
-                    />
-                  </li>
-                ))}
-              </HomeFinanceList>
+          <label className="block">
+            <span className="text-xs font-bold text-[#4d47b6]">หมายเหตุ</span>
+            <textarea
+              value={editNote}
+              onChange={(e) => setEditNote(e.target.value)}
+              rows={2}
+              className={cn(buildingPosFieldClass, "mt-1 min-h-[4rem] py-2")}
+            />
+          </label>
+          <div>
+            <p className="text-xs font-bold text-[#4d47b6]">สลิปชำระ (ไม่บังคับ)</p>
+            <AppGalleryCameraFileInputs
+              galleryInputRef={editGalleryRef}
+              cameraInputRef={editCameraInputRef}
+              onChange={(e) => void onPickEditSlip(e)}
+            />
+            <div className="mt-2">
+              <AppImagePickCameraButtons
+                onPickGallery={() => editGalleryRef.current?.click()}
+                onPickCamera={() => openEditSlipCamera((file) => void uploadEditSlip(file))}
+                disabled={editBusy || editSlipBusy}
+                busy={editSlipBusy}
+              />
             </div>
+            {editSlipCameraModal}
+            {editSlipUrl ? (
+              <div className="mt-2 flex flex-wrap items-end gap-3">
+                <AppImageThumb
+                  src={editSlipUrl}
+                  alt="สลิปออเดอร์"
+                  onOpen={() => {
+                    if (onSlipImageOpen) onSlipImageOpen(editSlipUrl);
+                  }}
+                  className="h-20 w-20"
+                />
+                <button
+                  type="button"
+                  onClick={() => setEditSlipUrl("")}
+                  className={cn(appTemplateOutlineButtonClass, "rounded-xl px-3 py-2 text-xs font-bold")}
+                >
+                  ลบสลิป
+                </button>
+              </div>
+            ) : (
+              <p className="mt-2 text-xs font-medium text-[#66638c]">ยังไม่มีสลิป — อัปโหลดหรือถ่ายใหม่ได้</p>
+            )}
           </div>
-        )}
-      </AppDashboardSection>
+        </div>
+      </FormModal>
     </div>
   );
 }

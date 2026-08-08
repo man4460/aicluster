@@ -26,10 +26,7 @@ import { listModuleSlugsChargedToday } from "@/lib/tokens/module-daily-deduction
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { STAFF_ALLOWED_MODULE_SLUGS } from "@/lib/modules/staff-policy";
 import { getModuleDailyUsageBadge } from "@/lib/modules/module-usage-badge";
-import {
-  SYSTEM_MAP_CATALOG_ROW,
-  SYSTEM_MAP_CATALOG_SLUG,
-} from "@/lib/modules/system-map-catalog";
+import { SYSTEM_MAP_CATALOG_SLUG } from "@/lib/modules/system-map-catalog";
 import { isChatAiDisabled } from "@/lib/chat-ai/feature";
 import { CHAT_AI_DASHBOARD_HREF } from "@/lib/dashboard/chat-ai-href";
 import { DashboardPwaInstallBanner } from "@/components/pwa/DashboardPwaInstallBanner";
@@ -245,31 +242,15 @@ export default async function DashboardHomePage() {
       </div>
 
       <DashboardHomeModuleShelf
-        modules={[
-          ...(user.role === "ADMIN"
-            ? [
-                {
-                  id: 0,
-                  slug: SYSTEM_MAP_CATALOG_ROW.slug,
-                  title: SYSTEM_MAP_CATALOG_ROW.title,
-                  groupId: SYSTEM_MAP_CATALOG_ROW.groupId,
-                  imageUrl: resolveModuleCardDisplayImageUrl(SYSTEM_MAP_CATALOG_ROW.slug, null),
-                  href: "/dashboard/explore",
-                  usageBadge: getModuleDailyUsageBadge(SYSTEM_MAP_CATALOG_ROW.slug, SYSTEM_MAP_CATALOG_ROW.groupId),
-                  systemMap: true,
-                },
-              ]
-            : []),
-          ...subscribedModules.map((m) => ({
-            id: m.id,
-            slug: m.slug,
-            title: m.title,
-            groupId: m.groupId,
-            imageUrl: resolveModuleCardDisplayImageUrl(m.slug, m.cardImageUrl),
-            href: dashboardModuleHref(m.slug),
-            usageBadge: getModuleDailyUsageBadge(m.slug, m.groupId),
-          })),
-        ]}
+        modules={subscribedModules.map((m) => ({
+          id: m.id,
+          slug: m.slug,
+          title: m.title,
+          groupId: m.groupId,
+          imageUrl: resolveModuleCardDisplayImageUrl(m.slug, m.cardImageUrl),
+          href: dashboardModuleHref(m.slug),
+          usageBadge: getModuleDailyUsageBadge(m.slug, m.groupId),
+        }))}
       />
 
       {user.role === "ADMIN" && (
@@ -291,7 +272,6 @@ export default async function DashboardHomePage() {
               { href: "/dashboard/admin/users", icon: "👥", label: "จัดการผู้ใช้" },
               { href: "/dashboard/admin/activity-logs", icon: "📝", label: "Log กิจกรรม" },
               { href: "/dashboard/admin/mqtt", icon: "📡", label: "MQTT Status" },
-              { href: "/dashboard/explore", icon: "🗺️", label: "แผนผังระบบ" },
             ].map((item) => (
               <Link
                 key={item.href}

@@ -1,0 +1,193 @@
+---
+description: แพทเทิร์น UI/UX โรงแรมรีสอร์ท — ระยะขอบ ซ่อนหัว ความโค้งมน dock แท็บ (อ้างอิงเมื่อปรับหรือคัดลอกโมดูล)
+globs:
+  - "**/systems/hotel-resort/**"
+  - "**/app/**/dashboard/hotel-resort/**"
+  - "**/app/hotel-resort/**"
+  - "**/app/api/hotel-resort/**"
+alwaysApply: false
+---
+
+# โรงแรม / รีสอร์ท (hotel-resort) — เทมเพลตโมดูลแดชบอร์ด
+
+ใช้เมื่อ **ปรับหรือคัดลอก** โมดูลโรงแรมรีสอร์ท หรือโมดูลที่ต้องการโครงเดียวกับชุดล่าสุดนี้ (ระยะขอบ · ซ่อนส่วนหัว · มุมมน · dock)
+
+**หลักการโปรเจกต์:** `dashboard-ux-car-wash-baseline.mdc` · `app-templates-central.mdc` · `module-chrome-no-branding.mdc` · `dashboard-page-width.mdc` · `dashboard-mobile-summary-stat-grid.mdc`
+
+**คู่ขนาน:** drink-pos `drink-pos-module-dashboard-template.mdc` · สนามฟุตบอล `football-turf-module-dashboard-template.mdc`
+
+---
+
+## 1) โครงไฟล์มาตรฐาน
+
+| บทบาท | ไฟล์ |
+|--------|------|
+| Layout + guard | `src/app/(dashboard)/dashboard/hotel-resort/layout.tsx` → `HotelResortShell` |
+| Shell (หัว + ยุบหัว + คู่มือ + provider เมนูล่าง) | `components/HotelResortShell.tsx` |
+| เมนู / collapse state | `hotel-resort-module-nav.ts` |
+| แท็บใน header ม่วงเมื่อยุบหัว (เดสก์ท็อป) | `HotelResortHeaderBarNav.tsx` · `HotelResortHeaderExpandButton` |
+| Dock มือถือ | `HotelResortMobileBottomChrome.tsx` · `HotelResortMobileDock.tsx` |
+| หน้าหลัก / จอง / เช็คอิน / ห้องพัก / การเงิน / ลูกค้า / ตั้งค่า | `HotelResort*Client.tsx` + หน้าใต้ `dashboard/hotel-resort/` |
+| พอร์ทัลลูกค้า + **QR พนักงาน** | `HotelResortGuestPortalHubClient` · `ModuleStaffTokenQrPanel` · ปลายทาง `/hotel-resort/staff/{ownerId}?t=&k=` (`HotelResortStaffClient`) |
+| แท็บแรก | **แดชบอร์ด** (`HOTEL_RESORT_BASE`) — สถิติ + ผังห้อง · ปุ่ม **เช็คอิน** บนการ์ดห้องว่าง/จอง |
+| แท็บห้องพัก | จัดการ **อาคาร/ตึก** (หลายอาคาร) · ประเภทห้อง · CRUD ห้อง — `/dashboard/hotel-resort/rooms` |
+| โทเค็น UI (มุมมน · glass · gutter ล่าง) | `lib/ui-tokens.ts` |
+| พอร์ทัลสาธารณะ | `HotelResortPortalClient.tsx` · `/hotel-resort/[ownerId]` |
+
+โมดูลใหม่: แยก **nav + shell + dock + client + api** — อย่าผูกเมนูยาวใน `page.tsx`
+
+---
+
+## 2) ระยะขอบซ้าย–ขวา (บังคับ)
+
+ชุดเดียวกับ drink-pos / สนามฟุตบอล:
+
+| # | ชั้น | คลาส | ไฟล์ |
+|---|------|------|------|
+| 1 | ห่อ `main` ใน `DashboardShell` | `px-3 sm:px-4` | ไม่ใช้ `moduleDashboardCompact` |
+| 2 | `PageContainer` ผ่าน `DashboardPagesShell` | `size="full"` + **`max-w-none !px-3 sm:!px-4 lg:!px-6`** | เงื่อนไข `hotelResortModule` |
+| 3 | การ์ดหัว Shell | `px-4 py-4 sm:px-8 sm:py-6` | `HotelResortShell.tsx` |
+| 4 | เนื้อหาใต้หัว (`children`) | **ห้าม** ห่อด้วย `px-*` / `max-w-*` ซ้ำทั้งหน้า | ไหลตรงจาก PageContainer |
+| 5 | การ์ดย่อย | padding ในการ์ดเอง | client แต่ละหน้า |
+
+**ห้าม** ซ้อน `max-w-6xl mx-auto` ใน Shell · **ห้าม** `MawellLogo` ใน chrome โมดูล
+
+---
+
+## 3) ยุบ / ขยายหัวโมดูล
+
+สถานะ: `localStorage` + `CustomEvent`  
+(`HOTEL_RESORT_HEADER_COLLAPSE_KEY` / `HOTEL_RESORT_HEADER_COLLAPSE_EVENT` ใน `hotel-resort-module-nav.ts`)
+
+| สถานะ | มือถือ | เดสก์ท็อป (`lg+`) |
+|-------|--------|-------------------|
+| **หัวเปิด** | การ์ดหัว · คู่มือ · **ปุ่มซ่อนขวาสุด** · **ไม่มีแท็บในหัว** (ใช้ dock) | การ์ดหัว + กริดแท็บ · ปุ่มซ่อนหลังคู่มือ |
+| **หัวยุบ** | โทเคน + **ปุ่มขยาย** — **ห้าม** แท็บใน header ม่วง | `HotelResortHeaderBarNav` · ชื่อโมดูลข้อความล้วน · ปุ่มขยายขวาสุด |
+
+จุดต่อ `DashboardShell.tsx`:
+
+- `showHotelResortHeaderBar = onHotelResortModule && hotelResortHeaderCollapsed`
+- มือถือ: เฉพาะ `HotelResortHeaderExpandButton` + บรรทัดโทเคน
+- `lg+`: `HotelResortHeaderBarNav` เต็ม
+
+**เส้น accent:** หลังแถบ `h-1.5` gradient ต้องมี **`mt-5`** ก่อนไอคอน/ปุ่ม/ข้อความ (`hotelResortAccentBarClass`)
+
+---
+
+## 4) ความโค้งมน (มาตรฐานโมดูลนี้ — บังคับ)
+
+**รัศมีหลัก: `1.5rem`** (`rounded-[1.5rem]`) — ใช้โทเค็นใน `lib/ui-tokens.ts`  
+ชั้นในห้ามโหดกว่าชั้นนอก
+
+| ระดับ | โทเค็น / คลาส | ค่า |
+|-------|----------------|-----|
+| เปลือกหัวโมดูล | `hotelResortGlassShellClass` | **`rounded-[1.5rem]`** |
+| การ์ดหลัก `AppDashboardSection` | `hotelResortSectionRadiusClass` | **`!rounded-[1.5rem]`** ทับ default `rounded-2xl` ของ template |
+| ห่อสถิติ / hub QR | `hotelResortStatsShellClass` · hub cards | **`rounded-[1.5rem]`** |
+| การ์ดย่อย / รายการ / สถิติใบ | `hotelResortContentCardClass` · stat card | **`rounded-xl`** |
+| ปุ่ม / input / chip | ตามจุด | `rounded-xl` (หรือ `rounded-full` สำหรับ chip) |
+| Dock pill มือถือ | `hotelResortDockPillClass` ผ่าน `pillClassName` | **`!rounded-[1.5rem]`** |
+
+**บังคับเมื่อเพิ่มหน้าใหม่ในโมดูลนี้:**
+
+1. `AppDashboardSection` ต้องส่ง `className={hotelResortSectionRadiusClass}`
+2. อย่า hardcode `rounded-[2.5rem]` / `rounded-2xl` / `rounded-[1.25rem]` บนเปลือกหรือการ์ดหลัก — ใช้โทเค็น `1.5rem`
+3. ชั้นในใช้ `rounded-xl` (ต่ำกว่าเปลือก `1.5rem`)
+
+---
+
+## 5) เมนูมือถือ / เดสก์ท็อป
+
+| โซน | พฤติกรรม |
+|-----|----------|
+| มือถือ | **dock ล่าง** (`AppMobileDockUnifiedBar`) · safe-area · `pb-24` (`hotelResortMainPaddingBottomClass`) |
+| เดสก์ท็อป | แท็บกริดในการ์ดหัว (เมื่อหัวเปิด) หรือแถบม่วงเมื่อหัวยุบ |
+| เข้าโมดูล | ย่อ sidebar หลัก · **ซ่อน** `MobileBottomNav` หลัก |
+
+เมนูรวมศูนย์ที่ `HOTEL_RESORT_NAV_ITEMS` — shell / dock / header bar อ่านชุดเดียวกัน
+
+---
+
+## 6) สถิติบนมือถือ
+
+แถวสรุปตัวเลข: **`grid-cols-2`** เสมอ · การ์ดคี่ใบสุดท้าย `col-span-2 sm:col-span-1`  
+ดู `hotelResortStatsGridClass` / `hotelResortFinanceStatsGridClass` + `dashboard-mobile-summary-stat-grid.mdc`
+
+---
+
+## 7) ช่องทางชำระ (เช็คอิน / บิล) — เหมือนร้านอาหาร
+
+**รายละเอียดเต็ม:** `hotel-resort-payment-methods.mdc`
+
+| ทางเลือก | ค่า `paymentMethod` | สลิป (แดชบอร์ดเช็คอิน/เอาต์) |
+|---------|---------------------|------|
+| เงินสด | `CASH` | ไม่ต้อง |
+| พร้อมเพย์ | `PROMPTPAY` | ทางเลือก (แผงมีช่องแนบ) |
+| โอนเงิน | `TRANSFER` | ทางเลือก (แผงมีช่องแนบ) |
+
+- UI: `HotelResortPaymentPanel` + `lib/payment-method.ts` · ถ่ายสลิปด้วย `useAppCameraCapture`
+- QR / บัญชี: `POST /api/hotel-resort/promptpay-qr` (`amountBaht`) จากโปรไฟล์ที่พัก
+- สลิป: อัปโหลด `/api/hotel-resort/upload` → เก็บ `paymentSlipUrl` บน `HotelResortBooking`
+- **ลิงก์ลูกค้า (มัดจำ/เต็ม):** บังคับสลิป + QR สาธารณะ — `module-customer-booking-website-portal.mdc`
+- **รายการจอง:** เมื่อชำระบางส่วน ต้องโชว์ยอดชำระ/ค้าง + สลิปกดดู lightbox
+
+---
+
+## 8) รายการจอง — ตัวกรอง + เตือนเลยเวลา + สลิปมัดจำ
+
+**รายละเอียดเต็ม:** `hotel-resort-booking-filters.mdc`
+
+- ชิป: วันนี้ · เดือนนี้ · ปีนี้ · ช่วงเวลา · ทั้งหมด (+ ต้องปิดงาน)
+- ปุ่ม **แสดงกรอง / ซ่อนกรอง** ทุก breakpoint + badge เมื่อกรองค้าง
+- เลยเวลาเช็คอิน (`RESERVED`) / เลยเวลาเช็คเอาต์ (`CHECKED_IN`) ตามตั้งค่าที่พัก → เตือนบนการ์ดให้ปิดงาน
+- Logic: `lib/booking-filters.ts` · เวลาอิง `checkInTime` / `checkOutTime`
+- ชำระบางส่วน + สลิป: แสดงบนการ์ดและโมดัลจัดการ — กดดูได้
+
+---
+
+## 8.1) ผังห้องแดชบอร์ด — สถานะวันนี้ + ซ่อนกรอง
+
+**รายละเอียดเต็ม:** `hotel-resort-room-grid-occupancy.mdc`
+
+- ปุ่ม **แสดงกรอง / ซ่อนกรอง** ที่มุมขวาหัวการ์ด คู่รีเฟรช
+- **ห้าม** กรองช่วงเวลาบนผัง — อ้างอิง**วันนี้**เสมอ (กรองวันอยู่ที่หน้าการจอง)
+- แผงกรอง: ค้นหา · สถานะ · ต้องปิดงาน · อาคาร · ประเภทห้อง
+- สถานะการ์ดจากช่วงพัก · เตือนคนละสี: **amber** ไม่มาเช็คอิน · **rose** ต้องเช็คเอาต์
+- **ห้าม** แบนเนอร์สรุปด้านบนผัง — โชว์ผู้จองเช็คอินต่อบนการ์ด
+- Logic: `lib/room-occupancy.ts` · เวลาจากตั้งค่าที่พัก · `GET .../rooms?asOf=วันนี้`
+
+---
+
+## 8.2) การเงิน — กรอง + กราฟ + แถบเมนู
+
+**รายละเอียดเต็ม:** `hotel-resort-finance.mdc` · กฎกลาง `dashboard-finance-filter-charts-toggle.mdc`
+
+- การ์ดเดียว «ช่วงเวลาและกราฟ» — แสดง/ซ่อนกรอง · แสดง/ซ่อนกราฟ
+- **แถบเมนูในการ์ดรายละเอียดใบเดียว:** ประวัติผู้เข้าพัก · รายรับ · รายจ่าย
+- แท็บรายจ่าย: CRUD **หมวดหมู่** + บันทึกรายจ่ายผูกหมวด
+- `HotelResortFinanceClient` · `GET .../finance-summary` · `.../cost-categories`
+
+---
+
+## 9) คำอธิบายใน UI (ตัดตามกฎ)
+
+- **`AppSectionHeader`**: `title` (+ `action`) — **ห้าม** `description` อธิบายฟีเจอร์ / นับรายการใต้หัว
+- คำอธิบายยาว → **คู่มือการใช้งาน** (`AppUsageGuideModal`) เท่านั้น
+- แบนเนอร์/hint บนหน้า: สั้น (เช่น ชื่อห้อง) — ไม่เล่า workflow
+- พอร์ทัลลูกค้า: หัวข้อสั้นพอ — ดู `customer-portal-no-description-copy.mdc`
+- **เว็บไซต์จองลูกค้า (แบนเนอร์ · ค้นหา · มัดจำ · QR พร้อมเพย์ · สลิป · รายละเอียดหลังจอง):** `.cursor/rules/module-customer-booking-website-portal.mdc`
+
+---
+
+## 10) Checklist ตอนคัดลอกโมดูล
+
+- [ ] `DashboardPagesShell` — เพิ่มเงื่อนไข module + gutter `max-w-none !px-3 sm:!px-4 lg:!px-6`
+- [ ] `DashboardShell` — collapse event + header bar เมื่อยุบหัว
+- [ ] Shell: accent + `mt-5` + ปุ่มซ่อนหัว + ไม่ใส่แบรนด์ซ้ำ
+- [ ] โทเค็นมุมมนตาม §4 · section ใช้ `!rounded-[1.5rem]`
+- [ ] Dock pill `rounded-[1.5rem]` · เนื้อหา `pb-24 lg:pb-0`
+- [ ] Nav keys แยกไฟล์ต่อ slug — ไม่ซ้ำแท็บกับ dock บนมือถือ
+- [ ] ช่องทางชำระ CASH / PROMPTPAY / TRANSFER + สลิปตาม §7 · ลิงก์ลูกค้าตาม `module-customer-booking-website-portal.mdc`
+- [ ] รายการจอง: ตัวกรองช่วง + ซ่อนกรอง + เตือนเลยเวลา + สลิปมัดจำกดดูได้ ตาม §8
+- [ ] ผังห้อง: เตือนคนละสี + ผู้จองต่อ + ไม่มีแบนเนอร์บน ตาม §8.1
+- [ ] ไม่มี `description` บน `AppSectionHeader` ตาม §9

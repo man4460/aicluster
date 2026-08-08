@@ -5,6 +5,8 @@ import {
   CAR_WASH_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
 } from "@/lib/modules/config";
+import type { AppSlipPaperSize } from "@/components/app-templates/slip-print";
+import { DEFAULT_APP_SLIP_PAPER_SIZE } from "@/components/app-templates/slip-print";
 
 /** โมดูลที่ใช้ตาราง `module_shop_brandings` */
 export const MODULE_SHOP_BRANDING_SLUGS = [
@@ -30,6 +32,12 @@ export type ModuleShopBrandingDto = {
   logoUrl: string | null;
   tagline: string | null;
   contactPhone: string | null;
+  /** ขนาดสลิปใบเสร็จของโมดูลนี้ */
+  slipPaperSize: AppSlipPaperSize;
+  /** ขนาดสลิปคิวออเดอร์ (ครัว / พร้อมเสิร์ฟ) */
+  orderTicketSlipPaperSize: AppSlipPaperSize;
+  /** มีรหัสเข้าลิงก์พนักงานรายวัน */
+  staffDailyPinSet: boolean;
 } & ModuleShopPaymentDto;
 
 export const EMPTY_MODULE_SHOP_BRANDING: ModuleShopBrandingDto = {
@@ -37,5 +45,8 @@ export const EMPTY_MODULE_SHOP_BRANDING: ModuleShopBrandingDto = {
   logoUrl: null,
   tagline: null,
   contactPhone: null,
+  slipPaperSize: DEFAULT_APP_SLIP_PAPER_SIZE,
+  orderTicketSlipPaperSize: DEFAULT_APP_SLIP_PAPER_SIZE,
+  staffDailyPinSet: false,
   ...EMPTY_MODULE_SHOP_PAYMENT,
 };

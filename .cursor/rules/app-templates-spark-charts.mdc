@@ -18,6 +18,17 @@ alwaysApply: true
 - กราฟข้างใน: `className="flex min-h-0 flex-1 flex-col"`
 - ช่องว่างระหว่างรายการในหน้าเดียวกัน: `space-y-3` ระหว่าง `AppRevenueCostColumnChart` กับแถวกราฟล่าง
 
+## ขนาดกราฟ / ความกว้างแท่ง (บังคับเมื่ออยู่หน้าเดียวกัน)
+
+เมื่อมีหลายกราฟแท่งบน**หน้าการเงิน / ยอดขาย** เดียวกัน:
+
+1. ใช้โหมด **`compact`** ชุดเดียวกันทั้งหน้า — **ห้าม** ผสม `compact` กับ non-compact ในแถวเดียวกัน
+2. ความสูงโซนแท่ง `compact` ต้องเท่ากันระหว่าง `AppRevenueCostColumnChart` กับ `AppColumnBarSparkChart` (`h-32` / `sm:h-40` + min-height ตาม template)
+3. ความกว้างแท่ง `compact` ของ `AppColumnBarSparkChart` ใช้ขนาดเดียว (`max-w-[11px] sm:max-w-[12px]`) — **อย่า** สลับ `pairedLayout` / `evenDistribution` เพียงเพื่อให้แท่งหนา-บางต่างกันในหน้าเดียวกัน
+4. ในหน้าเดียวกัน: ถ้าไม่จำเป็นต้องจัดคู่ dual chart — ใช้ `compact` ล้วน (ไม่ใส่ `pairedLayout`) เพื่อให้เส้นแท่งเท่ากันทุกรูป
+
+อ้างอิงหน้า: building-pos `BuildingPosSalesAnalytics` · drink-pos `DrinkPosSalesClient`
+
 ## ขยาย
 
 ถ้าต้องการพฤติกรรมใหม่ (เช่น stacked bar) — **เพิ่มที่ `src/components/app-templates/`** แล้ว export ใน `index.ts` อย่าคัดลอก CSS ไปโมดูลเดียว

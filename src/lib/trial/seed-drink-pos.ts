@@ -61,6 +61,7 @@ async function wipeDrinkPosOwnerData(prisma: PrismaClient, ownerUserId: string, 
   await prisma.drinkPosLoyaltyLedger.deleteMany({ where: { ownerUserId, trialSessionId } });
   await prisma.drinkPosLoyaltyReward.deleteMany({ where: { ownerUserId, trialSessionId } });
   await prisma.drinkPosLoyaltySettings.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await prisma.drinkPosStaffLink.deleteMany({ where: { ownerUserId, trialSessionId } });
   await prisma.drinkPosSaleLine.deleteMany({ where: { sale: { ownerUserId } } });
   await prisma.drinkPosSale.deleteMany({ where: { ownerUserId } });
   await prisma.drinkPosCostEntry.deleteMany({ where: { ownerUserId } });

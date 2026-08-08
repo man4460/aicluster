@@ -10,8 +10,10 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppSlipPaperSizeToolbar,
   appTemplateOutlineButtonClass,
   useAppImageLightbox,
+  useAppSlipPaperSize,
 } from "@/components/app-templates";
 import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
 import { cn } from "@/lib/cn";
@@ -179,6 +181,7 @@ export function CarWashServiceLanePanel({
   const [laneModalVisitId, setLaneModalVisitId] = useState<number | null>(null);
   const [laneModalView, setLaneModalView] = useState<"details" | "bill">("details");
   const [billPrintedAt, setBillPrintedAt] = useState("");
+  const { paper: slipPaper, setPaper: setSlipPaper } = useAppSlipPaperSize();
   const [ppQrUrl, setPpQrUrl] = useState<string | null>(null);
   const [ppQrLoading, setPpQrLoading] = useState(false);
   const [ppConfigured, setPpConfigured] = useState(true);
@@ -375,18 +378,24 @@ export function CarWashServiceLanePanel({
   }
 
   const printFooterRow = (
-    <div className="flex flex-wrap gap-2">
-      <button type="button" className={cn("cw-btn", appTemplateOutlineButtonClass)} onClick={() => handlePrintBill("SLIP_58")}>
-        <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect width="12" height="8" x="6" y="14" /></svg>
-        <span className="cw-btn-label">พิมพ์ 58 mm</span>
-      </button>
-      <button type="button" className={cn("cw-btn", appTemplateOutlineButtonClass)} onClick={() => handlePrintBill("SLIP_80")}>
-        <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect width="12" height="8" x="6" y="14" /></svg>
-        <span className="cw-btn-label">พิมพ์ 80 mm</span>
-      </button>
-      <button type="button" className={cn("cw-btn", appTemplateOutlineButtonClass)} onClick={() => handlePrintBill("A4")}>
-        <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-        <span className="cw-btn-label">พิมพ์ A4</span>
+    <div className="flex flex-wrap items-center gap-2">
+      <AppSlipPaperSizeToolbar
+        value={slipPaper}
+        onChange={setSlipPaper}
+        sizes={["SLIP_58", "SLIP_80", "A4"]}
+        aria-label="ขนาดกระดาษบิลคาร์แคร์"
+      />
+      <button
+        type="button"
+        className={cn("cw-btn", appTemplateOutlineButtonClass)}
+        onClick={() => handlePrintBill(slipPaper)}
+      >
+        <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <polyline points="6 9 6 2 18 2 18 9" />
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+          <rect width="12" height="8" x="6" y="14" />
+        </svg>
+        <span className="cw-btn-label">พิมพ์บิล</span>
       </button>
     </div>
   );
@@ -613,36 +622,23 @@ export function CarWashServiceLanePanel({
                 </button>
               </div>
             : <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <AppSlipPaperSizeToolbar
+                    value={slipPaper}
+                    onChange={setSlipPaper}
+                    sizes={["SLIP_58", "SLIP_80", "A4"]}
+                    aria-label="ขนาดกระดาษบิลคาร์แคร์"
+                  />
                   <button
                     type="button"
                     className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 transition-all hover:bg-slate-50 active:scale-95"
-                    onClick={() => handlePrintBill("SLIP_58")}
+                    onClick={() => handlePrintBill(slipPaper)}
                   >
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect width="12" height="8" x="6" y="14" />
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                      <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                      <rect width="12" height="8" x="6" y="14" />
                     </svg>
-                    58mm
-                  </button>
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 transition-all hover:bg-slate-50 active:scale-95"
-                    onClick={() => handlePrintBill("SLIP_80")}
-                  >
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect width="12" height="8" x="6" y="14" />
-                    </svg>
-                    80mm
-                  </button>
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 transition-all hover:bg-slate-50 active:scale-95"
-                    onClick={() => handlePrintBill("A4")}
-                  >
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
-                    </svg>
-                    A4
+                    พิมพ์บิล
                   </button>
                 </div>
                 <div className="flex gap-2">

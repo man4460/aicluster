@@ -34,8 +34,9 @@ alwaysApply: false
 | แผนกทำ / เสิร์ฟ (สาธารณะ) | `/drink-pos/kitchen/[ownerId]` · `/drink-pos/serve/[ownerId]` |
 | สถานะออเดอร์ | `lib/fulfillment-status.ts` · `RECEIVED` → `MAKING` → `DONE` (พร้อมรับ) → `SERVED` (ส่งมอบแล้ว · ออกจากกระดาน) |
 | หน้าสินค้า / draft | `DrinkPosDashboardClient.tsx` |
-| การเงิน (ช่วงเวลา + กราฟ + บิล) | `DrinkPosSalesClient.tsx` · `GET /api/drink-pos/finance-summary` |
-| สมาชิก / QR hub | `DrinkPosLoyaltyHubClient.tsx` · `DrinkPosLoyaltyBar.tsx` · `DrinkPosQrPosterClient.tsx` · เมนู «ลิงก์» รวม QR ลูกค้า · ค้นหาสมาชิก · แผนกทำ · แผนกเสิร์ฟ |
+| การเงิน (ช่วงเวลา + กราฟ + แท็บประวัติ/รายจ่าย) | `DrinkPosSalesClient.tsx` · `DrinkPosCostsPanel.tsx` · `GET /api/drink-pos/finance-summary` |
+| หมวดรายจ่าย / บันทึกต้นทุน | `DrinkPosCostsPanel` · `DrinkPosCostCategory` · `paymentSlipUrl` บน `DrinkPosCostEntry` · กฎ `dashboard-expense-cost-categories.mdc` |
+| สมาชิก / QR hub | `DrinkPosLoyaltyHubClient` · `DrinkPosLoyaltyBar` · `DrinkPosQrPosterClient` · เมนู «ลิงก์» (QR ลูกค้า · **QR พนักงาน** · ค้นหา · แผนกทำ/เสิร์ฟ) — ลิงก์พนักงานทั้งชุด: **`.cursor/rules/module-staff-token-link-portal.mdc`** |
 | ตั้งค่าร้าน + สะสมแต้ม | `DrinkPosShopSettingsClient.tsx` · `PATCH /api/drink-pos/profile` |
 | กฎแต้ม (ข้อความ) | `lib/loyalty-rule.ts` (`formatDrinkPosLoyaltyRule`) |
 | โทเค็น UI | `lib/ui-tokens.ts` |
@@ -97,7 +98,18 @@ alwaysApply: false
 
 ### เดสก์ท็อป (`lg+`)
 
-- 2 คอลัมน์: **ซ้าย** สมาชิก + รายการ · **ขวา** กริด — แผงซ้าย `hidden lg:flex`
+- 2 คอลัมน์: **ซ้าย** สมาชิก + รายการ + ชำระ · **ขวา** กริด — แผงซ้าย `hidden lg:flex`
+- **เลื่อนอิสระแยกคอลัมน์เมื่อเกินขอบล่าง** (หน้า `/order` แดชบอร์ด — บังคับ):
+  - **เชนความสูง (เดสก์ท็อป `lg+` เท่านั้น):** `DashboardShell` (`onPosOrderPage`) → `PageContainer` → `DrinkPosShell` → `DrinkPosOrderClient`
+  - กริด: `lg:grid-rows-1` + `overflow-hidden` · **ซ้าย/ขวา** `lg:h-full` + สกอลล์ในคอลัมน์
+  - **ห้าม** `max-h-[calc(100dvh-…)]` บนคอลัมน์อย่างเดียว — อยู่ใต้หัวโมดูลแล้วล้นขอบล่างจอ (ส่วนล่าง «หาย»)
+  - **ห้าม** ล็อก `h-[100dvh]` ทั้ง `DashboardShell` ทุกหน้า — เฉพาะ `/order` + `lg:`
+  - คู่ขนานร้านอาหาร: `BuildingPosOrderClient` · `.cursor/rules/building-pos-dashboard-template.mdc` § หน้าออร์เดอร์
+- **มือถือแดชบอร์ดออเดอร์:** ยังไม่ปรับ (รอกำหนด) — เลื่อนทั้งหน้าตามเดิม
+- **ลิงก์พนักงาน** (`layout="staffPortal"`):
+  - เดสก์ท็อป: ซ้าย/ขวาเลื่อนอิสระใน `h-dvh`
+  - มือถือ: แท็บเมนูล่าง · หัวคงที่ · สกอลล์รวมเบอร์โทร+เมนู
+  - รายละเอียดเต็ม → **`.cursor/rules/module-staff-token-link-portal.mdc`** (§3 เดสก์ท็อป · §4 มือถือ)
 
 ### Draft หน้าสินค้า
 
@@ -109,7 +121,7 @@ alwaysApply: false
 - ทางเลือก: **เงินสด · พร้อมเพย์ · โอนเงิน** — `DrinkPosPaymentPanel` + `lib/payment-method.ts`
 - พร้อมเพย์: QR จาก `POST /api/drink-pos/promptpay-qr` (เบอร์จากตั้งค่าร้าน)
 - โอน: แสดงธนาคาร/เลขบัญชีจากโปรไฟล์ร้าน · แนบสลิป (อัปโหลด `/api/drink-pos/upload`)
-- พร้อมเพย์/โอนเมื่อยอด > 0 **ต้องมีสลิป** ก่อนบันทึก (`paymentMethod` · `paymentSlipUrl` บน `DrinkPosSale`)
+- พร้อมเพย์/โอนเมื่อยอด > 0 **แสดงช่องแนบสลิปได้ (ไม่บังคับ)** (`paymentMethod` · `paymentSlipUrl` บน `DrinkPosSale`)
 - มือถือ: ปุ่ม dock «ชำระ / บันทึก» เปิดโมดัลสรุป (เลือกช่องทางที่นั่น)
 
 ---
@@ -148,7 +160,10 @@ alwaysApply: false
 
 ## 7) การเงิน — ช่วงเวลา (ค่าเริ่มต้นเดือนนี้)
 
-อ้างอิง `DrinkPosSalesClient.tsx` + `GET /api/drink-pos/finance-summary?range=` + **`dashboard-finance-filter-charts-toggle.mdc`**
+อ้างอิง `DrinkPosSalesClient.tsx` + `GET /api/drink-pos/finance-summary?range=`
+
+**แม่แบบข้ามโมดูล (บังคับ):** **`dashboard-finance-module-template.mdc`**  
+กฎย่อย: `dashboard-finance-page-layout.mdc` · `dashboard-finance-filter-charts-toggle.mdc` · `dashboard-finance-detail-tabs.mdc` · `dashboard-expense-cost-categories.mdc`
 
 | ช่วง | `range` | กราฟ |
 |------|---------|------|
@@ -157,12 +172,14 @@ alwaysApply: false
 | ปีนี้ | `YEAR` | **รายเดือน** |
 | กำหนดเอง | `CUSTOM` + `from`/`to` | รายวันในช่วง |
 
-UI (2 การ์ด):
+UI:
 
-1. **ช่วงเวลาและกราฟ** — ปุ่ม **แสดง/ซ่อนกรอง** · **แสดง/ซ่อนกราฟ** คนละปุ่ม · รีเฟรช (ค่าเริ่ม: กรองเปิด · กราฟซ่อน)
-   - แผงกรอง: chip วันนี้·เดือนนี้·ปีนี้·กำหนดเอง · ค้นหาโน้ต/สินค้า/เบอร์ · รีเซ็ต → เดือนนี้
-   - แผงกราฟ: สถิติรายได้/ต้นทุน/กำไร · รายได้เทียบต้นทุน · ยอดขาย · บันทึกต้นทุน
-2. **บิลล่าสุด** — รายการตามตัวกรอง · บันทึกขาย
+1. **ตัวเลขสรุปด้านบนสุด** — รายได้ `emerald-700` / ต้นทุน `rose-600` / กำไร (ไม่ถูกซ่อนกราฟ)
+2. **การ์ดการเงินใบเดียว** — แสดง/ซ่อนกรอง · แสดง/ซ่อนกราฟ · รีเฟรช · แผงกรอง · กราฟ
+3. **ชิปช่วงเวลา** เป็นปุ่ม pill เล็ก (`flex-wrap`) — **ห้าม**เต็มจอ / `grid-cols-4`
+4. ช่องพิมพ์สูงเท่ากัน · `sm+` แถวเดียว · **รีเซ็ตเฉพาะเมื่อกรองค้าง** · ซ่อนกรอง/กราฟแล้วไม่มี placeholder
+5. **แถบแท็บ** `drinkPosFinanceSubTabShellClass` — **ประวัติ / รายรับ** · **รายจ่าย**
+6. ประวัติ: สลิปเฉพาะเมื่อมี · ราคาขวา emerald · **ทุกแถวแก้ไข+ลบได้** · ลบยืนยันด้วย `useAppNoticePopup` · รายจ่าย: `DrinkPosCostsPanel` (ฟอร์ม 5 ช่องต้นแบบร้านอาหาร · ราคา rose · แก้ไข/ลบ + `notice.confirm`)
 
 API response: `buckets` · `totalRevenue` · `totalCost` · `rangeLabel` · (คง `totalRevenue7d`/`totalCost7d` alias ได้)
 

@@ -6,6 +6,7 @@ import { isBuildingPosPortalOpenForOwner } from "@/lib/building-pos/portal-acces
 import { formatBuildingPosDbError, jsonBuildingPosError } from "@/lib/building-pos/route-errors";
 import { planFeaturesApiPayload } from "@/lib/modules/plan-entitlements";
 import { getPlanFeaturePolicy } from "@/lib/modules/plan-feature-policy";
+import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
 import { getBuildingPosDataScope } from "@/lib/trial/module-scopes";
 import {
   applyKitchenDepartmentStatusAdvance,
@@ -120,7 +121,7 @@ export async function GET(req: Request) {
           moduleSlug: "building-pos",
         },
       },
-      select: { displayName: true },
+      select: { displayName: true, orderTicketSlipPaperSize: true },
     });
 
     const owner = await prisma.user.findUnique({
@@ -159,6 +160,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       serverTime: new Date().toISOString(),
       shopName: branding?.displayName?.trim() || "POS ร้านอาหาร",
+      orderTicketSlipPaperSize: normalizeModuleSlipPaperSize(branding?.orderTicketSlipPaperSize),
       departmentId,
       orders,
       features: owner

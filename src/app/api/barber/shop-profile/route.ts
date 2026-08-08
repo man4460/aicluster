@@ -8,6 +8,10 @@ import {
   moduleShopPaymentPatchSchema,
   paymentRowToDto,
 } from "@/lib/module-shop/payment";
+import {
+  appSlipPaperSizeZod,
+  normalizeModuleSlipPaperSize,
+} from "@/lib/profile/module-slip-paper-size";
 import { getBarberDataScope } from "@/lib/trial/module-scopes";
 
 const patchSchema = z
@@ -17,6 +21,7 @@ const patchSchema = z
     tagline: z.string().max(300).optional().nullable(),
     contactPhone: z.string().max(32).optional().nullable(),
     address: z.string().max(2000).optional().nullable(),
+    slipPaperSize: appSlipPaperSizeZod.optional(),
   })
   .merge(moduleShopPaymentPatchSchema);
 
@@ -25,6 +30,7 @@ const select = {
   logoUrl: true,
   contactPhone: true,
   address: true,
+  slipPaperSize: true,
   ...MODULE_SHOP_PAYMENT_SELECT,
 } as const;
 
@@ -40,6 +46,7 @@ function profileFromRow(row: {
   logoUrl: string | null;
   contactPhone: string | null;
   address: string | null;
+  slipPaperSize?: string | null;
   promptPayPhone?: string | null;
   bankName?: string | null;
   bankAccountNumber?: string | null;
@@ -52,6 +59,7 @@ function profileFromRow(row: {
     tagline: null,
     contactPhone: row.contactPhone,
     address: row.address,
+    slipPaperSize: normalizeModuleSlipPaperSize(row.slipPaperSize),
     ...paymentRowToDto(row),
   };
 }
@@ -65,7 +73,11 @@ export async function GET() {
     },
     select,
   });
-  return NextResponse.json({ profile: profileFromRow(row ?? { displayName: null, logoUrl: null, contactPhone: null, address: null }) });
+  return NextResponse.json({
+    profile: profileFromRow(
+      row ?? { displayName: null, logoUrl: null, contactPhone: null, address: null, slipPaperSize: "SLIP_58" },
+    ),
+  });
 }
 
 export async function PATCH(req: Request) {
@@ -93,6 +105,9 @@ export async function PATCH(req: Request) {
       logoUrl: d.logoUrl,
       contactPhone: d.contactPhone,
       address: d.address,
+      ...(d.slipPaperSize !== undefined
+        ? { slipPaperSize: normalizeModuleSlipPaperSize(d.slipPaperSize) }
+        : {}),
       ...moduleShopPaymentPatchData(d),
     },
     update: {
@@ -100,6 +115,9 @@ export async function PATCH(req: Request) {
       ...(d.logoUrl !== undefined ? { logoUrl: d.logoUrl } : {}),
       ...(d.contactPhone !== undefined ? { contactPhone: d.contactPhone } : {}),
       ...(d.address !== undefined ? { address: d.address } : {}),
+      ...(d.slipPaperSize !== undefined
+        ? { slipPaperSize: normalizeModuleSlipPaperSize(d.slipPaperSize) }
+        : {}),
       ...moduleShopPaymentPatchData(d),
     },
     select,

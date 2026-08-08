@@ -59,13 +59,23 @@ globs:
 
 ---
 
-## หน้าออร์เดอร์ (`/order`) — แบบ drink-pos
+## หน้าออร์เดอร์ (`/order`) — คู่ขนาน drink-pos
 
 - **เดสก์ท็อป (`lg+`):** กริด `lg:grid-cols-[minmax(280px,380px)_minmax(0,1fr)]`
   - **ซ้าย:** ช่องทางสั่ง · โต๊ะ/ชื่อ · รายการที่เลือก + ส่งออเดอร์
-  - **ขวา:** ชิปหมวด + กริดเมนู (`buildingPosProductGridClass` — มือถือ 3 คอลัมน์)
-- **มือถือ:** เมนูเต็มจอ · สรุปรายการในสล็อตบน dock (`BuildingPosMobileBottomProvider` / `useBuildingPosMobileDraftSlot`) · ยืนยันใน `FormModal`
+  - **ขวา:** ชิปหมวด + กริดเมนู (`buildingPosProductGridClass`)
+- **มือถือ — กริดเมนูบังคับ 3 คอลัมน์:** คลาส `bp-order-menu-grid` ใน `globals.css` (`grid-template-columns: repeat(3, …) !important`) · ใช้ใน `BuildingPosOrderClient` — ไม่พึ่ง utility Tailwind อย่างเดียว
+- **เลื่อนอิสระแยกคอลัมน์เมื่อเกินขอบล่าง** (แดชบอร์ด `/order` — บังคับ · แบบ drink-pos):
+  - **เชนความสูง (เดสก์ท็อป `lg+` เท่านั้น):** `DashboardShell` → `PageContainer` → `BuildingPosShell` → `BuildingPosOrderClient` = `h/max-h` + `overflow-hidden` ใต้หัวโมดูล
+  - กริด: `lg:grid-rows-1` + `lg:overflow-hidden` + `lg:h-full`
+  - **ซ้าย** `lg:h-full` + `overflow-y-auto` ทั้งคอลัมน์ (meta + รายการ + ส่งออเดอร์) — ขอบล่างคอลัมน์ชิดกรอบ ไม่หายใต้จอ
+  - **ขวา** `lg:h-full` + `overflow-hidden` · หมวด `shrink-0` · กริดเมนู `lg:overflow-y-auto`
+  - **ห้าม** `max-h-[calc(100dvh-…)]` บนคอลัมน์โดยไม่มีเชนความสูง — คอลัมน์อยู่ใต้หัวโมดูลแล้วสูงเกินจอ ทำให้ส่วนล่าง «หาย»
+  - **ห้าม** ล็อก `h-[100dvh]` ทั้ง `DashboardShell` ทุกหน้า — เฉพาะ path `/order` + `lg:`
+  - โค้ด: `BuildingPosOrderClient.tsx` · `BuildingPosShell.tsx` · `DashboardShell` (`onPosOrderPage`)
+- **มือถือแดชบอร์ดออเดอร์:** ยังไม่ปรับเลย์เอาต์สกอลล์ (รอกำหนด) — เมนูเต็มจอ · สรุปในสล็อต dock · ยืนยันใน `FormModal`
 - **ห้าม** ใช้เลย์เอาต์หน้าลูกค้าเต็มจอ (`BuildingPosCustomerOrderClient` แบบ portal) เป็นหน้าแดชบอร์ดออร์เดอร์
+- คู่กฎ drink-pos: `.cursor/rules/drink-pos-module-dashboard-template.mdc` § เดสก์ท็อปออเดอร์
 
 ---
 
@@ -115,10 +125,13 @@ globs:
 
 ## Hub อื่น
 
-- **แท็บย่อย:** `BuildingPosHubSubTabs.tsx` (QR / การเงิน เท่านั้น — **เมนูไม่มีแท็บย่อย**)
+- **การเงิน (ต้นแบบข้ามโมดูล):** **`dashboard-finance-module-template.mdc`** — สรุปบนสุด (รายรับ emerald · รายจ่าย rose) · กรองชิป pill เล็กไม่เต็มจอ · กราฟคนละปุ่มซ่อน · แท็บประวัติ/รายจ่าย · สลิปเฉพาะเมื่อมี · **ประวัติ/รายรับทุกแถวแก้ไข+ลบ** · ลบยืนยันด้วย `useAppNoticePopup` · ฟอร์มรายจ่าย 5 ช่อง
+- กฎย่อย: **`dashboard-finance-page-layout.mdc`** · **`dashboard-finance-filter-charts-toggle.mdc`** · **`dashboard-finance-detail-tabs.mdc`** · **`dashboard-expense-cost-categories.mdc`**
+- **กราฟ (แนวตั้ง ตาม `app-templates-spark-charts.mdc`):** สถิติ 3 การ์ด → `AppRevenueCostColumnChart` → ยอดขาย `AppColumnBarSparkChart` → เปรียบเทียบหมวด/โต๊ะเป็น **แท่งแนวตั้ง** · ย่อ/ขยายได้ · **`lg+` 2 คอลัมน์** · `compact` ล้วน · CTA รายจ่ายอยู่ที่แท็บรายจ่ายเท่านั้น (ไม่ใส่แถว «สรุปช่วงที่กรอง» / «+ รายจ่าย» เหนือกราฟ)
+- **รายจ่าย:** แท็บใน `BuildingPosSalesHistoryPanel` → `BuildingPosCostsPanel` (embedded · **ต้นแบบฟอร์ม**) — แก้ไข/ลบ + `notice.confirm`
+- URL เก่า `?fin=costs` / `tab=ingredients|purchases` → เปิดแท็บรายจ่ายในหน้าการเงินเดียวกัน
+- **แท็บย่อย hub:** `BuildingPosHubSubTabs.tsx` — **QR เท่านั้น** · เมนู/การเงินไม่มี hub sub-tab
 - **หมวดหมู่เมนู:** ปุ่ม «หมวดหมู่» → popup + ชิปกรอง — **`dashboard-menu-categories-popup.mdc`**
-- **การเงิน (ยอดขาย):** การ์ดเดียว «ช่วงเวลาและกราฟ» · ปุ่มแสดง/ซ่อนกรอง **คนละปุ่ม** กับแสดง/ซ่อนกราฟ — **`dashboard-finance-filter-charts-toggle.mdc`**
-- **URL เก่า:** normalize ใน client
 
 ---
 
@@ -156,6 +169,7 @@ globs:
 - [ ] การ์ดเนื้อหา**ทุกเมนู** = `rounded-[1.25rem]` (ไม่ใช้ `2rem` · ปุ่มยัง `xl`/`2xl` ได้ · hub QR นอกยัง `2.5rem`)
 - [ ] แดชบอร์ดโต๊ะ `lg:grid-cols-3`
 - [ ] ออร์เดอร์ซ้าย–ขวาบนคอม + สล็อตมือถือ
+- [ ] ออร์เดอร์มือถือกริดเมนู **3 คอลัมน์** (`buildingPosProductGridClass`)
 - [ ] คิวออเดอร์ไม่มีส่วนหัวซ้ำ
 - [ ] SSE + `notifyBuildingPosOrderBoard` ครบทุกจุดสร้าง/แก้/ลบออเดอร์
 - [ ] ครัว/จัดส่ง/คิวแดชบอร์ด/โต๊ะค้างอัปเดตร่วมกัน

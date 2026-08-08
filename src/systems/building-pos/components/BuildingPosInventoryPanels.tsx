@@ -4,9 +4,11 @@ import { useMemo, useState } from "react";
 import {
   AppEmptyState,
   AppImageLightbox,
+  appTemplateOutlineButtonClass,
   useAppImageLightbox,
 } from "@/components/app-templates";
-import { FormModal } from "@/components/ui/FormModal";
+import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
+import { cn } from "@/lib/cn";
 import { PopupIconButton, popupIconBtnDanger } from "@/systems/car-wash/car-wash-popup-icon-buttons";
 import {
   assetRowEditIconButtonClass,
@@ -17,10 +19,15 @@ import {
 import {
   createBuildingPosSessionApiRepository,
   uploadBuildingPosSessionImage,
+  type PosCostCategory,
+  type PosCostEntry,
   type PosIngredient,
   type PosPurchaseOrder,
 } from "@/systems/building-pos/building-pos-service";
-import { buildingPosContentPanelClass } from "@/systems/building-pos/components/building-pos-ui-tokens";
+import {
+  buildingPosContentPanelClass,
+  buildingPosListRowCardClass,
+} from "@/systems/building-pos/components/building-pos-ui-tokens";
 
 export function BuildingPosIngredientsPanel({
   ingredients,
@@ -270,18 +277,40 @@ export function BuildingPosIngredientsPanel({
 
 type DraftLine = { ingredient_id: number; quantity: string; unit_price_baht: string };
 
+function formatCostSpentAt(iso: string) {
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return iso;
+  return d.toLocaleString("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium", timeStyle: "short" });
+}
+
 export function BuildingPosPurchasesPanel({
   purchaseOrders,
   ingredients,
+  costCategories,
+  costEntries,
   onChanged,
 }: {
   purchaseOrders: PosPurchaseOrder[];
   ingredients: PosIngredient[];
+  costCategories: PosCostCategory[];
+  costEntries: PosCostEntry[];
   onChanged: () => void | Promise<void>;
 }) {
   const repo = useMemo(() => createBuildingPosSessionApiRepository(), []);
   const marketSlipLb = useAppImageLightbox();
   const ingById = useMemo(() => new Map(ingredients.map((x) => [x.id, x])), [ingredients]);
+  const sortedCostCategories = useMemo(
+    () => [...costCategories].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id),
+    [costCategories],
+  );
+  const recentCostEntries = useMemo(
+    () =>
+      [...costEntries].sort(
+        (a, b) => new Date(b.spent_at).getTime() - new Date(a.spent_at).getTime() || b.id - a.id,
+      ),
+    [costEntries],
+  );
+
   const [purchasedOn, setPurchasedOn] = useState(() => new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([{ ingredient_id: 0, quantity: "1", unit_price_baht: "0" }]);
@@ -296,6 +325,18 @@ export function BuildingPosPurchasesPanel({
   const [editSlipUploading, setEditSlipUploading] = useState(false);
   const [editLines, setEditLines] = useState<DraftLine[]>([]);
   const [editSaving, setEditSaving] = useState(false);
+
+  const [catModalOpen, setCatModalOpen] = useState(false);
+  const [catFormOpen, setCatFormOpen] = useState(false);
+  const [catEditing, setCatEditing] = useState<PosCostCategory | null>(null);
+  const [catName, setCatName] = useState("");
+  const [catBusy, setCatBusy] = useState(false);
+
+  const [costModalOpen, setCostModalOpen] = useState(false);
+  const [costCategoryId, setCostCategoryId] = useState("");
+  const [costLabel, setCostLabel] = useState("");
+  const [costAmount, setCostAmount] = useState("");
+  const [costBusy, setCostBusy] = useState(false);
 
   async function uploadMarketSlip(
     file: File | undefined,
@@ -445,10 +486,188 @@ export function BuildingPosPurchasesPanel({
     }
   }
 
+  function closeCatForm() {
+    setCatFormOpen(false);
+    setCatEditing(null);
+    setCatName("");
+  }
+
+  function openCatCreate() {
+    setCatEditing(null);
+    setCatName("");
+    setCatFormOpen(true);
+  }
+
+  function openCatEdit(c: PosCostCategory) {
+    setCatEditing(c);
+    setCatName(c.name);
+    setCatFormOpen(true);
+  }
+
+  async function submitCostCategory() {
+    const name = catName.trim();
+    if (!name) return;
+    setCatBusy(true);
+    try {
+      if (catEditing) {
+        await repo.updateCostCategory(catEditing.id, { name });
+      } else {
+        await repo.createCostCategory({ name });
+      }
+      closeCatForm();
+      await onChanged();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "บันทึกหมวดไม่สำเร็จ");
+    } finally {
+      setCatBusy(false);
+    }
+  }
+
+  async function deleteCostCategory(c: PosCostCategory) {
+    if (!window.confirm(`ลบหมวด «${c.name}» ?\n(ถ้ามีรายจ่ายในหมวดนี้ต้องย้ายหรือลบก่อน)`)) return;
+    setCatBusy(true);
+    try {
+      await repo.deleteCostCategory(c.id);
+      if (catEditing?.id === c.id) closeCatForm();
+      await onChanged();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "ลบหมวดไม่สำเร็จ");
+    } finally {
+      setCatBusy(false);
+    }
+  }
+
+  function resetCostForm() {
+    setCostCategoryId(sortedCostCategories[0] ? String(sortedCostCategories[0].id) : "");
+    setCostLabel("");
+    setCostAmount("");
+  }
+
+  function openCostModal() {
+    if (sortedCostCategories.length === 0) {
+      setCatFormOpen(false);
+      setCatEditing(null);
+      setCatName("");
+      setCatModalOpen(true);
+      return;
+    }
+    resetCostForm();
+    setCostModalOpen(true);
+  }
+
+  async function submitCostEntry() {
+    const label = costLabel.trim();
+    const amount = Number(costAmount);
+    const categoryId = Number(costCategoryId);
+    if (!label) {
+      window.alert("กรอกรายการ");
+      return;
+    }
+    if (!Number.isFinite(amount) || amount < 1) {
+      window.alert("กรอกจำนวนเงินให้ถูกต้อง");
+      return;
+    }
+    if (!Number.isFinite(categoryId) || categoryId < 1) {
+      window.alert("เลือกหมวดหมู่");
+      return;
+    }
+    setCostBusy(true);
+    try {
+      await repo.createCostEntry({
+        label,
+        amount_baht: Math.round(amount),
+        category_id: categoryId,
+      });
+      setCostModalOpen(false);
+      resetCostForm();
+      await onChanged();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "บันทึกรายจ่ายไม่สำเร็จ");
+    } finally {
+      setCostBusy(false);
+    }
+  }
+
+  async function deleteCostEntry(entry: PosCostEntry) {
+    if (!window.confirm(`ลบรายจ่าย «${entry.label}» ?`)) return;
+    try {
+      await repo.deleteCostEntry(entry.id);
+      await onChanged();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
+    }
+  }
+
   return (
     <section className={buildingPosContentPanelClass}>
       <div className="border-b border-[#ecebff] pb-4">
-        <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">ต้นทุน / รายจ่าย</h2>
+        <div className="flex flex-row items-start justify-between gap-3">
+          <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">ต้นทุน / รายจ่าย</h2>
+          <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                closeCatForm();
+                setCatModalOpen(true);
+              }}
+              className={cn(
+                appTemplateOutlineButtonClass,
+                "min-h-[40px] rounded-xl px-3 text-xs font-black text-[#4d47b6]",
+              )}
+              aria-label="จัดการหมวดหมู่รายจ่าย"
+              title="หมวดหมู่"
+            >
+              หมวดหมู่
+            </button>
+            <button
+              type="button"
+              onClick={openCostModal}
+              className="app-btn-primary min-h-[40px] min-w-[40px] rounded-xl px-0 text-sm font-black sm:min-w-0 sm:px-4"
+              aria-label="บันทึกรายจ่ายทั่วไป"
+            >
+              <span className="sm:hidden">+</span>
+              <span className="hidden sm:inline">+ บันทึกรายจ่าย</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-3 space-y-3 rounded-[1.25rem] border border-[#e1e3ff] bg-[#faf9ff]/80 p-3 sm:p-4">
+          <p className="text-sm font-black text-[#1e1b4b]">รายจ่ายทั่วไป</p>
+          {sortedCostCategories.length === 0 ? (
+            <p className="text-xs font-semibold text-amber-800">สร้างหมวดก่อนจึงจะบันทึกรายจ่ายได้ — กด «หมวดหมู่»</p>
+          ) : null}
+          {recentCostEntries.length === 0 ? (
+            <AppEmptyState tone="slate">ยังไม่มีรายจ่ายทั่วไป</AppEmptyState>
+          ) : (
+            <ul className="max-h-[min(40vh,20rem)] space-y-2 overflow-y-auto pr-0.5" aria-label="รายจ่ายทั่วไปล่าสุด">
+              {recentCostEntries.map((entry) => (
+                <li key={entry.id} className={cn(buildingPosListRowCardClass, "flex items-start justify-between gap-2")}>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold tabular-nums text-[#66638c]">{formatCostSpentAt(entry.spent_at)}</p>
+                    <p className="mt-0.5 truncate text-sm font-black text-[#1e1b4b]">{entry.label}</p>
+                    <p className="mt-0.5 text-[11px] font-bold text-[#4d47b6]">
+                      {entry.category_name?.trim() || "ไม่มีหมวด"}
+                    </p>
+                    <p className="mt-1 text-base font-black tabular-nums text-rose-600">
+                      ฿{entry.amount_baht.toLocaleString("th-TH")}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className={assetRowRemoveIconButtonClass}
+                    aria-label={`ลบรายจ่าย ${entry.label}`}
+                    title="ลบ"
+                    onClick={() => void deleteCostEntry(entry)}
+                  >
+                    <IconRowRemove className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <p className="mt-4 text-sm font-black text-[#1e1b4b]">ซื้อของ / วัตถุดิบ</p>
         <div className="mt-3 space-y-3 rounded-[1.25rem] border border-[#e1e3ff] bg-[#faf9ff]/80 p-3 sm:p-4">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label className="text-xs font-medium text-[#4d47b6]">
@@ -824,6 +1043,163 @@ export function BuildingPosPurchasesPanel({
           })
         )}
       </ul>
+      <FormModal
+        open={catModalOpen}
+        onClose={() => {
+          if (catBusy) return;
+          setCatModalOpen(false);
+          closeCatForm();
+        }}
+        title={catFormOpen ? (catEditing ? "แก้ไขหมวดหมู่" : "เพิ่มหมวดหมู่") : "หมวดหมู่รายจ่าย"}
+        size="md"
+        mobileCentered
+        footer={
+          catFormOpen ? (
+            <FormModalFooterActions
+              onCancel={closeCatForm}
+              onSubmit={() => void submitCostCategory()}
+              submitLabel={catEditing ? "บันทึก" : "เพิ่มหมวด"}
+              submitDisabled={!catName.trim()}
+              loading={catBusy}
+            />
+          ) : (
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={openCatCreate}
+                className="app-btn-primary min-h-[44px] rounded-xl px-4 text-sm font-black"
+              >
+                + เพิ่มหมวดหมู่
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCatModalOpen(false);
+                  closeCatForm();
+                }}
+                className={cn(appTemplateOutlineButtonClass, "min-h-[44px] rounded-xl px-4 text-sm font-black")}
+              >
+                ปิด
+              </button>
+            </div>
+          )
+        }
+      >
+        {catFormOpen ? (
+          <label className="block text-left text-sm font-bold text-[#1e1b4b]">
+            ชื่อหมวดหมู่
+            <input
+              className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+              value={catName}
+              onChange={(e) => setCatName(e.target.value)}
+              placeholder="เช่น ค่าเช่า · สาธารณูปโภค · วัสดุสิ้นเปลือง"
+              autoFocus
+            />
+          </label>
+        ) : sortedCostCategories.length === 0 ? (
+          <p className="rounded-[1.25rem] border border-dashed border-[#d8d6ec] bg-[#faf9ff] px-3 py-6 text-center text-sm font-semibold text-[#66638c]">
+            ยังไม่มีหมวด — กด «เพิ่มหมวดหมู่»
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {sortedCostCategories.map((c) => (
+              <li
+                key={c.id}
+                className="flex items-center justify-between gap-2 rounded-[1.25rem] border border-white/50 bg-white/70 px-3 py-2.5"
+              >
+                <p className="min-w-0 truncate text-sm font-black text-[#1e1b4b]">{c.name}</p>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    className={assetRowEditIconButtonClass}
+                    aria-label={`แก้ไขหมวด ${c.name}`}
+                    title="แก้ไข"
+                    disabled={catBusy}
+                    onClick={() => openCatEdit(c)}
+                  >
+                    <IconRowEdit className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    className={assetRowRemoveIconButtonClass}
+                    aria-label={`ลบหมวด ${c.name}`}
+                    title="ลบ"
+                    disabled={catBusy}
+                    onClick={() => void deleteCostCategory(c)}
+                  >
+                    <IconRowRemove className="h-4 w-4" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </FormModal>
+
+      <FormModal
+        open={costModalOpen}
+        onClose={() => {
+          if (costBusy) return;
+          setCostModalOpen(false);
+          resetCostForm();
+        }}
+        title="บันทึกรายจ่าย"
+        size="md"
+        mobileCentered
+        footer={
+          <FormModalFooterActions
+            onCancel={() => {
+              setCostModalOpen(false);
+              resetCostForm();
+            }}
+            onSubmit={() => void submitCostEntry()}
+            submitLabel="บันทึก"
+            submitDisabled={!costLabel.trim() || !costAmount.trim() || !costCategoryId}
+            loading={costBusy}
+          />
+        }
+      >
+        <div className="space-y-3">
+          <label className="block text-left text-sm font-bold text-[#1e1b4b]">
+            หมวดหมู่
+            <select
+              value={costCategoryId}
+              onChange={(e) => setCostCategoryId(e.target.value)}
+              className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+              aria-label="หมวดหมู่รายจ่าย"
+            >
+              {sortedCostCategories.length === 0 ? <option value="">ยังไม่มีหมวด</option> : null}
+              {sortedCostCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-left text-sm font-bold text-[#1e1b4b]">
+            รายการ
+            <input
+              className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+              value={costLabel}
+              onChange={(e) => setCostLabel(e.target.value)}
+              placeholder="เช่น ค่าไฟ · ค่าน้ำ · ค่าเช่า"
+            />
+          </label>
+          <label className="block text-left text-sm font-bold text-[#1e1b4b]">
+            จำนวนเงิน (บาท)
+            <input
+              className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+              type="number"
+              min={1}
+              step={1}
+              value={costAmount}
+              onChange={(e) => setCostAmount(e.target.value)}
+              placeholder="0"
+            />
+          </label>
+        </div>
+      </FormModal>
+
       <AppImageLightbox
         src={marketSlipLb.src}
         alt="สลิปรายจ่าย"

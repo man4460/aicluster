@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildPromptPayQrDataUrl } from "@/lib/dormitory/promptpay-qr-image";
-import { resolveBuildingPosStaffFromUrl } from "@/lib/building-pos/staff-request";
+import { requireBuildingPosStaff } from "@/lib/building-pos/staff-auth";
 import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
 import { resolveModulePayment } from "@/lib/module-shop/resolve-module-payment";
 
@@ -10,9 +10,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const ctx = await resolveBuildingPosStaffFromUrl(new URL(req.url));
-  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
+  const auth = await requireBuildingPosStaff(req);
+  if ("error" in auth) return auth.error;
+  const { ctx } = auth;
   let json: unknown;
   try {
     json = await req.json();

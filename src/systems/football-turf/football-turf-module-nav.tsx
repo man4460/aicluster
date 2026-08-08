@@ -7,14 +7,23 @@ export const FOOTBALL_TURF_HEADER_COLLAPSE_EVENT = "mawell-football-turf-header-
 
 export const FOOTBALL_TURF_MODULE_DISPLAY_NAME = "สนามฟุตบอล";
 
-export type FootballTurfTabKey = "overview" | "queue" | "finance" | "offers" | "customers" | "qr" | "settings";
+export type FootballTurfTabKey =
+  | "overview"
+  | "queue"
+  | "finance"
+  | "offers"
+  | "customers"
+  | "courts"
+  | "qr"
+  | "settings";
 
 export const FOOTBALL_TURF_TAB_ITEMS: { key: FootballTurfTabKey; label: string; shortLabel: string }[] = [
   { key: "overview", label: "ภาพรวม", shortLabel: "ภาพรวม" },
-  { key: "queue", label: "คิว", shortLabel: "คิว" },
+  { key: "queue", label: "จอง", shortLabel: "จอง" },
   { key: "finance", label: "การเงิน", shortLabel: "เงิน" },
   { key: "offers", label: "โปรโมชั่น", shortLabel: "โปร" },
   { key: "customers", label: "ลูกค้า", shortLabel: "ลูกค้า" },
+  { key: "courts", label: "จัดการสนาม", shortLabel: "สนาม" },
   { key: "qr", label: "QR / ลิงก์", shortLabel: "QR" },
   { key: "settings", label: "ตั้งค่า", shortLabel: "ตั้งค่า" },
 ];
@@ -48,6 +57,7 @@ export function parseFootballTurfTab(value: string | null | undefined): Football
     value === "finance" ||
     value === "offers" ||
     value === "customers" ||
+    value === "courts" ||
     value === "qr" ||
     value === "settings"
   ) {
@@ -90,6 +100,14 @@ export function footballTurfTabIcon(key: FootballTurfTabKey): ReactNode {
           <circle cx="9" cy="7" r="4" />
           <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
           <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </>
+      );
+    case "courts":
+      return (
+        <>
+          <path d="M4 20h16" />
+          <path d="M6 20V10l6-4 6 4v10" />
+          <path d="M10 20v-4h4v4" />
         </>
       );
     case "qr":

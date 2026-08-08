@@ -6,7 +6,9 @@ import {
   AppModuleShopPaymentFields,
   AppSectionHeader,
   AppShopLogoField,
+  AppSlipPaperSizeSettingsField,
   appDashboardSectionVioletClass,
+  type AppSlipPaperSize,
 } from "@/components/app-templates";
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
 import { cn } from "@/lib/cn";
@@ -16,6 +18,7 @@ type ShopProfile = {
   logoUrl: string | null;
   contactPhone: string | null;
   address: string | null;
+  slipPaperSize: AppSlipPaperSize;
 } & ModuleShopPaymentDto;
 
 export function BarberShopSettingsClient({
@@ -25,7 +28,10 @@ export function BarberShopSettingsClient({
   initial: ShopProfile;
   apiBase: "/api/barber/shop-profile" | "/api/massage/shop-profile";
 }) {
-  const [form, setForm] = useState(initial);
+  const [form, setForm] = useState({
+    ...initial,
+    slipPaperSize: initial.slipPaperSize ?? ("SLIP_58" as AppSlipPaperSize),
+  });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -42,7 +48,12 @@ export function BarberShopSettingsClient({
       });
       const json = (await res.json().catch(() => ({}))) as { profile?: ShopProfile; error?: string };
       if (!res.ok) throw new Error(json.error ?? "บันทึกไม่สำเร็จ");
-      if (json.profile) setForm(json.profile);
+      if (json.profile) {
+        setForm({
+          ...json.profile,
+          slipPaperSize: json.profile.slipPaperSize ?? "SLIP_58",
+        });
+      }
       setMsg("บันทึกแล้ว");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
@@ -92,6 +103,12 @@ export function BarberShopSettingsClient({
           <AppModuleShopPaymentFields
             value={form}
             onChange={(payment) => setForm((f) => ({ ...f, ...payment }))}
+          />
+
+          <AppSlipPaperSizeSettingsField
+            value={form.slipPaperSize}
+            onChange={(slipPaperSize) => setForm((f) => ({ ...f, slipPaperSize }))}
+            disabled={busy}
           />
 
           <button

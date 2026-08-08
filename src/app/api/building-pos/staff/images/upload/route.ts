@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
-import { resolveBuildingPosStaffFromUrl } from "@/lib/building-pos/staff-request";
+import { requireBuildingPosStaff } from "@/lib/building-pos/staff-auth";
 import { formatBuildingPosDbError, jsonBuildingPosError } from "@/lib/building-pos/route-errors";
 
 const MAX_BYTES = 6 * 1024 * 1024;
@@ -40,8 +40,9 @@ function extForKind(kind: Exclude<DetectedKind, "heic">): string {
 
 export async function POST(req: Request) {
   try {
-    const ctx = await resolveBuildingPosStaffFromUrl(new URL(req.url));
-    if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await requireBuildingPosStaff(req);
+    if ("error" in auth) return auth.error;
+    const { ctx } = auth;
 
     let form: FormData;
     try {

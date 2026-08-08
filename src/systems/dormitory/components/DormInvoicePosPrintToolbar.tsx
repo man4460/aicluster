@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { appTemplateOutlineButtonClass } from "@/components/app-templates/dashboard-tokens";
+import {
+  AppSlipPaperSizeToolbar,
+  appTemplateOutlineButtonClass,
+  useAppSlipPaperSize,
+} from "@/components/app-templates";
 import { shopQrTemplateGridPrimaryButtonClass } from "@/components/qr/shop-qr-template";
 import { downloadDormInvoicePdfFromCleanHtml } from "@/systems/dormitory/dorm-invoice-pdf-capture";
 import {
@@ -25,16 +29,17 @@ export function DormInvoicePosPrintToolbar({
   className?: string;
 }) {
   const [pdfBusy, setPdfBusy] = useState(false);
+  const { paper, setPaper } = useAppSlipPaperSize();
 
   const innerSlip = buildDormInvoiceBillInnerHtml(sheet, "slip");
   const innerA4 = buildDormInvoiceBillInnerHtml(sheet, "a4Preview");
   const docTitle = `ใบแจ้งหนี้ ห้อง ${sheet.roomNumber}`;
 
   const onPrint = useCallback(
-    (paper: PosTablePaperSize) => {
-      const inner = paper === "A4" ? innerA4 : innerSlip;
-      const pageOpts = paper === "A4" ? DORM_A4_PAGE : undefined;
-      const ok = openPosTableBillPrintWindow(paper, inner, docTitle, pageOpts);
+    (size: PosTablePaperSize) => {
+      const inner = size === "A4" ? innerA4 : innerSlip;
+      const pageOpts = size === "A4" ? DORM_A4_PAGE : undefined;
+      const ok = openPosTableBillPrintWindow(size, inner, docTitle, pageOpts);
       if (!ok) window.alert("เปิดหน้าต่างพิมพ์ไม่ได้ — ลองอนุญาตป๊อปอัปหรือใช้ดาวน์โหลด PDF");
     },
     [innerSlip, innerA4, docTitle],
@@ -56,15 +61,15 @@ export function DormInvoicePosPrintToolbar({
   }, [sheet, docTitle]);
 
   return (
-    <div className={cn("flex flex-wrap gap-2", className)}>
-      <button type="button" className={appTemplateOutlineButtonClass} onClick={() => onPrint("SLIP_58")}>
-        พิมพ์ 58 mm
-      </button>
-      <button type="button" className={appTemplateOutlineButtonClass} onClick={() => onPrint("SLIP_80")}>
-        พิมพ์ 80 mm
-      </button>
-      <button type="button" className={appTemplateOutlineButtonClass} onClick={() => onPrint("A4")}>
-        พิมพ์ A4
+    <div className={cn("flex flex-wrap items-center gap-2", className)}>
+      <AppSlipPaperSizeToolbar
+        value={paper}
+        onChange={setPaper}
+        sizes={["SLIP_58", "SLIP_80", "A4"]}
+        aria-label="ขนาดกระดาษใบแจ้งหนี้"
+      />
+      <button type="button" className={appTemplateOutlineButtonClass} onClick={() => onPrint(paper)}>
+        พิมพ์
       </button>
       <button
         type="button"

@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
-import { AppEmptyState, AppImageLightbox, appTemplateOutlineButtonClass, printDataUrlImagePoster, useAppImageLightbox } from "@/components/app-templates";
+import { AppEmptyState, AppImageLightbox, appTemplateOutlineButtonClass, printDataUrlImagePoster, useAppImageLightbox, useAppNoticePopup } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   createShopQrPosterCanvas,
@@ -16,6 +16,8 @@ import {
 import {
   createBuildingPosSessionApiRepository,
   type PosCategory,
+  type PosCostCategory,
+  type PosCostEntry,
   type PosIngredient,
   type PosKitchenDepartment,
   type PosMenuItem,
@@ -24,7 +26,6 @@ import {
 } from "@/systems/building-pos/building-pos-service";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { BuildingPosOpenTablesPanel, BuildingPosSalesHistoryPanel } from "@/systems/building-pos/BuildingPosSalesAnalytics";
-import { BuildingPosIngredientsPanel, BuildingPosPurchasesPanel } from "@/systems/building-pos/components/BuildingPosInventoryPanels";
 import { BuildingPosStaffQrSection } from "@/systems/building-pos/components/BuildingPosStaffQrSection";
 import { BUILDING_POS_ORDER_HREF, parseBuildingPosNav } from "@/systems/building-pos/building-pos-nav";
 import {
@@ -97,6 +98,7 @@ export function BuildingPosDashboardClient({
 
   const repo = useMemo(() => createBuildingPosSessionApiRepository(), []);
   const slipLightbox = useAppImageLightbox();
+  const notice = useAppNoticePopup();
 
   const nav = useMemo(
     () => parseBuildingPosNav(new URLSearchParams(searchParams.toString())),
@@ -139,6 +141,8 @@ export function BuildingPosDashboardClient({
   const [newTableCardInput, setNewTableCardInput] = useState("");
   const [ingredients, setIngredients] = useState<PosIngredient[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PosPurchaseOrder[]>([]);
+  const [costCategories, setCostCategories] = useState<PosCostCategory[]>([]);
+  const [costEntries, setCostEntries] = useState<PosCostEntry[]>([]);
 
   const [catForm, setCatForm] = useState({ name: "", image_url: "", sort_order: "1", is_active: true });
   const [menuForm, setMenuForm] = useState({
@@ -283,9 +287,16 @@ export function BuildingPosDashboardClient({
       setKitchenDepartments(k.departments ?? []);
       setMultiKitchenEnabled(k.features?.multiKitchen === true);
 
-      const inv = await Promise.allSettled([repo.listIngredients(), repo.listPurchaseOrders()]);
+      const inv = await Promise.allSettled([
+        repo.listIngredients(),
+        repo.listPurchaseOrders(),
+        repo.listCostCategories(),
+        repo.listCostEntries(),
+      ]);
       setIngredients(inv[0].status === "fulfilled" ? inv[0].value : []);
       setPurchaseOrders(inv[1].status === "fulfilled" ? inv[1].value : []);
+      setCostCategories(inv[2].status === "fulfilled" ? inv[2].value : []);
+      setCostEntries(inv[3].status === "fulfilled" ? inv[3].value : []);
       setSyncError(null);
     } catch (e) {
       console.error("[building-pos] loadAll", e);
@@ -832,10 +843,28 @@ export function BuildingPosDashboardClient({
     await loadAll();
   }
 
-  async function onSalesHistoryOrderDelete(id: number) {
-    if (!window.confirm(`ลบออเดอร์ #${id} ?`)) return;
-    await repo.deleteOrder(id);
+  async function onSalesHistoryOrderUpdate(
+    id: number,
+    patch: Partial<
+      Pick<
+        PosOrder,
+        "customer_name" | "table_no" | "note" | "status" | "payment_slip_url" | "member_phone" | "items" | "created_at"
+      >
+    >,
+  ) {
+    await repo.updateOrder(id, patch);
     await loadAll();
+  }
+
+  async function onSalesHistoryOrderDelete(id: number) {
+    const ok = await notice.confirm(`ลบออเดอร์ #${id} ใช่หรือไม่?`);
+    if (!ok) return;
+    try {
+      await repo.deleteOrder(id);
+      await loadAll();
+    } catch (e) {
+      notice.error(e instanceof Error ? e.message : "ลบออเดอร์ไม่สำเร็จ");
+    }
   }
 
   function addTableQrCard() {
@@ -858,6 +887,7 @@ export function BuildingPosDashboardClient({
 
   return (
     <div className="max-w-full space-y-4 sm:space-y-6">
+      {notice.popup}
       {syncError ? (
         <div
           role="alert"
@@ -1066,11 +1096,14 @@ export function BuildingPosDashboardClient({
                 <PosThumb url={m.image_url} />
                 <div className="relative min-w-0 flex-1">
                   <p className="font-black tracking-tight text-[#1e1b4b]">{m.name}</p>
-                  <p className="mt-0.5 text-xs text-[#66638c]">
-                    ฿{m.price.toLocaleString()} · {categories.find((c) => c.id === m.category_id)?.name ?? "-"}
-                    {multiKitchenEnabled && m.kitchen_department_id
-                      ? ` · ครัว ${kitchenDeptNameById.get(m.kitchen_department_id) ?? m.kitchen_department_id}`
-                      : ""}
+                  <p className="mt-0.5 text-xs font-semibold tabular-nums text-emerald-700">
+                    ฿{m.price.toLocaleString()}{" "}
+                    <span className="font-medium text-[#66638c]">
+                      · {categories.find((c) => c.id === m.category_id)?.name ?? "-"}
+                      {multiKitchenEnabled && m.kitchen_department_id
+                        ? ` · ครัว ${kitchenDeptNameById.get(m.kitchen_department_id) ?? m.kitchen_department_id}`
+                        : ""}
+                    </span>
                   </p>
                   {!m.is_active ? <span className="mt-1 inline-block text-xs text-amber-700">ปิดใช้งาน</span> : null}
                 </div>
@@ -1446,7 +1479,7 @@ export function BuildingPosDashboardClient({
             title="QR พนักงาน"
             appearance="glass"
             glassTint="amber"
-            size="lg"
+            size="full"
             mobileCentered
             footer={
               <div className="flex w-full justify-end">
@@ -1537,57 +1570,24 @@ export function BuildingPosDashboardClient({
         </div>
       ) : null}
 
-      {nav.main === "finance" && nav.finance === "sales" ? (
+      {nav.main === "finance" ? (
         <div className="space-y-4 sm:space-y-5">
           <BuildingPosSalesHistoryPanel
             orders={orders}
             categories={categories}
             menuItems={menuItems}
+            costCategories={costCategories}
+            costEntries={costEntries}
+            onCostsChanged={() => void loadAll()}
+            initialDetailPanel={nav.finance === "costs" ? "expenses" : "history"}
             onOrderStatusChange={(id, s) => void onSalesHistoryOrderStatusChange(id, s)}
+            onOrderUpdate={(id, patch) => onSalesHistoryOrderUpdate(id, patch)}
             onOrderDelete={(id) => void onSalesHistoryOrderDelete(id)}
             onRefresh={() => void refreshData()}
             refreshing={refreshing}
             onSlipImageOpen={(url) => slipLightbox.open(url)}
           />
           <AppImageLightbox src={slipLightbox.src} alt="สลิปโอน" onClose={slipLightbox.close} />
-        </div>
-      ) : null}
-
-      {nav.main === "finance" && nav.finance === "costs" ? (
-        <div className="min-w-0 space-y-5">
-          <div className="flex flex-wrap justify-end gap-2 print:hidden">
-            <button
-              type="button"
-              onClick={() => void refreshData()}
-              disabled={refreshing}
-              aria-busy={refreshing}
-              aria-label="รีเฟรชข้อมูลต้นทุน"
-              title="รีเฟรช"
-              className={cn(
-                appTemplateOutlineButtonClass,
-                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-0 px-0 sm:min-w-0 sm:gap-1.5 sm:px-4",
-                "border-[#dcd8f0] bg-white/80 text-[#4d47b6] disabled:opacity-60",
-              )}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className={cn("h-5 w-5 shrink-0", refreshing && "animate-spin")}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.25}
-                aria-hidden
-              >
-                <path d="M21 12a9 9 0 11-3.05-6.65M21 3v6h-6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <span className="hidden sm:inline">{refreshing ? "กำลังรีเฟรช…" : "รีเฟรช"}</span>
-            </button>
-          </div>
-          <BuildingPosIngredientsPanel ingredients={ingredients} onChanged={() => void loadAll()} />
-          <BuildingPosPurchasesPanel
-            purchaseOrders={purchaseOrders}
-            ingredients={ingredients}
-            onChanged={() => void loadAll()}
-          />
         </div>
       ) : null}
 

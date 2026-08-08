@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isDrinkPosPortalOpenForOwner } from "@/lib/drink-pos/portal-access";
 import { planFeaturesApiPayload } from "@/lib/modules/plan-entitlements";
 import { getPlanFeaturePolicy } from "@/lib/modules/plan-feature-policy";
+import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
 import { ensureDrinkPosShopProfile } from "@/systems/drink-pos/lib/member-service";
 import {
   fetchDrinkPosOrderBoardPayload,
@@ -41,17 +42,22 @@ export async function GET(req: Request) {
   const profile = await ensureDrinkPosShopProfile(prisma, ownerId, trialSessionId);
 
   const board = await fetchDrinkPosOrderBoardPayload(ownerId);
-  const [owner, policy] = await Promise.all([
+  const [owner, policy, shop] = await Promise.all([
     prisma.user.findUnique({
       where: { id: ownerId },
       select: { role: true, subscriptionType: true, subscriptionTier: true },
     }),
     getPlanFeaturePolicy(),
+    prisma.drinkPosShopProfile.findUnique({
+      where: { id: profile.id },
+      select: { orderTicketSlipPaperSize: true, displayName: true },
+    }),
   ]);
 
   return NextResponse.json({
     serverTime: new Date().toISOString(),
-    shopName: profile.displayName?.trim() || "ร้านเครื่องดื่ม",
+    shopName: shop?.displayName?.trim() || profile.displayName?.trim() || "ร้านเครื่องดื่ม",
+    orderTicketSlipPaperSize: normalizeModuleSlipPaperSize(shop?.orderTicketSlipPaperSize),
     orders: board.orders,
     staleUnclearedCount: board.staleUnclearedCount,
     features: owner

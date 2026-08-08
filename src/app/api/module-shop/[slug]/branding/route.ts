@@ -4,6 +4,7 @@ import { getModuleShopBranding, updateModuleShopBranding } from "@/lib/module-sh
 import { moduleShopPaymentPatchSchema } from "@/lib/module-shop/payment";
 import { resolveModuleShopOwnerContext } from "@/lib/module-shop/resolve-owner";
 import { isModuleShopBrandingSlug } from "@/lib/module-shop/slugs";
+import { appSlipPaperSizeZod } from "@/lib/profile/module-slip-paper-size";
 
 const patchSchema = z
   .object({
@@ -11,6 +12,10 @@ const patchSchema = z
     tagline: z.string().max(300).optional().nullable(),
     contactPhone: z.string().max(32).optional().nullable(),
     logoUrl: z.string().max(512).optional().nullable(),
+    slipPaperSize: appSlipPaperSizeZod.optional(),
+    orderTicketSlipPaperSize: appSlipPaperSizeZod.optional(),
+    staffDailyPin: z.string().max(64).optional().nullable(),
+    staffDailyPinClear: z.boolean().optional(),
   })
   .merge(moduleShopPaymentPatchSchema);
 
@@ -48,11 +53,17 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
   const parsed = patchSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
-  const profile = await updateModuleShopBranding(
-    auth.ctx.ownerUserId,
-    auth.ctx.trialSessionId,
-    slug,
-    parsed.data,
-  );
-  return NextResponse.json({ profile });
+  try {
+    const profile = await updateModuleShopBranding(
+      auth.ctx.ownerUserId,
+      auth.ctx.trialSessionId,
+      slug,
+      parsed.data,
+    );
+    return NextResponse.json({ profile });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "บันทึกไม่สำเร็จ";
+    if (msg.includes("รหัส")) return NextResponse.json({ error: msg }, { status: 400 });
+    throw e;
+  }
 }

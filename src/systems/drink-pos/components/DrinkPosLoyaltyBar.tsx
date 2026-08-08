@@ -32,6 +32,8 @@ type Props = {
    * full = โชว์รายการแลกในแผง
    */
   compact?: boolean;
+  /** โหมดลิงก์พนักงาน — เรียก /api/drink-pos/staff/loyalty* */
+  staffAuth?: { ownerId: string; trialSessionId: string; k: string } | null;
 };
 
 export function DrinkPosLoyaltyBar({
@@ -40,6 +42,7 @@ export function DrinkPosLoyaltyBar({
   hideMembersLink = false,
   onRedeemed,
   compact = false,
+  staffAuth = null,
 }: Props) {
   const notice = useAppNoticePopup({
     defaultConfirmTone: "warning",
@@ -56,6 +59,27 @@ export function DrinkPosLoyaltyBar({
   const [rulePreview, setRulePreview] = useState("สะสมคะแนน");
   const [redeemOpen, setRedeemOpen] = useState(false);
 
+  const staffQs = useMemo(() => {
+    if (!staffAuth) return "";
+    return new URLSearchParams({
+      ownerId: staffAuth.ownerId,
+      t: staffAuth.trialSessionId,
+      k: staffAuth.k,
+    }).toString();
+  }, [staffAuth]);
+
+  const loyaltySettingsUrl = staffAuth
+    ? `/api/drink-pos/staff/loyalty?${staffQs}`
+    : "/api/drink-pos/session/loyalty";
+  const membersUrl = (phoneQ: string) =>
+    staffAuth
+      ? `/api/drink-pos/staff/loyalty/members?${staffQs}&phone=${encodeURIComponent(phoneQ)}`
+      : `/api/drink-pos/session/loyalty/members?phone=${encodeURIComponent(phoneQ)}`;
+  const membersActionUrl = (action: string) =>
+    staffAuth
+      ? `/api/drink-pos/staff/loyalty/members?${staffQs}&action=${encodeURIComponent(action)}`
+      : `/api/drink-pos/session/loyalty/members?action=${encodeURIComponent(action)}`;
+
   useEffect(() => {
     if (member?.phone) setPhone(member.phone);
   }, [member?.phone]);
@@ -64,8 +88,8 @@ export function DrinkPosLoyaltyBar({
     let cancelled = false;
     void (async () => {
       try {
-        const res = await fetch("/api/drink-pos/session/loyalty", {
-          credentials: "include",
+        const res = await fetch(loyaltySettingsUrl, {
+          credentials: staffAuth ? "omit" : "include",
           cache: "no-store",
         });
         const j = (await res.json().catch(() => ({}))) as {
@@ -79,10 +103,7 @@ export function DrinkPosLoyaltyBar({
         if (j.rule_preview) setRulePreview(j.rule_preview);
         else if (j.settings) {
           setRulePreview(
-            formatDrinkPosLoyaltyEarnRule(
-              j.settings.baht_per_point ?? 100,
-              j.settings.points_per_unit ?? 1,
-            ),
+            formatDrinkPosLoyaltyEarnRule(j.settings.baht_per_point ?? 100, j.settings.points_per_unit ?? 1),
           );
         }
       } catch {
@@ -92,7 +113,7 @@ export function DrinkPosLoyaltyBar({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loyaltySettingsUrl, staffAuth]);
 
   const lookup = useCallback(async () => {
     if (!isLoyaltyPhoneSearchReady(phone)) return;
@@ -100,10 +121,10 @@ export function DrinkPosLoyaltyBar({
     setErr(null);
     setMsg(null);
     try {
-      const res = await fetch(
-        `/api/drink-pos/session/loyalty/members?phone=${encodeURIComponent(phone.trim())}`,
-        { credentials: "include", cache: "no-store" },
-      );
+      const res = await fetch(membersUrl(phone.trim()), {
+        credentials: staffAuth ? "omit" : "include",
+        cache: "no-store",
+      });
       const j = (await res.json().catch(() => ({}))) as {
         enabled?: boolean;
         member?: DrinkPosLoyaltyMemberDto | null;
@@ -138,7 +159,7 @@ export function DrinkPosLoyaltyBar({
     } finally {
       setBusy(false);
     }
-  }, [phone, onMemberChange]);
+  }, [phone, onMemberChange, membersUrl, staffAuth]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -160,9 +181,9 @@ export function DrinkPosLoyaltyBar({
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch("/api/drink-pos/session/loyalty/members?action=upsert", {
+      const res = await fetch(membersActionUrl("upsert"), {
         method: "POST",
-        credentials: "include",
+        credentials: staffAuth ? "omit" : "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: digits }),
       });
@@ -182,7 +203,7 @@ export function DrinkPosLoyaltyBar({
     } finally {
       setBusy(false);
     }
-  }, [phone, onMemberChange]);
+  }, [phone, onMemberChange, membersActionUrl, staffAuth]);
 
   const redeem = useCallback(
     async (reward: DrinkPosLoyaltyRewardDto) => {
@@ -200,9 +221,9 @@ export function DrinkPosLoyaltyBar({
       setErr(null);
       setMsg(null);
       try {
-        const res = await fetch("/api/drink-pos/session/loyalty/members?action=redeem", {
+        const res = await fetch(membersActionUrl("redeem"), {
           method: "POST",
-          credentials: "include",
+          credentials: staffAuth ? "omit" : "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             phone: digits,
@@ -225,7 +246,7 @@ export function DrinkPosLoyaltyBar({
         setBusy(false);
       }
     },
-    [member?.phone, phone, onMemberChange, onRedeemed, notice],
+    [member?.phone, phone, onMemberChange, onRedeemed, notice, membersActionUrl, staffAuth],
   );
 
   const redeemable = useMemo(() => {

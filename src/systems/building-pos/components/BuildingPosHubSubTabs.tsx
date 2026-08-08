@@ -43,23 +43,6 @@ function IconQrStaff({ className }: { className?: string }) {
   );
 }
 
-function IconFinSales({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} className={className} aria-hidden>
-      <path d="M4 18h16M7 14l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconFinCosts({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} className={className} aria-hidden>
-      <path d="M12 3v18M5 8l7-4 7 4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M9 14h6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function BuildingPosHubSubTabsInner({
   variant,
   className,
@@ -73,6 +56,8 @@ function BuildingPosHubSubTabsInner({
   if (nav.main === "overview") return null;
   /** เมนู: ไม่มีแท็บย่อย — หมวดหมู่จัดการผ่าน popup จากปุ่มในหน้าเมนู */
   if (nav.main === "menu") return null;
+  /** การเงิน: แถบประวัติ·รายรับ·รายจ่าย อยู่ในหน้าการเงิน (แบบโรงแรม) — ไม่แยก hub sub-tab */
+  if (nav.main === "finance") return null;
 
   const embedded = variant === "embedded";
 
@@ -92,20 +77,9 @@ function BuildingPosHubSubTabsInner({
             Icon: IconQrStaff,
           },
         ]
-      : [
-            {
-              href: buildingPosHubUrlMerge(nav, { main: "finance", finance: "sales" }),
-              label: "ยอดขาย",
-              active: nav.finance === "sales",
-              Icon: IconFinSales,
-            },
-            {
-              href: buildingPosHubUrlMerge(nav, { main: "finance", finance: "costs" }),
-              label: "ต้นทุน / รายจ่าย",
-              active: nav.finance === "costs",
-              Icon: IconFinCosts,
-            },
-          ];
+      : [];
+
+  if (links.length === 0) return null;
 
   const navBody = (
     <nav

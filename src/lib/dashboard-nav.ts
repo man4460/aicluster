@@ -46,7 +46,7 @@ export type DashboardNavItem = {
 
 export function dashboardModuleHref(slug: string): string {
   if (CHAT_AI_MODULE_SLUGS.has(slug)) return CHAT_AI_DASHBOARD_HREF;
-  if (slug === SYSTEM_MAP_CATALOG_SLUG) return "/dashboard/explore";
+  if (slug === SYSTEM_MAP_CATALOG_SLUG) return "/dashboard";
   if (slug === DORMITORY_MODULE_SLUG) return "/dashboard/dormitory";
   if (slug === ATTENDANCE_MODULE_SLUG) return "/dashboard/attendance";
   if (slug === BARBER_MODULE_SLUG) return "/dashboard/barber";

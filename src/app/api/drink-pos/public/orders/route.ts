@@ -136,7 +136,7 @@ export async function POST(req: Request) {
         memberPhone: memberPhone.length >= 9 ? memberPhone : null,
         customerSessionId,
         paymentMethod,
-        paymentSlipUrl: drinkPosPaymentRequiresSlip(paymentMethod, totalBaht) ? paymentSlipUrl : null,
+        paymentSlipUrl,
         fulfillmentStatus: "RECEIVED",
         statusUpdatedAt: new Date(),
         note: noteParts.join(" · ").slice(0, 500),

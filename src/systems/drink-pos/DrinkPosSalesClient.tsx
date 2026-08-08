@@ -1,25 +1,41 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AppColumnBarSparkChart,
   AppDashboardSection,
   AppEmptyState,
+  AppGalleryCameraFileInputs,
   AppImageLightbox,
+  AppImagePickCameraButtons,
   AppImageThumb,
   AppRevenueCostColumnChart,
   AppSectionHeader,
   AppSparkChartPanel,
   appDashboardInnerScrollClass,
   appTemplateOutlineButtonClass,
+  prepareImageFileForUpload,
+  useAppCameraCapture,
   useAppImageLightbox,
+  useAppNoticePopup,
 } from "@/components/app-templates";
-import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
+import {
+  assetRowEditIconButtonClass,
+  assetRowRemoveIconButtonClass,
+  IconRowEdit,
+  IconRowRemove,
+} from "@/systems/asset/components/AssetRowActionIcons";
+import {
+  DrinkPosCostsPanel,
+  type DrinkPosCostEntryRow,
+} from "@/systems/drink-pos/components/DrinkPosCostsPanel";
 import {
   drinkPosContentStackClass,
   drinkPosFieldClass,
+  drinkPosFinanceSubTabShellClass,
+  drinkPosNavActiveClass,
+  drinkPosNavIdleClass,
   drinkPosOutlineIconButtonClass,
   drinkPosPulseWashClass,
   drinkPosStatCardClass,
@@ -27,16 +43,46 @@ import {
 } from "@/systems/drink-pos/lib/ui-tokens";
 import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import {
+  fetchDrinkPosProducts,
   fetchDrinkPosSales,
   drinkPosFetchErrorMessage,
+  type DrinkPosProductRow,
   type DrinkPosSaleRow,
 } from "@/systems/drink-pos/lib/client-data";
 import { DrinkPosButton } from "@/systems/drink-pos/components/DrinkPosButton";
-import { drinkPosPaymentMethodLabel } from "@/systems/drink-pos/lib/payment-method";
+import {
+  DRINK_POS_PAYMENT_METHODS,
+  drinkPosPaymentMethodLabel,
+  drinkPosPaymentRequiresSlip,
+  type DrinkPosPaymentMethod,
+} from "@/systems/drink-pos/lib/payment-method";
+import {
+  drinkPosActiveSizePrices,
+  drinkPosProductHasSizes,
+  drinkPosResolveUnitPrice,
+  type DrinkPosSizeCode,
+} from "@/systems/drink-pos/lib/size-prices";
 import { DRINK_POS_ORDER_HREF } from "@/systems/drink-pos/lib/drink-pos-module-nav";
 import { formatThb } from "@/systems/inventory/lib/inventory-client-data";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import Link from "next/link";
+
+type CostCategory = {
+  id: string;
+  name: string;
+  sortOrder: number;
+};
 
 type FinanceRange = "TODAY" | "MONTH" | "YEAR" | "CUSTOM";
+
+type EditSaleLineDraft = {
+  key: string;
+  productId: string | null;
+  productName: string;
+  sizeLabel: string | null;
+  unitPriceBaht: number;
+  quantity: number;
+};
 
 function bangkokDateKey(iso: string): string {
   const d = new Date(iso);
@@ -51,6 +97,31 @@ function bangkokTodayKey(): string {
     month: "2-digit",
     day: "2-digit",
   });
+}
+
+function isoToDatetimeLocalBangkok(iso: string): string {
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return "";
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Bangkok",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+      .formatToParts(d)
+      .map((p) => [p.type, p.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
+function datetimeLocalBangkokToIso(local: string): string {
+  const m = local.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!m) return new Date(local).toISOString();
+  return new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:00+07:00`).toISOString();
 }
 
 function dateKeyInFinanceRange(
@@ -88,7 +159,7 @@ function FinanceRangeChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex h-10 items-center justify-center rounded-full px-3.5 text-xs font-black transition-all sm:px-4",
+        "inline-flex h-10 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-black transition-all sm:px-4",
         active
           ? cn(appDashboardBrandGradientFillClass, "text-white shadow-[0_18px_30px_-22px_rgba(91,97,255,0.55)]")
           : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50",
@@ -100,7 +171,12 @@ function FinanceRangeChip({
   );
 }
 
-const salesFilterFieldClass = drinkPosFieldClass;
+/** ช่องพิมพ์กรองการเงิน — ความสูงเท่ากัน */
+const salesFilterFieldClass = cn(drinkPosFieldClass, "box-border min-h-[44px]");
+const salesFilterResetButtonClass = cn(
+  appTemplateOutlineButtonClass,
+  "inline-flex h-11 w-full min-h-[44px] shrink-0 items-center justify-center rounded-2xl px-3 text-sm font-black text-[#4d47b6] sm:w-auto sm:min-w-[8.5rem]",
+);
 
 function IconFilter({ className }: { className?: string }) {
   return (
@@ -126,6 +202,11 @@ type FinanceBucket = {
   costBaht: number;
 };
 
+const FINANCE_DETAIL_TABS = [
+  { id: "history" as const, label: "ประวัติ / รายรับ" },
+  { id: "expenses" as const, label: "รายจ่าย" },
+];
+
 export function DrinkPosSalesClient() {
   const [sales, setSales] = useState<DrinkPosSaleRow[]>([]);
   const [financeBuckets, setFinanceBuckets] = useState<FinanceBucket[]>([]);
@@ -135,12 +216,31 @@ export function DrinkPosSalesClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [costModalOpen, setCostModalOpen] = useState(false);
-  const [costLabel, setCostLabel] = useState("");
-  const [costAmount, setCostAmount] = useState("");
-  const [costBusy, setCostBusy] = useState(false);
-  const [costErr, setCostErr] = useState<string | null>(null);
+  const [categories, setCategories] = useState<CostCategory[]>([]);
+  const [costs, setCosts] = useState<DrinkPosCostEntryRow[]>([]);
+  const [detailPanel, setDetailPanel] = useState<"history" | "expenses">("history");
   const slipLb = useAppImageLightbox();
+  const notice = useAppNoticePopup();
+  const editGalleryRef = useRef<HTMLInputElement>(null);
+  const {
+    openCamera: openEditSlipCamera,
+    cameraInputRef: editCameraInputRef,
+    cameraModal: editSlipCameraModal,
+  } = useAppCameraCapture({ title: "ถ่ายรูปสลิป" });
+
+  const [editSale, setEditSale] = useState<DrinkPosSaleRow | null>(null);
+  const [editNote, setEditNote] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editCreatedAt, setEditCreatedAt] = useState("");
+  const [editLines, setEditLines] = useState<EditSaleLineDraft[]>([]);
+  const [editAddProductId, setEditAddProductId] = useState("");
+  const [editAddSize, setEditAddSize] = useState<DrinkPosSizeCode | "">("");
+  const [editProducts, setEditProducts] = useState<DrinkPosProductRow[]>([]);
+  const [editPaymentMethod, setEditPaymentMethod] = useState<DrinkPosPaymentMethod>("CASH");
+  const [editSlipUrl, setEditSlipUrl] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
+  const [editErr, setEditErr] = useState<string | null>(null);
+  const [editSlipBusy, setEditSlipBusy] = useState(false);
 
   const [filterOpen, setFilterOpen] = useState(true);
   const [chartsOpen, setChartsOpen] = useState(false);
@@ -152,6 +252,18 @@ export function DrinkPosSalesClient() {
   const todayKey = useMemo(() => bangkokTodayKey(), []);
   const phoneSearchActiveRef = useRef(false);
 
+  const loadCategories = useCallback(async () => {
+    const res = await fetch("/api/drink-pos/cost-categories", { cache: "no-store", credentials: "include" });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(typeof j.error === "string" ? j.error : "โหลดหมวดหมู่ไม่สำเร็จ");
+    }
+    const j = (await res.json()) as { categories?: CostCategory[] };
+    const list = Array.isArray(j.categories) ? j.categories : [];
+    setCategories(list);
+    return list;
+  }, []);
+
   const reload = useCallback(async (opts?: { phone?: string | null }) => {
     setLoading(true);
     setError(null);
@@ -162,9 +274,11 @@ export function DrinkPosSalesClient() {
         if (dateTo.trim()) qs.set("to", dateTo.trim());
       }
       const phone = opts?.phone?.trim() || null;
-      const [s, finRes] = await Promise.all([
+      const [s, finRes, costsRes] = await Promise.all([
         fetchDrinkPosSales(phone ? 250 : 400, phone ? { phone } : undefined),
         fetch(`/api/drink-pos/finance-summary?${qs.toString()}`, { credentials: "include" }),
+        fetch("/api/drink-pos/costs", { credentials: "include", cache: "no-store" }),
+        loadCategories().catch(() => [] as CostCategory[]),
       ]);
       if (!s.ok) {
         setError(s.error);
@@ -185,12 +299,16 @@ export function DrinkPosSalesClient() {
         setTotalCost(fin.totalCost ?? fin.totalCost7d ?? 0);
         setFinanceRangeLabel(fin.rangeLabel ?? "ช่วงที่เลือก");
       }
+      if (costsRes.ok) {
+        const cj = (await costsRes.json().catch(() => ({}))) as { costs?: DrinkPosCostEntryRow[] };
+        setCosts(Array.isArray(cj.costs) ? cj.costs : []);
+      }
     } catch (e) {
       setError(drinkPosFetchErrorMessage(e));
     } finally {
       setLoading(false);
     }
-  }, [financeRange, dateFrom, dateTo]);
+  }, [financeRange, dateFrom, dateTo, loadCategories]);
 
   useEffect(() => {
     void reload();
@@ -219,6 +337,131 @@ export function DrinkPosSalesClient() {
     return financeRange !== "MONTH";
   }, [keyword, financeRange]);
 
+  function openSaleEdit(s: DrinkPosSaleRow) {
+    setEditSale(s);
+    setEditNote(s.note ?? "");
+    setEditPhone((s.memberPhone ?? "").replace(/\D/g, "").slice(0, 20));
+    setEditCreatedAt(isoToDatetimeLocalBangkok(s.createdAt));
+    setEditLines(
+      s.lines.map((l, i) => ({
+        key: l.id || `line-${i}`,
+        productId: l.productId ?? null,
+        productName: l.productName,
+        sizeLabel: l.sizeLabel,
+        unitPriceBaht: l.unitPriceBaht,
+        quantity: l.quantity,
+      })),
+    );
+    setEditAddProductId("");
+    setEditAddSize("");
+    const method = (s.paymentMethod ?? "CASH") as DrinkPosPaymentMethod;
+    setEditPaymentMethod(DRINK_POS_PAYMENT_METHODS.includes(method) ? method : "CASH");
+    setEditSlipUrl(s.paymentSlipUrl?.trim() ?? "");
+    setEditErr(null);
+    void (async () => {
+      const p = await fetchDrinkPosProducts();
+      if (p.ok) setEditProducts(p.products.filter((x) => x.isActive !== false));
+    })();
+  }
+
+  const editLinesTotal = useMemo(
+    () => editLines.reduce((sum, l) => sum + l.unitPriceBaht * l.quantity, 0),
+    [editLines],
+  );
+
+  const editAddProduct = useMemo(
+    () => editProducts.find((p) => p.id === editAddProductId) ?? null,
+    [editProducts, editAddProductId],
+  );
+
+  async function uploadEditSlip(file: File) {
+    setEditSlipBusy(true);
+    setEditErr(null);
+    try {
+      const prepared = await prepareImageFileForUpload(file);
+      const fd = new FormData();
+      fd.set("file", prepared);
+      const res = await fetch("/api/drink-pos/upload", { method: "POST", body: fd, credentials: "include" });
+      const j = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
+      if (!res.ok || !j.imageUrl?.trim()) throw new Error(j.error ?? "อัปโหลดสลิปไม่สำเร็จ");
+      setEditSlipUrl(j.imageUrl.trim());
+    } catch (err) {
+      setEditErr(err instanceof Error ? err.message : "อัปโหลดสลิปไม่สำเร็จ");
+    } finally {
+      setEditSlipBusy(false);
+    }
+  }
+
+  async function onPickEditSlip(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    await uploadEditSlip(file);
+  }
+
+  async function submitSaleEdit() {
+    if (!editSale) return;
+    if (editLines.length === 0) {
+      setEditErr("ต้องมีสินค้าอย่างน้อย 1 รายการ");
+      return;
+    }
+    const slip = editSlipUrl.trim() || null;
+    if (drinkPosPaymentRequiresSlip(editPaymentMethod, editLinesTotal) && !slip) {
+      setEditErr("แนบสลิปชำระเงินก่อนบันทึก");
+      return;
+    }
+    setEditBusy(true);
+    setEditErr(null);
+    try {
+      const createdIso = editCreatedAt.trim()
+        ? datetimeLocalBangkokToIso(editCreatedAt.trim())
+        : editSale.createdAt;
+      const res = await fetch(`/api/drink-pos/sales/${editSale.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          note: editNote.trim() || null,
+          memberPhone: editPhone.trim() || null,
+          createdAt: createdIso,
+          paymentMethod: editPaymentMethod,
+          paymentSlipUrl: slip,
+          lines: editLines.map((l) => ({
+            productId: l.productId,
+            productName: l.productName,
+            sizeLabel: l.sizeLabel,
+            unitPriceBaht: l.unitPriceBaht,
+            quantity: l.quantity,
+          })),
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof j.error === "string" ? j.error : "บันทึกไม่สำเร็จ");
+      setEditSale(null);
+      await reload();
+    } catch (e) {
+      setEditErr(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
+    } finally {
+      setEditBusy(false);
+    }
+  }
+
+  async function deleteSale(s: DrinkPosSaleRow) {
+    const ok = await notice.confirm(`ลบบิลขาย ฿${formatThb(s.totalBaht)} ใช่หรือไม่?`);
+    if (!ok) return;
+    try {
+      const res = await fetch(`/api/drink-pos/sales/${s.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof j.error === "string" ? j.error : "ลบไม่สำเร็จ");
+      await reload();
+    } catch (e) {
+      notice.error(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
+    }
+  }
+
   const filteredSales = useMemo(() => {
     const kw = keyword.trim().toLowerCase();
     const kwDigits = keyword.replace(/\D/g, "");
@@ -237,6 +480,13 @@ export function DrinkPosSalesClient() {
       return true;
     });
   }, [sales, keyword, financeRange, todayKey, dateFrom, dateTo]);
+
+  const filteredCosts = useMemo(() => {
+    return costs.filter((c) => {
+      const day = bangkokDateKey(c.spentAt);
+      return dateKeyInFinanceRange(day, financeRange, todayKey, dateFrom.trim(), dateTo.trim());
+    });
+  }, [costs, financeRange, todayKey, dateFrom, dateTo]);
 
   const { chartBuckets, chartPeriodTotalBaht } = useMemo(() => {
     const totals = new Map<string, number>();
@@ -277,35 +527,6 @@ export function DrinkPosSalesClient() {
     }
   }
 
-  async function submitCost() {
-    setCostBusy(true);
-    setCostErr(null);
-    try {
-      const amount = Number(costAmount);
-      if (!costLabel.trim() || !Number.isFinite(amount) || amount < 0) {
-        setCostErr("กรอกชื่อรายการและจำนวนเงิน");
-        return;
-      }
-      const res = await fetch("/api/drink-pos/costs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ label: costLabel.trim(), amountBaht: Math.round(amount) }),
-      });
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setCostErr(typeof j.error === "string" ? j.error : "บันทึกไม่สำเร็จ");
-        return;
-      }
-      setCostModalOpen(false);
-      setCostLabel("");
-      setCostAmount("");
-      await reload();
-    } finally {
-      setCostBusy(false);
-    }
-  }
-
   const profitTotal = totalRevenue - totalCost;
 
   const revenueCostChartBuckets = useMemo(() => {
@@ -326,16 +547,44 @@ export function DrinkPosSalesClient() {
 
   return (
     <div className={drinkPosContentStackClass}>
+      {notice.popup}
       {error ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm font-semibold text-rose-800">
           {error}
         </div>
       ) : null}
 
+      <section aria-label={`สรุปการเงิน ${financeRangeLabel}`}>
+        <ul className={cn(drinkPosStatGridClass, "lg:grid-cols-3")}>
+          <li className={financeStatClass}>
+            <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">
+              รายได้ · {financeRangeLabel}
+            </p>
+            <p className="mt-2 text-left text-2xl font-black tabular-nums text-emerald-700 sm:text-3xl">
+              ฿{formatThb(totalRevenue)}
+            </p>
+          </li>
+          <li className={financeStatClass}>
+            <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">
+              ต้นทุน · {financeRangeLabel}
+            </p>
+            <p className="mt-2 text-left text-2xl font-black tabular-nums text-rose-600 sm:text-3xl">
+              ฿{formatThb(totalCost)}
+            </p>
+          </li>
+          <li className={cn(financeStatClass, "col-span-2 lg:col-span-1")}>
+            <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">กำไรโดยประมาณ</p>
+            <p className="mt-2 text-left text-2xl font-black tabular-nums text-[#1e1b4b] sm:text-3xl">
+              ฿{formatThb(profitTotal)}
+            </p>
+          </li>
+        </ul>
+      </section>
+
       <AppDashboardSection tone="violet">
         <AppSectionHeader
           tone="violet"
-          title="ช่วงเวลาและกราฟ"
+          title="การเงิน"
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           action={
@@ -412,32 +661,32 @@ export function DrinkPosSalesClient() {
               onClick={() => selectFinanceRange("CUSTOM")}
             />
           </div>
-          {financeRange === "CUSTOM" ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="min-w-0">
-                <span className="text-xs font-bold text-[#4d47b6]">ตั้งแต่วันที่</span>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  aria-label="ตั้งแต่วันที่ กรุงเทพ"
-                  className={cn(salesFilterFieldClass, "mt-1")}
-                />
-              </label>
-              <label className="min-w-0">
-                <span className="text-xs font-bold text-[#4d47b6]">ถึงวันที่</span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  aria-label="ถึงวันที่ กรุงเทพ"
-                  className={cn(salesFilterFieldClass, "mt-1")}
-                />
-              </label>
-            </div>
-          ) : null}
-          <div className="grid gap-3 sm:grid-cols-12">
-            <label className="min-w-0 sm:col-span-9">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+            {financeRange === "CUSTOM" ? (
+              <>
+                <label className="min-w-0 sm:w-[11rem]">
+                  <span className="text-xs font-bold text-[#4d47b6]">ตั้งแต่วันที่</span>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    aria-label="ตั้งแต่วันที่ กรุงเทพ"
+                    className={cn(salesFilterFieldClass, "mt-1")}
+                  />
+                </label>
+                <label className="min-w-0 sm:w-[11rem]">
+                  <span className="text-xs font-bold text-[#4d47b6]">ถึงวันที่</span>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    aria-label="ถึงวันที่ กรุงเทพ"
+                    className={cn(salesFilterFieldClass, "mt-1")}
+                  />
+                </label>
+              </>
+            ) : null}
+            <label className="min-w-0 flex-1 sm:min-w-[14rem]">
               <span className="sr-only">ค้นหาโน้ต ชื่อสินค้า หรือเบอร์โทรลูกค้า</span>
               <input
                 value={keyword}
@@ -448,76 +697,22 @@ export function DrinkPosSalesClient() {
                 className={cn(salesFilterFieldClass, "mt-0")}
               />
             </label>
-            <div className="flex items-end sm:col-span-3">
+            {filtersActive || keyword.trim() ? (
               <DrinkPosButton
                 type="button"
                 onClick={() => resetSalesFilters()}
-                disabled={!filtersActive && !keyword.trim()}
-                className={cn(
-                  appTemplateOutlineButtonClass,
-                  "h-[42px] w-full rounded-2xl text-xs font-black text-[#4d47b6] disabled:opacity-40",
-                )}
+                className={salesFilterResetButtonClass}
+                aria-label="รีเซ็ตตัวกรองเป็นเดือนนี้"
               >
                 รีเซ็ต · เดือนนี้
               </DrinkPosButton>
-            </div>
+            ) : null}
           </div>
           <p className="text-xs font-semibold text-[#66638c]">กำลังดู: {financeRangeLabel}</p>
         </div>
-        {!filterOpen ? (
-          <p className="mt-3 text-xs font-semibold text-[#66638c]">
-            ตัวกรองถูกซ่อนไว้
-            {filtersActive ? " · มีเงื่อนไขกรองอยู่" : ""} — กด «แสดงกรอง» เพื่อเปิด
-          </p>
-        ) : null}
-
-        {chartsOpen ? (
-          <div id="drink-pos-finance-charts" className="mt-4 space-y-4 border-t border-[#ecebff] pt-4">
-            <section aria-label={`สรุปการเงิน ${financeRangeLabel}`}>
-              <ul className={cn(drinkPosStatGridClass, "lg:grid-cols-3")}>
-                <li className={financeStatClass}>
-                  <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">
-                    รายได้ · {financeRangeLabel}
-                  </p>
-                  <p className="mt-2 text-left text-2xl font-black tabular-nums text-emerald-700 sm:text-3xl">
-                    ฿{formatThb(totalRevenue)}
-                  </p>
-                </li>
-                <li className={financeStatClass}>
-                  <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">
-                    ต้นทุน · {financeRangeLabel}
-                  </p>
-                  <p className="mt-2 text-left text-2xl font-black tabular-nums text-rose-600 sm:text-3xl">
-                    ฿{formatThb(totalCost)}
-                  </p>
-                </li>
-                <li className={cn(financeStatClass, "col-span-2 lg:col-span-1")}>
-                  <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">กำไรโดยประมาณ</p>
-                  <p className="mt-2 text-left text-2xl font-black tabular-nums text-[#1e1b4b] sm:text-3xl">
-                    ฿{formatThb(profitTotal)}
-                  </p>
-                </li>
-              </ul>
-            </section>
-
-            <div className="flex flex-row items-center justify-between gap-3">
-              <p className="text-sm font-black text-[#1e1b4b]">รายได้เทียบต้นทุน · {financeRangeLabel}</p>
-              <DrinkPosButton
-                type="button"
-                onClick={() => {
-                  setCostErr(null);
-                  setCostModalOpen(true);
-                }}
-                className="app-btn-primary min-h-[40px] min-w-[40px] rounded-xl px-3 text-sm font-bold sm:min-w-0 sm:px-4"
-                aria-label="บันทึกต้นทุน"
-              >
-                <span className="sm:hidden" aria-hidden>
-                  +
-                </span>
-                <span className="hidden sm:inline">+ บันทึกต้นทุน</span>
-              </DrinkPosButton>
-            </div>
-
+          {chartsOpen ? (
+            <div id="drink-pos-finance-charts" className="space-y-4 mt-4">
+            <p className="text-sm font-black text-[#1e1b4b]">รายได้เทียบต้นทุน · {financeRangeLabel}</p>
             {loading ? (
               <div className={cn("h-40 animate-pulse rounded-2xl", drinkPosPulseWashClass)} aria-hidden />
             ) : (
@@ -570,151 +765,443 @@ export function DrinkPosSalesClient() {
                 </aside>
               </div>
             )}
+            </div>
+          ) : null}
+
+        <div className="mt-4 space-y-4 border-t border-[#ecebff] pt-4">
+          <nav className={drinkPosFinanceSubTabShellClass} aria-label="เมนูการเงิน">
+            <div className="flex w-full min-w-0 gap-1" role="tablist">
+              {FINANCE_DETAIL_TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={detailPanel === t.id}
+                  id={`drink-pos-finance-tab-${t.id}`}
+                  aria-controls={`drink-pos-finance-panel-${t.id}`}
+                  onClick={() => setDetailPanel(t.id)}
+                  className={cn(
+                    "flex min-h-[44px] min-w-0 flex-1 items-center justify-center rounded-[1.25rem] px-2 py-2 text-center text-[11px] font-black leading-tight transition-all sm:px-3 sm:text-sm",
+                    detailPanel === t.id
+                      ? cn(drinkPosNavActiveClass, "ring-1 ring-white/55")
+                      : cn("ring-1 ring-transparent", drinkPosNavIdleClass),
+                  )}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </nav>
+
+          <div className="mt-4">
+            {detailPanel === "history" ? (
+              <div
+                id="drink-pos-finance-panel-history"
+                role="tabpanel"
+                aria-labelledby="drink-pos-finance-tab-history"
+              >
+                <AppSectionHeader
+                  tone="slate"
+                  title="ประวัติ / รายรับ"
+                  className="flex flex-row items-start justify-between gap-3 sm:items-center"
+                  actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
+                  action={
+                    <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
+                      <Link
+                        href={DRINK_POS_ORDER_HREF}
+                        className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl px-0 font-black shadow-md sm:min-w-0 sm:px-4"
+                        aria-label="ไปหน้าออเดอร์เพื่อบันทึกขาย"
+                      >
+                        <svg className="h-5 w-5 sm:mr-1.5 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+                          <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                        </svg>
+                        <span className="hidden sm:inline">+ บันทึกขาย</span>
+                      </Link>
+                    </div>
+                  }
+                />
+                {filtersActive ? (
+                  <p className="mt-2 text-xs font-semibold text-[#66638c]">
+                    แสดงตามตัวกรองด้านบน
+                    {keyword.trim() ? ` · ค้นหา «${keyword.trim()}»` : ""} · {financeRangeLabel}
+                  </p>
+                ) : null}
+                {loading ? (
+                  <div className="mt-4 h-32 animate-pulse rounded-2xl bg-slate-100/80" aria-hidden />
+                ) : sales.length === 0 ? (
+                  <AppEmptyState tone="slate" className="mt-4">
+                    ยังไม่มีการขาย
+                  </AppEmptyState>
+                ) : filteredSales.length === 0 ? (
+                  <AppEmptyState tone="slate" className="mt-4">
+                    ไม่พบบิลตามตัวกรอง
+                  </AppEmptyState>
+                ) : (
+                  <div
+                    className={cn("mt-4 max-h-[min(70vh,44rem)] min-h-0", appDashboardInnerScrollClass)}
+                    role="region"
+                    aria-label="รายการบิล"
+                  >
+                    <ul className="space-y-2 pr-0.5">
+                      {filteredSales.map((s) => {
+                        const slipUrl = s.paymentSlipUrl?.trim() || "";
+                        return (
+                          <li
+                            key={s.id}
+                            className="rounded-[1.25rem] border border-white/50 bg-gradient-to-br from-white/55 to-slate-50/15 px-3 py-3 shadow-sm ring-1 ring-inset ring-white/40 backdrop-blur-sm sm:rounded-[2rem] sm:px-4"
+                          >
+                            <div className="flex items-start gap-3">
+                              {slipUrl ? (
+                                <AppImageThumb
+                                  src={slipUrl}
+                                  alt="สลิปชำระเงิน"
+                                  className="h-14 w-14 shrink-0"
+                                  onOpen={() => slipLb.open(slipUrl)}
+                                />
+                              ) : null}
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold text-[#66638c]">
+                                  {new Date(s.createdAt).toLocaleString("th-TH", {
+                                    timeZone: "Asia/Bangkok",
+                                    day: "2-digit",
+                                    month: "short",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </p>
+                                {s.memberPhone ? (
+                                  <p className="mt-0.5 text-sm font-black tabular-nums text-[#1e1b4b]">
+                                    ลูกค้า {s.memberPhone}
+                                  </p>
+                                ) : null}
+                                {s.note ? <p className="mt-0.5 text-sm font-semibold text-[#1e1b4b]">{s.note}</p> : null}
+                                <p className="mt-0.5 text-[11px] font-bold text-[#4d47b6]">
+                                  {drinkPosPaymentMethodLabel(s.paymentMethod)}
+                                  {s.isRewardRedemption ? " · แลกคะแนน" : ""}
+                                </p>
+                              </div>
+                              <div className="flex shrink-0 flex-col items-end gap-1.5">
+                                <p className="text-right text-lg font-black tabular-nums text-emerald-700">
+                                  ฿{formatThb(s.totalBaht)}
+                                </p>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => openSaleEdit(s)}
+                                    className={assetRowEditIconButtonClass}
+                                    aria-label={`แก้ไขบิล ${formatThb(s.totalBaht)} บาท`}
+                                    title="แก้ไข"
+                                  >
+                                    <IconRowEdit className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => void deleteSale(s)}
+                                    className={assetRowRemoveIconButtonClass}
+                                    aria-label={`ลบบิล ${formatThb(s.totalBaht)} บาท`}
+                                    title="ลบ"
+                                  >
+                                    <IconRowRemove className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                            <ul className="mt-2 space-y-1 border-t border-white/40 pt-2 text-xs font-medium text-[#66638c]">
+                              {s.lines.map((l) => (
+                                <li key={l.id} className="flex justify-between gap-2">
+                                  <span className="min-w-0 truncate">
+                                    {l.productName} × {l.quantity}
+                                  </span>
+                                  <span className="shrink-0 tabular-nums">฿{formatThb(l.lineTotalBaht)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {detailPanel === "expenses" ? (
+              <div
+                id="drink-pos-finance-panel-expenses"
+                role="tabpanel"
+                aria-labelledby="drink-pos-finance-tab-expenses"
+              >
+                <p className="mb-2 text-xs font-semibold text-[#66638c]">ต้นทุน · {financeRangeLabel}</p>
+                {loading ? (
+                  <div className="mt-4 h-32 animate-pulse rounded-2xl bg-slate-100/80" aria-hidden />
+                ) : (
+                  <DrinkPosCostsPanel
+                    categories={categories}
+                    entries={filteredCosts}
+                    emptyWhenFilteredMessage="ยังไม่มีรายจ่ายในช่วงนี้ — กด «+ เพิ่มรายจ่าย»"
+                    onChanged={() => void reload()}
+                  />
+                )}
+              </div>
+            ) : null}
           </div>
-        ) : (
-          <p className="mt-4 rounded-[1.25rem] border border-dashed border-[#d8d6ec] bg-[#faf9ff]/70 px-3 py-4 text-center text-xs font-semibold text-[#66638c]">
-            กราฟถูกซ่อนไว้ — กด «แสดงกราฟ» เพื่อเปิดดู
-          </p>
-        )}
+        </div>
       </AppDashboardSection>
 
-      <AppDashboardSection tone="slate">
-        <AppSectionHeader
-          tone="slate"
-          title="บิลล่าสุด"
-          className="flex flex-row items-start justify-between gap-3 sm:items-center"
-          actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
-          action={
-            <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
-              <Link
-                href={DRINK_POS_ORDER_HREF}
-                className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl px-0 font-black shadow-md sm:min-w-0 sm:px-4"
-                aria-label="ไปหน้าออเดอร์เพื่อบันทึกขาย"
-              >
-                <svg className="h-5 w-5 sm:mr-1.5 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-                </svg>
-                <span className="hidden sm:inline">+ บันทึกขาย</span>
-              </Link>
-            </div>
-          }
-        />
-        {filtersActive ? (
-          <p className="mt-2 text-xs font-semibold text-[#66638c]">
-            แสดงตามตัวกรองด้านบน
-            {keyword.trim() ? ` · ค้นหา «${keyword.trim()}»` : ""} · {financeRangeLabel}
-          </p>
-        ) : null}
-        {loading ? (
-          <div className="mt-4 h-32 animate-pulse rounded-2xl bg-slate-100/80" aria-hidden />
-        ) : sales.length === 0 ? (
-          <AppEmptyState tone="slate" className="mt-4">
-            ยังไม่มีการขาย
-          </AppEmptyState>
-        ) : filteredSales.length === 0 ? (
-          <AppEmptyState tone="slate" className="mt-4">
-            ไม่พบบิลตามตัวกรอง
-          </AppEmptyState>
-        ) : (
-          <div
-            className={cn("mt-4 max-h-[min(70vh,44rem)] min-h-0", appDashboardInnerScrollClass)}
-            role="region"
-            aria-label="รายการบิล"
-          >
-            <ul className="space-y-2 pr-0.5">
-              {filteredSales.map((s) => (
-                <li
-                  key={s.id}
-                  className="rounded-[1.25rem] border border-white/50 bg-gradient-to-br from-white/55 to-slate-50/15 px-3 py-3 shadow-sm ring-1 ring-inset ring-white/40 backdrop-blur-sm sm:rounded-[2rem] sm:px-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="text-xs font-bold text-[#66638c]">
-                        {new Date(s.createdAt).toLocaleString("th-TH", {
-                          timeZone: "Asia/Bangkok",
-                          day: "2-digit",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                      {s.memberPhone ? (
-                        <p className="mt-0.5 text-sm font-black tabular-nums text-[#1e1b4b]">
-                          ลูกค้า {s.memberPhone}
-                        </p>
-                      ) : null}
-                      {s.note ? <p className="mt-0.5 text-sm font-semibold text-[#1e1b4b]">{s.note}</p> : null}
-                      <p className="mt-0.5 text-[11px] font-bold text-[#4d47b6]">
-                        {drinkPosPaymentMethodLabel(s.paymentMethod)}
-                        {s.isRewardRedemption ? " · แลกคะแนน" : ""}
-                      </p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      {s.paymentSlipUrl ? (
-                        <AppImageThumb
-                          src={s.paymentSlipUrl}
-                          alt="สลิปชำระเงิน"
-                          onOpen={() => s.paymentSlipUrl && slipLb.open(s.paymentSlipUrl)}
-                          className="h-12 w-12"
-                        />
-                      ) : null}
-                      <p className="text-lg font-black tabular-nums text-emerald-700">฿{formatThb(s.totalBaht)}</p>
-                    </div>
-                  </div>
-                  <ul className="mt-2 space-y-1 border-t border-white/40 pt-2 text-xs font-medium text-[#66638c]">
-                    {s.lines.map((l) => (
-                      <li key={l.id} className="flex justify-between gap-2">
-                        <span className="min-w-0 truncate">
-                          {l.productName} × {l.quantity}
-                        </span>
-                        <span className="shrink-0 tabular-nums">฿{formatThb(l.lineTotalBaht)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </AppDashboardSection>
+
 
       <AppImageLightbox src={slipLb.src} onClose={slipLb.close} alt="สลิปชำระเงิน" />
 
       <FormModal
-        open={costModalOpen}
-        onClose={() => !costBusy && setCostModalOpen(false)}
-        title="บันทึกต้นทุน"
+        open={editSale != null}
+        onClose={() => {
+          if (!editBusy) setEditSale(null);
+        }}
+        title="แก้ไขบิลขาย"
+        description="แก้เมนู · เบอร์ · วันที่ · ชำระ และสลิป"
+        size="lg"
+        mobileCentered
         footer={
           <FormModalFooterActions
-            onCancel={() => !costBusy && setCostModalOpen(false)}
-            onSubmit={() => void submitCost()}
-            submitLabel="บันทึก"
-            loading={costBusy}
+            onCancel={() => setEditSale(null)}
+            onSubmit={() => void submitSaleEdit()}
+            submitLabel={editBusy ? "กำลังบันทึก…" : "บันทึก"}
+            submitDisabled={editBusy || editSlipBusy}
+            loading={editBusy}
           />
         }
       >
         <div className="space-y-3">
-          {costErr ? <p className="text-sm font-semibold text-rose-600">{costErr}</p> : null}
-          <label className="block text-left text-sm font-bold text-[#1e1b4b]">
-            รายการ
+          {editErr ? <p className="text-sm font-semibold text-rose-600">{editErr}</p> : null}
+          <p className="text-sm font-black tabular-nums text-emerald-700">
+            ยอด ฿{formatThb(editLinesTotal)}
+          </p>
+          <label className="block">
+            <span className="text-xs font-bold text-[#4d47b6]">เบอร์โทรลูกค้า</span>
             <input
-              type="text"
-              value={costLabel}
-              onChange={(e) => setCostLabel(e.target.value)}
-              className={cn(salesFilterFieldClass, "mt-1")}
-              placeholder="เช่น วัตถุดิบกาแฟ"
+              value={editPhone}
+              onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 20))}
+              className={cn(drinkPosFieldClass, "mt-1")}
+              inputMode="tel"
+              autoComplete="tel"
             />
           </label>
-          <label className="block text-left text-sm font-bold text-[#1e1b4b]">
-            จำนวนเงิน (บาท)
+          <label className="block">
+            <span className="text-xs font-bold text-[#4d47b6]">วัน–เวลาขาย</span>
             <input
-              type="number"
-              min={0}
-              value={costAmount}
-              onChange={(e) => setCostAmount(e.target.value)}
-              className={cn(salesFilterFieldClass, "mt-1")}
+              type="datetime-local"
+              value={editCreatedAt}
+              onChange={(e) => setEditCreatedAt(e.target.value)}
+              className={cn(drinkPosFieldClass, "mt-1")}
             />
           </label>
+          <label className="block">
+            <span className="text-xs font-bold text-[#4d47b6]">ช่องทางชำระ</span>
+            <select
+              value={editPaymentMethod}
+              onChange={(e) => setEditPaymentMethod(e.target.value as DrinkPosPaymentMethod)}
+              className={cn(drinkPosFieldClass, "mt-1 cursor-pointer")}
+            >
+              {DRINK_POS_PAYMENT_METHODS.map((m) => (
+                <option key={m} value={m}>
+                  {drinkPosPaymentMethodLabel(m)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div>
+            <p className="text-xs font-bold text-[#4d47b6]">รายการเครื่องดื่ม</p>
+            <ul className="mt-2 space-y-2">
+              {editLines.map((l) => (
+                <li
+                  key={l.key}
+                  className="flex flex-wrap items-center gap-2 rounded-xl border border-white/50 bg-white/70 px-3 py-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-[#1e1b4b]">
+                      {l.productName}
+                      {l.sizeLabel ? ` (${l.sizeLabel})` : ""}
+                    </p>
+                    <p className="text-[11px] font-medium text-[#66638c]">
+                      ฿{formatThb(l.unitPriceBaht)} / รายการ
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/60 bg-white text-lg font-black text-[#4d47b6]"
+                      aria-label={`ลดจำนวน ${l.productName}`}
+                      onClick={() =>
+                        setEditLines((prev) =>
+                          prev.flatMap((row) => {
+                            if (row.key !== l.key) return [row];
+                            if (row.quantity <= 1) return [];
+                            return [{ ...row, quantity: row.quantity - 1 }];
+                          }),
+                        )
+                      }
+                    >
+                      −
+                    </button>
+                    <span className="min-w-[2rem] text-center text-sm font-black tabular-nums text-[#1e1b4b]">
+                      {l.quantity}
+                    </span>
+                    <button
+                      type="button"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/60 bg-white text-lg font-black text-[#4d47b6]"
+                      aria-label={`เพิ่มจำนวน ${l.productName}`}
+                      onClick={() =>
+                        setEditLines((prev) =>
+                          prev.map((row) =>
+                            row.key === l.key
+                              ? { ...row, quantity: Math.min(9999, row.quantity + 1) }
+                              : row,
+                          ),
+                        )
+                      }
+                    >
+                      +
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className={assetRowRemoveIconButtonClass}
+                    aria-label={`ลบ ${l.productName}`}
+                    title="ลบรายการ"
+                    onClick={() => setEditLines((prev) => prev.filter((row) => row.key !== l.key))}
+                  >
+                    <IconRowRemove className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-2 space-y-2">
+              <label className="block">
+                <span className="text-[11px] font-bold text-[#4d47b6]">เพิ่มสินค้า</span>
+                <select
+                  value={editAddProductId}
+                  onChange={(e) => {
+                    setEditAddProductId(e.target.value);
+                    setEditAddSize("");
+                  }}
+                  className={cn(drinkPosFieldClass, "mt-1 cursor-pointer")}
+                >
+                  <option value="">— เลือกสินค้า —</option>
+                  {editProducts.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} · ฿{formatThb(p.priceBaht)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {editAddProduct && drinkPosProductHasSizes(editAddProduct.sizePrices) ? (
+                <label className="block">
+                  <span className="text-[11px] font-bold text-[#4d47b6]">ขนาด</span>
+                  <select
+                    value={editAddSize}
+                    onChange={(e) => setEditAddSize(e.target.value as DrinkPosSizeCode | "")}
+                    className={cn(drinkPosFieldClass, "mt-1 cursor-pointer")}
+                  >
+                    <option value="">— เลือกขนาด —</option>
+                    {drinkPosActiveSizePrices(editAddProduct.sizePrices).map((sz) => (
+                      <option key={sz.size} value={sz.size}>
+                        {sz.size} · ฿{formatThb(sz.priceBaht)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              <button
+                type="button"
+                className={cn(appTemplateOutlineButtonClass, "rounded-xl px-3 py-2 text-xs font-bold")}
+                disabled={
+                  !editAddProduct ||
+                  (drinkPosProductHasSizes(editAddProduct.sizePrices) && !editAddSize)
+                }
+                onClick={() => {
+                  if (!editAddProduct) return;
+                  const size = editAddSize || null;
+                  const unit = drinkPosResolveUnitPrice(editAddProduct, size);
+                  if (unit == null) return;
+                  const sizeKey = size ?? "";
+                  setEditLines((prev) => {
+                    const exist = prev.find(
+                      (x) => x.productId === editAddProduct.id && (x.sizeLabel ?? "") === sizeKey,
+                    );
+                    if (exist) {
+                      return prev.map((row) =>
+                        row.key === exist.key
+                          ? { ...row, quantity: Math.min(9999, row.quantity + 1) }
+                          : row,
+                      );
+                    }
+                    return [
+                      ...prev,
+                      {
+                        key: `new-${editAddProduct.id}-${sizeKey}-${Date.now()}`,
+                        productId: editAddProduct.id,
+                        productName: editAddProduct.name,
+                        sizeLabel: size,
+                        unitPriceBaht: unit,
+                        quantity: 1,
+                      },
+                    ];
+                  });
+                  setEditAddProductId("");
+                  setEditAddSize("");
+                }}
+              >
+                เพิ่มรายการ
+              </button>
+            </div>
+          </div>
+
+          <label className="block">
+            <span className="text-xs font-bold text-[#4d47b6]">หมายเหตุ</span>
+            <textarea
+              value={editNote}
+              onChange={(e) => setEditNote(e.target.value)}
+              rows={2}
+              className={cn(drinkPosFieldClass, "mt-1 min-h-[4rem] py-2")}
+            />
+          </label>
+          <div>
+            <p className="text-xs font-bold text-[#4d47b6]">สลิป (ไม่บังคับ ยกเว้นพร้อมเพย์/โอน)</p>
+            <AppGalleryCameraFileInputs
+              galleryInputRef={editGalleryRef}
+              cameraInputRef={editCameraInputRef}
+              onChange={(e) => void onPickEditSlip(e)}
+            />
+            <div className="mt-2">
+              <AppImagePickCameraButtons
+                onPickGallery={() => editGalleryRef.current?.click()}
+                onPickCamera={() => openEditSlipCamera((file) => void uploadEditSlip(file))}
+                disabled={editBusy || editSlipBusy}
+                busy={editSlipBusy}
+              />
+            </div>
+            {editSlipCameraModal}
+            {editSlipUrl ? (
+              <div className="mt-2 flex flex-wrap items-end gap-3">
+                <AppImageThumb
+                  src={editSlipUrl}
+                  alt="สลิปบิล"
+                  onOpen={() => slipLb.open(editSlipUrl)}
+                  className="h-20 w-20"
+                />
+                <button
+                  type="button"
+                  onClick={() => setEditSlipUrl("")}
+                  className={cn(appTemplateOutlineButtonClass, "rounded-xl px-3 py-2 text-xs font-bold")}
+                >
+                  ลบสลิป
+                </button>
+              </div>
+            ) : (
+              <p className="mt-2 text-xs font-medium text-[#66638c]">ยังไม่มีสลิป — อัปโหลดหรือถ่ายใหม่ได้</p>
+            )}
+          </div>
         </div>
       </FormModal>
     </div>

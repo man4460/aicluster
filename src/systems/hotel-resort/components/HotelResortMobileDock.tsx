@@ -6,7 +6,14 @@ import { usePathname } from "next/navigation";
 import { appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
+  HOTEL_RESORT_NAV_ITEMS,
+  isHotelResortModulePath,
+  isHotelResortNavItemActive,
+  type HotelResortNavKey,
+} from "@/systems/hotel-resort/hotel-resort-module-nav";
+import {
   IconCalendar,
+  IconDoorOpen,
   IconHotel,
   IconNavCheckIn,
   IconNavFinance,
@@ -17,9 +24,6 @@ import {
   MODULE_SHOP_SETTINGS_SHORT_LABEL,
 } from "@/systems/module-shop/module-shop-settings-nav";
 
-const base = "/dashboard/hotel-resort";
-const settingsHref = `${base}/settings`;
-
 const dockLinkClass = (active: boolean) =>
   cn(
     "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-center transition-all active:scale-90",
@@ -28,50 +32,48 @@ const dockLinkClass = (active: boolean) =>
       : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
   );
 
-type Item = {
-  href: string;
-  label: string;
-  icon: (props: { className?: string }) => ReactNode;
-  active: boolean;
-};
+function dockIcon(key: HotelResortNavKey, className?: string): ReactNode {
+  switch (key) {
+    case "dashboard":
+      return <IconHotel className={className} />;
+    case "rooms":
+      return <IconDoorOpen className={className} />;
+    case "bookings":
+      return <IconCalendar className={className} />;
+    case "checkIn":
+      return <IconNavCheckIn className={className} />;
+    case "finance":
+      return <IconNavFinance className={className} />;
+    case "guest":
+      return <IconNavGuest className={className} />;
+    case "settings":
+      return <IconModuleShopSettings className={className} />;
+  }
+}
 
 export function HotelResortMobileDockNav() {
-  const pathname = (usePathname() ?? "").replace(/\/+$/, "");
-  if (!pathname.startsWith(base)) return null;
-
-  const isSettings = pathname.endsWith(settingsHref);
-
-  const items: Item[] = [
-    { href: base, label: "ห้องพัก", icon: IconHotel, active: !isSettings && pathname === base },
-    { href: `${base}/bookings`, label: "จอง", icon: IconCalendar, active: !isSettings && pathname.endsWith(`${base}/bookings`) },
-    { href: `${base}/check-in`, label: "เช็คอิน", icon: IconNavCheckIn, active: !isSettings && pathname.endsWith(`${base}/check-in`) },
-    { href: `${base}/finance`, label: "การเงิน", icon: IconNavFinance, active: !isSettings && pathname.endsWith(`${base}/finance`) },
-    { href: `${base}/guest-portal`, label: "ลูกค้า", icon: IconNavGuest, active: !isSettings && pathname.endsWith(`${base}/guest-portal`) },
-  ];
+  const pathname = usePathname() ?? "";
+  if (!isHotelResortModulePath(pathname)) return null;
 
   return (
-    <ul className={cn(appMobileDockGridClass, "grid-cols-6")} aria-label="แท็บนำทางโมดูลโรงแรมรีสอร์ท">
-      {items.map((item) => (
-        <li key={item.href} className="min-w-0">
-          <Link href={item.href} className={dockLinkClass(item.active)} aria-current={item.active ? "page" : undefined}>
-            <item.icon className="h-5 w-5 shrink-0" />
-            <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">{item.label}</span>
-          </Link>
-        </li>
-      ))}
-      <li className="min-w-0">
-        <Link
-          href={settingsHref}
-          className={dockLinkClass(isSettings)}
-          aria-current={isSettings ? "page" : undefined}
-          aria-label="ตั้งค่าร้าน"
-        >
-          <IconModuleShopSettings className="h-5 w-5 shrink-0" />
-          <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">
-            {MODULE_SHOP_SETTINGS_SHORT_LABEL}
-          </span>
-        </Link>
-      </li>
+    <ul className={cn(appMobileDockGridClass, "grid-cols-7")} aria-label="แท็บนำทางโมดูลโรงแรมรีสอร์ท">
+      {HOTEL_RESORT_NAV_ITEMS.map((item) => {
+        const active = isHotelResortNavItemActive(pathname, item.key);
+        const label = item.key === "settings" ? MODULE_SHOP_SETTINGS_SHORT_LABEL : item.shortLabel;
+        return (
+          <li key={item.key} className="min-w-0">
+            <Link
+              href={item.href}
+              className={dockLinkClass(active)}
+              aria-current={active ? "page" : undefined}
+              aria-label={item.label}
+            >
+              {dockIcon(item.key, "h-5 w-5 shrink-0")}
+              <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">{label}</span>
+            </Link>
+          </li>
+        );
+      })}
     </ul>
   );
 }

@@ -1,8 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppEmptyState, AppSlipPrintIconButton, alertSlipPrintRequiresMonthlyPlan } from "@/components/app-templates";
+import {
+  AppEmptyState,
+  AppSlipPrintIconButton,
+  alertSlipPrintRequiresMonthlyPlan,
+  resolveAppSlipPaperSize,
+  useAppSlipPaperSize,
+  type AppSlipPaperSize,
+} from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { readStoredStaffDailyUnlock, staffDailyUnlockHeaders } from "@/lib/modules/staff-daily-pin";
 import { DrinkPosButton } from "@/systems/drink-pos/components/DrinkPosButton";
 import {
   drinkPosFulfillmentLabel,
@@ -19,10 +27,12 @@ const FALLBACK_POLL_MS = 20_000;
 const OFFLINE_POLL_MS = 3_000;
 
 type Props = {
-  mode: "dashboard" | "station";
+  mode: "dashboard" | "station" | "staff";
   role?: DrinkPosStationRole;
   ownerId?: string;
   trialParam?: string | null;
+  /** โทเค็นลิงก์พนักงาน — ใช้เมื่อ mode="staff" */
+  staffKey?: string;
   shopName?: string | null;
   className?: string;
 };
@@ -47,32 +57,54 @@ export function DrinkPosOrderBoardClient({
   role = "kitchen",
   ownerId,
   trialParam,
+  staffKey,
   shopName: shopNameProp,
   className,
 }: Props) {
   const [orders, setOrders] = useState<DrinkPosOrderBoardRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [lastSync, setLastSync] = useState<string | null>(null);
-  const [liveMode, setLiveMode] = useState<"sse" | "poll">("poll");
   const [shopName, setShopName] = useState<string | null>(shopNameProp?.trim() || null);
   const [slipPrintEnabled, setSlipPrintEnabled] = useState(false);
+  const { paper: profileSlipPaper } = useAppSlipPaperSize();
+  const [orderTicketPaper, setOrderTicketPaper] = useState<AppSlipPaperSize | null>(null);
+  const slipPaper = orderTicketPaper ?? profileSlipPaper;
   const mounted = useRef(true);
   const liveModeRef = useRef<"sse" | "poll">("poll");
+
+  const staffQs = useMemo(() => {
+    if (mode !== "staff" || !ownerId || !staffKey) return "";
+    const q = new URLSearchParams({
+      ownerId,
+      k: staffKey,
+    });
+    if (trialParam) q.set("t", trialParam);
+    const du = readStoredStaffDailyUnlock("drink-pos", ownerId);
+    if (du) q.set("du", du);
+    return q.toString();
+  }, [mode, ownerId, staffKey, trialParam]);
 
   const load = useCallback(async () => {
     try {
       const url =
         mode === "dashboard"
           ? "/api/drink-pos/orders/board"
-          : `/api/drink-pos/public/station/orders?ownerId=${encodeURIComponent(ownerId ?? "")}${
-              trialParam ? `&t=${encodeURIComponent(trialParam)}` : ""
-            }`;
-      const res = await fetch(url, { credentials: mode === "dashboard" ? "include" : "omit", cache: "no-store" });
+          : mode === "staff"
+            ? `/api/drink-pos/staff/orders/board?${staffQs}`
+            : `/api/drink-pos/public/station/orders?ownerId=${encodeURIComponent(ownerId ?? "")}${
+                trialParam ? `&t=${encodeURIComponent(trialParam)}` : ""
+              }`;
+      const res = await fetch(url, {
+        credentials: mode === "dashboard" ? "include" : "omit",
+        cache: "no-store",
+        headers:
+          mode === "staff" && ownerId ? staffDailyUnlockHeaders("drink-pos", ownerId) : undefined,
+      });
       const j = (await res.json().catch(() => ({}))) as {
         orders?: DrinkPosOrderBoardRow[];
         serverTime?: string;
         shopName?: string;
+        orderTicketSlipPaperSize?: string | null;
         features?: { slipPrint?: boolean };
         error?: string;
       };
@@ -80,15 +112,17 @@ export function DrinkPosOrderBoardClient({
       if (!mounted.current) return;
       const next = Array.isArray(j.orders) ? j.orders : [];
       setOrders((prev) => (sameBoard(prev, next) ? prev : next));
-      setLastSync(j.serverTime ?? new Date().toISOString());
       if (typeof j.shopName === "string" && j.shopName.trim()) setShopName(j.shopName.trim());
+      if (j.orderTicketSlipPaperSize) {
+        setOrderTicketPaper(resolveAppSlipPaperSize(j.orderTicketSlipPaperSize));
+      }
       setSlipPrintEnabled(j.features?.slipPrint === true);
       setError(null);
     } catch (e) {
       if (!mounted.current) return;
       setError(e instanceof Error ? e.message : "โหลดคิวไม่สำเร็จ");
     }
-  }, [mode, ownerId, trialParam]);
+  }, [mode, ownerId, trialParam, staffQs]);
 
   useEffect(() => {
     mounted.current = true;
@@ -97,17 +131,17 @@ export function DrinkPosOrderBoardClient({
     const streamUrl =
       mode === "dashboard"
         ? "/api/drink-pos/orders/board/stream"
-        : `/api/drink-pos/public/station/orders/stream?ownerId=${encodeURIComponent(ownerId ?? "")}`;
+        : mode === "staff"
+          ? `/api/drink-pos/staff/orders/board/stream?${staffQs}`
+          : `/api/drink-pos/public/station/orders/stream?ownerId=${encodeURIComponent(ownerId ?? "")}`;
 
     let es: EventSource | null = null;
 
     const markPoll = () => {
       liveModeRef.current = "poll";
-      setLiveMode("poll");
     };
     const markSse = () => {
       liveModeRef.current = "sse";
-      setLiveMode("sse");
     };
 
     try {
@@ -129,7 +163,6 @@ export function DrinkPosOrderBoardClient({
       markPoll();
     }
 
-    // สำรอง: ถ้า SSE หลุด โพลทุก 3 วินาที · ถ้า SSE ติด โพลเบาทุก 20 วินาที
     const pollTimer = window.setInterval(() => {
       if (!mounted.current) return;
       if (liveModeRef.current === "sse") return;
@@ -148,7 +181,7 @@ export function DrinkPosOrderBoardClient({
       window.clearInterval(pollTimer);
       window.clearInterval(softTimer);
     };
-  }, [load, mode, ownerId]);
+  }, [load, mode, ownerId, staffQs]);
 
   const grouped = useMemo(() => {
     const map: Record<"RECEIVED" | "MAKING" | "DONE", DrinkPosOrderBoardRow[]> = {
@@ -183,16 +216,26 @@ export function DrinkPosOrderBoardClient({
               credentials: "include",
               body: JSON.stringify({ status }),
             })
-          : await fetch("/api/drink-pos/public/station/orders", {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                ownerId,
-                saleId: orderId,
-                status,
-                t: trialParam ?? null,
-              }),
-            });
+          : mode === "staff"
+            ? await fetch(`/api/drink-pos/staff/orders/board?${staffQs}`, {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  ...(ownerId ? staffDailyUnlockHeaders("drink-pos", ownerId) : {}),
+                },
+                credentials: "omit",
+                body: JSON.stringify({ saleId: orderId, status }),
+              })
+            : await fetch("/api/drink-pos/public/station/orders", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  ownerId,
+                  saleId: orderId,
+                  status,
+                  t: trialParam ?? null,
+                }),
+              });
       const j = (await res.json().catch(() => ({}))) as { order?: DrinkPosOrderBoardRow; error?: string };
       if (!res.ok) throw new Error(typeof j.error === "string" ? j.error : "อัปเดตไม่สำเร็จ");
       if (j.order) {
@@ -220,31 +263,26 @@ export function DrinkPosOrderBoardClient({
     }
   }
 
-  const liveLabel =
-    liveMode === "sse" ? "อัปเดตทันที (SSE)" : "โหมดสำรอง — โพลทุก 3 วินาที";
-  const lastSyncLabel = lastSync
-    ? new Date(lastSync).toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok" })
-    : null;
-
   const columns: { status: "RECEIVED" | "MAKING" | "DONE"; borderClass: string }[] = [
     { status: "RECEIVED", borderClass: "border-sky-300/80" },
     { status: "MAKING", borderClass: "border-amber-300/80" },
     { status: "DONE", borderClass: "border-emerald-300/80" },
   ];
 
+  const fillViewport = mode === "station" || mode === "staff";
+
   return (
-    <div className={cn(mode === "station" ? "flex min-h-0 flex-1 flex-col gap-2" : "space-y-3", className)}>
+    <div className={cn(fillViewport ? "flex min-h-0 flex-1 flex-col gap-2" : "space-y-3", className)}>
       {error ? (
         <div className="shrink-0 rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm font-semibold text-rose-800" role="alert">
           {error}
         </div>
       ) : null}
 
-      {/* สถานี: เต็มจอ · แดชบอร์ด: สูงตามหน้า */}
       <div
         className={cn(
           "grid min-h-0 gap-2 sm:gap-3",
-          mode === "station"
+          fillViewport
             ? "h-full flex-1 grid-rows-3 md:grid-rows-1 md:grid-cols-3"
             : "gap-3 md:h-[calc(100dvh-8.5rem)] md:min-h-[22rem] md:grid-cols-3 md:gap-4",
         )}
@@ -252,14 +290,12 @@ export function DrinkPosOrderBoardClient({
         {columns.map(({ status, borderClass }) => {
           const list = grouped[status];
           const tone = drinkPosFulfillmentTone(status);
-          const isDone = status === "DONE";
-          const showRefreshChrome = mode === "dashboard" && isDone;
           return (
             <section
               key={status}
               className={cn(
                 "relative flex min-h-0 flex-col overflow-hidden rounded-[1.75rem] border-2 p-3 shadow-md ring-1 ring-inset ring-white/50 sm:rounded-[2rem] sm:p-4",
-                mode === "station" ? "h-full" : "min-h-[20rem] md:h-full md:min-h-0",
+                fillViewport ? "h-full" : "min-h-[20rem] md:h-full md:min-h-0",
                 tone.card,
                 borderClass,
               )}
@@ -281,8 +317,7 @@ export function DrinkPosOrderBoardClient({
                 <div
                   className={cn(
                     "flex min-h-0 flex-1 flex-col justify-center",
-                    showRefreshChrome && "pb-16",
-                    mode !== "station" && "min-h-[12rem] md:min-h-0",
+                    !fillViewport && "min-h-[12rem] md:min-h-0",
                   )}
                 >
                   <AppEmptyState tone="violet" className="py-6 text-xs sm:py-10">
@@ -293,8 +328,7 @@ export function DrinkPosOrderBoardClient({
                 <ul
                   className={cn(
                     "min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]",
-                    showRefreshChrome && "pb-16",
-                    mode !== "station" && "min-h-[12rem] md:min-h-0",
+                    !fillViewport && "min-h-[12rem] md:min-h-0",
                   )}
                 >
                   {list.map((order) => (
@@ -305,35 +339,12 @@ export function DrinkPosOrderBoardClient({
                       role={role}
                       shopLabel={shopName}
                       slipPrintEnabled={slipPrintEnabled}
+                      slipPaper={slipPaper}
                       onSetStatus={(s) => void setStatus(order.id, s)}
                     />
                   ))}
                 </ul>
               )}
-
-              {showRefreshChrome ? (
-                <div className="pointer-events-none absolute bottom-3 right-3 z-10 flex flex-col items-end gap-1 sm:bottom-4 sm:right-4">
-                  <p className="max-w-[11rem] rounded-lg bg-white/85 px-2 py-0.5 text-right text-[10px] font-semibold text-[#66638c] shadow-sm backdrop-blur-sm">
-                    {liveLabel}
-                    {lastSyncLabel ? ` · ${lastSyncLabel}` : ""}
-                  </p>
-                  <DrinkPosButton
-                    type="button"
-                    className={cn(
-                      drinkPosCtaClass,
-                      "pointer-events-auto min-h-[44px] min-w-[44px] rounded-2xl px-3 text-sm shadow-[0_10px_24px_-8px_rgba(55,48,163,0.5)] sm:min-w-0 sm:px-4",
-                    )}
-                    onClick={() => void load()}
-                    aria-label="รีเฟรชคิวออเดอร์"
-                    title="รีเฟรช"
-                  >
-                    <span className="sm:hidden" aria-hidden>
-                      ↻
-                    </span>
-                    <span className="hidden sm:inline">รีเฟรช</span>
-                  </DrinkPosButton>
-                </div>
-              ) : null}
             </section>
           );
         })}
@@ -357,6 +368,7 @@ function OrderCard({
   role,
   shopLabel,
   slipPrintEnabled,
+  slipPaper,
   onSetStatus,
 }: {
   order: DrinkPosOrderBoardRow;
@@ -364,6 +376,7 @@ function OrderCard({
   role: DrinkPosStationRole;
   shopLabel?: string | null;
   slipPrintEnabled: boolean;
+  slipPaper: AppSlipPaperSize;
   onSetStatus: (status: DrinkPosFulfillmentStatus) => void;
 }) {
   const tone = drinkPosFulfillmentTone(order.fulfillmentStatus);
@@ -440,7 +453,7 @@ function OrderCard({
                 alertSlipPrintRequiresMonthlyPlan();
                 return;
               }
-              printDrinkPosOrderTicket(order, { shopLabel });
+              printDrinkPosOrderTicket(order, { shopLabel, paper: slipPaper });
             }}
           />
           <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-black", tone.badge)}>

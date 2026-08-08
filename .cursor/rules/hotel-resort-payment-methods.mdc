@@ -1,0 +1,94 @@
+---
+description: โรงแรมรีสอร์ท — ช่องทางชำระเงินสด พร้อมเพย์ โอน + สลิปมัดจำจากลิงก์ลูกค้า
+globs:
+  - "**/systems/hotel-resort/**"
+  - "**/app/**/dashboard/hotel-resort/**"
+  - "**/app/api/hotel-resort/**"
+alwaysApply: false
+---
+
+# โรงแรม / รีสอร์ท — ช่องทางชำระเงิน
+
+ใช้เมื่อทำหรือแก้ **การรับชำระตอนเช็คอิน / บิลจอง / สลิปมัดจำจากลิงก์ลูกค้า** ในโมดูล hotel-resort  
+แพทเทิร์นเดียวกับร้านอาหาร (drink-pos): **เงินสด · พร้อมเพย์ · โอนเงิน**
+
+อ้างอิง drink-pos: `DrinkPosPaymentPanel` · `drink-pos/lib/payment-method.ts` · §ช่องทางชำระใน `drink-pos-module-dashboard-template.mdc`  
+ลิงก์ลูกค้าเว็บจอง: `module-customer-booking-website-portal.mdc`
+
+---
+
+## บังคับ (แดชบอร์ด)
+
+1. **สามช่องทางเท่านั้น** (ค่าเก็บใน DB เป็นสตริง):
+   - `CASH` — เงินสด
+   - `PROMPTPAY` — พร้อมเพย์
+   - `TRANSFER` — โอนเงิน
+2. **UI เลือกช่องทาง** ใช้ `HotelResortPaymentPanel` — ห้ามทำปุ่ม QR / อัปโหลดสลิปแยกแบบ ad-hoc บนหน้าเช็คอินถ้าเป้าหมายคือรับชำระแบบบิลร้านอาหาร
+3. **Logic / label** รวมที่ `src/systems/hotel-resort/lib/payment-method.ts`
+   - `hotelResortPaymentMethodLabel`
+   - `isHotelResortPaymentMethod`
+   - `hotelResortPaymentShowsSlipUpload(method, amountBaht)` — แสดงช่องแนบสลิปเมื่อ `PROMPTPAY` หรือ `TRANSFER` และ **ยอดที่ชำระ > 0**
+   - `hotelResortPaymentRequiresSlip` — **ไม่บังคับสลิปแล้ว** บนแดชบอร์ดเช็คอิน/เอาต์ (คืน `false` เสมอ; คงชื่อไว้เพื่อความเข้ากันได้)
+4. **ฟิลด์บน `HotelResortBooking`**: `paymentMethod` · `paymentSlipUrl` · `amountPaidBaht` · `paymentStatus` · `depositAmountBaht`
+5. **API** `POST` / `PATCH` `/api/hotel-resort/bookings` รับสลิปได้แต่**ไม่บังคับ** บนแดชบอร์ด — ใช้ยอด `amountPaidBaht` ร่วมกับแผงชำระ
+6. **พร้อมเพย์ (แดชบอร์ด):** QR จาก `POST /api/hotel-resort/promptpay-qr` body `{ amountBaht }` — เบอร์จาก `HotelResortProfile.promptPayPhone`
+7. **โอน**: แสดงธนาคาร / เลขบัญชี / ชื่อบัญชีจากโปรไฟล์ที่พัก (ผ่าน response ของ promptpay-qr เดียวกัน)
+8. **สลิป (แดชบอร์ด):** อัปโหลด `/api/hotel-resort/upload` ผ่าน `AppGalleryCameraFileInputs` + `AppImagePickCameraButtons` ใน `HotelResortPaymentPanel` — ปุ่มถ่ายใช้ **`useAppCameraCapture`** (`AppCameraCaptureModal`) — **ไม่บังคับ** สลิปตอนเช็คอิน/เอาต์
+9. เงินสด: ล้าง `paymentSlipUrl` ได้ · ไม่บังคับสลิป
+
+---
+
+## ลิงก์ลูกค้า (เว็บจอง — เมื่อ `payDueBaht > 0`)
+
+1. ช่องทางเฉพาะ `PROMPTPAY` \| `TRANSFER` (ไม่มี CASH บนพอร์ทัลเมื่อเก็บเงิน)
+2. **พร้อมเพย์:** แสดง QR จาก `POST /api/hotel-resort/public/portal/promptpay-qr` — gate `isHotelResortPortalOpenForOwner`
+3. **ถ่ายสลิป:** `useAppCameraCapture` เหมือนแผงแดชบอร์ด
+4. **บังคับแนบสลิป** ก่อนยืนยันจอง + ข้อความ:
+   - มัดจำ: `กรุณาอัปโหลดสลิป เพื่อเป็นหลักฐานการมัดจำการจอง`
+   - เต็ม: `กรุณาอัปโหลดสลิป เพื่อเป็นหลักฐานการชำระเงินจอง`
+5. บันทึกยอดชำระบางส่วน/เต็มลง `amountPaidBaht` + `paymentSlipUrl`
+6. รายละเอียดเต็ม UI/API: `module-customer-booking-website-portal.mdc`
+
+---
+
+## แสดงสลิปเมื่อชำระบางส่วน (บังคับ)
+
+เมื่อจองมี `amountPaidBaht > 0` และ/หรือ `paymentSlipUrl`:
+
+| พื้นผิว | ต้องแสดง |
+|--------|----------|
+| หน้ารายละเอียดลูกค้าหลังจอง | ชำระแล้ว · คงเหลือ · สลิป `AppImageThumb` กด lightbox |
+| รายการจองแดชบอร์ด | ยอดชำระแล้ว/ค้าง + สลิปกดดูได้บนการ์ด |
+| โมดัลจัดการการจอง | ยอดชำระแล้ว/คงเหลือ + สลิปมัดจำ/ชำระกดดูได้ |
+
+ใช้ `AppImageThumb` + `AppImageLightbox` + `useAppImageLightbox` จาก `@/components/app-templates` เท่านั้น
+
+---
+
+## หน้าเช็คอิน
+
+- ยอดรวม + ยอดที่ชำระ (หรือยอดชำระตอนนี้เมื่อเช็คอินจากการจอง)
+- แผง `HotelResortPaymentPanel` ผูกกับยอดที่ชำระครั้งนี้
+- ปุ่มยืนยันเช็คอิน — สลิปพร้อมเพย์/โอนเป็นทางเลือก ไม่บล็อกเมื่อไม่มีรูป
+- ถ้ามีสลิปมัดจำจากลิงก์ลูกค้าอยู่แล้ว — ควรยังดูสลิปเดิมได้ผ่านจัดการจอง / แผงที่เกี่ยวข้อง
+
+---
+
+## หน้าเช็คเอาต์ (แดชบอร์ดผังห้อง)
+
+- ห้องสถานะ **เข้าพัก (`OCCUPIED`)** แสดงปุ่ม **เช็คเอาต์** — **ห้าม** ปุ่ม「ดูการจอง」บนการ์ดผัง
+- โมดัล `HotelResortCheckOutModal`: รายการเพิ่ม (ผ้าขนหนู · มินิบาร์ ฯลฯ) + สรุปยอด + ยอดชำระตอนนี้ + `HotelResortPaymentPanel`
+- บันทึก: `PATCH` จอง → `status: CHECKED_OUT` · บวก extras เข้า `totalBaht` · เพิ่ม `amountPaidBaht` · extras เก็บใน `note` บล็อก `[HR_EXTRAS]…` (`lib/checkout-extras.ts`)
+- สลิปพร้อมเพย์/โอนเป็นทางเลือกเมื่อยอดชำระตอนนี้ > 0 — ไม่บังคับแนบรูป
+
+---
+
+## ห้ามพลาด
+
+- อย่าเพิ่มช่องทางที่ 4 โดยไม่ขยาย `HOTEL_RESORT_PAYMENT_METHODS` + แผง + schema ความหมาย
+- อย่าตรวจสลิปจาก `totalBaht` เมื่อยังไม่มีการชำระ (`amountPaidBaht === 0`)
+- อย่าบล็อก `PATCH` เปลี่ยนสถานะอย่างเดียวด้วยกฎสลิป ถ้าไม่ได้แตะฟิลด์ชำระ
+- อย่าบวกรายการ extras จาก note ซ้ำเข้า `totalBaht` อีกครั้งตอนเปิดโมดัล
+- อย่าทำพร้อมเพย์บนลิงก์ลูกค้าโดยไม่แสดง QR (`public/portal/promptpay-qr`)
+- อย่าผูกปุ่มถ่ายสลิปกับ `input capture` อย่างเดียว — ใช้ `useAppCameraCapture`
+- อย่าซ่อนสลิปมัดจำ/ชำระบางส่วนบนรายการจองหรือหน้ารายละเอียดลูกค้า

@@ -68,16 +68,26 @@ export function AppColumnBarSparkChart({
   : pairedLayout ? "w-[2.75rem] sm:w-[3.5rem]"
   : "w-8 sm:w-10";
 
-  const hChart = distribute ? "h-32 sm:h-40" : compact ? "h-24" : "h-36";
+  /** ความสูงโซนแท่ง — compact เท่า `AppRevenueCostColumnChart` เสมอ (รวม evenDistribution) */
+  const hChart = compact
+    ? "min-h-[7.5rem] h-32 sm:min-h-[8.5rem] sm:h-40"
+    : distribute
+      ? "h-32 sm:h-40"
+      : "h-36";
   const titleSz = compact ? "text-xs" : "text-sm";
   const subSz = compact ? "text-[10px]" : "text-xs";
   const scrollMt = compact ? "mt-2" : "mt-3";
   const scrollPad = compact ? "px-0 pb-0.5 pt-0" : "pb-2 pl-0.5 pr-1 pt-1";
   const rowGap = compact ? "gap-0.5" : "gap-1.5";
   const labelSz = compact ? "text-[8px] sm:text-[9px]" : "text-[9px] sm:text-[10px]";
-  const barMax =
-    distribute ? "max-w-[2.25rem] sm:max-w-[2.75rem]"
-    : pairedLayout ? (compact ? "max-w-[10px] sm:max-w-[11px]" : "max-w-[18px]") : compact ? "max-w-[11px] sm:max-w-[12px]" : "max-w-[22px]";
+  /** ความกว้างแท่ง — compact ใช้ขนาดเดียวทุกโหมด (paired / distribute) */
+  const barMax = compact
+    ? "max-w-[11px] sm:max-w-[12px]"
+    : distribute
+      ? "max-w-[2.25rem] sm:max-w-[2.75rem]"
+      : pairedLayout
+        ? "max-w-[18px]"
+        : "max-w-[22px]";
   const trackRound = compact ? "rounded-t-sm" : "rounded-t-lg";
   const emptyPy = compact ? "py-4 text-xs" : "py-6 text-sm";
   const emptyMt = compact ? "mt-2" : "mt-3";

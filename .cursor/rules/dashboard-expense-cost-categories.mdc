@@ -1,0 +1,106 @@
+---
+description: หมวดหมู่รายจ่าย/ต้นทุน — CRUD + ฟอร์ม 5 ช่อง + สลิป (ต้นแบบร้านอาหาร) ใช้ซ้ำทุกโมดูล
+globs:
+  - "**/systems/**/**Finance*"
+  - "**/systems/**/**Sales*"
+  - "**/systems/**/*Cost*"
+  - "**/systems/**/BuildingPosInventory*"
+  - "**/app/api/**/cost-categories/**"
+  - "**/app/api/**/costs/**"
+alwaysApply: false
+---
+
+# หมวดหมู่รายจ่าย (Cost categories) — มาตรฐานข้ามโมดูล
+
+ใช้เมื่อโมดูลมี **บันทึกรายจ่าย / ต้นทุน** และต้องให้ผู้ใช้ **เพิ่ม · แก้ไข · ลบ หมวดหมู่** เอง
+
+**แม่แบบการเงินครบชุด:** **`dashboard-finance-module-template.mdc`**
+
+**อ้างอิงที่ทำแล้ว:** hotel-resort · drink-pos · building-pos (รายจ่ายทั่วไป) · คาร์แคร์/บาร์เบอร์ (หมวดต้นทุนเดิม)
+
+คู่กับ: `dashboard-finance-page-layout.mdc` · `dashboard-finance-filter-charts-toggle.mdc` · `dashboard-finance-detail-tabs.mdc` · `dashboard-row-action-icon-buttons.mdc` · `hotel-resort-finance.mdc` · `dashboard-menu-categories-popup.mdc`
+
+---
+
+## 1) ข้อมูล (Prisma)
+
+| ชิ้น | แนวทาง |
+|------|--------|
+| หมวด | `XxxCostCategory` — `ownerUserId` (+ `trialSessionId` ถ้าโมดูลมี sandbox) · `name` · `sortOrder` |
+| รายการ | `XxxCostEntry` — `categoryId` · `label` · `amountBaht` · `spentAt` · **`paymentSlipUrl`** (ว่างได้ · `VarChar` พอสำหรับ URL อัปโหลด) · `note` optional |
+| ลบหมวด | `onDelete: SetNull` ที่รายการ **หรือ** ปฏิเสธใน API ถ้ายังมีรายการ (แนะนำ **409** ให้ย้าย/ลบรายการก่อน) |
+
+Migration: สร้างตารางหมวด → เพิ่ม `category_id` → backfill หมวด «ทั่วไป» ต่อ owner ที่มีรายการเก่า → FK  
+หลัง migrate: **`npx prisma generate`** เสมอ
+
+---
+
+## 2) API
+
+| Method | Path (ตัวอย่าง) |
+|--------|----------------|
+| GET / POST | `/api/{module}/cost-categories` |
+| PATCH / DELETE | `/api/{module}/cost-categories/[id]` หรือ `?id=` (session style) |
+| GET / POST | `/api/{module}/costs` |
+| PATCH / DELETE | `/api/{module}/costs/[id]` — รวมอัปเดต `paymentSlipUrl` |
+| POST รายจ่าย | ต้องส่ง `categoryId` / `category_id` — ไม่มีหมวด → 400 |
+
+ลบหมวดที่มีรายการอยู่ → **409** + ข้อความชัด  
+finance-summary (ถ้ามี) ควรคืน `paymentSlipUrl` ในรายการ costs ด้วย
+
+---
+
+## 3) UI (บังคับ)
+
+อยู่ที่ **แท็บรายจ่าย** ของหน้าการเงิน (ไม่ใช่หน้าแยกเป็นทางหลัก) — ดู `dashboard-finance-detail-tabs.mdc`
+
+1. ปุ่ม **หมวดหมู่** คู่กับปุ่ม **+ รายจ่าย / บันทึกต้นทุน** — popup จัดการตาม **`dashboard-menu-categories-popup.mdc`** (`FormModal` + `mobileCentered`)
+2. **แถบชิปกรองหมวด** ใต้หัว: **ทั้งหมด** + แต่ละหมวด (เลื่อนแนวนอนมือถือ · `aria-pressed`)
+3. โมดัลจัดการหมวด: รายการ + **ไอคอนแก้ไข/ลบ** · หลังบันทึกหมวดกลับหน้ารายการใน popup
+4. ฟอร์มบันทึก/แก้ไขรายจ่าย — **ลำดับบังคับ (ต้นแบบร้านอาหาร):**
+   1. หมวด  
+   2. รายละเอียดรายการ  
+   3. จำนวนเงิน (บาท)  
+   4. หมายเหตุ (ไม่บังคับ)  
+   5. รูปสลิป (ไม่บังคับ)  
+   - คอมโพเนนต์ต้นแบบ: **`BuildingPosCostsPanel`**  
+   - เครื่องดื่ม: `DrinkPosCostsPanel` · โรงแรม: ฟอร์มใน `HotelResortFinanceClient` — โครงฟิลด์เดียวกัน  
+   - อัปโหลด: `AppGalleryCameraFileInputs` + `AppImagePickCameraButtons` + `prepareImageFileForUpload`  
+   - ดูตัวอย่างในฟอร์ม: `AppImageThumb` + lightbox · `FormModal` + **`mobileCentered`**
+5. **ในแถวรายการ:**
+   - มีสลิป → **`AppImageThumb`** กดเปิด lightbox · ไม่มี → **ไม่แสดงช่องสลิป**  
+   - เลย์เอาต์: `[สลิป?] [เนื้อหา flex-1] [ราคาขวา text-rose-600 + ไอคอนแก้ไข/ลบ]`  
+   - มือถือห้ามให้ราคาหล่นซ้ายเพราะ `flex-wrap`  
+   - กฎเต็ม: **`dashboard-finance-detail-tabs.mdc`** §2 · **`app-templates-media.mdc`**
+6. แถวมี **แก้ไข / ลบ** เป็นไอคอนตาม `dashboard-row-action-icon-buttons.mdc`  
+   - **ลบต้องยืนยัน** ด้วย **`useAppNoticePopup().confirm`** จาก `@/components/app-templates` — **ห้าม** `window.confirm`  
+   - เรนเดอร์ `{notice.popup}` ในแผง · ลบหมวดในโมดัลหมวดก็ใช้ confirm เดียวกัน  
+   - ดู **`dashboard-finance-module-template.mdc`** §6b
+7. ยังไม่มีหมวด → เปิดโมดัลหมวดก่อนบันทึกรายจ่าย
+
+**building-pos:** `BuildingPosCostsPanel` — ไม่โชว์ฟอร์มซื้อวัตถุดิบหลายบรรทัดบนแท็บต้นทุนการเงิน
+
+**ห้าม** วางปุ่ม «+ รายจ่าย» เหนือกราฟในการ์ดการเงิน · ลบโดยไม่ยืนยัน · ใช้ `window.confirm`
+
+---
+
+## 4) โมดูลอ้างอิง
+
+| โมดูล | หมวด | รายการ |
+|-------|------|--------|
+| hotel-resort | `HotelResortCostCategory` | `HotelResortCostEntry` + `paymentSlipUrl` |
+| drink-pos | `DrinkPosCostCategory` | `DrinkPosCostEntry` + `paymentSlipUrl` · UI `DrinkPosCostsPanel` |
+| building-pos | `BuildingPosCostCategory` | `BuildingPosCostEntry` + สลิป · `BuildingPosCostsPanel` (**ต้นแบบ**) |
+| car-wash / barber / … | `*CostCategory` | `*CostEntry` + สลิปตามมาตรฐาน |
+
+โมดูลใหม่: คัดลอกแพทเทิร์น building-pos (หมวด + สลิป + lightbox + ฟอร์ม 5 ช่อง) — ห้าม lightbox ad-hoc
+
+## เช็กลิสต์
+
+- [ ] Schema หมวด + categoryId + **paymentSlipUrl** บนรายจ่าย
+- [ ] GET/POST + PATCH/DELETE หมวด · ลบมีรายการ = 409
+- [ ] GET/POST + PATCH/DELETE รายจ่าย (รวม paymentSlipUrl)
+- [ ] UI หมวดหมู่ + ฟอร์ม 5 ช่องตามต้นแบบร้านอาหาร
+- [ ] แถว: สลิปเฉพาะเมื่อมี · ราคาขวา rose · ไอคอนแก้ไข/ลบ
+- [ ] ลบรายจ่าย/หมวดใช้ `useAppNoticePopup().confirm` — ห้าม `window.confirm`
+- [ ] CTA อยู่แท็บรายจ่าย · ไม่เหนือกราฟ

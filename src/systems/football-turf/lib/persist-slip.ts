@@ -11,6 +11,22 @@ export async function persistFootballTurfSlipUrl(
   ownerUserId: string,
   value: string | null | undefined,
 ): Promise<string | null> {
+  return persistFootballTurfImageUrl(ownerUserId, value, "slip");
+}
+
+/** รูปปกสนาม — เก็บ path สั้นใต้ uploads */
+export async function persistFootballTurfCourtImageUrl(
+  ownerUserId: string,
+  value: string | null | undefined,
+): Promise<string | null> {
+  return persistFootballTurfImageUrl(ownerUserId, value, "court");
+}
+
+async function persistFootballTurfImageUrl(
+  ownerUserId: string,
+  value: string | null | undefined,
+  kind: "slip" | "court",
+): Promise<string | null> {
   const raw = value?.trim() ?? "";
   if (!raw) return null;
   if (raw.startsWith("/uploads/") || raw.startsWith("http://") || raw.startsWith("https://")) {
@@ -26,7 +42,7 @@ export async function persistFootballTurfSlipUrl(
   const b64 = match[2].replace(/\s+/g, "");
   const buf = Buffer.from(b64, "base64");
   if (buf.length === 0 || buf.length > 6 * 1024 * 1024) {
-    throw new Error("สลิปใหญ่เกินหรือว่าง");
+    throw new Error(kind === "court" ? "รูปสนามใหญ่เกินหรือว่าง" : "สลิปใหญ่เกินหรือว่าง");
   }
 
   const detected = detectImageKind(buf);
@@ -40,7 +56,7 @@ export async function persistFootballTurfSlipUrl(
     moduleSlug: "football-turf",
     ownerUserId,
     ext,
-    kind: "slip",
+    kind,
   });
   const dir = path.join(process.cwd(), "public", "uploads", "football-turf", userSeg);
   await mkdir(dir, { recursive: true });

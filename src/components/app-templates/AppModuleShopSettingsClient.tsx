@@ -5,6 +5,8 @@ import { AppDashboardSection } from "./AppDashboardSection";
 import { AppModuleShopPaymentFields } from "./AppModuleShopPaymentFields";
 import { AppSectionHeader } from "./AppSectionHeader";
 import { AppShopLogoField } from "./AppShopLogoField";
+import { AppSlipPaperSizeSettingsField } from "./AppSlipPaperSizeSettingsField";
+import { AppStaffDailyPinSettingsField, staffDailyPinPatchBody } from "./AppStaffDailyPinSettingsField";
 import { appDashboardSectionVioletClass } from "./dashboard-tokens";
 import type { ModuleShopBrandingDto } from "@/lib/module-shop/slugs";
 import { cn } from "@/lib/cn";
@@ -19,6 +21,12 @@ export type AppModuleShopSettingsClientProps = {
   fieldClassName?: string;
   children?: ReactNode;
   onSaved?: (profile: ModuleShopBrandingDto) => void;
+  /** แสดงช่องตั้งขนาดสลิปใบเสร็จ (โปรไฟล์ส่วนกลาง) — ค่าเริ่มเปิด */
+  showSlipPaperSizeSettings?: boolean;
+  /** แสดงช่องขนาดสลิปคิวออเดอร์ (ครัว / พร้อมเสิร์ฟ) — ค่าเริ่มปิด */
+  showOrderTicketSlipPaperSize?: boolean;
+  /** แสดงช่องรหัสเข้าลิงก์พนักงานรายวัน — ค่าเริ่มปิด */
+  showStaffDailyPinSettings?: boolean;
 };
 
 export function AppModuleShopSettingsClient({
@@ -31,8 +39,13 @@ export function AppModuleShopSettingsClient({
   fieldClassName = "app-input mt-1 w-full rounded-xl",
   children,
   onSaved,
+  showSlipPaperSizeSettings = true,
+  showOrderTicketSlipPaperSize = false,
+  showStaffDailyPinSettings = false,
 }: AppModuleShopSettingsClientProps) {
   const [form, setForm] = useState(initial);
+  const [pinDraft, setPinDraft] = useState("");
+  const [clearPin, setClearPin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -45,7 +58,10 @@ export function AppModuleShopSettingsClient({
       const res = await fetch(profileApiUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          ...(showStaffDailyPinSettings ? staffDailyPinPatchBody({ pinDraft, clearPin }) : {}),
+        }),
       });
       const json = (await res.json().catch(() => ({}))) as {
         profile?: ModuleShopBrandingDto;
@@ -55,6 +71,8 @@ export function AppModuleShopSettingsClient({
       if (json.profile) {
         setForm(json.profile);
         onSaved?.(json.profile);
+        setPinDraft("");
+        setClearPin(false);
       }
       setMsg("บันทึกแล้ว");
     } catch (e) {
@@ -107,6 +125,41 @@ export function AppModuleShopSettingsClient({
             onChange={(payment) => setForm((f) => ({ ...f, ...payment }))}
             fieldClassName={fieldClassName}
           />
+
+          {showSlipPaperSizeSettings ? (
+            <>
+              <AppSlipPaperSizeSettingsField
+                fieldClassName={fieldClassName}
+                value={form.slipPaperSize ?? "SLIP_58"}
+                onChange={(slipPaperSize) => setForm((f) => ({ ...f, slipPaperSize }))}
+                disabled={busy}
+              />
+              {showOrderTicketSlipPaperSize ? (
+                <AppSlipPaperSizeSettingsField
+                  fieldClassName={fieldClassName}
+                  label="ขนาดสลิปคิวออเดอร์"
+                  hint="สลิปครัว / พร้อมเสิร์ฟ · แยกจากใบเสร็จลูกค้า · 58 mm กึ่งกลาง · 80 mm / A4 ชิดซ้าย"
+                  value={form.orderTicketSlipPaperSize ?? "SLIP_58"}
+                  onChange={(orderTicketSlipPaperSize) =>
+                    setForm((f) => ({ ...f, orderTicketSlipPaperSize }))
+                  }
+                  disabled={busy}
+                />
+              ) : null}
+            </>
+          ) : null}
+
+          {showStaffDailyPinSettings ? (
+            <AppStaffDailyPinSettingsField
+              fieldClassName={fieldClassName}
+              pinSet={Boolean(form.staffDailyPinSet)}
+              pinDraft={pinDraft}
+              onPinDraftChange={setPinDraft}
+              clearPin={clearPin}
+              onClearPinChange={setClearPin}
+              disabled={busy}
+            />
+          ) : null}
 
           {children}
           <button

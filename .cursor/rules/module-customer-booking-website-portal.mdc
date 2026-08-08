@@ -1,0 +1,253 @@
+---
+description: ลิงก์ลูกค้าแบบเว็บไซต์จอง (marketing portal) — แบนเนอร์ · ค้นหา · มัดจำ/เต็ม · สลิป · lookup · รายละเอียดหลังจอง · อ้างอิงโรงแรม
+alwaysApply: false
+globs:
+  - "**/systems/hotel-resort/components/HotelResortPortal*.tsx"
+  - "**/systems/hotel-resort/components/HotelResortGuestPortal*"
+  - "**/systems/hotel-resort/components/HotelResortPortalMedia*"
+  - "**/systems/hotel-resort/components/HotelResortReviews*"
+  - "**/systems/hotel-resort/HotelResortBookingsClient.tsx"
+  - "**/systems/hotel-resort/lib/portal-*.ts"
+  - "**/app/hotel-resort/**"
+  - "**/api/hotel-resort/public/portal/**"
+  - "**/lib/hotel-resort/public-url.ts"
+  - "**/lib/hotel-resort/portal-access.ts"
+  - "**/systems/football-turf/FootballTurfBookingPortalClient.tsx"
+  - "**/systems/football-turf/FootballTurfPortalBookingClient.tsx"
+  - "**/app/football-turf/book/**"
+  - "**/api/football-turf/public/**"
+  - "**/lib/football-turf/public-url.ts"
+  - "**/lib/football-turf/portal-access.ts"
+---
+
+# ลิงก์ลูกค้า — เว็บไซต์จองสาธารณะ (Booking website portal)
+
+Canonical: **โรงแรม / รีสอร์ท** — หน้า `/hotel-resort/[ownerId]` (`HotelResortPortalClient`)
+
+ใช้กฎนี้เมื่อโมดูลต้องการ **เว็บไซต์ลูกค้าแบบหลายส่วน** (แบนเนอร์ · แกลเลอรี · ค้นหาสินค้า/ห้อง · จอง · ชำระมัดจำ/เต็ม · ติดต่อ · รีวิว) — **ไม่ใช่** พอร์ทัล QR คอลัมน์เดียวแบบคาร์แคร์
+
+| ชนิด | กฎ | เมื่อไหร่ |
+|------|-----|----------|
+| เว็บไซต์จอง (กฎนี้) | `module-customer-booking-website-portal.mdc` | โรงแรม · รีสอร์ท · ที่พัก · โดเมนที่ต้อง “หน้าเว็บร้าน” |
+| พอร์ทัล QR กะทัดรัด | `shop-customer-qr-portal.mdc` | คาร์แคร์ · บาร์เบอร์ · ซักผ้า · โฟลว์เช็คอินสั้น |
+| ลิงก์พนักงาน | `module-staff-token-link-portal.mdc` | staff `?t=&k=` — คนละลิงก์ |
+| Hub QR ในแดชบอร์ด | `shop-qr-hub-popup-pattern.mdc` | การ์ดคู่ลูกค้า/พนักงาน + ป๊อปอัป |
+| คำอธิบายสั้นบนหน้าลูกค้า | `customer-portal-no-description-copy.mdc` | ทุกหน้าสาธารณะลูกค้า |
+
+---
+
+## 1) โครง URL (บังคับ)
+
+| บทบาท | พาธ | หมายเหตุ |
+|--------|------|----------|
+| หน้าเว็บหลัก | `/{module}/[ownerId]?t=` | marketing + ค้นหา + จอง + lookup |
+| รายละเอียดหลังจอง | `/{module}/[ownerId]/booking/[bookingId]?phone=&t=` | พิสูจน์ด้วยเบอร์ · alias `p=` ได้ |
+| พนักงาน (แยก) | `/{module}/staff/[ownerId]?t=&k=` | ไม่ปนกับลิงก์ลูกค้า |
+
+**ตัวสร้าง URL (โรงแรม):** `src/lib/hotel-resort/public-url.ts`
+
+- `hotelResortPublicPortalUrl(base, ownerId, trialSessionId)` — ใส่ `?t=` **เฉพาะเมื่อ trial ≠ `"prod"`**
+- `hotelResortPublicBookingUrl(base, ownerId, bookingId, phone, trialSessionId)`
+
+โมดูลใหม่: คัดลอกคู่ฟังก์ชันนี้ไป `src/lib/{module}/public-url.ts`
+
+---
+
+## 2) Trial / ขอบเขตข้อมูล / เปิดพอร์ทัล
+
+1. `ownerId` จาก path — สั้นหรือปิดพอร์ทัล → `notFound()`
+2. Trial: `?t=` จาก URL หรือ body `trialSessionId` — ค่าว่าง → `"prod"` (`TRIAL_PROD_SCOPE`)
+3. ข้อมูลผูก `(ownerUserId, trialSessionId)` — profile · bookings · guests · reviews
+4. เปิดลิงก์สาธารณะได้เมื่อโมดูล active + `canAccessAppModule` ของเจ้าของ  
+   - โรงแรม: `src/lib/hotel-resort/portal-access.ts` → `isHotelResortPortalOpenForOwner`
+5. โมดูลใหม่: ทำ `is{Module}PortalOpenForOwner` แบบเดียวกัน — **ห้าม** เปิด API สาธารณะโดยไม่ gate
+
+---
+
+## 3) หน้าสาธารณะ — UI (บังคับ)
+
+### เปลือก
+
+1. **`AppPublicCheckInGlassPage`** จาก `@/components/app-templates` เท่านั้น
+2. โทน **glass ขาว–ม่วงอ่อน** — **ห้าม** dark theme / พื้นดำทั้งหน้า
+3. โทเค็น: `appPublicCheckInGlassPageClass` · `appPublicCheckInGlassCardClass`
+4. สีข้อความ: หัว `#1e1b4b` · รอง `#66638c` · แบรนด์ `#4d47b6` / `#5b61ff`
+
+### เลย์เอาต์เว็บไซต์จอง (ต่างจาก QR กะทัดรัด)
+
+| ส่วน | แนวทาง |
+|------|--------|
+| ความกว้างเนื้อหา | `max-w-6xl` (กว้างกว่า `max-w-md` ของคาร์แคร์) |
+| Hero แบนเนอร์ | เต็มความกว้าง · หน้าใช้ `!px-0 !pt-0` ให้แบนเนอร์ชิดขอบ |
+| Overlay บนแบนเนอร์ | เบา — ให้รูปโชว์ชัด เช่น `from-[#1e1b4b]/25 … to-[#faf9ff]/90` + fade ล่างเข้าพื้น `#faf9ff` |
+| หัวบนแบนเนอร์ | ข้อความขาว + ปุ่ม nav แบบ glass pill |
+| ฟอร์มค้นหา | การ์ด glass **ทับมุมล่างแบนเนอร์** (`#book`) |
+| หน้ารายละเอียดจอง | กลับไป `max-w-md` compact ได้ |
+
+### สื่อ / สลิป / กล้อง / พร้อมเพย์ (บังคับเมื่อมียอดชำระ)
+
+- รูปย่อ + lightbox → `AppImageThumb` · `AppImageLightbox` · `useAppImageLightbox`
+- **ถ่ายรูปสลิป:** `useAppCameraCapture()` → `openCamera(onFile)` + `cameraModal` + `AppGalleryCameraFileInputs` (`cameraInputRef`) — **ห้าม** ให้ปุ่มถ่ายไป `input.capture.click()` อย่างเดียวโดยไม่เปิด `AppCameraCaptureModal`
+- เลือกแกลเลอรี → `AppImagePickCameraButtons.onPickGallery` → gallery input
+- อัปโหลดก่อนย่อ: `prepareImageFileForUpload`
+- **พร้อมเพย์บนลิงก์ลูกค้า:** เมื่อเลือก `PROMPTPAY` ต้องแสดง **รูป QR** จาก API สาธารณะ (โรงแรม: `POST /api/hotel-resort/public/portal/promptpay-qr` body `{ ownerId, amountBaht, t? }`) — ห้ามเหลือแค่ข้อความเบอร์อย่างเดียว
+- โอน: แสดงธนาคาร / เลขบัญชี / ชื่อบัญชี
+- **ข้อความแนบสลิป (บังคับ 1 บรรทัด):**
+  - มัดจำ (`DEPOSIT`): `กรุณาอัปโหลดสลิป เพื่อเป็นหลักฐานการมัดจำการจอง`
+  - ชำระเต็ม (`FULL`): `กรุณาอัปโหลดสลิป เพื่อเป็นหลักฐานการชำระเงินจอง`
+  - ใช้ข้อความเดียวกันตอน validate ยังไม่แนบสลิป
+- ดู `app-templates-media.mdc` · แดชบอร์ดแผงชำระ: `HotelResortPaymentPanel` + `hotel-resort-payment-methods.mdc`
+
+### คัดลอกบนหน้าลูกค้า
+
+หัวข้อสั้น — **ห้าม** คำโปรยยาว / อธิบาย workflow → `customer-portal-no-description-copy.mdc`  
+ข้อยกเว้น: ข้อความแนบสลิป 1 บรรทัดด้านบน **อนุญาต** เพราะเป็นหลักฐานชำระที่จำเป็น
+
+---
+
+## 4) ฟีเจอร์มาตรฐานบนหน้าเว็บ
+
+| ฟีเจอร์ | พฤติกรรม (อ้างอิงโรงแรม) |
+|---------|---------------------------|
+| แบนเนอร์ | `portalBannerUrl` หรือรูปตัวอย่าง · คลิกดูใหญ่ |
+| แกลเลอรี | `#gallery` · จำกัดจำนวน (โรงแรม `HOTEL_RESORT_PORTAL_GALLERY_MAX = 8`) |
+| ค้นหา / ว่าง | วันเข้า–ออก → API rooms · **ค่าเริ่มวันนี้→พรุ่งนี้ + auto-load** |
+| การ์ดสินค้า/ห้อง | ราคา · รายละเอียดสั้น · ปุ่มจองเปิด sheet |
+| โหมดชำระ | `NONE` \| `DEPOSIT` \| `FULL` — คำนวณ `payDueBaht` |
+| สลิปตอนจอง | บังคับเมื่อ `payDueBaht > 0` · `PROMPTPAY` โชว์ QR · ถ่ายผ่าน `useAppCameraCapture` · ข้อความหลักฐานมัดจำ/ชำระ |
+| รีวิว | รายการที่เจ้าของคิวเรต (เผยแพร่) + คะแนนเฉลี่ยบน hero |
+| ติดต่อ | โทร · ที่อยู่ · LINE · Facebook · แผนที่ · เวลาเช็คอิน/เอาต์จาก**ตั้งค่าที่พัก** |
+| ดูการจอง | กรอกเบอร์ → `RESERVED` → เปิดหน้ารายละเอียด |
+| หลังจองสำเร็จ | `router.push` → `/…/booking/[id]?phone=&t=` |
+
+### หน้ารายละเอียดหลังจอง (`HotelResortPortalBookingClient`) — บังคับ
+
+1. แสดง **ยอดพัก** · **ชำระแล้ว** (ยอด + สถานะชำระ) · **คงเหลือ** ถ้ายังไม่ครบ
+2. ถ้ามี `paymentSlipUrl` — ส่วน「สลิปชำระ / มัดจำ」+ `AppImageThumb` **กดดู lightbox** ได้
+3. เวลาเช็คอิน/เอาต์บนหน้า = วันที่พัก + เวลาจากตั้งค่าที่พัก
+
+### แดชบอร์ดรายการจอง (`HotelResortBookingsClient`) — เมื่อชำระบางส่วน
+
+1. การ์ดรายการ: แสดง `ชำระแล้ว ฿… · ค้าง ฿…` เมื่อ `amountPaidBaht > 0`
+2. ถ้ามี `paymentSlipUrl` — `AppImageThumb` บนการ์ด **กดดู lightbox**
+3. โมดัลจัดการ: ยอดชำระแล้ว/คงเหลือ + สลิปมัดจำ/ชำระกดดูได้เช่นกัน  
+รายละเอียดตัวกรอง/เตือนเวลา: `hotel-resort-booking-filters.mdc`
+
+Helpers โรงแรม: `src/systems/hotel-resort/lib/portal-booking.ts` · `portal-media.ts`
+
+---
+
+## 5) โหมดชำระบนพอร์ทัล (บังคับเมื่อมีจองออนไลน์)
+
+เก็บบน profile (โรงแรม: `portalBookingPaymentMode` · `depositAmountBaht`):
+
+| โหมด | ความหมาย | `payDueBaht` |
+|------|----------|--------------|
+| `NONE` | จองอย่างเดียว ไม่เก็บเงินบนลิงก์ | `null` / 0 — ไม่บังคับสลิป |
+| `DEPOSIT` | มัดจำคงที่ (cap ไม่เกินยอดรวม) | `min(deposit, total)` → มักได้ `PARTIAL` |
+| `FULL` | เก็บเต็มยอดพัก/บริการ | `total` |
+
+เมื่อจองสำเร็จ (`POST …/book`): บันทึก `amountPaidBaht` = `payDue` · `depositAmountBaht` = `payDue` · `paymentSlipUrl` · `paymentMethod`
+
+- Normalize: `hotelResortNormalizePortalPaymentMode` → ค่าไม่รู้จัก = `NONE`
+- Compute: `hotelResortComputePortalPayDue({ mode, depositAmountBaht, totalBaht })`
+- วันที่พัก: `hotelResortParsePortalStayDate(ymd, timeHm)` ใช้ **เวลาเช็คอิน/เอาต์จากตั้งค่าที่พัก** — ห้าม `new Date("YYYY-MM-DD")` ตรง ๆ (UTC midnight)
+
+**แยกจากแดชบอร์ด:** หน้าเช็คอินเจ้าของยังใช้ `CASH` \| `PROMPTPAY` \| `TRANSFER` ตาม `hotel-resort-payment-methods.mdc` — คนละพื้นผิว
+
+---
+
+## 6) API สาธารณะ (แพทเทิร์นคัดลอก)
+
+Prefix โรงแรม: `/api/hotel-resort/public/portal/…`  
+ทุกเส้นทาง: gate เปิดพอร์ทัล + resolve trial (`t` / body)
+
+| Method | Path | หน้าที่ |
+|--------|------|---------|
+| GET | `…/info` | โปรไฟล์ · สื่อ · โหมดชำระ · ช่องทางโอน/พร้อมเพย์ · รีวิวที่เผยแพร่ |
+| GET | `…/rooms?checkIn&checkOut` | รายการว่าง + `payDueBaht` ต่อรายการ |
+| POST | `…/book` | สร้างแขก + จอง (`RESERVED`) · บังคับสลิปถ้ามียอด · บันทึกยอดชำระบางส่วน/เต็ม |
+| POST | `…/lookup` | ค้นด้วยเบอร์ |
+| GET | `…/booking?bookingId&phone` | รายละเอียด + `paymentSlipUrl` — เบอร์ต้องตรง |
+| POST | `…/upload-slip` | อัปโหลดสลิปสาธารณะ (rate limit + plan gate) |
+| POST | `…/promptpay-qr` | สร้าง QR พร้อมเพย์ + ข้อมูลโอน (`ownerId`, `amountBaht`, `t?`) |
+
+แนะนำ: rate limit ต่อ IP (โรงแรม book ~40/ชม. · slip ~30/ชม.) · `assertOwnerPlanUpload` → 402 เมื่อแพ็กไม่รองรับ
+
+Owner (ล็อกอิน): `PATCH` profile · CRUD reviews · upload สื่อผ่าน API อัปโหลดของโมดูล
+
+---
+
+## 7) Schema / ฟิลด์โปรไฟล์ที่ควรมีเมื่อทำเว็บจอง
+
+คัดลอกแนวจาก `HotelResortProfile` (+ โมเดลรีวิวถ้าต้องการ):
+
+| กลุ่ม | ฟิลด์ตัวอย่าง |
+|-------|----------------|
+| สื่อ | `portalBannerUrl` · `portalGalleryJson` |
+| ติดต่อ | `address` · `contactPhone` · `lineId` · `facebookUrl` · `mapUrl` |
+| เวลา | `checkInTime` · `checkOutTime` (ใช้ทั้งแดชบอร์ดเตือน + พอร์ทัลแสดง/parse วัน) |
+| ชำระพอร์ทัล | `portalBookingPaymentMode` · `depositAmountBaht` |
+| แบรนด์/โอน | `propertyName` · `logoUrl` · `promptPayPhone` · บัญชีธนาคาร |
+| รีวิว | โมเดลแยก `*Review` · `isPublished` · `sortOrder` · scope owner+trial |
+| จอง | `depositAmountBaht` · `paymentSlipUrl` · `paymentMethod` · `amountPaidBaht` · `paymentStatus` · `guestPhone` |
+
+---
+
+## 8) ตั้งค่าฝั่งเจ้าของ (แดชบอร์ด)
+
+| ที่ | เนื้อหา |
+|-----|---------|
+| Hub ลิงก์ลูกค้า | การ์ดคู่: QR ลูกค้า (ม่วง) + QR พนักงาน (amber) + ป๊อปอัป — `shop-qr-hub-popup-pattern.mdc` |
+| สื่อพอร์ทัล | อัปโหลดแบนเนอร์/แกลเลอรี → PATCH profile (โรงแรม: `HotelResortPortalMediaSettings` บน guest-portal) |
+| ตั้งค่าที่พัก/ร้าน | ที่อยู่ · โซเชียล · โหมด `NONE/DEPOSIT/FULL` · ยอดมัดจำ · เวลาเช็คอิน/เอาต์ · รีวิว CRUD |
+| นำทาง | แท็บ/ลิงก์ «ลิงก์» / guest-portal ใน nav โมดูล |
+
+โรงแรม:  
+`/dashboard/hotel-resort/guest-portal` · `/dashboard/hotel-resort/settings`  
+`HotelResortGuestPortalHubClient` · `HotelResortSettingsClient` · `HotelResortReviewsSettings`
+
+---
+
+## 9) ไฟล์อ้างอิง (โรงแรม — คัดลอกโครง)
+
+| ชั้น | ไฟล์ |
+|------|------|
+| หน้าเว็บ | `src/systems/hotel-resort/components/HotelResortPortalClient.tsx` |
+| หลังจอง | `…/HotelResortPortalBookingClient.tsx` |
+| รายการจอง (แดชบอร์ด) | `…/HotelResortBookingsClient.tsx` |
+| App routes | `src/app/hotel-resort/[ownerId]/page.tsx` · `…/booking/[bookingId]/page.tsx` |
+| Hub เจ้าของ | `…/HotelResortGuestPortalHubClient.tsx` · `…/HotelResortPortalMediaSettings.tsx` |
+| Helpers | `…/lib/portal-booking.ts` · `…/lib/portal-media.ts` |
+| URL / access | `src/lib/hotel-resort/public-url.ts` · `portal-access.ts` |
+| Glass shell | `src/components/app-templates/AppPublicCheckInGlassTemplate.tsx` |
+
+---
+
+## 10) Checklist โมดูลใหม่ (เว็บไซต์จอง)
+
+- [ ] Public routes: `/{slug}/[ownerId]` + optional `/booking/[id]?phone=`
+- [ ] `public-url.ts` + omit `?t=` เมื่อ prod
+- [ ] `is*PortalOpenForOwner` บนทุก public API
+- [ ] `AppPublicCheckInGlassPage` — light glass · แบนเนอร์ overlay เบา · `max-w-6xl`
+- [ ] Profile: สื่อ · ติดต่อ · โหมดชำระ · เวลาเข้า/ออก
+- [ ] APIs: info · list/search · book · lookup · booking detail · upload-slip · **promptpay-qr**
+- [ ] เมื่อมียอดชำระ: พร้อมเพย์ → QR · ถ่ายสลิป → `useAppCameraCapture` · ข้อความหลักฐานมัดจำ/ชำระ
+- [ ] หลังจอง → หน้ารายละเอียด: ชำระแล้ว/คงเหลือ + สลิปกดดู lightbox
+- [ ] แดชบอร์ดรายการจอง: ชำระบางส่วน + สลิปกดดูได้
+- [ ] Owner hub: QR ลูกค้า + ตั้งค่าสื่อ/ชำระ (ไม่ใส่แบรนด์ซ้ำใต้ dashboard shell)
+- [ ] สื่อ/สลิปผ่าน `app-templates` · หัวข้อสั้นตาม `customer-portal-no-description-copy.mdc`
+- [ ] แยกชัดจาก staff portal และจากพอร์ทัล QR กะทัดรัด
+
+---
+
+## ห้ามพลาด
+
+- อย่าใช้ `shop-customer-qr-portal` (max-w-md + ไอคอน hero) แทนเว็บไซต์จองเมื่อโดเมนต้องการแบนเนอร์/ค้นหาหลายส่วน — หรือกลับกัน
+- อย่า dark theme บนลิงก์ลูกค้า
+- อย่าเปิดจองสาธารณะโดยไม่ gate แพ็ก/โมดูล
+- อย่าผสมลิงก์พนักงานกับลิงก์ลูกค้าใน URL เดียวกัน
+- อย่าให้พร้อมเพย์บนลิงก์ลูกค้าเหลือแค่เบอร์โดยไม่มี QR เมื่อมียอดชำระ
+- อย่าผูกปุ่ม「ถ่ายรูป」กับ `input capture` อย่างเดียว — ต้องใช้ `useAppCameraCapture` (กล้อง device กลาง)
+- อย่าซ่อนสลิปหลังจอง/บนรายการจองเมื่อลูกค้าชำระบางส่วนแล้วอัปโหลดแล้ว — ต้องกดดู lightbox ได้
+- อย่าอ้างเวลาเช็คอิน/เอาต์คนละค่ากับตั้งค่าที่พัก

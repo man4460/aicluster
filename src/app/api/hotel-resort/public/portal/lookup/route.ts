@@ -26,14 +26,15 @@ export async function POST(req: Request) {
       ownerUserId: ownerId,
       trialSessionId,
       guestPhone: { contains: phone.slice(-10) },
-      status: { notIn: ["CANCELLED"] },
+      /** หน้าลิงก์ลูกค้า — ค้นหาเฉพาะสถานะจอง */
+      status: "RESERVED",
     },
     include: {
       room: { select: { roomNumber: true } },
       roomType: { select: { name: true } },
     },
     orderBy: { checkInAt: "desc" },
-    take: 10,
+    take: 20,
   });
 
   return NextResponse.json({

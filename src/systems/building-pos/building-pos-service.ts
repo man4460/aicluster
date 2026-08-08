@@ -1,5 +1,7 @@
 "use client";
 
+import { readStoredStaffDailyUnlock, staffDailyUnlockHeaders } from "@/lib/modules/staff-daily-pin";
+
 export type PosCategory = {
   id: number;
   name: string;
@@ -49,6 +51,25 @@ export type PosPurchaseOrder = {
   payment_slip_url?: string;
   created_at: string;
   lines: PosPurchaseLine[];
+};
+
+/** หมวดรายจ่ายทั่วไป (ไม่ใช่ซื้อวัตถุดิบ) */
+export type PosCostCategory = {
+  id: number;
+  name: string;
+  sort_order: number;
+};
+
+/** รายจ่ายทั่วไป (ค่าเช่า / สาธารณูปโภค ฯลฯ) */
+export type PosCostEntry = {
+  id: number;
+  label: string;
+  amount_baht: number;
+  spent_at: string;
+  note: string;
+  category_id: number | null;
+  category_name: string | null;
+  payment_slip_url?: string;
 };
 
 export type PosRecipeLine = {
@@ -248,7 +269,7 @@ export class LocalStorageBuildingPosRepository {
     saveDB(db);
     return row;
   }
-  async updateOrder(id: number, patch: Partial<Omit<PosOrder, "id" | "created_at">>) {
+  async updateOrder(id: number, patch: Partial<Omit<PosOrder, "id">>) {
     const db = loadDB();
     const idx = db.orders.findIndex((x) => x.id === id);
     if (idx < 0) return null;
@@ -501,6 +522,73 @@ class SessionApiBuildingPosRepository {
     await readJson<{ ok: boolean }>(res);
   }
 
+  async listCostCategories() {
+    const res = await this.fetchSession("/api/building-pos/session/cost-categories", { cache: "no-store" });
+    return (await readJson<{ categories: PosCostCategory[] }>(res)).categories;
+  }
+  async createCostCategory(input: { name: string; sort_order?: number }) {
+    const res = await this.fetchSession("/api/building-pos/session/cost-categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    return (await readJson<{ category: PosCostCategory }>(res)).category;
+  }
+  async updateCostCategory(id: number, patch: { name: string; sort_order?: number }) {
+    const res = await this.fetchSession(`/api/building-pos/session/cost-categories?id=${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    return (await readJson<{ category: PosCostCategory }>(res)).category;
+  }
+  async deleteCostCategory(id: number) {
+    const res = await this.fetchSession(`/api/building-pos/session/cost-categories?id=${id}`, { method: "DELETE" });
+    await readJson<{ ok: boolean }>(res);
+  }
+
+  async listCostEntries() {
+    const res = await this.fetchSession("/api/building-pos/session/costs", { cache: "no-store" });
+    return (await readJson<{ costs: PosCostEntry[] }>(res)).costs;
+  }
+  async createCostEntry(input: {
+    label: string;
+    amount_baht: number;
+    category_id: number;
+    note?: string | null;
+    payment_slip_url?: string | null;
+    spent_at?: string;
+  }) {
+    const res = await this.fetchSession("/api/building-pos/session/costs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    return (await readJson<{ cost: PosCostEntry }>(res)).cost;
+  }
+  async updateCostEntry(
+    id: number,
+    patch: {
+      label?: string;
+      amount_baht?: number;
+      category_id?: number;
+      note?: string | null;
+      payment_slip_url?: string | null;
+      spent_at?: string;
+    },
+  ) {
+    const res = await this.fetchSession(`/api/building-pos/session/costs?id=${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    return (await readJson<{ cost: PosCostEntry }>(res)).cost;
+  }
+  async deleteCostEntry(id: number) {
+    const res = await this.fetchSession(`/api/building-pos/session/costs?id=${id}`, { method: "DELETE" });
+    await readJson<{ ok: boolean }>(res);
+  }
+
   async listRecipesByMenu() {
     const res = await this.fetchSession("/api/building-pos/session/menu-recipes", { cache: "no-store" });
     return (await readJson<{ recipes_by_menu: Record<string, PosRecipeLine[]> }>(res)).recipes_by_menu;
@@ -523,7 +611,7 @@ class SessionApiBuildingPosRepository {
     const res = await this.fetchSession("/api/building-pos/session/orders", { cache: "no-store" });
     return (await readJson<{ orders: PosOrder[] }>(res)).orders;
   }
-  async updateOrder(id: number, patch: Partial<Omit<PosOrder, "id" | "created_at">>) {
+  async updateOrder(id: number, patch: Partial<Omit<PosOrder, "id">>) {
     const res = await this.fetchSession(`/api/building-pos/session/orders?id=${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -545,18 +633,28 @@ class StaffApiBuildingPosRepository {
   ) {}
 
   private qs() {
-    return new URLSearchParams({ ownerId: this.ownerId, t: this.trialSessionId, k: this.k }).toString();
+    const p = new URLSearchParams({ ownerId: this.ownerId, t: this.trialSessionId, k: this.k });
+    const du = readStoredStaffDailyUnlock("building-pos", this.ownerId);
+    if (du) p.set("du", du);
+    return p.toString();
+  }
+
+  private unlockHeaders(): HeadersInit {
+    return staffDailyUnlockHeaders("building-pos", this.ownerId);
   }
 
   async listOrders() {
-    const res = await fetch(`/api/building-pos/staff/orders?${this.qs()}`, { cache: "no-store" });
+    const res = await fetch(`/api/building-pos/staff/orders?${this.qs()}`, {
+      cache: "no-store",
+      headers: this.unlockHeaders(),
+    });
     return (await readJson<{ orders: PosOrder[] }>(res)).orders;
   }
 
-  async updateOrder(id: number, patch: Partial<Omit<PosOrder, "id" | "created_at">>) {
+  async updateOrder(id: number, patch: Partial<Omit<PosOrder, "id">>) {
     const res = await fetch(`/api/building-pos/staff/orders?id=${id}&${this.qs()}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...this.unlockHeaders() },
       body: JSON.stringify(patch),
     });
     return (await readJson<{ order: PosOrder }>(res)).order;

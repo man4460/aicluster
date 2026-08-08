@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
 import { detectImageKind, extensionForImageKind } from "@/lib/upload/detect-image-kind";
-import { withHotelResortOwnerContext } from "@/systems/hotel-resort/lib/api-auth";
+import { withHotelResortOwnerOrStaffContext } from "@/systems/hotel-resort/lib/api-auth";
 
 const MAX_BYTES = 6 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -17,7 +17,7 @@ const ALLOWED_MIME = new Set([
 ]);
 
 export async function POST(req: Request) {
-  const auth = await withHotelResortOwnerContext();
+  const auth = await withHotelResortOwnerOrStaffContext(req);
   if (!auth.ok) return auth.res;
 
   let form: FormData;

@@ -5,28 +5,45 @@ import { withDrinkPosOwnerContext } from "@/systems/drink-pos/lib/api-auth";
 
 const createSchema = z.object({
   label: z.string().trim().min(1).max(160),
-  amountBaht: z.number().int().min(0).max(99_999_999),
+  amountBaht: z.number().int().min(1).max(99_999_999),
+  categoryId: z.string().trim().min(1),
   spentAt: z.string().datetime().optional(),
   note: z.string().trim().max(300).optional().nullable(),
+  paymentSlipUrl: z.string().trim().max(512).optional().nullable(),
 });
+
+function mapCost(r: {
+  id: string;
+  label: string;
+  amountBaht: number;
+  spentAt: Date;
+  note: string | null;
+  paymentSlipUrl: string | null;
+  categoryId: string | null;
+  category: { id: string; name: string } | null;
+}) {
+  return {
+    id: r.id,
+    label: r.label,
+    amountBaht: r.amountBaht,
+    spentAt: r.spentAt.toISOString(),
+    note: r.note,
+    paymentSlipUrl: r.paymentSlipUrl,
+    categoryId: r.categoryId,
+    categoryName: r.category?.name ?? null,
+  };
+}
 
 export async function GET() {
   const auth = await withDrinkPosOwnerContext();
   if (!auth.ok) return auth.res;
   const rows = await prisma.drinkPosCostEntry.findMany({
     where: { ownerUserId: auth.ctx.ownerUserId },
+    include: { category: { select: { id: true, name: true } } },
     orderBy: { spentAt: "desc" },
     take: 200,
   });
-  return NextResponse.json({
-    costs: rows.map((r) => ({
-      id: r.id,
-      label: r.label,
-      amountBaht: r.amountBaht,
-      spentAt: r.spentAt.toISOString(),
-      note: r.note,
-    })),
-  });
+  return NextResponse.json({ costs: rows.map(mapCost) });
 }
 
 export async function POST(req: Request) {
@@ -41,26 +58,28 @@ export async function POST(req: Request) {
   }
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
+    return NextResponse.json({ error: "กรอกรายการ จำนวนเงิน และหมวดหมู่" }, { status: 400 });
+  }
+
+  const cat = await prisma.drinkPosCostCategory.findFirst({
+    where: { id: parsed.data.categoryId, ownerUserId: auth.ctx.ownerUserId },
+  });
+  if (!cat) {
+    return NextResponse.json({ error: "ไม่พบหมวดหมู่" }, { status: 400 });
   }
 
   const row = await prisma.drinkPosCostEntry.create({
     data: {
       ownerUserId: auth.ctx.ownerUserId,
+      categoryId: parsed.data.categoryId,
       label: parsed.data.label,
       amountBaht: parsed.data.amountBaht,
       spentAt: parsed.data.spentAt ? new Date(parsed.data.spentAt) : new Date(),
       note: parsed.data.note?.trim() || null,
+      paymentSlipUrl: parsed.data.paymentSlipUrl?.trim() || null,
     },
+    include: { category: { select: { id: true, name: true } } },
   });
 
-  return NextResponse.json({
-    cost: {
-      id: row.id,
-      label: row.label,
-      amountBaht: row.amountBaht,
-      spentAt: row.spentAt.toISOString(),
-      note: row.note,
-    },
-  });
+  return NextResponse.json({ cost: mapCost(row) });
 }

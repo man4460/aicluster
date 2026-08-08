@@ -1,6 +1,7 @@
 import {
   alertIfSlipPrintFailed,
   printAppOrderTicketSlip,
+  resolveAppSlipPaperSize,
   type AppOrderTicketSlipVariant,
   type AppSlipPaperSize,
 } from "@/components/app-templates/slip-print";
@@ -9,7 +10,8 @@ import type { PosOrder } from "@/systems/building-pos/building-pos-service";
 export type BuildingPosOrderTicketPrintOpts = {
   shopLabel?: string | null;
   logoUrl?: string | null;
-  paper?: AppSlipPaperSize;
+  /** จากโปรไฟล์ `defaultPaperSize` — ไม่ส่ง = SLIP_58 */
+  paper?: AppSlipPaperSize | string | null;
   /** kitchen = สลิปส่งโต๊ะ · receipt = มีราคา */
   variant?: AppOrderTicketSlipVariant;
   subtitle?: string;
@@ -41,7 +43,7 @@ export function printBuildingPosOrderTicket(
     })),
     variant,
     grandTotal: order.total_amount,
-    paper: opts.paper ?? "SLIP_80",
+    paper: resolveAppSlipPaperSize(opts.paper),
     footerNote: variant === "kitchen" ? "ส่งที่โต๊ะลูกค้า" : "ขอบคุณที่ใช้บริการ",
   });
   alertIfSlipPrintFailed(ok);

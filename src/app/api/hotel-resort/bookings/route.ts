@@ -1,12 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withHotelResortOwnerContext } from "@/systems/hotel-resort/lib/api-auth";
+import { withHotelResortOwnerOrStaffContext } from "@/systems/hotel-resort/lib/api-auth";
 import { paymentFields, syncHotelRoomForBooking } from "@/systems/hotel-resort/lib/booking-mutate";
 import { nightsBetween } from "@/systems/hotel-resort/lib/room-status";
 import { ensureHotelResortProfile } from "@/systems/hotel-resort/lib/ensure-profile";
+import {
+  hotelResortPaymentRequiresSlip,
+  isHotelResortPaymentMethod,
+} from "@/systems/hotel-resort/lib/payment-method";
+import {
+  hotelResortProfilePrintSelect,
+  hotelResortPropertyPrintFromProfile,
+} from "@/systems/hotel-resort/lib/property-print-meta";
+import { hotelResortParseStayDateInput } from "@/systems/hotel-resort/lib/room-occupancy";
 
 export async function GET(req: Request) {
-  const auth = await withHotelResortOwnerContext();
+  const auth = await withHotelResortOwnerOrStaffContext(req);
   if (!auth.ok) return auth.res;
   const { ownerUserId } = auth.ctx;
   const limit = Math.min(500, Number(new URL(req.url).searchParams.get("limit") ?? 200));
@@ -36,6 +45,8 @@ export async function GET(req: Request) {
       totalBaht: b.totalBaht,
       amountPaidBaht: b.amountPaidBaht,
       paymentStatus: b.paymentStatus,
+      paymentMethod: b.paymentMethod,
+      paymentSlipUrl: b.paymentSlipUrl,
       idCardImageUrl: b.idCardImageUrl,
       note: b.note,
     })),
@@ -43,7 +54,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = await withHotelResortOwnerContext();
+  const auth = await withHotelResortOwnerOrStaffContext(req);
   if (!auth.ok) return auth.res;
   const { ownerUserId, trialSessionId } = auth.ctx;
   await ensureHotelResortProfile(prisma, ownerUserId, trialSessionId);
@@ -62,7 +73,11 @@ export async function POST(req: Request) {
     idCardImageUrl?: string;
     nationalId?: string;
     nationality?: string;
+    guestAddress?: string;
+    guestTaxId?: string;
     note?: string;
+    paymentMethod?: string;
+    paymentSlipUrl?: string | null;
   };
   try {
     body = await req.json();
@@ -76,9 +91,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "กรอกชื่อและเบอร์ลูกค้า" }, { status: 400 });
   }
 
-  const checkInAt = body.checkInAt ? new Date(body.checkInAt) : new Date();
-  const checkOutAt = body.checkOutAt ? new Date(body.checkOutAt) : new Date(checkInAt.getTime() + 86400000);
-  if (Number.isNaN(checkInAt.getTime()) || Number.isNaN(checkOutAt.getTime()) || checkOutAt <= checkInAt) {
+  const checkInAt = body.checkInAt
+    ? hotelResortParseStayDateInput(body.checkInAt, "14:00")
+    : new Date();
+  const checkOutAt = body.checkOutAt
+    ? hotelResortParseStayDateInput(body.checkOutAt, "12:00")
+    : checkInAt
+      ? new Date(checkInAt.getTime() + 86400000)
+      : null;
+  if (!checkInAt || !checkOutAt || checkOutAt <= checkInAt) {
     return NextResponse.json({ error: "วันเข้าพัก/ออกไม่ถูกต้อง" }, { status: 400 });
   }
 
@@ -100,6 +121,11 @@ export async function POST(req: Request) {
   }
 
   const pay = paymentFields(totalBaht, body.amountPaidBaht ?? 0);
+  const paymentMethod = isHotelResortPaymentMethod(body.paymentMethod) ? body.paymentMethod : "CASH";
+  const paymentSlipUrl = body.paymentSlipUrl?.trim() || null;
+  if (hotelResortPaymentRequiresSlip(paymentMethod, pay.amountPaidBaht) && !paymentSlipUrl) {
+    return NextResponse.json({ error: "แนบสลิปชำระเงินก่อนบันทึก" }, { status: 400 });
+  }
 
   const guest = await prisma.hotelResortGuest.create({
     data: {
@@ -109,6 +135,8 @@ export async function POST(req: Request) {
       phone: guestPhone,
       nationalId: body.nationalId?.trim() || null,
       nationality: body.nationality?.trim() || null,
+      address: body.guestAddress?.trim() || null,
+      taxId: body.guestTaxId?.trim() || null,
       idCardImageUrl: body.idCardImageUrl?.trim() || null,
     },
   });
@@ -128,11 +156,43 @@ export async function POST(req: Request) {
       isWalkIn,
       totalBaht,
       ...pay,
+      paymentMethod,
+      paymentSlipUrl,
       idCardImageUrl: body.idCardImageUrl?.trim() || guest.idCardImageUrl,
       note: body.note?.trim() || null,
+    },
+    include: {
+      room: { select: { roomNumber: true } },
+      roomType: { select: { name: true } },
+      guest: { select: { address: true, taxId: true, nationalId: true, nationality: true } },
     },
   });
 
   await syncHotelRoomForBooking(prisma, booking.roomId, booking.status);
-  return NextResponse.json({ booking });
+
+  const profile = await prisma.hotelResortProfile.findUnique({
+    where: { ownerUserId_trialSessionId: { ownerUserId, trialSessionId } },
+    select: hotelResortProfilePrintSelect,
+  });
+
+  return NextResponse.json({
+    booking: {
+      id: booking.id,
+      guestName: booking.guestName,
+      guestPhone: booking.guestPhone,
+      roomId: booking.roomId,
+      roomNumber: booking.room?.roomNumber ?? null,
+      roomTypeName: booking.roomType?.name ?? null,
+      checkInAt: booking.checkInAt.toISOString(),
+      checkOutAt: booking.checkOutAt.toISOString(),
+      status: booking.status,
+      totalBaht: booking.totalBaht,
+      amountPaidBaht: booking.amountPaidBaht,
+      paymentMethod: booking.paymentMethod,
+      note: booking.note,
+      guestAddress: booking.guest?.address ?? null,
+      guestTaxId: booking.guest?.taxId ?? null,
+    },
+    property: hotelResortPropertyPrintFromProfile(profile),
+  });
 }

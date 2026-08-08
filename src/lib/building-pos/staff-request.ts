@@ -1,35 +1,55 @@
 import { prisma } from "@/lib/prisma";
-import { resolvePublicBuildingPosTrialSessionId } from "@/lib/building-pos/public-trial-scope";
-import { verifyStaffToken } from "@/lib/building-pos/staff-token";
+import {
+  resolvePermanentStaffLink,
+  STAFF_LINK_PERMANENT_SESSION_ID,
+  type PermanentStaffLinkContext,
+} from "@/lib/modules/permanent-staff-link";
+import { getBuildingPosDataScope } from "@/lib/trial/module-scopes";
 
-export type BuildingPosStaffContext = {
-  ownerId: string;
-  trialSessionId: string;
-};
+export type BuildingPosStaffContext = PermanentStaffLinkContext;
 
 /**
  * ยืนยันโทเค็นพนักงานจาก query — ใช้กับ /api/building-pos/staff/*
+ * ลิงก์ถาวร (prod) · ข้อมูลตามสโคปปัจจุบันของร้าน
  */
 export async function resolveBuildingPosStaffFromUrl(url: URL): Promise<BuildingPosStaffContext | null> {
   const ownerId = url.searchParams.get("ownerId")?.trim() ?? "";
   const k = url.searchParams.get("k")?.trim() ?? "";
   const t = url.searchParams.get("t")?.trim() ?? "";
-  if (!ownerId || !k) return null;
-  const { trialSessionId } = await resolvePublicBuildingPosTrialSessionId(ownerId, t || null);
-  const row = await prisma.buildingPosStaffLink.findUnique({
-    where: {
-      ownerUserId_trialSessionId: { ownerUserId: ownerId, trialSessionId },
-    },
-    select: { tokenHash: true },
+  return resolvePermanentStaffLink({
+    ownerId,
+    plainToken: k,
+    urlTrialParam: t,
+    findProdRow: () =>
+      prisma.buildingPosStaffLink.findUnique({
+        where: {
+          ownerUserId_trialSessionId: {
+            ownerUserId: ownerId,
+            trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID,
+          },
+        },
+        select: { tokenHash: true },
+      }),
+    findRowBySession: (sessionId) =>
+      prisma.buildingPosStaffLink.findUnique({
+        where: {
+          ownerUserId_trialSessionId: { ownerUserId: ownerId, trialSessionId: sessionId },
+        },
+        select: { tokenHash: true },
+      }),
+    findAnyRows: () =>
+      prisma.buildingPosStaffLink.findMany({
+        where: { ownerUserId: ownerId },
+        select: { tokenHash: true },
+      }),
+    liveDataScope: () => getBuildingPosDataScope(ownerId),
   });
-  if (!row?.tokenHash || !verifyStaffToken(k, row.tokenHash)) return null;
-  return { ownerId, trialSessionId };
 }
 
 export function staffQuerySuffix(ctx: BuildingPosStaffContext, plainToken: string): string {
   const p = new URLSearchParams({
     ownerId: ctx.ownerId,
-    t: ctx.trialSessionId,
+    t: STAFF_LINK_PERMANENT_SESSION_ID,
     k: plainToken,
   });
   return p.toString();

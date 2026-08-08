@@ -64,6 +64,7 @@ export async function GET(req: Request) {
         orderBy: { id: "asc" },
         select: {
           id: true,
+          productId: true,
           productName: true,
           sizeLabel: true,
           unitPriceBaht: true,
@@ -203,7 +204,7 @@ export async function POST(req: Request) {
       memberPhone,
       isRewardRedemption,
       paymentMethod,
-      paymentSlipUrl: drinkPosPaymentRequiresSlip(paymentMethod, totalBaht) ? paymentSlipUrl : null,
+      paymentSlipUrl,
       fulfillmentStatus: "RECEIVED",
       statusUpdatedAt: new Date(),
       note: parsed.data.note?.trim() || (loyaltyRewardId ? "แลกคะแนน" : null),

@@ -1,18 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
 import { canAccessAppModule, type UserAccessFields } from "@/lib/modules/access";
-import { MODULE_GROUP_TIER_NAME } from "@/lib/modules/config";
+import {
+  BUILDING_POS_MODULE_SLUG,
+  DRINK_POS_MODULE_SLUG,
+  HOTEL_RESORT_MODULE_SLUG,
+  MODULE_GROUP_TIER_NAME,
+} from "@/lib/modules/config";
 import { dashboardModuleCardDescription } from "@/lib/modules/dashboard-card-descriptions";
 import { getModuleDailyUsageBadge } from "@/lib/modules/module-usage-badge";
 import { MODULE_RESUBSCRIBE_COOLDOWN_MS } from "@/lib/modules/module-subscription-cooldown";
 import { isSafeModuleCardDisplayUrl } from "@/lib/module-card-image";
-import { isSystemMapCatalogSlug } from "@/lib/modules/system-map-catalog";
 import { appDashboardBrandGradientBarClass, appDashboardBrandGradientFillClass } from "@/components/app-templates";
+import { isSystemMapCatalogSlug } from "@/lib/modules/system-map-catalog";
 import {
   DashboardModuleHeroCard,
   dashboardModulePrimaryCtaClass,
@@ -32,8 +37,8 @@ type ModuleCardDTO = {
 
 type Props = {
   modules: ModuleCardDTO[];
-  /** แสดงการ์ดแผนผังระบบ — ต้องตรงกับบัญชีแอดมินที่ล็อกอิน (ส่งจากเซิร์ฟเวอร์) */
-  showSystemMapCatalog?: boolean;
+  /** แสดงหมวด «ปัจจุบัน» (featured) — บัญชีแอดมินที่ล็อกอิน */
+  isAdminCatalog?: boolean;
   showCatalogHeader?: boolean;
   backHref?: string;
   access: UserAccessFields;
@@ -118,12 +123,12 @@ function groupTone(groupId: number): { header: string; chip: string; icon: React
   };
 }
 
-/** หัวข้อกลุ่มในแคตตาล็อก เช่น Basic 199 / เดือน */
-function moduleGroupCatalogHeading(groupId: number): string {
-  const name = MODULE_GROUP_TIER_NAME[groupId] ?? `กลุ่ม ${groupId}`;
-  if (groupId === 1) return `${name} 199 / เดือน`;
-  return `${name} รวมแพ็กเกจ`;
-}
+/** การ์ดแนะนำส่วน «ปัจจุบัน» บนหน้าระบบทั้งหมด — แสดงเฉพาะแอดมิน */
+const FEATURED_CATALOG_SLUGS = [
+  BUILDING_POS_MODULE_SLUG,
+  DRINK_POS_MODULE_SLUG,
+  HOTEL_RESORT_MODULE_SLUG,
+] as const;
 
 /** คำอธิบายบรรทัดเดียวใต้ชื่อโมดูล — ตัดคำนำหน้ากลุ่มที่ซ้ำกับหัวข้อส่วน */
 function catalogModuleDescription(m: { slug: string; description: string | null }): string {
@@ -157,7 +162,7 @@ function ModuleThumb({
 
 export function ModuleSubscriptionBrowser({
   modules,
-  showSystemMapCatalog = false,
+  isAdminCatalog = false,
   showCatalogHeader = false,
   backHref = "/dashboard",
   access,
@@ -172,8 +177,8 @@ export function ModuleSubscriptionBrowser({
   const cooldownNowMs = cooldownClockMounted ? Date.now() : hydrationReferenceMs;
 
   const [q, setQ] = useState("");
-  const [catalogMode, setCatalogMode] = useState<"ALL" | "FREE">("ALL");
-  const [groupFilter, setGroupFilter] = useState<number | "ALL">("ALL");
+  /** แถบแคตตาล็อก — ค่าเริ่มต้น Basic (กลุ่ม 1) */
+  const [catalogTab, setCatalogTab] = useState<"free" | number>(1);
   const [savedSubscribedIds, setSavedSubscribedIds] = useState<Set<string>>(() => new Set(initialSubscribedIds));
   /** สิทธิ์เข้าโมดูลชั่วคราวจากระบบทดลองแบบเก่า (ไม่มีปุ่มเริ่มใหม่) */
   const [legacyTrialAccessIds, setLegacyTrialAccessIds] = useState<Set<string>>(() => {
@@ -203,9 +208,8 @@ export function ModuleSubscriptionBrowser({
   const upgradeMessage = "ระบบนี้ยังไม่อยู่ในแผนของคุณ — กรุณาอัปเกรดแพ็กเกจเพื่อใช้งาน";
 
   const modulesForUi = useMemo(
-    () =>
-      showSystemMapCatalog ? modules : modules.filter((m) => !isSystemMapCatalogSlug(m.slug)),
-    [modules, showSystemMapCatalog],
+    () => modules.filter((m) => !isSystemMapCatalogSlug(m.slug)),
+    [modules],
   );
 
   const rows = useMemo(() => {
@@ -216,59 +220,52 @@ export function ModuleSubscriptionBrowser({
     );
   }, [modulesForUi, q]);
 
-  const toneRows = useMemo(() => {
-    if (catalogMode === "FREE") {
-      return rows.filter((m) => getModuleDailyUsageBadge(m.slug, m.groupId)?.tone === "free");
-    }
-    return rows;
-  }, [catalogMode, rows]);
+  const isFreeModule = useCallback(
+    (m: ModuleCardDTO) => getModuleDailyUsageBadge(m.slug, m.groupId)?.tone === "free",
+    [],
+  );
+
+  const freeModules = useMemo(() => rows.filter((m) => isFreeModule(m)), [isFreeModule, rows]);
 
   const groupIds = useMemo(
-    () => Array.from(new Set(toneRows.map((m) => m.groupId))).sort((a, b) => a - b),
-    [toneRows],
+    () =>
+      Array.from(new Set(rows.filter((m) => !isFreeModule(m)).map((m) => m.groupId))).sort((a, b) => a - b),
+    [isFreeModule, rows],
   );
-
-  const filteredRows = useMemo(() => {
-    if (groupFilter === "ALL") return toneRows;
-    return toneRows.filter((m) => m.groupId === groupFilter);
-  }, [groupFilter, toneRows]);
-
-  useEffect(() => {
-    if (groupFilter === "ALL") return;
-    if (toneRows.some((m) => m.groupId === groupFilter)) return;
-    setGroupFilter("ALL");
-  }, [groupFilter, toneRows]);
 
   const featuredModules = useMemo(() => {
-    if (catalogMode !== "ALL") return [];
+    if (!isAdminCatalog) return [];
     if (rows.length === 0) return [];
-    const preferred = rows.filter((m) => savedSubscribedIds.has(m.id) || legacyTrialAccessIds.has(m.id));
-    const seen = new Set<string>();
+    const bySlug = new Map(rows.map((m) => [m.slug, m]));
     const picked: ModuleCardDTO[] = [];
-    for (const m of [...preferred, ...rows]) {
-      if (picked.length >= 3) break;
-      if (seen.has(m.slug)) continue;
-      seen.add(m.slug);
-      picked.push(m);
+    for (const slug of FEATURED_CATALOG_SLUGS) {
+      const m = bySlug.get(slug);
+      if (m) picked.push(m);
     }
     return picked;
-  }, [catalogMode, legacyTrialAccessIds, rows, savedSubscribedIds]);
+  }, [isAdminCatalog, rows]);
 
-  const freeModules = useMemo(
-    () => rows.filter((m) => getModuleDailyUsageBadge(m.slug, m.groupId)?.tone === "free").slice(0, 12),
-    [rows],
+  const featuredSlugSet = useMemo(
+    () => new Set(featuredModules.map((m) => m.slug)),
+    [featuredModules],
   );
 
-  const compactRows = useMemo(() => {
-    const isSearch = q.trim().length > 0;
-    if (isSearch) return filteredRows;
-    if (catalogMode !== "ALL") return filteredRows;
-    const hidden = new Set<string>([
-      ...featuredModules.map((m) => m.slug),
-      ...freeModules.map((m) => m.slug),
-    ]);
-    return filteredRows.filter((m) => !hidden.has(m.slug));
-  }, [catalogMode, featuredModules, filteredRows, freeModules, q]);
+  useEffect(() => {
+    if (catalogTab === "free") return;
+    if (typeof catalogTab === "number" && groupIds.includes(catalogTab)) return;
+    if (groupIds.includes(1)) setCatalogTab(1);
+    else if (groupIds.length > 0) setCatalogTab(groupIds[0]!);
+    else setCatalogTab("free");
+  }, [catalogTab, groupIds]);
+
+  const tabModules = useMemo(() => {
+    if (catalogTab === "free") return freeModules;
+    let list = rows.filter((m) => m.groupId === catalogTab && !isFreeModule(m));
+    if (isAdminCatalog && featuredSlugSet.size > 0) {
+      list = list.filter((m) => !featuredSlugSet.has(m.slug));
+    }
+    return list;
+  }, [catalogTab, featuredSlugSet, freeModules, isAdminCatalog, isFreeModule, rows]);
 
   function activeCooldownUnlockIso(moduleId: string): string | null {
     const iso = cooldownUnlocks[moduleId];
@@ -374,89 +371,88 @@ export function ModuleSubscriptionBrowser({
 
         <div className="mt-4 flex min-w-0 flex-col gap-3">
           <label className="flex h-10 w-full min-w-0 cursor-text items-center gap-2.5 rounded-xl bg-[#f3f2fa]/90 px-3 transition focus-within:bg-[#eeedf8] focus-within:ring-2 focus-within:ring-[#5b61ff]/20">
-              <svg
-                className="h-4 w-4 shrink-0 text-slate-400"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                aria-hidden
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
-              <input
-                suppressHydrationWarning
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="ค้นหาระบบ..."
-                aria-label="ค้นหาระบบ"
-                className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-bold text-[#2e2a58] outline-none placeholder:text-slate-400 focus:ring-0"
-              />
-            </label>
+            <svg
+              className="h-4 w-4 shrink-0 text-slate-400"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              aria-hidden
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <input
+              suppressHydrationWarning
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="ค้นหาระบบ..."
+              aria-label="ค้นหาระบบ"
+              className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-bold text-[#2e2a58] outline-none placeholder:text-slate-400 focus:ring-0"
+            />
+          </label>
 
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <div className="inline-flex shrink-0 rounded-xl bg-[#f3f2fa]/90 p-1">
-                <button
-                  type="button"
-                  suppressHydrationWarning
-                  onClick={() => setCatalogMode("ALL")}
-                  className={cn(
-                    "inline-flex h-9 items-center justify-center rounded-lg px-3 text-xs font-black transition",
-                    catalogMode === "ALL"
-                      ? cn(appDashboardBrandGradientFillClass, "text-white")
-                      : "text-slate-600 hover:bg-white/80",
-                  )}
-                >
-                  ทั้งหมด
-                </button>
-                <button
-                  type="button"
-                  suppressHydrationWarning
-                  onClick={() => setCatalogMode("FREE")}
-                  className={cn(
-                    "inline-flex h-9 items-center justify-center rounded-lg px-3 text-xs font-black transition",
-                    catalogMode === "FREE"
-                      ? cn(appDashboardBrandGradientFillClass, "text-white")
-                      : "text-slate-600 hover:bg-white/80",
-                  )}
-                >
-                  ฟรี
-                </button>
-              </div>
-
-              <select
-                value={groupFilter === "ALL" ? "ALL" : String(groupFilter)}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === "ALL") setGroupFilter("ALL");
-                  else setGroupFilter(Number(v));
-                }}
-                aria-label="กรองตามกลุ่ม"
-                className="h-10 min-w-0 flex-1 rounded-xl border-0 bg-[#f3f2fa]/90 px-3 text-xs font-black text-[#2e2a58] outline-none transition focus:bg-[#eeedf8] focus:ring-2 focus:ring-[#5b61ff]/20 sm:min-w-[10.5rem] sm:flex-none"
-              >
-                <option value="ALL">{`ทุกกลุ่ม (${toneRows.length})`}</option>
-                {groupIds.map((gid) => {
-                  const count = toneRows.filter((m) => m.groupId === gid).length;
-                  return (
-                    <option key={`group-opt-${gid}`} value={String(gid)}>
-                      {`${moduleGroupCatalogHeading(gid)} (${count})`}
-                    </option>
-                  );
-                })}
-              </select>
-
-              {catalogMode === "ALL" ? (
-                <span className="inline-flex h-10 items-center rounded-lg border border-[#0000BF]/15 bg-[#0000BF]/10 px-3 text-xs font-black text-[#2e2a58]">
-                  {rows.length} ระบบ
-                </span>
-              ) : (
-                <span className="inline-flex h-10 items-center rounded-lg border border-emerald-200/70 bg-emerald-50/80 px-3 text-xs font-black text-emerald-800">
-                  {toneRows.length} ฟรี
-                </span>
+          <div
+            className="flex gap-1 overflow-x-auto rounded-2xl border border-indigo-100/90 bg-white/90 p-1 shadow-sm ring-1 ring-indigo-100/60 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            role="tablist"
+            aria-label="หมวดแคตตาล็อกโมดูล"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={catalogTab === "free"}
+              suppressHydrationWarning
+              onClick={() => setCatalogTab("free")}
+              className={cn(
+                "inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-black transition sm:text-sm",
+                catalogTab === "free"
+                  ? cn(appDashboardBrandGradientFillClass, "text-white shadow-md shadow-indigo-400/25")
+                  : "bg-transparent text-slate-600 hover:bg-indigo-50/80",
               )}
-            </div>
+            >
+              โมดูลฟรี
+              <span
+                className={cn(
+                  "rounded-md px-1.5 py-0.5 text-[10px] font-black tabular-nums",
+                  catalogTab === "free" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500",
+                )}
+              >
+                {freeModules.length}
+              </span>
+            </button>
+            {groupIds.map((gid) => {
+              const active = catalogTab === gid;
+              const count = rows.filter((m) => m.groupId === gid && !isFreeModule(m)).length;
+              const label = MODULE_GROUP_TIER_NAME[gid] ?? `กลุ่ม ${gid}`;
+              return (
+                <button
+                  key={`tab-g-${gid}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  suppressHydrationWarning
+                  onClick={() => setCatalogTab(gid)}
+                  className={cn(
+                    "inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-black transition sm:text-sm",
+                    active
+                      ? cn(appDashboardBrandGradientFillClass, "text-white shadow-md shadow-indigo-400/25")
+                      : "bg-transparent text-slate-600 hover:bg-indigo-50/80",
+                  )}
+                >
+                  {label}
+                  <span
+                    className={cn(
+                      "rounded-md px-1.5 py-0.5 text-[10px] font-black tabular-nums",
+                      active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500",
+                    )}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
+        </div>
 
         {infoBanner ? (
           <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50/60 px-3 py-2 text-xs font-bold text-sky-800">
@@ -471,7 +467,7 @@ export function ModuleSubscriptionBrowser({
         ) : null}
       </section>
 
-      {q.trim().length === 0 && catalogMode === "ALL" && featuredModules.length > 0 ? (
+      {isAdminCatalog && q.trim().length === 0 && featuredModules.length > 0 ? (
         <section className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">ปัจจุบัน</p>
@@ -554,202 +550,112 @@ export function ModuleSubscriptionBrowser({
         </section>
       ) : null}
 
-          {q.trim().length === 0 && catalogMode === "ALL" && freeModules.length > 0 ? (
-            <section className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">โมดูลฟรี</p>
-                <span className="rounded-lg border border-emerald-200/60 bg-emerald-50/80 px-2 py-0.5 text-[10px] font-black text-emerald-800">
-                  {freeModules.length}
+      <section className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <p className="min-w-0 truncate text-[10px] font-black tracking-[0.12em] text-[#66638c]">
+            {catalogTab === "free" ? (
+              <span className="uppercase tracking-[0.2em]">โมดูลฟรี</span>
+            ) : (
+              <>
+                <span className="uppercase tracking-[0.2em]">
+                  {MODULE_GROUP_TIER_NAME[catalogTab] ?? `กลุ่ม ${catalogTab}`}
                 </span>
-              </div>
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
-                {freeModules.slice(0, 6).map((m) => (
-                  <Link
-                    key={`free-${m.id}`}
-                    href={dashboardModuleHref(m.slug)}
-                    className="group flex min-w-0 max-w-full items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-200/70 hover:bg-white active:scale-[0.99]"
-                  >
-                    <ModuleThumb
-                      url={m.cardImageUrl}
-                      fallback={<GroupIcon groupId={m.groupId} className="h-5 w-5" />}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-black text-[#1e1b4b]">{m.title}</p>
-                      <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
-                        {catalogModuleDescription(m)}
-                      </p>
-                    </div>
-                    <span className="text-slate-300 transition group-hover:text-emerald-500" aria-hidden>
-                      →
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {catalogMode === "FREE" && q.trim().length === 0 ? (
-            <section className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">โมดูลฟรี</p>
-                <span className="rounded-lg border border-emerald-200/60 bg-emerald-50/80 px-2 py-0.5 text-[10px] font-black text-emerald-800">
-                  {toneRows.length}
+                <span className="ml-1.5 font-black normal-case tracking-normal text-[#5f5a8a]">
+                  {catalogTab === 1 ? "1 บาท/วัน" : "รวมแพ็กเกจ"}
                 </span>
-              </div>
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
-                {filteredRows.map((m) => (
-                  <Link
-                    key={`free-grid-${m.id}`}
-                    href={dashboardModuleHref(m.slug)}
-                    className="group flex min-w-0 max-w-full items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-200/70 hover:bg-white active:scale-[0.99]"
-                  >
-                    <ModuleThumb
-                      url={m.cardImageUrl}
-                      fallback={<GroupIcon groupId={m.groupId} className="h-5 w-5" />}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-black text-[#1e1b4b]">{m.title}</p>
-                      <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
-                        {catalogModuleDescription(m)}
-                      </p>
-                    </div>
-                    <span className="text-slate-300 transition group-hover:text-emerald-500" aria-hidden>
-                      →
-                    </span>
+              </>
+            )}
+          </p>
+          <span
+            className={cn(
+              "shrink-0 rounded-lg border px-2 py-0.5 text-[10px] font-black",
+              catalogTab === "free"
+                ? "border-emerald-200/60 bg-emerald-50/80 text-emerald-800"
+                : groupTone(typeof catalogTab === "number" ? catalogTab : 1).chip,
+            )}
+          >
+            {tabModules.length}
+          </span>
+        </div>
+
+        {tabModules.length === 0 ? (
+          <p className="mt-4 rounded-xl border border-dashed border-[#d8d6ec] bg-[#faf9ff]/70 px-3 py-8 text-center text-xs font-semibold text-[#66638c]">
+            {q.trim() ? "ไม่พบระบบตามคำค้น" : "ยังไม่มีโมดูลในหมวดนี้"}
+          </p>
+        ) : (
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
+            {tabModules.map((m) => {
+              const subscribed = savedSubscribedIds.has(m.id);
+              const legacyTrialAccess = !subscribed && legacyTrialAccessIds.has(m.id);
+              const hasAccess = subscribed || legacyTrialAccess || isFreeModule(m);
+              const unlocked = canAccessAppModule(access, { slug: m.slug, groupId: m.groupId });
+              const cooldownIso = activeCooldownUnlockIso(m.id);
+              const lockedByCooldown = !subscribed && cooldownIso !== null;
+              const lockedByDailyLimit = !subscribed && !lockedByCooldown && reachedDailyLimit;
+              const rowClass =
+                "group flex w-full min-w-0 max-w-full items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white active:scale-[0.99]";
+              const subtitle = catalogModuleDescription(m);
+
+              const body = (
+                <>
+                  <ModuleThumb
+                    url={m.cardImageUrl}
+                    fallback={<GroupIcon groupId={m.groupId} className="h-5 w-5" />}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-black text-[#1e1b4b]">{m.title}</p>
+                    <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{subtitle}</p>
+                  </div>
+                  <span className="text-slate-300 transition group-hover:text-[#5b61ff]" aria-hidden>
+                    →
+                  </span>
+                </>
+              );
+
+              if (hasAccess) {
+                return (
+                  <Link key={m.id} href={dashboardModuleHref(m.slug)} className={rowClass}>
+                    {body}
                   </Link>
-                ))}
-              </div>
-            </section>
-          ) : null}
+                );
+              }
 
-          {!(catalogMode === "FREE" && q.trim().length === 0) ? (
-            <div className="space-y-4 sm:space-y-6">
-              {Array.from(new Set(compactRows.map((m) => m.groupId)))
-                .sort((a, b) => a - b)
-                .map((gid) => {
-                  const items = compactRows.filter((m) => m.groupId === gid);
-                  const tone = groupTone(gid);
-                  return (
-                    <section
-                      key={gid}
-                      className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="min-w-0 truncate text-[10px] font-black tracking-[0.12em] text-[#66638c]">
-                          <span className="uppercase tracking-[0.2em]">
-                            {MODULE_GROUP_TIER_NAME[gid] ?? `กลุ่ม ${gid}`}
-                          </span>
-                          <span className="ml-1.5 font-black normal-case tracking-normal text-[#5f5a8a]">
-                            {gid === 1 ? "199 / เดือน" : "รวมแพ็กเกจ"}
-                          </span>
-                        </p>
-                        <span className={cn("shrink-0 rounded-lg border px-2 py-0.5 text-[10px] font-black", tone.chip)}>
-                          {items.length}
-                        </span>
-                      </div>
-                      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
-                        {items.map((m) => {
-                          if (showSystemMapCatalog && isSystemMapCatalogSlug(m.slug)) {
-                            return (
-                              <Link
-                                key={m.id}
-                                href="/dashboard/explore"
-                                className="group flex min-w-0 max-w-full items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white active:scale-[0.99]"
-                              >
-                                <ModuleThumb
-                                  url={m.cardImageUrl}
-                                  fallback={<GroupIcon groupId={m.groupId} className="h-5 w-5" />}
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm font-black text-[#1e1b4b]">{m.title}</p>
-                                  <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
-                                    {catalogModuleDescription(m)}
-                                  </p>
-                                </div>
-                                <span className="text-slate-300 transition group-hover:text-[#5b61ff]" aria-hidden>
-                                  →
-                                </span>
-                              </Link>
-                            );
-                          }
+              if (lockedByCooldown || lockedByDailyLimit) {
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    suppressHydrationWarning
+                    className={rowClass}
+                    onClick={() =>
+                      setErr(
+                        lockedByCooldown
+                          ? `ระบบถูกล็อคจนถึง ${formatBangkokDateTimeLong(cooldownIso!)}`
+                          : upgradeMessage,
+                      )
+                    }
+                  >
+                    {body}
+                  </button>
+                );
+              }
 
-                          const subscribed = savedSubscribedIds.has(m.id);
-                          const legacyTrialAccess = !subscribed && legacyTrialAccessIds.has(m.id);
-                          const hasAccess = subscribed || legacyTrialAccess;
-                          const unlocked = canAccessAppModule(access, { slug: m.slug, groupId: m.groupId });
-                          const cooldownIso = activeCooldownUnlockIso(m.id);
-                          const lockedByCooldown = !subscribed && cooldownIso !== null;
-                          const lockedByDailyLimit = !subscribed && !lockedByCooldown && reachedDailyLimit;
-                          const rowClass =
-                            "group flex w-full min-w-0 max-w-full items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white active:scale-[0.99]";
-                          const subtitle = catalogModuleDescription(m);
-
-                          const thumb = (
-                            <ModuleThumb
-                              url={m.cardImageUrl}
-                              fallback={<GroupIcon groupId={m.groupId} className="h-5 w-5" />}
-                            />
-                          );
-                          const body = (
-                            <>
-                              {thumb}
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-black text-[#1e1b4b]">{m.title}</p>
-                                <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{subtitle}</p>
-                              </div>
-                              <span className="text-slate-300 transition group-hover:text-[#5b61ff]" aria-hidden>
-                                →
-                              </span>
-                            </>
-                          );
-
-                          if (hasAccess) {
-                            return (
-                              <Link key={m.id} href={dashboardModuleHref(m.slug)} className={rowClass}>
-                                {body}
-                              </Link>
-                            );
-                          }
-
-                          if (lockedByCooldown || lockedByDailyLimit) {
-                            return (
-                              <button
-                                key={m.id}
-                                type="button"
-                                suppressHydrationWarning
-                                className={rowClass}
-                                onClick={() =>
-                                  setErr(
-                                    lockedByCooldown
-                                      ? `ระบบถูกล็อคจนถึง ${formatBangkokDateTimeLong(cooldownIso!)}`
-                                      : upgradeMessage,
-                                  )
-                                }
-                              >
-                                {body}
-                              </button>
-                            );
-                          }
-
-                          return (
-                            <button
-                              key={m.id}
-                              type="button"
-                              suppressHydrationWarning
-                              disabled={busyId === m.id || !unlocked}
-                              className={cn(rowClass, "disabled:opacity-50")}
-                              onClick={() => void subscribeOnly(m.id)}
-                            >
-                              {body}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </section>
-                  );
-                })}
-            </div>
-          ) : null}
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  suppressHydrationWarning
+                  disabled={busyId === m.id || !unlocked}
+                  className={cn(rowClass, "disabled:opacity-50")}
+                  onClick={() => void subscribeOnly(m.id)}
+                >
+                  {body}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {pendingUnsubscribe ? (
         <div

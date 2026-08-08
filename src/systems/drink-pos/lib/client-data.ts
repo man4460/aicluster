@@ -23,6 +23,7 @@ export type DrinkPosProductRow = {
 
 export type DrinkPosSaleLineRow = {
   id: string;
+  productId?: string | null;
   productName: string;
   sizeLabel: string | null;
   unitPriceBaht: number;

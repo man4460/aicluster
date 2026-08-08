@@ -537,7 +537,7 @@ export function LaundryQrHubClient({
 
       <FormModal
         open={showStaffQrModal}
-        size="lg"
+        size="full"
         appearance="glass"
         glassTint="amber"
         mobileCentered

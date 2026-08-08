@@ -54,6 +54,7 @@ const lb = useAppImageLightbox();
 - **`prepareImageFileForUpload`** — ย่อ/บีบ JPEG ก่อนอัปโหลด
 - **`AppPickGalleryImageButton`** / **`AppTakePhotoButton`** — ปุ่มเดี่ยว (คลาส: `appTemplatePickGalleryImageButtonClass`, `appTemplateTakePhotoButtonClass`)
 - **`AppGalleryCameraFileInputs`** + **`AppImagePickCameraButtons`** — แถวปุ่มคู่ (คู่กับ **`AppCameraCaptureModal`** — `getUserMedia`; สำรอง `input capture`)
+- **ปุ่มถ่ายรูป:** ใช้ **`useAppCameraCapture()`** → `openCamera(onFile)` + render `cameraModal` — ห้ามผูก `onPickCamera` ไป `input.capture.click()` อย่างเดียวเมื่อมี hook กลางนี้ (ลิงก์ลูกค้าโรงแรม / แผงชำระแดชบอร์ด)
 - **`appTemplateOutlineButtonClass`** — ปุ่มขอบ (เช่น เลือกขนาดกระดาษพิมพ์)
 - **`AppWindowPrintButton`** — พิมพ์หน้าปัจจุบัน (`window.print()`)
 

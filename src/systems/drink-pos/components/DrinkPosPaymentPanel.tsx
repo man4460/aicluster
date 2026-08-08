@@ -9,6 +9,7 @@ import {
   AppImagePickCameraButtons,
   AppImageThumb,
   prepareImageFileForUpload,
+  useAppCameraCapture,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
@@ -16,7 +17,7 @@ import { formatThb } from "@/systems/inventory/lib/inventory-client-data";
 import { DrinkPosButton } from "@/systems/drink-pos/components/DrinkPosButton";
 import {
   drinkPosPaymentMethodLabel,
-  drinkPosPaymentRequiresSlip,
+  drinkPosPaymentShowsSlipUpload,
   type DrinkPosPaymentMethod,
 } from "@/systems/drink-pos/lib/payment-method";
 import {
@@ -70,7 +71,7 @@ export function DrinkPosPaymentPanel({
   trialParam,
 }: DrinkPosPaymentPanelProps) {
   const galleryRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
+  const { openCamera, cameraInputRef, cameraModal } = useAppCameraCapture({ title: "ถ่ายรูปสลิป" });
   const lb = useAppImageLightbox();
   const methods = variant === "public" ? PUBLIC_METHODS : STAFF_METHODS;
   const isPublic = variant === "public";
@@ -81,9 +82,10 @@ export function DrinkPosPaymentPanel({
   const [slipBusy, setSlipBusy] = useState(false);
   const [slipErr, setSlipErr] = useState<string | null>(null);
   const [customerQrOpen, setCustomerQrOpen] = useState(false);
+  const [qrRefreshTick, setQrRefreshTick] = useState(0);
 
   const needsPayUi = amountBaht > 0;
-  const needsSlip = drinkPosPaymentRequiresSlip(method, amountBaht);
+  const needsSlip = drinkPosPaymentShowsSlipUpload(method, amountBaht);
   const showPromptPay = needsPayUi && method === "PROMPTPAY";
   const showTransfer = needsPayUi && method === "TRANSFER";
 
@@ -162,7 +164,7 @@ export function DrinkPosPaymentPanel({
     return () => {
       cancelled = true;
     };
-  }, [amountBaht, method, needsPayUi, isPublic, ownerId, trialParam]);
+  }, [amountBaht, method, needsPayUi, isPublic, ownerId, trialParam, qrRefreshTick]);
 
   async function uploadSlip(file: File | null) {
     if (!file || disabled) return;
@@ -235,7 +237,19 @@ export function DrinkPosPaymentPanel({
 
       {showPromptPay ? (
         <div className="space-y-2 rounded-[1.25rem] border border-[#e8e6fc]/90 bg-white/80 p-3">
-          <p className="text-xs font-black text-[#1e1b4b]">QR พร้อมเพย์</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-black text-[#1e1b4b]">QR พร้อมเพย์</p>
+            <DrinkPosButton
+              type="button"
+              disabled={disabled || qrBusy}
+              className="rounded-xl border border-white/60 bg-white/85 px-2.5 py-1.5 text-[11px] font-black text-[#4d47b6] shadow-sm"
+              aria-label="รีเฟรช QR พร้อมเพย์"
+              title="รีเฟรช QR"
+              onClick={() => setQrRefreshTick((n) => n + 1)}
+            >
+              {qrBusy ? "…" : "รีเฟรช"}
+            </DrinkPosButton>
+          </div>
           <div className="flex flex-col items-center justify-center rounded-2xl bg-[#f8f7ff] p-3 ring-1 ring-[#e8e6fc]">
             {qrBusy ? (
               <p className="py-12 text-xs font-bold text-[#66638c]">กำลังสร้าง QR…</p>
@@ -358,20 +372,21 @@ export function DrinkPosPaymentPanel({
       ) : null}
 
       {needsSlip ? (
-        <div className="space-y-2">
+        <div className="space-y-2 pb-1">
           <p className="text-xs font-black text-[#1e1b4b]">
-            {method === "PROMPTPAY" ? "แนบสลิปหลังโอนพร้อมเพย์" : "แนบสลิปการโอน"}
+            {method === "PROMPTPAY" ? "แนบสลิปหลังโอนพร้อมเพย์" : "แนบสลิปการโอน"}{" "}
+            <span className="font-semibold text-[#8b87b8]">(ไม่บังคับ)</span>
           </p>
           <AppGalleryCameraFileInputs
             galleryInputRef={galleryRef}
-            cameraInputRef={cameraRef}
+            cameraInputRef={cameraInputRef}
             onChange={onSlipInputChange}
           />
           <AppImagePickCameraButtons
             disabled={disabled}
             busy={slipBusy}
             onPickGallery={() => galleryRef.current?.click()}
-            onPickCamera={() => cameraRef.current?.click()}
+            onPickCamera={() => openCamera((file) => void uploadSlip(file))}
             labels={{ gallery: "เลือกรูปสลิป", camera: "ถ่ายสลิป", busy: "กำลังอัปโหลด…" }}
             className="justify-start"
           />
@@ -392,9 +407,10 @@ export function DrinkPosPaymentPanel({
               </div>
             </div>
           ) : (
-            <p className="text-[11px] font-semibold text-[#66638c]">ต้องแนบสลิปก่อนบันทึกบิล</p>
+            <p className="text-[11px] font-semibold text-[#66638c]">แนบสลิปได้ถ้าต้องการ — ไม่บังคับก่อนบันทึกบิล</p>
           )}
           <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิปชำระเงิน" />
+          {cameraModal}
         </div>
       ) : null}
     </div>
@@ -402,9 +418,9 @@ export function DrinkPosPaymentPanel({
 }
 
 export function drinkPosPaymentSubmitBlocked(
-  method: DrinkPosPaymentMethod,
-  amountBaht: number,
-  slipUrl: string | null,
+  _method: DrinkPosPaymentMethod,
+  _amountBaht: number,
+  _slipUrl: string | null,
 ): boolean {
-  return drinkPosPaymentRequiresSlip(method, amountBaht) && !slipUrl?.trim();
+  return false;
 }

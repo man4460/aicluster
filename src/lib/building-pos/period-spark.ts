@@ -50,17 +50,36 @@ export async function getBuildingPosPurchaseCostBahtInRange(
   return Math.round(sum * 100) / 100;
 }
 
+/** รายจ่ายทั่วไป (BuildingPosCostEntry) ตาม spentAt ในช่วง [start, end) */
+export async function getBuildingPosGeneralCostBahtInRange(
+  ownerId: string,
+  trialSessionId: string,
+  start: Date,
+  end: Date,
+): Promise<number> {
+  const agg = await prisma.buildingPosCostEntry.aggregate({
+    where: {
+      ownerUserId: ownerId,
+      trialSessionId,
+      spentAt: { gte: start, lt: end },
+    },
+    _sum: { amountBaht: true },
+  });
+  return Number(agg._sum.amountBaht ?? 0);
+}
+
 async function buildingPosSparkRowMetrics(
   ownerId: string,
   trialSessionId: string,
   start: Date,
   end: Date,
 ): Promise<{ revenueBaht: number; costBaht: number }> {
-  const [revenueBaht, costBaht] = await Promise.all([
+  const [revenueBaht, purchaseCost, generalCost] = await Promise.all([
     getBuildingPosRevenueBahtInRange(ownerId, trialSessionId, start, end),
     getBuildingPosPurchaseCostBahtInRange(ownerId, trialSessionId, start, end),
+    getBuildingPosGeneralCostBahtInRange(ownerId, trialSessionId, start, end),
   ]);
-  return { revenueBaht, costBaht };
+  return { revenueBaht, costBaht: purchaseCost + generalCost };
 }
 
 const TH_MONTH_SHORT = [

@@ -8,6 +8,7 @@ import { appTemplateOutlineButtonClass } from "@/components/app-templates";
 import { DrinkPosButton } from "@/systems/drink-pos/components/DrinkPosButton";
 import { DrinkPosLoyaltyBar } from "@/systems/drink-pos/components/DrinkPosLoyaltyBar";
 import { DrinkPosQrPosterClient } from "@/systems/drink-pos/components/DrinkPosQrPosterClient";
+import { ModuleStaffTokenQrPanel } from "@/components/qr/module-staff-token-qr-panel";
 import type { DrinkPosLoyaltyMemberDto } from "@/systems/drink-pos/lib/loyalty-rule";
 import { formatDrinkPosLoyaltyEarnRule } from "@/systems/drink-pos/lib/loyalty-rule";
 import {
@@ -28,7 +29,7 @@ type Props = {
   pointsPerUnit?: number;
 };
 
-type HubModal = "qr" | "lookup" | "kitchen" | "serve" | null;
+type HubModal = "qr" | "lookup" | "kitchen" | "serve" | "staff" | null;
 
 function ModalCloseFooter({ onClose }: { onClose: () => void }) {
   return (
@@ -181,6 +182,41 @@ export function DrinkPosLoyaltyHubClient({
 
         <DrinkPosButton
           type="button"
+          onClick={() => openModal("staff")}
+          className={cn(
+            hubCardBase,
+            "bg-gradient-to-br from-white/50 via-amber-50/40 to-orange-100/28",
+            "shadow-[0_28px_70px_-24px_rgba(245,158,11,0.38),inset_0_1px_0_0_rgba(255,255,255,0.65)]",
+            "hover:shadow-[0_34px_85px_-22px_rgba(245,158,11,0.45)]",
+            "focus-visible:outline-amber-600",
+          )}
+          aria-label="เปิดจัดการ QR พนักงาน"
+        >
+          <span className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-amber-400/28 blur-3xl" aria-hidden />
+          <span className="pointer-events-none absolute -bottom-14 -left-10 h-40 w-40 rounded-full bg-orange-300/18 blur-3xl" aria-hidden />
+          <div className="relative flex items-start gap-4 sm:gap-5">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg sm:h-16 sm:w-16">
+              <svg viewBox="0 0 24 24" className="h-7 w-7 sm:h-8 sm:w-8" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" />
+              </svg>
+            </span>
+            <div className="min-w-0 flex-1 pt-0.5">
+              <h2 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">QR พนักงาน</h2>
+              <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+                ลิงก์ลับสำหรับเคาน์เตอร์ — บันทึกขายโดยไม่ล็อกอินเจ้าของ
+              </p>
+              <p className="mt-5 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-800">
+                <span>คลิกเพื่อเปิด</span>
+                <HubCardChevron />
+              </p>
+            </div>
+          </div>
+        </DrinkPosButton>
+
+        <DrinkPosButton
+          type="button"
           onClick={() => openModal("kitchen")}
           className={cn(
             hubCardBase,
@@ -310,6 +346,28 @@ export function DrinkPosLoyaltyHubClient({
           member={member}
           onMemberChange={setMember}
           hideMembersLink
+        />
+      </FormModal>
+
+      <FormModal
+        open={modal === "staff"}
+        size="full"
+        appearance="glass"
+        glassTint="amber"
+        mobileCentered
+        onClose={() => setModal(null)}
+        title="QR พนักงาน"
+        description="สร้างลิงก์ถาวรให้พนักงานบันทึกขายที่เคาน์เตอร์ — ไม่มีวันหมดอายุ"
+        footer={<ModalCloseFooter onClose={() => setModal(null)} />}
+      >
+        <ModuleStaffTokenQrPanel
+          staffLinkApiPath="/api/drink-pos/session/staff-link"
+          shopLabel={shopLabel}
+          logoUrl={logoUrl}
+          trialExportBlocked={trialExportBlocked}
+          tagline="สแกนเข้าหน้าพนักงาน — ไม่มีวันหมดอายุ · ไม่ต้องล็อกอินเจ้าของ"
+          mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าหน้าพนักงานบันทึกขาย"
+          openPrimaryLabel="เปิดหน้าพนักงาน"
         />
       </FormModal>
 

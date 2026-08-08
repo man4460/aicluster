@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
+  AlertTriangle,
   BarChart3,
   CalendarDays,
   ChevronDown,
@@ -29,13 +30,17 @@ import {
 import {
   AppDashboardSection,
   AppEmptyState,
+  AppGalleryCameraFileInputs,
   AppImageLightbox,
+  AppImagePickCameraButtons,
   AppImageThumb,
   AppRevenueCostColumnChart,
   AppSectionHeader,
+  AppSlipPaperSizeSettingsField,
   AppSparkChartPanel,
   appTemplateOutlineButtonClass,
   prepareImageFileAsDataUrl,
+  useAppCameraCapture,
   useAppImageLightbox,
   useAppNoticePopup,
   type AppRevenueCostBucket,
@@ -43,6 +48,18 @@ import {
 import { appDashboardBrandGradientBarClass, appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import {
+  footballTurfPublicBookUrl,
+  footballTurfPublicCheckInUrl,
+} from "@/lib/football-turf/public-url";
+import {
+  footballTurfCardAccentBarClass,
+  footballTurfContentCardClass,
+  footballTurfCourtStatusBadgeClass,
+  footballTurfCourtTabPillClass,
+  footballTurfCourtTabShellClass,
+  footballTurfMetaChipClass,
+} from "@/systems/football-turf/lib/ui-tokens";
 import {
   assetRowEditIconButtonClass,
   assetRowRemoveIconButtonClass,
@@ -527,6 +544,9 @@ const EMPTY_SETTINGS: FootballTurfVenueSettings = {
   contactPhone: "",
   contactLine: "",
   note: "",
+  slipPaperSize: "SLIP_58",
+  portalBookingPaymentMode: "NONE",
+  depositAmountBaht: null,
 };
 
 function formatMoney(value: number): string {
@@ -615,11 +635,62 @@ function bookingStatusClass(status: FootballTurfBooking["status"]): string {
 }
 
 function bookingStatusLabel(status: FootballTurfBooking["status"]): string {
-  if (status === "BOOKED") return "จองแล้ว";
-  if (status === "CHECKED_IN") return "เช็กอินแล้ว";
-  if (status === "PLAYING") return "กำลังใช้งาน";
-  if (status === "COMPLETED") return "ปิดรอบแล้ว";
+  if (status === "BOOKED") return "จอง";
+  if (status === "CHECKED_IN") return "เช็กอิน";
+  if (status === "PLAYING") return "เช็กอิน";
+  if (status === "COMPLETED") return "เช็กเอาท์";
   return "ยกเลิก";
+}
+
+function getBookingInitials(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return "?";
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function footballBookingNeedsClose(
+  item: FootballTurfBooking,
+  opts: { todayDateKey: string; nowMinutes: number },
+): boolean {
+  if (item.status === "CANCELLED" || item.status === "COMPLETED") return false;
+  if (item.bookingDate < opts.todayDateKey) return true;
+  if (item.bookingDate > opts.todayDateKey) return false;
+  if (item.status === "BOOKED" && timeToMinutes(item.startTime) <= opts.nowMinutes) return true;
+  if (
+    (item.status === "CHECKED_IN" || item.status === "PLAYING") &&
+    timeToMinutes(item.endTime) <= opts.nowMinutes
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function footballBookingOverdueLabel(status: FootballTurfBooking["status"]): string {
+  if (status === "BOOKED") return "ถึงเวลาเช็กอิน — ลูกค้ายังไม่มา";
+  return "ถึงเวลาเช็กเอาท์ — ควรปิดรอบ";
+}
+
+type QueueDatePreset = "TODAY" | "MONTH" | "YEAR" | "CUSTOM" | "ALL";
+
+function queueDateInPreset(
+  bookingDate: string,
+  preset: QueueDatePreset,
+  todayDateKey: string,
+  from: string,
+  to: string,
+): boolean {
+  if (preset === "ALL") return true;
+  if (preset === "TODAY") return bookingDate === todayDateKey;
+  if (preset === "MONTH") return bookingDate.slice(0, 7) === todayDateKey.slice(0, 7);
+  if (preset === "YEAR") return bookingDate.slice(0, 4) === todayDateKey.slice(0, 4);
+  const start = from && to && from > to ? to : from || to;
+  const end = from && to && from > to ? from : to || from;
+  if (!start && !end) return true;
+  if (start && bookingDate < start) return false;
+  if (end && bookingDate > end) return false;
+  return true;
 }
 
 /** วันที่ท้องถิ่น YYYY-MM-DD (ไม่ใช้ UTC จาก toISOString) */
@@ -642,10 +713,9 @@ function bookingCoversMinutes(booking: Pick<FootballTurfBooking, "startTime" | "
 }
 
 /**
- * หาคิวที่สนามกำลังใช้งานจริง (ต้องยังไม่หมดเวลา)
- * - วันนี้เท่านั้น: อิงนาฬิกา
- * - PLAYING / CHECKED_IN / BOOKED ที่ endTime ยังไม่ผ่าน และ (PLAYING หรือช่วงเวลากลืนตอนนี้)
- * - วันอื่นหรือรอบที่เวลาผ่านแล้ว → ไม่แสดงผู้จอง/ผู้เล่น
+ * หาคิวที่สนามกำลังใช้งานจริง (อิงนาฬิกาวันนี้เท่านั้น)
+ * - รอบ PLAYING / CHECKED_IN ที่เลย endTime แล้วยังไม่ปิด → ถือว่ายังใช้อยู่ (overdue)
+ * - ไม่เช่นนั้นใช้รอบที่ช่วงเวลากลืนตอนนี้ (PLAYING > CHECKED_IN > BOOKED)
  */
 function findCourtLiveBooking(
   courtBookings: FootballTurfBooking[],
@@ -653,16 +723,28 @@ function findCourtLiveBooking(
 ): FootballTurfBooking | null {
   if (!opts.isToday) return null;
 
+  const open = (item: FootballTurfBooking) =>
+    item.status !== "CANCELLED" && item.status !== "COMPLETED";
+
+  const overdue = courtBookings
+    .filter(
+      (item) =>
+        open(item) &&
+        (item.status === "PLAYING" || item.status === "CHECKED_IN") &&
+        timeToMinutes(item.endTime) <= opts.nowMinutes,
+    )
+    .sort((a, b) => timeToMinutes(b.endTime) - timeToMinutes(a.endTime));
+  if (overdue[0]) return overdue[0];
+
   const active = courtBookings.filter(
-    (item) =>
-      item.status !== "CANCELLED" &&
-      item.status !== "COMPLETED" &&
-      timeToMinutes(item.endTime) > opts.nowMinutes,
+    (item) => open(item) && timeToMinutes(item.endTime) > opts.nowMinutes,
   );
   if (active.length === 0) return null;
 
   const playing = active
-    .filter((item) => item.status === "PLAYING")
+    .filter(
+      (item) => item.status === "PLAYING" && bookingCoversMinutes(item, opts.nowMinutes),
+    )
     .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
   if (playing[0]) return playing[0];
 
@@ -676,6 +758,63 @@ function findCourtLiveBooking(
       return timeToMinutes(a.startTime) - timeToMinutes(b.startTime);
     });
   return covering[0] ?? null;
+}
+
+/** คิวถัดไปหลังรอบปัจจุบัน (หรือรอบถัดไปถ้าสนามว่าง) — เหมือน「เช็คอินต่อ」ของโรงแรม */
+function findCourtNextBooking(
+  courtBookings: FootballTurfBooking[],
+  opts: { nowMinutes: number },
+  current: FootballTurfBooking | null,
+): FootballTurfBooking | null {
+  const afterMinutes = current ? timeToMinutes(current.endTime) : opts.nowMinutes;
+  const currentId = current?.id;
+  return (
+    courtBookings
+      .filter(
+        (item) =>
+          item.status !== "CANCELLED" &&
+          item.status !== "COMPLETED" &&
+          item.id !== currentId &&
+          timeToMinutes(item.startTime) >= afterMinutes,
+      )
+      .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))[0] ?? null
+  );
+}
+
+function courtLiveAlertKind(
+  current: FootballTurfBooking | null,
+  nowMinutes: number,
+): "NO_SHOW" | "OVERTIME" | null {
+  if (!current) return null;
+  const start = timeToMinutes(current.startTime);
+  const end = timeToMinutes(current.endTime);
+  if (
+    (current.status === "PLAYING" || current.status === "CHECKED_IN") &&
+    end <= nowMinutes
+  ) {
+    return "OVERTIME";
+  }
+  if (current.status === "BOOKED" && start <= nowMinutes && end > nowMinutes) {
+    return "NO_SHOW";
+  }
+  return null;
+}
+
+/** ช่วงเปิด–ปิดตามรอบที่ตั้งในสนาม · นอกช่วง = สนามปิด */
+function courtHoursPhase(
+  court: Pick<FootballTurfCourt, "openTime" | "closeTime">,
+  nowMinutes: number,
+): "BEFORE_OPEN" | "OPEN" | "AFTER_CLOSE" {
+  const open = timeToMinutes(court.openTime);
+  const close = timeToMinutes(court.closeTime);
+  if (close <= open) {
+    // ข้ามคืน — เปิดถ้าเลยเปิด หรือยังไม่ถึงปิด
+    if (nowMinutes >= open || nowMinutes < close) return "OPEN";
+    return "BEFORE_OPEN";
+  }
+  if (nowMinutes < open) return "BEFORE_OPEN";
+  if (nowMinutes >= close) return "AFTER_CLOSE";
+  return "OPEN";
 }
 
 function isSlotTimePassed(
@@ -780,10 +919,15 @@ export function FootballTurfDashboard({
   const [qrOpen, setQrOpen] = useState(false);
   const [scheduleDate, setScheduleDate] = useState(() => localDateKey());
   const [overviewCourtId, setOverviewCourtId] = useState("ALL");
+  const [scheduleCourtId, setScheduleCourtId] = useState<string>("");
   const [queueSearch, setQueueSearch] = useState("");
   const [queueStatus, setQueueStatus] = useState("ALL");
   const [queueCourtId, setQueueCourtId] = useState("ALL");
-  const [queueDate, setQueueDate] = useState(() => localDateKey());
+  const [queueFilterOpen, setQueueFilterOpen] = useState(true);
+  const [queueDatePreset, setQueueDatePreset] = useState<QueueDatePreset>("MONTH");
+  const [queueDateFrom, setQueueDateFrom] = useState("");
+  const [queueDateTo, setQueueDateTo] = useState("");
+  const [queueNeedsCloseOnly, setQueueNeedsCloseOnly] = useState(false);
   const [financeSearch, setFinanceSearch] = useState("");
   const [financeType, setFinanceType] = useState<"ALL" | "BOOKING" | "PROMOTION" | "COST">("ALL");
   const [financeStartDate, setFinanceStartDate] = useState(() => localDateKey());
@@ -813,8 +957,17 @@ export function FootballTurfDashboard({
     slotMinutes: "60",
     weekdayPrice: "900",
     weekendPrice: "1200",
+    imageUrl: "",
     isActive: true,
   });
+  const [courtImageBusy, setCourtImageBusy] = useState(false);
+  const courtImageGalleryRef = useRef<HTMLInputElement>(null);
+  const {
+    openCamera: openCourtCamera,
+    cameraInputRef: courtCameraInputRef,
+    cameraModal: courtCameraModal,
+  } = useAppCameraCapture({ title: "ถ่ายรูปสนาม" });
+  const courtImageLightbox = useAppImageLightbox();
   const [promotionForm, setPromotionForm] = useState({
     name: "",
     kind: "COUNT",
@@ -939,9 +1092,9 @@ export function FootballTurfDashboard({
     () => selectedDayCosts.reduce((sum, item) => sum + item.amount, 0),
     [selectedDayCosts],
   );
-  const publicLinkQuery = trialSessionId ? `?t=${encodeURIComponent(trialSessionId)}` : "";
-  const publicBookUrl = `${origin}/football-turf/book/${ownerUserId}${publicLinkQuery}`;
-  const publicCheckInUrl = `${origin}/football-turf/check-in/${ownerUserId}${publicLinkQuery}`;
+  const publicLinkTrial = trialSessionId?.trim() || "prod";
+  const publicBookUrl = footballTurfPublicBookUrl(origin, ownerUserId, publicLinkTrial);
+  const publicCheckInUrl = footballTurfPublicCheckInUrl(origin, ownerUserId, publicLinkTrial);
   const bookingCourt = useMemo(
     () => courts.find((item) => item.id === Number(bookingForm.courtId)) ?? courts[0] ?? null,
     [courts, bookingForm.courtId],
@@ -994,13 +1147,22 @@ export function FootballTurfDashboard({
       })),
     [courts, bookings, scheduleDate],
   );
-  const filteredScheduleBoard = useMemo(
-    () =>
-      overviewCourtId === "ALL"
-        ? scheduleBoard
-        : scheduleBoard.filter(({ court }) => String(court.id) === overviewCourtId),
-    [overviewCourtId, scheduleBoard],
-  );
+
+  useEffect(() => {
+    if (courts.length === 0) {
+      setScheduleCourtId("");
+      return;
+    }
+    setScheduleCourtId((prev) =>
+      prev && courts.some((court) => String(court.id) === prev) ? prev : String(courts[0]!.id),
+    );
+  }, [courts]);
+
+  const selectedScheduleBoard = useMemo(() => {
+    if (!scheduleCourtId) return scheduleBoard[0] ?? null;
+    return scheduleBoard.find(({ court }) => String(court.id) === scheduleCourtId) ?? scheduleBoard[0] ?? null;
+  }, [scheduleBoard, scheduleCourtId]);
+
   const filteredOverviewCourts = useMemo(
     () => (overviewCourtId === "ALL" ? courts : courts.filter((court) => String(court.id) === overviewCourtId)),
     [courts, overviewCourtId],
@@ -1026,18 +1188,60 @@ export function FootballTurfDashboard({
   );
   const queueFilteredBookings = useMemo(() => {
     const keyword = queueSearch.trim().toLowerCase();
-    return bookings.filter((item) => {
-      const matchesKeyword =
-        !keyword ||
-        `${item.teamName} ${item.customerName} ${item.customerPhone} ${item.courtName}`
-          .toLowerCase()
-          .includes(keyword);
-      const matchesStatus = queueStatus === "ALL" || item.status === queueStatus;
-      const matchesCourt = queueCourtId === "ALL" || String(item.courtId) === queueCourtId;
-      const matchesDate = !queueDate || item.bookingDate === queueDate;
-      return matchesKeyword && matchesStatus && matchesCourt && matchesDate;
-    });
-  }, [bookings, queueCourtId, queueDate, queueSearch, queueStatus]);
+    const nowMinutes = localNowMinutes(new Date(liveClockMs));
+    return bookings
+      .filter((item) => {
+        const matchesKeyword =
+          !keyword ||
+          `${item.teamName} ${item.customerName} ${item.customerPhone} ${item.courtName}`
+            .toLowerCase()
+            .includes(keyword);
+        const matchesStatus = queueStatus === "ALL" || item.status === queueStatus;
+        const matchesCourt = queueCourtId === "ALL" || String(item.courtId) === queueCourtId;
+        const matchesDate = queueDateInPreset(
+          item.bookingDate,
+          queueDatePreset,
+          todayDateKey,
+          queueDateFrom,
+          queueDateTo,
+        );
+        const overdue = footballBookingNeedsClose(item, { todayDateKey, nowMinutes });
+        if (queueNeedsCloseOnly && !overdue) return false;
+        return matchesKeyword && matchesStatus && matchesCourt && matchesDate;
+      })
+      .sort((a, b) => {
+        const aOver = footballBookingNeedsClose(a, { todayDateKey, nowMinutes }) ? 1 : 0;
+        const bOver = footballBookingNeedsClose(b, { todayDateKey, nowMinutes }) ? 1 : 0;
+        if (aOver !== bOver) return bOver - aOver;
+        const byDate = b.bookingDate.localeCompare(a.bookingDate);
+        if (byDate !== 0) return byDate;
+        return timeToMinutes(b.startTime) - timeToMinutes(a.startTime);
+      });
+  }, [
+    bookings,
+    liveClockMs,
+    queueCourtId,
+    queueDateFrom,
+    queueDatePreset,
+    queueDateTo,
+    queueNeedsCloseOnly,
+    queueSearch,
+    queueStatus,
+    todayDateKey,
+  ]);
+  const queueNeedsCloseCount = useMemo(() => {
+    const nowMinutes = localNowMinutes(new Date(liveClockMs));
+    return bookings.filter((item) => footballBookingNeedsClose(item, { todayDateKey, nowMinutes })).length;
+  }, [bookings, liveClockMs, todayDateKey]);
+  const queueFiltersActive = useMemo(
+    () =>
+      Boolean(queueSearch.trim()) ||
+      queueStatus !== "ALL" ||
+      queueCourtId !== "ALL" ||
+      queueNeedsCloseOnly ||
+      queueDatePreset !== "MONTH",
+    [queueCourtId, queueDatePreset, queueNeedsCloseOnly, queueSearch, queueStatus],
+  );
   const financeRows = useMemo(
     () =>
       [
@@ -1177,15 +1381,20 @@ export function FootballTurfDashboard({
     Number(Boolean(queueSearch.trim())) +
     Number(queueStatus !== "ALL") +
     Number(queueCourtId !== "ALL") +
-    Number(queueDate !== todayDateKey);
+    Number(queueNeedsCloseOnly) +
+    Number(queueDatePreset !== "MONTH");
   const queueFilterSummary = buildFilterSummary(
     [
       queueSearch.trim() && `ค้นหา "${queueSearch.trim()}"`,
       queueStatus !== "ALL" && `สถานะ ${bookingStatusLabel(queueStatus as FootballTurfBooking["status"])}`,
       queueCourtLabel && `สนาม ${queueCourtLabel}`,
-      queueDate !== todayDateKey && (queueDate ? `วันที่ ${queueDate}` : "ทุกวัน"),
+      queueNeedsCloseOnly && "ต้องปิดงาน",
+      queueDatePreset !== "MONTH" &&
+        ({ TODAY: "วันนี้", MONTH: "เดือนนี้", YEAR: "ปีนี้", CUSTOM: "ช่วงเวลา", ALL: "ทั้งหมด" } as const)[
+          queueDatePreset
+        ],
     ],
-    "แสดงรายการจองของวันนี้",
+    "แสดงรายการจองเดือนนี้",
   );
   const financeTypeLabel =
     financeType === "BOOKING"
@@ -1312,6 +1521,7 @@ export function FootballTurfDashboard({
         slotMinutes: String(court.slotMinutes),
         weekdayPrice: String(court.weekdayPrice),
         weekendPrice: String(court.weekendPrice),
+        imageUrl: court.imageUrl ?? "",
         isActive: court.isActive,
       });
     } else {
@@ -1323,6 +1533,7 @@ export function FootballTurfDashboard({
         slotMinutes: "60",
         weekdayPrice: "900",
         weekendPrice: "1200",
+        imageUrl: "",
         isActive: true,
       });
     }
@@ -1339,8 +1550,22 @@ export function FootballTurfDashboard({
       slotMinutes: "60",
       weekdayPrice: "900",
       weekendPrice: "1200",
+      imageUrl: "",
       isActive: true,
     });
+  }
+
+  async function onCourtImageSelected(file: File | null) {
+    if (!file) return;
+    setCourtImageBusy(true);
+    try {
+      const dataUrl = await prepareImageFileAsDataUrl(file);
+      setCourtForm((state) => ({ ...state, imageUrl: dataUrl }));
+    } catch (error) {
+      notice.error(error instanceof Error ? error.message : "แนบรูปไม่สำเร็จ");
+    } finally {
+      setCourtImageBusy(false);
+    }
   }
 
   function openPromotionModal(promotion?: FootballTurfPromotion) {
@@ -1469,7 +1694,7 @@ export function FootballTurfDashboard({
   function openBookingModal(source: FootballTurfBookingSource) {
     setEditingBookingId(null);
     const nextCourtId = bookingForm.courtId || String(courts[0]?.id ?? 1);
-    const nextBookingDate = bookingForm.bookingDate || new Date().toISOString().slice(0, 10);
+    const nextBookingDate = bookingForm.bookingDate || localDateKey();
     const nextSlot = resolveBookingSlot(
       nextCourtId,
       nextBookingDate,
@@ -1485,6 +1710,61 @@ export function FootballTurfDashboard({
       endTime: nextSlot.endTime,
     }));
     setBookingOpen(true);
+  }
+
+  /** เปิดฟอร์มจอง/walk-in จากการ์ดสนาม (วันนี้ + สล็อตว่างถัดไปของสนามนั้น) */
+  function openCourtLiveBooking(court: FootballTurfCourt, source: FootballTurfBookingSource) {
+    const today = localDateKey(new Date(liveClockMs));
+    const nextSlot = resolveBookingSlot(String(court.id), today);
+    setEditingBookingId(null);
+    setBookingSource(source);
+    setBookingForm((state) => ({
+      ...state,
+      courtId: String(court.id),
+      bookingDate: today,
+      startTime: nextSlot.startTime,
+      endTime: nextSlot.endTime,
+      customerName: "",
+      customerPhone: "",
+      teamName: "",
+      playerCount: "",
+      note: "",
+      paymentStatus: "UNPAID",
+    }));
+    setBookingOpen(true);
+  }
+
+  /** จองช่วงเวลาว่างจากตาราง */
+  function openScheduleSlotBooking(court: FootballTurfCourt, startTime: string, endTime: string) {
+    setEditingBookingId(null);
+    setBookingSource("ONLINE");
+    setBookingForm((state) => ({
+      ...state,
+      courtId: String(court.id),
+      bookingDate: scheduleDate,
+      startTime,
+      endTime,
+      customerName: "",
+      customerPhone: "",
+      teamName: "",
+      playerCount: "",
+      note: "",
+      paymentStatus: "UNPAID",
+    }));
+    setBookingOpen(true);
+  }
+
+  async function onMarkBookingNoShow(id: number) {
+    const ok = await notice.confirm("ลูกค้าไม่มา · ยกเลิกคิวและเปิดสนามใช่หรือไม่?", {
+      title: "ไม่มา · เปิดคิว",
+      confirmLabel: "เปิดคิว",
+      tone: "warning",
+    });
+    if (!ok) return;
+    await runSave(async () => {
+      await repo.updateBooking(id, { status: "CANCELLED" });
+      await refresh();
+    });
   }
 
   function updateBookingCourt(nextCourtId: string) {
@@ -1577,6 +1857,7 @@ export function FootballTurfDashboard({
         slotMinutes: Number(courtForm.slotMinutes) || 60,
         weekdayPrice: Number(courtForm.weekdayPrice) || 0,
         weekendPrice: Number(courtForm.weekendPrice) || 0,
+        imageUrl: courtForm.imageUrl.trim(),
         isActive: courtForm.isActive,
       };
       if (editingCourtId != null) {
@@ -1808,6 +2089,12 @@ export function FootballTurfDashboard({
         contactPhone: settingsForm.contactPhone.trim(),
         contactLine: settingsForm.contactLine.trim(),
         note: settingsForm.note.trim(),
+        slipPaperSize: settingsForm.slipPaperSize,
+        portalBookingPaymentMode: settingsForm.portalBookingPaymentMode,
+        depositAmountBaht:
+          settingsForm.portalBookingPaymentMode === "DEPOSIT"
+            ? Math.max(0, Math.round(Number(settingsForm.depositAmountBaht ?? 0))) || null
+            : null,
       });
       setSettings(next);
       setSettingsForm(next);
@@ -1859,7 +2146,10 @@ export function FootballTurfDashboard({
     setQueueSearch("");
     setQueueStatus("ALL");
     setQueueCourtId("ALL");
-    setQueueDate(todayDateKey);
+    setQueueDatePreset("MONTH");
+    setQueueDateFrom("");
+    setQueueDateTo("");
+    setQueueNeedsCloseOnly(false);
   }
 
   function resetFinanceFilters() {
@@ -1885,55 +2175,30 @@ export function FootballTurfDashboard({
         <div className="space-y-4">
           <AppDashboardSection tone="violet">
             <div className="flex flex-col gap-4">
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
+              <div className="grid gap-4">
                 <div className="min-w-0">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">ภาพรวมวันที่เลือก</p>
                   <div className="mt-3 grid w-full grid-cols-2 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.45fr)_minmax(0,1.45fr)]">
-                    <div className="flex min-h-[7.25rem] flex-col rounded-xl border border-violet-200/60 bg-gradient-to-br from-white/90 via-[#0000BF]/10 to-violet-50/80 px-4 py-4 shadow-sm">
-                      <p className={cn(COMPACT_CARD_LABEL_CLASS, "text-[#4d47b6]")}>สนามเปิดใช้งาน</p>
-                      <p className={cn(COMPACT_CARD_VALUE_CLASS, "text-slate-900")}>{filteredOverviewCourts.length}</p>
+                    <div className="relative flex min-h-[7.25rem] flex-col overflow-hidden rounded-[1rem] border border-white/60 bg-gradient-to-br from-white/60 via-indigo-50/35 to-indigo-100/30 px-4 py-4 shadow-[0_18px_38px_-26px_rgba(79,70,229,0.45)] backdrop-blur-xl">
+                      <p className={cn(COMPACT_CARD_LABEL_CLASS, "text-indigo-700/80")}>สนามเปิดใช้งาน</p>
+                      <p className={cn(COMPACT_CARD_VALUE_CLASS, "text-[#1e1b4b]")}>{filteredOverviewCourts.length}</p>
                     </div>
-                    <div className="flex min-h-[7.25rem] flex-col rounded-xl border border-fuchsia-200/50 bg-gradient-to-br from-white/90 via-fuchsia-50/55 to-rose-50/80 px-4 py-4 shadow-sm">
-                      <p className={cn(COMPACT_CARD_LABEL_CLASS, "text-fuchsia-700")}>รอบที่จอง</p>
-                      <p className={cn(COMPACT_CARD_VALUE_CLASS, "text-slate-900")}>{filteredOverviewBookings.length}</p>
+                    <div className="relative flex min-h-[7.25rem] flex-col overflow-hidden rounded-[1rem] border border-white/60 bg-gradient-to-br from-white/60 via-amber-50/35 to-orange-100/30 px-4 py-4 shadow-[0_18px_38px_-26px_rgba(217,119,6,0.35)] backdrop-blur-xl">
+                      <p className={cn(COMPACT_CARD_LABEL_CLASS, "text-amber-700/80")}>รอบที่จอง</p>
+                      <p className={cn(COMPACT_CARD_VALUE_CLASS, "text-[#1e1b4b]")}>{filteredOverviewBookings.length}</p>
                     </div>
-                    <div className="col-span-2 flex min-h-[7.25rem] flex-col rounded-xl border border-[#0000BF]/30 bg-[#0000BF]/10 px-4 py-4 shadow-sm sm:col-span-1">
-                      <p className={cn(COMPACT_CARD_LABEL_CLASS, "text-[#0000BF]")}>รายรับรวม</p>
-                      <p className={cn(COMPACT_CARD_VALUE_CLASS, "text-slate-900 tabular-nums")}>
+                    <div className="col-span-2 relative flex min-h-[7.25rem] flex-col overflow-hidden rounded-[1rem] border border-white/60 bg-gradient-to-br from-white/60 via-emerald-50/35 to-emerald-100/30 px-4 py-4 shadow-[0_18px_38px_-26px_rgba(16,185,129,0.35)] backdrop-blur-xl sm:col-span-1">
+                      <p className={cn(COMPACT_CARD_LABEL_CLASS, "text-emerald-700/80")}>รายรับรวม</p>
+                      <p className={cn(COMPACT_CARD_VALUE_CLASS, "text-[#1e1b4b] tabular-nums")}>
                         {formatMoney(overviewRevenueTotal)}
                       </p>
                     </div>
-                    <div className="col-span-2 flex min-h-[7.25rem] flex-col rounded-xl border border-violet-200/60 bg-gradient-to-br from-white/90 via-violet-50/70 to-[#0000BF]/10 px-4 py-4 shadow-sm sm:col-span-1">
-                      <p className={cn(COMPACT_CARD_LABEL_CLASS, "text-violet-700")}>กำไรขั้นต้น</p>
-                      <p className={cn(COMPACT_CARD_VALUE_CLASS, "text-slate-900 tabular-nums")}>
+                    <div className="col-span-2 relative flex min-h-[7.25rem] flex-col overflow-hidden rounded-[1rem] border border-white/60 bg-gradient-to-br from-white/60 via-violet-50/35 to-violet-100/30 px-4 py-4 shadow-[0_18px_38px_-26px_rgba(124,58,237,0.4)] backdrop-blur-xl sm:col-span-1">
+                      <p className={cn(COMPACT_CARD_LABEL_CLASS, "text-violet-700/80")}>กำไรขั้นต้น</p>
+                      <p className={cn(COMPACT_CARD_VALUE_CLASS, "text-[#1e1b4b] tabular-nums")}>
                         {formatMoney(overviewProfitTotal)}
                       </p>
                     </div>
-                  </div>
-                </div>
-                <div className="overflow-x-auto pb-1 xl:pt-7 xl:overflow-visible xl:pb-0">
-                  <div className="flex min-w-max items-center gap-2 xl:min-w-0 xl:flex-wrap xl:justify-end">
-                    <button
-                      type="button"
-                      onClick={() => openCourtModal()}
-                      className="h-11 shrink-0 whitespace-nowrap rounded-xl border border-[#0000BF]/30 bg-white/90 px-4 text-sm font-black text-[#2e2a58] shadow-sm transition-all hover:bg-[#0000BF]/10 active:scale-[0.98]"
-                    >
-                      เพิ่มสนาม
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openBookingModal("WALK_IN")}
-                      className="h-11 shrink-0 whitespace-nowrap rounded-xl border border-[#0000BF]/30 bg-[#0000BF]/10 px-4 text-sm font-black text-[#2e2a58] shadow-sm transition-all hover:bg-[#0000BF]/12 active:scale-[0.98]"
-                    >
-                      เพิ่ม walk-in
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openBookingModal("ONLINE")}
-                      className="app-btn-primary h-11 shrink-0 whitespace-nowrap rounded-xl px-4 text-sm font-black shadow-lg transition-all active:scale-[0.98]"
-                    >
-                      เพิ่มการจอง
-                    </button>
                   </div>
                 </div>
               </div>
@@ -1978,74 +2243,319 @@ export function FootballTurfDashboard({
                 tone="violet"
                 title="สนามที่กำลังใช้งาน"
               />
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <p className="mt-1 text-[11px] font-semibold text-[#8b87b8]">
+                สถานะตามเวลาปัจจุบัน · ไม่ผูกกับตัวกรองวันที่ด้านบน
+              </p>
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {filteredOverviewCourts.map((court) => {
-                  const courtDayBookings = filteredOverviewBookings.filter((item) => item.courtId === court.id);
                   const liveNow = new Date(liveClockMs);
-                  const isTodayView =
-                    scheduleDate === todayDateKey && scheduleDate === localDateKey(liveNow);
+                  const liveTodayKey = localDateKey(liveNow);
+                  const nowMinutes = localNowMinutes(liveNow);
+                  const hoursPhase = courtHoursPhase(court, nowMinutes);
+                  const isHoursClosed = hoursPhase !== "OPEN";
+                  const courtDayBookings = bookings
+                    .filter(
+                      (item) =>
+                        item.courtId === court.id &&
+                        item.bookingDate === liveTodayKey &&
+                        item.status !== "CANCELLED",
+                    )
+                    .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
                   const current = findCourtLiveBooking(courtDayBookings, {
-                    isToday: isTodayView,
-                    nowMinutes: localNowMinutes(liveNow),
+                    isToday: true,
+                    nowMinutes,
                   });
-                  const idle = !current;
+                  const next = findCourtNextBooking(courtDayBookings, { nowMinutes }, current);
+                  const alertKind = courtLiveAlertKind(current, nowMinutes);
+                  const isNoShowAlert = alertKind === "NO_SHOW";
+                  const isOvertimeAlert = alertKind === "OVERTIME";
+                  /** นอกเวลาเปิด แต่ยังมีรอบค้างปิด → ไม่ถือว่าปิดสนิท */
+                  const showAsClosed = isHoursClosed && !isOvertimeAlert && !current;
+                  const idle = !current && !showAsClosed;
+                  const accentTone: "emerald" | "indigo" | "amber" | "rose" | "sky" | "slate" = showAsClosed
+                    ? "slate"
+                    : isOvertimeAlert
+                      ? "rose"
+                      : isNoShowAlert
+                        ? "amber"
+                        : idle
+                          ? "emerald"
+                          : current?.status === "PLAYING"
+                            ? "indigo"
+                            : current?.status === "CHECKED_IN"
+                              ? "sky"
+                              : "amber";
+                  const statusTone: "emerald" | "indigo" | "amber" | "rose" | "slate" = showAsClosed
+                    ? "slate"
+                    : isOvertimeAlert
+                      ? "rose"
+                      : isNoShowAlert
+                        ? "amber"
+                        : idle
+                          ? "emerald"
+                          : current?.status === "PLAYING" || current?.status === "CHECKED_IN"
+                            ? "indigo"
+                            : "amber";
+                  const statusLabel = showAsClosed
+                    ? "สนามปิด"
+                    : idle
+                      ? "ว่าง"
+                      : isOvertimeAlert
+                        ? "เลยเวลา"
+                        : bookingStatusLabel(current!.status);
+                  const nextIsContinuous =
+                    Boolean(current && next) &&
+                    timeToMinutes(next!.startTime) === timeToMinutes(current!.endTime);
+                  const guestLabel = current
+                    ? current.teamName || current.customerName
+                    : null;
+                  const nextGuestLabel = next ? next.teamName || next.customerName : null;
+                  const hoursRangeLabel = `${court.openTime}–${court.closeTime}`;
+                  const slotLabel = `รอบละ ${court.slotMinutes} นาที`;
+                  const closedHint =
+                    hoursPhase === "BEFORE_OPEN"
+                      ? `ยังไม่ถึงเวลา · เปิด ${hoursRangeLabel} · ${slotLabel}`
+                      : `หมดเวลาแล้ว · เปิด ${hoursRangeLabel} · ${slotLabel}`;
+
                   return (
                     <div
                       key={court.id}
                       className={cn(
-                        "rounded-xl border p-4 shadow-sm",
-                        idle
-                          ? "border-slate-200/80 bg-gradient-to-br from-slate-100/90 via-slate-50/85 to-slate-100/70"
-                          : "border-white/60 bg-gradient-to-br from-white/80 via-white/65 to-emerald-50/50",
+                        footballTurfContentCardClass,
+                        "flex h-full min-h-[11rem] flex-col pl-4 sm:pl-5",
+                        showAsClosed && "opacity-95",
+                        isOvertimeAlert && "ring-2 ring-rose-400/80 shadow-[0_0_0_1px_rgba(251,113,133,0.35)]",
+                        isNoShowAlert && "ring-2 ring-amber-400/80 shadow-[0_0_0_1px_rgba(251,191,36,0.4)]",
                       )}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">คอร์ต</p>
-                          <h3 className={cn("mt-1 text-xl font-black tracking-tight", idle ? "text-slate-500" : "text-slate-900")}>
-                            {court.name}
-                          </h3>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-2">
-                          <button
-                            type="button"
-                            className={assetRowEditIconButtonClass}
-                            aria-label={`แก้ไข ${court.name}`}
-                            title="แก้ไข"
-                            onClick={() => openCourtModal(court)}
-                          >
-                            <IconRowEdit className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            className={assetRowRemoveIconButtonClass}
-                            aria-label={`ลบสนาม ${court.name}`}
-                            title="ลบ"
-                            onClick={() => void onDeleteCourt(court.id, court.name)}
-                          >
-                            <IconRowRemove className="h-4 w-4" />
-                          </button>
-                          <span
-                            className={cn(
-                              "rounded-lg px-2.5 py-1 text-[11px] font-black ring-1",
-                              current
-                                ? bookingStatusClass(current.status)
-                                : "bg-slate-200/80 text-slate-500 ring-slate-300/80",
-                            )}
-                          >
-                            {current ? bookingStatusLabel(current.status) : "ว่าง"}
+                      <span className={footballTurfCardAccentBarClass(accentTone)} aria-hidden />
+                      {isNoShowAlert ? (
+                        <span
+                          className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-300 bg-amber-500 text-white shadow-md ring-2 ring-white"
+                          title="ถึงเวลาแล้ว ยังไม่เช็กอิน"
+                          aria-label="ถึงเวลาแล้ว ยังไม่เช็กอิน"
+                        >
+                          <AlertTriangle className="h-4 w-4" aria-hidden />
+                        </span>
+                      ) : null}
+                      {isOvertimeAlert ? (
+                        <span
+                          className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-300 bg-rose-500 text-white shadow-md ring-2 ring-white"
+                          title="เลยเวลาสิ้นสุดรอบ ควรปิดรอบ"
+                          aria-label="เลยเวลาสิ้นสุดรอบ ควรปิดรอบ"
+                        >
+                          <AlertTriangle className="h-4 w-4" aria-hidden />
+                        </span>
+                      ) : null}
+
+                      <div
+                        className={cn(
+                          "flex shrink-0 items-start justify-between gap-2",
+                          (isNoShowAlert || isOvertimeAlert) && "pr-9",
+                        )}
+                      >
+                        <div className="min-w-0">
+                          <p className="text-lg font-black tracking-tight text-[#1e1b4b]">{court.name}</p>
+                          <span className={cn(footballTurfMetaChipClass, "mt-1.5")}>
+                            {hoursRangeLabel} · {slotLabel}
                           </span>
                         </div>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <span className={footballTurfCourtStatusBadgeClass(statusTone)}>{statusLabel}</span>
+                        </div>
                       </div>
-                      <div className="mt-4 space-y-2 text-sm">
-                        <p className={cn("font-semibold", idle ? "text-slate-400" : "text-slate-700")}>
-                          {current ? current.teamName || current.customerName : "ไม่มีผู้จอง / ผู้เล่น"}
+
+                      <div className="mt-3 min-h-0 flex-1 space-y-1.5">
+                        {showAsClosed ? (
+                          <div
+                            className="rounded-xl border border-slate-200/90 bg-slate-50/95 px-2 py-1.5 text-[11px] font-bold text-slate-700"
+                            role="status"
+                          >
+                            {closedHint}
+                          </div>
+                        ) : null}
+                        {isNoShowAlert ? (
+                          <div
+                            className="flex items-start gap-1.5 rounded-xl border border-amber-300/90 bg-amber-50 px-2 py-1.5 text-[11px] font-bold text-amber-950"
+                            role="alert"
+                          >
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" aria-hidden />
+                            <span>ถึงเวลาแล้ว · ยังไม่เช็กอิน — แจ้งลูกค้าหรือเปิดคิว</span>
+                          </div>
+                        ) : null}
+                        {isOvertimeAlert ? (
+                          <div
+                            className="flex items-start gap-1.5 rounded-xl border border-rose-300/90 bg-rose-50 px-2 py-1.5 text-[11px] font-bold text-rose-950"
+                            role="alert"
+                          >
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-600" aria-hidden />
+                            <span>เลยเวลาสิ้นสุดรอบ · ควรปิดรอบก่อนคิวถัดไป</span>
+                          </div>
+                        ) : null}
+
+                        <p className="line-clamp-2 min-h-[2.5rem] text-xs font-medium leading-snug text-[#2e2a58]">
+                          {guestLabel ? (
+                            <>
+                              <span className="font-semibold text-[#66638c]">
+                                {isOvertimeAlert
+                                  ? "ผู้ใช้ก่อนหน้า: "
+                                  : current!.status === "BOOKED"
+                                    ? "จอง: "
+                                    : "เช็กอิน: "}
+                              </span>
+                              {guestLabel}
+                              <span className="mt-0.5 block text-[11px] font-semibold text-[#8b87b8]">
+                                {current!.startTime}–{current!.endTime} · {current!.customerPhone}
+                              </span>
+                            </>
+                          ) : showAsClosed ? (
+                            hoursPhase === "BEFORE_OPEN" ? (
+                              nextGuestLabel ? (
+                                <span className="text-[#8b87b8]">สนามปิด · มีคิวรอเปิด</span>
+                              ) : (
+                                <span className="text-[#8b87b8]">สนามปิด · ยังไม่มีผู้จองวันนี้</span>
+                              )
+                            ) : (
+                              <span className="text-[#8b87b8]">สนามปิด · หมดเวลารอบวันนี้</span>
+                            )
+                          ) : nextGuestLabel ? (
+                            <span className="text-[#8b87b8]">ตอนนี้ว่าง · รอคิวถัดไป</span>
+                          ) : (
+                            <span className="text-[#8b87b8]">ยังไม่มีผู้จองวันนี้</span>
+                          )}
                         </p>
-                        <p className={cn(idle ? "text-slate-400" : "text-slate-500")}>
-                          {current
-                            ? `${current.startTime} - ${current.endTime} · ${current.customerPhone}`
-                            : `${court.openTime} - ${court.closeTime} · รอบละ ${court.slotMinutes} นาที`}
-                        </p>
+
+                        {next && nextGuestLabel && hoursPhase !== "AFTER_CLOSE" ? (
+                          <div
+                            className={cn(
+                              "rounded-xl border px-2 py-1.5 text-[11px] font-bold",
+                              nextIsContinuous
+                                ? "border-violet-300/90 bg-violet-50/95 text-violet-950"
+                                : "border-sky-200/90 bg-sky-50/95 text-sky-950",
+                            )}
+                            role="status"
+                          >
+                            <p
+                              className={cn(
+                                "font-black uppercase tracking-wide",
+                                nextIsContinuous ? "text-violet-800" : "text-sky-700",
+                              )}
+                            >
+                              {hoursPhase === "BEFORE_OPEN"
+                                ? "คิวรอเปิด"
+                                : nextIsContinuous
+                                  ? "จองต่อ"
+                                  : "คิวถัดไป"}
+                            </p>
+                            <p className="mt-0.5 line-clamp-2 font-semibold text-[#2e2a58]">{nextGuestLabel}</p>
+                            <p
+                              className={cn(
+                                "mt-0.5 text-[10px] font-semibold",
+                                nextIsContinuous ? "text-violet-900/75" : "text-sky-800/80",
+                              )}
+                            >
+                              {next.startTime}–{next.endTime}
+                              {next.customerPhone ? ` · ${next.customerPhone}` : ""}
+                            </p>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="mt-auto flex shrink-0 flex-wrap items-center gap-1.5 pt-3">
+                        {idle || (showAsClosed && hoursPhase === "BEFORE_OPEN") ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => openCourtLiveBooking(court, "ONLINE")}
+                              className="inline-flex min-h-[32px] items-center justify-center rounded-xl border border-[#5b61ff]/35 bg-white/80 px-3 py-1.5 text-[11px] font-black text-[#4d47b6] shadow-sm"
+                              aria-label={`จอง ${court.name}`}
+                            >
+                              จอง
+                            </button>
+                            {idle ? (
+                              <button
+                                type="button"
+                                onClick={() => openCourtLiveBooking(court, "WALK_IN")}
+                                className="inline-flex min-h-[32px] items-center justify-center rounded-xl bg-gradient-to-r from-[#5b61ff] to-[#7c66ff] px-3 py-1.5 text-[11px] font-black text-white shadow-sm"
+                                aria-label={`เช็กอิน ${court.name}`}
+                              >
+                                เช็กอิน
+                              </button>
+                            ) : null}
+                          </>
+                        ) : null}
+
+                        {current?.status === "BOOKED" && isNoShowAlert ? (
+                          <button
+                            type="button"
+                            onClick={() => void onMarkBookingNoShow(current.id)}
+                            className="inline-flex min-h-[32px] items-center justify-center rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-[11px] font-black text-amber-900 shadow-sm"
+                            aria-label={`ไม่มา เปิดคิว ${court.name}`}
+                          >
+                            ไม่มา · เปิดคิว
+                          </button>
+                        ) : null}
+
+                        {current?.status === "BOOKED" ? (
+                          <button
+                            type="button"
+                            onClick={() => void setBookingStatus(current.id, "CHECKED_IN")}
+                            className="inline-flex min-h-[32px] items-center justify-center rounded-xl bg-gradient-to-r from-[#5b61ff] to-[#7c66ff] px-3 py-1.5 text-[11px] font-black text-white shadow-sm"
+                            aria-label={`เช็กอิน ${court.name}`}
+                          >
+                            เช็กอิน
+                          </button>
+                        ) : null}
+
+                        {current &&
+                        (current.status === "CHECKED_IN" || current.status === "PLAYING" || isOvertimeAlert) ? (
+                          <button
+                            type="button"
+                            onClick={() => void setBookingStatus(current.id, "COMPLETED")}
+                            className={cn(
+                              "inline-flex min-h-[32px] items-center justify-center rounded-xl px-3 py-1.5 text-[11px] font-black shadow-sm",
+                              isOvertimeAlert
+                                ? "border border-rose-400 bg-rose-600 text-white"
+                                : "border border-indigo-300/70 bg-indigo-50 text-indigo-800",
+                            )}
+                            aria-label={`เช็กเอาท์ ${court.name}`}
+                          >
+                            {isOvertimeAlert ? "เช็กเอาท์ · เคลียร์" : "เช็กเอาท์"}
+                          </button>
+                        ) : null}
+
+                        {current?.paymentStatus === "PENDING_REVIEW" ? (
+                          <button
+                            type="button"
+                            onClick={() => void confirmBookingPayment(current.id)}
+                            className="inline-flex min-h-[32px] items-center justify-center rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-[11px] font-black text-cyan-800 shadow-sm"
+                            aria-label={`ยืนยันชำระ ${court.name}`}
+                          >
+                            ยืนยันชำระ
+                          </button>
+                        ) : null}
+
+                        {current ? (
+                          <button
+                            type="button"
+                            onClick={() => openEditBookingModal(current)}
+                            className="inline-flex min-h-[32px] items-center justify-center rounded-xl border border-[#5b61ff]/35 bg-white/80 px-3 py-1.5 text-[11px] font-black text-[#4d47b6] shadow-sm"
+                            aria-label={`แก้ไขการจอง ${court.name}`}
+                          >
+                            แก้ไข
+                          </button>
+                        ) : null}
+
+                        {!idle && !showAsClosed && next?.status === "BOOKED" ? (
+                          <button
+                            type="button"
+                            onClick={() => void setBookingStatus(next.id, "CHECKED_IN")}
+                            className="inline-flex min-h-[32px] items-center justify-center rounded-xl border border-violet-300/80 bg-violet-50 px-3 py-1.5 text-[11px] font-black text-violet-900 shadow-sm"
+                            aria-label={`เช็กอินคิวถัดไป ${court.name}`}
+                          >
+                            เช็กอินคิวถัดไป
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   );
@@ -2056,38 +2566,70 @@ export function FootballTurfDashboard({
           </div>
 
           <AppDashboardSection tone="violet">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <AppSectionHeader
-                tone="violet"
-                title="ตารางเวลาจองรายสนาม"
-              />
-              <div className="inline-flex h-11 items-center rounded-xl bg-slate-100 px-4 text-sm font-black text-slate-600 ring-1 ring-slate-200">
-                {scheduleDate}
-              </div>
-            </div>
-            <div className="mt-4 grid gap-4 xl:grid-cols-2">
-              {filteredScheduleBoard.map(({ court, timeline }) => (
+            <AppSectionHeader
+              tone="violet"
+              title="ตารางเวลาจองรายสนาม"
+              className="flex flex-row items-start justify-between gap-3 sm:items-center"
+              actionWrapClassName="min-w-0 shrink-0 self-start pt-0.5 sm:pt-0"
+              action={
+                <div className="flex max-w-full flex-nowrap items-center justify-end gap-2 overflow-x-auto">
+                  <div className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 px-3 text-xs font-black text-slate-600 ring-1 ring-slate-200">
+                    {scheduleDate}
+                  </div>
+                  {courts.length > 0 ? (
+                    <nav className={footballTurfCourtTabShellClass} aria-label="เลือกสนามในตารางเวลา">
+                      <div className="flex min-w-0 gap-1" role="tablist">
+                        {courts.map((court) => {
+                          const id = String(court.id);
+                          const active = scheduleCourtId === id;
+                          return (
+                            <button
+                              key={`schedule-court-tab-${court.id}`}
+                              type="button"
+                              role="tab"
+                              aria-selected={active}
+                              aria-label={`ตาราง ${court.name}`}
+                              onClick={() => setScheduleCourtId(id)}
+                              className={footballTurfCourtTabPillClass(active)}
+                            >
+                              {court.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </nav>
+                  ) : null}
+                </div>
+              }
+            />
+            <div className="mt-4">
+              {!selectedScheduleBoard ? (
+                <AppEmptyState tone="violet">ยังไม่มีสนามให้แสดงตาราง</AppEmptyState>
+              ) : (
                 <div
-                  key={`${court.id}-${scheduleDate}`}
-                  className="rounded-xl border border-white/70 bg-gradient-to-br from-white/85 via-white/70 to-cyan-50/45 p-4 shadow-sm"
+                  key={`${selectedScheduleBoard.court.id}-${scheduleDate}`}
+                  className="rounded-[1.5rem] border border-white/70 bg-gradient-to-br from-white/85 via-white/70 to-cyan-50/45 p-4 shadow-sm"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/70 pb-4">
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">สนาม</p>
-                      <h3 className="mt-1 text-xl font-black tracking-tight text-slate-900">{court.name}</h3>
+                      <h3 className="mt-1 text-xl font-black tracking-tight text-slate-900">
+                        {selectedScheduleBoard.court.name}
+                      </h3>
                     </div>
                     <div className="rounded-xl bg-white/80 px-3 py-2 text-right shadow-sm ring-1 ring-white/80">
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">เวลาเปิดใช้งาน</p>
                       <p className="mt-1 text-sm font-black text-slate-700">
-                        {court.openTime} - {court.closeTime}
+                        {selectedScheduleBoard.court.openTime} - {selectedScheduleBoard.court.closeTime}
                       </p>
                     </div>
                   </div>
                   <div className="mt-5 space-y-2">
-                    {timeline.length === 0 ? (
+                    {selectedScheduleBoard.timeline.length === 0 ? (
                       <AppEmptyState tone="violet">ยังไม่มีช่วงเวลาให้แสดง</AppEmptyState>
                     ) : (
-                      timeline.map((slot) => {
+                      selectedScheduleBoard.timeline.map((slot) => {
+                        const court = selectedScheduleBoard.court;
                         const liveNow = new Date(liveClockMs);
                         const timeOpts = {
                           scheduleDate,
@@ -2165,6 +2707,16 @@ export function FootballTurfDashboard({
                                   {formatMoney(booking.finalPrice)}
                                 </span>
                               ) : null}
+                              {!booking && !timePassed ? (
+                                <button
+                                  type="button"
+                                  onClick={() => openScheduleSlotBooking(court, slot.startTime, slot.endTime)}
+                                  className="inline-flex min-h-[32px] items-center justify-center rounded-xl bg-gradient-to-r from-[#5b61ff] to-[#7c66ff] px-3 py-1.5 text-[11px] font-black text-white shadow-sm"
+                                  aria-label={`จอง ${court.name} ${slot.startTime}`}
+                                >
+                                  จอง
+                                </button>
+                              ) : null}
                             </div>
                           </div>
                         );
@@ -2172,7 +2724,7 @@ export function FootballTurfDashboard({
                     )}
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           </AppDashboardSection>
         </div>
@@ -2180,125 +2732,334 @@ export function FootballTurfDashboard({
 
       {activeTab === "queue" ? (
         <AppDashboardSection tone="violet">
-          <AppSectionHeader tone="violet" title="คิวและการจอง" />
-          <FilterToolbar
-            title="กรองรายการจอง"
-            summary={queueFilterSummary}
-            activeCount={queueActiveFilterCount}
-            onReset={resetQueueFilters}
-          >
-            <div className="grid gap-3 lg:grid-cols-4">
-              <FilterField label="ค้นหา" icon={<Search className="h-4 w-4" />}>
-                <input
-                  type="search"
-                  value={queueSearch}
-                  onChange={(e) => setQueueSearch(e.target.value)}
-                  className={FILTER_CONTROL_CLASS}
-                  placeholder="ค้นหาทีม ลูกค้า เบอร์โทร"
-                />
-              </FilterField>
-              <FilterField label="สถานะ" icon={<ClipboardList className="h-4 w-4" />}>
-                <select value={queueStatus} onChange={(e) => setQueueStatus(e.target.value)} className={FILTER_CONTROL_CLASS}>
-                  <option value="ALL">ทุกสถานะ</option>
-                  <option value="BOOKED">จองแล้ว</option>
-                  <option value="CHECKED_IN">เช็กอินแล้ว</option>
-                  <option value="PLAYING">กำลังใช้งาน</option>
-                  <option value="COMPLETED">ปิดรอบแล้ว</option>
-                  <option value="CANCELLED">ยกเลิก</option>
-                </select>
-              </FilterField>
-              <FilterField label="สนาม" icon={<Landmark className="h-4 w-4" />}>
-                <select value={queueCourtId} onChange={(e) => setQueueCourtId(e.target.value)} className={FILTER_CONTROL_CLASS}>
-                  <option value="ALL">ทุกสนาม</option>
-                  {courts.map((court) => (
-                    <option key={`queue-court-${court.id}`} value={String(court.id)}>
-                      {court.name}
-                    </option>
-                  ))}
-                </select>
-              </FilterField>
-              <FilterField label="วันที่" icon={<CalendarDays className="h-4 w-4" />}>
-                <input
-                  type="date"
-                  value={queueDate}
-                  onChange={(e) => setQueueDate(e.target.value)}
-                  className={FILTER_CONTROL_CLASS}
-                />
-              </FilterField>
+          <AppSectionHeader
+            tone="violet"
+            title="จอง"
+            className="flex flex-row items-start justify-between gap-3 sm:items-center"
+            actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
+            action={
+              <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+                <button
+                  type="button"
+                  aria-label={queueFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                  aria-pressed={queueFilterOpen}
+                  onClick={() => setQueueFilterOpen((v) => !v)}
+                  className={cn(
+                    appTemplateOutlineButtonClass,
+                    "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-0 px-0 text-[#4d47b6] sm:min-w-0 sm:gap-2 sm:px-4",
+                    queueFiltersActive && "ring-2 ring-amber-300/60",
+                  )}
+                >
+                  <SlidersHorizontal className="h-5 w-5 sm:hidden" aria-hidden />
+                  <span className="hidden sm:inline">{queueFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+                  {queueFiltersActive ? (
+                    <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-white" aria-hidden />
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  aria-label="เพิ่มการจอง"
+                  onClick={() => openBookingModal("ONLINE")}
+                  className="app-btn-primary min-h-[40px] min-w-[40px] rounded-xl px-3 text-sm font-black shadow-sm sm:min-w-0 sm:px-4"
+                >
+                  <span className="sm:hidden" aria-hidden>
+                    +
+                  </span>
+                  <span className="hidden sm:inline">+ เพิ่มการจอง</span>
+                </button>
+              </div>
+            }
+          />
+
+          <div className={cn("mt-3 space-y-3", queueFilterOpen ? "block" : "hidden")}>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="กรองช่วงเวลาการจอง">
+              {(
+                [
+                  ["TODAY", "วันนี้"],
+                  ["MONTH", "เดือนนี้"],
+                  ["YEAR", "ปีนี้"],
+                  ["CUSTOM", "ช่วงเวลา"],
+                  ["ALL", "ทั้งหมด"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={queueDatePreset === key}
+                  onClick={() => {
+                    setQueueDatePreset(key);
+                    if (key !== "CUSTOM") {
+                      setQueueDateFrom("");
+                      setQueueDateTo("");
+                    }
+                  }}
+                  className={cn(
+                    "min-h-[36px] rounded-full border px-3 text-xs font-black transition",
+                    queueDatePreset === key
+                      ? "border-[#5b61ff]/50 bg-[#ecebff] text-[#3b36a0] ring-2 ring-[#5b61ff]/20"
+                      : "border-white/60 bg-white/70 text-[#4d47b6] hover:bg-white/90",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                type="button"
+                aria-pressed={queueNeedsCloseOnly}
+                onClick={() => setQueueNeedsCloseOnly((v) => !v)}
+                className={cn(
+                  "min-h-[36px] rounded-full border px-3 text-xs font-black transition",
+                  queueNeedsCloseOnly
+                    ? "border-amber-400 bg-amber-100 text-amber-900 ring-2 ring-amber-300/50"
+                    : "border-amber-200/80 bg-amber-50/70 text-amber-800 hover:bg-amber-100/80",
+                )}
+              >
+                {queueNeedsCloseCount > 0 ? `ต้องปิดงาน (${queueNeedsCloseCount})` : "ต้องปิดงาน"}
+              </button>
             </div>
-          </FilterToolbar>
+
+            {queueDatePreset === "CUSTOM" ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="min-w-0 space-y-1 text-xs font-bold text-slate-600">
+                  จากวันที่
+                  <input
+                    type="date"
+                    value={queueDateFrom}
+                    onChange={(e) => setQueueDateFrom(e.target.value)}
+                    className={FILTER_CONTROL_CLASS}
+                  />
+                </label>
+                <label className="min-w-0 space-y-1 text-xs font-bold text-slate-600">
+                  ถึงวันที่
+                  <input
+                    type="date"
+                    value={queueDateTo}
+                    onChange={(e) => setQueueDateTo(e.target.value)}
+                    className={FILTER_CONTROL_CLASS}
+                  />
+                </label>
+              </div>
+            ) : null}
+
+            <div className="grid gap-2 sm:grid-cols-3">
+              <input
+                type="search"
+                value={queueSearch}
+                onChange={(e) => setQueueSearch(e.target.value)}
+                className={FILTER_CONTROL_CLASS}
+                placeholder="ค้นหา ชื่อ/เบอร์/สนาม"
+              />
+              <select value={queueStatus} onChange={(e) => setQueueStatus(e.target.value)} className={FILTER_CONTROL_CLASS}>
+                <option value="ALL">ทุกสถานะ</option>
+                <option value="BOOKED">จอง</option>
+                <option value="CHECKED_IN">เช็กอิน</option>
+                <option value="PLAYING">เช็กอิน (ใช้งาน)</option>
+                <option value="COMPLETED">เช็กเอาท์</option>
+                <option value="CANCELLED">ยกเลิก</option>
+              </select>
+              <select value={queueCourtId} onChange={(e) => setQueueCourtId(e.target.value)} className={FILTER_CONTROL_CLASS}>
+                <option value="ALL">ทุกสนาม</option>
+                {courts.map((court) => (
+                  <option key={`queue-court-${court.id}`} value={String(court.id)}>
+                    {court.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={resetQueueFilters}
+                className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-4 text-xs font-black text-[#4d47b6]")}
+              >
+                ล้างตัวกรอง
+              </button>
+            </div>
+            {queueFilterSummary ? (
+              <p className="text-[11px] font-semibold text-[#8b87b8]">{queueFilterSummary}</p>
+            ) : null}
+          </div>
+
+          {!queueFilterOpen ? (
+            <p className="mt-3 text-xs font-semibold text-[#8b87b8]">
+              ตัวกรองถูกซ่อน{queueFiltersActive ? " · มีเงื่อนไขกรองอยู่" : ""} — กด «แสดงกรอง» เพื่อเปิด
+            </p>
+          ) : null}
+
           <div className="mt-4 space-y-3">
-            {queueFilteredBookings.length === 0 ? <AppEmptyState tone="violet">ไม่พบรายการจองตามตัวกรอง</AppEmptyState> : queueFilteredBookings.map((item) => (
-              <div key={item.id} className="rounded-xl border border-white/70 bg-gradient-to-br from-white/85 via-white/70 to-slate-50/60 p-4 shadow-sm">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-lg font-black tracking-tight text-slate-900">{item.teamName || item.customerName}</span>
-                      <span className={cn("rounded-lg px-2.5 py-1 text-[11px] font-black ring-1", bookingStatusClass(item.status))}>{bookingStatusLabel(item.status)}</span>
-                      <span className={cn("rounded-lg px-2.5 py-1 text-[11px] font-black ring-1", bookingPaymentStatusClass(item.paymentStatus))}>{bookingPaymentStatusLabel(item.paymentStatus)}</span>
-                    </div>
-                    <p className="mt-1 text-sm font-medium text-slate-600">{item.courtName} · {item.bookingDate} · {item.startTime}-{item.endTime} · {item.customerPhone}</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {item.source === "WALK_IN" ? "walk-in หน้างาน" : "จองล่วงหน้า"}
-                      {item.promotionSaleId ? " · ใช้สิทธิ์โปรโมชั่นแล้ว" : ""}
-                      {item.paymentMethod === "TRANSFER" ? " · โอนเงิน" : item.paymentMethod === "ONSITE" ? " · ชำระหน้าสนาม" : ""}
-                    </p>
-                    {item.paymentSlipDataUrl ? (
-                      <div className="mt-3 flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3">
-                        <Image src={item.paymentSlipDataUrl} alt="สลิปการจอง" width={96} height={64} className="h-16 w-24 rounded-xl object-cover ring-1 ring-emerald-100" unoptimized />
-                        <div className="min-w-0">
-                          <p className="text-xs font-black text-emerald-800">แนบสลิปแล้ว</p>
-                          <p className="mt-1 truncate text-[11px] font-medium text-emerald-700">{item.paymentReference || "ไม่มีเลขอ้างอิง"}</p>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="overflow-x-auto pb-1">
-                    <div className="flex min-w-max gap-2">
-                      {item.paymentStatus === "PENDING_REVIEW" ? (
-                        <button
-                          type="button"
-                          onClick={() => void confirmBookingPayment(item.id)}
-                          className="whitespace-nowrap rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700"
-                        >
-                          ยืนยันชำระ
-                        </button>
-                      ) : null}
+            {queueFilteredBookings.length === 0 ? (
+              <AppEmptyState tone="violet">ไม่พบรายการจองตามตัวกรอง</AppEmptyState>
+            ) : (
+              queueFilteredBookings.map((item) => {
+                const overdue = footballBookingNeedsClose(item, {
+                  todayDateKey,
+                  nowMinutes: localNowMinutes(new Date(liveClockMs)),
+                });
+                const guest = item.teamName || item.customerName;
+                const accent =
+                  item.status === "BOOKED"
+                    ? "amber"
+                    : item.status === "CHECKED_IN" || item.status === "PLAYING"
+                      ? "indigo"
+                      : item.status === "COMPLETED"
+                        ? "emerald"
+                        : item.status === "CANCELLED"
+                          ? "rose"
+                          : "slate";
+                return (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      footballTurfContentCardClass,
+                      "relative overflow-hidden pl-5 pr-12 sm:pl-6 sm:pr-14",
+                      overdue && "ring-2 ring-amber-400/70",
+                    )}
+                  >
+                    <span className={footballTurfCardAccentBarClass(overdue ? "amber" : accent)} aria-hidden />
+                    <div className="absolute right-2 top-2 z-10 flex flex-col items-end gap-1 sm:right-3 sm:top-3">
                       <button
                         type="button"
                         className={assetRowEditIconButtonClass}
-                        aria-label={`แก้ไขการจอง ${item.teamName || item.customerName}`}
-                        title="แก้ไข"
+                        aria-label={`จัดการการจอง ${guest}`}
+                        title="จัดการ"
                         onClick={() => openEditBookingModal(item)}
                       >
                         <IconRowEdit className="h-4 w-4" />
                       </button>
-                      {item.status !== "CANCELLED" ? (
-                        <button
-                          type="button"
-                          className="whitespace-nowrap rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-700"
-                          onClick={() => void onCancelBooking(item.id)}
-                        >
-                          ยกเลิก
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        className={assetRowRemoveIconButtonClass}
-                        aria-label={`ลบการจอง ${item.teamName || item.customerName}`}
-                        title="ลบ"
-                        onClick={() => void onDeleteBooking(item.id)}
-                      >
-                        <IconRowRemove className="h-4 w-4" />
-                      </button>
-                      <button type="button" onClick={() => void setBookingStatus(item.id, "CHECKED_IN")} className="whitespace-nowrap rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-black text-sky-700">เช็กอิน</button>
-                      <button type="button" onClick={() => void setBookingStatus(item.id, "PLAYING")} className="whitespace-nowrap rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700">เริ่มใช้งาน</button>
-                      <button type="button" onClick={() => void setBookingStatus(item.id, "COMPLETED")} className="whitespace-nowrap rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-black text-violet-700">ปิดรอบ</button>
+                      <div className="hidden text-right md:block">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[#8b87b8]">ยอดรวม</p>
+                        <p className="bg-gradient-to-r from-[#5b61ff] to-[#7c66ff] bg-clip-text text-lg font-black tabular-nums leading-tight text-transparent">
+                          {formatMoney(item.finalPrice)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5b61ff]/15 to-violet-100 text-sm font-black text-[#4d47b6] ring-1 ring-[#5b61ff]/20">
+                        {getBookingInitials(guest)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <p className="text-base font-black tracking-tight text-[#1e1b4b]">{guest}</p>
+                          <span className={cn("rounded-lg px-2.5 py-1 text-[11px] font-black ring-1", bookingStatusClass(item.status))}>
+                            {bookingStatusLabel(item.status)}
+                          </span>
+                          <span
+                            className={cn(
+                              "rounded-lg px-2.5 py-1 text-[11px] font-black ring-1",
+                              bookingPaymentStatusClass(item.paymentStatus),
+                            )}
+                          >
+                            {bookingPaymentStatusLabel(item.paymentStatus)}
+                          </span>
+                        </div>
+
+                        {overdue ? (
+                          <div
+                            className="mt-2 flex flex-wrap items-center gap-2 rounded-[1rem] border border-amber-300/80 bg-amber-50/95 px-2.5 py-1.5 text-xs font-bold text-amber-950"
+                            role="status"
+                          >
+                            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-700" aria-hidden />
+                            <span className="min-w-0 flex-1">{footballBookingOverdueLabel(item.status)}</span>
+                            {item.status === "BOOKED" ? (
+                              <button
+                                type="button"
+                                onClick={() => void setBookingStatus(item.id, "CHECKED_IN")}
+                                className="rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-black text-white"
+                              >
+                                เช็กอิน
+                              </button>
+                            ) : item.status === "CHECKED_IN" || item.status === "PLAYING" ? (
+                              <button
+                                type="button"
+                                onClick={() => void setBookingStatus(item.id, "COMPLETED")}
+                                className="rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-black text-white"
+                              >
+                                เช็กเอาท์
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
+
+                        <p className="mt-2 text-sm font-medium text-[#66638c]">
+                          {item.courtName} · {item.bookingDate} · {item.startTime}–{item.endTime}
+                        </p>
+                        <p className="mt-1 text-xs font-semibold text-[#8b87b8]">
+                          {item.customerPhone}
+                          {item.source === "WALK_IN" ? " · เช็กอินหน้างาน" : " · จองล่วงหน้า"}
+                          {item.paymentMethod === "TRANSFER" ? " · โอนเงิน" : item.paymentMethod === "ONSITE" ? " · ชำระหน้าสนาม" : ""}
+                        </p>
+
+                        {item.paymentSlipDataUrl ? (
+                          <div className="mt-3 flex items-center gap-3">
+                            <AppImageThumb
+                              src={item.paymentSlipDataUrl}
+                              alt={`สลิปการจอง ${guest}`}
+                              onOpen={() => item.paymentSlipDataUrl && saleSlipLightbox.open(item.paymentSlipDataUrl)}
+                              className="h-14 w-14"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-xs font-black text-emerald-800">แนบสลิปแล้ว</p>
+                              <p className="truncate text-[11px] font-medium text-emerald-700">
+                                {item.paymentReference || "ไม่มีเลขอ้างอิง"}
+                              </p>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {item.paymentStatus === "PENDING_REVIEW" ? (
+                            <button
+                              type="button"
+                              onClick={() => void confirmBookingPayment(item.id)}
+                              className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-[11px] font-black text-cyan-700"
+                            >
+                              ยืนยันชำระ
+                            </button>
+                          ) : null}
+                          {item.status === "BOOKED" ? (
+                            <button
+                              type="button"
+                              onClick={() => void setBookingStatus(item.id, "CHECKED_IN")}
+                              className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-1.5 text-[11px] font-black text-sky-700"
+                            >
+                              เช็กอิน
+                            </button>
+                          ) : null}
+                          {item.status === "CHECKED_IN" || item.status === "PLAYING" ? (
+                            <button
+                              type="button"
+                              onClick={() => void setBookingStatus(item.id, "COMPLETED")}
+                              className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[11px] font-black text-indigo-700"
+                            >
+                              เช็กเอาท์
+                            </button>
+                          ) : null}
+                          {item.status !== "CANCELLED" && item.status !== "COMPLETED" ? (
+                            <button
+                              type="button"
+                              onClick={() => void onCancelBooking(item.id)}
+                              className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-black text-amber-700"
+                            >
+                              ยกเลิก
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            className={assetRowRemoveIconButtonClass}
+                            aria-label={`ลบการจอง ${guest}`}
+                            title="ลบ"
+                            onClick={() => void onDeleteBooking(item.id)}
+                          >
+                            <IconRowRemove className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                );
+              })
+            )}
           </div>
         </AppDashboardSection>
       ) : null}
@@ -2401,23 +3162,88 @@ export function FootballTurfDashboard({
               {financeFilteredRows.length === 0 ? <AppEmptyState tone="violet">ไม่พบรายการทางการเงินตามตัวกรอง</AppEmptyState> : financeFilteredRows.map((item) => (
                 <div key={item.id} className={cn("rounded-xl border p-4", item.tone)}>
                   <div className="flex items-center justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-black">{item.title}</p>
                       <p className="text-xs font-medium opacity-80">{item.subtitle} · {item.dateLabel}</p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <p className="text-base font-black">{formatMoney(item.amount)}</p>
-                      {item.kind === "COST" ? (
-                        <button
-                          type="button"
-                          className={assetRowRemoveIconButtonClass}
-                          aria-label={`ลบรายจ่าย ${item.title}`}
-                          title="ลบ"
-                          onClick={() => void onDeleteCostEntry(Number(item.id.replace("cost-", "")))}
-                        >
-                          <IconRowRemove className="h-4 w-4" />
-                        </button>
-                      ) : null}
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <p
+                        className={cn(
+                          "text-base font-black tabular-nums",
+                          item.kind === "COST" ? "text-rose-700" : "text-emerald-700",
+                        )}
+                      >
+                        {formatMoney(item.amount)}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        {item.kind === "BOOKING" ? (
+                          <>
+                            <button
+                              type="button"
+                              className={assetRowEditIconButtonClass}
+                              aria-label={`แก้ไขรายรับ ${item.title}`}
+                              title="แก้ไข"
+                              onClick={() => {
+                                const booking = bookings.find((b) => `booking-${b.id}` === item.id);
+                                if (booking) openEditBookingModal(booking);
+                              }}
+                            >
+                              <IconRowEdit className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              className={assetRowRemoveIconButtonClass}
+                              aria-label={`ลบรายรับ ${item.title}`}
+                              title="ลบ"
+                              onClick={() => {
+                                const id = Number(item.id.replace("booking-", ""));
+                                if (Number.isFinite(id)) void onDeleteBooking(id);
+                              }}
+                            >
+                              <IconRowRemove className="h-4 w-4" />
+                            </button>
+                          </>
+                        ) : null}
+                        {item.kind === "PROMOTION" ? (
+                          <>
+                            <button
+                              type="button"
+                              className={assetRowEditIconButtonClass}
+                              aria-label={`แก้ไขรายรับโปร ${item.title}`}
+                              title="แก้ไข"
+                              onClick={() => {
+                                const sale = promotionSales.find((s) => `promotion-${s.id}` === item.id);
+                                if (sale) openPromotionSaleEditModal(sale);
+                              }}
+                            >
+                              <IconRowEdit className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              className={assetRowRemoveIconButtonClass}
+                              aria-label={`ลบรายรับโปร ${item.title}`}
+                              title="ลบ"
+                              onClick={() => {
+                                const id = Number(item.id.replace("promotion-", ""));
+                                if (Number.isFinite(id)) void onDeletePromotionSale(id, item.title);
+                              }}
+                            >
+                              <IconRowRemove className="h-4 w-4" />
+                            </button>
+                          </>
+                        ) : null}
+                        {item.kind === "COST" ? (
+                          <button
+                            type="button"
+                            className={assetRowRemoveIconButtonClass}
+                            aria-label={`ลบรายจ่าย ${item.title}`}
+                            title="ลบ"
+                            onClick={() => void onDeleteCostEntry(Number(item.id.replace("cost-", "")))}
+                          >
+                            <IconRowRemove className="h-4 w-4" />
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2562,7 +3388,6 @@ export function FootballTurfDashboard({
                   </div>
                 </div>
               ))}
-              <AppImageLightbox src={saleSlipLightbox.src} onClose={saleSlipLightbox.close} alt="สลิปขายโปรโมชั่น" />
             </div>
           </AppDashboardSection>
         </div>
@@ -2709,6 +3534,108 @@ export function FootballTurfDashboard({
         </div>
       ) : null}
 
+      {activeTab === "courts" ? (
+        <AppDashboardSection tone="violet">
+          <AppSectionHeader
+            tone="violet"
+            title="จัดการสนาม"
+            className="flex flex-row items-start justify-between gap-3 sm:items-center"
+            actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
+            action={
+              <button
+                type="button"
+                aria-label="เพิ่มสนาม"
+                onClick={() => openCourtModal()}
+                className="app-btn-primary min-h-[40px] min-w-[40px] rounded-xl px-3 text-sm font-black shadow-sm sm:min-w-0 sm:px-4"
+              >
+                <span className="sm:hidden" aria-hidden>
+                  +
+                </span>
+                <span className="hidden sm:inline">+ เพิ่มสนาม</span>
+              </button>
+            }
+          />
+          <p className="mt-1 text-[11px] font-semibold text-[#8b87b8]">
+            เพิ่ม · แก้ไข · ลบ · แนบรูปปกสนาม
+          </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {courts.length === 0 ? (
+              <AppEmptyState tone="violet" className="md:col-span-2 xl:col-span-3">
+                ยังไม่มีสนาม — กดเพิ่มสนามเพื่อเริ่มตั้งค่ารอบและราคา
+              </AppEmptyState>
+            ) : (
+              courts.map((court) => (
+                <div
+                  key={court.id}
+                  className={cn(
+                    footballTurfContentCardClass,
+                    "flex h-full flex-col overflow-hidden !p-0",
+                    !court.isActive && "opacity-70",
+                  )}
+                >
+                  <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-slate-100 to-indigo-50">
+                    {court.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={court.imageUrl}
+                        alt={court.name}
+                        className="h-full w-full object-cover object-center"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-slate-400">
+                        <Landmark className="h-8 w-8" aria-hidden />
+                        <span className="text-[11px] font-bold">ยังไม่มีรูป</span>
+                      </div>
+                    )}
+                    <span
+                      className={cn(
+                        "absolute left-3 top-3 rounded-lg px-2.5 py-1 text-[11px] font-black ring-1",
+                        court.isActive
+                          ? "bg-emerald-50/95 text-emerald-800 ring-emerald-200"
+                          : "bg-slate-100/95 text-slate-600 ring-slate-300",
+                      )}
+                    >
+                      {court.isActive ? "เปิดใช้งาน" : "ปิดใช้งาน"}
+                    </span>
+                  </div>
+                  <div className="flex flex-1 flex-col gap-3 p-4">
+                    <div>
+                      <p className="text-lg font-black tracking-tight text-[#1e1b4b]">{court.name}</p>
+                      <p className="mt-1 text-xs font-semibold text-[#66638c]">
+                        {court.openTime}–{court.closeTime} · รอบละ {court.slotMinutes} นาที
+                      </p>
+                      <p className="mt-1 text-xs font-bold text-[#4d47b6]">
+                        จ–ศ {formatMoney(court.weekdayPrice)} · น–อา {formatMoney(court.weekendPrice)}
+                      </p>
+                    </div>
+                    <div className="mt-auto flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        className={assetRowEditIconButtonClass}
+                        aria-label={`แก้ไข ${court.name}`}
+                        title="แก้ไข"
+                        onClick={() => openCourtModal(court)}
+                      >
+                        <IconRowEdit className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className={assetRowRemoveIconButtonClass}
+                        aria-label={`ลบสนาม ${court.name}`}
+                        title="ลบ"
+                        onClick={() => void onDeleteCourt(court.id, court.name)}
+                      >
+                        <IconRowRemove className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </AppDashboardSection>
+      ) : null}
+
       {activeTab === "settings" ? (
         <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
           <AppDashboardSection tone="violet">
@@ -2773,6 +3700,70 @@ export function FootballTurfDashboard({
                     หมายเหตุอื่นๆ
                     <input className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800" value={settingsForm.note} onChange={(e) => setSettingsForm((state) => ({ ...state, note: e.target.value }))} placeholder="ข้อมูลอื่นที่ต้องการแสดง" />
                   </label>
+                </div>
+              </div>
+
+              <div className="rounded-[1.2rem] border border-white/80 bg-white/88 p-4 shadow-sm">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">ชำระตอนจองจากลิงก์ลูกค้า</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  {(
+                    [
+                      { value: "NONE", label: "ไม่ต้องชำระ" },
+                      { value: "DEPOSIT", label: "มัดจำ" },
+                      { value: "FULL", label: "ชำระเต็มยอด" },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() =>
+                        setSettingsForm((state) => ({
+                          ...state,
+                          portalBookingPaymentMode: opt.value,
+                        }))
+                      }
+                      className={cn(
+                        "min-h-[44px] rounded-xl border px-3 text-sm font-bold transition",
+                        settingsForm.portalBookingPaymentMode === opt.value
+                          ? "border-[#5b61ff]/50 bg-[#5b61ff]/15 text-[#4d47b6]"
+                          : "border-slate-200 bg-white text-slate-500",
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {settingsForm.portalBookingPaymentMode === "DEPOSIT" ? (
+                  <label className="mt-3 block space-y-1.5 text-sm font-bold text-slate-700">
+                    จำนวนมัดจำ (บาท)
+                    <input
+                      type="number"
+                      min={0}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800"
+                      value={settingsForm.depositAmountBaht ?? ""}
+                      onChange={(e) =>
+                        setSettingsForm((state) => ({
+                          ...state,
+                          depositAmountBaht: e.target.value === "" ? null : Number(e.target.value),
+                        }))
+                      }
+                      placeholder="เช่น 300"
+                    />
+                  </label>
+                ) : null}
+              </div>
+
+              <div className="rounded-[1.2rem] border border-white/80 bg-white/88 p-4 shadow-sm">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">สลิปใบเสร็จ</p>
+                <div className="mt-3">
+                  <AppSlipPaperSizeSettingsField
+                    fieldClassName="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800"
+                    hint="ใช้ตอนพิมพ์ใบเสร็จ · เฉพาะโมดูลสนามฟุตบอล"
+                    value={settingsForm.slipPaperSize ?? "SLIP_58"}
+                    onChange={(slipPaperSize) =>
+                      setSettingsForm((state) => ({ ...state, slipPaperSize }))
+                    }
+                  />
                 </div>
               </div>
 
@@ -3068,6 +4059,53 @@ export function FootballTurfDashboard({
               />
             </div>
           </div>
+
+          <div className="rounded-[1.75rem] border border-slate-100 bg-slate-50/70 p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">รูปสนาม</p>
+            <p className="mt-1 text-xs font-semibold text-slate-500">รูปปกที่ใช้แสดงในการจัดการสนาม</p>
+            <div className="mt-3 space-y-3">
+              <AppGalleryCameraFileInputs
+                galleryInputRef={courtImageGalleryRef}
+                cameraInputRef={courtCameraInputRef}
+                onChange={(ev) => {
+                  const f = ev.target.files?.[0];
+                  ev.target.value = "";
+                  if (!f) return;
+                  void onCourtImageSelected(f);
+                }}
+              />
+              <AppImagePickCameraButtons
+                onPickGallery={() => courtImageGalleryRef.current?.click()}
+                onPickCamera={() =>
+                  openCourtCamera((file) => {
+                    void onCourtImageSelected(file);
+                  })
+                }
+                busy={courtImageBusy}
+                labels={{ gallery: "เลือกรูป", camera: "ถ่ายรูป" }}
+              />
+              {courtForm.imageUrl ? (
+                <div className="flex items-start gap-3">
+                  <AppImageThumb
+                    src={courtForm.imageUrl}
+                    alt="รูปสนาม"
+                    onOpen={() => courtImageLightbox.open(courtForm.imageUrl)}
+                    className="h-24 w-24"
+                  />
+                  <button
+                    type="button"
+                    className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-3 text-xs font-black text-rose-600")}
+                    onClick={() => setCourtForm((s) => ({ ...s, imageUrl: "" }))}
+                  >
+                    ลบรูป
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs font-bold text-slate-400">ยังไม่ได้แนบรูป</p>
+              )}
+            </div>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="space-y-1.5 text-sm font-medium text-slate-600">
               เวลาเปิด
@@ -3422,6 +4460,9 @@ export function FootballTurfDashboard({
       </FormModal>
 
       {notice.popup}
+      <AppImageLightbox src={saleSlipLightbox.src} onClose={saleSlipLightbox.close} alt="สลิป" />
+      <AppImageLightbox src={courtImageLightbox.src} onClose={courtImageLightbox.close} alt="รูปสนาม" />
+      {courtCameraModal}
     </div>
   );
 }

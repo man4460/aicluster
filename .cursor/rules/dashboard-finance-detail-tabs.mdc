@@ -1,0 +1,175 @@
+---
+description: หน้าการเงิน — แท็บประวัติ/รายรับ · รายจ่าย · สลิปเฉพาะเมื่อมี · ราคาขวา emerald/rose · ฟอร์มรายจ่ายต้นแบบร้านอาหาร
+globs:
+  - "**/systems/**/**Finance*"
+  - "**/systems/**/**Sales*"
+  - "**/systems/building-pos/**Sales*"
+  - "**/systems/drink-pos/**Sales*"
+  - "**/systems/hotel-resort/**Finance*"
+  - "**/dashboard/**/finance/**"
+  - "**/dashboard/**/sales/**"
+alwaysApply: false
+---
+
+# การเงิน — แถบเมนูรายละเอียด (ประวัติ / รายรับ · รายจ่าย)
+
+**แม่แบบครบชุด:** **`dashboard-finance-module-template.mdc`**  
+**โครงหน้าจอเต็ม:** **`dashboard-finance-page-layout.mdc`**
+
+**คู่กับ:** `dashboard-finance-filter-charts-toggle.mdc` · `dashboard-expense-cost-categories.mdc` · `app-templates-media.mdc` · `app-templates-spark-charts.mdc` · `dashboard-row-action-icon-buttons.mdc` · `useAppNoticePopup` / `AppNoticePopup`
+
+**ต้นแบบโมดูล:** ร้านอาหาร (`BuildingPosSalesHistoryPanel` + `BuildingPosCostsPanel`) — เครื่องดื่ม / โรงแรมต้องจัดแถบ + ฟอร์มรายจ่าย + เลย์เอาต์แถวให้ใกล้เคียง
+
+---
+
+## 1) แถบเมนู 2 แท็บ (บังคับ · ทุกโมดูล)
+
+แถบอยู่**ในการ์ดการเงินใบเดียว** กับกรอง/กราฟ — ใต้แผงกรองและกราฟ (คั่น `border-t`) — **ห้าม**แยกเป็น `AppDashboardSection` คนละใบ
+
+| แท็บ | เนื้อหา |
+|------|---------|
+| **ประวัติ / รายรับ** | รายการธุรกรรม·ออเดอร์·เข้าพัก ตามช่วงกรอง |
+| **รายจ่าย** | ต้นทุน/รายจ่าย + หมวดหมู่ |
+
+ลำดับ: **ประวัติ/รายรับ → รายจ่าย**
+
+### UI แถบ (ให้เหมือนกันข้ามโมดูล)
+
+- `<nav>` · `role="tablist"` / `tab` / `tabpanel` · `aria-selected` · `aria-controls`
+- โทเค็นเปลือก: `*FinanceSubTabShellClass` (rounded-[1.25rem] + gradient inset)
+- ปุ่ม: `min-h-[44px]` · `flex-1` · `font-black` · active = `*NavActiveClass` + ring · idle = `*NavIdleClass`
+- **เครื่องดื่ม** ต้องมีแถบนี้ด้วย (อย่าเหลือแค่รายการขายใต้กราฟอย่างเดียว)
+
+อ้างอิง: building-pos / hotel-resort / drink-pos (`drinkPosFinanceSubTabShellClass`)
+
+---
+
+## 2) รูปสลิป — แสดงเฉพาะเมื่อมี (บังคับ)
+
+| เงื่อนไข | พฤติกรรม |
+|----------|----------|
+| **มี URL สลิป** | แสดง **`AppImageThumb`** (`h-14 w-14`) · กดเปิด **`AppImageLightbox`** ผ่าน `useAppImageLightbox` |
+| **ไม่มีสลิป** | **ไม่แสดง** ช่องว่าง / empty / ข้อความ «ไม่มีสลิป» |
+
+ใช้กับทั้งแท็บ **ประวัติ / รายรับ** และ **รายจ่าย**
+
+### เลย์เอาต์แถว (มือถือ + เดสก์ท็อป)
+
+แถวหลักใช้ **`flex items-start gap-2`** (หรือ `gap-3`) — **หลีกเลี่ยง `flex-wrap`** ที่ดันราคาลงบรรทัดใหม่บนมือถือ:
+
+```
+[สลิปย่อ ถ้ามี]  [เนื้อหา min-w-0 flex-1]  [ราคา shrink-0 text-right]  [ไอคอนแก้ไข · ลบ]
+```
+
+### สีราคาในแถว (บังคับ)
+
+| แท็บ | สีราคา |
+|------|--------|
+| ประวัติ / รายรับ | `text-emerald-700` · `font-black` · `tabular-nums` · แนะนำ `text-lg` |
+| รายจ่าย | `text-rose-600` · `font-black` · `tabular-nums` |
+
+- สลิปอยู่ซ้ายหรือชิดเนื้อหา — ไม่แทรกกลางจนราคาหล่น
+- Import จาก `@/components/app-templates` เท่านั้น
+
+```tsx
+{slipUrl ? (
+  <AppImageThumb src={slipUrl} alt="สลิป …" onOpen={() => lb.open(slipUrl)} className="h-14 w-14 shrink-0" />
+) : null}
+```
+
+**ห้าม**
+
+- แสดง placeholder สลิปเมื่อไม่มีรูป
+- lightbox / `<img>` เต็มจอ ad-hoc
+- `window.open` เป็นทางหลักเมื่อมี lightbox แล้ว
+- แสดงเฉพาะลิงก์ข้อความโดยไม่มีรูปย่อ (อนุญาตเป็นทางสำรองเพิ่มจาก thumb ได้)
+- ยอดรายรับเป็นม่วง/`slate-900` เป็นสีหลัก
+
+---
+
+## 2b) แท็บ **ประวัติ / รายรับ** — แก้ไข + ลบ (บังคับ)
+
+**ห้าม** ทำให้แท็บประวัติ/รายรับเป็นรายการอ่านอย่างเดียว
+
+| | บังคับ |
+|--|--------|
+| **แก้ไข** | ไอคอนดินสอทุกแถว · `FormModal` · PATCH ตามโดเมน · **รวมสลิป** (ดูย่อ · ลบ · อัปโหลด/ถ่ายใหม่ ด้วย `AppImageThumb` + gallery/camera จาก app-templates) |
+| **ลบ** | ไอคอนถังทุกแถว · **`await notice.confirm(...)`** ก่อน DELETE |
+| **วางปุ่ม** | ขวาสุดคู่ราคา · `dashboard-row-action-icon-buttons.mdc` · `aria-label` |
+| **สีราคา** | `text-emerald-700` |
+
+แท็บ **รายจ่าย** ต้องมีแก้ไข+ลบเช่นกัน (ฟอร์ม 5 ช่อง · สลิป · ราคา rose)
+
+### ยืนยันก่อนลบ — template กลาง
+
+```tsx
+import { useAppNoticePopup } from "@/components/app-templates";
+
+const notice = useAppNoticePopup();
+// render: {notice.popup}
+
+const ok = await notice.confirm(`ลบรายการ «${label}» ใช่หรือไม่?`);
+if (!ok) return;
+```
+
+| บังคับ | ห้าม |
+|--------|------|
+| `useAppNoticePopup().confirm` ก่อนลบรายรับ · รายจ่าย · หมวด | `window.confirm` / `confirm()` / `alert` |
+| `{notice.popup}` ในหน้า/แผง | แถวประวัติไม่มีแก้ไขหรือไม่มีลบ |
+| error → `notice.error` หรือข้อความใน UI | ลบทันทีโดยไม่ถาม |
+
+รายละเอียดเต็ม + ตารางโดเมน: **`dashboard-finance-module-template.mdc`** §6b
+
+---
+
+## 3) พฤติกรรมแท็บ
+
+1. CTA **+ รายจ่าย / + เพิ่มรายจ่าย** และปุ่ม **หมวดหมู่** อยู่ที่แท็บรายจ่ายเท่านั้น — ไม่เปิดหน้าแยก · **ไม่วางเหนือกราฟ**
+2. รายการกรองตามช่วงเวลาของแผงกรองในการ์ดเดียวกัน
+3. URL เก่า `?fin=costs` → เปิดแท็บรายจ่ายในหน้าเดิมได้
+
+---
+
+## 4) แท็บรายจ่าย — ฟอร์มต้นแบบร้านอาหาร
+
+ฟอร์มบันทึก/แก้ไขรายจ่าย **ต้องเหมือนร้านอาหาร** (`BuildingPosCostsPanel`):
+
+1. หมวดหมู่  
+2. รายละเอียดรายการ  
+3. จำนวนเงิน (บาท)  
+4. หมายเหตุ (ไม่บังคับ)  
+5. รูปสลิป (ไม่บังคับ) — gallery/camera + preview thumb + ลบสลิป  
+
+- `FormModal` + **`mobileCentered`**
+- แถวรายการ: สลิป (ถ้ามี) · เนื้อหา · **ราคาขวาโทน rose** · ไอคอนแก้ไข/ลบ  
+- ลบรายการ/หมวด: **`await notice.confirm(...)`** ก่อนเรียก API  
+- ชิปกรองหมวด · ปุ่มหมวดหมู่ — ตาม **`dashboard-expense-cost-categories.mdc`**
+
+| โมดูล | คอมโพเนนต์ / จุดอ้างอิง |
+|-------|-------------------------|
+| ร้านอาหาร | `BuildingPosCostsPanel` (**ต้นแบบ**) |
+| เครื่องดื่ม | `DrinkPosCostsPanel` |
+| โรงแรม | ฟอร์มใน `HotelResortFinanceClient` (โครงเดียวกับต้นแบบ) |
+
+---
+
+## 5) อ้างอิงสลิปตามโดเมน
+
+| โมดูล | รายรับ | รายจ่าย |
+|-------|--------|---------|
+| POS ร้านอาหาร | `payment_slip_url` บนออเดอร์ | `BuildingPosCostEntry.paymentSlipUrl` |
+| POS เครื่องดื่ม | `DrinkPosSale.paymentSlipUrl` | `DrinkPosCostEntry.paymentSlipUrl` |
+| โรงแรม | `HotelResortBooking.paymentSlipUrl` | `HotelResortCostEntry.paymentSlipUrl` |
+
+## เช็กลิสต์
+
+- [ ] ตาม `dashboard-finance-page-layout.mdc` / แม่แบบครบชุด
+- [ ] แถบ 2 แท็บ UI เดียวกัน (รวมเครื่องดื่ม)
+- [ ] สลิป: มีถึงแสดง + กดดู · ไม่มีไม่โชว์
+- [ ] แถว: ราคาขวา emerald/rose · ไม่ flex-wrap หลุดบนมือถือ
+- [ ] **ประวัติ / รายรับ:** ทุกแถวมีแก้ไข + ลบ (ห้ามอ่านอย่างเดียว)
+- [ ] รายจ่าย: มีแก้ไข + ลบ
+- [ ] ลบใช้ `useAppNoticePopup().confirm` — ห้าม `window.confirm`
+- [ ] ฟอร์มรายจ่ายครบ 5 ช่องตามต้นแบบร้านอาหาร
+- [ ] CTA รายจ่ายอยู่แท็บรายจ่ายเท่านั้น
+- [ ] `AppImageThumb` / `AppImageLightbox` จาก `app-templates`

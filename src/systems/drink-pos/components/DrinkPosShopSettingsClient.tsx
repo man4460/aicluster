@@ -6,7 +6,11 @@ import {
   AppModuleShopPaymentFields,
   AppSectionHeader,
   AppShopLogoField,
+  AppSlipPaperSizeSettingsField,
+  AppStaffDailyPinSettingsField,
+  staffDailyPinPatchBody,
   appDashboardSectionVioletClass,
+  type AppSlipPaperSize,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
@@ -16,7 +20,11 @@ export type DrinkPosShopSettingsProfile = {
   displayName: string | null;
   logoUrl: string | null;
   tagline: string | null;
+  address: string | null;
   contactPhone: string | null;
+  slipPaperSize: AppSlipPaperSize;
+  orderTicketSlipPaperSize: AppSlipPaperSize;
+  staffDailyPinSet?: boolean;
 } & ModuleShopPaymentDto;
 
 export function DrinkPosShopSettingsClient({
@@ -24,7 +32,14 @@ export function DrinkPosShopSettingsClient({
 }: {
   initial: DrinkPosShopSettingsProfile;
 }) {
-  const [form, setForm] = useState<DrinkPosShopSettingsProfile>({ ...initial });
+  const [form, setForm] = useState<DrinkPosShopSettingsProfile>({
+    ...initial,
+    slipPaperSize: initial.slipPaperSize ?? "SLIP_58",
+    orderTicketSlipPaperSize: initial.orderTicketSlipPaperSize ?? "SLIP_58",
+    staffDailyPinSet: initial.staffDailyPinSet ?? false,
+  });
+  const [pinDraft, setPinDraft] = useState("");
+  const [clearPin, setClearPin] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -38,7 +53,10 @@ export function DrinkPosShopSettingsClient({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          ...staffDailyPinPatchBody({ pinDraft, clearPin }),
+        }),
       });
       const json = (await res.json().catch(() => ({}))) as {
         profile?: DrinkPosShopSettingsProfile;
@@ -50,13 +68,19 @@ export function DrinkPosShopSettingsClient({
           displayName: json.profile.displayName,
           logoUrl: json.profile.logoUrl,
           tagline: json.profile.tagline,
+          address: json.profile.address,
           contactPhone: json.profile.contactPhone,
+          slipPaperSize: json.profile.slipPaperSize ?? "SLIP_58",
+          orderTicketSlipPaperSize: json.profile.orderTicketSlipPaperSize ?? "SLIP_58",
+          staffDailyPinSet: json.profile.staffDailyPinSet ?? false,
           promptPayPhone: json.profile.promptPayPhone,
           bankName: json.profile.bankName,
           bankAccountNumber: json.profile.bankAccountNumber,
           bankAccountName: json.profile.bankAccountName,
           taxId: json.profile.taxId,
         });
+        setPinDraft("");
+        setClearPin(false);
       }
       setMsg("บันทึกแล้ว");
     } catch (e) {
@@ -98,6 +122,15 @@ export function DrinkPosShopSettingsClient({
             />
           </label>
           <label className="block space-y-1">
+            <span className="text-xs font-bold text-[#4d47b6]">ที่อยู่ร้าน (บนใบเสร็จ)</span>
+            <textarea
+              className={cn(drinkPosFieldClass, "min-h-[72px] resize-y py-2")}
+              value={form.address ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+              placeholder="บ้านเลขที่ · ถนน · ตำบล · อำเภอ · จังหวัด"
+            />
+          </label>
+          <label className="block space-y-1">
             <span className="text-xs font-bold text-[#4d47b6]">เบอร์ติดต่อร้าน</span>
             <input
               className={drinkPosFieldClass}
@@ -110,6 +143,34 @@ export function DrinkPosShopSettingsClient({
             value={form}
             onChange={(payment) => setForm((f) => ({ ...f, ...payment }))}
             fieldClassName={drinkPosFieldClass}
+          />
+
+          <AppSlipPaperSizeSettingsField
+            fieldClassName={drinkPosFieldClass}
+            value={form.slipPaperSize}
+            onChange={(slipPaperSize) => setForm((f) => ({ ...f, slipPaperSize }))}
+            disabled={busy}
+          />
+
+          <AppSlipPaperSizeSettingsField
+            fieldClassName={drinkPosFieldClass}
+            label="ขนาดสลิปคิวออเดอร์"
+            hint="สลิปครัว / พร้อมเสิร์ฟ · แยกจากใบเสร็จลูกค้า · 58 mm กึ่งกลาง · 80 mm / A4 ชิดซ้าย"
+            value={form.orderTicketSlipPaperSize}
+            onChange={(orderTicketSlipPaperSize) =>
+              setForm((f) => ({ ...f, orderTicketSlipPaperSize }))
+            }
+            disabled={busy}
+          />
+
+          <AppStaffDailyPinSettingsField
+            fieldClassName={drinkPosFieldClass}
+            pinSet={Boolean(form.staffDailyPinSet)}
+            pinDraft={pinDraft}
+            onPinDraftChange={setPinDraft}
+            clearPin={clearPin}
+            onClearPinChange={setClearPin}
+            disabled={busy}
           />
 
           <button

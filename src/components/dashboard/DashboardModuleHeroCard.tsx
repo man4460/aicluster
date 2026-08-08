@@ -107,9 +107,9 @@ function HeroUsagePill({ badge }: { badge: ModuleUsageBadge }) {
     return (
       <span
         className="rounded-full border border-amber-200/60 bg-amber-400/95 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#1a0d3a] shadow-md backdrop-blur-md sm:text-xs"
-        title="แพ็กเหมารายเดือน 199 — ข้อมูลมากกว่า 10,000 แถว · เปิดพิมพ์สลิป"
+        title="หัก 1 โทเคนต่อวันเมื่อเข้าใช้โมดูล (1 บาท = 1 โทเคน)"
       >
-        199 / เดือน
+        {badge.label}
       </span>
     );
   }

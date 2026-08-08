@@ -72,6 +72,10 @@ export const drinkPosNavActiveClass = cn(
 
 export const drinkPosNavIdleClass = "text-slate-500 hover:bg-white/55 hover:text-slate-700";
 
+/** แถบแท็บย่อยหน้าการเงิน (ประวัติ / รายรับ · รายจ่าย) — แบบร้านอาหาร/โรงแรม */
+export const drinkPosFinanceSubTabShellClass =
+  "rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]";
+
 export const drinkPosOutlineIconButtonClass =
   "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/85 px-0 text-[#4d47b6] shadow-sm transition hover:bg-white sm:min-w-0 sm:px-3";
 

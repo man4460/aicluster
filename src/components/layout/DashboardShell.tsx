@@ -28,16 +28,18 @@ import {
   MODULE_GROUP_TIER_NAME,
   UI_VISIBLE_MAX_MODULE_GROUP,
 } from "@/lib/modules/config";
-import { BuildingPosHeaderBarNav, BuildingPosHeaderExpandButton } from "@/systems/building-pos/components/BuildingPosHeaderBarNav";
 import {
   BUILDING_POS_HEADER_COLLAPSE_EVENT,
+  BUILDING_POS_ORDER_HREF,
   isBuildingPosModulePath,
   readBuildingPosHeaderCollapsed,
   writeBuildingPosHeaderCollapsed,
 } from "@/systems/building-pos/building-pos-nav";
+import { BuildingPosHeaderBarNav, BuildingPosHeaderExpandButton } from "@/systems/building-pos/components/BuildingPosHeaderBarNav";
 import { DrinkPosHeaderBarNav, DrinkPosHeaderExpandButton } from "@/systems/drink-pos/components/DrinkPosHeaderBarNav";
 import {
   DRINK_POS_HEADER_COLLAPSE_EVENT,
+  DRINK_POS_ORDER_HREF,
   isDrinkPosModulePath,
   readDrinkPosHeaderCollapsed,
   writeDrinkPosHeaderCollapsed,
@@ -52,6 +54,36 @@ import {
   readFootballTurfHeaderCollapsed,
   writeFootballTurfHeaderCollapsed,
 } from "@/systems/football-turf/football-turf-module-nav";
+import {
+  HotelResortHeaderBarNav,
+  HotelResortHeaderExpandButton,
+} from "@/systems/hotel-resort/components/HotelResortHeaderBarNav";
+import {
+  HOTEL_RESORT_HEADER_COLLAPSE_EVENT,
+  isHotelResortModulePath,
+  readHotelResortHeaderCollapsed,
+  writeHotelResortHeaderCollapsed,
+} from "@/systems/hotel-resort/hotel-resort-module-nav";
+import {
+  CarWashHeaderBarNav,
+  CarWashHeaderExpandButton,
+} from "@/systems/car-wash/components/CarWashHeaderBarNav";
+import {
+  CAR_WASH_HEADER_COLLAPSE_EVENT,
+  isCarWashModulePath,
+  readCarWashHeaderCollapsed,
+  writeCarWashHeaderCollapsed,
+} from "@/systems/car-wash/car-wash-module-nav";
+import {
+  MassageHeaderBarNav,
+  MassageHeaderExpandButton,
+} from "@/systems/massage/components/MassageHeaderBarNav";
+import {
+  MASSAGE_HEADER_COLLAPSE_EVENT,
+  isMassageModulePath,
+  readMassageHeaderCollapsed,
+  writeMassageHeaderCollapsed,
+} from "@/systems/massage/massage-module-nav";
 import {
   AdminHubHeaderBarNav,
   AdminHubHeaderExpandButton,
@@ -352,6 +384,9 @@ export function DashboardShell({
   const [drinkPosHeaderCollapsed, setDrinkPosHeaderCollapsed] = useState(false);
   const [buildingPosHeaderCollapsed, setBuildingPosHeaderCollapsed] = useState(false);
   const [footballTurfHeaderCollapsed, setFootballTurfHeaderCollapsed] = useState(false);
+  const [hotelResortHeaderCollapsed, setHotelResortHeaderCollapsed] = useState(false);
+  const [carWashHeaderCollapsed, setCarWashHeaderCollapsed] = useState(false);
+  const [massageHeaderCollapsed, setMassageHeaderCollapsed] = useState(false);
   const [adminHubHeaderCollapsed, setAdminHubHeaderCollapsed] = useState(false);
   const accountWrapRef = useRef<HTMLDivElement>(null);
   const moduleMenuRef = useRef<HTMLDivElement>(null);
@@ -361,10 +396,22 @@ export function DashboardShell({
   const systemFocusLayout = shouldUseSystemFocusLayout(pathname);
   const onDrinkPosModule = isDrinkPosModulePath(pathname);
   const onBuildingPosModule = isBuildingPosModulePath(pathname);
+  /** หน้าออเดอร์ POS — เดสก์ท็อปล็อกความสูงให้คอลัมน์ซ้าย/ขวาเลื่อนในกรอบ (มือถือไม่ล็อก) */
+  const onPosOrderPage =
+    pathname === DRINK_POS_ORDER_HREF ||
+    pathname.startsWith(`${DRINK_POS_ORDER_HREF}/`) ||
+    pathname === BUILDING_POS_ORDER_HREF ||
+    pathname.startsWith(`${BUILDING_POS_ORDER_HREF}/`);
   const onFootballTurfModule = isFootballTurfModulePath(pathname);
+  const onHotelResortModule = isHotelResortModulePath(pathname);
+  const onCarWashModule = isCarWashModulePath(pathname);
+  const onMassageModule = isMassageModulePath(pathname);
   const showDrinkPosHeaderBar = onDrinkPosModule && drinkPosHeaderCollapsed;
   const showBuildingPosHeaderBar = onBuildingPosModule && buildingPosHeaderCollapsed;
   const showFootballTurfHeaderBar = onFootballTurfModule && footballTurfHeaderCollapsed;
+  const showHotelResortHeaderBar = onHotelResortModule && hotelResortHeaderCollapsed;
+  const showCarWashHeaderBar = onCarWashModule && carWashHeaderCollapsed;
+  const showMassageHeaderBar = onMassageModule && massageHeaderCollapsed;
   const showAdminHubHeaderBar = onAdminHub && adminHubHeaderCollapsed;
   const mainNavGroups = navGroups.filter((group) => group.id === "basic");
   const mainMenuItems = mainNavGroups[0]?.items ?? [];
@@ -490,6 +537,51 @@ export function DashboardShell({
   }, [onFootballTurfModule]);
 
   useEffect(() => {
+    if (!onHotelResortModule) {
+      setHotelResortHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setHotelResortHeaderCollapsed(readHotelResortHeaderCollapsed());
+    sync();
+    window.addEventListener(HOTEL_RESORT_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(HOTEL_RESORT_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onHotelResortModule]);
+
+  useEffect(() => {
+    if (!onCarWashModule) {
+      setCarWashHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setCarWashHeaderCollapsed(readCarWashHeaderCollapsed());
+    sync();
+    window.addEventListener(CAR_WASH_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(CAR_WASH_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onCarWashModule]);
+
+  useEffect(() => {
+    if (!onMassageModule) {
+      setMassageHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setMassageHeaderCollapsed(readMassageHeaderCollapsed());
+    sync();
+    window.addEventListener(MASSAGE_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(MASSAGE_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onMassageModule]);
+
+  useEffect(() => {
     if (!onAdminHub) {
       setAdminHubHeaderCollapsed(false);
       return;
@@ -551,7 +643,12 @@ export function DashboardShell({
   }, [moduleMenuOpen]);
 
   return (
-    <div className="flex min-h-[100dvh] flex-col text-[#2e2a58]">
+    <div
+      className={cn(
+        "flex min-h-[100dvh] flex-col text-[#2e2a58]",
+        onPosOrderPage && "lg:h-[100dvh] lg:max-h-[100dvh] lg:overflow-hidden",
+      )}
+    >
       {/* แถบบน — แก้ว โค้งมนเทียบเปลือกโมดูล / drawer (rounded-[2.5rem]) */}
       {!moduleStaffKiosk ?
         <header className="sticky top-0 z-30 w-full">
@@ -737,6 +834,78 @@ export function DashboardShell({
                     <span className="font-medium text-white/90">{displayName}</span>
                   </p>
                   <FootballTurfHeaderExpandButton onExpand={() => writeFootballTurfHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showHotelResortHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <HotelResortHeaderBarNav onExpand={() => writeHotelResortHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <HotelResortHeaderExpandButton onExpand={() => writeHotelResortHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showCarWashHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <CarWashHeaderBarNav onExpand={() => writeCarWashHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <CarWashHeaderExpandButton onExpand={() => writeCarWashHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showMassageHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <MassageHeaderBarNav onExpand={() => writeMassageHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <MassageHeaderExpandButton onExpand={() => writeMassageHeaderCollapsed(false)} />
                 </div>
               </>
             ) : showAdminHubHeaderBar ? (
@@ -949,6 +1118,7 @@ export function DashboardShell({
           <main
             className={cn(
               "flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden rounded-[1.15rem]",
+              onPosOrderPage && "lg:overflow-hidden",
               systemFocusLayout && "md:rounded-none",
               moduleStaffKiosk && "!rounded-none",
             )}

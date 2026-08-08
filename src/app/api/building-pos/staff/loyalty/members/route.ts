@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { resolveBuildingPosStaffFromUrl } from "@/lib/building-pos/staff-request";
+import { requireBuildingPosStaff } from "@/lib/building-pos/staff-auth";
 import { formatBuildingPosDbError, jsonBuildingPosError } from "@/lib/building-pos/route-errors";
 import { parseLoyaltyPhoneQuery } from "@/lib/loyalty-stamp/member-qr";
 import {
@@ -16,8 +16,9 @@ import {
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const ctx = await resolveBuildingPosStaffFromUrl(url);
-    if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await requireBuildingPosStaff(req);
+    if ("error" in auth) return auth.error;
+    const { ctx } = auth;
     const settings = await ensureBuildingPosLoyaltySettings(ctx.ownerId, ctx.trialSessionId);
     if (!settings.enabled) {
       return NextResponse.json({
@@ -104,8 +105,9 @@ const upsertSchema = z.object({
 export async function POST(req: Request) {
   try {
     const url = new URL(req.url);
-    const ctx = await resolveBuildingPosStaffFromUrl(url);
-    if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await requireBuildingPosStaff(req);
+    if ("error" in auth) return auth.error;
+    const { ctx } = auth;
     let json: unknown;
     try {
       json = await req.json();

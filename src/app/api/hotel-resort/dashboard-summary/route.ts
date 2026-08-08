@@ -1,25 +1,46 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withHotelResortOwnerContext } from "@/systems/hotel-resort/lib/api-auth";
+import { withHotelResortOwnerOrStaffContext } from "@/systems/hotel-resort/lib/api-auth";
+import {
+  hotelResortAsOfInputValue,
+  hotelResortDisplayRoomStatus,
+  hotelResortOccupancyClock,
+  hotelResortParseAsOfDate,
+  hotelResortPickBookingForRoomDay,
+  type HotelResortOccupancyBooking,
+} from "@/systems/hotel-resort/lib/room-occupancy";
 
-function bangkokDayBounds() {
-  const now = new Date();
-  const key = now.toLocaleString("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" });
-  const start = new Date(`${key}T00:00:00+07:00`);
-  const end = new Date(`${key}T23:59:59.999+07:00`);
-  return { start, end };
+function dayBounds(asOf: Date) {
+  const key = hotelResortAsOfInputValue(asOf);
+  const localStart = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate(), 0, 0, 0, 0);
+  const localEnd = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate(), 23, 59, 59, 999);
+  return { start: localStart, end: localEnd, key };
 }
 
-export async function GET() {
-  const auth = await withHotelResortOwnerContext();
+export async function GET(req: Request) {
+  const auth = await withHotelResortOwnerOrStaffContext(req);
   if (!auth.ok) return auth.res;
-  const { ownerUserId } = auth.ctx;
-  const { start, end } = bangkokDayBounds();
+  const { ownerUserId, trialSessionId } = auth.ctx;
+  const url = new URL(req.url);
+  const asOf = hotelResortParseAsOfDate(url.searchParams.get("asOf"));
+  const { start, end, key } = dayBounds(asOf);
 
-  const [rooms, arrivals, departures, inHouse] = await Promise.all([
+  const [rooms, activeBookings, arrivals, departures, inHouse, profile] = await Promise.all([
     prisma.hotelResortRoom.findMany({
       where: { ownerUserId },
-      select: { status: true },
+      select: { id: true, status: true },
+    }),
+    prisma.hotelResortBooking.findMany({
+      where: { ownerUserId, status: { in: ["RESERVED", "CHECKED_IN"] }, roomId: { not: null } },
+      select: {
+        id: true,
+        roomId: true,
+        guestName: true,
+        guestPhone: true,
+        status: true,
+        checkInAt: true,
+        checkOutAt: true,
+      },
     }),
     prisma.hotelResortBooking.count({
       where: {
@@ -38,15 +59,40 @@ export async function GET() {
     prisma.hotelResortBooking.count({
       where: { ownerUserId, status: "CHECKED_IN" },
     }),
+    prisma.hotelResortProfile.findUnique({
+      where: {
+        ownerUserId_trialSessionId: { ownerUserId, trialSessionId },
+      },
+      select: { checkInTime: true, checkOutTime: true },
+    }),
   ]);
 
+  const bookings: HotelResortOccupancyBooking[] = activeBookings
+    .filter((b): b is typeof b & { roomId: string } => Boolean(b.roomId))
+    .map((b) => ({
+      id: b.id,
+      roomId: b.roomId,
+      guestName: b.guestName,
+      guestPhone: b.guestPhone,
+      status: b.status as "RESERVED" | "CHECKED_IN",
+      checkInAt: b.checkInAt,
+      checkOutAt: b.checkOutAt,
+    }));
+
+  const pickOpts = {
+    clock: hotelResortOccupancyClock(asOf),
+    checkOutTimeHm: profile?.checkOutTime?.trim() || "12:00",
+    checkInTimeHm: profile?.checkInTime?.trim() || "14:00",
+  };
   const counts = { VACANT: 0, OCCUPIED: 0, RESERVED: 0, MAINTENANCE: 0 };
   for (const r of rooms) {
-    const k = r.status as keyof typeof counts;
-    if (k in counts) counts[k]++;
+    const pick = hotelResortPickBookingForRoomDay(bookings, r.id, asOf, pickOpts);
+    const display = hotelResortDisplayRoomStatus(r.status, pick);
+    counts[display] += 1;
   }
 
   return NextResponse.json({
+    asOf: key,
     totalRooms: rooms.length,
     vacant: counts.VACANT,
     occupied: counts.OCCUPIED,

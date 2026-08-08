@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { AppImagePickCameraButtons } from "./AppImagePickCameraButtons";
+import { useAppCameraCapture } from "./useAppCameraCapture";
 import { cn } from "@/lib/cn";
 
 export type AppShopLogoFieldProps = {
@@ -27,7 +28,7 @@ export function AppShopLogoField({
   const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
+  const { openCamera, cameraInputRef, cameraModal } = useAppCameraCapture({ title: "ถ่ายโลโก้ร้าน" });
 
   async function upload(file: File) {
     setUploading(true);
@@ -80,7 +81,7 @@ export function AppShopLogoField({
           }}
         />
         <input
-          ref={cameraRef}
+          ref={cameraInputRef}
           type="file"
           accept="image/*"
           capture="environment"
@@ -95,11 +96,12 @@ export function AppShopLogoField({
           className="mt-2 justify-start"
           busy={uploading}
           onPickGallery={() => galleryRef.current?.click()}
-          onPickCamera={() => cameraRef.current?.click()}
+          onPickCamera={() => openCamera((file) => void upload(file))}
           labels={{ gallery: labels?.gallery ?? "เลือกโลโก้", camera: labels?.camera ?? "ถ่ายโลโก้" }}
         />
         {err ? <p className="mt-1 text-xs text-rose-600">{err}</p> : null}
       </div>
+      {cameraModal}
     </div>
   );
 }
