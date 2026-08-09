@@ -75,6 +75,67 @@ export function isSlotTimeCurrent(
   return bookingCoversMinutes(slot, opts.nowMinutes);
 }
 
+type TimelineSlot = {
+  startTime: string;
+  endTime: string;
+  booking?: unknown;
+};
+
+type SlotTimeOpts = { scheduleDate: string; todayDateKey: string; nowMinutes: number };
+
+/**
+ * เช็คอินหน้างาน: รอบปัจจุบันที่ว่าง หรือรอบถัดไปที่ว่าง (เมื่อยังไม่มีคนจอง)
+ * — ไม่รวมรอบผ่านแล้ว / รอบไกลหลายช่วง · เฉพาะวันนี้
+ */
+export function listWalkInEligibleSlots<T extends TimelineSlot>(
+  timeline: T[],
+  opts: SlotTimeOpts,
+): T[] {
+  if (opts.scheduleDate !== opts.todayDateKey) return [];
+
+  const free = (slot: T) => !slot.booking && !isSlotTimePassed(slot, opts);
+  const out: T[] = [];
+
+  const current = timeline.find((slot) => isSlotTimeCurrent(slot, opts));
+  if (current && free(current)) out.push(current);
+
+  const next = timeline.find((slot) => isSlotUpcoming(slot, opts) && free(slot));
+  if (next && !out.some((s) => s.startTime === next.startTime && s.endTime === next.endTime)) {
+    out.push(next);
+  }
+
+  return out;
+}
+
+/**
+ * จองล่วงหน้า: เฉพาะรอบถัดไป (ยังไม่เริ่ม) ที่ว่าง — ไม่รวมรอบปัจจุบันที่กำลังเล่น
+ */
+export function listAdvanceBookingEligibleSlots<T extends TimelineSlot>(
+  timeline: T[],
+  opts: SlotTimeOpts,
+): T[] {
+  return timeline.filter(
+    (slot) => !slot.booking && !isSlotTimePassed(slot, opts) && isSlotUpcoming(slot, opts),
+  );
+}
+
+export function isSlotEligibleForWalkIn(
+  slot: TimelineSlot,
+  timeline: TimelineSlot[],
+  opts: SlotTimeOpts,
+): boolean {
+  return listWalkInEligibleSlots(timeline, opts).some(
+    (s) => s.startTime === slot.startTime && s.endTime === slot.endTime,
+  );
+}
+
+export function isSlotEligibleForAdvanceBooking(
+  slot: TimelineSlot,
+  opts: SlotTimeOpts,
+): boolean {
+  return !slot.booking && !isSlotTimePassed(slot, opts) && isSlotUpcoming(slot, opts);
+}
+
 /** การจองหมดเวลาแล้วหรือยัง (อิงวันที่จอง + นาฬิกาไทย) */
 export function isBookingTimePassed(
   booking: { bookingDate: string; endTime: string },

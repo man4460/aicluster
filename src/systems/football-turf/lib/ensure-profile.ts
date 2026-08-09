@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import { ensureFootballTurfIncomeCategories } from "@/systems/football-turf/lib/ensure-income-categories";
 
 function defaultVenueSettings() {
   return {
     venueName: "สนามฟุตบอล MAWELL",
     venueSubtitle: "สนามหญ้าเทียม",
+    logoUrl: "",
     promptpayNumber: "",
     bankName: "",
     accountName: "",
@@ -16,6 +18,10 @@ function defaultVenueSettings() {
     slipPaperSize: "SLIP_58",
     portalBookingPaymentMode: "NONE",
     depositAmountBaht: null as number | null,
+    portalBannerUrl: null as string | null,
+    portalGalleryJson: "[]",
+    facebookUrl: "",
+    mapUrl: "",
   };
 }
 
@@ -108,6 +114,8 @@ export async function ensureFootballTurfProfile(ownerUserId: string, trialSessio
       { ownerUserId, trialSessionId, name: "ค่าดูแลสนาม" },
     ],
   });
+
+  await ensureFootballTurfIncomeCategories(ownerUserId, trialSessionId);
 
   return profile;
 }

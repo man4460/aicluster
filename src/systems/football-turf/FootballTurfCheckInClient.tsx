@@ -24,6 +24,7 @@ const FOOTBALL_TURF_MODULE_NAME = "สนามฟุตบอล";
 const EMPTY_SETTINGS: FootballTurfVenueSettings = {
   venueName: "",
   venueSubtitle: "",
+  logoUrl: "",
   promptpayNumber: "",
   bankName: "",
   accountName: "",
@@ -36,6 +37,10 @@ const EMPTY_SETTINGS: FootballTurfVenueSettings = {
   slipPaperSize: "SLIP_58",
   portalBookingPaymentMode: "NONE",
   depositAmountBaht: null,
+  portalBannerUrl: "",
+  portalGallery: [],
+  facebookUrl: "",
+  mapUrl: "",
 };
 
 function bookingStatusLabel(status: FootballTurfBooking["status"]) {
@@ -122,9 +127,19 @@ export function FootballTurfCheckInClient({
       setMessage("คิวนี้หมดเวลาหรือเช็กอินไม่ได้แล้ว");
       return;
     }
-    await repo.updateBooking(bookingId, { status: "CHECKED_IN" });
-    setMessage("เช็กอินแล้ว — ทุกรอบของชื่อ/เบอร์เดียวกันในวันนี้ถูกเช็กอินด้วย");
-    await refresh();
+    const paid = Math.max(0, Math.round(Number(target.amountPaidBaht ?? target.depositAmountBaht ?? 0)));
+    const fullyPaid = target.paymentStatus === "PAID" || paid >= target.finalPrice;
+    if (!fullyPaid) {
+      setMessage("ยังค้างชำระ — ติดต่อเจ้าหน้าที่รับชำระเต็มก่อนเช็กอิน");
+      return;
+    }
+    try {
+      await repo.updateBooking(bookingId, { status: "CHECKED_IN" });
+      setMessage("เช็กอินแล้ว — ทุกรอบของชื่อ/เบอร์เดียวกันในวันนี้ถูกเช็กอินด้วย");
+      await refresh();
+    } catch {
+      setMessage("เช็กอินไม่สำเร็จ — อาจยังค้างชำระหรือคิวไม่พร้อม");
+    }
   }
 
   async function applyPromotionSale(saleId: number, bookingId: number) {

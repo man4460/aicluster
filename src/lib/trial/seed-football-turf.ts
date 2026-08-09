@@ -338,7 +338,8 @@ const LIVE_OVERVIEW_NOTE = "ตัวอย่างภาพรวมสด";
 
 /**
  * ใส่จองวันนี้ตามช่วงเวลาปัจจุบัน (เล่นอยู่ / จองต่อ / รอเช็กอิน)
- * เพื่อให้การ์ดภาพรวมมีปุ่มเช็กอิน·ปิดรอบทดสอบได้ — รันซ้ำได้โดยไม่ซ้อนถ้ามีโน้ต marker วันนี้แล้ว
+ * เพื่อให้การ์ดภาพรวมมีปุ่มเช็กอิน·ปิดรอบทดสอบได้
+ * — เรียกเฉพาะตอน seed ทดลอง/เดโมเท่านั้น ห้ามเรียกใน API hot path
  */
 export async function seedFootballTurfLiveOverviewBookings(
   db: PrismaClient | Tx,
@@ -348,6 +349,17 @@ export async function seedFootballTurfLiveOverviewBookings(
   const tx = db;
   const todayKey = daysAgoIsoDate(0);
   const todayDate = parseBookingDate(todayKey);
+
+  // กันซ้ำแบบกว้าง: มีจองวันนี้แล้ว (ไม่สน note) ไม่ใส่ demo live อีก
+  const todayCount = await tx.footballTurfBooking.count({
+    where: {
+      ownerUserId,
+      trialSessionId,
+      bookingDate: todayDate,
+      status: { not: "CANCELLED" },
+    },
+  });
+  if (todayCount > 0) return;
 
   const already = await tx.footballTurfBooking.count({
     where: {
@@ -399,6 +411,20 @@ export async function seedFootballTurfLiveOverviewBookings(
         rangesOverlap(row.startTime, row.endTime, input.startTime, input.endTime),
     );
     if (clash) return;
+    // กัน race: เช็คซ้ำใน DB ก่อน insert
+    const dup = await tx.footballTurfBooking.findFirst({
+      where: {
+        ownerUserId,
+        trialSessionId,
+        courtId: input.courtId,
+        bookingDate: todayDate,
+        startTime: input.startTime,
+        endTime: input.endTime,
+        status: { not: "CANCELLED" },
+      },
+      select: { id: true },
+    });
+    if (dup) return;
     await tx.footballTurfBooking.create({
       data: {
         ownerUserId,
@@ -415,6 +441,7 @@ export async function seedFootballTurfLiveOverviewBookings(
         status: input.status,
         listedPrice: input.listedPrice,
         finalPrice: input.listedPrice,
+        amountPaidBaht: input.listedPrice,
         note: LIVE_OVERVIEW_NOTE,
         paymentMethod: input.paymentMethod,
         paymentStatus: "PAID",

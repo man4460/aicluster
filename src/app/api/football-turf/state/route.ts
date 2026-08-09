@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getFootballTurfOwnerContext } from "@/systems/football-turf/lib/api-auth";
+import { getFootballTurfOwnerOrStaffContext } from "@/systems/football-turf/lib/api-auth";
 import { createFootballTurfServerRepo } from "@/systems/football-turf/lib/server-repo";
 
-export async function GET() {
-  const ctx = await getFootballTurfOwnerContext();
-  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET(req: Request) {
+  const gate = await getFootballTurfOwnerOrStaffContext(req);
+  if (!gate.ok) return gate.res;
 
-  const repo = createFootballTurfServerRepo(ctx.userId, ctx.scope.trialSessionId);
+  const repo = createFootballTurfServerRepo(gate.userId, gate.trialSessionId);
   const state = await repo.loadFullState();
   return NextResponse.json(state);
 }

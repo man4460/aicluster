@@ -284,7 +284,11 @@ export function HotelResortCheckOutModal({ open, room, onClose, onDone }: Props)
           ...(payNowBaht > 0
             ? {
                 paymentMethod,
-                paymentSlipUrl,
+                ...(paymentMethod === "CASH"
+                  ? { paymentSlipUrl: null }
+                  : paymentSlipUrl
+                    ? { paymentSlipUrl }
+                    : {}),
               }
             : {}),
         }),

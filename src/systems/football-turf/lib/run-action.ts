@@ -23,8 +23,17 @@ type FootballTurfServerRepoLike = Pick<
   | "deletePromotionSale"
   | "usePromotionSale"
   | "createCostCategory"
+  | "updateCostCategory"
+  | "deleteCostCategory"
   | "createCostEntry"
+  | "updateCostEntry"
   | "deleteCostEntry"
+  | "createIncomeCategory"
+  | "updateIncomeCategory"
+  | "deleteIncomeCategory"
+  | "createIncomeEntry"
+  | "updateIncomeEntry"
+  | "deleteIncomeEntry"
   | "createCustomer"
   | "updateCustomer"
   | "deleteCustomer"
@@ -119,13 +128,101 @@ export async function runFootballTurfAction(
       const result = await repo.createCostCategory(name);
       return { ok: true, result };
     }
+    case "updateCostCategory": {
+      if (id == null) return { ok: false, status: 400, error: "id required" };
+      const name = (input.name as string | undefined) ?? "";
+      try {
+        const result = await repo.updateCostCategory(id, name);
+        if (!result) return { ok: false, status: 404, error: "not found" };
+        return { ok: true, result };
+      } catch (e) {
+        return { ok: false, status: 409, error: e instanceof Error ? e.message : "update failed" };
+      }
+    }
+    case "deleteCostCategory": {
+      if (id == null) return { ok: false, status: 400, error: "id required" };
+      try {
+        const deleted = await repo.deleteCostCategory(id);
+        if (!deleted) return { ok: false, status: 404, error: "not found" };
+        return { ok: true, result: { deleted } };
+      } catch (e) {
+        return { ok: false, status: 409, error: e instanceof Error ? e.message : "delete failed" };
+      }
+    }
     case "createCostEntry": {
       const result = await repo.createCostEntry(input as Parameters<FootballTurfRepository["createCostEntry"]>[0]);
+      return { ok: true, result };
+    }
+    case "updateCostEntry": {
+      if (id == null) return { ok: false, status: 400, error: "id required" };
+      const result = await repo.updateCostEntry(
+        id,
+        input as Parameters<FootballTurfRepository["updateCostEntry"]>[1],
+      );
+      if (!result) return { ok: false, status: 404, error: "not found" };
       return { ok: true, result };
     }
     case "deleteCostEntry": {
       if (id == null) return { ok: false, status: 400, error: "id required" };
       const deleted = await repo.deleteCostEntry(id);
+      return { ok: true, result: { deleted } };
+    }
+    case "createIncomeCategory": {
+      const name = (input.name as string | undefined) ?? "";
+      try {
+        const result = await repo.createIncomeCategory(name);
+        return { ok: true, result };
+      } catch (e) {
+        return { ok: false, status: 409, error: e instanceof Error ? e.message : "create failed" };
+      }
+    }
+    case "updateIncomeCategory": {
+      if (id == null) return { ok: false, status: 400, error: "id required" };
+      const name = (input.name as string | undefined) ?? "";
+      try {
+        const result = await repo.updateIncomeCategory(id, name);
+        if (!result) return { ok: false, status: 404, error: "not found" };
+        return { ok: true, result };
+      } catch (e) {
+        return { ok: false, status: 409, error: e instanceof Error ? e.message : "update failed" };
+      }
+    }
+    case "deleteIncomeCategory": {
+      if (id == null) return { ok: false, status: 400, error: "id required" };
+      try {
+        const deleted = await repo.deleteIncomeCategory(id);
+        if (!deleted) return { ok: false, status: 404, error: "not found" };
+        return { ok: true, result: { deleted } };
+      } catch (e) {
+        return { ok: false, status: 409, error: e instanceof Error ? e.message : "delete failed" };
+      }
+    }
+    case "createIncomeEntry": {
+      try {
+        const result = await repo.createIncomeEntry(
+          input as Parameters<FootballTurfRepository["createIncomeEntry"]>[0],
+        );
+        return { ok: true, result };
+      } catch (e) {
+        return { ok: false, status: 409, error: e instanceof Error ? e.message : "create failed" };
+      }
+    }
+    case "updateIncomeEntry": {
+      if (id == null) return { ok: false, status: 400, error: "id required" };
+      try {
+        const result = await repo.updateIncomeEntry(
+          id,
+          input as Parameters<FootballTurfRepository["updateIncomeEntry"]>[1],
+        );
+        if (!result) return { ok: false, status: 404, error: "not found" };
+        return { ok: true, result };
+      } catch (e) {
+        return { ok: false, status: 409, error: e instanceof Error ? e.message : "update failed" };
+      }
+    }
+    case "deleteIncomeEntry": {
+      if (id == null) return { ok: false, status: 400, error: "id required" };
+      const deleted = await repo.deleteIncomeEntry(id);
       return { ok: true, result: { deleted } };
     }
     case "createCustomer": {

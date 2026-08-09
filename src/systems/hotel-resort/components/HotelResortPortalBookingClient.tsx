@@ -29,6 +29,7 @@ type BookingDetail = {
   paymentStatusLabel: string;
   paymentMethod: string;
   paymentSlipUrl: string | null;
+  depositSlipUrl: string | null;
   note: string | null;
 };
 
@@ -170,16 +171,32 @@ export function HotelResortPortalBookingClient({
               ) : null}
             </section>
 
-            {booking.paymentSlipUrl ? (
-              <section className={cn(appPublicCheckInGlassCardClass, "p-4")}>
-                <p className="mb-1 text-xs font-bold text-[#8b87b8]">สลิปชำระ / มัดจำ</p>
-                <p className="mb-2 text-[11px] font-semibold text-[#66638c]">กดรูปเพื่อดูขนาดใหญ่</p>
-                <AppImageThumb
-                  src={booking.paymentSlipUrl}
-                  alt="สลิปชำระ / มัดจำ"
-                  onOpen={() => lb.open(booking.paymentSlipUrl!)}
-                  className="h-24 w-24"
-                />
+            {booking.depositSlipUrl || booking.paymentSlipUrl ? (
+              <section className={cn(appPublicCheckInGlassCardClass, "space-y-4 p-4")}>
+                {booking.depositSlipUrl ? (
+                  <div>
+                    <p className="mb-1 text-xs font-bold text-[#8b87b8]">สลิปมัดจำ / ชำระตอนจอง</p>
+                    <p className="mb-2 text-[11px] font-semibold text-[#66638c]">กดรูปเพื่อดูขนาดใหญ่</p>
+                    <AppImageThumb
+                      src={booking.depositSlipUrl}
+                      alt="สลิปมัดจำ / ชำระตอนจอง"
+                      onOpen={() => lb.open(booking.depositSlipUrl!)}
+                      className="h-24 w-24"
+                    />
+                  </div>
+                ) : null}
+                {booking.paymentSlipUrl ? (
+                  <div>
+                    <p className="mb-1 text-xs font-bold text-[#8b87b8]">สลิปชำระเพิ่ม</p>
+                    <p className="mb-2 text-[11px] font-semibold text-[#66638c]">กดรูปเพื่อดูขนาดใหญ่</p>
+                    <AppImageThumb
+                      src={booking.paymentSlipUrl}
+                      alt="สลิปชำระเพิ่ม"
+                      onOpen={() => lb.open(booking.paymentSlipUrl!)}
+                      className="h-24 w-24"
+                    />
+                  </div>
+                ) : null}
               </section>
             ) : null}
 

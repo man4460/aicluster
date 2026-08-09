@@ -37,18 +37,62 @@ export function footballTurfCourtPriceForDate(
   return isBangkokWeekend(bookingDateYmd) ? court.weekendPrice : court.weekdayPrice;
 }
 
-/** ยอดที่ถือว่าชำระแล้วจากสถานะ + มัดจำที่บันทึกตอนจอง */
+export function footballTurfComputePaymentStatus(
+  totalBaht: number,
+  amountPaidBaht: number,
+  opts?: { pendingReview?: boolean },
+): "UNPAID" | "PENDING_REVIEW" | "PARTIAL" | "PAID" {
+  const total = Math.max(0, Math.round(totalBaht));
+  const paid = Math.max(0, Math.round(amountPaidBaht));
+  if (opts?.pendingReview && paid > 0) return "PENDING_REVIEW";
+  if (paid <= 0) return "UNPAID";
+  if (paid >= total) return "PAID";
+  return "PARTIAL";
+}
+
+/** ยอดที่ถือว่าชำระแล้ว — ใช้ amountPaidBaht เป็นหลัก · ถ้าว่างให้เทียบจากสถานะ */
 export function footballTurfBookingAmountPaidBaht(booking: {
   finalPrice: number;
+  amountPaidBaht?: number | null;
   depositAmountBaht?: number | null;
   paymentStatus?: string | null;
 }): number {
   const status = booking.paymentStatus ?? "UNPAID";
-  if (status === "PAID") return Math.max(0, Math.round(booking.finalPrice));
-  if (status === "PENDING_REVIEW") {
-    const due = booking.depositAmountBaht;
-    if (due != null && due > 0) return Math.max(0, Math.round(due));
+  if (status === "PAID") {
     return Math.max(0, Math.round(booking.finalPrice));
   }
-  return 0;
+
+  const storedRaw = booking.amountPaidBaht;
+  const stored =
+    storedRaw != null && Number.isFinite(Number(storedRaw))
+      ? Math.max(0, Math.round(Number(storedRaw)))
+      : null;
+  if (stored != null && stored > 0) return stored;
+
+  if (status === "PARTIAL" || status === "PENDING_REVIEW") {
+    const due = booking.depositAmountBaht;
+    if (due != null && Number(due) > 0) return Math.max(0, Math.round(Number(due)));
+  }
+  return stored ?? 0;
+}
+
+export function footballTurfBookingRemainingBaht(booking: {
+  finalPrice: number;
+  amountPaidBaht?: number | null;
+  depositAmountBaht?: number | null;
+  paymentStatus?: string | null;
+}): number {
+  return Math.max(0, Math.round(booking.finalPrice) - footballTurfBookingAmountPaidBaht(booking));
+}
+
+export function footballTurfBookingIsFullyPaid(booking: {
+  finalPrice: number;
+  amountPaidBaht?: number | null;
+  depositAmountBaht?: number | null;
+  paymentStatus?: string | null;
+}): boolean {
+  const status = booking.paymentStatus ?? "UNPAID";
+  if (status === "PENDING_REVIEW" || status === "UNPAID") return false;
+  if (status === "PAID") return true;
+  return footballTurfBookingRemainingBaht(booking) <= 0;
 }

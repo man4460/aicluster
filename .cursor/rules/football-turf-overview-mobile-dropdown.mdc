@@ -1,0 +1,41 @@
+---
+description: หน้าภาพรวมสนามฟุตบอลมือถือ — เลือกสนาม/กรองสถานะเป็น dropdown เต็มความกว้างอย่างเดียว (ห้ามโชว์ pill คู่กัน)
+globs:
+  - "**/systems/football-turf/**"
+  - "**/dashboard/football-turf/**"
+alwaysApply: false
+---
+
+# ภาพรวม (มือถือ) — dropdown อย่างเดียว · เต็มขอบ
+
+ใช้กับ **หน้าภาพรวม** · **ตารางเวลาจองรายสนาม** ก่อน breakpoint `sm` เท่านั้น
+
+## บังคับ
+
+### 1) เลือกสนาม
+
+- มือถือ: **มีแค่** `<select>` เลือกสนาม (`footballTurfMobileSelectClass`)  
+  - **เต็มความกว้าง** ของการ์ด (`w-full` · วางใต้หัวข้อ ไม่ยัดในมุมขวากับวัน/ปุ่ม)  
+  - **ห้าม** โชว์ป้ายวันที่ + แถบ pill สนาม A/B/C คู่กับ dropdown  
+- `sm+`: ป้ายวันที่ + แถบ pill ตามเดิม (ซ่อน dropdown)
+
+### 2) กรองสถานะช่วงเวลา
+
+- มือถือ: **มีแค่** `<select>` เต็มความกว้าง (รวมตัวเลือกทั้งหมด + `NEEDS_CLOSE`)  
+- `sm+`: ชิปปุ่มตามเดิม (ซ่อน dropdown ด้วย `sm:hidden`)
+
+### 3) การซ่อน/แสดง
+
+- อย่าพึ่ง `cn(shellClassHavingInlineFlex, "hidden sm:…")` อย่างเดียวถ้า conflict แล้ว pill โผล่บนมือถือ  
+- มือถือ: wrapper `sm:hidden` รอบ select · เดสก์ท็อป: `actionWrapClassName="hidden … sm:block"` รอบวัน+pill
+
+## ห้าม
+
+- มือถือโชว์ dropdown กับ pill พร้อมกัน  
+- จำกัด `max-w-[…]` จน dropdown แคบไม่เต็มขอบการ์ด  
+- เปลี่ยนเดสก์ท็อปเป็น dropdown โดยไม่จำเป็น  
+
+## อ้างอิง
+
+- `FootballTurfDashboard.tsx` — `ft-overview-schedule-court` · `ft-overview-schedule-status`  
+- `footballTurfMobileSelectClass` ใน `lib/ui-tokens.ts`

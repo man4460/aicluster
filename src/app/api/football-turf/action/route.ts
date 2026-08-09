@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
-import { getFootballTurfOwnerContext } from "@/systems/football-turf/lib/api-auth";
+import {
+  FOOTBALL_TURF_STAFF_ALLOWED_OPS,
+  getFootballTurfOwnerOrStaffContext,
+} from "@/systems/football-turf/lib/api-auth";
 import { runFootballTurfAction } from "@/systems/football-turf/lib/run-action";
 import { createFootballTurfServerRepo } from "@/systems/football-turf/lib/server-repo";
 
 export async function POST(req: Request) {
-  const ctx = await getFootballTurfOwnerContext();
-  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const gate = await getFootballTurfOwnerOrStaffContext(req);
+  if (!gate.ok) return gate.res;
 
   let body: { op: string; id?: number; input?: Record<string, unknown> };
   try {
@@ -16,7 +19,11 @@ export async function POST(req: Request) {
 
   if (!body?.op) return NextResponse.json({ error: "op required" }, { status: 400 });
 
-  const repo = createFootballTurfServerRepo(ctx.userId, ctx.scope.trialSessionId);
+  if (gate.isStaff && !FOOTBALL_TURF_STAFF_ALLOWED_OPS.has(body.op)) {
+    return NextResponse.json({ error: "พนักงานไม่มีสิทธิ์การกระทำนี้" }, { status: 403 });
+  }
+
+  const repo = createFootballTurfServerRepo(gate.userId, gate.trialSessionId);
   try {
     const outcome = await runFootballTurfAction(repo, body);
     if (!outcome.ok) return NextResponse.json({ error: outcome.error }, { status: outcome.status });

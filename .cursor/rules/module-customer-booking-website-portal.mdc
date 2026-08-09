@@ -123,14 +123,14 @@ Canonical: **โรงแรม / รีสอร์ท** — หน้า `/hot
 ### หน้ารายละเอียดหลังจอง (`HotelResortPortalBookingClient`) — บังคับ
 
 1. แสดง **ยอดพัก** · **ชำระแล้ว** (ยอด + สถานะชำระ) · **คงเหลือ** ถ้ายังไม่ครบ
-2. ถ้ามี `paymentSlipUrl` — ส่วน「สลิปชำระ / มัดจำ」+ `AppImageThumb` **กดดู lightbox** ได้
+2. ถ้ามี `depositSlipUrl` / `paymentSlipUrl` — ส่วน「สลิปมัดจำ」และ「สลิปชำระเพิ่ม」แยกกัน + `AppImageThumb` **กดดู lightbox** ได้
 3. เวลาเช็คอิน/เอาต์บนหน้า = วันที่พัก + เวลาจากตั้งค่าที่พัก
 
 ### แดชบอร์ดรายการจอง (`HotelResortBookingsClient`) — เมื่อชำระบางส่วน
 
 1. การ์ดรายการ: แสดง `ชำระแล้ว ฿… · ค้าง ฿…` เมื่อ `amountPaidBaht > 0`
-2. ถ้ามี `paymentSlipUrl` — `AppImageThumb` บนการ์ด **กดดู lightbox**
-3. โมดัลจัดการ: ยอดชำระแล้ว/คงเหลือ + สลิปมัดจำ/ชำระกดดูได้เช่นกัน  
+2. ถ้ามี `depositSlipUrl` / `paymentSlipUrl` — `AppImageThumb` บนการ์ด **กดดู lightbox** (แยกมัดจำกับชำระเพิ่ม)
+3. โมดัลจัดการ: ยอดชำระแล้ว/คงเหลือ + สลิปมัดจำ + สลิปชำระเพิ่มกดดูได้เช่นกัน  
 รายละเอียดตัวกรอง/เตือนเวลา: `hotel-resort-booking-filters.mdc`
 
 Helpers โรงแรม: `src/systems/hotel-resort/lib/portal-booking.ts` · `portal-media.ts`
@@ -147,7 +147,7 @@ Helpers โรงแรม: `src/systems/hotel-resort/lib/portal-booking.ts` · 
 | `DEPOSIT` | มัดจำคงที่ (cap ไม่เกินยอดรวม) | `min(deposit, total)` → มักได้ `PARTIAL` |
 | `FULL` | เก็บเต็มยอดพัก/บริการ | `total` |
 
-เมื่อจองสำเร็จ (`POST …/book`): บันทึก `amountPaidBaht` = `payDue` · `depositAmountBaht` = `payDue` · `paymentSlipUrl` · `paymentMethod`
+เมื่อจองสำเร็จ (`POST …/book`): บันทึก `amountPaidBaht` = `payDue` · `depositAmountBaht` = `payDue` · `depositSlipUrl` · `paymentMethod` — `paymentSlipUrl` ว่างไว้สำหรับสลิปชำระเพิ่มตอนเช็คอิน
 
 - Normalize: `hotelResortNormalizePortalPaymentMode` → ค่าไม่รู้จัก = `NONE`
 - Compute: `hotelResortComputePortalPayDue({ mode, depositAmountBaht, totalBaht })`
@@ -190,7 +190,7 @@ Owner (ล็อกอิน): `PATCH` profile · CRUD reviews · upload สื�
 | ชำระพอร์ทัล | `portalBookingPaymentMode` · `depositAmountBaht` |
 | แบรนด์/โอน | `propertyName` · `logoUrl` · `promptPayPhone` · บัญชีธนาคาร |
 | รีวิว | โมเดลแยก `*Review` · `isPublished` · `sortOrder` · scope owner+trial |
-| จอง | `depositAmountBaht` · `paymentSlipUrl` · `paymentMethod` · `amountPaidBaht` · `paymentStatus` · `guestPhone` |
+| จอง | `depositAmountBaht` · `depositSlipUrl` · `paymentSlipUrl` · `paymentMethod` · `amountPaidBaht` · `paymentStatus` · `guestPhone` |
 
 ---
 

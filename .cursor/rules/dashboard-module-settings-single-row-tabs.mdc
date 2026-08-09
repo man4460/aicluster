@@ -1,0 +1,96 @@
+---
+description: หน้าตั้งค่า / ลูกค้า / โปรโมชันโมดูล — แถวเดียว + แถบเมนูย่อย (แท็บ) ไม่ใช้คอลัมน์คู่ซ้าย–ขวา
+globs:
+  - "**/systems/football-turf/**"
+  - "**/systems/**/components/**Settings*.tsx"
+  - "**/systems/**/*Settings*.tsx"
+  - "**/systems/**/*Dashboard*.tsx"
+alwaysApply: false
+---
+
+# หน้าตั้งค่า / ลูกค้า / โปรโมชัน — แถวเดียว · แถบเมนูย่อย
+
+ใช้เมื่อออกแบบหรือปรับ **แท็บตั้งค่า** · **หน้าลูกค้า (โปร)** · หรือ **โปรโมชัน/แพ็ก** ของโมดูลแดชบอร์ด (สนามฟุตบอลเป็นต้นแบบ)
+
+## บังคับ
+
+1. **เลย์เอาต์แถวเดียว** — เนื้อหาอยู่ใน **คอลัมน์เดียวเต็มความกว้าง**  
+   - **ห้าม** `xl:grid-cols-2` / สองคอลัมน์ ฟอร์มซ้าย · พรีวิวขวา เป็นโครงหลัก  
+   - พรีวิวตั้งค่า = สแตกแนวตั้ง (`space-y-3`) ไม่กริด 2 คอลัมน์
+2. **แยกหมวดด้วยแถบเมนูย่อย (sub-tabs)** — pill ห่อบรรทัดเมื่อล้น (`flex-wrap` · ดูกฎ `dashboard-mobile-compact-wrap.mdc`)  
+   - **เดสก์ท็อป (`sm+`):** แท็บอยู่ในแถวหัวการ์ด คู่ปุ่มมุมขวา (`AppSectionHeader.action`)  
+   - **มือถือ:** แถว 1 = หัวข้อ + ไอคอนกรอง/เพิ่ม · แถว 2 = แท็บเต็มความกว้าง (`footballTurfSubTabMobileRowClass`) ป้ายสั้น · ขนาดย่อมาตรฐาน  
+   - ใช้โทเค็น: `footballTurfSubTabShellClass` + `footballTurfHeaderActionRowClass` + `footballTurfMobileFilterIconButtonClass`
+3. **ตัวกรองมือถือ:** ไอคอน `SlidersHorizontal` ในหัวการ์ด → แผงค้นหาย่อ · เดสก์ท็อปใช้ `FilterToolbar` (ปุ่มเปิดกรองเป็นไอคอนบนมือถือถ้ายังใช้ toolbar)
+4. **ARIA:** `role="tablist"` / `role="tab"` / `role="tabpanel"` + `aria-selected` + `aria-controls`
+5. **แผงเนื้อหา** — glass `footballTurfPanelCardClass` · ฟิลด์ `footballTurfFieldClass` · ปุ่มมี `footballTurfInteractiveButtonClass` (hover)
+6. **ปุ่มบันทึก (ตั้งค่า)** — อยู่ขวาสุดของแถวหัว · แท็บคะแนน/ตัวอย่างซ่อนปุ่มบันทึกหัว
+7. **แผงย่อยซ้อน** (เช่น loyalty) — ส่ง `embedded` เพื่อ **ไม่ห่อ `AppDashboardSection` ซ้ำ**
+
+## หน้าลูกค้า (โปร)
+
+| แท็บเมนู | กรองรายการ |
+|----------|------------|
+| ทั้งหมด | ทุกคน (+ จำนวน) |
+| ใช้งาน | `isActive` |
+| ปิดใช้งาน | ไม่ active |
+| ใบกำกับ | `taxInvoiceEnabled` |
+| มีคะแนน | มี balance / earned |
+
+- ค้นหา keyword คู่กับเมนูได้ · รีเซ็ตตัวกรอง = ล้างค้นหา + กลับแท็บทั้งหมด  
+- **ห้าม** แถวการ์ดสถิติแยกนอกเมนูเมื่อมีแถบเมนูนับจำนวนแล้ว (เลี่ยงซ้ำ)
+
+## หน้าตั้งค่า
+
+| จอ | UI สลับหมวด |
+|----|-------------|
+| มือถือ | **dropdown อย่างเดียว** (`footballTurfMobileSelectClass` · `sm:hidden`) + ป้าย «กรุณาเลือกหมวดตั้งค่า» |
+| `sm+` | แถบหลัก pill (`footballTurfPrimaryTabShellClass`) ใน wrapper `hidden sm:block` |
+
+### มือถือ — บังคับซ่อนแถบเมนู
+
+เมื่อมี dropdown เลือกหมวดตั้งค่าแล้ว:
+
+1. **ซ่อนแถบเมนู pill ทั้งก้อน** (`hidden` ก่อน `sm`) — **ห้าม** โชว์คู่กับ dropdown  
+2. อย่าใส่ `hidden` บน element เดียวกับคลาสที่มี `inline-flex` / `flex` ใน shell (twMerge อาจชน) — ห่อด้วย `<div className="hidden sm:block">` แทน  
+3. หัวการ์ด: ชื่อ «ตั้งค่า» + ปุ่มบันทึกเท่านั้น (ไม่ยัดแท็บใน `action`)
+
+| แท็บ | เนื้อหา |
+|------|---------|
+| ข้อมูลสนาม | ชื่อ · ติดต่อ · ที่อยู่ |
+| รับโอน / จอง | พร้อมเพย์ · บัญชี · โหมดชำระลิงก์ลูกค้า |
+| เอกสาร · สลิป | เลขผู้เสียภาษี · หมายเหตุ · ขนาดสลิป |
+| คะแนน | สะสมคะแนน / รางวัล (`embedded`) |
+| ตัวอย่าง | พรีวิวข้อมูล — **สแตกแถวเดียว** |
+
+- หมวดตั้งค่า = **แถบหลักของหน้า** (เดสก์ท็อป) / dropdown (มือถือ) — ดูกฎ `dashboard-primary-secondary-menu-tabs.mdc`
+
+## หน้าโปร / ลูกค้า (`tab=offers`)
+
+เมนูหลักรวมเป็นแท็บเดียว **โปร / ลูกค้า** — **ดูกฎเต็ม:** `dashboard-primary-secondary-menu-tabs.mdc`
+
+| ระดับ | สิ่งที่แสดง | โทเค็น |
+|-------|------------|--------|
+| **การ์ดเดียว** | หัวข้อ + ปุ่มแอ็กชัน + แถบหลัก + กรอง + รายการ | `AppDashboardSection` ห่อทั้งหมด |
+| **แถบหลัก** | โปรโมชัน \| ลูกค้า | `footballTurfPrimaryTabShellClass` + `footballTurfPrimaryTabPillClass` |
+| **แถบย่อย (กรอง)** | แพ็กโปร / ถือสิทธิ์ · สถานะสิทธิ์ · กรองลูกค้า | `footballTurfFilterChipShellClass` + `footballTurfFilterChipClass` |
+
+- **ห้าม** แยกแถบหลักโปร/ลูกค้าไว้นอกการ์ด  
+- **ห้าม** ให้แถบกรองย่อยใช้ขนาดเท่าแถบหลักโปร/ลูกค้า  
+- **ห้าม** แยกเมนูหลัก `offers` กับ `customers` ใน dock/sidebar อีก  
+- ปุ่มหัวการ์ดสลับตามหมวด: โปร = เพิ่ม/ขาย · ลูกค้า = เพิ่มลูกค้า  
+- การ์ดรายการใช้ `footballTurfPanelCardClass` + accent bar
+
+## ห้าม
+
+- วางพรีวิวเป็นคอลัมน์ข้างฟอร์มแบบถาวรบนเดสก์ท็อป  
+- ยัดทุกหมวดในหน้าเดียวยาวโดยไม่มีแถบเมนูเมื่อหมวด ≥ 3  
+- คัดลอกสตริงคลาสแถบแท็บซ้ำ — รวมที่ `lib/ui-tokens` ของโมดูล  
+- บนมือถือยัดแท็บยาว + ปุ่มข้อความในแถวเดียวจนล้นโดยไม่ห่อ — ใช้ wrap / แยกแถวแท็บ / ไอคอน (ดู `dashboard-mobile-compact-wrap.mdc`)
+
+## อ้างอิงโค้ด
+
+- `FootballTurfDashboard.tsx` — `settingsMenu` · `crmSection` · `customersMenu` · `offersMenu`
+- `src/systems/football-turf/lib/ui-tokens.ts` — `footballTurfPrimaryTab*` · `footballTurfFilterChip*` · `footballTurfSubTab*`
+- `FootballTurfLoyaltySettingsPanel` — prop `embedded`
+- แถบหลัก/รอง: `dashboard-primary-secondary-menu-tabs.mdc`

@@ -11,6 +11,12 @@ import {
   footballTurfPortalSlipProofMessage,
   normalizeFootballTurfPortalPaymentMode,
 } from "@/systems/football-turf/lib/portal-booking";
+import {
+  isSlotEligibleForAdvanceBooking,
+  localDateKey,
+  localNowMinutes,
+  timeToMinutes,
+} from "@/systems/football-turf/lib/time-queue";
 
 type PublicActionBody = {
   ownerId: string;
@@ -70,13 +76,50 @@ export async function POST(req: Request) {
     const input = { ...(body.input ?? {}) };
     const courtId = Number(input.courtId);
     const bookingDate = typeof input.bookingDate === "string" ? input.bookingDate.trim() : "";
-    if (!Number.isFinite(courtId) || courtId < 1 || !/^\d{4}-\d{2}-\d{2}$/.test(bookingDate)) {
+    const startTime = typeof input.startTime === "string" ? input.startTime.trim() : "";
+    const endTime = typeof input.endTime === "string" ? input.endTime.trim() : "";
+    if (
+      !Number.isFinite(courtId) ||
+      courtId < 1 ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(bookingDate) ||
+      !/^\d{2}:\d{2}$/.test(startTime) ||
+      !/^\d{2}:\d{2}$/.test(endTime)
+    ) {
       return NextResponse.json({ error: "ข้อมูลการจองไม่ถูกต้อง" }, { status: 400 });
     }
 
-    const [settings, courts] = await Promise.all([repo.getSettings(), repo.listCourts()]);
+    const now = new Date();
+    const slotTimeOpts = {
+      scheduleDate: bookingDate,
+      todayDateKey: localDateKey(now),
+      nowMinutes: localNowMinutes(now),
+    };
+    if (!isSlotEligibleForAdvanceBooking({ startTime, endTime, booking: null }, slotTimeOpts)) {
+      return NextResponse.json(
+        { error: "จองผ่านลิงก์ได้เฉพาะรอบถัดไปที่ยังไม่เริ่ม" },
+        { status: 400 },
+      );
+    }
+
+    const [settings, courts, bookings] = await Promise.all([
+      repo.getSettings(),
+      repo.listCourts(),
+      repo.listBookings(),
+    ]);
     const court = courts.find((c) => c.id === courtId && c.isActive);
     if (!court) return NextResponse.json({ error: "ไม่พบสนาม" }, { status: 404 });
+
+    const startMin = timeToMinutes(startTime);
+    const endMin = timeToMinutes(endTime);
+    const conflict = bookings.some((b) => {
+      if (b.courtId !== courtId || b.bookingDate !== bookingDate || b.status === "CANCELLED") {
+        return false;
+      }
+      return timeToMinutes(b.startTime) < endMin && timeToMinutes(b.endTime) > startMin;
+    });
+    if (conflict) {
+      return NextResponse.json({ error: "ช่วงเวลานี้ถูกจองแล้ว" }, { status: 409 });
+    }
 
     const totalBaht = footballTurfCourtPriceForDate(court, bookingDate);
     const mode = normalizeFootballTurfPortalPaymentMode(settings.portalBookingPaymentMode);
@@ -120,11 +163,14 @@ export async function POST(req: Request) {
       courtId,
       courtName: court.name,
       bookingDate,
+      startTime,
+      endTime,
       source: "ONLINE",
       status: "BOOKED",
       listedPrice: totalBaht,
       finalPrice: totalBaht,
       depositAmountBaht: payDue,
+      amountPaidBaht: payDue != null && payDue > 0 ? payDue : 0,
       note: payNote.slice(0, 500),
       paymentMethod: payDue != null && payDue > 0 ? "TRANSFER" : "UNPAID",
       paymentStatus: payDue != null && payDue > 0 ? "PENDING_REVIEW" : "UNPAID",

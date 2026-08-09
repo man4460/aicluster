@@ -52,6 +52,19 @@ export async function loadHotelResortStaffDailyPinHash(ownerId: string): Promise
   return row?.staffDailyPinHash?.trim() || null;
 }
 
+export async function loadFootballTurfStaffDailyPinHash(ownerId: string): Promise<string | null> {
+  const row = await prisma.footballTurfShopProfile.findUnique({
+    where: {
+      ownerUserId_trialSessionId: {
+        ownerUserId: ownerId,
+        trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID,
+      },
+    },
+    select: { staffDailyPinHash: true },
+  });
+  return row?.staffDailyPinHash?.trim() || null;
+}
+
 export async function gateStaffDailyPin(
   req: Request,
   module: StaffDailyPinModule,
@@ -143,6 +156,20 @@ async function writeStaffDailyPinHash(
         staffDailyPinHash: hash,
       },
       update: { staffDailyPinHash: hash },
+    });
+    return;
+  }
+  if (module === "football-turf") {
+    const { ensureFootballTurfProfile } = await import("@/systems/football-turf/lib/ensure-profile");
+    await ensureFootballTurfProfile(ownerId, STAFF_LINK_PERMANENT_SESSION_ID);
+    await prisma.footballTurfShopProfile.update({
+      where: {
+        ownerUserId_trialSessionId: {
+          ownerUserId: ownerId,
+          trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID,
+        },
+      },
+      data: { staffDailyPinHash: hash },
     });
     return;
   }

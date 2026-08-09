@@ -98,6 +98,9 @@ export type HotelResortBookingRow = {
   paymentStatus: string;
   paymentMethod?: string;
   paymentSlipUrl?: string | null;
+  /** สลิปมัดจำ/ชำระตอนจองจากลิงก์ลูกค้า */
+  depositSlipUrl?: string | null;
+  depositAmountBaht?: number | null;
   idCardImageUrl: string | null;
   note: string | null;
   nationalId?: string | null;

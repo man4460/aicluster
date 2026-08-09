@@ -182,9 +182,11 @@ export function DashboardModuleHeroCard(props: DashboardModuleHeroCardProps) {
   const body = (
     <div className={cn("border-t border-white/50 bg-gradient-to-br from-white/90 to-indigo-50/20", tall ? "px-4 py-3.5 sm:px-5 sm:py-4" : "px-4 py-3")}>
       <p
+        title={description}
         className={cn(
-          "text-pretty text-xs font-semibold leading-relaxed whitespace-pre-line text-[#5f5a8a] sm:text-sm",
-          tall ? "line-clamp-4" : "line-clamp-2",
+          "text-xs font-semibold leading-relaxed text-[#5f5a8a] sm:text-sm",
+          // การ์ด «ปัจจุบัน» (tall=false): แถวเดียวเสมอ — ความสูงการ์ดเท่ากัน
+          tall ? "text-pretty line-clamp-4 whitespace-pre-line" : "truncate",
         )}
       >
         {description}

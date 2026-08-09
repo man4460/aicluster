@@ -10,7 +10,7 @@ export type FootballTurfBookingStatus =
 export type FootballTurfBookingSource = "ONLINE" | "WALK_IN" | "STAFF";
 export type FootballTurfPromotionKind = "COUNT" | "HOUR";
 export type FootballTurfBookingPaymentMethod = "UNPAID" | "TRANSFER" | "ONSITE";
-export type FootballTurfBookingPaymentStatus = "UNPAID" | "PENDING_REVIEW" | "PAID";
+export type FootballTurfBookingPaymentStatus = "UNPAID" | "PENDING_REVIEW" | "PARTIAL" | "PAID";
 
 export type FootballTurfCourt = {
   id: number;
@@ -41,6 +41,8 @@ export type FootballTurfBooking = {
   finalPrice: number;
   /** มัดจำ/ยอดชำระตอนจองจากลิงก์ลูกค้า (null = ไม่บังคับ) */
   depositAmountBaht?: number | null;
+  /** ยอดที่ชำระแล้วสะสม */
+  amountPaidBaht?: number;
   promotionSaleId: number | null;
   note: string;
   paymentMethod?: FootballTurfBookingPaymentMethod;
@@ -55,6 +57,8 @@ export type FootballTurfPortalBookingPaymentMode = "NONE" | "DEPOSIT" | "FULL";
 export type FootballTurfVenueSettings = {
   venueName: string;
   venueSubtitle: string;
+  /** โลโก้สนาม — path /uploads หรือ URL */
+  logoUrl: string;
   promptpayNumber: string;
   bankName: string;
   accountName: string;
@@ -69,6 +73,14 @@ export type FootballTurfVenueSettings = {
   portalBookingPaymentMode: FootballTurfPortalBookingPaymentMode;
   /** จำนวนมัดจำ (บาท) เมื่อโหมด DEPOSIT */
   depositAmountBaht: number | null;
+  /** แบนเนอร์หน้าเว็บจองลูกค้า */
+  portalBannerUrl: string;
+  /** แกลเลอรีหน้าเว็บจอง */
+  portalGallery: string[];
+  facebookUrl: string;
+  mapUrl: string;
+  /** มีรหัสเข้าลิงก์พนักงานรายวันหรือไม่ (ไม่เก็บรหัสจริง) */
+  staffDailyPinSet?: boolean;
 };
 
 export type FootballTurfPromotion = {
@@ -115,6 +127,28 @@ export type FootballTurfCostEntry = {
   amount: number;
   itemLabel: string;
   note: string;
+  paymentSlipUrl: string;
+};
+
+export type FootballTurfIncomeCategoryKind = "COURT_RENTAL" | "PROMOTION" | "CUSTOM";
+
+export type FootballTurfIncomeCategory = {
+  id: number;
+  name: string;
+  kind: FootballTurfIncomeCategoryKind;
+  isBuiltin: boolean;
+  sortOrder: number;
+};
+
+export type FootballTurfIncomeEntry = {
+  id: number;
+  categoryId: number;
+  categoryName: string;
+  earnedAt: string;
+  amount: number;
+  itemLabel: string;
+  note: string;
+  paymentSlipUrl: string;
 };
 
 export type FootballTurfRevenueEntry = {
@@ -124,7 +158,7 @@ export type FootballTurfRevenueEntry = {
   label: string;
   customerName: string;
   customerPhone: string;
-  source: "BOOKING" | "PROMOTION";
+  source: "BOOKING" | "PROMOTION" | "INCOME";
 };
 
 export type FootballTurfCustomer = {
@@ -134,6 +168,17 @@ export type FootballTurfCustomer = {
   teamName: string;
   note: string;
   isActive: boolean;
+  /** ต้องการออกใบกำกับภาษี — เก็บข้อมูลภาษีไว้ใช้ตอนพิมพ์ */
+  taxInvoiceEnabled: boolean;
+  billingName: string;
+  taxId: string;
+  taxAddress: string;
+  taxBranch: string;
+  /** รูปโปรไฟล์ลูกค้า */
+  photoUrl: string;
+  pointsBalance?: number;
+  totalEarned?: number;
+  totalRedeemed?: number;
 };
 
 export type FootballTurfFullState = {
@@ -144,6 +189,8 @@ export type FootballTurfFullState = {
   promotionSales: FootballTurfPromotionSale[];
   costCategories: FootballTurfCostCategory[];
   costEntries: FootballTurfCostEntry[];
+  incomeCategories: FootballTurfIncomeCategory[];
+  incomeEntries: FootballTurfIncomeEntry[];
   customers: FootballTurfCustomer[];
 };
 
@@ -153,7 +200,12 @@ export interface FootballTurfRepository {
   updateCourt(id: number, patch: Partial<Omit<FootballTurfCourt, "id">>): Promise<FootballTurfCourt | null>;
   deleteCourt(id: number): Promise<boolean>;
   getSettings(): Promise<FootballTurfVenueSettings>;
-  updateSettings(patch: Partial<FootballTurfVenueSettings>): Promise<FootballTurfVenueSettings>;
+  updateSettings(
+    patch: Partial<FootballTurfVenueSettings> & {
+      staffDailyPin?: string | null;
+      staffDailyPinClear?: boolean;
+    },
+  ): Promise<FootballTurfVenueSettings>;
   listBookings(): Promise<FootballTurfBooking[]>;
   createBooking(input: Omit<FootballTurfBooking, "id" | "createdAt"> & { createdAt?: string }): Promise<FootballTurfBooking>;
   updateBooking(id: number, patch: Partial<Omit<FootballTurfBooking, "id" | "createdAt">>): Promise<FootballTurfBooking | null>;
@@ -185,9 +237,26 @@ export interface FootballTurfRepository {
   usePromotionSale(saleId: number, bookingId: number): Promise<FootballTurfPromotionSale | null>;
   listCostCategories(): Promise<FootballTurfCostCategory[]>;
   createCostCategory(name: string): Promise<FootballTurfCostCategory>;
+  updateCostCategory(id: number, name: string): Promise<FootballTurfCostCategory | null>;
+  deleteCostCategory(id: number): Promise<boolean>;
   listCostEntries(): Promise<FootballTurfCostEntry[]>;
   createCostEntry(input: Omit<FootballTurfCostEntry, "id" | "categoryName">): Promise<FootballTurfCostEntry>;
+  updateCostEntry(
+    id: number,
+    patch: Partial<Omit<FootballTurfCostEntry, "id" | "categoryName">>,
+  ): Promise<FootballTurfCostEntry | null>;
   deleteCostEntry(id: number): Promise<boolean>;
+  listIncomeCategories(): Promise<FootballTurfIncomeCategory[]>;
+  createIncomeCategory(name: string): Promise<FootballTurfIncomeCategory>;
+  updateIncomeCategory(id: number, name: string): Promise<FootballTurfIncomeCategory | null>;
+  deleteIncomeCategory(id: number): Promise<boolean>;
+  listIncomeEntries(): Promise<FootballTurfIncomeEntry[]>;
+  createIncomeEntry(input: Omit<FootballTurfIncomeEntry, "id" | "categoryName">): Promise<FootballTurfIncomeEntry>;
+  updateIncomeEntry(
+    id: number,
+    patch: Partial<Omit<FootballTurfIncomeEntry, "id" | "categoryName">>,
+  ): Promise<FootballTurfIncomeEntry | null>;
+  deleteIncomeEntry(id: number): Promise<boolean>;
   listRevenueEntries(): Promise<FootballTurfRevenueEntry[]>;
   listCustomers(): Promise<FootballTurfCustomer[]>;
   createCustomer(input: Omit<FootballTurfCustomer, "id">): Promise<FootballTurfCustomer>;

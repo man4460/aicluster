@@ -129,7 +129,8 @@ export async function POST(req: Request) {
       totalBaht: room.totalBaht,
       ...pay,
       paymentMethod,
-      paymentSlipUrl: slipUrl,
+      paymentSlipUrl: null,
+      depositSlipUrl: slipUrl,
       depositAmountBaht: payDue,
       note: d.note?.trim() || null,
     },
@@ -156,6 +157,7 @@ export async function POST(req: Request) {
       paymentStatus: booking.paymentStatus,
       depositAmountBaht: booking.depositAmountBaht,
       paymentSlipUrl: booking.paymentSlipUrl,
+      depositSlipUrl: booking.depositSlipUrl,
     },
   });
 }

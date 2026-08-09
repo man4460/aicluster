@@ -59,6 +59,8 @@ export async function GET(req: Request, { params }: Params) {
       paymentStatus: booking.paymentStatus,
       paymentMethod: booking.paymentMethod,
       paymentSlipUrl: booking.paymentSlipUrl,
+      depositSlipUrl: booking.depositSlipUrl,
+      depositAmountBaht: booking.depositAmountBaht,
       idCardImageUrl: booking.idCardImageUrl,
       note: booking.note,
       nationalId: booking.guest?.nationalId ?? null,

@@ -47,6 +47,8 @@ export async function GET(req: Request) {
       paymentStatus: b.paymentStatus,
       paymentMethod: b.paymentMethod,
       paymentSlipUrl: b.paymentSlipUrl,
+      depositSlipUrl: b.depositSlipUrl,
+      depositAmountBaht: b.depositAmountBaht,
       idCardImageUrl: b.idCardImageUrl,
       note: b.note,
     })),

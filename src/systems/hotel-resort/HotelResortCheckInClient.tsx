@@ -5,10 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   AppDashboardSection,
   AppGalleryCameraFileInputs,
+  AppImageLightbox,
   AppImagePickCameraButtons,
+  AppImageThumb,
   AppSectionHeader,
   appTemplateOutlineButtonClass,
   useAppCameraCapture,
+  useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { HotelResortButton } from "@/systems/hotel-resort/components/HotelResortButton";
@@ -111,9 +114,9 @@ export function HotelResortCheckInClient({
   const taxInvoiceFieldsMissing =
     printTaxInvoice && (!guestAddress.trim() || !guestTaxId.trim());
 
+  const slipLb = useAppImageLightbox();
   const paidNow = useMemo(() => Math.max(0, Math.round(Number(amountPaidBaht || 0))), [amountPaidBaht]);
   const totalNow = useMemo(() => Math.max(0, Math.round(Number(totalBaht || 0))), [totalBaht]);
-  const dueBaht = useMemo(() => Math.max(0, totalNow - paidNow), [paidNow, totalNow]);
   const slipMissing = hotelResortPaymentRequiresSlip(paymentMethod, paidNow) && !paymentSlipUrl;
 
   useEffect(() => {
@@ -157,7 +160,15 @@ export function HotelResortCheckInClient({
         setTotalBaht(String(b.totalBaht ?? ""));
         const remaining = Math.max(0, (b.totalBaht ?? 0) - (b.amountPaidBaht ?? 0));
         setAmountPaidBaht(String(remaining));
-        setPaymentMethod(isHotelResortPaymentMethod(b.paymentMethod) ? b.paymentMethod : "CASH");
+        // ช่องทางตอนเช็คอินเริ่มใหม่ — ไม่ดึง PROMPTPAY/โอนจากมัดจำพอร์ทัลโดยอัตโนมัติถ้ายังค้างชำระ
+        setPaymentMethod(
+          remaining > 0
+            ? "CASH"
+            : isHotelResortPaymentMethod(b.paymentMethod)
+              ? b.paymentMethod
+              : "CASH",
+        );
+        // สลิปชำระเพิ่มแยกจากมัดจำ — อย่าใส่สลิปมัดจำลงช่องนี้
         setPaymentSlipUrl(b.paymentSlipUrl ?? null);
         setIdCardImageUrl(b.idCardImageUrl);
       } else {
@@ -223,9 +234,16 @@ export function HotelResortCheckInClient({
         throw new Error("กรอกที่อยู่และเลขผู้เสียภาษีลูกค้าก่อนพิมพ์ใบกำกับภาษี");
       }
 
+      // paymentSlipUrl = สลิปชำระเพิ่มเท่านั้น — ไม่แตะ depositSlipUrl บน API
       const paymentPayload = {
         paymentMethod,
-        paymentSlipUrl: paymentMethod === "CASH" ? null : paymentSlipUrl,
+        ...(paid > 0
+          ? paymentMethod === "CASH"
+            ? { paymentSlipUrl: null as string | null }
+            : paymentSlipUrl
+              ? { paymentSlipUrl }
+              : {}
+          : {}),
       };
       const guestDocPayload = {
         nationalId: nationalId.trim() || null,
@@ -529,10 +547,37 @@ export function HotelResortCheckInClient({
           </label>
         </div>
         {isExistingReservation && existingBooking ? (
-          <p className="mt-2 text-xs font-semibold text-[#66638c]">
-            ชำระแล้วก่อนหน้า {(existingBooking.amountPaidBaht ?? 0).toLocaleString("th-TH")} บาท
-            {dueBaht > 0 ? ` · หลังชำระครั้งนี้ค้าง ${Math.max(0, totalNow - ((existingBooking.amountPaidBaht ?? 0) + paidNow)).toLocaleString("th-TH")} บาท` : null}
-          </p>
+          <div className="mt-2 space-y-2">
+            <p className="text-xs font-semibold text-[#66638c]">
+              ชำระแล้วก่อนหน้า (มัดจำ/จอง) {(existingBooking.amountPaidBaht ?? 0).toLocaleString("th-TH")} บาท
+              {existingBooking.depositAmountBaht != null && existingBooking.depositAmountBaht > 0
+                ? ` · มัดจำที่ตั้งไว้ ${existingBooking.depositAmountBaht.toLocaleString("th-TH")} บาท`
+                : null}
+            </p>
+            <p className="text-sm font-black text-[#1e1b4b]">
+              ต้องชำระเพิ่ม{" "}
+              {Math.max(0, (existingBooking.totalBaht ?? 0) - (existingBooking.amountPaidBaht ?? 0)).toLocaleString(
+                "th-TH",
+              )}{" "}
+              บาท
+              {paidNow > 0
+                ? ` · หลังชำระครั้งนี้ค้าง ${Math.max(0, totalNow - ((existingBooking.amountPaidBaht ?? 0) + paidNow)).toLocaleString("th-TH")} บาท`
+                : null}
+            </p>
+            {existingBooking.depositSlipUrl?.trim() ? (
+              <div className="rounded-[1rem] border border-white/60 bg-white/70 p-3">
+                <p className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-[#8b87b8]">
+                  สลิปมัดจำ (จากลิงก์จอง)
+                </p>
+                <AppImageThumb
+                  src={existingBooking.depositSlipUrl.trim()}
+                  alt="สลิปมัดจำ"
+                  onOpen={() => slipLb.open(existingBooking.depositSlipUrl!.trim())}
+                  className="h-16 w-16"
+                />
+              </div>
+            ) : null}
+          </div>
         ) : null}
 
         <HotelResortPaymentPanel
@@ -544,6 +589,11 @@ export function HotelResortCheckInClient({
           onSlipUrlChange={setPaymentSlipUrl}
           disabled={busy || loading}
         />
+        {isExistingReservation && paidNow > 0 ? (
+          <p className="mt-2 text-[11px] font-semibold text-[#66638c]">
+            สลิปด้านบนเป็นการชำระเพิ่มตอนเช็คอิน — เก็บแยกจากสลิปมัดจำ
+          </p>
+        ) : null}
 
         <p className={cn(hotelResortFormLabelClass, "mt-5")}>5) เอกสารพิมพ์</p>
         <p className="mt-1 text-[11px] font-medium text-[#8b87b8]">
@@ -699,6 +749,7 @@ export function HotelResortCheckInClient({
           กลับแดชบอร์ด
         </HotelResortButton>
       </div>
+      <AppImageLightbox src={slipLb.src} onClose={slipLb.close} alt="สลิปชำระ" />
     </AppDashboardSection>
   );
 }

@@ -1,0 +1,70 @@
+---
+description: มือถือแดชบอร์ด — ย่อขนาดมาตรฐาน + แถวที่ล้นให้ขึ้นบรรทัดถัดไป (ห้ามยัดเลื่อนแนวนอนเป็นหลัก)
+globs:
+  - "**/systems/**/*Dashboard*.tsx"
+  - "**/systems/**/components/**/*.tsx"
+  - "**/app/(dashboard)/**/*.tsx"
+  - "**/components/app-templates/**"
+alwaysApply: true
+---
+
+# มือถือแดชบอร์ด — ขนาดมาตรฐาน · ห่อแถวเมื่อล้น
+
+ใช้กับหัวการ์ด · แท็บย่อย · ชิปกรอง · ปุ่มไอคอนแอ็กชัน ในโมดูลแดชบอร์ด (สนามฟุตบอลเป็นต้นแบบ)
+
+## บังคับ — ลดขนาดอัตโนมัติบนมือถือ (`default` / ก่อน `sm`)
+
+ใช้ขนาดกระชับตามมาตรฐาน UI มือถือ (ไม่ใช้ปุ่ม/ตัวอักษรใหญ่เกินจำเป็นบนจอแคบ):
+
+| องค์ประกอบ | มือถือ | `sm+` |
+|------------|--------|-------|
+| ปุ่มไอคอนหัวการ์ด | `h-9 w-9` (36px) · ไอคอน `h-4 w-4` | `min-h-10` · ขยายมีข้อความได้ |
+| แท็บ / pill | `min-h-8` · `text-[11px]` · `px-2` · `rounded-lg` | `min-h-9` · `text-xs` · `px-3.5` |
+| ชิปกรองสถานะ | `min-h-8` · `text-[11px]` | `min-h-9` · `text-xs` |
+| หัวข้อแผง | `text-base`–`text-lg` (อย่าบังคับ `text-xl`+ บนมือถือ) | ตามโทนโมดูล |
+| การ์ดรายการ | padding `p-3` · มุม `rounded-[1.25rem]` | `p-4`/`p-5` · `rounded-[1.5rem]` |
+| ช่องว่างแถว | `gap-1.5` | `gap-2` |
+
+โทเค็นสนามฟุตบอล: `footballTurfHeaderIconButtonClass` · `footballTurfMobileFilterIconButtonClass` · `footballTurfSubTabPillClass` · `footballTurfPanelCardClass`
+
+## บังคับ — ข้อความ/ไอคอนเกินแถว → ขึ้นแถวถัดไป
+
+1. **ห้าม** ยัดทุกอย่างในแถวเดียวด้วย `flex-nowrap` + `overflow-x-auto` เป็นทางแก้หลักเมื่อเนื้อหาล้น  
+2. **ใช้** `flex-wrap` (หรือ `content-start`) ให้รายการที่เกิน **ขึ้นบรรทัดใหม่** โดยอัตโนมัติ  
+3. แถวหัวการ์ด: `footballTurfHeaderActionRowClass` (= wrap บนมือถือ · `sm:flex-nowrap` เมื่อพื้นที่พอ)  
+4. แถบแท็บ: `footballTurfSubTabShellClass` / `footballTurfCourtTabShellClass` (= `flex-wrap`)  
+5. ชิปกรอง: `footballTurfChipWrapRowClass`  
+6. ลำดับความสำคัญเมื่อแคบ: **หัวข้อซ้าย** · **ปุ่มแอ็กชันขวา** · ถ้าแท็บยาว → **แถวถัดไปเต็มความกว้าง** (`footballTurfSubTabMobileRowClass`)
+
+```tsx
+{/* ✅ ห่อเมื่อล้น */}
+<div className={footballTurfHeaderActionRowClass}>
+  <nav className={footballTurfSubTabShellClass}>…</nav>
+  <button className={footballTurfMobileFilterIconButtonClass}>…</button>
+  <button className={footballTurfHeaderIconButtonClass}>…</button>
+</div>
+
+{/* ❌ บังคับแถวเดียวแล้วเลื่อนแนวนอนเป็นหลัก */}
+<div className="flex flex-nowrap overflow-x-auto">…</div>
+```
+
+## ข้อยกเว้นเลื่อนแนวนอน
+
+อนุญาต `overflow-x-auto` เฉพาะเมื่อเป็น **แกนเลื่อนของเนื้อหา** จริง (เช่น กราฟแท่งรายวัน `AppColumnBarSparkChart`, แกลเลอรีรูป) — ไม่ใช้กับเมนูแท็บ/ชิป/ปุ่มหัวการ์ด
+
+## ข้อยกเว้นภาพรวมสนามฟุตบอล (มือถือ)
+
+แถบเลือกสนาม + กรองสถานะใน **ตารางเวลาจองรายสนาม** → **dropdown** ไม่ใช่ wrap — ดูกฎ `football-turf-overview-mobile-dropdown.mdc`
+
+## ตรวจก่อนจบงาน UI มือถือ
+
+- [ ] แท็บ/ชิป/ปุ่มหัวการ์ดใช้ขนาดมือถือย่อตามตาราง  
+- [ ] แถวแอ็กชัน + แท็บห่อ (`flex-wrap`) เมื่อล้น — **ยกเว้น** ภาพรวมตาราง (dropdown)  
+- [ ] ไม่มีแถบเลื่อนแนวนอนซ่อนเป็นทางแก้หลักของเมนู  
+- [ ] ปุ่มมี `aria-label` เมื่อเป็นไอคอนล้วน  
+
+## อ้างอิง
+
+- `src/systems/football-turf/lib/ui-tokens.ts`
+- `FootballTurfDashboard.tsx` — โปรโมชัน · ลูกค้า · ตั้งค่า · ตารางเวลาจอง  
+- คู่กับ: `dashboard-module-settings-single-row-tabs.mdc` · `dashboard-mobile-filter-icon.mdc` · `football-turf-overview-mobile-dropdown.mdc`

@@ -94,6 +94,7 @@ export async function GET(req: Request) {
       paymentStatusLabel: HOTEL_PAYMENT_STATUS_LABELS[paymentStatus] ?? paymentStatus,
       paymentMethod: booking.paymentMethod,
       paymentSlipUrl: booking.paymentSlipUrl,
+      depositSlipUrl: booking.depositSlipUrl,
       note: booking.note,
     },
   });

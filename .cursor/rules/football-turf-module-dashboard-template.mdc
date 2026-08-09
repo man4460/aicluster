@@ -143,6 +143,9 @@ alwaysApply: false
 | `footballTurfNavIdleClass` | แท็บ idle = slate + hover ขาวโปร่ง |
 | `footballTurfMainPaddingBottomClass` | `pb-24 lg:pb-0` |
 
+**หน้าตั้งค่า:** แถวเดียว + แถบเมนูย่อย — ดู **`.cursor/rules/dashboard-module-settings-single-row-tabs.mdc`** (`footballTurfSubTabShellClass` · `settingsMenu`)
+
+**แถบเมนูหลัก vs รอง (กรอง):** ดู **`.cursor/rules/dashboard-primary-secondary-menu-tabs.mdc`** (`footballTurfPrimaryTab*` · `footballTurfFilterChip*` · หน้าโปร/ลูกค้า)
 **สีข้อความมาตรฐานโปรเจกต์**  
 - หัวข้อเข้ม: `#1e1b4b` / `text-slate-900` · `font-black tracking-tight`  
 - รอง: `#66638c` / `#5f5a8a` / `text-slate-500`  

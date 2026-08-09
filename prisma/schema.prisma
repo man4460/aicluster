@@ -171,6 +171,13 @@ model User {
   footballTurfPromotionSales FootballTurfPromotionSale[]
   footballTurfCostCategories FootballTurfCostCategory[]
   footballTurfCostEntries  FootballTurfCostEntry[]
+  footballTurfIncomeCategories FootballTurfIncomeCategory[]
+  footballTurfIncomeEntries FootballTurfIncomeEntry[]
+  footballTurfLoyaltySettings FootballTurfLoyaltySettings[]
+  footballTurfLoyaltyMembers  FootballTurfLoyaltyMember[]
+  footballTurfLoyaltyRewards  FootballTurfLoyaltyReward[]
+  footballTurfLoyaltyLedgers  FootballTurfLoyaltyLedger[]
+  footballTurfStaffLinks      FootballTurfStaffLink[]
   mqttTenantProfiles       MqttTenantProfile[]
   mqttCredentials          MqttCredential[]
   mqttAclRules             MqttAclRule[]
@@ -4274,9 +4281,12 @@ model HotelResortBooking {
   totalBaht       Int                      @default(0) @map("total_baht")
   amountPaidBaht  Int                      @default(0) @map("amount_paid_baht")
   paymentStatus   HotelResortPaymentStatus @default(UNPAID) @map("payment_status")
-  /** CASH | PROMPTPAY | TRANSFER — ช่องทางชำระตอนเช็คอิน */
+  /** CASH | PROMPTPAY | TRANSFER — ช่องทางชำระล่าสุด (เช็คอิน/เช็คเอาต์) */
   paymentMethod   String                   @default("CASH") @map("payment_method") @db.VarChar(20)
+  /** สลิปชำระเพิ่มตอนเช็คอิน / เช็คเอาต์ / ยอดคงเหลือ */
   paymentSlipUrl  String?                  @map("payment_slip_url") @db.VarChar(512)
+  /** สลิปมัดจำหรือชำระตอนจองจากลิงก์ลูกค้า — ไม่ทับด้วยสลิปเช็คอิน */
+  depositSlipUrl  String?                  @map("deposit_slip_url") @db.VarChar(512)
   /** มัดจำ/ยอดที่ต้องชำระตอนจองจากพอร์ทัล (null = ไม่บังคับชำระตอนจอง) */
   depositAmountBaht Int?                   @map("deposit_amount_baht")
   idCardImageUrl  String?                  @map("id_card_image_url") @db.VarChar(500)
@@ -4876,6 +4886,8 @@ model FootballTurfShopProfile {
   trialSessionId  String   @default("prod") @map("trial_session_id") @db.VarChar(36)
   venueName       String   @default("") @map("venue_name") @db.VarChar(200)
   venueSubtitle   String   @default("") @map("venue_subtitle") @db.VarChar(300)
+  /** โลโก้สนาม — path สั้นใต้ /uploads หรือ URL */
+  logoUrl         String   @default("") @map("logo_url") @db.VarChar(512)
   promptpayNumber String   @default("") @map("promptpay_number") @db.VarChar(32)
   bankName        String   @default("") @map("bank_name") @db.VarChar(120)
   accountName     String   @default("") @map("account_name") @db.VarChar(200)
@@ -4893,6 +4905,14 @@ model FootballTurfShopProfile {
   portalBookingPaymentMode String @default("NONE") @map("portal_booking_payment_mode") @db.VarChar(16)
   /** จำนวนมัดจำ (บาท) เมื่อโหมด DEPOSIT */
   depositAmountBaht Int? @map("deposit_amount_baht")
+  /** รหัสเข้าลิงก์พนักงานรายวัน (bcrypt) — ว่าง = ไม่บังคับ */
+  staffDailyPinHash String? @map("staff_daily_pin_hash") @db.VarChar(255)
+  /** แบนเนอร์หน้าเว็บจองลูกค้า */
+  portalBannerUrl String? @map("portal_banner_url") @db.VarChar(512)
+  /** แกลเลอรีหน้าเว็บจอง — JSON array ของ URL */
+  portalGalleryJson String @default("[]") @map("portal_gallery_json") @db.Text
+  facebookUrl String @default("") @map("facebook_url") @db.VarChar(512)
+  mapUrl      String @default("") @map("map_url") @db.VarChar(512)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -4926,17 +4946,26 @@ model FootballTurfCourt {
 }
 
 model FootballTurfCustomer {
-  id             Int      @id @default(autoincrement())
-  ownerUserId    String   @map("owner_id") @db.VarChar(191)
-  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
-  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
-  name           String   @default("") @db.VarChar(160)
-  phone          String   @db.VarChar(32)
-  teamName       String   @default("") @map("team_name") @db.VarChar(160)
-  note           String   @default("") @db.VarChar(500)
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id                 Int      @id @default(autoincrement())
+  ownerUserId        String   @map("owner_id") @db.VarChar(191)
+  owner              User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId     String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name               String   @default("") @db.VarChar(160)
+  phone              String   @db.VarChar(32)
+  teamName           String   @default("") @map("team_name") @db.VarChar(160)
+  note               String   @default("") @db.VarChar(500)
+  isActive           Boolean  @default(true) @map("is_active")
+  /** ติ๊กเมื่อต้องการออกใบกำกับภาษี — เก็บชื่อ/เลขผู้เสียภาษี/ที่อยู่ไว้ใช้ตอนพิมพ์ */
+  taxInvoiceEnabled  Boolean  @default(false) @map("tax_invoice_enabled")
+  /** ชื่อในใบกำกับ (ว่าง = ใช้ชื่อลูกค้า) */
+  billingName        String   @default("") @map("billing_name") @db.VarChar(160)
+  taxId              String   @default("") @map("tax_id") @db.VarChar(30)
+  taxAddress         String   @default("") @map("tax_address") @db.VarChar(1000)
+  taxBranch          String   @default("") @map("tax_branch") @db.VarChar(120)
+  /** รูปโปรไฟล์ลูกค้า (อัปโหลด / ถ่าย) */
+  photoUrl           String   @default("") @map("photo_url") @db.VarChar(512)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@unique([ownerUserId, trialSessionId, phone], map: "ft_cust_owner_trial_phone_uq")
   @@index([ownerUserId, trialSessionId], map: "ft_cust_owner_trial_idx")
@@ -4963,9 +4992,15 @@ model FootballTurfBooking {
   finalPrice         Int               @default(0) @map("final_price")
   /** มัดจำ/ยอดที่ต้องชำระตอนจองจากพอร์ทัล (null = ไม่บังคับชำระตอนจอง) */
   depositAmountBaht  Int?              @map("deposit_amount_baht")
+  /** ยอดที่ชำระแล้วสะสม (มัดจำ + ชำระเพิ่ม) */
+  amountPaidBaht     Int               @default(0) @map("amount_paid_baht")
+  /** คะแนนที่ให้แล้วจากบิลนี้ (กันให้ซ้ำ) */
+  pointsEarned       Int               @default(0) @map("points_earned")
+  pointsRedeemed     Int               @default(0) @map("points_redeemed")
   promotionSaleId    Int?              @map("promotion_sale_id")
   note               String            @default("") @db.VarChar(500)
   paymentMethod      String            @default("UNPAID") @map("payment_method") @db.VarChar(20)
+  /** UNPAID | PENDING_REVIEW | PARTIAL | PAID */
   paymentStatus      String            @default("UNPAID") @map("payment_status") @db.VarChar(20)
   paymentSlipDataUrl String?           @map("payment_slip_data_url") @db.VarChar(512)
   paymentReference   String            @default("") @map("payment_reference") @db.VarChar(120)
@@ -5017,12 +5052,94 @@ model FootballTurfPromotionSale {
   paymentStatus      String                @default("PAID") @map("payment_status") @db.VarChar(20)
   paymentSlipDataUrl String?               @map("payment_slip_data_url") @db.VarChar(512)
   paymentReference   String                @default("") @map("payment_reference") @db.VarChar(120)
+  pointsEarned       Int                   @default(0) @map("points_earned")
+  pointsRedeemed     Int                   @default(0) @map("points_redeemed")
   createdAt          DateTime              @default(now()) @map("created_at")
   updatedAt          DateTime              @updatedAt @map("updated_at")
 
   @@index([ownerUserId, trialSessionId])
   @@index([promotionId])
   @@map("football_turf_promotion_sales")
+}
+
+/** ตั้งค่าสะสมคะแนนสนามฟุตบอล — เช่น ทุก 100 บาท = 1 คะแนน */
+model FootballTurfLoyaltySettings {
+  id             Int      @id @default(autoincrement())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  enabled        Boolean  @default(false) @map("is_enabled")
+  bahtPerPoint   Int      @default(100) @map("baht_per_point")
+  pointsPerUnit  Int      @default(1) @map("points_per_unit")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId], map: "ft_loyalty_settings_owner_trial_uq")
+  @@index([ownerUserId], map: "ft_loyalty_settings_owner_idx")
+  @@map("football_turf_loyalty_settings")
+}
+
+model FootballTurfLoyaltyMember {
+  id             Int      @id @default(autoincrement())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  phone          String   @db.VarChar(20)
+  customerName   String   @default("") @map("customer_name") @db.VarChar(160)
+  pointsBalance  Int      @default(0) @map("points_balance")
+  totalEarned    Int      @default(0) @map("total_earned")
+  totalRedeemed  Int      @default(0) @map("total_redeemed")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  ledger         FootballTurfLoyaltyLedger[]
+
+  @@unique([ownerUserId, trialSessionId, phone], map: "ft_loyalty_member_owner_trial_phone_uq")
+  @@index([ownerUserId, trialSessionId], map: "ft_loyalty_member_owner_trial_idx")
+  @@index([ownerUserId], map: "ft_loyalty_member_owner_idx")
+  @@map("football_turf_loyalty_members")
+}
+
+model FootballTurfLoyaltyReward {
+  id             Int      @id @default(autoincrement())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  title          String   @db.VarChar(160)
+  pointsCost     Int      @map("points_cost")
+  imageUrl       String?  @map("image_url") @db.VarChar(512)
+  sortOrder      Int      @default(100) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  ledger         FootballTurfLoyaltyLedger[]
+
+  @@index([ownerUserId, trialSessionId, sortOrder], map: "ft_loyalty_reward_owner_trial_sort_idx")
+  @@index([ownerUserId], map: "ft_loyalty_reward_owner_idx")
+  @@map("football_turf_loyalty_rewards")
+}
+
+model FootballTurfLoyaltyLedger {
+  id             Int      @id @default(autoincrement())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  memberId       Int      @map("member_id")
+  member         FootballTurfLoyaltyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  /** EARN | REDEEM */
+  kind           String   @db.VarChar(16)
+  pointsDelta    Int      @map("points_delta")
+  balanceAfter   Int      @map("balance_after")
+  bookingId      Int?     @map("booking_id")
+  promotionSaleId Int?    @map("promotion_sale_id")
+  rewardId       Int?     @map("reward_id")
+  reward         FootballTurfLoyaltyReward? @relation(fields: [rewardId], references: [id], onDelete: SetNull)
+  note           String   @default("") @db.VarChar(300)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([ownerUserId, trialSessionId, createdAt], map: "ft_loyalty_ledger_owner_trial_created_idx")
+  @@index([memberId, createdAt], map: "ft_loyalty_ledger_member_created_idx")
+  @@index([bookingId], map: "ft_loyalty_ledger_booking_idx")
+  @@map("football_turf_loyalty_ledgers")
 }
 
 model FootballTurfCostCategory {
@@ -5051,9 +5168,72 @@ model FootballTurfCostEntry {
   amount         Int
   itemLabel      String                   @default("") @map("item_label") @db.VarChar(200)
   note           String                   @default("") @db.VarChar(500)
+  /** สลิปรายจ่าย — path สั้นใต้ /uploads หรือ URL */
+  paymentSlipUrl String                   @default("") @map("payment_slip_url") @db.VarChar(512)
   createdAt      DateTime                 @default(now()) @map("created_at")
   updatedAt      DateTime                 @updatedAt @map("updated_at")
 
   @@index([ownerUserId, trialSessionId, spentAt], map: "ft_cost_ent_owner_trial_spent_idx")
   @@map("football_turf_cost_entries")
+}
+
+enum FootballTurfIncomeCategoryKind {
+  COURT_RENTAL
+  PROMOTION
+  CUSTOM
+}
+
+/** หมวดรายรับ — ค่าสนาม / โปรโมชัน เป็น builtin · อื่น ๆ บันทึกมือ */
+model FootballTurfIncomeCategory {
+  id             Int                           @id @default(autoincrement())
+  ownerUserId    String                        @map("owner_id") @db.VarChar(191)
+  owner          User                          @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String                        @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String                        @db.VarChar(120)
+  kind           FootballTurfIncomeCategoryKind @default(CUSTOM)
+  isBuiltin      Boolean                       @default(false) @map("is_builtin")
+  sortOrder      Int                           @default(0) @map("sort_order")
+  createdAt      DateTime                      @default(now()) @map("created_at")
+  updatedAt      DateTime                      @updatedAt @map("updated_at")
+
+  entries FootballTurfIncomeEntry[]
+
+  @@index([ownerUserId, trialSessionId], map: "ft_income_cat_owner_trial_idx")
+  @@index([ownerUserId, trialSessionId, kind], map: "ft_income_cat_owner_trial_kind_idx")
+  @@map("football_turf_income_categories")
+}
+
+model FootballTurfIncomeEntry {
+  id             Int                        @id @default(autoincrement())
+  ownerUserId    String                     @map("owner_id") @db.VarChar(191)
+  owner          User                       @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String                     @default("prod") @map("trial_session_id") @db.VarChar(36)
+  categoryId     Int                        @map("category_id")
+  category       FootballTurfIncomeCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  earnedAt       DateTime                   @map("earned_at")
+  amount         Int
+  itemLabel      String                     @default("") @map("item_label") @db.VarChar(200)
+  note           String                     @default("") @db.VarChar(500)
+  paymentSlipUrl String                     @default("") @map("payment_slip_url") @db.VarChar(512)
+  createdAt      DateTime                   @default(now()) @map("created_at")
+  updatedAt      DateTime                   @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, earnedAt], map: "ft_income_ent_owner_trial_earned_idx")
+  @@map("football_turf_income_entries")
+}
+
+/** ลิงก์/QR พนักงานสนามฟุตบอล — โทเค็น + cipher สำหรับ QR ค้าง */
+model FootballTurfStaffLink {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  tokenHash      String   @map("token_hash") @db.VarChar(128)
+  tokenCipher    String?  @map("token_cipher") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId], map: "football_turf_staff_link_owner_trial_uniq")
+  @@index([ownerUserId], map: "football_turf_staff_link_owner_idx")
+  @@map("football_turf_staff_links")
 }

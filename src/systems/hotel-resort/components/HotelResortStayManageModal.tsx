@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { appTemplateOutlineButtonClass } from "@/components/app-templates";
+import {
+  AppImageLightbox,
+  AppImageThumb,
+  appTemplateOutlineButtonClass,
+  useAppImageLightbox,
+} from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { HotelResortButton } from "@/systems/hotel-resort/components/HotelResortButton";
@@ -45,6 +50,7 @@ function ymdFromIso(iso: string) {
 
 export function HotelResortStayManageModal({ open, room, onClose, onDone }: Props) {
   const apiFetch = useHotelResortApiFetch();
+  const slipLb = useAppImageLightbox();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -204,7 +210,11 @@ export function HotelResortStayManageModal({ open, room, onClose, onDone }: Prop
           totalBaht: total,
           amountPaidBaht: paid,
           paymentMethod,
-          paymentSlipUrl: paymentMethod === "CASH" ? null : paymentSlipUrl,
+          ...(paymentMethod === "CASH"
+            ? { paymentSlipUrl: null }
+            : paymentSlipUrl
+              ? { paymentSlipUrl }
+              : {}),
           guestAddress: guestAddress.trim() || null,
           guestTaxId: guestTaxId.trim() || null,
           note: note.trim() || null,
@@ -320,6 +330,20 @@ export function HotelResortStayManageModal({ open, room, onClose, onDone }: Prop
             </div>
           </div>
 
+          {booking.depositSlipUrl?.trim() ? (
+            <div className="rounded-[1rem] border border-white/60 bg-white/70 p-3">
+              <p className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-[#8b87b8]">
+                สลิปมัดจำ (จากลิงก์จอง)
+              </p>
+              <AppImageThumb
+                src={booking.depositSlipUrl.trim()}
+                alt="สลิปมัดจำ"
+                onOpen={() => slipLb.open(booking.depositSlipUrl!.trim())}
+                className="h-16 w-16"
+              />
+            </div>
+          ) : null}
+
           <HotelResortPaymentPanel
             amountBaht={paid}
             method={paymentMethod}
@@ -412,6 +436,7 @@ export function HotelResortStayManageModal({ open, room, onClose, onDone }: Prop
           {info ? <p className="text-sm font-semibold text-emerald-700">{info}</p> : null}
         </div>
       ) : null}
+      <AppImageLightbox src={slipLb.src} onClose={slipLb.close} alt="สลิปชำระ" />
     </FormModal>
   );
 }

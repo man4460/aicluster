@@ -205,6 +205,7 @@ export async function GET(req: Request) {
       paymentStatus: b.paymentStatus,
       paymentMethod: b.paymentMethod,
       paymentSlipUrl: b.paymentSlipUrl,
+      depositSlipUrl: b.depositSlipUrl,
       note: b.note,
       guestAddress: b.guest?.address ?? null,
       guestTaxId: b.guest?.taxId ?? null,

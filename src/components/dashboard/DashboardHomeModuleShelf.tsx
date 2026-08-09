@@ -72,47 +72,47 @@ function UsagePill({ badge }: { badge: ModuleUsageBadge }) {
 function CompactModuleCard({
   module,
   pinned,
+  shelfTab,
   onTogglePinned,
   onVisit,
 }: {
   module: HomeModule;
   pinned: boolean;
+  shelfTab: ShelfTab;
   onTogglePinned: (slug: string) => void;
   onVisit: (slug: string) => void;
 }) {
   const safeImage = module.imageUrl && isSafeModuleCardDisplayUrl(module.imageUrl) ? module.imageUrl : null;
+  const cornerBadge = shelfTab === "recent" ? "ล่าสุด" : pinned ? "ปักหมุด" : null;
   return (
     <Link
       href={module.href}
       onClick={() => onVisit(module.slug)}
       className={cn(
-        "group relative overflow-hidden rounded-[1.35rem] border border-white/60 bg-white/75 p-4 shadow-[0_20px_48px_-30px_rgba(30,27,75,0.35)] ring-1 ring-inset ring-white/60 backdrop-blur-xl transition duration-300",
-        "hover:-translate-y-0.5 hover:border-[#5b61ff]/30 hover:shadow-[0_28px_58px_-28px_rgba(91,97,255,0.34)]",
+        "group relative flex flex-col overflow-hidden rounded-2xl border border-white/70 bg-white/90 shadow-[0_16px_36px_-24px_rgba(30,27,75,0.4)] ring-1 ring-inset ring-white/70 transition duration-300",
+        "hover:-translate-y-0.5 hover:border-[#5b61ff]/30 hover:shadow-[0_22px_44px_-22px_rgba(91,97,255,0.35)]",
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="relative h-12 w-12 overflow-hidden rounded-2xl border border-white/70 bg-gradient-to-br from-[#ecebff] to-indigo-100/40 shadow-sm">
-            {safeImage ? (
-              <Image src={safeImage} alt="" fill sizes="48px" className="object-cover" unoptimized />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-[#4d47b6]">
-                <span className="text-sm font-black">⚡</span>
-              </div>
+      <div className="relative aspect-[5/4] w-full overflow-hidden bg-gradient-to-br from-[#ecebff] to-indigo-100/50">
+        {safeImage ? (
+          <Image src={safeImage} alt="" fill sizes="(max-width: 640px) 33vw, 12vw" className="object-cover" unoptimized />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[#4d47b6]">
+            <span className="text-lg font-black">⚡</span>
+          </div>
+        )}
+        {cornerBadge ? (
+          <span
+            className={cn(
+              "absolute left-1.5 top-1.5 rounded-full px-2 py-0.5 text-[9px] font-black shadow-sm sm:left-2 sm:top-2 sm:text-[10px]",
+              shelfTab === "recent"
+                ? "bg-[#5b61ff] text-white"
+                : "bg-[#f3efe6] text-[#5c5346]",
             )}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-black tracking-tight text-[#1e1b4b]">{module.title}</p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              {module.usageBadge ? <UsagePill badge={module.usageBadge} /> : null}
-              {pinned ? (
-                <span className="rounded-lg border border-[#0000BF]/20 bg-[#0000BF]/10 px-2 py-0.5 text-[10px] font-black text-[#2e2a58]">
-                  ปักหมุด
-                </span>
-              ) : null}
-            </div>
-          </div>
-        </div>
+          >
+            {cornerBadge}
+          </span>
+        ) : null}
         <button
           type="button"
           onClick={(e) => {
@@ -120,14 +120,24 @@ function CompactModuleCard({
             onTogglePinned(module.slug);
           }}
           className={cn(
-            "inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/70 bg-white/80 text-[#2e2a58] shadow-sm transition",
+            "absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/80 bg-white/90 text-sm text-[#2e2a58] shadow-sm transition sm:right-2 sm:top-2 sm:h-8 sm:w-8",
             "hover:bg-white active:scale-[0.98]",
             pinned ? cn(appDashboardBrandGradientFillClass, "border-0 text-white") : "",
           )}
           aria-label={pinned ? "เอาออกจากปักหมุด" : "ปักหมุด"}
         >
-          <span className="text-base leading-none">{pinned ? "★" : "☆"}</span>
+          <span className="leading-none">{pinned ? "★" : "☆"}</span>
         </button>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col gap-1 px-2 py-2 sm:px-2.5 sm:py-2.5">
+        <p className="line-clamp-2 text-[11px] font-black leading-snug tracking-tight text-[#1e1b4b] sm:text-xs">
+          {module.title}
+        </p>
+        {module.usageBadge ? (
+          <div className="mt-auto">
+            <UsagePill badge={module.usageBadge} />
+          </div>
+        ) : null}
       </div>
     </Link>
   );
@@ -257,12 +267,13 @@ export function DashboardHomeModuleShelf({ modules }: { modules: HomeModule[] })
           {emptyLabel}
         </p>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-3 gap-2 sm:gap-2.5 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
           {visibleModules.map((m) => (
             <CompactModuleCard
               key={`${shelfTab}-${m.slug}`}
               module={m}
               pinned={pinnedSlugs.includes(m.slug)}
+              shelfTab={shelfTab}
               onTogglePinned={togglePinned}
               onVisit={onVisit}
             />

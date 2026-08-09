@@ -1,0 +1,73 @@
+---
+description: แถบเมนูหลัก vs แถบเมนูรอง (กรอง) ในหน้าแดชบอร์ดโมดูล — ขนาด·ลำดับชั้น·การ์ดเดียว
+globs:
+  - "**/systems/**/*Dashboard*.tsx"
+  - "**/systems/**/lib/ui-tokens.ts"
+  - "**/systems/football-turf/**"
+  - "**/app/(dashboard)/dashboard/**/*.tsx"
+alwaysApply: true
+---
+
+# แถบเมนูหลัก · แถบเมนูรอง (กรอง)
+
+ใช้เมื่อหน้าโมดูลมีทั้ง **สลับหมวดหลัก** (เช่น โปรโมชัน | ลูกค้า) และ **กรองรายการย่อย** (เช่น แพ็ก / สิทธิ์ / สถานะ)
+
+สนามฟุตบอล (`tab=offers` · โปร / ลูกค้า) เป็นต้นแบบ
+
+## ลำดับชั้น (บังคับ)
+
+| ระดับ | บทบาท | ตัวอย่าง | ขนาด / ลักษณะ |
+|-------|--------|---------|----------------|
+| **แถบหลัก (primary)** | สลับหมวดใหญ่ของหน้า | โปรโมชัน \| ลูกค้า | ใหญ่ · `min-h-10`–`11` · `text-sm`+ · gradient เมื่อ active |
+| **แถบรอง (secondary / filter)** | กรองภายในหมวด | แพ็กโปร · ถือสิทธิ์ · ทั้งหมด/ใช้งาน/ใบกำกับ | เล็ก · `min-h-7`–`8` · `text-[10px]`–`11px` · โทนชิปอ่อน |
+
+1. **แถบหลักต้องเด่นกว่าแถบรองชัดเจน** — ห้ามใช้คลาส/ขนาดเดียวกัน  
+2. **อยู่ใน `AppDashboardSection` การ์ดเดียว** กับหัวข้อ · ปุ่มแอ็กชัน · รายการ — ห้ามวางแถบหลักนอกการ์ดแยกชั้น  
+3. ลำดับใน DOM: หัวการ์ด → **แถบหลัก** → **แถบรอง** → แผงค้นหา (ถ้ามี) → รายการ
+
+## โทเค็น (สนามฟุตบอล)
+
+| ระดับ | Shell | Pill / Chip |
+|-------|-------|-------------|
+| หลัก | `footballTurfPrimaryTabShellClass` | `footballTurfPrimaryTabPillClass(active)` |
+| รอง | `footballTurfFilterChipShellClass` | `footballTurfFilterChipClass(active)` |
+
+โมดูลอื่น: สร้างคู่โทเค็นเทียบเท่าใน `lib/ui-tokens` ของโมดูล — **ห้าม** คัดลอกสตริง Tailwind ซ้ำในหลายหน้า
+
+## ARIA
+
+- ทั้งสองระดับ: `role="tablist"` / `role="tab"` / `aria-selected`  
+- แผงเนื้อหา: `role="tabpanel"` + `aria-controls` / `aria-labelledby` เมื่อสลับหมวดหรือกรองมีแผงแยก
+
+## ไอคอนเมนูโมดูล (dock / sidebar)
+
+เมื่อรวมสองหมวดเป็นแท็บเดียว (เช่น โปร + ลูกค้า):
+
+- ใช้ **ไอคอนเดียวที่อ่านง่าย** (เช่น ผู้ใช้คู่)  
+- **ห้าม** ซ้อน path ของสองไอคอนทับกันใน SVG เดียวกัน
+
+## ข้อยกเว้น — dropdown บนมือถือ
+
+เมื่อแถบหลักมีหลายตัวเลือกจนห่อเพี้ยน (เช่น ตั้งค่า 5 หมวด · เลือกสนาม/กรองสถานะภาพรวม):
+
+- มือถือ: `<select>` เต็มขอบ (`footballTurfMobileSelectClass`)  
+- `sm+`: แถบหลัก / pill ตามปกติ  
+- **หน้าตั้งค่ามือถือ:** มี dropdown แล้ว **ต้องซ่อนแถบเมนู pill ทั้งก้อน** — ห้ามโชว์คู่กัน  
+- ซ่อนด้วย wrapper `hidden sm:block` รอบ `<nav>` — **ห้าม** `cn(shellHavingInlineFlex, "hidden sm:…")` บน element เดียว (อาจชน twMerge แล้ว pill โผล่บนมือถือ)
+
+อ้างอิง: `football-turf-overview-mobile-dropdown.mdc` · หน้าตั้งค่าใน `FootballTurfDashboard.tsx`
+
+## ห้าม
+
+- ให้แถบกรองย่อยสูง/ใหญ่เท่าแถบหลัก  
+- วางแถบหลักนอกการ์ด แล้วเปิดการ์ดเนื้อหาแยกตามหมวด  
+- แยกเป็นสองรายการใน dock เมื่อรวมเป็นหน้าเดียวแล้ว (เช่น แยก «โปร» กับ «ลูกค้า» ในเมนูล่าง)  
+- ใช้ `overflow-x-auto` เป็นทางแก้หลักของแถบเมนู — ห่อ (`flex-wrap`) หรือ dropdown ตามข้อยกเว้นด้านบน  
+- บนมือถือโชว์แถบเมนูตั้งค่าสองชั้น (หัวการ์ด + แถบห่อเพี้ยน) พร้อมกัน  
+
+## อ้างอิง
+
+- `FootballTurfDashboard.tsx` — `crmSection` · `settingsMenu` · แถบหลัก/รองใน `AppDashboardSection`  
+- `src/systems/football-turf/lib/ui-tokens.ts` — `footballTurfPrimaryTab*` · `footballTurfFilterChip*` · `footballTurfMobileSelectClass`  
+- `football-turf-module-nav.tsx` — แท็บ `offers` = «โปร / ลูกค้า»  
+- คู่กับ: `dashboard-module-settings-single-row-tabs.mdc` · `dashboard-mobile-compact-wrap.mdc`

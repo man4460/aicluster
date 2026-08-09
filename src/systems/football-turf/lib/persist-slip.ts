@@ -22,10 +22,26 @@ export async function persistFootballTurfCourtImageUrl(
   return persistFootballTurfImageUrl(ownerUserId, value, "court");
 }
 
+/** รูปโปรไฟล์ลูกค้า — เก็บ path สั้นใต้ uploads */
+export async function persistFootballTurfCustomerPhotoUrl(
+  ownerUserId: string,
+  value: string | null | undefined,
+): Promise<string> {
+  return (await persistFootballTurfImageUrl(ownerUserId, value, "customer")) ?? "";
+}
+
+/** โลโก้สนาม — เก็บ path สั้นใต้ uploads */
+export async function persistFootballTurfLogoUrl(
+  ownerUserId: string,
+  value: string | null | undefined,
+): Promise<string> {
+  return (await persistFootballTurfImageUrl(ownerUserId, value, "logo")) ?? "";
+}
+
 async function persistFootballTurfImageUrl(
   ownerUserId: string,
   value: string | null | undefined,
-  kind: "slip" | "court",
+  kind: "slip" | "court" | "customer" | "logo",
 ): Promise<string | null> {
   const raw = value?.trim() ?? "";
   if (!raw) return null;
@@ -42,7 +58,15 @@ async function persistFootballTurfImageUrl(
   const b64 = match[2].replace(/\s+/g, "");
   const buf = Buffer.from(b64, "base64");
   if (buf.length === 0 || buf.length > 6 * 1024 * 1024) {
-    throw new Error(kind === "court" ? "รูปสนามใหญ่เกินหรือว่าง" : "สลิปใหญ่เกินหรือว่าง");
+    throw new Error(
+      kind === "court"
+        ? "รูปสนามใหญ่เกินหรือว่าง"
+        : kind === "customer"
+          ? "รูปลูกค้าใหญ่เกินหรือว่าง"
+          : kind === "logo"
+            ? "โลโก้ใหญ่เกินหรือว่าง"
+            : "สลิปใหญ่เกินหรือว่าง",
+    );
   }
 
   const detected = detectImageKind(buf);

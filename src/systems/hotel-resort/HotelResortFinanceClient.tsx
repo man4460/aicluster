@@ -81,6 +81,7 @@ type FinanceStay = {
   paymentStatus: HotelResortPaymentStatus;
   paymentMethod: string | null;
   paymentSlipUrl?: string | null;
+  depositSlipUrl?: string | null;
   note?: string | null;
   guestAddress?: string | null;
   guestTaxId?: string | null;
@@ -1021,17 +1022,30 @@ export function HotelResortFinanceClient() {
                   >
                     <ul className="space-y-2 pr-0.5">
                       {filteredStays.map((s) => {
+                        const depositSlip = s.depositSlipUrl?.trim() || "";
                         const slip = s.paymentSlipUrl?.trim() || "";
                         return (
                           <li key={s.id} className={listItemClass}>
                             <div className="flex items-start gap-2">
-                              {slip ? (
-                                <AppImageThumb
-                                  src={slip}
-                                  alt={`สลิป ${s.guestName}`}
-                                  onOpen={() => slipLb.open(slip)}
-                                  className="h-14 w-14 shrink-0"
-                                />
+                              {depositSlip || slip ? (
+                                <div className="flex shrink-0 flex-col gap-1">
+                                  {depositSlip ? (
+                                    <AppImageThumb
+                                      src={depositSlip}
+                                      alt={`สลิปมัดจำ ${s.guestName}`}
+                                      onOpen={() => slipLb.open(depositSlip)}
+                                      className="h-14 w-14 shrink-0"
+                                    />
+                                  ) : null}
+                                  {slip ? (
+                                    <AppImageThumb
+                                      src={slip}
+                                      alt={`สลิปชำระเพิ่ม ${s.guestName}`}
+                                      onOpen={() => slipLb.open(slip)}
+                                      className="h-14 w-14 shrink-0"
+                                    />
+                                  ) : null}
+                                </div>
                               ) : null}
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-black text-[#1e1b4b]">{s.guestName}</p>

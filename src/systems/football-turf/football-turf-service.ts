@@ -11,6 +11,8 @@ export type {
   FootballTurfCourt,
   FootballTurfCustomer,
   FootballTurfFullState,
+  FootballTurfIncomeCategory,
+  FootballTurfIncomeEntry,
   FootballTurfPromotion,
   FootballTurfPromotionKind,
   FootballTurfPromotionSale,
@@ -20,6 +22,11 @@ export type {
   FootballTurfVenueSettings,
 } from "@/systems/football-turf/lib/types";
 
+import {
+  readStoredStaffDailyUnlock,
+  staffDailyUnlockHeaders,
+} from "@/lib/modules/staff-daily-pin";
+
 import type {
   FootballTurfBooking,
   FootballTurfCostCategory,
@@ -27,6 +34,8 @@ import type {
   FootballTurfCourt,
   FootballTurfCustomer,
   FootballTurfFullState,
+  FootballTurfIncomeCategory,
+  FootballTurfIncomeEntry,
   FootballTurfPromotion,
   FootballTurfPromotionSale,
   FootballTurfRepository,
@@ -35,6 +44,8 @@ import type {
 } from "@/systems/football-turf/lib/types";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { sameFootballTurfCustomer } from "@/systems/football-turf/lib/booking-session";
+import { timeToMinutes } from "@/systems/football-turf/lib/time-queue";
+import { footballTurfBookingIsFullyPaid } from "@/systems/football-turf/lib/portal-booking";
 
 type FootballTurfDB = {
   settings: FootballTurfVenueSettings;
@@ -44,6 +55,8 @@ type FootballTurfDB = {
   promotionSales: FootballTurfPromotionSale[];
   costCategories: FootballTurfCostCategory[];
   costEntries: FootballTurfCostEntry[];
+  incomeCategories: FootballTurfIncomeCategory[];
+  incomeEntries: FootballTurfIncomeEntry[];
   customers: FootballTurfCustomer[];
   seq: {
     court: number;
@@ -52,6 +65,8 @@ type FootballTurfDB = {
     promotionSale: number;
     costCategory: number;
     costEntry: number;
+    incomeCategory: number;
+    incomeEntry: number;
     customer: number;
   };
 };
@@ -63,6 +78,7 @@ function defaultVenueSettings(): FootballTurfVenueSettings {
   return {
     venueName: "สนามฟุตบอล MAWELL",
     venueSubtitle: "สนามหญ้าเทียม",
+    logoUrl: "",
     promptpayNumber: "",
     bankName: "",
     accountName: "",
@@ -75,6 +91,11 @@ function defaultVenueSettings(): FootballTurfVenueSettings {
     slipPaperSize: "SLIP_58",
     portalBookingPaymentMode: "NONE",
     depositAmountBaht: null,
+    portalBannerUrl: "",
+    portalGallery: [],
+    facebookUrl: "",
+    mapUrl: "",
+    staffDailyPinSet: false,
   };
 }
 
@@ -281,6 +302,12 @@ const seedDB: FootballTurfDB = {
     { id: 1, name: "ค่าน้ำค่าไฟ" },
     { id: 2, name: "ค่าดูแลสนาม" },
   ],
+  incomeCategories: [
+    { id: 1, name: "ค่าสนาม", kind: "COURT_RENTAL", isBuiltin: true, sortOrder: 0 },
+    { id: 2, name: "โปรโมชัน", kind: "PROMOTION", isBuiltin: true, sortOrder: 1 },
+    { id: 3, name: "เช่าพื้นที่ขายของ", kind: "CUSTOM", isBuiltin: false, sortOrder: 10 },
+  ],
+  incomeEntries: [],
   costEntries: [
     {
       id: 1,
@@ -290,6 +317,7 @@ const seedDB: FootballTurfDB = {
       amount: 1200,
       itemLabel: "เติมยางเม็ด + ดูแลพื้น",
       note: "ข้อมูลตัวอย่าง",
+      paymentSlipUrl: "",
     },
     {
       id: 2,
@@ -299,6 +327,7 @@ const seedDB: FootballTurfDB = {
       amount: 850,
       itemLabel: "ค่าไฟช่วงเย็น",
       note: "ข้อมูลตัวอย่าง",
+      paymentSlipUrl: "",
     },
     {
       id: 3,
@@ -308,14 +337,54 @@ const seedDB: FootballTurfDB = {
       amount: 640,
       itemLabel: "ค่าน้ำประปา",
       note: "",
+      paymentSlipUrl: "",
     },
   ],
   customers: [
-    { id: 1, name: "ทีมเสือดำ", phone: "0811111111", teamName: "เสือดำ FC", note: "ลูกค้าประจำ · ข้อมูลตัวอย่าง", isActive: true },
-    { id: 2, name: "ทีมตัวอย่าง", phone: "0899999999", teamName: "Night League", note: "ข้อมูลตัวอย่าง", isActive: true },
-    { id: 3, name: "คุณอาร์ม", phone: "0822222222", teamName: "Arm United", note: "", isActive: true },
+    {
+      id: 1,
+      name: "ทีมเสือดำ",
+      phone: "0811111111",
+      teamName: "เสือดำ FC",
+      note: "ลูกค้าประจำ · ข้อมูลตัวอย่าง",
+      isActive: true,
+      taxInvoiceEnabled: false,
+      billingName: "",
+      taxId: "",
+      taxAddress: "",
+      taxBranch: "",
+      photoUrl: "",
+    },
+    {
+      id: 2,
+      name: "ทีมตัวอย่าง",
+      phone: "0899999999",
+      teamName: "Night League",
+      note: "ข้อมูลตัวอย่าง",
+      isActive: true,
+      taxInvoiceEnabled: false,
+      billingName: "",
+      taxId: "",
+      taxAddress: "",
+      taxBranch: "",
+      photoUrl: "",
+    },
+    {
+      id: 3,
+      name: "คุณอาร์ม",
+      phone: "0822222222",
+      teamName: "Arm United",
+      note: "",
+      isActive: true,
+      taxInvoiceEnabled: false,
+      billingName: "",
+      taxId: "",
+      taxAddress: "",
+      taxBranch: "",
+      photoUrl: "",
+    },
   ],
-  seq: { court: 2, booking: 7, promotion: 2, promotionSale: 1, costCategory: 2, costEntry: 3, customer: 3 },
+  seq: { court: 2, booking: 7, promotion: 2, promotionSale: 1, costCategory: 2, costEntry: 3, incomeCategory: 3, incomeEntry: 0, customer: 3 },
 };
 
 function clone<T>(value: T): T {
@@ -351,8 +420,21 @@ function normalizeDB(parsed: Partial<FootballTurfDB>): FootballTurfDB {
     promotions: parsed.promotions ?? base.promotions,
     promotionSales: parsed.promotionSales ?? base.promotionSales,
     costCategories: parsed.costCategories ?? base.costCategories,
-    costEntries: parsed.costEntries ?? base.costEntries,
-    customers: parsed.customers ?? deriveCustomersFromLegacy(parsed),
+    incomeCategories: parsed.incomeCategories ?? base.incomeCategories,
+    incomeEntries: parsed.incomeEntries ?? base.incomeEntries,
+    costEntries: (parsed.costEntries ?? base.costEntries).map((item) => ({
+      ...item,
+      paymentSlipUrl: item.paymentSlipUrl ?? "",
+    })),
+    customers: (parsed.customers ?? deriveCustomersFromLegacy(parsed)).map((item) => ({
+      ...item,
+      taxInvoiceEnabled: Boolean(item.taxInvoiceEnabled),
+      billingName: item.billingName ?? "",
+      taxId: item.taxId ?? "",
+      taxAddress: item.taxAddress ?? "",
+      taxBranch: item.taxBranch ?? "",
+      photoUrl: item.photoUrl ?? "",
+    })),
     seq: {
       ...base.seq,
       ...(parsed.seq ?? {}),
@@ -373,7 +455,20 @@ function deriveCustomersFromLegacy(parsed: Partial<FootballTurfDB>): FootballTur
       if (existing && teamName.trim()) existing.teamName = teamName.trim();
       return;
     }
-    map.set(key, { id: id++, name: name.trim() || key, phone: key, teamName: teamName.trim(), note: "", isActive: true });
+    map.set(key, {
+      id: id++,
+      name: name.trim() || key,
+      phone: key,
+      teamName: teamName.trim(),
+      note: "",
+      isActive: true,
+      taxInvoiceEnabled: false,
+      billingName: "",
+      taxId: "",
+      taxAddress: "",
+      taxBranch: "",
+      photoUrl: "",
+    });
   };
   for (const b of parsed.bookings ?? []) upsert(b.customerPhone, b.customerName, b.teamName);
   for (const s of parsed.promotionSales ?? []) upsert(s.customerPhone, s.customerName, s.teamName);
@@ -412,7 +507,21 @@ function saveDB(db: FootballTurfDB) {
   localStorage.setItem(activeStorageKey(), JSON.stringify(db));
 }
 
-function upsertLocalCustomer(db: FootballTurfDB, input: { phone: string; name: string; teamName?: string; note?: string }) {
+function upsertLocalCustomer(
+  db: FootballTurfDB,
+  input: {
+    phone: string;
+    name: string;
+    teamName?: string;
+    note?: string;
+    taxInvoiceEnabled?: boolean;
+    billingName?: string;
+    taxId?: string;
+    taxAddress?: string;
+    taxBranch?: string;
+    photoUrl?: string;
+  },
+) {
   const phone = input.phone.trim();
   if (!phone) return;
   const idx = db.customers.findIndex((c) => c.phone === phone);
@@ -422,6 +531,12 @@ function upsertLocalCustomer(db: FootballTurfDB, input: { phone: string; name: s
       name: input.name.trim() || db.customers[idx].name,
       teamName: input.teamName?.trim() || db.customers[idx].teamName,
       note: input.note?.trim() || db.customers[idx].note,
+      ...(input.taxInvoiceEnabled !== undefined ? { taxInvoiceEnabled: Boolean(input.taxInvoiceEnabled) } : {}),
+      ...(input.billingName !== undefined ? { billingName: input.billingName.trim() } : {}),
+      ...(input.taxId !== undefined ? { taxId: input.taxId.replace(/\D/g, "").slice(0, 13) } : {}),
+      ...(input.taxAddress !== undefined ? { taxAddress: input.taxAddress.trim() } : {}),
+      ...(input.taxBranch !== undefined ? { taxBranch: input.taxBranch.trim() } : {}),
+      ...(input.photoUrl !== undefined ? { photoUrl: input.photoUrl.trim() } : {}),
     };
     return;
   }
@@ -432,6 +547,12 @@ function upsertLocalCustomer(db: FootballTurfDB, input: { phone: string; name: s
     teamName: input.teamName?.trim() ?? "",
     note: input.note?.trim() ?? "",
     isActive: true,
+    taxInvoiceEnabled: Boolean(input.taxInvoiceEnabled),
+    billingName: input.billingName?.trim() ?? "",
+    taxId: input.taxId?.replace(/\D/g, "").slice(0, 13) ?? "",
+    taxAddress: input.taxAddress?.trim() ?? "",
+    taxBranch: input.taxBranch?.trim() ?? "",
+    photoUrl: input.photoUrl?.trim() ?? "",
   };
   db.seq.customer = row.id;
   db.customers.push(row);
@@ -457,17 +578,55 @@ async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
 class ApiFootballTurfRepository implements FootballTurfRepository {
   private cache: FootballTurfFullState | null = null;
 
+  constructor(
+    private readonly staffAuth?: { ownerId: string; trialSessionId: string; k: string } | null,
+  ) {}
+
+  private authUrl(path: string): string {
+    if (!this.staffAuth) return path;
+    const qs = new URLSearchParams({
+      ownerId: this.staffAuth.ownerId,
+      t: this.staffAuth.trialSessionId,
+      k: this.staffAuth.k,
+    });
+    const unlock = readStoredStaffDailyUnlock("football-turf", this.staffAuth.ownerId);
+    if (unlock) qs.set("du", unlock);
+    return `${path}${path.includes("?") ? "&" : "?"}${qs.toString()}`;
+  }
+
+  private authInit(init?: RequestInit): RequestInit {
+    if (!this.staffAuth) {
+      return { ...init, credentials: init?.credentials ?? "include" };
+    }
+    const headerBag = new Headers(init?.headers);
+    const unlockHeaders = staffDailyUnlockHeaders("football-turf", this.staffAuth.ownerId);
+    for (const [key, value] of Object.entries(unlockHeaders)) {
+      headerBag.set(key, value);
+    }
+    return {
+      ...init,
+      credentials: "omit",
+      cache: init?.cache ?? "no-store",
+      headers: headerBag,
+    };
+  }
+
   private async loadState(force = false): Promise<FootballTurfFullState> {
     if (this.cache && !force) return this.cache;
-    this.cache = await apiJson<FootballTurfFullState>("/api/football-turf/state");
+    this.cache = await apiJson<FootballTurfFullState>(
+      this.authUrl("/api/football-turf/state"),
+      this.authInit(),
+    );
     return this.cache;
   }
 
   private async mutate<T>(op: string, id?: number, input?: unknown): Promise<T> {
-    const result = await apiJson<T>("/api/football-turf/action", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ op, id, input }),
+    const result = await apiJson<T>(this.authUrl("/api/football-turf/action"), {
+      ...this.authInit({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ op, id, input }),
+      }),
     });
     this.cache = null;
     return result;
@@ -476,7 +635,12 @@ class ApiFootballTurfRepository implements FootballTurfRepository {
   async getSettings(): Promise<FootballTurfVenueSettings> {
     return (await this.loadState()).settings;
   }
-  async updateSettings(patch: Partial<FootballTurfVenueSettings>): Promise<FootballTurfVenueSettings> {
+  async updateSettings(
+    patch: Partial<FootballTurfVenueSettings> & {
+      staffDailyPin?: string | null;
+      staffDailyPinClear?: boolean;
+    },
+  ): Promise<FootballTurfVenueSettings> {
     return this.mutate("updateSettings", undefined, patch);
   }
   async listCourts(): Promise<FootballTurfCourt[]> {
@@ -566,6 +730,13 @@ class ApiFootballTurfRepository implements FootballTurfRepository {
   async createCostCategory(name: string): Promise<FootballTurfCostCategory> {
     return this.mutate("createCostCategory", undefined, { name });
   }
+  async updateCostCategory(id: number, name: string): Promise<FootballTurfCostCategory | null> {
+    return this.mutate("updateCostCategory", id, { name });
+  }
+  async deleteCostCategory(id: number): Promise<boolean> {
+    const result = await this.mutate<{ deleted: boolean }>("deleteCostCategory", id);
+    return result.deleted;
+  }
   async listCostEntries(): Promise<FootballTurfCostEntry[]> {
     return (await this.loadState()).costEntries;
   }
@@ -574,8 +745,46 @@ class ApiFootballTurfRepository implements FootballTurfRepository {
   ): Promise<FootballTurfCostEntry> {
     return this.mutate("createCostEntry", undefined, input);
   }
+  async updateCostEntry(
+    id: number,
+    patch: Partial<Omit<FootballTurfCostEntry, "id" | "categoryName">>,
+  ): Promise<FootballTurfCostEntry | null> {
+    return this.mutate("updateCostEntry", id, patch);
+  }
   async deleteCostEntry(id: number): Promise<boolean> {
     const result = await this.mutate<{ deleted: boolean }>("deleteCostEntry", id);
+    return result.deleted;
+  }
+
+  async listIncomeCategories(): Promise<FootballTurfIncomeCategory[]> {
+    return (await this.loadState()).incomeCategories;
+  }
+  async createIncomeCategory(name: string): Promise<FootballTurfIncomeCategory> {
+    return this.mutate("createIncomeCategory", undefined, { name });
+  }
+  async updateIncomeCategory(id: number, name: string): Promise<FootballTurfIncomeCategory | null> {
+    return this.mutate("updateIncomeCategory", id, { name });
+  }
+  async deleteIncomeCategory(id: number): Promise<boolean> {
+    const result = await this.mutate<{ deleted: boolean }>("deleteIncomeCategory", id);
+    return result.deleted;
+  }
+  async listIncomeEntries(): Promise<FootballTurfIncomeEntry[]> {
+    return (await this.loadState()).incomeEntries;
+  }
+  async createIncomeEntry(
+    input: Omit<FootballTurfIncomeEntry, "id" | "categoryName">,
+  ): Promise<FootballTurfIncomeEntry> {
+    return this.mutate("createIncomeEntry", undefined, input);
+  }
+  async updateIncomeEntry(
+    id: number,
+    patch: Partial<Omit<FootballTurfIncomeEntry, "id" | "categoryName">>,
+  ): Promise<FootballTurfIncomeEntry | null> {
+    return this.mutate("updateIncomeEntry", id, patch);
+  }
+  async deleteIncomeEntry(id: number): Promise<boolean> {
+    const result = await this.mutate<{ deleted: boolean }>("deleteIncomeEntry", id);
     return result.deleted;
   }
   async listRevenueEntries() {
@@ -602,7 +811,16 @@ class ApiFootballTurfRepository implements FootballTurfRepository {
       customerPhone: item.customerPhone,
       source: "PROMOTION",
     }));
-    return [...bookingRows, ...promotionRows].sort(
+    const incomeRows: FootballTurfRevenueEntry[] = (state.incomeEntries ?? []).map((item) => ({
+      id: `income-${item.id}`,
+      paidAt: item.earnedAt,
+      amount: item.amount,
+      label: item.itemLabel || item.categoryName,
+      customerName: "",
+      customerPhone: "",
+      source: "INCOME",
+    }));
+    return [...bookingRows, ...promotionRows, ...incomeRows].sort(
       (a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime(),
     );
   }
@@ -733,13 +951,46 @@ class PublicApiFootballTurfRepository implements FootballTurfRepository {
   async createCostCategory(): Promise<FootballTurfCostCategory> {
     return this.unsupported();
   }
+  async updateCostCategory(): Promise<FootballTurfCostCategory | null> {
+    return this.unsupported();
+  }
+  async deleteCostCategory(): Promise<boolean> {
+    return this.unsupported();
+  }
   async listCostEntries(): Promise<FootballTurfCostEntry[]> {
     return [];
   }
   async createCostEntry(): Promise<FootballTurfCostEntry> {
     return this.unsupported();
   }
+  async updateCostEntry(): Promise<FootballTurfCostEntry | null> {
+    return this.unsupported();
+  }
   async deleteCostEntry(): Promise<boolean> {
+    return this.unsupported();
+  }
+  async listIncomeCategories(): Promise<FootballTurfIncomeCategory[]> {
+    return [];
+  }
+  async createIncomeCategory(): Promise<FootballTurfIncomeCategory> {
+    return this.unsupported();
+  }
+  async updateIncomeCategory(): Promise<FootballTurfIncomeCategory | null> {
+    return this.unsupported();
+  }
+  async deleteIncomeCategory(): Promise<boolean> {
+    return this.unsupported();
+  }
+  async listIncomeEntries(): Promise<FootballTurfIncomeEntry[]> {
+    return [];
+  }
+  async createIncomeEntry(): Promise<FootballTurfIncomeEntry> {
+    return this.unsupported();
+  }
+  async updateIncomeEntry(): Promise<FootballTurfIncomeEntry | null> {
+    return this.unsupported();
+  }
+  async deleteIncomeEntry(): Promise<boolean> {
     return this.unsupported();
   }
   async listRevenueEntries(): Promise<FootballTurfRevenueEntry[]> {
@@ -763,9 +1014,20 @@ export class LocalStorageFootballTurfRepository implements FootballTurfRepositor
   async getSettings() {
     return loadDB().settings;
   }
-  async updateSettings(patch: Partial<FootballTurfVenueSettings>) {
+  async updateSettings(
+    patch: Partial<FootballTurfVenueSettings> & {
+      staffDailyPin?: string | null;
+      staffDailyPinClear?: boolean;
+    },
+  ) {
     const db = loadDB();
-    db.settings = { ...db.settings, ...patch };
+    const { staffDailyPin, staffDailyPinClear, ...rest } = patch;
+    db.settings = { ...db.settings, ...rest };
+    if (staffDailyPinClear) {
+      db.settings.staffDailyPinSet = false;
+    } else if (typeof staffDailyPin === "string" && staffDailyPin.trim()) {
+      db.settings.staffDailyPinSet = true;
+    }
     saveDB(db);
     return db.settings;
   }
@@ -808,13 +1070,38 @@ export class LocalStorageFootballTurfRepository implements FootballTurfRepositor
   }
   async createBooking(input: Omit<FootballTurfBooking, "id" | "createdAt"> & { createdAt?: string }) {
     const db = loadDB();
+    const startMin = timeToMinutes(input.startTime);
+    const endMin = timeToMinutes(input.endTime);
+    const conflict = db.bookings.some((b) => {
+      if (b.courtId !== input.courtId || b.bookingDate !== input.bookingDate || b.status === "CANCELLED") {
+        return false;
+      }
+      return timeToMinutes(b.startTime) < endMin && timeToMinutes(b.endTime) > startMin;
+    });
+    if (conflict) throw new Error("ช่วงเวลานี้ถูกจองแล้ว");
+
+    const finalPrice = Math.max(0, Math.round(Number(input.finalPrice ?? 0)));
+    let amountPaidBaht = Math.max(0, Math.round(Number(input.amountPaidBaht ?? 0)));
+    let paymentStatus = input.paymentStatus ?? "UNPAID";
+    if (paymentStatus === "PAID" && amountPaidBaht <= 0) amountPaidBaht = finalPrice;
+    if (input.source === "WALK_IN" && amountPaidBaht < finalPrice) {
+      throw new Error("walk-in เช็กอินหน้างานต้องชำระเต็มยอด");
+    }
+
     upsertLocalCustomer(db, {
       phone: input.customerPhone,
       name: input.customerName,
       teamName: input.teamName,
       note: input.note,
     });
-    const row = { ...input, id: db.seq.booking + 1, createdAt: input.createdAt ?? new Date().toISOString() };
+    const row = {
+      ...input,
+      finalPrice,
+      amountPaidBaht,
+      paymentStatus,
+      id: db.seq.booking + 1,
+      createdAt: input.createdAt ?? new Date().toISOString(),
+    };
     db.seq.booking = row.id;
     db.bookings.push(row);
     saveDB(db);
@@ -825,7 +1112,20 @@ export class LocalStorageFootballTurfRepository implements FootballTurfRepositor
     const idx = db.bookings.findIndex((x) => x.id === id);
     if (idx < 0) return null;
     const existing = db.bookings[idx];
-    db.bookings[idx] = { ...existing, ...patch };
+    if (patch.status === "CHECKED_IN" || patch.status === "PLAYING") {
+      const next = { ...existing, ...patch };
+      if (!footballTurfBookingIsFullyPaid(next)) {
+        throw new Error("ต้องชำระเต็มยอดก่อนเช็กอิน");
+      }
+    }
+    const nextPatch = { ...patch };
+    if (patch.paymentStatus === "PAID" && patch.amountPaidBaht === undefined) {
+      const currentPaid = existing.amountPaidBaht ?? 0;
+      if (currentPaid < existing.finalPrice) {
+        nextPatch.amountPaidBaht = existing.finalPrice;
+      }
+    }
+    db.bookings[idx] = { ...existing, ...nextPatch };
     if (patch.customerPhone || patch.customerName) {
       upsertLocalCustomer(db, {
         phone: patch.customerPhone ?? db.bookings[idx].customerPhone,
@@ -977,17 +1277,52 @@ export class LocalStorageFootballTurfRepository implements FootballTurfRepositor
     saveDB(db);
     return row;
   }
+  async updateCostCategory(id: number, name: string) {
+    const db = loadDB();
+    const idx = db.costCategories.findIndex((x) => x.id === id);
+    if (idx < 0) return null;
+    db.costCategories[idx] = { ...db.costCategories[idx], name: name.trim() };
+    saveDB(db);
+    return db.costCategories[idx];
+  }
+  async deleteCostCategory(id: number) {
+    const db = loadDB();
+    if (db.costEntries.some((x) => x.categoryId === id)) {
+      throw new Error("มีรายจ่ายในหมวดนี้ — ย้ายหรือลบรายจ่ายก่อน");
+    }
+    const prev = db.costCategories.length;
+    db.costCategories = db.costCategories.filter((x) => x.id !== id);
+    saveDB(db);
+    return prev !== db.costCategories.length;
+  }
   async listCostEntries() {
     return loadDB().costEntries.sort((a, b) => new Date(b.spentAt).getTime() - new Date(a.spentAt).getTime());
   }
   async createCostEntry(input: Omit<FootballTurfCostEntry, "id" | "categoryName">) {
     const db = loadDB();
     const categoryName = db.costCategories.find((x) => x.id === input.categoryId)?.name ?? "ไม่ระบุหมวด";
-    const row = { ...input, id: db.seq.costEntry + 1, categoryName };
+    const row = {
+      ...input,
+      paymentSlipUrl: input.paymentSlipUrl ?? "",
+      id: db.seq.costEntry + 1,
+      categoryName,
+    };
     db.seq.costEntry = row.id;
     db.costEntries.push(row);
     saveDB(db);
     return row;
+  }
+  async updateCostEntry(id: number, patch: Partial<Omit<FootballTurfCostEntry, "id" | "categoryName">>) {
+    const db = loadDB();
+    const idx = db.costEntries.findIndex((x) => x.id === id);
+    if (idx < 0) return null;
+    const next = { ...db.costEntries[idx], ...patch };
+    if (patch.categoryId !== undefined) {
+      next.categoryName = db.costCategories.find((x) => x.id === patch.categoryId)?.name ?? next.categoryName;
+    }
+    db.costEntries[idx] = next;
+    saveDB(db);
+    return db.costEntries[idx];
   }
   async deleteCostEntry(id: number) {
     const db = loadDB();
@@ -996,6 +1331,92 @@ export class LocalStorageFootballTurfRepository implements FootballTurfRepositor
     saveDB(db);
     return prev !== db.costEntries.length;
   }
+
+  async listIncomeCategories() {
+    return loadDB().incomeCategories.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+  }
+  async createIncomeCategory(name: string) {
+    const db = loadDB();
+    const trimmed = name.trim();
+    if (trimmed.length < 2) throw new Error("ตั้งชื่อหมวดอย่างน้อย 2 ตัวอักษร");
+    const sortOrder = Math.max(0, ...db.incomeCategories.map((c) => c.sortOrder)) + 1;
+    const row = {
+      id: db.seq.incomeCategory + 1,
+      name: trimmed,
+      kind: "CUSTOM" as const,
+      isBuiltin: false,
+      sortOrder,
+    };
+    db.seq.incomeCategory = row.id;
+    db.incomeCategories.push(row);
+    saveDB(db);
+    return row;
+  }
+  async updateIncomeCategory(id: number, name: string) {
+    const db = loadDB();
+    const idx = db.incomeCategories.findIndex((x) => x.id === id);
+    if (idx < 0) return null;
+    const current = db.incomeCategories[idx];
+    if (current.isBuiltin || current.kind !== "CUSTOM") {
+      throw new Error("หมวดรายรับหลักแก้ชื่อไม่ได้");
+    }
+    db.incomeCategories[idx] = { ...current, name: name.trim() };
+    saveDB(db);
+    return db.incomeCategories[idx];
+  }
+  async deleteIncomeCategory(id: number) {
+    const db = loadDB();
+    const cat = db.incomeCategories.find((x) => x.id === id);
+    if (!cat) return false;
+    if (cat.isBuiltin || cat.kind !== "CUSTOM") throw new Error("หมวดรายรับหลักลบไม่ได้");
+    if (db.incomeEntries.some((x) => x.categoryId === id)) {
+      throw new Error("มีรายรับในหมวดนี้ — ย้ายหรือลบรายรับก่อน");
+    }
+    const prev = db.incomeCategories.length;
+    db.incomeCategories = db.incomeCategories.filter((x) => x.id !== id);
+    saveDB(db);
+    return prev !== db.incomeCategories.length;
+  }
+  async listIncomeEntries() {
+    return loadDB().incomeEntries.sort((a, b) => new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime());
+  }
+  async createIncomeEntry(input: Omit<FootballTurfIncomeEntry, "id" | "categoryName">) {
+    const db = loadDB();
+    const category = db.incomeCategories.find((x) => x.id === input.categoryId);
+    if (!category || category.kind !== "CUSTOM") throw new Error("เลือกหมวดที่บันทึกมือได้เท่านั้น");
+    const row = {
+      ...input,
+      paymentSlipUrl: input.paymentSlipUrl ?? "",
+      id: db.seq.incomeEntry + 1,
+      categoryName: category.name,
+    };
+    db.seq.incomeEntry = row.id;
+    db.incomeEntries.push(row);
+    saveDB(db);
+    return row;
+  }
+  async updateIncomeEntry(id: number, patch: Partial<Omit<FootballTurfIncomeEntry, "id" | "categoryName">>) {
+    const db = loadDB();
+    const idx = db.incomeEntries.findIndex((x) => x.id === id);
+    if (idx < 0) return null;
+    const next = { ...db.incomeEntries[idx], ...patch };
+    if (patch.categoryId !== undefined) {
+      const category = db.incomeCategories.find((x) => x.id === patch.categoryId);
+      if (!category || category.kind !== "CUSTOM") throw new Error("เลือกหมวดที่บันทึกมือได้เท่านั้น");
+      next.categoryName = category.name;
+    }
+    db.incomeEntries[idx] = next;
+    saveDB(db);
+    return db.incomeEntries[idx];
+  }
+  async deleteIncomeEntry(id: number) {
+    const db = loadDB();
+    const prev = db.incomeEntries.length;
+    db.incomeEntries = db.incomeEntries.filter((x) => x.id !== id);
+    saveDB(db);
+    return prev !== db.incomeEntries.length;
+  }
+
   async listRevenueEntries() {
     const db = loadDB();
     const bookingRows: FootballTurfRevenueEntry[] = db.bookings
@@ -1020,7 +1441,16 @@ export class LocalStorageFootballTurfRepository implements FootballTurfRepositor
       customerPhone: item.customerPhone,
       source: "PROMOTION",
     }));
-    return [...bookingRows, ...promotionRows].sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime());
+    const incomeRows: FootballTurfRevenueEntry[] = db.incomeEntries.map((item) => ({
+      id: `income-${item.id}`,
+      paidAt: item.earnedAt,
+      amount: item.amount,
+      label: item.itemLabel || item.categoryName,
+      customerName: "",
+      customerPhone: "",
+      source: "INCOME",
+    }));
+    return [...bookingRows, ...promotionRows, ...incomeRows].sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime());
   }
   async listCustomers() {
     return loadDB().customers.sort((a, b) => a.id - b.id);
@@ -1054,6 +1484,7 @@ export function createFootballTurfRepository(opts?: {
   mode?: "api" | "storage" | "public";
   ownerId?: string;
   trialSessionId?: string | null;
+  staffAuth?: { ownerId: string; trialSessionId: string; k: string } | null;
 }): FootballTurfRepository {
   const mode = opts?.mode ?? (typeof window !== "undefined" ? "api" : "storage");
   if (mode === "storage") return new LocalStorageFootballTurfRepository();
@@ -1061,5 +1492,5 @@ export function createFootballTurfRepository(opts?: {
     if (!opts?.ownerId) throw new Error("ownerId required for public football-turf repository");
     return new PublicApiFootballTurfRepository(opts.ownerId, opts.trialSessionId);
   }
-  return new ApiFootballTurfRepository();
+  return new ApiFootballTurfRepository(opts?.staffAuth ?? null);
 }

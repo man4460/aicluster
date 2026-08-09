@@ -79,7 +79,9 @@ export async function GET(req: Request) {
       paymentStatusLabel:
         booking.paymentStatus === "PAID"
           ? "ชำระแล้ว"
-          : booking.paymentStatus === "PENDING_REVIEW"
+          : booking.paymentStatus === "PARTIAL"
+            ? "ชำระบางส่วน"
+            : booking.paymentStatus === "PENDING_REVIEW"
             ? booking.depositAmountBaht != null &&
                 booking.depositAmountBaht > 0 &&
                 booking.depositAmountBaht < booking.finalPrice

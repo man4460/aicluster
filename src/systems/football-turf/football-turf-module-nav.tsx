@@ -12,21 +12,35 @@ export type FootballTurfTabKey =
   | "queue"
   | "finance"
   | "offers"
-  | "customers"
   | "courts"
   | "qr"
   | "settings";
+
+/** หมวดย่อยในแท็บโปร / ลูกค้า */
+export type FootballTurfCrmSection = "offers" | "customers";
 
 export const FOOTBALL_TURF_TAB_ITEMS: { key: FootballTurfTabKey; label: string; shortLabel: string }[] = [
   { key: "overview", label: "ภาพรวม", shortLabel: "ภาพรวม" },
   { key: "queue", label: "จอง", shortLabel: "จอง" },
   { key: "finance", label: "การเงิน", shortLabel: "เงิน" },
-  { key: "offers", label: "โปรโมชั่น", shortLabel: "โปร" },
-  { key: "customers", label: "ลูกค้า", shortLabel: "ลูกค้า" },
+  { key: "offers", label: "โปร / ลูกค้า", shortLabel: "โปร" },
   { key: "courts", label: "จัดการสนาม", shortLabel: "สนาม" },
   { key: "qr", label: "QR / ลิงก์", shortLabel: "QR" },
   { key: "settings", label: "ตั้งค่า", shortLabel: "ตั้งค่า" },
 ];
+
+/** เมนูลิงก์พนักงาน — เฉพาะภาพรวม · จอง · โปร (แบบโรงแรม) */
+export const FOOTBALL_TURF_STAFF_TAB_ITEMS: {
+  key: Extract<FootballTurfTabKey, "overview" | "queue" | "offers">;
+  label: string;
+  shortLabel: string;
+}[] = [
+  { key: "overview", label: "ภาพรวม", shortLabel: "ภาพรวม" },
+  { key: "queue", label: "จอง", shortLabel: "จอง" },
+  { key: "offers", label: "โปร", shortLabel: "โปร" },
+];
+
+export type FootballTurfStaffTabKey = (typeof FOOTBALL_TURF_STAFF_TAB_ITEMS)[number]["key"];
 
 export function isFootballTurfModulePath(pathname: string): boolean {
   return pathname === FOOTBALL_TURF_BASE || pathname.startsWith(`${FOOTBALL_TURF_BASE}/`);
@@ -56,14 +70,20 @@ export function parseFootballTurfTab(value: string | null | undefined): Football
     value === "queue" ||
     value === "finance" ||
     value === "offers" ||
-    value === "customers" ||
     value === "courts" ||
     value === "qr" ||
     value === "settings"
   ) {
     return value;
   }
+  // ลิงก์เก่า ?tab=customers → แท็บโปร / ลูกค้า
+  if (value === "customers") return "offers";
   return "overview";
+}
+
+/** อ่านหมวดย่อยโปร/ลูกค้าจาก query (รองรับ ?tab=customers เดิม) */
+export function parseFootballTurfCrmSection(tabParam: string | null | undefined): FootballTurfCrmSection {
+  return tabParam === "customers" ? "customers" : "offers";
 }
 
 export function footballTurfTabHref(tab: FootballTurfTabKey): string {
@@ -87,13 +107,7 @@ export function footballTurfTabIcon(key: FootballTurfTabKey): ReactNode {
     case "finance":
       return <path d="M4 18h16M7 14l3-3 3 2 4-5" />;
     case "offers":
-      return (
-        <>
-          <path d="M20.59 13.41 11 3.83 3.41 11.41a2 2 0 0 0 0 2.83l6.34 6.34a2 2 0 0 0 2.83 0l8-8a2 2 0 0 0 .01-2.83Z" />
-          <path d="M7 7h.01" />
-        </>
-      );
-    case "customers":
+      // โปร / ลูกค้า — ไอคอนผู้ใช้คู่ (ไม่ซ้อนกับแท็ก)
       return (
         <>
           <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />

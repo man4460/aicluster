@@ -23,6 +23,7 @@ type BookingDetail = {
   finalPrice: number;
   amountPaidBaht: number;
   remainingBaht: number;
+  depositAmountBaht?: number | null;
   paymentStatus: string;
   paymentStatusLabel: string;
   paymentMethod: string;
@@ -99,6 +100,11 @@ export function FootballTurfPortalBookingClient({
   }, [ownerId, bookingId, phone, trialSessionId]);
 
   const slipUrl = booking?.paymentSlipDataUrl?.trim() || null;
+  const slipIsDeposit =
+    booking != null &&
+    booking.depositAmountBaht != null &&
+    booking.depositAmountBaht > 0 &&
+    booking.depositAmountBaht < booking.finalPrice;
 
   return (
     <AppPublicCheckInGlassPage>
@@ -119,10 +125,10 @@ export function FootballTurfPortalBookingClient({
           <>
             <div className="text-center">
               <p className="text-xs font-bold uppercase tracking-widest text-[#8b87b8]">การจอง</p>
-              <h1 className="mt-1 text-2xl font-black tracking-tight text-[#1e1b4b]">
+              <h1 className="mt-2 text-3xl font-black tracking-tight text-[#1e1b4b] sm:text-4xl">
                 {property.venueName}
               </h1>
-              <p className="mt-2 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
+              <p className="mt-3 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
                 {booking.statusLabel}
               </p>
             </div>
@@ -149,11 +155,12 @@ export function FootballTurfPortalBookingClient({
 
             {slipUrl ? (
               <section className={cn(appPublicCheckInGlassCardClass, "p-4")}>
-                <p className="mb-1 text-xs font-bold text-[#8b87b8]">สลิปชำระ</p>
-                <p className="mb-2 text-[11px] font-semibold text-[#66638c]">กดรูปเพื่อดูขนาดใหญ่</p>
+                <p className="mb-1 text-xs font-bold text-[#8b87b8]">
+                  {slipIsDeposit ? "สลิปมัดจำ" : "สลิปชำระ"}
+                </p>
                 <AppImageThumb
                   src={slipUrl}
-                  alt="สลิปชำระ"
+                  alt={slipIsDeposit ? "สลิปมัดจำ" : "สลิปชำระ"}
                   onOpen={() => lb.open(slipUrl)}
                   className="h-24 w-24"
                 />
