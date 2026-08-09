@@ -123,7 +123,7 @@ export function FootballTurfCheckInClient({
       return;
     }
     await repo.updateBooking(bookingId, { status: "CHECKED_IN" });
-    setMessage("อัปเดตสถานะเช็กอินเรียบร้อย");
+    setMessage("เช็กอินแล้ว — ทุกรอบของชื่อ/เบอร์เดียวกันในวันนี้ถูกเช็กอินด้วย");
     await refresh();
   }
 

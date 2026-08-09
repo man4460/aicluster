@@ -1,4 +1,5 @@
 import { persistFootballTurfCourtImageUrl, persistFootballTurfSlipUrl } from "@/systems/football-turf/lib/persist-slip";
+import { sameFootballTurfCustomer } from "@/systems/football-turf/lib/booking-session";
 import { prisma } from "@/lib/prisma";
 import {
   formatBookingDate,
@@ -241,6 +242,7 @@ export class FootballTurfServerRepo {
         status: input.status,
         listedPrice: input.listedPrice,
         finalPrice: input.finalPrice,
+        depositAmountBaht: input.depositAmountBaht ?? null,
         promotionSaleId: input.promotionSaleId ?? null,
         note: input.note ?? "",
         paymentMethod: input.paymentMethod ?? "UNPAID",
@@ -289,6 +291,42 @@ export class FootballTurfServerRepo {
       data,
       include: { court: { select: { name: true } } },
     });
+
+    /** หลายช่วงเวลาชื่อ/เบอร์เดียวกัน → เช็กอิน/เช็กเอาต์ทั้งเซสชัน */
+    if (patch.status === "CHECKED_IN" || patch.status === "PLAYING" || patch.status === "COMPLETED") {
+      const siblings = await prisma.footballTurfBooking.findMany({
+        where: {
+          ...scopeWhere(this.scope()),
+          courtId: existing.courtId,
+          bookingDate: existing.bookingDate,
+          id: { not: id },
+          status:
+            patch.status === "COMPLETED"
+              ? { in: ["BOOKED", "CHECKED_IN", "PLAYING"] }
+              : "BOOKED",
+        },
+      });
+      const linkedIds = siblings
+        .filter((item) =>
+          sameFootballTurfCustomer(
+            {
+              customerName: existing.customerName,
+              customerPhone: existing.customerPhone,
+            },
+            item,
+          ),
+        )
+        .map((item) => item.id);
+      if (linkedIds.length > 0) {
+        await prisma.footballTurfBooking.updateMany({
+          where: { id: { in: linkedIds } },
+          data: {
+            status: patch.status === "COMPLETED" ? "COMPLETED" : "CHECKED_IN",
+          },
+        });
+      }
+    }
+
     return mapBooking(row, row.court.name);
   }
 

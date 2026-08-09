@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { isFootballTurfPortalOpenForOwner } from "@/lib/football-turf/portal-access";
 import { resolvePublicFootballTurfTrialSessionId } from "@/lib/football-turf/public-trial-scope";
 import { mapBooking } from "@/systems/football-turf/lib/mappers";
+import { footballTurfBookingAmountPaidBaht } from "@/systems/football-turf/lib/portal-booking";
 
 function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "").slice(0, 20);
@@ -61,13 +62,7 @@ export async function GET(req: Request) {
   });
 
   const booking = mapBooking(row, row.court.name);
-  const paid =
-    booking.paymentMethod === "TRANSFER" &&
-    (booking.paymentStatus === "PENDING_REVIEW" || booking.paymentStatus === "PAID")
-      ? booking.finalPrice
-      : booking.paymentStatus === "PAID"
-        ? booking.finalPrice
-        : 0;
+  const paid = footballTurfBookingAmountPaidBaht(booking);
   const remaining = Math.max(0, booking.finalPrice - paid);
 
   return NextResponse.json({
@@ -85,7 +80,11 @@ export async function GET(req: Request) {
         booking.paymentStatus === "PAID"
           ? "ชำระแล้ว"
           : booking.paymentStatus === "PENDING_REVIEW"
-            ? "รอตรวจสลิป"
+            ? booking.depositAmountBaht != null &&
+                booking.depositAmountBaht > 0 &&
+                booking.depositAmountBaht < booking.finalPrice
+              ? "รอตรวจมัดจำ"
+              : "รอตรวจสลิป"
             : "ยังไม่ชำระ",
       paymentMethodLabel:
         booking.paymentMethod === "TRANSFER"

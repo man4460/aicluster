@@ -60,6 +60,18 @@ export async function ensureFootballTurfProfile(ownerUserId: string, trialSessio
         isActive: true,
         sortOrder: 1,
       },
+      {
+        ownerUserId,
+        trialSessionId,
+        name: "สนาม C",
+        openTime: "16:00",
+        closeTime: "23:00",
+        slotMinutes: 60,
+        weekdayPrice: 1000,
+        weekendPrice: 1300,
+        isActive: true,
+        sortOrder: 2,
+      },
     ],
   });
 

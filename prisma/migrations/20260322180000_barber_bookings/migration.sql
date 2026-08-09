@@ -1,3 +1,18 @@
+-- barber_customers is required by FK below; full barber module arrives later
+-- (20260327120000) — create a compatible stub so fresh deploys succeed.
+CREATE TABLE IF NOT EXISTS `barber_customers` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `owner_id` VARCHAR(191) NOT NULL,
+    `phone` VARCHAR(20) NOT NULL,
+    `name` VARCHAR(100) NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `barber_customers_owner_id_phone_key`(`owner_id`, `phone`),
+    INDEX `barber_customers_owner_id_idx`(`owner_id`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `barber_bookings` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `owner_id` VARCHAR(191) NOT NULL,

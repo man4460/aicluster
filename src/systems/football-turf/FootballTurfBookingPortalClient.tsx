@@ -17,6 +17,7 @@ import {
 } from "@/components/app-templates";
 import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import { cn } from "@/lib/cn";
+import { isBangkokWeekend } from "@/lib/time/bangkok";
 import { footballTurfPublicBookingUrl } from "@/lib/football-turf/public-url";
 import {
   type FootballTurfBooking,
@@ -24,7 +25,7 @@ import {
   type FootballTurfVenueSettings,
   createFootballTurfRepository,
 } from "@/systems/football-turf/football-turf-service";
-import { footballTurfComputePortalPayDue } from "@/systems/football-turf/lib/portal-booking";
+import { footballTurfComputePortalPayDue, footballTurfPortalSlipProofMessage } from "@/systems/football-turf/lib/portal-booking";
 import {
   isBookingTimePassed,
   isSlotOpenForBooking,
@@ -47,7 +48,11 @@ type PortalPayQr = {
   shopName?: string | null;
 };
 
-const SLIP_PROOF_MESSAGE = "กรุณาอัปโหลดสลิป เพื่อเป็นหลักฐานการชำระเงินจอง";
+const FOOTBALL_TURF_MODULE_NAME = "สนามฟุตบอล";
+
+function slipProofMessage(mode: FootballTurfVenueSettings["portalBookingPaymentMode"]) {
+  return footballTurfPortalSlipProofMessage(mode ?? "NONE");
+}
 
 function buildCourtTimeline(
   court: FootballTurfCourt,
@@ -102,8 +107,6 @@ const EMPTY_SETTINGS: FootballTurfVenueSettings = {
   portalBookingPaymentMode: "NONE",
   depositAmountBaht: null,
 };
-
-const FOOTBALL_TURF_MODULE_NAME = "สนามฟุตบอล";
 
 export function FootballTurfBookingPortalClient({
   ownerId,
@@ -226,8 +229,7 @@ export function FootballTurfBookingPortalClient({
   );
   const bookingPrice = useMemo(() => {
     if (!selectedCourt) return 0;
-    const day = new Date(`${form.bookingDate}T12:00:00`);
-    const isWeekend = [0, 6].includes(day.getDay());
+    const isWeekend = isBangkokWeekend(form.bookingDate);
     return isWeekend ? selectedCourt.weekendPrice : selectedCourt.weekdayPrice;
   }, [form.bookingDate, selectedCourt]);
   const payDueBaht = useMemo(
@@ -239,6 +241,9 @@ export function FootballTurfBookingPortalClient({
       }),
     [bookingPrice, settings.depositAmountBaht, settings.portalBookingPaymentMode],
   );
+  const depositMisconfigured =
+    settings.portalBookingPaymentMode === "DEPOSIT" &&
+    Math.max(0, Math.round(Number(settings.depositAmountBaht ?? 0))) <= 0;
   const requiresPortalPay = payDueBaht != null && payDueBaht > 0;
   const moduleVenueLine = settings.venueName.trim() || settings.venueSubtitle.trim() || "สนามหญ้าเทียม";
   const canSubmit = Boolean(
@@ -246,6 +251,7 @@ export function FootballTurfBookingPortalClient({
       selectedSlot &&
       form.customerName.trim() &&
       form.customerPhone.trim() &&
+      !depositMisconfigured &&
       (!requiresPortalPay || (form.paymentMethod === "TRANSFER" && form.paymentSlipDataUrl)) &&
       !submitting &&
       !uploadingSlip,
@@ -358,7 +364,7 @@ export function FootballTurfBookingPortalClient({
       return;
     }
     if (requiresPortalPay && (form.paymentMethod !== "TRANSFER" || !form.paymentSlipDataUrl)) {
-      setMessage(SLIP_PROOF_MESSAGE);
+      setMessage(slipProofMessage(settings.portalBookingPaymentMode));
       return;
     }
     const playerCount = Number(form.playerCount);
@@ -383,6 +389,7 @@ export function FootballTurfBookingPortalClient({
         status: "BOOKED",
         listedPrice: bookingPrice,
         finalPrice: bookingPrice,
+        depositAmountBaht: payDueBaht,
         promotionSaleId: null,
         note:
           requiresPortalPay && settings.portalBookingPaymentMode === "DEPOSIT"
@@ -625,11 +632,13 @@ export function FootballTurfBookingPortalClient({
 
               <div className="rounded-[1.5rem] border border-white/70 bg-white/50 p-4">
                 <p className="text-xs font-black text-[#1e1b4b]">
-                  {settings.portalBookingPaymentMode === "DEPOSIT"
-                    ? `มัดจำตอนจอง · ${formatMoney(payDueBaht ?? 0)}`
-                    : settings.portalBookingPaymentMode === "FULL"
-                      ? `ชำระเต็มยอด · ${formatMoney(payDueBaht ?? bookingPrice)}`
-                      : "ไม่ต้องชำระตอนจอง — ชำระหน้าสนามได้"}
+                  {depositMisconfigured
+                    ? "สนามยังไม่ได้ตั้งจำนวนมัดจำ — ติดต่อเจ้าของสนาม"
+                    : settings.portalBookingPaymentMode === "DEPOSIT"
+                      ? `มัดจำตอนจอง · ${formatMoney(payDueBaht ?? 0)}`
+                      : settings.portalBookingPaymentMode === "FULL"
+                        ? `ชำระเต็มยอด · ${formatMoney(payDueBaht ?? bookingPrice)}`
+                        : "ไม่ต้องชำระตอนจอง — ชำระหน้าสนามได้"}
                 </p>
                 {requiresPortalPay ? (
                   <>
@@ -732,7 +741,9 @@ export function FootballTurfBookingPortalClient({
                       <ReceiptText className="h-5 w-5 text-slate-500" />
                       <p className="text-sm font-black text-slate-900">แนบสลิป</p>
                     </div>
-                    <p className="mt-2 text-[11px] font-semibold leading-snug text-[#66638c]">{SLIP_PROOF_MESSAGE}</p>
+                    <p className="mt-2 text-[11px] font-semibold leading-snug text-[#66638c]">
+                      {slipProofMessage(settings.portalBookingPaymentMode)}
+                    </p>
                     <div className="mt-4 grid gap-3">
                       <input
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800"

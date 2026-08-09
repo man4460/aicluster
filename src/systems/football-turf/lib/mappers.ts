@@ -14,6 +14,7 @@ import type {
   FootballTurfVenueSettings,
 } from "@/systems/football-turf/lib/types";
 import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
+import { bangkokDateKey } from "@/lib/time/bangkok";
 import { normalizeFootballTurfPortalPaymentMode } from "@/systems/football-turf/lib/portal-booking";
 import type {
   FootballTurfBooking as DbBooking,
@@ -27,11 +28,12 @@ import type {
 } from "@/generated/prisma/client";
 
 export function formatBookingDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return bangkokDateKey(date);
 }
 
 export function parseBookingDate(value: string): Date {
-  return new Date(`${value}T00:00:00.000Z`);
+  // เก็บเป็นกลางวันไทย — กันเลื่อนวันเมื่อ serialize ข้ามโซนเวลา
+  return new Date(`${value}T12:00:00+07:00`);
 }
 
 export function mapProfileToSettings(row: DbProfile): FootballTurfVenueSettings {
@@ -143,6 +145,7 @@ export function mapBooking(row: DbBooking & { court?: { name: string } | null },
     status: row.status as FootballTurfBookingStatus,
     listedPrice: row.listedPrice,
     finalPrice: row.finalPrice,
+    depositAmountBaht: row.depositAmountBaht ?? null,
     promotionSaleId: row.promotionSaleId,
     note: row.note,
     paymentMethod: row.paymentMethod as FootballTurfBookingPaymentMethod,

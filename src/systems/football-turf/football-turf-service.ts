@@ -33,6 +33,8 @@ import type {
   FootballTurfRevenueEntry,
   FootballTurfVenueSettings,
 } from "@/systems/football-turf/lib/types";
+import { bangkokDateKey } from "@/lib/time/bangkok";
+import { sameFootballTurfCustomer } from "@/systems/football-turf/lib/booking-session";
 
 type FootballTurfDB = {
   settings: FootballTurfVenueSettings;
@@ -79,7 +81,7 @@ function defaultVenueSettings(): FootballTurfVenueSettings {
 function plusDays(date: Date, days: number): string {
   const value = new Date(date);
   value.setDate(value.getDate() + days);
-  return value.toISOString().slice(0, 10);
+  return bangkokDateKey(value);
 }
 
 const seedToday = new Date();
@@ -822,7 +824,8 @@ export class LocalStorageFootballTurfRepository implements FootballTurfRepositor
     const db = loadDB();
     const idx = db.bookings.findIndex((x) => x.id === id);
     if (idx < 0) return null;
-    db.bookings[idx] = { ...db.bookings[idx], ...patch };
+    const existing = db.bookings[idx];
+    db.bookings[idx] = { ...existing, ...patch };
     if (patch.customerPhone || patch.customerName) {
       upsertLocalCustomer(db, {
         phone: patch.customerPhone ?? db.bookings[idx].customerPhone,
@@ -830,6 +833,21 @@ export class LocalStorageFootballTurfRepository implements FootballTurfRepositor
         teamName: patch.teamName ?? db.bookings[idx].teamName,
         note: patch.note ?? db.bookings[idx].note,
       });
+    }
+    if (patch.status === "CHECKED_IN" || patch.status === "PLAYING" || patch.status === "COMPLETED") {
+      for (let i = 0; i < db.bookings.length; i += 1) {
+        const item = db.bookings[i];
+        if (item.id === id) continue;
+        if (item.courtId !== existing.courtId || item.bookingDate !== existing.bookingDate) continue;
+        if (!sameFootballTurfCustomer(existing, item)) continue;
+        if (patch.status === "COMPLETED") {
+          if (item.status === "BOOKED" || item.status === "CHECKED_IN" || item.status === "PLAYING") {
+            db.bookings[i] = { ...item, status: "COMPLETED" };
+          }
+        } else if (item.status === "BOOKED") {
+          db.bookings[i] = { ...item, status: "CHECKED_IN" };
+        }
+      }
     }
     saveDB(db);
     return db.bookings[idx];

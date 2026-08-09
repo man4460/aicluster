@@ -38,6 +38,7 @@ import {
   AppSectionHeader,
   AppSlipPaperSizeSettingsField,
   AppSparkChartPanel,
+  AppTime24Input,
   appTemplateOutlineButtonClass,
   prepareImageFileAsDataUrl,
   useAppCameraCapture,
@@ -68,6 +69,7 @@ import {
 } from "@/systems/asset/components/AssetRowActionIcons";
 import {
   type FootballTurfBooking,
+  type FootballTurfBookingPaymentMethod,
   type FootballTurfBookingPaymentStatus,
   type FootballTurfBookingSource,
   type FootballTurfCostCategory,
@@ -83,10 +85,29 @@ import {
   setFootballTurfStorageScope,
 } from "@/systems/football-turf/football-turf-service";
 import {
+  footballTurfComputePortalPayDue,
+  footballTurfPortalSlipProofMessage,
+} from "@/systems/football-turf/lib/portal-booking";
+import {
   FOOTBALL_TURF_TAB_ITEMS,
   footballTurfTabIcon,
   parseFootballTurfTab,
 } from "@/systems/football-turf/football-turf-module-nav";
+import { bangkokDateKey, formatBangkokTimeHm, isBangkokWeekend } from "@/lib/time/bangkok";
+import {
+  footballTurfSessionEndMinutes,
+  isFootballTurfSameSessionBooking,
+  listFootballTurfSessionBookings,
+} from "@/systems/football-turf/lib/booking-session";
+import {
+  bookingCoversMinutes,
+  isSlotTimeCurrent,
+  isSlotTimePassed,
+  localDateKey,
+  localNowMinutes,
+  minutesToTime,
+  timeToMinutes,
+} from "@/systems/football-turf/lib/time-queue";
 
 function StatCard({ title, value, icon, tone }: { title: string; value: string; icon: React.ReactNode; tone: string }) {
   return (
@@ -557,17 +578,6 @@ function normalizeDateKey(value: string): string {
   return value ? value.slice(0, 10) : "";
 }
 
-function timeToMinutes(value: string): number {
-  const [h = "0", m = "0"] = value.split(":");
-  return Number(h) * 60 + Number(m);
-}
-
-function minutesToTime(value: number): string {
-  const hours = Math.floor(value / 60);
-  const minutes = value % 60;
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-}
-
 function dateKeyInRange(
   value: string,
   range: "TODAY" | "MONTH" | "YEAR" | "CUSTOM",
@@ -653,17 +663,20 @@ function getBookingInitials(name: string): string {
 function footballBookingNeedsClose(
   item: FootballTurfBooking,
   opts: { todayDateKey: string; nowMinutes: number },
+  allBookings: FootballTurfBooking[] = [],
 ): boolean {
   if (item.status === "CANCELLED" || item.status === "COMPLETED") return false;
   if (item.bookingDate < opts.todayDateKey) return true;
   if (item.bookingDate > opts.todayDateKey) return false;
-  if (item.status === "BOOKED" && timeToMinutes(item.startTime) <= opts.nowMinutes) return true;
-  if (
-    (item.status === "CHECKED_IN" || item.status === "PLAYING") &&
-    timeToMinutes(item.endTime) <= opts.nowMinutes
-  ) {
-    return true;
+
+  if (item.status === "CHECKED_IN" || item.status === "PLAYING") {
+    const session =
+      allBookings.length > 0 ? listFootballTurfSessionBookings(item, allBookings) : [item];
+    const sessionEnd = footballTurfSessionEndMinutes(session);
+    return sessionEnd <= opts.nowMinutes;
   }
+
+  if (item.status === "BOOKED" && timeToMinutes(item.startTime) <= opts.nowMinutes) return true;
   return false;
 }
 
@@ -693,24 +706,7 @@ function queueDateInPreset(
   return true;
 }
 
-/** วันที่ท้องถิ่น YYYY-MM-DD (ไม่ใช้ UTC จาก toISOString) */
-function localDateKey(date = new Date()): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-function localNowMinutes(date = new Date()): number {
-  return date.getHours() * 60 + date.getMinutes();
-}
-
-function bookingCoversMinutes(booking: Pick<FootballTurfBooking, "startTime" | "endTime">, minutes: number): boolean {
-  const start = timeToMinutes(booking.startTime);
-  const end = timeToMinutes(booking.endTime);
-  if (end <= start) return minutes >= start || minutes < end;
-  return minutes >= start && minutes < end;
-}
+/** วันที่ท้องถิ่นไทย YYYY-MM-DD — ใช้ localDateKey จาก time-queue (Asia/Bangkok) */
 
 /**
  * หาคิวที่สนามกำลังใช้งานจริง (อิงนาฬิกาวันนี้เท่านั้น)
@@ -731,7 +727,8 @@ function findCourtLiveBooking(
       (item) =>
         open(item) &&
         (item.status === "PLAYING" || item.status === "CHECKED_IN") &&
-        timeToMinutes(item.endTime) <= opts.nowMinutes,
+        footballTurfSessionEndMinutes(listFootballTurfSessionBookings(item, courtBookings)) <=
+          opts.nowMinutes,
     )
     .sort((a, b) => timeToMinutes(b.endTime) - timeToMinutes(a.endTime));
   if (overdue[0]) return overdue[0];
@@ -760,7 +757,7 @@ function findCourtLiveBooking(
   return covering[0] ?? null;
 }
 
-/** คิวถัดไปหลังรอบปัจจุบัน (หรือรอบถัดไปถ้าสนามว่าง) — เหมือน「เช็คอินต่อ」ของโรงแรม */
+/** คิวถัดไปหลังรอบปัจจุบัน (หรือรอบถัดไปถ้าสนามว่าง) — ข้ามคิวเซสชันเดียวกัน (ชื่อ/เบอร์เดียวกัน) */
 function findCourtNextBooking(
   courtBookings: FootballTurfBooking[],
   opts: { nowMinutes: number },
@@ -775,7 +772,8 @@ function findCourtNextBooking(
           item.status !== "CANCELLED" &&
           item.status !== "COMPLETED" &&
           item.id !== currentId &&
-          timeToMinutes(item.startTime) >= afterMinutes,
+          timeToMinutes(item.startTime) >= afterMinutes &&
+          !(current && isFootballTurfSameSessionBooking(current, item)),
       )
       .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))[0] ?? null
   );
@@ -784,17 +782,18 @@ function findCourtNextBooking(
 function courtLiveAlertKind(
   current: FootballTurfBooking | null,
   nowMinutes: number,
+  courtBookings: FootballTurfBooking[] = [],
 ): "NO_SHOW" | "OVERTIME" | null {
   if (!current) return null;
   const start = timeToMinutes(current.startTime);
-  const end = timeToMinutes(current.endTime);
-  if (
-    (current.status === "PLAYING" || current.status === "CHECKED_IN") &&
-    end <= nowMinutes
-  ) {
+  const end =
+    current.status === "PLAYING" || current.status === "CHECKED_IN"
+      ? footballTurfSessionEndMinutes(listFootballTurfSessionBookings(current, courtBookings))
+      : timeToMinutes(current.endTime);
+  if ((current.status === "PLAYING" || current.status === "CHECKED_IN") && end <= nowMinutes) {
     return "OVERTIME";
   }
-  if (current.status === "BOOKED" && start <= nowMinutes && end > nowMinutes) {
+  if (current.status === "BOOKED" && start <= nowMinutes && timeToMinutes(current.endTime) > nowMinutes) {
     return "NO_SHOW";
   }
   return null;
@@ -815,23 +814,6 @@ function courtHoursPhase(
   if (nowMinutes < open) return "BEFORE_OPEN";
   if (nowMinutes >= close) return "AFTER_CLOSE";
   return "OPEN";
-}
-
-function isSlotTimePassed(
-  slot: { startTime: string; endTime: string },
-  opts: { scheduleDate: string; todayDateKey: string; nowMinutes: number },
-): boolean {
-  if (opts.scheduleDate < opts.todayDateKey) return true;
-  if (opts.scheduleDate > opts.todayDateKey) return false;
-  return timeToMinutes(slot.endTime) <= opts.nowMinutes;
-}
-
-function isSlotTimeCurrent(
-  slot: { startTime: string; endTime: string },
-  opts: { scheduleDate: string; todayDateKey: string; nowMinutes: number },
-): boolean {
-  if (opts.scheduleDate !== opts.todayDateKey) return false;
-  return bookingCoversMinutes(slot, opts.nowMinutes);
 }
 
 function bookingPaymentStatusClass(status?: FootballTurfBooking["paymentStatus"]): string {
@@ -920,6 +902,10 @@ export function FootballTurfDashboard({
   const [scheduleDate, setScheduleDate] = useState(() => localDateKey());
   const [overviewCourtId, setOverviewCourtId] = useState("ALL");
   const [scheduleCourtId, setScheduleCourtId] = useState<string>("");
+  /** กรองแถวในตารางเวลาจองรายสนาม (หน้าภาพรวม) */
+  const [scheduleStatusFilter, setScheduleStatusFilter] = useState<
+    "ALL" | "FREE" | "BOOKED" | "CHECKED_IN" | "COMPLETED" | "PASSED" | "NEEDS_CLOSE"
+  >("ALL");
   const [queueSearch, setQueueSearch] = useState("");
   const [queueStatus, setQueueStatus] = useState("ALL");
   const [queueCourtId, setQueueCourtId] = useState("ALL");
@@ -940,16 +926,27 @@ export function FootballTurfDashboard({
   const [bookingSource, setBookingSource] = useState<FootballTurfBookingSource>("WALK_IN");
   const [bookingForm, setBookingForm] = useState({
     courtId: "1",
-    bookingDate: new Date().toISOString().slice(0, 10),
+    bookingDate: localDateKey(),
     startTime: "18:00",
     endTime: "19:00",
+    /** ช่วงที่เลือกตอนสร้างคิวใหม่ (แก้รายการเดิมใช้ start/end เดียว) */
+    selectedSlots: [{ startTime: "18:00", endTime: "19:00" }] as Array<{ startTime: string; endTime: string }>,
     customerName: "",
     customerPhone: "",
     teamName: "",
     playerCount: "10",
     note: "",
+    paymentMethod: "ONSITE" as FootballTurfBookingPaymentMethod,
     paymentStatus: "UNPAID" as FootballTurfBookingPaymentStatus,
+    paymentReference: "",
+    paymentSlipDataUrl: "",
   });
+  const [bookingPromptPayQr, setBookingPromptPayQr] = useState<{
+    dataUrl: string | null;
+    loading: boolean;
+    configured: boolean;
+  }>({ dataUrl: null, loading: false, configured: true });
+  const [bookingSlipBusy, setBookingSlipBusy] = useState(false);
   const [courtForm, setCourtForm] = useState({
     name: "",
     openTime: "16:00",
@@ -1117,22 +1114,67 @@ export function FootballTurfDashboard({
         : [],
     [bookingCourt, bookings, bookingForm.bookingDate, editingBookingId],
   );
-  const selectedBookingSlot = useMemo(
+  const bookingFormTimeOpts = useMemo(() => {
+    const now = new Date(liveClockMs);
+    return {
+      scheduleDate: bookingForm.bookingDate,
+      todayDateKey: localDateKey(now),
+      nowMinutes: localNowMinutes(now),
+    };
+  }, [bookingForm.bookingDate, liveClockMs]);
+  const bookingSelectedSlots = useMemo(() => {
+    if (editingBookingId != null) return [] as Array<{ startTime: string; endTime: string }>;
+    return bookingForm.selectedSlots.filter((slot) =>
+      bookingTimeline.some(
+        (row) =>
+          !row.booking &&
+          row.startTime === slot.startTime &&
+          row.endTime === slot.endTime &&
+          !isSlotTimePassed(row, bookingFormTimeOpts),
+      ),
+    );
+  }, [bookingForm.selectedSlots, bookingFormTimeOpts, bookingTimeline, editingBookingId]);
+  const bookingSelectedTotal = useMemo(() => {
+    if (!bookingCourt || editingBookingId != null) return 0;
+    const isWeekend = isBangkokWeekend(bookingForm.bookingDate);
+    const unit = isWeekend ? bookingCourt.weekendPrice : bookingCourt.weekdayPrice;
+    return unit * bookingSelectedSlots.length;
+  }, [bookingCourt, bookingForm.bookingDate, bookingSelectedSlots.length, editingBookingId]);
+  const bookingUnitPrice = useMemo(() => {
+    if (!bookingCourt) return 0;
+    const isWeekend = isBangkokWeekend(bookingForm.bookingDate);
+    return isWeekend ? bookingCourt.weekendPrice : bookingCourt.weekdayPrice;
+  }, [bookingCourt, bookingForm.bookingDate]);
+  const bookingPayDueUnit = useMemo(
     () =>
-      editingBookingId != null
-        ? { startTime: bookingForm.startTime, endTime: bookingForm.endTime, booking: null }
-        : bookingTimeline.find(
-            (slot) => !slot.booking && slot.startTime === bookingForm.startTime && slot.endTime === bookingForm.endTime,
-          ) ?? null,
-    [bookingTimeline, bookingForm.startTime, bookingForm.endTime, editingBookingId],
+      footballTurfComputePortalPayDue({
+        mode: settings.portalBookingPaymentMode ?? "NONE",
+        depositAmountBaht: settings.depositAmountBaht,
+        totalBaht: bookingUnitPrice,
+      }),
+    [bookingUnitPrice, settings.depositAmountBaht, settings.portalBookingPaymentMode],
   );
+  const bookingDepositMisconfigured =
+    settings.portalBookingPaymentMode === "DEPOSIT" &&
+    Math.max(0, Math.round(Number(settings.depositAmountBaht ?? 0))) <= 0;
+  const bookingPayDueTotal =
+    bookingPayDueUnit != null && bookingPayDueUnit > 0
+      ? bookingPayDueUnit * Math.max(1, editingBookingId != null ? 1 : bookingSelectedSlots.length)
+      : null;
+  const bookingRequiresPay = bookingPayDueTotal != null && bookingPayDueTotal > 0;
   const canSubmitBooking = Boolean(
     bookingCourt &&
-      (editingBookingId != null || selectedBookingSlot) &&
+      (editingBookingId != null
+        ? bookingForm.startTime && bookingForm.endTime
+        : bookingSelectedSlots.length > 0) &&
       bookingForm.customerName.trim() &&
       bookingForm.customerPhone.trim() &&
-      bookingForm.startTime &&
-      bookingForm.endTime,
+      !bookingDepositMisconfigured &&
+      !(
+        editingBookingId == null &&
+        bookingForm.paymentMethod === "TRANSFER" &&
+        !bookingForm.paymentSlipDataUrl
+      ),
   );
   const scheduleBoard = useMemo(
     () =>
@@ -1162,6 +1204,67 @@ export function FootballTurfDashboard({
     if (!scheduleCourtId) return scheduleBoard[0] ?? null;
     return scheduleBoard.find(({ court }) => String(court.id) === scheduleCourtId) ?? scheduleBoard[0] ?? null;
   }, [scheduleBoard, scheduleCourtId]);
+
+  const scheduleBoardTimeOpts = useMemo(() => {
+    const liveNow = new Date(liveClockMs);
+    return {
+      scheduleDate,
+      todayDateKey: localDateKey(liveNow),
+      nowMinutes: localNowMinutes(liveNow),
+    };
+  }, [liveClockMs, scheduleDate]);
+
+  const scheduleStatusCounts = useMemo(() => {
+    const counts = {
+      ALL: 0,
+      FREE: 0,
+      BOOKED: 0,
+      CHECKED_IN: 0,
+      COMPLETED: 0,
+      PASSED: 0,
+      NEEDS_CLOSE: 0,
+    };
+    if (!selectedScheduleBoard) return counts;
+    for (const slot of selectedScheduleBoard.timeline) {
+      counts.ALL += 1;
+      const timePassed = isSlotTimePassed(slot, scheduleBoardTimeOpts);
+      if (timePassed) {
+        counts.PASSED += 1;
+        continue;
+      }
+      const booking = slot.booking;
+      if (!booking) {
+        counts.FREE += 1;
+        continue;
+      }
+      if (footballBookingNeedsClose(booking, scheduleBoardTimeOpts, bookings)) counts.NEEDS_CLOSE += 1;
+      if (booking.status === "BOOKED") counts.BOOKED += 1;
+      else if (booking.status === "CHECKED_IN" || booking.status === "PLAYING") counts.CHECKED_IN += 1;
+      else if (booking.status === "COMPLETED") counts.COMPLETED += 1;
+    }
+    return counts;
+  }, [bookings, scheduleBoardTimeOpts, selectedScheduleBoard]);
+
+  const filteredScheduleTimeline = useMemo(() => {
+    if (!selectedScheduleBoard) return [];
+    return selectedScheduleBoard.timeline.filter((slot) => {
+      const timePassed = isSlotTimePassed(slot, scheduleBoardTimeOpts);
+      const booking = timePassed ? null : slot.booking;
+      if (scheduleStatusFilter === "ALL") return true;
+      if (scheduleStatusFilter === "PASSED") return timePassed;
+      if (scheduleStatusFilter === "FREE") return !timePassed && !booking;
+      if (scheduleStatusFilter === "NEEDS_CLOSE") {
+        return Boolean(booking && footballBookingNeedsClose(booking, scheduleBoardTimeOpts, bookings));
+      }
+      if (!booking || timePassed) return false;
+      if (scheduleStatusFilter === "BOOKED") return booking.status === "BOOKED";
+      if (scheduleStatusFilter === "CHECKED_IN") {
+        return booking.status === "CHECKED_IN" || booking.status === "PLAYING";
+      }
+      if (scheduleStatusFilter === "COMPLETED") return booking.status === "COMPLETED";
+      return true;
+    });
+  }, [bookings, scheduleBoardTimeOpts, scheduleStatusFilter, selectedScheduleBoard]);
 
   const filteredOverviewCourts = useMemo(
     () => (overviewCourtId === "ALL" ? courts : courts.filter((court) => String(court.id) === overviewCourtId)),
@@ -1205,13 +1308,13 @@ export function FootballTurfDashboard({
           queueDateFrom,
           queueDateTo,
         );
-        const overdue = footballBookingNeedsClose(item, { todayDateKey, nowMinutes });
+        const overdue = footballBookingNeedsClose(item, { todayDateKey, nowMinutes }, bookings);
         if (queueNeedsCloseOnly && !overdue) return false;
         return matchesKeyword && matchesStatus && matchesCourt && matchesDate;
       })
       .sort((a, b) => {
-        const aOver = footballBookingNeedsClose(a, { todayDateKey, nowMinutes }) ? 1 : 0;
-        const bOver = footballBookingNeedsClose(b, { todayDateKey, nowMinutes }) ? 1 : 0;
+        const aOver = footballBookingNeedsClose(a, { todayDateKey, nowMinutes }, bookings) ? 1 : 0;
+        const bOver = footballBookingNeedsClose(b, { todayDateKey, nowMinutes }, bookings) ? 1 : 0;
         if (aOver !== bOver) return bOver - aOver;
         const byDate = b.bookingDate.localeCompare(a.bookingDate);
         if (byDate !== 0) return byDate;
@@ -1231,7 +1334,7 @@ export function FootballTurfDashboard({
   ]);
   const queueNeedsCloseCount = useMemo(() => {
     const nowMinutes = localNowMinutes(new Date(liveClockMs));
-    return bookings.filter((item) => footballBookingNeedsClose(item, { todayDateKey, nowMinutes })).length;
+    return bookings.filter((item) => footballBookingNeedsClose(item, { todayDateKey, nowMinutes }, bookings)).length;
   }, [bookings, liveClockMs, todayDateKey]);
   const queueFiltersActive = useMemo(
     () =>
@@ -1261,8 +1364,8 @@ export function FootballTurfDashboard({
           id: `promotion-${item.id}`,
           kind: "PROMOTION" as const,
           amount: item.price,
-          dateKey: normalizeDateKey(item.createdAt),
-          dateLabel: new Date(item.createdAt).toLocaleString("th-TH"),
+          dateKey: bangkokDateKey(new Date(item.createdAt)),
+          dateLabel: new Date(item.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" }),
           title: item.teamName || item.customerName,
           subtitle: `${item.promotionName} · ${item.customerPhone}`,
           tone: "border-sky-100 bg-sky-50/70 text-sky-900",
@@ -1271,8 +1374,8 @@ export function FootballTurfDashboard({
           id: `cost-${item.id}`,
           kind: "COST" as const,
           amount: item.amount,
-          dateKey: normalizeDateKey(item.spentAt),
-          dateLabel: new Date(item.spentAt).toLocaleString("th-TH"),
+          dateKey: bangkokDateKey(new Date(item.spentAt)),
+          dateLabel: new Date(item.spentAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" }),
           title: item.itemLabel,
           subtitle: `${item.categoryName}${item.note ? ` · ${item.note}` : ""}`,
           tone: "border-rose-100 bg-rose-50/70 text-rose-900",
@@ -1363,6 +1466,47 @@ export function FootballTurfDashboard({
       cancelled = true;
     };
   }, [saleOpen, saleForm.paymentMethod, selectedSalePromotion?.id, selectedSalePromotion?.price]);
+  useEffect(() => {
+    const amount = bookingPayDueTotal ?? bookingSelectedTotal;
+    if (
+      !bookingOpen ||
+      editingBookingId != null ||
+      bookingForm.paymentMethod !== "TRANSFER" ||
+      amount <= 0
+    ) {
+      setBookingPromptPayQr({ dataUrl: null, loading: false, configured: true });
+      return;
+    }
+    let cancelled = false;
+    setBookingPromptPayQr({ dataUrl: null, loading: true, configured: true });
+    void fetch("/api/football-turf/promptpay-qr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ amount }),
+    })
+      .then(async (res) => {
+        const data = (await res.json()) as { qrDataUrl?: string | null; configured?: boolean };
+        if (cancelled) return;
+        setBookingPromptPayQr({
+          dataUrl: data.qrDataUrl ?? null,
+          loading: false,
+          configured: data.configured !== false,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setBookingPromptPayQr({ dataUrl: null, loading: false, configured: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    bookingOpen,
+    bookingForm.paymentMethod,
+    bookingPayDueTotal,
+    bookingSelectedTotal,
+    editingBookingId,
+  ]);
   const overviewCourtLabel = overviewCourtId === "ALL"
     ? ""
     : (courts.find((court) => String(court.id) === overviewCourtId)?.name ?? "สนามที่เลือก");
@@ -1459,6 +1603,12 @@ export function FootballTurfDashboard({
     if (!court) {
       return { startTime: "", endTime: "" };
     }
+    const now = new Date(liveClockMs);
+    const timeOpts = {
+      scheduleDate: nextBookingDate,
+      todayDateKey: localDateKey(now),
+      nowMinutes: localNowMinutes(now),
+    };
     const timeline = buildCourtTimeline(
       court,
       bookings
@@ -1470,14 +1620,92 @@ export function FootballTurfDashboard({
         )
         .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime)),
     );
+    const isOpen = (slot: { startTime: string; endTime: string; booking: unknown }) =>
+      !slot.booking && !isSlotTimePassed(slot, timeOpts);
     const preferredSlot =
       timeline.find(
-        (slot) => !slot.booking && slot.startTime === preferredStart && slot.endTime === preferredEnd,
+        (slot) =>
+          isOpen(slot) && slot.startTime === preferredStart && slot.endTime === preferredEnd,
       ) ?? null;
-    const availableSlot = preferredSlot ?? timeline.find((slot) => !slot.booking) ?? null;
+    const availableSlot = preferredSlot ?? timeline.find((slot) => isOpen(slot)) ?? null;
     return availableSlot
       ? { startTime: availableSlot.startTime, endTime: availableSlot.endTime }
       : { startTime: "", endTime: "" };
+  }
+
+  function resolveAvailableSlotsOnCourt(
+    nextCourtId: string,
+    nextBookingDate: string,
+    preferred: Array<{ startTime: string; endTime: string }>,
+  ) {
+    const court = courts.find((item) => item.id === Number(nextCourtId)) ?? courts[0] ?? null;
+    if (!court) return [] as Array<{ startTime: string; endTime: string }>;
+    const now = new Date(liveClockMs);
+    const timeOpts = {
+      scheduleDate: nextBookingDate,
+      todayDateKey: localDateKey(now),
+      nowMinutes: localNowMinutes(now),
+    };
+    const timeline = buildCourtTimeline(
+      court,
+      bookings
+        .filter(
+          (item) =>
+            item.courtId === court.id &&
+            item.bookingDate === nextBookingDate &&
+            item.status !== "CANCELLED",
+        )
+        .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime)),
+    );
+    const freeKeys = new Set(
+      timeline
+        .filter((slot) => !slot.booking && !isSlotTimePassed(slot, timeOpts))
+        .map((slot) => `${slot.startTime}|${slot.endTime}`),
+    );
+    const kept = preferred
+      .filter((slot) => freeKeys.has(`${slot.startTime}|${slot.endTime}`))
+      .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+    if (kept.length > 0) return kept;
+    const first = timeline.find((slot) => !slot.booking && !isSlotTimePassed(slot, timeOpts));
+    return first ? [{ startTime: first.startTime, endTime: first.endTime }] : [];
+  }
+
+  function applySelectedSlots(
+    slots: Array<{ startTime: string; endTime: string }>,
+  ): Pick<typeof bookingForm, "selectedSlots" | "startTime" | "endTime"> {
+    const sorted = [...slots].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+    const primary = sorted[0] ?? { startTime: "", endTime: "" };
+    return {
+      selectedSlots: sorted,
+      startTime: primary.startTime,
+      endTime: primary.endTime,
+    };
+  }
+
+  function toggleBookingSlot(startTime: string, endTime: string) {
+    if (
+      isSlotTimePassed(
+        { startTime, endTime },
+        {
+          scheduleDate: bookingForm.bookingDate,
+          todayDateKey: localDateKey(new Date(liveClockMs)),
+          nowMinutes: localNowMinutes(new Date(liveClockMs)),
+        },
+      )
+    ) {
+      return;
+    }
+    setBookingForm((state) => {
+      const exists = state.selectedSlots.some(
+        (slot) => slot.startTime === startTime && slot.endTime === endTime,
+      );
+      const next = exists
+        ? state.selectedSlots.filter(
+            (slot) => !(slot.startTime === startTime && slot.endTime === endTime),
+          )
+        : [...state.selectedSlots, { startTime, endTime }];
+      return { ...state, ...applySelectedSlots(next) };
+    });
   }
 
   function closeBookingModal() {
@@ -1489,7 +1717,10 @@ export function FootballTurfDashboard({
       customerPhone: "",
       teamName: "",
       note: "",
+      paymentMethod: "ONSITE",
       paymentStatus: "UNPAID",
+      paymentReference: "",
+      paymentSlipDataUrl: "",
     }));
   }
 
@@ -1501,12 +1732,16 @@ export function FootballTurfDashboard({
       bookingDate: booking.bookingDate,
       startTime: booking.startTime,
       endTime: booking.endTime,
+      selectedSlots: [{ startTime: booking.startTime, endTime: booking.endTime }],
       customerName: booking.customerName,
       customerPhone: booking.customerPhone,
       teamName: booking.teamName,
       playerCount: String(booking.playerCount),
       note: booking.note,
+      paymentMethod: (booking.paymentMethod as FootballTurfBookingPaymentMethod) || "UNPAID",
       paymentStatus: booking.paymentStatus ?? "UNPAID",
+      paymentReference: booking.paymentReference ?? "",
+      paymentSlipDataUrl: booking.paymentSlipDataUrl ?? "",
     });
     setBookingOpen(true);
   }
@@ -1668,6 +1903,19 @@ export function FootballTurfDashboard({
     }
   }
 
+  async function onBookingSlipSelected(file: File | null) {
+    if (!file) return;
+    setBookingSlipBusy(true);
+    try {
+      const dataUrl = await prepareImageFileAsDataUrl(file);
+      setBookingForm((state) => ({ ...state, paymentSlipDataUrl: dataUrl, paymentMethod: "TRANSFER" }));
+    } catch (error) {
+      notice.error(error instanceof Error ? error.message : "แนบสลิปไม่สำเร็จ");
+    } finally {
+      setBookingSlipBusy(false);
+    }
+  }
+
   function openCustomerModal(customer?: FootballTurfCustomer) {
     if (customer) {
       setEditingCustomerId(customer.id);
@@ -1695,19 +1943,23 @@ export function FootballTurfDashboard({
     setEditingBookingId(null);
     const nextCourtId = bookingForm.courtId || String(courts[0]?.id ?? 1);
     const nextBookingDate = bookingForm.bookingDate || localDateKey();
-    const nextSlot = resolveBookingSlot(
-      nextCourtId,
-      nextBookingDate,
-      bookingForm.startTime,
-      bookingForm.endTime,
-    );
+    const nextSlots = resolveAvailableSlotsOnCourt(nextCourtId, nextBookingDate, bookingForm.selectedSlots);
     setBookingSource(source);
     setBookingForm((state) => ({
       ...state,
       courtId: nextCourtId,
       bookingDate: nextBookingDate,
-      startTime: nextSlot.startTime,
-      endTime: nextSlot.endTime,
+      ...applySelectedSlots(nextSlots),
+      customerName: "",
+      customerPhone: "",
+      teamName: "",
+      playerCount: "",
+      note: "",
+      paymentMethod:
+        source === "WALK_IN" || settings.portalBookingPaymentMode === "NONE" ? "ONSITE" : "TRANSFER",
+      paymentStatus: "UNPAID",
+      paymentReference: "",
+      paymentSlipDataUrl: "",
     }));
     setBookingOpen(true);
   }
@@ -1715,21 +1967,24 @@ export function FootballTurfDashboard({
   /** เปิดฟอร์มจอง/walk-in จากการ์ดสนาม (วันนี้ + สล็อตว่างถัดไปของสนามนั้น) */
   function openCourtLiveBooking(court: FootballTurfCourt, source: FootballTurfBookingSource) {
     const today = localDateKey(new Date(liveClockMs));
-    const nextSlot = resolveBookingSlot(String(court.id), today);
+    const nextSlots = resolveAvailableSlotsOnCourt(String(court.id), today, []);
     setEditingBookingId(null);
     setBookingSource(source);
     setBookingForm((state) => ({
       ...state,
       courtId: String(court.id),
       bookingDate: today,
-      startTime: nextSlot.startTime,
-      endTime: nextSlot.endTime,
+      ...applySelectedSlots(nextSlots),
       customerName: "",
       customerPhone: "",
       teamName: "",
       playerCount: "",
       note: "",
+      paymentMethod:
+        source === "WALK_IN" || settings.portalBookingPaymentMode === "NONE" ? "ONSITE" : "TRANSFER",
       paymentStatus: "UNPAID",
+      paymentReference: "",
+      paymentSlipDataUrl: "",
     }));
     setBookingOpen(true);
   }
@@ -1742,14 +1997,16 @@ export function FootballTurfDashboard({
       ...state,
       courtId: String(court.id),
       bookingDate: scheduleDate,
-      startTime,
-      endTime,
+      ...applySelectedSlots([{ startTime, endTime }]),
       customerName: "",
       customerPhone: "",
       teamName: "",
       playerCount: "",
       note: "",
+      paymentMethod: settings.portalBookingPaymentMode === "NONE" ? "ONSITE" : "TRANSFER",
       paymentStatus: "UNPAID",
+      paymentReference: "",
+      paymentSlipDataUrl: "",
     }));
     setBookingOpen(true);
   }
@@ -1768,32 +2025,60 @@ export function FootballTurfDashboard({
   }
 
   function updateBookingCourt(nextCourtId: string) {
-    const nextSlot = resolveBookingSlot(
+    if (editingBookingId != null) {
+      const nextSlot = resolveBookingSlot(
+        nextCourtId,
+        bookingForm.bookingDate,
+        bookingForm.startTime,
+        bookingForm.endTime,
+      );
+      setBookingForm((state) => ({
+        ...state,
+        courtId: nextCourtId,
+        ...applySelectedSlots(
+          nextSlot.startTime ? [{ startTime: nextSlot.startTime, endTime: nextSlot.endTime }] : [],
+        ),
+      }));
+      return;
+    }
+    const nextSlots = resolveAvailableSlotsOnCourt(
       nextCourtId,
       bookingForm.bookingDate,
-      bookingForm.startTime,
-      bookingForm.endTime,
+      bookingForm.selectedSlots,
     );
     setBookingForm((state) => ({
       ...state,
       courtId: nextCourtId,
-      startTime: nextSlot.startTime,
-      endTime: nextSlot.endTime,
+      ...applySelectedSlots(nextSlots),
     }));
   }
 
   function updateBookingDate(nextBookingDate: string) {
-    const nextSlot = resolveBookingSlot(
+    if (editingBookingId != null) {
+      const nextSlot = resolveBookingSlot(
+        bookingForm.courtId,
+        nextBookingDate,
+        bookingForm.startTime,
+        bookingForm.endTime,
+      );
+      setBookingForm((state) => ({
+        ...state,
+        bookingDate: nextBookingDate,
+        ...applySelectedSlots(
+          nextSlot.startTime ? [{ startTime: nextSlot.startTime, endTime: nextSlot.endTime }] : [],
+        ),
+      }));
+      return;
+    }
+    const nextSlots = resolveAvailableSlotsOnCourt(
       bookingForm.courtId,
       nextBookingDate,
-      bookingForm.startTime,
-      bookingForm.endTime,
+      bookingForm.selectedSlots,
     );
     setBookingForm((state) => ({
       ...state,
       bookingDate: nextBookingDate,
-      startTime: nextSlot.startTime,
-      endTime: nextSlot.endTime,
+      ...applySelectedSlots(nextSlots),
     }));
   }
 
@@ -1816,30 +2101,59 @@ export function FootballTurfDashboard({
           paymentStatus: bookingForm.paymentStatus,
         });
       } else {
-        if (!selectedBookingSlot) return;
-        const isWeekend = [0, 6].includes(new Date(bookingForm.bookingDate).getDay());
+        if (bookingSelectedSlots.length === 0) return;
+        if (bookingDepositMisconfigured) {
+          notice.error("ตั้งค่าโหมดมัดจำแล้ว แต่ยังไม่ได้กำหนดจำนวนมัดจำ");
+          return;
+        }
+        const isWeekend = isBangkokWeekend(bookingForm.bookingDate);
         const listedPrice = isWeekend ? court.weekendPrice : court.weekdayPrice;
-        await repo.createBooking({
+        const payDue = footballTurfComputePortalPayDue({
+          mode: settings.portalBookingPaymentMode ?? "NONE",
+          depositAmountBaht: settings.depositAmountBaht,
+          totalBaht: listedPrice,
+        });
+        const method =
+          bookingForm.paymentMethod === "TRANSFER"
+            ? ("TRANSFER" as const)
+            : bookingForm.paymentMethod === "ONSITE"
+              ? ("ONSITE" as const)
+              : ("UNPAID" as const);
+        const paymentStatus =
+          method === "TRANSFER"
+            ? ("PENDING_REVIEW" as const)
+            : method === "ONSITE"
+              ? (payDue != null && payDue > 0) || bookingSource === "WALK_IN"
+                ? ("PAID" as const)
+                : ("UNPAID" as const)
+              : ("UNPAID" as const);
+        const shared = {
           courtId: court.id,
           courtName: court.name,
           bookingDate: bookingForm.bookingDate,
-          startTime: bookingForm.startTime,
-          endTime: bookingForm.endTime,
           customerName: bookingForm.customerName.trim(),
           customerPhone: bookingForm.customerPhone.trim(),
           teamName: bookingForm.teamName.trim(),
           playerCount: Number(bookingForm.playerCount) || 10,
           source: bookingSource,
-          status: bookingSource === "WALK_IN" ? "CHECKED_IN" : "BOOKED",
+          status: bookingSource === "WALK_IN" ? ("CHECKED_IN" as const) : ("BOOKED" as const),
           listedPrice,
           finalPrice: listedPrice,
+          depositAmountBaht: payDue,
           promotionSaleId: null,
           note: bookingForm.note.trim(),
-          paymentMethod: bookingSource === "WALK_IN" ? "ONSITE" : "UNPAID",
-          paymentStatus: bookingSource === "WALK_IN" ? "PAID" : "UNPAID",
-          paymentSlipDataUrl: "",
-          paymentReference: "",
-        });
+          paymentMethod: method,
+          paymentStatus,
+          paymentSlipDataUrl: method === "TRANSFER" ? bookingForm.paymentSlipDataUrl : "",
+          paymentReference: bookingForm.paymentReference.trim(),
+        };
+        for (const slot of bookingSelectedSlots) {
+          await repo.createBooking({
+            ...shared,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+          });
+        }
       }
       closeBookingModal();
       await refresh();
@@ -2070,6 +2384,13 @@ export function FootballTurfDashboard({
   }
 
   async function onSaveSettings() {
+    if (settingsForm.portalBookingPaymentMode === "DEPOSIT") {
+      const dep = Math.max(0, Math.round(Number(settingsForm.depositAmountBaht ?? 0)));
+      if (dep <= 0) {
+        notice.error("โหมดมัดจำต้องระบุจำนวนมัดจำมากกว่า 0 บาท");
+        return;
+      }
+    }
     const ok = await notice.confirm("บันทึกการตั้งค่าสนามใช่หรือไม่?", {
       title: "ยืนยันการบันทึก",
       confirmLabel: "บันทึก",
@@ -2105,6 +2426,11 @@ export function FootballTurfDashboard({
     await runSave(async () => {
       await repo.updateBooking(id, { status });
       await refresh();
+      if (status === "CHECKED_IN") {
+        notice.success("เช็กอินแล้ว — ทุกรอบของชื่อ/เบอร์เดียวกันถูกเช็กอินด้วย");
+      } else if (status === "COMPLETED") {
+        notice.success("เช็กเอาท์แล้ว — ปิดทุกรอบของเซสชันนี้แล้ว พร้อมรับคิวถัดไป");
+      }
     });
   }
 
@@ -2244,7 +2570,7 @@ export function FootballTurfDashboard({
                 title="สนามที่กำลังใช้งาน"
               />
               <p className="mt-1 text-[11px] font-semibold text-[#8b87b8]">
-                สถานะตามเวลาปัจจุบัน · ไม่ผูกกับตัวกรองวันที่ด้านบน
+                สถานะตามเวลาไทย (Asia/Bangkok) ตอนนี้ {formatBangkokTimeHm(new Date(liveClockMs))} น. · ไม่ผูกกับตัวกรองวันที่ด้านบน
               </p>
               <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {filteredOverviewCourts.map((court) => {
@@ -2266,7 +2592,16 @@ export function FootballTurfDashboard({
                     nowMinutes,
                   });
                   const next = findCourtNextBooking(courtDayBookings, { nowMinutes }, current);
-                  const alertKind = courtLiveAlertKind(current, nowMinutes);
+                  const alertKind = courtLiveAlertKind(current, nowMinutes, courtDayBookings);
+                  const currentSession = current
+                    ? listFootballTurfSessionBookings(current, courtDayBookings)
+                    : [];
+                  const currentSessionLabel =
+                    currentSession.length > 1
+                      ? `${currentSession[0]!.startTime}–${currentSession[currentSession.length - 1]!.endTime} · ${currentSession.length} รอบ`
+                      : current
+                        ? `${current.startTime}–${current.endTime}`
+                        : "";
                   const isNoShowAlert = alertKind === "NO_SHOW";
                   const isOvertimeAlert = alertKind === "OVERTIME";
                   /** นอกเวลาเปิด แต่ยังมีรอบค้างปิด → ไม่ถือว่าปิดสนิท */
@@ -2389,7 +2724,11 @@ export function FootballTurfDashboard({
                             role="alert"
                           >
                             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-600" aria-hidden />
-                            <span>เลยเวลาสิ้นสุดรอบ · ควรปิดรอบก่อนคิวถัดไป</span>
+                            <span>
+                              {currentSession.length > 1
+                                ? "เลยเวลาสิ้นสุดเซสชัน · ควรเช็กเอาท์ก่อนคิวถัดไป"
+                                : "เลยเวลาสิ้นสุดรอบ · ควรปิดรอบก่อนคิวถัดไป"}
+                            </span>
                           </div>
                         ) : null}
 
@@ -2405,7 +2744,8 @@ export function FootballTurfDashboard({
                               </span>
                               {guestLabel}
                               <span className="mt-0.5 block text-[11px] font-semibold text-[#8b87b8]">
-                                {current!.startTime}–{current!.endTime} · {current!.customerPhone}
+                                {currentSessionLabel || `${current!.startTime}–${current!.endTime}`} ·{" "}
+                                {current!.customerPhone}
                               </span>
                             </>
                           ) : showAsClosed ? (
@@ -2624,20 +2964,67 @@ export function FootballTurfDashboard({
                       </p>
                     </div>
                   </div>
+                  <div
+                    className="mt-4 flex flex-wrap items-center gap-1.5"
+                    role="group"
+                    aria-label="กรองสถานะช่วงเวลา"
+                  >
+                    {(
+                      [
+                        ["ALL", "ทั้งหมด"],
+                        ["FREE", "ว่าง"],
+                        ["BOOKED", "จอง"],
+                        ["CHECKED_IN", "เช็กอิน"],
+                        ["COMPLETED", "เช็กเอาท์"],
+                        ["PASSED", "หมดเวลา"],
+                      ] as const
+                    ).map(([key, label]) => {
+                      const count = scheduleStatusCounts[key];
+                      const active = scheduleStatusFilter === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => setScheduleStatusFilter(key)}
+                          className={cn(
+                            "min-h-[34px] rounded-full border px-3 text-[11px] font-black transition",
+                            active
+                              ? "border-[#5b61ff]/50 bg-[#ecebff] text-[#3b36a0] ring-2 ring-[#5b61ff]/20"
+                              : "border-white/70 bg-white/75 text-[#4d47b6] hover:bg-white/95",
+                          )}
+                        >
+                          {label}
+                          {key !== "ALL" ? ` (${count})` : count > 0 ? ` (${count})` : ""}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      aria-pressed={scheduleStatusFilter === "NEEDS_CLOSE"}
+                      onClick={() =>
+                        setScheduleStatusFilter((prev) => (prev === "NEEDS_CLOSE" ? "ALL" : "NEEDS_CLOSE"))
+                      }
+                      className={cn(
+                        "min-h-[34px] rounded-full border px-3 text-[11px] font-black transition",
+                        scheduleStatusFilter === "NEEDS_CLOSE"
+                          ? "border-amber-400 bg-amber-100 text-amber-900 ring-2 ring-amber-300/50"
+                          : "border-amber-200/80 bg-amber-50/80 text-amber-800 hover:bg-amber-100/90",
+                      )}
+                    >
+                      {scheduleStatusCounts.NEEDS_CLOSE > 0
+                        ? `ต้องปิดงาน (${scheduleStatusCounts.NEEDS_CLOSE})`
+                        : "ต้องปิดงาน"}
+                    </button>
+                  </div>
                   <div className="mt-5 space-y-2">
-                    {selectedScheduleBoard.timeline.length === 0 ? (
-                      <AppEmptyState tone="violet">ยังไม่มีช่วงเวลาให้แสดง</AppEmptyState>
+                    {filteredScheduleTimeline.length === 0 ? (
+                      <AppEmptyState tone="violet">ไม่พบช่วงเวลาตามตัวกรองสถานะ</AppEmptyState>
                     ) : (
-                      selectedScheduleBoard.timeline.map((slot) => {
+                      filteredScheduleTimeline.map((slot) => {
                         const court = selectedScheduleBoard.court;
-                        const liveNow = new Date(liveClockMs);
-                        const timeOpts = {
-                          scheduleDate,
-                          todayDateKey,
-                          nowMinutes: localNowMinutes(liveNow),
-                        };
-                        const timePassed = isSlotTimePassed(slot, timeOpts);
-                        const timeCurrent = isSlotTimeCurrent(slot, timeOpts);
+                        const timePassed = isSlotTimePassed(slot, scheduleBoardTimeOpts);
+                        const timeCurrent = isSlotTimeCurrent(slot, scheduleBoardTimeOpts);
                         const booking = timePassed ? null : slot.booking;
                         return (
                           <div
@@ -2891,10 +3278,14 @@ export function FootballTurfDashboard({
               <AppEmptyState tone="violet">ไม่พบรายการจองตามตัวกรอง</AppEmptyState>
             ) : (
               queueFilteredBookings.map((item) => {
-                const overdue = footballBookingNeedsClose(item, {
-                  todayDateKey,
-                  nowMinutes: localNowMinutes(new Date(liveClockMs)),
-                });
+                const overdue = footballBookingNeedsClose(
+                  item,
+                  {
+                    todayDateKey,
+                    nowMinutes: localNowMinutes(new Date(liveClockMs)),
+                  },
+                  bookings,
+                );
                 const guest = item.teamName || item.customerName;
                 const accent =
                   item.status === "BOOKED"
@@ -2952,34 +3343,17 @@ export function FootballTurfDashboard({
                           >
                             {bookingPaymentStatusLabel(item.paymentStatus)}
                           </span>
+                          {overdue ? (
+                            <span
+                              className="inline-flex h-7 w-7 items-center justify-center text-amber-700"
+                              title={footballBookingOverdueLabel(item.status)}
+                              aria-label={footballBookingOverdueLabel(item.status)}
+                              role="status"
+                            >
+                              <AlertTriangle className="h-4 w-4" aria-hidden />
+                            </span>
+                          ) : null}
                         </div>
-
-                        {overdue ? (
-                          <div
-                            className="mt-2 flex flex-wrap items-center gap-2 rounded-[1rem] border border-amber-300/80 bg-amber-50/95 px-2.5 py-1.5 text-xs font-bold text-amber-950"
-                            role="status"
-                          >
-                            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-700" aria-hidden />
-                            <span className="min-w-0 flex-1">{footballBookingOverdueLabel(item.status)}</span>
-                            {item.status === "BOOKED" ? (
-                              <button
-                                type="button"
-                                onClick={() => void setBookingStatus(item.id, "CHECKED_IN")}
-                                className="rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-black text-white"
-                              >
-                                เช็กอิน
-                              </button>
-                            ) : item.status === "CHECKED_IN" || item.status === "PLAYING" ? (
-                              <button
-                                type="button"
-                                onClick={() => void setBookingStatus(item.id, "COMPLETED")}
-                                className="rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-black text-white"
-                              >
-                                เช็กเอาท์
-                              </button>
-                            ) : null}
-                          </div>
-                        ) : null}
 
                         <p className="mt-2 text-sm font-medium text-[#66638c]">
                           {item.courtName} · {item.bookingDate} · {item.startTime}–{item.endTime}
@@ -3556,7 +3930,7 @@ export function FootballTurfDashboard({
             }
           />
           <p className="mt-1 text-[11px] font-semibold text-[#8b87b8]">
-            เพิ่ม · แก้ไข · ลบ · แนบรูปปกสนาม
+            เวลาเปิด–ปิดเป็นเวลาไทย · นาฬิกาอ้างอิง {formatBangkokTimeHm(new Date(liveClockMs))} น. · เพิ่ม · แก้ไข · ลบ · แนบรูปปก
           </p>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {courts.length === 0 ? (
@@ -3602,7 +3976,7 @@ export function FootballTurfDashboard({
                     <div>
                       <p className="text-lg font-black tracking-tight text-[#1e1b4b]">{court.name}</p>
                       <p className="mt-1 text-xs font-semibold text-[#66638c]">
-                        {court.openTime}–{court.closeTime} · รอบละ {court.slotMinutes} นาที
+                        เปิด {court.openTime}–{court.closeTime} น. (เวลาไทย) · รอบละ {court.slotMinutes} นาที
                       </p>
                       <p className="mt-1 text-xs font-bold text-[#4d47b6]">
                         จ–ศ {formatMoney(court.weekdayPrice)} · น–อา {formatMoney(court.weekendPrice)}
@@ -3834,7 +4208,13 @@ export function FootballTurfDashboard({
         footer={
           <FormModalFooterActions
             onCancel={closeBookingModal}
-            submitLabel={editingBookingId != null ? "บันทึกการแก้ไข" : "บันทึกคิว"}
+            submitLabel={
+              editingBookingId != null
+                ? "บันทึกการแก้ไข"
+                : bookingSelectedSlots.length > 1
+                  ? `บันทึก ${bookingSelectedSlots.length} คิว`
+                  : "บันทึกคิว"
+            }
             submitDisabled={!canSubmitBooking}
             onSubmit={() => void onCreateBooking()}
           />
@@ -3849,36 +4229,45 @@ export function FootballTurfDashboard({
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                  {editingBookingId != null ? "ช่วงเวลา" : "ช่วงเวลาของวันจอง"}
+                  {editingBookingId != null ? "ช่วงเวลา" : "เลือกช่วงเวลาได้หลายรอบ"}
                 </p>
+                {editingBookingId == null ? (
+                  <p className="mt-1 text-xs font-semibold text-[#66638c]">กดเลือก/ยกเลิกช่วงว่าง · บันทึกเป็นหลายคิว</p>
+                ) : null}
               </div>
               <div className="rounded-2xl bg-white px-3 py-2 text-right shadow-sm ring-1 ring-slate-200">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">ช่วงเวลาที่เลือก</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  {editingBookingId != null ? "ช่วงเวลาที่เลือก" : "สรุปที่เลือก"}
+                </p>
                 <p className="mt-1 text-sm font-black text-slate-800">
-                  {bookingForm.startTime && bookingForm.endTime
-                    ? `${bookingForm.startTime} - ${bookingForm.endTime}`
-                    : "ไม่มีช่วงว่าง"}
+                  {editingBookingId != null
+                    ? bookingForm.startTime && bookingForm.endTime
+                      ? `${bookingForm.startTime} - ${bookingForm.endTime}`
+                      : "ไม่มีช่วงว่าง"
+                    : bookingSelectedSlots.length > 0
+                      ? `${bookingSelectedSlots.length} ช่วง · รวม ${formatMoney(bookingSelectedTotal)}`
+                      : "ยังไม่ได้เลือกช่วง"}
                 </p>
               </div>
             </div>
             {editingBookingId != null ? (
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <label className="space-y-1.5 text-sm font-medium text-slate-600">
-                  เวลาเริ่ม
-                  <input
-                    type="time"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800"
+                  เวลาเริ่ม (24 ชม.)
+                  <AppTime24Input
+                    aria-label="เวลาเริ่ม"
+                    minuteStep={1}
                     value={bookingForm.startTime}
-                    onChange={(e) => setBookingForm((state) => ({ ...state, startTime: e.target.value }))}
+                    onChange={(startTime) => setBookingForm((state) => ({ ...state, startTime }))}
                   />
                 </label>
                 <label className="space-y-1.5 text-sm font-medium text-slate-600">
-                  เวลาสิ้นสุด
-                  <input
-                    type="time"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800"
+                  เวลาสิ้นสุด (24 ชม.)
+                  <AppTime24Input
+                    aria-label="เวลาสิ้นสุด"
+                    minuteStep={1}
                     value={bookingForm.endTime}
-                    onChange={(e) => setBookingForm((state) => ({ ...state, endTime: e.target.value }))}
+                    onChange={(endTime) => setBookingForm((state) => ({ ...state, endTime }))}
                   />
                 </label>
               </div>
@@ -3891,25 +4280,22 @@ export function FootballTurfDashboard({
               ) : (
                 bookingTimeline.map((slot) => {
                   const isBooked = Boolean(slot.booking);
+                  const timePassed = !isBooked && isSlotTimePassed(slot, bookingFormTimeOpts);
+                  const isBlocked = isBooked || timePassed;
                   const isSelected =
-                    !isBooked &&
-                    bookingForm.startTime === slot.startTime &&
-                    bookingForm.endTime === slot.endTime;
+                    !isBlocked &&
+                    bookingSelectedSlots.some(
+                      (row) => row.startTime === slot.startTime && row.endTime === slot.endTime,
+                    );
                   return (
                     <button
                       key={`booking-slot-${slot.startTime}-${slot.endTime}`}
                       type="button"
-                      disabled={isBooked}
-                      onClick={() =>
-                        setBookingForm((state) => ({
-                          ...state,
-                          startTime: slot.startTime,
-                          endTime: slot.endTime,
-                        }))
-                      }
+                      disabled={isBlocked}
+                      onClick={() => toggleBookingSlot(slot.startTime, slot.endTime)}
                       className={cn(
                         "rounded-[1.35rem] border px-4 py-3 text-left transition-all",
-                        isBooked
+                        isBlocked
                           ? "cursor-not-allowed border-slate-200 bg-slate-100/80 opacity-70"
                           : isSelected
                             ? "border-emerald-300 bg-emerald-50 shadow-sm ring-2 ring-emerald-200/70"
@@ -3924,7 +4310,11 @@ export function FootballTurfDashboard({
                           <p className="mt-1 text-xs font-medium text-slate-500">
                             {isBooked
                               ? `${slot.booking?.teamName || slot.booking?.customerName} · ${slot.booking?.customerPhone}`
-                              : "ว่าง พร้อมรับจอง"}
+                              : timePassed
+                                ? "หมดเวลา · จองไม่ได้"
+                                : isSelected
+                                  ? "เลือกแล้ว · กดอีกครั้งเพื่อยกเลิก"
+                                  : "ว่าง · กดเพื่อเลือกเพิ่ม"}
                           </p>
                         </div>
                         <span
@@ -3932,12 +4322,20 @@ export function FootballTurfDashboard({
                             "rounded-full px-2.5 py-1 text-[11px] font-black ring-1",
                             isBooked
                               ? bookingStatusClass(slot.booking!.status)
-                              : isSelected
-                                ? "bg-emerald-100 text-emerald-700 ring-emerald-200"
-                                : "bg-slate-50 text-slate-500 ring-slate-200",
+                              : timePassed
+                                ? "bg-slate-200 text-slate-500 ring-slate-300"
+                                : isSelected
+                                  ? "bg-emerald-100 text-emerald-700 ring-emerald-200"
+                                  : "bg-slate-50 text-slate-500 ring-slate-200",
                           )}
                         >
-                          {isBooked ? bookingStatusLabel(slot.booking!.status) : isSelected ? "เลือกแล้ว" : "ว่าง"}
+                          {isBooked
+                            ? bookingStatusLabel(slot.booking!.status)
+                            : timePassed
+                              ? "หมดเวลา"
+                              : isSelected
+                                ? "เลือกแล้ว"
+                                : "ว่าง"}
                         </span>
                       </div>
                     </button>
@@ -3975,6 +4373,164 @@ export function FootballTurfDashboard({
               ) : null}
             </div>
           </div>
+
+          {editingBookingId == null ? (
+            <div className="rounded-[1.75rem] border border-slate-100 bg-slate-50/70 p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">การชำระเงิน</p>
+              <p className="mt-2 text-sm font-black text-[#1e1b4b]">
+                {bookingDepositMisconfigured
+                  ? "ตั้งค่าโหมดมัดจำแล้ว แต่ยังไม่ได้ใส่จำนวนมัดจำ — ไปแท็บตั้งค่า"
+                  : settings.portalBookingPaymentMode === "DEPOSIT"
+                    ? `มัดจำตอนจอง · ${formatMoney(bookingPayDueTotal ?? 0)}${
+                        bookingSelectedSlots.length > 1 ? ` (${bookingSelectedSlots.length} คิว)` : ""
+                      }`
+                    : settings.portalBookingPaymentMode === "FULL"
+                      ? `ชำระเต็มยอด · ${formatMoney(bookingPayDueTotal ?? bookingSelectedTotal)}`
+                      : "ไม่บังคับชำระตอนจอง (ตามตั้งค่า) — รับเงินหน้าสนามได้"}
+              </p>
+              {bookingRequiresPay ? (
+                <p className="mt-1 text-xs font-semibold text-[#66638c]">
+                  ยอดค่าสนามรวม {formatMoney(bookingSelectedTotal)}
+                  {settings.portalBookingPaymentMode === "DEPOSIT" ? " · ส่วนที่เหลือชำระหน้าสนาม" : ""}
+                </p>
+              ) : bookingSelectedTotal > 0 ? (
+                <p className="mt-1 text-xs font-semibold text-[#66638c]">
+                  ยอดค่าสนามรวม {formatMoney(bookingSelectedTotal)}
+                </p>
+              ) : null}
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setBookingForm((s) => ({
+                      ...s,
+                      paymentMethod: "ONSITE",
+                      paymentSlipDataUrl: "",
+                    }))
+                  }
+                  className={cn(
+                    "rounded-full px-4 py-2 text-xs font-black transition",
+                    bookingForm.paymentMethod === "ONSITE"
+                      ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
+                      : "bg-white text-slate-500 ring-1 ring-slate-200",
+                  )}
+                >
+                  {bookingRequiresPay ? "รับมัดจำ/ชำระหน้าสนาม" : "เงินสด / หน้าสนาม"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBookingForm((s) => ({ ...s, paymentMethod: "TRANSFER" }))}
+                  className={cn(
+                    "rounded-full px-4 py-2 text-xs font-black transition",
+                    bookingForm.paymentMethod === "TRANSFER"
+                      ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
+                      : "bg-white text-slate-500 ring-1 ring-slate-200",
+                  )}
+                >
+                  โอนเงิน / พร้อมเพย์
+                </button>
+              </div>
+
+              {bookingForm.paymentMethod === "TRANSFER" ? (
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-[1.25rem] border border-white bg-white p-4 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <QrCode className="h-4 w-4 text-slate-500" />
+                      <p className="text-sm font-black text-slate-900">
+                        QR พร้อมเพย์ · {formatMoney(bookingPayDueTotal ?? bookingSelectedTotal)}
+                      </p>
+                    </div>
+                    <div className="mt-3 flex flex-col items-center justify-center rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                      {bookingPromptPayQr.loading ? (
+                        <p className="py-16 text-xs font-bold text-slate-400">กำลังสร้าง QR...</p>
+                      ) : bookingPromptPayQr.dataUrl ? (
+                        <Image
+                          src={bookingPromptPayQr.dataUrl}
+                          alt="QR พร้อมเพย์"
+                          width={220}
+                          height={220}
+                          className="h-[220px] w-[220px] rounded-2xl bg-white p-2"
+                          unoptimized
+                        />
+                      ) : (
+                        <p className="py-10 text-center text-xs font-bold text-rose-600">
+                          {bookingPromptPayQr.configured === false
+                            ? "ยังไม่ได้ตั้งเบอร์พร้อมเพย์ในแท็บตั้งค่า"
+                            : "สร้าง QR ไม่สำเร็จ"}
+                        </p>
+                      )}
+                    </div>
+                    <div className="mt-3 space-y-2 text-xs font-medium text-slate-600">
+                      <p>
+                        พร้อมเพย์:{" "}
+                        <span className="font-black text-slate-900">{settings.promptpayNumber || "-"}</span>
+                      </p>
+                      <p>
+                        บัญชี:{" "}
+                        <span className="font-black text-slate-900">{settings.accountNumber || "-"}</span>
+                      </p>
+                      <p>
+                        {settings.bankName || settings.accountName
+                          ? `${settings.bankName} · ${settings.accountName}`
+                          : "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-[1.25rem] border border-white bg-white p-4 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <ReceiptText className="h-4 w-4 text-slate-500" />
+                      <p className="text-sm font-black text-slate-900">แนบสลิป</p>
+                    </div>
+                    <p className="mt-2 text-[11px] font-semibold leading-snug text-[#66638c]">
+                      {footballTurfPortalSlipProofMessage(settings.portalBookingPaymentMode ?? "NONE")}
+                    </p>
+                    <input
+                      className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800"
+                      placeholder="เลขอ้างอิง / หมายเหตุการโอน"
+                      value={bookingForm.paymentReference}
+                      onChange={(e) => setBookingForm((s) => ({ ...s, paymentReference: e.target.value }))}
+                    />
+                    <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-black text-slate-600 transition hover:bg-slate-100">
+                      <Upload className="h-4 w-4" />
+                      {bookingSlipBusy ? "กำลังแนบสลิป..." : "เลือกไฟล์สลิป"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={bookingSlipBusy}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] ?? null;
+                          e.target.value = "";
+                          void onBookingSlipSelected(file);
+                        }}
+                      />
+                    </label>
+                    {bookingForm.paymentSlipDataUrl ? (
+                      <div className="mt-3">
+                        <AppImageThumb
+                          src={bookingForm.paymentSlipDataUrl}
+                          alt="สลิปการจอง"
+                          onOpen={() => saleSlipLightbox.open(bookingForm.paymentSlipDataUrl)}
+                          className="h-24 w-24"
+                        />
+                        <p className="mt-2 text-xs font-bold text-emerald-700">แนบสลิปแล้ว — บันทึกแล้วรอตรวจชำระ</p>
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-xs font-bold text-amber-700">ต้องแนบสลิปก่อนบันทึกเมื่อเลือกโอนเงิน</p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-3 text-xs font-medium text-slate-500">
+                  {bookingRequiresPay
+                    ? "บันทึกเป็นรับชำระแล้วทันที (เงินสด / หน้าสนาม)"
+                    : "บันทึกเป็นชำระแล้วทันที (เงินสด / หน้าสนาม)"}
+                </p>
+              )}
+            </div>
+          ) : null}
         </div>
       </FormModal>
 
@@ -4108,21 +4664,21 @@ export function FootballTurfDashboard({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="space-y-1.5 text-sm font-medium text-slate-600">
-              เวลาเปิด
-              <input
-                type="time"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800"
+              เวลาเปิด (เวลาไทย · 24 ชม.)
+              <AppTime24Input
+                aria-label="เวลาเปิด"
+                minuteStep={1}
                 value={courtForm.openTime}
-                onChange={(e) => setCourtForm((state) => ({ ...state, openTime: e.target.value }))}
+                onChange={(openTime) => setCourtForm((state) => ({ ...state, openTime }))}
               />
             </label>
             <label className="space-y-1.5 text-sm font-medium text-slate-600">
-              เวลาปิด
-              <input
-                type="time"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800"
+              เวลาปิด (เวลาไทย · 24 ชม.)
+              <AppTime24Input
+                aria-label="เวลาปิด"
+                minuteStep={1}
                 value={courtForm.closeTime}
-                onChange={(e) => setCourtForm((state) => ({ ...state, closeTime: e.target.value }))}
+                onChange={(closeTime) => setCourtForm((state) => ({ ...state, closeTime }))}
               />
             </label>
           </div>

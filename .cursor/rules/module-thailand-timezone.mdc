@@ -1,0 +1,57 @@
+---
+description: วันเวลาโมดูลต้องใช้ Asia/Bangkok (เวลาไทย) — ห้าม UTC จาก toISOString
+alwaysApply: true
+---
+
+# เวลาไทย (Asia/Bangkok) — ทุกโมดูล
+
+โปรเจกต์นี้เป็นธุรกิจไทย วัน/เวลาที่กระทบ **สถานะเปิด–ปิด · คิว · จอง · ราคาวันธรรมดา/เสาร์–อาทิตย์ · “วันนี้” · seed** ต้องอิง **`Asia/Bangkok`** ไม่ใช่ timezone ของเครื่องเซิร์ฟเวอร์หรือ UTC ของ `toISOString()`
+
+## แหล่งความจริง
+
+ใช้ helper กลางจาก `@/lib/time/bangkok`:
+
+| ฟังก์ชัน | ใช้เมื่อ |
+|---------|---------|
+| `bangkokDateKey(d?)` | วันที่ปฏิทิน `YYYY-MM-DD` (“วันนี้”, กรองวัน, seed) |
+| `bangkokNowMinutes(d?)` | นาทีจากเที่ยงคืน — เทียบสล็อต / เปิด–ปิด |
+| `formatBangkokTimeHm(d?)` | แสดงนาฬิกา `HH:mm` บน UI |
+| `formatBangkokDateTimeLong(iso)` | แสดงวันเวลาภาษาไทย |
+| `isBangkokWeekend(d\|ymd)` | เลือกราคา จ–ศ / ส–อา |
+| `bangkokMonthKey(d?)` | เดือน `YYYY-MM` |
+
+โมดูลที่มีคิว/สล็อต (เช่น สนามฟุตบอล) ห่อซ้ำได้ใน `lib/time-queue.ts` ของโมดูล แต่ภายในต้องเรียก helper Bangkok ด้านบน
+
+## ห้าม
+
+```ts
+// ❌ BAD — เลื่อนวันช่วงกลางคืนไทย / คนละโซนกับเครื่อง
+new Date().toISOString().slice(0, 10)
+date.getHours() * 60 + date.getMinutes()
+new Date("2026-08-09").getDay()
+new Date(iso).toLocaleString("th-TH") // ไม่ใส่ timeZone
+
+// ✅ GOOD
+bangkokDateKey()
+bangkokNowMinutes()
+isBangkokWeekend("2026-08-09")
+new Date(iso).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })
+```
+
+## เก็บวันที่ปฏิทินใน DB
+
+- อ่านเป็น `YYYY-MM-DD` ผ่าน `bangkokDateKey` / mapper ของโมดูล  
+- parse วันอย่างเดียว: ใช้กลางวันไทย เช่น `` `${ymd}T12:00:00+07:00` `` — กันเลื่อนวันตอน serialize  
+- ฟิลด์ “เวลาเปิด–ปิด” แบบ `HH:mm` = **เวลาไทยตามที่ร้านตั้ง** (ไม่แปลง timezone ตอนแสดง)
+
+## UI
+
+- ป้ายฟอร์ม/คำอธิบายเมนูที่เกี่ยวกับชั่วโมงเปิด: ระบุ **เวลาไทย** เมื่ออาจสับสน  
+- สถานะสด (ว่าง / ปิด / เลยเวลา) เทียบด้วย `bangkokNowMinutes` + วันที่ `bangkokDateKey`  
+- **ฟอร์มแก้ไขเวลา:** ใช้ **`AppTime24Input`** จาก `@/components/app-templates` (เลือก ชม./นาที 00–23) — **ห้าม** `<input type="time">` ที่โชว์ AM/PM ตาม OS
+
+## อ้างอิงที่ทำแล้ว
+
+- `src/lib/time/bangkok.ts`
+- `src/components/app-templates/AppTime24Input.tsx`
+- สนามฟุตบอล: `src/systems/football-turf/lib/time-queue.ts` · `lib/mappers.ts` · `FootballTurfDashboard.tsx`

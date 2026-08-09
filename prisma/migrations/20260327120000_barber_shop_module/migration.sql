@@ -14,7 +14,7 @@ CREATE TABLE `barber_packages` (
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE `barber_customers` (
+CREATE TABLE IF NOT EXISTS `barber_customers` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `owner_id` VARCHAR(191) NOT NULL,
     `phone` VARCHAR(20) NOT NULL,
@@ -59,7 +59,15 @@ CREATE TABLE `barber_service_logs` (
 
 ALTER TABLE `barber_packages` ADD CONSTRAINT `barber_packages_owner_id_fkey` FOREIGN KEY (`owner_id`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE `barber_customers` ADD CONSTRAINT `barber_customers_owner_id_fkey` FOREIGN KEY (`owner_id`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+SET @fk_bc_owner := (
+  SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+  WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'barber_customers'
+    AND CONSTRAINT_NAME = 'barber_customers_owner_id_fkey' AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+);
+SET @sql_bc_owner := IF(@fk_bc_owner = 0,
+  'ALTER TABLE `barber_customers` ADD CONSTRAINT `barber_customers_owner_id_fkey` FOREIGN KEY (`owner_id`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE',
+  'SELECT 1');
+PREPARE s_bc_owner FROM @sql_bc_owner; EXECUTE s_bc_owner; DEALLOCATE PREPARE s_bc_owner;
 
 ALTER TABLE `customer_subscriptions` ADD CONSTRAINT `customer_subscriptions_owner_id_fkey` FOREIGN KEY (`owner_id`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE `customer_subscriptions` ADD CONSTRAINT `customer_subscriptions_barber_customer_id_fkey` FOREIGN KEY (`barber_customer_id`) REFERENCES `barber_customers`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

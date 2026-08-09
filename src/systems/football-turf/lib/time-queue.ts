@@ -1,4 +1,6 @@
-/** เวลาท้องถิ่น + คิวสนาม — ใช้ร่วมแดชบอร์ด / พอร์ทัลจอง / เช็กอิน */
+/** เวลาไทย (Asia/Bangkok) + คิวสนาม — ใช้ร่วมแดชบอร์ด / พอร์ทัลจอง / เช็กอิน */
+
+import { bangkokDateKey, bangkokNowMinutes } from "@/lib/time/bangkok";
 
 export function timeToMinutes(value: string): number {
   const [h = "0", m = "0"] = value.split(":");
@@ -11,15 +13,14 @@ export function minutesToTime(value: number): string {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
+/** วันที่ปฏิทินไทย YYYY-MM-DD */
 export function localDateKey(date = new Date()): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  return bangkokDateKey(date);
 }
 
+/** นาทีจากเที่ยงคืนตามนาฬิกาไทย */
 export function localNowMinutes(date = new Date()): number {
-  return date.getHours() * 60 + date.getMinutes();
+  return bangkokNowMinutes(date);
 }
 
 export function bookingCoversMinutes(
@@ -74,7 +75,7 @@ export function isSlotTimeCurrent(
   return bookingCoversMinutes(slot, opts.nowMinutes);
 }
 
-/** การจองหมดเวลาแล้วหรือยัง (อิงวันที่จอง + นาฬิกาท้องถิ่น) */
+/** การจองหมดเวลาแล้วหรือยัง (อิงวันที่จอง + นาฬิกาไทย) */
 export function isBookingTimePassed(
   booking: { bookingDate: string; endTime: string },
   now = new Date(),

@@ -4880,11 +4880,11 @@ model FootballTurfShopProfile {
   bankName        String   @default("") @map("bank_name") @db.VarChar(120)
   accountName     String   @default("") @map("account_name") @db.VarChar(200)
   accountNumber   String   @default("") @map("account_number") @db.VarChar(32)
-  venueAddress    String   @default("") @map("venue_address") @db.Text
+  venueAddress    String   @map("venue_address") @db.Text
   taxId           String   @default("") @map("tax_id") @db.VarChar(30)
   contactPhone    String   @default("") @map("contact_phone") @db.VarChar(32)
   contactLine     String   @default("") @map("contact_line") @db.VarChar(120)
-  note            String   @default("") @db.Text
+  note            String   @db.Text
   /** ขนาดสลิปใบเสร็จของโมดูลนี้: SLIP_58 | SLIP_80 | A4 */
   slipPaperSize   String   @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
   /**
@@ -4961,6 +4961,8 @@ model FootballTurfBooking {
   status             String            @db.VarChar(20)
   listedPrice        Int               @default(0) @map("listed_price")
   finalPrice         Int               @default(0) @map("final_price")
+  /** มัดจำ/ยอดที่ต้องชำระตอนจองจากพอร์ทัล (null = ไม่บังคับชำระตอนจอง) */
+  depositAmountBaht  Int?              @map("deposit_amount_baht")
   promotionSaleId    Int?              @map("promotion_sale_id")
   note               String            @default("") @db.VarChar(500)
   paymentMethod      String            @default("UNPAID") @map("payment_method") @db.VarChar(20)

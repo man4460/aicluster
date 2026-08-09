@@ -39,6 +39,8 @@ export type FootballTurfBooking = {
   status: FootballTurfBookingStatus;
   listedPrice: number;
   finalPrice: number;
+  /** มัดจำ/ยอดชำระตอนจองจากลิงก์ลูกค้า (null = ไม่บังคับ) */
+  depositAmountBaht?: number | null;
   promotionSaleId: number | null;
   note: string;
   paymentMethod?: FootballTurfBookingPaymentMethod;

@@ -1,7 +1,9 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { bangkokDateKey, bangkokNowMinutes } from "@/lib/time/bangkok";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import { ensureFootballTurfProfile } from "@/systems/football-turf/lib/ensure-profile";
 import { parseBookingDate } from "@/systems/football-turf/lib/mappers";
+import { minutesToTime, timeToMinutes } from "@/systems/football-turf/lib/time-queue";
 
 type Tx = Omit<
   PrismaClient,
@@ -12,7 +14,7 @@ function daysAgoIsoDate(days: number): string {
   const d = new Date();
   d.setHours(12, 0, 0, 0);
   d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
+  return bangkokDateKey(d);
 }
 
 function daysAgoDateTime(days: number, hour = 12): Date {
@@ -309,26 +311,11 @@ export async function seedFootballTurfSampleActivity(
   }
 }
 
-function pad2(n: number) {
-  return String(n).padStart(2, "0");
-}
-
-function minutesToHm(total: number): string {
-  const m = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
-  return `${pad2(Math.floor(m / 60))}:${pad2(m % 60)}`;
-}
-
-function hmToMinutes(hm: string): number {
-  const [h, m] = hm.split(":").map((x) => Number(x));
-  return (h || 0) * 60 + (m || 0);
-}
-
 function liveDemoWindow(openHm: string, closeHm: string, slotMinutes: number) {
-  const open = hmToMinutes(openHm);
-  const close = hmToMinutes(closeHm);
+  const open = timeToMinutes(openHm);
+  const close = timeToMinutes(closeHm);
   const slot = Math.max(30, slotMinutes || 60);
-  const now = new Date();
-  let nowM = now.getHours() * 60 + now.getMinutes();
+  let nowM = bangkokNowMinutes();
   if (nowM < open) nowM = open;
   if (nowM >= close) nowM = Math.max(open, close - slot);
   const start = Math.floor((nowM - open) / slot) * slot + open;
@@ -336,15 +323,15 @@ function liveDemoWindow(openHm: string, closeHm: string, slotMinutes: number) {
   const nextStart = end < close ? end : null;
   const nextEnd = nextStart != null ? Math.min(nextStart + slot, close) : null;
   return {
-    start: minutesToHm(start),
-    end: minutesToHm(end),
-    nextStart: nextStart != null ? minutesToHm(nextStart) : null,
-    nextEnd: nextEnd != null ? minutesToHm(nextEnd) : null,
+    start: minutesToTime(start),
+    end: minutesToTime(end),
+    nextStart: nextStart != null ? minutesToTime(nextStart) : null,
+    nextEnd: nextEnd != null ? minutesToTime(nextEnd) : null,
   };
 }
 
 function rangesOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string) {
-  return hmToMinutes(aStart) < hmToMinutes(bEnd) && hmToMinutes(aEnd) > hmToMinutes(bStart);
+  return timeToMinutes(aStart) < timeToMinutes(bEnd) && timeToMinutes(aEnd) > timeToMinutes(bStart);
 }
 
 const LIVE_OVERVIEW_NOTE = "ตัวอย่างภาพรวมสด";

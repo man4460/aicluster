@@ -181,3 +181,8 @@ export {
   type AppIconToolbarButtonProps,
 } from "./AppTemplateIcons";
 export { AppUsageGuideModal } from "./AppUsageGuideModal";
+export {
+  AppTime24Input,
+  normalizeAppTime24,
+  type AppTime24InputProps,
+} from "./AppTime24Input";
