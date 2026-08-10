@@ -1,0 +1,72 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { withHotelResortOwnerContext } from "@/systems/hotel-resort/lib/api-auth";
+
+export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const auth = await withHotelResortOwnerContext();
+  if (!auth.ok) return auth.res;
+  const { id } = await ctx.params;
+  let body: { name?: string; sortOrder?: number };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "รูปแบบไม่ถูกต้อง" }, { status: 400 });
+  }
+
+  const existing = await prisma.hotelResortIncomeCategory.findFirst({
+    where: { id, ownerUserId: auth.ctx.ownerUserId },
+  });
+  if (!existing) return NextResponse.json({ error: "ไม่พบหมวดหมู่" }, { status: 404 });
+  if (existing.isBuiltin || existing.kind !== "CUSTOM") {
+    return NextResponse.json({ error: "หมวดหลักแก้ไขไม่ได้" }, { status: 400 });
+  }
+
+  const name = body.name?.trim();
+  if (name !== undefined && (!name || name.length > 120)) {
+    return NextResponse.json({ error: "กรอกชื่อหมวดหมู่" }, { status: 400 });
+  }
+
+  const row = await prisma.hotelResortIncomeCategory.update({
+    where: { id },
+    data: {
+      ...(name ? { name } : {}),
+      ...(typeof body.sortOrder === "number" && Number.isFinite(body.sortOrder)
+        ? { sortOrder: Math.round(body.sortOrder) }
+        : {}),
+    },
+  });
+  return NextResponse.json({
+    category: {
+      id: row.id,
+      name: row.name,
+      kind: row.kind,
+      isBuiltin: row.isBuiltin,
+      sortOrder: row.sortOrder,
+      createdAt: row.createdAt.toISOString(),
+    },
+  });
+}
+
+export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const auth = await withHotelResortOwnerContext();
+  if (!auth.ok) return auth.res;
+  const { id } = await ctx.params;
+
+  const existing = await prisma.hotelResortIncomeCategory.findFirst({
+    where: { id, ownerUserId: auth.ctx.ownerUserId },
+    include: { _count: { select: { entries: true } } },
+  });
+  if (!existing) return NextResponse.json({ error: "ไม่พบหมวดหมู่" }, { status: 404 });
+  if (existing.isBuiltin || existing.kind !== "CUSTOM") {
+    return NextResponse.json({ error: "หมวดหลักลบไม่ได้" }, { status: 400 });
+  }
+  if (existing._count.entries > 0) {
+    return NextResponse.json(
+      { error: `มีรายรับ ${existing._count.entries} รายการในหมวดนี้ — ย้ายหรือลบรายรับก่อน` },
+      { status: 409 },
+    );
+  }
+
+  await prisma.hotelResortIncomeCategory.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}

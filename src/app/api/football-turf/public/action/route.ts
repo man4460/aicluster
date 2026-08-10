@@ -4,6 +4,7 @@ import { isFootballTurfPortalOpenForOwner } from "@/lib/football-turf/portal-acc
 import { resolvePublicFootballTurfTrialSessionId } from "@/lib/football-turf/public-trial-scope";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { ensureFootballTurfProfile } from "@/systems/football-turf/lib/ensure-profile";
+import { notifyFootballTurfActionLive } from "@/systems/football-turf/lib/live-board-notify";
 import { createFootballTurfServerRepo } from "@/systems/football-turf/lib/server-repo";
 import {
   footballTurfComputePortalPayDue,
@@ -26,7 +27,7 @@ type PublicActionBody = {
   input?: Record<string, unknown>;
 };
 
-const PUBLIC_OPS = new Set(["createBooking", "updateBooking", "usePromotionSale"]);
+const PUBLIC_OPS = new Set(["createBooking", "createOnlineBookingsBatch", "updateBooking", "usePromotionSale"]);
 
 export async function POST(req: Request) {
   const ip = clientIp(req.headers);
@@ -69,6 +70,59 @@ export async function POST(req: Request) {
     }
     if (patch.status && patch.status !== "CHECKED_IN") {
       return NextResponse.json({ error: "public updateBooking status must be CHECKED_IN" }, { status: 400 });
+    }
+  }
+
+  if (body.op === "createOnlineBookingsBatch") {
+    const input = body.input ?? {};
+    const courtId = Number(input.courtId);
+    const bookingDate = typeof input.bookingDate === "string" ? input.bookingDate.trim() : "";
+    const slotsRaw = Array.isArray(input.slots) ? input.slots : [];
+    const slots = slotsRaw
+      .map((s) => {
+        const row = s as { startTime?: string; endTime?: string };
+        return {
+          startTime: typeof row.startTime === "string" ? row.startTime.trim() : "",
+          endTime: typeof row.endTime === "string" ? row.endTime.trim() : "",
+        };
+      })
+      .filter((s) => /^\d{2}:\d{2}$/.test(s.startTime) && /^\d{2}:\d{2}$/.test(s.endTime));
+
+    if (!Number.isFinite(courtId) || courtId < 1 || !/^\d{4}-\d{2}-\d{2}$/.test(bookingDate) || !slots.length) {
+      return NextResponse.json({ error: "ข้อมูลการจองไม่ถูกต้อง" }, { status: 400 });
+    }
+
+    const customerPhone = String(input.customerPhone ?? "").replace(/\D/g, "");
+    const customerName = String(input.customerName ?? "").trim();
+    const teamName = String(input.teamName ?? "").trim();
+    if (customerPhone.length < 9) {
+      return NextResponse.json({ error: "กรอกเบอร์โทรให้ครบ" }, { status: 400 });
+    }
+    if (!customerName && !teamName) {
+      return NextResponse.json({ error: "กรอกชื่อหรือชื่อทีม" }, { status: 400 });
+    }
+
+    try {
+      const created = await repo.createOnlineBookingsBatch({
+        courtId,
+        bookingDate,
+        slots,
+        customerName: customerName || teamName,
+        customerPhone,
+        teamName,
+        playerCount: Number(input.playerCount ?? 0),
+        paymentMethod: typeof input.paymentMethod === "string" ? input.paymentMethod : "UNPAID",
+        paymentSlipDataUrl:
+          typeof input.paymentSlipDataUrl === "string" ? input.paymentSlipDataUrl : "",
+        paymentReference:
+          typeof input.paymentReference === "string" ? input.paymentReference : "",
+      });
+      notifyFootballTurfActionLive(ownerId, "createOnlineBookingsBatch", created);
+      return NextResponse.json({ result: created });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "จองไม่สำเร็จ";
+      const status = /ถูกจอง|จองไม่ได้|มัดจำ|สลิป|พร้อมเพย์|โอน/.test(msg) ? 400 : 500;
+      return NextResponse.json({ error: msg }, { status });
     }
   }
 
@@ -186,5 +240,6 @@ export async function POST(req: Request) {
     input: body.input,
   });
   if (!outcome.ok) return NextResponse.json({ error: outcome.error }, { status: outcome.status });
+  notifyFootballTurfActionLive(ownerId, body.op, outcome.result, body.id, body.input);
   return NextResponse.json({ result: outcome.result });
 }

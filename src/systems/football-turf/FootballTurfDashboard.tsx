@@ -22,7 +22,6 @@ import {
   ReceiptText,
   RefreshCw,
   Search,
-  ShieldCheck,
   SlidersHorizontal,
   TicketPercent,
   Wallet,
@@ -55,10 +54,7 @@ import {
 import { appDashboardBrandGradientBarClass, appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
-import {
-  footballTurfPublicBookUrl,
-  footballTurfPublicCheckInUrl,
-} from "@/lib/football-turf/public-url";
+import { footballTurfPublicBookUrl } from "@/lib/football-turf/public-url";
 import { FootballTurfBookingPrintModal } from "@/systems/football-turf/components/FootballTurfBookingPrintModal";
 import { FootballTurfCustomerStatsModal } from "@/systems/football-turf/components/FootballTurfCustomerStatsModal";
 import { FootballTurfLoyaltySettingsPanel } from "@/systems/football-turf/components/FootballTurfLoyaltySettingsPanel";
@@ -140,6 +136,7 @@ import {
   type FootballTurfTabKey,
 } from "@/systems/football-turf/football-turf-module-nav";
 import { ModuleStaffTokenQrPanel } from "@/components/qr/module-staff-token-qr-panel";
+import { ModulePublicLinkQrPanel } from "@/components/qr/module-public-link-qr-panel";
 import {
   readStoredStaffDailyUnlock,
   staffDailyUnlockHeaders,
@@ -150,6 +147,12 @@ import {
   isFootballTurfSameSessionBooking,
   listFootballTurfSessionBookings,
 } from "@/systems/football-turf/lib/booking-session";
+import {
+  applyFootballTurfLiveEventToBookings,
+  removeByIds,
+  upsertById,
+  type FootballTurfLiveEvent,
+} from "@/systems/football-turf/lib/live-board-events";
 import {
   bookingCoversMinutes,
   isSlotEligibleForAdvanceBooking,
@@ -1258,6 +1261,12 @@ export function FootballTurfDashboard({
   const [balancePayReference, setBalancePayReference] = useState("");
   const [balancePaySlipDataUrl, setBalancePaySlipDataUrl] = useState("");
   const [balancePayBusy, setBalancePayBusy] = useState(false);
+  /** ภาพรวม — เช็กอิน/ชำระเพิ่มจากคิวที่จองไว้ */
+  const [overviewCheckInModal, setOverviewCheckInModal] = useState<
+    | { mode: "pick"; courtId: number }
+    | { mode: "booking"; bookingId: number }
+    | null
+  >(null);
   const balancePayGalleryRef = useRef<HTMLInputElement>(null);
   const {
     openCamera: openBalancePayCamera,
@@ -1419,6 +1428,8 @@ export function FootballTurfDashboard({
   });
 
   const refresh = useCallback(async () => {
+    const clearable = repo as { clearCache?: () => void };
+    clearable.clearCache?.();
     const [
       courtRows,
       bookingRows,
@@ -1454,6 +1465,126 @@ export function FootballTurfDashboard({
     setSettings(settingsRow);
     setSettingsForm(settingsRow);
   }, [repo]);
+
+  const applyLiveEvent = useCallback(
+    (event: FootballTurfLiveEvent) => {
+      if (event.type === "hello") return;
+      const clearable = repo as { clearCache?: () => void };
+      clearable.clearCache?.();
+      if (event.type === "refresh") {
+        void refresh();
+        return;
+      }
+      if (
+        event.type === "booking.upsert" ||
+        event.type === "booking.delete" ||
+        event.type === "booking.sessionStatus"
+      ) {
+        setBookings((prev) => applyFootballTurfLiveEventToBookings(prev, event) ?? prev);
+      }
+      if (event.type === "court.upsert") {
+        setCourts((prev) => upsertById(prev, event.courts));
+      }
+      if (event.type === "court.delete") {
+        setCourts((prev) => removeByIds(prev, event.ids));
+      }
+      if (event.type === "customer.upsert") {
+        setCustomers((prev) => upsertById(prev, event.customers));
+      }
+      if (event.type === "customer.delete") {
+        setCustomers((prev) => removeByIds(prev, event.ids));
+      }
+      if (event.type === "promotion.upsert") {
+        setPromotions((prev) => upsertById(prev, event.promotions));
+      }
+      if (event.type === "promotion.delete") {
+        setPromotions((prev) => removeByIds(prev, event.ids));
+      }
+      if (event.type === "promotionSale.upsert") {
+        setPromotionSales((prev) => upsertById(prev, event.sales));
+      }
+      if (event.type === "promotionSale.delete") {
+        setPromotionSales((prev) => removeByIds(prev, event.ids));
+      }
+      if (event.type === "settings.upsert") {
+        setSettings(event.settings);
+        setSettingsForm(event.settings);
+      }
+    },
+    [refresh, repo],
+  );
+
+  useEffect(() => {
+    if (storageOnly) return;
+
+    let streamUrl = "/api/football-turf/state/stream";
+    if (staffPortal && staffAuth) {
+      const qs = new URLSearchParams({
+        ownerId: staffAuth.ownerId,
+        t: staffAuth.trialSessionId,
+        k: staffAuth.k,
+      });
+      const unlock = readStoredStaffDailyUnlock("football-turf", staffAuth.ownerId);
+      if (unlock) qs.set("du", unlock);
+      streamUrl = `/api/football-turf/state/stream?${qs.toString()}`;
+    }
+
+    let es: EventSource | null = null;
+    let closed = false;
+    const liveMode = { current: "poll" as "sse" | "poll" };
+    /** เมื่อ SSE ต่ออยู่ยัง soft-poll — กัน pub/sub พลาดใน next dev */
+    const FALLBACK_POLL_MS = 12_000;
+    /** เมื่อ SSE หลุด — รีเฟรชถี่ขึ้น */
+    const OFFLINE_POLL_MS = 4_000;
+
+    try {
+      es = new EventSource(streamUrl);
+      es.onopen = () => {
+        if (closed) return;
+        liveMode.current = "sse";
+      };
+      es.onmessage = (msg) => {
+        if (closed) return;
+        liveMode.current = "sse";
+        try {
+          const data = JSON.parse(msg.data) as FootballTurfLiveEvent;
+          applyLiveEvent(data);
+        } catch {
+          /* ignore malformed */
+        }
+      };
+      es.onerror = () => {
+        if (closed) return;
+        liveMode.current = "poll";
+      };
+    } catch {
+      liveMode.current = "poll";
+    }
+
+    const offlinePoll = window.setInterval(() => {
+      if (closed || liveMode.current === "sse") return;
+      void refresh();
+    }, OFFLINE_POLL_MS);
+
+    const softPoll = window.setInterval(() => {
+      if (closed || liveMode.current !== "sse") return;
+      void refresh();
+    }, FALLBACK_POLL_MS);
+
+    const onVisible = () => {
+      if (closed || document.visibilityState !== "visible") return;
+      void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      closed = true;
+      es?.close();
+      window.clearInterval(offlinePoll);
+      window.clearInterval(softPoll);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [storageOnly, staffPortal, staffAuth, applyLiveEvent, refresh]);
 
   useEffect(() => {
     setCrmSection(parseFootballTurfCrmSection(searchParams.get("tab")));
@@ -1510,7 +1641,6 @@ export function FootballTurfDashboard({
   );
   const publicLinkTrial = trialSessionId?.trim() || "prod";
   const publicBookUrl = footballTurfPublicBookUrl(origin, ownerUserId, publicLinkTrial);
-  const publicCheckInUrl = footballTurfPublicCheckInUrl(origin, ownerUserId, publicLinkTrial);
   const bookingCourt = useMemo(
     () => courts.find((item) => item.id === Number(bookingForm.courtId)) ?? courts[0] ?? null,
     [courts, bookingForm.courtId],
@@ -2938,8 +3068,16 @@ export function FootballTurfDashboard({
     });
     if (!ok) return;
     await runSave(async () => {
-      await repo.updateBooking(id, { status: "CANCELLED" });
-      await refresh();
+      const updated = await repo.updateBooking(id, { status: "CANCELLED" });
+      if (storageOnly) {
+        await refresh();
+      } else if (updated) {
+        applyLiveEvent({
+          type: "booking.upsert",
+          at: new Date().toISOString(),
+          bookings: [updated],
+        });
+      }
     });
   }
 
@@ -3030,7 +3168,7 @@ export function FootballTurfDashboard({
             : bookingForm.paymentMethod === "ONSITE"
               ? ("ONSITE" as const)
               : ("UNPAID" as const);
-        await repo.updateBooking(editingBookingId, {
+        const updated = await repo.updateBooking(editingBookingId, {
           courtId: court.id,
           courtName: court.name,
           bookingDate: bookingForm.bookingDate,
@@ -3047,6 +3185,17 @@ export function FootballTurfDashboard({
           paymentSlipDataUrl: method === "TRANSFER" ? bookingForm.paymentSlipDataUrl : "",
         });
         await upsertCustomerFromBookingFields();
+        closeBookingModal();
+        if (storageOnly) {
+          await refresh();
+        } else if (updated) {
+          applyLiveEvent({
+            type: "booking.upsert",
+            at: new Date().toISOString(),
+            bookings: [updated],
+          });
+        }
+        return;
       } else {
         if (bookingSelectedSlots.length === 0) return;
         if (bookingTax.taxInvoiceEnabled) {
@@ -3149,17 +3298,28 @@ export function FootballTurfDashboard({
           paymentSlipDataUrl: method === "TRANSFER" ? bookingForm.paymentSlipDataUrl : "",
           paymentReference: bookingForm.paymentReference.trim(),
         };
+        const createdRows: FootballTurfBooking[] = [];
         for (const slot of uniqueSlots) {
-          await repo.createBooking({
+          const created = await repo.createBooking({
             ...shared,
             startTime: slot.startTime,
             endTime: slot.endTime,
           });
+          createdRows.push(created);
         }
         await upsertCustomerFromBookingFields();
+        closeBookingModal();
+        if (storageOnly) {
+          await refresh();
+        } else if (createdRows.length > 0) {
+          applyLiveEvent({
+            type: "booking.upsert",
+            at: new Date().toISOString(),
+            bookings: createdRows,
+          });
+        }
+        return;
       }
-      closeBookingModal();
-      await refresh();
     });
     } finally {
       setBookingSaving(false);
@@ -3331,8 +3491,16 @@ export function FootballTurfDashboard({
     });
     if (!ok) return;
     await runSave(async () => {
-      await repo.updateBooking(id, { status: "CANCELLED" });
-      await refresh();
+      const updated = await repo.updateBooking(id, { status: "CANCELLED" });
+      if (storageOnly) {
+        await refresh();
+      } else if (updated) {
+        applyLiveEvent({
+          type: "booking.upsert",
+          at: new Date().toISOString(),
+          bookings: [updated],
+        });
+      }
     });
   }
 
@@ -3341,7 +3509,15 @@ export function FootballTurfDashboard({
     if (!ok) return;
     await runSave(async () => {
       await repo.deleteBooking(id);
-      await refresh();
+      if (storageOnly) {
+        await refresh();
+      } else {
+        applyLiveEvent({
+          type: "booking.delete",
+          at: new Date().toISOString(),
+          ids: [id],
+        });
+      }
     });
   }
 
@@ -3405,10 +3581,18 @@ export function FootballTurfDashboard({
       );
       const amountPaidBaht = paid > 0 ? paid : item.finalPrice;
       const paymentStatus = footballTurfComputePaymentStatus(item.finalPrice, amountPaidBaht);
-      await repo.updateBooking(id, { amountPaidBaht, paymentStatus });
-      await refresh();
+      const updated = await repo.updateBooking(id, { amountPaidBaht, paymentStatus });
+      if (storageOnly) {
+        await refresh();
+      } else if (updated) {
+        applyLiveEvent({
+          type: "booking.upsert",
+          at: new Date().toISOString(),
+          bookings: [updated],
+        });
+      }
       if (paymentStatus === "PAID") {
-        setPrintBooking({ ...item, amountPaidBaht, paymentStatus: "PAID" });
+        setPrintBooking({ ...(updated ?? item), amountPaidBaht, paymentStatus: "PAID" });
       }
     });
   }
@@ -3470,7 +3654,7 @@ export function FootballTurfDashboard({
     const checkInAfter = balancePayCheckInAfter;
     const bookingId = balancePayBooking.id;
     await runSave(async () => {
-      await repo.updateBooking(bookingId, {
+      let updated = await repo.updateBooking(bookingId, {
         amountPaidBaht: balancePayBooking.finalPrice,
         paymentStatus: balancePayMethod === "TRANSFER" ? "PENDING_REVIEW" : "PAID",
         paymentMethod: balancePayMethod,
@@ -3479,10 +3663,26 @@ export function FootballTurfDashboard({
         paymentReference: balancePayReference.trim() || balancePayBooking.paymentReference,
       });
       if (checkInAfter && balancePayMethod === "ONSITE") {
-        await repo.updateBooking(bookingId, { status: "CHECKED_IN" });
+        updated = (await repo.updateBooking(bookingId, { status: "CHECKED_IN" })) ?? updated;
       }
       closeBalancePayModal();
-      await refresh();
+      if (storageOnly) {
+        await refresh();
+      } else if (updated) {
+        const at = new Date().toISOString();
+        applyLiveEvent({ type: "booking.upsert", at, bookings: [updated] });
+        if (checkInAfter && balancePayMethod === "ONSITE") {
+          applyLiveEvent({
+            type: "booking.sessionStatus",
+            at,
+            courtId: updated.courtId,
+            bookingDate: updated.bookingDate,
+            customerName: updated.customerName,
+            customerPhone: updated.customerPhone,
+            status: "CHECKED_IN",
+          });
+        }
+      }
       if (checkInAfter && balancePayMethod === "TRANSFER") {
         notice.success("รับสลิปแล้ว — ยืนยันชำระก่อนเช็กอิน");
       } else if (checkInAfter) {
@@ -3493,6 +3693,7 @@ export function FootballTurfDashboard({
       if (balancePayMethod === "ONSITE") {
         setPrintBooking({
           ...balancePayBooking,
+          ...updated,
           amountPaidBaht: balancePayBooking.finalPrice,
           paymentStatus: "PAID",
           paymentMethod: "ONSITE",
@@ -3517,6 +3718,54 @@ export function FootballTurfDashboard({
       return;
     }
     await setBookingStatus(booking.id, "CHECKED_IN");
+  }
+
+  function closeOverviewCheckInModal() {
+    setOverviewCheckInModal(null);
+  }
+
+  function listCourtTodayBookedForCheckIn(courtId: number): FootballTurfBooking[] {
+    const today = localDateKey(new Date(liveClockMs));
+    return bookings
+      .filter(
+        (item) =>
+          item.courtId === courtId &&
+          item.bookingDate === today &&
+          item.status === "BOOKED",
+      )
+      .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+  }
+
+  /** เปิดแผงรายละเอียดคิวจองเพื่อเช็กอิน / ชำระเพิ่ม — ว่างไม่มีคิว → walk-in */
+  function openOverviewCheckInHub(court: FootballTurfCourt, preferred?: FootballTurfBooking | null) {
+    if (preferred) {
+      setOverviewCheckInModal({ mode: "booking", bookingId: preferred.id });
+      return;
+    }
+    const booked = listCourtTodayBookedForCheckIn(court.id);
+    if (booked.length === 1) {
+      setOverviewCheckInModal({ mode: "booking", bookingId: booked[0]!.id });
+      return;
+    }
+    if (booked.length > 1) {
+      setOverviewCheckInModal({ mode: "pick", courtId: court.id });
+      return;
+    }
+    openCourtLiveBooking(court, "WALK_IN");
+  }
+
+  function openOverviewBookingDetail(booking: FootballTurfBooking) {
+    setOverviewCheckInModal({ mode: "booking", bookingId: booking.id });
+  }
+
+  async function overviewRequestCheckIn(booking: FootballTurfBooking) {
+    closeOverviewCheckInModal();
+    await requestCheckIn(booking);
+  }
+
+  function overviewOpenBalancePay(booking: FootballTurfBooking, opts?: { checkInAfter?: boolean }) {
+    closeOverviewCheckInModal();
+    openBalancePayModal(booking, opts);
   }
 
   async function onSellPromotion() {
@@ -3832,8 +4081,24 @@ export function FootballTurfDashboard({
       }
     }
     await runSave(async () => {
-      await repo.updateBooking(id, { status });
-      await refresh();
+      const updated = await repo.updateBooking(id, { status });
+      if (storageOnly) {
+        await refresh();
+      } else if (updated) {
+        const at = new Date().toISOString();
+        applyLiveEvent({ type: "booking.upsert", at, bookings: [updated] });
+        if (status === "CHECKED_IN" || status === "PLAYING" || status === "COMPLETED") {
+          applyLiveEvent({
+            type: "booking.sessionStatus",
+            at,
+            courtId: updated.courtId,
+            bookingDate: updated.bookingDate,
+            customerName: updated.customerName,
+            customerPhone: updated.customerPhone,
+            status: status === "PLAYING" ? "CHECKED_IN" : status,
+          });
+        }
+      }
       if (status === "CHECKED_IN") {
         notice.success("เช็กอินแล้ว — ทุกรอบของชื่อ/เบอร์เดียวกันถูกเช็กอินด้วย");
       } else if (status === "COMPLETED") {
@@ -4128,7 +4393,12 @@ export function FootballTurfDashboard({
 
                         <p className="min-h-[2.5rem] text-xs font-medium leading-snug text-[#2e2a58]">
                           {guestLabel ? (
-                            <>
+                            <button
+                              type="button"
+                              onClick={() => openOverviewBookingDetail(current!)}
+                              className="block w-full rounded-xl text-left transition hover:bg-white/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40"
+                              aria-label={`ดูรายละเอียดคิว ${guestLabel}`}
+                            >
                               <span className="font-semibold text-[#66638c]">
                                 {isOvertimeAlert
                                   ? "ผู้ใช้ก่อนหน้า: "
@@ -4149,7 +4419,7 @@ export function FootballTurfDashboard({
                               >
                                 {bookingPaymentStatusLabel(current!.paymentStatus)}
                               </span>
-                            </>
+                            </button>
                           ) : showAsClosed ? (
                             hoursPhase === "BEFORE_OPEN" ? (
                               nextGuestLabel ? (
@@ -4168,14 +4438,16 @@ export function FootballTurfDashboard({
                         </p>
 
                         {next && nextGuestLabel && hoursPhase !== "AFTER_CLOSE" ? (
-                          <div
+                          <button
+                            type="button"
+                            onClick={() => openOverviewBookingDetail(next)}
                             className={cn(
-                              "rounded-xl border px-2 py-1.5 text-[11px] font-bold",
+                              "w-full rounded-xl border px-2 py-1.5 text-left text-[11px] font-bold transition hover:brightness-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40",
                               nextIsContinuous
                                 ? "border-violet-300/90 bg-violet-50/95 text-violet-950"
                                 : "border-sky-200/90 bg-sky-50/95 text-sky-950",
                             )}
-                            role="status"
+                            aria-label={`ดูคิว ${nextGuestLabel}`}
                           >
                             <p
                               className={cn(
@@ -4208,18 +4480,16 @@ export function FootballTurfDashboard({
                               {bookingPaymentStatusLabel(next.paymentStatus)}
                             </span>
                             {footballTurfBookingRemainingBaht(next) > 0 ? (
-                              <button
-                                type="button"
-                                onClick={() => openBalancePayModal(next)}
+                              <span
                                 className={cn(
                                   footballTurfChipActionButtonClass,
-                                  "mt-1.5 min-h-[28px] rounded-lg border border-amber-300 bg-white/90 px-2.5 py-1 text-[10px] text-amber-900",
+                                  "mt-1.5 inline-flex min-h-[28px] rounded-lg border border-amber-300 bg-white/90 px-2.5 py-1 text-[10px] text-amber-900",
                                 )}
                               >
-                                จ่ายเพิ่ม {formatMoney(footballTurfBookingRemainingBaht(next))}
-                              </button>
+                                ค้าง {formatMoney(footballTurfBookingRemainingBaht(next))}
+                              </span>
                             ) : null}
-                          </div>
+                          </button>
                         ) : null}
                       </div>
 
@@ -4238,7 +4508,7 @@ export function FootballTurfDashboard({
                             {idle ? (
                               <button
                                 type="button"
-                                onClick={() => openCourtLiveBooking(court, "WALK_IN")}
+                                onClick={() => openOverviewCheckInHub(court, next?.status === "BOOKED" ? next : null)}
                                 className={cn(footballTurfChipActionButtonClass, "bg-gradient-to-r from-[#5b61ff] to-[#7c66ff] px-3 py-1.5 text-[11px] font-black text-white")}
 
                                 aria-label={`เช็กอิน ${court.name}`}
@@ -4264,7 +4534,7 @@ export function FootballTurfDashboard({
                         {current?.status === "BOOKED" ? (
                           <button
                             type="button"
-                            onClick={() => void requestCheckIn(current)}
+                            onClick={() => openOverviewCheckInHub(court, current)}
                             className={cn(footballTurfChipActionButtonClass, "bg-gradient-to-r from-[#5b61ff] to-[#7c66ff] px-3 py-1.5 text-[11px] font-black text-white")}
 
                             aria-label={`เช็กอิน ${court.name}`}
@@ -4344,7 +4614,7 @@ export function FootballTurfDashboard({
                         {!idle && !showAsClosed && next?.status === "BOOKED" ? (
                           <button
                             type="button"
-                            onClick={() => void requestCheckIn(next)}
+                            onClick={() => openOverviewCheckInHub(court, next)}
                             className={cn(footballTurfChipActionButtonClass, "border border-violet-300/80 bg-violet-50 px-3 py-1.5 text-[11px] font-black text-violet-900")}
 
                             aria-label={`เช็กอินคิวถัดไป ${court.name}`}
@@ -4728,6 +4998,7 @@ export function FootballTurfDashboard({
                   onClick={() => setQueueFilterOpen((v) => !v)}
                   className={cn(
                     appTemplateOutlineButtonClass,
+                    footballTurfInteractiveButtonClass,
                     "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-0 px-0 text-[#4d47b6] sm:min-w-0 sm:gap-2 sm:px-4",
                     queueFiltersActive && "ring-2 ring-amber-300/60",
                   )}
@@ -4742,7 +5013,10 @@ export function FootballTurfDashboard({
                   type="button"
                   aria-label="เพิ่มการจอง"
                   onClick={() => openBookingModal("ONLINE")}
-                  className="app-btn-primary min-h-[40px] min-w-[40px] rounded-xl px-3 text-sm font-black shadow-sm sm:min-w-0 sm:px-4"
+                  className={cn(
+                    "app-btn-primary min-h-[40px] min-w-[40px] rounded-xl px-3 text-sm font-black shadow-sm sm:min-w-0 sm:px-4",
+                    footballTurfInteractiveButtonClass,
+                  )}
                 >
                   <span className="sm:hidden" aria-hidden>
                     +
@@ -4776,10 +5050,8 @@ export function FootballTurfDashboard({
                     }
                   }}
                   className={cn(
-                    "min-h-[36px] rounded-full border px-3 text-xs font-black transition",
-                    queueDatePreset === key
-                      ? "border-[#5b61ff]/50 bg-[#ecebff] text-[#3b36a0] ring-2 ring-[#5b61ff]/20"
-                      : "border-white/60 bg-white/70 text-[#4d47b6] hover:bg-white/90",
+                    footballTurfFilterChipClass(queueDatePreset === key),
+                    "min-h-[36px] rounded-full px-3 text-xs",
                   )}
                 >
                   {label}
@@ -4790,7 +5062,8 @@ export function FootballTurfDashboard({
                 aria-pressed={queueNeedsCloseOnly}
                 onClick={() => setQueueNeedsCloseOnly((v) => !v)}
                 className={cn(
-                  "min-h-[36px] rounded-full border px-3 text-xs font-black transition",
+                  footballTurfInteractiveButtonClass,
+                  "min-h-[36px] rounded-full border px-3 text-xs font-black",
                   queueNeedsCloseOnly
                     ? "border-amber-400 bg-amber-100 text-amber-900 ring-2 ring-amber-300/50"
                     : "border-amber-200/80 bg-amber-50/70 text-amber-800 hover:bg-amber-100/80",
@@ -4852,7 +5125,11 @@ export function FootballTurfDashboard({
               <button
                 type="button"
                 onClick={resetQueueFilters}
-                className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-4 text-xs font-black text-[#4d47b6]")}
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  footballTurfInteractiveButtonClass,
+                  "min-h-[40px] rounded-xl px-4 text-xs font-black text-[#4d47b6]",
+                )}
               >
                 ล้างตัวกรอง
               </button>
@@ -4905,7 +5182,7 @@ export function FootballTurfDashboard({
                     <div className="absolute right-2 top-2 z-10 flex flex-col items-end gap-1 sm:right-3 sm:top-3">
                       <button
                         type="button"
-                        className={assetRowEditIconButtonClass}
+                        className={cn(assetRowEditIconButtonClass, footballTurfInteractiveButtonClass)}
                         aria-label={`จัดการการจอง ${guest}`}
                         title="จัดการ"
                         onClick={() => openEditBookingModal(item)}
@@ -4991,7 +5268,10 @@ export function FootballTurfDashboard({
                             <button
                               type="button"
                               onClick={() => void confirmBookingPayment(item.id)}
-                              className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-[11px] font-black text-cyan-700"
+                              className={cn(
+                                footballTurfChipActionButtonClass,
+                                "border border-cyan-200 bg-cyan-50 text-cyan-700",
+                              )}
                             >
                               ยืนยันชำระ
                             </button>
@@ -5003,7 +5283,10 @@ export function FootballTurfDashboard({
                             <button
                               type="button"
                               onClick={() => void collectBookingBalance(item.id)}
-                              className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-black text-amber-800"
+                              className={cn(
+                                footballTurfChipActionButtonClass,
+                                "border border-amber-200 bg-amber-50 text-amber-800",
+                              )}
                             >
                               จ่ายเพิ่ม {formatMoney(footballTurfBookingRemainingBaht(item))}
                             </button>
@@ -5012,7 +5295,10 @@ export function FootballTurfDashboard({
                             <button
                               type="button"
                               onClick={() => setPrintBooking(item)}
-                              className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-black text-emerald-800"
+                              className={cn(
+                                footballTurfChipActionButtonClass,
+                                "gap-1 border border-emerald-200 bg-emerald-50 text-emerald-800",
+                              )}
                               aria-label={`พิมพ์สลิป ${guest}`}
                             >
                               <ReceiptText className="h-3.5 w-3.5" aria-hidden />
@@ -5023,7 +5309,10 @@ export function FootballTurfDashboard({
                             <button
                               type="button"
                               onClick={() => void requestCheckIn(item)}
-                              className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-1.5 text-[11px] font-black text-sky-700"
+                              className={cn(
+                                footballTurfChipActionButtonClass,
+                                "border border-sky-200 bg-sky-50 text-sky-700",
+                              )}
                             >
                               เช็กอิน
                             </button>
@@ -5032,7 +5321,10 @@ export function FootballTurfDashboard({
                             <button
                               type="button"
                               onClick={() => void setBookingStatus(item.id, "COMPLETED")}
-                              className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[11px] font-black text-indigo-700"
+                              className={cn(
+                                footballTurfChipActionButtonClass,
+                                "border border-indigo-200 bg-indigo-50 text-indigo-700",
+                              )}
                             >
                               เช็กเอาท์
                             </button>
@@ -5041,14 +5333,17 @@ export function FootballTurfDashboard({
                             <button
                               type="button"
                               onClick={() => void onCancelBooking(item.id)}
-                              className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-black text-amber-700"
+                              className={cn(
+                                footballTurfChipActionButtonClass,
+                                "border border-amber-200 bg-amber-50 text-amber-700",
+                              )}
                             >
                               ยกเลิก
                             </button>
                           ) : null}
                           <button
                             type="button"
-                            className={assetRowRemoveIconButtonClass}
+                            className={cn(assetRowRemoveIconButtonClass, footballTurfInteractiveButtonClass)}
                             aria-label={`ลบการจอง ${guest}`}
                             title="ลบ"
                             onClick={() => void onDeleteBooking(item.id)}
@@ -6318,7 +6613,7 @@ export function FootballTurfDashboard({
                 </div>
                 <div>
                   <h2 className="text-lg font-black text-[#1e1b4b] sm:text-xl">QR / ลิงก์ลูกค้า</h2>
-                  <p className="mt-2 text-sm font-medium text-slate-600">จองสนาม · เช็กอิน / ใช้สิทธิ์</p>
+                  <p className="mt-2 text-sm font-medium text-slate-600">ลิงก์จองสนาม · QR พอร์ทัลลูกค้า</p>
                   <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-[#5b61ff]">คลิกเพื่อเปิด</p>
                 </div>
               </div>
@@ -6352,8 +6647,8 @@ export function FootballTurfDashboard({
             appearance="glass"
             glassTint="violet"
             mobileCentered
-            title="ลิงก์ลูกค้า"
-            description="คัดลอกลิงก์จอง / เช็กอิน หรือสร้าง QR"
+            title="QR / ลิงก์ลูกค้า"
+            description="ลิงก์จองสนามสำหรับลูกค้า — คัดลอก · สแกน QR · ดาวน์โหลดโปสเตอร์"
             footer={
               <div className="flex justify-end">
                 <button
@@ -6366,37 +6661,22 @@ export function FootballTurfDashboard({
               </div>
             }
           >
-            <div className="space-y-3">
-              <div className="rounded-xl border border-cyan-100 bg-cyan-50/70 p-4">
-                <div className="flex items-center gap-3">
-                  <QrCode className="h-5 w-5 text-cyan-700" aria-hidden />
-                  <p className="font-black text-slate-900">ลิงก์จองสนาม</p>
-                </div>
-                <p className="mt-2 break-all rounded-xl bg-white/80 px-3 py-3 text-sm text-slate-600">{publicBookUrl}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => void copyText(publicBookUrl)} className="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-xs font-black text-cyan-700">คัดลอกลิงก์</button>
-                  <button type="button" onClick={() => void openQrModal("QR-ลิงก์จองสนาม", publicBookUrl)} className="app-btn-primary rounded-xl px-4 py-2 text-xs font-black shadow-sm">Gen QR</button>
-                </div>
-              </div>
-              <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-4">
-                <div className="flex items-center gap-3">
-                  <ShieldCheck className="h-5 w-5 text-emerald-700" aria-hidden />
-                  <p className="font-black text-slate-900">ลิงก์เช็กอินและใช้สิทธิ์</p>
-                </div>
-                <p className="mt-2 break-all rounded-xl bg-white/80 px-3 py-3 text-sm text-slate-600">{publicCheckInUrl}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => void copyText(publicCheckInUrl)} className="rounded-xl border border-emerald-200 bg-white px-4 py-2 text-xs font-black text-emerald-700">คัดลอกลิงก์</button>
-                  <button type="button" onClick={() => void openQrModal("QR-ลิงก์เช็กอิน", publicCheckInUrl)} className="app-btn-primary rounded-xl px-4 py-2 text-xs font-black shadow-sm">Gen QR</button>
-                </div>
-              </div>
-              {copyMsg ? <p className="text-xs font-bold text-[#4d47b6]">{copyMsg}</p> : null}
-            </div>
+            <ModulePublicLinkQrPanel
+              pageUrl={publicBookUrl}
+              shopLabel={settings.venueName || "สนามฟุตบอล"}
+              logoUrl={settings.logoUrl || null}
+              tagline="สแกนเข้าหน้าจองสนาม — เลือกวัน · ช่วงเวลา · ชำระมัดจำ/เต็ม"
+              mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อจองสนามฟุตบอล"
+              openPrimaryLabel="เปิดหน้าจองลูกค้า"
+              openSecondaryLabel="เปิดหน้า"
+              downloadFilePrefix="football-turf-customer-qr"
+            />
           </FormModal>
 
           <FormModal
             open={qrHubModal === "staff"}
             onClose={() => setQrHubModal(null)}
-            size="full"
+            size="lg"
             appearance="glass"
             glassTint="amber"
             mobileCentered
@@ -8864,6 +9144,307 @@ export function FootballTurfDashboard({
             placeholder="เช่น เช่าพื้นที่ขายของ"
           />
         </label>
+      </FormModal>
+
+      <FormModal
+        open={overviewCheckInModal != null}
+        onClose={closeOverviewCheckInModal}
+        title={
+          overviewCheckInModal?.mode === "pick"
+            ? "เลือกคิวเพื่อเช็กอิน"
+            : "รายละเอียดคิว · เช็กอิน / ชำระเพิ่ม"
+        }
+        description={
+          overviewCheckInModal?.mode === "pick"
+            ? (() => {
+                const court = courts.find((c) => c.id === overviewCheckInModal.courtId);
+                return court ? `${court.name} · คิวจองวันนี้` : undefined;
+              })()
+            : overviewCheckInModal?.mode === "booking"
+              ? (() => {
+                  const b = bookings.find((row) => row.id === overviewCheckInModal.bookingId);
+                  if (!b) return undefined;
+                  return `${b.courtName} · ${b.bookingDate} · ${b.startTime}–${b.endTime}`;
+                })()
+              : undefined
+        }
+        size="lg"
+        mobileCentered
+        footer={
+          overviewCheckInModal?.mode === "pick" ? (
+            <FormModalFooterActions
+              onCancel={closeOverviewCheckInModal}
+              cancelLabel="ปิด"
+              submitLabel="เช็กอิน walk-in"
+              onSubmit={() => {
+                const court = courts.find((c) => c.id === overviewCheckInModal.courtId);
+                closeOverviewCheckInModal();
+                if (court) openCourtLiveBooking(court, "WALK_IN");
+              }}
+            />
+          ) : overviewCheckInModal?.mode === "booking" ? (
+            (() => {
+              const booking = bookings.find((row) => row.id === overviewCheckInModal.bookingId);
+              if (!booking) {
+                return (
+                  <FormModalFooterActions
+                    onCancel={closeOverviewCheckInModal}
+                    cancelLabel="ปิด"
+                    submitLabel="ปิด"
+                    onSubmit={closeOverviewCheckInModal}
+                  />
+                );
+              }
+              if (booking.status === "BOOKED") {
+                return (
+                  <FormModalFooterActions
+                    onCancel={closeOverviewCheckInModal}
+                    cancelLabel="ปิด"
+                    submitLabel={
+                      footballTurfBookingIsFullyPaid(booking) ? "เช็กอิน" : "ชำระ / เช็กอิน"
+                    }
+                    onSubmit={() => void overviewRequestCheckIn(booking)}
+                  />
+                );
+              }
+              return (
+                <FormModalFooterActions
+                  onCancel={closeOverviewCheckInModal}
+                  cancelLabel="ปิด"
+                  submitLabel="แก้ไขคิว"
+                  onSubmit={() => {
+                    closeOverviewCheckInModal();
+                    openEditBookingModal(booking);
+                  }}
+                />
+              );
+            })()
+          ) : undefined
+        }
+      >
+        {overviewCheckInModal?.mode === "pick" ? (
+          (() => {
+            const rows = listCourtTodayBookedForCheckIn(overviewCheckInModal.courtId);
+            if (rows.length === 0) {
+              return <AppEmptyState tone="violet">ไม่มีคิวจองวันนี้สำหรับสนามนี้</AppEmptyState>;
+            }
+            return (
+              <ul className="space-y-2">
+                {rows.map((item) => {
+                  const remain = footballTurfBookingRemainingBaht(item);
+                  const label = item.teamName || item.customerName;
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOverviewCheckInModal({ mode: "booking", bookingId: item.id })
+                        }
+                        className="flex w-full items-start justify-between gap-3 rounded-[1.25rem] border border-white/60 bg-white/80 px-3.5 py-3 text-left shadow-sm ring-1 ring-[#5b61ff]/10 transition hover:bg-violet-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5b61ff]/40"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-black text-[#1e1b4b]">{label}</p>
+                          <p className="mt-0.5 text-[11px] font-semibold text-[#66638c]">
+                            {item.startTime}–{item.endTime}
+                            {item.customerPhone ? ` · ${item.customerPhone}` : ""}
+                          </p>
+                          <span
+                            className={cn(
+                              "mt-1.5 inline-flex rounded-lg px-2 py-0.5 text-[10px] font-black ring-1",
+                              bookingPaymentStatusClass(item.paymentStatus),
+                            )}
+                          >
+                            {bookingPaymentStatusLabel(item.paymentStatus)}
+                            {remain > 0 ? ` · ค้าง ${formatMoney(remain)}` : ""}
+                          </span>
+                        </div>
+                        <span className="shrink-0 self-center text-[11px] font-black text-[#4d47b6]">
+                          เลือก
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            );
+          })()
+        ) : overviewCheckInModal?.mode === "booking" ? (
+          (() => {
+            const booking =
+              bookings.find((row) => row.id === overviewCheckInModal.bookingId) ?? null;
+            if (!booking) {
+              return <AppEmptyState tone="violet">ไม่พบรายการจอง</AppEmptyState>;
+            }
+            const paid = footballTurfBookingAmountPaidBaht(booking);
+            const remain = footballTurfBookingRemainingBaht(booking);
+            const sessionRows = listFootballTurfSessionBookings(
+              booking,
+              bookings.filter(
+                (row) =>
+                  row.courtId === booking.courtId &&
+                  row.bookingDate === booking.bookingDate &&
+                  row.status !== "CANCELLED",
+              ),
+            );
+            const sessionLabel =
+              sessionRows.length > 1
+                ? `${sessionRows[0]!.startTime}–${sessionRows[sessionRows.length - 1]!.endTime} · ${sessionRows.length} รอบ`
+                : `${booking.startTime}–${booking.endTime}`;
+            const guest = booking.teamName || booking.customerName;
+            return (
+              <div className="space-y-4">
+                <div className="rounded-[1.75rem] border border-violet-100 bg-gradient-to-br from-violet-50/90 via-white to-indigo-50/70 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#8b87b8]">
+                    ผู้จอง
+                  </p>
+                  <p className="mt-1 text-lg font-black tracking-tight text-[#1e1b4b]">{guest}</p>
+                  <p className="mt-1 text-xs font-semibold text-[#66638c]">
+                    {booking.customerName && booking.teamName
+                      ? `${booking.customerName} · ${booking.customerPhone}`
+                      : booking.customerPhone || "—"}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    <span
+                      className={cn(
+                        "inline-flex rounded-lg px-2 py-0.5 text-[10px] font-black ring-1",
+                        bookingStatusClass(booking.status),
+                      )}
+                    >
+                      {bookingStatusLabel(booking.status)}
+                    </span>
+                    <span
+                      className={cn(
+                        "inline-flex rounded-lg px-2 py-0.5 text-[10px] font-black ring-1",
+                        bookingPaymentStatusClass(booking.paymentStatus),
+                      )}
+                    >
+                      {bookingPaymentStatusLabel(booking.paymentStatus)}
+                    </span>
+                    <span className="inline-flex rounded-lg bg-white/80 px-2 py-0.5 text-[10px] font-black text-[#4d47b6] ring-1 ring-[#5b61ff]/20">
+                      {booking.source === "WALK_IN"
+                        ? "Walk-in"
+                        : booking.source === "ONLINE"
+                          ? "จองออนไลน์"
+                          : "พนักงาน"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[1.5rem] border border-slate-100 bg-slate-50/80 p-3.5">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                      รอบเวลา
+                    </p>
+                    <p className="mt-1 text-sm font-black text-slate-900">{sessionLabel}</p>
+                    <p className="mt-0.5 text-[11px] font-semibold text-slate-500">
+                      {booking.courtName} · {booking.bookingDate}
+                    </p>
+                    {booking.playerCount > 0 ? (
+                      <p className="mt-1 text-[11px] font-semibold text-slate-500">
+                        ผู้เล่น {booking.playerCount} คน
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="rounded-[1.5rem] border border-amber-100 bg-amber-50/70 p-3.5">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-700/80">
+                      การชำระ
+                    </p>
+                    <p className="mt-1 text-sm font-black text-amber-950">
+                      รวม {formatMoney(booking.finalPrice)}
+                    </p>
+                    <p className="mt-0.5 text-[11px] font-semibold text-amber-900/80">
+                      ชำระแล้ว {formatMoney(paid)}
+                      {remain > 0 ? ` · ค้าง ${formatMoney(remain)}` : ""}
+                    </p>
+                  </div>
+                </div>
+
+                {booking.note?.trim() ? (
+                  <div className="rounded-[1.25rem] border border-slate-100 bg-white/80 px-3.5 py-2.5 text-[11px] font-semibold text-[#66638c]">
+                    หมายเหตุ: {booking.note.trim()}
+                  </div>
+                ) : null}
+
+                {booking.paymentSlipDataUrl ? (
+                  <div>
+                    <p className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                      สลิป
+                    </p>
+                    <AppImageThumb
+                      src={booking.paymentSlipDataUrl}
+                      alt="สลิปการจอง"
+                      onOpen={() => saleSlipLightbox.open(booking.paymentSlipDataUrl!)}
+                      className="h-20 w-20"
+                    />
+                  </div>
+                ) : null}
+
+                <div className="flex flex-wrap gap-2">
+                  {remain > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        overviewOpenBalancePay(booking, {
+                          checkInAfter: booking.status === "BOOKED",
+                        })
+                      }
+                      className={cn(
+                        footballTurfChipActionButtonClass,
+                        "border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-black text-amber-900",
+                      )}
+                    >
+                      จ่ายเพิ่ม {formatMoney(remain)}
+                    </button>
+                  ) : null}
+                  {booking.paymentStatus === "PENDING_REVIEW" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeOverviewCheckInModal();
+                        void confirmBookingPayment(booking.id);
+                      }}
+                      className={cn(
+                        footballTurfChipActionButtonClass,
+                        "border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-800",
+                      )}
+                    >
+                      ยืนยันชำระ
+                    </button>
+                  ) : null}
+                  {footballTurfBookingIsFullyPaid(booking) ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeOverviewCheckInModal();
+                        setPrintBooking(booking);
+                      }}
+                      className={cn(
+                        footballTurfChipActionButtonClass,
+                        "gap-1 border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-900",
+                      )}
+                    >
+                      <ReceiptText className="h-3.5 w-3.5" aria-hidden />
+                      พิมพ์
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeOverviewCheckInModal();
+                      openEditBookingModal(booking);
+                    }}
+                    className={cn(
+                      footballTurfChipActionButtonClass,
+                      "border border-[#5b61ff]/35 bg-white/80 px-3 py-2 text-xs font-black text-[#4d47b6]",
+                    )}
+                  >
+                    แก้ไข
+                  </button>
+                </div>
+              </div>
+            );
+          })()
+        ) : null}
       </FormModal>
 
       <FormModal

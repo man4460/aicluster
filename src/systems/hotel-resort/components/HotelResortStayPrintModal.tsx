@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { appTemplateOutlineButtonClass } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
-import { HotelResortButton } from "@/systems/hotel-resort/components/HotelResortButton";
 import { hotelResortFetchErrorMessage } from "@/systems/hotel-resort/lib/client-data";
 import {
   printHotelResortCheckInDocs,
@@ -281,36 +279,6 @@ export function HotelResortStayPrintModal({ open, stay, onClose }: Props) {
               />
             </div>
           ) : null}
-
-          <div className="flex flex-wrap gap-1.5">
-            <HotelResortButton
-              type="button"
-              disabled={loading}
-              onClick={() => printSelected({ receipt: true })}
-              className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-3 text-xs font-black text-[#4d47b6]")}
-              aria-label="พิมพ์ใบเสร็จธรรมดาทันที"
-            >
-              พิมพ์ใบเสร็จ
-            </HotelResortButton>
-            <HotelResortButton
-              type="button"
-              disabled={loading}
-              onClick={() => printSelected({ taxInvoice: true })}
-              className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-3 text-xs font-black text-[#4d47b6]")}
-              aria-label="พิมพ์ใบกำกับภาษีทันที"
-            >
-              พิมพ์ใบกำกับ
-            </HotelResortButton>
-            <HotelResortButton
-              type="button"
-              disabled={loading}
-              onClick={() => printSelected({ folio: true })}
-              className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-3 text-xs font-black text-[#4d47b6]")}
-              aria-label="พิมพ์โฟลิโอทันที"
-            >
-              พิมพ์โฟลิโอ
-            </HotelResortButton>
-          </div>
 
           {error ? <p className="text-sm font-semibold text-rose-600">{error}</p> : null}
           {info ? <p className="text-sm font-semibold text-emerald-700">{info}</p> : null}

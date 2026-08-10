@@ -40,6 +40,13 @@ type PropertyInfo = {
   contactLine: string | null;
 };
 
+type SummaryInfo = {
+  slotCount: number;
+  totalFinalBaht: number;
+  totalPaidBaht: number;
+  remainingBaht: number;
+};
+
 function formatMoney(value: number) {
   return `฿${value.toLocaleString("th-TH")}`;
 }
@@ -58,17 +65,22 @@ export function FootballTurfPortalBookingClient({
   bookingId,
   phone,
   trialSessionId,
+  extraIds = [],
 }: {
   ownerId: string;
   bookingId: string;
   phone: string;
   trialSessionId?: string;
+  extraIds?: string[];
 }) {
   const [busy, setBusy] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [property, setProperty] = useState<PropertyInfo | null>(null);
   const [booking, setBooking] = useState<BookingDetail | null>(null);
+  const [bookings, setBookings] = useState<BookingDetail[]>([]);
+  const [summary, setSummary] = useState<SummaryInfo | null>(null);
   const lb = useAppImageLightbox();
+  const extraIdsKey = extraIds.join(",");
 
   const homeHref =
     trialSessionId && trialSessionId !== "prod"
@@ -82,6 +94,8 @@ export function FootballTurfPortalBookingClient({
       phone,
     });
     if (trialSessionId) q.set("t", trialSessionId);
+    const ids = [bookingId, ...extraIdsKey.split(",").filter(Boolean)];
+    if (ids.length > 1) q.set("ids", ids.join(","));
     setBusy(true);
     setErr(null);
     void fetch(`/api/football-turf/public/booking?${q}`, { cache: "no-store" })
@@ -89,22 +103,31 @@ export function FootballTurfPortalBookingClient({
         const j = (await res.json().catch(() => ({}))) as {
           property?: PropertyInfo;
           booking?: BookingDetail;
+          bookings?: BookingDetail[];
+          summary?: SummaryInfo;
           error?: string;
         };
         if (!res.ok) throw new Error(j.error ?? "โหลดไม่สำเร็จ");
         setProperty(j.property ?? null);
         setBooking(j.booking ?? null);
+        setBookings(j.bookings?.length ? j.bookings : j.booking ? [j.booking] : []);
+        setSummary(j.summary ?? null);
       })
       .catch((e) => setErr(e instanceof Error ? e.message : "โหลดไม่สำเร็จ"))
       .finally(() => setBusy(false));
-  }, [ownerId, bookingId, phone, trialSessionId]);
+  }, [ownerId, bookingId, phone, trialSessionId, extraIdsKey]);
 
-  const slipUrl = booking?.paymentSlipDataUrl?.trim() || null;
+  const slipUrl = bookings.find((b) => b.paymentSlipDataUrl?.trim())?.paymentSlipDataUrl?.trim() || null;
+  const primary = booking;
   const slipIsDeposit =
-    booking != null &&
-    booking.depositAmountBaht != null &&
-    booking.depositAmountBaht > 0 &&
-    booking.depositAmountBaht < booking.finalPrice;
+    primary != null &&
+    primary.depositAmountBaht != null &&
+    primary.depositAmountBaht > 0 &&
+    (summary?.totalFinalBaht ?? primary.finalPrice) > primary.depositAmountBaht;
+  const teamLabel = primary?.teamName?.trim() || "ทีม";
+  const totalFinal = summary?.totalFinalBaht ?? primary?.finalPrice ?? 0;
+  const totalPaid = summary?.totalPaidBaht ?? primary?.amountPaidBaht ?? 0;
+  const remaining = summary?.remainingBaht ?? primary?.remainingBaht ?? 0;
 
   return (
     <AppPublicCheckInGlassPage>
@@ -121,7 +144,7 @@ export function FootballTurfPortalBookingClient({
               กลับหน้าจอง
             </Link>
           </div>
-        ) : booking && property ? (
+        ) : primary && property ? (
           <>
             <div className="text-center">
               <p className="text-xs font-bold uppercase tracking-widest text-[#8b87b8]">การจอง</p>
@@ -129,28 +152,41 @@ export function FootballTurfPortalBookingClient({
                 {property.venueName}
               </h1>
               <p className="mt-3 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
-                {booking.statusLabel}
+                {primary.statusLabel}
               </p>
             </div>
 
             <section className={cn(appPublicCheckInGlassCardClass, "px-5 py-2 sm:px-6")}>
-              <Row label="ผู้จอง" value={booking.customerName} />
-              <Row label="เบอร์โทร" value={booking.customerPhone} />
-              {booking.teamName ? <Row label="ทีม" value={booking.teamName} /> : null}
-              <Row label="สนาม" value={booking.courtName} />
-              <Row
-                label="วันเวลา"
-                value={`${booking.bookingDate} · ${booking.startTime}-${booking.endTime}`}
-              />
-              <Row label="ยอดจอง" value={formatMoney(booking.finalPrice)} />
+              <Row label="ทีม" value={teamLabel} />
+              <Row label="สนาม" value={primary.courtName} />
+              <Row label="วันที่" value={primary.bookingDate} />
+              {bookings.length > 1 ? (
+                <div className="border-b border-[#e4e0f5]/80 py-3">
+                  <p className="text-xs font-bold text-[#8b87b8]">ช่วงเวลา ({bookings.length} รอบ)</p>
+                  <ul className="mt-2 space-y-1.5">
+                    {bookings.map((b) => (
+                      <li
+                        key={b.id}
+                        className="flex items-center justify-between gap-2 text-sm font-black text-[#1e1b4b]"
+                      >
+                        <span>
+                          {b.startTime}–{b.endTime}
+                        </span>
+                        <span className="text-xs font-bold text-[#66638c]">{formatMoney(b.finalPrice)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <Row label="เวลา" value={`${primary.startTime}-${primary.endTime}`} />
+              )}
+              <Row label="ยอดจอง" value={formatMoney(totalFinal)} />
               <Row
                 label="ชำระแล้ว"
-                value={`${formatMoney(booking.amountPaidBaht)} · ${booking.paymentStatusLabel}`}
+                value={`${formatMoney(totalPaid)} · ${primary.paymentStatusLabel}`}
               />
-              {booking.remainingBaht > 0 ? (
-                <Row label="คงเหลือ" value={formatMoney(booking.remainingBaht)} />
-              ) : null}
-              <Row label="วิธีชำระ" value={booking.paymentMethodLabel} />
+              {remaining > 0 ? <Row label="คงเหลือ" value={formatMoney(remaining)} /> : null}
+              <Row label="วิธีชำระ" value={primary.paymentMethodLabel} />
             </section>
 
             {slipUrl ? (

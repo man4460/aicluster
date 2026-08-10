@@ -124,6 +124,7 @@ alwaysApply: false
 | เงินสด | `CASH` | ไม่ต้อง |
 | พร้อมเพย์ | `PROMPTPAY` | ทางเลือก (แผงมีช่องแนบ) |
 | โอนเงิน | `TRANSFER` | ทางเลือก (แผงมีช่องแนบ) |
+| บัตรเครดิต | `CREDIT_CARD` | ไม่ต้อง |
 
 - UI: `HotelResortPaymentPanel` + `lib/payment-method.ts` · ถ่ายสลิปด้วย `useAppCameraCapture`
 - QR / บัญชี: `POST /api/hotel-resort/promptpay-qr` (`amountBaht`) จากโปรไฟล์ที่พัก
@@ -187,7 +188,7 @@ alwaysApply: false
 - [ ] โทเค็นมุมมนตาม §4 · section ใช้ `!rounded-[1.5rem]`
 - [ ] Dock pill `rounded-[1.5rem]` · เนื้อหา `pb-24 lg:pb-0`
 - [ ] Nav keys แยกไฟล์ต่อ slug — ไม่ซ้ำแท็บกับ dock บนมือถือ
-- [ ] ช่องทางชำระ CASH / PROMPTPAY / TRANSFER + สลิปตาม §7 · ลิงก์ลูกค้าตาม `module-customer-booking-website-portal.mdc`
+- [ ] ช่องทางชำระ CASH / PROMPTPAY / TRANSFER / CREDIT_CARD + สลิปตาม §7 · ลิงก์ลูกค้าตาม `module-customer-booking-website-portal.mdc`
 - [ ] รายการจอง: ตัวกรองช่วง + ซ่อนกรอง + เตือนเลยเวลา + สลิปมัดจำกดดูได้ ตาม §8
 - [ ] ผังห้อง: เตือนคนละสี + ผู้จองต่อ + ไม่มีแบนเนอร์บน ตาม §8.1
 - [ ] ไม่มี `description` บน `AppSectionHeader` ตาม §9

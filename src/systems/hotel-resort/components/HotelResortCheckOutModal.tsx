@@ -284,7 +284,7 @@ export function HotelResortCheckOutModal({ open, room, onClose, onDone }: Props)
           ...(payNowBaht > 0
             ? {
                 paymentMethod,
-                ...(paymentMethod === "CASH"
+                ...(paymentMethod === "CASH" || paymentMethod === "CREDIT_CARD"
                   ? { paymentSlipUrl: null }
                   : paymentSlipUrl
                     ? { paymentSlipUrl }

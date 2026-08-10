@@ -582,6 +582,11 @@ class ApiFootballTurfRepository implements FootballTurfRepository {
     private readonly staffAuth?: { ownerId: string; trialSessionId: string; k: string } | null,
   ) {}
 
+  /** ล้าง cache หลังรับ SSE patch — กัน refresh ทับข้อมูลเก่า */
+  clearCache() {
+    this.cache = null;
+  }
+
   private authUrl(path: string): string {
     if (!this.staffAuth) return path;
     const qs = new URLSearchParams({
@@ -909,6 +914,22 @@ class PublicApiFootballTurfRepository implements FootballTurfRepository {
   ): Promise<FootballTurfBooking> {
     return this.publicMutate("createBooking", undefined, input);
   }
+
+  async createOnlineBookingsBatch(input: {
+    courtId: number;
+    bookingDate: string;
+    slots: Array<{ startTime: string; endTime: string }>;
+    customerName: string;
+    customerPhone: string;
+    teamName?: string;
+    playerCount?: number;
+    paymentMethod?: string;
+    paymentSlipDataUrl?: string;
+    paymentReference?: string;
+  }): Promise<FootballTurfBooking[]> {
+    return this.publicMutate("createOnlineBookingsBatch", undefined, input);
+  }
+
   async updateBooking(
     id: number,
     patch: Partial<Omit<FootballTurfBooking, "id" | "createdAt">>,
@@ -1007,6 +1028,24 @@ class PublicApiFootballTurfRepository implements FootballTurfRepository {
   }
   async deleteCustomer(): Promise<boolean> {
     return this.unsupported();
+  }
+
+  /** ค้นหาสมาชิกจากเบอร์เต็มเพื่อจอง — คืนชื่อ/ทีมเมื่อพบ */
+  async lookupMemberForBooking(phone: string): Promise<{
+    found: boolean;
+    name?: string;
+    teamName?: string;
+    phone?: string;
+  }> {
+    return apiJson("/api/football-turf/public/member-lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ownerId: this.ownerId,
+        phone,
+        t: this.trialSessionId?.trim() || undefined,
+      }),
+    });
   }
 }
 
@@ -1493,4 +1532,19 @@ export function createFootballTurfRepository(opts?: {
     return new PublicApiFootballTurfRepository(opts.ownerId, opts.trialSessionId);
   }
   return new ApiFootballTurfRepository(opts?.staffAuth ?? null);
+}
+
+/** ค้นหาสมาชิกจากเบอร์เต็มบนลิงก์ลูกค้า — คืนชื่อ/ทีมเมื่อพบ */
+export async function lookupFootballTurfPublicMemberForBooking(
+  ownerId: string,
+  phone: string,
+  trialSessionId?: string | null,
+): Promise<{
+  found: boolean;
+  name?: string;
+  teamName?: string;
+  phone?: string;
+}> {
+  const repo = new PublicApiFootballTurfRepository(ownerId, trialSessionId);
+  return repo.lookupMemberForBooking(phone);
 }

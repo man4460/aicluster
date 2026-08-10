@@ -6,7 +6,7 @@ import { FootballTurfPortalBookingClient } from "@/systems/football-turf/Footbal
 
 type Props = {
   params: Promise<{ ownerId: string; bookingId: string }>;
-  searchParams: Promise<{ t?: string; phone?: string; p?: string }>;
+  searchParams: Promise<{ t?: string; phone?: string; p?: string; ids?: string }>;
 };
 
 export default async function FootballTurfPublicBookingPage({ params, searchParams }: Props) {
@@ -14,6 +14,10 @@ export default async function FootballTurfPublicBookingPage({ params, searchPara
   const sp = await searchParams;
   const phone = (sp.phone ?? sp.p ?? "").replace(/\D/g, "");
   const bookingIdNum = Number(bookingId);
+  const extraIds = (sp.ids ?? "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter((x) => x && x !== String(bookingIdNum));
 
   if (!ownerId || ownerId.length < 10 || !Number.isFinite(bookingIdNum) || bookingIdNum < 1) {
     notFound();
@@ -32,6 +36,7 @@ export default async function FootballTurfPublicBookingPage({ params, searchPara
       bookingId={String(bookingIdNum)}
       phone={phone}
       trialSessionId={trialSessionId}
+      extraIds={extraIds}
     />
   );
 }

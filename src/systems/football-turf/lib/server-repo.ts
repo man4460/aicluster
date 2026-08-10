@@ -25,7 +25,12 @@ import {
   applyStaffDailyPinPatch,
   loadFootballTurfStaffDailyPinHash,
 } from "@/lib/modules/staff-daily-pin-store";
-import { footballTurfBookingIsFullyPaid } from "@/systems/football-turf/lib/portal-booking";
+import {
+  footballTurfBookingIsFullyPaid,
+  footballTurfComputePortalPayDue,
+  footballTurfCourtPriceForDate,
+  footballTurfPortalSlipProofMessage,
+} from "@/systems/football-turf/lib/portal-booking";
 import { footballTurfNormalizePortalGallery } from "@/systems/football-turf/lib/portal-media";
 import {
   isSlotEligibleForAdvanceBooking,
@@ -374,6 +379,43 @@ export class FootballTurfServerRepo {
       }
     }
 
+    let depositAmountBaht = input.depositAmountBaht ?? null;
+    let paymentMethod = input.paymentMethod ?? "UNPAID";
+    let paymentStatus = input.paymentStatus ?? "UNPAID";
+    let paymentSlipDataUrl = input.paymentSlipDataUrl ?? "";
+    let enforcedPaid = amountPaidBaht;
+
+    if (input.source === "ONLINE") {
+      const settings = await this.getSettings();
+      const payDue = footballTurfComputePortalPayDue({
+        mode: settings.portalBookingPaymentMode ?? "NONE",
+        depositAmountBaht: settings.depositAmountBaht,
+        totalBaht: finalPrice,
+      });
+      if (settings.portalBookingPaymentMode === "DEPOSIT") {
+        const dep = Math.max(0, Math.round(Number(settings.depositAmountBaht ?? 0)));
+        if (dep <= 0) throw new Error("สนามยังไม่ได้ตั้งจำนวนมัดจำ");
+      }
+      if (payDue != null && payDue > 0) {
+        if (paymentMethod !== "PROMPTPAY" && paymentMethod !== "TRANSFER") {
+          throw new Error("ต้องชำระผ่านพร้อมเพย์หรือโอนเงิน");
+        }
+        if (!String(paymentSlipDataUrl).trim()) {
+          throw new Error(footballTurfPortalSlipProofMessage(settings.portalBookingPaymentMode));
+        }
+        depositAmountBaht = payDue;
+        enforcedPaid = payDue;
+        paymentStatus =
+          settings.portalBookingPaymentMode === "FULL" ? "PAID" : "PARTIAL";
+      } else {
+        depositAmountBaht = null;
+        enforcedPaid = 0;
+        paymentMethod = paymentMethod === "ONSITE" ? "ONSITE" : "UNPAID";
+        paymentStatus = "UNPAID";
+        paymentSlipDataUrl = "";
+      }
+    }
+
     await upsertCustomerByPhone(scope, {
       phone: input.customerPhone,
       name: input.customerName,
@@ -399,25 +441,25 @@ export class FootballTurfServerRepo {
         status: input.status,
         listedPrice: input.listedPrice,
         finalPrice,
-        depositAmountBaht: input.depositAmountBaht ?? null,
-        amountPaidBaht,
+        depositAmountBaht,
+        amountPaidBaht: enforcedPaid,
         promotionSaleId: input.promotionSaleId ?? null,
         note: input.note ?? "",
-        paymentMethod: input.paymentMethod ?? "UNPAID",
-        paymentStatus: input.paymentStatus ?? "UNPAID",
-        paymentSlipDataUrl: await persistFootballTurfSlipUrl(scope.ownerUserId, input.paymentSlipDataUrl),
+        paymentMethod,
+        paymentStatus,
+        paymentSlipDataUrl: await persistFootballTurfSlipUrl(scope.ownerUserId, paymentSlipDataUrl),
         paymentReference: input.paymentReference ?? "",
         ...(input.createdAt ? { createdAt: new Date(input.createdAt) } : {}),
       },
       include: { court: { select: { name: true } } },
     });
 
-    if ((input.paymentStatus ?? "UNPAID") === "PAID" && amountPaidBaht > 0) {
+    if (paymentStatus === "PAID" && enforcedPaid > 0) {
       await applyFootballTurfLoyaltyEarnOnBookingPaid({
         ownerUserId: scope.ownerUserId,
         trialSessionId: scope.trialSessionId,
         bookingId: row.id,
-        totalAmount: amountPaidBaht,
+        totalAmount: enforcedPaid,
         memberPhone: normalizedPhone,
         customerName: input.customerName,
         previousPointsEarned: 0,
@@ -425,6 +467,194 @@ export class FootballTurfServerRepo {
     }
 
     return mapBooking(row, row.court.name);
+  }
+
+  /** จองหลายช่วงจากลิงก์ลูกค้า — คิดมัดจำ/ชำระเต็มจากยอดรวมครั้งเดียว */
+  async createOnlineBookingsBatch(input: {
+    courtId: number;
+    bookingDate: string;
+    slots: Array<{ startTime: string; endTime: string }>;
+    customerName: string;
+    customerPhone: string;
+    teamName?: string;
+    playerCount?: number;
+    paymentMethod?: string;
+    paymentSlipDataUrl?: string;
+    paymentReference?: string;
+  }): Promise<FootballTurfBooking[]> {
+    const scope = this.scope();
+    const slots = (input.slots ?? [])
+      .map((s) => ({
+        startTime: String(s.startTime ?? "").trim(),
+        endTime: String(s.endTime ?? "").trim(),
+      }))
+      .filter((s) => /^\d{2}:\d{2}$/.test(s.startTime) && /^\d{2}:\d{2}$/.test(s.endTime));
+    if (!slots.length) throw new Error("เลือกอย่างน้อย 1 ช่วงเวลา");
+    if (slots.length > 12) throw new Error("จองได้สูงสุด 12 ช่วงต่อครั้ง");
+
+    const seen = new Set<string>();
+    for (const s of slots) {
+      const key = `${s.startTime}-${s.endTime}`;
+      if (seen.has(key)) throw new Error("ช่วงเวลาซ้ำ");
+      seen.add(key);
+    }
+    slots.sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+
+    const bookingDate = String(input.bookingDate ?? "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(bookingDate)) throw new Error("วันที่ไม่ถูกต้อง");
+
+    const court = await prisma.footballTurfCourt.findFirst({
+      where: { id: input.courtId, ...scopeWhere(scope), isActive: true },
+    });
+    if (!court) throw new Error("ไม่พบสนาม");
+
+    const unitPrice = footballTurfCourtPriceForDate(
+      { weekdayPrice: court.weekdayPrice, weekendPrice: court.weekendPrice },
+      bookingDate,
+    );
+    const totalBaht = unitPrice * slots.length;
+    const settings = await this.getSettings();
+    const mode = settings.portalBookingPaymentMode ?? "NONE";
+    if (mode === "DEPOSIT") {
+      const dep = Math.max(0, Math.round(Number(settings.depositAmountBaht ?? 0)));
+      if (dep <= 0) throw new Error("สนามยังไม่ได้ตั้งจำนวนมัดจำ");
+    }
+    const payDue = footballTurfComputePortalPayDue({
+      mode,
+      depositAmountBaht: settings.depositAmountBaht,
+      totalBaht,
+    });
+    const requiresPay = payDue != null && payDue > 0;
+    let paymentMethod = (input.paymentMethod ?? "UNPAID") as string;
+    const slipUrl = String(input.paymentSlipDataUrl ?? "").trim();
+    if (requiresPay) {
+      if (paymentMethod !== "PROMPTPAY" && paymentMethod !== "TRANSFER") {
+        throw new Error("ต้องชำระผ่านพร้อมเพย์หรือโอนเงิน");
+      }
+      if (!slipUrl) throw new Error(footballTurfPortalSlipProofMessage(mode));
+    } else {
+      paymentMethod = "UNPAID";
+    }
+
+    const now = new Date();
+    const slotTimeOpts = {
+      scheduleDate: bookingDate,
+      todayDateKey: localDateKey(now),
+      nowMinutes: localNowMinutes(now),
+    };
+    const dayBookings = await prisma.footballTurfBooking.findMany({
+      where: {
+        ...scopeWhere(scope),
+        courtId: input.courtId,
+        bookingDate: parseBookingDate(bookingDate),
+        status: { not: "CANCELLED" },
+      },
+      select: { startTime: true, endTime: true },
+    });
+
+    for (const slot of slots) {
+      if (!isSlotEligibleForAdvanceBooking({ ...slot, booking: null }, slotTimeOpts)) {
+        throw new Error(`ช่วง ${slot.startTime}-${slot.endTime} จองไม่ได้แล้ว`);
+      }
+      const startMin = timeToMinutes(slot.startTime);
+      const endMin = timeToMinutes(slot.endTime);
+      const conflict = dayBookings.some(
+        (b) => timeToMinutes(b.startTime) < endMin && timeToMinutes(b.endTime) > startMin,
+      );
+      if (conflict) throw new Error(`ช่วง ${slot.startTime}-${slot.endTime} ถูกจองแล้ว`);
+      // reserve against later slots in same request
+      dayBookings.push({ startTime: slot.startTime, endTime: slot.endTime });
+    }
+
+    const customerName = input.customerName.trim() || input.teamName?.trim() || "ลูกค้า";
+    const teamName = input.teamName?.trim() ?? "";
+    const playerCount = Math.max(0, Math.round(Number(input.playerCount ?? 0)));
+    const phone = input.customerPhone;
+
+    await upsertCustomerByPhone(scope, {
+      phone,
+      name: customerName,
+      teamName,
+      note: "ลูกค้าจองผ่านลิงก์สนาม",
+    });
+    const normalizedPhone = normalizeMemberPhone(phone) || phone.trim();
+    const persistedSlip = requiresPay
+      ? (await persistFootballTurfSlipUrl(scope.ownerUserId, slipUrl)) || ""
+      : "";
+    const payNote =
+      requiresPay
+        ? mode === "DEPOSIT"
+          ? `ลูกค้าจองผ่านลิงก์ · มัดจำรวม ${payDue} บาท (${slots.length} ช่วง)`
+          : `ลูกค้าจองผ่านลิงก์ · ชำระเต็มรวม ${payDue} บาท (${slots.length} ช่วง)`
+        : "ลูกค้าจองผ่านลิงก์สนาม";
+
+    const created: FootballTurfBooking[] = [];
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
+      const isPrimary = i === 0;
+      let depositAmountBaht: number | null = null;
+      let amountPaidBaht = 0;
+      let paymentStatus: string = "UNPAID";
+      let rowPaymentMethod = "UNPAID";
+      let rowSlip = "";
+
+      if (requiresPay && mode === "FULL") {
+        amountPaidBaht = unitPrice;
+        paymentStatus = "PAID";
+        rowPaymentMethod = paymentMethod;
+        rowSlip = persistedSlip;
+        depositAmountBaht = null;
+      } else if (requiresPay && isPrimary) {
+        depositAmountBaht = payDue;
+        amountPaidBaht = payDue ?? 0;
+        paymentStatus = "PARTIAL";
+        rowPaymentMethod = paymentMethod;
+        rowSlip = persistedSlip;
+      }
+
+      const row = await prisma.footballTurfBooking.create({
+        data: {
+          ownerUserId: scope.ownerUserId,
+          trialSessionId: scope.trialSessionId,
+          courtId: input.courtId,
+          bookingDate: parseBookingDate(bookingDate),
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          customerName,
+          customerPhone: normalizedPhone,
+          teamName,
+          playerCount,
+          source: "ONLINE",
+          status: "BOOKED",
+          listedPrice: unitPrice,
+          finalPrice: unitPrice,
+          depositAmountBaht,
+          amountPaidBaht,
+          promotionSaleId: null,
+          note: payNote.slice(0, 500),
+          paymentMethod: rowPaymentMethod,
+          paymentStatus,
+          paymentSlipDataUrl: rowSlip,
+          paymentReference: requiresPay && isPrimary ? String(input.paymentReference ?? "").trim() : "",
+        },
+        include: { court: { select: { name: true } } },
+      });
+      created.push(mapBooking(row, row.court.name));
+
+      if (paymentStatus === "PAID" && amountPaidBaht > 0) {
+        await applyFootballTurfLoyaltyEarnOnBookingPaid({
+          ownerUserId: scope.ownerUserId,
+          trialSessionId: scope.trialSessionId,
+          bookingId: row.id,
+          totalAmount: amountPaidBaht,
+          memberPhone: normalizedPhone,
+          customerName,
+          previousPointsEarned: 0,
+        });
+      }
+    }
+
+    return created;
   }
 
   async updateBooking(
@@ -1172,6 +1402,36 @@ export class FootballTurfServerRepo {
       bookings: full.bookings.filter((b) => b.status !== "CANCELLED" && b.bookingDate >= today),
       promotions: full.promotions.filter((p) => p.isActive),
       promotionSales: full.promotionSales.filter((s) => s.status === "ACTIVE"),
+    };
+  }
+
+  /**
+   * ค้นหาสมาชิกจากเบอร์เต็ม (≥9) เพื่อจองจากลิงก์ลูกค้า
+   * คืนชื่อ/ทีมเฉพาะเมื่อจับคู่เบอร์ตรง — ไม่รองรับ 4 หลักท้าย
+   */
+  async lookupPublicMemberForBooking(phoneRaw: string): Promise<{
+    found: boolean;
+    name?: string;
+    teamName?: string;
+    phone?: string;
+  }> {
+    const digits = phoneRaw.replace(/\D/g, "");
+    if (digits.length < 9) return { found: false };
+    const phone = normalizeMemberPhone(digits) || digits;
+    const row = await prisma.footballTurfCustomer.findFirst({
+      where: {
+        ...scopeWhere(this.scope()),
+        isActive: true,
+        phone,
+      },
+      select: { name: true, teamName: true, phone: true },
+    });
+    if (!row) return { found: false };
+    return {
+      found: true,
+      name: row.name,
+      teamName: row.teamName ?? "",
+      phone: row.phone,
     };
   }
 }

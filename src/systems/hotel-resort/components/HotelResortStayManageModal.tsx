@@ -210,7 +210,7 @@ export function HotelResortStayManageModal({ open, room, onClose, onDone }: Prop
           totalBaht: total,
           amountPaidBaht: paid,
           paymentMethod,
-          ...(paymentMethod === "CASH"
+          ...(paymentMethod === "CASH" || paymentMethod === "CREDIT_CARD"
             ? { paymentSlipUrl: null }
             : paymentSlipUrl
               ? { paymentSlipUrl }

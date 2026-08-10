@@ -9,7 +9,7 @@ export type FootballTurfBookingStatus =
 
 export type FootballTurfBookingSource = "ONLINE" | "WALK_IN" | "STAFF";
 export type FootballTurfPromotionKind = "COUNT" | "HOUR";
-export type FootballTurfBookingPaymentMethod = "UNPAID" | "TRANSFER" | "ONSITE";
+export type FootballTurfBookingPaymentMethod = "UNPAID" | "PROMPTPAY" | "TRANSFER" | "ONSITE";
 export type FootballTurfBookingPaymentStatus = "UNPAID" | "PENDING_REVIEW" | "PARTIAL" | "PAID";
 
 export type FootballTurfCourt = {
@@ -208,6 +208,18 @@ export interface FootballTurfRepository {
   ): Promise<FootballTurfVenueSettings>;
   listBookings(): Promise<FootballTurfBooking[]>;
   createBooking(input: Omit<FootballTurfBooking, "id" | "createdAt"> & { createdAt?: string }): Promise<FootballTurfBooking>;
+  createOnlineBookingsBatch?(input: {
+    courtId: number;
+    bookingDate: string;
+    slots: Array<{ startTime: string; endTime: string }>;
+    customerName: string;
+    customerPhone: string;
+    teamName?: string;
+    playerCount?: number;
+    paymentMethod?: string;
+    paymentSlipDataUrl?: string;
+    paymentReference?: string;
+  }): Promise<FootballTurfBooking[]>;
   updateBooking(id: number, patch: Partial<Omit<FootballTurfBooking, "id" | "createdAt">>): Promise<FootballTurfBooking | null>;
   deleteBooking(id: number): Promise<boolean>;
   listPromotions(): Promise<FootballTurfPromotion[]>;

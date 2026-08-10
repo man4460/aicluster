@@ -104,7 +104,7 @@ export async function GET(req: Request) {
   const toUtc = new Date(`${bounds.end}T23:59:59.999Z`);
   toUtc.setUTCDate(toUtc.getUTCDate() + 1);
 
-  const [bookings, costs] = await Promise.all([
+  const [bookings, costs, incomes] = await Promise.all([
     prisma.hotelResortBooking.findMany({
       where: {
         ownerUserId,
@@ -126,6 +126,12 @@ export async function GET(req: Request) {
       where: { ownerUserId, spentAt: { gte: fromUtc, lte: toUtc } },
       include: { category: { select: { id: true, name: true } } },
       orderBy: [{ spentAt: "desc" }],
+      take: 300,
+    }),
+    prisma.hotelResortIncomeEntry.findMany({
+      where: { ownerUserId, earnedAt: { gte: fromUtc, lte: toUtc } },
+      include: { category: { select: { id: true, name: true, kind: true } } },
+      orderBy: [{ earnedAt: "desc" }],
       take: 300,
     }),
   ]);
@@ -159,6 +165,18 @@ export async function GET(req: Request) {
     const day = bangkokDayKey(c.spentAt);
     const key = bounds.grain === "month" ? day.slice(0, 7) : day;
     costMap.set(key, (costMap.get(key) ?? 0) + c.amountBaht);
+  }
+
+  const incomesInRange = incomes.filter((row) => {
+    const day = bangkokDayKey(row.earnedAt);
+    return day >= bounds.start && day <= bounds.end;
+  });
+
+  for (const row of incomesInRange) {
+    const day = bangkokDayKey(row.earnedAt);
+    if (day < bounds.start || day > bounds.end) continue;
+    const key = bounds.grain === "month" ? day.slice(0, 7) : day;
+    revMap.set(key, (revMap.get(key) ?? 0) + row.amountBaht);
   }
 
   const keys =
@@ -219,6 +237,17 @@ export async function GET(req: Request) {
       paymentSlipUrl: c.paymentSlipUrl,
       categoryId: c.categoryId,
       categoryName: c.category?.name ?? null,
+    })),
+    incomes: incomesInRange.map((row) => ({
+      id: row.id,
+      label: row.label,
+      amountBaht: row.amountBaht,
+      earnedAt: row.earnedAt.toISOString(),
+      note: row.note,
+      paymentSlipUrl: row.paymentSlipUrl,
+      categoryId: row.categoryId,
+      categoryName: row.category.name,
+      categoryKind: row.category.kind,
     })),
   });
 }

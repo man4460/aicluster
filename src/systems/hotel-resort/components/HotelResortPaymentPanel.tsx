@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/cn";
 import { HotelResortButton } from "@/systems/hotel-resort/components/HotelResortButton";
 import {
+  HOTEL_RESORT_PAYMENT_METHODS,
   hotelResortPaymentMethodLabel,
   hotelResortPaymentShowsSlipUpload,
   type HotelResortPaymentMethod,
@@ -35,8 +36,6 @@ type PayInfo = {
   bankAccountName: string | null;
   shopName: string | null;
 };
-
-const METHODS: HotelResortPaymentMethod[] = ["CASH", "PROMPTPAY", "TRANSFER"];
 
 export type HotelResortPaymentPanelProps = {
   amountBaht: number;
@@ -187,14 +186,14 @@ export function HotelResortPaymentPanel({
       <div>
         <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">ช่องทางชำระ</p>
         <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="ช่องทางชำระเงิน">
-          {METHODS.map((m) => (
+          {HOTEL_RESORT_PAYMENT_METHODS.map((m) => (
             <HotelResortButton
               key={m}
               type="button"
               disabled={disabled}
               onClick={() => {
                 onMethodChange(m);
-                if (m === "CASH") onSlipUrlChange(null);
+                if (m === "CASH" || m === "CREDIT_CARD") onSlipUrlChange(null);
               }}
               className={cn(
                 "shrink-0 transition",

@@ -278,6 +278,8 @@ model User {
   hotelResortBookings       HotelResortBooking[]
   hotelResortCostCategories HotelResortCostCategory[]
   hotelResortCostEntries    HotelResortCostEntry[]
+  hotelResortIncomeCategories HotelResortIncomeCategory[]
+  hotelResortIncomeEntries    HotelResortIncomeEntry[]
   hotelResortStaffLinks     HotelResortStaffLink[]
   hotelResortReviews        HotelResortReview[]
   ecommerceStores           EcommerceStore[]
@@ -4281,7 +4283,7 @@ model HotelResortBooking {
   totalBaht       Int                      @default(0) @map("total_baht")
   amountPaidBaht  Int                      @default(0) @map("amount_paid_baht")
   paymentStatus   HotelResortPaymentStatus @default(UNPAID) @map("payment_status")
-  /** CASH | PROMPTPAY | TRANSFER — ช่องทางชำระล่าสุด (เช็คอิน/เช็คเอาต์) */
+  /** CASH | PROMPTPAY | TRANSFER | CREDIT_CARD — ช่องทางชำระล่าสุด (เช็คอิน/เช็คเอาต์) */
   paymentMethod   String                   @default("CASH") @map("payment_method") @db.VarChar(20)
   /** สลิปชำระเพิ่มตอนเช็คอิน / เช็คเอาต์ / ยอดคงเหลือ */
   paymentSlipUrl  String?                  @map("payment_slip_url") @db.VarChar(512)
@@ -4330,6 +4332,46 @@ model HotelResortCostEntry {
   @@index([ownerUserId, spentAt], map: "hr_cost_owner_spent_idx")
   @@index([categoryId], map: "hr_cost_category_idx")
   @@map("hotel_resort_cost_entries")
+}
+
+enum HotelResortIncomeCategoryKind {
+  ROOM_STAY
+  CUSTOM
+}
+
+/** หมวดรายรับโรงแรม — ROOM_STAY = ค่าห้องจากจอง · CUSTOM = รายรับอื่นที่บันทึกเอง */
+model HotelResortIncomeCategory {
+  id          String                         @id @default(cuid())
+  ownerUserId String                         @map("owner_user_id") @db.VarChar(191)
+  owner       User                           @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  name        String                         @db.VarChar(120)
+  kind        HotelResortIncomeCategoryKind  @default(CUSTOM)
+  isBuiltin   Boolean                        @default(false) @map("is_builtin")
+  sortOrder   Int                            @default(0) @map("sort_order")
+  createdAt   DateTime                       @default(now()) @map("created_at")
+  updatedAt   DateTime                       @updatedAt @map("updated_at")
+  entries     HotelResortIncomeEntry[]
+
+  @@index([ownerUserId, sortOrder], map: "hr_income_cat_owner_sort_idx")
+  @@map("hotel_resort_income_categories")
+}
+
+model HotelResortIncomeEntry {
+  id             String                    @id @default(cuid())
+  ownerUserId    String                    @map("owner_user_id") @db.VarChar(191)
+  owner          User                      @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  categoryId     String                    @map("category_id") @db.VarChar(191)
+  category       HotelResortIncomeCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  label          String                    @db.VarChar(160)
+  amountBaht     Int                       @map("amount_baht")
+  earnedAt       DateTime                  @default(now()) @map("earned_at")
+  note           String?                   @db.VarChar(300)
+  paymentSlipUrl String?                   @map("payment_slip_url") @db.VarChar(512)
+  createdAt      DateTime                  @default(now()) @map("created_at")
+
+  @@index([ownerUserId, earnedAt], map: "hr_income_owner_earned_idx")
+  @@index([categoryId], map: "hr_income_category_idx")
+  @@map("hotel_resort_income_entries")
 }
 
 /** ลิงก์/QR พนักงานโรงแรม — โทเค็น + cipher สำหรับ QR ค้าง */

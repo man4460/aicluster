@@ -98,9 +98,29 @@ type FinanceCost = {
   paymentSlipUrl?: string | null;
 };
 
+type FinanceIncome = {
+  id: string;
+  label: string;
+  amountBaht: number;
+  earnedAt: string;
+  note: string | null;
+  categoryId: string;
+  categoryName: string;
+  categoryKind?: "ROOM_STAY" | "CUSTOM" | string;
+  paymentSlipUrl?: string | null;
+};
+
 type CostCategory = {
   id: string;
   name: string;
+  sortOrder: number;
+};
+
+type IncomeCategory = {
+  id: string;
+  name: string;
+  kind: "ROOM_STAY" | "CUSTOM";
+  isBuiltin: boolean;
   sortOrder: number;
 };
 
@@ -188,13 +208,18 @@ export function HotelResortFinanceClient() {
   const [financeRangeLabel, setFinanceRangeLabel] = useState("เดือนนี้");
   const [stays, setStays] = useState<FinanceStay[]>([]);
   const [costs, setCosts] = useState<FinanceCost[]>([]);
+  const [incomes, setIncomes] = useState<FinanceIncome[]>([]);
   const [categories, setCategories] = useState<CostCategory[]>([]);
+  const [incomeCategories, setIncomeCategories] = useState<IncomeCategory[]>([]);
+  const [incomeFilterCat, setIncomeFilterCat] = useState<"all" | "ROOM_STAY" | string>("all");
 
   const slipLb = useAppImageLightbox();
   const notice = useAppNoticePopup();
   const galleryRef = useRef<HTMLInputElement>(null);
+  const incomeGalleryRef = useRef<HTMLInputElement>(null);
   const costCamera = useAppCameraCapture({ title: "ถ่ายรูปสลิปรายจ่าย" });
   const stayCamera = useAppCameraCapture({ title: "ถ่ายรูปสลิปรายรับ" });
+  const incomeCamera = useAppCameraCapture({ title: "ถ่ายรูปสลิปรายรับอื่น" });
 
   const [stayEdit, setStayEdit] = useState<FinanceStay | null>(null);
   const [stayPrint, setStayPrint] = useState<FinanceStay | null>(null);
@@ -241,7 +266,29 @@ export function HotelResortFinanceClient() {
   const [catBusy, setCatBusy] = useState(false);
   const [catErr, setCatErr] = useState<string | null>(null);
 
+  const [incomeOpen, setIncomeOpen] = useState(false);
+  const [incomeBusy, setIncomeBusy] = useState(false);
+  const [incomeEditing, setIncomeEditing] = useState<FinanceIncome | null>(null);
+  const [incomeLabel, setIncomeLabel] = useState("");
+  const [incomeAmount, setIncomeAmount] = useState("");
+  const [incomeCategoryId, setIncomeCategoryId] = useState("");
+  const [incomeNote, setIncomeNote] = useState("");
+  const [incomeSlipUrl, setIncomeSlipUrl] = useState("");
+  const [incomeSlipBusy, setIncomeSlipBusy] = useState(false);
+
+  const [incomeCatModalOpen, setIncomeCatModalOpen] = useState(false);
+  const [incomeCatFormOpen, setIncomeCatFormOpen] = useState(false);
+  const [incomeCatEdit, setIncomeCatEdit] = useState<IncomeCategory | null>(null);
+  const [incomeCatName, setIncomeCatName] = useState("");
+  const [incomeCatBusy, setIncomeCatBusy] = useState(false);
+  const [incomeCatErr, setIncomeCatErr] = useState<string | null>(null);
+
   const filtersActive = financeRange !== "MONTH" || Boolean(keyword.trim());
+
+  const customIncomeCategories = useMemo(
+    () => incomeCategories.filter((c) => c.kind === "CUSTOM" && !c.isBuiltin),
+    [incomeCategories],
+  );
 
   const loadCategories = useCallback(async () => {
     const res = await fetch("/api/hotel-resort/cost-categories", { cache: "no-store", credentials: "include" });
@@ -250,6 +297,22 @@ export function HotelResortFinanceClient() {
     const list = Array.isArray(j.categories) ? j.categories : [];
     setCategories(list);
     setCostCategoryId((prev) => (prev && list.some((c) => c.id === prev) ? prev : list[0]?.id ?? ""));
+    return list;
+  }, []);
+
+  const loadIncomeCategories = useCallback(async () => {
+    const res = await fetch("/api/hotel-resort/income-categories", {
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error(await hotelResortFetchErrorMessage(res));
+    const j = (await res.json()) as { categories?: IncomeCategory[] };
+    const list = Array.isArray(j.categories) ? j.categories : [];
+    setIncomeCategories(list);
+    const customs = list.filter((c) => c.kind === "CUSTOM" && !c.isBuiltin);
+    setIncomeCategoryId((prev) =>
+      prev && customs.some((c) => c.id === prev) ? prev : customs[0]?.id ?? "",
+    );
     return list;
   }, []);
 
@@ -265,6 +328,7 @@ export function HotelResortFinanceClient() {
       const [finRes] = await Promise.all([
         fetch(`/api/hotel-resort/finance-summary?${qs}`, { cache: "no-store", credentials: "include" }),
         loadCategories().catch(() => [] as CostCategory[]),
+        loadIncomeCategories().catch(() => [] as IncomeCategory[]),
       ]);
       if (!finRes.ok) throw new Error(await hotelResortFetchErrorMessage(finRes));
       const j = (await finRes.json()) as {
@@ -276,6 +340,7 @@ export function HotelResortFinanceClient() {
         rangeLabel?: string;
         stays?: FinanceStay[];
         costs?: FinanceCost[];
+        incomes?: FinanceIncome[];
       };
       setBuckets(Array.isArray(j.buckets) ? j.buckets : []);
       setTotalRevenue(j.totalRevenue ?? j.totalRevenue7d ?? 0);
@@ -283,12 +348,13 @@ export function HotelResortFinanceClient() {
       setFinanceRangeLabel(j.rangeLabel ?? "ช่วงที่เลือก");
       setStays(Array.isArray(j.stays) ? j.stays : []);
       setCosts(Array.isArray(j.costs) ? j.costs : []);
+      setIncomes(Array.isArray(j.incomes) ? j.incomes : []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "โหลดการเงินไม่สำเร็จ");
     } finally {
       setLoading(false);
     }
-  }, [financeRange, dateFrom, dateTo, loadCategories]);
+  }, [financeRange, dateFrom, dateTo, loadCategories, loadIncomeCategories]);
 
   useEffect(() => {
     void load();
@@ -335,6 +401,38 @@ export function HotelResortFinanceClient() {
       return hay.includes(kw);
     });
   }, [costs, kw, costFilterCat]);
+
+  const filteredHistoryRows = useMemo(() => {
+    type Row =
+      | { key: string; sortAt: string; kind: "stay"; stay: FinanceStay }
+      | { key: string; sortAt: string; kind: "income"; income: FinanceIncome };
+
+    const rows: Row[] = [];
+    const showStays = incomeFilterCat === "all" || incomeFilterCat === "ROOM_STAY";
+    const showIncomes = incomeFilterCat !== "ROOM_STAY";
+
+    if (showStays) {
+      for (const s of filteredStays) {
+        rows.push({ key: `stay-${s.id}`, sortAt: s.checkInAt || s.checkOutAt, kind: "stay", stay: s });
+      }
+    }
+    if (showIncomes) {
+      let list = incomes;
+      if (incomeFilterCat !== "all") {
+        list = list.filter((row) => row.categoryId === incomeFilterCat);
+      }
+      if (kw) {
+        list = list.filter((row) => {
+          const hay = [row.label, row.note, row.categoryName].filter(Boolean).join(" ").toLowerCase();
+          return hay.includes(kw);
+        });
+      }
+      for (const row of list) {
+        rows.push({ key: `income-${row.id}`, sortAt: row.earnedAt, kind: "income", income: row });
+      }
+    }
+    return rows.sort((a, b) => (a.sortAt < b.sortAt ? 1 : a.sortAt > b.sortAt ? -1 : 0));
+  }, [filteredStays, incomes, incomeFilterCat, kw]);
 
   const chartBuckets = useMemo(() => {
     const max = Math.max(1, ...buckets.map((x) => Math.max(x.revenueBaht, x.costBaht)));
@@ -538,6 +636,204 @@ export function HotelResortFinanceClient() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : "ลบหมวดไม่สำเร็จ";
       setCatErr(msg);
+      notice.error(msg);
+    }
+  }
+
+  function resetIncomeForm() {
+    setIncomeEditing(null);
+    const preferred =
+      incomeFilterCat !== "all" &&
+      incomeFilterCat !== "ROOM_STAY" &&
+      customIncomeCategories.some((c) => c.id === incomeFilterCat)
+        ? incomeFilterCat
+        : customIncomeCategories[0]?.id ?? "";
+    setIncomeCategoryId(preferred);
+    setIncomeLabel("");
+    setIncomeAmount("");
+    setIncomeNote("");
+    setIncomeSlipUrl("");
+  }
+
+  function openIncomeCreate() {
+    if (customIncomeCategories.length === 0) {
+      setIncomeCatErr(null);
+      setIncomeCatFormOpen(false);
+      setIncomeCatModalOpen(true);
+      return;
+    }
+    resetIncomeForm();
+    setIncomeOpen(true);
+  }
+
+  function openIncomeEdit(row: FinanceIncome) {
+    setIncomeEditing(row);
+    setIncomeCategoryId(row.categoryId);
+    setIncomeLabel(row.label);
+    setIncomeAmount(String(row.amountBaht));
+    setIncomeNote(row.note ?? "");
+    setIncomeSlipUrl(row.paymentSlipUrl?.trim() ?? "");
+    setIncomeOpen(true);
+  }
+
+  async function uploadIncomeSlip(file: File) {
+    setIncomeSlipBusy(true);
+    setError(null);
+    try {
+      const prepared = await prepareImageFileForUpload(file);
+      const fd = new FormData();
+      fd.append("file", prepared);
+      const res = await fetch("/api/hotel-resort/upload", {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      const j = (await res.json().catch(() => null)) as { url?: string; imageUrl?: string; error?: string } | null;
+      const url = j?.url ?? j?.imageUrl;
+      if (!res.ok || typeof url !== "string") {
+        throw new Error(typeof j?.error === "string" ? j.error : "อัปโหลดสลิปไม่สำเร็จ");
+      }
+      setIncomeSlipUrl(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "อัปโหลดสลิปไม่สำเร็จ");
+    } finally {
+      setIncomeSlipBusy(false);
+    }
+  }
+
+  async function onPickIncomeSlipFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    await uploadIncomeSlip(file);
+  }
+
+  async function submitIncome() {
+    setIncomeBusy(true);
+    setError(null);
+    try {
+      if (!incomeCategoryId) throw new Error("เลือกหมวดหมู่รายรับ หรือเพิ่มหมวดก่อน");
+      const label = incomeLabel.trim();
+      const amount = Math.round(Number(incomeAmount || 0));
+      if (!label) throw new Error("กรอกรายละเอียดรายการ");
+      if (amount < 1) throw new Error("กรอกจำนวนเงินให้ถูกต้อง");
+      const payload = {
+        label,
+        amountBaht: amount,
+        categoryId: incomeCategoryId,
+        note: incomeNote.trim() || null,
+        paymentSlipUrl: incomeSlipUrl.trim() || null,
+      };
+      const res = await fetch(
+        incomeEditing ? `/api/hotel-resort/incomes/${incomeEditing.id}` : "/api/hotel-resort/incomes",
+        {
+          method: incomeEditing ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        },
+      );
+      if (!res.ok) throw new Error(await hotelResortFetchErrorMessage(res));
+      setIncomeOpen(false);
+      resetIncomeForm();
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "บันทึกรายรับไม่สำเร็จ");
+    } finally {
+      setIncomeBusy(false);
+    }
+  }
+
+  async function deleteIncome(row: FinanceIncome) {
+    const ok = await notice.confirm(`ลบรายรับ «${row.label}» ใช่หรือไม่?`);
+    if (!ok) return;
+    setError(null);
+    try {
+      const res = await fetch(`/api/hotel-resort/incomes/${row.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(await hotelResortFetchErrorMessage(res));
+      await load();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "ลบรายรับไม่สำเร็จ";
+      setError(msg);
+      notice.error(msg);
+    }
+  }
+
+  function openIncomeCatCreate() {
+    setIncomeCatEdit(null);
+    setIncomeCatName("");
+    setIncomeCatErr(null);
+    setIncomeCatFormOpen(true);
+  }
+
+  function openIncomeCatEdit(c: IncomeCategory) {
+    if (c.isBuiltin || c.kind !== "CUSTOM") return;
+    setIncomeCatEdit(c);
+    setIncomeCatName(c.name);
+    setIncomeCatErr(null);
+    setIncomeCatFormOpen(true);
+  }
+
+  async function submitIncomeCategory() {
+    setIncomeCatBusy(true);
+    setIncomeCatErr(null);
+    try {
+      const name = incomeCatName.trim();
+      if (!name) {
+        setIncomeCatErr("กรอกชื่อหมวดหมู่");
+        return;
+      }
+      if (incomeCatEdit) {
+        const res = await fetch(`/api/hotel-resort/income-categories/${incomeCatEdit.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ name }),
+        });
+        if (!res.ok) throw new Error(await hotelResortFetchErrorMessage(res));
+      } else {
+        const res = await fetch("/api/hotel-resort/income-categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ name }),
+        });
+        if (!res.ok) throw new Error(await hotelResortFetchErrorMessage(res));
+      }
+      setIncomeCatFormOpen(false);
+      setIncomeCatEdit(null);
+      setIncomeCatName("");
+      await loadIncomeCategories();
+      await load();
+    } catch (e) {
+      setIncomeCatErr(e instanceof Error ? e.message : "บันทึกหมวดไม่สำเร็จ");
+    } finally {
+      setIncomeCatBusy(false);
+    }
+  }
+
+  async function deleteIncomeCategory(c: IncomeCategory) {
+    if (c.isBuiltin || c.kind !== "CUSTOM") return;
+    const ok = await notice.confirm(
+      `ลบหมวดหมู่ «${c.name}» ใช่หรือไม่?\n(ถ้ามีรายรับในหมวดนี้ต้องย้ายหรือลบก่อน)`,
+    );
+    if (!ok) return;
+    setIncomeCatErr(null);
+    try {
+      const res = await fetch(`/api/hotel-resort/income-categories/${c.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(await hotelResortFetchErrorMessage(res));
+      if (incomeFilterCat === c.id) setIncomeFilterCat("all");
+      await loadIncomeCategories();
+      await load();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "ลบหมวดไม่สำเร็จ";
+      setIncomeCatErr(msg);
       notice.error(msg);
     }
   }
@@ -1003,16 +1299,98 @@ export function HotelResortFinanceClient() {
           <div className="mt-4">
             {panel === "history" ? (
               <div id="hotel-finance-panel-history" role="tabpanel" aria-labelledby="hotel-finance-tab-history">
-                <AppSectionHeader tone="slate" title="ประวัติ / รายรับ" />
+                <AppSectionHeader
+                  tone="slate"
+                  title="ประวัติ / รายรับ"
+                  className="flex flex-row items-start justify-between gap-3 sm:items-center"
+                  actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
+                  action={
+                    <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
+                      <HotelResortButton
+                        type="button"
+                        onClick={() => {
+                          setIncomeCatErr(null);
+                          setIncomeCatFormOpen(false);
+                          setIncomeCatModalOpen(true);
+                        }}
+                        className={cn(
+                          appTemplateOutlineButtonClass,
+                          "min-h-[40px] rounded-[1rem] px-3 text-xs font-black text-[#4d47b6]",
+                        )}
+                        aria-label="จัดการหมวดหมู่รายรับ"
+                        title="หมวดหมู่"
+                      >
+                        หมวดหมู่
+                      </HotelResortButton>
+                      <HotelResortButton
+                        type="button"
+                        onClick={openIncomeCreate}
+                        className="app-btn-primary min-h-[40px] min-w-[40px] rounded-[1rem] px-0 font-black sm:min-w-0 sm:px-4"
+                        aria-label="เพิ่มรายรับ"
+                      >
+                        <span className="sm:hidden">+</span>
+                        <span className="hidden sm:inline">+ เพิ่มรายรับ</span>
+                      </HotelResortButton>
+                    </div>
+                  }
+                />
                 <p className="mt-2 text-xs font-semibold text-[#66638c]">
                   ตามช่วง · {financeRangeLabel}
                   {kw ? ` · ค้นหา «${keyword.trim()}»` : ""}
                 </p>
+
+                <div
+                  className="mt-4 min-w-0 overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth pb-1 [-webkit-overflow-scrolling:touch]"
+                  role="group"
+                  aria-label="กรองตามหมวดหมู่รายรับ — เลื่อนซ้ายขวาได้"
+                >
+                  <div className="flex w-max touch-pan-x gap-2 pr-1 sm:flex-wrap sm:pr-0">
+                    <button
+                      type="button"
+                      onClick={() => setIncomeFilterCat("all")}
+                      className={cn(
+                        "shrink-0 snap-start transition",
+                        hotelResortFilterChipClass(incomeFilterCat === "all"),
+                      )}
+                      aria-pressed={incomeFilterCat === "all"}
+                    >
+                      ทั้งหมด
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIncomeFilterCat("ROOM_STAY")}
+                      className={cn(
+                        "shrink-0 snap-start transition",
+                        hotelResortFilterChipClass(incomeFilterCat === "ROOM_STAY"),
+                      )}
+                      aria-pressed={incomeFilterCat === "ROOM_STAY"}
+                    >
+                      ค่าห้อง / ที่พัก
+                    </button>
+                    {customIncomeCategories.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setIncomeFilterCat(c.id)}
+                        className={cn(
+                          "shrink-0 snap-start transition",
+                          hotelResortFilterChipClass(incomeFilterCat === c.id),
+                        )}
+                        aria-pressed={incomeFilterCat === c.id}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {loading ? (
                   <div className={`mt-4 h-32 ${hotelResortSkeletonClass}`} aria-hidden />
-                ) : filteredStays.length === 0 ? (
+                ) : filteredHistoryRows.length === 0 ? (
                   <AppEmptyState tone="slate" className="mt-4">
-                    ไม่พบรายการในช่วงนี้
+                    {customIncomeCategories.length === 0 && incomeFilterCat !== "ROOM_STAY"
+                      ? "เริ่มจากเพิ่มหมวด แล้วเพิ่มรายรับ — หรือดูค่าห้องจากการจอง"
+                      : "ไม่พบรายการในช่วงนี้"}
                   </AppEmptyState>
                 ) : (
                   <div
@@ -1021,11 +1399,66 @@ export function HotelResortFinanceClient() {
                     aria-label="ประวัติรายรับ"
                   >
                     <ul className="space-y-2 pr-0.5">
-                      {filteredStays.map((s) => {
+                      {filteredHistoryRows.map((row) => {
+                        if (row.kind === "income") {
+                          const item = row.income;
+                          const slip = item.paymentSlipUrl?.trim() || "";
+                          return (
+                            <li key={row.key} className={cn(listItemClass, "flex items-start gap-2")}>
+                              {slip ? (
+                                <AppImageThumb
+                                  src={slip}
+                                  alt={`สลิป ${item.label}`}
+                                  onOpen={() => slipLb.open(slip)}
+                                  className="h-14 w-14 shrink-0"
+                                />
+                              ) : null}
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold text-[#66638c]">
+                                  {formatThaiDateTime(item.earnedAt)}
+                                </p>
+                                <p className="mt-0.5 text-sm font-black text-[#1e1b4b]">{item.label}</p>
+                                <p className="mt-0.5 text-[11px] font-bold text-[#4d47b6]">
+                                  {item.categoryName}
+                                </p>
+                                {item.note ? (
+                                  <p className="mt-0.5 text-xs font-semibold text-[#66638c]">{item.note}</p>
+                                ) : null}
+                              </div>
+                              <div className="flex shrink-0 flex-col items-end gap-1.5">
+                                <p className="text-lg font-black tabular-nums text-emerald-700">
+                                  ฿{formatThb(item.amountBaht)}
+                                </p>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => openIncomeEdit(item)}
+                                    className={assetRowEditIconButtonClass}
+                                    aria-label={`แก้ไขรายรับ ${item.label}`}
+                                    title="แก้ไข"
+                                  >
+                                    <IconRowEdit className="h-4 w-4" aria-hidden />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => void deleteIncome(item)}
+                                    className={assetRowRemoveIconButtonClass}
+                                    aria-label={`ลบรายรับ ${item.label}`}
+                                    title="ลบ"
+                                  >
+                                    <IconRowRemove className="h-4 w-4" aria-hidden />
+                                  </button>
+                                </div>
+                              </div>
+                            </li>
+                          );
+                        }
+
+                        const s = row.stay;
                         const depositSlip = s.depositSlipUrl?.trim() || "";
                         const slip = s.paymentSlipUrl?.trim() || "";
                         return (
-                          <li key={s.id} className={listItemClass}>
+                          <li key={row.key} className={listItemClass}>
                             <div className="flex items-start gap-2">
                               {depositSlip || slip ? (
                                 <div className="flex shrink-0 flex-col gap-1">
@@ -1055,7 +1488,7 @@ export function HotelResortFinanceClient() {
                                   {s.guestPhone ? ` · ${s.guestPhone}` : ""}
                                 </p>
                                 <p className="mt-0.5 text-[11px] font-bold text-[#4d47b6]">
-                                  {formatThaiDate(s.checkInAt)} → {formatThaiDate(s.checkOutAt)} ·{" "}
+                                  ค่าห้อง / ที่พัก · {formatThaiDate(s.checkInAt)} → {formatThaiDate(s.checkOutAt)} ·{" "}
                                   {HOTEL_BOOKING_STATUS_LABELS[s.status]}
                                   {s.paymentMethod ? ` · ${hotelResortPaymentMethodLabel(s.paymentMethod)}` : ""}
                                 </p>
@@ -1444,6 +1877,217 @@ export function HotelResortFinanceClient() {
                     <IconRowRemove className="h-4 w-4" />
                   </button>
                 </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </FormModal>
+
+      <FormModal
+        open={incomeOpen}
+        onClose={() => !incomeBusy && !incomeSlipBusy && setIncomeOpen(false)}
+        title={incomeEditing ? "แก้ไขรายรับ" : "เพิ่มรายรับ"}
+        mobileCentered
+        size="lg"
+        footer={
+          <FormModalFooterActions
+            onCancel={() => {
+              if (!incomeBusy && !incomeSlipBusy) {
+                setIncomeOpen(false);
+                resetIncomeForm();
+              }
+            }}
+            onSubmit={() => void submitIncome()}
+            submitLabel="บันทึก"
+            loading={incomeBusy}
+          />
+        }
+      >
+        <div className="space-y-3">
+          <label className="block text-left text-sm font-bold text-[#1e1b4b]">
+            หมวดหมู่
+            <select
+              value={incomeCategoryId}
+              onChange={(e) => setIncomeCategoryId(e.target.value)}
+              className={cn(hotelResortFieldClass, "mt-1")}
+              aria-label="หมวดหมู่รายรับ"
+            >
+              {customIncomeCategories.length === 0 ? <option value="">ยังไม่มีหมวด</option> : null}
+              {customIncomeCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="text-[11px] font-semibold text-[#8b87b8]">
+            ค่าห้อง / ที่พักมาจากการจอง — เพิ่มรายรับอื่นผ่านหมวดที่สร้างเอง
+          </p>
+          <label className="block text-left text-sm font-bold text-[#1e1b4b]">
+            รายละเอียดรายการ
+            <input
+              className={cn(hotelResortFieldClass, "mt-1")}
+              value={incomeLabel}
+              onChange={(e) => setIncomeLabel(e.target.value)}
+              placeholder="เช่น เช่าห้องประชุม · ขายของฝาก"
+            />
+          </label>
+          <label className="block text-left text-sm font-bold text-[#1e1b4b]">
+            จำนวนเงิน (บาท)
+            <input
+              className={cn(hotelResortFieldClass, "mt-1")}
+              type="number"
+              min={1}
+              value={incomeAmount}
+              onChange={(e) => setIncomeAmount(e.target.value)}
+              placeholder="0"
+            />
+          </label>
+          <label className="block text-left text-sm font-bold text-[#1e1b4b]">
+            หมายเหตุ <span className="font-normal text-[#9b98c4]">(ไม่บังคับ)</span>
+            <input
+              className={cn(hotelResortFieldClass, "mt-1")}
+              value={incomeNote}
+              onChange={(e) => setIncomeNote(e.target.value)}
+              placeholder="รายละเอียดเพิ่มเติม"
+            />
+          </label>
+          <div>
+            <p className="text-sm font-bold text-[#1e1b4b]">
+              รูปสลิป <span className="font-normal text-[#9b98c4]">(ไม่บังคับ)</span>
+            </p>
+            <AppGalleryCameraFileInputs
+              galleryInputRef={incomeGalleryRef}
+              cameraInputRef={incomeCamera.cameraInputRef}
+              onChange={(e) => void onPickIncomeSlipFile(e)}
+            />
+            <div className="mt-2">
+              <AppImagePickCameraButtons
+                onPickGallery={() => incomeGalleryRef.current?.click()}
+                onPickCamera={() => incomeCamera.openCamera((file) => void uploadIncomeSlip(file))}
+                disabled={incomeBusy || incomeSlipBusy}
+                busy={incomeSlipBusy}
+              />
+            </div>
+            {incomeCamera.cameraModal}
+            {incomeSlipUrl ? (
+              <div className="mt-2 flex flex-wrap items-end gap-3">
+                <AppImageThumb
+                  src={incomeSlipUrl}
+                  alt="สลิปรายรับ"
+                  onOpen={() => slipLb.open(incomeSlipUrl)}
+                  className="h-20 w-20"
+                />
+                <button
+                  type="button"
+                  onClick={() => setIncomeSlipUrl("")}
+                  className={cn(appTemplateOutlineButtonClass, "rounded-[1rem] px-3 py-2 text-xs font-bold")}
+                >
+                  ลบสลิป
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </FormModal>
+
+      <FormModal
+        open={incomeCatModalOpen}
+        onClose={() => !incomeCatBusy && setIncomeCatModalOpen(false)}
+        title={
+          incomeCatFormOpen
+            ? incomeCatEdit
+              ? "แก้ไขหมวดหมู่รายรับ"
+              : "เพิ่มหมวดหมู่รายรับ"
+            : "หมวดหมู่รายรับ"
+        }
+        mobileCentered
+        footer={
+          incomeCatFormOpen ? (
+            <FormModalFooterActions
+              onCancel={() => {
+                setIncomeCatFormOpen(false);
+                setIncomeCatEdit(null);
+                setIncomeCatName("");
+                setIncomeCatErr(null);
+              }}
+              onSubmit={() => void submitIncomeCategory()}
+              submitLabel={incomeCatEdit ? "บันทึก" : "เพิ่มหมวด"}
+              loading={incomeCatBusy}
+            />
+          ) : (
+            <div className="flex justify-end gap-2">
+              <HotelResortButton
+                type="button"
+                onClick={() => openIncomeCatCreate()}
+                className="app-btn-primary rounded-[1rem] px-4 py-2 text-sm font-bold"
+              >
+                + เพิ่มหมวดหมู่
+              </HotelResortButton>
+              <HotelResortButton
+                type="button"
+                onClick={() => setIncomeCatModalOpen(false)}
+                className={cn(appTemplateOutlineButtonClass, "rounded-[1rem] px-4 py-2 text-sm font-bold")}
+              >
+                ปิด
+              </HotelResortButton>
+            </div>
+          )
+        }
+      >
+        {incomeCatErr ? <p className="mb-3 text-sm font-semibold text-rose-600">{incomeCatErr}</p> : null}
+        {incomeCatFormOpen ? (
+          <label className="block text-left text-sm font-bold text-[#1e1b4b]">
+            ชื่อหมวดหมู่
+            <input
+              className={cn(hotelResortFieldClass, "mt-1")}
+              value={incomeCatName}
+              onChange={(e) => setIncomeCatName(e.target.value)}
+              placeholder="เช่น เช่าห้องประชุม · ขายของฝาก"
+              autoFocus
+            />
+          </label>
+        ) : incomeCategories.length === 0 ? (
+          <p className="rounded-[1.25rem] border border-dashed border-[#d8d6ec] bg-[#faf9ff] px-3 py-6 text-center text-sm font-semibold text-[#66638c]">
+            ยังไม่มีหมวด — กด «เพิ่มหมวดหมู่»
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {incomeCategories.map((c) => (
+              <li
+                key={c.id}
+                className="flex items-center justify-between gap-2 rounded-[1.25rem] border border-white/50 bg-white/70 px-3 py-2.5"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-black text-[#1e1b4b]">{c.name}</p>
+                  {c.isBuiltin ? (
+                    <p className="mt-0.5 text-[10px] font-bold text-[#8b87b8]">หมวดหลัก · จากจองห้อง</p>
+                  ) : null}
+                </div>
+                {c.isBuiltin || c.kind !== "CUSTOM" ? (
+                  <span className="shrink-0 text-[10px] font-black text-[#9b98c4]">ล็อก</span>
+                ) : (
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      className={assetRowEditIconButtonClass}
+                      aria-label={`แก้ไขหมวด ${c.name}`}
+                      title="แก้ไข"
+                      onClick={() => openIncomeCatEdit(c)}
+                    >
+                      <IconRowEdit className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className={assetRowRemoveIconButtonClass}
+                      aria-label={`ลบหมวด ${c.name}`}
+                      title="ลบ"
+                      onClick={() => void deleteIncomeCategory(c)}
+                    >
+                      <IconRowRemove className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

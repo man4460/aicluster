@@ -24,8 +24,9 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 58: Massage* module tables */
 /** 59: AppointmentQueue* + LoyaltyStamp* — client เก่าไม่มี delegate แล้ว undefined.findUnique */
 /** 61: HotelResort* module tables */
-/** 63: FootballTurf* module tables */
-const PRISMA_SINGLETON_VERSION = 64;
+/** 64: FootballTurf* module tables */
+/** 65: HotelResortIncomeCategory + HotelResortIncomeEntry */
+const PRISMA_SINGLETON_VERSION = 65;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -111,6 +112,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     hotelResortGuest?: { findMany?: unknown };
     hotelResortBooking?: { findMany?: unknown };
     hotelResortCostEntry?: { findMany?: unknown };
+    hotelResortIncomeCategory?: { findMany?: unknown };
+    hotelResortIncomeEntry?: { findMany?: unknown };
     ecommerceStore?: { findFirst?: unknown };
     ecommerceProduct?: { findMany?: unknown };
     ecommerceOrder?: { findMany?: unknown };
@@ -211,6 +214,10 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.drinkPosSale?.findMany === "function" &&
     typeof c.drinkPosSaleLine?.findMany === "function" &&
     typeof c.drinkPosCostEntry?.findMany === "function" &&
+    typeof c.hotelResortBooking?.findMany === "function" &&
+    typeof c.hotelResortCostEntry?.findMany === "function" &&
+    typeof c.hotelResortIncomeCategory?.findMany === "function" &&
+    typeof c.hotelResortIncomeEntry?.findMany === "function" &&
     typeof c.ecommerceStore?.findFirst === "function" &&
     typeof c.ecommerceProduct?.findMany === "function" &&
     typeof c.ecommerceOrder?.findMany === "function" &&

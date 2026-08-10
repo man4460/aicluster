@@ -1,4 +1,4 @@
-export const HOTEL_RESORT_PAYMENT_METHODS = ["CASH", "PROMPTPAY", "TRANSFER"] as const;
+export const HOTEL_RESORT_PAYMENT_METHODS = ["CASH", "PROMPTPAY", "TRANSFER", "CREDIT_CARD"] as const;
 export type HotelResortPaymentMethod = (typeof HOTEL_RESORT_PAYMENT_METHODS)[number];
 
 export function hotelResortPaymentMethodLabel(method: string | null | undefined): string {
@@ -7,6 +7,8 @@ export function hotelResortPaymentMethodLabel(method: string | null | undefined)
       return "พร้อมเพย์";
     case "TRANSFER":
       return "โอนเงิน";
+    case "CREDIT_CARD":
+      return "บัตรเครดิต";
     case "CASH":
     default:
       return "เงินสด";
@@ -14,7 +16,7 @@ export function hotelResortPaymentMethodLabel(method: string | null | undefined)
 }
 
 export function isHotelResortPaymentMethod(value: string | null | undefined): value is HotelResortPaymentMethod {
-  return value === "CASH" || value === "PROMPTPAY" || value === "TRANSFER";
+  return (HOTEL_RESORT_PAYMENT_METHODS as readonly string[]).includes(value ?? "");
 }
 
 /** พร้อมเพย์ / โอน — แสดงช่องแนบสลิปเมื่อยอด > 0 (ไม่บังคับ) */

@@ -3,6 +3,7 @@ import {
   FOOTBALL_TURF_STAFF_ALLOWED_OPS,
   getFootballTurfOwnerOrStaffContext,
 } from "@/systems/football-turf/lib/api-auth";
+import { notifyFootballTurfActionLive } from "@/systems/football-turf/lib/live-board-notify";
 import { runFootballTurfAction } from "@/systems/football-turf/lib/run-action";
 import { createFootballTurfServerRepo } from "@/systems/football-turf/lib/server-repo";
 
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
   try {
     const outcome = await runFootballTurfAction(repo, body);
     if (!outcome.ok) return NextResponse.json({ error: outcome.error }, { status: outcome.status });
+    notifyFootballTurfActionLive(gate.userId, body.op, outcome.result, body.id, body.input);
     return NextResponse.json({ result: outcome.result });
   } catch (error) {
     console.error("[football-turf/action]", body.op, error);

@@ -238,7 +238,7 @@ export function HotelResortCheckInClient({
       const paymentPayload = {
         paymentMethod,
         ...(paid > 0
-          ? paymentMethod === "CASH"
+          ? paymentMethod === "CASH" || paymentMethod === "CREDIT_CARD"
             ? { paymentSlipUrl: null as string | null }
             : paymentSlipUrl
               ? { paymentSlipUrl }

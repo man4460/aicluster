@@ -1,5 +1,5 @@
 ---
-description: โรงแรมรีสอร์ท — ช่องทางชำระเงินสด พร้อมเพย์ โอน + สลิปมัดจำจากลิงก์ลูกค้า
+description: โรงแรมรีสอร์ท — ช่องทางชำระเงินสด พร้อมเพย์ โอน บัตรเครดิต + สลิปมัดจำจากลิงก์ลูกค้า
 globs:
   - "**/systems/hotel-resort/**"
   - "**/app/**/dashboard/hotel-resort/**"
@@ -10,7 +10,7 @@ alwaysApply: false
 # โรงแรม / รีสอร์ท — ช่องทางชำระเงิน
 
 ใช้เมื่อทำหรือแก้ **การรับชำระตอนเช็คอิน / บิลจอง / สลิปมัดจำจากลิงก์ลูกค้า** ในโมดูล hotel-resort  
-แพทเทิร์นเดียวกับร้านอาหาร (drink-pos): **เงินสด · พร้อมเพย์ · โอนเงิน**
+แพทเทิร์นเดียวกับร้านอาหาร (drink-pos): **เงินสด · พร้อมเพย์ · โอนเงิน · บัตรเครดิต**
 
 อ้างอิง drink-pos: `DrinkPosPaymentPanel` · `drink-pos/lib/payment-method.ts` · §ช่องทางชำระใน `drink-pos-module-dashboard-template.mdc`  
 ลิงก์ลูกค้าเว็บจอง: `module-customer-booking-website-portal.mdc`
@@ -19,28 +19,29 @@ alwaysApply: false
 
 ## บังคับ (แดชบอร์ด)
 
-1. **สามช่องทางเท่านั้น** (ค่าเก็บใน DB เป็นสตริง):
+1. **สี่ช่องทาง** (ค่าเก็บใน DB เป็นสตริง):
    - `CASH` — เงินสด
    - `PROMPTPAY` — พร้อมเพย์
    - `TRANSFER` — โอนเงิน
+   - `CREDIT_CARD` — บัตรเครดิต
 2. **UI เลือกช่องทาง** ใช้ `HotelResortPaymentPanel` — ห้ามทำปุ่ม QR / อัปโหลดสลิปแยกแบบ ad-hoc บนหน้าเช็คอินถ้าเป้าหมายคือรับชำระแบบบิลร้านอาหาร
 3. **Logic / label** รวมที่ `src/systems/hotel-resort/lib/payment-method.ts`
    - `hotelResortPaymentMethodLabel`
    - `isHotelResortPaymentMethod`
-   - `hotelResortPaymentShowsSlipUpload(method, amountBaht)` — แสดงช่องแนบสลิปเมื่อ `PROMPTPAY` หรือ `TRANSFER` และ **ยอดที่ชำระ > 0**
+   - `hotelResortPaymentShowsSlipUpload(method, amountBaht)` — แสดงช่องแนบสลิปเมื่อ `PROMPTPAY` หรือ `TRANSFER` และ **ยอดที่ชำระ > 0** (บัตรเครดิต / เงินสดไม่โชว์ช่องสลิป)
    - `hotelResortPaymentRequiresSlip` — **ไม่บังคับสลิปแล้ว** บนแดชบอร์ดเช็คอิน/เอาต์ (คืน `false` เสมอ; คงชื่อไว้เพื่อความเข้ากันได้)
 4. **ฟิลด์บน `HotelResortBooking`**: `paymentMethod` · `paymentSlipUrl` (สลิปชำระเพิ่มตอนเช็คอิน/เอาต์) · `depositSlipUrl` (สลิปมัดจำ/ชำระตอนจองจากลิงก์ลูกค้า) · `amountPaidBaht` · `paymentStatus` · `depositAmountBaht`
-5. **API** `POST` / `PATCH` `/api/hotel-resort/bookings` รับสลิปได้แต่**ไม่บังคับ** บนแดชบอร์ด — ใช้ยอด `amountPaidBaht` ร่วมกับแผงชำระ · **ห้าม** ทับ/ลบ `depositSlipUrl` เมื่ออัปเดต `paymentSlipUrl` หรือเลือก CASH
+5. **API** `POST` / `PATCH` `/api/hotel-resort/bookings` รับสลิปได้แต่**ไม่บังคับ** บนแดชบอร์ด — ใช้ยอด `amountPaidBaht` ร่วมกับแผงชำระ · **ห้าม** ทับ/ลบ `depositSlipUrl` เมื่ออัปเดต `paymentSlipUrl` หรือเลือก CASH / CREDIT_CARD
 6. **พร้อมเพย์ (แดชบอร์ด):** QR จาก `POST /api/hotel-resort/promptpay-qr` body `{ amountBaht }` — เบอร์จาก `HotelResortProfile.promptPayPhone`
 7. **โอน**: แสดงธนาคาร / เลขบัญชี / ชื่อบัญชีจากโปรไฟล์ที่พัก (ผ่าน response ของ promptpay-qr เดียวกัน)
 8. **สลิป (แดชบอร์ด):** อัปโหลด `/api/hotel-resort/upload` ผ่าน `AppGalleryCameraFileInputs` + `AppImagePickCameraButtons` ใน `HotelResortPaymentPanel` — ปุ่มถ่ายใช้ **`useAppCameraCapture`** (`AppCameraCaptureModal`) — **ไม่บังคับ** สลิปตอนเช็คอิน/เอาต์ · เก็บใน `paymentSlipUrl`
-9. เงินสด: ล้าง `paymentSlipUrl` ได้ · **ไม่** ล้าง `depositSlipUrl` · ไม่บังคับสลิป
+9. เงินสด / บัตรเครดิต: ล้าง `paymentSlipUrl` ได้ · **ไม่** ล้าง `depositSlipUrl` · ไม่บังคับสลิป
 
 ---
 
 ## ลิงก์ลูกค้า (เว็บจอง — เมื่อ `payDueBaht > 0`)
 
-1. ช่องทางเฉพาะ `PROMPTPAY` \| `TRANSFER` (ไม่มี CASH บนพอร์ทัลเมื่อเก็บเงิน)
+1. ช่องทางเฉพาะ `PROMPTPAY` \| `TRANSFER` (ไม่มี CASH / CREDIT_CARD บนพอร์ทัลเมื่อเก็บเงิน — ชำระหน้าเว็บด้วยโอน/พร้อมเพย์)
 2. **พร้อมเพย์:** แสดง QR จาก `POST /api/hotel-resort/public/portal/promptpay-qr` — gate `isHotelResortPortalOpenForOwner`
 3. **ถ่ายสลิป:** `useAppCameraCapture` เหมือนแผงแดชบอร์ด
 4. **บังคับแนบสลิป** ก่อนยืนยันจอง + ข้อความ:
@@ -86,12 +87,12 @@ alwaysApply: false
 
 ## ห้ามพลาด
 
-- อย่าเพิ่มช่องทางที่ 4 โดยไม่ขยาย `HOTEL_RESORT_PAYMENT_METHODS` + แผง + schema ความหมาย
+- อย่าเพิ่มช่องทางใหม่โดยไม่ขยาย `HOTEL_RESORT_PAYMENT_METHODS` + แผง + schema ความหมาย
 - อย่าตรวจสลิปจาก `totalBaht` เมื่อยังไม่มีการชำระ (`amountPaidBaht === 0`)
 - อย่าบล็อก `PATCH` เปลี่ยนสถานะอย่างเดียวด้วยกฎสลิป ถ้าไม่ได้แตะฟิลด์ชำระ
 - อย่าบวกรายการ extras จาก note ซ้ำเข้า `totalBaht` อีกครั้งตอนเปิดโมดัล
 - อย่าทำพร้อมเพย์บนลิงก์ลูกค้าโดยไม่แสดง QR (`public/portal/promptpay-qr`)
 - อย่าผูกปุ่มถ่ายสลิปกับ `input capture` อย่างเดียว — ใช้ `useAppCameraCapture`
 - อย่าซ่อนสลิปมัดจำ/ชำระบางส่วนบนรายการจองหรือหน้ารายละเอียดลูกค้า
-- อย่าทับสลิปมัดจำ (`depositSlipUrl`) ด้วยสลิปเช็คอิน หรือล้างเมื่อเลือกเงินสด
+- อย่าทับสลิปมัดจำ (`depositSlipUrl`) ด้วยสลิปเช็คอิน หรือล้างเมื่อเลือกเงินสด / บัตรเครดิต
 - อย่าใส่สลิปมัดจำลง `paymentSlipUrl` ตอนเช็คอิน — เก็บแยกทั้งสองเสมอ
