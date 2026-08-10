@@ -34,7 +34,7 @@ import { resolveModuleCardDisplayImageUrl } from "@/lib/modules/dashboard-module
 import { DashboardHomeModuleShelf } from "@/components/dashboard/DashboardHomeModuleShelf";
 
 export const metadata: Metadata = {
-  title: "แดชบอร์ด | MAWELL Buffet",
+  title: "แดชบอร์ด | MAWELL PLATFORM",
 };
 
 function planSummaryLine(subscriptionType: SubscriptionType, subscriptionTier: SubscriptionTier): string {

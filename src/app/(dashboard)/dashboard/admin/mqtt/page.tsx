@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { MqttHealthClient } from "@/systems/admin/components/MqttHealthClient";
 
 export const metadata: Metadata = {
-  title: "สถานะ MQTT | MAWELL Buffet",
+  title: "สถานะ MQTT | MAWELL PLATFORM",
 };
 
 export default async function AdminMqttPage() {

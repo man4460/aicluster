@@ -37,8 +37,6 @@ type ModuleCardDTO = {
 
 type Props = {
   modules: ModuleCardDTO[];
-  /** แสดงหมวด «ปัจจุบัน» (featured) — บัญชีแอดมินที่ล็อกอิน */
-  isAdminCatalog?: boolean;
   showCatalogHeader?: boolean;
   backHref?: string;
   access: UserAccessFields;
@@ -123,7 +121,7 @@ function groupTone(groupId: number): { header: string; chip: string; icon: React
   };
 }
 
-/** การ์ดแนะนำส่วน «ปัจจุบัน» บนหน้าระบบทั้งหมด — แสดงเฉพาะแอดมิน */
+/** การ์ดแนะนำส่วน «ปัจจุบัน» บนหน้าระบบทั้งหมด — แสดงทุกบทบาท */
 const FEATURED_CATALOG_SLUGS = [
   BUILDING_POS_MODULE_SLUG,
   DRINK_POS_MODULE_SLUG,
@@ -162,7 +160,6 @@ function ModuleThumb({
 
 export function ModuleSubscriptionBrowser({
   modules,
-  isAdminCatalog = false,
   showCatalogHeader = false,
   backHref = "/dashboard",
   access,
@@ -234,7 +231,6 @@ export function ModuleSubscriptionBrowser({
   );
 
   const featuredModules = useMemo(() => {
-    if (!isAdminCatalog) return [];
     if (rows.length === 0) return [];
     const bySlug = new Map(rows.map((m) => [m.slug, m]));
     const picked: ModuleCardDTO[] = [];
@@ -243,7 +239,7 @@ export function ModuleSubscriptionBrowser({
       if (m) picked.push(m);
     }
     return picked;
-  }, [isAdminCatalog, rows]);
+  }, [rows]);
 
   const featuredSlugSet = useMemo(
     () => new Set(featuredModules.map((m) => m.slug)),
@@ -261,11 +257,11 @@ export function ModuleSubscriptionBrowser({
   const tabModules = useMemo(() => {
     if (catalogTab === "free") return freeModules;
     let list = rows.filter((m) => m.groupId === catalogTab && !isFreeModule(m));
-    if (isAdminCatalog && featuredSlugSet.size > 0) {
+    if (featuredSlugSet.size > 0) {
       list = list.filter((m) => !featuredSlugSet.has(m.slug));
     }
     return list;
-  }, [catalogTab, featuredSlugSet, freeModules, isAdminCatalog, isFreeModule, rows]);
+  }, [catalogTab, featuredSlugSet, freeModules, isFreeModule, rows]);
 
   function activeCooldownUnlockIso(moduleId: string): string | null {
     const iso = cooldownUnlocks[moduleId];
@@ -467,7 +463,7 @@ export function ModuleSubscriptionBrowser({
         ) : null}
       </section>
 
-      {isAdminCatalog && q.trim().length === 0 && featuredModules.length > 0 ? (
+      {q.trim().length === 0 && featuredModules.length > 0 ? (
         <section className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">ปัจจุบัน</p>

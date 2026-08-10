@@ -9,7 +9,7 @@ import { getServerAppBaseUrl } from "@/lib/url/server-app-base-url";
 import { ModuleTryLinksAdmin } from "@/systems/admin/components/ModuleTryLinksAdmin";
 
 export const metadata: Metadata = {
-  title: "ลิงก์ทดลองโมดูล | MAWELL Buffet",
+  title: "ลิงก์ทดลองโมดูล | MAWELL PLATFORM",
 };
 
 export default async function AdminModuleTryLinksPage() {

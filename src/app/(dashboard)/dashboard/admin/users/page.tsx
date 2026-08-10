@@ -4,7 +4,7 @@ import { UsersAdmin } from "@/systems/admin/components/UsersAdmin";
 import { getSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
-  title: "จัดการผู้ใช้ | MAWELL Buffet",
+  title: "จัดการผู้ใช้ | MAWELL PLATFORM",
 };
 
 export default async function AdminUsersPage() {

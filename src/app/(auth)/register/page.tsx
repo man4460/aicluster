@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { RegisterForm } from "@/components/auth/RegisterForm";
 
 export const metadata: Metadata = {
-  title: "สมัครสมาชิก | MAWELL Buffet",
+  title: "สมัครสมาชิก | MAWELL PLATFORM",
 };
 
 type Props = { searchParams: Promise<{ next?: string }> };

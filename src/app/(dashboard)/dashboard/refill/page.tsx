@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-container";
 
 export const metadata: Metadata = {
-  title: "โทเคนไม่เพียงพอ | MAWELL Buffet",
+  title: "โทเคนไม่เพียงพอ | MAWELL PLATFORM",
 };
 
 export default function RefillPage() {

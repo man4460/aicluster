@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PAGE_GUTTER_X, PAGE_GUTTER_Y } from "@/components/ui/page-container";
 
 export const metadata: Metadata = {
-  title: "PDPA, ข้อกำหนดการใช้งาน และนโยบายความเป็นส่วนตัว | MAWELL Buffet",
+  title: "PDPA, ข้อกำหนดการใช้งาน และนโยบายความเป็นส่วนตัว | MAWELL PLATFORM",
 };
 
 export default function LegalPage() {
@@ -14,7 +14,7 @@ export default function LegalPage() {
           กฎตาม พ.ร.บ. PDPA, ข้อกำหนดการใช้งาน และนโยบายความเป็นส่วนตัว
         </h1>
         <p className="max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
-          เอกสารฉบับนี้ใช้สำหรับผู้ใช้งานระบบ MAWELL Buffet เพื่ออธิบายสิทธิ หน้าที่ และแนวทางการคุ้มครองข้อมูลส่วนบุคคล
+          เอกสารฉบับนี้ใช้สำหรับผู้ใช้งานระบบ MAWELL PLATFORM เพื่ออธิบายสิทธิ หน้าที่ และแนวทางการคุ้มครองข้อมูลส่วนบุคคล
           โดยมีผลบังคับใช้ตั้งแต่วันที่ผู้ใช้เริ่มสมัครใช้งานหรือเข้าใช้งานระบบ
         </p>
         <nav className="flex flex-wrap gap-2 pt-1 text-sm sm:gap-3">
@@ -38,7 +38,7 @@ export default function LegalPage() {
           1) กฎตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA)
         </h2>
         <p className="text-sm leading-6 text-slate-700">
-          MAWELL Buffet ให้ความสำคัญกับข้อมูลส่วนบุคคลของผู้ใช้ และดำเนินการตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล
+          MAWELL PLATFORM ให้ความสำคัญกับข้อมูลส่วนบุคคลของผู้ใช้ และดำเนินการตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล
           พ.ศ. 2562 โดยเก็บ ใช้ และเปิดเผยข้อมูลเท่าที่จำเป็นตามวัตถุประสงค์ของการให้บริการ
         </p>
         <ul className="list-disc space-y-1 pl-5 text-sm leading-6 text-slate-700">

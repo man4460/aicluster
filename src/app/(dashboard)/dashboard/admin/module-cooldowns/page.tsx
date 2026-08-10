@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { ModuleCooldownAdminClient } from "@/systems/admin/components/ModuleCooldownAdminClient";
 
 export const metadata: Metadata = {
-  title: "ปลดล็อค Subscribe หลัง Unsubscribe | MAWELL Buffet",
+  title: "ปลดล็อค Subscribe หลัง Unsubscribe | MAWELL PLATFORM",
 };
 
 export default async function AdminModuleCooldownsPage() {

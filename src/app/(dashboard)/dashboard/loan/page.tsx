@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ModuleRoadmapPage } from "@/components/dashboard/ModuleRoadmapPage";
 
 export const metadata: Metadata = {
-  title: "สินเชื่อ | MAWELL Buffet",
+  title: "สินเชื่อ | MAWELL PLATFORM",
 };
 
 export default function LoanDashboardPage() {

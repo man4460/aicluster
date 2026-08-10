@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ModuleRoadmapPage } from "@/components/dashboard/ModuleRoadmapPage";
 
 export const metadata: Metadata = {
-  title: "LINE | MAWELL Buffet",
+  title: "LINE | MAWELL PLATFORM",
 };
 
 export default function LineIntegrationDashboardPage() {

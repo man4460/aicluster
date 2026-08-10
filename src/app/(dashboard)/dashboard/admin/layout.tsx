@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth/session";
 import { cn } from "@/lib/cn";
 
 export const metadata: Metadata = {
-  title: "ศูนย์แอดมิน | MAWELL Buffet",
+  title: "ศูนย์แอดมิน | MAWELL PLATFORM",
 };
 
 export default async function AdminSectionLayout({

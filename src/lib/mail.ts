@@ -58,8 +58,8 @@ function mailFromAddress(): string {
   const custom = trimEnv("SMTP_FROM");
   if (custom) return custom;
   const sender = trimEnv("GMAIL_SENDER_EMAIL") ?? trimEnv("SMTP_USER");
-  if (sender) return `"MAWELL Buffet" <${sender}>`;
-  return `"MAWELL Buffet" <noreply@mawell.local>`;
+  if (sender) return `"MAWELL PLATFORM" <${sender}>`;
+  return `"MAWELL PLATFORM" <noreply@mawell.local>`;
 }
 
 /**
@@ -98,7 +98,7 @@ export async function sendPasswordResetEmail(to: string, token: string, req: Req
   await transporter.sendMail({
     from: mailFromAddress(),
     to,
-    subject: "รีเซ็ตรหัสผ่าน — MAWELL Buffet",
+    subject: "รีเซ็ตรหัสผ่าน — MAWELL PLATFORM",
     text: `คลิกลิงก์เพื่อตั้งรหัสผ่านใหม่:\n${resetUrl}\n\nลิงก์หมดอายุใน 1 ชั่วโมง`,
     html: `<p>คลิกลิงก์เพื่อตั้งรหัสผ่านใหม่:</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>ลิงก์หมดอายุใน 1 ชั่วโมง</p>`,
   });

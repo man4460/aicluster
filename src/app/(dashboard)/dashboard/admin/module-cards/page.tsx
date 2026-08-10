@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { ModuleCardImagesAdmin } from "@/systems/admin/components/ModuleCardImagesAdmin";
 
 export const metadata: Metadata = {
-  title: "รูปการ์ดระบบ | MAWELL Buffet",
+  title: "รูปการ์ดระบบ | MAWELL PLATFORM",
 };
 
 export default async function AdminModuleCardsPage() {

@@ -4,7 +4,7 @@ import { LandingPageClient } from "@/app/landing/LandingPageClient";
 import { getSession } from "@/lib/auth/session";
 import { MAWELL_OG_IMAGE, MAWELL_OG_IMAGE_SQUARE } from "@/lib/pwa/brand-assets";
 
-const landingTitle = "MAWELL — แพลตฟอร์มธุรกิจครบวงจร";
+const landingTitle = "MAWELL PLATFORM";
 const landingDescription =
   "แพลตฟอร์มเดียวครบระบบหลังบ้าน องค์กร ธุรกิจ โรงเรียน — โมดูลฟรีหลายระบบ และสายรายวัน 1 บาทต่อวันต่อระบบ";
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "th_TH",
-    siteName: "MAWELL",
+    siteName: "MAWELL PLATFORM",
     title: landingTitle,
     description: landingDescription,
     url: "/",

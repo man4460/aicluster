@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ModuleRoadmapPage } from "@/components/dashboard/ModuleRoadmapPage";
 
 export const metadata: Metadata = {
-  title: "สปา / นวด | MAWELL Buffet",
+  title: "สปา / นวด | MAWELL PLATFORM",
 };
 
 export default function SpaDashboardPage() {

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ModuleRoadmapPage } from "@/components/dashboard/ModuleRoadmapPage";
 
 export const metadata: Metadata = {
-  title: "เช่าสื่อ | MAWELL Buffet",
+  title: "เช่าสื่อ | MAWELL PLATFORM",
 };
 
 export default function RentalDashboardPage() {

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ModuleRoadmapPage } from "@/components/dashboard/ModuleRoadmapPage";
 
 export const metadata: Metadata = {
-  title: "จองคิว | MAWELL Buffet",
+  title: "จองคิว | MAWELL PLATFORM",
 };
 
 export default function BookingDashboardPage() {

@@ -9,7 +9,7 @@ import { ChatAiUnderDevelopment } from "@/systems/chat/components/ChatAiUnderDev
 import ChatAiClientRoot from "./chat-ai-client";
 
 export const metadata: Metadata = {
-  title: "น้องมาเวล — เลขาส่วนตัว | MAWELL Buffet",
+  title: "น้องมาเวล — เลขาส่วนตัว | MAWELL PLATFORM",
 };
 
 export default async function ChatAiPage() {

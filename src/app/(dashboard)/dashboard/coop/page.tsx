@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ModuleRoadmapPage } from "@/components/dashboard/ModuleRoadmapPage";
 
 export const metadata: Metadata = {
-  title: "สหกรณ์ | MAWELL Buffet",
+  title: "สหกรณ์ | MAWELL PLATFORM",
 };
 
 export default function CoopDashboardPage() {

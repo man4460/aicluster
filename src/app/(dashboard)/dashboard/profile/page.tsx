@@ -11,7 +11,7 @@ import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import { isDemoSessionUsername } from "@/lib/auth/demo-account";
 
 export const metadata: Metadata = {
-  title: "โปรไฟล์ | MAWELL Buffet",
+  title: "โปรไฟล์ | MAWELL PLATFORM",
 };
 
 export default async function ProfilePage() {

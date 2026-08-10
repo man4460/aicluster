@@ -5,7 +5,7 @@ import { getGoogleOAuthClientId } from "@/lib/auth/google-oauth";
 import { getSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
-  title: "เข้าสู่ระบบ | MAWELL Buffet",
+  title: "เข้าสู่ระบบ | MAWELL PLATFORM",
 };
 
 /** อ่าน GOOGLE_* ทุก request — กันหน้าโหลดแบบ static แล้วไม่เห็นปุ่ม Google หลังใส่ .env */

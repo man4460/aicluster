@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 import { getSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
-  title: "แชท | MAWELL Buffet",
+  title: "แชท | MAWELL PLATFORM",
 };
 
 export default async function ChatPage() {

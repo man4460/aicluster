@@ -7,7 +7,7 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
-  title: "แพ็กเกจ | MAWELL Buffet",
+  title: "แพ็กเกจ | MAWELL PLATFORM",
 };
 
 type Props = { searchParams: Promise<{ upgrade?: string }> };

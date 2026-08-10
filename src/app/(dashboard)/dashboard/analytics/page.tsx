@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ModuleRoadmapPage } from "@/components/dashboard/ModuleRoadmapPage";
 
 export const metadata: Metadata = {
-  title: "วิเคราะห์ | MAWELL Buffet",
+  title: "วิเคราะห์ | MAWELL PLATFORM",
 };
 
 export default function AnalyticsDashboardPage() {

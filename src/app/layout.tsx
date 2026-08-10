@@ -10,7 +10,7 @@ import {
 import { normalizeAppPublicBase } from "@/lib/url/normalize-app-public-base";
 import "./globals.css";
 
-const siteDescription = "MAWELL Buffet — ระบบจัดการธุรกิจและโมดูลแดชบอร์ด";
+const siteDescription = "MAWELL PLATFORM — ระบบจัดการธุรกิจและโมดูลแดชบอร์ด";
 const metadataBaseOrigin =
   normalizeAppPublicBase(process.env.NEXT_PUBLIC_APP_URL) ||
   normalizeAppPublicBase(process.env.APP_URL) ||
@@ -33,16 +33,16 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(metadataBaseOrigin),
   title: {
-    default: "MAWELL Buffet",
+    default: "MAWELL PLATFORM",
     template: "%s",
   },
   description: siteDescription,
   manifest: "/manifest.webmanifest",
-  applicationName: "MAWELL",
+  applicationName: "MAWELL PLATFORM",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "MAWELL",
+    title: "MAWELL PLATFORM",
   },
   icons: {
     icon: [
@@ -54,8 +54,8 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "th_TH",
-    siteName: "MAWELL",
-    title: "MAWELL Buffet",
+    siteName: "MAWELL PLATFORM",
+    title: "MAWELL PLATFORM",
     description: siteDescription,
     images: [
       { url: MAWELL_OG_IMAGE_SQUARE, width: 1200, height: 1200, alt: "MAWELL" },
@@ -64,7 +64,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "MAWELL Buffet",
+    title: "MAWELL PLATFORM",
     description: siteDescription,
     images: [MAWELL_OG_IMAGE_SQUARE, MAWELL_OG_IMAGE],
   },

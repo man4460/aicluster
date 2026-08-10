@@ -46,7 +46,6 @@ export default async function ModulesCatalogPage() {
       showCatalogHeader
       backHref="/dashboard"
       modules={modulesWithDisplayTitles}
-      isAdminCatalog={session.role === "ADMIN"}
       access={ctx.access}
       initialSubscribedIds={subscribedIds}
       initialTrialIds={trialIds}
