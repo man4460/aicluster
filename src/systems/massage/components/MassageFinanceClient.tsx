@@ -104,15 +104,23 @@ function IconRefresh({ className }: { className?: string }) {
 }
 
 /** Dummy chart buckets placeholder (ไม่ต้อง fetch สำหรับ baseline layout) — ให้กราฟไม่ว่างเปล่าในตอนแรก */
-const BASELINE_CHART_BUCKETS = [
-  { key: "d1", label: "จันทร์", revenue: 4200, cost: 900 },
-  { key: "d2", label: "อังคาร", revenue: 6800, cost: 1350 },
-  { key: "d3", label: "พุธ", revenue: 3100, cost: 820 },
-  { key: "d4", label: "พฤหัส", revenue: 9450, cost: 2300 },
-  { key: "d5", label: "ศุกร์", revenue: 12100, cost: 2900 },
-  { key: "d6", label: "เสาร์", revenue: 14900, cost: 3650 },
-  { key: "d7", label: "อาทิตย์", revenue: 8200, cost: 1850 },
-];
+const BASELINE_CHART_BUCKETS = (() => {
+  const raw = [
+    { key: "d1", label: "จันทร์", revenue: 4200, cost: 900 },
+    { key: "d2", label: "อังคาร", revenue: 6800, cost: 1350 },
+    { key: "d3", label: "พุธ", revenue: 3100, cost: 820 },
+    { key: "d4", label: "พฤหัส", revenue: 9450, cost: 2300 },
+    { key: "d5", label: "ศุกร์", revenue: 12100, cost: 2900 },
+    { key: "d6", label: "เสาร์", revenue: 14900, cost: 3650 },
+    { key: "d7", label: "อาทิตย์", revenue: 8200, cost: 1850 },
+  ];
+  const max = Math.max(...raw.flatMap((b) => [b.revenue, b.cost]), 1);
+  return raw.map((b) => ({
+    ...b,
+    revenuePct: (b.revenue / max) * 100,
+    costPct: (b.cost / max) * 100,
+  }));
+})();
 
 function tabFromSearch(searchParams: URLSearchParams | null): FinanceListTab {
   return searchParams?.get("tab") === "costs" ? "costs" : "sales";

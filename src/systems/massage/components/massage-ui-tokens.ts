@@ -15,6 +15,9 @@ export const massageShellRadiusClass = "rounded-[2rem]";
 /** §9 surface radius = 1.5rem (การ์ดย่อยๆ, stat cards, list rows, แถบ filter) */
 export const massageSurfaceRadiusClass = "rounded-[1.5rem]";
 
+/** alias — ชื่อเดิมที่คอมโพเนนต์ยัง import */
+export const massageCardSurfaceRadiusClass = massageSurfaceRadiusClass;
+
 /** §9 control radius = 1.0rem (input, button ย่อย, badge) */
 export const massageControlRadiusClass = "rounded-[1rem]";
 

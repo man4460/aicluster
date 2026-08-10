@@ -1,6 +1,13 @@
 /**
  * สิทธิ์แพ็กเกจ / กลุ่มโมดูล — จุดเข้าใช้เดียว (re-export)
  * แก้ mapping กลุ่ม vs ราคา ที่ `lib/modules/config.ts` และ `lib/modules/access.ts`
+ *
+ * ห้าม re-export โมดูลที่ import Prisma ที่นี่ — client component (เช่น PlansPricing)
+ * จะดึง webpack ไป bundle `node:*` แล้ว build ล้ม
+ *
+ * Server-only (Prisma):
+ * - `@/lib/modules/plan-entitlements`
+ * - `@/lib/modules/plan-feature-policy`
  */
 export {
   BUFFET_TIERS_OPEN_FOR_PURCHASE,
@@ -36,29 +43,3 @@ export {
   userMaxModuleGroup,
   type UserAccessFields,
 } from "@/lib/modules/access";
-
-export {
-  assertOwnerPlanUpload,
-  assertPlanDataRowAllowance,
-  assertPlanUploadAllowance,
-  canUseDocumentUploadFeature,
-  canUseSlipPrintFeature,
-  canUseSlipUploadFeature,
-  getPlanDataRowLimit,
-  getPlanFeatureEntitlements,
-  loadPlanFeaturePolicyAndAssertRows,
-  loadPlanFeaturesForUser,
-  planFeaturesApiPayload,
-  resolvePlanFeatureEntitlements,
-  type PlanFeatureEntitlements,
-  type PlanFeaturesApiPayload,
-  type PlanUploadKind,
-} from "@/lib/modules/plan-entitlements";
-
-export {
-  DEFAULT_PLAN_FEATURE_POLICY,
-  getPlanFeaturePolicy,
-  updatePlanFeaturePolicy,
-  type PlanFeaturePolicyDto,
-  type PlanFeaturePolicyUpdateInput,
-} from "@/lib/modules/plan-feature-policy";

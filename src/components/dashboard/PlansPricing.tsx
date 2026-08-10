@@ -17,7 +17,7 @@ import {
   buffetTierMaxGroup,
   computeBuffetSubscriptionTokenCharge,
   isBuffetTierOpenForPurchase,
-} from "@/lib/module-permissions";
+} from "@/lib/modules/config";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 
 type Props = {

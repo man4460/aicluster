@@ -807,7 +807,7 @@ export function BuildingPosCustomerOrderClient({
             : cn(
                 shopQrTemplateMaxWidthClass,
                 shopQrTemplateOrderPagePaddingClass,
-                isCustomer && customerTab !== "menu" ? "!pb-6" : null,
+                isCustomer && customerTab !== "menu" && "!pb-6",
               ),
         )}
       >
