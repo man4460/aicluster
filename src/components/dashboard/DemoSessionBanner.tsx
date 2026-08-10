@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { TrialSandboxStrip } from "@/components/dashboard/TrialSandboxStrip";
 
@@ -31,27 +30,30 @@ const bannerLinkClass =
 export function DemoSessionBanner() {
   const pathname = usePathname() || "/dashboard";
   const nextQ = encodeURIComponent(pathname.startsWith("/") ? pathname : "/dashboard");
-  const loginNext = encodeURIComponent(`/login?next=${nextQ}`);
-  const registerNext = encodeURIComponent(`/register?next=${nextQ}`);
+  const loginNext = `/login?next=${nextQ}`;
+  const registerNext = `/register?next=${nextQ}`;
 
   return (
     <TrialSandboxStrip
       trailing={
         <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
-          <Link
-            href={`/api/auth/demo/exit?next=${loginNext}`}
-            className={bannerLinkClass}
-            title="เข้าสู่ระบบด้วยบัญชีของคุณ"
-          >
-            เข้าสู่ระบบ
-          </Link>
-          <Link
-            href={`/api/auth/demo/exit?next=${registerNext}`}
-            className={bannerLinkClass}
-            title="สมัครสมาชิกใหม่"
-          >
-            สมัคร
-          </Link>
+          {/* POST เท่านั้น — ห้าม <Link> ไป /api/auth/demo/exit (Next prefetch แล้วล้าง session) */}
+          <form action="/api/auth/demo/exit" method="POST">
+            <input type="hidden" name="next" value={loginNext} />
+            <button
+              type="submit"
+              className={bannerLinkClass}
+              title="เข้าสู่ระบบด้วยบัญชีของคุณ"
+            >
+              เข้าสู่ระบบ
+            </button>
+          </form>
+          <form action="/api/auth/demo/exit" method="POST">
+            <input type="hidden" name="next" value={registerNext} />
+            <button type="submit" className={bannerLinkClass} title="สมัครสมาชิกใหม่">
+              สมัคร
+            </button>
+          </form>
           <form action="/api/auth/demo/exit" method="POST">
             <button
               type="submit"

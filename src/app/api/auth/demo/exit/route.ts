@@ -17,6 +17,14 @@ function safeNextPath(raw: string | null | undefined): string | null {
   return raw;
 }
 
+function isLikelyPrefetch(req: Request): boolean {
+  const purpose = (req.headers.get("purpose") ?? req.headers.get("Sec-Purpose") ?? "").toLowerCase();
+  if (purpose.includes("prefetch")) return true;
+  if (req.headers.get("Next-Router-Prefetch") === "1") return true;
+  if (req.headers.get("Next-Router-Segment-Prefetch") === "1") return true;
+  return false;
+}
+
 async function clearDemoReturnCookie(req: Request): Promise<void> {
   const store = await cookies();
   const secure = sessionCookieSecureForIncomingRequest(req);
@@ -77,10 +85,16 @@ async function readNextFromRequest(req: Request): Promise<string | null> {
   return null;
 }
 
-/** GET — เช่นลิงก์ออกจากทดลองแล้วไปล็อกอิน */
+/**
+ * GET ไม่ล้าง session — เคยถูก Next <Link> prefetch แล้วเด้งล็อกอิน
+ * ออกจากบัญชีทดลองใช้ POST เท่านั้น (แบนเนอร์เป็น form)
+ */
 export async function GET(req: Request) {
-  const next = await readNextFromRequest(req);
-  return exitDemo(req, next);
+  if (isLikelyPrefetch(req)) {
+    return new NextResponse(null, { status: 204 });
+  }
+  const origin = publicRedirectOriginFromRequest(req);
+  return NextResponse.redirect(new URL("/dashboard", origin), 303);
 }
 
 /** ออกจากบัญชีทดลอง — คืนเซสชันเดิมถ้ามี ไม่มีให้ไปหน้าเข้าสู่ระบบ */
