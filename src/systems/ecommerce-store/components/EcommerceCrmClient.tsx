@@ -171,13 +171,13 @@ export function EcommerceCrmClient() {
           <EcommerceStatCard
             title="ยอดขายสะสม"
             value={`฿${stats.total.toLocaleString("th-TH")}`}
-            tone="blue"
+            tone="indigo"
             icon={<IconCoin className="h-4 w-4" />}
           />
           <EcommerceStatCard
             title="ออเดอร์รวม"
             value={stats.orders}
-            tone="green"
+            tone="emerald"
             icon={<IconBag className="h-4 w-4" />}
           />
           <EcommerceStatCard

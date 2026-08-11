@@ -695,7 +695,9 @@ async function main() {
       await tryDemoSeed(`barber (${email})`, () => seedBarberProdDemoForOwner(prisma, row.id));
     }
   }
-  await tryDemoSeed("barber portal media fill", () => fillBarberPortalDemoMedia(prisma));
+  await tryDemoSeed("barber portal media fill", async () => {
+    await fillBarberPortalDemoMedia(prisma);
+  });
 
   /** คาร์แคร์ — แพ็กตัวอย่าง */
   for (const email of demoSeedDataOwnerEmails) {

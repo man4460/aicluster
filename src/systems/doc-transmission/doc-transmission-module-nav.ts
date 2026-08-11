@@ -41,11 +41,12 @@ export function isDocTransmissionModulePath(pathname: string): boolean {
 export function docTransmissionPathFlags(pathname: string) {
   const pathNorm = pathname.replace(/\/+$/, "") || pathname;
   const onModule = isDocTransmissionModulePath(pathname);
-  const isRecords =
+  const isRecords = Boolean(
     pathNorm.startsWith(`${DOC_TRANSMISSION_BASE}/records`) ||
-    DOC_TRANSMISSION_NAV_ITEMS.find((i) => i.key === "records")?.includes?.some(
-      (p) => pathNorm.startsWith(p) || pathNorm.endsWith(p),
-    );
+      DOC_TRANSMISSION_NAV_ITEMS.find((i) => i.key === "records")?.includes?.some(
+        (p) => pathNorm.startsWith(p) || pathNorm.endsWith(p),
+      ),
+  );
   const isMaster =
     pathNorm.startsWith(`${DOC_TRANSMISSION_BASE}/master`) ||
     pathNorm === DOC_TRANSMISSION_SETTINGS_HREF ||

@@ -235,7 +235,7 @@ export function EcommerceDashboardClient() {
           <EcommerceStatCard
             title="จำนวนออเดอร์"
             value={salesLoading ? "—" : (sales?.orderCount ?? 0)}
-            tone="blue"
+            tone="indigo"
             icon={
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
                 <rect x="5" y="4" width="14" height="17" rx="2" />
@@ -310,7 +310,7 @@ export function EcommerceDashboardClient() {
           <EcommerceStatCard
             title="สถานะร้าน"
             value={data?.store.merchantPaused ? "ปิดชั่วคราว" : "เปิด"}
-            tone={data?.store.merchantPaused ? "amber" : "green"}
+            tone={data?.store.merchantPaused ? "amber" : "emerald"}
             icon={
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
                 <path d="M22 11.08V12a10 10 0 11-5.93-9.14" strokeLinecap="round" />

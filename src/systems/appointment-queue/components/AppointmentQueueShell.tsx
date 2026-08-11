@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { AppUsageGuideModal } from "@/components/app-templates";
 import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import { cn } from "@/lib/cn";
-import { AppointmentQueueMobileDock } from "@/systems/appointment-queue/components/AppointmentQueueMobileDock";
+import { AppointmentQueueMobileBottomProvider } from "@/systems/appointment-queue/components/AppointmentQueueMobileBottomChrome";
 import {
   APPOINTMENT_QUEUE_HEADER_COLLAPSE_EVENT,
   APPOINTMENT_QUEUE_MODULE_DISPLAY_NAME,
@@ -148,6 +148,7 @@ export function AppointmentQueueShell({ children }: { children: React.ReactNode 
   }, [headerCollapsed]);
 
   return (
+    <AppointmentQueueMobileBottomProvider>
     <div className="max-w-full space-y-4 pb-28 sm:space-y-6 lg:pb-0">
       <header
         className={cn(
@@ -254,7 +255,7 @@ export function AppointmentQueueShell({ children }: { children: React.ReactNode 
         ]}
       />
       {children}
-      <AppointmentQueueMobileDock />
     </div>
+    </AppointmentQueueMobileBottomProvider>
   );
 }
