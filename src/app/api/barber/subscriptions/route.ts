@@ -20,6 +20,7 @@ import {
   normalizeBarberSlipUrlForDashboard,
   parseBarberCashReceiptBasenameFromStored,
 } from "@/lib/barber/receipt-display-url";
+import { isBarberPaymentMethod } from "@/systems/barber/lib/payment-method";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,35 @@ const postSchema = z.object({
     z.coerce.number().int().positive().optional(),
   ),
   receiptImageUrl: z.string().max(512).optional().nullable(),
+  paymentMethod: z.string().max(20).optional().nullable(),
+  taxInvoiceEnabled: z.boolean().optional(),
+  billingName: z.string().max(160).optional().nullable(),
+  taxId: z.string().max(30).optional().nullable(),
+  taxAddress: z.string().max(1000).optional().nullable(),
+  taxBranch: z.string().max(120).optional().nullable(),
 });
+
+function mapCustomerTax(c: {
+  id: number;
+  phone: string;
+  name: string | null;
+  taxInvoiceEnabled?: boolean;
+  billingName?: string;
+  taxId?: string;
+  taxAddress?: string;
+  taxBranch?: string;
+}) {
+  return {
+    id: c.id,
+    phone: c.phone,
+    name: c.name,
+    taxInvoiceEnabled: Boolean(c.taxInvoiceEnabled),
+    billingName: c.billingName ?? "",
+    taxId: c.taxId ?? "",
+    taxAddress: c.taxAddress ?? "",
+    taxBranch: c.taxBranch ?? "",
+  };
+}
 
 function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "").slice(0, 20);
@@ -85,16 +114,28 @@ export async function GET(req: Request) {
         name: string;
         price: unknown;
         totalSessions: number;
+        imageUrl?: string | null;
       };
-      customer: { id: number; phone: string; name: string | null };
+      customer: {
+        id: number;
+        phone: string;
+        name: string | null;
+        taxInvoiceEnabled?: boolean;
+        billingName?: string;
+        taxId?: string;
+        taxAddress?: string;
+        taxBranch?: string;
+      };
       soldByStylist: { id: number; name: string } | null;
       saleReceiptImageUrl?: string | null;
+      paymentMethod?: string | null;
     },
   ) => ({
     id: s.id,
     createdAt: s.createdAt.toISOString(),
     status: s.status,
     remainingSessions: s.remainingSessions,
+    paymentMethod: s.paymentMethod ?? null,
     saleReceiptImageUrl: (() => {
       const raw = s.saleReceiptImageUrl?.trim() ?? null;
       if (!raw) return null;
@@ -112,12 +153,9 @@ export async function GET(req: Request) {
       name: s.package.name,
       price: String(s.package.price),
       totalSessions: s.package.totalSessions,
+      imageUrl: s.package.imageUrl ?? null,
     },
-    customer: {
-      id: s.customer.id,
-      phone: s.customer.phone,
-      name: s.customer.name,
-    },
+    customer: mapCustomerTax(s.customer),
     soldByStylist: s.soldByStylist
       ? { id: s.soldByStylist.id, name: s.soldByStylist.name }
       : null,
@@ -142,6 +180,7 @@ export async function GET(req: Request) {
           status: true,
           remainingSessions: true,
           saleReceiptImageUrl: true,
+          paymentMethod: true,
           customer: true,
           package: true,
           soldByStylist: true,
@@ -162,9 +201,27 @@ export async function GET(req: Request) {
           saleReceiptImageUrl: true,
           customer: true,
           package: true,
+          soldByStylist: true,
         },
       });
-      return rows.map((r) => ({ ...r, soldByStylist: null }));
+      return rows.map((r) => ({ ...r, paymentMethod: null as string | null }));
+    },
+    async () => {
+      const rows = await prisma.barberCustomerSubscription.findMany({
+        where: whereSub,
+        orderBy,
+        take,
+        select: {
+          id: true,
+          createdAt: true,
+          status: true,
+          remainingSessions: true,
+          saleReceiptImageUrl: true,
+          customer: true,
+          package: true,
+        },
+      });
+      return rows.map((r) => ({ ...r, soldByStylist: null, paymentMethod: null as string | null }));
     },
     async () => {
       const rows = await prisma.barberCustomerSubscription.findMany({
@@ -181,7 +238,11 @@ export async function GET(req: Request) {
           soldByStylist: true,
         },
       });
-      return rows.map((r) => ({ ...r, saleReceiptImageUrl: null as string | null }));
+      return rows.map((r) => ({
+        ...r,
+        saleReceiptImageUrl: null as string | null,
+        paymentMethod: null as string | null,
+      }));
     },
     async () => {
       const rows = await prisma.barberCustomerSubscription.findMany({
@@ -201,6 +262,7 @@ export async function GET(req: Request) {
         ...r,
         soldByStylist: null,
         saleReceiptImageUrl: null as string | null,
+        paymentMethod: null as string | null,
       }));
     },
   ];
@@ -277,6 +339,14 @@ export async function POST(req: Request) {
     }
 
     const name = parsed.data.name?.trim() || null;
+    const taxEnabled = Boolean(parsed.data.taxInvoiceEnabled);
+    const taxData = {
+      taxInvoiceEnabled: taxEnabled,
+      billingName: taxEnabled ? (parsed.data.billingName?.trim() || name || "") : "",
+      taxId: taxEnabled ? (parsed.data.taxId?.replace(/\D/g, "").slice(0, 13) || "") : "",
+      taxAddress: taxEnabled ? (parsed.data.taxAddress?.trim() || "") : "",
+      taxBranch: taxEnabled ? (parsed.data.taxBranch?.trim() || "") : "",
+    };
 
     const whereCustomer = {
       ownerUserId_phone_trialSessionId: {
@@ -293,12 +363,16 @@ export async function POST(req: Request) {
           trialSessionId: scope.trialSessionId,
           phone,
           name,
+          ...taxData,
         },
       });
-    } else if (name !== null && name.length > 0) {
+    } else {
       customer = await prisma.barberCustomer.update({
         where: { id: customer.id },
-        data: { name },
+        data: {
+          ...(name !== null && name.length > 0 ? { name } : {}),
+          ...(parsed.data.taxInvoiceEnabled !== undefined ? taxData : {}),
+        },
       });
     }
 
@@ -308,6 +382,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "จำนวนครั้งของแพ็กเกจไม่ถูกต้อง" }, { status: 400 });
     }
 
+    const paymentMethod = isBarberPaymentMethod(parsed.data.paymentMethod)
+      ? parsed.data.paymentMethod
+      : "CASH";
+
     const baseData = {
       ownerUserId: own.ownerId,
       trialSessionId: scope.trialSessionId,
@@ -315,6 +393,7 @@ export async function POST(req: Request) {
       packageId: pkg.id,
       remainingSessions,
       ...(soldByStylistId != null ? { soldByStylistId } : {}),
+      paymentMethod,
     };
 
     let sub: { id: number; remainingSessions: number; status: string };
@@ -328,24 +407,54 @@ export async function POST(req: Request) {
         select: { id: true, remainingSessions: true, status: true },
       });
     } catch (e) {
-      const retry = receiptUrl && shouldRetrySubscriptionCreateWithoutReceipt(e);
-      if (retry) {
-        sub = await prisma.barberCustomerSubscription.create({
-          data: baseData,
-          select: { id: true, remainingSessions: true, status: true },
-        });
-        receiptSkipped = true;
+      const msg = e instanceof Error ? e.message : String(e);
+      const paymentColMissing =
+        /payment_method|paymentMethod/i.test(msg) &&
+        (/Unknown column|Unknown argument|Unknown field|P2022/i.test(msg) ||
+          e instanceof Prisma.PrismaClientValidationError);
+      if (paymentColMissing) {
+        const { paymentMethod: _drop, ...withoutPay } = baseData;
+        void _drop;
         try {
-          await prisma.barberCustomerSubscription.update({
-            where: { id: sub.id },
-            data: { saleReceiptImageUrl: receiptUrl },
+          sub = await prisma.barberCustomerSubscription.create({
+            data: {
+              ...withoutPay,
+              ...(receiptUrl ? { saleReceiptImageUrl: receiptUrl } : {}),
+            },
+            select: { id: true, remainingSessions: true, status: true },
           });
-          receiptSkipped = false;
-        } catch (ue) {
-          console.warn("[barber/subscriptions POST] บันทึกสลิปหลังสร้างแพ็กไม่สำเร็จ:", ue);
+        } catch (e2) {
+          const retry = receiptUrl && shouldRetrySubscriptionCreateWithoutReceipt(e2);
+          if (retry) {
+            sub = await prisma.barberCustomerSubscription.create({
+              data: withoutPay,
+              select: { id: true, remainingSessions: true, status: true },
+            });
+            receiptSkipped = true;
+          } else {
+            throw e2;
+          }
         }
       } else {
-        throw e;
+        const retry = receiptUrl && shouldRetrySubscriptionCreateWithoutReceipt(e);
+        if (retry) {
+          sub = await prisma.barberCustomerSubscription.create({
+            data: baseData,
+            select: { id: true, remainingSessions: true, status: true },
+          });
+          receiptSkipped = true;
+          try {
+            await prisma.barberCustomerSubscription.update({
+              where: { id: sub.id },
+              data: { saleReceiptImageUrl: receiptUrl },
+            });
+            receiptSkipped = false;
+          } catch (ue) {
+            console.warn("[barber/subscriptions POST] บันทึกสลิปหลังสร้างแพ็กไม่สำเร็จ:", ue);
+          }
+        } else {
+          throw e;
+        }
       }
     }
 
@@ -383,6 +492,7 @@ export async function POST(req: Request) {
         customerId: customer.id,
         phone: customer.phone,
         saleReceiptImageUrl: saleReceiptImageUrlForClient,
+        paymentMethod,
       },
       ...(receiptSkipped ?
         {

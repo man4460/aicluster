@@ -12,6 +12,7 @@ const bodySchema = z.object({
   phone: z.string().min(1).max(32),
   plateNumber: z.union([z.string(), z.null()]).optional(),
   scheduledAtLocal: z.string().min(10).max(40),
+  packageId: z.number().int().min(1),
   customerName: z
     .union([z.string(), z.null()])
     .optional()
@@ -57,6 +58,7 @@ export async function POST(req: Request) {
       phone: parsed.data.phone,
       plateNumber: parsed.data.plateNumber,
       scheduledAtLocal: parsed.data.scheduledAtLocal,
+      packageId: parsed.data.packageId,
       customerName: parsed.data.customerName,
     });
     if (!out.ok) {

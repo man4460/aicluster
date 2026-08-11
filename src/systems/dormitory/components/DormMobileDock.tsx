@@ -1,88 +1,68 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { AppMobileDockShell, appMobileDockGridClass } from "@/components/app-templates";
+import { appMobileDockGridClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
-  dormDockItemActiveClass,
-  dormDockItemIdleClass,
-} from "@/systems/dormitory/dorm-ui-tokens";
+  DORMITORY_NAV_ITEMS,
+  isDormitoryModulePath,
+  isDormitoryNavItemActive,
+  dormitoryNavIcon,
+  type DormitoryNavKey,
+} from "@/systems/dormitory/dormitory-module-nav";
+import {
+  IconModuleShopSettings,
+  MODULE_SHOP_SETTINGS_SHORT_LABEL,
+} from "@/systems/module-shop/module-shop-settings-nav";
+import { dormNavActiveClass, dormNavIdleClass } from "@/systems/dormitory/lib/ui-tokens";
 
-const items = [
-  { href: "/dashboard/dormitory", label: "ภาพรวม", icon: IconHome },
-  { href: "/dashboard/dormitory/rooms", label: "จัดการห้อง", icon: IconRooms },
-  { href: "/dashboard/dormitory/history", label: "การเงิน", icon: IconHistory },
-] as const;
+const dockLinkClass = (active: boolean) =>
+  cn(
+    "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-center transition-all active:scale-90",
+    active
+      ? cn(dormNavActiveClass, "ring-1 ring-white/40")
+      : dormNavIdleClass,
+  );
 
-function isActive(pathname: string, href: string) {
-  if (href === "/dashboard/dormitory") return pathname === href;
-  if (href === "/dashboard/dormitory/rooms") {
-    return pathname === "/dashboard/dormitory/rooms" || pathname.startsWith("/dashboard/dormitory/rooms/");
+function dockIcon(key: DormitoryNavKey, className?: string): ReactNode {
+  if (key === "settings") {
+    return <IconModuleShopSettings className={className} />;
   }
-  if (href === "/dashboard/dormitory/history") {
-    return (
-      pathname === "/dashboard/dormitory/history" ||
-      pathname.startsWith("/dashboard/dormitory/history/") ||
-      pathname === "/dashboard/dormitory/costs" ||
-      pathname.startsWith("/dashboard/dormitory/costs/")
-    );
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className={className} aria-hidden>
+      {dormitoryNavIcon(key)}
+    </svg>
+  );
 }
 
-export function DormMobileDock() {
+export function DormMobileDockNav() {
   const pathname = usePathname() ?? "";
-  return (
-    <AppMobileDockShell ariaLabel="เมนูล่างหอพัก">
-      <ul className={cn(appMobileDockGridClass, "grid-cols-3")}>
-        {items.map((item) => {
-          const active = isActive(pathname, item.href);
-          const Icon = item.icon;
-          return (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className={cn(
-                  "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1 text-center transition-all active:scale-90",
-                  active ? dormDockItemActiveClass : dormDockItemIdleClass,
-                )}
-                aria-current={active ? "page" : undefined}
-              >
-                <Icon className={cn("h-5 w-5 shrink-0", active ? "text-[#5b61ff]" : "text-slate-400")} />
-                <span className="text-[9px] font-black leading-none">{item.label}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </AppMobileDockShell>
-  );
-}
 
-function IconHome({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-      <path d="m3 11 9-7 9 7" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M5 10.5V20h14v-9.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+  if (!isDormitoryModulePath(pathname)) return null;
 
-function IconHistory({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-      <path d="M3 12a9 9 0 1 0 3-6.7" strokeLinecap="round" />
-      <path d="M3 4v3h3M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconRooms({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="M3 10h18M9 10v10M15 10v10" strokeLinecap="round" />
-    </svg>
+    <ul className={cn(appMobileDockGridClass, "grid-cols-5")} aria-label="แท็บนำทางโมดูลหอพัก">
+      {DORMITORY_NAV_ITEMS.map((item) => {
+        const active = isDormitoryNavItemActive(pathname, item.key);
+        const label = item.key === "settings" ? MODULE_SHOP_SETTINGS_SHORT_LABEL : item.shortLabel;
+        return (
+          <li key={item.key} className="min-w-0">
+            <Link
+              href={item.href}
+              className={dockLinkClass(active)}
+              aria-current={active ? "page" : undefined}
+              aria-label={item.label}
+            >
+              {dockIcon(item.key, "h-5 w-5 shrink-0")}
+              <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">
+                {label}
+              </span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

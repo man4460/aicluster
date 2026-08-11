@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
-import { scheduledAtLocalFromSlot } from "@/lib/car-wash/booking-slot-availability";
+import {
+  buildBookableStartSlots,
+  carWashNormalizeDurationMinutes,
+  scheduledAtLocalFromSlot,
+} from "@/lib/car-wash/booking-slot-availability";
 import { carWashStatusLabelTh, normalizeCarWashServiceStatus } from "@/lib/car-wash/service-status";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { useMounted } from "@/lib/use-mounted";
@@ -42,6 +46,17 @@ type SlotsPayload = {
   slotAvailability?: PublicSlotItem[];
   error?: string;
 };
+
+type PublicPackage = {
+  id: number;
+  name: string;
+  price: number;
+  duration_minutes: number;
+  description?: string;
+};
+
+const CAR_WASH_PORTAL_SAMPLE_BANNER =
+  "https://images.unsplash.com/photo-1607860108855-64acf2078ed9?auto=format&fit=crop&w=1600&q=80";
 
 function formatPhoneDisplay(digits: string): string {
   const d = digits.replace(/\D/g, "");
@@ -94,11 +109,15 @@ export function CarWashCustomerPortalClient({
   const [upcomingBookings, setUpcomingBookings] = useState<UpcomingBooking[]>([]);
   const [section, setSection] = useState<PortalSection>("book");
   const [selectedBundleId, setSelectedBundleId] = useState<number | null>(null);
+  const [packages, setPackages] = useState<PublicPackage[]>([]);
+  const [packagesLoading, setPackagesLoading] = useState(false);
+  const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
   const [checkInLoading, setCheckInLoading] = useState(false);
   const [laneVisitAckId, setLaneVisitAckId] = useState<number | null>(null);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
   const [customerName, setCustomerName] = useState("");
+  const [bookPhoneInput, setBookPhoneInput] = useState("");
   const [plateInput, setPlateInput] = useState("");
   const [bookingDateKey, setBookingDateKey] = useState("");
   const [selectedSlot, setSelectedSlot] = useState("");
@@ -121,19 +140,24 @@ export function CarWashCustomerPortalClient({
     () => bundles.find((b) => b.id === selectedBundleId) ?? null,
     [bundles, selectedBundleId],
   );
+  const selectedPackage = useMemo(
+    () => packages.find((p) => p.id === selectedPackageId) ?? null,
+    [packages, selectedPackageId],
+  );
 
   const primaryCustomer = bundles[0] ?? null;
   const customerBundleSummary = selected ?? bundles[0] ?? null;
 
   const phoneForBook = useMemo(() => {
+    const direct = bookPhoneInput.replace(/\D/g, "");
+    if (direct.length >= 9) return direct;
     if (queryDigits.length >= 9) return queryDigits;
     const fromBundle = primaryCustomer?.customer_phone?.replace(/\D/g, "") ?? "";
     return fromBundle.length >= 9 ? fromBundle : "";
-  }, [queryDigits, primaryCustomer?.customer_phone]);
+  }, [bookPhoneInput, queryDigits, primaryCustomer?.customer_phone]);
 
   const phoneOk = phoneForBook.length >= 9;
   const hasBundles = bundles.length > 0;
-  const showActions = phoneOk || hasBundles;
 
   const openLaneVisit = useMemo(() => {
     for (const v of recentVisits) {
@@ -150,6 +174,33 @@ export function CarWashCustomerPortalClient({
     setBookingDateKey(bangkokDateKey());
   }, []);
 
+  useEffect(() => {
+    if (!ownerId) return;
+    let cancelled = false;
+    (async () => {
+      setPackagesLoading(true);
+      try {
+        const res = await fetch(`/api/car-wash/public/packages?ownerId=${encodeURIComponent(ownerId)}`);
+        const j = (await res.json().catch(() => ({}))) as { packages?: PublicPackage[]; error?: string };
+        if (!res.ok) {
+          if (!cancelled) setErr(j.error ?? "โหลดบริการไม่สำเร็จ");
+          return;
+        }
+        if (!cancelled) setPackages(j.packages ?? []);
+      } finally {
+        if (!cancelled) setPackagesLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerId]);
+
+  useEffect(() => {
+    if (selectedPackageId != null) return;
+    if (packages.length > 0) setSelectedPackageId(packages[0]!.id);
+  }, [packages, selectedPackageId]);
+
   const laneConfirmed = openLaneVisit != null && laneVisitAckId === openLaneVisit.id;
   const historyPreview = useMemo(() => recentVisits.slice(0, 6), [recentVisits]);
 
@@ -160,6 +211,15 @@ export function CarWashCustomerPortalClient({
     Boolean(selected?.is_active) &&
     (selected?.used_uses ?? 0) < (selected?.total_uses ?? 0) &&
     !checkInLoading;
+  const bookableSlots = useMemo(
+    () =>
+      buildBookableStartSlots(
+        slotAvailability,
+        scheduleSlotMinutes,
+        carWashNormalizeDurationMinutes(selectedPackage?.duration_minutes, scheduleSlotMinutes),
+      ),
+    [slotAvailability, scheduleSlotMinutes, selectedPackage?.duration_minutes],
+  );
 
   const loadSlots = useCallback(
     async (dk: string) => {
@@ -191,9 +251,16 @@ export function CarWashCustomerPortalClient({
   );
 
   useEffect(() => {
-    if (section !== "book" || !phoneOk || !bookingDateKey) return;
+    if (section !== "book" || !bookingDateKey) return;
     void loadSlots(bookingDateKey);
-  }, [section, phoneOk, bookingDateKey, loadSlots]);
+  }, [section, bookingDateKey, loadSlots]);
+
+  useEffect(() => {
+    if (section !== "book" || !selectedPackageId) return;
+    const active = bookableSlots.find((s) => s.time === selectedSlot && s.available);
+    if (active) return;
+    setSelectedSlot(bookableSlots.find((s) => s.available)?.time ?? "");
+  }, [section, selectedPackageId, bookableSlots, selectedSlot]);
 
   async function runLookup(
     raw: string,
@@ -262,6 +329,9 @@ export function CarWashCustomerPortalClient({
     if (!customerName.trim() && firstActive?.customer_name) {
       setCustomerName(firstActive.customer_name);
     }
+    if (!bookPhoneInput.trim() && firstActive?.customer_phone) {
+      setBookPhoneInput(firstActive.customer_phone);
+    }
     return { ok: true, hasBundles: true };
   }
 
@@ -304,6 +374,10 @@ export function CarWashCustomerPortalClient({
       setErr("วันนี้ปิดรับจอง — เลือกวันอื่น");
       return;
     }
+    if (!selectedPackageId) {
+      setErr("เลือกบริการก่อนเลือกช่วงเวลา");
+      return;
+    }
     if (!selectedSlot) {
       setErr("เลือกช่วงเวลาจากตาราง");
       return;
@@ -328,6 +402,7 @@ export function CarWashCustomerPortalClient({
           phone: phoneForBook,
           plateNumber: plate,
           scheduledAtLocal: localKey,
+          packageId: selectedPackageId,
           customerName: customerName.trim() || null,
         }),
       });
@@ -403,24 +478,33 @@ export function CarWashCustomerPortalClient({
     <AppPublicCheckInGlassPage>
       <div className="relative mx-auto max-w-md space-y-4">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-[1.25rem] border border-white/70 bg-gradient-to-br from-white/80 to-violet-100/60 shadow-[0_8px_24px_-8px_rgba(91,97,255,0.35)] backdrop-blur-xl ring-1 ring-inset ring-white/70">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-7 w-7 text-[#5b61ff]"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <path d="M19 17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3l2-2h4l2 2h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2Z" />
-              <circle cx="12" cy="11" r="2.5" />
-              <path d="m8 19 4-2 4 2" />
-            </svg>
+          <div className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/50 shadow-[0_18px_45px_-22px_rgba(91,97,255,0.45)] backdrop-blur-xl ring-1 ring-inset ring-white/70">
+            <div className="relative h-44 w-full sm:h-52">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={CAR_WASH_PORTAL_SAMPLE_BANNER} alt="" className="h-full w-full object-cover object-center" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#1e1b4b]/75 via-[#1e1b4b]/20 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-5 text-left sm:p-6">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-[1rem] border border-white/60 bg-white/20 text-white backdrop-blur-md">
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-6 w-6"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <path d="M19 17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3l2-2h4l2 2h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2Z" />
+                    <circle cx="12" cy="11" r="2.5" />
+                    <path d="m8 19 4-2 4 2" />
+                  </svg>
+                </div>
+                <h1 className="text-2xl font-black tracking-tight text-white">คาร์แคร์</h1>
+                <p className="mt-1 text-sm font-medium text-white/90">เลือกแพ็กเกจ จองตามช่วงเวลา หรือใช้แพ็กเหมาเดิม</p>
+              </div>
+            </div>
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-[#1e1b4b]">คาร์แคร์</h1>
-          <p className="mt-1 text-sm text-[#6b6894]">จองคิวล้างรถ หรือใช้แพ็กเหมา</p>
         </div>
 
         {!mounted ? (
@@ -429,6 +513,9 @@ export function CarWashCustomerPortalClient({
           <>
             <div className={appPublicCheckInGlassCardClass}>
               <div className="px-5 py-5 sm:px-6">
+                <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[#9490c0]">
+                  ค้นหาแพ็กเหมา / ประวัติ / คิวเดิม
+                </p>
                 <form onSubmit={onSearch} className="flex items-stretch gap-2">
                   <div className="relative min-w-0 flex-1">
                     {!query ? (
@@ -472,45 +559,43 @@ export function CarWashCustomerPortalClient({
               </div>
             </div>
 
-            {showActions ? (
-              <div
-                className="flex rounded-2xl border border-white/60 bg-white/40 p-1 backdrop-blur-md"
-                role="tablist"
-                aria-label="เลือกบริการ"
+            <div
+              className="flex rounded-2xl border border-white/60 bg-white/40 p-1 backdrop-blur-md"
+              role="tablist"
+              aria-label="เลือกบริการ"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={section === "book"}
+                onClick={() => setSection("book")}
+                className={cn(
+                  "min-h-[44px] flex-1 rounded-xl text-sm font-bold transition",
+                  section === "book"
+                    ? "bg-white/90 text-[#5b61ff] shadow-sm"
+                    : "text-[#6b6894] hover:bg-white/50",
+                )}
               >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={section === "book"}
-                  onClick={() => setSection("book")}
-                  className={cn(
-                    "min-h-[44px] flex-1 rounded-xl text-sm font-bold transition",
-                    section === "book"
-                      ? "bg-white/90 text-[#5b61ff] shadow-sm"
-                      : "text-[#6b6894] hover:bg-white/50",
-                  )}
-                >
-                  จองคิว
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={section === "package"}
-                  disabled={!hasBundles}
-                  onClick={() => hasBundles && setSection("package")}
-                  className={cn(
-                    "min-h-[44px] flex-1 rounded-xl text-sm font-bold transition",
-                    section === "package"
-                      ? "bg-white/90 text-[#5b61ff] shadow-sm"
-                      : "text-[#6b6894] hover:bg-white/50 disabled:cursor-not-allowed disabled:opacity-45",
-                  )}
-                >
-                  ใช้แพ็ก
-                </button>
-              </div>
-            ) : null}
+                จองคิว
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={section === "package"}
+                disabled={!hasBundles}
+                onClick={() => hasBundles && setSection("package")}
+                className={cn(
+                  "min-h-[44px] flex-1 rounded-xl text-sm font-bold transition",
+                  section === "package"
+                    ? "bg-white/90 text-[#5b61ff] shadow-sm"
+                    : "text-[#6b6894] hover:bg-white/50 disabled:cursor-not-allowed disabled:opacity-45",
+                )}
+              >
+                ใช้แพ็ก
+              </button>
+            </div>
 
-            {showActions && section === "book" ? (
+            {section === "book" ? (
               <>
                 {upcomingBookings.length > 0 ? (
                   <div className={appPublicCheckInGlassCardClass}>
@@ -535,9 +620,60 @@ export function CarWashCustomerPortalClient({
                     <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[#9490c0]">จองล้างรถ</p>
                     {!hasBundles ? (
                       <p className="mb-3 text-xs text-[#6b6894]">
-                        ยังไม่พบแพ็กในระบบ — จองคิวด้วยเบอร์นี้ได้เลย
+                        ลูกค้าใหม่จองได้ทันที หรือค้นหาเบอร์/ทะเบียนด้านบนเพื่อใช้แพ็กเหมาเดิม
                       </p>
                     ) : null}
+                    <div className="mb-3 space-y-2">
+                      <p className="text-xs font-semibold text-[#6b6894]">เลือกบริการก่อนเลือกเวลา</p>
+                      {packagesLoading ? (
+                        <p className="text-sm text-[#66638c]">กำลังโหลดบริการ…</p>
+                      ) : packages.length === 0 ? (
+                        <p className="rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
+                          ยังไม่มีบริการที่เปิดให้จอง
+                        </p>
+                      ) : (
+                        <ul className="grid grid-cols-2 gap-2">
+                          {packages.map((pkg) => {
+                            const active = selectedPackageId === pkg.id;
+                            return (
+                              <li key={pkg.id}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedPackageId(pkg.id);
+                                    setSelectedSlot("");
+                                  }}
+                                  className={cn(
+                                    "flex min-h-[88px] w-full flex-col rounded-2xl border px-3 py-2 text-left transition-all",
+                                    active
+                                      ? "border-[#5b61ff]/40 bg-white/90 ring-2 ring-[#5b61ff]/25"
+                                      : "border-white/70 bg-white/55 hover:border-[#5b61ff]/35 hover:bg-white/80",
+                                  )}
+                                >
+                                  <span className="line-clamp-2 text-sm font-black text-[#1e1b4b]">{pkg.name}</span>
+                                  <span className="mt-1 text-[11px] font-semibold text-[#6b6894]">
+                                    {carWashNormalizeDurationMinutes(pkg.duration_minutes, scheduleSlotMinutes)} นาที
+                                  </span>
+                                  <span className="mt-0.5 text-xs font-black text-[#4d47b6]">
+                                    ฿{pkg.price.toLocaleString("th-TH")}
+                                  </span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                    <label className="mb-3 block text-xs font-semibold text-[#6b6894]">
+                      เบอร์โทรสำหรับจอง
+                      <input
+                        type="tel"
+                        value={bookPhoneInput}
+                        onChange={(e) => setBookPhoneInput(e.target.value.slice(0, 32))}
+                        placeholder="0812345678"
+                        className="mt-1.5 w-full rounded-2xl border border-white/70 bg-white/60 px-4 py-3 text-sm font-semibold text-[#1e1b4b] outline-none focus:border-[#5b61ff]/50 focus:ring-2 focus:ring-[#5b61ff]/15"
+                      />
+                    </label>
                     <label className="mb-3 block text-xs font-semibold text-[#6b6894]">
                       ชื่อ (ไม่บังคับ)
                       <input
@@ -563,7 +699,7 @@ export function CarWashCustomerPortalClient({
                       onDateChange={setBookingDateKey}
                       selectedSlot={selectedSlot}
                       onSlotChange={setSelectedSlot}
-                      slotAvailability={slotAvailability}
+                      slotAvailability={bookableSlots}
                       scheduleLoading={scheduleLoading}
                       scheduleClosed={scheduleClosed}
                       scheduleOpen={scheduleOpen}
@@ -581,12 +717,12 @@ export function CarWashCustomerPortalClient({
 
                 <button
                   type="button"
-                  disabled={bookLoading || scheduleClosed || !selectedSlot || !phoneOk}
+                  disabled={bookLoading || scheduleClosed || !selectedSlot || !phoneOk || !selectedPackageId}
                   onClick={() => void onBook()}
                   aria-label={bookLoading ? "กำลังจอง" : "ยืนยันจองคิว"}
                   className={cn(
                     "flex min-h-[52px] w-full items-center justify-center rounded-2xl py-4 transition-all",
-                    bookLoading || scheduleClosed || !selectedSlot || !phoneOk
+                    bookLoading || scheduleClosed || !selectedSlot || !phoneOk || !selectedPackageId
                       ? "border border-white/60 bg-white/40 text-[#a8a5cc]"
                       : "border border-[#5b61ff]/30 bg-gradient-to-br from-[#5b61ff] to-[#6a63ff] text-white shadow-[0_14px_30px_-10px_rgba(91,97,255,0.45)] active:scale-[0.98]",
                   )}
@@ -605,7 +741,7 @@ export function CarWashCustomerPortalClient({
               </>
             ) : null}
 
-            {showActions && section === "package" && !hasBundles ? (
+            {section === "package" && !hasBundles ? (
               <div className={appPublicCheckInGlassCardClass}>
                 <p className="px-5 py-5 text-center text-sm text-[#6b6894] sm:px-6">
                   ไม่พบแพ็กเหมา — ค้นหาด้วยเบอร์หรือทะเบียนที่ลงทะเบียนไว้
@@ -613,7 +749,7 @@ export function CarWashCustomerPortalClient({
               </div>
             ) : null}
 
-            {showActions && section === "package" && hasBundles ? (
+            {section === "package" && hasBundles ? (
               <div className={appPublicCheckInGlassCardClass}>
                 <div className="border-b border-white/50 bg-gradient-to-r from-[#5b61ff]/8 via-transparent to-transparent px-5 py-4 sm:px-6">
                   <div className="flex items-start justify-between gap-3">

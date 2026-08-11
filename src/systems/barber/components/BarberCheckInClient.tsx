@@ -1,15 +1,30 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { BarberModalPortal } from "@/systems/barber/components/BarberModalPortal";
+import { BarberPaymentPanel } from "@/systems/barber/components/BarberPaymentPanel";
+import {
+  BarberTaxInvoiceFields,
+  emptyBarberTaxInvoiceForm,
+  type BarberTaxInvoiceFormValue,
+} from "@/systems/barber/components/BarberTaxInvoiceFields";
 import { cn } from "@/lib/cn";
+import { isValidThaiId13 } from "@/lib/thai-tax-id";
 import { BarberSellPackageModal } from "@/systems/barber/components/BarberSellPackageModal";
+import type { BarberPaymentMethod } from "@/systems/barber/lib/payment-method";
+import {
+  printBarberMemberDocs,
+  type BarberPrintShopProfile,
+} from "@/systems/barber/lib/barber-print-docs";
+import {
+  DEFAULT_BARBER_PAY_AMOUNT_PRESETS,
+  parseBarberPayAmountPresets,
+} from "@/systems/barber/lib/pay-amount-presets";
 import {
   barberCardBodyPaddingXClass,
   barberCardSurfaceRadiusClass,
   barberModalBackdropClass,
-  barberModalCameraBackdropClass,
   barberModalCloseBtnClass,
   barberModalHeaderClass,
   barberModalPanelLgClass,
@@ -17,6 +32,8 @@ import {
   barberModalSubtitleClass,
   barberModalTitleClass,
   barberPageStackClass,
+  barberPaymentChipActiveClass,
+  barberPaymentChipIdleClass,
   barberSectionFirstClass,
   barberSectionNextClass,
 } from "@/systems/barber/components/barber-ui-tokens";
@@ -29,7 +46,7 @@ type SubRow = {
   packageId: number;
 };
 
-type Pkg = { id: number; name: string; price: number; totalSessions: number };
+type Pkg = { id: number; name: string; price: number; totalSessions: number; imageUrl?: string | null };
 
 type StylistBrief = { id: number; name: string };
 
@@ -50,43 +67,6 @@ function IconReceipt({ className }: { className?: string }) {
       <line x1="16" y1="13" x2="8" y2="13" />
       <line x1="16" y1="17" x2="8" y2="17" />
       <polyline points="10 9 9 9 8 9" />
-    </svg>
-  );
-}
-
-function IconImageUp({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
-  );
-}
-
-function IconCamera({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-      <circle cx="12" cy="13" r="4" />
     </svg>
   );
 }
@@ -132,7 +112,12 @@ export function BarberCheckInClient({
   embedded = false,
   /** หน้า QR พนักงาน — เลย์เอาต์แบบมือถือ (คอลัมน์เดียว ไม่แยกแถวบน sm+) */
   staffQrLanding = false,
-}: { embedded?: boolean; staffQrLanding?: boolean } = {}) {
+  headerToolbar = null,
+}: {
+  embedded?: boolean;
+  staffQrLanding?: boolean;
+  headerToolbar?: ReactNode;
+} = {}) {
   const router = useRouter();
 
   const [phone, setPhone] = useState("");
@@ -157,10 +142,17 @@ export function BarberCheckInClient({
   const [cashModalOpen, setCashModalOpen] = useState(false);
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const [cashFormErr, setCashFormErr] = useState<string | null>(null);
-  const [cashReceipt, setCashReceipt] = useState<{ file: File; url: string } | null>(null);
-  const [cashCameraOpen, setCashCameraOpen] = useState(false);
-  const [cashCameraErr, setCashCameraErr] = useState<string | null>(null);
-  const cashVideoRef = useRef<HTMLVideoElement>(null);
+  const [cashPaymentMethod, setCashPaymentMethod] = useState<BarberPaymentMethod>("CASH");
+  const [cashSlipUrl, setCashSlipUrl] = useState<string | null>(null);
+  const [cashTaxForm, setCashTaxForm] = useState<BarberTaxInvoiceFormValue>(() =>
+    emptyBarberTaxInvoiceForm(),
+  );
+  const [cashPrintReceipt, setCashPrintReceipt] = useState(true);
+  const [cashPrintTaxInvoice, setCashPrintTaxInvoice] = useState(false);
+  const [payAmountPresets, setPayAmountPresets] = useState<number[]>([
+    ...DEFAULT_BARBER_PAY_AMOUNT_PRESETS,
+  ]);
+  const [shopPrintProfile, setShopPrintProfile] = useState<BarberPrintShopProfile | null>(null);
 
   const stylistPickSummary = useMemo(() => {
     if (stylists.length === 0) return "ยังไม่มีช่าง · ตั้งที่เมนูช่าง";
@@ -169,135 +161,42 @@ export function BarberCheckInClient({
     return s?.name ?? "ไม่ระบุช่าง";
   }, [stylists, stylistId]);
 
-  const clearCashReceipt = useCallback(() => {
-    setCashReceipt((prev) => {
-      if (prev?.url) URL.revokeObjectURL(prev.url);
-      return null;
-    });
-  }, []);
+  const cashAmountBaht = useMemo(() => {
+    const rawAmt = cashAmount.trim().replace(/,/g, "");
+    if (!rawAmt) return 0;
+    const n = Number(rawAmt);
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return Math.round(n * 100) / 100;
+  }, [cashAmount]);
 
-  const onCashReceiptSelected = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    e.target.value = "";
-    if (!f) return;
-    if (!f.type.startsWith("image/")) {
-      setCashFormErr("เลือกรูปภาพเท่านั้น");
-      return;
-    }
-    setCashFormErr(null);
-    setCashReceipt((prev) => {
-      if (prev?.url) URL.revokeObjectURL(prev.url);
-      return { file: f, url: URL.createObjectURL(f) };
-    });
-  }, []);
-
-  const closeCashCamera = useCallback(() => {
-    setCashCameraOpen(false);
-    setCashCameraErr(null);
+  const resetCashPayment = useCallback(() => {
+    setCashPaymentMethod("CASH");
+    setCashSlipUrl(null);
+    setCashTaxForm(emptyBarberTaxInvoiceForm());
+    setCashPrintReceipt(true);
+    setCashPrintTaxInvoice(false);
   }, []);
 
   useEffect(() => {
-    if (!cashCameraOpen) return;
-    const video = cashVideoRef.current;
-    let stream: MediaStream | null = null;
-    let cancelled = false;
-
-    const stop = () => {
-      stream?.getTracks().forEach((t) => t.stop());
-      stream = null;
-      if (video) video.srcObject = null;
-    };
-
-    (async () => {
-      setCashCameraErr(null);
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" } },
-          audio: false,
-        });
-      } catch {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-        } catch {
-          if (!cancelled) {
-            setCashCameraErr("เปิดกล้องไม่ได้ — อนุญาตกล้องในเบราว์เซอร์ และใช้ HTTPS หรือ localhost");
-            setCashCameraOpen(false);
-          }
-          return;
-        }
-      }
-      if (cancelled) {
-        stop();
-        return;
-      }
-      const attach = () => {
-        const v = cashVideoRef.current;
-        if (v && stream) {
-          v.srcObject = stream;
-          void v.play().catch(() => {});
-          return true;
-        }
-        return false;
-      };
-      if (!attach()) {
-        requestAnimationFrame(() => {
-          if (!cancelled && stream) attach();
-        });
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      stop();
-    };
-  }, [cashCameraOpen]);
-
-  const captureFromCashCamera = useCallback(() => {
-    const video = cashVideoRef.current;
-    if (!video || video.readyState < 2) {
-      setCashCameraErr("รอกล้องพร้อมสักครู่แล้วลองอีกครั้ง");
-      return;
-    }
-    const w = video.videoWidth;
-    const h = video.videoHeight;
-    if (!w || !h) {
-      setCashCameraErr("ยังไม่มีภาพจากกล้อง");
-      return;
-    }
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.drawImage(video, 0, 0, w, h);
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          setCashCameraErr("บันทึกภาพไม่สำเร็จ");
-          return;
-        }
-        const file = new File([blob], `slip-${Date.now()}.jpg`, { type: "image/jpeg" });
-        setCashReceipt((prev) => {
-          if (prev?.url) URL.revokeObjectURL(prev.url);
-          return { file, url: URL.createObjectURL(blob) };
-        });
-        setCashFormErr(null);
-        setCashCameraErr(null);
-        setCashCameraOpen(false);
-      },
-      "image/jpeg",
-      0.88,
-    );
-  }, []);
-
-  const openCashCamera = useCallback(() => {
-    setCashFormErr(null);
-    setCashCameraErr(null);
-    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-      setCashFormErr("เบราว์เซอร์ไม่รองรับการเปิดกล้อง — ใช้ปุ่มอัปโหลดรูปแทน");
-      return;
-    }
-    setCashCameraOpen(true);
+    void fetch("/api/barber/shop-profile", { credentials: "include" })
+      .then((r) => r.json())
+      .then(
+        (d: {
+          profile?: BarberPrintShopProfile & {
+            payAmountPresets?: number[];
+            payAmountPresetsRaw?: string;
+          };
+        }) => {
+          if (!d.profile) return;
+          setShopPrintProfile(d.profile);
+          const presets =
+            d.profile.payAmountPresets && d.profile.payAmountPresets.length > 0
+              ? d.profile.payAmountPresets
+              : parseBarberPayAmountPresets(d.profile.payAmountPresetsRaw);
+          setPayAmountPresets(presets);
+        },
+      )
+      .catch(() => {});
   }, []);
 
   const searchByPhone = useCallback(async (raw: string) => {
@@ -351,11 +250,7 @@ export function BarberCheckInClient({
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (cashCameraOpen) {
-          closeCashCamera();
-          return;
-        }
-        if (cashModalOpen) clearCashReceipt();
+        resetCashPayment();
         setCashModalOpen(false);
       }
     };
@@ -364,7 +259,7 @@ export function BarberCheckInClient({
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [cashModalOpen, cashCameraOpen, clearCashReceipt, closeCashCamera]);
+  }, [cashModalOpen, resetCashPayment]);
 
   useEffect(() => {
     if (!stylistModalOpen) return;
@@ -440,25 +335,24 @@ export function BarberCheckInClient({
       }
       amountBaht = Math.round(n * 100) / 100;
     }
+    if (cashPrintTaxInvoice || cashTaxForm.taxInvoiceEnabled) {
+      if (cashTaxForm.billingName.trim().length < 2) {
+        setCashFormErr("กรอกชื่อในใบกำกับภาษี");
+        return;
+      }
+      if (!isValidThaiId13(cashTaxForm.taxId)) {
+        setCashFormErr("เลขผู้เสียภาษีต้องเป็นตัวเลข 13 หลักและถูกต้อง");
+        return;
+      }
+      if (cashTaxForm.taxAddress.trim().length < 8) {
+        setCashFormErr("กรอกที่อยู่ในใบกำกับภาษีให้ครบ");
+        return;
+      }
+    }
     setCashLoading(true);
     try {
-      let receiptImageUrl: string | null = null;
-      if (cashReceipt?.file) {
-        const fd = new FormData();
-        fd.append("file", cashReceipt.file);
-        const up = await fetch("/api/barber/cash-receipt/upload", { method: "POST", body: fd });
-        const upData = (await up.json().catch(() => ({}))) as { error?: string; imageUrl?: string };
-        if (!up.ok) {
-          setCashFormErr(upData.error ?? "อัปโหลดรูปไม่สำเร็จ");
-          return;
-        }
-        if (!upData.imageUrl) {
-          setCashFormErr("อัปโหลดรูปไม่สำเร็จ");
-          return;
-        }
-        receiptImageUrl = upData.imageUrl;
-      }
-
+      const receiptImageUrl =
+        cashPaymentMethod === "CASH" || cashPaymentMethod === "CREDIT_CARD" ? null : cashSlipUrl;
       const sidCash = stylistId ? Number(stylistId) : null;
       const res = await fetch("/api/barber/check-in", {
         method: "POST",
@@ -469,21 +363,70 @@ export function BarberCheckInClient({
           name: cashName.trim() || null,
           note: cashNote.trim() || null,
           ...(amountBaht != null ? { amountBaht } : {}),
+          ...(amountBaht != null && amountBaht > 0 ? { paymentMethod: cashPaymentMethod } : {}),
           ...(receiptImageUrl ? { receiptImageUrl } : {}),
           ...(sidCash != null && Number.isInteger(sidCash) && sidCash > 0 ? { stylistId: sidCash } : {}),
+          taxInvoiceEnabled: cashTaxForm.taxInvoiceEnabled,
+          ...(cashTaxForm.taxInvoiceEnabled
+            ? {
+                billingName: cashTaxForm.billingName.trim() || null,
+                taxId: cashTaxForm.taxId.trim() || null,
+                taxAddress: cashTaxForm.taxAddress.trim() || null,
+                taxBranch: cashTaxForm.taxBranch.trim() || null,
+              }
+            : {}),
         }),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        serviceLogId?: number;
+        customer?: {
+          phone: string;
+          name: string | null;
+          billingName?: string;
+          taxId?: string;
+          taxAddress?: string;
+          taxBranch?: string;
+        };
+      };
       if (!res.ok) {
         setCashFormErr(data.error ?? "บันทึกไม่สำเร็จ");
         return;
       }
+
+      if ((cashPrintReceipt || cashPrintTaxInvoice) && amountBaht != null && amountBaht > 0) {
+        const billingName =
+          (cashTaxForm.billingName || data.customer?.billingName || cashName || digits).trim() ||
+          digits;
+        printBarberMemberDocs({
+          receipt: cashPrintReceipt,
+          taxInvoice: cashPrintTaxInvoice,
+          data: {
+            shop: shopPrintProfile ?? { displayName: "ร้านตัดผม", slipPaperSize: "SLIP_58" },
+            customerName: cashPrintTaxInvoice ? billingName : cashName.trim() || billingName,
+            customerPhone: digits,
+            customerAddress: cashPrintTaxInvoice ? cashTaxForm.taxAddress.trim() : null,
+            customerTaxId: cashPrintTaxInvoice ? cashTaxForm.taxId.trim() : null,
+            packageName: cashNote.trim() || "บริการตัดผม",
+            totalSessions: 0,
+            remainingSessions: 0,
+            priceBaht: amountBaht,
+            paymentMethod: cashPaymentMethod,
+            soldAtIso: new Date().toISOString(),
+            docNo: data.serviceLogId != null ? `CW-${data.serviceLogId}` : undefined,
+            note: cashTaxForm.taxBranch.trim()
+              ? `สาขา ${cashTaxForm.taxBranch.trim()}`
+              : null,
+          },
+        });
+      }
+
       setMsg("บันทึกลูกค้าเงินสดแล้ว");
       setCashPhone("");
       setCashName("");
       setCashNote("");
       setCashAmount("");
-      clearCashReceipt();
+      resetCashPayment();
       setCashModalOpen(false);
       router.refresh();
     } finally {
@@ -493,6 +436,14 @@ export function BarberCheckInClient({
 
   return (
     <div className={embedded ? "space-y-4 sm:space-y-5" : barberPageStackClass}>
+      {headerToolbar ? (
+        <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <h2 className="shrink-0 text-base font-black leading-none tracking-tight text-[#1e1b4b] sm:text-lg">
+            เช็กอิน
+          </h2>
+          <div className="flex w-full justify-end sm:w-auto">{headerToolbar}</div>
+        </div>
+      ) : null}
       <section className={barberSectionFirstClass} aria-label="ช่างที่บันทึก">
         <button
           type="button"
@@ -575,16 +526,14 @@ export function BarberCheckInClient({
               }}
             >
               <div className="relative min-w-0 flex-1">
-                {phone.length === 0 ? (
-                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-600/75">
-                    <IconSearch className="h-5 w-5" aria-hidden />
-                  </span>
-                ) : null}
+                <span
+                  className="pointer-events-none absolute inset-y-0 left-0 z-[1] flex w-11 items-center justify-center text-emerald-600/80"
+                  aria-hidden
+                >
+                  <IconSearch className="h-5 w-5 shrink-0" />
+                </span>
                 <input
-                  className={cn(
-                    "app-input min-h-[52px] w-full rounded-[1.25rem] border-emerald-200/90 bg-white/95 py-3 pr-3 text-base font-medium text-[#1e293b] shadow-inner shadow-emerald-950/5 placeholder:text-slate-400 focus:border-emerald-400 focus:ring-emerald-400/25",
-                    phone.length === 0 ? "pl-12" : "pl-3.5",
-                  )}
+                  className="app-input min-h-[52px] w-full rounded-[1.25rem] border-emerald-200/90 bg-white/95 py-3 !pl-11 pr-3 text-base font-medium text-[#1e293b] shadow-inner shadow-emerald-950/5 placeholder:text-slate-400 focus:border-emerald-400 focus:ring-emerald-400/25"
                   inputMode="numeric"
                   placeholder="เบอร์โทรลูกค้า"
                   autoComplete="tel"
@@ -683,8 +632,7 @@ export function BarberCheckInClient({
                 type="button"
                 onClick={() => {
                   setCashFormErr(null);
-                  closeCashCamera();
-                  clearCashReceipt();
+                  resetCashPayment();
                   setCashModalOpen(true);
                 }}
                 suppressHydrationWarning
@@ -694,8 +642,8 @@ export function BarberCheckInClient({
                   <IconCoins className="h-6 w-6" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-base font-black text-amber-950">เงินสด</span>
-                  <span className="mt-0.5 block text-xs font-medium text-amber-900/85">เบอร์ · ชื่อ · ยอด · สลิป</span>
+                  <span className="block text-base font-black text-amber-950">รับชำระ</span>
+                  <span className="mt-0.5 block text-xs font-medium text-amber-900/85">เบอร์ · ยอด · ช่องทางชำระ</span>
                 </span>
               </button>
               <button
@@ -804,11 +752,7 @@ export function BarberCheckInClient({
               className={barberModalBackdropClass}
               role="presentation"
               onClick={() => {
-                if (cashCameraOpen) {
-                  closeCashCamera();
-                  return;
-                }
-                clearCashReceipt();
+                resetCashPayment();
                 setCashModalOpen(false);
               }}
             >
@@ -822,17 +766,16 @@ export function BarberCheckInClient({
             <div className={barberModalHeaderClass}>
               <div className="min-w-0">
                 <h2 id="barber-cash-modal-title" className={barberModalTitleClass}>
-                  ลูกค้าเงินสด (Walk-in)
+                  ลูกค้า Walk-in
                 </h2>
                 <p className={barberModalSubtitleClass}>
-                  แยกจากการหักแพ็ก — กรอกยอดเงินได้เพื่อสรุปรายได้ในประวัติ
+                  แยกจากการหักแพ็ก — กรอกยอดและเลือกช่องทางชำระ
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  closeCashCamera();
-                  clearCashReceipt();
+                  resetCashPayment();
                   setCashModalOpen(false);
                 }}
                 className={barberModalCloseBtnClass}
@@ -841,7 +784,7 @@ export function BarberCheckInClient({
                 ✕
               </button>
             </div>
-            <form onSubmit={onCash} className="grid gap-3 px-5 py-5">
+            <form onSubmit={(e) => void onCash(e)} className="grid max-h-[min(78vh,44rem)] gap-3 overflow-y-auto px-5 py-5">
               {cashFormErr ? (
                 <p className="rounded-[1.25rem] bg-red-50 px-3 py-2 text-sm text-red-800">{cashFormErr}</p>
               ) : null}
@@ -860,70 +803,130 @@ export function BarberCheckInClient({
               />
               <input
                 className="min-h-[48px] rounded-[1.25rem] border border-slate-200 px-3 text-base"
-                placeholder="หมายเหตุ (ไม่บังคับ)"
+                placeholder="หมายเหตุ / รายการบริการ (ไม่บังคับ)"
                 value={cashNote}
                 onChange={(e) => setCashNote(e.target.value)}
               />
               <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/60 px-3 py-2.5">
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
                   <IconReceipt className="h-4 w-4 shrink-0 text-amber-700" />
-                  <span>ยอดเงิน (บาท, ไม่บังคับ)</span>
+                  <span>ยอดเงิน (บาท)</span>
                 </div>
-                <input
-                  className="app-input mt-2 min-h-[48px] w-full rounded-[1.25rem] border border-slate-200 bg-white px-3 text-base"
-                  placeholder="0"
-                  inputMode="decimal"
-                  value={cashAmount}
-                  onChange={(e) => setCashAmount(e.target.value)}
-                  aria-label="ยอดเงินบาท"
-                />
-              </div>
-              <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50/60 px-3 py-2.5">
-                <p className="text-xs font-semibold text-slate-700">แนบรูปบิล / สลิป (ไม่บังคับ)</p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <div className="relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center overflow-hidden rounded-[1.25rem] border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="absolute inset-0 z-10 h-full min-h-[44px] w-full min-w-[44px] cursor-pointer opacity-0"
-                      onChange={onCashReceiptSelected}
-                      aria-label="อัปโหลดรูป"
-                    />
-                    <IconImageUp className="pointer-events-none h-5 w-5" aria-hidden />
-                  </div>
-                  <button
-                    type="button"
-                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-[1.25rem] border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
-                    aria-label="ถ่ายรูปจากกล้อง"
-                    onClick={openCashCamera}
+                {payAmountPresets.length > 0 ? (
+                  <div
+                    className="mt-2 flex flex-wrap gap-1.5"
+                    role="group"
+                    aria-label="ปุ่มลัดยอดเงิน"
                   >
-                    <IconCamera className="h-5 w-5" aria-hidden />
-                  </button>
-                  {cashReceipt ? (
-                    <button
-                      type="button"
-                      className="rounded-[1.25rem] px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-white hover:text-slate-800"
-                      onClick={clearCashReceipt}
-                    >
-                      ลบรูป
-                    </button>
-                  ) : null}
-                </div>
-                {cashReceipt ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={cashReceipt.url}
-                    alt="ตัวอย่างสลิป"
-                    className="mt-2 max-h-40 w-full rounded-[1.25rem] border border-slate-200 bg-white object-contain"
-                  />
+                    {payAmountPresets.map((n) => {
+                      const active = cashAmountBaht === n;
+                      return (
+                        <button
+                          key={n}
+                          type="button"
+                          disabled={cashLoading}
+                          className={cn(
+                            active ? barberPaymentChipActiveClass : barberPaymentChipIdleClass,
+                            "tabular-nums",
+                          )}
+                          aria-pressed={active}
+                          onClick={() => setCashAmount(String(n))}
+                        >
+                          ฿{n.toLocaleString("th-TH")}
+                        </button>
+                      );
+                    })}
+                  </div>
                 ) : null}
+                <label className="mt-2 block text-[11px] font-bold text-[#4d47b6]">
+                  กรอกจำนวนเอง
+                  <input
+                    className="app-input mt-1 min-h-[48px] w-full rounded-[1.25rem] border border-slate-200 bg-white px-3 text-base"
+                    placeholder="0"
+                    inputMode="decimal"
+                    value={cashAmount}
+                    onChange={(e) => setCashAmount(e.target.value)}
+                    aria-label="ยอดเงินบาท"
+                  />
+                </label>
               </div>
+
+              <BarberPaymentPanel
+                amountBaht={cashAmountBaht}
+                method={cashPaymentMethod}
+                slipUrl={cashSlipUrl}
+                onMethodChange={setCashPaymentMethod}
+                onSlipUrlChange={setCashSlipUrl}
+                disabled={cashLoading}
+              />
+
+              <BarberTaxInvoiceFields
+                value={cashTaxForm}
+                onChange={(next) => {
+                  setCashTaxForm(next);
+                  if (next.taxInvoiceEnabled) setCashPrintTaxInvoice(true);
+                }}
+                fallbackName={cashName}
+                disabled={cashLoading}
+              />
+
+              <div className="space-y-2 rounded-[1.25rem] border border-[#ecebff] bg-[#faf9ff]/90 p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  พิมพ์หลังบันทึก
+                </p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <label
+                    className={cn(
+                      "flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-sm font-bold transition",
+                      cashPrintReceipt
+                        ? "border-[#5b61ff]/45 bg-[#ecebff]/70 text-[#1e1b4b]"
+                        : "border-white/60 bg-white/55 text-slate-700",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-[#5b61ff]"
+                      checked={cashPrintReceipt}
+                      disabled={cashLoading}
+                      onChange={(e) => setCashPrintReceipt(e.target.checked)}
+                    />
+                    ใบเสร็จ
+                  </label>
+                  <label
+                    className={cn(
+                      "flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-sm font-bold transition",
+                      cashPrintTaxInvoice
+                        ? "border-[#5b61ff]/45 bg-[#ecebff]/70 text-[#1e1b4b]"
+                        : "border-white/60 bg-white/55 text-slate-700",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-[#5b61ff]"
+                      checked={cashPrintTaxInvoice}
+                      disabled={cashLoading}
+                      onChange={(e) => {
+                        const on = e.target.checked;
+                        setCashPrintTaxInvoice(on);
+                        if (on && !cashTaxForm.taxInvoiceEnabled) {
+                          setCashTaxForm((prev) => ({
+                            ...prev,
+                            taxInvoiceEnabled: true,
+                            billingName: prev.billingName.trim() || cashName.trim(),
+                          }));
+                        }
+                      }}
+                    />
+                    ใบกำกับภาษี
+                  </label>
+                </div>
+              </div>
+
               <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => {
-                    closeCashCamera();
-                    clearCashReceipt();
+                    resetCashPayment();
                     setCashModalOpen(false);
                   }}
                   className="min-h-[48px] rounded-[1.25rem] border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
@@ -935,50 +938,11 @@ export function BarberCheckInClient({
                   disabled={cashLoading}
                   className="min-h-[48px] rounded-[1.25rem] border-2 border-amber-400 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950 disabled:opacity-60"
                 >
-                  {cashLoading ? "…" : "บันทึกเงินสด"}
+                  {cashLoading ? "…" : "บันทึก"}
                 </button>
               </div>
             </form>
           </div>
-
-          {cashCameraOpen ? (
-            <div
-              className={barberModalCameraBackdropClass}
-              role="dialog"
-              aria-modal="true"
-              aria-label="ถ่ายรูปสลิป"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <video
-                ref={cashVideoRef}
-                className="max-h-[min(55vh,420px)] w-full max-w-lg rounded-[1.25rem] bg-black object-contain"
-                playsInline
-                muted
-                autoPlay
-              />
-              {cashCameraErr ? (
-                <p className="max-w-lg text-center text-sm text-amber-200">{cashCameraErr}</p>
-              ) : (
-                <p className="max-w-lg text-center text-xs text-white/70">กดถ่ายรูปเมื่อพร้อม — อนุญาตกล้องถ้าเบราว์เซอร์ถาม</p>
-              )}
-              <div className="flex w-full max-w-lg flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
-                <button
-                  type="button"
-                  onClick={closeCashCamera}
-                  className="min-h-[48px] rounded-[1.25rem] border border-white/30 bg-white/10 px-4 py-3 text-sm font-medium text-white hover:bg-white/20"
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  type="button"
-                  onClick={captureFromCashCamera}
-                  className="min-h-[48px] rounded-[1.25rem] bg-white px-4 py-3 text-sm font-bold text-slate-900 hover:bg-slate-100"
-                >
-                  ถ่ายรูป
-                </button>
-              </div>
-            </div>
-          ) : null}
             </div>
             </BarberModalPortal>
           )

@@ -19,7 +19,7 @@ import {
 } from "@/systems/barber/components/barber-ui-tokens";
 
 const BARBER_STAFF_QR_TAGLINE =
-  "สแกนเข้าหน้าพนักงาน — เช็กอินและจัดการคิววันนี้ (ต้องล็อกอินร้าน)";
+  "สแกนเข้าหน้าพนักงาน — แดชบอร์ดคิว/เช็กอิน และแพ็กเกจ (ล็อกอินร้าน · ถ้าร้านตั้งรหัสรายวันต้องใส่รหัสก่อน)";
 
 type Props = {
   ownerId: string;

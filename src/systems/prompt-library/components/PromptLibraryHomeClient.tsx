@@ -11,7 +11,7 @@ import {
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
-import { PROMPT_LIBRARY_MODULE_GROUP_ID } from "@/lib/modules/config";
+
 import {
   PromptLibraryCard,
   type PromptLibraryCardRow,
@@ -343,17 +343,10 @@ export function PromptLibraryHomeClient() {
               <IconPromptSpark className="h-5 w-5" />
             </div>
             <div className="min-w-0 text-left">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">
-                กลุ่ม {PROMPT_LIBRARY_MODULE_GROUP_ID} · 1 โทเคน/วัน
-              </p>
-              <h2 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">
-                <span className="bg-gradient-to-r from-[#312e81] via-[#5b61ff] to-[#7c3aed] bg-clip-text text-transparent">
-                  คลังคำสั่ง AI
-                </span>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#4d47b6]">โมดูล</p>
+              <h2 className="mt-1 truncate text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">
+                คลังคำสั่ง AI
               </h2>
-              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[#5f5a8a]">
-                ค้นหา · แยกตามหมวด · คัดลอกไปใช้กับเครื่องมือ AI ได้ทันที
-              </p>
             </div>
           </div>
           <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
@@ -361,22 +354,32 @@ export function PromptLibraryHomeClient() {
               type="button"
               className={cn(
                 appTemplateOutlineButtonClass,
-                "hidden sm:inline-flex min-h-[40px] items-center rounded-xl px-3 text-xs font-semibold sm:text-sm",
+                "hidden sm:inline-flex min-h-[40px] items-center gap-1.5 rounded-xl px-3 text-xs font-semibold sm:text-sm",
               )}
               onClick={() => importRef.current?.click()}
               aria-label="นำเข้า JSON"
             >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M17 8l-5-5-5 5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M12 3v12" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
               นำเข้า
             </button>
             <button
               type="button"
               className={cn(
                 appTemplateOutlineButtonClass,
-                "hidden sm:inline-flex min-h-[40px] items-center rounded-xl px-3 text-xs font-semibold sm:text-sm",
+                "hidden sm:inline-flex min-h-[40px] items-center gap-1.5 rounded-xl px-3 text-xs font-semibold sm:text-sm",
               )}
               onClick={() => void exportJson()}
               aria-label="ส่งออก JSON"
             >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M7 10l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M12 15V3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
               ส่งออก
             </button>
             <Link
@@ -384,7 +387,7 @@ export function PromptLibraryHomeClient() {
               aria-label="จัดการหมวดหมู่"
               className={cn(
                 appTemplateOutlineButtonClass,
-                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-0 sm:min-w-0 sm:gap-2 sm:px-4",
+                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded-xl px-0 sm:min-w-0 sm:px-4",
               )}
             >
               <IconPromptFolder className="h-5 w-5" aria-hidden />
@@ -395,39 +398,59 @@ export function PromptLibraryHomeClient() {
               onClick={openCreate}
               className={cn(
                 appDashboardBrandCtaPillButtonClass,
-                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-0 sm:min-w-0 sm:rounded-full sm:px-5",
+                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded-xl px-0 sm:min-w-0 sm:rounded-full sm:px-5",
               )}
-              aria-label="เพิ่มคำสั่ง"
+              aria-label="สร้างคำสั่งใหม่"
             >
-              <IconPromptPlus className="h-5 w-5 sm:mr-1.5" aria-hidden />
-              <span className="hidden sm:inline">เพิ่มคำสั่ง</span>
+              <IconPromptSpark className="h-5 w-5" aria-hidden />
+              <span className="hidden sm:inline">สร้างใหม่</span>
             </button>
           </div>
         </div>
 
-        <ul className="mt-5 grid grid-cols-2 gap-3 border-t border-white/40 pt-5 sm:grid-cols-3">
+        <ul className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
           <li>
-            <div className={promptStatCardClass}>
-              <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">คำสั่ง</p>
-              <p className="mt-2 text-left text-2xl font-black tabular-nums text-[#1e1b4b] sm:text-3xl">
-                {loading ? "…" : stats.total}
-              </p>
+            <div className={cn(promptStatCardClass, "relative overflow-hidden")}>
+              <div aria-hidden className="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br from-indigo-100/60 via-indigo-200/30 to-transparent blur-xl" />
+              <div className="relative z-10">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#66638c]">คำสั่งทั้งหมด</p>
+                <p className="mt-1 bg-gradient-to-br from-[#4338ca] via-[#5b61ff] to-[#6366f1] bg-clip-text text-2xl font-black tabular-nums leading-none text-transparent sm:text-[1.8rem]">
+                  {loading ? "…" : stats.total}
+                </p>
+              </div>
             </div>
           </li>
           <li>
-            <div className={promptStatCardClass}>
-              <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">โปรด</p>
-              <p className="mt-2 text-left text-2xl font-black tabular-nums text-violet-700 sm:text-3xl">
-                {loading ? "…" : stats.favorites}
-              </p>
+            <div className={cn(promptStatCardClass, "relative overflow-hidden")}>
+              <div aria-hidden className="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br from-violet-300/40 via-fuchsia-200/30 to-transparent blur-xl" />
+              <div className="relative z-10">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#66638c]">หมวดหมู่</p>
+                <p className="mt-1 bg-gradient-to-br from-[#7c3aed] via-[#a855f7] to-[#c026d3] bg-clip-text text-2xl font-black tabular-nums leading-none text-transparent sm:text-[1.8rem]">
+                  {loading ? "…" : categories.length}
+                </p>
+              </div>
             </div>
           </li>
-          <li className="col-span-2 sm:col-span-1">
-            <div className={promptStatCardClass}>
-              <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">ใช้งานสะสม</p>
-              <p className="mt-2 text-left text-2xl font-black tabular-nums text-[#1e1b4b] sm:text-3xl">
-                {loading ? "…" : stats.usage}
-              </p>
+          <li>
+            <div className={cn(promptStatCardClass, "relative overflow-hidden")}>
+              <div aria-hidden className="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br from-emerald-300/45 via-teal-200/30 to-transparent blur-xl" />
+              <div className="relative z-10">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#66638c]">ใช้แล้ว</p>
+                <p className="mt-1 bg-gradient-to-br from-emerald-500 via-teal-500 to-[#0d9488] bg-clip-text text-2xl font-black tabular-nums leading-none text-transparent sm:text-[1.8rem]">
+                  {loading ? "…" : stats.usage}
+                </p>
+              </div>
+            </div>
+          </li>
+          <li>
+            <div className={cn(promptStatCardClass, "relative overflow-hidden")}>
+              <div aria-hidden className="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br from-amber-300/45 via-orange-200/30 to-transparent blur-xl" />
+              <div className="relative z-10">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#66638c]">ความนิยม</p>
+                <p className="mt-1 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 bg-clip-text text-2xl font-black tabular-nums leading-none text-transparent sm:text-[1.8rem]">
+                  {loading ? "…" : stats.favorites}
+                </p>
+              </div>
             </div>
           </li>
         </ul>
@@ -475,8 +498,9 @@ export function PromptLibraryHomeClient() {
           <button
             type="button"
             onClick={searchApply}
-            className="app-btn-primary shrink-0 rounded-2xl px-4 text-sm font-bold"
+            className="app-btn-primary inline-flex shrink-0 items-center gap-1.5 rounded-2xl px-4 text-sm font-bold"
           >
+            <IconPromptSearch className="h-4 w-4" aria-hidden />
             ค้นหา
           </button>
         </div>

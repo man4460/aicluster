@@ -1,25 +1,39 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { AppMobileDockShell, AppUsageGuideModal, appMobileDockGridClass } from "@/components/app-templates";
+import { AppUsageGuideModal, appModuleShellMainScrollClass } from "@/components/app-templates";
+import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import { cn } from "@/lib/cn";
-import { parkingValetHeaderShellClass } from "@/systems/parking/parking-valet-ui";
+import { SchoolBankMobileBottomProvider } from "@/systems/school-bank/components/SchoolBankMobileBottomChrome";
+import {
+  SCHOOL_BANK_HEADER_COLLAPSE_EVENT,
+  SCHOOL_BANK_MODULE_DISPLAY_NAME,
+  SCHOOL_BANK_NAV_ITEMS,
+  isSchoolBankNavItemActive,
+  readSchoolBankHeaderCollapsed,
+  writeSchoolBankHeaderCollapsed,
+  type SchoolBankNavKey,
+} from "@/systems/school-bank/school-bank-module-nav";
+import {
+  schoolBankAccentBarClass,
+  schoolBankGlassShellClass,
+  schoolBankMainPaddingBottomClass,
+  schoolBankNavActiveClass,
+  schoolBankNavIdleClass,
+} from "@/systems/school-bank/lib/ui-tokens";
+import {
+  IconModuleShopSettings,
+  MODULE_SHOP_SETTINGS_SHORT_LABEL,
+} from "@/systems/module-shop/module-shop-settings-nav";
 
-function dockLinkClass(active: boolean) {
-  return cn(
-    "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-center transition-all active:scale-90",
-    active
-      ? "bg-white/85 text-emerald-700 shadow-md ring-1 ring-emerald-200/80 backdrop-blur-sm"
-      : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
-  );
-}
-
-function IconHome({ className }: { className?: string }) {
+function IconBank({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} className={className} aria-hidden>
       <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" />
+      <path d="M9 22V12h6v10" strokeLinecap="round" />
     </svg>
   );
 }
@@ -34,36 +48,65 @@ function IconUsers({ className }: { className?: string }) {
   );
 }
 
-function IconGear({ className }: { className?: string }) {
+function navIcon(key: SchoolBankNavKey, className?: string) {
+  switch (key) {
+    case "dashboard":
+      return <IconBank className={className} />;
+    case "members":
+      return <IconUsers className={className} />;
+    case "settings":
+      return <IconModuleShopSettings className={className} />;
+  }
+}
+
+function TabLink({
+  href,
+  label,
+  active,
+  icon,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+  icon: ReactNode;
+}) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} className={className} aria-hidden>
-      <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" strokeLinecap="round" />
-      <path
-        d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 0 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 0 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.55V3a2 2 0 0 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9c0 .65.37 1.25.97 1.55z"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <Link
+      href={href}
+      className={cn(
+        "flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-black transition-all",
+        active ? schoolBankNavActiveClass : schoolBankNavIdleClass,
+      )}
+      aria-current={active ? "page" : undefined}
+    >
+      <span
+        className={cn("flex h-4 w-4 shrink-0 items-center justify-center", active ? "text-white" : "text-slate-400")}
+        aria-hidden
+      >
+        {icon}
+      </span>
+      {label}
+    </Link>
   );
 }
 
-const NAV: { href: string; label: string; icon: typeof IconHome }[] = [
-  { href: "/dashboard/school-bank", label: "ภาพรวม", icon: IconHome },
-  { href: "/dashboard/school-bank/members", label: "บัญชี", icon: IconUsers },
-  { href: "/dashboard/school-bank/settings", label: "ตั้งค่า", icon: IconGear },
-];
-
-function navActive(pathname: string, href: string): boolean {
-  if (href === "/dashboard/school-bank") {
-    return pathname === "/dashboard/school-bank";
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
+function HeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {collapsed ? (
+        <path d="M6 9l6 6 6-6" />
+      ) : (
+        <path d="M6 15l6-6 6 6" />
+      )}
+    </svg>
+  );
 }
 
 const guideSections = [
   {
     title: "ภาพรวม",
     content: (
-      <ul className="list-disc space-y-1.5 pl-5 marker:text-emerald-600">
+      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
         <li>ดูยอดรวม จำนวนบัญชี และประวัติล่าสุด</li>
         <li>กด «ทำรายการ» เพื่อฝากหรือถอนให้นักเรียน</li>
       </ul>
@@ -72,7 +115,7 @@ const guideSections = [
   {
     title: "บัญชี",
     content: (
-      <ul className="list-disc space-y-1.5 pl-5 marker:text-emerald-600">
+      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
         <li>เพิ่มบัญชีด้วยรหัสนักเรียนและชื่อ — แยกตามห้องได้</li>
         <li>ยอดคงเหลืออัปเดตทุกครั้งที่มีรายการ</li>
       </ul>
@@ -81,112 +124,121 @@ const guideSections = [
 ];
 
 export function SchoolBankShell({
-  siteName,
   children,
 }: {
-  siteName: string;
+  siteName?: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname() ?? "";
-  const [guideOpen, setGuideOpen] = useState(false);
+  const [usageGuideOpen, setUsageGuideOpen] = useState(false);
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+
+  useEffect(() => {
+    const sync = () => setHeaderCollapsed(readSchoolBankHeaderCollapsed());
+    sync();
+    window.addEventListener(SCHOOL_BANK_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(SCHOOL_BANK_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  const toggleHeaderCollapse = useCallback(() => {
+    writeSchoolBankHeaderCollapsed(!headerCollapsed);
+  }, [headerCollapsed]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex min-h-0 flex-1 flex-col gap-4 pb-24 sm:gap-6 lg:pb-0">
-        <div className={parkingValetHeaderShellClass}>
-          <header>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="min-w-0">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-200/80">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} className="h-5 w-5" aria-hidden>
-                      <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" />
-                      <path d="M9 22V12h6v10" strokeLinecap="round" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">ธนาคารโรงเรียน</p>
-                    <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">ออมทรัพย์นักเรียน</h1>
-                    <p className="mt-0.5 truncate text-xs font-bold text-slate-500">{siteName}</p>
-                  </div>
-                </div>
+    <SchoolBankMobileBottomProvider>
+      <div className="flex min-h-0 max-w-full flex-1 flex-col gap-4 sm:gap-6">
+        <header
+          className={cn(
+            schoolBankGlassShellClass,
+            "flex shrink-0 flex-col px-4 py-4 sm:px-8 sm:py-6 print:hidden",
+            headerCollapsed && "hidden",
+          )}
+        >
+          <div className={schoolBankAccentBarClass} aria-hidden />
+          <div className="mt-5 flex flex-wrap items-start justify-between gap-3 gap-y-2">
+            <div className="flex min-w-0 items-start gap-3">
+              <div
+                className={cn(
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg shadow-fuchsia-500/20",
+                  appDashboardBrandGradientFillClass,
+                )}
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M20 12V8H6a2 2 0 01-2-2c0-1.1.9-2 2-2h12v4" />
+                  <path d="M4 6v12c0 1.1.9 2 2 2h14v-4" />
+                  <path d="M18 12a2 2 0 00-2 2c0 1.1.9 2 2 2h4v-4h-4z" />
+                </svg>
               </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#4d47b6]">โมดูล</p>
+                <h1 className="mt-1 truncate text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">
+                  {SCHOOL_BANK_MODULE_DISPLAY_NAME}
+                </h1>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
+                onClick={() => setUsageGuideOpen(true)}
+                className="flex h-10 min-h-[44px] w-10 shrink-0 items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/80 text-sm font-black text-[#4d47b6] shadow-sm backdrop-blur-md transition-all hover:bg-white active:scale-95 sm:w-auto sm:gap-2 sm:px-4"
+                aria-label="คู่มือการใช้งาน"
+                aria-haspopup="dialog"
+                aria-expanded={usageGuideOpen}
                 suppressHydrationWarning
-                onClick={() => setGuideOpen(true)}
-                className="flex h-10 items-center gap-2 rounded-2xl border border-white/60 bg-white/45 px-4 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-95"
-                aria-label="เปิดคู่มือการใช้งาน"
               >
-                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
                   <circle cx="12" cy="12" r="9" />
                   <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
                   <circle cx="12" cy="17" r="1" />
                 </svg>
-                <span className="hidden sm:inline">คู่มือ</span>
+                <span className="hidden sm:inline">คู่มือการใช้งาน</span>
+              </button>
+              <button
+                type="button"
+                onClick={toggleHeaderCollapse}
+                className="inline-flex h-10 min-h-[44px] w-10 items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/80 text-[#4d47b6] shadow-sm backdrop-blur-md transition-all hover:bg-white active:scale-95"
+                aria-pressed={headerCollapsed}
+                aria-label="ซ่อนส่วนหัวโมดูล"
+                title="ซ่อนส่วนหัวโมดูล"
+                suppressHydrationWarning
+              >
+                <HeaderCollapseGlyph collapsed={headerCollapsed} />
               </button>
             </div>
-          </header>
+          </div>
 
-          <nav aria-label="เมนูธนาคารโรงเรียน" className="mt-5 hidden border-t border-white/40 pt-5 lg:block print:hidden">
-            <ul className="flex gap-1">
-              {NAV.map((item) => {
-                const active = navActive(pathname, item.href);
-                const Icon = item.icon;
-                return (
-                  <li key={item.href} className="min-w-0 flex-1">
-                    <Link
-                      href={item.href}
-                      aria-current={active ? "page" : undefined}
-                      className={cn(
-                        "flex w-full min-h-[48px] items-center justify-center gap-2 rounded-xl px-2 py-3 text-center text-sm font-black transition-all",
-                        active
-                          ? "bg-white/75 text-emerald-700 shadow-md ring-1 ring-white/80 backdrop-blur-sm"
-                          : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
-                      )}
-                    >
-                      <Icon className={cn("h-4 w-4 shrink-0", active ? "text-emerald-600" : "text-slate-400")} />
-                      <span className="truncate">{item.label}</span>
-                    </Link>
-                  </li>
-                );
-              })}
+          <nav
+            className="mt-5 hidden border-t border-[#e8e6fc]/70 pt-5 lg:block print:hidden"
+            aria-label="เมนูโมดูลธนาคารโรงเรียน"
+          >
+            <ul className="grid grid-cols-3 gap-2">
+              {SCHOOL_BANK_NAV_ITEMS.map((item) => (
+                <li key={item.key} className="min-w-0">
+                  <TabLink
+                    href={item.href}
+                    label={item.key === "settings" ? MODULE_SHOP_SETTINGS_SHORT_LABEL : item.label}
+                    active={isSchoolBankNavItemActive(pathname, item.key)}
+                    icon={navIcon(item.key, "h-4 w-4")}
+                  />
+                </li>
+              ))}
             </ul>
           </nav>
-        </div>
+        </header>
 
-        <div className="min-h-0 min-w-0 flex-1">{children}</div>
+        <AppUsageGuideModal
+          open={usageGuideOpen}
+          onClose={() => setUsageGuideOpen(false)}
+          title="คู่มือ — ธนาคารโรงเรียน"
+          sections={guideSections}
+        />
+
+        <div className={cn(schoolBankMainPaddingBottomClass, appModuleShellMainScrollClass)}>{children}</div>
       </div>
-
-      <AppMobileDockShell ariaLabel="เมนูล่างธนาคารโรงเรียน">
-        <ul className={cn(appMobileDockGridClass, "grid-cols-3")}>
-          {NAV.map((item) => {
-            const active = navActive(pathname, item.href);
-            const Icon = item.icon;
-            return (
-              <li key={item.href} className="min-w-0">
-                <Link
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={dockLinkClass(active)}
-                  title={item.label}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">{item.label}</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </AppMobileDockShell>
-
-      <AppUsageGuideModal
-        open={guideOpen}
-        onClose={() => setGuideOpen(false)}
-        title="คู่มือ — ธนาคารโรงเรียน"
-        subtitle="บัญชีออม · ฝาก–ถอน · ประวัติ"
-        sections={guideSections}
-      />
-    </div>
+    </SchoolBankMobileBottomProvider>
   );
 }

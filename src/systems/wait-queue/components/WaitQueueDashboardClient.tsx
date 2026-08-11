@@ -17,7 +17,7 @@ import {
   primeWaitQueueAudioContext,
   speakWaitQueueAnnouncement,
 } from "@/systems/wait-queue/lib/wait-queue-speech";
-import { ParkingStatCard } from "@/systems/parking/components/ParkingStatCard";
+
 
 const refreshIntervalMs = 8000;
 const VOICE_ENABLED_STORAGE_KEY = "wait-queue-voice-enabled";
@@ -307,49 +307,43 @@ export function WaitQueueDashboardClient({ initial }: { initial: WaitQueueDashbo
             </label>
           }
         />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          <ParkingStatCard
-            title="กำลังรอ"
-            value={data.stats.waiting.toLocaleString("en-US")}
-            tone="indigo"
-            icon={
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
-                <path d="M8 7h12M8 12h12M8 17h12M4 7h.01M4 12h.01M4 17h.01" strokeLinecap="round" />
-              </svg>
-            }
-          />
-          <ParkingStatCard
-            title="เรียกแล้ว"
-            value={data.stats.called.toLocaleString("en-US")}
-            tone="slate"
-            icon={
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
-                <path d="M15 18l6-6-6-6M9 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            }
-          />
-          <ParkingStatCard
-            title="เข้าร้านแล้ว"
-            value={data.stats.seated.toLocaleString("en-US")}
-            tone="emerald"
-            icon={
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                <polyline points="22 4 12 14.01 9 11.01" />
-              </svg>
-            }
-          />
-          <ParkingStatCard
-            title="ยกเลิก / ข้าม"
-            value={(data.stats.cancelled + data.stats.skipped).toLocaleString("en-US")}
-            tone="slate"
-            icon={
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
-                <circle cx="12" cy="12" r="10" />
-                <path d="M15 9l-6 6M9 9l6 6" strokeLinecap="round" />
-              </svg>
-            }
-          />
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
+          <div className="relative overflow-hidden rounded-[1rem] border border-violet-200/70 bg-gradient-to-br from-white via-violet-50/50 to-indigo-50/40 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] ring-1 ring-inset ring-white/60 sm:p-4">
+            <span aria-hidden className="absolute left-0 top-0 h-full w-1 rounded-r-full bg-gradient-to-b from-violet-500 to-indigo-500" />
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-700/80">คิวทั้งหมด</p>
+            <p className="mt-1 bg-gradient-to-br from-[#4338ca] via-[#5b61ff] to-[#6366f1] bg-clip-text text-2xl font-black tabular-nums leading-none text-transparent sm:text-[1.8rem]">
+              {(data.stats.waiting + data.stats.called + data.stats.seated + data.stats.cancelled + data.stats.skipped).toLocaleString("th-TH")}
+              <span className="ml-1 text-sm font-bold text-[#8b87ad]">ราย</span>
+            </p>
+            <div aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-16 w-16 rounded-full bg-gradient-to-br from-violet-300/40 via-indigo-200/30 to-transparent blur-2xl" />
+          </div>
+          <div className="relative overflow-hidden rounded-[1rem] border border-amber-200/80 bg-gradient-to-br from-white via-amber-50/55 to-orange-50/40 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] ring-1 ring-inset ring-white/60 sm:p-4">
+            <span aria-hidden className="absolute left-0 top-0 h-full w-1 rounded-r-full bg-gradient-to-b from-amber-400 to-orange-500" />
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-700">กำลังรอ</p>
+            <p className="mt-1 bg-gradient-to-br from-amber-500 via-orange-500 to-[#ea580c] bg-clip-text text-2xl font-black tabular-nums leading-none text-transparent sm:text-[1.8rem]">
+              {data.stats.waiting.toLocaleString("th-TH")}
+              <span className="ml-1 text-sm font-bold text-[#b45309]">ราย</span>
+            </p>
+            <div aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-16 w-16 rounded-full bg-gradient-to-br from-amber-300/45 via-orange-200/30 to-transparent blur-2xl" />
+          </div>
+          <div className="relative overflow-hidden rounded-[1rem] border border-indigo-200/80 bg-gradient-to-br from-white via-indigo-50/55 to-violet-50/40 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] ring-1 ring-inset ring-white/60 sm:p-4">
+            <span aria-hidden className="absolute left-0 top-0 h-full w-1 rounded-r-full bg-gradient-to-b from-indigo-500 to-violet-600" />
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-indigo-700">กำลังให้บริการ</p>
+            <p className="mt-1 bg-gradient-to-br from-[#4f46e5] via-[#6366f1] to-[#7c3aed] bg-clip-text text-2xl font-black tabular-nums leading-none text-transparent sm:text-[1.8rem]">
+              {data.stats.called.toLocaleString("th-TH")}
+              <span className="ml-1 text-sm font-bold text-[#6366f1]">ราย</span>
+            </p>
+            <div aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-16 w-16 rounded-full bg-gradient-to-br from-indigo-300/45 via-violet-200/30 to-transparent blur-2xl" />
+          </div>
+          <div className="relative overflow-hidden rounded-[1rem] border border-emerald-200/80 bg-gradient-to-br from-white via-emerald-50/55 to-teal-50/40 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] ring-1 ring-inset ring-white/60 sm:p-4">
+            <span aria-hidden className="absolute left-0 top-0 h-full w-1 rounded-r-full bg-gradient-to-b from-emerald-500 to-teal-500" />
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">เสร็จแล้ว</p>
+            <p className="mt-1 bg-gradient-to-br from-emerald-500 via-teal-500 to-[#0d9488] bg-clip-text text-2xl font-black tabular-nums leading-none text-transparent sm:text-[1.8rem]">
+              {data.stats.seated.toLocaleString("th-TH")}
+              <span className="ml-1 text-sm font-bold text-[#0d9488]">ราย</span>
+            </p>
+            <div aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-16 w-16 rounded-full bg-gradient-to-br from-emerald-300/45 via-teal-200/30 to-transparent blur-2xl" />
+          </div>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -357,9 +351,12 @@ export function WaitQueueDashboardClient({ initial }: { initial: WaitQueueDashbo
             type="button"
             disabled={busy || data.stats.waiting === 0}
             onClick={() => void callNext()}
-            className="app-btn-primary inline-flex min-h-[56px] w-full flex-1 items-center justify-center rounded-[1.35rem] px-6 py-4 text-base font-black shadow-[0_14px_36px_-12px_rgba(91,97,255,0.55)] disabled:opacity-40 sm:min-h-[52px] sm:min-w-[min(100%,18rem)] sm:text-lg"
+            className="app-btn-primary inline-flex min-h-[56px] w-full flex-1 items-center justify-center gap-2 rounded-[1.35rem] px-6 py-4 text-base font-black shadow-[0_14px_36px_-12px_rgba(91,97,255,0.55)] disabled:opacity-40 sm:min-h-[52px] sm:min-w-[min(100%,18rem)] sm:text-lg"
             suppressHydrationWarning
           >
+            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" />
+            </svg>
             เรียกคิวถัดไป
           </button>
           <button
@@ -368,14 +365,14 @@ export function WaitQueueDashboardClient({ initial }: { initial: WaitQueueDashbo
             onClick={() => void refresh()}
             className={cn(
               appTemplateOutlineButtonClass,
-              "inline-flex min-h-[48px] min-w-[48px] shrink-0 items-center justify-center rounded-2xl px-4 text-sm font-black sm:min-h-[52px] sm:min-w-0",
+              "inline-flex min-h-[48px] min-w-[48px] shrink-0 items-center justify-center gap-1.5 rounded-2xl px-4 text-sm font-black sm:min-h-[52px] sm:min-w-0",
             )}
             aria-label="รีเฟรชข้อมูลคิว"
             suppressHydrationWarning
           >
-            <svg viewBox="0 0 24 24" className="h-5 w-5 sm:mr-1.5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-              <path d="M21 12a9 9 0 1 1-3-6.7" strokeLinecap="round" />
-              <path d="M21 3v7h-7" strokeLinecap="round" strokeLinejoin="round" />
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M21 12a9 9 0 1 1-3-6.7" />
+              <path d="M21 3v7h-7" />
             </svg>
             <span className="hidden sm:inline">รีเฟรช</span>
           </button>
@@ -395,13 +392,13 @@ export function WaitQueueDashboardClient({ initial }: { initial: WaitQueueDashbo
               onClick={openAddTicketModal}
               aria-label="ลงคิวใหม่"
               title="ลงคิวใหม่"
-              className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-2 rounded-2xl px-4 text-sm font-black sm:min-w-0 sm:px-5"
+              className="app-btn-primary inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-2xl px-4 text-sm font-black"
               suppressHydrationWarning
             >
-              <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 sm:hidden" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-                <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 5v14M5 12h14" />
               </svg>
-              <span className="hidden sm:inline">ลงคิวใหม่</span>
+              <span>ลงคิวใหม่</span>
             </button>
           }
         />
@@ -510,9 +507,8 @@ export function WaitQueueDashboardClient({ initial }: { initial: WaitQueueDashbo
                         className="inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#5b61ff]/45 bg-gradient-to-br from-[#5b61ff] to-[#6d28d9] px-3 py-2 text-sm font-black text-white shadow-[0_8px_22px_-8px_rgba(91,97,255,0.5)] transition active:scale-[0.98] disabled:opacity-40"
                         suppressHydrationWarning
                       >
-                        <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                          <path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M13.73 21a2 2 0 01-3.46 0" strokeLinecap="round" strokeLinejoin="round" />
+                        <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 010 7.07" />
                         </svg>
                         เรียกคิว
                       </button>
@@ -522,9 +518,12 @@ export function WaitQueueDashboardClient({ initial }: { initial: WaitQueueDashbo
                         onClick={() => void patchTicket(t.id, "cancel")}
                         aria-label={`ยกเลิกคิว ${t.ticketLabel}`}
                         title="ยกเลิกคิว"
-                        className="inline-flex min-h-[40px] shrink-0 items-center justify-center rounded-lg border border-slate-200/90 bg-white/80 px-2.5 py-1.5 text-xs font-semibold text-slate-600 shadow-sm backdrop-blur-sm disabled:opacity-40"
+                        className="inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-200/90 bg-white/80 px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm backdrop-blur-sm disabled:opacity-40"
                         suppressHydrationWarning
                       >
+                        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
+                        </svg>
                         ยกเลิก
                       </button>
                     </div>
@@ -535,27 +534,37 @@ export function WaitQueueDashboardClient({ initial }: { initial: WaitQueueDashbo
                         type="button"
                         disabled={busy}
                         onClick={() => void patchTicket(t.id, "seat")}
-                        className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-950 disabled:opacity-40"
+                        className="inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-950 disabled:opacity-40"
                         suppressHydrationWarning
                       >
+                        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                          <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
                         เข้าร้านแล้ว
                       </button>
                       <button
                         type="button"
                         disabled={busy}
                         onClick={() => void patchTicket(t.id, "skip")}
-                        className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-900 disabled:opacity-40"
+                        className="inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-900 disabled:opacity-40"
                         suppressHydrationWarning
                       >
+                        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="M13 17l5-5-5-5M6 17l5-5-5-5" />
+                        </svg>
                         ข้าม
                       </button>
                       <button
                         type="button"
                         disabled={busy}
                         onClick={() => void patchTicket(t.id, "cancel")}
-                        className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-40"
+                        className="inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-40"
                         suppressHydrationWarning
                       >
+                        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
+                        </svg>
                         ยกเลิก
                       </button>
                     </>

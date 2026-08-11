@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { AppSectionHeader } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   BarberPackagesClient,
@@ -12,30 +13,47 @@ import {
   type BarberPurchasesEmbeddedToolbarApi,
 } from "@/systems/barber/components/BarberPurchasesClient";
 import {
-  barberCtaClass,
-  barberHeaderEnLabelClass,
+  barberDashboardSegmentBtnClass,
+  barberDashboardSegmentShellClass,
   barberMutedLoadingNoticeClass,
-  barberNavActiveClass,
-  barberNavIdleClass,
-  barberOffersHubHeaderShellClass,
-  barberOffersTabSegmentShellClass,
   barberPageStackClass,
 } from "@/systems/barber/components/barber-ui-tokens";
 
 type OffersTab = "packages" | "members";
 
-const tabBtnClass = (active: boolean) =>
-  cn(
-    "inline-flex flex-1 items-center justify-center gap-1.5 rounded-[2rem] font-bold transition-all duration-200 sm:rounded-[1.25rem]",
-    "min-h-[46px] min-w-0 px-2 text-[11px] leading-tight sm:min-h-0 sm:flex-initial sm:px-4 sm:py-2 sm:text-xs sm:text-sm",
-    active ? barberNavActiveClass : barberNavIdleClass,
+function IconPlus({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      aria-hidden
+    >
+      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+    </svg>
   );
+}
 
-const hubPrimaryBtnClass = cn(
-  barberCtaClass,
-  "min-h-[48px] w-full justify-center whitespace-nowrap sm:min-h-[44px] sm:w-auto",
-  "px-4 py-2.5 text-sm sm:px-4 sm:py-2.5 sm:text-sm",
-);
+function IconSellPackage({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+      <path d="M3 6h18" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
+    </svg>
+  );
+}
 
 function IconPackageTab({ className }: { className?: string }) {
   return (
@@ -106,24 +124,41 @@ function BarberPackagesHubTabs() {
 
   return (
     <div className={barberPageStackClass}>
-      <div className={`print:hidden ${barberOffersHubHeaderShellClass}`}>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <div className="min-w-0 flex-1">
-            <p className={cn(barberHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
-              PACKAGES &amp; MEMBERSHIPS
-            </p>
-            <h2 className="text-lg font-black leading-snug tracking-tight text-[#1e1b4b] sm:truncate sm:text-xl">
-              แพ็กเกจและสมาชิก
-            </h2>
-          </div>
-
-          {/*
-            มือถือ: แท็บเต็มความกว้างด้านบน → ปุ่มหลักเต็มความกว้างด้านล่าง (ไม่บีบมุมขวา)
-            เดสก์ท็อป: ปุ่ม + แท็บ แถวเดียวชิดขวา
-          */}
-          <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+      <AppSectionHeader
+        tone="violet"
+        title="แพ็กเกจ"
+        className="flex flex-row items-center justify-between gap-2 sm:gap-3"
+        actionWrapClassName="min-w-0 shrink-0"
+        action={
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+            {tab === "packages" && pkgToolbar ? (
+              <div className={barberDashboardSegmentShellClass} role="group">
+                <button
+                  type="button"
+                  onClick={() => pkgToolbar.openAddModal()}
+                  className={barberDashboardSegmentBtnClass(true)}
+                  aria-label="เพิ่มแพ็กเกจ"
+                >
+                  <IconPlus className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden sm:inline">เพิ่มแพ็กเกจ</span>
+                </button>
+              </div>
+            ) : null}
+            {tab === "members" && purchaseToolbar ? (
+              <div className={barberDashboardSegmentShellClass} role="group">
+                <button
+                  type="button"
+                  onClick={() => purchaseToolbar.openSellModal()}
+                  className={barberDashboardSegmentBtnClass(true)}
+                  aria-label="ขายแพ็กเกจ"
+                >
+                  <IconSellPackage className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden sm:inline">ขายแพ็กเกจ</span>
+                </button>
+              </div>
+            ) : null}
             <nav
-              className={cn(barberOffersTabSegmentShellClass, "order-1 w-full min-w-0 sm:order-2 sm:w-auto")}
+              className={cn(barberDashboardSegmentShellClass, "max-w-full")}
               aria-label="แท็บแพ็กเกจและสมาชิก"
             >
               <button
@@ -132,17 +167,10 @@ function BarberPackagesHubTabs() {
                 suppressHydrationWarning
                 aria-label="แพ็กเกจ"
                 aria-current={tab === "packages" ? "page" : undefined}
-                className={tabBtnClass(tab === "packages")}
+                className={barberDashboardSegmentBtnClass(tab === "packages")}
               >
-                <IconPackageTab
-                  className={cn(
-                    "h-5 w-5 shrink-0 sm:h-5 sm:w-5",
-                    tab === "packages" ? "text-white/95" : "text-[#9b97b8]",
-                  )}
-                />
-                <span className={cn("max-w-[5.5rem] text-center sm:max-w-none", tab === "packages" ? "text-white" : "")}>
-                  แพ็กเกจ
-                </span>
+                <IconPackageTab className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden sm:inline">แพ็กเกจ</span>
               </button>
               <button
                 type="button"
@@ -150,41 +178,23 @@ function BarberPackagesHubTabs() {
                 suppressHydrationWarning
                 aria-label="สมาชิกแพ็กเกจ"
                 aria-current={tab === "members" ? "page" : undefined}
-                className={tabBtnClass(tab === "members")}
+                className={barberDashboardSegmentBtnClass(tab === "members")}
               >
-                <IconMembersTab
-                  className={cn(
-                    "h-5 w-5 shrink-0 sm:h-5 sm:w-5",
-                    tab === "members" ? "text-white/95" : "text-[#9b97b8]",
-                  )}
-                />
-                <span className={cn("max-w-[5.5rem] text-center sm:max-w-none", tab === "members" ? "text-white" : "")}>
-                  สมาชิก
-                </span>
+                <IconMembersTab className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden sm:inline">สมาชิก</span>
               </button>
             </nav>
-
-            <div className="order-2 flex w-full flex-col gap-2 sm:order-1 sm:w-auto sm:flex-row sm:justify-end">
-              {tab === "packages" && pkgToolbar ?
-                <button type="button" onClick={() => pkgToolbar.openAddModal()} className={hubPrimaryBtnClass}>
-                  เพิ่มแพ็กเกจ
-                </button>
-              : null}
-              {tab === "members" && purchaseToolbar ?
-                <button type="button" onClick={() => purchaseToolbar.openSellModal()} className={hubPrimaryBtnClass}>
-                  ขายแพ็กเกจ
-                </button>
-              : null}
-            </div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
-      {tab === "packages" ? (
-        <BarberPackagesClient embedded onEmbeddedToolbar={registerPkgToolbar} />
-      ) : (
-        <BarberPurchasesClient embedded onEmbeddedToolbar={registerPurchaseToolbar} />
-      )}
+      <div className="min-w-0">
+        {tab === "packages" ? (
+          <BarberPackagesClient embedded onEmbeddedToolbar={registerPkgToolbar} />
+        ) : (
+          <BarberPurchasesClient embedded onEmbeddedToolbar={registerPurchaseToolbar} />
+        )}
+      </div>
     </div>
   );
 }

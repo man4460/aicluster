@@ -21,11 +21,6 @@ import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { CAR_WASH_SERVICE_STATUSES, carWashStatusLabelTh } from "@/lib/car-wash/service-status";
 import { prepareBuildingPosSlipImageFile } from "@/systems/building-pos/building-pos-slip-image";
 import {
-  buildCarWashBundleSlipInnerHtml,
-  openCarWashBundleSlipPrintWindow,
-  type PosTablePaperSize,
-} from "@/systems/car-wash/car-wash-bundle-slip-print";
-import {
   PopupIconButton,
   popupIconBtnDanger,
   SalesRowOpenDetailButton,
@@ -35,6 +30,11 @@ import {
   AppTakePhotoButton,
   useAppSlipPaperSize,
 } from "@/components/app-templates";
+import {
+  printCarWashBundleReceipt,
+  printCarWashVisitReceiptFromVisit,
+  type CarWashPrintShopProfile,
+} from "@/systems/car-wash/lib/car-wash-print-docs";
 import {
   uploadCarWashSessionImage,
   type CarWashRepository,
@@ -51,10 +51,6 @@ import {
   carWashContentStackClass,
   carWashCtaClass,
   carWashFieldClass,
-  carWashHeaderEnLabelClass,
-  carWashNavActiveClass,
-  carWashNavIdleClass,
-  carWashSubTabSegmentShellClass,
   carWashFinanceStatsGridClass,
   carWashFinanceStatTailClass,
   carWashFinanceSubTabShellClass,
@@ -361,6 +357,7 @@ type EditFormState = {
   recorded_by_name: string;
   service_status: CarWashServiceStatus;
   visit_at_local: string;
+  photo_url: string;
 };
 
 type EditBundleFormState = {
@@ -370,7 +367,10 @@ type EditBundleFormState = {
   package_id: string;
   paid_amount: string;
   total_uses: string;
+  used_uses: number;
   is_active: boolean;
+  slip_photo_url: string;
+  created_at: string;
 };
 
 function visitToEditForm(v: ServiceVisit): EditFormState {
@@ -385,6 +385,7 @@ function visitToEditForm(v: ServiceVisit): EditFormState {
     recorded_by_name: v.recorded_by_name,
     service_status: v.service_status,
     visit_at_local: isoToDatetimeLocalInput(v.visit_at),
+    photo_url: v.photo_url ?? "",
   };
 }
 
@@ -396,7 +397,10 @@ function bundleToEditForm(b: WashBundle): EditBundleFormState {
     package_id: String(b.package_id),
     paid_amount: String(b.paid_amount),
     total_uses: String(b.total_uses),
+    used_uses: b.used_uses,
     is_active: b.is_active,
+    slip_photo_url: b.slip_photo_url ?? "",
+    created_at: b.created_at,
   };
 }
 
@@ -407,6 +411,7 @@ export function CarWashSalesPanel({
   baseUrl,
   shopLabel,
   logoUrl = null,
+  shopPrintProfile = null,
   recorderDisplayName,
   onRefresh,
   updateVisit,
@@ -426,6 +431,7 @@ export function CarWashSalesPanel({
   baseUrl: string;
   shopLabel: string;
   logoUrl?: string | null;
+  shopPrintProfile?: CarWashPrintShopProfile | null;
   recorderDisplayName: string;
   onRefresh: () => Promise<void>;
   updateVisit: (id: number, patch: ServiceVisitPatch) => Promise<ServiceVisit | null>;
@@ -441,8 +447,8 @@ export function CarWashSalesPanel({
   const [filterDay, setFilterDay] = useState("");
   const [search, setSearch] = useState("");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  /** §15 โรงแรม pattern: Filter toggle + Charts toggle state */
-  const [filterOpen, setFilterOpen] = useState(true);
+  /** §15: Filter toggle + Charts toggle — ค่าเริ่ม กรองซ่อน · กราฟซ่อน */
+  const [filterOpen, setFilterOpen] = useState(false);
   const [chartsOpen, setChartsOpen] = useState(false);
 
   const filtersActive = useMemo(() => {
@@ -503,6 +509,13 @@ export function CarWashSalesPanel({
   const [editVisit, setEditVisit] = useState<ServiceVisit | null>(null);
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+  const [editPhotoBusy, setEditPhotoBusy] = useState(false);
+  const editVisitGalleryRef = useRef<HTMLInputElement>(null);
+  const editBundleGalleryRef = useRef<HTMLInputElement>(null);
+  const [editVisitCameraOpen, setEditVisitCameraOpen] = useState(false);
+  const [editBundleCameraOpen, setEditBundleCameraOpen] = useState(false);
+  const editVisitCameraInputRef = useRef<HTMLInputElement>(null);
+  const editBundleCameraInputRef = useRef<HTMLInputElement>(null);
   const editFormRef = useRef<HTMLFormElement>(null);
 
   const [editBundle, setEditBundle] = useState<WashBundle | null>(null);
@@ -655,7 +668,30 @@ export function CarWashSalesPanel({
   }, [filteredVisits, filteredBundles]);
 
   const resolvedLogoForPrint = useMemo(() => resolveAssetUrl(logoUrl, baseUrl), [logoUrl, baseUrl]);
-  const { paper: slipPaper } = useAppSlipPaperSize();
+  const { paper: slipPaper } = useAppSlipPaperSize(shopPrintProfile?.slipPaperSize);
+
+  function resolveSalesPrintShop(): CarWashPrintShopProfile {
+    const rawLogo = shopPrintProfile?.logoUrl || logoUrl;
+    return {
+      displayName: shopPrintProfile?.displayName?.trim() || shopLabel,
+      logoUrl: rawLogo ? resolveAssetUrl(rawLogo, baseUrl) : resolvedLogoForPrint,
+      address: shopPrintProfile?.address ?? null,
+      taxId: shopPrintProfile?.taxId ?? null,
+      contactPhone: shopPrintProfile?.contactPhone ?? null,
+      bankAccountName: shopPrintProfile?.bankAccountName ?? null,
+      slipPaperSize: shopPrintProfile?.slipPaperSize ?? slipPaper,
+    };
+  }
+
+  function printVisitReceipt(v: ServiceVisit) {
+    const ok = printCarWashVisitReceiptFromVisit(resolveSalesPrintShop(), v);
+    if (!ok) window.alert("รายการนี้มียอด ฿0 — ไม่พิมพ์ใบเสร็จรับเงิน");
+  }
+
+  function printBundleSlip(b: WashBundle) {
+    const ok = printCarWashBundleReceipt(resolveSalesPrintShop(), b);
+    if (!ok) window.alert("แพ็กเหมานี้มียอด ฿0 — ไม่พิมพ์ใบเสร็จรับเงิน");
+  }
 
   const finalizeListPhoto = useCallback(
     async (file: File) => {
@@ -997,30 +1033,42 @@ export function CarWashSalesPanel({
     }
   }
 
-  function printBundleSlip(b: WashBundle, paper: PosTablePaperSize = slipPaper) {
-    const printedAt = new Date().toLocaleString("th-TH", {
-      timeZone: "Asia/Bangkok",
-      hour12: false,
-    });
-    const slipResolved = b.slip_photo_url?.trim() ? resolveAssetUrl(b.slip_photo_url, baseUrl) : null;
-    const inner = buildCarWashBundleSlipInnerHtml({
-      shopLabel: shopLabel.trim() || "คาร์แคร์",
-      logoUrl: resolvedLogoForPrint,
-      bundle: b,
-      printedAt,
-      slipImageUrl: slipResolved,
-    });
-    const ok = openCarWashBundleSlipPrintWindow(paper, inner);
-    if (!ok) {
-      window.alert(
-        "ไม่สามารถเปิดหน้าพิมพ์ได้ — ลองอนุญาตป๊อปอัปสำหรับเว็บไซต์นี้ หรือรีเฟรชแล้วลองอีกครั้ง",
-      );
-    }
-  }
-
   function openEdit(v: ServiceVisit) {
     setEditVisit(v);
     setEditForm(visitToEditForm(v));
+  }
+
+  async function uploadEditFormImage(file: File): Promise<string> {
+    const prepared = await prepareBuildingPosSlipImageFile(file);
+    return uploadCarWashSessionImage(prepared);
+  }
+
+  async function onEditVisitPhotoFile(file: File) {
+    setEditPhotoBusy(true);
+    setListError(null);
+    try {
+      const url = await uploadEditFormImage(file);
+      setEditForm((s) => (s ? { ...s, photo_url: url } : s));
+    } catch (e) {
+      setListError(e instanceof Error ? e.message : "อัปโหลดรูปไม่สำเร็จ");
+      window.alert(e instanceof Error ? e.message : "อัปโหลดรูปไม่สำเร็จ");
+    } finally {
+      setEditPhotoBusy(false);
+    }
+  }
+
+  async function onEditBundleSlipFile(file: File) {
+    setEditPhotoBusy(true);
+    setListError(null);
+    try {
+      const url = await uploadEditFormImage(file);
+      setEditBundleForm((s) => (s ? { ...s, slip_photo_url: url } : s));
+    } catch (e) {
+      setListError(e instanceof Error ? e.message : "อัปโหลดรูปไม่สำเร็จ");
+      window.alert(e instanceof Error ? e.message : "อัปโหลดรูปไม่สำเร็จ");
+    } finally {
+      setEditPhotoBusy(false);
+    }
   }
 
   async function submitEdit() {
@@ -1044,13 +1092,15 @@ export function CarWashSalesPanel({
         customer_phone: phoneDigits,
         plate_number: editForm.plate_number.trim(),
         package_id: pkg?.id ?? null,
-        package_name: pkg?.name ?? editVisit.package_name,
+        package_name: pkg?.name ?? (editForm.package_id ? editVisit.package_name : "บริการพิเศษ"),
         listed_price: Number.isFinite(listedPrice) ? listedPrice : 0,
         final_price: Number.isFinite(finalPrice) ? finalPrice : 0,
         note: editForm.note.trim(),
         recorded_by_name: editForm.recorded_by_name.trim() || recorderDisplayName,
         service_status: editForm.service_status,
         visit_at: datetimeLocalToIso(editForm.visit_at_local),
+        photo_url: editForm.photo_url.trim(),
+        bundle_id: editVisit.bundle_id,
       };
       const updated = await updateVisit(editVisit.id, patch);
       if (!updated) {
@@ -1112,6 +1162,7 @@ export function CarWashSalesPanel({
         paid_amount: paidRaw,
         total_uses: usesRaw,
         is_active: editBundleForm.is_active,
+        slip_photo_url: editBundleForm.slip_photo_url.trim(),
       };
       const updated = await updateBundle(editBundle.id, patch);
       if (!updated) {
@@ -1149,7 +1200,7 @@ export function CarWashSalesPanel({
                 title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
                 className={cn(
                   appTemplateOutlineButtonClass,
-                  "relative inline-flex min-h-[40px] items-center justify-center gap-1.5 px-3 text-xs font-black text-[#4d47b6]",
+                  "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 px-0 text-xs font-black text-[#4d47b6] sm:min-w-0 sm:px-3",
                   filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
                   filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
                 )}
@@ -1157,7 +1208,7 @@ export function CarWashSalesPanel({
                 <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
                 </svg>
-                <span>{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+                <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
                 {filtersActive ? (
                   <span
                     className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-[#4338ca]/95 via-[#5b61ff]/95 to-[#ec4899]/85 ring-2 ring-white"
@@ -1249,7 +1300,7 @@ export function CarWashSalesPanel({
             </button>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid gap-3">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="cw-f-y">ปี</label>
               <select
@@ -1394,23 +1445,22 @@ export function CarWashSalesPanel({
 
 
       <AppDashboardSection tone="slate">
-        <div className="flex flex-col gap-4 rounded-[2rem] border border-white/55 bg-white/35 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="flex flex-col gap-2 rounded-[1.25rem] border border-white/55 bg-white/35 p-2.5 shadow-[0_12px_28px_-22px_rgba(30,27,75,0.28)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-3 sm:rounded-[1.5rem]">
           <div className="min-w-0 flex-1">
-            <p className={cn(carWashHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
-              FILTERED LEDGER
-            </p>
-            <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">รายการในช่วงที่กรอง</h2>
+            <h2 className="text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">
+              รายการในช่วงที่กรอง
+            </h2>
           </div>
 
-          <nav className={carWashFinanceSubTabShellClass} aria-label="เมนูการเงินคาร์แคร์">
-            <div className="flex w-full min-w-0 gap-1" role="tablist">
+          <nav className={cn(carWashFinanceSubTabShellClass, "w-full shrink-0 sm:w-auto")} aria-label="เมนูการเงินคาร์แคร์">
+            <div className="flex w-full min-w-0 items-center gap-1" role="tablist">
               {activeListTab === "costs" ? (
-                <div className="mr-1.5 flex items-center gap-1 border-r border-[#e4e0f5]/90 pr-1.5">
+                <div className="mr-1 flex shrink-0 items-center gap-1 border-r border-[#e4e0f5]/90 pr-1">
                   <button
                     type="button"
                     disabled={busy}
                     onClick={openManageCategories}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/60 bg-white/60 px-2.5 text-xs font-bold text-[#4d47b6] shadow-sm ring-1 ring-white/80 hover:bg-white/80 disabled:opacity-50"
+                    className="inline-flex h-7 items-center gap-1 rounded-full border border-white/60 bg-white/60 px-2 text-[11px] font-bold text-[#4d47b6] shadow-sm ring-1 ring-white/80 hover:bg-white/80 disabled:opacity-50"
                     aria-label="จัดการหมวดหมู่รายจ่าย"
                   >
                     <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -1425,7 +1475,7 @@ export function CarWashSalesPanel({
                     onClick={openAddEntry}
                     className={cn(
                       carWashCtaClass,
-                      "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-bold disabled:opacity-50",
+                      "inline-flex !min-h-0 h-7 items-center gap-1 rounded-full px-2 text-[11px] font-bold disabled:opacity-50",
                     )}
                     aria-label="เพิ่มรายจ่าย"
                   >
@@ -1446,7 +1496,7 @@ export function CarWashSalesPanel({
                 aria-controls="car-wash-finance-panel-sales"
                 onClick={() => setActiveListTab("sales")}
                 className={cn(
-                  "inline-flex min-h-[36px] flex-1 items-center justify-center rounded-[1.25rem] px-3 py-1.5 text-xs font-black transition-all sm:flex-none",
+                  "inline-flex min-h-8 flex-1 items-center justify-center rounded-xl px-2.5 py-1 text-[11px] font-black transition-all sm:flex-none sm:px-3 sm:text-xs",
                   activeListTab === "sales"
                     ? cn(
                         "bg-gradient-to-r from-[#4338ca]/95 via-[#5b61ff]/95 to-[#ec4899]/85",
@@ -1466,7 +1516,7 @@ export function CarWashSalesPanel({
                 aria-controls="car-wash-finance-panel-costs"
                 onClick={() => setActiveListTab("costs")}
                 className={cn(
-                  "inline-flex min-h-[36px] flex-1 items-center justify-center rounded-[1.25rem] px-3 py-1.5 text-xs font-black transition-all sm:flex-none",
+                  "inline-flex min-h-8 flex-1 items-center justify-center rounded-xl px-2.5 py-1 text-[11px] font-black transition-all sm:flex-none sm:px-3 sm:text-xs",
                   activeListTab === "costs"
                     ? cn(
                         "bg-gradient-to-r from-[#4338ca]/95 via-[#5b61ff]/95 to-[#ec4899]/85",
@@ -1493,7 +1543,7 @@ export function CarWashSalesPanel({
                 onChange={onListGalleryChange}
               />
               <ul
-                className="divide-y divide-slate-100 lg:grid lg:grid-cols-4 lg:gap-3 lg:divide-y-0 lg:p-2"
+                className="divide-y divide-slate-100"
                 aria-label="ประวัติยอดขายคาร์แคร์"
               >
                 {mergedSalesRows.map((row) => {
@@ -1507,7 +1557,7 @@ export function CarWashSalesPanel({
                     return (
                       <li
                         key={`v-${v.id}`}
-                        className="group/item relative flex flex-col gap-3 overflow-hidden px-3 py-3 transition-all duration-300 hover:bg-white/45 sm:px-4 lg:rounded-2xl lg:border lg:border-white/60 lg:bg-white/50 lg:shadow-[0_16px_34px_-24px_rgba(30,27,75,0.42)] lg:backdrop-blur-xl lg:hover:-translate-y-1 lg:hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.45)]"
+                        className="group/item relative flex flex-col gap-3 overflow-hidden px-3 py-3 transition-all duration-300 hover:bg-white/45 sm:px-4"
                       >
                         {/* Left Indicator Bar — Gradient พริ้วๆ */}
                         <span
@@ -1574,17 +1624,32 @@ export function CarWashSalesPanel({
                           </div>
                         </div>
 
-                        <div className="flex shrink-0 items-center justify-between border-t border-slate-100/60 pt-2">
+                        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-100/60 pt-2">
                           {v.note?.trim() ?
-                            <p className="line-clamp-1 flex-1 pr-4 text-[10px] italic text-slate-400">
+                            <p className="line-clamp-1 min-w-0 flex-1 pr-2 text-[10px] italic text-slate-400">
                               &quot;{v.note}&quot;
                             </p>
-                          : <div className="flex-1" />}
-                          <SalesRowOpenDetailButton
-                            disabled={rowBusy}
-                            onClick={() => setSalesRowDetail({ kind: "visit", id: v.id })}
-                            className="!h-9 !w-9 rounded-xl bg-slate-50 hover:bg-white"
-                          />
+                          : <div className="min-w-0 flex-1" />}
+                          <div className="flex shrink-0 items-center gap-1">
+                            {v.final_price > 0 ? (
+                              <PopupIconButton
+                                label="พิมพ์ใบเสร็จ"
+                                disabled={rowBusy}
+                                onClick={() => printVisitReceipt(v)}
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                  <polyline points="6 9 6 2 18 2 18 9" />
+                                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                                  <rect x="6" y="14" width="12" height="8" />
+                                </svg>
+                              </PopupIconButton>
+                            ) : null}
+                            <SalesRowOpenDetailButton
+                              disabled={rowBusy}
+                              onClick={() => setSalesRowDetail({ kind: "visit", id: v.id })}
+                              className="!h-9 !w-9 rounded-xl bg-slate-50 hover:bg-white"
+                            />
+                          </div>
                         </div>
                       </li>
                     );
@@ -1601,7 +1666,7 @@ export function CarWashSalesPanel({
                   return (
                     <li
                       key={`b-${b.id}`}
-                      className="group/item relative flex flex-col gap-3 overflow-hidden border-l-[4px] border-amber-300/70 bg-white/40 px-3 py-3 transition-all duration-300 hover:bg-white/50 sm:px-4 lg:rounded-2xl lg:border lg:border-white/60 lg:bg-white/45 lg:shadow-[0_16px_34px_-24px_rgba(217,119,6,0.4)] lg:backdrop-blur-xl lg:hover:-translate-y-1 lg:hover:shadow-[0_24px_44px_-24px_rgba(217,119,6,0.44)]"
+                      className="group/item relative flex flex-col gap-3 overflow-hidden border-l-[4px] border-amber-300/70 bg-white/40 px-3 py-3 transition-all duration-300 hover:bg-white/50 sm:px-4"
                     >
                       <span
                         aria-hidden
@@ -1668,7 +1733,20 @@ export function CarWashSalesPanel({
                           </div>
                         </div>
                       </div>
-                      <div className="flex shrink-0 items-center justify-end border-t border-amber-200/40 pt-2">
+                      <div className="flex shrink-0 items-center justify-end gap-1 border-t border-amber-200/40 pt-2">
+                        {b.paid_amount > 0 ? (
+                          <PopupIconButton
+                            label="พิมพ์ใบเสร็จ"
+                            disabled={rowBusy}
+                            onClick={() => printBundleSlip(b)}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                              <polyline points="6 9 6 2 18 2 18 9" />
+                              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                              <rect x="6" y="14" width="12" height="8" />
+                            </svg>
+                          </PopupIconButton>
+                        ) : null}
                         <SalesRowOpenDetailButton
                           disabled={rowBusy}
                           onClick={() => setSalesRowDetail({ kind: "bundle", id: b.id })}
@@ -1684,7 +1762,7 @@ export function CarWashSalesPanel({
           <AppEmptyState tone="glass">ไม่พบรายการต้นทุนตามเงื่อนไข</AppEmptyState>
         : <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain rounded-2xl border border-white/55 bg-white/35 shadow-[0_16px_38px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl [-webkit-overflow-scrolling:touch] lg:border-0 lg:bg-transparent lg:shadow-none lg:backdrop-blur-0">
             <ul
-              className="divide-y divide-slate-100 lg:grid lg:grid-cols-4 lg:gap-3 lg:divide-y-0 lg:p-2"
+              className="divide-y divide-slate-100"
               aria-label="ประวัติรายจ่ายคาร์แคร์"
             >
               {filteredCostEntries.map((e) => {
@@ -1697,7 +1775,7 @@ export function CarWashSalesPanel({
                 return (
                   <li
                     key={`c-${e.id}`}
-                    className="group/item relative flex flex-col gap-3 overflow-hidden px-3 py-3 transition-all duration-300 hover:bg-white/45 sm:px-4 lg:rounded-2xl lg:border lg:border-white/60 lg:bg-white/45 lg:shadow-[0_16px_34px_-24px_rgba(244,63,94,0.36)] lg:backdrop-blur-xl lg:hover:-translate-y-1 lg:hover:shadow-[0_24px_44px_-24px_rgba(244,63,94,0.4)]"
+                    className="group/item relative flex flex-col gap-3 overflow-hidden px-3 py-3 transition-all duration-300 hover:bg-white/45 sm:px-4"
                   >
                     <span
                       aria-hidden
@@ -1946,6 +2024,19 @@ export function CarWashSalesPanel({
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   </PopupIconButton>
+                  {v.final_price > 0 ? (
+                    <PopupIconButton
+                      label="พิมพ์ใบเสร็จ"
+                      disabled={rowBusy}
+                      onClick={() => printVisitReceipt(v)}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <polyline points="6 9 6 2 18 2 18 9" />
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                        <rect x="6" y="14" width="12" height="8" />
+                      </svg>
+                    </PopupIconButton>
+                  ) : null}
                   <PopupIconButton
                     label="อัปโหลดรูป"
                     busy={rowPhotoBusy}
@@ -2050,8 +2141,8 @@ export function CarWashSalesPanel({
                     </svg>
                   </PopupIconButton>
                   <PopupIconButton
-                    label="พิมพ์ใบ"
-                    disabled={rowBusy}
+                    label="พิมพ์ใบเสร็จ"
+                    disabled={rowBusy || !(b.paid_amount > 0)}
                     onClick={() => printBundleSlip(b)}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -2563,38 +2654,48 @@ export function CarWashSalesPanel({
         {editVisit && editForm ?
           <form
             ref={editFormRef}
-            className="space-y-3"
+            className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
               void submitEdit();
             }}
           >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block text-xs font-medium text-slate-600">
-                ชื่อลูกค้า
-                <input
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                  placeholder="เช่น คุณสมชาย"
-                  autoComplete="name"
-                  value={editForm.customer_name}
-                  onChange={(e) => setEditForm((s) => (s ? { ...s, customer_name: e.target.value } : s))}
-                  required
-                />
-              </label>
-              <label className="block text-xs font-medium text-slate-600">
-                เบอร์โทร
-                <input
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                  placeholder="เว้นว่างได้"
-                  inputMode="numeric"
-                  autoComplete="tel"
-                  value={editForm.customer_phone}
-                  onChange={(e) =>
-                    setEditForm((s) => (s ? { ...s, customer_phone: e.target.value.replace(/\D/g, "").slice(0, 15) } : s))
-                  }
-                />
-              </label>
+            <div className="rounded-xl border border-slate-100 bg-slate-50/90 px-3 py-2 text-xs font-medium text-slate-600">
+              <p>
+                รหัสรายการ <span className="font-mono font-bold text-[#2e2a58]">#{editVisit.id}</span>
+                {editVisit.bundle_id != null ? (
+                  <>
+                    {" · "}แพ็กเหมา <span className="font-mono font-bold text-amber-800">#{editVisit.bundle_id}</span>
+                  </>
+                ) : null}
+              </p>
+              <p className="mt-1 text-[11px] text-slate-500">บริการเดิม: {editVisit.package_name || "—"}</p>
             </div>
+
+            <label className="block text-xs font-medium text-slate-600">
+              ชื่อลูกค้า
+              <input
+                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                placeholder="เช่น คุณสมชาย"
+                autoComplete="name"
+                value={editForm.customer_name}
+                onChange={(e) => setEditForm((s) => (s ? { ...s, customer_name: e.target.value } : s))}
+                required
+              />
+            </label>
+            <label className="block text-xs font-medium text-slate-600">
+              เบอร์โทร
+              <input
+                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                placeholder="เว้นว่างได้"
+                inputMode="numeric"
+                autoComplete="tel"
+                value={editForm.customer_phone}
+                onChange={(e) =>
+                  setEditForm((s) => (s ? { ...s, customer_phone: e.target.value.replace(/\D/g, "").slice(0, 15) } : s))
+                }
+              />
+            </label>
             <label className="block text-xs font-medium text-slate-600">
               ทะเบียนรถ
               <input
@@ -2627,39 +2728,37 @@ export function CarWashSalesPanel({
               >
                 <option value="">บริการพิเศษ (ไม่ผูกแพ็กเกจ)</option>
                 {packages
-                  .filter((p) => p.is_active)
+                  .filter((p) => p.is_active || p.id === editVisit.package_id)
                   .map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} (฿ {p.price})
+                      {p.name} (฿ {p.price}){!p.is_active ? " — ปิดใช้" : ""}
                     </option>
                   ))}
               </select>
             </label>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block text-xs font-medium text-slate-600">
-                ราคาในแพ็กเกจ (บาท)
-                <input
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                  type="number"
-                  min={0}
-                  placeholder="0"
-                  value={editForm.listed_price}
-                  onChange={(e) => setEditForm((s) => (s ? { ...s, listed_price: e.target.value } : s))}
-                />
-              </label>
-              <label className="block text-xs font-medium text-slate-600">
-                ราคาที่คิดจริง (บาท)
-                <input
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                  type="number"
-                  min={0}
-                  placeholder="0"
-                  value={editForm.final_price}
-                  onChange={(e) => setEditForm((s) => (s ? { ...s, final_price: e.target.value } : s))}
-                  required
-                />
-              </label>
-            </div>
+            <label className="block text-xs font-medium text-slate-600">
+              ราคาในแพ็กเกจ (บาท)
+              <input
+                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                type="number"
+                min={0}
+                placeholder="0"
+                value={editForm.listed_price}
+                onChange={(e) => setEditForm((s) => (s ? { ...s, listed_price: e.target.value } : s))}
+              />
+            </label>
+            <label className="block text-xs font-medium text-slate-600">
+              ราคาที่คิดจริง (บาท)
+              <input
+                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                type="number"
+                min={0}
+                placeholder="0"
+                value={editForm.final_price}
+                onChange={(e) => setEditForm((s) => (s ? { ...s, final_price: e.target.value } : s))}
+                required
+              />
+            </label>
             <label className="block text-xs font-medium text-slate-600">
               เวลาเข้าใช้บริการ
               <input
@@ -2707,7 +2806,73 @@ export function CarWashSalesPanel({
                 onChange={(e) => setEditForm((s) => (s ? { ...s, note: e.target.value } : s))}
               />
             </label>
-            <p className="text-[11px] text-slate-500">แก้รูปได้จากปุ่มอัปโหลด / ถ่ายรูปในรายการ — หรือล้างรูปที่แถวนั้น</p>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-[#4d47b6]">รูปแนบ / สลิป</p>
+              <AppGalleryCameraFileInputs
+                galleryInputRef={editVisitGalleryRef}
+                cameraInputRef={editVisitCameraInputRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void onEditVisitPhotoFile(file);
+                }}
+              />
+              <div className="flex flex-wrap items-center gap-3">
+                {editForm.photo_url.trim() ? (
+                  <AppImageThumb
+                    src={resolveAssetUrl(editForm.photo_url, baseUrl)}
+                    alt="รูปแนบรายการ"
+                    onOpen={() => {
+                      const u = resolveAssetUrl(editForm.photo_url, baseUrl);
+                      if (u) lightbox.open(u);
+                    }}
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-400">
+                    ไม่มีรูป
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <AppPickGalleryImageButton
+                    type="button"
+                    disabled={editSaving || editPhotoBusy}
+                    onClick={() => editVisitGalleryRef.current?.click()}
+                    aria-label="อัปโหลดรูปแนบ"
+                  />
+                  <AppTakePhotoButton
+                    type="button"
+                    disabled={editSaving || editPhotoBusy}
+                    onClick={() => setEditVisitCameraOpen(true)}
+                    aria-label="ถ่ายรูปแนบ"
+                  />
+                  {editForm.photo_url.trim() ? (
+                    <button
+                      type="button"
+                      className="text-xs font-bold text-rose-600 underline-offset-2 hover:underline"
+                      disabled={editSaving || editPhotoBusy}
+                      onClick={() => setEditForm((s) => (s ? { ...s, photo_url: "" } : s))}
+                    >
+                      ล้างรูป
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+              {editPhotoBusy ? <p className="text-xs font-medium text-violet-700">กำลังอัปโหลดรูป…</p> : null}
+            </div>
+            <AppCameraCaptureModal
+              open={editVisitCameraOpen}
+              onClose={() => setEditVisitCameraOpen(false)}
+              onCapture={(file) => {
+                setEditVisitCameraOpen(false);
+                void onEditVisitPhotoFile(file);
+              }}
+              onRequestLegacyPicker={() => {
+                setEditVisitCameraOpen(false);
+                requestAnimationFrame(() => editVisitCameraInputRef.current?.click());
+              }}
+              title="ถ่ายรูปแนบรายการ"
+            />
           </form>
         : null}
       </FormModal>
@@ -2738,39 +2903,50 @@ export function CarWashSalesPanel({
         {editBundle && editBundleForm ?
           <form
             ref={editBundleFormRef}
-            className="space-y-3"
+            className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
               void submitEditBundle();
             }}
           >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block text-xs font-medium text-slate-600">
-                ชื่อลูกค้า
-                <input
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                  value={editBundleForm.customer_name}
-                  onChange={(e) =>
-                    setEditBundleForm((s) => (s ? { ...s, customer_name: e.target.value } : s))
-                  }
-                  required
-                />
-              </label>
-              <label className="block text-xs font-medium text-slate-600">
-                เบอร์โทร
-                <input
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                  inputMode="numeric"
-                  value={editBundleForm.customer_phone}
-                  onChange={(e) =>
-                    setEditBundleForm((s) =>
-                      s ? { ...s, customer_phone: e.target.value.replace(/\D/g, "").slice(0, 15) } : s,
-                    )
-                  }
-                  required
-                />
-              </label>
+            <div className="rounded-xl border border-amber-100 bg-amber-50/60 px-3 py-2 text-xs font-medium text-slate-600">
+              <p>
+                รหัสแพ็กเหมา <span className="font-mono font-bold text-[#2e2a58]">#{editBundle.id}</span>
+              </p>
+              <p className="mt-1 text-[11px] text-slate-500">
+                สร้างเมื่อ{" "}
+                {new Date(editBundleForm.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
+              </p>
+              <p className="mt-1 text-[11px] font-bold text-amber-800">
+                ใช้ไปแล้ว {editBundleForm.used_uses} / {editBundleForm.total_uses || "—"} ครั้ง
+              </p>
             </div>
+
+            <label className="block text-xs font-medium text-slate-600">
+              ชื่อลูกค้า
+              <input
+                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                value={editBundleForm.customer_name}
+                onChange={(e) =>
+                  setEditBundleForm((s) => (s ? { ...s, customer_name: e.target.value } : s))
+                }
+                required
+              />
+            </label>
+            <label className="block text-xs font-medium text-slate-600">
+              เบอร์โทร
+              <input
+                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                inputMode="numeric"
+                value={editBundleForm.customer_phone}
+                onChange={(e) =>
+                  setEditBundleForm((s) =>
+                    s ? { ...s, customer_phone: e.target.value.replace(/\D/g, "").slice(0, 15) } : s,
+                  )
+                }
+                required
+              />
+            </label>
             <label className="block text-xs font-medium text-slate-600">
               ทะเบียนรถ
               <input
@@ -2802,42 +2978,44 @@ export function CarWashSalesPanel({
                 required
               >
                 {packages
-                  .filter((p) => p.is_active)
+                  .filter((p) => p.is_active || p.id === editBundle.package_id)
                   .map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} (฿ {p.price})
+                      {p.name} (฿ {p.price}){!p.is_active ? " — ปิดใช้" : ""}
                     </option>
                   ))}
               </select>
             </label>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block text-xs font-medium text-slate-600">
-                ยอดชำระรวม (บาท)
-                <input
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                  type="number"
-                  min={0}
-                  value={editBundleForm.paid_amount}
-                  onChange={(e) =>
-                    setEditBundleForm((s) => (s ? { ...s, paid_amount: e.target.value } : s))
-                  }
-                  required
-                />
-              </label>
-              <label className="block text-xs font-medium text-slate-600">
-                จำนวนครั้งรวม
-                <input
-                  className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
-                  type="number"
-                  min={1}
-                  value={editBundleForm.total_uses}
-                  onChange={(e) =>
-                    setEditBundleForm((s) => (s ? { ...s, total_uses: e.target.value } : s))
-                  }
-                  required
-                />
-              </label>
-            </div>
+            <label className="block text-xs font-medium text-slate-600">
+              ยอดชำระรวม (บาท)
+              <input
+                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                type="number"
+                min={0}
+                value={editBundleForm.paid_amount}
+                onChange={(e) =>
+                  setEditBundleForm((s) => (s ? { ...s, paid_amount: e.target.value } : s))
+                }
+                required
+              />
+            </label>
+            <label className="block text-xs font-medium text-slate-600">
+              จำนวนครั้งรวม
+              <input
+                className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm"
+                type="number"
+                min={1}
+                value={editBundleForm.total_uses}
+                onChange={(e) =>
+                  setEditBundleForm((s) => (s ? { ...s, total_uses: e.target.value } : s))
+                }
+                required
+              />
+            </label>
+            <p className="text-[11px] font-medium text-slate-500">
+              จำนวนครั้งที่ใช้ไปแล้ว: <span className="font-bold text-[#2e2a58]">{editBundleForm.used_uses}</span>{" "}
+              (แก้จากระบบอัตโนมัติเมื่อใช้สิทธิ์ — ตั้งจำนวนรวมให้ไม่น้อยกว่าที่ใช้ไปแล้ว)
+            </p>
             <label className="flex items-center gap-2 text-sm text-slate-600">
               <input
                 type="checkbox"
@@ -2848,9 +3026,73 @@ export function CarWashSalesPanel({
               />
               เปิดใช้งานแพ็กนี้
             </label>
-            <p className="text-[11px] text-slate-500">
-              แก้สลิปได้จากปุ่มอัปโหลด / ถ่ายรูปในรายการยอดขาย — หรือพิมพ์ใบสรุปตามเทมเพลต
-            </p>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-[#4d47b6]">สลิปชำระแพ็กเหมา</p>
+              <AppGalleryCameraFileInputs
+                galleryInputRef={editBundleGalleryRef}
+                cameraInputRef={editBundleCameraInputRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void onEditBundleSlipFile(file);
+                }}
+              />
+              <div className="flex flex-wrap items-center gap-3">
+                {editBundleForm.slip_photo_url.trim() ? (
+                  <AppImageThumb
+                    src={resolveAssetUrl(editBundleForm.slip_photo_url, baseUrl)}
+                    alt="สลิปแพ็กเหมา"
+                    onOpen={() => {
+                      const u = resolveAssetUrl(editBundleForm.slip_photo_url, baseUrl);
+                      if (u) lightbox.open(u);
+                    }}
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-amber-200 bg-amber-50/50 text-[10px] font-bold text-amber-500">
+                    ไม่มีสลิป
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <AppPickGalleryImageButton
+                    type="button"
+                    disabled={editBundleSaving || editPhotoBusy}
+                    onClick={() => editBundleGalleryRef.current?.click()}
+                    aria-label="อัปโหลดสลิปแพ็กเหมา"
+                  />
+                  <AppTakePhotoButton
+                    type="button"
+                    disabled={editBundleSaving || editPhotoBusy}
+                    onClick={() => setEditBundleCameraOpen(true)}
+                    aria-label="ถ่ายสลิปแพ็กเหมา"
+                  />
+                  {editBundleForm.slip_photo_url.trim() ? (
+                    <button
+                      type="button"
+                      className="text-xs font-bold text-rose-600 underline-offset-2 hover:underline"
+                      disabled={editBundleSaving || editPhotoBusy}
+                      onClick={() => setEditBundleForm((s) => (s ? { ...s, slip_photo_url: "" } : s))}
+                    >
+                      ล้างสลิป
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+              {editPhotoBusy ? <p className="text-xs font-medium text-violet-700">กำลังอัปโหลดรูป…</p> : null}
+            </div>
+            <AppCameraCaptureModal
+              open={editBundleCameraOpen}
+              onClose={() => setEditBundleCameraOpen(false)}
+              onCapture={(file) => {
+                setEditBundleCameraOpen(false);
+                void onEditBundleSlipFile(file);
+              }}
+              onRequestLegacyPicker={() => {
+                setEditBundleCameraOpen(false);
+                requestAnimationFrame(() => editBundleCameraInputRef.current?.click());
+              }}
+              title="ถ่ายสลิปแพ็กเหมา"
+            />
           </form>
         : null}
       </FormModal>

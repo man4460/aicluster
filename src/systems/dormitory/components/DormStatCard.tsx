@@ -15,6 +15,9 @@ const toneStyles: Record<DormStatTone, string> = {
     "border-white/60 bg-gradient-to-br from-white/60 via-slate-50/40 to-slate-100/35 text-slate-700 shadow-[0_18px_38px_-26px_rgba(51,65,85,0.35)]",
 };
 
+const valueGradientClass =
+  "bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] bg-clip-text text-transparent";
+
 export function DormStatCard({
   title,
   value,
@@ -33,17 +36,17 @@ export function DormStatCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-[2rem] border p-5 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.4)] sm:p-6",
+        "relative overflow-hidden rounded-[1.5rem] border p-5 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.4)] sm:p-6",
         toneStyles[tone],
         className,
       )}
     >
       <div className="relative z-10 flex h-full flex-col justify-between">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-black uppercase tracking-widest opacity-60">{title}</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">{title}</p>
           {icon ? <div className="opacity-40">{icon}</div> : null}
         </div>
-        <p className="mt-4 text-2xl font-black tabular-nums tracking-tight sm:text-3xl">{value}</p>
+        <p className={cn("mt-4 text-2xl font-black tabular-nums tracking-tight sm:text-3xl", valueGradientClass)}>{value}</p>
         {subtitle ? <p className="mt-1 text-[11px] font-medium opacity-80">{subtitle}</p> : null}
       </div>
       <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-current opacity-[0.03] blur-2xl" aria-hidden />

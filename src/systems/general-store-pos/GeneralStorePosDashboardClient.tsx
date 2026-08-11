@@ -13,6 +13,7 @@ import {
   appDashboardInnerScrollClass,
   prepareImageFileForUpload,
 } from "@/components/app-templates";
+import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import {
@@ -35,7 +36,7 @@ import { suggestGeneralStorePosStockImageUrl } from "@/systems/general-store-pos
 import { useGeneralStorePosMobileDraftSlot } from "@/systems/general-store-pos/components/GeneralStorePosMobileBottomChrome";
 
 const statCardClass =
-  "relative overflow-hidden rounded-[1.25rem] border border-white/55 bg-gradient-to-br from-white/60 via-indigo-50/25 to-violet-100/15 p-4 shadow-[0_16px_40px_-28px_rgba(30,27,75,0.28)] backdrop-blur-xl ring-1 ring-inset ring-white/50 sm:rounded-[2rem] sm:p-5";
+  "relative overflow-hidden rounded-[1.5rem] border border-white/60 bg-gradient-to-br from-white/70 via-indigo-50/25 to-violet-100/15 px-4 py-4 shadow-sm backdrop-blur-xl ring-1 ring-inset ring-white/55 sm:px-5 sm:py-5";
 
 const productCardClass =
   "group relative flex flex-col overflow-hidden rounded-[1.25rem] border border-white/55 bg-gradient-to-br from-white/65 via-white/40 to-indigo-50/20 shadow-sm ring-1 ring-inset ring-white/45 backdrop-blur-md transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-[2rem]";
@@ -157,15 +158,13 @@ export function GeneralStorePosDashboardClient() {
 
   const stats = useMemo(() => {
     const tKey = todayBangkokKey();
-    const activeProducts = products.filter((x) => x.isActive);
-    const todayTotal = sales
-      .filter((x) => bangkokDayKey(x.createdAt) === tKey)
-      .reduce((a, x) => a + x.totalBaht, 0);
+    const todaySales = sales.filter((x) => bangkokDayKey(x.createdAt) === tKey);
+    const productsTotalValue = products.reduce((a, x) => a + x.priceBaht, 0);
     return {
-      categories: categories.length,
-      products: activeProducts.length,
-      featured: activeProducts.filter((x) => x.isFeatured).length,
-      todayTotal,
+      products: products.length,
+      productsValue: productsTotalValue,
+      todayTotal: todaySales.reduce((a, x) => a + x.totalBaht, 0),
+      todayOrders: todaySales.length,
     };
   }, [categories.length, products, sales]);
 
@@ -557,23 +556,33 @@ export function GeneralStorePosDashboardClient() {
       ) : null}
 
       <section aria-label="สรุป">
-        <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <ul className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
           <li className={statCardClass}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">หมวดหมู่</p>
-            <p className="mt-2 text-2xl font-black tabular-nums text-[#4d47b6] sm:text-3xl">{stats.categories}</p>
+            <div aria-hidden className="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br from-indigo-100/60 via-blue-200/40 to-transparent blur-xl" />
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#66638c]">สินค้าทั้งหมด</p>
+            <p className={cn("mt-2 text-2xl font-black tabular-nums bg-gradient-to-br from-[#4338ca] via-[#5b61ff] to-[#0d9488] bg-clip-text text-transparent sm:text-3xl")}>
+              {stats.products}
+            </p>
           </li>
           <li className={statCardClass}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">สินค้าเปิดขาย</p>
-            <p className="mt-2 text-2xl font-black tabular-nums text-[#4d47b6] sm:text-3xl">{stats.products}</p>
+            <div aria-hidden className="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br from-violet-100/60 via-fuchsia-200/40 to-transparent blur-xl" />
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#66638c]">ราคารวมสินค้า</p>
+            <p className={cn("mt-2 text-2xl font-black tabular-nums bg-gradient-to-br from-[#7c3aed] via-[#a855f7] to-[#c026d3] bg-clip-text text-transparent sm:text-3xl")}>
+              ฿{formatThb(stats.productsValue)}
+            </p>
           </li>
           <li className={statCardClass}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">แนะนำ</p>
-            <p className="mt-2 text-2xl font-black tabular-nums text-emerald-700 sm:text-3xl">{stats.featured}</p>
-          </li>
-          <li className={statCardClass}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">ยอดขายวันนี้ (กทม.)</p>
-            <p className="mt-2 text-2xl font-black tabular-nums text-[#1e1b4b] sm:text-3xl">
+            <div aria-hidden className="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br from-emerald-100/60 via-teal-200/40 to-transparent blur-xl" />
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#66638c]">ยอดขายวันนี้</p>
+            <p className={cn("mt-2 text-2xl font-black tabular-nums bg-gradient-to-br from-[#059669] via-[#10b981] to-[#14b8a6] bg-clip-text text-transparent sm:text-3xl")}>
               ฿{formatThb(stats.todayTotal)}
+            </p>
+          </li>
+          <li className={statCardClass}>
+            <div aria-hidden className="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br from-amber-100/60 via-orange-200/40 to-transparent blur-xl" />
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#66638c]">ออเดอร์วันนี้</p>
+            <p className={cn("mt-2 text-2xl font-black tabular-nums bg-gradient-to-br from-[#d97706] via-[#f59e0b] to-[#f97316] bg-clip-text text-transparent sm:text-3xl")}>
+              {stats.todayOrders}
             </p>
           </li>
         </ul>
@@ -592,11 +601,11 @@ export function GeneralStorePosDashboardClient() {
                 aria-label="ดูยอดขาย"
                 className={cn(
                   appTemplateOutlineButtonClass,
-                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl border-[#5b61ff]/25 bg-white/80 px-0 text-[#4d47b6] sm:min-w-0 sm:px-4",
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl border-[#0000BF]/25 bg-white/80 px-0 text-[#4d47b6] sm:min-w-0 sm:gap-1.5 sm:px-4",
                 )}
                 title="ยอดขาย"
               >
-                <svg className="h-5 w-5 sm:mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+                <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
                   <path d="M4 18h16M7 14l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <span className="hidden sm:inline">ยอดขาย</span>
@@ -607,12 +616,13 @@ export function GeneralStorePosDashboardClient() {
                 aria-label="จัดการหมวดหมู่"
                 className={cn(
                   appTemplateOutlineButtonClass,
-                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl border-[#5b61ff]/25 bg-white/80 px-0 text-[#4d47b6] sm:min-w-0 sm:px-3",
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl border-[#0000BF]/25 bg-white/80 px-0 text-[#4d47b6] sm:min-w-0 sm:gap-1.5 sm:px-3",
                 )}
                 title="จัดการหมวด"
               >
-                <svg className="h-5 w-5 sm:mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-                  <path d="M4 6h16M4 12h10M4 18h14" strokeLinecap="round" />
+                <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" strokeLinecap="round" />
                 </svg>
                 <span className="hidden sm:inline">จัดการหมวด</span>
               </button>
@@ -622,11 +632,11 @@ export function GeneralStorePosDashboardClient() {
                 aria-label="เพิ่มหมวดหมู่"
                 className={cn(
                   appTemplateOutlineButtonClass,
-                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl border-[#5b61ff]/25 bg-white/80 px-0 text-[#4d47b6] sm:min-w-0 sm:px-3",
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl border-[#0000BF]/25 bg-white/80 px-0 text-[#4d47b6] sm:min-w-0 sm:gap-1.5 sm:px-3",
                 )}
                 title="เพิ่มหมวด"
               >
-                <svg className="h-5 w-5 sm:mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+                <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
                   <path d="M12 5v14M5 12h14" strokeLinecap="round" />
                 </svg>
                 <span className="hidden sm:inline">หมวด</span>
@@ -635,13 +645,16 @@ export function GeneralStorePosDashboardClient() {
                 type="button"
                 onClick={openCreateProduct}
                 aria-label="เพิ่มสินค้า"
-                className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl px-0 font-black shadow-md sm:min-w-0 sm:px-4"
+                className={cn(
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl px-0 font-black text-white shadow-md sm:min-w-0 sm:gap-1.5 sm:px-4",
+                  appDashboardBrandGradientFillClass,
+                )}
                 title="เพิ่มสินค้า"
               >
-                <svg className="h-5 w-5 sm:mr-1.5 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+                <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
                   <path d="M12 5v14M5 12h14" strokeLinecap="round" />
                 </svg>
-                <span className="hidden sm:inline">+ เพิ่มสินค้า</span>
+                <span className="hidden sm:inline">เพิ่มสินค้า</span>
               </button>
             </div>
           }
@@ -659,7 +672,7 @@ export function GeneralStorePosDashboardClient() {
               className={cn(
                 "shrink-0 snap-start rounded-full border px-4 py-2 text-xs font-black transition",
                 filterCat === "all"
-                  ? "border-[#5b61ff]/40 bg-[#5b61ff] text-white shadow-md"
+                  ? cn(appDashboardBrandGradientFillClass, "border-transparent text-white shadow-md ring-1 ring-white/40")
                   : "border-white/60 bg-white/50 text-[#66638c] hover:bg-white/80",
               )}
             >
@@ -673,7 +686,7 @@ export function GeneralStorePosDashboardClient() {
                 className={cn(
                   "shrink-0 snap-start rounded-full border px-4 py-2 text-xs font-black transition",
                   filterCat === c.id
-                    ? "border-[#5b61ff]/40 bg-[#5b61ff] text-white shadow-md"
+                    ? cn(appDashboardBrandGradientFillClass, "border-transparent text-white shadow-md ring-1 ring-white/40")
                     : "border-white/60 bg-white/50 text-[#66638c] hover:bg-white/80",
                 )}
               >

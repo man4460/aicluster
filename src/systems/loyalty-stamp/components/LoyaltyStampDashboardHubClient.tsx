@@ -115,13 +115,13 @@ export function LoyaltyStampOverviewSections({
                 aria-label="ไปหน้าเพิ่มแต้ม"
                 className={cn(
                   appTemplateOutlineButtonClass,
-                  "min-h-[40px] min-w-[40px] rounded-xl sm:min-w-0 sm:px-4",
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded-xl sm:min-w-0 sm:px-4",
                 )}
               >
+                <svg viewBox="0 0 24 24" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+                  <polygon points="12 2 15 8.5 22 9.3 17 14.5 18.2 22 12 18.8 5.8 22 7 14.5 2 9.3 9 8.5 12 2" strokeLinejoin="round" />
+                </svg>
                 <span className="hidden sm:inline">เพิ่มแต้ม</span>
-                <span className="sm:hidden" aria-hidden>
-                  +
-                </span>
               </Link>
             }
           />

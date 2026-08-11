@@ -4,8 +4,8 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import { usePathname } from "next/navigation";
 import { AppMobileDockUnifiedBar } from "@/components/app-templates";
 import { GeneralStorePosMobileDockNav } from "@/systems/general-store-pos/components/GeneralStorePosMobileDock";
-
-const base = "/dashboard/general-store-pos";
+import { isGeneralStorePosModulePath } from "@/systems/general-store-pos/general-store-pos-module-nav";
+import { generalStorePosDockPillClass } from "@/systems/general-store-pos/lib/ui-tokens";
 
 type GeneralStorePosMobileBottomContextValue = {
   setMobileBottomSlot: (slot: ReactNode | null) => void;
@@ -13,7 +13,6 @@ type GeneralStorePosMobileBottomContextValue = {
 
 const GeneralStorePosMobileBottomContext = createContext<GeneralStorePosMobileBottomContextValue | null>(null);
 
-/** ฝังรายการสรุปบิล (มือถือ) ในการ์ดล่างเดียวกับเมนู — ใช้ใน `GeneralStorePosDashboardClient` เท่านั้น */
 export function useGeneralStorePosMobileDraftSlot() {
   const ctx = useContext(GeneralStorePosMobileBottomContext);
   return ctx?.setMobileBottomSlot ?? ((_n: ReactNode | null) => {});
@@ -34,14 +33,16 @@ export function GeneralStorePosMobileBottomProvider({ children }: { children: Re
   );
 }
 
-/** การ์ดล่างเดียว: โซนสล็อต (รายการรอ) + เมนู — อิงระยะ `bottom-6` + `inset-x-4` แบบคาร์แคร์ */
 function GeneralStorePosMobileUnifiedBar({ slot }: { slot: ReactNode | null }) {
   const pathname = usePathname() ?? "";
-  const onModule = pathname.startsWith(base);
-  if (!onModule) return null;
+  if (!isGeneralStorePosModulePath(pathname)) return null;
 
   return (
-    <AppMobileDockUnifiedBar ariaLabel="เมนูล่าง POS ร้านทั่วไป" slot={slot}>
+    <AppMobileDockUnifiedBar
+      ariaLabel="เมนูล่าง POS ร้านทั่วไป"
+      slot={slot}
+      pillClassName={generalStorePosDockPillClass}
+    >
       <GeneralStorePosMobileDockNav />
     </AppMobileDockUnifiedBar>
   );

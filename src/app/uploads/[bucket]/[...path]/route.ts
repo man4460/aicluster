@@ -18,6 +18,7 @@ const ALLOWED_BUCKETS = new Set([
   "avatars",
   "barber",
   "barber-cash-receipts",
+  "barber-packages",
   "barber-portal-slips",
   "barber-stylists",
   "building-pos",

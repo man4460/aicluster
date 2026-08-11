@@ -21,12 +21,18 @@ export type AppModuleShopSettingsClientProps = {
   fieldClassName?: string;
   children?: ReactNode;
   onSaved?: (profile: ModuleShopBrandingDto) => void;
+  /** แสดงชื่อ/โลโก้/คำโปรย/เบอร์ — ค่าเริ่มเปิด */
+  showBasicFields?: boolean;
+  /** แสดงช่องทางชำระ — ค่าเริ่มเปิด */
+  showPaymentFields?: boolean;
   /** แสดงช่องตั้งขนาดสลิปใบเสร็จ (โปรไฟล์ส่วนกลาง) — ค่าเริ่มเปิด */
   showSlipPaperSizeSettings?: boolean;
   /** แสดงช่องขนาดสลิปคิวออเดอร์ (ครัว / พร้อมเสิร์ฟ) — ค่าเริ่มปิด */
   showOrderTicketSlipPaperSize?: boolean;
   /** แสดงช่องรหัสเข้าลิงก์พนักงานรายวัน — ค่าเริ่มปิด */
   showStaffDailyPinSettings?: boolean;
+  /** ไม่ห่อ AppDashboardSection (เมื่ออยู่ภายใต้แท็บตั้งค่าแล้ว) */
+  embedded?: boolean;
 };
 
 export function AppModuleShopSettingsClient({
@@ -39,9 +45,12 @@ export function AppModuleShopSettingsClient({
   fieldClassName = "app-input mt-1 w-full rounded-xl",
   children,
   onSaved,
+  showBasicFields = true,
+  showPaymentFields = true,
   showSlipPaperSizeSettings = true,
   showOrderTicketSlipPaperSize = false,
   showStaffDailyPinSettings = false,
+  embedded = false,
 }: AppModuleShopSettingsClientProps) {
   const [form, setForm] = useState(initial);
   const [pinDraft, setPinDraft] = useState("");
@@ -82,49 +91,52 @@ export function AppModuleShopSettingsClient({
     }
   };
 
-  return (
-    <div className="space-y-4 sm:space-y-6">
-      <AppDashboardSection className={appDashboardSectionVioletClass}>
-        <AppSectionHeader title={title} description={description} />
+  const body = (
         <div className="space-y-3 text-left">
           {err ? <p className="text-sm text-rose-600">{err}</p> : null}
           {msg ? <p className="text-sm font-semibold text-emerald-700">{msg}</p> : null}
-          <AppShopLogoField
-            logoUrl={form.logoUrl}
-            fallbackLabel={form.displayName ?? displayNameLabel}
-            uploadUrl={uploadLogoApiUrl}
-            onLogoUrlChange={(url) => setForm((f) => ({ ...f, logoUrl: url }))}
-          />
-          <label className="block space-y-1">
-            <span className="text-xs font-bold text-[#4d47b6]">{displayNameLabel}</span>
-            <input
-              className={fieldClassName}
-              value={form.displayName ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))}
-            />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-xs font-bold text-[#4d47b6]">คำโปรย</span>
-            <input
-              className={fieldClassName}
-              value={form.tagline ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))}
-            />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-xs font-bold text-[#4d47b6]">เบอร์ติดต่อร้าน</span>
-            <input
-              className={fieldClassName}
-              value={form.contactPhone ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, contactPhone: e.target.value }))}
-            />
-          </label>
+          {showBasicFields ? (
+            <>
+              <AppShopLogoField
+                logoUrl={form.logoUrl}
+                fallbackLabel={form.displayName ?? displayNameLabel}
+                uploadUrl={uploadLogoApiUrl}
+                onLogoUrlChange={(url) => setForm((f) => ({ ...f, logoUrl: url }))}
+              />
+              <label className="block space-y-1">
+                <span className="text-xs font-bold text-[#4d47b6]">{displayNameLabel}</span>
+                <input
+                  className={fieldClassName}
+                  value={form.displayName ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))}
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-bold text-[#4d47b6]">คำโปรย</span>
+                <input
+                  className={fieldClassName}
+                  value={form.tagline ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))}
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-bold text-[#4d47b6]">เบอร์ติดต่อร้าน</span>
+                <input
+                  className={fieldClassName}
+                  value={form.contactPhone ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, contactPhone: e.target.value }))}
+                />
+              </label>
+            </>
+          ) : null}
 
-          <AppModuleShopPaymentFields
-            value={form}
-            onChange={(payment) => setForm((f) => ({ ...f, ...payment }))}
-            fieldClassName={fieldClassName}
-          />
+          {showPaymentFields ? (
+            <AppModuleShopPaymentFields
+              value={form}
+              onChange={(payment) => setForm((f) => ({ ...f, ...payment }))}
+              fieldClassName={fieldClassName}
+            />
+          ) : null}
 
           {showSlipPaperSizeSettings ? (
             <>
@@ -171,6 +183,17 @@ export function AppModuleShopSettingsClient({
             {busy ? "กำลังบันทึก…" : "บันทึก"}
           </button>
         </div>
+  );
+
+  if (embedded) {
+    return <div className="space-y-3">{body}</div>;
+  }
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      <AppDashboardSection className={appDashboardSectionVioletClass}>
+        <AppSectionHeader title={title} description={description} />
+        {body}
       </AppDashboardSection>
     </div>
   );

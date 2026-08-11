@@ -1,0 +1,86 @@
+---
+description: หน้าตั้งค่าร้านโมดูล — แยกแถบเมนูพื้นฐาน · การเงิน · เว็ปลิงค์ลูกค้า · เวลาเปิดร้าน (คาร์แคร์/บาร์เบอร์)
+globs:
+  - "**/systems/**/*Settings*.tsx"
+  - "**/systems/**/**Settings*.tsx"
+  - "**/dashboard/**/settings/**"
+  - "**/systems/car-wash/CarWashSettings*.tsx"
+  - "**/systems/barber/**/BarberShopSettings*.tsx"
+alwaysApply: false
+---
+
+# เมนูตั้งค่าร้าน — แถบหมวดมาตรฐาน
+
+ใช้เมื่อทำหรือปรับ **หน้าตั้งค่าร้าน** ของโมดูลบริการ (คิว / จอง / พอร์ทัลลูกค้า) เช่น คาร์แคร์ · ร้านตัดผม
+
+**เลย์เอาต์มือถือ/เดสก์ท็อป (dropdown vs pill):** `dashboard-module-settings-single-row-tabs.mdc` · `dashboard-primary-secondary-menu-tabs.mdc`
+
+---
+
+## 1) แถบเมนูบังคับ (เมื่อมีครบโดเมน)
+
+| ลำดับ | แท็บ (ข้อความ UI) | เนื้อหา |
+|------|-------------------|--------|
+| 1 | **ตั้งค่าพื้นฐาน** | ชื่อร้าน · โลโก้ · คำโปรย/สโลแกน · เบอร์ · ที่อยู่ (ถ้ามี) |
+| 2 | **ตั้งค่าเกี่ยวกับการเงิน** | ช่องทางชำระ · ขนาดสลิป · ปุ่มลัดยอด/PIN พนักงาน (ถ้ามี) |
+| 3 | **ตั้งค่าเว็ปลิงค์ลูกค้า** | ลิงก์สาธารณะ (คัดลอก/เปิด) · แบนเนอร์ · แกลเลอรี · LINE · Facebook · แผนที่ |
+| 4 | **ตั้งค่าเวลาเปิดร้าน** | เวลาเริ่ม/สิ้นสุด · วันเปิดประจำ · สล็อต · override รายวัน (ถ้ามี) |
+
+- อยู่ใน **`AppDashboardSection` การ์ดเดียว** — หัวข้อ «ตั้งค่าร้าน» → แถบเมนู → แผงตามแท็บ  
+- **มือถือ:** `<select>` + ป้าย «กรุณาเลือกหมวดตั้งค่า» · **ซ่อน** แถบ pill (`hidden sm:block` ที่ wrapper)  
+- **`sm+`:** แถบหลัก pill · `role="tablist"` / `tab` / `tabpanel` · `aria-selected` / `aria-controls`  
+- รองรับ deep-link `?tab=basic|finance|portal|hours` เมื่อเหมาะสม
+
+โมดูลที่**ไม่มี**พอร์ทัล/ชั่วโมง (เช่น นวดบางหน้า) — เหลือแท็บที่มีจริงเท่านั้น (**พื้นฐาน** + **การเงิน**) อย่าสร้างแท็บว่าง
+
+---
+
+## 2) โทเค็น UI
+
+สร้างคู่ใน `*-ui-tokens` ของโมดูล (ห้ามคัดลอกสตริงซ้ำหลายหน้า):
+
+| บทบาท | ตัวอย่าง |
+|-------|---------|
+| Shell pill | `carWashPrimaryTabShellClass` · `barberPrimaryTabShellClass` |
+| Pill active/idle | `*PrimaryTabPillClass(active)` |
+| Dropdown มือถือ | `*MobileSelectClass` |
+
+---
+
+## 3) การบันทึกข้อมูล
+
+| แท็บ | แนวทาง |
+|------|--------|
+| พื้นฐาน / การเงิน | `ModuleShop` branding **หรือ** shop-profile ของโมดูล — แยกแผงฟิลด์ด้วย `showBasicFields` / `showPaymentFields` เมื่อใช้ `AppModuleShopSettingsClient` |
+| เว็ปลิงค์ลูกค้า | ฟิลด์บน **shop profile โมดูล** (`portalBannerUrl` · `portalGalleryJson` · `contactLine` · `facebookUrl` · `mapUrl` · `address`) — **ห้าม** ยัดลง `ModuleShopBranding` กลางถ้ายังไม่มีคอลัมน์ |
+| เวลาเปิดร้าน | shop profile hours / day-schedule API ของโมดูล |
+
+- พอร์ทัลสาธารณะ: อ่านค่าจาก DB · **fallback ตัวอย่าง** เมื่อยังว่าง  
+- อัปโหลดรูป: endpoint โมดูลเอง (เช่น `/api/.../images/upload`) + `prepareImageFileForUpload` / `AppImagePickCameraButtons`
+
+---
+
+## 4) ห้าม
+
+- ยัดทุกหมวดในหน้าเดียวยาวเมื่อมี ≥ 3 หมวด โดยไม่มีแถบ/dropdown  
+- โชว์ pill + dropdown พร้อมกันบนมือถือ  
+- วางแถบเมนูตั้งค่านอกการ์ดหลัก  
+- คัดลอก UI สื่อพอร์ทัลใหม่ทั้งก้อน — เลียนแบบ `BarberPortalMediaSettings` / `CarWashPortalMediaSettings`
+
+---
+
+## 5) อ้างอิงที่ทำแล้ว
+
+| โมดูล | ไฟล์ |
+|-------|------|
+| คาร์แคร์ | `CarWashSettingsClient.tsx` · `CarWashPortalMediaSettings.tsx` · `CarWashShopHoursPanel.tsx` |
+| ร้านตัดผม | `BarberShopSettingsClient.tsx` · `BarberPortalMediaSettings.tsx` |
+| UX พอร์ทัลลูกค้า | `module-customer-booking-website-portal.mdc` · `shop-customer-qr-portal.mdc` |
+
+## เช็กลิสต์
+
+- [ ] 4 แท็บ (หรือชุดย่อยตามโดเมน) ข้อความตรงตารางด้านบน  
+- [ ] มือถือ dropdown · `sm+` pill · ไม่โชว์คู่  
+- [ ] สื่อพอร์ทัล + ลิงก์สาธารณะอยู่แท็บเว็ปลิงค์  
+- [ ] ชั่วโมงเปิดร้านไม่อยู่หน้าภาพรวมถ้ามีแท็บตั้งค่าเวลาแล้ว  
+- [ ] โทเค็นอยู่ใน `*-ui-tokens` ของโมดูล  

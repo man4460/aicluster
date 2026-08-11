@@ -1,10 +1,9 @@
 "use client";
 
-import { Suspense, useCallback, useMemo } from "react";
+import { Suspense, useCallback, useEffect, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { CarWashBookingsClient } from "@/systems/car-wash/CarWashBookingsClient";
-import { CarWashDayScheduleClient } from "@/systems/car-wash/CarWashDayScheduleClient";
 import {
   carWashContentStackClass,
   carWashNavActiveClass,
@@ -12,9 +11,9 @@ import {
   carWashSubTabSegmentShellClass,
 } from "@/systems/car-wash/car-wash-ui-tokens";
 
-export type CarWashHubTabKey = "overview" | "queue" | "schedule";
+export type CarWashHubTabKey = "overview" | "queue";
 
-const HUB_TAB_KEYS = new Set<string>(["overview", "queue", "schedule"]);
+const HUB_TAB_KEYS = new Set<string>(["overview", "queue"]);
 
 function parseHubTab(raw: string | null): CarWashHubTabKey {
   if (raw && HUB_TAB_KEYS.has(raw)) return raw as CarWashHubTabKey;
@@ -24,7 +23,6 @@ function parseHubTab(raw: string | null): CarWashHubTabKey {
 const HUB_TAB_ITEMS: { key: CarWashHubTabKey; label: string }[] = [
   { key: "overview", label: "ภาพรวม" },
   { key: "queue", label: "จัดการคิว" },
-  { key: "schedule", label: "ตารางเวลา" },
 ];
 
 function hubTabIcon(key: CarWashHubTabKey) {
@@ -38,19 +36,12 @@ function hubTabIcon(key: CarWashHubTabKey) {
           <path d="M16 2v4M8 2v4M3 10h18" />
         </g>
       );
-    case "schedule":
-      return (
-        <g>
-          <circle cx="12" cy="12" r="9" />
-          <path d="M12 7v5l3 2" />
-        </g>
-      );
     default:
       return <circle cx="12" cy="12" r="9" />;
   }
 }
 
-/** ปุ่มสลับภาพรวม / จัดการคิว / ตารางเวลา — วางคู่หัวข้อสถิติ */
+/** ปุ่มสลับภาพรวม / จัดการคิว — วางคู่หัวข้อสถิติ */
 export function CarWashDashboardTabToolbar({ className }: { className?: string }) {
   const router = useRouter();
   const pathname = usePathname() ?? "/dashboard/car-wash";
@@ -128,8 +119,24 @@ function CarWashDashboardHubPanels({
   initialDateKey: string;
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const hubTab = useMemo(() => parseHubTab(searchParams.get("tab")), [searchParams]);
+  const rawTab = searchParams.get("tab");
+  const hubTab = useMemo(() => parseHubTab(rawTab), [rawTab]);
+
+  useEffect(() => {
+    if (rawTab === "schedule") {
+      router.replace("/dashboard/car-wash/settings?tab=hours");
+    }
+  }, [rawTab, router]);
+
+  if (rawTab === "schedule") {
+    return (
+      <div className={carWashContentStackClass} aria-busy>
+        <p className="text-sm text-[#5f5a8a]">กำลังไปหน้าตั้งค่าเวลาเปิดร้าน…</p>
+      </div>
+    );
+  }
 
   return (
     <div className={carWashContentStackClass}>
@@ -140,12 +147,7 @@ function CarWashDashboardHubPanels({
       ) : null}
 
       {hubTab === "overview" ? <div className={carWashContentStackClass}>{children}</div> : null}
-      {hubTab === "queue" ? (
-        <CarWashBookingsClient initialDateKey={initialDateKey} />
-      ) : null}
-      {hubTab === "schedule" ? (
-        <CarWashDayScheduleClient embedded initialDateKey={initialDateKey} />
-      ) : null}
+      {hubTab === "queue" ? <CarWashBookingsClient initialDateKey={initialDateKey} /> : null}
     </div>
   );
 }

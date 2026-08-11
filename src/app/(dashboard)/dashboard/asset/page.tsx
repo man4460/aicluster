@@ -84,9 +84,9 @@ export default async function AssetHomePage() {
                 <Link
                   href="/dashboard/asset/assets"
                   aria-label="จัดการทรัพย์สิน"
-                  className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2.5 py-2 text-sm font-semibold sm:min-h-0 sm:min-w-0 sm:px-4 sm:py-2.5"
+                  className="app-btn-primary inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-semibold sm:min-h-0 sm:px-4 sm:py-2.5"
                 >
-                  <IconAssetBox className="h-5 w-5 shrink-0 sm:hidden" />
+                  <IconAssetBox className="h-5 w-5 shrink-0" />
                   <span className="hidden sm:inline">จัดการทรัพย์สิน</span>
                 </Link>
                 <Link
@@ -94,10 +94,10 @@ export default async function AssetHomePage() {
                   aria-label="ดูรายงาน"
                   className={cn(
                     appTemplateOutlineButtonClass,
-                    "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2.5 py-2 sm:min-h-0 sm:min-w-0 sm:px-4 sm:py-2.5",
+                    "inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 sm:min-h-0 sm:px-4 sm:py-2.5",
                   )}
                 >
-                  <IconReportChart className="h-5 w-5 shrink-0 sm:hidden" />
+                  <IconReportChart className="h-5 w-5 shrink-0" />
                   <span className="hidden sm:inline">ดูรายงาน</span>
                 </Link>
               </div>
@@ -106,7 +106,7 @@ export default async function AssetHomePage() {
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
         />
 
-        <div className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <AssetStatCard
             title="ทรัพย์สินทั้งหมด"
             value={data.totalAssets.toLocaleString("th-TH")}

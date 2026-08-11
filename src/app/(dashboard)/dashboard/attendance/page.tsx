@@ -6,6 +6,7 @@ import {
   appDashboardSectionSlateClass,
   appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
+import { appDashboardBrandGradientBarClass } from "@/components/app-templates/dashboard-tokens";
 import { cn } from "@/lib/cn";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -92,7 +93,7 @@ export default async function AttendanceHomePage() {
           title="สรุปวันนี้"
           description="อัปเดตตามข้อมูลจริงของวันนี้ (เวลาไทย) สำหรับเจ้าของระบบ"
         />
-        <div className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-5">
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
           <StatCard label="เข้างานแล้ว" value={checkedIn} hint="รวมผู้ที่เช็คชื่อเข้าแล้วทั้งหมด" accent="violet" />
           <StatCard label="มาสาย" value={late} hint="เข้าเกินเวลาเริ่มกะที่ตั้งไว้" accent="amber" />
           <StatCard label="ยังเหลือ" value={remaining} hint="คงเหลือจากรายชื่อพนักงาน QR ที่ยังไม่เข้า" accent="slate" />
@@ -102,23 +103,30 @@ export default async function AttendanceHomePage() {
             value={checkedOut}
             hint="เช็คออกเรียบร้อยแล้ววันนี้"
             accent="indigo"
-            className="col-span-2 xl:col-span-1"
+            className="col-span-2 sm:col-span-1"
           />
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-2 sm:gap-3">
           <Link
             href="/dashboard/attendance/check"
-            className="app-btn-primary inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold sm:min-h-0"
+            className="app-btn-primary inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold sm:min-h-0"
           >
+            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M9 11l3 3L22 4" />
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+            </svg>
             เปิดหน้าเช็คอิน
           </Link>
           <Link
             href="/dashboard/attendance/logs"
             className={cn(
               appTemplateOutlineButtonClass,
-              "inline-flex min-h-[44px] items-center justify-center sm:min-h-0",
+              "inline-flex min-h-[44px] items-center justify-center gap-1.5 sm:min-h-0",
             )}
           >
+            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M4 19h16M7 15l3-3 3 2 4-5" />
+            </svg>
             ดูรายงานย้อนหลัง
           </Link>
         </div>
@@ -195,24 +203,29 @@ function StatCard({
   accent: "violet" | "amber" | "slate" | "green" | "indigo";
   className?: string;
 }) {
-  const valueTone =
-    accent === "green"
-      ? "text-emerald-700"
-      : accent === "amber"
-        ? "text-amber-800"
-        : accent === "indigo"
-          ? "text-indigo-700"
-          : accent === "violet"
-            ? "text-[#4d47b6]"
-            : "text-[#2e2a58]";
+  const toneStyles = {
+    violet:
+      "border-white/60 bg-gradient-to-br from-white/60 via-indigo-50/35 to-violet-100/30 text-indigo-800 shadow-[0_18px_38px_-26px_rgba(79,70,229,0.45)]",
+    amber:
+      "border-white/60 bg-gradient-to-br from-white/60 via-amber-50/35 to-orange-100/30 text-amber-700 shadow-[0_18px_38px_-26px_rgba(217,119,6,0.35)]",
+    slate:
+      "border-white/60 bg-gradient-to-br from-white/60 via-slate-50/40 to-slate-100/35 text-slate-700 shadow-[0_18px_38px_-26px_rgba(51,65,85,0.35)]",
+    green:
+      "border-white/60 bg-gradient-to-br from-white/60 via-emerald-50/35 to-emerald-100/30 text-emerald-700 shadow-[0_18px_38px_-26px_rgba(16,185,129,0.35)]",
+    indigo:
+      "border-white/60 bg-gradient-to-br from-white/60 via-indigo-50/35 to-indigo-100/30 text-indigo-800 shadow-[0_18px_38px_-26px_rgba(79,70,229,0.45)]",
+  };
 
   return (
-    <div className={cn(appDashboardSectionSlateClass, "space-y-0", className)}>
-      <p className="text-xs font-medium text-[#66638c]">{label}</p>
-      <p className={cn("mt-1 text-2xl font-bold tabular-nums sm:text-3xl", valueTone)}>
-        {value.toLocaleString("th-TH")}
-      </p>
-      <p className="mt-1 text-xs leading-snug text-[#66638c]">{hint}</p>
+    <div className={cn("relative overflow-hidden rounded-[1.5rem] border p-4 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.4)] sm:p-5", toneStyles[accent], className)}>
+      <div className="relative z-10 flex h-full flex-col justify-between">
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">{label}</p>
+        <p className={cn("mt-3 bg-clip-text text-transparent text-2xl font-black tabular-nums tracking-tight sm:text-3xl", appDashboardBrandGradientBarClass)}>
+          {value.toLocaleString("th-TH")}
+        </p>
+        {hint ? <p className="mt-1 text-[11px] font-medium opacity-80 leading-snug">{hint}</p> : null}
+      </div>
+      <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-current opacity-[0.03] blur-2xl" aria-hidden />
     </div>
   );
 }

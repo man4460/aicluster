@@ -1,6 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { bangkokDateKey } from "@/lib/time/bangkok";
-import { daysInBangkokMonth } from "./bangkok-day";
+import { bangkokRangeForCalendarFilter, daysInBangkokMonth } from "./bangkok-day";
+import {
+  barberFinanceRangeBounds,
+  barberFinanceRangeToCalendarFilter,
+  parseBarberFinanceRange,
+  type BarberFinanceRange,
+} from "./finance-range";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -67,8 +73,12 @@ export async function resolveBarberHistoryCalendarFromSearchParams(
   month: number | "all";
   day: number | "all";
   availableYears: number[];
+  /** เมื่อมี range=TODAY|MONTH|YEAR|CUSTOM — ใช้ start/end ตรงนี้แทนปฏิทิน year/month/day */
+  financeRange: BarberFinanceRange | null;
+  rangeLabel: string;
+  start: Date;
+  end: Date;
 }> {
-  const monthParam = parseHistoryMonthParam(searchParams);
   const key = bangkokDateKey();
   const defY = Number(key.split("-")[0]);
 
@@ -76,6 +86,25 @@ export async function resolveBarberHistoryCalendarFromSearchParams(
   const fromDb = dbYears.length > 0 ? dbYears : [];
   const availableYears = [...new Set([...fromDb, defY])].sort((a, b) => a - b);
 
+  const financeRange = parseBarberFinanceRange(searchParams.get("range"));
+  if (financeRange) {
+    const from = (searchParams.get("from") ?? "").trim();
+    const to = (searchParams.get("to") ?? "").trim();
+    const bounds = barberFinanceRangeBounds(financeRange, from, to);
+    const cal = barberFinanceRangeToCalendarFilter(financeRange, from, to);
+    return {
+      year: cal.year,
+      month: cal.month,
+      day: cal.day,
+      availableYears,
+      financeRange,
+      rangeLabel: bounds.label,
+      start: bounds.start,
+      end: bounds.end,
+    };
+  }
+
+  const monthParam = parseHistoryMonthParam(searchParams);
   const yearParam = Number(searchParams.get("year"));
   let year = Number.isFinite(yearParam) && yearParam >= 2000 && yearParam <= 2100 ? yearParam : defY;
   if (!availableYears.includes(year)) {
@@ -83,5 +112,20 @@ export async function resolveBarberHistoryCalendarFromSearchParams(
   }
 
   const dayParam = parseHistoryDayParam(searchParams, year, monthParam);
-  return { year, month: monthParam, day: dayParam, availableYears };
+  const { start, end } = bangkokRangeForCalendarFilter(year, monthParam, dayParam);
+  let rangeLabel = String(year);
+  if (monthParam === "all") rangeLabel = `ปี ${year}`;
+  else if (dayParam === "all") rangeLabel = `เดือน ${monthParam}/${year}`;
+  else rangeLabel = `${dayParam}/${monthParam}/${year}`;
+
+  return {
+    year,
+    month: monthParam,
+    day: dayParam,
+    availableYears,
+    financeRange: null,
+    rangeLabel,
+    start,
+    end,
+  };
 }

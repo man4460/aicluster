@@ -9,13 +9,20 @@ import {
   AppIconToolbarButton,
   AppIconTrash,
   AppIconUpload,
-  AppSectionHeader,
+  AppTime24Input,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { BarberDashboardBackLink } from "@/systems/barber/components/BarberDashboardBackLink";
+import { BarberDashboardHeaderTrailing } from "@/systems/barber/components/BarberDashboardHeaderTrailing";
 import { BarberModalPortal } from "@/systems/barber/components/BarberModalPortal";
 import {
+  BARBER_ALL_WEEKDAYS,
+  BARBER_WEEKDAY_LABELS_TH,
+  barberFormatWorkWeekdaysLabel,
+} from "@/systems/barber/lib/stylist-schedule";
+import {
   barberCardSurfaceRadiusClass,
+  barberDashboardSegmentBtnClass,
   barberEmptyStateDashedClass,
   barberIconToolbarGroupClass,
   barberInlineAlertErrorClass,
@@ -40,6 +47,9 @@ type Stylist = {
   phone: string | null;
   photoUrl: string | null;
   isActive: boolean;
+  workStartTime: string;
+  workEndTime: string;
+  workWeekdays: number[];
   createdAt: string;
 };
 
@@ -54,7 +64,13 @@ async function uploadStylistImage(file: File): Promise<string> {
   return url;
 }
 
-export function BarberStylistsClient({ embedded = false }: { embedded?: boolean } = {}) {
+export function BarberStylistsClient({
+  embedded = false,
+  showHubToolbar = false,
+}: {
+  embedded?: boolean;
+  showHubToolbar?: boolean;
+} = {}) {
   const router = useRouter();
   const [list, setList] = useState<Stylist[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +81,9 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [workStartTime, setWorkStartTime] = useState("09:00");
+  const [workEndTime, setWorkEndTime] = useState("20:00");
+  const [workWeekdays, setWorkWeekdays] = useState<number[]>([...BARBER_ALL_WEEKDAYS]);
   const [addPhotoFile, setAddPhotoFile] = useState<File | null>(null);
   const [addPhotoPreview, setAddPhotoPreview] = useState<string | null>(null);
   const addFileRef = useRef<HTMLInputElement>(null);
@@ -72,6 +91,9 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
   const [editStylist, setEditStylist] = useState<Stylist | null>(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editWorkStartTime, setEditWorkStartTime] = useState("09:00");
+  const [editWorkEndTime, setEditWorkEndTime] = useState("20:00");
+  const [editWorkWeekdays, setEditWorkWeekdays] = useState<number[]>([...BARBER_ALL_WEEKDAYS]);
   const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null);
   const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null);
   const editFileRef = useRef<HTMLInputElement>(null);
@@ -91,7 +113,16 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
       setList([]);
       return;
     }
-    setList(data.stylists ?? []);
+    setList(
+      (data.stylists ?? []).map((s) => ({
+        ...s,
+        workStartTime: s.workStartTime || "09:00",
+        workEndTime: s.workEndTime || "20:00",
+        workWeekdays: Array.isArray(s.workWeekdays) && s.workWeekdays.length > 0
+          ? s.workWeekdays
+          : [...BARBER_ALL_WEEKDAYS],
+      })),
+    );
   }, []);
 
   useEffect(() => {
@@ -135,6 +166,9 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
   const closeAddModal = useCallback(() => {
     setAddOpen(false);
     setErr(null);
+    setWorkStartTime("09:00");
+    setWorkEndTime("20:00");
+    setWorkWeekdays([...BARBER_ALL_WEEKDAYS]);
     setAddPhotoFile(null);
     if (addFileRef.current) addFileRef.current.value = "";
   }, []);
@@ -144,10 +178,20 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
     setEditStylist(null);
     setEditName("");
     setEditPhone("");
+    setEditWorkStartTime("09:00");
+    setEditWorkEndTime("20:00");
+    setEditWorkWeekdays([...BARBER_ALL_WEEKDAYS]);
     setEditPhotoFile(null);
     if (editFileRef.current) editFileRef.current.value = "";
     setErr(null);
   }, []);
+
+  function toggleWorkWeekday(day: number, mode: "add" | "edit") {
+    const setter = mode === "add" ? setWorkWeekdays : setEditWorkWeekdays;
+    setter((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort((a, b) => a - b),
+    );
+  }
 
   const anyModalOpen = addOpen || editOpen || Boolean(previewUrl);
 
@@ -173,6 +217,9 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
     setErr(null);
     setName("");
     setPhone("");
+    setWorkStartTime("09:00");
+    setWorkEndTime("20:00");
+    setWorkWeekdays([...BARBER_ALL_WEEKDAYS]);
     setAddPhotoFile(null);
     if (addFileRef.current) addFileRef.current.value = "";
     setAddOpen(true);
@@ -183,6 +230,13 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
     setEditStylist(s);
     setEditName(s.name);
     setEditPhone(s.phone ?? "");
+    setEditWorkStartTime(s.workStartTime || "09:00");
+    setEditWorkEndTime(s.workEndTime || "20:00");
+    setEditWorkWeekdays(
+      Array.isArray(s.workWeekdays) && s.workWeekdays.length > 0
+        ? [...s.workWeekdays]
+        : [...BARBER_ALL_WEEKDAYS],
+    );
     setEditPhotoFile(null);
     if (editFileRef.current) editFileRef.current.value = "";
     setEditOpen(true);
@@ -212,6 +266,9 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
         body: JSON.stringify({
           name: name.trim(),
           phone: phone.replace(/\D/g, "").length > 0 ? phone.replace(/\D/g, "").slice(0, 15) : null,
+          workStartTime,
+          workEndTime,
+          workWeekdays,
           ...(photoUrl ? { photoUrl } : {}),
         }),
       });
@@ -247,9 +304,19 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
           return;
         }
       }
-      const body: { name: string; phone: string | null; photoUrl?: string | null } = {
+      const body: {
+        name: string;
+        phone: string | null;
+        workStartTime: string;
+        workEndTime: string;
+        workWeekdays: number[];
+        photoUrl?: string | null;
+      } = {
         name: editName.trim(),
         phone: editPhone.replace(/\D/g, "").length > 0 ? editPhone.replace(/\D/g, "").slice(0, 15) : null,
+        workStartTime: editWorkStartTime,
+        workEndTime: editWorkEndTime,
+        workWeekdays: editWorkWeekdays,
       };
       if (nextPhotoUrl !== undefined) body.photoUrl = nextPhotoUrl;
 
@@ -388,22 +455,56 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
       ) : null}
 
       <section className={barberSectionFirstClass} aria-label="รายชื่อช่าง">
-        <AppSectionHeader
-          tone="violet"
-          title="รายชื่อช่าง"
-          action={
+        <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <h2 className="shrink-0 text-base font-black leading-none tracking-tight text-[#1e1b4b] sm:text-lg">
+            รายชื่อช่าง
+          </h2>
+          {showHubToolbar ? (
+            <BarberDashboardHeaderTrailing className="w-full sm:w-auto">
+              {!embedded ? <BarberDashboardBackLink /> : null}
+              <button
+                type="button"
+                onClick={openAddModal}
+                className={barberDashboardSegmentBtnClass(true)}
+                aria-label="เพิ่มช่าง"
+              >
+                <svg
+                  className="h-4 w-4 shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  aria-hidden
+                >
+                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                </svg>
+                <span className="hidden sm:inline">เพิ่มช่าง</span>
+              </button>
+            </BarberDashboardHeaderTrailing>
+          ) : (
             <div className={barberSectionActionsRowClass}>
               {!embedded ? <BarberDashboardBackLink /> : null}
               <button
                 type="button"
                 onClick={openAddModal}
-                className={`app-btn-primary min-h-[44px] ${barberCardSurfaceRadiusClass} px-4 py-2.5 text-sm font-semibold`}
+                className={barberDashboardSegmentBtnClass(true)}
+                aria-label="เพิ่มช่าง"
               >
-                เพิ่มช่าง
+                <svg
+                  className="h-4 w-4 shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  aria-hidden
+                >
+                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                </svg>
+                <span className="hidden sm:inline">เพิ่มช่าง</span>
               </button>
             </div>
-          }
-        />
+          )}
+        </div>
         {loading ? (
           <p className={barberMutedLoadingNoticeClass}>กำลังโหลดรายการ…</p>
         ) : list.length === 0 ? (
@@ -443,8 +544,15 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
                         </span>
                       ) : null}
                     </div>
+                    <p className="mt-1 truncate text-xs leading-normal text-[#7a7699]">
+                      รับคิว {s.workStartTime || "09:00"}–{s.workEndTime || "20:00"}
+                      <span className="mx-1.5 text-[#c4c0e0]" aria-hidden>
+                        ·
+                      </span>
+                      {barberFormatWorkWeekdaysLabel(s.workWeekdays ?? [...BARBER_ALL_WEEKDAYS])}
+                    </p>
                     {s.phone ? (
-                      <p className="mt-1 truncate text-xs leading-normal text-[#7a7699] tabular-nums">{s.phone}</p>
+                      <p className="mt-0.5 truncate text-xs leading-normal text-[#7a7699] tabular-nums">{s.phone}</p>
                     ) : null}
                   </div>
                 </div>
@@ -546,6 +654,55 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
                 />
               </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-xs font-semibold text-[#4d47b6]">
+                  เริ่มรับคิว (เวลาไทย)
+                  <div className="mt-1">
+                    <AppTime24Input
+                      value={workStartTime}
+                      onChange={setWorkStartTime}
+                      aria-label="เวลาเริ่มรับคิว"
+                    />
+                  </div>
+                </label>
+                <label className="block text-xs font-semibold text-[#4d47b6]">
+                  เลิกรับคิว (เวลาไทย)
+                  <div className="mt-1">
+                    <AppTime24Input
+                      value={workEndTime}
+                      onChange={setWorkEndTime}
+                      aria-label="เวลาเลิกรับคิว"
+                    />
+                  </div>
+                </label>
+              </div>
+              <fieldset>
+                <legend className="text-xs font-semibold text-[#4d47b6]">วันที่รับบริการ</legend>
+                <p className="mt-1 text-[11px] leading-relaxed text-[#7a7699]">
+                  เลือกวันในสัปดาห์ที่ช่างคนนี้รับคิว (เวลาไทย)
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="วันที่รับบริการ">
+                  {BARBER_WEEKDAY_LABELS_TH.map((label, day) => {
+                    const on = workWeekdays.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => toggleWorkWeekday(day, "add")}
+                        className={cn(
+                          "min-h-9 min-w-9 rounded-xl px-2.5 text-xs font-semibold transition",
+                          on
+                            ? "bg-[#5b61ff] text-white ring-1 ring-[#5b61ff]/40"
+                            : "bg-[#f6f5ff] text-[#8b87ad] ring-1 ring-[#ecebff]",
+                        )}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
               <div>
                 <p className="text-xs font-semibold text-[#4d47b6]">รูป (ไม่บังคับ)</p>
                 <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -656,6 +813,55 @@ export function BarberStylistsClient({ embedded = false }: { embedded?: boolean 
                   onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
                 />
               </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-xs font-semibold text-[#4d47b6]">
+                  เริ่มรับคิว (เวลาไทย)
+                  <div className="mt-1">
+                    <AppTime24Input
+                      value={editWorkStartTime}
+                      onChange={setEditWorkStartTime}
+                      aria-label="เวลาเริ่มรับคิว"
+                    />
+                  </div>
+                </label>
+                <label className="block text-xs font-semibold text-[#4d47b6]">
+                  เลิกรับคิว (เวลาไทย)
+                  <div className="mt-1">
+                    <AppTime24Input
+                      value={editWorkEndTime}
+                      onChange={setEditWorkEndTime}
+                      aria-label="เวลาเลิกรับคิว"
+                    />
+                  </div>
+                </label>
+              </div>
+              <fieldset>
+                <legend className="text-xs font-semibold text-[#4d47b6]">วันที่รับบริการ</legend>
+                <p className="mt-1 text-[11px] leading-relaxed text-[#7a7699]">
+                  เลือกวันในสัปดาห์ที่ช่างคนนี้รับคิว (เวลาไทย)
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="วันที่รับบริการ">
+                  {BARBER_WEEKDAY_LABELS_TH.map((label, day) => {
+                    const on = editWorkWeekdays.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => toggleWorkWeekday(day, "edit")}
+                        className={cn(
+                          "min-h-9 min-w-9 rounded-xl px-2.5 text-xs font-semibold transition",
+                          on
+                            ? "bg-[#5b61ff] text-white ring-1 ring-[#5b61ff]/40"
+                            : "bg-[#f6f5ff] text-[#8b87ad] ring-1 ring-[#ecebff]",
+                        )}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
               <div>
                 <p className="text-xs font-semibold text-[#4d47b6]">รูป</p>
                 <div className="mt-2 flex flex-wrap items-center gap-3">

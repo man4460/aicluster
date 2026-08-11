@@ -1,5 +1,5 @@
 ---
-description: เทมเพลตแดชบอร์ดโมดูลร้านตัดผม — เลย์เอาต์ตามขนาดจอ สี การ์ด ขอบมน เมนูล่างมือถือ และแพทเทิร์นต่อยอดโมดูลอื่น
+description: เทมเพลตแดชบอร์ดโมดูลร้านตัดผม — gutter เต็มความกว้าง มุมมน 1.5/2.0 dock ยุบหัว ชำระเงินเหมือนโรงแรม
 globs:
   - "**/systems/barber/**"
   - "**/app/**/dashboard/barber/**"
@@ -7,60 +7,94 @@ globs:
 
 # ร้านตัดผม (Barber) — เทมเพลตแดชบอร์ด & UI
 
-ใช้เป็นแบบอ้างอิงเมื่อสร้างโมดูลแดชบอร์ดใหม่ที่โทน MAWELL / glass / แยกเมนูมือถือ–เดสก์ท็อป — **หลักการ UX/UI ระดับโปรเจกต์ (เมนูล่าง มุมมน เฉดสี แม่แบบคาร์แคร์):** **`dashboard-ux-car-wash-baseline.mdc`**
+**หลักการโปรเจกต์:** `dashboard-ux-car-wash-baseline.mdc` · **อ้างอิงโรงแรม:** `hotel-resort-module-dashboard-template.mdc`
 
-**ตารางเทียบคู่ขนานคาร์แคร์:** **`dashboard-module-car-wash-barber-reference.mdc`**
+**จองคิว + ตารางช่าง (ย้ายไปโมดูลอื่น):** `module-booking-staff-schedule-template.mdc` — แพ็กก่อนสล็อต · แดชบอร์ด=พอร์ทัล · ห้ามจองอดีต · วันที่รับบริการ+ชั่วโมง
 
-## 1) เลย์เอาต์ตามขนาดจอ (Tailwind)
+## 1) ระยะขอบ · ความกว้าง
 
-| โซน | มือถือ (`max-md`, &lt;768px) | แท็บเล็ต/คอม (`md:` ขึ้นไป) |
-|-----|------------------------------|------------------------------|
-| **แถบนำทางโมดูล** | **`BarberModuleMobileDock`** — `fixed inset-x-4 bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))] z-40` กริด 4 คอลัมน์ · `rounded-[2.5rem]` | **`BarberModuleDesktopNav`** — ในการ์ดหัว (`BarberLayoutChrome`) ใต้เส้นแบ่ง `border-t border-white/40` |
-| **หัวโมดูล** | โลโก้ + ชื่อระบบ + ปุ่มคู่มือ; tagline ซ่อนบนมือถือ (`hidden md:block`) | เหมือนเดิม + แสดง tagline |
-| **พื้นที่เลื่อนเนื้อหา** | **`BarberLayoutChrome`** ใส่ `max-md:pb-20 md:pb-0` เพื่อไม่ให้เนื้อหาถูก dock บัง | ไม่ต้องเว้น pb แบบ dock |
-| **Gutter แดชบอร์ด** | `DashboardShell` แถวหลัก: `max-md:px-2` เมื่ออยู่ใต้ `/dashboard/barber/*` | `sm:px-4` |
-| **PageContainer ชั้นแดชบอร์ด** | `DashboardPagesShell`: `max-md:!px-3 sm:!px-6` สำหรับ path barber | `sm:!px-6` |
-| **โมดูล Shell** | `BarberModuleShell` → `PageContainer` ใช้ `!px-0` (ไม่ซ้ำขอบแนวนอนกับชั้นแดชบอร์ด) | เหมือนกัน |
+| ชั้น | ค่า |
+|------|-----|
+| `DashboardPagesShell` | `WIDE_MODULE` — `size="full"` + `max-w-none !px-3 sm:!px-4 lg:!px-6` |
+| `DashboardShell` main | `px-3 sm:px-4` (ไม่ใช้ compact) |
+| `BarberModuleShell` | ไม่ซ้อน `PageContainer` ซ้ำ — chrome เท่านั้น |
+| เนื้อหา | หุ้มด้วย `barberModuleContentShellClass` (ยกเว้น staff / finance / qr ที่ plain) |
 
-**หมายเหตุแท็บเล็ต:** ในโค้ดปัจจุบันใช้ breakpoint **`md` (768px)** เป็นจุดสลับ dock ↔ เมนูในการ์ด — แท็บเล็ตแนวตั้งส่วนใหญ่จึงได้ **dock ล่าง**; แท็บเล็ตแนวนอน/หน้าจอกว้างพอได้ **เมนูในการ์ด**
+## 2) ความโค้งมน (§9)
 
-## 2) สี ขนาดการ์ด ขอบมน
+| ระดับ | ค่า |
+|-------|-----|
+| เปลือกหัว / section | `rounded-[2rem]` (`barberGlassShellClass` · `barberSectionRadiusClass`) |
+| การ์ดย่อย / hub / dock pill | `rounded-[1.5rem]` |
+| ปุ่ม / input | `rounded-[1rem]` |
 
-**แหล่ง token หลัก:** `@/systems/barber/components/barber-ui-tokens.ts`
+## 3) ยุบหัว + เมนู
 
-- **โทนแบรนด์ / ลิงก์ active:** `#5b61ff`, ไล่ข้อความหัวข้อ `#4338ca` → `#5b61ff` → `#0d9488`
-- **ข้อความหลักเข้ม:** `#1e1b4b`, รอง `#5f5a8a` / `#66638c`
-- **เปลือกโมดูล (glass):** `BarberLayoutChrome` — `rounded-[2.5rem] max-md:rounded-2xl`, เส้นขอบ `border-white/50`, พื้นไล่ `from-white/50 via-indigo-50/25 to-violet-100/20`, `backdrop-blur-2xl`, เงา inset ขาวอ่อน
-- **เปลือกเนื้อหาชั้นใน (ใช้เฉพาะบางหน้า):** `rounded-[2rem] max-md:rounded-2xl`, `border-white/45`, `bg-white/35` — หน้าที่มีการ์ดหนาแล้วใช้โหมด **plain inner** (ดูด้านล่าง)
-- **การ์ดย่อยในโมดูล:** `barberCardSurfaceRadiusClass` = `rounded-2xl sm:rounded-xl`; `barberCardBodyPaddingXClass` = `px-2.5 sm:px-4`
-- **เซกชันแดชบอร์มมาตรฐาน (การเงิน ฯลฯ):** `AppDashboardSection` tone **`violet`** → `appDashboardSectionVioletClass` ใน `@/components/app-templates/dashboard-tokens.ts`
+- `barber-module-nav.tsx` — `BARBER_NAV_ITEMS` · collapse key/event
+- ซ่อนการ์ดหัวทั้งใบเมื่อยุบ → `BarberHeaderBarNav` ใน `DashboardShell`
+- มือถือ: `AppMobileDockUnifiedBar` + `barberDockPillClass`
+- แท็บ: แดชบอร์ด · การเงิน · แพ็กเกจ · **ลิงก์** · ตั้งค่า
+- **หน้าตั้งค่าร้าน** — แถบ 4 หมวด (พื้นฐาน · การเงิน · เว็ปลิงค์ลูกค้า · เวลาเปิดร้าน): **`dashboard-module-shop-settings-tabs.mdc`** · `BarberShopSettingsClient.tsx`
 
-อย่าซ้อน glass card ทับ glass card โดยไม่จำเป็น — ถ้าหน้ามี `AppDashboardSection` หรือ hub header หนาแล้ว ให้ไม่ห่อด้วย `barberModuleContentShellClass` ซ้ำ
+## 4) ชำระเงิน
 
-## 3) ปุ่มเมนู — มือถืออยู่ด้านล่าง
+- `lib/payment-method.ts` + `BarberPaymentPanel` — CASH / PROMPTPAY / TRANSFER / CREDIT_CARD
+- QR: `POST /api/barber/promptpay-qr` · สลิป: `/api/barber/cash-receipt/upload` (ทางเลือก)
+- ใช้ในเช็คอินเงินสด + ขายแพ็กเกจ
 
-- **เมนูหลักโมดูล (แดชบอร์ด / การเงิน / แพ็กเกจ / QR):** ใช้ **`BarberModuleMobileDock`** เท่านั้นบนมือถือ — อย่าย้ายเป็นแถบบนหรือ hamburger สำหรับลิงก์เหล่านี้
-- Dock ต้องอยู่ **นอก** การ์ดหัวที่มี `overflow-hidden` เพื่อไม่ถูกตัด — เรียบง่าย: dock เรนเดอร์ถัดจากการ์ดหัวใน `BarberLayoutChrome`
-- **safe area:** `pb-[max(0.35rem,env(safe-area-inset-bottom))]` บน dock
-- **ช่องสัมผัส:** ลิงก์ dock `min-h-[52px]`; ปุ่มนำทางเดสก์ท็อป `min-h-[44px]` (`barberNavLinkClass`)
+## 5) ปุ่ม · ชิป · ขนาดแตะ
 
-## 4) แพทเทิร์นอื่นที่ควรคงไว้ในระบบต่อไป
+- ปุ่มหลักใช้โทนม่วงแบรนด์ (`app-btn-primary` หรือ token บาร์เบอร์) — ข้อความหนา `font-semibold`–`font-bold`
+- ปุ่มรอง/ปุ่มนุ่ม ใช้พื้นขาวหรือม่วงอ่อน (`app-btn-soft`) + ขอบโปร่ง ไม่แย่งจุดเด่นจาก primary
+- ปุ่มเสี่ยง/ลบ ใช้โทน `rose` ชัดเจน ห้ามใช้สีเดียวกับปุ่มหลัก
+- ปุ่มไอคอนล้วนต้องมี `aria-label` และขนาดแตะอย่างน้อย `min-h-[40px] min-w-[40px]`
+- ปุ่มในโมดัล/ฟอร์มหลักใช้ความสูง `min-h-[48px]` เป็นฐาน
+- กลุ่มชิป/แท็บ/ตัวเลือกพนักงาน ใช้ `rounded-2xl` หรือ `rounded-xl` และมี 2 state ชัด:
+  - active = ม่วงทึบ/ม่วงอ่อน + ring
+  - inactive = ขาว/ม่วงอ่อนจาง + border โปร่ง
+- ชิปวันรับบริการ: เปิด = สี primary, ปิด = ตัวอักษร muted + พื้นจาง
 
-- **Staff kiosk (`/dashboard/barber/staff`):** ซ่อน header/sidebar แดชบอร์ด + ซ่อน chrome โมดูล — เนื้อหาแบบพอร์ทัล (`DashboardPagesShell` / `BarberModuleShell` เต็มความกว้าง `!p-0` ตามโค้ด) — ห้ามใส่ gutter ซ้ำ
-- **หน้า plain inner (ไม่ห่อ `barberModuleContentShellClass`):** `/dashboard/barber/staff`, `/finance`, `/packages`, `/qr` — ลดการ์ดซ้อน
-- **โมดัลที่ต้องลอยเหนือ dock:** ใช้ **`BarberModalPortal`** (portal ไป `document.body`, z เหนือ dock) สำหรับฟอร์ม/กรองมือถือ
-- **Hydration / ส่วนขยายเบราว์เซอร์:** ปุ่มที่โดน inject attribute (เช่น `fdprocessedid`) ใช้ `suppressHydrationWarning` ตามที่ทำใน clients ที่เกี่ยวข้อง
-- **หน้า hub แพ็กเกจบนมือถือ:** หัวข้อเต็มความกว้าง → แถบแท็บเต็มความกว้าง → ปุ่มหลักเต็มความกว้าง (ดู `BarberPackagesHubClient`)
+## 6) การ์ด · แถวรายการ · โมดัล
 
-## ไฟล์อ้างอิงหลัก
+- การ์ดหลักของ section ใช้พื้น glass/white โปร่ง ขอบอ่อน และเงานุ่ม ไม่ใช้พื้นทึบแข็งทั้งหน้า
+- แถวรายการในลิสต์ (`barberListRowCardClass`) ต้องอ่านง่ายบนมือถือ: `flex-wrap` ได้, ช่องไฟ `gap-2` ถึง `gap-3`, action toolbar ชิดขวา
+- การ์ดเมนูบริการ/แพ็กเกจต้อง:
+  - รูปเป็นสี่เหลี่ยมจัตุรัส `aspect-square`
+  - เนื้อหาด้านล่างสั้น กระชับ (`line-clamp-2`)
+  - state ที่ถูกเลือกเห็นชัดด้วย `ring` + พื้น primary tint
+- การ์ดเลือกช่าง/พนักงานเป็น pill card ขนาดกดง่าย มี avatar และชื่อในแถวเดียวกัน
+- โมดัลใช้หัวชัด (`title` + `subtitle`) ปุ่มปิดมุมขวาบน และ body เว้นระยะ `px-5 py-5` แบบเดียวกับบาร์เบอร์
+- รูปตัวอย่าง/พรีวิวในโมดัลใช้กรอบโค้งเดียวกับการ์ด (`barberCardSurfaceRadiusClass`) ไม่ใช้กรอบคนละภาษา
+
+## 7) สี · ตัวอักษร · feedback state
+
+- โทนหลักของบาร์เบอร์ = ม่วงคราม/indigo (`#4d47b6`, `#5b61ff`, `#1e1b4b`) + พื้นม่วงอ่อน/ขาวอมม่วง
+- ข้อความหลักเข้มมาก (`#1e1b4b` / `#2e2a58`), ข้อความรอง muted (`#66638c`, `#7a7699`, `#8b87ad`)
+- เส้นขอบพื้นฐานใช้โทนอ่อนเช่น `#ecebff`, `border-white/70`, `border-[#e8e6f4]`
+- สถานะเตือน availability/จองไม่ได้ ใช้กลุ่ม `amber` (ไม่ใช้แดงถ้าไม่ใช่ error จริง)
+- error form/API ใช้ `rose`/`red` แยกจาก warning ให้ชัด
+- disabled state ต้องลด opacity และคง contrast พออ่านได้
+
+## 8) ฟอร์ม · การเลือกข้อมูล
+
+- ฟอร์มเวลาใช้ `AppTime24Input` เท่านั้น เมื่อเกี่ยวกับเวลาไทยหรือเวลาเปิด–ปิด/รับคิว
+- ฟอร์มค้นหาเบอร์/สมาชิกใช้ input สูง `h-12` หรือ `min-h-[48px]` เพื่อให้ตรงกับปุ่ม action ข้างกัน
+- ถ้ามี dependency ของการกรอก ให้บังคับลำดับใน UI ชัดเจน เช่น:
+  - เลือกบริการก่อนเวลา
+  - เลือกช่างก่อนโหลดสล็อต
+  - ถ้าวันนั้นไม่รับบริการ ให้ขึ้น notice แทนกริดสล็อต
+- ข้อความ helper ให้สั้นและ actionable เช่น “เลือกบริการก่อนจึงเลือกช่วงเวลาได้”
+
+## 9) คำอธิบาย UI
+
+- `AppSectionHeader`: **ห้าม** `description` — ใส่คู่มือแทน
+
+## ไฟล์หลัก
 
 | บทบาท | ไฟล์ |
 |--------|------|
-| Shell + glass + plain inner | `src/systems/barber/components/BarberLayoutChrome.tsx` |
-| Dock / เดสก์ท็อป nav | `src/systems/barber/components/BarberModuleHeader.tsx` |
-| PageContainer โมดูล | `src/systems/barber/components/BarberModuleShell.tsx` |
-| Token การ์ด / ว่าง / modal | `src/systems/barber/components/barber-ui-tokens.ts` |
-| Gutter แดชบอร์ด | `src/components/dashboard/DashboardPagesShell.tsx`, `src/components/layout/DashboardShell.tsx` |
-| พอร์ทัลโมดัล | `src/systems/barber/components/BarberModalPortal.tsx` |
-
-เมื่อคัดลอกเทมเพลตไปโมดูลใหม่: แยก **`ModuleLayoutChrome`** (glass header + desktop nav + **fixed mobile dock**) + **`module-ui-tokens.ts`** + ผูก path ใน `DashboardShell` / `DashboardPagesShell` ให้ gutter ไม่ซ้ำชั้น
+| Nav / collapse | `barber-module-nav.tsx` · `BarberHeaderBarNav.tsx` |
+| Shell | `BarberLayoutChrome.tsx` · `BarberModuleShell.tsx` |
+| Dock / desktop nav | `BarberModuleHeader.tsx` |
+| Tokens | `barber-ui-tokens.ts` |
+| ชำระ | `BarberPaymentPanel.tsx` · `lib/payment-method.ts` |

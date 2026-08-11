@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import { bangkokMonthStartYmd, bangkokTodayYmd } from "@/lib/dates/bangkok-calendar";
 import { ActivityLogsClient } from "@/systems/activity-logs/components/ActivityLogsClient";
+import { ActivityLogsShell } from "@/systems/activity-logs/components/ActivityLogsShell";
 
 export const metadata: Metadata = {
-  title: "ความเคลื่อนไหวระบบ | ศูนย์แอดมิน",
+  title: "ประวัติกรรม | ศูนย์แอดมิน",
 };
 
 export default function AdminActivityLogsPage() {
-  return <ActivityLogsClient initialFrom={bangkokMonthStartYmd()} initialTo={bangkokTodayYmd()} />;
+  return (
+    <ActivityLogsShell>
+      <ActivityLogsClient initialFrom={bangkokMonthStartYmd()} initialTo={bangkokTodayYmd()} />
+    </ActivityLogsShell>
+  );
 }

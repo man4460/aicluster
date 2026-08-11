@@ -6,6 +6,7 @@ import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
 import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import { prismaErrorToApiMessage, prismaKnownRequestCode } from "@/lib/prisma-api-error";
+import { isBarberPaymentMethod } from "@/systems/barber/lib/payment-method";
 
 const packageUseSchema = z.object({
   subscriptionId: z.number().int().positive(),
@@ -25,6 +26,12 @@ const cashSchema = z.object({
   amountBaht: z.number().finite().min(0).max(999_999.99).optional().nullable(),
   stylistId: z.number().int().positive().optional().nullable(),
   receiptImageUrl: barberCashReceiptUrl.optional().nullable(),
+  paymentMethod: z.string().max(20).optional().nullable(),
+  taxInvoiceEnabled: z.boolean().optional(),
+  billingName: z.string().max(160).optional().nullable(),
+  taxId: z.string().max(30).optional().nullable(),
+  taxAddress: z.string().max(1000).optional().nullable(),
+  taxBranch: z.string().max(120).optional().nullable(),
 });
 
 /** cash มาก่อน — ถ้า package มาก่อน JSON ที่มีทั้ง subscriptionId + visitType อาจถูก parse เป็นหักแพ็กผิด */
@@ -155,6 +162,13 @@ export async function POST(req: Request) {
       ? parsed.data.receiptImageUrl
       : null;
 
+  const paymentMethod =
+    parsed.data.paymentMethod != null && isBarberPaymentMethod(parsed.data.paymentMethod)
+      ? parsed.data.paymentMethod
+      : amountBaht != null && amountBaht > 0
+        ? "CASH"
+        : null;
+
   const whereCustomer = {
     ownerUserId_phone_trialSessionId: {
       ownerUserId: ownerId,
@@ -164,6 +178,15 @@ export async function POST(req: Request) {
   } as const;
 
   try {
+    const taxEnabled = Boolean(parsed.data.taxInvoiceEnabled);
+    const taxData = {
+      taxInvoiceEnabled: taxEnabled,
+      billingName: taxEnabled ? (parsed.data.billingName?.trim() || name || "") : "",
+      taxId: taxEnabled ? (parsed.data.taxId?.replace(/\D/g, "").slice(0, 13) || "") : "",
+      taxAddress: taxEnabled ? (parsed.data.taxAddress?.trim() || "") : "",
+      taxBranch: taxEnabled ? (parsed.data.taxBranch?.trim() || "") : "",
+    };
+
     let customer = await prisma.barberCustomer.findUnique({ where: whereCustomer });
     if (!customer) {
       customer = await prisma.barberCustomer.create({
@@ -172,12 +195,16 @@ export async function POST(req: Request) {
           trialSessionId,
           phone,
           name,
+          ...(parsed.data.taxInvoiceEnabled !== undefined ? taxData : {}),
         },
       });
-    } else if (name !== null && name.length > 0) {
+    } else {
       customer = await prisma.barberCustomer.update({
         where: { id: customer.id },
-        data: { name },
+        data: {
+          ...(name !== null && name.length > 0 ? { name } : {}),
+          ...(parsed.data.taxInvoiceEnabled !== undefined ? taxData : {}),
+        },
       });
     }
 
@@ -189,32 +216,68 @@ export async function POST(req: Request) {
       ...(note != null ? { note } : {}),
       ...(amountBaht != null ? { amountBaht: amountBaht.toFixed(2) } : {}),
       ...(stylistIdResolved != null ? { stylistId: stylistIdResolved } : {}),
+      ...(paymentMethod != null ? { paymentMethod } : {}),
     };
 
+    let serviceLogId: number | null = null;
     try {
-      await prisma.barberServiceLog.create({
+      const created = await prisma.barberServiceLog.create({
         data: {
           ...cashLogCore,
           ...(receiptImageUrl != null ? { receiptImageUrl } : {}),
         },
       });
+      serviceLogId = created.id;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       const staleClientReceipt =
         receiptImageUrl != null &&
         isPrismaClientValidationError(e) &&
         /receiptImageUrl|receipt_image|Unknown argument/i.test(msg);
-      if (staleClientReceipt) {
+      const stalePaymentMethod =
+        paymentMethod != null &&
+        isPrismaClientValidationError(e) &&
+        /paymentMethod|payment_method|Unknown argument/i.test(msg);
+      if (staleClientReceipt || stalePaymentMethod) {
         console.warn(
-          "[barber/check-in] Prisma ไม่รู้จัก receiptImageUrl (มักเป็น client ค้างหลัง prisma generate) — บันทึกโดยไม่แนบรูปสลิป",
+          "[barber/check-in] Prisma ไม่รู้จักฟิลด์ใหม่ — บันทึกแบบลดฟิลด์",
+          { staleClientReceipt, stalePaymentMethod },
         );
-        await prisma.barberServiceLog.create({ data: cashLogCore });
+        const { paymentMethod: _pm, ...coreWithoutPay } = cashLogCore;
+        void _pm;
+        try {
+          const created = await prisma.barberServiceLog.create({
+            data: {
+              ...coreWithoutPay,
+              ...(receiptImageUrl != null && !staleClientReceipt ? { receiptImageUrl } : {}),
+            },
+          });
+          serviceLogId = created.id;
+        } catch {
+          const created = await prisma.barberServiceLog.create({ data: coreWithoutPay });
+          serviceLogId = created.id;
+        }
       } else {
         throw e;
       }
     }
 
-    return NextResponse.json({ ok: true, visitType: "CASH_WALK_IN", phone: customer.phone });
+    return NextResponse.json({
+      ok: true,
+      visitType: "CASH_WALK_IN",
+      phone: customer.phone,
+      serviceLogId,
+      customer: {
+        id: customer.id,
+        phone: customer.phone,
+        name: customer.name,
+        taxInvoiceEnabled: customer.taxInvoiceEnabled,
+        billingName: customer.billingName,
+        taxId: customer.taxId,
+        taxAddress: customer.taxAddress,
+        taxBranch: customer.taxBranch,
+      },
+    });
   } catch (e) {
     console.error("[barber/check-in] CASH_WALK_IN", e);
     const mapped = prismaErrorToApiMessage(e);

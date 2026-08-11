@@ -30,7 +30,7 @@ type ActivityLogRow = {
 };
 
 const fieldInputClass =
-  "min-h-[44px] w-full rounded-xl border border-white/50 bg-white/70 px-3 py-2.5 text-sm text-[#1e1b4b] shadow-inner outline-none ring-1 ring-inset ring-white/40 backdrop-blur-sm focus:border-[#5b61ff]/40 focus:ring-2 focus:ring-[#5b61ff]/20";
+  "min-h-[44px] w-full rounded-xl border border-white/50 bg-white/70 px-3 py-2.5 text-sm text-[#1e1b4b] shadow-inner outline-none ring-1 ring-inset ring-white/40 backdrop-blur-sm focus:border-[#4d47b6]/40 focus:ring-2 focus:ring-[#4d47b6]/20";
 
 function formatActivityTime(iso: string): string {
   return new Date(iso).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
@@ -132,29 +132,6 @@ export function ActivityLogsClient({ initialFrom, initialTo }: ActivityLogsCalen
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <section
-        className={cn(
-          "overflow-hidden rounded-[2.5rem] border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/25 to-violet-100/20",
-          "p-4 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.28),inset_0_1px_0_0_rgba(255,255,255,0.55)] backdrop-blur-2xl ring-1 ring-inset ring-white/55 sm:p-6",
-        )}
-      >
-        <div className="flex min-w-0 items-start gap-3">
-          <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5b61ff] to-[#a855f7] text-white shadow-lg shadow-indigo-200/80"
-            aria-hidden
-          >
-            <IconActivityHero className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">
-              <span className="bg-gradient-to-r from-[#312e81] via-[#5b61ff] to-[#7c3aed] bg-clip-text text-transparent">
-                ความเคลื่อนไหวระบบ
-              </span>
-            </h1>
-          </div>
-        </div>
-      </section>
-
       <AppDashboardSection tone="violet">
         <AppSectionHeader
           tone="violet"
@@ -174,7 +151,7 @@ export function ActivityLogsClient({ initialFrom, initialTo }: ActivityLogsCalen
                   appTemplateOutlineButtonClass,
                   "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center px-0 sm:px-3",
                   "border-[#dcd8f0] bg-white/80 text-[#4d47b6]",
-                  filterOpen && "border-[#5b61ff]/45 bg-[#ecebff]/90 ring-2 ring-[#5b61ff]/20",
+                  filterOpen && "border-[#4d47b6]/45 bg-[#ecebff]/90 ring-2 ring-[#4d47b6]/20",
                   filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
                 )}
               >
@@ -182,7 +159,7 @@ export function ActivityLogsClient({ initialFrom, initialTo }: ActivityLogsCalen
                 <span className="hidden sm:ml-1 sm:inline">{filterOpen ? "ซ่อนกรอง" : "กรอง"}</span>
                 {filtersActive ? (
                   <span
-                    className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
+                    className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#4d47b6] ring-2 ring-white"
                     aria-hidden
                   />
                 ) : null}
@@ -327,7 +304,7 @@ export function ActivityLogsClient({ initialFrom, initialTo }: ActivityLogsCalen
                 <li key={String(r.id)}>
                   <article className="group flex min-w-0 max-w-full flex-col gap-2 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white">
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-gradient-to-br from-[#ecebff] to-indigo-100/40 text-[#5b61ff] shadow-sm">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-gradient-to-br from-[#ecebff] to-indigo-100/40 text-[#4d47b6] shadow-sm">
                         <IconClock className="h-5 w-5" />
                       </div>
                       <div className="min-w-0 flex-1">

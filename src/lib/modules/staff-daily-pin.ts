@@ -2,7 +2,12 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 
-export type StaffDailyPinModule = "drink-pos" | "building-pos" | "hotel-resort" | "football-turf";
+export type StaffDailyPinModule =
+  | "drink-pos"
+  | "building-pos"
+  | "hotel-resort"
+  | "football-turf"
+  | "barber";
 
 export const STAFF_DAILY_UNLOCK_HEADER = "x-staff-daily-unlock";
 

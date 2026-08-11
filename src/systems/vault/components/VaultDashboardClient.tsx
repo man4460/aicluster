@@ -7,6 +7,7 @@ import {
   AppEmptyState,
   AppSectionHeader,
 } from "@/components/app-templates";
+import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import {
   VAULT_CATEGORIES,
@@ -25,7 +26,7 @@ const inputClz =
 type FilterCategory = "all" | "favorites" | string; // string = category key
 
 const heroStatClass =
-  "flex flex-1 flex-col gap-1 rounded-2xl border border-white/60 bg-white/65 px-3 py-3 shadow-sm backdrop-blur-md ring-1 ring-white/40";
+  "relative overflow-hidden flex flex-1 flex-col gap-1 rounded-[1.5rem] border border-white/60 bg-gradient-to-br from-white/70 via-indigo-50/25 to-violet-100/15 px-4 py-4 shadow-sm backdrop-blur-xl ring-1 ring-inset ring-white/50 sm:px-5 sm:py-5";
 
 export function VaultDashboardClient() {
   const [entries, setEntries] = useState<VaultEntry[]>([]);
@@ -78,14 +79,15 @@ export function VaultDashboardClient() {
   }, [loadEntries]);
 
   const stats = useMemo(() => {
-    const favorites = entries.filter((e) => e.isFavorite).length;
+    const categories = new Set(entries.map((e) => e.category)).size;
     const recent = entries
       .filter((e) => e.lastUsedAt)
       .sort((a, b) => new Date(b.lastUsedAt!).getTime() - new Date(a.lastUsedAt!).getTime())[0];
     return {
       total: entries.length,
-      favorites,
+      categories,
       recentLabel: recent?.serviceName ?? "—",
+      sharedCount: 0,
     };
   }, [entries]);
 
@@ -311,20 +313,18 @@ export function VaultDashboardClient() {
         </div>
       ) : null}
 
-      {/* Hero stats — มือถือ 2 คอลัมน์ (ใบสุดท้าย col-span-2) ตามกฎ dashboard-mobile-summary-stat-grid */}
       <AppDashboardSection>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <HeroStat label="บัญชีทั้งหมด" value={stats.total} accent="from-indigo-500 to-violet-600" />
-          <HeroStat label="รายการโปรด" value={stats.favorites} accent="from-amber-400 to-orange-500" />
-          <div className="col-span-2 sm:col-span-1">
-            <HeroStat
-              label="ใช้ล่าสุด"
-              value={
-                <span className="block truncate text-base sm:text-lg">{stats.recentLabel}</span>
-              }
-              accent="from-emerald-400 to-teal-500"
-            />
-          </div>
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-4">
+          <HeroStat label="รหัสผ่านทั้งหมด" value={stats.total} accent="from-[#4338ca] via-[#5b61ff] to-[#0d9488]" />
+          <HeroStat label="ประเภท" value={stats.categories} accent="from-[#7c3aed] via-[#a855f7] to-[#c026d3]" />
+          <HeroStat
+            label="ใช้ล่าสุด"
+            value={
+              <span className="block truncate text-base sm:text-lg">{stats.recentLabel}</span>
+            }
+            accent="from-[#059669] via-[#10b981] to-[#14b8a6]"
+          />
+          <HeroStat label="แชร์ไว้" value={stats.sharedCount} accent="from-[#d97706] via-[#f59e0b] to-[#f97316]" />
         </div>
       </AppDashboardSection>
 
@@ -341,10 +341,13 @@ export function VaultDashboardClient() {
               suppressHydrationWarning
               onClick={openCreate}
               aria-label="เพิ่มบัญชี"
-              className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 px-2 text-sm font-bold text-white shadow-md transition hover:brightness-110 sm:min-w-0 sm:px-4"
+              className={cn(
+                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2 text-sm font-black text-white shadow-md transition hover:brightness-110 sm:min-w-0 sm:gap-1.5 sm:px-4",
+                appDashboardBrandGradientFillClass,
+              )}
             >
-              <IconPlus className="h-5 w-5 sm:hidden" />
-              <span className="hidden sm:inline">+ เพิ่มบัญชี</span>
+              <IconPlus className="h-5 w-5" />
+              <span className="hidden sm:inline">เพิ่มบัญชี</span>
             </button>
           }
         />
@@ -503,7 +506,11 @@ function HeroStat({
 }) {
   return (
     <div className={heroStatClass}>
-      <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">{label}</span>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br from-indigo-100/60 via-violet-200/40 to-transparent blur-xl"
+      />
+      <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#66638c]">{label}</span>
       <div className={cn("bg-gradient-to-br bg-clip-text font-black tracking-tight text-transparent", accent, typeof value === "number" || typeof value === "string" ? "text-2xl sm:text-3xl" : "")}>
         {value}
       </div>

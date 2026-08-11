@@ -1,0 +1,87 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { isCarWashCustomerPortalOpenForOwner } from "@/lib/car-wash/portal-access";
+import { resolvePublicCarWashTrialSessionId } from "@/lib/car-wash/public-trial-scope";
+import { createCarWashBookingForPortal } from "@/lib/car-wash/portal-create-booking";
+import { isPrismaSchemaMismatch, THAI_PRISMA_SCHEMA_MISMATCH } from "@/lib/prisma-schema-mismatch";
+
+const bodySchema = z.object({
+  ownerId: z.string().min(10).max(64),
+  t: z.string().trim().max(36).optional().nullable(),
+  phone: z.string().min(1).max(32),
+  plateNumber: z.union([z.string(), z.null()]).optional(),
+  scheduledAtLocal: z.string().min(10).max(40).optional(),
+  scheduledLocal: z.string().min(10).max(40).optional(),
+  packageId: z.number().int().min(1),
+  customerName: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((v) => {
+      if (v == null || v === undefined) return null;
+      const t = String(v).trim();
+      return t.length > 0 ? t.slice(0, 160) : null;
+    }),
+  paymentMethod: z.string().max(24).optional().nullable(),
+  amountPaidBaht: z.number().int().min(0).max(9_999_999).optional().nullable(),
+  paymentSlipUrl: z.string().max(512).optional().nullable(),
+});
+
+export async function POST(req: Request) {
+  const ip = clientIp(req.headers);
+  let json: unknown;
+  try {
+    json = await req.json();
+  } catch {
+    return NextResponse.json({ error: "รูปแบบข้อมูลไม่ถูกต้อง" }, { status: 400 });
+  }
+  const parsed = bodySchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "ข้อมูลไม่ครบหรือรูปแบบไม่ถูกต้อง" }, { status: 400 });
+  }
+
+  const { ownerId } = parsed.data;
+  const scheduledAtLocal = parsed.data.scheduledAtLocal || parsed.data.scheduledLocal;
+  if (!scheduledAtLocal) {
+    return NextResponse.json({ error: "เลือกเวลาจอง" }, { status: 400 });
+  }
+
+  const rl = rateLimit(`car-wash-portal-book:${ip}:${ownerId}`, 12, 10 * 60 * 1000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "จองถี่เกินไป กรุณารอสักครู่" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } },
+    );
+  }
+
+  const portalOk = await isCarWashCustomerPortalOpenForOwner(ownerId);
+  if (!portalOk) {
+    return NextResponse.json({ error: "ไม่สามารถจองได้ในขณะนี้" }, { status: 403 });
+  }
+
+  const { trialSessionId } = await resolvePublicCarWashTrialSessionId(ownerId, parsed.data.t);
+
+  try {
+    const out = await createCarWashBookingForPortal(prisma, ownerId, trialSessionId, {
+      phone: parsed.data.phone,
+      plateNumber: parsed.data.plateNumber,
+      scheduledAtLocal,
+      packageId: parsed.data.packageId,
+      customerName: parsed.data.customerName,
+      paymentMethod: parsed.data.paymentMethod,
+      amountPaidBaht: parsed.data.amountPaidBaht,
+      paymentSlipUrl: parsed.data.paymentSlipUrl,
+    });
+    if (!out.ok) {
+      return NextResponse.json({ error: out.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true as const, booking: out.booking });
+  } catch (e) {
+    console.error("[car-wash/public/portal/book]", e);
+    if (isPrismaSchemaMismatch(e)) {
+      return NextResponse.json({ error: THAI_PRISMA_SCHEMA_MISMATCH }, { status: 503 });
+    }
+    return NextResponse.json({ error: "จองคิวไม่สำเร็จ — ลองใหม่อีกครั้ง" }, { status: 500 });
+  }
+}

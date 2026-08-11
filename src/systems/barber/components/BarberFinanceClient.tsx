@@ -36,14 +36,6 @@ export function BarberFinanceClient({ baseUrl }: { baseUrl: string }) {
   return (
     <BarberHistoryClient
       embedded
-      financeFilterTitle={
-        <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c] hidden sm:block" aria-hidden>
-            FINANCE
-          </p>
-          <h2 className="text-lg font-black leading-tight tracking-tight text-[#1e1b4b] sm:text-xl">การเงิน</h2>
-        </div>
-      }
       financeListTab={listTab}
       onFinanceListTabChange={setFinanceListTab}
       costToolbar={costToolbar}

@@ -1,64 +1,214 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { TrialSandboxStrip } from "@/components/dashboard/TrialSandboxStrip";
 import { AppUsageGuideModal } from "@/components/app-templates";
+import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import { cn } from "@/lib/cn";
-import { DormModuleHeader } from "./DormModuleHeader";
-import { DormMobileDock } from "./DormMobileDock";
-import { dormIconBadgeClass, dormModuleHeaderShellClass } from "@/systems/dormitory/dorm-ui-tokens";
+import { DormMobileBottomProvider } from "./DormMobileBottomChrome";
+import { DormHeaderBarNav } from "./DormHeaderBarNav";
+import {
+  DORMITORY_NAV_ITEMS,
+  DORMITORY_HEADER_COLLAPSE_EVENT,
+  isDormitoryNavItemActive,
+  readDormitoryHeaderCollapsed,
+  writeDormitoryHeaderCollapsed,
+} from "@/systems/dormitory/dormitory-module-nav";
+import {
+  dormAccentBarClass,
+  dormGlassShellClass,
+  dormMainPaddingBottomClass,
+  dormNavActiveClass,
+  dormNavIdleClass,
+} from "@/systems/dormitory/lib/ui-tokens";
+import {
+  IconModuleShopSettings,
+  MODULE_SHOP_SETTINGS_SHORT_LABEL,
+  moduleShopSettingsDesktopNavItem,
+  ModuleShopSettingsDesktopNavLink,
+} from "@/systems/module-shop/module-shop-settings-nav";
 
-/** โครงเดียวกับ VillageLayoutChrome — หัวข้อระบบ · การ์ดเมนู · แบนเนอร์ทดลอง */
-export function DormLayoutChrome({
+const DORM_MODULE_LABEL = "โมดูล";
+
+function DormHeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
+      {collapsed ? (
+        <path d="M6 9l6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+      ) : (
+        <path d="M6 15l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+      )}
+    </svg>
+  );
+}
+
+function IconHelpCircle({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
+      <circle cx="12" cy="17" r="1" />
+    </svg>
+  );
+}
+
+function DormLayoutChromeInner({
   children,
   trialExpiresLabel,
 }: {
   children: React.ReactNode;
-  /** ข้อความวันหมดอายุที่ format บนเซิร์ฟเวอร์แล้ว — กัน hydration กับ toLocaleString บน client */
   trialExpiresLabel?: string | null;
 }) {
+  const pathname = usePathname() ?? "";
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
+  const [headerCollapsed, setHeaderCollapsed] = useState(readDormitoryHeaderCollapsed());
+
+  useEffect(() => {
+    const sync = () => setHeaderCollapsed(readDormitoryHeaderCollapsed());
+    sync();
+    window.addEventListener(DORMITORY_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(DORMITORY_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  const toggleHeader = useCallback(() => {
+    writeDormitoryHeaderCollapsed(!headerCollapsed);
+  }, [headerCollapsed]);
+
+  const dormIconBadgeClass = cn(
+    "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg shadow-indigo-100",
+    appDashboardBrandGradientFillClass,
+  );
+
+  const dormHeaderCollapseBtnClass =
+    "h-10 min-h-[44px] w-10 items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/80 text-[#4d47b6] shadow-sm backdrop-blur-md transition-all hover:bg-white active:scale-[0.98]";
+
+  const navLinkClass = (active: boolean) =>
+    cn(
+      "flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl py-3 text-sm font-black transition-all",
+      active ? dormNavActiveClass : dormNavIdleClass,
+    );
 
   return (
-    <div className="max-w-full space-y-4 pb-28 sm:space-y-6 sm:pb-6">
-      <header className={cn(dormModuleHeaderShellClass, "print:hidden")}>
-        <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start gap-3">
-              <div className={dormIconBadgeClass}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5" aria-hidden>
-                  <rect x="3" y="4" width="18" height="16" rx="2" />
-                  <path d="M3 10h18M9 10v10M15 10v10" strokeLinecap="round" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">จัดการหอพัก</h1>
-                <p className="mt-1 hidden max-w-2xl text-sm leading-snug text-[#66638c] md:block">
-                  ผังห้อง · มิเตอร์ · แบ่งบิล · ประวัติชำระ · ต้นทุน/รายจ่าย · ตั้งค่า
-                </p>
+    <div className={cn("max-w-full space-y-4 sm:space-y-6", dormMainPaddingBottomClass)}>
+      {headerCollapsed ? (
+        <DormHeaderBarNav onExpand={toggleHeader} />
+      ) : (
+        <header className={cn(dormGlassShellClass, "p-4 sm:px-8 sm:py-6 print:hidden")}>
+          <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start gap-3">
+                <div className={dormIconBadgeClass}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5" aria-hidden>
+                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                    <path d="M3 10h18M9 10v10M15 10v10" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="hidden text-[10px] font-black uppercase tracking-[0.16em] text-[#4d47b6] sm:block" aria-hidden>
+                    {DORM_MODULE_LABEL}
+                  </p>
+                  <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">จัดการหอพัก</h1>
+                </div>
               </div>
             </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleHeader}
+                className={cn("inline-flex", dormHeaderCollapseBtnClass)}
+                aria-label={headerCollapsed ? "แสดงหัวโมดูล" : "ซ่อนหัวโมดูล"}
+                aria-pressed={headerCollapsed}
+                title={headerCollapsed ? "แสดงหัวโมดูล" : "ซ่อนหัวโมดูล"}
+                suppressHydrationWarning
+              >
+                <DormHeaderCollapseGlyph collapsed={headerCollapsed} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setUsageGuideOpen(true)}
+                className="flex h-10 min-h-[40px] items-center gap-1.5 rounded-2xl border border-white/60 bg-white/55 px-3 text-sm font-semibold text-[#4d47b6] shadow-sm backdrop-blur-md transition hover:bg-white/75 sm:px-4 inline-flex"
+                aria-haspopup="dialog"
+                aria-expanded={usageGuideOpen}
+                aria-label="คู่มือการใช้งาน"
+                title="คู่มือการใช้งาน"
+              >
+                <IconHelpCircle className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">คู่มือการใช้งาน</span>
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setUsageGuideOpen(true)}
-            className="flex h-10 min-h-[40px] items-center gap-2 rounded-2xl border border-white/60 bg-white/55 px-3 text-sm font-semibold text-[#4d47b6] shadow-sm backdrop-blur-md transition hover:bg-white/75 sm:px-4"
-            aria-haspopup="dialog"
-            aria-expanded={usageGuideOpen}
-            aria-label="คู่มือการใช้งาน"
-            title="คู่มือการใช้งาน"
+
+          <div className="mt-5">
+            <div className={dormAccentBarClass} aria-hidden />
+          </div>
+
+          <nav
+            aria-label="เมนูหอพัก"
+            className="mt-5 hidden border-t border-[#e8e6fc]/70 pt-5 md:block print:hidden"
           >
-            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" strokeLinecap="round" />
-              <path d="M6.5 17V5A2.5 2.5 0 0 1 9 2.5h11V21H9A2.5 2.5 0 0 1 6.5 18.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="hidden sm:inline">คู่มือการใช้งาน</span>
-          </button>
-        </div>
-        <div className="mt-4 hidden border-t border-white/50 pt-4 md:block">
-          <DormModuleHeader />
-        </div>
-      </header>
+            <ul className="flex gap-1">
+              {DORMITORY_NAV_ITEMS.slice(0, 4).map((item) => {
+                const active = isDormitoryNavItemActive(pathname, item.key);
+                return (
+                  <li key={item.key} className="min-w-0 flex-1">
+                    <Link
+                      href={item.href}
+                      className={navLinkClass(active)}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                        className={cn("h-4 w-4 shrink-0", active ? "text-white/95" : "text-slate-400")}
+                        aria-hidden
+                      >
+                        {item.key === "dashboard" && (
+                          <>
+                            <path d="m3 11 9-7 9 7" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M5 10.5V20h14v-9.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </>
+                        )}
+                        {item.key === "rooms" && (
+                          <>
+                            <rect x="3" y="4" width="18" height="16" rx="2" />
+                            <path d="M3 10h18M9 10v10M15 10v10" strokeLinecap="round" />
+                          </>
+                        )}
+                        {item.key === "history" && (
+                          <>
+                            <path d="M3 12a9 9 0 1 0 3-6.7" strokeLinecap="round" />
+                            <path d="M3 4v3h3M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
+                          </>
+                        )}
+                        {item.key === "costs" && (
+                          <>
+                            <path d="M4 19h16M6 15l3-3 3 2 5-6" strokeLinecap="round" strokeLinejoin="round" />
+                          </>
+                        )}
+                      </svg>
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
+              {moduleShopSettingsDesktopNavItem(
+                <ModuleShopSettingsDesktopNavLink
+                  href={DORMITORY_NAV_ITEMS[4].href}
+                  active={isDormitoryNavItemActive(pathname, "settings")}
+                />,
+              )}
+            </ul>
+          </nav>
+        </header>
+      )}
 
       <AppUsageGuideModal
         open={usageGuideOpen}
@@ -141,7 +291,32 @@ export function DormLayoutChrome({
       ) : null}
 
       {children}
-      <DormMobileDock />
     </div>
+  );
+}
+
+/** โครงเดียวกับ VillageLayoutChrome — หัวข้อระบบ · การ์ดเมนู · แบนเนอร์ทดลอง */
+export function DormLayoutChrome({
+  children,
+  trialExpiresLabel,
+}: {
+  children: React.ReactNode;
+  /** ข้อความวันหมดอายุที่ format บนเซิร์ฟเวอร์แล้ว — กัน hydration กับ toLocaleString บน client */
+  trialExpiresLabel?: string | null;
+}) {
+  return (
+    <DormMobileBottomProvider>
+      <Suspense
+        fallback={
+          <div className={cn("max-w-full space-y-4 sm:space-y-6", dormMainPaddingBottomClass)}>
+            {children}
+          </div>
+        }
+      >
+        <DormLayoutChromeInner trialExpiresLabel={trialExpiresLabel}>
+          {children}
+        </DormLayoutChromeInner>
+      </Suspense>
+    </DormMobileBottomProvider>
   );
 }

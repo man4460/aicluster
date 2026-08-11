@@ -65,6 +65,22 @@ export async function loadFootballTurfStaffDailyPinHash(ownerId: string): Promis
   return row?.staffDailyPinHash?.trim() || null;
 }
 
+export async function loadBarberStaffDailyPinHash(
+  ownerId: string,
+  trialSessionId: string,
+): Promise<string | null> {
+  const row = await prisma.barberShopProfile.findUnique({
+    where: {
+      ownerUserId_trialSessionId: {
+        ownerUserId: ownerId,
+        trialSessionId,
+      },
+    },
+    select: { staffDailyPinHash: true },
+  });
+  return row?.staffDailyPinHash?.trim() || null;
+}
+
 export async function gateStaffDailyPin(
   req: Request,
   module: StaffDailyPinModule,
@@ -105,9 +121,11 @@ export async function applyStaffDailyPinPatch(opts: {
   module: StaffDailyPinModule;
   staffDailyPin?: string | null;
   staffDailyPinClear?: boolean;
+  /** ร้านตัดผม — ใช้ trial session ของร้าน */
+  trialSessionId?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   if (opts.staffDailyPinClear) {
-    await writeStaffDailyPinHash(opts.module, opts.ownerId, null);
+    await writeStaffDailyPinHash(opts.module, opts.ownerId, null, opts.trialSessionId);
     return { ok: true };
   }
   if (opts.staffDailyPin === undefined) return { ok: true };
@@ -116,7 +134,7 @@ export async function applyStaffDailyPinPatch(opts: {
   const err = validateStaffDailyPinPlain(pin);
   if (err) return { ok: false, error: err };
   const hash = await hashStaffDailyPin(pin);
-  await writeStaffDailyPinHash(opts.module, opts.ownerId, hash);
+  await writeStaffDailyPinHash(opts.module, opts.ownerId, hash, opts.trialSessionId);
   return { ok: true };
 }
 
@@ -124,7 +142,26 @@ async function writeStaffDailyPinHash(
   module: StaffDailyPinModule,
   ownerId: string,
   hash: string | null,
+  trialSessionId?: string,
 ) {
+  if (module === "barber") {
+    const tid = trialSessionId?.trim() || "prod";
+    await prisma.barberShopProfile.upsert({
+      where: {
+        ownerUserId_trialSessionId: {
+          ownerUserId: ownerId,
+          trialSessionId: tid,
+        },
+      },
+      create: {
+        ownerUserId: ownerId,
+        trialSessionId: tid,
+        staffDailyPinHash: hash,
+      },
+      update: { staffDailyPinHash: hash },
+    });
+    return;
+  }
   if (module === "drink-pos") {
     await prisma.drinkPosShopProfile.upsert({
       where: {

@@ -47,7 +47,7 @@ export function isCarWashTabActive(pathname: string, tab: CarWashTabKey, tabPara
   const norm = pathname.replace(/\/+$/, "");
   if (norm !== CAR_WASH_BASE) return false;
   if (tab === "overview") {
-    return !tabParam || tabParam === "overview" || tabParam === "queue" || tabParam === "schedule";
+    return !tabParam || tabParam === "overview" || tabParam === "queue";
   }
   return parseCarWashTab(tabParam) === tab;
 }
@@ -76,7 +76,7 @@ export function isCarWashNavItemActive(
   const f = carWashPathFlags(pathname);
   switch (key) {
     case "overview":
-      return f.isDashboard && (!tabParam || tabParam === "overview" || tabParam === "queue" || tabParam === "schedule");
+      return f.isDashboard && (!tabParam || tabParam === "overview" || tabParam === "queue");
     case "finance":
       return f.isDashboard && parseCarWashTab(tabParam) === "finance";
     case "offers":

@@ -1,5 +1,9 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import {
+  CAR_WASH_PACKAGE_SAMPLE_IMAGES,
+  carWashPackageSampleImage,
+} from "@/systems/car-wash/lib/portal-media";
 
 type Tx = Omit<
   PrismaClient,
@@ -17,61 +21,130 @@ function daysAgoStartOfDay(days: number): Date {
   return daysAgoDateTime(days, 0);
 }
 
-/** แพ็กล้างรถตัวอย่าง — สร้าง 4 ระดับ 199/299/499/899 บาท */
-async function ensureCarWashPackages(tx: Tx, ownerUserId: string, trialSessionId: string) {
+function isMissingPackageImage(url: string | null | undefined): boolean {
+  if (!url?.trim()) return true;
+  if (url.includes("picsum.photos")) return true;
+  return false;
+}
+
+/** แพ็กล้างรถตัวอย่าง — รายครั้ง (~60 นาที) + แพ็กเหมา + รูป */
+export async function ensureCarWashPackages(tx: Tx, ownerUserId: string, trialSessionId: string) {
   const n = await tx.carWashPackage.count({ where: { ownerUserId, trialSessionId } });
-  if (n >= 4) {
-    return tx.carWashPackage.findMany({
-      where: { ownerUserId, trialSessionId, isActive: true },
-      orderBy: { price: "asc" },
-      take: 4,
+  if (n < 4) {
+    const data = [
+      {
+        ownerUserId,
+        trialSessionId,
+        name: "ล้างสี + ดูดฝุ่น",
+        price: 199,
+        durationMinutes: 60,
+        totalUses: 1,
+        imageUrl: CAR_WASH_PACKAGE_SAMPLE_IMAGES[0]!,
+        description: "ล้างรถน้ำยา, เช็ดผ้าไมโครไฟเบอร์, ดูดฝุ่นภายใน",
+        isActive: true,
+      },
+      {
+        ownerUserId,
+        trialSessionId,
+        name: "ล้างสี + ขัดสีอย่างรวดเร็ว",
+        price: 299,
+        durationMinutes: 60,
+        totalUses: 1,
+        imageUrl: CAR_WASH_PACKAGE_SAMPLE_IMAGES[1]!,
+        description: "เบสิค + ครีมขัดสีอย่างเร็ว, ยางเงา, เคมีล้างหน้าต่าง",
+        isActive: true,
+      },
+      {
+        ownerUserId,
+        trialSessionId,
+        name: "เคลือบแก้วสีเร่งด่วน",
+        price: 499,
+        durationMinutes: 90,
+        totalUses: 1,
+        imageUrl: CAR_WASH_PACKAGE_SAMPLE_IMAGES[2]!,
+        description: "ล้างขัด + สเปรย์เคลือบแก้วระดับ Hi-Gloss",
+        isActive: true,
+      },
+      {
+        ownerUserId,
+        trialSessionId,
+        name: "สปาเครื่องอบสี (เต็มรายการ)",
+        price: 899,
+        durationMinutes: 120,
+        totalUses: 1,
+        imageUrl: CAR_WASH_PACKAGE_SAMPLE_IMAGES[3]!,
+        description: "ดีทัช, เคลือบสี 9H, ฆ่าเชื้อแอร์, ทำความสะอาดห้องเครื่อง",
+        isActive: true,
+      },
+    ];
+    for (const row of data) {
+      await tx.carWashPackage.create({ data: row });
+    }
+  }
+
+  const multiCount = await tx.carWashPackage.count({
+    where: { ownerUserId, trialSessionId, totalUses: { gt: 1 } },
+  });
+  if (multiCount < 1) {
+    await tx.carWashPackage.createMany({
+      data: [
+        {
+          ownerUserId,
+          trialSessionId,
+          name: "แพ็กเหมา ล้างสี 5 ครั้ง",
+          price: 899,
+          durationMinutes: 60,
+          totalUses: 5,
+          imageUrl: CAR_WASH_PACKAGE_SAMPLE_IMAGES[4]!,
+          description: "ล้างสี + ดูดฝุ่น ใช้ได้ 5 ครั้ง",
+          isActive: true,
+        },
+        {
+          ownerUserId,
+          trialSessionId,
+          name: "แพ็กเหมา พรีเมียม 10 ครั้ง",
+          price: 2490,
+          durationMinutes: 60,
+          totalUses: 10,
+          imageUrl: CAR_WASH_PACKAGE_SAMPLE_IMAGES[5]!,
+          description: "ล้างสี + ขัดสี ใช้ได้ 10 ครั้ง",
+          isActive: true,
+        },
+      ],
     });
   }
-  const data = [
-    {
+
+  /** ล้างสี/ดูดฝุ่นทั่วไป — ปรับระยะให้ราว 1 ชม. ถ้ายังสั้นกว่า */
+  await tx.carWashPackage.updateMany({
+    where: {
       ownerUserId,
       trialSessionId,
-      name: "ล้างสี + ดูดฝุ่น (เบสิค)",
-      price: 199,
-      durationMinutes: 30,
-      description: "ล้างรถน้ำยา, เช็ดผ้าไมโครไฟเบอร์, ดูดฝุ่นภายในเบสิค",
-      isActive: true,
+      totalUses: 1,
+      durationMinutes: { lt: 60 },
+      NOT: { name: { contains: "สปา" } },
     },
-    {
-      ownerUserId,
-      trialSessionId,
-      name: "ล้างสี + ขัดสีอย่างรวดเร็ว",
-      price: 299,
-      durationMinutes: 45,
-      description: "เบสิค + ครีมขัดสีอย่างเร็ว, ยางเงา, เคมีล้างหน้าต่าง",
-      isActive: true,
-    },
-    {
-      ownerUserId,
-      trialSessionId,
-      name: "เคลือบแก้วสีเร่งด่วน",
-      price: 499,
-      durationMinutes: 60,
-      description: "ล้างขัด + สเปรย์เคลือบแก้วระดับ Hi-Gloss, ห้องเครื่องอ่อนๆ, ฆ่าเชื้อภายใน",
-      isActive: true,
-    },
-    {
-      ownerUserId,
-      trialSessionId,
-      name: "สปาเครื่องอบสี (เต็มรายการ)",
-      price: 899,
-      durationMinutes: 120,
-      description: "ดีทัช, เคลือบสี 9H, ฆ่าเชื้อแอร์, ทำความสะอาดห้องเครื่อง + ยาง + โครเมียม",
-      isActive: true,
-    },
-  ];
-  for (const row of data) {
-    await tx.carWashPackage.create({ data: row });
+    data: { durationMinutes: 60 },
+  });
+
+  /** เติมรูปแพ็กที่ยังว่าง */
+  const pkgs = await tx.carWashPackage.findMany({
+    where: { ownerUserId, trialSessionId },
+    orderBy: [{ totalUses: "asc" }, { price: "asc" }, { id: "asc" }],
+    select: { id: true, imageUrl: true },
+  });
+  for (let i = 0; i < pkgs.length; i++) {
+    const pkg = pkgs[i]!;
+    if (!isMissingPackageImage(pkg.imageUrl)) continue;
+    await tx.carWashPackage.update({
+      where: { id: pkg.id },
+      data: { imageUrl: carWashPackageSampleImage(i) },
+    });
   }
+
   return tx.carWashPackage.findMany({
     where: { ownerUserId, trialSessionId, isActive: true },
-    orderBy: { price: "asc" },
-    take: 4,
+    orderBy: [{ totalUses: "asc" }, { price: "asc" }],
+    take: 12,
   });
 }
 

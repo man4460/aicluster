@@ -15,6 +15,9 @@ import {
   AppMobileDockShell,
   AppUsageGuideModal,
   appMobileDockGridClass,
+  appTemplateOutlineButtonClass,
+  prepareImageFileForUpload,
+  useAppCameraCapture,
   useAppImageLightbox,
   useAppSlipPaperSize,
 } from "@/components/app-templates";
@@ -44,6 +47,9 @@ import {
   carWashAccentBarClass,
   carWashContentStackClass,
   carWashCtaClass,
+  carWashFieldClass,
+  carWashFilterChipClass,
+  carWashFilterFieldGridClass,
   carWashHeaderCollapseBtnClass,
   carWashHeaderEnLabelClass,
   carWashHeaderToolbarGroupClass,
@@ -54,19 +60,20 @@ import {
   carWashShellWrapperClass,
   carWashStatGridClass,
   carWashSubTabSegmentShellClass,
+  carWashVisitFieldClass,
 } from "@/systems/car-wash/car-wash-ui-tokens";
-
-const CAR_WASH_CUSTOMER_QR_TAGLINE = "สแกน จองคิว · ใช้แพ็กเหมาได้เอง";
-const CAR_WASH_STAFF_QR_TAGLINE =
-  "สแกนเข้าหน้าลานพนักงาน — บันทึกรายการและจัดการคิววันนี้ (ต้องล็อกอินร้าน)";
-const CAR_WASH_MODULE_EN_LABEL = "CAR WASH";
+import { CarWashPaymentPanel } from "@/systems/car-wash/CarWashPaymentPanel";
+import {
+  printCarWashBundleReceipt,
+  printCarWashVisitReceipt,
+  type CarWashPrintShopProfile,
+} from "@/systems/car-wash/lib/car-wash-print-docs";
+import {
+  carWashPaymentMethodLabel,
+  type CarWashPaymentMethod,
+} from "@/systems/car-wash/lib/payment-method";
 import { CAR_WASH_SERVICE_STATUSES, carWashStatusLabelTh } from "@/lib/car-wash/service-status";
 import { prepareBuildingPosSlipImageFile } from "@/systems/building-pos/building-pos-slip-image";
-import {
-  buildCarWashBundleSlipInnerHtml,
-  openCarWashBundleSlipPrintWindow,
-  type PosTablePaperSize,
-} from "@/systems/car-wash/car-wash-bundle-slip-print";
 import {
   PopupIconButton,
   popupIconBtnDanger,
@@ -82,10 +89,22 @@ import {
 import { CarWashBookingsClient } from "@/systems/car-wash/CarWashBookingsClient";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import {
+  buildBookableStartSlots,
+  carWashNormalizeDurationMinutes,
+  scheduledAtLocalFromSlot,
+  type SlotAvailabilityItem,
+} from "@/lib/car-wash/booking-slot-availability";
+import {
+  carWashComputePortalPayDue,
+  normalizeCarWashPortalPaymentMode,
+  type CarWashPortalBookingPaymentMode,
+} from "@/lib/car-wash/portal-booking";
+import {
   type CarWashServiceStatus,
   type CostCategory,
   type CostEntry,
   createCarWashSessionApiRepository,
+  uploadCarWashPackageImage,
   uploadCarWashSessionImage,
   type ServiceVisit,
   type ServicePackage,
@@ -98,17 +117,37 @@ import {
   moduleShopSettingsDesktopNavItem,
 } from "@/systems/module-shop/module-shop-settings-nav";
 
+const CAR_WASH_CUSTOMER_QR_TAGLINE = "สแกน จองคิว · เลือกแพ็ก · ใช้แพ็กเหมาได้เอง";
+const CAR_WASH_STAFF_QR_TAGLINE =
+  "สแกนเข้าหน้าลานพนักงาน — บันทึกรายการและจัดการคิววันนี้ (ต้องล็อกอินร้าน)";
+const CAR_WASH_MODULE_LABEL = "โมดูล";
+
 type TabKey = CarWashTabKey;
 type OffersListTabKey = "packages" | "bundles";
+type PackageStatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
+type BundleStatusFilter = "ALL" | "READY" | "EXHAUSTED" | "INACTIVE";
 
-function CarWashHeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
+function OffersFilterFunnelIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+    </svg>
+  );
+}
+
+function CarWashHeaderCollapseGlyph() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
-      {collapsed ? (
-        <path d="M4 8h16M4 12h16M4 16h10" strokeLinecap="round" />
-      ) : (
-        <path d="M4 6h16M4 12h16M4 18h10" strokeLinecap="round" />
-      )}
+      <path d="M4 8h16M4 12h16M4 16h16" strokeLinecap="round" />
     </svg>
   );
 }
@@ -132,19 +171,22 @@ function CarWashStat({
     slate: "border-white/60 bg-gradient-to-br from-white/60 via-slate-50/40 to-slate-100/35 text-slate-700 shadow-[0_18px_38px_-26px_rgba(51,65,85,0.35)] backdrop-blur-xl",
   };
 
+  const valueGradientClass =
+    "bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] bg-clip-text text-transparent";
+
   return (
     <div className={cn(
-      "relative overflow-hidden rounded-[2rem] border p-5 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.4)] sm:p-6",
+      "relative overflow-hidden rounded-[1.5rem] border p-5 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.4)] sm:p-6",
       toneStyles[tone]
     )}>
       <div className="relative z-10 flex flex-col justify-between h-full">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-black uppercase tracking-widest opacity-60">{title}</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">{title}</p>
           {Icon && <div className="opacity-40">{Icon}</div>}
         </div>
-        <p className="mt-4 text-2xl font-black tabular-nums tracking-tight sm:text-3xl">{value}</p>
+        <p className={cn("mt-4 text-2xl font-black tabular-nums tracking-tight sm:text-3xl", valueGradientClass)}>{value}</p>
       </div>
-      <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-current opacity-[0.03] blur-2xl" />
+      <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-current opacity-[0.03] blur-2xl" aria-hidden />
     </div>
   );
 }
@@ -219,6 +261,7 @@ export function CarWashDashboard({
   trialSessionId,
   isTrialSandbox,
   paymentChannelsNote = null,
+  shopPrintProfile = null,
   defaultTab,
   layoutVariant = "full",
 }: {
@@ -231,6 +274,8 @@ export function CarWashDashboard({
   isTrialSandbox: boolean;
   /** จากโปรไฟล์หอพัก (prod) — แสดงในบิล / QR เหมือน POS */
   paymentChannelsNote?: string | null;
+  /** โปรไฟล์พิมพ์ใบเสร็จ + ขนาดสลิปจากตั้งค่าโมดูล */
+  shopPrintProfile?: CarWashPrintShopProfile | null;
   /** แท็บเริ่มต้นเมื่อ layoutVariant เป็น full */
   defaultTab?: TabKey;
   /** staff_lane = หน้าเฉพาะลาน (มือถือ) ไม่มีเมนูเต็ม */
@@ -249,7 +294,7 @@ export function CarWashDashboard({
   );
   const [loading, setLoading] = useState(true);
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
-  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const [headerCollapsed, setHeaderCollapsed] = useState(readCarWashHeaderCollapsed());
 
   useEffect(() => {
     if (!isStaffLaneOnly) setTabState(tabFromUrl);
@@ -294,15 +339,30 @@ export function CarWashDashboard({
   const [pkgForm, setPkgForm] = useState({
     name: "",
     price: "",
-    duration_minutes: "",
+    duration_minutes: "60",
+    total_uses: "1",
     description: "",
+    image_url: null as string | null,
     is_active: true,
   });
+  const [pkgImageBusy, setPkgImageBusy] = useState(false);
+  const pkgGalleryRef = useRef<HTMLInputElement>(null);
+  const {
+    openCamera: openPkgCamera,
+    cameraInputRef: pkgCameraInputRef,
+    cameraModal: pkgCameraModal,
+  } = useAppCameraCapture({ title: "ถ่ายรูปแพ็กเกจ" });
+  const pkgLightbox = useAppImageLightbox();
 
   const [showVisitModal, setShowVisitModal] = useState(false);
   const [visitAdvancedOpen, setVisitAdvancedOpen] = useState(false);
   const [showBundleModal, setShowBundleModal] = useState(false);
   const [offersListTab, setOffersListTab] = useState<OffersListTabKey>("packages");
+  const [offersFilterOpen, setOffersFilterOpen] = useState(true);
+  const [pkgStatusFilter, setPkgStatusFilter] = useState<PackageStatusFilter>("ALL");
+  const [pkgQuery, setPkgQuery] = useState("");
+  const [bundleStatusFilter, setBundleStatusFilter] = useState<BundleStatusFilter>("ALL");
+  const [bundleQuery, setBundleQuery] = useState("");
   const [showQrModal, setShowQrModal] = useState(false);
   const [showStaffQrModal, setShowStaffQrModal] = useState(false);
   const [portalUrl, setPortalUrl] = useState("");
@@ -370,6 +430,17 @@ export function CarWashDashboard({
   const bundleModalSlipGalleryRef = useRef<HTMLInputElement>(null);
   /** เข้าลานตอนบันทึก — แสดงบนแดชบอร์ด POS */
   const [visitLaneStatus, setVisitLaneStatus] = useState<CarWashServiceStatus>("WASHING");
+  const [visitPaymentMethod, setVisitPaymentMethod] = useState<CarWashPaymentMethod>("CASH");
+  const [visitPaymentSlipUrl, setVisitPaymentSlipUrl] = useState<string | null>(null);
+  const [visitPrintReceipt, setVisitPrintReceipt] = useState(true);
+  const [visitBookDateKey, setVisitBookDateKey] = useState(() => bangkokDateKey());
+  const [visitSelectedSlot, setVisitSelectedSlot] = useState("");
+  const [visitSlotAvailability, setVisitSlotAvailability] = useState<SlotAvailabilityItem[]>([]);
+  const [visitScheduleSlotMinutes, setVisitScheduleSlotMinutes] = useState(30);
+  const [visitScheduleClosed, setVisitScheduleClosed] = useState(false);
+  const [visitScheduleLoading, setVisitScheduleLoading] = useState(false);
+  const [visitBookPayMode, setVisitBookPayMode] = useState<CarWashPortalBookingPaymentMode>("NONE");
+  const [visitShopDeposit, setVisitShopDeposit] = useState<number | null>(null);
   const [laneBusyVisitId, setLaneBusyVisitId] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -377,6 +448,62 @@ export function CarWashDashboard({
     () => bundles.filter((b) => b.is_active && b.used_uses < b.total_uses),
     [bundles],
   );
+
+  const packageFilterStats = useMemo(() => {
+    const active = packages.filter((p) => p.is_active).length;
+    return {
+      total: packages.length,
+      active,
+      inactive: packages.length - active,
+    };
+  }, [packages]);
+
+  const filteredPackages = useMemo(() => {
+    const q = pkgQuery.trim().toLowerCase();
+    return packages.filter((p) => {
+      if (pkgStatusFilter === "ACTIVE" && !p.is_active) return false;
+      if (pkgStatusFilter === "INACTIVE" && p.is_active) return false;
+      if (!q) return true;
+      const hay = `${p.name} ${p.description ?? ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [packages, pkgQuery, pkgStatusFilter]);
+
+  const packageFiltersActive = pkgStatusFilter !== "ALL" || pkgQuery.trim().length > 0;
+
+  const bundleFilterStats = useMemo(() => {
+    let ready = 0;
+    let exhausted = 0;
+    let inactive = 0;
+    for (const b of bundles) {
+      if (!b.is_active) {
+        inactive += 1;
+        continue;
+      }
+      if (b.used_uses >= b.total_uses) exhausted += 1;
+      else ready += 1;
+    }
+    return { total: bundles.length, ready, exhausted, inactive };
+  }, [bundles]);
+
+  const filteredBundles = useMemo(() => {
+    const q = bundleQuery.trim().toLowerCase();
+    const phoneQ = bundleQuery.replace(/\D/g, "");
+    return bundles.filter((b) => {
+      const remaining = Math.max(0, b.total_uses - b.used_uses);
+      if (bundleStatusFilter === "READY" && !(b.is_active && remaining > 0)) return false;
+      if (bundleStatusFilter === "EXHAUSTED" && !(b.is_active && remaining <= 0)) return false;
+      if (bundleStatusFilter === "INACTIVE" && b.is_active) return false;
+      if (!q && phoneQ.length < 1) return true;
+      const phone = (b.customer_phone ?? "").replace(/\D/g, "");
+      if (phoneQ.length > 0 && phone.includes(phoneQ)) return true;
+      const hay = `${b.customer_name} ${b.customer_phone} ${b.plate_number} ${b.package_name}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [bundles, bundleQuery, bundleStatusFilter]);
+
+  const bundleFiltersActive = bundleStatusFilter !== "ALL" || bundleQuery.trim().length > 0;
+  const offersFiltersActive = offersListTab === "packages" ? packageFiltersActive : bundleFiltersActive;
 
   const bundleTabRowDetail = useMemo(
     () =>
@@ -443,6 +570,14 @@ export function CarWashDashboard({
   }, [loadAll]);
 
   useEffect(() => {
+    const onQueueChanged = () => {
+      void loadAll({ silent: true });
+    };
+    window.addEventListener("car-wash-queue-changed", onQueueChanged);
+    return () => window.removeEventListener("car-wash-queue-changed", onQueueChanged);
+  }, [loadAll]);
+
+  useEffect(() => {
     if (bundleTabRowDetailId == null) return;
     if (!bundles.some((b) => b.id === bundleTabRowDetailId)) setBundleTabRowDetailId(null);
   }, [bundleTabRowDetailId, bundles]);
@@ -492,9 +627,18 @@ export function CarWashDashboard({
     const params = new URLSearchParams();
     if (isTrialSandbox) params.set("t", trialSessionId);
     const q = params.toString();
-    const base = `${root.replace(/\/$/, "")}/car-wash/check-in/${ownerId}`;
+    const base = `${root.replace(/\/$/, "")}/car-wash/${ownerId}`;
     setPortalUrl(q ? `${base}?${q}` : base);
   }, [baseUrl, ownerId, trialSessionId, isTrialSandbox]);
+
+  const customerPortalPath = useMemo(() => {
+    if (!ownerId) return "";
+    const params = new URLSearchParams();
+    if (isTrialSandbox) params.set("t", trialSessionId);
+    const q = params.toString();
+    const path = `/car-wash/${ownerId}`;
+    return q ? `${path}?${q}` : path;
+  }, [ownerId, trialSessionId, isTrialSandbox]);
 
   useEffect(() => {
     if (!portalUrl) return;
@@ -684,7 +828,15 @@ export function CarWashDashboard({
 
   function openCreatePackage() {
     setEditingPkg(null);
-    setPkgForm({ name: "", price: "", duration_minutes: "", description: "", is_active: true });
+    setPkgForm({
+      name: "",
+      price: "",
+      duration_minutes: "60",
+      total_uses: "1",
+      description: "",
+      image_url: null,
+      is_active: true,
+    });
     setShowPkgModal(true);
   }
 
@@ -694,23 +846,42 @@ export function CarWashDashboard({
       name: row.name,
       price: String(row.price),
       duration_minutes: String(row.duration_minutes),
+      total_uses: String(row.total_uses ?? 1),
       description: row.description ?? "",
+      image_url: row.image_url?.trim() || null,
       is_active: row.is_active,
     });
     setShowPkgModal(true);
+  }
+
+  async function onPkgImageFile(file: File) {
+    setPkgImageBusy(true);
+    setError(null);
+    try {
+      const prepared = await prepareImageFileForUpload(file);
+      const url = await uploadCarWashPackageImage(prepared);
+      setPkgForm((s) => ({ ...s, image_url: url }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "อัปโหลดรูปไม่สำเร็จ");
+    } finally {
+      setPkgImageBusy(false);
+    }
   }
 
   async function submitPackage(e: React.FormEvent) {
     e.preventDefault();
     const price = Number(pkgForm.price);
     const duration = Number(pkgForm.duration_minutes);
+    const totalUses = Math.max(1, Math.trunc(Number(pkgForm.total_uses)) || 1);
     if (!pkgForm.name.trim() || !Number.isFinite(price) || !Number.isFinite(duration)) return;
     if (editingPkg) {
       await repo.updatePackage(editingPkg.id, {
         name: pkgForm.name.trim(),
         price,
         duration_minutes: duration,
+        total_uses: totalUses,
         description: pkgForm.description.trim(),
+        image_url: pkgForm.image_url,
         is_active: pkgForm.is_active,
       });
     } else {
@@ -718,7 +889,9 @@ export function CarWashDashboard({
         name: pkgForm.name.trim(),
         price,
         duration_minutes: duration,
+        total_uses: totalUses,
         description: pkgForm.description.trim(),
+        image_url: pkgForm.image_url,
         is_active: pkgForm.is_active,
       });
     }
@@ -748,9 +921,125 @@ export function CarWashDashboard({
       photo_url: "",
     });
     setVisitLaneStatus("WASHING");
+    setVisitPaymentMethod("CASH");
+    setVisitPaymentSlipUrl(null);
+    setVisitPrintReceipt(true);
     setVisitEntryMode("walkin");
     setVisitAdvancedOpen(false);
+    setVisitBookDateKey(bangkokDateKey());
+    setVisitSelectedSlot("");
+    setVisitSlotAvailability([]);
     setShowVisitModal(true);
+  }
+
+  const visitSelectedPkg = useMemo(
+    () => packages.find((p) => String(p.id) === visitForm.package_id) ?? null,
+    [packages, visitForm.package_id],
+  );
+
+  const visitBookableSlots = useMemo(
+    () =>
+      buildBookableStartSlots(
+        visitSlotAvailability,
+        visitScheduleSlotMinutes,
+        carWashNormalizeDurationMinutes(visitSelectedPkg?.duration_minutes, visitScheduleSlotMinutes),
+      ),
+    [visitSlotAvailability, visitScheduleSlotMinutes, visitSelectedPkg?.duration_minutes],
+  );
+
+  const visitBookingPayDue = useMemo(
+    () =>
+      carWashComputePortalPayDue({
+        mode: visitBookPayMode,
+        depositAmountBaht: visitShopDeposit,
+        totalBaht: visitSelectedPkg?.price ?? 0,
+      }),
+    [visitBookPayMode, visitShopDeposit, visitSelectedPkg?.price],
+  );
+
+  const loadVisitSchedule = useCallback(async (dk: string) => {
+    setVisitScheduleLoading(true);
+    try {
+      const res = await fetch(`/api/car-wash/day-schedules?date=${encodeURIComponent(dk)}`, {
+        credentials: "include",
+      });
+      const j = (await res.json().catch(() => ({}))) as {
+        slotMinutes?: number;
+        isClosed?: boolean;
+        slotAvailability?: SlotAvailabilityItem[];
+        error?: string;
+      };
+      if (!res.ok) {
+        setError(j.error ?? "โหลดตารางเวลาไม่สำเร็จ");
+        setVisitSlotAvailability([]);
+        return;
+      }
+      setVisitScheduleSlotMinutes(j.slotMinutes ?? 30);
+      setVisitScheduleClosed(Boolean(j.isClosed));
+      const slots = j.slotAvailability ?? [];
+      setVisitSlotAvailability(slots);
+      setVisitSelectedSlot((prev) =>
+        slots.some((s) => s.time === prev && s.available) ? prev : slots.find((s) => s.available)?.time ?? "",
+      );
+    } finally {
+      setVisitScheduleLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!showVisitModal || visitEntryMode !== "walkin") return;
+    void loadVisitSchedule(visitBookDateKey);
+  }, [showVisitModal, visitEntryMode, visitBookDateKey, loadVisitSchedule]);
+
+  useEffect(() => {
+    if (!showVisitModal) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/car-wash/session/booking-payment", { credentials: "include" });
+        const j = (await res.json().catch(() => ({}))) as {
+          bookingPayment?: { portalBookingPaymentMode?: string; depositAmountBaht?: number | null };
+        };
+        if (!res.ok || cancelled) return;
+        setVisitBookPayMode(normalizeCarWashPortalPaymentMode(j.bookingPayment?.portalBookingPaymentMode));
+        setVisitShopDeposit(j.bookingPayment?.depositAmountBaht ?? null);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showVisitModal]);
+
+  const visitPayAmountBaht = useMemo(() => {
+    if (visitEntryMode !== "walkin") return 0;
+    const isFuture = visitBookDateKey > bangkokDateKey();
+    if (isFuture && visitBookingPayDue != null) return visitBookingPayDue;
+    const raw = Number(visitForm.final_price);
+    if (Number.isFinite(raw) && raw >= 0) return raw;
+    const pkg = packages.find((p) => String(p.id) === visitForm.package_id);
+    return pkg?.price ?? 0;
+  }, [
+    visitEntryMode,
+    visitForm.final_price,
+    visitForm.package_id,
+    packages,
+    visitBookDateKey,
+    visitBookingPayDue,
+  ]);
+
+  function resolveVisitPrintShop(): CarWashPrintShopProfile {
+    const rawLogo = shopPrintProfile?.logoUrl || logoUrl;
+    return {
+      displayName: shopPrintProfile?.displayName?.trim() || shopLabel,
+      logoUrl: rawLogo ? resolveAssetUrl(rawLogo, baseUrl) : null,
+      address: shopPrintProfile?.address ?? null,
+      taxId: shopPrintProfile?.taxId ?? null,
+      contactPhone: shopPrintProfile?.contactPhone ?? null,
+      bankAccountName: shopPrintProfile?.bankAccountName ?? null,
+      slipPaperSize: shopPrintProfile?.slipPaperSize ?? null,
+    };
   }
 
   function runVisitLookup() {
@@ -792,7 +1081,7 @@ export function CarWashDashboard({
         package_id: "",
         final_price: "",
       }));
-      setVisitLookupHint("พบจากประวัติการใช้บริการ — เลือกแพ็กเกจหรือราคาด้านล่าง");
+      setVisitLookupHint("พบจากประวัติการใช้บริการ — เลือกบริการด้านบนแล้วตรวจเบอร์/ทะเบียน");
       return;
     }
     setVisitForm((s) => ({
@@ -820,6 +1109,10 @@ export function CarWashDashboard({
     const plateNumber = visitForm.plate_number.trim();
     const phoneDigits = visitForm.customer_phone.replace(/\D/g, "").trim();
     if (visitEntryMode === "walkin") {
+      if (!visitForm.package_id) {
+        setError("กรุณาเลือกบริการ/แพ็กเกจก่อนบันทึก");
+        return;
+      }
       const hasPlate = plateNumber.length > 0;
       const hasPhone = phoneDigits.length > 0;
       if (!hasPlate && !hasPhone) {
@@ -837,12 +1130,33 @@ export function CarWashDashboard({
     setError(null);
     const recordedBy = visitForm.recorded_by_override.trim() || recorderDisplayName;
     const bundleId = visitForm.bundle_id ? Number(visitForm.bundle_id) : null;
+    const resetVisitModal = () => {
+      setShowVisitModal(false);
+      setVisitLookupHint(null);
+      setVisitLaneStatus("WASHING");
+      setVisitPaymentMethod("CASH");
+      setVisitPaymentSlipUrl(null);
+      setVisitPrintReceipt(true);
+      setVisitForm({
+        customer_lookup: "",
+        customer_name: "",
+        customer_phone: "",
+        plate_number: "",
+        package_id: "",
+        bundle_id: "",
+        final_price: "",
+        note: "",
+        recorded_by_override: "",
+        photo_url: "",
+      });
+    };
     if (bundleId != null) {
       const b = bundles.find((x) => x.id === bundleId);
       if (!b || !b.is_active || b.used_uses >= b.total_uses) {
         setError("แพ็กเกจเหมาไม่พร้อมใช้งาน หรือจำนวนครั้งคงเหลือหมดแล้ว");
         return;
       }
+      const remainingAfter = Math.max(0, b.total_uses - b.used_uses - 1);
       try {
         await repo.createVisit({
           customer_name: customerName,
@@ -857,26 +1171,26 @@ export function CarWashDashboard({
           service_status: visitLaneStatus,
           photo_url: visitForm.photo_url.trim(),
           bundle_id: bundleId,
+          booking_id: null,
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : "บันทึกรายการไม่สำเร็จ");
         return;
       }
-      setShowVisitModal(false);
-      setVisitLookupHint(null);
-      setVisitLaneStatus("WASHING");
-      setVisitForm({
-        customer_lookup: "",
-        customer_name: "",
-        customer_phone: "",
-        plate_number: "",
-        package_id: "",
-        bundle_id: "",
-        final_price: "",
-        note: "",
-        recorded_by_override: "",
-        photo_url: "",
-      });
+      if (visitPrintReceipt) {
+        printCarWashVisitReceipt({
+          shop: resolveVisitPrintShop(),
+          customerName: customerName || b.customer_name || "ลูกค้า",
+          customerPhone: b.customer_phone,
+          plateNumber,
+          packageName: `เหมาจ่าย: ${b.package_name}`,
+          priceBaht: 0,
+          paymentMethod: "CASH",
+          soldAtIso: new Date().toISOString(),
+          note: `เหลือ ${remainingAfter}/${b.total_uses} ครั้ง`,
+        });
+      }
+      resetVisitModal();
       await loadAll();
       return;
     }
@@ -885,40 +1199,119 @@ export function CarWashDashboard({
     const listedPrice = pkg?.price ?? 0;
     const finalPriceRaw = Number(visitForm.final_price);
     const finalPrice = Number.isFinite(finalPriceRaw) ? finalPriceRaw : listedPrice;
+    const payLabel = carWashPaymentMethodLabel(visitPaymentMethod);
+    const noteBase = visitForm.note.trim();
+    const noteWithPay =
+      finalPrice > 0
+        ? [noteBase, `ชำระ: ${payLabel}`].filter(Boolean).join(" · ")
+        : noteBase;
+    const photoUrl =
+      (visitPaymentSlipUrl?.trim() || visitForm.photo_url.trim() || "").trim();
+
+    if (!visitSelectedSlot) {
+      setError("เลือกช่วงเวลาก่อนบันทึก");
+      return;
+    }
+    if (visitScheduleClosed) {
+      setError("วันที่เลือกปิดรับจอง");
+      return;
+    }
+    if (phoneDigits.length < 9) {
+      setError("จองคิวต้องมีเบอร์โทรอย่างน้อย 9 หลัก");
+      return;
+    }
+
+    const todayKey = bangkokDateKey();
+    const isFuture = visitBookDateKey > todayKey;
+    const bookingPayDue = visitBookingPayDue;
+    if (bookingPayDue != null && bookingPayDue > 0) {
+      if (
+        (visitPaymentMethod === "PROMPTPAY" || visitPaymentMethod === "TRANSFER") &&
+        !visitPaymentSlipUrl
+      ) {
+        setError(visitBookPayMode === "FULL" ? "แนบสลิปชำระเต็มยอด" : "แนบสลิปมัดจำ");
+        return;
+      }
+    }
+
+    let bookingId: number | null = null;
     try {
-      await repo.createVisit({
-        customer_name: customerName,
-        customer_phone: phoneDigits,
-        plate_number: plateNumber,
-        package_id: pkg?.id ?? null,
-        package_name: pkg?.name ?? "บริการพิเศษ",
-        listed_price: listedPrice,
-        final_price: finalPrice,
-        note: visitForm.note.trim(),
-        recorded_by_name: recordedBy,
-        service_status: visitLaneStatus,
-        photo_url: visitForm.photo_url.trim(),
-        bundle_id: null,
+      const bookRes = await fetch("/api/car-wash/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          phone: phoneDigits,
+          plateNumber: plateNumber || null,
+          customerName: customerName || null,
+          packageId: pkgId,
+          scheduledAtLocal: scheduledAtLocalFromSlot(visitBookDateKey, visitSelectedSlot),
+          paymentMethod: bookingPayDue != null && bookingPayDue > 0 ? visitPaymentMethod : "UNPAID",
+          amountPaidBaht: bookingPayDue != null && bookingPayDue > 0 ? bookingPayDue : 0,
+          paymentSlipUrl: visitPaymentSlipUrl,
+        }),
       });
+      const bookJ = (await bookRes.json().catch(() => ({}))) as {
+        error?: string;
+        booking?: { id?: number; scheduledAt?: string };
+      };
+      if (!bookRes.ok) {
+        setError(bookJ.error ?? "จองคิวไม่สำเร็จ");
+        return;
+      }
+      bookingId = Number(bookJ.booking?.id) || null;
+
+      if (isFuture) {
+        resetVisitModal();
+        setError(null);
+        window.dispatchEvent(new CustomEvent("car-wash-queue-changed"));
+        await loadAll();
+        window.alert(`บันทึกคิวจองล่วงหน้าแล้ว — ดูที่เมนูจัดการคิว วันที่ ${visitBookDateKey}`);
+        return;
+      }
+
+      if (bookingId != null) {
+        const arriveRes = await fetch(`/api/car-wash/bookings/${bookingId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ status: "ARRIVED" }),
+        });
+        const arriveJ = (await arriveRes.json().catch(() => ({}))) as {
+          booking?: { visitId?: number | null };
+        };
+        const visitId = arriveJ.booking?.visitId;
+        if (visitId != null) {
+          await repo.updateVisit(visitId, {
+            ...(customerName.trim() ? { customer_name: customerName.trim() } : {}),
+            ...(plateNumber.trim() ? { plate_number: plateNumber.trim() } : {}),
+            listed_price: listedPrice,
+            final_price: finalPrice,
+            note: noteWithPay,
+            recorded_by_name: recordedBy,
+            service_status: visitLaneStatus,
+            photo_url: photoUrl,
+          });
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "บันทึกรายการไม่สำเร็จ");
       return;
     }
-    setShowVisitModal(false);
-    setVisitLookupHint(null);
-    setVisitLaneStatus("WASHING");
-    setVisitForm({
-      customer_lookup: "",
-      customer_name: "",
-      customer_phone: "",
-      plate_number: "",
-      package_id: "",
-      bundle_id: "",
-      final_price: "",
-      note: "",
-      recorded_by_override: "",
-      photo_url: "",
-    });
+    if (visitPrintReceipt) {
+      printCarWashVisitReceipt({
+        shop: resolveVisitPrintShop(),
+        customerName: customerName || plateNumber || phoneDigits || "ลูกค้า",
+        customerPhone: phoneDigits,
+        plateNumber,
+        packageName: pkg?.name ?? "บริการพิเศษ",
+        priceBaht: finalPrice,
+        paymentMethod: visitPaymentMethod,
+        soldAtIso: new Date().toISOString(),
+        note: noteBase || null,
+      });
+    }
+    resetVisitModal();
     await loadAll();
   }
 
@@ -1027,27 +1420,12 @@ export function CarWashDashboard({
     await loadAll();
   }
 
-  const resolvedLogoForBundlePrint = useMemo(() => resolveAssetUrl(logoUrl, baseUrl), [logoUrl, baseUrl]);
-  const { paper: slipPaper } = useAppSlipPaperSize();
+  const { paper: slipPaper } = useAppSlipPaperSize(shopPrintProfile?.slipPaperSize);
 
-  function printBundleSlipDashboard(b: WashBundle, paper: PosTablePaperSize = slipPaper) {
-    const printedAt = new Date().toLocaleString("th-TH", {
-      timeZone: "Asia/Bangkok",
-      hour12: false,
-    });
-    const slipResolved = b.slip_photo_url?.trim() ? resolveAssetUrl(b.slip_photo_url, baseUrl) : null;
-    const inner = buildCarWashBundleSlipInnerHtml({
-      shopLabel: shopLabel.trim() || "คาร์แคร์",
-      logoUrl: resolvedLogoForBundlePrint,
-      bundle: b,
-      printedAt,
-      slipImageUrl: slipResolved,
-    });
-    const ok = openCarWashBundleSlipPrintWindow(paper, inner);
+  function printBundleSlipDashboard(b: WashBundle) {
+    const ok = printCarWashBundleReceipt(resolveVisitPrintShop(), b);
     if (!ok) {
-      window.alert(
-        "ไม่สามารถเปิดหน้าพิมพ์ได้ — ลองอนุญาตป๊อปอัปสำหรับเว็บไซต์นี้ หรือรีเฟรชแล้วลองอีกครั้ง",
-      );
+      window.alert("แพ็กเหมานี้มียอด ฿0 — ไม่พิมพ์ใบเสร็จรับเงิน");
     }
   }
 
@@ -1208,6 +1586,7 @@ export function CarWashDashboard({
       shopLabel={shopLabel}
       logoUrl={logoUrl}
       paymentChannelsNote={paymentChannelsNote}
+      shopPrintProfile={shopPrintProfile}
       busyVisitId={laneBusyVisitId}
       onSetStatus={handleVisitLaneStatus}
       onVisitPhotoUpdate={handleLaneVisitPhoto}
@@ -1242,8 +1621,8 @@ export function CarWashDashboard({
                     </svg>
                   </div>
                   <div className="min-w-0">
-                    <p className={cn(carWashHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
-                      {CAR_WASH_MODULE_EN_LABEL}
+                    <p className="hidden text-[10px] font-black uppercase tracking-[0.16em] text-[#4d47b6] sm:block" aria-hidden>
+                      {CAR_WASH_MODULE_LABEL}
                     </p>
                     <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">คาร์แคร์</h1>
                   </div>
@@ -1254,12 +1633,12 @@ export function CarWashDashboard({
                   type="button"
                   onClick={toggleHeader}
                   className={cn("inline-flex", carWashHeaderCollapseBtnClass)}
-                  aria-label={headerCollapsed ? "แสดงหัวโมดูล" : "ซ่อนหัวโมดูล"}
-                  aria-pressed={headerCollapsed}
-                  title={headerCollapsed ? "แสดงหัวโมดูล" : "ซ่อนหัวโมดูล"}
+                  aria-expanded={!headerCollapsed}
+                  aria-label={headerCollapsed ? "แสดงส่วนหัวโมดูล" : "ซ่อนส่วนหัวโมดูล"}
+                  title={headerCollapsed ? "แสดงส่วนหัวโมดูล" : "ซ่อนส่วนหัวโมดูล"}
                   suppressHydrationWarning
                 >
-                  <CarWashHeaderCollapseGlyph collapsed={false} />
+                  <CarWashHeaderCollapseGlyph />
                 </button>
                 <button
                   type="button"
@@ -1283,7 +1662,7 @@ export function CarWashDashboard({
 
           <nav
             aria-label="เมนูคาร์แคร์"
-            className="mt-5 hidden border-t border-white/40 pt-5 lg:block print:hidden"
+            className="mt-5 hidden border-t border-[#e8e6fc]/70 pt-5 lg:block print:hidden"
           >
             <ul className="flex gap-1">
               {tabItems.map((item) => {
@@ -1410,9 +1789,9 @@ export function CarWashDashboard({
               title: "ปุ่ม: QR ลูกค้า",
               content: (
                 <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                  <li>เปิดหน้าสร้าง QR ให้ลูกค้าเช็กสิทธิ์และใช้บริการสะดวกขึ้น</li>
-                  <li>มีปุ่มคัดลอกลิงก์ แสดง/ซ่อนลิงก์ และดาวน์โหลดโปสเตอร์</li>
-                  <li>แนะนำติด QR จุดรับรถเพื่อเร่งขั้นตอนหน้างาน</li>
+                  <li>เปิดลิงก์ให้ลูกค้าจองคิว (เลือกแพ็ก + ช่วงเวลา) หรือใช้แพ็กเหมาเดิม</li>
+                  <li>มีปุ่มเปิดลิงก์ · คัดลอก · แสดง/ซ่อน · ดาวน์โหลดโปสเตอร์</li>
+                  <li>แนะนำติด QR จุดรับรถหรือจุดรอคิว</li>
                 </ul>
               ),
             },
@@ -1570,7 +1949,7 @@ export function CarWashDashboard({
                     <div className="min-w-0 flex-1 pt-0.5">
                       <h3 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">QR ลูกค้า</h3>
                       <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-                        เช็กสิทธิ์แพ็กเหมาและสแกนเข้าใช้บริการ — คัดลอกลิงก์ ดาวน์โหลดโปสเตอร์ และดูตัวอย่างในป๊อปอัป
+                        พอร์ทัลจองคิว — เลือกแพ็กเกจ · จองตามช่วงเวลา · ใช้แพ็กเหมา — คัดลอกลิงก์ เปิดดู และดาวน์โหลดโปสเตอร์ในป๊อปอัป
                       </p>
                       <p className="mt-5 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#5b61ff]">
                         <span>คลิกเพื่อเปิด</span>
@@ -1660,6 +2039,7 @@ export function CarWashDashboard({
           baseUrl={baseUrl}
           shopLabel={shopLabel}
           logoUrl={logoUrl}
+          shopPrintProfile={shopPrintProfile}
           recorderDisplayName={recorderDisplayName}
           onRefresh={loadAll}
           updateVisit={(id, p) => repo.updateVisit(id, p)}
@@ -1680,6 +2060,7 @@ export function CarWashDashboard({
             {!loading ? (
               <>
                 <AppImageLightbox src={bundleTabLightbox.src} onClose={bundleTabLightbox.close} alt="สลิปแพ็กเหมา" />
+                <AppImageLightbox src={pkgLightbox.src} onClose={pkgLightbox.close} alt="รูปแพ็กเกจ" />
 
                 <div className="flex flex-col gap-4 rounded-[2rem] border border-white/50 bg-white/35 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-5">
                   <div className="min-w-0 flex-1">
@@ -1688,7 +2069,30 @@ export function CarWashDashboard({
                     </p>
                     <h2 className="text-lg font-black tracking-tight text-[#1e1b4b]">แพ็กเกจและเหมาจ่าย</h2>
                   </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-1">
+                  <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setOffersFilterOpen((o) => !o)}
+                      aria-expanded={offersFilterOpen}
+                      aria-controls="car-wash-offers-filter-panel"
+                      aria-label={offersFilterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                      title={offersFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+                      className={cn(
+                        appTemplateOutlineButtonClass,
+                        "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded-[1rem] px-0 text-xs font-black text-[#4d47b6] sm:min-w-0 sm:px-3",
+                        offersFilterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
+                        offersFiltersActive && !offersFilterOpen && "border-amber-300/80 bg-amber-50/90",
+                      )}
+                    >
+                      <OffersFilterFunnelIcon className="h-5 w-5 shrink-0" />
+                      <span className="hidden sm:inline">{offersFilterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+                      {offersFiltersActive ? (
+                        <span
+                          className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-[#4338ca] via-[#5b61ff] to-[#ec4899] ring-2 ring-white"
+                          aria-hidden
+                        />
+                      ) : null}
+                    </button>
                     <div className={cn(carWashSubTabSegmentShellClass, "rounded-xl")}>
                       {offersListTab === "packages" ?
                         <div className="mr-1.5 flex items-center gap-1 border-r border-slate-200 pr-1.5">
@@ -1756,15 +2160,163 @@ export function CarWashDashboard({
                   </div>
                 </div>
 
+                <div
+                  id="car-wash-offers-filter-panel"
+                  className={cn(
+                    "space-y-3 rounded-[1.5rem] border border-white/55 bg-white/40 p-3 shadow-sm backdrop-blur-xl sm:p-4",
+                    offersFilterOpen ? "block" : "hidden",
+                  )}
+                  aria-label={offersListTab === "packages" ? "ตัวกรองแพ็กเกจ" : "ตัวกรองเหมาจ่าย"}
+                >
+                  {offersListTab === "packages" ? (
+                    <>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap gap-2" role="tablist" aria-label="กรองสถานะแพ็กเกจ">
+                          {(
+                            [
+                              { key: "ALL" as const, label: "ทั้งหมด", count: packageFilterStats.total },
+                              { key: "ACTIVE" as const, label: "เปิดใช้", count: packageFilterStats.active },
+                              { key: "INACTIVE" as const, label: "ปิด", count: packageFilterStats.inactive },
+                            ] as const
+                          ).map((opt) => (
+                            <button
+                              key={opt.key}
+                              type="button"
+                              role="tab"
+                              aria-selected={pkgStatusFilter === opt.key}
+                              onClick={() => setPkgStatusFilter(opt.key)}
+                              className={carWashFilterChipClass(pkgStatusFilter === opt.key)}
+                            >
+                              <span className="inline-flex items-baseline gap-1">
+                                {opt.label}
+                                <span
+                                  aria-hidden
+                                  className={cn(
+                                    "rounded-full px-1.5 py-0.5 text-[10px] leading-none",
+                                    pkgStatusFilter === opt.key ? "bg-white/25 text-white/95" : "bg-[#e8e6fc]/80 text-[#4d47b6]",
+                                  )}
+                                >
+                                  {opt.count}
+                                </span>
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-xs font-bold tabular-nums text-[#8b87ad]">
+                          แสดง {filteredPackages.length}/{packages.length}
+                        </p>
+                      </div>
+                      <div className={carWashFilterFieldGridClass}>
+                        <label className="min-w-0 space-y-1.5" htmlFor="cw-offers-pkg-q">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ค้นหา</span>
+                          <input
+                            id="cw-offers-pkg-q"
+                            className={carWashFieldClass}
+                            placeholder="ชื่อแพ็กเกจ / รายละเอียด"
+                            value={pkgQuery}
+                            onChange={(e) => setPkgQuery(e.target.value)}
+                            autoComplete="off"
+                          />
+                        </label>
+                        {packageFiltersActive ? (
+                          <div className="flex items-end">
+                            <button
+                              type="button"
+                              className={cn(appTemplateOutlineButtonClass, "min-h-[44px] px-4 text-xs font-black text-[#4d47b6]")}
+                              aria-label="ล้างตัวกรองแพ็กเกจ"
+                              onClick={() => {
+                                setPkgStatusFilter("ALL");
+                                setPkgQuery("");
+                              }}
+                            >
+                              ล้างกรอง
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap gap-2" role="tablist" aria-label="กรองสถานะเหมาจ่าย">
+                          {(
+                            [
+                              { key: "ALL" as const, label: "ทั้งหมด", count: bundleFilterStats.total },
+                              { key: "READY" as const, label: "พร้อมใช้", count: bundleFilterStats.ready },
+                              { key: "EXHAUSTED" as const, label: "หมดสิทธิ์", count: bundleFilterStats.exhausted },
+                              { key: "INACTIVE" as const, label: "ปิด", count: bundleFilterStats.inactive },
+                            ] as const
+                          ).map((opt) => (
+                            <button
+                              key={opt.key}
+                              type="button"
+                              role="tab"
+                              aria-selected={bundleStatusFilter === opt.key}
+                              onClick={() => setBundleStatusFilter(opt.key)}
+                              className={carWashFilterChipClass(bundleStatusFilter === opt.key)}
+                            >
+                              <span className="inline-flex items-baseline gap-1">
+                                {opt.label}
+                                <span
+                                  aria-hidden
+                                  className={cn(
+                                    "rounded-full px-1.5 py-0.5 text-[10px] leading-none",
+                                    bundleStatusFilter === opt.key ? "bg-white/25 text-white/95" : "bg-[#e8e6fc]/80 text-[#4d47b6]",
+                                  )}
+                                >
+                                  {opt.count}
+                                </span>
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-xs font-bold tabular-nums text-[#8b87ad]">
+                          แสดง {filteredBundles.length}/{bundles.length}
+                        </p>
+                      </div>
+                      <div className={carWashFilterFieldGridClass}>
+                        <label className="min-w-0 space-y-1.5" htmlFor="cw-offers-bundle-q">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ค้นหา</span>
+                          <input
+                            id="cw-offers-bundle-q"
+                            className={carWashFieldClass}
+                            placeholder="ชื่อ · เบอร์ · ทะเบียน · ชื่อแพ็ก"
+                            value={bundleQuery}
+                            onChange={(e) => setBundleQuery(e.target.value)}
+                            autoComplete="off"
+                          />
+                        </label>
+                        {bundleFiltersActive ? (
+                          <div className="flex items-end">
+                            <button
+                              type="button"
+                              className={cn(appTemplateOutlineButtonClass, "min-h-[44px] px-4 text-xs font-black text-[#4d47b6]")}
+                              aria-label="ล้างตัวกรองเหมาจ่าย"
+                              onClick={() => {
+                                setBundleStatusFilter("ALL");
+                                setBundleQuery("");
+                              }}
+                            >
+                              ล้างกรอง
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 {offersListTab === "packages" ?
                   packages.length === 0 ?
                     <AppEmptyState tone="glass">ยังไม่มีแพ็กเกจ — กด «เพิ่มแพ็กเกจ» เพื่อสร้างรายการแรก</AppEmptyState>
+                  : filteredPackages.length === 0 ?
+                    <AppEmptyState tone="glass">ไม่พบแพ็กเกจตามตัวกรอง — ปรับหรือล้างกรอง</AppEmptyState>
                   : <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain rounded-2xl border border-white/55 bg-white/35 shadow-[0_16px_38px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl [-webkit-overflow-scrolling:touch] lg:border-0 lg:bg-transparent lg:shadow-none lg:backdrop-blur-0">
                       <ul
                         className="divide-y divide-slate-100 lg:grid lg:grid-cols-4 lg:gap-3 lg:divide-y-0 lg:p-2"
                         aria-label="แพ็กเกจบริการคาร์แคร์"
                       >
-                        {packages.map((p) => (
+                        {filteredPackages.map((p) => (
                           <li
                             key={p.id}
                             className="group/item relative flex min-h-0 flex-col gap-2 overflow-hidden px-3 py-3 transition-all duration-300 hover:bg-white/45 sm:px-4 lg:min-h-[200px] lg:rounded-2xl lg:border lg:border-white/60 lg:bg-white/50 lg:shadow-[0_16px_34px_-24px_rgba(30,27,75,0.42)] lg:backdrop-blur-xl lg:hover:-translate-y-1 lg:hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.45)]"
@@ -1773,15 +2325,34 @@ export function CarWashDashboard({
                               aria-hidden
                               className="absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-gradient-to-b from-[#5b61ff] via-[#8d64ff] to-[#f06dc8] opacity-80 transition-all group-hover/item:w-1.5"
                             />
-                            <div className="relative flex min-w-0 items-start justify-between gap-2 border-b border-white/70 pb-2">
-                              <h3 className="min-w-0 text-xs font-bold text-[#2e2a58] sm:text-sm">{p.name}</h3>
-                              <span
-                                className={`shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold sm:text-[11px] ${
-                                  p.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"
-                                }`}
+                            <div className="relative flex min-w-0 items-start gap-2.5 border-b border-white/70 pb-2">
+                              <button
+                                type="button"
+                                className={cn(
+                                  "h-14 w-14 shrink-0 overflow-hidden rounded-xl ring-2 ring-white/80",
+                                  !p.image_url && "bg-gradient-to-br from-violet-200 via-indigo-100 to-fuchsia-200",
+                                )}
+                                aria-label={p.image_url ? `ดูรูป ${p.name}` : `ยังไม่มีรูป ${p.name}`}
+                                disabled={!p.image_url}
+                                onClick={() => p.image_url && pkgLightbox.open(p.image_url)}
                               >
-                                {p.is_active ? "เปิด" : "ปิด"}
-                              </span>
+                                {p.image_url ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={p.image_url} alt="" className="h-full w-full object-cover" />
+                                ) : null}
+                              </button>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <h3 className="min-w-0 text-xs font-bold text-[#2e2a58] sm:text-sm">{p.name}</h3>
+                                  <span
+                                    className={`shrink-0 rounded-full px-1.5 py-px text-[10px] font-semibold sm:text-[11px] ${
+                                      p.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"
+                                    }`}
+                                  >
+                                    {p.is_active ? "เปิด" : "ปิด"}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                             {p.description?.trim() ?
                               <p className="relative line-clamp-3 text-[11px] leading-snug text-[#5f5a8a]">{p.description}</p>
@@ -1792,6 +2363,8 @@ export function CarWashDashboard({
                                 <span className="font-semibold text-[#4d47b6]">฿{p.price.toLocaleString()}</span>
                                 <span className="text-[#8b87ad]"> · </span>
                                 <span className="font-medium text-[#2e2a58]">{p.duration_minutes} น.</span>
+                                <span className="text-[#8b87ad]"> · </span>
+                                <span className="font-medium text-[#2e2a58]">{p.total_uses ?? 1} ครั้ง</span>
                               </span>
                             </div>
                             <div className="relative mt-1 flex flex-wrap items-center justify-end gap-1.5">
@@ -1846,12 +2419,14 @@ export function CarWashDashboard({
                     />
                     {bundles.length === 0 ?
                       <AppEmptyState tone="glass">ยังไม่มีแพ็กเหมา</AppEmptyState>
+                    : filteredBundles.length === 0 ?
+                      <AppEmptyState tone="glass">ไม่พบเหมาจ่ายตามตัวกรอง — ปรับหรือล้างกรอง</AppEmptyState>
                     : <div className="max-h-[min(70vh,40rem)] overflow-y-auto overscroll-y-contain rounded-2xl border border-white/55 bg-white/35 shadow-[0_16px_38px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl [-webkit-overflow-scrolling:touch] lg:border-0 lg:bg-transparent lg:shadow-none lg:backdrop-blur-0">
                         <ul
                           className="divide-y divide-slate-100 lg:grid lg:grid-cols-4 lg:gap-3 lg:divide-y-0 lg:p-2"
                           aria-label="รายการเหมาจ่ายคาร์แคร์"
                         >
-                          {bundles.map((b) => {
+                          {filteredBundles.map((b) => {
                             const remaining = Math.max(0, b.total_uses - b.used_uses);
                             const canUse = b.is_active && remaining > 0;
                             const slipResolved = b.slip_photo_url?.trim() ? resolveAssetUrl(b.slip_photo_url, baseUrl) : null;
@@ -2034,7 +2609,8 @@ export function CarWashDashboard({
                     </svg>
                   </PopupIconButton>
                   <PopupIconButton
-                    label="พิมพ์ใบ"
+                    label="พิมพ์ใบเสร็จ"
+                    disabled={!(b.paid_amount > 0)}
                     onClick={() => printBundleSlipDashboard(b)}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -2116,7 +2692,7 @@ export function CarWashDashboard({
         open={showPkgModal}
         onClose={() => setShowPkgModal(false)}
         title={editingPkg ? "แก้ไขแพ็กเกจ" : "เพิ่มแพ็กเกจ"}
-        description="กำหนดชื่อ ราคา และรายละเอียดบริการ"
+        description="กำหนดชื่อ ราคา รายละเอียด และรูปบริการ"
         footer={
           <FormModalFooterActions
             onCancel={() => setShowPkgModal(false)}
@@ -2125,11 +2701,59 @@ export function CarWashDashboard({
               form?.requestSubmit();
             }}
             submitLabel="บันทึกแพ็กเกจ"
+            submitDisabled={pkgImageBusy}
           />
         }
       >
         <form id="pkg-form" className="space-y-6" onSubmit={(e) => void submitPackage(e)}>
           <div className="space-y-5 rounded-[2rem] border border-slate-100 bg-slate-50/30 p-6 sm:p-8">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">รูปแพ็กเกจ</label>
+              <AppGalleryCameraFileInputs
+                galleryInputRef={pkgGalleryRef}
+                cameraInputRef={pkgCameraInputRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void onPkgImageFile(file);
+                }}
+              />
+              <div className="flex flex-wrap items-center gap-3">
+                {pkgForm.image_url ? (
+                  <AppImageThumb
+                    src={pkgForm.image_url}
+                    alt="รูปแพ็กเกจ"
+                    onOpen={() => pkgForm.image_url && pkgLightbox.open(pkgForm.image_url)}
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-violet-100 to-fuchsia-100 text-[10px] font-bold text-[#8b87b8] ring-2 ring-white">
+                    ไม่มีรูป
+                  </div>
+                )}
+                <div className="min-w-0 flex-1 space-y-2">
+                  <AppImagePickCameraButtons
+                    disabled={pkgImageBusy}
+                    busy={pkgImageBusy}
+                    onPickGallery={() => pkgGalleryRef.current?.click()}
+                    onPickCamera={() => openPkgCamera((file) => void onPkgImageFile(file))}
+                    labels={{ gallery: "เลือกรูป", camera: "ถ่ายรูป", busy: "กำลังอัปโหลด…" }}
+                  />
+                  {pkgForm.image_url ? (
+                    <button
+                      type="button"
+                      className="text-xs font-bold text-rose-600 underline-offset-2 hover:underline"
+                      disabled={pkgImageBusy}
+                      onClick={() => setPkgForm((s) => ({ ...s, image_url: null }))}
+                    >
+                      ลบรูป
+                    </button>
+                  ) : (
+                    <p className="text-[11px] font-medium text-slate-500">แนบรูปเพื่อแสดงบนลิงก์ลูกค้า</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ชื่อแพ็กเกจบริการ</label>
               <input
@@ -2158,12 +2782,27 @@ export function CarWashDashboard({
                 <input
                   className="w-full rounded-2xl border-purple-100 bg-white px-4 py-3 text-lg font-black text-purple-900 focus:ring-[#8d64ff]"
                   type="number"
-                  placeholder="30"
+                  placeholder="60"
                   value={pkgForm.duration_minutes}
                   onChange={(e) => setPkgForm((s) => ({ ...s, duration_minutes: e.target.value }))}
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                จำนวนครั้ง (1 = รายครั้ง · มากกว่า 1 = แพ็กเหมา)
+              </label>
+              <input
+                className="w-full rounded-2xl border-slate-200 bg-white px-4 py-3 text-sm font-bold focus:ring-[#5b61ff]"
+                type="number"
+                min={1}
+                max={500}
+                value={pkgForm.total_uses}
+                onChange={(e) => setPkgForm((s) => ({ ...s, total_uses: e.target.value }))}
+                required
+              />
             </div>
 
             <div className="space-y-1.5">
@@ -2190,6 +2829,7 @@ export function CarWashDashboard({
             </label>
           </div>
         </form>
+        {pkgCameraModal}
       </FormModal>
 
       <FormModal
@@ -2202,7 +2842,7 @@ export function CarWashDashboard({
           setVisitAdvancedOpen(false);
         }}
         title="บันทึกรายการ"
-        description="กรอกข้อมูลลูกค้าและแพ็กเกจ — แบบฟอร์มกระชับสไตล์ POS"
+        description="เลือกบริการ · กรอกข้อมูล · ชำระเงิน · พิมพ์ใบเสร็จ — หลักเดียวกับจองคิวและเช็คอิน"
         footer={
           <FormModalFooterActions
             cancelLabel="ปิด"
@@ -2216,8 +2856,7 @@ export function CarWashDashboard({
           />
         }
       >
-          <form ref={visitFormRef} className="space-y-6" onSubmit={(e) => void submitVisit(e)}>
-            {/* Mode Switcher */}
+          <form ref={visitFormRef} className="space-y-5" onSubmit={(e) => void submitVisit(e)}>
             <div className="rounded-2xl border border-slate-100 bg-slate-50 p-1">
               <div className="grid grid-cols-2 gap-1">
                 <button
@@ -2234,10 +2873,10 @@ export function CarWashDashboard({
                       : "text-slate-500 hover:text-slate-700",
                   )}
                 >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
                     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
                   </svg>
-                  Walk-in
+                  ซื้อบริการ
                 </button>
                 <button
                   type="button"
@@ -2252,26 +2891,279 @@ export function CarWashDashboard({
                       : "text-slate-500 hover:text-slate-700",
                   )}
                 >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
                     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
                   </svg>
-                  แพ็กเกจเหมา
+                  ใช้แพ็กเหมา
                 </button>
               </div>
             </div>
 
             {error ? (
               <div className="flex items-center gap-2 rounded-xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-600">
-                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="3">
+                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
                   <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
                 </svg>
                 {error}
               </div>
             ) : null}
 
-            {/* Status Section */}
+            <div className="space-y-5 rounded-[1.5rem] border border-slate-100 bg-slate-50/30 p-4 sm:p-6">
+              {visitEntryMode === "walkin" ? (
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-[#4d47b6]">เลือกบริการก่อนกรอกข้อมูลลูกค้า</p>
+                    {packages.filter((p) => p.is_active).length === 0 ? (
+                      <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                        ยังไม่มีบริการที่เปิดใช้งาน — ไปแท็บแพ็กเกจก่อน
+                      </p>
+                    ) : (
+                      <ul
+                        className="grid grid-cols-2 items-stretch gap-2 sm:grid-cols-3"
+                        role="listbox"
+                        aria-label="เลือกบริการ"
+                      >
+                        {packages
+                          .filter((p) => p.is_active)
+                          .map((p) => {
+                            const active = visitForm.package_id === String(p.id);
+                            return (
+                              <li key={p.id} className="min-h-0 h-full">
+                                <button
+                                  type="button"
+                                  role="option"
+                                  aria-selected={active}
+                                  title={p.name}
+                                  onClick={() => {
+                                    setVisitForm((s) => ({
+                                      ...s,
+                                      package_id: String(p.id),
+                                      bundle_id: "",
+                                      final_price: String(p.price),
+                                    }));
+                                  }}
+                                  className={cn(
+                                    "flex h-full min-h-[104px] w-full flex-col rounded-xl border px-3 py-2.5 text-left transition active:scale-[0.99] sm:min-h-[112px]",
+                                    active
+                                      ? "border-[#5b61ff] bg-[#5b61ff]/10 ring-2 ring-[#5b61ff]/25"
+                                      : "border-violet-200 bg-white text-[#4d47b6] hover:border-[#5b61ff]/45 hover:bg-[#5b61ff]/5",
+                                  )}
+                                >
+                                  <span className="line-clamp-2 min-h-[2.5rem] text-sm font-black leading-snug text-[#1e1b4b]">
+                                    {p.name}
+                                  </span>
+                                  <span className="mt-auto pt-1 text-[11px] font-semibold text-[#66638c]">
+                                    {p.duration_minutes} นาที
+                                    {(p.total_uses ?? 1) > 1 ? ` · ${p.total_uses} ครั้ง` : ""}
+                                  </span>
+                                  <span className="mt-0.5 text-xs font-black text-[#4d47b6]">
+                                    ฿{p.price.toLocaleString("th-TH")}
+                                  </span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                      </ul>
+                    )}
+                    {!visitForm.package_id ? (
+                      <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                        เลือกบริการก่อน จึงกรอกเบอร์/ทะเบียนได้
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {visitForm.package_id ? (
+                    <div className="space-y-3">
+                      <p className="text-xs font-medium text-[#4d47b6]">เลือกวันและช่วงเวลา (ผูกคิวตามรอบ)</p>
+                      <label className="block space-y-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">วันที่รับบริการ</span>
+                        <input
+                          type="date"
+                          min={bangkokDateKey()}
+                          value={visitBookDateKey}
+                          onChange={(e) => setVisitBookDateKey(e.target.value)}
+                          className={carWashVisitFieldClass}
+                        />
+                      </label>
+                      {visitBookDateKey > bangkokDateKey() ? (
+                        <p className="rounded-xl bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-900">
+                          จองล่วงหน้า — จะแสดงในเมนูจัดการคิววันที่ {visitBookDateKey} (ยังไม่เข้าลาน)
+                        </p>
+                      ) : null}
+                      {visitScheduleLoading ? (
+                        <p className="text-sm text-[#66638c]">กำลังโหลดตาราง…</p>
+                      ) : visitScheduleClosed ? (
+                        <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">วันนี้ปิดรับจอง</p>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4" role="listbox" aria-label="เลือกช่วงเวลา">
+                          {visitBookableSlots.map((s) => (
+                            <button
+                              key={s.time}
+                              type="button"
+                              disabled={!s.available}
+                              onClick={() => s.available && setVisitSelectedSlot(s.time)}
+                              className={cn(
+                                "min-h-[44px] rounded-xl border text-sm font-bold tabular-nums",
+                                s.available
+                                  ? visitSelectedSlot === s.time
+                                    ? "border-[#5b61ff] bg-[#5b61ff] text-white"
+                                    : "border-violet-200 bg-white text-[#4d47b6]"
+                                  : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 line-through",
+                              )}
+                            >
+                              {s.time}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+
+                  <div className={cn("space-y-4", !visitForm.package_id && "pointer-events-none opacity-45")}>
+                    <p className="text-[10px] font-bold text-slate-400">
+                      จองคิวต้องมีเบอร์โทร · ทะเบียนไม่บังคับ
+                    </p>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-[#5b61ff]">เบอร์โทรศัพท์</label>
+                      <input
+                        className={cn(carWashVisitFieldClass, "border-indigo-100 tracking-widest focus:border-[#5b61ff] focus:ring-[#5b61ff]/25")}
+                        placeholder="08XXXXXXXX"
+                        value={visitForm.customer_phone}
+                        onChange={(e) =>
+                          setVisitForm((s) => ({
+                            ...s,
+                            customer_phone: e.target.value.replace(/\D/g, "").slice(0, 15),
+                          }))
+                        }
+                        inputMode="numeric"
+                        disabled={!visitForm.package_id}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-[#8d64ff]">
+                          ทะเบียนรถ
+                        </label>
+                        <input
+                          className={cn(carWashVisitFieldClass, "border-purple-100 tracking-widest focus:border-[#8d64ff] focus:ring-[#8d64ff]/25")}
+                          placeholder="กข 1234"
+                          value={visitForm.plate_number}
+                          onChange={(e) => setVisitForm((s) => ({ ...s, plate_number: e.target.value }))}
+                          disabled={!visitForm.package_id}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          ชื่อลูกค้า <span className="font-medium normal-case">(ไม่บังคับ)</span>
+                        </label>
+                        <input
+                          className={cn(carWashVisitFieldClass, "border-slate-200 tracking-normal focus:border-[#5b61ff] focus:ring-[#5b61ff]/25")}
+                          placeholder="เช่น คุณสมชาย"
+                          value={visitForm.customer_name}
+                          onChange={(e) => setVisitForm((s) => ({ ...s, customer_name: e.target.value }))}
+                          disabled={!visitForm.package_id}
+                        />
+                      </div>
+                    </div>
+
+                    {visitForm.package_id ? (
+                      <div className="space-y-3">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-[#4d47b6]">
+                            ยอดที่รับชำระ (บาท)
+                          </label>
+                          <input
+                            className={cn(carWashVisitFieldClass, "border-indigo-100 tabular-nums focus:border-[#5b61ff] focus:ring-[#5b61ff]/25")}
+                            inputMode="decimal"
+                            value={visitForm.final_price}
+                            onChange={(e) => setVisitForm((s) => ({ ...s, final_price: e.target.value }))}
+                          />
+                        </div>
+                        <CarWashPaymentPanel
+                          amountBaht={visitPayAmountBaht}
+                          method={visitPaymentMethod}
+                          slipUrl={visitPaymentSlipUrl}
+                          onMethodChange={setVisitPaymentMethod}
+                          onSlipUrlChange={setVisitPaymentSlipUrl}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <p className="text-xs font-medium text-[#4d47b6]">
+                    ค้นหาลูกค้าแพ็กเหมา — ตัดสิทธิ์ 1 ครั้งเมื่อบันทึก (เหมือนเช็คอินใช้แพ็ก)
+                  </p>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#8d64ff]">
+                      ค้นหาลูกค้าแพ็กเหมา
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        className={cn(carWashVisitFieldClass, "min-w-0 flex-1 border-purple-100 focus:border-[#8d64ff] focus:ring-[#8d64ff]/25")}
+                        placeholder="เบอร์โทร หรือ ทะเบียนรถ"
+                        value={visitForm.customer_lookup}
+                        onChange={(e) => setVisitForm((s) => ({ ...s, customer_lookup: e.target.value }))}
+                      />
+                      <button
+                        type="button"
+                        onClick={runVisitLookup}
+                        className="shrink-0 rounded-2xl bg-[#8d64ff] px-5 min-h-[48px] text-sm font-black text-white shadow-lg shadow-purple-100 transition-all active:scale-95"
+                      >
+                        ค้นหา
+                      </button>
+                    </div>
+                  </div>
+
+                  {visitLookupHint ? (
+                    <div className="flex items-center gap-2 rounded-xl bg-indigo-50 px-4 py-3 text-[11px] font-bold text-indigo-600">
+                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
+                        <circle cx="12" cy="12" r="10" /><path d="M12 16h.01M12 8v4" />
+                      </svg>
+                      {visitLookupHint}
+                    </div>
+                  ) : null}
+
+                  {visitForm.bundle_id ? (
+                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">ข้อมูลที่พบ</p>
+                      <div className="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                        <div>
+                          <p className="text-[10px] font-medium text-slate-500">เบอร์โทร</p>
+                          <p className="text-sm font-black text-emerald-900">{visitForm.customer_phone || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-medium text-slate-500">ทะเบียนรถ</p>
+                          <p className="text-sm font-black text-emerald-900">{visitForm.plate_number || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-medium text-slate-500">ชื่อลูกค้า</p>
+                          <p className="text-sm font-black text-emerald-900">{visitForm.customer_name || "-"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowVisitModal(false);
+                      setShowBundleModal(true);
+                    }}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 py-4 text-xs font-bold text-slate-400 transition-all hover:border-[#8d64ff] hover:text-[#8d64ff] active:scale-[0.98]"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    ยังไม่มีแพ็ก? ขายแพ็กเกจเหมาใหม่
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">สถานะเริ่มต้น</label>
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">สถานะเริ่มต้นบนลาน</label>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {CAR_WASH_SERVICE_STATUSES.filter((s) => s !== "COMPLETED" && s !== "PAID").map((s) => (
                   <button
@@ -2292,187 +3184,21 @@ export function CarWashDashboard({
               </div>
             </div>
 
-            {/* Main Form Section */}
-            <div className="space-y-5 rounded-[2rem] border border-slate-100 bg-slate-50/30 p-6 sm:p-8">
-              {visitEntryMode === "walkin" ? (
-                <div className="space-y-5">
-                  {/* Name Field */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      ชื่อลูกค้า <span className="font-medium normal-case text-slate-400">(ไม่บังคับ)</span>
-                    </label>
-                    <input
-                      className="w-full rounded-2xl border-slate-200 bg-white px-4 py-3 text-sm font-bold placeholder:text-slate-300 focus:ring-[#5b61ff]"
-                      placeholder="เช่น คุณสมชาย"
-                      value={visitForm.customer_name}
-                      onChange={(e) => setVisitForm((s) => ({ ...s, customer_name: e.target.value }))}
-                    />
-                  </div>
+            <label className="flex min-h-[48px] cursor-pointer items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300 text-[#5b61ff] focus:ring-[#5b61ff]"
+                checked={visitPrintReceipt}
+                onChange={(e) => setVisitPrintReceipt(e.target.checked)}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-black text-[#1e1b4b]">พิมพ์ใบเสร็จหลังบันทึก</span>
+                <span className="block text-[11px] font-semibold text-[#66638c]">
+                  ขนาดกระดาษตามตั้งค่าร้าน ({shopPrintProfile?.slipPaperSize || slipPaper})
+                </span>
+              </span>
+            </label>
 
-                  {/* Highlighted Fields: Phone & Plate */}
-                  <p className="text-[10px] font-bold text-slate-400">
-                    กรอกเบอร์โทรหรือทะเบียนรถอย่างน้อยหนึ่งอย่าง
-                  </p>
-                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-[#5b61ff]">เบอร์โทรศัพท์</label>
-                    <div className="relative">
-                      <input
-                        className={cn(
-                          "peer w-full rounded-2xl border-indigo-100 bg-white pr-4 py-3.5 text-lg font-black tracking-widest text-indigo-900 placeholder:text-slate-200 focus:border-[#5b61ff] focus:ring-[#5b61ff] transition-all",
-                          "pl-6 peer-placeholder-shown:pl-16",
-                        )}
-                        placeholder="08XXXXXXXX"
-                        value={visitForm.customer_phone}
-                        onChange={(e) =>
-                          setVisitForm((s) => ({ ...s, customer_phone: e.target.value.replace(/\D/g, "").slice(0, 15) }))
-                        }
-                        inputMode="numeric"
-                      />
-                      <span
-                        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 transition-opacity peer-placeholder-shown:opacity-100"
-                        aria-hidden
-                      >
-                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                        </svg>
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#8d64ff]">ทะเบียนรถ</label>
-                    <div className="relative">
-                      <input
-                        className={cn(
-                          "peer w-full rounded-2xl border-purple-100 bg-white pr-4 py-3.5 text-lg font-black tracking-widest text-purple-900 placeholder:text-slate-200 focus:border-[#8d64ff] focus:ring-[#8d64ff] transition-all",
-                          "pl-6 peer-placeholder-shown:pl-16",
-                        )}
-                        placeholder="กข 1234"
-                        value={visitForm.plate_number}
-                        onChange={(e) => setVisitForm((s) => ({ ...s, plate_number: e.target.value }))}
-                      />
-                      <span
-                        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 transition-opacity peer-placeholder-shown:opacity-100"
-                        aria-hidden
-                      >
-                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <rect width="18" height="12" x="3" y="6" rx="2" /><path d="M7 12h10M12 9v6" />
-                        </svg>
-                      </span>
-                    </div>
-                  </div>
-                  </div>
-
-                  {/* Package Selector */}
-                  <div className="space-y-1.5 pt-2">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">เลือกแพ็กเกจบริการ</label>
-                    <div className="grid grid-cols-1 gap-2">
-                      {packages
-                        .filter((p) => p.is_active)
-                        .map((p) => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => {
-                              setVisitForm((s) => ({
-                                ...s,
-                                package_id: String(p.id),
-                                bundle_id: "",
-                                final_price: String(p.price),
-                              }));
-                            }}
-                            className={cn(
-                              "flex items-center justify-between rounded-2xl border px-4 py-3 transition-all active:scale-[0.98]",
-                              visitForm.package_id === String(p.id)
-                                ? "border-[#5b61ff] bg-white text-[#5b61ff] shadow-sm ring-1 ring-[#5b61ff]"
-                                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300",
-                            )}
-                          >
-                            <span className="text-sm font-bold">{p.name}</span>
-                            <span className="text-sm font-black">฿{p.price.toLocaleString()}</span>
-                          </button>
-                        ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-5">
-                  {/* Bundle Search */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#8d64ff]">ค้นหาลูกค้าแพ็กเหมา</label>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <input
-                          className={cn(
-                            "peer w-full rounded-2xl border-purple-100 bg-white pr-4 py-3 text-sm font-bold placeholder:text-slate-300 focus:border-[#8d64ff] focus:ring-[#8d64ff] transition-all",
-                            "pl-4 peer-placeholder-shown:pl-16",
-                          )}
-                          placeholder="เบอร์โทร หรือ ทะเบียนรถ"
-                          value={visitForm.customer_lookup}
-                          onChange={(e) => setVisitForm((s) => ({ ...s, customer_lookup: e.target.value }))}
-                        />
-                        <span
-                          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 transition-opacity peer-placeholder-shown:opacity-100"
-                          aria-hidden
-                        >
-                          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
-                          </svg>
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={runVisitLookup}
-                        className="rounded-2xl bg-[#8d64ff] px-6 py-3 text-sm font-black text-white shadow-lg shadow-purple-100 transition-all active:scale-95"
-                      >
-                        ค้นหา
-                      </button>
-                    </div>
-                  </div>
-
-                  {visitLookupHint ? (
-                    <div className="flex items-center gap-2 rounded-xl bg-indigo-50 px-4 py-3 text-[11px] font-bold text-indigo-600">
-                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="3">
-                        <circle cx="12" cy="12" r="10" /><path d="M12 16h.01M12 8v4" />
-                      </svg>
-                      {visitLookupHint}
-                    </div>
-                  ) : null}
-
-                  {visitForm.bundle_id && (
-                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">ข้อมูลที่พบ</p>
-                      <div className="mt-2 grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-[10px] font-medium text-slate-500">ชื่อลูกค้า</p>
-                          <p className="text-sm font-black text-emerald-900">{visitForm.customer_name || "-"}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-medium text-slate-500">ทะเบียนรถ</p>
-                          <p className="text-sm font-black text-emerald-900">{visitForm.plate_number || "-"}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowVisitModal(false);
-                      setShowBundleModal(true);
-                    }}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 py-4 text-xs font-bold text-slate-400 transition-all hover:border-[#8d64ff] hover:text-[#8d64ff] active:scale-[0.98]"
-                  >
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M12 5v14M5 12h14" />
-                    </svg>
-                    ยังไม่มีแพ็กเกจ? คลิกเพื่อขายแพ็กเกจใหม่
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Advanced Options */}
             <div className="rounded-2xl border border-slate-100 bg-white p-2">
               <button
                 type="button"
@@ -2486,6 +3212,7 @@ export function CarWashDashboard({
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2.5"
+                  aria-hidden
                 >
                   <path d="m6 9 6 6 6-6" />
                 </svg>
@@ -2521,15 +3248,16 @@ export function CarWashDashboard({
                               type="button"
                               className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-white shadow-md active:scale-90"
                               onClick={() => setVisitForm((s) => ({ ...s, photo_url: "" }))}
+                              aria-label="ลบรูปแนบ"
                             >
-                              <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3">
+                              <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
                                 <path d="M18 6L6 18M6 6l12 12" />
                               </svg>
                             </button>
                           </div>
                         ) : (
                           <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-dashed border-slate-100 bg-slate-50/50 text-slate-300">
-                            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
+                            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" />
                             </svg>
                           </div>
@@ -2952,8 +3680,10 @@ export function CarWashDashboard({
         size="lg"
         appearance="glass"
         glassTint="violet"
+        mobileCentered
         onClose={() => setShowQrModal(false)}
         title="QR ลูกค้า"
+        description="ลิงก์พอร์ทัลจอง — เลือกแพ็ก · จองช่วงเวลา · ใช้แพ็กเหมา"
         footer={
           <div className="flex justify-end">
             <button
@@ -2969,10 +3699,29 @@ export function CarWashDashboard({
       >
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
+              <a
+                href={customerPortalPath || undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-disabled={!customerPortalPath}
+                className={cn(
+                  "cw-btn app-btn-primary rounded-xl px-3 py-2 text-sm font-semibold",
+                  !customerPortalPath && "pointer-events-none opacity-60",
+                )}
+                aria-label="เปิดลิงก์พอร์ทัลลูกค้าบนโฮสต์นี้"
+              >
+                <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <path d="M15 3h6v6" />
+                  <path d="M10 14 21 3" />
+                </svg>
+                <span className="cw-btn-label">เปิดลิงก์ลูกค้า</span>
+              </a>
               <button
                 type="button"
                 onClick={() => void copyPortalLink()}
-                className="cw-btn app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] shadow-sm ring-1 ring-white/40"
+                disabled={!portalUrl}
+                className="cw-btn app-btn-soft rounded-xl px-3 py-2 text-sm font-semibold text-[#4d47b6] shadow-sm ring-1 ring-white/40 disabled:opacity-60"
               >
                 <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><rect x="9" y="9" width="13" height="13" rx="2" /><rect x="2" y="2" width="13" height="13" rx="2" /></svg>
                 <span className="cw-btn-label">คัดลอกลิงก์</span>

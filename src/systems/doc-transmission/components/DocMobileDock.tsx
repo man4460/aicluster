@@ -1,72 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { AppMobileDockShell, appMobileDockGridClass } from "@/components/app-templates";
+import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import { cn } from "@/lib/cn";
 import {
-  docDockItemActiveClass,
-  docDockItemIdleClass,
-} from "@/systems/doc-transmission/doc-ui-tokens";
-
-type DockItem = {
-  href: string;
-  label: string;
-  icon: (props: { className?: string }) => React.ReactNode;
-  includes?: readonly string[];
-};
-
-const items: readonly DockItem[] = [
-  { href: "/dashboard/doc-transmission", label: "ภาพรวม", icon: IconHome },
-  {
-    href: "/dashboard/doc-transmission/records/orders",
-    label: "เอกสาร",
-    icon: IconDoc,
-    includes: ["/dashboard/doc-transmission/records"] as const,
-  },
-  {
-    href: "/dashboard/doc-transmission/master",
-    label: "ข้อมูลหลัก",
-    icon: IconStack,
-    includes: ["/dashboard/doc-transmission/settings"] as const,
-  },
-  { href: "/dashboard/doc-transmission/reports", label: "รายงาน", icon: IconReport },
-] as const;
-
-function isActive(pathname: string, href: string, includes?: readonly string[]) {
-  if (href === "/dashboard/doc-transmission") return pathname === href;
-  if (includes?.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return true;
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-export function DocMobileDock() {
-  const pathname = usePathname() ?? "";
-  return (
-    <AppMobileDockShell ariaLabel="เมนูล่าง สารบรรณดิจิทัล">
-      <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
-        {items.map((item) => {
-          const active = isActive(pathname, item.href, item.includes);
-          const Icon = item.icon;
-          return (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className={cn(
-                  "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1 text-center transition-all active:scale-90",
-                  active ? docDockItemActiveClass : docDockItemIdleClass,
-                )}
-                aria-current={active ? "page" : undefined}
-              >
-                <Icon className={cn("h-5 w-5 shrink-0", active ? "text-[#5b61ff]" : "text-slate-400")} />
-                <span className="max-w-full truncate px-0.5 text-[9px] font-black leading-none">{item.label}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </AppMobileDockShell>
-  );
-}
+  DOC_TRANSMISSION_NAV_ITEMS,
+  isDocTransmissionModulePath,
+  isDocTransmissionNavItemActive,
+  type DocTransmissionNavKey,
+} from "@/systems/doc-transmission/doc-transmission-module-nav";
 
 function IconHome({ className }: { className?: string }) {
   return (
@@ -100,5 +45,60 @@ function IconReport({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path d="M4 19h16M7 15l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+function dockIcon(key: DocTransmissionNavKey, className?: string): ReactNode {
+  switch (key) {
+    case "dashboard":
+      return <IconHome className={className} />;
+    case "records":
+      return <IconDoc className={className} />;
+    case "master":
+      return <IconStack className={className} />;
+    case "reports":
+      return <IconReport className={className} />;
+  }
+}
+
+const dockLinkClass = (active: boolean) =>
+  cn(
+    "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-center transition-all active:scale-90",
+    active ? cn("text-white shadow-md", appDashboardBrandGradientFillClass) : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
+  );
+
+export function DocTransmissionMobileDockNav() {
+  const pathname = usePathname() ?? "";
+  if (!isDocTransmissionModulePath(pathname)) return null;
+
+  return (
+    <ul className={cn(appMobileDockGridClass, "grid-cols-4")} aria-label="แท็บนำทางโมดูลสารบรรณดิจิทัล">
+      {DOC_TRANSMISSION_NAV_ITEMS.map((item) => {
+        const active = isDocTransmissionNavItemActive(pathname, item.key);
+        return (
+          <li key={item.key} className="min-w-0">
+            <Link
+              href={item.href}
+              className={dockLinkClass(active)}
+              aria-current={active ? "page" : undefined}
+              aria-label={item.label}
+              title={item.label}
+            >
+              {dockIcon(item.key, "h-5 w-5 shrink-0")}
+              <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">{item.shortLabel}</span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+export function DocMobileDock() {
+  const pathname = usePathname() ?? "";
+  return (
+    <AppMobileDockShell ariaLabel="เมนูล่าง สารบรรณดิจิทัล">
+      <DocTransmissionMobileDockNav />
+    </AppMobileDockShell>
   );
 }

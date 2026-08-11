@@ -17,6 +17,7 @@ alwaysApply: true
 - **พื้นที่เลื่อนเนื้อหา** ต้องมี padding-bottom เพื่อไม่ให้ถูก dock บัง (ดูแม่แบบในโค้ดจริง)
 - **อ้างอิงโค้ด:** `src/systems/car-wash/CarWashDashboard.tsx` (แท็บล่าง / สลับโซน), `src/systems/barber/components/BarberLayoutChrome.tsx`, `BarberModuleMobileDock` / `BarberModuleHeader.tsx`
 - **แถวการ์ดสรุปตัวเลข (stat) บนมือถือ:** ต้องเป็น **2 คอลัมน์** (`grid-cols-2`) — ห้ามปล่อย `grid-cols-1` บน viewport แคบ — รายละเอียดการ์ดคี่/คู่: **`.cursor/rules/dashboard-mobile-summary-stat-grid.mdc`**
+- **รายการที่กรองได้ (แพ็กเกจ · เหมา · จอง ฯลฯ):** ต้องมีปุ่ม **แสดง/ซ่อนกรอง** — **`.cursor/rules/dashboard-module-list-filter.mdc`** · มือถือไอคอน: **`.cursor/rules/dashboard-mobile-filter-icon.mdc`**
 
 ---
 
@@ -51,6 +52,8 @@ alwaysApply: true
 - ก่อนทำหน้า/โฟลว์ใหม่ ให้ดู **`src/systems/car-wash/CarWashDashboard.tsx`** และพาแนลที่เกี่ยวข้อง (แท็บ, **`FormModal`**, QR, ปุ่ม **`cw-btn`**, การจัดการ์ด)
 - กฎเชิงลึกเฉพาะคาร์แคร์: **`.cursor/rules/car-wash-dashboard-ui.mdc`**
 - การนำแม่แบบไปโมดูลอื่น (dock, token การ์ด, plain inner): **`.cursor/rules/barber-module-dashboard-template.mdc`**
+- **จองบริการ + ตารางพนักงาน** (แพ็กก่อนสล็อต · พอริตีแดชบอร์ด/พอร์ทัล · ห้ามจองอดีต · วันที่รับบริการ): **`.cursor/rules/module-booking-staff-schedule-template.mdc`** (ต้นแบบร้านตัดผม)
+- **ตั้งค่าร้าน — แถบเมนูมาตรฐาน** (พื้นฐาน · การเงิน · เว็ปลิงค์ลูกค้า · เวลาเปิดร้าน): **`.cursor/rules/dashboard-module-shop-settings-tabs.mdc`**
 - Hub QR การ์ดคู่ + ป๊อปอัป: **`.cursor/rules/shop-qr-hub-popup-pattern.mdc`**
 - **แผนที่ไฟล์คู่ขนาน (คาร์แคร์ × ร้านตัดผม):** **`.cursor/rules/dashboard-module-car-wash-barber-reference.mdc`**
 

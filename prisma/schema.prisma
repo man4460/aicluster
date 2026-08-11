@@ -381,12 +381,19 @@ model BarberStylist {
   phone       String?  @db.VarChar(20)
   /** รูปโปรไฟล์ — path ใต้ public เช่น /uploads/barber-stylists/... */
   photoUrl    String?  @map("photo_url") @db.VarChar(512)
+  /** เวลาเริ่มรับคิว (HH:mm เวลาไทย) */
+  workStartTime String @default("09:00") @map("work_start_time") @db.VarChar(5)
+  /** เวลาสิ้นสุดรับคิว (HH:mm เวลาไทย) — สล็อตต้องจบก่อนหรือเท่านี้ */
+  workEndTime   String @default("20:00") @map("work_end_time") @db.VarChar(5)
+  /** วันที่รับบริการประจำสัปดาห์ — JSON array ของ 0=อา … 6=ส (Asia/Bangkok); ค่าว่าง = ไม่รับวันไหน */
+  workWeekdaysJson String @default("[0,1,2,3,4,5,6]") @map("work_weekdays_json") @db.VarChar(64)
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   subscriptionsSold BarberCustomerSubscription[] @relation("SubscriptionSoldByStylist")
   serviceLogs       BarberServiceLog[]
+  bookings          BarberBooking[]
 
   @@index([ownerUserId])
   @@index([ownerUserId, isActive])
@@ -645,15 +652,33 @@ model BarberShopProfile {
   trialSessionId String @default("prod") @map("trial_session_id") @db.VarChar(36)
   displayName  String?  @map("display_name") @db.VarChar(200)
   logoUrl      String?  @map("logo_url") @db.VarChar(512)
+  tagline      String?  @db.VarChar(300)
   taxId        String?  @map("tax_id") @db.VarChar(30)
   address      String?  @db.Text
   contactPhone String?  @map("contact_phone") @db.VarChar(32)
+  contactLine  String?  @map("contact_line") @db.VarChar(120)
+  facebookUrl  String?  @map("facebook_url") @db.VarChar(512)
+  mapUrl       String?  @map("map_url") @db.VarChar(512)
   promptPayPhone String? @map("prompt_pay_phone") @db.VarChar(20)
   bankName     String?  @map("bank_name") @db.VarChar(120)
   bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
   bankAccountName String? @map("bank_account_name") @db.VarChar(200)
   /** ขนาดสลิปใบเสร็จของโมดูลนี้: SLIP_58 | SLIP_80 | A4 */
   slipPaperSize String @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
+  /** ปุ่มลัดยอดรับชำระ เช่น 80,100,120,150 */
+  payAmountPresets String @default("80,100,120,150") @map("pay_amount_presets") @db.VarChar(200)
+  /** รหัสเข้าลิงก์พนักงานรายวัน (hash) */
+  staffDailyPinHash String? @map("staff_daily_pin_hash") @db.VarChar(255)
+  /** เวลาเปิดร้าน (HH:mm เวลาไทย) */
+  openTime String @default("09:00") @map("open_time") @db.VarChar(5)
+  /** เวลาปิดร้าน (HH:mm เวลาไทย) */
+  closeTime String @default("20:00") @map("close_time") @db.VarChar(5)
+  /** ความยาวสล็อตจอง (นาที) เช่น 30 หรือ 60 */
+  slotMinutes Int @default(30) @map("slot_minutes")
+  /** แบนเนอร์หน้าเว็บลูกค้า */
+  portalBannerUrl String? @map("portal_banner_url") @db.VarChar(512)
+  /** แกลเลอรีหน้าเว็บลูกค้า — JSON array ของ URL */
+  portalGalleryJson String @default("[]") @map("portal_gallery_json") @db.Text
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -831,10 +856,15 @@ model BarberPackage {
   name          String   @db.VarChar(191)
   price         Decimal  @db.Decimal(10, 2)
   totalSessions Int      @map("total_sessions")
+  /** รูปปกแพ็กเกจ — path ใต้ public เช่น /uploads/barber-packages/... */
+  imageUrl      String?  @map("image_url") @db.VarChar(512)
+  /** ระยะเวลาบริการต่อครั้ง (นาที) — ใช้คำนวณจำนวนสล็อตตอนจอง */
+  durationMinutes Int @default(30) @map("duration_minutes")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   subscriptions BarberCustomerSubscription[]
+  bookings      BarberBooking[]
 
   @@index([ownerUserId])
   @@index([ownerUserId, trialSessionId])
@@ -849,6 +879,12 @@ model BarberCustomer {
   trialSessionId String @default("prod") @map("trial_session_id") @db.VarChar(36)
   phone        String   @db.VarChar(20)
   name         String?  @db.VarChar(100)
+  /** ต้องการใบกำกับภาษี — กรอก billing/tax เมื่อติ๊ก */
+  taxInvoiceEnabled Boolean @default(false) @map("tax_invoice_enabled")
+  billingName  String   @default("") @map("billing_name") @db.VarChar(160)
+  taxId        String   @default("") @map("tax_id") @db.VarChar(30)
+  taxAddress   String   @default("") @map("tax_address") @db.VarChar(1000)
+  taxBranch    String   @default("") @map("tax_branch") @db.VarChar(120)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -861,7 +897,7 @@ model BarberCustomer {
   @@map("barber_customers")
 }
 
-/** จองคิวล่วงหน้า — ผูกเบอร์/ลูกค้าในระบบได้ */
+/** จองคิวล่วงหน้า — ผูกเบอร์/ลูกค้าในระบบได้ · ตรวจชนคิวช่างตามช่วงเวลา */
 model BarberBooking {
   id               Int                  @id @default(autoincrement())
   ownerUserId      String               @map("owner_id") @db.VarChar(191)
@@ -871,13 +907,21 @@ model BarberBooking {
   customer         BarberCustomer?      @relation(fields: [barberCustomerId], references: [id], onDelete: SetNull)
   phone            String               @map("phone") @db.VarChar(20)
   customerName     String?              @map("customer_name") @db.VarChar(100)
+  /** เริ่มคิว (เวลาไทยเก็บเป็น DateTime) */
   scheduledAt      DateTime             @map("scheduled_at")
+  /** ความยาวการจอง (นาที) — ต้องครอบคลุมสล็อตตามแพ็ก/บริการ */
+  durationMinutes  Int                  @default(30) @map("duration_minutes")
+  stylistId        Int?                 @map("stylist_id")
+  stylist          BarberStylist?       @relation(fields: [stylistId], references: [id], onDelete: SetNull)
+  packageId        Int?                 @map("package_id")
+  package          BarberPackage?       @relation(fields: [packageId], references: [id], onDelete: SetNull)
   status           BarberBookingStatus  @default(SCHEDULED) @map("status")
   createdAt        DateTime             @default(now()) @map("created_at")
   updatedAt        DateTime             @updatedAt @map("updated_at")
 
   @@index([ownerUserId, scheduledAt])
   @@index([ownerUserId, trialSessionId])
+  @@index([stylistId, scheduledAt])
   @@map("barber_bookings")
 }
 
@@ -900,6 +944,8 @@ model BarberCustomerSubscription {
   status            BarberSubscriptionStatus @default(ACTIVE)
   /** รูปสลิปตอนขายแพ็ก (ถ้ามี) */
   saleReceiptImageUrl String?                @map("sale_receipt_image_url") @db.VarChar(512)
+  /** CASH | PROMPTPAY | TRANSFER | CREDIT_CARD */
+  paymentMethod     String?                  @map("payment_method") @db.VarChar(20)
   createdAt         DateTime                 @default(now()) @map("created_at")
   updatedAt         DateTime                 @updatedAt @map("updated_at")
 
@@ -931,6 +977,8 @@ model BarberServiceLog {
   amountBaht       Decimal?                      @map("amount_baht") @db.Decimal(10, 2)
   /** รูปบิล/สลิป walk-in เงินสด (ถ้ามี) */
   receiptImageUrl  String?                       @map("receipt_image_url") @db.VarChar(512)
+  /** CASH | PROMPTPAY | TRANSFER | CREDIT_CARD — walk-in ที่รับชำระ */
+  paymentMethod    String?                       @map("payment_method") @db.VarChar(20)
   note             String?                       @db.VarChar(255)
   createdAt        DateTime                      @default(now()) @map("created_at")
 
@@ -1718,7 +1766,24 @@ model CarWashShopProfile {
   ownerUserId        String   @map("owner_id") @db.VarChar(191)
   owner              User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   trialSessionId     String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  /** เวลาเปิดร้านค่าเริ่ม (HH:mm เวลาไทย) — ใช้เมื่อยังไม่ตั้งรายวัน */
+  openTime           String   @default("08:00") @map("open_time") @db.VarChar(5)
+  /** เวลาปิดร้านค่าเริ่ม (HH:mm เวลาไทย) */
+  closeTime          String   @default("20:00") @map("close_time") @db.VarChar(5)
   defaultSlotMinutes Int      @default(30) @map("default_slot_minutes")
+  /** วันที่เปิดร้านประจำสัปดาห์ — JSON array ของ 0=อา … 6=ส (Asia/Bangkok) */
+  openWeekdaysJson   String   @default("[0,1,2,3,4,5,6]") @map("open_weekdays_json") @db.VarChar(64)
+  /** ที่อยู่แสดงบนลิงก์ลูกค้า */
+  address            String?  @db.Text
+  contactLine        String?  @map("contact_line") @db.VarChar(120)
+  facebookUrl        String?  @map("facebook_url") @db.VarChar(512)
+  mapUrl             String?  @map("map_url") @db.VarChar(512)
+  portalBannerUrl    String?  @map("portal_banner_url") @db.VarChar(512)
+  portalGalleryJson  String   @default("[]") @map("portal_gallery_json") @db.VarChar(4000)
+  /** NONE | DEPOSIT | FULL — ชำระตอนจอง (ลิงก์ลูกค้า / เพิ่มคิว) */
+  portalBookingPaymentMode String @default("NONE") @map("portal_booking_payment_mode") @db.VarChar(16)
+  /** จำนวนมัดจำ (บาท) เมื่อโหมด DEPOSIT */
+  depositAmountBaht  Int?     @map("deposit_amount_baht")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -1754,12 +1819,25 @@ model CarWashBooking {
   phone           String                @db.VarChar(32)
   plateNumber     String                @default("") @map("plate_number") @db.VarChar(64)
   customerName    String?               @map("customer_name") @db.VarChar(160)
+  packageId       Int?                  @map("package_id")
+  packageName     String                @default("") @map("package_name") @db.VarChar(160)
   scheduledAt     DateTime              @map("scheduled_at")
   durationMinutes Int                   @default(30) @map("duration_minutes")
+  /** ราคารายการ ณ เวลาจอง (บาท) */
+  packagePrice    Int                   @default(0) @map("package_price")
+  /** ยอดที่ต้องชำระตอนจอง (มัดจำ/เต็ม) — null = ไม่บังคับ */
+  depositAmountBaht Int?                @map("deposit_amount_baht")
+  amountPaidBaht  Int                   @default(0) @map("amount_paid_baht")
+  /** UNPAID | CASH | PROMPTPAY | TRANSFER | CREDIT_CARD | ONSITE */
+  paymentMethod   String                @default("UNPAID") @map("payment_method") @db.VarChar(24)
+  /** UNPAID | PENDING_REVIEW | PARTIAL | PAID */
+  paymentStatus   String                @default("UNPAID") @map("payment_status") @db.VarChar(24)
+  paymentSlipUrl  String                @default("") @map("payment_slip_url") @db.VarChar(512)
   status          CarWashBookingStatus  @default(SCHEDULED) @map("status")
   note            String?               @db.VarChar(255)
   createdAt       DateTime              @default(now()) @map("created_at")
   updatedAt       DateTime              @updatedAt @map("updated_at")
+  visit           CarWashVisit?
 
   @@index([ownerUserId, scheduledAt])
   @@index([ownerUserId, trialSessionId])
@@ -1773,7 +1851,11 @@ model CarWashPackage {
   trialSessionId  String   @default("prod") @map("trial_session_id") @db.VarChar(36)
   name            String   @db.VarChar(160)
   price           Int
-  durationMinutes Int      @default(30) @map("duration_minutes")
+  /** ระยะบริการ (นาที) — ล้างสี/ดูดฝุ่นทั่วไปราว 60 */
+  durationMinutes Int      @default(60) @map("duration_minutes")
+  /** จำนวนครั้งในแพ็ก — 1 = รายครั้ง · >1 = แพ็กเหมา */
+  totalUses       Int      @default(1) @map("total_uses")
+  imageUrl        String?  @map("image_url") @db.VarChar(512)
   description     String   @default("") @db.VarChar(800)
   isActive        Boolean  @default(true) @map("is_active")
   createdAt       DateTime @default(now()) @map("created_at")
@@ -1833,6 +1915,9 @@ model CarWashVisit {
   /** แพ็กเกจเหมา: ค้างหักครั้งจนกว่าจะชำระแล้ว (PAID) แล้วเซิร์ฟเวอร์จะหักและเคลียร์ */
   bundleId       Int?     @map("bundle_id")
   pendingBundle  CarWashBundle? @relation("CarWashVisitPendingBundle", fields: [bundleId], references: [id], onDelete: SetNull)
+  /** จองคิวที่ผูกกับรายการลาน (พอร์ทัล / เพิ่มคิว) — null = walk-in */
+  bookingId      Int?     @unique @map("booking_id")
+  booking        CarWashBooking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 

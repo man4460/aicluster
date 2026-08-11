@@ -82,7 +82,7 @@ export function HotelResortDashboardClient({
   const [rooms, setRooms] = useState<HotelResortRoomRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filterOpen, setFilterOpen] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [filtersActive, setFiltersActive] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);

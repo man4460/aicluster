@@ -5,8 +5,8 @@ import { requireSession } from "@/lib/api-auth";
 import { carWashOwnerFromAuth } from "@/lib/car-wash/api-owner";
 import { getCarWashDataScope } from "@/lib/trial/module-scopes";
 import { bangkokDateKey } from "@/lib/time/bangkok";
-import { assertBookingSlotAvailable } from "@/lib/car-wash/booking-slot-availability";
 import { bangkokDayRangeFromDateKey } from "@/lib/car-wash/booking-datetime";
+import { createCarWashBookingWithPayment } from "@/lib/car-wash/create-booking";
 import { isPrismaSchemaMismatch, THAI_PRISMA_SCHEMA_MISMATCH } from "@/lib/prisma-schema-mismatch";
 
 const postSchema = z.object({
@@ -24,6 +24,11 @@ const postSchema = z.object({
       return t.length > 0 ? t.slice(0, 160) : null;
     }),
   scheduledAtLocal: z.string().min(10).max(40),
+  packageId: z.number().int().min(1),
+  paymentMethod: z.string().max(24).optional().nullable(),
+  amountPaidBaht: z.number().int().min(0).max(9_999_999).optional().nullable(),
+  paymentSlipUrl: z.string().max(512).optional().nullable(),
+  forcePaymentMode: z.enum(["NONE", "DEPOSIT", "FULL"]).optional().nullable(),
 });
 
 function normalizePhone(raw: string): string {
@@ -35,16 +40,36 @@ function mapBooking(row: {
   phone: string;
   plateNumber: string;
   customerName: string | null;
+  packageId: number | null;
+  packageName: string;
   scheduledAt: Date;
+  durationMinutes: number;
   status: string;
+  packagePrice?: number;
+  depositAmountBaht?: number | null;
+  amountPaidBaht?: number;
+  paymentMethod?: string;
+  paymentStatus?: string;
+  paymentSlipUrl?: string;
+  visit?: { id: number } | null;
 }) {
   return {
     id: row.id,
     phone: row.phone,
     plateNumber: row.plateNumber,
     customerName: row.customerName,
+    packageId: row.packageId,
+    packageName: row.packageName,
+    durationMinutes: row.durationMinutes,
     scheduledAt: row.scheduledAt.toISOString(),
     status: row.status,
+    packagePrice: row.packagePrice ?? 0,
+    depositAmountBaht: row.depositAmountBaht ?? null,
+    amountPaidBaht: row.amountPaidBaht ?? 0,
+    paymentMethod: row.paymentMethod ?? "UNPAID",
+    paymentStatus: row.paymentStatus ?? "UNPAID",
+    paymentSlipUrl: row.paymentSlipUrl ?? "",
+    visitId: row.visit?.id ?? null,
   };
 }
 
@@ -67,6 +92,7 @@ export async function GET(req: Request) {
       trialSessionId: scope.trialSessionId,
       scheduledAt: { gte: range.start, lt: range.end },
     },
+    include: { visit: { select: { id: true } } },
     orderBy: { scheduledAt: "asc" },
   });
 
@@ -97,31 +123,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "เบอร์ไม่ถูกต้อง" }, { status: 400 });
   }
 
-  const slotCheck = await assertBookingSlotAvailable(
-    prisma,
-    own.ownerId,
-    scope.trialSessionId,
-    parsed.data.scheduledAtLocal,
-  );
-  if (!slotCheck.ok) {
-    return NextResponse.json({ error: slotCheck.error }, { status: 400 });
-  }
-  const { scheduledAt, slotMinutes } = slotCheck;
-
   try {
-    const row = await prisma.carWashBooking.create({
-      data: {
-        ownerUserId: own.ownerId,
-        trialSessionId: scope.trialSessionId,
-        phone,
-        plateNumber: parsed.data.plateNumber ?? "",
-        customerName: parsed.data.customerName,
-        scheduledAt,
-        durationMinutes: slotMinutes,
+    const result = await createCarWashBookingWithPayment(prisma, own.ownerId, scope.trialSessionId, {
+      phone,
+      plateNumber: parsed.data.plateNumber,
+      customerName: parsed.data.customerName,
+      packageId: parsed.data.packageId,
+      scheduledAtLocal: parsed.data.scheduledAtLocal,
+      fromPortal: false,
+      payment: {
+        paymentMethod: parsed.data.paymentMethod,
+        amountPaidBaht: parsed.data.amountPaidBaht,
+        paymentSlipUrl: parsed.data.paymentSlipUrl,
+        forceMode: parsed.data.forcePaymentMode ?? null,
       },
     });
-
-    return NextResponse.json({ booking: mapBooking(row) });
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ booking: mapBooking({ ...result.booking, visit: null }) });
   } catch (e) {
     console.error("[car-wash/bookings POST]", e);
     if (isPrismaSchemaMismatch(e)) {

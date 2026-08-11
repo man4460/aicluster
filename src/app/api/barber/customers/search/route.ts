@@ -55,6 +55,8 @@ export async function GET(req: Request) {
       status: s.status,
       packageName: s.package.name,
       packageId: s.packageId,
+      durationMinutes: s.package.durationMinutes,
+      imageUrl: s.package.imageUrl ?? null,
     })),
   });
 }

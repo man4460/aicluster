@@ -1,21 +1,41 @@
-"use client";
-
+import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-export type EcommerceStatTone = "slate" | "blue" | "green" | "amber" | "violet" | "rose";
+type Tone = "slate" | "violet" | "emerald" | "amber" | "indigo" | "rose";
 
-const toneStyles: Record<EcommerceStatTone, string> = {
-  violet:
-    "border-white/60 bg-gradient-to-br from-white/60 via-indigo-50/35 to-violet-100/30 text-indigo-800 shadow-[0_18px_38px_-26px_rgba(79,70,229,0.45)]",
-  blue: "border-white/60 bg-gradient-to-br from-white/60 via-indigo-50/35 to-indigo-100/30 text-indigo-700 shadow-[0_18px_38px_-26px_rgba(79,70,229,0.45)]",
-  green:
-    "border-white/60 bg-gradient-to-br from-white/60 via-emerald-50/35 to-emerald-100/30 text-emerald-700 shadow-[0_18px_38px_-26px_rgba(16,185,129,0.35)]",
-  amber:
-    "border-white/60 bg-gradient-to-br from-white/60 via-amber-50/35 to-orange-100/30 text-amber-700 shadow-[0_18px_38px_-26px_rgba(217,119,6,0.35)]",
-  rose: "border-white/60 bg-gradient-to-br from-white/60 via-rose-50/35 to-rose-100/30 text-rose-700 shadow-[0_18px_38px_-26px_rgba(244,63,94,0.35)]",
-  slate:
-    "border-white/60 bg-gradient-to-br from-white/60 via-slate-50/40 to-slate-100/35 text-slate-700 shadow-[0_18px_38px_-26px_rgba(51,65,85,0.35)]",
-};
+function toneGradientClass(tone: Tone): string {
+  switch (tone) {
+    case "violet":
+      return "from-[#7c3aed] via-[#a855f7] to-[#c026d3]";
+    case "indigo":
+      return "from-[#4338ca] via-[#5b61ff] to-[#6366f1]";
+    case "emerald":
+      return "from-emerald-500 via-teal-500 to-[#0d9488]";
+    case "amber":
+      return "from-amber-500 via-orange-500 to-rose-500";
+    case "rose":
+      return "from-rose-500 via-pink-500 to-fuchsia-500";
+    case "slate":
+      return "from-slate-500 via-slate-600 to-slate-700";
+  }
+}
+
+function toneBubbleClass(tone: Tone): string {
+  switch (tone) {
+    case "violet":
+      return "from-violet-300/40 via-fuchsia-200/30 to-transparent";
+    case "indigo":
+      return "from-indigo-100/60 via-indigo-200/30 to-transparent";
+    case "emerald":
+      return "from-emerald-300/45 via-teal-200/30 to-transparent";
+    case "amber":
+      return "from-amber-300/45 via-orange-200/30 to-transparent";
+    case "rose":
+      return "from-fuchsia-300/40 via-pink-200/30 to-transparent";
+    case "slate":
+      return "from-slate-200/50 via-slate-100/30 to-transparent";
+  }
+}
 
 export function EcommerceStatCard({
   title,
@@ -24,39 +44,44 @@ export function EcommerceStatCard({
   icon,
   className,
   compact,
+  subtitle,
+  colSpanMobile,
 }: {
   title: string;
-  value: string | number;
-  tone?: EcommerceStatTone;
-  icon?: React.ReactNode;
+  value: ReactNode;
+  tone?: Tone;
+  icon?: ReactNode;
   className?: string;
-  /** การ์ดรายรับใหญ่ */
   compact?: boolean;
+  subtitle?: ReactNode;
+  colSpanMobile?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-[2rem] border p-5 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.4)]",
-        compact ? "p-4 sm:p-5" : "sm:p-6",
-        toneStyles[tone],
+        "relative overflow-hidden rounded-[1.5rem] border border-[#e8e6f4]/80 bg-white shadow-sm",
+        compact ? "p-4 sm:p-4" : "p-4",
+        colSpanMobile && "col-span-2 sm:col-span-1",
         className,
       )}
     >
+      <div aria-hidden className={cn("pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full bg-gradient-to-br blur-xl", toneBubbleClass(tone))} />
       <div className="relative z-10 flex h-full flex-col justify-between">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-black uppercase tracking-widest opacity-60">{title}</p>
-          {icon ? <div className="opacity-40">{icon}</div> : null}
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#66638c]">{title}</p>
+          {icon ? <div className="opacity-60">{icon}</div> : null}
         </div>
         <p
           className={cn(
-            "mt-3 font-black tabular-nums tracking-tight",
-            compact ? "text-2xl sm:text-3xl" : "text-2xl sm:text-3xl",
+            "mt-1 bg-gradient-to-br bg-clip-text font-black tabular-nums leading-none text-transparent",
+            toneGradientClass(tone),
+            compact ? "text-2xl sm:text-[1.8rem]" : "text-2xl sm:text-[1.8rem]",
           )}
         >
           {value}
         </p>
+        {subtitle ? <p className="mt-1 text-xs font-semibold text-[#8b87ad]">{subtitle}</p> : null}
       </div>
-      <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-current opacity-[0.03] blur-2xl" aria-hidden />
     </div>
   );
 }

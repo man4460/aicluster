@@ -8,6 +8,14 @@ import {
   isPrismaSchemaMismatch,
   THAI_PRISMA_SCHEMA_MISMATCH,
 } from "@/lib/prisma-schema-mismatch";
+import {
+  BARBER_ALL_WEEKDAYS,
+  barberMapStylistSchedule,
+  barberNormalizeWorkHm,
+  barberNormalizeWorkWeekdays,
+  barberSerializeWorkWeekdays,
+} from "@/systems/barber/lib/stylist-schedule";
+import { barberParseHmToMinutes } from "@/systems/barber/lib/booking-slots";
 
 const STYLIST_PHOTO_PREFIX = "/uploads/barber-stylists/";
 
@@ -15,12 +23,40 @@ const postSchema = z.object({
   name: z.string().trim().min(1).max(100),
   phone: z.string().trim().max(20).optional().nullable(),
   photoUrl: z.string().trim().max(512).optional().nullable(),
+  workStartTime: z.string().max(5).optional(),
+  workEndTime: z.string().max(5).optional(),
+  workWeekdays: z.array(z.number().int().min(0).max(6)).optional(),
 });
 
 function normalizePhone(raw: string | null | undefined): string | null {
   if (raw == null || raw.trim() === "") return null;
   const d = raw.replace(/\D/g, "").slice(0, 20);
   return d.length > 0 ? d : null;
+}
+
+function mapStylist(s: {
+  id: number;
+  name: string;
+  phone: string | null;
+  photoUrl: string | null;
+  isActive: boolean;
+  workStartTime: string;
+  workEndTime: string;
+  workWeekdaysJson: string;
+  createdAt?: Date;
+}) {
+  const schedule = barberMapStylistSchedule(s);
+  return {
+    id: s.id,
+    name: s.name,
+    phone: s.phone,
+    photoUrl: s.photoUrl ?? null,
+    isActive: s.isActive,
+    workStartTime: schedule.workStartTime,
+    workEndTime: schedule.workEndTime,
+    workWeekdays: schedule.workWeekdays,
+    ...(s.createdAt ? { createdAt: s.createdAt.toISOString() } : {}),
+  };
 }
 
 export async function GET(req: Request) {
@@ -45,14 +81,7 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json({
-      stylists: rows.map((s) => ({
-        id: s.id,
-        name: s.name,
-        phone: s.phone,
-        photoUrl: s.photoUrl ?? null,
-        isActive: s.isActive,
-        createdAt: s.createdAt.toISOString(),
-      })),
+      stylists: rows.map((s) => mapStylist(s)),
     });
   } catch (e) {
     console.error("[barber/stylists GET]", e);
@@ -93,24 +122,47 @@ export async function POST(req: Request) {
     photoUrl = t;
   }
 
-  const s = await prisma.barberStylist.create({
-    data: {
-      ownerUserId: own.ownerId,
-      trialSessionId: scope.trialSessionId,
-      name: parsed.data.name.trim(),
-      phone,
-      photoUrl,
-      isActive: true,
-    },
-  });
+  const workStartTime = barberNormalizeWorkHm(parsed.data.workStartTime, "09:00");
+  const workEndTime = barberNormalizeWorkHm(parsed.data.workEndTime, "20:00");
+  const sm = barberParseHmToMinutes(workStartTime);
+  const em = barberParseHmToMinutes(workEndTime);
+  if (sm == null || em == null || em <= sm) {
+    return NextResponse.json(
+      { error: "ช่วงเวลารับคิวไม่ถูกต้อง (สิ้นสุดต้องหลังเริ่ม)" },
+      { status: 400 },
+    );
+  }
+  const workWeekdays = barberNormalizeWorkWeekdays(
+    parsed.data.workWeekdays ?? [...BARBER_ALL_WEEKDAYS],
+  );
+  if (workWeekdays.length === 0) {
+    return NextResponse.json({ error: "เลือกอย่างน้อย 1 วันที่รับบริการ" }, { status: 400 });
+  }
+  const workWeekdaysJson = barberSerializeWorkWeekdays(workWeekdays);
 
-  return NextResponse.json({
-    stylist: {
-      id: s.id,
-      name: s.name,
-      phone: s.phone,
-      photoUrl: s.photoUrl ?? null,
-      isActive: s.isActive,
-    },
-  });
+  try {
+    const s = await prisma.barberStylist.create({
+      data: {
+        ownerUserId: own.ownerId,
+        trialSessionId: scope.trialSessionId,
+        name: parsed.data.name.trim(),
+        phone,
+        photoUrl,
+        isActive: true,
+        workStartTime,
+        workEndTime,
+        workWeekdaysJson,
+      },
+    });
+
+    return NextResponse.json({
+      stylist: mapStylist(s),
+    });
+  } catch (e) {
+    console.error("[barber/stylists POST]", e);
+    if (isPrismaSchemaMismatch(e)) {
+      return NextResponse.json({ error: THAI_PRISMA_SCHEMA_MISMATCH }, { status: 503 });
+    }
+    return NextResponse.json({ error: "บันทึกไม่สำเร็จ" }, { status: 500 });
+  }
 }

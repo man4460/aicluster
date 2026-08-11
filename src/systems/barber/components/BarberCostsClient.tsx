@@ -194,7 +194,6 @@ export function BarberCostsClient({
       <PageHeader
         compact
         title="ต้นทุน / รายจ่าย"
-        description="บันทึกตามหมวด แนบสลิป — ยอดรวมในกราฟหน้ายอดขาย"
         action={
           <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
             <CostToolbarButtons toolbar={toolbar} busy={loading} />

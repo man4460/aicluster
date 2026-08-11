@@ -1204,7 +1204,7 @@ export function FootballTurfDashboard({
   const incomeCamera = useAppCameraCapture({ title: "ถ่ายรูปสลิปรายรับ" });
   const incomeGalleryRef = useRef<HTMLInputElement>(null);
   const [financePanel, setFinancePanel] = useState<"history" | "expenses">("history");
-  const [financeFilterOpen, setFinanceFilterOpen] = useState(true);
+  const [financeFilterOpen, setFinanceFilterOpen] = useState(false);
   const [financeChartsOpen, setFinanceChartsOpen] = useState(false);
   const [courtOpen, setCourtOpen] = useState(false);
   const [editingCourtId, setEditingCourtId] = useState<number | null>(null);
@@ -1231,7 +1231,7 @@ export function FootballTurfDashboard({
   const [queueSearch, setQueueSearch] = useState("");
   const [queueStatus, setQueueStatus] = useState("ALL");
   const [queueCourtId, setQueueCourtId] = useState("ALL");
-  const [queueFilterOpen, setQueueFilterOpen] = useState(true);
+  const [queueFilterOpen, setQueueFilterOpen] = useState(false);
   const [queueDatePreset, setQueueDatePreset] = useState<QueueDatePreset>("MONTH");
   const [queueDateFrom, setQueueDateFrom] = useState("");
   const [queueDateTo, setQueueDateTo] = useState("");

@@ -42,7 +42,11 @@ export async function GET(req: Request) {
     closeTime: schedule.closeTime,
     slotMinutes: schedule.slotMinutes,
     isClosed: schedule.isClosed,
-    slotAvailability: slotAvailability.map((s) => ({ time: s.time, available: s.available })),
+    slotAvailability: slotAvailability.map((s) => ({
+      time: s.time,
+      available: s.available,
+      ...(s.status ? { status: s.status } : {}),
+    })),
     availableCount: slotAvailability.filter((s) => s.available).length,
   });
 }

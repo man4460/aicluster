@@ -30,6 +30,7 @@ Canonical: **โรงแรม / รีสอร์ท** — หน้า `/hot
 |------|-----|----------|
 | เว็บไซต์จอง (กฎนี้) | `module-customer-booking-website-portal.mdc` | โรงแรม · รีสอร์ท · ที่พัก · โดเมนที่ต้อง “หน้าเว็บร้าน” |
 | พอร์ทัล QR กะทัดรัด | `shop-customer-qr-portal.mdc` | คาร์แคร์ · บาร์เบอร์ · ซักผ้า · โฟลว์เช็คอินสั้น |
+| จองสล็อต + ตารางพนักงาน | `module-booking-staff-schedule-template.mdc` | บาร์เบอร์ · นวด · โดเมนคิวรายชั่วโมงที่มีช่าง/พนักงาน |
 | ลิงก์พนักงาน | `module-staff-token-link-portal.mdc` | staff `?t=&k=` — คนละลิงก์ |
 | Hub QR ในแดชบอร์ด | `shop-qr-hub-popup-pattern.mdc` | การ์ดคู่ลูกค้า/พนักงาน + ป๊อปอัป |
 | คำอธิบายสั้นบนหน้าลูกค้า | `customer-portal-no-description-copy.mdc` | ทุกหน้าสาธารณะลูกค้า |

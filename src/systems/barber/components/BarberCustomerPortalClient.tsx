@@ -22,7 +22,14 @@ type LookupOk = {
   subscriptions: SubRow[];
 };
 
-export function BarberCustomerPortalClient({ ownerId }: { ownerId: string }) {
+export function BarberCustomerPortalClient({
+  ownerId,
+  embedded = false,
+}: {
+  ownerId: string;
+  /** เมื่อฝังในเว็บไซต์พอร์ทัล — ไม่ห่อ glass page / hero ชั้นนอก */
+  embedded?: boolean;
+}) {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -212,32 +219,8 @@ export function BarberCustomerPortalClient({ ownerId }: { ownerId: string }) {
     }
   }
 
-  return (
-    <AppPublicCheckInGlassPage>
-      <div className="relative mx-auto max-w-md space-y-4">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-[1.25rem] border border-white/70 bg-gradient-to-br from-white/80 to-violet-100/60 shadow-[0_8px_24px_-8px_rgba(91,97,255,0.35)] backdrop-blur-xl ring-1 ring-inset ring-white/70">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-7 w-7 text-[#5b61ff]"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <circle cx="6" cy="6" r="3" />
-              <circle cx="6" cy="18" r="3" />
-              <line x1="20" y1="4" x2="8.12" y2="15.88" />
-              <line x1="14.47" y1="14.48" x2="20" y2="20" />
-              <line x1="8.12" y1="8.12" x2="12" y2="12" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-black tracking-tight text-[#1e1b4b]">สมาชิกร้านตัดผม</h1>
-          <p className="mt-1 text-sm text-[#6b6894]">กรอกเบอร์โทรเพื่อดูแพ็กและยืนยันการใช้บริการ</p>
-        </div>
-
+  const body = (
+    <>
         <div className={appPublicCheckInGlassCardClass}>
           <div className="px-5 py-5 sm:px-6">
             <form onSubmit={onSearch} className="flex items-stretch gap-2">
@@ -474,6 +457,38 @@ export function BarberCustomerPortalClient({ ownerId }: { ownerId: string }) {
             </div>
           </div>
         ) : null}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="space-y-4">{body}</div>;
+  }
+
+  return (
+    <AppPublicCheckInGlassPage>
+      <div className="relative mx-auto max-w-md space-y-4">
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-[1.25rem] border border-white/70 bg-gradient-to-br from-white/80 to-violet-100/60 shadow-[0_8px_24px_-8px_rgba(91,97,255,0.35)] backdrop-blur-xl ring-1 ring-inset ring-white/70">
+            <svg
+              viewBox="0 0 24 24"
+              className="h-7 w-7 text-[#5b61ff]"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <circle cx="6" cy="6" r="3" />
+              <circle cx="6" cy="18" r="3" />
+              <line x1="20" y1="4" x2="8.12" y2="15.88" />
+              <line x1="14.47" y1="14.48" x2="20" y2="20" />
+              <line x1="8.12" y1="8.12" x2="12" y2="12" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-black tracking-tight text-[#1e1b4b]">สมาชิกร้านตัดผม</h1>
+        </div>
+        {body}
       </div>
     </AppPublicCheckInGlassPage>
   );

@@ -1,25 +1,14 @@
-import type { Metadata } from "next";
-import { isBarberCustomerPortalOpenForOwner } from "@/lib/barber/portal-access";
-import { BarberCustomerPortalClient } from "@/systems/barber/components/BarberCustomerPortalClient";
-import { BarberPortalMaintenance } from "@/systems/barber/components/BarberPortalMaintenance";
+import { permanentRedirect } from "next/navigation";
 
-type Props = { params: Promise<{ ownerId: string }> };
-
-export const metadata: Metadata = {
-  title: "สมาชิกร้าน",
-  robots: { index: false, follow: false },
+type Props = {
+  params: Promise<{ ownerId: string }>;
+  searchParams: Promise<{ t?: string }>;
 };
 
-export default async function BarberCustomerPortalPage({ params }: Props) {
+/** @deprecated ใช้ `/barber/[ownerId]` — คง redirect จากลิงก์เก่า `/m/...` */
+export default async function BarberCustomerPortalLegacyRedirect({ params, searchParams }: Props) {
   const { ownerId } = await params;
-  if (!ownerId || ownerId.length < 10) {
-    return <BarberPortalMaintenance />;
-  }
-
-  const open = await isBarberCustomerPortalOpenForOwner(ownerId);
-  if (!open) {
-    return <BarberPortalMaintenance />;
-  }
-
-  return <BarberCustomerPortalClient ownerId={ownerId} />;
+  const sp = await searchParams;
+  const q = sp.t?.trim() ? `?t=${encodeURIComponent(sp.t.trim())}` : "";
+  permanentRedirect(`/barber/${ownerId}${q}`);
 }

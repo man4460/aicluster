@@ -16,7 +16,7 @@ import { seedSchoolBankProdDemoForOwner } from "../src/lib/trial/seed-school-ban
 import { seedCommunityCoopProdDemoForOwner } from "../src/lib/trial/seed-community-coop";
 import { seedAttendanceProdDemoForOwner } from "../src/lib/trial/seed-attendance";
 import { seedDormitoryProdDemoForOwner } from "../src/lib/trial/seed-dorm";
-import { seedBarberProdDemoForOwner } from "../src/lib/trial/seed-barber";
+import { fillBarberPortalDemoMedia, seedBarberProdDemoForOwner } from "../src/lib/trial/seed-barber";
 import { seedCarWashProdDemoForOwner } from "../src/lib/trial/seed-car-wash";
 import { seedFootballTurfProdDemoForOwner } from "../src/lib/trial/seed-football-turf";
 import { seedMassageProdDemoForOwner } from "../src/lib/trial/seed-massage";
@@ -695,6 +695,7 @@ async function main() {
       await tryDemoSeed(`barber (${email})`, () => seedBarberProdDemoForOwner(prisma, row.id));
     }
   }
+  await tryDemoSeed("barber portal media fill", () => fillBarberPortalDemoMedia(prisma));
 
   /** คาร์แคร์ — แพ็กตัวอย่าง */
   for (const email of demoSeedDataOwnerEmails) {

@@ -9,6 +9,10 @@ export type ServicePackage = {
   name: string;
   price: number;
   duration_minutes: number;
+  /** จำนวนครั้งในแพ็ก — 1 = รายครั้ง · >1 = เหมา */
+  total_uses: number;
+  /** รูปปกแพ็กเกจ (ลิงก์ลูกค้า) */
+  image_url: string | null;
   description: string;
   is_active: boolean;
 };
@@ -41,6 +45,8 @@ export type ServiceVisit = {
   photo_url: string;
   /** เหมาจ่าย: ยังไม่หักครั้งจนกว่า PAID (null หลังหักแล้วหรือไม่ใช่เหมา) */
   bundle_id: number | null;
+  /** คิวจองที่ผูก (พอร์ทัล / เพิ่มคิว) */
+  booking_id: number | null;
 };
 
 /** PATCH รายการล้าง — ส่งเฉพาะฟิลด์ที่ต้องการเปลี่ยน */
@@ -180,7 +186,9 @@ const seedDB: CarWashDB = {
       id: 1,
       name: "Basic Wash",
       price: 250,
-      duration_minutes: 30,
+      duration_minutes: 60,
+      total_uses: 1,
+      image_url: null,
       description: "Exterior wash and dry",
       is_active: true,
     },
@@ -189,6 +197,8 @@ const seedDB: CarWashDB = {
       name: "Premium Wash",
       price: 590,
       duration_minutes: 60,
+      total_uses: 1,
+      image_url: null,
       description: "Exterior + interior cleaning + tire shine",
       is_active: true,
     },
@@ -219,6 +229,7 @@ const seedDB: CarWashDB = {
       service_status: "COMPLETED",
       photo_url: "",
       bundle_id: null,
+      booking_id: null,
     },
   ],
   bundles: [
@@ -286,6 +297,7 @@ function normalizeDB(input: unknown): CarWashDB | null {
       ),
       photo_url: typeof rv.photo_url === "string" ? rv.photo_url : "",
       bundle_id: typeof rv.bundle_id === "number" ? rv.bundle_id : null,
+      booking_id: typeof rv.booking_id === "number" ? rv.booking_id : null,
     };
   });
 
@@ -311,13 +323,29 @@ function normalizeDB(input: unknown): CarWashDB | null {
       })
     : [];
 
-  const maxPackage = raw.packages.reduce((m, x) => (typeof x.id === "number" && x.id > m ? x.id : m), 0);
+  const packages: ServicePackage[] = Array.isArray(raw.packages)
+    ? raw.packages.map((p, idx) => {
+        const entry = p as Partial<ServicePackage>;
+        return {
+          id: typeof entry.id === "number" ? entry.id : idx + 1,
+          name: typeof entry.name === "string" ? entry.name : "",
+          price: typeof entry.price === "number" ? entry.price : 0,
+          duration_minutes: typeof entry.duration_minutes === "number" ? entry.duration_minutes : 60,
+          total_uses: typeof entry.total_uses === "number" ? Math.max(1, entry.total_uses) : 1,
+          image_url: typeof entry.image_url === "string" && entry.image_url.trim() ? entry.image_url.trim() : null,
+          description: typeof entry.description === "string" ? entry.description : "",
+          is_active: typeof entry.is_active === "boolean" ? entry.is_active : true,
+        };
+      })
+    : [];
+
+  const maxPackage = packages.reduce((m, x) => (x.id > m ? x.id : m), 0);
   const maxComplaint = raw.complaints.reduce((m, x) => (typeof x.id === "number" && x.id > m ? x.id : m), 0);
   const maxVisit = visits.reduce((m, x) => (x.id > m ? x.id : m), 0);
   const maxBundle = bundles.reduce((m, x) => (x.id > m ? x.id : m), 0);
 
   return {
-    packages: raw.packages as ServicePackage[],
+    packages,
     complaints: raw.complaints as Complaint[],
     visits,
     bundles,
@@ -473,6 +501,7 @@ export class LocalStorageCarWashRepository implements CarWashRepository {
       service_status: status,
       photo_url: input.photo_url ?? "",
       bundle_id: storedBundleId,
+      booking_id: input.booking_id ?? null,
     };
     db.seq.visit = row.id;
     db.visits.push(row);
@@ -692,7 +721,11 @@ class SessionApiCarWashRepository implements CarWashRepository {
   async listPackages(): Promise<ServicePackage[]> {
     const res = await sessionFetch("/api/car-wash/session/packages", { cache: "no-store" });
     const data = await readJson<{ packages: ServicePackage[] }>(res);
-    return data.packages;
+    return (data.packages ?? []).map((p) => ({
+      ...p,
+      total_uses: Math.max(1, p.total_uses || 1),
+      image_url: p.image_url?.trim() || null,
+    }));
   }
   async createPackage(input: Omit<ServicePackage, "id">): Promise<ServicePackage> {
     const res = await sessionFetch("/api/car-wash/session/packages", {
@@ -890,6 +923,25 @@ export async function uploadCarWashSessionImage(file: File): Promise<string> {
   const form = new FormData();
   form.append("file", file);
   const res = await sessionFetch("/api/car-wash/session/images/upload", {
+    method: "POST",
+    body: form,
+    credentials: "include",
+  });
+  const data = (await res.json().catch(() => ({}))) as { error?: string; imageUrl?: string };
+  if (!res.ok) {
+    const msg =
+      typeof data.error === "string" && data.error.trim() ? data.error : "อัปโหลดรูปไม่สำเร็จ";
+    throw new Error(msg);
+  }
+  const url = data.imageUrl?.trim();
+  if (!url) throw new Error("อัปโหลดรูปไม่สำเร็จ");
+  return url;
+}
+
+export async function uploadCarWashPackageImage(file: File): Promise<string> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await sessionFetch("/api/car-wash/session/packages/upload", {
     method: "POST",
     body: form,
     credentials: "include",

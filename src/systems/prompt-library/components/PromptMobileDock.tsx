@@ -1,70 +1,73 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { appMobileDockGridClass } from "@/components/app-templates";
+import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import { cn } from "@/lib/cn";
-
-const base =
-  "fixed inset-x-0 bottom-0 z-[70] border-t border-white/45 bg-gradient-to-r from-white/80 via-white/70 to-[#eef2ff]/75 px-3 pb-[calc(env(safe-area-inset-bottom)+0.45rem)] pt-2 backdrop-blur-2xl md:hidden";
-
-type Item = { href: string; label: string; icon: (p: { className?: string }) => React.ReactNode };
-
-const items: Item[] = [
-  { href: "/dashboard/prompt-library", label: "คลัง", icon: IconSpark },
-  { href: "/dashboard/prompt-library/categories", label: "หมวด", icon: IconFolders },
-];
-
-function active(path: string, href: string) {
-  if (href === "/dashboard/prompt-library") return path === href;
-  return path === href || path.startsWith(`${href}/`);
-}
-
-export function PromptMobileDock() {
-  const pathname = usePathname() ?? "";
-  return (
-    <nav aria-label="เมนูล่าง คลังคำสั่ง AI" className={base}>
-      <ul className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-1 rounded-[2rem] border border-white/60 bg-white/65 p-1.5 shadow-[0_12px_38px_-18px_rgba(76,70,178,0.55)] ring-1 ring-white/65">
-        {items.map((item) => {
-          const on = active(pathname, item.href);
-          const Icon = item.icon;
-          return (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className={cn(
-                  "flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-bold tracking-tight transition",
-                  on
-                    ? "bg-gradient-to-b from-[#5b61ff] to-[#4d47b6] text-white shadow-[0_10px_20px_-12px_rgba(77,71,182,0.9)]"
-                    : "text-[#66638c] hover:bg-white/70",
-                )}
-                aria-current={on ? "page" : undefined}
-              >
-                <Icon className="h-4 w-4" />
-                <span className="leading-none">{item.label}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
-  );
-}
+import {
+  PROMPT_LIBRARY_NAV_ITEMS,
+  isPromptLibraryModulePath,
+  isPromptLibraryNavItemActive,
+  type PromptLibraryNavKey,
+} from "@/systems/prompt-library/prompt-library-module-nav";
 
 function IconSpark({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-      <path
-        d="M12 2l2.88 7.26H22l-6.44 4.96 2.46 7.5L12 16.77l-6.02 4.95 2.46-7.5L2 9.26h7.12L12 2z"
-        strokeLinejoin="round"
-      />
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} aria-hidden>
+      <path d="M9.5 2 8 8l-6 1.5L8 11l1.5 6L11 11l6-1.5L11 8 9.5 2Z" strokeLinejoin="round" />
+      <path d="M18 14.5 17 17l-2.5 1 2.5 1 1 2.5 1-2.5 2.5-1-2.5-1-1-2.5Z" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function IconFolders({ className }: { className?: string }) {
+function IconFolder({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-      <path d="M4 7h4l2-2h10v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7z" strokeLinejoin="round" />
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} aria-hidden>
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+function dockIcon(key: PromptLibraryNavKey, className?: string): ReactNode {
+  switch (key) {
+    case "library":
+      return <IconSpark className={className} />;
+    case "categories":
+      return <IconFolder className={className} />;
+  }
+}
+
+const dockLinkClass = (active: boolean) =>
+  cn(
+    "flex min-h-[50px] w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-center transition-all active:scale-90",
+    active ? cn("text-white shadow-md", appDashboardBrandGradientFillClass) : "text-slate-500 hover:bg-white/45 hover:text-slate-700",
+  );
+
+export function PromptLibraryMobileDockNav() {
+  const pathname = usePathname() ?? "";
+  if (!isPromptLibraryModulePath(pathname)) return null;
+
+  return (
+    <ul className={cn(appMobileDockGridClass, "grid-cols-2")} aria-label="แท็บนำทางโมดูลคลังคำสั่ง AI">
+      {PROMPT_LIBRARY_NAV_ITEMS.map((item) => {
+        const active = isPromptLibraryNavItemActive(pathname, item.key);
+        return (
+          <li key={item.key} className="min-w-0">
+            <Link
+              href={item.href}
+              className={dockLinkClass(active)}
+              aria-current={active ? "page" : undefined}
+              aria-label={item.label}
+              title={item.label}
+            >
+              {dockIcon(item.key, "h-5 w-5 shrink-0")}
+              <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">{item.shortLabel}</span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

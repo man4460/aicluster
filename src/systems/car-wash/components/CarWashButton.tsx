@@ -1,0 +1,7 @@
+"use client";
+
+import type { ButtonHTMLAttributes } from "react";
+
+export function CarWashButton(props: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return <button suppressHydrationWarning {...props} />;
+}

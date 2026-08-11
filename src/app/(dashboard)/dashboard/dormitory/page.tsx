@@ -55,7 +55,7 @@ export default async function DormitoryDashboardPage() {
 
   return (
     <DormPageStack>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <DormStatCard title="ห้องทั้งหมด" value={rooms.length} tone="slate" />
         <DormStatCard title="มีผู้พัก" value={occupiedCount} tone="blue" subtitle={vacantCount > 0 ? `ว่าง ${vacantCount} ห้อง` : undefined} />
         <DormStatCard
@@ -76,7 +76,11 @@ export default async function DormitoryDashboardPage() {
         title="ผังห้องพัก"
         description="คลิกห้องเพื่อมิเตอร์ แบ่งบิล และแนบสลิป — สถานะการเงินอิงงวดเดือนปัจจุบัน (เวลาไทย)"
         action={
-          <Link href="/dashboard/dormitory/rooms" className={cn(dormBtnPrimary, "w-full justify-center sm:w-auto")}>
+          <Link href="/dashboard/dormitory/rooms" className={cn(dormBtnPrimary, "w-full justify-center sm:w-auto inline-flex gap-1.5")}>
+            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="M3 10h18M9 10v10M15 10v10" strokeLinecap="round" />
+            </svg>
             จัดการห้อง
           </Link>
         }
@@ -93,7 +97,11 @@ export default async function DormitoryDashboardPage() {
         description="งวดก่อนเดือนปัจจุบัน (ไทย) — แยกรายคน · แตะ «ดำเนินการ»เพื่อเปิดห้อง"
         action={
           overdue.length > 0 ? (
-            <Link href="/dashboard/dormitory/history" className={cn(dormBtnSecondary, "w-full justify-center sm:w-auto")}>
+            <Link href="/dashboard/dormitory/history" className={cn(dormBtnSecondary, "w-full justify-center sm:w-auto inline-flex gap-1.5")}>
+              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                <path d="M3 12a9 9 0 1 0 3-6.7" strokeLinecap="round" />
+                <path d="M3 4v3h3M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
               ประวัติ
             </Link>
           ) : null
@@ -119,8 +127,11 @@ export default async function DormitoryDashboardPage() {
                   </div>
                   <Link
                     href={`/dashboard/dormitory/rooms/${row.roomId}?month=${encodeURIComponent(row.month)}`}
-                    className="mt-2 flex min-h-[40px] items-center justify-center rounded-xl bg-[#5b61ff] py-2 text-center text-xs font-bold text-white shadow-sm active:scale-[0.99]"
+                    className="mt-2 inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl bg-[#5b61ff] py-2 text-center text-xs font-bold text-white shadow-sm active:scale-[0.99]"
                   >
+                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                      <path d="M5 12h14M13 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                     ดำเนินการ
                   </Link>
                 </li>
@@ -149,8 +160,11 @@ export default async function DormitoryDashboardPage() {
                       <td className="px-3 py-2">
                         <Link
                           href={`/dashboard/dormitory/rooms/${row.roomId}?month=${encodeURIComponent(row.month)}`}
-                          className="inline-flex rounded-lg bg-[#0000BF]/10 px-2.5 py-1.5 text-xs font-bold text-[#0000BF] hover:bg-[#0000BF]/15"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#0000BF]/10 px-2.5 py-1.5 text-xs font-bold text-[#0000BF] hover:bg-[#0000BF]/15"
                         >
+                          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                            <path d="M5 12h14M13 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
                           ดำเนินการ
                         </Link>
                       </td>

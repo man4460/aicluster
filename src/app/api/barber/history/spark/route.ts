@@ -17,11 +17,8 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 
   try {
-    const { year, month, day } = await resolveBarberHistoryCalendarFromSearchParams(
-      ownerId,
-      scope.trialSessionId,
-      searchParams,
-    );
+    const { year, month, day, financeRange, rangeLabel } =
+      await resolveBarberHistoryCalendarFromSearchParams(ownerId, scope.trialSessionId, searchParams);
     const spark = await getBarberSparkBucketsForCalendarFilter(
       ownerId,
       scope.trialSessionId,
@@ -29,7 +26,10 @@ export async function GET(req: Request) {
       month,
       day,
     );
-    return NextResponse.json(spark);
+    return NextResponse.json({
+      ...spark,
+      meta: { year, month, day, range: financeRange, rangeLabel },
+    });
   } catch (e) {
     console.error("[barber/history/spark]", e);
     const msg = e instanceof Error ? e.message : "เกิดข้อผิดพลาด";

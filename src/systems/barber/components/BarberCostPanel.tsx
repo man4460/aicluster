@@ -613,7 +613,7 @@ export function BarberCostPanel({
           }
         </>
       : <AppDashboardSection tone="slate">
-          <AppSectionHeader tone="slate" title="รายการต้นทุนทั้งหมด" description={`${entries.length} รายการ`} />
+          <AppSectionHeader tone="slate" title="รายการต้นทุนทั้งหมด" />
           {listLoading ?
           <p
             className={`${barberCardSurfaceRadiusClass} border border-dashed border-[#e8e6f4]/90 bg-gradient-to-br from-[#faf9ff]/90 via-white to-[#fff7ed]/30 ${barberCardBodyPaddingXClass} py-6 text-center text-sm text-slate-600`}

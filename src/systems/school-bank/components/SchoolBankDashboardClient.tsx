@@ -9,7 +9,6 @@ import {
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
-import { parkingStatCardClass } from "@/systems/parking/parking-valet-ui";
 import type { SchoolBankDashboardDto } from "@/systems/school-bank/lib/load-school-bank-dashboard";
 
 function ledgerTypeLabel(t: string): string {
@@ -90,36 +89,42 @@ export function SchoolBankDashboardClient({ initial }: { initial: SchoolBankDash
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5">
-        <div className={parkingStatCardClass("emerald")}>
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-70">ยอดรวมในบัญชี</p>
-            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 opacity-40" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </svg>
-          </div>
-          <p className="mt-3 text-2xl font-black tabular-nums tracking-tight sm:text-3xl">{data.totalLabel}</p>
-          <p className="mt-1 text-xs font-bold opacity-70">บาท</p>
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
+        <div className="relative overflow-hidden rounded-[1rem] border border-indigo-200/70 bg-gradient-to-br from-white via-indigo-50/50 to-violet-50/40 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] ring-1 ring-inset ring-white/60 sm:p-4">
+          <span aria-hidden className="absolute left-0 top-0 h-full w-1 rounded-r-full bg-gradient-to-b from-indigo-500 to-violet-600" />
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-indigo-700">สมาชิกทั้งหมด</p>
+          <p className="mt-1 bg-gradient-to-br from-[#4338ca] via-[#5b61ff] to-[#6366f1] bg-clip-text text-2xl font-black tabular-nums leading-none text-transparent sm:text-[1.8rem]">
+            {data.accountCount.toLocaleString("th-TH")}
+            <span className="ml-1 text-sm font-bold text-[#8b87ad]">คน</span>
+          </p>
+          <div aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-16 w-16 rounded-full bg-gradient-to-br from-indigo-300/40 via-violet-200/30 to-transparent blur-2xl" />
         </div>
-        <div className={parkingStatCardClass("indigo")}>
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-70">จำนวนบัญชี</p>
-            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 opacity-40" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
-            </svg>
-          </div>
-          <p className="mt-3 text-2xl font-black tabular-nums tracking-tight sm:text-3xl">{data.accountCount}</p>
-          <p className="mt-1 text-xs font-bold opacity-70">บัญชีที่ใช้งาน</p>
+        <div className="relative overflow-hidden rounded-[1rem] border border-emerald-200/80 bg-gradient-to-br from-white via-emerald-50/55 to-teal-50/40 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] ring-1 ring-inset ring-white/60 sm:p-4">
+          <span aria-hidden className="absolute left-0 top-0 h-full w-1 rounded-r-full bg-gradient-to-b from-emerald-500 to-teal-500" />
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">ยอดเงินฝากรวม</p>
+          <p className="mt-1 flex items-baseline bg-gradient-to-br from-emerald-500 via-teal-500 to-[#0d9488] bg-clip-text text-2xl font-black tabular-nums leading-none text-transparent sm:text-[1.8rem]">
+            <span className="mr-0.5 text-sm font-bold text-[#7a9e96]">฿</span>
+            {data.totalLabel}
+          </p>
+          <div aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-16 w-16 rounded-full bg-gradient-to-br from-emerald-300/45 via-teal-200/30 to-transparent blur-2xl" />
         </div>
-        <div className={cn(parkingStatCardClass("slate"), "col-span-2 sm:col-span-1")}>
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-70">รายการล่าสุด</p>
-            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 opacity-40" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-              <path d="M4 18h16M7 14l3-3 3 2 4-5" />
-            </svg>
-          </div>
-          <p className="mt-3 text-2xl font-black tabular-nums tracking-tight sm:text-3xl">{data.recent.length}</p>
-          <p className="mt-1 text-xs font-bold opacity-70">แสดงในหน้านี้</p>
+        <div className="relative overflow-hidden rounded-[1rem] border border-rose-200/80 bg-gradient-to-br from-white via-rose-50/55 to-pink-50/40 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] ring-1 ring-inset ring-white/60 sm:p-4">
+          <span aria-hidden className="absolute left-0 top-0 h-full w-1 rounded-r-full bg-gradient-to-b from-rose-500 to-pink-500" />
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-rose-700">ยอดถอนวันนี้</p>
+          <p className="mt-1 flex items-baseline bg-gradient-to-br from-rose-500 via-pink-500 to-[#ec4899] bg-clip-text text-2xl font-black tabular-nums leading-none text-transparent sm:text-[1.8rem]">
+            <span className="mr-0.5 text-sm font-bold text-[#f9a8d4]">฿</span>
+            0
+          </p>
+          <div aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-16 w-16 rounded-full bg-gradient-to-br from-rose-300/40 via-pink-200/30 to-transparent blur-2xl" />
+        </div>
+        <div className="relative overflow-hidden rounded-[1rem] border border-amber-200/80 bg-gradient-to-br from-white via-amber-50/55 to-orange-50/40 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] ring-1 ring-inset ring-white/60 sm:p-4">
+          <span aria-hidden className="absolute left-0 top-0 h-full w-1 rounded-r-full bg-gradient-to-b from-amber-400 to-orange-500" />
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-700">ธุรกรรมวันนี้</p>
+          <p className="mt-1 bg-gradient-to-br from-amber-500 via-orange-500 to-[#ea580c] bg-clip-text text-2xl font-black tabular-nums leading-none text-transparent sm:text-[1.8rem]">
+            {data.recent.length.toLocaleString("th-TH")}
+            <span className="ml-1 text-sm font-bold text-[#b45309]">รายการ</span>
+          </p>
+          <div aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-16 w-16 rounded-full bg-gradient-to-br from-amber-300/45 via-orange-200/30 to-transparent blur-2xl" />
         </div>
       </div>
 
@@ -143,10 +148,13 @@ export function SchoolBankDashboardClient({ initial }: { initial: SchoolBankDash
               setTxOpen(true);
             }}
             className={cn(
-              "inline-flex min-h-[48px] items-center justify-center rounded-2xl px-6 text-sm font-black text-white shadow-lg transition active:scale-[0.98] disabled:opacity-45",
+              "inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-2xl px-6 text-sm font-black text-white shadow-lg transition active:scale-[0.98] disabled:opacity-45",
               "bg-gradient-to-r from-emerald-500 to-teal-600 shadow-emerald-500/25",
             )}
           >
+            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 5v14M5 12h14" />
+            </svg>
             ทำรายการ
           </button>
         </div>
@@ -260,7 +268,7 @@ export function SchoolBankDashboardClient({ initial }: { initial: SchoolBankDash
                 type="button"
                 onClick={() => setKind(k)}
                 className={cn(
-                  "min-h-[44px] flex-1 rounded-2xl text-sm font-black transition",
+                  "inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-2xl text-sm font-black transition",
                   kind === k
                     ? k === "deposit"
                       ? "bg-emerald-500 text-white shadow-md"
@@ -268,6 +276,15 @@ export function SchoolBankDashboardClient({ initial }: { initial: SchoolBankDash
                     : "border border-white/60 bg-white/50 text-slate-600",
                 )}
               >
+                {k === "deposit" ? (
+                  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M12 19V5M5 12l7-7 7 7" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M12 5v14M5 12l7 7 7-7" />
+                  </svg>
+                )}
                 {k === "deposit" ? "ฝาก" : "ถอน"}
               </button>
             ))}

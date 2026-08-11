@@ -50,6 +50,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const row = await prisma.barberBooking.update({
     where: { id },
     data: { status: parsed.data.status },
+    include: {
+      package: { select: { id: true, name: true, durationMinutes: true } },
+      stylist: { select: { id: true, name: true } },
+    },
   });
 
   return NextResponse.json({
@@ -60,6 +64,11 @@ export async function PATCH(req: Request, ctx: Ctx) {
       scheduledAt: row.scheduledAt.toISOString(),
       status: row.status,
       barberCustomerId: row.barberCustomerId,
+      durationMinutes: row.durationMinutes,
+      stylistId: row.stylistId,
+      packageId: row.packageId,
+      packageName: row.package?.name ?? null,
+      stylistName: row.stylist?.name ?? null,
     },
   });
 }

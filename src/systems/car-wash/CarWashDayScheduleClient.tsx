@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   AppDashboardSection,
   AppSectionHeader,
+  AppTime24Input,
   appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
@@ -165,22 +166,16 @@ export function CarWashDayScheduleClient({
       {!isClosed ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <label className="text-sm">
-            <span className="font-semibold text-[#2e2a58]">เปิด</span>
-            <input
-              type="time"
-              value={openTime}
-              onChange={(e) => setOpenTime(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-white/70 bg-white/60 px-3 py-2.5"
-            />
+            <span className="font-semibold text-[#2e2a58]">เริ่มรับจอง (เวลาไทย)</span>
+            <div className="mt-1">
+              <AppTime24Input value={openTime} onChange={setOpenTime} aria-label="เวลาเริ่มรับจอง" />
+            </div>
           </label>
           <label className="text-sm">
-            <span className="font-semibold text-[#2e2a58]">ปิด</span>
-            <input
-              type="time"
-              value={closeTime}
-              onChange={(e) => setCloseTime(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-white/70 bg-white/60 px-3 py-2.5"
-            />
+            <span className="font-semibold text-[#2e2a58]">สิ้นสุดรับจอง (เวลาไทย)</span>
+            <div className="mt-1">
+              <AppTime24Input value={closeTime} onChange={setCloseTime} aria-label="เวลาสิ้นสุดรับจอง" />
+            </div>
           </label>
           <label className="col-span-2 text-sm sm:col-span-1">
             <span className="font-semibold text-[#2e2a58]">ระยะคิว (นาที)</span>
@@ -254,7 +249,7 @@ export function CarWashDayScheduleClient({
   if (embedded) {
     return (
       <AppDashboardSection tone="violet" className="min-w-0">
-        <AppSectionHeader title="ตั้งช่วงเวลานวดรายวัน" description="กำหนดเวลาเปิด-ปิดและระยะคิวสำหรับการจอง" />
+        <AppSectionHeader title="ตั้งช่วงเวลารับจองรายวัน" />
         {inner}
       </AppDashboardSection>
     );
@@ -262,7 +257,7 @@ export function CarWashDayScheduleClient({
 
   return (
     <AppDashboardSection tone="violet">
-      <AppSectionHeader title="ตั้งช่วงเวลานวดรายวัน" description="เจ้าของร้านกำหนดคิวแต่ละวัน" />
+      <AppSectionHeader title="ตั้งช่วงเวลารับจองรายวัน" />
       {inner}
     </AppDashboardSection>
   );

@@ -85,6 +85,16 @@ import {
   writeMassageHeaderCollapsed,
 } from "@/systems/massage/massage-module-nav";
 import {
+  BarberHeaderBarNav,
+  BarberHeaderExpandButton,
+} from "@/systems/barber/components/BarberHeaderBarNav";
+import {
+  BARBER_HEADER_COLLAPSE_EVENT,
+  isBarberModulePath,
+  readBarberHeaderCollapsed,
+  writeBarberHeaderCollapsed,
+} from "@/systems/barber/barber-module-nav";
+import {
   AdminHubHeaderBarNav,
   AdminHubHeaderExpandButton,
 } from "@/components/admin/AdminHubHeaderBarNav";
@@ -363,15 +373,12 @@ export function DashboardShell({
   const laundryStaffKiosk = pathname === "/dashboard/laundry/staff";
   const massageStaffKiosk = pathname === "/dashboard/massage/staff";
   const moduleStaffKiosk = barberStaffKiosk || laundryStaffKiosk || massageStaffKiosk;
-  /** โมดูลร้านตัดผม / ซักผ้า / นวด บนมือถือ — ลด padding แนวนอกซ้ำกับ PageContainer */
-  const barberDashboardCompact =
-    !moduleStaffKiosk && (pathname === "/dashboard/barber" || pathname.startsWith("/dashboard/barber/"));
+  /** โมดูลซักผ้า / นวด บนมือถือ — ลด padding แนวนอกซ้ำกับ PageContainer */
   const laundryDashboardCompact =
     !moduleStaffKiosk && (pathname === "/dashboard/laundry" || pathname.startsWith("/dashboard/laundry/"));
   const massageDashboardCompact =
     !moduleStaffKiosk && (pathname === "/dashboard/massage" || pathname.startsWith("/dashboard/massage/"));
-  const moduleDashboardCompact =
-    barberDashboardCompact || laundryDashboardCompact || massageDashboardCompact;
+  const moduleDashboardCompact = laundryDashboardCompact || massageDashboardCompact;
   /** มือถือ: ในโมดูลหรือศูนย์แอดมิน ซ่อนเมนูหลักด้านล่าง — ให้ใช้เมนูโมดูล/แอดมินแทน */
   const onAdminHub = isAdminHubPath(pathname);
   const hideMainMobileBottomNav =
@@ -387,6 +394,7 @@ export function DashboardShell({
   const [hotelResortHeaderCollapsed, setHotelResortHeaderCollapsed] = useState(false);
   const [carWashHeaderCollapsed, setCarWashHeaderCollapsed] = useState(false);
   const [massageHeaderCollapsed, setMassageHeaderCollapsed] = useState(false);
+  const [barberHeaderCollapsed, setBarberHeaderCollapsed] = useState(false);
   const [adminHubHeaderCollapsed, setAdminHubHeaderCollapsed] = useState(false);
   const accountWrapRef = useRef<HTMLDivElement>(null);
   const moduleMenuRef = useRef<HTMLDivElement>(null);
@@ -406,12 +414,14 @@ export function DashboardShell({
   const onHotelResortModule = isHotelResortModulePath(pathname);
   const onCarWashModule = isCarWashModulePath(pathname);
   const onMassageModule = isMassageModulePath(pathname);
+  const onBarberModule = isBarberModulePath(pathname);
   const showDrinkPosHeaderBar = onDrinkPosModule && drinkPosHeaderCollapsed;
   const showBuildingPosHeaderBar = onBuildingPosModule && buildingPosHeaderCollapsed;
   const showFootballTurfHeaderBar = onFootballTurfModule && footballTurfHeaderCollapsed;
   const showHotelResortHeaderBar = onHotelResortModule && hotelResortHeaderCollapsed;
   const showCarWashHeaderBar = onCarWashModule && carWashHeaderCollapsed;
   const showMassageHeaderBar = onMassageModule && massageHeaderCollapsed;
+  const showBarberHeaderBar = onBarberModule && barberHeaderCollapsed;
   const showAdminHubHeaderBar = onAdminHub && adminHubHeaderCollapsed;
   const mainNavGroups = navGroups.filter((group) => group.id === "basic");
   const mainMenuItems = mainNavGroups[0]?.items ?? [];
@@ -582,6 +592,21 @@ export function DashboardShell({
   }, [onMassageModule]);
 
   useEffect(() => {
+    if (!onBarberModule) {
+      setBarberHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setBarberHeaderCollapsed(readBarberHeaderCollapsed());
+    sync();
+    window.addEventListener(BARBER_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(BARBER_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onBarberModule]);
+
+  useEffect(() => {
     if (!onAdminHub) {
       setAdminHubHeaderCollapsed(false);
       return;
@@ -647,6 +672,7 @@ export function DashboardShell({
       className={cn(
         "flex min-h-[100dvh] flex-col text-[#2e2a58]",
         onPosOrderPage && "lg:h-[100dvh] lg:max-h-[100dvh] lg:overflow-hidden",
+        moduleStaffKiosk && "h-[100dvh] max-h-[100dvh] overflow-hidden",
       )}
     >
       {/* แถบบน — แก้ว โค้งมนเทียบเปลือกโมดูล / drawer (rounded-[2.5rem]) */}
@@ -908,6 +934,30 @@ export function DashboardShell({
                   <MassageHeaderExpandButton onExpand={() => writeMassageHeaderCollapsed(false)} />
                 </div>
               </>
+            ) : showBarberHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <BarberHeaderBarNav onExpand={() => writeBarberHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <BarberHeaderExpandButton onExpand={() => writeBarberHeaderCollapsed(false)} />
+                </div>
+              </>
             ) : showAdminHubHeaderBar ? (
               <>
                 <div className="hidden min-w-0 lg:block">
@@ -1030,8 +1080,7 @@ export function DashboardShell({
         className={cn(
           "flex min-h-0 flex-1 gap-0 pb-[max(5.75rem,calc(5.75rem+env(safe-area-inset-bottom,0px)))] pt-2 md:pb-4",
           moduleDashboardCompact ? "max-md:px-2 sm:px-4" : "px-3 sm:px-4",
-          moduleStaffKiosk &&
-            "!gap-0 !px-0 !pt-0 !pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:!px-0 sm:!pb-4",
+          moduleStaffKiosk && "!gap-0 !px-0 !pt-0 !pb-0 sm:!px-0 sm:!pb-0",
         )}
       >
         {/* Sidebar — แก้ว โค้งมนเทียบแถบบน / drawer */}
@@ -1120,7 +1169,7 @@ export function DashboardShell({
               "flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden rounded-[1.15rem]",
               onPosOrderPage && "lg:overflow-hidden",
               systemFocusLayout && "md:rounded-none",
-              moduleStaffKiosk && "!rounded-none",
+              moduleStaffKiosk && "!rounded-none !overflow-hidden",
             )}
           >
             {children}

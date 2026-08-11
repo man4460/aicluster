@@ -1,0 +1,180 @@
+---
+description: แม่แบบจองบริการ + ตารางพนักงาน (ร้านตัดผมเป็นต้นแบบ) — แพ็ก/บริการก่อนสล็อต · แดชบอร์ด=พอร์ทัล · ห้ามจองอดีต · วันที่รับบริการ+ชั่วโมง · ผูก availability
+alwaysApply: false
+globs:
+  - "**/systems/barber/**"
+  - "**/app/**/dashboard/barber/**"
+  - "**/app/barber/**"
+  - "**/app/api/barber/**"
+  - "**/systems/**/*Booking*.tsx"
+  - "**/systems/**/*Portal*.tsx"
+  - "**/systems/**/*Stylist*.tsx"
+  - "**/systems/**/*Therapist*.tsx"
+  - "**/systems/**/lib/*schedule*.ts"
+  - "**/systems/**/lib/*booking-slot*.ts"
+  - "**/app/api/**/bookings/**"
+  - "**/app/api/**/public/portal/**"
+  - "**/lib/trial/seed-barber.ts"
+---
+
+# จองบริการ + ตารางพนักงาน — แม่แบบจากร้านตัดผม
+
+ใช้เมื่อโมดูลมี **จองคิว/สล็อต** + **เลือกพนักงาน/ช่าง/เทอราปิสต์** + **ลิงก์ลูกค้าสาธารณะ** — ยึด **ร้านตัดผม** เป็นต้นแบบลอจิก (UX แดชบอร์ดยังอิงคาร์แคร์)
+
+**Canonical:** `src/systems/barber/` · API `src/app/api/barber/` · พอร์ทัล `/barber/[ownerId]?t=`
+
+**คู่กับ:** `module-thailand-timezone.mdc` · `module-customer-booking-website-portal.mdc` / `shop-customer-qr-portal.mdc` · `barber-module-dashboard-template.mdc` · `agent-finish-checkpoint.mdc` · `app-templates-central.mdc` (`AppTime24Input`)
+
+---
+
+## 0) หลักคิด (บังคับเมื่อย้ายไปโมดูลอื่น)
+
+1. **เลือกบริการ/แพ็กก่อน → ค่อยเลือกเวลา** — ระยะเวลากำหนดจำนวนสล็อต  
+2. **แดชบอร์ด «เพิ่มคิว» = พอร์ทัลลูกค้า** — กฎเดียวกัน · API คู่ขนาน · ห้ามพอร์ทัลเข้มกว่าแดชบอร์ดหรือกลับกัน  
+3. **ห้ามจองเวลาที่ผ่านไปแล้ว** — เทียบ `Asia/Bangkok` ทั้ง availability และ POST จอง  
+4. **ตารางพนักงาน = วันที่รับบริการ + ช่วงชั่วโมง** — ห้ามเก็บเป็น «วันหยุด» เป็นหลัก (สากลกว่า = เลือกวันทำงาน)  
+5. **availability + book ต้องอ่านตารางพนักงานจริง** — ห้ามกรองแค่เปิด–ปิดร้าน  
+6. เวลาในฟอร์ม = **`AppTime24Input`** — ห้าม `<input type="time">` AM/PM  
+
+---
+
+## 1) แพ็ก / บริการ
+
+| ชนิด | ความหมาย | ผลต่อจอง |
+|------|----------|----------|
+| รายครั้ง (`totalSessions = 1`) | เมนูบริการวันนั้น | เลือกก่อนโชว์สล็อต · ส่ง `packageId` |
+| หลายครั้ง | สมาชิก/แพ็กสิทธิ์ | ใช้แทนรายครั้งได้หลังค้นหาเบอร์ |
+
+- มี `durationMinutes` ต่อแพ็ก — คำนวณ `slotsNeeded` จาก `slotMinutes` ของร้าน  
+- พอร์ทัลแยก UI เมนูรายครั้ง vs แพ็กหลายครั้ง  
+- กริดการ์ดเมนูหนาแน่น (บาร์เบอร์: สูงสุด `lg:grid-cols-6`)  
+
+**อ้างอิง:** `BarberBookingPortalClient` · `ensureBarberSingleVisitPackages` / seed ใน `seed-barber.ts` · `portal-media.ts`
+
+---
+
+## 2) พอริตีแดชบอร์ด ↔ พอร์ทัล
+
+โฟลว์เดียวกันทั้งสองฝั่ง:
+
+`วันที่ → พนักงาน (ถ้ามี) → บริการ/แพ็ก → เบอร์/สมาชิก → สล็อตติดกัน → ยืนยัน`
+
+| ฝั่ง | Availability | Book |
+|------|--------------|------|
+| พอร์ทัล | `GET …/public/portal/availability` | `POST …/public/portal/book` |
+| แดชบอร์ด | `GET …/bookings/availability` | `POST …/bookings` |
+
+ตรวจซ้ำทั้งคู่: ชั่วโมงร้าน · สล็อตอดีต · ตารางพนักงาน · conflict คิวเดิม · `packageId` + ระยะเวลา  
+
+**อ้างอิง UI:** `BarberBookingsClient` (โมดัลเพิ่มคิว) · `BarberBookingPortalClient`
+
+---
+
+## 3) ห้ามจองอดีต (Bangkok)
+
+ใส่ helper ใน `lib/*booking-slots*` ของโมดูล:
+
+- `*SlotStartIsPastBangkok(dateKey, startHm, now?)`  
+- ใช้ตอนสร้างกริดสล็อต + ตอน validate ทุกสล็อตในรันจอง  
+
+```ts
+// ❌ BAD
+new Date(`${date}T${hm}:00`).getTime() < Date.now()
+
+// ✅ GOOD — เทียบนาฬิกาไทย
+barberSlotStartIsPastBangkok(dateKey, startHm)
+```
+
+**อ้างอิง:** `src/systems/barber/lib/booking-slots.ts`
+
+---
+
+## 4) ตารางพนักงาน / ช่าง
+
+### สคีมา (ต่อคน)
+
+| ฟิลด์ | ความหมาย | ค่าเริ่ม |
+|-------|----------|----------|
+| `workStartTime` | เริ่มรับคิว `HH:mm` ไทย | `09:00` |
+| `workEndTime` | เลิกรับคิว `HH:mm` ไทย (สล็อตต้องจบ ≤ นี้) | `20:00` |
+| `workWeekdaysJson` | JSON `[0..6]` วันที่**รับบริการ** (0=อา … 6=ส Bangkok) | `[0,1,2,3,4,5,6]` |
+
+**ห้าม** ใช้ `offWeekdays` เป็นโมเดลหลักของ UI/API ใหม่ — ถ้ามีของเก่า ให้ migrate เป็น `workWeekdays` (วันรับ = ทุกวัน − วันหยุดเดิม)
+
+### Helper (`lib/*-schedule.ts`)
+
+- `*Map*Schedule` · `*NormalizeWorkWeekdays` · `*WorksOnDate` / `*IsOffOnDate`  
+- `*SlotWithinWorkHours` · `*AllowsSlot({ schedule, dateKey, startHm, slotMinutes })`  
+- `*FormatWorkWeekdaysLabel` → `รับบริการทุกวัน` / `รับบริการ จ·อ·พ…` / `ไม่รับบริการ`  
+
+**อ้างอิง:** `src/systems/barber/lib/stylist-schedule.ts`
+
+### API พนักงาน
+
+- GET/POST/PATCH ส่ง–รับ `workStartTime` · `workEndTime` · `workWeekdays` (array)  
+- POST/PATCH: อย่างน้อย 1 วันรับบริการ · `workEnd > workStart`  
+
+### UI เมนูพนักงาน
+
+- ฟอร์มเพิ่ม/แก้: `AppTime24Input` คู่ + ชิปวันรับบริการ (`aria-pressed`)  
+- ชิป**เปิด** = รับวันนั้น (โทน primary) · ปิด = ไม่รับ (โทนจาง)  
+- แถวรายการโชว์ `รับคิว HH:mm–HH:mm · รับบริการ …`  
+
+**อ้างอิง:** `BarberStylistsClient.tsx` · `/api/barber/stylists`
+
+---
+
+## 5) ผูกตารางเข้าจอง (บังคับ)
+
+เมื่อมี `stylistId` / พนักงานที่เลือก:
+
+1. **Availability** — ถ้าไม่รับวันนี้ → สล็อตว่างเปล่า + ธง `stylistDayOff` (หรือชื่อเทียบ) + ส่ง `stylistSchedule` สรุป  
+2. กรองแต่ละสล็อตด้วย `*AllowsSlot` (วัน + ชั่วโมงพนักงาน) แล้วค่อย past / conflict  
+3. **Book** — ปฏิเสธถ้าไม่รับวันนี้ หรือสล็อตใดในรันอยู่นอกชั่วโมงพนักงาน  
+4. UI จอง: ใต้ปุ่มเลือกพนักงานโชว์ช่วงเวลา + ป้ายวันรับบริการ · วันไม่รับ → ข้อความ amber ชัด  
+
+ข้อความแนะนำ: «ไม่รับบริการวันนี้ — เลือกวันอื่นหรือคนอื่น» (ไม่ใช้คำว่า «วันหยุด» เป็นหลัก)
+
+---
+
+## 6) พอร์ทัล / สื่อ / เดโม่
+
+- รูปตัวอย่างพอร์ทัล: URL ที่โหลดได้จริง (Unsplash โฮสต์ที่อนุญาต) — ตรวจลิงก์เสีย  
+- โลโก้บนพอร์ทัล: ไม่ใส่กรอบ/ring ของ thumb ถ้าไม่จำเป็น  
+- Seed trial ใส่ตารางพนักงานตัวอย่าง (คนละช่วงวัน/ชั่วโมงได้)  
+
+**อ้างอิง:** `portal-media.ts` · `seed-barber.ts` · `scripts/fill-barber-portal-demo.ts`
+
+---
+
+## 7) Checklist ย้ายไปโมดูลอื่น
+
+- [ ] แพ็ก/บริการมี `durationMinutes` · จองบังคับเลือกก่อนสล็อต  
+- [ ] Availability + Book คู่ (พอร์ทัล + แดชบอร์ด) กฎชุดเดียว  
+- [ ] Past slot ใช้ helper Bangkok  
+- [ ] โมเดลพนักงาน: `workStart` / `workEnd` / `workWeekdaysJson`  
+- [ ] UI = วันที่รับบริการ (ไม่ใช่เลือกวันหยุด) + `AppTime24Input`  
+- [ ] Availability/Book อ่านตารางพนักงาน  
+- [ ] Migration + **`npx prisma generate`** (+ รีสตาร์ท `next dev` ถ้า EPERM บน Windows)  
+- [ ] Seed มีตารางตัวอย่าง  
+
+---
+
+## 8) แผนที่ไฟล์ (บาร์เบอร์)
+
+| บทบาท | พาธ |
+|--------|-----|
+| สล็อต / อดีต | `systems/barber/lib/booking-slots.ts` |
+| ตารางช่าง | `systems/barber/lib/stylist-schedule.ts` |
+| พอร์ทัลจอง | `systems/barber/components/BarberBookingPortalClient.tsx` |
+| แดชบอร์ดจอง | `systems/barber/components/BarberBookingsClient.tsx` |
+| เมนูช่าง | `systems/barber/components/BarberStylistsClient.tsx` |
+| Avail สาธารณะ | `app/api/barber/public/portal/availability/route.ts` |
+| Book สาธารณะ | `app/api/barber/public/portal/book/route.ts` |
+| Avail แดชบอร์ด | `app/api/barber/bookings/availability/route.ts` |
+| Book แดชบอร์ด | `app/api/barber/bookings/route.ts` |
+| CRUD ช่าง | `app/api/barber/stylists/route.ts` · `[id]/route.ts` |
+| Info พอร์ทัล | `app/api/barber/public/portal/info/route.ts` |
+| Schema | `BarberStylist` ใน `prisma/schema.prisma` |
+
+โมดูลใกล้เคียง (นวด ฯลฯ): คัดลอกชั้น lib + API คู่ · เปลี่ยนชื่อโมเดล/พาธ — **คงลำดับโฟลว์และกฎ Bangkok ตามกฎนี้**

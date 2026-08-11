@@ -27,6 +27,10 @@ import {
 } from "@/systems/car-wash/car-wash-visit-bill-print";
 import { prepareBuildingPosSlipImageFile } from "@/systems/building-pos/building-pos-slip-image";
 import {
+  printCarWashVisitReceiptFromVisit,
+  type CarWashPrintShopProfile,
+} from "@/systems/car-wash/lib/car-wash-print-docs";
+import {
   uploadCarWashSessionImage,
   type CarWashServiceStatus,
   type ServicePackage,
@@ -146,6 +150,24 @@ const waitingPayLaneTone: (typeof laneTone)["WASHING"] = {
 const waitingPayModalBoxClass = "border-emerald-200 bg-emerald-50/80";
 const waitingPayModalBadgeClass = "bg-emerald-100 text-emerald-950 ring-emerald-200";
 
+const LANE_STATUS_FLOW: CarWashServiceStatus[] = [
+  "QUEUED",
+  "WASHING",
+  "VACUUMING",
+  "WAXING",
+  "COMPLETED",
+];
+
+function nextLaneStatus(v: ServiceVisit): CarWashServiceStatus | null {
+  if (v.service_status === "PAID") return null;
+  if (v.service_status === "COMPLETED") {
+    return canSelectPaidLane(v) ? "PAID" : null;
+  }
+  const i = LANE_STATUS_FLOW.indexOf(v.service_status);
+  if (i < 0 || i >= LANE_STATUS_FLOW.length - 1) return null;
+  return LANE_STATUS_FLOW[i + 1] ?? null;
+}
+
 export function CarWashServiceLanePanel({
   visits,
   packages,
@@ -153,6 +175,7 @@ export function CarWashServiceLanePanel({
   shopLabel,
   logoUrl = null,
   paymentChannelsNote = null,
+  shopPrintProfile = null,
   busyVisitId,
   onSetStatus,
   onVisitPhotoUpdate,
@@ -168,6 +191,7 @@ export function CarWashServiceLanePanel({
   shopLabel: string;
   logoUrl?: string | null;
   paymentChannelsNote?: string | null;
+  shopPrintProfile?: CarWashPrintShopProfile | null;
   busyVisitId: number | null;
   onSetStatus: (id: number, status: CarWashServiceStatus) => void | Promise<void>;
   onVisitPhotoUpdate: (id: number, photoUrl: string) => void | Promise<void>;
@@ -181,7 +205,7 @@ export function CarWashServiceLanePanel({
   const [laneModalVisitId, setLaneModalVisitId] = useState<number | null>(null);
   const [laneModalView, setLaneModalView] = useState<"details" | "bill">("details");
   const [billPrintedAt, setBillPrintedAt] = useState("");
-  const { paper: slipPaper, setPaper: setSlipPaper } = useAppSlipPaperSize();
+  const { paper: slipPaper, setPaper: setSlipPaper } = useAppSlipPaperSize(shopPrintProfile?.slipPaperSize);
   const [ppQrUrl, setPpQrUrl] = useState<string | null>(null);
   const [ppQrLoading, setPpQrLoading] = useState(false);
   const [ppConfigured, setPpConfigured] = useState(true);
@@ -199,6 +223,65 @@ export function CarWashServiceLanePanel({
       .filter((v) => isInServiceLaneToday(v))
       .sort((a, b) => new Date(a.visit_at).getTime() - new Date(b.visit_at).getTime());
   }, [visits]);
+
+  const laneSummary = useMemo(() => {
+    let queued = 0;
+    let inService = 0;
+    let waitingSlip = 0;
+    let waitingPay = 0;
+    for (const v of active) {
+      if (v.service_status === "COMPLETED") {
+        if (!hasLaneSlipPhoto(v) && !isPendingBundleVisit(v)) waitingSlip += 1;
+        else waitingPay += 1;
+      } else if (v.service_status === "QUEUED") {
+        queued += 1;
+      } else {
+        inService += 1;
+      }
+    }
+    return { total: active.length, queued, inService, waitingSlip, waitingPay };
+  }, [active]);
+
+  function resolveLanePrintShop(): CarWashPrintShopProfile {
+    const rawLogo = shopPrintProfile?.logoUrl || logoUrl;
+    return {
+      displayName: shopPrintProfile?.displayName?.trim() || shopLabel,
+      logoUrl: rawLogo ? resolveAssetUrl(rawLogo, baseUrl) : null,
+      address: shopPrintProfile?.address ?? null,
+      taxId: shopPrintProfile?.taxId ?? null,
+      contactPhone: shopPrintProfile?.contactPhone ?? null,
+      bankAccountName: shopPrintProfile?.bankAccountName ?? null,
+      slipPaperSize: shopPrintProfile?.slipPaperSize ?? slipPaper,
+    };
+  }
+
+  function openLaneDetails(id: number) {
+    setLaneModalVisitId(id);
+    setLaneModalView("details");
+  }
+
+  function openLaneBill(id: number) {
+    setLaneModalVisitId(id);
+    setLaneModalView("bill");
+  }
+
+  function printLaneReceipt(v: ServiceVisit) {
+    const ok = printCarWashVisitReceiptFromVisit(resolveLanePrintShop(), v);
+    if (!ok) window.alert("รายการนี้มียอด ฿0 — ไม่พิมพ์ใบเสร็จรับเงิน");
+  }
+
+  async function applyLaneStatus(v: ServiceVisit, next: CarWashServiceStatus) {
+    if (next === "PAID" && !canSelectPaidLane(v)) {
+      window.alert("เลือกสถานะเสร็จแล้วและแนบสลิปก่อน จึงจะเลือกชำระแล้วได้");
+      return;
+    }
+    await onSetStatus(v.id, next);
+  }
+
+  function pickLanePhotoForVisit(id: number) {
+    lanePhotoTargetVisitIdRef.current = id;
+    laneGalleryInputRef.current?.click();
+  }
 
   const modalVisit = useMemo(() => {
     if (laneModalVisitId == null) return null;
@@ -405,7 +488,9 @@ export function CarWashServiceLanePanel({
       <div className="flex items-start justify-between gap-3 border-b border-[#ecebff] pb-3">
         <div className="min-w-0">
           <h2 className="text-lg font-bold text-[#2e2a58]">ลานล้างวันนี้</h2>
-          <p className="mt-1 text-xs text-[#66638c]">แตะการ์ดเพื่ออัปเดตสถานะ แนบรูป หรือเปิดบิล</p>
+          <p className="mt-1 text-xs text-[#66638c]">
+            เปลี่ยนสถานะ · แนบรูป · บิล/QR · พิมพ์ใบเสร็จได้จากการ์ดเลย
+          </p>
         </div>
         {onRecordVisit || onRefresh ?
           <div className="flex shrink-0 items-center gap-2 self-start">
@@ -476,10 +561,45 @@ export function CarWashServiceLanePanel({
   const listBlock =
     active.length === 0 ?
       <AppEmptyState tone="violet" className={cn(staffLayout ? "py-8" : "mt-4 py-8")}>
-        ไม่มีคิวในลานตอนนี้
+        ไม่มีคิวในลานตอนนี้ — กด「บันทึกรายการ」เพื่อรับรถเข้าลาน
       </AppEmptyState>
     : (
-      <ul className={cn("grid gap-3", staffLayout ? "grid-cols-1" : "mt-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4")}>
+      <>
+        <div
+          className={cn(
+            "grid grid-cols-2 gap-2 sm:grid-cols-4",
+            staffLayout ? "mb-3" : "mt-4 mb-1",
+          )}
+          aria-label="สรุปลานล้างวันนี้"
+        >
+          {[
+            { label: "ทั้งหมด", value: laneSummary.total, tone: "text-[#1e1b4b] bg-white/80 border-white/70" },
+            { label: "รอคิว", value: laneSummary.queued, tone: "text-amber-900 bg-amber-50/90 border-amber-200/80" },
+            { label: "กำลังบริการ", value: laneSummary.inService, tone: "text-sky-900 bg-sky-50/90 border-sky-200/80" },
+            {
+              label: laneSummary.waitingSlip > 0 ? "รอสลิป/ชำระ" : "รอชำระ",
+              value: laneSummary.waitingSlip + laneSummary.waitingPay,
+              tone: "text-emerald-900 bg-emerald-50/90 border-emerald-200/80",
+            },
+          ].map((s) => (
+            <div
+              key={s.label}
+              className={cn(
+                "rounded-xl border px-2.5 py-2 text-center shadow-sm sm:rounded-2xl sm:px-3 sm:py-2.5",
+                s.tone,
+              )}
+            >
+              <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">{s.label}</p>
+              <p className="mt-0.5 text-lg font-black tabular-nums sm:text-xl">{s.value}</p>
+            </div>
+          ))}
+        </div>
+        <ul
+          className={cn(
+            "grid gap-3",
+            staffLayout ? "grid-cols-1" : "mt-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+          )}
+        >
           {active.map((v) => {
             const waitingSlip =
               v.service_status === "COMPLETED" && !hasLaneSlipPhoto(v) && !isPendingBundleVisit(v);
@@ -490,85 +610,167 @@ export function CarWashServiceLanePanel({
             const badgeLabel = waitingSlip ? "รอแนบสลิป" : waitingPay ? "รอชำระ" : carWashStatusLabelTh(st);
             const pkgMins = packages.find((p) => p.id === v.package_id)?.duration_minutes;
             const elapsed = laneClockMs != null ? minsSince(v.visit_at, laneClockMs) : 0;
+            const rowBusy = busyVisitId === v.id;
+            const next = nextLaneStatus(v);
+            const photoUrl = v.photo_url?.trim() ? resolveAssetUrl(v.photo_url, baseUrl) : null;
             return (
               <li key={v.id}>
-                <button
-                  type="button"
-                  onClick={() => setLaneModalVisitId(v.id)}
+                <article
                   className={cn(
-                    staffLayout
-                      ? "flex min-h-[132px] w-full flex-col rounded-xl border-2 p-3 text-left shadow-sm ring-1 transition hover:shadow-md sm:min-h-[150px] sm:rounded-2xl sm:p-4"
-                      : "flex min-h-[124px] w-full flex-col rounded-xl border-2 p-2.5 text-left shadow-sm ring-1 transition hover:shadow-md sm:min-h-[148px] sm:rounded-2xl sm:p-4",
+                    "flex h-full min-h-[200px] w-full flex-col rounded-2xl border-2 p-3 shadow-sm ring-1 transition sm:min-h-[220px] sm:p-4",
                     tone.border,
                     tone.bg,
                     tone.ring,
-                    tone.hoverBorder,
                   )}
                 >
-                  {staffLayout ? (
-                    <div className="flex min-h-[112px] items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#66638c]">ทะเบียนรถ</p>
-                        <span className="mt-1 block line-clamp-1 text-xl font-black tabular-nums leading-tight text-[#2e2a58]">
-                          {v.plate_number}
-                        </span>
-                        <p className="mt-1 text-[11px] tabular-nums text-slate-500">
-                          {new Date(v.visit_at).toLocaleTimeString("th-TH", {
-                            timeZone: "Asia/Bangkok",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}{" "}
-                          · ผ่านมา {elapsed} นาที
-                        </p>
-                        {pkgMins != null ? <p className="mt-1 text-[11px] text-slate-400">แพ็กเกจประมาณ {pkgMins} นาที</p> : null}
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <span className={cn("inline-flex max-w-[9rem] truncate rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", tone.badge)}>
-                          {badgeLabel}
-                        </span>
-                        <p className="mt-2 line-clamp-1 text-sm font-bold text-[#4d47b6]">{v.package_name}</p>
-                        <p className="mt-0.5 line-clamp-1 text-xs font-medium text-[#66638c]">{v.customer_name}</p>
-                        <p className="mt-2 text-sm font-black tabular-nums text-emerald-700">฿{v.final_price.toLocaleString("th-TH")}</p>
-                        <p className="mt-1 text-[10px] font-semibold text-[#4d47b6]">แตะเพื่อดูรายละเอียด</p>
-                      </div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#66638c]">ทะเบียนรถ</p>
+                      <p className="mt-0.5 line-clamp-1 text-xl font-black tabular-nums leading-tight text-[#2e2a58]">
+                        {v.plate_number.trim() || "—"}
+                      </p>
                     </div>
-                  ) : (
-                    <>
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-[9px] font-semibold uppercase tracking-wide text-[#66638c] sm:text-[10px]">ทะเบียน</span>
-                        <span
-                          className={cn(
-                            "max-w-[58%] truncate rounded-full px-1.5 py-0.5 text-[9px] font-semibold ring-1 sm:px-2 sm:text-[10px]",
-                            tone.badge,
-                          )}
-                        >
-                          {badgeLabel}
-                        </span>
-                      </div>
-                      <span className="mt-0.5 line-clamp-2 text-base font-bold tabular-nums text-[#2e2a58] sm:mt-1 sm:text-xl">{v.plate_number}</span>
-                      <p className="mt-0.5 line-clamp-1 text-[11px] font-medium text-[#4d47b6] sm:mt-1 sm:text-xs">{v.package_name}</p>
-                      <p className="mt-0.5 line-clamp-1 text-[10px] text-[#66638c] sm:text-[11px]">{v.customer_name}</p>
-                      <p className="mt-0.5 text-[9px] tabular-nums text-slate-500 sm:mt-1 sm:text-[10px]">
-                        {new Date(v.visit_at).toLocaleTimeString("th-TH", {
-                          timeZone: "Asia/Bangkok",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}{" "}
-                        · ผ่านมา{" "}
-                        {elapsed} นาที
-                      </p>
-                      {pkgMins != null ? <p className="text-[9px] text-slate-400 sm:text-[10px]">แพ็กเกจประมาณ {pkgMins} นาที</p> : null}
-                      <p className="mt-auto pt-1.5 text-xs font-bold tabular-nums text-emerald-700 sm:pt-2 sm:text-sm">
-                        ฿{v.final_price.toLocaleString("th-TH")}
-                      </p>
-                      <p className="mt-1 text-[9px] font-medium text-[#4d47b6] sm:mt-2 sm:text-[10px]">แตะเพื่อดูรายละเอียด</p>
-                    </>
-                  )}
-                </button>
+                    <span
+                      className={cn(
+                        "inline-flex max-w-[9rem] shrink-0 truncate rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1",
+                        tone.badge,
+                      )}
+                    >
+                      {badgeLabel}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 min-w-0 space-y-0.5">
+                    <p className="line-clamp-1 text-sm font-bold text-[#4d47b6]">{v.package_name}</p>
+                    <p className="line-clamp-1 text-xs font-medium text-[#66638c]">
+                      {v.customer_name.trim() || "ลูกค้าทั่วไป"}
+                      {v.customer_phone?.trim() ? ` · ${v.customer_phone}` : ""}
+                    </p>
+                    <p className="text-[11px] tabular-nums text-slate-500">
+                      {new Date(v.visit_at).toLocaleTimeString("th-TH", {
+                        timeZone: "Asia/Bangkok",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}{" "}
+                      · ผ่านมา {elapsed} นาที
+                      {pkgMins != null ? ` · แพ็ก ~${pkgMins} น.` : ""}
+                    </p>
+                    <p className="text-sm font-black tabular-nums text-emerald-700">
+                      ฿{v.final_price.toLocaleString("th-TH")}
+                      {v.bundle_id != null ? (
+                        <span className="ml-1 text-[10px] font-bold text-amber-700">เหมา</span>
+                      ) : null}
+                    </p>
+                  </div>
+
+                  <div className="mt-3">
+                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-[#66638c]">เปลี่ยนสถานะ</p>
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label={`สถานะ ${v.plate_number}`}>
+                      {LANE_STATUS_FLOW.map((s) => {
+                        const selected = v.service_status === s;
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            disabled={rowBusy}
+                            aria-pressed={selected}
+                            className={cn(
+                              "rounded-full px-2.5 py-1 text-[10px] font-black transition disabled:opacity-50",
+                              selected
+                                ? "bg-[#5b61ff] text-white shadow-sm"
+                                : "border border-white/80 bg-white/80 text-[#4d47b6] hover:bg-white",
+                            )}
+                            onClick={() => void applyLaneStatus(v, s)}
+                          >
+                            {carWashStatusLabelTh(s)}
+                          </button>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        disabled={rowBusy || !canSelectPaidLane(v)}
+                        aria-pressed={v.service_status === "PAID"}
+                        title={
+                          canSelectPaidLane(v)
+                            ? "ปิดคิว — ชำระแล้ว"
+                            : "ต้องสถานะเสร็จแล้วและมีสลิป (หรือแพ็กเหมา)"
+                        }
+                        className={cn(
+                          "rounded-full px-2.5 py-1 text-[10px] font-black transition disabled:opacity-40",
+                          v.service_status === "PAID"
+                            ? "bg-emerald-600 text-white"
+                            : "border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100",
+                        )}
+                        onClick={() => void applyLaneStatus(v, "PAID")}
+                      >
+                        ชำระแล้ว
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-white/60 pt-3">
+                    {next ? (
+                      <button
+                        type="button"
+                        disabled={rowBusy}
+                        className="inline-flex min-h-[36px] flex-1 items-center justify-center rounded-xl bg-gradient-to-r from-[#5b61ff] to-[#8d64ff] px-3 text-[11px] font-black text-white shadow-sm disabled:opacity-50"
+                        onClick={() => void applyLaneStatus(v, next)}
+                      >
+                        ขั้นถัดไป: {carWashStatusLabelTh(next)}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={cn(appTemplateOutlineButtonClass, "min-h-[36px] rounded-xl px-2.5 text-[11px] font-black")}
+                      onClick={() => openLaneDetails(v.id)}
+                    >
+                      รายละเอียด
+                    </button>
+                    <button
+                      type="button"
+                      className={cn(appTemplateOutlineButtonClass, "min-h-[36px] rounded-xl px-2.5 text-[11px] font-black")}
+                      onClick={() => openLaneBill(v.id)}
+                    >
+                      บิล/QR
+                    </button>
+                    {v.final_price > 0 ? (
+                      <button
+                        type="button"
+                        className={cn(appTemplateOutlineButtonClass, "min-h-[36px] rounded-xl px-2.5 text-[11px] font-black")}
+                        onClick={() => printLaneReceipt(v)}
+                      >
+                        พิมพ์ใบเสร็จ
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      disabled={rowBusy || lanePhotoBusy}
+                      className={cn(
+                        appTemplateOutlineButtonClass,
+                        "min-h-[36px] rounded-xl px-2.5 text-[11px] font-black disabled:opacity-50",
+                      )}
+                      onClick={() => pickLanePhotoForVisit(v.id)}
+                    >
+                      {photoUrl ? "เปลี่ยนรูป" : "แนบรูป"}
+                    </button>
+                    {photoUrl ? (
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl ring-2 ring-white/80"
+                        aria-label="ดูรูปแนบ"
+                        onClick={() => lightbox.open(photoUrl)}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+                      </button>
+                    ) : null}
+                  </div>
+                </article>
               </li>
             );
           })}
         </ul>
+      </>
     );
 
   const laneMain = (
@@ -581,6 +783,12 @@ export function CarWashServiceLanePanel({
 
   return (
     <>
+      <AppGalleryCameraFileInputs
+        galleryInputRef={laneGalleryInputRef}
+        cameraInputRef={laneCameraInputRef}
+        onChange={onLaneGalleryChange}
+      />
+      <AppImageLightbox src={lightbox.src} onClose={lightbox.close} alt="รูปแนบลาน" />
       {staffLayout ?
         <div className="relative w-full">{laneMain}</div>
       : <AppDashboardSection tone="violet">{laneMain}</AppDashboardSection>}
@@ -596,11 +804,6 @@ export function CarWashServiceLanePanel({
               `ทะเบียน ${modalVisit.plate_number}`
             : `ทะเบียน ${modalVisit.plate_number}`
           : ""
-        }
-        description={
-          laneModalView === "details" ?
-            "ตรวจสอบข้อมูลลูกค้า อัปเดตสถานะ และแนบหลักฐานการชำระเงิน"
-          : "แสดงบิลสรุปยอดและ QR ชำระเงิน"
         }
         footer={
           modalVisit ?
@@ -665,11 +868,6 @@ export function CarWashServiceLanePanel({
           <div className="space-y-5">
             {laneModalView === "details" ?
               <>
-                <AppGalleryCameraFileInputs
-                  galleryInputRef={laneGalleryInputRef}
-                  cameraInputRef={laneCameraInputRef}
-                  onChange={onLaneGalleryChange}
-                />
                 <div
                   className={cn(
                     "rounded-2xl border-2 p-4 sm:p-5",
@@ -915,7 +1113,6 @@ export function CarWashServiceLanePanel({
         onRequestLegacyPicker={onLaneCameraLegacyPicker}
         title="ถ่ายรูปสลิป / หลักฐาน"
       />
-      <AppImageLightbox src={lightbox.src} onClose={lightbox.close} alt="สลิป / รูปแนบ" />
     </>
   );
 }

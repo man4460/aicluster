@@ -37,7 +37,10 @@ export function StaffDailyPinGate({
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch(`${unlockApiPath}?${staffQuery}`, {
+      const unlockUrl = staffQuery.trim()
+        ? `${unlockApiPath}?${staffQuery.trim()}`
+        : unlockApiPath;
+      const res = await fetch(unlockUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",

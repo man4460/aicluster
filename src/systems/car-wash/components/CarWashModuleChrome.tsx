@@ -44,16 +44,12 @@ const navLinkClass = (active: boolean) =>
     active ? carWashNavActiveClass : carWashNavIdleClass,
   );
 
-const CAR_WASH_MODULE_EN_LABEL = "CAR WASH";
+const CAR_WASH_MODULE_LABEL = "โมดูล";
 
-function CarWashHeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
+function CarWashHeaderCollapseGlyph() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
-      {collapsed ? (
-        <path d="M4 8h16M4 12h16M4 16h10" strokeLinecap="round" />
-      ) : (
-        <path d="M4 6h16M4 12h16M4 18h10" strokeLinecap="round" />
-      )}
+      <path d="M4 8h16M4 12h16M4 16h16" strokeLinecap="round" />
     </svg>
   );
 }
@@ -64,7 +60,7 @@ function CarWashModuleChromeInner({ children }: { children: ReactNode }) {
   const tabParam = searchParams.get("tab");
   const onSettings = isCarWashSettingsActive(pathname);
 
-  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+  const [headerCollapsed, setHeaderCollapsed] = useState(readCarWashHeaderCollapsed());
 
   useEffect(() => {
     const sync = () => setHeaderCollapsed(readCarWashHeaderCollapsed());
@@ -99,8 +95,8 @@ function CarWashModuleChromeInner({ children }: { children: ReactNode }) {
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <p className={cn(carWashHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
-                    {CAR_WASH_MODULE_EN_LABEL}
+                  <p className="hidden text-[10px] font-black uppercase tracking-[0.16em] text-[#4d47b6] sm:block" aria-hidden>
+                    {CAR_WASH_MODULE_LABEL}
                   </p>
                   <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl" id="car-wash-module-title">
                     คาร์แคร์
@@ -113,12 +109,12 @@ function CarWashModuleChromeInner({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={toggleHeader}
                 className={cn("inline-flex", carWashHeaderCollapseBtnClass)}
-                aria-label={headerCollapsed ? "แสดงหัวโมดูล" : "ซ่อนหัวโมดูล"}
-                aria-pressed={headerCollapsed}
-                title={headerCollapsed ? "แสดงหัวโมดูล" : "ซ่อนหัวโมดูล"}
+                aria-expanded={!headerCollapsed}
+                aria-label={headerCollapsed ? "แสดงส่วนหัวโมดูล" : "ซ่อนส่วนหัวโมดูล"}
+                title={headerCollapsed ? "แสดงส่วนหัวโมดูล" : "ซ่อนส่วนหัวโมดูล"}
                 suppressHydrationWarning
               >
-                <CarWashHeaderCollapseGlyph collapsed={false} />
+                <CarWashHeaderCollapseGlyph />
               </button>
             </div>
           </div>
@@ -129,7 +125,7 @@ function CarWashModuleChromeInner({ children }: { children: ReactNode }) {
 
         <nav
           aria-label="เมนูคาร์แคร์"
-          className="mt-5 hidden border-t border-white/40 pt-5 lg:block print:hidden"
+          className="mt-5 hidden border-t border-[#e8e6fc]/70 pt-5 lg:block print:hidden"
         >
           <ul className="flex gap-1">
             {CAR_WASH_TAB_ITEMS.map((item) => {

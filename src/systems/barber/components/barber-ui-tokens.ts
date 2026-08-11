@@ -1,6 +1,5 @@
 /**
- * โทน UI ร้านตัดผม — ให้สอดคล้องร้านเครื่องดื่ม / สนามฟุตบอล / template กลาง (ม่วง MAWELL)
- * Baseline: drink-pos · football-turf (MASTER.md §Module Workspace UX/UI Rules)
+ * โทน UI ร้านตัดผม — สอดคล้องโรงแรม / นวด (§9 Radius 2.0 / 1.5 / 1.0)
  */
 import { cn } from "@/lib/cn";
 import {
@@ -8,17 +7,23 @@ import {
   appDashboardBrandGradientFillClass,
 } from "@/components/app-templates/dashboard-tokens";
 
-/** โค้งการ์ด/แผงย่อยในโมดูล — เทียบ CarWashStat / แถวรายการคาร์แคร์ (rounded-[2rem]) */
-export const barberCardSurfaceRadiusClass = "rounded-[2rem]";
+/** §9 Surface = 1.5rem — การ์ดย่อย / รายการ */
+export const barberCardSurfaceRadiusClass = "rounded-[1.5rem]";
 
-/** แผงใหญ่ชั้นใน (คู่กับเปลือกโมดูล rounded-[2.5rem]) */
-export const barberCardLargeRadiusClass = "rounded-[2.5rem]";
+/** §9 Shell = 2.0rem — แผงใหญ่ / section */
+export const barberCardLargeRadiusClass = "rounded-[2rem]";
 
-/** ช่องป้อนข้อมูล / แถบแจ้งเตือนเล็ก / รูปย่อ — โค้งรองจากการ์ดหลัก */
-export const barberInsetControlRadiusClass = "rounded-[1.25rem]";
+/** §9 Control = 1.0rem */
+export const barberInsetControlRadiusClass = "rounded-[1rem]";
+
+/** ทับ AppDashboardSection */
+export const barberSectionRadiusClass = "!rounded-[2rem]";
+
+/** dock pill มือถือ */
+export const barberDockPillClass = "!rounded-[1.5rem]";
 
 /** padding แนวนอนในการ์ด — มือถือแคบลงให้สัดส่วนจอเล็ก */
-export const barberCardBodyPaddingXClass = "px-2.5 sm:px-4";
+export const barberCardBodyPaddingXClass = "px-3 sm:px-4";
 
 /** สถานะว่างแบบเส้นประ (มีพื้นอ่อน) */
 export const barberEmptyStateDashedClass =
@@ -106,11 +111,17 @@ export const barberFinanceHubHeaderShellClass = barberOffersHubHeaderShellClass;
 
 // --- Design System tokens (baseline drink-pos · football-turf — MASTER.md) ---
 
-/** เปลือกหัวโมดูล glass shell — baseline: drinkPosGlassShellClass / footballTurfGlassShellClass */
+/** เปลือกหัวโมดูล glass — §9 Shell 2.0rem (โรงแรม) */
 export const barberGlassShellClass = cn(
-  "app-surface overflow-hidden rounded-[2.5rem] max-md:rounded-2xl border border-[#e8e6fc]/80",
-  "bg-gradient-to-br from-white/80 via-[#f5f3ff]/70 to-[#fdf2f8]/55",
-  "shadow-[0_24px_60px_-28px_rgba(30,27,75,0.28)] backdrop-blur-2xl",
+  "overflow-hidden rounded-[2rem] border border-white/50",
+  "bg-gradient-to-br from-white/50 via-indigo-50/25 to-violet-100/20",
+  "shadow-[0_24px_60px_-28px_rgba(30,27,75,0.32),inset_0_1px_0_0_rgba(255,255,255,0.55)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
+);
+
+/** การ์ดนอกหุ้มเนื้อหาใต้หัวโมดูล — §9 Shell 2.0rem */
+export const barberModuleContentShellClass = cn(
+  "min-w-0 overflow-hidden rounded-[2rem] border border-white/45 bg-white/35 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.28)] backdrop-blur-xl ring-1 ring-inset ring-white/50",
+  "p-4 sm:p-5 md:p-6 print:border-0 print:shadow-none",
 );
 
 /** Accent bar ในหัวหลักเท่านั้น — หลังเส้นต้องมี `mt-5` ก่อนเนื้อหาใต้ */
@@ -147,6 +158,24 @@ export const barberSubTabSegmentShellClass = cn(
   `${barberCardSurfaceRadiusClass} flex shrink-0 items-center gap-1 border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-[#f0fdfa]/35 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]`,
 );
 
+/** แถวเครื่องมือหัวแดชบอร์ด: ปุ่มแอ็กชันซ้าย · เมนูแท็บชิดขวา */
+export const barberDashboardToolsRowClass =
+  "flex min-w-0 flex-wrap items-center justify-end gap-2 overflow-visible";
+
+/** ความสูงมาตรฐานของ segment ควบคู่เมนูแท็บ — ไม่ scroll ในกล่อง */
+export const barberDashboardSegmentShellClass = cn(
+  barberSubTabSegmentShellClass,
+  "min-h-10 flex-nowrap items-center gap-0.5 overflow-hidden p-0.5",
+);
+
+/** ปุ่มใน segment หัวแดชบอร์ด (โทนเดียวกับแท็บ) */
+export const barberDashboardSegmentBtnClass = (active = false) =>
+  cn(
+    "inline-flex h-8 min-h-8 shrink-0 items-center justify-center gap-1.5 rounded-[0.85rem] px-2.5 text-xs font-bold leading-none transition-all sm:px-3",
+    active ? barberNavActiveClass : barberNavIdleClass,
+  );
+
+
 /** ระยะ content stack แนวตั้งภายใน shell — gap-4 mobile / gap-6 desktop */
 export const barberContentStackClass = "space-y-4 sm:space-y-6";
 
@@ -159,12 +188,12 @@ export const barberChartSectionDividerClass = "mt-6 border-t border-[#ecebff] pt
 /** Filter field grid layout — 1 col mobile, 2 col desktop */
 export const barberFilterFieldGridClass = "grid gap-3 sm:grid-cols-2";
 
-/** Field / input class — baseline drinkPosFieldClass */
+/** Field / input — §9 Control 1.0rem */
 export const barberFieldClass =
-  "w-full rounded-2xl border border-white/60 bg-white/85 px-3 py-2.5 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#0000BF]/20 focus:ring-2";
+  "w-full rounded-[1rem] border border-white/60 bg-white/85 px-3 py-2.5 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#0000BF]/20 focus:ring-2";
 
-/** Stat card grid — ตั้งแต่ md ขึ้นไปต้อง 3 คอลัมน์ (MASTER.md §8) */
-export const barberStatGridClass = "grid gap-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3";
+/** สถิติมือถือ 2 คอลัมน์ */
+export const barberStatGridClass = "grid grid-cols-2 gap-3 sm:grid-cols-3";
 
 /** Booking / check-in card grid — ตั้งแต่ sm ขึ้นไป 3 คอลัมน์ */
 export const barberBookingGridClass = "grid gap-4 sm:grid-cols-3";
@@ -189,6 +218,21 @@ export const barberHeaderEnLabelClass =
 /** CTA button class — brand gradient white text rounded-xl shadow-md */
 export const barberCtaClass = cn(
   "inline-flex min-h-[40px] items-center justify-center rounded-xl px-3 py-2 text-xs font-black text-white shadow-md transition active:scale-[0.99] disabled:opacity-50",
+  appDashboardBrandGradientFillClass,
+);
+
+/** Payment chips — คู่กับ hotelResortPaymentChip* */
+export const barberPaymentChipIdleClass =
+  "rounded-full border border-[#0000BF]/25 bg-white/85 px-4 py-2 text-xs font-black text-[#2e2a58] shadow-sm";
+
+export const barberPaymentChipActiveClass = cn(
+  "rounded-full border-transparent px-4 py-2 text-xs font-black text-white shadow-md",
+  appDashboardBrandGradientFillClass,
+);
+
+/** CTA ในแผงชำระ (แสดง QR ให้ลูกค้า) */
+export const barberPaymentCtaClass = cn(
+  "inline-flex min-h-[40px] items-center justify-center rounded-[1rem] px-3 py-2 text-xs font-black text-white shadow-md transition active:scale-[0.99] disabled:opacity-50",
   appDashboardBrandGradientFillClass,
 );
 
@@ -241,3 +285,19 @@ export const barberModalCloseBtnClass =
 /** ปิดพรีวิวรูป — เว้น safe area */
 export const barberModalImagePreviewCloseBtnClass =
   "absolute right-[max(1rem,env(safe-area-inset-right,0px))] top-[max(1rem,env(safe-area-inset-top,0px))] rounded-[1.25rem] bg-white/90 px-3 py-1 text-sm font-semibold text-[#2e2a58] shadow";
+
+/** แถบเมนูหลักหน้าตั้งค่า (pill) */
+export const barberPrimaryTabShellClass =
+  "inline-flex w-full max-w-full flex-wrap content-start items-center gap-1 rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/30 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)] sm:rounded-[1.35rem] sm:p-1.5";
+
+export function barberPrimaryTabPillClass(active: boolean): string {
+  return cn(
+    "min-h-10 shrink-0 grow basis-[calc(50%-4px)] whitespace-nowrap rounded-xl px-3 text-sm font-black leading-none sm:min-h-11 sm:grow-0 sm:basis-auto sm:px-4 sm:text-[15px]",
+    active
+      ? cn(appDashboardBrandGradientFillClass, "text-white shadow-md")
+      : "bg-white/50 text-[#5f5a8a] transition hover:bg-white/90 hover:text-[#4d47b6]",
+  );
+}
+
+export const barberMobileSelectClass =
+  "box-border h-9 w-full min-w-0 appearance-none rounded-xl border border-[#e4e0f5] bg-white/95 px-3 pr-8 text-xs font-black text-[#1e1b4b] shadow-sm outline-none ring-1 ring-inset ring-white/70 focus:border-[#5b61ff]/40 focus:ring-2 focus:ring-[#5b61ff]/20";

@@ -18,5 +18,5 @@ export default async function VaultLayout({ children }: { children: React.ReactN
   const session = await getSession();
   if (!session) redirect("/login");
 
-  return <VaultShell siteName={session.username}>{children}</VaultShell>;
+  return <VaultShell>{children}</VaultShell>;
 }

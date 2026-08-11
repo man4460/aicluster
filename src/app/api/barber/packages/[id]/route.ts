@@ -4,11 +4,43 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
 import { getBarberDataScope } from "@/lib/trial/module-scopes";
+import {
+  BARBER_DURATION_PRESETS,
+  barberNormalizeDurationMinutes,
+} from "@/systems/barber/lib/booking-slots";
+
+const PACKAGE_IMAGE_PREFIX = "/uploads/barber-packages/";
+
+function normalizePackageImageUrl(raw: string | null | undefined): string | null {
+  if (raw == null) return null;
+  const t = raw.trim();
+  if (!t) return null;
+  if (!t.startsWith(PACKAGE_IMAGE_PREFIX)) return null;
+  if (t.includes("..") || t.includes("\\")) return null;
+  return t.slice(0, 512);
+}
+
+function normalizePackageDuration(raw: unknown): number {
+  const n = barberNormalizeDurationMinutes(raw, 30);
+  if ((BARBER_DURATION_PRESETS as readonly number[]).includes(n)) return n;
+  let best: number = BARBER_DURATION_PRESETS[0]!;
+  let bestDiff = Math.abs(n - best);
+  for (const p of BARBER_DURATION_PRESETS) {
+    const d = Math.abs(n - p);
+    if (d < bestDiff) {
+      best = p;
+      bestDiff = d;
+    }
+  }
+  return best;
+}
 
 const patchSchema = z.object({
   name: z.string().min(1).max(191).optional(),
   price: z.number().finite().min(0).max(99_999_999).optional(),
   totalSessions: z.number().int().min(1).max(9999).optional(),
+  imageUrl: z.union([z.string().max(512), z.null()]).optional(),
+  durationMinutes: z.number().int().min(15).max(480).optional(),
 });
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -55,12 +87,30 @@ export async function PATCH(req: Request, ctx: Ctx) {
     }
   }
 
+  let imageUrl: string | null | undefined;
+  if (d.imageUrl !== undefined) {
+    if (d.imageUrl === null || d.imageUrl.trim() === "") {
+      imageUrl = null;
+    } else {
+      const norm = normalizePackageImageUrl(d.imageUrl);
+      if (!norm) {
+        return NextResponse.json({ error: "รูปแพ็กเกจไม่ถูกต้อง" }, { status: 400 });
+      }
+      imageUrl = norm;
+    }
+  }
+
+  const durationMinutes =
+    d.durationMinutes !== undefined ? normalizePackageDuration(d.durationMinutes) : undefined;
+
   const p = await prisma.barberPackage.update({
     where: { id },
     data: {
       ...(d.name !== undefined && { name: d.name.trim() }),
       ...(d.price !== undefined && { price: d.price }),
       ...(d.totalSessions !== undefined && { totalSessions: d.totalSessions }),
+      ...(imageUrl !== undefined && { imageUrl }),
+      ...(durationMinutes !== undefined && { durationMinutes }),
     },
   });
 
@@ -70,6 +120,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
       name: p.name,
       price: Number(p.price),
       totalSessions: p.totalSessions,
+      imageUrl: p.imageUrl ?? null,
+      durationMinutes: barberNormalizeDurationMinutes(p.durationMinutes, 30),
     },
   });
 }

@@ -9,6 +9,7 @@ import {
   appDashboardInnerScrollClass,
   appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
+import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import {
@@ -292,13 +293,16 @@ export function GeneralStorePosSalesClient() {
               <button
                 type="button"
                 onClick={openModal}
-                className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl px-0 font-black shadow-md sm:min-w-0 sm:px-4"
+                className={cn(
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl px-0 font-black text-white shadow-md sm:min-w-0 sm:gap-1.5 sm:px-4",
+                  appDashboardBrandGradientFillClass,
+                )}
                 aria-label="บันทึกการขาย"
               >
-                <svg className="h-5 w-5 sm:mr-1.5 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+                <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
                   <path d="M12 5v14M5 12h14" strokeLinecap="round" />
                 </svg>
-                <span className="hidden sm:inline">+ บันทึกขาย</span>
+                <span className="hidden sm:inline">บันทึกขาย</span>
               </button>
             </div>
           }

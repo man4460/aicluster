@@ -23,6 +23,7 @@ const WIDE_MODULE_PREFIXES = [
   "/dashboard/drink-pos",
   "/dashboard/building-pos",
   "/dashboard/hotel-resort",
+  "/dashboard/barber",
   "/dashboard/admin",
   "/dashboard/car-wash",
   "/dashboard/spa",
@@ -58,7 +59,6 @@ const WIDE_MODULE_PREFIXES = [
 
 /** Module paths ที่มี bottom dock — เพิ่ม gutter px-3 มือถือ ไม่ให้ซ้อนกับ padding ชั้นใน shell */
 const DOCKED_MODULE_PREFIXES = [
-  "/dashboard/barber",
   "/dashboard/laundry",
   "/dashboard/massage",
   "/dashboard/parking",

@@ -10,6 +10,13 @@ import {
   isPrismaSchemaMismatch,
   THAI_PRISMA_SCHEMA_MISMATCH,
 } from "@/lib/prisma-schema-mismatch";
+import {
+  barberMapStylistSchedule,
+  barberNormalizeWorkHm,
+  barberNormalizeWorkWeekdays,
+  barberSerializeWorkWeekdays,
+} from "@/systems/barber/lib/stylist-schedule";
+import { barberParseHmToMinutes } from "@/systems/barber/lib/booking-slots";
 
 const STYLIST_PHOTO_PREFIX = "/uploads/barber-stylists/";
 
@@ -35,12 +42,38 @@ const patchSchema = z.object({
   phone: z.union([z.string().max(20), z.null()]).optional(),
   isActive: z.boolean().optional(),
   photoUrl: z.union([z.string().max(512), z.null()]).optional(),
+  workStartTime: z.string().max(5).optional(),
+  workEndTime: z.string().max(5).optional(),
+  workWeekdays: z.array(z.number().int().min(0).max(6)).optional(),
 });
 
 function phoneOrNull(raw: string | null): string | null {
   if (raw == null || raw.trim() === "") return null;
   const d = raw.replace(/\D/g, "").slice(0, 20);
   return d.length > 0 ? d : null;
+}
+
+function mapStylist(s: {
+  id: number;
+  name: string;
+  phone: string | null;
+  photoUrl: string | null;
+  isActive: boolean;
+  workStartTime: string;
+  workEndTime: string;
+  workWeekdaysJson: string;
+}) {
+  const schedule = barberMapStylistSchedule(s);
+  return {
+    id: s.id,
+    name: s.name,
+    phone: s.phone,
+    photoUrl: s.photoUrl ?? null,
+    isActive: s.isActive,
+    workStartTime: schedule.workStartTime,
+    workEndTime: schedule.workEndTime,
+    workWeekdays: schedule.workWeekdays,
+  };
 }
 
 export async function PATCH(
@@ -86,6 +119,9 @@ export async function PATCH(
     phone?: string | null;
     isActive?: boolean;
     photoUrl?: string | null;
+    workStartTime?: string;
+    workEndTime?: string;
+    workWeekdaysJson?: string;
   } = {};
   if (parsed.data.name !== undefined) {
     const n = parsed.data.name.trim();
@@ -102,6 +138,34 @@ export async function PATCH(
       return NextResponse.json({ error: "ลิงก์รูปไม่ถูกต้อง" }, { status: 400 });
     }
     data.photoUrl = norm;
+  }
+
+  const nextStart =
+    parsed.data.workStartTime !== undefined
+      ? barberNormalizeWorkHm(parsed.data.workStartTime, existing.workStartTime)
+      : existing.workStartTime;
+  const nextEnd =
+    parsed.data.workEndTime !== undefined
+      ? barberNormalizeWorkHm(parsed.data.workEndTime, existing.workEndTime)
+      : existing.workEndTime;
+  if (parsed.data.workStartTime !== undefined || parsed.data.workEndTime !== undefined) {
+    const sm = barberParseHmToMinutes(nextStart);
+    const em = barberParseHmToMinutes(nextEnd);
+    if (sm == null || em == null || em <= sm) {
+      return NextResponse.json(
+        { error: "ช่วงเวลารับคิวไม่ถูกต้อง (สิ้นสุดต้องหลังเริ่ม)" },
+        { status: 400 },
+      );
+    }
+    data.workStartTime = nextStart;
+    data.workEndTime = nextEnd;
+  }
+  if (parsed.data.workWeekdays !== undefined) {
+    const days = barberNormalizeWorkWeekdays(parsed.data.workWeekdays);
+    if (days.length === 0) {
+      return NextResponse.json({ error: "เลือกอย่างน้อย 1 วันที่รับบริการ" }, { status: 400 });
+    }
+    data.workWeekdaysJson = barberSerializeWorkWeekdays(days);
   }
 
   if (Object.keys(data).length === 0) {
@@ -142,13 +206,7 @@ export async function PATCH(
   });
 
   return NextResponse.json({
-    stylist: {
-      id: s.id,
-      name: s.name,
-      phone: s.phone,
-      photoUrl: s.photoUrl ?? null,
-      isActive: s.isActive,
-    },
+    stylist: mapStylist(s),
   });
 }
 

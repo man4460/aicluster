@@ -7,6 +7,7 @@ import { normalizePhone } from "@/lib/car-wash/http";
 import { carWashServiceStatusZod, normalizeCarWashServiceStatus } from "@/lib/car-wash/service-status";
 import { jsonCarWashSessionError } from "@/lib/car-wash/route-errors";
 import { getCarWashDataScope } from "@/lib/trial/module-scopes";
+import { resolveAndLinkCarWashVisitBooking } from "@/lib/car-wash/link-visit-to-booking";
 
 const postSchema = z
   .object({
@@ -25,6 +26,8 @@ const postSchema = z
     photo_url: z.string().max(512).optional().nullable(),
     /** เหมาจ่าย: เก็บ id แพ็กไว้ — หักครั้งเมื่อสถานะเป็น PAID เท่านั้น */
     bundle_id: z.number().int().positive().optional().nullable(),
+    /** ผูกคิวจอง (พอร์ทัล / เพิ่มคิว) — ว่างได้ ระบบจะจับคู่เบอร์/ทะเบียนวันนี้ */
+    booking_id: z.number().int().positive().optional().nullable(),
   })
   .superRefine((data, ctx) => {
     if (data.bundle_id != null) return;
@@ -76,6 +79,7 @@ export async function GET() {
         service_status: normalizeCarWashServiceStatus(r.serviceStatus),
         photo_url: r.photoUrl ?? "",
         bundle_id: r.bundleId ?? null,
+        booking_id: r.bookingId ?? null,
       })),
     });
   } catch (e) {
@@ -174,6 +178,21 @@ export async function POST(req: Request) {
         },
       });
     }
+
+    const linkedBookingId = await resolveAndLinkCarWashVisitBooking(prisma, {
+      ownerUserId: own.ownerId,
+      trialSessionId: scope.trialSessionId,
+      visitId: row.id,
+      bookingId: parsed.data.booking_id ?? null,
+      customerPhone: row.customerPhone,
+      plateNumber: row.plateNumber,
+      serviceStatus,
+    });
+    if (linkedBookingId != null) {
+      const refreshed = await prisma.carWashVisit.findUnique({ where: { id: row.id } });
+      if (refreshed) row = refreshed;
+    }
+
     return NextResponse.json({
       visit: {
         id: row.id,
@@ -190,6 +209,7 @@ export async function POST(req: Request) {
         service_status: normalizeCarWashServiceStatus(row.serviceStatus),
         photo_url: row.photoUrl ?? "",
         bundle_id: row.bundleId ?? null,
+        booking_id: row.bookingId ?? null,
       },
     });
   } catch (e) {

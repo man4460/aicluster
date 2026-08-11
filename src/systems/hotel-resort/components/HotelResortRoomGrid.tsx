@@ -348,7 +348,7 @@ function HotelResortRoomCard({
 
 export function HotelResortRoomGrid({
   rooms,
-  filterOpen = true,
+  filterOpen = false,
   onFiltersActiveChange,
   onRoomSelect,
   onCheckIn,

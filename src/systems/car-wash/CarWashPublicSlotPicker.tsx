@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/cn";
 
-export type PublicSlotItem = { time: string; available: boolean };
+export type PublicSlotItem = { time: string; available: boolean; status?: string };
 
 type Props = {
   bookingDateKey: string;
@@ -65,7 +65,13 @@ export function CarWashPublicSlotPicker({
                     disabled={!s.available}
                     role="option"
                     aria-selected={active}
-                    aria-label={s.available ? `จองเวลา ${s.time}` : `เวลา ${s.time} เต็มแล้ว`}
+                    aria-label={
+                      s.available
+                        ? `จองเวลา ${s.time}`
+                        : s.status === "PAST"
+                          ? `เวลา ${s.time} ผ่านไปแล้ว`
+                          : `เวลา ${s.time} เต็มแล้ว`
+                    }
                     onClick={() => s.available && onSlotChange(s.time)}
                     className={cn(
                       "flex w-full min-h-[48px] items-center justify-between rounded-2xl border px-4 py-3 text-left transition-all",
@@ -85,7 +91,7 @@ export function CarWashPublicSlotPicker({
                       {s.time}
                     </span>
                     <span className="text-xs font-semibold text-[#6b6894]">
-                      {s.available ? (active ? "เลือกแล้ว" : "ว่าง") : "เต็ม"}
+                      {s.available ? (active ? "เลือกแล้ว" : "ว่าง") : s.status === "PAST" ? "เลยเวลา" : "เต็ม"}
                     </span>
                   </button>
                 </li>

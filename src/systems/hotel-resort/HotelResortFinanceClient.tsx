@@ -195,7 +195,7 @@ export function HotelResortFinanceClient() {
   const today = bangkokTodayYmd();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filterOpen, setFilterOpen] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [chartsOpen, setChartsOpen] = useState(false);
   const [panel, setPanel] = useState<FinancePanel>("history");
   const [financeRange, setFinanceRange] = useState<FinanceRange>("MONTH");

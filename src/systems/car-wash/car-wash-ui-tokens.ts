@@ -53,11 +53,20 @@ export const carWashAccentBarClass = cn("h-1.5 w-full rounded-full", appDashboar
 /** padding-bottom safe area เมื่อมี bottom dock */
 export const carWashMainPaddingBottomClass = "pb-24 lg:pb-0";
 
+/** Section radius standard */
+export const carWashSectionRadiusClass = "!rounded-[2rem]";
+
+/** Dock pill radius class */
+export const carWashDockPillClass = "!rounded-[1.5rem]";
+
 /** Nav active state — ใช้ brand gradient + text-white (ห้ามโทนดำ) */
-export const carWashNavActiveClass = cn("text-white shadow-md", appDashboardBrandGradientFillClass);
+export const carWashNavActiveClass = cn(
+  appDashboardBrandGradientFillClass,
+  "text-white shadow-md ring-1 ring-white/40",
+);
 
 /** Nav idle state */
-export const carWashNavIdleClass = "text-slate-500 hover:bg-white/55 hover:text-slate-700";
+export const carWashNavIdleClass = "text-slate-500 hover:bg-white/45 hover:text-slate-700";
 
 /** Chip active state — rounded-full gradient white text */
 export const carWashChipActiveClass = cn(
@@ -97,8 +106,8 @@ export const carWashFilterFieldGridClass = "grid gap-3 sm:grid-cols-2";
 export const carWashFieldClass =
   "w-full rounded-[1rem] border border-white/60 bg-white/85 px-3 py-2.5 text-sm font-semibold text-[#1e1b4b] outline-none ring-[#0000BF]/20 focus:ring-2";
 
-/** Stat card grid — 4 คอลัมน์บนคอม md+ (เนื่องจาก stat = 4 ใบพอดี 1 แถวเดียว; มือถือ grid-cols-2 = 2×2) */
-export const carWashStatGridClass = "grid gap-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4";
+/** Stat card grid — 4 คอลัมน์บนคอม sm+ (เนื่องจาก stat = 4 ใบพอดี 1 แถวเดียว; มือถือ grid-cols-2 = 2×2) */
+export const carWashStatGridClass = "grid grid-cols-2 gap-3 sm:grid-cols-4";
 
 /** Booking / check-in card grid — 3 col sm+ */
 export const carWashBookingGridClass = "grid gap-4 sm:grid-cols-3";
@@ -126,6 +135,25 @@ export const carWashCtaClass = cn(
   appDashboardBrandGradientFillClass,
 );
 
+/** Payment chips — คู่กับ barberPaymentChip* */
+export const carWashPaymentChipIdleClass =
+  "rounded-full border border-[#0000BF]/25 bg-white/85 px-4 py-2 text-xs font-black text-[#2e2a58] shadow-sm";
+
+export const carWashPaymentChipActiveClass = cn(
+  "rounded-full border-transparent px-4 py-2 text-xs font-black text-white shadow-md",
+  appDashboardBrandGradientFillClass,
+);
+
+/** CTA ในแผงชำระ (แสดง QR ให้ลูกค้า) */
+export const carWashPaymentCtaClass = cn(
+  "inline-flex min-h-[40px] items-center justify-center rounded-[1rem] px-3 py-2 text-xs font-black text-white shadow-md transition active:scale-[0.99] disabled:opacity-50",
+  appDashboardBrandGradientFillClass,
+);
+
+/** ช่องกรอกฟอร์มบันทึกรายการ — สูงเท่ากัน */
+export const carWashVisitFieldClass =
+  "box-border min-h-[48px] w-full rounded-2xl border bg-white px-4 py-3 text-base font-black tracking-wide text-[#1e1b4b] placeholder:font-semibold placeholder:tracking-normal placeholder:text-slate-300 outline-none focus:ring-2 disabled:opacity-50";
+
 /** Header toolbar group ครอบ ปุ่มซ่อนหัว + คู่มือ */
 export const carWashHeaderToolbarGroupClass = "flex shrink-0 items-center gap-2";
 
@@ -136,7 +164,7 @@ export const carWashShellPaddingClass = "p-4 sm:px-8 sm:py-6 print:hidden";
 
 /** §14 Finance SubTabs shell (2 ใบ: ประวัติ/รายรับ · รายจ่าย) = 1.25rem radius gradient white-fa-indigo inset shadow */
 export const carWashFinanceSubTabShellClass =
-  "rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]";
+  "rounded-xl border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)] sm:rounded-[1.25rem] sm:p-1";
 
 /** §14 Finance stats grid: 3 ใบ (รายได้/ต้นทุน/กำไร) — mobile 2-col sm+ 3-col, gaps 2 sm=3, mt-4 */
 export const carWashFinanceStatsGridClass = "mt-4 grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3";
@@ -155,6 +183,22 @@ export const carWashFilterChipClass = (active: boolean) =>
   active
     ? "rounded-full border border-[#5b61ff]/40 bg-[#5b61ff] px-4 py-2 text-xs font-black text-white shadow-md"
     : "rounded-full border border-[#dedbf0]/90 bg-white/70 px-4 py-2 text-xs font-bold text-[#5b61ff] hover:bg-white hover:shadow-sm";
+
+/** แถบเมนูหลักหน้าตั้งค่า (pill) */
+export const carWashPrimaryTabShellClass =
+  "inline-flex w-full max-w-full flex-wrap content-start items-center gap-1 rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/30 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)] sm:rounded-[1.35rem] sm:p-1.5";
+
+export function carWashPrimaryTabPillClass(active: boolean): string {
+  return cn(
+    "min-h-10 shrink-0 grow basis-[calc(50%-4px)] whitespace-nowrap rounded-xl px-3 text-sm font-black leading-none sm:min-h-11 sm:grow-0 sm:basis-auto sm:px-4 sm:text-[15px]",
+    active
+      ? cn(appDashboardBrandGradientFillClass, "text-white shadow-md")
+      : "bg-white/50 text-[#5f5a8a] transition hover:bg-white/90 hover:text-[#4d47b6]",
+  );
+}
+
+export const carWashMobileSelectClass =
+  "box-border h-9 w-full min-w-0 appearance-none rounded-xl border border-[#e4e0f5] bg-white/95 px-3 pr-8 text-xs font-black text-[#1e1b4b] shadow-sm outline-none ring-1 ring-inset ring-white/70 focus:border-[#5b61ff]/40 focus:ring-2 focus:ring-[#5b61ff]/20";
 
 /** §14 Finance form field base (date, text, keyword search input) */
 export const carWashFinanceFieldClass =

@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
-import {
-  AppCameraCaptureModal,
-  AppPickGalleryImageButton,
-  AppTakePhotoButton,
-} from "@/components/app-templates";
+import { useEffect, useMemo, useState } from "react";
+import { cn } from "@/lib/cn";
 import { BarberModalPortal } from "@/systems/barber/components/BarberModalPortal";
+import { BarberPaymentPanel } from "@/systems/barber/components/BarberPaymentPanel";
+import {
+  BarberTaxInvoiceFields,
+  emptyBarberTaxInvoiceForm,
+  type BarberTaxInvoiceFormValue,
+} from "@/systems/barber/components/BarberTaxInvoiceFields";
+import type { BarberPaymentMethod } from "@/systems/barber/lib/payment-method";
 import {
   barberCardSurfaceRadiusClass,
   barberModalBackdropClass,
@@ -15,9 +18,16 @@ import {
   barberModalPanelLgClass,
   barberModalSubtitleClass,
   barberModalTitleClass,
+  barberOffersListRowCardClass,
 } from "@/systems/barber/components/barber-ui-tokens";
 
-export type BarberSellPackagePkg = { id: number; name: string; price: number; totalSessions: number };
+export type BarberSellPackagePkg = {
+  id: number;
+  name: string;
+  price: number;
+  totalSessions: number;
+  imageUrl?: string | null;
+};
 
 type StylistBrief = { id: number; name: string };
 
@@ -40,6 +50,33 @@ export type BarberSellPackageModalProps = {
   packagesFromParent?: BarberSellPackagePkg[];
 };
 
+const SELL_PKG_THEMES = [
+  {
+    shell: "border-violet-200/70 bg-gradient-to-br from-white via-violet-50/40 to-fuchsia-50/40",
+    accent: "from-violet-500 via-indigo-500 to-fuchsia-500",
+    glow: "bg-violet-300/35",
+    placeholder: "from-violet-200 via-indigo-100 to-fuchsia-200",
+  },
+  {
+    shell: "border-teal-200/70 bg-gradient-to-br from-white via-emerald-50/45 to-cyan-50/40",
+    accent: "from-teal-500 via-emerald-500 to-cyan-500",
+    glow: "bg-teal-300/35",
+    placeholder: "from-teal-200 via-emerald-100 to-cyan-200",
+  },
+  {
+    shell: "border-amber-200/70 bg-gradient-to-br from-white via-amber-50/45 to-orange-50/40",
+    accent: "from-amber-500 via-orange-500 to-rose-500",
+    glow: "bg-amber-300/35",
+    placeholder: "from-amber-200 via-orange-100 to-rose-200",
+  },
+  {
+    shell: "border-sky-200/70 bg-gradient-to-br from-white via-sky-50/45 to-indigo-50/40",
+    accent: "from-sky-500 via-blue-500 to-indigo-500",
+    glow: "bg-sky-300/35",
+    placeholder: "from-sky-200 via-blue-100 to-indigo-200",
+  },
+] as const;
+
 export function BarberSellPackageModal({
   open,
   onClose,
@@ -55,39 +92,9 @@ export function BarberSellPackageModal({
   const [sellName, setSellName] = useState("");
   const [sellLoading, setSellLoading] = useState(false);
   const [sellFormErr, setSellFormErr] = useState<string | null>(null);
-  const [sellReceipt, setSellReceipt] = useState<{ file: File; url: string } | null>(null);
-  const [sellCameraOpen, setSellCameraOpen] = useState(false);
-  const sellSlipFileInputRef = useRef<HTMLInputElement>(null);
-
-  const clearSellReceipt = useCallback(() => {
-    setSellReceipt((prev) => {
-      if (prev?.url) URL.revokeObjectURL(prev.url);
-      return null;
-    });
-  }, []);
-
-  const onSellReceiptSelected = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    e.target.value = "";
-    if (!f) return;
-    if (!f.type.startsWith("image/")) {
-      setSellFormErr("เลือกรูปภาพเท่านั้น");
-      return;
-    }
-    setSellFormErr(null);
-    setSellReceipt((prev) => {
-      if (prev?.url) URL.revokeObjectURL(prev.url);
-      return { file: f, url: URL.createObjectURL(f) };
-    });
-  }, []);
-
-  const onSellCameraCapture = useCallback((file: File) => {
-    setSellReceipt((prev) => {
-      if (prev?.url) URL.revokeObjectURL(prev.url);
-      return { file, url: URL.createObjectURL(file) };
-    });
-    setSellFormErr(null);
-  }, []);
+  const [paymentMethod, setPaymentMethod] = useState<BarberPaymentMethod>("CASH");
+  const [slipUrl, setSlipUrl] = useState<string | null>(null);
+  const [taxForm, setTaxForm] = useState<BarberTaxInvoiceFormValue>(emptyBarberTaxInvoiceForm);
 
   useEffect(() => {
     if (packagesFromParent && packagesFromParent.length > 0) {
@@ -118,12 +125,10 @@ export function BarberSellPackageModal({
     setSellPkg("");
     setSellPhone("");
     setSellName("");
-    setSellReceipt((prev) => {
-      if (prev?.url) URL.revokeObjectURL(prev.url);
-      return null;
-    });
-    setSellCameraOpen(false);
+    setPaymentMethod("CASH");
+    setSlipUrl(null);
     setInternalStylistId("");
+    setTaxForm(emptyBarberTaxInvoiceForm());
   }, [open]);
 
   useEffect(() => {
@@ -131,21 +136,22 @@ export function BarberSellPackageModal({
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (sellCameraOpen) {
-          setSellCameraOpen(false);
-          return;
-        }
-        clearSellReceipt();
-        onClose();
-      }
+      if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, sellCameraOpen, clearSellReceipt, onClose]);
+  }, [open, onClose]);
+
+  const pkgList = packagesFromParent && packagesFromParent.length > 0 ? packagesFromParent : packages;
+  const selectedPkg = useMemo(
+    () => pkgList.find((p) => String(p.id) === sellPkg) ?? null,
+    [pkgList, sellPkg],
+  );
+  const amountBaht = selectedPkg?.price ?? 0;
+  const showInternalStylist = externalStylistId === undefined;
 
   async function onSell(e: React.FormEvent) {
     e.preventDefault();
@@ -158,29 +164,9 @@ export function BarberSellPackageModal({
     }
     setSellLoading(true);
     try {
-      let receiptImageUrl: string | undefined;
-      if (sellReceipt?.file) {
-        const fd = new FormData();
-        fd.append("file", sellReceipt.file);
-        const up = await fetch("/api/barber/cash-receipt/upload", {
-          method: "POST",
-          body: fd,
-          credentials: "include",
-        });
-        const upData = (await up.json().catch(() => ({}))) as { error?: string; imageUrl?: string };
-        if (!up.ok) {
-          setSellFormErr(upData.error ?? "อัปโหลดรูปไม่สำเร็จ");
-          return;
-        }
-        if (!upData.imageUrl) {
-          setSellFormErr("อัปโหลดรูปไม่สำเร็จ");
-          return;
-        }
-        receiptImageUrl = upData.imageUrl;
-      }
-
-      const sidFromPage =
-        externalStylistId !== undefined ? externalStylistId : internalStylistId;
+      const receiptImageUrl =
+        paymentMethod === "CASH" || paymentMethod === "CREDIT_CARD" ? undefined : slipUrl ?? undefined;
+      const sidFromPage = externalStylistId !== undefined ? externalStylistId : internalStylistId;
       const sidSell = sidFromPage ? Number(sidFromPage) : null;
       const res = await fetch("/api/barber/subscriptions", {
         method: "POST",
@@ -190,8 +176,18 @@ export function BarberSellPackageModal({
           packageId: pkgId,
           phone: digits,
           name: sellName.trim() || null,
+          paymentMethod,
           ...(sidSell != null && Number.isInteger(sidSell) && sidSell > 0 ? { stylistId: sidSell } : {}),
           ...(receiptImageUrl ? { receiptImageUrl } : {}),
+          taxInvoiceEnabled: taxForm.taxInvoiceEnabled,
+          ...(taxForm.taxInvoiceEnabled
+            ? {
+                billingName: taxForm.billingName.trim() || null,
+                taxId: taxForm.taxId.trim() || null,
+                taxAddress: taxForm.taxAddress.trim() || null,
+                taxBranch: taxForm.taxBranch.trim() || null,
+              }
+            : {}),
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -203,7 +199,7 @@ export function BarberSellPackageModal({
         setSellFormErr(data.error ?? "ขายแพ็กไม่สำเร็จ");
         return;
       }
-      clearSellReceipt();
+      setSlipUrl(null);
       onSuccess?.({
         subscriptionId: data.subscription?.id,
         warning: data.warning?.trim() ?? null,
@@ -215,52 +211,44 @@ export function BarberSellPackageModal({
     }
   }
 
-  const pkgList = packagesFromParent && packagesFromParent.length > 0 ? packagesFromParent : packages;
-  const showInternalStylist = externalStylistId === undefined;
-
   if (!open) return null;
 
   return (
     <BarberModalPortal>
-      <>
+      <div
+        className={barberModalBackdropClass}
+        role="presentation"
+        onClick={() => {
+          setSlipUrl(null);
+          onClose();
+        }}
+      >
         <div
-          className={barberModalBackdropClass}
-          role="presentation"
-          onClick={() => {
-            clearSellReceipt();
-            setSellCameraOpen(false);
-            onClose();
-          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="barber-sell-modal-title"
+          className={barberModalPanelLgClass}
+          onClick={(e) => e.stopPropagation()}
         >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="barber-sell-modal-title"
-            className={barberModalPanelLgClass}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={barberModalHeaderClass}>
-              <div className="min-w-0">
-                <h2 id="barber-sell-modal-title" className={barberModalTitleClass}>
-                  ขายแพ็กเกจให้ลูกค้า
-                </h2>
-                <p className={barberModalSubtitleClass}>
-                  เลือกแพ็กเกจ กรอกเบอร์และชื่อ — แนบสลิปได้ (ไม่บังคับ)
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  clearSellReceipt();
-                  setSellCameraOpen(false);
-                  onClose();
-                }}
-                className={barberModalCloseBtnClass}
-                aria-label="ปิด"
-              >
-                ✕
-              </button>
+          <div className={barberModalHeaderClass}>
+            <div className="min-w-0">
+              <h2 id="barber-sell-modal-title" className={barberModalTitleClass}>
+                ขายแพ็กเกจให้ลูกค้า
+              </h2>
+              <p className={barberModalSubtitleClass}>เลือกแพ็กเกจ กรอกเบอร์ และช่องทางชำระ</p>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                setSlipUrl(null);
+                onClose();
+              }}
+              className={barberModalCloseBtnClass}
+              aria-label="ปิด"
+            >
+              ✕
+            </button>
+          </div>
           <form onSubmit={(e) => void onSell(e)} className="grid gap-3 px-5 py-5">
             {sellFormErr ? (
               <p className="rounded-[1.25rem] bg-red-50 px-3 py-2 text-sm text-red-800">{sellFormErr}</p>
@@ -285,19 +273,93 @@ export function BarberSellPackageModal({
                 </select>
               </div>
             ) : null}
-            <select
-              className="min-h-[48px] rounded-[1.25rem] border border-slate-200 px-3 text-base"
-              value={sellPkg}
-              onChange={(e) => setSellPkg(e.target.value)}
-              required
-            >
-              <option value="">เลือกแพ็กเกจ</option>
-              {pkgList.map((p) => (
-                <option key={p.id} value={String(p.id)}>
-                  {p.name} — {p.price.toLocaleString("th-TH")} บ. / {p.totalSessions} ครั้ง
-                </option>
-              ))}
-            </select>
+
+            <fieldset className="min-w-0 space-y-2">
+              <legend className="text-sm font-semibold text-[#4d47b6]">เลือกแพ็กเกจ</legend>
+              {pkgList.length === 0 ? (
+                <p className="rounded-[1.25rem] border border-dashed border-[#d4cff7]/75 bg-[#faf9ff]/80 px-3 py-6 text-center text-sm text-[#66638c]">
+                  ยังไม่มีแพ็กเกจ — ไปเพิ่มที่เมนูแพ็กเกจก่อน
+                </p>
+              ) : (
+                <ul className="grid max-h-[min(40vh,22rem)] grid-cols-1 gap-2 overflow-y-auto pr-0.5 sm:grid-cols-2">
+                  {pkgList.map((p, index) => {
+                    const theme = SELL_PKG_THEMES[index % SELL_PKG_THEMES.length]!;
+                    const selected = sellPkg === String(p.id);
+                    const img = p.imageUrl?.trim() || null;
+                    return (
+                      <li key={p.id}>
+                        <button
+                          type="button"
+                          onClick={() => setSellPkg(String(p.id))}
+                          aria-pressed={selected}
+                          className={cn(
+                            barberOffersListRowCardClass,
+                            "group/item relative w-full overflow-hidden !px-3 py-2.5 text-left transition",
+                            theme.shell,
+                            selected && "ring-2 ring-[#5b61ff]/55 shadow-[0_10px_28px_-16px_rgba(91,97,255,0.45)]",
+                          )}
+                        >
+                          <span
+                            aria-hidden
+                            className={cn(
+                              "pointer-events-none absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-gradient-to-b opacity-90",
+                              theme.accent,
+                            )}
+                          />
+                          <span
+                            aria-hidden
+                            className={cn(
+                              "pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full blur-2xl opacity-70",
+                              theme.glow,
+                            )}
+                          />
+                          <div className="relative flex min-w-0 gap-2.5 pl-2">
+                            <span
+                              className={cn(
+                                "h-14 w-14 shrink-0 overflow-hidden rounded-[1rem] ring-2 ring-white/90 shadow-md",
+                                !img && "flex items-center justify-center bg-gradient-to-br",
+                                !img && theme.placeholder,
+                              )}
+                            >
+                              {img ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={img} alt="" className="h-full w-full object-cover" />
+                              ) : (
+                                <span className="text-sm font-black text-[#4d47b6]/70">
+                                  {p.name.trim().charAt(0) || "P"}
+                                </span>
+                              )}
+                            </span>
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex items-start justify-between gap-1.5">
+                                <p className="truncate text-sm font-black leading-snug text-[#1e1b4b]">{p.name}</p>
+                                {selected ? (
+                                  <span className="shrink-0 rounded-full bg-[#5b61ff] px-1.5 py-px text-[10px] font-bold text-white">
+                                    เลือกแล้ว
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+                                <p className="text-sm font-black tabular-nums text-[#1e1b4b]">
+                                  <span className="mr-0.5 text-[10px] font-bold text-[#8b87ad]">฿</span>
+                                  {p.price.toLocaleString("th-TH", { maximumFractionDigits: 2 })}
+                                </p>
+                                <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-bold text-[#4d47b6] ring-1 ring-[#e8e6f4]/90">
+                                  {p.totalSessions} ครั้ง
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {/* ให้ required ของฟอร์มยังทำงาน */}
+              <input type="hidden" value={sellPkg} required readOnly aria-hidden tabIndex={-1} />
+            </fieldset>
+
             <input
               className="min-h-[48px] rounded-[1.25rem] border border-slate-200 px-3 text-base"
               placeholder="เบอร์ลูกค้า"
@@ -311,67 +373,25 @@ export function BarberSellPackageModal({
               value={sellName}
               onChange={(e) => setSellName(e.target.value)}
             />
-            <div className={`${barberCardSurfaceRadiusClass} border border-slate-200 bg-slate-50/60 px-3 py-2.5`}>
-              <p className="text-xs font-semibold text-slate-700">แนบรูปสลิป (ไม่บังคับ)</p>
-              <input
-                ref={sellSlipFileInputRef}
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                tabIndex={-1}
-                aria-hidden
-                onChange={onSellReceiptSelected}
-              />
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <AppPickGalleryImageButton
-                  type="button"
-                  disabled={sellLoading}
-                  className="min-h-[44px]"
-                  onClick={() => {
-                    setSellFormErr(null);
-                    sellSlipFileInputRef.current?.click();
-                  }}
-                >
-                  อัปโหลดสลิป (ทดลอง)
-                </AppPickGalleryImageButton>
-                <AppTakePhotoButton
-                  type="button"
-                  disabled={sellLoading}
-                  className="min-h-[44px]"
-                  onClick={() => {
-                    setSellFormErr(null);
-                    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-                      setSellFormErr("เบราว์เซอร์ไม่รองรับการเปิดกล้อง — ใช้ปุ่มอัปโหลดสลิปแทน");
-                      return;
-                    }
-                    setSellCameraOpen(true);
-                  }}
-                />
-                {sellReceipt ? (
-                  <button
-                    type="button"
-                    className="rounded-[1.25rem] px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-white hover:text-slate-800"
-                    onClick={clearSellReceipt}
-                  >
-                    ลบรูป
-                  </button>
-                ) : null}
-              </div>
-              {sellReceipt ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={sellReceipt.url}
-                  alt="ตัวอย่างสลิป"
-                  className="mt-2 max-h-40 w-full rounded-[1.25rem] border border-slate-200 bg-white object-contain"
-                />
-              ) : null}
-            </div>
+            <BarberTaxInvoiceFields
+              value={taxForm}
+              onChange={setTaxForm}
+              fallbackName={sellName}
+              disabled={sellLoading}
+            />
+            <BarberPaymentPanel
+              amountBaht={amountBaht}
+              method={paymentMethod}
+              slipUrl={slipUrl}
+              onMethodChange={setPaymentMethod}
+              onSlipUrlChange={setSlipUrl}
+              disabled={sellLoading}
+            />
             <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => {
-                  clearSellReceipt();
-                  setSellCameraOpen(false);
+                  setSlipUrl(null);
                   onClose();
                 }}
                 className={`min-h-[48px] ${barberCardSurfaceRadiusClass} border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50`}
@@ -380,7 +400,7 @@ export function BarberSellPackageModal({
               </button>
               <button
                 type="submit"
-                disabled={sellLoading || pkgList.length === 0}
+                disabled={sellLoading || pkgList.length === 0 || !sellPkg}
                 className={`app-btn-primary min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-white disabled:opacity-50`}
               >
                 {sellLoading ? "…" : "เปิดแพ็กเกจ"}
@@ -389,14 +409,6 @@ export function BarberSellPackageModal({
           </form>
         </div>
       </div>
-
-      <AppCameraCaptureModal
-        open={sellCameraOpen}
-        onClose={() => setSellCameraOpen(false)}
-        onCapture={(file) => onSellCameraCapture(file)}
-        title="ถ่ายรูปสลิป"
-      />
-      </>
     </BarberModalPortal>
   );
 }

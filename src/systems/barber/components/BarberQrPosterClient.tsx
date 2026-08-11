@@ -20,12 +20,15 @@ import {
   downloadPosterPng,
   resolveAssetUrl,
 } from "@/components/qr/shop-qr-template";
+import { barberPublicPortalUrl } from "@/lib/barber/public-url";
 
 type Props = {
   ownerId: string;
   shopLabel: string;
   logoUrl: string | null;
   baseUrl: string;
+  /** โหมดทดลอง — ใส่ `?t=` ในลิงก์ลูกค้าเมื่อไม่ใช่ prod */
+  trialSessionId?: string;
   /** โหมดทดลอง — ปิดดาวน์โหลด PDF/PNG */
   trialExportBlocked?: boolean;
   /** ใช้ในหน้ารวม QR — ไม่มีปุ่มกลับและไม่ห่อด้วย stack ชั้นนอก */
@@ -69,13 +72,14 @@ export function BarberQrPosterClient({
   shopLabel,
   logoUrl,
   baseUrl,
+  trialSessionId = "prod",
   trialExportBlocked = false,
   embedded = false,
   compactForModal = false,
 }: Props) {
   const portalUrl =
     baseUrl.startsWith("http://") || baseUrl.startsWith("https://")
-      ? `${baseUrl.replace(/\/$/, "")}/m/${ownerId}`
+      ? barberPublicPortalUrl(baseUrl, ownerId, trialSessionId)
       : "";
   const headline = shopLabel.trim() || "ร้านตัดผม";
   const logoSrc = useMemo(() => resolveAssetUrl(logoUrl, baseUrl), [logoUrl, baseUrl]);

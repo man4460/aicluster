@@ -7,6 +7,7 @@
 
 
 import { cn } from "@/lib/cn";
+import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 
 
 
@@ -43,13 +44,12 @@ export const aqNavItemBase =
 
 
 
-export const aqNavItemActiveClass =
+export const aqNavItemActiveClass = cn(
+  appDashboardBrandGradientFillClass,
+  "text-white shadow-md ring-1 ring-white/40",
+);
 
-  "bg-white/75 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/20 backdrop-blur-sm";
-
-
-
-export const aqNavItemIdleClass = "app-btn-soft text-[#66638c] hover:bg-white/55 hover:text-[#4d47b6]";
+export const aqNavItemIdleClass = "text-slate-500 hover:bg-white/45 hover:text-slate-700";
 
 
 

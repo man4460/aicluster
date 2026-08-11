@@ -105,7 +105,7 @@ export function StaffQrLandingShell({
   shopLabel?: string | null;
   loading?: boolean;
   error?: string | null;
-  children: ReactNode;
+  children?: ReactNode;
   /** คลาสเพิ่มบน inner column (เช่น flex-1) */
   className?: string;
   /** คลาสเพิ่มบน AppPublicCheckInGlassPage root */
@@ -126,7 +126,7 @@ export function StaffQrLandingShell({
         </div>
         {loading ? <p className="text-center text-sm text-[#66638c]">กำลังโหลด...</p> : null}
         {error ? <p className="text-center text-sm text-red-600">{error}</p> : null}
-        {!loading ?
+        {!loading && children != null ?
           <div className={appPublicCheckInGlassCardClass}>
             <div className="px-5 py-5 sm:px-6">{children}</div>
           </div>

@@ -1,9 +1,16 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { TrialSandboxStrip } from "@/components/dashboard/TrialSandboxStrip";
 import { cn } from "@/lib/cn";
+import {
+  BARBER_HEADER_COLLAPSE_EVENT,
+  BARBER_MODULE_DISPLAY_NAME,
+  barberPathFlags,
+  readBarberHeaderCollapsed,
+  writeBarberHeaderCollapsed,
+} from "@/systems/barber/barber-module-nav";
 import {
   barberAccentBarClass,
   barberContentStackClass,
@@ -12,36 +19,18 @@ import {
   barberHeaderEnLabelClass,
   barberHeaderToolbarGroupClass,
   barberMainPaddingBottomClass,
+  barberModuleContentShellClass,
   barberModuleIconBadgeClass,
 } from "@/systems/barber/components/barber-ui-tokens";
 import { BarberModuleDesktopNav, BarberModuleMobileDock } from "./BarberModuleHeader";
 import { BarberUsageGuideModal } from "./BarberUsageGuideModal";
 
-/** EN small-caps label บนหัวข้อ header (MASTER.md §7 — ห้ามมีคำอธิบายใต้ H1) */
 const BARBER_MODULE_EN_LABEL = "BARBER SHOP";
-/** ชื่อระบบโมดูล — แสดงเป็นหัวข้อหลักด้านบน (ไทย H1 บรรทัดล่าง) */
-const BARBER_MODULE_TITLE = "ร้านตัดผม";
-/** LocalStorage key สำหรับ UI preference: ซ่อน/แสดงหัวโมดูล */
-const BARBER_HEADER_COLLAPSED_KEY = "barber:header-collapsed:v1";
 
-/** พื้นที่เนื้อหาโมดูล — โทนกระจกอ่อน โค้งระดับแผงใหญ่คาร์แคร์ */
-const barberModuleContentShellClass = cn(
-  "min-w-0 overflow-hidden rounded-[2.5rem] border border-white/45 bg-white/35 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.28)] backdrop-blur-xl ring-1 ring-inset ring-white/50",
-  "p-4 sm:p-5 md:p-6 print:border-0 print:shadow-none",
-);
-
-/** Chevron ขึ้น-ลง สำหรับปุ่มซ่อน/แสดงหัวโมดูล */
-function BarberHeaderChevron({ expanded }: { expanded: boolean }) {
+function BarberHeaderCollapseGlyph() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.5}
-      className={cn("h-4 w-4 transition-transform duration-200", expanded ? "rotate-0" : "rotate-180")}
-      aria-hidden
-    >
-      <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
+      <path d="M4 8h16M4 12h16M4 16h16" strokeLinecap="round" />
     </svg>
   );
 }
@@ -51,151 +40,116 @@ export function BarberLayoutChrome({
   trialExpiresLabel,
 }: {
   children: React.ReactNode;
-  /** format บนเซิร์ฟเวอร์แล้ว — กัน hydration กับ toLocaleString บน client */
   trialExpiresLabel?: string | null;
 }) {
   const pathname = usePathname() ?? "";
+  const flags = barberPathFlags(pathname);
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
-  /** ซ่อน/แสดงหัวโมดูล + เมนูหลักบนเดสก์ท็อป — default: แสดง (false) */
-  const [headerCollapsed, setHeaderCollapsed] = useState<boolean>(false);
-  /** mount เสร็จแล้ว — อ่าน preference จาก localStorage ได้แล้วเท่านั้น (กัน hydration mismatch) */
-  const [headerPrefHydrated, setHeaderPrefHydrated] = useState(false);
-  /** หน้าจาก QR พนักงาน — โฟกัสคิว/เช็กอิน ไม่แสดงเมนูร้าน */
-  const hideBarberChrome = pathname === "/dashboard/barber/staff";
-  /**
-   * ไม่ห่อเนื้อหาด้วยการ์ดกระจกชั้นใน — หน้าเหล่านี้มีการ์ด/เซกชันของตัวเองอยู่แล้ว (ซ้อนกับขอบโมดูลนอกเกินไป)
-   */
-  const plainInnerContent =
-    hideBarberChrome ||
-    pathname === "/dashboard/barber/finance" ||
-    pathname === "/dashboard/barber/packages" ||
-    pathname === "/dashboard/barber/qr";
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
 
-  /** โหลด preference ซ่อนหัวจาก localStorage หลัง mount (SSR-safe) */
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(BARBER_HEADER_COLLAPSED_KEY);
-      if (stored === "1") setHeaderCollapsed(true);
-    } catch {
-      /* storage ไม่พร้อม — ใช้ default */
-    } finally {
-      setHeaderPrefHydrated(true);
+    if (flags.onStaff) {
+      setHeaderCollapsed(false);
+      return;
     }
-  }, []);
+    const sync = () => setHeaderCollapsed(readBarberHeaderCollapsed());
+    sync();
+    window.addEventListener(BARBER_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(BARBER_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [flags.onStaff]);
 
-  /** Persist preference: ซ่อน/แสดงหัวโมดูล */
-  const toggleHeader = () => {
-    const next = !headerCollapsed;
-    setHeaderCollapsed(next);
-    try {
-      window.localStorage.setItem(BARBER_HEADER_COLLAPSED_KEY, next ? "1" : "0");
-    } catch {
-      /* ignore */
-    }
-  };
+  const toggleHeader = useCallback(() => {
+    writeBarberHeaderCollapsed(!headerCollapsed);
+  }, [headerCollapsed]);
+
+  /** พอร์ทัลพนักงาน — เต็มจอแบบสนามฟุตบอล ไม่มีหัว/dock โมดูล */
+  if (flags.onStaff) {
+    return <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>;
+  }
 
   return (
-    <div
-      className={cn(
-        "flex min-w-0 flex-col",
-        barberContentStackClass,
-        /* เว้นที่ให้แถบ dock ลอยแบบสนามฟุตบอล / ร้านเครื่องดื่ม (MASTER.md §1) */
-        !hideBarberChrome && barberMainPaddingBottomClass,
-      )}
-    >
-      {!hideBarberChrome ? (
-        <>
-          <div className={cn(barberGlassShellClass, "p-4 sm:px-8 sm:py-6 print:hidden")}>
-            <header>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-3">
-                    <div className={barberModuleIconBadgeClass} aria-hidden>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5">
-                        <circle cx="6" cy="6" r="3" />
-                        <circle cx="6" cy="18" r="3" />
-                        <line x1="20" y1="4" x2="8.12" y2="15.88" />
-                        <line x1="14.47" y1="14.48" x2="20" y2="20" />
-                        <line x1="8.12" y1="8.12" x2="12" y2="12" />
-                      </svg>
-                    </div>
-                    <div className="min-w-0">
-                      <p className={cn(barberHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
-                        {BARBER_MODULE_EN_LABEL}
-                      </p>
-                      <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl" id="barber-module-title">
-                        {BARBER_MODULE_TITLE}
-                      </h1>
-                    </div>
-                  </div>
+    <div className={cn("flex min-w-0 flex-col", barberContentStackClass, barberMainPaddingBottomClass)}>
+      <div
+        className={cn(barberGlassShellClass, "p-4 sm:px-8 sm:py-6 print:hidden", headerCollapsed && "hidden")}
+      >
+        <header>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3">
+                <div className={barberModuleIconBadgeClass} aria-hidden>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5">
+                    <circle cx="6" cy="6" r="3" />
+                    <circle cx="6" cy="18" r="3" />
+                    <line x1="20" y1="4" x2="8.12" y2="15.88" />
+                    <line x1="14.47" y1="14.48" x2="20" y2="20" />
+                    <line x1="8.12" y1="8.12" x2="12" y2="12" />
+                  </svg>
                 </div>
-
-                <div className={barberHeaderToolbarGroupClass}>
-                  <button
-                    type="button"
-                    onClick={toggleHeader}
-                    className={cn("inline-flex", barberHeaderCollapseBtnClass)}
-                    aria-expanded={headerCollapsed ? "false" : "true"}
-                    aria-controls="barber-desktop-nav-section"
-                    aria-label={headerCollapsed ? "แสดงกลุ่มเมนูส่วนหัว" : "ซ่อนกลุ่มเมนูส่วนหัว"}
-                    suppressHydrationWarning
-                  >
-                    {headerPrefHydrated ?
-                      <BarberHeaderChevron expanded={!headerCollapsed} />
-                    : /* SSR placeholder (กัน hydration mismatch) */
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-4 w-4" aria-hidden>
-                        <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    }
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setUsageGuideOpen(true)}
-                    className="flex h-10 shrink-0 items-center gap-2 rounded-2xl border border-white/60 bg-white/45 px-4 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-[0.98]"
-                    aria-haspopup="dialog"
-                    aria-expanded={usageGuideOpen}
-                    aria-label="คู่มือการใช้งาน"
-                    suppressHydrationWarning
-                  >
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
-                      <circle cx="12" cy="12" r="9" />
-                      <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
-                      <circle cx="12" cy="17" r="1" />
-                    </svg>
-                    <span className="hidden sm:inline">คู่มือ</span>
-                  </button>
+                <div className="min-w-0">
+                  <p className={cn(barberHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
+                    {BARBER_MODULE_EN_LABEL}
+                  </p>
+                  <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl" id="barber-module-title">
+                    {BARBER_MODULE_DISPLAY_NAME}
+                  </h1>
                 </div>
               </div>
-            </header>
-
-            {/* Accent bar — เฉพาะหัวหลักเท่านั้น (MASTER.md §4) */}
-            <div className="mt-5">
-              <div className={barberAccentBarClass} aria-hidden />
             </div>
 
-            {!headerCollapsed ?
-              <div id="barber-desktop-nav-section">
-                <BarberModuleDesktopNav pathname={pathname} />
-              </div>
-            : null}
+            <div className={barberHeaderToolbarGroupClass}>
+              <button
+                type="button"
+                onClick={toggleHeader}
+                className={cn("inline-flex", barberHeaderCollapseBtnClass)}
+                aria-expanded={!headerCollapsed}
+                aria-label={headerCollapsed ? "แสดงส่วนหัวโมดูล" : "ซ่อนส่วนหัวโมดูล"}
+                suppressHydrationWarning
+              >
+                <BarberHeaderCollapseGlyph />
+              </button>
+              <button
+                type="button"
+                onClick={() => setUsageGuideOpen(true)}
+                className="flex h-10 shrink-0 items-center gap-2 rounded-[1rem] border border-white/60 bg-white/45 px-4 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-[0.98]"
+                aria-haspopup="dialog"
+                aria-expanded={usageGuideOpen}
+                aria-label="คู่มือการใช้งาน"
+                suppressHydrationWarning
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
+                  <circle cx="12" cy="17" r="1" />
+                </svg>
+                <span className="hidden sm:inline">คู่มือ</span>
+              </button>
+            </div>
           </div>
-          <BarberModuleMobileDock pathname={pathname} />
-        </>
-      ) : null}
+        </header>
 
-      {!hideBarberChrome ? (
-        <BarberUsageGuideModal open={usageGuideOpen} onClose={() => setUsageGuideOpen(false)} />
-      ) : null}
+        <div className="mt-5">
+          <div className={barberAccentBarClass} aria-hidden />
+        </div>
+
+        <BarberModuleDesktopNav pathname={pathname} />
+      </div>
+      <BarberModuleMobileDock pathname={pathname} />
+
+      <BarberUsageGuideModal open={usageGuideOpen} onClose={() => setUsageGuideOpen(false)} />
 
       {trialExpiresLabel ? (
-        <TrialSandboxStrip>
-          ทดลอง · หมด {trialExpiresLabel} · ส่งออก QR ปิด
-        </TrialSandboxStrip>
+        <TrialSandboxStrip>ทดลอง · หมด {trialExpiresLabel} · ส่งออก QR ปิด</TrialSandboxStrip>
       ) : null}
 
-      {plainInnerContent ?
+      {flags.plainInner ? (
         <div className={cn("flex min-w-0 flex-col", barberContentStackClass)}>{children}</div>
-      : <div className={barberModuleContentShellClass}>{children}</div>}
+      ) : (
+        <div className={barberModuleContentShellClass}>{children}</div>
+      )}
     </div>
   );
 }

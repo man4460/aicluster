@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { barberOwnerFromAuth } from "@/lib/barber/api-owner";
 import { getBarberDataScope } from "@/lib/trial/module-scopes";
-import { bangkokRangeForCalendarFilter } from "@/lib/barber/bangkok-day";
 import { resolveBarberHistoryCalendarFromSearchParams } from "@/lib/barber/history-calendar-query";
 import { normalizeBarberSlipUrlForDashboard } from "@/lib/barber/receipt-display-url";
 
@@ -100,10 +99,16 @@ export async function GET(req: Request) {
   const q = (searchParams.get("q") ?? "").trim();
 
   try {
-    const { year, month: monthParam, day: dayParam, availableYears } =
-      await resolveBarberHistoryCalendarFromSearchParams(ownerId, scope.trialSessionId, searchParams);
-
-    const { start, end } = bangkokRangeForCalendarFilter(year, monthParam, dayParam);
+    const {
+      year,
+      month: monthParam,
+      day: dayParam,
+      availableYears,
+      financeRange,
+      rangeLabel,
+      start,
+      end,
+    } = await resolveBarberHistoryCalendarFromSearchParams(ownerId, scope.trialSessionId, searchParams);
 
     const textFilter =
       q.length > 0
@@ -178,6 +183,7 @@ export async function GET(req: Request) {
         amountBaht: null,
         stylistId: null,
         stylist: null,
+        paymentMethod: null,
       })) as BarberLogWithCustomer[];
     }
 
@@ -204,6 +210,7 @@ export async function GET(req: Request) {
         note: l.note,
         amountBaht: l.amountBaht != null ? String(l.amountBaht) : null,
         receiptImageUrl: normalizeBarberSlipUrlForDashboard(l.receiptImageUrl, requestOrigin),
+        paymentMethod: l.paymentMethod ?? null,
         createdAt: l.createdAt.toISOString(),
         subscriptionId: l.subscriptionId,
         stylistName: l.stylist?.name ?? null,
@@ -211,6 +218,11 @@ export async function GET(req: Request) {
           id: l.customer.id,
           phone: l.customer.phone,
           name: l.customer.name,
+          taxInvoiceEnabled: Boolean(l.customer.taxInvoiceEnabled),
+          billingName: l.customer.billingName ?? "",
+          taxId: l.customer.taxId ?? "",
+          taxAddress: l.customer.taxAddress ?? "",
+          taxBranch: l.customer.taxBranch ?? "",
         },
       })),
       summary: {
@@ -230,6 +242,10 @@ export async function GET(req: Request) {
         day: monthParam === "all" ? "all" : dayParam === "all" ? "all" : dayParam,
         availableYears,
         truncated,
+        range: financeRange,
+        rangeLabel,
+        from: start.toISOString(),
+        to: end.toISOString(),
       },
     });
   } catch (e) {

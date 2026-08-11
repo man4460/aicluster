@@ -242,7 +242,7 @@ export function DrinkPosSalesClient() {
   const [editErr, setEditErr] = useState<string | null>(null);
   const [editSlipBusy, setEditSlipBusy] = useState(false);
 
-  const [filterOpen, setFilterOpen] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [chartsOpen, setChartsOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
   /** ค่าเริ่มต้น: เดือนนี้ */

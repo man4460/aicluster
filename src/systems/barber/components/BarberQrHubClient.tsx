@@ -1,10 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import {
+  AppDashboardSection,
+  AppSectionHeader,
+} from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { FormModal } from "@/components/ui/FormModal";
 import { BarberQrPosterClient } from "@/systems/barber/components/BarberQrPosterClient";
 import { BarberStaffQrDashboardSection } from "@/systems/barber/components/BarberStaffQrDashboardSection";
+import {
+  barberDashboardSegmentBtnClass,
+  barberDashboardSegmentShellClass,
+} from "@/systems/barber/components/barber-ui-tokens";
 
 type Props = {
   ownerId: string;
@@ -19,17 +27,19 @@ type Props = {
 function ModalCloseFooter({ onClose }: { onClose: () => void }) {
   return (
     <div className="flex justify-end">
-      <button
-        type="button"
-        onClick={onClose}
-        className="cw-btn app-btn-primary rounded-xl px-5 py-2.5 text-sm font-semibold"
-        aria-label="ปิด"
-      >
-        <svg className="cw-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-          <path d="M18 6 6 18M6 6l12 12" />
-        </svg>
-        <span className="cw-btn-label">ปิด</span>
-      </button>
+      <div className={barberDashboardSegmentShellClass} role="group">
+        <button
+          type="button"
+          onClick={onClose}
+          className={barberDashboardSegmentBtnClass(true)}
+          aria-label="ปิด"
+        >
+          <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+          <span>ปิด</span>
+        </button>
+      </div>
     </div>
   );
 }
@@ -48,8 +58,10 @@ export function BarberQrHubClient({
   const [showStaffQrModal, setShowStaffQrModal] = useState(false);
 
   return (
-    <div className="min-w-0 space-y-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+    <AppDashboardSection tone="violet">
+      <AppSectionHeader tone="violet" title="ลิงก์" />
+
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <button
           type="button"
           onClick={() => {
@@ -57,7 +69,7 @@ export function BarberQrHubClient({
             setShowCustomerQrModal(true);
           }}
           className={cn(
-            "group relative w-full overflow-hidden rounded-[2.5rem] border border-white/50 text-left",
+            "group relative w-full overflow-hidden rounded-[1.5rem] border border-white/50 text-left",
             "bg-gradient-to-br from-white/50 via-indigo-50/35 to-violet-200/25",
             "p-6 shadow-[0_28px_70px_-24px_rgba(91,97,255,0.42),inset_0_1px_0_0_rgba(255,255,255,0.65)] backdrop-blur-2xl",
             "ring-1 ring-inset ring-white/60 transition-all duration-300",
@@ -114,7 +126,7 @@ export function BarberQrHubClient({
             setShowStaffQrModal(true);
           }}
           className={cn(
-            "group relative w-full overflow-hidden rounded-[2.5rem] border border-white/50 text-left",
+            "group relative w-full overflow-hidden rounded-[1.5rem] border border-white/50 text-left",
             "bg-gradient-to-br from-white/50 via-amber-50/35 to-orange-100/22",
             "p-6 shadow-[0_28px_70px_-24px_rgba(217,119,6,0.35),inset_0_1px_0_0_rgba(255,255,255,0.65)] backdrop-blur-2xl",
             "ring-1 ring-inset ring-white/60 transition-all duration-300",
@@ -169,6 +181,7 @@ export function BarberQrHubClient({
         size="lg"
         appearance="glass"
         glassTint="violet"
+        mobileCentered
         onClose={() => setShowCustomerQrModal(false)}
         title="QR ลูกค้า"
         footer={<ModalCloseFooter onClose={() => setShowCustomerQrModal(false)} />}
@@ -178,6 +191,7 @@ export function BarberQrHubClient({
           shopLabel={shopLabel}
           logoUrl={logoUrl}
           baseUrl={baseUrl}
+          trialSessionId={trialSessionId}
           trialExportBlocked={trialExportBlocked}
           embedded
           compactForModal
@@ -192,7 +206,6 @@ export function BarberQrHubClient({
         mobileCentered
         onClose={() => setShowStaffQrModal(false)}
         title="QR พนักงาน"
-        description="เน้นมือถือ — สแกน QR หรือเปิดหน้าพนักงานบนเครื่องตัวเอง"
         footer={<ModalCloseFooter onClose={() => setShowStaffQrModal(false)} />}
       >
         <BarberStaffQrDashboardSection
@@ -207,6 +220,6 @@ export function BarberQrHubClient({
           compactForModal
         />
       </FormModal>
-    </div>
+    </AppDashboardSection>
   );
 }

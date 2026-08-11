@@ -3,6 +3,8 @@ import type { CarWashBookingStatus } from "@/generated/prisma/enums";
 import { bangkokDayRangeFromDateKey, normalizeScheduledAtLocalForApi } from "@/lib/car-wash/booking-datetime";
 import { parseYmdToDbDate } from "@/lib/home-finance/entry-date";
 import { buildCarWashSlotTimes, DEFAULT_CAR_WASH_DAY } from "@/lib/car-wash/slot-times";
+import { carWashNormalizeOpenWeekdays } from "@/lib/car-wash/shop-hours";
+import { bangkokDateKey, bangkokNowMinutes, bangkokWeekday } from "@/lib/time/bangkok";
 
 export const BLOCKING_BOOKING_STATUSES: CarWashBookingStatus[] = [
   "SCHEDULED",
@@ -28,6 +30,61 @@ export type SlotAvailabilityItem = {
   status?: string;
 };
 
+export function carWashNormalizeDurationMinutes(raw: unknown, fallback = 30): number {
+  const n = Math.trunc(Number(raw));
+  if (!Number.isFinite(n) || n < 15) return fallback;
+  return Math.min(480, n);
+}
+
+export function carWashSlotsNeeded(durationMinutes: number, slotMinutes: number): number {
+  const slot = Math.max(15, Math.trunc(slotMinutes) || 30);
+  const dur = Math.max(slot, Math.trunc(durationMinutes) || slot);
+  return Math.max(1, Math.ceil(dur / slot));
+}
+
+export function buildBookableStartSlots(
+  slotAvailability: SlotAvailabilityItem[],
+  slotMinutes: number,
+  durationMinutes: number,
+): SlotAvailabilityItem[] {
+  const need = carWashSlotsNeeded(durationMinutes, slotMinutes);
+  if (need <= 1) return slotAvailability;
+  return slotAvailability.map((slot, idx) => {
+    const run = slotAvailability.slice(idx, idx + need);
+    if (run.length < need) return { ...slot, available: false };
+    for (let i = 0; i < run.length; i++) {
+      const item = run[i]!;
+      if (!item.available) return { ...slot, available: false, status: item.status };
+      const start = parseHmToMinutes(slot.time);
+      const current = parseHmToMinutes(item.time);
+      if (start == null || current == null || current !== start + i * slotMinutes) {
+        return { ...slot, available: false };
+      }
+    }
+    return slot;
+  });
+}
+
+function parseHmToMinutes(time: string): number | null {
+  const m = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!m) return null;
+  const hh = Number(m[1]);
+  const mm = Number(m[2]);
+  if (!Number.isInteger(hh) || !Number.isInteger(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) {
+    return null;
+  }
+  return (hh * 60) + mm;
+}
+
+export function carWashSlotStartIsPastBangkok(dateKey: string, timeHHmm: string, now = new Date()): boolean {
+  const todayKey = bangkokDateKey(now);
+  if (dateKey < todayKey) return true;
+  if (dateKey > todayKey) return false;
+  const slotMinutes = parseHmToMinutes(timeHHmm);
+  if (slotMinutes == null) return false;
+  return slotMinutes < bangkokNowMinutes(now);
+}
+
 export function scheduledAtLocalFromSlot(dateKey: string, timeHHmm: string): string {
   return `${dateKey}T${timeHHmm}`;
 }
@@ -49,6 +106,7 @@ export function bangkokTimeHHmmFromScheduledAt(scheduledAt: Date): string {
 }
 
 export function buildSlotAvailability(
+  dateKey: string,
   slotTimes: string[],
   bookings: Array<{ id: number; scheduledAt: Date; status: string }>,
 ): SlotAvailabilityItem[] {
@@ -59,6 +117,9 @@ export function buildSlotAvailability(
     taken.set(t, { id: b.id, status: b.status });
   }
   return slotTimes.map((time) => {
+    if (carWashSlotStartIsPastBangkok(dateKey, time)) {
+      return { time, available: false, status: "PAST" };
+    }
     const hit = taken.get(time);
     if (!hit) return { time, available: true };
     return { time, available: false, bookingId: hit.id, status: hit.status };
@@ -80,7 +141,12 @@ export async function resolveCarWashDayScheduleForDate(
   const [profile, row] = await Promise.all([
     db.carWashShopProfile.findUnique({
       where: { ownerUserId_trialSessionId: { ownerUserId, trialSessionId } },
-      select: { defaultSlotMinutes: true },
+      select: {
+        defaultSlotMinutes: true,
+        openTime: true,
+        closeTime: true,
+        openWeekdaysJson: true,
+      },
     }),
     db.carWashDaySchedule.findUnique({
       where: {
@@ -93,10 +159,16 @@ export async function resolveCarWashDayScheduleForDate(
     }),
   ]);
 
-  const slotMinutes = row?.slotMinutes ?? profile?.defaultSlotMinutes ?? DEFAULT_CAR_WASH_DAY.slotMinutes;
-  const openTime = row?.openTime ?? DEFAULT_CAR_WASH_DAY.openTime;
-  const closeTime = row?.closeTime ?? DEFAULT_CAR_WASH_DAY.closeTime;
-  const isClosed = row?.isClosed ?? false;
+  const openWeekdays = carWashNormalizeOpenWeekdays(profile?.openWeekdaysJson);
+  const weekday = bangkokWeekday(`${dateKey}T12:00:00+07:00`);
+  const closedByWeekday = !openWeekdays.includes(weekday);
+
+  const slotMinutes =
+    row?.slotMinutes ?? profile?.defaultSlotMinutes ?? DEFAULT_CAR_WASH_DAY.slotMinutes;
+  const openTime = row?.openTime ?? profile?.openTime ?? DEFAULT_CAR_WASH_DAY.openTime;
+  const closeTime = row?.closeTime ?? profile?.closeTime ?? DEFAULT_CAR_WASH_DAY.closeTime;
+  /** มีแถวรายวัน = override · ไม่มีแถว = ตามวันเปิดประจำสัปดาห์ */
+  const isClosed = row ? row.isClosed : closedByWeekday;
   const slots = isClosed ? [] : buildCarWashSlotTimes(openTime, closeTime, slotMinutes);
 
   return { dateKey, openTime, closeTime, slotMinutes, isClosed, slots, hasCustomRow: Boolean(row) };
@@ -124,7 +196,7 @@ export async function loadSlotAvailabilityForDate(
     select: { id: true, scheduledAt: true, status: true },
   });
 
-  return { schedule, slotAvailability: buildSlotAvailability(schedule.slots, bookings) };
+  return { schedule, slotAvailability: buildSlotAvailability(schedule.dateKey, schedule.slots, bookings) };
 }
 
 export async function assertBookingSlotAvailable(
@@ -132,6 +204,7 @@ export async function assertBookingSlotAvailable(
   ownerUserId: string,
   trialSessionId: string,
   scheduledAtLocal: string,
+  durationMinutes?: number,
   excludeBookingId?: number,
 ): Promise<
   | { ok: true; dateKey: string; time: string; slotMinutes: number; scheduledAt: Date }
@@ -149,7 +222,7 @@ export async function assertBookingSlotAvailable(
   if ("error" in schedule) return { ok: false, error: schedule.error };
 
   if (schedule.isClosed) {
-    return { ok: false, error: "วันนี้ปิดรับจอง — ไปที่แท็บ「ตารางเวลา」เพื่อเปิดร้าน" };
+    return { ok: false, error: "วันนี้ปิดรับจอง — ไปที่ตั้งค่า → ตั้งค่าเวลาเปิดร้าน" };
   }
 
   if (!schedule.slots.includes(time)) {
@@ -170,7 +243,16 @@ export async function assertBookingSlotAvailable(
     select: { id: true, scheduledAt: true, status: true },
   });
 
-  const slot = buildSlotAvailability(schedule.slots, bookings).find((s) => s.time === time);
+  if (carWashSlotStartIsPastBangkok(dateKey, time)) {
+    return { ok: false, error: `เวลา ${time} ผ่านไปแล้ว — เลือกช่วงเวลาใหม่` };
+  }
+
+  const bookableSlots = buildBookableStartSlots(
+    buildSlotAvailability(dateKey, schedule.slots, bookings),
+    schedule.slotMinutes,
+    carWashNormalizeDurationMinutes(durationMinutes, schedule.slotMinutes),
+  );
+  const slot = bookableSlots.find((s) => s.time === time);
   if (!slot?.available) {
     return { ok: false, error: `ช่วง ${time} มีคิวแล้ว — เลือกช่วงอื่นที่ว่าง` };
   }

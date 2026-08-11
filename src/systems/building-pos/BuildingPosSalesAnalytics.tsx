@@ -1481,7 +1481,7 @@ export function BuildingPosSalesHistoryPanel({
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");
-  const [filterOpen, setFilterOpen] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [chartsOpen, setChartsOpen] = useState(false);
   const [categoryCompareOpen, setCategoryCompareOpen] = useState(true);
   const [tableCompareOpen, setTableCompareOpen] = useState(true);

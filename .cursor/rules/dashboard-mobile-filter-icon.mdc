@@ -1,30 +1,56 @@
 ---
-description: ฟอร์มกรองข้อมูลบนมือถือให้ย่อเป็นปุ่มไอคอน และเปิดตัวกรองแบบแผง/โมดัล
+description: ฟอร์มกรองบนมือถือเป็นไอคอน + ต้องมีปุ่มแสดง/ซ่อนกรองทุก breakpoint (ดูกฎ list filter)
 alwaysApply: true
 ---
 
 # Mobile filter pattern (dashboard modules)
 
-- เมื่อมี **ฟอร์มกรองข้อมูล** (เช่น วันที่, ห้องเรียน, สถานะ, keyword) ในหน้าแดชบอร์ด:
-  - บนจอเล็ก (`< sm` หรือ breakpoint โมดูล) ให้แสดงเป็น **ปุ่มไอคอนตัวกรอง** (เช่น funnel/sliders) แทนการโชว์ฟอร์มเต็มแถว
-  - เมื่อกดไอคอน ให้เปิดแผงกรอง (`sheet` / `popover` / `modal`) เพื่อแก้ค่า filter
-- บนจอใหญ่ (`sm+`) ให้แสดงฟอร์มกรองเต็มรูปแบบได้ตามปกติ
-- ปุ่มไอคอนต้องมี `aria-label` ชัดเจน เช่น `"เปิดตัวกรอง"` และมีขนาดแตะง่ายอย่างน้อย `min-h-[40px]`
-- ควรแสดงสถานะว่ามีการกรองอยู่ (badge จุด/ตัวเลข/สีปุ่ม) เพื่อให้ผู้ใช้มือถือรู้ว่าฟิลเตอร์กำลังทำงาน
-- ใช้ pattern นี้กับโมดูล `educare` และโมดูลใหม่ในอนาคตที่มี list/report/filter ลักษณะเดียวกัน
-- ถ้ามีปุ่ม **เพิ่มรายการ** คู่กับไอคอนกรองบนหัวการ์ด — ดูกฎ **`dashboard-mobile-list-header-actions.mdc`** (แถวเดียว หัวข้อซ้าย · กรอง+เพิ่มขวา, มือถือเพิ่มเป็นไอคอน)
+**กฎเต็ม (รายการ · แสดง/ซ่อน · ชิป · ค้นหา):** **`dashboard-module-list-filter.mdc`**  
+หน้าการเงิน: **`dashboard-finance-filter-charts-toggle.mdc`**
 
-## Example pattern
+เมื่อมี **ฟอร์ม/แผงกรองข้อมูล** ในหน้าแดชบอร์ด:
+
+## บังคับ
+
+1. มีปุ่ม **แสดงกรอง / ซ่อนกรอง** ควบคุมแผงด้วย `filterOpen` — **ทุกขนาดจอ** (ห้ามเดสก์ท็อปโชว์แผงถาวรโดยไม่มีปุ่มซ่อน)
+2. **มือถือ:** ไอคอน funnel อย่างเดียว · `aria-label` เช่น `"แสดงตัวกรอง"` / `"ซ่อนตัวกรอง"` · `min-h-[40px]` (แนะนำ `min-w-[40px]`)
+3. **`sm+`:** ไอคอน + ข้อความ `แสดงกรอง` / `ซ่อนกรอง`
+4. เมื่อกดแล้วสลับแผงกรอง (`block` / `hidden`) — ไม่บังคับ `sm:block` ให้แผงเปิดค้าง
+5. Badge จุดบนปุ่มเมื่อ**มีการกรองค้าง** และแผงถูกซ่อน
+6. ถ้ามีปุ่ม **เพิ่มรายการ** คู่กัน — ดูกฎ **`dashboard-mobile-list-header-actions.mdc`** (กรองก่อน · เพิ่มขวาสุด)
+
+## ตัวอย่างปุ่ม
 
 ```tsx
 <button
   type="button"
-  aria-label="เปิดตัวกรอง"
-  className="sm:hidden min-h-[40px] rounded-xl px-3"
-  onClick={() => setFilterOpen(true)}
+  aria-expanded={filterOpen}
+  aria-controls="…-filter-panel"
+  aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+  className={cn(
+    appTemplateOutlineButtonClass,
+    "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 sm:min-w-0 sm:px-3",
+    filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
+    filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
+  )}
+  onClick={() => setFilterOpen((o) => !o)}
 >
-  <FilterIcon aria-hidden />
+  <FilterIcon className="h-5 w-5" aria-hidden />
+  <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+  {filtersActive ? <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full …" aria-hidden /> : null}
 </button>
 
-<div className="hidden sm:grid">{/* full filter form on desktop */}</div>
+<div id="…-filter-panel" className={cn("space-y-3", filterOpen ? "block" : "hidden")}>
+  {/* ชิป + ช่องค้นหา */}
+</div>
+```
+
+## ห้าม
+
+```tsx
+{/* ❌ เดสก์ท็อปโชว์แผงตลอด โดยไม่มีปุ่มซ่อน */}
+<div className={cn(filterOpen ? "block" : "hidden", "sm:block")}>…</div>
+
+{/* ❌ ปุ่มกรองเฉพาะมือถือ */}
+<button className="sm:hidden" … />
 ```
