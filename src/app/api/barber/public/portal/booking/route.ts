@@ -79,6 +79,13 @@ export async function GET(req: Request) {
       scheduledAt: true,
       durationMinutes: true,
       status: true,
+      packagePrice: true,
+      depositAmountBaht: true,
+      amountPaidBaht: true,
+      paymentMethod: true,
+      paymentStatus: true,
+      depositSlipUrl: true,
+      paymentSlipUrl: true,
       stylist: { select: { name: true } },
       package: { select: { name: true, price: true } },
     },
@@ -104,7 +111,15 @@ export async function GET(req: Request) {
   const startHm = formatBangkokTimeHm(row.scheduledAt);
   const endDate = new Date(row.scheduledAt.getTime() + Math.max(15, row.durationMinutes) * 60_000);
   const endHm = formatBangkokTimeHm(endDate);
-  const priceBaht = row.package?.price != null ? Number(row.package.price) : null;
+  const priceBaht =
+    row.packagePrice > 0
+      ? row.packagePrice
+      : row.package?.price != null
+        ? Number(row.package.price)
+        : null;
+  const amountPaid = row.amountPaidBaht ?? 0;
+  const remainingBaht =
+    priceBaht != null ? Math.max(0, Math.round(priceBaht) - Math.max(0, amountPaid)) : null;
 
   return NextResponse.json({
     shop: {
@@ -125,6 +140,13 @@ export async function GET(req: Request) {
       endTime: endHm,
       durationMinutes: row.durationMinutes,
       priceBaht,
+      amountPaidBaht: amountPaid,
+      remainingBaht,
+      paymentStatus: row.paymentStatus,
+      paymentMethod: row.paymentMethod,
+      depositAmountBaht: row.depositAmountBaht,
+      depositSlipUrl: row.depositSlipUrl?.trim() || null,
+      paymentSlipUrl: row.paymentSlipUrl?.trim() || null,
       status: row.status,
       statusLabel: statusLabel(row.status),
     },

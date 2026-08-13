@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { drinkPosPublicImageUrl } from "@/lib/drink-pos/drink-stock-images";
 import { normalizeMemberPhone } from "@/lib/loyalty-stamp/member-qr";
 import {
   calcDrinkPosPointsEarned,
@@ -61,7 +62,7 @@ export function mapDrinkPosLoyaltyReward(r: {
     points_cost: r.pointsCost,
     sort_order: r.sortOrder,
     is_active: r.isActive,
-    image_url: typeof r.imageUrl === "string" ? r.imageUrl.trim() : "",
+    image_url: drinkPosPublicImageUrl(r.imageUrl) ?? "",
   };
 }
 
@@ -71,9 +72,9 @@ function resolveDrinkPosLoyaltyRewardImageUrl(
   productId: string | null | undefined,
   productImageById: Map<string, string>,
 ): string {
-  const custom = typeof customImageUrl === "string" ? customImageUrl.trim() : "";
+  const custom = drinkPosPublicImageUrl(customImageUrl) ?? "";
   if (custom) return custom;
-  if (productId) return productImageById.get(productId) ?? "";
+  if (productId) return drinkPosPublicImageUrl(productImageById.get(productId)) ?? "";
   return "";
 }
 

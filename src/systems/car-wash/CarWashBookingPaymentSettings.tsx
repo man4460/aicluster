@@ -15,7 +15,7 @@ import {
 
 const MODES: { value: CarWashPortalBookingPaymentMode; label: string; hint: string }[] = [
   { value: "NONE", label: "ไม่ต้องชำระ", hint: "จองคิวได้เลย ไม่บังคับมัดจำ" },
-  { value: "DEPOSIT", label: "มัดจำ", hint: "ต้องชำระมัดจำตอนจอง (ลิงก์ลูกค้า / เพิ่มคิว)" },
+  { value: "DEPOSIT", label: "มัดจำ", hint: "ต้องชำระมัดจำตอนจองจากลิงก์ลูกค้า" },
   { value: "FULL", label: "ชำระเต็มยอด", hint: "ต้องชำระเต็มราคาก่อนยืนยันคิว" },
 ];
 
@@ -86,7 +86,7 @@ export function CarWashBookingPaymentSettings() {
       <AppSectionHeader
         tone="violet"
         title="ชำระตอนจองคิว"
-        description="ใช้กับลิงก์ลูกค้าและปุ่มเพิ่มคิว — แบบเดียวกับสนามฟุตบอล"
+        description="ใช้กับลิงก์จองลูกค้า — แบบเดียวกับสนามฟุตบอล"
       />
       {loading ? (
         <p className="text-sm text-[#66638c]">กำลังโหลด…</p>

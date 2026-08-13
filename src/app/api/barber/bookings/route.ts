@@ -23,6 +23,7 @@ import {
   barberSlotRunConflicts,
   loadBarberBusyRanges,
 } from "@/systems/barber/lib/booking-availability";
+import { resolveBarberBookingPayment } from "@/systems/barber/lib/resolve-booking-payment";
 
 const postSchema = z.object({
   phone: z.string().min(9).max(32),
@@ -33,6 +34,11 @@ const postSchema = z.object({
   packageId: z.number().int().positive(),
   stylistId: z.number().int().positive().optional().nullable(),
   durationMinutes: z.number().int().min(15).max(480).optional().nullable(),
+  useMemberPackage: z.boolean().optional().nullable(),
+  paymentMethod: z.enum(["PROMPTPAY", "TRANSFER"]).optional().nullable(),
+  paymentSlipUrl: z.string().max(512).optional().nullable(),
+  amountPaidBaht: z.number().int().min(0).max(9_999_999).optional().nullable(),
+  forcePaymentMode: z.enum(["NONE", "DEPOSIT", "FULL"]).optional().nullable(),
 });
 
 function normalizePhone(raw: string): string {
@@ -49,6 +55,13 @@ function mapBooking(row: {
   durationMinutes?: number;
   stylistId?: number | null;
   packageId?: number | null;
+  packagePrice?: number | null;
+  depositAmountBaht?: number | null;
+  amountPaidBaht?: number | null;
+  paymentMethod?: string | null;
+  paymentStatus?: string | null;
+  depositSlipUrl?: string | null;
+  paymentSlipUrl?: string | null;
   package?: { id: number; name: string; durationMinutes: number } | null;
   stylist?: { id: number; name: string } | null;
 }) {
@@ -64,6 +77,13 @@ function mapBooking(row: {
     packageId: row.packageId ?? null,
     packageName: row.package?.name ?? null,
     stylistName: row.stylist?.name ?? null,
+    packagePrice: row.packagePrice ?? 0,
+    depositAmountBaht: row.depositAmountBaht ?? null,
+    amountPaidBaht: row.amountPaidBaht ?? 0,
+    paymentMethod: row.paymentMethod ?? "UNPAID",
+    paymentStatus: row.paymentStatus ?? "UNPAID",
+    depositSlipUrl: row.depositSlipUrl ?? null,
+    paymentSlipUrl: row.paymentSlipUrl ?? null,
   };
 }
 
@@ -135,7 +155,13 @@ export async function POST(req: Request) {
   const [profile, stylistCount] = await Promise.all([
     prisma.barberShopProfile.findUnique({
       where: { ownerUserId_trialSessionId: { ownerUserId: ownerId, trialSessionId } },
-      select: { openTime: true, closeTime: true, slotMinutes: true },
+      select: {
+        openTime: true,
+        closeTime: true,
+        slotMinutes: true,
+        portalBookingPaymentMode: true,
+        depositAmountBaht: true,
+      },
     }),
     prisma.barberStylist.count({
       where: { ownerUserId: ownerId, trialSessionId, isActive: true },
@@ -186,7 +212,7 @@ export async function POST(req: Request) {
       ownerUserId: ownerId,
       trialSessionId,
     },
-    select: { id: true, name: true, durationMinutes: true },
+    select: { id: true, name: true, durationMinutes: true, price: true },
   });
   if (!pkg) {
     return NextResponse.json({ error: "ไม่พบบริการ/แพ็กเกจ" }, { status: 400 });
@@ -194,6 +220,22 @@ export async function POST(req: Request) {
   const packageId = pkg.id;
   const durationMinutes = barberNormalizeDurationMinutes(pkg.durationMinutes, slotMinutes);
   const slotsNeeded = barberSlotsNeeded(durationMinutes, slotMinutes);
+  const packagePriceBaht = Math.max(0, Math.round(Number(pkg.price) || 0));
+
+  const payResolved = resolveBarberBookingPayment({
+    shopMode: profile?.portalBookingPaymentMode,
+    shopDepositAmountBaht: profile?.depositAmountBaht,
+    packagePriceBaht,
+    forceMode: parsed.data.useMemberPackage
+      ? "NONE"
+      : parsed.data.forcePaymentMode ?? null,
+    paymentMethod: parsed.data.paymentMethod,
+    paymentSlipUrl: parsed.data.paymentSlipUrl,
+    amountPaidBaht: parsed.data.amountPaidBaht,
+  });
+  if (!payResolved.ok) {
+    return NextResponse.json({ error: payResolved.error }, { status: 400 });
+  }
 
   const startHm = parsed.data.scheduledAtLocal.slice(11, 16);
   const dateKey = parsed.data.scheduledAtLocal.slice(0, 10);
@@ -295,6 +337,13 @@ export async function POST(req: Request) {
       stylistId,
       packageId,
       status: "SCHEDULED",
+      packagePrice: payResolved.fields.packagePrice,
+      depositAmountBaht: payResolved.fields.depositAmountBaht,
+      amountPaidBaht: payResolved.fields.amountPaidBaht,
+      paymentMethod: payResolved.fields.paymentMethod,
+      paymentStatus: payResolved.fields.paymentStatus,
+      depositSlipUrl: payResolved.fields.depositSlipUrl,
+      paymentSlipUrl: payResolved.fields.paymentSlipUrl,
     },
     include: {
       package: { select: { id: true, name: true, durationMinutes: true } },

@@ -16,6 +16,18 @@ export const CAR_WASH_TAB_ITEMS: { key: CarWashTabKey; label: string; shortLabel
   { key: "qr", label: "QR", shortLabel: "QR" },
 ];
 
+/** เมนูลิงก์พนักงาน (โทเค็นถาวร) — เฉพาะภาพรวม · แพ็ก */
+export const CAR_WASH_STAFF_TAB_ITEMS: {
+  key: Extract<CarWashTabKey, "overview" | "offers">;
+  label: string;
+  shortLabel: string;
+}[] = [
+  { key: "overview", label: "ภาพรวม", shortLabel: "ภาพรวม" },
+  { key: "offers", label: "แพ็ก", shortLabel: "แพ็ก" },
+];
+
+export type CarWashStaffTabKey = (typeof CAR_WASH_STAFF_TAB_ITEMS)[number]["key"];
+
 export type CarWashNavKey = CarWashTabKey | "settings";
 
 export type CarWashNavItem = {

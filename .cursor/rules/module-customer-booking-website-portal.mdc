@@ -1,5 +1,5 @@
 ---
-description: ลิงก์ลูกค้าแบบเว็บไซต์จอง (marketing portal) — แบนเนอร์ · ค้นหา · มัดจำ/เต็ม · สลิป · lookup · รายละเอียดหลังจอง · อ้างอิงโรงแรม
+description: ลิงก์ลูกค้าแบบเว็บไซต์จอง (marketing portal) — แบนเนอร์ · ค้นหา · มัดจำ/เต็ม · สลิป · lookup · รายละเอียดหลังจอง · อ้างอิงโรงแรม · ร้านอาหาร · ร้านเครื่องดื่ม
 alwaysApply: false
 globs:
   - "**/systems/hotel-resort/components/HotelResortPortal*.tsx"
@@ -18,22 +18,42 @@ globs:
   - "**/api/football-turf/public/**"
   - "**/lib/football-turf/public-url.ts"
   - "**/lib/football-turf/portal-access.ts"
+  - "**/systems/building-pos/components/BuildingPosPortal*.tsx"
+  - "**/systems/building-pos/components/BuildingPosPortalMedia*"
+  - "**/systems/building-pos/components/BuildingPosBookingPayment*"
+  - "**/app/building-pos/[ownerId]/**"
+  - "**/api/building-pos/public/portal/**"
+  - "**/lib/building-pos/public-url.ts"
+  - "**/lib/building-pos/portal-*.ts"
+  - "**/lib/building-pos/portal-booking.ts"
+  - "**/systems/drink-pos/components/DrinkPosPortal*.tsx"
+  - "**/systems/drink-pos/components/DrinkPosPortalMedia*"
+  - "**/systems/drink-pos/components/DrinkPosBookingPayment*"
+  - "**/app/drink-pos/[ownerId]/**"
+  - "**/api/drink-pos/public/portal/**"
+  - "**/lib/drink-pos/public-url.ts"
+  - "**/lib/drink-pos/portal-*.ts"
+  - "**/lib/drink-pos/portal-booking.ts"
 ---
 
 # ลิงก์ลูกค้า — เว็บไซต์จองสาธารณะ (Booking website portal)
 
-Canonical: **โรงแรม / รีสอร์ท** — หน้า `/hotel-resort/[ownerId]` (`HotelResortPortalClient`)
+Canonical: **โรงแรม / รีสอร์ท** — หน้า `/hotel-resort/[ownerId]` (`HotelResortPortalClient`)  
+คู่ขนาน POS ร้านอาหาร: `/building-pos/[ownerId]` (`BuildingPosPortalClient`)  
+คู่ขนาน POS ร้านเครื่องดื่ม: `/drink-pos/[ownerId]` (`DrinkPosPortalClient`) — **สั่งเครื่องดื่มเท่านั้น** (ไม่มีจองที่นั่ง) · แผงสั่ง = `DrinkPosCustomerOrderClient` `variant="portal"`
 
-ใช้กฎนี้เมื่อโมดูลต้องการ **เว็บไซต์ลูกค้าแบบหลายส่วน** (แบนเนอร์ · แกลเลอรี · ค้นหาสินค้า/ห้อง · จอง · ชำระมัดจำ/เต็ม · ติดต่อ · รีวิว) — **ไม่ใช่** พอร์ทัล QR คอลัมน์เดียวแบบคาร์แคร์
+ใช้กฎนี้เมื่อโมดูลต้องการ **เว็บไซต์ลูกค้าแบบหลายส่วน** (แบนเนอร์ · แกลเลอรี · ค้นหาสินค้า/ห้อง/เมนู · จอง · ชำระมัดจำ/เต็ม · ติดต่อ · รีวิว) — **ไม่ใช่** พอร์ทัล QR คอลัมน์เดียวแบบคาร์แคร์
 
 | ชนิด | กฎ | เมื่อไหร่ |
 |------|-----|----------|
-| เว็บไซต์จอง (กฎนี้) | `module-customer-booking-website-portal.mdc` | โรงแรม · รีสอร์ท · ที่พัก · โดเมนที่ต้อง “หน้าเว็บร้าน” |
+| เว็บไซต์จอง (กฎนี้) | `module-customer-booking-website-portal.mdc` | โรงแรม · รีสอร์ท · ที่พัก · **ร้านอาหาร (จองโต๊ะ)** · โดเมนที่ต้อง “หน้าเว็บร้าน” |
+| เว็บร้าน + สั่งเลย (ไม่มีจอง) | กฎนี้ + `pos-customer-order-link-ux.mdc` | **ร้านเครื่องดื่ม** — แบนเนอร์/แกลเลอรี/รีวิว + แผงสั่ง |
 | พอร์ทัล QR กะทัดรัด | `shop-customer-qr-portal.mdc` | คาร์แคร์ · บาร์เบอร์ · ซักผ้า · โฟลว์เช็คอินสั้น |
 | จองสล็อต + ตารางพนักงาน | `module-booking-staff-schedule-template.mdc` | บาร์เบอร์ · นวด · โดเมนคิวรายชั่วโมงที่มีช่าง/พนักงาน |
 | ลิงก์พนักงาน | `module-staff-token-link-portal.mdc` | staff `?t=&k=` — คนละลิงก์ |
 | Hub QR ในแดชบอร์ด | `shop-qr-hub-popup-pattern.mdc` | การ์ดคู่ลูกค้า/พนักงาน + ป๊อปอัป |
 | คำอธิบายสั้นบนหน้าลูกค้า | `customer-portal-no-description-copy.mdc` | ทุกหน้าสาธารณะลูกค้า |
+| สั่งอาหาร/เครื่องดื่ม QR (ไม่ใช่เว็บจอง) | `pos-customer-order-link-ux.mdc` | `/building-pos/order/[ownerId]` · `/drink-pos/order/[ownerId]` — แถวเมนู 1 คอลัมน์ |
 
 ---
 
@@ -50,6 +70,10 @@ Canonical: **โรงแรม / รีสอร์ท** — หน้า `/hot
 - `hotelResortPublicPortalUrl(base, ownerId, trialSessionId)` — ใส่ `?t=` **เฉพาะเมื่อ trial ≠ `"prod"`**
 - `hotelResortPublicBookingUrl(base, ownerId, bookingId, phone, trialSessionId)`
 
+ร้านอาหาร: `src/lib/building-pos/public-url.ts` · หน้ารายละเอียด `/building-pos/[ownerId]/reservation/[reservationId]`
+
+ร้านเครื่องดื่ม: `src/lib/drink-pos/public-url.ts` · เว็บสั่ง `/drink-pos/[ownerId]` · URL เก่า `/drink-pos/order/[ownerId]` และ `/reservation/…` รีไดเรกต์มาหน้านี้
+
 โมดูลใหม่: คัดลอกคู่ฟังก์ชันนี้ไป `src/lib/{module}/public-url.ts`
 
 ---
@@ -61,6 +85,8 @@ Canonical: **โรงแรม / รีสอร์ท** — หน้า `/hot
 3. ข้อมูลผูก `(ownerUserId, trialSessionId)` — profile · bookings · guests · reviews
 4. เปิดลิงก์สาธารณะได้เมื่อโมดูล active + `canAccessAppModule` ของเจ้าของ  
    - โรงแรม: `src/lib/hotel-resort/portal-access.ts` → `isHotelResortPortalOpenForOwner`
+   - ร้านอาหาร: `isBuildingPosPortalOpenForOwner`
+   - ร้านเครื่องดื่ม: `isDrinkPosPortalOpenForOwner`
 5. โมดูลใหม่: ทำ `is{Module}PortalOpenForOwner` แบบเดียวกัน — **ห้าม** เปิด API สาธารณะโดยไม่ gate
 
 ---
@@ -76,14 +102,39 @@ Canonical: **โรงแรม / รีสอร์ท** — หน้า `/hot
 
 ### เลย์เอาต์เว็บไซต์จอง (ต่างจาก QR กะทัดรัด)
 
+**โครงเดียวกันบังคับทั้งโรงแรม (`HotelResortPortalClient`) · ร้านอาหาร (`BuildingPosPortalClient`) · ร้านเครื่องดื่ม (`DrinkPosPortalClient`)**
+
 | ส่วน | แนวทาง |
 |------|--------|
 | ความกว้างเนื้อหา | `max-w-6xl` (กว้างกว่า `max-w-md` ของคาร์แคร์) |
-| Hero แบนเนอร์ | เต็มความกว้าง · หน้าใช้ `!px-0 !pt-0` ให้แบนเนอร์ชิดขอบ |
-| Overlay บนแบนเนอร์ | เบา — ให้รูปโชว์ชัด เช่น `from-[#1e1b4b]/25 … to-[#faf9ff]/90` + fade ล่างเข้าพื้น `#faf9ff` |
-| หัวบนแบนเนอร์ | ข้อความขาว + ปุ่ม nav แบบ glass pill |
-| ฟอร์มค้นหา | การ์ด glass **ทับมุมล่างแบนเนอร์** (`#book`) |
+| Early return | `busy` / `loadErr` คืน `AppPublicCheckInGlassPage` แยก (`!px-0 !pt-0`) — ไม่ห่อใน success tree |
+| โลโก้ | **เฉพาะ** แถบ `header` absolute บนสุด · `h-10 w-10 rounded-full object-cover ring-2 ring-white/70 shadow-md` + ชื่อร้าน truncate สีขาว — **ห้าม** โลโก้สี่เหลี่ยมใหญ่ข้าง H1 ใน hero |
+| Nav เดสก์ท็อป | glass pill ใน header · `hidden … md:flex` (`portalNavLinkClass` / `navLinkClass`) — จอง · เมนู/ห้อง · แกลเลอรี · รีวิว · ติดต่อ |
+| Hero แบนเนอร์ | **เต็มจอความกว้าง** · หน้าใช้ `!px-0 !pt-0` · `min-h-[72vh]` / `sm:min-h-[80vh]` · ปุ่มรูป `absolute inset-0` + `object-cover object-center` — **ห้าม** แบนเนอร์สูงแคบในกล่องมี padding |
+| Overlay บนแบนเนอร์ | เหมือนโรงแรม: `from-[#1e1b4b]/25 via-[#1e1b4b]/5 to-[#faf9ff]/90` + fade ล่าง `h-40 from-[#faf9ff]` |
+| เนื้อหาบน hero | eyebrow + `h1` (`text-4xl` → `md:text-6xl`) + tagline + Stars/คะแนน — **ไม่มี** โลโก้ข้างหัวข้อ |
+| ฟอร์มจอง/ค้นหาบน hero | **แถบกะทัดรัดเท่านั้น** (โรงแรม: เช็คอิน·เช็คเอาต์·ปุ่ม · ร้านอาหาร/เครื่องดื่ม: วันที่·เวลา·จำนวนคน·ปุ่ม) — `sm:grid-cols-[…_auto] sm:items-end` · ช่องกรอกสูงเท่ากัน (`h-11`) ให้**ตรงแนวเดียวกับปุ่ม** · เวลาใช้ `AppTime24Input` + `selectClassName` ความสูงเท่าช่องวันที่ · **ห้าม** ฟอร์มยาวทับแบนเนอร์ |
+| โฟลว์จองยาว (ร้านอาหาร / เครื่องดื่ม) | ขั้น: **1 เมื่อไหร่** → **2 ผู้จอง** → **3 เมนู** → **4 ยืนยัน/ชำระ** · เพิ่มเมนูได้เฉพาะขั้น 3 · **ตอนขั้น 3 ต้องซ่อนการ์ดเมนูส่วน `#menu` ปกติ** ให้เหลือเฉพาะกริดเลือกในแถบจอง (กันซ้ำ) · นอกขั้น 3 คืนส่วน `#menu` แบบดูอย่างเดียว |
+| `main` ใต้ hero | `max-w-6xl space-y-12` — (ร้านอาหาร/เครื่องดื่ม: แผงจองต่อเมื่อขั้น ≥ 2) · เมนู/ห้อง · แกลเลอรี · รีวิว · ติดต่อ |
 | หน้ารายละเอียดจอง | กลับไป `max-w-md` compact ได้ |
+
+### กริดเมนู / สินค้าบนเว็บจอง (ร้านอาหาร — บังคับ)
+
+| Viewport | คอลัมน์ | โทเค็น |
+|----------|---------|--------|
+| มือถือ (`default`) | **`grid-cols-3`** | `buildingPosPortalMenuGridClass` |
+| คอม (`lg+`) | **`lg:grid-cols-6`** | เดียวกัน |
+
+- การ์ด: รูป `aspect-square` + ชื่อสั้น + ราคา — `buildingPosPortalMenuCardClass`
+- **ห้าม** `grid-cols-2` / `lg:grid-cols-4` บนเว็บจองร้านอาหาร
+- **อย่าสับสน** กับลิงก์สั่งอาหาร QR (`pos-customer-order-link-ux.mdc`) ที่บังคับแถว 1 คอลัมน์ใต้หมวด
+
+### แกลเลอรีร้าน
+
+- ส่วน `#gallery` — แสดงเมื่อมีรูปใน `portalGalleryJson`
+- Normalize รับทั้ง path อัปโหลด (`/…`) และ URL `http(s)://` (seed / Unsplash)
+- กริดแนะนำ: **มือถือ 3 · คอม 6** ให้หนาแน่นสอดคล้องเมนู (หรืออย่างน้อย 2 / 4 ตามโรงแรม)
+- สูงสุด: `BUILDING_POS_PORTAL_GALLERY_MAX` / `HOTEL_RESORT_PORTAL_GALLERY_MAX` (= 8)
 
 ### สื่อ / สลิป / กล้อง / พร้อมเพย์ (บังคับเมื่อมียอดชำระ)
 
@@ -91,7 +142,7 @@ Canonical: **โรงแรม / รีสอร์ท** — หน้า `/hot
 - **ถ่ายรูปสลิป:** `useAppCameraCapture()` → `openCamera(onFile)` + `cameraModal` + `AppGalleryCameraFileInputs` (`cameraInputRef`) — **ห้าม** ให้ปุ่มถ่ายไป `input.capture.click()` อย่างเดียวโดยไม่เปิด `AppCameraCaptureModal`
 - เลือกแกลเลอรี → `AppImagePickCameraButtons.onPickGallery` → gallery input
 - อัปโหลดก่อนย่อ: `prepareImageFileForUpload`
-- **พร้อมเพย์บนลิงก์ลูกค้า:** เมื่อเลือก `PROMPTPAY` ต้องแสดง **รูป QR** จาก API สาธารณะ (โรงแรม: `POST /api/hotel-resort/public/portal/promptpay-qr` body `{ ownerId, amountBaht, t? }`) — ห้ามเหลือแค่ข้อความเบอร์อย่างเดียว
+- **พร้อมเพย์บนลิงก์ลูกค้า:** เมื่อเลือก `PROMPTPAY` ต้องแสดง **รูป QR** จาก API สาธารณะ (โรงแรม: `POST /api/hotel-resort/public/portal/promptpay-qr` · ร้านอาหาร: `…/building-pos/public/portal/promptpay-qr`) — ห้ามเหลือแค่ข้อความเบอร์อย่างเดียว
 - โอน: แสดงธนาคาร / เลขบัญชี / ชื่อบัญชี
 - **ข้อความแนบสลิป (บังคับ 1 บรรทัด):**
   - มัดจำ (`DEPOSIT`): `กรุณาอัปโหลดสลิป เพื่อเป็นหลักฐานการมัดจำการจอง`
@@ -108,72 +159,74 @@ Canonical: **โรงแรม / รีสอร์ท** — หน้า `/hot
 
 ## 4) ฟีเจอร์มาตรฐานบนหน้าเว็บ
 
-| ฟีเจอร์ | พฤติกรรม (อ้างอิงโรงแรม) |
+| ฟีเจอร์ | พฤติกรรม (อ้างอิงโรงแรม / ร้านอาหาร) |
 |---------|---------------------------|
-| แบนเนอร์ | `portalBannerUrl` หรือรูปตัวอย่าง · คลิกดูใหญ่ |
-| แกลเลอรี | `#gallery` · จำกัดจำนวน (โรงแรม `HOTEL_RESORT_PORTAL_GALLERY_MAX = 8`) |
-| ค้นหา / ว่าง | วันเข้า–ออก → API rooms · **ค่าเริ่มวันนี้→พรุ่งนี้ + auto-load** |
-| การ์ดสินค้า/ห้อง | ราคา · รายละเอียดสั้น · ปุ่มจองเปิด sheet |
+| แบนเนอร์ | `portalBannerUrl` หรือรูปตัวอย่าง · คลิกดูใหญ่ · **เต็มความกว้าง + สูง ~viewport** |
+| แกลเลอรี | `#gallery` · จำกัดจำนวน (สูงสุด 8) · seed ใส่รูปตัวอย่างได้ |
+| ค้นหา / ว่าง | วันเข้า–ออก → API rooms · **ค่าเริ่มวันนี้→พรุ่งนี้ + auto-load** (โรงแรม) · แถบบน hero กะทัดรัด |
+| จองร้านอาหาร (ขั้น) | Hero: วัน·เวลา·คน → ผู้จอง → **เมนู (เลือกพรีออเดอร์ได้เฉพาะขั้นนี้)** → ยืนยัน/ชำระ |
+| การ์ดสินค้า/ห้อง/เมนู | ราคา · รายละเอียดสั้น · ปุ่มจอง/พรีออเดอร์ |
+| กริดเมนูร้านอาหาร | **มือถือ 3 · คอม 6** (`buildingPosPortalMenuGridClass`) |
 | โหมดชำระ | `NONE` \| `DEPOSIT` \| `FULL` — คำนวณ `payDueBaht` |
 | สลิปตอนจอง | บังคับเมื่อ `payDueBaht > 0` · `PROMPTPAY` โชว์ QR · ถ่ายผ่าน `useAppCameraCapture` · ข้อความหลักฐานมัดจำ/ชำระ |
 | รีวิว | รายการที่เจ้าของคิวเรต (เผยแพร่) + คะแนนเฉลี่ยบน hero |
-| ติดต่อ | โทร · ที่อยู่ · LINE · Facebook · แผนที่ · เวลาเช็คอิน/เอาต์จาก**ตั้งค่าที่พัก** |
-| ดูการจอง | กรอกเบอร์ → `RESERVED` → เปิดหน้ารายละเอียด |
-| หลังจองสำเร็จ | `router.push` → `/…/booking/[id]?phone=&t=` |
+| ติดต่อ | โทร · ที่อยู่ · LINE · Facebook · แผนที่ · เวลาเปิด–ปิด / เช็คอิน–เอาต์ |
+| ดูการจอง | กรอกเบอร์ → สถานะจอง → เปิดหน้ารายละเอียด |
+| หลังจองสำเร็จ | `router.push` → หน้ารายละเอียด + เบอร์ |
 
-### หน้ารายละเอียดหลังจอง (`HotelResortPortalBookingClient`) — บังคับ
+### หน้ารายละเอียดหลังจอง (`HotelResortPortalBookingClient` / `BuildingPosPortalReservationClient`) — บังคับ
 
-1. แสดง **ยอดพัก** · **ชำระแล้ว** (ยอด + สถานะชำระ) · **คงเหลือ** ถ้ายังไม่ครบ
-2. ถ้ามี `depositSlipUrl` / `paymentSlipUrl` — ส่วน「สลิปมัดจำ」และ「สลิปชำระเพิ่ม」แยกกัน + `AppImageThumb` **กดดู lightbox** ได้
-3. เวลาเช็คอิน/เอาต์บนหน้า = วันที่พัก + เวลาจากตั้งค่าที่พัก
+1. แสดง **ยอด** · **ชำระแล้ว** · **คงเหลือ** ถ้ายังไม่ครบ
+2. ถ้ามีสลิป — `AppImageThumb` **กดดู lightbox** ได้
+3. เวลานัด/เช็คอินบนหน้า = วันที่ + เวลาจากตั้งค่าร้าน
 
-### แดชบอร์ดรายการจอง (`HotelResortBookingsClient`) — เมื่อชำระบางส่วน
+### แดชบอร์ดรายการจอง — เมื่อชำระบางส่วน
 
-1. การ์ดรายการ: แสดง `ชำระแล้ว ฿… · ค้าง ฿…` เมื่อ `amountPaidBaht > 0`
-2. ถ้ามี `depositSlipUrl` / `paymentSlipUrl` — `AppImageThumb` บนการ์ด **กดดู lightbox** (แยกมัดจำกับชำระเพิ่ม)
-3. โมดัลจัดการ: ยอดชำระแล้ว/คงเหลือ + สลิปมัดจำ + สลิปชำระเพิ่มกดดูได้เช่นกัน  
-รายละเอียดตัวกรอง/เตือนเวลา: `hotel-resort-booking-filters.mdc`
+1. การ์ดรายการ: แสดงยอดชำระแล้ว/ค้างเมื่อมียอดชำระ
+2. ถ้ามีสลิป — `AppImageThumb` บนการ์ด **กดดู lightbox**  
+รายละเอียดตัวกรอง/เตือนเวลา (โรงแรม): `hotel-resort-booking-filters.mdc`
 
-Helpers โรงแรม: `src/systems/hotel-resort/lib/portal-booking.ts` · `portal-media.ts`
+Helpers โรงแรม: `src/systems/hotel-resort/lib/portal-booking.ts` · `portal-media.ts`  
+Helpers ร้านอาหาร: `src/lib/building-pos/portal-booking.ts`
 
 ---
 
 ## 5) โหมดชำระบนพอร์ทัล (บังคับเมื่อมีจองออนไลน์)
 
-เก็บบน profile (โรงแรม: `portalBookingPaymentMode` · `depositAmountBaht`):
+เก็บบน profile (โรงแรม: `portalBookingPaymentMode` · `depositAmountBaht` · ร้านอาหารเพิ่ม `depositPercent`):
 
 | โหมด | ความหมาย | `payDueBaht` |
 |------|----------|--------------|
 | `NONE` | จองอย่างเดียว ไม่เก็บเงินบนลิงก์ | `null` / 0 — ไม่บังคับสลิป |
-| `DEPOSIT` | มัดจำคงที่ (cap ไม่เกินยอดรวม) | `min(deposit, total)` → มักได้ `PARTIAL` |
-| `FULL` | เก็บเต็มยอดพัก/บริการ | `total` |
+| `DEPOSIT` | มัดจำคงที่หรือ % ของพรีออเดอร์ | ตามสูตรโมดูล → มักได้ `PARTIAL` |
+| `FULL` | เก็บเต็มยอด | `total` / ยอดพรีออเดอร์ |
 
-เมื่อจองสำเร็จ (`POST …/book`): บันทึก `amountPaidBaht` = `payDue` · `depositAmountBaht` = `payDue` · `depositSlipUrl` · `paymentMethod` — `paymentSlipUrl` ว่างไว้สำหรับสลิปชำระเพิ่มตอนเช็คอิน
+เมื่อจองสำเร็จ (`POST …/book`): บันทึกยอดชำระ · สลิป · `paymentMethod`
 
-- Normalize: `hotelResortNormalizePortalPaymentMode` → ค่าไม่รู้จัก = `NONE`
-- Compute: `hotelResortComputePortalPayDue({ mode, depositAmountBaht, totalBaht })`
-- วันที่พัก: `hotelResortParsePortalStayDate(ymd, timeHm)` ใช้ **เวลาเช็คอิน/เอาต์จากตั้งค่าที่พัก** — ห้าม `new Date("YYYY-MM-DD")` ตรง ๆ (UTC midnight)
+- Normalize → ค่าไม่รู้จัก = `NONE`
+- วันที่จอง: ใช้ **Asia/Bangkok** — ห้าม `new Date("YYYY-MM-DD")` ตรง ๆ (UTC midnight)
 
-**แยกจากแดชบอร์ด:** หน้าเช็คอินเจ้าของยังใช้ `CASH` \| `PROMPTPAY` \| `TRANSFER` ตาม `hotel-resort-payment-methods.mdc` — คนละพื้นผิว
+**แยกจากแดชบอร์ด:** หน้าชำระเจ้าของยังใช้ `CASH` \| `PROMPTPAY` \| `TRANSFER` ตามกฎโมดูล — คนละพื้นผิว
 
 ---
 
 ## 6) API สาธารณะ (แพทเทิร์นคัดลอก)
 
 Prefix โรงแรม: `/api/hotel-resort/public/portal/…`  
+Prefix ร้านอาหาร: `/api/building-pos/public/portal/…`  
 ทุกเส้นทาง: gate เปิดพอร์ทัล + resolve trial (`t` / body)
 
 | Method | Path | หน้าที่ |
 |--------|------|---------|
-| GET | `…/info` | โปรไฟล์ · สื่อ · โหมดชำระ · ช่องทางโอน/พร้อมเพย์ · รีวิวที่เผยแพร่ |
-| GET | `…/rooms?checkIn&checkOut` | รายการว่าง + `payDueBaht` ต่อรายการ |
-| POST | `…/book` | สร้างแขก + จอง (`RESERVED`) · บังคับสลิปถ้ามียอด · บันทึกยอดชำระบางส่วน/เต็ม |
-| POST | `…/lookup` | ค้นด้วยเบอร์ |
-| GET | `…/booking?bookingId&phone` | รายละเอียด + `paymentSlipUrl` — เบอร์ต้องตรง |
+| GET | `…/info` | โปรไฟล์ · สื่อ · โหมดชำระ · ช่องทางโอน/พร้อมเพย์ · รีวิวที่เผยแพร่ · เมนู (ร้านอาหาร) |
+| GET | `…/rooms?checkIn&checkOut` | รายการว่าง + `payDueBaht` (โรงแรม) |
+| POST | `…/book` | สร้างจอง · บังคับสลิปถ้ามียอด |
+| GET/POST | `…/reservation` / lookup | ค้น/ดูรายละเอียดด้วยเบอร์ |
 | POST | `…/upload-slip` | อัปโหลดสลิปสาธารณะ (rate limit + plan gate) |
-| POST | `…/promptpay-qr` | สร้าง QR พร้อมเพย์ + ข้อมูลโอน (`ownerId`, `amountBaht`, `t?`) |
+| POST | `…/promptpay-qr` | สร้าง QR พร้อมเพย์ + ข้อมูลโอน |
+| GET/POST | `…/reviews` | รีวิวเผยแพร่ / ส่งรีวิว |
 
-แนะนำ: rate limit ต่อ IP (โรงแรม book ~40/ชม. · slip ~30/ชม.) · `assertOwnerPlanUpload` → 402 เมื่อแพ็กไม่รองรับ
+แนะนำ: rate limit ต่อ IP · `assertOwnerPlanUpload` → 402 เมื่อแพ็กไม่รองรับ
 
 Owner (ล็อกอิน): `PATCH` profile · CRUD reviews · upload สื่อผ่าน API อัปโหลดของโมดูล
 
@@ -181,64 +234,62 @@ Owner (ล็อกอิน): `PATCH` profile · CRUD reviews · upload สื�
 
 ## 7) Schema / ฟิลด์โปรไฟล์ที่ควรมีเมื่อทำเว็บจอง
 
-คัดลอกแนวจาก `HotelResortProfile` (+ โมเดลรีวิวถ้าต้องการ):
+คัดลอกแนวจาก `HotelResortProfile` / `BuildingPosShopProfile` (+ โมเดลรีวิวถ้าต้องการ):
 
 | กลุ่ม | ฟิลด์ตัวอย่าง |
 |-------|----------------|
 | สื่อ | `portalBannerUrl` · `portalGalleryJson` |
-| ติดต่อ | `address` · `contactPhone` · `lineId` · `facebookUrl` · `mapUrl` |
-| เวลา | `checkInTime` · `checkOutTime` (ใช้ทั้งแดชบอร์ดเตือน + พอร์ทัลแสดง/parse วัน) |
-| ชำระพอร์ทัล | `portalBookingPaymentMode` · `depositAmountBaht` |
-| แบรนด์/โอน | `propertyName` · `logoUrl` · `promptPayPhone` · บัญชีธนาคาร |
-| รีวิว | โมเดลแยก `*Review` · `isPublished` · `sortOrder` · scope owner+trial |
-| จอง | `depositAmountBaht` · `depositSlipUrl` · `paymentSlipUrl` · `paymentMethod` · `amountPaidBaht` · `paymentStatus` · `guestPhone` |
+| ติดต่อ | `address` · `contactPhone` · `contactLine` / `lineId` · `facebookUrl` · `mapUrl` |
+| เวลา | เปิด–ปิดร้าน หรือ `checkInTime` · `checkOutTime` |
+| ชำระพอร์ทัล | `portalBookingPaymentMode` · `depositAmountBaht` · (ร้านอาหาร) `depositPercent` |
+| แบรนด์/โอน | ชื่อร้าน · `logoUrl` · `promptPayPhone` · บัญชีธนาคาร (`ModuleShopBranding` หรือ profile) |
+| รีวิว | โมเดลแยก `*Review` · `isPublished` · scope owner+trial |
+| จอง | ยอด · สลิป · `paymentMethod` · `amountPaidBaht` · เบอร์ลูกค้า |
 
 ---
 
 ## 8) ตั้งค่าฝั่งเจ้าของ (แดชบอร์ด)
 
-| ที่ | เนื้อหา |
-|-----|---------|
-| Hub ลิงก์ลูกค้า | การ์ดคู่: QR ลูกค้า (ม่วง) + QR พนักงาน (amber) + ป๊อปอัป — `shop-qr-hub-popup-pattern.mdc` |
-| สื่อพอร์ทัล | อัปโหลดแบนเนอร์/แกลเลอรี → PATCH profile (โรงแรม: `HotelResortPortalMediaSettings` บน guest-portal) |
-| ตั้งค่าที่พัก/ร้าน | ที่อยู่ · โซเชียล · โหมด `NONE/DEPOSIT/FULL` · ยอดมัดจำ · เวลาเช็คอิน/เอาต์ · รีวิว CRUD |
-| นำทาง | แท็บ/ลิงก์ «ลิงก์» / guest-portal ใน nav โมดูล |
+แถบ **ตั้งค่าเว็ปลิงค์ลูกค้า** ตาม `dashboard-module-shop-settings-tabs.mdc`:
 
-โรงแรม:  
-`/dashboard/hotel-resort/guest-portal` · `/dashboard/hotel-resort/settings`  
-`HotelResortGuestPortalHubClient` · `HotelResortSettingsClient` · `HotelResortReviewsSettings`
+- ลิงก์สาธารณะ (คัดลอก/เปิด)
+- อัปโหลดแบนเนอร์ + แกลเลอรี (`*PortalMediaSettings`)
+- LINE · Facebook · แผนที่ · ที่อยู่
+- โหมดมัดจำ/เต็ม
+
+ร้านอาหาร: `BuildingPosPortalMediaSettings` · `BuildingPosBookingPaymentSettings` ใน `/dashboard/building-pos/settings`
 
 ---
 
-## 9) ไฟล์อ้างอิง (โรงแรม — คัดลอกโครง)
+## 9) แผนที่ไฟล์อ้างอิง
 
-| ชั้น | ไฟล์ |
-|------|------|
-| หน้าเว็บ | `src/systems/hotel-resort/components/HotelResortPortalClient.tsx` |
-| หลังจอง | `…/HotelResortPortalBookingClient.tsx` |
-| รายการจอง (แดชบอร์ด) | `…/HotelResortBookingsClient.tsx` |
-| App routes | `src/app/hotel-resort/[ownerId]/page.tsx` · `…/booking/[bookingId]/page.tsx` |
-| Hub เจ้าของ | `…/HotelResortGuestPortalHubClient.tsx` · `…/HotelResortPortalMediaSettings.tsx` |
-| Helpers | `…/lib/portal-booking.ts` · `…/lib/portal-media.ts` |
-| URL / access | `src/lib/hotel-resort/public-url.ts` · `portal-access.ts` |
-| Glass shell | `src/components/app-templates/AppPublicCheckInGlassTemplate.tsx` |
+| บทบาท | โรงแรม | ร้านอาหาร |
+|--------|--------|-----------|
+| พอร์ทัลลูกค้า | `HotelResortPortalClient.tsx` | `BuildingPosPortalClient.tsx` |
+| รายละเอียดหลังจอง | `HotelResortPortalBookingClient` | `BuildingPosPortalReservationClient` |
+| สื่อตั้งค่า | `HotelResortPortalMediaSettings` | `BuildingPosPortalMediaSettings` |
+| Helpers | `hotel-resort/lib/portal-*.ts` | `lib/building-pos/portal-booking.ts` |
+| URL / access | `lib/hotel-resort/public-url.ts` | `lib/building-pos/public-url.ts` |
+| App routes | `app/hotel-resort/[ownerId]` | `app/building-pos/[ownerId]` |
+| Glass shell | `AppPublicCheckInGlassTemplate.tsx` | เดียวกัน |
 
 ---
 
 ## 10) Checklist โมดูลใหม่ (เว็บไซต์จอง)
 
-- [ ] Public routes: `/{slug}/[ownerId]` + optional `/booking/[id]?phone=`
+- [ ] Public routes: `/{slug}/[ownerId]` + optional หน้ารายละเอียดหลังจอง
 - [ ] `public-url.ts` + omit `?t=` เมื่อ prod
 - [ ] `is*PortalOpenForOwner` บนทุก public API
-- [ ] `AppPublicCheckInGlassPage` — light glass · แบนเนอร์ overlay เบา · `max-w-6xl`
-- [ ] Profile: สื่อ · ติดต่อ · โหมดชำระ · เวลาเข้า/ออก
-- [ ] APIs: info · list/search · book · lookup · booking detail · upload-slip · **promptpay-qr**
+- [ ] `AppPublicCheckInGlassPage` — light glass · **แบนเนอร์เต็มความกว้าง + สูง ~viewport** · overlay เบา · `max-w-6xl` · แถบจองบน hero **กะทัดรัด** (ร้านอาหาร: ขั้น 2–3 ใต้ hero)
+- [ ] (ร้านอาหาร) กริดเมนู **มือถือ 3 · คอม 6** · โฟลว์จอง 4 ขั้น (เมื่อไหร่ → ผู้จอง → เมนู → ยืนยัน) · แถบบน hero ช่องตรงแนว
+- [ ] Profile: สื่อ · ติดต่อ · โหมดชำระ · เวลา
+- [ ] แกลเลอรีมีรูปตัวอย่างใน seed เมื่อเป็น demo
+- [ ] APIs: info · book · detail · upload-slip · **promptpay-qr** · reviews
 - [ ] เมื่อมียอดชำระ: พร้อมเพย์ → QR · ถ่ายสลิป → `useAppCameraCapture` · ข้อความหลักฐานมัดจำ/ชำระ
 - [ ] หลังจอง → หน้ารายละเอียด: ชำระแล้ว/คงเหลือ + สลิปกดดู lightbox
-- [ ] แดชบอร์ดรายการจอง: ชำระบางส่วน + สลิปกดดูได้
 - [ ] Owner hub: QR ลูกค้า + ตั้งค่าสื่อ/ชำระ (ไม่ใส่แบรนด์ซ้ำใต้ dashboard shell)
 - [ ] สื่อ/สลิปผ่าน `app-templates` · หัวข้อสั้นตาม `customer-portal-no-description-copy.mdc`
-- [ ] แยกชัดจาก staff portal และจากพอร์ทัล QR กะทัดรัด
+- [ ] แยกชัดจาก staff portal และจากพอร์ทัล QR กะทัดรัด / ลิงก์สั่งอาหาร
 
 ---
 
@@ -252,3 +303,10 @@ Owner (ล็อกอิน): `PATCH` profile · CRUD reviews · upload สื�
 - อย่าผูกปุ่ม「ถ่ายรูป」กับ `input capture` อย่างเดียว — ต้องใช้ `useAppCameraCapture` (กล้อง device กลาง)
 - อย่าซ่อนสลิปหลังจอง/บนรายการจองเมื่อลูกค้าชำระบางส่วนแล้วอัปโหลดแล้ว — ต้องกดดู lightbox ได้
 - อย่าอ้างเวลาเช็คอิน/เอาต์คนละค่ากับตั้งค่าที่พัก
+- อย่าใส่แบนเนอร์ในกล่องมี `px-*` หรือสูงแคบ (`h-[min(52vw,…)]`) เมื่อกฎบังคับเต็มจอ
+- อย่าใช้กริดเมนูเว็บจองร้านอาหารเป็น 2 / 4 คอลัมน์ — ต้อง **3 มือถือ · 6 คอม**
+- **โลโก้:** อย่าวางโลโก้สี่เหลี่ยมใหญ่ข้าง H1 ใน hero — ใช้เฉพาะวงกลม `h-10 w-10` ใน header absolute (โรงแรม + ร้านอาหารโครงเดียวกัน)
+- **แบนเนอร์ / ฟอร์มบน hero:** แถบจอง/ค้นหาบน hero ต้อง**กะทัดรัด** และช่องกรอก**ตรงแนว** (`sm:items-end` + ความสูงเท่ากัน) — โรงแรม 2–3 ช่อง + ปุ่ม · ร้านอาหาร วัน·เวลา·คน + ปุ่ม — **ห้าม** ฟอร์มยาวทั้งชุดทับภาพ · ร้านอาหารขั้นถัดไป: ผู้จอง → เมนู → ยืนยัน ใน `main`
+- **พรีออเดอร์เมนู (ร้านอาหาร):** เพิ่มเข้าตะกร้าได้**เฉพาะขั้นเมนูในโฟลว์จอง** · ตอนขั้นเมนู**ซ่อน**การ์ดส่วน `#menu` ปกติ — เหลือกริดเลือกในแถบจองอย่างเดียว · นอกขั้นนั้น `#menu` แสดงผลอย่างเดียว (ไม่ติ๊กเข้าตะกร้า)
+- **ร้านเครื่องดื่ม:** ไม่มีจองที่นั่ง — ลิงก์ลูกค้า = สั่งเลย (`DrinkPosCustomerOrderClient` ฝังในพอร์ทัล) · อย่าเพิ่มโฟลว์จองโต๊ะกลับมา
+

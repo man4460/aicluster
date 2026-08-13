@@ -6,10 +6,11 @@ import {
 } from "@/lib/module-shop/payment";
 import type { ModuleShopBrandingDto, ModuleShopBrandingSlug } from "@/lib/module-shop/slugs";
 import { EMPTY_MODULE_SHOP_BRANDING } from "@/lib/module-shop/slugs";
-import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
+import { BUILDING_POS_MODULE_SLUG, CAR_WASH_MODULE_SLUG } from "@/lib/modules/config";
 import {
   applyStaffDailyPinPatch,
   loadBuildingPosStaffDailyPinHash,
+  loadCarWashStaffDailyPinHash,
 } from "@/lib/modules/staff-daily-pin-store";
 import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
 
@@ -44,6 +45,8 @@ async function toDto(
   let staffDailyPinSet = false;
   if (ownerUserId && moduleSlug === BUILDING_POS_MODULE_SLUG) {
     staffDailyPinSet = Boolean(await loadBuildingPosStaffDailyPinHash(ownerUserId));
+  } else if (ownerUserId && moduleSlug === CAR_WASH_MODULE_SLUG) {
+    staffDailyPinSet = Boolean(await loadCarWashStaffDailyPinHash(ownerUserId));
   }
   return {
     displayName: row.displayName,
@@ -95,10 +98,10 @@ export async function updateModuleShopBranding(
   },
 ) {
   await ensureModuleShopBranding(ownerUserId, trialSessionId, moduleSlug);
-  if (moduleSlug === BUILDING_POS_MODULE_SLUG) {
+  if (moduleSlug === BUILDING_POS_MODULE_SLUG || moduleSlug === CAR_WASH_MODULE_SLUG) {
     const pinResult = await applyStaffDailyPinPatch({
       ownerId: ownerUserId,
-      module: "building-pos",
+      module: moduleSlug === CAR_WASH_MODULE_SLUG ? "car-wash" : "building-pos",
       staffDailyPin: data.staffDailyPin,
       staffDailyPinClear: data.staffDailyPinClear,
     });

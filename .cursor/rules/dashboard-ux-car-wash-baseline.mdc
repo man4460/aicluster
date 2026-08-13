@@ -62,7 +62,7 @@ alwaysApply: true
 - **สนามฟุตบอล (ตัวอย่างโมดูลครบชุด — UX/UI · ขอบซ้ายขวา · อัปโหลด · QR · ปุ่ม · ซ่อม):** `.cursor/rules/football-turf-module-dashboard-template.mdc`
 - **หน้าการเงินข้ามโมดูล (สรุป · กรองชิป pill · กราฟ · แท็บ · สลิป · แก้ไข/ลบ + `useAppNoticePopup` · รายจ่าย · สีราคา):** `.cursor/rules/dashboard-finance-module-template.mdc`
 - **โรงแรม / รีสอร์ท (ระยะขอบ · ซ่อนหัว · ความโค้งมน `1.5rem` · dock · ชำระเงินสด/พร้อมเพย์/โอน):** `.cursor/rules/hotel-resort-module-dashboard-template.mdc` · ชำระเงิน: `.cursor/rules/hotel-resort-payment-methods.mdc`
-- **เว็บไซต์จองลูกค้า (ลิงก์สาธารณะ · มัดจำ · QR · สลิปกดดู · รายละเอียดหลังจอง):** `.cursor/rules/module-customer-booking-website-portal.mdc`
+- **เว็บไซต์จองลูกค้า (ลิงก์สาธารณะ · มัดจำ · QR · สลิปกดดู · รายละเอียดหลังจอง · แบนเนอร์เต็มจอ · ร้านอาหาร/เครื่องดื่มกริดเมนู 3/6):** `.cursor/rules/module-customer-booking-website-portal.mdc`
 - **ผังห้อง (เตือน amber/rose · ผู้จองต่อ · ไม่มีแบนเนอร์บน):** `.cursor/rules/hotel-resort-room-grid-occupancy.mdc`
 - **ศูนย์แอดมิน (การ์ดรายการ · ตัดคำอธิบาย · Export Excel):** `.cursor/rules/admin-hub-dashboard-template.mdc`
 - **ความกว้าง / gutter ซ้าย–ขวา (ทุกชั้น):** `.cursor/rules/dashboard-page-width.mdc`

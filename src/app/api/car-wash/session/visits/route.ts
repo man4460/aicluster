@@ -1,13 +1,66 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/api-auth";
-import { carWashOwnerFromAuth } from "@/lib/car-wash/api-owner";
+import { getCarWashOwnerOrStaffContext } from "@/lib/car-wash/owner-or-staff";
 import { normalizePhone } from "@/lib/car-wash/http";
 import { carWashServiceStatusZod, normalizeCarWashServiceStatus } from "@/lib/car-wash/service-status";
 import { jsonCarWashSessionError } from "@/lib/car-wash/route-errors";
-import { getCarWashDataScope } from "@/lib/trial/module-scopes";
 import { resolveAndLinkCarWashVisitBooking } from "@/lib/car-wash/link-visit-to-booking";
+import { computeCarWashVisitPayment } from "@/lib/car-wash/visit-lane-payment";
+import {
+  CAR_WASH_VISIT_EVIDENCE_MAX,
+  normalizeCarWashVisitEvidenceUrls,
+} from "@/systems/car-wash/lib/visit-media";
+import { notifyCarWashLaneBoard } from "@/systems/car-wash/lib/lane-board-sse";
+
+const visitBookingSelect = { paymentStatus: true, amountPaidBaht: true, packagePrice: true } as const;
+
+function visitJson(row: {
+  id: number;
+  visitAt: Date;
+  customerName: string;
+  customerPhone: string;
+  plateNumber: string;
+  packageId: number | null;
+  packageName: string;
+  listedPrice: number;
+  finalPrice: number;
+  note: string;
+  recordedByName: string;
+  serviceStatus: string;
+  photoUrl: string;
+  evidencePhotoUrlsJson?: unknown;
+  bundleId: number | null;
+  bookingId?: number | null;
+  booking?: { paymentStatus: string; amountPaidBaht: number; packagePrice: number } | null;
+}) {
+  const serviceStatus = normalizeCarWashServiceStatus(row.serviceStatus);
+  const payment = computeCarWashVisitPayment({
+    bundleId: row.bundleId ?? null,
+    finalPrice: row.finalPrice,
+    serviceStatus,
+    booking: row.booking ?? null,
+  });
+  return {
+    id: row.id,
+    visit_at: row.visitAt.toISOString(),
+    customer_name: row.customerName,
+    customer_phone: row.customerPhone,
+    plate_number: row.plateNumber,
+    package_id: row.packageId,
+    package_name: row.packageName,
+    listed_price: row.listedPrice,
+    final_price: row.finalPrice,
+    note: row.note,
+    recorded_by_name: row.recordedByName,
+    service_status: serviceStatus,
+    photo_url: row.photoUrl ?? "",
+    evidence_photo_urls: normalizeCarWashVisitEvidenceUrls(row.evidencePhotoUrlsJson),
+    bundle_id: row.bundleId ?? null,
+    booking_id: row.bookingId ?? null,
+    ...payment,
+  };
+}
 
 const postSchema = z
   .object({
@@ -24,6 +77,7 @@ const postSchema = z
     /** จากแดชบอร์ด: ค่าเริ่ม WASHING ให้ขึ้นลานทันที */
     service_status: carWashServiceStatusZod.optional(),
     photo_url: z.string().max(512).optional().nullable(),
+    evidence_photo_urls: z.array(z.string().max(512)).max(CAR_WASH_VISIT_EVIDENCE_MAX).optional(),
     /** เหมาจ่าย: เก็บ id แพ็กไว้ — หักครั้งเมื่อสถานะเป็น PAID เท่านั้น */
     bundle_id: z.number().int().positive().optional().nullable(),
     /** ผูกคิวจอง (พอร์ทัล / เพิ่มคิว) — ว่างได้ ระบบจะจับคู่เบอร์/ทะเบียนวันนี้ */
@@ -51,36 +105,19 @@ const postSchema = z
     }
   });
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const auth = await requireSession();
-    if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const own = await carWashOwnerFromAuth(auth.session.sub);
-    if (!own.ok) return own.response;
-    const scope = await getCarWashDataScope(own.ownerId);
+    const own = await getCarWashOwnerOrStaffContext(req);
+    if (!own.ok) return own.res;
+    const scope = { trialSessionId: own.trialSessionId };
 
     const rows = await prisma.carWashVisit.findMany({
       where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
       orderBy: { visitAt: "desc" },
+      include: { booking: { select: visitBookingSelect } },
     });
     return NextResponse.json({
-      visits: rows.map((r) => ({
-        id: r.id,
-        visit_at: r.visitAt.toISOString(),
-        customer_name: r.customerName,
-        customer_phone: r.customerPhone,
-        plate_number: r.plateNumber,
-        package_id: r.packageId,
-        package_name: r.packageName,
-        listed_price: r.listedPrice,
-        final_price: r.finalPrice,
-        note: r.note,
-        recorded_by_name: r.recordedByName,
-        service_status: normalizeCarWashServiceStatus(r.serviceStatus),
-        photo_url: r.photoUrl ?? "",
-        bundle_id: r.bundleId ?? null,
-        booking_id: r.bookingId ?? null,
-      })),
+      visits: rows.map((r) => visitJson(r)),
     });
   } catch (e) {
     return jsonCarWashSessionError(e, "car-wash/session/visits GET");
@@ -89,11 +126,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const auth = await requireSession();
-    if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const own = await carWashOwnerFromAuth(auth.session.sub);
-    if (!own.ok) return own.response;
-    const scope = await getCarWashDataScope(own.ownerId);
+    const own = await getCarWashOwnerOrStaffContext(req);
+    if (!own.ok) return own.res;
+    const scope = { trialSessionId: own.trialSessionId };
 
     let json: unknown;
     try {
@@ -118,9 +153,10 @@ export async function POST(req: Request) {
       listedPrice: parsed.data.listed_price,
       finalPrice: parsed.data.final_price,
       note: parsed.data.note?.trim() ?? "",
-      recordedByName: parsed.data.recorded_by_name?.trim() ?? "",
+      recordedByName: parsed.data.recorded_by_name?.trim() || (own.isStaff ? own.recordedByName : ""),
       serviceStatus,
       photoUrl: parsed.data.photo_url?.trim() ?? "",
+      evidencePhotoUrlsJson: normalizeCarWashVisitEvidenceUrls(parsed.data.evidence_photo_urls),
     };
 
     let row;
@@ -193,25 +229,17 @@ export async function POST(req: Request) {
       if (refreshed) row = refreshed;
     }
 
-    return NextResponse.json({
-      visit: {
-        id: row.id,
-        visit_at: row.visitAt.toISOString(),
-        customer_name: row.customerName,
-        customer_phone: row.customerPhone,
-        plate_number: row.plateNumber,
-        package_id: row.packageId,
-        package_name: row.packageName,
-        listed_price: row.listedPrice,
-        final_price: row.finalPrice,
-        note: row.note,
-        recorded_by_name: row.recordedByName,
-        service_status: normalizeCarWashServiceStatus(row.serviceStatus),
-        photo_url: row.photoUrl ?? "",
-        bundle_id: row.bundleId ?? null,
-        booking_id: row.bookingId ?? null,
-      },
-    });
+    const bookingSnapshot =
+      row.bookingId != null
+        ? await prisma.carWashBooking.findUnique({
+            where: { id: row.bookingId },
+            select: visitBookingSelect,
+          })
+        : null;
+
+    notifyCarWashLaneBoard(own.ownerId);
+
+    return NextResponse.json({ visit: visitJson({ ...row, booking: bookingSnapshot }) });
   } catch (e) {
     return jsonCarWashSessionError(e, "car-wash/session/visits POST");
   }

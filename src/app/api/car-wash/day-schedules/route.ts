@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { carWashOwnerFromAuth } from "@/lib/car-wash/api-owner";
+import { getCarWashOwnerOrStaffContext } from "@/lib/car-wash/owner-or-staff";
 import { getCarWashDataScope } from "@/lib/trial/module-scopes";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { parseYmdToDbDate } from "@/lib/home-finance/entry-date";
@@ -25,15 +26,12 @@ const putSchema = z.object({
 });
 
 export async function GET(req: Request) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const own = await carWashOwnerFromAuth(auth.session.sub);
-  if (!own.ok) return own.response;
+  const own = await getCarWashOwnerOrStaffContext(req);
+  if (!own.ok) return own.res;
 
-  const scope = await getCarWashDataScope(own.ownerId);
   const dateKey = new URL(req.url).searchParams.get("date")?.trim() || bangkokDateKey();
 
-  const result = await loadSlotAvailabilityForDate(prisma, own.ownerId, scope.trialSessionId, dateKey);
+  const result = await loadSlotAvailabilityForDate(prisma, own.ownerId, own.trialSessionId, dateKey);
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

@@ -1,4 +1,5 @@
 import { Prisma } from "@/generated/prisma/client";
+import { drinkPosPublicImageUrl } from "@/lib/drink-pos/drink-stock-images";
 import {
   drinkPosPrimaryDisplayPriceBaht,
   normalizeDrinkPosSizePrices,
@@ -27,7 +28,7 @@ export function mapDrinkPosProductRow(r: {
     priceBaht: drinkPosPrimaryDisplayPriceBaht({ priceBaht: r.priceBaht, sizePrices }),
     basePriceBaht: r.priceBaht,
     sizePrices,
-    imageUrl: r.imageUrl,
+    imageUrl: drinkPosPublicImageUrl(r.imageUrl),
     isFeatured: r.isFeatured,
     isActive: r.isActive,
     sortOrder: r.sortOrder,

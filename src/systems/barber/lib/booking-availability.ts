@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { bangkokDayRangeFromDateKey } from "@/lib/barber/booking-datetime";
+import { formatBangkokTimeHm } from "@/lib/time/bangkok";
 import {
   barberNormalizeDurationMinutes,
   barberParseHmToMinutes,
@@ -13,7 +14,21 @@ export type BarberBusyRange = {
   stylistId: number | null;
 };
 
-/** โหลดช่วงเวลาที่ถูกจองในวันนั้น (ไม่รวม CANCELLED) */
+function bangkokHmFromDate(d: Date): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Bangkok",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(d);
+  const hRaw = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const mRaw = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  const h = ((Number.isFinite(hRaw) ? hRaw : 0) % 24 + 24) % 24;
+  const m = Number.isFinite(mRaw) ? mRaw : 0;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/** โหลดช่วงเวลาที่ถูกจองในวันนั้น (ไม่รวม CANCELLED / NO_SHOW — ว่างให้จองใหม่ได้) */
 export async function loadBarberBusyRanges(opts: {
   ownerId: string;
   trialSessionId: string;
@@ -28,7 +43,7 @@ export async function loadBarberBusyRanges(opts: {
       ownerUserId: opts.ownerId,
       trialSessionId: opts.trialSessionId,
       scheduledAt: { gte: range.start, lt: range.end },
-      status: { not: "CANCELLED" },
+      status: { in: ["SCHEDULED", "ARRIVED"] },
       ...(opts.stylistId != null
         ? {
             OR: [{ stylistId: opts.stylistId }, { stylistId: null }],
@@ -45,15 +60,8 @@ export async function loadBarberBusyRanges(opts: {
 
   const out: BarberBusyRange[] = [];
   for (const row of rows) {
-    const parts = new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Asia/Bangkok",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).formatToParts(row.scheduledAt);
-    const hh = parts.find((p) => p.type === "hour")?.value ?? "00";
-    const mm = parts.find((p) => p.type === "minute")?.value ?? "00";
-    const startMin = barberParseHmToMinutes(`${hh}:${mm}`);
+    const startHm = bangkokHmFromDate(row.scheduledAt) || formatBangkokTimeHm(row.scheduledAt);
+    const startMin = barberParseHmToMinutes(startHm);
     if (startMin == null) continue;
     const dur = barberNormalizeDurationMinutes(row.durationMinutes, 30);
     out.push({

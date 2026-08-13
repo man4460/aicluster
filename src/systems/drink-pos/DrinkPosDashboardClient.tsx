@@ -35,6 +35,7 @@ import { formatThb } from "@/systems/inventory/lib/inventory-client-data";
 import { suggestDrinkPosStockImageUrl } from "@/systems/drink-pos/lib/suggest-stock-image";
 import { useDrinkPosMobileDraftSlot } from "@/systems/drink-pos/components/DrinkPosMobileBottomChrome";
 import { DrinkPosButton } from "@/systems/drink-pos/components/DrinkPosButton";
+import { DrinkPosRemoteImg } from "@/systems/drink-pos/components/DrinkPosRemoteImg";
 import { DrinkPosLoyaltyBar } from "@/systems/drink-pos/components/DrinkPosLoyaltyBar";
 import {
   DrinkPosPaymentPanel,
@@ -894,9 +895,10 @@ export function DrinkPosDashboardClient() {
                   aria-label={`${p.name} ราคา ${formatDrinkPosCardPrice(p)} บาท${inDraftQty > 0 ? ` ในบิล ${inDraftQty} ชิ้น` : ""}${drinkPosProductHasSizes(p.sizePrices) ? " มีหลายขนาด" : ""}`}
                 >
                   <div className="relative aspect-square w-full overflow-hidden bg-[#0000BF]/08 sm:aspect-[4/3] lg:aspect-square">
-                    {p.imageUrl ? (
-                      <img src={p.imageUrl} alt="" className="h-full w-full object-cover object-center transition duration-500 group-hover:scale-[1.03]" />
-                    ) : (
+                    <DrinkPosRemoteImg
+                      src={p.imageUrl}
+                      className="h-full w-full object-cover object-center transition duration-500 group-hover:scale-[1.03]"
+                      fallback={
                       <div className="flex h-full w-full items-center justify-center text-[#66638c]">
                         <svg className="h-5 w-5 opacity-40 sm:h-12 sm:w-12 lg:h-7 lg:w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden>
                           <rect x="4" y="5" width="16" height="14" rx="2" />
@@ -904,7 +906,8 @@ export function DrinkPosDashboardClient() {
                           <path d="M4 17l4-4 3 3 5-6 4 4" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </div>
-                    )}
+                      }
+                    />
                     {inDraftQty > 0 ? (
                       <span className="absolute right-1 top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full border border-transparent bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] px-1 text-[9px] font-black tabular-nums text-white shadow-md backdrop-blur-sm sm:right-3 sm:top-3 sm:h-9 sm:min-w-[2.25rem] sm:px-2 sm:text-sm lg:right-1 lg:top-1 lg:h-6 lg:min-w-[1.5rem] lg:text-[10px]">
                         ×{inDraftQty}
@@ -1259,10 +1262,14 @@ export function DrinkPosDashboardClient() {
                 className="flex min-h-[56px] items-center gap-3 rounded-[1.25rem] border border-[#e8e6f4]/90 bg-white/80 px-3 py-2.5"
               >
                 {c.imageUrl ? (
-                  <img
+                  <DrinkPosRemoteImg
                     src={c.imageUrl}
-                    alt=""
                     className="h-10 w-10 shrink-0 rounded-xl object-cover"
+                    fallback={
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ecebff] text-xs font-black text-[#4d47b6]">
+                    {c.sortOrder}
+                  </span>
+                    }
                   />
                 ) : (
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ecebff] text-xs font-black text-[#4d47b6]">

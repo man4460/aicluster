@@ -1,0 +1,65 @@
+-- Building POS: shop profile (portal), reservations, reviews (no FK — match existing bpos tables)
+CREATE TABLE IF NOT EXISTS `building_pos_shop_profiles` (
+  `id` VARCHAR(191) NOT NULL,
+  `owner_id` VARCHAR(191) NOT NULL,
+  `trial_session_id` VARCHAR(36) NOT NULL DEFAULT 'prod',
+  `address` TEXT NULL,
+  `contact_line` VARCHAR(120) NULL,
+  `facebook_url` VARCHAR(512) NULL,
+  `map_url` VARCHAR(512) NULL,
+  `portal_banner_url` VARCHAR(512) NULL,
+  `portal_gallery_json` TEXT NOT NULL,
+  `open_time` VARCHAR(5) NOT NULL DEFAULT '10:00',
+  `close_time` VARCHAR(5) NOT NULL DEFAULT '22:00',
+  `portal_booking_payment_mode` VARCHAR(16) NOT NULL DEFAULT 'NONE',
+  `deposit_amount_baht` INT NULL,
+  `deposit_percent` INT NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `bpos_shop_profile_owner_trial_uq`(`owner_id`, `trial_session_id`),
+  INDEX `bpos_shop_profile_owner_idx`(`owner_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `building_pos_reservations` (
+  `id` VARCHAR(191) NOT NULL,
+  `owner_id` VARCHAR(191) NOT NULL,
+  `trial_session_id` VARCHAR(36) NOT NULL DEFAULT 'prod',
+  `customer_name` VARCHAR(160) NOT NULL,
+  `phone` VARCHAR(20) NOT NULL,
+  `party_size` INT NOT NULL DEFAULT 2,
+  `table_preference` VARCHAR(40) NOT NULL DEFAULT '',
+  `visit_date_key` VARCHAR(10) NOT NULL,
+  `visit_time_hm` VARCHAR(5) NOT NULL,
+  `items_json` JSON NOT NULL,
+  `items_total_baht` INT NOT NULL DEFAULT 0,
+  `payment_mode` VARCHAR(16) NOT NULL DEFAULT 'NONE',
+  `pay_due_baht` INT NOT NULL DEFAULT 0,
+  `amount_paid_baht` INT NOT NULL DEFAULT 0,
+  `payment_method` VARCHAR(24) NOT NULL DEFAULT '',
+  `payment_slip_url` VARCHAR(2048) NOT NULL DEFAULT '',
+  `status` VARCHAR(24) NOT NULL DEFAULT 'SCHEDULED',
+  `note` VARCHAR(1000) NOT NULL DEFAULT '',
+  `linked_order_id` INT NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `bpos_rsv_owner_trial_date_idx`(`owner_id`, `trial_session_id`, `visit_date_key`),
+  INDEX `bpos_rsv_owner_trial_phone_idx`(`owner_id`, `trial_session_id`, `phone`),
+  INDEX `bpos_rsv_owner_trial_status_idx`(`owner_id`, `trial_session_id`, `status`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `building_pos_reviews` (
+  `id` VARCHAR(191) NOT NULL,
+  `owner_id` VARCHAR(191) NOT NULL,
+  `trial_session_id` VARCHAR(36) NOT NULL DEFAULT 'prod',
+  `guest_name` VARCHAR(120) NOT NULL,
+  `rating` INT NOT NULL DEFAULT 5,
+  `comment` VARCHAR(800) NOT NULL,
+  `photo_urls_json` TEXT NOT NULL,
+  `is_published` BOOLEAN NOT NULL DEFAULT true,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `bpos_review_owner_pub_created_idx`(`owner_id`, `trial_session_id`, `is_published`, `created_at`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireDrinkPosStaff } from "@/lib/drink-pos/staff-auth";
+import { drinkPosPublicImageUrl } from "@/lib/drink-pos/drink-stock-images";
 import { mapDrinkPosProductRow } from "@/systems/drink-pos/lib/product-map";
 import {
   ensureDrinkPosLoyaltySettings,
@@ -57,7 +58,7 @@ export async function GET(req: Request) {
     categories: cats.map((c) => ({
       id: c.id,
       name: c.name,
-      imageUrl: c.imageUrl,
+      imageUrl: drinkPosPublicImageUrl(c.imageUrl),
       sortOrder: c.sortOrder,
     })),
     products: products.map(mapDrinkPosProductRow),

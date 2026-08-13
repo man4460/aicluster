@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isDrinkPosPortalOpenForOwner } from "@/lib/drink-pos/portal-access";
 import { getDrinkPosDataScope } from "@/lib/trial/module-scopes";
+import { drinkPosPublicImageUrl } from "@/lib/drink-pos/drink-stock-images";
 import { mapDrinkPosProductRow } from "@/systems/drink-pos/lib/product-map";
 import {
   ensureDrinkPosLoyaltySettings,
@@ -58,7 +59,7 @@ export async function GET(req: Request) {
     trialSessionId,
     shop: {
       displayName: shopName,
-      logoUrl: profile?.logoUrl ?? null,
+      logoUrl: drinkPosPublicImageUrl(profile?.logoUrl) ?? profile?.logoUrl ?? null,
       tagline: profile?.tagline ?? null,
     },
     loyalty: {
@@ -72,7 +73,7 @@ export async function GET(req: Request) {
     categories: cats.map((c) => ({
       id: c.id,
       name: c.name,
-      imageUrl: c.imageUrl,
+      imageUrl: drinkPosPublicImageUrl(c.imageUrl),
       sortOrder: c.sortOrder,
       isActive: c.isActive,
     })),

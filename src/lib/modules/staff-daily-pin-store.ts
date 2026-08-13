@@ -9,7 +9,7 @@ import {
   type StaffDailyPinModule,
 } from "@/lib/modules/staff-daily-pin";
 import { prisma } from "@/lib/prisma";
-import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
+import { BUILDING_POS_MODULE_SLUG, CAR_WASH_MODULE_SLUG } from "@/lib/modules/config";
 import { NextResponse } from "next/server";
 
 export async function loadDrinkPosStaffDailyPinHash(ownerId: string): Promise<string | null> {
@@ -58,6 +58,20 @@ export async function loadFootballTurfStaffDailyPinHash(ownerId: string): Promis
       ownerUserId_trialSessionId: {
         ownerUserId: ownerId,
         trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID,
+      },
+    },
+    select: { staffDailyPinHash: true },
+  });
+  return row?.staffDailyPinHash?.trim() || null;
+}
+
+export async function loadCarWashStaffDailyPinHash(ownerId: string): Promise<string | null> {
+  const row = await prisma.moduleShopBranding.findUnique({
+    where: {
+      ownerUserId_trialSessionId_moduleSlug: {
+        ownerUserId: ownerId,
+        trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID,
+        moduleSlug: CAR_WASH_MODULE_SLUG,
       },
     },
     select: { staffDailyPinHash: true },
@@ -207,6 +221,25 @@ async function writeStaffDailyPinHash(
         },
       },
       data: { staffDailyPinHash: hash },
+    });
+    return;
+  }
+  if (module === "car-wash") {
+    await prisma.moduleShopBranding.upsert({
+      where: {
+        ownerUserId_trialSessionId_moduleSlug: {
+          ownerUserId: ownerId,
+          trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID,
+          moduleSlug: CAR_WASH_MODULE_SLUG,
+        },
+      },
+      create: {
+        ownerUserId: ownerId,
+        trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID,
+        moduleSlug: CAR_WASH_MODULE_SLUG,
+        staffDailyPinHash: hash,
+      },
+      update: { staffDailyPinHash: hash },
     });
     return;
   }

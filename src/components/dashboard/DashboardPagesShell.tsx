@@ -114,7 +114,7 @@ export function DashboardPagesShell({ children }: { children: React.ReactNode })
         basicWidePages && "max-w-[1680px] lg:!px-8",
         wideModule && "max-w-none !px-3 sm:!px-4 lg:!px-6",
         dockedModule && "max-md:!px-3 sm:!px-6",
-        posOrderDesktopFill && "lg:min-h-0 lg:overflow-hidden lg:!py-3",
+        posOrderDesktopFill && "lg:min-h-0 lg:overflow-hidden lg:!pt-2 lg:!pb-3",
         dashboardModules && "max-w-[1680px] lg:!px-8",
         dashboardHome && "max-w-[1680px] lg:!px-8",
       )}

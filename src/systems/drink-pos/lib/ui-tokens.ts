@@ -84,3 +84,31 @@ export const drinkPosContentStackClass = "space-y-4";
 
 /** กริดการ์ดสรุป */
 export const drinkPosStatGridClass = "grid grid-cols-2 gap-3";
+
+/**
+ * กริดเมนูบนเว็บไซต์จองลูกค้า (`DrinkPosPortalClient`)
+ * มือถือ 3 คอลัมน์ · คอม (`lg+`) 6 คอลัมน์
+ */
+export const drinkPosPortalMenuGridClass =
+  "grid grid-cols-3 gap-1.5 sm:gap-2 lg:grid-cols-6";
+
+/** การ์ดเมนูบนพอร์ทัลจอง */
+export const drinkPosPortalMenuCardClass =
+  "overflow-hidden rounded-lg border border-white/70 bg-white/80 text-left shadow-sm sm:rounded-xl lg:rounded-2xl";
+
+export const drinkPosPrimaryTabShellClass =
+  "flex flex-wrap gap-1.5 rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]";
+
+export function drinkPosPrimaryTabPillClass(active: boolean): string {
+  return cn(
+    "inline-flex min-h-9 items-center justify-center rounded-xl px-3 text-xs font-bold transition touch-manipulation sm:min-h-10 sm:px-3.5 sm:text-sm",
+    active
+      ? cn("text-white shadow-md", appDashboardBrandGradientFillClass)
+      : "bg-white/70 text-[#5f5a8a] hover:bg-white hover:text-[#4d47b6]",
+  );
+}
+
+export const drinkPosMobileSelectClass = cn(
+  drinkPosFieldClass,
+  "border border-[#e4e0f5] bg-white/90 font-bold text-[#1e1b4b]",
+);

@@ -31,6 +31,10 @@ import {
   barberNormalizeSlotMinutes,
   barberParseHmToMinutes,
 } from "@/systems/barber/lib/booking-slots";
+import {
+  normalizeBarberPortalPaymentMode,
+  type BarberPortalBookingPaymentMode,
+} from "@/systems/barber/lib/portal-booking";
 
 const hmTimeSchema = z
   .string()
@@ -57,6 +61,8 @@ const patchSchema = z
     openTime: hmTimeSchema.optional(),
     closeTime: hmTimeSchema.optional(),
     slotMinutes: z.union([z.literal(30), z.literal(60)]).optional(),
+    portalBookingPaymentMode: z.enum(["NONE", "DEPOSIT", "FULL"]).optional(),
+    depositAmountBaht: z.number().int().min(0).max(9_999_999).nullable().optional(),
   })
   .merge(moduleShopPaymentPatchSchema);
 
@@ -77,6 +83,8 @@ const select = {
   openTime: true,
   closeTime: true,
   slotMinutes: true,
+  portalBookingPaymentMode: true,
+  depositAmountBaht: true,
   ...MODULE_SHOP_PAYMENT_SELECT,
 } as const;
 
@@ -104,6 +112,8 @@ function profileFromRow(row: {
   openTime?: string | null;
   closeTime?: string | null;
   slotMinutes?: number | null;
+  portalBookingPaymentMode?: string | null;
+  depositAmountBaht?: number | null;
   promptPayPhone?: string | null;
   bankName?: string | null;
   bankAccountNumber?: string | null;
@@ -133,6 +143,8 @@ function profileFromRow(row: {
     openTime: open,
     closeTime: close,
     slotMinutes: barberNormalizeSlotMinutes(row.slotMinutes ?? 30),
+    portalBookingPaymentMode: normalizeBarberPortalPaymentMode(row.portalBookingPaymentMode),
+    depositAmountBaht: row.depositAmountBaht ?? null,
     ...paymentRowToDto(row),
   };
 }
@@ -154,6 +166,8 @@ const emptyProfile = {
   openTime: "09:00",
   closeTime: "20:00",
   slotMinutes: 30,
+  portalBookingPaymentMode: "NONE",
+  depositAmountBaht: null,
 };
 
 export async function GET() {
@@ -216,6 +230,28 @@ export async function PATCH(req: Request) {
       : undefined;
   const slotMinutes = d.slotMinutes !== undefined ? barberNormalizeSlotMinutes(d.slotMinutes) : undefined;
 
+  let portalMode: BarberPortalBookingPaymentMode | undefined;
+  let depositAmountBaht: number | null | undefined;
+  if (d.portalBookingPaymentMode !== undefined) {
+    portalMode = normalizeBarberPortalPaymentMode(d.portalBookingPaymentMode);
+    if (portalMode === "DEPOSIT") {
+      const dep =
+        d.depositAmountBaht !== undefined
+          ? d.depositAmountBaht
+          : undefined;
+      if (dep !== undefined) {
+        if (dep == null || dep <= 0) {
+          return NextResponse.json({ error: "กรอกจำนวนมัดจำมากกว่า 0 บาท" }, { status: 400 });
+        }
+        depositAmountBaht = dep;
+      }
+    } else {
+      depositAmountBaht = null;
+    }
+  } else if (d.depositAmountBaht !== undefined) {
+    depositAmountBaht = d.depositAmountBaht;
+  }
+
   if (openTime !== undefined && closeTime !== undefined) {
     const o = barberParseHmToMinutes(openTime);
     const c = barberParseHmToMinutes(closeTime);
@@ -239,6 +275,23 @@ export async function PATCH(req: Request) {
     ...(slotMinutes !== undefined ? { slotMinutes } : {}),
   };
 
+  const bookingPayPatch = {
+    ...(portalMode !== undefined ? { portalBookingPaymentMode: portalMode } : {}),
+    ...(depositAmountBaht !== undefined ? { depositAmountBaht } : {}),
+  };
+
+  if (portalMode === "DEPOSIT" && depositAmountBaht === undefined) {
+    const existing = await prisma.barberShopProfile.findUnique({
+      where: {
+        ownerUserId_trialSessionId: { ownerUserId: own.userId, trialSessionId: own.trialSessionId },
+      },
+      select: { depositAmountBaht: true },
+    });
+    if (existing?.depositAmountBaht == null || existing.depositAmountBaht <= 0) {
+      return NextResponse.json({ error: "กรอกจำนวนมัดจำมากกว่า 0 บาท" }, { status: 400 });
+    }
+  }
+
   const updated = await prisma.barberShopProfile.upsert({
     where: {
       ownerUserId_trialSessionId: { ownerUserId: own.userId, trialSessionId: own.trialSessionId },
@@ -256,6 +309,7 @@ export async function PATCH(req: Request) {
       ...(presetsSerialized !== undefined ? { payAmountPresets: presetsSerialized } : {}),
       ...portalCreate,
       ...hoursPatch,
+      ...bookingPayPatch,
       ...moduleShopPaymentPatchData(d),
     },
     update: {
@@ -269,6 +323,7 @@ export async function PATCH(req: Request) {
       ...(presetsSerialized !== undefined ? { payAmountPresets: presetsSerialized } : {}),
       ...portalCreate,
       ...hoursPatch,
+      ...bookingPayPatch,
       ...moduleShopPaymentPatchData(d),
     },
     select,

@@ -25,6 +25,10 @@ import {
   barberParseHmToMinutes,
   barberSlotsNeeded,
 } from "@/systems/barber/lib/booking-slots";
+import {
+  barberPortalSlipProofMessage,
+  type BarberPortalBookingPaymentMode,
+} from "@/systems/barber/lib/portal-booking";
 
 type PortalPackage = {
   id: number;
@@ -33,6 +37,7 @@ type PortalPackage = {
   totalSessions: number;
   imageUrl: string | null;
   durationMinutes: number;
+  payDueBaht?: number | null;
 };
 
 type PortalStylist = {
@@ -62,6 +67,8 @@ type PortalShop = {
   openTime: string;
   closeTime: string;
   slotMinutes: 30 | 60;
+  portalBookingPaymentMode?: BarberPortalBookingPaymentMode;
+  depositAmountBaht?: number | null;
 };
 
 type AvailSlot = { startTime: string; available: boolean };
@@ -152,12 +159,25 @@ export function BarberBookingPortalClient({
   const [payQr, setPayQr] = useState<PortalPayQr | null>(null);
   const [payQrBusy, setPayQrBusy] = useState(false);
 
+  const [bookPayMethod, setBookPayMethod] = useState<"PROMPTPAY" | "TRANSFER">("PROMPTPAY");
+  const [bookSlipUrl, setBookSlipUrl] = useState("");
+  const [bookPayQr, setBookPayQr] = useState<PortalPayQr | null>(null);
+  const [bookPayQrBusy, setBookPayQrBusy] = useState(false);
+
   const slipGalleryRef = useRef<HTMLInputElement>(null);
+  const bookSlipGalleryRef = useRef<HTMLInputElement>(null);
   const { openCamera, cameraInputRef, cameraModal } = useAppCameraCapture({ title: "ถ่ายรูปสลิป" });
   const lb = useAppImageLightbox();
 
   const slotMinutes = shop ? barberNormalizeSlotMinutes(shop.slotMinutes) : 30;
   const slotsNeeded = barberSlotsNeeded(durationMinutes, slotMinutes);
+
+  const memberPackageSelected =
+    selectedPackageId != null && memberPkgs.some((m) => m.packageId === selectedPackageId);
+  const selectedPkg = packages.find((p) => p.id === selectedPackageId) ?? null;
+  const bookPayDue =
+    memberPackageSelected || !selectedPkg ? null : (selectedPkg.payDueBaht ?? null);
+  const bookPayMode = shop?.portalBookingPaymentMode ?? "NONE";
 
   const qBase = useMemo(() => {
     const q = new URLSearchParams({ ownerId });
@@ -295,6 +315,55 @@ export function BarberBookingPortalClient({
     };
   }, [buyPkg, buyMethod, ownerId, resolvedTrial, trialSessionId]);
 
+  useEffect(() => {
+    if (bookPayDue == null || bookPayDue <= 0 || bookPayMethod !== "PROMPTPAY") {
+      setBookPayQr(null);
+      return;
+    }
+    let cancelled = false;
+    setBookPayQrBusy(true);
+    void (async () => {
+      try {
+        const res = await fetch("/api/barber/public/portal/promptpay-qr", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ownerId,
+            amountBaht: bookPayDue,
+            t: resolvedTrial || trialSessionId || undefined,
+          }),
+        });
+        const j = (await res.json().catch(() => ({}))) as Partial<PortalPayQr> & {
+          error?: string;
+          promptPayPhone?: string | null;
+          bankAccountNumber?: string | null;
+          bankAccountName?: string | null;
+        };
+        if (cancelled) return;
+        if (!res.ok) {
+          setBookPayQr(null);
+          return;
+        }
+        setBookPayQr({
+          qrDataUrl: j.qrDataUrl ?? null,
+          configured: Boolean(j.configured),
+          promptpayNumber: j.promptpayNumber ?? j.promptPayPhone ?? null,
+          bankName: j.bankName ?? null,
+          accountNumber: j.accountNumber ?? j.bankAccountNumber ?? null,
+          accountName: j.accountName ?? j.bankAccountName ?? null,
+          shopName: j.shopName ?? null,
+        });
+      } catch {
+        if (!cancelled) setBookPayQr(null);
+      } finally {
+        if (!cancelled) setBookPayQrBusy(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [bookPayDue, bookPayMethod, ownerId, resolvedTrial, trialSessionId]);
+
   function applyDurationAndAutoSelect(nextDuration: number) {
     const dur = barberNormalizeDurationMinutes(nextDuration, slotMinutes);
     setDurationMinutes(dur);
@@ -380,6 +449,9 @@ export function BarberBookingPortalClient({
       if (stylists.length > 0 && stylistId == null) throw new Error("กรุณาเลือกช่าง");
       if (selectedPackageId == null) throw new Error("เลือกบริการก่อน");
       if (selectedSlots.length < 1) throw new Error("เลือกสล็อตเวลา");
+      if (bookPayDue != null && bookPayDue > 0 && !bookSlipUrl.trim()) {
+        throw new Error(barberPortalSlipProofMessage(bookPayMode));
+      }
       const startTime = selectedSlots[0]!;
       const scheduledLocal = `${bookDate}T${startTime}`;
       const res = await fetch("/api/barber/public/portal/book", {
@@ -394,6 +466,14 @@ export function BarberBookingPortalClient({
           packageId: selectedPackageId ?? undefined,
           scheduledLocal,
           durationMinutes,
+          useMemberPackage: memberPackageSelected || undefined,
+          ...(bookPayDue != null && bookPayDue > 0
+            ? {
+                paymentMethod: bookPayMethod,
+                paymentSlipUrl: bookSlipUrl.trim(),
+                amountPaidBaht: bookPayDue,
+              }
+            : {}),
         }),
       });
       const j = (await res.json().catch(() => ({}))) as {
@@ -424,6 +504,17 @@ export function BarberBookingPortalClient({
     const j = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
     if (!res.ok || !j.imageUrl) throw new Error(j.error ?? "อัปโหลดไม่สำเร็จ");
     setSlipUrl(j.imageUrl);
+  }
+
+  async function uploadBookSlip(file: File) {
+    const prepared = await prepareImageFileForUpload(file);
+    const fd = new FormData();
+    fd.append("ownerId", ownerId);
+    fd.append("file", prepared);
+    const res = await fetch("/api/barber/public/portal/upload-slip", { method: "POST", body: fd });
+    const j = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
+    if (!res.ok || !j.imageUrl) throw new Error(j.error ?? "อัปโหลดไม่สำเร็จ");
+    setBookSlipUrl(j.imageUrl);
   }
 
   async function submitBuy(e: FormEvent) {
@@ -491,8 +582,6 @@ export function BarberBookingPortalClient({
   const selectedSet = new Set(selectedSlots);
   const singleVisitPackages = packages.filter((p) => p.totalSessions === 1);
   const multiSessionPackages = packages.filter((p) => p.totalSessions > 1);
-  const memberPackageSelected =
-    selectedPackageId != null && memberPkgs.some((m) => m.packageId === selectedPackageId);
   const serviceSelected = selectedPackageId != null;
 
   return (
@@ -781,9 +870,10 @@ export function BarberBookingPortalClient({
                 <p className="text-xs font-semibold text-[#66638c]">ไม่มีสล็อตในวันนี้</p>
               ) : (
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
-                  {availSlots.map((s) => {
+                  {availSlots.map((s, idx) => {
                     const selected = selectedSet.has(s.startTime);
-                    const disabled = !s.available;
+                    const canStart = runIsFree(availSlots, idx, slotsNeeded) != null;
+                    const disabled = !s.available || !canStart;
                     return (
                       <button
                         key={s.startTime}
@@ -816,6 +906,99 @@ export function BarberBookingPortalClient({
                 autoComplete="name"
               />
             </label>
+
+            {bookPayDue != null && bookPayDue > 0 ? (
+              <div className="space-y-3 rounded-2xl border border-[#5b61ff]/25 bg-[#5b61ff]/5 p-4 sm:max-w-lg">
+                <p className="text-sm font-black text-[#1e1b4b]">
+                  {bookPayMode === "FULL" ? "ชำระเต็มยอด" : "มัดจำ"} ฿
+                  {bookPayDue.toLocaleString("th-TH")}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBookPayMethod("PROMPTPAY")}
+                    className={cn(
+                      "min-h-10 rounded-xl px-3 text-xs font-bold",
+                      bookPayMethod === "PROMPTPAY"
+                        ? "bg-[#5b61ff] text-white"
+                        : "bg-white text-[#4d47b6]",
+                    )}
+                  >
+                    พร้อมเพย์
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBookPayMethod("TRANSFER")}
+                    className={cn(
+                      "min-h-10 rounded-xl px-3 text-xs font-bold",
+                      bookPayMethod === "TRANSFER"
+                        ? "bg-[#5b61ff] text-white"
+                        : "bg-white text-[#4d47b6]",
+                    )}
+                  >
+                    โอนเงิน
+                  </button>
+                </div>
+                {bookPayMethod === "PROMPTPAY" ? (
+                  <div className="space-y-2">
+                    {bookPayQrBusy ? (
+                      <p className="text-xs font-semibold text-[#66638c]">กำลังสร้าง QR…</p>
+                    ) : bookPayQr?.qrDataUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={bookPayQr.qrDataUrl}
+                        alt="QR พร้อมเพย์"
+                        className="mx-auto h-44 w-44 rounded-xl bg-white p-2"
+                      />
+                    ) : (
+                      <p className="text-xs font-semibold text-amber-800">
+                        ยังไม่มี QR พร้อมเพย์ — ใช้โอนเงินแทนได้
+                      </p>
+                    )}
+                    {bookPayQr?.promptpayNumber ? (
+                      <p className="text-center text-xs font-semibold text-[#5f5a8a]">
+                        {bookPayQr.promptpayNumber}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="space-y-1 text-xs font-semibold text-[#5f5a8a]">
+                    {shop?.bankName ? <p>ธนาคาร {shop.bankName}</p> : null}
+                    {shop?.bankAccountNumber ? <p>เลขบัญชี {shop.bankAccountNumber}</p> : null}
+                    {shop?.bankAccountName ? <p>ชื่อบัญชี {shop.bankAccountName}</p> : null}
+                  </div>
+                )}
+                <AppGalleryCameraFileInputs
+                  galleryInputRef={bookSlipGalleryRef}
+                  cameraInputRef={cameraInputRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (file)
+                      void uploadBookSlip(file).catch((err) =>
+                        setBookErr(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ"),
+                      );
+                  }}
+                />
+                <AppImagePickCameraButtons
+                  onPickGallery={() => bookSlipGalleryRef.current?.click()}
+                  onPickCamera={() =>
+                    openCamera((file) => {
+                      void uploadBookSlip(file).catch((err) =>
+                        setBookErr(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ"),
+                      );
+                    })
+                  }
+                />
+                {bookSlipUrl ? (
+                  <AppImageThumb src={bookSlipUrl} alt="สลิปจอง" onOpen={() => lb.open(bookSlipUrl)} />
+                ) : (
+                  <p className="text-xs font-semibold text-amber-800">
+                    {barberPortalSlipProofMessage(bookPayMode)}
+                  </p>
+                )}
+              </div>
+            ) : null}
 
             {bookErr ? <p className="text-sm font-semibold text-rose-600">{bookErr}</p> : null}
             {bookOk ? <p className="text-sm font-semibold text-emerald-700">{bookOk}</p> : null}

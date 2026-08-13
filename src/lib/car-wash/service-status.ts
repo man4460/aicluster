@@ -1,7 +1,19 @@
 import { z } from "zod";
 
-/** ขั้นตอนลานล้าง — ลำดับใน CAR_WASH_LANE_FLOW (PAID = ปิดคิว / ออกจากลาน) */
-export const CAR_WASH_SERVICE_STATUSES = ["QUEUED", "WASHING", "VACUUMING", "WAXING", "COMPLETED", "PAID"] as const;
+/**
+ * ขั้นตอนลานล้าง — ลำดับใน CAR_WASH_LANE_FLOW
+ * PAID = ชำระแล้ว/พร้อมส่งมอบ (ยังอยู่บนบอร์ด — ย้ายไป «ลานรอส่งมอบ»)
+ * HANDED_OVER = ส่งมอบแล้ว (ออกจากลาน — ขั้นสุดท้าย)
+ */
+export const CAR_WASH_SERVICE_STATUSES = [
+  "QUEUED",
+  "WASHING",
+  "VACUUMING",
+  "WAXING",
+  "COMPLETED",
+  "PAID",
+  "HANDED_OVER",
+] as const;
 export type CarWashServiceStatus = (typeof CAR_WASH_SERVICE_STATUSES)[number];
 
 export const carWashServiceStatusZod = z.enum(CAR_WASH_SERVICE_STATUSES);
@@ -13,6 +25,7 @@ export const CAR_WASH_LANE_FLOW: CarWashServiceStatus[] = [
   "WAXING",
   "COMPLETED",
   "PAID",
+  "HANDED_OVER",
 ];
 
 export function carWashStatusLabelTh(s: string): string {
@@ -29,6 +42,8 @@ export function carWashStatusLabelTh(s: string): string {
       return "เสร็จแล้ว";
     case "PAID":
       return "ชำระแล้ว";
+    case "HANDED_OVER":
+      return "ส่งมอบแล้ว";
     case "IN_PROGRESS":
       return "กำลังล้าง";
     default:
@@ -70,6 +85,8 @@ export function carWashLaneListBadgeClass(s: CarWashServiceStatus): string {
       return "bg-emerald-100 text-emerald-900";
     case "PAID":
       return "bg-emerald-200 text-emerald-950";
+    case "HANDED_OVER":
+      return "bg-violet-200 text-violet-950";
     default:
       return "bg-slate-100 text-slate-700";
   }

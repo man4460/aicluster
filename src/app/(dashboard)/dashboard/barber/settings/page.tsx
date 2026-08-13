@@ -36,6 +36,8 @@ export default async function BarberSettingsPage() {
       openTime: true,
       closeTime: true,
       slotMinutes: true,
+      portalBookingPaymentMode: true,
+      depositAmountBaht: true,
       ...MODULE_SHOP_PAYMENT_SELECT,
     },
   });
@@ -66,6 +68,11 @@ export default async function BarberSettingsPage() {
           openTime: row?.openTime ?? "09:00",
           closeTime: row?.closeTime ?? "20:00",
           slotMinutes: row?.slotMinutes === 60 ? 60 : 30,
+          portalBookingPaymentMode:
+            row?.portalBookingPaymentMode === "DEPOSIT" || row?.portalBookingPaymentMode === "FULL"
+              ? row.portalBookingPaymentMode
+              : "NONE",
+          depositAmountBaht: row?.depositAmountBaht ?? null,
           ...paymentRowToDto(row),
         }}
       />

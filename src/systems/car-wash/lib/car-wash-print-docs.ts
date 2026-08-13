@@ -31,6 +31,10 @@ export type CarWashPrintVisitInput = {
   soldAtIso?: string | null;
   docNo?: string | null;
   note?: string | null;
+  /** ที่อยู่ลูกค้า (ใบกำกับภาษี) */
+  customerAddress?: string | null;
+  /** เลขผู้เสียภาษีลูกค้า (ใบกำกับภาษี) */
+  customerTaxId?: string | null;
 };
 
 function baht(n: number) {
@@ -80,11 +84,38 @@ function baseParams(data: CarWashPrintVisitInput, paper: AppSlipPaperSize) {
   };
 }
 
-export function printCarWashVisitReceipt(data: CarWashPrintVisitInput) {
-  const paper = resolveAppSlipPaperSize(data.shop.slipPaperSize);
+export function printCarWashVisitReceipt(
+  data: CarWashPrintVisitInput,
+  paperOverride?: AppSlipPaperSize | string | null,
+) {
+  const paper = resolveAppSlipPaperSize(paperOverride ?? data.shop.slipPaperSize);
   printAppReceiptSlip({
     ...baseParams(data, paper),
     subtitle: "ใบเสร็จรับเงิน",
+  });
+}
+
+export function printCarWashTaxInvoice(data: CarWashPrintVisitInput) {
+  printAppReceiptSlip({
+    ...baseParams(data, "A4"),
+    subtitle: "ใบกำกับภาษี",
+    customerAddress: data.customerAddress,
+    customerTaxId: data.customerTaxId,
+  });
+}
+
+export function printCarWashVisitDocs(opts: {
+  receipt?: boolean;
+  taxInvoice?: boolean;
+  data: CarWashPrintVisitInput;
+  /** ขนาดกระดาษใบเสร็จ (ใบกำกับบังคับ A4) */
+  receiptPaper?: AppSlipPaperSize | string | null;
+}) {
+  const queue: Array<() => void> = [];
+  if (opts.receipt) queue.push(() => printCarWashVisitReceipt(opts.data, opts.receiptPaper));
+  if (opts.taxInvoice) queue.push(() => printCarWashTaxInvoice(opts.data));
+  queue.forEach((fn, i) => {
+    window.setTimeout(fn, i * 650);
   });
 }
 
@@ -92,24 +123,34 @@ export function printCarWashVisitReceipt(data: CarWashPrintVisitInput) {
 export function carWashPaymentMethodFromNote(note: string | null | undefined): CarWashPaymentMethod | null {
   const n = note?.trim() ?? "";
   if (!n) return null;
-  if (/ชำระ:\s*พร้อมเพย์/i.test(n) || /พร้อมเพย์/.test(n) && /ชำระ/.test(n)) return "PROMPTPAY";
+  if (/ชำระ:\s*พร้อมเพย์/i.test(n) || (/พร้อมเพย์/.test(n) && /ชำระ/.test(n))) return "PROMPTPAY";
   if (/ชำระ:\s*โอน/.test(n)) return "TRANSFER";
   if (/ชำระ:\s*บัตร/.test(n)) return "CREDIT_CARD";
+  if (/ชำระ:\s*จ่ายที่หลัง/.test(n)) return "PAY_LATER";
   if (/ชำระ:\s*เงินสด/.test(n)) return "CASH";
   return null;
 }
 
-export function printCarWashVisitReceiptFromVisit(
+export function carWashPrintVisitInputFromVisit(
   shop: CarWashPrintShopProfile,
   visit: ServiceVisit,
-): boolean {
-  if (!(visit.final_price > 0)) return false;
+  extras?: {
+    customerName?: string | null;
+    customerAddress?: string | null;
+    customerTaxId?: string | null;
+  },
+): CarWashPrintVisitInput | null {
+  if (!(visit.final_price > 0)) return null;
   const noteClean = (visit.note ?? "")
     .replace(/\s*·\s*ชำระ:\s*[^\n·]+/g, "")
     .trim();
-  printCarWashVisitReceipt({
+  return {
     shop,
-    customerName: visit.customer_name.trim() || visit.plate_number.trim() || "ลูกค้า",
+    customerName:
+      extras?.customerName?.trim() ||
+      visit.customer_name.trim() ||
+      visit.plate_number.trim() ||
+      "ลูกค้า",
     customerPhone: visit.customer_phone,
     plateNumber: visit.plate_number,
     packageName: visit.package_name || "บริการคาร์แคร์",
@@ -118,7 +159,18 @@ export function printCarWashVisitReceiptFromVisit(
     soldAtIso: visit.visit_at,
     docNo: `CW-${visit.id}`,
     note: noteClean || null,
-  });
+    customerAddress: extras?.customerAddress ?? null,
+    customerTaxId: extras?.customerTaxId ?? null,
+  };
+}
+
+export function printCarWashVisitReceiptFromVisit(
+  shop: CarWashPrintShopProfile,
+  visit: ServiceVisit,
+): boolean {
+  const data = carWashPrintVisitInputFromVisit(shop, visit);
+  if (!data) return false;
+  printCarWashVisitReceipt(data);
   return true;
 }
 

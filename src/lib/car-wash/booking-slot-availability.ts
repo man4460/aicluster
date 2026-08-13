@@ -100,21 +100,42 @@ export function bangkokTimeHHmmFromScheduledAt(scheduledAt: Date): string {
     minute: "2-digit",
     hour12: false,
   }).formatToParts(scheduledAt);
-  const h = parts.find((p) => p.type === "hour")?.value ?? "00";
-  const m = parts.find((p) => p.type === "minute")?.value ?? "00";
-  return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
+  const hRaw = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const mRaw = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  // en-GB บาง engine ให้ 24:xx ตอนเที่ยงคืน
+  const h = ((Number.isFinite(hRaw) ? hRaw : 0) % 24 + 24) % 24;
+  const m = Number.isFinite(mRaw) ? mRaw : 0;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 export function buildSlotAvailability(
   dateKey: string,
   slotTimes: string[],
-  bookings: Array<{ id: number; scheduledAt: Date; status: string }>,
+  bookings: Array<{
+    id: number;
+    scheduledAt: Date;
+    status: string;
+    durationMinutes?: number | null;
+  }>,
+  slotMinutes = 30,
 ): SlotAvailabilityItem[] {
+  const slotLen = Math.max(15, Math.trunc(slotMinutes) || 30);
   const taken = new Map<string, { id: number; status: string }>();
   for (const b of bookings) {
     if (!BLOCKING_BOOKING_STATUSES.includes(b.status as CarWashBookingStatus)) continue;
-    const t = bangkokTimeHHmmFromScheduledAt(b.scheduledAt);
-    taken.set(t, { id: b.id, status: b.status });
+    const startHm = bangkokTimeHHmmFromScheduledAt(b.scheduledAt);
+    const startMin = parseHmToMinutes(startHm);
+    if (startMin == null) continue;
+    const dur = carWashNormalizeDurationMinutes(b.durationMinutes, slotLen);
+    const endMin = startMin + dur;
+    for (const time of slotTimes) {
+      const tMin = parseHmToMinutes(time);
+      if (tMin == null) continue;
+      // สล็อต [tMin, tMin+slotLen) ทับช่วงจอง [startMin, endMin)
+      if (tMin < endMin && startMin < tMin + slotLen) {
+        taken.set(time, { id: b.id, status: b.status });
+      }
+    }
   }
   return slotTimes.map((time) => {
     if (carWashSlotStartIsPastBangkok(dateKey, time)) {
@@ -193,10 +214,18 @@ export async function loadSlotAvailabilityForDate(
       trialSessionId,
       scheduledAt: { gte: range.start, lt: range.end },
     },
-    select: { id: true, scheduledAt: true, status: true },
+    select: { id: true, scheduledAt: true, status: true, durationMinutes: true },
   });
 
-  return { schedule, slotAvailability: buildSlotAvailability(schedule.dateKey, schedule.slots, bookings) };
+  return {
+    schedule,
+    slotAvailability: buildSlotAvailability(
+      schedule.dateKey,
+      schedule.slots,
+      bookings,
+      schedule.slotMinutes,
+    ),
+  };
 }
 
 export async function assertBookingSlotAvailable(
@@ -240,7 +269,7 @@ export async function assertBookingSlotAvailable(
       scheduledAt: { gte: range.start, lt: range.end },
       ...(excludeBookingId != null ? { id: { not: excludeBookingId } } : {}),
     },
-    select: { id: true, scheduledAt: true, status: true },
+    select: { id: true, scheduledAt: true, status: true, durationMinutes: true },
   });
 
   if (carWashSlotStartIsPastBangkok(dateKey, time)) {
@@ -248,7 +277,7 @@ export async function assertBookingSlotAvailable(
   }
 
   const bookableSlots = buildBookableStartSlots(
-    buildSlotAvailability(dateKey, schedule.slots, bookings),
+    buildSlotAvailability(dateKey, schedule.slots, bookings, schedule.slotMinutes),
     schedule.slotMinutes,
     carWashNormalizeDurationMinutes(durationMinutes, schedule.slotMinutes),
   );

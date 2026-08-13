@@ -682,7 +682,7 @@ export function DashboardShell({
           className="pointer-events-none absolute inset-x-0 top-0 bottom-0 border-b border-slate-200/60 bg-gradient-to-b from-white/98 via-slate-50/96 to-slate-100/90 shadow-[0_10px_28px_-20px_rgba(51,65,85,0.28)] backdrop-blur-2xl"
           aria-hidden
         />
-        <div className="relative z-[1] w-full px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-4 sm:pb-3 sm:pt-4">
+        <div className="relative z-[1] w-full px-3 pb-1 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-4 sm:pb-1.5 sm:pt-3">
         <div className="flex h-12 w-full min-w-0 items-center gap-2 rounded-[1.15rem] border border-white/30 bg-gradient-to-r from-[#4f2f9a]/90 via-[#5b3ac2]/85 to-[#ec4899]/85 px-3 text-white shadow-[0_20px_40px_-15px_rgba(61,29,125,0.7)] backdrop-blur-xl sm:h-14 sm:gap-2.5 sm:px-5 lg:px-6">
           <button
             type="button"
@@ -723,6 +723,8 @@ export function DashboardShell({
           >
             <MawellLogo size="sm" />
           </Link>
+
+          {demoSession ? <DemoSessionBanner /> : null}
 
           {systemFocusLayout ? (
             <div className="relative hidden shrink-0 md:block" ref={moduleMenuRef}>
@@ -1070,15 +1072,9 @@ export function DashboardShell({
       </header>
       : null}
 
-      {demoSession ?
-        <div className={cn("w-full shrink-0 px-3 pt-2 sm:px-4", moduleStaffKiosk && "pt-3")}>
-          <DemoSessionBanner />
-        </div>
-      : null}
-
       <div
         className={cn(
-          "flex min-h-0 flex-1 gap-0 pb-[max(5.75rem,calc(5.75rem+env(safe-area-inset-bottom,0px)))] pt-2 md:pb-4",
+          "flex min-h-0 flex-1 gap-0 pb-[max(5.75rem,calc(5.75rem+env(safe-area-inset-bottom,0px)))] pt-0 md:pb-4",
           moduleDashboardCompact ? "max-md:px-2 sm:px-4" : "px-3 sm:px-4",
           moduleStaffKiosk && "!gap-0 !px-0 !pt-0 !pb-0 sm:!px-0 sm:!pb-0",
         )}
@@ -1086,7 +1082,7 @@ export function DashboardShell({
         {/* Sidebar — แก้ว โค้งมนเทียบแถบบน / drawer */}
         <aside
           className={cn(
-            "hidden w-[264px] shrink-0 flex-col overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 bg-white/78 text-[#2e2a58] shadow-[0_20px_48px_-30px_rgba(30,27,75,0.18)] ring-1 ring-white/60 backdrop-blur-2xl md:flex md:my-6 lg:my-8",
+            "hidden w-[264px] shrink-0 flex-col overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 bg-white/78 text-[#2e2a58] shadow-[0_20px_48px_-30px_rgba(30,27,75,0.18)] ring-1 ring-white/60 backdrop-blur-2xl md:flex md:my-3 lg:my-4",
             sidebarCollapsed && "md:!hidden",
             (systemFocusLayout || moduleStaffKiosk) && "md:hidden",
             moduleStaffKiosk && "!hidden !my-0",

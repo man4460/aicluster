@@ -43,6 +43,17 @@ export const buildingPosStaffPortalPaddingBottomClass = "pb-24 lg:pb-0";
 /** กริดการ์ดเมนูหน้าออร์เดอร์ — ใช้คู่กับคลาส `bp-order-menu-grid` ใน globals.css (มือถือ 3 คอลัมน์บังคับ) */
 export const buildingPosProductGridClass = "bp-order-menu-grid";
 
+/**
+ * กริดเมนูบนเว็บไซต์จองลูกค้า (`BuildingPosPortalClient`)
+ * มือถือ 3 คอลัมน์ · คอม (`lg+`) 6 คอลัมน์ — ตาม `module-customer-booking-website-portal.mdc`
+ */
+export const buildingPosPortalMenuGridClass =
+  "grid grid-cols-3 gap-1.5 sm:gap-2 lg:grid-cols-6";
+
+/** การ์ดเมนูบนพอร์ทัลจอง — ย่อแน่นบนมือถือ (3 คอลัมน์) */
+export const buildingPosPortalMenuCardClass =
+  "overflow-hidden rounded-lg border border-white/70 bg-white/80 text-left shadow-sm sm:rounded-xl lg:rounded-2xl";
+
 /** การ์ดเมนู — มือถือแน่น (3 คอลัมน์) · มุมโค้งเล็กลง · เดสก์ท็อปมนขึ้น */
 export const buildingPosProductCardClass =
   "group relative flex min-w-0 flex-col overflow-hidden rounded-lg border border-white/70 bg-gradient-to-br from-white/85 via-white/70 to-violet-50/45 shadow-sm ring-1 ring-inset ring-white/55 backdrop-blur-md transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-xl lg:rounded-[1.25rem]";
@@ -85,3 +96,21 @@ export const buildingPosFinanceSubTabShellClass = buildingPosSubTabSegmentShellC
 
 /** การ์ดย่อยในแดชบอร์ด (โต๊ะค้าง ฯลฯ) */
 export const buildingPosInnerCardRadiusClass = "rounded-[1.25rem]";
+
+/** แถบหลักหน้าตั้งค่า (มือถือ dropdown · sm+ pill) */
+export const buildingPosPrimaryTabShellClass =
+  "flex flex-wrap gap-1.5 rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]";
+
+export function buildingPosPrimaryTabPillClass(active: boolean): string {
+  return cn(
+    "inline-flex min-h-9 items-center justify-center rounded-xl px-3 text-xs font-bold transition touch-manipulation sm:min-h-10 sm:px-3.5 sm:text-sm",
+    active
+      ? cn("text-white shadow-md", appDashboardBrandGradientFillClass)
+      : "bg-white/70 text-[#5f5a8a] hover:bg-white hover:text-[#4d47b6]",
+  );
+}
+
+export const buildingPosMobileSelectClass = cn(
+  buildingPosSelectFieldClass,
+  "border border-[#e4e0f5] bg-white/90 font-bold text-[#1e1b4b]",
+);

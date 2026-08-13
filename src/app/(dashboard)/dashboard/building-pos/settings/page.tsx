@@ -3,8 +3,7 @@ import { getSession } from "@/lib/auth/session";
 import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
 import { getModuleShopBranding } from "@/lib/module-shop/branding-store";
 import { getBuildingPosDataScope } from "@/lib/trial/module-scopes";
-import { BuildingPosLoyaltySettingsClient } from "@/systems/building-pos/components/BuildingPosLoyaltySettingsClient";
-import { ModuleShopSettingsPanel } from "@/systems/module-shop/ModuleShopSettingsPanel";
+import { BuildingPosSettingsClient } from "@/systems/building-pos/components/BuildingPosSettingsClient";
 
 export default async function BuildingPosSettingsPage() {
   const session = await getSession();
@@ -13,9 +12,10 @@ export default async function BuildingPosSettingsPage() {
   const initial = await getModuleShopBranding(session.sub, scope.trialSessionId, BUILDING_POS_MODULE_SLUG);
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <ModuleShopSettingsPanel moduleSlug={BUILDING_POS_MODULE_SLUG} initial={initial} />
-      <BuildingPosLoyaltySettingsClient />
-    </div>
+    <BuildingPosSettingsClient
+      brandingInitial={initial}
+      ownerId={session.sub}
+      trialSessionId={scope.trialSessionId}
+    />
   );
 }

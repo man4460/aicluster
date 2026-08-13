@@ -51,7 +51,8 @@ function BuildingPosMobileUnifiedBar({
   const pathname = usePathname() ?? "";
   const onDashboard = isBuildingPosModulePath(pathname);
   const onStaffPortal = pathname.startsWith("/building-pos/staff");
-  if (!onDashboard && !onStaffPortal) return null;
+  const onPresentation = pathname.includes("/building-pos/presentation");
+  if ((!onDashboard && !onStaffPortal) || onPresentation) return null;
 
   if (onStaffPortal) {
     if (!staffFooterNav && !slot) return null;

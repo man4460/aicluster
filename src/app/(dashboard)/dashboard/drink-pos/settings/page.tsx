@@ -7,8 +7,7 @@ import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-si
 import { getDrinkPosDataScope } from "@/lib/trial/module-scopes";
 import { loadDrinkPosStaffDailyPinHash } from "@/lib/modules/staff-daily-pin-store";
 import { ensureDrinkPosShopProfile } from "@/systems/drink-pos/lib/member-service";
-import { DrinkPosShopSettingsClient } from "@/systems/drink-pos/components/DrinkPosShopSettingsClient";
-import { DrinkPosLoyaltySettingsClient } from "@/systems/drink-pos/components/DrinkPosLoyaltySettingsClient";
+import { DrinkPosSettingsClient } from "@/systems/drink-pos/components/DrinkPosSettingsClient";
 
 export default async function DrinkPosSettingsPage() {
   const session = await getSession();
@@ -37,25 +36,24 @@ export default async function DrinkPosSettingsPage() {
   const p = full ?? row;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <DrinkPosShopSettingsClient
-        initial={{
-          displayName: p.displayName,
-          logoUrl: p.logoUrl,
-          tagline: p.tagline,
-          address: p.address ?? null,
-          contactPhone: p.contactPhone,
-          slipPaperSize: normalizeModuleSlipPaperSize(
-            "slipPaperSize" in p ? p.slipPaperSize : "SLIP_58",
-          ),
-          orderTicketSlipPaperSize: normalizeModuleSlipPaperSize(
-            "orderTicketSlipPaperSize" in p ? p.orderTicketSlipPaperSize : "SLIP_58",
-          ),
-          staffDailyPinSet: Boolean(pinHash),
-          ...paymentRowToDto(p),
-        }}
-      />
-      <DrinkPosLoyaltySettingsClient />
-    </div>
+    <DrinkPosSettingsClient
+      ownerId={ctx.billingUserId}
+      trialSessionId={scope.trialSessionId}
+      shopInitial={{
+        displayName: p.displayName,
+        logoUrl: p.logoUrl,
+        tagline: p.tagline,
+        address: p.address ?? null,
+        contactPhone: p.contactPhone,
+        slipPaperSize: normalizeModuleSlipPaperSize(
+          "slipPaperSize" in p ? p.slipPaperSize : "SLIP_58",
+        ),
+        orderTicketSlipPaperSize: normalizeModuleSlipPaperSize(
+          "orderTicketSlipPaperSize" in p ? p.orderTicketSlipPaperSize : "SLIP_58",
+        ),
+        staffDailyPinSet: Boolean(pinHash),
+        ...paymentRowToDto(p),
+      }}
+    />
   );
 }

@@ -169,6 +169,13 @@ type BookingRow = {
   packageId?: number | null;
   packageName?: string | null;
   stylistName?: string | null;
+  packagePrice?: number;
+  depositAmountBaht?: number | null;
+  amountPaidBaht?: number;
+  paymentMethod?: string;
+  paymentStatus?: string;
+  depositSlipUrl?: string | null;
+  paymentSlipUrl?: string | null;
 };
 
 type ServicePkg = {
@@ -576,6 +583,9 @@ export function BarberBookingsClient({
           packageId: selectedPackageId,
           stylistId: stylistId ?? null,
           durationMinutes,
+          useMemberPackage: memberPackageSelected || undefined,
+          /** เพิ่มคิวจากแดชบอร์ด — รับชำระหน้างาน; มัดจำ/เต็มบังคับที่ลิงก์ลูกค้า */
+          forcePaymentMode: "NONE",
         }),
       });
       const j = (await res.json().catch(() => ({}))) as { error?: string; booking?: BookingRow };
@@ -942,6 +952,19 @@ export function BarberBookingsClient({
                         .join(" · ")}
                     </p>
                   )}
+                  {(b.amountPaidBaht ?? 0) > 0 ? (
+                    <p className="mt-0.5 text-[11px] font-semibold text-[#4d47b6]">
+                      ชำระแล้ว ฿{(b.amountPaidBaht ?? 0).toLocaleString("th-TH")}
+                      {(b.packagePrice ?? 0) > (b.amountPaidBaht ?? 0)
+                        ? ` · ค้าง ฿${Math.max(0, (b.packagePrice ?? 0) - (b.amountPaidBaht ?? 0)).toLocaleString("th-TH")}`
+                        : ""}
+                      {b.paymentStatus === "PENDING_REVIEW" ? " · รอตรวจสลิป" : ""}
+                    </p>
+                  ) : b.depositAmountBaht != null && b.depositAmountBaht > 0 ? (
+                    <p className="mt-0.5 text-[11px] font-semibold text-amber-800">
+                      ค้างมัดจำ ฿{b.depositAmountBaht.toLocaleString("th-TH")}
+                    </p>
+                  ) : null}
                   <p className="mt-1 text-xs font-medium tabular-nums text-[#4d47b6] sm:text-sm">
                     {todayOverview
                       ? new Date(b.scheduledAt).toLocaleTimeString("th-TH", {
@@ -1246,9 +1269,10 @@ export function BarberBookingsClient({
                   <p className="text-xs font-semibold text-[#66638c]">ไม่มีสล็อตในวันนี้</p>
                 ) : (
                   <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
-                    {availSlots.map((s) => {
+                    {availSlots.map((s, idx) => {
                       const selected = selectedSet.has(s.startTime);
-                      const disabled = !s.available;
+                      const canStart = runIsFree(availSlots, idx, slotsNeeded) != null;
+                      const disabled = !s.available || !canStart;
                       return (
                         <button
                           key={s.startTime}

@@ -29,7 +29,7 @@ const fieldClass =
 
 type ProductOpt = { id: string; name: string };
 
-export function DrinkPosLoyaltySettingsClient() {
+export function DrinkPosLoyaltySettingsClient({ embedded = false }: { embedded?: boolean }) {
   const [settings, setSettings] = useState<DrinkPosLoyaltySettingsDto | null>(null);
   const [rewards, setRewards] = useState<DrinkPosLoyaltyRewardDto[]>([]);
   const [products, setProducts] = useState<ProductOpt[]>([]);
@@ -268,6 +268,299 @@ export function DrinkPosLoyaltySettingsClient() {
       settings.baht_per_point !== bahtPerPoint ||
       settings.points_per_unit !== pointsPerUnit);
 
+  const saveRulesButton = (
+    <button
+      type="button"
+      className={cn(
+        appDashboardBrandCtaPillButtonClass,
+        "min-h-[40px] rounded-xl px-4 text-xs font-black disabled:opacity-50",
+      )}
+      disabled={!dirty || saving || loading}
+      onClick={() => void saveSettings()}
+    >
+      {saving ? "กำลังบันทึก…" : "บันทึกกฎ"}
+    </button>
+  );
+
+  const alerts = (
+    <>
+      {err ? (
+        <p
+          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800"
+          role="alert"
+        >
+          {err}
+        </p>
+      ) : null}
+      {okMsg ? (
+        <p
+          className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800"
+          role="status"
+        >
+          {okMsg}
+        </p>
+      ) : null}
+    </>
+  );
+
+  const rulesBody =
+    loading || !settings ? (
+      <div className="h-28 animate-pulse rounded-[1.25rem] bg-[#ecebff]/50" aria-hidden />
+    ) : (
+      <div className="space-y-3">
+        <label className="flex cursor-pointer items-center justify-between gap-3 rounded-[1.25rem] border border-white/60 bg-white/70 p-4 shadow-sm">
+          <span className="text-sm font-black text-[#1e1b4b]">เปิดระบบสะสมคะแนน</span>
+          <input
+            type="checkbox"
+            className="h-5 w-5 accent-[#5b61ff]"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+          />
+        </label>
+
+        <div className={cn("grid gap-3 sm:grid-cols-2", !enabled && "opacity-55")}>
+          <label className="block text-xs font-black uppercase tracking-wide text-[#66638c]">
+            ทุกๆ (บาท)
+            <input
+              type="number"
+              min={1}
+              className={cn(fieldClass, "mt-1.5 tabular-nums")}
+              value={bahtPerPoint}
+              disabled={!enabled || saving}
+              onChange={(e) => setBahtPerPoint(Number(e.target.value) || 1)}
+            />
+          </label>
+          <label className="block text-xs font-black uppercase tracking-wide text-[#66638c]">
+            ได้คะแนน
+            <input
+              type="number"
+              min={1}
+              className={cn(fieldClass, "mt-1.5 tabular-nums")}
+              value={pointsPerUnit}
+              disabled={!enabled || saving}
+              onChange={(e) => setPointsPerUnit(Number(e.target.value) || 1)}
+            />
+          </label>
+        </div>
+
+        <div className="rounded-2xl border border-[#0000BF]/20 bg-gradient-to-r from-[#0000BF]/8 via-[#8b5cf6]/8 to-[#ec4899]/8 px-4 py-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">ตัวอย่างกฎ</p>
+          <p className="mt-1 text-sm font-black text-[#1e1b4b]">{rulePreview}</p>
+          <p className="mt-1 text-[11px] font-semibold text-[#66638c]">
+            ให้คะแนนเมื่อบันทึกบิลชำระ และมีเบอร์สมาชิก
+          </p>
+        </div>
+      </div>
+    );
+
+  const rewardsBody = (
+    <>
+      <div className="space-y-3 rounded-[1.25rem] border border-white/60 bg-white/55 p-4">
+        <label className="block text-xs font-bold text-[#4d47b6]">
+          เลือกสินค้า (ไม่บังคับ)
+          <select
+            className={cn(fieldClass, "mt-1")}
+            value={rewardForm.product_id}
+            onChange={(e) => fillTitleFromProduct(e.target.value)}
+          >
+            <option value="">— กำหนดชื่อเอง —</option>
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {!rewardForm.product_id ? (
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-[#4d47b6]">รูปประกอบ (เมื่อไม่ได้เลือกสินค้า)</p>
+            <AppGalleryCameraFileInputs
+              galleryInputRef={rewardGalleryRef}
+              cameraInputRef={rewardCameraInputRef}
+              onChange={(e) => void onRewardImageFileChange(e)}
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <AppImagePickCameraButtons
+                onPickGallery={() => rewardGalleryRef.current?.click()}
+                onPickCamera={() => openRewardCamera((file) => void applyRewardImage(file))}
+                disabled={rewardSaving || imageUploadBusy}
+                busy={imageUploadBusy}
+                labels={{ busy: "กำลังอัปโหลด…" }}
+                className="justify-start"
+              />
+              {rewardForm.image_url.trim() ? (
+                <button
+                  type="button"
+                  className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-3 text-xs font-black")}
+                  onClick={() => setRewardForm((s) => ({ ...s, image_url: "" }))}
+                >
+                  ลบรูป
+                </button>
+              ) : null}
+            </div>
+            {rewardCameraModal}
+            {rewardForm.image_url.trim() ? (
+              <div className="h-28 w-28 overflow-hidden rounded-2xl border border-white/60 bg-[#0000BF]/08 ring-1 ring-inset ring-white/40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={rewardForm.image_url.trim()}
+                  alt=""
+                  className="h-full w-full object-cover object-center"
+                />
+              </div>
+            ) : (
+              <p className="text-[11px] font-semibold text-[#66638c]">ยังไม่มีรูป — อัปโหลดจากแกลเลอรีหรือกล้อง</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-[11px] font-semibold text-[#66638c]">
+            เลือกสินค้าแล้ว — ใช้รูปจากเมนูสินค้าอัตโนมัติ
+          </p>
+        )}
+
+        <label className="block text-xs font-bold text-[#4d47b6]">
+          ชื่อรายการแลก
+          <input
+            className={cn(fieldClass, "mt-1")}
+            placeholder="เช่น เครื่องดื่มฟรี 1 แก้ว"
+            value={rewardForm.title}
+            onChange={(e) => setRewardForm((s) => ({ ...s, title: e.target.value }))}
+          />
+        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block text-xs font-bold text-[#4d47b6]">
+            คะแนนที่ใช้
+            <input
+              type="number"
+              min={1}
+              className={cn(fieldClass, "mt-1 tabular-nums")}
+              value={rewardForm.points_cost}
+              onChange={(e) => setRewardForm((s) => ({ ...s, points_cost: e.target.value }))}
+            />
+          </label>
+          <label className="block text-xs font-bold text-[#4d47b6]">
+            ลำดับ
+            <input
+              type="number"
+              className={cn(fieldClass, "mt-1 tabular-nums")}
+              value={rewardForm.sort_order}
+              onChange={(e) => setRewardForm((s) => ({ ...s, sort_order: e.target.value }))}
+            />
+          </label>
+        </div>
+        <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#4d47b6]">
+          <input
+            type="checkbox"
+            checked={rewardForm.is_active}
+            onChange={(e) => setRewardForm((s) => ({ ...s, is_active: e.target.checked }))}
+          />
+          เปิดใช้งาน
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={rewardSaving || !rewardForm.title.trim()}
+            className={cn(
+              appDashboardBrandCtaPillButtonClass,
+              "min-h-[40px] rounded-xl px-4 text-xs font-black disabled:opacity-50",
+            )}
+            onClick={() => void saveReward()}
+          >
+            {rewardSaving ? "กำลังบันทึก…" : editingId ? "บันทึกการแก้ไข" : "เพิ่มรายการแลก"}
+          </button>
+          {editingId ? (
+            <button
+              type="button"
+              className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-4 text-xs font-black")}
+              onClick={() => resetRewardForm()}
+            >
+              ยกเลิกแก้ไข
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {rewards.length === 0 ? (
+        <p className="rounded-[1.25rem] border border-dashed border-[#d8d6ec] px-3 py-8 text-center text-sm font-semibold text-[#66638c]">
+          ยังไม่มีรายการแลกคะแนน
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {rewards.map((r) => (
+            <li
+              key={r.id}
+              className="flex min-h-[56px] items-center gap-3 rounded-[1.25rem] border border-[#e8e6f4]/90 bg-white/80 px-3 py-2.5"
+            >
+              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-slate-100 to-violet-50 ring-1 ring-[#e8e6f4]">
+                {r.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={r.image_url} alt="" className="h-full w-full object-cover object-center" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-slate-300" aria-hidden>
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                      <path
+                        d="M4 16l4.5-4.5a2 2 0 012.8 0L16 16M14 14l1.5-1.5a2 2 0 012.8 0L20 14"
+                        strokeLinecap="round"
+                      />
+                      <rect x="3" y="5" width="18" height="14" rx="2" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <span className="min-w-0 flex-1 text-sm font-semibold text-[#1e1b4b]">
+                {r.title}
+                <span className="mt-0.5 block text-xs font-medium text-[#66638c]">
+                  แลก {r.points_cost.toLocaleString("th-TH")} คะแนน
+                  {!r.is_active ? " · ปิดใช้งาน" : ""}
+                </span>
+              </span>
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  className={assetRowEditIconButtonClass}
+                  aria-label={`แก้ไข ${r.title}`}
+                  title="แก้ไข"
+                  onClick={() => startEditReward(r)}
+                >
+                  <IconRowEdit className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  className={assetRowRemoveIconButtonClass}
+                  aria-label={`ลบ ${r.title}`}
+                  title="ลบ"
+                  onClick={() => void deleteReward(r)}
+                >
+                  <IconRowRemove className="h-4 w-4" />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <div className="flex flex-row items-start justify-between gap-3">
+            <p className="text-sm font-black text-[#1e1b4b]">กฎสะสมคะแนน</p>
+            {saveRulesButton}
+          </div>
+          {alerts}
+          {rulesBody}
+        </div>
+        <div className="space-y-4">
+          <p className="text-sm font-black text-[#1e1b4b]">รายการแลกคะแนน</p>
+          {rewardsBody}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <AppDashboardSection tone="violet" className="space-y-4">
@@ -275,269 +568,15 @@ export function DrinkPosLoyaltySettingsClient() {
           title="สะสมคะแนน"
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
-          action={
-            <button
-              type="button"
-              className={cn(
-                appDashboardBrandCtaPillButtonClass,
-                "min-h-[40px] rounded-xl px-4 text-xs font-black disabled:opacity-50",
-              )}
-              disabled={!dirty || saving || loading}
-              onClick={() => void saveSettings()}
-            >
-              {saving ? "กำลังบันทึก…" : "บันทึกกฎ"}
-            </button>
-          }
+          action={saveRulesButton}
         />
-
-        {err ? (
-          <p
-            className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800"
-            role="alert"
-          >
-            {err}
-          </p>
-        ) : null}
-        {okMsg ? (
-          <p
-            className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800"
-            role="status"
-          >
-            {okMsg}
-          </p>
-        ) : null}
-
-        {loading || !settings ? (
-          <div className="h-28 animate-pulse rounded-[1.25rem] bg-[#ecebff]/50" aria-hidden />
-        ) : (
-          <div className="space-y-3">
-            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-[1.25rem] border border-white/60 bg-white/70 p-4 shadow-sm">
-              <span className="text-sm font-black text-[#1e1b4b]">เปิดระบบสะสมคะแนน</span>
-              <input
-                type="checkbox"
-                className="h-5 w-5 accent-[#5b61ff]"
-                checked={enabled}
-                onChange={(e) => setEnabled(e.target.checked)}
-              />
-            </label>
-
-            <div className={cn("grid gap-3 sm:grid-cols-2", !enabled && "opacity-55")}>
-              <label className="block text-xs font-black uppercase tracking-wide text-[#66638c]">
-                ทุกๆ (บาท)
-                <input
-                  type="number"
-                  min={1}
-                  className={cn(fieldClass, "mt-1.5 tabular-nums")}
-                  value={bahtPerPoint}
-                  disabled={!enabled || saving}
-                  onChange={(e) => setBahtPerPoint(Number(e.target.value) || 1)}
-                />
-              </label>
-              <label className="block text-xs font-black uppercase tracking-wide text-[#66638c]">
-                ได้คะแนน
-                <input
-                  type="number"
-                  min={1}
-                  className={cn(fieldClass, "mt-1.5 tabular-nums")}
-                  value={pointsPerUnit}
-                  disabled={!enabled || saving}
-                  onChange={(e) => setPointsPerUnit(Number(e.target.value) || 1)}
-                />
-              </label>
-            </div>
-
-            <div className="rounded-2xl border border-[#0000BF]/20 bg-gradient-to-r from-[#0000BF]/8 via-[#8b5cf6]/8 to-[#ec4899]/8 px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#66638c]">ตัวอย่างกฎ</p>
-              <p className="mt-1 text-sm font-black text-[#1e1b4b]">{rulePreview}</p>
-              <p className="mt-1 text-[11px] font-semibold text-[#66638c]">
-                ให้คะแนนเมื่อบันทึกบิลชำระ และมีเบอร์สมาชิก
-              </p>
-            </div>
-          </div>
-        )}
+        {alerts}
+        {rulesBody}
       </AppDashboardSection>
 
       <AppDashboardSection tone="violet" className="space-y-4">
         <AppSectionHeader title="รายการแลกคะแนน" />
-
-        <div className="space-y-3 rounded-[1.25rem] border border-white/60 bg-white/55 p-4">
-          <label className="block text-xs font-bold text-[#4d47b6]">
-            เลือกสินค้า (ไม่บังคับ)
-            <select
-              className={cn(fieldClass, "mt-1")}
-              value={rewardForm.product_id}
-              onChange={(e) => fillTitleFromProduct(e.target.value)}
-            >
-              <option value="">— กำหนดชื่อเอง —</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {!rewardForm.product_id ?
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-[#4d47b6]">รูปประกอบ (เมื่อไม่ได้เลือกสินค้า)</p>
-              <AppGalleryCameraFileInputs
-                galleryInputRef={rewardGalleryRef}
-                cameraInputRef={rewardCameraInputRef}
-                onChange={(e) => void onRewardImageFileChange(e)}
-              />
-              <div className="flex flex-wrap items-center gap-2">
-                <AppImagePickCameraButtons
-                  onPickGallery={() => rewardGalleryRef.current?.click()}
-                  onPickCamera={() => openRewardCamera((file) => void applyRewardImage(file))}
-                  disabled={rewardSaving || imageUploadBusy}
-                  busy={imageUploadBusy}
-                  labels={{ busy: "กำลังอัปโหลด…" }}
-                  className="justify-start"
-                />
-                {rewardForm.image_url.trim() ?
-                  <button
-                    type="button"
-                    className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-3 text-xs font-black")}
-                    onClick={() => setRewardForm((s) => ({ ...s, image_url: "" }))}
-                  >
-                    ลบรูป
-                  </button>
-                : null}
-              </div>
-              {rewardCameraModal}
-              {rewardForm.image_url.trim() ?
-                <div className="h-28 w-28 overflow-hidden rounded-2xl border border-white/60 bg-[#0000BF]/08 ring-1 ring-inset ring-white/40">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={rewardForm.image_url.trim()}
-                    alt=""
-                    className="h-full w-full object-cover object-center"
-                  />
-                </div>
-              : <p className="text-[11px] font-semibold text-[#66638c]">ยังไม่มีรูป — อัปโหลดจากแกลเลอรีหรือกล้อง</p>
-              }
-            </div>
-          : <p className="text-[11px] font-semibold text-[#66638c]">
-              เลือกสินค้าแล้ว — ใช้รูปจากเมนูสินค้าอัตโนมัติ
-            </p>
-          }
-
-          <label className="block text-xs font-bold text-[#4d47b6]">
-            ชื่อรายการแลก
-            <input
-              className={cn(fieldClass, "mt-1")}
-              placeholder="เช่น เครื่องดื่มฟรี 1 แก้ว"
-              value={rewardForm.title}
-              onChange={(e) => setRewardForm((s) => ({ ...s, title: e.target.value }))}
-            />
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block text-xs font-bold text-[#4d47b6]">
-              คะแนนที่ใช้
-              <input
-                type="number"
-                min={1}
-                className={cn(fieldClass, "mt-1 tabular-nums")}
-                value={rewardForm.points_cost}
-                onChange={(e) => setRewardForm((s) => ({ ...s, points_cost: e.target.value }))}
-              />
-            </label>
-            <label className="block text-xs font-bold text-[#4d47b6]">
-              ลำดับ
-              <input
-                type="number"
-                className={cn(fieldClass, "mt-1 tabular-nums")}
-                value={rewardForm.sort_order}
-                onChange={(e) => setRewardForm((s) => ({ ...s, sort_order: e.target.value }))}
-              />
-            </label>
-          </div>
-          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#4d47b6]">
-            <input
-              type="checkbox"
-              checked={rewardForm.is_active}
-              onChange={(e) => setRewardForm((s) => ({ ...s, is_active: e.target.checked }))}
-            />
-            เปิดใช้งาน
-          </label>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={rewardSaving || !rewardForm.title.trim()}
-              className={cn(
-                appDashboardBrandCtaPillButtonClass,
-                "min-h-[40px] rounded-xl px-4 text-xs font-black disabled:opacity-50",
-              )}
-              onClick={() => void saveReward()}
-            >
-              {rewardSaving ? "กำลังบันทึก…" : editingId ? "บันทึกการแก้ไข" : "เพิ่มรายการแลก"}
-            </button>
-            {editingId ? (
-              <button
-                type="button"
-                className={cn(appTemplateOutlineButtonClass, "min-h-[40px] rounded-xl px-4 text-xs font-black")}
-                onClick={() => resetRewardForm()}
-              >
-                ยกเลิกแก้ไข
-              </button>
-            ) : null}
-          </div>
-        </div>
-
-        {rewards.length === 0 ? (
-          <p className="rounded-[1.25rem] border border-dashed border-[#d8d6ec] px-3 py-8 text-center text-sm font-semibold text-[#66638c]">
-            ยังไม่มีรายการแลกคะแนน
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {rewards.map((r) => (
-              <li
-                key={r.id}
-                className="flex min-h-[56px] items-center gap-3 rounded-[1.25rem] border border-[#e8e6f4]/90 bg-white/80 px-3 py-2.5"
-              >
-                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-slate-100 to-violet-50 ring-1 ring-[#e8e6f4]">
-                  {r.image_url ?
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={r.image_url} alt="" className="h-full w-full object-cover object-center" />
-                  : <div className="flex h-full w-full items-center justify-center text-slate-300" aria-hidden>
-                      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                        <path d="M4 16l4.5-4.5a2 2 0 012.8 0L16 16M14 14l1.5-1.5a2 2 0 012.8 0L20 14" strokeLinecap="round" />
-                        <rect x="3" y="5" width="18" height="14" rx="2" />
-                      </svg>
-                    </div>
-                  }
-                </div>
-                <span className="min-w-0 flex-1 text-sm font-semibold text-[#1e1b4b]">
-                  {r.title}
-                  <span className="mt-0.5 block text-xs font-medium text-[#66638c]">
-                    แลก {r.points_cost.toLocaleString("th-TH")} คะแนน
-                    {!r.is_active ? " · ปิดใช้งาน" : ""}
-                  </span>
-                </span>
-                <div className="flex shrink-0 items-center gap-1">
-                  <button
-                    type="button"
-                    className={assetRowEditIconButtonClass}
-                    aria-label={`แก้ไข ${r.title}`}
-                    title="แก้ไข"
-                    onClick={() => startEditReward(r)}
-                  >
-                    <IconRowEdit className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    className={assetRowRemoveIconButtonClass}
-                    aria-label={`ลบ ${r.title}`}
-                    title="ลบ"
-                    onClick={() => void deleteReward(r)}
-                  >
-                    <IconRowRemove className="h-4 w-4" />
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        {rewardsBody}
       </AppDashboardSection>
     </div>
   );

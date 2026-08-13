@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { bangkokDateKeyMinusDays, bangkokDayStartEndForDateKey } from "@/lib/barber/bangkok-day";
+import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 
@@ -453,6 +454,264 @@ export async function seedBuildingPosDemoFinanceData(
   await db.buildingPosOrder.createMany({ data: ordersData });
 }
 
+/** แบนเนอร์พอร์ทัลจอง — Unsplash ร้านอาหาร (ยาว ≤ 512) */
+const BUILDING_POS_PORTAL_SAMPLE_BANNER =
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1600&q=80";
+
+const BUILDING_POS_PORTAL_SAMPLE_GALLERY = [
+  "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=78",
+  "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=800&q=78",
+  "https://images.unsplash.com/photo-1551218808-94e220e084d2?auto=format&fit=crop&w=800&q=78",
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=78",
+  "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=78",
+  "https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?auto=format&fit=crop&w=800&q=78",
+] as const;
+
+/**
+ * โปรไฟล์ร้าน + แบรนด์ + จองโต๊ะ + รีวิว — ให้พอร์ทัล/แดชบอร์ดจองมีข้อมูลตัวอย่าง
+ */
+export async function seedBuildingPosPortalDemoData(
+  db: DbLike,
+  ownerUserId: string,
+  trialSessionId: string,
+): Promise<void> {
+  const isTrial = trialSessionId !== TRIAL_PROD_SCOPE;
+  const shopSuffix = isTrial ? " (ทดลอง)" : "";
+
+  await db.moduleShopBranding.upsert({
+    where: {
+      ownerUserId_trialSessionId_moduleSlug: {
+        ownerUserId,
+        trialSessionId,
+        moduleSlug: BUILDING_POS_MODULE_SLUG,
+      },
+    },
+    create: {
+      ownerUserId,
+      trialSessionId,
+      moduleSlug: BUILDING_POS_MODULE_SLUG,
+      displayName: `ครัวมาเวล Demo${shopSuffix}`,
+      tagline: "อาหารไทย · ของหวาน · จองโต๊ะออนไลน์",
+      contactPhone: "021234568",
+      promptPayPhone: "0812345678",
+      bankName: "กสิกรไทย",
+      bankAccountNumber: "1234567890",
+      bankAccountName: "ครัวมาเวล Demo",
+      logoUrl:
+        "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=240&h=240&q=80",
+    },
+    update: {
+      displayName: `ครัวมาเวล Demo${shopSuffix}`,
+      tagline: "อาหารไทย · ของหวาน · จองโต๊ะออนไลน์",
+      contactPhone: "021234568",
+      promptPayPhone: "0812345678",
+      bankName: "กสิกรไทย",
+      bankAccountNumber: "1234567890",
+      bankAccountName: "ครัวมาเวล Demo",
+      logoUrl:
+        "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=240&h=240&q=80",
+    },
+  });
+
+  await db.buildingPosShopProfile.upsert({
+    where: {
+      ownerUserId_trialSessionId: { ownerUserId, trialSessionId },
+    },
+    create: {
+      ownerUserId,
+      trialSessionId,
+      address: "88/1 ถ.ตัวอย่าง แขวงสาธิต เขตสาธิต กรุงเทพฯ 10110",
+      contactLine: "@mawell-kitchen",
+      facebookUrl: "https://www.facebook.com/",
+      mapUrl: "https://maps.google.com/?q=Bangkok",
+      portalBannerUrl: BUILDING_POS_PORTAL_SAMPLE_BANNER,
+      portalGalleryJson: JSON.stringify([...BUILDING_POS_PORTAL_SAMPLE_GALLERY]),
+      openTime: "10:00",
+      closeTime: "22:00",
+      portalBookingPaymentMode: "DEPOSIT",
+      depositAmountBaht: 200,
+      depositPercent: 30,
+    },
+    update: {
+      address: "88/1 ถ.ตัวอย่าง แขวงสาธิต เขตสาธิต กรุงเทพฯ 10110",
+      contactLine: "@mawell-kitchen",
+      facebookUrl: "https://www.facebook.com/",
+      mapUrl: "https://maps.google.com/?q=Bangkok",
+      portalBannerUrl: BUILDING_POS_PORTAL_SAMPLE_BANNER,
+      portalGalleryJson: JSON.stringify([...BUILDING_POS_PORTAL_SAMPLE_GALLERY]),
+      openTime: "10:00",
+      closeTime: "22:00",
+      portalBookingPaymentMode: "DEPOSIT",
+      depositAmountBaht: 200,
+      depositPercent: 30,
+    },
+  });
+
+  const reviewCount = await db.buildingPosReview.count({ where: { ownerUserId, trialSessionId } });
+  if (reviewCount === 0) {
+    await db.buildingPosReview.createMany({
+      data: [
+        {
+          ownerUserId,
+          trialSessionId,
+          guestName: "คุณมายด์",
+          rating: 5,
+          comment: "แกงเขียวหวานหอมมาก บริการดี จองโต๊ะสะดวก",
+          photoUrlsJson: "[]",
+          isPublished: true,
+        },
+        {
+          ownerUserId,
+          trialSessionId,
+          guestName: "ครอบครัวใจดี",
+          rating: 5,
+          comment: "ข้าวเหนียวมะม่วงหวานกำลังดี โต๊ะสะอาด",
+          photoUrlsJson: "[]",
+          isPublished: true,
+        },
+        {
+          ownerUserId,
+          trialSessionId,
+          guestName: "คุณต้น",
+          rating: 4,
+          comment: "ชาเย็นอร่อย ของว่างมาเร็ว รอของหวานนานนิดหน่อย",
+          photoUrlsJson: "[]",
+          isPublished: true,
+        },
+        {
+          ownerUserId,
+          trialSessionId,
+          guestName: "Walk-in",
+          rating: 5,
+          comment: "บรรยากาศดี พนักงานยิ้มแย้ม จะกลับมาอีก",
+          photoUrlsJson: "[]",
+          isPublished: true,
+        },
+      ],
+    });
+  }
+
+  const reservationCount = await db.buildingPosReservation.count({
+    where: { ownerUserId, trialSessionId },
+  });
+  if (reservationCount > 0) return;
+
+  const menus = await db.buildingPosMenuItem.findMany({
+    where: { ownerUserId, trialSessionId, isActive: true },
+    orderBy: { id: "asc" },
+    select: { id: true, name: true, price: true },
+  });
+  const byName = (name: string) => menus.find((x) => x.name === name);
+  const cartOf = (pairs: { n: string; q: number }[]) => {
+    const items: { menuItemId: number; name: string; unitPrice: number; qty: number }[] = [];
+    for (const p of pairs) {
+      const m = byName(p.n);
+      if (!m) continue;
+      items.push({ menuItemId: m.id, name: m.name, unitPrice: m.price, qty: p.q });
+    }
+    return items;
+  };
+  const totalOf = (items: { unitPrice: number; qty: number }[]) =>
+    items.reduce((s, x) => s + x.unitPrice * x.qty, 0);
+
+  const todayKey = bangkokDateKey(new Date());
+  const tomorrowKey = bangkokDateKeyMinusDays(todayKey, -1);
+
+  const r1Items = cartOf([
+    { n: "แกงเขียวหวานไก่", q: 2 },
+    { n: "ชาเย็น", q: 2 },
+  ]);
+  const r1Total = totalOf(r1Items);
+  const r2Items = cartOf([
+    { n: "ผัดกะเพราไก่ไข่ดาว", q: 1 },
+    { n: "ข้าวเหนียวมะม่วง", q: 1 },
+  ]);
+  const r2Total = totalOf(r2Items);
+  const r3Items = cartOf([{ n: "ข้าวผัดกุ้ง", q: 2 }, { n: "น้ำเปล่า", q: 2 }]);
+  const r3Total = totalOf(r3Items);
+
+  await db.buildingPosReservation.createMany({
+    data: [
+      {
+        ownerUserId,
+        trialSessionId,
+        customerName: "คุณนภา",
+        phone: "0815551001",
+        partySize: 4,
+        tablePreference: "โซนหน้าต่าง",
+        visitDateKey: todayKey,
+        visitTimeHm: "18:30",
+        itemsJson: r1Items,
+        itemsTotalBaht: r1Total,
+        paymentMode: "DEPOSIT",
+        payDueBaht: 200,
+        amountPaidBaht: 200,
+        paymentMethod: "PROMPTPAY",
+        paymentSlipUrl: "",
+        status: "SCHEDULED",
+        note: "มีเด็กเล็ก 1 คน",
+      },
+      {
+        ownerUserId,
+        trialSessionId,
+        customerName: "คุณวิชัย",
+        phone: "0892223344",
+        partySize: 2,
+        tablePreference: "",
+        visitDateKey: todayKey,
+        visitTimeHm: "12:00",
+        itemsJson: r2Items,
+        itemsTotalBaht: r2Total,
+        paymentMode: "DEPOSIT",
+        payDueBaht: 200,
+        amountPaidBaht: 0,
+        paymentMethod: "",
+        paymentSlipUrl: "",
+        status: "ARRIVED",
+        note: "",
+      },
+      {
+        ownerUserId,
+        trialSessionId,
+        customerName: "บริษัท เอ จำกัด",
+        phone: "0629988776",
+        partySize: 6,
+        tablePreference: "โต๊ะใหญ่",
+        visitDateKey: tomorrowKey,
+        visitTimeHm: "19:00",
+        itemsJson: r3Items,
+        itemsTotalBaht: r3Total,
+        paymentMode: "DEPOSIT",
+        payDueBaht: Math.max(200, Math.ceil((r3Total * 30) / 100)),
+        amountPaidBaht: Math.max(200, Math.ceil((r3Total * 30) / 100)),
+        paymentMethod: "TRANSFER",
+        paymentSlipUrl: "",
+        status: "SCHEDULED",
+        note: "ประชุมทีม — ขอใบเสร็จบริษัท",
+      },
+      {
+        ownerUserId,
+        trialSessionId,
+        customerName: "คุณฝ้าย",
+        phone: "0951112233",
+        partySize: 3,
+        tablePreference: "",
+        visitDateKey: bangkokDateKeyMinusDays(todayKey, 1),
+        visitTimeHm: "20:00",
+        itemsJson: [],
+        itemsTotalBaht: 0,
+        paymentMode: "NONE",
+        payDueBaht: 0,
+        amountPaidBaht: 0,
+        paymentMethod: "",
+        paymentSlipUrl: "",
+        status: "COMPLETED",
+        note: "มาร่วมงานวันเกิด",
+      },
+    ],
+  });
+}
+
 /**
  * เติม/รีเซ็ตข้อมูลตัวอย่างสำหรับแดชบอร์ด (เมนูถ้ายังไม่มี + ออเดอร์/ต้นทุน)
  * `force` = ล้างออเดอร์+รายจ่ายใน scope แล้วใส่ตัวอย่างใหม่ (คงหมวด/เมนูถ้ามีแล้ว)
@@ -474,6 +733,7 @@ export async function ensureBuildingPosDemoDataForOwner(
 
   const orderCount = await db.buildingPosOrder.count({ where: { ownerUserId, trialSessionId } });
   if (orderCount > 0 && !force) {
+    await seedBuildingPosPortalDemoData(db, ownerUserId, trialSessionId);
     return { catalogSeeded, financeSeeded: false };
   }
 
@@ -486,6 +746,7 @@ export async function ensureBuildingPosDemoDataForOwner(
   }
 
   await seedBuildingPosDemoFinanceData(db, ownerUserId, trialSessionId);
+  await seedBuildingPosPortalDemoData(db, ownerUserId, trialSessionId);
   return { catalogSeeded, financeSeeded: true };
 }
 
@@ -495,6 +756,14 @@ export async function deleteBuildingPosScopeData(
   ownerUserId: string,
   trialSessionId: string,
 ): Promise<void> {
+  await db.buildingPosLoyaltyLedger.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await db.buildingPosLoyaltyReward.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await db.buildingPosLoyaltyMember.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await db.buildingPosLoyaltySettings.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await db.buildingPosReservation.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await db.buildingPosReview.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await db.buildingPosCostEntry.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await db.buildingPosCostCategory.deleteMany({ where: { ownerUserId, trialSessionId } });
   await db.buildingPosOrder.deleteMany({ where: { ownerUserId, trialSessionId } });
   await db.buildingPosMenuRecipeLine.deleteMany({
     where: { menuItem: { ownerUserId, trialSessionId } },
@@ -502,22 +771,26 @@ export async function deleteBuildingPosScopeData(
   await db.buildingPosPurchaseOrder.deleteMany({ where: { ownerUserId, trialSessionId } });
   await db.buildingPosMenuItem.deleteMany({ where: { ownerUserId, trialSessionId } });
   await db.buildingPosCategory.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await db.buildingPosKitchenDepartment.deleteMany({ where: { ownerUserId, trialSessionId } });
   await db.buildingPosIngredient.deleteMany({ where: { ownerUserId, trialSessionId } });
   await db.buildingPosStaffLink.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await db.buildingPosShopProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
 }
 
 /** เมนู + หมวดตัวอย่างสำหรับผู้ใช้ทดลอง POS */
 export async function seedBuildingPosTrialData(tx: Tx, ownerUserId: string, trialSessionId: string): Promise<void> {
   await insertCatalog(tx, ownerUserId, trialSessionId, " (ทดลอง)");
   await seedBuildingPosDemoFinanceData(tx, ownerUserId, trialSessionId);
+  await seedBuildingPosPortalDemoData(tx, ownerUserId, trialSessionId);
 }
 
 /**
  * ข้อมูลตัวอย่างโหมดใช้งานจริง (`trial_session_id` = prod) สำหรับบัญชี demo เท่านั้น (เรียกจาก prisma/seed.ts)
- * ทุกครั้งที่รัน seed: **ล้าง** POS scope prod ของ user นี้แล้วสร้างเมนู 20 รายการ + ออเดอร์/ต้นทุนตัวอย่างใหม่
+ * ทุกครั้งที่รัน seed: **ล้าง** POS scope prod ของ user นี้แล้วสร้างเมนู 20 รายการ + ออเดอร์/ต้นทุน + พอร์ทัลตัวอย่างใหม่
  */
 export async function seedBuildingPosProdDemoForOwner(db: DbLike, ownerUserId: string): Promise<void> {
   await deleteBuildingPosScopeData(db, ownerUserId, TRIAL_PROD_SCOPE);
   await insertCatalog(db, ownerUserId, TRIAL_PROD_SCOPE, "");
   await seedBuildingPosDemoFinanceData(db, ownerUserId, TRIAL_PROD_SCOPE);
+  await seedBuildingPosPortalDemoData(db, ownerUserId, TRIAL_PROD_SCOPE);
 }

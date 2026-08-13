@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/api-auth";
-import { carWashOwnerFromAuth } from "@/lib/car-wash/api-owner";
-import { getCarWashDataScope } from "@/lib/trial/module-scopes";
+import { getCarWashOwnerOrStaffContext } from "@/lib/car-wash/owner-or-staff";
 import type { CarWashBookingStatus } from "@/generated/prisma/enums";
 import { assertBookingSlotAvailable } from "@/lib/car-wash/booking-slot-availability";
 import {
@@ -12,6 +10,7 @@ import {
   visitStatusForBookingStatus,
 } from "@/lib/car-wash/ensure-visit-for-booking";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import { notifyCarWashLaneBoard } from "@/systems/car-wash/lib/lane-board-sse";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -96,12 +95,10 @@ function mapBooking(
 }
 
 export async function PATCH(req: Request, ctx: Ctx) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const own = await carWashOwnerFromAuth(auth.session.sub);
-  if (!own.ok) return own.response;
+  const own = await getCarWashOwnerOrStaffContext(req);
+  if (!own.ok) return own.res;
 
-  const scope = await getCarWashDataScope(own.ownerId);
+  const scope = { trialSessionId: own.trialSessionId };
   const id = parseId((await ctx.params).id);
   if (id === null) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 
@@ -213,7 +210,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (parsed.data.status != null && bookingStatusShouldEnsureVisit(parsed.data.status)) {
     const force = visitStatusForBookingStatus(parsed.data.status) ?? "QUEUED";
     const ensured = await ensureCarWashVisitForBooking(prisma, row, {
-      recordedByName: auth.session.username || "พนักงาน",
+      recordedByName: own.recordedByName || "พนักงาน",
       forceStatus: force,
     });
     visitId = ensured.visitId;
@@ -227,18 +224,17 @@ export async function PATCH(req: Request, ctx: Ctx) {
         data: { serviceStatus: "WASHING" },
       });
     }
+    notifyCarWashLaneBoard(own.ownerId);
   }
 
   return NextResponse.json({ booking: mapBooking(row, visitId) });
 }
 
-export async function DELETE(_req: Request, ctx: Ctx) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const own = await carWashOwnerFromAuth(auth.session.sub);
-  if (!own.ok) return own.response;
+export async function DELETE(req: Request, ctx: Ctx) {
+  const own = await getCarWashOwnerOrStaffContext(req);
+  if (!own.ok) return own.res;
 
-  const scope = await getCarWashDataScope(own.ownerId);
+  const scope = { trialSessionId: own.trialSessionId };
   const id = parseId((await ctx.params).id);
   if (id === null) return NextResponse.json({ error: "ไม่พบ" }, { status: 404 });
 

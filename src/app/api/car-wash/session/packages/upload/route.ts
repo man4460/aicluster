@@ -1,17 +1,14 @@
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
-import { requireSession } from "@/lib/api-auth";
-import { carWashOwnerFromAuth } from "@/lib/car-wash/api-owner";
+import { getCarWashOwnerOrStaffContext } from "@/lib/car-wash/owner-or-staff";
 
 const MAX_BYTES = 3 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 export async function POST(req: Request) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const own = await carWashOwnerFromAuth(auth.session.sub);
-  if (!own.ok) return own.response;
+  const own = await getCarWashOwnerOrStaffContext(req);
+  if (!own.ok) return own.res;
 
   let form: FormData;
   try {

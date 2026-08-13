@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/api-auth";
-import { carWashOwnerFromAuth } from "@/lib/car-wash/api-owner";
+import { getCarWashOwnerOrStaffContext } from "@/lib/car-wash/owner-or-staff";
 import { normalizePhone } from "@/lib/car-wash/http";
 import { carWashServiceStatusZod, normalizeCarWashServiceStatus } from "@/lib/car-wash/service-status";
 import { jsonCarWashSessionError } from "@/lib/car-wash/route-errors";
-import { getCarWashDataScope } from "@/lib/trial/module-scopes";
+import { carWashBookingTotalAmount, computeCarWashVisitPayment } from "@/lib/car-wash/visit-lane-payment";
+import {
+  CAR_WASH_VISIT_EVIDENCE_MAX,
+  normalizeCarWashVisitEvidenceUrls,
+} from "@/systems/car-wash/lib/visit-media";
+import { notifyCarWashLaneBoard } from "@/systems/car-wash/lib/lane-board-sse";
+
+const visitBookingSelect = { paymentStatus: true, amountPaidBaht: true, packagePrice: true } as const;
 
 const visitPatchSchema = z
   .object({
@@ -22,6 +28,7 @@ const visitPatchSchema = z
     visit_at: z.string().datetime().optional(),
     service_status: carWashServiceStatusZod.optional(),
     photo_url: z.string().max(512).optional().nullable(),
+    evidence_photo_urls: z.array(z.string().max(512)).max(CAR_WASH_VISIT_EVIDENCE_MAX).optional(),
   })
   .refine(
     (d) =>
@@ -36,7 +43,8 @@ const visitPatchSchema = z
       d.recorded_by_name !== undefined ||
       d.visit_at !== undefined ||
       d.service_status !== undefined ||
-      d.photo_url !== undefined,
+      d.photo_url !== undefined ||
+      d.evidence_photo_urls !== undefined,
     { message: "ต้องส่งอย่างน้อยหนึ่งฟิลด์" },
   );
 
@@ -54,8 +62,18 @@ function visitJson(row: {
   recordedByName: string;
   serviceStatus: string;
   photoUrl: string;
+  evidencePhotoUrlsJson?: unknown;
   bundleId: number | null;
+  bookingId?: number | null;
+  booking?: { paymentStatus: string; amountPaidBaht: number; packagePrice: number } | null;
 }) {
+  const serviceStatus = normalizeCarWashServiceStatus(row.serviceStatus);
+  const payment = computeCarWashVisitPayment({
+    bundleId: row.bundleId ?? null,
+    finalPrice: row.finalPrice,
+    serviceStatus,
+    booking: row.booking ?? null,
+  });
   return {
     id: row.id,
     visit_at: row.visitAt.toISOString(),
@@ -68,19 +86,20 @@ function visitJson(row: {
     final_price: row.finalPrice,
     note: row.note,
     recorded_by_name: row.recordedByName,
-    service_status: normalizeCarWashServiceStatus(row.serviceStatus),
+    service_status: serviceStatus,
     photo_url: row.photoUrl ?? "",
+    evidence_photo_urls: normalizeCarWashVisitEvidenceUrls(row.evidencePhotoUrlsJson),
     bundle_id: row.bundleId ?? null,
+    booking_id: row.bookingId ?? null,
+    ...payment,
   };
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const auth = await requireSession();
-    if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const own = await carWashOwnerFromAuth(auth.session.sub);
-    if (!own.ok) return own.response;
-    const scope = await getCarWashDataScope(own.ownerId);
+    const own = await getCarWashOwnerOrStaffContext(req);
+    if (!own.ok) return own.res;
+    const scope = { trialSessionId: own.trialSessionId };
 
     const p = await ctx.params;
     const id = Number(p.id);
@@ -127,6 +146,29 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           clearBundleId = true;
         }
 
+        if (becomesPaid && row.bundleId == null && row.bookingId != null) {
+          const booking = await tx.carWashBooking.findFirst({
+            where: { id: row.bookingId, ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
+          });
+          if (booking) {
+            const total = carWashBookingTotalAmount(
+              {
+                paymentStatus: booking.paymentStatus,
+                amountPaidBaht: booking.amountPaidBaht,
+                packagePrice: booking.packagePrice,
+              },
+              d.final_price !== undefined ? d.final_price : row.finalPrice,
+            );
+            const remaining = Math.max(0, total - booking.amountPaidBaht);
+            if (remaining > 0) {
+              await tx.carWashBooking.update({
+                where: { id: booking.id },
+                data: { amountPaidBaht: booking.amountPaidBaht + remaining, paymentStatus: "PAID" },
+              });
+            }
+          }
+        }
+
         return tx.carWashVisit.update({
           where: { id: row.id },
           data: {
@@ -142,6 +184,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
             ...(d.visit_at !== undefined && { visitAt: new Date(d.visit_at) }),
             ...(d.service_status !== undefined && { serviceStatus: d.service_status }),
             ...(d.photo_url !== undefined && { photoUrl: (d.photo_url ?? "").trim() }),
+            ...(d.evidence_photo_urls !== undefined && {
+              evidencePhotoUrlsJson: normalizeCarWashVisitEvidenceUrls(d.evidence_photo_urls),
+            }),
             ...(clearBundleId && { bundleId: null }),
           },
         });
@@ -157,19 +202,27 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       throw e;
     }
 
-    return NextResponse.json({ visit: visitJson(updated) });
+    const bookingSnapshot =
+      updated.bookingId != null
+        ? await prisma.carWashBooking.findUnique({
+            where: { id: updated.bookingId },
+            select: visitBookingSelect,
+          })
+        : null;
+
+    notifyCarWashLaneBoard(own.ownerId);
+
+    return NextResponse.json({ visit: visitJson({ ...updated, booking: bookingSnapshot }) });
   } catch (e) {
     return jsonCarWashSessionError(e, "car-wash/session/visits/[id] PATCH");
   }
 }
 
-export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const auth = await requireSession();
-    if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const own = await carWashOwnerFromAuth(auth.session.sub);
-    if (!own.ok) return own.response;
-    const scope = await getCarWashDataScope(own.ownerId);
+    const own = await getCarWashOwnerOrStaffContext(req);
+    if (!own.ok) return own.res;
+    const scope = { trialSessionId: own.trialSessionId };
 
     const p = await ctx.params;
     const id = Number(p.id);
@@ -180,6 +233,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     });
     if (!row) return NextResponse.json({ ok: false });
     await prisma.carWashVisit.delete({ where: { id: row.id } });
+    notifyCarWashLaneBoard(own.ownerId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return jsonCarWashSessionError(e, "car-wash/session/visits/[id] DELETE");

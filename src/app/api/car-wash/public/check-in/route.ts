@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { isCarWashCustomerPortalOpenForOwner } from "@/lib/car-wash/portal-access";
 import { resolvePublicCarWashTrialSessionId } from "@/lib/car-wash/public-trial-scope";
+import { notifyCarWashLaneBoard } from "@/systems/car-wash/lib/lane-board-sse";
 
 const bodySchema = z.object({
   ownerId: z.string().min(10).max(64),
@@ -64,6 +65,7 @@ export async function POST(req: Request) {
       });
       return consumed;
     });
+    notifyCarWashLaneBoard(ownerId);
     return NextResponse.json({
       ok: true,
       bundle: {

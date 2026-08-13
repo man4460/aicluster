@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 /** แถวรายการแลกคะแนน — รูปซ้าย + ชื่อ/คะแนน + ปุ่มแลก */
@@ -22,6 +22,7 @@ export function LoyaltyRewardMenuCard({
   className?: string;
 }) {
   const src = (imageUrl ?? "").trim();
+  const [failed, setFailed] = useState(false);
   return (
     <li
       className={cn(
@@ -30,9 +31,15 @@ export function LoyaltyRewardMenuCard({
       )}
     >
       <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-slate-100 to-violet-50">
-        {src ?
+        {src && !failed ?
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt="" className="h-full w-full object-cover object-center" />
+          <img
+            src={src}
+            alt=""
+            className="h-full w-full object-cover object-center"
+            referrerPolicy="no-referrer"
+            onError={() => setFailed(true)}
+          />
         : <div className="flex h-full w-full items-center justify-center text-slate-300" aria-hidden>
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.5}>
               <path d="M4 16l4.5-4.5a2 2 0 012.8 0L16 16M14 14l1.5-1.5a2 2 0 012.8 0L20 14M6 8h.01" strokeLinecap="round" />

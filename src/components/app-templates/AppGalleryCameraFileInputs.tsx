@@ -8,6 +8,8 @@ export type AppGalleryCameraFileInputsProps = {
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   /** className สำหรับ input ซ่อน (เช่น sr-only) */
   inputClassName?: string;
+  /** เลือกหลายรูปจากแกลเลอรีได้ (กล้องยังทีละรูป) */
+  galleryMultiple?: boolean;
 };
 
 /**
@@ -18,6 +20,7 @@ export function AppGalleryCameraFileInputs({
   cameraInputRef,
   onChange,
   inputClassName = "sr-only",
+  galleryMultiple = false,
 }: AppGalleryCameraFileInputsProps) {
   return (
     <>
@@ -25,6 +28,7 @@ export function AppGalleryCameraFileInputs({
         ref={galleryInputRef}
         type="file"
         accept="image/*"
+        multiple={galleryMultiple || undefined}
         className={inputClassName}
         tabIndex={-1}
         aria-hidden

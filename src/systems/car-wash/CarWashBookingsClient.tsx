@@ -1,12 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   AppDashboardSection,
-  AppIconCheck,
-  AppIconClose,
-  AppIconToolbarButton,
-  AppIconUserX,
   AppSectionHeader,
 } from "@/components/app-templates";
 import { FormModal } from "@/components/ui/FormModal";
@@ -18,12 +14,9 @@ import {
   scheduledAtLocalFromSlot,
   type SlotAvailabilityItem,
 } from "@/lib/car-wash/booking-slot-availability";
-import {
-  carWashComputePortalPayDue,
-  normalizeCarWashPortalPaymentMode,
-  type CarWashPortalBookingPaymentMode,
-} from "@/lib/car-wash/portal-booking";
+import { readStoredStaffDailyUnlock, staffDailyUnlockHeaders } from "@/lib/modules/staff-daily-pin";
 import { bangkokDateKey } from "@/lib/time/bangkok";
+import type { CarWashStaffAuth } from "@/systems/car-wash/car-wash-service";
 import {
   assetRowEditIconButtonClass,
   assetRowRemoveIconButtonClass,
@@ -31,8 +24,17 @@ import {
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
 import { CarWashBookingStatusBadge } from "@/systems/car-wash/CarWashBookingStatusBadge";
-import { CarWashPaymentPanel } from "@/systems/car-wash/CarWashPaymentPanel";
-import type { CarWashPaymentMethod } from "@/systems/car-wash/lib/payment-method";
+import { CarWashDashboardTabToolbar } from "@/systems/car-wash/CarWashDashboardTabToolbar";
+
+/** คิวที่ยังรอรับเข้าลาน — หลังเข้าลาน / ไม่มา / ยกเลิก จะไม่โชว์ในจัดการคิว */
+const QUEUE_WAITING_STATUSES = new Set(["SCHEDULED"]);
+
+const queuePrimaryActionClass =
+  "inline-flex min-h-10 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-3.5 text-xs font-black text-white shadow-sm transition hover:brightness-105 disabled:opacity-50";
+const queueSecondaryActionClass =
+  "inline-flex min-h-10 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs font-black text-amber-900 transition hover:bg-amber-100 disabled:opacity-50";
+const queueDangerActionClass =
+  "inline-flex min-h-10 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-black text-rose-700 transition hover:bg-rose-100 disabled:opacity-50";
 
 type BookingRow = {
   id: number;
@@ -73,18 +75,6 @@ type ServicePackage = {
   is_active?: boolean;
 };
 
-type MemberBundle = {
-  id: number;
-  customer_name: string;
-  customer_phone: string;
-  plate_number: string;
-  package_id: number;
-  package_name: string;
-  total_uses: number;
-  used_uses: number;
-  is_active: boolean;
-};
-
 type DaySchedulePayload = {
   openTime?: string;
   closeTime?: string;
@@ -101,12 +91,39 @@ export function CarWashBookingsClient({
   initialDateKey,
   staffQrLanding = false,
   onQueueChanged,
+  staffAuth = null,
 }: {
   initialDateKey?: string;
   staffQrLanding?: boolean;
-  /** หลังเปลี่ยนสถานะคิว (เช่น มาแล้ว → เข้าลาน) ให้รีเฟรชลาน/รายการ */
+  /** หลังเปลี่ยนสถานะคิว (เช่น เข้าลาน) ให้รีเฟรชลาน/รายการ */
   onQueueChanged?: () => void;
+  /** พอร์ทัลลิงก์พนักงาน — ใส่โทเค็นแทน session cookie ทุกคำขอ */
+  staffAuth?: CarWashStaffAuth | null;
 }) {
+  const authUrl = useCallback(
+    (path: string) => {
+      if (!staffAuth) return path;
+      const qs = new URLSearchParams({
+        ownerId: staffAuth.ownerId,
+        t: staffAuth.trialSessionId,
+        k: staffAuth.k,
+      });
+      const unlock = readStoredStaffDailyUnlock("car-wash", staffAuth.ownerId);
+      if (unlock) qs.set("du", unlock);
+      return `${path}${path.includes("?") ? "&" : "?"}${qs.toString()}`;
+    },
+    [staffAuth],
+  );
+  const authInit = useCallback(
+    (init?: RequestInit): RequestInit => {
+      if (!staffAuth) return { ...init, credentials: init?.credentials ?? "include" };
+      const headerBag = new Headers(init?.headers);
+      const unlockHeaders = staffDailyUnlockHeaders("car-wash", staffAuth.ownerId);
+      for (const [key, value] of Object.entries(unlockHeaders)) headerBag.set(key, value);
+      return { ...init, credentials: "omit", cache: init?.cache ?? "no-store", headers: headerBag };
+    },
+    [staffAuth],
+  );
   const [dateKey, setDateKey] = useState(initialDateKey ?? bangkokDateKey());
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [listLoading, setListLoading] = useState(true);
@@ -128,18 +145,8 @@ export function CarWashBookingsClient({
   const [patchingId, setPatchingId] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<BookingRow | null>(null);
-  const [payMode, setPayMode] = useState<CarWashPortalBookingPaymentMode>("NONE");
-  const [shopDeposit, setShopDeposit] = useState<number | null>(null);
-  const [payMethod, setPayMethod] = useState<CarWashPaymentMethod>("CASH");
-  const [paySlipUrl, setPaySlipUrl] = useState<string | null>(null);
-  const [memberBusy, setMemberBusy] = useState(false);
-  const [memberFound, setMemberFound] = useState<boolean | null>(null);
-  const [memberBundles, setMemberBundles] = useState<MemberBundle[]>([]);
-  const [memberPackageSelected, setMemberPackageSelected] = useState(false);
-  const [memberDurationMinutes, setMemberDurationMinutes] = useState<number | null>(null);
 
   const singleVisitPackages = useMemo(
     () => packages.filter((p) => (p.total_uses ?? 1) === 1),
@@ -149,27 +156,14 @@ export function CarWashBookingsClient({
     () => packages.find((p) => p.id === selectedPackageId) ?? null,
     [packages, selectedPackageId],
   );
-  const effectiveDuration = useMemo(() => {
-    if (memberPackageSelected && memberDurationMinutes != null) return memberDurationMinutes;
-    return carWashNormalizeDurationMinutes(selectedPackage?.duration_minutes, scheduleSlotMinutes);
-  }, [
-    memberPackageSelected,
-    memberDurationMinutes,
-    selectedPackage?.duration_minutes,
-    scheduleSlotMinutes,
-  ]);
+  const effectiveDuration = useMemo(
+    () => carWashNormalizeDurationMinutes(selectedPackage?.duration_minutes, scheduleSlotMinutes),
+    [selectedPackage?.duration_minutes, scheduleSlotMinutes],
+  );
   const slotsNeeded = useMemo(
     () => carWashSlotsNeeded(effectiveDuration, scheduleSlotMinutes),
     [effectiveDuration, scheduleSlotMinutes],
   );
-  const payDue = useMemo(() => {
-    if (memberPackageSelected) return null;
-    return carWashComputePortalPayDue({
-      mode: payMode,
-      depositAmountBaht: shopDeposit,
-      totalBaht: selectedPackage?.price ?? 0,
-    });
-  }, [memberPackageSelected, payMode, shopDeposit, selectedPackage?.price]);
   const bookableSlots = useMemo(
     () => buildBookableStartSlots(slotAvailability, scheduleSlotMinutes, effectiveDuration),
     [slotAvailability, scheduleSlotMinutes, effectiveDuration],
@@ -179,9 +173,10 @@ export function CarWashBookingsClient({
     setListLoading(true);
     setErr(null);
     try {
-      const res = await fetch(`/api/car-wash/bookings?date=${encodeURIComponent(dateKey)}`, {
-        credentials: "include",
-      });
+      const res = await fetch(
+        authUrl(`/api/car-wash/bookings?date=${encodeURIComponent(dateKey)}`),
+        authInit(),
+      );
       const j = (await res.json().catch(() => ({}))) as { bookings?: BookingRow[]; error?: string };
       if (!res.ok) {
         setErr(j.error ?? "โหลดรายการไม่สำเร็จ");
@@ -192,7 +187,7 @@ export function CarWashBookingsClient({
     } finally {
       setListLoading(false);
     }
-  }, [dateKey]);
+  }, [dateKey, authUrl, authInit]);
 
   useEffect(() => {
     void load();
@@ -201,29 +196,9 @@ export function CarWashBookingsClient({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      try {
-        const res = await fetch("/api/car-wash/session/booking-payment", { credentials: "include" });
-        const j = (await res.json().catch(() => ({}))) as {
-          bookingPayment?: { portalBookingPaymentMode?: string; depositAmountBaht?: number | null };
-        };
-        if (!res.ok || cancelled) return;
-        setPayMode(normalizeCarWashPortalPaymentMode(j.bookingPayment?.portalBookingPaymentMode));
-        setShopDeposit(j.bookingPayment?.depositAmountBaht ?? null);
-      } catch {
-        /* ignore */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
       setPackagesLoading(true);
       try {
-        const res = await fetch("/api/car-wash/session/packages", { credentials: "include" });
+        const res = await fetch(authUrl("/api/car-wash/session/packages"), authInit());
         const j = (await res.json().catch(() => ({}))) as { packages?: ServicePackage[]; error?: string };
         if (!res.ok) {
           if (!cancelled) setErr(j.error ?? "โหลดบริการไม่สำเร็จ");
@@ -237,106 +212,39 @@ export function CarWashBookingsClient({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [authUrl, authInit]);
 
-  const loadScheduleForBooking = useCallback(async (dk: string) => {
-    setScheduleLoading(true);
-    try {
-      const res = await fetch(`/api/car-wash/day-schedules?date=${encodeURIComponent(dk)}`, {
-        credentials: "include",
-      });
-      const j = (await res.json().catch(() => ({}))) as DaySchedulePayload;
-      if (!res.ok) {
-        setErr(j.error ?? "โหลดตารางเวลาไม่สำเร็จ");
-        setSlotAvailability([]);
-        return;
+  const loadScheduleForBooking = useCallback(
+    async (dk: string) => {
+      setScheduleLoading(true);
+      try {
+        const res = await fetch(
+          authUrl(`/api/car-wash/day-schedules?date=${encodeURIComponent(dk)}`),
+          authInit(),
+        );
+        const j = (await res.json().catch(() => ({}))) as DaySchedulePayload;
+        if (!res.ok) {
+          setErr(j.error ?? "โหลดตารางเวลาไม่สำเร็จ");
+          setSlotAvailability([]);
+          return;
+        }
+        setScheduleOpen(j.openTime ?? "08:00");
+        setScheduleClose(j.closeTime ?? "20:00");
+        setScheduleSlotMinutes(j.slotMinutes ?? 30);
+        setScheduleClosed(Boolean(j.isClosed));
+        const slots = j.slotAvailability ?? [];
+        setSlotAvailability(slots);
+        setSelectedSlot(slots.find((s) => s.available)?.time ?? "");
+      } finally {
+        setScheduleLoading(false);
       }
-      setScheduleOpen(j.openTime ?? "08:00");
-      setScheduleClose(j.closeTime ?? "20:00");
-      setScheduleSlotMinutes(j.slotMinutes ?? 30);
-      setScheduleClosed(Boolean(j.isClosed));
-      const slots = j.slotAvailability ?? [];
-      setSlotAvailability(slots);
-      setSelectedSlot(slots.find((s) => s.available)?.time ?? "");
-    } finally {
-      setScheduleLoading(false);
-    }
-  }, []);
-
-  function openAddModal() {
-    setErr(null);
-    setMsg(null);
-    setPhone("");
-    setPlateNumber("");
-    setCustomerName("");
-    setSelectedPackageId(null);
-    setBookingDateKey(dateKey);
-    setSelectedSlot("");
-    setPayMethod("CASH");
-    setPaySlipUrl(null);
-    setMemberFound(null);
-    setMemberBundles([]);
-    setMemberPackageSelected(false);
-    setMemberDurationMinutes(null);
-    setEditing(null);
-    setEditOpen(false);
-    setAddOpen(true);
-    void loadScheduleForBooking(dateKey);
-  }
+    },
+    [authUrl, authInit],
+  );
 
   function selectSingleVisitPackage(pkg: ServicePackage) {
     setSelectedPackageId(pkg.id);
-    setMemberPackageSelected(false);
-    setMemberDurationMinutes(null);
     setSelectedSlot("");
-  }
-
-  function selectMemberBundle(b: MemberBundle) {
-    setSelectedPackageId(b.package_id);
-    setMemberPackageSelected(true);
-    const pkg = packages.find((p) => p.id === b.package_id);
-    setMemberDurationMinutes(
-      carWashNormalizeDurationMinutes(pkg?.duration_minutes, scheduleSlotMinutes),
-    );
-    setCustomerName((prev) => prev.trim() || b.customer_name || "");
-    setPlateNumber((prev) => prev.trim() || b.plate_number || "");
-    setSelectedSlot("");
-  }
-
-  async function lookupMember() {
-    const digits = phone.replace(/\D/g, "");
-    if (digits.length < 9) {
-      setErr("กรอกเบอร์อย่างน้อย 9 หลักก่อนค้นหา");
-      return;
-    }
-    setMemberBusy(true);
-    setErr(null);
-    setMemberFound(null);
-    setMemberBundles([]);
-    setMemberPackageSelected(false);
-    try {
-      const res = await fetch("/api/car-wash/session/bundles", { credentials: "include" });
-      const j = (await res.json().catch(() => ({}))) as { bundles?: MemberBundle[]; error?: string };
-      if (!res.ok) {
-        setErr(j.error ?? "ค้นหาสมาชิกไม่สำเร็จ");
-        return;
-      }
-      const hits = (j.bundles ?? []).filter((b) => {
-        if (!b.is_active) return false;
-        if (b.used_uses >= b.total_uses) return false;
-        const ph = String(b.customer_phone ?? "").replace(/\D/g, "");
-        return ph === digits || ph.endsWith(digits) || digits.endsWith(ph);
-      });
-      setMemberFound(true);
-      setMemberBundles(hits);
-      if (hits.length === 1) {
-        selectMemberBundle(hits[0]!);
-      } else if (hits.length === 0) {
-        setMsg("ยังไม่มีลูกค้าเบอร์นี้ — เลือกเมนูรายครั้งแล้วจองได้");
-      }
-    } finally {
-      setMemberBusy(false);
-    }
   }
 
   function openEditModal(b: BookingRow) {
@@ -347,15 +255,10 @@ export function CarWashBookingsClient({
     setPlateNumber(b.plateNumber);
     setCustomerName(b.customerName ?? "");
     setSelectedPackageId(b.packageId);
-    setMemberPackageSelected(false);
-    setMemberDurationMinutes(null);
-    setMemberFound(null);
-    setMemberBundles([]);
     const dk = new Date(b.scheduledAt).toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
     const hm = bookingSlotHm(b.scheduledAt);
     setBookingDateKey(dk);
     setSelectedSlot(hm);
-    setAddOpen(false);
     setEditOpen(true);
     void loadScheduleForBooking(dk);
   }
@@ -365,10 +268,10 @@ export function CarWashBookingsClient({
     setPatchingId(b.id);
     setErr(null);
     try {
-      const res = await fetch(`/api/car-wash/bookings/${b.id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const res = await fetch(
+        authUrl(`/api/car-wash/bookings/${b.id}`),
+        authInit({ method: "DELETE" }),
+      );
       const j = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
         setErr(j.error ?? "ลบไม่สำเร็จ");
@@ -386,20 +289,24 @@ export function CarWashBookingsClient({
   }
 
   useEffect(() => {
-    if (!addOpen && !editOpen) return;
+    if (!editOpen) return;
     void loadScheduleForBooking(bookingDateKey);
-  }, [addOpen, editOpen, bookingDateKey, loadScheduleForBooking]);
+  }, [editOpen, bookingDateKey, loadScheduleForBooking]);
 
   useEffect(() => {
-    if ((!addOpen && !editOpen) || selectedPackageId == null) return;
+    if (!editOpen || selectedPackageId == null) return;
     const active = bookableSlots.find((s) => s.time === selectedSlot && s.available);
     if (active) return;
     setSelectedSlot(bookableSlots.find((s) => s.available)?.time ?? "");
-  }, [addOpen, editOpen, selectedPackageId, bookableSlots, selectedSlot]);
+  }, [editOpen, selectedPackageId, bookableSlots, selectedSlot]);
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
+    if (!editing) {
+      setErr("ไม่พบคิวที่แก้ไข");
+      return;
+    }
     const digits = phone.replace(/\D/g, "");
     if (digits.length < 9) {
       setErr("กรอกเบอร์อย่างน้อย 9 หลัก");
@@ -413,19 +320,13 @@ export function CarWashBookingsClient({
       setErr(scheduleClosed ? "วันนี้ปิดรับจอง" : "เลือกช่วงเวลาจากตาราง");
       return;
     }
-    if (payDue != null && payDue > 0 && !editOpen) {
-      if ((payMethod === "PROMPTPAY" || payMethod === "TRANSFER") && !paySlipUrl) {
-        setErr(payMode === "FULL" ? "แนบสลิปชำระเต็มยอด" : "แนบสลิปมัดจำ");
-        return;
-      }
-    }
     setSaving(true);
     try {
-      if (editOpen && editing) {
-        const res = await fetch(`/api/car-wash/bookings/${editing.id}`, {
+      const res = await fetch(
+        authUrl(`/api/car-wash/bookings/${editing.id}`),
+        authInit({
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          credentials: "include",
           body: JSON.stringify({
             phone: digits,
             plateNumber: plateNumber.trim() || null,
@@ -433,52 +334,16 @@ export function CarWashBookingsClient({
             packageId: selectedPackageId,
             scheduledAtLocal: scheduledAtLocalFromSlot(bookingDateKey, selectedSlot),
           }),
-        });
-        const j = (await res.json().catch(() => ({}))) as { error?: string };
-        if (!res.ok) {
-          setErr(j.error ?? "แก้ไขไม่สำเร็จ");
-          return;
-        }
-        setMsg("แก้ไขคิวแล้ว");
-        setEditOpen(false);
-        setEditing(null);
-        await load();
-        onQueueChanged?.();
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("car-wash-queue-changed"));
-        }
-        return;
-      }
-
-      const useMemberPay = memberPackageSelected;
-      const res = await fetch("/api/car-wash/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          phone: digits,
-          plateNumber: plateNumber.trim() || null,
-          customerName: customerName.trim() || null,
-          packageId: selectedPackageId,
-          scheduledAtLocal: scheduledAtLocalFromSlot(bookingDateKey, selectedSlot),
-          paymentMethod: !useMemberPay && payDue != null && payDue > 0 ? payMethod : "UNPAID",
-          amountPaidBaht: !useMemberPay && payDue != null && payDue > 0 ? payDue : 0,
-          paymentSlipUrl: !useMemberPay ? paySlipUrl : null,
-          forcePaymentMode: useMemberPay ? "NONE" : null,
         }),
-      });
-      const j = (await res.json().catch(() => ({}))) as { error?: string; booking?: BookingRow };
+      );
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setErr(j.error ?? "บันทึกไม่สำเร็จ");
+        setErr(j.error ?? "แก้ไขไม่สำเร็จ");
         return;
       }
-      setMsg(
-        bookingDateKey === bangkokDateKey()
-          ? "บันทึกคิวแล้ว"
-          : `บันทึกคิวล่วงหน้าแล้ว — ดูที่จัดการคิววันที่ ${bookingDateKey}`,
-      );
-      setAddOpen(false);
-      if (bookingDateKey !== dateKey) setDateKey(bookingDateKey);
+      setMsg("แก้ไขคิวแล้ว");
+      setEditOpen(false);
+      setEditing(null);
       await load();
       onQueueChanged?.();
       if (typeof window !== "undefined") {
@@ -496,18 +361,32 @@ export function CarWashBookingsClient({
     setErr(null);
     setPatchingId(id);
     try {
-      const res = await fetch(`/api/car-wash/bookings/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ status }),
-      });
+      const res = await fetch(
+        authUrl(`/api/car-wash/bookings/${id}`),
+        authInit({
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        }),
+      );
       const j = (await res.json().catch(() => ({}))) as { error?: string; booking?: BookingRow };
       if (!res.ok) {
         setErr(j.error ?? "อัปเดตไม่สำเร็จ");
         return;
       }
-      if (j.booking) {
+      /** เข้าลาน / ไม่มา / ยกเลิก / เสร็จ — ออกจากรายการจัดการคิว */
+      const leaveQueue =
+        status === "ARRIVED" ||
+        status === "IN_SERVICE" ||
+        status === "COMPLETED" ||
+        status === "NO_SHOW" ||
+        status === "CANCELLED";
+      if (leaveQueue) {
+        setBookings((prev) => prev.filter((b) => b.id !== id));
+        if (status === "ARRIVED") {
+          setMsg("เข้าลานแล้ว — ดูที่ภาพรวมลานล้าง");
+        }
+      } else if (j.booking) {
         setBookings((prev) =>
           prev.map((b) =>
             b.id === id
@@ -531,8 +410,13 @@ export function CarWashBookingsClient({
     }
   }
 
+  const waitingBookings = useMemo(
+    () => bookings.filter((b) => QUEUE_WAITING_STATUSES.has(b.status)),
+    [bookings],
+  );
+
   const bookingsByRound = useMemo(() => {
-    const sorted = [...bookings].sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+    const sorted = [...waitingBookings].sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
     const map = new Map<string, BookingRow[]>();
     for (const b of sorted) {
       const hm = bookingSlotHm(b.scheduledAt);
@@ -541,20 +425,20 @@ export function CarWashBookingsClient({
       map.set(hm, list);
     }
     return Array.from(map.entries()).map(([timeHm, rows]) => ({ timeHm, rows }));
-  }, [bookings]);
+  }, [waitingBookings]);
 
   const listInner = (
     <>
       {listLoading ? (
         <p className="text-center text-sm text-[#66638c]">กำลังโหลด…</p>
-      ) : bookings.length === 0 ? (
+      ) : waitingBookings.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/60 p-6 text-center text-sm text-[#66638c]">
-          ไม่มีคิวในวันนี้ — จองจากลิงก์ลูกค้าหรือกด「เพิ่มคิว」จะขึ้นที่นี่ชุดเดียวกัน
+          ไม่มีคิวรอวันนี้ — จองจากลิงก์ลูกค้าจะขึ้นที่นี่ · Walk-in ใช้「บันทึกรายการ」เข้าลานโดยตรง
         </div>
       ) : (
         <div className="space-y-4">
           <p className="text-xs font-semibold text-[#66638c]">
-            เรียงตามรอบเวลา · คิวจากลิงก์ลูกค้าและเพิ่มคิวในร้านใช้ข้อมูลชุดเดียวกัน
+            เรียงตามรอบเวลา · กด「เข้าลาน」เมื่อลูกค้ามาถึง — คิวจะย้ายไปลานล้าง
           </p>
           {bookingsByRound.map(({ timeHm, rows }) => (
             <section key={timeHm} className="space-y-2" aria-label={`รอบ ${timeHm}`}>
@@ -571,15 +455,9 @@ export function CarWashBookingsClient({
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-mono text-sm font-semibold text-[#2e2a58]">{b.phone}</p>
-                        {b.visitId != null ? (
-                          <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-900">
-                            เข้าลานแล้ว #{b.visitId}
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-[#ecebff] px-2 py-0.5 text-[10px] font-bold text-[#4d47b6]">
-                            คิวจอง
-                          </span>
-                        )}
+                        <span className="rounded-full bg-[#ecebff] px-2 py-0.5 text-[10px] font-bold text-[#4d47b6]">
+                          รอเข้าลาน
+                        </span>
                       </div>
                       {b.plateNumber ? (
                         <p className="mt-0.5 text-xs font-bold uppercase text-[#4d47b6]">{b.plateNumber}</p>
@@ -637,44 +515,36 @@ export function CarWashBookingsClient({
                           <IconRowRemove className="h-4 w-4" />
                         </button>
                       </div>
-                      {b.status === "SCHEDULED" || b.status === "ARRIVED" || b.status === "IN_SERVICE" ? (
-                        <div className="flex justify-end gap-1" role="group" aria-label="อัปเดตสถานะคิว">
-                          {b.status === "SCHEDULED" ? (
-                            <>
-                              <AppIconToolbarButton
-                                title="มาแล้ว · เข้าลาน"
-                                ariaLabel="มาแล้ว เข้าลาน"
-                                disabled={patchingId === b.id}
-                                onClick={() => void patchStatus(b.id, "ARRIVED")}
-                                className="text-emerald-700"
-                              >
-                                <AppIconCheck className="h-3.5 w-3.5" />
-                              </AppIconToolbarButton>
-                              <AppIconToolbarButton title="ไม่มา" ariaLabel="ไม่มา" disabled={patchingId === b.id} onClick={() => void patchStatus(b.id, "NO_SHOW")} className="text-amber-800">
-                                <AppIconUserX className="h-3.5 w-3.5" />
-                              </AppIconToolbarButton>
-                              <AppIconToolbarButton title="ยกเลิก" ariaLabel="ยกเลิกคิว" disabled={patchingId === b.id} onClick={() => void patchStatus(b.id, "CANCELLED")}>
-                                <AppIconClose className="h-3.5 w-3.5" />
-                              </AppIconToolbarButton>
-                            </>
-                          ) : null}
-                          {b.status === "ARRIVED" ? (
-                            <>
-                              <AppIconToolbarButton title="เริ่มล้าง" ariaLabel="เริ่มล้าง" disabled={patchingId === b.id} onClick={() => void patchStatus(b.id, "IN_SERVICE")}>
-                                <AppIconCheck className="h-3.5 w-3.5" />
-                              </AppIconToolbarButton>
-                              <AppIconToolbarButton title="ยกเลิก" ariaLabel="ยกเลิกคิว" disabled={patchingId === b.id} onClick={() => void patchStatus(b.id, "CANCELLED")}>
-                                <AppIconClose className="h-3.5 w-3.5" />
-                              </AppIconToolbarButton>
-                            </>
-                          ) : null}
-                          {b.status === "IN_SERVICE" ? (
-                            <AppIconToolbarButton title="เสร็จแล้ว" ariaLabel="ล้างเสร็จ" disabled={patchingId === b.id} onClick={() => void patchStatus(b.id, "COMPLETED")}>
-                              <AppIconCheck className="h-3.5 w-3.5" />
-                            </AppIconToolbarButton>
-                          ) : null}
-                        </div>
-                      ) : null}
+                      <div
+                        className="flex flex-wrap justify-end gap-1.5"
+                        role="group"
+                        aria-label="อัปเดตสถานะคิว"
+                      >
+                        <button
+                          type="button"
+                          className={queuePrimaryActionClass}
+                          disabled={patchingId === b.id}
+                          onClick={() => void patchStatus(b.id, "ARRIVED")}
+                        >
+                          เข้าลาน
+                        </button>
+                        <button
+                          type="button"
+                          className={queueSecondaryActionClass}
+                          disabled={patchingId === b.id}
+                          onClick={() => void patchStatus(b.id, "NO_SHOW")}
+                        >
+                          ไม่มา
+                        </button>
+                        <button
+                          type="button"
+                          className={queueDangerActionClass}
+                          disabled={patchingId === b.id}
+                          onClick={() => void patchStatus(b.id, "CANCELLED")}
+                        >
+                          ยกเลิก
+                        </button>
+                      </div>
                     </div>
                   </li>
                 ))}
@@ -688,35 +558,26 @@ export function CarWashBookingsClient({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {err && !addOpen && !editOpen ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{err}</p> : null}
-      {msg && !addOpen && !editOpen ? <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900">{msg}</p> : null}
+      {err && !editOpen ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{err}</p> : null}
+      {msg && !editOpen ? <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900">{msg}</p> : null}
 
       <AppDashboardSection tone="violet">
         {staffQrLanding ? (
           <div className="mb-4 flex flex-nowrap items-center justify-between gap-2 border-b border-[#ecebff] pb-3">
-            <h2 className="text-base font-bold text-[#2e2a58]">คิวตามวัน</h2>
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={dateKey}
-                onChange={(e) => setDateKey(e.target.value)}
-                className="app-input min-h-10 rounded-xl px-2.5 py-2 text-sm"
-                aria-label="วันที่"
-              />
-              <button
-                type="button"
-                onClick={openAddModal}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#5b61ff] to-[#6a63ff] text-white"
-                aria-label="เพิ่มคิว"
-              >
-                <span className="text-xl font-bold">+</span>
-              </button>
-            </div>
+            <h2 className="text-base font-bold text-[#2e2a58]">คิวรอเข้าลาน</h2>
+            <input
+              type="date"
+              value={dateKey}
+              onChange={(e) => setDateKey(e.target.value)}
+              className="app-input min-h-10 rounded-xl px-2.5 py-2 text-sm"
+              aria-label="วันที่"
+            />
           </div>
         ) : (
           <AppSectionHeader
             tone="violet"
-            title="คิวตามวัน"
+            title="คิวรอเข้าลาน"
+            description="จองจากลิงก์ลูกค้า · กดเข้าลานเมื่อมาถึง"
             className="flex flex-row items-start justify-between gap-3 sm:items-center"
             actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
             action={
@@ -725,18 +586,19 @@ export function CarWashBookingsClient({
                   type="date"
                   value={dateKey}
                   onChange={(e) => setDateKey(e.target.value)}
-                  className="app-input min-h-[40px] max-w-[11rem] rounded-xl px-2 py-2 text-sm sm:min-h-[44px]"
+                  className="app-input min-h-[44px] max-w-[11rem] rounded-xl px-2 py-2 text-sm"
                   aria-label="วันที่"
                 />
-                <button
-                  type="button"
-                  onClick={openAddModal}
-                  className="app-btn-primary min-h-[40px] min-w-[40px] rounded-xl px-3 sm:min-h-[44px] sm:min-w-0 sm:px-4"
-                  aria-label="เพิ่มคิว"
+                <Suspense
+                  fallback={
+                    <div
+                      className="h-11 w-[7.5rem] shrink-0 animate-pulse rounded-xl bg-white/40"
+                      aria-hidden
+                    />
+                  }
                 >
-                  <span className="sm:hidden">+</span>
-                  <span className="hidden sm:inline">+ เพิ่มคิว</span>
-                </button>
+                  <CarWashDashboardTabToolbar matchCardActions className="shrink-0" />
+                </Suspense>
               </div>
             }
           />
@@ -745,32 +607,17 @@ export function CarWashBookingsClient({
       </AppDashboardSection>
 
       <FormModal
-        open={addOpen || editOpen}
+        open={editOpen}
         onClose={() => {
-          setAddOpen(false);
           setEditOpen(false);
           setEditing(null);
         }}
-        title={editOpen ? "แก้ไขคิว" : "เพิ่มคิว"}
+        title="แก้ไขคิว"
         size="lg"
       >
         <form onSubmit={onSave} className="grid max-h-[min(78vh,720px)] gap-3 overflow-y-auto">
           {err ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{err}</p> : null}
-          {msg && (addOpen || editOpen) ? (
-            <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900">{msg}</p>
-          ) : null}
-          {!editOpen ? (
-            <p className="text-xs font-semibold text-[#5f5a8a]">
-              เลือกบริการและเวลาเหมือนลิงก์ลูกค้า
-              {payMode !== "NONE"
-                ? ` · จอง: ${payMode === "FULL" ? "ชำระเต็มยอด" : "มัดจำ"}${
-                    payMode === "DEPOSIT" && shopDeposit != null
-                      ? ` ${shopDeposit.toLocaleString("th-TH")} บาท`
-                      : ""
-                  }`
-                : ""}
-            </p>
-          ) : null}
+          {msg ? <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-900">{msg}</p> : null}
 
           <label className="block text-xs font-medium text-[#4d47b6]">
             วันที่
@@ -793,7 +640,7 @@ export function CarWashBookingsClient({
             ) : (
               <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
                 {singleVisitPackages.map((pkg) => {
-                  const active = selectedPackageId === pkg.id && !memberPackageSelected;
+                  const active = selectedPackageId === pkg.id;
                   return (
                     <li key={pkg.id} className="min-h-0 h-full">
                       <button
@@ -833,34 +680,17 @@ export function CarWashBookingsClient({
             )}
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <label className="block flex-1 text-xs font-medium text-[#4d47b6]">
-              เบอร์โทร
-              <input
-                type="tel"
-                inputMode="numeric"
-                value={phone}
-                onChange={(e) => {
-                  setPhone(e.target.value.replace(/\D/g, "").slice(0, 15));
-                  setMemberFound(null);
-                  setMemberBundles([]);
-                  setMemberPackageSelected(false);
-                }}
-                className="app-input mt-1 min-h-[48px] w-full rounded-xl px-3"
-                autoComplete="tel"
-              />
-            </label>
-            {!editOpen ? (
-              <button
-                type="button"
-                disabled={memberBusy}
-                onClick={() => void lookupMember()}
-                className="app-btn-soft inline-flex min-h-[48px] shrink-0 items-center justify-center rounded-xl px-4 text-sm font-semibold disabled:opacity-50"
-              >
-                {memberBusy ? "กำลังค้นหา…" : "ค้นหาสมาชิก"}
-              </button>
-            ) : null}
-          </div>
+          <label className="block text-xs font-medium text-[#4d47b6]">
+            เบอร์โทร
+            <input
+              type="tel"
+              inputMode="numeric"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
+              className="app-input mt-1 min-h-[48px] w-full rounded-xl px-3"
+              autoComplete="tel"
+            />
+          </label>
 
           <label className="block text-xs font-medium text-[#4d47b6]">
             ทะเบียนรถ (ไม่บังคับ)
@@ -873,47 +703,12 @@ export function CarWashBookingsClient({
             />
           </label>
 
-          {!editOpen && memberFound === true && memberBundles.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-[#4d47b6]">แพ็กเกจสมาชิก (ใช้แทนเมนูรายครั้งได้)</p>
-              <div className="flex flex-wrap gap-2">
-                {memberBundles.map((b) => {
-                  const active = selectedPackageId === b.package_id && memberPackageSelected;
-                  const remain = Math.max(0, b.total_uses - b.used_uses);
-                  return (
-                    <button
-                      key={b.id}
-                      type="button"
-                      onClick={() => selectMemberBundle(b)}
-                      className={cn(
-                        "inline-flex min-h-[40px] items-center gap-2 rounded-xl px-3 text-xs font-bold",
-                        active
-                          ? "bg-[#5b61ff] text-white"
-                          : "border border-[#e8e6f4] bg-white text-[#4d47b6]",
-                      )}
-                    >
-                      {b.package_name} · เหลือ {remain}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-          {!editOpen && memberFound === true && memberBundles.length === 0 ? (
-            <p className="text-xs font-semibold text-[#66638c]">ไม่พบแพ็กที่เหลือใช้ — เลือกเมนูรายครั้ง</p>
-          ) : null}
-          {!editOpen && memberFound === false ? (
-            <p className="text-xs font-semibold text-[#66638c]">ไม่พบสมาชิก — เลือกเมนูรายครั้งแล้วจองได้</p>
-          ) : null}
-
           <div className="space-y-2">
             <p className="text-xs font-medium text-[#4d47b6]">
               เวลา · ต้องการ {slotsNeeded} สล็อต
               {selectedSlot
                 ? ` · เลือก ${selectedSlot}${
-                    slotsNeeded > 1
-                      ? ` (${slotsNeeded} ช่องติดกัน)`
-                      : ""
+                    slotsNeeded > 1 ? ` (${slotsNeeded} ช่องติดกัน)` : ""
                   }`
                 : ""}
             </p>
@@ -923,7 +718,7 @@ export function CarWashBookingsClient({
               <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">วันนี้ปิดรับจอง</p>
             ) : selectedPackageId == null ? (
               <p className="rounded-xl border border-amber-200/80 bg-amber-50/90 px-3 py-3 text-xs font-semibold text-amber-900">
-                เลือกบริการรายครั้ง (หรือแพ็กสมาชิก) ก่อน จึงเลือกช่วงเวลาได้
+                เลือกบริการรายครั้งก่อน จึงเลือกช่วงเวลาได้
               </p>
             ) : (
               <>
@@ -935,11 +730,11 @@ export function CarWashBookingsClient({
                     <button
                       key={s.time}
                       type="button"
-                      disabled={!s.available && s.time !== selectedSlot}
-                      onClick={() => (s.available || s.time === selectedSlot) && setSelectedSlot(s.time)}
+                      disabled={!s.available}
+                      onClick={() => s.available && setSelectedSlot(s.time)}
                       className={cn(
                         "min-h-[44px] rounded-xl border text-sm font-bold tabular-nums",
-                        s.available || s.time === selectedSlot
+                        s.available
                           ? selectedSlot === s.time
                             ? "border-[#5b61ff] bg-[#5b61ff] text-white"
                             : "border-violet-200 bg-white text-[#4d47b6]"
@@ -968,28 +763,11 @@ export function CarWashBookingsClient({
             />
           </label>
 
-          {!editOpen && payDue != null && payDue > 0 ? (
-            <CarWashPaymentPanel
-              amountBaht={payDue}
-              method={payMethod}
-              slipUrl={paySlipUrl}
-              onMethodChange={setPayMethod}
-              onSlipUrlChange={setPaySlipUrl}
-              disabled={saving}
-            />
-          ) : null}
-          {!editOpen && memberPackageSelected ? (
-            <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900">
-              ใช้แพ็กเหมา — ไม่ต้องชำระตอนจอง
-            </p>
-          ) : null}
-
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               className="app-btn-soft min-h-[48px] rounded-xl px-4"
               onClick={() => {
-                setAddOpen(false);
                 setEditOpen(false);
                 setEditing(null);
               }}
@@ -997,7 +775,7 @@ export function CarWashBookingsClient({
               ยกเลิก
             </button>
             <button type="submit" disabled={saving} className="app-btn-primary min-h-[48px] rounded-xl px-4 disabled:opacity-50">
-              {saving ? "กำลังบันทึก…" : editOpen ? "บันทึกการแก้ไข" : "บันทึกคิว"}
+              {saving ? "กำลังบันทึก…" : "บันทึกการแก้ไข"}
             </button>
           </div>
         </form>

@@ -21,6 +21,8 @@ export const BUILDING_POS_BASE = "/dashboard/building-pos";
 export const BUILDING_POS_ORDER_HREF = `${BUILDING_POS_BASE}/order`;
 export const BUILDING_POS_ORDERS_HREF = `${BUILDING_POS_BASE}/orders`;
 export const BUILDING_POS_SETTINGS_HREF = `${BUILDING_POS_BASE}/settings`;
+/** สไลด์นำเสนอสาธารณะ — ไม่ผ่านแดชบอร์ด แชร์ Facebook / LINE ได้ */
+export const BUILDING_POS_PUBLIC_PRESENTATION_HREF = "/building-pos/presentation";
 export const BUILDING_POS_DISPLAY_NAME = "POS ร้านอาหาร";
 
 export const BUILDING_POS_HEADER_COLLAPSE_KEY = "mawell-building-pos-module-header-collapsed";

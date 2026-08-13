@@ -31,12 +31,16 @@ import {
   drinkPosNavActiveClass,
 } from "@/systems/drink-pos/lib/ui-tokens";
 import { DrinkPosCustomerLoyaltyPanel } from "@/systems/drink-pos/components/DrinkPosCustomerLoyaltyPanel";
+import { DrinkPosRemoteImg } from "@/systems/drink-pos/components/DrinkPosRemoteImg";
 import {
   DrinkPosPaymentPanel,
   drinkPosPaymentSubmitBlocked,
 } from "@/systems/drink-pos/components/DrinkPosPaymentPanel";
 import type { DrinkPosPaymentMethod } from "@/systems/drink-pos/lib/payment-method";
-import { appTemplateOutlineButtonClass } from "@/components/app-templates";
+import {
+  appPublicCheckInGlassCardClass,
+  appTemplateOutlineButtonClass,
+} from "@/components/app-templates";
 
 type MenuCategory = {
   id: string;
@@ -172,13 +176,15 @@ function DrinkProductCard({
           compact ? "h-14" : "aspect-[4/3] h-auto",
         )}
       >
-        {product.imageUrl ?
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.imageUrl} alt="" className="h-full w-full object-cover" />
-        : <div className="flex h-full w-full items-center justify-center text-slate-400" aria-hidden>
-            <span className="text-lg opacity-40">◆</span>
-          </div>
-        }
+        <DrinkPosRemoteImg
+          src={product.imageUrl}
+          className="h-full w-full object-cover"
+          fallback={
+            <div className="flex h-full w-full items-center justify-center text-slate-400" aria-hidden>
+              <span className="text-lg opacity-40">◆</span>
+            </div>
+          }
+        />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/55 via-slate-900/15 to-transparent" />
         {product.isFeatured ?
           <span className="absolute left-0.5 top-0.5 inline-flex items-center rounded bg-amber-400/95 px-1 py-px text-[8px] font-bold text-amber-950 shadow-sm">
@@ -293,13 +299,15 @@ function DrinkProductRowCard({
     >
       <div className="flex items-center gap-2 px-2 py-1.5">
         <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-slate-200 to-slate-300">
-          {product.imageUrl ?
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.imageUrl} alt="" className="h-full w-full object-cover" />
-          : <div className="flex h-full w-full items-center justify-center text-slate-400" aria-hidden>
-              <span className="text-sm opacity-40">◆</span>
-            </div>
-          }
+          <DrinkPosRemoteImg
+            src={product.imageUrl}
+            className="h-full w-full object-cover"
+            fallback={
+              <div className="flex h-full w-full items-center justify-center text-slate-400" aria-hidden>
+                <span className="text-sm opacity-40">◆</span>
+              </div>
+            }
+          />
           {selected ?
             <div className="absolute inset-0 flex items-center justify-center bg-indigo-600/35">
               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white ring-1 ring-white/60">
@@ -362,10 +370,17 @@ function DrinkProductRowCard({
 export function DrinkPosCustomerOrderClient({
   ownerId,
   trialSessionId: trialProp,
+  variant = "standalone",
 }: {
   ownerId: string;
   trialSessionId?: string;
+  /** portal = ฝังในเว็บลูกค้า (ไม่มีเปลือก QR เต็มหน้า) */
+  variant?: "standalone" | "portal";
 }) {
+  const isPortal = variant === "portal";
+  const cardClass = isPortal
+    ? cn(appPublicCheckInGlassCardClass, "p-4 sm:p-5")
+    : shopQrTemplateCardClass;
   const [trialSessionId, setTrialSessionId] = useState(trialProp || "prod");
   const [shopName, setShopName] = useState("ร้านเครื่องดื่ม");
   const [categories, setCategories] = useState<MenuCategory[]>([]);
@@ -736,6 +751,9 @@ export function DrinkPosCustomerOrderClient({
   }
 
   if (loading) {
+    if (isPortal) {
+      return <div className="h-40 animate-pulse rounded-[1.25rem] bg-white/40" aria-busy aria-hidden />;
+    }
     return (
       <div className={cn(shopQrTemplatePageBgClass, "min-h-[100dvh] text-slate-800")}>
         <div className={cn(shopQrTemplateMaxWidthClass, shopQrTemplateOrderPagePaddingClass)}>
@@ -745,25 +763,25 @@ export function DrinkPosCustomerOrderClient({
     );
   }
 
-  return (
-    <div className={cn(shopQrTemplatePageBgClass, "min-h-[100dvh] text-slate-800")}>
-      <div
-        className={cn(
-          shopQrTemplateMaxWidthClass,
-          shopQrTemplateOrderPagePaddingClass,
-          customerTab !== "menu" ? "!pb-6" : undefined,
-        )}
-      >
-        <header>
-          <p className={shopQrTemplateHeadKickerClass}>สแกน · สั่ง</p>
-          <h1 className={shopQrTemplateHeadTitleClass}>{shopName || "สั่งเครื่องดื่ม"}</h1>
-        </header>
+  const orderBody = (
+    <>
+        {!isPortal ? (
+          <header>
+            <p className={shopQrTemplateHeadKickerClass}>สแกน · สั่ง</p>
+            <h1 className={shopQrTemplateHeadTitleClass}>{shopName || "สั่งเครื่องดื่ม"}</h1>
+          </header>
+        ) : null}
 
         {err ? <p className="mt-3 text-center text-sm font-semibold text-rose-600">{err}</p> : null}
         {msg ? <p className="mt-3 text-center text-sm font-semibold text-emerald-700">{msg}</p> : null}
 
         <div
-          className="mt-4 flex gap-1 rounded-2xl border border-indigo-100/90 bg-white/90 p-1 shadow-sm ring-1 ring-indigo-100/60"
+          className={cn(
+            "mt-4 flex gap-1 rounded-2xl p-1 shadow-sm",
+            isPortal
+              ? "border border-white/60 bg-white/70 ring-1 ring-inset ring-white/50"
+              : "border border-indigo-100/90 bg-white/90 ring-1 ring-indigo-100/60",
+          )}
           role="tablist"
           aria-label="เมนูหน้าสั่ง"
         >
@@ -800,18 +818,14 @@ export function DrinkPosCustomerOrderClient({
         </div>
 
         {customerTab === "info" ?
-          <div className={cn("mt-5 p-4", shopQrTemplateCardClass)}>
-            <h2 className="mb-3 text-sm font-bold text-slate-900">ข้อมูล</h2>
+          <div className={cn("mt-5", isPortal ? cardClass : cn("p-4", shopQrTemplateCardClass))}>
+            <h2 className="mb-1 text-sm font-bold text-[#1e1b4b]">ข้อมูล</h2>
+            {loyaltyEnabled ?
+              <p className="mb-3 text-xs font-medium text-slate-500">
+                กรอกเบอร์โทรก่อนสั่ง เพื่อสะสมคะแนนอัตโนมัติ
+              </p>
+            : <p className="mb-3 text-xs font-medium text-slate-500">กรอกชื่อก่อนสั่งเครื่องดื่ม</p>}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block text-xs font-medium text-slate-600 sm:col-span-2">
-                ชื่อ
-                <input
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/25"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="ชื่อลูกค้า"
-                />
-              </label>
               {loyaltyEnabled ?
                 <label className="block text-xs font-medium text-slate-600 sm:col-span-2">
                   เบอร์โทรสะสมคะแนน
@@ -854,6 +868,15 @@ export function DrinkPosCustomerOrderClient({
                   </span>
                 </label>
               : null}
+              <label className="block text-xs font-medium text-slate-600 sm:col-span-2">
+                ชื่อ
+                <input
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/25"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="ชื่อลูกค้า"
+                />
+              </label>
             </div>
             <div className="mt-4 space-y-2">
               {infoCanRedeem ?
@@ -904,9 +927,9 @@ export function DrinkPosCustomerOrderClient({
         : null}
 
         {customerTab === "orders" ?
-          <section className={cn("mt-5 p-4", shopQrTemplateCardClass)}>
+          <section className={cn("mt-5", isPortal ? cardClass : cn("p-4", shopQrTemplateCardClass))}>
             <div className="flex flex-wrap items-end justify-between gap-2">
-              <h2 className="text-sm font-bold text-slate-900">ออเดอร์</h2>
+              <h2 className="text-sm font-bold text-[#1e1b4b]">ออเดอร์</h2>
               <button
                 type="button"
                 onClick={() => void loadMyOrders()}
@@ -1008,8 +1031,7 @@ export function DrinkPosCustomerOrderClient({
                       )}
                     >
                       {c.imageUrl ?
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={c.imageUrl} alt="" className="h-6 w-6 rounded-md object-cover" />
+                        <DrinkPosRemoteImg src={c.imageUrl} className="h-6 w-6 rounded-md object-cover" />
                       : null}
                       {c.name}
                     </button>
@@ -1046,10 +1068,8 @@ export function DrinkPosCustomerOrderClient({
                 <section key={c.id} className="mt-7">
                   <div className="mb-2.5 flex items-center gap-2.5 border-b border-slate-200 pb-2">
                     {c.imageUrl ?
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <DrinkPosRemoteImg
                         src={c.imageUrl}
-                        alt=""
                         className="h-9 w-9 rounded-lg border border-slate-200 object-cover sm:h-10 sm:w-10"
                       />
                     : <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-400 sm:h-10 sm:w-10" aria-hidden>
@@ -1080,16 +1100,49 @@ export function DrinkPosCustomerOrderClient({
             : null}
           </>
         : null}
-      </div>
+    </>
+  );
+
+  return (
+    <>
+      {isPortal ? (
+        <div className={cn("text-[#1e1b4b]", customerTab === "menu" && cartCount > 0 ? "pb-24" : undefined)}>
+          {orderBody}
+        </div>
+      ) : (
+        <div className={cn(shopQrTemplatePageBgClass, "min-h-[100dvh] text-slate-800")}>
+          <div
+            className={cn(
+              shopQrTemplateMaxWidthClass,
+              shopQrTemplateOrderPagePaddingClass,
+              customerTab !== "menu" ? "!pb-6" : undefined,
+            )}
+          >
+            {orderBody}
+          </div>
+        </div>
+      )}
 
       {customerTab === "menu" && cartCount > 0 ?
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 shadow-[0_-8px_32px_rgba(15,23,42,0.08)] backdrop-blur-xl">
-          <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 sm:max-w-xl">
+        <div
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur-xl",
+            isPortal
+              ? "border-white/50 bg-white/90 shadow-[0_-12px_40px_rgba(30,27,75,0.12)]"
+              : "border-slate-200 bg-white/95 shadow-[0_-8px_32px_rgba(15,23,42,0.08)]",
+          )}
+        >
+          <div
+            className={cn(
+              "mx-auto flex items-center justify-between gap-3 px-4 py-3",
+              isPortal ? "max-w-6xl sm:px-6" : "max-w-lg sm:max-w-xl",
+            )}
+          >
             <div>
-              <p className="text-xs text-slate-500">ยอดรวม</p>
-              <p className="text-lg font-bold tabular-nums text-slate-900">
+              <p className="text-xs text-[#66638c]">ยอดรวม</p>
+              <p className="text-lg font-bold tabular-nums text-[#1e1b4b]">
                 ฿{formatBaht(cartTotal)}
-                <span className="ml-2 text-sm font-normal text-slate-500">({cartCount} ชิ้น)</span>
+                <span className="ml-2 text-sm font-normal text-[#66638c]">({cartCount} ชิ้น)</span>
               </p>
             </div>
             <button
@@ -1247,6 +1300,6 @@ export function DrinkPosCustomerOrderClient({
           </div>
         </div>
       : null}
-    </div>
+    </>
   );
 }

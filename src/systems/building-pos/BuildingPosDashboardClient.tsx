@@ -26,7 +26,9 @@ import {
 } from "@/systems/building-pos/building-pos-service";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { BuildingPosOpenTablesPanel, BuildingPosSalesHistoryPanel } from "@/systems/building-pos/BuildingPosSalesAnalytics";
+import { BuildingPosReservationsPanel } from "@/systems/building-pos/components/BuildingPosReservationsPanel";
 import { BuildingPosStaffQrSection } from "@/systems/building-pos/components/BuildingPosStaffQrSection";
+import { buildingPosPublicPortalUrl } from "@/lib/building-pos/public-url";
 import { BUILDING_POS_ORDER_HREF, parseBuildingPosNav } from "@/systems/building-pos/building-pos-nav";
 import {
   buildingPosStationPublicUrl,
@@ -170,6 +172,7 @@ export function BuildingPosDashboardClient({
   const [menuSaving, setMenuSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [portalCopyMsg, setPortalCopyMsg] = useState<string | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
   const [showStaffQrModal, setShowStaffQrModal] = useState(false);
   const [stationModal, setStationModal] = useState<"serve" | "kitchen" | null>(null);
@@ -905,7 +908,7 @@ export function BuildingPosDashboardClient({
         </div>
       ) : null}
       {nav.main === "overview" ? (
-        <div className="space-y-5 sm:space-y-6">
+        <div className="space-y-4 sm:space-y-5">
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className={buildingPosStatCardEmeraldClass}>
               <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800/70">รายรับวันนี้</p>
@@ -990,6 +993,8 @@ export function BuildingPosDashboardClient({
               </div>
             }
           />
+
+          <BuildingPosReservationsPanel />
         </div>
       ) : null}
 
@@ -1220,6 +1225,58 @@ export function BuildingPosDashboardClient({
                   </div>
                 </div>
               </button>
+
+              <div
+                className={cn(
+                  "sm:col-span-2 relative overflow-hidden rounded-[2.5rem] border border-white/50 text-left",
+                  "bg-gradient-to-br from-white/55 via-violet-50/40 to-fuchsia-50/30",
+                  "p-5 shadow-[0_24px_60px_-28px_rgba(139,92,246,0.3)] backdrop-blur-2xl",
+                  "ring-1 ring-inset ring-white/60",
+                )}
+              >
+                <p className="text-xs font-bold uppercase tracking-widest text-[#9490c0]">เว็บไซต์จองลูกค้า</p>
+                <p className="mt-2 break-all text-sm font-semibold text-[#1e1b4b]">
+                  {buildingPosPublicPortalUrl(baseUrl || "", ownerId, trialSessionId)}
+                </p>
+                {portalCopyMsg ? (
+                  <p className="mt-2 text-sm font-semibold text-emerald-700">{portalCopyMsg}</p>
+                ) : null}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <a
+                    href={buildingPosPublicPortalUrl("", ownerId, trialSessionId)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(appTemplateOutlineButtonClass, "min-h-10 rounded-xl px-4 text-sm font-bold")}
+                  >
+                    เปิดลิงก์
+                  </a>
+                  <button
+                    type="button"
+                    className="app-btn-primary min-h-10 rounded-xl px-4 text-sm font-bold"
+                    onClick={async () => {
+                      const url = buildingPosPublicPortalUrl(
+                        typeof window !== "undefined" ? window.location.origin : baseUrl || "",
+                        ownerId,
+                        trialSessionId,
+                      );
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        setPortalCopyMsg("คัดลอกลิงก์แล้ว");
+                      } catch {
+                        setPortalCopyMsg("คัดลอกไม่สำเร็จ");
+                      }
+                    }}
+                  >
+                    คัดลอกลิงก์
+                  </button>
+                  <Link
+                    href="/dashboard/building-pos/settings?tab=portal"
+                    className={cn(appTemplateOutlineButtonClass, "inline-flex min-h-10 items-center rounded-xl px-4 text-sm font-bold")}
+                  >
+                    ตั้งค่าเว็บ
+                  </Link>
+                </div>
+              </div>
 
               {multiKitchenEnabled && activeKitchenDepartments.length > 0 ? (
                 <div className="space-y-3">

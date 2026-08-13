@@ -1,14 +1,14 @@
 import { notFound } from "next/navigation";
 import { isDrinkPosPortalOpenForOwner } from "@/lib/drink-pos/portal-access";
 import { getDrinkPosDataScope } from "@/lib/trial/module-scopes";
-import { DrinkPosCustomerOrderClient } from "@/systems/drink-pos/DrinkPosCustomerOrderClient";
+import { DrinkPosPortalClient } from "@/systems/drink-pos/components/DrinkPosPortalClient";
 
 type Props = {
   params: Promise<{ ownerId: string }>;
   searchParams: Promise<{ t?: string }>;
 };
 
-export default async function DrinkPosPublicOrderPage({ params, searchParams }: Props) {
+export default async function DrinkPosPublicPortalPage({ params, searchParams }: Props) {
   const { ownerId } = await params;
   const { t } = await searchParams;
 
@@ -20,5 +20,5 @@ export default async function DrinkPosPublicOrderPage({ params, searchParams }: 
   const scope = await getDrinkPosDataScope(ownerId);
   const trialSessionId = t?.trim() || scope.trialSessionId;
 
-  return <DrinkPosCustomerOrderClient ownerId={ownerId} trialSessionId={trialSessionId} />;
+  return <DrinkPosPortalClient ownerId={ownerId} trialSessionId={trialSessionId} />;
 }

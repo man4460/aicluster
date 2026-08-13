@@ -76,7 +76,9 @@ export async function resolveAndLinkCarWashVisitBooking(
     opts.serviceStatus === "WAXING" ||
     opts.serviceStatus === "IN_PROGRESS"
       ? ("IN_SERVICE" as const)
-      : opts.serviceStatus === "COMPLETED" || opts.serviceStatus === "PAID"
+      : opts.serviceStatus === "COMPLETED" ||
+          opts.serviceStatus === "PAID" ||
+          opts.serviceStatus === "HANDED_OVER"
         ? ("COMPLETED" as const)
         : ("ARRIVED" as const);
 

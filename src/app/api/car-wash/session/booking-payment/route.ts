@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { carWashOwnerFromAuth } from "@/lib/car-wash/api-owner";
+import { getCarWashOwnerOrStaffContext } from "@/lib/car-wash/owner-or-staff";
 import { getCarWashDataScope } from "@/lib/trial/module-scopes";
 import {
   normalizeCarWashPortalPaymentMode,
@@ -27,13 +28,10 @@ async function ensureProfile(ownerUserId: string, trialSessionId: string) {
   });
 }
 
-export async function GET() {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const own = await carWashOwnerFromAuth(auth.session.sub);
-  if (!own.ok) return own.response;
-  const scope = await getCarWashDataScope(own.ownerId);
-  const row = await ensureProfile(own.ownerId, scope.trialSessionId);
+export async function GET(req: Request) {
+  const own = await getCarWashOwnerOrStaffContext(req);
+  if (!own.ok) return own.res;
+  const row = await ensureProfile(own.ownerId, own.trialSessionId);
   return NextResponse.json({ bookingPayment: mapPayment(row) });
 }
 

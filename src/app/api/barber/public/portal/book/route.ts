@@ -22,6 +22,7 @@ import {
   barberSlotRunConflicts,
   loadBarberBusyRanges,
 } from "@/systems/barber/lib/booking-availability";
+import { resolveBarberBookingPayment } from "@/systems/barber/lib/resolve-booking-payment";
 
 const bodySchema = z.object({
   ownerId: z.string().trim().min(10).max(191),
@@ -33,6 +34,11 @@ const bodySchema = z.object({
   /** YYYY-MM-DDTHH:mm เวลาไทย */
   scheduledLocal: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
   durationMinutes: z.number().int().min(15).max(480).optional().nullable(),
+  /** ใช้สิทธิ์สมาชิกแพ็ก — ไม่บังคับมัดจำ/ชำระเต็ม */
+  useMemberPackage: z.boolean().optional().nullable(),
+  paymentMethod: z.enum(["PROMPTPAY", "TRANSFER"]).optional().nullable(),
+  paymentSlipUrl: z.string().max(512).optional().nullable(),
+  amountPaidBaht: z.number().int().min(0).max(9_999_999).optional().nullable(),
 });
 
 function normalizePhone(raw: string): string {
@@ -74,7 +80,13 @@ export async function POST(req: Request) {
   const [profile, stylistCount] = await Promise.all([
     prisma.barberShopProfile.findUnique({
       where: { ownerUserId_trialSessionId: { ownerUserId: ownerId, trialSessionId } },
-      select: { openTime: true, closeTime: true, slotMinutes: true },
+      select: {
+        openTime: true,
+        closeTime: true,
+        slotMinutes: true,
+        portalBookingPaymentMode: true,
+        depositAmountBaht: true,
+      },
     }),
     prisma.barberStylist.count({
       where: { ownerUserId: ownerId, trialSessionId, isActive: true },
@@ -127,17 +139,32 @@ export async function POST(req: Request) {
     parsed.data.durationMinutes ?? slotMinutes,
     slotMinutes,
   );
+  let packagePriceBaht = 0;
 
   {
     const pkg = await prisma.barberPackage.findFirst({
       where: { id: packageId, ownerUserId: ownerId, trialSessionId },
-      select: { id: true, durationMinutes: true },
+      select: { id: true, durationMinutes: true, price: true },
     });
     if (!pkg) {
       return NextResponse.json({ error: "ไม่พบแพ็กเกจ" }, { status: 400 });
     }
     packageId = pkg.id;
     durationMinutes = barberNormalizeDurationMinutes(pkg.durationMinutes, slotMinutes);
+    packagePriceBaht = Math.max(0, Math.round(Number(pkg.price) || 0));
+  }
+
+  const payResolved = resolveBarberBookingPayment({
+    shopMode: profile?.portalBookingPaymentMode,
+    shopDepositAmountBaht: profile?.depositAmountBaht,
+    packagePriceBaht,
+    forceMode: parsed.data.useMemberPackage ? "NONE" : null,
+    paymentMethod: parsed.data.paymentMethod,
+    paymentSlipUrl: parsed.data.paymentSlipUrl,
+    amountPaidBaht: parsed.data.amountPaidBaht,
+  });
+  if (!payResolved.ok) {
+    return NextResponse.json({ error: payResolved.error }, { status: 400 });
   }
 
   const slotsNeeded = barberSlotsNeeded(durationMinutes, slotMinutes);
@@ -217,6 +244,13 @@ export async function POST(req: Request) {
       stylistId,
       packageId,
       status: "SCHEDULED",
+      packagePrice: payResolved.fields.packagePrice,
+      depositAmountBaht: payResolved.fields.depositAmountBaht,
+      amountPaidBaht: payResolved.fields.amountPaidBaht,
+      paymentMethod: payResolved.fields.paymentMethod,
+      paymentStatus: payResolved.fields.paymentStatus,
+      depositSlipUrl: payResolved.fields.depositSlipUrl,
+      paymentSlipUrl: payResolved.fields.paymentSlipUrl,
     },
     select: {
       id: true,
@@ -227,6 +261,12 @@ export async function POST(req: Request) {
       durationMinutes: true,
       stylistId: true,
       packageId: true,
+      packagePrice: true,
+      depositAmountBaht: true,
+      amountPaidBaht: true,
+      paymentMethod: true,
+      paymentStatus: true,
+      depositSlipUrl: true,
     },
   });
 
@@ -242,6 +282,12 @@ export async function POST(req: Request) {
       stylistId: row.stylistId,
       packageId: row.packageId,
       slotsNeeded,
+      packagePrice: row.packagePrice,
+      depositAmountBaht: row.depositAmountBaht,
+      amountPaidBaht: row.amountPaidBaht,
+      paymentMethod: row.paymentMethod,
+      paymentStatus: row.paymentStatus,
+      depositSlipUrl: row.depositSlipUrl,
     },
   });
 }

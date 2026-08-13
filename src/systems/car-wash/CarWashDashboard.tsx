@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import QRCode from "qrcode";
 import {
   AppCameraCaptureModal,
@@ -41,8 +41,12 @@ import {
   resolveAssetUrl,
 } from "@/components/qr/shop-qr-template";
 import { StaffQrLandingShell } from "@/components/qr/staff-qr-landing-shell";
-import { ShopStaffQrPanel } from "@/components/qr/shop-staff-qr-panel";
+import { ModuleStaffTokenQrPanel } from "@/components/qr/module-staff-token-qr-panel";
 import { cn } from "@/lib/cn";
+import {
+  readStoredStaffDailyUnlock,
+  staffDailyUnlockHeaders,
+} from "@/lib/modules/staff-daily-pin";
 import {
   carWashAccentBarClass,
   carWashContentStackClass,
@@ -69,9 +73,11 @@ import {
   type CarWashPrintShopProfile,
 } from "@/systems/car-wash/lib/car-wash-print-docs";
 import {
+  carWashPaymentIsPayLater,
   carWashPaymentMethodLabel,
   type CarWashPaymentMethod,
 } from "@/systems/car-wash/lib/payment-method";
+import { CAR_WASH_VISIT_EVIDENCE_MAX } from "@/systems/car-wash/lib/visit-media";
 import { CAR_WASH_SERVICE_STATUSES, carWashStatusLabelTh } from "@/lib/car-wash/service-status";
 import { prepareBuildingPosSlipImageFile } from "@/systems/building-pos/building-pos-slip-image";
 import {
@@ -82,9 +88,9 @@ import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { CarWashSalesPanel } from "@/systems/car-wash/CarWashSalesPanel";
 import { CarWashServiceLanePanel } from "@/systems/car-wash/CarWashServiceLanePanel";
 import { CarWashCostPanel } from "@/systems/car-wash/CarWashCostPanel";
+import { useCarWashLaneBoardSse } from "@/systems/car-wash/lib/use-car-wash-lane-board-sse";
 import {
   CarWashDashboardHubClient,
-  CarWashDashboardTabToolbar,
 } from "@/systems/car-wash/CarWashDashboardHubClient";
 import { CarWashBookingsClient } from "@/systems/car-wash/CarWashBookingsClient";
 import { bangkokDateKey } from "@/lib/time/bangkok";
@@ -101,6 +107,7 @@ import {
 } from "@/lib/car-wash/portal-booking";
 import {
   type CarWashServiceStatus,
+  type CarWashStaffAuth,
   type CostCategory,
   type CostEntry,
   createCarWashSessionApiRepository,
@@ -118,8 +125,6 @@ import {
 } from "@/systems/module-shop/module-shop-settings-nav";
 
 const CAR_WASH_CUSTOMER_QR_TAGLINE = "สแกน จองคิว · เลือกแพ็ก · ใช้แพ็กเหมาได้เอง";
-const CAR_WASH_STAFF_QR_TAGLINE =
-  "สแกนเข้าหน้าลานพนักงาน — บันทึกรายการและจัดการคิววันนี้ (ต้องล็อกอินร้าน)";
 const CAR_WASH_MODULE_LABEL = "โมดูล";
 
 type TabKey = CarWashTabKey;
@@ -264,6 +269,10 @@ export function CarWashDashboard({
   shopPrintProfile = null,
   defaultTab,
   layoutVariant = "full",
+  staffPortal = false,
+  staffAuth = null,
+  forcedTab,
+  refreshNonce = 0,
 }: {
   shopLabel: string;
   logoUrl: string | null;
@@ -278,27 +287,45 @@ export function CarWashDashboard({
   shopPrintProfile?: CarWashPrintShopProfile | null;
   /** แท็บเริ่มต้นเมื่อ layoutVariant เป็น full */
   defaultTab?: TabKey;
-  /** staff_lane = หน้าเฉพาะลาน (มือถือ) ไม่มีเมนูเต็ม */
-  layoutVariant?: "full" | "staff_lane";
+  /** staff_lane = หน้าพนักงานจาก QR (ล็อกอินร้าน) · lane_board = ลานล้างเต็มจอ (SSE) */
+  layoutVariant?: "full" | "staff_lane" | "lane_board";
+  /** พอร์ทัลลิงก์พนักงานแบบโทเค็น (ไม่ล็อกอิน) — เมนูจำกัดภาพรวม+แพ็ก · API โทเค็น */
+  staffPortal?: boolean;
+  staffAuth?: CarWashStaffAuth | null;
+  /** แท็บที่ถูกบังคับเมื่อ staffPortal (คุมจากภายนอกโดย CarWashStaffClient) */
+  forcedTab?: Extract<TabKey, "overview" | "offers">;
+  refreshNonce?: number;
 }) {
-  const repo = useMemo(() => createCarWashSessionApiRepository(), []);
+  /** พอร์ทัลลิงก์พนักงาน — ใส่โทเค็นแทน session cookie ทุกคำขอ (repo + อัปโหลดรูป) */
+  const effectiveStaffAuth = staffPortal ? staffAuth : null;
+  const repo = useMemo(
+    () => createCarWashSessionApiRepository({ staffAuth: staffPortal ? staffAuth : null }),
+    [staffPortal, staffAuth],
+  );
   const lightbox = useAppImageLightbox();
 
-  const isStaffLaneOnly = layoutVariant === "staff_lane";
+  const isLaneBoard = layoutVariant === "lane_board";
+  const isStaffLaneOnly = layoutVariant === "staff_lane" || isLaneBoard;
+  /** ซ่อนหัว/เมนู/แถบล่าง — ทั้งลานล้างเต็มจอ · หน้าลานล็อกอิน · พอร์ทัลโทเค็นพนักงาน */
+  const hideChrome = isStaffLaneOnly || staffPortal;
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname() ?? "";
   const tabFromUrl = useMemo(() => parseCarWashTab(searchParams.get("tab")), [searchParams]);
   const [tab, setTabState] = useState<TabKey>(
-    isStaffLaneOnly ? "qr" : (defaultTab ?? tabFromUrl),
+    staffPortal ? (forcedTab ?? "overview") : isStaffLaneOnly ? "qr" : (defaultTab ?? tabFromUrl),
   );
   const [loading, setLoading] = useState(true);
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
   const [headerCollapsed, setHeaderCollapsed] = useState(readCarWashHeaderCollapsed());
 
   useEffect(() => {
+    if (staffPortal) {
+      setTabState(forcedTab ?? "overview");
+      return;
+    }
     if (!isStaffLaneOnly) setTabState(tabFromUrl);
-  }, [tabFromUrl, isStaffLaneOnly]);
+  }, [tabFromUrl, isStaffLaneOnly, staffPortal, forcedTab]);
 
   useEffect(() => {
     const sync = () => setHeaderCollapsed(readCarWashHeaderCollapsed());
@@ -318,14 +345,40 @@ export function CarWashDashboard({
   const setTab = useCallback(
     (key: TabKey) => {
       setTabState(key);
-      if (isStaffLaneOnly) return;
+      if (isStaffLaneOnly || staffPortal) return;
       const q = new URLSearchParams(searchParams.toString());
       if (key === "overview") q.delete("tab");
       else q.set("tab", key);
       const qs = q.toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [isStaffLaneOnly, pathname, router, searchParams],
+    [isStaffLaneOnly, staffPortal, pathname, router, searchParams],
+  );
+
+  /** พอร์ทัลลิงก์พนักงาน — ต่อท้าย ownerId/t/k/du ทุกคำขอ แทน session cookie */
+  const staffApiUrl = useCallback(
+    (path: string) => {
+      if (!staffPortal || !staffAuth) return path;
+      const qs = new URLSearchParams({
+        ownerId: staffAuth.ownerId,
+        t: staffAuth.trialSessionId,
+        k: staffAuth.k,
+      });
+      const unlock = readStoredStaffDailyUnlock("car-wash", staffAuth.ownerId);
+      if (unlock) qs.set("du", unlock);
+      return `${path}?${qs.toString()}`;
+    },
+    [staffPortal, staffAuth],
+  );
+  const staffApiInit = useCallback(
+    (init?: RequestInit): RequestInit => {
+      if (!staffPortal || !staffAuth) return { ...init, credentials: init?.credentials ?? "include" };
+      const headerBag = new Headers(init?.headers);
+      const unlockHeaders = staffDailyUnlockHeaders("car-wash", staffAuth.ownerId);
+      for (const [key, value] of Object.entries(unlockHeaders)) headerBag.set(key, value);
+      return { ...init, credentials: "omit", headers: headerBag };
+    },
+    [staffPortal, staffAuth],
   );
   const [packages, setPackages] = useState<ServicePackage[]>([]);
   const [bundles, setBundles] = useState<WashBundle[]>([]);
@@ -372,13 +425,6 @@ export function CarWashDashboard({
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
   /** ป๊อปอัป QR: ลิงก์ซ่อนเป็นค่าเริ่มต้น แตะแสดงลิงก์เมื่อต้องการ */
   const [qrLinkVisible, setQrLinkVisible] = useState(false);
-  const [staffPortalQr, setStaffPortalQr] = useState<string | null>(null);
-  const [staffPosterPreviewUrl, setStaffPosterPreviewUrl] = useState<string | null>(null);
-  const [staffQrLinkVisible, setStaffQrLinkVisible] = useState(false);
-  const [staffQrBusy, setStaffQrBusy] = useState(false);
-  const [staffCopyMsg, setStaffCopyMsg] = useState<string | null>(null);
-  /** โมดูล QR พนักงานใหญ่ขึ้นบนจอแคบให้สแกนง่าย */
-  const [staffQrModuleSize, setStaffQrModuleSize] = useState(240);
   const [visitLookupHint, setVisitLookupHint] = useState<string | null>(null);
   const visitFormRef = useRef<HTMLFormElement>(null);
   const visitGalleryInputRef = useRef<HTMLInputElement>(null);
@@ -396,7 +442,8 @@ export function CarWashDashboard({
     final_price: "",
     note: "",
     recorded_by_override: "",
-    photo_url: "",
+    /** รูปหลักฐานสภาพรถตอนรับรถ (ไม่ใช่สลิปชำระ) */
+    evidence_photo_urls: [] as string[],
   });
   const [bundleForm, setBundleForm] = useState({
     customer_name: "",
@@ -432,7 +479,7 @@ export function CarWashDashboard({
   const [visitLaneStatus, setVisitLaneStatus] = useState<CarWashServiceStatus>("WASHING");
   const [visitPaymentMethod, setVisitPaymentMethod] = useState<CarWashPaymentMethod>("CASH");
   const [visitPaymentSlipUrl, setVisitPaymentSlipUrl] = useState<string | null>(null);
-  const [visitPrintReceipt, setVisitPrintReceipt] = useState(true);
+  const [visitPrintReceipt, setVisitPrintReceipt] = useState(false);
   const [visitBookDateKey, setVisitBookDateKey] = useState(() => bangkokDateKey());
   const [visitSelectedSlot, setVisitSelectedSlot] = useState("");
   const [visitSlotAvailability, setVisitSlotAvailability] = useState<SlotAvailabilityItem[]>([]);
@@ -546,15 +593,39 @@ export function CarWashDashboard({
 
   useEffect(() => {
     void loadAll();
-  }, [loadAll]);
+  }, [loadAll, refreshNonce]);
+
+  /** พอร์ทัลลิงก์พนักงาน — ต่อ query ให้ SSE (EventSource ตั้ง header เองไม่ได้) */
+  const staffStreamQuery = useMemo(() => {
+    if (!staffPortal || !staffAuth) return undefined;
+    const qs = new URLSearchParams({
+      ownerId: staffAuth.ownerId,
+      t: staffAuth.trialSessionId,
+      k: staffAuth.k,
+    });
+    const unlock = readStoredStaffDailyUnlock("car-wash", staffAuth.ownerId);
+    if (unlock) qs.set("du", unlock);
+    return qs.toString();
+  }, [staffPortal, staffAuth]);
+
+  /** SSE ลานล้าง — หน้าเต็มจอเปิดเสมอ · แดชบอร์ด/พนักงานเมื่อแท็บภาพรวมหรือ staff */
+  useCarWashLaneBoardSse(
+    () => {
+      void loadAll({ silent: true });
+    },
+    isLaneBoard || isStaffLaneOnly || tab === "overview",
+    staffStreamQuery,
+  );
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       if (document.hidden) return;
+      /** เมื่อมี SSE แล้วไม่ต้อง poll 60s ซ้ำหนัก — soft-poll อยู่ใน hook */
+      if (isLaneBoard) return;
       void loadAll({ silent: true });
     }, 60_000);
     return () => window.clearInterval(timer);
-  }, [loadAll]);
+  }, [loadAll, isLaneBoard]);
 
   useEffect(() => {
     const onFocusOrVisible = () => {
@@ -584,35 +655,12 @@ export function CarWashDashboard({
 
   const resolvedLogoUrl = useMemo(() => resolveAssetUrl(logoUrl, baseUrl), [logoUrl, baseUrl]);
 
-  const staffPageUrl = useMemo(() => {
-    const root =
-      baseUrl.startsWith("http://") || baseUrl.startsWith("https://") ? baseUrl.replace(/\/$/, "") : "";
-    if (!root) return "";
-    const u = new URL("/dashboard/car-wash/staff", root);
-    if (isTrialSandbox && trialSessionId) u.searchParams.set("t", trialSessionId);
-    return u.toString();
-  }, [baseUrl, isTrialSandbox, trialSessionId]);
-
   useEffect(() => {
     if (showQrModal) setQrLinkVisible(false);
   }, [showQrModal]);
 
   useEffect(() => {
-    if (showStaffQrModal) setStaffQrLinkVisible(false);
-  }, [showStaffQrModal]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(max-width: 639px)");
-    const sync = () => setStaffQrModuleSize(mq.matches ? 312 : 240);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
-
-  useEffect(() => {
     if (tab !== "qr") {
-      setStaffQrLinkVisible(false);
       setShowQrModal(false);
       setShowStaffQrModal(false);
     }
@@ -675,70 +723,12 @@ export function CarWashDashboard({
     };
   }, [portalQr, resolvedLogoUrl, shopLabel]);
 
-  useEffect(() => {
-    if (isStaffLaneOnly || !staffPageUrl || (tab !== "qr" && !showStaffQrModal)) {
-      setStaffPortalQr(null);
-      setStaffPosterPreviewUrl(null);
-      return;
-    }
-    let cancelled = false;
-    void QRCode.toDataURL(staffPageUrl, {
-      width: staffQrModuleSize,
-      margin: 2,
-      errorCorrectionLevel: "M",
-      color: { dark: "#0f172a", light: "#ffffff" },
-    })
-      .then((url) => {
-        if (!cancelled) setStaffPortalQr(url);
-      })
-      .catch(() => {
-        if (!cancelled) setStaffPortalQr(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isStaffLaneOnly, tab, staffPageUrl, showStaffQrModal, staffQrModuleSize]);
-
-  useEffect(() => {
-    if (!staffPortalQr) {
-      setStaffPosterPreviewUrl(null);
-      return;
-    }
-    let cancelled = false;
-    void createShopQrPosterDataUrl({
-      qrDataUrl: staffPortalQr,
-      shopLabel: shopLabel.trim() || "คาร์แคร์",
-      logoUrl: resolvedLogoUrl,
-      tagline: CAR_WASH_STAFF_QR_TAGLINE,
-    })
-      .then((url) => {
-        if (!cancelled) setStaffPosterPreviewUrl(url);
-      })
-      .catch(() => {
-        if (!cancelled) setStaffPosterPreviewUrl(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [staffPortalQr, resolvedLogoUrl, shopLabel]);
-
   async function copyPortalLink() {
     if (!portalUrl) return;
     try {
       await navigator.clipboard.writeText(portalUrl);
       setCopyMsg("คัดลอกลิงก์แล้ว");
       setTimeout(() => setCopyMsg(null), 1800);
-    } catch {
-      setError("คัดลอกลิงก์ไม่สำเร็จ");
-    }
-  }
-
-  async function copyStaffPageUrl() {
-    if (!staffPageUrl) return;
-    try {
-      await navigator.clipboard.writeText(staffPageUrl);
-      setStaffCopyMsg("คัดลอกลิงก์หน้าพนักงานแล้ว");
-      setTimeout(() => setStaffCopyMsg(null), 1800);
     } catch {
       setError("คัดลอกลิงก์ไม่สำเร็จ");
     }
@@ -773,38 +763,6 @@ export function CarWashDashboard({
       await downloadPosterPdf(canvas, "car-wash-qr-poster-a4.pdf", "a4");
     } finally {
       setQrBusy(false);
-    }
-  }
-
-  async function downloadStaffQrPng() {
-    if (!staffPageUrl || !staffPortalQr) return;
-    setStaffQrBusy(true);
-    try {
-      const canvas = await createShopQrPosterCanvas({
-        qrDataUrl: staffPortalQr,
-        shopLabel: shopLabel.trim() || "คาร์แคร์",
-        logoUrl: resolvedLogoUrl,
-        tagline: CAR_WASH_STAFF_QR_TAGLINE,
-      });
-      await downloadPosterPng(canvas, "car-wash-staff-qr-poster.png");
-    } finally {
-      setStaffQrBusy(false);
-    }
-  }
-
-  async function downloadStaffQrPdf() {
-    if (!staffPageUrl || !staffPortalQr) return;
-    setStaffQrBusy(true);
-    try {
-      const canvas = await createShopQrPosterCanvas({
-        qrDataUrl: staffPortalQr,
-        shopLabel: shopLabel.trim() || "คาร์แคร์",
-        logoUrl: resolvedLogoUrl,
-        tagline: CAR_WASH_STAFF_QR_TAGLINE,
-      });
-      await downloadPosterPdf(canvas, "car-wash-staff-qr-poster-a4.pdf", "a4");
-    } finally {
-      setStaffQrBusy(false);
     }
   }
 
@@ -859,7 +817,7 @@ export function CarWashDashboard({
     setError(null);
     try {
       const prepared = await prepareImageFileForUpload(file);
-      const url = await uploadCarWashPackageImage(prepared);
+      const url = await uploadCarWashPackageImage(prepared, effectiveStaffAuth);
       setPkgForm((s) => ({ ...s, image_url: url }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "อัปโหลดรูปไม่สำเร็จ");
@@ -918,12 +876,12 @@ export function CarWashDashboard({
       final_price: "",
       note: "",
       recorded_by_override: "",
-      photo_url: "",
+      evidence_photo_urls: [],
     });
     setVisitLaneStatus("WASHING");
     setVisitPaymentMethod("CASH");
     setVisitPaymentSlipUrl(null);
-    setVisitPrintReceipt(true);
+    setVisitPrintReceipt(false);
     setVisitEntryMode("walkin");
     setVisitAdvancedOpen(false);
     setVisitBookDateKey(bangkokDateKey());
@@ -960,9 +918,10 @@ export function CarWashDashboard({
   const loadVisitSchedule = useCallback(async (dk: string) => {
     setVisitScheduleLoading(true);
     try {
-      const res = await fetch(`/api/car-wash/day-schedules?date=${encodeURIComponent(dk)}`, {
-        credentials: "include",
-      });
+      const res = await fetch(
+        staffApiUrl(`/api/car-wash/day-schedules?date=${encodeURIComponent(dk)}`),
+        staffApiInit(),
+      );
       const j = (await res.json().catch(() => ({}))) as {
         slotMinutes?: number;
         isClosed?: boolean;
@@ -984,7 +943,7 @@ export function CarWashDashboard({
     } finally {
       setVisitScheduleLoading(false);
     }
-  }, []);
+  }, [staffApiUrl, staffApiInit]);
 
   useEffect(() => {
     if (!showVisitModal || visitEntryMode !== "walkin") return;
@@ -996,7 +955,10 @@ export function CarWashDashboard({
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/car-wash/session/booking-payment", { credentials: "include" });
+        const res = await fetch(
+          staffApiUrl("/api/car-wash/session/booking-payment"),
+          staffApiInit(),
+        );
         const j = (await res.json().catch(() => ({}))) as {
           bookingPayment?: { portalBookingPaymentMode?: string; depositAmountBaht?: number | null };
         };
@@ -1010,7 +972,7 @@ export function CarWashDashboard({
     return () => {
       cancelled = true;
     };
-  }, [showVisitModal]);
+  }, [showVisitModal, staffApiUrl, staffApiInit]);
 
   const visitPayAmountBaht = useMemo(() => {
     if (visitEntryMode !== "walkin") return 0;
@@ -1093,7 +1055,7 @@ export function CarWashDashboard({
       package_id: "",
       final_price: "",
       note: "",
-      photo_url: "",
+      evidence_photo_urls: [],
     }));
     setVisitEntryMode("walkin");
     setVisitLookupHint("ไม่พบข้อมูล — กรอกเบอร์หรือทะเบียนเป็น Walk-in (ชื่อไม่บังคับ)");
@@ -1136,7 +1098,7 @@ export function CarWashDashboard({
       setVisitLaneStatus("WASHING");
       setVisitPaymentMethod("CASH");
       setVisitPaymentSlipUrl(null);
-      setVisitPrintReceipt(true);
+      setVisitPrintReceipt(false);
       setVisitForm({
         customer_lookup: "",
         customer_name: "",
@@ -1147,7 +1109,7 @@ export function CarWashDashboard({
         final_price: "",
         note: "",
         recorded_by_override: "",
-        photo_url: "",
+        evidence_photo_urls: [],
       });
     };
     if (bundleId != null) {
@@ -1157,6 +1119,10 @@ export function CarWashDashboard({
         return;
       }
       const remainingAfter = Math.max(0, b.total_uses - b.used_uses - 1);
+      const evidenceUrls = visitForm.evidence_photo_urls
+        .map((u) => u.trim())
+        .filter(Boolean)
+        .slice(0, CAR_WASH_VISIT_EVIDENCE_MAX);
       try {
         await repo.createVisit({
           customer_name: customerName,
@@ -1169,7 +1135,8 @@ export function CarWashDashboard({
           note: visitForm.note.trim(),
           recorded_by_name: recordedBy,
           service_status: visitLaneStatus,
-          photo_url: visitForm.photo_url.trim(),
+          photo_url: "",
+          evidence_photo_urls: evidenceUrls,
           bundle_id: bundleId,
           booking_id: null,
         });
@@ -1202,11 +1169,15 @@ export function CarWashDashboard({
     const payLabel = carWashPaymentMethodLabel(visitPaymentMethod);
     const noteBase = visitForm.note.trim();
     const noteWithPay =
-      finalPrice > 0
+      finalPrice > 0 || carWashPaymentIsPayLater(visitPaymentMethod)
         ? [noteBase, `ชำระ: ${payLabel}`].filter(Boolean).join(" · ")
         : noteBase;
-    const photoUrl =
-      (visitPaymentSlipUrl?.trim() || visitForm.photo_url.trim() || "").trim();
+    const payLater = carWashPaymentIsPayLater(visitPaymentMethod);
+    const photoUrl = payLater ? "" : (visitPaymentSlipUrl?.trim() || "").trim();
+    const evidenceUrls = visitForm.evidence_photo_urls
+      .map((u) => u.trim())
+      .filter(Boolean)
+      .slice(0, CAR_WASH_VISIT_EVIDENCE_MAX);
 
     if (!visitSelectedSlot) {
       setError("เลือกช่วงเวลาก่อนบันทึก");
@@ -1224,7 +1195,7 @@ export function CarWashDashboard({
     const todayKey = bangkokDateKey();
     const isFuture = visitBookDateKey > todayKey;
     const bookingPayDue = visitBookingPayDue;
-    if (bookingPayDue != null && bookingPayDue > 0) {
+    if (!payLater && bookingPayDue != null && bookingPayDue > 0) {
       if (
         (visitPaymentMethod === "PROMPTPAY" || visitPaymentMethod === "TRANSFER") &&
         !visitPaymentSlipUrl
@@ -1236,21 +1207,24 @@ export function CarWashDashboard({
 
     let bookingId: number | null = null;
     try {
-      const bookRes = await fetch("/api/car-wash/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          phone: phoneDigits,
-          plateNumber: plateNumber || null,
-          customerName: customerName || null,
-          packageId: pkgId,
-          scheduledAtLocal: scheduledAtLocalFromSlot(visitBookDateKey, visitSelectedSlot),
-          paymentMethod: bookingPayDue != null && bookingPayDue > 0 ? visitPaymentMethod : "UNPAID",
-          amountPaidBaht: bookingPayDue != null && bookingPayDue > 0 ? bookingPayDue : 0,
-          paymentSlipUrl: visitPaymentSlipUrl,
+      const chargeNow = !payLater && bookingPayDue != null && bookingPayDue > 0;
+      const bookRes = await fetch(
+        staffApiUrl("/api/car-wash/bookings"),
+        staffApiInit({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone: phoneDigits,
+            plateNumber: plateNumber || null,
+            customerName: customerName || null,
+            packageId: pkgId,
+            scheduledAtLocal: scheduledAtLocalFromSlot(visitBookDateKey, visitSelectedSlot),
+            paymentMethod: payLater ? "PAY_LATER" : chargeNow ? visitPaymentMethod : "UNPAID",
+            amountPaidBaht: chargeNow ? bookingPayDue : 0,
+            paymentSlipUrl: chargeNow ? visitPaymentSlipUrl : null,
+          }),
         }),
-      });
+      );
       const bookJ = (await bookRes.json().catch(() => ({}))) as {
         error?: string;
         booking?: { id?: number; scheduledAt?: string };
@@ -1271,12 +1245,14 @@ export function CarWashDashboard({
       }
 
       if (bookingId != null) {
-        const arriveRes = await fetch(`/api/car-wash/bookings/${bookingId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ status: "ARRIVED" }),
-        });
+        const arriveRes = await fetch(
+          staffApiUrl(`/api/car-wash/bookings/${bookingId}`),
+          staffApiInit({
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "ARRIVED" }),
+          }),
+        );
         const arriveJ = (await arriveRes.json().catch(() => ({}))) as {
           booking?: { visitId?: number | null };
         };
@@ -1291,6 +1267,7 @@ export function CarWashDashboard({
             recorded_by_name: recordedBy,
             service_status: visitLaneStatus,
             photo_url: photoUrl,
+            evidence_photo_urls: evidenceUrls,
           });
         }
       }
@@ -1298,7 +1275,7 @@ export function CarWashDashboard({
       setError(err instanceof Error ? err.message : "บันทึกรายการไม่สำเร็จ");
       return;
     }
-    if (visitPrintReceipt) {
+    if (visitPrintReceipt && !payLater) {
       printCarWashVisitReceipt({
         shop: resolveVisitPrintShop(),
         customerName: customerName || plateNumber || phoneDigits || "ลูกค้า",
@@ -1341,35 +1318,101 @@ export function CarWashDashboard({
     }
   }
 
+  async function handleLaneVisitEvidence(id: number, evidencePhotoUrls: string[]) {
+    setLaneBusyVisitId(id);
+    setError(null);
+    try {
+      await repo.updateVisit(id, { evidence_photo_urls: evidencePhotoUrls });
+      await loadAll();
+    } catch {
+      setError("บันทึกรูปหลักฐานรถไม่สำเร็จ");
+    } finally {
+      setLaneBusyVisitId(null);
+    }
+  }
+
+  async function handleLanePayment(
+    id: number,
+    payload: { service_status: "PAID"; photo_url?: string; note?: string },
+  ) {
+    setLaneBusyVisitId(id);
+    setError(null);
+    try {
+      await repo.updateVisit(id, {
+        service_status: payload.service_status,
+        ...(payload.photo_url !== undefined ? { photo_url: payload.photo_url } : {}),
+        ...(payload.note !== undefined ? { note: payload.note } : {}),
+      });
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "บันทึกการชำระไม่สำเร็จ");
+      throw e;
+    } finally {
+      setLaneBusyVisitId(null);
+    }
+  }
+
   const onVisitGalleryFileChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const picked = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith("image/"));
     e.target.value = "";
-    if (!file) return;
+    if (picked.length === 0) return;
+    const slotsLeft = CAR_WASH_VISIT_EVIDENCE_MAX - visitForm.evidence_photo_urls.length;
+    if (slotsLeft <= 0) {
+      window.alert(`แนบรูปหลักฐานได้ไม่เกิน ${CAR_WASH_VISIT_EVIDENCE_MAX} รูป`);
+      return;
+    }
+    const files = picked.slice(0, slotsLeft);
+    if (picked.length > slotsLeft) {
+      window.alert(
+        `แนบได้สูงสุด ${CAR_WASH_VISIT_EVIDENCE_MAX} รูป — จะอัปโหลด ${files.length} รูปจากที่เลือก`,
+      );
+    }
     setVisitPhotoBusy(true);
     try {
-      const prepared = await prepareBuildingPosSlipImageFile(file);
-      const url = await uploadCarWashSessionImage(prepared);
-      setVisitForm((s) => ({ ...s, photo_url: url }));
+      const uploaded: string[] = [];
+      for (const file of files) {
+        const prepared = await prepareBuildingPosSlipImageFile(file);
+        const url = await uploadCarWashSessionImage(prepared, effectiveStaffAuth);
+        uploaded.push(url);
+      }
+      if (uploaded.length === 0) return;
+      setVisitForm((s) => ({
+        ...s,
+        evidence_photo_urls: [...s.evidence_photo_urls, ...uploaded].slice(
+          0,
+          CAR_WASH_VISIT_EVIDENCE_MAX,
+        ),
+      }));
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "อัปโหลดรูปไม่สำเร็จ");
     } finally {
       setVisitPhotoBusy(false);
     }
-  }, []);
+  }, [effectiveStaffAuth, visitForm.evidence_photo_urls.length]);
 
   const onVisitCameraCaptured = useCallback(async (file: File) => {
     setVisitCameraOpen(false);
+    if (visitForm.evidence_photo_urls.length >= CAR_WASH_VISIT_EVIDENCE_MAX) {
+      window.alert(`แนบรูปหลักฐานได้ไม่เกิน ${CAR_WASH_VISIT_EVIDENCE_MAX} รูป`);
+      return;
+    }
     setVisitPhotoBusy(true);
     try {
       const prepared = await prepareBuildingPosSlipImageFile(file);
-      const url = await uploadCarWashSessionImage(prepared);
-      setVisitForm((s) => ({ ...s, photo_url: url }));
+      const url = await uploadCarWashSessionImage(prepared, effectiveStaffAuth);
+      setVisitForm((s) => {
+        if (s.evidence_photo_urls.length >= CAR_WASH_VISIT_EVIDENCE_MAX) return s;
+        return {
+          ...s,
+          evidence_photo_urls: [...s.evidence_photo_urls, url].slice(0, CAR_WASH_VISIT_EVIDENCE_MAX),
+        };
+      });
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "อัปโหลดรูปไม่สำเร็จ");
     } finally {
       setVisitPhotoBusy(false);
     }
-  }, []);
+  }, [effectiveStaffAuth, visitForm.evidence_photo_urls.length]);
 
   async function submitBundle(e: React.FormEvent) {
     e.preventDefault();
@@ -1436,27 +1479,27 @@ export function CarWashDashboard({
     setBundleTabPhotoBusy(true);
     try {
       const prepared = await prepareBuildingPosSlipImageFile(file);
-      const url = await uploadCarWashSessionImage(prepared);
+      const url = await uploadCarWashSessionImage(prepared, effectiveStaffAuth);
       setBundleForm((s) => ({ ...s, slip_photo_url: url }));
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "อัปโหลดรูปไม่สำเร็จ");
     } finally {
       setBundleTabPhotoBusy(false);
     }
-  }, []);
+  }, [effectiveStaffAuth]);
 
   const onBundleModalCameraCaptured = useCallback(async (file: File) => {
     setBundleTabPhotoBusy(true);
     try {
       const prepared = await prepareBuildingPosSlipImageFile(file);
-      const url = await uploadCarWashSessionImage(prepared);
+      const url = await uploadCarWashSessionImage(prepared, effectiveStaffAuth);
       setBundleForm((s) => ({ ...s, slip_photo_url: url }));
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "อัปโหลดรูปไม่สำเร็จ");
     } finally {
       setBundleTabPhotoBusy(false);
     }
-  }, []);
+  }, [effectiveStaffAuth]);
 
   const finalizeBundleTabListSlip = useCallback(
     async (file: File) => {
@@ -1466,7 +1509,7 @@ export function CarWashDashboard({
       setBundleTabPhotoBusy(true);
       try {
         const prepared = await prepareBuildingPosSlipImageFile(file);
-        const url = await uploadCarWashSessionImage(prepared);
+        const url = await uploadCarWashSessionImage(prepared, effectiveStaffAuth);
         await repo.updateBundle(id, { slip_photo_url: url });
         await loadAll();
       } catch (err) {
@@ -1475,7 +1518,7 @@ export function CarWashDashboard({
         setBundleTabPhotoBusy(false);
       }
     },
-    [repo, loadAll],
+    [repo, loadAll, effectiveStaffAuth],
   );
 
   const onBundleUnifiedCameraCaptured = useCallback(
@@ -1590,11 +1633,17 @@ export function CarWashDashboard({
       busyVisitId={laneBusyVisitId}
       onSetStatus={handleVisitLaneStatus}
       onVisitPhotoUpdate={handleLaneVisitPhoto}
+      onVisitEvidenceUpdate={handleLaneVisitEvidence}
+      onLanePayment={handleLanePayment}
       onRecordVisit={openVisitModal}
       onRefresh={() => void refreshData()}
       refreshing={refreshing}
-      iconOnlyActions={isStaffLaneOnly}
-      staffLayout={isStaffLaneOnly}
+      iconOnlyActions={layoutVariant === "staff_lane"}
+      staffLayout={layoutVariant === "staff_lane"}
+      showFullscreenBoardLink={!isLaneBoard && !staffPortal}
+      fullscreenBoardHref="/dashboard/car-wash/lane-board"
+      staffAuth={effectiveStaffAuth}
+      showHubTabToolbar={!isStaffLaneOnly && !isLaneBoard}
     />
   );
 
@@ -1603,10 +1652,11 @@ export function CarWashDashboard({
       className={cn(
         "max-w-full",
         carWashContentStackClass,
-        !isStaffLaneOnly && carWashMainPaddingBottomClass,
+        !hideChrome && carWashMainPaddingBottomClass,
+        isLaneBoard && "min-h-dvh",
       )}
     >
-      {!isStaffLaneOnly ? (
+      {!hideChrome ? (
         <header className={cn(carWashShellWrapperClass, headerCollapsed && "hidden")}>
           <div>
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1700,7 +1750,7 @@ export function CarWashDashboard({
         </header>
       ) : null}
 
-      {!isStaffLaneOnly ? (
+      {!hideChrome ? (
         <AppUsageGuideModal
           open={usageGuideOpen}
           onClose={() => setUsageGuideOpen(false)}
@@ -1829,7 +1879,42 @@ export function CarWashDashboard({
         />
       ) : null}
 
-      {isStaffLaneOnly ?
+      {isLaneBoard ?
+        <div className="mx-auto flex min-h-dvh w-full max-w-[1600px] flex-col gap-3 px-3 py-3 sm:gap-4 sm:px-5 sm:py-4">
+          <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border border-white/55 bg-white/40 px-4 py-3 shadow-sm backdrop-blur-xl sm:rounded-[2rem] sm:px-5">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#4d47b6]">Live · SSE</p>
+              <h1 className="truncate text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">
+                ลานล้างวันนี้ — {shopLabel}
+              </h1>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50/90 px-2.5 py-1 text-[11px] font-bold text-emerald-800"
+                title="อัปเดตสถานะแบบสดผ่าน SSE"
+              >
+                <span className="relative flex h-2 w-2" aria-hidden>
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
+                สด
+              </span>
+              <Link
+                href="/dashboard/car-wash"
+                className={cn(
+                  appTemplateOutlineButtonClass,
+                  "inline-flex min-h-[40px] items-center justify-center px-3 text-sm font-bold",
+                )}
+              >
+                ปิดเต็มจอ
+              </Link>
+            </div>
+          </header>
+          {loading ? <p className="text-sm font-medium text-[#66638c]">กำลังโหลดลานล้าง...</p> : null}
+          {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
+          <div className="min-h-0 flex-1">{serviceLanePanelEl}</div>
+        </div>
+      : isStaffLaneOnly ?
         <StaffQrLandingShell
           variant="car-wash"
           title="คาร์แคร์พนักงาน"
@@ -1845,20 +1930,11 @@ export function CarWashDashboard({
       : tab === "overview" ? (
         <CarWashDashboardHubClient initialDateKey={bookingDateKey}>
           <div className="space-y-4 rounded-[2.5rem] border border-white/55 bg-white/28 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
-            <div className="flex min-w-0 flex-row items-center justify-between gap-2 px-0 sm:items-start sm:gap-4">
-              <div className="min-w-0 flex-1">
-                <p className={cn(carWashHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
-                  TODAY&apos;S STATS
-                </p>
-                <h3 className="text-lg font-bold text-[#2e2a58]">สถิติวันนี้</h3>
-              </div>
-              <Suspense
-                fallback={
-                  <div className="h-11 w-36 shrink-0 animate-pulse rounded-[1.25rem] bg-white/30" aria-hidden />
-                }
-              >
-                <CarWashDashboardTabToolbar className="shrink-0" />
-              </Suspense>
+            <div className="min-w-0">
+              <p className={cn(carWashHeaderEnLabelClass, "hidden sm:block")} aria-hidden>
+                TODAY&apos;S STATS
+              </p>
+              <h3 className="text-lg font-bold text-[#2e2a58]">สถิติวันนี้</h3>
             </div>
             <div className={cn("mt-4 grid grid-cols-2 gap-3", carWashStatGridClass)}>
               <CarWashStat
@@ -1905,7 +1981,7 @@ export function CarWashDashboard({
           </div>
           {serviceLanePanelEl}
         </CarWashDashboardHubClient>
-      ) : tab === "qr" ?
+      ) : tab === "qr" && !staffPortal ?
         <div className="space-y-4">
           {loading ? <p className="text-sm font-medium text-[#66638c]">กำลังโหลด...</p> : null}
           {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
@@ -2028,7 +2104,7 @@ export function CarWashDashboard({
         </div>
       : null}
 
-      {!isStaffLaneOnly && tab === "finance" ? (
+      {!hideChrome && tab === "finance" ? (
         <CarWashSalesPanel
           visits={visits}
           bundles={bundles}
@@ -2507,7 +2583,7 @@ export function CarWashDashboard({
         </div>
       ) : null}
 
-      {!isStaffLaneOnly ? (
+      {!hideChrome ? (
         <AppMobileDockShell ariaLabel="เมนูล่างคาร์แคร์">
           <ul className={cn(appMobileDockGridClass, "grid-cols-5")}>
             {tabItems.map((item) => {
@@ -2835,7 +2911,7 @@ export function CarWashDashboard({
       <FormModal
         open={showVisitModal}
         size="lg"
-        mobileCentered={isStaffLaneOnly}
+        mobileCentered={hideChrome}
         onClose={() => {
           setShowVisitModal(false);
           setVisitLookupHint(null);
@@ -3165,7 +3241,9 @@ export function CarWashDashboard({
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">สถานะเริ่มต้นบนลาน</label>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {CAR_WASH_SERVICE_STATUSES.filter((s) => s !== "COMPLETED" && s !== "PAID").map((s) => (
+                {CAR_WASH_SERVICE_STATUSES.filter(
+                  (s) => s !== "COMPLETED" && s !== "PAID" && s !== "HANDED_OVER",
+                ).map((s) => (
                   <button
                     key={s}
                     type="button"
@@ -3205,7 +3283,7 @@ export function CarWashDashboard({
                 onClick={() => setVisitAdvancedOpen((s) => !s)}
                 className="flex w-full items-center justify-between rounded-xl px-4 py-2.5 text-left transition-colors hover:bg-slate-50"
               >
-                <span className="text-xs font-black text-slate-500">ข้อมูลเพิ่มเติม (โน้ต / รูปแนบ)</span>
+                <span className="text-xs font-black text-slate-500">ข้อมูลเพิ่มเติม (โน้ต / รูปหลักฐานรถ)</span>
                 <svg
                   viewBox="0 0 24 24"
                   className={cn("h-4 w-4 text-slate-400 transition-transform", visitAdvancedOpen && "rotate-180")}
@@ -3230,44 +3308,77 @@ export function CarWashDashboard({
                         rows={2}
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">รูปแนบ (สภาพรถ / สลิป)</label>
-                      <div className="flex flex-wrap items-center gap-3">
-                        {visitForm.photo_url.trim() ? (
-                          <div className="group relative">
-                            <AppImageThumb
-                              className="h-16 w-16 rounded-xl border-2 border-white shadow-md transition-transform group-hover:scale-105"
-                              src={resolveAssetUrl(visitForm.photo_url.trim(), baseUrl)}
-                              alt="รูปแนบ"
-                              onOpen={() => {
-                                const u = resolveAssetUrl(visitForm.photo_url.trim(), baseUrl);
-                                if (u) lightbox.open(u);
-                              }}
-                            />
-                            <button
-                              type="button"
-                              className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-white shadow-md active:scale-90"
-                              onClick={() => setVisitForm((s) => ({ ...s, photo_url: "" }))}
-                              aria-label="ลบรูปแนบ"
-                            >
-                              <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
-                                <path d="M18 6L6 18M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        ) : (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            รูปหลักฐานสภาพรถ
+                          </label>
+                          <p className="mt-0.5 text-[11px] font-medium text-[#8b87b8]">
+                            ร่องรอย / รอยขีดข่วนตอนรับรถ · เลือกหลายรูปได้ · สูงสุด{" "}
+                            {CAR_WASH_VISIT_EVIDENCE_MAX} รูป
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black tabular-nums text-slate-600">
+                          {visitForm.evidence_photo_urls.length}/{CAR_WASH_VISIT_EVIDENCE_MAX}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {visitForm.evidence_photo_urls.map((raw) => {
+                          const src = resolveAssetUrl(raw, baseUrl);
+                          if (!src) return null;
+                          return (
+                            <div key={raw} className="group relative">
+                              <AppImageThumb
+                                className="h-16 w-16 rounded-xl border-2 border-white shadow-md transition-transform group-hover:scale-105"
+                                src={src}
+                                alt="รูปหลักฐานรถ"
+                                onOpen={() => lightbox.open(src)}
+                              />
+                              <button
+                                type="button"
+                                className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-white shadow-md active:scale-90"
+                                onClick={() =>
+                                  setVisitForm((s) => ({
+                                    ...s,
+                                    evidence_photo_urls: s.evidence_photo_urls.filter((u) => u !== raw),
+                                  }))
+                                }
+                                aria-label="ลบรูปหลักฐาน"
+                              >
+                                <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
+                                  <path d="M18 6L6 18M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          );
+                        })}
+                        {visitForm.evidence_photo_urls.length === 0 ? (
                           <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-dashed border-slate-100 bg-slate-50/50 text-slate-300">
                             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" />
                             </svg>
                           </div>
-                        )}
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
                         <AppImagePickCameraButtons
                           busy={visitPhotoBusy}
+                          disabled={visitForm.evidence_photo_urls.length >= CAR_WASH_VISIT_EVIDENCE_MAX}
                           onPickGallery={() => visitGalleryInputRef.current?.click()}
                           onPickCamera={() => setVisitCameraOpen(true)}
-                          labels={{ gallery: "เลือกรูป", camera: "ถ่ายรูป", busy: "กำลังอัปโหลด..." }}
+                          labels={{ gallery: "เลือกหลายรูป", camera: "ถ่ายรูป", busy: "กำลังอัปโหลด..." }}
                         />
+                        {visitForm.evidence_photo_urls.length > 0 ? (
+                          <button
+                            type="button"
+                            disabled={visitPhotoBusy}
+                            className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-100 disabled:opacity-50"
+                            onClick={() => setVisitForm((s) => ({ ...s, evidence_photo_urls: [] }))}
+                          >
+                            ลบทั้งหมด
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -3278,6 +3389,7 @@ export function CarWashDashboard({
             <AppGalleryCameraFileInputs
               galleryInputRef={visitGalleryInputRef}
               cameraInputRef={visitCameraInputRef}
+              galleryMultiple
               onChange={(e) => void onVisitGalleryFileChange(e)}
             />
           </form>
@@ -3291,7 +3403,7 @@ export function CarWashDashboard({
           setVisitCameraOpen(false);
           requestAnimationFrame(() => visitCameraInputRef.current?.click());
         }}
-        title="ถ่ายรูปรายการ"
+        title="ถ่ายรูปหลักฐานรถ"
       />
 
       <AppCameraCaptureModal
@@ -3790,7 +3902,7 @@ export function CarWashDashboard({
         mobileCentered
         onClose={() => setShowStaffQrModal(false)}
         title="QR พนักงาน"
-        description="เน้นมือถือ — สแกน QR หรือเปิดหน้าลานบนเครื่องพนักงาน"
+        description="สร้างลิงก์ถาวร — พนักงานใช้ภาพรวมและแพ็ก · ตั้งรหัสประจำวันได้ที่ตั้งค่าร้าน → พื้นฐาน"
         footer={
           <div className="flex justify-end">
             <button
@@ -3804,23 +3916,13 @@ export function CarWashDashboard({
           </div>
         }
       >
-        <ShopStaffQrPanel
-          pageUrl={staffPageUrl}
-          qrPng={staffPortalQr}
-          posterPreview={staffPosterPreviewUrl}
-          copyMsg={staffCopyMsg}
-          linkVisible={staffQrLinkVisible}
-          setLinkVisible={setStaffQrLinkVisible}
-          onCopyLink={() => void copyStaffPageUrl()}
-          downloadBusy={staffQrBusy}
-          onDownloadPdfA4={() => void downloadStaffQrPdf()}
-          onDownloadPng={() => void downloadStaffQrPng()}
-          posterTintClass="shadow-lg shadow-amber-950/10"
-          mobileBannerText="เน้นมือถือ — พนักงานสแกน QR หรือกดเปิดหน้าลานบนเครื่องตัวเอง"
-          qrAlt="QR เข้าหน้าพนักงานคาร์แคร์"
-          openPrimaryLabel="เปิดหน้าลานบนเครื่องนี้"
-          openSecondaryLabel="เปิดหน้าลาน"
-          posterAlt="ตัวอย่างโปสเตอร์ QR พนักงานคาร์แคร์"
+        <ModuleStaffTokenQrPanel
+          staffLinkApiPath="/api/car-wash/session/staff-link"
+          shopLabel={shopLabel.trim() || "คาร์แคร์"}
+          logoUrl={resolvedLogoUrl}
+          tagline="สแกนเข้าหน้าพนักงาน — ภาพรวม · แพ็ก"
+          mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าหน้าพนักงานคาร์แคร์"
+          openPrimaryLabel="เปิดหน้าพนักงาน"
         />
       </FormModal>
 

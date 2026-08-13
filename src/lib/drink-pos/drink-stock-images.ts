@@ -8,7 +8,7 @@ export const DRINK_POS_CATEGORY_IMAGES = [
   `https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?${Q}&w=640&h=400`,
   `https://images.unsplash.com/photo-1544787219-7f47ccb76574?${Q}&w=640&h=400`,
   `https://images.unsplash.com/photo-1563805042-7684c019e1cb?${Q}&w=640&h=400`,
-  `https://images.unsplash.com/photo-1623065425237-9c1a4c4f0d0f?${Q}&w=640&h=400`,
+  `https://images.unsplash.com/photo-1505252585461-04db1eb84625?${Q}&w=640&h=400`,
 ] as const;
 
 /** ลาเต้ · อเมริกาโน่ · คาปูชิโน่ · มอคค่า · ชาเขียว · ชาไทย · โกโก้ · นม · ท็อปปิ้ง · วิป · เอสเปรสโซ่ · สมูทตี้×2 */
@@ -29,3 +29,15 @@ export const DRINK_POS_PRODUCT_IMAGES = [
 ] as const;
 
 export const DRINK_POS_DEFAULT_IMAGE = `https://images.unsplash.com/photo-1604719312566-8912e9227c6a?${Q}&w=800&h=600`;
+
+const DEAD_UNSPLASH_PHOTO_IDS = ["photo-1623065425237-9c1a4c4f0d0f"] as const;
+
+/** แทนลิงก์ Unsplash ที่ 404 และตัดช่องว่าง — ใช้ตอนแสดง/แมปสินค้า */
+export function drinkPosPublicImageUrl(url: string | null | undefined): string | null {
+  const s = typeof url === "string" ? url.trim() : "";
+  if (!s) return null;
+  for (const id of DEAD_UNSPLASH_PHOTO_IDS) {
+    if (s.includes(id)) return DRINK_POS_CATEGORY_IMAGES[3] ?? DRINK_POS_DEFAULT_IMAGE;
+  }
+  return s;
+}

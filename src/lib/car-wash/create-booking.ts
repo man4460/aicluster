@@ -128,8 +128,12 @@ export async function createCarWashBookingWithPayment(
   let amountPaid = Math.max(0, Math.round(Number(input.payment?.amountPaidBaht ?? 0)));
   let paymentMethod = String(input.payment?.paymentMethod ?? "UNPAID").trim().toUpperCase() || "UNPAID";
   const slip = String(input.payment?.paymentSlipUrl ?? "").trim().slice(0, 512);
+  const payLater = paymentMethod === "PAY_LATER";
 
-  if (payDue != null && payDue > 0) {
+  if (payLater) {
+    /** รับรถ/จองก่อน · เก็บเงินบนลาน — ไม่บังคับยอด/สลิปตอนบันทึก */
+    amountPaid = 0;
+  } else if (payDue != null && payDue > 0) {
     if (amountPaid < payDue) {
       amountPaid = payDue;
     }
@@ -172,9 +176,17 @@ export async function createCarWashBookingWithPayment(
       packagePrice: totalBaht,
       depositAmountBaht: payDue,
       amountPaidBaht: amountPaid,
-      paymentMethod: payDue != null && payDue > 0 ? paymentMethod : "UNPAID",
-      paymentStatus: payDue != null && payDue > 0 ? paymentStatus : "UNPAID",
-      paymentSlipUrl: slip,
+      paymentMethod: payLater
+        ? "PAY_LATER"
+        : payDue != null && payDue > 0
+          ? paymentMethod
+          : "UNPAID",
+      paymentStatus: payLater
+        ? "UNPAID"
+        : payDue != null && payDue > 0
+          ? paymentStatus
+          : "UNPAID",
+      paymentSlipUrl: payLater ? "" : slip,
       status: "SCHEDULED",
       note: input.note?.trim().slice(0, 255) || null,
     },

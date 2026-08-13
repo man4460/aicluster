@@ -20,8 +20,11 @@ export function useCarWashMobileBottomSlot() {
 
 export function CarWashMobileBottomProvider({
   children,
+  /** แถบเมนูพอร์ทัลพนักงาน (มือถือ) — แสดงใน pill ล่างแทนเมนูแดชบอร์ด */
+  staffFooterNav,
 }: {
   children: ReactNode;
+  staffFooterNav?: ReactNode;
 }) {
   const [slot, setSlot] = useState<ReactNode | null>(null);
   const setMobileBottomSlot = useCallback((n: ReactNode | null) => {
@@ -32,19 +35,36 @@ export function CarWashMobileBottomProvider({
   return (
     <CarWashMobileBottomContext.Provider value={api}>
       {children}
-      <CarWashMobileUnifiedBar slot={slot} />
+      <CarWashMobileUnifiedBar slot={slot} staffFooterNav={staffFooterNav} />
     </CarWashMobileBottomContext.Provider>
   );
 }
 
 function CarWashMobileUnifiedBar({
   slot,
+  staffFooterNav,
 }: {
   slot: ReactNode | null;
+  staffFooterNav?: ReactNode;
 }) {
   const pathname = usePathname() ?? "";
+  const onDashboard = isCarWashModulePath(pathname);
+  const onStaffPortal = pathname.startsWith("/car-wash/staff");
 
-  if (!isCarWashModulePath(pathname)) return null;
+  if (onStaffPortal) {
+    if (!staffFooterNav && !slot) return null;
+    return (
+      <AppMobileDockUnifiedBar
+        ariaLabel="เมนูพนักงานคาร์แคร์"
+        slot={slot}
+        pillClassName={carWashDockPillClass}
+      >
+        {staffFooterNav ?? <span className="sr-only">พนักงานคาร์แคร์</span>}
+      </AppMobileDockUnifiedBar>
+    );
+  }
+
+  if (!onDashboard) return null;
 
   return (
     <AppMobileDockUnifiedBar

@@ -191,6 +191,8 @@ function visitStatusPillClass(s: ServiceVisit["service_status"]): string {
       return "bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200/80";
     case "PAID":
       return "bg-emerald-200 text-emerald-950 ring-1 ring-emerald-300/80";
+    case "HANDED_OVER":
+      return "bg-violet-200 text-violet-950 ring-1 ring-violet-300/80";
     case "QUEUED":
       return "bg-amber-100 text-amber-900 ring-1 ring-amber-200/80";
     case "WASHING":
@@ -582,7 +584,9 @@ export function CarWashSalesPanel({
   }, [salesRowDetail, visits, bundles]);
 
   const completedForChart = useMemo(() => {
-    return filteredVisits.filter((v) => v.service_status === "COMPLETED" || v.service_status === "PAID");
+    return filteredVisits.filter(
+      (v) => v.service_status === "COMPLETED" || v.service_status === "PAID" || v.service_status === "HANDED_OVER",
+    );
   }, [filteredVisits]);
 
   const revenueCostBuckets = useMemo(() => {

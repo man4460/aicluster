@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AppTime24Input, appTemplateOutlineButtonClass } from "@/components/app-templates";
+import { AppTime24Input } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { DEFAULT_CAR_WASH_DAY, normalizeTimeHHmm } from "@/lib/car-wash/slot-times";
 import {
@@ -13,12 +13,19 @@ import {
 import { CarWashDayScheduleClient } from "@/systems/car-wash/CarWashDayScheduleClient";
 import { carWashFilterChipClass, carWashFinanceFieldClass } from "@/systems/car-wash/car-wash-ui-tokens";
 
+const SLOT_MINUTE_OPTIONS = [15, 30, 45, 60] as const;
+
 type HoursState = {
   openTime: string;
   closeTime: string;
   slotMinutes: number;
   openWeekdays: number[];
 };
+
+function formatHoursSummary(h: HoursState): string {
+  const days = carWashFormatOpenWeekdaysLabel(h.openWeekdays);
+  return `${h.openTime}–${h.closeTime} · คิวทุก ${h.slotMinutes} นาที · ${days}`;
+}
 
 export function CarWashShopHoursPanel({ initialDateKey }: { initialDateKey: string }) {
   const [hours, setHours] = useState<HoursState>({
@@ -31,6 +38,7 @@ export function CarWashShopHoursPanel({ initialDateKey }: { initialDateKey: stri
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [dailyOpen, setDailyOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -111,7 +119,7 @@ export function CarWashShopHoursPanel({ initialDateKey }: { initialDateKey: stri
           openWeekdays: carWashNormalizeOpenWeekdays(data.hours.openWeekdays),
         });
       }
-      setMsg("บันทึกเวลาเปิดร้านประจำแล้ว");
+      setMsg("บันทึกเวลาเปิดร้านแล้ว");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
     } finally {
@@ -120,70 +128,71 @@ export function CarWashShopHoursPanel({ initialDateKey }: { initialDateKey: stri
   };
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-3 rounded-[1.25rem] border border-white/60 bg-white/50 p-3 sm:p-4">
-        <div>
-          <p className="text-sm font-black text-[#1e1b4b]">เวลาเปิดร้านประจำ (เวลาไทย)</p>
-          <p className="mt-1 text-xs text-[#66638c]">
-            ใช้เป็นค่าเริ่มเมื่อยังไม่ตั้งรายวัน · วันไหนไม่ติ๊ก = ปิดรับจองอัตโนมัติ
-          </p>
+    <div className="space-y-4">
+      <div className="rounded-[1.25rem] border border-white/60 bg-white/50 p-4 sm:p-5">
+        <div className="space-y-1">
+          <p className="text-sm font-black text-[#1e1b4b]">เวลาเปิดร้าน</p>
+          <p className="text-xs text-[#66638c]">ตั้งครั้งเดียวใช้ทุกวัน · เวลาไทย</p>
         </div>
 
         {loading ? (
-          <div className="h-24 animate-pulse rounded-xl bg-white/40" aria-hidden />
+          <div className="mt-4 h-28 animate-pulse rounded-xl bg-white/40" aria-hidden />
         ) : (
-          <>
+          <div className="mt-4 space-y-4">
+            {!loading && !err ? (
+              <p className="rounded-xl border border-[#ecebff] bg-[#faf9ff]/90 px-3 py-2.5 text-xs font-semibold text-[#4d47b6]">
+                ตอนนี้: {formatHoursSummary(hours)}
+              </p>
+            ) : null}
             {err ? <p className="text-sm text-rose-600">{err}</p> : null}
             {msg ? <p className="text-sm font-semibold text-emerald-700">{msg}</p> : null}
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-3">
               <label className="text-sm">
-                <span className="font-semibold text-[#2e2a58]">เริ่ม</span>
+                <span className="font-semibold text-[#2e2a58]">เปิด</span>
                 <div className="mt-1">
                   <AppTime24Input
                     value={hours.openTime}
                     onChange={(openTime) => setHours((h) => ({ ...h, openTime }))}
-                    aria-label="เวลาเริ่มเปิดร้าน"
+                    aria-label="เวลาเปิดร้าน"
                   />
                 </div>
               </label>
               <label className="text-sm">
-                <span className="font-semibold text-[#2e2a58]">สิ้นสุด</span>
+                <span className="font-semibold text-[#2e2a58]">ปิด</span>
                 <div className="mt-1">
                   <AppTime24Input
                     value={hours.closeTime}
                     onChange={(closeTime) => setHours((h) => ({ ...h, closeTime }))}
-                    aria-label="เวลาสิ้นสุดเปิดร้าน"
+                    aria-label="เวลาปิดร้าน"
                   />
                 </div>
               </label>
-              <label className="col-span-2 text-sm sm:col-span-1">
-                <span className="font-semibold text-[#2e2a58]">ระยะคิว (นาที)</span>
-                <input
-                  type="number"
-                  min={15}
-                  max={240}
-                  step={15}
+              <label className="text-sm">
+                <span className="font-semibold text-[#2e2a58]">ระยะคิว</span>
+                <select
                   value={hours.slotMinutes}
+                  disabled={busy}
                   onChange={(e) =>
                     setHours((h) => ({
                       ...h,
-                      slotMinutes: Math.max(15, Number(e.target.value) || 30),
+                      slotMinutes: Number(e.target.value) || DEFAULT_CAR_WASH_DAY.slotMinutes,
                     }))
                   }
                   className={cn(carWashFinanceFieldClass, "mt-1")}
                   aria-label="ระยะคิวเป็นนาที"
-                />
+                >
+                  {SLOT_MINUTE_OPTIONS.map((m) => (
+                    <option key={m} value={m}>
+                      {m} นาที
+                    </option>
+                  ))}
+                </select>
               </label>
             </div>
 
             <div className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-bold text-[#4d47b6]">เปิดวันไหนบ้าง</p>
-                <p className="text-[11px] font-semibold text-[#66638c]">
-                  {carWashFormatOpenWeekdaysLabel(hours.openWeekdays)}
-                </p>
-              </div>
+              <p className="text-xs font-bold text-[#4d47b6]">เปิดวันไหน</p>
               <div className="flex flex-wrap gap-1.5" role="group" aria-label="วันเปิดร้าน">
                 {CAR_WASH_ALL_WEEKDAYS.map((day) => {
                   const active = hours.openWeekdays.includes(day);
@@ -204,14 +213,17 @@ export function CarWashShopHoursPanel({ initialDateKey }: { initialDateKey: stri
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className={cn(appTemplateOutlineButtonClass, "min-h-9 rounded-xl px-3 text-xs font-bold")}
+                  className="text-xs font-bold text-[#5b61ff] underline-offset-2 hover:underline"
                   onClick={() => setHours((h) => ({ ...h, openWeekdays: [...CAR_WASH_ALL_WEEKDAYS] }))}
                 >
                   ทุกวัน
                 </button>
+                <span className="text-[#ccc]" aria-hidden>
+                  ·
+                </span>
                 <button
                   type="button"
-                  className={cn(appTemplateOutlineButtonClass, "min-h-9 rounded-xl px-3 text-xs font-bold")}
+                  className="text-xs font-bold text-[#5b61ff] underline-offset-2 hover:underline"
                   onClick={() => setHours((h) => ({ ...h, openWeekdays: [1, 2, 3, 4, 5] }))}
                 >
                   จ–ศ
@@ -225,18 +237,43 @@ export function CarWashShopHoursPanel({ initialDateKey }: { initialDateKey: stri
               onClick={() => void saveDefaults()}
               className="app-btn-primary min-h-[44px] rounded-xl px-5 text-sm font-bold"
             >
-              {busy ? "กำลังบันทึก…" : "บันทึกเวลาเปิดร้านประจำ"}
+              {busy ? "กำลังบันทึก…" : "บันทึก"}
             </button>
-          </>
+          </div>
         )}
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-black text-[#1e1b4b]">ปรับรายวัน (ถ้าต้องการ)</p>
-        <p className="text-xs text-[#66638c]">
-          ตั้งปิดชั่วคราวหรือเปลี่ยนเวลาเฉพาะวัน — ทับค่าประจำของวันนั้น
-        </p>
-        <CarWashDayScheduleClient embedded initialDateKey={initialDateKey} />
+      <div className="rounded-[1.25rem] border border-white/60 bg-white/40">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left"
+          aria-expanded={dailyOpen}
+          onClick={() => setDailyOpen((o) => !o)}
+        >
+          <div>
+            <p className="text-sm font-black text-[#1e1b4b]">เฉพาะวัน (ไม่บังคับ)</p>
+            <p className="mt-0.5 text-xs text-[#66638c]">ปิดวันหยุด หรือเปลี่ยนเวลาเฉพาะวันนั้น</p>
+          </div>
+          <svg
+            viewBox="0 0 24 24"
+            className={cn("h-5 w-5 shrink-0 text-[#8b87b8] transition-transform", dailyOpen && "rotate-180")}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            aria-hidden
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+        {dailyOpen ? (
+          <div className="border-t border-white/60 px-4 pb-4 pt-3">
+            <CarWashDayScheduleClient
+              compact
+              initialDateKey={initialDateKey}
+              defaultSlotMinutes={hours.slotMinutes}
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   );

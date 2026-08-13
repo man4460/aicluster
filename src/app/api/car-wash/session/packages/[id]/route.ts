@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/api-auth";
-import { carWashOwnerFromAuth } from "@/lib/car-wash/api-owner";
+import { getCarWashOwnerOrStaffContext } from "@/lib/car-wash/owner-or-staff";
 import { normalizeCarWashPackageImageUrl } from "@/lib/car-wash/package-image";
-import { getCarWashDataScope } from "@/lib/trial/module-scopes";
 
 const patchSchema = z.object({
   name: z.string().min(1).max(160).optional(),
@@ -39,11 +37,9 @@ function mapPackage(r: {
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const own = await carWashOwnerFromAuth(auth.session.sub);
-  if (!own.ok) return own.response;
-  const scope = await getCarWashDataScope(own.ownerId);
+  const own = await getCarWashOwnerOrStaffContext(req);
+  if (!own.ok) return own.res;
+  const scope = { trialSessionId: own.trialSessionId };
 
   const p = await ctx.params;
   const id = Number(p.id);
@@ -91,12 +87,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   });
 }
 
-export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const own = await carWashOwnerFromAuth(auth.session.sub);
-  if (!own.ok) return own.response;
-  const scope = await getCarWashDataScope(own.ownerId);
+export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const own = await getCarWashOwnerOrStaffContext(req);
+  if (!own.ok) return own.res;
+  const scope = { trialSessionId: own.trialSessionId };
 
   const p = await ctx.params;
   const id = Number(p.id);

@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/api-auth";
-import { carWashOwnerFromAuth } from "@/lib/car-wash/api-owner";
+import { getCarWashOwnerOrStaffContext } from "@/lib/car-wash/owner-or-staff";
 import { normalizePhone } from "@/lib/car-wash/http";
-import { getCarWashDataScope } from "@/lib/trial/module-scopes";
 import { jsonCarWashSessionError } from "@/lib/car-wash/route-errors";
 
 const postSchema = z.object({
@@ -19,13 +17,11 @@ const postSchema = z.object({
   slip_photo_url: z.string().max(512).optional().nullable(),
 });
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const auth = await requireSession();
-    if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const own = await carWashOwnerFromAuth(auth.session.sub);
-    if (!own.ok) return own.response;
-    const scope = await getCarWashDataScope(own.ownerId);
+    const own = await getCarWashOwnerOrStaffContext(req);
+    if (!own.ok) return own.res;
+    const scope = { trialSessionId: own.trialSessionId };
 
     const rows = await prisma.carWashBundle.findMany({
       where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
@@ -54,11 +50,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const auth = await requireSession();
-    if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const own = await carWashOwnerFromAuth(auth.session.sub);
-    if (!own.ok) return own.response;
-    const scope = await getCarWashDataScope(own.ownerId);
+    const own = await getCarWashOwnerOrStaffContext(req);
+    if (!own.ok) return own.res;
+    const scope = { trialSessionId: own.trialSessionId };
 
     let json: unknown;
     try {

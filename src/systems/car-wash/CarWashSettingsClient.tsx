@@ -333,6 +333,7 @@ function CarWashSettingsClientInner({
                 showBasicFields
                 showPaymentFields={false}
                 showSlipPaperSizeSettings={false}
+                showStaffDailyPinSettings
                 onSaved={setBranding}
               />
             </div>

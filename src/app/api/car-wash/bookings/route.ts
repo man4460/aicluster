@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/api-auth";
-import { carWashOwnerFromAuth } from "@/lib/car-wash/api-owner";
-import { getCarWashDataScope } from "@/lib/trial/module-scopes";
+import { getCarWashOwnerOrStaffContext } from "@/lib/car-wash/owner-or-staff";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { bangkokDayRangeFromDateKey } from "@/lib/car-wash/booking-datetime";
 import { createCarWashBookingWithPayment } from "@/lib/car-wash/create-booking";
@@ -74,12 +72,10 @@ function mapBooking(row: {
 }
 
 export async function GET(req: Request) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const own = await carWashOwnerFromAuth(auth.session.sub);
-  if (!own.ok) return own.response;
+  const own = await getCarWashOwnerOrStaffContext(req);
+  if (!own.ok) return own.res;
 
-  const scope = await getCarWashDataScope(own.ownerId);
+  const scope = { trialSessionId: own.trialSessionId };
   const dateKey = new URL(req.url).searchParams.get("date")?.trim() || bangkokDateKey();
   const range = bangkokDayRangeFromDateKey(dateKey);
   if (!range) {
@@ -100,12 +96,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const own = await carWashOwnerFromAuth(auth.session.sub);
-  if (!own.ok) return own.response;
+  const own = await getCarWashOwnerOrStaffContext(req);
+  if (!own.ok) return own.res;
 
-  const scope = await getCarWashDataScope(own.ownerId);
+  const scope = { trialSessionId: own.trialSessionId };
 
   let json: unknown;
   try {

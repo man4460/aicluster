@@ -34,6 +34,10 @@ import {
 } from "@/systems/barber/lib/pay-amount-presets";
 import { BarberPortalMediaSettings } from "@/systems/barber/components/BarberPortalMediaSettings";
 import { barberNormalizeSlotMinutes } from "@/systems/barber/lib/booking-slots";
+import {
+  normalizeBarberPortalPaymentMode,
+  type BarberPortalBookingPaymentMode,
+} from "@/systems/barber/lib/portal-booking";
 
 type ShopProfile = {
   displayName: string | null;
@@ -53,6 +57,8 @@ type ShopProfile = {
   openTime?: string;
   closeTime?: string;
   slotMinutes?: 30 | 60;
+  portalBookingPaymentMode?: BarberPortalBookingPaymentMode;
+  depositAmountBaht?: number | null;
 } & ModuleShopPaymentDto;
 
 type SettingsTab = "basic" | "finance" | "portal" | "hours";
@@ -209,6 +215,8 @@ function BarberShopSettingsClientInner({
     openTime: initial.openTime ?? "09:00",
     closeTime: initial.closeTime ?? "20:00",
     slotMinutes: barberNormalizeSlotMinutes(initial.slotMinutes ?? 30),
+    portalBookingPaymentMode: normalizeBarberPortalPaymentMode(initial.portalBookingPaymentMode),
+    depositAmountBaht: initial.depositAmountBaht ?? null,
     payAmountPresetsRaw:
       initial.payAmountPresetsRaw ??
       formatBarberPayAmountPresetsInput(
@@ -238,6 +246,9 @@ function BarberShopSettingsClientInner({
         payload.openTime = form.openTime;
         payload.closeTime = form.closeTime;
         payload.slotMinutes = barberNormalizeSlotMinutes(form.slotMinutes);
+        payload.portalBookingPaymentMode = form.portalBookingPaymentMode;
+        payload.depositAmountBaht =
+          form.portalBookingPaymentMode === "DEPOSIT" ? form.depositAmountBaht : null;
         Object.assign(payload, staffDailyPinPatchBody({ pinDraft, clearPin }));
       } else {
         delete payload.payAmountPresets;
@@ -252,6 +263,8 @@ function BarberShopSettingsClientInner({
         delete payload.openTime;
         delete payload.closeTime;
         delete payload.slotMinutes;
+        delete payload.portalBookingPaymentMode;
+        delete payload.depositAmountBaht;
       }
       const res = await fetch(apiBase, {
         method: "PATCH",
@@ -273,6 +286,10 @@ function BarberShopSettingsClientInner({
           openTime: json.profile.openTime ?? "09:00",
           closeTime: json.profile.closeTime ?? "20:00",
           slotMinutes: barberNormalizeSlotMinutes(json.profile.slotMinutes ?? 30),
+          portalBookingPaymentMode: normalizeBarberPortalPaymentMode(
+            json.profile.portalBookingPaymentMode,
+          ),
+          depositAmountBaht: json.profile.depositAmountBaht ?? null,
           payAmountPresetsRaw:
             json.profile.payAmountPresetsRaw ??
             formatBarberPayAmountPresetsInput(
@@ -412,6 +429,60 @@ function BarberShopSettingsClientInner({
 
           {tab === "finance" ? (
             <div id="barber-settings-panel-finance" role="tabpanel" aria-labelledby="barber-settings-tab-finance" className="space-y-3">
+              {isBarber ? (
+                <div className="rounded-2xl border border-white/60 bg-white/40 p-3 sm:p-4">
+                  <p className="text-xs font-bold text-[#4d47b6]">ชำระตอนจองจากลิงก์ลูกค้า</p>
+                  <div
+                    className={cn(barberPrimaryTabShellClass, "mt-2 flex flex-wrap gap-1.5")}
+                    role="radiogroup"
+                    aria-label="โหมดชำระตอนจอง"
+                  >
+                    {(
+                      [
+                        { value: "NONE", label: "ไม่ต้องชำระ" },
+                        { value: "DEPOSIT", label: "มัดจำ" },
+                        { value: "FULL", label: "ชำระเต็มยอด" },
+                      ] as const
+                    ).map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={form.portalBookingPaymentMode === opt.value}
+                        disabled={busy}
+                        onClick={() =>
+                          setForm((f) => ({
+                            ...f,
+                            portalBookingPaymentMode: opt.value,
+                          }))
+                        }
+                        className={barberPrimaryTabPillClass(form.portalBookingPaymentMode === opt.value)}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  {form.portalBookingPaymentMode === "DEPOSIT" ? (
+                    <label className="mt-3 block space-y-1">
+                      <span className="text-xs font-bold text-[#4d47b6]">จำนวนมัดจำ (บาท)</span>
+                      <input
+                        type="number"
+                        min={1}
+                        className="app-input mt-1 w-full rounded-xl"
+                        value={form.depositAmountBaht ?? ""}
+                        disabled={busy}
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            depositAmountBaht: e.target.value === "" ? null : Number(e.target.value),
+                          }))
+                        }
+                      />
+                    </label>
+                  ) : null}
+                </div>
+              ) : null}
+
               <AppModuleShopPaymentFields
                 value={form}
                 onChange={(payment) => setForm((f) => ({ ...f, ...payment }))}

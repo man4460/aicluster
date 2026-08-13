@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/api-auth";
-import { carWashOwnerFromAuth } from "@/lib/car-wash/api-owner";
+import { getCarWashOwnerOrStaffContext } from "@/lib/car-wash/owner-or-staff";
 import { normalizeCarWashPackageImageUrl } from "@/lib/car-wash/package-image";
-import { getCarWashDataScope } from "@/lib/trial/module-scopes";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 
 const postSchema = z.object({
@@ -39,12 +37,10 @@ function mapPackage(r: {
   };
 }
 
-export async function GET() {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const own = await carWashOwnerFromAuth(auth.session.sub);
-  if (!own.ok) return own.response;
-  const scope = await getCarWashDataScope(own.ownerId);
+export async function GET(req: Request) {
+  const own = await getCarWashOwnerOrStaffContext(req);
+  if (!own.ok) return own.res;
+  const scope = { trialSessionId: own.trialSessionId };
 
   let rows = await prisma.carWashPackage.findMany({
     where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
@@ -63,11 +59,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const own = await carWashOwnerFromAuth(auth.session.sub);
-  if (!own.ok) return own.response;
-  const scope = await getCarWashDataScope(own.ownerId);
+  const own = await getCarWashOwnerOrStaffContext(req);
+  if (!own.ok) return own.res;
+  const scope = { trialSessionId: own.trialSessionId };
 
   let json: unknown;
   try {

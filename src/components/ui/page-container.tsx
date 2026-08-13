@@ -2,7 +2,8 @@ import { cn } from "@/lib/cn";
 
 /** ใช้ sync กับ AuthPageFrame แนวนอน */
 export const PAGE_GUTTER_X = "px-4 sm:px-6";
-export const PAGE_GUTTER_Y = "py-6 sm:py-8";
+/** ระยะใต้แถบ Header ม่วง — บนแน่น · ล่างพอเลื่อน (ทุกหน้า /dashboard) */
+export const PAGE_GUTTER_Y = "pt-2 pb-5 sm:pt-3 sm:pb-7";
 
 /**
  * Padding แนวนอนของการ์ด/แถบชั้นในใต้ PageContainer — ให้แถบเมนูกับเนื้อหาในการ์ดเส้นตั้งเดียวกัน

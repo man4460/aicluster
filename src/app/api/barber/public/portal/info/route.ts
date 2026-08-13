@@ -14,6 +14,10 @@ import {
   barberParseHmToMinutes,
 } from "@/systems/barber/lib/booking-slots";
 import { barberMapStylistSchedule } from "@/systems/barber/lib/stylist-schedule";
+import {
+  barberComputePortalPayDue,
+  normalizeBarberPortalPaymentMode,
+} from "@/systems/barber/lib/portal-booking";
 
 /** ข้อมูลร้านสำหรับหน้าเว็บลูกค้า */
 export async function GET(req: Request) {
@@ -54,6 +58,8 @@ export async function GET(req: Request) {
         openTime: true,
         closeTime: true,
         slotMinutes: true,
+        portalBookingPaymentMode: true,
+        depositAmountBaht: true,
       },
     }),
     prisma.barberPackage.findMany({
@@ -92,6 +98,10 @@ export async function GET(req: Request) {
     profile?.closeTime && barberParseHmToMinutes(profile.closeTime) != null
       ? profile.closeTime
       : "20:00";
+  const portalBookingPaymentMode = normalizeBarberPortalPaymentMode(
+    profile?.portalBookingPaymentMode,
+  );
+  const depositAmountBaht = profile?.depositAmountBaht ?? null;
 
   return NextResponse.json({
     shop: {
@@ -112,15 +122,25 @@ export async function GET(req: Request) {
       openTime,
       closeTime,
       slotMinutes: barberNormalizeSlotMinutes(profile?.slotMinutes ?? 30),
+      portalBookingPaymentMode,
+      depositAmountBaht,
     },
-    packages: packages.map((p) => ({
-      id: p.id,
-      name: p.name,
-      priceBaht: Number(p.price),
-      totalSessions: p.totalSessions,
-      imageUrl: p.imageUrl,
-      durationMinutes: barberNormalizeDurationMinutes(p.durationMinutes, 30),
-    })),
+    packages: packages.map((p) => {
+      const priceBaht = Number(p.price);
+      return {
+        id: p.id,
+        name: p.name,
+        priceBaht,
+        totalSessions: p.totalSessions,
+        imageUrl: p.imageUrl,
+        durationMinutes: barberNormalizeDurationMinutes(p.durationMinutes, 30),
+        payDueBaht: barberComputePortalPayDue({
+          mode: portalBookingPaymentMode,
+          depositAmountBaht,
+          totalBaht: priceBaht,
+        }),
+      };
+    }),
     stylists: stylists.map((s) => {
       const schedule = barberMapStylistSchedule(s);
       return {

@@ -864,9 +864,10 @@ export function CarWashBookingPortalClient({
                 <p className="text-xs font-semibold text-[#66638c]">ไม่มีสล็อตในวันนี้</p>
               ) : (
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
-                  {availSlots.map((s) => {
+                  {availSlots.map((s, idx) => {
                     const selected = selectedSet.has(s.startTime);
-                    const disabled = !s.available;
+                    const canStart = runIsFree(availSlots, idx, slotsNeeded) != null;
+                    const disabled = !s.available || !canStart;
                     return (
                       <button
                         key={s.startTime}

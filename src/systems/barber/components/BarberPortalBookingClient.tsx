@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AppPublicCheckInGlassPage, appPublicCheckInGlassCardClass } from "@/components/app-templates";
+import {
+  AppImageLightbox,
+  AppImageThumb,
+  AppPublicCheckInGlassPage,
+  appPublicCheckInGlassCardClass,
+  useAppImageLightbox,
+} from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { barberPublicPortalUrl } from "@/lib/barber/public-url";
 
@@ -17,6 +23,13 @@ type BookingDetail = {
   endTime: string;
   durationMinutes: number;
   priceBaht: number | null;
+  amountPaidBaht?: number;
+  remainingBaht?: number | null;
+  paymentStatus?: string;
+  paymentMethod?: string;
+  depositAmountBaht?: number | null;
+  depositSlipUrl?: string | null;
+  paymentSlipUrl?: string | null;
   status: string;
   statusLabel: string;
 };
@@ -30,6 +43,13 @@ type ShopInfo = {
 
 function formatMoney(value: number) {
   return `฿${value.toLocaleString("th-TH")}`;
+}
+
+function paymentStatusLabel(status?: string): string {
+  if (status === "PAID") return "ชำระแล้ว";
+  if (status === "PARTIAL") return "ชำระบางส่วน";
+  if (status === "PENDING_REVIEW") return "รอตรวจสลิป";
+  return "ยังไม่ชำระ";
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -56,6 +76,7 @@ export function BarberPortalBookingClient({
   const [err, setErr] = useState<string | null>(null);
   const [shop, setShop] = useState<ShopInfo | null>(null);
   const [booking, setBooking] = useState<BookingDetail | null>(null);
+  const slipLb = useAppImageLightbox();
 
   const homeHref = barberPublicPortalUrl("", ownerId, trialSessionId || "prod");
 
@@ -117,7 +138,45 @@ export function BarberPortalBookingClient({
               {booking.priceBaht != null ? (
                 <Row label="ราคา" value={formatMoney(booking.priceBaht)} />
               ) : null}
+              {(booking.amountPaidBaht ?? 0) > 0 ? (
+                <Row
+                  label="ชำระแล้ว"
+                  value={`${formatMoney(booking.amountPaidBaht ?? 0)} · ${paymentStatusLabel(booking.paymentStatus)}`}
+                />
+              ) : null}
+              {booking.remainingBaht != null && booking.remainingBaht > 0 ? (
+                <Row label="คงเหลือ" value={formatMoney(booking.remainingBaht)} />
+              ) : null}
             </section>
+
+            {booking.depositSlipUrl?.trim() || booking.paymentSlipUrl?.trim() ? (
+              <section className={cn(appPublicCheckInGlassCardClass, "space-y-3 px-5 py-4")}>
+                {booking.depositSlipUrl?.trim() ? (
+                  <div>
+                    <p className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-[#8b87b8]">
+                      สลิปมัดจำ
+                    </p>
+                    <AppImageThumb
+                      src={booking.depositSlipUrl}
+                      alt="สลิปมัดจำ"
+                      onOpen={() => slipLb.open(booking.depositSlipUrl!.trim())}
+                    />
+                  </div>
+                ) : null}
+                {booking.paymentSlipUrl?.trim() ? (
+                  <div>
+                    <p className="mb-1.5 text-[10px] font-black uppercase tracking-widest text-[#8b87b8]">
+                      สลิปชำระเพิ่ม
+                    </p>
+                    <AppImageThumb
+                      src={booking.paymentSlipUrl}
+                      alt="สลิปชำระเพิ่ม"
+                      onOpen={() => slipLb.open(booking.paymentSlipUrl!.trim())}
+                    />
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
 
             {shop.contactPhone || shop.address ? (
               <section
@@ -146,6 +205,7 @@ export function BarberPortalBookingClient({
           </>
         ) : null}
       </div>
+      <AppImageLightbox src={slipLb.src} onClose={slipLb.close} alt="สลิป" />
     </AppPublicCheckInGlassPage>
   );
 }

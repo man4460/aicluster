@@ -163,6 +163,7 @@ model User {
   carWashShopProfiles      CarWashShopProfile[]
   carWashDaySchedules      CarWashDaySchedule[]
   carWashBookings          CarWashBooking[]
+  carWashStaffLinks        CarWashStaffLink[]
   footballTurfShopProfiles FootballTurfShopProfile[]
   footballTurfCourts       FootballTurfCourt[]
   footballTurfCustomers    FootballTurfCustomer[]
@@ -196,6 +197,9 @@ model User {
   buildingPosLoyaltyMembers  BuildingPosLoyaltyMember[]
   buildingPosLoyaltyRewards  BuildingPosLoyaltyReward[]
   buildingPosLoyaltyLedgers  BuildingPosLoyaltyLedger[]
+  buildingPosShopProfiles    BuildingPosShopProfile[]
+  buildingPosReservations    BuildingPosReservation[]
+  buildingPosReviews         BuildingPosReview[]
   villageProfiles           VillageProfile[]           @relation("VillageProfileToUser")
   villageHouses             VillageHouse[]             @relation("VillageHouseToUser")
   villageCommonFeeRows      VillageCommonFeeRow[]      @relation("VillageFeeRowToUser")
@@ -257,6 +261,8 @@ model User {
   generalStorePosProducts   GeneralStorePosProduct[]
   generalStorePosSales      GeneralStorePosSale[]
   drinkPosShopProfiles      DrinkPosShopProfile[]
+  drinkPosReservations      DrinkPosReservation[]
+  drinkPosReviews           DrinkPosReview[]
   moduleShopBrandings       ModuleShopBranding[]
   drinkPosCategories        DrinkPosCategory[]
   drinkPosProducts          DrinkPosProduct[]
@@ -679,6 +685,10 @@ model BarberShopProfile {
   portalBannerUrl String? @map("portal_banner_url") @db.VarChar(512)
   /** แกลเลอรีหน้าเว็บลูกค้า — JSON array ของ URL */
   portalGalleryJson String @default("[]") @map("portal_gallery_json") @db.Text
+  /** NONE | DEPOSIT | FULL — ชำระตอนจองจากลิงก์ลูกค้า / เพิ่มคิว */
+  portalBookingPaymentMode String @default("NONE") @map("portal_booking_payment_mode") @db.VarChar(16)
+  /** จำนวนมัดจำ (บาท) เมื่อโหมด DEPOSIT */
+  depositAmountBaht Int? @map("deposit_amount_baht")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -915,6 +925,20 @@ model BarberBooking {
   stylist          BarberStylist?       @relation(fields: [stylistId], references: [id], onDelete: SetNull)
   packageId        Int?                 @map("package_id")
   package          BarberPackage?       @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  /** ราคารายการ ณ เวลาจอง (บาท) */
+  packagePrice     Int                  @default(0) @map("package_price")
+  /** ยอดที่ต้องชำระตอนจอง (มัดจำ/เต็ม) — null = ไม่บังคับ */
+  depositAmountBaht Int?                @map("deposit_amount_baht")
+  /** ยอดที่ชำระแล้วสะสม */
+  amountPaidBaht   Int                  @default(0) @map("amount_paid_baht")
+  /** UNPAID | PROMPTPAY | TRANSFER | CASH | CREDIT_CARD | ONSITE */
+  paymentMethod    String               @default("UNPAID") @map("payment_method") @db.VarChar(24)
+  /** UNPAID | PENDING_REVIEW | PARTIAL | PAID */
+  paymentStatus    String               @default("UNPAID") @map("payment_status") @db.VarChar(24)
+  /** สลิปมัดจำ/ชำระตอนจองจากลิงก์ลูกค้า — ไม่ทับด้วยสลิปเช็คอิน */
+  depositSlipUrl   String?              @map("deposit_slip_url") @db.VarChar(512)
+  /** สลิปชำระเพิ่มตอนเช็คอิน */
+  paymentSlipUrl   String?              @map("payment_slip_url") @db.VarChar(512)
   status           BarberBookingStatus  @default(SCHEDULED) @map("status")
   createdAt        DateTime             @default(now()) @map("created_at")
   updatedAt        DateTime             @updatedAt @map("updated_at")
@@ -1811,6 +1835,21 @@ model CarWashDaySchedule {
   @@map("car_wash_day_schedules")
 }
 
+model CarWashStaffLink {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  tokenHash      String   @map("token_hash") @db.VarChar(128)
+  tokenCipher    String?  @map("token_cipher") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId], map: "car_wash_staff_link_owner_trial_uniq")
+  @@index([ownerUserId], map: "car_wash_staff_link_owner_idx")
+  @@map("car_wash_staff_links")
+}
+
 model CarWashBooking {
   id              Int                   @id @default(autoincrement())
   ownerUserId     String                @map("owner_id") @db.VarChar(191)
@@ -1910,8 +1949,10 @@ model CarWashVisit {
   recordedByName String   @default("") @map("recorded_by_name") @db.VarChar(160)
   /** QUEUED | WASHING | VACUUMING | WAXING | COMPLETED | PAID — ลานล้าง (PAID = ปิดคิว; รองรับ IN_PROGRESS เก่า) */
   serviceStatus  String   @default("COMPLETED") @map("service_status") @db.VarChar(32)
-  /** รูปแนบรายการ (สลิป/หลักฐาน) — อัปโหลดจากแดชบอร์ด */
+  /** รูปสลิปชำระเงินของรายการล้าง (1 รูป) */
   photoUrl       String   @default("") @map("photo_url") @db.VarChar(512)
+  /** รูปหลักฐานสภาพรถ / ร่องรอย — JSON array ของ URL สูงสุด 10 รูป */
+  evidencePhotoUrlsJson Json? @map("evidence_photo_urls_json")
   /** แพ็กเกจเหมา: ค้างหักครั้งจนกว่าจะชำระแล้ว (PAID) แล้วเซิร์ฟเวอร์จะหักและเคลียร์ */
   bundleId       Int?     @map("bundle_id")
   pendingBundle  CarWashBundle? @relation("CarWashVisitPendingBundle", fields: [bundleId], references: [id], onDelete: SetNull)
@@ -2269,6 +2310,85 @@ model BuildingPosOrder {
   @@index([ownerUserId, trialSessionId, memberPhone], map: "bpos_order_owner_trial_phone_idx")
   @@index([ownerUserId], map: "bpos_order_owner_idx")
   @@map("building_pos_orders")
+}
+
+/** โปรไฟล์ร้าน + เว็บจองจากบ้าน (แยกจาก ModuleShopBranding) */
+model BuildingPosShopProfile {
+  id                       String   @id @default(cuid())
+  ownerUserId              String   @map("owner_id") @db.VarChar(191)
+  owner                    User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId           String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  address                  String?  @db.Text
+  contactLine              String?  @map("contact_line") @db.VarChar(120)
+  facebookUrl              String?  @map("facebook_url") @db.VarChar(512)
+  mapUrl                   String?  @map("map_url") @db.VarChar(512)
+  portalBannerUrl          String?  @map("portal_banner_url") @db.VarChar(512)
+  /** JSON string[] รูปแกลเลอรี */
+  portalGalleryJson        String   @default("[]") @map("portal_gallery_json") @db.Text
+  openTime                 String   @default("10:00") @map("open_time") @db.VarChar(5)
+  closeTime                String   @default("22:00") @map("close_time") @db.VarChar(5)
+  /** NONE | DEPOSIT | FULL */
+  portalBookingPaymentMode String   @default("NONE") @map("portal_booking_payment_mode") @db.VarChar(16)
+  depositAmountBaht        Int?     @map("deposit_amount_baht")
+  /** 1–100 เมื่อมียอดพรีออเดอร์ — ว่าง = ใช้บาทคงที่ */
+  depositPercent           Int?     @map("deposit_percent")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId], map: "bpos_shop_profile_owner_trial_uq")
+  @@index([ownerUserId], map: "bpos_shop_profile_owner_idx")
+  @@map("building_pos_shop_profiles")
+}
+
+/** จองโต๊ะจากเว็บลูกค้า — พรีออเดอร์เก็บรอ ส่งเข้าครัวเมื่อยืนยัน */
+model BuildingPosReservation {
+  id               String   @id @default(cuid())
+  ownerUserId      String   @map("owner_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  customerName     String   @map("customer_name") @db.VarChar(160)
+  phone            String   @db.VarChar(20)
+  partySize        Int      @default(2) @map("party_size")
+  tablePreference  String   @default("") @map("table_preference") @db.VarChar(40)
+  visitDateKey     String   @map("visit_date_key") @db.VarChar(10)
+  visitTimeHm      String   @map("visit_time_hm") @db.VarChar(5)
+  itemsJson        Json     @map("items_json")
+  itemsTotalBaht   Int      @default(0) @map("items_total_baht")
+  paymentMode      String   @default("NONE") @map("payment_mode") @db.VarChar(16)
+  payDueBaht       Int      @default(0) @map("pay_due_baht")
+  amountPaidBaht   Int      @default(0) @map("amount_paid_baht")
+  paymentMethod    String   @default("") @map("payment_method") @db.VarChar(24)
+  paymentSlipUrl   String   @default("") @map("payment_slip_url") @db.VarChar(2048)
+  /** SCHEDULED | ARRIVED | CANCELLED | COMPLETED */
+  status           String   @default("SCHEDULED") @db.VarChar(24)
+  note             String   @default("") @db.VarChar(1000)
+  linkedOrderId    Int?     @map("linked_order_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, visitDateKey], map: "bpos_rsv_owner_trial_date_idx")
+  @@index([ownerUserId, trialSessionId, phone], map: "bpos_rsv_owner_trial_phone_idx")
+  @@index([ownerUserId, trialSessionId, status], map: "bpos_rsv_owner_trial_status_idx")
+  @@map("building_pos_reservations")
+}
+
+/** รีวิวลูกค้าบนเว็บจอง — แนบรูปได้ */
+model BuildingPosReview {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  guestName      String   @map("guest_name") @db.VarChar(120)
+  rating         Int      @default(5)
+  comment        String   @db.VarChar(800)
+  /** JSON string[] สูงสุด 5 รูป */
+  photoUrlsJson  String   @default("[]") @map("photo_urls_json") @db.Text
+  isPublished    Boolean  @default(true) @map("is_published")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, isPublished, createdAt], map: "bpos_review_owner_pub_created_idx")
+  @@map("building_pos_reviews")
 }
 
 /** ตั้งค่าสะสมคะแนน POS ร้านอาหาร — เช่น ทุก 100 บาท = 1 คะแนน */
@@ -3854,7 +3974,7 @@ model GeneralStorePosSaleLine {
   @@map("general_store_pos_sale_lines")
 }
 
-/** POS ร้านเครื่องดื่ม — การ์ดสินค้า บันทึกขาย สะสมแต้ม */
+/** POS ร้านเครื่องดื่ม — การ์ดสินค้า บันทึกขาย สะสมแต้ม · เว็บจองที่นั่ง */
 model DrinkPosShopProfile {
   id              String   @id @default(cuid())
   ownerUserId     String   @map("owner_user_id") @db.VarChar(191)
@@ -3865,6 +3985,19 @@ model DrinkPosShopProfile {
   tagline         String?  @db.VarChar(300)
   address         String?  @db.Text
   contactPhone    String?  @map("contact_phone") @db.VarChar(32)
+  contactLine     String?  @map("contact_line") @db.VarChar(120)
+  facebookUrl     String?  @map("facebook_url") @db.VarChar(512)
+  mapUrl          String?  @map("map_url") @db.VarChar(512)
+  portalBannerUrl String?  @map("portal_banner_url") @db.VarChar(512)
+  /** JSON string[] รูปแกลเลอรี */
+  portalGalleryJson String  @default("[]") @map("portal_gallery_json") @db.Text
+  openTime        String   @default("08:00") @map("open_time") @db.VarChar(5)
+  closeTime       String   @default("20:00") @map("close_time") @db.VarChar(5)
+  /** NONE | DEPOSIT | FULL */
+  portalBookingPaymentMode String @default("NONE") @map("portal_booking_payment_mode") @db.VarChar(16)
+  depositAmountBaht Int?   @map("deposit_amount_baht")
+  /** 1–100 เมื่อมียอดพรีออเดอร์ — ว่าง = ใช้บาทคงที่ */
+  depositPercent  Int?     @map("deposit_percent")
   promptPayPhone  String?  @map("prompt_pay_phone") @db.VarChar(20)
   bankName        String?  @map("bank_name") @db.VarChar(120)
   bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
@@ -3883,6 +4016,57 @@ model DrinkPosShopProfile {
 
   @@unique([ownerUserId, trialSessionId], map: "dp_shop_owner_trial_uq")
   @@map("drink_pos_shop_profiles")
+}
+
+/** จองที่นั่งจากเว็บลูกค้า — พรีออเดอร์เครื่องดื่มเก็บรอ */
+model DrinkPosReservation {
+  id               String   @id @default(cuid())
+  ownerUserId      String   @map("owner_user_id") @db.VarChar(191)
+  owner            User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  customerName     String   @map("customer_name") @db.VarChar(160)
+  phone            String   @db.VarChar(20)
+  partySize        Int      @default(2) @map("party_size")
+  tablePreference  String   @default("") @map("table_preference") @db.VarChar(40)
+  visitDateKey     String   @map("visit_date_key") @db.VarChar(10)
+  visitTimeHm      String   @map("visit_time_hm") @db.VarChar(5)
+  itemsJson        Json     @map("items_json")
+  itemsTotalBaht   Int      @default(0) @map("items_total_baht")
+  paymentMode      String   @default("NONE") @map("payment_mode") @db.VarChar(16)
+  payDueBaht       Int      @default(0) @map("pay_due_baht")
+  amountPaidBaht   Int      @default(0) @map("amount_paid_baht")
+  paymentMethod    String   @default("") @map("payment_method") @db.VarChar(24)
+  paymentSlipUrl   String   @default("") @map("payment_slip_url") @db.VarChar(2048)
+  /** SCHEDULED | ARRIVED | CANCELLED | COMPLETED */
+  status           String   @default("SCHEDULED") @db.VarChar(24)
+  note             String   @default("") @db.VarChar(1000)
+  linkedSaleId     String?  @map("linked_sale_id") @db.VarChar(191)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, visitDateKey], map: "dp_rsv_owner_trial_date_idx")
+  @@index([ownerUserId, trialSessionId, phone], map: "dp_rsv_owner_trial_phone_idx")
+  @@index([ownerUserId, trialSessionId, status], map: "dp_rsv_owner_trial_status_idx")
+  @@map("drink_pos_reservations")
+}
+
+/** รีวิวลูกค้าบนเว็บจองร้านเครื่องดื่ม */
+model DrinkPosReview {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_user_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  guestName      String   @map("guest_name") @db.VarChar(120)
+  rating         Int      @default(5)
+  comment        String   @db.VarChar(800)
+  /** JSON string[] สูงสุด 5 รูป */
+  photoUrlsJson  String   @default("[]") @map("photo_urls_json") @db.Text
+  isPublished    Boolean  @default(true) @map("is_published")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, isPublished, createdAt], map: "dp_review_owner_pub_created_idx")
+  @@map("drink_pos_reviews")
 }
 
 model DrinkPosCategory {

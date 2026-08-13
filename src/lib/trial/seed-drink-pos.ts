@@ -58,6 +58,8 @@ const COST_BLUEPRINTS = [
 ];
 
 async function wipeDrinkPosOwnerData(prisma: PrismaClient, ownerUserId: string, trialSessionId: string) {
+  await prisma.drinkPosReservation.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await prisma.drinkPosReview.deleteMany({ where: { ownerUserId, trialSessionId } });
   await prisma.drinkPosLoyaltyLedger.deleteMany({ where: { ownerUserId, trialSessionId } });
   await prisma.drinkPosLoyaltyReward.deleteMany({ where: { ownerUserId, trialSessionId } });
   await prisma.drinkPosLoyaltySettings.deleteMany({ where: { ownerUserId, trialSessionId } });
@@ -71,6 +73,14 @@ async function wipeDrinkPosOwnerData(prisma: PrismaClient, ownerUserId: string, 
   await prisma.drinkPosShopProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
 }
 
+const DRINK_POS_PORTAL_SAMPLE_BANNER =
+  "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1600&q=80";
+const DRINK_POS_PORTAL_SAMPLE_GALLERY = [
+  "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=800&q=80",
+];
+
 /** ใส่ข้อมูลตัวอย่าง POS เครื่องดื่ม (ล้างแล้วใส่ใหม่) */
 export async function seedDrinkPosProdDemoForOwner(prisma: PrismaClient, ownerUserId: string) {
   const trialSessionId = "prod";
@@ -82,8 +92,19 @@ export async function seedDrinkPosProdDemoForOwner(prisma: PrismaClient, ownerUs
       ownerUserId,
       trialSessionId,
       displayName: "Café MAWELL Demo",
-      tagline: "กาแฟสด · สมูทตี้ · สะสมคะแนน",
+      tagline: "กาแฟสด · สมูทตี้ · สั่งออนไลน์",
       contactPhone: "021234567",
+      address: "99 ถนนสุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพฯ",
+      contactLine: "@mawellcafe",
+      facebookUrl: "https://facebook.com/",
+      mapUrl: "https://maps.google.com/",
+      portalBannerUrl: DRINK_POS_PORTAL_SAMPLE_BANNER,
+      portalGalleryJson: JSON.stringify(DRINK_POS_PORTAL_SAMPLE_GALLERY),
+      openTime: "08:00",
+      closeTime: "20:00",
+      portalBookingPaymentMode: "DEPOSIT",
+      depositAmountBaht: 50,
+      depositPercent: 30,
       stampsPerReward: 10,
       rewardTitle: "เครื่องดื่มฟรี 1 แก้ว",
       promptPayPhone: "0812345678",
@@ -233,6 +254,60 @@ export async function seedDrinkPosProdDemoForOwner(prisma: PrismaClient, ownerUs
       },
     });
   }
+
+  const featured = productsOrdered[0];
+  const todayKey = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
+  if (featured) {
+    await prisma.drinkPosReservation.create({
+      data: {
+        ownerUserId,
+        trialSessionId,
+        customerName: "คุณมุก",
+        phone: "0812345678",
+        partySize: 2,
+        visitDateKey: todayKey,
+        visitTimeHm: "15:00",
+        itemsJson: [
+          {
+            productId: featured.id,
+            name: featured.name,
+            unitPrice: featured.priceBaht,
+            qty: 2,
+          },
+        ],
+        itemsTotalBaht: featured.priceBaht * 2,
+        paymentMode: "DEPOSIT",
+        payDueBaht: 50,
+        amountPaidBaht: 50,
+        paymentMethod: "PROMPTPAY",
+        status: "SCHEDULED",
+        note: "ใกล้หน้าต่าง",
+      },
+    });
+  }
+
+  await prisma.drinkPosReview.createMany({
+    data: [
+      {
+        ownerUserId,
+        trialSessionId,
+        guestName: "น้องบีม",
+        rating: 5,
+        comment: "ลาเต้หอมมาก สั่งสะดวก",
+        photoUrlsJson: "[]",
+        isPublished: true,
+      },
+      {
+        ownerUserId,
+        trialSessionId,
+        guestName: "คุณฝน",
+        rating: 4,
+        comment: "สมูทตี้สดดี บรรยากาศร้านน่านั่ง",
+        photoUrlsJson: "[]",
+        isPublished: true,
+      },
+    ],
+  });
 }
 
 /** ใส่ข้อมูลตัวอย่างถ้ายังไม่มีหมวด (ไม่ล้างของเดิม) */

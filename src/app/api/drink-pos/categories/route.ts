@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { drinkPosPublicImageUrl } from "@/lib/drink-pos/drink-stock-images";
 import { withDrinkPosOwnerContext } from "@/systems/drink-pos/lib/api-auth";
 
 const createSchema = z.object({
@@ -32,7 +33,7 @@ export async function GET() {
     categories: rows.map((r) => ({
       id: r.id,
       name: r.name,
-      imageUrl: r.imageUrl,
+      imageUrl: drinkPosPublicImageUrl(r.imageUrl),
       sortOrder: r.sortOrder,
       isActive: r.isActive,
       productCount: r._count.products,

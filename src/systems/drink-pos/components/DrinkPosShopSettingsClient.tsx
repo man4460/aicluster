@@ -29,8 +29,14 @@ export type DrinkPosShopSettingsProfile = {
 
 export function DrinkPosShopSettingsClient({
   initial,
+  embedded = false,
+  showBasicFields = true,
+  showPaymentFields = true,
 }: {
   initial: DrinkPosShopSettingsProfile;
+  embedded?: boolean;
+  showBasicFields?: boolean;
+  showPaymentFields?: boolean;
 }) {
   const [form, setForm] = useState<DrinkPosShopSettingsProfile>({
     ...initial,
@@ -90,14 +96,13 @@ export function DrinkPosShopSettingsClient({
     }
   };
 
-  return (
-    <div className="space-y-4 sm:space-y-6">
-      <AppDashboardSection className={appDashboardSectionVioletClass}>
-        <AppSectionHeader title="ตั้งค่าร้าน" />
-        <div className="space-y-3 text-left">
-          {err ? <p className="text-sm text-rose-600">{err}</p> : null}
-          {msg ? <p className="text-sm font-semibold text-emerald-700">{msg}</p> : null}
+  const fields = (
+    <div className="space-y-3 text-left">
+      {err ? <p className="text-sm text-rose-600">{err}</p> : null}
+      {msg ? <p className="text-sm font-semibold text-emerald-700">{msg}</p> : null}
 
+      {showBasicFields ? (
+        <>
           <AppShopLogoField
             logoUrl={form.logoUrl}
             fallbackLabel={form.displayName ?? "ร้านเครื่องดื่ม"}
@@ -138,7 +143,11 @@ export function DrinkPosShopSettingsClient({
               onChange={(e) => setForm((f) => ({ ...f, contactPhone: e.target.value }))}
             />
           </label>
+        </>
+      ) : null}
 
+      {showPaymentFields ? (
+        <>
           <AppModuleShopPaymentFields
             value={form}
             onChange={(payment) => setForm((f) => ({ ...f, ...payment }))}
@@ -172,16 +181,27 @@ export function DrinkPosShopSettingsClient({
             onClearPinChange={setClearPin}
             disabled={busy}
           />
+        </>
+      ) : null}
 
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void save()}
-            className={cn("app-btn-primary min-h-[44px] rounded-xl px-5 text-sm font-bold")}
-          >
-            {busy ? "กำลังบันทึก…" : "บันทึก"}
-          </button>
-        </div>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => void save()}
+        className={cn("app-btn-primary min-h-[44px] rounded-xl px-5 text-sm font-bold")}
+      >
+        {busy ? "กำลังบันทึก…" : "บันทึก"}
+      </button>
+    </div>
+  );
+
+  if (embedded) return fields;
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      <AppDashboardSection className={appDashboardSectionVioletClass}>
+        <AppSectionHeader title="ตั้งค่าร้าน" />
+        {fields}
       </AppDashboardSection>
     </div>
   );

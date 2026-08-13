@@ -13,6 +13,7 @@ import {
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { readStoredStaffDailyUnlock, staffDailyUnlockHeaders } from "@/lib/modules/staff-daily-pin";
 import {
   CAR_WASH_PAYMENT_METHODS,
   carWashPaymentMethodLabel,
@@ -24,6 +25,7 @@ import {
   carWashPaymentChipIdleClass,
   carWashPaymentCtaClass,
 } from "@/systems/car-wash/car-wash-ui-tokens";
+import type { CarWashStaffAuth } from "@/systems/car-wash/car-wash-service";
 
 type PayInfo = {
   qrDataUrl: string | null;
@@ -43,6 +45,8 @@ export type CarWashPaymentPanelProps = {
   onSlipUrlChange: (url: string | null) => void;
   disabled?: boolean;
   className?: string;
+  /** พอร์ทัลลิงก์พนักงาน — ใส่โทเค็นแทน session cookie */
+  staffAuth?: CarWashStaffAuth | null;
 };
 
 export function CarWashPaymentPanel({
@@ -53,7 +57,26 @@ export function CarWashPaymentPanel({
   onSlipUrlChange,
   disabled,
   className,
+  staffAuth = null,
 }: CarWashPaymentPanelProps) {
+  const authUrl = (path: string) => {
+    if (!staffAuth) return path;
+    const qs = new URLSearchParams({
+      ownerId: staffAuth.ownerId,
+      t: staffAuth.trialSessionId,
+      k: staffAuth.k,
+    });
+    const unlock = readStoredStaffDailyUnlock("car-wash", staffAuth.ownerId);
+    if (unlock) qs.set("du", unlock);
+    return `${path}?${qs.toString()}`;
+  };
+  const authInit = (init?: RequestInit): RequestInit => {
+    if (!staffAuth) return { ...init, credentials: init?.credentials ?? "include" };
+    const headerBag = new Headers(init?.headers);
+    const unlockHeaders = staffDailyUnlockHeaders("car-wash", staffAuth.ownerId);
+    for (const [key, value] of Object.entries(unlockHeaders)) headerBag.set(key, value);
+    return { ...init, credentials: "omit", headers: headerBag };
+  };
   const galleryRef = useRef<HTMLInputElement>(null);
   const { openCamera, cameraInputRef, cameraModal } = useAppCameraCapture({ title: "ถ่ายรูปสลิป" });
   const lb = useAppImageLightbox();
@@ -69,6 +92,7 @@ export function CarWashPaymentPanel({
   const needsSlip = carWashPaymentShowsSlipUpload(method, amountBaht);
   const showPromptPay = needsPayUi && method === "PROMPTPAY";
   const showTransfer = needsPayUi && method === "TRANSFER";
+  const payLater = method === "PAY_LATER";
 
   useEffect(() => {
     if (!showPromptPay) setCustomerQrOpen(false);
@@ -99,12 +123,14 @@ export function CarWashPaymentPanel({
     setQrErr(null);
     void (async () => {
       try {
-        const res = await fetch("/api/car-wash/session/promptpay-qr", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ amountBaht }),
-        });
+        const res = await fetch(
+          authUrl("/api/car-wash/session/promptpay-qr"),
+          authInit({
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amountBaht }),
+          }),
+        );
         const j = (await res.json().catch(() => ({}))) as Partial<PayInfo> & { error?: string };
         if (cancelled) return;
         if (!res.ok) {
@@ -143,11 +169,10 @@ export function CarWashPaymentPanel({
       const prepared = await prepareImageFileForUpload(file);
       const fd = new FormData();
       fd.append("file", prepared);
-      const res = await fetch("/api/car-wash/session/images/upload", {
-        method: "POST",
-        body: fd,
-        credentials: "include",
-      });
+      const res = await fetch(
+        authUrl("/api/car-wash/session/images/upload"),
+        authInit({ method: "POST", body: fd }),
+      );
       const j = (await res.json().catch(() => null)) as { imageUrl?: string; url?: string; error?: string } | null;
       const url = j?.imageUrl ?? j?.url;
       if (!res.ok || typeof url !== "string") {
@@ -192,7 +217,7 @@ export function CarWashPaymentPanel({
               disabled={disabled}
               onClick={() => {
                 onMethodChange(m);
-                if (m === "CASH" || m === "CREDIT_CARD") onSlipUrlChange(null);
+                if (m === "CASH" || m === "CREDIT_CARD" || m === "PAY_LATER") onSlipUrlChange(null);
               }}
               className={cn(
                 "shrink-0 transition disabled:opacity-50",
@@ -207,8 +232,16 @@ export function CarWashPaymentPanel({
       </div>
 
       <p className="text-sm font-black text-[#4d47b6]">
-        ยอดที่ต้องชำระ ฿{amountBaht.toLocaleString("th-TH")}
+        {payLater
+          ? "เก็บเงินตอนปิดคิวบนลานล้าง"
+          : `ยอดที่ต้องชำระ ฿${amountBaht.toLocaleString("th-TH")}`}
       </p>
+
+      {payLater ? (
+        <p className="rounded-xl border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-xs font-semibold text-amber-950">
+          รับรถเข้าลานก่อน — ไม่แนบสลิปตอนนี้ · รับชำระภายหลังจากการ์ดลาน
+        </p>
+      ) : null}
 
       {showPromptPay ? (
         <div className="space-y-2 rounded-[1.25rem] border border-[#e8e6fc]/90 bg-white/80 p-3">

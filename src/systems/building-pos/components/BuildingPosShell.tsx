@@ -12,6 +12,7 @@ import {
   writeBuildingPosHeaderCollapsed,
 } from "@/systems/building-pos/building-pos-nav";
 import { BuildingPosMobileBottomProvider } from "@/systems/building-pos/components/BuildingPosMobileBottomChrome";
+import { BuildingPosPresentationGuideCard } from "@/systems/building-pos/components/BuildingPosPresentationGuideCard";
 import { BuildingPosUnifiedMenuBar } from "@/systems/building-pos/components/BuildingPosUnifiedMenuBar";
 import {
   buildingPosAccentBarClass,
@@ -37,6 +38,7 @@ export function BuildingPosShell({ children }: { children: React.ReactNode }) {
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
   const onOrderPage =
     pathname === BUILDING_POS_ORDER_HREF || pathname.startsWith(`${BUILDING_POS_ORDER_HREF}/`);
+  const onPresentationPage = pathname.includes("/building-pos/presentation");
 
   useEffect(() => {
     const sync = () => setHeaderCollapsed(readBuildingPosHeaderCollapsed());
@@ -57,15 +59,16 @@ export function BuildingPosShell({ children }: { children: React.ReactNode }) {
     <BuildingPosMobileBottomProvider>
     <div
       className={cn(
-        "flex min-h-0 max-w-full flex-1 flex-col space-y-4 sm:space-y-6",
-        onOrderPage && "lg:h-full lg:max-h-full lg:overflow-hidden lg:space-y-3",
+        "flex min-h-0 max-w-full flex-1 flex-col gap-3 sm:gap-4",
+        onOrderPage && "lg:h-full lg:max-h-full lg:overflow-hidden lg:!gap-3",
+        onPresentationPage && "!gap-0",
       )}
     >
       <header
         className={cn(
           buildingPosModuleGlassShellClass,
           "flex flex-col px-4 py-4 sm:px-8 sm:py-6 print:hidden",
-          headerCollapsed && "hidden",
+          (headerCollapsed || onPresentationPage) && "hidden",
         )}
       >
         <div className={buildingPosAccentBarClass} aria-hidden />
@@ -129,129 +132,122 @@ export function BuildingPosShell({ children }: { children: React.ReactNode }) {
         open={usageGuideOpen}
         onClose={() => setUsageGuideOpen(false)}
         title="คู่มือการใช้งาน — POS ร้านอาหาร"
-        subtitle="วิธีใช้งานแบบละเอียดรายเมนู สำหรับงานหน้าร้านและหลังร้าน"
+        subtitle="ภาพรวม · เมนู · วิธีสั่งออเดอร์ · การไหลของงานครัวถึงชำระเงิน"
         sections={[
           {
-            title: "ลำดับเริ่มต้นแนะนำ",
+            title: "สไลด์นำเสนอ",
+            content: <BuildingPosPresentationGuideCard />,
+          },
+          {
+            title: "1. ภาพรวมของโมดูล",
             content: (
               <>
                 <p>
-                  เริ่มจาก <strong className="font-semibold text-[#2e2a58]">หมวดหมู่</strong> แล้วค่อยสร้าง{" "}
-                  <strong className="font-semibold text-[#2e2a58]">เมนูอาหาร</strong> จากนั้นทดสอบ{" "}
-                  <strong className="font-semibold text-[#2e2a58]">QR สั่งอาหาร</strong> และปิดการขายใน{" "}
-                  <strong className="font-semibold text-[#2e2a58]">ยอดขาย</strong>
+                  <strong className="font-semibold text-[#2e2a58]">POS ร้านอาหาร</strong> รวมงานหน้าร้านและหลังร้านไว้ในที่เดียว
+                  — จากเมนู · รับออเดอร์ · ครัวหลายแผนก · เสิร์ฟ · ชำระเงิน · ยอดขาย และการเงิน
                 </p>
-                <ol className="list-decimal space-y-1 pl-5 marker:font-semibold marker:text-[#4d47b6]">
-                  <li>ตั้งชื่อร้าน/โลโก้/ช่องทางรับชำระที่หน้าโปรไฟล์</li>
-                  <li>สร้างหมวดหมู่เมนูให้ครบก่อนเปิดร้าน</li>
-                  <li>เพิ่มเมนูและราคา พร้อมตรวจสถานะเปิดขาย</li>
-                  <li>ทดสอบรับออเดอร์ 1 รายการ และปิดบิลจริง</li>
+                <ul className="mt-2 list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">แดชบอร์ด</strong> — สรุปยอดวันนี้ ออเดอร์ค้าง และทางลัดสำคัญ
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ออร์เดอร์ / คิวออเดอร์</strong> — สั่งแทนลูกค้า และติดตามสถานะแบบเรียลไทม์
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">เมนู · หมวดหมู่</strong> — จัดรายการอาหาร ราคา สถานะเปิดขาย
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">QR</strong> — ลูกค้าสแกนสั่งเอง · ลิงก์พนักงาน / แผนกครัว
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">การเงิน</strong> — ยอดขาย กราฟ รายรับ–รายจ่าย และสลิป
+                  </li>
+                </ul>
+              </>
+            ),
+          },
+          {
+            title: "2. รายละเอียดแต่ละเมนู",
+            content: (
+              <ol className="list-decimal space-y-3 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                <li>
+                  <p className="font-semibold text-[#2e2a58]">แดชบอร์ด</p>
+                  <p className="mt-0.5">ดูภาพรวมร้านก่อนเปิดกะ — รายรับวันนี้ จำนวนออเดอร์ และทางลัดไปรับออเดอร์ / QR</p>
+                </li>
+                <li>
+                  <p className="font-semibold text-[#2e2a58]">ออร์เดอร์</p>
+                  <p className="mt-0.5">หน้ารับออเดอร์ของพนักงาน — เลือกโต๊ะ ช่องทาง เมนู แล้วส่งเข้าครัวทันที</p>
+                </li>
+                <li>
+                  <p className="font-semibold text-[#2e2a58]">คิวออเดอร์</p>
+                  <p className="mt-0.5">กระดาน 4 ขั้น: รับออเดอร์ → ครัวกำลังทำ → กำลังเสิร์ฟ → เสร็จแล้ว อัปเดตสถานะได้ทันที</p>
+                </li>
+                <li>
+                  <p className="font-semibold text-[#2e2a58]">เมนู / หมวดหมู่</p>
+                  <p className="mt-0.5">สร้างหมวด (เช่น จานหลัก · เครื่องดื่ม) แล้วเพิ่มเมนู ราคา รูป และเปิด/ปิดขาย</p>
+                </li>
+                <li>
+                  <p className="font-semibold text-[#2e2a58]">QR</p>
+                  <p className="mt-0.5">QR ลูกค้า/โต๊ะ · ลิงก์พนักงาน · ลิงก์แผนกครัว/เสิร์ฟ สำหรับเปิดบนมือถือหรือแท็บเล็ต</p>
+                </li>
+                <li>
+                  <p className="font-semibold text-[#2e2a58]">การเงิน (ยอดขาย · รายจ่าย)</p>
+                  <p className="mt-0.5">ตรวจยอด ปิดบิล พิมพ์สลิป กรองช่วงเวลา และบันทึกรายจ่ายพร้อมหลักฐาน</p>
+                </li>
+              </ol>
+            ),
+          },
+          {
+            title: "3. วิธีการใช้งาน — จากเมนูถึงออเดอร์",
+            content: (
+              <>
+                <p className="font-semibold text-[#2e2a58]">เตรียมร้านให้พร้อม</p>
+                <ol className="mt-1 list-decimal space-y-1 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                  <li>ตั้งชื่อร้าน · โลโก้ · ช่องทางรับชำระที่โปรไฟล์/ตั้งค่า</li>
+                  <li>สร้างหมวดหมู่เมนูให้ครบ</li>
+                  <li>เพิ่มเมนู ราคา และเปิดสถานะขาย</li>
+                </ol>
+                <p className="mt-3 font-semibold text-[#2e2a58]">รับออเดอร์จากลูกค้า (พนักงาน)</p>
+                <ol className="mt-1 list-decimal space-y-1 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                  <li>เปิดเมนู <strong className="font-semibold text-[#2e2a58]">ออร์เดอร์</strong></li>
+                  <li>เลือกโต๊ะ / ช่องทาง · เลือกเมนูใส่ตะกร้า</li>
+                  <li>ยืนยัน — ระบบส่งเข้าครัวและขึ้นคิวออเดอร์อัตโนมัติ</li>
+                </ol>
+                <p className="mt-3 font-semibold text-[#2e2a58]">ลูกค้าสั่งเองผ่าน QR</p>
+                <ol className="mt-1 list-decimal space-y-1 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                  <li>เปิดแท็บ <strong className="font-semibold text-[#2e2a58]">QR</strong> → คัดลอกลิงก์หรือพิมพ์โปสเตอร์ติดโต๊ะ</li>
+                  <li>ลูกค้าสแกน เลือกเมนู ส่งออเดอร์</li>
+                  <li>ออเดอร์เข้าคิวเดียวกับที่พนักงานสั่ง — ไม่ต้องคีย์ซ้ำ</li>
                 </ol>
               </>
             ),
           },
           {
-            title: "เมนูหลัก",
+            title: "4. การทำงานของระบบ — ครัว · เสิร์ฟ · จ่ายเงิน",
             content: (
-              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>แท็บเมนูอยู่ในส่วนหัว — กดซ่อนเพื่อย้ายไปแถบบน (มือถือและคอมพิวเตอร์)</li>
-                <li>มือถือยังใช้เมนูล่างสลับหน้าได้</li>
-              </ul>
-            ),
-          },
-          {
-            title: "เมนู: ออร์เดอร์ / คิวออเดอร์",
-            content: (
-              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>
-                  <strong className="font-semibold text-[#2e2a58]">ออร์เดอร์</strong> — สั่งอาหารแทนลูกค้าจากแดชบอร์ด
-                  (เลือกช่องทาง · โต๊ะ · เมนู)
-                </li>
-                <li>
-                  <strong className="font-semibold text-[#2e2a58]">คิวออเดอร์</strong> — กระดาน 4 ขั้น: รับออเดอร์ · ครัวกำลังทำ ·
-                  กำลังเสิร์ฟ · เสร็จแล้ว อัปเดตได้ทันที
-                </li>
-              </ul>
-            ),
-          },
-          {
-            title: "เมนู: แดชบอร์ด",
-            content: (
-              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>ดูภาพรวมยอดวันนี้ จำนวนออเดอร์ และสถานะออเดอร์ค้าง</li>
-                <li>ปุ่มออเดอร์พาไปหน้าสั่ง · ลิงก์ QR แผนกครัว/จัดส่งอยู่ที่แท็บ QR</li>
-                <li>เหมาะสำหรับผู้จัดการที่ต้องดูภาพรวมก่อนเริ่มรอบขาย</li>
-              </ul>
-            ),
-          },
-          {
-            title: "เมนู: ยอดขาย",
-            content: (
-              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>ดูรายการขายย้อนหลัง แก้ไขข้อมูลที่จำเป็น และตรวจยอดสุทธิ</li>
-                <li>ตรวจสอบการชำระเงินและพิมพ์ใบเสร็จ/สลิปจากรายการที่ต้องการ</li>
-                <li>ใช้กรองช่วงเวลาเพื่อสรุปยอดรายวัน รายสัปดาห์ หรือรายเดือน</li>
-              </ul>
-            ),
-          },
-          {
-            title: "เมนู: พนักงานเสิร์ฟ",
-            content: (
-              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>จัดการลิงก์หรือหน้าสำหรับพนักงานหน้างานให้รับออเดอร์ได้ง่าย</li>
-                <li>ช่วยแยกบทบาทพนักงานกับเจ้าของร้าน ลดความผิดพลาดในการแก้ข้อมูลหลัก</li>
-                <li>ทดสอบจากมือถือพนักงานก่อนใช้งานจริงในช่วงลูกค้าหนาแน่น</li>
-              </ul>
-            ),
-          },
-          {
-            title: "เมนู: QR สั่งอาหาร",
-            content: (
-              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>สร้างหน้าให้ลูกค้าสแกนแล้วสั่งอาหารได้จากโต๊ะ</li>
-                <li>ตรวจว่าเมนูที่ปิดขายจะไม่แสดงให้ลูกค้าเลือก</li>
-                <li>ควรพิมพ์ QR และติดตามโต๊ะให้ชัดเจนเพื่อลดการสั่งผิดโต๊ะ</li>
-              </ul>
-            ),
-          },
-          {
-            title: "เมนู: เมนูอาหาร",
-            content: (
-              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>เพิ่ม/แก้ไขชื่อเมนู ราคา และหมวดหมู่ที่สังกัด</li>
-                <li>กำหนดสถานะเปิดขายหรือปิดชั่วคราวสำหรับเมนูหมด</li>
-                <li>ทบทวนราคาให้ตรงกับหน้าร้านทุกครั้งก่อนเปิดกะ</li>
-              </ul>
-            ),
-          },
-          {
-            title: "เมนู: หมวดหมู่",
-            content: (
-              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>สร้างหมวด เช่น อาหารจานหลัก เครื่องดื่ม ของหวาน</li>
-                <li>จัดเรียงหมวดให้ง่ายต่อการใช้งานทั้งฝั่งพนักงานและลูกค้า</li>
-                <li>ควรตั้งชื่อสั้น กระชับ และไม่ซ้ำเพื่อความเร็วในการขาย</li>
-              </ul>
-            ),
-          },
-          {
-            title: "เมนู: การเงิน",
-            content: (
-              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>กรองช่วงเวลาและดูกราฟรายรับเทียบรายจ่าย</li>
-                <li>สรุปตัวเลขด้านบน · การ์ดเดียวมีกรอง กราฟ และแถบประวัติ / รายรับ · รายจ่าย</li>
-                <li>แท็บรายจ่าย — จัดการหมวด บันทึกยอด หมายเหตุ และสลิป</li>
-              </ul>
-            ),
-          },
-          {
-            title: "ปุ่ม: รีเฟรชออเดอร์",
-            content: (
-              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>ใช้เมื่อสงสัยว่าหน้าจอค้างหรือข้อมูลไม่ตรงกับอุปกรณ์อื่น</li>
-                <li>ดึงออเดอร์และเมนูล่าสุดจากเซิร์ฟเวอร์ทันที</li>
-                <li>แนะนำให้กดหลังมีการแก้เมนูหรือรับออเดอร์ปริมาณมาก</li>
-              </ul>
+              <>
+                <p>เมื่อมีออเดอร์ใหม่ ระบบไหลงานต่อเนื่องแบบนี้:</p>
+                <ol className="mt-2 list-decimal space-y-2.5 pl-5 marker:font-semibold marker:text-[#4d47b6]">
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">รับออเดอร์</strong> — เข้าคิว · แยกเมนูไปแผนกครัวที่เกี่ยวข้อง
+                    (จานหลัก / ของหวาน / เครื่องดื่ม ฯลฯ)
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">แผนกครัว</strong> — เห็นออเดอร์แบบเรียลไทม์ ทำอาหารแล้วอัปเดตสถานะ
+                    “กำลังทำ / พร้อมเสิร์ฟ”
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">แผนกเสิร์ฟ</strong> — รับจานจากครัว เสิร์ฟโต๊ะ แล้วขยับสถานะบนคิว
+                  </li>
+                  <li>
+                    <strong className="font-semibold text-[#2e2a58]">ชำระเงิน</strong> — ปิดบิลด้วยเงินสด / พร้อมเพย์ / โอน
+                    พิมพ์ใบเสร็จ และบันทึกลงยอดขาย
+                  </li>
+                </ol>
+                <p className="mt-3 rounded-xl border border-[#dcd8f0]/80 bg-white/70 px-3 py-2.5 text-[13px] leading-relaxed text-[#4d47b6]">
+                  เคล็ดลับ: เปิดจอคิวออเดอร์ให้หน้าร้าน · เปิดลิงก์ครัวบนแท็บเล็ตในครัว — ทุกเครื่องอัปเดตพร้อมกัน ไม่ต้องวิ่งส่งใบ
+                </p>
+              </>
             ),
           },
         ]}

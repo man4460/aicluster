@@ -16,6 +16,7 @@ import {
 } from "@/systems/asset/components/AssetRowActionIcons";
 import { formatThb } from "@/systems/inventory/lib/inventory-client-data";
 import { DrinkPosButton } from "@/systems/drink-pos/components/DrinkPosButton";
+import { DrinkPosRemoteImg } from "@/systems/drink-pos/components/DrinkPosRemoteImg";
 import { DrinkPosLoyaltyBar } from "@/systems/drink-pos/components/DrinkPosLoyaltyBar";
 import { useDrinkPosMobileDraftSlot } from "@/systems/drink-pos/components/DrinkPosMobileBottomChrome";
 import {
@@ -834,13 +835,10 @@ export function DrinkPosOrderClient({
                         aria-label={`${p.name} ราคา ${formatDrinkPosCardPrice(p)} บาท`}
                       >
                         <div className="relative aspect-square w-full overflow-hidden bg-[#0000BF]/08">
-                          {p.imageUrl ? (
-                            <img
-                              src={p.imageUrl}
-                              alt=""
-                              className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
-                            />
-                          ) : (
+                          <DrinkPosRemoteImg
+                            src={p.imageUrl}
+                            className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
+                            fallback={
                             <div className="flex h-full w-full items-center justify-center text-[#66638c]">
                               <svg
                                 className="h-5 w-5 opacity-40 sm:h-8 sm:w-8"
@@ -855,7 +853,8 @@ export function DrinkPosOrderClient({
                                 <path d="M4 17l4-4 3 3 5-6 4 4" strokeLinecap="round" strokeLinejoin="round" />
                               </svg>
                             </div>
-                          )}
+                            }
+                          />
                           {inDraftQty > 0 ? (
                             <span className="absolute right-1 top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] px-1 text-[9px] font-black text-white shadow-md sm:right-1.5 sm:top-1.5 sm:h-6 sm:min-w-[1.5rem] sm:px-1.5 sm:text-[10px]">
                               ×{inDraftQty}

@@ -1,6 +1,12 @@
 "use client";
 
 import { type CarWashServiceStatus, normalizeCarWashServiceStatus } from "@/lib/car-wash/service-status";
+import { computeCarWashVisitPayment } from "@/lib/car-wash/visit-lane-payment";
+import { readStoredStaffDailyUnlock, staffDailyUnlockHeaders } from "@/lib/modules/staff-daily-pin";
+import { normalizeCarWashVisitEvidenceUrls } from "@/systems/car-wash/lib/visit-media";
+
+/** โทเค็นลิงก์พนักงาน (`ownerId`+`t`+`k`) — ใช้แทน session cookie บนพอร์ทัลพนักงาน */
+export type CarWashStaffAuth = { ownerId: string; trialSessionId: string; k: string };
 
 export type { CarWashServiceStatus } from "@/lib/car-wash/service-status";
 
@@ -41,12 +47,22 @@ export type ServiceVisit = {
   note: string;
   recorded_by_name: string;
   service_status: CarWashServiceStatus;
-  /** รูปแนบ (สลิป/หลักฐาน) */
+  /** รูปสลิปชำระ (1 รูป) */
   photo_url: string;
+  /** รูปหลักฐานสภาพรถ / ร่องรอย (สูงสุด 10) */
+  evidence_photo_urls: string[];
   /** เหมาจ่าย: ยังไม่หักครั้งจนกว่า PAID (null หลังหักแล้วหรือไม่ใช่เหมา) */
   bundle_id: number | null;
-  /** คิวจองที่ผูก (พอร์ทัล / เพิ่มคิว) */
+  /** คิวจองที่ผูก (พอร์ทัล / บันทึกรายการ) */
   booking_id: number | null;
+  /** สแนปช็อตยอดชำระของคิวจอง (null เมื่อไม่มีคิวจอง / walk-in) */
+  booking_payment_status: string | null;
+  booking_amount_paid: number | null;
+  booking_package_price: number | null;
+  /** ยอดคงเหลือที่ต้องชำระ — 0 เมื่อชำระครบแล้ว */
+  amount_remaining: number;
+  /** ชำระครบแล้วหรือยัง (เหมา/PAID/HANDED_OVER = true เสมอ) */
+  is_fully_paid: boolean;
 };
 
 /** PATCH รายการล้าง — ส่งเฉพาะฟิลด์ที่ต้องการเปลี่ยน */
@@ -63,6 +79,7 @@ export type ServiceVisitPatch = Partial<{
   visit_at: string;
   service_status: CarWashServiceStatus;
   photo_url: string;
+  evidence_photo_urls: string[];
   bundle_id: number | null;
 }>;
 
@@ -145,7 +162,17 @@ export interface CarWashRepository {
 
   listVisits(): Promise<ServiceVisit[]>;
   createVisit(
-    input: Omit<ServiceVisit, "id" | "visit_at" | "service_status"> & { visit_at?: string; service_status?: CarWashServiceStatus },
+    input: Omit<
+      ServiceVisit,
+      | "id"
+      | "visit_at"
+      | "service_status"
+      | "booking_payment_status"
+      | "booking_amount_paid"
+      | "booking_package_price"
+      | "amount_remaining"
+      | "is_fully_paid"
+    > & { visit_at?: string; service_status?: CarWashServiceStatus },
   ): Promise<ServiceVisit>;
   updateVisit(id: number, patch: ServiceVisitPatch): Promise<ServiceVisit | null>;
   updateVisitStatus(id: number, service_status: CarWashServiceStatus): Promise<ServiceVisit | null>;
@@ -228,8 +255,14 @@ const seedDB: CarWashDB = {
       recorded_by_name: "ตัวอย่าง",
       service_status: "COMPLETED",
       photo_url: "",
+      evidence_photo_urls: [],
       bundle_id: null,
       booking_id: null,
+      booking_payment_status: null,
+      booking_amount_paid: null,
+      booking_package_price: null,
+      amount_remaining: 250,
+      is_fully_paid: false,
     },
   ],
   bundles: [
@@ -280,6 +313,12 @@ function normalizeDB(input: unknown): CarWashDB | null {
   const visits: ServiceVisit[] = raw.visits.map((v, idx) => {
     const rv = v as Record<string, unknown>;
     const pkgId = rv.package_id;
+    const bundleId = typeof rv.bundle_id === "number" ? rv.bundle_id : null;
+    const finalPrice = typeof rv.final_price === "number" ? rv.final_price : 0;
+    const serviceStatus = normalizeCarWashServiceStatus(
+      typeof rv.service_status === "string" ? rv.service_status : "COMPLETED",
+    );
+    const payment = computeCarWashVisitPayment({ bundleId, finalPrice, serviceStatus, booking: null });
     return {
       id: typeof rv.id === "number" ? rv.id : idx + 1,
       visit_at: typeof rv.visit_at === "string" ? rv.visit_at : new Date().toISOString(),
@@ -289,15 +328,15 @@ function normalizeDB(input: unknown): CarWashDB | null {
       package_id: typeof pkgId === "number" ? pkgId : pkgId === null ? null : null,
       package_name: typeof rv.package_name === "string" ? rv.package_name : "",
       listed_price: typeof rv.listed_price === "number" ? rv.listed_price : 0,
-      final_price: typeof rv.final_price === "number" ? rv.final_price : 0,
+      final_price: finalPrice,
       note: typeof rv.note === "string" ? rv.note : "",
       recorded_by_name: typeof rv.recorded_by_name === "string" ? rv.recorded_by_name : "",
-      service_status: normalizeCarWashServiceStatus(
-        typeof rv.service_status === "string" ? rv.service_status : "COMPLETED",
-      ),
+      service_status: serviceStatus,
       photo_url: typeof rv.photo_url === "string" ? rv.photo_url : "",
-      bundle_id: typeof rv.bundle_id === "number" ? rv.bundle_id : null,
+      evidence_photo_urls: normalizeCarWashVisitEvidenceUrls(rv.evidence_photo_urls),
+      bundle_id: bundleId,
       booking_id: typeof rv.booking_id === "number" ? rv.booking_id : null,
+      ...payment,
     };
   });
 
@@ -469,7 +508,17 @@ export class LocalStorageCarWashRepository implements CarWashRepository {
   }
 
   async createVisit(
-    input: Omit<ServiceVisit, "id" | "visit_at" | "service_status"> & { visit_at?: string; service_status?: CarWashServiceStatus },
+    input: Omit<
+      ServiceVisit,
+      | "id"
+      | "visit_at"
+      | "service_status"
+      | "booking_payment_status"
+      | "booking_amount_paid"
+      | "booking_package_price"
+      | "amount_remaining"
+      | "is_fully_paid"
+    > & { visit_at?: string; service_status?: CarWashServiceStatus },
   ): Promise<ServiceVisit> {
     const db = loadDB();
     const bundleId = input.bundle_id ?? null;
@@ -500,8 +549,15 @@ export class LocalStorageCarWashRepository implements CarWashRepository {
       recorded_by_name: input.recorded_by_name ?? "",
       service_status: status,
       photo_url: input.photo_url ?? "",
+      evidence_photo_urls: normalizeCarWashVisitEvidenceUrls(input.evidence_photo_urls),
       bundle_id: storedBundleId,
       booking_id: input.booking_id ?? null,
+      ...computeCarWashVisitPayment({
+        bundleId: storedBundleId,
+        finalPrice: input.final_price,
+        serviceStatus: status,
+        booking: null,
+      }),
     };
     db.seq.visit = row.id;
     db.visits.push(row);
@@ -527,6 +583,9 @@ export class LocalStorageCarWashRepository implements CarWashRepository {
     if (patch.visit_at !== undefined) next.visit_at = patch.visit_at;
     if (patch.service_status !== undefined) next.service_status = patch.service_status;
     if (patch.photo_url !== undefined) next.photo_url = patch.photo_url ?? "";
+    if (patch.evidence_photo_urls !== undefined) {
+      next.evidence_photo_urls = normalizeCarWashVisitEvidenceUrls(patch.evidence_photo_urls);
+    }
     if (patch.bundle_id !== undefined) next.bundle_id = patch.bundle_id;
 
     const becamePaid =
@@ -538,6 +597,16 @@ export class LocalStorageCarWashRepository implements CarWashRepository {
       }
       next.bundle_id = null;
     }
+
+    Object.assign(
+      next,
+      computeCarWashVisitPayment({
+        bundleId: next.bundle_id,
+        finalPrice: next.final_price,
+        serviceStatus: next.service_status,
+        booking: null,
+      }),
+    );
 
     db.visits[idx] = next;
     saveDB(db);
@@ -718,8 +787,39 @@ async function sessionFetch(input: RequestInfo | URL, init?: RequestInit): Promi
 }
 
 class SessionApiCarWashRepository implements CarWashRepository {
+  constructor(private readonly staffAuth?: CarWashStaffAuth | null) {}
+
+  private authUrl(path: string): string {
+    if (!this.staffAuth) return path;
+    const qs = new URLSearchParams({
+      ownerId: this.staffAuth.ownerId,
+      t: this.staffAuth.trialSessionId,
+      k: this.staffAuth.k,
+    });
+    const unlock = readStoredStaffDailyUnlock("car-wash", this.staffAuth.ownerId);
+    if (unlock) qs.set("du", unlock);
+    return `${path}${path.includes("?") ? "&" : "?"}${qs.toString()}`;
+  }
+
+  private authInit(init?: RequestInit): RequestInit {
+    if (!this.staffAuth) {
+      return { ...init, credentials: init?.credentials ?? "include" };
+    }
+    const headerBag = new Headers(init?.headers);
+    const unlockHeaders = staffDailyUnlockHeaders("car-wash", this.staffAuth.ownerId);
+    for (const [key, value] of Object.entries(unlockHeaders)) {
+      headerBag.set(key, value);
+    }
+    return {
+      ...init,
+      credentials: "omit",
+      cache: init?.cache ?? "no-store",
+      headers: headerBag,
+    };
+  }
+
   async listPackages(): Promise<ServicePackage[]> {
-    const res = await sessionFetch("/api/car-wash/session/packages", { cache: "no-store" });
+    const res = await sessionFetch(this.authUrl("/api/car-wash/session/packages"), this.authInit({ cache: "no-store" }));
     const data = await readJson<{ packages: ServicePackage[] }>(res);
     return (data.packages ?? []).map((p) => ({
       ...p,
@@ -728,24 +828,33 @@ class SessionApiCarWashRepository implements CarWashRepository {
     }));
   }
   async createPackage(input: Omit<ServicePackage, "id">): Promise<ServicePackage> {
-    const res = await sessionFetch("/api/car-wash/session/packages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    });
+    const res = await sessionFetch(
+      this.authUrl("/api/car-wash/session/packages"),
+      this.authInit({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      }),
+    );
     return (await readJson<{ package: ServicePackage }>(res)).package;
   }
   async updatePackage(id: number, patch: Partial<Omit<ServicePackage, "id">>): Promise<ServicePackage | null> {
-    const res = await sessionFetch(`/api/car-wash/session/packages/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    });
+    const res = await sessionFetch(
+      this.authUrl(`/api/car-wash/session/packages/${id}`),
+      this.authInit({
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      }),
+    );
     if (res.status === 404) return null;
     return (await readJson<{ package: ServicePackage }>(res)).package;
   }
   async deletePackage(id: number): Promise<boolean> {
-    const res = await sessionFetch(`/api/car-wash/session/packages/${id}`, { method: "DELETE" });
+    const res = await sessionFetch(
+      this.authUrl(`/api/car-wash/session/packages/${id}`),
+      this.authInit({ method: "DELETE" }),
+    );
     return (await readJson<{ ok: boolean }>(res)).ok;
   }
 
@@ -776,28 +885,47 @@ class SessionApiCarWashRepository implements CarWashRepository {
   }
 
   async listVisits(): Promise<ServiceVisit[]> {
-    const res = await sessionFetch("/api/car-wash/session/visits", { cache: "no-store" });
+    const res = await sessionFetch(
+      this.authUrl("/api/car-wash/session/visits"),
+      this.authInit({ cache: "no-store" }),
+    );
     return (await readJson<{ visits: ServiceVisit[] }>(res)).visits;
   }
   async createVisit(
-    input: Omit<ServiceVisit, "id" | "visit_at" | "service_status"> & { visit_at?: string; service_status?: CarWashServiceStatus },
+    input: Omit<
+      ServiceVisit,
+      | "id"
+      | "visit_at"
+      | "service_status"
+      | "booking_payment_status"
+      | "booking_amount_paid"
+      | "booking_package_price"
+      | "amount_remaining"
+      | "is_fully_paid"
+    > & { visit_at?: string; service_status?: CarWashServiceStatus },
   ): Promise<ServiceVisit> {
-    const res = await sessionFetch("/api/car-wash/session/visits", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    });
+    const res = await sessionFetch(
+      this.authUrl("/api/car-wash/session/visits"),
+      this.authInit({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      }),
+    );
     return (await readJson<{ visit: ServiceVisit }>(res)).visit;
   }
   async updateVisit(id: number, patch: ServiceVisitPatch): Promise<ServiceVisit | null> {
     const body = Object.fromEntries(
       Object.entries(patch).filter(([, v]) => v !== undefined),
     ) as Record<string, unknown>;
-    const res = await sessionFetch(`/api/car-wash/session/visits/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res = await sessionFetch(
+      this.authUrl(`/api/car-wash/session/visits/${id}`),
+      this.authInit({
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    );
     if (res.status === 404) return null;
     return (await readJson<{ visit: ServiceVisit }>(res)).visit;
   }
@@ -806,40 +934,58 @@ class SessionApiCarWashRepository implements CarWashRepository {
     return this.updateVisit(id, { service_status });
   }
   async deleteVisit(id: number): Promise<boolean> {
-    const res = await fetch(`/api/car-wash/session/visits/${id}`, { method: "DELETE" });
+    const res = await sessionFetch(
+      this.authUrl(`/api/car-wash/session/visits/${id}`),
+      this.authInit({ method: "DELETE" }),
+    );
     return (await readJson<{ ok: boolean }>(res)).ok;
   }
 
   async listBundles(): Promise<WashBundle[]> {
-    const res = await sessionFetch("/api/car-wash/session/bundles", { cache: "no-store" });
+    const res = await sessionFetch(
+      this.authUrl("/api/car-wash/session/bundles"),
+      this.authInit({ cache: "no-store" }),
+    );
     return (await readJson<{ bundles: WashBundle[] }>(res)).bundles;
   }
   async createBundle(input: Omit<WashBundle, "id" | "created_at" | "used_uses">): Promise<WashBundle> {
-    const res = await fetch("/api/car-wash/session/bundles", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    });
+    const res = await sessionFetch(
+      this.authUrl("/api/car-wash/session/bundles"),
+      this.authInit({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      }),
+    );
     return (await readJson<{ bundle: WashBundle }>(res)).bundle;
   }
   async updateBundle(id: number, patch: WashBundlePatch): Promise<WashBundle | null> {
     const body = Object.fromEntries(
       Object.entries(patch).filter(([, v]) => v !== undefined),
     ) as Record<string, unknown>;
-    const res = await sessionFetch(`/api/car-wash/session/bundles/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res = await sessionFetch(
+      this.authUrl(`/api/car-wash/session/bundles/${id}`),
+      this.authInit({
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    );
     if (res.status === 404) return null;
     return (await readJson<{ bundle: WashBundle }>(res)).bundle;
   }
   async consumeBundleUse(id: number): Promise<WashBundle | null> {
-    const res = await sessionFetch(`/api/car-wash/session/bundles/${id}/consume`, { method: "POST" });
+    const res = await sessionFetch(
+      this.authUrl(`/api/car-wash/session/bundles/${id}/consume`),
+      this.authInit({ method: "POST" }),
+    );
     return (await readJson<{ bundle: WashBundle | null }>(res)).bundle;
   }
   async deleteBundle(id: number): Promise<boolean> {
-    const res = await fetch(`/api/car-wash/session/bundles/${id}`, { method: "DELETE" });
+    const res = await sessionFetch(
+      this.authUrl(`/api/car-wash/session/bundles/${id}`),
+      this.authInit({ method: "DELETE" }),
+    );
     return (await readJson<{ ok: boolean }>(res)).ok;
   }
 
@@ -915,17 +1061,40 @@ class SessionApiCarWashRepository implements CarWashRepository {
   }
 }
 
-export function createCarWashSessionApiRepository(): CarWashRepository {
-  return new SessionApiCarWashRepository();
+export function createCarWashSessionApiRepository(opts?: {
+  staffAuth?: CarWashStaffAuth | null;
+}): CarWashRepository {
+  return new SessionApiCarWashRepository(opts?.staffAuth ?? null);
 }
 
-export async function uploadCarWashSessionImage(file: File): Promise<string> {
+function staffUploadUrl(path: string, staffAuth?: CarWashStaffAuth | null): string {
+  if (!staffAuth) return path;
+  const qs = new URLSearchParams({
+    ownerId: staffAuth.ownerId,
+    t: staffAuth.trialSessionId,
+    k: staffAuth.k,
+  });
+  const unlock = readStoredStaffDailyUnlock("car-wash", staffAuth.ownerId);
+  if (unlock) qs.set("du", unlock);
+  return `${path}?${qs.toString()}`;
+}
+
+function staffUploadInit(staffAuth?: CarWashStaffAuth | null): RequestInit {
+  if (!staffAuth) return { credentials: "include" };
+  const headers = new Headers(staffDailyUnlockHeaders("car-wash", staffAuth.ownerId));
+  return { credentials: "omit", headers };
+}
+
+export async function uploadCarWashSessionImage(
+  file: File,
+  staffAuth?: CarWashStaffAuth | null,
+): Promise<string> {
   const form = new FormData();
   form.append("file", file);
-  const res = await sessionFetch("/api/car-wash/session/images/upload", {
+  const res = await sessionFetch(staffUploadUrl("/api/car-wash/session/images/upload", staffAuth), {
+    ...staffUploadInit(staffAuth),
     method: "POST",
     body: form,
-    credentials: "include",
   });
   const data = (await res.json().catch(() => ({}))) as { error?: string; imageUrl?: string };
   if (!res.ok) {
@@ -938,13 +1107,16 @@ export async function uploadCarWashSessionImage(file: File): Promise<string> {
   return url;
 }
 
-export async function uploadCarWashPackageImage(file: File): Promise<string> {
+export async function uploadCarWashPackageImage(
+  file: File,
+  staffAuth?: CarWashStaffAuth | null,
+): Promise<string> {
   const form = new FormData();
   form.append("file", file);
-  const res = await sessionFetch("/api/car-wash/session/packages/upload", {
+  const res = await sessionFetch(staffUploadUrl("/api/car-wash/session/packages/upload", staffAuth), {
+    ...staffUploadInit(staffAuth),
     method: "POST",
     body: form,
-    credentials: "include",
   });
   const data = (await res.json().catch(() => ({}))) as { error?: string; imageUrl?: string };
   if (!res.ok) {

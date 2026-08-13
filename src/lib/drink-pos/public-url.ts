@@ -1,4 +1,5 @@
-/** ลิงก์สาธารณะให้ลูกค้าสั่งเครื่องดื่ม + สะสม/แลกคะแนน */
+/** ลิงก์สาธารณะเว็บลูกค้า (สั่งเครื่องดื่ม) */
+
 export function drinkPosPublicPortalUrl(
   baseUrl: string,
   ownerId: string,
@@ -12,5 +13,22 @@ export function drinkPosPublicPortalUrl(
   return `${base}${path}`;
 }
 
-/** alias — ลิงก์สั่งออเดอร์ลูกค้า */
-export const drinkPosPublicOrderUrl = drinkPosPublicPortalUrl;
+/** @deprecated ร้านเครื่องดื่มไม่มีจองที่นั่งแล้ว — ชี้ไปหน้าสั่ง */
+export function drinkPosPublicReservationUrl(
+  baseUrl: string,
+  ownerId: string,
+  _reservationId: string,
+  _phone: string,
+  trialSessionId: string,
+): string {
+  return drinkPosPublicPortalUrl(baseUrl, ownerId, trialSessionId);
+}
+
+/** ลิงก์สั่งออเดอร์ลูกค้า — หน้าเว็บเดียวกับพอร์ทัล */
+export function drinkPosPublicOrderUrl(
+  baseUrl: string,
+  ownerId: string,
+  trialSessionId?: string,
+): string {
+  return drinkPosPublicPortalUrl(baseUrl, ownerId, trialSessionId);
+}
