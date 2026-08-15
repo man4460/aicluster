@@ -173,7 +173,9 @@ async function main() {
     await trySeed("smart-police", () => seedSmartPoliceProdDemoForOwner(prisma, id));
   }
 
-  await trySeed("barber portal media fill", () => fillBarberPortalDemoMedia(prisma));
+  await trySeed("barber portal media fill", async () => {
+    await fillBarberPortalDemoMedia(prisma);
+  });
   console.log("\nDone.");
 }
 
