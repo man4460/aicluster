@@ -80,17 +80,33 @@ async function seedSchedules(db: DbLike, ownerUserId: string, trialSessionId: st
 }
 
 /**
- * เติมข้อมูลตัวอย่างจองคิว (production scope) — ข้ามถ้ามีคิว demo แล้ว
+ * เติมข้อมูลตัวอย่างจองคิว (production scope)
+ * @param opts.refreshDaily — ลบคิว demo เก่า (รวมวันก่อน) แล้วใส่ใหม่ตามวันนี้
  */
 export async function seedAppointmentQueueProdDemoForOwner(
   prisma: PrismaClient,
   ownerUserId: string,
+  opts?: { refreshDaily?: boolean },
 ): Promise<void> {
   const trialSessionId = TRIAL_PROD_SCOPE;
-  const demoCount = await prisma.appointmentQueueBooking.count({
-    where: { ownerUserId, trialSessionId, note: DEMO_NOTE },
-  });
-  if (demoCount > 0) return;
+  const refresh = opts?.refreshDaily !== false;
+  const today = bangkokDateKey();
+  const todayStart = new Date(`${today}T00:00:00+07:00`);
+
+  if (refresh) {
+    await prisma.appointmentQueueBooking.deleteMany({
+      where: {
+        ownerUserId,
+        trialSessionId,
+        OR: [{ note: DEMO_NOTE }, { scheduledAt: { lt: todayStart } }],
+      },
+    });
+  } else {
+    const demoCount = await prisma.appointmentQueueBooking.count({
+      where: { ownerUserId, trialSessionId, note: DEMO_NOTE },
+    });
+    if (demoCount > 0) return;
+  }
 
   await ensureAppointmentQueueProfile(ownerUserId, trialSessionId);
 
@@ -108,7 +124,6 @@ export async function seedAppointmentQueueProdDemoForOwner(
     },
   });
 
-  const today = bangkokDateKey();
   await seedSchedules(prisma, ownerUserId, trialSessionId, today);
 
   const services = await ensureServices(prisma, ownerUserId, trialSessionId);

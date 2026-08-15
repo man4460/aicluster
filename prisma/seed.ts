@@ -36,6 +36,7 @@ import { seedSmartPoliceProdDemoForOwner } from "../src/lib/trial/seed-smart-pol
 import {
   ASSET_MODULE_SLUG,
   ATTENDANCE_MODULE_SLUG,
+  APPOINTMENT_QUEUE_MODULE_SLUG,
   BARBER_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
@@ -52,6 +53,7 @@ import {
   ECOMMERCE_STORE_MODULE_SLUG,
   SMART_POLICE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
+  LOYALTY_STAMP_MODULE_SLUG,
   MEDIA_REGISTRY_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
@@ -462,15 +464,10 @@ async function main() {
   }
 
   /**
-   * บัญชีที่ได้รับข้อมูลตัวอย่างจาก seed — บัญชี demo user + **แอดมิน dev account**
-   * - [2026-08-07 UPDATE ตามคำขอ user โดยตรง: "ช่วยเพิ่มข้อมูลตัวอย่างให้แอดมินหน่อย"]
-   *   เพิ่ม `admin@mawell.local` เข้า list — ให้แอดมินเข้า preview UI ทุกโมดูลแล้ว stat cards ไม่เป็น 0 หมด
-   *   (เหมาะสำหรับ dev/local seed เท่านั้น ใช้ design / UX signoff;
-   *    หากย้ายไป production ควรเอา admin ออกจาก list นี้ 1 ค่า)
-   * - หน้าแดชบอร์ดหลักของ user จะแสดงการ์ดโมดูลเฉพาะที่ subscribe → seed ต้องสมัครให้อัตโนมัติด้วย
+   * บัญชีที่ได้รับข้อมูลตัวอย่างจาก seed — เฉพาะ user demo (ไม่ใส่แอดมิน)
+   * แอดมิน = ทดสอบสิทธิ์/หลังบ้าน — ไม่ต้องมีข้อมูลตัวอย่างโมดูล
    */
   const demoSeedDataOwnerEmails = [
-    "admin@mawell.local",
     "user@mawell.local.com",
     "user@mawell.local",
   ] as const;
@@ -478,6 +475,8 @@ async function main() {
   /** โมดูลที่มี prod demo seed — subscribe ให้ครบเพื่อเห็นการ์ดบนแดชบอร์ดและเข้าใช้ได้ทันที */
   const demoAutoSubscribeSlugs = [
     WAIT_QUEUE_MODULE_SLUG,
+    APPOINTMENT_QUEUE_MODULE_SLUG,
+    LOYALTY_STAMP_MODULE_SLUG,
     SCHOOL_BANK_MODULE_SLUG,
     COMMUNITY_COOP_MODULE_SLUG,
     PROMPT_LIBRARY_MODULE_SLUG,
@@ -492,7 +491,7 @@ async function main() {
     BARBER_MODULE_SLUG,
     CAR_WASH_MODULE_SLUG,
     "football-turf",
-  MASSAGE_MODULE_SLUG,
+    MASSAGE_MODULE_SLUG,
     VILLAGE_MODULE_SLUG,
     HOME_FINANCE_BASIC_MODULE_SLUG,
     MQTT_SERVICE_MODULE_SLUG,
@@ -818,22 +817,6 @@ async function main() {
     }
   }
 
-  /**
-   * POS เครื่องดื่ม — ตัวอย่างให้แอดมินดูภาพรวมโมดูล (ยกเว้นกฎ skip-admin ตามคำขอ)
-   * แอดมิน BUFFET เข้าโมดูลได้โดยไม่ต้อง subscribe
-   */
-  {
-    const adminRow = await prisma.user.findUnique({
-      where: { email: "admin@mawell.local" },
-      select: { id: true },
-    });
-    if (adminRow) {
-      await tryDemoSeed(`drink-pos (admin@mawell.local)`, () =>
-        seedDrinkPosProdDemoForOwner(prisma, adminRow.id),
-      );
-    }
-  }
-
   /** โรงแรม / รีสอร์ท — ห้องพัก จอง เช็คอิน ต้นทุนตัวอย่าง */
   for (const email of demoSeedDataOwnerEmails) {
     const row = await prisma.user.findUnique({
@@ -842,22 +825,6 @@ async function main() {
     });
     if (row) {
       await tryDemoSeed(`hotel-resort (${email})`, () => seedHotelResortProdDemoForOwner(prisma, row.id));
-    }
-  }
-
-  /**
-   * โรงแรม / รีสอร์ท — ตัวอย่างให้แอดมินดูภาพรวมโมดูล
-   * แอดมิน BUFFET เข้าโมดูลได้โดยไม่ต้อง subscribe
-   */
-  {
-    const adminRow = await prisma.user.findUnique({
-      where: { email: "admin@mawell.local" },
-      select: { id: true },
-    });
-    if (adminRow) {
-      await tryDemoSeed(`hotel-resort (admin@mawell.local)`, () =>
-        seedHotelResortProdDemoForOwner(prisma, adminRow.id),
-      );
     }
   }
 

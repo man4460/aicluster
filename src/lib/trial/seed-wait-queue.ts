@@ -27,8 +27,23 @@ const SAMPLES: SampleRow[] = [
   { partySize: 1, customerName: "Walk-in", status: "WAITING" },
 ];
 
-async function insertDemoTicketsForSite(db: DbLike, site: { id: string; name: string }): Promise<void> {
+async function insertDemoTicketsForSite(
+  db: DbLike,
+  site: { id: string; name: string },
+  opts?: { force?: boolean },
+): Promise<void> {
   const dateKey = bangkokDateKey();
+
+  if (opts?.force) {
+    /** ลบคิววันเก่าทั้งหมด + คิว demo วันนี้ แล้วใส่ใหม่ */
+    await db.waitQueueTicket.deleteMany({
+      where: { siteId: site.id, dateKey: { lt: dateKey } },
+    });
+    await db.waitQueueTicket.deleteMany({
+      where: { siteId: site.id, dateKey, note: DEMO_NOTE },
+    });
+  }
+
   const demoCount = await db.waitQueueTicket.count({
     where: { siteId: site.id, dateKey, note: DEMO_NOTE },
   });
@@ -75,9 +90,15 @@ async function insertDemoTicketsForSite(db: DbLike, site: { id: string; name: st
 }
 
 /**
- * เติมคิวตัวอย่าง (production scope, วันนี้ตาม Asia/Bangkok) ให้เจ้าของ — ข้ามถ้ามีคิว demo ครบแล้ว
+ * เติมคิวตัวอย่าง (production scope, วันนี้ตาม Asia/Bangkok) ให้เจ้าของ
+ * @param opts.refreshDaily — เคลียร์คิววันเก่า + รีเฟรชคิว demo วันนี้ (ค่าเริ่ม true)
  */
-export async function seedWaitQueueProdDemoForOwner(prisma: PrismaClient, ownerUserId: string): Promise<void> {
+export async function seedWaitQueueProdDemoForOwner(
+  prisma: PrismaClient,
+  ownerUserId: string,
+  opts?: { refreshDaily?: boolean },
+): Promise<void> {
+  const refresh = opts?.refreshDaily !== false;
   let site = await prisma.waitQueueSite.findFirst({
     where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },
     orderBy: { createdAt: "asc" },
@@ -93,7 +114,7 @@ export async function seedWaitQueueProdDemoForOwner(prisma: PrismaClient, ownerU
     });
   }
 
-  await insertDemoTicketsForSite(prisma, site);
+  await insertDemoTicketsForSite(prisma, site, { force: refresh });
 }
 
 /** เติมคิวทดลองใน sandbox หลังกดเริ่มทดลองโมดูล */

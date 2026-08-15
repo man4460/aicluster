@@ -24,6 +24,7 @@
     "check:chat-ai-db": "node --import tsx scripts/check-personal-ai-tables.ts",
     "openclaw:probe": "node scripts/openclaw-probe.mjs",
     "seed": "tsx prisma/seed.ts",
+    "seed:demo-refresh": "tsx scripts/seed-demo-refresh.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate": "prisma migrate deploy",
     "db:migrate-seed": "npm run db:migrate && npm run db:generate && npm run db:seed",
