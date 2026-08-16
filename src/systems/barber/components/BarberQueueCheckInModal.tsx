@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AppSignaturePad, type AppSignaturePadHandle } from "@/components/app-templates";
 import { BarberModalPortal } from "@/systems/barber/components/BarberModalPortal";
 import { BarberPaymentPanel } from "@/systems/barber/components/BarberPaymentPanel";
 import {
@@ -11,6 +12,7 @@ import {
 import { cn } from "@/lib/cn";
 import { isValidThaiId13 } from "@/lib/thai-tax-id";
 import type { BarberPaymentMethod } from "@/systems/barber/lib/payment-method";
+import { uploadBarberSignatureBlob } from "@/systems/barber/lib/upload-signature";
 import {
   printBarberMemberDocs,
   type BarberPrintShopProfile,
@@ -79,6 +81,7 @@ export function BarberQueueCheckInModal({ open, seed, onClose, onSuccess }: Prop
   const [shopPrintProfile, setShopPrintProfile] = useState<BarberPrintShopProfile | null>(null);
   const [payPresets, setPayPresets] = useState<number[]>([...DEFAULT_BARBER_PAY_AMOUNT_PRESETS]);
   const [busy, setBusy] = useState(false);
+  const signaturePadRef = useRef<AppSignaturePadHandle>(null);
   const [err, setErr] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
@@ -221,8 +224,18 @@ export function BarberQueueCheckInModal({ open, seed, onClose, onSuccess }: Prop
       setErr("เลือกแพ็กเกจที่จะหัก");
       return;
     }
+    if (signaturePadRef.current?.isEmpty()) {
+      setErr("ให้ลูกค้าลงชื่อด้วยปากกาหรือนิ้วก่อนหักแพ็ก");
+      return;
+    }
     setBusy(true);
     try {
+      const blob = await signaturePadRef.current?.toPngBlob();
+      if (!blob) {
+        setErr("ให้ลูกค้าลงชื่อด้วยปากกาหรือนิ้วก่อนหักแพ็ก");
+        return;
+      }
+      const signatureImageUrl = await uploadBarberSignatureBlob(blob);
       const sid = stylistId ? Number(stylistId) : null;
       const res = await fetch("/api/barber/check-in", {
         method: "POST",
@@ -230,6 +243,7 @@ export function BarberQueueCheckInModal({ open, seed, onClose, onSuccess }: Prop
         credentials: "include",
         body: JSON.stringify({
           subscriptionId: selectedSubId,
+          signatureImageUrl,
           ...(sid != null && Number.isInteger(sid) && sid > 0 ? { stylistId: sid } : {}),
         }),
       });
@@ -486,6 +500,7 @@ export function BarberQueueCheckInModal({ open, seed, onClose, onSuccess }: Prop
                     );
                   })}
                 </ul>
+                <AppSignaturePad ref={signaturePadRef} disabled={busy} />
                 <button
                   type="button"
                   disabled={busy || !selectedSubId}

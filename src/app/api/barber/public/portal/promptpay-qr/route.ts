@@ -46,6 +46,7 @@ export async function POST(req: Request) {
     select: {
       displayName: true,
       promptPayPhone: true,
+      promptPayQrImageUrl: true,
       bankName: true,
       bankAccountNumber: true,
       bankAccountName: true,
@@ -54,6 +55,7 @@ export async function POST(req: Request) {
 
   const phone = profile?.promptPayPhone?.trim() ?? "";
   const digits = phone.replace(/\D/g, "");
+  const staticQr = profile?.promptPayQrImageUrl?.trim() || null;
   const bankPayload = {
     promptpayNumber: phone || null,
     bankName: profile?.bankName ?? null,
@@ -62,10 +64,20 @@ export async function POST(req: Request) {
     shopName: profile?.displayName ?? null,
   };
 
+  if (staticQr) {
+    return NextResponse.json({
+      qrDataUrl: staticQr,
+      configured: true,
+      qrSource: "uploaded" as const,
+      ...bankPayload,
+    });
+  }
+
   if (digits.length < 9) {
     return NextResponse.json({
       qrDataUrl: null as string | null,
       configured: false,
+      qrSource: "none" as const,
       ...bankPayload,
     });
   }
@@ -74,6 +86,7 @@ export async function POST(req: Request) {
   return NextResponse.json({
     qrDataUrl,
     configured: Boolean(qrDataUrl),
+    qrSource: "generated" as const,
     ...bankPayload,
   });
 }

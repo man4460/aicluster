@@ -666,6 +666,8 @@ model BarberShopProfile {
   facebookUrl  String?  @map("facebook_url") @db.VarChar(512)
   mapUrl       String?  @map("map_url") @db.VarChar(512)
   promptPayPhone String? @map("prompt_pay_phone") @db.VarChar(20)
+  /** รูป QR พร้อมเพย์ที่อัปโหลดเอง (ทางเลือก — ใช้แทนการสร้างจากเบอร์) */
+  promptPayQrImageUrl String? @map("prompt_pay_qr_image_url") @db.VarChar(512)
   bankName     String?  @map("bank_name") @db.VarChar(120)
   bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
   bankAccountName String? @map("bank_account_name") @db.VarChar(200)
@@ -1001,6 +1003,8 @@ model BarberServiceLog {
   amountBaht       Decimal?                      @map("amount_baht") @db.Decimal(10, 2)
   /** รูปบิล/สลิป walk-in เงินสด (ถ้ามี) */
   receiptImageUrl  String?                       @map("receipt_image_url") @db.VarChar(512)
+  /** ลายเซ็นลูกค้าตอนหักแพ็กเกจ (path ใต้ /uploads/…) */
+  signatureImageUrl String?                      @map("signature_image_url") @db.VarChar(512)
   /** CASH | PROMPTPAY | TRANSFER | CREDIT_CARD — walk-in ที่รับชำระ */
   paymentMethod    String?                       @map("payment_method") @db.VarChar(20)
   note             String?                       @db.VarChar(255)

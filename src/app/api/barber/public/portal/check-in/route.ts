@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { barberPortalSlipOwnerTag, barberPortalSlipPathPrefix } from "@/lib/barber/portal-slip-filename";
+import { isValidBarberPortalSignatureUrl } from "@/lib/barber/portal-signature";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { isBarberCustomerPortalOpenForOwner } from "@/lib/barber/portal-access";
 import { BARBER_MODULE_SLUG } from "@/lib/modules/config";
@@ -13,6 +14,7 @@ const bodySchema = z.object({
   phone: z.string().min(1).max(32),
   subscriptionId: z.number().int().positive(),
   receiptImageUrl: z.string().max(512).optional().nullable(),
+  signatureImageUrl: z.string().max(512).optional().nullable(),
 });
 
 function isValidPortalSlipUrl(ownerId: string, url: string | null | undefined): boolean {
@@ -42,7 +44,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
   }
 
-  const { ownerId, phone: phoneRaw, subscriptionId, receiptImageUrl } = parsed.data;
+  const { ownerId, phone: phoneRaw, subscriptionId, receiptImageUrl, signatureImageUrl } = parsed.data;
   const phone = normalizePhone(phoneRaw);
   if (phone.length < 9) {
     return NextResponse.json({ error: "กรอกเบอร์อย่างน้อย 9 หลัก" }, { status: 400 });
@@ -50,7 +52,11 @@ export async function POST(req: Request) {
   if (!isValidPortalSlipUrl(ownerId, receiptImageUrl)) {
     return NextResponse.json({ error: "ลิงก์รูปไม่ถูกต้อง" }, { status: 400 });
   }
+  if (!isValidBarberPortalSignatureUrl(ownerId, signatureImageUrl)) {
+    return NextResponse.json({ error: "ลายเซ็นไม่ถูกต้อง" }, { status: 400 });
+  }
   const slip = receiptImageUrl?.trim() || null;
+  const signature = signatureImageUrl?.trim() || null;
 
   const rl = rateLimit(`barber-portal-checkin:${ip}:${ownerId}`, 24, 10 * 60 * 1000);
   if (!rl.ok) {
@@ -96,6 +102,7 @@ export async function POST(req: Request) {
           barberCustomerId: sub.barberCustomerId,
           visitType: "PACKAGE_USE",
           receiptImageUrl: slip ?? undefined,
+          ...(signature ? { signatureImageUrl: signature } : {}),
         },
       });
 

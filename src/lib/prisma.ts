@@ -29,7 +29,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 66: CarWashStaffLink — client เก่าไม่มี delegate แล้วลิงก์พนักงานคาร์แคร์ล้ม */
 /** 67: BuildingPosShopProfile + Reservation + Review — เว็บจองจากบ้าน */
 /** 68: DrinkPosReservation + Review + portal fields on DrinkPosShopProfile */
-const PRISMA_SINGLETON_VERSION = 68;
+/** 69: BarberServiceLog.signatureImageUrl + BarberShopProfile.promptPayQrImageUrl */
+const PRISMA_SINGLETON_VERSION = 69;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;

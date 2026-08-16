@@ -11,6 +11,12 @@ import { isBarberPaymentMethod } from "@/systems/barber/lib/payment-method";
 const packageUseSchema = z.object({
   subscriptionId: z.number().int().positive(),
   stylistId: z.number().int().positive().optional().nullable(),
+  signatureImageUrl: z
+    .string()
+    .max(512)
+    .regex(/^\/uploads\/barber(\/|-)/)
+    .optional()
+    .nullable(),
 });
 
 const barberCashReceiptUrl = z
@@ -85,6 +91,10 @@ export async function POST(req: Request) {
     if (parsed.data.stylistId != null && stylistIdResolved == null) {
       return NextResponse.json({ error: "ไม่พบช่างหรือปิดใช้งานแล้ว" }, { status: 400 });
     }
+    const signatureImageUrl =
+      parsed.data.signatureImageUrl != null && parsed.data.signatureImageUrl.length > 0
+        ? parsed.data.signatureImageUrl.trim()
+        : null;
     try {
       const out = await prisma.$transaction(async (tx) => {
         const sub = await tx.barberCustomerSubscription.findFirst({
@@ -113,6 +123,7 @@ export async function POST(req: Request) {
             barberCustomerId: sub.barberCustomerId,
             visitType: "PACKAGE_USE",
             ...(stylistIdResolved != null ? { stylistId: stylistIdResolved } : {}),
+            ...(signatureImageUrl != null ? { signatureImageUrl } : {}),
           },
         });
 

@@ -100,6 +100,11 @@ export { AppGalleryCameraFileInputs, type AppGalleryCameraFileInputsProps } from
 export { AppImagePickCameraButtons, type AppImagePickCameraButtonsProps } from "./AppImagePickCameraButtons";
 export { AppShopLogoField, type AppShopLogoFieldProps } from "./AppShopLogoField";
 export {
+  AppSignaturePad,
+  type AppSignaturePadHandle,
+  type AppSignaturePadProps,
+} from "./AppSignaturePad";
+export {
   AppModuleShopSettingsClient,
   type AppModuleShopSettingsClientProps,
 } from "./AppModuleShopSettingsClient";

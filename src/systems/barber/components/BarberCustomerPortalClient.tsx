@@ -4,10 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } f
 import {
   AppCameraCaptureModal,
   AppPublicCheckInGlassPage,
+  AppSignaturePad,
   appPublicCheckInGlassCardClass,
+  type AppSignaturePadHandle,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { prepareBuildingPosSlipImageFile } from "@/systems/building-pos/building-pos-slip-image";
+import { uploadBarberSignatureBlob } from "@/systems/barber/lib/upload-signature";
 
 type SubRow = {
   id: number;
@@ -38,6 +41,7 @@ export function BarberCustomerPortalClient({
   const [checkInLoading, setCheckInLoading] = useState(false);
   const [checkInMsg, setCheckInMsg] = useState<string | null>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const signaturePadRef = useRef<AppSignaturePadHandle>(null);
   const [slipUrl, setSlipUrl] = useState("");
   const [cameraOpen, setCameraOpen] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -166,8 +170,21 @@ export function BarberCustomerPortalClient({
       setErr("เลือกแพ็กเกจที่มียอดครั้งคงเหลือก่อน");
       return;
     }
+    if (signaturePadRef.current?.isEmpty()) {
+      setErr("กรุณาลงชื่อด้วยปากกาหรือนิ้วก่อนยืนยัน");
+      return;
+    }
     setCheckInLoading(true);
     try {
+      const blob = await signaturePadRef.current?.toPngBlob();
+      if (!blob) {
+        setErr("กรุณาลงชื่อด้วยปากกาหรือนิ้วก่อนยืนยัน");
+        return;
+      }
+      const signatureImageUrl = await uploadBarberSignatureBlob(blob, {
+        publicPortal: true,
+        ownerId,
+      });
       const res = await fetch("/api/barber/public/portal/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -176,6 +193,7 @@ export function BarberCustomerPortalClient({
           phone: digits,
           subscriptionId: selectedSubId,
           receiptImageUrl: slipUrl.trim() || undefined,
+          signatureImageUrl,
         }),
       });
       const j = (await res.json().catch(() => ({}))) as {
@@ -191,6 +209,7 @@ export function BarberCustomerPortalClient({
       }
       if (j.ok && typeof j.remainingSessions === "number") {
         setSlipUrl("");
+        signaturePadRef.current?.clear();
         setData((prev) => {
           if (!prev) return prev;
           return {
@@ -214,6 +233,8 @@ export function BarberCustomerPortalClient({
           setCheckInMsg(`บันทึกการใช้บริการแล้ว — ${pkg} เหลืออีก ${rem} สิทธิ์`);
         }
       }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
     } finally {
       setCheckInLoading(false);
     }
@@ -414,6 +435,7 @@ export function BarberCustomerPortalClient({
                   }}
                 />
               </div>
+              <AppSignaturePad ref={signaturePadRef} disabled={checkInLoading} className="mt-4" />
             </div>
 
             <button

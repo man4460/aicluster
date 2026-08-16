@@ -237,6 +237,11 @@ export function BarberPaymentPanel({
               พร้อมเพย์: <span className="font-black text-[#1e1b4b]">{info.promptPayPhone}</span>
             </p>
           ) : null}
+          {info?.qrDataUrl && !info.qrDataUrl.startsWith("data:") ? (
+            <p className="text-[11px] font-semibold text-[#66638c]">
+              แสดงจากรูป QR ที่อัปโหลดในตั้งค่า — ยอดใน QR อาจไม่ตรงยอดที่เลือก
+            </p>
+          ) : null}
           {info?.qrDataUrl ? (
             <button
               type="button"

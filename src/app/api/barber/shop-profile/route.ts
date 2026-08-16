@@ -63,6 +63,7 @@ const patchSchema = z
     slotMinutes: z.union([z.literal(30), z.literal(60)]).optional(),
     portalBookingPaymentMode: z.enum(["NONE", "DEPOSIT", "FULL"]).optional(),
     depositAmountBaht: z.number().int().min(0).max(9_999_999).nullable().optional(),
+    promptPayQrImageUrl: z.string().max(512).optional().nullable(),
   })
   .merge(moduleShopPaymentPatchSchema);
 
@@ -85,6 +86,7 @@ const select = {
   slotMinutes: true,
   portalBookingPaymentMode: true,
   depositAmountBaht: true,
+  promptPayQrImageUrl: true,
   ...MODULE_SHOP_PAYMENT_SELECT,
 } as const;
 
@@ -114,6 +116,7 @@ function profileFromRow(row: {
   slotMinutes?: number | null;
   portalBookingPaymentMode?: string | null;
   depositAmountBaht?: number | null;
+  promptPayQrImageUrl?: string | null;
   promptPayPhone?: string | null;
   bankName?: string | null;
   bankAccountNumber?: string | null;
@@ -145,6 +148,7 @@ function profileFromRow(row: {
     slotMinutes: barberNormalizeSlotMinutes(row.slotMinutes ?? 30),
     portalBookingPaymentMode: normalizeBarberPortalPaymentMode(row.portalBookingPaymentMode),
     depositAmountBaht: row.depositAmountBaht ?? null,
+    promptPayQrImageUrl: row.promptPayQrImageUrl ?? null,
     ...paymentRowToDto(row),
   };
 }
@@ -168,6 +172,7 @@ const emptyProfile = {
   slotMinutes: 30,
   portalBookingPaymentMode: "NONE",
   depositAmountBaht: null,
+  promptPayQrImageUrl: null,
 };
 
 export async function GET() {
@@ -310,6 +315,9 @@ export async function PATCH(req: Request) {
       ...portalCreate,
       ...hoursPatch,
       ...bookingPayPatch,
+      ...(d.promptPayQrImageUrl !== undefined
+        ? { promptPayQrImageUrl: d.promptPayQrImageUrl?.trim() || null }
+        : {}),
       ...moduleShopPaymentPatchData(d),
     },
     update: {
@@ -324,6 +332,9 @@ export async function PATCH(req: Request) {
       ...portalCreate,
       ...hoursPatch,
       ...bookingPayPatch,
+      ...(d.promptPayQrImageUrl !== undefined
+        ? { promptPayQrImageUrl: d.promptPayQrImageUrl?.trim() || null }
+        : {}),
       ...moduleShopPaymentPatchData(d),
     },
     select,

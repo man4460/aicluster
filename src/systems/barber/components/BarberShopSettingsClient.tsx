@@ -59,6 +59,7 @@ type ShopProfile = {
   slotMinutes?: 30 | 60;
   portalBookingPaymentMode?: BarberPortalBookingPaymentMode;
   depositAmountBaht?: number | null;
+  promptPayQrImageUrl?: string | null;
 } & ModuleShopPaymentDto;
 
 type SettingsTab = "basic" | "finance" | "portal" | "hours";
@@ -217,6 +218,7 @@ function BarberShopSettingsClientInner({
     slotMinutes: barberNormalizeSlotMinutes(initial.slotMinutes ?? 30),
     portalBookingPaymentMode: normalizeBarberPortalPaymentMode(initial.portalBookingPaymentMode),
     depositAmountBaht: initial.depositAmountBaht ?? null,
+    promptPayQrImageUrl: initial.promptPayQrImageUrl ?? null,
     payAmountPresetsRaw:
       initial.payAmountPresetsRaw ??
       formatBarberPayAmountPresetsInput(
@@ -265,6 +267,7 @@ function BarberShopSettingsClientInner({
         delete payload.slotMinutes;
         delete payload.portalBookingPaymentMode;
         delete payload.depositAmountBaht;
+        delete payload.promptPayQrImageUrl;
       }
       const res = await fetch(apiBase, {
         method: "PATCH",
@@ -290,6 +293,7 @@ function BarberShopSettingsClientInner({
             json.profile.portalBookingPaymentMode,
           ),
           depositAmountBaht: json.profile.depositAmountBaht ?? null,
+          promptPayQrImageUrl: json.profile.promptPayQrImageUrl ?? null,
           payAmountPresetsRaw:
             json.profile.payAmountPresetsRaw ??
             formatBarberPayAmountPresetsInput(
@@ -487,6 +491,72 @@ function BarberShopSettingsClientInner({
                 value={form}
                 onChange={(payment) => setForm((f) => ({ ...f, ...payment }))}
               />
+
+              {isBarber ? (
+                <div className="space-y-2 rounded-2xl border border-[#ecebff] bg-[#faf9ff]/80 p-3">
+                  <p className="text-xs font-black text-[#4d47b6]">QR พร้อมเพย์ (อัปโหลดรูป)</p>
+                  <p className="text-[11px] font-semibold text-[#8b87b8]">
+                    ทางเลือก — อัปโหลดภาพ QR จากแอปธนาคารที่มีอยู่แล้ว ถ้ามีรูปนี้ระบบจะแสดงรูปนี้แทนการสร้างจากเบอร์
+                  </p>
+                  {form.promptPayQrImageUrl ? (
+                    <div className="flex flex-wrap items-start gap-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={form.promptPayQrImageUrl}
+                        alt="QR พร้อมเพย์ที่อัปโหลด"
+                        className="h-28 w-28 rounded-xl border border-white object-contain bg-white p-1 shadow-sm"
+                      />
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className={cn(appTemplateOutlineButtonClass, "min-h-10 rounded-xl px-3 text-xs font-bold text-rose-700")}
+                        onClick={() => setForm((f) => ({ ...f, promptPayQrImageUrl: null }))}
+                      >
+                        ลบรูป QR
+                      </button>
+                    </div>
+                  ) : null}
+                  <label className={cn(appTemplateOutlineButtonClass, "inline-flex min-h-10 cursor-pointer items-center rounded-xl px-4 text-sm font-bold")}>
+                    {form.promptPayQrImageUrl ? "เปลี่ยนภาพ QR" : "เลือกภาพ QR พร้อมเพย์"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      disabled={busy}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        e.target.value = "";
+                        if (!f) return;
+                        void (async () => {
+                          setBusy(true);
+                          setErr(null);
+                          try {
+                            const fd = new FormData();
+                            fd.set("file", f);
+                            const res = await fetch(`${apiBase}/upload-promptpay-qr`, {
+                              method: "POST",
+                              body: fd,
+                            });
+                            const json = (await res.json().catch(() => ({}))) as {
+                              imageUrl?: string;
+                              error?: string;
+                            };
+                            if (!res.ok || !json.imageUrl) {
+                              throw new Error(json.error ?? "อัปโหลดไม่สำเร็จ");
+                            }
+                            setForm((prev) => ({ ...prev, promptPayQrImageUrl: json.imageUrl! }));
+                            setMsg("อัปโหลด QR พร้อมเพย์แล้ว");
+                          } catch (errUpload) {
+                            setErr(errUpload instanceof Error ? errUpload.message : "อัปโหลดไม่สำเร็จ");
+                          } finally {
+                            setBusy(false);
+                          }
+                        })();
+                      }}
+                    />
+                  </label>
+                </div>
+              ) : null}
 
               {isBarber ? (
                 <div className="space-y-2 rounded-2xl border border-[#ecebff] bg-[#faf9ff]/80 p-3">

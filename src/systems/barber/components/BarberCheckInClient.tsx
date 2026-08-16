@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AppSignaturePad, type AppSignaturePadHandle } from "@/components/app-templates";
 import { BarberModalPortal } from "@/systems/barber/components/BarberModalPortal";
 import { BarberPaymentPanel } from "@/systems/barber/components/BarberPaymentPanel";
 import {
@@ -13,6 +14,7 @@ import { cn } from "@/lib/cn";
 import { isValidThaiId13 } from "@/lib/thai-tax-id";
 import { BarberSellPackageModal } from "@/systems/barber/components/BarberSellPackageModal";
 import type { BarberPaymentMethod } from "@/systems/barber/lib/payment-method";
+import { uploadBarberSignatureBlob } from "@/systems/barber/lib/upload-signature";
 import {
   printBarberMemberDocs,
   type BarberPrintShopProfile,
@@ -128,6 +130,7 @@ export function BarberCheckInClient({
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [deducting, setDeducting] = useState(false);
+  const signaturePadRef = useRef<AppSignaturePadHandle>(null);
 
   const [cashPhone, setCashPhone] = useState("");
   const [cashName, setCashName] = useState("");
@@ -280,16 +283,27 @@ export function BarberCheckInClient({
       setErr("เลือกแพ็กเกจที่จะหักครั้ง");
       return;
     }
+    if (signaturePadRef.current?.isEmpty()) {
+      setErr("ให้ลูกค้าลงชื่อด้วยปากกาหรือนิ้วก่อนหักแพ็ก");
+      return;
+    }
     setErr(null);
     setMsg(null);
     setDeducting(true);
     try {
+      const blob = await signaturePadRef.current?.toPngBlob();
+      if (!blob) {
+        setErr("ให้ลูกค้าลงชื่อด้วยปากกาหรือนิ้วก่อนหักแพ็ก");
+        return;
+      }
+      const signatureImageUrl = await uploadBarberSignatureBlob(blob);
       const sid = stylistId ? Number(stylistId) : null;
       const res = await fetch("/api/barber/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subscriptionId: selectedSubId,
+          signatureImageUrl,
           ...(sid != null && Number.isInteger(sid) && sid > 0 ? { stylistId: sid } : {}),
         }),
       });
@@ -303,6 +317,7 @@ export function BarberCheckInClient({
         return;
       }
       setMsg(`หัก 1 ครั้งแล้ว — เหลือ ${data.remainingSessions} ครั้ง`);
+      signaturePadRef.current?.clear();
       setSubs((prev) =>
         prev.map((s) =>
           s.id === selectedSubId
@@ -311,6 +326,8 @@ export function BarberCheckInClient({
         ),
       );
       router.refresh();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
     } finally {
       setDeducting(false);
     }
@@ -601,6 +618,7 @@ export function BarberCheckInClient({
                     </div>
                   </label>
                 ))}
+                <AppSignaturePad ref={signaturePadRef} disabled={deducting} className="pt-1" />
               </div>
             ) : null}
 
