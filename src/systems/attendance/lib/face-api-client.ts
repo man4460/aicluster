@@ -36,7 +36,14 @@ export const FACE_MAX_ROLL_DEG = 20;
 /** หันหน้า (ความไม่สมมาตรจมูกเทียบระยะตา) */
 export const FACE_MAX_YAW_RATIO = 0.38;
 /** ใบหน้ารองใหญ่เกินสัดส่วนนี้ของใบหน้าหลัก = มีหลายคนในเฟรม */
-const SECOND_FACE_RATIO = 0.62;
+export const FACE_MAX_SECOND_FACE_RATIO = 0.62;
+/** จำนวนเฟรมที่ถ่ายต่อการสแกนหนึ่งครั้ง */
+export const FACE_CAPTURE_FRAMES = 4;
+/** ระยะห่างระหว่างเฟรม (ms) */
+export const FACE_CAPTURE_GAP_MS = 260;
+/** ความละเอียดกล้องที่ขอ */
+export const FACE_CAMERA_IDEAL_WIDTH = 1280;
+export const FACE_CAMERA_IDEAL_HEIGHT = 720;
 
 const SSD_OPTS = { minConfidence: 0.5, maxResults: 5 };
 const TINY_OPTS = { inputSize: 416 as const, scoreThreshold: 0.5 };
@@ -229,7 +236,7 @@ export async function extractFaceDescriptorFromImage(source: MediaSource): Promi
     if (runnerUp) {
       const mainArea = main.detection.box.width * main.detection.box.height;
       const nextArea = runnerUp.detection.box.width * runnerUp.detection.box.height;
-      if (mainArea > 0 && nextArea / mainArea > SECOND_FACE_RATIO) {
+      if (mainArea > 0 && nextArea / mainArea > FACE_MAX_SECOND_FACE_RATIO) {
         return { ok: false, error: "มีหลายใบหน้าในเฟรม — ให้เหลือคนเดียวหน้ากล้อง" };
       }
     }
@@ -356,7 +363,7 @@ function meanAbsDiff(a: Float32Array, b: Float32Array): number {
 }
 
 /** ต่ำกว่านี้ = ภาพแทบไม่เปลี่ยนเลย (สัญญาณของภาพนิ่ง/สตรีมค้าง) */
-const MIN_FRAME_MOTION = 0.35;
+export const FACE_MIN_FRAME_MOTION = 0.35;
 
 export type MultiFrameResult =
   | ({ ok: true; descriptor: number[]; samples: number[][]; framesUsed: number; motion: number } & FaceQuality)
@@ -370,8 +377,8 @@ export async function captureMultiFrameDescriptor(
   video: HTMLVideoElement,
   opts?: { frames?: number; gapMs?: number; requireMotion?: boolean },
 ): Promise<MultiFrameResult> {
-  const frames = Math.min(FACE_ENROLL_MAX_SAMPLES, Math.max(2, opts?.frames ?? 4));
-  const gapMs = opts?.gapMs ?? 260;
+  const frames = Math.min(FACE_ENROLL_MAX_SAMPLES, Math.max(2, opts?.frames ?? FACE_CAPTURE_FRAMES));
+  const gapMs = opts?.gapMs ?? FACE_CAPTURE_GAP_MS;
   const requireMotion = opts?.requireMotion ?? true;
 
   const samples: number[][] = [];
@@ -410,7 +417,7 @@ export async function captureMultiFrameDescriptor(
   for (let i = 1; i < snapshots.length; i++) {
     motion = Math.max(motion, meanAbsDiff(snapshots[i - 1]!, snapshots[i]!));
   }
-  if (requireMotion && snapshots.length >= 2 && motion < MIN_FRAME_MOTION) {
+  if (requireMotion && snapshots.length >= 2 && motion < FACE_MIN_FRAME_MOTION) {
     return {
       ok: false,
       error: "ภาพไม่เปลี่ยนแปลงเลย — ต้องเป็นคนจริงหน้ากล้อง (ไม่ใช่รูปถ่าย/หน้าจอ)",
