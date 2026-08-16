@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { distanceMeters } from "@/lib/geo/haversine";
 import { attendanceStepBoxClass } from "@/systems/attendance/attendance-ui";
+import { AttendanceFaceKioskGuideModal } from "@/systems/attendance/components/AttendanceFaceKioskGuideModal";
 import {
   captureMultiFrameDescriptor,
   extractFaceDescriptorFromBlob,
@@ -278,6 +279,7 @@ export function AttendanceCheckClient(props: Props) {
   /** แถบด้านบนหลังเช็คเข้าสำเร็จ */
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
   const [dataConsent, setDataConsent] = useState(false);
+  const [kioskGuideOpen, setKioskGuideOpen] = useState(false);
 
   const isPublic = props.mode === "public";
   const kioskFaceOnly = Boolean(isPublic && props.kioskFaceOnly);
@@ -865,6 +867,20 @@ export function AttendanceCheckClient(props: Props) {
                     <span className="text-xl font-black tracking-tight">สแกนใบหน้าเช็คอิน</span>
                     <span className="text-[11px] font-semibold text-white/85">กดแล้วเปิดกล้องทันที</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setKioskGuideOpen(true)}
+                    className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl border border-[#0000BF]/20 bg-white/85 px-4 text-sm font-bold text-[#4d47b6] shadow-sm transition hover:bg-white active:scale-[0.99]"
+                    aria-haspopup="dialog"
+                    aria-expanded={kioskGuideOpen}
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
+                      <circle cx="12" cy="17" r="1" />
+                    </svg>
+                    คู่มือการทำงาน · วิธีสแกนให้ผ่าน
+                  </button>
                 </>
               ) : (
                 <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-950">
@@ -1314,6 +1330,10 @@ export function AttendanceCheckClient(props: Props) {
       ) : null}
       {err ? <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-center text-sm text-red-800">{err}</p> : null}
       {msg ? <p className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-center text-sm text-emerald-900">{msg}</p> : null}
+
+      {kioskFaceOnly ? (
+        <AttendanceFaceKioskGuideModal open={kioskGuideOpen} onClose={() => setKioskGuideOpen(false)} />
+      ) : null}
     </div>
   );
 }

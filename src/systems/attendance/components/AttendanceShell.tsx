@@ -4,10 +4,11 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { AppUsageGuideModal, appModuleShellMainScrollClass } from "@/components/app-templates";
+import { appModuleShellMainScrollClass } from "@/components/app-templates";
 import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import { cn } from "@/lib/cn";
 import { AttendanceMobileBottomProvider } from "@/systems/attendance/components/AttendanceMobileBottomChrome";
+import { AttendanceUsageGuideModal } from "@/systems/attendance/components/AttendanceUsageGuideModal";
 import {
   ATTENDANCE_HEADER_COLLAPSE_EVENT,
   ATTENDANCE_MODULE_DISPLAY_NAME,
@@ -130,66 +131,6 @@ function HeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
     </svg>
   );
 }
-
-const guideSections = [
-  {
-    title: "ลำดับเริ่มต้นแนะนำ",
-    content: (
-      <>
-        <p>
-          ให้ตั้งค่าที่เมนู <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> และ{" "}
-          <strong className="font-semibold text-[#2e2a58]">รายชื่อพนักงาน</strong> ก่อน แล้วเผยแพร่{" "}
-          <strong className="font-semibold text-[#2e2a58]">QR จุดเช็คอิน</strong> ให้ทีมใช้งาน
-        </p>
-        <ol className="list-decimal space-y-1 pl-5 marker:font-semibold marker:text-[#4d47b6]">
-          <li>กำหนดกะและนโยบายสาย/ขาด</li>
-          <li>เพิ่มพนักงานให้ครบทุกคน</li>
-          <li>เปิดใช้ QR และทดสอบเช็คอินจริง</li>
-        </ol>
-      </>
-    ),
-  },
-  {
-    title: "เมนู: แดชบอร์ด",
-    content: (
-      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>ดูภาพรวมพนักงานที่เช็คอินแล้ว เช็คเอาท์แล้ว และที่ยังไม่เข้า</li>
-        <li>ติดตามสถานะหน้างานแบบเรียลไทม์ในวันปัจจุบัน</li>
-        <li>เหมาะสำหรับหัวหน้างานใช้ตรวจความพร้อมทีมก่อนเริ่มกะ</li>
-      </ul>
-    ),
-  },
-  {
-    title: "เมนู: จัดการเช็คอิน",
-    content: (
-      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>ตั้งค่า — กำหนดกะเวลางาน เวลาเข้างาน-เลิกงาน และเงื่อนไขการนับสาย</li>
-        <li>รายชื่อพนักงาน — เพิ่ม/แก้ไขข้อมูลพนักงานที่สามารถเช็คอินได้</li>
-        <li>เช็คอิน — เปิดหน้าจอเช็คอิน/เช็คเอาท์สำหรับเจ้าหน้าที่</li>
-      </ul>
-    ),
-  },
-  {
-    title: "เมนู: รายงาน",
-    content: (
-      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>ดูประวัติการเข้างานย้อนหลังตามช่วงวันที่ต้องการ</li>
-        <li>กรองตามพนักงานเพื่อส่งต่อคำนวณเงินเดือน</li>
-        <li>ใช้ตรวจเหตุผิดปกติ เช่น ลืมเช็คเอาท์หรือเวลาไม่ครบ</li>
-      </ul>
-    ),
-  },
-  {
-    title: "เมนู: QR จุดเช็คอิน",
-    content: (
-      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>สร้าง QR สำหรับให้พนักงานสแกนเข้า/ออกงาน</li>
-        <li>วาง QR ไว้ตำแหน่งที่เข้าถึงง่ายและมีสัญญาณอินเทอร์เน็ต</li>
-        <li>ทดสอบสแกนจากมือถือหลายเครื่องก่อนเริ่มใช้งานจริง</li>
-      </ul>
-    ),
-  },
-];
 
 export function AttendanceShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
@@ -321,13 +262,7 @@ export function AttendanceShell({ children }: { children: React.ReactNode }) {
           </nav>
         ) : null}
 
-        <AppUsageGuideModal
-          open={usageGuideOpen}
-          onClose={() => setUsageGuideOpen(false)}
-          title="คู่มือ — เช็คอินอัจฉริยะ"
-          subtitle="เช็คอิน–เช็คเอาท์ กะงาน รายงาน และ QR จุดเช็คอิน"
-          sections={guideSections}
-        />
+        <AttendanceUsageGuideModal open={usageGuideOpen} onClose={() => setUsageGuideOpen(false)} />
 
         <div className={cn(attendanceMainPaddingBottomClass, appModuleShellMainScrollClass)}>{children}</div>
       </div>
