@@ -14,6 +14,7 @@ export function appointmentQueuePaymentFromRow(row: {
   if (!row) {
     return {
       promptPayPhone: null,
+      promptPayQrImageUrl: null,
       bankName: null,
       bankAccountNumber: null,
       bankAccountName: null,
@@ -22,6 +23,7 @@ export function appointmentQueuePaymentFromRow(row: {
   }
   return {
     promptPayPhone: row.promptPayPhone?.trim() || row.promptPayId?.trim() || null,
+    promptPayQrImageUrl: null,
     bankName: row.bankName?.trim() || null,
     bankAccountNumber: row.bankAccountNumber?.trim() || null,
     bankAccountName: row.bankAccountName?.trim() || row.promptPayName?.trim() || null,
@@ -44,6 +46,7 @@ export function appointmentQueuePaymentWriteData(payment: Partial<ModuleShopPaym
 
   const merged: ModuleShopPaymentDto = {
     promptPayPhone: promptPayPhone ?? null,
+    promptPayQrImageUrl: payment.promptPayQrImageUrl ?? null,
     bankName: bankName ?? null,
     bankAccountNumber: bankAccountNumber ?? null,
     bankAccountName: bankAccountName ?? null,

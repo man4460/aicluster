@@ -80,6 +80,7 @@ export function DrinkPosShopSettingsClient({
           orderTicketSlipPaperSize: json.profile.orderTicketSlipPaperSize ?? "SLIP_58",
           staffDailyPinSet: json.profile.staffDailyPinSet ?? false,
           promptPayPhone: json.profile.promptPayPhone,
+          promptPayQrImageUrl: json.profile.promptPayQrImageUrl ?? null,
           bankName: json.profile.bankName,
           bankAccountNumber: json.profile.bankAccountNumber,
           bankAccountName: json.profile.bankAccountName,

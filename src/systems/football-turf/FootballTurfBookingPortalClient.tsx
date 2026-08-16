@@ -147,6 +147,7 @@ const EMPTY_SETTINGS: FootballTurfVenueSettings = {
   venueSubtitle: "",
   logoUrl: "",
   promptpayNumber: "",
+  promptPayQrImageUrl: "",
   bankName: "",
   accountName: "",
   accountNumber: "",

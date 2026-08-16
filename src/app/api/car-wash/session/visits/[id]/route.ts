@@ -29,6 +29,7 @@ const visitPatchSchema = z
     service_status: carWashServiceStatusZod.optional(),
     photo_url: z.string().max(512).optional().nullable(),
     evidence_photo_urls: z.array(z.string().max(512)).max(CAR_WASH_VISIT_EVIDENCE_MAX).optional(),
+    signature_image_url: z.string().max(512).optional().nullable(),
   })
   .refine(
     (d) =>
@@ -44,7 +45,8 @@ const visitPatchSchema = z
       d.visit_at !== undefined ||
       d.service_status !== undefined ||
       d.photo_url !== undefined ||
-      d.evidence_photo_urls !== undefined,
+      d.evidence_photo_urls !== undefined ||
+      d.signature_image_url !== undefined,
     { message: "ต้องส่งอย่างน้อยหนึ่งฟิลด์" },
   );
 
@@ -64,6 +66,7 @@ function visitJson(row: {
   photoUrl: string;
   evidencePhotoUrlsJson?: unknown;
   bundleId: number | null;
+  signatureImageUrl?: string | null;
   bookingId?: number | null;
   booking?: { paymentStatus: string; amountPaidBaht: number; packagePrice: number } | null;
 }) {
@@ -90,6 +93,7 @@ function visitJson(row: {
     photo_url: row.photoUrl ?? "",
     evidence_photo_urls: normalizeCarWashVisitEvidenceUrls(row.evidencePhotoUrlsJson),
     bundle_id: row.bundleId ?? null,
+    signature_image_url: row.signatureImageUrl?.trim() || null,
     booking_id: row.bookingId ?? null,
     ...payment,
   };
@@ -128,7 +132,15 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     try {
       updated = await prisma.$transaction(async (tx) => {
         let clearBundleId = false;
+        const signatureUrl =
+          d.signature_image_url !== undefined
+            ? d.signature_image_url?.trim() || null
+            : row.signatureImageUrl?.trim() || null;
+
         if (becomesPaid && row.bundleId != null) {
+          if (!signatureUrl) {
+            throw new Error("SIGNATURE_REQUIRED");
+          }
           const b = await tx.carWashBundle.findFirst({
             where: {
               id: row.bundleId,
@@ -187,12 +199,21 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
             ...(d.evidence_photo_urls !== undefined && {
               evidencePhotoUrlsJson: normalizeCarWashVisitEvidenceUrls(d.evidence_photo_urls),
             }),
+            ...(d.signature_image_url !== undefined && {
+              signatureImageUrl: d.signature_image_url?.trim() || null,
+            }),
             ...(clearBundleId && { bundleId: null }),
           },
         });
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "";
+      if (msg === "SIGNATURE_REQUIRED") {
+        return NextResponse.json(
+          { error: "ให้ลูกค้าลงชื่อด้วยปากกาหรือนิ้วก่อนหักแพ็ก" },
+          { status: 400 },
+        );
+      }
       if (msg === "BUNDLE_CONSUME_FAIL") {
         return NextResponse.json(
           { error: "แพ็กเกจเหมาไม่พร้อมใช้งาน หรือจำนวนครั้งคงเหลือหมดแล้ว" },

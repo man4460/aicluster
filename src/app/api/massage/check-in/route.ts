@@ -10,6 +10,12 @@ import { prismaErrorToApiMessage, prismaKnownRequestCode } from "@/lib/prisma-ap
 const packageUseSchema = z.object({
   subscriptionId: z.number().int().positive(),
   therapistId: z.number().int().positive().optional().nullable(),
+  signatureImageUrl: z
+    .string()
+    .max(512)
+    .regex(/^\/uploads\/massage(\/|-)/)
+    .optional()
+    .nullable(),
 });
 
 const massageCashReceiptUrl = z
@@ -78,6 +84,10 @@ export async function POST(req: Request) {
     if (parsed.data.therapistId != null && therapistIdResolved == null) {
       return NextResponse.json({ error: "ไม่พบช่างหรือปิดใช้งานแล้ว" }, { status: 400 });
     }
+    const signatureImageUrl =
+      parsed.data.signatureImageUrl != null && parsed.data.signatureImageUrl.length > 0
+        ? parsed.data.signatureImageUrl.trim()
+        : null;
     try {
       const out = await prisma.$transaction(async (tx) => {
         const sub = await tx.massageCustomerSubscription.findFirst({
@@ -106,6 +116,7 @@ export async function POST(req: Request) {
             massageCustomerId: sub.massageCustomerId,
             visitType: "PACKAGE_USE",
             ...(therapistIdResolved != null ? { therapistId: therapistIdResolved } : {}),
+            ...(signatureImageUrl != null ? { signatureImageUrl } : {}),
           },
         });
 

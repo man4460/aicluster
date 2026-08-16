@@ -2,6 +2,8 @@ import { z } from "zod";
 
 export type ModuleShopPaymentDto = {
   promptPayPhone: string | null;
+  /** รูป QR พร้อมเพย์ที่อัปโหลดเอง (ทางเลือก — ใช้แทนการสร้างจากเบอร์) */
+  promptPayQrImageUrl: string | null;
   bankName: string | null;
   bankAccountNumber: string | null;
   bankAccountName: string | null;
@@ -10,6 +12,7 @@ export type ModuleShopPaymentDto = {
 
 export const EMPTY_MODULE_SHOP_PAYMENT: ModuleShopPaymentDto = {
   promptPayPhone: null,
+  promptPayQrImageUrl: null,
   bankName: null,
   bankAccountNumber: null,
   bankAccountName: null,
@@ -18,6 +21,7 @@ export const EMPTY_MODULE_SHOP_PAYMENT: ModuleShopPaymentDto = {
 
 export const moduleShopPaymentPatchSchema = z.object({
   promptPayPhone: z.string().max(20).optional().nullable(),
+  promptPayQrImageUrl: z.string().max(512).optional().nullable(),
   bankName: z.string().max(120).optional().nullable(),
   bankAccountNumber: z.string().max(32).optional().nullable(),
   bankAccountName: z.string().max(200).optional().nullable(),
@@ -51,6 +55,7 @@ export function formatModuleBankTransferNote(data: {
 
 export function paymentRowToDto(row: {
   promptPayPhone?: string | null;
+  promptPayQrImageUrl?: string | null;
   bankName?: string | null;
   bankAccountNumber?: string | null;
   bankAccountName?: string | null;
@@ -59,6 +64,7 @@ export function paymentRowToDto(row: {
   if (!row) return { ...EMPTY_MODULE_SHOP_PAYMENT };
   return {
     promptPayPhone: row.promptPayPhone ?? null,
+    promptPayQrImageUrl: row.promptPayQrImageUrl ?? null,
     bankName: row.bankName ?? null,
     bankAccountNumber: row.bankAccountNumber ?? null,
     bankAccountName: row.bankAccountName ?? null,
@@ -68,6 +74,7 @@ export function paymentRowToDto(row: {
 
 export const MODULE_SHOP_PAYMENT_SELECT = {
   promptPayPhone: true,
+  promptPayQrImageUrl: true,
   bankName: true,
   bankAccountNumber: true,
   bankAccountName: true,
@@ -80,6 +87,9 @@ export function moduleShopPaymentPatchData(
   const out: Record<string, string | null> = {};
   if (data.promptPayPhone !== undefined) {
     out.promptPayPhone = normalizePromptPayPhone(data.promptPayPhone);
+  }
+  if (data.promptPayQrImageUrl !== undefined) {
+    out.promptPayQrImageUrl = data.promptPayQrImageUrl?.trim() || null;
   }
   if (data.bankName !== undefined) out.bankName = data.bankName?.trim() || null;
   if (data.bankAccountNumber !== undefined) {

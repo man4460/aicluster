@@ -64,6 +64,10 @@ mawell_buffet_from_host.sql
 !/public/uploads/attendance-roster/.gitkeep
 /public/uploads/car-wash/*
 !/public/uploads/car-wash/.gitkeep
+/public/uploads/car-wash-portal-slips/*
+!/public/uploads/car-wash-portal-slips/.gitkeep
+/public/uploads/car-wash-portal-signatures/*
+!/public/uploads/car-wash-portal-signatures/.gitkeep
 /public/uploads/barber-stylists/*
 !/public/uploads/barber-stylists/.gitkeep
 /public/uploads/barber-cash-receipts/*

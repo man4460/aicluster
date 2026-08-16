@@ -199,6 +199,8 @@ function BarberShopSettingsClientInner({
   trialSessionId?: string;
 }) {
   const isBarber = apiBase === "/api/barber/shop-profile";
+  const supportsUploadedPromptPayQr =
+    isBarber || apiBase.includes("/api/massage/shop-profile");
   const tabs = isBarber ? BARBER_SETTINGS_TABS : MASSAGE_SETTINGS_TABS;
   const allowed = tabs.map((t) => t.id);
   const searchParams = useSearchParams();
@@ -267,7 +269,9 @@ function BarberShopSettingsClientInner({
         delete payload.slotMinutes;
         delete payload.portalBookingPaymentMode;
         delete payload.depositAmountBaht;
-        delete payload.promptPayQrImageUrl;
+        if (!supportsUploadedPromptPayQr) {
+          delete payload.promptPayQrImageUrl;
+        }
       }
       const res = await fetch(apiBase, {
         method: "PATCH",
@@ -492,7 +496,7 @@ function BarberShopSettingsClientInner({
                 onChange={(payment) => setForm((f) => ({ ...f, ...payment }))}
               />
 
-              {isBarber ? (
+              {supportsUploadedPromptPayQr ? (
                 <div className="space-y-2 rounded-2xl border border-[#ecebff] bg-[#faf9ff]/80 p-3">
                   <p className="text-xs font-black text-[#4d47b6]">QR พร้อมเพย์ (อัปโหลดรูป)</p>
                   <p className="text-[11px] font-semibold text-[#8b87b8]">

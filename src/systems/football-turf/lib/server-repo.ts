@@ -220,6 +220,9 @@ export class FootballTurfServerRepo {
     if (patch.portalBannerUrl !== undefined) {
       data.portalBannerUrl = patch.portalBannerUrl.trim() || null;
     }
+    if (patch.promptPayQrImageUrl !== undefined) {
+      data.promptPayQrImageUrl = patch.promptPayQrImageUrl.trim() || null;
+    }
     if (patch.logoUrl !== undefined) {
       data.logoUrl = await persistFootballTurfLogoUrl(this.ownerUserId, patch.logoUrl || null);
     }
@@ -947,7 +950,11 @@ export class FootballTurfServerRepo {
     return true;
   }
 
-  async usePromotionSale(saleId: number, bookingId: number): Promise<FootballTurfPromotionSale | null> {
+  async usePromotionSale(
+    saleId: number,
+    bookingId: number,
+    signatureImageUrl?: string | null,
+  ): Promise<FootballTurfPromotionSale | null> {
     const scope = this.scope();
     const sale = await prisma.footballTurfPromotionSale.findFirst({
       where: { id: saleId, ...scopeWhere(scope) },
@@ -961,6 +968,7 @@ export class FootballTurfServerRepo {
 
     const remainingUses = sale.remainingUses - 1;
     const status = remainingUses > 0 ? "ACTIVE" : "USED_UP";
+    const sig = typeof signatureImageUrl === "string" ? signatureImageUrl.trim() || null : null;
 
     const [updatedSale] = await prisma.$transaction([
       prisma.footballTurfPromotionSale.update({
@@ -969,7 +977,11 @@ export class FootballTurfServerRepo {
       }),
       prisma.footballTurfBooking.update({
         where: { id: bookingId },
-        data: { promotionSaleId: saleId, finalPrice: 0 },
+        data: {
+          promotionSaleId: saleId,
+          finalPrice: 0,
+          ...(sig ? { signatureImageUrl: sig } : {}),
+        },
       }),
     ]);
     return mapPromotionSale(updatedSale);

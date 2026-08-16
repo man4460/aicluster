@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
   AppGalleryCameraFileInputs,
   AppIconImage,
+  AppIconPencil,
   AppIconToolbarButton,
   AppIconTrash,
   AppIconUpload,
@@ -116,6 +117,8 @@ export function BarberPackagesClient({
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editPkg, setEditPkg] = useState<Pkg | null>(null);
   const [imageBusyId, setImageBusyId] = useState<number | null>(null);
 
   const [name, setName] = useState("");
@@ -125,6 +128,19 @@ export function BarberPackagesClient({
   const [addImageUrl, setAddImageUrl] = useState<string | null>(null);
   const [addImageBusy, setAddImageBusy] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const [editName, setEditName] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editSessions, setEditSessions] = useState("10");
+  const [editDurationMinutes, setEditDurationMinutes] = useState(30);
+  const [editImageUrl, setEditImageUrl] = useState<string | null>(null);
+  const [editImageBusy, setEditImageBusy] = useState(false);
+  const editGalleryRef = useRef<HTMLInputElement>(null);
+  const {
+    openCamera: openEditCamera,
+    cameraInputRef: editCameraInputRef,
+    cameraModal: editCameraModal,
+  } = useAppCameraCapture({ title: "ถ่ายรูปแพ็กเกจ" });
 
   const load = useCallback(async () => {
     setErr(null);
@@ -162,19 +178,33 @@ export function BarberPackagesClient({
     setAddImageUrl(null);
   }, []);
 
+  const closeEditModal = useCallback(() => {
+    setEditOpen(false);
+    setEditPkg(null);
+    setEditName("");
+    setEditPrice("");
+    setEditSessions("10");
+    setEditDurationMinutes(30);
+    setEditImageUrl(null);
+    setErr(null);
+  }, []);
+
   useEffect(() => {
-    if (!addOpen) return;
+    if (!addOpen && !editOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeAddModal();
+      if (e.key === "Escape") {
+        if (editOpen) closeEditModal();
+        else closeAddModal();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [addOpen, closeAddModal]);
+  }, [addOpen, editOpen, closeAddModal, closeEditModal]);
 
   const openAddModal = useCallback(() => {
     setErr(null);
@@ -185,6 +215,17 @@ export function BarberPackagesClient({
     setAddImageUrl(null);
     setAddOpen(true);
   }, []);
+
+  function openEditModal(p: Pkg) {
+    setErr(null);
+    setEditPkg(p);
+    setEditName(p.name);
+    setEditPrice(String(p.price));
+    setEditSessions(String(p.totalSessions));
+    setEditDurationMinutes(p.durationMinutes || 30);
+    setEditImageUrl(p.imageUrl);
+    setEditOpen(true);
+  }
 
   useEffect(() => {
     if (!embedded || !onEmbeddedToolbar) return;
@@ -249,6 +290,19 @@ export function BarberPackagesClient({
     }
   }
 
+  async function onEditImageFile(file: File) {
+    setEditImageBusy(true);
+    setErr(null);
+    try {
+      const imageUrl = await uploadPackageImage(file);
+      setEditImageUrl(imageUrl);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "อัปโหลดรูปไม่สำเร็จ");
+    } finally {
+      setEditImageBusy(false);
+    }
+  }
+
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
@@ -283,6 +337,51 @@ export function BarberPackagesClient({
       setAddImageUrl(null);
       setAddOpen(false);
       setErr(null);
+      await load();
+      router.refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onSaveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editPkg) return;
+    setErr(null);
+    const p = Number(editPrice);
+    const s = Number(editSessions);
+    if (!editName.trim() || !Number.isFinite(p) || p < 0 || !Number.isInteger(s) || s < 1) {
+      setErr("กรอกชื่อ ราคา และจำนวนครั้งให้ถูกต้อง");
+      return;
+    }
+    setSaving(true);
+    try {
+      const body: {
+        name: string;
+        price: number;
+        durationMinutes: number;
+        imageUrl: string | null;
+        totalSessions?: number;
+      } = {
+        name: editName.trim(),
+        price: p,
+        durationMinutes: editDurationMinutes,
+        imageUrl: editImageUrl,
+      };
+      // ส่งจำนวนครั้งเฉพาะเมื่อเปลี่ยน — API บล็อกถ้ามีสมาชิกแพ็กแล้ว
+      if (s !== editPkg.totalSessions) body.totalSessions = s;
+
+      const res = await fetch(`/api/barber/packages/${editPkg.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; package?: Pkg };
+      if (!res.ok) {
+        setErr(data.error ?? "บันทึกไม่สำเร็จ");
+        return;
+      }
+      closeEditModal();
       await load();
       router.refresh();
     } finally {
@@ -326,7 +425,7 @@ export function BarberPackagesClient({
 
   return (
     <div className={embedded ? "min-w-0" : barberPageStackClass}>
-      {err && !addOpen ? <p className={barberInlineAlertErrorClass}>{err}</p> : null}
+      {err && !addOpen && !editOpen ? <p className={barberInlineAlertErrorClass}>{err}</p> : null}
 
       <section className={embedded ? "min-w-0" : barberSectionFirstClass} aria-label="แพ็กเกจทั้งหมด">
         {!embedded ? (
@@ -417,7 +516,7 @@ export function BarberPackagesClient({
 
                     <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                       <div className="min-w-0 pr-1">
-                        <p className="truncate text-sm font-black leading-snug tracking-tight text-[#1e1b4b]">
+                        <p className="break-words text-sm font-black leading-snug tracking-tight text-[#1e1b4b]">
                           {p.name}
                         </p>
                         <p className="mt-0.5 text-[11px] font-semibold text-[#66638c]">
@@ -514,6 +613,14 @@ export function BarberPackagesClient({
                             onClick={() => p.imageUrl && lb.open(p.imageUrl)}
                           >
                             <AppIconImage className="h-3.5 w-3.5" />
+                          </AppIconToolbarButton>
+                          <AppIconToolbarButton
+                            title="แก้ไขแพ็กเกจ"
+                            ariaLabel={`แก้ไขแพ็กเกจ ${p.name}`}
+                            disabled={busy}
+                            onClick={() => openEditModal(p)}
+                          >
+                            <AppIconPencil className="h-3.5 w-3.5" aria-hidden />
                           </AppIconToolbarButton>
                           <AppIconToolbarButton
                             title="ลบแพ็กเกจ"
@@ -689,6 +796,153 @@ export function BarberPackagesClient({
             </div>
           </div>
           {addCameraModal}
+        </BarberModalPortal>
+      ) : null}
+
+      {editOpen && editPkg ? (
+        <BarberModalPortal>
+          <div className={barberModalBackdropClass} role="presentation" onClick={() => closeEditModal()}>
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={`${formId}-edit-title`}
+              className={barberModalPanelLgClass}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={barberModalHeaderClass}>
+                <div className="min-w-0">
+                  <h2 id={`${formId}-edit-title`} className={barberModalTitleClass}>
+                    แก้ไขแพ็กเกจ
+                  </h2>
+                  <p className={barberModalSubtitleClass}>{editPkg.name}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => closeEditModal()}
+                  className={barberModalCloseBtnClass}
+                  aria-label="ปิด"
+                >
+                  ✕
+                </button>
+              </div>
+              <form onSubmit={onSaveEdit} className="grid gap-3 px-5 py-5">
+                {err ? (
+                  <p className="rounded-[1.25rem] bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">
+                    {err}
+                  </p>
+                ) : null}
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-[#4d47b6]">รูปแพ็กเกจ</p>
+                  <AppGalleryCameraFileInputs
+                    galleryInputRef={editGalleryRef}
+                    cameraInputRef={editCameraInputRef}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (file) void onEditImageFile(file);
+                    }}
+                  />
+                  <AppImagePickCameraButtons
+                    disabled={saving}
+                    busy={editImageBusy}
+                    onPickGallery={() => editGalleryRef.current?.click()}
+                    onPickCamera={() => openEditCamera((file) => void onEditImageFile(file))}
+                    labels={{ gallery: "เลือกรูป", camera: "ถ่ายรูป", busy: "กำลังอัปโหลด…" }}
+                    className="justify-start"
+                  />
+                  {editImageUrl ? (
+                    <div className="flex items-center gap-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={editImageUrl}
+                        alt=""
+                        className="h-20 w-20 rounded-xl object-cover ring-2 ring-white shadow-md"
+                      />
+                      <button
+                        type="button"
+                        disabled={saving || editImageBusy}
+                        className="rounded-xl px-2 py-1 text-[11px] font-black text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                        onClick={() => setEditImageUrl(null)}
+                      >
+                        ลบรูป
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] font-semibold text-[#66638c]">ยังไม่มีรูป</p>
+                  )}
+                </div>
+
+                <label className="block text-xs font-semibold text-[#4d47b6]">
+                  ชื่อแพ็กเกจ
+                  <input
+                    className="app-input mt-1 w-full rounded-[1.25rem] px-3 py-2.5 text-sm"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="ตัดผม 10 ครั้ง"
+                    required
+                  />
+                </label>
+                <label className="block text-xs font-semibold text-[#4d47b6]">
+                  ราคา (บาท)
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    className="app-input mt-1 w-full rounded-[1.25rem] px-3 py-2.5 text-sm"
+                    value={editPrice}
+                    onChange={(e) => setEditPrice(e.target.value)}
+                    required
+                  />
+                </label>
+                <label className="block text-xs font-semibold text-[#4d47b6]">
+                  จำนวนครั้ง
+                  <input
+                    type="number"
+                    min={1}
+                    className="app-input mt-1 w-full rounded-[1.25rem] px-3 py-2.5 text-sm"
+                    value={editSessions}
+                    onChange={(e) => setEditSessions(e.target.value)}
+                    required
+                  />
+                  <span className="mt-1 block text-[10px] font-medium text-[#8b87ad]">
+                    เปลี่ยนไม่ได้ถ้ามีสมาชิกแพ็กเกจนี้แล้ว
+                  </span>
+                </label>
+                <label className="block text-xs font-semibold text-[#4d47b6]">
+                  ระยะเวลาต่อครั้ง (นาที)
+                  <select
+                    className="app-input mt-1 w-full rounded-[1.25rem] px-3 py-2.5 text-sm"
+                    value={editDurationMinutes}
+                    onChange={(e) => setEditDurationMinutes(Number(e.target.value))}
+                  >
+                    {BARBER_DURATION_PRESETS.map((m) => (
+                      <option key={m} value={m}>
+                        {m} นาที
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => closeEditModal()}
+                    className={`app-btn-soft min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold text-[#2e2a58]`}
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving || editImageBusy}
+                    className={`app-btn-primary min-h-[48px] ${barberCardSurfaceRadiusClass} px-4 py-3 text-sm font-semibold disabled:opacity-60`}
+                  >
+                    {saving ? "กำลังบันทึก…" : "บันทึก"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+          {editCameraModal}
         </BarberModalPortal>
       ) : null}
     </div>

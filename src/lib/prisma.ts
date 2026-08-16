@@ -30,7 +30,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 67: BuildingPosShopProfile + Reservation + Review — เว็บจองจากบ้าน */
 /** 68: DrinkPosReservation + Review + portal fields on DrinkPosShopProfile */
 /** 69: BarberServiceLog.signatureImageUrl + BarberShopProfile.promptPayQrImageUrl */
-const PRISMA_SINGLETON_VERSION = 69;
+/** 70: massage/car-wash/football signature + promptPayQrImageUrl */
+const PRISMA_SINGLETON_VERSION = 70;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;

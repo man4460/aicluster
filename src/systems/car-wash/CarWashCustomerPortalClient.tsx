@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import {
   buildBookableStartSlots,
@@ -11,12 +11,18 @@ import { carWashStatusLabelTh, normalizeCarWashServiceStatus } from "@/lib/car-w
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { useMounted } from "@/lib/use-mounted";
 import { FormModal } from "@/components/ui/FormModal";
-import { AppPublicCheckInGlassPage, appPublicCheckInGlassCardClass } from "@/components/app-templates";
+import {
+  AppPublicCheckInGlassPage,
+  AppSignaturePad,
+  appPublicCheckInGlassCardClass,
+  type AppSignaturePadHandle,
+} from "@/components/app-templates";
 import {
   CarWashPublicSlotPicker,
   type PublicSlotItem,
 } from "@/systems/car-wash/CarWashPublicSlotPicker";
 import type { WashBundle } from "@/systems/car-wash/car-wash-service";
+import { uploadCarWashSignatureBlob } from "@/systems/car-wash/lib/upload-signature";
 
 export type CarWashPublicVisitRow = {
   id: number;
@@ -115,6 +121,7 @@ export function CarWashCustomerPortalClient({
   const [checkInLoading, setCheckInLoading] = useState(false);
   const [laneVisitAckId, setLaneVisitAckId] = useState<number | null>(null);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const signaturePadRef = useRef<AppSignaturePadHandle>(null);
 
   const [customerName, setCustomerName] = useState("");
   const [bookPhoneInput, setBookPhoneInput] = useState("");
@@ -444,16 +451,34 @@ export function CarWashCustomerPortalClient({
       setErr("แพ็กเกจนี้หมดสิทธิ์หรือไม่พร้อมใช้งาน");
       return;
     }
+    if (signaturePadRef.current?.isEmpty()) {
+      setErr("กรุณาลงชื่อด้วยปากกาหรือนิ้วก่อนยืนยัน");
+      return;
+    }
     setCheckInLoading(true);
     try {
       if (!ownerId) {
         setErr("ไม่พบข้อมูลเจ้าของร้าน");
         return;
       }
+      const blob = await signaturePadRef.current?.toPngBlob();
+      if (!blob) {
+        setErr("กรุณาลงชื่อด้วยปากกาหรือนิ้วก่อนยืนยัน");
+        return;
+      }
+      const signatureImageUrl = await uploadCarWashSignatureBlob(blob, {
+        publicPortal: true,
+        ownerId,
+      });
       const res = await fetch("/api/car-wash/public/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ownerId, bundleId: selectedBundleId, trialSessionId: trialSessionId ?? null }),
+        body: JSON.stringify({
+          ownerId,
+          bundleId: selectedBundleId,
+          trialSessionId: trialSessionId ?? null,
+          signatureImageUrl,
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         error?: string;
@@ -467,8 +492,11 @@ export function CarWashCustomerPortalClient({
       const consumed = data.bundle;
       const remain = Math.max(0, consumed.total_uses - consumed.used_uses);
       setBundles((prev) => prev.map((b) => (b.id === consumed.id ? consumed : b)));
+      signaturePadRef.current?.clear();
       setMsg(`ชำระและหักสิทธิ์แล้ว — คงเหลือ ${remain} ครั้ง จาก ${consumed.total_uses} ครั้ง`);
       await runLookup(query.trim(), { keepMessage: true });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "ไม่สามารถหักสิทธิ์ได้");
     } finally {
       setCheckInLoading(false);
     }
@@ -866,6 +894,7 @@ export function CarWashCustomerPortalClient({
                     </div>
                   )}
                   <div className="mt-4 space-y-2 border-t border-white/50 pt-4">
+                    <AppSignaturePad ref={signaturePadRef} disabled={checkInLoading} className="pb-1" />
                     <button
                       type="button"
                       onClick={() => void onCheckIn()}

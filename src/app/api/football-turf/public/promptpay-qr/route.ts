@@ -12,7 +12,7 @@ const bodySchema = z.object({
   t: z.string().trim().max(36).optional().nullable(),
 });
 
-/** QR พร้อมเพย์ — ลิงก์ลูกค้าจองสนาม */
+/** QR พร้อมเพย์ — ลิงก์ลูกค้าจองสนาม (รูปอัปโหลดมาก่อนสร้างจากเบอร์) */
 export async function POST(req: Request) {
   let json: unknown;
   try {
@@ -40,6 +40,7 @@ export async function POST(req: Request) {
 
   const phone = settings.promptpayNumber?.trim() ?? "";
   const digits = phone.replace(/\D/g, "");
+  const staticQr = settings.promptPayQrImageUrl?.trim() || null;
   const bankPayload = {
     promptpayNumber: phone || null,
     bankName: settings.bankName || null,
@@ -48,10 +49,20 @@ export async function POST(req: Request) {
     shopName: settings.venueName || null,
   };
 
+  if (staticQr) {
+    return NextResponse.json({
+      qrDataUrl: staticQr,
+      configured: true,
+      qrSource: "uploaded" as const,
+      ...bankPayload,
+    });
+  }
+
   if (digits.length < 9) {
     return NextResponse.json({
       qrDataUrl: null as string | null,
       configured: false,
+      qrSource: "none" as const,
       ...bankPayload,
     });
   }
@@ -60,6 +71,7 @@ export async function POST(req: Request) {
   return NextResponse.json({
     qrDataUrl,
     configured: Boolean(qrDataUrl),
+    qrSource: "generated" as const,
     ...bankPayload,
   });
 }

@@ -53,6 +53,8 @@ export type ServiceVisit = {
   evidence_photo_urls: string[];
   /** เหมาจ่าย: ยังไม่หักครั้งจนกว่า PAID (null หลังหักแล้วหรือไม่ใช่เหมา) */
   bundle_id: number | null;
+  /** ลายเซ็นลูกค้าตอนหักสิทธิ์แพ็กเหมา */
+  signature_image_url: string | null;
   /** คิวจองที่ผูก (พอร์ทัล / บันทึกรายการ) */
   booking_id: number | null;
   /** สแนปช็อตยอดชำระของคิวจอง (null เมื่อไม่มีคิวจอง / walk-in) */
@@ -81,7 +83,25 @@ export type ServiceVisitPatch = Partial<{
   photo_url: string;
   evidence_photo_urls: string[];
   bundle_id: number | null;
+  signature_image_url: string | null;
 }>;
+
+export type ServiceVisitCreateInput = Omit<
+  ServiceVisit,
+  | "id"
+  | "visit_at"
+  | "service_status"
+  | "booking_payment_status"
+  | "booking_amount_paid"
+  | "booking_package_price"
+  | "amount_remaining"
+  | "is_fully_paid"
+  | "signature_image_url"
+> & {
+  visit_at?: string;
+  service_status?: CarWashServiceStatus;
+  signature_image_url?: string | null;
+};
 
 export type WashBundle = {
   id: number;
@@ -161,19 +181,7 @@ export interface CarWashRepository {
   deleteComplaint(id: number): Promise<boolean>;
 
   listVisits(): Promise<ServiceVisit[]>;
-  createVisit(
-    input: Omit<
-      ServiceVisit,
-      | "id"
-      | "visit_at"
-      | "service_status"
-      | "booking_payment_status"
-      | "booking_amount_paid"
-      | "booking_package_price"
-      | "amount_remaining"
-      | "is_fully_paid"
-    > & { visit_at?: string; service_status?: CarWashServiceStatus },
-  ): Promise<ServiceVisit>;
+  createVisit(input: ServiceVisitCreateInput): Promise<ServiceVisit>;
   updateVisit(id: number, patch: ServiceVisitPatch): Promise<ServiceVisit | null>;
   updateVisitStatus(id: number, service_status: CarWashServiceStatus): Promise<ServiceVisit | null>;
   deleteVisit(id: number): Promise<boolean>;
@@ -257,6 +265,7 @@ const seedDB: CarWashDB = {
       photo_url: "",
       evidence_photo_urls: [],
       bundle_id: null,
+      signature_image_url: null,
       booking_id: null,
       booking_payment_status: null,
       booking_amount_paid: null,
@@ -335,6 +344,10 @@ function normalizeDB(input: unknown): CarWashDB | null {
       photo_url: typeof rv.photo_url === "string" ? rv.photo_url : "",
       evidence_photo_urls: normalizeCarWashVisitEvidenceUrls(rv.evidence_photo_urls),
       bundle_id: bundleId,
+      signature_image_url:
+        typeof rv.signature_image_url === "string" && rv.signature_image_url.trim()
+          ? rv.signature_image_url.trim()
+          : null,
       booking_id: typeof rv.booking_id === "number" ? rv.booking_id : null,
       ...payment,
     };
@@ -507,19 +520,7 @@ export class LocalStorageCarWashRepository implements CarWashRepository {
     return db.visits.sort((a, b) => (a.visit_at < b.visit_at ? 1 : -1));
   }
 
-  async createVisit(
-    input: Omit<
-      ServiceVisit,
-      | "id"
-      | "visit_at"
-      | "service_status"
-      | "booking_payment_status"
-      | "booking_amount_paid"
-      | "booking_package_price"
-      | "amount_remaining"
-      | "is_fully_paid"
-    > & { visit_at?: string; service_status?: CarWashServiceStatus },
-  ): Promise<ServiceVisit> {
+  async createVisit(input: ServiceVisitCreateInput): Promise<ServiceVisit> {
     const db = loadDB();
     const bundleId = input.bundle_id ?? null;
     if (bundleId != null) {
@@ -551,6 +552,7 @@ export class LocalStorageCarWashRepository implements CarWashRepository {
       photo_url: input.photo_url ?? "",
       evidence_photo_urls: normalizeCarWashVisitEvidenceUrls(input.evidence_photo_urls),
       bundle_id: storedBundleId,
+      signature_image_url: input.signature_image_url ?? null,
       booking_id: input.booking_id ?? null,
       ...computeCarWashVisitPayment({
         bundleId: storedBundleId,
@@ -587,10 +589,16 @@ export class LocalStorageCarWashRepository implements CarWashRepository {
       next.evidence_photo_urls = normalizeCarWashVisitEvidenceUrls(patch.evidence_photo_urls);
     }
     if (patch.bundle_id !== undefined) next.bundle_id = patch.bundle_id;
+    if (patch.signature_image_url !== undefined) {
+      next.signature_image_url = patch.signature_image_url?.trim() || null;
+    }
 
     const becamePaid =
       patch.service_status === "PAID" && normalizeCarWashServiceStatus(cur.service_status) !== "PAID";
     if (becamePaid && next.bundle_id != null) {
+      if (!next.signature_image_url?.trim()) {
+        throw new Error("ให้ลูกค้าลงชื่อด้วยปากกาหรือนิ้วก่อนหักแพ็ก");
+      }
       const consumed = await this.consumeBundleUse(next.bundle_id);
       if (!consumed) {
         throw new Error("แพ็กเกจเหมาไม่พร้อมใช้งาน หรือจำนวนครั้งคงเหลือหมดแล้ว");
@@ -891,19 +899,7 @@ class SessionApiCarWashRepository implements CarWashRepository {
     );
     return (await readJson<{ visits: ServiceVisit[] }>(res)).visits;
   }
-  async createVisit(
-    input: Omit<
-      ServiceVisit,
-      | "id"
-      | "visit_at"
-      | "service_status"
-      | "booking_payment_status"
-      | "booking_amount_paid"
-      | "booking_package_price"
-      | "amount_remaining"
-      | "is_fully_paid"
-    > & { visit_at?: string; service_status?: CarWashServiceStatus },
-  ): Promise<ServiceVisit> {
+  async createVisit(input: ServiceVisitCreateInput): Promise<ServiceVisit> {
     const res = await sessionFetch(
       this.authUrl("/api/car-wash/session/visits"),
       this.authInit({
@@ -1126,5 +1122,27 @@ export async function uploadCarWashPackageImage(
   }
   const url = data.imageUrl?.trim();
   if (!url) throw new Error("อัปโหลดรูปไม่สำเร็จ");
+  return url;
+}
+
+export async function uploadCarWashSignatureViaSession(
+  file: File,
+  staffAuth?: CarWashStaffAuth | null,
+): Promise<string> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await sessionFetch(staffUploadUrl("/api/car-wash/signature/upload", staffAuth), {
+    ...staffUploadInit(staffAuth),
+    method: "POST",
+    body: form,
+  });
+  const data = (await res.json().catch(() => ({}))) as { error?: string; imageUrl?: string };
+  if (!res.ok) {
+    const msg =
+      typeof data.error === "string" && data.error.trim() ? data.error : "อัปโหลดลายเซ็นไม่สำเร็จ";
+    throw new Error(msg);
+  }
+  const url = data.imageUrl?.trim();
+  if (!url) throw new Error("อัปโหลดลายเซ็นไม่สำเร็จ");
   return url;
 }

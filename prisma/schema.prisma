@@ -1085,6 +1085,8 @@ model MassageShopProfile {
   address        String?  @db.Text
   contactPhone   String?  @map("contact_phone") @db.VarChar(32)
   promptPayPhone String?  @map("prompt_pay_phone") @db.VarChar(20)
+  /** รูป QR พร้อมเพย์ที่อัปโหลดเอง (ทางเลือก — ใช้แทนการสร้างจากเบอร์) */
+  promptPayQrImageUrl String? @map("prompt_pay_qr_image_url") @db.VarChar(512)
   bankName       String?  @map("bank_name") @db.VarChar(120)
   bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
   bankAccountName String? @map("bank_account_name") @db.VarChar(200)
@@ -1242,6 +1244,8 @@ model MassageServiceLog {
   therapist         MassageTherapist?              @relation(fields: [therapistId], references: [id], onDelete: SetNull)
   amountBaht        Decimal?                       @map("amount_baht") @db.Decimal(10, 2)
   receiptImageUrl   String?                        @map("receipt_image_url") @db.VarChar(512)
+  /** ลายเซ็นลูกค้าตอนหักแพ็กเกจ (path ใต้ /uploads/…) */
+  signatureImageUrl String?                        @map("signature_image_url") @db.VarChar(512)
   note              String?                        @db.VarChar(255)
   createdAt         DateTime                       @default(now()) @map("created_at")
 
@@ -1960,6 +1964,8 @@ model CarWashVisit {
   /** แพ็กเกจเหมา: ค้างหักครั้งจนกว่าจะชำระแล้ว (PAID) แล้วเซิร์ฟเวอร์จะหักและเคลียร์ */
   bundleId       Int?     @map("bundle_id")
   pendingBundle  CarWashBundle? @relation("CarWashVisitPendingBundle", fields: [bundleId], references: [id], onDelete: SetNull)
+  /** ลายเซ็นลูกค้าตอนหักสิทธิ์แพ็กเหมา (path ใต้ /uploads/…) */
+  signatureImageUrl String? @map("signature_image_url") @db.VarChar(512)
   /** จองคิวที่ผูกกับรายการลาน (พอร์ทัล / เพิ่มคิว) — null = walk-in */
   bookingId      Int?     @unique @map("booking_id")
   booking        CarWashBooking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
@@ -4391,6 +4397,8 @@ model ModuleShopBranding {
   tagline        String?  @db.VarChar(300)
   contactPhone   String?  @map("contact_phone") @db.VarChar(32)
   promptPayPhone String?  @map("prompt_pay_phone") @db.VarChar(20)
+  /** รูป QR พร้อมเพย์ที่อัปโหลดเอง (ทางเลือก — ใช้แทนการสร้างจากเบอร์) */
+  promptPayQrImageUrl String? @map("prompt_pay_qr_image_url") @db.VarChar(512)
   bankName       String?  @map("bank_name") @db.VarChar(120)
   bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
   bankAccountName String? @map("bank_account_name") @db.VarChar(200)
@@ -5204,6 +5212,8 @@ model FootballTurfShopProfile {
   /** โลโก้สนาม — path สั้นใต้ /uploads หรือ URL */
   logoUrl         String   @default("") @map("logo_url") @db.VarChar(512)
   promptpayNumber String   @default("") @map("promptpay_number") @db.VarChar(32)
+  /** รูป QR พร้อมเพย์ที่อัปโหลดเอง (ทางเลือก — ใช้แทนการสร้างจากเบอร์) */
+  promptPayQrImageUrl String? @map("prompt_pay_qr_image_url") @db.VarChar(512)
   bankName        String   @default("") @map("bank_name") @db.VarChar(120)
   accountName     String   @default("") @map("account_name") @db.VarChar(200)
   accountNumber   String   @default("") @map("account_number") @db.VarChar(32)
@@ -5313,6 +5323,8 @@ model FootballTurfBooking {
   pointsEarned       Int               @default(0) @map("points_earned")
   pointsRedeemed     Int               @default(0) @map("points_redeemed")
   promotionSaleId    Int?              @map("promotion_sale_id")
+  /** ลายเซ็นลูกค้าตอนใช้สิทธิ์โปรโมชัน / หักแพ็ก (path ใต้ /uploads/…) */
+  signatureImageUrl  String?           @map("signature_image_url") @db.VarChar(512)
   note               String            @default("") @db.VarChar(500)
   paymentMethod      String            @default("UNPAID") @map("payment_method") @db.VarChar(20)
   /** UNPAID | PENDING_REVIEW | PARTIAL | PAID */

@@ -36,6 +36,8 @@ import {
   AppRevenueCostColumnChart,
   AppSectionHeader,
   AppShopLogoField,
+  AppSignaturePad,
+  type AppSignaturePadHandle,
   AppSlipPaperSizeSettingsField,
   AppStaffDailyPinSettingsField,
   staffDailyPinPatchBody,
@@ -59,6 +61,7 @@ import { FootballTurfBookingPrintModal } from "@/systems/football-turf/component
 import { FootballTurfCustomerStatsModal } from "@/systems/football-turf/components/FootballTurfCustomerStatsModal";
 import { FootballTurfLoyaltySettingsPanel } from "@/systems/football-turf/components/FootballTurfLoyaltySettingsPanel";
 import { FootballTurfPortalMediaSettings } from "@/systems/football-turf/components/FootballTurfPortalMediaSettings";
+import { uploadFootballTurfSignatureBlob } from "@/systems/football-turf/lib/upload-signature";
 import {
   footballTurfCardAccentBarClass,
   footballTurfChipActionButtonClass,
@@ -649,6 +652,7 @@ const EMPTY_SETTINGS: FootballTurfVenueSettings = {
   venueSubtitle: "",
   logoUrl: "",
   promptpayNumber: "",
+  promptPayQrImageUrl: "",
   bankName: "",
   accountName: "",
   accountNumber: "",
@@ -1267,6 +1271,11 @@ export function FootballTurfDashboard({
     | { mode: "booking"; bookingId: number }
     | null
   >(null);
+  const [overviewPromoSaleId, setOverviewPromoSaleId] = useState<number | null>(null);
+  const [overviewPromoBusy, setOverviewPromoBusy] = useState(false);
+  const [overviewPromoErr, setOverviewPromoErr] = useState<string | null>(null);
+  const overviewSignaturePadRef = useRef<AppSignaturePadHandle>(null);
+  const [settingsQrBusy, setSettingsQrBusy] = useState(false);
   const balancePayGalleryRef = useRef<HTMLInputElement>(null);
   const {
     openCamera: openBalancePayCamera,
@@ -3722,6 +3731,63 @@ export function FootballTurfDashboard({
 
   function closeOverviewCheckInModal() {
     setOverviewCheckInModal(null);
+    setOverviewPromoSaleId(null);
+    setOverviewPromoBusy(false);
+    setOverviewPromoErr(null);
+    overviewSignaturePadRef.current?.clear();
+  }
+
+  function listActivePromoSalesForBooking(booking: FootballTurfBooking): FootballTurfPromotionSale[] {
+    if (booking.promotionSaleId) return [];
+    const phone = normalizeFtPhoneDigits(booking.customerPhone);
+    if (phone.length < 9) return [];
+    return promotionSales.filter((sale) => {
+      if (sale.status !== "ACTIVE" || sale.remainingUses <= 0) return false;
+      const salePhone = normalizeFtPhoneDigits(sale.customerPhone);
+      return (
+        salePhone === phone ||
+        (salePhone.length >= 9 && (salePhone.endsWith(phone) || phone.endsWith(salePhone)))
+      );
+    });
+  }
+
+  async function overviewApplyPromotionSale(booking: FootballTurfBooking) {
+    setOverviewPromoErr(null);
+    const options = listActivePromoSalesForBooking(booking);
+    const saleId =
+      overviewPromoSaleId != null && options.some((s) => s.id === overviewPromoSaleId)
+        ? overviewPromoSaleId
+        : options[0]?.id ?? null;
+    if (saleId == null) {
+      setOverviewPromoErr("เลือกสิทธิ์โปรที่จะใช้");
+      return;
+    }
+    if (overviewSignaturePadRef.current?.isEmpty()) {
+      setOverviewPromoErr("ให้ลูกค้าลงชื่อด้วยปากกาหรือนิ้วก่อนใช้สิทธิ์โปร");
+      return;
+    }
+    setOverviewPromoBusy(true);
+    try {
+      const blob = await overviewSignaturePadRef.current?.toPngBlob();
+      if (!blob) {
+        setOverviewPromoErr("ให้ลูกค้าลงชื่อด้วยปากกาหรือนิ้วก่อนใช้สิทธิ์โปร");
+        return;
+      }
+      const signatureImageUrl = await uploadFootballTurfSignatureBlob(blob);
+      const updated = await repo.usePromotionSale(saleId, booking.id, signatureImageUrl);
+      if (!updated) {
+        setOverviewPromoErr("ใช้สิทธิ์โปรไม่สำเร็จ — ตรวจสอบสิทธิ์คงเหลือ");
+        return;
+      }
+      overviewSignaturePadRef.current?.clear();
+      setOverviewPromoSaleId(null);
+      await refresh();
+      notice.success(`ใช้สิทธิ์โปรแล้ว — เหลือ ${updated.remainingUses} ครั้ง`);
+    } catch (e) {
+      setOverviewPromoErr(e instanceof Error ? e.message : "ใช้สิทธิ์โปรไม่สำเร็จ");
+    } finally {
+      setOverviewPromoBusy(false);
+    }
   }
 
   function listCourtTodayBookedForCheckIn(courtId: number): FootballTurfBooking[] {
@@ -4045,6 +4111,7 @@ export function FootballTurfDashboard({
         venueSubtitle: settingsForm.venueSubtitle.trim(),
         logoUrl: settingsForm.logoUrl.trim(),
         promptpayNumber: settingsForm.promptpayNumber.trim(),
+        promptPayQrImageUrl: settingsForm.promptPayQrImageUrl.trim(),
         bankName: settingsForm.bankName.trim(),
         accountName: settingsForm.accountName.trim(),
         accountNumber: settingsForm.accountNumber.trim(),
@@ -7007,6 +7074,88 @@ export function FootballTurfDashboard({
                       />
                     </label>
                   </div>
+                  <div className="mt-4 space-y-2 rounded-[1.25rem] border border-[#ecebff] bg-[#faf9ff]/80 p-3">
+                    <p className="text-xs font-black text-[#4d47b6]">QR พร้อมเพย์ (อัปโหลดรูป)</p>
+                    <p className="text-[11px] font-semibold text-[#8b87b8]">
+                      ทางเลือก — อัปโหลดภาพ QR จากแอปธนาคารที่มีอยู่แล้ว ถ้ามีรูปนี้ระบบจะแสดงรูปนี้แทนการสร้างจากเบอร์
+                    </p>
+                    {settingsForm.promptPayQrImageUrl ? (
+                      <div className="flex flex-wrap items-start gap-3">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={settingsForm.promptPayQrImageUrl}
+                          alt="QR พร้อมเพย์ที่อัปโหลด"
+                          className="h-28 w-28 rounded-xl border border-white bg-white p-1 object-contain shadow-sm"
+                        />
+                        <button
+                          type="button"
+                          disabled={settingsQrBusy}
+                          className={cn(
+                            appTemplateOutlineButtonClass,
+                            "min-h-10 rounded-xl px-3 text-xs font-bold text-rose-700",
+                          )}
+                          onClick={() =>
+                            setSettingsForm((state) => ({ ...state, promptPayQrImageUrl: "" }))
+                          }
+                        >
+                          ลบรูป QR
+                        </button>
+                      </div>
+                    ) : null}
+                    <label
+                      className={cn(
+                        appTemplateOutlineButtonClass,
+                        "inline-flex min-h-10 cursor-pointer items-center rounded-xl px-4 text-sm font-bold",
+                      )}
+                    >
+                      {settingsForm.promptPayQrImageUrl ? "เปลี่ยนภาพ QR" : "เลือกภาพ QR พร้อมเพย์"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        disabled={settingsQrBusy}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          e.target.value = "";
+                          if (!f) return;
+                          void (async () => {
+                            setSettingsQrBusy(true);
+                            try {
+                              const fd = new FormData();
+                              fd.set("file", f);
+                              const res = await fetch("/api/football-turf/upload-promptpay-qr", {
+                                method: "POST",
+                                body: fd,
+                                credentials: "include",
+                              });
+                              const json = (await res.json().catch(() => ({}))) as {
+                                imageUrl?: string;
+                                error?: string;
+                              };
+                              if (!res.ok || !json.imageUrl) {
+                                throw new Error(json.error ?? "อัปโหลดไม่สำเร็จ");
+                              }
+                              setSettingsForm((prev) => ({
+                                ...prev,
+                                promptPayQrImageUrl: json.imageUrl!,
+                              }));
+                              setSettings((prev) => ({
+                                ...prev,
+                                promptPayQrImageUrl: json.imageUrl!,
+                              }));
+                              notice.success("อัปโหลด QR พร้อมเพย์แล้ว");
+                            } catch (errUpload) {
+                              notice.error(
+                                errUpload instanceof Error ? errUpload.message : "อัปโหลดไม่สำเร็จ",
+                              );
+                            } finally {
+                              setSettingsQrBusy(false);
+                            }
+                          })();
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
                 <div className={footballTurfPanelCardClass}>
                   <p className={footballTurfSectionEyebrowClass}>ชำระตอนจองจากลิงก์ลูกค้า</p>
@@ -9364,6 +9513,85 @@ export function FootballTurfDashboard({
                     หมายเหตุ: {booking.note.trim()}
                   </div>
                 ) : null}
+
+                {(() => {
+                  const promoOptions = listActivePromoSalesForBooking(booking);
+                  if (promoOptions.length === 0) return null;
+                  const selectedId =
+                    overviewPromoSaleId != null &&
+                    promoOptions.some((s) => s.id === overviewPromoSaleId)
+                      ? overviewPromoSaleId
+                      : promoOptions[0]!.id;
+                  return (
+                    <div className="space-y-3 rounded-[1.5rem] border border-emerald-200/80 bg-emerald-50/50 p-3.5">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-800/80">
+                          ใช้สิทธิ์โปร
+                        </p>
+                        <p className="mt-1 text-[11px] font-semibold text-emerald-900/80">
+                          พบสิทธิ์โปรที่เบอร์นี้ — ลงชื่อแล้วหัก 1 ครั้ง (ยอดจองเป็น 0)
+                        </p>
+                      </div>
+                      <ul className="space-y-1.5" role="listbox" aria-label="เลือกสิทธิ์โปร">
+                        {promoOptions.map((sale) => {
+                          const active = sale.id === selectedId;
+                          return (
+                            <li key={sale.id}>
+                              <button
+                                type="button"
+                                disabled={overviewPromoBusy}
+                                onClick={() => {
+                                  setOverviewPromoSaleId(sale.id);
+                                  setOverviewPromoErr(null);
+                                }}
+                                className={cn(
+                                  "flex w-full items-center justify-between gap-2 rounded-[1rem] border px-3 py-2.5 text-left transition",
+                                  active
+                                    ? "border-emerald-400 bg-white ring-1 ring-emerald-300"
+                                    : "border-emerald-100 bg-white/70 hover:bg-white",
+                                )}
+                                aria-pressed={active}
+                              >
+                                <span className="min-w-0">
+                                  <span className="block truncate text-sm font-bold text-[#1e1b4b]">
+                                    {sale.promotionName}
+                                  </span>
+                                  <span className="text-[11px] font-semibold text-[#66638c]">
+                                    เหลือ {sale.remainingUses} ครั้ง
+                                    {sale.teamName ? ` · ${sale.teamName}` : ""}
+                                  </span>
+                                </span>
+                                {active ? (
+                                  <span className="shrink-0 text-[11px] font-black text-emerald-700">
+                                    เลือก
+                                  </span>
+                                ) : null}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      <AppSignaturePad
+                        ref={overviewSignaturePadRef}
+                        disabled={overviewPromoBusy}
+                        className="pt-1"
+                      />
+                      {overviewPromoErr ? (
+                        <p className="text-xs font-bold text-rose-600" role="alert">
+                          {overviewPromoErr}
+                        </p>
+                      ) : null}
+                      <button
+                        type="button"
+                        disabled={overviewPromoBusy || selectedId == null}
+                        onClick={() => void overviewApplyPromotionSale(booking)}
+                        className="app-btn-primary min-h-[48px] w-full rounded-[1.25rem] text-sm font-bold disabled:opacity-60"
+                      >
+                        {overviewPromoBusy ? "กำลังใช้สิทธิ์…" : "ใช้สิทธิ์โปร + ลงชื่อ"}
+                      </button>
+                    </div>
+                  );
+                })()}
 
                 {booking.paymentSlipDataUrl ? (
                   <div>

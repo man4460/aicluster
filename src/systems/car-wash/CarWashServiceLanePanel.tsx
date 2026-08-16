@@ -11,10 +11,12 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppSignaturePad,
   AppSlipPaperSizeToolbar,
   appTemplateOutlineButtonClass,
   useAppImageLightbox,
   useAppSlipPaperSize,
+  type AppSignaturePadHandle,
 } from "@/components/app-templates";
 import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
 import { cn } from "@/lib/cn";
@@ -42,12 +44,14 @@ import {
   type ServicePackage,
   type ServiceVisit,
 } from "@/systems/car-wash/car-wash-service";
+import { uploadCarWashSignatureBlob } from "@/systems/car-wash/lib/upload-signature";
 import { CAR_WASH_VISIT_EVIDENCE_MAX } from "@/systems/car-wash/lib/visit-media";
 
 export type CarWashLanePaymentPayload = {
   service_status: "PAID";
   photo_url?: string;
   note?: string;
+  signature_image_url?: string | null;
 };
 
 type LanePhotoKind = "slip" | "evidence";
@@ -303,13 +307,14 @@ export function CarWashServiceLanePanel({
   const [paySlipUrl, setPaySlipUrl] = useState<string | null>(null);
   const [payBusy, setPayBusy] = useState(false);
   const [payErr, setPayErr] = useState<string | null>(null);
+  const signaturePadRef = useRef<AppSignaturePadHandle>(null);
 
   const laneGalleryInputRef = useRef<HTMLInputElement>(null);
   const laneCameraInputRef = useRef<HTMLInputElement>(null);
   const lanePhotoTargetVisitIdRef = useRef<number | null>(null);
   const lanePhotoKindRef = useRef<LanePhotoKind>("evidence");
 
-const sortByVisitAtAsc = (a: ServiceVisit, b: ServiceVisit) =>
+  const sortByVisitAtAsc = (a: ServiceVisit, b: ServiceVisit) =>
     new Date(a.visit_at).getTime() - new Date(b.visit_at).getTime();
 
   /** ทั้งลาน (บริการ + รอส่งมอบ) วันนี้ */
@@ -387,7 +392,7 @@ const sortByVisitAtAsc = (a: ServiceVisit, b: ServiceVisit) =>
 
   async function applyLaneStatus(v: ServiceVisit, next: CarWashServiceStatus) {
     if (next === "PAID") {
-      if (v.service_status === "COMPLETED" && !v.is_fully_paid) {
+      if (v.service_status === "COMPLETED" && (!v.is_fully_paid || isPendingBundleVisit(v))) {
         openLanePay(v);
         return;
       }
@@ -406,6 +411,7 @@ const sortByVisitAtAsc = (a: ServiceVisit, b: ServiceVisit) =>
     setPayMethod("CASH");
     setPaySlipUrl(v.photo_url?.trim() || null);
     setPayErr(null);
+    signaturePadRef.current?.clear();
   }
 
   function closeLanePay() {
@@ -413,6 +419,7 @@ const sortByVisitAtAsc = (a: ServiceVisit, b: ServiceVisit) =>
     setPaySlipUrl(null);
     setPayErr(null);
     setPayBusy(false);
+    signaturePadRef.current?.clear();
   }
 
   async function confirmLanePay() {
@@ -422,11 +429,26 @@ const sortByVisitAtAsc = (a: ServiceVisit, b: ServiceVisit) =>
       setPayErr("ตั้งสถานะเสร็จแล้วก่อนรับชำระ");
       return;
     }
+    const isBundle = isPendingBundleVisit(v);
+    if (isBundle) {
+      if (signaturePadRef.current?.isEmpty()) {
+        setPayErr("ให้ลูกค้าลงชื่อด้วยปากกาหรือนิ้วก่อนหักแพ็ก");
+        return;
+      }
+    }
     setPayBusy(true);
     setPayErr(null);
     try {
+      let signatureImageUrl: string | null = null;
+      if (isBundle) {
+        const blob = await signaturePadRef.current?.toPngBlob();
+        if (!blob) {
+          setPayErr("ให้ลูกค้าลงชื่อด้วยปากกาหรือนิ้วก่อนหักแพ็ก");
+          return;
+        }
+        signatureImageUrl = await uploadCarWashSignatureBlob(blob, { staffAuth });
+      }
       const amount = v.amount_remaining > 0 ? v.amount_remaining : v.final_price;
-      const isBundle = isPendingBundleVisit(v);
       const noteClean = (v.note ?? "").replace(/\s*·\s*ชำระ:\s*[^\n·]+/g, "").trim();
       const note =
         amount > 0 && !isBundle
@@ -436,6 +458,7 @@ const sortByVisitAtAsc = (a: ServiceVisit, b: ServiceVisit) =>
         service_status: "PAID",
         photo_url: paySlipUrl?.trim() || v.photo_url?.trim() || "",
         note,
+        ...(signatureImageUrl ? { signature_image_url: signatureImageUrl } : {}),
       });
       closeLanePay();
       if (laneModalVisitId === v.id) setLaneModalVisitId(null);
@@ -1990,6 +2013,9 @@ const sortByVisitAtAsc = (a: ServiceVisit, b: ServiceVisit) =>
                 แพ็กเหมา / ยอด ฿0 — กดยืนยันเพื่อหักสิทธิ์ (ถ้ามี) และปิดคิวออกจากลาน
               </p>
             )}
+            {isPendingBundleVisit(payVisit) ? (
+              <AppSignaturePad ref={signaturePadRef} disabled={payBusy} className="pt-1" />
+            ) : null}
             {payErr ? <p className="text-xs font-semibold text-rose-600">{payErr}</p> : null}
           </div>
         ) : null}

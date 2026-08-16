@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { isCarWashCustomerPortalOpenForOwner } from "@/lib/car-wash/portal-access";
+import { isValidCarWashPortalSignatureUrl } from "@/lib/car-wash/portal-signature";
 import { resolvePublicCarWashTrialSessionId } from "@/lib/car-wash/public-trial-scope";
 import { notifyCarWashLaneBoard } from "@/systems/car-wash/lib/lane-board-sse";
 
@@ -10,6 +11,7 @@ const bodySchema = z.object({
   ownerId: z.string().min(10).max(64),
   bundleId: z.number().int().positive(),
   trialSessionId: z.string().max(36).optional().nullable(),
+  signatureImageUrl: z.string().max(512).optional().nullable(),
 });
 
 export async function POST(req: Request) {
@@ -29,6 +31,16 @@ export async function POST(req: Request) {
   const ownerId = parsed.data.ownerId;
   const portalOk = await isCarWashCustomerPortalOpenForOwner(ownerId);
   if (!portalOk) return NextResponse.json({ error: "ไม่พร้อมใช้งาน" }, { status: 404 });
+  if (!isValidCarWashPortalSignatureUrl(ownerId, parsed.data.signatureImageUrl)) {
+    return NextResponse.json({ error: "ลายเซ็นไม่ถูกต้อง" }, { status: 400 });
+  }
+  const signature = parsed.data.signatureImageUrl?.trim() || null;
+  if (!signature) {
+    return NextResponse.json(
+      { error: "กรุณาลงชื่อด้วยปากกาหรือนิ้วก่อนยืนยัน" },
+      { status: 400 },
+    );
+  }
   const { trialSessionId } = await resolvePublicCarWashTrialSessionId(ownerId, parsed.data.trialSessionId);
 
   try {
@@ -61,6 +73,7 @@ export async function POST(req: Request) {
           note: "ลูกค้าเช็กอินผ่าน QR",
           recordedByName: "ลูกค้า (QR)",
           serviceStatus: "COMPLETED",
+          signatureImageUrl: signature,
         },
       });
       return consumed;

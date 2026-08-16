@@ -44,6 +44,8 @@ export type FootballTurfBooking = {
   /** ยอดที่ชำระแล้วสะสม */
   amountPaidBaht?: number;
   promotionSaleId: number | null;
+  /** ลายเซ็นลูกค้าตอนใช้สิทธิ์โปร / หักแพ็ก */
+  signatureImageUrl?: string | null;
   note: string;
   paymentMethod?: FootballTurfBookingPaymentMethod;
   paymentStatus?: FootballTurfBookingPaymentStatus;
@@ -60,6 +62,8 @@ export type FootballTurfVenueSettings = {
   /** โลโก้สนาม — path /uploads หรือ URL */
   logoUrl: string;
   promptpayNumber: string;
+  /** รูป QR พร้อมเพย์ที่อัปโหลดเอง (ว่าง = สร้างจากเบอร์) */
+  promptPayQrImageUrl: string;
   bankName: string;
   accountName: string;
   accountNumber: string;
@@ -246,7 +250,11 @@ export interface FootballTurfRepository {
     >,
   ): Promise<FootballTurfPromotionSale | null>;
   deletePromotionSale(id: number): Promise<boolean>;
-  usePromotionSale(saleId: number, bookingId: number): Promise<FootballTurfPromotionSale | null>;
+  usePromotionSale(
+    saleId: number,
+    bookingId: number,
+    signatureImageUrl?: string | null,
+  ): Promise<FootballTurfPromotionSale | null>;
   listCostCategories(): Promise<FootballTurfCostCategory[]>;
   createCostCategory(name: string): Promise<FootballTurfCostCategory>;
   updateCostCategory(id: number, name: string): Promise<FootballTurfCostCategory | null>;

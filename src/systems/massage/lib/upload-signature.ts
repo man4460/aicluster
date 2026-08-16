@@ -1,0 +1,26 @@
+/** อัปโหลดลายเซ็นจาก canvas blob → คืน URL สำหรับบันทึกกับ service log */
+export async function uploadMassageSignatureBlob(
+  blob: Blob,
+  opts?: { ownerId?: string; publicPortal?: boolean },
+): Promise<string> {
+  const file = new File([blob], `signature-${Date.now()}.png`, { type: "image/png" });
+  const fd = new FormData();
+  fd.append("file", file);
+  if (opts?.publicPortal && opts.ownerId) {
+    fd.append("ownerId", opts.ownerId);
+  }
+  const url =
+    opts?.publicPortal ?
+      "/api/massage/public/portal/upload-signature"
+    : "/api/massage/signature/upload";
+  const res = await fetch(url, {
+    method: "POST",
+    body: fd,
+    credentials: opts?.publicPortal ? "omit" : "include",
+  });
+  const j = (await res.json().catch(() => null)) as { imageUrl?: string; error?: string } | null;
+  if (!res.ok || typeof j?.imageUrl !== "string") {
+    throw new Error(typeof j?.error === "string" ? j.error : "อัปโหลดลายเซ็นไม่สำเร็จ");
+  }
+  return j.imageUrl;
+}

@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } f
 import {
   AppCameraCaptureModal,
   AppPublicCheckInGlassPage,
+  AppSignaturePad,
   appPublicCheckInGlassCardClass,
+  type AppSignaturePadHandle,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { scheduledAtLocalFromSlot } from "@/lib/massage/booking-slot-availability";
@@ -15,6 +17,7 @@ import {
   MassagePublicSlotPicker,
   type PublicSlotItem,
 } from "@/systems/massage/components/MassagePublicSlotPicker";
+import { uploadMassageSignatureBlob } from "@/systems/massage/lib/upload-signature";
 
 type SubRow = {
   id: number;
@@ -84,6 +87,7 @@ export function MassageCustomerPortalClient({ ownerId }: { ownerId: string }) {
   const [selectedSubId, setSelectedSubId] = useState<number | null>(null);
   const [checkInLoading, setCheckInLoading] = useState(false);
   const [checkInMsg, setCheckInMsg] = useState<string | null>(null);
+  const signaturePadRef = useRef<AppSignaturePadHandle>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const [slipUrl, setSlipUrl] = useState("");
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -344,8 +348,21 @@ export function MassageCustomerPortalClient({ ownerId }: { ownerId: string }) {
       setErr("เลือกแพ็กเกจที่มียอดครั้งคงเหลือก่อน");
       return;
     }
+    if (signaturePadRef.current?.isEmpty()) {
+      setErr("กรุณาลงชื่อด้วยปากกาหรือนิ้วก่อนยืนยัน");
+      return;
+    }
     setCheckInLoading(true);
     try {
+      const blob = await signaturePadRef.current?.toPngBlob();
+      if (!blob) {
+        setErr("กรุณาลงชื่อด้วยปากกาหรือนิ้วก่อนยืนยัน");
+        return;
+      }
+      const signatureImageUrl = await uploadMassageSignatureBlob(blob, {
+        publicPortal: true,
+        ownerId,
+      });
       const res = await fetch("/api/massage/public/portal/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -354,6 +371,7 @@ export function MassageCustomerPortalClient({ ownerId }: { ownerId: string }) {
           phone: phoneDigits,
           subscriptionId: selectedSubId,
           receiptImageUrl: slipUrl.trim() || undefined,
+          signatureImageUrl,
         }),
       });
       const j = (await res.json().catch(() => ({}))) as {
@@ -369,6 +387,7 @@ export function MassageCustomerPortalClient({ ownerId }: { ownerId: string }) {
       }
       if (j.ok && typeof j.remainingSessions === "number") {
         setSlipUrl("");
+        signaturePadRef.current?.clear();
         setData((prev) => {
           if (!prev) return prev;
           return {
@@ -392,6 +411,8 @@ export function MassageCustomerPortalClient({ ownerId }: { ownerId: string }) {
           setCheckInMsg(`บันทึกการใช้บริการแล้ว — ${pkg} เหลืออีก ${rem} สิทธิ์`);
         }
       }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
     } finally {
       setCheckInLoading(false);
     }
@@ -752,6 +773,7 @@ export function MassageCustomerPortalClient({ ownerId }: { ownerId: string }) {
                   }}
                 />
               </div>
+              <AppSignaturePad ref={signaturePadRef} disabled={checkInLoading} className="mt-4" />
             </div>
 
             <button

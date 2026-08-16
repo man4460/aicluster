@@ -22,6 +22,7 @@ const patchSchema = z
     contactPhone: z.string().max(32).optional().nullable(),
     address: z.string().max(2000).optional().nullable(),
     slipPaperSize: appSlipPaperSizeZod.optional(),
+    promptPayQrImageUrl: z.string().max(512).optional().nullable(),
   })
   .merge(moduleShopPaymentPatchSchema);
 
@@ -47,6 +48,7 @@ function profileFromRow(row: {
   contactPhone: string | null;
   address: string | null;
   slipPaperSize?: string | null;
+  promptPayQrImageUrl?: string | null;
   promptPayPhone?: string | null;
   bankName?: string | null;
   bankAccountNumber?: string | null;
@@ -114,6 +116,9 @@ export async function PATCH(req: Request) {
       ...(d.slipPaperSize !== undefined
         ? { slipPaperSize: normalizeModuleSlipPaperSize(d.slipPaperSize) }
         : {}),
+      ...(d.promptPayQrImageUrl !== undefined
+        ? { promptPayQrImageUrl: d.promptPayQrImageUrl?.trim() || null }
+        : {}),
       ...moduleShopPaymentPatchData(d),
     },
     update: {
@@ -123,6 +128,9 @@ export async function PATCH(req: Request) {
       ...(d.address !== undefined ? { address: d.address } : {}),
       ...(d.slipPaperSize !== undefined
         ? { slipPaperSize: normalizeModuleSlipPaperSize(d.slipPaperSize) }
+        : {}),
+      ...(d.promptPayQrImageUrl !== undefined
+        ? { promptPayQrImageUrl: d.promptPayQrImageUrl?.trim() || null }
         : {}),
       ...moduleShopPaymentPatchData(d),
     },

@@ -33,6 +33,7 @@ export async function POST(req: Request) {
   const branding = await getModuleShopBranding(own.ownerId, own.trialSessionId, CAR_WASH_MODULE_SLUG);
   const phone = branding.promptPayPhone?.trim() ?? "";
   const digits = phone.replace(/\D/g, "");
+  const staticQr = branding.promptPayQrImageUrl?.trim() || null;
   const bankPayload = {
     promptPayPhone: phone || null,
     bankName: branding.bankName ?? null,
@@ -41,10 +42,20 @@ export async function POST(req: Request) {
     shopName: branding.displayName ?? null,
   };
 
+  if (staticQr) {
+    return NextResponse.json({
+      qrDataUrl: staticQr,
+      configured: true,
+      qrSource: "uploaded" as const,
+      ...bankPayload,
+    });
+  }
+
   if (digits.length < 9) {
     return NextResponse.json({
       qrDataUrl: null as string | null,
       configured: false,
+      qrSource: "none" as const,
       ...bankPayload,
     });
   }
@@ -53,6 +64,7 @@ export async function POST(req: Request) {
   return NextResponse.json({
     qrDataUrl,
     configured: Boolean(qrDataUrl),
+    qrSource: "generated" as const,
     ...bankPayload,
   });
 }

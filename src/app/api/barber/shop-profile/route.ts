@@ -86,7 +86,6 @@ const select = {
   slotMinutes: true,
   portalBookingPaymentMode: true,
   depositAmountBaht: true,
-  promptPayQrImageUrl: true,
   ...MODULE_SHOP_PAYMENT_SELECT,
 } as const;
 
@@ -148,7 +147,6 @@ function profileFromRow(row: {
     slotMinutes: barberNormalizeSlotMinutes(row.slotMinutes ?? 30),
     portalBookingPaymentMode: normalizeBarberPortalPaymentMode(row.portalBookingPaymentMode),
     depositAmountBaht: row.depositAmountBaht ?? null,
-    promptPayQrImageUrl: row.promptPayQrImageUrl ?? null,
     ...paymentRowToDto(row),
   };
 }

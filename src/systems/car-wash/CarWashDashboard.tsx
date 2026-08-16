@@ -1333,7 +1333,12 @@ export function CarWashDashboard({
 
   async function handleLanePayment(
     id: number,
-    payload: { service_status: "PAID"; photo_url?: string; note?: string },
+    payload: {
+      service_status: "PAID";
+      photo_url?: string;
+      note?: string;
+      signature_image_url?: string | null;
+    },
   ) {
     setLaneBusyVisitId(id);
     setError(null);
@@ -1342,6 +1347,9 @@ export function CarWashDashboard({
         service_status: payload.service_status,
         ...(payload.photo_url !== undefined ? { photo_url: payload.photo_url } : {}),
         ...(payload.note !== undefined ? { note: payload.note } : {}),
+        ...(payload.signature_image_url !== undefined
+          ? { signature_image_url: payload.signature_image_url }
+          : {}),
       });
       await loadAll();
     } catch (e) {

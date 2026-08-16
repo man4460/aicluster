@@ -33,6 +33,7 @@ async function toDto(
     slipPaperSize?: string | null;
     orderTicketSlipPaperSize?: string | null;
     promptPayPhone?: string | null;
+    promptPayQrImageUrl?: string | null;
     bankName?: string | null;
     bankAccountNumber?: string | null;
     bankAccountName?: string | null;

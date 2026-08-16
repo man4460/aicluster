@@ -119,7 +119,10 @@ export async function runFootballTurfAction(
       const saleId = id ?? (input.saleId as number | undefined);
       const bookingId = input.bookingId as number | undefined;
       if (saleId == null || bookingId == null) return { ok: false, status: 400, error: "saleId and bookingId required" };
-      const result = await repo.usePromotionSale(saleId, bookingId);
+      const signatureRaw = input.signatureImageUrl;
+      const signatureImageUrl =
+        typeof signatureRaw === "string" ? signatureRaw.trim() || null : null;
+      const result = await repo.usePromotionSale(saleId, bookingId, signatureImageUrl);
       if (!result) return { ok: false, status: 400, error: "cannot use promotion" };
       return { ok: true, result };
     }

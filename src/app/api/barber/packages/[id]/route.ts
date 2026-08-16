@@ -75,7 +75,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   }
 
   const d = parsed.data;
-  if (d.totalSessions !== undefined) {
+  if (d.totalSessions !== undefined && d.totalSessions !== existing.totalSessions) {
     const hasSubs = await prisma.barberCustomerSubscription.count({
       where: { packageId: id, ownerUserId: own.ownerId },
     });

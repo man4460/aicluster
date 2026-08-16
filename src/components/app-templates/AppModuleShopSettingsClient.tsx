@@ -7,7 +7,7 @@ import { AppSectionHeader } from "./AppSectionHeader";
 import { AppShopLogoField } from "./AppShopLogoField";
 import { AppSlipPaperSizeSettingsField } from "./AppSlipPaperSizeSettingsField";
 import { AppStaffDailyPinSettingsField, staffDailyPinPatchBody } from "./AppStaffDailyPinSettingsField";
-import { appDashboardSectionVioletClass } from "./dashboard-tokens";
+import { appDashboardSectionVioletClass, appTemplateOutlineButtonClass } from "./dashboard-tokens";
 import type { ModuleShopBrandingDto } from "@/lib/module-shop/slugs";
 import { cn } from "@/lib/cn";
 
@@ -25,6 +25,10 @@ export type AppModuleShopSettingsClientProps = {
   showBasicFields?: boolean;
   /** แสดงช่องทางชำระ — ค่าเริ่มเปิด */
   showPaymentFields?: boolean;
+  /** แสดงอัปโหลดรูป QR พร้อมเพย์ (เมื่อมี showPaymentFields) — ค่าเริ่มปิด */
+  showPromptPayQrUpload?: boolean;
+  /** API อัปโหลด QR พร้อมเพย์ — ต้องส่งเมื่อเปิด showPromptPayQrUpload */
+  uploadPromptPayQrApiUrl?: string;
   /** แสดงช่องตั้งขนาดสลิปใบเสร็จ (โปรไฟล์ส่วนกลาง) — ค่าเริ่มเปิด */
   showSlipPaperSizeSettings?: boolean;
   /** แสดงช่องขนาดสลิปคิวออเดอร์ (ครัว / พร้อมเสิร์ฟ) — ค่าเริ่มปิด */
@@ -47,6 +51,8 @@ export function AppModuleShopSettingsClient({
   onSaved,
   showBasicFields = true,
   showPaymentFields = true,
+  showPromptPayQrUpload = false,
+  uploadPromptPayQrApiUrl,
   showSlipPaperSizeSettings = true,
   showOrderTicketSlipPaperSize = false,
   showStaffDailyPinSettings = false,
@@ -131,11 +137,86 @@ export function AppModuleShopSettingsClient({
           ) : null}
 
           {showPaymentFields ? (
-            <AppModuleShopPaymentFields
-              value={form}
-              onChange={(payment) => setForm((f) => ({ ...f, ...payment }))}
-              fieldClassName={fieldClassName}
-            />
+            <>
+              <AppModuleShopPaymentFields
+                value={form}
+                onChange={(payment) => setForm((f) => ({ ...f, ...payment }))}
+                fieldClassName={fieldClassName}
+              />
+              {showPromptPayQrUpload && uploadPromptPayQrApiUrl ? (
+                <div className="space-y-2 rounded-2xl border border-[#ecebff] bg-[#faf9ff]/80 p-3">
+                  <p className="text-xs font-black text-[#4d47b6]">QR พร้อมเพย์ (อัปโหลดรูป)</p>
+                  <p className="text-[11px] font-semibold text-[#8b87b8]">
+                    ทางเลือก — อัปโหลดภาพ QR จากแอปธนาคารที่มีอยู่แล้ว ถ้ามีรูปนี้ระบบจะแสดงรูปนี้แทนการสร้างจากเบอร์
+                  </p>
+                  {form.promptPayQrImageUrl ? (
+                    <div className="flex flex-wrap items-start gap-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={form.promptPayQrImageUrl}
+                        alt="QR พร้อมเพย์ที่อัปโหลด"
+                        className="h-28 w-28 rounded-xl border border-white bg-white object-contain p-1 shadow-sm"
+                      />
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className={cn(
+                          appTemplateOutlineButtonClass,
+                          "min-h-10 rounded-xl px-3 text-xs font-bold text-rose-700",
+                        )}
+                        onClick={() => setForm((f) => ({ ...f, promptPayQrImageUrl: null }))}
+                      >
+                        ลบรูป QR
+                      </button>
+                    </div>
+                  ) : null}
+                  <label
+                    className={cn(
+                      appTemplateOutlineButtonClass,
+                      "inline-flex min-h-10 cursor-pointer items-center rounded-xl px-4 text-sm font-bold",
+                    )}
+                  >
+                    {form.promptPayQrImageUrl ? "เปลี่ยนภาพ QR" : "เลือกภาพ QR พร้อมเพย์"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      disabled={busy}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        e.target.value = "";
+                        if (!f) return;
+                        void (async () => {
+                          setBusy(true);
+                          setErr(null);
+                          try {
+                            const fd = new FormData();
+                            fd.set("file", f);
+                            const res = await fetch(uploadPromptPayQrApiUrl, {
+                              method: "POST",
+                              body: fd,
+                            });
+                            const json = (await res.json().catch(() => ({}))) as {
+                              imageUrl?: string;
+                              error?: string;
+                            };
+                            if (!res.ok || !json.imageUrl) {
+                              throw new Error(json.error ?? "อัปโหลดไม่สำเร็จ");
+                            }
+                            setForm((prev) => ({ ...prev, promptPayQrImageUrl: json.imageUrl! }));
+                            setMsg("อัปโหลด QR พร้อมเพย์แล้ว");
+                          } catch (errUpload) {
+                            setErr(errUpload instanceof Error ? errUpload.message : "อัปโหลดไม่สำเร็จ");
+                          } finally {
+                            setBusy(false);
+                          }
+                        })();
+                      }}
+                    />
+                  </label>
+                </div>
+              ) : null}
+            </>
           ) : null}
 
           {showSlipPaperSizeSettings ? (

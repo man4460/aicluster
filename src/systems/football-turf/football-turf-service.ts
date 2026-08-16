@@ -96,6 +96,7 @@ function defaultVenueSettings(): FootballTurfVenueSettings {
     facebookUrl: "",
     mapUrl: "",
     staffDailyPinSet: false,
+    promptPayQrImageUrl: "",
   };
 }
 
@@ -726,8 +727,15 @@ class ApiFootballTurfRepository implements FootballTurfRepository {
     const result = await this.mutate<{ deleted: boolean }>("deletePromotionSale", id);
     return result.deleted;
   }
-  async usePromotionSale(saleId: number, bookingId: number): Promise<FootballTurfPromotionSale | null> {
-    return this.mutate("usePromotionSale", saleId, { bookingId });
+  async usePromotionSale(
+    saleId: number,
+    bookingId: number,
+    signatureImageUrl?: string | null,
+  ): Promise<FootballTurfPromotionSale | null> {
+    return this.mutate("usePromotionSale", saleId, {
+      bookingId,
+      ...(signatureImageUrl ? { signatureImageUrl } : {}),
+    });
   }
   async listCostCategories(): Promise<FootballTurfCostCategory[]> {
     return (await this.loadState()).costCategories;
@@ -963,8 +971,15 @@ class PublicApiFootballTurfRepository implements FootballTurfRepository {
   async deletePromotionSale(): Promise<boolean> {
     return this.unsupported();
   }
-  async usePromotionSale(saleId: number, bookingId: number): Promise<FootballTurfPromotionSale | null> {
-    return this.publicMutate("usePromotionSale", saleId, { bookingId });
+  async usePromotionSale(
+    saleId: number,
+    bookingId: number,
+    signatureImageUrl?: string | null,
+  ): Promise<FootballTurfPromotionSale | null> {
+    return this.publicMutate("usePromotionSale", saleId, {
+      bookingId,
+      ...(signatureImageUrl ? { signatureImageUrl } : {}),
+    });
   }
   async listCostCategories(): Promise<FootballTurfCostCategory[]> {
     return [];
@@ -1290,7 +1305,11 @@ export class LocalStorageFootballTurfRepository implements FootballTurfRepositor
     saveDB(db);
     return prev !== db.promotionSales.length;
   }
-  async usePromotionSale(saleId: number, bookingId: number) {
+  async usePromotionSale(
+    saleId: number,
+    bookingId: number,
+    signatureImageUrl?: string | null,
+  ) {
     const db = loadDB();
     const saleIdx = db.promotionSales.findIndex((x) => x.id === saleId);
     const bookingIdx = db.bookings.findIndex((x) => x.id === bookingId);
@@ -1301,7 +1320,13 @@ export class LocalStorageFootballTurfRepository implements FootballTurfRepositor
     if (booking.status === "CANCELLED" || booking.promotionSaleId) return null;
     sale.remainingUses -= 1;
     sale.status = sale.remainingUses > 0 ? "ACTIVE" : "USED_UP";
-    db.bookings[bookingIdx] = { ...booking, promotionSaleId: sale.id, finalPrice: 0 };
+    const sig = typeof signatureImageUrl === "string" ? signatureImageUrl.trim() || null : null;
+    db.bookings[bookingIdx] = {
+      ...booking,
+      promotionSaleId: sale.id,
+      finalPrice: 0,
+      ...(sig ? { signatureImageUrl: sig } : {}),
+    };
     saveDB(db);
     return sale;
   }

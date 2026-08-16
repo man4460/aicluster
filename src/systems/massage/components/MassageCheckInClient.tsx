@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AppSignaturePad, type AppSignaturePadHandle } from "@/components/app-templates";
 import { MassageModalPortal } from "@/systems/massage/components/MassageModalPortal";
 import { cn } from "@/lib/cn";
 import { MassageSellPackageModal } from "@/systems/massage/components/MassageSellPackageModal";
+import { uploadMassageSignatureBlob } from "@/systems/massage/lib/upload-signature";
 import {
   massageCardBodyPaddingXClass,
   massageCardSurfaceRadiusClass,
@@ -143,6 +145,7 @@ export function MassageCheckInClient({
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [deducting, setDeducting] = useState(false);
+  const signaturePadRef = useRef<AppSignaturePadHandle>(null);
 
   const [cashPhone, setCashPhone] = useState("");
   const [cashName, setCashName] = useState("");
@@ -385,16 +388,27 @@ export function MassageCheckInClient({
       setErr("เลือกแพ็กเกจที่จะหักครั้ง");
       return;
     }
+    if (signaturePadRef.current?.isEmpty()) {
+      setErr("ให้ลูกค้าลงชื่อด้วยปากกาหรือนิ้วก่อนหักแพ็ก");
+      return;
+    }
     setErr(null);
     setMsg(null);
     setDeducting(true);
     try {
+      const blob = await signaturePadRef.current?.toPngBlob();
+      if (!blob) {
+        setErr("ให้ลูกค้าลงชื่อด้วยปากกาหรือนิ้วก่อนหักแพ็ก");
+        return;
+      }
+      const signatureImageUrl = await uploadMassageSignatureBlob(blob);
       const sid = stylistId ? Number(stylistId) : null;
       const res = await fetch("/api/massage/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subscriptionId: selectedSubId,
+          signatureImageUrl,
           ...(sid != null && Number.isInteger(sid) && sid > 0 ? { therapistId: sid } : {}),
         }),
       });
@@ -408,6 +422,7 @@ export function MassageCheckInClient({
         return;
       }
       setMsg(`หัก 1 ครั้งแล้ว — เหลือ ${data.remainingSessions} ครั้ง`);
+      signaturePadRef.current?.clear();
       setSubs((prev) =>
         prev.map((s) =>
           s.id === selectedSubId
@@ -416,6 +431,8 @@ export function MassageCheckInClient({
         ),
       );
       router.refresh();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
     } finally {
       setDeducting(false);
     }
@@ -652,6 +669,7 @@ export function MassageCheckInClient({
                     </div>
                   </label>
                 ))}
+                <AppSignaturePad ref={signaturePadRef} disabled={deducting} className="pt-1" />
               </div>
             ) : null}
 

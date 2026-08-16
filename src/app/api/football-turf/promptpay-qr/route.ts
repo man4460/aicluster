@@ -8,7 +8,7 @@ const bodySchema = z.object({
   amount: z.number().finite().positive().max(9_999_999.99),
 });
 
-/** QR พร้อมเพย์ตามยอดบาท — อ่านเบอร์จากตั้งค่าสนามฟุตบอล */
+/** QR พร้อมเพย์ตามยอดบาท — ใช้รูปอัปโหลดถ้ามี ไม่งั้นสร้างจากเบอร์ */
 export async function POST(req: Request) {
   const gate = await getFootballTurfOwnerOrStaffContext(req);
   if (!gate.ok) return gate.res;
@@ -28,18 +28,38 @@ export async function POST(req: Request) {
   const settings = await repo.getSettings();
   const phone = settings.promptpayNumber?.trim() ?? "";
   const digits = phone.replace(/\D/g, "");
+  const staticQr = settings.promptPayQrImageUrl?.trim() || null;
+  const bankPayload = {
+    promptpayNumber: phone || null,
+    bankName: settings.bankName || null,
+    accountNumber: settings.accountNumber || null,
+    accountName: settings.accountName || null,
+    shopName: settings.venueName || null,
+  };
+
+  if (staticQr) {
+    return NextResponse.json({
+      qrDataUrl: staticQr,
+      configured: true,
+      qrSource: "uploaded" as const,
+      ...bankPayload,
+    });
+  }
+
   if (digits.length < 9) {
     return NextResponse.json({
       qrDataUrl: null as string | null,
       configured: false,
-      promptpayNumber: phone,
+      qrSource: "none" as const,
+      ...bankPayload,
     });
   }
 
   const qrDataUrl = await buildPromptPayQrDataUrl(phone, parsed.data.amount);
   return NextResponse.json({
     qrDataUrl,
-    configured: true,
-    promptpayNumber: phone,
+    configured: Boolean(qrDataUrl),
+    qrSource: "generated" as const,
+    ...bankPayload,
   });
 }

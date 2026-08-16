@@ -351,6 +351,8 @@ function CarWashSettingsClientInner({
                 uploadLogoApiUrl={`${base}/upload-logo`}
                 showBasicFields={false}
                 showPaymentFields
+                showPromptPayQrUpload
+                uploadPromptPayQrApiUrl="/api/car-wash/session/branding/upload-promptpay-qr"
                 showSlipPaperSizeSettings
                 onSaved={setBranding}
               />

@@ -521,11 +521,11 @@ export function BarberStylistsClient({
                 key={s.id}
                 className={cn(
                   barberListRowCardClass,
-                  "flex flex-wrap items-center gap-x-3 gap-y-2.5 sm:flex-nowrap sm:gap-x-4 sm:py-2.5",
+                  "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:py-3",
                 )}
               >
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-[#e4e2f5] bg-gradient-to-br from-[#f4f3fb] to-[#ecebff] ring-1 ring-white">
+                <div className="flex min-w-0 flex-1 items-start gap-3">
+                  <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full border border-[#e4e2f5] bg-gradient-to-br from-[#f4f3fb] to-[#ecebff] ring-1 ring-white">
                     {s.photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={s.photoUrl} alt="" className="h-full w-full object-cover" />
@@ -536,15 +536,17 @@ export function BarberStylistsClient({
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <p className="truncate text-[15px] font-semibold leading-snug text-[#2e2a58]">{s.name}</p>
+                    <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
+                      <p className="break-words text-[15px] font-semibold leading-snug text-[#2e2a58]">
+                        {s.name}
+                      </p>
                       {!s.isActive ? (
-                        <span className="shrink-0 rounded-[1rem] bg-amber-100/90 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-amber-900">
+                        <span className="mt-0.5 shrink-0 rounded-[1rem] bg-amber-100/90 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-amber-900">
                           ปิดใช้งาน
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-1 truncate text-xs leading-normal text-[#7a7699]">
+                    <p className="mt-1 break-words text-xs leading-normal text-[#7a7699]">
                       รับคิว {s.workStartTime || "09:00"}–{s.workEndTime || "20:00"}
                       <span className="mx-1.5 text-[#c4c0e0]" aria-hidden>
                         ·
@@ -552,12 +554,14 @@ export function BarberStylistsClient({
                       {barberFormatWorkWeekdaysLabel(s.workWeekdays ?? [...BARBER_ALL_WEEKDAYS])}
                     </p>
                     {s.phone ? (
-                      <p className="mt-0.5 truncate text-xs leading-normal text-[#7a7699] tabular-nums">{s.phone}</p>
+                      <p className="mt-0.5 break-all text-xs leading-normal text-[#7a7699] tabular-nums">
+                        {s.phone}
+                      </p>
                     ) : null}
                   </div>
                 </div>
 
-                <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:ml-0 sm:gap-2">
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 self-stretch sm:self-start sm:gap-2">
                   <div className={barberIconToolbarGroupClass} role="group" aria-label="รูปช่าง">
                     <AppIconToolbarButton
                       title="อัปโหลดรูป"

@@ -31,6 +31,7 @@ function visitJson(row: {
   photoUrl: string;
   evidencePhotoUrlsJson?: unknown;
   bundleId: number | null;
+  signatureImageUrl?: string | null;
   bookingId?: number | null;
   booking?: { paymentStatus: string; amountPaidBaht: number; packagePrice: number } | null;
 }) {
@@ -57,6 +58,7 @@ function visitJson(row: {
     photo_url: row.photoUrl ?? "",
     evidence_photo_urls: normalizeCarWashVisitEvidenceUrls(row.evidencePhotoUrlsJson),
     bundle_id: row.bundleId ?? null,
+    signature_image_url: row.signatureImageUrl?.trim() || null,
     booking_id: row.bookingId ?? null,
     ...payment,
   };

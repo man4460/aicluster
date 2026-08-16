@@ -7,6 +7,7 @@ function defaultVenueSettings() {
     venueSubtitle: "สนามหญ้าเทียม",
     logoUrl: "",
     promptpayNumber: "",
+    promptPayQrImageUrl: null as string | null,
     bankName: "",
     accountName: "",
     accountNumber: "",
