@@ -301,12 +301,18 @@ async function deleteBarberScopeRows(tx: Tx, ownerUserId: string, trialSessionId
 
 /**
  * ข้อมูลตัวอย่าง prod — ดูจากแพ็กเกจ (ไม่ใช้แค่โปรไฟล์ เพราะโปรไฟล์เปล่าจะทำให้ข้าม seed ผิด)
+ * @param opts.refreshDaily — ล้างแล้วใส่ใหม่ (ค่าเริ่ม true) ให้แดชบอร์ดรายวันไม่ค้างวันเก่า
  */
-export async function seedBarberProdDemoForOwner(db: PrismaClient, ownerUserId: string): Promise<void> {
+export async function seedBarberProdDemoForOwner(
+  db: PrismaClient,
+  ownerUserId: string,
+  opts?: { refreshDaily?: boolean },
+): Promise<void> {
+  const refresh = opts?.refreshDaily !== false;
   const pkgCount = await db.barberPackage.count({
     where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },
   });
-  if (pkgCount > 0) return;
+  if (pkgCount > 0 && !refresh) return;
 
   await db.$transaction(async (tx) => {
     await deleteBarberScopeRows(tx, ownerUserId, TRIAL_PROD_SCOPE);

@@ -11,33 +11,53 @@ type Tx = Omit<
 >;
 
 function daysAgoIsoDate(days: number): string {
-  const d = new Date();
-  d.setHours(12, 0, 0, 0);
-  d.setDate(d.getDate() - days);
-  return bangkokDateKey(d);
+  const today = bangkokDateKey();
+  const base = new Date(`${today}T12:00:00+07:00`);
+  base.setTime(base.getTime() - days * 86_400_000);
+  return bangkokDateKey(base);
 }
 
 function daysAgoDateTime(days: number, hour = 12): Date {
-  const d = new Date();
-  d.setHours(hour, 0, 0, 0);
-  d.setDate(d.getDate() - days);
-  return d;
+  const ymd = daysAgoIsoDate(days);
+  const hh = String(Math.max(0, Math.min(23, hour))).padStart(2, "0");
+  return new Date(`${ymd}T${hh}:00:00+07:00`);
+}
+
+/**
+ * ล้างจอง / ขายโปร / รายจ่ายตัวอย่าง เพื่อรีเฟรชตามวันนี้
+ * คงโปรไฟล์สนาม · โปรโมชัน · ลูกค้า · หมวดต้นทุน
+ */
+export async function clearFootballTurfDemoActivity(
+  db: PrismaClient | Tx,
+  ownerUserId: string,
+  trialSessionId: string,
+): Promise<void> {
+  const where = { ownerUserId, trialSessionId };
+  await db.footballTurfBooking.deleteMany({ where });
+  await db.footballTurfPromotionSale.deleteMany({ where });
+  await db.footballTurfCostEntry.deleteMany({ where });
 }
 
 /**
  * ใส่จอง / ขายโปร / รายจ่ายตัวอย่าง เมื่อยังไม่มีรายการจอง
  * (ให้หน้าการเงินและกราฟมีข้อมูลดูได้ทันที)
+ * @param opts.force — ล้างกิจกรรมเก่าแล้วใส่ใหม่ตามวันนี้
  */
 export async function seedFootballTurfSampleActivity(
   db: PrismaClient | Tx,
   ownerUserId: string,
   trialSessionId: string,
+  opts?: { force?: boolean },
 ): Promise<void> {
   const tx = db;
-  const bookingCount = await tx.footballTurfBooking.count({
-    where: { ownerUserId, trialSessionId },
-  });
-  if (bookingCount > 0) return;
+  if (opts?.force) {
+    await clearFootballTurfDemoActivity(tx, ownerUserId, trialSessionId);
+  } else {
+    const bookingCount = await tx.footballTurfBooking.count({
+      where: { ownerUserId, trialSessionId },
+    });
+    if (bookingCount > 0) return;
+  }
 
   const courts = await tx.footballTurfCourt.findMany({
     where: { ownerUserId, trialSessionId },
@@ -513,14 +533,12 @@ export async function seedFootballTurfTrialData(
 export async function seedFootballTurfProdDemoForOwner(
   db: PrismaClient,
   ownerUserId: string,
+  opts?: { refreshDaily?: boolean },
 ): Promise<void> {
+  const refresh = opts?.refreshDaily !== false;
   await ensureFootballTurfProfile(ownerUserId, TRIAL_PROD_SCOPE);
-  const n = await db.footballTurfBooking.count({
-    where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },
-  });
-  if (n > 0) return;
   await db.$transaction(async (tx) => {
-    await seedFootballTurfSampleActivity(tx, ownerUserId, TRIAL_PROD_SCOPE);
+    await seedFootballTurfSampleActivity(tx, ownerUserId, TRIAL_PROD_SCOPE, { force: refresh });
     await seedFootballTurfLiveOverviewBookings(tx, ownerUserId, TRIAL_PROD_SCOPE);
   });
 }

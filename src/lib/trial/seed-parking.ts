@@ -30,11 +30,23 @@ const SAMPLE_PLATES = [
 ] as const;
 
 /**
- * เติมประวัติการจอดตัวอย่าง 20 แถว (production scope) ให้เจ้าของ — ข้ามถ้ามีแถว demo ครบแล้ว
+ * เติมประวัติการจอดตัวอย่าง 20 แถว (production scope) ให้เจ้าของ
+ * @param opts.refreshDaily — ลบแถว demo เก่าแล้วใส่ใหม่ตามวันนี้
  */
-export async function seedParkingProdDemoForOwner(prisma: PrismaClient, ownerUserId: string): Promise<void> {
+export async function seedParkingProdDemoForOwner(
+  prisma: PrismaClient,
+  ownerUserId: string,
+  opts?: { refreshDaily?: boolean },
+): Promise<void> {
+  const refresh = opts?.refreshDaily !== false;
   const site = await ensureDefaultParkingSite(ownerUserId, TRIAL_PROD_SCOPE);
   await ensureSampleSpotsIfEmpty(site.id);
+
+  if (refresh) {
+    await prisma.parkingSession.deleteMany({
+      where: { internalNote: DEMO_NOTE, spot: { siteId: site.id } },
+    });
+  }
 
   const demoCount = await prisma.parkingSession.count({
     where: { internalNote: DEMO_NOTE, spot: { siteId: site.id } },

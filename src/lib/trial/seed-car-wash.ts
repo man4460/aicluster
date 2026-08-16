@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { bangkokDateKey } from "@/lib/time/bangkok";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import {
   CAR_WASH_PACKAGE_SAMPLE_IMAGES,
@@ -10,15 +11,38 @@ type Tx = Omit<
   "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends" | "$use"
 >;
 
+/** วันปฏิทินไทย − N วัน ที่ชั่วโมงที่กำหนด (Asia/Bangkok) */
 function daysAgoDateTime(days: number, hour = 10): Date {
-  const d = new Date();
-  d.setHours(hour, 0, 0, 0);
-  d.setDate(d.getDate() - days);
-  return d;
+  const today = bangkokDateKey();
+  const base = new Date(`${today}T12:00:00+07:00`);
+  base.setTime(base.getTime() - days * 86_400_000);
+  const ymd = bangkokDateKey(base);
+  const hh = String(Math.max(0, Math.min(23, hour))).padStart(2, "0");
+  return new Date(`${ymd}T${hh}:00:00+07:00`);
 }
 
 function daysAgoStartOfDay(days: number): Date {
   return daysAgoDateTime(days, 0);
+}
+
+/**
+ * ล้างกิจกรรมตัวอย่าง (visit / bundle / ต้นทุน / จองเก่า) แล้วเตรียมใส่ใหม่ตามวันนี้
+ * คงแพ็กเกจ + หมวดต้นทุนไว้
+ */
+export async function clearCarWashDemoActivity(
+  db: PrismaClient | Tx,
+  ownerUserId: string,
+  trialSessionId: string,
+): Promise<void> {
+  const where = { ownerUserId, trialSessionId };
+  await db.carWashVisit.deleteMany({ where });
+  await db.carWashBundle.deleteMany({ where });
+  await db.carWashCostEntry.deleteMany({ where });
+  /** จองที่เลยวันแล้ว — เคลียร์ให้บอร์ดวันนี้ไม่รก */
+  const todayStart = daysAgoDateTime(0, 0);
+  await db.carWashBooking.deleteMany({
+    where: { ...where, scheduledAt: { lt: todayStart } },
+  });
 }
 
 function isMissingPackageImage(url: string | null | undefined): boolean {
@@ -164,18 +188,23 @@ async function ensureCostCategories(tx: Tx, ownerUserId: string, trialSessionId:
 }
 
 /**
- * สร้างกิจกรรมตัวอย่าง: ลูกค้า, visit (วันนี้ + ย้อนหลัง 6 วัน), แพ็กเหมา (วันนี้), ค่าใช้จ่ายต้นทุน
+ * สร้างกิจกรรมตัวอย่าง: ลูกค้า, visit (วันนี้ + ย้อนหลังไม่เกิน 5 วัน), แพ็กเหมา (วันนี้), ค่าใช้จ่ายต้นทุน
  * ให้หน้า dashboard stat cards และกราฟไม่เป็น 0 หมด
- * (idempotent: มี visit แล้วจะข้าม — ปลอดภัยรันซ้ำ)
+ * @param opts.force — ล้างกิจกรรมเก่าแล้วใส่ใหม่ตามวันนี้ (สำหรับบัญชีทดลอง)
  */
 export async function seedCarWashSampleActivity(
   db: PrismaClient | Tx,
   ownerUserId: string,
   trialSessionId: string,
+  opts?: { force?: boolean },
 ): Promise<void> {
   const tx = db;
-  const visitCount = await tx.carWashVisit.count({ where: { ownerUserId, trialSessionId } });
-  if (visitCount > 0) return;
+  if (opts?.force) {
+    await clearCarWashDemoActivity(tx, ownerUserId, trialSessionId);
+  } else {
+    const visitCount = await tx.carWashVisit.count({ where: { ownerUserId, trialSessionId } });
+    if (visitCount > 0) return;
+  }
 
   const packages = await ensureCarWashPackages(tx, ownerUserId, trialSessionId);
   const pkgBasic = packages[0]!; // 199
@@ -381,16 +410,14 @@ export async function seedCarWashTrialData(tx: Tx, ownerUserId: string, trialSes
   await seedCarWashSampleActivity(tx, ownerUserId, trialSessionId);
 }
 
-export async function seedCarWashProdDemoForOwner(db: PrismaClient, ownerUserId: string): Promise<void> {
-  const n = await db.carWashPackage.count({
-    where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },
+export async function seedCarWashProdDemoForOwner(
+  db: PrismaClient,
+  ownerUserId: string,
+  opts?: { refreshDaily?: boolean },
+): Promise<void> {
+  const refresh = opts?.refreshDaily !== false;
+  await db.$transaction(async (tx) => {
+    await ensureCarWashPackages(tx, ownerUserId, TRIAL_PROD_SCOPE);
+    await seedCarWashSampleActivity(tx, ownerUserId, TRIAL_PROD_SCOPE, { force: refresh });
   });
-  await db.$transaction((tx) => seedCarWashTrialData(tx, ownerUserId, TRIAL_PROD_SCOPE));
-  if (n === 0) return;
-  const visits = await db.carWashVisit.count({
-    where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },
-  });
-  if (visits === 0) {
-    await db.$transaction((tx) => seedCarWashSampleActivity(tx, ownerUserId, TRIAL_PROD_SCOPE));
-  }
 }
