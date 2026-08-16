@@ -19,9 +19,20 @@ import {
   attendanceFilterChipClass,
   attendanceLabelClass,
   attendanceLabelMutedClass,
+  attendanceRosterAccentBarClass,
+  attendanceStatCardClass,
+  attendanceZoneChipActiveClass,
+  attendanceZoneChipFaceClass,
+  attendanceZoneChipFaceIdleClass,
+  attendanceZoneChipFpClass,
+  attendanceZoneChipInactiveClass,
 } from "@/systems/attendance/attendance-ui";
 import { attendanceSectionRadiusClass } from "@/systems/attendance/lib/ui-tokens";
 import { AttendanceFaceEnrollModal } from "@/systems/attendance/components/AttendanceFaceEnrollModal";
+import {
+  assetRowRemoveIconButtonClass,
+  IconRowRemove,
+} from "@/systems/asset/components/AssetRowActionIcons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 
 type ShiftSlot = { index: number; label: string };
@@ -89,6 +100,13 @@ export function AttendanceRosterClient() {
       return e.displayName.toLowerCase().includes(needle) || e.phone.includes(needle);
     });
   }, [entries, q, statusFilter]);
+
+  const rosterStats = useMemo(() => {
+    const active = entries.filter((e) => e.isActive).length;
+    const face = entries.filter((e) => e.faceEnrolled).length;
+    const finger = entries.filter((e) => e.fingerprintSlot != null).length;
+    return { total: entries.length, active, face, finger };
+  }, [entries]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -313,7 +331,7 @@ export function AttendanceRosterClient() {
       <AppSectionHeader
         tone="violet"
         title="รายชื่อพนักงาน"
-        description="เพิ่มชื่อ เบอร์โทร กะ · ลงทะเบียนใบหน้า / slot ลายนิ้วมือ"
+        description="ชื่อ · เบอร์ · กะ · ใบหน้า · ลายนิ้วมือ"
         className="flex flex-row items-start justify-between gap-3 sm:items-center"
         actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
         action={
@@ -356,6 +374,27 @@ export function AttendanceRosterClient() {
           </div>
         }
       />
+
+      {!loading && !listErr ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="สรุปรายชื่อ">
+          <div className={cn(attendanceStatCardClass, "bg-gradient-to-br from-white/80 via-violet-50/40 to-fuchsia-50/30")}>
+            <p className="text-[10px] font-bold text-[#66638c]">ทั้งหมด</p>
+            <p className="mt-0.5 text-xl font-black tabular-nums text-[#1e1b4b]">{rosterStats.total}</p>
+          </div>
+          <div className={cn(attendanceStatCardClass, "bg-gradient-to-br from-white/80 via-emerald-50/45 to-teal-50/25")}>
+            <p className="text-[10px] font-bold text-emerald-800/80">ใช้งาน</p>
+            <p className="mt-0.5 text-xl font-black tabular-nums text-emerald-900">{rosterStats.active}</p>
+          </div>
+          <div className={cn(attendanceStatCardClass, "bg-gradient-to-br from-white/80 via-sky-50/45 to-cyan-50/30")}>
+            <p className="text-[10px] font-bold text-sky-800/80">ใบหน้า</p>
+            <p className="mt-0.5 text-xl font-black tabular-nums text-sky-900">{rosterStats.face}</p>
+          </div>
+          <div className={cn(attendanceStatCardClass, "bg-gradient-to-br from-white/80 via-amber-50/45 to-orange-50/25")}>
+            <p className="text-[10px] font-bold text-amber-900/80">ลายนิ้วมือ</p>
+            <p className="mt-0.5 text-xl font-black tabular-nums text-amber-950">{rosterStats.finger}</p>
+          </div>
+        </div>
+      ) : null}
 
       <div
         id="attendance-roster-filter-panel"
@@ -547,21 +586,22 @@ export function AttendanceRosterClient() {
         ) : filteredEntries.length === 0 ? (
           <p className={attendanceEmptyStateClass}>ไม่พบรายชื่อตามเงื่อนไขกรอง</p>
         ) : (
-          <ul className="flex flex-col gap-2.5 sm:gap-3" aria-label="รายชื่อพนักงานในระบบ">
+          <ul className="flex flex-col gap-1.5 sm:gap-2" aria-label="รายชื่อพนักงานในระบบ">
             {filteredEntries.map((r) => (
               <li key={r.id} className={attendanceCardClass}>
-                <div className="flex gap-2 sm:gap-2.5">
+                <div className={cn(attendanceRosterAccentBarClass, "mb-2")} aria-hidden />
+                <div className="flex items-start gap-2">
                   <AppImageThumb
                     src={r.photoUrl}
                     alt=""
                     emptyLabel="ไม่มีรูป"
-                    className="shrink-0"
+                    className="h-12 w-12 shrink-0"
                     onOpen={() => r.photoUrl && lightbox.open(r.photoUrl)}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1 pr-1">
-                        <p className="text-balance text-sm font-semibold leading-tight text-[#2e2a58] line-clamp-2">
+                        <p className="text-balance text-sm font-black leading-tight text-[#1e1b4b] line-clamp-2">
                           {r.displayName}
                         </p>
                         <p
@@ -574,49 +614,40 @@ export function AttendanceRosterClient() {
                       <button
                         type="button"
                         onClick={() => void toggleActive(r.id, r.isActive)}
-                        className={
-                          r.isActive
-                            ? "shrink-0 rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-900 ring-1 ring-emerald-200/70"
-                            : "shrink-0 rounded-md bg-[#f4f2ff] px-2 py-0.5 text-[10px] font-semibold text-[#66638c] ring-1 ring-[#e8e6fc]"
-                        }
+                        className={r.isActive ? attendanceZoneChipActiveClass : attendanceZoneChipInactiveClass}
                       >
-                        {r.isActive ? "ใช้งาน" : "ปิดชั่วคราว"}
+                        {r.isActive ? "ใช้งาน" : "ปิด"}
                       </button>
                     </div>
-                    <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-dashed border-[#e8e6fc] pt-1.5">
-                      <span className={cn("shrink-0 tracking-wide", attendanceLabelMutedClass)}>ใบหน้า</span>
-                      <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5">
-                        <span
-                          className={
-                            r.faceEnrolled
-                              ? "rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-900"
-                              : "rounded-md bg-[#f4f2ff] px-2 py-0.5 text-[10px] font-semibold text-[#66638c]"
-                          }
-                        >
+
+                    <div className="mt-1.5 space-y-1 border-t border-dashed border-slate-100 pt-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] font-semibold text-emerald-800/90">ใบหน้า</span>
+                        <span className={r.faceEnrolled ? attendanceZoneChipFaceClass : attendanceZoneChipFaceIdleClass}>
                           {r.faceEnrolled
-                            ? `ลงทะเบียนแล้ว${r.faceSampleCount > 0 ? ` · ${r.faceSampleCount} มุม` : ""}`
+                            ? `แล้ว${r.faceSampleCount > 0 ? ` · ${r.faceSampleCount} มุม` : ""}`
                             : "ยังไม่ลงทะเบียน"}
                         </span>
                         <button
                           type="button"
                           onClick={() => setFaceEnrollId(r.id)}
-                          className="min-h-[36px] shrink-0 rounded-lg border border-[#d8d6ec] bg-white px-2.5 text-[11px] font-bold text-[#4d47b6]"
+                          className="min-h-[32px] shrink-0 rounded-md border border-emerald-200/80 bg-emerald-50/90 px-2 text-[10px] font-bold text-emerald-800"
                         >
-                          {r.faceEnrolled ? "แก้ใบหน้า" : "ลงทะเบียนใบหน้า"}
+                          {r.faceEnrolled ? "แก้" : "ลงทะเบียน"}
                         </button>
                       </div>
-                    </div>
-                    <div className="mt-1.5 flex flex-wrap items-end justify-between gap-x-2 gap-y-1 border-t border-dashed border-[#e8e6fc] pt-1.5">
-                      <label className={cn("min-w-0 flex-1", attendanceLabelMutedClass)}>
-                        ลายนิ้วมือ (slot ESP32)
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] font-semibold text-sky-800/90">นิ้วมือ</span>
                         <input
                           type="number"
                           min={1}
                           max={1000}
-                          placeholder="เช่น 3"
+                          placeholder="slot"
+                          aria-label={`slot ลายนิ้วมือ ${r.displayName}`}
                           defaultValue={r.fingerprintSlot ?? ""}
                           key={`fp-${r.id}-${r.fingerprintSlot ?? "x"}`}
-                          className="app-input mt-0.5 block w-full min-h-[36px] max-w-[8rem] rounded-lg px-2 py-1 text-xs"
+                          className="app-input h-8 w-16 rounded-md border-sky-100 px-1.5 py-0 text-center text-xs tabular-nums"
                           onBlur={(e) => {
                             const raw = e.target.value.trim();
                             const next = raw === "" ? null : Number(raw);
@@ -643,21 +674,18 @@ export function AttendanceRosterClient() {
                             })();
                           }}
                         />
-                      </label>
-                      {r.fingerprintSlot != null ? (
-                        <span className="shrink-0 rounded-md bg-sky-100 px-2 py-0.5 text-[10px] font-semibold text-sky-900">
-                          slot {r.fingerprintSlot}
-                        </span>
-                      ) : (
-                        <span className="shrink-0 text-[10px] font-semibold text-[#66638c]">ยังไม่ผูก</span>
-                      )}
-                    </div>
-                    <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-dashed border-[#e8e6fc] pt-1.5">
-                      <span className={cn("shrink-0 tracking-wide", attendanceLabelMutedClass)}>รูป</span>
-                      <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5 sm:flex-initial">
+                        {r.fingerprintSlot != null ? (
+                          <span className={attendanceZoneChipFpClass}>ผูกแล้ว</span>
+                        ) : (
+                          <span className="text-[10px] font-semibold text-[#9490c0]">ยังไม่ผูก</span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] font-semibold text-violet-800/90">รูป</span>
                         <AppImagePickCameraButtons
-                          className="justify-end gap-1.5"
-                          labels={photoLabels}
+                          className="justify-start gap-1"
+                          labels={{ gallery: "อัปโหลด", camera: "ถ่าย" }}
                           busy={photoBusyTarget === r.id}
                           onPickGallery={() => openEntryGallery(r.id)}
                           onPickCamera={() => openEntryCamera(r.id)}
@@ -667,27 +695,24 @@ export function AttendanceRosterClient() {
                             type="button"
                             disabled={photoBusy}
                             onClick={() => void clearEntryPhoto(r.id)}
-                            className="shrink-0 text-[10px] font-semibold text-[#66638c] underline decoration-[#d8d6ec] hover:text-[#2e2a58] disabled:opacity-50"
+                            className="text-[10px] font-semibold text-[#66638c] underline decoration-[#d8d6ec] hover:text-[#2e2a58] disabled:opacity-50"
                           >
-                            ลบรูป
+                            ลบ
                           </button>
                         ) : null}
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="mt-2 flex flex-wrap items-end justify-between gap-2 border-t border-[#e8e6fc] pt-2">
-                  <label
-                    className={cn(
-                      "min-w-0 flex-1 basis-[min(100%,16rem)] text-[10px]",
-                      attendanceLabelMutedClass,
-                    )}
-                  >
-                    กะที่ปฏิบัติงาน
+
+                <div className="mt-1.5 flex flex-wrap items-end justify-between gap-2 border-t border-slate-100 pt-1.5">
+                  <label className={cn("min-w-0 flex-1", attendanceLabelMutedClass)}>
+                    <span className="text-[10px]">กะ</span>
                     <select
                       className="app-input mt-0.5 min-h-[40px] w-full rounded-lg px-2.5 py-1.5 text-sm touch-manipulation sm:min-h-0 sm:rounded-xl sm:px-3 sm:py-2"
                       value={clampNewShift(r.rosterShiftIndex, shiftSlots.length)}
                       onChange={(e) => void setEntryShift(r.id, Number(e.target.value))}
+                      aria-label={`กะของ ${r.displayName}`}
                     >
                       {shiftSlots.map((s) => (
                         <option key={s.index} value={s.index}>
@@ -699,9 +724,11 @@ export function AttendanceRosterClient() {
                   <button
                     type="button"
                     onClick={() => void remove(r.id)}
-                    className="shrink-0 self-center text-[10px] font-semibold text-red-600 hover:underline sm:self-end"
+                    className={cn(assetRowRemoveIconButtonClass, "shrink-0 self-end")}
+                    aria-label={`ลบรายชื่อ ${r.displayName}`}
+                    title="ลบรายชื่อ"
                   >
-                    ลบรายชื่อ
+                    <IconRowRemove className="h-4 w-4" />
                   </button>
                 </div>
               </li>

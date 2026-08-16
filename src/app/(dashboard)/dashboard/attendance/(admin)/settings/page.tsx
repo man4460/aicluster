@@ -1,13 +1,15 @@
 import { AppDashboardSection, AppSectionHeader } from "@/components/app-templates";
+import { cn } from "@/lib/cn";
 import { AttendanceSettingsClient } from "@/systems/attendance/components/AttendanceSettingsClient";
+import { attendanceSectionRadiusClass } from "@/systems/attendance/lib/ui-tokens";
 
 export default function AttendanceSettingsPage() {
   return (
-    <AppDashboardSection tone="violet">
+    <AppDashboardSection tone="violet" className={cn(attendanceSectionRadiusClass, "space-y-4")}>
       <AppSectionHeader
         tone="violet"
         title="ตั้งค่าเช็คอิน"
-        description="หนึ่งจุดเช็ค สูงสุด 5 กะ — กำหนดพิกัดและรัศมีสำหรับเช็คอินตามตำแหน่ง ลิงก์และ QR ใช้ ?loc= คงที่เมื่อแก้ชื่อจุด"
+        description="จุดเช็ค · กะ · พิกัด · สแกนใบหน้า · Device API"
       />
       <AttendanceSettingsClient />
     </AppDashboardSection>
