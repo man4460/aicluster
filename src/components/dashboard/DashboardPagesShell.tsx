@@ -112,8 +112,12 @@ export function DashboardPagesShell({ children }: { children: React.ReactNode })
         "flex min-h-0 flex-1 flex-col",
         staffKiosk && "!mx-0 !max-w-none !w-full !px-0 !py-0",
         basicWidePages && "max-w-[1680px] lg:!px-8",
-        wideModule && "max-w-none !px-3 sm:!px-4 lg:!px-6",
-        dockedModule && "max-md:!px-3 sm:!px-6",
+        /**
+         * โมดูลเต็มความกว้าง — มือถือ/เดสก์ท็อปไม่ซ้อน px กับ DashboardShell
+         * (Shell = px-3 sm:px-4 เดียวกับ wrapper ของแถบ header ม่วง)
+         */
+        wideModule && "max-w-none !px-0",
+        dockedModule && "max-md:!px-0 sm:!px-0",
         posOrderDesktopFill && "lg:min-h-0 lg:overflow-hidden lg:!pt-2 lg:!pb-3",
         dashboardModules && "max-w-[1680px] lg:!px-8",
         dashboardHome && "max-w-[1680px] lg:!px-8",

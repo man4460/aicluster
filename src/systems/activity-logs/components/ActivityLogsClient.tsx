@@ -303,7 +303,7 @@ export function ActivityLogsClient({ initialFrom, initialTo }: ActivityLogsCalen
               {rows.map((r) => (
                 <li key={String(r.id)}>
                   <article className="group flex min-w-0 max-w-full flex-col gap-2 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white">
-                    <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-gradient-to-br from-[#ecebff] to-indigo-100/40 text-[#4d47b6] shadow-sm">
                         <IconClock className="h-5 w-5" />
                       </div>
@@ -314,13 +314,15 @@ export function ActivityLogsClient({ initialFrom, initialTo }: ActivityLogsCalen
                           </p>
                           <ActionBadge action={r.action} />
                         </div>
-                        <p className="mt-0.5 truncate text-sm font-black text-[#2e2a58]">
+                        <p className="mt-0.5 break-words text-sm font-black leading-snug text-[#2e2a58]">
                           {activityLogModelLabelTh(r.modelName)}
                         </p>
-                        <p className="mt-0.5 truncate font-mono text-[10px] text-[#66638c]">{r.modelName}</p>
+                        <p className="mt-0.5 break-all font-mono text-[10px] leading-snug text-[#66638c]">
+                          {r.modelName}
+                        </p>
                       </div>
                     </div>
-                    <p className="line-clamp-3 text-xs leading-relaxed text-[#5f5a8a]">
+                    <p className="break-words text-xs leading-relaxed text-[#5f5a8a]">
                       {humanizeActivityLogRow(r.action, r.modelName, r.payload)}
                     </p>
                   </article>

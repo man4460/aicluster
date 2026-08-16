@@ -118,10 +118,10 @@ export const barberGlassShellClass = cn(
   "shadow-[0_24px_60px_-28px_rgba(30,27,75,0.32),inset_0_1px_0_0_rgba(255,255,255,0.55)] backdrop-blur-2xl ring-1 ring-inset ring-white/55",
 );
 
-/** การ์ดนอกหุ้มเนื้อหาใต้หัวโมดูล — §9 Shell 2.0rem */
+/** การ์ดนอกหุ้มเนื้อหาใต้หัวโมดูล — §9 Shell 2.0rem · มือถือ padding ในการ์ดเท่าแถบ header (px-3) */
 export const barberModuleContentShellClass = cn(
   "min-w-0 overflow-hidden rounded-[2rem] border border-white/45 bg-white/35 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.28)] backdrop-blur-xl ring-1 ring-inset ring-white/50",
-  "p-4 sm:p-5 md:p-6 print:border-0 print:shadow-none",
+  "p-3 sm:p-5 md:p-6 print:border-0 print:shadow-none",
 );
 
 /** Accent bar ในหัวหลักเท่านั้น — หลังเส้นต้องมี `mt-5` ก่อนเนื้อหาใต้ */

@@ -26,7 +26,9 @@ export default async function AdminSectionLayout({
       )}
     >
       <AdminHubChrome />
-      <div className="app-surface rounded-[1.75rem] px-4 py-4 sm:rounded-[2.5rem] sm:px-6 sm:py-6">{children}</div>
+      <div className="app-surface rounded-[1.75rem] px-3 py-3 sm:rounded-[2.5rem] sm:px-6 sm:py-6">
+        {children}
+      </div>
     </div>
   );
 }

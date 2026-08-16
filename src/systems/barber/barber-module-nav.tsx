@@ -30,7 +30,8 @@ export function barberPathFlags(pathname: string) {
     onBarber &&
     (pathname === "/dashboard/barber/qr" || pathname.startsWith("/dashboard/barber/qr/"));
   const onSettings = pathname === "/dashboard/barber/settings";
-  const plainInner = onStaff || onFinance || onQr;
+  /** การเงิน · QR · ตั้งค่า มีการ์ดเนื้อหาเอง — ไม่ห่อ barberModuleContentShell ซ้ำ */
+  const plainInner = onStaff || onFinance || onQr || onSettings;
   return {
     onBarber,
     onStaff,

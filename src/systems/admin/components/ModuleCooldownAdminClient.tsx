@@ -305,16 +305,16 @@ export function ModuleCooldownAdminClient() {
                 const letter = (e.moduleTitle.trim().charAt(0) || "?").toUpperCase();
                 return (
                   <li key={key}>
-                    <article className="group flex min-w-0 max-w-full items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white">
+                    <article className="group flex min-w-0 max-w-full items-start gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white">
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-gradient-to-br from-[#ecebff] to-indigo-100/40 text-sm font-black text-[#4d47b6] shadow-sm">
                         {letter}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-black text-[#1e1b4b]">{e.moduleTitle}</p>
-                        <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
+                        <p className="break-words text-sm font-black leading-snug text-[#1e1b4b]">{e.moduleTitle}</p>
+                        <p className="mt-0.5 break-words text-xs font-semibold leading-snug text-slate-500">
                           {e.username} · {e.email}
                         </p>
-                        <p className="mt-0.5 truncate text-[10px] tabular-nums text-[#66638c]">
+                        <p className="mt-0.5 break-words text-[10px] leading-snug tabular-nums text-[#66638c]">
                           ยกเลิก {formatTh(e.unsubscribedAtIso)} · ปลดได้ {formatTh(e.unlockAtIso)}
                         </p>
                       </div>

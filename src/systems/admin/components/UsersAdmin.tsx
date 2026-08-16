@@ -568,15 +568,15 @@ export function UsersAdmin() {
                 return (
                   <li key={u.id}>
                     <article className="group flex min-w-0 max-w-full flex-col gap-2 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white">
-                      <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex min-w-0 items-start gap-3">
                         <UserAvatarThumb src={avatar} username={u.username} />
                         <div className="min-w-0 flex-1">
-                          <div className="flex min-w-0 items-center gap-2">
-                            <p className="truncate text-sm font-black text-[#1e1b4b]">{u.username}</p>
+                          <div className="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1">
+                            <p className="break-words text-sm font-black leading-snug text-[#1e1b4b]">{u.username}</p>
                             <RoleBadge role={u.role} />
                           </div>
-                          <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{u.email}</p>
-                          <p className="mt-0.5 truncate text-[11px] font-bold tabular-nums text-amber-800">
+                          <p className="mt-0.5 break-all text-xs font-semibold leading-snug text-slate-500">{u.email}</p>
+                          <p className="mt-0.5 break-words text-[11px] font-bold leading-snug tabular-nums text-amber-800">
                             {u.tokens.toLocaleString()} โทเคน · {subType} · {u.subscriptionTier}
                           </p>
                         </div>

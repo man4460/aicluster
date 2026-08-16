@@ -347,7 +347,7 @@ export function ModuleCardImagesAdmin() {
                   <li key={r.id}>
                     <article
                       className={cn(
-                        "group flex min-w-0 max-w-full items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white",
+                        "group flex min-w-0 max-w-full items-start gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white",
                         !r.isActive && "opacity-60",
                       )}
                     >
@@ -361,9 +361,9 @@ export function ModuleCardImagesAdmin() {
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-black text-[#1e1b4b]">{r.title}</p>
-                        <p className="mt-0.5 truncate font-mono text-[10px] text-[#66638c]">{r.slug}</p>
-                        <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500">
+                        <p className="break-words text-sm font-black leading-snug text-[#1e1b4b]">{r.title}</p>
+                        <p className="mt-0.5 break-all font-mono text-[10px] leading-snug text-[#66638c]">{r.slug}</p>
+                        <p className="mt-0.5 break-words text-[11px] font-semibold leading-snug text-slate-500">
                           {MODULE_GROUP_TIER_NAME[r.groupId] ?? `กลุ่ม ${r.groupId}`}
                           {hasUpload ? " · มีรูปอัปโหลด" : " · ใช้รูปค่าเริ่ม"}
                         </p>

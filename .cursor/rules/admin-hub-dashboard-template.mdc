@@ -26,9 +26,13 @@ alwaysApply: false
 
 ```
 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm
-flex items-center gap-3
-[รูปย่อ 44×44 rounded-2xl] [ชื่อ + บรรทัดรอง] [ปุ่มไอคอน]
+flex items-start gap-3
+[รูปย่อ 44×44 rounded-2xl] [ชื่อ + บรรทัดรอง — break-words ไม่ truncate] [ปุ่มไอคอน]
 ```
+
+**มือถือ — เห็นข้อความเต็ม:** ห้าม `truncate` / `line-clamp` บนชื่อ·อีเมล·slug·คำอธิบายในการ์ดรายการ  
+ใช้ `break-words` / `break-all` (อีเมล·slug) · จัด `items-start` ให้ข้อความหลายบรรทัดไม่ถูกตัด  
+หน้าภาพรวมศูนย์แอดมิน: กริด `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` (ไม่บีบ 2 คอลัมน์บนมือถือจนตัดคำ)
 
 - **รูปการ์ดโมดูล / ลิงก์ทดลอง:** ใช้ `resolveModuleCardDisplayImageUrl` (หรือรูปอัปโหลดที่ปลอดภัย)
 - **ผู้ใช้:** ใช้ `avatarUrl` (`/uploads/…` หรือ `https://`) — ไม่มีรูปใช้ตัวอักษรย่อ
@@ -65,6 +69,9 @@ downloadAdminExcel({
 ชุดเดียวกับสนามฟุตบอลใน `DashboardPagesShell`:
 
 `size="full"` + `max-w-none !px-3 sm:!px-4 lg:!px-6`
+
+**มือถือ / เดสก์ท็อป — ขอบซ้าย–ขวาเท่าแถบ header ม่วง:**  
+`DashboardPagesShell` สำหรับ `/dashboard/admin` ใช้ `!px-0` (ชุด wide module) · ขอบนอกมาจาก `DashboardShell` `px-3 sm:px-4` เท่านั้น · การ์ด chrome/เนื้อหาใช้ `p-3` / `px-3` ด้านใน
 
 รายละเอียดชั้น gutter: `.cursor/rules/dashboard-page-width.mdc`  
 ยุบหัวศูนย์แอดมิน: `.cursor/rules/dashboard-nav-menu-groups.mdc` §5

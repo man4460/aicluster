@@ -344,7 +344,7 @@ export function ModuleTryLinksAdmin({
                   className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <p className="min-w-0 truncate text-[10px] font-black tracking-[0.12em] text-[#66638c]">
+                    <p className="min-w-0 break-words text-[10px] font-black tracking-[0.12em] text-[#66638c]">
                       <span className="uppercase tracking-[0.2em]">
                         {MODULE_GROUP_TIER_NAME[gid] ?? `กลุ่ม ${gid}`}
                       </span>
@@ -366,14 +366,14 @@ export function ModuleTryLinksAdmin({
                       const cover = resolveModuleCardDisplayImageUrl(row.slug, row.cardImageUrl);
                       return (
                         <li key={row.id}>
-                          <div className="group flex min-w-0 max-w-full items-center gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white">
+                          <div className="group flex min-w-0 max-w-full items-start gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white">
                             <ModuleThumb
                               url={cover}
                               fallback={<GroupIcon groupId={row.groupId} className="h-5 w-5" />}
                             />
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-black text-[#1e1b4b]">{row.title}</p>
-                              <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
+                              <p className="break-words text-sm font-black leading-snug text-[#1e1b4b]">{row.title}</p>
+                              <p className="mt-0.5 break-words text-xs font-semibold leading-snug text-slate-500">
                                 {catalogLine(row.slug)}
                               </p>
                             </div>

@@ -224,7 +224,7 @@ export function MqttHealthClient() {
               {events.map((e, idx) => (
                 <li key={`${e.at}-${idx}`}>
                   <article className="group flex min-w-0 max-w-full flex-col gap-2 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white">
-                    <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-gradient-to-br from-[#ecebff] to-indigo-100/40 text-[#5b61ff] shadow-sm">
                         <IconPulse className="h-5 w-5" />
                       </div>
@@ -232,7 +232,9 @@ export function MqttHealthClient() {
                         <p className="text-xs font-semibold tabular-nums text-[#1e1b4b]">
                           {new Date(e.at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
                         </p>
-                        <p className="mt-0.5 truncate font-mono text-xs font-bold text-[#4d47b6]">{e.topic}</p>
+                        <p className="mt-0.5 break-all font-mono text-xs font-bold leading-snug text-[#4d47b6]">
+                          {e.topic}
+                        </p>
                       </div>
                     </div>
                     <pre className="max-h-28 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] leading-relaxed text-[#5f5a8a]">

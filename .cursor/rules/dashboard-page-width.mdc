@@ -11,8 +11,8 @@ alwaysApply: true
 
 | ชั้น | ไฟล์ | ขอบซ้าย–ขวา (ค่าเริ่ม) | หมายเหตุ |
 |------|------|------------------------|----------|
-| 1. แถวเนื้อหาใต้ header | `DashboardShell.tsx` ห่อ `main` | ปกติ `px-3 sm:px-4` · บาร์เบอร์/ซักผ้า/นวดมือถือ `max-md:px-2 sm:px-4` | ช่องว่างระหว่างขอบจอกับการ์ดหลัก |
-| 2. `PageContainer` | `DashboardPagesShell` → `page-container.tsx` | **`PAGE_GUTTER_X`** = `px-4 sm:px-6` · **`PAGE_GUTTER_Y`** = `pt-2 pb-5 sm:pt-3 sm:pb-7` (บนแน่นกว่าล่าง) | ชั้นหลักของเนื้อหาหน้า — ระยะใต้ Header ม่วงมาจากค่านี้ |
+| 1. แถวเนื้อหาใต้ header | `DashboardShell.tsx` ห่อ `main` | ปกติ `px-3 sm:px-4` · ซักผ้า/นวดมือถือ `max-md:px-2 sm:px-4` | **ชั้นเดียวกับแถบ header ม่วง** (`px-3`) — ช่องว่างระหว่างขอบจอกับการ์ดหลัก |
+| 2. `PageContainer` | `DashboardPagesShell` → `page-container.tsx` | ค่าเริ่ม **`PAGE_GUTTER_X`** · โมดูล wide **`!px-0`** (ห้ามซ้อนกับชั้น 1) · **`PAGE_GUTTER_Y`** = `pt-2 pb-5 sm:pt-3 sm:pb-7` | ระยะใต้ Header ม่วงแนวตั้ง · แนวนอนโมดูลงานให้ Shell อย่างเดียว |
 | 3. Shell / การ์ดโมดูล | เช่น `FootballTurfShell` | padding ในหัว `px-4 sm:px-8` — **ห้าม** ห่อ `children` ด้วย `px-*` ซ้ำทั้งหน้า | เนื้อหาไหลใต้ PageContainer |
 | 4. ชั้นในของการ์ด | เนื้อหาในการ์ด | ถ้าต้อง gutter ใน: **`PAGE_INNER_GUTTER_X`** = `px-4 sm:px-6 md:px-8` | ให้หัวข้อกับการ์ดเส้นตั้งเดียวกัน |
 
@@ -23,9 +23,9 @@ alwaysApply: true
 | พาธ | `size` | class เพิ่ม (ขอบซ้าย–ขวา / ความกว้าง) |
 |-----|--------|----------------------------------------|
 | หน้าปกติ | `default` (`max-w-6xl`) | `PAGE_GUTTER_X` อย่างเดียว |
-| **สนามฟุตบอล** · **drink-pos** · **building-pos** · **hotel-resort** · **ศูนย์แอดมิน** | `full` | **`max-w-none !px-3 sm:!px-4 lg:!px-6`** — ชุด gutter มาตรฐานโมดูลเต็มความกว้าง (มือถือขอบแคบ · เดสก์ท็อป `px-6`) |
+| **สนามฟุตบอล** · **drink-pos** · **building-pos** · **hotel-resort** · **ศูนย์แอดมิน** · **บาร์เบอร์** ฯลฯ (`WIDE_MODULE_PREFIXES`) | `full` | **`max-w-none !px-0`** — ไม่ซ้อนกับ `DashboardShell` (`px-3 sm:px-4` = ขอบเดียวกับแถบ header ม่วง) |
+| ซักผ้า · นวด · จอดรถ · คาร์แคร์ (dock) | ตาม wide/default | `!px-0` เช่นกันเมื่ออยู่ใน `dockedModule` — ขอบนอกมาจาก Shell |
 | หน้าบ้าน / ระบบทั้งหมด / โปรไฟล์ / แพ็กเกจ / แชท | `full` | `max-w-[1680px] lg:!px-8` |
-| บาร์เบอร์ · ซักผ้า · นวด · จอดรถ | `default` | `max-md:!px-3 sm:!px-6` (มือถือแคบลง ไม่ซ้ำกับ Shell `px-2`) |
 | staff kiosk | `full` | `!px-0 !py-0 !max-w-none` |
 
 **ศูนย์แอดมินเพิ่มเติม:** ซ่อน `MobileBottomNav` หลัก · ยุบหัว+กลุ่มเมนูส่วนหัวได้เหมือนสนามฟุตบอล (`ADMIN_HUB_HEADER_COLLAPSE_*` · `dashboard-nav-menu-groups.mdc` §5)
@@ -40,8 +40,8 @@ alwaysApply: true
 
 ## ตัวอย่างสนามฟุตบอล (ครบชั้น)
 
-1. `DashboardShell` แถว main: `px-3 sm:px-4` (ไม่ compact)
-2. `DashboardPagesShell`: `size="full"` + `max-w-none lg:!px-6`
+1. `DashboardShell` แถว main: `px-3 sm:px-4` (ไม่ compact) — **ขอบเดียวกับแถบ header ม่วง**
+2. `DashboardPagesShell`: `size="full"` + `max-w-none !px-0` (ห้ามซ้อน px)
 3. `FootballTurfShell` หัว: `px-4 sm:px-8` · เนื้อหา **ไม่มี** `px` ซ้ำทั้งหน้า
 4. ล่างมือถือ: `pb-24` (`footballTurfMainPaddingBottomClass`) ให้พ้น dock — **ไม่เกี่ยวกับ** ขอบซ้ายขวา
 

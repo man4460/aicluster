@@ -74,7 +74,7 @@ export function BarberLayoutChrome({
   return (
     <div className={cn("flex min-w-0 flex-col", barberContentStackClass, barberMainPaddingBottomClass)}>
       <div
-        className={cn(barberGlassShellClass, "p-4 sm:px-8 sm:py-6 print:hidden", headerCollapsed && "hidden")}
+        className={cn(barberGlassShellClass, "p-3 sm:px-8 sm:py-6 print:hidden", headerCollapsed && "hidden")}
       >
         <header>
           <div className="flex flex-wrap items-center justify-between gap-3">
