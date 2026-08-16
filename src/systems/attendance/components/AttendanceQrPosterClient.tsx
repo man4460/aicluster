@@ -21,6 +21,8 @@ type Props = {
   /** มีค่าเมื่อต้องการ QR ต่อจุด — URL จะมี ?loc= */
   locationId?: number | null;
   locationName?: string | null;
+  /** true = ลิงก์ `/check-in/.../face` สำหรับ iPad สแกนใบหน้า */
+  faceKiosk?: boolean;
 };
 
 export function AttendanceQrPosterClient({
@@ -31,6 +33,7 @@ export function AttendanceQrPosterClient({
   baseUrl,
   locationId,
   locationName,
+  faceKiosk = false,
 }: Props) {
   const [clientOrigin, setClientOrigin] = useState("");
   useEffect(() => {
@@ -51,14 +54,15 @@ export function AttendanceQrPosterClient({
 
   const checkInUrl = useMemo(() => {
     if (!effectiveBaseUrl) return "";
-    const root = `${effectiveBaseUrl}/check-in/${ownerId}`;
+    const facePath = faceKiosk ? "/face" : "";
+    const root = `${effectiveBaseUrl}/check-in/${ownerId}${facePath}`;
     const params = new URLSearchParams();
     if (locationId != null && locationId > 0) params.set("loc", String(locationId));
     const tid = sandboxTrialSessionId?.trim();
     if (tid) params.set("t", tid);
     const q = params.toString();
     return q ? `${root}?${q}` : root;
-  }, [effectiveBaseUrl, ownerId, locationId, sandboxTrialSessionId]);
+  }, [effectiveBaseUrl, ownerId, locationId, sandboxTrialSessionId, faceKiosk]);
 
   const logoSrc = useMemo(() => {
     if (!logoUrl?.trim()) return null;
@@ -70,7 +74,9 @@ export function AttendanceQrPosterClient({
     }
     return resolveAssetUrl(raw, effectiveBaseUrl);
   }, [logoUrl, clientOrigin, effectiveBaseUrl]);
-  const headline = orgLabel.trim() || "เช็คอินเข้างาน";
+  const headline = faceKiosk
+    ? `${orgLabel.trim() || "องค์กร"} · สแกนใบหน้า`
+    : orgLabel.trim() || "เช็คอินเข้างาน";
   const subLocation = locationName?.trim() || null;
 
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);

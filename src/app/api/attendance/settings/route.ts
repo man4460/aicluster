@@ -34,6 +34,7 @@ const locationInSchema = z.object({
 
 const putSchema = z.object({
   locations: z.array(locationInSchema).min(1),
+  faceCheckInEnabled: z.boolean().optional(),
 });
 
 async function ensureSettings(ownerUserId: string, trialSessionId: string) {
@@ -94,8 +95,19 @@ export async function GET() {
       include: { shifts: { orderBy: { sortOrder: "asc" } } },
     });
 
+    const settings = await prisma.attendanceSettings.findUnique({
+      where: {
+        ownerUserId_trialSessionId: {
+          ownerUserId: ctx.billingUserId,
+          trialSessionId: scope.trialSessionId,
+        },
+      },
+      select: { faceCheckInEnabled: true },
+    });
+
     return NextResponse.json({
       quota,
+      faceCheckInEnabled: Boolean(settings?.faceCheckInEnabled),
       locations: locations.map((loc) => ({
         id: loc.id,
         name: loc.name,
@@ -180,6 +192,18 @@ export async function PUT(req: Request) {
   }
 
   await ensureSettings(ctx.billingUserId, scope.trialSessionId);
+
+  if (parsed.data.faceCheckInEnabled !== undefined) {
+    await prisma.attendanceSettings.update({
+      where: {
+        ownerUserId_trialSessionId: {
+          ownerUserId: ctx.billingUserId,
+          trialSessionId: scope.trialSessionId,
+        },
+      },
+      data: { faceCheckInEnabled: parsed.data.faceCheckInEnabled },
+    });
+  }
 
   await prisma.$transaction(async (tx) => {
     const keptIds: number[] = [];

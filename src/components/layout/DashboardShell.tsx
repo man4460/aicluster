@@ -65,6 +65,16 @@ import {
   writeHotelResortHeaderCollapsed,
 } from "@/systems/hotel-resort/hotel-resort-module-nav";
 import {
+  AttendanceHeaderBarNav,
+  AttendanceHeaderExpandButton,
+} from "@/systems/attendance/components/AttendanceHeaderBarNav";
+import {
+  ATTENDANCE_HEADER_COLLAPSE_EVENT,
+  isAttendanceModulePath,
+  readAttendanceHeaderCollapsed,
+  writeAttendanceHeaderCollapsed,
+} from "@/systems/attendance/attendance-module-nav";
+import {
   CarWashHeaderBarNav,
   CarWashHeaderExpandButton,
 } from "@/systems/car-wash/components/CarWashHeaderBarNav";
@@ -373,12 +383,6 @@ export function DashboardShell({
   const laundryStaffKiosk = pathname === "/dashboard/laundry/staff";
   const massageStaffKiosk = pathname === "/dashboard/massage/staff";
   const moduleStaffKiosk = barberStaffKiosk || laundryStaffKiosk || massageStaffKiosk;
-  /** โมดูลซักผ้า / นวด บนมือถือ — ลด padding แนวนอกซ้ำกับ PageContainer */
-  const laundryDashboardCompact =
-    !moduleStaffKiosk && (pathname === "/dashboard/laundry" || pathname.startsWith("/dashboard/laundry/"));
-  const massageDashboardCompact =
-    !moduleStaffKiosk && (pathname === "/dashboard/massage" || pathname.startsWith("/dashboard/massage/"));
-  const moduleDashboardCompact = laundryDashboardCompact || massageDashboardCompact;
   /** มือถือ: ในโมดูลหรือศูนย์แอดมิน ซ่อนเมนูหลักด้านล่าง — ให้ใช้เมนูโมดูล/แอดมินแทน */
   const onAdminHub = isAdminHubPath(pathname);
   const hideMainMobileBottomNav =
@@ -392,6 +396,7 @@ export function DashboardShell({
   const [buildingPosHeaderCollapsed, setBuildingPosHeaderCollapsed] = useState(false);
   const [footballTurfHeaderCollapsed, setFootballTurfHeaderCollapsed] = useState(false);
   const [hotelResortHeaderCollapsed, setHotelResortHeaderCollapsed] = useState(false);
+  const [attendanceHeaderCollapsed, setAttendanceHeaderCollapsed] = useState(false);
   const [carWashHeaderCollapsed, setCarWashHeaderCollapsed] = useState(false);
   const [massageHeaderCollapsed, setMassageHeaderCollapsed] = useState(false);
   const [barberHeaderCollapsed, setBarberHeaderCollapsed] = useState(false);
@@ -412,6 +417,7 @@ export function DashboardShell({
     pathname.startsWith(`${BUILDING_POS_ORDER_HREF}/`);
   const onFootballTurfModule = isFootballTurfModulePath(pathname);
   const onHotelResortModule = isHotelResortModulePath(pathname);
+  const onAttendanceModule = isAttendanceModulePath(pathname);
   const onCarWashModule = isCarWashModulePath(pathname);
   const onMassageModule = isMassageModulePath(pathname);
   const onBarberModule = isBarberModulePath(pathname);
@@ -419,6 +425,7 @@ export function DashboardShell({
   const showBuildingPosHeaderBar = onBuildingPosModule && buildingPosHeaderCollapsed;
   const showFootballTurfHeaderBar = onFootballTurfModule && footballTurfHeaderCollapsed;
   const showHotelResortHeaderBar = onHotelResortModule && hotelResortHeaderCollapsed;
+  const showAttendanceHeaderBar = onAttendanceModule && attendanceHeaderCollapsed;
   const showCarWashHeaderBar = onCarWashModule && carWashHeaderCollapsed;
   const showMassageHeaderBar = onMassageModule && massageHeaderCollapsed;
   const showBarberHeaderBar = onBarberModule && barberHeaderCollapsed;
@@ -560,6 +567,21 @@ export function DashboardShell({
       window.removeEventListener("storage", sync);
     };
   }, [onHotelResortModule]);
+
+  useEffect(() => {
+    if (!onAttendanceModule) {
+      setAttendanceHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setAttendanceHeaderCollapsed(readAttendanceHeaderCollapsed());
+    sync();
+    window.addEventListener(ATTENDANCE_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(ATTENDANCE_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onAttendanceModule]);
 
   useEffect(() => {
     if (!onCarWashModule) {
@@ -888,6 +910,30 @@ export function DashboardShell({
                   <HotelResortHeaderExpandButton onExpand={() => writeHotelResortHeaderCollapsed(false)} />
                 </div>
               </>
+            ) : showAttendanceHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <AttendanceHeaderBarNav onExpand={() => writeAttendanceHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <AttendanceHeaderExpandButton onExpand={() => writeAttendanceHeaderCollapsed(false)} />
+                </div>
+              </>
             ) : showCarWashHeaderBar ? (
               <>
                 <div className="hidden min-w-0 lg:block">
@@ -1075,7 +1121,8 @@ export function DashboardShell({
       <div
         className={cn(
           "flex min-h-0 flex-1 gap-0 pb-[max(5.75rem,calc(5.75rem+env(safe-area-inset-bottom,0px)))] pt-0 md:pb-4",
-          moduleDashboardCompact ? "max-md:px-2 sm:px-4" : "px-3 sm:px-4",
+          /** ขอบนอกเดียวกับ wrapper แถบ header ม่วง (px-3 sm:px-4) — ห้าม px-2 แยกโมดูล */
+          "px-3 sm:px-4",
           moduleStaffKiosk && "!gap-0 !px-0 !pt-0 !pb-0 sm:!px-0 sm:!pb-0",
         )}
       >

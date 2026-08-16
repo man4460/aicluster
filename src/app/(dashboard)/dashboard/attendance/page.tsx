@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { bangkokDayStartEnd } from "@/lib/barber/bangkok-day";
 import { ensureAttendanceLocationsFromLegacy } from "@/lib/attendance/location-ensure";
 import { PublicCheckInLinkCopy } from "@/systems/attendance/components/PublicCheckInLinkCopy";
+import { attendanceSectionRadiusClass } from "@/systems/attendance/lib/ui-tokens";
 import { getServerAppBaseUrl } from "@/lib/url/server-app-base-url";
 import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
 
@@ -22,8 +23,10 @@ function publicCheckInUrl(
   locId: number | null,
   trialSessionId: string,
   isTrialSandbox: boolean,
+  opts?: { faceKiosk?: boolean },
 ) {
-  const root = `${basePrefix.replace(/\/$/, "")}/check-in/${ownerSub}`;
+  const facePath = opts?.faceKiosk ? "/face" : "";
+  const root = `${basePrefix.replace(/\/$/, "")}/check-in/${ownerSub}${facePath}`;
   const params = new URLSearchParams();
   if (locId != null && locId > 0) params.set("loc", String(locId));
   if (isTrialSandbox) params.set("t", trialSessionId);
@@ -87,12 +90,8 @@ export default async function AttendanceHomePage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <AppDashboardSection tone="violet">
-        <AppSectionHeader
-          tone="violet"
-          title="สรุปวันนี้"
-          description="อัปเดตตามข้อมูลจริงของวันนี้ (เวลาไทย) สำหรับเจ้าของระบบ"
-        />
+      <AppDashboardSection tone="violet" className={attendanceSectionRadiusClass}>
+        <AppSectionHeader tone="violet" title="สรุปวันนี้" />
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
           <StatCard label="เข้างานแล้ว" value={checkedIn} hint="รวมผู้ที่เช็คชื่อเข้าแล้วทั้งหมด" accent="violet" />
           <StatCard label="มาสาย" value={late} hint="เข้าเกินเวลาเริ่มกะที่ตั้งไว้" accent="amber" />
@@ -132,57 +131,95 @@ export default async function AttendanceHomePage() {
         </div>
       </AppDashboardSection>
 
-      <AppDashboardSection tone="violet">
-        <AppSectionHeader
-          tone="violet"
-          title="ลิงก์เช็คอินสาธารณะ"
-          description={
-            attendanceLocs.length > 1 ? (
-              <span>
-                มีหลายโลเคชัน — ใช้ลิงก์ตามจุด (หรือสร้าง QR แยกใน{" "}
-                <Link href="/dashboard/attendance/qr" className="font-semibold text-[#4d47b6] underline">
-                  QR จุดเช็คอิน
-                </Link>
-                )
-              </span>
-            ) : (
-              "แชร์ลิงก์หรือสร้างโปสเตอร์ QR จากเมนู QR จุดเช็คอิน — กดคัดลอกแล้วส่งต่อ"
-            )
-          }
-        />
-        <div className="mt-4 space-y-3 sm:space-y-4">
+      <AppDashboardSection tone="violet" className={attendanceSectionRadiusClass}>
+        <AppSectionHeader tone="violet" title="ลิงก์เช็คอินสาธารณะ" />
+        <div className="mt-4 space-y-4">
           {attendanceLocs.length <= 1 ? (
-            <PublicCheckInLinkCopy
-              url={
-                baseUrl
-                  ? publicCheckInUrl(
-                      baseUrl,
-                      session.sub,
-                      attendanceLocs[0]?.id ?? null,
-                      scope.trialSessionId,
-                      scope.isTrialSandbox,
-                    )
-                  : publicCheckInUrl(
-                      "",
-                      session.sub,
-                      attendanceLocs[0]?.id ?? null,
-                      scope.trialSessionId,
-                      scope.isTrialSandbox,
-                    )
-              }
-            />
-          ) : (
-            attendanceLocs.map((loc) => (
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <PublicCheckInLinkCopy
-                key={loc.id}
-                title={`ลิงก์เช็คอิน · ${loc.name.trim() || `จุด #${loc.id}`}`}
+                title="เช็คอินแบบเดิม"
+                description="เบอร์โทร · บุคคลภายนอก"
+                tone="violet"
                 url={
                   baseUrl
-                    ? publicCheckInUrl(baseUrl, session.sub, loc.id, scope.trialSessionId, scope.isTrialSandbox)
-                    : publicCheckInUrl("", session.sub, loc.id, scope.trialSessionId, scope.isTrialSandbox)
+                    ? publicCheckInUrl(
+                        baseUrl,
+                        session.sub,
+                        attendanceLocs[0]?.id ?? null,
+                        scope.trialSessionId,
+                        scope.isTrialSandbox,
+                      )
+                    : publicCheckInUrl(
+                        "",
+                        session.sub,
+                        attendanceLocs[0]?.id ?? null,
+                        scope.trialSessionId,
+                        scope.isTrialSandbox,
+                      )
                 }
               />
-            ))
+              <PublicCheckInLinkCopy
+                title="สแกนใบหน้า"
+                description="ลิงก์ iPad ที่จุดเช็ค"
+                tone="emerald"
+                url={
+                  baseUrl
+                    ? publicCheckInUrl(
+                        baseUrl,
+                        session.sub,
+                        attendanceLocs[0]?.id ?? null,
+                        scope.trialSessionId,
+                        scope.isTrialSandbox,
+                        { faceKiosk: true },
+                      )
+                    : publicCheckInUrl(
+                        "",
+                        session.sub,
+                        attendanceLocs[0]?.id ?? null,
+                        scope.trialSessionId,
+                        scope.isTrialSandbox,
+                        { faceKiosk: true },
+                      )
+                }
+              />
+            </div>
+          ) : (
+            attendanceLocs.map((loc) => {
+              const locLabel = loc.name.trim() || `จุด #${loc.id}`;
+              return (
+                <div key={loc.id} className="space-y-2">
+                  <p className="text-xs font-bold text-[#5f5a8a] line-clamp-1" title={locLabel}>
+                    {locLabel}
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    <PublicCheckInLinkCopy
+                      title="เช็คอินแบบเดิม"
+                      description={locLabel}
+                      tone="violet"
+                      url={
+                        baseUrl
+                          ? publicCheckInUrl(baseUrl, session.sub, loc.id, scope.trialSessionId, scope.isTrialSandbox)
+                          : publicCheckInUrl("", session.sub, loc.id, scope.trialSessionId, scope.isTrialSandbox)
+                      }
+                    />
+                    <PublicCheckInLinkCopy
+                      title="สแกนใบหน้า"
+                      description={locLabel}
+                      tone="emerald"
+                      url={
+                        baseUrl
+                          ? publicCheckInUrl(baseUrl, session.sub, loc.id, scope.trialSessionId, scope.isTrialSandbox, {
+                              faceKiosk: true,
+                            })
+                          : publicCheckInUrl("", session.sub, loc.id, scope.trialSessionId, scope.isTrialSandbox, {
+                              faceKiosk: true,
+                            })
+                      }
+                    />
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </AppDashboardSection>

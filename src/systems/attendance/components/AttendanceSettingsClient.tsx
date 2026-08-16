@@ -1,5 +1,6 @@
 "use client";
 
+import { AttendanceDeviceApiSettings } from "@/systems/attendance/components/AttendanceDeviceApiSettings";
 import { useCallback, useEffect, useState } from "react";
 import type { AttendancePlanQuota } from "@/lib/attendance/plan-quota";
 import { ATTENDANCE_MAX_SHIFTS_PER_LOCATION } from "@/lib/attendance/plan-quota";
@@ -35,6 +36,7 @@ function emptyLocation(): LocRow {
 export function AttendanceSettingsClient() {
   const [quota, setQuota] = useState<AttendancePlanQuota | null>(null);
   const [locations, setLocations] = useState<LocRow[]>([]);
+  const [faceCheckInEnabled, setFaceCheckInEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -45,6 +47,7 @@ export function AttendanceSettingsClient() {
     const res = await fetch("/api/attendance/settings", { credentials: "include" });
     const j = (await res.json().catch(() => ({}))) as {
       quota?: AttendancePlanQuota;
+      faceCheckInEnabled?: boolean;
       locations?: {
         id: number;
         name: string;
@@ -62,6 +65,7 @@ export function AttendanceSettingsClient() {
       return;
     }
     setQuota(j.quota ?? null);
+    setFaceCheckInEnabled(Boolean(j.faceCheckInEnabled));
     if (j.locations?.length) {
       setLocations(
         j.locations.map((loc) => ({
@@ -134,6 +138,7 @@ export function AttendanceSettingsClient() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
+          faceCheckInEnabled,
           locations: locations.map((loc) => ({
             ...(loc.id != null ? { id: loc.id } : {}),
             name: loc.name,
@@ -178,6 +183,26 @@ export function AttendanceSettingsClient() {
           {msg}
         </p>
       ) : null}
+
+      <section className={attendancePanelClass}>
+        <h2 className={attendanceSectionTitleClass}>ทางเลือกเช็คอิน</h2>
+        <label className={cn(attendanceInsetClass, "mt-3 flex cursor-pointer items-start gap-3")}>
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 rounded border-[#d8d6ec] text-[#5b61ff] focus:ring-[#5b61ff]"
+            checked={faceCheckInEnabled}
+            onChange={(e) => setFaceCheckInEnabled(e.target.checked)}
+          />
+          <span className="min-w-0">
+            <span className={cn("block", attendanceLabelClass)}>เปิดเช็คอินด้วยสแกนใบหน้า</span>
+            <span className="mt-0.5 block text-xs font-medium text-[#66638c]">
+              ใช้กับลิงก์แยก «สแกนใบหน้า» / QR iPad — หน้าเช็คอินแบบเดิม (เบอร์) ยังใช้ได้ตามปกติ · ต้องลงทะเบียนใบหน้าในรายชื่อก่อน
+            </span>
+          </span>
+        </label>
+      </section>
+
+      <AttendanceDeviceApiSettings />
 
       {locations.map((loc, li) => (
         <section

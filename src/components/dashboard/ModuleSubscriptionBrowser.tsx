@@ -7,10 +7,10 @@ import { useRouter } from "next/navigation";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
 import { canAccessAppModule, type UserAccessFields } from "@/lib/modules/access";
 import {
-  BUILDING_POS_MODULE_SLUG,
-  DRINK_POS_MODULE_SLUG,
-  HOTEL_RESORT_MODULE_SLUG,
+  APPOINTMENT_QUEUE_MODULE_SLUG,
+  LOYALTY_STAMP_MODULE_SLUG,
   MODULE_GROUP_TIER_NAME,
+  SCHOOL_BANK_MODULE_SLUG,
 } from "@/lib/modules/config";
 import { dashboardModuleCardDescription } from "@/lib/modules/dashboard-card-descriptions";
 import { getModuleDailyUsageBadge } from "@/lib/modules/module-usage-badge";
@@ -121,12 +121,17 @@ function groupTone(groupId: number): { header: string; chip: string; icon: React
   };
 }
 
-/** การ์ดแนะนำส่วน «ปัจจุบัน» บนหน้าระบบทั้งหมด — แสดงทุกบทบาท */
-const FEATURED_CATALOG_SLUGS = [
-  BUILDING_POS_MODULE_SLUG,
-  DRINK_POS_MODULE_SLUG,
-  HOTEL_RESORT_MODULE_SLUG,
+/**
+ * ส่วน «แนะนำ» + แท็บโมดูลฟรี — จองคิว · สะสมแต้ม · ธนาคารโรงเรียน
+ * (โมดูลฟรีอื่นยังอยู่ใน Basic ตามกลุ่ม)
+ */
+const FREE_MENU_CATALOG_SLUGS = [
+  APPOINTMENT_QUEUE_MODULE_SLUG,
+  LOYALTY_STAMP_MODULE_SLUG,
+  SCHOOL_BANK_MODULE_SLUG,
 ] as const;
+
+const FREE_MENU_CATALOG_SLUG_SET = new Set<string>(FREE_MENU_CATALOG_SLUGS);
 
 /** คำอธิบายบรรทัดเดียวใต้ชื่อโมดูล — ตัดคำนำหน้ากลุ่มที่ซ้ำกับหัวข้อส่วน */
 function catalogModuleDescription(m: { slug: string; description: string | null }): string {
@@ -217,29 +222,31 @@ export function ModuleSubscriptionBrowser({
     );
   }, [modulesForUi, q]);
 
-  const isFreeModule = useCallback(
-    (m: ModuleCardDTO) => getModuleDailyUsageBadge(m.slug, m.groupId)?.tone === "free",
+  const isFreeMenuModule = useCallback(
+    (m: ModuleCardDTO) => FREE_MENU_CATALOG_SLUG_SET.has(m.slug),
     [],
   );
 
-  const freeModules = useMemo(() => rows.filter((m) => isFreeModule(m)), [isFreeModule, rows]);
+  const freeModules = useMemo(() => {
+    const bySlug = new Map(rows.filter((m) => isFreeMenuModule(m)).map((m) => [m.slug, m]));
+    const ordered: ModuleCardDTO[] = [];
+    for (const slug of FREE_MENU_CATALOG_SLUGS) {
+      const m = bySlug.get(slug);
+      if (m) ordered.push(m);
+    }
+    return ordered;
+  }, [isFreeMenuModule, rows]);
 
   const groupIds = useMemo(
     () =>
-      Array.from(new Set(rows.filter((m) => !isFreeModule(m)).map((m) => m.groupId))).sort((a, b) => a - b),
-    [isFreeModule, rows],
+      Array.from(new Set(rows.filter((m) => !isFreeMenuModule(m)).map((m) => m.groupId))).sort(
+        (a, b) => a - b,
+      ),
+    [isFreeMenuModule, rows],
   );
 
-  const featuredModules = useMemo(() => {
-    if (rows.length === 0) return [];
-    const bySlug = new Map(rows.map((m) => [m.slug, m]));
-    const picked: ModuleCardDTO[] = [];
-    for (const slug of FEATURED_CATALOG_SLUGS) {
-      const m = bySlug.get(slug);
-      if (m) picked.push(m);
-    }
-    return picked;
-  }, [rows]);
+  /** การ์ดฮีโร่ «แนะนำ» — ชุดเดียวกับเมนูฟรี */
+  const featuredModules = freeModules;
 
   const featuredSlugSet = useMemo(
     () => new Set(featuredModules.map((m) => m.slug)),
@@ -256,12 +263,12 @@ export function ModuleSubscriptionBrowser({
 
   const tabModules = useMemo(() => {
     if (catalogTab === "free") return freeModules;
-    let list = rows.filter((m) => m.groupId === catalogTab && !isFreeModule(m));
+    let list = rows.filter((m) => m.groupId === catalogTab && !isFreeMenuModule(m));
     if (featuredSlugSet.size > 0) {
       list = list.filter((m) => !featuredSlugSet.has(m.slug));
     }
     return list;
-  }, [catalogTab, featuredSlugSet, freeModules, isFreeModule, rows]);
+  }, [catalogTab, featuredSlugSet, freeModules, isFreeMenuModule, rows]);
 
   function activeCooldownUnlockIso(moduleId: string): string | null {
     const iso = cooldownUnlocks[moduleId];
@@ -418,7 +425,7 @@ export function ModuleSubscriptionBrowser({
             </button>
             {groupIds.map((gid) => {
               const active = catalogTab === gid;
-              const count = rows.filter((m) => m.groupId === gid && !isFreeModule(m)).length;
+              const count = rows.filter((m) => m.groupId === gid && !isFreeMenuModule(m)).length;
               const label = MODULE_GROUP_TIER_NAME[gid] ?? `กลุ่ม ${gid}`;
               return (
                 <button
@@ -466,7 +473,7 @@ export function ModuleSubscriptionBrowser({
       {q.trim().length === 0 && featuredModules.length > 0 ? (
         <section className="app-surface min-w-0 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-3.5 sm:p-5">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">ปัจจุบัน</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">แนะนำ</p>
             <span className="rounded-lg border border-white/70 bg-white/80 px-2 py-0.5 text-[10px] font-black text-[#2e2a58]">
               {featuredModules.length}
             </span>
@@ -475,7 +482,8 @@ export function ModuleSubscriptionBrowser({
             {featuredModules.map((m) => {
               const subscribed = savedSubscribedIds.has(m.id);
               const legacyTrialAccess = !subscribed && legacyTrialAccessIds.has(m.id);
-              const hasAccess = subscribed || legacyTrialAccess;
+              const tokenFree = getModuleDailyUsageBadge(m.slug, m.groupId)?.tone === "free";
+              const hasAccess = subscribed || legacyTrialAccess || Boolean(tokenFree);
               const unlocked = canAccessAppModule(access, { slug: m.slug, groupId: m.groupId });
               const cooldownIso = activeCooldownUnlockIso(m.id);
               const lockedByCooldown = !subscribed && cooldownIso !== null;
@@ -583,7 +591,8 @@ export function ModuleSubscriptionBrowser({
             {tabModules.map((m) => {
               const subscribed = savedSubscribedIds.has(m.id);
               const legacyTrialAccess = !subscribed && legacyTrialAccessIds.has(m.id);
-              const hasAccess = subscribed || legacyTrialAccess || isFreeModule(m);
+              const tokenFree = getModuleDailyUsageBadge(m.slug, m.groupId)?.tone === "free";
+              const hasAccess = subscribed || legacyTrialAccess || Boolean(tokenFree);
               const unlocked = canAccessAppModule(access, { slug: m.slug, groupId: m.groupId });
               const cooldownIso = activeCooldownUnlockIso(m.id);
               const lockedByCooldown = !subscribed && cooldownIso !== null;

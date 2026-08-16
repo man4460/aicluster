@@ -2,10 +2,13 @@
 
 import {
   AppCameraCaptureModal,
+  AppDashboardSection,
   AppGalleryCameraFileInputs,
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppSectionHeader,
+  appTemplateOutlineButtonClass,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
@@ -13,10 +16,13 @@ import { cn } from "@/lib/cn";
 import {
   attendanceCardClass,
   attendanceEmptyStateClass,
+  attendanceFilterChipClass,
   attendanceLabelClass,
   attendanceLabelMutedClass,
 } from "@/systems/attendance/attendance-ui";
-import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
+import { attendanceSectionRadiusClass } from "@/systems/attendance/lib/ui-tokens";
+import { AttendanceFaceEnrollModal } from "@/systems/attendance/components/AttendanceFaceEnrollModal";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 
 type ShiftSlot = { index: number; label: string };
 type Entry = {
@@ -26,6 +32,11 @@ type Entry = {
   isActive: boolean;
   rosterShiftIndex: number;
   photoUrl: string | null;
+  faceEnrolled: boolean;
+  faceEnrolledAt: string | null;
+  faceSampleCount: number;
+  fingerprintSlot: number | null;
+  fingerprintEnrolledAt: string | null;
 };
 
 async function uploadRosterPhoto(file: File): Promise<string> {
@@ -62,13 +73,38 @@ export function AttendanceRosterClient() {
   const [err, setErr] = useState<string | null>(null);
   const [listErr, setListErr] = useState<string | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [faceEnrollId, setFaceEnrollId] = useState<number | null>(null);
+  const [filterOpen, setFilterOpen] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [q, setQ] = useState("");
+
+  const filtersActive = statusFilter !== "all" || Boolean(q.trim());
+
+  const filteredEntries = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return entries.filter((e) => {
+      if (statusFilter === "active" && !e.isActive) return false;
+      if (statusFilter === "inactive" && e.isActive) return false;
+      if (!needle) return true;
+      return e.displayName.toLowerCase().includes(needle) || e.phone.includes(needle);
+    });
+  }, [entries, q, statusFilter]);
 
   const load = useCallback(async () => {
     setLoading(true);
     const res = await fetch("/api/attendance/owner/roster", { credentials: "include" });
     const j = (await res.json().catch(() => ({}))) as {
       shiftSlots?: ShiftSlot[];
-      entries?: Array<Entry & { photoUrl?: string | null }>;
+      entries?: Array<
+        Entry & {
+          photoUrl?: string | null;
+          faceEnrolled?: boolean;
+          faceEnrolledAt?: string | null;
+          faceSampleCount?: number;
+          fingerprintSlot?: number | null;
+          fingerprintEnrolledAt?: string | null;
+        }
+      >;
       error?: string;
     };
     if (res.ok) {
@@ -79,6 +115,11 @@ export function AttendanceRosterClient() {
         (j.entries ?? []).map((e) => ({
           ...e,
           photoUrl: e.photoUrl ?? null,
+          faceEnrolled: Boolean(e.faceEnrolled),
+          faceEnrolledAt: e.faceEnrolledAt ?? null,
+          faceSampleCount: e.faceSampleCount ?? 0,
+          fingerprintSlot: e.fingerprintSlot ?? null,
+          fingerprintEnrolledAt: e.fingerprintEnrolledAt ?? null,
         })),
       );
       setNewShiftIndex((prev) => (slots.length > 0 && prev >= slots.length ? 0 : prev));
@@ -268,7 +309,102 @@ export function AttendanceRosterClient() {
   const photoBusy = photoBusyTarget !== null;
 
   return (
-    <div className="space-y-6">
+    <AppDashboardSection tone="violet" className={cn(attendanceSectionRadiusClass, "space-y-4")}>
+      <AppSectionHeader
+        tone="violet"
+        title="รายชื่อพนักงาน"
+        description="เพิ่มชื่อ เบอร์โทร กะ · ลงทะเบียนใบหน้า / slot ลายนิ้วมือ"
+        className="flex flex-row items-start justify-between gap-3 sm:items-center"
+        actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
+        action={
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={() => setFilterOpen((v) => !v)}
+              aria-expanded={filterOpen}
+              aria-controls="attendance-roster-filter-panel"
+              aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+              title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+              className={cn(
+                appTemplateOutlineButtonClass,
+                "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 px-0 text-xs font-black text-[#4d47b6] sm:min-w-0 sm:px-3",
+                filterOpen && "border-[#5b61ff]/45 bg-[#ecebff]/90 ring-2 ring-[#5b61ff]/20",
+                filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
+              )}
+            >
+              <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="M3 5h18M6 12h12M10 19h4" strokeLinecap="round" />
+              </svg>
+              <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+              {filtersActive ? (
+                <span
+                  className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-[#5b61ff] via-[#8b5cf6] to-[#ec4899] ring-2 ring-white"
+                  aria-hidden
+                />
+              ) : null}
+            </button>
+            <button
+              type="button"
+              onClick={openAddModal}
+              disabled={Boolean(listErr) || shiftSlots.length === 0}
+              aria-label="เพิ่มรายชื่อ"
+              className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-[1rem] px-0 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-0 sm:px-4"
+            >
+              <span className="sm:hidden">+</span>
+              <span className="hidden sm:inline">+ เพิ่มรายชื่อ</span>
+            </button>
+          </div>
+        }
+      />
+
+      <div
+        id="attendance-roster-filter-panel"
+        className={cn("space-y-3", filterOpen ? "block" : "hidden")}
+      >
+        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="กรองสถานะรายชื่อ">
+          {(
+            [
+              { id: "all" as const, label: `ทั้งหมด (${entries.length})` },
+              { id: "active" as const, label: `ใช้งาน (${entries.filter((e) => e.isActive).length})` },
+              { id: "inactive" as const, label: `ปิด (${entries.filter((e) => !e.isActive).length})` },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              role="tab"
+              aria-selected={statusFilter === opt.id}
+              className={attendanceFilterChipClass(statusFilter === opt.id)}
+              onClick={() => setStatusFilter(opt.id)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <input
+          className="min-h-[44px] w-full rounded-[1rem] border border-white/60 bg-white/80 px-3 py-2 text-sm text-[#2e2a58] outline-none backdrop-blur-sm focus:border-[#4d47b6]/50 focus:ring-2 focus:ring-[#5b61ff]/20"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="ค้นหาชื่อหรือเบอร์โทร"
+          aria-label="ค้นหารายชื่อ"
+        />
+        {filtersActive ? (
+          <p className="text-[11px] font-medium text-[#66638c]">
+            แสดง {filteredEntries.length}/{entries.length}
+            <button
+              type="button"
+              className="ml-2 font-bold text-[#4d47b6] underline"
+              onClick={() => {
+                setStatusFilter("all");
+                setQ("");
+              }}
+            >
+              ล้างกรอง
+            </button>
+          </p>
+        ) : null}
+      </div>
+
       <AppGalleryCameraFileInputs
         galleryInputRef={rosterGalleryInputRef}
         cameraInputRef={rosterCameraInputRef}
@@ -285,12 +421,22 @@ export function AttendanceRosterClient() {
         onRequestLegacyPicker={() => rosterCameraInputRef.current?.click()}
       />
       <AppImageLightbox src={lightbox.src} onClose={lightbox.close} />
+      {faceEnrollId != null ? (
+        <AttendanceFaceEnrollModal
+          open
+          entryId={faceEnrollId}
+          displayName={entries.find((e) => e.id === faceEnrollId)?.displayName ?? ""}
+          sampleCount={entries.find((e) => e.id === faceEnrollId)?.faceSampleCount ?? 0}
+          onClose={() => setFaceEnrollId(null)}
+          onSaved={() => void load()}
+        />
+      ) : null}
 
       {listErr ? (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">{listErr}</p>
+        <p className="rounded-[1rem] border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm font-semibold text-amber-950">{listErr}</p>
       ) : null}
       {!listErr && shiftSlots.length === 0 ? (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <p className="rounded-[1rem] border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm font-semibold text-amber-900">
           ยังไม่มีกะในระบบ — ไปที่{" "}
           <a href="/dashboard/attendance/settings" className="font-semibold underline">
             ตั้งค่าเช็คอิน
@@ -298,17 +444,6 @@ export function AttendanceRosterClient() {
           แล้วบันทึกอย่างน้อยหนึ่งช่วงเวลากะ
         </p>
       ) : null}
-
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={openAddModal}
-          disabled={Boolean(listErr) || shiftSlots.length === 0}
-          className="app-btn-primary rounded-xl px-5 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          เพิ่มรายชื่อ
-        </button>
-      </div>
 
       <FormModal
         open={addModalOpen}
@@ -409,9 +544,11 @@ export function AttendanceRosterClient() {
             ยังไม่มีรายชื่อ — กดปุ่ม <span className="font-semibold text-[#66638c]">เพิ่มรายชื่อ</span>{" "}
             แล้วกรอกเบอร์พนักงานและกะที่ปฏิบัติงานเพื่อใช้กับ QR / ลิงก์สาธารณะ
           </p>
+        ) : filteredEntries.length === 0 ? (
+          <p className={attendanceEmptyStateClass}>ไม่พบรายชื่อตามเงื่อนไขกรอง</p>
         ) : (
-          <ul className="flex flex-col gap-1.5 sm:gap-2" aria-label="รายชื่อพนักงานในระบบ">
-            {entries.map((r) => (
+          <ul className="flex flex-col gap-2.5 sm:gap-3" aria-label="รายชื่อพนักงานในระบบ">
+            {filteredEntries.map((r) => (
               <li key={r.id} className={attendanceCardClass}>
                 <div className="flex gap-2 sm:gap-2.5">
                   <AppImageThumb
@@ -445,6 +582,75 @@ export function AttendanceRosterClient() {
                       >
                         {r.isActive ? "ใช้งาน" : "ปิดชั่วคราว"}
                       </button>
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-dashed border-[#e8e6fc] pt-1.5">
+                      <span className={cn("shrink-0 tracking-wide", attendanceLabelMutedClass)}>ใบหน้า</span>
+                      <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5">
+                        <span
+                          className={
+                            r.faceEnrolled
+                              ? "rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-900"
+                              : "rounded-md bg-[#f4f2ff] px-2 py-0.5 text-[10px] font-semibold text-[#66638c]"
+                          }
+                        >
+                          {r.faceEnrolled
+                            ? `ลงทะเบียนแล้ว${r.faceSampleCount > 0 ? ` · ${r.faceSampleCount} มุม` : ""}`
+                            : "ยังไม่ลงทะเบียน"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setFaceEnrollId(r.id)}
+                          className="min-h-[36px] shrink-0 rounded-lg border border-[#d8d6ec] bg-white px-2.5 text-[11px] font-bold text-[#4d47b6]"
+                        >
+                          {r.faceEnrolled ? "แก้ใบหน้า" : "ลงทะเบียนใบหน้า"}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap items-end justify-between gap-x-2 gap-y-1 border-t border-dashed border-[#e8e6fc] pt-1.5">
+                      <label className={cn("min-w-0 flex-1", attendanceLabelMutedClass)}>
+                        ลายนิ้วมือ (slot ESP32)
+                        <input
+                          type="number"
+                          min={1}
+                          max={1000}
+                          placeholder="เช่น 3"
+                          defaultValue={r.fingerprintSlot ?? ""}
+                          key={`fp-${r.id}-${r.fingerprintSlot ?? "x"}`}
+                          className="app-input mt-0.5 block w-full min-h-[36px] max-w-[8rem] rounded-lg px-2 py-1 text-xs"
+                          onBlur={(e) => {
+                            const raw = e.target.value.trim();
+                            const next = raw === "" ? null : Number(raw);
+                            if (next === r.fingerprintSlot) return;
+                            if (next != null && (!Number.isInteger(next) || next < 1 || next > 1000)) {
+                              window.alert("slot ต้องเป็นจำนวนเต็ม 1–1000");
+                              e.target.value = r.fingerprintSlot != null ? String(r.fingerprintSlot) : "";
+                              return;
+                            }
+                            void (async () => {
+                              const res = await fetch(`/api/attendance/owner/roster/${r.id}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                credentials: "include",
+                                body: JSON.stringify({ fingerprintSlot: next }),
+                              });
+                              const j = (await res.json().catch(() => ({}))) as { error?: string };
+                              if (!res.ok) {
+                                window.alert(j.error ?? "บันทึก slot ไม่สำเร็จ");
+                                e.target.value = r.fingerprintSlot != null ? String(r.fingerprintSlot) : "";
+                                return;
+                              }
+                              await load();
+                            })();
+                          }}
+                        />
+                      </label>
+                      {r.fingerprintSlot != null ? (
+                        <span className="shrink-0 rounded-md bg-sky-100 px-2 py-0.5 text-[10px] font-semibold text-sky-900">
+                          slot {r.fingerprintSlot}
+                        </span>
+                      ) : (
+                        <span className="shrink-0 text-[10px] font-semibold text-[#66638c]">ยังไม่ผูก</span>
+                      )}
                     </div>
                     <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-dashed border-[#e8e6fc] pt-1.5">
                       <span className={cn("shrink-0 tracking-wide", attendanceLabelMutedClass)}>รูป</span>
@@ -503,7 +709,7 @@ export function AttendanceRosterClient() {
           </ul>
         )}
       </div>
-    </div>
+    </AppDashboardSection>
   );
 }
 

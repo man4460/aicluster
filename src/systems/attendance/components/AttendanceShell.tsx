@@ -21,11 +21,9 @@ import {
   attendanceAccentBarClass,
   attendanceGlassShellClass,
   attendanceMainPaddingBottomClass,
-  attendanceModuleIconBadgeClass,
   attendanceNavActiveClass,
   attendanceNavIdleClass,
 } from "@/systems/attendance/lib/ui-tokens";
-import { AttendanceHeaderBarNav } from "@/systems/attendance/components/AttendanceHeaderBarNav";
 
 type AttendanceNavKeyIcon = AttendanceNavKey;
 
@@ -123,11 +121,11 @@ function TabLink({
 
 function HeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
       {collapsed ? (
-        <path d="M6 9l6-6 6 6" />
+        <path d="M4 8h16M4 12h16M4 16h10" strokeLinecap="round" />
       ) : (
-        <path d="M6 15l6 6 6-6" />
+        <path d="M4 6h16M4 12h16M4 18h10" strokeLinecap="round" />
       )}
     </svg>
   );
@@ -196,7 +194,7 @@ const guideSections = [
 export function AttendanceShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
-  const [headerCollapsed, setHeaderCollapsed] = useState(readAttendanceHeaderCollapsed());
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
 
   useEffect(() => {
     const sync = () => setHeaderCollapsed(readAttendanceHeaderCollapsed());
@@ -218,13 +216,6 @@ export function AttendanceShell({ children }: { children: React.ReactNode }) {
   return (
     <AttendanceMobileBottomProvider>
       <div className="flex min-h-0 max-w-full flex-1 flex-col gap-4 sm:gap-6">
-        {headerCollapsed ? (
-          <div className="sticky top-0 z-40 print:hidden">
-            <div className={cn("mx-auto flex max-w-full items-center gap-2 rounded-2xl px-2 py-2 sm:rounded-3xl sm:px-3 sm:py-2.5", appDashboardBrandGradientFillClass)}>
-              <AttendanceHeaderBarNav onExpand={toggleHeaderCollapse} />
-            </div>
-          </div>
-        ) : null}
         <header
           className={cn(
             attendanceGlassShellClass,
@@ -235,8 +226,13 @@ export function AttendanceShell({ children }: { children: React.ReactNode }) {
           <div className={attendanceAccentBarClass} aria-hidden />
           <div className="mt-5 flex flex-wrap items-start justify-between gap-3 gap-y-2">
             <div className="flex min-w-0 items-start gap-3">
-              <div className={attendanceModuleIconBadgeClass}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <div
+                className={cn(
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg shadow-fuchsia-500/20",
+                  appDashboardBrandGradientFillClass,
+                )}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <circle cx="12" cy="12" r="9" />
                   <path d="M12 7v5l3 2" />
                 </svg>
@@ -274,7 +270,7 @@ export function AttendanceShell({ children }: { children: React.ReactNode }) {
                 title="ซ่อนส่วนหัวโมดูล"
                 suppressHydrationWarning
               >
-                <HeaderCollapseGlyph collapsed={headerCollapsed} />
+                <HeaderCollapseGlyph collapsed={false} />
               </button>
             </div>
           </div>
@@ -301,7 +297,7 @@ export function AttendanceShell({ children }: { children: React.ReactNode }) {
         {inManageGroup ? (
           <nav
             aria-label="เมนูย่อยจัดการเช็คอิน"
-            className="overflow-hidden rounded-[2rem] border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/25 to-violet-100/20 p-3 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.25),inset_0_1px_0_0_rgba(255,255,255,0.55)] backdrop-blur-2xl ring-1 ring-inset ring-white/55 sm:p-4"
+            className={cn(attendanceGlassShellClass, "p-3 sm:p-4")}
           >
             <ul className="grid grid-cols-3 gap-2">
               {manageSubLinks.map((item) => {
@@ -312,9 +308,7 @@ export function AttendanceShell({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       className={cn(
                         "flex min-h-[42px] items-center justify-center rounded-xl px-3 text-xs font-bold transition sm:text-sm",
-                        active
-                          ? attendanceNavActiveClass
-                          : attendanceNavIdleClass,
+                        active ? attendanceNavActiveClass : attendanceNavIdleClass,
                       )}
                       aria-current={active ? "page" : undefined}
                     >

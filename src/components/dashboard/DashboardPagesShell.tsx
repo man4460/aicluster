@@ -17,7 +17,7 @@ const STAFF_KIOSK_PATHS = [
   LAUNDRY_STAFF_KIOSK_PATH,
 ] as const;
 
-/** Module paths ที่ขยายเต็มความกว้างหน้าจอ (size=full + max-w-none) */
+/** Module paths ที่ขยายเต็มความกว้างหน้าจอ (size=full + max-w-none + !px-0) */
 const WIDE_MODULE_PREFIXES = [
   "/dashboard/football-turf",
   "/dashboard/drink-pos",
@@ -26,6 +26,8 @@ const WIDE_MODULE_PREFIXES = [
   "/dashboard/barber",
   "/dashboard/admin",
   "/dashboard/car-wash",
+  "/dashboard/laundry",
+  "/dashboard/massage",
   "/dashboard/spa",
   "/dashboard/rental",
   "/dashboard/refill",
@@ -57,7 +59,7 @@ const WIDE_MODULE_PREFIXES = [
   "/dashboard/vault",
 ] as const;
 
-/** Module paths ที่มี bottom dock — เพิ่ม gutter px-3 มือถือ ไม่ให้ซ้อนกับ padding ชั้นใน shell */
+/** Module paths ที่มี bottom dock — บังคับ !px-0 (ซ้ำกับ WIDE ได้ — กันพลาด) */
 const DOCKED_MODULE_PREFIXES = [
   "/dashboard/laundry",
   "/dashboard/massage",
@@ -111,16 +113,19 @@ export function DashboardPagesShell({ children }: { children: React.ReactNode })
       className={cn(
         "flex min-h-0 flex-1 flex-col",
         staffKiosk && "!mx-0 !max-w-none !w-full !px-0 !py-0",
-        basicWidePages && "max-w-[1680px] lg:!px-8",
         /**
-         * โมดูลเต็มความกว้าง — มือถือ/เดสก์ท็อปไม่ซ้อน px กับ DashboardShell
+         * หน้าบ้าน / modules / โปรไฟล์ / แพ็ก / แชท — !px-0 ทุก breakpoint
+         * ขอบนอก = DashboardShell เดียวกับแถบ header ม่วง (max-w-[1680px] คอยจำกัดความกว้าง)
+         */
+        basicWidePages && "max-w-[1680px] !px-0",
+        /**
+         * โมดูลเต็มความกว้าง — ไม่ซ้อน px กับ DashboardShell
          * (Shell = px-3 sm:px-4 เดียวกับ wrapper ของแถบ header ม่วง)
          */
         wideModule && "max-w-none !px-0",
-        dockedModule && "max-md:!px-0 sm:!px-0",
+        dockedModule && "!px-0",
         posOrderDesktopFill && "lg:min-h-0 lg:overflow-hidden lg:!pt-2 lg:!pb-3",
-        dashboardModules && "max-w-[1680px] lg:!px-8",
-        dashboardHome && "max-w-[1680px] lg:!px-8",
+        (dashboardModules || dashboardHome) && "max-w-[1680px]",
       )}
     >
       {children}

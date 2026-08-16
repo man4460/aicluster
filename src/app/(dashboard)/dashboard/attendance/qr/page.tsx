@@ -39,7 +39,7 @@ export default async function AttendanceQrPage() {
       <AppSectionHeader
         tone="violet"
         title="QR จุดเช็คอิน"
-        description="คัดลอกลิงก์หรือดาวน์โหลดโปสเตอร์ — ชื่อและโลโก้มาจากหน้าโปรไฟล์"
+        description="คัดลอกลิงก์หรือดาวน์โหลดโปสเตอร์ — มีทั้ง QR แบบเดิมและ QR สแกนใบหน้าสำหรับ iPad"
       />
       {locations.length === 0 ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -57,15 +57,33 @@ export default async function AttendanceQrPage() {
               className="space-y-4 rounded-[2rem] border border-[#e8e6fc]/80 bg-white/80 p-4 shadow-sm backdrop-blur-sm sm:p-5"
             >
               <h3 className="text-base font-bold tracking-tight text-[#2e2a58]">{loc.name.trim() || `จุดเช็ค #${loc.id}`}</h3>
-              <AttendanceQrPosterClient
-                ownerId={session.sub}
-                sandboxTrialSessionId={scope.isTrialSandbox ? scope.trialSessionId : null}
-                orgLabel={orgLabel}
-                logoUrl={profile?.logoUrl?.trim() || null}
-                baseUrl={baseUrl}
-                locationId={loc.id}
-                locationName={loc.name}
-              />
+              <div className="space-y-6">
+                <div>
+                  <p className="mb-2 text-xs font-bold text-[#66638c]">QR แบบเดิม (เบอร์ / บุคคลภายนอก)</p>
+                  <AttendanceQrPosterClient
+                    ownerId={session.sub}
+                    sandboxTrialSessionId={scope.isTrialSandbox ? scope.trialSessionId : null}
+                    orgLabel={orgLabel}
+                    logoUrl={profile?.logoUrl?.trim() || null}
+                    baseUrl={baseUrl}
+                    locationId={loc.id}
+                    locationName={loc.name}
+                  />
+                </div>
+                <div>
+                  <p className="mb-2 text-xs font-bold text-emerald-800">QR สแกนใบหน้า (วาง iPad ที่จุด)</p>
+                  <AttendanceQrPosterClient
+                    ownerId={session.sub}
+                    sandboxTrialSessionId={scope.isTrialSandbox ? scope.trialSessionId : null}
+                    orgLabel={orgLabel}
+                    logoUrl={profile?.logoUrl?.trim() || null}
+                    baseUrl={baseUrl}
+                    locationId={loc.id}
+                    locationName={loc.name}
+                    faceKiosk
+                  />
+                </div>
+              </div>
             </section>
           ))}
         </div>

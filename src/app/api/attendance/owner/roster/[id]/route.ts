@@ -4,6 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { isValidRosterPhotoUrl } from "@/lib/attendance/roster-photo-url";
+import {
+  FACE_ENROLL_MAX_SAMPLES,
+  findDuplicateFaceOwner,
+  mergeFaceDescriptorSamples,
+  parseFaceDescriptorBank,
+  serializeFaceDescriptorBank,
+  type FaceMatchCandidate,
+} from "@/lib/attendance/face-descriptor";
 import { clampShiftIndex } from "@/lib/attendance/shift";
 import {
   isPrismaClientValidationSyncError,
@@ -16,11 +24,23 @@ import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
 
 type Ctx = { params: Promise<{ id: string }> };
 
+const faceSampleSchema = z.array(z.number().finite()).length(128);
+
 const patchSchema = z.object({
   displayName: z.string().trim().min(1).max(100).optional(),
   isActive: z.boolean().optional(),
   rosterShiftIndex: z.number().int().min(0).max(4).optional(),
   photoUrl: z.union([z.string().max(512), z.null()]).optional(),
+  /** null = ลบใบหน้า · number[128] = ตัวอย่างเดียว · หรือส่ง faceDescriptors แทน */
+  faceDescriptor: z.union([faceSampleSchema, z.null()]).optional(),
+  /** หลายตัวอย่าง (แนะนำ) */
+  faceDescriptors: z.array(faceSampleSchema).min(1).max(FACE_ENROLL_MAX_SAMPLES).optional(),
+  /** true = เพิ่มมุมใบหน้าเข้าไปในชุดเดิม (ไม่ทับ) */
+  appendFace: z.boolean().optional(),
+  /** true = ยอมรับแม้ใบหน้าใกล้กับพนักงานคนอื่น (เช่น ฝาแฝด) */
+  allowDuplicateFace: z.boolean().optional(),
+  /** null = ลบ · 1–1000 = slot บนเซ็นเซอร์ ESP32 */
+  fingerprintSlot: z.union([z.number().int().min(1).max(1000), z.null()]).optional(),
 });
 
 function parseId(s: string): number | null {
@@ -92,12 +112,105 @@ export async function PATCH(req: Request, ctx: Ctx) {
     isActive?: boolean;
     rosterShiftIndex?: number;
     photoUrl?: string | null;
+    faceDescriptorJson?: string | null;
+    faceEnrolledAt?: Date | null;
+    fingerprintSlot?: number | null;
+    fingerprintEnrolledAt?: Date | null;
   } = {
     ...(parsed.data.displayName !== undefined ? { displayName: parsed.data.displayName } : {}),
     ...(parsed.data.isActive !== undefined ? { isActive: parsed.data.isActive } : {}),
     ...(parsed.data.rosterShiftIndex !== undefined ? { rosterShiftIndex: nextRosterShiftIndex } : {}),
     ...(nextPhotoUrl !== undefined ? { photoUrl: nextPhotoUrl } : {}),
   };
+
+  if (parsed.data.faceDescriptor !== undefined || parsed.data.faceDescriptors !== undefined) {
+    if (parsed.data.faceDescriptor === null && !parsed.data.faceDescriptors) {
+      data.faceDescriptorJson = null;
+      data.faceEnrolledAt = null;
+    } else {
+      const incoming = parsed.data.faceDescriptors?.length
+        ? parsed.data.faceDescriptors
+        : parsed.data.faceDescriptor
+          ? [parsed.data.faceDescriptor]
+          : [];
+      if (incoming.length === 0) {
+        return NextResponse.json({ error: "ข้อมูลใบหน้าไม่ถูกต้อง" }, { status: 400 });
+      }
+
+      // กันลงทะเบียนใบหน้าคนเดียวกันให้พนักงานสองคน (จับคู่ผิดคนตอนเช็คอิน)
+      if (!parsed.data.allowDuplicateFace) {
+        const others = await prisma.attendanceRosterEntry.findMany({
+          where: {
+            ownerUserId: mod.billingUserId,
+            trialSessionId: scope.trialSessionId,
+            faceDescriptorJson: { not: null },
+            NOT: { id },
+          },
+          select: { id: true, displayName: true, phone: true, faceDescriptorJson: true },
+          take: 2500,
+        });
+        const candidates: FaceMatchCandidate[] = [];
+        for (const row of others) {
+          const descriptors = parseFaceDescriptorBank(row.faceDescriptorJson);
+          if (!descriptors?.length) continue;
+          candidates.push({
+            id: row.id,
+            displayName: row.displayName,
+            phone: row.phone,
+            descriptors,
+          });
+        }
+        for (const sample of incoming) {
+          const dup = findDuplicateFaceOwner(sample, candidates);
+          if (dup) {
+            return NextResponse.json(
+              {
+                error: `ใบหน้านี้ใกล้กับ ${dup.entry.displayName} ที่ลงทะเบียนไว้แล้ว — ตรวจสอบว่าถ่ายถูกคน`,
+                duplicateOf: { id: dup.entry.id, displayName: dup.entry.displayName },
+              },
+              { status: 409 },
+            );
+          }
+        }
+      }
+
+      try {
+        const existingBank = parsed.data.appendFace
+          ? (parseFaceDescriptorBank(existing.faceDescriptorJson) ?? [])
+          : [];
+        const merged = mergeFaceDescriptorSamples(existingBank, incoming);
+        data.faceDescriptorJson = serializeFaceDescriptorBank(merged);
+        data.faceEnrolledAt = new Date();
+      } catch {
+        return NextResponse.json({ error: "ข้อมูลใบหน้าไม่ถูกต้อง" }, { status: 400 });
+      }
+    }
+  }
+
+  if (parsed.data.fingerprintSlot !== undefined) {
+    if (parsed.data.fingerprintSlot === null) {
+      data.fingerprintSlot = null;
+      data.fingerprintEnrolledAt = null;
+    } else {
+      const clash = await prisma.attendanceRosterEntry.findFirst({
+        where: {
+          ownerUserId: mod.billingUserId,
+          trialSessionId: scope.trialSessionId,
+          fingerprintSlot: parsed.data.fingerprintSlot,
+          NOT: { id },
+        },
+        select: { id: true, displayName: true },
+      });
+      if (clash) {
+        return NextResponse.json(
+          { error: `ลายนิ้วมือ slot ${parsed.data.fingerprintSlot} ถูกใช้โดย ${clash.displayName} แล้ว` },
+          { status: 409 },
+        );
+      }
+      data.fingerprintSlot = parsed.data.fingerprintSlot;
+      data.fingerprintEnrolledAt = new Date();
+    }
+  }
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "ไม่มีฟิลด์ที่อัปเดต" }, { status: 400 });
@@ -117,6 +230,11 @@ export async function PATCH(req: Request, ctx: Ctx) {
         isActive: row.isActive,
         rosterShiftIndex: row.rosterShiftIndex,
         photoUrl: row.photoUrl ?? null,
+        faceEnrolled: Boolean(row.faceDescriptorJson),
+        faceEnrolledAt: row.faceEnrolledAt?.toISOString() ?? null,
+        faceSampleCount: parseFaceDescriptorBank(row.faceDescriptorJson)?.length ?? 0,
+        fingerprintSlot: row.fingerprintSlot ?? null,
+        fingerprintEnrolledAt: row.fingerprintEnrolledAt?.toISOString() ?? null,
       },
     });
   } catch (e) {

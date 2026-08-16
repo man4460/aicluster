@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { distanceMeters } from "@/lib/geo/haversine";
 import { attendanceStepBoxClass } from "@/systems/attendance/attendance-ui";
+import {
+  captureMultiFrameDescriptor,
+  extractFaceDescriptorFromBlob,
+  preloadAttendanceFaceModels,
+} from "@/systems/attendance/lib/face-api-client";
 
 const statusTh: Record<string, string> = {
   AWAITING_CHECKOUT: "รอเช็คออก",
@@ -72,9 +77,16 @@ type Props =
       /** จุดเช็คจาก ?loc= — ส่งต่อ API */
       publicLocationId: number | null;
       locationLabel?: string | null;
+      /** เปิดทางเลือกสแกนใบหน้า (ตั้งค่าโดยเจ้าของ) */
+      faceCheckInEnabled?: boolean;
+      /**
+       * ลิงก์แยกโหมด iPad (`/check-in/.../face`) — เฉพาะสแกนใบหน้า
+       * หน้า `/check-in/...` หลักยังใช้วิธีเดิม (เบอร์ / ภายนอก)
+       */
+      kioskFaceOnly?: boolean;
     };
 
-type PublicFlow = "pick" | "staff" | "external";
+type PublicFlow = "pick" | "staff" | "external" | "face";
 
 const stepBox = attendanceStepBoxClass;
 
@@ -179,7 +191,11 @@ export function AttendanceCheckClient(props: Props) {
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
+        video: {
+          facingMode: "user",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
         audio: false,
       });
       streamRef.current = stream;
@@ -189,32 +205,53 @@ export function AttendanceCheckClient(props: Props) {
     }
   }
 
+  function grabFaceBlobFromCamera(): Promise<File | null> {
+    return new Promise((resolve) => {
+      const video = videoRef.current;
+      const stream = streamRef.current;
+      if (!video || !stream) {
+        resolve(null);
+        return;
+      }
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+      if (!w || !h) {
+        resolve(null);
+        return;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(null);
+        return;
+      }
+      ctx.drawImage(video, 0, 0);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(null);
+            return;
+          }
+          resolve(new File([blob], "face.jpg", { type: "image/jpeg" }));
+        },
+        "image/jpeg",
+        0.92,
+      );
+    });
+  }
+
   function captureFromCamera() {
-    const video = videoRef.current;
-    const stream = streamRef.current;
-    if (!video || !stream) return;
-    const w = video.videoWidth;
-    const h = video.videoHeight;
-    if (!w || !h) {
-      setErr("รอให้ภาพจากกล้องพร้อมแล้วลองอีกครั้ง");
-      return;
-    }
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.drawImage(video, 0, 0);
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) return;
-        stopFaceStream();
-        setCameraActive(false);
-        setFaceFile(new File([blob], "face.jpg", { type: "image/jpeg" }));
-      },
-      "image/jpeg",
-      0.92,
-    );
+    void grabFaceBlobFromCamera().then((file) => {
+      if (!file) {
+        setErr("รอให้ภาพจากกล้องพร้อมแล้วลองอีกครั้ง");
+        return;
+      }
+      stopFaceStream();
+      setCameraActive(false);
+      setFaceFile(file);
+    });
   }
 
   function cancelFaceCamera() {
@@ -243,6 +280,8 @@ export function AttendanceCheckClient(props: Props) {
   const [dataConsent, setDataConsent] = useState(false);
 
   const isPublic = props.mode === "public";
+  const kioskFaceOnly = Boolean(isPublic && props.kioskFaceOnly);
+  const faceEnabled = Boolean(isPublic && props.faceCheckInEnabled);
   const centerLat = isPublic ? props.geofence.lat : null;
   const centerLng = isPublic ? props.geofence.lng : null;
   const radius = isPublic ? props.geofence.radiusMeters : null;
@@ -347,6 +386,12 @@ export function AttendanceCheckClient(props: Props) {
   }, []);
 
   useEffect(() => {
+    if (!successBanner) return;
+    const t = window.setTimeout(() => setSuccessBanner(null), 4500);
+    return () => window.clearTimeout(t);
+  }, [successBanner]);
+
+  useEffect(() => {
     if (!isPublic) void loadStateSession();
   }, [isPublic, loadStateSession]);
 
@@ -368,6 +413,140 @@ export function AttendanceCheckClient(props: Props) {
     });
   }
 
+  /** สแกนใบหน้าสาธารณะ — ถ่ายแล้วระบุตัวตน + เช็คอินในขั้นตอนเดียว */
+  async function submitPublicFaceCheckIn(
+    file: File,
+    precomputedDescriptor?: number[],
+    precomputedSamples?: number[][],
+  ) {
+    if (props.mode !== "public") return;
+    setErr(null);
+    setMsg("กำลังระบุตัวตนและบันทึกเช็คอิน…");
+    setBusy(true);
+    try {
+      const pos = await getFreshPosition();
+      if (!pos) {
+        setErr("ไม่ได้รับพิกัด — อนุญาตการเข้าถึงตำแหน่งแล้วลองใหม่");
+        void startFaceCamera();
+        return;
+      }
+      if (isPublic && centerLat != null && centerLng != null && radius != null) {
+        const d = distanceMeters(centerLat, centerLng, pos.lat, pos.lng);
+        if (d > radius) {
+          setErr(`อยู่นอกรัศมีจุดเช็ค (~${Math.round(d)} ม. จากจุดที่ตั้งไว้ สูงสุด ${radius} ม.)`);
+          void startFaceCamera();
+          return;
+        }
+        setGeo({ ok: true, lat: pos.lat, lng: pos.lng, distance: d });
+      } else {
+        setGeo({ ok: true, lat: pos.lat, lng: pos.lng, distance: null });
+      }
+
+      let descriptor = precomputedDescriptor;
+      if (!descriptor) {
+        setMsg("กำลังวิเคราะห์ใบหน้าหลายเฟรม…");
+        const extracted = await extractFaceDescriptorFromBlob(file);
+        if (!extracted.ok) {
+          setErr(extracted.error);
+          void startFaceCamera();
+          return;
+        }
+        descriptor = extracted.descriptor;
+      }
+      const fd = new FormData();
+      fd.set("ownerId", props.ownerId);
+      fd.set("latitude", String(pos.lat));
+      fd.set("longitude", String(pos.lng));
+      fd.set("descriptor", JSON.stringify(descriptor));
+      if (precomputedSamples && precomputedSamples.length >= 2) {
+        fd.set("descriptors", JSON.stringify(precomputedSamples));
+      }
+      fd.set("face", file, file.name || "face.jpg");
+      if (props.publicLocationId != null && props.publicLocationId > 0) {
+        fd.set("locationId", String(props.publicLocationId));
+      }
+      const pubTid = props.sandboxTrialSessionId?.trim();
+      if (pubTid) fd.set("trialSessionId", pubTid);
+      const res = await fetch("/api/attendance/public/face-check-in", {
+        method: "POST",
+        body: fd,
+      });
+      const j = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        matched?: { displayName?: string };
+      };
+      if (!res.ok) {
+        setErr(j.error ?? "บันทึกไม่สำเร็จ");
+        void startFaceCamera();
+        return;
+      }
+      clearFaceCapture();
+      setDataConsent(false);
+      setErr(null);
+      setMsg(null);
+      setPhone("");
+      setGuestName("");
+      setPublicFlow("pick");
+      setGeo(initialAttendanceGeoState());
+      setSuccessBanner(
+        j.matched?.displayName
+          ? `เช็คเข้าแล้ว · ${j.matched.displayName}`
+          : "เช็คเข้างานแล้ว (สแกนใบหน้า)",
+      );
+      await loadStatePublic();
+      setTimeout(() => scrollToCheckStep1(), 120);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function captureAndFaceCheckIn() {
+    setErr(null);
+    setMsg(null);
+    if (!cameraActive || !videoRef.current) {
+      setErr("กำลังเปิดกล้อง — รอสักครู่แล้วลองใหม่");
+      return;
+    }
+    setBusy(true);
+    setMsg("กำลังถ่ายหลายเฟรมเพื่อความแม่นยำ…");
+    try {
+      const multi = await captureMultiFrameDescriptor(videoRef.current, { frames: 4, gapMs: 240 });
+      if (!multi.ok) {
+        setErr(multi.error);
+        setMsg(null);
+        return;
+      }
+      const file = await grabFaceBlobFromCamera();
+      if (!file) {
+        setErr("รอให้ภาพจากกล้องพร้อมแล้วลองอีกครั้ง");
+        setMsg(null);
+        return;
+      }
+      stopFaceStream();
+      setCameraActive(false);
+      setFaceFile(file);
+      setDataConsent(true);
+      await submitPublicFaceCheckIn(file, multi.descriptor, multi.samples);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function beginFaceCheckInFlow() {
+    if (!kioskFaceOnly || !faceEnabled) return;
+    setPublicFlow("face");
+    setErr(null);
+    setMsg(null);
+    setSuccessBanner(null);
+    setGuestName("");
+    setPhone("");
+    setDataConsent(true);
+    clearFaceCapture();
+    void preloadAttendanceFaceModels().catch(() => {});
+    refreshGeo();
+    await startFaceCamera();
+  }
+
   async function onCheckIn() {
     setErr(null);
     setMsg(null);
@@ -383,49 +562,58 @@ export function AttendanceCheckClient(props: Props) {
         return;
       }
       if (isPublic) {
-        const digits = phone.replace(/\D/g, "");
-        if (digits.length < 9) {
-          setErr("กรอกเบอร์อย่างน้อย 9 หลัก");
+        if (publicFlow === "face") {
+          if (!faceFile) {
+            setErr("ต้องสแกนใบหน้าก่อนเช็คเข้า");
+            return;
+          }
+          await submitPublicFaceCheckIn(faceFile);
           return;
+        } else {
+          const digits = phone.replace(/\D/g, "");
+          if (digits.length < 9) {
+            setErr("กรอกเบอร์อย่างน้อย 9 หลัก");
+            return;
+          }
+          if (!faceFile) {
+            setErr("ต้องถ่ายรูปใบหน้าก่อนเช็คเข้า");
+            return;
+          }
+          const visitorKind = publicFlow === "staff" ? "ROSTER_STAFF" : "EXTERNAL_GUEST";
+          const fd = new FormData();
+          fd.set("ownerId", props.ownerId);
+          fd.set("phone", digits);
+          fd.set("name", guestName.trim());
+          fd.set("visitorKind", visitorKind);
+          fd.set("latitude", String(pos.lat));
+          fd.set("longitude", String(pos.lng));
+          fd.set("face", faceFile, faceFile.name || "face.jpg");
+          if (props.publicLocationId != null && props.publicLocationId > 0) {
+            fd.set("locationId", String(props.publicLocationId));
+          }
+          const pubTid = props.sandboxTrialSessionId?.trim();
+          if (pubTid) fd.set("trialSessionId", pubTid);
+          const res = await fetch("/api/attendance/public/check-in", {
+            method: "POST",
+            body: fd,
+          });
+          const j = (await res.json().catch(() => ({}))) as { error?: string };
+          if (!res.ok) {
+            setErr(j.error ?? "บันทึกไม่สำเร็จ");
+            return;
+          }
+          clearFaceCapture();
+          setDataConsent(false);
+          setErr(null);
+          setMsg(null);
+          setPhone("");
+          setGuestName("");
+          setPublicFlow("pick");
+          setGeo(initialAttendanceGeoState());
+          setSuccessBanner("เช็คเข้างานแล้ว");
+          await loadStatePublic();
+          setTimeout(() => scrollToCheckStep1(), 120);
         }
-        if (!faceFile) {
-          setErr("ต้องถ่ายรูปใบหน้าก่อนเช็คเข้า");
-          return;
-        }
-        const visitorKind = publicFlow === "staff" ? "ROSTER_STAFF" : "EXTERNAL_GUEST";
-        const fd = new FormData();
-        fd.set("ownerId", props.ownerId);
-        fd.set("phone", digits);
-        fd.set("name", guestName.trim());
-        fd.set("visitorKind", visitorKind);
-        fd.set("latitude", String(pos.lat));
-        fd.set("longitude", String(pos.lng));
-        fd.set("face", faceFile, faceFile.name || "face.jpg");
-        if (props.publicLocationId != null && props.publicLocationId > 0) {
-          fd.set("locationId", String(props.publicLocationId));
-        }
-        const pubTid = props.sandboxTrialSessionId?.trim();
-        if (pubTid) fd.set("trialSessionId", pubTid);
-        const res = await fetch("/api/attendance/public/check-in", {
-          method: "POST",
-          body: fd,
-        });
-        const j = (await res.json().catch(() => ({}))) as { error?: string };
-        if (!res.ok) {
-          setErr(j.error ?? "บันทึกไม่สำเร็จ");
-          return;
-        }
-        clearFaceCapture();
-        setDataConsent(false);
-        setErr(null);
-        setMsg(null);
-        setPhone("");
-        setGuestName("");
-        setPublicFlow("pick");
-        setGeo(initialAttendanceGeoState());
-        setSuccessBanner("เช็คเข้างานแล้ว");
-        await loadStatePublic();
-        setTimeout(() => scrollToCheckStep1(), 120);
       } else {
         if (!faceFile) {
           setErr("ต้องถ่ายรูปใบหน้าก่อนเช็คเข้า");
@@ -518,7 +706,8 @@ export function AttendanceCheckClient(props: Props) {
     }
   }
 
-  const showFaceCapture = !isPublic || publicFlow === "staff" || publicFlow === "external";
+  const showFaceCapture =
+    !isPublic || publicFlow === "staff" || publicFlow === "external";
   /** มีบันทึกเช็คเข้าค้าง — โฟกัสเช็คออก ไม่ต้องถ่ายรูป/ยินยอมใหม่ */
   const checkoutOnlyUi = !!openLog;
 
@@ -565,7 +754,7 @@ export function AttendanceCheckClient(props: Props) {
   }
   const canCheckOut = !!openLog;
 
-  const showAfterStep1 = !isPublic || publicFlow !== "pick";
+  const showAfterStep1 = !isPublic || (publicFlow !== "pick" && publicFlow !== "face");
 
   const phoneDigitsLen = phone.replace(/\D/g, "").length;
   const step1PublicFormDone =
@@ -650,40 +839,135 @@ export function AttendanceCheckClient(props: Props) {
       {isPublic ? (
         publicFlow === "pick" ? (
           <div className={stepBox} id={CHECK_STEP_1_ANCHOR_ID}>
-            <p className="text-sm font-semibold text-[#2e2a58]">ขั้นตอนที่ 1 · เลือกประเภทผู้เช็ค</p>
-            <p className="mt-1 text-xs text-[#66638c]">เลือกว่าเป็นพนักงานหรือบุคคลภายนอก</p>
-            <div className="mt-4 space-y-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setPublicFlow("staff");
-                  setErr(null);
-                  setMsg(null);
-                  setSuccessBanner(null);
-                  setGuestName("");
-                  setDataConsent(false);
-                  clearFaceCapture();
-                }}
-                className="min-h-[52px] w-full rounded-2xl bg-[#0000BF] py-3.5 text-base font-bold text-white shadow-md shadow-[#0000BF]/20"
-              >
-                พนักงาน — ยืนยันด้วยเบอร์ในรายชื่อ
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPublicFlow("external");
-                  setErr(null);
-                  setMsg(null);
-                  setSuccessBanner(null);
-                  setGuestName("");
-                  setDataConsent(false);
-                  clearFaceCapture();
-                }}
-                className="min-h-[52px] w-full rounded-2xl border-2 border-[#d8d6ec] bg-white py-3.5 text-base font-bold text-[#2e2a58]"
-              >
-                บุคคลภายนอก — กรอกข้อมูลอิสระ
-              </button>
+            {kioskFaceOnly ? (
+              faceEnabled ? (
+                <>
+                  <p className="text-center text-sm font-black tracking-tight text-[#1e1b4b]">
+                    จุดเช็คอิน · สแกนใบหน้า
+                  </p>
+                  <p className="mt-1 text-center text-xs font-medium text-[#66638c]">
+                    วาง iPad ไว้ที่จุดนี้ — พนักงานมากดปุ่มด้านล่างแล้วสแกนใบหน้าเพื่อเข้างาน
+                  </p>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void beginFaceCheckInFlow()}
+                    className="mt-5 flex min-h-[88px] w-full flex-col items-center justify-center gap-1 rounded-[1.5rem] bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 px-4 py-5 text-white shadow-[0_20px_40px_-18px_rgba(16,185,129,0.55)] transition active:scale-[0.99] disabled:opacity-50"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                      <circle cx="12" cy="9" r="3.2" />
+                      <path d="M5.5 19c1.4-3 3.7-4.5 6.5-4.5s5.1 1.5 6.5 4.5" strokeLinecap="round" />
+                      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                      <path d="M14 17h3v3" strokeLinecap="round" />
+                    </svg>
+                    <span className="text-xl font-black tracking-tight">สแกนใบหน้าเช็คอิน</span>
+                    <span className="text-[11px] font-semibold text-white/85">กดแล้วเปิดกล้องทันที</span>
+                  </button>
+                </>
+              ) : (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-950">
+                  ยังไม่ได้เปิดสแกนใบหน้าในตั้งค่า — ให้เจ้าของเปิด «เช็คอินด้วยสแกนใบหน้า» ก่อนใช้ลิงก์นี้
+                </p>
+              )
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-[#2e2a58]">ขั้นตอนที่ 1 · เลือกประเภทผู้เช็ค</p>
+                <p className="mt-1 text-xs text-[#66638c]">เลือกว่าเป็นพนักงานหรือบุคคลภายนอก</p>
+                <div className="mt-4 space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPublicFlow("staff");
+                      setErr(null);
+                      setMsg(null);
+                      setSuccessBanner(null);
+                      setGuestName("");
+                      setDataConsent(false);
+                      clearFaceCapture();
+                    }}
+                    className="min-h-[52px] w-full rounded-2xl bg-[#0000BF] py-3.5 text-base font-bold text-white shadow-md shadow-[#0000BF]/20"
+                  >
+                    พนักงาน — ยืนยันด้วยเบอร์ในรายชื่อ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPublicFlow("external");
+                      setErr(null);
+                      setMsg(null);
+                      setSuccessBanner(null);
+                      setGuestName("");
+                      setDataConsent(false);
+                      clearFaceCapture();
+                    }}
+                    className="min-h-[52px] w-full rounded-2xl border-2 border-[#d8d6ec] bg-white py-3.5 text-base font-bold text-[#2e2a58]"
+                  >
+                    บุคคลภายนอก — กรอกข้อมูลอิสระ
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : publicFlow === "face" ? (
+          <div className={stepBox} id={CHECK_STEP_1_ANCHOR_ID}>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                clearFaceCapture();
+                setPublicFlow("pick");
+                setErr(null);
+                setMsg(null);
+                setSuccessBanner(null);
+                setDataConsent(false);
+              }}
+              className="text-xs font-bold text-[#0000BF] hover:underline disabled:opacity-50"
+            >
+              ← กลับหน้าจุดเช็ค
+            </button>
+            <p className="mt-2 text-center text-sm font-black text-[#1e1b4b]">สแกนใบหน้าเพื่อเช็คอิน</p>
+            <p className="mt-1 text-center text-xs text-[#66638c]">
+              มองตรงกล้อง แล้วกดปุ่มเขียว — ระบบระบุตัวตนและบันทึกเข้างานทันที
+            </p>
+
+            <div className="mt-3 space-y-3 rounded-2xl border border-[#e8e6fc]/90 bg-black p-2">
+              {cameraActive ? (
+                <video
+                  ref={videoRef}
+                  className="mx-auto aspect-[3/4] w-full max-w-xs rounded-xl bg-black object-cover"
+                  playsInline
+                  muted
+                  autoPlay
+                />
+              ) : (
+                <div className="mx-auto flex aspect-[3/4] w-full max-w-xs items-center justify-center rounded-xl bg-black/80 px-4 text-center text-xs font-medium text-white/80">
+                  {busy ? "กำลังระบุตัวตน…" : "กำลังเปิดกล้อง…"}
+                </div>
+              )}
             </div>
+
+            <button
+              type="button"
+              disabled={busy || !cameraActive}
+              onClick={() => void captureAndFaceCheckIn()}
+              className="mt-4 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 text-base font-bold text-white shadow-md shadow-emerald-600/25 disabled:opacity-45"
+            >
+              {busy ? "กำลังเช็คอิน…" : "ถ่ายใบหน้าและเช็คอิน"}
+            </button>
+            {!cameraActive && !busy ? (
+              <button
+                type="button"
+                onClick={() => void startFaceCamera()}
+                className="mt-2 w-full rounded-xl border border-[#d8d6ec] bg-white py-2.5 text-sm font-bold text-[#4d47b6]"
+              >
+                เปิดกล้องอีกครั้ง
+              </button>
+            ) : null}
+            <p className="mt-3 text-[11px] leading-relaxed text-[#66638c]">
+              การกดเช็คอินถือว่ายินยอมให้เก็บพิกัด GPS รูปใบหน้า และเวลาเข้างานตามนโยบายองค์กร
+            </p>
           </div>
         ) : (
           <div className={stepBox} id={CHECK_STEP_1_ANCHOR_ID}>
@@ -800,11 +1084,15 @@ export function AttendanceCheckClient(props: Props) {
             <>
               <div className={stepBox}>
                 <div className="flex items-start justify-between gap-3">
-                  <p className="min-w-0 flex-1 text-sm font-semibold text-[#2e2a58]">ขั้นตอนที่ 3 · ถ่ายรูปใบหน้า</p>
+                  <p className="min-w-0 flex-1 text-sm font-semibold text-[#2e2a58]">
+                    {publicFlow === "face" ? "ขั้นตอนที่ 3 · สแกนใบหน้าเช็คอิน" : "ขั้นตอนที่ 3 · ถ่ายรูปใบหน้า"}
+                  </p>
                   <StepDoneMark done={step3FaceDone} label="ถ่ายรูปแล้ว" />
                 </div>
                 <p className="mt-1 text-xs text-[#66638c]">
-                  ถ่ายจากกล้องเท่านั้น — เปิดกล้องหน้า แล้วกดยืนยันถ่ายรูป
+                  {publicFlow === "face"
+                    ? "เปิดกล้องหน้า จัดใบหน้ากลางเฟรม แล้วกดยืนยัน — ระบบจะจดจำและเทียบกับรายชื่อ"
+                    : "ถ่ายจากกล้องเท่านั้น — เปิดกล้องหน้า แล้วกดยืนยันถ่ายรูป"}
                 </p>
                 {!facePreview ? (
                   cameraActive ? (

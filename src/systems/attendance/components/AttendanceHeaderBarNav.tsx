@@ -68,12 +68,13 @@ function navIcon(key: AttendanceNavKey, className?: string): ReactNode {
 
 function ExpandGlyph() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M6 15l6-6 6 6" />
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
+      <path d="M4 8h16M4 12h16M4 16h10" strokeLinecap="round" />
     </svg>
   );
 }
 
+/** ปุ่มขยายหัวโมดูล — มือถือใช้เมื่อซ่อนหัว (ไม่มีแท็บใน header) */
 export function AttendanceHeaderExpandButton({ onExpand }: { onExpand: () => void }) {
   return (
     <button
@@ -89,6 +90,7 @@ export function AttendanceHeaderExpandButton({ onExpand }: { onExpand: () => voi
   );
 }
 
+/** แถบเมนูใน header หลักเมื่อย่อหัวโมดูล — เดสก์ท็อปเท่านั้น */
 export function AttendanceHeaderBarNav({ onExpand }: { onExpand: () => void }) {
   const pathname = usePathname() ?? "";
 

@@ -5,6 +5,7 @@ import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { isPrismaSchemaMismatchError, PRISMA_SYNC_HINT_TH } from "@/lib/prisma-errors";
 import { isValidRosterPhotoUrl } from "@/lib/attendance/roster-photo-url";
+import { parseFaceDescriptorBank } from "@/lib/attendance/face-descriptor";
 import { clampShiftIndex, formatShiftSlotLabel } from "@/lib/attendance/shift";
 import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
 
@@ -64,6 +65,11 @@ export async function GET() {
         isActive: r.isActive,
         rosterShiftIndex: typeof r.rosterShiftIndex === "number" ? r.rosterShiftIndex : 0,
         photoUrl: r.photoUrl ?? null,
+        faceEnrolled: Boolean(r.faceDescriptorJson),
+        faceEnrolledAt: r.faceEnrolledAt?.toISOString() ?? null,
+        faceSampleCount: parseFaceDescriptorBank(r.faceDescriptorJson)?.length ?? 0,
+        fingerprintSlot: r.fingerprintSlot ?? null,
+        fingerprintEnrolledAt: r.fingerprintEnrolledAt?.toISOString() ?? null,
       })),
     });
   } catch (e) {

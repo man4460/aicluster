@@ -73,6 +73,13 @@ export default async function PublicAttendancePage({ params, searchParams }: Pro
         })
       : null;
 
+  const settingsRow = await prisma.attendanceSettings.findUnique({
+    where: {
+      ownerUserId_trialSessionId: { ownerUserId: ownerId, trialSessionId },
+    },
+    select: { faceCheckInEnabled: true },
+  });
+
   const sandboxTrialSessionIdForClient =
     trialSessionId === TRIAL_PROD_SCOPE ? null : trialSessionId;
 
@@ -90,6 +97,7 @@ export default async function PublicAttendancePage({ params, searchParams }: Pro
       }}
       publicLocationId={site.locationId > 0 ? site.locationId : null}
       locationLabel={locRow?.name ?? null}
+      faceCheckInEnabled={Boolean(settingsRow?.faceCheckInEnabled)}
     />
   );
 }

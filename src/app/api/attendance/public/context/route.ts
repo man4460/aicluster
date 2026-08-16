@@ -60,11 +60,19 @@ export async function GET(req: Request) {
   const starts = site.shifts.map((s) => s.startTime);
   const ends = site.shifts.map((s) => s.endTime);
 
+  const settingsRow = await prisma.attendanceSettings.findUnique({
+    where: {
+      ownerUserId_trialSessionId: { ownerUserId: ownerId, trialSessionId },
+    },
+    select: { faceCheckInEnabled: true },
+  });
+
   return NextResponse.json({
     ownerId,
     trialSessionId,
     orgName,
     logoUrl: profile?.logoUrl ?? null,
+    faceCheckInEnabled: Boolean(settingsRow?.faceCheckInEnabled),
     geofence: {
       lat: site.allowedLocationLat,
       lng: site.allowedLocationLng,

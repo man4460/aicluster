@@ -185,7 +185,7 @@ export function DashboardModuleHeroCard(props: DashboardModuleHeroCardProps) {
         title={description}
         className={cn(
           "text-xs font-semibold leading-relaxed text-[#5f5a8a] sm:text-sm",
-          // การ์ด «ปัจจุบัน» (tall=false): แถวเดียวเสมอ — ความสูงการ์ดเท่ากัน
+          // การ์ด «แนะนำ» (tall=false): แถวเดียวเสมอ — ความสูงการ์ดเท่ากัน
           tall ? "text-pretty line-clamp-4 whitespace-pre-line" : "truncate",
         )}
       >

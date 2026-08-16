@@ -31,7 +31,9 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 68: DrinkPosReservation + Review + portal fields on DrinkPosShopProfile */
 /** 69: BarberServiceLog.signatureImageUrl + BarberShopProfile.promptPayQrImageUrl */
 /** 70: massage/car-wash/football signature + promptPayQrImageUrl */
-const PRISMA_SINGLETON_VERSION = 70;
+/** 71: AttendanceSettings.faceCheckInEnabled + AttendanceRosterEntry.faceDescriptor* */
+/** 72: device API key + fingerprintSlot on roster */
+const PRISMA_SINGLETON_VERSION = 72;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;

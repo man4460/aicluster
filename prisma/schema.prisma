@@ -1368,6 +1368,14 @@ model AttendanceSettings {
   allowedLocationLat   Float    @map("allowed_location_lat")
   allowedLocationLng   Float    @map("allowed_location_lng")
   radiusMeters         Int      @default(120) @map("radius_meters")
+  /** เปิดทางเลือกเช็คอินด้วยสแกนใบหน้า (เปรียบเทียบในระบบ) */
+  faceCheckInEnabled   Boolean  @default(false) @map("face_check_in_enabled")
+  /** เปิด API สำหรับอุปกรณ์ (ESP32 ฯลฯ) */
+  deviceApiEnabled     Boolean  @default(false) @map("device_api_enabled")
+  /** bcrypt ของ device API key */
+  deviceApiKeyHash     String?  @map("device_api_key_hash") @db.VarChar(255)
+  /** ท้ายคีย์ 4 ตัวสำหรับแสดงใน UI */
+  deviceApiKeyHint     String?  @map("device_api_key_hint") @db.VarChar(16)
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
@@ -1423,11 +1431,18 @@ model AttendanceRosterEntry {
   rosterShiftIndex Int @default(0) @map("roster_shift_index")
   /** รูปโปรไฟล์รายชื่อ (path ใต้ public เช่น /uploads/attendance-roster/...) */
   photoUrl    String?  @map("photo_url") @db.VarChar(512)
+  /** เวกเตอร์ใบหน้า (JSON float[128]) — ประมวลผลในระบบ ไม่ส่ง API ภายนอก */
+  faceDescriptorJson String? @map("face_descriptor_json") @db.LongText
+  faceEnrolledAt     DateTime? @map("face_enrolled_at")
+  /** รหัสนิ้วบนเซ็นเซอร์ ESP32 (เช่น AS608/R307 slot 1–127) */
+  fingerprintSlot    Int?      @map("fingerprint_slot")
+  fingerprintEnrolledAt DateTime? @map("fingerprint_enrolled_at")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@unique([ownerUserId, phone, trialSessionId])
   @@index([ownerUserId, trialSessionId, isActive])
+  @@index([ownerUserId, trialSessionId, fingerprintSlot], map: "arost_owner_trial_fp_idx")
   @@map("attendance_roster_entries")
 }
 
