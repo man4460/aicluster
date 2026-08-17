@@ -12,7 +12,10 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { bangkokDayStartEnd } from "@/lib/barber/bangkok-day";
 import { ensureAttendanceLocationsFromLegacy } from "@/lib/attendance/location-ensure";
-import { PublicCheckInLinkCopy } from "@/systems/attendance/components/PublicCheckInLinkCopy";
+import {
+  PublicCheckInLinkCopy,
+  type PublicCheckInLinkNotice,
+} from "@/systems/attendance/components/PublicCheckInLinkCopy";
 import { attendanceSectionRadiusClass } from "@/systems/attendance/lib/ui-tokens";
 import { getServerAppBaseUrl } from "@/lib/url/server-app-base-url";
 import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
@@ -56,7 +59,7 @@ export default async function AttendanceHomePage() {
   });
   const { start, end } = bangkokDayStartEnd();
 
-  const [todayLogs, rosterTotal, rosterCheckedIn] = await Promise.all([
+  const [todayLogs, rosterTotal, rosterCheckedIn, faceSettings, faceEnrolledCount] = await Promise.all([
     prisma.attendanceLog.findMany({
       where: {
         ownerUserId: session.sub,
@@ -80,7 +83,43 @@ export default async function AttendanceHomePage() {
         publicVisitorKind: "ROSTER_STAFF",
       },
     }),
+    prisma.attendanceSettings.findUnique({
+      where: {
+        ownerUserId_trialSessionId: {
+          ownerUserId: session.sub,
+          trialSessionId: scope.trialSessionId,
+        },
+      },
+      select: { faceCheckInEnabled: true },
+    }),
+    prisma.attendanceRosterEntry.count({
+      where: {
+        ownerUserId: session.sub,
+        trialSessionId: scope.trialSessionId,
+        isActive: true,
+        faceDescriptorJson: { not: null },
+      },
+    }),
   ]);
+
+  const faceCheckInEnabled = Boolean(faceSettings?.faceCheckInEnabled);
+  /** ลิงก์สแกนใบหน้าใช้ได้จริงเมื่อเปิดในตั้งค่า + มีใบหน้าในรายชื่ออย่างน้อยหนึ่งคน */
+  const faceLinkNotice: PublicCheckInLinkNotice = !faceCheckInEnabled
+    ? {
+        text: "ยังไม่ได้เปิด «เช็คอินด้วยสแกนใบหน้า» — เปิดก่อน ลิงก์นี้จึงจะสแกนได้",
+        href: "/dashboard/attendance/settings",
+        hrefLabel: "เปิดในตั้งค่าเช็คอิน",
+      }
+    : faceEnrolledCount === 0
+      ? {
+          text: "เปิดใช้แล้ว แต่ยังไม่มีพนักงานลงทะเบียนใบหน้า — สแกนจะยังไม่ผ่าน",
+          href: "/dashboard/attendance/roster",
+          hrefLabel: "ไปลงทะเบียนใบหน้า",
+        }
+      : {
+          tone: "info",
+          text: `พร้อมใช้งาน — ลงทะเบียนใบหน้าแล้ว ${faceEnrolledCount.toLocaleString("th-TH")} คน`,
+        };
 
   const checkedIn = todayLogs.length;
   const late = todayLogs.filter((l) => l.lateCheckIn).length;
@@ -162,6 +201,7 @@ export default async function AttendanceHomePage() {
                 title="สแกนใบหน้า"
                 description="ลิงก์ iPad ที่จุดเช็ค"
                 tone="emerald"
+                notice={faceLinkNotice}
                 url={
                   baseUrl
                     ? publicCheckInUrl(
@@ -206,6 +246,7 @@ export default async function AttendanceHomePage() {
                       title="สแกนใบหน้า"
                       description={locLabel}
                       tone="emerald"
+                      notice={faceLinkNotice}
                       url={
                         baseUrl
                           ? publicCheckInUrl(baseUrl, session.sub, loc.id, scope.trialSessionId, scope.isTrialSandbox, {

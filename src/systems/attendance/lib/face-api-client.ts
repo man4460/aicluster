@@ -103,6 +103,16 @@ export type FaceExtractResult =
   | ({ ok: true; descriptor: number[] } & FaceQuality)
   | { ok: false; error: string };
 
+/**
+ * เกณฑ์ที่ผ่อนได้ตามบริบท — ตอน "ลงทะเบียน" ต้องเก็บมุมข้าง/ก้มหน้าด้วย
+ * ถ้าใช้เกณฑ์เดียวกับตอนเช็คอิน ระบบจะปฏิเสธมุมที่คู่มือสั่งให้ทำ
+ */
+export type FaceExtractOptions = {
+  maxRollDeg?: number;
+  maxYawRatio?: number;
+  minDetectionScore?: number;
+};
+
 type MediaSource = HTMLImageElement | HTMLVideoElement | HTMLCanvasElement;
 
 function sourceSize(source: MediaSource): { w: number; h: number } {
@@ -203,7 +213,13 @@ function poseFromLandmarks(leftEye: Pt[], rightEye: Pt[], nose: Pt[]): { rollDeg
   return { rollDeg: rollDeg > 90 ? 180 - rollDeg : rollDeg, yawRatio };
 }
 
-export async function extractFaceDescriptorFromImage(source: MediaSource): Promise<FaceExtractResult> {
+export async function extractFaceDescriptorFromImage(
+  source: MediaSource,
+  opts?: FaceExtractOptions,
+): Promise<FaceExtractResult> {
+  const maxRollDeg = opts?.maxRollDeg ?? FACE_MAX_ROLL_DEG;
+  const maxYawRatio = opts?.maxYawRatio ?? FACE_MAX_YAW_RATIO;
+  const minDetectionScore = opts?.minDetectionScore ?? FACE_MIN_DETECTION_SCORE;
   let faceapi: FaceApi;
   let useTinyDetector: boolean;
   let useTinyLandmarks: boolean;
@@ -246,7 +262,7 @@ export async function extractFaceDescriptorFromImage(source: MediaSource): Promi
     }
 
     const detectionScore = main.detection.score;
-    if (detectionScore < FACE_MIN_DETECTION_SCORE) {
+    if (detectionScore < minDetectionScore) {
       return {
         ok: false,
         error: `ใบหน้าไม่ชัดพอ (คะแนน ${(detectionScore * 100).toFixed(0)}%) — เพิ่มแสงและมองตรงกล้อง`,
@@ -266,11 +282,11 @@ export async function extractFaceDescriptorFromImage(source: MediaSource): Promi
       main.landmarks.getRightEye(),
       main.landmarks.getNose(),
     );
-    if (rollDeg > FACE_MAX_ROLL_DEG) {
+    if (rollDeg > maxRollDeg) {
       return { ok: false, error: "หน้าเอียงมากเกินไป — ตั้งหัวตรงแล้วลองใหม่" };
     }
-    if (yawRatio > FACE_MAX_YAW_RATIO) {
-      return { ok: false, error: "หันหน้ามากเกินไป — มองตรงเข้ากล้อง" };
+    if (yawRatio > maxYawRatio) {
+      return { ok: false, error: "หันหน้ามากเกินไป — หันกลับมาให้เห็นสองตาชัด" };
     }
 
     const gray = grayFaceCrop(source, box);
@@ -369,17 +385,47 @@ export type MultiFrameResult =
   | ({ ok: true; descriptor: number[]; samples: number[][]; framesUsed: number; motion: number } & FaceQuality)
   | { ok: false; error: string };
 
+/** รอให้สตรีมกล้องมีเฟรมจริง — กดถ่ายเร็วเกินไปจะได้ภาพขนาด 0 แล้วอ่านใบหน้าไม่ได้ */
+export async function waitForVideoFrame(video: HTMLVideoElement, timeoutMs = 6000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) return true;
+    if (video.paused) void video.play().catch(() => {});
+    await sleep(120);
+  }
+  return video.videoWidth > 0 && video.videoHeight > 0;
+}
+
 /**
  * ถ่ายหลายเฟรม → ตัดเฟรมหลุด → เฉลี่ย descriptor
  * แม่นกว่าเฟรมเดียวและทนต่อการกะพริบตา/แสงแวบ
+ *
+ * `requireMotion` เปิดไว้สำหรับ "เช็คอิน" (กันถือรูปถ่ายมาสแกน)
+ * ตอน "ลงทะเบียน" ให้ปิด เพราะผู้ใช้ตั้งใจอยู่นิ่งตามคำแนะนำ
  */
 export async function captureMultiFrameDescriptor(
   video: HTMLVideoElement,
-  opts?: { frames?: number; gapMs?: number; requireMotion?: boolean },
+  opts?: {
+    frames?: number;
+    gapMs?: number;
+    requireMotion?: boolean;
+    /** จำนวนเฟรมชัดขั้นต่ำที่ยอมรับ (ค่าเริ่ม 2) */
+    minSamples?: number;
+  } & FaceExtractOptions,
 ): Promise<MultiFrameResult> {
   const frames = Math.min(FACE_ENROLL_MAX_SAMPLES, Math.max(2, opts?.frames ?? FACE_CAPTURE_FRAMES));
   const gapMs = opts?.gapMs ?? FACE_CAPTURE_GAP_MS;
   const requireMotion = opts?.requireMotion ?? true;
+  const minSamples = Math.max(1, opts?.minSamples ?? 2);
+  const extractOpts: FaceExtractOptions = {
+    ...(opts?.maxRollDeg !== undefined ? { maxRollDeg: opts.maxRollDeg } : {}),
+    ...(opts?.maxYawRatio !== undefined ? { maxYawRatio: opts.maxYawRatio } : {}),
+    ...(opts?.minDetectionScore !== undefined ? { minDetectionScore: opts.minDetectionScore } : {}),
+  };
+
+  if (!(await waitForVideoFrame(video))) {
+    return { ok: false, error: "กล้องยังไม่พร้อม — รอให้เห็นภาพในกรอบแล้วกดอีกครั้ง" };
+  }
 
   const samples: number[][] = [];
   const snapshots: Float32Array[] = [];
@@ -390,7 +436,7 @@ export async function captureMultiFrameDescriptor(
     if (i > 0) await sleep(gapMs);
     const snap = tinyGraySnapshot(video);
     if (snap) snapshots.push(snap);
-    const one = await extractFaceDescriptorFromImage(video);
+    const one = await extractFaceDescriptorFromImage(video, extractOpts);
     if (!one.ok) {
       lastErr = one.error;
       continue;
@@ -409,7 +455,7 @@ export async function captureMultiFrameDescriptor(
     }
   }
 
-  if (samples.length < 2 || !best) {
+  if (samples.length < minSamples || !best) {
     return { ok: false, error: `${lastErr} (ได้ชัด ${samples.length}/${frames} เฟรม)` };
   }
 

@@ -26,6 +26,8 @@ export async function seedAttendanceTrialData(tx: Tx, ownerUserId: string, trial
       radiusMeters: 150,
       shiftStartTime: "09:00",
       shiftEndTime: "18:00",
+      // ลิงก์ «สแกนใบหน้า» ต้องกดใช้ได้ทันทีตอนทดลอง (ยังต้องลงทะเบียนใบหน้าในรายชื่อก่อนสแกนผ่าน)
+      faceCheckInEnabled: true,
     },
   });
 
@@ -63,7 +65,16 @@ export async function seedAttendanceTrialData(tx: Tx, ownerUserId: string, trial
 export async function seedAttendanceProdDemoForOwner(db: PrismaClient, ownerUserId: string): Promise<void> {
   const existing = await db.attendanceSettings.findFirst({
     where: { ownerUserId, trialSessionId: TRIAL_PROD_SCOPE },
+    select: { id: true, faceCheckInEnabled: true },
   });
-  if (existing) return;
+  if (existing) {
+    if (!existing.faceCheckInEnabled) {
+      await db.attendanceSettings.update({
+        where: { id: existing.id },
+        data: { faceCheckInEnabled: true },
+      });
+    }
+    return;
+  }
   await db.$transaction((tx) => seedAttendanceTrialData(tx, ownerUserId, TRIAL_PROD_SCOPE));
 }
