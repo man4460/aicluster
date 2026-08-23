@@ -185,7 +185,7 @@ export function PlanFeaturesAdminClient() {
             title="เปิดเงื่อนไขจำนวนแถว"
             description={
               draft.dataRowLimitEnabled
-                ? "สายรายวันถูกจำกัดจำนวนแถว · แพ็กเหมาได้มากกว่าเกณฑ์ที่ตั้ง"
+                ? "สายรายวันถูกจำกัดจำนวนแถว · แพ็ก 199 ของโมดูลนั้นได้มากกว่าเกณฑ์ที่ตั้ง"
                 : "ปิดแล้ว — ไม่จำกัดจำนวนแถวสำหรับทุกแพ็กเกจ"
             }
             checked={draft.dataRowLimitEnabled}
@@ -219,7 +219,7 @@ export function PlanFeaturesAdminClient() {
             </div>
             <div>
               <label htmlFor="monthly-threshold" className="text-xs font-black uppercase tracking-wide text-[#66638c]">
-                แพ็กเหมา — ได้มากกว่า (แถว)
+                แพ็ก 199 ต่อโมดูล — ได้มากกว่า (แถว)
               </label>
               <input
                 id="monthly-threshold"
@@ -244,7 +244,7 @@ export function PlanFeaturesAdminClient() {
             title="เปิดเงื่อนไขพิมพ์สลิป"
             description={
               draft.slipPrintGateEnabled
-                ? "พิมพ์สลิปเปิดเฉพาะแพ็กเหมารายเดือน (และแอดมิน)"
+                ? "พิมพ์สลิปเปิดเฉพาะแพ็ก 199 ของโมดูลนั้น (และแอดมิน)"
                 : "ปิดแล้ว — พิมพ์สลิปได้ทุกแพ็กเกจรวมสายรายวัน"
             }
             checked={draft.slipPrintGateEnabled}
@@ -257,7 +257,7 @@ export function PlanFeaturesAdminClient() {
             title="เปิดเงื่อนไขอัปโหลดสลิป"
             description={
               draft.slipUploadGateEnabled
-                ? "อัปโหลดสลิปชำระ/หลักฐานโอนเปิดเฉพาะแพ็กเหมารายเดือน"
+                ? "อัปโหลดสลิปชำระ/หลักฐานโอนเปิดเฉพาะแพ็ก 199 ของโมดูลนั้น"
                 : "ปิดแล้ว — อัปโหลดสลิปได้ทุกแพ็กเกจ"
             }
             checked={draft.slipUploadGateEnabled}
@@ -270,7 +270,7 @@ export function PlanFeaturesAdminClient() {
             title="เปิดเงื่อนไขอัปโหลดเอกสาร"
             description={
               draft.documentUploadGateEnabled
-                ? "อัปโหลดเอกสาร (เช่น สารบรรณ / แนบไฟล์) เปิดเฉพาะแพ็กเหมารายเดือน"
+                ? "อัปโหลดเอกสาร (เช่น สารบรรณ / แนบไฟล์) เปิดเฉพาะแพ็ก 199 ของโมดูลนั้น"
                 : "ปิดแล้ว — อัปโหลดเอกสารได้ทุกแพ็กเกจ"
             }
             checked={draft.documentUploadGateEnabled}
@@ -283,7 +283,7 @@ export function PlanFeaturesAdminClient() {
             title="เปิดเงื่อนไขหลายแผนกครัว (POS ร้านอาหาร)"
             description={
               draft.multiKitchenGateEnabled
-                ? "ตั้งแผนกครัวหลายจุด · จำแนกเมนู · ลิงก์ครัวแยก — เปิดเฉพาะแพ็กเหมา 299 ขึ้นไป"
+                ? "ตั้งแผนกครัวหลายจุด · จำแนกเมนู · ลิงก์ครัวแยก — เปิดเฉพาะแพ็ก 199 ของ POS ร้านอาหาร"
                 : "ปิดแล้ว — ใช้หลายแผนกครัวได้ทุกแพ็กเกจ"
             }
             checked={draft.multiKitchenGateEnabled}

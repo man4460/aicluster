@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { isHotelResortPortalOpenForOwner } from "@/lib/hotel-resort/portal-access";
+import { HOTEL_RESORT_MODULE_SLUG } from "@/lib/modules/config";
 import { assertOwnerPlanUpload } from "@/lib/modules/plan-entitlements";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
     if (!slipUrl) {
       return NextResponse.json({ error: "แนบสลิปชำระก่อนจอง" }, { status: 400 });
     }
-    const planGate = await assertOwnerPlanUpload(ownerId, "slip");
+    const planGate = await assertOwnerPlanUpload(ownerId, "slip", HOTEL_RESORT_MODULE_SLUG);
     if (!planGate.ok) {
       return NextResponse.json({ error: planGate.error, code: planGate.code }, { status: 402 });
     }

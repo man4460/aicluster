@@ -33,6 +33,7 @@ export default async function DashboardLayout({
     // หมายเหตุ: ไม่หักโทเคนรายวันที่หน้าแดชบอร์ดหลักอีกต่อไป
     // สายรายวัน (DAILY) จะถูกหัก 1 โทเคน/โมดูล/วัน เมื่อเข้าโมดูลกลุ่ม 1 จริง ๆ
     // (ดู src/lib/modules/guard.ts → applyModuleDailyTokenDeduction)
+    // สายรายวันหักตอนเข้าโมดูล · แพ็ก 199 ต่อโมดูลหักตอนขึ้นเดือน
     await applyBuffetMonthlyBilling(session.sub);
   } catch (e) {
     console.error("[token billing]", e);
@@ -118,10 +119,11 @@ export default async function DashboardLayout({
         });
 
   const accessFields = {
-    role: user.role,
-    subscriptionType: user.subscriptionType,
-    subscriptionTier: user.subscriptionTier,
-    tokens: user.tokens,
+    role: billCtx.access.role,
+    subscriptionType: billCtx.access.subscriptionType,
+    subscriptionTier: billCtx.access.subscriptionTier,
+    tokens: billCtx.access.tokens,
+    monthly199Slugs: billCtx.access.monthly199Slugs,
   };
 
   let serviceModules = allModules

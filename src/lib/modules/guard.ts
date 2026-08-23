@@ -1,10 +1,9 @@
 /**
  * ตรวจสิทธิ์ก่อนเข้าโมดูล (แทน middleware ที่ต้องอ่าน DB)
  *
- * - สายรายวัน (DAILY) สามารถเข้าใช้ "หลายโมดูลในกลุ่ม 1 ได้" (ไม่จำกัดเฉพาะเช็คอิน)
- *   โดยหัก **1 โทเคน ต่อ 1 โมดูล ต่อ 1 วัน Bangkok** ผ่าน `applyModuleDailyTokenDeduction` (ยกเว้น slug ใน `DAILY_TOKEN_EXEMPT_MODULE_SLUGS` เช่น คิวหน้าร้าน)
- *   ถ้าโทเคนหมด → redirect /dashboard/refill
- * - แพ็กเหมา (BUFFET) / ADMIN / staff: ไม่หักโทเคน
+ * - สายรายวัน: หัก **1 โทเคน ต่อ 1 โมดูล ต่อ 1 วัน Bangkok** (โทเคนไม่พอให้ติดลบ)
+ * - แพ็ก 199 ของโมดูลนั้น: ไม่หักรายวัน
+ * - ล็อคหนี้ (ติดลบถึงเกณฑ์) → redirect /dashboard/refill
  * - กลุ่มอื่น (ที่เกินสิทธิ์): redirect /dashboard/plans?upgrade=1
  */
 import { notFound, redirect } from "next/navigation";
@@ -19,6 +18,7 @@ import {
   applyModuleDailyTokenDeduction,
   listModuleSlugsChargedToday,
 } from "@/lib/tokens/module-daily-deduction";
+import { isTokenDebtLocked } from "@/lib/tokens/token-debt";
 
 export async function requireModulePage(slug: string) {
   const session = await getSession();
@@ -50,10 +50,13 @@ export async function requireModulePage(slug: string) {
       { chargedTodaySlugs },
     )
   ) {
+    if (isTokenDebtLocked(ctx.access.tokens)) {
+      redirect("/dashboard/refill");
+    }
     redirect("/dashboard/plans?upgrade=1");
   }
 
-  // หักโทเคนต่อโมดูล/วัน — ADMIN/BUFFET ผ่าน exempt; DAILY ที่หักแล้วก็ผ่าน (already_charged)
+  // หักโทเคนต่อโมดูล/วัน — แพ็ก 199 / โมดูลฟรี / แอดมินไม่หัก; ล็อคหนี้ → refill
   const tokenResult = await applyModuleDailyTokenDeduction(ctx.billingUserId, mod.slug);
   if (!tokenResult.ok) {
     redirect("/dashboard/refill");

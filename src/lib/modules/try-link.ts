@@ -6,6 +6,12 @@ export function moduleTryPath(slug: string): string {
   return `/try/${encodeURIComponent(s)}`;
 }
 
+/** หน้าทดลองใช้ทุกโมดูล — เข้าบัญชี demo แล้วไประบบทั้งหมด */
+export const MODULE_TRY_ALL_PATH = "/try" as const;
+
+/** แดชบอร์ดหลังขอสาธิตฟรี — เมนูระบบทั้งหมดของบัญชีทดลอง */
+export const MODULE_TRY_ALL_DASHBOARD_HREF = "/dashboard/modules" as const;
+
 /** แดชบอร์ดโมดูลหลังเข้าบัญชีทดลอง */
 export function moduleTryDashboardHref(slug: string): string {
   return dashboardModuleHref(slug.trim());

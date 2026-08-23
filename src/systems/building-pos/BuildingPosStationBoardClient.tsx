@@ -479,9 +479,9 @@ function StationOrderCard({
             aria-label={
               slipPrintEnabled
                 ? `พิมพ์สลิปโต๊ะ ${table} ออเดอร์ ${order.id}`
-                : `พิมพ์สลิปต้องแพ็กเหมา 199 — โต๊ะ ${table}`
+                : `พิมพ์สลิปต้องแพ็ก 199 ของโมดูลนี้ — โต๊ะ ${table}`
             }
-            title={slipPrintEnabled ? "พิมพ์สลิป" : "ต้องแพ็กเหมารายเดือน 199"}
+            title={slipPrintEnabled ? "พิมพ์สลิป" : "ต้องแพ็ก 199 ของโมดูลนี้"}
             disabled={busy}
             className={cn(
               "min-h-[32px] min-w-[32px] sm:min-h-[36px] sm:min-w-[36px]",

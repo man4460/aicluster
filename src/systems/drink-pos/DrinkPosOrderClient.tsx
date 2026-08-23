@@ -509,7 +509,7 @@ export function DrinkPosOrderClient({
         }}
         disabled={draftBusy}
       />
-          {slipPrintEnabled ? "พิมพ์ใบเสร็จหลังออเดอร์" : "พิมพ์ใบเสร็จ (ต้องแพ็กเหมา 199)"}
+          {slipPrintEnabled ? "พิมพ์ใบเสร็จหลังออเดอร์" : "พิมพ์ใบเสร็จ (ต้องแพ็ก 199 ของโมดูลนี้)"}
     </label>
   );
 

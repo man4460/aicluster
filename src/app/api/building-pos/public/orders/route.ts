@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { resolvePublicBuildingPosTrialSessionId } from "@/lib/building-pos/public-trial-scope";
 import { assertPlanDataRowAllowance } from "@/lib/modules/plan-entitlements";
+import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
+import { listMonthly199ModuleSlugs } from "@/lib/tokens/module-monthly-199";
 import { getPlanFeaturePolicy } from "@/lib/modules/plan-feature-policy";
 import { notifyBuildingPosOrderBoard } from "@/systems/building-pos/lib/order-board-sse";
 import { stampBuildingPosOrderItemsKitchenDept } from "@/lib/building-pos/stamp-order-kitchen";
@@ -49,16 +51,25 @@ export async function POST(req: Request) {
     if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
     const { trialSessionId } = await resolvePublicBuildingPosTrialSessionId(parsed.data.ownerId, parsed.data.trialSessionId);
     const memberPhone = normalizeMemberPhone(parsed.data.member_phone ?? "");
-    const owner = await prisma.user.findUnique({
-      where: { id: parsed.data.ownerId },
-      select: { role: true, subscriptionType: true, subscriptionTier: true },
-    });
+    const [owner, monthly199Slugs] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: parsed.data.ownerId },
+        select: { role: true, subscriptionType: true, subscriptionTier: true },
+      }),
+      listMonthly199ModuleSlugs(parsed.data.ownerId),
+    ]);
     if (owner) {
       const policy = await getPlanFeaturePolicy();
       const existingCount = await prisma.buildingPosOrder.count({
         where: { ownerUserId: parsed.data.ownerId, trialSessionId },
       });
-      const allowance = assertPlanDataRowAllowance(owner, existingCount, 1, policy);
+      const allowance = assertPlanDataRowAllowance(
+        { ...owner, monthly199Slugs },
+        existingCount,
+        1,
+        policy,
+        BUILDING_POS_MODULE_SLUG,
+      );
       if (!allowance.ok) {
         return NextResponse.json({ error: allowance.error, code: allowance.code }, { status: 402 });
       }

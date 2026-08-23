@@ -18,7 +18,6 @@ import {
   filterAppModulesForDashboardUi,
   MQTT_SERVICE_MODULE_SLUG,
 } from "@/lib/modules/config";
-import { tierGroupLabel } from "@/lib/module-permissions";
 import { isMqttServiceModuleEnabled } from "@/lib/modules/mqtt-feature";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { listTrialModuleIds } from "@/lib/modules/trial-store";
@@ -39,8 +38,8 @@ export const metadata: Metadata = {
 
 function planSummaryLine(subscriptionType: SubscriptionType, subscriptionTier: SubscriptionTier): string {
   if (subscriptionType === "DAILY") return "สายรายวัน";
-  if (subscriptionType === "BUFFET" && subscriptionTier !== "NONE") return tierGroupLabel(subscriptionTier);
-  return "—";
+  if (subscriptionType === "BUFFET" && subscriptionTier !== "NONE") return "กำลังแปลงเป็นแพ็กต่อโมดูล";
+  return "สายรายวัน";
 }
 
 export default async function DashboardHomePage() {

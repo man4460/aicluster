@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { buildingPosOwnerFromAuth } from "@/lib/building-pos/api-owner";
 import { formatBuildingPosDbError, jsonBuildingPosError } from "@/lib/building-pos/route-errors";
+import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
 import { assertPlanMultiKitchenAllowance, planFeaturesApiPayload } from "@/lib/modules/plan-entitlements";
 import { getPlanFeaturePolicy } from "@/lib/modules/plan-feature-policy";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
@@ -34,10 +35,11 @@ export async function GET() {
     const bill = await getModuleBillingContext(auth.session.sub);
     const policy = await getPlanFeaturePolicy();
     const features = bill
-      ? planFeaturesApiPayload(bill.access, policy)
+      ? planFeaturesApiPayload(bill.access, policy, BUILDING_POS_MODULE_SLUG)
       : planFeaturesApiPayload(
-          { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE" },
+          { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE", monthly199Slugs: [] },
           policy,
+          BUILDING_POS_MODULE_SLUG,
         );
 
     if (!features.multiKitchen) {
@@ -68,14 +70,15 @@ export async function POST(req: Request) {
     const bill = await getModuleBillingContext(auth.session.sub);
     const policy = await getPlanFeaturePolicy();
     if (bill) {
-      const gate = assertPlanMultiKitchenAllowance(bill.access, policy);
+      const gate = assertPlanMultiKitchenAllowance(bill.access, policy, BUILDING_POS_MODULE_SLUG);
       if (!gate.ok) {
         return NextResponse.json({ error: gate.error, code: gate.code }, { status: 402 });
       }
     } else {
       const gate = assertPlanMultiKitchenAllowance(
-        { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE" },
+        { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE", monthly199Slugs: [] },
         policy,
+        BUILDING_POS_MODULE_SLUG,
       );
       if (!gate.ok) {
         return NextResponse.json({ error: gate.error, code: gate.code }, { status: 402 });
@@ -120,8 +123,9 @@ export async function PATCH(req: Request) {
       role: "USER" as const,
       subscriptionType: "DAILY" as const,
       subscriptionTier: "NONE" as const,
+      monthly199Slugs: [] as string[],
     };
-    const gate = assertPlanMultiKitchenAllowance(access, policy);
+    const gate = assertPlanMultiKitchenAllowance(access, policy, BUILDING_POS_MODULE_SLUG);
     if (!gate.ok) {
       return NextResponse.json({ error: gate.error, code: gate.code }, { status: 402 });
     }
@@ -171,8 +175,9 @@ export async function DELETE(req: Request) {
       role: "USER" as const,
       subscriptionType: "DAILY" as const,
       subscriptionTier: "NONE" as const,
+      monthly199Slugs: [] as string[],
     };
-    const gate = assertPlanMultiKitchenAllowance(access, policy);
+    const gate = assertPlanMultiKitchenAllowance(access, policy, BUILDING_POS_MODULE_SLUG);
     if (!gate.ok) {
       return NextResponse.json({ error: gate.error, code: gate.code }, { status: 402 });
     }

@@ -161,13 +161,13 @@ export const LANDING_DAILY_MODULE_SHOWCASE: LandingModuleShowcaseItem[] = [
   },
   {
     slug: "drink-pos",
-    blurb: "POS เครื่องดื่ม สะสมแต้ม · 199 / เดือน",
+    blurb: "POS เครื่องดื่ม สะสมแต้ม QR ลูกค้า",
     coverSrc:
       "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=78",
   },
   {
     slug: "hotel-resort",
-    blurb: "โรงแรม รีสอร์ท · ห้องพัก จอง QR · 199 / เดือน",
+    blurb: "โรงแรม รีสอร์ท · ห้องพัก จอง QR",
     coverSrc:
       "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=78",
   },

@@ -698,7 +698,7 @@ export function UsersAdmin() {
               className={inputClass}
             >
               <option value="DAILY">DAILY — สายรายวัน</option>
-              <option value="BUFFET">BUFFET — แพ็กเหมา</option>
+              <option value="BUFFET">BUFFET — เลิกใช้ (จะแปลงเป็น 199 ต่อโมดูล)</option>
             </select>
           </Field>
           <Field label="แพ็กเกจ tier">

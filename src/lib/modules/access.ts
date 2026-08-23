@@ -4,22 +4,28 @@ import {
   isModuleHiddenFromDashboardUi,
   MAX_MODULE_GROUP,
   UI_VISIBLE_GROUP2_MODULE_SLUGS,
-  UI_VISIBLE_MAX_MODULE_GROUP,
-  buffetTierMaxGroup,
 } from "@/lib/modules/config";
+import { isTokenDebtLocked } from "@/lib/tokens/token-debt";
 
 export type UserAccessFields = {
   role: UserRole;
   subscriptionType: SubscriptionType;
   subscriptionTier: SubscriptionTier;
   tokens: number;
+  /** slug ที่สมัครแพ็ก 199 รายโมดูล */
+  monthly199Slugs?: string[];
 };
 
-function effectiveBuffetMaxGroup(tier: SubscriptionTier): number {
-  return Math.min(buffetTierMaxGroup(tier), UI_VISIBLE_MAX_MODULE_GROUP);
+export function hasMonthly199ForModule(
+  user: Pick<UserAccessFields, "role" | "monthly199Slugs">,
+  moduleSlug?: string | null,
+): boolean {
+  if (user.role === "ADMIN") return true;
+  const slugs = user.monthly199Slugs ?? [];
+  if (moduleSlug) return slugs.includes(moduleSlug);
+  return slugs.length > 0;
 }
 
-/** โมดูลกลุ่ม 2 ที่เปิดให้สมัคร/เข้าใช้ก่อน (แพ็ก 199 + สายรายวันมีโทเคน) */
 function isEarlyAccessGroup2Module(slug: string): boolean {
   return UI_VISIBLE_GROUP2_MODULE_SLUGS.has(slug);
 }
@@ -27,10 +33,7 @@ function isEarlyAccessGroup2Module(slug: string): boolean {
 /** สูงสุดถึงกลุ่มไหนที่ user เข้าได้ (0 = ไม่มีโมดูล) */
 export function userMaxModuleGroup(user: UserAccessFields): number {
   if (user.role === "ADMIN") return MAX_MODULE_GROUP;
-  if (user.subscriptionType === "BUFFET") {
-    return effectiveBuffetMaxGroup(user.subscriptionTier);
-  }
-  if (user.tokens <= 0) return 0;
+  if (isTokenDebtLocked(user.tokens)) return 0;
   return 1;
 }
 
@@ -40,17 +43,15 @@ export function canAccessModuleGroup(user: UserAccessFields, groupId: number): b
   /** กลุ่ม 2 — เปิดเฉพาะโมดูลใน whitelist (เช่น smart-police) */
   if (groupId === 2 && UI_VISIBLE_GROUP2_MODULE_SLUGS.size > 0) {
     if (user.role === "ADMIN") return true;
-    if (user.subscriptionType === "BUFFET") return true;
-    return user.tokens > 0;
+    if (isTokenDebtLocked(user.tokens)) return false;
+    return true;
   }
   return false;
 }
 
 /**
- * สิทธิ์เข้าโมดูลรายตัว — สายรายวัน + มีโทเคน: เข้าโมดูลกลุ่ม 1 ได้ทุกตัว (รวมหอพัก)
- *
- * `options.chargedTodaySlugs` — slug ที่หักโทเคนไปแล้วในวัน Bangkok นี้
- * (สายรายวันที่ tokens = 0 แต่หักไปแล้ววันนี้ ยังเข้าใช้ได้จนถึงเที่ยงคืน Bangkok)
+ * สิทธิ์เข้าโมดูลรายตัว — สายรายวันหัก 1/โมดูล/วัน (ติดลบได้จนกว่าจะล็อคหนี้)
+ * แพ็ก 199 ของโมดูลนั้นไม่หักรายวัน และได้สิทธิ์ตามที่แอดมินตั้ง
  */
 export function canAccessAppModule(
   user: UserAccessFields,
@@ -61,23 +62,17 @@ export function canAccessAppModule(
     return false;
   }
   if (user.role === "ADMIN") return true;
+  if (isTokenDebtLocked(user.tokens)) return false;
   if (isModuleHiddenFromDashboardUi(mod.slug)) return false;
   if (mod.slug && isEarlyAccessGroup2Module(mod.slug)) {
-    if (user.subscriptionType === "BUFFET") return true;
     if (isDailyTokenExemptModuleSlug(mod.slug)) return true;
-    if (user.tokens > 0) return true;
+    if (hasMonthly199ForModule(user, mod.slug)) return true;
     if (options?.chargedTodaySlugs?.has(mod.slug)) return true;
-    return false;
-  }
-  if (user.subscriptionType === "BUFFET") {
-    return mod.groupId <= effectiveBuffetMaxGroup(user.subscriptionTier);
+    return true;
   }
   if (mod.groupId !== 1) return false;
-  /** โมดูลฟรี — ไม่หักโทเคน ไม่อาศัยบันทึกรายวัน */
   if (isDailyTokenExemptModuleSlug(mod.slug)) return true;
-  if (user.tokens > 0) return true;
-  if (options?.chargedTodaySlugs?.has(mod.slug)) return true;
-  return false;
+  return true;
 }
 
 /**
@@ -92,8 +87,8 @@ export function canStartTrialForModule(
   return canAccessAppModule(user, mod);
 }
 
-/** true = แพ็กเหมา (ไม่หักโทเคนรายวัน) */
-export function isBuffetSubscriber(user: Pick<UserAccessFields, "role" | "subscriptionType">): boolean {
+/** true = มีแพ็ก 199 ของโมดูล (ไม่หักรายวันโมดูลนั้น) — เลิกใช้แพ็กเหมาทั้งบัญชี */
+export function isBuffetSubscriber(user: Pick<UserAccessFields, "role" | "monthly199Slugs">): boolean {
   if (user.role === "ADMIN") return true;
-  return user.subscriptionType === "BUFFET";
+  return (user.monthly199Slugs?.length ?? 0) > 0;
 }

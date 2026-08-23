@@ -61,11 +61,19 @@ export async function subscribeModule(userId: string, moduleId: string): Promise
 
 export async function unsubscribeModule(userId: string, moduleId: string): Promise<void> {
   await ensureTable();
+  const mod = await prisma.appModule.findUnique({
+    where: { id: moduleId },
+    select: { slug: true },
+  });
   await prisma.$executeRawUnsafe(
     "DELETE FROM user_module_subscriptions WHERE user_id = ? AND module_id = ?",
     userId,
     moduleId,
   );
+  if (mod?.slug) {
+    const { clearModuleMonthly199 } = await import("@/lib/tokens/module-monthly-199");
+    await clearModuleMonthly199(userId, mod.slug);
+  }
   await recordUnsubscribeCooldown(userId, moduleId);
 }
 

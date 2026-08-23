@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { UserAccessFields } from "@/lib/modules/access";
+import { listMonthly199ModuleSlugs } from "@/lib/tokens/module-monthly-199";
 
 /** หักโทเคน/เช็คแพ็กใช้ billingUserId — พนักงาน (employerUserId) ใช้สิทธิ์เจ้าของ */
 export type ModuleBillingContext = {
@@ -27,6 +28,7 @@ export async function getModuleBillingContext(actorUserId: string): Promise<Modu
       select: { role: true, subscriptionType: true, subscriptionTier: true, tokens: true },
     });
     if (!boss) return null;
+    const monthly199Slugs = await listMonthly199ModuleSlugs(u.employerUserId);
     return {
       actorUserId,
       billingUserId: u.employerUserId,
@@ -36,9 +38,11 @@ export async function getModuleBillingContext(actorUserId: string): Promise<Modu
         subscriptionType: boss.subscriptionType,
         subscriptionTier: boss.subscriptionTier,
         tokens: boss.tokens,
+        monthly199Slugs,
       },
     };
   }
+  const monthly199Slugs = await listMonthly199ModuleSlugs(actorUserId);
   return {
     actorUserId,
     billingUserId: actorUserId,
@@ -48,6 +52,7 @@ export async function getModuleBillingContext(actorUserId: string): Promise<Modu
       subscriptionType: u.subscriptionType,
       subscriptionTier: u.subscriptionTier,
       tokens: u.tokens,
+      monthly199Slugs,
     },
   };
 }

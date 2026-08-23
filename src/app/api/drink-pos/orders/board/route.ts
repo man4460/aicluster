@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withDrinkPosOwnerContext } from "@/systems/drink-pos/lib/api-auth";
 import { fetchDrinkPosOrderBoardPayload } from "@/systems/drink-pos/lib/order-board";
+import { DRINK_POS_MODULE_SLUG } from "@/lib/modules/config";
 import { planFeaturesApiPayload } from "@/lib/modules/plan-entitlements";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { getPlanFeaturePolicy } from "@/lib/modules/plan-feature-policy";
@@ -34,10 +35,11 @@ export async function GET() {
     orders: board.orders,
     staleUnclearedCount: board.staleUnclearedCount,
     features: bill
-      ? planFeaturesApiPayload(bill.access, policy)
+      ? planFeaturesApiPayload(bill.access, policy, DRINK_POS_MODULE_SLUG)
       : planFeaturesApiPayload(
-          { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE" },
+          { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE", monthly199Slugs: [] },
           policy,
+          DRINK_POS_MODULE_SLUG,
         ),
   });
 }

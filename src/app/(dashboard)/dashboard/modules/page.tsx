@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { displayAppModuleTitle, filterAppModulesForDashboardUi, MQTT_SERVICE_MODULE_SLUG } from "@/lib/modules/config";
 import { ModuleSubscriptionBrowser } from "@/components/dashboard/ModuleSubscriptionBrowser";
+import { listMonthly199ModuleSlugs } from "@/lib/tokens/module-monthly-199";
 import { listActiveResubscribeCooldowns, listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { listTrialModuleIds } from "@/lib/modules/trial-store";
 import { isMqttServiceModuleEnabled } from "@/lib/modules/mqtt-feature";
@@ -15,7 +16,7 @@ export default async function ModulesCatalogPage() {
   const ctx = await getModuleBillingContext(session.sub);
   if (!ctx) redirect("/login");
 
-  const [modulesRaw, subscribedIds, trialIds, cooldownRows] = await Promise.all([
+  const [modulesRaw, subscribedIds, trialIds, cooldownRows, monthly199Slugs] = await Promise.all([
     prisma.appModule.findMany({
       where: { isActive: true },
       orderBy: [{ groupId: "asc" }, { sortOrder: "asc" }],
@@ -24,6 +25,7 @@ export default async function ModulesCatalogPage() {
     listSubscribedModuleIds(session.sub),
     listTrialModuleIds(session.sub),
     listActiveResubscribeCooldowns(session.sub),
+    listMonthly199ModuleSlugs(ctx.billingUserId),
   ]);
 
   const initialCooldownUnlocks = Object.fromEntries(cooldownRows.map((c) => [c.moduleId, c.unlockAtIso]));
@@ -50,6 +52,7 @@ export default async function ModulesCatalogPage() {
       initialSubscribedIds={subscribedIds}
       initialTrialIds={trialIds}
       initialCooldownUnlocks={initialCooldownUnlocks}
+      initialMonthly199Slugs={monthly199Slugs}
       hydrationReferenceMs={hydrationReferenceMs}
     />
   );

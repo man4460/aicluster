@@ -48,7 +48,7 @@ export async function requireChatAiPermission(): Promise<
     return {
       ok: false,
       response: NextResponse.json(
-        { error: "โทเคนไม่พอหรือยังไม่ครบงวดแพ็กเกจ — กรุณาเติมโทเคน" },
+        { error: "บัญชีถูกล็อคหรือมียอดค้าง — กรุณาชำระที่หน้าเติมโทเคน" },
         { status: 403 },
       ),
     };

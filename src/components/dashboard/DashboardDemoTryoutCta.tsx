@@ -18,7 +18,7 @@ export function DashboardDemoTryoutCta({ username }: { username: string }) {
           ลองก่อนตัดสินใจ
         </p>
         <form action="/api/auth/demo/enter" method="POST" className="mt-2">
-          <input type="hidden" name="next" value="/dashboard" />
+          <input type="hidden" name="next" value="/dashboard/modules" />
           <button
             type="submit"
             className="w-full rounded-xl bg-gradient-to-r from-[#0000BF] to-indigo-600 py-2.5 text-sm font-bold text-white shadow-md transition hover:from-[#0000a3] hover:to-indigo-700 active:scale-[0.99]"

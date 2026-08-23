@@ -1,5 +1,5 @@
-import { buffetTierMaxGroup } from "@/lib/modules/config";
-import type { UserAccessFields } from "@/lib/modules/access";
+import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
+import { hasMonthly199ForModule, type UserAccessFields } from "@/lib/modules/access";
 import type { PlanFeaturePolicyDto } from "@/lib/modules/plan-feature-policy";
 
 type KitchenOrderItem = {
@@ -14,21 +14,21 @@ type KitchenOrderItem = {
   note?: string;
 };
 
-/** แพ็ก 299 ขึ้นไป (กลุ่ม 2+) หรือแอดมิน */
+/** แพ็ก 199 ของ POS ร้านอาหาร หรือแอดมิน */
 export function isBuffetTier299OrAbove(
-  user: Pick<UserAccessFields, "role" | "subscriptionType" | "subscriptionTier">,
+  user: Pick<UserAccessFields, "role" | "monthly199Slugs">,
+  moduleSlug: string = BUILDING_POS_MODULE_SLUG,
 ): boolean {
-  if (user.role === "ADMIN") return true;
-  if (user.subscriptionType !== "BUFFET") return false;
-  return buffetTierMaxGroup(user.subscriptionTier) >= 2;
+  return hasMonthly199ForModule(user, moduleSlug);
 }
 
 export function canUseMultiKitchenFeature(
-  user: Pick<UserAccessFields, "role" | "subscriptionType" | "subscriptionTier">,
+  user: Pick<UserAccessFields, "role" | "monthly199Slugs">,
   policy: Pick<PlanFeaturePolicyDto, "multiKitchenGateEnabled">,
+  moduleSlug: string = BUILDING_POS_MODULE_SLUG,
 ): boolean {
   if (!policy.multiKitchenGateEnabled) return true;
-  return isBuffetTier299OrAbove(user);
+  return isBuffetTier299OrAbove(user, moduleSlug);
 }
 
 export type PosKitchenDepartment = {

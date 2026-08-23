@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { massagePortalSlipOwnerTag, massagePortalSlipPathPrefix } from "@/lib/massage/portal-slip-filename";
 import { isMassageCustomerPortalOpenForOwner } from "@/lib/massage/portal-access";
+import { MASSAGE_MODULE_SLUG } from "@/lib/modules/config";
 import { assertOwnerPlanUpload } from "@/lib/modules/plan-entitlements";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "ไม่สามารถใช้งานได้ในขณะนี้" }, { status: 403 });
   }
 
-  const planGate = await assertOwnerPlanUpload(ownerId, "slip");
+  const planGate = await assertOwnerPlanUpload(ownerId, "slip", MASSAGE_MODULE_SLUG);
   if (!planGate.ok) {
     return NextResponse.json({ error: planGate.error, code: planGate.code }, { status: 402 });
   }

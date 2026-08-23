@@ -349,7 +349,7 @@ export function ModuleTryLinksAdmin({
                         {MODULE_GROUP_TIER_NAME[gid] ?? `กลุ่ม ${gid}`}
                       </span>
                       <span className="ml-1.5 font-black normal-case tracking-normal text-[#5f5a8a]">
-                        {gid === 1 ? "199 / เดือน" : "รวมแพ็กเกจ"}
+                        {gid === 1 ? "1 บาท/วัน" : "รวมแพ็กเกจ"}
                       </span>
                     </p>
                     <span

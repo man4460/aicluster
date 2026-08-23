@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
-import {
-  isDemoAccountConfiguredForEntry,
-  isPublicDemoEntryFlagOn,
-} from "@/lib/auth/demo-account";
+import { isDemoAccountConfiguredForEntry } from "@/lib/auth/demo-account";
 import { moduleTryDashboardHref } from "@/lib/modules/try-link";
 import { prisma } from "@/lib/prisma";
 
@@ -43,7 +40,7 @@ export default async function ModuleTryPage({ params }: Props) {
   const loginHref = `/login?next=${encodeURIComponent(dashboardHref)}`;
   const registerHref = `/register?next=${encodeURIComponent(dashboardHref)}`;
 
-  if (isPublicDemoEntryFlagOn() && isDemoAccountConfiguredForEntry()) {
+  if (isDemoAccountConfiguredForEntry()) {
     redirect(`/api/auth/demo/enter?next=${encodeURIComponent(dashboardHref)}`);
   }
 

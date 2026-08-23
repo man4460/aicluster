@@ -443,9 +443,9 @@ function OrderCard({
             aria-label={
               slipPrintEnabled
                 ? `พิมพ์สลิปออเดอร์ ${order.id.slice(-6)}`
-                : `พิมพ์สลิปต้องแพ็กเหมา 199 — ${order.id.slice(-6)}`
+                : `พิมพ์สลิปต้องแพ็ก 199 ของโมดูลนี้ — ${order.id.slice(-6)}`
             }
-            title={slipPrintEnabled ? "พิมพ์สลิป" : "ต้องแพ็กเหมารายเดือน 199"}
+            title={slipPrintEnabled ? "พิมพ์สลิป" : "ต้องแพ็ก 199 ของโมดูลนี้"}
             disabled={busy}
             className={cn(!slipPrintEnabled && "opacity-45")}
             onClick={() => {

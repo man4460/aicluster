@@ -44,6 +44,8 @@ type Props = {
   /** โมดูลที่เคยเปิดทดลองแบบเก่า (ยังเหลือสิทธิ์จนกว่าจะหมดอายุ) — ไม่มีปุ่มเริ่มทดลองใหม่แล้ว */
   initialTrialIds?: string[];
   initialCooldownUnlocks?: Record<string, string>;
+  /** slug ที่สมัครแพ็ก 199 ของโมดูลนั้น */
+  initialMonthly199Slugs?: string[];
   /** Date.now() ตอน render บนเซิร์ฟเวอร์ — ใช้แทน Date.now() รอบแรกบนไคลเอนต์เพื่อกัน hydration mismatch ตอนเช็ค cooldown */
   hydrationReferenceMs: number;
 };
@@ -133,6 +135,10 @@ const FREE_MENU_CATALOG_SLUGS = [
 
 const FREE_MENU_CATALOG_SLUG_SET = new Set<string>(FREE_MENU_CATALOG_SLUGS);
 
+function isFreeModule(m: ModuleCardDTO) {
+  return getModuleDailyUsageBadge(m.slug, m.groupId)?.tone === "free";
+}
+
 /** คำอธิบายบรรทัดเดียวใต้ชื่อโมดูล — ตัดคำนำหน้ากลุ่มที่ซ้ำกับหัวข้อส่วน */
 function catalogModuleDescription(m: { slug: string; description: string | null }): string {
   const fromDb = m.description?.trim();
@@ -171,6 +177,7 @@ export function ModuleSubscriptionBrowser({
   initialSubscribedIds,
   initialTrialIds = [],
   initialCooldownUnlocks = {},
+  initialMonthly199Slugs = [],
   hydrationReferenceMs,
 }: Props) {
   const router = useRouter();
@@ -188,6 +195,7 @@ export function ModuleSubscriptionBrowser({
     return new Set(initialTrialIds.filter((id) => !sub.has(id)));
   });
   const [cooldownUnlocks, setCooldownUnlocks] = useState<Record<string, string>>(() => ({ ...initialCooldownUnlocks }));
+  const [monthly199Slugs, setMonthly199Slugs] = useState<Set<string>>(() => new Set(initialMonthly199Slugs));
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [infoBanner, setInfoBanner] = useState<string | null>(null);
@@ -196,9 +204,15 @@ export function ModuleSubscriptionBrowser({
   const subSyncKey = useMemo(() => [...initialSubscribedIds].sort().join(","), [initialSubscribedIds]);
   const trialSyncKey = useMemo(() => [...initialTrialIds].sort().join(","), [initialTrialIds]);
 
+  const monthly199Key = useMemo(() => [...initialMonthly199Slugs].sort().join(","), [initialMonthly199Slugs]);
+
   useEffect(() => {
     setCooldownUnlocks({ ...initialCooldownUnlocks });
   }, [initialCooldownUnlocks]);
+
+  useEffect(() => {
+    setMonthly199Slugs(new Set(initialMonthly199Slugs));
+  }, [monthly199Key, initialMonthly199Slugs]);
 
   useEffect(() => {
     setSavedSubscribedIds(new Set(initialSubscribedIds));
@@ -313,7 +327,7 @@ export function ModuleSubscriptionBrowser({
     }
   }
 
-  async function subscribeOnly(moduleId: string) {
+  async function subscribeOnly(moduleId: string, plan: "daily" | "monthly199" = "daily") {
     setErr(null);
     setInfoBanner(null);
     setBusyId(moduleId);
@@ -322,14 +336,18 @@ export function ModuleSubscriptionBrowser({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ moduleId }),
+        body: JSON.stringify({ moduleId, plan }),
       });
-      const j = (await res.json().catch(() => ({}))) as { error?: string; unlockAt?: string };
+      const j = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        unlockAt?: string;
+        monthly199?: boolean;
+      };
       if (!res.ok) {
         if (j.unlockAt) {
           setCooldownUnlocks((prev) => ({ ...prev, [moduleId]: j.unlockAt! }));
         }
-        setErr(j.error ?? "Subscribe ไม่สำเร็จ");
+        setErr(j.error ?? (plan === "monthly199" ? "สมัครแพ็ก 199 ไม่สำเร็จ" : "Subscribe ไม่สำเร็จ"));
         return;
       }
       setSavedSubscribedIds((prev) => new Set(prev).add(moduleId));
@@ -343,6 +361,10 @@ export function ModuleSubscriptionBrowser({
         delete n[moduleId];
         return n;
       });
+      if (j.monthly199) {
+        const slug = modules.find((m) => m.id === moduleId)?.slug;
+        if (slug) setMonthly199Slugs((prev) => new Set(prev).add(slug));
+      }
       router.refresh();
     } finally {
       setBusyId(null);
@@ -503,12 +525,28 @@ export function ModuleSubscriptionBrowser({
                   footer={
                     <div className="space-y-2">
                       {hasAccess ? (
-                        <Link
-                          href={dashboardModuleHref(m.slug)}
-                          className={cn(dashboardModulePrimaryCtaClass, "!min-h-[40px] !rounded-xl !text-sm")}
-                        >
-                          เข้าใช้งาน
-                        </Link>
+                        <>
+                          <Link
+                            href={dashboardModuleHref(m.slug)}
+                            className={cn(dashboardModulePrimaryCtaClass, "!min-h-[40px] !rounded-xl !text-sm")}
+                          >
+                            เข้าใช้งาน
+                          </Link>
+                          {!isFreeModule(m) && monthly199Slugs.has(m.slug) ? (
+                            <p className="text-center text-[11px] font-bold text-emerald-800">แพ็ก 199 / เดือน</p>
+                          ) : null}
+                          {!isFreeModule(m) && !monthly199Slugs.has(m.slug) ? (
+                            <button
+                              type="button"
+                              suppressHydrationWarning
+                              disabled={busyId === m.id || !unlocked}
+                              onClick={() => void subscribeOnly(m.id, "monthly199")}
+                              className="app-tap-feedback w-full rounded-xl border border-[#0000BF]/20 bg-white px-3 py-2 text-xs font-bold text-[#2e2a58] hover:bg-indigo-50 disabled:opacity-50"
+                            >
+                              {busyId === m.id ? "กำลังสมัคร 199..." : "แพ็ก 199 / เดือน"}
+                            </button>
+                          ) : null}
+                        </>
                       ) : showCooldownLock || showDailyLock ? (
                         <button
                           type="button"
@@ -525,25 +563,38 @@ export function ModuleSubscriptionBrowser({
                           Locked
                         </button>
                       ) : (
-                        <button
-                          type="button"
-                          suppressHydrationWarning
-                          disabled={busyId === m.id || !unlocked}
-                          onClick={() => void subscribeOnly(m.id)}
-                          className={cn(dashboardModuleSubscribeButtonClass, "app-tap-feedback !min-h-[40px] !rounded-xl !py-2")}
-                        >
-                          {busyId === m.id ? (
-                            <span className="inline-flex items-center gap-2">
-                              <span className="app-inline-spinner !h-3 !w-3" aria-hidden />
-                              <span>กำลังสมัคร...</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 justify-center">
-                              <span className="text-sm">+</span>
-                              <span>Subscribe</span>
-                            </span>
-                          )}
-                        </button>
+                        <div className="space-y-2">
+                          <button
+                            type="button"
+                            suppressHydrationWarning
+                            disabled={busyId === m.id || !unlocked}
+                            onClick={() => void subscribeOnly(m.id, "daily")}
+                            className={cn(dashboardModuleSubscribeButtonClass, "app-tap-feedback !min-h-[40px] !rounded-xl !py-2")}
+                          >
+                            {busyId === m.id ? (
+                              <span className="inline-flex items-center gap-2">
+                                <span className="app-inline-spinner !h-3 !w-3" aria-hidden />
+                                <span>กำลังสมัคร...</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 justify-center">
+                                <span className="text-sm">+</span>
+                                <span>Subscribe · 1 บาท/วัน</span>
+                              </span>
+                            )}
+                          </button>
+                          {!isFreeModule(m) ? (
+                            <button
+                              type="button"
+                              suppressHydrationWarning
+                              disabled={busyId === m.id || !unlocked}
+                              onClick={() => void subscribeOnly(m.id, "monthly199")}
+                              className="app-tap-feedback w-full rounded-xl border border-[#0000BF]/20 bg-white px-3 py-2 text-xs font-bold text-[#2e2a58] hover:bg-indigo-50 disabled:opacity-50"
+                            >
+                              แพ็ก 199 / เดือน
+                            </button>
+                          ) : null}
+                        </div>
                       )}
                     </div>
                   }
@@ -619,9 +670,24 @@ export function ModuleSubscriptionBrowser({
 
               if (hasAccess) {
                 return (
-                  <Link key={m.id} href={dashboardModuleHref(m.slug)} className={rowClass}>
-                    {body}
-                  </Link>
+                  <div key={m.id} className="flex min-w-0 items-stretch gap-2">
+                    <Link href={dashboardModuleHref(m.slug)} className={cn(rowClass, "flex-1")}>
+                      {body}
+                    </Link>
+                    {!isFreeModule(m) && !monthly199Slugs.has(m.slug) ? (
+                      <button
+                        type="button"
+                        suppressHydrationWarning
+                        disabled={busyId === m.id}
+                        aria-label={`สมัครแพ็ก 199 ${m.title}`}
+                        title="แพ็ก 199 / เดือน"
+                        onClick={() => void subscribeOnly(m.id, "monthly199")}
+                        className="app-tap-feedback shrink-0 rounded-xl border border-[#0000BF]/20 bg-white px-2.5 text-[11px] font-black text-[#2e2a58] hover:bg-indigo-50 disabled:opacity-50"
+                      >
+                        199
+                      </button>
+                    ) : null}
+                  </div>
                 );
               }
 
@@ -646,16 +712,30 @@ export function ModuleSubscriptionBrowser({
               }
 
               return (
-                <button
-                  key={m.id}
-                  type="button"
-                  suppressHydrationWarning
-                  disabled={busyId === m.id || !unlocked}
-                  className={cn(rowClass, "disabled:opacity-50")}
-                  onClick={() => void subscribeOnly(m.id)}
-                >
-                  {body}
-                </button>
+                <div key={m.id} className="flex min-w-0 items-stretch gap-2">
+                  <button
+                    type="button"
+                    suppressHydrationWarning
+                    disabled={busyId === m.id || !unlocked}
+                    className={cn(rowClass, "flex-1 disabled:opacity-50")}
+                    onClick={() => void subscribeOnly(m.id, "daily")}
+                  >
+                    {body}
+                  </button>
+                  {!isFreeModule(m) ? (
+                    <button
+                      type="button"
+                      suppressHydrationWarning
+                      disabled={busyId === m.id || !unlocked}
+                      aria-label={`สมัครแพ็ก 199 ${m.title}`}
+                      title="แพ็ก 199 / เดือน"
+                      onClick={() => void subscribeOnly(m.id, "monthly199")}
+                      className="app-tap-feedback shrink-0 rounded-xl border border-[#0000BF]/20 bg-white px-2.5 text-[11px] font-black text-[#2e2a58] hover:bg-indigo-50 disabled:opacity-50"
+                    >
+                      199
+                    </button>
+                  ) : null}
+                </div>
               );
             })}
           </div>

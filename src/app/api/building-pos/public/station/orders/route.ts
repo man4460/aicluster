@@ -4,7 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { mapBuildingPosOrderRow } from "@/lib/building-pos/order-map";
 import { isBuildingPosPortalOpenForOwner } from "@/lib/building-pos/portal-access";
 import { formatBuildingPosDbError, jsonBuildingPosError } from "@/lib/building-pos/route-errors";
+import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
 import { planFeaturesApiPayload } from "@/lib/modules/plan-entitlements";
+import { listMonthly199ModuleSlugs } from "@/lib/tokens/module-monthly-199";
 import { getPlanFeaturePolicy } from "@/lib/modules/plan-feature-policy";
 import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
 import { getBuildingPosDataScope } from "@/lib/trial/module-scopes";
@@ -124,10 +126,13 @@ export async function GET(req: Request) {
       select: { displayName: true, orderTicketSlipPaperSize: true },
     });
 
-    const owner = await prisma.user.findUnique({
-      where: { id: ownerId },
-      select: { role: true, subscriptionType: true, subscriptionTier: true },
-    });
+    const [owner, monthly199Slugs] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: ownerId },
+        select: { role: true, subscriptionType: true, subscriptionTier: true },
+      }),
+      listMonthly199ModuleSlugs(ownerId),
+    ]);
     const policy = await getPlanFeaturePolicy();
 
     const rows = await prisma.buildingPosOrder.findMany({
@@ -164,10 +169,11 @@ export async function GET(req: Request) {
       departmentId,
       orders,
       features: owner
-        ? planFeaturesApiPayload(owner, policy)
+        ? planFeaturesApiPayload({ ...owner, monthly199Slugs }, policy, BUILDING_POS_MODULE_SLUG)
         : planFeaturesApiPayload(
-            { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE" },
+            { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE", monthly199Slugs: [] },
             policy,
+            BUILDING_POS_MODULE_SLUG,
           ),
     });
   } catch (e) {

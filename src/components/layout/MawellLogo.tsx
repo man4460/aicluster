@@ -3,13 +3,14 @@ import { cn } from "@/lib/cn";
 type Props = {
   className?: string;
   /** ขนาดตัวอักษรหลัก */
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "hero";
 };
 
 const sizeClasses = {
   sm: "text-xs leading-snug sm:text-sm md:text-base",
   md: "text-sm leading-snug sm:text-base md:text-lg lg:text-xl",
   lg: "text-base leading-snug sm:text-lg md:text-xl lg:text-2xl",
+  hero: "text-4xl leading-none sm:text-5xl md:text-6xl",
 } as const;
 
 export function MawellLogo({ className, size = "md" }: Props) {

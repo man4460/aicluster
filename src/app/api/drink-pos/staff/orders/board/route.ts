@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireDrinkPosStaff } from "@/lib/drink-pos/staff-auth";
+import { DRINK_POS_MODULE_SLUG } from "@/lib/modules/config";
 import { planFeaturesApiPayload } from "@/lib/modules/plan-entitlements";
+import { listMonthly199ModuleSlugs } from "@/lib/tokens/module-monthly-199";
 import { getPlanFeaturePolicy } from "@/lib/modules/plan-feature-policy";
 import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
 import { ensureDrinkPosShopProfile } from "@/systems/drink-pos/lib/member-service";
@@ -24,7 +26,7 @@ export async function GET(req: Request) {
   if ("error" in auth) return auth.error;
   const ctx = auth.ctx;
 
-  const [board, profile, owner, policy] = await Promise.all([
+  const [board, profile, owner, policy, monthly199Slugs] = await Promise.all([
     fetchDrinkPosOrderBoardPayload(ctx.ownerId),
     ensureDrinkPosShopProfile(prisma, ctx.ownerId, ctx.trialSessionId),
     prisma.user.findUnique({
@@ -32,6 +34,7 @@ export async function GET(req: Request) {
       select: { role: true, subscriptionType: true, subscriptionTier: true },
     }),
     getPlanFeaturePolicy(),
+    listMonthly199ModuleSlugs(ctx.ownerId),
   ]);
 
   const shop = await prisma.drinkPosShopProfile.findUnique({
@@ -46,10 +49,11 @@ export async function GET(req: Request) {
     orders: board.orders,
     staleUnclearedCount: board.staleUnclearedCount,
     features: owner
-      ? planFeaturesApiPayload(owner, policy)
+      ? planFeaturesApiPayload({ ...owner, monthly199Slugs }, policy, DRINK_POS_MODULE_SLUG)
       : planFeaturesApiPayload(
-          { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE" },
+          { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE", monthly199Slugs: [] },
           policy,
+          DRINK_POS_MODULE_SLUG,
         ),
   });
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { establishDemoSession } from "@/lib/auth/demo-enter";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
-import { publicRedirectOriginFromRequest } from "@/lib/http/public-redirect-origin";
+import { requestHostRedirectOrigin } from "@/lib/http/public-redirect-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ function safeNextPath(raw: string | null | undefined): string {
 }
 
 async function enterDemo(req: Request, nextRaw: string | null): Promise<NextResponse> {
-  const origin = publicRedirectOriginFromRequest(req);
+  const origin = requestHostRedirectOrigin(req);
   const next = safeNextPath(nextRaw);
 
   const ip = clientIp(req.headers);

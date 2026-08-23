@@ -33,7 +33,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 70: massage/car-wash/football signature + promptPayQrImageUrl */
 /** 71: AttendanceSettings.faceCheckInEnabled + AttendanceRosterEntry.faceDescriptor* */
 /** 72: device API key + fingerprintSlot on roster */
-const PRISMA_SINGLETON_VERSION = 72;
+/** 73: UserModulePlan — แพ็ก 199 ต่อโมดูล */
+const PRISMA_SINGLETON_VERSION = 73;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -152,6 +153,11 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     loyaltyStampEvent?: { findMany?: unknown };
     footballTurfShopProfile?: { findUnique?: unknown };
     footballTurfBooking?: { findMany?: unknown };
+    footballTurfIncomeCategory?: { findMany?: unknown };
+    footballTurfIncomeEntry?: { findMany?: unknown };
+    footballTurfStaffLink?: { findUnique?: unknown };
+    userModulePlan?: { findMany?: unknown };
+    siteSetting?: { findUnique?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -258,7 +264,12 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.loyaltyStampMember?.findMany === "function" &&
     typeof c.loyaltyStampEvent?.findMany === "function" &&
     typeof c.footballTurfShopProfile?.findUnique === "function" &&
-    typeof c.footballTurfBooking?.findMany === "function"
+    typeof c.footballTurfBooking?.findMany === "function" &&
+    typeof c.footballTurfIncomeCategory?.findMany === "function" &&
+    typeof c.footballTurfIncomeEntry?.findMany === "function" &&
+    typeof c.footballTurfStaffLink?.findUnique === "function" &&
+    typeof c.userModulePlan?.findMany === "function" &&
+    typeof c.siteSetting?.findUnique === "function"
   );
 }
 

@@ -1,31 +1,26 @@
 import { isDailyTokenExemptModuleSlug } from "@/lib/modules/config";
 import { prisma } from "@/lib/prisma";
 import { bangkokDateKey } from "@/lib/time/bangkok";
+import { isTokenDebtLocked } from "@/lib/tokens/token-debt";
+import { moduleHasActiveMonthly199 } from "@/lib/tokens/module-monthly-199";
 
 /**
  * ผลการหักโทเคนต่อโมดูล/วัน (Bangkok)
  * - ok: ผ่านเกท (อาจหักหรือไม่หักก็ได้ — ดู `charged`)
- * - !ok: โทเคนไม่พอ → ไม่ให้เข้าโมดูล
+ * - !ok: ล็อคหนี้ / ไม่ให้เข้าโมดูล
  */
 export type ModuleDailyTokenResult =
-  | { ok: true; charged: boolean; reason?: "exempt" | "already_charged" | "newly_charged" }
-  | { ok: false; reason: "no_tokens" };
+  | { ok: true; charged: boolean; reason?: "exempt" | "already_charged" | "newly_charged" | "monthly_199" }
+  | { ok: false; reason: "no_tokens" | "debt_locked" };
 
 function bangkokDateOnly(key = bangkokDateKey()): Date {
-  // เก็บเป็น UTC midnight ของวัน Bangkok เพื่อให้ MySQL DATE คงค่า YYYY-MM-DD เดียวกัน
   return new Date(`${key}T00:00:00.000Z`);
 }
 
 /**
- * สายรายวัน (DAILY): หัก 1 โทเคน ต่อ "โมดูล + วัน Bangkok"
- *
- * - ADMIN / BUFFET: ไม่หัก ไม่บันทึก
- * - DAILY: ถ้ามีบันทึก (userId, slug, today) แล้ว → ผ่านโดยไม่หัก
- *   ถ้ายังไม่มีบันทึก:
- *     - tokens >= 1 → หัก atomic + insert log
- *     - tokens = 0 → no_tokens (ไม่หัก ไม่ insert) → ผู้เรียก redirect ไป refill
- *
- * ใช้ทรานแซกชันเพื่อให้ตรวจ → หัก → บันทึก เป็น atomic
+ * สายรายวัน: หัก 1 โทเคน ต่อโมดูลต่อวัน Bangkok — โทเคนไม่พอให้ติดลบ
+ * แพ็ก 199 ของโมดูลนั้น: ไม่หักรายวัน
+ * ถ้าติดลบถึงเกณฑ์ล็อค → ไม่หักเพิ่ม ไม่ให้เข้า
  */
 export async function applyModuleDailyTokenDeduction(
   billingUserId: string,
@@ -34,14 +29,18 @@ export async function applyModuleDailyTokenDeduction(
   if (!billingUserId || !moduleSlug) return { ok: true, charged: false, reason: "exempt" };
   if (isDailyTokenExemptModuleSlug(moduleSlug)) return { ok: true, charged: false, reason: "exempt" };
 
+  if (await moduleHasActiveMonthly199(billingUserId, moduleSlug)) {
+    return { ok: true, charged: false, reason: "monthly_199" };
+  }
+
   return prisma.$transaction(async (tx): Promise<ModuleDailyTokenResult> => {
     const user = await tx.user.findUnique({
       where: { id: billingUserId },
-      select: { id: true, role: true, subscriptionType: true, tokens: true },
+      select: { id: true, role: true, tokens: true },
     });
     if (!user) return { ok: true, charged: false, reason: "exempt" };
     if (user.role === "ADMIN") return { ok: true, charged: false, reason: "exempt" };
-    if (user.subscriptionType === "BUFFET") return { ok: true, charged: false, reason: "exempt" };
+    if (isTokenDebtLocked(user.tokens)) return { ok: false, reason: "debt_locked" };
 
     const todayDate = bangkokDateOnly();
 
@@ -57,13 +56,10 @@ export async function applyModuleDailyTokenDeduction(
     });
     if (existing) return { ok: true, charged: false, reason: "already_charged" };
 
-    if (user.tokens < 1) return { ok: false, reason: "no_tokens" };
-
-    const decremented = await tx.user.updateMany({
-      where: { id: billingUserId, tokens: { gte: 1 } },
+    await tx.user.update({
+      where: { id: billingUserId },
       data: { tokens: { decrement: 1 } },
     });
-    if (decremented.count !== 1) return { ok: false, reason: "no_tokens" };
 
     try {
       await tx.userModuleDailyCharge.create({
@@ -75,7 +71,6 @@ export async function applyModuleDailyTokenDeduction(
         },
       });
     } catch {
-      // ถ้าเกิด race condition (insert ชนกัน) คืนโทเคนกลับ
       await tx.user.update({
         where: { id: billingUserId },
         data: { tokens: { increment: 1 } },
@@ -87,15 +82,7 @@ export async function applyModuleDailyTokenDeduction(
   });
 }
 
-/**
- * รายชื่อ moduleSlug ที่ผู้ใช้ "หักโทเคนไปแล้วในวัน Bangkok นี้" — ใช้ใน UI/guard เพื่ออนุโลม
- * ให้ผู้ใช้สายรายวันที่ tokens = 0 แต่หักไปแล้วยังคงเข้าใช้งานต่อได้จนถึงเที่ยงคืน Bangkok
- *
- * **สำคัญ**: ใช้ billingUserId (เจ้าของ) ไม่ใช่ session.sub (พนักงานก็จะอ้างอิงเจ้าของ)
- */
-export async function listModuleSlugsChargedToday(
-  billingUserId: string,
-): Promise<Set<string>> {
+export async function listModuleSlugsChargedToday(billingUserId: string): Promise<Set<string>> {
   if (!billingUserId) return new Set();
   const todayDate = bangkokDateOnly();
   const rows = await prisma.userModuleDailyCharge.findMany({

@@ -388,8 +388,8 @@ export function DashboardShell({
   const hideMainMobileBottomNav =
     moduleStaffKiosk || isModuleWorkspacePath(pathname) || onAdminHub;
   const [drawerOpen, setDrawerOpen] = useState(false);
-  /** เดสก์ท็อป: ซ่อน sidebar เพื่อให้พื้นที่เนื้อหากว้างขึ้น — โหลดจาก localStorage หลัง mount */
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  /** เดสก์ท็อป: ซ่อน sidebar เพื่อให้พื้นที่เนื้อหากว้างขึ้น — โหลดจาก localStorage หลัง mount · โหมดทดลองเริ่มซ่อน */
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => demoSession);
   const [accountOpen, setAccountOpen] = useState(false);
   const [moduleMenuOpen, setModuleMenuOpen] = useState(false);
   const [drinkPosHeaderCollapsed, setDrinkPosHeaderCollapsed] = useState(false);
@@ -487,6 +487,12 @@ export function DashboardShell({
   }, []);
 
   useEffect(() => {
+    /** ขอสาธิต / บัญชีทดลอง — ซ่อนแถบซ้ายอัตโนมัติ (ยังกดปุ่มเปิดได้อยู่) */
+    if (demoSession) {
+      setSidebarCollapsed(true);
+      setDrawerOpen(false);
+      return;
+    }
     if (pathname === "/dashboard") {
       setSidebarCollapsed(false);
       try {
@@ -506,7 +512,7 @@ export function DashboardShell({
     } catch {
       setSidebarCollapsed(false);
     }
-  }, [pathname]);
+  }, [pathname, demoSession]);
 
   useEffect(() => {
     if (!onDrinkPosModule) {
@@ -1120,7 +1126,7 @@ export function DashboardShell({
 
       <div
         className={cn(
-          "flex min-h-0 flex-1 gap-0 pb-[max(5.75rem,calc(5.75rem+env(safe-area-inset-bottom,0px)))] pt-0 md:pb-4",
+          "flex min-h-0 flex-1 gap-0 pb-[max(5.75rem,calc(5.75rem+env(safe-area-inset-bottom,0px)))] pt-0 md:gap-3 md:pb-4 lg:gap-4",
           /** ขอบนอกเดียวกับ wrapper แถบ header ม่วง (px-3 sm:px-4) — ห้าม px-2 แยกโมดูล */
           "px-3 sm:px-4",
           moduleStaffKiosk && "!gap-0 !px-0 !pt-0 !pb-0 sm:!px-0 sm:!pb-0",

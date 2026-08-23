@@ -8,7 +8,7 @@ import {
   setSessionCookie,
   verifySessionToken,
 } from "@/lib/auth/session";
-import { publicRedirectOriginFromRequest } from "@/lib/http/public-redirect-origin";
+import { requestHostRedirectOrigin } from "@/lib/http/public-redirect-origin";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +40,7 @@ async function clearDemoReturnCookie(req: Request): Promise<void> {
 async function exitDemo(req: Request, nextRaw: string | null): Promise<NextResponse> {
   const store = await cookies();
   const ret = store.get(DEMO_RETURN_SESSION_COOKIE)?.value ?? null;
-  const origin = publicRedirectOriginFromRequest(req);
+  const origin = requestHostRedirectOrigin(req);
   const forcedNext = safeNextPath(nextRaw);
 
   /** ออกไปล็อกอิน/สมัคร — ไม่คืนเซสชันเดิม */
@@ -93,7 +93,7 @@ export async function GET(req: Request) {
   if (isLikelyPrefetch(req)) {
     return new NextResponse(null, { status: 204 });
   }
-  const origin = publicRedirectOriginFromRequest(req);
+  const origin = requestHostRedirectOrigin(req);
   return NextResponse.redirect(new URL("/dashboard", origin), 303);
 }
 

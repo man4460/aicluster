@@ -18,6 +18,7 @@ import {
   assetRowRemoveIconButtonClass,
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
+import { LandingBannerAdmin } from "@/systems/admin/components/LandingBannerAdmin";
 
 type Row = {
   id: string;
@@ -214,6 +215,8 @@ export function ModuleCardImagesAdmin() {
           </div>
         </div>
       </section>
+
+      <LandingBannerAdmin />
 
       <AppDashboardSection tone="violet">
         <AppSectionHeader

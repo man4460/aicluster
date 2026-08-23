@@ -118,7 +118,7 @@ export async function saveModuleUpload(
 ): Promise<SaveModuleUploadSuccess | SaveModuleUploadFailure> {
   const planGate = resolvePlanUploadGate(input);
   if (planGate) {
-    const gate = await assertOwnerPlanUpload(input.ownerUserId, planGate);
+    const gate = await assertOwnerPlanUpload(input.ownerUserId, planGate, input.moduleSlug);
     if (!gate.ok) {
       return { ok: false, error: gate.error, status: 402 };
     }

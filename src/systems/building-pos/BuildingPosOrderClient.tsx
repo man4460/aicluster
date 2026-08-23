@@ -468,7 +468,7 @@ export function BuildingPosOrderClient({
             }}
             disabled={busy}
           />
-          {slipPrintEnabled ? "พิมพ์สลิปหลังส่งออเดอร์" : "พิมพ์สลิป (ต้องแพ็กเหมา 199)"}
+          {slipPrintEnabled ? "พิมพ์สลิปหลังส่งออเดอร์" : "พิมพ์สลิป (ต้องแพ็ก 199 ของโมดูลนี้)"}
         </label>
         <div className="flex items-end justify-between gap-2">
           <div>
@@ -731,7 +731,7 @@ export function BuildingPosOrderClient({
               }}
               disabled={busy}
             />
-            {slipPrintEnabled ? "พิมพ์สลิปหลังส่งออเดอร์" : "พิมพ์สลิป (ต้องแพ็กเหมา 199)"}
+            {slipPrintEnabled ? "พิมพ์สลิปหลังส่งออเดอร์" : "พิมพ์สลิป (ต้องแพ็ก 199 ของโมดูลนี้)"}
           </label>
         </div>
       </FormModal>

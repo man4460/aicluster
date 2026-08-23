@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
+import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
 import { canUseSlipPrintFeature } from "@/lib/modules/plan-entitlements";
 import { getPlanFeaturePolicy } from "@/lib/modules/plan-feature-policy";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
@@ -23,10 +24,13 @@ export default async function BuildingPosOrderPage() {
     getModuleBillingContext(session.sub),
     getPlanFeaturePolicy(),
   ]);
-  const slipPrintEnabled = bill ? canUseSlipPrintFeature(bill.access, policy) : canUseSlipPrintFeature(
-    { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE" },
-    policy,
-  );
+  const slipPrintEnabled = bill
+    ? canUseSlipPrintFeature(bill.access, policy, BUILDING_POS_MODULE_SLUG)
+    : canUseSlipPrintFeature(
+        { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE", monthly199Slugs: [] },
+        policy,
+        BUILDING_POS_MODULE_SLUG,
+      );
 
   return (
     <BuildingPosOrderClient

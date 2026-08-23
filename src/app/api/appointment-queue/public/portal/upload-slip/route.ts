@@ -7,6 +7,7 @@ import {
   appointmentQueuePortalSlipPathPrefix,
 } from "@/lib/appointment-queue/portal-slip-filename";
 import { isAppointmentQueuePortalOpenForOwner } from "@/lib/appointment-queue/portal-access";
+import { APPOINTMENT_QUEUE_MODULE_SLUG } from "@/lib/modules/config";
 import { assertOwnerPlanUpload } from "@/lib/modules/plan-entitlements";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
   const portalOk = await isAppointmentQueuePortalOpenForOwner(ownerId);
   if (!portalOk) return NextResponse.json({ error: "ไม่สามารถใช้งานได้" }, { status: 403 });
 
-  const planGate = await assertOwnerPlanUpload(ownerId, "slip");
+  const planGate = await assertOwnerPlanUpload(ownerId, "slip", APPOINTMENT_QUEUE_MODULE_SLUG);
   if (!planGate.ok) {
     return NextResponse.json({ error: planGate.error, code: planGate.code }, { status: 402 });
   }

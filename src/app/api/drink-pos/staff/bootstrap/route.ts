@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getQrDrinkPosBranding } from "@/lib/profile/qr-branding";
+import { DRINK_POS_MODULE_SLUG } from "@/lib/modules/config";
 import { planFeaturesApiPayload } from "@/lib/modules/plan-entitlements";
+import { listMonthly199ModuleSlugs } from "@/lib/tokens/module-monthly-199";
 import { getPlanFeaturePolicy } from "@/lib/modules/plan-feature-policy";
 import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
 import { prisma } from "@/lib/prisma";
@@ -12,7 +14,7 @@ export async function GET(req: Request) {
   const ctx = auth.ctx;
   const pinStatus = await drinkPosStaffDailyPinStatus(req, ctx.ownerId);
 
-  const [branding, owner, policy, shop] = await Promise.all([
+  const [branding, owner, policy, shop, monthly199Slugs] = await Promise.all([
     getQrDrinkPosBranding(ctx.ownerId, ctx.trialSessionId),
     prisma.user.findUnique({
       where: { id: ctx.ownerId },
@@ -36,6 +38,7 @@ export async function GET(req: Request) {
         orderTicketSlipPaperSize: true,
       },
     }),
+    listMonthly199ModuleSlugs(ctx.ownerId),
   ]);
   const shopLabel = shop?.displayName?.trim() || branding.label || "ร้านเครื่องดื่ม";
   const slipPaperSize = normalizeModuleSlipPaperSize(shop?.slipPaperSize);
@@ -74,10 +77,11 @@ export async function GET(req: Request) {
       orderTicketSlipPaperSize,
     },
     features: owner
-      ? planFeaturesApiPayload(owner, policy)
+      ? planFeaturesApiPayload({ ...owner, monthly199Slugs }, policy, DRINK_POS_MODULE_SLUG)
       : planFeaturesApiPayload(
-          { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE" },
+          { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE", monthly199Slugs: [] },
           policy,
+          DRINK_POS_MODULE_SLUG,
         ),
   });
 }

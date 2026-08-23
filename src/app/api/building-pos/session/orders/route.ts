@@ -70,10 +70,11 @@ export async function GET() {
       orders: rows.map(mapBuildingPosOrderRow),
       orderTicketSlipPaperSize: normalizeModuleSlipPaperSize(branding?.orderTicketSlipPaperSize),
       features: bill
-        ? planFeaturesApiPayload(bill.access, policy)
+        ? planFeaturesApiPayload(bill.access, policy, BUILDING_POS_MODULE_SLUG)
         : planFeaturesApiPayload(
-            { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE" },
+            { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE", monthly199Slugs: [] },
             policy,
+            BUILDING_POS_MODULE_SLUG,
           ),
     });
   } catch (e) {
@@ -99,7 +100,7 @@ export async function POST(req: Request) {
       const existingCount = await prisma.buildingPosOrder.count({
         where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
       });
-      const allowance = assertPlanDataRowAllowance(bill.access, existingCount, 1, policy);
+      const allowance = assertPlanDataRowAllowance(bill.access, existingCount, 1, policy, BUILDING_POS_MODULE_SLUG);
       if (!allowance.ok) {
         return NextResponse.json({ error: allowance.error, code: allowance.code }, { status: 402 });
       }

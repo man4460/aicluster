@@ -20,14 +20,10 @@ function redirectOriginFromAppEnv(): string {
 }
 
 /**
- * Origin สำหรับ Location หลัง redirect จาก Route Handler
- * - ลำดับ: NEXT_PUBLIC_APP_URL → APP_URL (ตัด path ทิ้ง เหลือ origin — รองรับเช่น .../dashboard ใน .env)
- * - ถ้า Host / URL เป็น 0.0.0.0 แปลงเป็น 127.0.0.1 — เบราว์เซอร์หลายตัวเปิด http://0.0.0.0 ไม่ได้
+ * Origin ของคำขอจริง (Host / x-forwarded-host) — ไม่ใช้ APP_URL
+ * ใช้ตอนตั้งคุกกี้แล้ว redirect: ต้องอยู่โฮสต์เดียวกับที่เบราว์เซอร์เพิ่งได้รับคุกกี้
  */
-export function publicRedirectOriginFromRequest(req: Request): string {
-  const fromEnv = redirectOriginFromAppEnv();
-  if (fromEnv) return fromEnv;
-
+export function requestHostRedirectOrigin(req: Request): string {
   const uBase = new URL(req.url);
   const defaultProto = uBase.protocol === "https:" ? "https" : "http";
 
@@ -49,4 +45,15 @@ export function publicRedirectOriginFromRequest(req: Request): string {
   }
   const port = uBase.port ? `:${uBase.port}` : "";
   return `${uBase.protocol}//${host}${port}`;
+}
+
+/**
+ * Origin สำหรับ Location หลัง redirect จาก Route Handler
+ * - ลำดับ: NEXT_PUBLIC_APP_URL → APP_URL (ตัด path ทิ้ง เหลือ origin — รองรับเช่น .../dashboard ใน .env)
+ * - ถ้า Host / URL เป็น 0.0.0.0 แปลงเป็น 127.0.0.1 — เบราว์เซอร์หลายตัวเปิด http://0.0.0.0 ไม่ได้
+ */
+export function publicRedirectOriginFromRequest(req: Request): string {
+  const fromEnv = redirectOriginFromAppEnv();
+  if (fromEnv) return fromEnv;
+  return requestHostRedirectOrigin(req);
 }

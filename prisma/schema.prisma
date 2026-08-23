@@ -55,10 +55,16 @@ enum SubscriptionTier {
   TIER_599
 }
 
-/** BUFFET = แพ็กเกจ/รายเดือน | DAILY = สายรายวัน */
+/** BUFFET = แพ็กเกจเหมา (เลิกใช้ — คิดรายโมดูล) | DAILY = สายรายวันต่อโมดูล */
 enum SubscriptionType {
   BUFFET
   DAILY
+}
+
+/** วิธีคิดเงินต่อโมดูล — รายวัน 1 โทเคน หรือรายเดือน 199 ต่อโมดูล */
+enum ModuleBillingKind {
+  DAILY
+  MONTHLY_199
 }
 
 /**
@@ -249,6 +255,7 @@ model User {
   openClawSyncRequests     OpenClawSyncRequest[]
   /** บันทึกหักโทเคนต่อโมดูลต่อวัน (สายรายวัน) — ป้องกันหักซ้ำ + ตรวจสอบย้อนหลัง */
   moduleDailyCharges       UserModuleDailyCharge[]
+  modulePlans              UserModulePlan[]
   promptLibraryCategories  PromptLibraryCategory[]
   promptLibraryPrompts     PromptLibraryPrompt[]
   promptLibraryVersions    PromptLibraryVersion[]
@@ -321,6 +328,22 @@ model UserModuleDailyCharge {
   @@index([userId, chargeDate], map: "umd_user_date_idx")
   @@index([moduleSlug, chargeDate], map: "umd_slug_date_idx")
   @@map("user_module_daily_charges")
+}
+
+/** แพ็กต่อโมดูล — MONTHLY_199 = สิทธิ์ตามที่แอดมินตั้ง (ข้อมูลเกินเกณฑ์ · พิมพ์สลิป ฯลฯ) ไม่เหมาทั้งระบบ */
+model UserModulePlan {
+  id               String            @id @default(cuid())
+  userId           String            @map("user_id") @db.VarChar(191)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moduleSlug       String            @map("module_slug") @db.VarChar(64)
+  kind             ModuleBillingKind @default(MONTHLY_199)
+  lastBillingMonth String?           @map("last_billing_month") @db.VarChar(7)
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  @@unique([userId, moduleSlug], map: "ump_user_slug_uidx")
+  @@index([userId, kind], map: "ump_user_kind_idx")
+  @@map("user_module_plans")
 }
 
 model OpenClawSyncRequest {
@@ -5578,4 +5601,14 @@ model FootballTurfStaffLink {
   @@unique([ownerUserId, trialSessionId], map: "football_turf_staff_link_owner_trial_uniq")
   @@index([ownerUserId], map: "football_turf_staff_link_owner_idx")
   @@map("football_turf_staff_links")
+}
+
+/** ตั้งค่าแพลตฟอร์มทั้งไซต์ — แถวเดียว id = default */
+model SiteSetting {
+  id               String   @id @db.VarChar(32)
+  landingBannerUrl String?  @map("landing_banner_url") @db.VarChar(512)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("site_settings")
 }

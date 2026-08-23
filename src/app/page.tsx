@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { LandingPageClient } from "@/app/landing/LandingPageClient";
 import { getSession } from "@/lib/auth/session";
+import { getLandingBannerUrl } from "@/lib/landing/site-setting";
 import { MAWELL_OG_IMAGE, MAWELL_OG_IMAGE_SQUARE } from "@/lib/pwa/brand-assets";
 
 const landingTitle = "MAWELL PLATFORM";
@@ -44,5 +45,6 @@ export const metadata: Metadata = {
 export default async function Home() {
   const session = await getSession();
   if (session) redirect("/dashboard");
-  return <LandingPageClient />;
+  const bannerUrl = await getLandingBannerUrl();
+  return <LandingPageClient bannerUrl={bannerUrl} />;
 }

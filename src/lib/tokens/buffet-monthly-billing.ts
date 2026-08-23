@@ -1,37 +1,9 @@
-import { prisma } from "@/lib/prisma";
-import { bangkokMonthKey } from "@/lib/time/bangkok";
-import { tierMonthlyBuffetTokenCost } from "@/lib/modules/config";
+import { applyModuleMonthly199Billing } from "@/lib/tokens/module-monthly-199";
 
 /**
- * หักโทเคนค่าแพ็กเกจรายเดือน (BUFFET) ตามงวดปฏิทิน Bangkok
- * ถ้าโทเคนไม่พอจะไม่อัปเดตงวด — ผู้ใช้ต้องเติมโทเคน (เข้าใช้งานไม่ได้จนกว่าจะหักสำเร็จ)
+ * เดิม: หักแพ็กเหมาทั้งบัญชี — เลิกใช้แล้ว
+ * ตอนนี้แปลง BUFFET เก่าเป็นแพ็ก 199 ต่อโมดูล แล้วหัก 199/โมดูล/เดือน
  */
 export async function applyBuffetMonthlyBilling(userId: string): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    const user = await tx.user.findUnique({ where: { id: userId } });
-    if (!user || user.role === "ADMIN") return;
-    if (user.subscriptionType !== "BUFFET" || user.subscriptionTier === "NONE") return;
-
-    const mk = bangkokMonthKey();
-    if (user.lastBuffetBillingMonth === mk) return;
-
-    const cost = tierMonthlyBuffetTokenCost(user.subscriptionTier);
-    if (cost <= 0) {
-      await tx.user.update({
-        where: { id: userId },
-        data: { lastBuffetBillingMonth: mk },
-      });
-      return;
-    }
-
-    if (user.tokens >= cost) {
-      await tx.user.update({
-        where: { id: userId },
-        data: {
-          tokens: user.tokens - cost,
-          lastBuffetBillingMonth: mk,
-        },
-      });
-    }
-  });
+  await applyModuleMonthly199Billing(userId);
 }

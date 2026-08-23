@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getQrBuildingPosBranding } from "@/lib/profile/qr-branding";
 import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
 import { planFeaturesApiPayload } from "@/lib/modules/plan-entitlements";
+import { listMonthly199ModuleSlugs } from "@/lib/tokens/module-monthly-199";
 import { resolveModulePayment } from "@/lib/module-shop/resolve-module-payment";
 import { getPlanFeaturePolicy } from "@/lib/modules/plan-feature-policy";
 import { loadBuildingPosStaffDailyPinHash } from "@/lib/modules/staff-daily-pin-store";
@@ -28,7 +29,7 @@ export async function GET(req: Request) {
       ownerId: ctx.ownerId,
     });
 
-  const [branding, modulePayment, owner, policy] = await Promise.all([
+  const [branding, modulePayment, owner, policy, monthly199Slugs] = await Promise.all([
     getQrBuildingPosBranding(ctx.ownerId, trialSessionId),
     resolveModulePayment(ctx.ownerId, trialSessionId, BUILDING_POS_MODULE_SLUG),
     prisma.user.findUnique({
@@ -36,6 +37,7 @@ export async function GET(req: Request) {
       select: { role: true, subscriptionType: true, subscriptionTier: true },
     }),
     getPlanFeaturePolicy(),
+    listMonthly199ModuleSlugs(ctx.ownerId),
   ]);
 
   if (requiresDailyPin && !unlocked) {
@@ -56,10 +58,11 @@ export async function GET(req: Request) {
     logoUrl: branding.logoUrl,
     paymentChannelsNote: modulePayment.paymentChannelsNote,
     features: owner
-      ? planFeaturesApiPayload(owner, policy)
+      ? planFeaturesApiPayload({ ...owner, monthly199Slugs }, policy, BUILDING_POS_MODULE_SLUG)
       : planFeaturesApiPayload(
-          { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE" },
+          { role: "USER", subscriptionType: "DAILY", subscriptionTier: "NONE", monthly199Slugs: [] },
           policy,
+          BUILDING_POS_MODULE_SLUG,
         ),
   });
 }
