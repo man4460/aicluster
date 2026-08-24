@@ -4,11 +4,21 @@ import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enum
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import { cn } from "@/lib/cn";
 import QRCode from "qrcode";
-import { DAILY_LINE_PLAN_SUMMARY, MONTHLY_199_PLAN_FEATURE_LINES } from "@/lib/modules/config";
+import {
+  DAILY_LINE_PLAN_SUMMARY,
+  MODULE_GROUP_TIER_NAME,
+  MONTHLY_199_PLAN_FEATURE_LINES,
+  MONTHLY_299_PLAN_FEATURE_LINES,
+  PLAN_PRICES,
+  PRICE_TO_TIER,
+  TIER_SUBSCRIPTION_TOKEN_COST,
+  buffetTierMaxGroup,
+  computeBuffetSubscriptionTokenCharge,
+  isBuffetTierOpenForPurchase,
+} from "@/lib/modules/config";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
-import { isTokenDebtLocked, tokenArrearsToClear } from "@/lib/tokens/token-debt";
 
 type Props = {
   showUpgradeHint?: boolean;
@@ -17,10 +27,45 @@ type Props = {
   tokens: number;
 };
 
-export function PlansPricing({ showUpgradeHint, tokens }: Props) {
+type TopUpState = {
+  planPrice: number;
+  shortfallTokens: number;
+  balance: number;
+  amountBaht: number;
+};
+
+function buffetPlanBullets({
+  fullCost,
+  maxG,
+  packTierName,
+}: {
+  fullCost: number;
+  maxG: number;
+  packTierName: string;
+}): string[] {
+  const groupLine = maxG <= 1 ? "กลุ่ม 1 (Basic)" : `กลุ่ม 1–${maxG} (${packTierName || "Buffet"})`;
+  return [
+    `เหมาจ่ายรายเดือน ${fullCost} โทเคน`,
+    ...MONTHLY_199_PLAN_FEATURE_LINES,
+    ...(maxG >= 2 ? MONTHLY_299_PLAN_FEATURE_LINES : []),
+    `สิทธิ์: ${groupLine}`,
+    maxG > 1 ? "หมายเหตุ: กลุ่ม 2+ ยังปิดชั่วคราว" : "ใช้ได้ทุกโมดูลกลุ่ม 1 ที่เปิดแล้ว",
+    "โทเคนไม่พอ ระบบจะให้เติมก่อนสมัคร",
+  ];
+}
+
+export function PlansPricing({
+  showUpgradeHint,
+  subscriptionTier,
+  subscriptionType,
+  tokens,
+}: Props) {
   const router = useRouter();
+  const [loading, setLoading] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
   const [topUpOpen, setTopUpOpen] = useState(false);
+  const [topUp, setTopUp] = useState<TopUpState | null>(null);
   const [topUpOrderId, setTopUpOrderId] = useState<string | null>(null);
   const [topUpQr, setTopUpQr] = useState<string | null>(null);
   const [topUpQrImg, setTopUpQrImg] = useState<string | null>(null);
@@ -28,9 +73,6 @@ export function PlansPricing({ showUpgradeHint, tokens }: Props) {
   const [topUpBusy, setTopUpBusy] = useState(false);
   const [topUpErr, setTopUpErr] = useState<string | null>(null);
   const [amountBahtInput, setAmountBahtInput] = useState("");
-
-  const arrears = tokenArrearsToClear(tokens);
-  const locked = isTokenDebtLocked(tokens);
 
   const resetTopUpModal = useCallback(() => {
     setTopUpOrderId(null);
@@ -43,15 +85,57 @@ export function PlansPricing({ showUpgradeHint, tokens }: Props) {
 
   const closeTopUpModal = useCallback(() => {
     setTopUpOpen(false);
+    setTopUp(null);
     resetTopUpModal();
   }, [resetTopUpModal]);
 
-  function openTopUp(preset?: number) {
+  async function selectPlan(price: number) {
     setErr(null);
-    const suggest = preset ?? (arrears > 0 ? arrears : 100);
-    setAmountBahtInput(String(suggest));
-    resetTopUpModal();
-    setTopUpOpen(true);
+    setLoading(price);
+    try {
+      const res = await fetch("/api/subscription/buffet/purchase-from-balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ amountBaht: price }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        code?: string;
+        balance?: number;
+        requiredTokens?: number;
+        error?: string;
+      };
+
+      if (res.ok && data.ok) {
+        router.refresh();
+        return;
+      }
+
+      if (res.status === 402 && data.code === "INSUFFICIENT_TOKENS") {
+        const bal = data.balance ?? 0;
+        const req = data.requiredTokens ?? 0;
+        const short = Math.max(1, req - bal);
+        setTopUp({
+          planPrice: price,
+          shortfallTokens: short,
+          balance: bal,
+          amountBaht: short,
+        });
+        setAmountBahtInput(String(short));
+        setTopUpOpen(true);
+        setTopUpOrderId(null);
+        setTopUpQr(null);
+        setTopUpQrImg(null);
+        setTopUpWaiting(false);
+        setTopUpErr(null);
+        return;
+      }
+
+      setErr(data.error ?? "ดำเนินการไม่สำเร็จ");
+    } finally {
+      setLoading(null);
+    }
   }
 
   async function createTopUpOrder() {
@@ -83,22 +167,85 @@ export function PlansPricing({ showUpgradeHint, tokens }: Props) {
     }
   }
 
-  const finishAfterTopUp = useCallback(() => {
-    closeTopUpModal();
-    router.refresh();
-  }, [closeTopUpModal, router]);
+  const tryFinishAfterTopUp = useCallback(async () => {
+    if (!topUp) return;
+    const res = await fetch("/api/subscription/buffet/purchase-from-balance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ amountBaht: topUp.planPrice }),
+    });
+    const data = (await res.json()) as { ok?: boolean; error?: string };
+    if (res.ok && data.ok) {
+      closeTopUpModal();
+      router.refresh();
+      return;
+    }
+    setTopUpErr(data.error ?? "โทเคนยังไม่พอหรือยังไม่เข้า — ลองอีกครั้งหลังชำระสำเร็จ");
+  }, [topUp, router, closeTopUpModal]);
+
+  const isDev = process.env.NODE_ENV === "development";
+  const currentPlanLabel =
+    subscriptionType === "DAILY" ? "รายวัน (กลุ่ม 1)" : `เหมารายเดือน ${subscriptionTier === "NONE" ? "-" : subscriptionTier}`;
+  const planRows = PLAN_PRICES.map((price) => {
+    const tier = PRICE_TO_TIER[price];
+    const fullCost = TIER_SUBSCRIPTION_TOKEN_COST[tier];
+    const maxG = buffetTierMaxGroup(tier);
+    const packTierName = MODULE_GROUP_TIER_NAME[maxG] ?? "";
+    const bullets = buffetPlanBullets({ fullCost, maxG, packTierName });
+    const tierOpen = isBuffetTierOpenForPurchase(tier);
+    const charge = computeBuffetSubscriptionTokenCharge({
+      targetTier: tier,
+      currentTier: subscriptionTier,
+      subscriptionType,
+    });
+    const canSelect = charge.ok && tierOpen;
+    const enough = charge.ok && tokens >= charge.tokensToDeduct;
+    const disabledReason = !tierOpen
+      ? "ปิดจำหน่ายชั่วคราว — เปิดเฉพาะแพ็ก 199 โทเคน"
+      : !charge.ok
+        ? charge.error
+        : null;
+    return {
+      price,
+      tier,
+      fullCost,
+      maxG,
+      packTierName,
+      bullets,
+      tierOpen,
+      charge,
+      canSelect,
+      enough,
+      disabledReason,
+      featured: price === 199,
+      neededTokens: charge.ok ? Math.max(0, charge.tokensToDeduct - tokens) : null,
+    };
+  });
+  const displayPlans = planRows.sort((a, b) => {
+    if (a.featured && !b.featured) return -1;
+    if (!a.featured && b.featured) return 1;
+    return a.price - b.price;
+  });
+  const openPlans = displayPlans.filter((p) => p.tierOpen);
+  const lockedPlans = displayPlans.filter((p) => !p.tierOpen);
 
   useEffect(() => {
+    let done = false;
     if (!topUpQr) {
       setTopUpQrImg(null);
       return;
     }
-    let cancelled = false;
-    void QRCode.toDataURL(topUpQr, { margin: 1, width: 416 }).then((url) => {
-      if (!cancelled) setTopUpQrImg(url);
-    });
+    (async () => {
+      try {
+        const dataUrl = await QRCode.toDataURL(topUpQr, { margin: 1, width: 260 });
+        if (!done) setTopUpQrImg(dataUrl);
+      } catch {
+        if (!done) setTopUpQrImg(null);
+      }
+    })();
     return () => {
-      cancelled = true;
+      done = true;
     };
   }, [topUpQr]);
 
@@ -111,16 +258,14 @@ export function PlansPricing({ showUpgradeHint, tokens }: Props) {
         if (!res.ok) return;
         if (data.paid || data.status === "PAID") {
           setTopUpWaiting(false);
-          finishAfterTopUp();
+          await tryFinishAfterTopUp();
         }
       } catch {
         // ignore
       }
     }, 3000);
     return () => window.clearInterval(timer);
-  }, [topUpOrderId, topUpWaiting, finishAfterTopUp]);
-
-  const isDev = process.env.NODE_ENV === "development";
+  }, [topUpOrderId, topUpWaiting, tryFinishAfterTopUp]);
 
   async function simulateTopUpPay() {
     if (!topUpOrderId) return;
@@ -137,7 +282,7 @@ export function PlansPricing({ showUpgradeHint, tokens }: Props) {
       return;
     }
     setTopUpWaiting(false);
-    finishAfterTopUp();
+    await tryFinishAfterTopUp();
   }
 
   return (
@@ -148,73 +293,285 @@ export function PlansPricing({ showUpgradeHint, tokens }: Props) {
           <p className="mt-1 tabular-nums text-lg font-bold text-[#0000BF]">{tokens.toLocaleString("th-TH")} โทเคน</p>
         </div>
         <div className="rounded-xl border border-[#ebe9ff] bg-white/85 px-3 py-2.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#66638c]">สถานะบัญชี</p>
-          <p className="mt-1 text-sm font-semibold text-[#2e2a58]">
-            {locked ? "ถูกล็อค — ต้องชำระค่าค้าง" : arrears > 0 ? `ติดค้าง ${arrears} บาท` : "ใช้งานได้"}
-          </p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#66638c]">แพ็กปัจจุบัน</p>
+          <p className="mt-1 text-sm font-semibold text-[#2e2a58]">{currentPlanLabel}</p>
         </div>
         <div className="rounded-xl border border-[#ebe9ff] bg-white/85 px-3 py-2.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#66638c]">เติมโทเคน</p>
-          <button
-            type="button"
-            onClick={() => openTopUp(arrears > 0 ? arrears : 100)}
-            className="mt-1 text-sm font-semibold text-[#0000BF] underline-offset-2 hover:underline"
-          >
-            {arrears > 0 ? `ชำระค่าค้าง ${arrears} บาท` : "เปิด QR เติมโทเคน"}
-          </button>
-        </div>
-      </div>
-
-      {locked ? (
-        <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-950" role="alert">
-          <p className="font-semibold">บัญชีถูกล็อคเพราะติดค้างเกิน 100 บาท</p>
-          <p className="mt-1">
-            เติมอย่างน้อย {arrears} บาท (1 บาท = 1 โทเคน) จนยอดไม่ติดลบ จึงเข้าใช้ระบบต่อได้
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#66638c]">แนวทางแนะนำ</p>
+          <p className="mt-1 text-sm font-semibold text-[#2e2a58]">
+            {tokens >= 199 ? "สมัครแพ็ก 199 ได้ทันที" : `เติมเพิ่ม ${Math.max(0, 199 - tokens)} โทเคนเพื่อสมัคร 199`}
           </p>
         </div>
-      ) : null}
+      </div>
 
       {showUpgradeHint ? (
         <div
           className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
           role="status"
         >
-          <p className="font-semibold">สมัครระบบที่หน้า ระบบทั้งหมด</p>
-          <p className="mt-1">สายรายวัน 1 บาท/โมดูล/วัน หรือแพ็ก 199 ต่อโมดูล — ไม่มีเหมาจ่ายทั้งบัญชี</p>
+          <p className="font-semibold">ต้องการสิทธิ์เพิ่ม?</p>
         </div>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <div className="flex flex-col rounded-2xl border-2 border-[#0000BF]/20 bg-gradient-to-b from-indigo-50/90 to-white p-5 shadow-sm ring-1 ring-indigo-100/80">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.95fr)]">
+        <div className="space-y-3">
+          <div className="flex flex-col rounded-2xl border-2 border-[#0000BF]/20 bg-gradient-to-b from-indigo-50/90 to-white p-5 shadow-sm ring-1 ring-indigo-100/80">
           <p className="text-lg font-bold text-[#2e2a58]">{DAILY_LINE_PLAN_SUMMARY.title}</p>
-          <p className="mt-1 text-xs font-semibold text-[#66638c]">{DAILY_LINE_PLAN_SUMMARY.subtitle}</p>
           <ul className="mt-3 flex-1 space-y-1.5 text-xs leading-relaxed text-slate-600">
             {DAILY_LINE_PLAN_SUMMARY.lines.map((line, i) => (
               <li key={i}>• {line}</li>
             ))}
           </ul>
-          <Link
-            href="/dashboard/modules"
-            className="mt-4 inline-flex justify-center rounded-lg bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3]"
-          >
-            สมัครโมดูล (1 บาท/วัน)
-          </Link>
+          {subscriptionType === "DAILY" ? (
+            <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-center text-sm font-medium text-emerald-800">
+              คุณใช้สายรายวันอยู่
+            </p>
+          ) : subscriptionType === "BUFFET" && subscriptionTier !== "NONE" ? (
+            <p className="mt-4 text-center text-xs text-slate-600">
+              คุณใช้แพ็กเหมารายเดือน — ปรับระดับได้จากการ์ดด้านข้าง (เปิดรับสมัครเฉพาะ 199 โทเคน)
+            </p>
+          ) : (
+            <p className="mt-4 text-center text-xs text-slate-500">
+              ต้องการรายเดือนเลือกการ์ด &quot;แพ็กเหมา&quot; ด้านข้าง · เปลี่ยนกลับมาสายรายวันติดต่อแอดมิน
+            </p>
+          )}
+          </div>
         </div>
 
-        <div className="flex flex-col rounded-2xl border border-[#d6d2ff]/75 bg-gradient-to-b from-white via-[#faf9ff] to-[#fff6fc] p-5 shadow-sm">
-          <p className="text-lg font-bold text-[#2e2a58]">แพ็ก 199 / โมดูล / เดือน</p>
-          <p className="mt-1 text-xs font-semibold text-[#66638c]">ไม่เหมาทั้งระบบ — สมัครทีละโมดูล</p>
-          <ul className="mt-3 flex-1 space-y-1.5 text-xs leading-relaxed text-slate-600">
-            {MONTHLY_199_PLAN_FEATURE_LINES.map((line, i) => (
-              <li key={i}>• {line}</li>
-            ))}
-          </ul>
-          <Link
-            href="/dashboard/modules"
-            className="mt-4 inline-flex justify-center rounded-lg border border-[#0000BF]/25 bg-white px-4 py-2.5 text-sm font-semibold text-[#2e2a58] hover:bg-indigo-50"
-          >
-            เลือกโมดูลแล้วกดแพ็ก 199
-          </Link>
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-[#d6d2ff]/75 bg-gradient-to-r from-white via-[#faf9ff] to-[#fff6fc] p-3.5">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0000BF]/80">แพ็กเหมา</p>
+          </div>
+          {openPlans.length === 1 && lockedPlans.length > 0 ? (
+            <div className="grid gap-3 xl:grid-cols-12">
+              {openPlans.map((plan) => (
+                <div key={plan.price} className="xl:col-span-5">
+                  <div
+                    className={cn(
+                      "relative flex flex-col overflow-hidden rounded-2xl border bg-white p-4 shadow-sm",
+                      plan.featured
+                        ? "border-[#0000BF]/25 bg-gradient-to-b from-indigo-50/65 to-white ring-1 ring-[#0000BF]/15"
+                        : "border-slate-200",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "pointer-events-none absolute inset-x-0 top-0 h-1.5",
+                        "bg-gradient-to-r from-[#5b61ff] via-[#8d64ff] to-[#f06dc8]",
+                      )}
+                      aria-hidden
+                    />
+                    <p className="text-3xl font-bold tabular-nums text-slate-900">
+                      {plan.fullCost}
+                      <span className="text-base font-normal text-slate-500"> โทเคน</span>
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      แพ็กเหมา · กลุ่ม 1{plan.maxG > 1 ? `–${plan.maxG}` : ""}
+                      {plan.packTierName ? ` (${plan.packTierName})` : ""}
+                    </p>
+                    {plan.featured ? (
+                      <p className="mt-2 inline-flex w-fit rounded-full bg-[#0000BF]/10 px-2.5 py-1 text-[11px] font-semibold text-[#0000BF]">
+                        แผนแนะนำ
+                      </p>
+                    ) : null}
+                    {plan.charge.ok ? (
+                      <>
+                        <p
+                          className={cn(
+                            "mt-2 text-sm font-medium",
+                            plan.charge.tokensToDeduct < plan.fullCost ? "text-emerald-700" : "text-slate-800",
+                          )}
+                        >
+                          {plan.charge.tokensToDeduct < plan.fullCost
+                            ? `อัปเกรด: หัก ${plan.charge.tokensToDeduct} โทเคน (ส่วนต่าง)`
+                            : `สมัคร: หัก ${plan.charge.tokensToDeduct} โทเคน`}
+                        </p>
+                        <p className={cn("mt-1 text-xs font-medium", plan.enough ? "text-emerald-700" : "text-amber-800")}>
+                          {plan.enough
+                            ? "โทเคนของคุณพอ — กดแล้วสมัครทันที"
+                            : `โทเคนไม่พอ — ขาด ${plan.charge.tokensToDeduct - tokens} โทเคน (จะเปิดเติมโทเคน)`}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-2 text-xs leading-relaxed text-amber-800">{plan.charge.error}</p>
+                    )}
+                    <ul className="mt-3 flex-1 space-y-1 text-xs text-slate-600">
+                      {plan.bullets.slice(0, 4).map((line, i) => (
+                        <li key={i}>• {line}</li>
+                      ))}
+                    </ul>
+                    <button
+                      type="button"
+                      disabled={loading === plan.price || !plan.canSelect}
+                      title={plan.disabledReason ?? undefined}
+                      onClick={() => selectPlan(plan.price)}
+                      className="app-tap-feedback mt-4 w-full rounded-lg bg-[#0000BF] py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3] disabled:cursor-not-allowed disabled:opacity-55"
+                    >
+                      {loading === plan.price ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="app-inline-spinner" aria-hidden />
+                          กำลังดำเนินการ...
+                        </span>
+                      ) : plan.charge.ok ? (
+                        plan.enough ? (
+                          `สมัครทันที (หัก ${plan.charge.tokensToDeduct})`
+                        ) : (
+                          `เติมอีก ${plan.neededTokens ?? 0} แล้วสมัคร`
+                        )
+                      ) : (
+                        "คำนวณโทเคนไม่สำเร็จ"
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              <div className="xl:col-span-7">
+                <div className="rounded-2xl border border-slate-200 bg-white/70 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">ยังไม่เปิดรับสมัคร</p>
+                    <span className="rounded-lg border border-slate-200 bg-white/90 px-2 py-0.5 text-[10px] font-black text-slate-600">
+                      {lockedPlans.length}
+                    </span>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    {lockedPlans.map((plan) => (
+                      <div
+                        key={`locked-${plan.price}`}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50/70 px-3 py-2.5"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-black tabular-nums text-slate-900">{plan.fullCost} โทเคน</p>
+                          <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
+                            กลุ่ม 1{plan.maxG > 1 ? `–${plan.maxG}` : ""}
+                            {plan.packTierName ? ` (${plan.packTierName})` : ""}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                          ล็อก
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {openPlans.map((plan) => (
+                  <div
+                    key={plan.price}
+                    className={cn(
+                      "relative flex flex-col overflow-hidden rounded-2xl border bg-white p-4 shadow-sm",
+                      plan.featured
+                        ? "border-[#0000BF]/25 bg-gradient-to-b from-indigo-50/65 to-white ring-1 ring-[#0000BF]/15"
+                        : "border-slate-200",
+                    )}
+                  >
+                    <div
+                      className="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#5b61ff] via-[#8d64ff] to-[#f06dc8]"
+                      aria-hidden
+                    />
+                    <p className="text-3xl font-bold tabular-nums text-slate-900">
+                      {plan.fullCost}
+                      <span className="text-base font-normal text-slate-500"> โทเคน</span>
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      แพ็กเหมา · กลุ่ม 1{plan.maxG > 1 ? `–${plan.maxG}` : ""}
+                      {plan.packTierName ? ` (${plan.packTierName})` : ""}
+                    </p>
+                    {plan.featured ? (
+                      <p className="mt-2 inline-flex w-fit rounded-full bg-[#0000BF]/10 px-2.5 py-1 text-[11px] font-semibold text-[#0000BF]">
+                        แผนแนะนำ
+                      </p>
+                    ) : null}
+                    {plan.charge.ok ? (
+                      <>
+                        <p
+                          className={cn(
+                            "mt-2 text-sm font-medium",
+                            plan.charge.tokensToDeduct < plan.fullCost ? "text-emerald-700" : "text-slate-800",
+                          )}
+                        >
+                          {plan.charge.tokensToDeduct < plan.fullCost
+                            ? `อัปเกรด: หัก ${plan.charge.tokensToDeduct} โทเคน (ส่วนต่าง)`
+                            : `สมัคร: หัก ${plan.charge.tokensToDeduct} โทเคน`}
+                        </p>
+                        <p className={cn("mt-1 text-xs font-medium", plan.enough ? "text-emerald-700" : "text-amber-800")}>
+                          {plan.enough
+                            ? "โทเคนของคุณพอ — กดแล้วสมัครทันที"
+                            : `โทเคนไม่พอ — ขาด ${plan.charge.tokensToDeduct - tokens} โทเคน (จะเปิดเติมโทเคน)`}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-2 text-xs leading-relaxed text-amber-800">{plan.charge.error}</p>
+                    )}
+                    <ul className="mt-3 flex-1 space-y-1 text-xs text-slate-600">
+                      {plan.bullets.slice(0, 4).map((line, i) => (
+                        <li key={i}>• {line}</li>
+                      ))}
+                    </ul>
+                    <button
+                      type="button"
+                      disabled={loading === plan.price || !plan.canSelect}
+                      title={plan.disabledReason ?? undefined}
+                      onClick={() => selectPlan(plan.price)}
+                      className={cn(
+                        "app-tap-feedback mt-4 w-full rounded-lg py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-55",
+                        "bg-[#0000BF] text-white hover:bg-[#0000a3]",
+                      )}
+                    >
+                      {loading === plan.price ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="app-inline-spinner" aria-hidden />
+                          กำลังดำเนินการ...
+                        </span>
+                      ) : plan.charge.ok ? (
+                        plan.enough ? (
+                          `สมัครทันที (หัก ${plan.charge.tokensToDeduct})`
+                        ) : (
+                          `เติมอีก ${plan.neededTokens ?? 0} แล้วสมัคร`
+                        )
+                      ) : (
+                        "คำนวณโทเคนไม่สำเร็จ"
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {lockedPlans.length > 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-white/70 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">ยังไม่เปิดรับสมัคร</p>
+                    <span className="rounded-lg border border-slate-200 bg-white/90 px-2 py-0.5 text-[10px] font-black text-slate-600">
+                      {lockedPlans.length}
+                    </span>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {lockedPlans.map((plan) => (
+                      <div
+                        key={`locked-${plan.price}`}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50/70 px-3 py-2.5"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-black tabular-nums text-slate-900">{plan.fullCost} โทเคน</p>
+                          <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
+                            กลุ่ม 1{plan.maxG > 1 ? `–${plan.maxG}` : ""}
+                            {plan.packTierName ? ` (${plan.packTierName})` : ""}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                          ล็อก
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          )}
         </div>
       </div>
 
@@ -222,7 +579,11 @@ export function PlansPricing({ showUpgradeHint, tokens }: Props) {
         open={topUpOpen}
         onClose={closeTopUpModal}
         title="เติมโทเคน"
-        description="1 บาท = 1 โทเคน — ถ้าติดค้างให้เติมจนยอดไม่ติดลบจึงปลดล็อค"
+        description={
+          topUp ?
+            `ต้องการอีกอย่างน้อย ${topUp.shortfallTokens} โทเคน (ยอดปัจจุบัน ${topUp.balance}) · 1 บาท = 1 โทเคน`
+          : undefined
+        }
         footer={
           <FormModalFooterActions
             onCancel={closeTopUpModal}
@@ -249,19 +610,16 @@ export function PlansPricing({ showUpgradeHint, tokens }: Props) {
                 onChange={(e) => setAmountBahtInput(e.target.value)}
               />
               <div className="mt-2 flex flex-wrap gap-2">
-                {[arrears > 0 ? arrears : null, 100, 199, 300, 500]
-                  .filter((n): n is number => n != null)
-                  .filter((n, i, arr) => arr.indexOf(n) === i)
-                  .map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setAmountBahtInput(String(preset))}
-                      className="app-tap-feedback rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                      +{preset}
-                    </button>
-                  ))}
+                {[100, 199, 300, 500].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setAmountBahtInput(String(preset))}
+                    className="app-tap-feedback rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    +{preset}
+                  </button>
+                ))}
               </div>
             </label>
           ) : null}
@@ -285,17 +643,26 @@ export function PlansPricing({ showUpgradeHint, tokens }: Props) {
                 <p className="text-center text-xs text-slate-500">กำลังสร้าง QR...</p>
               )}
               <p className="mt-2 text-center text-xs text-slate-600">
-                {topUpWaiting ? "รอชำระ — ระบบจะรีเฟรชยอดอัตโนมัติ" : "ชำระแล้ว"}
+                {topUpWaiting ? "หลังชำระสำเร็จ ระบบจะลองสมัครแพ็กให้อัตโนมัติ" : "ชำระแล้ว"}
               </p>
-              {isDev && topUpOrderId ? (
+              <div className="mt-3 flex flex-col gap-2">
+                {isDev && topUpOrderId ? (
+                  <button
+                    type="button"
+                    onClick={() => void simulateTopUpPay()}
+                    className="w-full rounded-lg border border-blue-300 bg-blue-50 py-2 text-xs font-semibold text-blue-900"
+                  >
+                    จำลองชำระสำเร็จ (dev)
+                  </button>
+                ) : null}
                 <button
                   type="button"
-                  onClick={() => void simulateTopUpPay()}
-                  className="mt-3 w-full rounded-lg border border-blue-300 bg-blue-50 py-2 text-xs font-semibold text-blue-900"
+                  onClick={() => void tryFinishAfterTopUp()}
+                  className="w-full rounded-lg border border-slate-200 bg-white py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
                 >
-                  จำลองชำระสำเร็จ (dev)
+                  ลองสมัครแพ็กอีกครั้ง (หลังเติมโทเคนแล้ว)
                 </button>
-              ) : null}
+              </div>
             </div>
           ) : null}
         </div>
