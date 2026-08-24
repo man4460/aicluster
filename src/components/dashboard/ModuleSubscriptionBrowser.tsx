@@ -8,6 +8,9 @@ import { dashboardModuleHref } from "@/lib/dashboard-nav";
 import { canAccessAppModule, type UserAccessFields } from "@/lib/modules/access";
 import {
   APPOINTMENT_QUEUE_MODULE_SLUG,
+  BUILDING_POS_MODULE_SLUG,
+  DRINK_POS_MODULE_SLUG,
+  HOTEL_RESORT_MODULE_SLUG,
   LOYALTY_STAMP_MODULE_SLUG,
   MODULE_GROUP_TIER_NAME,
   SCHOOL_BANK_MODULE_SLUG,
@@ -123,20 +126,35 @@ function groupTone(groupId: number): { header: string; chip: string; icon: React
   };
 }
 
-/**
- * ส่วน «แนะนำ» + แท็บโมดูลฟรี — จองคิว · สะสมแต้ม · ธนาคารโรงเรียน
- * (โมดูลฟรีอื่นยังอยู่ใน Basic ตามกลุ่ม)
- */
-const FREE_MENU_CATALOG_SLUGS = [
+/** การ์ดแนะนำแถบโมดูลฟรี */
+const FEATURED_FREE_CATALOG_SLUGS = [
   APPOINTMENT_QUEUE_MODULE_SLUG,
   LOYALTY_STAMP_MODULE_SLUG,
   SCHOOL_BANK_MODULE_SLUG,
 ] as const;
 
-const FREE_MENU_CATALOG_SLUG_SET = new Set<string>(FREE_MENU_CATALOG_SLUGS);
+/** การ์ดแนะนำแถบ Basic (1 บาท/วัน) */
+const FEATURED_BASIC_CATALOG_SLUGS = [
+  BUILDING_POS_MODULE_SLUG,
+  DRINK_POS_MODULE_SLUG,
+  HOTEL_RESORT_MODULE_SLUG,
+] as const;
+
+const FEATURED_FREE_CATALOG_SLUG_SET = new Set<string>(FEATURED_FREE_CATALOG_SLUGS);
 
 function isFreeModule(m: ModuleCardDTO) {
   return getModuleDailyUsageBadge(m.slug, m.groupId)?.tone === "free";
+}
+
+/** เรียงการ์ดตาม slug ที่กำหนด — ใช้กับส่วนแนะนำ */
+function pickFeaturedModules(slugs: readonly string[], pool: ModuleCardDTO[]): ModuleCardDTO[] {
+  const bySlug = new Map(pool.map((m) => [m.slug, m]));
+  const picked: ModuleCardDTO[] = [];
+  for (const slug of slugs) {
+    const m = bySlug.get(slug);
+    if (m) picked.push(m);
+  }
+  return picked;
 }
 
 /** คำอธิบายบรรทัดเดียวใต้ชื่อโมดูล — ตัดคำนำหน้ากลุ่มที่ซ้ำกับหัวข้อส่วน */
@@ -236,31 +254,34 @@ export function ModuleSubscriptionBrowser({
     );
   }, [modulesForUi, q]);
 
-  const isFreeMenuModule = useCallback(
-    (m: ModuleCardDTO) => FREE_MENU_CATALOG_SLUG_SET.has(m.slug),
-    [],
-  );
-
   const freeModules = useMemo(() => {
-    const bySlug = new Map(rows.filter((m) => isFreeMenuModule(m)).map((m) => [m.slug, m]));
-    const ordered: ModuleCardDTO[] = [];
-    for (const slug of FREE_MENU_CATALOG_SLUGS) {
-      const m = bySlug.get(slug);
-      if (m) ordered.push(m);
-    }
-    return ordered;
-  }, [isFreeMenuModule, rows]);
+    const free = rows.filter((m) => isFreeModule(m));
+    const rest = free.filter((m) => !FEATURED_FREE_CATALOG_SLUG_SET.has(m.slug));
+    return [...pickFeaturedModules(FEATURED_FREE_CATALOG_SLUGS, free), ...rest];
+  }, [rows]);
 
   const groupIds = useMemo(
     () =>
-      Array.from(new Set(rows.filter((m) => !isFreeMenuModule(m)).map((m) => m.groupId))).sort(
+      Array.from(new Set(rows.filter((m) => !isFreeModule(m)).map((m) => m.groupId))).sort(
         (a, b) => a - b,
       ),
-    [isFreeMenuModule, rows],
+    [rows],
   );
 
-  /** การ์ดฮีโร่ «แนะนำ» — ชุดเดียวกับเมนูฟรี */
-  const featuredModules = freeModules;
+  const featuredModules = useMemo(() => {
+    if (catalogTab === "free") {
+      return pickFeaturedModules(FEATURED_FREE_CATALOG_SLUGS, freeModules);
+    }
+    if (catalogTab === 1) {
+      const basicPool = rows.filter((m) => m.groupId === 1 && !isFreeModule(m));
+      return pickFeaturedModules(FEATURED_BASIC_CATALOG_SLUGS, basicPool);
+    }
+    if (typeof catalogTab === "number") {
+      const pool = rows.filter((m) => m.groupId === catalogTab && !isFreeModule(m));
+      return pool.slice(0, 3);
+    }
+    return [];
+  }, [catalogTab, freeModules, rows]);
 
   const featuredSlugSet = useMemo(
     () => new Set(featuredModules.map((m) => m.slug)),
@@ -276,13 +297,18 @@ export function ModuleSubscriptionBrowser({
   }, [catalogTab, groupIds]);
 
   const tabModules = useMemo(() => {
-    if (catalogTab === "free") return freeModules;
-    let list = rows.filter((m) => m.groupId === catalogTab && !isFreeMenuModule(m));
+    if (catalogTab === "free") {
+      if (featuredSlugSet.size > 0) {
+        return freeModules.filter((m) => !featuredSlugSet.has(m.slug));
+      }
+      return freeModules;
+    }
+    let list = rows.filter((m) => m.groupId === catalogTab && !isFreeModule(m));
     if (featuredSlugSet.size > 0) {
       list = list.filter((m) => !featuredSlugSet.has(m.slug));
     }
     return list;
-  }, [catalogTab, featuredSlugSet, freeModules, isFreeMenuModule, rows]);
+  }, [catalogTab, featuredSlugSet, freeModules, rows]);
 
   function activeCooldownUnlockIso(moduleId: string): string | null {
     const iso = cooldownUnlocks[moduleId];
@@ -447,7 +473,7 @@ export function ModuleSubscriptionBrowser({
             </button>
             {groupIds.map((gid) => {
               const active = catalogTab === gid;
-              const count = rows.filter((m) => m.groupId === gid && !isFreeMenuModule(m)).length;
+              const count = rows.filter((m) => m.groupId === gid && !isFreeModule(m)).length;
               const label = MODULE_GROUP_TIER_NAME[gid] ?? `กลุ่ม ${gid}`;
               return (
                 <button
