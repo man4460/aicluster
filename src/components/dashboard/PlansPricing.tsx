@@ -13,6 +13,7 @@ import {
   MONTHLY_299_PLAN_FEATURE_LINES,
   PLAN_PRICES,
   PRICE_TO_TIER,
+  SHOW_MODULE_MONTHLY_199_CTA,
   TIER_SUBSCRIPTION_TOKEN_COST,
   buffetTierMaxGroup,
   computeBuffetSubscriptionTokenCharge,
@@ -299,7 +300,11 @@ export function PlansPricing({
         <div className="rounded-xl border border-[#ebe9ff] bg-white/85 px-3 py-2.5">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#66638c]">แนวทางแนะนำ</p>
           <p className="mt-1 text-sm font-semibold text-[#2e2a58]">
-            {tokens >= 199 ? "สมัครแพ็ก 199 ได้ทันที" : `เติมเพิ่ม ${Math.max(0, 199 - tokens)} โทเคนเพื่อสมัคร 199`}
+            {SHOW_MODULE_MONTHLY_199_CTA
+              ? tokens >= 199
+                ? "สมัครแพ็ก 199 ได้ทันที"
+                : `เติมเพิ่ม ${Math.max(0, 199 - tokens)} โทเคนเพื่อสมัคร 199`
+              : "สมัครระบบแบบ 1 บาท/วัน ที่หน้า ระบบทั้งหมด"}
           </p>
         </div>
       </div>
@@ -309,11 +314,22 @@ export function PlansPricing({
           className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
           role="status"
         >
-          <p className="font-semibold">ต้องการสิทธิ์เพิ่ม?</p>
+          <p className="font-semibold">สมัครระบบที่หน้า ระบบทั้งหมด</p>
+          <p className="mt-1">
+            {SHOW_MODULE_MONTHLY_199_CTA
+              ? "สายรายวัน 1 บาท/โมดูล/วัน หรือแพ็กเหมาต่อเดือน"
+              : "สายรายวัน 1 บาท/โมดูล/วัน — สมัครทีละระบบ"}
+          </p>
         </div>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.95fr)]">
+      <div
+        className={
+          SHOW_MODULE_MONTHLY_199_CTA
+            ? "grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.95fr)]"
+            : "grid gap-4"
+        }
+      >
         <div className="space-y-3">
           <div className="flex flex-col rounded-2xl border-2 border-[#0000BF]/20 bg-gradient-to-b from-indigo-50/90 to-white p-5 shadow-sm ring-1 ring-indigo-100/80">
           <p className="text-lg font-bold text-[#2e2a58]">{DAILY_LINE_PLAN_SUMMARY.title}</p>
@@ -326,18 +342,23 @@ export function PlansPricing({
             <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-center text-sm font-medium text-emerald-800">
               คุณใช้สายรายวันอยู่
             </p>
-          ) : subscriptionType === "BUFFET" && subscriptionTier !== "NONE" ? (
+          ) : SHOW_MODULE_MONTHLY_199_CTA && subscriptionType === "BUFFET" && subscriptionTier !== "NONE" ? (
             <p className="mt-4 text-center text-xs text-slate-600">
               คุณใช้แพ็กเหมารายเดือน — ปรับระดับได้จากการ์ดด้านข้าง (เปิดรับสมัครเฉพาะ 199 โทเคน)
             </p>
-          ) : (
+          ) : SHOW_MODULE_MONTHLY_199_CTA ? (
             <p className="mt-4 text-center text-xs text-slate-500">
               ต้องการรายเดือนเลือกการ์ด &quot;แพ็กเหมา&quot; ด้านข้าง · เปลี่ยนกลับมาสายรายวันติดต่อแอดมิน
+            </p>
+          ) : (
+            <p className="mt-4 text-center text-xs text-slate-500">
+              สมัครโมดูลแบบ 1 บาท/วัน ได้ที่หน้า ระบบทั้งหมด
             </p>
           )}
           </div>
         </div>
 
+        {SHOW_MODULE_MONTHLY_199_CTA ? (
         <div className="space-y-3">
           <div className="rounded-2xl border border-[#d6d2ff]/75 bg-gradient-to-r from-white via-[#faf9ff] to-[#fff6fc] p-3.5">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0000BF]/80">แพ็กเหมา</p>
@@ -573,6 +594,7 @@ export function PlansPricing({
             </>
           )}
         </div>
+        ) : null}
       </div>
 
       <FormModal

@@ -12,6 +12,12 @@ export const UI_VISIBLE_MAX_MODULE_GROUP = 1 as const;
 /** แพ็กเหมาที่เปิดให้สมัครใหม่ได้ — ตอนนี้เฉพาะ 199 (กลุ่ม 1) */
 export const BUFFET_TIERS_OPEN_FOR_PURCHASE: ReadonlySet<SubscriptionTier> = new Set(["TIER_199"]);
 
+/**
+ * แสดงปุ่ม/การ์ดสมัครแพ็ก 199 บนหน้าโมดูลและแพ็กเกจ
+ * — ปิดชั่วคราวเพื่อโปรโหมดสาย 1 บาท/วัน (API สมัคร 199 ยังใช้ได้ถ้าเรียกตรง)
+ */
+export const SHOW_MODULE_MONTHLY_199_CTA = false as const;
+
 /** สายรายวัน (เดิม) — จำกัดจำนวนแถวข้อมูล */
 export const PLAN_DAILY_MAX_DATA_ROWS = 10_000 as const;
 /** แพ็กเหมารายเดือน — รองรับข้อมูลมากกว่าเกณฑ์นี้ + เปิดพิมพ์สลิป */
@@ -235,7 +241,7 @@ export const DAILY_LINE_PLAN_SUMMARY = {
   lines: [
     "หัก 1 โทเคน ต่อ 1 ระบบ ต่อ 1 วัน (Bangkok) เมื่อเข้าใช้จริง — สมัครหลายระบบคิดแยก เช่น ร้านอาหาร 1 + เครื่องดื่ม 1",
     "โทเคนไม่พอระบบหักต่อได้ (ยอดติดลบ) — ติดลบถึง 100 ขึ้นไปจะล็อคบัญชี จนกว่าจะชำระค่าค้าง (เติมจนยอดไม่ติดลบ)",
-    `ข้อมูลสูงสุด ${PLAN_DAILY_MAX_DATA_ROWS.toLocaleString("th-TH")} แถว และสิทธิ์อื่นตามที่แอดมินตั้ง — อัปเกรดแพ็ก 199 ของโมดูลนั้นเพื่อปลด`,
+    `ข้อมูลสูงสุด ${PLAN_DAILY_MAX_DATA_ROWS.toLocaleString("th-TH")} แถว และสิทธิ์อื่นตามที่แอดมินตั้ง`,
   ],
 } as const;
 

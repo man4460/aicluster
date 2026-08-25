@@ -14,6 +14,7 @@ import {
   LOYALTY_STAMP_MODULE_SLUG,
   MODULE_GROUP_TIER_NAME,
   SCHOOL_BANK_MODULE_SLUG,
+  SHOW_MODULE_MONTHLY_199_CTA,
 } from "@/lib/modules/config";
 import { dashboardModuleCardDescription } from "@/lib/modules/dashboard-card-descriptions";
 import { getModuleDailyUsageBadge } from "@/lib/modules/module-usage-badge";
@@ -558,10 +559,10 @@ export function ModuleSubscriptionBrowser({
                           >
                             เข้าใช้งาน
                           </Link>
-                          {!isFreeModule(m) && monthly199Slugs.has(m.slug) ? (
+                          {SHOW_MODULE_MONTHLY_199_CTA && !isFreeModule(m) && monthly199Slugs.has(m.slug) ? (
                             <p className="text-center text-[11px] font-bold text-emerald-800">แพ็ก 199 / เดือน</p>
                           ) : null}
-                          {!isFreeModule(m) && !monthly199Slugs.has(m.slug) ? (
+                          {SHOW_MODULE_MONTHLY_199_CTA && !isFreeModule(m) && !monthly199Slugs.has(m.slug) ? (
                             <button
                               type="button"
                               suppressHydrationWarning
@@ -609,7 +610,7 @@ export function ModuleSubscriptionBrowser({
                               </span>
                             )}
                           </button>
-                          {!isFreeModule(m) ? (
+                          {SHOW_MODULE_MONTHLY_199_CTA && !isFreeModule(m) ? (
                             <button
                               type="button"
                               suppressHydrationWarning
@@ -700,7 +701,7 @@ export function ModuleSubscriptionBrowser({
                     <Link href={dashboardModuleHref(m.slug)} className={cn(rowClass, "flex-1")}>
                       {body}
                     </Link>
-                    {!isFreeModule(m) && !monthly199Slugs.has(m.slug) ? (
+                    {SHOW_MODULE_MONTHLY_199_CTA && !isFreeModule(m) && !monthly199Slugs.has(m.slug) ? (
                       <button
                         type="button"
                         suppressHydrationWarning
@@ -748,7 +749,7 @@ export function ModuleSubscriptionBrowser({
                   >
                     {body}
                   </button>
-                  {!isFreeModule(m) ? (
+                  {SHOW_MODULE_MONTHLY_199_CTA && !isFreeModule(m) ? (
                     <button
                       type="button"
                       suppressHydrationWarning
