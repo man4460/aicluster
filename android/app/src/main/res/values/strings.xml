@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MAWELL</string>
+    <string name="title_activity_main">MAWELL</string>
+    <string name="package_name">com.mawell.app</string>
+    <string name="custom_url_scheme">com.mawell.app</string>
+</resources>

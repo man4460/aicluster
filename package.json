@@ -45,12 +45,22 @@
     "db:backup:status": "bash scripts/backup-db-setup.sh status",
     "db:backup:install": "bash scripts/backup-db-setup.sh install",
     "db:backup:uninstall": "bash scripts/backup-db-setup.sh uninstall",
-    "db:restore": "bash scripts/backup-db-restore.sh"
+    "db:restore": "bash scripts/backup-db-restore.sh",
+    "cap:sync": "npx cap sync",
+    "cap:android": "npx cap open android",
+    "cap:ios": "npx cap open ios",
+    "cap:sync:prod": "npx cap sync android",
+    "android:bundle": "cd android && gradlew.bat bundleRelease"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.0",
+    "@delicity/capacitor-thermal-printer": "^8.2.2",
     "@prisma/client": "^6.19.2",
     "@react-oauth/google": "^0.13.5",
     "@vladmandic/face-api": "^1.7.15",
