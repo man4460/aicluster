@@ -6,7 +6,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * - Dev LAN: CAPACITOR_SERVER_URL=http://192.168.x.x:3000
  */
 const serverUrl =
-  process.env.CAPACITOR_SERVER_URL?.trim() || "https://buffet.ma-well.com";
+  process.env.CAPACITOR_SERVER_URL?.trim() || "https://bapp.ma-well.com";
 
 const isHttp = serverUrl.startsWith("http://");
 
