@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
 import { canAccessAppModule } from "@/lib/modules/access";
 import {
-  appDashboardBrandCtaPillButtonClass,
   appDashboardBrandGradientFillClass,
 } from "@/components/app-templates";
 import { TokenTopupModal } from "@/components/dashboard/TokenTopupModal";
