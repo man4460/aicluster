@@ -5,7 +5,7 @@
  *
  * - rejected: path traversal, separator/null/control char, ชื่อขึ้นต้นด้วย `.`
  * - filename ต้องมี extension ที่รู้จัก (ภาพ/svg/PDF)
- * - subdir (ถ้ามี) ต้องเป็น ASCII slug `[a-z0-9_-]+` เท่านั้น
+ * - subdir (ถ้ามี) ต้องเป็น ASCII slug `[a-zA-Z0-9_-]+` เท่านั้น (ยาวสุด 64)
  */
 import { readFile } from "fs/promises";
 import path from "path";
@@ -19,10 +19,14 @@ const ALLOWED_BUCKETS = new Set([
   "barber",
   "barber-cash-receipts",
   "barber-packages",
+  "barber-portal-signatures",
   "barber-portal-slips",
   "barber-stylists",
   "building-pos",
+  "building-pos-portal",
   "car-wash",
+  "car-wash-portal-slips",
+  "car-wash-portal-signatures",
   "doc-transmission",
   "dorm-cost-slips",
   "dorm-logos",
@@ -33,10 +37,12 @@ const ALLOWED_BUCKETS = new Set([
   "general-store-pos",
   "home-finance",
   "hotel-resort",
+  "hotel-resort-portal",
   "laundry",
   "loyalty-stamp",
   "massage",
   "massage-cash-receipts",
+  "massage-portal-signatures",
   "massage-portal-slips",
   "massage-therapists",
   "module-cards",
@@ -58,7 +64,8 @@ const MIME_BY_EXT: Record<string, string> = {
 };
 
 const MAX_FILENAME = 200;
-const MAX_SUBDIR = 48;
+/** ตรงกับ ownerSeg ของ API อัปโหลด (slice 0, 64) */
+const MAX_SUBDIR = 64;
 
 function safeSegment(raw: string, maxLen: number): string | null {
   let s = raw;
@@ -76,8 +83,9 @@ function safeSegment(raw: string, maxLen: number): string | null {
   return s;
 }
 
+/** ownerId / cuid อาจมีตัวพิมพ์ใหญ่ — ต้องตรงกับโฟลเดอร์ที่อัปโหลดสร้าง */
 function isAsciiSlug(s: string): boolean {
-  return /^[a-z0-9_-]+$/.test(s);
+  return /^[a-zA-Z0-9_-]+$/.test(s);
 }
 
 function safeBucket(raw: string): string | null {
