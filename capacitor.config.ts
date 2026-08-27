@@ -30,8 +30,12 @@ const config: CapacitorConfig = {
     },
   },
   ios: {
-    // ดันเนื้อหาพ้น status bar / notch — WKWebView ไม่ส่ง env(safe-area-inset-*) ให้ CSS ในโหมด remote URL
-    contentInset: "always",
+    /**
+     * ต้องเป็น "never" — WebView ครอบเต็มจอ แล้ว CSS `env(safe-area-inset-*)` ทำงาน
+     * ถ้าตั้ง "always" WebKit ถือว่า WebView อยู่ในพื้นที่ปลอดภัยแล้ว → insets = 0
+     * และหน้าที่ไม่ scroll ที่ document (เช่นหน้าแรก) จะยังซ้อน status bar
+     */
+    contentInset: "never",
   },
 };
 
