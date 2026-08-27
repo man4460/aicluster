@@ -31,6 +31,7 @@ import { CHAT_AI_DASHBOARD_HREF } from "@/lib/dashboard/chat-ai-href";
 import { DashboardPwaInstallBanner } from "@/components/pwa/DashboardPwaInstallBanner";
 import { resolveModuleCardDisplayImageUrl } from "@/lib/modules/dashboard-module-cover-images";
 import { DashboardHomeModuleShelf } from "@/components/dashboard/DashboardHomeModuleShelf";
+import { DashboardMobileAppInstallCard } from "@/components/dashboard/DashboardMobileAppInstallCard";
 
 export const metadata: Metadata = {
   title: "แดชบอร์ด | MAWELL PLATFORM",
@@ -181,7 +182,7 @@ export default async function DashboardHomePage() {
         <section className="flex flex-col gap-4 sm:gap-5 md:col-span-1 lg:col-span-4">
           <div className="app-surface flex-1 overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-4 sm:p-5">
             <p className="pl-0.5 text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c] sm:pl-0">Shortcut</p>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-2">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3">
               {[
                 { label: "โปรไฟล์", href: "/dashboard/profile", icon: "👤" },
                 { label: "แชท", href: "/dashboard/chat", icon: "💬" },
@@ -192,6 +193,7 @@ export default async function DashboardHomePage() {
                   icon: "🤖",
                   badge: chatAiOff ? "พัฒนา" : undefined,
                 },
+                { label: "แอปมือถือ", href: "#download-app", icon: "📱" },
               ].map((link) => (
                 <Link
                   key={link.href}
@@ -239,6 +241,8 @@ export default async function DashboardHomePage() {
           </div>
         </section>
       </div>
+
+      <DashboardMobileAppInstallCard />
 
       <DashboardHomeModuleShelf
         modules={subscribedModules.map((m) => ({
