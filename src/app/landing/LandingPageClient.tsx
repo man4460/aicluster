@@ -11,6 +11,7 @@ import {
   appMobileDockGridClass,
   appMobileDockLinkClass,
   appPublicCheckInGlassCardClass,
+  appTemplateOutlineButtonClass,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { MawellLogo } from "@/components/layout/MawellLogo";
@@ -24,7 +25,7 @@ import {
 import { LANDING_GALLERY, LANDING_GALLERY_URLS } from "@/app/landing/landing-media";
 import { buildLandingHeroSlides, LandingHeroSlideMeta, LandingHeroSlideshow } from "@/app/landing/LandingHeroSlideshow";
 import { isSafeLandingBannerDisplayUrl } from "@/lib/landing/banner-url";
-import { LandingAndroidInstallGuide, LandingMobileInstallHeroCta } from "@/app/landing/LandingAndroidInstallGuide";
+import { LandingAndroidInstallGuide } from "@/app/landing/LandingAndroidInstallGuide";
 import { moduleTryPath, MODULE_TRY_ALL_PATH } from "@/lib/modules/try-link";
 
 function ModuleShowcaseCard({ item, tier }: { item: LandingModuleShowcaseItem; tier: "free" | "daily" }) {
@@ -181,6 +182,7 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
   const [scrolled, setScrolled] = useState(false);
   const [moduleTab, setModuleTab] = useState<"free" | "daily">("daily");
   const [activeNav, setActiveNav] = useState<(typeof NAV)[number]["href"]>("#gallery");
+  const [installOpen, setInstallOpen] = useState(false);
   const heroCta = useReveal<HTMLDivElement>();
   const galleryBlock = useReveal<HTMLDivElement>();
   const valueBlock = useReveal<HTMLDivElement>();
@@ -198,9 +200,46 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
   }, []);
 
   useEffect(() => {
-    const ids = NAV.map((n) => n.href.slice(1));
+    if (typeof window === "undefined") return;
+    const applyHash = () => {
+      if (window.location.hash === "#download-app") {
+        setInstallOpen(true);
+        setActiveNav("#download-app");
+      }
+    };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, []);
+
+  function toggleInstallPanel() {
+    setInstallOpen((v) => {
+      const next = !v;
+      if (typeof window !== "undefined") {
+        if (next) {
+          window.history.replaceState(null, "", "#download-app");
+          setActiveNav("#download-app");
+        } else if (window.location.hash === "#download-app") {
+          window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        }
+      }
+      return next;
+    });
+  }
+
+  function openInstallPanel() {
+    setInstallOpen(true);
+    setActiveNav("#download-app");
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", "#download-app");
+    }
+  }
+
+  useEffect(() => {
+    const ids = NAV.map((n) => n.href.slice(1)).filter((id) => id !== "download-app");
     const observer = new IntersectionObserver(
       (entries) => {
+        if (installOpen) return;
         const visible = entries
           .filter((e) => e.isIntersecting)
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
@@ -214,7 +253,7 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
       if (el) observer.observe(el);
     }
     return () => observer.disconnect();
-  }, []);
+  }, [installOpen]);
 
   const navLinkClass = scrolled
     ? "rounded-full px-3 py-2 text-xs font-bold text-[#1e1b4b] transition hover:bg-[#5b61ff]/10 sm:text-sm"
@@ -246,13 +285,47 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
             aria-label="เมนู"
           >
             {NAV.map((item) => (
-              <a key={item.href} href={item.href} className={cn(navLinkClass, "shrink-0")}>
+              <a
+                key={item.href}
+                href={item.href}
+                className={cn(navLinkClass, "shrink-0")}
+                onClick={(e) => {
+                  if (item.href === "#download-app") {
+                    e.preventDefault();
+                    openInstallPanel();
+                  } else {
+                    setInstallOpen(false);
+                  }
+                }}
+              >
                 {item.label}
               </a>
             ))}
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              aria-expanded={installOpen}
+              aria-controls="landing-mobile-app-install-panel"
+              className={cn(
+                "inline-flex h-10 min-w-[40px] items-center justify-center gap-1.5 rounded-2xl px-3 text-sm font-black transition active:scale-[0.99] sm:px-4",
+                installOpen
+                  ? scrolled
+                    ? cn(appTemplateOutlineButtonClass, "border-[#5b61ff]/35 bg-[#5b61ff]/10 text-[#4d47b6]")
+                    : "border border-white/70 bg-white/90 text-[#4d47b6]"
+                  : scrolled
+                    ? cn("text-white shadow-sm", appDashboardBrandGradientFillClass)
+                    : "bg-white/95 text-[#4d47b6] shadow-sm ring-1 ring-white/80",
+              )}
+              onClick={toggleInstallPanel}
+            >
+              <span aria-hidden className="text-sm leading-none">
+                📱
+              </span>
+              <span className="hidden sm:inline">{installOpen ? "ซ่อนคู่มือแอป" : "ติดตั้งแอป"}</span>
+              <span className="sm:hidden">{installOpen ? "ซ่อน" : "แอป"}</span>
+            </button>
             <Link
               href="/login"
               className={cn(
@@ -270,6 +343,21 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
               <span className="hidden sm:inline">ขอสาธิตฟรี</span>
             </Link>
           </div>
+        </div>
+
+        <div
+          id="landing-mobile-app-install-panel"
+          hidden={!installOpen}
+          className={cn(
+            "max-h-[min(70vh,32rem)] overflow-y-auto border-t border-[#5b61ff]/15 bg-white/95 text-[#1e1b4b] shadow-lg backdrop-blur-xl",
+            installOpen ? "block" : "hidden",
+          )}
+        >
+          {installOpen ? (
+            <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
+              <LandingAndroidInstallGuide variant="section" />
+            </div>
+          ) : null}
         </div>
       </header>
 
@@ -307,7 +395,7 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
             ref={heroCta.ref}
             className={cn(
               appPublicCheckInGlassCardClass,
-              "grid w-full gap-3 p-4 text-[#1e1b4b] sm:grid-cols-[1fr_auto_auto_auto] sm:items-center sm:p-5",
+              "grid w-full gap-3 p-4 text-[#1e1b4b] sm:grid-cols-[1fr_auto_auto] sm:items-center sm:p-5",
             )}
           >
             <div className="min-w-0">
@@ -323,7 +411,6 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
             >
               ขอสาธิตฟรี
             </Link>
-            <LandingMobileInstallHeroCta />
             <Link
               href="/login"
               className="inline-flex min-h-[52px] items-center justify-center rounded-[1rem] border-2 border-[#5b61ff]/35 bg-white/80 px-6 text-sm font-black text-[#4d47b6] transition hover:border-[#5b61ff]/55 hover:bg-white"
@@ -579,10 +666,6 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
           </div>
         </section>
 
-        <section id="download-app" className="scroll-mt-24">
-          <LandingAndroidInstallGuide variant="section" />
-        </section>
-
         <section id="contact" className="scroll-mt-24">
           <h2 className={sectionTitleClass}>ติดต่อ</h2>
           <div className={cn(appPublicCheckInGlassCardClass, "mt-6 grid gap-4 p-5 sm:grid-cols-2 sm:p-6")}>
@@ -682,7 +765,15 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
                   className={appMobileDockLinkClass(active)}
                   aria-current={active ? "page" : undefined}
                   aria-label={item.label}
-                  onClick={() => setActiveNav(item.href)}
+                  onClick={(e) => {
+                    if (item.href === "#download-app") {
+                      e.preventDefault();
+                      openInstallPanel();
+                      return;
+                    }
+                    setActiveNav(item.href);
+                    setInstallOpen(false);
+                  }}
                 >
                   <LandingNavIcon href={item.href} className="h-5 w-5 shrink-0" />
                   <span className="max-w-full truncate px-0.5 text-center text-[9px] font-black leading-none">
