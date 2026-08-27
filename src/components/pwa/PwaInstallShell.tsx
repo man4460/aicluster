@@ -1,15 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { PwaInstallGuideModals } from "@/components/pwa/PwaInstallGuideModals";
 import { PwaInstallProvider } from "@/components/pwa/pwa-install-context";
 
-/** ห่อแอปทั้งหมด — state ติดตั้งแอปร่วมกัน (เทียบ MelodyWebapp) */
+/** ห่อแอป — ไม่โชว์คู่มือ Add to Home Screen (ใช้ Capacitor APK แทน) */
 export function PwaInstallShell({ children }: { children: ReactNode }) {
-  return (
-    <PwaInstallProvider>
-      {children}
-      <PwaInstallGuideModals />
-    </PwaInstallProvider>
-  );
+  return <PwaInstallProvider>{children}</PwaInstallProvider>;
 }

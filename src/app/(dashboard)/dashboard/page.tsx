@@ -26,7 +26,6 @@ import { getModuleDailyUsageBadge } from "@/lib/modules/module-usage-badge";
 import { SYSTEM_MAP_CATALOG_SLUG } from "@/lib/modules/system-map-catalog";
 import { isChatAiDisabled } from "@/lib/chat-ai/feature";
 import { CHAT_AI_DASHBOARD_HREF } from "@/lib/dashboard/chat-ai-href";
-import { DashboardPwaInstallBanner } from "@/components/pwa/DashboardPwaInstallBanner";
 import { resolveModuleCardDisplayImageUrl } from "@/lib/modules/dashboard-module-cover-images";
 import { DashboardHomeModuleShelf } from "@/components/dashboard/DashboardHomeModuleShelf";
 import { DashboardMobileAppInstallCard } from "@/components/dashboard/DashboardMobileAppInstallCard";
@@ -118,8 +117,6 @@ export default async function DashboardHomePage() {
 
   return (
     <div className="space-y-3 sm:space-y-5">
-      <DashboardPwaInstallBanner />
-
       <DashboardMobileAppInstallCard displayName={user.fullName || user.username} />
 
       {/* Main Bento Grid */}

@@ -38,13 +38,8 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description: siteDescription,
-  manifest: "/manifest.webmanifest",
+  /** ไม่ลิงก์ webmanifest — เลิกชวน Install / Add to Home Screen ของเบราว์เซอร์ (ใช้ Capacitor APK) */
   applicationName: "MAWELL PLATFORM",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "MAWELL PLATFORM",
-  },
   icons: {
     icon: [
       { url: "/icons/mawell-32.png", sizes: "32x32", type: "image/png" },
@@ -68,9 +63,6 @@ export const metadata: Metadata = {
     title: "MAWELL PLATFORM",
     description: siteDescription,
     images: [MAWELL_OG_IMAGE_SQUARE, MAWELL_OG_IMAGE],
-  },
-  other: {
-    "mobile-web-app-capable": "yes",
   },
 };
 

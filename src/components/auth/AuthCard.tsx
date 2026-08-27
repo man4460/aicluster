@@ -1,6 +1,5 @@
 import { cn } from "@/lib/cn";
 import { PAGE_GUTTER_X } from "@/components/ui/page-container";
-import { PwaInstallBanner } from "@/components/pwa/PwaInstallBanner";
 
 export function AuthCard({
   title,
@@ -30,9 +29,6 @@ export function AuthPageFrame({ children }: { children: React.ReactNode }) {
         PAGE_GUTTER_X,
       )}
     >
-      <div className="mb-4 w-full max-w-md">
-        <PwaInstallBanner />
-      </div>
       {children}
     </div>
   );

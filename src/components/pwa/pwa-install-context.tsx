@@ -10,18 +10,23 @@ import {
   type ReactNode,
 } from "react";
 
-const DISMISS_KEY = "mawell.v1.pwaInstallDismissedAt";
-const DISMISS_DAYS = 14;
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
+/**
+ * เลิกชวนติดตั้งแบบ PWA / Add to Home Screen
+ * แอปจริงคือ Capacitor APK — คู่มืออยู่ที่ /download-app
+ */
+export const PWA_BROWSER_INSTALL_ENABLED = false;
 
 export type PwaInstallPlatform = "ios" | "android" | "other";
 
 export function isStandaloneMode(): boolean {
   if (typeof window === "undefined") return false;
+  try {
+    // Capacitor WebView
+    const cap = (window as Window & { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+    if (cap?.isNativePlatform?.()) return true;
+  } catch {
+    /* ignore */
+  }
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
     window.matchMedia("(display-mode: fullscreen)").matches ||
@@ -48,19 +53,6 @@ export function isIpadDevice(): boolean {
   );
 }
 
-function isDismissedRecently(): boolean {
-  try {
-    const raw = localStorage.getItem(DISMISS_KEY);
-    if (!raw) return false;
-    const dismissedAt = Number(raw);
-    if (!Number.isFinite(dismissedAt)) return false;
-    const ms = DISMISS_DAYS * 24 * 60 * 60 * 1000;
-    return Date.now() - dismissedAt < ms;
-  } catch {
-    return false;
-  }
-}
-
 type PwaInstallContextValue = {
   isStandalone: boolean;
   platform: PwaInstallPlatform;
@@ -84,12 +76,6 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
   const [isStandalone, setIsStandalone] = useState(isStandaloneMode);
   const [platform] = useState(detectPwaPlatform);
   const [isIpad] = useState(isIpadDevice);
-  const [canNativeInstall, setCanNativeInstall] = useState(false);
-  const [installing, setInstalling] = useState(false);
-  const [dismissed, setDismissed] = useState(isDismissedRecently);
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [iosGuideOpen, setIosGuideOpen] = useState(false);
-  const [androidGuideOpen, setAndroidGuideOpen] = useState(false);
 
   useEffect(() => {
     setIsStandalone(isStandaloneMode());
@@ -98,126 +84,46 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  /** กลืน beforeinstallprompt ของ Chrome — ไม่โชว์ «ติดตั้งแอป» แบบเบราว์เซอร์ */
   useEffect(() => {
-    const onBeforeInstall = (event: Event) => {
+    if (PWA_BROWSER_INSTALL_ENABLED) return;
+    const block = (event: Event) => {
       event.preventDefault();
-      setDeferredPrompt(event as BeforeInstallPromptEvent);
-      setCanNativeInstall(true);
     };
-
-    const onAppInstalled = () => {
-      setDeferredPrompt(null);
-      setCanNativeInstall(false);
-      setIsStandalone(true);
-      document.documentElement.classList.add("pwa-standalone");
-    };
-
-    window.addEventListener("beforeinstallprompt", onBeforeInstall);
-    window.addEventListener("appinstalled", onAppInstalled);
-    return () => {
-      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
-      window.removeEventListener("appinstalled", onAppInstalled);
-    };
+    window.addEventListener("beforeinstallprompt", block);
+    return () => window.removeEventListener("beforeinstallprompt", block);
   }, []);
 
-  const dismiss = useCallback(() => {
-    try {
-      localStorage.setItem(DISMISS_KEY, String(Date.now()));
-    } catch {
-      /* ignore */
-    }
-    setDismissed(true);
-    setIosGuideOpen(false);
-    setAndroidGuideOpen(false);
-  }, []);
-
+  const dismiss = useCallback(() => {}, []);
   const openInstallGuide = useCallback(() => {
-    if (platform === "ios") {
-      setIosGuideOpen(true);
-      return;
+    if (typeof window !== "undefined") {
+      window.location.assign("/download-app");
     }
-    if (platform === "android") {
-      if (deferredPrompt) {
-        void (async () => {
-          setInstalling(true);
-          try {
-            await deferredPrompt.prompt();
-            await deferredPrompt.userChoice;
-            setDeferredPrompt(null);
-            setCanNativeInstall(false);
-          } catch {
-            setAndroidGuideOpen(true);
-          } finally {
-            setInstalling(false);
-          }
-        })();
-        return;
-      }
-      setAndroidGuideOpen(true);
-    }
-  }, [deferredPrompt, platform]);
-
+  }, []);
   const install = useCallback(async () => {
-    if (platform === "ios") {
-      setIosGuideOpen(true);
-      return false;
-    }
-    if (!deferredPrompt) {
-      setAndroidGuideOpen(true);
-      return false;
-    }
-    setInstalling(true);
-    try {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      setDeferredPrompt(null);
-      setCanNativeInstall(false);
-      return outcome === "accepted";
-    } catch {
-      return false;
-    } finally {
-      setInstalling(false);
-    }
-  }, [deferredPrompt, platform]);
+    openInstallGuide();
+    return false;
+  }, [openInstallGuide]);
 
   const isMobile = platform === "ios" || platform === "android";
-  const showBanner =
-    !isStandalone &&
-    !dismissed &&
-    isMobile &&
-    (canNativeInstall || platform === "ios" || platform === "android");
-
   const value = useMemo<PwaInstallContextValue>(
     () => ({
       isStandalone,
       platform,
       isIpad,
       isMobile,
-      canNativeInstall,
-      showBanner,
-      installing,
-      iosGuideOpen,
-      androidGuideOpen,
-      setIosGuideOpen,
-      setAndroidGuideOpen,
+      canNativeInstall: false,
+      showBanner: false,
+      installing: false,
+      iosGuideOpen: false,
+      androidGuideOpen: false,
+      setIosGuideOpen: () => {},
+      setAndroidGuideOpen: () => {},
       install,
       openInstallGuide,
       dismiss,
     }),
-    [
-      isStandalone,
-      platform,
-      isIpad,
-      isMobile,
-      canNativeInstall,
-      showBanner,
-      installing,
-      iosGuideOpen,
-      androidGuideOpen,
-      install,
-      openInstallGuide,
-      dismiss,
-    ],
+    [isStandalone, platform, isIpad, isMobile, install, openInstallGuide, dismiss],
   );
 
   return <PwaInstallContext.Provider value={value}>{children}</PwaInstallContext.Provider>;

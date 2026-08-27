@@ -1,8 +1,4 @@
-"use client";
-
-import { PwaInstallBanner } from "@/components/pwa/PwaInstallBanner";
-
-/** แถบติดตั้งแอปหน้าแดชบอร์ดหลัก — ตำแหน่งเดียวกับ Melody home tab */
+/** เลิกใช้ — ไม่โชว์แบนเนอร์ PWA บนแดชบอร์ด */
 export function DashboardPwaInstallBanner() {
-  return <PwaInstallBanner className="mb-3" />;
+  return null;
 }

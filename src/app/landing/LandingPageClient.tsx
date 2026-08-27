@@ -211,21 +211,6 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
     return () => window.removeEventListener("hashchange", applyHash);
   }, []);
 
-  function toggleInstallPanel() {
-    setInstallOpen((v) => {
-      const next = !v;
-      if (typeof window !== "undefined") {
-        if (next) {
-          window.history.replaceState(null, "", "#download-app");
-          setActiveNav("#download-app");
-        } else if (window.location.hash === "#download-app") {
-          window.history.replaceState(null, "", window.location.pathname + window.location.search);
-        }
-      }
-      return next;
-    });
-  }
-
   function openInstallPanel() {
     setInstallOpen(true);
     setActiveNav("#download-app");
@@ -303,19 +288,6 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              aria-expanded={installOpen}
-              aria-controls="landing-mobile-app-install-panel"
-              className={cn(
-                "rounded-2xl px-3 py-2 text-sm font-bold transition sm:px-4",
-                scrolled ? "text-[#5f5a8a] hover:bg-white hover:text-[#1e1b4b]" : "text-white/95 hover:bg-white/20",
-              )}
-              onClick={toggleInstallPanel}
-            >
-              <span className="hidden sm:inline">{installOpen ? "ซ่อนคู่มือแอป" : "ติดตั้งแอป"}</span>
-              <span className="sm:hidden">{installOpen ? "ซ่อน" : "แอป"}</span>
-            </button>
             <Link
               href="/login"
               className={cn(

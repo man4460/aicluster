@@ -1,14 +1,21 @@
 {
   "name": "MAWELL PLATFORM",
   "short_name": "MAWELL",
-  "description": "MAWELL PLATFORM — ระบบจัดการธุรกิจและโมดูลแดชบอร์ด",
+  "description": "MAWELL PLATFORM — ระบบจัดการธุรกิจและโมดูลแดชบอร์ด (ติดตั้งผ่าน APK Capacitor ไม่ใช่ Add to Home Screen)",
   "start_url": "/dashboard",
   "scope": "/",
-  "display": "standalone",
+  "display": "browser",
   "orientation": "portrait-primary",
   "background_color": "#f7f6ff",
   "theme_color": "#4f2f9a",
   "lang": "th",
+  "prefer_related_applications": true,
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://app.ma-well.com/download-app"
+    }
+  ],
   "icons": [
     {
       "src": "/icons/mawell-192.png",

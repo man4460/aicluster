@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState, Suspense } from "react";
 import { DemoSessionBanner } from "@/components/dashboard/DemoSessionBanner";
 import { LogoutButton, LogoutIconButton } from "@/components/layout/LogoutButton";
-import { PwaInstallHelpButton } from "@/components/pwa/PwaInstallHelpButton";
 import { dashboardNavIconForHref } from "@/components/layout/dashboard-nav-icons";
 import { MawellLogo } from "@/components/layout/MawellLogo";
 import { appDashboardBrandGradientBarClass, appDashboardBrandGradientFillClass } from "@/components/app-templates";
@@ -1057,7 +1056,6 @@ export function DashboardShell({
 
           {/* ขวา: ไม่ wrap — โปรไฟล์ + logout เรียงแนวนอนเสมอ */}
           <div className="flex shrink-0 flex-nowrap items-center gap-1.5 border-l border-white/20 pl-2.5 sm:gap-2 sm:pl-3.5">
-            <PwaInstallHelpButton />
             <div className="hidden shrink-0 md:block">
               {avatarUrl ? (
                 <Image
