@@ -53,7 +53,10 @@
     "android:bundle": "cd android && gradlew.bat bundleRelease",
     "android:apk": "cd android && gradlew.bat assembleRelease",
     "android:publish-apk": "node scripts/publish-android-apk.cjs",
-    "cap:sync:ios": "npx cap sync ios"
+    "cap:sync:ios": "npx cap sync ios",
+    "ios:build-check": "node scripts/build-ios-ipa.cjs --simulator",
+    "ios:publish-ipa": "node scripts/build-ios-ipa.cjs",
+    "ios:publish-ipa:appstore": "node scripts/build-ios-ipa.cjs --method app-store"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

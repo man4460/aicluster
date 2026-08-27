@@ -1,10 +1,12 @@
 /**
- * ลิงก์ติดตั้ง iOS — ตั้งบนเซิร์ฟเวอร์เมื่อ build บน Mac แล้ว
+ * ลิงก์ติดตั้ง iOS
  *
- * ตัวอย่างค่า:
+ * ปกติ **ไม่ต้องตั้งเอง** — `npm run ios:publish-ipa` จะวาง IPA + manifest ไว้ที่
+ * `public/downloads/ios/` แล้ว `next.config.ts` สร้างลิงก์ `itms-services://` ให้ตอน build
+ *
+ * ตั้ง env `NEXT_PUBLIC_MAWELL_IOS_INSTALL_URL` เมื่อต้องการ override เช่น:
  * - TestFlight: https://testflight.apple.com/join/XXXX
  * - App Store:  https://apps.apple.com/app/idXXXXXXXX
- * - Enterprise OTA (manifest): itms-services://?action=download-manifest&url=https://app.ma-well.com/downloads/ios/manifest.plist
  */
 export const MAWELL_IOS_BUNDLE_ID = "com.mawell.app";
 

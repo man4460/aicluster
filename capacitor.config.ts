@@ -29,6 +29,10 @@ const config: CapacitorConfig = {
       backgroundColor: "#1e1b4b",
     },
   },
+  ios: {
+    // ดันเนื้อหาพ้น status bar / notch — WKWebView ไม่ส่ง env(safe-area-inset-*) ให้ CSS ในโหมด remote URL
+    contentInset: "always",
+  },
 };
 
 export default config;

@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import type { NextConfig } from "next";
 
 /**
@@ -37,10 +39,37 @@ function parseAllowedDevOrigins(): string[] {
   return [...new Set([...DEFAULT_ALLOWED_DEV_ORIGINS, ...extras])];
 }
 
+/**
+ * ปุ่มติดตั้ง iOS: ถ้า `scripts/build-ios-ipa.cjs` วาง IPA + manifest ไว้แล้ว
+ * ให้สร้างลิงก์ `itms-services://` ให้เอง — ไม่ต้องตั้ง env ซ้ำ
+ * (env `NEXT_PUBLIC_MAWELL_IOS_INSTALL_URL` ยัง override ได้ เช่นชี้ TestFlight)
+ */
+function resolveIosInstallUrl(): string | undefined {
+  const fromEnv = process.env.NEXT_PUBLIC_MAWELL_IOS_INSTALL_URL?.trim();
+  if (fromEnv) return fromEnv;
+
+  const iosDir = path.join(process.cwd(), "public", "downloads", "ios");
+  const hasManifest = fs.existsSync(path.join(iosDir, "manifest.plist"));
+  const hasIpa = fs.existsSync(path.join(iosDir, "MAWELL.ipa"));
+  if (!hasManifest || !hasIpa) return undefined;
+
+  const origin = (
+    process.env.APP_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "https://app.ma-well.com"
+  ).replace(/\/+$/, "");
+  return `itms-services://?action=download-manifest&url=${origin}/downloads/ios/manifest.plist`;
+}
+
+const iosInstallUrl = resolveIosInstallUrl();
+
 const nextConfig: NextConfig = {
   // ไม่ให้ bundle Prisma เข้า SSR — ใช้ Node process เต็มรูปแบบ (กัน process.once is not a function)
   serverExternalPackages: ["@prisma/client", "prisma"],
   allowedDevOrigins: parseAllowedDevOrigins(),
+  env: {
+    ...(iosInstallUrl ? { NEXT_PUBLIC_MAWELL_IOS_INSTALL_URL: iosInstallUrl } : {}),
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "picsum.photos", pathname: "/**" },
@@ -64,6 +93,21 @@ const nextConfig: NextConfig = {
             key: "Cache-Control",
             value: "public, max-age=0, must-revalidate",
           },
+        ],
+      },
+      {
+        // iOS OTA: ระบบดาวน์โหลด IPA เอง — ห้ามใส่ Content-Disposition attachment
+        source: "/downloads/ios/:file*.ipa",
+        headers: [
+          { key: "Content-Type", value: "application/octet-stream" },
+          { key: "Cache-Control", value: "no-store" },
+        ],
+      },
+      {
+        source: "/downloads/ios/:file*.plist",
+        headers: [
+          { key: "Content-Type", value: "application/xml" },
+          { key: "Cache-Control", value: "no-store" },
         ],
       },
     ];
