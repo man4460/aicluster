@@ -6,7 +6,6 @@ import { dashboardModuleHref } from "@/lib/dashboard-nav";
 import { canAccessAppModule } from "@/lib/modules/access";
 import {
   appDashboardBrandCtaPillButtonClass,
-  appDashboardBrandGradientBarClass,
   appDashboardBrandGradientFillClass,
 } from "@/components/app-templates";
 import { TokenTopupModal } from "@/components/dashboard/TokenTopupModal";
@@ -122,25 +121,7 @@ export default async function DashboardHomePage() {
     <div className="space-y-3 sm:space-y-5">
       <DashboardPwaInstallBanner />
 
-      <header className="app-surface overflow-hidden rounded-[1.35rem] border border-[#e8e6fc]/80 p-4 sm:p-5">
-        <div className={cn("h-1.5 w-full rounded-full", appDashboardBrandGradientBarClass)} aria-hidden />
-        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0 pl-0.5 sm:pl-0">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">Workspace</p>
-            <h1 className="mt-1 truncate text-xl font-black tracking-tight text-[#2e2a58] sm:text-2xl">
-              สวัสดี, <span className="app-gradient-text">{user.fullName || user.username}</span>
-            </h1>
-          </div>
-          <Link
-            href="/dashboard/modules"
-            className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-[#0000BF]/20 bg-[#0000BF]/10 px-4 text-xs font-black text-[#2e2a58] shadow-sm transition hover:bg-[#0000BF]/12 active:scale-[0.99]"
-          >
-            ดูระบบทั้งหมด
-          </Link>
-        </div>
-      </header>
-
-      <DashboardMobileAppInstallCard />
+      <DashboardMobileAppInstallCard displayName={user.fullName || user.username} />
 
       {/* Main Bento Grid */}
       <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-12">
