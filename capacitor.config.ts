@@ -2,11 +2,12 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 /**
  * แอปโหลดเว็บจาก URL นี้
- * - Play / โปรดักชัน: ตั้ง CAPACITOR_SERVER_URL หรือใช้ค่าเริ่มต้นด้านล่าง
+ * - Play / โปรดักชัน: ชี้โดเมนเดียวกับเบราว์เซอร์ (app.ma-well.com) — แก้เว็บแล้วแอปเห็นตาม
+ * - ชั่วคราว: ตั้ง CAPACITOR_SERVER_URL
  * - Dev LAN: CAPACITOR_SERVER_URL=http://192.168.x.x:3000
  */
 const serverUrl =
-  process.env.CAPACITOR_SERVER_URL?.trim() || "https://bapp.ma-well.com";
+  process.env.CAPACITOR_SERVER_URL?.trim() || "https://app.ma-well.com";
 
 const isHttp = serverUrl.startsWith("http://");
 
