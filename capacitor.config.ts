@@ -40,3 +40,4 @@ const config: CapacitorConfig = {
 };
 
 export default config;
+// แก้ไฟล์เดิม
