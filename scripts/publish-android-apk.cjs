@@ -1,6 +1,7 @@
 /**
- * Build release APK (ถ้ายังไม่มี) แล้วคัดลอกไป public/downloads/mawell-android.apk
+ * Build release APK แล้วคัดลอกไป public/downloads/mawell-android.apk
  * Usage: npm run android:publish-apk
+ * Force rebuild: npm run android:publish-apk -- --rebuild
  */
 const fs = require("fs");
 const path = require("path");
@@ -10,6 +11,7 @@ const root = path.join(__dirname, "..");
 const apkSrc = path.join(root, "android", "app", "build", "outputs", "apk", "release", "app-release.apk");
 const destDir = path.join(root, "public", "downloads");
 const dest = path.join(destDir, "mawell-android.apk");
+const forceRebuild = process.argv.includes("--rebuild") || process.argv.includes("-f");
 
 function runGradle() {
   const isWin = process.platform === "win32";
@@ -24,8 +26,8 @@ function runGradle() {
   }
 }
 
-if (!fs.existsSync(apkSrc)) {
-  console.log("APK not found — building assembleRelease…");
+if (forceRebuild || !fs.existsSync(apkSrc)) {
+  console.log(forceRebuild ? "Rebuilding assembleRelease…" : "APK not found — building assembleRelease…");
   runGradle();
 }
 

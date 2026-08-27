@@ -60,6 +60,10 @@ const nextConfig: NextConfig = {
             key: "Content-Disposition",
             value: 'attachment; filename="mawell-android.apk"',
           },
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
         ],
       },
     ];
