@@ -22,6 +22,13 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: isHttp,
   },
+  plugins: {
+    StatusBar: {
+      overlaysWebView: false,
+      style: "DARK",
+      backgroundColor: "#1e1b4b",
+    },
+  },
 };
 
 export default config;

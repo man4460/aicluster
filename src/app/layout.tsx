@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_Thai } from "next/font/google";
 import { PwaInstallShell } from "@/components/pwa/PwaInstallShell";
+import { CapacitorNativeChrome } from "@/components/native/CapacitorNativeChrome";
 import {
   MAWELL_OG_IMAGE,
   MAWELL_OG_IMAGE_SQUARE,
@@ -84,6 +85,7 @@ export default function RootLayout({
         className={`${notoSansThai.className} app-shell min-h-full flex flex-col font-sans`}
         suppressHydrationWarning
       >
+        <CapacitorNativeChrome />
         <PwaInstallShell>{children}</PwaInstallShell>
       </body>
     </html>

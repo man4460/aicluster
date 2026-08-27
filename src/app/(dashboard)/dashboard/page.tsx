@@ -176,6 +176,7 @@ export default async function DashboardHomePage() {
                   badge: chatAiOff ? "พัฒนา" : undefined,
                 },
                 { label: "แอปมือถือ", href: "#download-app", icon: "📱" },
+                { label: "ทดสอบพิมพ์", href: "/dashboard/printer-test", icon: "🖨️" },
               ].map((link) => (
                 <Link
                   key={link.href}

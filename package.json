@@ -63,6 +63,7 @@
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
     "@capacitor/ios": "^8.5.0",
+    "@capacitor/status-bar": "^8.0.3",
     "@delicity/capacitor-thermal-printer": "^8.2.2",
     "@prisma/client": "^6.19.2",
     "@react-oauth/google": "^0.13.5",

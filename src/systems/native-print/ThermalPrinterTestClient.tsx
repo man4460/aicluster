@@ -27,7 +27,7 @@ export function ThermalPrinterTestClient() {
     setLog("");
     try {
       await requestThermalPrinterPermissions();
-      setLog("อนุญาตสิทธิ์แล้ว");
+      setLog("อนุญาตสิทธิ์แล้ว — Bluetooth พร้อม");
     } catch (e) {
       setLog(e instanceof Error ? e.message : String(e));
     } finally {
@@ -39,10 +39,14 @@ export function ThermalPrinterTestClient() {
     setBusy(true);
     setLog("กำลังสแกน…");
     try {
-      const list = await discoverThermalPrinters(12000);
+      const list = await discoverThermalPrinters(15000);
       setPrinters(list);
       setSelectedId(list[0]?.id ?? null);
-      setLog(list.length ? `พบ ${list.length} เครื่อง` : "ไม่พบเครื่อง — เปิด MP210 แล้วลองใหม่");
+      setLog(
+        list.length
+          ? `พบ ${list.length} เครื่อง — เลือกแล้วกดพิมพ์ทดสอบ`
+          : "ไม่พบเครื่อง — เปิด MP210, จับคู่ Bluetooth ในตั้งค่ามือถือ, แล้วกดสแกนใหม่",
+      );
     } catch (e) {
       setLog(e instanceof Error ? e.message : String(e));
     } finally {
@@ -71,18 +75,33 @@ export function ThermalPrinterTestClient() {
     <AppDashboardSection tone="violet" className="space-y-4">
       <AppSectionHeader
         title="ทดสอบเครื่องพิมพ์ Bluetooth"
-        description="สำหรับแอป Capacitor + MP210 (BLE) — เว็บเบราว์เซอร์พิมพ์บลูทูธตรง ๆ ไม่ได้"
+        description="ใช้ได้เฉพาะแอป Android MAWELL (ไม่ใช่ Chrome) · รุ่นแนะนำ MP210 (BLE)"
       />
 
       {!native ? (
         <p className="rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-900">
-          เปิดหน้านี้อยู่ในเบราว์เซอร์ — ต้องรันผ่านแอป Android/iOS (Capacitor) ถึงจะสแกน/พิมพ์ได้
+          ตอนนี้อยู่ในเบราว์เซอร์ — พิมพ์บลูทูธไม่ได้ เปิดผ่านแอป MAWELL แล้วเข้า{" "}
+          <span className="font-mono text-xs">/dashboard/printer-test</span>
         </p>
       ) : (
         <p className="rounded-2xl border border-emerald-200 bg-emerald-50/90 px-4 py-3 text-sm text-emerald-900">
           โหมดแอป native พร้อมทดสอบ
         </p>
       )}
+
+      <div className="rounded-2xl border border-[#e8e6fc] bg-white/80 px-4 py-3 text-sm text-[#5f5a8a]">
+        <p className="font-black text-[#2e2a58]">วิธีตั้งค่า MP210 (ทีละขั้น)</p>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs sm:text-sm">
+          <li>เปิดเครื่องพิมพ์ MP210 ให้ไฟ Bluetooth พร้อมจับคู่</li>
+          <li>
+            มือถือ: <strong>ตั้งค่า → Bluetooth</strong> → จับคู่กับ MP210 (ครั้งแรก)
+          </li>
+          <li>เปิดแอป <strong>MAWELL</strong> (ไม่ใช่ Chrome) → เข้าเมนูทดสอบพิมพ์</li>
+          <li>กด <strong>ขอสิทธิ์ Bluetooth</strong> → อนุญาตเมื่อระบบถาม</li>
+          <li>กด <strong>สแกนหาเครื่อง</strong> → แตะเลือก MP210 ในรายการ</li>
+          <li>กด <strong>พิมพ์ทดสอบ</strong></li>
+        </ol>
+      </div>
 
       <div className="flex flex-wrap gap-2">
         <button
@@ -91,7 +110,7 @@ export function ThermalPrinterTestClient() {
           onClick={() => void onRequestPerms()}
           className={cn(appTemplateOutlineButtonClass, "min-h-10 px-4 disabled:opacity-50")}
         >
-          ขอสิทธิ์ Bluetooth
+          1) ขอสิทธิ์ Bluetooth
         </button>
         <button
           type="button"
@@ -99,7 +118,7 @@ export function ThermalPrinterTestClient() {
           onClick={() => void onScan()}
           className={cn(appTemplateOutlineButtonClass, "min-h-10 px-4 disabled:opacity-50")}
         >
-          สแกนหาเครื่อง
+          2) สแกนหาเครื่อง
         </button>
         <button
           type="button"
@@ -107,7 +126,7 @@ export function ThermalPrinterTestClient() {
           onClick={() => void onTestPrint()}
           className="app-btn-primary min-h-10 px-4 disabled:opacity-50"
         >
-          พิมพ์ทดสอบ
+          3) พิมพ์ทดสอบ
         </button>
       </div>
 
@@ -122,16 +141,18 @@ export function ThermalPrinterTestClient() {
                   role="option"
                   aria-selected={active}
                   className={cn(
-                    "w-full rounded-2xl border px-4 py-3 text-left text-sm",
+                    "flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition",
                     active
-                      ? "border-[#0000BF]/50 bg-[#0000BF]/10"
-                      : "border-white/60 bg-white/70",
+                      ? "border-[#5b61ff]/45 bg-[#5b61ff]/10 text-[#2e2a58]"
+                      : "border-white/70 bg-white/85 text-[#5f5a8a] hover:border-[#5b61ff]/25",
                   )}
                   onClick={() => setSelectedId(p.id)}
                 >
-                  <span className="font-semibold text-[#1e1b4b]">{p.name}</span>
+                  <span>{p.name}</span>
                   {p.transport ? (
-                    <span className="mt-0.5 block text-xs text-[#66638c]">{p.transport}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-[#8b87a8]">
+                      {p.transport}
+                    </span>
                   ) : null}
                 </button>
               </li>
@@ -141,9 +162,9 @@ export function ThermalPrinterTestClient() {
       ) : null}
 
       {log ? (
-        <pre className="overflow-x-auto rounded-2xl border border-white/50 bg-white/60 p-3 text-xs text-[#1e1b4b]">
+        <p className="rounded-xl border border-[#e8e6fc] bg-[#faf9ff] px-3 py-2 text-sm font-medium text-[#4d47b6]" role="status">
           {log}
-        </pre>
+        </p>
       ) : null}
     </AppDashboardSection>
   );
