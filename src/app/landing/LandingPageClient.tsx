@@ -24,9 +24,8 @@ import {
 import { LANDING_GALLERY, LANDING_GALLERY_URLS } from "@/app/landing/landing-media";
 import { buildLandingHeroSlides, LandingHeroSlideMeta, LandingHeroSlideshow } from "@/app/landing/LandingHeroSlideshow";
 import { isSafeLandingBannerDisplayUrl } from "@/lib/landing/banner-url";
-import { LandingAndroidInstallGuide } from "@/app/landing/LandingAndroidInstallGuide";
+import { LandingAndroidInstallGuide, LandingMobileInstallHeroCta } from "@/app/landing/LandingAndroidInstallGuide";
 import { moduleTryPath, MODULE_TRY_ALL_PATH } from "@/lib/modules/try-link";
-import { MAWELL_ANDROID_APK_PATH } from "@/lib/mobile/android-apk";
 
 function ModuleShowcaseCard({ item, tier }: { item: LandingModuleShowcaseItem; tier: "free" | "daily" }) {
   const title = displayAppModuleTitle(item.slug, item.slug);
@@ -324,16 +323,7 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
             >
               ขอสาธิตฟรี
             </Link>
-            <a
-              href={MAWELL_ANDROID_APK_PATH}
-              download
-              className={cn(
-                "inline-flex min-h-[52px] items-center justify-center rounded-[1rem] px-6 text-sm font-black text-white shadow-md",
-                appDashboardBrandGradientFillClass,
-              )}
-            >
-              ติดตั้งบนมือถือ
-            </a>
+            <LandingMobileInstallHeroCta />
             <Link
               href="/login"
               className="inline-flex min-h-[52px] items-center justify-center rounded-[1rem] border-2 border-[#5b61ff]/35 bg-white/80 px-6 text-sm font-black text-[#4d47b6] transition hover:border-[#5b61ff]/55 hover:bg-white"
