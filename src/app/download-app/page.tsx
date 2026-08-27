@@ -5,8 +5,8 @@ import { AppPublicCheckInGlassPage } from "@/components/app-templates";
 import { MawellLogo } from "@/components/layout/MawellLogo";
 
 export const metadata: Metadata = {
-  title: "ดาวน์โหลดแอป MAWELL | Android",
-  description: "ดาวน์โหลดไฟล์ APK และติดตั้งแอป MAWELL บนมือถือ Android ด้วยตัวเอง",
+  title: "ดาวน์โหลดแอป MAWELL | Android และ iOS",
+  description: "คู่มือดาวน์โหลดและติดตั้งแอป MAWELL บน Android และ iPhone / iPad",
 };
 
 export default function DownloadAppPage() {

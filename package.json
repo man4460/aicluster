@@ -52,7 +52,8 @@
     "cap:sync:prod": "npx cap sync android",
     "android:bundle": "cd android && gradlew.bat bundleRelease",
     "android:apk": "cd android && gradlew.bat assembleRelease",
-    "android:publish-apk": "node scripts/publish-android-apk.cjs"
+    "android:publish-apk": "node scripts/publish-android-apk.cjs",
+    "cap:sync:ios": "npx cap sync ios"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

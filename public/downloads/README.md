@@ -1,15 +1,16 @@
-# ไฟล์ติดตั้งแอป MAWELL (Android)
+# ไฟล์ติดตั้งแอป MAWELL
 
-| ไฟล์ | รายละเอียด |
-|------|------------|
-| `mawell-android.apk` | ติดตั้งเองจากเบราว์เซอร์ (ไม่ผ่าน Play) |
+| ระบบ | ไฟล์ / ลิงก์ |
+|------|----------------|
+| Android | `mawell-android.apk` — ดาวน์โหลดจากหน้าแรก / `/download-app` |
+| iOS | ตั้ง `NEXT_PUBLIC_MAWELL_IOS_INSTALL_URL` หลัง build บน Mac — ดู `docs/ios-capacitor-mac.md` และโฟลเดอร์ `ios/` |
 
-สร้างใหม่หลัง build:
+## Android — สร้าง APK ใหม่
 
 ```text
-cd android
-gradlew.bat assembleRelease
-copy app\build\outputs\apk\release\app-release.apk ..\public\downloads\mawell-android.apk
+npm run android:publish-apk
 ```
 
-หรือจากรากโปรเจกต์: `npm run android:publish-apk`
+## iOS — บนเครื่อง Mac
+
+ดู **`docs/ios-capacitor-mac.md`**

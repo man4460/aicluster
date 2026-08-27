@@ -1,0 +1,24 @@
+/**
+ * ลิงก์ติดตั้ง iOS — ตั้งบนเซิร์ฟเวอร์เมื่อ build บน Mac แล้ว
+ *
+ * ตัวอย่างค่า:
+ * - TestFlight: https://testflight.apple.com/join/XXXX
+ * - App Store:  https://apps.apple.com/app/idXXXXXXXX
+ * - Enterprise OTA (manifest): itms-services://?action=download-manifest&url=https://app.ma-well.com/downloads/ios/manifest.plist
+ */
+export const MAWELL_IOS_BUNDLE_ID = "com.mawell.app";
+
+export const MAWELL_IOS_APP_VERSION = "1.0.1";
+
+/** พาธสำรองถ้าโฮสต์ไฟล์ OTA เอง (หลังมี IPA + manifest บน Mac) */
+export const MAWELL_IOS_MANIFEST_PATH = "/downloads/ios/manifest.plist";
+
+export function getMawellIosInstallUrl(): string | null {
+  const fromEnv = process.env.NEXT_PUBLIC_MAWELL_IOS_INSTALL_URL?.trim();
+  if (fromEnv) return fromEnv;
+  return null;
+}
+
+export function isMawellIosInstallReady(): boolean {
+  return Boolean(getMawellIosInstallUrl());
+}

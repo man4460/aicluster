@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  ตัวอย่าง manifest สำหรับติดตั้ง OTA (Enterprise / Ad Hoc)
+  1) แทนที่ URL ของ IPA ให้เป็น https จริง
+  2) บันทึกเป็น manifest.plist ในโฟลเดอร์นี้ (อย่า commit รหัสลับ)
+  3) ตั้ง NEXT_PUBLIC_MAWELL_IOS_INSTALL_URL=itms-services://?action=download-manifest&url=https://app.ma-well.com/downloads/ios/manifest.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>items</key>
+  <array>
+    <dict>
+      <key>assets</key>
+      <array>
+        <dict>
+          <key>kind</key>
+          <string>software-package</string>
+          <key>url</key>
+          <string>https://app.ma-well.com/downloads/ios/MAWELL.ipa</string>
+        </dict>
+      </array>
+      <key>metadata</key>
+      <dict>
+        <key>bundle-identifier</key>
+        <string>com.mawell.app</string>
+        <key>bundle-version</key>
+        <string>1.0.1</string>
+        <key>kind</key>
+        <string>software</string>
+        <key>title</key>
+        <string>MAWELL</string>
+      </dict>
+    </dict>
+  </array>
+</dict>
+</plist>
