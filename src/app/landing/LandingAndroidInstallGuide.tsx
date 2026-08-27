@@ -22,12 +22,10 @@ type Step = { n: string; title: string; hint: string };
 type PlatformPanel = {
   id: Tab;
   tabLabel: string;
-  /** ปุ่มหลัก */
   ctaLabel: string;
   ctaHref: string;
   ctaDownload?: boolean;
   versionBadge: string;
-  ctaHint: string;
   fullGuideHash: string;
   steps: Step[];
   notes: string[];
@@ -61,14 +59,6 @@ function DownloadIcon({ className }: { className?: string }) {
   );
 }
 
-function ClickHereBadge() {
-  return (
-    <span className="inline-flex items-center rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#1a0d3a]">
-      กดตรงนี้
-    </span>
-  );
-}
-
 function buildPanels(iosUrl: string | null): Record<Tab, PlatformPanel> {
   const iosReady = Boolean(iosUrl);
   return {
@@ -79,13 +69,12 @@ function buildPanels(iosUrl: string | null): Record<Tab, PlatformPanel> {
       ctaHref: MAWELL_ANDROID_APK_PATH,
       ctaDownload: true,
       versionBadge: `v${MAWELL_ANDROID_APK_VERSION}`,
-      ctaHint: "ปุ่มดาวน์โหลดไฟล์ .apk",
       fullGuideHash: "android",
       steps: [
         {
           n: "1",
           title: "กดปุ่มม่วงด้านบน",
-          hint: "ป้าย «กดตรงนี้» — บันทึกไฟล์ mawell-android.apk",
+          hint: "บันทึกไฟล์ mawell-android.apk ลงมือถือ",
         },
         {
           n: "2",
@@ -101,7 +90,7 @@ function buildPanels(iosUrl: string | null): Record<Tab, PlatformPanel> {
       notes: [
         "ใช้ได้กับมือถือ / แท็บเล็ต Android เท่านั้น",
         "ถ้าเครื่องเตือนแหล่งที่ไม่รู้จัก — กดอนุญาตเฉพาะครั้งนี้",
-        "หลังติดตั้ง แอปชี้เว็บ app.ma-well.com — แก้เว็บแล้วแอปเห็นตาม",
+        "หลังติดตั้งแล้ว สามารถใช้แอปได้เหมือนใช้งานบนเว็บบราวเซอร์",
       ],
     },
     ios: {
@@ -111,9 +100,6 @@ function buildPanels(iosUrl: string | null): Record<Tab, PlatformPanel> {
       ctaHref: iosReady && iosUrl ? iosUrl : "/login",
       ctaDownload: false,
       versionBadge: iosReady ? `v${MAWELL_IOS_APP_VERSION}` : "เว็บ",
-      ctaHint: iosReady
-        ? "เปิดด้วย Safari เท่านั้น"
-        : "แอป iOS กำลังเตรียม — ใช้เว็บได้ก่อน",
       fullGuideHash: "ios",
       steps: iosReady
         ? [
@@ -125,7 +111,7 @@ function buildPanels(iosUrl: string | null): Record<Tab, PlatformPanel> {
             {
               n: "2",
               title: "กดปุ่มม่วงด้านบน",
-              hint: "ป้าย «กดตรงนี้» — ยืนยันติดตั้งตามที่เครื่องถาม",
+              hint: "ยืนยันติดตั้งตามที่เครื่องถาม",
             },
             {
               n: "3",
@@ -137,7 +123,7 @@ function buildPanels(iosUrl: string | null): Record<Tab, PlatformPanel> {
             {
               n: "1",
               title: "กดปุ่มม่วงด้านบน",
-              hint: "ป้าย «กดตรงนี้» — เข้าใช้งานผ่านเบราว์เซอร์",
+              hint: "เข้าใช้งานผ่านเบราว์เซอร์",
             },
             {
               n: "2",
@@ -154,18 +140,17 @@ function buildPanels(iosUrl: string | null): Record<Tab, PlatformPanel> {
         ? [
             "ติดตั้งจากเว็บได้ผ่าน TestFlight / App Store / Enterprise OTA",
             "แนะนำเปิดลิงก์ด้วย Safari",
-            "หลังติดตั้ง แอปชี้เว็บ app.ma-well.com — แก้เว็บแล้วแอปเห็นตาม",
+            "หลังติดตั้งแล้ว สามารถใช้แอปได้เหมือนใช้งานบนเว็บบราวเซอร์",
           ]
         : [
             "แอป native iOS กำลังเตรียมบน Mac — ปุ่มดาวน์โหลดจะโผล่เมื่อพร้อม",
             "ตอนนี้ใช้ Safari หรือเพิ่มไอคอนที่หน้าจอโฮมได้",
-            "ฟีเจอร์แดชบอร์ดหลักใช้งานผ่านเว็บได้ตามปกติ",
+            "หลังใช้งานแล้ว สามารถใช้ได้เหมือนบนเว็บบราวเซอร์",
           ],
     },
   };
 }
 
-/** แผงเดียวใช้ทั้ง Android / iOS */
 function PlatformInstallTemplate({
   panel,
   variant,
@@ -173,45 +158,40 @@ function PlatformInstallTemplate({
   panel: PlatformPanel;
   variant: "section" | "page";
 }) {
+  const isExternal =
+    panel.ctaDownload ||
+    panel.ctaHref.startsWith("http") ||
+    panel.ctaHref.startsWith("itms-services:");
+
+  const ctaClass = cn(
+    "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-6 text-sm font-black text-white shadow-md transition active:scale-[0.99]",
+    appDashboardBrandGradientFillClass,
+  );
+
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <div className="inline-flex min-w-0 flex-col gap-1.5">
-          {panel.ctaDownload || panel.ctaHref.startsWith("http") || panel.ctaHref.startsWith("itms-services:") ? (
-            <a
-              href={panel.ctaHref}
-              {...(panel.ctaDownload ? { download: true } : {})}
-              className={cn(
-                "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-6 text-sm font-black text-white shadow-md transition active:scale-[0.99]",
-                appDashboardBrandGradientFillClass,
-              )}
-            >
-              <DownloadIcon />
-              {panel.ctaLabel}
-              <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold">
-                {panel.versionBadge}
-              </span>
-            </a>
-          ) : (
-            <Link
-              href={panel.ctaHref}
-              className={cn(
-                "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-6 text-sm font-black text-white shadow-md transition active:scale-[0.99]",
-                appDashboardBrandGradientFillClass,
-              )}
-            >
-              <DownloadIcon />
-              {panel.ctaLabel}
-              <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold">
-                {panel.versionBadge}
-              </span>
-            </Link>
-          )}
-          <p className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-amber-700">
-            <ClickHereBadge />
-            <span>← {panel.ctaHint}</span>
-          </p>
-        </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        {isExternal ? (
+          <a
+            href={panel.ctaHref}
+            {...(panel.ctaDownload ? { download: true } : {})}
+            className={ctaClass}
+          >
+            <DownloadIcon />
+            {panel.ctaLabel}
+            <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold">
+              {panel.versionBadge}
+            </span>
+          </a>
+        ) : (
+          <Link href={panel.ctaHref} className={ctaClass}>
+            <DownloadIcon />
+            {panel.ctaLabel}
+            <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold">
+              {panel.versionBadge}
+            </span>
+          </Link>
+        )}
         {variant === "section" ? (
           <Link
             href={`/download-app#${panel.fullGuideHash}`}
@@ -287,8 +267,7 @@ export function LandingAndroidInstallGuide({ variant = "section", className, ini
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#5b61ff]">แอปมือถือ</p>
         <h2 className={cn(titleClass, "mt-2")}>ติดตั้ง MAWELL บนมือถือ</h2>
         <p className="mt-2 text-sm font-medium leading-relaxed text-[#66638c] sm:text-base">
-          เลือกระบบด้านล่าง — โครงคู่มือ Android และ iOS แบบเดียวกัน ปุ่มม่วงที่มีป้าย{" "}
-          <span className="font-black text-[#7a5b10]">กดตรงนี้</span> คือจุดเริ่มติดตั้ง
+          เลือกระบบด้านล่าง แล้วกดปุ่มม่วงเพื่อดาวน์โหลดหรือเริ่มใช้งาน
         </p>
         {platform === "ios" || platform === "android" ? (
           <p className="mt-1 text-xs font-semibold text-[#5b61ff]">
@@ -334,7 +313,6 @@ export function LandingAndroidInstallGuide({ variant = "section", className, ini
   );
 }
 
-/** ปุ่ม CTA หน้าแรก — Android โหลด APK · iOS ไปคู่มือหรือลิงก์ติดตั้งเมื่อพร้อม */
 export function LandingMobileInstallHeroCta({ className }: { className?: string }) {
   const [platform, setPlatform] = useState<PwaInstallPlatform | null>(null);
   const iosUrl = iosInstallUrlFromEnv();
