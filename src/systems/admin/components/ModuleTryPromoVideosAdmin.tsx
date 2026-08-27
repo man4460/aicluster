@@ -51,7 +51,7 @@ export function ModuleTryPromoVideosAdmin({
 
   const load = useCallback(async () => {
     setErr(null);
-    const res = await fetch(`/api/admin/app-modules/${encodeURIComponent(moduleSlug)}/try-promo`, {
+    const res = await fetch(`/api/admin/module-try-promo/${encodeURIComponent(moduleSlug)}`, {
       credentials: "include",
     });
     const j = (await res.json().catch(() => ({}))) as {
@@ -117,7 +117,7 @@ export function ModuleTryPromoVideosAdmin({
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch(`/api/admin/app-modules/${encodeURIComponent(moduleSlug)}/try-promo`, {
+      const res = await fetch(`/api/admin/module-try-promo/${encodeURIComponent(moduleSlug)}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
