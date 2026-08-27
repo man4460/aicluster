@@ -140,6 +140,8 @@ export default async function DashboardHomePage() {
         </div>
       </header>
 
+      <DashboardMobileAppInstallCard />
+
       {/* Main Bento Grid */}
       <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-12">
         <section className="app-surface overflow-hidden rounded-[1.15rem] border border-[#e8e6fc]/80 p-4 md:col-span-2 lg:col-span-8 sm:p-5">
@@ -241,8 +243,6 @@ export default async function DashboardHomePage() {
           </div>
         </section>
       </div>
-
-      <DashboardMobileAppInstallCard />
 
       <DashboardHomeModuleShelf
         modules={subscribedModules.map((m) => ({
