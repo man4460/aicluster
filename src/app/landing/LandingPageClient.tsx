@@ -309,20 +309,11 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
               aria-expanded={installOpen}
               aria-controls="landing-mobile-app-install-panel"
               className={cn(
-                "inline-flex h-10 min-w-[40px] items-center justify-center gap-1.5 rounded-2xl px-3 text-sm font-black transition active:scale-[0.99] sm:px-4",
-                installOpen
-                  ? scrolled
-                    ? cn(appTemplateOutlineButtonClass, "border-[#5b61ff]/35 bg-[#5b61ff]/10 text-[#4d47b6]")
-                    : "border border-white/70 bg-white/90 text-[#4d47b6]"
-                  : scrolled
-                    ? cn("text-white shadow-sm", appDashboardBrandGradientFillClass)
-                    : "bg-white/95 text-[#4d47b6] shadow-sm ring-1 ring-white/80",
+                "rounded-2xl px-3 py-2 text-sm font-bold transition sm:px-4",
+                scrolled ? "text-[#5f5a8a] hover:bg-white hover:text-[#1e1b4b]" : "text-white/95 hover:bg-white/20",
               )}
               onClick={toggleInstallPanel}
             >
-              <span aria-hidden className="text-sm leading-none">
-                📱
-              </span>
               <span className="hidden sm:inline">{installOpen ? "ซ่อนคู่มือแอป" : "ติดตั้งแอป"}</span>
               <span className="sm:hidden">{installOpen ? "ซ่อน" : "แอป"}</span>
             </button>
