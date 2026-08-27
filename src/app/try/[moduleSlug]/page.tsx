@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { isDemoAccountConfiguredForEntry } from "@/lib/auth/demo-account";
+import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
 import { moduleTryDashboardHref } from "@/lib/modules/try-link";
 import { prisma } from "@/lib/prisma";
+import { BuildingPosTryPromoClient } from "@/systems/building-pos/components/BuildingPosTryPromoClient";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +24,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * ลิงก์/QR สาธารณะต่อโมดูล — redirect ไป Route Handler ที่ตั้งคุกกี้บัญชีทดลอง
- * (ห้าม set cookies ใน Server Component)
+ * ลิงก์/QR สาธารณะต่อโมดูล
+ * - building-pos: หน้าเว็บโฆษณา (แบนเนอร์ · วิดีโอ · CTA) ก่อนเข้าทดลอง
+ * - โมดูลอื่น: เข้าบัญชีทดลองทันที (ถ้าเปิด demo บนเซิร์ฟเวอร์)
  */
 export default async function ModuleTryPage({ params }: Props) {
   const { moduleSlug } = await params;
@@ -39,8 +42,22 @@ export default async function ModuleTryPage({ params }: Props) {
   const dashboardHref = moduleTryDashboardHref(mod.slug);
   const loginHref = `/login?next=${encodeURIComponent(dashboardHref)}`;
   const registerHref = `/register?next=${encodeURIComponent(dashboardHref)}`;
+  const demoConfigured = isDemoAccountConfiguredForEntry();
+  const tryHref = demoConfigured
+    ? `/api/auth/demo/enter?next=${encodeURIComponent(dashboardHref)}`
+    : loginHref;
 
-  if (isDemoAccountConfiguredForEntry()) {
+  if (mod.slug === BUILDING_POS_MODULE_SLUG) {
+    return (
+      <BuildingPosTryPromoClient
+        moduleTitle={mod.title}
+        tryHref={tryHref}
+        registerHref={registerHref}
+      />
+    );
+  }
+
+  if (demoConfigured) {
     redirect(`/api/auth/demo/enter?next=${encodeURIComponent(dashboardHref)}`);
   }
 
