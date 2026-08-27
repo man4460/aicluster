@@ -51,6 +51,7 @@ export default async function ModuleTryPage({ params }: Props) {
     return (
       <BuildingPosTryPromoClient
         moduleTitle={mod.title}
+        moduleSlug={mod.slug}
         tryHref={tryHref}
         registerHref={registerHref}
       />

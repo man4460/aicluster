@@ -437,6 +437,13 @@ model AppModule {
   description   String?  @db.Text
   /** รูปการ์ดระบบ (path ใต้ public เช่น /uploads/module-cards/...) */
   cardImageUrl  String?  @map("card_image_url") @db.VarChar(512)
+  /**
+   * วิดีโอหน้าโฆษณา /try/{slug} — JSON array
+   * [{ "id", "title", "hint?", "youtubeUrl" }]
+   */
+  tryPromoVideosJson String @default("[]") @map("try_promo_videos_json") @db.Text
+  /** แบนเนอร์หน้า /try/{slug} (optional — ไม่มีใช้ค่า default ในโค้ด) */
+  tryPromoBannerUrl  String? @map("try_promo_banner_url") @db.VarChar(512)
   groupId       Int      @map("group_id")
   sortOrder     Int      @default(0) @map("sort_order")
   isActive      Boolean  @default(true) @map("is_active")

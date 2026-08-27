@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import {
   AppImageLightbox,
   AppPublicCheckInGlassPage,
@@ -8,6 +9,8 @@ import {
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import type { TryPromoVideoPublic } from "@/lib/modules/try-promo";
+import { youtubeEmbedUrl } from "@/lib/youtube-url";
 import {
   BUILDING_POS_TRY_BANNER,
   BUILDING_POS_TRY_FEATURES,
@@ -23,16 +26,129 @@ const navLinkClass =
 
 type Props = {
   moduleTitle: string;
+  moduleSlug: string;
   tryHref: string;
   registerHref: string;
 };
 
-export function BuildingPosTryPromoClient({ moduleTitle, tryHref, registerHref }: Props) {
+type DisplayVideo = {
+  id: string;
+  title: string;
+  hint: string;
+  thumbUrl: string;
+  videoId: string | null;
+  href: string;
+};
+
+export function BuildingPosTryPromoClient({
+  moduleTitle,
+  moduleSlug,
+  tryHref,
+  registerHref,
+}: Props) {
   const lb = useAppImageLightbox();
+  const [banner, setBanner] = useState(BUILDING_POS_TRY_BANNER);
+  const [videos, setVideos] = useState<DisplayVideo[]>([]);
+  const [playing, setPlaying] = useState<DisplayVideo | null>(null);
+
+  const fallbackVideos = useMemo<DisplayVideo[]>(
+    () =>
+      BUILDING_POS_TRY_VIDEOS.map((v) => ({
+        id: v.id,
+        title: v.title,
+        hint: v.hint,
+        thumbUrl: v.thumb,
+        videoId: null,
+        href: v.href,
+      })),
+    [],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/public/module-try-promo/${encodeURIComponent(moduleSlug)}`);
+        const j = (await res.json().catch(() => ({}))) as {
+          bannerUrl?: string | null;
+          videos?: TryPromoVideoPublic[];
+        };
+        if (cancelled || !res.ok) {
+          if (!cancelled) setVideos(fallbackVideos);
+          return;
+        }
+        if (j.bannerUrl?.trim()) setBanner(j.bannerUrl.trim());
+        const list = j.videos ?? [];
+        if (list.length === 0) {
+          setVideos(fallbackVideos);
+          return;
+        }
+        setVideos(
+          list.map((v) => ({
+            id: v.id,
+            title: v.title,
+            hint: v.hint,
+            thumbUrl: v.thumbUrl,
+            videoId: v.videoId,
+            href: v.watchUrl,
+          })),
+        );
+      } catch {
+        if (!cancelled) setVideos(fallbackVideos);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [moduleSlug, fallbackVideos]);
+
+  function onOpenVideo(v: DisplayVideo) {
+    if (v.videoId) {
+      setPlaying(v);
+      return;
+    }
+    window.open(v.href, "_blank", "noopener,noreferrer");
+  }
 
   return (
     <AppPublicCheckInGlassPage className="!px-0 !pt-0 sm:!px-0">
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="แบนเนอร์" />
+
+      {playing?.videoId ? (
+        <div
+          className="fixed inset-0 z-[240] flex items-center justify-center bg-[#1e1b4b]/75 p-3 backdrop-blur-sm sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label={playing.title}
+          onClick={() => setPlaying(null)}
+        >
+          <div
+            className="relative w-full max-w-4xl overflow-hidden rounded-2xl border border-white/30 bg-black shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-[#1e1b4b] px-3 py-2">
+              <p className="truncate text-sm font-bold text-white">{playing.title}</p>
+              <button
+                type="button"
+                className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg bg-white/10 text-white"
+                aria-label="ปิดวิดีโอ"
+                onClick={() => setPlaying(null)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="aspect-video w-full">
+              <iframe
+                title={playing.title}
+                src={youtubeEmbedUrl(playing.videoId, true)}
+                className="h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <header className="absolute inset-x-0 top-0 z-30">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
@@ -60,15 +176,11 @@ export function BuildingPosTryPromoClient({ moduleTitle, tryHref, registerHref }
         <button
           type="button"
           className="absolute inset-0 block"
-          onClick={() => lb.open(BUILDING_POS_TRY_BANNER)}
+          onClick={() => lb.open(banner)}
           aria-label="ดูแบนเนอร์"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={BUILDING_POS_TRY_BANNER}
-            alt=""
-            className="h-full w-full object-cover object-center"
-          />
+          <img src={banner} alt="" className="h-full w-full object-cover object-center" />
         </button>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#1e1b4b]/35 via-[#1e1b4b]/15 to-[#faf9ff]/95" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#faf9ff] via-[#faf9ff]/80 to-transparent" />
@@ -121,22 +233,19 @@ export function BuildingPosTryPromoClient({ moduleTitle, tryHref, registerHref }
           <h2 className="text-2xl font-black tracking-tight text-[#1e1b4b] sm:text-3xl">
             วิดีโอเรียนรู้
           </h2>
-          <p className="mt-2 text-sm font-medium text-[#66638c]">
-            กดการ์ดเพื่อเปิดคลิป / ค้นหาที่เกี่ยวข้องในแท็บใหม่
-          </p>
+          <p className="mt-2 text-sm font-medium text-[#66638c]">กดการ์ดเพื่อเล่นคลิปบนหน้านี้</p>
           <div className={cn("mt-6", buildingPosPortalMenuGridClass)}>
-            {BUILDING_POS_TRY_VIDEOS.map((v) => (
-              <a
+            {videos.map((v) => (
+              <button
                 key={v.id}
-                href={v.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group relative overflow-hidden rounded-xl border border-white/70 bg-white/80 shadow-sm ring-1 ring-inset ring-white/50 transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-2xl"
+                type="button"
+                onClick={() => onOpenVideo(v)}
+                className="group relative overflow-hidden rounded-xl border border-white/70 bg-white/80 text-left shadow-sm ring-1 ring-inset ring-white/50 transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-2xl"
               >
                 <div className="relative aspect-square overflow-hidden sm:aspect-[4/3]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={v.thumb}
+                    src={v.thumbUrl}
                     alt=""
                     className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                   />
@@ -155,11 +264,13 @@ export function BuildingPosTryPromoClient({ moduleTitle, tryHref, registerHref }
                   <p className="line-clamp-2 text-[11px] font-black leading-snug text-[#1e1b4b] sm:text-xs">
                     {v.title}
                   </p>
-                  <p className="line-clamp-1 text-[10px] font-medium text-[#66638c] sm:text-[11px]">
-                    {v.hint}
-                  </p>
+                  {v.hint ? (
+                    <p className="line-clamp-1 text-[10px] font-medium text-[#66638c] sm:text-[11px]">
+                      {v.hint}
+                    </p>
+                  ) : null}
                 </div>
-              </a>
+              </button>
             ))}
           </div>
         </section>

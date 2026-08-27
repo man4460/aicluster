@@ -16,6 +16,7 @@ import { MODULE_GROUP_TIER_NAME } from "@/lib/modules/config";
 import { dashboardModuleCardDescription } from "@/lib/modules/dashboard-card-descriptions";
 import { resolveModuleCardDisplayImageUrl } from "@/lib/modules/dashboard-module-cover-images";
 import { moduleTryAbsoluteUrl } from "@/lib/modules/try-link";
+import { ModuleTryPromoVideosAdmin } from "@/systems/admin/components/ModuleTryPromoVideosAdmin";
 
 type Row = {
   id: string;
@@ -377,7 +378,8 @@ export function ModuleTryLinksAdmin({
                                 {catalogLine(row.slug)}
                               </p>
                             </div>
-                            <div className="flex shrink-0 items-center gap-1">
+                            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                              <ModuleTryPromoVideosAdmin moduleSlug={row.slug} moduleTitle={row.title} />
                               <button
                                 type="button"
                                 className={iconBtn}
