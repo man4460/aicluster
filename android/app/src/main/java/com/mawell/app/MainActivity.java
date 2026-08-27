@@ -7,6 +7,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
   @Override
   public void onCreate(Bundle savedInstanceState) {
+    registerPlugin(MawellBluetoothPermissionsPlugin.class);
     super.onCreate(savedInstanceState);
     // เว้นพื้นที่แถบสถานะ (เวลา / ไวไฟ / แบต) — เนื้อหาไม่ทับไอคอนระบบ
     WindowCompat.setDecorFitsSystemWindows(getWindow(), true);

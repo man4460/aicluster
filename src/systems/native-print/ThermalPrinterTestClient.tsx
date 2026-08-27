@@ -10,6 +10,7 @@ import { cn } from "@/lib/cn";
 import {
   discoverThermalPrinters,
   isNativeThermalPrinterAvailable,
+  openNativeAppPermissionSettings,
   printThermalTestSlip,
   requestThermalPrinterPermissions,
   type DiscoveredThermalPrinter,
@@ -24,10 +25,24 @@ export function ThermalPrinterTestClient() {
 
   async function onRequestPerms() {
     setBusy(true);
-    setLog("");
+    setLog("กำลังขอสิทธิ์จากระบบ…");
     try {
-      await requestThermalPrinterPermissions();
-      setLog("อนุญาตสิทธิ์แล้ว — Bluetooth พร้อม");
+      const status = await requestThermalPrinterPermissions();
+      setLog(
+        `อนุญาตแล้ว (Android SDK ${status.sdk ?? "?"}) — พร้อมสแกน Bluetooth`,
+      );
+    } catch (e) {
+      setLog(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onOpenSettings() {
+    setBusy(true);
+    try {
+      await openNativeAppPermissionSettings();
+      setLog("เปิดหน้าตั้งค่าแอปแล้ว — อนุญาต「อุปกรณ์ใกล้เคียง」หรือ「ตำแหน่ง」แล้วกลับมากดขอสิทธิ์อีกครั้ง");
     } catch (e) {
       setLog(e instanceof Error ? e.message : String(e));
     } finally {
@@ -97,7 +112,8 @@ export function ThermalPrinterTestClient() {
             มือถือ: <strong>ตั้งค่า → Bluetooth</strong> → จับคู่กับ MP210 (ครั้งแรก)
           </li>
           <li>เปิดแอป <strong>MAWELL</strong> (ไม่ใช่ Chrome) → เข้าเมนูทดสอบพิมพ์</li>
-          <li>กด <strong>ขอสิทธิ์ Bluetooth</strong> → อนุญาตเมื่อระบบถาม</li>
+          <li>กด <strong>ขอสิทธิ์ Bluetooth</strong> → อนุญาตเมื่อระบบถาม (Android 12+ = อุปกรณ์ใกล้เคียง · Android เก่า = ตำแหน่ง)</li>
+          <li>ถ้าไม่มีหน้าต่างถาม → กด <strong>เปิดตั้งค่าสิทธิ์แอป</strong> แล้วอนุญาตเอง</li>
           <li>กด <strong>สแกนหาเครื่อง</strong> → แตะเลือก MP210 ในรายการ</li>
           <li>กด <strong>พิมพ์ทดสอบ</strong></li>
         </ol>
@@ -111,6 +127,14 @@ export function ThermalPrinterTestClient() {
           className={cn(appTemplateOutlineButtonClass, "min-h-10 px-4 disabled:opacity-50")}
         >
           1) ขอสิทธิ์ Bluetooth
+        </button>
+        <button
+          type="button"
+          disabled={!native || busy}
+          onClick={() => void onOpenSettings()}
+          className={cn(appTemplateOutlineButtonClass, "min-h-10 px-4 disabled:opacity-50")}
+        >
+          เปิดตั้งค่าสิทธิ์แอป
         </button>
         <button
           type="button"
