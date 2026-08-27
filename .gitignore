@@ -102,6 +102,7 @@ next-env.d.ts
 
 # iOS build artifacts — IPA ผูกกับ certificate ของเครื่อง build (อย่า commit)
 /build/ios/
+/ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/configuration/
 /public/downloads/ios/MAWELL.ipa
 /public/downloads/ios/manifest.plist
 
