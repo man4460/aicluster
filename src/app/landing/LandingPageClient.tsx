@@ -266,7 +266,7 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
           scrolled ? "border-b border-white/50 bg-white/80 shadow-sm backdrop-blur-xl" : "bg-transparent",
         )}
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6 sm:pb-4 sm:pt-[max(1rem,env(safe-area-inset-top))]">
           <Link
             href="/"
             className="inline-flex items-center rounded-2xl bg-white/95 px-3 py-1.5 leading-none shadow-sm ring-1 ring-white/80"

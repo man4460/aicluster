@@ -100,6 +100,11 @@ next-env.d.ts
 /src/generated/prisma
 /src/generated/.prisma_stale_*
 
+# iOS build artifacts — IPA ผูกกับ certificate ของเครื่อง build (อย่า commit)
+/build/ios/
+/public/downloads/ios/MAWELL.ipa
+/public/downloads/ios/manifest.plist
+
 # local build / tooling artifacts (ไม่อัปโหลด)
 /dist/
 .wrangler/
