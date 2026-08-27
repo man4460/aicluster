@@ -24,7 +24,9 @@ import {
 import { LANDING_GALLERY, LANDING_GALLERY_URLS } from "@/app/landing/landing-media";
 import { buildLandingHeroSlides, LandingHeroSlideMeta, LandingHeroSlideshow } from "@/app/landing/LandingHeroSlideshow";
 import { isSafeLandingBannerDisplayUrl } from "@/lib/landing/banner-url";
+import { LandingAndroidInstallGuide } from "@/app/landing/LandingAndroidInstallGuide";
 import { moduleTryPath, MODULE_TRY_ALL_PATH } from "@/lib/modules/try-link";
+import { MAWELL_ANDROID_APK_PATH } from "@/lib/mobile/android-apk";
 
 function ModuleShowcaseCard({ item, tier }: { item: LandingModuleShowcaseItem; tier: "free" | "daily" }) {
   const title = displayAppModuleTitle(item.slug, item.slug);
@@ -129,7 +131,7 @@ const reviews = [
 const NAV = [
   { href: "#gallery", label: "ภาพรวม", dock: "ภาพรวม" },
   { href: "#modules", label: "โมดูล", dock: "โมดูล" },
-  { href: "#reviews", label: "รีวิว", dock: "รีวิว" },
+  { href: "#download-app", label: "แอปมือถือ", dock: "แอป" },
   { href: "#contact", label: "ติดต่อ", dock: "ติดต่อ" },
 ] as const;
 
@@ -154,10 +156,11 @@ function LandingNavIcon({ href, className }: { href: string; className?: string 
       </svg>
     );
   }
-  if (href === "#reviews") {
+  if (href === "#download-app") {
     return (
       <svg viewBox="0 0 24 24" className={common} fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
-        <path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.9 6.2 16.9l.9-5.4L3.2 8.7l5.4-.8L12 3z" strokeLinejoin="round" />
+        <rect x="7" y="2" width="10" height="20" rx="2" />
+        <path d="M12 17h.01" strokeLinecap="round" />
       </svg>
     );
   }
@@ -305,7 +308,7 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
             ref={heroCta.ref}
             className={cn(
               appPublicCheckInGlassCardClass,
-              "grid w-full gap-3 p-4 text-[#1e1b4b] sm:grid-cols-[1fr_auto_auto] sm:items-center sm:p-5",
+              "grid w-full gap-3 p-4 text-[#1e1b4b] sm:grid-cols-[1fr_auto_auto_auto] sm:items-center sm:p-5",
             )}
           >
             <div className="min-w-0">
@@ -321,6 +324,16 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
             >
               ขอสาธิตฟรี
             </Link>
+            <a
+              href={MAWELL_ANDROID_APK_PATH}
+              download
+              className={cn(
+                "inline-flex min-h-[52px] items-center justify-center rounded-[1rem] px-6 text-sm font-black text-white shadow-md",
+                appDashboardBrandGradientFillClass,
+              )}
+            >
+              ติดตั้งบนมือถือ
+            </a>
             <Link
               href="/login"
               className="inline-flex min-h-[52px] items-center justify-center rounded-[1rem] border-2 border-[#5b61ff]/35 bg-white/80 px-6 text-sm font-black text-[#4d47b6] transition hover:border-[#5b61ff]/55 hover:bg-white"
@@ -576,6 +589,10 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
           </div>
         </section>
 
+        <section id="download-app" className="scroll-mt-24">
+          <LandingAndroidInstallGuide variant="section" />
+        </section>
+
         <section id="contact" className="scroll-mt-24">
           <h2 className={sectionTitleClass}>ติดต่อ</h2>
           <div className={cn(appPublicCheckInGlassCardClass, "mt-6 grid gap-4 p-5 sm:grid-cols-2 sm:p-6")}>
@@ -646,6 +663,12 @@ export function LandingPageClient({ bannerUrl }: { bannerUrl?: string | null }) 
           </span>
           <Link href="/login" className="text-[#5b61ff] underline-offset-2 hover:underline">
             สมัครใช้งาน
+          </Link>
+          <span className="mx-2 text-[#66638c]/80" aria-hidden>
+            ·
+          </span>
+          <Link href="/download-app" className="text-[#5b61ff] underline-offset-2 hover:underline">
+            ดาวน์โหลดแอป Android
           </Link>
         </p>
       </footer>

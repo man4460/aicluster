@@ -47,6 +47,23 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
     ],
   },
+  async headers() {
+    return [
+      {
+        source: "/downloads/:file*.apk",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/vnd.android.package-archive",
+          },
+          {
+            key: "Content-Disposition",
+            value: 'attachment; filename="mawell-android.apk"',
+          },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       {
