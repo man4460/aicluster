@@ -85,6 +85,23 @@ html.pwa-standalone body {
 }
 
 /**
+ * แอป Capacitor iOS — แถบสถานะโปร่ง แล้ววาดไล่สีแบรนด์ใต้ไอคอนระบบ
+ * โทนเดียวกับปุ่ม CTA (`appDashboardBrandGradientFillClass`) — ถ้าเปลี่ยนสีปุ่ม ต้องเปลี่ยนที่นี่ด้วย
+ * ความสูงมาจาก safe-area — บนแพลตฟอร์มที่ไม่มี notch จะสูง 0 เอง
+ */
+html.capacitor-ios::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0px);
+  background-image: linear-gradient(to right, #0000bf, #8b5cf6, #ec4899);
+  z-index: 120;
+  pointer-events: none;
+}
+
+/**
  * พื้นหลังการ์ดมาตรฐาน — ใช้คู่กับ rounded-3xl ในโค้ด
  */
 .mawell-card-surface {
