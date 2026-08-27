@@ -11,7 +11,6 @@ import {
   appMobileDockGridClass,
   appMobileDockLinkClass,
   appPublicCheckInGlassCardClass,
-  appTemplateOutlineButtonClass,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { MawellLogo } from "@/components/layout/MawellLogo";
