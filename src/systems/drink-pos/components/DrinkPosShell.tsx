@@ -88,8 +88,6 @@ function navIcon(key: DrinkPosNavKey, className?: string) {
       return <IconTabOrdersQueue className={className} />;
     case "products":
       return <IconTabProducts className={className} />;
-    case "members":
-      return <IconTabMembers className={className} />;
     case "finance":
       return <IconTabSales className={className} />;
     case "settings":
@@ -232,7 +230,7 @@ export function DrinkPosShell({ children }: { children: React.ReactNode }) {
             className="mt-5 hidden border-t border-[#e8e6fc]/70 pt-5 lg:block print:hidden"
             aria-label="เมนูโมดูล POS ร้านเครื่องดื่ม"
           >
-            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5">
               {DRINK_POS_NAV_ITEMS.map((item) => (
                 <li key={item.key} className="min-w-0">
                   <TabLink
@@ -267,7 +265,7 @@ export function DrinkPosShell({ children }: { children: React.ReactNode }) {
               content: (
                 <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
                   <li>ดูสถานะ: รับออเดอร์ · กำลังทำ · เสร็จแล้ว (แยกสี)</li>
-                  <li>ลิงก์แผนกทำ / เสิร์ฟ รวมอยู่ที่เมนู «ลิงก์» — สถานะอัปเดตทันทีทุกเครื่อง</li>
+                  <li>ลิงก์แผนกทำ / เสิร์ฟ · QR ลูกค้า — อยู่ในเมนู «ตั้งค่า» แท็บลิงก์ QR</li>
                 </ul>
               ),
             },

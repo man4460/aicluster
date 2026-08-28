@@ -24,7 +24,6 @@ import {
   vaultNavActiveClass,
   vaultNavIdleClass,
 } from "@/systems/vault/lib/ui-tokens";
-import { VaultHeaderBarNav } from "@/systems/vault/components/VaultHeaderBarNav";
 
 function IconShield({ className }: { className?: string }) {
   return (
@@ -162,14 +161,7 @@ export function VaultShell({ children }: { children: React.ReactNode }) {
 
   return (
     <VaultMobileBottomProvider>
-      <div className="flex min-h-0 max-w-full flex-1 flex-col gap-4 sm:gap-6">
-        {headerCollapsed ? (
-          <div className="sticky top-0 z-40 print:hidden">
-            <div className={cn("mx-auto flex max-w-full items-center gap-2 rounded-2xl px-2 py-2 sm:rounded-3xl sm:px-3 sm:py-2.5", appDashboardBrandGradientFillClass)}>
-              <VaultHeaderBarNav onExpand={toggleHeaderCollapse} />
-            </div>
-          </div>
-        ) : null}
+      <div className="flex min-h-0 max-w-full flex-1 flex-col gap-3 sm:gap-4">
         <header
           className={cn(
             vaultGlassShellClass,

@@ -5,5 +5,5 @@ export const metadata = {
 };
 
 export default function BuildingPosStaffLinkPage() {
-  redirect("/dashboard/building-pos?tab=qr&qr=staff");
+  redirect("/dashboard/building-pos/settings?tab=link");
 }

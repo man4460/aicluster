@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { getRequestBaseUrl } from "@/lib/app/request-base-url";
 import { getSession } from "@/lib/auth/session";
+import { getQrBarberBranding } from "@/lib/profile/qr-branding";
 import { prisma } from "@/lib/prisma";
 import { MODULE_SHOP_PAYMENT_SELECT, paymentRowToDto } from "@/lib/module-shop/payment";
 import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
@@ -15,32 +17,36 @@ export default async function BarberSettingsPage() {
   const session = await getSession();
   if (!session) redirect("/login");
   const scope = await getBarberDataScope(session.sub);
-  const row = await prisma.barberShopProfile.findUnique({
-    where: {
-      ownerUserId_trialSessionId: { ownerUserId: session.sub, trialSessionId: scope.trialSessionId },
-    },
-    select: {
-      displayName: true,
-      logoUrl: true,
-      contactPhone: true,
-      address: true,
-      tagline: true,
-      contactLine: true,
-      facebookUrl: true,
-      mapUrl: true,
-      portalBannerUrl: true,
-      portalGalleryJson: true,
-      slipPaperSize: true,
-      payAmountPresets: true,
-      staffDailyPinHash: true,
-      openTime: true,
-      closeTime: true,
-      slotMinutes: true,
-      portalBookingPaymentMode: true,
-      depositAmountBaht: true,
-      ...MODULE_SHOP_PAYMENT_SELECT,
-    },
-  });
+  const [row, branding, baseUrl] = await Promise.all([
+    prisma.barberShopProfile.findUnique({
+      where: {
+        ownerUserId_trialSessionId: { ownerUserId: session.sub, trialSessionId: scope.trialSessionId },
+      },
+      select: {
+        displayName: true,
+        logoUrl: true,
+        contactPhone: true,
+        address: true,
+        tagline: true,
+        contactLine: true,
+        facebookUrl: true,
+        mapUrl: true,
+        portalBannerUrl: true,
+        portalGalleryJson: true,
+        slipPaperSize: true,
+        payAmountPresets: true,
+        staffDailyPinHash: true,
+        openTime: true,
+        closeTime: true,
+        slotMinutes: true,
+        portalBookingPaymentMode: true,
+        depositAmountBaht: true,
+        ...MODULE_SHOP_PAYMENT_SELECT,
+      },
+    }),
+    getQrBarberBranding(session.sub, scope.trialSessionId),
+    getRequestBaseUrl(),
+  ]);
 
   const presets = parseBarberPayAmountPresets(row?.payAmountPresets);
 
@@ -50,6 +56,13 @@ export default async function BarberSettingsPage() {
         apiBase="/api/barber/shop-profile"
         ownerId={session.sub}
         trialSessionId={scope.trialSessionId}
+        linkHub={{
+          baseUrl,
+          shopLabel: branding.label,
+          logoUrl: branding.logoUrl,
+          trialExportBlocked: scope.isTrialSandbox,
+          isTrialSandbox: scope.isTrialSandbox,
+        }}
         initial={{
           displayName: row?.displayName ?? null,
           logoUrl: row?.logoUrl ?? null,

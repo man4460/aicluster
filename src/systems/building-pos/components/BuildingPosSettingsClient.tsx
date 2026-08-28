@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AppDashboardSection,
   AppSectionHeader,
@@ -17,6 +17,7 @@ import {
 } from "@/lib/building-pos/portal-booking";
 import type { ModuleShopBrandingDto } from "@/lib/module-shop/slugs";
 import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
+import { BuildingPosDashboardClient } from "@/systems/building-pos/BuildingPosDashboardClient";
 import { BuildingPosBookingPaymentSettings } from "@/systems/building-pos/components/BuildingPosBookingPaymentSettings";
 import { BuildingPosLoyaltySettingsClient } from "@/systems/building-pos/components/BuildingPosLoyaltySettingsClient";
 import { BuildingPosPortalMediaSettings } from "@/systems/building-pos/components/BuildingPosPortalMediaSettings";
@@ -25,9 +26,10 @@ import {
   buildingPosPrimaryTabPillClass,
   buildingPosPrimaryTabShellClass,
 } from "@/systems/building-pos/components/building-pos-ui-tokens";
+import type { BuildingPosSettingsTab } from "@/systems/building-pos/building-pos-nav";
 import { ModuleShopSettingsPanel } from "@/systems/module-shop/ModuleShopSettingsPanel";
 
-type SettingsTab = "basic" | "finance" | "portal" | "hours" | "loyalty";
+type SettingsTab = BuildingPosSettingsTab;
 
 const TABS: { id: SettingsTab; label: string }[] = [
   { id: "basic", label: "ตั้งค่าพื้นฐาน" },
@@ -35,6 +37,7 @@ const TABS: { id: SettingsTab; label: string }[] = [
   { id: "portal", label: "ตั้งค่าเว็ปลิงค์ลูกค้า" },
   { id: "hours", label: "ตั้งค่าเวลาเปิดร้าน" },
   { id: "loyalty", label: "สะสมคะแนน" },
+  { id: "link", label: "ลิงก์ QR" },
 ];
 
 type ShopProfileForm = {
@@ -69,10 +72,19 @@ export function BuildingPosSettingsClient({
   brandingInitial,
   ownerId,
   trialSessionId,
+  isTrialSandbox,
+  linkHub,
 }: {
   brandingInitial: ModuleShopBrandingDto;
   ownerId: string;
   trialSessionId: string;
+  isTrialSandbox: boolean;
+  linkHub: {
+    baseUrl: string;
+    shopLabel: string;
+    logoUrl: string | null;
+    paymentChannelsNote: string | null;
+  };
 }) {
   return (
     <Suspense fallback={<div className="h-40 animate-pulse rounded-[1.25rem] bg-white/30" aria-busy />}>
@@ -80,6 +92,8 @@ export function BuildingPosSettingsClient({
         brandingInitial={brandingInitial}
         ownerId={ownerId}
         trialSessionId={trialSessionId}
+        isTrialSandbox={isTrialSandbox}
+        linkHub={linkHub}
       />
     </Suspense>
   );
@@ -89,11 +103,21 @@ function BuildingPosSettingsClientInner({
   brandingInitial,
   ownerId,
   trialSessionId,
+  isTrialSandbox,
+  linkHub,
 }: {
   brandingInitial: ModuleShopBrandingDto;
   ownerId: string;
   trialSessionId: string;
+  isTrialSandbox: boolean;
+  linkHub: {
+    baseUrl: string;
+    shopLabel: string;
+    logoUrl: string | null;
+    paymentChannelsNote: string | null;
+  };
 }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<SettingsTab>(() => parseTab(searchParams.get("tab")));
   const [form, setForm] = useState<ShopProfileForm>({
@@ -119,6 +143,15 @@ function BuildingPosSettingsClientInner({
     () => buildingPosPublicPortalUrl("", ownerId, trialSessionId),
     [ownerId, trialSessionId],
   );
+
+  useEffect(() => {
+    const raw = searchParams.get("tab");
+    if (raw === "qr") {
+      router.replace(`${window.location.pathname}?tab=link`);
+      return;
+    }
+    setTab(parseTab(raw));
+  }, [searchParams, router]);
 
   useEffect(() => {
     void fetch("/api/building-pos/session/shop-profile", { credentials: "include" })
@@ -338,12 +371,13 @@ function BuildingPosSettingsClientInner({
                 >
                   คัดลอกลิงก์
                 </button>
-                <Link
-                  href="/dashboard/building-pos?tab=qr"
+                <button
+                  type="button"
                   className={cn(appTemplateOutlineButtonClass, "inline-flex min-h-10 items-center rounded-xl px-4 text-sm font-bold")}
+                  onClick={() => selectTab("link")}
                 >
                   ไปหน้า QR
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -431,6 +465,19 @@ function BuildingPosSettingsClientInner({
         ) : null}
 
         {tab === "loyalty" ? <BuildingPosLoyaltySettingsClient /> : null}
+
+        {tab === "link" ? (
+          <BuildingPosDashboardClient
+            linkOnly
+            ownerId={ownerId}
+            trialSessionId={trialSessionId}
+            isTrialSandbox={isTrialSandbox}
+            baseUrl={linkHub.baseUrl}
+            shopLabel={linkHub.shopLabel}
+            logoUrl={linkHub.logoUrl}
+            paymentChannelsNote={linkHub.paymentChannelsNote}
+          />
+        ) : null}
       </div>
     </AppDashboardSection>
   );

@@ -25,7 +25,6 @@ import {
   assetNavActiveClass,
   assetNavIdleClass,
 } from "@/systems/asset/lib/ui-tokens";
-import { AssetHeaderBarNav } from "@/systems/asset/components/AssetHeaderBarNav";
 import { assetFilterChipClass, assetSegmentShellClass } from "@/systems/asset/asset-ui-tokens";
 
 type AssetNavKeyIcon = AssetNavKey;
@@ -244,14 +243,7 @@ export function AssetShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AssetMobileBottomProvider>
-      <div className="flex min-h-0 max-w-full flex-1 flex-col gap-4 sm:gap-6">
-        {headerCollapsed ? (
-          <div className="sticky top-0 z-40 print:hidden">
-            <div className={cn("mx-auto flex max-w-full items-center gap-2 rounded-2xl px-2 py-2 sm:rounded-3xl sm:px-3 sm:py-2.5", appDashboardBrandGradientFillClass)}>
-              <AssetHeaderBarNav onExpand={toggleHeaderCollapse} />
-            </div>
-          </div>
-        ) : null}
+      <div className="flex min-h-0 max-w-full flex-1 flex-col gap-3 sm:gap-4">
         <header
           className={cn(
             assetGlassShellClass,

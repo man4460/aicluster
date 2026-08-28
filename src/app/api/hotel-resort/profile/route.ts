@@ -98,6 +98,7 @@ function profileFromRow(
     portalBannerUrl?: string | null;
     portalGalleryJson?: unknown;
     promptPayPhone?: string | null;
+    promptPayQrImageUrl?: string | null;
     bankName?: string | null;
     bankAccountNumber?: string | null;
     bankAccountName?: string | null;

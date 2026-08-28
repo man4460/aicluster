@@ -17,7 +17,6 @@ import {
   IconHotel,
   IconNavCheckIn,
   IconNavFinance,
-  IconNavGuest,
 } from "@/systems/hotel-resort/components/HotelResortIcons";
 import {
   IconModuleShopSettings,
@@ -44,8 +43,6 @@ function dockIcon(key: HotelResortNavKey, className?: string): ReactNode {
       return <IconNavCheckIn className={className} />;
     case "finance":
       return <IconNavFinance className={className} />;
-    case "guest":
-      return <IconNavGuest className={className} />;
     case "settings":
       return <IconModuleShopSettings className={className} />;
   }
@@ -56,7 +53,7 @@ export function HotelResortMobileDockNav() {
   if (!isHotelResortModulePath(pathname)) return null;
 
   return (
-    <ul className={cn(appMobileDockGridClass, "grid-cols-7")} aria-label="แท็บนำทางโมดูลโรงแรมรีสอร์ท">
+    <ul className={cn(appMobileDockGridClass, "grid-cols-6")} aria-label="แท็บนำทางโมดูลโรงแรมรีสอร์ท">
       {HOTEL_RESORT_NAV_ITEMS.map((item) => {
         const active = isHotelResortNavItemActive(pathname, item.key);
         const label = item.key === "settings" ? MODULE_SHOP_SETTINGS_SHORT_LABEL : item.shortLabel;

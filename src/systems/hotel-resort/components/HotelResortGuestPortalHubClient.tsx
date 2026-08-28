@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { FormModal } from "@/components/ui/FormModal";
+import { appTemplateOutlineButtonClass } from "@/components/app-templates";
+import { cn } from "@/lib/cn";
 import { HotelResortButton } from "@/systems/hotel-resort/components/HotelResortButton";
 import {
   hotelResortHubCardAmberClass,
@@ -9,7 +12,6 @@ import {
 } from "@/systems/hotel-resort/lib/ui-tokens";
 import { HotelResortQrPosterClient } from "@/systems/hotel-resort/components/HotelResortQrPosterClient";
 import { HotelResortStaffQrPosterClient } from "@/systems/hotel-resort/components/HotelResortStaffQrPosterClient";
-import { HotelResortPortalMediaSettings } from "@/systems/hotel-resort/components/HotelResortPortalMediaSettings";
 import { IconQr } from "@/systems/hotel-resort/components/HotelResortIcons";
 
 function ModalCloseFooter({ onClose }: { onClose: () => void }) {
@@ -37,8 +39,7 @@ export function HotelResortGuestPortalHubClient({
   hotelLabel,
   logoUrl = null,
   trialExportBlocked = false,
-  initialPortalBannerUrl = null,
-  initialPortalGallery = [],
+  embedded = false,
 }: {
   ownerId: string;
   trialSessionId: string;
@@ -46,8 +47,7 @@ export function HotelResortGuestPortalHubClient({
   hotelLabel: string;
   logoUrl?: string | null;
   trialExportBlocked?: boolean;
-  initialPortalBannerUrl?: string | null;
-  initialPortalGallery?: string[];
+  embedded?: boolean;
 }) {
   const [modal, setModal] = useState<"qr" | "staff" | null>(null);
 
@@ -93,6 +93,18 @@ export function HotelResortGuestPortalHubClient({
         </HotelResortButton>
       </div>
 
+      {!embedded ? (
+        <p className="text-sm font-medium text-[#66638c]">
+          ตั้งค่าแบนเนอร์ · รูปภาพ · ข้อมูลติดต่อ · รีวิว —{" "}
+          <Link
+            href="/dashboard/hotel-resort/settings?tab=portal"
+            className={cn(appTemplateOutlineButtonClass, "inline-flex min-h-9 items-center rounded-xl px-3 text-xs font-bold")}
+          >
+            ไปตั้งค่าเว็ปลิงค์ลูกค้า
+          </Link>
+        </p>
+      ) : null}
+
       <FormModal
         open={modal === "qr"}
         onClose={() => setModal(null)}
@@ -131,11 +143,6 @@ export function HotelResortGuestPortalHubClient({
           compactForModal
         />
       </FormModal>
-
-      <HotelResortPortalMediaSettings
-        initialBannerUrl={initialPortalBannerUrl}
-        initialGallery={initialPortalGallery}
-      />
     </div>
   );
 }

@@ -34,9 +34,11 @@ import {
 export function HotelResortPortalMediaSettings({
   initialBannerUrl = null,
   initialGallery = [],
+  embedded = false,
 }: {
   initialBannerUrl?: string | null;
   initialGallery?: string[];
+  embedded?: boolean;
 }) {
   const [bannerUrl, setBannerUrl] = useState(initialBannerUrl ?? "");
   const [gallery, setGallery] = useState<string[]>(initialGallery);
@@ -140,14 +142,8 @@ export function HotelResortPortalMediaSettings({
     }
   }
 
-  return (
-    <AppDashboardSection tone="violet" className={hotelResortSectionRadiusClass}>
-      <AppSectionHeader
-        tone="violet"
-        title="รูปหน้าเว็บลิงก์ลูกค้า"
-        description="แบนเนอร์และภาพรวมโรงแรม — แสดงบนหน้าตรวจสอบสถานะการจอง"
-      />
-      <div className="mt-4 space-y-5">
+  const body = (
+    <div className={embedded ? "space-y-5" : "mt-4 space-y-5"}>
         {err ? <HotelResortErrorBanner message={err} /> : null}
         {msg ? <p className={hotelResortSuccessBannerClass}>{msg}</p> : null}
 
@@ -326,7 +322,9 @@ export function HotelResortPortalMediaSettings({
           {busy ? "กำลังบันทึก…" : "บันทึกรูปหน้าลิงก์"}
         </button>
       </div>
+  );
 
+  const lightbox = (
       <AppImageLightbox
         src={lb.src}
         sources={lb.sources}
@@ -334,6 +332,30 @@ export function HotelResortPortalMediaSettings({
         onClose={lb.close}
         alt="รูปพอร์ทัล"
       />
+  );
+
+  if (embedded) {
+    return (
+      <div className="rounded-2xl border border-white/60 bg-white/40 p-3 sm:p-4">
+        <p className="text-xs font-bold text-[#4d47b6]">รูปหน้าเว็บลิงก์ลูกค้า</p>
+        <p className="mt-0.5 text-[11px] font-medium text-[#8b87b8]">
+          แบนเนอร์และภาพรวมโรงแรม — แสดงบนหน้าตรวจสอบสถานะการจอง
+        </p>
+        <div className="mt-3">{body}</div>
+        {lightbox}
+      </div>
+    );
+  }
+
+  return (
+    <AppDashboardSection tone="violet" className={hotelResortSectionRadiusClass}>
+      <AppSectionHeader
+        tone="violet"
+        title="รูปหน้าเว็บลิงก์ลูกค้า"
+        description="แบนเนอร์และภาพรวมโรงแรม — แสดงบนหน้าตรวจสอบสถานะการจอง"
+      />
+      {body}
+      {lightbox}
     </AppDashboardSection>
   );
 }

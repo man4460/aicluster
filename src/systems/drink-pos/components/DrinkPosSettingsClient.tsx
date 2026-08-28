@@ -1,8 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AppDashboardSection,
   AppSectionHeader,
@@ -11,19 +10,21 @@ import {
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { drinkPosPublicPortalUrl } from "@/lib/drink-pos/public-url";
+import { DrinkPosLoyaltyHubClient } from "@/systems/drink-pos/components/DrinkPosLoyaltyHubClient";
 import { DrinkPosLoyaltySettingsClient } from "@/systems/drink-pos/components/DrinkPosLoyaltySettingsClient";
 import { DrinkPosPortalMediaSettings } from "@/systems/drink-pos/components/DrinkPosPortalMediaSettings";
 import {
   DrinkPosShopSettingsClient,
   type DrinkPosShopSettingsProfile,
 } from "@/systems/drink-pos/components/DrinkPosShopSettingsClient";
+import type { DrinkPosSettingsTab } from "@/systems/drink-pos/lib/drink-pos-module-nav";
 import {
   drinkPosMobileSelectClass,
   drinkPosPrimaryTabPillClass,
   drinkPosPrimaryTabShellClass,
 } from "@/systems/drink-pos/lib/ui-tokens";
 
-type SettingsTab = "basic" | "finance" | "portal" | "hours" | "loyalty";
+type SettingsTab = DrinkPosSettingsTab;
 
 const TABS: { id: SettingsTab; label: string }[] = [
   { id: "basic", label: "ตั้งค่าพื้นฐาน" },
@@ -31,6 +32,7 @@ const TABS: { id: SettingsTab; label: string }[] = [
   { id: "portal", label: "ตั้งค่าเว็ปลิงค์ลูกค้า" },
   { id: "hours", label: "ตั้งค่าเวลาเปิดร้าน" },
   { id: "loyalty", label: "สะสมคะแนน" },
+  { id: "link", label: "ลิงก์ QR" },
 ];
 
 type ShopProfileForm = {
@@ -62,10 +64,20 @@ export function DrinkPosSettingsClient({
   shopInitial,
   ownerId,
   trialSessionId,
+  linkHub,
 }: {
   shopInitial: DrinkPosShopSettingsProfile;
   ownerId: string;
   trialSessionId: string;
+  linkHub: {
+    baseUrl: string;
+    shopLabel: string;
+    logoUrl: string | null;
+    trialExportBlocked: boolean;
+    loyaltyEnabled: boolean;
+    bahtPerPoint: number;
+    pointsPerUnit: number;
+  };
 }) {
   return (
     <Suspense fallback={<div className="h-40 animate-pulse rounded-[1.25rem] bg-white/30" aria-busy />}>
@@ -73,6 +85,7 @@ export function DrinkPosSettingsClient({
         shopInitial={shopInitial}
         ownerId={ownerId}
         trialSessionId={trialSessionId}
+        linkHub={linkHub}
       />
     </Suspense>
   );
@@ -82,11 +95,22 @@ function DrinkPosSettingsClientInner({
   shopInitial,
   ownerId,
   trialSessionId,
+  linkHub,
 }: {
   shopInitial: DrinkPosShopSettingsProfile;
   ownerId: string;
   trialSessionId: string;
+  linkHub: {
+    baseUrl: string;
+    shopLabel: string;
+    logoUrl: string | null;
+    trialExportBlocked: boolean;
+    loyaltyEnabled: boolean;
+    bahtPerPoint: number;
+    pointsPerUnit: number;
+  };
 }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<SettingsTab>(() => parseTab(searchParams.get("tab")));
   const [form, setForm] = useState<ShopProfileForm>({
@@ -109,6 +133,15 @@ function DrinkPosSettingsClientInner({
     () => drinkPosPublicPortalUrl("", ownerId, trialSessionId),
     [ownerId, trialSessionId],
   );
+
+  useEffect(() => {
+    const raw = searchParams.get("tab");
+    if (raw === "members") {
+      router.replace(`${window.location.pathname}?tab=link`);
+      return;
+    }
+    setTab(parseTab(raw));
+  }, [searchParams, router]);
 
   useEffect(() => {
     void fetch("/api/drink-pos/profile", { credentials: "include", cache: "no-store" })
@@ -310,15 +343,13 @@ function DrinkPosSettingsClientInner({
                 >
                   คัดลอกลิงก์
                 </button>
-                <Link
-                  href="/dashboard/drink-pos?tab=qr"
-                  className={cn(
-                    appTemplateOutlineButtonClass,
-                    "inline-flex min-h-10 items-center rounded-xl px-4 text-sm font-bold",
-                  )}
+                <button
+                  type="button"
+                  className={cn(appTemplateOutlineButtonClass, "min-h-10 rounded-xl px-4 text-sm font-bold")}
+                  onClick={() => selectTab("link")}
                 >
                   ไปหน้า QR
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -398,6 +429,21 @@ function DrinkPosSettingsClientInner({
         ) : null}
 
         {tab === "loyalty" ? <DrinkPosLoyaltySettingsClient embedded /> : null}
+
+        {tab === "link" ? (
+          <DrinkPosLoyaltyHubClient
+            embedded
+            ownerId={ownerId}
+            trialSessionId={trialSessionId}
+            baseUrl={linkHub.baseUrl}
+            shopLabel={linkHub.shopLabel}
+            logoUrl={linkHub.logoUrl}
+            trialExportBlocked={linkHub.trialExportBlocked}
+            loyaltyEnabled={linkHub.loyaltyEnabled}
+            bahtPerPoint={linkHub.bahtPerPoint}
+            pointsPerUnit={linkHub.pointsPerUnit}
+          />
+        ) : null}
       </div>
     </AppDashboardSection>
   );

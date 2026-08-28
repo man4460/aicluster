@@ -28,7 +28,7 @@ type ReviewRow = {
   createdAt: string;
 };
 
-export function HotelResortReviewsSettings() {
+export function HotelResortReviewsSettings({ embedded = false }: { embedded?: boolean }) {
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [guestName, setGuestName] = useState("");
   const [rating, setRating] = useState(5);
@@ -108,10 +108,8 @@ export function HotelResortReviewsSettings() {
     }
   }
 
-  return (
-    <AppDashboardSection tone="violet" className={hotelResortSectionRadiusClass}>
-      <AppSectionHeader tone="violet" title="รีวิวหน้าลิงก์ลูกค้า" />
-      <div className="mt-4 space-y-3">
+  const body = (
+    <div className={embedded ? "space-y-3" : "mt-4 space-y-3"}>
         {err ? <HotelResortErrorBanner message={err} /> : null}
         {msg ? <p className={hotelResortSuccessBannerClass}>{msg}</p> : null}
         <div className="grid gap-3 sm:grid-cols-2">
@@ -192,6 +190,21 @@ export function HotelResortReviewsSettings() {
           ))}
         </ul>
       </div>
+  );
+
+  if (embedded) {
+    return (
+      <div className="rounded-2xl border border-white/60 bg-white/40 p-3 sm:p-4">
+        <p className="text-xs font-bold text-[#4d47b6]">รีวิวหน้าลิงก์ลูกค้า</p>
+        <div className="mt-3">{body}</div>
+      </div>
+    );
+  }
+
+  return (
+    <AppDashboardSection tone="violet" className={hotelResortSectionRadiusClass}>
+      <AppSectionHeader tone="violet" title="รีวิวหน้าลิงก์ลูกค้า" />
+      {body}
     </AppDashboardSection>
   );
 }

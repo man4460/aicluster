@@ -20,7 +20,7 @@ export function VillageLayoutChrome({
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
 
   return (
-    <div className="max-w-full space-y-4 pb-28 sm:space-y-6 sm:pb-6">
+    <div className="flex min-h-0 max-w-full flex-1 flex-col gap-3 pb-28 sm:gap-4 sm:pb-6">
       <header className={cn(villageModuleHeaderShellClass, "print:hidden")}>
         <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
           <div className="min-w-0 flex-1">

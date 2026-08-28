@@ -1,8 +1,7 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AppDashboardSection,
   AppModuleShopSettingsClient,
@@ -17,6 +16,7 @@ import { bangkokDateKey } from "@/lib/time/bangkok";
 import { CarWashShopHoursPanel } from "@/systems/car-wash/CarWashShopHoursPanel";
 import { CarWashPortalMediaSettings } from "@/systems/car-wash/CarWashPortalMediaSettings";
 import { CarWashBookingPaymentSettings } from "@/systems/car-wash/CarWashBookingPaymentSettings";
+import { CarWashQrHubClient } from "@/systems/car-wash/CarWashQrHubClient";
 import {
   carWashMobileSelectClass,
   carWashPrimaryTabPillClass,
@@ -32,13 +32,14 @@ export type CarWashPortalMediaDto = {
   portalGallery: string[];
 };
 
-type SettingsTab = "basic" | "finance" | "portal" | "hours";
+type SettingsTab = "basic" | "finance" | "portal" | "hours" | "link";
 
 const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
   { id: "basic", label: "ตั้งค่าพื้นฐาน" },
   { id: "finance", label: "ตั้งค่าเกี่ยวกับการเงิน" },
   { id: "portal", label: "ตั้งค่าเว็ปลิงค์ลูกค้า" },
   { id: "hours", label: "ตั้งค่าเวลาเปิดร้าน" },
+  { id: "link", label: "ลิงก์ QR" },
 ];
 
 const SETTINGS_TAB_KEYS = new Set<string>(SETTINGS_TABS.map((t) => t.id));
@@ -51,9 +52,11 @@ function parseSettingsTab(raw: string | null): SettingsTab {
 function CarWashPortalLinkPanel({
   ownerId,
   trialSessionId,
+  onGoToQr,
 }: {
   ownerId: string;
   trialSessionId: string;
+  onGoToQr?: () => void;
 }) {
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
   const portalPath = useMemo(
@@ -130,12 +133,15 @@ function CarWashPortalLinkPanel({
         </div>
       </div>
 
-      <Link
-        href="/dashboard/car-wash?tab=qr"
-        className={cn(appTemplateOutlineButtonClass, "inline-flex min-h-10 items-center rounded-xl px-4 text-sm font-bold")}
-      >
-        ไปหน้า QR / โปสเตอร์
-      </Link>
+      {onGoToQr ? (
+        <button
+          type="button"
+          className={cn(appTemplateOutlineButtonClass, "inline-flex min-h-10 items-center rounded-xl px-4 text-sm font-bold")}
+          onClick={onGoToQr}
+        >
+          ไปหน้า QR / โปสเตอร์
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -231,12 +237,19 @@ export function CarWashSettingsClient({
   ownerId,
   trialSessionId,
   initialDateKey,
+  linkHub,
 }: {
   initial: ModuleShopBrandingDto;
   initialPortal: CarWashPortalMediaDto;
   ownerId: string;
   trialSessionId: string;
   initialDateKey?: string;
+  linkHub?: {
+    baseUrl: string;
+    shopLabel: string;
+    logoUrl: string | null;
+    isTrialSandbox: boolean;
+  };
 }) {
   return (
     <Suspense fallback={<div className="h-40 animate-pulse rounded-[1.5rem] bg-white/30" aria-busy />}>
@@ -246,6 +259,7 @@ export function CarWashSettingsClient({
         ownerId={ownerId}
         trialSessionId={trialSessionId}
         initialDateKey={initialDateKey}
+        linkHub={linkHub}
       />
     </Suspense>
   );
@@ -257,18 +271,42 @@ function CarWashSettingsClientInner({
   ownerId,
   trialSessionId,
   initialDateKey,
+  linkHub,
 }: {
   initial: ModuleShopBrandingDto;
   initialPortal: CarWashPortalMediaDto;
   ownerId: string;
   trialSessionId: string;
   initialDateKey?: string;
+  linkHub?: {
+    baseUrl: string;
+    shopLabel: string;
+    logoUrl: string | null;
+    isTrialSandbox: boolean;
+  };
 }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<SettingsTab>(() => parseSettingsTab(searchParams.get("tab")));
   const [branding, setBranding] = useState(initial);
   const hoursDateKey = initialDateKey ?? bangkokDateKey();
   const base = `/api/module-shop/${CAR_WASH_MODULE_SLUG}`;
+
+  useEffect(() => {
+    const raw = searchParams.get("tab");
+    if (raw === "qr") {
+      router.replace(`${window.location.pathname}?tab=link`);
+      return;
+    }
+    setTab(parseSettingsTab(raw));
+  }, [searchParams, router]);
+
+  const selectTab = (next: SettingsTab) => {
+    setTab(next);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", next);
+    window.history.replaceState({}, "", url.toString());
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -276,7 +314,7 @@ function CarWashSettingsClientInner({
         <AppSectionHeader
           tone="violet"
           title="ตั้งค่าร้าน"
-          description="พื้นฐาน · การเงิน · ลิงก์ลูกค้า · เวลาเปิดร้าน"
+          description="พื้นฐาน · การเงิน · ลิงก์ลูกค้า · เวลาเปิดร้าน · QR"
         />
 
         <div className="mt-3 w-full sm:hidden">
@@ -286,7 +324,7 @@ function CarWashSettingsClientInner({
           <select
             id="cw-settings-menu-mobile"
             value={tab}
-            onChange={(e) => setTab(e.target.value as SettingsTab)}
+            onChange={(e) => selectTab(e.target.value as SettingsTab)}
             className={carWashMobileSelectClass}
             aria-label="กรุณาเลือกหมวดตั้งค่า"
           >
@@ -309,7 +347,7 @@ function CarWashSettingsClientInner({
                   aria-selected={tab === item.id}
                   id={`cw-settings-tab-${item.id}`}
                   aria-controls={`cw-settings-panel-${item.id}`}
-                  onClick={() => setTab(item.id)}
+                  onClick={() => selectTab(item.id)}
                   className={cn(carWashPrimaryTabPillClass(tab === item.id), "grow-0 basis-auto")}
                 >
                   {item.label}
@@ -366,7 +404,11 @@ function CarWashSettingsClientInner({
               aria-labelledby="cw-settings-tab-portal"
               className="space-y-5"
             >
-              <CarWashPortalLinkPanel ownerId={ownerId} trialSessionId={trialSessionId} />
+              <CarWashPortalLinkPanel
+                ownerId={ownerId}
+                trialSessionId={trialSessionId}
+                onGoToQr={() => selectTab("link")}
+              />
               <CarWashPortalMediaPanel initial={initialPortal} />
             </div>
           ) : null}
@@ -374,6 +416,20 @@ function CarWashSettingsClientInner({
           {tab === "hours" ? (
             <div id="cw-settings-panel-hours" role="tabpanel" aria-labelledby="cw-settings-tab-hours">
               <CarWashShopHoursPanel initialDateKey={hoursDateKey} />
+            </div>
+          ) : null}
+
+          {tab === "link" && linkHub ? (
+            <div id="cw-settings-panel-link" role="tabpanel" aria-labelledby="cw-settings-tab-link">
+              <CarWashQrHubClient
+                embedded
+                ownerId={ownerId}
+                shopLabel={linkHub.shopLabel}
+                logoUrl={linkHub.logoUrl}
+                baseUrl={linkHub.baseUrl}
+                trialSessionId={trialSessionId}
+                isTrialSandbox={linkHub.isTrialSandbox}
+              />
             </div>
           ) : null}
         </div>

@@ -1,4 +1,3 @@
-import { PageContainer } from "@/components/ui/page-container";
 import { getSession } from "@/lib/auth/session";
 import { VILLAGE_MODULE_SLUG } from "@/lib/modules/config";
 import { getActiveTrialBanner } from "@/lib/modules/trial-store";
@@ -19,10 +18,10 @@ export default async function VillageLayout({ children }: { children: React.Reac
         });
 
   return (
-    <PageContainer>
+    <div className="flex min-h-0 flex-1 flex-col">
       <VillageLayoutChrome trialExpiresLabel={trialExpiresLabel}>
         {children}
       </VillageLayoutChrome>
-    </PageContainer>
+    </div>
   );
 }

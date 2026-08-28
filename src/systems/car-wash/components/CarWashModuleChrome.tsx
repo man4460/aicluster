@@ -162,7 +162,7 @@ function CarWashModuleChromeInner({ children }: { children: ReactNode }) {
       {children}
 
       <AppMobileDockShell ariaLabel="เมนูล่างคาร์แคร์">
-        <ul className={cn(appMobileDockGridClass, "grid-cols-5")}>
+        <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
           {CAR_WASH_TAB_ITEMS.map((item) => {
             const active = !onSettings && isCarWashTabActive(pathname, item.key, tabParam);
             return (

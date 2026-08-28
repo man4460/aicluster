@@ -29,7 +29,12 @@ import { BuildingPosOpenTablesPanel, BuildingPosSalesHistoryPanel } from "@/syst
 import { BuildingPosReservationsPanel } from "@/systems/building-pos/components/BuildingPosReservationsPanel";
 import { BuildingPosStaffQrSection } from "@/systems/building-pos/components/BuildingPosStaffQrSection";
 import { buildingPosPublicPortalUrl } from "@/lib/building-pos/public-url";
-import { BUILDING_POS_ORDER_HREF, parseBuildingPosNav } from "@/systems/building-pos/building-pos-nav";
+import {
+  BUILDING_POS_ORDER_HREF,
+  BUILDING_POS_ORDERS_HREF,
+  BUILDING_POS_SETTINGS_LINK_HREF,
+  parseBuildingPosNav,
+} from "@/systems/building-pos/building-pos-nav";
 import {
   buildingPosStationPublicUrl,
 } from "@/systems/building-pos/lib/station-role";
@@ -85,6 +90,7 @@ export function BuildingPosDashboardClient({
   shopLabel,
   logoUrl,
   paymentChannelsNote,
+  linkOnly = false,
 }: {
   ownerId: string;
   trialSessionId: string;
@@ -94,6 +100,8 @@ export function BuildingPosDashboardClient({
   logoUrl: string | null;
   /** จากโปรไฟล์ส่วนกลาง — แสดงบนบิล / QR */
   paymentChannelsNote?: string | null;
+  /** แสดงเฉพาะศูนย์ QR — ใช้ในแท็บตั้งค่า */
+  linkOnly?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -108,20 +116,25 @@ export function BuildingPosDashboardClient({
   );
 
   useLayoutEffect(() => {
+    if (linkOnly) return;
     const tabQ = searchParams.get("tab");
-    if (tabQ === "ingredients" || tabQ === "purchases") {
-      router.replace("/dashboard/building-pos?tab=finance&fin=costs");
+    if (tabQ === "qr") {
+      router.replace(BUILDING_POS_SETTINGS_LINK_HREF, { scroll: false });
       return;
     }
     if (tabQ === "orders") {
-      router.replace("/dashboard/building-pos?tab=qr", { scroll: false });
+      router.replace(BUILDING_POS_ORDERS_HREF, { scroll: false });
+      return;
+    }
+    if (tabQ === "ingredients" || tabQ === "purchases") {
+      router.replace("/dashboard/building-pos?tab=finance&fin=costs");
       return;
     }
     if (tabQ === "categories") {
       router.replace("/dashboard/building-pos?tab=menu", { scroll: false });
       return;
     }
-  }, [searchParams, router]);
+  }, [searchParams, router, linkOnly]);
 
   const [categories, setCategories] = useState<PosCategory[]>([]);
   const [kitchenDepartments, setKitchenDepartments] = useState<PosKitchenDepartment[]>([]);
@@ -907,7 +920,7 @@ export function BuildingPosDashboardClient({
           </button>
         </div>
       ) : null}
-      {nav.main === "overview" ? (
+      {!linkOnly && nav.main === "overview" ? (
         <div className="space-y-4 sm:space-y-5">
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className={buildingPosStatCardEmeraldClass}>
@@ -998,7 +1011,7 @@ export function BuildingPosDashboardClient({
         </div>
       ) : null}
 
-      {nav.main === "menu" ? (
+      {!linkOnly && nav.main === "menu" ? (
         <section className={buildingPosContentPanelClass}>
           <div className="flex flex-row items-start justify-between gap-3 border-b border-[#ecebff] pb-4">
             <h2 className="min-w-0 text-lg font-black tracking-tight text-[#1e1b4b]">เมนูอาหาร</h2>
@@ -1154,7 +1167,7 @@ export function BuildingPosDashboardClient({
         </section>
       ) : null}
 
-      {nav.main === "qr" && nav.qr === "customer" ? (
+      {linkOnly ? (
         <div className="space-y-4">
           <section className={buildingPosQrHubOuterClass}>
             <div className="border-b border-white/50 bg-gradient-to-r from-[#4d47b6]/[0.08] via-transparent to-[#0d9488]/[0.06] px-4 py-4 sm:px-6 sm:py-5">
@@ -1627,7 +1640,7 @@ export function BuildingPosDashboardClient({
         </div>
       ) : null}
 
-      {nav.main === "finance" ? (
+      {!linkOnly && nav.main === "finance" ? (
         <div className="space-y-4 sm:space-y-5">
           <BuildingPosSalesHistoryPanel
             orders={orders}

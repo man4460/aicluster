@@ -45,7 +45,7 @@ export function CarWashMobileDockNav() {
   if (!isCarWashModulePath(pathname)) return null;
 
   return (
-    <ul className={cn(appMobileDockGridClass, "grid-cols-5")} aria-label="แท็บนำทางโมดูลคาร์แคร์">
+    <ul className={cn(appMobileDockGridClass, "grid-cols-4")} aria-label="แท็บนำทางโมดูลคาร์แคร์">
       {CAR_WASH_NAV_ITEMS.map((item) => {
         const active = isCarWashNavItemActive(pathname, item.key, tabParam);
         const label = item.key === "settings" ? MODULE_SHOP_SETTINGS_SHORT_LABEL : item.shortLabel;

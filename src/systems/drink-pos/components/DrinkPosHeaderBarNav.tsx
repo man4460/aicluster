@@ -72,8 +72,6 @@ function navIcon(key: DrinkPosNavKey, className?: string) {
       return <IconTabOrdersQueue className={className} />;
     case "products":
       return <IconTabProducts className={className} />;
-    case "members":
-      return <IconTabMembers className={className} />;
     case "finance":
       return <IconTabSales className={className} />;
     case "settings":

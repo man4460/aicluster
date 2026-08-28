@@ -198,7 +198,7 @@ function slidesForVariant(variant: PresentationVariant): SlideDef[] {
           ctaPrimaryLabel: "ไปหน้า Dashboard",
           ctaPrimaryHref: BUILDING_POS_BASE,
           ctaSecondaryLabel: "ดู QR ลูกค้า",
-          ctaSecondaryHref: `${BUILDING_POS_BASE}?tab=qr`,
+          ctaSecondaryHref: `${BUILDING_POS_BASE}/settings?tab=link`,
         }
       : s,
   );

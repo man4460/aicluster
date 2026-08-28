@@ -15,7 +15,6 @@ import {
   IconHotel,
   IconNavCheckIn,
   IconNavFinance,
-  IconNavGuest,
 } from "@/systems/hotel-resort/components/HotelResortIcons";
 import {
   IconModuleShopSettings,
@@ -34,8 +33,6 @@ function navIcon(key: HotelResortNavKey, className?: string) {
       return <IconNavCheckIn className={className} />;
     case "finance":
       return <IconNavFinance className={className} />;
-    case "guest":
-      return <IconNavGuest className={className} />;
     case "settings":
       return <IconModuleShopSettings className={className} />;
   }

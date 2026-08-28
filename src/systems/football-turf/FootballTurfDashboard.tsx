@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   BarChart3,
@@ -132,10 +132,13 @@ import {
   footballTurfPortalSlipProofMessage,
 } from "@/systems/football-turf/lib/portal-booking";
 import {
+  FOOTBALL_TURF_BASE,
+  FOOTBALL_TURF_SETTINGS_LINK_HREF,
   FOOTBALL_TURF_TAB_ITEMS,
   footballTurfTabIcon,
-  parseFootballTurfCrmSection,
+  parseFootballTurfManageSection,
   parseFootballTurfTab,
+  type FootballTurfManageSection,
   type FootballTurfTabKey,
 } from "@/systems/football-turf/football-turf-module-nav";
 import { ModuleStaffTokenQrPanel } from "@/components/qr/module-staff-token-qr-panel";
@@ -1118,11 +1121,12 @@ export function FootballTurfDashboard({
   forcedTab?: FootballTurfTabKey;
   refreshNonce?: number;
 }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const urlTab = parseFootballTurfTab(searchParams.get("tab"));
   const activeTab = forcedTab ?? urlTab;
-  const [crmSection, setCrmSection] = useState<"offers" | "customers">(() =>
-    parseFootballTurfCrmSection(searchParams.get("tab")),
+  const [manageSection, setManageSection] = useState<FootballTurfManageSection>(() =>
+    parseFootballTurfManageSection(searchParams.get("tab"), searchParams.get("section")),
   );
   const repo = useMemo(
     () =>
@@ -1216,8 +1220,8 @@ export function FootballTurfDashboard({
   const [editingCustomerId, setEditingCustomerId] = useState<number | null>(null);
   const [customerSearch, setCustomerSearch] = useState("");
   const [settingsMenu, setSettingsMenu] = useState<
-    "venue" | "payment" | "docs" | "loyalty" | "preview"
-  >("venue");
+    "venue" | "payment" | "docs" | "loyalty" | "preview" | "link"
+  >(() => (searchParams.get("menu") === "link" ? "link" : "venue"));
   const [customersMenu, setCustomersMenu] = useState<
     "all" | "active" | "inactive" | "tax" | "points"
   >("all");
@@ -1595,9 +1599,57 @@ export function FootballTurfDashboard({
     };
   }, [storageOnly, staffPortal, staffAuth, applyLiveEvent, refresh]);
 
+  useLayoutEffect(() => {
+    if (staffPortal || forcedTab) return;
+    const tab = searchParams.get("tab");
+    if (tab === "qr") {
+      router.replace(FOOTBALL_TURF_SETTINGS_LINK_HREF, { scroll: false });
+      return;
+    }
+    if (tab === "offers" || tab === "customers" || tab === "courts") {
+      const section = tab === "offers" ? null : tab;
+      const href =
+        section == null
+          ? `${FOOTBALL_TURF_BASE}?tab=manage`
+          : `${FOOTBALL_TURF_BASE}?tab=manage&section=${section}`;
+      router.replace(href, { scroll: false });
+    }
+  }, [searchParams, router, staffPortal, forcedTab]);
+
   useEffect(() => {
-    setCrmSection(parseFootballTurfCrmSection(searchParams.get("tab")));
+    setManageSection(parseFootballTurfManageSection(searchParams.get("tab"), searchParams.get("section")));
+    if (searchParams.get("tab") === "settings" && searchParams.get("menu") === "link") {
+      setSettingsMenu("link");
+    }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (staffPortal && manageSection === "courts") {
+      setManageSection("offers");
+    }
+  }, [staffPortal, manageSection]);
+
+  const selectManageSection = (next: FootballTurfManageSection) => {
+    setManageSection(next);
+    if (staffPortal || forcedTab) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", "manage");
+    if (next === "offers") url.searchParams.delete("section");
+    else url.searchParams.set("section", next);
+    window.history.replaceState({}, "", url.toString());
+  };
+
+  const selectSettingsMenu = (
+    next: "venue" | "payment" | "docs" | "loyalty" | "preview" | "link",
+  ) => {
+    setSettingsMenu(next);
+    if (staffPortal || forcedTab) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", "settings");
+    if (next === "venue") url.searchParams.delete("menu");
+    else url.searchParams.set("menu", next);
+    window.history.replaceState({}, "", url.toString());
+  };
 
   useEffect(() => {
     if (storageOnly) {
@@ -6058,15 +6110,15 @@ export function FootballTurfDashboard({
         </div>
       ) : null}
 
-      {activeTab === "offers" ? (
+      {activeTab === "manage" ? (
         <AppDashboardSection tone="violet">
           <AppSectionHeader
             tone="violet"
-            title="โปร / ลูกค้า"
+            title="การจัดการ"
             className="flex flex-row flex-wrap items-center justify-between gap-2 sm:gap-3"
             actionWrapClassName="min-w-0 shrink-0 self-center"
             action={
-              crmSection === "offers" ? (
+              manageSection === "offers" ? (
                 <div className={cn(footballTurfChipWrapRowClass, "justify-end")}>
                   <button
                     type="button"
@@ -6106,7 +6158,7 @@ export function FootballTurfDashboard({
                     <span className="hidden sm:inline">ขายโปร</span>
                   </button>
                 </div>
-              ) : (
+              ) : manageSection === "customers" ? (
                 <div className={cn(footballTurfChipWrapRowClass, "justify-end")}>
                   <button
                     type="button"
@@ -6133,25 +6185,38 @@ export function FootballTurfDashboard({
                     <span className="ml-1 hidden sm:inline">เพิ่มลูกค้า</span>
                   </button>
                 </div>
+              ) : (
+                <button
+                  type="button"
+                  aria-label="เพิ่มสนาม"
+                  onClick={() => openCourtModal()}
+                  className="app-btn-primary min-h-[40px] min-w-[40px] rounded-xl px-3 text-sm font-black shadow-sm sm:min-w-0 sm:px-4"
+                >
+                  <span className="sm:hidden" aria-hidden>
+                    +
+                  </span>
+                  <span className="hidden sm:inline">+ เพิ่มสนาม</span>
+                </button>
               )
             }
           />
 
-          <nav className={cn(footballTurfPrimaryTabShellClass, "mt-3")} aria-label="เมนูหลักโปรหรือลูกค้า">
+          <nav className={cn(footballTurfPrimaryTabShellClass, "mt-3")} aria-label="เมนูหลักการจัดการ">
             <div className="flex w-full min-w-0 flex-wrap gap-1" role="tablist">
               {(
                 [
                   { id: "offers" as const, label: "โปรโมชัน" },
                   { id: "customers" as const, label: "ลูกค้า" },
-                ] as const
+                  ...(!staffPortal ? [{ id: "courts" as const, label: "สนาม" }] : []),
+                ] as { id: FootballTurfManageSection; label: string }[]
               ).map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
                   role="tab"
-                  aria-selected={crmSection === tab.id}
-                  onClick={() => setCrmSection(tab.id)}
-                  className={footballTurfPrimaryTabPillClass(crmSection === tab.id)}
+                  aria-selected={manageSection === tab.id}
+                  onClick={() => selectManageSection(tab.id)}
+                  className={footballTurfPrimaryTabPillClass(manageSection === tab.id)}
                 >
                   {tab.label}
                 </button>
@@ -6159,7 +6224,7 @@ export function FootballTurfDashboard({
             </div>
           </nav>
 
-          {crmSection === "offers" ? (
+          {manageSection === "offers" ? (
             <>
           <nav className={cn(footballTurfFilterChipShellClass, "mt-3")} aria-label="กรองแพ็กหรือสิทธิ์">
             <div className="flex w-full min-w-0 flex-wrap gap-1" role="tablist">
@@ -6474,7 +6539,7 @@ export function FootballTurfDashboard({
             </>
           ) : null}
 
-          {crmSection === "customers" ? (
+          {manageSection === "customers" ? (
             <>
           <nav className={cn(footballTurfFilterChipShellClass, "mt-3")} aria-label="กรองลูกค้า">
             <div className="flex w-full min-w-0 flex-wrap gap-1" role="tablist">
@@ -6663,138 +6728,9 @@ export function FootballTurfDashboard({
           </div>
             </>
           ) : null}
-        </AppDashboardSection>
-      ) : null}
 
-      {activeTab === "qr" && !staffPortal ? (
-        <div className="min-w-0 space-y-4 sm:space-y-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
-            <button
-              type="button"
-              onClick={() => setQrHubModal("customer")}
-              className={footballTurfHubCardVioletClass}
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5b61ff] to-[#7c66ff] text-white shadow-lg">
-                  <QrCode className="h-6 w-6" aria-hidden />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-[#1e1b4b] sm:text-xl">QR / ลิงก์ลูกค้า</h2>
-                  <p className="mt-2 text-sm font-medium text-slate-600">ลิงก์จองสนาม · QR พอร์ทัลลูกค้า</p>
-                  <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-[#5b61ff]">คลิกเพื่อเปิด</p>
-                </div>
-              </div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setQrHubModal("staff")}
-              className={footballTurfHubCardAmberClass}
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg">
-                  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-[#1e1b4b] sm:text-xl">QR พนักงาน</h2>
-                  <p className="mt-2 text-sm font-medium text-slate-600">ลิงก์ลับ · ภาพรวม · จอง · โปร</p>
-                  <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-amber-800">คลิกเพื่อเปิด</p>
-                </div>
-              </div>
-            </button>
-          </div>
-
-          <FormModal
-            open={qrHubModal === "customer"}
-            onClose={() => setQrHubModal(null)}
-            size="lg"
-            appearance="glass"
-            glassTint="violet"
-            mobileCentered
-            title="QR / ลิงก์ลูกค้า"
-            description="ลิงก์จองสนามสำหรับลูกค้า — คัดลอก · สแกน QR · ดาวน์โหลดโปสเตอร์"
-            footer={
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  className="app-btn-primary rounded-[1rem] px-4 py-2 text-sm font-bold"
-                  onClick={() => setQrHubModal(null)}
-                >
-                  ปิด
-                </button>
-              </div>
-            }
-          >
-            <ModulePublicLinkQrPanel
-              pageUrl={publicBookUrl}
-              shopLabel={settings.venueName || "สนามฟุตบอล"}
-              logoUrl={settings.logoUrl || null}
-              tagline="สแกนเข้าหน้าจองสนาม — เลือกวัน · ช่วงเวลา · ชำระมัดจำ/เต็ม"
-              mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อจองสนามฟุตบอล"
-              openPrimaryLabel="เปิดหน้าจองลูกค้า"
-              openSecondaryLabel="เปิดหน้า"
-              downloadFilePrefix="football-turf-customer-qr"
-            />
-          </FormModal>
-
-          <FormModal
-            open={qrHubModal === "staff"}
-            onClose={() => setQrHubModal(null)}
-            size="lg"
-            appearance="glass"
-            glassTint="amber"
-            mobileCentered
-            title="QR พนักงาน"
-            description="สร้างลิงก์ถาวรให้พนักงานใช้ภาพรวม · จอง · โปร — ตั้งรหัสประจำวันได้ที่ตั้งค่า → ชำระเงิน"
-            footer={
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  className="app-btn-primary rounded-[1rem] px-4 py-2 text-sm font-bold"
-                  onClick={() => setQrHubModal(null)}
-                >
-                  ปิด
-                </button>
-              </div>
-            }
-          >
-            <ModuleStaffTokenQrPanel
-              staffLinkApiPath="/api/football-turf/session/staff-link"
-              shopLabel={settings.venueName || "สนามฟุตบอล"}
-              logoUrl={settings.logoUrl || null}
-              tagline="สแกนเข้าหน้าพนักงาน — ภาพรวม · จอง · โปร"
-              mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าหน้าพนักงานสนามฟุตบอล"
-              openPrimaryLabel="เปิดหน้าพนักงาน"
-            />
-          </FormModal>
-        </div>
-      ) : null}
-
-      {activeTab === "courts" ? (
-        <AppDashboardSection tone="violet">
-          <AppSectionHeader
-            tone="violet"
-            title="จัดการสนาม"
-            className="flex flex-row items-start justify-between gap-3 sm:items-center"
-            actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
-            action={
-              <button
-                type="button"
-                aria-label="เพิ่มสนาม"
-                onClick={() => openCourtModal()}
-                className="app-btn-primary min-h-[40px] min-w-[40px] rounded-xl px-3 text-sm font-black shadow-sm sm:min-w-0 sm:px-4"
-              >
-                <span className="sm:hidden" aria-hidden>
-                  +
-                </span>
-                <span className="hidden sm:inline">+ เพิ่มสนาม</span>
-              </button>
-            }
-          />
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {manageSection === "courts" && !staffPortal ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {courts.length === 0 ? (
               <AppEmptyState tone="violet" className="md:col-span-2 xl:col-span-3">
                 ยังไม่มีสนาม — กดเพิ่มสนามเพื่อเริ่มตั้งค่ารอบและราคา
@@ -6869,10 +6805,11 @@ export function FootballTurfDashboard({
               ))
             )}
           </div>
+          ) : null}
         </AppDashboardSection>
       ) : null}
 
-      {activeTab === "settings" ? (
+{activeTab === "settings" ? (
         <AppDashboardSection tone="violet">
           <AppSectionHeader
             tone="violet"
@@ -6880,7 +6817,7 @@ export function FootballTurfDashboard({
             className="flex flex-row items-center justify-between gap-2 sm:gap-3"
             actionWrapClassName="min-w-0 shrink-0 self-center"
             action={
-              settingsMenu !== "loyalty" && settingsMenu !== "preview" ? (
+              settingsMenu !== "loyalty" && settingsMenu !== "preview" && settingsMenu !== "link" ? (
                 <button
                   type="button"
                   onClick={() => void onSaveSettings()}
@@ -6904,7 +6841,7 @@ export function FootballTurfDashboard({
               id="ft-settings-menu-mobile"
               value={settingsMenu}
               onChange={(e) =>
-                setSettingsMenu(e.target.value as "venue" | "payment" | "docs" | "loyalty" | "preview")
+                selectSettingsMenu(e.target.value as "venue" | "payment" | "docs" | "loyalty" | "preview" | "link")
               }
               className={footballTurfMobileSelectClass}
               aria-label="กรุณาเลือกหมวดตั้งค่า"
@@ -6914,6 +6851,7 @@ export function FootballTurfDashboard({
               <option value="docs">เอกสาร · สลิป</option>
               <option value="loyalty">คะแนน</option>
               <option value="preview">ตัวอย่าง</option>
+              <option value="link">ลิงก์ QR</option>
             </select>
           </div>
 
@@ -6927,6 +6865,7 @@ export function FootballTurfDashboard({
                     { id: "docs" as const, label: "เอกสาร · สลิป" },
                     { id: "loyalty" as const, label: "คะแนน" },
                     { id: "preview" as const, label: "ตัวอย่าง" },
+                    { id: "link" as const, label: "ลิงก์ QR" },
                   ] as const
                 ).map((tab) => (
                   <button
@@ -6936,7 +6875,7 @@ export function FootballTurfDashboard({
                     aria-selected={settingsMenu === tab.id}
                     id={`ft-settings-tab-${tab.id}`}
                     aria-controls={`ft-settings-panel-${tab.id}`}
-                    onClick={() => setSettingsMenu(tab.id)}
+                    onClick={() => selectSettingsMenu(tab.id)}
                     className={cn(footballTurfPrimaryTabPillClass(settingsMenu === tab.id), "grow-0 basis-auto")}
                   >
                     {tab.label}
@@ -7220,7 +7159,7 @@ export function FootballTurfDashboard({
                     />
                   </div>
                   <p className="mt-2 text-[11px] font-semibold text-[#8b87b8]">
-                    สร้าง QR / ลิงก์ได้ที่แท็บ QR · ตั้งรหัสแล้วพนักงานต้องใส่ทุกวัน (เวลาไทย)
+                    สร้าง QR / ลิงก์ได้ที่ตั้งค่า → ลิงก์ QR · ตั้งรหัสแล้วพนักงานต้องใส่ทุกวัน (เวลาไทย)
                   </p>
                 </div>
               </div>
@@ -7369,8 +7308,117 @@ export function FootballTurfDashboard({
                 </div>
               </div>
             ) : null}
+            {settingsMenu === "link" ? (
+              <div id="ft-settings-panel-link" role="tabpanel" aria-labelledby="ft-settings-tab-link" className="space-y-4">
+                <div className="min-w-0 space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+            <button
+              type="button"
+              onClick={() => setQrHubModal("customer")}
+              className={footballTurfHubCardVioletClass}
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5b61ff] to-[#7c66ff] text-white shadow-lg">
+                  <QrCode className="h-6 w-6" aria-hidden />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-[#1e1b4b] sm:text-xl">QR / ลิงก์ลูกค้า</h2>
+                  <p className="mt-2 text-sm font-medium text-slate-600">ลิงก์จองสนาม · QR พอร์ทัลลูกค้า</p>
+                  <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-[#5b61ff]">คลิกเพื่อเปิด</p>
+                </div>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setQrHubModal("staff")}
+              className={footballTurfHubCardAmberClass}
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg">
+                  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-[#1e1b4b] sm:text-xl">QR พนักงาน</h2>
+                  <p className="mt-2 text-sm font-medium text-slate-600">ลิงก์ลับ · ภาพรวม · จอง · โปร</p>
+                  <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-amber-800">คลิกเพื่อเปิด</p>
+                </div>
+              </div>
+            </button>
+          </div>
 
-            {settingsMenu !== "loyalty" && settingsMenu !== "preview" ? (
+          <FormModal
+            open={qrHubModal === "customer"}
+            onClose={() => setQrHubModal(null)}
+            size="lg"
+            appearance="glass"
+            glassTint="violet"
+            mobileCentered
+            title="QR / ลิงก์ลูกค้า"
+            description="ลิงก์จองสนามสำหรับลูกค้า — คัดลอก · สแกน QR · ดาวน์โหลดโปสเตอร์"
+            footer={
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="app-btn-primary rounded-[1rem] px-4 py-2 text-sm font-bold"
+                  onClick={() => setQrHubModal(null)}
+                >
+                  ปิด
+                </button>
+              </div>
+            }
+          >
+            <ModulePublicLinkQrPanel
+              pageUrl={publicBookUrl}
+              shopLabel={settings.venueName || "สนามฟุตบอล"}
+              logoUrl={settings.logoUrl || null}
+              tagline="สแกนเข้าหน้าจองสนาม — เลือกวัน · ช่วงเวลา · ชำระมัดจำ/เต็ม"
+              mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อจองสนามฟุตบอล"
+              openPrimaryLabel="เปิดหน้าจองลูกค้า"
+              openSecondaryLabel="เปิดหน้า"
+              downloadFilePrefix="football-turf-customer-qr"
+            />
+          </FormModal>
+
+          <FormModal
+            open={qrHubModal === "staff"}
+            onClose={() => setQrHubModal(null)}
+            size="lg"
+            appearance="glass"
+            glassTint="amber"
+            mobileCentered
+            title="QR พนักงาน"
+            description="สร้างลิงก์ถาวรให้พนักงานใช้ภาพรวม · จอง · โปร — ตั้งรหัสประจำวันได้ที่ตั้งค่า → ชำระเงิน"
+            footer={
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="app-btn-primary rounded-[1rem] px-4 py-2 text-sm font-bold"
+                  onClick={() => setQrHubModal(null)}
+                >
+                  ปิด
+                </button>
+              </div>
+            }
+          >
+            <ModuleStaffTokenQrPanel
+              staffLinkApiPath="/api/football-turf/session/staff-link"
+              shopLabel={settings.venueName || "สนามฟุตบอล"}
+              logoUrl={settings.logoUrl || null}
+              tagline="สแกนเข้าหน้าพนักงาน — ภาพรวม · จอง · โปร"
+              mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าหน้าพนักงานสนามฟุตบอล"
+              openPrimaryLabel="เปิดหน้าพนักงาน"
+            />
+          </FormModal>
+        </div>
+              </div>
+            ) : null}
+
+
+            {settingsMenu !== "loyalty" && settingsMenu !== "preview" && settingsMenu !== "link" ? (
               <div className="flex justify-end">
                 <button
                   type="button"

@@ -77,8 +77,6 @@ function dockIcon(key: DrinkPosNavKey, className?: string) {
       return <IconQueue className={className} />;
     case "products":
       return <IconGrid className={className} />;
-    case "members":
-      return <IconMembers className={className} />;
     case "finance":
       return <IconTrend className={className} />;
     case "settings":
@@ -100,7 +98,7 @@ export function DrinkPosMobileDockNav() {
   if (!isDrinkPosModulePath(pathname)) return null;
 
   return (
-    <ul className={cn(appMobileDockGridClass, "grid-cols-6")} aria-label="แท็บนำทาง POS ร้านเครื่องดื่ม">
+    <ul className={cn(appMobileDockGridClass, "grid-cols-5")} aria-label="แท็บนำทาง POS ร้านเครื่องดื่ม">
       {DRINK_POS_NAV_ITEMS.map((item) => {
         const active = isDrinkPosNavItemActive(pathname, item.key);
         const label = item.key === "settings" ? MODULE_SHOP_SETTINGS_SHORT_LABEL : item.label;

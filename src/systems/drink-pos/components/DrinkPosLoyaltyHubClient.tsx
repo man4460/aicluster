@@ -27,6 +27,7 @@ type Props = {
   loyaltyEnabled?: boolean;
   bahtPerPoint?: number;
   pointsPerUnit?: number;
+  embedded?: boolean;
 };
 
 type HubModal = "qr" | "lookup" | "kitchen" | "serve" | "staff" | null;
@@ -78,6 +79,7 @@ export function DrinkPosLoyaltyHubClient({
   loyaltyEnabled = false,
   bahtPerPoint = 100,
   pointsPerUnit = 1,
+  embedded = false,
 }: Props) {
   const [modal, setModal] = useState<HubModal>(null);
   const [member, setMember] = useState<DrinkPosLoyaltyMemberDto | null>(null);
@@ -293,7 +295,7 @@ export function DrinkPosLoyaltyHubClient({
             </p>
           </div>
           <Link
-            href="/dashboard/drink-pos/settings"
+            href={embedded ? "/dashboard/drink-pos/settings?tab=loyalty" : "/dashboard/drink-pos/settings"}
             className={cn(
               appTemplateOutlineButtonClass,
               "shrink-0 rounded-xl px-3 py-1.5 text-[10px] font-black text-[#4d47b6]",

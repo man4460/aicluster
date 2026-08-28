@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { cn } from "@/lib/cn";
+import { DRINK_POS_SETTINGS_LINK_HREF } from "@/systems/drink-pos/lib/drink-pos-module-nav";
 import {
   appTemplateOutlineButtonClass,
   useAppNoticePopup,
@@ -318,7 +319,7 @@ export function DrinkPosLoyaltyBar({
           <div className="flex shrink-0 flex-wrap items-center gap-1.5">
             {hideMembersLink ? null : (
               <Link
-                href="/dashboard/drink-pos/members"
+                href={DRINK_POS_SETTINGS_LINK_HREF}
                 className={cn(
                   appTemplateOutlineButtonClass,
                   "rounded-xl px-3 py-1.5 text-[10px] font-black text-[#4d47b6]",

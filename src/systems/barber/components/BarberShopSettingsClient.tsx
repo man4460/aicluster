@@ -1,8 +1,7 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AppDashboardSection,
   AppModuleShopPaymentFields,
@@ -33,6 +32,7 @@ import {
   parseBarberPayAmountPresets,
 } from "@/systems/barber/lib/pay-amount-presets";
 import { BarberPortalMediaSettings } from "@/systems/barber/components/BarberPortalMediaSettings";
+import { BarberQrHubClient } from "@/systems/barber/components/BarberQrHubClient";
 import { barberNormalizeSlotMinutes } from "@/systems/barber/lib/booking-slots";
 import {
   normalizeBarberPortalPaymentMode,
@@ -62,13 +62,14 @@ type ShopProfile = {
   promptPayQrImageUrl?: string | null;
 } & ModuleShopPaymentDto;
 
-type SettingsTab = "basic" | "finance" | "portal" | "hours";
+type SettingsTab = "basic" | "finance" | "portal" | "hours" | "link";
 
 const BARBER_SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
   { id: "basic", label: "ตั้งค่าพื้นฐาน" },
   { id: "finance", label: "ตั้งค่าเกี่ยวกับการเงิน" },
   { id: "portal", label: "ตั้งค่าเว็ปลิงค์ลูกค้า" },
   { id: "hours", label: "ตั้งค่าเวลาเปิดร้าน" },
+  { id: "link", label: "ลิงก์ QR" },
 ];
 
 const MASSAGE_SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
@@ -103,9 +104,11 @@ function parseSettingsTab(raw: string | null, allowed: SettingsTab[]): SettingsT
 function BarberPortalLinkPanel({
   ownerId,
   trialSessionId,
+  onGoToQr,
 }: {
   ownerId: string;
   trialSessionId: string;
+  onGoToQr?: () => void;
 }) {
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
   const portalPath = useMemo(
@@ -152,12 +155,15 @@ function BarberPortalLinkPanel({
           >
             คัดลอกลิงก์
           </button>
-          <Link
-            href="/dashboard/barber/qr"
-            className={cn(appTemplateOutlineButtonClass, "inline-flex min-h-10 items-center rounded-xl px-4 text-sm font-bold")}
-          >
-            ไปหน้า QR
-          </Link>
+          {onGoToQr ? (
+            <button
+              type="button"
+              className={cn(appTemplateOutlineButtonClass, "inline-flex min-h-10 items-center rounded-xl px-4 text-sm font-bold")}
+              onClick={onGoToQr}
+            >
+              ไปหน้า QR
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
@@ -169,11 +175,19 @@ export function BarberShopSettingsClient({
   apiBase,
   ownerId,
   trialSessionId,
+  linkHub,
 }: {
   initial: ShopProfile;
   apiBase: "/api/barber/shop-profile" | "/api/massage/shop-profile";
   ownerId?: string;
   trialSessionId?: string;
+  linkHub?: {
+    baseUrl: string;
+    shopLabel: string;
+    logoUrl: string | null;
+    trialExportBlocked: boolean;
+    isTrialSandbox: boolean;
+  };
 }) {
   return (
     <Suspense fallback={<div className="h-40 animate-pulse rounded-[1.5rem] bg-white/30" aria-busy />}>
@@ -182,6 +196,7 @@ export function BarberShopSettingsClient({
         apiBase={apiBase}
         ownerId={ownerId}
         trialSessionId={trialSessionId}
+        linkHub={linkHub}
       />
     </Suspense>
   );
@@ -192,12 +207,21 @@ function BarberShopSettingsClientInner({
   apiBase,
   ownerId,
   trialSessionId,
+  linkHub,
 }: {
   initial: ShopProfile;
   apiBase: "/api/barber/shop-profile" | "/api/massage/shop-profile";
   ownerId?: string;
   trialSessionId?: string;
+  linkHub?: {
+    baseUrl: string;
+    shopLabel: string;
+    logoUrl: string | null;
+    trialExportBlocked: boolean;
+    isTrialSandbox: boolean;
+  };
 }) {
+  const router = useRouter();
   const isBarber = apiBase === "/api/barber/shop-profile";
   const supportsUploadedPromptPayQr =
     isBarber || apiBase.includes("/api/massage/shop-profile");
@@ -238,6 +262,22 @@ function BarberShopSettingsClientInner({
     () => parseBarberPayAmountPresets(form.payAmountPresetsRaw),
     [form.payAmountPresetsRaw],
   );
+
+  useEffect(() => {
+    const raw = searchParams.get("tab");
+    if (raw === "qr") {
+      router.replace(`${window.location.pathname}?tab=link`);
+      return;
+    }
+    setTab(parseSettingsTab(raw, allowed));
+  }, [searchParams, router, allowed]);
+
+  const selectTab = (next: SettingsTab) => {
+    setTab(next);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", next);
+    window.history.replaceState({}, "", url.toString());
+  };
 
   const save = async () => {
     setBusy(true);
@@ -353,7 +393,7 @@ function BarberShopSettingsClientInner({
           <select
             id="barber-settings-menu-mobile"
             value={tab}
-            onChange={(e) => setTab(e.target.value as SettingsTab)}
+            onChange={(e) => selectTab(e.target.value as SettingsTab)}
             className={barberMobileSelectClass}
             aria-label="กรุณาเลือกหมวดตั้งค่า"
           >
@@ -376,7 +416,7 @@ function BarberShopSettingsClientInner({
                   aria-selected={tab === item.id}
                   id={`barber-settings-tab-${item.id}`}
                   aria-controls={`barber-settings-panel-${item.id}`}
-                  onClick={() => setTab(item.id)}
+                  onClick={() => selectTab(item.id)}
                   className={cn(barberPrimaryTabPillClass(tab === item.id), "grow-0 basis-auto")}
                 >
                   {item.label}
@@ -619,7 +659,11 @@ function BarberShopSettingsClientInner({
               className="space-y-4"
             >
               {ownerId && trialSessionId ? (
-                <BarberPortalLinkPanel ownerId={ownerId} trialSessionId={trialSessionId} />
+                <BarberPortalLinkPanel
+                  ownerId={ownerId}
+                  trialSessionId={trialSessionId}
+                  onGoToQr={() => selectTab("link")}
+                />
               ) : null}
               <BarberPortalMediaSettings
                 bannerUrl={form.portalBannerUrl ?? ""}
@@ -682,6 +726,25 @@ function BarberShopSettingsClientInner({
                   <option value={60}>60 นาที</option>
                 </select>
               </label>
+            </div>
+          ) : null}
+
+          {tab === "link" && isBarber && ownerId && trialSessionId && linkHub ? (
+            <div
+              id="barber-settings-panel-link"
+              role="tabpanel"
+              aria-labelledby="barber-settings-tab-link"
+            >
+              <BarberQrHubClient
+                embedded
+                ownerId={ownerId}
+                shopLabel={linkHub.shopLabel}
+                logoUrl={linkHub.logoUrl}
+                baseUrl={linkHub.baseUrl}
+                trialExportBlocked={linkHub.trialExportBlocked}
+                isTrialSandbox={linkHub.isTrialSandbox}
+                trialSessionId={trialSessionId}
+              />
             </div>
           ) : null}
         </div>

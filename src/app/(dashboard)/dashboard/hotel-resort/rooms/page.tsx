@@ -1,9 +1,15 @@
-import { HotelResortRoomsClient } from "@/systems/hotel-resort/HotelResortRoomsClient";
-import { getSession } from "@/lib/auth/session";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth/session";
+import { HotelResortRoomsClient } from "@/systems/hotel-resort/HotelResortRoomsClient";
 
 export default async function HotelResortRoomsPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  return <HotelResortRoomsClient />;
+
+  return (
+    <Suspense fallback={<div className="h-24 animate-pulse rounded-2xl bg-[#ecebff]/40" aria-hidden />}>
+      <HotelResortRoomsClient />
+    </Suspense>
+  );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { PageContainer } from "@/components/ui/page-container";
 import { cn } from "@/lib/cn";
 import { MassageLayoutChrome } from "@/systems/massage/components/MassageLayoutChrome";
 
@@ -19,14 +18,13 @@ export function MassageModuleShell({
   const staffKiosk = pathname === BARBER_STAFF_KIOSK_PATH;
 
   return (
-    <PageContainer
-      size={staffKiosk ? "full" : "default"}
+    <div
       className={cn(
-        "!px-0",
-        staffKiosk && "max-w-none flex min-h-0 flex-1 flex-col !p-0",
+        "flex min-h-0 flex-1 flex-col",
+        staffKiosk && "max-w-none !p-0",
       )}
     >
       <MassageLayoutChrome trialExpiresLabel={trialExpiresLabel}>{children}</MassageLayoutChrome>
-    </PageContainer>
+    </div>
   );
 }

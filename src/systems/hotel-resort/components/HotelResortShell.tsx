@@ -30,7 +30,6 @@ import {
   IconHotel,
   IconNavCheckIn,
   IconNavFinance,
-  IconNavGuest,
 } from "@/systems/hotel-resort/components/HotelResortIcons";
 import {
   IconModuleShopSettings,
@@ -49,8 +48,6 @@ function navIcon(key: HotelResortNavKey, className?: string) {
       return <IconNavCheckIn className={className} />;
     case "finance":
       return <IconNavFinance className={className} />;
-    case "guest":
-      return <IconNavGuest className={className} />;
     case "settings":
       return <IconModuleShopSettings className={className} />;
   }
@@ -182,7 +179,7 @@ export function HotelResortShell({ children }: { children: ReactNode }) {
             className="mt-5 hidden border-t border-[#e8e6fc]/70 pt-5 lg:block print:hidden"
             aria-label="เมนูโมดูลโรงแรมรีสอร์ท"
           >
-            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-6">
               {HOTEL_RESORT_NAV_ITEMS.map((item) => (
                 <li key={item.key} className="min-w-0">
                   <TabLink
@@ -201,7 +198,7 @@ export function HotelResortShell({ children }: { children: ReactNode }) {
           open={usageGuideOpen}
           onClose={() => setUsageGuideOpen(false)}
           title="คู่มือโรงแรม / รีสอร์ท"
-          subtitle="แดชบอร์ด ห้องพัก จอง เช็คอิน การเงิน และลิงก์ QR"
+          subtitle="แดชบอร์ด ห้องพัก จอง เช็คอิน การเงิน · ลิงก์ QR อยู่ในเมนูตั้งค่า"
           sections={[
             {
               title: "เมนูหลัก",
@@ -218,15 +215,19 @@ export function HotelResortShell({ children }: { children: ReactNode }) {
             },
             {
               title: "ห้องพัก",
-              content: <p>จัดการอาคาร/ตึกหลายแห่ง · ประเภทห้อง · เพิ่มแก้ไขลบห้อง</p>,
+              content: <p>จัดการอาคาร · ประเภทห้อง · เพิ่ม/แก้ไขห้อง — เมนู «ห้องพัก»</p>,
+            },
+            {
+              title: "ตั้งค่า — ลิงก์ QR",
+              content: <p>QR พอร์ทัลลูกค้า/พนักงาน · แบนเนอร์และข้อมูลลิงก์ — อยู่ในเมนู «ตั้งค่า»</p>,
             },
             {
               title: "จอง / เช็คอิน",
               content: <p>หน้าจองสำหรับงานล่วงหน้า · หน้าเช็คอินอัปโหลดรูปบัตรประชาชนและรับชำระ</p>,
             },
             {
-              title: "การเงิน / ลิงก์",
-              content: <p>รายรับ–ต้นทุน · QR พร้อมเพย์ · แชร์ลิงก์พอร์ทัลให้ลูกค้าตรวจสถานะ</p>,
+              title: "การเงิน",
+              content: <p>รายรับ–ต้นทุน · QR พร้อมเพย์ · ใบเสร็จ/สลิป</p>,
             },
           ]}
         />

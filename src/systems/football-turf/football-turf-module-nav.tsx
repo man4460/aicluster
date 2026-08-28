@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 
 export const FOOTBALL_TURF_BASE = "/dashboard/football-turf";
 
+export const FOOTBALL_TURF_SETTINGS_LINK_HREF = `${FOOTBALL_TURF_BASE}?tab=settings&menu=link`;
+
 export const FOOTBALL_TURF_HEADER_COLLAPSE_KEY = "mawell-football-turf-module-header-collapsed";
 export const FOOTBALL_TURF_HEADER_COLLAPSE_EVENT = "mawell-football-turf-header-collapse";
 
@@ -11,33 +13,32 @@ export type FootballTurfTabKey =
   | "overview"
   | "queue"
   | "finance"
-  | "offers"
-  | "courts"
-  | "qr"
+  | "manage"
   | "settings";
 
-/** หมวดย่อยในแท็บโปร / ลูกค้า */
-export type FootballTurfCrmSection = "offers" | "customers";
+/** หมวดย่อยในแท็บการจัดการ (โปร · ลูกค้า · สนาม) */
+export type FootballTurfManageSection = "offers" | "customers" | "courts";
+
+/** @deprecated ใช้ FootballTurfManageSection */
+export type FootballTurfCrmSection = Extract<FootballTurfManageSection, "offers" | "customers">;
 
 export const FOOTBALL_TURF_TAB_ITEMS: { key: FootballTurfTabKey; label: string; shortLabel: string }[] = [
   { key: "overview", label: "ภาพรวม", shortLabel: "ภาพรวม" },
   { key: "queue", label: "จอง", shortLabel: "จอง" },
   { key: "finance", label: "การเงิน", shortLabel: "เงิน" },
-  { key: "offers", label: "โปร / ลูกค้า", shortLabel: "โปร" },
-  { key: "courts", label: "จัดการสนาม", shortLabel: "สนาม" },
-  { key: "qr", label: "QR / ลิงก์", shortLabel: "QR" },
+  { key: "manage", label: "การจัดการ", shortLabel: "จัดการ" },
   { key: "settings", label: "ตั้งค่า", shortLabel: "ตั้งค่า" },
 ];
 
-/** เมนูลิงก์พนักงาน — เฉพาะภาพรวม · จอง · โปร (แบบโรงแรม) */
+/** เมนูลิงก์พนักงาน — เฉพาะภาพรวม · จอง · โปร */
 export const FOOTBALL_TURF_STAFF_TAB_ITEMS: {
-  key: Extract<FootballTurfTabKey, "overview" | "queue" | "offers">;
+  key: Extract<FootballTurfTabKey, "overview" | "queue" | "manage">;
   label: string;
   shortLabel: string;
 }[] = [
   { key: "overview", label: "ภาพรวม", shortLabel: "ภาพรวม" },
   { key: "queue", label: "จอง", shortLabel: "จอง" },
-  { key: "offers", label: "โปร", shortLabel: "โปร" },
+  { key: "manage", label: "โปร", shortLabel: "โปร" },
 ];
 
 export type FootballTurfStaffTabKey = (typeof FOOTBALL_TURF_STAFF_TAB_ITEMS)[number]["key"];
@@ -66,24 +67,32 @@ export function writeFootballTurfHeaderCollapsed(collapsed: boolean): void {
 }
 
 export function parseFootballTurfTab(value: string | null | undefined): FootballTurfTabKey {
-  if (
-    value === "queue" ||
-    value === "finance" ||
-    value === "offers" ||
-    value === "courts" ||
-    value === "qr" ||
-    value === "settings"
-  ) {
+  if (value === "queue" || value === "finance" || value === "manage" || value === "settings") {
     return value;
   }
-  // ลิงก์เก่า ?tab=customers → แท็บโปร / ลูกค้า
-  if (value === "customers") return "offers";
+  // ลิงก์เก่า
+  if (value === "offers" || value === "courts" || value === "customers") return "manage";
+  if (value === "qr") return "settings";
   return "overview";
 }
 
-/** อ่านหมวดย่อยโปร/ลูกค้าจาก query (รองรับ ?tab=customers เดิม) */
+/** อ่านหมวดย่อยการจัดการจาก query (รองรับ ?tab=offers|courts|customers เดิม) */
+export function parseFootballTurfManageSection(
+  tabParam: string | null | undefined,
+  sectionParam?: string | null,
+): FootballTurfManageSection {
+  if (sectionParam === "customers" || sectionParam === "courts" || sectionParam === "offers") {
+    return sectionParam;
+  }
+  if (tabParam === "customers") return "customers";
+  if (tabParam === "courts") return "courts";
+  return "offers";
+}
+
+/** @deprecated ใช้ parseFootballTurfManageSection */
 export function parseFootballTurfCrmSection(tabParam: string | null | undefined): FootballTurfCrmSection {
-  return tabParam === "customers" ? "customers" : "offers";
+  const section = parseFootballTurfManageSection(tabParam);
+  return section === "courts" ? "offers" : section;
 }
 
 export function footballTurfTabHref(tab: FootballTurfTabKey): string {
@@ -106,31 +115,12 @@ export function footballTurfTabIcon(key: FootballTurfTabKey): ReactNode {
       return <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />;
     case "finance":
       return <path d="M4 18h16M7 14l3-3 3 2 4-5" />;
-    case "offers":
-      // โปร / ลูกค้า — ไอคอนผู้ใช้คู่ (ไม่ซ้อนกับแท็ก)
+    case "manage":
       return (
         <>
-          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-        </>
-      );
-    case "courts":
-      return (
-        <>
-          <path d="M4 20h16" />
-          <path d="M6 20V10l6-4 6 4v10" />
-          <path d="M10 20v-4h4v4" />
-        </>
-      );
-    case "qr":
-      return (
-        <>
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-          <path d="M14 14h3v3h-3zM20 14h1v1h-1zM18 18h3v3h-3z" />
+          <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+          <path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z" />
+          <path d="M9 12h6M9 16h4" />
         </>
       );
     case "settings":

@@ -62,7 +62,7 @@ export function BarberModuleDesktopNav({ pathname }: { pathname: string }) {
 export function BarberModuleMobileDock({ pathname }: { pathname: string }) {
   return (
     <AppMobileDockUnifiedBar ariaLabel="เมนูล่างร้านตัดผม" pillClassName={barberDockPillClass}>
-      <ul className={cn(appMobileDockGridClass, "grid-cols-5")}>
+      <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
         {BARBER_NAV_ITEMS.map((item) => {
           const active = isBarberModuleNavItemActive(pathname, item.key);
           return (

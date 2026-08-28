@@ -143,7 +143,7 @@ export function CarWashStaffClient({
       <div className={cn(shopQrTemplatePageBgClass, "flex min-h-dvh items-center justify-center p-6")}>
         <div className="max-w-sm rounded-2xl border border-white/60 bg-white/80 p-6 text-center shadow-sm">
           <p className="text-lg font-black text-[#1e1b4b]">ลิงก์ไม่ถูกต้องหรือถูกยกเลิก</p>
-          <p className="mt-2 text-sm text-[#66638c]">ให้เจ้าของร้านสร้างลิงก์พนักงานใหม่จากแท็บ QR</p>
+          <p className="mt-2 text-sm text-[#66638c]">ให้เจ้าของร้านสร้างลิงก์พนักงานใหม่จากตั้งค่าร้าน → ลิงก์ QR</p>
         </div>
       </div>
     );

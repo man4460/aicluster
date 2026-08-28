@@ -31,13 +31,6 @@ function buildingPosMainTabIcon(key: BuildingPosMainTab) {
     return <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" strokeLinecap="round" />;
   if (key === "overview")
     return <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" />;
-  if (key === "qr")
-    return (
-      <>
-        <path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3z" />
-        <path d="M15 15h2v2M19 15h2v2M15 19h2M19 19h2" strokeLinecap="round" />
-      </>
-    );
   if (key === "finance") return <path d="M4 18h16M7 14l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />;
   return (
     <>
@@ -106,7 +99,7 @@ function BuildingPosUnifiedMenuBarInner({
       {!embedded ?
         <p className="mb-2 text-xs font-black uppercase tracking-widest text-[#66638c] sm:mb-3">เมนูหลัก</p>
       : null}
-      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {BUILDING_POS_MAIN_TABS.map(({ key, label }) => {
           const active = isBuildingPosNavItemActive(pathname, searchParams, key);
           const href = buildingPosMainTabHref(nav, key);

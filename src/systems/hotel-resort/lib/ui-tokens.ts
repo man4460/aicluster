@@ -118,6 +118,24 @@ export const hotelResortSuccessBannerClass =
 export const hotelResortFormLabelClass =
   "text-[11px] font-black uppercase tracking-[0.12em] text-[#5b61ff]";
 
+/** แถบแท็บหลักหน้าตั้งค่า — แบบ drink-pos / building-pos */
+export const hotelResortPrimaryTabShellClass =
+  "flex flex-wrap gap-1.5 rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]";
+
+export function hotelResortPrimaryTabPillClass(active: boolean): string {
+  return cn(
+    "inline-flex min-h-9 items-center justify-center rounded-xl px-3 text-xs font-bold transition touch-manipulation sm:min-h-10 sm:px-3.5 sm:text-sm",
+    active
+      ? cn("text-white shadow-md", appDashboardBrandGradientFillClass)
+      : "bg-white/70 text-[#5f5a8a] hover:bg-white hover:text-[#4d47b6]",
+  );
+}
+
+export const hotelResortMobileSelectClass = cn(
+  hotelResortFieldClass,
+  "border border-[#e4e0f5] bg-white/90 font-bold text-[#1e1b4b]",
+);
+
 /** §9 Control = 1.0rem (icon action button) — เปลี่ยนจาก rounded-xl (0.75rem) → rounded-[1rem] */
 export const hotelResortPlainIconActionClass =
   "inline-flex min-h-[40px] min-w-[40px] shrink-0 items-center justify-center rounded-[1rem] text-[#5b61ff] transition hover:bg-[#5b61ff]/[0.08] active:opacity-80";

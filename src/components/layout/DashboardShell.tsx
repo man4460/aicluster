@@ -104,6 +104,16 @@ import {
   writeBarberHeaderCollapsed,
 } from "@/systems/barber/barber-module-nav";
 import {
+  AdminHubHeaderBarNav,
+  AdminHubHeaderExpandButton,
+} from "@/components/admin/AdminHubHeaderBarNav";
+import {
+  ADMIN_HUB_HEADER_COLLAPSE_EVENT,
+  isAdminHubPath,
+  readAdminHubHeaderCollapsed,
+  writeAdminHubHeaderCollapsed,
+} from "@/lib/admin-hub-nav";
+import {
   DormitoryHeaderBarNav,
   DormitoryHeaderExpandButton,
 } from "@/systems/dormitory/components/DormitoryHeaderBarNav";
@@ -114,15 +124,145 @@ import {
   writeDormitoryHeaderCollapsed,
 } from "@/systems/dormitory/dormitory-module-nav";
 import {
-  AdminHubHeaderBarNav,
-  AdminHubHeaderExpandButton,
-} from "@/components/admin/AdminHubHeaderBarNav";
+  VaultHeaderBarNav,
+  VaultHeaderExpandButton,
+} from "@/systems/vault/components/VaultHeaderBarNav";
 import {
-  ADMIN_HUB_HEADER_COLLAPSE_EVENT,
-  isAdminHubPath,
-  readAdminHubHeaderCollapsed,
-  writeAdminHubHeaderCollapsed,
-} from "@/lib/admin-hub-nav";
+  VAULT_HEADER_COLLAPSE_EVENT,
+  isVaultModulePath,
+  readVaultHeaderCollapsed,
+  writeVaultHeaderCollapsed,
+} from "@/systems/vault/vault-module-nav";
+import {
+  AssetHeaderBarNav,
+  AssetHeaderExpandButton,
+} from "@/systems/asset/components/AssetHeaderBarNav";
+import {
+  ASSET_HEADER_COLLAPSE_EVENT,
+  isAssetModulePath,
+  readAssetHeaderCollapsed,
+  writeAssetHeaderCollapsed,
+} from "@/systems/asset/asset-module-nav";
+import {
+  GeneralStorePosHeaderBarNav,
+  GeneralStorePosHeaderExpandButton,
+} from "@/systems/general-store-pos/components/GeneralStorePosHeaderBarNav";
+import {
+  GENERAL_STORE_POS_HEADER_COLLAPSE_EVENT,
+  isGeneralStorePosModulePath,
+  readGeneralStorePosHeaderCollapsed,
+  writeGeneralStorePosHeaderCollapsed,
+} from "@/systems/general-store-pos/general-store-pos-module-nav";
+import {
+  EducareHeaderBarNav,
+  EducareHeaderExpandButton,
+} from "@/systems/educare/components/EducareHeaderBarNav";
+import {
+  EDUCARE_HEADER_COLLAPSE_EVENT,
+  isEducareModulePath,
+  readEducareHeaderCollapsed,
+  writeEducareHeaderCollapsed,
+} from "@/systems/educare/educare-module-nav";
+import {
+  CommunityCoopHeaderBarNav,
+  CommunityCoopHeaderExpandButton,
+} from "@/systems/community-coop/components/CommunityCoopHeaderBarNav";
+import {
+  COMMUNITY_COOP_HEADER_COLLAPSE_EVENT,
+  isCommunityCoopModulePath,
+  readCommunityCoopHeaderCollapsed,
+  writeCommunityCoopHeaderCollapsed,
+} from "@/systems/community-coop/community-coop-module-nav";
+import {
+  HomeFinanceHeaderBarNav,
+  HomeFinanceHeaderExpandButton,
+} from "@/systems/home-finance/components/HomeFinanceHeaderBarNav";
+import {
+  HOME_FINANCE_HEADER_COLLAPSE_EVENT,
+  isHomeFinanceModulePath,
+  readHomeFinanceHeaderCollapsed,
+  writeHomeFinanceHeaderCollapsed,
+} from "@/systems/home-finance/home-finance-module-nav";
+import {
+  EcommerceStoreHeaderBarNav,
+  EcommerceStoreHeaderExpandButton,
+} from "@/systems/ecommerce-store/components/EcommerceStoreHeaderBarNav";
+import {
+  ECOMMERCE_STORE_HEADER_COLLAPSE_EVENT,
+  isEcommerceStoreModulePath,
+  readEcommerceStoreHeaderCollapsed,
+  writeEcommerceStoreHeaderCollapsed,
+} from "@/systems/ecommerce-store/ecommerce-store-module-nav";
+import {
+  AppointmentQueueHeaderBarNav,
+  AppointmentQueueHeaderExpandButton,
+} from "@/systems/appointment-queue/components/AppointmentQueueHeaderBarNav";
+import {
+  APPOINTMENT_QUEUE_HEADER_COLLAPSE_EVENT,
+  isAppointmentQueueModulePath,
+  readAppointmentQueueHeaderCollapsed,
+  writeAppointmentQueueHeaderCollapsed,
+} from "@/systems/appointment-queue/appointment-queue-module-nav";
+import {
+  SchoolBankHeaderBarNav,
+  SchoolBankHeaderExpandButton,
+} from "@/systems/school-bank/components/SchoolBankHeaderBarNav";
+import {
+  SCHOOL_BANK_HEADER_COLLAPSE_EVENT,
+  isSchoolBankModulePath,
+  readSchoolBankHeaderCollapsed,
+  writeSchoolBankHeaderCollapsed,
+} from "@/systems/school-bank/school-bank-module-nav";
+import {
+  WaitQueueHeaderBarNav,
+  WaitQueueHeaderExpandButton,
+} from "@/systems/wait-queue/components/WaitQueueHeaderBarNav";
+import {
+  WAIT_QUEUE_HEADER_COLLAPSE_EVENT,
+  isWaitQueueModulePath,
+  readWaitQueueHeaderCollapsed,
+  writeWaitQueueHeaderCollapsed,
+} from "@/systems/wait-queue/wait-queue-module-nav";
+import {
+  ActivityLogsHeaderBarNav,
+  ActivityLogsHeaderExpandButton,
+} from "@/systems/activity-logs/components/ActivityLogsHeaderBarNav";
+import {
+  ACTIVITY_LOGS_HEADER_COLLAPSE_EVENT,
+  isActivityLogsModulePath,
+  readActivityLogsHeaderCollapsed,
+  writeActivityLogsHeaderCollapsed,
+} from "@/systems/activity-logs/activity-logs-module-nav";
+import {
+  PromptLibraryHeaderBarNav,
+  PromptLibraryHeaderExpandButton,
+} from "@/systems/prompt-library/components/PromptLibraryHeaderBarNav";
+import {
+  PROMPT_LIBRARY_HEADER_COLLAPSE_EVENT,
+  isPromptLibraryModulePath,
+  readPromptLibraryHeaderCollapsed,
+  writePromptLibraryHeaderCollapsed,
+} from "@/systems/prompt-library/prompt-library-module-nav";
+import {
+  DocTransmissionHeaderBarNav,
+  DocTransmissionHeaderExpandButton,
+} from "@/systems/doc-transmission/components/DocTransmissionHeaderBarNav";
+import {
+  DOC_TRANSMISSION_HEADER_COLLAPSE_EVENT,
+  isDocTransmissionModulePath,
+  readDocTransmissionHeaderCollapsed,
+  writeDocTransmissionHeaderCollapsed,
+} from "@/systems/doc-transmission/doc-transmission-module-nav";
+import {
+  LoyaltyStampHeaderBarNav,
+  LoyaltyStampHeaderExpandButton,
+} from "@/systems/loyalty-stamp/components/LoyaltyStampHeaderBarNav";
+import {
+  LOYALTY_STAMP_HEADER_COLLAPSE_EVENT,
+  isLoyaltyStampModulePath,
+  readLoyaltyStampHeaderCollapsed,
+  writeLoyaltyStampHeaderCollapsed,
+} from "@/systems/loyalty-stamp/loyalty-stamp-module-nav";
 
 /** localStorage — ซ่อนแถบเมนูซ้ายบนเดสก์ท็อป (ใช้ทุกหน้าแดชบอร์ดที่ผ่าน DashboardShell) */
 const DASHBOARD_SIDEBAR_COLLAPSED_KEY = "mawell-dashboard-sidebar-collapsed";
@@ -409,8 +549,22 @@ export function DashboardShell({
   const [carWashHeaderCollapsed, setCarWashHeaderCollapsed] = useState(false);
   const [massageHeaderCollapsed, setMassageHeaderCollapsed] = useState(false);
   const [barberHeaderCollapsed, setBarberHeaderCollapsed] = useState(false);
-  const [dormitoryHeaderCollapsed, setDormitoryHeaderCollapsed] = useState(false);
   const [adminHubHeaderCollapsed, setAdminHubHeaderCollapsed] = useState(false);
+  const [dormitoryHeaderCollapsed, setDormitoryHeaderCollapsed] = useState(false);
+  const [vaultHeaderCollapsed, setVaultHeaderCollapsed] = useState(false);
+  const [assetHeaderCollapsed, setAssetHeaderCollapsed] = useState(false);
+  const [generalStorePosHeaderCollapsed, setGeneralStorePosHeaderCollapsed] = useState(false);
+  const [educareHeaderCollapsed, setEducareHeaderCollapsed] = useState(false);
+  const [communityCoopHeaderCollapsed, setCommunityCoopHeaderCollapsed] = useState(false);
+  const [homeFinanceHeaderCollapsed, setHomeFinanceHeaderCollapsed] = useState(false);
+  const [ecommerceStoreHeaderCollapsed, setEcommerceStoreHeaderCollapsed] = useState(false);
+  const [appointmentQueueHeaderCollapsed, setAppointmentQueueHeaderCollapsed] = useState(false);
+  const [schoolBankHeaderCollapsed, setSchoolBankHeaderCollapsed] = useState(false);
+  const [waitQueueHeaderCollapsed, setWaitQueueHeaderCollapsed] = useState(false);
+  const [activityLogsHeaderCollapsed, setActivityLogsHeaderCollapsed] = useState(false);
+  const [promptLibraryHeaderCollapsed, setPromptLibraryHeaderCollapsed] = useState(false);
+  const [docTransmissionHeaderCollapsed, setDocTransmissionHeaderCollapsed] = useState(false);
+  const [loyaltyStampHeaderCollapsed, setLoyaltyStampHeaderCollapsed] = useState(false);
   const accountWrapRef = useRef<HTMLDivElement>(null);
   const moduleMenuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -431,6 +585,20 @@ export function DashboardShell({
   const onCarWashModule = isCarWashModulePath(pathname);
   const onMassageModule = isMassageModulePath(pathname);
   const onBarberModule = isBarberModulePath(pathname);
+  const onVaultModule = isVaultModulePath(pathname);
+  const onAssetModule = isAssetModulePath(pathname);
+  const onGeneralStorePosModule = isGeneralStorePosModulePath(pathname);
+  const onEducareModule = isEducareModulePath(pathname);
+  const onCommunityCoopModule = isCommunityCoopModulePath(pathname);
+  const onHomeFinanceModule = isHomeFinanceModulePath(pathname);
+  const onEcommerceStoreModule = isEcommerceStoreModulePath(pathname);
+  const onAppointmentQueueModule = isAppointmentQueueModulePath(pathname);
+  const onSchoolBankModule = isSchoolBankModulePath(pathname);
+  const onWaitQueueModule = isWaitQueueModulePath(pathname);
+  const onActivityLogsModule = isActivityLogsModulePath(pathname);
+  const onPromptLibraryModule = isPromptLibraryModulePath(pathname);
+  const onDocTransmissionModule = isDocTransmissionModulePath(pathname);
+  const onLoyaltyStampModule = isLoyaltyStampModulePath(pathname);
   const onDormitoryModule = isDormitoryModulePath(pathname);
   const showDrinkPosHeaderBar = onDrinkPosModule && drinkPosHeaderCollapsed;
   const showBuildingPosHeaderBar = onBuildingPosModule && buildingPosHeaderCollapsed;
@@ -440,8 +608,22 @@ export function DashboardShell({
   const showCarWashHeaderBar = onCarWashModule && carWashHeaderCollapsed;
   const showMassageHeaderBar = onMassageModule && massageHeaderCollapsed;
   const showBarberHeaderBar = onBarberModule && barberHeaderCollapsed;
-  const showDormitoryHeaderBar = onDormitoryModule && dormitoryHeaderCollapsed;
+  const showVaultHeaderBar = onVaultModule && vaultHeaderCollapsed;
+  const showAssetHeaderBar = onAssetModule && assetHeaderCollapsed;
+  const showGeneralStorePosHeaderBar = onGeneralStorePosModule && generalStorePosHeaderCollapsed;
+  const showEducareHeaderBar = onEducareModule && educareHeaderCollapsed;
+  const showCommunityCoopHeaderBar = onCommunityCoopModule && communityCoopHeaderCollapsed;
+  const showHomeFinanceHeaderBar = onHomeFinanceModule && homeFinanceHeaderCollapsed;
+  const showEcommerceStoreHeaderBar = onEcommerceStoreModule && ecommerceStoreHeaderCollapsed;
+  const showAppointmentQueueHeaderBar = onAppointmentQueueModule && appointmentQueueHeaderCollapsed;
+  const showSchoolBankHeaderBar = onSchoolBankModule && schoolBankHeaderCollapsed;
+  const showWaitQueueHeaderBar = onWaitQueueModule && waitQueueHeaderCollapsed;
+  const showActivityLogsHeaderBar = onActivityLogsModule && activityLogsHeaderCollapsed;
+  const showPromptLibraryHeaderBar = onPromptLibraryModule && promptLibraryHeaderCollapsed;
+  const showDocTransmissionHeaderBar = onDocTransmissionModule && docTransmissionHeaderCollapsed;
+  const showLoyaltyStampHeaderBar = onLoyaltyStampModule && loyaltyStampHeaderCollapsed;
   const showAdminHubHeaderBar = onAdminHub && adminHubHeaderCollapsed;
+  const showDormitoryHeaderBar = onDormitoryModule && dormitoryHeaderCollapsed;
   const mainNavGroups = navGroups.filter((group) => group.id === "basic");
   const mainMenuItems = mainNavGroups[0]?.items ?? [];
   const mobileNavCandidates = mainMenuItems
@@ -557,6 +739,21 @@ export function DashboardShell({
   }, [onBuildingPosModule]);
 
   useEffect(() => {
+    if (!onDormitoryModule) {
+      setDormitoryHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setDormitoryHeaderCollapsed(readDormitoryHeaderCollapsed());
+    sync();
+    window.addEventListener(DORMITORY_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(DORMITORY_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onDormitoryModule]);
+
+  useEffect(() => {
     if (!onFootballTurfModule) {
       setFootballTurfHeaderCollapsed(false);
       return;
@@ -647,19 +844,214 @@ export function DashboardShell({
   }, [onBarberModule]);
 
   useEffect(() => {
-    if (!onDormitoryModule) {
-      setDormitoryHeaderCollapsed(false);
+    if (!onVaultModule) {
+      setVaultHeaderCollapsed(false);
       return;
     }
-    const sync = () => setDormitoryHeaderCollapsed(readDormitoryHeaderCollapsed());
+    const sync = () => setVaultHeaderCollapsed(readVaultHeaderCollapsed());
     sync();
-    window.addEventListener(DORMITORY_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener(VAULT_HEADER_COLLAPSE_EVENT, sync);
     window.addEventListener("storage", sync);
     return () => {
-      window.removeEventListener(DORMITORY_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener(VAULT_HEADER_COLLAPSE_EVENT, sync);
       window.removeEventListener("storage", sync);
     };
-  }, [onDormitoryModule]);
+  }, [onVaultModule]);
+
+  useEffect(() => {
+    if (!onAssetModule) {
+      setAssetHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setAssetHeaderCollapsed(readAssetHeaderCollapsed());
+    sync();
+    window.addEventListener(ASSET_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(ASSET_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onAssetModule]);
+
+  useEffect(() => {
+    if (!onGeneralStorePosModule) {
+      setGeneralStorePosHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setGeneralStorePosHeaderCollapsed(readGeneralStorePosHeaderCollapsed());
+    sync();
+    window.addEventListener(GENERAL_STORE_POS_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(GENERAL_STORE_POS_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onGeneralStorePosModule]);
+
+  useEffect(() => {
+    if (!onEducareModule) {
+      setEducareHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setEducareHeaderCollapsed(readEducareHeaderCollapsed());
+    sync();
+    window.addEventListener(EDUCARE_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(EDUCARE_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onEducareModule]);
+
+  useEffect(() => {
+    if (!onCommunityCoopModule) {
+      setCommunityCoopHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setCommunityCoopHeaderCollapsed(readCommunityCoopHeaderCollapsed());
+    sync();
+    window.addEventListener(COMMUNITY_COOP_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(COMMUNITY_COOP_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onCommunityCoopModule]);
+
+  useEffect(() => {
+    if (!onHomeFinanceModule) {
+      setHomeFinanceHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setHomeFinanceHeaderCollapsed(readHomeFinanceHeaderCollapsed());
+    sync();
+    window.addEventListener(HOME_FINANCE_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(HOME_FINANCE_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onHomeFinanceModule]);
+
+  useEffect(() => {
+    if (!onEcommerceStoreModule) {
+      setEcommerceStoreHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setEcommerceStoreHeaderCollapsed(readEcommerceStoreHeaderCollapsed());
+    sync();
+    window.addEventListener(ECOMMERCE_STORE_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(ECOMMERCE_STORE_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onEcommerceStoreModule]);
+
+  useEffect(() => {
+    if (!onAppointmentQueueModule) {
+      setAppointmentQueueHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setAppointmentQueueHeaderCollapsed(readAppointmentQueueHeaderCollapsed());
+    sync();
+    window.addEventListener(APPOINTMENT_QUEUE_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(APPOINTMENT_QUEUE_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onAppointmentQueueModule]);
+
+  useEffect(() => {
+    if (!onSchoolBankModule) {
+      setSchoolBankHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setSchoolBankHeaderCollapsed(readSchoolBankHeaderCollapsed());
+    sync();
+    window.addEventListener(SCHOOL_BANK_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(SCHOOL_BANK_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onSchoolBankModule]);
+
+  useEffect(() => {
+    if (!onWaitQueueModule) {
+      setWaitQueueHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setWaitQueueHeaderCollapsed(readWaitQueueHeaderCollapsed());
+    sync();
+    window.addEventListener(WAIT_QUEUE_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(WAIT_QUEUE_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onWaitQueueModule]);
+
+  useEffect(() => {
+    if (!onActivityLogsModule) {
+      setActivityLogsHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setActivityLogsHeaderCollapsed(readActivityLogsHeaderCollapsed());
+    sync();
+    window.addEventListener(ACTIVITY_LOGS_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(ACTIVITY_LOGS_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onActivityLogsModule]);
+
+  useEffect(() => {
+    if (!onPromptLibraryModule) {
+      setPromptLibraryHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setPromptLibraryHeaderCollapsed(readPromptLibraryHeaderCollapsed());
+    sync();
+    window.addEventListener(PROMPT_LIBRARY_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(PROMPT_LIBRARY_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onPromptLibraryModule]);
+
+  useEffect(() => {
+    if (!onDocTransmissionModule) {
+      setDocTransmissionHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setDocTransmissionHeaderCollapsed(readDocTransmissionHeaderCollapsed());
+    sync();
+    window.addEventListener(DOC_TRANSMISSION_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(DOC_TRANSMISSION_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onDocTransmissionModule]);
+
+  useEffect(() => {
+    if (!onLoyaltyStampModule) {
+      setLoyaltyStampHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setLoyaltyStampHeaderCollapsed(readLoyaltyStampHeaderCollapsed());
+    sync();
+    window.addEventListener(LOYALTY_STAMP_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(LOYALTY_STAMP_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onLoyaltyStampModule]);
 
   useEffect(() => {
     if (!onAdminHub) {
@@ -893,6 +1285,30 @@ export function DashboardShell({
                   <BuildingPosHeaderExpandButton onExpand={() => writeBuildingPosHeaderCollapsed(false)} />
                 </div>
               </>
+            ) : showDormitoryHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <DormitoryHeaderBarNav onExpand={() => writeDormitoryHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <DormitoryHeaderExpandButton onExpand={() => writeDormitoryHeaderCollapsed(false)} />
+                </div>
+              </>
             ) : showFootballTurfHeaderBar ? (
               <>
                 <div className="hidden min-w-0 lg:block">
@@ -1039,10 +1455,10 @@ export function DashboardShell({
                   <BarberHeaderExpandButton onExpand={() => writeBarberHeaderCollapsed(false)} />
                 </div>
               </>
-            ) : showDormitoryHeaderBar ? (
+            ) : showVaultHeaderBar ? (
               <>
                 <div className="hidden min-w-0 lg:block">
-                  <DormitoryHeaderBarNav onExpand={() => writeDormitoryHeaderCollapsed(false)} />
+                  <VaultHeaderBarNav onExpand={() => writeVaultHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
                   <p
@@ -1060,7 +1476,319 @@ export function DashboardShell({
                     </span>
                     <span className="font-medium text-white/90">{displayName}</span>
                   </p>
-                  <DormitoryHeaderExpandButton onExpand={() => writeDormitoryHeaderCollapsed(false)} />
+                  <VaultHeaderExpandButton onExpand={() => writeVaultHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showAssetHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <AssetHeaderBarNav onExpand={() => writeAssetHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <AssetHeaderExpandButton onExpand={() => writeAssetHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showGeneralStorePosHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <GeneralStorePosHeaderBarNav onExpand={() => writeGeneralStorePosHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <GeneralStorePosHeaderExpandButton onExpand={() => writeGeneralStorePosHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showEducareHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <EducareHeaderBarNav onExpand={() => writeEducareHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <EducareHeaderExpandButton onExpand={() => writeEducareHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showCommunityCoopHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <CommunityCoopHeaderBarNav onExpand={() => writeCommunityCoopHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <CommunityCoopHeaderExpandButton onExpand={() => writeCommunityCoopHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showHomeFinanceHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <HomeFinanceHeaderBarNav onExpand={() => writeHomeFinanceHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <HomeFinanceHeaderExpandButton onExpand={() => writeHomeFinanceHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showEcommerceStoreHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <EcommerceStoreHeaderBarNav onExpand={() => writeEcommerceStoreHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <EcommerceStoreHeaderExpandButton onExpand={() => writeEcommerceStoreHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showAppointmentQueueHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <AppointmentQueueHeaderBarNav onExpand={() => writeAppointmentQueueHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <AppointmentQueueHeaderExpandButton onExpand={() => writeAppointmentQueueHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showSchoolBankHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <SchoolBankHeaderBarNav onExpand={() => writeSchoolBankHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <SchoolBankHeaderExpandButton onExpand={() => writeSchoolBankHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showWaitQueueHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <WaitQueueHeaderBarNav onExpand={() => writeWaitQueueHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <WaitQueueHeaderExpandButton onExpand={() => writeWaitQueueHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showActivityLogsHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <ActivityLogsHeaderBarNav onExpand={() => writeActivityLogsHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <ActivityLogsHeaderExpandButton onExpand={() => writeActivityLogsHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showPromptLibraryHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <PromptLibraryHeaderBarNav onExpand={() => writePromptLibraryHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <PromptLibraryHeaderExpandButton onExpand={() => writePromptLibraryHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showDocTransmissionHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <DocTransmissionHeaderBarNav onExpand={() => writeDocTransmissionHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <DocTransmissionHeaderExpandButton onExpand={() => writeDocTransmissionHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showLoyaltyStampHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <LoyaltyStampHeaderBarNav onExpand={() => writeLoyaltyStampHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <LoyaltyStampHeaderExpandButton onExpand={() => writeLoyaltyStampHeaderCollapsed(false)} />
                 </div>
               </>
             ) : showAdminHubHeaderBar ? (

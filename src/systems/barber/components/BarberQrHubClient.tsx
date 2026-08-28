@@ -22,6 +22,8 @@ type Props = {
   trialExportBlocked: boolean;
   isTrialSandbox: boolean;
   trialSessionId: string;
+  /** ฝังในแท็บตั้งค่า — ไม่ห่อ AppDashboardSection ซ้ำ */
+  embedded?: boolean;
 };
 
 function ModalCloseFooter({ onClose }: { onClose: () => void }) {
@@ -53,15 +55,14 @@ export function BarberQrHubClient({
   trialExportBlocked,
   isTrialSandbox,
   trialSessionId,
+  embedded = false,
 }: Props) {
   const [showCustomerQrModal, setShowCustomerQrModal] = useState(false);
   const [showStaffQrModal, setShowStaffQrModal] = useState(false);
 
-  return (
-    <AppDashboardSection tone="violet">
-      <AppSectionHeader tone="violet" title="ลิงก์" />
-
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+  const hubBody = (
+    <>
+      <div className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6", !embedded && "mt-4")}>
         <button
           type="button"
           onClick={() => {
@@ -220,6 +221,17 @@ export function BarberQrHubClient({
           compactForModal
         />
       </FormModal>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="min-w-0">{hubBody}</div>;
+  }
+
+  return (
+    <AppDashboardSection tone="violet">
+      <AppSectionHeader tone="violet" title="ลิงก์" />
+      {hubBody}
     </AppDashboardSection>
   );
 }

@@ -8,6 +8,8 @@ export const BARBER_HEADER_COLLAPSE_EVENT = "mawell-barber-header-collapse";
 
 export const BARBER_MODULE_PATH_PREFIX = "/dashboard/barber";
 export const BARBER_STAFF_KIOSK_PATH = "/dashboard/barber/staff";
+export const BARBER_SETTINGS_HREF = `${BARBER_MODULE_PATH_PREFIX}/settings`;
+export const BARBER_SETTINGS_LINK_HREF = `${BARBER_SETTINGS_HREF}?tab=link`;
 
 export function isBarberModulePath(pathname: string): boolean {
   if (!pathname) return false;
@@ -26,24 +28,21 @@ export function barberPathFlags(pathname: string) {
   const onPackages =
     onBarber &&
     (pathname === "/dashboard/barber/packages" || pathname.startsWith("/dashboard/barber/packages/"));
-  const onQr =
-    onBarber &&
-    (pathname === "/dashboard/barber/qr" || pathname.startsWith("/dashboard/barber/qr/"));
-  const onSettings = pathname === "/dashboard/barber/settings";
-  /** การเงิน · QR · ตั้งค่า มีการ์ดเนื้อหาเอง — ไม่ห่อ barberModuleContentShell ซ้ำ */
-  const plainInner = onStaff || onFinance || onQr || onSettings;
+  const onSettings =
+    pathname === BARBER_SETTINGS_HREF || pathname.startsWith(`${BARBER_SETTINGS_HREF}/`);
+  /** การเงิน · ตั้งค่า มีการ์ดเนื้อหาเอง — ไม่ห่อ barberModuleContentShell ซ้ำ */
+  const plainInner = onStaff || onFinance || onSettings;
   return {
     onBarber,
     onStaff,
     onFinance,
     onPackages,
-    onQr,
     onSettings,
     plainInner,
   };
 }
 
-export type BarberModuleNavKey = "dashboard" | "finance" | "packages" | "qr" | "settings";
+export type BarberModuleNavKey = "dashboard" | "finance" | "packages" | "settings";
 
 export type BarberNavItem = {
   key: BarberModuleNavKey;
@@ -55,8 +54,7 @@ export const BARBER_NAV_ITEMS: BarberNavItem[] = [
   { key: "dashboard", label: "แดชบอร์ด", href: "/dashboard/barber" },
   { key: "finance", label: "การเงิน", href: "/dashboard/barber/finance" },
   { key: "packages", label: "แพ็กเกจ", href: "/dashboard/barber/packages" },
-  { key: "qr", label: "ลิงก์", href: "/dashboard/barber/qr" },
-  { key: "settings", label: MODULE_SHOP_SETTINGS_SHORT_LABEL, href: "/dashboard/barber/settings" },
+  { key: "settings", label: MODULE_SHOP_SETTINGS_SHORT_LABEL, href: BARBER_SETTINGS_HREF },
 ];
 
 export function isBarberModuleNavItemActive(pathname: string, key: BarberModuleNavKey): boolean {
@@ -72,10 +70,10 @@ export function isBarberModuleNavItemActive(pathname: string, key: BarberModuleN
         pathname === "/dashboard/barber/packages" ||
         pathname.startsWith("/dashboard/barber/packages/")
       );
-    case "qr":
-      return pathname === "/dashboard/barber/qr" || pathname.startsWith("/dashboard/barber/qr/");
     case "settings":
-      return pathname === "/dashboard/barber/settings";
+      return (
+        pathname === BARBER_SETTINGS_HREF || pathname.startsWith(`${BARBER_SETTINGS_HREF}/`)
+      );
     default:
       return false;
   }
@@ -93,15 +91,6 @@ export function barberModuleNavIcon(key: BarberModuleNavKey): ReactElement {
           <path d="M4 7h16v4H4z" />
           <path d="M6 11v8h12v-8" />
           <path d="M9 7V5h6v2" />
-        </>
-      );
-    case "qr":
-      return (
-        <>
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
         </>
       );
     case "settings":

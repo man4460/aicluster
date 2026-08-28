@@ -49,14 +49,6 @@ function tabIcon(key: BuildingPosMainTab, className?: string) {
       </svg>
     );
   }
-  if (key === "qr") {
-    return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className={className} aria-hidden>
-        <path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3z" />
-        <path d="M15 15h2v2M19 15h2v2M15 19h2M19 19h2" strokeLinecap="round" />
-      </svg>
-    );
-  }
   if (key === "finance") {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className={className} aria-hidden>

@@ -46,15 +46,6 @@ function IconOverview({ className }: { className?: string }) {
   );
 }
 
-function IconQr({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className={className} aria-hidden>
-      <path d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3z" />
-      <path d="M15 15h2v2M19 15h2v2M15 19h2M19 19h2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function IconFinance({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className={className} aria-hidden>
@@ -79,8 +70,6 @@ function dockIcon(key: BuildingPosMainTab, className?: string) {
       return <IconQueue className={className} />;
     case "overview":
       return <IconOverview className={className} />;
-    case "qr":
-      return <IconQr className={className} />;
     case "finance":
       return <IconFinance className={className} />;
     case "menu":
@@ -105,7 +94,7 @@ function BuildingPosMobileDockNavInner() {
   if (!flags.onModule) return null;
 
   return (
-    <ul className={cn(appMobileDockGridClass, "grid-cols-7")} aria-label="แท็บนำทาง POS ร้านอาหาร">
+    <ul className={cn(appMobileDockGridClass, "grid-cols-6")} aria-label="แท็บนำทาง POS ร้านอาหาร">
       {BUILDING_POS_MAIN_TABS.map(({ key, label }) => {
         const active = isBuildingPosNavItemActive(pathname, searchParams, key);
         const href = buildingPosMainTabHref(nav, key);
