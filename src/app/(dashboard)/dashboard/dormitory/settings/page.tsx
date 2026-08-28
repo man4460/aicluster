@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
+import { getRequestBaseUrl } from "@/lib/app/request-base-url";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { loadDormitoryStaffDailyPinHash } from "@/lib/modules/staff-daily-pin-store";
 import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
+import { getQrDormitoryBranding } from "@/lib/profile/qr-branding";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 import { dormitoryNormalizePortalGallery } from "@/systems/dormitory/lib/portal-media";
 import {
@@ -16,7 +18,7 @@ export default async function DormitorySettingsPage() {
   if (!session) redirect("/login");
 
   const scope = await getDormitoryDataScope(session.sub);
-  const [row, pinHash] = await Promise.all([
+  const [row, pinHash, baseUrl, branding] = await Promise.all([
     prisma.dormitoryProfile.findUnique({
       where: {
         ownerUserId_trialSessionId: {
@@ -26,6 +28,8 @@ export default async function DormitorySettingsPage() {
       },
     }),
     loadDormitoryStaffDailyPinHash(session.sub),
+    getRequestBaseUrl(),
+    getQrDormitoryBranding(session.sub, scope.trialSessionId),
   ]);
 
   const initial: DormProfileDto = {
@@ -56,6 +60,10 @@ export default async function DormitorySettingsPage() {
         initial={initial}
         ownerId={session.sub}
         trialSessionId={scope.trialSessionId}
+        baseUrl={baseUrl}
+        dormLabel={branding.label}
+        logoUrl={branding.logoUrl}
+        trialExportBlocked={scope.isTrialSandbox}
       />
     </DormPageStack>
   );

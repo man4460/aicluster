@@ -4,7 +4,8 @@ import { saveDormPaymentProofImage } from "@/lib/dormitory/payment-proof-file";
 import { dormUnpaidPaymentStatusFilter } from "@/lib/dormitory/unpaid-payment-status";
 
 /**
- * อัปโหลดสลิปโดยไม่ล็อกอิน — ใช้โทเคนจากลิงก์ในใบแจ้งหนี้ (แยก path จาก /payments/[id] เพื่อไม่ให้ dynamic กลืน segment)
+ * อัปโหลดสลิปโดยไม่ล็อกอิน — ใช้โทเคนจากลิงก์ในใบแจ้งหนี้
+ * ใบแจ้งหนี้มี QR พร้อมเพย์ → บันทึกรับชำระอัตโนมัติด้วยช่องทาง PROMPTPAY
  */
 export async function POST(req: Request) {
   let form: FormData;
@@ -40,10 +41,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 
+  const receiptNumber = payment.receiptNumber ?? `RCP-${Date.now()}`;
   await prisma.splitBillPayment.update({
     where: { id: payment.id },
-    data: { proofSlipUrl: url, proofUploadedAt: new Date() },
+    data: {
+      proofSlipUrl: url,
+      proofUploadedAt: new Date(),
+      paymentStatus: "PAID",
+      paidAt: new Date(),
+      paymentMethod: "PROMPTPAY",
+      receiptNumber,
+      note: payment.note?.trim() || "ชำระผ่านพร้อมเพย์ (ใบแจ้งหนี้)",
+    },
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, autoPaid: true, paymentMethod: "PROMPTPAY" });
 }

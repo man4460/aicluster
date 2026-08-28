@@ -802,6 +802,17 @@ model Tenant {
   status       TenantStatus @default(ACTIVE)
   checkInDate  DateTime     @map("check_in_date") @db.Date
   checkOutDate DateTime?    @map("check_out_date") @db.Date
+  /** มัดจำแรกเข้า (บาท) */
+  bookingDepositBaht  Decimal @default(0) @map("booking_deposit_baht") @db.Decimal(10, 2)
+  /** ประกันห้องแรกเข้า (บาท) */
+  securityDepositBaht Decimal @default(0) @map("security_deposit_baht") @db.Decimal(10, 2)
+  /** ช่องทางรับมัดจำ/ประกันตอนเข้า CASH | PROMPTPAY | TRANSFER | CREDIT_CARD */
+  depositPaymentMethod String? @map("deposit_payment_method") @db.VarChar(20)
+  /** หักจากประกันความเสียหายตอนย้ายออก (บาท) */
+  damageDeductionBaht Decimal? @map("damage_deduction_baht") @db.Decimal(10, 2)
+  /** คืนประกันลูกค้าตอนย้ายออก (บาท) */
+  securityRefundBaht  Decimal? @map("security_refund_baht") @db.Decimal(10, 2)
+  moveOutNote         String?  @map("move_out_note") @db.VarChar(500)
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
 
@@ -854,6 +865,8 @@ model SplitBillPayment {
   paidAt          DateTime?         @map("paid_at")
   receiptNumber   String?           @unique @map("receipt_number") @db.VarChar(32)
   note            String?           @db.VarChar(500)
+  /** CASH | PROMPTPAY | TRANSFER | CREDIT_CARD */
+  paymentMethod   String?           @map("payment_method") @db.VarChar(20)
   /** รูปสลิปที่ผู้พักอัปโหลด (ลิงก์สาธารณะ) หรือเจ้าของหออัปโหลดแทน */
   proofSlipUrl    String?           @map("proof_slip_url") @db.VarChar(512)
   proofUploadedAt DateTime?         @map("proof_uploaded_at")

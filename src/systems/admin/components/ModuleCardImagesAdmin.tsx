@@ -332,7 +332,7 @@ export function ModuleCardImagesAdmin() {
           {loading && rows.length === 0 ? (
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
               {[0, 1, 2, 3, 4, 5].map((i) => (
-                <li key={i} className="h-14 animate-pulse rounded-xl bg-[#ecebff]/70" />
+                <li key={i} className="h-24 animate-pulse rounded-xl bg-[#ecebff]/70" />
               ))}
             </ul>
           ) : !err && filtered.length === 0 ? (
@@ -350,41 +350,43 @@ export function ModuleCardImagesAdmin() {
                   <li key={r.id}>
                     <article
                       className={cn(
-                        "group flex min-w-0 max-w-full items-start gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white",
+                        "group flex min-w-0 max-w-full flex-col gap-2 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white",
                         !r.isActive && "opacity-60",
                       )}
                     >
-                      <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-white/70 bg-gradient-to-br from-[#ecebff] to-indigo-100/40 shadow-sm">
-                        {safe ? (
-                          <Image src={safe} alt="" fill sizes="44px" className="object-cover" unoptimized />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[#4d47b6]">
-                            <IconImageCards className="h-5 w-5" />
-                          </div>
-                        )}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-white/70 bg-gradient-to-br from-[#ecebff] to-indigo-100/40 shadow-sm">
+                          {safe ? (
+                            <Image src={safe} alt="" fill sizes="44px" className="object-cover" unoptimized />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-[#4d47b6]">
+                              <IconImageCards className="h-5 w-5" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <UploadControls rowId={r.id} disabled={disabled} onFile={(f) => void uploadFile(r.id, f)} />
+                          {hasUpload ? (
+                            <button
+                              type="button"
+                              disabled={disabled}
+                              onClick={() => void clearImage(r.id)}
+                              className={assetRowRemoveIconButtonClass}
+                              aria-label={`ล้างรูป ${r.title}`}
+                              title="ล้างรูป"
+                            >
+                              <IconRowRemove className="h-4 w-4" />
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0">
                         <p className="break-words text-sm font-black leading-snug text-[#1e1b4b]">{r.title}</p>
                         <p className="mt-0.5 break-all font-mono text-[10px] leading-snug text-[#66638c]">{r.slug}</p>
                         <p className="mt-0.5 break-words text-[11px] font-semibold leading-snug text-slate-500">
                           {MODULE_GROUP_TIER_NAME[r.groupId] ?? `กลุ่ม ${r.groupId}`}
                           {hasUpload ? " · มีรูปอัปโหลด" : " · ใช้รูปค่าเริ่ม"}
                         </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <UploadControls rowId={r.id} disabled={disabled} onFile={(f) => void uploadFile(r.id, f)} />
-                        {hasUpload ? (
-                          <button
-                            type="button"
-                            disabled={disabled}
-                            onClick={() => void clearImage(r.id)}
-                            className={assetRowRemoveIconButtonClass}
-                            aria-label={`ล้างรูป ${r.title}`}
-                            title="ล้างรูป"
-                          >
-                            <IconRowRemove className="h-4 w-4" />
-                          </button>
-                        ) : null}
                       </div>
                     </article>
                   </li>

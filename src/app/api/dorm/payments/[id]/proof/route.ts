@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/api-auth";
+import { withDormitoryOwnerOrStaffContext } from "@/lib/dormitory/api-auth";
 import { saveDormPaymentProofImage } from "@/lib/dormitory/payment-proof-file";
 import { dormUnpaidPaymentStatusFilter } from "@/lib/dormitory/unpaid-payment-status";
-import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 function parseId(raw: string): number | null {
   const n = Number(raw);
@@ -11,8 +10,8 @@ function parseId(raw: string): number | null {
 }
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await withDormitoryOwnerOrStaffContext(req);
+  if (!auth.ok) return auth.res;
 
   const { id: idRaw } = await ctx.params;
   const paymentId = parseId(idRaw);
@@ -20,12 +19,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ error: "ไม่ถูกต้อง" }, { status: 400 });
   }
 
-  const scope = await getDormitoryDataScope(auth.session.sub);
   const payment = await prisma.splitBillPayment.findFirst({
     where: {
       id: paymentId,
       ...dormUnpaidPaymentStatusFilter(),
-      tenant: { room: { ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId } },
+      tenant: { room: { ownerUserId: auth.ctx.ownerUserId, trialSessionId: auth.ctx.trialSessionId } },
     },
   });
   if (!payment) {
@@ -63,9 +61,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   });
 }
 
-export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const auth = await withDormitoryOwnerOrStaffContext(req);
+  if (!auth.ok) return auth.res;
 
   const { id: idRaw } = await ctx.params;
   const paymentId = parseId(idRaw);
@@ -73,12 +71,11 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     return NextResponse.json({ error: "ไม่ถูกต้อง" }, { status: 400 });
   }
 
-  const scope = await getDormitoryDataScope(auth.session.sub);
   const payment = await prisma.splitBillPayment.findFirst({
     where: {
       id: paymentId,
       ...dormUnpaidPaymentStatusFilter(),
-      tenant: { room: { ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId } },
+      tenant: { room: { ownerUserId: auth.ctx.ownerUserId, trialSessionId: auth.ctx.trialSessionId } },
     },
   });
   if (!payment) {

@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/api-auth";
+import { withDormitoryOwnerOrStaffContext } from "@/lib/dormitory/api-auth";
 import type { RoomStatus } from "@/generated/prisma/enums";
-import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 const patchSchema = z.object({
   roomNumber: z.string().min(1).max(10).optional(),
@@ -21,15 +20,14 @@ function parseRoomId(id: string): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-export async function GET(_req: Request, ctx: Ctx) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET(req: Request, ctx: Ctx) {
+  const auth = await withDormitoryOwnerOrStaffContext(req);
+  if (!auth.ok) return auth.res;
   const rid = parseRoomId((await ctx.params).id);
   if (rid === null) return NextResponse.json({ error: "ไม่พบห้อง" }, { status: 404 });
 
-  const scope = await getDormitoryDataScope(auth.session.sub);
   const room = await prisma.room.findFirst({
-    where: { id: rid, ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId },
+    where: { id: rid, ownerUserId: auth.ctx.ownerUserId, trialSessionId: auth.ctx.trialSessionId },
     include: {
       tenants: { orderBy: { id: "asc" } },
       utilityBills: {
@@ -57,6 +55,12 @@ export async function GET(_req: Request, ctx: Ctx) {
         status: t.status,
         checkInDate: t.checkInDate.toISOString().slice(0, 10),
         checkOutDate: t.checkOutDate?.toISOString().slice(0, 10) ?? null,
+        bookingDepositBaht: Number(t.bookingDepositBaht),
+        securityDepositBaht: Number(t.securityDepositBaht),
+        depositPaymentMethod: t.depositPaymentMethod,
+        damageDeductionBaht: t.damageDeductionBaht != null ? Number(t.damageDeductionBaht) : null,
+        securityRefundBaht: t.securityRefundBaht != null ? Number(t.securityRefundBaht) : null,
+        moveOutNote: t.moveOutNote,
       })),
       utilityBills: room.utilityBills.map((b) => ({
         id: b.id,
@@ -85,12 +89,10 @@ export async function GET(_req: Request, ctx: Ctx) {
 }
 
 export async function PATCH(req: Request, ctx: Ctx) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await withDormitoryOwnerOrStaffContext(req);
+  if (!auth.ok) return auth.res;
   const rid = parseRoomId((await ctx.params).id);
   if (rid === null) return NextResponse.json({ error: "ไม่พบห้อง" }, { status: 404 });
-
-  const scope = await getDormitoryDataScope(auth.session.sub);
 
   let json: unknown;
   try {
@@ -104,7 +106,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   }
 
   const existing = await prisma.room.findFirst({
-    where: { id: rid, ownerUserId: auth.session.sub },
+    where: { id: rid, ownerUserId: auth.ctx.ownerUserId, trialSessionId: auth.ctx.trialSessionId },
   });
   if (!existing) return NextResponse.json({ error: "ไม่พบห้อง" }, { status: 404 });
 
@@ -127,15 +129,14 @@ export async function PATCH(req: Request, ctx: Ctx) {
   }
 }
 
-export async function DELETE(_req: Request, ctx: Ctx) {
-  const auth = await requireSession();
-  if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function DELETE(req: Request, ctx: Ctx) {
+  const auth = await withDormitoryOwnerOrStaffContext(req);
+  if (!auth.ok) return auth.res;
   const rid = parseRoomId((await ctx.params).id);
   if (rid === null) return NextResponse.json({ error: "ไม่พบห้อง" }, { status: 404 });
 
-  const scope = await getDormitoryDataScope(auth.session.sub);
   const existing = await prisma.room.findFirst({
-    where: { id: rid, ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId },
+    where: { id: rid, ownerUserId: auth.ctx.ownerUserId, trialSessionId: auth.ctx.trialSessionId },
   });
   if (!existing) return NextResponse.json({ error: "ไม่พบห้อง" }, { status: 404 });
 

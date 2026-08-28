@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   AppDashboardSection,
@@ -16,7 +15,7 @@ import {
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { dormitoryPublicPortalUrl } from "@/lib/dormitory/public-url";
-import { DORMITORY_GUEST_PORTAL_HREF } from "@/systems/dormitory/dormitory-module-nav";
+import { DormGuestPortalHubClient } from "@/systems/dormitory/components/DormGuestPortalHubClient";
 import { DormPortalMediaSettings } from "@/systems/dormitory/components/DormPortalMediaSettings";
 import {
   dormFieldClass,
@@ -50,16 +49,17 @@ export type DormProfileDto = {
   staffDailyPinSet?: boolean;
 };
 
-type SettingsTab = "basic" | "finance" | "portal";
+type SettingsTab = "basic" | "finance" | "portal" | "links";
 
 const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
   { id: "basic", label: "ตั้งค่าพื้นฐาน" },
   { id: "finance", label: "ตั้งค่าเกี่ยวกับการเงิน" },
   { id: "portal", label: "ตั้งค่าเว็ปลิงค์ลูกค้า" },
+  { id: "links", label: "ลิงก์ / QR" },
 ];
 
 function parseSettingsTab(raw: string | null): SettingsTab {
-  if (raw === "finance" || raw === "portal") return raw;
+  if (raw === "finance" || raw === "portal" || raw === "links") return raw;
   return "basic";
 }
 
@@ -93,7 +93,7 @@ function DormPortalLinkPanel({
   return (
     <div className="space-y-4 text-left">
       <p className="text-sm text-[#66638c]">
-        ลิงก์สาธารณะให้ผู้เช่าดูห้องว่าง · ติดต่อสอบถาม · แบนเนอร์และแกลเลอรีด้านล่าง
+        ลิงก์สาธารณะให้ผู้เช่าดูห้องว่าง · ติดต่อสอบถาม · QR โปสเตอร์ด้านล่าง
       </p>
       {copyMsg ? <p className="text-sm font-semibold text-emerald-700">{copyMsg}</p> : null}
       <div className="space-y-2 rounded-[1.25rem] border border-white/60 bg-white/55 p-3 sm:p-4">
@@ -117,12 +117,6 @@ function DormPortalLinkPanel({
           </button>
         </div>
       </div>
-      <Link
-        href={DORMITORY_GUEST_PORTAL_HREF}
-        className={cn(appTemplateOutlineButtonClass, "inline-flex min-h-10 items-center rounded-xl px-4 text-sm font-bold")}
-      >
-        ไปหน้า QR / ลิงก์พนักงาน
-      </Link>
     </div>
   );
 }
@@ -131,14 +125,30 @@ export function DormSettingsClient({
   initial,
   ownerId,
   trialSessionId,
+  baseUrl,
+  dormLabel,
+  logoUrl = null,
+  trialExportBlocked = false,
 }: {
   initial: DormProfileDto;
   ownerId: string;
   trialSessionId: string;
+  baseUrl: string;
+  dormLabel: string;
+  logoUrl?: string | null;
+  trialExportBlocked?: boolean;
 }) {
   return (
     <Suspense fallback={<div className="h-40 animate-pulse rounded-[1.5rem] bg-white/30" aria-busy />}>
-      <DormSettingsClientInner initial={initial} ownerId={ownerId} trialSessionId={trialSessionId} />
+      <DormSettingsClientInner
+        initial={initial}
+        ownerId={ownerId}
+        trialSessionId={trialSessionId}
+        baseUrl={baseUrl}
+        dormLabel={dormLabel}
+        logoUrl={logoUrl}
+        trialExportBlocked={trialExportBlocked}
+      />
     </Suspense>
   );
 }
@@ -147,10 +157,18 @@ function DormSettingsClientInner({
   initial,
   ownerId,
   trialSessionId,
+  baseUrl,
+  dormLabel,
+  logoUrl = null,
+  trialExportBlocked = false,
 }: {
   initial: DormProfileDto;
   ownerId: string;
   trialSessionId: string;
+  baseUrl: string;
+  dormLabel: string;
+  logoUrl?: string | null;
+  trialExportBlocked?: boolean;
 }) {
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<SettingsTab>(() => parseSettingsTab(searchParams.get("tab")));
@@ -160,6 +178,10 @@ function DormSettingsClientInner({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTab(parseSettingsTab(searchParams.get("tab")));
+  }, [searchParams]);
 
   const save = useCallback(async () => {
     setBusy(true);
@@ -197,7 +219,7 @@ function DormSettingsClientInner({
         <AppSectionHeader
           tone="violet"
           title="ตั้งค่าหอพัก"
-          description="พื้นฐาน · การเงิน · เว็ปลิงค์ลูกค้า"
+          description="พื้นฐาน · การเงิน · เว็บลูกค้า · ลิงก์ / QR"
         />
 
         <div className="mt-3 w-full sm:hidden">
@@ -368,7 +390,6 @@ function DormSettingsClientInner({
             aria-labelledby="dorm-settings-tab-portal"
             className="mt-4 space-y-4 text-left"
           >
-            <DormPortalLinkPanel ownerId={ownerId} trialSessionId={trialSessionId} />
             <DormPortalMediaSettings
               bannerUrl={form.portalBannerUrl ?? ""}
               gallery={form.portalGallery ?? []}
@@ -387,16 +408,44 @@ function DormSettingsClientInner({
           </div>
         ) : null}
 
-        <div className="mt-5 flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void save()}
-            className={cn(dormBtnPrimary, "min-h-11 px-5")}
+        {tab === "links" ? (
+          <div
+            id="dorm-settings-panel-links"
+            role="tabpanel"
+            aria-labelledby="dorm-settings-tab-links"
+            className="mt-4 space-y-4 text-left"
           >
-            {busy ? "กำลังบันทึก…" : "บันทึกการตั้งค่า"}
-          </button>
-        </div>
+            <DormPortalLinkPanel ownerId={ownerId} trialSessionId={trialSessionId} />
+            <DormGuestPortalHubClient
+              ownerId={ownerId}
+              trialSessionId={trialSessionId}
+              baseUrl={baseUrl}
+              dormLabel={dormLabel}
+              logoUrl={logoUrl}
+              trialExportBlocked={trialExportBlocked}
+              initialPortalBannerUrl={form.portalBannerUrl}
+              initialPortalGallery={form.portalGallery ?? []}
+              initialAddress={form.address ?? ""}
+              initialContactLine={form.contactLine ?? ""}
+              initialFacebookUrl={form.facebookUrl ?? ""}
+              initialMapUrl={form.mapUrl ?? ""}
+              embedded
+            />
+          </div>
+        ) : null}
+
+        {tab !== "links" ? (
+          <div className="mt-5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void save()}
+              className={cn(dormBtnPrimary, "min-h-11 px-5")}
+            >
+              {busy ? "กำลังบันทึก…" : "บันทึกการตั้งค่า"}
+            </button>
+          </div>
+        ) : null}
       </AppDashboardSection>
     </div>
   );

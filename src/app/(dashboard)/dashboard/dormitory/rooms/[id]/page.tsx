@@ -154,6 +154,13 @@ export default async function DormitoryRoomDetailPage({ params, searchParams }: 
       idCard: t.idCard,
       status: t.status,
       checkInDate: t.checkInDate.toISOString().slice(0, 10),
+      checkOutDate: t.checkOutDate?.toISOString().slice(0, 10) ?? null,
+      bookingDepositBaht: Number(t.bookingDepositBaht),
+      securityDepositBaht: Number(t.securityDepositBaht),
+      depositPaymentMethod: t.depositPaymentMethod,
+      damageDeductionBaht: t.damageDeductionBaht != null ? Number(t.damageDeductionBaht) : null,
+      securityRefundBaht: t.securityRefundBaht != null ? Number(t.securityRefundBaht) : null,
+      moveOutNote: t.moveOutNote,
     })),
     utilityBills: utilityBillsForRender.map((b) => ({
       id: b.id,
@@ -183,6 +190,7 @@ export default async function DormitoryRoomDetailPage({ params, searchParams }: 
       paidAt: p.paidAt!.toISOString(),
       note: p.note,
       receiptNumber: p.receiptNumber,
+      paymentMethod: p.paymentMethod,
     })),
   };
 

@@ -22,16 +22,24 @@ alwaysApply: false
 | `sm+` | `sm:grid-cols-3 sm:gap-5` |
 | **กิจกรรม** | **`grid-cols-1 gap-3` เสมอ** (ข้อความสรุปยาว — ไม่ใช้ 3 คอลัมน์) |
 
-การ์ดแนวนอนสไตล์แคตตาล็อกโมดูล:
+การ์ดรายการแอดมิน — **2 แถว (บังคับ)** ชื่อ/ข้อมูลต้องไม่อยู่แถวเดียวกับรูปหรือปุ่ม (กริด `sm:grid-cols-3` แคบ — ชื่อจะอ่านไม่ออก):
 
 ```
 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm
-flex items-start gap-3
-[รูปย่อ 44×44 rounded-2xl] [ชื่อ + บรรทัดรอง — break-words ไม่ truncate] [ปุ่มไอคอน]
+flex flex-col gap-2
+
+แถว 1: flex justify-between gap-2
+  [รูปย่อ 44×44 rounded-2xl ซ้าย]  [ปุ่มแอ็กชัน shrink-0 ขวา]
+
+แถว 2: min-w-0 เต็มความกว้างการ์ด
+  [ชื่อ — break-words text-sm font-black]
+  [บรรทัดรอง — slug break-all · คำอธิบาย break-words]
 ```
 
+**ห้าม** ใช้เลย์เอาต์แถวเดียว `flex items-start gap-3` ที่วาง `[รูป][ชื่อ flex-1][ปุ่ม]` คู่กัน — ชื่อจะถูกบีบระหว่างรูปกับปุ่ม
+
 **มือถือ — เห็นข้อความเต็ม:** ห้าม `truncate` / `line-clamp` บนชื่อ·อีเมล·slug·คำอธิบายในการ์ดรายการ  
-ใช้ `break-words` / `break-all` (อีเมล·slug) · จัด `items-start` ให้ข้อความหลายบรรทัดไม่ถูกตัด  
+ใช้ `break-words` / `break-all` (อีเมล·slug) · ข้อความหลายบรรทัดอยู่แถวล่างเต็มความกว้าง  
 หน้าภาพรวมศูนย์แอดมิน: กริด `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` (ไม่บีบ 2 คอลัมน์บนมือถือจนตัดคำ)
 
 - **รูปการ์ดโมดูล / ลิงก์ทดลอง:** ใช้ `resolveModuleCardDisplayImageUrl` (หรือรูปอัปโหลดที่ปลอดภัย)
@@ -92,5 +100,6 @@ downloadAdminExcel({
 
 - [ ] ไม่มี `description` บนหัวข้อรายการ / ไม่มีย่อหน้าใต้ฮีโร่
 - [ ] กริดการ์ด `grid-cols-1 sm:grid-cols-3` (กิจกรรมใช้ `grid-cols-1` อย่างเดียว) — ไม่แยกตารางเดสก์ท็อป
+- [ ] การ์ดรายการ 2 แถว: แถวบน = รูป/ไอคอน + ปุ่ม · แถวล่าง = ชื่อ/ข้อมูลเต็มความกว้าง (`break-words`)
 - [ ] มีปุ่ม Export Excel ผ่าน `downloadAdminExcel` (ถ้ารายการส่งออกได้)
 - [ ] gutter ผ่าน `DashboardPagesShell` ชุด admin/football

@@ -6,9 +6,8 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/api-auth";
+import { withDormitoryOwnerOrStaffContext } from "@/lib/dormitory/api-auth";
 import { computeUtilityTotalRoomAmount, refreshPendingSplitPaymentsForBill } from "@/systems/dormitory/lib/split-payments";
-import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 /** ขีดจำกัดของคอลัมน์ DECIMAL(10,2) ใน MySQL สำหรับยอดเงินในตาราง utility_bills / payments */
 const MAX_DECIMAL_10_2 = 99_999_999.99;
@@ -64,22 +63,16 @@ function zodIssuesToDetails(issues: z.core.$ZodIssue[]): string[] {
 }
 
 export async function GET(req: Request, ctx: Ctx) {
-  const auth = await requireSession();
-  if (!auth.ok) {
-    return NextResponse.json(
-      { error: "กรุณาเข้าสู่ระบบใหม่ (เซสชันหมดอายุหรือยังไม่ได้ล็อกอิน)" },
-      { status: 401 },
-    );
-  }
+  const auth = await withDormitoryOwnerOrStaffContext(req);
+  if (!auth.ok) return auth.res;
   const rid = parseRoomId((await ctx.params).id);
   if (rid === null) return NextResponse.json({ error: "ไม่พบห้อง" }, { status: 404 });
 
-  const scope = await getDormitoryDataScope(auth.session.sub);
   const { searchParams } = new URL(req.url);
   const periodMonth = searchParams.get("periodMonth");
 
   const room = await prisma.room.findFirst({
-    where: { id: rid, ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId },
+    where: { id: rid, ownerUserId: auth.ctx.ownerUserId, trialSessionId: auth.ctx.trialSessionId },
   });
   if (!room) return NextResponse.json({ error: "ไม่พบห้อง" }, { status: 404 });
 
@@ -146,19 +139,13 @@ export async function GET(req: Request, ctx: Ctx) {
 }
 
 export async function POST(req: Request, ctx: Ctx) {
-  const auth = await requireSession();
-  if (!auth.ok) {
-    return NextResponse.json(
-      { error: "กรุณาเข้าสู่ระบบใหม่ (เซสชันหมดอายุหรือยังไม่ได้ล็อกอิน)" },
-      { status: 401 },
-    );
-  }
+  const auth = await withDormitoryOwnerOrStaffContext(req);
+  if (!auth.ok) return auth.res;
   const rid = parseRoomId((await ctx.params).id);
   if (rid === null) return NextResponse.json({ error: "ไม่พบห้อง" }, { status: 404 });
 
-  const scope = await getDormitoryDataScope(auth.session.sub);
   const room = await prisma.room.findFirst({
-    where: { id: rid, ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId },
+    where: { id: rid, ownerUserId: auth.ctx.ownerUserId, trialSessionId: auth.ctx.trialSessionId },
   });
   if (!room) return NextResponse.json({ error: "ไม่พบห้อง" }, { status: 404 });
 

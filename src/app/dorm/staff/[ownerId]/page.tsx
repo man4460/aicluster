@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { DormStaffClient } from "@/systems/dormitory/DormStaffClient";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
@@ -16,5 +17,9 @@ export default async function DormStaffPage({
   if (!ownerId || ownerId.length < 10 || !staffKey) notFound();
   const scope = await getDormitoryDataScope(ownerId);
   const trialSessionId = sp.t?.trim() || scope.trialSessionId;
-  return <DormStaffClient ownerId={ownerId} trialSessionId={trialSessionId} staffKey={staffKey} />;
+  return (
+    <Suspense fallback={<div className="h-dvh animate-pulse bg-slate-50" aria-busy />}>
+      <DormStaffClient ownerId={ownerId} trialSessionId={trialSessionId} staffKey={staffKey} />
+    </Suspense>
+  );
 }

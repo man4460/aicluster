@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { shopQrTemplateGridPrimaryButtonClass } from "@/components/qr/shop-qr-template";
 import type { DormInvoiceSheetDto } from "@/lib/dormitory/dorm-invoice-sheet";
 import { safeDormInvoicePdfFileName } from "@/lib/dormitory/dorm-invoice-pdf-filename";
@@ -9,9 +10,13 @@ import { cn } from "@/lib/cn";
 import { downloadDormInvoicePdfFromCleanHtml } from "@/systems/dormitory/dorm-invoice-pdf-capture";
 import type { DormInvoicePrintPayload } from "@/systems/dormitory/dorm-invoice-print-html";
 import { dormBtnSecondary } from "@/systems/dormitory/dorm-ui";
-import { DormInvoicePosPrintToolbar } from "./DormInvoicePosPrintToolbar";
+import { useDormitoryApiFetch } from "@/systems/dormitory/lib/staff-api-fetch";
+import { DormInvoicePageClient } from "./DormInvoicePageClient";
 import { DormInvoicePrintStyles } from "./DormInvoicePrintStyles";
-import { DormInvoiceSheetContent } from "./DormInvoiceSheetContent";
+
+function subscribeToClient() {
+  return () => {};
+}
 
 export function DormRoomInvoiceSheetModal({
   paymentId,
@@ -25,6 +30,8 @@ export function DormRoomInvoiceSheetModal({
   onClose: () => void;
 }) {
   const titleId = useId();
+  const isClient = useSyncExternalStore(subscribeToClient, () => true, () => false);
+  const apiFetch = useDormitoryApiFetch();
   const [data, setData] = useState<DormInvoiceSheetDto | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,7 +73,7 @@ export function DormRoomInvoiceSheetModal({
     setLoading(true);
     setErr(null);
     setData(null);
-    fetch(`/api/dorm/payments/${paymentId}/invoice-sheet`)
+    apiFetch(`/api/dorm/payments/${paymentId}/invoice-sheet`)
       .then(async (r) => {
         const j = (await r.json().catch(() => ({}))) as { error?: string; sheet?: DormInvoiceSheetDto };
         if (!r.ok) throw new Error(j.error || "โหลดไม่สำเร็จ");
@@ -88,7 +95,7 @@ export function DormRoomInvoiceSheetModal({
     return () => {
       cancelled = true;
     };
-  }, [paymentId]);
+  }, [paymentId, apiFetch]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -106,33 +113,40 @@ export function DormRoomInvoiceSheetModal({
   const sheetProps = data
     ? {
         dormName: data.dormName,
-        logoUrl: data.logoUrl,
-        taxId: data.taxId,
-        address: data.address,
-        caretakerPhone: data.caretakerPhone,
+        logoUrl: data.logoUrl ?? null,
+        taxId: data.taxId ?? null,
+        address: data.address ?? null,
+        caretakerPhone: data.caretakerPhone ?? null,
         roomNumber: data.roomNumber,
         tenantName: data.tenantName,
         tenantPhone: data.tenantPhone,
         periodMonth: data.periodMonth,
         amount: data.amount,
-        paymentChannelsNote: data.paymentChannelsNote,
-        promptPayQrDataUrl: data.promptPayQrDataUrl,
-        slipUploadQrDataUrl: data.slipUploadQrDataUrl,
+        paymentChannelsNote: data.paymentChannelsNote ?? null,
+        promptPayQrDataUrl: data.promptPayQrDataUrl ?? null,
+        slipUploadQrDataUrl: data.slipUploadQrDataUrl ?? null,
       }
     : null;
 
-  return (
+  if (!isClient) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex flex-col bg-slate-900/55 p-2 backdrop-blur-[2px] sm:p-4"
+      className="fixed inset-0 z-[240] flex items-center justify-center p-3 sm:p-4"
       role="presentation"
     >
       <DormInvoicePrintStyles />
-      <div className="absolute inset-0" aria-hidden onClick={handleClose} />
+      <button
+        type="button"
+        className="absolute inset-0 bg-slate-900/55 backdrop-blur-sm"
+        aria-label="ปิดหน้าต่าง"
+        onClick={handleClose}
+      />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-[1] mx-auto flex max-h-[min(96vh,920px)] w-full max-w-[min(100%,220mm)] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200/80"
+        className="relative z-10 flex max-h-[min(92dvh,920px)] w-full max-w-[min(100%,220mm)] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200/80"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200/90 bg-slate-50/95 px-3 py-2.5 sm:px-4 sm:py-3">
@@ -178,37 +192,33 @@ export function DormRoomInvoiceSheetModal({
               </button>
             </div>
           ) : sheetProps ? (
-            <div className="space-y-4">
-              <DormInvoiceSheetContent {...sheetProps} printRootId="dorm-invoice-root" />
-
-              <div className="no-print app-surface rounded-2xl p-3 sm:p-4">
-                <p className="text-xs font-semibold text-[#2e2a58]">เครื่องมือใบแจ้งหนี้</p>
-                <p className="mt-1 text-[11px] text-[#66638c]">ส่วนนี้ไม่ถูกพิมพ์</p>
-                <div className="mt-3 flex flex-col gap-3">
-                  <DormInvoicePosPrintToolbar sheet={sheetProps} />
-                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                    <Link
-                      href={`/dashboard/dormitory/invoice/${paymentId}`}
-                      className={cn(
-                        dormBtnSecondary,
-                        "inline-flex w-full justify-center text-center sm:w-auto",
-                      )}
-                    >
-                      เปิดแบบเต็มหน้า
-                    </Link>
-                    <Link
-                      href={`/dashboard/dormitory/rooms/${roomId}`}
-                      className={cn(dormBtnSecondary, "inline-flex w-full justify-center sm:w-auto")}
-                    >
-                      กลับห้อง {roomNumber}
-                    </Link>
-                  </div>
+            <DormInvoicePageClient
+              sheet={sheetProps}
+              defaultPaperSize={data?.defaultPaperSize}
+              toolbarExtra={
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                  <Link
+                    href={`/dashboard/dormitory/invoice/${paymentId}`}
+                    className={cn(
+                      dormBtnSecondary,
+                      "inline-flex w-full justify-center text-center sm:w-auto",
+                    )}
+                  >
+                    เปิดแบบเต็มหน้า
+                  </Link>
+                  <Link
+                    href={`/dashboard/dormitory/rooms/${roomId}`}
+                    className={cn(dormBtnSecondary, "inline-flex w-full justify-center sm:w-auto")}
+                  >
+                    กลับห้อง {roomNumber}
+                  </Link>
                 </div>
-              </div>
-            </div>
+              }
+            />
           ) : null}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

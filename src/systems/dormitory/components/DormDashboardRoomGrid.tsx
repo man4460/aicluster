@@ -32,9 +32,14 @@ type FilterKey = "all" | "unpaid" | "paid";
 export function DormDashboardRoomGrid({
   rooms,
   staffMode = false,
+  roomHref,
+  onRoomClick,
 }: {
   rooms: RoomGridItem[];
+  /** @deprecated ใช้ roomHref / onRoomClick แทน */
   staffMode?: boolean;
+  roomHref?: (roomId: number) => string;
+  onRoomClick?: (roomId: number) => void;
 }) {
   const [filter, setFilter] = useState<FilterKey>("all");
 
@@ -99,11 +104,15 @@ export function DormDashboardRoomGrid({
             );
             return (
             <li key={r.id}>
-              {staffMode ? (
+              {onRoomClick ? (
+                <button type="button" className={`${tileClass} w-full text-left`} onClick={() => onRoomClick(r.id)}>
+                  {inner}
+                </button>
+              ) : staffMode && !roomHref ? (
                 <div className={tileClass}>{inner}</div>
               ) : (
               <Link
-                href={`/dashboard/dormitory/rooms/${r.id}`}
+                href={roomHref ? roomHref(r.id) : `/dashboard/dormitory/rooms/${r.id}`}
                 className={tileClass}
               >
                 {inner}

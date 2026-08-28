@@ -59,12 +59,25 @@ export default async function DormitoryReceiptPage({ params }: Props) {
     paidAtIso: payment.paidAt.toISOString(),
     receiptNumber: payment.receiptNumber,
     note: payment.note,
+    paymentMethod: payment.paymentMethod,
   };
 
   return (
     <DormReceiptPageClient
       data={printData}
       defaultPaperSize={dormRow?.defaultPaperSize ?? "SLIP_58"}
+      paymentSource={{
+        roomNumber: payment.bill.room.roomNumber,
+        tenantName: payment.tenant.name,
+        tenantPhone: payment.tenant.phone,
+        tenantIdCard: payment.tenant.idCard,
+        periodMonth,
+        amountBaht: Number(payment.amountToPay),
+        paidAtIso: payment.paidAt.toISOString(),
+        receiptNumber: payment.receiptNumber,
+        note: payment.note,
+        paymentMethod: payment.paymentMethod,
+      }}
     />
   );
 }

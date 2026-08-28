@@ -367,39 +367,41 @@ export function ModuleTryLinksAdmin({
                       const cover = resolveModuleCardDisplayImageUrl(row.slug, row.cardImageUrl);
                       return (
                         <li key={row.id}>
-                          <div className="group flex min-w-0 max-w-full items-start gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white">
-                            <ModuleThumb
-                              url={cover}
-                              fallback={<GroupIcon groupId={row.groupId} className="h-5 w-5" />}
-                            />
-                            <div className="min-w-0 flex-1">
+                          <div className="group flex min-w-0 max-w-full flex-col gap-2 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#0000BF]/25 hover:bg-white">
+                            <div className="flex items-start justify-between gap-2">
+                              <ModuleThumb
+                                url={cover}
+                                fallback={<GroupIcon groupId={row.groupId} className="h-5 w-5" />}
+                              />
+                              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                                <ModuleTryPromoVideosAdmin moduleSlug={row.slug} moduleTitle={row.title} />
+                                <button
+                                  type="button"
+                                  className={iconBtn}
+                                  aria-label={`คัดลอกลิงก์ทดลอง ${row.title}`}
+                                  title="คัดลอกลิงก์"
+                                  disabled={!base}
+                                  onClick={() => void onCopy(row)}
+                                >
+                                  <CopyIcon className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className={iconBtn}
+                                  aria-label={`แสดง QR ${row.title}`}
+                                  title="สร้าง QR"
+                                  disabled={!base}
+                                  onClick={() => setQrRow(row)}
+                                >
+                                  <QrIcon className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="min-w-0">
                               <p className="break-words text-sm font-black leading-snug text-[#1e1b4b]">{row.title}</p>
                               <p className="mt-0.5 break-words text-xs font-semibold leading-snug text-slate-500">
                                 {catalogLine(row.slug)}
                               </p>
-                            </div>
-                            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
-                              <ModuleTryPromoVideosAdmin moduleSlug={row.slug} moduleTitle={row.title} />
-                              <button
-                                type="button"
-                                className={iconBtn}
-                                aria-label={`คัดลอกลิงก์ทดลอง ${row.title}`}
-                                title="คัดลอกลิงก์"
-                                disabled={!base}
-                                onClick={() => void onCopy(row)}
-                              >
-                                <CopyIcon className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                className={iconBtn}
-                                aria-label={`แสดง QR ${row.title}`}
-                                title="สร้าง QR"
-                                disabled={!base}
-                                onClick={() => setQrRow(row)}
-                              >
-                                <QrIcon className="h-3.5 w-3.5" />
-                              </button>
                             </div>
                           </div>
                         </li>

@@ -3,15 +3,31 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { DormPaymentProofBlock } from "@/systems/dormitory/components/DormPaymentProofBlock";
+import { DormInvoiceSlipIconActions } from "@/systems/dormitory/components/DormInvoiceSlipIconActions";
+import {
+  DormReceivePaymentModal,
+  type DormReceivePaymentSource,
+} from "@/systems/dormitory/components/DormReceivePaymentModal";
+import {
+  DormMoveOutModal,
+  type DormMoveOutTenant,
+} from "@/systems/dormitory/components/DormMoveOutModal";
 import { DormCenteredModal } from "@/systems/dormitory/components/DormCenteredModal";
 import { DormRoomInvoiceSheetModal } from "@/systems/dormitory/components/DormRoomInvoiceSheetModal";
-import { DormReceiptPrintIconButton } from "@/systems/dormitory/components/DormReceiptPrintIconButton";
+import {
+  DormPaymentPrintModal,
+  type DormPaymentPrintSource,
+} from "@/systems/dormitory/components/DormPaymentPrintModal";
 import { AppEmptyState } from "@/components/app-templates";
 import type { DormReceiptBrand } from "@/systems/dormitory/lib/dorm-receipt-print";
 import { formatDormAmountStable, formatPeriodMonthLabelStable } from "@/lib/dormitory/format-display-stable";
 import { cn } from "@/lib/cn";
 import { dormFilterChipClass, dormSegmentShellClass } from "@/systems/dormitory/dorm-ui-tokens";
+import {
+  DORM_PAYMENT_METHODS,
+  dormPaymentMethodLabel,
+} from "@/systems/dormitory/lib/payment-method";
+import { useDormitoryApiFetch } from "@/systems/dormitory/lib/staff-api-fetch";
 import {
   rentPerTenant,
   utilityBillRoomTotal,
@@ -33,6 +49,13 @@ export type DormRoomDetailJson = {
     idCard: string;
     status: "ACTIVE" | "MOVED_OUT";
     checkInDate: string;
+    checkOutDate?: string | null;
+    bookingDepositBaht: number;
+    securityDepositBaht: number;
+    depositPaymentMethod?: string | null;
+    damageDeductionBaht?: number | null;
+    securityRefundBaht?: number | null;
+    moveOutNote?: string | null;
   }>;
   utilityBills: Array<{
     id: number;
@@ -62,6 +85,7 @@ export type DormRoomDetailJson = {
     paidAt: string;
     note: string | null;
     receiptNumber: string | null;
+    paymentMethod: string | null;
   }>;
 };
 
@@ -155,6 +179,7 @@ export function RoomDetailClient({
   initialBangkokYm,
   initialFocusSection = null,
   initialSection = null,
+  staffPortal,
 }: {
   room: DormRoomDetailJson;
   dormBrand: DormReceiptBrand;
@@ -164,18 +189,29 @@ export function RoomDetailClient({
   initialBangkokYm: string;
   initialFocusSection?: "meter" | "payment" | null;
   initialSection?: string | null;
+  staffPortal?: {
+    backHref: string;
+    hideDeleteRoom?: boolean;
+    onMutated?: () => void;
+  };
 }) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
+  const apiFetch = useDormitoryApiFetch();
+
+  function afterMutate() {
+    if (staffPortal?.onMutated) staffPortal.onMutated();
+    else router.refresh();
+  }
   const [tab, setTab] = useState<RoomDetailTab>(() =>
     resolveInitialRoomDetailTab(initialFocusSection, initialPayMonth, initialSection),
   );
 
   async function deleteRoom() {
     if (!confirm(`ลบห้อง ${room.roomNumber} และข้อมูลที่เกี่ยวข้องทั้งหมด?`)) return;
-    const res = await fetch(`/api/dorm/rooms/${room.id}`, { method: "DELETE" });
-    if (res.ok) router.push("/dashboard/dormitory/rooms");
+    const res = await apiFetch(`/api/dorm/rooms/${room.id}`, { method: "DELETE" });
+    if (res.ok) router.push(staffPortal?.backHref ?? "/dashboard/dormitory/rooms");
   }
 
   const [periodMonth, setPeriodMonth] = useState(initialBangkokYm);
@@ -359,7 +395,7 @@ export function RoomDetailClient({
       const fixedCosts = fixedRows
         .map((r) => ({ label: r.label.trim(), amount: finite(r.amount, 0) }))
         .filter((r) => r.label.length > 0);
-      const res = await fetch(`/api/dorm/rooms/${room.id}/bills`, {
+      const res = await apiFetch(`/api/dorm/rooms/${room.id}/bills`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -425,7 +461,7 @@ export function RoomDetailClient({
       const params = new URLSearchParams(searchParams.toString());
       params.set("section", "payment");
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-      router.refresh();
+      afterMutate();
     } catch (err) {
       setBillFeedback({
         ok: false,
@@ -442,8 +478,12 @@ export function RoomDetailClient({
   const [tPhone, setTPhone] = useState("");
   const [tIdCard, setTIdCard] = useState("");
   const [tCheckIn, setTCheckIn] = useState("");
+  const [tBookingDeposit, setTBookingDeposit] = useState("");
+  const [tSecurityDeposit, setTSecurityDeposit] = useState("");
+  const [tDepositMethod, setTDepositMethod] = useState<(typeof DORM_PAYMENT_METHODS)[number]>("CASH");
   const [tLoading, setTLoading] = useState(false);
   const [tErr, setTErr] = useState<string | null>(null);
+  const [moveOutTenant, setMoveOutTenant] = useState<DormMoveOutTenant | null>(null);
 
   async function addTenant(e: React.FormEvent) {
     e.preventDefault();
@@ -456,15 +496,29 @@ export function RoomDetailClient({
       setTErr("เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก");
       return;
     }
+    const bookingDepositBaht = tBookingDeposit.trim() === "" ? 0 : Number(tBookingDeposit);
+    const securityDepositBaht = tSecurityDeposit.trim() === "" ? 0 : Number(tSecurityDeposit);
+    if (!Number.isFinite(bookingDepositBaht) || bookingDepositBaht < 0) {
+      setTErr("มัดจำต้องเป็นตัวเลข ≥ 0");
+      return;
+    }
+    if (!Number.isFinite(securityDepositBaht) || securityDepositBaht < 0) {
+      setTErr("ประกันห้องต้องเป็นตัวเลข ≥ 0");
+      return;
+    }
     setTLoading(true);
     try {
-      const body: Record<string, string> = {
+      const body: Record<string, string | number | null> = {
         name: tName.trim(),
         phone: tPhone.trim(),
         idCard: tIdCard.trim(),
+        bookingDepositBaht,
+        securityDepositBaht,
+        depositPaymentMethod:
+          bookingDepositBaht > 0 || securityDepositBaht > 0 ? tDepositMethod : null,
       };
       if (tCheckIn.trim()) body.checkInDate = tCheckIn.trim();
-      const res = await fetch(`/api/dorm/rooms/${room.id}/tenants`, {
+      const res = await apiFetch(`/api/dorm/rooms/${room.id}/tenants`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -478,8 +532,11 @@ export function RoomDetailClient({
       setTPhone("");
       setTIdCard("");
       setTCheckIn("");
+      setTBookingDeposit("");
+      setTSecurityDeposit("");
+      setTDepositMethod("CASH");
       setTenantModalOpen(false);
-      router.refresh();
+      afterMutate();
     } finally {
       setTLoading(false);
     }
@@ -487,9 +544,7 @@ export function RoomDetailClient({
 
   const [payTenant, setPayTenant] = useState(activeTenants[0]?.id ?? "");
   const [payMonth, setPayMonth] = useState(() => initialPayMonth ?? initialBangkokYm);
-  const [payNote, setPayNote] = useState("");
-  const [payLoading, setPayLoading] = useState(false);
-  const [payErr, setPayErr] = useState<string | null>(null);
+  const [receivePaymentOpen, setReceivePaymentOpen] = useState(false);
 
   useEffect(() => {
     const first = activeTenants[0]?.id;
@@ -540,35 +595,31 @@ export function RoomDetailClient({
   const billButNoUnpaidRow =
     Boolean(billForPay && payTenant && !pendingForTenant && overdueRowForPay && overdueRowForPay.balance > 0.005);
 
-  async function recordPayment(e: React.FormEvent) {
-    e.preventDefault();
-    setPayErr(null);
-    if (!payTenant || !billForPay || !pendingForTenant) {
-      setPayErr("เลือกผู้เข้าพักและงวดที่มีบิลมิเตอร์แล้ว (และมียอดค้างชำระ)");
-      return;
-    }
-    setPayLoading(true);
-    try {
-      const res = await fetch("/api/dorm/payments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          billId: billForPay.id,
-          tenantId: Number(payTenant),
-          note: payNote.trim() || null,
-        }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        setPayErr(data.error ?? "บันทึกไม่สำเร็จ");
-        return;
-      }
-      setPayNote("");
-      router.refresh();
-    } finally {
-      setPayLoading(false);
-    }
-  }
+  const receivePaymentSource = useMemo((): DormReceivePaymentSource | null => {
+    if (!pendingForTenant || !billForPay || !payTenant) return null;
+    const tenant = activeTenants.find((t) => t.id === payTenant);
+    if (!tenant) return null;
+    return {
+      paymentId: pendingForTenant.id,
+      billId: billForPay.id,
+      tenantId: Number(payTenant),
+      tenantName: tenant.name,
+      tenantPhone: tenant.phone,
+      tenantIdCard: tenant.idCard,
+      roomNumber: room.roomNumber,
+      periodMonth: payMonth,
+      amountBaht: pendingForTenant.amountToPay,
+      proofSlipUrl: pendingForTenant.proofSlipUrl ?? null,
+    };
+  }, [activeTenants, billForPay, payMonth, payTenant, pendingForTenant, room.roomNumber]);
+
+  /** รายการชำระแล้วของงวด+ผู้พักที่เลือก — สำหรับปุ่มพิมพ์ใบเสร็จ/ใบกำกับบนการ์ด */
+  const paidForPaySelection = useMemo(() => {
+    if (!payTenant) return null;
+    return (
+      room.paidPayments.find((p) => p.tenantId === payTenant && p.periodMonth === payMonth) ?? null
+    );
+  }, [payMonth, payTenant, room.paidPayments]);
 
   function addFixedRow() {
     setFixedRows((r) => [...r, { label: "ค่าส่วนกลาง", amount: 0 }]);
@@ -585,6 +636,8 @@ export function RoomDetailClient({
   const [tenantModalOpen, setTenantModalOpen] = useState(false);
   const [meterModalOpen, setMeterModalOpen] = useState(false);
   const [invoiceSheetPaymentId, setInvoiceSheetPaymentId] = useState<number | null>(null);
+  const [paidPrintPayment, setPaidPrintPayment] = useState<DormPaymentPrintSource | null>(null);
+  const [paidPrintPreferTax, setPaidPrintPreferTax] = useState(false);
 
   function openMeterEditor(nextMonth?: string) {
     setBillFeedback(null);
@@ -641,6 +694,40 @@ export function RoomDetailClient({
           onClose={() => setInvoiceSheetPaymentId(null)}
         />
       ) : null}
+
+      <DormPaymentPrintModal
+        open={paidPrintPayment != null}
+        onClose={() => {
+          setPaidPrintPayment(null);
+          setPaidPrintPreferTax(false);
+        }}
+        defaultPaperSize={dormBrand.defaultPaperSize}
+        brand={{
+          dormTitle: dormBrand.dormTitle,
+          logoUrl: dormBrand.logoUrl,
+          taxId: dormBrand.taxId,
+          address: dormBrand.address,
+          caretakerPhone: dormBrand.caretakerPhone,
+        }}
+        payment={paidPrintPayment}
+        preferTaxInvoice={paidPrintPreferTax}
+      />
+
+      <DormReceivePaymentModal
+        open={receivePaymentOpen}
+        onClose={() => setReceivePaymentOpen(false)}
+        source={receivePaymentSource}
+        brand={dormBrand}
+        onSuccess={afterMutate}
+      />
+
+      <DormMoveOutModal
+        open={moveOutTenant != null}
+        onClose={() => setMoveOutTenant(null)}
+        tenant={moveOutTenant}
+        roomNumber={room.roomNumber}
+        onSuccess={afterMutate}
+      />
 
       <div className="space-y-4">
         <nav
@@ -726,7 +813,8 @@ export function RoomDetailClient({
                 <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {overviewBillingCards.map((row, index) => {
                     const resolvedPayment = resolveOverviewInvoicePayment(row, room.utilityBills);
-                    const invoicePayment = row.scope === "overdue" ? resolvedPayment : null;
+                    const invoicePayment =
+                      resolvedPayment && row.balance > 0.005 ? resolvedPayment : null;
                     const needsMeterFirst = row.scope === "current" || !row.billId;
                     return (
                     <li
@@ -758,10 +846,20 @@ export function RoomDetailClient({
                             <span className="font-mono text-slate-400">({row.month})</span>
                           </p>
                           {row.balance > 0.005 ? (
-                            <p className="mt-2 text-lg font-bold tabular-nums text-red-800">
-                              {formatDormAmountStable(row.balance, 2)}{" "}
-                              <span className="text-sm font-semibold">บาท</span>
-                            </p>
+                            <div className="mt-2 flex items-start justify-between gap-2">
+                              <p className="text-lg font-bold tabular-nums text-red-800">
+                                {formatDormAmountStable(row.balance, 2)}{" "}
+                                <span className="text-sm font-semibold">บาท</span>
+                              </p>
+                              {invoicePayment ? (
+                                <DormInvoiceSlipIconActions
+                                  paymentId={invoicePayment.paymentId}
+                                  defaultPaperSize={dormBrand.defaultPaperSize}
+                                  initialProofUrl={invoicePayment.proofSlipUrl}
+                                  onProofChanged={staffPortal ? afterMutate : undefined}
+                                />
+                              ) : null}
+                            </div>
                           ) : row.scope === "current" && !row.billId ? (
                             <p className="mt-2 text-sm font-medium text-sky-800">ยังไม่มีบิลมิเตอร์งวดนี้</p>
                           ) : null}
@@ -810,32 +908,17 @@ export function RoomDetailClient({
                               </div>
                             </>
                           ) : invoicePayment ? (
-                            <>
-                              <div className="flex flex-col gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => setInvoiceSheetPaymentId(invoicePayment.paymentId)}
-                                  className="inline-flex w-full items-center justify-center rounded-xl bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a3]"
-                                >
-                                  พิมพ์ใบแจ้งหนี้
-                                </button>
-                                <button
-                                  type="button"
-                                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-                                  onClick={() => {
-                                    setPayTenant(row.tenantId);
-                                    setPayMonth(row.month);
-                                    selectTab("payment");
-                                  }}
-                                >
-                                  ไปแถบชำระเงิน
-                                </button>
-                              </div>
-                              <DormPaymentProofBlock
-                                paymentId={invoicePayment.paymentId}
-                                initialUrl={invoicePayment.proofSlipUrl}
-                              />
-                            </>
+                            <button
+                              type="button"
+                              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                              onClick={() => {
+                                setPayTenant(row.tenantId);
+                                setPayMonth(row.month);
+                                selectTab("payment");
+                              }}
+                            >
+                              ไปแถบชำระเงิน
+                            </button>
                           ) : (
                             <p className="text-xs text-slate-500">
                               ไม่พบแถวชำระในงวดนี้ — ลองรีเฟรช หรือบันทึกมิเตอร์ใหม่
@@ -850,6 +933,7 @@ export function RoomDetailClient({
               </section>
             ) : null}
 
+            {staffPortal?.hideDeleteRoom ? null : (
             <div className="flex justify-end pt-1">
               <button
                 type="button"
@@ -859,6 +943,7 @@ export function RoomDetailClient({
                 ลบห้อง
               </button>
             </div>
+            )}
           </div>
         ) : null}
 
@@ -877,13 +962,27 @@ export function RoomDetailClient({
         </p>
         <ul className="mt-4 divide-y divide-slate-100 rounded-xl border border-slate-100">
           {room.tenants.map((t) => (
-            <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-3 text-sm">
-              <div>
+            <li key={t.id} className="flex flex-wrap items-start justify-between gap-2 px-3 py-3 text-sm">
+              <div className="min-w-0">
                 <span className="font-medium text-slate-900">{t.name}</span>
                 <span className="text-slate-500"> · {t.phone}</span>
                 <span className="text-slate-400"> · ปชช. {t.idCard}</span>
                 {t.status === "MOVED_OUT" ? (
                   <span className="ml-2 text-xs text-slate-400">(ย้ายออก)</span>
+                ) : null}
+                <p className="mt-1 text-[11px] font-semibold text-[#66638c]">
+                  มัดจำ {formatDormAmountStable(t.bookingDepositBaht ?? 0, 2)} · ประกัน{" "}
+                  {formatDormAmountStable(t.securityDepositBaht ?? 0, 2)} บาท
+                  {t.depositPaymentMethod
+                    ? ` · ${dormPaymentMethodLabel(t.depositPaymentMethod)}`
+                    : ""}
+                </p>
+                {t.status === "MOVED_OUT" ? (
+                  <p className="mt-0.5 text-[11px] font-semibold text-emerald-800">
+                    หักเสียหาย {formatDormAmountStable(t.damageDeductionBaht ?? 0, 2)} · คืนประกัน{" "}
+                    {formatDormAmountStable(t.securityRefundBaht ?? 0, 2)} บาท
+                    {t.checkOutDate ? ` · ออก ${t.checkOutDate}` : ""}
+                  </p>
                 ) : null}
               </div>
               <div className="flex gap-2">
@@ -891,14 +990,16 @@ export function RoomDetailClient({
                   <button
                     type="button"
                     className="text-xs font-medium text-slate-500 hover:text-slate-800"
-                    onClick={async () => {
-                      await fetch(`/api/dorm/tenants/${t.id}`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ status: "MOVED_OUT" }),
-                      });
-                      router.refresh();
-                    }}
+                    onClick={() =>
+                      setMoveOutTenant({
+                        id: t.id,
+                        name: t.name,
+                        bookingDepositBaht: t.bookingDepositBaht ?? 0,
+                        securityDepositBaht: t.securityDepositBaht ?? 0,
+                        depositPaymentMethod: t.depositPaymentMethod,
+                        checkInDate: t.checkInDate,
+                      })
+                    }
                   >
                     ย้ายออก
                   </button>
@@ -908,8 +1009,8 @@ export function RoomDetailClient({
                   className="text-xs font-medium text-red-600 hover:text-red-800"
                   onClick={async () => {
                     if (!confirm("ลบผู้เข้าพักนี้?")) return;
-                    await fetch(`/api/dorm/tenants/${t.id}`, { method: "DELETE" });
-                    router.refresh();
+                    await apiFetch(`/api/dorm/tenants/${t.id}`, { method: "DELETE" });
+                    afterMutate();
                   }}
                 >
                   ลบ
@@ -1113,14 +1214,14 @@ export function RoomDetailClient({
         className="overflow-hidden rounded-[1.25rem] border border-white/60 bg-white/40"
       >
         <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-5 py-4">
-          <h2 className="text-base font-semibold text-slate-900">บันทึกการชำระเงิน</h2>
+          <h2 className="text-base font-semibold text-slate-900">ชำระเงิน</h2>
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-500">
-            เลือกผู้เข้าพักและงวดที่บันทึกมิเตอร์แล้ว — พิมพ์ใบแจ้งหนี้ให้ผู้พักสแกนพร้อมเพย์และแนบสลิป จากนั้นตรวจสลิปแล้วกดรับชำระ
-            ถ้างวดนั้นยังไม่มีบิล ให้บันทึกมิเตอร์ที่แถบ «มิเตอร์» ก่อน แล้วยอดจะขึ้นที่นี่
+            เลือกผู้เข้าพักและงวด — พิมพ์ใบแจ้งหนี้ให้ผู้พักสแกนพร้อมเพย์ หรือกดรับชำระเมื่อมาจ่ายที่เคาน์เตอร์
+            หากผู้พักจ่ายผ่าน QR ในใบแจ้งหนี้และแนบสลิป ระบบบันทึกพร้อมเพย์อัตโนมัติ
           </p>
         </div>
 
-        <form onSubmit={recordPayment} className="space-y-6 p-5">
+        <div className="space-y-6 p-5">
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="space-y-2">
               <label htmlFor="pay-tenant" className="block text-xs font-semibold text-slate-700">
@@ -1154,63 +1255,11 @@ export function RoomDetailClient({
             </div>
           </div>
 
-          <div
-            className={
-              displayOutstanding != null
-                ? "rounded-2xl border-2 border-[#0000BF]/20 bg-[#0000BF]/[0.04] p-4 sm:p-5"
-                : "rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-4 sm:p-5"
-            }
-          >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                  {pendingForTenant ? "ยอด Split Bill (เรียกเก็บ)" : "ยอดค้างชำระ"}
-                </p>
-                {displayOutstanding != null ? (
-                  <>
-                    <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-red-800 sm:text-3xl">
-                      {formatDormAmountStable(displayOutstanding, 2)}{" "}
-                      <span className="text-base font-semibold text-red-800/85">บาท</span>
-                    </p>
-                    {pendingForTenant ? (
-                      <p className="mt-1 text-[11px] text-slate-600">
-                        ตรงกับใบแจ้งหนี้ / แนบสลิปในงวด {payMonth}
-                      </p>
-                    ) : overdueNoBillForPayMonth ? (
-                      <p className="mt-2 text-xs leading-relaxed text-amber-950">
-                        งวดนี้ยังไม่มีบิลมิเตอร์ — บันทึกมิเตอร์ / ค่าคงที่ก่อน (การ์ดค้างชำระหรือส่วนมิเตอร์)
-                        หลังมีบิลแล้วยอดด้านบนจะตรงกับ Split Bill และจะออกใบแจ้งหนี้ได้
-                      </p>
-                    ) : billButNoUnpaidRow ? (
-                      <p className="mt-2 text-xs leading-relaxed text-amber-900">
-                        มีบิลในงวดนี้แต่ไม่พบแถวชำระที่ยังค้างสำหรับผู้พักนี้ — ลองรีเฟรชหน้า หรือบันทึกมิเตอร์ใหม่ให้ครบผู้พัก ACTIVE
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-[11px] text-slate-600">
-                        ยอดตามการคำนวณค้างชำระ (สอดคล้องแดชบอร์ด)
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="mt-2 text-sm text-slate-500">
-                    ไม่มียอดค้างชำระในงวดนี้สำหรับผู้พักที่เลือก — หรือยังไม่มีบิลมิเตอร์ ให้บันทึกมิเตอร์ด้วยปุ่ม
-                    &quot;บันทึกมิเตอร์ / ค่าคงที่&quot; ก่อน
-                  </p>
-                )}
-              </div>
-              {displayOutstanding != null ? (
-                <span className="inline-flex w-fit shrink-0 items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-950 ring-1 ring-amber-200/80">
-                  ค้างชำระ
-                </span>
-              ) : null}
-            </div>
-          </div>
-
           {payMonthIsCurrent && !billForPay ? (
             <div className="rounded-2xl border border-sky-200/90 bg-sky-50/80 p-4 sm:p-5">
               <p className="text-sm font-semibold text-sky-950">งวดปัจจุบันยังไม่มีบิลมิเตอร์</p>
               <p className="mt-1 text-xs leading-relaxed text-sky-900/85">
-                บันทึกมิเตอร์และค่าคงที่ก่อน — หลังมีบิลแล้วจึงออกใบแจ้งหนี้และรับชำระได้ที่แถบนี้
+                บันทึกมิเตอร์และค่าคงที่ก่อน — หลังมีบิลแล้วจึงออกใบแจ้งหนี้และรับชำระได้
               </p>
               <button
                 type="button"
@@ -1227,57 +1276,149 @@ export function RoomDetailClient({
             </div>
           ) : null}
 
-          {pendingForTenant && billForPay ? (
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <p className="text-xs font-semibold text-slate-800">ใบแจ้งหนี้ &amp; QR พร้อมเพย์</p>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  ตั้งเบอร์พร้อมเพย์และช่องทางโอนได้ที่ &quot;ตั้งค่าหอพัก&quot;
+          <div
+            className={
+              displayOutstanding != null || paidForPaySelection
+                ? "rounded-2xl border-2 border-[#0000BF]/20 bg-[#0000BF]/[0.04] p-4 sm:p-5"
+                : "rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-4 sm:p-5"
+            }
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  {paidForPaySelection && !pendingForTenant
+                    ? "ชำระแล้ว"
+                    : pendingForTenant
+                      ? "ยอดเรียกเก็บ"
+                      : "ยอดค้างชำระ"}
                 </p>
+                {displayOutstanding != null ? (
+                  <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-red-800 sm:text-3xl">
+                    {formatDormAmountStable(displayOutstanding, 2)}{" "}
+                    <span className="text-base font-semibold text-red-800/85">บาท</span>
+                  </p>
+                ) : paidForPaySelection ? (
+                  <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-emerald-800 sm:text-3xl">
+                    {formatDormAmountStable(paidForPaySelection.amountToPay, 2)}{" "}
+                    <span className="text-base font-semibold text-emerald-800/85">บาท</span>
+                  </p>
+                ) : (
+                  <p className="mt-2 text-sm text-slate-500">
+                    ไม่มียอดค้างชำระในงวดนี้ — หรือยังไม่มีบิลมิเตอร์
+                  </p>
+                )}
+                {pendingForTenant?.proofSlipUrl ? (
+                  <p className="mt-2 text-[11px] font-semibold text-sky-700">
+                    มีสลิปจากผู้พัก — ตรวจแล้วกดรับชำระ หรือรอระบบบันทึกพร้อมเพย์อัตโนมัติจากลิงก์ใบแจ้งหนี้
+                  </p>
+                ) : null}
+                {overdueNoBillForPayMonth ? (
+                  <p className="mt-2 text-xs leading-relaxed text-amber-950">
+                    งวดนี้ยังไม่มีบิลมิเตอร์ — บันทึกมิเตอร์ก่อนจึงออกใบแจ้งหนี้ได้
+                  </p>
+                ) : billButNoUnpaidRow ? (
+                  <p className="mt-2 text-xs leading-relaxed text-amber-900">
+                    มีบิลแต่ไม่พบแถวค้างชำระ — ลองรีเฟรชหรือบันทึกมิเตอร์ใหม่
+                  </p>
+                ) : null}
+              </div>
+              {displayOutstanding != null || paidForPaySelection ? (
+                <span
+                  className={cn(
+                    "inline-flex shrink-0 items-center rounded-full px-3 py-1 text-xs font-bold ring-1",
+                    pendingForTenant
+                      ? "bg-amber-100 text-amber-950 ring-amber-200/80"
+                      : "bg-emerald-100 text-emerald-900 ring-emerald-200/80",
+                  )}
+                >
+                  {pendingForTenant ? "ค้างชำระ" : "ชำระแล้ว"}
+                </span>
+              ) : null}
+            </div>
+
+            {pendingForTenant && billForPay ? (
+              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#0000BF]/10 pt-4">
+                <p className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                  ใบแจ้งหนี้
+                </p>
+                <DormInvoiceSlipIconActions
+                  paymentId={pendingForTenant.id}
+                  defaultPaperSize={dormBrand.defaultPaperSize}
+                  initialProofUrl={pendingForTenant.proofSlipUrl ?? null}
+                  onProofChanged={afterMutate}
+                />
+              </div>
+            ) : null}
+
+            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#0000BF]/10 pt-4">
+              <p className="mr-1 w-full text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:w-auto">
+                รับชำระ / เอกสาร
+              </p>
+              {pendingForTenant ? (
                 <button
                   type="button"
-                  onClick={() => setInvoiceSheetPaymentId(pendingForTenant.id)}
-                  className="mt-3 inline-flex min-h-[44px] items-center rounded-xl bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a6]"
+                  disabled={!receivePaymentSource}
+                  className="inline-flex min-h-[40px] items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+                  onClick={() => setReceivePaymentOpen(true)}
                 >
-                  เปิดใบแจ้งหนี้ (พิมพ์ / ลิงก์แนบสลิป)
+                  รับชำระเงิน
                 </button>
-              </div>
-              <DormPaymentProofBlock
-                paymentId={pendingForTenant.id}
-                initialUrl={pendingForTenant.proofSlipUrl ?? null}
-              />
+              ) : null}
+              <button
+                type="button"
+                disabled={!paidForPaySelection}
+                title={paidForPaySelection ? "พิมพ์ใบเสร็จรับเงิน" : "ชำระแล้วจึงพิมพ์ใบเสร็จได้"}
+                aria-label="พิมพ์ใบเสร็จรับเงิน"
+                className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-[#4d47b6]/20 bg-[#ecebff] px-3 py-2 text-xs font-semibold text-[#4338ca] transition hover:bg-[#e0dcff] disabled:cursor-not-allowed disabled:opacity-45"
+                onClick={() => {
+                  if (!paidForPaySelection) return;
+                  const tenant = room.tenants.find((t) => t.id === paidForPaySelection.tenantId);
+                  setPaidPrintPreferTax(false);
+                  setPaidPrintPayment({
+                    roomNumber: room.roomNumber,
+                    tenantName: tenant?.name ?? "—",
+                    tenantPhone: tenant?.phone,
+                    tenantIdCard: tenant?.idCard,
+                    periodMonth: paidForPaySelection.periodMonth,
+                    amountBaht: paidForPaySelection.amountToPay,
+                    paidAtIso: paidForPaySelection.paidAt,
+                    receiptNumber: paidForPaySelection.receiptNumber,
+                    note: paidForPaySelection.note,
+                    paymentMethod: paidForPaySelection.paymentMethod,
+                  });
+                }}
+              >
+                พิมพ์ใบเสร็จ
+              </button>
+              <button
+                type="button"
+                disabled={!paidForPaySelection}
+                title={paidForPaySelection ? "พิมพ์ใบกำกับภาษี" : "ชำระแล้วจึงพิมพ์ใบกำกับได้"}
+                aria-label="พิมพ์ใบกำกับภาษี"
+                className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-[#4d47b6]/20 bg-[#ecebff] px-3 py-2 text-xs font-semibold text-[#4338ca] transition hover:bg-[#e0dcff] disabled:cursor-not-allowed disabled:opacity-45"
+                onClick={() => {
+                  if (!paidForPaySelection) return;
+                  const tenant = room.tenants.find((t) => t.id === paidForPaySelection.tenantId);
+                  setPaidPrintPreferTax(true);
+                  setPaidPrintPayment({
+                    roomNumber: room.roomNumber,
+                    tenantName: tenant?.name ?? "—",
+                    tenantPhone: tenant?.phone,
+                    tenantIdCard: tenant?.idCard,
+                    periodMonth: paidForPaySelection.periodMonth,
+                    amountBaht: paidForPaySelection.amountToPay,
+                    paidAtIso: paidForPaySelection.paidAt,
+                    receiptNumber: paidForPaySelection.receiptNumber,
+                    note: paidForPaySelection.note,
+                    paymentMethod: paidForPaySelection.paymentMethod,
+                  });
+                }}
+              >
+                ใบกำกับภาษี
+              </button>
             </div>
-          ) : null}
-
-          <div className="space-y-2">
-            <label htmlFor="pay-note" className="block text-xs font-semibold text-slate-700">
-              หมายเหตุ <span className="font-normal text-slate-400">(ไม่บังคับ)</span>
-            </label>
-            <input
-              id="pay-note"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[#0000BF]/40 focus:ring-2 focus:ring-[#0000BF]/15"
-              placeholder="เช่น โอนแล้ว, เงินสด"
-              value={payNote}
-              onChange={(e) => setPayNote(e.target.value)}
-            />
           </div>
-
-          <div className="flex flex-col gap-3 border-t border-slate-100 pt-2 sm:flex-row sm:items-center sm:justify-between">
-            <button
-              type="submit"
-              disabled={payLoading || activeTenants.length === 0 || !pendingForTenant}
-              className="order-2 w-full rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 sm:order-1 sm:w-auto sm:min-w-[180px]"
-            >
-              {payLoading ? "กำลังบันทึก…" : "บันทึกการชำระ"}
-            </button>
-            <p className="order-1 text-center text-[11px] text-slate-400 sm:order-2 sm:text-right">
-              แนะนำตรวจสลิปก่อนกดรับเงิน — หลังบันทึกจะออกใบเสร็จได้จากรายการด้านล่าง
-            </p>
-          </div>
-          {payErr ? (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-100">{payErr}</p>
-          ) : null}
-        </form>
+        </div>
 
         <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-5">
           <div className="mb-3 flex items-center justify-between gap-2">
@@ -1293,7 +1434,8 @@ export function RoomDetailClient({
           ) : (
             <ul className="space-y-2">
               {room.paidPayments.slice(0, 15).map((p) => {
-                const tn = room.tenants.find((t) => t.id === p.tenantId)?.name ?? "—";
+                const tenant = room.tenants.find((t) => t.id === p.tenantId);
+                const tn = tenant?.name ?? "—";
                 return (
                   <li
                     key={p.id}
@@ -1309,25 +1451,50 @@ export function RoomDetailClient({
                         {formatDormAmountStable(p.amountToPay, 2)}{" "}
                         <span className="text-sm font-semibold">บาท</span>
                       </p>
+                      {p.paymentMethod ? (
+                        <p className="mt-0.5 text-[11px] font-semibold text-[#66638c]">
+                          ช่องทาง: {dormPaymentMethodLabel(p.paymentMethod)}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2">
-                      <DormReceiptPrintIconButton
-                        defaultPaperSize={dormBrand.defaultPaperSize}
-                        data={{
-                          dormTitle: dormBrand.dormTitle,
-                          logoUrl: dormBrand.logoUrl,
-                          taxId: dormBrand.taxId,
-                          address: dormBrand.address,
-                          caretakerPhone: dormBrand.caretakerPhone,
-                          roomNumber: room.roomNumber,
-                          tenantName: tn,
-                          periodMonth: p.periodMonth,
-                          amountBaht: p.amountToPay,
-                          paidAtIso: p.paidAt,
-                          receiptNumber: p.receiptNumber,
-                          note: p.note,
-                        }}
-                      />
+                      <button
+                        type="button"
+                        className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-lg border border-[#4d47b6]/20 bg-[#ecebff] px-3 py-2 text-xs font-semibold text-[#4338ca] transition hover:bg-[#e0dcff] sm:min-w-0"
+                        aria-label={`พิมพ์เอกสาร ${tn}`}
+                        title="พิมพ์ใบเสร็จ / ใบกำกับภาษี"
+                        onClick={() =>
+                          setPaidPrintPayment({
+                            roomNumber: room.roomNumber,
+                            tenantName: tn,
+                            tenantPhone: tenant?.phone,
+                            tenantIdCard: tenant?.idCard,
+                            periodMonth: p.periodMonth,
+                            amountBaht: p.amountToPay,
+                            paidAtIso: p.paidAt,
+                            receiptNumber: p.receiptNumber,
+                            note: p.note,
+                            paymentMethod: p.paymentMethod,
+                          })
+                        }
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4 sm:mr-1.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.9}
+                          aria-hidden
+                        >
+                          <path
+                            d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path d="M6 14h12v8H6z" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <span className="hidden sm:inline">พิมพ์เอกสาร</span>
+                      </button>
                       <Link
                         href={`/dashboard/dormitory/receipt/${p.id}`}
                         target="_blank"
@@ -1390,6 +1557,56 @@ export function RoomDetailClient({
               onChange={(e) => setTCheckIn(e.target.value)}
             />
           </label>
+          <div className="rounded-2xl border border-[#4d47b6]/15 bg-[#ecebff]/40 p-3 space-y-3">
+            <p className="text-xs font-bold text-[#1e1b4b]">รับมัดจำ / ประกันห้อง (แรกเข้า)</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="text-xs font-medium text-slate-600">
+                ค่ามัดจำ (บาท)
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  inputMode="decimal"
+                  className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+                  placeholder="0"
+                  value={tBookingDeposit}
+                  onChange={(e) => setTBookingDeposit(e.target.value)}
+                />
+              </label>
+              <label className="text-xs font-medium text-slate-600">
+                ประกันห้อง (บาท)
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  inputMode="decimal"
+                  className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+                  placeholder="0"
+                  value={tSecurityDeposit}
+                  onChange={(e) => setTSecurityDeposit(e.target.value)}
+                />
+              </label>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-600">ช่องทางรับเงิน</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {DORM_PAYMENT_METHODS.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setTDepositMethod(m)}
+                    className={cn(
+                      "min-h-[36px] rounded-xl px-3 text-xs font-bold transition",
+                      dormFilterChipClass(tDepositMethod === m),
+                    )}
+                    aria-pressed={tDepositMethod === m}
+                  >
+                    {dormPaymentMethodLabel(m)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
             <button
               type="button"

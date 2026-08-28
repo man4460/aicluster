@@ -2,15 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useDormitoryApiFetch } from "@/systems/dormitory/lib/staff-api-fetch";
 
 export function DormPaymentProofBlock({
   paymentId,
   initialUrl,
+  onChanged,
 }: {
   paymentId: number;
   initialUrl: string | null;
+  onChanged?: () => void;
 }) {
   const router = useRouter();
+  const apiFetch = useDormitoryApiFetch();
   const [url, setUrl] = useState(initialUrl);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -24,14 +28,15 @@ export function DormPaymentProofBlock({
     try {
       const fd = new FormData();
       fd.set("file", f);
-      const res = await fetch(`/api/dorm/payments/${paymentId}/proof`, { method: "POST", body: fd });
+      const res = await apiFetch(`/api/dorm/payments/${paymentId}/proof`, { method: "POST", body: fd });
       const data = (await res.json().catch(() => ({}))) as { proofSlipUrl?: string; error?: string };
       if (!res.ok) {
         setErr(data.error ?? "อัปโหลดไม่สำเร็จ");
         return;
       }
       if (data.proofSlipUrl) setUrl(data.proofSlipUrl);
-      router.refresh();
+      if (onChanged) onChanged();
+      else router.refresh();
     } finally {
       setBusy(false);
     }
@@ -42,14 +47,15 @@ export function DormPaymentProofBlock({
     setErr(null);
     setBusy(true);
     try {
-      const res = await fetch(`/api/dorm/payments/${paymentId}/proof`, { method: "DELETE" });
+      const res = await apiFetch(`/api/dorm/payments/${paymentId}/proof`, { method: "DELETE" });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         setErr(data.error ?? "ลบไม่สำเร็จ");
         return;
       }
       setUrl(null);
-      router.refresh();
+      if (onChanged) onChanged();
+      else router.refresh();
     } finally {
       setBusy(false);
     }

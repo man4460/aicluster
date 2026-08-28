@@ -7,19 +7,11 @@ import {
   useAppSlipPaperSize,
 } from "@/components/app-templates";
 import { shopQrTemplateGridPrimaryButtonClass } from "@/components/qr/shop-qr-template";
-import { downloadDormInvoicePdfFromCleanHtml } from "@/systems/dormitory/dorm-invoice-pdf-capture";
-import {
-  buildDormInvoiceBillInnerHtml,
-  type DormInvoicePrintPayload,
-} from "@/systems/dormitory/dorm-invoice-print-html";
-import {
-  openPosTableBillPrintWindow,
-  type PosTablePaperSize,
-} from "@/systems/building-pos/pos-table-bill-print";
 import { safeDormInvoicePdfFileName } from "@/lib/dormitory/dorm-invoice-pdf-filename";
 import { cn } from "@/lib/cn";
-
-const DORM_A4_PAGE = { a4TightVerticalMargins: true as const };
+import { downloadDormInvoicePdfFromCleanHtml } from "@/systems/dormitory/dorm-invoice-pdf-capture";
+import type { DormInvoicePrintPayload } from "@/systems/dormitory/dorm-invoice-print-html";
+import { printDormInvoice } from "@/systems/dormitory/lib/dorm-invoice-print";
 
 export function DormInvoicePosPrintToolbar({
   sheet,
@@ -32,20 +24,12 @@ export function DormInvoicePosPrintToolbar({
 }) {
   const [pdfBusy, setPdfBusy] = useState(false);
   const { paper, setPaper } = useAppSlipPaperSize(defaultPaperSize);
-
-  const innerSlip = buildDormInvoiceBillInnerHtml(sheet, "slip");
-  const innerA4 = buildDormInvoiceBillInnerHtml(sheet, "a4Preview");
   const docTitle = `ใบแจ้งหนี้ ห้อง ${sheet.roomNumber}`;
 
-  const onPrint = useCallback(
-    (size: PosTablePaperSize) => {
-      const inner = size === "A4" ? innerA4 : innerSlip;
-      const pageOpts = size === "A4" ? DORM_A4_PAGE : undefined;
-      const ok = openPosTableBillPrintWindow(size, inner, docTitle, pageOpts);
-      if (!ok) window.alert("เปิดหน้าต่างพิมพ์ไม่ได้ — ลองอนุญาตป๊อปอัปหรือใช้ดาวน์โหลด PDF");
-    },
-    [innerSlip, innerA4, docTitle],
-  );
+  const onPrint = useCallback(() => {
+    const ok = printDormInvoice(sheet, paper);
+    if (!ok) window.alert("เปิดหน้าต่างพิมพ์ไม่ได้ — ลองอนุญาตป๊อปอัปหรือใช้ดาวน์โหลด PDF");
+  }, [sheet, paper]);
 
   const onPdf = useCallback(async () => {
     setPdfBusy(true);
@@ -70,7 +54,7 @@ export function DormInvoicePosPrintToolbar({
         sizes={["SLIP_58", "SLIP_80", "A4"]}
         aria-label="ขนาดกระดาษใบแจ้งหนี้"
       />
-      <button type="button" className={appTemplateOutlineButtonClass} onClick={() => onPrint(paper)}>
+      <button type="button" className={appTemplateOutlineButtonClass} onClick={onPrint}>
         พิมพ์
       </button>
       <button

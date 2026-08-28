@@ -20,8 +20,11 @@ export function useDormMobileBottomSlot() {
 
 export function DormMobileBottomProvider({
   children,
+  staffFooterNav,
 }: {
   children: ReactNode;
+  /** แถบเมนูพอร์ทัลพนักงาน (มือถือ) */
+  staffFooterNav?: ReactNode;
 }) {
   const [slot, setSlot] = useState<ReactNode | null>(null);
   const setMobileBottomSlot = useCallback((n: ReactNode | null) => {
@@ -32,17 +35,33 @@ export function DormMobileBottomProvider({
   return (
     <DormMobileBottomContext.Provider value={api}>
       {children}
-      <DormMobileUnifiedBar slot={slot} />
+      <DormMobileUnifiedBar slot={slot} staffFooterNav={staffFooterNav} />
     </DormMobileBottomContext.Provider>
   );
 }
 
 function DormMobileUnifiedBar({
   slot,
+  staffFooterNav,
 }: {
   slot: ReactNode | null;
+  staffFooterNav?: ReactNode;
 }) {
   const pathname = usePathname() ?? "";
+  const onStaffPortal = pathname.startsWith("/dorm/staff");
+
+  if (onStaffPortal) {
+    if (!staffFooterNav && !slot) return null;
+    return (
+      <AppMobileDockUnifiedBar
+        ariaLabel="เมนูพนักงานหอพัก"
+        slot={slot}
+        pillClassName={dormDockPillClass}
+      >
+        {staffFooterNav ?? <span className="sr-only">พนักงานหอพัก</span>}
+      </AppMobileDockUnifiedBar>
+    );
+  }
 
   if (!isDormitoryModulePath(pathname)) return null;
 

@@ -13,6 +13,7 @@ export async function resolveDormInvoiceBranding(
   caretakerPhone: string | null;
   promptPayPhone: string | null;
   paymentChannelsNote: string | null;
+  defaultPaperSize: string;
 }> {
   const [profile, business] = await Promise.all([
     prisma.dormitoryProfile.findUnique({
@@ -36,5 +37,6 @@ export async function resolveDormInvoiceBranding(
       profile?.caretakerPhone?.trim() || business?.contactPhone?.trim() || null,
     promptPayPhone: profile?.promptPayPhone ?? null,
     paymentChannelsNote: profile?.paymentChannelsNote ?? null,
+    defaultPaperSize: profile?.defaultPaperSize?.trim() || "SLIP_58",
   };
 }

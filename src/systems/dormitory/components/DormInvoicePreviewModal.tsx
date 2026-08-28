@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { shopQrTemplateGridPrimaryButtonClass } from "@/components/qr/shop-qr-template";
 import { safeDormInvoicePdfFileName } from "@/lib/dormitory/dorm-invoice-pdf-filename";
 import { cn } from "@/lib/cn";
@@ -9,12 +10,17 @@ import type { DormInvoicePrintPayload } from "@/systems/dormitory/dorm-invoice-p
 import { dormBtnSecondary } from "@/systems/dormitory/dorm-ui";
 import { DormInvoiceSheetContent, type DormInvoiceSheetContentProps } from "./DormInvoiceSheetContent";
 
+function subscribeToClient() {
+  return () => {};
+}
+
 type Props = Omit<DormInvoiceSheetContentProps, "printRootId" | "className">;
 
 export function DormInvoicePreviewModal(props: Props) {
   const [open, setOpen] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const titleId = useId();
+  const isClient = useSyncExternalStore(subscribeToClient, () => true, () => false);
 
   const onClose = useCallback(() => setOpen(false), []);
 
@@ -73,18 +79,21 @@ export function DormInvoicePreviewModal(props: Props) {
         พรีวิวใบแจ้งหนี้
       </button>
 
-      {open ? (
-        <div className="fixed inset-0 z-[100] flex flex-col bg-slate-900/55 p-3 backdrop-blur-[2px] sm:p-5" role="presentation">
-          <div
-            className="absolute inset-0"
-            aria-hidden
+      {open && isClient
+        ? createPortal(
+        <div className="fixed inset-0 z-[240] flex items-center justify-center p-3 sm:p-4" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/55 backdrop-blur-sm"
+            aria-label="ปิดหน้าต่าง"
             onClick={onClose}
           />
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className="relative z-[1] mx-auto flex max-h-[min(92vh,900px)] w-full max-w-[min(100%,220mm)] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200/80"
+            className="relative z-10 flex max-h-[min(92dvh,900px)] w-full max-w-[min(100%,220mm)] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200/80"
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200/90 bg-slate-50/95 px-3 py-2.5 sm:px-4 sm:py-3">
               <h2 id={titleId} className="text-sm font-bold text-slate-900 sm:text-base">
@@ -115,8 +124,10 @@ export function DormInvoicePreviewModal(props: Props) {
               </div>
             </div>
           </div>
-        </div>
-      ) : null}
+        </div>,
+        document.body,
+      )
+        : null}
     </>
   );
 }

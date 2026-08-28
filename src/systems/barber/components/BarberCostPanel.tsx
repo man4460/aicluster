@@ -169,6 +169,9 @@ export function BarberCostPanel({
   costPanelOps,
   formAriaIdPrefix = "barber-cost",
   renderWithoutOuterSection = false,
+  filterCategoryId = "all",
+  dateFrom,
+  dateTo,
 }: {
   baseUrl: string;
   categories: BarberCostCategory[];
@@ -186,6 +189,11 @@ export function BarberCostPanel({
   formAriaIdPrefix?: string;
   /** true = ให้ parent เป็นคนห่อการ์ดหลัก */
   renderWithoutOuterSection?: boolean;
+  /** กรองตามหมวดจาก parent (เช่น หน้าการเงินหอพัก) */
+  filterCategoryId?: number | "all";
+  /** กรองช่วงวันที่ปฏิทินไทย YYYY-MM-DD */
+  dateFrom?: string;
+  dateTo?: string;
 }) {
   const ops = costPanelOps ?? defaultBarberCostPanelOps;
   const recordExpenseHeadingId = `${formAriaIdPrefix}-record-expense-details-heading`;
@@ -220,10 +228,26 @@ export function BarberCostPanel({
 
   const lightbox = useAppImageLightbox();
 
-  const sortedEntries = useMemo(
-    () => [...entries].sort((a, b) => new Date(b.spent_at).getTime() - new Date(a.spent_at).getTime()),
-    [entries],
-  );
+  const sortedEntries = useMemo(() => {
+    let list = entries;
+    if (filterCategoryId !== "all") {
+      list = list.filter((e) => e.category_id === filterCategoryId);
+    }
+    if (dateFrom || dateTo) {
+      list = list.filter((e) => {
+        const day = new Date(e.spent_at).toLocaleString("en-CA", {
+          timeZone: "Asia/Bangkok",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        });
+        if (dateFrom && day < dateFrom) return false;
+        if (dateTo && day > dateTo) return false;
+        return true;
+      });
+    }
+    return [...list].sort((a, b) => new Date(b.spent_at).getTime() - new Date(a.spent_at).getTime());
+  }, [entries, filterCategoryId, dateFrom, dateTo]);
 
   const openManageCategories = useCallback(() => {
     setShowRecordExpenseModal(false);

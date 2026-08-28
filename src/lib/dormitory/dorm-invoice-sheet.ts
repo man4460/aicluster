@@ -23,6 +23,7 @@ export type DormInvoiceSheetDto = {
   promptPayQrDataUrl: string | null;
   slipUploadQrDataUrl: string | null;
   uploadPageAbs: string;
+  defaultPaperSize: string;
 };
 
 /** ข้อมูลใบแจ้งหนี้ + QR (เฉพาะรายการค้างชำระที่เป็นของเจ้าของล็อกอิน) */
@@ -79,5 +80,6 @@ export async function getDormInvoiceSheetDto(
     promptPayQrDataUrl,
     slipUploadQrDataUrl,
     uploadPageAbs,
+    defaultPaperSize: branding.defaultPaperSize,
   };
 }

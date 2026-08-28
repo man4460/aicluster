@@ -35,3 +35,31 @@ export const DORMITORY_PORTAL_SAMPLE_GALLERY = [
   `https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?${Q}&w=800&h=600`,
   `https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?${Q}&w=800&h=600`,
 ] as const;
+
+/** ตรวจว่า URL โหลดเป็นรูปได้ (client-side) */
+export function probePortalImageUrl(url: string): Promise<boolean> {
+  const s = url.trim();
+  if (!s) return Promise.resolve(false);
+  if (typeof window === "undefined") return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const img = new Image();
+    const done = (ok: boolean) => {
+      img.onload = null;
+      img.onerror = null;
+      resolve(ok);
+    };
+    img.onload = () => done(true);
+    img.onerror = () => done(false);
+    img.referrerPolicy = "no-referrer";
+    img.src = s;
+  });
+}
+
+/** คัดเฉพาะ URL ที่โหลดได้ — ใช้ก่อนแสดงบนเว็บลูกค้า */
+export async function filterLoadablePortalGalleryUrls(urls: string[]): Promise<string[]> {
+  const out: string[] = [];
+  for (const url of urls) {
+    if (await probePortalImageUrl(url)) out.push(url);
+  }
+  return out;
+}

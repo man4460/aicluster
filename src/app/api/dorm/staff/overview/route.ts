@@ -44,6 +44,26 @@ export async function GET(req: Request) {
     };
   });
 
+  const manageRows = rooms.map((r) => ({
+    id: r.id,
+    roomNumber: r.roomNumber,
+    floor: r.floor,
+    roomType: r.roomType,
+    basePrice: Number(r.basePrice),
+    maxOccupants: r.maxOccupants,
+    activeTenants: r.tenants.filter((t) => t.status === "ACTIVE").length,
+    billingStatus: roomBillingUiStatus(buildRoomComputeInput(r)),
+  }));
+
+  const overdueRows = overdue.map((row) => ({
+    roomId: String(row.roomId),
+    roomNumber: row.roomNumber,
+    tenantId: String(row.tenantId),
+    tenantName: row.tenantName,
+    month: row.month,
+    balance: row.balance,
+  }));
+
   return NextResponse.json({
     stats: {
       roomCount: rooms.length,
@@ -53,5 +73,7 @@ export async function GET(req: Request) {
       overdueTotalBaht: overdue.reduce((s, o) => s + o.balance, 0),
     },
     rooms: roomsForGrid,
+    manageRows,
+    overdueRows,
   });
 }

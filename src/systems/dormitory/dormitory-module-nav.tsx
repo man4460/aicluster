@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 export const DORMITORY_BASE = "/dashboard/dormitory";
 export const DORMITORY_SETTINGS_HREF = `${DORMITORY_BASE}/settings`;
+/** @deprecated ใช้ DORMITORY_SETTINGS_HREF?tab=portal */
 export const DORMITORY_GUEST_PORTAL_HREF = `${DORMITORY_BASE}/guest-portal`;
 export const DORMITORY_ROOMS_HREF = `${DORMITORY_BASE}/rooms`;
 export const DORMITORY_FINANCE_HREF = `${DORMITORY_BASE}/finance`;
@@ -15,7 +16,7 @@ export const DORMITORY_MODULE_DISPLAY_NAME = "หอพัก";
 export const DORMITORY_HEADER_COLLAPSE_KEY = "mawell-dormitory-module-header-collapsed";
 export const DORMITORY_HEADER_COLLAPSE_EVENT = "mawell-dormitory-header-collapse";
 
-export type DormitoryNavKey = "dashboard" | "rooms" | "finance" | "guest" | "settings";
+export type DormitoryNavKey = "dashboard" | "rooms" | "finance" | "settings";
 
 export type DormitoryNavItem = {
   key: DormitoryNavKey;
@@ -28,7 +29,6 @@ export const DORMITORY_NAV_ITEMS: DormitoryNavItem[] = [
   { key: "dashboard", href: DORMITORY_BASE, label: "แดชบอร์ด", shortLabel: "ภาพรวม" },
   { key: "rooms", href: DORMITORY_ROOMS_HREF, label: "การจัดการ", shortLabel: "จัดการ" },
   { key: "finance", href: DORMITORY_FINANCE_HREF, label: "การเงิน", shortLabel: "การเงิน" },
-  { key: "guest", href: DORMITORY_GUEST_PORTAL_HREF, label: "ลิงก์", shortLabel: "ลิงก์" },
   { key: "settings", href: DORMITORY_SETTINGS_HREF, label: "ตั้งค่า", shortLabel: "ตั้งค่า" },
 ];
 
@@ -48,10 +48,8 @@ export function dormitoryPathFlags(pathname: string) {
     pathNorm.startsWith(`${DORMITORY_HISTORY_HREF}/`) ||
     pathNorm === DORMITORY_COSTS_HREF ||
     pathNorm.startsWith(`${DORMITORY_COSTS_HREF}/`);
-  const isGuest =
-    pathNorm === DORMITORY_GUEST_PORTAL_HREF || pathNorm.startsWith(`${DORMITORY_GUEST_PORTAL_HREF}/`);
-  const isDashboard = onModule && !isSettings && !isRooms && !isFinance && !isGuest;
-  return { onModule, isDashboard, isRooms, isFinance, isGuest, isSettings };
+  const isDashboard = onModule && !isSettings && !isRooms && !isFinance;
+  return { onModule, isDashboard, isRooms, isFinance, isSettings };
 }
 
 export function isDormitoryNavItemActive(pathname: string, key: DormitoryNavKey): boolean {
@@ -63,8 +61,6 @@ export function isDormitoryNavItemActive(pathname: string, key: DormitoryNavKey)
       return f.isRooms;
     case "finance":
       return f.isFinance;
-    case "guest":
-      return f.isGuest;
     case "settings":
       return f.isSettings;
     default:
@@ -90,13 +86,6 @@ export function dormitoryNavIcon(key: DormitoryNavKey): ReactNode {
       );
     case "finance":
       return <path d="M4 18h16M7 14l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />;
-    case "guest":
-      return (
-        <>
-          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" strokeLinecap="round" />
-          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" strokeLinecap="round" />
-        </>
-      );
     case "settings":
       return (
         <g>

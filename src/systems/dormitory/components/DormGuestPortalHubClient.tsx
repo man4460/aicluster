@@ -32,6 +32,7 @@ export function DormGuestPortalHubClient({
   initialContactLine = "",
   initialFacebookUrl = "",
   initialMapUrl = "",
+  embedded = false,
 }: {
   ownerId: string;
   trialSessionId: string;
@@ -45,6 +46,8 @@ export function DormGuestPortalHubClient({
   initialContactLine?: string;
   initialFacebookUrl?: string;
   initialMapUrl?: string;
+  /** ฝังในแท็บตั้งค่า — แสดงเฉพาะ QR (สื่ออยู่ในแบบฟอร์มหลัก) */
+  embedded?: boolean;
 }) {
   const [modal, setModal] = useState<"qr" | "staff" | null>(null);
   const [form, setForm] = useState({
@@ -168,6 +171,7 @@ export function DormGuestPortalHubClient({
         />
       </FormModal>
 
+      {!embedded ? (
       <div className="rounded-[2rem] border border-white/60 bg-white/55 p-4 backdrop-blur-sm sm:p-5">
         <h3 className="text-base font-black text-[#1e1b4b]">สื่อบนเว็บลูกค้า</h3>
         <p className="mt-1 text-xs font-semibold text-[#66638c]">แบนเนอร์ · แกลเลอรี · ติดต่อ</p>
@@ -199,6 +203,7 @@ export function DormGuestPortalHubClient({
           {busy ? "กำลังบันทึก…" : "บันทึกสื่อเว็บลูกค้า"}
         </button>
       </div>
+      ) : null}
     </div>
   );
 }

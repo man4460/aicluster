@@ -24,7 +24,15 @@ function monthTabClass(active: boolean) {
   );
 }
 
-function OverdueRowList({ rows }: { rows: DormOverdueDashboardRow[] }) {
+function OverdueRowList({
+  rows,
+  roomDetailHref,
+  onRoomAction,
+}: {
+  rows: DormOverdueDashboardRow[];
+  roomDetailHref?: (roomId: string, month: string) => string;
+  onRoomAction?: (roomId: string, month: string) => void;
+}) {
   if (rows.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-amber-200/80 bg-amber-50/40 px-4 py-8 text-center text-sm font-medium text-amber-900/80">
@@ -49,8 +57,24 @@ function OverdueRowList({ rows }: { rows: DormOverdueDashboardRow[] }) {
                 {row.balance.toLocaleString("th-TH", { maximumFractionDigits: 2 })}
               </p>
             </div>
+            {onRoomAction ? (
+              <button
+                type="button"
+                onClick={() => onRoomAction(row.roomId, row.month)}
+                className="mt-2 inline-flex min-h-[40px] w-full items-center justify-center gap-1.5 rounded-xl bg-[#5b61ff] py-2 text-center text-xs font-bold text-white shadow-sm active:scale-[0.99]"
+              >
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                  <path d="M5 12h14M13 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                ดำเนินการ
+              </button>
+            ) : (
             <Link
-              href={`/dashboard/dormitory/rooms/${row.roomId}?month=${encodeURIComponent(row.month)}`}
+              href={
+                roomDetailHref
+                  ? roomDetailHref(row.roomId, row.month)
+                  : `/dashboard/dormitory/rooms/${row.roomId}?month=${encodeURIComponent(row.month)}`
+              }
               className="mt-2 inline-flex min-h-[40px] w-full items-center justify-center gap-1.5 rounded-xl bg-[#5b61ff] py-2 text-center text-xs font-bold text-white shadow-sm active:scale-[0.99]"
             >
               <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
@@ -58,6 +82,7 @@ function OverdueRowList({ rows }: { rows: DormOverdueDashboardRow[] }) {
               </svg>
               ดำเนินการ
             </Link>
+            )}
           </li>
         ))}
       </ul>
@@ -80,8 +105,24 @@ function OverdueRowList({ rows }: { rows: DormOverdueDashboardRow[] }) {
                   {row.balance.toLocaleString("th-TH", { maximumFractionDigits: 2 })}
                 </td>
                 <td className="px-3 py-2">
+                  {onRoomAction ? (
+                    <button
+                      type="button"
+                      onClick={() => onRoomAction(row.roomId, row.month)}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#0000BF]/10 px-2.5 py-1.5 text-xs font-bold text-[#0000BF] hover:bg-[#0000BF]/15"
+                    >
+                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                        <path d="M5 12h14M13 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      ดำเนินการ
+                    </button>
+                  ) : (
                   <Link
-                    href={`/dashboard/dormitory/rooms/${row.roomId}?month=${encodeURIComponent(row.month)}`}
+                    href={
+                      roomDetailHref
+                        ? roomDetailHref(row.roomId, row.month)
+                        : `/dashboard/dormitory/rooms/${row.roomId}?month=${encodeURIComponent(row.month)}`
+                    }
                     className="inline-flex items-center gap-1.5 rounded-lg bg-[#0000BF]/10 px-2.5 py-1.5 text-xs font-bold text-[#0000BF] hover:bg-[#0000BF]/15"
                   >
                     <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
@@ -89,6 +130,7 @@ function OverdueRowList({ rows }: { rows: DormOverdueDashboardRow[] }) {
                     </svg>
                     ดำเนินการ
                   </Link>
+                  )}
                 </td>
               </tr>
             ))}
@@ -99,7 +141,17 @@ function OverdueRowList({ rows }: { rows: DormOverdueDashboardRow[] }) {
   );
 }
 
-export function DormOverdueDashboardPanel({ rows }: { rows: DormOverdueDashboardRow[] }) {
+export function DormOverdueDashboardPanel({
+  rows,
+  roomDetailHref,
+  onRoomAction,
+  hideFinanceLink = false,
+}: {
+  rows: DormOverdueDashboardRow[];
+  roomDetailHref?: (roomId: string, month: string) => string;
+  onRoomAction?: (roomId: string, month: string) => void;
+  hideFinanceLink?: boolean;
+}) {
   const months = useMemo(() => {
     const set = new Set(rows.map((r) => r.month));
     return [...set].sort((a, b) => a.localeCompare(b));
@@ -186,9 +238,10 @@ export function DormOverdueDashboardPanel({ rows }: { rows: DormOverdueDashboard
       </div>
 
       <div role="tabpanel" id={panelId(selectedMonth)} aria-labelledby={tabId(selectedMonth)}>
-        <OverdueRowList rows={filteredRows} />
+        <OverdueRowList rows={filteredRows} roomDetailHref={roomDetailHref} onRoomAction={onRoomAction} />
       </div>
 
+      {hideFinanceLink ? null : (
       <div className="flex justify-end pt-1">
         <Link href={DORMITORY_FINANCE_HREF} className={cn(dormBtnSecondary, "inline-flex gap-1.5")}>
           <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
@@ -198,6 +251,7 @@ export function DormOverdueDashboardPanel({ rows }: { rows: DormOverdueDashboard
           ดูประวัติทั้งหมด
         </Link>
       </div>
+      )}
     </div>
   );
 }

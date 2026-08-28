@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AppImageLightbox,
-  AppImageThumb,
   AppPublicCheckInGlassPage,
   appPublicCheckInGlassCardClass,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { DormPortalRemoteImage } from "@/systems/dormitory/components/DormPortalRemoteImage";
+import {
+  DORMITORY_PORTAL_SAMPLE_BANNER,
+  filterLoadablePortalGalleryUrls,
+} from "@/systems/dormitory/lib/portal-media";
 
 type PortalInfo = {
   dormLabel: string;
@@ -33,6 +37,9 @@ type PortalInfo = {
   }[];
 };
 
+const portalNavLinkClass =
+  "rounded-full px-3 py-1.5 text-xs font-black text-white/95 transition hover:bg-white/15";
+
 export function DormPortalClient({
   ownerId,
   trialSessionId,
@@ -43,6 +50,8 @@ export function DormPortalClient({
   const [busy, setBusy] = useState(true);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [info, setInfo] = useState<PortalInfo | null>(null);
+  const [galleryReady, setGalleryReady] = useState<string[]>([]);
+  const [bannerSrc, setBannerSrc] = useState(DORMITORY_PORTAL_SAMPLE_BANNER);
   const lb = useAppImageLightbox();
 
   useEffect(() => {
@@ -53,10 +62,32 @@ export function DormPortalClient({
         const j = (await r.json().catch(() => ({}))) as PortalInfo & { error?: string };
         if (!r.ok) throw new Error(j.error ?? "โหลดไม่สำเร็จ");
         setInfo(j);
+        setBannerSrc(j.portalBannerUrl?.trim() || DORMITORY_PORTAL_SAMPLE_BANNER);
       })
       .catch((e) => setLoadErr(e instanceof Error ? e.message : "โหลดไม่สำเร็จ"))
       .finally(() => setBusy(false));
   }, [ownerId, trialSessionId]);
+
+  useEffect(() => {
+    if (!info?.portalGallery?.length) {
+      setGalleryReady([]);
+      return;
+    }
+    let cancelled = false;
+    void filterLoadablePortalGalleryUrls(info.portalGallery).then((urls) => {
+      if (!cancelled) setGalleryReady(urls);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [info?.portalGallery]);
+
+  const vacantRooms = useMemo(
+    () => (info?.rooms ?? []).filter((r) => r.vacant),
+    [info?.rooms],
+  );
+  const tel = info?.caretakerPhone?.replace(/\D/g, "") ?? "";
+  const showGalleryNav = galleryReady.length > 0;
 
   if (busy) {
     return (
@@ -78,36 +109,59 @@ export function DormPortalClient({
     );
   }
 
-  const vacantRooms = info.rooms.filter((r) => r.vacant);
-  const tel = info.caretakerPhone?.replace(/\D/g, "") ?? "";
-
   return (
     <AppPublicCheckInGlassPage className="!px-0 !pt-0">
+      <header className="absolute inset-x-0 top-0 z-30">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            {info.logoUrl ? (
+              <DormPortalRemoteImage
+                src={info.logoUrl}
+                alt=""
+                className="h-10 w-10 rounded-full object-cover ring-2 ring-white/70 shadow-md"
+              />
+            ) : null}
+            <p className="truncate text-sm font-black tracking-tight text-white drop-shadow sm:text-base">
+              {info.dormLabel}
+            </p>
+          </div>
+          <nav
+            className="hidden items-center gap-1 rounded-full border border-white/40 bg-white/20 px-1 py-1 backdrop-blur-xl md:flex"
+            aria-label="เมนู"
+          >
+            <a href="#rooms" className={portalNavLinkClass}>
+              ห้องว่าง
+            </a>
+            {showGalleryNav ? (
+              <a href="#gallery" className={portalNavLinkClass}>
+                ภาพหอพัก
+              </a>
+            ) : null}
+            <a href="#contact" className={portalNavLinkClass}>
+              ติดต่อ
+            </a>
+          </nav>
+        </div>
+      </header>
+
       <div className="relative min-h-[72vh] sm:min-h-[80vh]">
         <button
           type="button"
           className="absolute inset-0"
           aria-label="ดูแบนเนอร์"
-          onClick={() => lb.open(info.portalBannerUrl)}
+          onClick={() => lb.open(bannerSrc)}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={info.portalBannerUrl}
+          <DormPortalRemoteImage
+            src={bannerSrc}
             alt=""
             className="h-full w-full object-cover object-center"
+            loading="eager"
+            onFailed={() => setBannerSrc(DORMITORY_PORTAL_SAMPLE_BANNER)}
           />
         </button>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#1e1b4b]/25 via-[#1e1b4b]/5 to-[#faf9ff]/90" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#faf9ff]" />
         <div className="relative mx-auto flex min-h-[72vh] max-w-6xl flex-col justify-end px-4 pb-10 pt-24 sm:min-h-[80vh] sm:px-6">
-          {info.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={info.logoUrl}
-              alt=""
-              className="absolute left-4 top-4 h-10 w-10 rounded-full object-cover ring-2 ring-white/70 shadow-md sm:left-6"
-            />
-          ) : null}
           <p className="text-xs font-black uppercase tracking-[0.14em] text-white/90">หอพัก</p>
           <h1 className="mt-2 text-4xl font-black tracking-tight text-white drop-shadow sm:text-5xl md:text-6xl">
             {info.dormLabel}
@@ -119,7 +173,7 @@ export function DormPortalClient({
       </div>
 
       <main className="mx-auto max-w-6xl space-y-12 px-4 pb-16 pt-8 sm:px-6">
-        <section id="rooms" className={cn(appPublicCheckInGlassCardClass, "p-4 sm:p-6")}>
+        <section id="rooms" className={cn(appPublicCheckInGlassCardClass, "scroll-mt-8 p-4 sm:p-6")}>
           <h2 className="text-lg font-black text-[#1e1b4b]">ห้องว่าง</h2>
           {vacantRooms.length === 0 ? (
             <p className="mt-4 text-sm font-semibold text-[#66638c]">ขณะนี้ไม่มีห้องว่าง</p>
@@ -143,24 +197,31 @@ export function DormPortalClient({
           )}
         </section>
 
-        {info.portalGallery.length > 0 ? (
-          <section id="gallery" className={cn(appPublicCheckInGlassCardClass, "p-4 sm:p-6")}>
+        {galleryReady.length > 0 ? (
+          <section id="gallery" className={cn(appPublicCheckInGlassCardClass, "scroll-mt-8 p-4 sm:p-6")}>
             <h2 className="text-lg font-black text-[#1e1b4b]">ภาพหอพัก</h2>
-            <div className="mt-4 grid grid-cols-3 gap-2 lg:grid-cols-6">
-              {info.portalGallery.map((url) => (
-                <AppImageThumb
-                  key={url}
-                  src={url}
-                  alt="ภาพหอพัก"
-                  className="aspect-square h-auto w-full"
-                  onOpen={() => lb.open(url)}
-                />
+            <ul className="mt-4 grid grid-cols-3 gap-2 lg:grid-cols-6">
+              {galleryReady.map((url, idx) => (
+                <li key={`${url}-${idx}`}>
+                  <button
+                    type="button"
+                    onClick={() => lb.openGallery(galleryReady, idx)}
+                    className="block w-full overflow-hidden rounded-[1.25rem] border border-white/60 shadow-sm ring-1 ring-inset ring-white/60"
+                    aria-label={`ภาพหอพัก ${idx + 1}`}
+                  >
+                    <DormPortalRemoteImage
+                      src={url}
+                      alt=""
+                      className="aspect-square w-full object-cover object-center"
+                    />
+                  </button>
+                </li>
               ))}
-            </div>
+            </ul>
           </section>
         ) : null}
 
-        <section id="contact" className={cn(appPublicCheckInGlassCardClass, "p-4 sm:p-6")}>
+        <section id="contact" className={cn(appPublicCheckInGlassCardClass, "scroll-mt-8 p-4 sm:p-6")}>
           <h2 className="text-lg font-black text-[#1e1b4b]">ติดต่อ</h2>
           <div className="mt-4 space-y-2 text-sm font-semibold text-[#66638c]">
             {info.address ? <p>{info.address}</p> : null}
@@ -179,12 +240,22 @@ export function DormPortalClient({
               </p>
             ) : null}
             {info.facebookUrl ? (
-              <a href={info.facebookUrl} target="_blank" rel="noopener noreferrer" className="inline-block font-black text-[#4d47b6] underline-offset-2 hover:underline">
+              <a
+                href={info.facebookUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block font-black text-[#4d47b6] underline-offset-2 hover:underline"
+              >
                 Facebook
               </a>
             ) : null}
             {info.mapUrl ? (
-              <a href={info.mapUrl} target="_blank" rel="noopener noreferrer" className="inline-block font-black text-[#4d47b6] underline-offset-2 hover:underline">
+              <a
+                href={info.mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block font-black text-[#4d47b6] underline-offset-2 hover:underline"
+              >
                 แผนที่
               </a>
             ) : null}
@@ -200,7 +271,13 @@ export function DormPortalClient({
         </section>
       </main>
 
-      <AppImageLightbox src={lb.src} onClose={lb.close} alt="ภาพหอพัก" />
+      <AppImageLightbox
+        src={lb.src}
+        sources={lb.sources}
+        initialIndex={lb.initialIndex}
+        onClose={lb.close}
+        alt="ภาพหอพัก"
+      />
     </AppPublicCheckInGlassPage>
   );
 }

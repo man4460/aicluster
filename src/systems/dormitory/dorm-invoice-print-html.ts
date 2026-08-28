@@ -1,6 +1,7 @@
 /** HTML ภายในสำหรับ window.print แบบ POS (58 / 80 / A4) — ใบแจ้งหนี้หอพัก */
 
 import { formatDormAmountStable } from "@/lib/dormitory/format-display-stable";
+import { resolveAppSlipPaperSize, type AppSlipPaperSize } from "@/components/app-templates/slip-print";
 
 export type DormInvoicePrintPayload = {
   dormName: string;
@@ -32,7 +33,10 @@ function escapeHtml(s: string): string {
 export function buildDormInvoiceBillInnerHtml(
   p: DormInvoicePrintPayload,
   layout: DormInvoicePrintLayout = "slip",
+  paper?: AppSlipPaperSize | string | null,
 ): string {
+  const resolvedPaper = resolveAppSlipPaperSize(paper);
+  const slipCentered = layout === "slip" && resolvedPaper === "SLIP_58";
   const amt = formatDormAmountStable(p.amount, 2);
 
   const logoImg = p.logoUrl?.trim()
@@ -71,7 +75,16 @@ ${p.caretakerPhone?.trim() ? `<p style="margin:0;">ติดต่อ ${escapeHt
 
   const headerBlock = layout === "a4Preview" ? headerPreview : `${logoBlockSlip}${shopBlockSlip}${metaTopSlip}`;
 
-  const tenantBlockSlip = `
+  const tenantBlockSlip = slipCentered
+    ? `
+<section style="margin-top:10px;text-align:center;">
+<h2 style="margin:0 0 6px;font-size:0.85em;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;">ข้อมูลผู้พัก</h2>
+<p style="margin:2px 0;font-size:0.95em;"><span style="color:#64748b;">ห้อง</span> <strong>${escapeHtml(p.roomNumber)}</strong></p>
+<p style="margin:2px 0;font-size:0.95em;"><span style="color:#64748b;">ผู้พัก</span> <strong>${escapeHtml(p.tenantName)}</strong></p>
+<p style="margin:2px 0;font-size:0.95em;"><span style="color:#64748b;">เบอร์</span> ${escapeHtml(p.tenantPhone)}</p>
+<p style="margin:2px 0;font-size:0.95em;font-family:ui-monospace,monospace;"><span style="color:#64748b;">งวด</span> <strong>${escapeHtml(p.periodMonth)}</strong></p>
+</section>`
+    : `
 <section style="margin-top:10px;">
 <h2 style="margin:0 0 6px;font-size:0.85em;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;">ข้อมูลผู้พัก</h2>
 <table style="width:100%;font-size:0.95em;border-collapse:collapse;">
@@ -134,7 +147,11 @@ ${p.caretakerPhone?.trim() ? `<p style="margin:0;">ติดต่อ ${escapeHt
 </section>`
     : `<p style="margin-top:12px;font-size:0.8125rem;color:#64748b;">(ตั้งค่าช่องทางโอนได้ที่โปรไฟล์ / ตั้งค่าหอพัก)</p>`;
 
-  const channelsBlock = layout === "a4Preview" ? channelsBlockA4 : channelsBlockSlip;
+  const channelsBlock = layout === "a4Preview" ? channelsBlockA4 : slipCentered
+    ? (p.paymentChannelsNote?.trim()
+        ? `<section style="margin-top:10px;text-align:center;"><h2 style="margin:0 0 4px;font-size:0.85em;color:#64748b;">ช่องทางชำระเงิน</h2><p style="margin:0;white-space:pre-wrap;font-size:0.95em;">${escapeHtml(p.paymentChannelsNote.trim())}</p></section>`
+        : `<p style="margin-top:8px;font-size:0.85em;color:#64748b;text-align:center;">(ตั้งค่าช่องทางโอนที่ตั้งค่าหอพัก)</p>`)
+    : channelsBlockSlip;
 
   const ppBlockSlip =
     p.promptPayQrDataUrl ?

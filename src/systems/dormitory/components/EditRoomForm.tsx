@@ -6,6 +6,7 @@ import { DormCenteredModal } from "@/systems/dormitory/components/DormCenteredMo
 import { parseRoomFormValues, RoomFormFields } from "@/systems/dormitory/components/RoomFormFields";
 import { dormBtnSecondary } from "@/systems/dormitory/dorm-ui";
 import { cn } from "@/lib/cn";
+import { useDormitoryApiFetch, useDormitoryStaffAuth } from "@/systems/dormitory/lib/staff-api-fetch";
 
 export type EditRoomFormRoom = {
   id: string;
@@ -20,10 +21,13 @@ export type EditRoomFormRoom = {
 type EditRoomFormProps = {
   room: EditRoomFormRoom;
   className?: string;
+  onSaved?: () => void;
 };
 
-export function EditRoomForm({ room, className }: EditRoomFormProps) {
+export function EditRoomForm({ room, className, onSaved }: EditRoomFormProps) {
   const router = useRouter();
+  const apiFetch = useDormitoryApiFetch();
+  const staffAuth = useDormitoryStaffAuth();
   const [open, setOpen] = useState(false);
   const [roomNumber, setRoomNumber] = useState(room.roomNumber);
   const [floor, setFloor] = useState(String(room.floor));
@@ -66,7 +70,7 @@ export function EditRoomForm({ room, className }: EditRoomFormProps) {
     }
     setLoading(true);
     try {
-      const res = await fetch(`/api/dorm/rooms/${room.id}`, {
+      const res = await apiFetch(`/api/dorm/rooms/${room.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(parsed.data),
@@ -77,7 +81,8 @@ export function EditRoomForm({ room, className }: EditRoomFormProps) {
         return;
       }
       closeModal();
-      router.refresh();
+      if (onSaved) onSaved();
+      else if (!staffAuth) router.refresh();
     } finally {
       setLoading(false);
     }
