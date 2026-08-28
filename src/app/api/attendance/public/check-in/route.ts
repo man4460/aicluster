@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { saveAttendanceFacePhoto } from "@/lib/attendance/face-photo-file";
+import { ATTENDANCE_LOG_CHANNEL } from "@/lib/attendance/log-channel";
 import { isAttendancePublicOpenForOwner } from "@/lib/attendance/portal-access";
 import {
   AttendanceBusinessError,
@@ -94,6 +95,7 @@ export async function POST(req: Request) {
       longitude: parsed.data.longitude,
       checkInFacePhotoUrl: photoUrl,
       locationId: locationId ?? null,
+      checkInChannel: ATTENDANCE_LOG_CHANNEL.IN_PUBLIC_CLASSIC,
     });
     return NextResponse.json({
       ok: true,

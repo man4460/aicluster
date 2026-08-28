@@ -147,6 +147,7 @@ model User {
   attendanceLogsOwned      AttendanceLog[]           @relation("AttendanceOrg")
   attendanceLogsAsActor    AttendanceLog[]           @relation("AttendanceActor")
   attendanceRosterEntries  AttendanceRosterEntry[]
+  attendanceBranches       AttendanceBranch[]
   attendanceLocations      AttendanceLocation[]
   homeFinanceEntries       HomeFinanceEntry[]
   homeFinanceSlipExtractions HomeFinanceSlipExtraction[]
@@ -1414,23 +1415,51 @@ model AttendanceSettings {
   @@map("attendance_settings")
 }
 
+/** สาขา / หน่วยงาน — จัดกลุ่มจุดเช็คและสังกัดพนักงาน */
+model AttendanceBranch {
+  id             Int                    @id @default(autoincrement())
+  ownerUserId    String                 @map("owner_id") @db.VarChar(191)
+  owner          User                   @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String                 @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String                 @default("สาขาหลัก") @db.VarChar(80)
+  /** รหัสสาขา (ใช้ใน Excel / export) — ไม่ซ้ำต่อ owner+scope */
+  code           String                 @default("MAIN") @db.VarChar(20)
+  address        String                 @default("") @db.VarChar(200)
+  isActive       Boolean                @default(true) @map("is_active")
+  sortOrder      Int                    @default(0) @map("sort_order")
+  locations      AttendanceLocation[]
+  rosterEntries  AttendanceRosterEntry[]
+  createdAt      DateTime               @default(now()) @map("created_at")
+  updatedAt      DateTime               @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId, code], map: "albr_owner_trial_code_uidx")
+  @@index([ownerUserId, trialSessionId, sortOrder], map: "albr_owner_trial_sort_idx")
+  @@index([ownerUserId], map: "albr_owner_id_idx")
+  @@map("attendance_branches")
+}
+
 /** โลเคชันจุดเช็ค (หลายจุดตามแพ็กเกจ) — กะสูงสุด 5 ต่อจุด */
 model AttendanceLocation {
   id                 Int               @id @default(autoincrement())
   ownerUserId        String            @map("owner_id") @db.VarChar(191)
   owner              User              @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   trialSessionId     String            @default("prod") @map("trial_session_id") @db.VarChar(36)
+  branchId           Int               @map("branch_id")
+  branch             AttendanceBranch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
   name               String            @default("จุดเช็ค") @db.VarChar(80)
   allowedLocationLat Float             @map("allowed_location_lat")
   allowedLocationLng Float             @map("allowed_location_lng")
   radiusMeters       Int               @default(120) @map("radius_meters")
   sortOrder          Int               @default(0) @map("sort_order")
   shifts             AttendanceShift[]
+  checkInLogs        AttendanceLog[]   @relation("AttendanceCheckInLocation")
+  checkOutLogs       AttendanceLog[]   @relation("AttendanceCheckOutLocation")
   createdAt          DateTime          @default(now()) @map("created_at")
   updatedAt          DateTime          @updatedAt @map("updated_at")
 
   @@index([ownerUserId, trialSessionId, sortOrder], map: "aloc_owner_trial_sort_idx")
   @@index([ownerUserId], map: "aloc_owner_id_idx")
+  @@index([branchId], map: "aloc_branch_id_idx")
   @@map("attendance_locations")
 }
 
@@ -1459,6 +1488,9 @@ model AttendanceRosterEntry {
   isActive    Boolean  @default(true) @map("is_active")
   /** ลำดับกะในโลเคชัน (0 = กะแรก ตาม sort_order) สูงสุด 4 ถ้ามี 5 กะ */
   rosterShiftIndex Int @default(0) @map("roster_shift_index")
+  /** สาขาประจำ (null = เช็คได้ทุกสาขาในองค์กร) */
+  homeBranchId   Int?               @map("home_branch_id")
+  homeBranch     AttendanceBranch?  @relation(fields: [homeBranchId], references: [id], onDelete: SetNull)
   /** รูปโปรไฟล์รายชื่อ (path ใต้ public เช่น /uploads/attendance-roster/...) */
   photoUrl    String?  @map("photo_url") @db.VarChar(512)
   /** เวกเตอร์ใบหน้า (JSON float[128]) — ประมวลผลในระบบ ไม่ส่ง API ภายนอก */
@@ -1473,6 +1505,7 @@ model AttendanceRosterEntry {
   @@unique([ownerUserId, phone, trialSessionId])
   @@index([ownerUserId, trialSessionId, isActive])
   @@index([ownerUserId, trialSessionId, fingerprintSlot], map: "arost_owner_trial_fp_idx")
+  @@index([homeBranchId], map: "arost_home_branch_idx")
   @@map("attendance_roster_entries")
 }
 
@@ -1501,6 +1534,12 @@ model AttendanceLog {
   checkInFacePhotoUrl String?              @map("check_in_face_photo_url") @db.VarChar(512)
   /** กะที่ใช้คำนวณมาสาย/ออกก่อนเวลา ณ เวลาเช็คเข้า (ลำดับในโลเคชัน) */
   appliedShiftIndex Int?                   @map("applied_shift_index")
+  /** จุดเช็คอินที่ใช้ตอนเข้างาน */
+  checkInLocationId  Int?                  @map("check_in_location_id")
+  checkInLocation    AttendanceLocation?   @relation("AttendanceCheckInLocation", fields: [checkInLocationId], references: [id], onDelete: SetNull)
+  /** จุดเช็คอินที่ใช้ตอนออกงาน */
+  checkOutLocationId Int?                  @map("check_out_location_id")
+  checkOutLocation   AttendanceLocation?   @relation("AttendanceCheckOutLocation", fields: [checkOutLocationId], references: [id], onDelete: SetNull)
   note            String?                  @db.VarChar(500)
   createdAt       DateTime                 @default(now()) @map("created_at")
   updatedAt       DateTime                 @updatedAt @map("updated_at")
@@ -1509,6 +1548,7 @@ model AttendanceLog {
   @@index([ownerUserId, trialSessionId, guestPhone], map: "alog_owner_trial_phone_idx")
   @@index([ownerUserId], map: "alog_owner_id_idx")
   @@index([actorUserId])
+  @@index([checkInLocationId], map: "alog_check_in_loc_idx")
   @@map("attendance_logs")
 }
 

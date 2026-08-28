@@ -41,6 +41,8 @@ const patchSchema = z.object({
   allowDuplicateFace: z.boolean().optional(),
   /** null = ลบ · 1–1000 = slot บนเซ็นเซอร์ ESP32 */
   fingerprintSlot: z.union([z.number().int().min(1).max(1000), z.null()]).optional(),
+  /** null = ทุกสาขา · number = สาขาประจำ */
+  homeBranchId: z.union([z.number().int().positive(), z.null()]).optional(),
 });
 
 function parseId(s: string): number | null {
@@ -116,6 +118,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     faceEnrolledAt?: Date | null;
     fingerprintSlot?: number | null;
     fingerprintEnrolledAt?: Date | null;
+    homeBranchId?: number | null;
   } = {
     ...(parsed.data.displayName !== undefined ? { displayName: parsed.data.displayName } : {}),
     ...(parsed.data.isActive !== undefined ? { isActive: parsed.data.isActive } : {}),
@@ -187,6 +190,24 @@ export async function PATCH(req: Request, ctx: Ctx) {
     }
   }
 
+  if (parsed.data.homeBranchId !== undefined) {
+    if (parsed.data.homeBranchId === null) {
+      data.homeBranchId = null;
+    } else {
+      const okBranch = await prisma.attendanceBranch.count({
+        where: {
+          id: parsed.data.homeBranchId,
+          ownerUserId: mod.billingUserId,
+          trialSessionId: scope.trialSessionId,
+        },
+      });
+      if (okBranch === 0) {
+        return NextResponse.json({ error: "สาขาประจำไม่ถูกต้อง" }, { status: 400 });
+      }
+      data.homeBranchId = parsed.data.homeBranchId;
+    }
+  }
+
   if (parsed.data.fingerprintSlot !== undefined) {
     if (parsed.data.fingerprintSlot === null) {
       data.fingerprintSlot = null;
@@ -229,6 +250,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
         phone: row.phone,
         isActive: row.isActive,
         rosterShiftIndex: row.rosterShiftIndex,
+        homeBranchId: row.homeBranchId ?? null,
         photoUrl: row.photoUrl ?? null,
         faceEnrolled: Boolean(row.faceDescriptorJson),
         faceEnrolledAt: row.faceEnrolledAt?.toISOString() ?? null,

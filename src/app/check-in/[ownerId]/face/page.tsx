@@ -15,7 +15,7 @@ type Props = {
 };
 
 export const metadata: Metadata = {
-  title: "เช็คอินด้วยสแกนใบหน้า",
+  title: "เช็คอิน / เช็คเอาตด้วยสแกนใบหน้า",
   robots: { index: false, follow: false },
 };
 

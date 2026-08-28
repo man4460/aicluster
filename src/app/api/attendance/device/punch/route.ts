@@ -5,10 +5,8 @@ import { requireAttendanceDeviceAuth } from "@/lib/attendance/device-auth";
 import {
   FACE_DESCRIPTOR_LENGTH,
   FACE_ENROLL_MAX_SAMPLES,
-  matchFaceDescriptorMulti,
-  parseFaceDescriptorBank,
-  type FaceMatchCandidate,
 } from "@/lib/attendance/face-descriptor";
+import { matchPublicFaceToRoster } from "@/lib/attendance/public-face-roster-match";
 import {
   AttendanceBusinessError,
   AttendanceGeoError,
@@ -54,40 +52,6 @@ const bodySchema = z.object({
   longitude: z.number().finite().optional(),
   deviceId: z.string().trim().max(64).optional(),
 });
-
-async function resolveRosterByFace(
-  ownerUserId: string,
-  trialSessionId: string,
-  probes: number[][],
-) {
-  const roster = await prisma.attendanceRosterEntry.findMany({
-    where: {
-      ownerUserId,
-      trialSessionId,
-      isActive: true,
-      faceDescriptorJson: { not: null },
-    },
-    select: {
-      id: true,
-      displayName: true,
-      phone: true,
-      faceDescriptorJson: true,
-    },
-    take: 2500,
-  });
-  const candidates: FaceMatchCandidate[] = [];
-  for (const row of roster) {
-    const descriptors = parseFaceDescriptorBank(row.faceDescriptorJson);
-    if (!descriptors?.length) continue;
-    candidates.push({
-      id: row.id,
-      displayName: row.displayName,
-      phone: row.phone,
-      descriptors,
-    });
-  }
-  return matchFaceDescriptorMulti(probes, candidates);
-}
 
 export async function POST(req: Request) {
   const ip = clientIp(req.headers);
@@ -148,21 +112,23 @@ export async function POST(req: Request) {
           { status: 400 },
         );
       }
-      const match = await resolveRosterByFace(ownerUserId, trialSessionId, probes);
+      const match = await matchPublicFaceToRoster({
+        ownerUserId,
+        trialSessionId,
+        descriptor: probes[0]!,
+        descriptors: probes.length >= 2 ? probes : undefined,
+      });
       if (!match.ok) {
-        if (match.reason === "NO_CANDIDATES") {
-          return NextResponse.json(
-            { error: "ยังไม่มีพนักงานที่ลงทะเบียนใบหน้า" },
-            { status: 400 },
-          );
+        if (match.status === 400 && match.error.includes("ยังไม่มีพนักงาน")) {
+          return NextResponse.json({ error: "ยังไม่มีพนักงานที่ลงทะเบียนใบหน้า" }, { status: 400 });
         }
-        if (match.reason === "AMBIGUOUS") {
+        if (match.error.includes("คล้ายหลายคน")) {
           return NextResponse.json(
             { error: "ใบหน้าคล้ายหลายคน — ปฏิเสธเพื่อความปลอดภัย" },
             { status: 409 },
           );
         }
-        return NextResponse.json({ error: "ไม่ตรงกับใบหน้าในรายชื่อ" }, { status: 404 });
+        return NextResponse.json({ error: match.error || "ไม่ตรงกับใบหน้าในรายชื่อ" }, { status: match.status });
       }
       roster = {
         id: match.entry.id,

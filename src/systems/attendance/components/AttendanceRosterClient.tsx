@@ -7,41 +7,41 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
+  AppPickGalleryImageButton,
   AppSectionHeader,
+  AppTakePhotoButton,
   appTemplateOutlineButtonClass,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import { ATTENDANCE_BRANCH_SETTINGS_HREF } from "@/systems/attendance/attendance-module-nav";
+import Link from "next/link";
 import {
-  attendanceCardClass,
   attendanceEmptyStateClass,
   attendanceFilterChipClass,
+  attendanceInteractiveHoverClass,
   attendanceLabelClass,
-  attendanceLabelMutedClass,
-  attendanceRosterAccentBarClass,
+  attendanceRosterMetaBtnMutedClass,
   attendanceStatCardClass,
-  attendanceZoneChipActiveClass,
-  attendanceZoneChipFaceClass,
-  attendanceZoneChipFaceIdleClass,
-  attendanceZoneChipFpClass,
-  attendanceZoneChipInactiveClass,
+  attendanceTextLinkBtnClass,
 } from "@/systems/attendance/attendance-ui";
 import { attendanceSectionRadiusClass } from "@/systems/attendance/lib/ui-tokens";
 import { AttendanceFaceEnrollModal } from "@/systems/attendance/components/AttendanceFaceEnrollModal";
-import {
-  assetRowRemoveIconButtonClass,
-  IconRowRemove,
-} from "@/systems/asset/components/AssetRowActionIcons";
+import { AttendanceRosterEntryCard } from "@/systems/attendance/components/AttendanceRosterEntryCard";
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 
 type ShiftSlot = { index: number; label: string };
+type BranchOption = { id: number; name: string; code: string };
 type Entry = {
   id: number;
   displayName: string;
   phone: string;
   isActive: boolean;
   rosterShiftIndex: number;
+  homeBranchId: number | null;
+  homeBranchName: string | null;
+  homeBranchCode: string | null;
   photoUrl: string | null;
   faceEnrolled: boolean;
   faceEnrolledAt: string | null;
@@ -72,11 +72,13 @@ export function AttendanceRosterClient() {
   const rosterPhotoTargetRef = useRef<"new" | number | null>(null);
 
   const [shiftSlots, setShiftSlots] = useState<ShiftSlot[]>([]);
+  const [branches, setBranches] = useState<BranchOption[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [newShiftIndex, setNewShiftIndex] = useState(0);
+  const [newHomeBranchId, setNewHomeBranchId] = useState<number | "">("");
   const [newPhotoUrl, setNewPhotoUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [photoBusyTarget, setPhotoBusyTarget] = useState<"new" | number | null>(null);
@@ -87,25 +89,73 @@ export function AttendanceRosterClient() {
   const [faceEnrollId, setFaceEnrollId] = useState<number | null>(null);
   const [filterOpen, setFilterOpen] = useState(true);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [branchFilter, setBranchFilter] = useState<number | "all" | "none">("all");
   const [q, setQ] = useState("");
+  const [importBusy, setImportBusy] = useState(false);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [importErr, setImportErr] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  /** หลีกเลี่ยง hydration mismatch จาก browser extension (fdprocessedid ฯลฯ) บนปุ่ม/ input */
+  const [mounted, setMounted] = useState(false);
 
-  const filtersActive = statusFilter !== "all" || Boolean(q.trim());
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  async function onImportFile(file: File) {
+    setImportBusy(true);
+    setImportErr(null);
+    setImportMsg(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/attendance/owner/roster/import", {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      const j = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        message?: string;
+        errors?: string[];
+      };
+      if (!res.ok) {
+        setImportErr(j.error ?? "นำเข้าไม่สำเร็จ");
+        return;
+      }
+      setImportMsg(j.message ?? "นำเข้าแล้ว");
+      if (j.errors?.length) {
+        setImportErr(j.errors.slice(0, 5).join(" · "));
+      }
+      await load();
+    } finally {
+      setImportBusy(false);
+      if (importInputRef.current) importInputRef.current.value = "";
+    }
+  }
+
+  const filtersActive = statusFilter !== "all" || branchFilter !== "all" || Boolean(q.trim());
 
   const filteredEntries = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return entries.filter((e) => {
       if (statusFilter === "active" && !e.isActive) return false;
       if (statusFilter === "inactive" && e.isActive) return false;
+      if (branchFilter !== "all") {
+        if (branchFilter === "none") {
+          if (e.homeBranchId != null) return false;
+        } else if (e.homeBranchId !== branchFilter) return false;
+      }
       if (!needle) return true;
       return e.displayName.toLowerCase().includes(needle) || e.phone.includes(needle);
     });
-  }, [entries, q, statusFilter]);
+  }, [entries, q, statusFilter, branchFilter]);
 
   const rosterStats = useMemo(() => {
     const active = entries.filter((e) => e.isActive).length;
     const face = entries.filter((e) => e.faceEnrolled).length;
     const finger = entries.filter((e) => e.fingerprintSlot != null).length;
-    return { total: entries.length, active, face, finger };
+    return { total: entries.length, active, inactive: entries.length - active, face, finger };
   }, [entries]);
 
   const load = useCallback(async () => {
@@ -113,6 +163,7 @@ export function AttendanceRosterClient() {
     const res = await fetch("/api/attendance/owner/roster", { credentials: "include" });
     const j = (await res.json().catch(() => ({}))) as {
       shiftSlots?: ShiftSlot[];
+      branches?: BranchOption[];
       entries?: Array<
         Entry & {
           photoUrl?: string | null;
@@ -129,9 +180,13 @@ export function AttendanceRosterClient() {
       setListErr(null);
       const slots = j.shiftSlots ?? [];
       setShiftSlots(slots);
+      setBranches(j.branches ?? []);
       setEntries(
         (j.entries ?? []).map((e) => ({
           ...e,
+          homeBranchId: e.homeBranchId ?? null,
+          homeBranchName: e.homeBranchName ?? null,
+          homeBranchCode: e.homeBranchCode ?? null,
           photoUrl: e.photoUrl ?? null,
           faceEnrolled: Boolean(e.faceEnrolled),
           faceEnrolledAt: e.faceEnrolledAt ?? null,
@@ -157,6 +212,7 @@ export function AttendanceRosterClient() {
     setName("");
     setPhone("");
     setNewShiftIndex(0);
+    setNewHomeBranchId("");
     setNewPhotoUrl(null);
     setErr(null);
   }, []);
@@ -248,20 +304,6 @@ export function AttendanceRosterClient() {
     setRosterCameraOpen(true);
   }, []);
 
-  const clearEntryPhoto = useCallback(
-    async (id: number) => {
-      setPhotoBusyTarget(id);
-      try {
-        await patchEntryPhoto(id, null);
-      } catch (err) {
-        window.alert(err instanceof Error ? err.message : "ลบรูปไม่สำเร็จ");
-      } finally {
-        setPhotoBusyTarget(null);
-      }
-    },
-    [patchEntryPhoto],
-  );
-
   async function add(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
@@ -277,6 +319,8 @@ export function AttendanceRosterClient() {
         rosterShiftIndex: clampNewShift(newShiftIndex, shiftSlots.length),
       };
       if (newPhotoUrl) body.photoUrl = newPhotoUrl;
+      if (newHomeBranchId !== "") body.homeBranchId = newHomeBranchId;
+      else body.homeBranchId = null;
 
       const res = await fetch("/api/attendance/owner/roster", {
         method: "POST",
@@ -303,6 +347,16 @@ export function AttendanceRosterClient() {
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ rosterShiftIndex: clampNewShift(rosterShiftIndex, shiftSlots.length) }),
+    });
+    await load();
+  }
+
+  async function setEntryBranch(id: number, homeBranchId: number | null) {
+    await fetch(`/api/attendance/owner/roster/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ homeBranchId }),
     });
     await load();
   }
@@ -335,6 +389,7 @@ export function AttendanceRosterClient() {
         className="flex flex-row items-start justify-between gap-3 sm:items-center"
         actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
         action={
+          mounted ? (
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <button
               type="button"
@@ -343,8 +398,10 @@ export function AttendanceRosterClient() {
               aria-controls="attendance-roster-filter-panel"
               aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
               title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+              suppressHydrationWarning
               className={cn(
                 appTemplateOutlineButtonClass,
+                attendanceInteractiveHoverClass,
                 "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 px-0 text-xs font-black text-[#4d47b6] sm:min-w-0 sm:px-3",
                 filterOpen && "border-[#5b61ff]/45 bg-[#ecebff]/90 ring-2 ring-[#5b61ff]/20",
                 filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
@@ -361,17 +418,49 @@ export function AttendanceRosterClient() {
                 />
               ) : null}
             </button>
+            <Link
+              href={ATTENDANCE_BRANCH_SETTINGS_HREF}
+              aria-label="จัดการสาขา"
+              title="จัดการสาขา"
+              suppressHydrationWarning
+              className={cn(
+                appTemplateOutlineButtonClass,
+                attendanceInteractiveHoverClass,
+                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 px-0 text-xs font-black text-[#4d47b6] sm:min-w-0 sm:px-3",
+              )}
+            >
+              <svg className="h-5 w-5 shrink-0 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="M3 21h18M5 21V7l8-4 8 4v14" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M9 21v-6h6v6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="hidden sm:inline">จัดการสาขา</span>
+            </Link>
             <button
               type="button"
               onClick={openAddModal}
               disabled={Boolean(listErr) || shiftSlots.length === 0}
               aria-label="เพิ่มรายชื่อ"
-              className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-[1rem] px-0 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-0 sm:px-4"
+              suppressHydrationWarning
+              className={cn(
+                "app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-[1rem] px-0 text-sm font-black sm:min-w-0 sm:px-4",
+                attendanceInteractiveHoverClass,
+                "hover:brightness-110 hover:shadow-lg hover:shadow-[#5b61ff]/25",
+              )}
             >
               <span className="sm:hidden">+</span>
               <span className="hidden sm:inline">+ เพิ่มรายชื่อ</span>
             </button>
           </div>
+          ) : (
+            <div
+              className="flex shrink-0 items-center gap-1.5 sm:gap-2"
+              aria-hidden
+            >
+              <div className="inline-flex min-h-[40px] min-w-[40px] rounded-xl border border-transparent" />
+              <div className="inline-flex min-h-[40px] min-w-[40px] rounded-xl border border-transparent sm:min-w-[6.5rem]" />
+              <div className="inline-flex min-h-[40px] min-w-[40px] rounded-[1rem] sm:min-w-[7.5rem]" />
+            </div>
+          )
         }
       />
 
@@ -396,29 +485,142 @@ export function AttendanceRosterClient() {
         </div>
       ) : null}
 
+      {!loading && !listErr ? (
+        <div className="rounded-[1.25rem] border border-white/60 bg-white/55 p-3 sm:p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-[#4d47b6]">นำเข้ารายชื่อจาก Excel</p>
+              <p className="mt-1 text-xs font-medium text-[#66638c]">
+                ดาวน์โหลดแบบฟอร์ม (มีชีตรหัสสาขาขององค์กร) · กรอก ชื่อ · เบอร์ · รหัสสาขา · กะ · อัปโหลด .xls หรือ .csv
+              </p>
+              {importMsg ? (
+                <p className="mt-2 text-sm font-semibold text-emerald-800">{importMsg}</p>
+              ) : null}
+              {importErr ? (
+                <p className="mt-2 text-sm font-semibold text-rose-700">{importErr}</p>
+              ) : null}
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+              {mounted ? (
+                <>
+                  <a
+                    href="/api/attendance/owner/roster/import/template"
+                    className={cn(
+                      appTemplateOutlineButtonClass,
+                      "inline-flex min-h-[40px] items-center rounded-xl px-3 text-sm font-bold",
+                    )}
+                    download
+                    suppressHydrationWarning
+                  >
+                    ดาวน์โหลดแบบฟอร์ม Excel
+                  </a>
+                  <input
+                    ref={importInputRef}
+                    type="file"
+                    accept=".xls,.csv,text/csv,application/vnd.ms-excel"
+                    className="sr-only"
+                    aria-hidden
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void onImportFile(f);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    disabled={importBusy || shiftSlots.length === 0}
+                    onClick={() => importInputRef.current?.click()}
+                    suppressHydrationWarning
+                    className="app-btn-primary inline-flex min-h-[40px] items-center rounded-xl px-4 text-sm font-bold disabled:opacity-50"
+                  >
+                    {importBusy ? "กำลังนำเข้า…" : "อัปโหลดไฟล์"}
+                  </button>
+                </>
+              ) : (
+                <div className="flex flex-wrap gap-2" aria-hidden>
+                  <div className="inline-flex min-h-[40px] min-w-[10rem] rounded-xl border border-transparent" />
+                  <div className="inline-flex min-h-[40px] min-w-[7rem] rounded-xl" />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {mounted ? (
       <div
         id="attendance-roster-filter-panel"
         className={cn("space-y-3", filterOpen ? "block" : "hidden")}
       >
-        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="กรองสถานะรายชื่อ">
-          {(
-            [
-              { id: "all" as const, label: `ทั้งหมด (${entries.length})` },
-              { id: "active" as const, label: `ใช้งาน (${entries.filter((e) => e.isActive).length})` },
-              { id: "inactive" as const, label: `ปิด (${entries.filter((e) => !e.isActive).length})` },
-            ] as const
-          ).map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              role="tab"
-              aria-selected={statusFilter === opt.id}
-              className={attendanceFilterChipClass(statusFilter === opt.id)}
-              onClick={() => setStatusFilter(opt.id)}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1.5">
+          <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="กรองสถานะรายชื่อ">
+            {(
+              [
+                { id: "all" as const, label: "ทั้งหมด", count: rosterStats.total },
+                { id: "active" as const, label: "ใช้งาน", count: rosterStats.active },
+                { id: "inactive" as const, label: "ปิด", count: rosterStats.inactive },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                role="tab"
+                aria-selected={statusFilter === opt.id}
+                className={attendanceFilterChipClass(statusFilter === opt.id)}
+                onClick={() => setStatusFilter(opt.id)}
+                suppressHydrationWarning
+              >
+                <span className="inline-flex items-baseline gap-1">
+                  {opt.label}
+                  <span aria-hidden className="tabular-nums">
+                    ({opt.count})
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+          {branches.length > 0 ? (
+            <>
+              <span
+                className="hidden h-5 w-px shrink-0 bg-[#e8e6fc] sm:inline-block"
+                aria-hidden
+              />
+              <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="กรองสาขา">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={branchFilter === "all"}
+                  className={attendanceFilterChipClass(branchFilter === "all")}
+                  onClick={() => setBranchFilter("all")}
+                  suppressHydrationWarning
+                >
+                  ทุกสาขา
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={branchFilter === "none"}
+                  className={attendanceFilterChipClass(branchFilter === "none")}
+                  onClick={() => setBranchFilter("none")}
+                  suppressHydrationWarning
+                >
+                  ไม่ระบุสาขา
+                </button>
+                {branches.map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={branchFilter === b.id}
+                    className={attendanceFilterChipClass(branchFilter === b.id)}
+                    onClick={() => setBranchFilter(b.id)}
+                    suppressHydrationWarning
+                  >
+                    {b.name.trim() || b.code}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
         </div>
         <input
           className="min-h-[44px] w-full rounded-[1rem] border border-white/60 bg-white/80 px-3 py-2 text-sm text-[#2e2a58] outline-none backdrop-blur-sm focus:border-[#4d47b6]/50 focus:ring-2 focus:ring-[#5b61ff]/20"
@@ -426,15 +628,18 @@ export function AttendanceRosterClient() {
           onChange={(e) => setQ(e.target.value)}
           placeholder="ค้นหาชื่อหรือเบอร์โทร"
           aria-label="ค้นหารายชื่อ"
+          suppressHydrationWarning
         />
         {filtersActive ? (
           <p className="text-[11px] font-medium text-[#66638c]">
             แสดง {filteredEntries.length}/{entries.length}
             <button
               type="button"
-              className="ml-2 font-bold text-[#4d47b6] underline"
+              className={cn(attendanceTextLinkBtnClass, "ml-2")}
+              suppressHydrationWarning
               onClick={() => {
                 setStatusFilter("all");
+                setBranchFilter("all");
                 setQ("");
               }}
             >
@@ -443,6 +648,7 @@ export function AttendanceRosterClient() {
           </p>
         ) : null}
       </div>
+      ) : null}
 
       <AppGalleryCameraFileInputs
         galleryInputRef={rosterGalleryInputRef}
@@ -543,6 +749,26 @@ export function AttendanceRosterClient() {
               ))}
             </select>
           </label>
+          {branches.length > 0 ? (
+            <label className={attendanceLabelClass}>
+              สาขาประจำ (ไม่บังคับ)
+              <select
+                className="app-input mt-1 block w-full min-h-[44px] rounded-xl px-3 py-2 text-sm touch-manipulation"
+                value={newHomeBranchId === "" ? "" : String(newHomeBranchId)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setNewHomeBranchId(v === "" ? "" : Number(v));
+                }}
+              >
+                <option value="">ทุกสาขา (ไม่ระบุ)</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name.trim() || b.code} ({b.code})
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <div className="border-t border-dashed border-[#e8e6fc] pt-3">
             <span className={attendanceLabelClass}>รูปพนักงาน (ไม่บังคับ)</span>
             <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -564,7 +790,7 @@ export function AttendanceRosterClient() {
                   type="button"
                   disabled={photoBusy}
                   onClick={() => setNewPhotoUrl(null)}
-                  className="text-[11px] font-semibold text-[#66638c] underline decoration-[#d8d6ec] hover:text-[#2e2a58] disabled:opacity-50"
+                  className={attendanceRosterMetaBtnMutedClass}
                 >
                   ลบรูป
                 </button>
@@ -586,153 +812,48 @@ export function AttendanceRosterClient() {
         ) : filteredEntries.length === 0 ? (
           <p className={attendanceEmptyStateClass}>ไม่พบรายชื่อตามเงื่อนไขกรอง</p>
         ) : (
-          <ul className="flex flex-col gap-1.5 sm:gap-2" aria-label="รายชื่อพนักงานในระบบ">
-            {filteredEntries.map((r) => (
-              <li key={r.id} className={attendanceCardClass}>
-                <div className={cn(attendanceRosterAccentBarClass, "mb-2")} aria-hidden />
-                <div className="flex items-start gap-2">
-                  <AppImageThumb
-                    src={r.photoUrl}
-                    alt=""
-                    emptyLabel="ไม่มีรูป"
-                    className="h-12 w-12 shrink-0"
-                    onOpen={() => r.photoUrl && lightbox.open(r.photoUrl)}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1 pr-1">
-                        <p className="text-balance text-sm font-black leading-tight text-[#1e1b4b] line-clamp-2">
-                          {r.displayName}
-                        </p>
-                        <p
-                          className="mt-0.5 truncate font-mono text-[11px] tabular-nums text-[#66638c]"
-                          title={r.phone}
-                        >
-                          {r.phone}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => void toggleActive(r.id, r.isActive)}
-                        className={r.isActive ? attendanceZoneChipActiveClass : attendanceZoneChipInactiveClass}
-                      >
-                        {r.isActive ? "ใช้งาน" : "ปิด"}
-                      </button>
-                    </div>
-
-                    <div className="mt-1.5 space-y-1 border-t border-dashed border-slate-100 pt-1.5">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[10px] font-semibold text-emerald-800/90">ใบหน้า</span>
-                        <span className={r.faceEnrolled ? attendanceZoneChipFaceClass : attendanceZoneChipFaceIdleClass}>
-                          {r.faceEnrolled
-                            ? `แล้ว${r.faceSampleCount > 0 ? ` · ${r.faceSampleCount} มุม` : ""}`
-                            : "ยังไม่ลงทะเบียน"}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setFaceEnrollId(r.id)}
-                          className="min-h-[32px] shrink-0 rounded-md border border-emerald-200/80 bg-emerald-50/90 px-2 text-[10px] font-bold text-emerald-800"
-                        >
-                          {r.faceEnrolled ? "แก้" : "ลงทะเบียน"}
-                        </button>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[10px] font-semibold text-sky-800/90">นิ้วมือ</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={1000}
-                          placeholder="slot"
-                          aria-label={`slot ลายนิ้วมือ ${r.displayName}`}
-                          defaultValue={r.fingerprintSlot ?? ""}
-                          key={`fp-${r.id}-${r.fingerprintSlot ?? "x"}`}
-                          className="app-input h-8 w-16 rounded-md border-sky-100 px-1.5 py-0 text-center text-xs tabular-nums"
-                          onBlur={(e) => {
-                            const raw = e.target.value.trim();
-                            const next = raw === "" ? null : Number(raw);
-                            if (next === r.fingerprintSlot) return;
-                            if (next != null && (!Number.isInteger(next) || next < 1 || next > 1000)) {
-                              window.alert("slot ต้องเป็นจำนวนเต็ม 1–1000");
-                              e.target.value = r.fingerprintSlot != null ? String(r.fingerprintSlot) : "";
-                              return;
-                            }
-                            void (async () => {
-                              const res = await fetch(`/api/attendance/owner/roster/${r.id}`, {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
-                                credentials: "include",
-                                body: JSON.stringify({ fingerprintSlot: next }),
-                              });
-                              const j = (await res.json().catch(() => ({}))) as { error?: string };
-                              if (!res.ok) {
-                                window.alert(j.error ?? "บันทึก slot ไม่สำเร็จ");
-                                e.target.value = r.fingerprintSlot != null ? String(r.fingerprintSlot) : "";
-                                return;
-                              }
-                              await load();
-                            })();
-                          }}
-                        />
-                        {r.fingerprintSlot != null ? (
-                          <span className={attendanceZoneChipFpClass}>ผูกแล้ว</span>
-                        ) : (
-                          <span className="text-[10px] font-semibold text-[#9490c0]">ยังไม่ผูก</span>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[10px] font-semibold text-violet-800/90">รูป</span>
-                        <AppImagePickCameraButtons
-                          className="justify-start gap-1"
-                          labels={{ gallery: "อัปโหลด", camera: "ถ่าย" }}
-                          busy={photoBusyTarget === r.id}
-                          onPickGallery={() => openEntryGallery(r.id)}
-                          onPickCamera={() => openEntryCamera(r.id)}
-                        />
-                        {r.photoUrl ? (
-                          <button
-                            type="button"
-                            disabled={photoBusy}
-                            onClick={() => void clearEntryPhoto(r.id)}
-                            className="text-[10px] font-semibold text-[#66638c] underline decoration-[#d8d6ec] hover:text-[#2e2a58] disabled:opacity-50"
-                          >
-                            ลบ
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-1.5 flex flex-wrap items-end justify-between gap-2 border-t border-slate-100 pt-1.5">
-                  <label className={cn("min-w-0 flex-1", attendanceLabelMutedClass)}>
-                    <span className="text-[10px]">กะ</span>
-                    <select
-                      className="app-input mt-0.5 min-h-[40px] w-full rounded-lg px-2.5 py-1.5 text-sm touch-manipulation sm:min-h-0 sm:rounded-xl sm:px-3 sm:py-2"
-                      value={clampNewShift(r.rosterShiftIndex, shiftSlots.length)}
-                      onChange={(e) => void setEntryShift(r.id, Number(e.target.value))}
-                      aria-label={`กะของ ${r.displayName}`}
-                    >
-                      {shiftSlots.map((s) => (
-                        <option key={s.index} value={s.index}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => void remove(r.id)}
-                    className={cn(assetRowRemoveIconButtonClass, "shrink-0 self-end")}
-                    aria-label={`ลบรายชื่อ ${r.displayName}`}
-                    title="ลบรายชื่อ"
-                  >
-                    <IconRowRemove className="h-4 w-4" />
-                  </button>
-                </div>
-              </li>
-            ))}
+          <ul className="flex flex-col gap-2 sm:gap-2.5" aria-label="รายชื่อพนักงานในระบบ">
+            {filteredEntries.map((r) => {
+              const shiftLabel =
+                shiftSlots.find((s) => s.index === clampNewShift(r.rosterShiftIndex, shiftSlots.length))?.label ??
+                "—";
+              return (
+                <AttendanceRosterEntryCard
+                  key={r.id}
+                  entry={r}
+                  shiftSlots={shiftSlots}
+                  branches={branches}
+                  photoBusy={photoBusy}
+                  photoBusyThis={photoBusyTarget === r.id}
+                  shiftLabel={shiftLabel}
+                  onViewPhoto={() => r.photoUrl && lightbox.open(r.photoUrl)}
+                  onUploadPhoto={() => openEntryGallery(r.id)}
+                  onCameraPhoto={() => openEntryCamera(r.id)}
+                  onFaceEnroll={() => setFaceEnrollId(r.id)}
+                  onToggleActive={() => void toggleActive(r.id, r.isActive)}
+                  onRemove={() => void remove(r.id)}
+                  onShiftChange={(index) => void setEntryShift(r.id, index)}
+                  onBranchChange={(homeBranchId) => void setEntryBranch(r.id, homeBranchId)}
+                  onFingerprintBlur={(next) => {
+                    void (async () => {
+                      const res = await fetch(`/api/attendance/owner/roster/${r.id}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "include",
+                        body: JSON.stringify({ fingerprintSlot: next }),
+                      });
+                      const j = (await res.json().catch(() => ({}))) as { error?: string };
+                      if (!res.ok) {
+                        window.alert(j.error ?? "บันทึก slot ไม่สำเร็จ");
+                        await load();
+                        return;
+                      }
+                      await load();
+                    })();
+                  }}
+                />
+              );
+            })}
           </ul>
         )}
       </div>

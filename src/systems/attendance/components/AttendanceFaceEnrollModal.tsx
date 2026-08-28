@@ -28,7 +28,7 @@ type AngleStep = {
   maxRollDeg?: number;
 };
 
-/** ลำดับมุมที่เก็บ — เก็บครบยิ่งจับคู่ได้แม่นในแสง/มุมจริง */
+/** ลำดับมุมที่เก็บ — ความยาวต้องเท่ากับ FACE_ENROLL_MAX_SAMPLES */
 const ANGLE_STEPS: AngleStep[] = [
   {
     title: "มองตรงกล้อง",
@@ -48,9 +48,35 @@ const ANGLE_STEPS: AngleStep[] = [
   },
   {
     title: "มองตรง แล้วยิ้ม",
-    detail: "มุมสุดท้าย เก็บสีหน้าตอนยิ้มไว้ให้ระบบจำได้ทั้งสองแบบ",
+    detail: "มองตรงกล้องแล้วยิ้มพอประมาณ — เก็บสีหน้ายิ้มไว้ให้ระบบจำได้ทั้งสองแบบ",
+  },
+  {
+    title: "ก้มหน้าเล็กน้อย",
+    detail: "ก้มคางลงประมาณนิ้วเดียว — ยังต้องเห็นตาทั้งสองข้างชัดในกรอบ (อย่าก้มจนเห็นแต่หัวมน)",
+    maxRollDeg: 28,
+  },
+  {
+    title: "เงยหน้าเล็กน้อย",
+    detail: "เงยคางขึ้นเล็กน้อย — ไม่เอียงหลังมาก ยังมองเข้ากล้องและเห็นตาชัด",
+    maxRollDeg: 28,
+  },
+  {
+    title: "หันซ้ายมากขึ้น",
+    detail: "หันซ้ายให้เห็นข้างแก้มชัดขึ้น — ตาขวายังมองเข้ากล้องได้",
+    maxYawRatio: 0.72,
+    maxRollDeg: 28,
+  },
+  {
+    title: "หันขวามากขึ้น",
+    detail: "หันขวาเท่า ๆ กับมุมก่อนหน้า — ตาซ้ายยังมองเข้ากล้องได้",
+    maxYawRatio: 0.72,
+    maxRollDeg: 28,
   },
 ];
+
+if (ANGLE_STEPS.length !== FACE_ENROLL_MAX_SAMPLES) {
+  throw new Error("ANGLE_STEPS must match FACE_ENROLL_MAX_SAMPLES");
+}
 
 /** เก็บได้ครบเท่านี้ถือว่าใช้งานได้ดี */
 const GOOD_ENOUGH_ANGLES = 3;
@@ -138,7 +164,7 @@ export function AttendanceFaceEnrollModal({
   useEffect(() => {
     if (!open) return;
     setSavedCount(sampleCount);
-    setAngleIndex(sampleCount > 0 ? Math.min(sampleCount, ANGLE_STEPS.length - 1) : 0);
+    setAngleIndex(Math.min(sampleCount, ANGLE_STEPS.length - 1));
   }, [sampleCount, open]);
 
   useEffect(() => {
@@ -180,10 +206,8 @@ export function AttendanceFaceEnrollModal({
       return;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      });
+      const { openUserCameraStream } = await import("@/lib/media/open-user-camera-stream");
+      const stream = await openUserCameraStream();
       streamRef.current = stream;
       setCameraOn(true);
       setHint("กล้องเปิดแล้ว — ทำตามคำสั่งในกรอบ แล้วกดปุ่มถ่ายเก็บใบหน้า");
@@ -220,8 +244,9 @@ export function AttendanceFaceEnrollModal({
     const count = j.entry?.faceSampleCount ?? prev + 1;
     setSavedCount(count);
     onSaved();
-    const nextIndex = Math.min(angleIndex + 1, ANGLE_STEPS.length - 1);
-    setAngleIndex(nextIndex);
+    if (count > prev) {
+      setAngleIndex(Math.min(count, ANGLE_STEPS.length - 1));
+    }
     if (count <= prev) {
       setHint("มุมนี้ใกล้กับที่เก็บไว้แล้ว — ลองขยับมุมให้ต่างขึ้นอีกนิดในรอบถัดไป");
     } else if (count >= GOOD_ENOUGH_ANGLES) {
@@ -405,10 +430,32 @@ export function AttendanceFaceEnrollModal({
         ) : (
           <div className="rounded-[1.25rem] border border-[#5b61ff]/30 bg-gradient-to-br from-[#ecebff] to-white p-3.5">
             <p className="text-[11px] font-bold uppercase tracking-wide text-[#4d47b6]">
-              มุมที่ {Math.min(angleIndex + 1, ANGLE_STEPS.length)} จาก {ANGLE_STEPS.length}
+              มุมที่ {Math.min(angleIndex + 1, FACE_ENROLL_MAX_SAMPLES)} จาก {FACE_ENROLL_MAX_SAMPLES}
             </p>
             <p className="mt-0.5 text-base font-black leading-snug text-[#1e1b4b]">{step.title}</p>
             <p className="mt-1 text-xs font-medium leading-snug text-[#5f5a8a]">{step.detail}</p>
+            <ol className="mt-2.5 flex flex-wrap gap-1" aria-label="ความคืบหน้ามุมใบหน้า">
+              {ANGLE_STEPS.map((s, i) => {
+                const done = i < savedCount;
+                const current = i === angleIndex && !reachedMax;
+                return (
+                  <li
+                    key={s.title}
+                    title={s.title}
+                    className={cn(
+                      "rounded-md px-1.5 py-0.5 text-[9px] font-bold leading-tight",
+                      done
+                        ? "bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200/70"
+                        : current
+                          ? "bg-[#5b61ff] text-white shadow-sm"
+                          : "bg-white/70 text-[#9490c0] ring-1 ring-[#e8e6fc]",
+                    )}
+                  >
+                    {done ? "✓" : current ? "→" : "·"} {i + 1}
+                  </li>
+                );
+              })}
+            </ol>
           </div>
         )}
 

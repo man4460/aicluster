@@ -4,6 +4,7 @@ import { AppUsageGuideModal } from "@/components/app-templates";
 import {
   FACE_DESCRIPTOR_LENGTH,
   FACE_MATCH_MAX_DISTANCE,
+  FACE_MATCH_SINGLE_CANDIDATE_MAX_DISTANCE,
 } from "@/lib/attendance/face-descriptor";
 import { FACE_CAPTURE_FRAMES } from "@/systems/attendance/lib/face-api-client";
 
@@ -23,18 +24,40 @@ export function AttendanceFaceKioskGuideModal({
     <AppUsageGuideModal
       open={open}
       onClose={onClose}
-      title="วิธีสแกนใบหน้าเช็คอิน"
-      subtitle="กดปุ่มเดียว มองตรงกล้อง ระบบบันทึกเวลาเข้างานให้เอง"
+      title="วิธีสแกนใบหน้าเช็คอิน / เช็คเอาต"
+      subtitle="กดปุ่มเดียว มองตรงกล้อง — ระบบบันทึกเข้างานหรือออกงานให้เอง"
       sections={[
         {
           title: "ขั้นตอน",
           content: (
             <ol className={orderedClass}>
-              <li>กดปุ่ม «สแกนใบหน้าเช็คอิน» — กล้องเปิดขึ้นทันที</li>
+              <li>กดปุ่ม «สแกนใบหน้าเช็คเข้า» (เขียว) ตอนมาเข้างาน หรือ «สแกนใบหน้าเช็คออก» (แดง) ตอนเลิกงาน</li>
               <li>ยืนห่างจากจอประมาณหนึ่งช่วงแขน ให้ใบหน้าเต็มกรอบ</li>
-              <li>มองตรงกล้อง อยู่นิ่งสัก 2 วินาที ระบบถ่ายหลายภาพเอง ไม่ต้องกดถ่าย</li>
-              <li>รอข้อความขึ้นชื่อว่าเช็คอินสำเร็จ แล้วให้คนถัดไปเข้ามาสแกน</li>
+              <li>มองตรงกล้อง กดปุ่มเข้า (เขียว) หรือออก (แดง) — ระบบนับถอยหลัง 3–2–1 แล้วถ่ายอัตโนมัติ</li>
+              <li>
+                <strong className={strongClass}>ตอนมาเข้างาน</strong> — กล่องแจ้งผลสีเขียว ขึ้น «ตรงกับ: ชื่อ» และ «เช็คเข้าแล้ว»
+              </li>
+              <li>
+                <strong className={strongClass}>ตอนเลิกงาน</strong> — กดปุ่มสแกนเช็คออก (แดง) กล่องแจ้งผลสีแดง ขึ้น «ตรงกับ: ชื่อ» และ «เช็คออกแล้ว»
+              </li>
+              <li>รอให้คนถัดไปเข้ามาสแกน — ไม่ต้องเปลี่ยนหน้าหรือเมนู</li>
             </ol>
+          ),
+        },
+        {
+          title: "สีบนหน้าจอ (เข้า / ออก)",
+          content: (
+            <ul className={listClass}>
+              <li>
+                <strong className={strongClass}>เช็คเข้า</strong> — ปุ่ม กรอบกล้อง และกล่องแจ้งผลเป็นโทน{" "}
+                <strong className={strongClass}>เขียว</strong>
+              </li>
+              <li>
+                <strong className={strongClass}>เช็คออก</strong> — ปุ่ม กรอบกล้อง และกล่องแจ้งผลเป็นโทน{" "}
+                <strong className={strongClass}>แดง</strong>
+              </li>
+              <li>หน้าจอจัดกลางจอเต็ม iPad — ไม่ต้องเลื่อนขึ้นลง</li>
+            </ul>
           ),
         },
         {
@@ -49,13 +72,34 @@ export function AttendanceFaceKioskGuideModal({
           ),
         },
         {
+          title: "กล้องตัดพื้นหลังออก (พื้นหลังดำ)",
+          content: (
+            <ul className={listClass}>
+              <li>
+                แอป MAWELL <strong className={strongClass}>ไม่ได้</strong> ตัดพื้นหลังด้วย AI — ถ้าเห็นคนตัดออกพื้นหลังดำ
+                มักมาจาก <strong className={strongClass}>Windows Studio Effects</strong> หรือโปรแกรมกล้องของเครื่อง
+              </li>
+              <li>
+                <strong className={strongClass}>Windows 11:</strong> ตั้งค่า → Bluetooth และอุปกรณ์ → กล้อง → เลือกกล้อง →
+                ปิด «Studio effects» / เอฟเฟกต์พื้นหลัง
+              </li>
+              <li>
+                <strong className={strongClass}>Lenovo:</strong> เปิด Lenovo Vantage → กล้อง → ปิด Background blur / Portrait
+                light
+              </li>
+              <li>ลองปิด OBS Virtual Camera, NVIDIA Broadcast หรือกล้องเสมือนอื่น แล้วเลือกกล้องจริงของเครื่อง</li>
+              <li>ระบบจะพยายามปิดเอฟเฟกต์พื้นหลังให้อัตโนมัติเมื่อเปิดกล้อง — ถ้ายังเป็นอยู่ ต้องปิดที่การตั้งค่า Windows</li>
+            </ul>
+          ),
+        },
+        {
           title: "ถ้าระบบไม่รับ",
           content: (
             <ul className={listClass}>
               <li>ข้อความจะบอกสาเหตุ เช่น ภาพเบลอ แสงน้อย หรือใบหน้าเล็กเกินไป — แก้ตามนั้นแล้วกดสแกนอีกครั้ง</li>
-              <li>ถ้าบอกว่าไม่ตรงกับรายชื่อ ให้แจ้งหัวหน้าลงทะเบียนใบหน้าเพิ่มมุมให้</li>
+              <li>ถ้าไม่ตรงกับรายชื่อ — กล่องแจ้งเตือนจะบอก «กรุณาถ่ายใหม่» ให้แจ้งหัวหน้าลงทะเบียนใบหน้าเพิ่มมุม</li>
               <li>ถ้าบอกว่าอยู่นอกรัศมีจุดเช็ค ให้อนุญาตการเข้าถึงตำแหน่งบนเครื่องนี้</li>
-              <li>เช็คอินด้วยเบอร์โทรที่ลิงก์เช็คอินทั่วไปใช้แทนกันได้เสมอ</li>
+              <li>ถ้าบอกว่า «ยังไม่ได้เช็คเข้า» ตอนออกงาน — ให้สแกนเข้างานก่อน หรือใช้ลิงก์เช็คอินทั่วไป</li>
             </ul>
           ),
         },
@@ -83,7 +127,9 @@ export function AttendanceFaceKioskGuideModal({
               </li>
               <li>
                 เทียบกับใบหน้าที่ลงทะเบียนไว้ ต้องใกล้กว่าเกณฑ์{" "}
-                <strong className={strongClass}>{FACE_MATCH_MAX_DISTANCE}</strong> และต้องห่างจากคนอันดับถัดไปพอสมควร
+                <strong className={strongClass}>{FACE_MATCH_MAX_DISTANCE}</strong> (หรือ{" "}
+                <strong className={strongClass}>{FACE_MATCH_SINGLE_CANDIDATE_MAX_DISTANCE}</strong> เมื่อมีแค่คนเดียวในรายชื่อ)
+                และต้องห่างจากคนอันดับถัดไปพอสมควร
               </li>
               <li>หลายเฟรมต้องโหวตตรงกันเกินครึ่ง ถ้าคลุมเครือระบบจะไม่บันทึกและให้สแกนใหม่</li>
               <li>รายละเอียดครบทุกจุดตรวจดูได้ที่คู่มือในแดชบอร์ดของเจ้าของระบบ</li>

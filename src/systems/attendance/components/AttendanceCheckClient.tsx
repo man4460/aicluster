@@ -1,8 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { cn } from "@/lib/cn";
 import { distanceMeters } from "@/lib/geo/haversine";
-import { attendanceStepBoxClass } from "@/systems/attendance/attendance-ui";
+import {
+  attendanceFacePunchActionButtonClass,
+  attendanceFacePunchCameraPlaceholderClass,
+  attendanceFacePunchCameraShellClass,
+  attendanceFacePunchCameraVideoClass,
+  attendanceFacePunchFeedbackClass,
+  attendanceKioskCenterShellClass,
+  attendanceKioskCompactClockClass,
+  attendanceKioskPageInnerClass,
+  attendanceKioskPageShellClass,
+  attendanceKioskStepBoxClass,
+  attendanceStepBoxClass,
+} from "@/systems/attendance/attendance-ui";
 import { AttendanceFaceKioskGuideModal } from "@/systems/attendance/components/AttendanceFaceKioskGuideModal";
 import {
   captureMultiFrameDescriptor,
@@ -65,6 +78,68 @@ function initialAttendanceGeoState(): GeoState {
 
 const CHECK_STEP_1_ANCHOR_ID = "attendance-check-step-1";
 
+const FACE_CAPTURE_COUNTDOWN_SEC = 3;
+
+function sleepMs(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function faceScanRetakeHint(detail: string): string {
+  if (/ถ่ายใหม่|ลองใหม่/.test(detail)) return detail;
+  return `${detail} — กรุณาถ่ายใหม่`;
+}
+
+function faceScanErrorFeedback(msg: string): { title: string; detail: string } {
+  const t = msg.trim();
+  if (/ไม่ตรงกับใบหน้า/.test(t)) {
+    return { title: "ไม่ตรงกับใบหน้าในรายชื่อ", detail: faceScanRetakeHint(t) };
+  }
+  if (/คล้ายหลายคน/.test(t)) {
+    return { title: "ใบหน้าคล้ายหลายคนในรายชื่อ", detail: faceScanRetakeHint(t) };
+  }
+  if (/ไม่พบใบหน้า|ภาพเบลอ|ใบหน้าเล็ก|ไม่เปลี่ยนแปลง|กล้อง/.test(t)) {
+    return { title: "ถ่ายไม่ชัด — ลองใหม่", detail: faceScanRetakeHint(t) };
+  }
+  return { title: "สแกนไม่สำเร็จ", detail: faceScanRetakeHint(t) };
+}
+
+function faceScanSuccessFeedback(
+  action: "check_in" | "check_out",
+  displayName: string | undefined,
+): { title: string; detail: string } {
+  const name = displayName?.trim();
+  const verb = action === "check_out" ? "เช็คออกแล้ว" : "เช็คเข้าแล้ว";
+  if (name) {
+    return { title: `ตรงกับ: ${name}`, detail: `${verb} — บันทึกเรียบร้อย` };
+  }
+  return { title: verb, detail: "ยืนยันใบหน้าและบันทึกเรียบร้อย" };
+}
+
+function FaceScanFeedback({
+  variant,
+  intent,
+  title,
+  detail,
+}: {
+  variant: "success" | "error";
+  intent: "check_in" | "check_out";
+  title: string;
+  detail?: string;
+}) {
+  const success = variant === "success";
+  return (
+    <div
+      role={success ? "status" : "alert"}
+      className={attendanceFacePunchFeedbackClass(intent, variant)}
+    >
+      <p className="text-base font-black tracking-tight">{title}</p>
+      {detail ? <p className="mt-1.5 text-xs font-semibold leading-relaxed opacity-90">{detail}</p> : null}
+    </div>
+  );
+}
+
 type Props =
   | { mode: "session"; orgName?: string; logoUrl?: string | null }
   | {
@@ -117,24 +192,66 @@ function PublicCheckInHeader({
   orgName,
   logoUrl,
   locationLabel,
+  compact = false,
 }: {
   orgName: string;
   logoUrl: string | null;
   locationLabel?: string | null;
+  compact?: boolean;
 }) {
   return (
-    <header className="flex flex-col items-center gap-3 text-center">
+    <header
+      className={cn(
+        "flex shrink-0 flex-col items-center text-center",
+        compact ? "gap-1.5 pb-1" : "gap-3",
+      )}
+    >
       {logoUrl ? (
-        <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-[#e8e6fc] bg-white shadow-sm">
+        <div
+          className={cn(
+            "flex items-center justify-center overflow-hidden rounded-2xl border border-[#e8e6fc] bg-white shadow-sm",
+            compact ? "h-11 w-11" : "h-16 w-16",
+          )}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={logoUrl} alt={orgName} className="max-h-full max-w-full object-contain p-1" />
         </div>
       ) : null}
-      <h1 className="text-xl font-bold leading-snug text-[#2e2a58]">{orgName}</h1>
+      <h1 className={cn("font-bold leading-snug text-[#2e2a58]", compact ? "text-lg" : "text-xl")}>
+        {orgName}
+      </h1>
       {locationLabel?.trim() ? (
         <p className="text-xs font-medium text-[#66638c]">จุดเช็ค · {locationLabel.trim()}</p>
       ) : null}
     </header>
+  );
+}
+
+function KioskCompactClock({ now }: { now: Date | null }) {
+  return (
+    <div className={attendanceKioskCompactClockClass}>
+      <p className="text-2xl font-bold tabular-nums text-[#2e2a58]">
+        {now
+          ? now.toLocaleTimeString("th-TH", {
+              timeZone: "Asia/Bangkok",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })
+          : "--:--:--"}
+      </p>
+      <p className="mt-0.5 text-xs text-[#66638c]">
+        {now
+          ? now.toLocaleDateString("th-TH", {
+              timeZone: "Asia/Bangkok",
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })
+          : "\u00a0"}
+      </p>
+    </div>
   );
 }
 
@@ -191,14 +308,8 @@ export function AttendanceCheckClient(props: Props) {
       return;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "user",
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
+      const { openUserCameraStream } = await import("@/lib/media/open-user-camera-stream");
+      const stream = await openUserCameraStream();
       streamRef.current = stream;
       setCameraActive(true);
     } catch {
@@ -264,6 +375,7 @@ export function AttendanceCheckClient(props: Props) {
     stopFaceStream();
     setCameraActive(false);
     setFaceFile(null);
+    setFaceCaptureCountdown(null);
   }
 
   const [geo, setGeo] = useState<GeoState>(() => initialAttendanceGeoState());
@@ -278,15 +390,56 @@ export function AttendanceCheckClient(props: Props) {
   const [msg, setMsg] = useState<string | null>(null);
   /** แถบด้านบนหลังเช็คเข้าสำเร็จ */
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
+  /** คีออสก์สแกนใบหน้า — แจ้งตรงกับใคร / ไม่ตรงให้ถ่ายใหม่ */
+  const [faceScanFeedback, setFaceScanFeedback] = useState<{
+    variant: "success" | "error";
+    intent: "check_in" | "check_out";
+    title: string;
+    detail?: string;
+  } | null>(null);
   const [dataConsent, setDataConsent] = useState(false);
   const [kioskGuideOpen, setKioskGuideOpen] = useState(false);
+  /** คีออสก์ — ผู้ใช้เลือกเข้าหรือออกก่อนเปิดกล้อง */
+  const [facePunchIntent, setFacePunchIntent] = useState<"check_in" | "check_out" | null>(null);
+  /** นับถอยหลังก่อนถ่ายใบหน้า (คีออสก์) */
+  const [faceCaptureCountdown, setFaceCaptureCountdown] = useState<number | null>(null);
+  /** คีออสก์หลายจุด — เลือกจุดเมื่อลิงก์ไม่มี ?loc= */
+  const [kioskSite, setKioskSite] = useState<{
+    locationId: number;
+    locationLabel: string;
+    geofence: { lat: number; lng: number; radiusMeters: number };
+  } | null>(null);
+  const [kioskLocationChoices, setKioskLocationChoices] = useState<{ id: number; name: string }[] | null>(
+    null,
+  );
+  const [kioskLocationPickOpen, setKioskLocationPickOpen] = useState(false);
+  const [kioskContextLoading, setKioskContextLoading] = useState(false);
 
   const isPublic = props.mode === "public";
   const kioskFaceOnly = Boolean(isPublic && props.kioskFaceOnly);
   const faceEnabled = Boolean(isPublic && props.faceCheckInEnabled);
-  const centerLat = isPublic ? props.geofence.lat : null;
-  const centerLng = isPublic ? props.geofence.lng : null;
-  const radius = isPublic ? props.geofence.radiusMeters : null;
+
+  const effectivePublicLocationId = useMemo(() => {
+    if (!isPublic) return null;
+    if (props.publicLocationId != null && props.publicLocationId > 0) return props.publicLocationId;
+    return kioskSite?.locationId ?? null;
+  }, [isPublic, props, kioskSite]);
+
+  const effectiveGeofence = useMemo(() => {
+    if (!isPublic) return null;
+    if (props.publicLocationId != null && props.publicLocationId > 0) return props.geofence;
+    return kioskSite?.geofence ?? props.geofence;
+  }, [isPublic, props, kioskSite]);
+
+  const effectiveLocationLabel = useMemo(() => {
+    if (!isPublic) return null;
+    if (props.locationLabel?.trim()) return props.locationLabel;
+    return kioskSite?.locationLabel ?? null;
+  }, [isPublic, props, kioskSite]);
+
+  const centerLat = isPublic && effectiveGeofence ? effectiveGeofence.lat : null;
+  const centerLng = isPublic && effectiveGeofence ? effectiveGeofence.lng : null;
+  const radius = isPublic && effectiveGeofence ? effectiveGeofence.radiusMeters : null;
 
   const refreshGeo = useCallback(() => {
     if (!navigator.geolocation) {
@@ -328,6 +481,96 @@ export function AttendanceCheckClient(props: Props) {
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
   }, [isPublic, centerLat, centerLng, radius]);
+
+  const selectKioskLocation = useCallback(
+    async (locId: number) => {
+      if (props.mode !== "public") return;
+      setKioskContextLoading(true);
+      setErr(null);
+      try {
+        const params = new URLSearchParams({ ownerId: props.ownerId, loc: String(locId) });
+        const tid = props.sandboxTrialSessionId?.trim();
+        if (tid) params.set("t", tid);
+        const res = await fetch(`/api/attendance/public/context?${params}`);
+        const j = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          activeLocationId?: number;
+          locationLabel?: string | null;
+          geofence?: { lat: number; lng: number; radiusMeters: number };
+          locations?: { id: number; name: string }[];
+        };
+        if (!res.ok || !j.geofence || j.activeLocationId == null) {
+          setErr(j.error ?? "โหลดจุดเช็คไม่สำเร็จ");
+          return;
+        }
+        setKioskSite({
+          locationId: j.activeLocationId,
+          locationLabel:
+            j.locationLabel ??
+            j.locations?.find((l) => l.id === j.activeLocationId)?.name ??
+            "จุดเช็ค",
+          geofence: j.geofence,
+        });
+        setKioskLocationPickOpen(false);
+        setGeo(initialAttendanceGeoState());
+      } finally {
+        setKioskContextLoading(false);
+      }
+    },
+    [props],
+  );
+
+  useEffect(() => {
+    if (!kioskFaceOnly || props.mode !== "public") return;
+    if (props.publicLocationId != null && props.publicLocationId > 0) {
+      setKioskSite({
+        locationId: props.publicLocationId,
+        locationLabel: props.locationLabel ?? "จุดเช็ค",
+        geofence: props.geofence,
+      });
+      setKioskLocationPickOpen(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setKioskContextLoading(true);
+      const params = new URLSearchParams({ ownerId: props.ownerId });
+      const tid = props.sandboxTrialSessionId?.trim();
+      if (tid) params.set("t", tid);
+      try {
+        const res = await fetch(`/api/attendance/public/context?${params}`);
+        const j = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          activeLocationId?: number;
+          locationLabel?: string | null;
+          geofence?: { lat: number; lng: number; radiusMeters: number };
+          locations?: { id: number; name: string }[];
+        };
+        if (cancelled) return;
+        if (!res.ok || !j.geofence || j.activeLocationId == null) {
+          setErr(j.error ?? "โหลดจุดเช็คไม่สำเร็จ");
+          return;
+        }
+        const locs = j.locations ?? [];
+        if (locs.length > 1) {
+          setKioskLocationChoices(locs);
+          setKioskLocationPickOpen(true);
+        } else {
+          setKioskSite({
+            locationId: j.activeLocationId,
+            locationLabel: j.locationLabel ?? locs[0]?.name ?? "จุดเช็ค",
+            geofence: j.geofence,
+          });
+          setKioskLocationPickOpen(false);
+        }
+      } finally {
+        if (!cancelled) setKioskContextLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [kioskFaceOnly, props]);
 
   function scrollToCheckStep1() {
     window.requestAnimationFrame(() => {
@@ -389,9 +632,43 @@ export function AttendanceCheckClient(props: Props) {
 
   useEffect(() => {
     if (!successBanner) return;
-    const t = window.setTimeout(() => setSuccessBanner(null), 4500);
+    const ms = kioskFaceOnly ? 7000 : 4500;
+    const t = window.setTimeout(() => setSuccessBanner(null), ms);
     return () => window.clearTimeout(t);
-  }, [successBanner]);
+  }, [successBanner, kioskFaceOnly]);
+
+  useEffect(() => {
+    if (!faceScanFeedback) return;
+    const ms = faceScanFeedback.variant === "success" ? 7000 : 12000;
+    const t = window.setTimeout(() => setFaceScanFeedback(null), ms);
+    return () => window.clearTimeout(t);
+  }, [faceScanFeedback]);
+
+  /** คีออสก์ iPad — ล็อก scroll ทั้งหน้า (กัน body เลื่อน / bounce บน iOS) */
+  useEffect(() => {
+    if (!kioskFaceOnly) return;
+    const html = document.documentElement;
+    const body = document.body;
+    const previous = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyInset: body.style.inset,
+      bodyWidth: body.style.width,
+    };
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.inset = "0";
+    body.style.width = "100%";
+    return () => {
+      html.style.overflow = previous.htmlOverflow;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.position = previous.bodyPosition;
+      body.style.inset = previous.bodyInset;
+      body.style.width = previous.bodyWidth;
+    };
+  }, [kioskFaceOnly]);
 
   useEffect(() => {
     if (!isPublic) void loadStateSession();
@@ -415,7 +692,7 @@ export function AttendanceCheckClient(props: Props) {
     });
   }
 
-  /** สแกนใบหน้าสาธารณะ — ถ่ายแล้วระบุตัวตน + เช็คอินในขั้นตอนเดียว */
+  /** สแกนใบหน้าสาธารณะ — คีออสก์: เช็คเข้าหรือเช็คออก · อื่น ๆ: เช็คเข้าอย่างเดียว */
   async function submitPublicFaceCheckIn(
     file: File,
     precomputedDescriptor?: number[],
@@ -423,7 +700,9 @@ export function AttendanceCheckClient(props: Props) {
   ) {
     if (props.mode !== "public") return;
     setErr(null);
-    setMsg("กำลังระบุตัวตนและบันทึกเช็คอิน…");
+    setMsg(
+      kioskFaceOnly ? "กำลังระบุตัวตนและบันทึกเช็คเข้า/เช็คออก…" : "กำลังระบุตัวตนและบันทึกเช็คอิน…",
+    );
     setBusy(true);
     try {
       const pos = await getFreshPosition();
@@ -464,38 +743,73 @@ export function AttendanceCheckClient(props: Props) {
         fd.set("descriptors", JSON.stringify(precomputedSamples));
       }
       fd.set("face", file, file.name || "face.jpg");
-      if (props.publicLocationId != null && props.publicLocationId > 0) {
-        fd.set("locationId", String(props.publicLocationId));
+      if (effectivePublicLocationId != null && effectivePublicLocationId > 0) {
+        fd.set("locationId", String(effectivePublicLocationId));
       }
       const pubTid = props.sandboxTrialSessionId?.trim();
       if (pubTid) fd.set("trialSessionId", pubTid);
-      const res = await fetch("/api/attendance/public/face-check-in", {
+      if (kioskFaceOnly && facePunchIntent) fd.set("intent", facePunchIntent);
+      const faceApi = kioskFaceOnly ? "/api/attendance/public/face-punch" : "/api/attendance/public/face-check-in";
+      const res = await fetch(faceApi, {
         method: "POST",
         body: fd,
       });
       const j = (await res.json().catch(() => ({}))) as {
         error?: string;
+        action?: "check_in" | "check_out";
         matched?: { displayName?: string };
       };
       if (!res.ok) {
-        setErr(j.error ?? "บันทึกไม่สำเร็จ");
-        void startFaceCamera();
+        const apiErr = j.error ?? "บันทึกไม่สำเร็จ";
+        if (kioskFaceOnly) {
+          const fb = faceScanErrorFeedback(apiErr);
+          setSuccessBanner(null);
+          setFaceScanFeedback({
+            variant: "error",
+            intent: facePunchIntent ?? "check_in",
+            title: fb.title,
+            detail: fb.detail,
+          });
+          setErr(null);
+        } else {
+          setErr(apiErr);
+        }
+        if (kioskFaceOnly) void startFaceCamera();
         return;
       }
       clearFaceCapture();
-      setDataConsent(false);
+      setDataConsent(kioskFaceOnly);
       setErr(null);
       setMsg(null);
-      setPhone("");
-      setGuestName("");
-      setPublicFlow("pick");
-      setGeo(initialAttendanceGeoState());
-      setSuccessBanner(
-        j.matched?.displayName
-          ? `เช็คเข้าแล้ว · ${j.matched.displayName}`
-          : "เช็คเข้างานแล้ว (สแกนใบหน้า)",
-      );
-      await loadStatePublic();
+      if (!kioskFaceOnly) {
+        setPhone("");
+        setGuestName("");
+        setPublicFlow("pick");
+        setGeo(initialAttendanceGeoState());
+      } else {
+        setPublicFlow("face");
+      }
+      const name = j.matched?.displayName?.trim();
+      const action = j.action ?? "check_in";
+      if (kioskFaceOnly) {
+        const fb = faceScanSuccessFeedback(action, name);
+        setFaceScanFeedback({
+          variant: "success",
+          intent: action,
+          title: fb.title,
+          detail: fb.detail,
+        });
+        setSuccessBanner(`${fb.title} · ${fb.detail}`);
+      } else if (action === "check_out") {
+        setSuccessBanner(name ? `เช็คออกแล้ว · ${name}` : "เช็คออกงานแล้ว (สแกนใบหน้า)");
+      } else {
+        setSuccessBanner(name ? `เช็คเข้าแล้ว · ${name}` : "เช็คเข้างานแล้ว (สแกนใบหน้า)");
+      }
+      if (kioskFaceOnly) {
+        await startFaceCamera();
+      } else {
+        await loadStatePublic();
+      }
       setTimeout(() => scrollToCheckStep1(), 120);
     } finally {
       setBusy(false);
@@ -505,16 +819,34 @@ export function AttendanceCheckClient(props: Props) {
   async function captureAndFaceCheckIn() {
     setErr(null);
     setMsg(null);
+    setFaceScanFeedback(null);
     if (!cameraActive || !videoRef.current) {
       setErr("กำลังเปิดกล้อง — รอสักครู่แล้วลองใหม่");
       return;
     }
     setBusy(true);
-    setMsg("กำลังถ่ายหลายเฟรมเพื่อความแม่นยำ…");
+    setMsg("จัดใบหน้าให้นิ่งในกรอบ…");
     try {
+      for (let n = FACE_CAPTURE_COUNTDOWN_SEC; n >= 1; n--) {
+        setFaceCaptureCountdown(n);
+        await sleepMs(620);
+      }
+      setFaceCaptureCountdown(null);
+      setMsg("กำลังถ่ายหลายเฟรมเพื่อความแม่นยำ…");
       const multi = await captureMultiFrameDescriptor(videoRef.current, { frames: 4, gapMs: 240 });
       if (!multi.ok) {
-        setErr(multi.error);
+        const fb = faceScanErrorFeedback(multi.error);
+        if (kioskFaceOnly) {
+          setFaceScanFeedback({
+            variant: "error",
+            intent: facePunchIntent ?? "check_in",
+            title: fb.title,
+            detail: fb.detail,
+          });
+          setErr(null);
+        } else {
+          setErr(multi.error);
+        }
         setMsg(null);
         return;
       }
@@ -530,16 +862,19 @@ export function AttendanceCheckClient(props: Props) {
       setDataConsent(true);
       await submitPublicFaceCheckIn(file, multi.descriptor, multi.samples);
     } finally {
+      setFaceCaptureCountdown(null);
       setBusy(false);
     }
   }
 
-  async function beginFaceCheckInFlow() {
+  async function beginFaceCheckInFlow(intent: "check_in" | "check_out") {
     if (!kioskFaceOnly || !faceEnabled) return;
+    setFacePunchIntent(intent);
     setPublicFlow("face");
     setErr(null);
     setMsg(null);
     setSuccessBanner(null);
+    setFaceScanFeedback(null);
     setGuestName("");
     setPhone("");
     setDataConsent(true);
@@ -590,8 +925,8 @@ export function AttendanceCheckClient(props: Props) {
           fd.set("latitude", String(pos.lat));
           fd.set("longitude", String(pos.lng));
           fd.set("face", faceFile, faceFile.name || "face.jpg");
-          if (props.publicLocationId != null && props.publicLocationId > 0) {
-            fd.set("locationId", String(props.publicLocationId));
+          if (effectivePublicLocationId != null && effectivePublicLocationId > 0) {
+            fd.set("locationId", String(effectivePublicLocationId));
           }
           const pubTid = props.sandboxTrialSessionId?.trim();
           if (pubTid) fd.set("trialSessionId", pubTid);
@@ -674,8 +1009,8 @@ export function AttendanceCheckClient(props: Props) {
             phone: digits,
             latitude: pos.lat,
             longitude: pos.lng,
-            ...(props.publicLocationId != null && props.publicLocationId > 0
-              ? { locationId: props.publicLocationId }
+            ...(effectivePublicLocationId != null && effectivePublicLocationId > 0
+              ? { locationId: effectivePublicLocationId }
               : {}),
             ...(pubTidOut ? { trialSessionId: pubTidOut } : {}),
           }),
@@ -770,13 +1105,33 @@ export function AttendanceCheckClient(props: Props) {
   const step4ConsentDone = dataConsent;
   const step5AttendanceDone = !!openLog || !!todayLatest?.checkOutTime;
 
+  const kioskMainCentered =
+    kioskFaceOnly && isPublic && (publicFlow === "pick" || publicFlow === "face");
+
+  /** หน้าเช็คอินสาธารณะ — พื้นหลังเต็มจอ (body gradient) · คีออสก์จัดกลางจอ */
+  const checkInPageShellClass = isPublic
+    ? kioskFaceOnly
+      ? attendanceKioskPageShellClass
+      : "min-h-[100dvh] w-full"
+    : "mx-auto min-h-[100dvh] max-w-md bg-gradient-to-b from-[#0000BF]/[0.03] via-white to-white px-4 pb-16 pt-6";
+
+  const checkInPageInnerClass = isPublic
+    ? kioskFaceOnly
+      ? attendanceKioskPageInnerClass
+      : "mx-auto w-full max-w-md px-4 pb-16 pt-6"
+    : null;
+
+  const kioskStepBox = kioskFaceOnly ? attendanceKioskStepBoxClass : stepBox;
+
   return (
-    <div className="mx-auto min-h-[100dvh] max-w-md bg-gradient-to-b from-[#0000BF]/[0.03] via-white to-white px-4 pb-16 pt-6">
+    <div className={checkInPageShellClass}>
+      <div className={checkInPageInnerClass ?? undefined}>
       {isPublic ? (
         <PublicCheckInHeader
           orgName={props.orgName}
           logoUrl={props.logoUrl}
-          locationLabel={props.locationLabel ?? null}
+          locationLabel={effectiveLocationLabel ?? null}
+          compact={kioskFaceOnly}
         />
       ) : (
         <header className="rounded-2xl border border-[#e8e6fc] bg-white/90 px-4 py-4 text-center shadow-sm">
@@ -785,9 +1140,14 @@ export function AttendanceCheckClient(props: Props) {
         </header>
       )}
 
-      {successBanner ? (
+      {successBanner && !kioskMainCentered ? (
         <div
-          className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald-400/40 bg-emerald-600 px-4 py-3 text-white shadow-md shadow-emerald-900/10"
+          className={cn(
+            "mt-4 flex items-center gap-3 rounded-2xl border-[3px] px-4 py-3 text-white shadow-md",
+            kioskFaceOnly && facePunchIntent === "check_out"
+              ? "border-rose-300/70 bg-gradient-to-r from-rose-600 to-red-600 shadow-rose-900/15 ring-2 ring-rose-400/25"
+              : "border-emerald-300/70 bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-900/10 ring-2 ring-emerald-400/25",
+          )}
           role="status"
         >
           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20">
@@ -813,60 +1173,134 @@ export function AttendanceCheckClient(props: Props) {
         </div>
       ) : null}
 
-      <div className="mt-8 rounded-2xl border border-[#0000BF]/15 bg-white px-5 py-6 shadow-sm">
-        <p className="text-center text-xs font-medium uppercase tracking-wider text-[#66638c]">เวลาปัจจุบัน</p>
-        <p className="mt-2 text-center text-3xl font-bold tabular-nums text-[#2e2a58]">
-          {now
-            ? now.toLocaleTimeString("th-TH", {
-                timeZone: "Asia/Bangkok",
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-              })
-            : "--:--:--"}
-        </p>
-        <p className="mt-1 text-center text-sm text-[#66638c]">
-          {now
-            ? now.toLocaleDateString("th-TH", {
-                timeZone: "Asia/Bangkok",
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })
-            : "\u00a0"}
-        </p>
-      </div>
+      {!kioskFaceOnly ? (
+        <div className="mt-8 rounded-2xl border border-[#0000BF]/15 bg-white px-5 py-6 shadow-sm">
+          <p className="text-center text-xs font-medium uppercase tracking-wider text-[#66638c]">เวลาปัจจุบัน</p>
+          <p className="mt-2 text-center text-3xl font-bold tabular-nums text-[#2e2a58]">
+            {now
+              ? now.toLocaleTimeString("th-TH", {
+                  timeZone: "Asia/Bangkok",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })
+              : "--:--:--"}
+          </p>
+          <p className="mt-1 text-center text-sm text-[#66638c]">
+            {now
+              ? now.toLocaleDateString("th-TH", {
+                  timeZone: "Asia/Bangkok",
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })
+              : "\u00a0"}
+          </p>
+        </div>
+      ) : null}
+
+      <div className={cn(kioskMainCentered && attendanceKioskCenterShellClass)}>
+        {successBanner && kioskMainCentered ? (
+          <div
+            className={cn(
+              "flex w-full max-w-md items-center gap-3 rounded-2xl border-[3px] px-4 py-3 text-white shadow-md",
+              facePunchIntent === "check_out"
+                ? "border-rose-300/70 bg-gradient-to-r from-rose-600 to-red-600 shadow-rose-900/15 ring-2 ring-rose-400/25"
+                : "border-emerald-300/70 bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-900/10 ring-2 ring-emerald-400/25",
+            )}
+            role="status"
+          >
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20">
+              <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" aria-hidden>
+                <path
+                  d="M3.5 8.5l3 3 6-6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            <p className="min-w-0 flex-1 text-sm font-semibold leading-snug">{successBanner}</p>
+            <button
+              type="button"
+              onClick={() => setSuccessBanner(null)}
+              className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-white/90 hover:bg-white/15"
+              aria-label="ปิดแถบแจ้งเตือน"
+            >
+              ปิด
+            </button>
+          </div>
+        ) : null}
+
+        {kioskMainCentered && publicFlow === "pick" ? <KioskCompactClock now={now} /> : null}
+
+        {kioskFaceOnly && kioskLocationPickOpen && kioskLocationChoices && kioskLocationChoices.length > 1 ? (
+          <div className={cn(kioskStepBox, "w-full max-w-md")}>
+            <p className="text-center text-sm font-black tracking-tight text-[#1e1b4b]">เลือกจุดเช็ค</p>
+            <p className="mt-1 text-center text-xs font-medium text-[#66638c]">
+              องค์กรมีหลายจุด — เลือกสาขาที่ติดตั้ง iPad นี้
+            </p>
+            <div className="mt-4 space-y-2">
+              {kioskLocationChoices.map((loc) => (
+                <button
+                  key={loc.id}
+                  type="button"
+                  disabled={kioskContextLoading}
+                  onClick={() => void selectKioskLocation(loc.id)}
+                  className="flex min-h-[52px] w-full items-center justify-center rounded-[1.25rem] border border-[#0000BF]/20 bg-white/90 px-4 text-sm font-bold text-[#2e2a58] shadow-sm transition hover:bg-white active:scale-[0.99] disabled:opacity-50"
+                >
+                  {loc.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
       {isPublic ? (
         publicFlow === "pick" ? (
-          <div className={stepBox} id={CHECK_STEP_1_ANCHOR_ID}>
+          <div className={kioskStepBox} id={CHECK_STEP_1_ANCHOR_ID}>
             {kioskFaceOnly ? (
               faceEnabled ? (
-                <>
+                kioskLocationPickOpen ? null : (
+                  <>
                   <p className="text-center text-sm font-black tracking-tight text-[#1e1b4b]">
                     จุดเช็คอิน · สแกนใบหน้า
                   </p>
                   <p className="mt-1 text-center text-xs font-medium text-[#66638c]">
-                    วาง iPad ไว้ที่จุดนี้ — พนักงานมากดปุ่มด้านล่างแล้วสแกนใบหน้าเพื่อเข้างาน
+                    วาง iPad ไว้ที่จุดนี้ — กดปุ่มเข้าหรือออก แล้วสแกนใบหน้า
                   </p>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void beginFaceCheckInFlow()}
-                    className="mt-5 flex min-h-[88px] w-full flex-col items-center justify-center gap-1 rounded-[1.5rem] bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 px-4 py-5 text-white shadow-[0_20px_40px_-18px_rgba(16,185,129,0.55)] transition active:scale-[0.99] disabled:opacity-50"
-                  >
-                    <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-                      <circle cx="12" cy="9" r="3.2" />
-                      <path d="M5.5 19c1.4-3 3.7-4.5 6.5-4.5s5.1 1.5 6.5 4.5" strokeLinecap="round" />
-                      <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                      <rect x="14" y="3" width="7" height="7" rx="1.5" />
-                      <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                      <path d="M14 17h3v3" strokeLinecap="round" />
-                    </svg>
-                    <span className="text-xl font-black tracking-tight">สแกนใบหน้าเช็คอิน</span>
-                    <span className="text-[11px] font-semibold text-white/85">กดแล้วเปิดกล้องทันที</span>
-                  </button>
+                  <div className="mt-4 space-y-2.5">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void beginFaceCheckInFlow("check_in")}
+                      className="flex min-h-[76px] w-full flex-col items-center justify-center gap-1 rounded-[1.5rem] bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 px-4 py-4 text-white shadow-[0_20px_40px_-18px_rgba(16,185,129,0.55)] transition active:scale-[0.99] disabled:opacity-50"
+                    >
+                      <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                        <circle cx="12" cy="9" r="3.2" />
+                        <path d="M5.5 19c1.4-3 3.7-4.5 6.5-4.5s5.1 1.5 6.5 4.5" strokeLinecap="round" />
+                        <path d="M12 5V3M12 3l2 2M12 3L10 5" strokeLinecap="round" />
+                      </svg>
+                      <span className="text-xl font-black tracking-tight">สแกนใบหน้าเช็คเข้า</span>
+                      <span className="text-[11px] font-semibold text-white/85">ตอนมาเข้างาน</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void beginFaceCheckInFlow("check_out")}
+                      className="flex min-h-[76px] w-full flex-col items-center justify-center gap-1 rounded-[1.5rem] bg-gradient-to-br from-rose-600 via-red-600 to-red-700 px-4 py-4 text-white shadow-[0_20px_40px_-18px_rgba(225,29,72,0.5)] transition active:scale-[0.99] disabled:opacity-50"
+                    >
+                      <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                        <circle cx="12" cy="9" r="3.2" />
+                        <path d="M5.5 19c1.4-3 3.7-4.5 6.5-4.5s5.1 1.5 6.5 4.5" strokeLinecap="round" />
+                        <path d="M12 19v2M12 21l2-2M12 21l-2-2" strokeLinecap="round" />
+                      </svg>
+                      <span className="text-xl font-black tracking-tight">สแกนใบหน้าเช็คออก</span>
+                      <span className="text-[11px] font-semibold text-white/85">ตอนเลิกงาน</span>
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setKioskGuideOpen(true)}
@@ -881,7 +1315,8 @@ export function AttendanceCheckClient(props: Props) {
                     </svg>
                     คู่มือการทำงาน · วิธีสแกนให้ผ่าน
                   </button>
-                </>
+                  </>
+                )
               ) : (
                 <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-950">
                   ยังไม่ได้เปิดสแกนใบหน้าในตั้งค่า — ให้เจ้าของเปิด «เช็คอินด้วยสแกนใบหน้า» ก่อนใช้ลิงก์นี้
@@ -927,50 +1362,82 @@ export function AttendanceCheckClient(props: Props) {
             )}
           </div>
         ) : publicFlow === "face" ? (
-          <div className={stepBox} id={CHECK_STEP_1_ANCHOR_ID}>
+          <div className={kioskStepBox} id={CHECK_STEP_1_ANCHOR_ID}>
             <button
               type="button"
               disabled={busy}
               onClick={() => {
                 clearFaceCapture();
+                setFacePunchIntent(null);
                 setPublicFlow("pick");
                 setErr(null);
                 setMsg(null);
                 setSuccessBanner(null);
+                setFaceScanFeedback(null);
                 setDataConsent(false);
               }}
               className="text-xs font-bold text-[#0000BF] hover:underline disabled:opacity-50"
             >
               ← กลับหน้าจุดเช็ค
             </button>
-            <p className="mt-2 text-center text-sm font-black text-[#1e1b4b]">สแกนใบหน้าเพื่อเช็คอิน</p>
+            <p className="mt-2 text-center text-sm font-black text-[#1e1b4b]">
+              {facePunchIntent === "check_out" ? "สแกนใบหน้าเช็คออก" : "สแกนใบหน้าเช็คเข้า"}
+            </p>
             <p className="mt-1 text-center text-xs text-[#66638c]">
-              มองตรงกล้อง แล้วกดปุ่มเขียว — ระบบระบุตัวตนและบันทึกเข้างานทันที
+              {facePunchIntent === "check_out"
+                ? "มองตรงกล้อง กดปุ่มแดง — ระบบนับถอยหลังแล้วถ่ายอัตโนมัติ"
+                : "มองตรงกล้อง กดปุ่มเขียว — ระบบนับถอยหลังแล้วถ่ายอัตโนมัติ"}
             </p>
 
-            <div className="mt-3 space-y-3 rounded-2xl border border-[#e8e6fc]/90 bg-black p-2">
+            <div className={attendanceFacePunchCameraShellClass(facePunchIntent, { kiosk: kioskFaceOnly })}>
               {cameraActive ? (
-                <video
-                  ref={videoRef}
-                  className="mx-auto aspect-[3/4] w-full max-w-xs rounded-xl bg-black object-cover"
-                  playsInline
-                  muted
-                  autoPlay
-                />
+                <>
+                  <video
+                    ref={videoRef}
+                    className={attendanceFacePunchCameraVideoClass(facePunchIntent, { kiosk: kioskFaceOnly })}
+                    playsInline
+                    muted
+                    autoPlay
+                  />
+                  {faceCaptureCountdown != null ? (
+                    <div className="pointer-events-none absolute inset-2 flex items-center justify-center rounded-xl bg-black/25">
+                      <span className="text-7xl font-black tabular-nums text-white drop-shadow-lg">
+                        {faceCaptureCountdown}
+                      </span>
+                    </div>
+                  ) : null}
+                </>
               ) : (
-                <div className="mx-auto flex aspect-[3/4] w-full max-w-xs items-center justify-center rounded-xl bg-black/80 px-4 text-center text-xs font-medium text-white/80">
+                <div className={attendanceFacePunchCameraPlaceholderClass(facePunchIntent, { kiosk: kioskFaceOnly })}>
                   {busy ? "กำลังระบุตัวตน…" : "กำลังเปิดกล้อง…"}
                 </div>
               )}
             </div>
 
+            {faceScanFeedback ? (
+              <div className="mt-3">
+                <FaceScanFeedback
+                  variant={faceScanFeedback.variant}
+                  intent={faceScanFeedback.intent}
+                  title={faceScanFeedback.title}
+                  detail={faceScanFeedback.detail}
+                />
+              </div>
+            ) : null}
+
             <button
               type="button"
               disabled={busy || !cameraActive}
               onClick={() => void captureAndFaceCheckIn()}
-              className="mt-4 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 text-base font-bold text-white shadow-md shadow-emerald-600/25 disabled:opacity-45"
+              className={attendanceFacePunchActionButtonClass(facePunchIntent)}
             >
-              {busy ? "กำลังเช็คอิน…" : "ถ่ายใบหน้าและเช็คอิน"}
+              {faceCaptureCountdown != null
+                ? `เตรียมตัว… ${faceCaptureCountdown}`
+                : busy
+                  ? "กำลังบันทึก…"
+                  : facePunchIntent === "check_out"
+                    ? "เริ่มสแกนเช็คออก"
+                    : "เริ่มสแกนเช็คเข้า"}
             </button>
             {!cameraActive && !busy ? (
               <button
@@ -981,9 +1448,11 @@ export function AttendanceCheckClient(props: Props) {
                 เปิดกล้องอีกครั้ง
               </button>
             ) : null}
-            <p className="mt-3 text-[11px] leading-relaxed text-[#66638c]">
-              การกดเช็คอินถือว่ายินยอมให้เก็บพิกัด GPS รูปใบหน้า และเวลาเข้างานตามนโยบายองค์กร
-            </p>
+            {!kioskFaceOnly ? (
+              <p className="mt-3 text-[11px] leading-relaxed text-[#66638c]">
+                การกดบันทึกถือว่ายินยอมให้เก็บพิกัด GPS รูปใบหน้า (ตอนเข้างาน) และเวลาเข้า-ออกตามนโยบายองค์กร
+              </p>
+            ) : null}
           </div>
         ) : (
           <div className={stepBox} id={CHECK_STEP_1_ANCHOR_ID}>
@@ -1112,10 +1581,10 @@ export function AttendanceCheckClient(props: Props) {
                 </p>
                 {!facePreview ? (
                   cameraActive ? (
-                    <div className="mt-3 space-y-3 rounded-2xl border border-[#e8e6fc]/90 bg-black p-2">
+                    <div className={attendanceFacePunchCameraShellClass("check_in")}>
                       <video
                         ref={videoRef}
-                        className="mx-auto aspect-[3/4] w-full max-w-xs rounded-xl bg-black object-cover"
+                        className={attendanceFacePunchCameraVideoClass("check_in")}
                         playsInline
                         muted
                         autoPlay
@@ -1323,17 +1792,24 @@ export function AttendanceCheckClient(props: Props) {
         </>
       ) : null}
 
-      {schemaSyncWarning ? (
+      </div>
+
+      {schemaSyncWarning && !kioskFaceOnly ? (
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-sm text-amber-950">
           {schemaSyncWarning}
         </p>
       ) : null}
-      {err ? <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-center text-sm text-red-800">{err}</p> : null}
-      {msg ? <p className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-center text-sm text-emerald-900">{msg}</p> : null}
+      {err && !(kioskFaceOnly && (publicFlow === "face" || kioskMainCentered)) ? (
+        <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-center text-sm text-red-800">{err}</p>
+      ) : null}
+      {msg && !(kioskFaceOnly && kioskMainCentered) ? (
+        <p className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-center text-sm text-emerald-900">{msg}</p>
+      ) : null}
 
       {kioskFaceOnly ? (
         <AttendanceFaceKioskGuideModal open={kioskGuideOpen} onClose={() => setKioskGuideOpen(false)} />
       ) : null}
+      </div>
     </div>
   );
 }

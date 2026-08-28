@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
+import { cn } from "@/lib/cn";
 import {
   createShopQrPosterCanvas,
   createShopQrPosterDataUrl,
@@ -9,7 +10,15 @@ import {
   downloadPosterPng,
   resolveAssetUrl,
 } from "@/components/qr/shop-qr-template";
-import { attendanceOutlineBtnClass, attendancePosterPreviewShellClass } from "@/systems/attendance/attendance-ui";
+import {
+  attendanceLinkActionBtnClass,
+  attendanceOutlineBtnClass,
+  attendancePosterPreviewShellClass,
+  attendancePrimaryBtnClass,
+  attendanceQrPosterSplitClass,
+  attendanceQrToolbarBtnClass,
+  attendanceQrToolbarClass,
+} from "@/systems/attendance/attendance-ui";
 
 type Props = {
   ownerId: string;
@@ -167,12 +176,16 @@ export function AttendanceQrPosterClient({
     }
   }
 
-  const actionBtnOutline =
-    "rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50";
-  const actionBtnMobileIcon = "inline-flex min-h-[44px] items-center justify-center gap-2 px-3 py-2.5";
+  const actionBtnOutline = cn(attendanceOutlineBtnClass, attendanceQrToolbarBtnClass);
+  const actionBtnPrimary = cn(attendancePrimaryBtnClass, attendanceQrToolbarBtnClass);
+  const actionBtnSoft = cn(attendanceLinkActionBtnClass, attendanceQrToolbarBtnClass);
+
+  const printHint = faceKiosk
+    ? "นำไปปริ๊นท์วางจุดเช็ค — เปิด iPad สแกนใบหน้าตรงกับรายชื่อ"
+    : "นำไปปริ๊นต์วางจุดเช็ค — พนักงานสแกนแล้วเลือก \"พนักงาน\" ยืนยันด้วยเบอร์ในรายชื่อ";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {!checkInUrl ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           ยังสร้างลิงก์/QR ไม่ได้ — เปิดหน้านี้จากเบราว์เซอร์บนโดเมนที่ใช้งานจริง หรือตั้งค่า URL แอปให้ตรงโดเมนนั้น
@@ -180,90 +193,98 @@ export function AttendanceQrPosterClient({
       ) : null}
 
       {checkInUrl ? (
-        <>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void copyLink()}
-              className={`${attendanceOutlineBtnClass} ${actionBtnMobileIcon}`}
-              title={copyDone ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
-              aria-label={copyDone ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <rect x="9" y="9" width="13" height="13" rx="2" />
-                <rect x="2" y="2" width="13" height="13" rx="2" />
-              </svg>
-              <span className="hidden sm:inline">{copyDone ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}</span>
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => downloadPdf("a4")}
-              className={`${actionBtnMobileIcon} rounded-xl bg-[#0000BF] text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50`}
-              title="ดาวน์โหลด PDF (A4)"
-              aria-label="ดาวน์โหลด PDF (A4)"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <path d="M12 3v12" />
-                <path d="m7 10 5 5 5-5" />
-                <path d="M5 21h14" />
-              </svg>
-              <span className="hidden sm:inline">ดาวน์โหลด PDF (A4)</span>
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => downloadPdf("a5")}
-              className={`${attendanceOutlineBtnClass} ${actionBtnMobileIcon}`}
-              title="ดาวน์โหลด PDF (A5)"
-              aria-label="ดาวน์โหลด PDF (A5)"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <path d="M12 3v12" />
-                <path d="m7 10 5 5 5-5" />
-                <path d="M5 21h14" />
-              </svg>
-              <span className="hidden sm:inline">ดาวน์โหลด PDF (A5)</span>
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={downloadPng}
-              className={`${attendanceOutlineBtnClass} ${actionBtnMobileIcon}`}
-              title="ดาวน์โหลด PNG"
-              aria-label="ดาวน์โหลด PNG"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <path d="m21 15-5-5L5 21" />
-              </svg>
-              <span className="hidden sm:inline">ดาวน์โหลด PNG</span>
-            </button>
+        <div className={attendanceQrPosterSplitClass}>
+          <div className="flex min-w-0 flex-col gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-[#2e2a58]">{headline}</p>
+              {subLocation ? (
+                <p className="mt-1 text-xs font-semibold text-[#8b87b8]">จุดเช็ค: {subLocation}</p>
+              ) : null}
+              <p className="mt-2 text-xs font-medium leading-relaxed text-[#66638c]">{printHint}</p>
+              <p className="mt-3 break-all text-[10px] font-semibold leading-relaxed text-[#0000BF]">{checkInUrl}</p>
+              {copyErr ? (
+                <p className="mt-2 text-xs text-red-600">
+                  คัดลอกไม่สำเร็จ — ลองอนุญาตคลิปบอร์ดหรือเปิดหน้าใน HTTPS
+                </p>
+              ) : null}
+            </div>
+            <div className={attendanceQrToolbarClass}>
+              <button
+                type="button"
+                onClick={() => void copyLink()}
+                className={actionBtnSoft}
+                title={copyDone ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
+                aria-label={copyDone ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
+              >
+                <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <rect x="9" y="9" width="13" height="13" rx="2" />
+                  <rect x="2" y="2" width="13" height="13" rx="2" />
+                </svg>
+                <span className="hidden sm:inline">{copyDone ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}</span>
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => downloadPdf("a4")}
+                className={actionBtnPrimary}
+                title="ดาวน์โหลด PDF (A4)"
+                aria-label="ดาวน์โหลด PDF (A4)"
+              >
+                <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path d="M12 3v12" />
+                  <path d="m7 10 5 5 5-5" />
+                  <path d="M5 21h14" />
+                </svg>
+                <span className="hidden sm:inline">ดาวน์โหลด PDF (A4)</span>
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => downloadPdf("a5")}
+                className={actionBtnOutline}
+                title="ดาวน์โหลด PDF (A5)"
+                aria-label="ดาวน์โหลด PDF (A5)"
+              >
+                <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path d="M12 3v12" />
+                  <path d="m7 10 5 5 5-5" />
+                  <path d="M5 21h14" />
+                </svg>
+                <span className="hidden sm:inline">ดาวน์โหลด PDF (A5)</span>
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={downloadPng}
+                className={actionBtnOutline}
+                title="ดาวน์โหลด PNG"
+                aria-label="ดาวน์โหลด PNG"
+              >
+                <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <path d="m21 15-5-5L5 21" />
+                </svg>
+                <span className="hidden sm:inline">ดาวน์โหลด PNG</span>
+              </button>
+            </div>
           </div>
-          {copyErr ? (
-            <p className="text-xs text-red-600">คัดลอกไม่สำเร็จ — ลองอนุญาตคลิปบอร์ดหรือเปิดหน้าใน HTTPS</p>
-          ) : null}
-        </>
-      ) : null}
 
-      {checkInUrl ? (
-        <>
-          <p className="text-xs text-[#66638c]">
-            นำไปปริ๊นต์วางจุดเช็ค — พนักงานสแกนแล้วเลือก &quot;พนักงาน&quot; ยืนยันด้วยเบอร์ในรายชื่อ
-          </p>
-
-          <div className={attendancePosterPreviewShellClass}>
+          <div className={cn(attendancePosterPreviewShellClass, "lg:sticky lg:top-4")}>
             {posterPreviewUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={posterPreviewUrl} alt="ตัวอย่างโปสเตอร์ QR เช็คอิน" className="mx-auto w-[340px] rounded-3xl shadow-md" />
+              <img
+                src={posterPreviewUrl}
+                alt="ตัวอย่างโปสเตอร์ QR เช็คอิน"
+                className="mx-auto w-full max-w-[340px] rounded-3xl shadow-md lg:mx-0"
+              />
             ) : (
-              <div className="mx-auto flex h-[560px] w-[340px] items-center justify-center rounded-3xl border border-[#e1e3ff] bg-white text-xs text-[#66638c]">
+              <div className="mx-auto flex aspect-[340/560] w-full max-w-[340px] items-center justify-center rounded-3xl border border-[#e1e3ff] bg-white text-xs text-[#66638c] lg:mx-0">
                 กำลังเรนเดอร์ตัวอย่าง...
               </div>
             )}
           </div>
-        </>
+        </div>
       ) : null}
     </div>
   );

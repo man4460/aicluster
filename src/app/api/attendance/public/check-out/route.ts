@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { ATTENDANCE_LOG_CHANNEL } from "@/lib/attendance/log-channel";
 import { isAttendancePublicOpenForOwner } from "@/lib/attendance/portal-access";
 import {
   AttendanceBusinessError,
@@ -48,6 +49,7 @@ export async function POST(req: Request) {
       latitude: parsed.data.latitude,
       longitude: parsed.data.longitude,
       locationId: parsed.data.locationId ?? null,
+      checkOutChannel: ATTENDANCE_LOG_CHANNEL.OUT_PUBLIC_CLASSIC,
     });
     return NextResponse.json({
       ok: true,

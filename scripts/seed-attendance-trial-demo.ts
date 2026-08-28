@@ -74,6 +74,24 @@ async function ensureAttendanceDemoData(ownerUserId: string, trialSessionId: str
     },
   });
 
+  const branch = await prisma.attendanceBranch.upsert({
+    where: {
+      ownerUserId_trialSessionId_code: {
+        ownerUserId,
+        trialSessionId,
+        code: "MAIN",
+      },
+    },
+    update: { name: "สาขาหลัก" },
+    create: {
+      ownerUserId,
+      trialSessionId,
+      name: "สาขาหลัก",
+      code: "MAIN",
+      sortOrder: 0,
+    },
+  });
+
   const locations = [
     { name: "หน้าสำนักงาน", lat: 13.7563, lng: 100.5018, radius: 180, sortOrder: 0 },
     { name: "โซนคลังสินค้า", lat: 13.7549, lng: 100.5032, radius: 220, sortOrder: 1 },
@@ -99,6 +117,7 @@ async function ensureAttendanceDemoData(ownerUserId: string, trialSessionId: str
       create: {
         ownerUserId,
         trialSessionId,
+        branchId: branch.id,
         name: loc.name,
         allowedLocationLat: loc.lat,
         allowedLocationLng: loc.lng,

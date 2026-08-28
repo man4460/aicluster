@@ -2,13 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { saveAttendanceFacePhoto } from "@/lib/attendance/face-photo-file";
-import {
-  FACE_DESCRIPTOR_LENGTH,
-  FACE_ENROLL_MAX_SAMPLES,
-  matchFaceDescriptorMulti,
-  parseFaceDescriptorBank,
-  type FaceMatchCandidate,
-} from "@/lib/attendance/face-descriptor";
+import { FACE_DESCRIPTOR_LENGTH } from "@/lib/attendance/face-descriptor";
+import { ATTENDANCE_LOG_CHANNEL } from "@/lib/attendance/log-channel";
+import { matchPublicFaceToRoster, PUBLIC_FACE_FORM_DESCRIPTOR_MAX } from "@/lib/attendance/public-face-roster-match";
 import { isAttendancePublicOpenForOwner } from "@/lib/attendance/portal-access";
 import {
   AttendanceBusinessError,
@@ -25,8 +21,7 @@ const fieldsSchema = z.object({
   latitude: z.coerce.number().finite(),
   longitude: z.coerce.number().finite(),
   descriptor: descriptorSchema,
-  /** เฟรมย่อยจากการสแกน — ใช้โหวตเพื่อความแม่นยำ */
-  descriptors: z.array(descriptorSchema).max(FACE_ENROLL_MAX_SAMPLES).optional(),
+  descriptors: z.array(descriptorSchema).max(PUBLIC_FACE_FORM_DESCRIPTOR_MAX).optional(),
 });
 
 export async function POST(req: Request) {
@@ -103,56 +98,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "ยังไม่เปิดเช็คอินด้วยใบหน้า" }, { status: 400 });
   }
 
-  const roster = await prisma.attendanceRosterEntry.findMany({
-    where: {
-      ownerUserId: parsed.data.ownerId,
-      trialSessionId,
-      isActive: true,
-      faceDescriptorJson: { not: null },
-    },
-    select: {
-      id: true,
-      displayName: true,
-      phone: true,
-      faceDescriptorJson: true,
-    },
-    take: 2500,
+  const matched = await matchPublicFaceToRoster({
+    ownerUserId: parsed.data.ownerId,
+    trialSessionId,
+    descriptor: parsed.data.descriptor,
+    descriptors: parsed.data.descriptors,
   });
-
-  const candidates: FaceMatchCandidate[] = [];
-  for (const row of roster) {
-    const descriptors = parseFaceDescriptorBank(row.faceDescriptorJson);
-    if (!descriptors?.length) continue;
-    candidates.push({
-      id: row.id,
-      displayName: row.displayName,
-      phone: row.phone,
-      descriptors,
-    });
-  }
-
-  const probes =
-    parsed.data.descriptors && parsed.data.descriptors.length >= 2
-      ? parsed.data.descriptors
-      : [parsed.data.descriptor];
-  const match = matchFaceDescriptorMulti(probes, candidates);
-  if (!match.ok) {
-    if (match.reason === "NO_CANDIDATES") {
-      return NextResponse.json(
-        { error: "ยังไม่มีพนักงานที่ลงทะเบียนใบหน้า — ให้เจ้าของลงทะเบียนในรายชื่อก่อน" },
-        { status: 400 },
-      );
-    }
-    if (match.reason === "AMBIGUOUS") {
-      return NextResponse.json(
-        { error: "ใบหน้าคล้ายหลายคนในรายชื่อ — ลองใหม่ในแสงดีขึ้น หรือให้เจ้าของลงทะเบียนใบหน้าใหม่" },
-        { status: 400 },
-      );
-    }
-    return NextResponse.json(
-      { error: "ไม่ตรงกับใบหน้าในรายชื่อ — ลองใหม่หรือใช้เช็คอินด้วยเบอร์" },
-      { status: 400 },
-    );
+  if (!matched.ok) {
+    return NextResponse.json({ error: matched.error }, { status: matched.status });
   }
 
   const buf = Buffer.from(await face.arrayBuffer());
@@ -173,23 +126,24 @@ export async function POST(req: Request) {
     const log = await checkInAsGuest({
       ownerUserId: parsed.data.ownerId,
       trialSessionId,
-      guestPhone: match.entry.phone,
-      guestName: match.entry.displayName,
+      guestPhone: matched.entry.phone,
+      guestName: matched.entry.displayName,
       visitorKind: "ROSTER_STAFF",
       latitude: parsed.data.latitude,
       longitude: parsed.data.longitude,
       checkInFacePhotoUrl: photoUrl,
       locationId: locationId ?? null,
+      checkInChannel: ATTENDANCE_LOG_CHANNEL.IN_PUBLIC_FACE,
     });
     return NextResponse.json({
       ok: true,
       matched: {
-        rosterId: match.entry.id,
-        displayName: match.entry.displayName,
-        phone: match.entry.phone,
-        distance: match.distance,
-        margin: match.margin,
-        support: match.support,
+        rosterId: matched.entry.id,
+        displayName: matched.entry.displayName,
+        phone: matched.entry.phone,
+        distance: matched.distance,
+        margin: matched.margin,
+        support: matched.support,
       },
       log: {
         id: log.id,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireSession } from "@/lib/api-auth";
+import { ATTENDANCE_LOG_CHANNEL } from "@/lib/attendance/log-channel";
 import { saveAttendanceFacePhoto } from "@/lib/attendance/face-photo-file";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import {
@@ -63,6 +64,7 @@ export async function POST(req: Request) {
       latitude: parsed.data.latitude,
       longitude: parsed.data.longitude,
       checkInFacePhotoUrl: photoUrl,
+      checkInChannel: ATTENDANCE_LOG_CHANNEL.IN_APP,
     });
     return NextResponse.json({
       ok: true,

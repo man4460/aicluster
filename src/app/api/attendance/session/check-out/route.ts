@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
+import { ATTENDANCE_LOG_CHANNEL } from "@/lib/attendance/log-channel";
 import {
   AttendanceBusinessError,
   AttendanceGeoError,
@@ -38,6 +39,7 @@ export async function POST(req: Request) {
       actorUserId: ctx.actorUserId,
       latitude: parsed.data.latitude,
       longitude: parsed.data.longitude,
+      checkOutChannel: ATTENDANCE_LOG_CHANNEL.OUT_APP,
     });
     return NextResponse.json({
       ok: true,

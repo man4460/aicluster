@@ -38,6 +38,27 @@ alwaysApply: false
 
 - ใช้โทเค็นใน **`src/systems/attendance/attendance-ui.ts`** — `attendanceCardClass`, `attendancePanelClass`, `attendanceFilterBarClass`, `attendanceEmptyStateClass`, `attendanceInsetClass`, `attendanceLabelClass`, `attendanceSecondaryBtnClass`, `attendanceOutlineBtnClass` ฯลฯ — ให้ขอบ/พื้นหลัง/ตัวอักษรสอดคล้อง `AttendanceShell` และ `appDashboardSectionVioletClass` (#2e2a58 / #66638c / #e8e6fc / #4d47b6)
 
+## ปุ่ม + hover (บังคับ)
+
+ทุก `<button>` / `<Link>` ที่กดได้ในโมดูลเช็คอิน — **ห้าม** ทิ้งสไตล์นิ่ง ๆ ไม่มี feedback เมื่อเมาส์ชี้ (เดสก์ท็อป):
+
+1. **โทเค็นพื้นฐาน** — ใช้จาก `attendance-ui.ts` เท่านั้น ห้ามคัดลอกสตริง hover ซ้ำในหน้า:
+   - `attendanceInteractiveHoverClass` — ปุ่มทั่วไป: `hover:-translate-y-px` · `hover:shadow-md` · `active:scale-[0.97]`
+   - `attendanceChipButtonHoverClass` — chip/pill ที่เป็น `<button>` (กรอง · สลับสถานะ)
+   - `attendanceTextLinkBtnClass` — ลิงก์ข้อความกดได้ (เช่น ล้างกรอง)
+
+2. **ปุ่มมาตรฐานโมดูล** — ต่อท้ายโทเค็นเดิม (มี hover ในตัวแล้ว):
+   - `attendancePrimaryBtnClass` · `attendanceSecondaryBtnClass` · `attendanceOutlineBtnClass` · `attendanceLinkActionBtnClass`
+   - `attendanceFilterChipClass(active)` — ชip กรองสถานะ
+   - `attendanceRosterMetaBtn*` — ปุ่มย่อยในการ์ดรายชื่อ (อัปโหลด · ถ่าย · ลบรูป)
+   - `attendanceRowEditIconButtonClass` · `attendanceRowRemoveIconButtonClass` — ไอคอนแถว
+
+3. **ชip สลับสถานะในการ์ด** — `<span>` แสดงอย่างเดียวใช้ `attendanceZoneChipFaceClass` / `FpClass` ฯลฯ · **`<button>` สลับ** ใช้ `attendanceZoneChipActiveBtnClass` / `attendanceZoneChipInactiveBtnClass` (อย่าใช้คลาส span กับปุ่ม)
+
+4. **ปุ่มจาก template กลาง** — เช่น `appTemplateOutlineButtonClass` · `app-btn-primary` ต้อง **ซ้อน** `attendanceInteractiveHoverClass` (หรือใช้โทเค็นโมดูลแทน) เพื่อให้ lift/active สอดคล้องกัน
+
+5. **`disabled`** — โทเค็นพื้นฐานปิด pointer + opacity แล้ว — อย่า override ให้ hover ยังทำงาน
+
 ## อ้างอิงโค้ด
 
 - แพทเทิร์นการ์ดรายชื่อพนักงาน: `src/systems/attendance/components/AttendanceRosterClient.tsx`

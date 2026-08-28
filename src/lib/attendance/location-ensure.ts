@@ -1,10 +1,13 @@
 import { prisma } from "@/lib/prisma";
+import { ensureAttendanceBranchesFromLegacy } from "@/lib/attendance/branch-ensure";
 
 /** ถ้ายังไม่มีโลเคชัน (DB เก่า) ให้สร้างจากแถว attendance_settings */
 export async function ensureAttendanceLocationsFromLegacy(
   ownerUserId: string,
   trialSessionId: string,
 ): Promise<void> {
+  const branch = await ensureAttendanceBranchesFromLegacy(ownerUserId, trialSessionId);
+
   const n = await prisma.attendanceLocation.count({
     where: { ownerUserId, trialSessionId },
   });
@@ -19,6 +22,7 @@ export async function ensureAttendanceLocationsFromLegacy(
     data: {
       ownerUserId,
       trialSessionId,
+      branchId: branch.id,
       name: "จุดหลัก",
       allowedLocationLat: s.allowedLocationLat,
       allowedLocationLng: s.allowedLocationLng,
@@ -43,7 +47,7 @@ export async function syncAttendanceSettingsMirrorFromPrimaryLocation(
 
   const first = await prisma.attendanceLocation.findFirst({
     where: { ownerUserId, trialSessionId },
-    orderBy: { sortOrder: "asc" },
+    orderBy: [{ branch: { sortOrder: "asc" } }, { sortOrder: "asc" }],
     include: { shifts: { orderBy: { sortOrder: "asc" } } },
   });
   if (!first || first.shifts.length === 0) return;

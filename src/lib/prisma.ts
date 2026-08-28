@@ -34,7 +34,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 71: AttendanceSettings.faceCheckInEnabled + AttendanceRosterEntry.faceDescriptor* */
 /** 72: device API key + fingerprintSlot on roster */
 /** 73: UserModulePlan — แพ็ก 199 ต่อโมดูล */
-const PRISMA_SINGLETON_VERSION = 73;
+/** 74: AttendanceBranch + homeBranchId + location.branchId — client เก่าไม่มี attendanceBranch delegate */
+const PRISMA_SINGLETON_VERSION = 74;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -56,6 +57,7 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     barberShopProfile?: { findUnique?: unknown };
     barberBooking?: { findMany?: unknown };
     attendanceSettings?: { findUnique?: unknown };
+    attendanceBranch?: { findMany?: unknown };
     attendanceLocation?: { findMany?: unknown };
     attendanceShift?: { findMany?: unknown };
     attendanceRosterEntry?: { findMany?: unknown };
@@ -172,6 +174,7 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.barberShopProfile?.findUnique === "function" &&
     typeof c.barberBooking?.findMany === "function" &&
     typeof c.attendanceSettings?.findUnique === "function" &&
+    typeof c.attendanceBranch?.findMany === "function" &&
     typeof c.attendanceLocation?.findMany === "function" &&
     typeof c.attendanceShift?.findMany === "function" &&
     typeof c.attendanceRosterEntry?.findMany === "function" &&

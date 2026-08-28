@@ -7,22 +7,28 @@ export const FACE_DESCRIPTOR_LENGTH = 128;
  * face-api มักใช้ ~0.6 เป็นเกณฑ์หลวม · เราใช้เกณฑ์เข้มขึ้นเพื่อลดจับคู่ผิดคน
  * (แลกกับอาจ reject แสง/มุมแย่ — แก้ด้วยลงทะเบียนหลายมุม)
  */
-export const FACE_MATCH_MAX_DISTANCE = 0.42;
+export const FACE_MATCH_MAX_DISTANCE = 0.40;
 
 /** อันดับ 1 ต้องดีกว่าอันดับ 2 อย่างน้อยเท่านี้ — กันคนหน้าคล้ายกัน */
-export const FACE_MATCH_MIN_MARGIN = 0.08;
+export const FACE_MATCH_MIN_MARGIN = 0.10;
 
 /**
  * Ratio test (แนวเดียวกับ SIFT) — อันดับ 1 / อันดับ 2 ต้องไม่เกินค่านี้
  * ทำงานคู่กับ margin: เมื่อทั้งคู่ใกล้กันมาก (ratio สูง) ถือว่าคลุมเครือ
  */
-export const FACE_MATCH_MAX_RATIO = 0.9;
+export const FACE_MATCH_MAX_RATIO = 0.88;
+
+/**
+ * เมื่อมีแค่คนเดียวในรายชื่อที่ลงทะเบียนใบหน้า — ไม่มี margin ให้เทียบ
+ * ต้องใช้เกณฑ์เข้มกว่าปกติ มิฉะนั้นใบหน้าคนอื่นอาจหลุดเข้าได้
+ */
+export const FACE_MATCH_SINGLE_CANDIDATE_MAX_DISTANCE = 0.36;
 
 /**
  * ถ้าโพรบใกล้ตัวอย่างของคนเดียวกัน ≥ 2 ตัวอย่าง (support) — ผ่อนเกณฑ์ระยะได้ถึงค่านี้
- * เพราะการยืนยันซ้ำหลายมุมของคนเดียวกันคือหลักฐานที่แข็งกว่าเฟรมเดี่ยว
+ * (เฉพาะเมื่อมี ≥ 2 คนในรายชื่อ — มีคู่แข่งให้ margin test)
  */
-export const FACE_MATCH_STRONG_MAX_DISTANCE = 0.48;
+export const FACE_MATCH_STRONG_MAX_DISTANCE = 0.44;
 
 /** ตัวอย่างในธนาคารที่ถือว่า "สนับสนุน" การจับคู่ */
 export const FACE_MATCH_SUPPORT_DISTANCE = 0.5;
@@ -290,10 +296,14 @@ export function matchFaceDescriptor(
   const second = ranked[1];
   const margin = second ? second.distance - best.distance : Number.POSITIVE_INFINITY;
   const ratio = second && second.distance > 0 ? best.distance / second.distance : 0;
+  const onlyOnePerson = ranked.length === 1;
 
-  // ผ่อนเกณฑ์ระยะได้เมื่อมีหลายตัวอย่างของคนเดียวกันยืนยันตรงกัน (ลงทะเบียนหลายมุม)
-  const effectiveMax =
-    best.support >= 2 ? Math.max(maxDistance, FACE_MATCH_STRONG_MAX_DISTANCE) : maxDistance;
+  // คนเดียวในรายชื่อ: ไม่มี margin test — ห้ามผ่อนเกณฑ์ด้วย support จากหลายมุมลงทะเบียน
+  const effectiveMax = onlyOnePerson
+    ? FACE_MATCH_SINGLE_CANDIDATE_MAX_DISTANCE
+    : best.support >= 2
+      ? Math.max(maxDistance, FACE_MATCH_STRONG_MAX_DISTANCE)
+      : maxDistance;
 
   if (best.distance > effectiveMax) {
     return {

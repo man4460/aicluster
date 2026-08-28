@@ -11,6 +11,7 @@ import { AttendanceMobileBottomProvider } from "@/systems/attendance/components/
 import { AttendanceUsageGuideModal } from "@/systems/attendance/components/AttendanceUsageGuideModal";
 import {
   ATTENDANCE_HEADER_COLLAPSE_EVENT,
+  ATTENDANCE_MANAGE_SUB_LINKS,
   ATTENDANCE_MODULE_DISPLAY_NAME,
   ATTENDANCE_NAV_ITEMS,
   isAttendanceNavItemActive,
@@ -39,6 +40,15 @@ function IconDashboard({ className }: { className?: string }) {
   );
 }
 
+function IconManage({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} className={className} aria-hidden>
+      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function IconSettings({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} className={className} aria-hidden>
@@ -59,35 +69,21 @@ function IconReport({ className }: { className?: string }) {
   );
 }
 
-function IconQr({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} className={className} aria-hidden>
-      <rect x="3" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" />
-      <path d="M14 14h3v3h-3zM20 14v7h-3M14 20h3" strokeLinecap="round" />
-    </svg>
-  );
-}
 
 function navIcon(key: AttendanceNavKeyIcon, className?: string): ReactNode {
   switch (key) {
     case "dashboard":
       return <IconDashboard className={className} />;
     case "manage":
-      return <IconSettings className={className} />;
+      return <IconManage className={className} />;
     case "reports":
       return <IconReport className={className} />;
-    case "qr":
-      return <IconQr className={className} />;
+    case "settings":
+      return <IconSettings className={className} />;
   }
 }
 
-const manageSubLinks = [
-  { href: "/dashboard/attendance/settings", label: "ตั้งค่า" },
-  { href: "/dashboard/attendance/roster", label: "รายชื่อพนักงาน" },
-  { href: "/dashboard/attendance/check", label: "เช็คอิน" },
-] as const;
+const manageSubLinks = ATTENDANCE_MANAGE_SUB_LINKS;
 
 function TabLink({
   href,
@@ -240,7 +236,7 @@ export function AttendanceShell({ children }: { children: React.ReactNode }) {
             aria-label="เมนูย่อยจัดการเช็คอิน"
             className={cn(attendanceGlassShellClass, "p-3 sm:p-4")}
           >
-            <ul className="grid grid-cols-3 gap-2">
+            <ul className="grid grid-cols-2 gap-2">
               {manageSubLinks.map((item) => {
                 const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (

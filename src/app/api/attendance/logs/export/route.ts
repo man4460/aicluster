@@ -75,6 +75,12 @@ export async function GET(req: Request) {
     take: 5000,
     include: {
       actor: { select: { username: true, fullName: true } },
+      checkInLocation: {
+        select: { id: true, name: true, branch: { select: { id: true, name: true, code: true } } },
+      },
+      checkOutLocation: {
+        select: { id: true, name: true, branch: { select: { id: true, name: true, code: true } } },
+      },
     },
   });
 
@@ -87,6 +93,14 @@ export async function GET(req: Request) {
     "staff_full_name",
     "check_in",
     "check_out",
+    "check_in_location_id",
+    "check_in_branch_code",
+    "check_in_branch_name",
+    "check_in_location_name",
+    "check_out_location_id",
+    "check_out_branch_code",
+    "check_out_branch_name",
+    "check_out_location_name",
     "status",
     "late_in",
     "early_out",
@@ -102,6 +116,14 @@ export async function GET(req: Request) {
       r.actor?.fullName ?? "",
       r.checkInTime?.toISOString() ?? "",
       r.checkOutTime?.toISOString() ?? "",
+      r.checkInLocationId ?? "",
+      r.checkInLocation?.branch?.code ?? "",
+      r.checkInLocation?.branch?.name ?? "",
+      r.checkInLocation?.name ?? "",
+      r.checkOutLocationId ?? "",
+      r.checkOutLocation?.branch?.code ?? "",
+      r.checkOutLocation?.branch?.name ?? "",
+      r.checkOutLocation?.name ?? "",
       r.status,
       r.lateCheckIn ? "1" : "0",
       r.earlyCheckOut ? "1" : "0",

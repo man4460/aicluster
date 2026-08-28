@@ -6,13 +6,9 @@ import { cn } from "@/lib/cn";
 import { AttendanceDeviceApiGuideModal } from "@/systems/attendance/components/AttendanceDeviceApiGuideModal";
 import {
   attendanceFieldClass,
-  attendanceIconBadgeClass,
-  attendanceInsetToneClass,
+  attendanceInsetClass,
   attendanceLabelClass,
-  attendancePanelAccentBarClass,
-  attendancePanelToneClass,
   attendancePrimaryBtnClass,
-  attendanceSectionTitleClass,
 } from "@/systems/attendance/attendance-ui";
 
 type DeviceKeyState = {
@@ -22,16 +18,7 @@ type DeviceKeyState = {
   endpoints: { punch: string; roster: string; fingerprint: string };
 };
 
-function IconChip({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <rect x="5" y="5" width="14" height="14" rx="2" />
-      <path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-export function AttendanceDeviceApiSettings() {
+export function AttendanceDeviceApiSettings({ embedded = false }: { embedded?: boolean }) {
   const [state, setState] = useState<DeviceKeyState | null>(null);
   const [plainKey, setPlainKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -114,29 +101,24 @@ export function AttendanceDeviceApiSettings() {
 
   if (!state) {
     return (
-      <section className={cn(attendancePanelToneClass("sky"), "animate-pulse")}>
+      <div className={cn(embedded ? "" : "animate-pulse rounded-[1.25rem] border border-white/60 bg-white/55 p-4")}>
         <p className="text-sm font-medium text-[#66638c]">กำลังโหลด Device API…</p>
-      </section>
+      </div>
     );
   }
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
-  return (
-    <section className={attendancePanelToneClass("sky")}>
-      <div className={attendancePanelAccentBarClass("sky")} aria-hidden />
-      <div className="mt-4 space-y-3.5">
-        <div className="flex items-start gap-3">
-          <span className={attendanceIconBadgeClass("sky")} aria-hidden>
-            <IconChip className="h-5 w-5" />
-          </span>
-          <div className="min-w-0 pt-0.5">
-            <h2 className={attendanceSectionTitleClass}>Device API (ESP32)</h2>
-            <p className="mt-0.5 text-xs font-medium leading-snug text-[#66638c]">
-              เชื่อมเครื่องสแกนใบหน้า / ลายนิ้วมือบนอุปกรณ์ แล้วเรียก API ของระบบนี้
-            </p>
-          </div>
+  const body = (
+    <div className="space-y-3.5">
+      {!embedded ? (
+        <div>
+          <p className="text-xs font-bold text-[#4d47b6]">Device API (ESP32)</p>
+          <p className="mt-0.5 text-xs font-medium text-[#66638c]">
+            เชื่อมเครื่องสแกนใบหน้า / ลายนิ้วมือบนอุปกรณ์ แล้วเรียก API ของระบบนี้
+          </p>
         </div>
+      ) : null}
 
         {err ? (
           <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800">
@@ -151,7 +133,7 @@ export function AttendanceDeviceApiSettings() {
 
         <label
           className={cn(
-            attendanceInsetToneClass("sky"),
+            attendanceInsetClass,
             "flex cursor-pointer items-start gap-3 transition hover:brightness-[1.02]",
           )}
         >
@@ -200,7 +182,7 @@ export function AttendanceDeviceApiSettings() {
         </div>
 
         {plainKey ? (
-          <div className={cn(attendanceInsetToneClass("sky"), "space-y-2")}>
+          <div className={cn(attendanceInsetClass, "space-y-2")}>
             <p className={attendanceLabelClass}>คีย์ (แสดงครั้งเดียว)</p>
             <code className="block break-all rounded-xl bg-[#1e1b4b] px-3 py-2.5 text-[11px] text-white shadow-inner">
               {plainKey}
@@ -215,7 +197,7 @@ export function AttendanceDeviceApiSettings() {
           </div>
         ) : null}
 
-        <div className={cn(attendanceInsetToneClass("sky"), "space-y-1.5 text-[11px] font-medium text-[#5f5a8a]")}>
+        <div className={cn(attendanceInsetClass, "space-y-1.5 text-[11px] font-medium text-[#5f5a8a]")}>
           <p className="font-bold text-[#2e2a58]">Endpoints</p>
           <p className={cn(attendanceFieldClass, "min-h-0 break-all py-2 font-mono text-[10px]")}>
             POST {origin}
@@ -233,7 +215,6 @@ export function AttendanceDeviceApiSettings() {
             กด «วิธีใช้ / คัดลอกโค้ด» เพื่อดูขั้นตอนและตัวอย่าง ESP32 / curl ที่คัดลอกได้
           </p>
         </div>
-      </div>
 
       <AttendanceDeviceApiGuideModal
         open={guideOpen}
@@ -243,6 +224,10 @@ export function AttendanceDeviceApiSettings() {
         apiKeyHint={state.deviceApiKeyHint}
         plainKey={plainKey}
       />
-    </section>
+    </div>
   );
+
+  if (embedded) return body;
+
+  return <section className="rounded-[1.25rem] border border-white/60 bg-white/55 p-4">{body}</section>;
 }

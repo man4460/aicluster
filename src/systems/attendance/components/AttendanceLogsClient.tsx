@@ -34,6 +34,10 @@ type Row = {
   lateCheckIn: boolean;
   earlyCheckOut: boolean;
   checkInFacePhotoUrl: string | null;
+  checkInLocationName?: string | null;
+  checkInBranchName?: string | null;
+  checkOutLocationName?: string | null;
+  checkOutBranchName?: string | null;
 };
 
 function visitorGroupLabel(r: Row): string {
@@ -329,6 +333,16 @@ export function AttendanceLogsClient() {
                         <span className="text-[#9b98c4]">ออก</span>{" "}
                         <span className="font-semibold text-[#2e2a58]">{formatLogTime(r.checkOutTime)}</span>
                       </div>
+                      {r.checkInBranchName || r.checkInLocationName ? (
+                        <div
+                          className="mt-1 truncate text-[10px] font-medium text-[#8b87b8]"
+                          title={[r.checkInBranchName, r.checkInLocationName].filter(Boolean).join(" · ")}
+                        >
+                          {r.checkInBranchName ? `${r.checkInBranchName}` : ""}
+                          {r.checkInBranchName && r.checkInLocationName ? " · " : ""}
+                          {r.checkInLocationName ? `จุด ${r.checkInLocationName}` : ""}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </li>

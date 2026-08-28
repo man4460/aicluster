@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { bangkokDayStartEnd } from "@/lib/barber/bangkok-day";
 import { isWithinRadiusMeters } from "@/lib/geo/haversine";
 import { finalizedAttendanceStatus } from "@/lib/attendance/finalize-status";
+import { mergeAttendanceLogChannelNote } from "@/lib/attendance/log-channel";
+import { queueAttendanceDashboardNotify } from "@/lib/attendance/notify-dashboard";
 import { ensureAttendanceLocationsFromLegacy } from "@/lib/attendance/location-ensure";
 import {
   clampShiftIndex,
@@ -108,6 +110,8 @@ export async function checkInAsUser(params: {
   checkInFacePhotoUrl?: string | null;
   /** ไม่ส่ง = ใช้โลเคชันลำดับแรก (พนักงานล็อกอิน) */
   locationId?: number | null;
+  /** ช่องทางเช็คเข้า — เก็บใน note (ดู log-channel.ts) */
+  checkInChannel?: string | null;
 }) {
   const site = await resolveAttendanceLocation(
     params.ownerUserId,
@@ -155,7 +159,7 @@ export async function checkInAsUser(params: {
   const sh = site.shifts[shiftIdx] ?? site.shifts[0]!;
   const late = isLateCheckIn(now, sh.startTime);
 
-  return prisma.attendanceLog.create({
+  const log = await prisma.attendanceLog.create({
     data: {
       ownerUserId: params.ownerUserId,
       trialSessionId: params.trialSessionId,
@@ -164,11 +168,15 @@ export async function checkInAsUser(params: {
       checkInLat: params.latitude,
       checkInLng: params.longitude,
       checkInFacePhotoUrl: params.checkInFacePhotoUrl ?? null,
+      checkInLocationId: site.locationId > 0 ? site.locationId : null,
       lateCheckIn: late,
       appliedShiftIndex: shiftIdx,
       status: "AWAITING_CHECKOUT",
+      ...(params.checkInChannel ? { note: params.checkInChannel } : {}),
     },
   });
+  queueAttendanceDashboardNotify(params.ownerUserId, params.trialSessionId, log.id);
+  return log;
 }
 
 export async function checkInAsGuest(params: {
@@ -181,6 +189,8 @@ export async function checkInAsGuest(params: {
   longitude: number;
   checkInFacePhotoUrl?: string | null;
   locationId?: number | null;
+  /** ช่องทางเช็คเข้า — เก็บใน note (ดู log-channel.ts) */
+  checkInChannel?: string | null;
 }) {
   const phone = normalizePhone(params.guestPhone);
   if (phone.length < 9) throw new AttendanceBusinessError("BAD_PHONE");
@@ -228,7 +238,7 @@ export async function checkInAsGuest(params: {
   const sh = site.shifts[shiftIdx] ?? site.shifts[0]!;
   const late = isLateCheckIn(now, sh.startTime);
 
-  return prisma.attendanceLog.create({
+  const log = await prisma.attendanceLog.create({
     data: {
       ownerUserId: params.ownerUserId,
       trialSessionId: params.trialSessionId,
@@ -239,11 +249,15 @@ export async function checkInAsGuest(params: {
       checkInLat: params.latitude,
       checkInLng: params.longitude,
       checkInFacePhotoUrl: params.checkInFacePhotoUrl ?? null,
+      checkInLocationId: site.locationId > 0 ? site.locationId : null,
       lateCheckIn: late,
       appliedShiftIndex: shiftIdx,
       status: "AWAITING_CHECKOUT",
+      ...(params.checkInChannel ? { note: params.checkInChannel } : {}),
     },
   });
+  queueAttendanceDashboardNotify(params.ownerUserId, params.trialSessionId, log.id);
+  return log;
 }
 
 export async function checkOutAsUser(params: {
@@ -253,6 +267,7 @@ export async function checkOutAsUser(params: {
   latitude: number;
   longitude: number;
   locationId?: number | null;
+  checkOutChannel?: string | null;
 }) {
   const site = await resolveAttendanceLocation(
     params.ownerUserId,
@@ -280,16 +295,22 @@ export async function checkOutAsUser(params: {
   const early = earlyCheckoutForAppliedShift(now, site, open.appliedShiftIndex);
   const status = finalizedAttendanceStatus(open.lateCheckIn, early);
 
-  return prisma.attendanceLog.update({
+  const log = await prisma.attendanceLog.update({
     where: { id: open.id },
     data: {
       checkOutTime: now,
       checkOutLat: params.latitude,
       checkOutLng: params.longitude,
+      checkOutLocationId: site.locationId > 0 ? site.locationId : null,
       earlyCheckOut: early,
       status,
+      ...(params.checkOutChannel
+        ? { note: mergeAttendanceLogChannelNote(open.note, params.checkOutChannel) }
+        : {}),
     },
   });
+  queueAttendanceDashboardNotify(params.ownerUserId, params.trialSessionId, log.id);
+  return log;
 }
 
 export async function checkOutAsGuest(params: {
@@ -299,6 +320,7 @@ export async function checkOutAsGuest(params: {
   latitude: number;
   longitude: number;
   locationId?: number | null;
+  checkOutChannel?: string | null;
 }) {
   const phone = normalizePhone(params.guestPhone);
   if (phone.length < 9) throw new AttendanceBusinessError("BAD_PHONE");
@@ -328,16 +350,22 @@ export async function checkOutAsGuest(params: {
   const early = earlyCheckoutForAppliedShift(now, site, open.appliedShiftIndex);
   const status = finalizedAttendanceStatus(open.lateCheckIn, early);
 
-  return prisma.attendanceLog.update({
+  const log = await prisma.attendanceLog.update({
     where: { id: open.id },
     data: {
       checkOutTime: now,
       checkOutLat: params.latitude,
       checkOutLng: params.longitude,
+      checkOutLocationId: site.locationId > 0 ? site.locationId : null,
       earlyCheckOut: early,
       status,
+      ...(params.checkOutChannel
+        ? { note: mergeAttendanceLogChannelNote(open.note, params.checkOutChannel) }
+        : {}),
     },
   });
+  queueAttendanceDashboardNotify(params.ownerUserId, params.trialSessionId, log.id);
+  return log;
 }
 
 function earlyCheckoutForAppliedShift(

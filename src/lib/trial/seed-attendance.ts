@@ -31,10 +31,21 @@ export async function seedAttendanceTrialData(tx: Tx, ownerUserId: string, trial
     },
   });
 
+  const branch = await tx.attendanceBranch.create({
+    data: {
+      ownerUserId,
+      trialSessionId,
+      name: "สาขาตัวอย่าง",
+      code: "MAIN",
+      sortOrder: 0,
+    },
+  });
+
   await tx.attendanceLocation.create({
     data: {
       ownerUserId,
       trialSessionId,
+      branchId: branch.id,
       name: "จุดเช็คตัวอย่าง (ทดลอง)",
       allowedLocationLat: lat,
       allowedLocationLng: lng,

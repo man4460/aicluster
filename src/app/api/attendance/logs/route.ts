@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { bangkokDayRangeFromDateKey } from "@/lib/barber/booking-datetime";
-import { isPrismaSchemaMismatchError, PRISMA_SYNC_HINT_TH } from "@/lib/prisma-errors";
+import { mapAttendanceLogRow } from "@/lib/attendance/map-attendance-log-row";
+import { isPrismaSchemaMismatchError, isPrismaClientValidationSyncError, PRISMA_FULL_SYNC_HINT_TH, PRISMA_SYNC_HINT_TH } from "@/lib/prisma-errors";
 import { getAttendanceDataScope } from "@/lib/trial/module-scopes";
 
 export async function GET(req: Request) {
@@ -73,6 +74,12 @@ export async function GET(req: Request) {
       take: 500,
       include: {
         actor: { select: { id: true, username: true, fullName: true } },
+        checkInLocation: {
+          select: { id: true, name: true, branch: { select: { id: true, name: true, code: true } } },
+        },
+        checkOutLocation: {
+          select: { id: true, name: true, branch: { select: { id: true, name: true, code: true } } },
+        },
       },
     });
   } catch (e) {
@@ -80,23 +87,15 @@ export async function GET(req: Request) {
       console.error("[attendance logs GET] schema mismatch", e);
       return NextResponse.json({ error: PRISMA_SYNC_HINT_TH, logs: [] }, { status: 503 });
     }
-    throw e;
+    if (isPrismaClientValidationSyncError(e)) {
+      console.error("[attendance logs GET] client out of sync", e);
+      return NextResponse.json({ error: PRISMA_FULL_SYNC_HINT_TH, logs: [] }, { status: 503 });
+    }
+    console.error("[attendance logs GET]", e);
+    return NextResponse.json({ error: "โหลดประวัติไม่สำเร็จ" }, { status: 500 });
   }
 
   return NextResponse.json({
-    logs: rows.map((r) => ({
-      id: r.id,
-      guestPhone: r.guestPhone,
-      guestName: r.guestName,
-      publicVisitorKind: r.publicVisitorKind,
-      actorUsername: r.actor?.username ?? null,
-      actorFullName: r.actor?.fullName ?? null,
-      checkInTime: r.checkInTime?.toISOString() ?? null,
-      checkOutTime: r.checkOutTime?.toISOString() ?? null,
-      status: r.status,
-      lateCheckIn: r.lateCheckIn,
-      earlyCheckOut: r.earlyCheckOut,
-      checkInFacePhotoUrl: r.checkInFacePhotoUrl,
-    })),
+    logs: rows.map((r) => mapAttendanceLogRow({ ...r, actor: r.actor })),
   });
 }
