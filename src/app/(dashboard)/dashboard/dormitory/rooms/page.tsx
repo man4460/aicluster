@@ -1,23 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
-import { AddRoomForm } from "@/systems/dormitory/components/AddRoomForm";
-import { DormRoomManageQuickTabs } from "@/systems/dormitory/components/DormRoomManageQuickTabs";
-import { DormEmptyDashed, DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
-import { RoomBillingStatusBadge } from "@/systems/dormitory/components/RoomBillingStatusBadge";
+import { DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
+import { DormRoomManageHeaderActions } from "@/systems/dormitory/components/DormRoomManageHeaderActions";
+import { DormRoomManagePanel } from "@/systems/dormitory/components/DormRoomManagePanel";
 import { buildRoomComputeInput, roomBillingUiStatus } from "@/systems/dormitory/lib/compute";
-import {
-  dormBtnSecondary,
-  dormRoomCardCta,
-  dormRoomFieldLabel,
-  dormRoomListCard,
-  dormRoomNumberList,
-  dormRoomStatRow,
-  dormRoomStatValue,
-} from "@/systems/dormitory/dorm-ui";
-import { cn } from "@/lib/cn";
 
 export default async function DormitoryRoomsPage() {
   const session = await getSession();
@@ -35,80 +23,26 @@ export default async function DormitoryRoomsPage() {
     },
   });
 
+  const rows = rooms.map((r) => ({
+    id: r.id,
+    roomNumber: r.roomNumber,
+    floor: r.floor,
+    roomType: r.roomType,
+    basePrice: Number(r.basePrice),
+    maxOccupants: r.maxOccupants,
+    activeTenants: r.tenants.filter((t) => t.status === "ACTIVE").length,
+    billingStatus: roomBillingUiStatus(buildRoomComputeInput(r)),
+  }));
+
   return (
     <DormPageStack>
-      <DormRoomManageQuickTabs roomId={rooms[0]?.id ?? null} />
       <DormPanelCard
-        title="ห้องพัก"
-        description="เพิ่มห้อง มิเตอร์ระดับห้อง และแบ่งบิลตามผู้พัก ACTIVE"
-        action={
-          <Link href="/dashboard/dormitory" className={cn(dormBtnSecondary, "w-full justify-center sm:w-auto")}>
-            ผังห้อง
-          </Link>
-        }
+        title="การจัดการ"
+        description="จัดการห้องพัก มิเตอร์ และการชำระ"
+        action={<DormRoomManageHeaderActions />}
+        headerClassName="flex flex-row items-start justify-between gap-3 sm:items-center"
       >
-        <AddRoomForm />
-      </DormPanelCard>
-
-      <DormPanelCard title="รายการห้อง" description="คลิกการ์ดเพื่อเปิดรายละเอียด มิเตอร์ และการชำระ">
-        {rooms.length === 0 ? (
-          <DormEmptyDashed>ยังไม่มีห้อง — กด «เพิ่มห้องพัก» ด้านบน</DormEmptyDashed>
-        ) : (
-          <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
-            {rooms.map((r) => {
-              const billing = roomBillingUiStatus(buildRoomComputeInput(r));
-              const activeN = r.tenants.filter((t) => t.status === "ACTIVE").length;
-              const occ =
-                activeN === 0 ? "ว่าง" : activeN >= r.maxOccupants ? "เต็ม" : `${activeN}/${r.maxOccupants} คน`;
-
-              return (
-                <li key={r.id}>
-                  <Link href={`/dashboard/dormitory/rooms/${r.id}`} className={dormRoomListCard}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <span className={dormRoomFieldLabel}>เลขห้อง</span>
-                        <p className={dormRoomNumberList}>{r.roomNumber}</p>
-                        <p className="text-[11px] font-semibold leading-snug text-slate-600 tabular-nums antialiased sm:text-xs">
-                          ชั้น {r.floor}
-                        </p>
-                        <p className="line-clamp-2 text-[11px] font-medium leading-snug text-slate-500 antialiased sm:text-xs">
-                          {r.roomType}
-                        </p>
-                      </div>
-                      <div className="flex max-w-[46%] shrink-0 flex-col items-end gap-1">
-                        <span className={`${dormRoomFieldLabel} text-right`}>สถานะ</span>
-                        <RoomBillingStatusBadge status={billing} size="compactWide" />
-                      </div>
-                    </div>
-                    <div className={`${dormRoomStatRow} mt-3 border-t border-slate-200/60 pt-3`}>
-                      <span className={dormRoomFieldLabel}>ผู้พัก</span>
-                      <span className={dormRoomStatValue}>{occ}</span>
-                      <span className={dormRoomFieldLabel}>ค่าเช่า</span>
-                      <span className={`${dormRoomStatValue} tabular-nums`}>
-                        {Number(r.basePrice).toLocaleString("th-TH", { maximumFractionDigits: 0 })} บาท/ด.
-                      </span>
-                    </div>
-                    <span className={dormRoomCardCta}>
-                      รายละเอียด
-                      <svg
-                        className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-hidden
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <DormRoomManagePanel rooms={rows} />
       </DormPanelCard>
     </DormPageStack>
   );

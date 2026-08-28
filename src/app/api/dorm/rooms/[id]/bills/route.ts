@@ -224,20 +224,30 @@ export async function POST(req: Request, ctx: Ctx) {
     where: { roomId: rid, status: "ACTIVE" },
   });
 
-  if (activeTenantCount > 0) {
-    const perShare = Math.round(((basePrice + totalRoomAmount) / activeTenantCount) * 100) / 100;
-    if (!Number.isFinite(perShare) || perShare > MAX_DECIMAL_10_2) {
-      return NextResponse.json(
-        {
-          error: `ยอดที่แบ่งต่อผู้พัก 1 คนเกินระบบรองรับ (สูงสุด ${MAX_DECIMAL_10_2.toLocaleString("th-TH")} บาท) — คิดจาก (ค่าเช่าห้อง + น้ำไฟห้อง) ÷ จำนวนผู้พัก ACTIVE`,
-          details: [
-            `ค่าเช่าห้อง ${basePrice.toLocaleString("th-TH")} + น้ำไฟห้อง ${totalRoomAmount.toLocaleString("th-TH")} หาร ${activeTenantCount} คน ≈ ${perShare.toLocaleString("th-TH")} บ./คน`,
-            "ฐานข้อมูลเก็บยอดต่อคนได้ไม่เกิน ~99 ล้านบาท — ถ้ายอดจริงไม่ได้สูงขนาดนี้ ให้ตรวจมิเตอร์และค่าเช่าว่าพิมพ์ถูกหรือไม่",
-          ],
-        },
-        { status: 400 },
-      );
-    }
+  if (activeTenantCount === 0) {
+    return NextResponse.json(
+      {
+        error: "ห้องนี้ยังไม่มีผู้เข้าพัก — ไม่สามารถบันทึกมิเตอร์หรือเรียกเก็บค่าไฟได้",
+        details: [
+          "เพิ่มผู้พักที่แถบ «ผู้พัก» ก่อน แล้วค่อยบันทึกมิเตอร์ — ระบบจะแบ่งยอดให้ผู้พัก ACTIVE อัตโนมัติ",
+        ],
+      },
+      { status: 400 },
+    );
+  }
+
+  const perShare = Math.round(((basePrice + totalRoomAmount) / activeTenantCount) * 100) / 100;
+  if (!Number.isFinite(perShare) || perShare > MAX_DECIMAL_10_2) {
+    return NextResponse.json(
+      {
+        error: `ยอดที่แบ่งต่อผู้พัก 1 คนเกินระบบรองรับ (สูงสุด ${MAX_DECIMAL_10_2.toLocaleString("th-TH")} บาท) — คิดจาก (ค่าเช่าห้อง + น้ำไฟห้อง) ÷ จำนวนผู้พัก ACTIVE`,
+        details: [
+          `ค่าเช่าห้อง ${basePrice.toLocaleString("th-TH")} + น้ำไฟห้อง ${totalRoomAmount.toLocaleString("th-TH")} หาร ${activeTenantCount} คน ≈ ${perShare.toLocaleString("th-TH")} บ./คน`,
+          "ฐานข้อมูลเก็บยอดต่อคนได้ไม่เกิน ~99 ล้านบาท — ถ้ายอดจริงไม่ได้สูงขนาดนี้ ให้ตรวจมิเตอร์และค่าเช่าว่าพิมพ์ถูกหรือไม่",
+        ],
+      },
+      { status: 400 },
+    );
   }
 
   try {

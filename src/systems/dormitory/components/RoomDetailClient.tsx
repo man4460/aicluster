@@ -1,12 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { DormPaymentProofBlock } from "@/systems/dormitory/components/DormPaymentProofBlock";
+import { DormCenteredModal } from "@/systems/dormitory/components/DormCenteredModal";
 import { DormRoomInvoiceSheetModal } from "@/systems/dormitory/components/DormRoomInvoiceSheetModal";
-import { DormPageStack } from "@/systems/dormitory/components/DormPageChrome";
+import { DormReceiptPrintIconButton } from "@/systems/dormitory/components/DormReceiptPrintIconButton";
+import { AppEmptyState } from "@/components/app-templates";
+import type { DormReceiptBrand } from "@/systems/dormitory/lib/dorm-receipt-print";
 import { formatDormAmountStable, formatPeriodMonthLabelStable } from "@/lib/dormitory/format-display-stable";
+import { cn } from "@/lib/cn";
+import { dormFilterChipClass, dormSegmentShellClass } from "@/systems/dormitory/dorm-ui-tokens";
 import {
   rentPerTenant,
   utilityBillRoomTotal,
@@ -86,21 +91,86 @@ function isUnpaidStatus(s: string | null | undefined): boolean {
   return s === "PENDING" || s === "OVERDUE";
 }
 
+function resolveOverviewInvoicePayment(
+  row: OverviewBillingCard,
+  bills: DormRoomDetailJson["utilityBills"],
+): { paymentId: number; proofSlipUrl: string | null } | null {
+  if (row.paymentId != null && isUnpaidStatus(row.paymentStatus)) {
+    return { paymentId: row.paymentId, proofSlipUrl: row.proofSlipUrl ?? null };
+  }
+  if (!row.billId) return null;
+  const bill = bills.find((b) => b.id === row.billId);
+  const payment = bill?.payments.find(
+    (p) => String(p.tenantId) === row.tenantId && isUnpaidStatus(p.paymentStatus),
+  );
+  if (!payment) return null;
+  return { paymentId: payment.id, proofSlipUrl: payment.proofSlipUrl ?? null };
+}
+
+type OverviewBillingCard = {
+  key: string;
+  tenantId: string;
+  tenantName: string;
+  month: string;
+  balance: number;
+  billId: number | null;
+  paymentId: number | null;
+  paymentStatus: "PENDING" | "PAID" | "OVERDUE" | null;
+  proofSlipUrl: string | null;
+  scope: "overdue" | "current";
+  meterNote?: string;
+};
+
+type RoomDetailTab = "overview" | "tenants" | "meter" | "payment";
+
+function parseRoomDetailTab(raw: string | null | undefined): RoomDetailTab | null {
+  if (raw === "overview" || raw === "tenants" || raw === "meter" || raw === "payment") return raw;
+  return null;
+}
+
+function resolveInitialRoomDetailTab(
+  initialFocusSection: "meter" | "payment" | null,
+  initialPayMonth: string | null,
+  initialSection?: string | null,
+): RoomDetailTab {
+  const fromSection = parseRoomDetailTab(initialSection);
+  if (fromSection) return fromSection;
+  if (initialFocusSection === "meter") return "meter";
+  if (initialFocusSection === "payment" || initialPayMonth) return "payment";
+  return "overview";
+}
+
+function roomDetailTabClass(active: boolean) {
+  return cn(
+    "inline-flex min-h-[42px] w-full items-center justify-center gap-1 rounded-xl px-1.5 py-2 text-center text-[10px] font-bold sm:px-2 sm:text-sm",
+    dormFilterChipClass(active),
+  );
+}
+
 export function RoomDetailClient({
   room,
+  dormBrand,
   overdueRows = [],
   initialPayMonth = null,
   initialBangkokYm,
   initialFocusSection = null,
+  initialSection = null,
 }: {
   room: DormRoomDetailJson;
+  dormBrand: DormReceiptBrand;
   overdueRows?: DormOverdueRow[];
   initialPayMonth?: string | null;
   /** snapshot จาก Server Component — กัน hydration ของช่องงวด YYYY-MM */
   initialBangkokYm: string;
   initialFocusSection?: "meter" | "payment" | null;
+  initialSection?: string | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname() ?? "";
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<RoomDetailTab>(() =>
+    resolveInitialRoomDetailTab(initialFocusSection, initialPayMonth, initialSection),
+  );
 
   async function deleteRoom() {
     if (!confirm(`ลบห้อง ${room.roomNumber} และข้อมูลที่เกี่ยวข้องทั้งหมด?`)) return;
@@ -121,6 +191,8 @@ export function RoomDetailClient({
 
   const activeTenants = room.tenants.filter((t) => t.status === "ACTIVE");
   const n = activeTenants.length;
+  /** มิเตอร์/เรียกเก็บผูก Split Bill — ห้องว่างไม่บันทึกเพราะไม่มีผู้รับยอด */
+  const canManageBilling = n > 0;
 
   const [liveBangkokYm, setLiveBangkokYm] = useState<string | null>(null);
   useEffect(() => {
@@ -132,9 +204,97 @@ export function RoomDetailClient({
     [room.utilityBills, dashboardYm],
   );
 
+  const overviewBillingCards = useMemo(() => {
+    const cards: OverviewBillingCard[] = overdueRows.map((row) => ({
+      key: `overdue-${row.tenantId}-${row.month}`,
+      tenantId: row.tenantId,
+      tenantName: row.tenantName,
+      month: row.month,
+      balance: row.balance,
+      billId: row.billId,
+      paymentId: row.paymentId,
+      paymentStatus: row.paymentStatus,
+      proofSlipUrl: row.proofSlipUrl,
+      scope: "overdue" as const,
+    }));
+
+    if (!canManageBilling) return cards;
+
+    const seen = new Set(cards.map((c) => `${c.tenantId}-${c.month}`));
+    const meterNote = billCurrent
+      ? `มิเตอร์น้ำ ${billCurrent.waterMeterPrev}→${billCurrent.waterMeterCurr} · ไฟ ${billCurrent.electricMeterPrev}→${billCurrent.electricMeterCurr} · ห้อง ${formatDormAmountStable(billCurrent.totalRoomAmount, 2)} บ.`
+      : undefined;
+
+    for (const t of activeTenants) {
+      const dedupeKey = `${t.id}-${dashboardYm}`;
+      if (seen.has(dedupeKey)) continue;
+
+      const payment = billCurrent?.payments.find((p) => p.tenantId === Number(t.id));
+
+      if (!billCurrent) {
+        cards.push({
+          key: `current-${t.id}-${dashboardYm}`,
+          tenantId: t.id,
+          tenantName: t.name,
+          month: dashboardYm,
+          balance: 0,
+          billId: null,
+          paymentId: null,
+          paymentStatus: null,
+          proofSlipUrl: null,
+          scope: "current",
+        });
+        continue;
+      }
+
+      if (!payment) {
+        cards.push({
+          key: `current-${t.id}-${dashboardYm}`,
+          tenantId: t.id,
+          tenantName: t.name,
+          month: dashboardYm,
+          balance: 0,
+          billId: billCurrent.id,
+          paymentId: null,
+          paymentStatus: null,
+          proofSlipUrl: null,
+          scope: "current",
+          meterNote,
+        });
+        continue;
+      }
+
+      if (!isUnpaidStatus(payment.paymentStatus)) continue;
+
+      cards.push({
+        key: `current-${t.id}-${dashboardYm}`,
+        tenantId: t.id,
+        tenantName: t.name,
+        month: dashboardYm,
+        balance: payment.amountToPay,
+        billId: billCurrent.id,
+        paymentId: payment.id,
+        paymentStatus: payment.paymentStatus as "PENDING" | "PAID" | "OVERDUE",
+        proofSlipUrl: payment.proofSlipUrl,
+        scope: "current",
+        meterNote,
+      });
+    }
+
+    return cards.sort((a, b) => {
+      if (a.scope !== b.scope) return a.scope === "current" ? -1 : 1;
+      return a.month.localeCompare(b.month);
+    });
+  }, [overdueRows, canManageBilling, activeTenants, dashboardYm, billCurrent]);
+
   const billForMonth = useMemo(
     () => room.utilityBills.find((b) => b.periodMonth === periodMonth),
     [room.utilityBills, periodMonth],
+  );
+  const isEditingBill = Boolean(billForMonth);
+  const billForMonthPaidCount = useMemo(
+    () => billForMonth?.payments.filter((p) => p.paymentStatus === "PAID").length ?? 0,
+    [billForMonth],
   );
 
   const [waterPrev, setWaterPrev] = useState(billForMonth?.waterMeterPrev ?? 0);
@@ -174,6 +334,15 @@ export function RoomDetailClient({
   async function saveBill(e: React.FormEvent) {
     e.preventDefault();
     setBillFeedback(null);
+    if (!canManageBilling) {
+      setBillFeedback({
+        ok: false,
+        title: "ห้องว่าง — บันทึกมิเตอร์ไม่ได้",
+        message: "ยังไม่มีผู้เข้าพักในห้องนี้ จึงไม่ทราบว่าจะแบ่งค่าไฟ/น้ำให้ใคร",
+        hint: "เพิ่มผู้พักที่แถบ «ผู้พัก» ก่อน แล้วค่อยบันทึกมิเตอร์และชำระเงิน",
+      });
+      return;
+    }
     const ymOk = /^\d{4}-\d{2}$/.test(periodMonth);
     if (!ymOk) {
       setBillFeedback({
@@ -242,19 +411,21 @@ export function RoomDetailClient({
       }
       setBillFeedback({
         ok: true,
-        title: "บันทึกสำเร็จ",
-        message: "บันทึกมิเตอร์น้ำ / ไฟ และค่าคงที่สำหรับงวดนี้แล้ว",
-        hint: "กำลังเลื่อนไปส่วนชำระเงิน — ออกใบแจ้งหนี้ แนบสลิป หรือกดรับชำระได้ที่นั่น",
+        title: billForMonth ? "บันทึกการแก้ไขแล้ว" : "บันทึกสำเร็จ",
+        message: billForMonth
+          ? "อัปเดตมิเตอร์และค่าคงที่สำหรับงวดนี้แล้ว"
+          : "บันทึกมิเตอร์น้ำ / ไฟ และค่าคงที่สำหรับงวดนี้แล้ว",
+        hint: billForMonth
+          ? "ยอดค้างชำระจะปรับตามใหม่ — รายการที่ชำระแล้วจะไม่ถูกเปลี่ยน"
+          : "เปิดแถบ «ชำระเงิน» — ออกใบแจ้งหนี้ แนบสลิป หรือกดรับชำระได้ที่นั่น",
       });
       setPayMonth(periodMonth);
       setMeterModalOpen(false);
+      setTab("payment");
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("section", "payment");
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
       router.refresh();
-      window.setTimeout(() => {
-        document.getElementById("dorm-record-payment")?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }, 450);
     } catch (err) {
       setBillFeedback({
         ok: false,
@@ -364,6 +535,8 @@ export function RoomDetailClient({
 
   const overdueNoBillForPayMonth = Boolean(overdueRowForPay && !overdueRowForPay.billId);
 
+  const payMonthIsCurrent = payMonth === dashboardYm;
+
   const billButNoUnpaidRow =
     Boolean(billForPay && payTenant && !pendingForTenant && overdueRowForPay && overdueRowForPay.balance > 0.005);
 
@@ -413,32 +586,53 @@ export function RoomDetailClient({
   const [meterModalOpen, setMeterModalOpen] = useState(false);
   const [invoiceSheetPaymentId, setInvoiceSheetPaymentId] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (!initialFocusSection) return;
-    const targetId =
-      initialFocusSection === "meter" ? "dorm-meter-section" : "dorm-record-payment";
-    window.setTimeout(() => {
-      document.getElementById(targetId)?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
+  function openMeterEditor(nextMonth?: string) {
+    setBillFeedback(null);
+    if (!canManageBilling) {
+      setBillFeedback({
+        ok: false,
+        title: "ห้องว่าง — บันทึกมิเตอร์ไม่ได้",
+        message: "ยังไม่มีผู้เข้าพักในห้องนี้ จึงไม่ทราบว่าจะแบ่งค่าไฟ/น้ำให้ใคร",
+        hint: "เพิ่มผู้พักที่แถบ «ผู้พัก» ก่อน แล้วค่อยบันทึกมิเตอร์",
       });
-    }, 220);
-  }, [initialFocusSection]);
+      selectTab("tenants");
+      return;
+    }
+    if (nextMonth) {
+      setPeriodMonth(nextMonth);
+    }
+    setMeterModalOpen(true);
+  }
+
+  const selectTab = (next: RoomDetailTab) => {
+    setMeterModalOpen(false);
+    setTab(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "overview") {
+      params.delete("section");
+    } else {
+      params.set("section", next);
+    }
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+  };
 
   useEffect(() => {
-    if (!tenantModalOpen && !meterModalOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setTenantModalOpen(false);
-        setMeterModalOpen(false);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [tenantModalOpen, meterModalOpen]);
+    const fromUrl = parseRoomDetailTab(searchParams.get("section"));
+    if (fromUrl) {
+      setTab(fromUrl);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (initialFocusSection === "meter" && !canManageBilling) {
+      selectTab("tenants");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deep link ห้องว่าง → ไปแท็บผู้พัก
+  }, [initialFocusSection, canManageBilling]);
 
   return (
-    <DormPageStack>
+    <>
       {invoiceSheetPaymentId != null ? (
         <DormRoomInvoiceSheetModal
           paymentId={invoiceSheetPaymentId}
@@ -447,322 +641,234 @@ export function RoomDetailClient({
           onClose={() => setInvoiceSheetPaymentId(null)}
         />
       ) : null}
-      <section id="dorm-meter-section" className="app-surface p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-slate-900">จัดการห้องแบบเร็ว</h2>
-            <p className="mt-1 text-xs text-slate-500">ลำดับแนะนำ: เพิ่มผู้พัก → บันทึกมิเตอร์ → บันทึกการชำระเงิน</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setTErr(null);
-                setTenantModalOpen(true);
-              }}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-[#0000BF] hover:bg-slate-50"
-            >
-              + ผู้พัก
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setBillFeedback(null);
-                setMeterModalOpen(true);
-              }}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-[#0000BF] hover:bg-slate-50"
-            >
-              บันทึกมิเตอร์
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                document.getElementById("dorm-record-payment")?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "start",
-                })
-              }
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-[#0000BF] hover:bg-slate-50"
-            >
-              ไปชำระเงิน
-            </button>
-            <button
-              type="button"
-              onClick={deleteRoom}
-              className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100"
-            >
-              ลบห้องนี้
-            </button>
-          </div>
-        </div>
-      </section>
-      {overdueRows.length > 0 ? (
-        <section
-          className="app-surface border-amber-200/90 bg-gradient-to-br from-amber-50/80 via-white to-white p-4 sm:p-5"
-          aria-label="ค้างชำระ"
+
+      <div className="space-y-4">
+        <nav
+          aria-label="เมนูรายละเอียดห้อง"
+          role="tablist"
+          className={cn(dormSegmentShellClass, "grid grid-cols-2 gap-1 sm:grid-cols-4")}
         >
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold tracking-tight text-amber-950">ค้างชำระ (งวดที่ผ่านมา)</h2>
-              <p className="mt-1 text-xs leading-relaxed text-amber-900/80">
-                รายการตรงกับแดชบอร์ด — ใช้ใบแจ้งหนี้ / แนบสลิป หรือบันทึกมิเตอร์ถ้ายังไม่มีบิลในงวดนั้น
+          {(
+            [
+              { key: "overview" as const, label: "ภาพรวม" },
+              { key: "tenants" as const, label: "ผู้พัก", count: n },
+              { key: "meter" as const, label: "มิเตอร์" },
+              { key: "payment" as const, label: "ชำระเงิน" },
+            ] as const
+          ).map((item) => {
+            const active = tab === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                role="tab"
+                id={`dorm-room-tab-${item.key}`}
+                aria-selected={active}
+                aria-controls={`dorm-room-panel-${item.key}`}
+                className={roomDetailTabClass(active)}
+                onClick={() => selectTab(item.key)}
+              >
+                <span>{item.label}</span>
+                {"count" in item && item.count !== undefined ? (
+                  <span
+                    className={cn(
+                      "tabular-nums text-[10px] font-black sm:text-xs",
+                      active ? "text-white/90" : "text-[#66638c]",
+                    )}
+                  >
+                    {item.count}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </nav>
+
+        {tab === "overview" ? (
+          <div
+            role="tabpanel"
+            id="dorm-room-panel-overview"
+            aria-labelledby="dorm-room-tab-overview"
+            className="space-y-4"
+          >
+            <div className="rounded-[1.25rem] border border-white/60 bg-white/40 px-3 py-3 sm:px-4">
+              <p className="text-xs leading-relaxed text-[#66638c]">
+                {canManageBilling
+                  ? "ลำดับแนะนำ: แท็บ «ผู้พัก» → «มิเตอร์» → «ชำระเงิน»"
+                  : "ห้องว่าง — ไปแท็บ «ผู้พัก» เพื่อเพิ่มผู้เข้าพักก่อนบันทึกมิเตอร์"}
               </p>
             </div>
-          </div>
-          <ul className="mt-4 space-y-3">
-            {overdueRows.map((row) => (
-              <li
-                key={`${row.tenantId}-${row.month}`}
-                className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm"
-              >
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-900">{row.tenantName}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      งวด {formatPeriodMonthLabelStable(row.month)}{" "}
-                      <span className="font-mono text-slate-400">({row.month})</span>
-                    </p>
-                    <p className="mt-2 text-lg font-bold tabular-nums text-red-800">
-                      {formatDormAmountStable(row.balance, 2)}{" "}
-                      <span className="text-sm font-semibold">บาท</span>
-                    </p>
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col gap-3 lg:max-w-md">
-                    {!row.billId ? (
-                      <>
-                        <p className="text-xs leading-relaxed text-amber-900">
-                          ยังไม่มีบิลมิเตอร์ในงวดนี้ — บันทึกมิเตอร์และค่าคงที่ก่อน ระบบจะสร้างยอดแยกคนและใบแจ้งหนี้ให้
-                          จากนั้นไปที่ส่วน &quot;บันทึกการชำระเงิน&quot; ด้านล่างเพื่อออกใบแจ้งหนี้ แนบสลิป หรือรับชำระ
-                          (หลังบันทึกมิเตอร์สำเร็จ หน้าจะเลื่อนไปให้อัตโนมัติ)
-                        </p>
-                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                          <button
-                            type="button"
-                            className="w-full rounded-xl bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3] sm:w-auto"
-                            onClick={() => {
-                              setPayTenant(row.tenantId);
-                              setPayMonth(row.month);
-                              setPeriodMonth(row.month);
-                              setBillFeedback(null);
-                              setMeterModalOpen(true);
-                            }}
-                          >
-                            บันทึกมิเตอร์ / ค่าคงที่ — {row.month}
-                          </button>
-                          <button
-                            type="button"
-                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 sm:w-auto"
-                            onClick={() => {
-                              setPayTenant(row.tenantId);
-                              setPayMonth(row.month);
-                              document.getElementById("dorm-record-payment")?.scrollIntoView({
-                                behavior: "smooth",
-                                block: "start",
-                              });
-                            }}
-                          >
-                            ไปส่วนชำระเงิน (หลังมีบิลจึงชำระได้)
-                          </button>
-                        </div>
-                      </>
-                    ) : row.paymentId != null && isUnpaidStatus(row.paymentStatus) ? (
-                      <>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setInvoiceSheetPaymentId(row.paymentId!)}
-                            className="inline-flex items-center justify-center rounded-xl bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a3]"
-                          >
-                            ใบแจ้งหนี้ / QR / ลิงก์แนบสลิป
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-                            onClick={() => {
-                              setPayTenant(row.tenantId);
-                              setPayMonth(row.month);
-                              document.getElementById("dorm-record-payment")?.scrollIntoView({
-                                behavior: "smooth",
-                                block: "start",
-                              });
-                            }}
-                          >
-                            เลือกในแบบฟอร์มชำระ
-                          </button>
-                        </div>
-                        <DormPaymentProofBlock
-                          paymentId={row.paymentId}
-                          initialUrl={row.proofSlipUrl ?? null}
-                        />
-                      </>
-                    ) : (
-                      <p className="text-xs text-slate-500">
-                        ไม่พบแถวชำระในงวดนี้ — ลองรีเฟรช หรือบันทึกมิเตอร์ใหม่
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
 
-      <section className="app-surface p-4 sm:p-5">
-        <h2 className="text-sm font-semibold text-slate-900">งวดปัจจุบัน ({dashboardYm})</h2>
-        <p className="mt-1 text-xs text-slate-500">
-          มิเตอร์และยอดรวมเป็นของทั้งห้อง — แต่ละคนชำระตามยอดที่หารจากผู้พัก ACTIVE
-        </p>
-        {!billCurrent ? (
-          <p className="mt-4 text-sm text-sky-800">
-            ยังไม่มีบิลมิเตอร์เดือนนี้ — กดปุ่ม &quot;บันทึกมิเตอร์ / ค่าคงที่&quot; ด้านล่างเพื่อกรอกมิเตอร์
-          </p>
-        ) : (
-          <div className="mt-4 space-y-4">
-            <div className="grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
-              <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
-                <p className="text-xs font-semibold text-slate-500">มิเตอร์น้ำ (ห้อง)</p>
-                <p className="mt-1 tabular-nums">
-                  {billCurrent.waterMeterPrev} → {billCurrent.waterMeterCurr}
-                  <span className="text-slate-500">
-                    {" "}
-                    (ใช้ {Math.max(0, billCurrent.waterMeterCurr - billCurrent.waterMeterPrev)} หน่วย)
-                  </span>
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  ราคา/หน่วย {formatDormAmountStable(billCurrent.waterPrice)} บาท
-                </p>
-              </div>
-              <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
-                <p className="text-xs font-semibold text-slate-500">มิเตอร์ไฟ (ห้อง)</p>
-                <p className="mt-1 tabular-nums">
-                  {billCurrent.electricMeterPrev} → {billCurrent.electricMeterCurr}
-                  <span className="text-slate-500">
-                    {" "}
-                    (ใช้ {Math.max(0, billCurrent.electricMeterCurr - billCurrent.electricMeterPrev)} หน่วย)
-                  </span>
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  ราคา/หน่วย {formatDormAmountStable(billCurrent.electricPrice)} บาท
-                </p>
-              </div>
-            </div>
-            <p className="text-sm text-slate-700">
-              <span className="font-medium">ยอดน้ำไฟ+คงที่ (ห้อง):</span>{" "}
-              {formatDormAmountStable(billCurrent.totalRoomAmount, 2)} บาท
-            </p>
-            <div className="overflow-x-auto rounded-xl border border-slate-100">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2">ผู้เข้าพัก</th>
-                    <th className="px-3 py-2">สถานะในห้อง</th>
-                    <th className="px-3 py-2 text-right">ยอดหาร (บาท)</th>
-                    <th className="px-3 py-2">การชำระงวดนี้</th>
-                    <th className="px-3 py-2">ใบแจ้งหนี้</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {room.tenants.map((t) => {
-                    const row = billCurrent.payments.find((p) => p.tenantId === Number(t.id));
+            {overviewBillingCards.length > 0 ? (
+              <section
+                className="rounded-[1.25rem] border border-amber-200/90 bg-gradient-to-br from-amber-50/80 via-white to-white p-4 sm:p-5"
+                aria-label="ค้างชำระและงวดปัจจุบัน"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-semibold tracking-tight text-amber-950">
+                      ค้างชำระ & งวดปัจจุบัน
+                    </h2>
+                    <p className="mt-1 text-xs leading-relaxed text-amber-900/80">
+                      งวดปัจจุบัน — บันทึกมิเตอร์ก่อน · งวดค้าง — พิมพ์ใบแจ้งหนี้หรือแนบสลิปได้
+                    </p>
+                  </div>
+                  {canManageBilling && billCurrent ? (
+                    <button
+                      type="button"
+                      onClick={() => openMeterEditor(dashboardYm)}
+                      className="shrink-0 rounded-xl border border-amber-300/80 bg-white px-3 py-2 text-xs font-semibold text-[#0000BF] hover:bg-amber-50/80"
+                    >
+                      แก้ไขมิเตอร์งวดนี้
+                    </button>
+                  ) : null}
+                </div>
+                <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {overviewBillingCards.map((row, index) => {
+                    const resolvedPayment = resolveOverviewInvoicePayment(row, room.utilityBills);
+                    const invoicePayment = row.scope === "overdue" ? resolvedPayment : null;
+                    const needsMeterFirst = row.scope === "current" || !row.billId;
                     return (
-                      <tr key={t.id} className="text-slate-800">
-                        <td className="px-3 py-2 font-medium">{t.name}</td>
-                        <td className="px-3 py-2 text-slate-600">
-                          {t.status === "ACTIVE" ? "พักอยู่" : "ย้ายออก"}
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums">
-                          {t.status === "ACTIVE" && row
-                            ? formatDormAmountStable(row.amountToPay, 2)
-                            : "—"}
-                        </td>
-                        <td className="px-3 py-2">
-                          {t.status !== "ACTIVE" ? (
-                            <span className="text-slate-400">—</span>
-                          ) : row ? (
-                            <div className="flex flex-col gap-0.5">
-                              <span
-                                className={
-                                  row.paymentStatus === "PAID"
-                                    ? "font-medium text-emerald-700"
-                                    : "font-medium text-amber-800"
-                                }
-                              >
-                                {paymentStatusTh(row.paymentStatus)}
-                              </span>
-                              {isUnpaidStatus(row.paymentStatus) && row.proofSlipUrl ? (
-                                <span className="text-[10px] font-medium text-sky-700">มีสลิปรอตรวจ</span>
-                              ) : null}
-                            </div>
-                          ) : (
-                            <span className="text-slate-400">รอสร้างแถวชำระ</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2">
-                          {t.status === "ACTIVE" && row && isUnpaidStatus(row.paymentStatus) ? (
-                            <button
-                              type="button"
-                              onClick={() => setInvoiceSheetPaymentId(row.id)}
-                              className="text-xs font-semibold text-[#0000BF] underline decoration-[#0000BF]/40 underline-offset-2 hover:decoration-[#0000BF]"
+                    <li
+                      key={row.key}
+                      className={cn(
+                        "rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm",
+                        overviewBillingCards.length % 2 === 1 &&
+                          index === overviewBillingCards.length - 1 &&
+                          "sm:col-span-2 lg:col-span-1",
+                      )}
+                    >
+                      <div className="flex min-h-0 flex-col gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-slate-900">{row.tenantName}</p>
+                            <span
+                              className={cn(
+                                "rounded-full px-2 py-0.5 text-[10px] font-bold ring-1",
+                                row.scope === "current"
+                                  ? "bg-sky-50 text-sky-900 ring-sky-200/80"
+                                  : "bg-amber-50 text-amber-950 ring-amber-200/80",
+                              )}
                             >
-                              พิมพ์ / QR
-                            </button>
+                              {row.scope === "current" ? "งวดปัจจุบัน" : "ค้างชำระ"}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            งวด {formatPeriodMonthLabelStable(row.month)}{" "}
+                            <span className="font-mono text-slate-400">({row.month})</span>
+                          </p>
+                          {row.balance > 0.005 ? (
+                            <p className="mt-2 text-lg font-bold tabular-nums text-red-800">
+                              {formatDormAmountStable(row.balance, 2)}{" "}
+                              <span className="text-sm font-semibold">บาท</span>
+                            </p>
+                          ) : row.scope === "current" && !row.billId ? (
+                            <p className="mt-2 text-sm font-medium text-sky-800">ยังไม่มีบิลมิเตอร์งวดนี้</p>
+                          ) : null}
+                          {row.meterNote ? (
+                            <p className="mt-2 text-[11px] leading-relaxed text-slate-600">{row.meterNote}</p>
+                          ) : null}
+                        </div>
+                        <div className="flex min-w-0 flex-col gap-3">
+                          {needsMeterFirst ? (
+                            <>
+                              <p className="text-xs leading-relaxed text-amber-900">
+                                {row.scope === "current"
+                                  ? row.billId
+                                    ? "งวดปัจจุบัน — ตรวจ/บันทึกมิเตอร์ให้ครบก่อน แล้วไปแถบ «ชำระเงิน» เพื่อออกใบแจ้งหนี้"
+                                    : "ยังไม่มีบิลมิเตอร์งวดนี้ — บันทึกมิเตอร์และค่าคงที่ก่อน ระบบจะสร้างยอดแยกคนและใบแจ้งหนี้ให้"
+                                  : "ยังไม่มีบิลมิเตอร์ในงวดนี้ — บันทึกมิเตอร์และค่าคงที่ก่อน ระบบจะสร้างยอดแยกคนและใบแจ้งหนี้ให้"}
+                              </p>
+                              <div className="flex flex-col gap-2">
+                                <button
+                                  type="button"
+                                  className="w-full rounded-xl bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3]"
+                                  onClick={() => {
+                                    setPayTenant(row.tenantId);
+                                    setPayMonth(row.month);
+                                    setPeriodMonth(row.month);
+                                    setBillFeedback(null);
+                                    selectTab("meter");
+                                    openMeterEditor(row.month);
+                                  }}
+                                >
+                                  {row.billId ? "แก้ไขมิเตอร์ / ค่าคงที่" : "บันทึกมิเตอร์ / ค่าคงที่"}
+                                </button>
+                                {row.scope === "current" && row.billId && resolvedPayment ? (
+                                  <button
+                                    type="button"
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                                    onClick={() => {
+                                      setPayTenant(row.tenantId);
+                                      setPayMonth(row.month);
+                                      selectTab("payment");
+                                    }}
+                                  >
+                                    ไปแถบชำระเงิน
+                                  </button>
+                                ) : null}
+                              </div>
+                            </>
+                          ) : invoicePayment ? (
+                            <>
+                              <div className="flex flex-col gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setInvoiceSheetPaymentId(invoicePayment.paymentId)}
+                                  className="inline-flex w-full items-center justify-center rounded-xl bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a3]"
+                                >
+                                  พิมพ์ใบแจ้งหนี้
+                                </button>
+                                <button
+                                  type="button"
+                                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                                  onClick={() => {
+                                    setPayTenant(row.tenantId);
+                                    setPayMonth(row.month);
+                                    selectTab("payment");
+                                  }}
+                                >
+                                  ไปแถบชำระเงิน
+                                </button>
+                              </div>
+                              <DormPaymentProofBlock
+                                paymentId={invoicePayment.paymentId}
+                                initialUrl={invoicePayment.proofSlipUrl}
+                              />
+                            </>
                           ) : (
-                            <span className="text-slate-400">—</span>
+                            <p className="text-xs text-slate-500">
+                              ไม่พบแถวชำระในงวดนี้ — ลองรีเฟรช หรือบันทึกมิเตอร์ใหม่
+                            </p>
                           )}
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
+                    </li>
                     );
                   })}
-                </tbody>
-              </table>
+                </ul>
+              </section>
+            ) : null}
+
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={deleteRoom}
+                className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100"
+              >
+                ลบห้อง
+              </button>
             </div>
           </div>
-        )}
-      </section>
+        ) : null}
 
-      {billFeedback && (!meterModalOpen || billFeedback.ok) ? (
-        <div
-          role="alert"
-          aria-live="polite"
-          className={
-            billFeedback.ok
-              ? "rounded-xl border-2 border-emerald-200 bg-emerald-50/90 px-4 py-3 text-slate-800 shadow-sm"
-              : "rounded-xl border-2 border-red-300 bg-red-50/95 px-4 py-3 text-slate-900 shadow-sm"
-          }
-        >
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <p className="text-sm font-semibold">{billFeedback.title}</p>
-            <button
-              type="button"
-              onClick={() => setBillFeedback(null)}
-              className="shrink-0 rounded-lg px-2 py-0.5 text-xs font-medium text-slate-600 underline decoration-slate-400 underline-offset-2 hover:text-slate-900"
-            >
-              ปิดข้อความ
-            </button>
-          </div>
-          <p className="mt-1.5 text-sm leading-relaxed">{billFeedback.message}</p>
-          {billFeedback.details && billFeedback.details.length > 0 ? (
-            <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-slate-700">
-              {billFeedback.details.map((line, i) => (
-                <li key={i}>{line}</li>
-              ))}
-            </ul>
-          ) : null}
-          {billFeedback.hint ? (
-            <p className="mt-2 border-t border-slate-200/80 pt-2 text-xs leading-relaxed text-slate-600">
-              {billFeedback.hint}
-            </p>
-          ) : null}
-          {billFeedback.httpStatus != null && !billFeedback.ok ? (
-            <p className="mt-1 text-[11px] tabular-nums text-slate-500">
-              รหัส HTTP {billFeedback.httpStatus}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      <section className="app-surface p-4 sm:p-5">
+        {tab === "tenants" ? (
+          <div
+            role="tabpanel"
+            id="dorm-room-panel-tenants"
+            aria-labelledby="dorm-room-tab-tenants"
+            className="rounded-[1.25rem] border border-white/60 bg-white/40 p-4 sm:p-5"
+          >
         <h2 className="text-sm font-semibold text-slate-900">ผู้เข้าพัก ({n}/{room.maxOccupants})</h2>
         <p className="mt-1 text-xs text-slate-500">
           ค่าเช่า {formatDormAmountStable(room.basePrice)} บาท — หาร {n > 0 ? n : "—"} คน ={" "}
@@ -826,45 +932,191 @@ export function RoomDetailClient({
         ) : (
           <p className="mt-3 text-xs text-amber-700">ห้องเต็ม — ไม่สามารถเพิ่มผู้เข้าพักได้</p>
         )}
-      </section>
-
-      <section className="app-surface p-4 sm:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-slate-900">มิเตอร์น้ำ / ไฟ &amp; ค่าคงที่</h2>
-            <p className="mt-1 text-xs text-slate-500">
-              บันทึกงวดบิลและยอดรวมห้อง — Split ให้ผู้พัก ACTIVE อัตโนมัติ
-            </p>
-            <p className="mt-2 text-xs text-slate-600">
-              <span className="font-medium text-slate-700">สรุปงวด {periodMonth}</span> (
-              {formatPeriodMonthLabelStable(periodMonth)}
-              {billForMonth
-                ? `) · ยอดห้อง ${formatDormAmountStable(billForMonth.totalRoomAmount, 2)} บาท`
-                : ") · ยังไม่มีบิลในงวดนี้"}
-            </p>
           </div>
+        ) : null}
+
+        {tab === "meter" ? (
+          <div
+            role="tabpanel"
+            id="dorm-room-panel-meter"
+            aria-labelledby="dorm-room-tab-meter"
+            className="space-y-4"
+          >
+            {billFeedback && (!meterModalOpen || billFeedback.ok) ? (
+              <div
+                role="alert"
+                aria-live="polite"
+                className={
+                  billFeedback.ok
+                    ? "rounded-xl border-2 border-emerald-200 bg-emerald-50/90 px-4 py-3 text-slate-800 shadow-sm"
+                    : "rounded-xl border-2 border-red-300 bg-red-50/95 px-4 py-3 text-slate-900 shadow-sm"
+                }
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <p className="text-sm font-semibold">{billFeedback.title}</p>
+                  <button
+                    type="button"
+                    onClick={() => setBillFeedback(null)}
+                    className="shrink-0 rounded-lg px-2 py-0.5 text-xs font-medium text-slate-600 underline decoration-slate-400 underline-offset-2 hover:text-slate-900"
+                  >
+                    ปิดข้อความ
+                  </button>
+                </div>
+                <p className="mt-1.5 text-sm leading-relaxed">{billFeedback.message}</p>
+                {billFeedback.details && billFeedback.details.length > 0 ? (
+                  <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-slate-700">
+                    {billFeedback.details.map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                {billFeedback.hint ? (
+                  <p className="mt-2 border-t border-slate-200/80 pt-2 text-xs leading-relaxed text-slate-600">
+                    {billFeedback.hint}
+                  </p>
+                ) : null}
+                {billFeedback.httpStatus != null && !billFeedback.ok ? (
+                  <p className="mt-1 text-[11px] tabular-nums text-slate-500">
+                    รหัส HTTP {billFeedback.httpStatus}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            {!canManageBilling ? (
+              <AppEmptyState className="px-4 py-8">
+                <span className="block font-semibold text-slate-800">ห้องว่าง — ยังไม่บันทึกมิเตอร์</span>
+                <span className="mt-2 block text-xs leading-relaxed">
+                  ระบบแบ่งค่าไฟ/น้ำให้ผู้พัก ACTIVE เท่านั้น — เพิ่มผู้เข้าพักก่อน จึงจะบันทึกมิเตอร์และเรียกเก็บได้
+                </span>
+                <button
+                  type="button"
+                  onClick={() => selectTab("tenants")}
+                  className="mt-4 rounded-xl bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3]"
+                >
+                  + เพิ่มผู้พัก
+                </button>
+              </AppEmptyState>
+            ) : null}
+            <section className="rounded-[1.25rem] border border-white/60 bg-white/40 p-4 sm:p-5">
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-semibold text-slate-900">มิเตอร์น้ำ / ไฟ &amp; ค่าคงที่</h2>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {canManageBilling
+                        ? "เลือกงวดแล้วบันทึกใหม่หรือแก้ไขมิเตอร์ที่บันทึกแล้ว — Split ให้ผู้พัก ACTIVE อัตโนมัติ"
+                        : "ประวัติบิลเก่า (ถ้ามี) — ห้องว่างจึงไม่บันทึกหรือแก้ไขมิเตอร์ใหม่"}
+                    </p>
+                  </div>
+                  <label className="block shrink-0 text-xs font-medium text-slate-600">
+                    งวดที่จัดการ
+                    <input
+                      type="month"
+                      className="mt-1 block w-full min-w-[10.5rem] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                      value={periodMonth}
+                      onChange={(e) => setPeriodMonth(e.target.value)}
+                    />
+                  </label>
+                </div>
+
+                {room.utilityBills.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {room.utilityBills.map((b) => {
+                      const active = b.periodMonth === periodMonth;
+                      return (
+                        <button
+                          key={b.periodMonth}
+                          type="button"
+                          className={cn(
+                            "inline-flex min-h-8 items-center rounded-xl px-3 py-1.5 text-xs font-bold",
+                            dormFilterChipClass(active),
+                          )}
+                          onClick={() => setPeriodMonth(b.periodMonth)}
+                        >
+                          {formatPeriodMonthLabelStable(b.periodMonth)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+
+                <p className="text-xs text-slate-600">
+                  <span className="font-medium text-slate-700">สรุปงวด {periodMonth}</span> (
+                  {formatPeriodMonthLabelStable(periodMonth)}
+                  {billForMonth
+                    ? `) · ยอดห้อง ${formatDormAmountStable(billForMonth.totalRoomAmount, 2)} บาท`
+                    : ") · ยังไม่มีบิลในงวดนี้"}
+                </p>
+
+                {billForMonth ? (
+                  <div className="grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
+                    <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
+                      <p className="text-xs font-semibold text-slate-500">มิเตอร์น้ำ (ห้อง)</p>
+                      <p className="mt-1 tabular-nums">
+                        {billForMonth.waterMeterPrev} → {billForMonth.waterMeterCurr}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3">
+                      <p className="text-xs font-semibold text-slate-500">มิเตอร์ไฟ (ห้อง)</p>
+                      <p className="mt-1 tabular-nums">
+                        {billForMonth.electricMeterPrev} → {billForMonth.electricMeterCurr}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {billForMonthPaidCount > 0 ? (
+                  <p className="rounded-xl border border-amber-200/80 bg-amber-50/80 px-3 py-2 text-xs leading-relaxed text-amber-950">
+                    งวดนี้มี {billForMonthPaidCount} รายการชำระแล้ว — แก้ไขมิเตอร์จะอัปเดตยอดค้างชำระเท่านั้น ไม่เปลี่ยนยอดที่รับชำระแล้ว
+                  </p>
+                ) : null}
+
+                {canManageBilling ? (
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openMeterEditor(periodMonth)}
+                      className="rounded-lg bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0000a6]"
+                    >
+                      {isEditingBill ? "แก้ไขมิเตอร์ / ค่าคงที่" : "บันทึกมิเตอร์ / ค่าคงที่"}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+        {tab === "payment" ? (
+          <div
+            role="tabpanel"
+            id="dorm-room-panel-payment"
+            aria-labelledby="dorm-room-tab-payment"
+          >
+      {!canManageBilling ? (
+        <AppEmptyState className="px-4 py-10">
+          <span className="block font-semibold text-slate-800">ห้องว่าง — ยังไม่เรียกเก็บเงิน</span>
+          <span className="mt-2 block text-xs leading-relaxed">
+            ต้องมีผู้เข้าพัก ACTIVE ก่อน จึงจะออกใบแจ้งหนี้และรับชำระค่าเช่า/ไฟ/น้ำได้
+          </span>
           <button
             type="button"
-            onClick={() => {
-              setBillFeedback(null);
-              setMeterModalOpen(true);
-            }}
-            className="shrink-0 rounded-lg bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0000a6]"
+            onClick={() => selectTab("tenants")}
+            className="mt-4 rounded-xl bg-[#0000BF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0000a3]"
           >
-            บันทึกมิเตอร์ / ค่าคงที่
+            + เพิ่มผู้พัก
           </button>
-        </div>
-      </section>
-
+        </AppEmptyState>
+      ) : (
       <section
         id="dorm-record-payment"
-        className="app-surface scroll-mt-6 overflow-hidden p-0"
+        className="overflow-hidden rounded-[1.25rem] border border-white/60 bg-white/40"
       >
         <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-5 py-4">
           <h2 className="text-base font-semibold text-slate-900">บันทึกการชำระเงิน</h2>
           <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-500">
             เลือกผู้เข้าพักและงวดที่บันทึกมิเตอร์แล้ว — พิมพ์ใบแจ้งหนี้ให้ผู้พักสแกนพร้อมเพย์และแนบสลิป จากนั้นตรวจสลิปแล้วกดรับชำระ
-            ถ้างวดนั้นยังไม่มีบิล ให้บันทึกมิเตอร์ก่อน (จากการ์ดค้างชำระหรือปุ่มมิเตอร์ด้านบน) แล้วยอดจะขึ้นที่นี่
+            ถ้างวดนั้นยังไม่มีบิล ให้บันทึกมิเตอร์ที่แถบ «มิเตอร์» ก่อน แล้วยอดจะขึ้นที่นี่
           </p>
         </div>
 
@@ -954,7 +1206,28 @@ export function RoomDetailClient({
             </div>
           </div>
 
-          {pendingForTenant ? (
+          {payMonthIsCurrent && !billForPay ? (
+            <div className="rounded-2xl border border-sky-200/90 bg-sky-50/80 p-4 sm:p-5">
+              <p className="text-sm font-semibold text-sky-950">งวดปัจจุบันยังไม่มีบิลมิเตอร์</p>
+              <p className="mt-1 text-xs leading-relaxed text-sky-900/85">
+                บันทึกมิเตอร์และค่าคงที่ก่อน — หลังมีบิลแล้วจึงออกใบแจ้งหนี้และรับชำระได้ที่แถบนี้
+              </p>
+              <button
+                type="button"
+                className="mt-3 inline-flex min-h-[44px] items-center rounded-xl bg-[#0000BF] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0000a6]"
+                onClick={() => {
+                  setPeriodMonth(payMonth);
+                  setBillFeedback(null);
+                  selectTab("meter");
+                  openMeterEditor(payMonth);
+                }}
+              >
+                บันทึกมิเตอร์ / ค่าคงที่
+              </button>
+            </div>
+          ) : null}
+
+          {pendingForTenant && billForPay ? (
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <p className="text-xs font-semibold text-slate-800">ใบแจ้งหนี้ &amp; QR พร้อมเพย์</p>
@@ -1037,35 +1310,30 @@ export function RoomDetailClient({
                         <span className="text-sm font-semibold">บาท</span>
                       </p>
                     </div>
-                    <div className="flex shrink-0 flex-wrap gap-2">
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <DormReceiptPrintIconButton
+                        defaultPaperSize={dormBrand.defaultPaperSize}
+                        data={{
+                          dormTitle: dormBrand.dormTitle,
+                          logoUrl: dormBrand.logoUrl,
+                          taxId: dormBrand.taxId,
+                          address: dormBrand.address,
+                          caretakerPhone: dormBrand.caretakerPhone,
+                          roomNumber: room.roomNumber,
+                          tenantName: tn,
+                          periodMonth: p.periodMonth,
+                          amountBaht: p.amountToPay,
+                          paidAtIso: p.paidAt,
+                          receiptNumber: p.receiptNumber,
+                          note: p.note,
+                        }}
+                      />
                       <Link
                         href={`/dashboard/dormitory/receipt/${p.id}`}
                         target="_blank"
                         className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-xs font-semibold text-[#0000BF] transition hover:bg-[#0000BF]/5"
-                        title="ใช้ขนาดจากตั้งค่าหอพัก"
                       >
-                        ตามตั้งค่า
-                      </Link>
-                      <Link
-                        href={`/dashboard/dormitory/receipt/${p.id}?w=58`}
-                        target="_blank"
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-xs font-semibold text-[#0000BF] transition hover:bg-[#0000BF]/5"
-                      >
-                        Slip 58mm
-                      </Link>
-                      <Link
-                        href={`/dashboard/dormitory/receipt/${p.id}?w=80`}
-                        target="_blank"
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-xs font-semibold text-[#0000BF] transition hover:bg-[#0000BF]/5"
-                      >
-                        Slip 80mm
-                      </Link>
-                      <Link
-                        href={`/dashboard/dormitory/receipt/${p.id}?format=a4`}
-                        target="_blank"
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-xs font-semibold text-[#0000BF] transition hover:bg-[#0000BF]/5"
-                      >
-                        A4
+                        เปิดใบเสร็จ
                       </Link>
                     </div>
                   </li>
@@ -1075,126 +1343,85 @@ export function RoomDetailClient({
           )}
         </div>
       </section>
-
-      {tenantModalOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
-          role="presentation"
-          onClick={() => setTenantModalOpen(false)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="dorm-tenant-modal-title"
-            className="max-h-[min(92vh,640px)] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:rounded-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 flex items-start justify-between gap-3 border-b border-slate-100 bg-white px-5 py-4">
-              <div>
-                <h2 id="dorm-tenant-modal-title" className="text-lg font-semibold text-slate-900">
-                  เพิ่มผู้เข้าพัก
-                </h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  ห้อง {room.roomNumber} · เหลือที่ว่าง {room.maxOccupants - n} คน
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setTenantModalOpen(false)}
-                className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-                aria-label="ปิด"
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={addTenant} className="grid gap-3 px-5 py-4">
-              {tErr ? (
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{tErr}</p>
-              ) : null}
-              <input
-                className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-                placeholder="ชื่อ-นามสกุล"
-                value={tName}
-                onChange={(e) => setTName(e.target.value)}
-                autoComplete="name"
-              />
-              <input
-                className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-                placeholder="เบอร์โทร"
-                value={tPhone}
-                onChange={(e) => setTPhone(e.target.value)}
-                inputMode="tel"
-              />
-              <input
-                className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-                placeholder="เลขบัตร ปชช. 13 หลัก"
-                value={tIdCard}
-                onChange={(e) => setTIdCard(e.target.value.replace(/\D/g, "").slice(0, 13))}
-                maxLength={13}
-                inputMode="numeric"
-              />
-              <label className="text-xs font-medium text-slate-600">
-                วันเข้าพัก <span className="font-normal text-slate-400">(ว่างได้ = วันนี้)</span>
-                <input
-                  type="date"
-                  className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
-                  value={tCheckIn}
-                  onChange={(e) => setTCheckIn(e.target.value)}
-                />
-              </label>
-              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={() => setTenantModalOpen(false)}
-                  className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  type="submit"
-                  disabled={tLoading}
-                  className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-                >
-                  {tLoading ? "กำลังบันทึก…" : "เพิ่มผู้เข้าพัก"}
-                </button>
-              </div>
-            </form>
+      )}
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
-      {meterModalOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
-          role="presentation"
-          onClick={() => setMeterModalOpen(false)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="dorm-meter-modal-title"
-            className="max-h-[min(92vh,720px)] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:rounded-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-slate-100 bg-white px-5 py-4">
-              <div>
-                <h2 id="dorm-meter-modal-title" className="text-lg font-semibold text-slate-900">
-                  มิเตอร์น้ำ / ไฟ &amp; ค่าคงที่
-                </h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  เลือกงวด กรอกมิเตอร์และราคาต่อหน่วย แล้วบันทึก — Split ต่อคนอัตโนมัติ
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMeterModalOpen(false)}
-                className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-                aria-label="ปิด"
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={saveBill} className="space-y-4 px-5 py-4">
+      <DormCenteredModal
+        open={tenantModalOpen}
+        onClose={() => setTenantModalOpen(false)}
+        title="เพิ่มผู้เข้าพัก"
+        titleId="dorm-tenant-modal-title"
+        description={`ห้อง ${room.roomNumber} · เหลือที่ว่าง ${room.maxOccupants - n} คน`}
+      >
+        <form onSubmit={addTenant} className="grid gap-3">
+          {tErr ? (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-100">{tErr}</p>
+          ) : null}
+          <input
+            className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+            placeholder="ชื่อ-นามสกุล"
+            value={tName}
+            onChange={(e) => setTName(e.target.value)}
+            autoComplete="name"
+          />
+          <input
+            className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+            placeholder="เบอร์โทร"
+            value={tPhone}
+            onChange={(e) => setTPhone(e.target.value)}
+            inputMode="tel"
+          />
+          <input
+            className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+            placeholder="เลขบัตร ปชช. 13 หลัก"
+            value={tIdCard}
+            onChange={(e) => setTIdCard(e.target.value.replace(/\D/g, "").slice(0, 13))}
+            maxLength={13}
+            inputMode="numeric"
+          />
+          <label className="text-xs font-medium text-slate-600">
+            วันเข้าพัก <span className="font-normal text-slate-400">(ว่างได้ = วันนี้)</span>
+            <input
+              type="date"
+              className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
+              value={tCheckIn}
+              onChange={(e) => setTCheckIn(e.target.value)}
+            />
+          </label>
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setTenantModalOpen(false)}
+              className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              disabled={tLoading}
+              className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+            >
+              {tLoading ? "กำลังบันทึก…" : "เพิ่มผู้เข้าพัก"}
+            </button>
+          </div>
+        </form>
+      </DormCenteredModal>
+
+      <DormCenteredModal
+        open={meterModalOpen}
+        onClose={() => setMeterModalOpen(false)}
+        title={isEditingBill ? "แก้ไขมิเตอร์น้ำ / ไฟ & ค่าคงที่" : "บันทึกมิเตอร์น้ำ / ไฟ & ค่าคงที่"}
+        titleId="dorm-meter-modal-title"
+        description={
+          isEditingBill
+            ? "แก้ไขเลขมิเตอร์ ราคาต่อหน่วย หรือค่าคงที่ — แล้วกดบันทึกการแก้ไข"
+            : "เลือกงวด กรอกมิเตอร์และราคาต่อหน่วย แล้วบันทึก — Split ต่อคนอัตโนมัติ"
+        }
+        size="lg"
+      >
+        <form onSubmit={saveBill} className="space-y-4">
               <label className="block text-xs font-medium text-slate-600">
                 งวดบิล (YYYY-MM)
                 <input
@@ -1374,13 +1601,11 @@ export function RoomDetailClient({
                   disabled={loadingBill}
                   className="rounded-xl bg-[#0000BF] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0000a6] disabled:opacity-60"
                 >
-                  {loadingBill ? "กำลังบันทึก…" : "บันทึกบิลงวดนี้"}
+                  {loadingBill ? "กำลังบันทึก…" : isEditingBill ? "บันทึกการแก้ไข" : "บันทึกบิลงวดนี้"}
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      ) : null}
-    </DormPageStack>
+      </DormCenteredModal>
+    </>
   );
 }

@@ -2,6 +2,7 @@ import { toAbsolutePublicUrl } from "@/lib/dormitory/invoice-asset-url";
 import { buildPromptPayQrDataUrl } from "@/lib/dormitory/promptpay-qr-image";
 import { ensurePaymentPublicProofToken } from "@/lib/dormitory/proof-token";
 import { resolveDormInvoiceBranding } from "@/lib/dormitory/resolve-dorm-invoice-branding";
+import { dormUnpaidPaymentStatusFilter } from "@/lib/dormitory/unpaid-payment-status";
 import { buildUrlQrDataUrl } from "@/lib/dormitory/url-qr-dataurl";
 import { prisma } from "@/lib/prisma";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
@@ -34,7 +35,7 @@ export async function getDormInvoiceSheetDto(
   const payment = await prisma.splitBillPayment.findFirst({
     where: {
       id: paymentId,
-      paymentStatus: "PENDING",
+      ...dormUnpaidPaymentStatusFilter(),
       tenant: {
         room: { ownerUserId: sessionUserId, trialSessionId: scope.trialSessionId },
       },

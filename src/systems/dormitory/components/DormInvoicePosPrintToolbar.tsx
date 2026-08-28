@@ -23,13 +23,15 @@ const DORM_A4_PAGE = { a4TightVerticalMargins: true as const };
 
 export function DormInvoicePosPrintToolbar({
   sheet,
+  defaultPaperSize,
   className,
 }: {
   sheet: DormInvoicePrintPayload;
+  defaultPaperSize?: string | null;
   className?: string;
 }) {
   const [pdfBusy, setPdfBusy] = useState(false);
-  const { paper, setPaper } = useAppSlipPaperSize();
+  const { paper, setPaper } = useAppSlipPaperSize(defaultPaperSize);
 
   const innerSlip = buildDormInvoiceBillInnerHtml(sheet, "slip");
   const innerA4 = buildDormInvoiceBillInnerHtml(sheet, "a4Preview");

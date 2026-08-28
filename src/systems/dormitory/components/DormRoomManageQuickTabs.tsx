@@ -14,7 +14,7 @@ export function DormRoomManageQuickTabs({ roomId }: { roomId?: number | string |
   const tabs = [
     {
       href: "/dashboard/dormitory/rooms",
-      label: "เพิ่มห้อง",
+      label: "การจัดการ",
       active: pathname === "/dashboard/dormitory/rooms",
     },
     {

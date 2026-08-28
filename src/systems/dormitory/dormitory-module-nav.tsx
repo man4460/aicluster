@@ -22,7 +22,7 @@ export type DormitoryNavItem = {
 
 export const DORMITORY_NAV_ITEMS: DormitoryNavItem[] = [
   { key: "dashboard", href: DORMITORY_BASE, label: "แดชบอร์ด", shortLabel: "ภาพรวม" },
-  { key: "rooms", href: DORMITORY_ROOMS_HREF, label: "ห้อง", shortLabel: "ห้อง" },
+  { key: "rooms", href: DORMITORY_ROOMS_HREF, label: "การจัดการ", shortLabel: "จัดการ" },
   { key: "history", href: DORMITORY_HISTORY_HREF, label: "ประวัติ", shortLabel: "ประวัติ" },
   { key: "costs", href: DORMITORY_COSTS_HREF, label: "ต้นทุน", shortLabel: "ต้นทุน" },
   { key: "settings", href: DORMITORY_SETTINGS_HREF, label: "ตั้งค่า", shortLabel: "ตั้งค่า" },

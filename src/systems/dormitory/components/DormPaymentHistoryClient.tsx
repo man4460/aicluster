@@ -7,9 +7,11 @@ import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { formatBangkokDateTimeStable, formatDormAmountStable } from "@/lib/dormitory/format-display-stable";
 import { DormFinanceQuickTabs } from "@/systems/dormitory/components/DormFinanceQuickTabs";
+import { DormReceiptPrintIconButton } from "@/systems/dormitory/components/DormReceiptPrintIconButton";
 import { DormEmptyDashed, DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
 import { dormBtnSecondary } from "@/systems/dormitory/dorm-ui";
 import { dormListRowCardClass, dormListRowCardCompactClass } from "@/systems/dormitory/dorm-ui-tokens";
+import type { DormReceiptBrand } from "@/systems/dormitory/lib/dorm-receipt-print";
 
 type Row = {
   id: number;
@@ -39,36 +41,78 @@ function statusTh(s: string) {
 
 function PaymentHistoryRowActions({
   r,
+  dormBrand,
   onEdit,
   onRemove,
 }: {
   r: Row;
+  dormBrand: DormReceiptBrand | null;
   onEdit: (row: Row) => void;
   onRemove: (row: Row) => void;
 }) {
   const iconBtnBase =
     "inline-flex h-9 w-9 items-center justify-center rounded-xl border bg-white/90 shadow-sm transition active:scale-[0.98] sm:hidden";
+  const periodMonth = `${r.bill.billingYear}-${String(r.bill.billingMonth).padStart(2, "0")}`;
   return (
-    <div className="flex flex-wrap gap-2">
-      {r.paymentStatus === "PAID" && r.receiptNumber ? (
+    <div className="flex flex-wrap items-center gap-2">
+      {r.paymentStatus === "PAID" && r.receiptNumber && r.paidAt && dormBrand ? (
         <>
+          <DormReceiptPrintIconButton
+            className="sm:hidden"
+            defaultPaperSize={dormBrand.defaultPaperSize}
+            data={{
+              dormTitle: dormBrand.dormTitle,
+              logoUrl: dormBrand.logoUrl,
+              taxId: dormBrand.taxId,
+              address: dormBrand.address,
+              caretakerPhone: dormBrand.caretakerPhone,
+              roomNumber: r.bill.room.roomNumber,
+              tenantName: r.tenant.name,
+              periodMonth,
+              amountBaht: r.amountToPay,
+              paidAtIso: r.paidAt,
+              receiptNumber: r.receiptNumber,
+              note: r.note,
+            }}
+          />
           <Link
             href={`/dashboard/dormitory/receipt/${r.id}`}
+            target="_blank"
             className={cn(iconBtnBase, "border-[#4d47b6]/20 text-[#4338ca] hover:bg-[#eef0ff]")}
             aria-label="เปิดใบเสร็จ"
-            title="ใบเสร็จ"
+            title="เปิดใบเสร็จ"
           >
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden>
               <path d="M7 3h10v18l-2-1-2 1-2-1-2 1-2-1V3Z" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M9 8h6M9 12h6" strokeLinecap="round" />
             </svg>
           </Link>
-          <Link
-            href={`/dashboard/dormitory/receipt/${r.id}`}
-            className="hidden min-h-[40px] rounded-lg bg-[#ecebff] px-2.5 py-1.5 text-[11px] font-bold text-[#4338ca] ring-1 ring-[#4d47b6]/20 hover:bg-[#e0dcff] sm:inline-flex sm:min-h-0"
-          >
-            ใบเสร็จ
-          </Link>
+          <div className="hidden items-center gap-2 sm:flex">
+            <DormReceiptPrintIconButton
+              defaultPaperSize={dormBrand.defaultPaperSize}
+              data={{
+                dormTitle: dormBrand.dormTitle,
+                logoUrl: dormBrand.logoUrl,
+                taxId: dormBrand.taxId,
+                address: dormBrand.address,
+                caretakerPhone: dormBrand.caretakerPhone,
+                roomNumber: r.bill.room.roomNumber,
+                tenantName: r.tenant.name,
+                periodMonth,
+                amountBaht: r.amountToPay,
+                paidAtIso: r.paidAt,
+                receiptNumber: r.receiptNumber,
+                note: r.note,
+              }}
+            />
+            <Link
+              href={`/dashboard/dormitory/receipt/${r.id}`}
+              target="_blank"
+              className="min-h-[40px] rounded-lg bg-[#ecebff] px-2.5 py-1.5 text-[11px] font-bold text-[#4338ca] ring-1 ring-[#4d47b6]/20 hover:bg-[#e0dcff] sm:min-h-0"
+            >
+              เปิดใบเสร็จ
+            </Link>
+          </div>
         </>
       ) : null}
       <button
@@ -155,6 +199,7 @@ export function DormPaymentHistoryClient() {
   const [financeBuckets, setFinanceBuckets] = useState<AppRevenueCostBucket[]>([]);
   const [financeLoading, setFinanceLoading] = useState(true);
   const [financeErr, setFinanceErr] = useState<string | null>(null);
+  const [dormBrand, setDormBrand] = useState<DormReceiptBrand | null>(null);
 
   const load = useCallback(async () => {
     setErr(null);
@@ -185,6 +230,28 @@ export function DormPaymentHistoryClient() {
       c = true;
     };
   }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/dorm/profile", { cache: "no-store" })
+      .then((res) => res.json().catch(() => ({})))
+      .then((j: { profile?: Record<string, unknown> }) => {
+        if (cancelled) return;
+        const p = j.profile;
+        if (!p || typeof p !== "object") return;
+        setDormBrand({
+          dormTitle: String(p.displayName ?? "").trim() || "หอพัก",
+          logoUrl: (p.logoUrl as string | null | undefined) ?? null,
+          taxId: (p.taxId as string | null | undefined) ?? null,
+          address: (p.address as string | null | undefined) ?? null,
+          caretakerPhone: (p.caretakerPhone as string | null | undefined) ?? null,
+          defaultPaperSize: String(p.defaultPaperSize ?? "SLIP_58"),
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -505,7 +572,12 @@ export function DormPaymentHistoryClient() {
                     <p className="text-[10px] text-slate-500">อัปเดต {formatBangkokDateTimeStable(r.updatedAt)}</p>
                   </div>
                   <div className="mt-3 border-t border-slate-100 pt-2">
-                    <PaymentHistoryRowActions r={r} onEdit={openEdit} onRemove={(row) => void removeRow(row)} />
+                    <PaymentHistoryRowActions
+                      r={r}
+                      dormBrand={dormBrand}
+                      onEdit={openEdit}
+                      onRemove={(row) => void removeRow(row)}
+                    />
                   </div>
                 </li>
               ))}
@@ -539,7 +611,12 @@ export function DormPaymentHistoryClient() {
                       <td className="px-3 py-2 text-xs font-semibold">{statusTh(r.paymentStatus)}</td>
                       <td className="px-3 py-2 text-xs text-slate-500">{formatBangkokDateTimeStable(r.updatedAt)}</td>
                       <td className="px-3 py-2">
-                        <PaymentHistoryRowActions r={r} onEdit={openEdit} onRemove={(row) => void removeRow(row)} />
+                        <PaymentHistoryRowActions
+                      r={r}
+                      dormBrand={dormBrand}
+                      onEdit={openEdit}
+                      onRemove={(row) => void removeRow(row)}
+                    />
                       </td>
                     </tr>
                   ))}

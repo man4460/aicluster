@@ -1,4 +1,3 @@
-import { PageContainer } from "@/components/ui/page-container";
 import { getSession } from "@/lib/auth/session";
 import { DORMITORY_MODULE_SLUG } from "@/lib/modules/config";
 import { getActiveTrialBanner } from "@/lib/modules/trial-store";
@@ -19,10 +18,10 @@ export default async function DormitoryLayout({ children }: { children: React.Re
         });
 
   return (
-    <PageContainer>
+    <div className="flex min-h-0 flex-1 flex-col">
       <DormLayoutChrome trialExpiresLabel={trialExpiresLabel}>
         {children}
       </DormLayoutChrome>
-    </PageContainer>
+    </div>
   );
 }

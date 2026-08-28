@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { saveDormPaymentProofImage } from "@/lib/dormitory/payment-proof-file";
+import { dormUnpaidPaymentStatusFilter } from "@/lib/dormitory/unpaid-payment-status";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 function parseId(raw: string): number | null {
@@ -23,7 +24,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const payment = await prisma.splitBillPayment.findFirst({
     where: {
       id: paymentId,
-      paymentStatus: "PENDING",
+      ...dormUnpaidPaymentStatusFilter(),
       tenant: { room: { ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId } },
     },
   });
@@ -76,7 +77,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const payment = await prisma.splitBillPayment.findFirst({
     where: {
       id: paymentId,
-      paymentStatus: "PENDING",
+      ...dormUnpaidPaymentStatusFilter(),
       tenant: { room: { ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId } },
     },
   });

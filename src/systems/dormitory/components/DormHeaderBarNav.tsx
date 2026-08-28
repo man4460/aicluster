@@ -27,7 +27,7 @@ function navIcon(key: DormitoryNavKey, className?: string) {
 function ExpandGlyph() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
-      <path d="M6 9l6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 8h16M4 12h16M4 16h10" strokeLinecap="round" />
     </svg>
   );
 }
@@ -80,7 +80,7 @@ function DormHeaderBarNavInner({ onExpand }: { onExpand: () => void }) {
                   navIcon(item.key, "h-3.5 w-3.5")
                 )}
               </span>
-              <span className="hidden xl:inline">{label}</span>
+              <span className="hidden md:inline">{label}</span>
             </Link>
           );
         })}

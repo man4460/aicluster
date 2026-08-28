@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { dormUnpaidPaymentStatusFilter } from "@/lib/dormitory/unpaid-payment-status";
 import { DormPublicSlipForm } from "@/systems/dormitory/components/DormPublicSlipForm";
 
 type Props = { params: Promise<{ token: string }> };
@@ -10,7 +11,7 @@ export default async function DormPublicSlipPage({ params }: Props) {
   if (t.length < 16) notFound();
 
   const payment = await prisma.splitBillPayment.findFirst({
-    where: { publicProofToken: t, paymentStatus: "PENDING" },
+    where: { publicProofToken: t, ...dormUnpaidPaymentStatusFilter() },
     include: { tenant: true, bill: { include: { room: true } } },
   });
   if (!payment) {

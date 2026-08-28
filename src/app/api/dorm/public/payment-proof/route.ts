@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { saveDormPaymentProofImage } from "@/lib/dormitory/payment-proof-file";
+import { dormUnpaidPaymentStatusFilter } from "@/lib/dormitory/unpaid-payment-status";
 
 /**
  * อัปโหลดสลิปโดยไม่ล็อกอิน — ใช้โทเคนจากลิงก์ในใบแจ้งหนี้ (แยก path จาก /payments/[id] เพื่อไม่ให้ dynamic กลืน segment)
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
   }
 
   const payment = await prisma.splitBillPayment.findFirst({
-    where: { publicProofToken: token, paymentStatus: "PENDING" },
+    where: { publicProofToken: token, ...dormUnpaidPaymentStatusFilter() },
   });
   if (!payment) {
     return NextResponse.json({ error: "ไม่พบรายการหรือชำระแล้ว" }, { status: 404 });

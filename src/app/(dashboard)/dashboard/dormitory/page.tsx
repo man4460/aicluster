@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 import { DormDashboardRoomGrid } from "@/systems/dormitory/components/DormDashboardRoomGrid";
+import { DormOverdueDashboardPanel } from "@/systems/dormitory/components/DormOverdueDashboardPanel";
 import { DormEmptyDashed, DormPageStack, DormPanelCard } from "@/systems/dormitory/components/DormPageChrome";
 import { DormStatCard } from "@/systems/dormitory/components/DormStatCard";
 import {
@@ -11,8 +12,7 @@ import {
   overdueLines,
   roomBillingUiStatus,
 } from "@/systems/dormitory/lib/compute";
-import { dormBtnPrimary, dormBtnSecondary } from "@/systems/dormitory/dorm-ui";
-import { dormListRowCardWarnClass } from "@/systems/dormitory/dorm-ui-tokens";
+import { dormBtnPrimary } from "@/systems/dormitory/dorm-ui";
 import { cn } from "@/lib/cn";
 
 export default async function DormitoryDashboardPage() {
@@ -86,7 +86,7 @@ export default async function DormitoryDashboardPage() {
         }
       >
         {rooms.length === 0 ? (
-          <DormEmptyDashed>ยังไม่มีห้อง — เพิ่มได้จากเมนู «ห้อง»</DormEmptyDashed>
+          <DormEmptyDashed>ยังไม่มีห้อง — เพิ่มได้จากเมนู «การจัดการ»</DormEmptyDashed>
         ) : (
           <DormDashboardRoomGrid rooms={roomsForGrid} />
         )}
@@ -94,87 +94,18 @@ export default async function DormitoryDashboardPage() {
 
       <DormPanelCard
         title="ค้างชำระ (งวดก่อน)"
-        description="งวดก่อนเดือนปัจจุบัน (ไทย) — แยกรายคน · แตะ «ดำเนินการ»เพื่อเปิดห้อง"
-        action={
-          overdue.length > 0 ? (
-            <Link href="/dashboard/dormitory/history" className={cn(dormBtnSecondary, "w-full justify-center sm:w-auto inline-flex gap-1.5")}>
-              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-                <path d="M3 12a9 9 0 1 0 3-6.7" strokeLinecap="round" />
-                <path d="M3 4v3h3M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              ประวัติ
-            </Link>
-          ) : null
-        }
+        description="งวดก่อนเดือนปัจจุบัน (ไทย) — เลือกแถบเดือน · แยกรายคน · แตะ «ดำเนินการ»เพื่อเปิดห้อง"
       >
-        {overdue.length === 0 ? (
-          <p className="text-center text-sm font-medium text-emerald-700">ไม่มีรายการค้างจากงวดที่ผ่านมา</p>
-        ) : (
-          <>
-            <ul className="grid list-none gap-2 md:hidden">
-              {overdue.map((row) => (
-                <li key={`${row.tenantId}-${row.month}`} className={dormListRowCardWarnClass}>
-                  <div className="flex items-start justify-between gap-2 pt-0.5">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-amber-950">{row.tenantName}</p>
-                      <p className="mt-0.5 text-[11px] text-amber-900/80">
-                        ห้อง <span className="font-bold tabular-nums">{row.roomNumber}</span> · {row.month}
-                      </p>
-                    </div>
-                    <p className="shrink-0 text-sm font-bold tabular-nums text-red-700">
-                      {row.balance.toLocaleString("th-TH", { maximumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                  <Link
-                    href={`/dashboard/dormitory/rooms/${row.roomId}?month=${encodeURIComponent(row.month)}`}
-                    className="mt-2 inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl bg-[#5b61ff] py-2 text-center text-xs font-bold text-white shadow-sm active:scale-[0.99]"
-                  >
-                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-                      <path d="M5 12h14M13 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    ดำเนินการ
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <div className="hidden overflow-x-auto rounded-xl border border-amber-100/90 bg-white/95 shadow-inner md:block [-webkit-overflow-scrolling:touch]">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-amber-50/90 text-[11px] font-bold text-amber-900/75">
-                  <tr>
-                    <th className="whitespace-nowrap px-3 py-2">ผู้เข้าพัก</th>
-                    <th className="whitespace-nowrap px-3 py-2">ห้อง</th>
-                    <th className="whitespace-nowrap px-3 py-2">งวด</th>
-                    <th className="whitespace-nowrap px-3 py-2 text-right">ค้าง (บาท)</th>
-                    <th className="px-3 py-2" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {overdue.map((row) => (
-                    <tr key={`${row.tenantId}-${row.month}`} className="text-slate-800">
-                      <td className="px-3 py-2 font-medium">{row.tenantName}</td>
-                      <td className="px-3 py-2 tabular-nums">{row.roomNumber}</td>
-                      <td className="px-3 py-2 font-mono text-xs">{row.month}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-red-700">
-                        {row.balance.toLocaleString("th-TH", { maximumFractionDigits: 2 })}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Link
-                          href={`/dashboard/dormitory/rooms/${row.roomId}?month=${encodeURIComponent(row.month)}`}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#0000BF]/10 px-2.5 py-1.5 text-xs font-bold text-[#0000BF] hover:bg-[#0000BF]/15"
-                        >
-                          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-                            <path d="M5 12h14M13 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                          ดำเนินการ
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+        <DormOverdueDashboardPanel
+          rows={overdue.map((row) => ({
+            roomId: String(row.roomId),
+            roomNumber: row.roomNumber,
+            tenantId: String(row.tenantId),
+            tenantName: row.tenantName,
+            month: row.month,
+            balance: row.balance,
+          }))}
+        />
       </DormPanelCard>
     </DormPageStack>
   );

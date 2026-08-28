@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
+import { dormUnpaidPaymentStatusFilter } from "@/lib/dormitory/unpaid-payment-status";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 const postSchema = z.object({
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
     where: {
       billId,
       tenantId,
-      paymentStatus: "PENDING",
+      ...dormUnpaidPaymentStatusFilter(),
       tenant: { room: { ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId } },
     },
   });

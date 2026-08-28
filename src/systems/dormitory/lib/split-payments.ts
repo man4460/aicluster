@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { DORM_UNPAID_PAYMENT_STATUSES } from "@/lib/dormitory/unpaid-payment-status";
 import { computeUtilityTotalRoomAmount } from "@/systems/dormitory/lib/utility-math";
 
 function newPublicProofToken(): string {
@@ -33,7 +34,9 @@ export async function refreshPendingSplitPaymentsForBill(billId: number): Promis
 
   await prisma.$transaction(async (tx) => {
     if (n === 0) {
-      await tx.splitBillPayment.deleteMany({ where: { billId, paymentStatus: "PENDING" } });
+      await tx.splitBillPayment.deleteMany({
+        where: { billId, paymentStatus: { in: [...DORM_UNPAID_PAYMENT_STATUSES] } },
+      });
       return;
     }
 
@@ -41,7 +44,7 @@ export async function refreshPendingSplitPaymentsForBill(billId: number): Promis
     await tx.splitBillPayment.deleteMany({
       where: {
         billId,
-        paymentStatus: "PENDING",
+        paymentStatus: { in: [...DORM_UNPAID_PAYMENT_STATUSES] },
         tenantId: { notIn: activeIds },
       },
     });
@@ -62,7 +65,7 @@ export async function refreshPendingSplitPaymentsForBill(billId: number): Promis
             publicProofToken: newPublicProofToken(),
           },
         });
-      } else if (existing.paymentStatus === "PENDING") {
+      } else if (existing.paymentStatus !== "PAID") {
         await tx.splitBillPayment.update({
           where: { id: existing.id },
           data: {
