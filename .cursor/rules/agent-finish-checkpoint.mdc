@@ -1,5 +1,5 @@
 ---
-description: จบงานให้ครบ — prisma generate, migrate, tsc, dev และ git commit checkpoint
+description: จบงานให้ครบ — prisma generate, migrate, tsc, dev · git commit + push checkpoint
 alwaysApply: true
 ---
 
@@ -23,16 +23,22 @@ alwaysApply: true
 - ถ้า **ไม่มี** `next dev` รันอยู่และงานต้องทดสอบบนเบราว์เซอร์ — **เปิด `npm run dev` ใน background** หลัง generate/migrate
 - ถ้า dev รันอยู่แล้วหลัง schema change — **รีสตาร์ท** dev หนึ่งรอบ (หยุดแล้วรันใหม่) ดีกว่าคาดหวัง HMR อย่างเดียว
 
-## Git checkpoint — บันทึกทุกครั้งที่แก้โค้ดจบช่วงงาน
+## Git checkpoint — commit + push ทุกครั้งที่แก้โค้ดจบช่วงงาน
 
 หลังจบชุดการแก้ที่ **สมบูรณ์ในบริบทงาน** (feature/fix ย่อย หรือจบเทิร์น):
 
-1. `git status` + `git diff` — อย่า commit `.env`, `.next`, credentials
+1. `git status` + `git diff` — อย่า commit `.env`, `.next`, credentials · **อย่า** `git add .` แบบไม่กรอง (uploads/log/`.bak`)
 2. **สร้าง commit** ด้วยข้อความสั้น ชัด (ภาษาไทยหรืออังกฤษตามสไตล์ repo) — **ไม่ต้องรอผู้ใช้บอก "commit"** ในโปรเจกต์นี้
-3. **อย่า** `git push` เว้นแต่ผู้ใช้ขอ
-4. **อย่า** commit ไฟล์ build/cache (` .next/** `) หรือ secret
+3. **`git push`** ขึ้น remote ของ branch ปัจจุบัน (มัก `git push origin HEAD`) — **ไม่ต้องรอผู้ใช้บอก "push"** เมื่อ commit สำเร็จและมี remote
+4. **อย่า** commit ไฟล์ build/cache (`.next/**`) · uploads ทดสอบ · log · secret
 
-**ข้อยกเว้นไม่ commit:** งานค้างกลางทางชัดเจน (โค้ดพัง / tsc ไม่ผ่าน / migration ล้มเหลว) — แก้ให้ผ่าน checklist ก่อนแล้วค่อย commit
+**ข้อยกเว้นไม่ commit/push:** งานค้างกลางทางชัดเจน (โค้ดพัง / tsc ไม่ผ่าน / migration ล้มเหลว) — แก้ให้ผ่าน checklist ก่อน
+
+**ข้อยกเว้น commit แต่ยังไม่ push:**
+
+- push ล้มเหลวเพราะ **auth / 2FA / credential** ที่ agent ไม่มี — สรุปให้ผู้ใช้ push เอง
+- branch **ไม่มี remote** หรือต้อง `--force` / rebase ที่ทำลายประวัติ — **ห้าม** force push `main`/`master` โดยไม่ขอชัดเจน
+- ผู้ใช้สั่งชัดว่า **อย่า push** ในเทิร์นนั้น
 
 ## ลำดับมาตรฐานหลังแก้ schema
 
@@ -43,10 +49,12 @@ npx tsc --noEmit
 # หยุด dev ถ้าจำเป็น → ลบ .next ถ้าจำเป็น → npm run dev
 git add <ไฟล์ที่เกี่ยวข้อง>
 git commit -m "..."
+git push origin HEAD
 ```
 
 ## ห้ามพลาดซ้ำ
 
 - อย่าจบด้วย "รัน prisma generate เองนะ" หลังแก้ schema
-- อย่าทิ้ง diff ค้างหลายเทิร์นโดยไม่ commit เมื่องานย่อยนั้นจบแล้ว
+- อย่าทิ้ง diff ค้างหลายเทิร์นโดยไม่ commit/push เมื่องานย่อยนั้นจบแล้ว
+- อย่าจบด้วย "push เองนะ" ถ้า push ได้ในเครื่องนี้
 - อย่า commit เฉพาะ rule/doc โดยไม่ generate/tsc เมื่องานนั้นแตะ Prisma หรือ TS

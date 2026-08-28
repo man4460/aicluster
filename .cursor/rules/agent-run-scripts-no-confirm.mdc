@@ -12,6 +12,7 @@ alwaysApply: true
 - `npm` / `npx` / `pnpm` / `yarn` (รวม `dev`, `build`, `lint`, `test`, สคริปต์ใน `package.json`)
 - Prisma: `migrate`, `generate`, `db:seed`, `studio` (เมื่อจำเป็นต่องาน)
 - `tsc`, สคริปต์ใน `scripts/`, เชลล์ PowerShell/bash ที่เกี่ยวกับงานใน repo
+- Git: `status`, `diff`, `add`, `commit`, **`push`** (หลัง commit จบช่วงงาน — ดู **`agent-finish-checkpoint.mdc`**) — ไม่ต้องถามยืนยัน
 - หยุด/รีสตาร์ท `next dev`, ลบ `.next` เมื่อจำเป็นหลัง generate / client ค้าง
 
 ## บังคับ
