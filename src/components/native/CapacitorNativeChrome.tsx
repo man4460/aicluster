@@ -3,34 +3,27 @@
 import { Capacitor } from "@capacitor/core";
 import { useEffect } from "react";
 
+/** สีพื้นหลังหลักของแอป — ตรงกับ `--background` ใน globals.css */
+const MAWELL_NATIVE_STATUS_BAR_COLOR = "#f7f6ff";
+
 /**
  * ตั้งแถบสถานะในแอป Capacitor — เนื้อหาไม่ทับไอคอนระบบ
- *
- * - iOS: แถบโปร่ง (`overlay: true`) แล้วเว็บวาดไล่สีแบรนด์เอง (`html.capacitor-ios::before`)
- *   ได้โทนเดียวกับปุ่ม CTA — native วาดได้แต่สีเดียว ไล่สีไม่ได้
- * - Android: WebView อยู่ใต้แถบสถานะ (`setDecorFitsSystemWindows(true)` ใน MainActivity)
- *   จึง safe-area = 0 → ใช้พื้นทึบตามธีมต่อไป
+ * ใช้สีเดียวกับพื้นหลังหน้าเว็บ ไอคอนระบบโทนเข้ม (Light style)
  */
 export function CapacitorNativeChrome() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    const isIos = Capacitor.getPlatform() === "ios";
-    const root = document.documentElement;
-    root.classList.add("capacitor-native");
-    if (isIos) root.classList.add("capacitor-ios");
+    document.documentElement.classList.add("capacitor-native");
 
     let cancelled = false;
     void (async () => {
       try {
         const { StatusBar, Style } = await import("@capacitor/status-bar");
         if (cancelled) return;
-        // ไอคอนระบบสีขาว — พื้นหลังเป็นไล่สีเข้มทั้งสองแพลตฟอร์ม
-        await StatusBar.setStyle({ style: Style.Dark });
-        await StatusBar.setOverlaysWebView({ overlay: isIos });
-        if (!isIos) {
-          await StatusBar.setBackgroundColor({ color: "#0000bf" });
-        }
+        await StatusBar.setOverlaysWebView({ overlay: false });
+        await StatusBar.setBackgroundColor({ color: MAWELL_NATIVE_STATUS_BAR_COLOR });
+        await StatusBar.setStyle({ style: Style.Light });
       } catch {
         /* web / plugin ยังไม่ sync */
       }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { bangkokDateKey } from "@/lib/time/bangkok";
 import Link from "next/link";
 import {
   BarberCostPanel,
@@ -127,11 +128,21 @@ export function DormCostsClient({
     [onToolbarReady],
   );
 
+  const filteredEntries = useMemo(() => {
+    return entries.filter((e) => {
+      if (filterCategoryId !== "all" && e.category_id !== filterCategoryId) return false;
+      const ymd = bangkokDateKey(new Date(e.spent_at));
+      if (dateFrom && ymd < dateFrom) return false;
+      if (dateTo && ymd > dateTo) return false;
+      return true;
+    });
+  }, [entries, filterCategoryId, dateFrom, dateTo]);
+
   const panel = (
     <BarberCostPanel
       baseUrl={baseUrl}
       categories={categories}
-      entries={entries}
+      entries={filteredEntries}
       onRefresh={load}
       listLoading={loading}
       fetchError={err}
@@ -139,9 +150,6 @@ export function DormCostsClient({
       costPanelOps={dormCostPanelOps}
       formAriaIdPrefix="dorm-cost"
       renderWithoutOuterSection
-      filterCategoryId={filterCategoryId}
-      dateFrom={dateFrom}
-      dateTo={dateTo}
     />
   );
 

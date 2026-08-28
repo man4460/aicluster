@@ -14,6 +14,7 @@ import {
   SCHOOL_BANK_MODULE_SLUG,
   COMMUNITY_COOP_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
+  FOOTBALL_TURF_MODULE_SLUG,
 } from "@/lib/modules/config";
 import { seedDocTransmissionDemoForUser } from "@/lib/trial/seed-doc-transmission";
 import { TRIAL_PROD_SCOPE, trialSessionDaysDefault } from "./constants";
@@ -28,6 +29,8 @@ import { seedWaitQueueTrialData } from "./seed-wait-queue";
 import { seedSchoolBankTrialData } from "./seed-school-bank";
 import { seedCommunityCoopTrialData } from "./seed-community-coop";
 import { seedLaundryTrialData } from "./seed-mqtt-laundry";
+import { seedFootballTurfTrialData } from "./seed-football-turf";
+import { seedTrialModuleSettings } from "./seed-trial-module-settings";
 
 type Tx = Omit<
   PrismaClient,
@@ -227,7 +230,11 @@ export async function startTrial(userId: string, moduleId: string): Promise<void
       await seedCommunityCoopTrialData(tx, userId, session.id);
     } else if (mod.slug === LAUNDRY_MODULE_SLUG) {
       await seedLaundryTrialData(tx, userId, session.id);
+    } else if (mod.slug === FOOTBALL_TURF_MODULE_SLUG) {
+      await seedFootballTurfTrialData(tx, userId, session.id);
     }
+
+    await seedTrialModuleSettings(tx, userId, session.id, mod.slug);
   });
 }
 

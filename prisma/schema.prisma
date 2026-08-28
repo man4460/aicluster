@@ -4493,6 +4493,8 @@ model HotelResortProfile {
   tagline        String?  @db.VarChar(300)
   contactPhone   String?  @map("contact_phone") @db.VarChar(32)
   promptPayPhone String?  @map("prompt_pay_phone") @db.VarChar(20)
+  /** รูป QR พร้อมเพย์ที่อัปโหลดเอง (ทางเลือก — ใช้แทนการสร้างจากเบอร์) */
+  promptPayQrImageUrl String? @map("prompt_pay_qr_image_url") @db.VarChar(512)
   bankName       String?  @map("bank_name") @db.VarChar(120)
   bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
   bankAccountName String? @map("bank_account_name") @db.VarChar(200)

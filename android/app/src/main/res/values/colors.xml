@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="colorPrimary">#4f2f9a</color>
-    <!-- แถบสถานะ Android — สีเริ่มของไล่สีปุ่ม CTA แบรนด์ (วาดไล่สีบน native ไม่ได้) -->
-    <color name="colorPrimaryDark">#0000bf</color>
+    <!-- แถบสถานะ Android — สีเดียวกับพื้นหลังแอป (--background) -->
+    <color name="colorPrimaryDark">#f7f6ff</color>
     <color name="colorAccent">#5b61ff</color>
 </resources>
