@@ -77,6 +77,8 @@ async function deleteSandboxRowsInTx(tx: Tx, ownerUserId: string, trialSessionId
   await tx.barberShopProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.dormitoryCostEntry.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.dormitoryCostCategory.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.dormitoryIncomeEntry.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.dormitoryIncomeCategory.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.room.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.dormitoryProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
 

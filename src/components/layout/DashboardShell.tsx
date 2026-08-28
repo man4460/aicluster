@@ -104,6 +104,16 @@ import {
   writeBarberHeaderCollapsed,
 } from "@/systems/barber/barber-module-nav";
 import {
+  DormitoryHeaderBarNav,
+  DormitoryHeaderExpandButton,
+} from "@/systems/dormitory/components/DormitoryHeaderBarNav";
+import {
+  DORMITORY_HEADER_COLLAPSE_EVENT,
+  isDormitoryModulePath,
+  readDormitoryHeaderCollapsed,
+  writeDormitoryHeaderCollapsed,
+} from "@/systems/dormitory/dormitory-module-nav";
+import {
   AdminHubHeaderBarNav,
   AdminHubHeaderExpandButton,
 } from "@/components/admin/AdminHubHeaderBarNav";
@@ -399,6 +409,7 @@ export function DashboardShell({
   const [carWashHeaderCollapsed, setCarWashHeaderCollapsed] = useState(false);
   const [massageHeaderCollapsed, setMassageHeaderCollapsed] = useState(false);
   const [barberHeaderCollapsed, setBarberHeaderCollapsed] = useState(false);
+  const [dormitoryHeaderCollapsed, setDormitoryHeaderCollapsed] = useState(false);
   const [adminHubHeaderCollapsed, setAdminHubHeaderCollapsed] = useState(false);
   const accountWrapRef = useRef<HTMLDivElement>(null);
   const moduleMenuRef = useRef<HTMLDivElement>(null);
@@ -420,6 +431,7 @@ export function DashboardShell({
   const onCarWashModule = isCarWashModulePath(pathname);
   const onMassageModule = isMassageModulePath(pathname);
   const onBarberModule = isBarberModulePath(pathname);
+  const onDormitoryModule = isDormitoryModulePath(pathname);
   const showDrinkPosHeaderBar = onDrinkPosModule && drinkPosHeaderCollapsed;
   const showBuildingPosHeaderBar = onBuildingPosModule && buildingPosHeaderCollapsed;
   const showFootballTurfHeaderBar = onFootballTurfModule && footballTurfHeaderCollapsed;
@@ -428,6 +440,7 @@ export function DashboardShell({
   const showCarWashHeaderBar = onCarWashModule && carWashHeaderCollapsed;
   const showMassageHeaderBar = onMassageModule && massageHeaderCollapsed;
   const showBarberHeaderBar = onBarberModule && barberHeaderCollapsed;
+  const showDormitoryHeaderBar = onDormitoryModule && dormitoryHeaderCollapsed;
   const showAdminHubHeaderBar = onAdminHub && adminHubHeaderCollapsed;
   const mainNavGroups = navGroups.filter((group) => group.id === "basic");
   const mainMenuItems = mainNavGroups[0]?.items ?? [];
@@ -632,6 +645,21 @@ export function DashboardShell({
       window.removeEventListener("storage", sync);
     };
   }, [onBarberModule]);
+
+  useEffect(() => {
+    if (!onDormitoryModule) {
+      setDormitoryHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setDormitoryHeaderCollapsed(readDormitoryHeaderCollapsed());
+    sync();
+    window.addEventListener(DORMITORY_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(DORMITORY_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onDormitoryModule]);
 
   useEffect(() => {
     if (!onAdminHub) {
@@ -1009,6 +1037,30 @@ export function DashboardShell({
                     <span className="font-medium text-white/90">{displayName}</span>
                   </p>
                   <BarberHeaderExpandButton onExpand={() => writeBarberHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showDormitoryHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <DormitoryHeaderBarNav onExpand={() => writeDormitoryHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <DormitoryHeaderExpandButton onExpand={() => writeDormitoryHeaderCollapsed(false)} />
                 </div>
               </>
             ) : showAdminHubHeaderBar ? (

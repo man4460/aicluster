@@ -1,3 +1,4 @@
+import { bangkokDateKey } from "@/lib/time/bangkok";
 import { prisma } from "@/lib/prisma";
 import { bangkokDayStartEndForDateKey, bangkokMonthStartEnd } from "@/lib/barber/bangkok-day";
 import { bangkokMonthKey } from "@/lib/time/bangkok";
@@ -56,6 +57,35 @@ function labelForYm(ym: string): string {
   return ym;
 }
 
+function lastDayOfMonthYmd(ym: string): string {
+  const { y, m } = parseYm(ym);
+  const lastDay = new Date(y, m, 0).getDate();
+  return `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+}
+
+function buildRangeLabel(fromD: string, toD: string): string {
+  if (!fromD || !toD) return "12 เดือนล่าสุด";
+  const today = bangkokDateKey();
+  if (fromD === toD) {
+    return fromD === today ? "วันนี้" : fromD;
+  }
+  const monthStart = `${today.slice(0, 7)}-01`;
+  if (fromD === monthStart && toD === lastDayOfMonthYmd(today.slice(0, 7))) {
+    return "เดือนนี้";
+  }
+  const yearStart = `${today.slice(0, 4)}-01-01`;
+  const yearEnd = `${today.slice(0, 4)}-12-31`;
+  if (fromD === yearStart && toD === yearEnd) return "ปีนี้";
+  return "ช่วงที่เลือก";
+}
+
+export type DormFinanceSummary = {
+  buckets: AppRevenueCostBucket[];
+  totalRevenue: number;
+  totalCost: number;
+  rangeLabel: string;
+};
+
 function parseYm(ym: string): { y: number; m: number } {
   return { y: parseInt(ym.slice(0, 4), 10), m: parseInt(ym.slice(5, 7), 10) };
 }
@@ -70,7 +100,7 @@ export async function getDormMonthlyRevenueCostBuckets(
   trialSessionId: string,
   dateFromDay: string | null,
   dateToDay: string | null,
-): Promise<AppRevenueCostBucket[]> {
+): Promise<DormFinanceSummary> {
   let rangeStart: Date;
   let rangeEndExclusive: Date;
   let ymList: string[];
@@ -97,7 +127,7 @@ export async function getDormMonthlyRevenueCostBuckets(
     totals.set(ym, { revenue: 0, cost: 0 });
   }
 
-  const [payments, costRows] = await Promise.all([
+  const [payments, costRows, incomeRows] = await Promise.all([
     prisma.splitBillPayment.findMany({
       where: {
         paymentStatus: "PAID",
@@ -113,6 +143,14 @@ export async function getDormMonthlyRevenueCostBuckets(
         spentAt: { gte: rangeStart, lt: rangeEndExclusive },
       },
       select: { amount: true, spentAt: true },
+    }),
+    prisma.dormitoryIncomeEntry.findMany({
+      where: {
+        ownerUserId,
+        trialSessionId,
+        earnedAt: { gte: rangeStart, lt: rangeEndExclusive },
+      },
+      select: { amountBaht: true, earnedAt: true },
     }),
   ]);
 
@@ -131,12 +169,27 @@ export async function getDormMonthlyRevenueCostBuckets(
     slot.cost += c.amount;
   }
 
+  for (const row of incomeRows) {
+    const ym = bangkokYearMonthFromUtcDate(row.earnedAt);
+    const slot = totals.get(ym);
+    if (!slot) continue;
+    slot.revenue += row.amountBaht;
+  }
+
   const maxRevCost = Math.max(
     1,
     ...Array.from(totals.values()).flatMap((v) => [v.revenue, v.cost]),
   );
 
-  return ymList.map((ym) => {
+  let totalRevenue = 0;
+  let totalCost = 0;
+  for (const ym of ymList) {
+    const slot = totals.get(ym) ?? { revenue: 0, cost: 0 };
+    totalRevenue += slot.revenue;
+    totalCost += slot.cost;
+  }
+
+  const buckets = ymList.map((ym) => {
     const { revenue, cost } = totals.get(ym) ?? { revenue: 0, cost: 0 };
     return {
       key: ym,
@@ -147,4 +200,11 @@ export async function getDormMonthlyRevenueCostBuckets(
       costPct: Math.round((cost / maxRevCost) * 100),
     };
   });
+
+  return {
+    buckets,
+    totalRevenue: Math.round(totalRevenue),
+    totalCost: Math.round(totalCost),
+    rangeLabel: buildRangeLabel(fromD, toD),
+  };
 }

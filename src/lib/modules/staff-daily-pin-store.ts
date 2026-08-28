@@ -52,6 +52,19 @@ export async function loadHotelResortStaffDailyPinHash(ownerId: string): Promise
   return row?.staffDailyPinHash?.trim() || null;
 }
 
+export async function loadDormitoryStaffDailyPinHash(ownerId: string): Promise<string | null> {
+  const row = await prisma.dormitoryProfile.findUnique({
+    where: {
+      ownerUserId_trialSessionId: {
+        ownerUserId: ownerId,
+        trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID,
+      },
+    },
+    select: { staffDailyPinHash: true },
+  });
+  return row?.staffDailyPinHash?.trim() || null;
+}
+
 export async function loadFootballTurfStaffDailyPinHash(ownerId: string): Promise<string | null> {
   const row = await prisma.footballTurfShopProfile.findUnique({
     where: {
@@ -195,6 +208,23 @@ async function writeStaffDailyPinHash(
   }
   if (module === "hotel-resort") {
     await prisma.hotelResortProfile.upsert({
+      where: {
+        ownerUserId_trialSessionId: {
+          ownerUserId: ownerId,
+          trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID,
+        },
+      },
+      create: {
+        ownerUserId: ownerId,
+        trialSessionId: STAFF_LINK_PERMANENT_SESSION_ID,
+        staffDailyPinHash: hash,
+      },
+      update: { staffDailyPinHash: hash },
+    });
+    return;
+  }
+  if (module === "dormitory") {
+    await prisma.dormitoryProfile.upsert({
       where: {
         ownerUserId_trialSessionId: {
           ownerUserId: ownerId,

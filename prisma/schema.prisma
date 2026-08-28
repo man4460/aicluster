@@ -119,8 +119,11 @@ model User {
   personalAiSlipRecords  PersonalAiSlipRecord[]
   topUpOrders            TopUpOrder[]
   dormitoryProfiles         DormitoryProfile[]
+  dormitoryStaffLinks       DormitoryStaffLink[]
   dormitoryCostCategories   DormitoryCostCategory[]
   dormitoryCostEntries      DormitoryCostEntry[]
+  dormitoryIncomeCategories DormitoryIncomeCategory[]
+  dormitoryIncomeEntries    DormitoryIncomeEntry[]
   barberShopProfiles     BarberShopProfile[]
   rooms                  Room[]
   barberPackages         BarberPackage[]
@@ -673,12 +676,43 @@ model DormitoryProfile {
   promptPayPhone   String?  @map("prompt_pay_phone") @db.VarChar(20)
   /** ข้อความช่องทางชำระ (โอนธนาคาร ฯลฯ) แสดงบนใบแจ้งหนี้ */
   paymentChannelsNote String? @map("payment_channels_note") @db.Text
+  /** ชื่อผู้จัดการ — ใช้บนใบเสร็จ */
+  managerName      String?  @map("manager_name") @db.VarChar(160)
+  /** คำโปรยบนเว็บลิงก์ลูกค้า */
+  tagline          String?  @db.VarChar(300)
+  contactLine      String?  @map("contact_line") @db.VarChar(120)
+  facebookUrl      String?  @map("facebook_url") @db.VarChar(512)
+  mapUrl           String?  @map("map_url") @db.VarChar(512)
+  bankName         String?  @map("bank_name") @db.VarChar(120)
+  bankAccountNumber String? @map("bank_account_number") @db.VarChar(32)
+  bankAccountName  String?  @map("bank_account_name") @db.VarChar(200)
+  /** รหัสเข้าลิงก์พนักงานรายวัน (bcrypt) */
+  staffDailyPinHash String? @map("staff_daily_pin_hash") @db.VarChar(255)
+  /** แบนเนอร์หน้าเว็บลิงก์ลูกค้า */
+  portalBannerUrl  String?  @map("portal_banner_url") @db.VarChar(512)
+  /** JSON string[] รูปภาพหอพักบนพอร์ทัล */
+  portalGalleryJson Json?   @map("portal_gallery_json")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
   @@unique([ownerUserId, trialSessionId])
   @@index([ownerUserId])
   @@map("dormitory_profiles")
+}
+
+model DormitoryStaffLink {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  tokenHash      String   @map("token_hash") @db.VarChar(128)
+  tokenCipher    String?  @map("token_cipher") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId], map: "dormitory_staff_link_owner_trial_uniq")
+  @@index([ownerUserId], map: "dormitory_staff_link_owner_idx")
+  @@map("dormitory_staff_links")
 }
 
 /** ข้อมูลร้านตัดผม — โลโก้/ชื่อร้าน สำหรับป้าย QR และแสดงผลทั่วไป */
@@ -867,6 +901,48 @@ model DormitoryCostEntry {
 
   @@index([ownerUserId, trialSessionId, spentAt], map: "dorm_cost_ent_owner_trial_spent_idx")
   @@map("dormitory_cost_entries")
+}
+
+enum DormitoryIncomeCategoryKind {
+  TENANT_RENT
+  CUSTOM
+}
+
+/** หมวดรายรับหอพัก — TENANT_RENT = ค่าเช่าจากการชำระ · CUSTOM = รายรับอื่นที่บันทึกเอง */
+model DormitoryIncomeCategory {
+  id             String                      @id @default(cuid())
+  ownerUserId    String                      @map("owner_id") @db.VarChar(191)
+  owner          User                        @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String                      @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String                      @db.VarChar(120)
+  kind           DormitoryIncomeCategoryKind @default(CUSTOM)
+  isBuiltin      Boolean                     @default(false) @map("is_builtin")
+  sortOrder      Int                         @default(0) @map("sort_order")
+  createdAt      DateTime                    @default(now()) @map("created_at")
+  updatedAt      DateTime                    @updatedAt @map("updated_at")
+  entries        DormitoryIncomeEntry[]
+
+  @@index([ownerUserId, trialSessionId, sortOrder], map: "dorm_income_cat_owner_trial_sort_idx")
+  @@map("dormitory_income_categories")
+}
+
+model DormitoryIncomeEntry {
+  id             String                  @id @default(cuid())
+  ownerUserId    String                  @map("owner_id") @db.VarChar(191)
+  owner          User                    @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String                  @default("prod") @map("trial_session_id") @db.VarChar(36)
+  categoryId     String                  @map("category_id") @db.VarChar(191)
+  category       DormitoryIncomeCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  label          String                  @db.VarChar(160)
+  amountBaht     Int                     @map("amount_baht")
+  earnedAt       DateTime                @default(now()) @map("earned_at")
+  note           String?                 @db.VarChar(300)
+  paymentSlipUrl String?                 @map("payment_slip_url") @db.VarChar(512)
+  createdAt      DateTime                @default(now()) @map("created_at")
+
+  @@index([ownerUserId, trialSessionId, earnedAt], map: "dorm_income_owner_earned_idx")
+  @@index([categoryId], map: "dorm_income_category_idx")
+  @@map("dormitory_income_entries")
 }
 
 // --- Barber / ร้านตัดผม (กลุ่ม 1) ---

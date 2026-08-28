@@ -43,7 +43,7 @@ export function DormMobileDockNav() {
   if (!isDormitoryModulePath(pathname)) return null;
 
   return (
-    <ul className={cn(appMobileDockGridClass, "grid-cols-5")} aria-label="แท็บนำทางโมดูลหอพัก">
+    <ul className={cn(appMobileDockGridClass, "grid-cols-4")} aria-label="แท็บนำทางโมดูลหอพัก">
       {DORMITORY_NAV_ITEMS.map((item) => {
         const active = isDormitoryNavItemActive(pathname, item.key);
         const label = item.key === "settings" ? MODULE_SHOP_SETTINGS_SHORT_LABEL : item.shortLabel;

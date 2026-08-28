@@ -1,5 +1,5 @@
-import { DormPaymentHistoryClient } from "@/systems/dormitory/components/DormPaymentHistoryClient";
+import { redirect } from "next/navigation";
 
 export default function DormitoryHistoryPage() {
-  return <DormPaymentHistoryClient />;
+  redirect("/dashboard/dormitory/finance?panel=history");
 }

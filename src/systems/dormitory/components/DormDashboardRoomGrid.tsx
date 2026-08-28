@@ -29,7 +29,13 @@ type RoomGridItem = {
 
 type FilterKey = "all" | "unpaid" | "paid";
 
-export function DormDashboardRoomGrid({ rooms }: { rooms: RoomGridItem[] }) {
+export function DormDashboardRoomGrid({
+  rooms,
+  staffMode = false,
+}: {
+  rooms: RoomGridItem[];
+  staffMode?: boolean;
+}) {
   const [filter, setFilter] = useState<FilterKey>("all");
 
   const filteredRooms = useMemo(() => {
@@ -65,12 +71,10 @@ export function DormDashboardRoomGrid({ rooms }: { rooms: RoomGridItem[] }) {
         </p>
       ) : (
         <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-3">
-          {filteredRooms.map((r) => (
-            <li key={r.id}>
-              <Link
-                href={`/dashboard/dormitory/rooms/${r.id}`}
-                className={`${dormRoomTile}${r.showOverdueDot ? ` ${dormRoomTileOverdueHint}` : ""}`}
-              >
+          {filteredRooms.map((r) => {
+            const tileClass = `${dormRoomTile}${r.showOverdueDot ? ` ${dormRoomTileOverdueHint}` : ""}`;
+            const inner = (
+              <>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <span className={dormRoomFieldLabel}>เลขห้อง</span>
@@ -91,9 +95,23 @@ export function DormDashboardRoomGrid({ rooms }: { rooms: RoomGridItem[] }) {
                     <span className={`${dormRoomTypeHint} text-right`}>{r.roomType}</span>
                   </div>
                 </div>
+              </>
+            );
+            return (
+            <li key={r.id}>
+              {staffMode ? (
+                <div className={tileClass}>{inner}</div>
+              ) : (
+              <Link
+                href={`/dashboard/dormitory/rooms/${r.id}`}
+                className={tileClass}
+              >
+                {inner}
               </Link>
+              )}
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </div>

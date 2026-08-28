@@ -8,7 +8,8 @@ export type StaffDailyPinModule =
   | "hotel-resort"
   | "football-turf"
   | "barber"
-  | "car-wash";
+  | "car-wash"
+  | "dormitory";
 
 export const STAFF_DAILY_UNLOCK_HEADER = "x-staff-daily-unlock";
 

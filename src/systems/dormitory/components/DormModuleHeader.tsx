@@ -9,10 +9,12 @@ import {
   dormNavItemIdleClass,
 } from "@/systems/dormitory/dorm-ui-tokens";
 
+import { DORMITORY_FINANCE_HREF } from "@/systems/dormitory/dormitory-module-nav";
+
 const links = [
   { href: "/dashboard/dormitory", label: "แดชบอร์ด", icon: IconHome },
   { href: "/dashboard/dormitory/rooms", label: "จัดการห้อง", icon: IconRooms },
-  { href: "/dashboard/dormitory/history", label: "การเงิน", icon: IconFinance },
+  { href: DORMITORY_FINANCE_HREF, label: "การเงิน", icon: IconFinance },
 ] as const;
 
 export function DormModuleHeader() {
@@ -29,6 +31,8 @@ export function DormModuleHeader() {
             active = pathname === "/dashboard/dormitory/rooms" || pathname.startsWith("/dashboard/dormitory/rooms/");
           } else {
             active =
+              pathname === DORMITORY_FINANCE_HREF ||
+              pathname.startsWith(`${DORMITORY_FINANCE_HREF}/`) ||
               pathname === "/dashboard/dormitory/history" ||
               pathname.startsWith("/dashboard/dormitory/history/") ||
               pathname === "/dashboard/dormitory/costs" ||

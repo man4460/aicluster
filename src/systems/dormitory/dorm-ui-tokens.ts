@@ -49,5 +49,15 @@ export const dormPanelCardClass =
 export const dormSegmentShellClass =
   `${dormCardSurfaceRadiusClass} flex gap-1 border border-white/55 bg-white/40 p-1 backdrop-blur-md`;
 
+export const dormFinanceSubTabShellClass =
+  "rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]";
+
+export const dormFinanceStatsGridClass = "grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3";
+
+export const dormFinanceStatTailClass = "col-span-2 sm:col-span-1";
+
+export const dormFieldClass =
+  "mt-1 min-h-[44px] w-full rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm font-semibold text-[#1e1b4b] outline-none ring-1 ring-inset ring-white/50 focus:border-[#5b61ff]/45 focus:ring-2 focus:ring-[#5b61ff]/20 sm:min-h-[40px]";
+
 export const dormEmptyDashedClass =
   `${dormInsetControlRadiusClass} border border-dashed border-white/60 bg-white/35 px-4 py-10 text-center text-sm leading-relaxed text-[#66638c] backdrop-blur-sm`;

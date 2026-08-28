@@ -157,6 +157,24 @@ export async function getQrHotelResortBranding(
   };
 }
 
+/** หอพัก — displayName จากโมดูล โลโก้จากโปรไฟล์กลาง */
+export async function getQrDormitoryBranding(
+  ownerUserId: string,
+  trialSessionId: string,
+): Promise<QrBranding> {
+  const [owner, row] = await Promise.all([
+    getQrOwnerBranding(ownerUserId, "หอพัก"),
+    prisma.dormitoryProfile.findUnique({
+      where: { ownerUserId_trialSessionId: { ownerUserId, trialSessionId } },
+      select: { displayName: true, logoUrl: true },
+    }),
+  ]);
+  return {
+    label: pickLabel(row?.displayName, owner.label) || "หอพัก",
+    logoUrl: pickLogo(row?.logoUrl, owner.logoUrl),
+  };
+}
+
 /** POS เครื่องดื่ม — displayName/logo จากโมดูล แล้ว fallback โปรไฟล์กลาง */
 export async function getQrDrinkPosBranding(
   ownerUserId: string,

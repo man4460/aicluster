@@ -2,8 +2,12 @@ import type { ReactNode } from "react";
 
 export const DORMITORY_BASE = "/dashboard/dormitory";
 export const DORMITORY_SETTINGS_HREF = `${DORMITORY_BASE}/settings`;
+export const DORMITORY_GUEST_PORTAL_HREF = `${DORMITORY_BASE}/guest-portal`;
 export const DORMITORY_ROOMS_HREF = `${DORMITORY_BASE}/rooms`;
+export const DORMITORY_FINANCE_HREF = `${DORMITORY_BASE}/finance`;
+/** @deprecated ใช้ DORMITORY_FINANCE_HREF?panel=history */
 export const DORMITORY_HISTORY_HREF = `${DORMITORY_BASE}/history`;
+/** @deprecated ใช้ DORMITORY_FINANCE_HREF?panel=expenses */
 export const DORMITORY_COSTS_HREF = `${DORMITORY_BASE}/costs`;
 
 export const DORMITORY_MODULE_DISPLAY_NAME = "หอพัก";
@@ -11,7 +15,7 @@ export const DORMITORY_MODULE_DISPLAY_NAME = "หอพัก";
 export const DORMITORY_HEADER_COLLAPSE_KEY = "mawell-dormitory-module-header-collapsed";
 export const DORMITORY_HEADER_COLLAPSE_EVENT = "mawell-dormitory-header-collapse";
 
-export type DormitoryNavKey = "dashboard" | "rooms" | "history" | "costs" | "settings";
+export type DormitoryNavKey = "dashboard" | "rooms" | "finance" | "guest" | "settings";
 
 export type DormitoryNavItem = {
   key: DormitoryNavKey;
@@ -23,8 +27,8 @@ export type DormitoryNavItem = {
 export const DORMITORY_NAV_ITEMS: DormitoryNavItem[] = [
   { key: "dashboard", href: DORMITORY_BASE, label: "แดชบอร์ด", shortLabel: "ภาพรวม" },
   { key: "rooms", href: DORMITORY_ROOMS_HREF, label: "การจัดการ", shortLabel: "จัดการ" },
-  { key: "history", href: DORMITORY_HISTORY_HREF, label: "ประวัติ", shortLabel: "ประวัติ" },
-  { key: "costs", href: DORMITORY_COSTS_HREF, label: "ต้นทุน", shortLabel: "ต้นทุน" },
+  { key: "finance", href: DORMITORY_FINANCE_HREF, label: "การเงิน", shortLabel: "การเงิน" },
+  { key: "guest", href: DORMITORY_GUEST_PORTAL_HREF, label: "ลิงก์", shortLabel: "ลิงก์" },
   { key: "settings", href: DORMITORY_SETTINGS_HREF, label: "ตั้งค่า", shortLabel: "ตั้งค่า" },
 ];
 
@@ -37,10 +41,17 @@ export function dormitoryPathFlags(pathname: string) {
   const onModule = isDormitoryModulePath(pathname);
   const isSettings = pathNorm === DORMITORY_SETTINGS_HREF || pathNorm.endsWith("/settings");
   const isRooms = pathNorm === DORMITORY_ROOMS_HREF || pathNorm.startsWith(`${DORMITORY_ROOMS_HREF}/`);
-  const isHistory = pathNorm === DORMITORY_HISTORY_HREF || pathNorm.startsWith(`${DORMITORY_HISTORY_HREF}/`);
-  const isCosts = pathNorm === DORMITORY_COSTS_HREF || pathNorm.startsWith(`${DORMITORY_COSTS_HREF}/`);
-  const isDashboard = onModule && !isSettings && !isRooms && !isHistory && !isCosts;
-  return { onModule, isDashboard, isRooms, isHistory, isCosts, isSettings };
+  const isFinance =
+    pathNorm === DORMITORY_FINANCE_HREF ||
+    pathNorm.startsWith(`${DORMITORY_FINANCE_HREF}/`) ||
+    pathNorm === DORMITORY_HISTORY_HREF ||
+    pathNorm.startsWith(`${DORMITORY_HISTORY_HREF}/`) ||
+    pathNorm === DORMITORY_COSTS_HREF ||
+    pathNorm.startsWith(`${DORMITORY_COSTS_HREF}/`);
+  const isGuest =
+    pathNorm === DORMITORY_GUEST_PORTAL_HREF || pathNorm.startsWith(`${DORMITORY_GUEST_PORTAL_HREF}/`);
+  const isDashboard = onModule && !isSettings && !isRooms && !isFinance && !isGuest;
+  return { onModule, isDashboard, isRooms, isFinance, isGuest, isSettings };
 }
 
 export function isDormitoryNavItemActive(pathname: string, key: DormitoryNavKey): boolean {
@@ -50,10 +61,10 @@ export function isDormitoryNavItemActive(pathname: string, key: DormitoryNavKey)
       return f.isDashboard;
     case "rooms":
       return f.isRooms;
-    case "history":
-      return f.isHistory;
-    case "costs":
-      return f.isCosts;
+    case "finance":
+      return f.isFinance;
+    case "guest":
+      return f.isGuest;
     case "settings":
       return f.isSettings;
     default:
@@ -77,17 +88,13 @@ export function dormitoryNavIcon(key: DormitoryNavKey): ReactNode {
           <path d="M3 10h18M9 10v10M15 10v10" strokeLinecap="round" />
         </>
       );
-    case "history":
+    case "finance":
+      return <path d="M4 18h16M7 14l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />;
+    case "guest":
       return (
         <>
-          <path d="M3 12a9 9 0 1 0 3-6.7" strokeLinecap="round" />
-          <path d="M3 4v3h3M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
-        </>
-      );
-    case "costs":
-      return (
-        <>
-          <path d="M4 19h16M6 15l3-3 3 2 5-6" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" strokeLinecap="round" />
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" strokeLinecap="round" />
         </>
       );
     case "settings":

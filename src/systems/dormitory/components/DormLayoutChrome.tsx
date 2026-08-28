@@ -151,7 +151,7 @@ function DormLayoutChromeInner({
           className="mt-5 hidden border-t border-[#e8e6fc]/70 pt-5 lg:block print:hidden"
         >
           <ul className="flex gap-1">
-            {DORMITORY_NAV_ITEMS.slice(0, 4).map((item) => {
+            {DORMITORY_NAV_ITEMS.slice(0, 3).map((item) => {
               const active = isDormitoryNavItemActive(pathname, item.key);
               return (
                 <li key={item.key} className="min-w-0 flex-1">
@@ -180,16 +180,8 @@ function DormLayoutChromeInner({
                           <path d="M3 10h18M9 10v10M15 10v10" strokeLinecap="round" />
                         </>
                       )}
-                      {item.key === "history" && (
-                        <>
-                          <path d="M3 12a9 9 0 1 0 3-6.7" strokeLinecap="round" />
-                          <path d="M3 4v3h3M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
-                        </>
-                      )}
-                      {item.key === "costs" && (
-                        <>
-                          <path d="M4 19h16M6 15l3-3 3 2 5-6" strokeLinecap="round" strokeLinejoin="round" />
-                        </>
+                      {item.key === "finance" && (
+                        <path d="M4 18h16M7 14l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
                       )}
                     </svg>
                     {item.label}
@@ -199,7 +191,7 @@ function DormLayoutChromeInner({
             })}
             {moduleShopSettingsDesktopNavItem(
               <ModuleShopSettingsDesktopNavLink
-                href={DORMITORY_NAV_ITEMS[4].href}
+                href={DORMITORY_NAV_ITEMS[3].href}
                 active={isDormitoryNavItemActive(pathname, "settings")}
               />,
             )}
@@ -220,7 +212,7 @@ function DormLayoutChromeInner({
                 <p>
                   ตั้ง <strong className="font-semibold text-[#2e2a58]">ตั้งค่า</strong> ก่อน แล้วกรอกข้อมูลที่เมนู{" "}
                   <strong className="font-semibold text-[#2e2a58]">การจัดการ</strong> จากนั้นติดตามรอบบิลและรับชำระที่{" "}
-                  <strong className="font-semibold text-[#2e2a58]">ประวัติ</strong>
+                  <strong className="font-semibold text-[#2e2a58]">การเงิน</strong>
                 </p>
                 <ol className="list-decimal space-y-1 pl-5 marker:font-semibold marker:text-[#4d47b6]">
                   <li>กำหนดอัตราค่าเช่าและค่าสาธารณูปโภค</li>
@@ -251,22 +243,18 @@ function DormLayoutChromeInner({
             ),
           },
           {
-            title: "เมนู: ประวัติ",
+            title: "เมนู: การเงิน",
             content: (
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>ดูประวัติการออกบิลและการรับชำระย้อนหลัง</li>
+                <li>
+                  แท็บ <strong className="font-semibold text-[#2e2a58]">ประวัติ / รายรับ</strong> — ดูประวัติการออกบิล
+                  การรับชำระย้อนหลัง และกราฟรายได้เทียบรายจ่าย
+                </li>
                 <li>ตรวจรายการค้างและติดตามผู้เช่าที่ชำระล่าช้า</li>
-                <li>แก้ไขข้อมูลผิดพลาดของบิลหรือรายการชำระได้จากหน้านี้</li>
-              </ul>
-            ),
-          },
-          {
-            title: "เมนู: ต้นทุน / รายจ่าย",
-            content: (
-              <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>บันทึกค่าใช้จ่ายหอพัก เช่น ซ่อมแซม ค่าส่วนกลาง ค่าดูแล</li>
-                <li>วิเคราะห์กำไรสุทธิจากรายรับค่าเช่าหักรายจ่ายจริง</li>
-                <li>แนบหลักฐานเพื่อให้ตรวจสอบย้อนหลังได้ชัดเจน</li>
+                <li>
+                  แท็บ <strong className="font-semibold text-[#2e2a58]">รายจ่าย</strong> — บันทึกค่าใช้จ่ายหอพัก
+                  แนบหลักฐาน และวิเคราะห์กำไรสุทธิจากรายรับหักรายจ่าย
+                </li>
               </ul>
             ),
           },

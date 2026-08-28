@@ -44,6 +44,7 @@ alwaysApply: true
 |--------|----------------------|---------|------------------------|
 | สนามฟุตบอล | `mawell-football-turf-header-collapsed` · `FOOTBALL_TURF_HEADER_COLLAPSE_*` | `FootballTurfShell` | `FootballTurfHeaderBarNav` ใน header ม่วง `DashboardShell` |
 | drink-pos | `*DRINK_POS_HEADER_COLLAPSE*` | `DrinkPosShell` | `DrinkPosHeaderBarNav` |
+| **หอพัก** | `mawell-dormitory-module-header-collapsed` · `DORMITORY_HEADER_COLLAPSE_*` | `DormLayoutChrome` | `DormitoryHeaderBarNav` |
 | **ศูนย์แอดมิน** | `mawell-admin-hub-header-collapsed` · `ADMIN_HUB_HEADER_COLLAPSE_*` ใน `admin-hub-nav.ts` | `AdminHubChrome` (การ์ดหัว + กริดแท็บ) | `AdminHubHeaderBarNav` / `AdminHubHeaderExpandButton` ใน `DashboardShell` |
 
 - ปุ่มซ่อนชิดขวาสุดของหัว · จำค่าใน `localStorage` · sync ผ่าน `CustomEvent` + `storage`
