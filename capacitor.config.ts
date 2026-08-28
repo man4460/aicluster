@@ -23,14 +23,10 @@ const config: CapacitorConfig = {
     allowMixedContent: isHttp,
   },
   plugins: {
-    /**
-     * ค่าตอนเปิดแอป — `CapacitorNativeChrome` ปรับต่อตามแพลตฟอร์ม
-     * (iOS เปลี่ยนเป็นแถบโปร่งเพื่อให้เว็บวาดไล่สีแบรนด์เอง)
-     */
     StatusBar: {
       overlaysWebView: false,
-      style: "DARK",
-      backgroundColor: "#0000bf",
+      style: "LIGHT",
+      backgroundColor: "#f7f6ff",
     },
   },
   ios: {
