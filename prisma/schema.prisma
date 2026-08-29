@@ -1201,9 +1201,13 @@ model MassageShopProfile {
   trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
   displayName    String?  @map("display_name") @db.VarChar(200)
   logoUrl        String?  @map("logo_url") @db.VarChar(512)
+  tagline        String?  @db.VarChar(300)
   taxId          String?  @map("tax_id") @db.VarChar(30)
   address        String?  @db.Text
   contactPhone   String?  @map("contact_phone") @db.VarChar(32)
+  contactLine    String?  @map("contact_line") @db.VarChar(120)
+  facebookUrl    String?  @map("facebook_url") @db.VarChar(512)
+  mapUrl         String?  @map("map_url") @db.VarChar(512)
   promptPayPhone String?  @map("prompt_pay_phone") @db.VarChar(20)
   /** รูป QR พร้อมเพย์ที่อัปโหลดเอง (ทางเลือก — ใช้แทนการสร้างจากเบอร์) */
   promptPayQrImageUrl String? @map("prompt_pay_qr_image_url") @db.VarChar(512)
@@ -1212,8 +1216,22 @@ model MassageShopProfile {
   bankAccountName String? @map("bank_account_name") @db.VarChar(200)
   /** ขนาดสลิปใบเสร็จของโมดูลนี้: SLIP_58 | SLIP_80 | A4 */
   slipPaperSize  String   @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
-  /** ระยะเวลานวดเริ่มต้น (นาที) เมื่อไม่ได้ตั้งตารางรายวัน */
+  /** เวลาเปิดร้านค่าเริ่ม (HH:mm เวลาไทย) — ใช้เมื่อไม่มีตารางรายวัน */
+  openTime       String   @default("09:00") @map("open_time") @db.VarChar(5)
+  /** เวลาปิดร้านค่าเริ่ม (HH:mm เวลาไทย) */
+  closeTime      String   @default("21:00") @map("close_time") @db.VarChar(5)
+  /** ความยาวสล็อตจองค่าเริ่ม (นาที) */
+  slotMinutes    Int      @default(60) @map("slot_minutes")
+  /** ระยะเวลานวดเริ่มต้น (นาที) เมื่อไม่ได้ตั้งตารางรายวัน — เก็บคู่ slotMinutes */
   defaultSlotMinutes Int  @default(60) @map("default_slot_minutes")
+  /** แบนเนอร์หน้าเว็บลูกค้า */
+  portalBannerUrl String? @map("portal_banner_url") @db.VarChar(512)
+  /** แกลเลอรีหน้าเว็บลูกค้า — JSON array ของ URL */
+  portalGalleryJson String @default("[]") @map("portal_gallery_json") @db.Text
+  /** NONE | DEPOSIT | FULL — ชำระตอนจองจากลิงก์ลูกค้า */
+  portalBookingPaymentMode String @default("NONE") @map("portal_booking_payment_mode") @db.VarChar(16)
+  /** จำนวนมัดจำ (บาท) เมื่อโหมด DEPOSIT */
+  depositAmountBaht Int? @map("deposit_amount_baht")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -1249,10 +1267,15 @@ model MassagePackage {
   name          String   @db.VarChar(191)
   price         Decimal  @db.Decimal(10, 2)
   totalSessions Int      @map("total_sessions")
+  /** รูปปกแพ็กเกจ */
+  imageUrl      String?  @map("image_url") @db.VarChar(512)
+  /** ระยะเวลาบริการต่อครั้ง (นาที) */
+  durationMinutes Int @default(60) @map("duration_minutes")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   subscriptions MassageCustomerSubscription[]
+  bookings      MassageBooking[]
 
   @@index([ownerUserId])
   @@index([ownerUserId, trialSessionId])
@@ -1286,6 +1309,12 @@ model MassageTherapist {
   name           String   @db.VarChar(100)
   phone          String?  @db.VarChar(20)
   photoUrl       String?  @map("photo_url") @db.VarChar(512)
+  /** เวลาเริ่มรับคิว (HH:mm เวลาไทย) */
+  workStartTime  String   @default("09:00") @map("work_start_time") @db.VarChar(5)
+  /** เวลาสิ้นสุดรับคิว (HH:mm เวลาไทย) */
+  workEndTime    String   @default("21:00") @map("work_end_time") @db.VarChar(5)
+  /** วันที่รับบริการประจำสัปดาห์ — JSON array ของ 0=อา … 6=ส */
+  workWeekdaysJson String @default("[0,1,2,3,4,5,6]") @map("work_weekdays_json") @db.VarChar(64)
   isActive       Boolean  @default(true) @map("is_active")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
@@ -1309,10 +1338,26 @@ model MassageBooking {
   customer          MassageCustomer?      @relation(fields: [massageCustomerId], references: [id], onDelete: SetNull)
   therapistId       Int?                  @map("therapist_id")
   therapist         MassageTherapist?     @relation(fields: [therapistId], references: [id], onDelete: SetNull)
+  packageId         Int?                  @map("package_id")
+  package           MassagePackage?       @relation(fields: [packageId], references: [id], onDelete: SetNull)
   phone             String                @map("phone") @db.VarChar(20)
   customerName      String?               @map("customer_name") @db.VarChar(100)
   scheduledAt       DateTime              @map("scheduled_at")
   durationMinutes   Int                   @default(60) @map("duration_minutes")
+  /** ราคารายการ ณ เวลาจอง (บาท) */
+  packagePrice      Int                   @default(0) @map("package_price")
+  /** ยอดที่ต้องชำระตอนจอง (มัดจำ/เต็ม) — null = ไม่บังคับ */
+  depositAmountBaht Int?                  @map("deposit_amount_baht")
+  /** ยอดที่ชำระแล้วสะสม */
+  amountPaidBaht    Int                   @default(0) @map("amount_paid_baht")
+  /** UNPAID | PROMPTPAY | TRANSFER | CASH | CREDIT_CARD | ONSITE */
+  paymentMethod     String                @default("UNPAID") @map("payment_method") @db.VarChar(24)
+  /** UNPAID | PENDING_REVIEW | PARTIAL | PAID */
+  paymentStatus     String                @default("UNPAID") @map("payment_status") @db.VarChar(24)
+  /** สลิปมัดจำ/ชำระตอนจองจากลิงก์ลูกค้า */
+  depositSlipUrl    String?               @map("deposit_slip_url") @db.VarChar(512)
+  /** สลิปชำระเพิ่ม */
+  paymentSlipUrl    String?               @map("payment_slip_url") @db.VarChar(512)
   status            MassageBookingStatus  @default(SCHEDULED) @map("status")
   note              String?               @db.VarChar(255)
   createdAt         DateTime              @default(now()) @map("created_at")
@@ -1320,6 +1365,7 @@ model MassageBooking {
 
   @@index([ownerUserId, scheduledAt])
   @@index([ownerUserId, trialSessionId])
+  @@index([therapistId, scheduledAt])
   @@map("massage_bookings")
 }
 

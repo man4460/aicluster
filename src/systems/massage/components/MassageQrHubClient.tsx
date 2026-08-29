@@ -178,6 +178,7 @@ export function MassageQrHubClient({
           shopLabel={shopLabel}
           logoUrl={logoUrl}
           baseUrl={baseUrl}
+          trialSessionId={trialSessionId}
           trialExportBlocked={trialExportBlocked}
           embedded
           compactForModal

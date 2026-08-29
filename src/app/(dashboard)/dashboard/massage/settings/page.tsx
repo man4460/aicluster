@@ -10,6 +10,7 @@ import { bangkokDateKey } from "@/lib/time/bangkok";
 import { BarberShopSettingsClient } from "@/systems/barber/components/BarberShopSettingsClient";
 import { MassageDayScheduleClient } from "@/systems/massage/components/MassageDayScheduleClient";
 import { MassageQrHubClient } from "@/systems/massage/components/MassageQrHubClient";
+import { massageNormalizePortalGallery } from "@/systems/massage/lib/portal-media";
 
 export default async function MassageSettingsPage() {
   const session = await getSession();
@@ -25,7 +26,18 @@ export default async function MassageSettingsPage() {
         logoUrl: true,
         contactPhone: true,
         address: true,
+        tagline: true,
+        contactLine: true,
+        facebookUrl: true,
+        mapUrl: true,
+        portalBannerUrl: true,
+        portalGalleryJson: true,
         slipPaperSize: true,
+        openTime: true,
+        closeTime: true,
+        slotMinutes: true,
+        portalBookingPaymentMode: true,
+        depositAmountBaht: true,
         ...MODULE_SHOP_PAYMENT_SELECT,
       },
     }),
@@ -37,12 +49,28 @@ export default async function MassageSettingsPage() {
     <div className="space-y-4 sm:space-y-6">
       <BarberShopSettingsClient
         apiBase="/api/massage/shop-profile"
+        ownerId={session.sub}
+        trialSessionId={scope.trialSessionId}
         initial={{
           displayName: row?.displayName ?? null,
           logoUrl: row?.logoUrl ?? null,
           contactPhone: row?.contactPhone ?? null,
           address: row?.address ?? null,
+          tagline: row?.tagline ?? null,
+          contactLine: row?.contactLine ?? null,
+          facebookUrl: row?.facebookUrl ?? null,
+          mapUrl: row?.mapUrl ?? null,
+          portalBannerUrl: row?.portalBannerUrl ?? null,
+          portalGallery: massageNormalizePortalGallery(row?.portalGalleryJson),
           slipPaperSize: normalizeModuleSlipPaperSize(row?.slipPaperSize),
+          openTime: row?.openTime ?? "09:00",
+          closeTime: row?.closeTime ?? "21:00",
+          slotMinutes: row?.slotMinutes === 30 ? 30 : 60,
+          portalBookingPaymentMode:
+            row?.portalBookingPaymentMode === "DEPOSIT" || row?.portalBookingPaymentMode === "FULL"
+              ? row.portalBookingPaymentMode
+              : "NONE",
+          depositAmountBaht: row?.depositAmountBaht ?? null,
           ...paymentRowToDto(row),
         }}
         hoursPanel={<MassageDayScheduleClient plain initialDateKey={bangkokDateKey()} />}

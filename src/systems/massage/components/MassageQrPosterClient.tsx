@@ -20,12 +20,14 @@ import {
   downloadPosterPng,
   resolveAssetUrl,
 } from "@/components/qr/shop-qr-template";
+import { massagePublicPortalUrl } from "@/lib/massage/public-url";
 
 type Props = {
   ownerId: string;
   shopLabel: string;
   logoUrl: string | null;
   baseUrl: string;
+  trialSessionId?: string;
   /** โหมดทดลอง — ปิดดาวน์โหลด PDF/PNG */
   trialExportBlocked?: boolean;
   /** ใช้ในหน้ารวม QR — ไม่มีปุ่มกลับและไม่ห่อด้วย stack ชั้นนอก */
@@ -69,13 +71,14 @@ export function MassageQrPosterClient({
   shopLabel,
   logoUrl,
   baseUrl,
+  trialSessionId = "prod",
   trialExportBlocked = false,
   embedded = false,
   compactForModal = false,
 }: Props) {
   const portalUrl =
     baseUrl.startsWith("http://") || baseUrl.startsWith("https://")
-      ? `${baseUrl.replace(/\/$/, "")}/massage/check-in/${ownerId}`
+      ? massagePublicPortalUrl(baseUrl, ownerId, trialSessionId)
       : "";
   const headline = shopLabel.trim() || "ร้านนวด";
   const logoSrc = useMemo(() => resolveAssetUrl(logoUrl, baseUrl), [logoUrl, baseUrl]);

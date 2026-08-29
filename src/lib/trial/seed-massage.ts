@@ -179,12 +179,15 @@ async function ensureMassageCatalog(tx: DbLike, ownerUserId: string, trialSessio
 async function ensureTodaySchedule(tx: DbLike, ownerUserId: string, trialSessionId: string) {
   const todayKey = bangkokDateKey();
   const scheduleDate = new Date(`${todayKey}T12:00:00+07:00`);
-  const existing = await tx.massageDaySchedule.findFirst({
-    where: { ownerUserId, trialSessionId, scheduleDate },
-  });
-  if (existing) return;
-  await tx.massageDaySchedule.create({
-    data: {
+  await tx.massageDaySchedule.upsert({
+    where: {
+      ownerUserId_trialSessionId_scheduleDate: {
+        ownerUserId,
+        trialSessionId,
+        scheduleDate,
+      },
+    },
+    create: {
       ownerUserId,
       trialSessionId,
       scheduleDate,
@@ -193,6 +196,7 @@ async function ensureTodaySchedule(tx: DbLike, ownerUserId: string, trialSession
       slotMinutes: 60,
       isClosed: false,
     },
+    update: {},
   });
 }
 

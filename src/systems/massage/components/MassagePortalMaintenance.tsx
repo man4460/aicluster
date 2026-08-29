@@ -1,4 +1,4 @@
-import { AppPublicCheckInGlassPage, appPublicCheckInGlassCardClass } from "@/components/app-templates";
+﻿import { AppPublicCheckInGlassPage, appPublicCheckInGlassCardClass } from "@/components/app-templates";
 
 export function MassagePortalMaintenance() {
   return (

@@ -17,6 +17,7 @@ import {
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
 import { cn } from "@/lib/cn";
 import { barberPublicPortalUrl } from "@/lib/barber/public-url";
+import { massagePublicPortalUrl } from "@/lib/massage/public-url";
 import {
   barberDashboardSegmentBtnClass,
   barberDashboardSegmentShellClass,
@@ -32,12 +33,14 @@ import {
   parseBarberPayAmountPresets,
 } from "@/systems/barber/lib/pay-amount-presets";
 import { BarberPortalMediaSettings } from "@/systems/barber/components/BarberPortalMediaSettings";
+import { MassagePortalMediaSettings } from "@/systems/massage/components/MassagePortalMediaSettings";
 import { BarberQrHubClient } from "@/systems/barber/components/BarberQrHubClient";
 import { barberNormalizeSlotMinutes } from "@/systems/barber/lib/booking-slots";
 import {
   normalizeBarberPortalPaymentMode,
   type BarberPortalBookingPaymentMode,
 } from "@/systems/barber/lib/portal-booking";
+import { massageNormalizeSlotMinutes } from "@/systems/massage/lib/booking-slots";
 
 type ShopProfile = {
   displayName: string | null;
@@ -75,6 +78,7 @@ const BARBER_SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
 const MASSAGE_SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
   { id: "basic", label: "ตั้งค่าพื้นฐาน" },
   { id: "finance", label: "ตั้งค่าเกี่ยวกับการเงิน" },
+  { id: "portal", label: "ตั้งค่าเว็ปลิงค์ลูกค้า" },
   { id: "hours", label: "ตั้งค่าเวลาเปิดร้าน" },
   { id: "link", label: "ลิงก์ QR" },
 ];
@@ -104,19 +108,13 @@ function parseSettingsTab(raw: string | null, allowed: SettingsTab[]): SettingsT
 }
 
 function BarberPortalLinkPanel({
-  ownerId,
-  trialSessionId,
+  portalPath,
   onGoToQr,
 }: {
-  ownerId: string;
-  trialSessionId: string;
+  portalPath: string;
   onGoToQr?: () => void;
 }) {
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
-  const portalPath = useMemo(
-    () => barberPublicPortalUrl("", ownerId, trialSessionId),
-    [ownerId, trialSessionId],
-  );
 
   const absoluteUrl = (path: string) => {
     if (typeof window === "undefined") return path;
@@ -235,8 +233,9 @@ function BarberShopSettingsClientInner({
 }) {
   const router = useRouter();
   const isBarber = apiBase === "/api/barber/shop-profile";
-  const supportsUploadedPromptPayQr =
-    isBarber || apiBase.includes("/api/massage/shop-profile");
+  const isMassage = apiBase === "/api/massage/shop-profile";
+  const supportsPortalWebsite = isBarber || isMassage;
+  const supportsUploadedPromptPayQr = supportsPortalWebsite;
   const tabs = isBarber ? BARBER_SETTINGS_TABS : MASSAGE_SETTINGS_TABS;
   const allowed = tabs.map((t) => t.id);
   const searchParams = useSearchParams();
@@ -252,8 +251,10 @@ function BarberShopSettingsClientInner({
     portalBannerUrl: initial.portalBannerUrl ?? null,
     portalGallery: initial.portalGallery ?? [],
     openTime: initial.openTime ?? "09:00",
-    closeTime: initial.closeTime ?? "20:00",
-    slotMinutes: barberNormalizeSlotMinutes(initial.slotMinutes ?? 30),
+    closeTime: initial.closeTime ?? (isMassage ? "21:00" : "20:00"),
+    slotMinutes: isMassage
+      ? massageNormalizeSlotMinutes(initial.slotMinutes ?? 60)
+      : barberNormalizeSlotMinutes(initial.slotMinutes ?? 30),
     portalBookingPaymentMode: normalizeBarberPortalPaymentMode(initial.portalBookingPaymentMode),
     depositAmountBaht: initial.depositAmountBaht ?? null,
     promptPayQrImageUrl: initial.promptPayQrImageUrl ?? null,
@@ -306,6 +307,16 @@ function BarberShopSettingsClientInner({
         payload.depositAmountBaht =
           form.portalBookingPaymentMode === "DEPOSIT" ? form.depositAmountBaht : null;
         Object.assign(payload, staffDailyPinPatchBody({ pinDraft, clearPin }));
+      } else if (isMassage) {
+        delete payload.payAmountPresets;
+        delete payload.payAmountPresetsRaw;
+        delete payload.staffDailyPinSet;
+        payload.openTime = form.openTime;
+        payload.closeTime = form.closeTime;
+        payload.slotMinutes = massageNormalizeSlotMinutes(form.slotMinutes);
+        payload.portalBookingPaymentMode = form.portalBookingPaymentMode;
+        payload.depositAmountBaht =
+          form.portalBookingPaymentMode === "DEPOSIT" ? form.depositAmountBaht : null;
       } else {
         delete payload.payAmountPresets;
         delete payload.payAmountPresetsRaw;
@@ -343,8 +354,10 @@ function BarberShopSettingsClientInner({
           portalBannerUrl: json.profile.portalBannerUrl ?? null,
           portalGallery: json.profile.portalGallery ?? [],
           openTime: json.profile.openTime ?? "09:00",
-          closeTime: json.profile.closeTime ?? "20:00",
-          slotMinutes: barberNormalizeSlotMinutes(json.profile.slotMinutes ?? 30),
+          closeTime: json.profile.closeTime ?? (isMassage ? "21:00" : "20:00"),
+          slotMinutes: isMassage
+            ? massageNormalizeSlotMinutes(json.profile.slotMinutes ?? 60)
+            : barberNormalizeSlotMinutes(json.profile.slotMinutes ?? 30),
           portalBookingPaymentMode: normalizeBarberPortalPaymentMode(
             json.profile.portalBookingPaymentMode,
           ),
@@ -375,14 +388,17 @@ function BarberShopSettingsClientInner({
           tone="violet"
           title="ตั้งค่าร้าน"
           description={
-            isBarber
+            supportsPortalWebsite
               ? "พื้นฐาน · การเงิน · ลิงก์ลูกค้า · เวลาเปิดร้าน"
               : "พื้นฐาน · การเงิน · เวลาเปิดร้าน · ลิงก์ QR"
           }
           className="flex flex-row items-center justify-between gap-2 sm:gap-3"
           actionWrapClassName="shrink-0"
           action={
-            (!isBarber && tab === "hours" && hoursPanel) || (!isBarber && tab === "link" && qrHubPanel) ? null : (
+            (!supportsPortalWebsite && tab === "hours" && hoursPanel) ||
+            (!isBarber && tab === "link" && qrHubPanel)
+              ? null
+              : (
             <div className={barberDashboardSegmentShellClass} role="group">
               <button
                 type="button"
@@ -460,7 +476,7 @@ function BarberShopSettingsClientInner({
                   onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))}
                 />
               </label>
-              {isBarber ? (
+              {supportsPortalWebsite ? (
                 <label className="block space-y-1">
                   <span className="text-xs font-bold text-[#4d47b6]">สโลแกน</span>
                   <input
@@ -491,7 +507,7 @@ function BarberShopSettingsClientInner({
 
           {tab === "finance" ? (
             <div id="barber-settings-panel-finance" role="tabpanel" aria-labelledby="barber-settings-tab-finance" className="space-y-3">
-              {isBarber ? (
+              {supportsPortalWebsite ? (
                 <div className="rounded-2xl border border-white/60 bg-white/40 p-3 sm:p-4">
                   <p className="text-xs font-bold text-[#4d47b6]">ชำระตอนจองจากลิงก์ลูกค้า</p>
                   <div
@@ -665,7 +681,7 @@ function BarberShopSettingsClientInner({
             </div>
           ) : null}
 
-          {tab === "portal" && isBarber ? (
+          {tab === "portal" && (isBarber || apiBase === "/api/massage/shop-profile") ? (
             <div
               id="barber-settings-panel-portal"
               role="tabpanel"
@@ -674,76 +690,100 @@ function BarberShopSettingsClientInner({
             >
               {ownerId && trialSessionId ? (
                 <BarberPortalLinkPanel
-                  ownerId={ownerId}
-                  trialSessionId={trialSessionId}
+                  portalPath={
+                    isBarber
+                      ? barberPublicPortalUrl("", ownerId, trialSessionId)
+                      : massagePublicPortalUrl("", ownerId, trialSessionId)
+                  }
                   onGoToQr={() => selectTab("link")}
                 />
               ) : null}
-              <BarberPortalMediaSettings
-                bannerUrl={form.portalBannerUrl ?? ""}
-                gallery={form.portalGallery ?? []}
-                facebookUrl={form.facebookUrl ?? ""}
-                mapUrl={form.mapUrl ?? ""}
-                contactLine={form.contactLine ?? ""}
-                onBannerUrlChange={(url) => setForm((f) => ({ ...f, portalBannerUrl: url || null }))}
-                onGalleryChange={(urls) => setForm((f) => ({ ...f, portalGallery: urls }))}
-                onFacebookUrlChange={(url) => setForm((f) => ({ ...f, facebookUrl: url || null }))}
-                onMapUrlChange={(url) => setForm((f) => ({ ...f, mapUrl: url || null }))}
-                onContactLineChange={(value) => setForm((f) => ({ ...f, contactLine: value || null }))}
-                disabled={busy}
-              />
+              {isBarber ? (
+                <BarberPortalMediaSettings
+                  bannerUrl={form.portalBannerUrl ?? ""}
+                  gallery={form.portalGallery ?? []}
+                  facebookUrl={form.facebookUrl ?? ""}
+                  mapUrl={form.mapUrl ?? ""}
+                  contactLine={form.contactLine ?? ""}
+                  onBannerUrlChange={(url) => setForm((f) => ({ ...f, portalBannerUrl: url || null }))}
+                  onGalleryChange={(urls) => setForm((f) => ({ ...f, portalGallery: urls }))}
+                  onFacebookUrlChange={(url) => setForm((f) => ({ ...f, facebookUrl: url || null }))}
+                  onMapUrlChange={(url) => setForm((f) => ({ ...f, mapUrl: url || null }))}
+                  onContactLineChange={(value) => setForm((f) => ({ ...f, contactLine: value || null }))}
+                  disabled={busy}
+                />
+              ) : (
+                <MassagePortalMediaSettings
+                  bannerUrl={form.portalBannerUrl ?? ""}
+                  gallery={form.portalGallery ?? []}
+                  facebookUrl={form.facebookUrl ?? ""}
+                  mapUrl={form.mapUrl ?? ""}
+                  contactLine={form.contactLine ?? ""}
+                  onBannerUrlChange={(url) => setForm((f) => ({ ...f, portalBannerUrl: url || null }))}
+                  onGalleryChange={(urls) => setForm((f) => ({ ...f, portalGallery: urls }))}
+                  onFacebookUrlChange={(url) => setForm((f) => ({ ...f, facebookUrl: url || null }))}
+                  onMapUrlChange={(url) => setForm((f) => ({ ...f, mapUrl: url || null }))}
+                  onContactLineChange={(value) => setForm((f) => ({ ...f, contactLine: value || null }))}
+                  disabled={busy}
+                />
+              )}
             </div>
           ) : null}
 
-          {tab === "hours" && isBarber ? (
+          {tab === "hours" && supportsPortalWebsite ? (
             <div
               id="barber-settings-panel-hours"
               role="tabpanel"
               aria-labelledby="barber-settings-tab-hours"
-              className="space-y-3 rounded-2xl border border-[#ecebff] bg-[#faf9ff]/80 p-3"
+              className="space-y-4"
             >
-              <p className="text-xs font-bold text-[#4d47b6]">เวลาเปิด–ปิด · สล็อตจอง (เวลาไทย)</p>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-3 rounded-2xl border border-[#ecebff] bg-[#faf9ff]/80 p-3">
+                <p className="text-xs font-bold text-[#4d47b6]">เวลาเปิด–ปิด · สล็อตจอง (เวลาไทย)</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block space-y-1">
+                    <span className="text-xs font-bold text-[#4d47b6]">เปิด</span>
+                    <AppTime24Input
+                      value={form.openTime}
+                      onChange={(openTime) => setForm((f) => ({ ...f, openTime }))}
+                      disabled={busy}
+                      className="mt-1"
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs font-bold text-[#4d47b6]">ปิด</span>
+                    <AppTime24Input
+                      value={form.closeTime}
+                      onChange={(closeTime) => setForm((f) => ({ ...f, closeTime }))}
+                      disabled={busy}
+                      className="mt-1"
+                    />
+                  </label>
+                </div>
                 <label className="block space-y-1">
-                  <span className="text-xs font-bold text-[#4d47b6]">เปิด</span>
-                  <AppTime24Input
-                    value={form.openTime}
-                    onChange={(openTime) => setForm((f) => ({ ...f, openTime }))}
+                  <span className="text-xs font-bold text-[#4d47b6]">ความยาวสล็อต (นาที)</span>
+                  <select
+                    className="app-input mt-1 w-full rounded-xl"
+                    value={form.slotMinutes}
                     disabled={busy}
-                    className="mt-1"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-xs font-bold text-[#4d47b6]">ปิด</span>
-                  <AppTime24Input
-                    value={form.closeTime}
-                    onChange={(closeTime) => setForm((f) => ({ ...f, closeTime }))}
-                    disabled={busy}
-                    className="mt-1"
-                  />
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        slotMinutes: isMassage
+                          ? massageNormalizeSlotMinutes(Number(e.target.value))
+                          : barberNormalizeSlotMinutes(Number(e.target.value)),
+                      }))
+                    }
+                  >
+                    <option value={30}>30 นาที</option>
+                    <option value={60}>60 นาที</option>
+                  </select>
                 </label>
               </div>
-              <label className="block space-y-1">
-                <span className="text-xs font-bold text-[#4d47b6]">ความยาวสล็อต (นาที)</span>
-                <select
-                  className="app-input mt-1 w-full rounded-xl"
-                  value={form.slotMinutes}
-                  disabled={busy}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      slotMinutes: barberNormalizeSlotMinutes(Number(e.target.value)),
-                    }))
-                  }
-                >
-                  <option value={30}>30 นาที</option>
-                  <option value={60}>60 นาที</option>
-                </select>
-              </label>
+              {isMassage && hoursPanel ? <div className="min-w-0">{hoursPanel}</div> : null}
             </div>
           ) : null}
 
-          {tab === "hours" && !isBarber && hoursPanel ? (
+          {tab === "hours" && !supportsPortalWebsite && hoursPanel ? (
             <div
               id="barber-settings-panel-hours"
               role="tabpanel"
