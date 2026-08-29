@@ -123,6 +123,97 @@ export async function getVillageInvoiceSheetDto(
   };
 }
 
+/** ใบแจ้งหนี้ทุกบิลค้างของเดือนที่ระบุ (เรียงตามบ้าน) — สำหรับพิมพ์พร้อมกัน */
+export async function listVillageInvoiceSheetsForYearMonth(
+  ownerUserId: string,
+  yearMonth: string,
+  baseUrl: string,
+): Promise<VillageInvoiceSheetDto[]> {
+  if (!/^\d{4}-\d{2}$/.test(yearMonth)) return [];
+
+  const scope = await getVillageDataScope(ownerUserId);
+  const [profile, rows] = await Promise.all([
+    prisma.villageProfile.findUnique({
+      where: {
+        ownerUserId_trialSessionId: { ownerUserId, trialSessionId: scope.trialSessionId },
+      },
+    }),
+    prisma.villageCommonFeeRow.findMany({
+      where: {
+        ownerUserId,
+        trialSessionId: scope.trialSessionId,
+        yearMonth,
+        ...villageUnpaidFeeRowStatusFilter(),
+      },
+      include: {
+        house: {
+          include: {
+            residents: {
+              where: { isActive: true },
+              orderBy: [{ isPrimary: "desc" }, { id: "asc" }],
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: [{ house: { sortOrder: "asc" } }, { id: "asc" }],
+    }),
+  ]);
+
+  const villageName = profile?.displayName?.trim() || VILLAGE_INVOICE_FALLBACK_NAME;
+  const address = profile?.address?.trim() || null;
+  const contactPhone = profile?.contactPhone?.trim() || null;
+  const paymentChannelsNote = profile?.paymentChannelsNote?.trim() || null;
+  const bankName = profile?.bankName?.trim() || null;
+  const bankAccountNumber = profile?.bankAccountNumber?.trim() || null;
+  const bankAccountName = profile?.bankAccountName?.trim() || null;
+  const promptPayPhone = profile?.promptPayPhone ?? null;
+  const canPromptPay = Boolean(promptPayPhone && promptPayPhone.replace(/\D/g, "").length >= 9);
+
+  const out: VillageInvoiceSheetDto[] = [];
+  for (const row of rows) {
+    const amount = row.amountDue - row.amountPaid;
+    if (amount <= 0) continue;
+
+    const token = await ensureFeeRowPublicProofToken(row.id);
+    const uploadPagePath = `/pay/village/${token}`;
+    const uploadPageAbs = absoluteUploadUrl(baseUrl, uploadPagePath);
+    const slipUploadQrDataUrl =
+      uploadPageAbs.startsWith("http://") || uploadPageAbs.startsWith("https://")
+        ? await buildUrlQrDataUrl(uploadPageAbs, 108)
+        : null;
+    const promptPayQrDataUrl = canPromptPay
+      ? await buildPromptPayQrDataUrl(promptPayPhone!, amount)
+      : null;
+
+    const primaryResident = row.house.residents[0] ?? null;
+    out.push({
+      feeRowId: row.id,
+      houseId: row.houseId,
+      villageName,
+      address,
+      contactPhone,
+      houseNo: row.house.houseNo,
+      residentName: row.house.ownerName?.trim() || primaryResident?.name?.trim() || "—",
+      residentPhone: row.house.phone?.trim() || primaryResident?.phone?.trim() || "—",
+      periodMonth: row.yearMonth,
+      amountDue: row.amountDue,
+      amountPaid: row.amountPaid,
+      amount,
+      paymentChannelsNote,
+      bankName,
+      bankAccountNumber,
+      bankAccountName,
+      promptPayQrDataUrl,
+      slipUploadQrDataUrl,
+      uploadPagePath,
+      uploadPageAbs,
+    });
+  }
+
+  return out;
+}
+
 export type VillagePublicInvoiceDto = {
   villageName: string;
   contactPhone: string | null;

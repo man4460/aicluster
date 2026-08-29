@@ -5,6 +5,7 @@ import {
 import { downloadPosTableStaticHtmlAsA4Pdf } from "@/systems/building-pos/pos-table-bill-pdf-capture";
 import {
   buildVillageInvoiceInnerHtml,
+  buildVillageInvoicesBatchInnerHtml,
   type VillageInvoicePrintPayload,
 } from "@/systems/village/village-invoice-print-html";
 
@@ -22,6 +23,17 @@ export function safeVillageInvoicePdfFileName(houseNo: string, periodMonth: stri
 export function printVillageInvoice(sheet: VillageInvoicePrintPayload): boolean {
   const inner = buildVillageInvoiceInnerHtml(sheet);
   return openPosTableBillPrintWindow("A4", inner, invoiceDocTitle(sheet), VILLAGE_A4_PAGE);
+}
+
+/** พิมพ์ใบแจ้งหนี้หลายหลังในเอกสารเดียว (หน้าละใบ) */
+export function printVillageInvoicesBatch(sheets: VillageInvoicePrintPayload[]): boolean {
+  if (sheets.length === 0) return false;
+  const inner = buildVillageInvoicesBatchInnerHtml(sheets);
+  const title =
+    sheets.length === 1
+      ? invoiceDocTitle(sheets[0]!)
+      : `ใบแจ้งหนี้ค่าส่วนกลาง ${sheets.length} หลัง · ${sheets[0]?.periodMonth ?? ""}`;
+  return openPosTableBillPrintWindow("A4", inner, title, VILLAGE_A4_PAGE);
 }
 
 /** ดาวน์โหลด PDF จาก HTML สีแบบ hex (เลี่ยง oklab ของ Tailwind) */

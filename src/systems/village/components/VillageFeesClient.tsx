@@ -8,11 +8,14 @@ import { VillageInvoiceSheetModal } from "@/systems/village/components/VillageIn
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { AppImageLightbox, useAppImageLightbox } from "@/components/app-templates";
 import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
+import type { VillageInvoiceSheetDto } from "@/lib/village/village-invoice-sheet";
 import {
   createVillageSessionApiRepository,
   villageFeeCycleLabelTh,
   type VillageFeeRow,
 } from "@/systems/village/village-service";
+import { printVillageInvoicesBatch } from "@/systems/village/village-invoice-print";
+import type { VillageInvoicePrintPayload } from "@/systems/village/village-invoice-print-html";
 import { villageBtnPrimary, villageBtnSecondary, villageDivider, villageField, villageGlassCard } from "@/systems/village/village-ui";
 
 type FeeStatus = "PENDING" | "PARTIAL" | "PAID" | "WAIVED";
@@ -101,6 +104,37 @@ function IconInvoice({ className }: { className?: string }) {
       <path strokeLinecap="round" d="M9.75 7.5h4.5M9.75 10.5h4.5M9.75 13.5h3" />
     </svg>
   );
+}
+
+function IconPrinter({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.65} aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6.72 13.88V21h10.56v-7.12M6.72 17H4.5A1.5 1.5 0 0 1 3 15.5v-6A1.5 1.5 0 0 1 4.5 8h15A1.5 1.5 0 0 1 21 9.5v6a1.5 1.5 0 0 1-1.5 1.5h-2.22M7.5 8V3.75A.75.75 0 0 1 8.25 3h7.5a.75.75 0 0 1 .75.75V8"
+      />
+    </svg>
+  );
+}
+
+function sheetToPrintPayload(sheet: VillageInvoiceSheetDto): VillageInvoicePrintPayload {
+  return {
+    villageName: sheet.villageName,
+    address: sheet.address,
+    contactPhone: sheet.contactPhone,
+    houseNo: sheet.houseNo,
+    residentName: sheet.residentName,
+    residentPhone: sheet.residentPhone,
+    periodMonth: sheet.periodMonth,
+    amount: sheet.amount,
+    paymentChannelsNote: sheet.paymentChannelsNote,
+    bankName: sheet.bankName,
+    bankAccountNumber: sheet.bankAccountNumber,
+    bankAccountName: sheet.bankAccountName,
+    promptPayQrDataUrl: sheet.promptPayQrDataUrl,
+    slipUploadQrDataUrl: sheet.slipUploadQrDataUrl,
+  };
 }
 
 function feeRowInvoiceAvailable(r: VillageFeeRow): boolean {
@@ -423,6 +457,7 @@ export function VillageFeesClient({ initialYm, baseUrl }: { initialYm: string; b
   const [loading, setLoading] = useState(true);
   const [editRow, setEditRow] = useState<VillageFeeRow | null>(null);
   const [invoiceRow, setInvoiceRow] = useState<VillageFeeRow | null>(null);
+  const [printAllBusy, setPrintAllBusy] = useState(false);
 
   const load = useCallback(async () => {
     setErr(null);
@@ -447,6 +482,37 @@ export function VillageFeesClient({ initialYm, baseUrl }: { initialYm: string; b
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function printAllInvoices() {
+    setPrintAllBusy(true);
+    try {
+      const res = await fetch(
+        `/api/village/session/fee-rows/invoice-sheets?year_month=${encodeURIComponent(ym)}`,
+        { credentials: "include" },
+      );
+      const j = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        sheets?: VillageInvoiceSheetDto[];
+      };
+      if (!res.ok) throw new Error(j.error || "โหลดใบแจ้งหนี้ไม่สำเร็จ");
+      const sheets = j.sheets ?? [];
+      if (sheets.length === 0) {
+        window.alert(`ไม่มีบิลค้างชำระในเดือน ${ym}`);
+        return;
+      }
+      const ok = window.confirm(
+        `พิมพ์ใบแจ้งหนี้ ${sheets.length} หลัง ของเดือน ${ym} พร้อมกัน?\n(แต่ละบ้านขึ้นหน้าใหม่)`,
+      );
+      if (!ok) return;
+      if (!printVillageInvoicesBatch(sheets.map(sheetToPrintPayload))) {
+        window.alert("เบราว์เซอร์บล็อกหน้าต่างพิมพ์ — อนุญาต popup แล้วลองใหม่");
+      }
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "พิมพ์ไม่สำเร็จ");
+    } finally {
+      setPrintAllBusy(false);
+    }
+  }
 
   const filterPill = (active: boolean) =>
     cn(
@@ -557,11 +623,31 @@ export function VillageFeesClient({ initialYm, baseUrl }: { initialYm: string; b
 
         <div className={cn("mt-4 border-t pt-3.5", villageDivider)}>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-black tracking-tight text-[#1e1b4b]">รายการบิล · ใบแจ้งหนี้ · สลิป</h3>
-            <p className="text-xs text-[#66638c]">
-              เดือน <span className="font-mono font-semibold text-slate-700">{ym}</span> ·{" "}
-              <span className="tabular-nums">{rows.length}</span> รายการ
-            </p>
+            <div className="min-w-0">
+              <h3 className="text-sm font-black tracking-tight text-[#1e1b4b]">รายการบิล · ใบแจ้งหนี้ · สลิป</h3>
+              <p className="mt-0.5 text-xs text-[#66638c]">
+                เดือน <span className="font-mono font-semibold text-slate-700">{ym}</span> ·{" "}
+                <span className="tabular-nums">{rows.length}</span> รายการ
+              </p>
+            </div>
+            <button
+              type="button"
+              className={cn(
+                villageBtnSecondary,
+                "inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 px-3",
+                printAllBusy && "opacity-70",
+              )}
+              onClick={() => void printAllInvoices()}
+              disabled={printAllBusy || loading}
+              aria-busy={printAllBusy}
+              aria-label="พิมพ์ใบแจ้งหนี้ทั้งหมดพร้อมกัน"
+              title="พิมพ์ใบแจ้งหนี้ทุกบิลค้างของเดือนนี้"
+            >
+              <IconPrinter className={cn("h-4 w-4 shrink-0", printAllBusy && "animate-pulse")} aria-hidden />
+              <span className="text-[11px] font-bold sm:text-xs">
+                {printAllBusy ? "กำลังเตรียม…" : "พิมพ์ใบแจ้งหนี้ทั้งหมด"}
+              </span>
+            </button>
           </div>
           {err ? <p className="mt-2 text-sm text-rose-600">{err}</p> : null}
           {loading ? (

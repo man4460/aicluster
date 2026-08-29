@@ -140,3 +140,15 @@ ${stepsBlock}
 ${footer}
 `;
 }
+
+/** รวมหลายใบ — แต่ละใบขึ้นหน้าใหม่ตอนพิมพ์ */
+export function buildVillageInvoicesBatchInnerHtml(sheets: VillageInvoicePrintPayload[]): string {
+  if (sheets.length === 0) return "";
+  return sheets
+    .map((sheet, index) => {
+      const breakAfter =
+        index < sheets.length - 1 ? "page-break-after:always;break-after:page;" : "";
+      return `<div class="village-invoice-page" style="${breakAfter}">${buildVillageInvoiceInnerHtml(sheet)}</div>`;
+    })
+    .join("\n");
+}
