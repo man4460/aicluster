@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { VillageEmptyDashed, VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
 import { VillageHousingQuickTabs } from "@/systems/village/components/VillageHousingQuickTabs";
+import { VillageInvoiceSheetModal } from "@/systems/village/components/VillageInvoiceSheetModal";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import {
   createVillageSessionApiRepository,
@@ -99,6 +100,23 @@ function IconPlus({ className }: { className?: string }) {
   );
 }
 
+function IconInvoice({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.65} aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8.25 3.75h7.5A1.5 1.5 0 0 1 17.25 5.25v13.5l-2.25-1.5-2.25 1.5-2.25-1.5-2.25 1.5V5.25a1.5 1.5 0 0 1 1.5-1.5Z"
+      />
+      <path strokeLinecap="round" d="M9.75 7.5h4.5M9.75 10.5h4.5M9.75 13.5h3" />
+    </svg>
+  );
+}
+
+function feeRowInvoiceAvailable(r: VillageFeeRow): boolean {
+  return (r.status === "PENDING" || r.status === "PARTIAL") && r.amount_due - r.amount_paid > 0;
+}
+
 function feeStatusBadgeClass(status: string) {
   switch (status) {
     case "PAID":
@@ -126,11 +144,13 @@ function VillageFeeRowCard({
   r,
   api,
   onEdit,
+  onInvoice,
   onReload,
 }: {
   r: VillageFeeRow;
   api: ReturnType<typeof createVillageSessionApiRepository>;
   onEdit: () => void;
+  onInvoice: () => void;
   onReload: () => void;
 }) {
   const pct = feeCollectionPercent(r);
@@ -250,6 +270,19 @@ function VillageFeeRowCard({
           ยกเว้น
         </button>
       </div>
+
+      {feeRowInvoiceAvailable(r) ? (
+        <button
+          type="button"
+          className="mt-2 inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl border border-[#4d47b6]/25 bg-[#ecebff] px-3 py-2 text-[11px] font-bold text-[#3730a3] shadow-sm transition active:scale-[0.98] hover:bg-[#e2e0ff] sm:min-h-[40px]"
+          onClick={onInvoice}
+          aria-label={`เปิดใบแจ้งหนี้ บ้าน ${r.house_no} งวด ${r.year_month}`}
+          title="ใบแจ้งหนี้ · QR พร้อมเพย์ · ลิงก์แนบสลิป"
+        >
+          <IconInvoice className="h-4 w-4" />
+          ใบแจ้งหนี้
+        </button>
+      ) : null}
     </article>
   );
 }
@@ -362,6 +395,7 @@ export function VillageFeesClient({ initialYm }: { initialYm: string }) {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [editRow, setEditRow] = useState<VillageFeeRow | null>(null);
+  const [invoiceRow, setInvoiceRow] = useState<VillageFeeRow | null>(null);
 
   const load = useCallback(async () => {
     setErr(null);
@@ -507,6 +541,7 @@ export function VillageFeesClient({ initialYm }: { initialYm: string }) {
                     r={r}
                     api={api}
                     onEdit={() => setEditRow(r)}
+                    onInvoice={() => setInvoiceRow(r)}
                     onReload={() => void load()}
                   />
                 </li>
@@ -524,6 +559,13 @@ export function VillageFeesClient({ initialYm }: { initialYm: string }) {
             setEditRow(null);
             void load();
           }}
+        />
+      ) : null}
+      {invoiceRow ? (
+        <VillageInvoiceSheetModal
+          feeRowId={invoiceRow.id}
+          houseNo={invoiceRow.house_no}
+          onClose={() => setInvoiceRow(null)}
         />
       ) : null}
     </VillagePageStack>

@@ -2825,6 +2825,8 @@ model VillageCommonFeeRow {
   status         VillageFeeRowStatus  @default(PENDING) @map("status")
   note           String?              @db.VarChar(500)
   paidAt         DateTime?            @map("paid_at")
+  /** โทเคนลิงก์อัปโหลดสลิปสาธารณะ (ใบแจ้งหนี้) */
+  publicProofToken String?            @unique @map("public_proof_token") @db.VarChar(64)
   createdAt      DateTime             @default(now()) @map("created_at")
   updatedAt      DateTime             @updatedAt @map("updated_at")
   slips          VillageSlipSubmission[]
