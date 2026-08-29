@@ -5,6 +5,7 @@ import { requireSession } from "@/lib/api-auth";
 import { villageOwnerFromAuth } from "@/lib/village/api-owner";
 import { getVillageDataScope } from "@/lib/trial/module-scopes";
 import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
+import { villageNormalizePortalGallery } from "@/systems/village/lib/portal-media";
 
 const paperSizes = ["SLIP_58", "SLIP_80", "A4"] as const;
 
@@ -22,6 +23,13 @@ const putSchema = z.object({
   default_monthly_fee: z.number().int().min(0).max(9_999_999).optional(),
   due_day_of_month: z.number().int().min(1).max(28).optional(),
   auto_generate_fees: z.boolean().optional(),
+  tagline: z.string().max(300).optional().nullable(),
+  logo_url: z.string().max(512).optional().nullable(),
+  contact_line: z.string().max(120).optional().nullable(),
+  facebook_url: z.string().max(512).optional().nullable(),
+  map_url: z.string().max(512).optional().nullable(),
+  portal_banner_url: z.string().max(512).optional().nullable(),
+  portal_gallery: z.array(z.string()).optional(),
 });
 
 function mapProfile(row: {
@@ -39,6 +47,13 @@ function mapProfile(row: {
   defaultMonthlyFee: number;
   dueDayOfMonth: number;
   autoGenerateFees: boolean;
+  tagline: string | null;
+  logoUrl: string | null;
+  contactLine: string | null;
+  facebookUrl: string | null;
+  mapUrl: string | null;
+  portalBannerUrl: string | null;
+  portalGalleryJson: unknown;
 }) {
   return {
     id: row.id,
@@ -55,6 +70,13 @@ function mapProfile(row: {
     default_monthly_fee: row.defaultMonthlyFee,
     due_day_of_month: row.dueDayOfMonth,
     auto_generate_fees: row.autoGenerateFees,
+    tagline: row.tagline,
+    logo_url: row.logoUrl,
+    contact_line: row.contactLine,
+    facebook_url: row.facebookUrl,
+    map_url: row.mapUrl,
+    portal_banner_url: row.portalBannerUrl,
+    portal_gallery: villageNormalizePortalGallery(row.portalGalleryJson),
   };
 }
 
@@ -133,6 +155,16 @@ export async function PUT(req: Request) {
       defaultMonthlyFee: parsed.data.default_monthly_fee ?? 0,
       dueDayOfMonth: parsed.data.due_day_of_month ?? 5,
       autoGenerateFees: parsed.data.auto_generate_fees ?? true,
+      tagline: parsed.data.tagline?.trim() || null,
+      logoUrl: parsed.data.logo_url?.trim() || null,
+      contactLine: parsed.data.contact_line?.trim() || null,
+      facebookUrl: parsed.data.facebook_url?.trim() || null,
+      mapUrl: parsed.data.map_url?.trim() || null,
+      portalBannerUrl: parsed.data.portal_banner_url?.trim() || null,
+      portalGalleryJson:
+        parsed.data.portal_gallery !== undefined
+          ? villageNormalizePortalGallery(parsed.data.portal_gallery)
+          : undefined,
     },
     update: {
       ...(parsed.data.display_name !== undefined ? { displayName: parsed.data.display_name?.trim() || null } : {}),
@@ -156,6 +188,17 @@ export async function PUT(req: Request) {
       ...(parsed.data.default_monthly_fee !== undefined ? { defaultMonthlyFee: parsed.data.default_monthly_fee } : {}),
       ...(parsed.data.due_day_of_month !== undefined ? { dueDayOfMonth: parsed.data.due_day_of_month } : {}),
       ...(parsed.data.auto_generate_fees !== undefined ? { autoGenerateFees: parsed.data.auto_generate_fees } : {}),
+      ...(parsed.data.tagline !== undefined ? { tagline: parsed.data.tagline?.trim() || null } : {}),
+      ...(parsed.data.logo_url !== undefined ? { logoUrl: parsed.data.logo_url?.trim() || null } : {}),
+      ...(parsed.data.contact_line !== undefined ? { contactLine: parsed.data.contact_line?.trim() || null } : {}),
+      ...(parsed.data.facebook_url !== undefined ? { facebookUrl: parsed.data.facebook_url?.trim() || null } : {}),
+      ...(parsed.data.map_url !== undefined ? { mapUrl: parsed.data.map_url?.trim() || null } : {}),
+      ...(parsed.data.portal_banner_url !== undefined
+        ? { portalBannerUrl: parsed.data.portal_banner_url?.trim() || null }
+        : {}),
+      ...(parsed.data.portal_gallery !== undefined
+        ? { portalGalleryJson: villageNormalizePortalGallery(parsed.data.portal_gallery) }
+        : {}),
     },
   });
 

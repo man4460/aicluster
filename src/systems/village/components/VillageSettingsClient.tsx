@@ -3,11 +3,17 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  AppShopLogoField,
   AppSlipPaperSizeSettingsField,
+  appTemplateOutlineButtonClass,
   type AppSlipPaperSize,
 } from "@/components/app-templates";
+import { cn } from "@/lib/cn";
+import { villagePublicPortalUrl } from "@/lib/village/public-url";
 import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
+import { VillageGuestPortalHubClient } from "@/systems/village/components/VillageGuestPortalHubClient";
 import { VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
+import { VillagePortalMediaSettings } from "@/systems/village/components/VillagePortalMediaSettings";
 import { VillageSettingsQuickTabs } from "@/systems/village/components/VillageSettingsQuickTabs";
 import { createVillageSessionApiRepository, type VillageProfile } from "@/systems/village/village-service";
 import { villageBtnPrimary, villageDivider, villageField } from "@/systems/village/village-ui";
@@ -16,14 +22,15 @@ import {
   villagePrimaryTabPillClass,
   villagePrimaryTabShellClass,
 } from "@/systems/village/village-ui-tokens";
-import { cn } from "@/lib/cn";
 
-type SettingsTab = "basic" | "fees" | "payment";
+type SettingsTab = "basic" | "fees" | "payment" | "portal" | "links";
 
 const VILLAGE_SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
   { id: "basic", label: "ตั้งค่าพื้นฐาน" },
   { id: "fees", label: "ค่าส่วนกลาง" },
   { id: "payment", label: "ชำระเงิน" },
+  { id: "portal", label: "ตั้งค่าเว็ปลิงค์ลูกค้า" },
+  { id: "links", label: "ลิงก์ / QR" },
 ];
 
 const SETTINGS_TAB_KEYS = new Set<string>(VILLAGE_SETTINGS_TABS.map((t) => t.id));
@@ -56,6 +63,15 @@ function IconWallet({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} aria-hidden>
       <path d="M4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7z" strokeLinejoin="round" />
       <path d="M4 10h16v4H4M16 14h2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconGlobe({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18" strokeLinecap="round" />
     </svg>
   );
 }
@@ -106,20 +122,105 @@ function SettingsBlock({ icon, tone, title, hint, children }: SettingsBlockProps
   );
 }
 
-function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
+function VillagePortalLinkPanel({
+  ownerId,
+  trialSessionId,
+}: {
+  ownerId: string;
+  trialSessionId: string;
+}) {
+  const [copyMsg, setCopyMsg] = useState<string | null>(null);
+  const portalPath = useMemo(
+    () => villagePublicPortalUrl("", ownerId, trialSessionId),
+    [ownerId, trialSessionId],
+  );
+
+  const absoluteUrl = (path: string) => {
+    if (typeof window === "undefined") return path;
+    return `${window.location.origin}${path.startsWith("/") ? path : `/${path}`}`;
+  };
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(absoluteUrl(portalPath));
+      setCopyMsg("คัดลอกลิงก์เว็บโครงการแล้ว");
+    } catch {
+      setCopyMsg("คัดลอกลิงก์ไม่สำเร็จ");
+    }
+  };
+
+  return (
+    <div className="space-y-4 text-left">
+      <p className="text-sm text-[#66638c]">
+        ลิงก์สาธารณะให้ลูกบ้าน / ผู้สนใจดูบ้านในโครงการ · ติดต่อนิติ · QR โปสเตอร์ด้านล่าง
+      </p>
+      {copyMsg ? <p className="text-sm font-semibold text-emerald-700">{copyMsg}</p> : null}
+      <div className="space-y-2 rounded-[1.25rem] border border-white/60 bg-white/55 p-3 sm:p-4">
+        <p className="text-xs font-bold text-[#4d47b6]">เว็บโครงการ (ลูกค้า)</p>
+        <p className="break-all text-sm font-semibold text-[#1e1b4b]">{portalPath}</p>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={portalPath}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(appTemplateOutlineButtonClass, "min-h-10 rounded-xl px-4 text-sm font-bold")}
+          >
+            เปิดลิงก์
+          </a>
+          <button
+            type="button"
+            onClick={() => void copy()}
+            className="app-btn-primary min-h-10 rounded-xl px-4 text-sm font-bold"
+          >
+            คัดลอกลิงก์
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type SettingsProps = {
+  initial: VillageProfile;
+  ownerId: string;
+  trialSessionId: string;
+  baseUrl: string;
+  villageLabel: string;
+  logoUrl?: string | null;
+  trialExportBlocked?: boolean;
+};
+
+function VillageSettingsForm({
+  initial,
+  ownerId,
+  trialSessionId,
+  baseUrl,
+  villageLabel,
+  logoUrl = null,
+  trialExportBlocked = false,
+}: SettingsProps) {
   const api = useMemo(() => createVillageSessionApiRepository(), []);
   const router = useRouter();
   const pathname = usePathname() ?? "/dashboard/village/settings";
   const searchParams = useSearchParams();
-  const [p, setP] = useState(profile);
+  const [p, setP] = useState(initial);
   const [err, setErr] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<SettingsTab>(() => parseSettingsTab(searchParams.get("tab")));
   const [defaultPaperSize, setDefaultPaperSize] = useState<AppSlipPaperSize>(() =>
-    normalizeModuleSlipPaperSize(profile.default_paper_size),
+    normalizeModuleSlipPaperSize(initial.default_paper_size),
   );
-  const [taxId, setTaxId] = useState(profile.tax_id ?? "");
-  const [autoGenerateFees, setAutoGenerateFees] = useState(profile.auto_generate_fees ?? true);
+  const [taxId, setTaxId] = useState(initial.tax_id ?? "");
+  const [autoGenerateFees, setAutoGenerateFees] = useState(initial.auto_generate_fees ?? true);
+  const [tagline, setTagline] = useState(initial.tagline ?? "");
+  const [logoUrlState, setLogoUrlState] = useState(initial.logo_url);
+  const [contactLine, setContactLine] = useState(initial.contact_line ?? "");
+  const [facebookUrl, setFacebookUrl] = useState(initial.facebook_url ?? "");
+  const [mapUrl, setMapUrl] = useState(initial.map_url ?? "");
+  const [portalBannerUrl, setPortalBannerUrl] = useState(initial.portal_banner_url ?? "");
+  const [portalGallery, setPortalGallery] = useState<string[]>(initial.portal_gallery ?? []);
+  const [addressDraft, setAddressDraft] = useState(initial.address ?? "");
 
   useEffect(() => {
     setTab(parseSettingsTab(searchParams.get("tab")));
@@ -129,7 +230,27 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
     setDefaultPaperSize(normalizeModuleSlipPaperSize(p.default_paper_size));
     setTaxId(p.tax_id ?? "");
     setAutoGenerateFees(p.auto_generate_fees ?? true);
-  }, [p.default_paper_size, p.tax_id, p.auto_generate_fees]);
+    setTagline(p.tagline ?? "");
+    setLogoUrlState(p.logo_url);
+    setContactLine(p.contact_line ?? "");
+    setFacebookUrl(p.facebook_url ?? "");
+    setMapUrl(p.map_url ?? "");
+    setPortalBannerUrl(p.portal_banner_url ?? "");
+    setPortalGallery(p.portal_gallery ?? []);
+    setAddressDraft(p.address ?? "");
+  }, [
+    p.default_paper_size,
+    p.tax_id,
+    p.auto_generate_fees,
+    p.tagline,
+    p.logo_url,
+    p.contact_line,
+    p.facebook_url,
+    p.map_url,
+    p.portal_banner_url,
+    p.portal_gallery,
+    p.address,
+  ]);
 
   const selectTab = useCallback(
     (next: SettingsTab) => {
@@ -142,6 +263,10 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
     },
     [pathname, router, searchParams],
   );
+
+  const applyProfile = (profile: VillageProfile) => {
+    setP(profile);
+  };
 
   return (
     <VillagePageStack>
@@ -156,7 +281,7 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
 
       <VillagePanelCard
         title="ตั้งค่าโครงการ"
-        description="ข้อมูลนิติ ค่าส่วนกลางเริ่มต้น และช่องทางชำระเงิน — รอบเรียกเก็บต่อหลังตั้งที่หน้าลูกบ้าน"
+        description="ข้อมูลนิติ · ค่าส่วนกลาง · ชำระเงิน · เว็บลูกค้า · ลิงก์ / QR"
         action={<VillageSettingsQuickTabs />}
       >
         <div className="mt-1 w-full sm:hidden">
@@ -203,13 +328,15 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
           className="mt-4 w-full"
           onSubmit={async (e) => {
             e.preventDefault();
+            if (tab === "links") return;
             setErr(null);
             setSaved(false);
+            setBusy(true);
             const fd = new FormData(e.currentTarget);
             try {
               const r = await api.putProfile({
                 display_name: (fd.get("display_name") as string) || null,
-                address: (fd.get("address") as string) || null,
+                address: addressDraft.trim() || null,
                 contact_phone: (fd.get("contact_phone") as string) || null,
                 prompt_pay_phone: (fd.get("prompt_pay_phone") as string) || null,
                 payment_channels_note: (fd.get("payment_channels_note") as string) || null,
@@ -221,11 +348,20 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
                 default_monthly_fee: Number.parseInt(String(fd.get("default_monthly_fee")), 10) || 0,
                 due_day_of_month: Number.parseInt(String(fd.get("due_day_of_month")), 10) || 5,
                 auto_generate_fees: autoGenerateFees,
+                tagline: tagline.trim() || null,
+                logo_url: logoUrlState,
+                contact_line: contactLine.trim() || null,
+                facebook_url: facebookUrl.trim() || null,
+                map_url: mapUrl.trim() || null,
+                portal_banner_url: portalBannerUrl.trim() || null,
+                portal_gallery: portalGallery,
               });
-              setP(r.profile);
+              applyProfile(r.profile);
               setSaved(true);
             } catch (er) {
               setErr(er instanceof Error ? er.message : "บันทึกไม่สำเร็จ");
+            } finally {
+              setBusy(false);
             }
           }}
         >
@@ -241,6 +377,12 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
               title="ข้อมูลโครงการ"
               hint="ชื่อ ที่อยู่ และเบอร์ติดต่อนิติ"
             >
+              <AppShopLogoField
+                logoUrl={logoUrlState}
+                fallbackLabel={p.display_name ?? "หมู่บ้าน"}
+                uploadUrl="/api/village/session/profile/logo"
+                onLogoUrlChange={setLogoUrlState}
+              />
               <label className="block">
                 <FieldLabel>ชื่อโครงการ</FieldLabel>
                 <input
@@ -252,12 +394,22 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
                 />
               </label>
               <label className="block">
+                <FieldLabel>คำโปรย (เว็บลูกค้า)</FieldLabel>
+                <input
+                  id="tagline"
+                  value={tagline}
+                  onChange={(e) => setTagline(e.target.value)}
+                  className={villageField}
+                  placeholder="เช่น หมู่บ้านคุณภาพ · สงบ · ใกล้เมือง"
+                />
+              </label>
+              <label className="block">
                 <FieldLabel>ที่อยู่</FieldLabel>
                 <textarea
                   id="address"
                   name="address"
-                  key={`ad-${p.address ?? ""}`}
-                  defaultValue={p.address ?? ""}
+                  value={addressDraft}
+                  onChange={(e) => setAddressDraft(e.target.value)}
                   rows={3}
                   className={cn(villageField, "min-h-[5rem] resize-y")}
                 />
@@ -427,52 +579,79 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
             </SettingsBlock>
           </div>
 
+          <div
+            id="village-settings-panel-portal"
+            role="tabpanel"
+            aria-labelledby="village-settings-tab-portal"
+            className={cn(tab === "portal" ? "block" : "hidden")}
+          >
+            <SettingsBlock
+              icon={<IconGlobe className="h-5 w-5 text-violet-700" />}
+              tone="bg-violet-100/90"
+              title="เว็ปลิงค์ลูกค้า"
+              hint="แบนเนอร์ · แกลเลอรี · ที่อยู่ · โซเชียล แสดงบนหน้าสาธารณะ"
+            >
+              <VillagePortalMediaSettings
+                bannerUrl={portalBannerUrl}
+                gallery={portalGallery}
+                address={addressDraft}
+                contactLine={contactLine}
+                facebookUrl={facebookUrl}
+                mapUrl={mapUrl}
+                onBannerUrlChange={setPortalBannerUrl}
+                onGalleryChange={setPortalGallery}
+                onAddressChange={setAddressDraft}
+                onContactLineChange={setContactLine}
+                onFacebookUrlChange={setFacebookUrl}
+                onMapUrlChange={setMapUrl}
+                disabled={busy}
+              />
+            </SettingsBlock>
+          </div>
+
+          {tab === "links" ? (
+            <div
+              id="village-settings-panel-links"
+              role="tabpanel"
+              aria-labelledby="village-settings-tab-links"
+              className="space-y-4 text-left"
+            >
+              <VillagePortalLinkPanel ownerId={ownerId} trialSessionId={trialSessionId} />
+              <VillageGuestPortalHubClient
+                ownerId={ownerId}
+                trialSessionId={trialSessionId}
+                baseUrl={baseUrl}
+                villageLabel={villageLabel || p.display_name || "หมู่บ้าน"}
+                logoUrl={logoUrlState ?? logoUrl}
+                trialExportBlocked={trialExportBlocked}
+              />
+            </div>
+          ) : null}
+
           {err ? <p className="mt-3 text-sm text-rose-600">{err}</p> : null}
 
-          <div className={cn("mt-5 border-t pt-4", villageDivider)}>
-            <button
-              type="submit"
-              className={cn(villageBtnPrimary, "flex w-full min-h-[48px] items-center justify-center gap-2 sm:w-auto sm:min-w-[11rem]")}
-            >
-              <IconSave className="h-4 w-4 text-white/90" />
-              บันทึก
-            </button>
-          </div>
+          {tab !== "links" ? (
+            <div className={cn("mt-5 border-t pt-4", villageDivider)}>
+              <button
+                type="submit"
+                disabled={busy}
+                className={cn(
+                  villageBtnPrimary,
+                  "flex w-full min-h-[48px] items-center justify-center gap-2 sm:w-auto sm:min-w-[11rem]",
+                )}
+              >
+                <IconSave className="h-4 w-4 text-white/90" />
+                {busy ? "กำลังบันทึก…" : "บันทึก"}
+              </button>
+            </div>
+          ) : null}
         </form>
       </VillagePanelCard>
     </VillagePageStack>
   );
 }
 
-export function VillageSettingsClient() {
-  const api = useMemo(() => createVillageSessionApiRepository(), []);
-  const [p, setP] = useState<VillageProfile | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const r = await api.getProfile();
-        setP(r.profile);
-      } catch (e) {
-        setErr(e instanceof Error ? e.message : "โหลดไม่สำเร็จ");
-      }
-    })();
-  }, [api]);
-
-  if (!p) {
-    return (
-      <VillagePageStack>
-        {err ? <p className="text-sm text-rose-600">{err}</p> : null}
-        {!err ? (
-          <VillagePanelCard>
-            <p className="text-center text-sm text-[#66638c]">กำลังโหลด…</p>
-          </VillagePanelCard>
-        ) : null}
-      </VillagePageStack>
-    );
-  }
-
+export function VillageSettingsClient(props: SettingsProps) {
   return (
     <Suspense
       fallback={
@@ -483,7 +662,7 @@ export function VillageSettingsClient() {
         </VillagePageStack>
       }
     >
-      <VillageSettingsForm profile={p} />
+      <VillageSettingsForm {...props} />
     </Suspense>
   );
 }

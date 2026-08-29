@@ -17,6 +17,13 @@ export type VillageProfile = {
   due_day_of_month: number;
   /** สร้างบิลค่าส่วนกลางอัตโนมัติเมื่อเปิดหน้า fees / cron */
   auto_generate_fees: boolean;
+  tagline: string | null;
+  logo_url: string | null;
+  contact_line: string | null;
+  facebook_url: string | null;
+  map_url: string | null;
+  portal_banner_url: string | null;
+  portal_gallery: string[];
 };
 
 export type VillageHouse = {

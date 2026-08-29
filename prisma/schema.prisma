@@ -2770,6 +2770,17 @@ model VillageProfile {
   dueDayOfMonth        Int      @default(5) @map("due_day_of_month")
   /** เมื่อเปิด — สร้างบิลค่าส่วนกลางเดือนปัจจุบันอัตโนมัติ (หน้า fees + cron) */
   autoGenerateFees     Boolean  @default(true) @map("auto_generate_fees")
+  /** คำโปรยบนเว็บลิงก์ลูกค้า */
+  tagline              String?  @db.VarChar(300)
+  /** โลโก้ เช่น /uploads/village-portal/... */
+  logoUrl              String?  @map("logo_url") @db.VarChar(512)
+  contactLine          String?  @map("contact_line") @db.VarChar(120)
+  facebookUrl          String?  @map("facebook_url") @db.VarChar(512)
+  mapUrl               String?  @map("map_url") @db.VarChar(512)
+  /** แบนเนอร์หน้าเว็บลิงก์ลูกค้า */
+  portalBannerUrl      String?  @map("portal_banner_url") @db.VarChar(512)
+  /** JSON string[] รูปภาพโครงการบนพอร์ทัล */
+  portalGalleryJson    Json?    @map("portal_gallery_json")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 

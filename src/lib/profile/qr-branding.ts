@@ -175,6 +175,24 @@ export async function getQrDormitoryBranding(
   };
 }
 
+/** หมู่บ้าน / โครงการ — displayName + logo จาก VillageProfile */
+export async function getQrVillageBranding(
+  ownerUserId: string,
+  trialSessionId: string,
+): Promise<QrBranding> {
+  const [owner, row] = await Promise.all([
+    getQrOwnerBranding(ownerUserId, "หมู่บ้าน"),
+    prisma.villageProfile.findUnique({
+      where: { ownerUserId_trialSessionId: { ownerUserId, trialSessionId } },
+      select: { displayName: true, logoUrl: true },
+    }),
+  ]);
+  return {
+    label: pickLabel(row?.displayName, owner.label) || "หมู่บ้าน",
+    logoUrl: pickLogo(row?.logoUrl, owner.logoUrl),
+  };
+}
+
 /** POS เครื่องดื่ม — displayName/logo จากโมดูล แล้ว fallback โปรไฟล์กลาง */
 export async function getQrDrinkPosBranding(
   ownerUserId: string,
