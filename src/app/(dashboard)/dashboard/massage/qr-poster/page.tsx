@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function MassageQrPosterPage() {
-  redirect("/dashboard/massage/qr");
+export default function MassageQrPosterRedirectPage() {
+  redirect("/dashboard/massage/settings?tab=link");
 }

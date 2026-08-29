@@ -76,6 +76,7 @@ const MASSAGE_SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
   { id: "basic", label: "ตั้งค่าพื้นฐาน" },
   { id: "finance", label: "ตั้งค่าเกี่ยวกับการเงิน" },
   { id: "hours", label: "ตั้งค่าเวลาเปิดร้าน" },
+  { id: "link", label: "ลิงก์ QR" },
 ];
 
 function IconSave({ className }: { className?: string }) {
@@ -178,6 +179,7 @@ export function BarberShopSettingsClient({
   trialSessionId,
   linkHub,
   hoursPanel,
+  qrHubPanel,
 }: {
   initial: ShopProfile;
   apiBase: "/api/barber/shop-profile" | "/api/massage/shop-profile";
@@ -191,6 +193,7 @@ export function BarberShopSettingsClient({
     isTrialSandbox: boolean;
   };
   hoursPanel?: ReactNode;
+  qrHubPanel?: ReactNode;
 }) {
   return (
     <Suspense fallback={<div className="h-40 animate-pulse rounded-[1.5rem] bg-white/30" aria-busy />}>
@@ -201,6 +204,7 @@ export function BarberShopSettingsClient({
         trialSessionId={trialSessionId}
         linkHub={linkHub}
         hoursPanel={hoursPanel}
+        qrHubPanel={qrHubPanel}
       />
     </Suspense>
   );
@@ -213,6 +217,7 @@ function BarberShopSettingsClientInner({
   trialSessionId,
   linkHub,
   hoursPanel,
+  qrHubPanel,
 }: {
   initial: ShopProfile;
   apiBase: "/api/barber/shop-profile" | "/api/massage/shop-profile";
@@ -226,6 +231,7 @@ function BarberShopSettingsClientInner({
     isTrialSandbox: boolean;
   };
   hoursPanel?: ReactNode;
+  qrHubPanel?: ReactNode;
 }) {
   const router = useRouter();
   const isBarber = apiBase === "/api/barber/shop-profile";
@@ -371,12 +377,12 @@ function BarberShopSettingsClientInner({
           description={
             isBarber
               ? "พื้นฐาน · การเงิน · ลิงก์ลูกค้า · เวลาเปิดร้าน"
-              : "พื้นฐาน · การเงิน · เวลาเปิดร้าน"
+              : "พื้นฐาน · การเงิน · เวลาเปิดร้าน · ลิงก์ QR"
           }
           className="flex flex-row items-center justify-between gap-2 sm:gap-3"
           actionWrapClassName="shrink-0"
           action={
-            tab === "hours" && !isBarber && hoursPanel ? null : (
+            (!isBarber && tab === "hours" && hoursPanel) || (!isBarber && tab === "link" && qrHubPanel) ? null : (
             <div className={barberDashboardSegmentShellClass} role="group">
               <button
                 type="button"
@@ -764,6 +770,17 @@ function BarberShopSettingsClientInner({
                 isTrialSandbox={linkHub.isTrialSandbox}
                 trialSessionId={trialSessionId}
               />
+            </div>
+          ) : null}
+
+          {tab === "link" && !isBarber && qrHubPanel ? (
+            <div
+              id="barber-settings-panel-link"
+              role="tabpanel"
+              aria-labelledby="barber-settings-tab-link"
+              className="min-w-0"
+            >
+              {qrHubPanel}
             </div>
           ) : null}
         </div>

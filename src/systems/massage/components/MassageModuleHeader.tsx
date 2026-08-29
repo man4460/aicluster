@@ -6,7 +6,6 @@ const links = [
   { href: "/dashboard/massage", label: "แดชบอร์ด" },
   { href: "/dashboard/massage/finance", label: "การเงิน" },
   { href: "/dashboard/massage/packages", label: "แพ็กเกจ" },
-  { href: "/dashboard/massage/qr", label: "QR" },
   { href: "/dashboard/massage/settings", label: "ตั้งค่าร้าน" },
 ] as const;
 
@@ -18,11 +17,8 @@ function isMassageLinkActive(pathname: string, href: string): boolean {
   if (href === "/dashboard/massage/packages") {
     return pathname === "/dashboard/massage/packages" || pathname.startsWith("/dashboard/massage/packages/");
   }
-  if (href === "/dashboard/massage/qr") {
-    return pathname === "/dashboard/massage/qr" || pathname.startsWith("/dashboard/massage/qr/");
-  }
   if (href === "/dashboard/massage/settings") {
-    return pathname === "/dashboard/massage/settings";
+    return pathname === "/dashboard/massage/settings" || pathname.startsWith("/dashboard/massage/settings/");
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -35,15 +31,6 @@ function massageNavIcon(href: string) {
       return <path d="M4 18h16M7 14l3-3 3 2 4-5" />;
     case "/dashboard/massage/packages":
       return <path d="M4 7h16v4H4zM6 11v8h12v-8M9 7V5h6v2" />;
-    case "/dashboard/massage/qr":
-      return (
-        <g>
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-        </g>
-      );
     case "/dashboard/massage/settings":
       return (
         <>
@@ -112,7 +99,7 @@ export function MassageModuleDesktopNav({ pathname }: { pathname: string }) {
 export function MassageModuleMobileDock({ pathname }: { pathname: string }) {
   return (
     <AppMobileDockShell ariaLabel="เมนูล่างร้านนวด">
-      <ul className={cn(appMobileDockGridClass, "grid-cols-5")}>
+      <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
         {links.map((l) => {
           const active = isMassageLinkActive(pathname, l.href);
           return (

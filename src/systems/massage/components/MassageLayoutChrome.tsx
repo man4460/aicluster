@@ -50,7 +50,7 @@ function MassageHeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
 
 /**
  * §12 Main module DESKTOP nav (อยู่ใน glass shell header) — เมื่อซ่อน header จะหายไปด้วย
- * Nav items: 5 ใบตรงกับ MASSAGE_NAV_ITEMS (dashboard/finance/packages/qr/settings)
+ * Nav items: 4 ใบตรงกับ MASSAGE_NAV_ITEMS (dashboard/finance/packages/settings)
  * Active: brand gradient (§4 single source of truth)
  */
 export function MassageModuleDesktopNav({ pathname }: { pathname: string }) {
@@ -99,7 +99,7 @@ export function MassageModuleDesktopNav({ pathname }: { pathname: string }) {
 export function MassageModuleMobileDock({ pathname }: { pathname: string }) {
   return (
     <AppMobileDockShell ariaLabel="เมนูล่างร้านนวด">
-      <ul className={cn(appMobileDockGridClass, "grid-cols-5")}>
+      <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
         {MASSAGE_NAV_ITEMS.map((item) => {
           const active = isMassageModuleNavItemActive(pathname, item.key);
           const icon = massageModuleNavIcon(item.key);

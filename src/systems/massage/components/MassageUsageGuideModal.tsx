@@ -87,7 +87,7 @@ export function MassageUsageGuideModal({ open, onClose }: { open: boolean; onClo
                 <li>โปรไฟล์ — รูป ชื่อร้าน ที่อยู่ เบอร์ เลขภาษี (แท็บตั้งค่าบริษัท/ร้าน)</li>
                 <li>แพ็กเกจ — สร้างแพ็กที่ขายจริง (ราคา จำนวนครั้ง)</li>
                 <li>ช่าง — เพิ่มช่าง (ใช้ผูกกับประวัติการบริการได้)</li>
-                <li>แดชบอร์ด (แท็บคิว / เช็กอิน / ช่าง) และเมนู QR — ตาม workflow ร้าน</li>
+                <li>แดชบอร์ด (แท็บคิว / เช็กอิน / หมอนวด) และตั้งค่า → ลิงก์ QR — ตาม workflow ร้าน</li>
               </ol>
             </Section>
 
@@ -256,9 +256,10 @@ export function MassageUsageGuideModal({ open, onClose }: { open: boolean; onClo
               </ul>
             </Section>
 
-            <Section title="เมนู QR (ลูกค้า + พนักงาน)">
+            <Section title="ตั้งค่า → ลิงก์ QR (ลูกค้า + พนักงาน)">
               <p>
-                หน้าเดียวรวม <strong className="font-semibold text-[#2e2a58]">QR ลูกค้า</strong> และ{" "}
+                เปิดจาก <strong className="font-semibold text-[#2e2a58]">ตั้งค่าร้าน → ลิงก์ QR</strong> —
+                รวม <strong className="font-semibold text-[#2e2a58]">QR ลูกค้า</strong> และ{" "}
                 <strong className="font-semibold text-[#2e2a58]">QR พนักงาน</strong> — โครงคล้ายคาร์แคร์
               </p>
               <p className="font-semibold text-[#2e2a58]">QR ลูกค้า</p>

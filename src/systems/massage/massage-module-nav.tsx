@@ -35,8 +35,13 @@ export function massagePathFlags(pathname: string) {
     (pathname === "/dashboard/massage/packages" || pathname.startsWith("/dashboard/massage/packages/"));
   const onQr =
     onMassage &&
-    (pathname === "/dashboard/massage/qr" || pathname.startsWith("/dashboard/massage/qr/"));
-  const onSettings = pathname === "/dashboard/massage/settings";
+    (pathname === "/dashboard/massage/qr" ||
+      pathname.startsWith("/dashboard/massage/qr/") ||
+      pathname === "/dashboard/massage/qr-poster" ||
+      pathname === "/dashboard/massage/staff-qr");
+  const onSettings =
+    pathname === "/dashboard/massage/settings" ||
+    pathname.startsWith("/dashboard/massage/settings/");
   const plainInner = onStaff || onFinance || onPackages || onQr;
   return {
     onMassage,
@@ -52,12 +57,10 @@ export function massagePathFlags(pathname: string) {
 /**
  * Nav tab keys ของร้านนวด = 4 dashboard tabs + 1 settings
  * Dashboard hub tabs: overview / queue / checkin / therapists (query params ?tab=...)
- * ตารางเวลา → หน้าตั้งค่า (?tab=hours)
- * Main module tabs (MassageModuleDesktopNav / HeaderBarNav):
- *   dashboard (แดชบอร์ด), finance (การเงิน), packages (แพ็กเกจ), qr (QR), settings (ตั้งค่าร้าน)
- *   5 ใบพอดีตรงกับ MassageModuleMobileDock grid-cols-5
+ * ตารางเวลา + QR → หน้าตั้งค่า (?tab=hours|link)
+ * Main module tabs: dashboard · finance · packages · settings (4 ใบ — dock grid-cols-4)
  */
-export type MassageModuleNavKey = "dashboard" | "finance" | "packages" | "qr" | "settings";
+export type MassageModuleNavKey = "dashboard" | "finance" | "packages" | "settings";
 
 export type MassageDashboardTabKey = "overview" | "queue" | "checkin" | "therapists";
 
@@ -84,7 +87,6 @@ export const MASSAGE_NAV_ITEMS: MassageNavItem[] = [
   { key: "dashboard", label: "แดชบอร์ด", href: "/dashboard/massage" },
   { key: "finance", label: "การเงิน", href: "/dashboard/massage/finance" },
   { key: "packages", label: "แพ็กเกจ", href: "/dashboard/massage/packages" },
-  { key: "qr", label: "QR", href: "/dashboard/massage/qr" },
   { key: "settings", label: MODULE_SHOP_SETTINGS_SHORT_LABEL, href: "/dashboard/massage/settings" },
 ];
 
@@ -125,13 +127,11 @@ export function isMassageModuleNavItemActive(
         pathname === "/dashboard/massage/packages" ||
         pathname.startsWith("/dashboard/massage/packages/")
       );
-    case "qr":
-      return (
-        pathname === "/dashboard/massage/qr" ||
-        pathname.startsWith("/dashboard/massage/qr/")
-      );
     case "settings":
-      return pathname === "/dashboard/massage/settings";
+      return (
+        pathname === "/dashboard/massage/settings" ||
+        pathname.startsWith("/dashboard/massage/settings/")
+      );
     default:
       return false;
   }
@@ -197,15 +197,6 @@ export function massageModuleNavIcon(key: MassageModuleNavKey): React.ReactEleme
           <path d="M4 7h16v4H4z" />
           <path d="M6 11v8h12v-8" />
           <path d="M9 7V5h6v2" />
-        </>
-      );
-    case "qr":
-      return (
-        <>
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
         </>
       );
     case "settings":
