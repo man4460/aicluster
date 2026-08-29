@@ -60,3 +60,19 @@ export const villageSegmentShellClass =
 
 export const villageEmptyDashedClass =
   `${villageInsetControlRadiusClass} border border-dashed border-white/60 bg-white/35 px-4 py-10 text-center text-sm leading-relaxed text-[#66638c] backdrop-blur-sm`;
+
+/** แถบเมนูหลักหน้าตั้งค่า — shell pill */
+export const villagePrimaryTabShellClass =
+  "inline-flex w-full max-w-full flex-wrap content-start items-center gap-1 rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/30 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)] sm:rounded-[1.35rem] sm:p-1.5";
+
+export function villagePrimaryTabPillClass(active: boolean): string {
+  return [
+    "min-h-10 shrink-0 grow basis-[calc(50%-4px)] whitespace-nowrap rounded-xl px-3 text-sm font-black leading-none sm:min-h-11 sm:grow-0 sm:basis-auto sm:px-4 sm:text-[15px]",
+    active
+      ? "bg-gradient-to-br from-[#5b61ff] via-[#6366f1] to-[#7c3aed] text-white shadow-md"
+      : "bg-white/50 text-[#5f5a8a] transition hover:bg-white/90 hover:text-[#4d47b6]",
+  ].join(" ");
+}
+
+export const villageMobileSelectClass =
+  "box-border h-9 w-full min-w-0 appearance-none rounded-xl border border-[#e4e0f5] bg-white/95 px-3 pr-8 text-xs font-black text-[#1e1b4b] shadow-sm outline-none ring-1 ring-inset ring-white/70 focus:border-[#5b61ff]/40 focus:ring-2 focus:ring-[#5b61ff]/20";
