@@ -586,6 +586,11 @@ export function VillageFeesClient({ initialYm, baseUrl }: { initialYm: string; b
           <span className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-indigo-50/90 to-violet-50/80 px-2.5 py-1 text-[10px] font-semibold text-indigo-900/90 ring-1 ring-indigo-200/60">
             ครบกำหนดวันที่ <span className="tabular-nums">{dueDay}</span>
           </span>
+          {profile?.auto_generate_fees ? (
+            <span className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50/80 px-2.5 py-1 text-[10px] font-semibold text-emerald-900/90 ring-1 ring-emerald-200/70">
+              สร้างบิลอัตโนมัติเปิดอยู่
+            </span>
+          ) : null}
         </div>
 
         <div className="mt-3.5 grid grid-cols-1 gap-3 sm:mt-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:gap-3">

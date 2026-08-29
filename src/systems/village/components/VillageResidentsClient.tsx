@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { VillageEmptyDashed, VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
@@ -12,7 +12,6 @@ import {
   villageFeeCycleLabelTh,
   type VillageHouse,
   type VillageHouseFeeCycle,
-  type VillageResident,
 } from "@/systems/village/village-service";
 import {
   villageBtnPrimary,
@@ -26,6 +25,18 @@ import {
   villageHouseMetaRow,
   villageHouseNumber,
 } from "@/systems/village/village-ui";
+
+type ResidentDraft = {
+  key: string;
+  id?: number;
+  name: string;
+  phone: string;
+  is_primary: boolean;
+};
+
+function newDraftKey() {
+  return `r-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 export function VillageResidentsClient() {
   const api = useMemo(() => createVillageSessionApiRepository(), []);
@@ -53,7 +64,6 @@ export function VillageResidentsClient() {
     mode: "add" | "edit";
     house?: VillageHouse;
   } | null>(null);
-  const [residentModal, setResidentModal] = useState<{ houseId: number } | null>(null);
   const [q, setQ] = useState("");
 
   const needle = q.trim().toLowerCase();
@@ -65,6 +75,7 @@ export function VillageResidentsClient() {
         h.plot_label ?? "",
         h.owner_name ?? "",
         h.phone ?? "",
+        h.billing_start_ym ?? "",
         ...h.residents.map((r) => [r.name, r.phone ?? "", r.note ?? ""].join(" ")),
       ]
         .join(" ")
@@ -120,7 +131,7 @@ export function VillageResidentsClient() {
               ? `แสดง ${filteredHouses.length} จาก ${houses.length} หลังตามคำค้น`
               : houses.length === 0
                 ? "เพิ่มบ้านได้จากแผงด้านบน — แสดงเป็นผังการ์ดเหมือนหน้าห้องพัก"
-                : `ผังการ์ด ${houses.length} หลัง · คลิกปุ่มในการ์ดเพื่อแก้ไขหรือเพิ่มลูกบ้าน`
+                : `ผังการ์ด ${houses.length} หลัง · กดแก้ไขเพื่อจัดการบ้านและผู้อาศัย`
           }
         >
           {filteredHouses.length === 0 ? (
@@ -175,19 +186,25 @@ export function VillageResidentsClient() {
                           </p>
                         </div>
                       </div>
+                      <div className={villageHouseMetaRow}>
+                        <span className={villageHouseFieldLabel}>เริ่มเก็บ</span>
+                        <span className="min-w-0 flex-1 text-[11px] font-semibold tabular-nums text-slate-800">
+                          {h.billing_start_ym?.trim() || "ไม่กำหนด"}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="mt-2 flex-1">
                       {h.residents.length === 0 ? (
                         <p className="rounded-md border border-dashed border-white/75 bg-white/65 py-1.5 text-center text-[10px] font-medium leading-tight text-slate-500">
-                          ยังไม่มีรายชื่อ
+                          ยังไม่มีรายชื่อ — กดแก้ไขเพื่อเพิ่มผู้อาศัย
                         </p>
                       ) : (
                         <ul className="space-y-1">
                           {h.residents.map((r) => (
                             <li
                               key={r.id}
-                              className={cn("flex items-center justify-between gap-1.5 rounded-md py-1 pl-1.5 pr-1", villageGlassCard)}
+                              className={cn("rounded-md py-1 pl-1.5 pr-1", villageGlassCard)}
                             >
                               <span className="min-w-0 text-[10px] leading-tight sm:text-[11px]">
                                 <span className="font-semibold text-slate-800">{r.name}</span>
@@ -198,7 +215,6 @@ export function VillageResidentsClient() {
                                   <span className="ml-1 tabular-nums text-slate-500">{r.phone}</span>
                                 ) : null}
                               </span>
-                              <ResidentActions api={api} resident={r} onDone={load} />
                             </li>
                           ))}
                         </ul>
@@ -211,14 +227,7 @@ export function VillageResidentsClient() {
                         className="app-btn-soft rounded-lg px-2.5 py-1.5 text-[10px] font-semibold text-slate-800 sm:text-[11px]"
                         onClick={() => setHouseModal({ mode: "edit", house: h })}
                       >
-                        แก้ไขบ้าน
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-lg border border-[#5b61ff]/25 bg-[#eef0ff] px-2.5 py-1.5 text-[10px] font-semibold text-[#4d47b6] sm:text-[11px]"
-                        onClick={() => setResidentModal({ houseId: h.id })}
-                      >
-                        + ลูกบ้าน
+                        แก้ไข
                       </button>
                     </div>
                   </article>
@@ -241,73 +250,7 @@ export function VillageResidentsClient() {
           }}
         />
       ) : null}
-      {residentModal ? (
-        <ResidentFormModal
-          api={api}
-          houseId={residentModal.houseId}
-          onClose={() => setResidentModal(null)}
-          onSaved={() => {
-            setResidentModal(null);
-            void load();
-          }}
-        />
-      ) : null}
     </VillagePageStack>
-  );
-}
-
-function ResidentActions({
-  api,
-  resident,
-  onDone,
-}: {
-  api: ReturnType<typeof createVillageSessionApiRepository>;
-  resident: VillageResident;
-  onDone: () => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  return (
-    <span className="flex shrink-0 flex-wrap justify-end gap-0.5">
-      <button
-        type="button"
-        disabled={busy}
-        className="text-[10px] font-semibold text-[#4d47b6] hover:underline disabled:opacity-50"
-        onClick={async () => {
-          const name = window.prompt("ชื่อ", resident.name);
-          if (name == null) return;
-          setBusy(true);
-          try {
-            await api.patchResident(resident.id, { name: name.trim(), is_primary: resident.is_primary });
-            onDone();
-          } catch (e) {
-            alert(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        แก้ไข
-      </button>
-      <button
-        type="button"
-        disabled={busy}
-        className="text-[10px] font-semibold text-rose-600 hover:underline disabled:opacity-50"
-        onClick={async () => {
-          if (!window.confirm("ลบรายชื่อนี้?")) return;
-          setBusy(true);
-          try {
-            await api.deleteResident(resident.id);
-            onDone();
-          } catch (e) {
-            alert(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        ลบ
-      </button>
-    </span>
   );
 }
 
@@ -324,20 +267,44 @@ function HouseFormModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const residentsSectionId = useId();
   const [houseNo, setHouseNo] = useState(house?.house_no ?? "");
   const [plot, setPlot] = useState(house?.plot_label ?? "");
   const [ownerName, setOwnerName] = useState(house?.owner_name ?? "");
   const [phone, setPhone] = useState(house?.phone ?? "");
   const [override, setOverride] = useState(house?.monthly_fee_override != null ? String(house.monthly_fee_override) : "");
   const [feeCycle, setFeeCycle] = useState<VillageHouseFeeCycle>(house?.fee_cycle ?? "MONTHLY");
+  const [billingStartYm, setBillingStartYm] = useState(house?.billing_start_ym ?? "");
+  const [residents, setResidents] = useState<ResidentDraft[]>(() =>
+    (house?.residents ?? []).map((r) => ({
+      key: `id-${r.id}`,
+      id: r.id,
+      name: r.name,
+      phone: r.phone ?? "",
+      is_primary: r.is_primary,
+    })),
+  );
   const [busy, setBusy] = useState(false);
+
+  function updateResident(key: string, patch: Partial<ResidentDraft>) {
+    setResidents((rows) =>
+      rows.map((row) => {
+        if (row.key !== key) {
+          if (patch.is_primary === true) return { ...row, is_primary: false };
+          return row;
+        }
+        return { ...row, ...patch };
+      }),
+    );
+  }
 
   return (
     <FormModal
       open
       title={mode === "add" ? "เพิ่มบ้าน" : "แก้ไขบ้าน"}
+      description="ข้อมูลบ้าน · เดือนเริ่มเก็บ · และรายชื่อผู้อาศัย"
       onClose={onClose}
-      size="md"
+      size="lg"
       footer={
         <FormModalFooterActions
           cancelLabel="ยกเลิก"
@@ -356,6 +323,15 @@ function HouseFormModal({
                 phone: phone.trim() || null,
                 monthly_fee_override: ov != null && Number.isFinite(ov) ? ov : null,
                 fee_cycle: feeCycle,
+                billing_start_ym: billingStartYm.trim() || null,
+                residents: residents
+                  .filter((r) => r.name.trim())
+                  .map((r) => ({
+                    ...(r.id != null ? { id: r.id } : {}),
+                    name: r.name.trim(),
+                    phone: r.phone.trim() || null,
+                    is_primary: r.is_primary,
+                  })),
               };
               if (mode === "add") await api.postHouse(body);
               else if (house) await api.patchHouse(house.id, body);
@@ -415,66 +391,89 @@ function HouseFormModal({
             inputMode="numeric"
           />
         </label>
-      </div>
-    </FormModal>
-  );
-}
-
-function ResidentFormModal({
-  api,
-  houseId,
-  onClose,
-  onSaved,
-}: {
-  api: ReturnType<typeof createVillageSessionApiRepository>;
-  houseId: number;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [primary, setPrimary] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  return (
-    <FormModal
-      open
-      title="เพิ่มลูกบ้านในบ้านนี้"
-      onClose={onClose}
-      size="md"
-      footer={
-        <FormModalFooterActions
-          onCancel={onClose}
-          submitLabel="บันทึก"
-          submitDisabled={busy || !name.trim()}
-          loading={busy}
-          onSubmit={async () => {
-            setBusy(true);
-            try {
-              await api.postResident(houseId, { name: name.trim(), phone: phone.trim() || null, is_primary: primary });
-              onSaved();
-            } catch (e) {
-              alert(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
-            } finally {
-              setBusy(false);
-            }
-          }}
-        />
-      }
-    >
-      <div className="space-y-4 text-sm">
         <label className="block">
-          <span className="text-xs font-medium text-slate-600">ชื่อ-สกุล</span>
-          <input className={`mt-1.5 ${villageField}`} value={name} onChange={(e) => setName(e.target.value)} />
+          <span className="text-xs font-medium text-slate-600">เริ่มเก็บค่าส่วนกลาง (เดือน)</span>
+          <input
+            type="month"
+            className={`mt-1.5 ${villageField}`}
+            value={billingStartYm}
+            onChange={(e) => setBillingStartYm(e.target.value)}
+          />
+          <span className="mt-1 block text-[11px] text-slate-400">เว้นว่าง = ไม่จำกัด (สร้างบิลได้ทุกเดือน)</span>
         </label>
-        <label className="block">
-          <span className="text-xs font-medium text-slate-600">เบอร์</span>
-          <input className={`mt-1.5 ${villageField}`} value={phone} onChange={(e) => setPhone(e.target.value)} />
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={primary} onChange={(e) => setPrimary(e.target.checked)} />
-          <span>เป็นผู้ติดต่อหลัก</span>
-        </label>
+
+        <section
+          id={residentsSectionId}
+          className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3 sm:p-4"
+          aria-label="ผู้อาศัย"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-bold text-slate-900">ผู้อาศัย</h3>
+            <button
+              type="button"
+              className="rounded-xl border border-[#5b61ff]/30 bg-white px-3 py-1.5 text-[11px] font-semibold text-[#4d47b6] shadow-sm"
+              onClick={() =>
+                setResidents((rows) => [
+                  ...rows,
+                  { key: newDraftKey(), name: "", phone: "", is_primary: rows.length === 0 },
+                ])
+              }
+            >
+              + เพิ่มผู้อาศัย
+            </button>
+          </div>
+          {residents.length === 0 ? (
+            <p className="mt-3 text-center text-[11px] text-slate-500">ยังไม่มีรายชื่อ — กดเพิ่มผู้อาศัย</p>
+          ) : (
+            <ul className="mt-3 space-y-2.5">
+              {residents.map((r, idx) => (
+                <li
+                  key={r.key}
+                  className="rounded-xl border border-white/80 bg-white/90 p-3 shadow-sm ring-1 ring-slate-200/60"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[10px] font-bold text-slate-400">#{idx + 1}</span>
+                    <button
+                      type="button"
+                      className="text-[11px] font-semibold text-rose-600 hover:underline"
+                      onClick={() => setResidents((rows) => rows.filter((x) => x.key !== r.key))}
+                    >
+                      ลบ
+                    </button>
+                  </div>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <label className="block sm:col-span-2">
+                      <span className="text-[10px] font-medium text-slate-500">ชื่อ-สกุล</span>
+                      <input
+                        className={`mt-1 ${villageField}`}
+                        value={r.name}
+                        onChange={(e) => updateResident(r.key, { name: e.target.value })}
+                        placeholder="ชื่อผู้อาศัย"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-[10px] font-medium text-slate-500">เบอร์</span>
+                      <input
+                        className={`mt-1 ${villageField}`}
+                        value={r.phone}
+                        onChange={(e) => updateResident(r.key, { phone: e.target.value })}
+                        inputMode="tel"
+                      />
+                    </label>
+                    <label className="flex items-center gap-2 pt-5">
+                      <input
+                        type="checkbox"
+                        checked={r.is_primary}
+                        onChange={(e) => updateResident(r.key, { is_primary: e.target.checked })}
+                      />
+                      <span className="text-[11px] font-medium text-slate-700">ผู้ติดต่อหลัก</span>
+                    </label>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
     </FormModal>
   );

@@ -21,6 +21,7 @@ const putSchema = z.object({
   default_paper_size: z.enum(paperSizes).optional(),
   default_monthly_fee: z.number().int().min(0).max(9_999_999).optional(),
   due_day_of_month: z.number().int().min(1).max(28).optional(),
+  auto_generate_fees: z.boolean().optional(),
 });
 
 function mapProfile(row: {
@@ -37,6 +38,7 @@ function mapProfile(row: {
   defaultPaperSize: string;
   defaultMonthlyFee: number;
   dueDayOfMonth: number;
+  autoGenerateFees: boolean;
 }) {
   return {
     id: row.id,
@@ -52,6 +54,7 @@ function mapProfile(row: {
     default_paper_size: normalizeModuleSlipPaperSize(row.defaultPaperSize),
     default_monthly_fee: row.defaultMonthlyFee,
     due_day_of_month: row.dueDayOfMonth,
+    auto_generate_fees: row.autoGenerateFees,
   };
 }
 
@@ -76,6 +79,7 @@ export async function GET() {
         defaultMonthlyFee: 0,
         dueDayOfMonth: 5,
         defaultPaperSize: "SLIP_58",
+        autoGenerateFees: true,
       },
     });
   }
@@ -128,6 +132,7 @@ export async function PUT(req: Request) {
       defaultPaperSize: defaultPaperSize ?? "SLIP_58",
       defaultMonthlyFee: parsed.data.default_monthly_fee ?? 0,
       dueDayOfMonth: parsed.data.due_day_of_month ?? 5,
+      autoGenerateFees: parsed.data.auto_generate_fees ?? true,
     },
     update: {
       ...(parsed.data.display_name !== undefined ? { displayName: parsed.data.display_name?.trim() || null } : {}),
@@ -150,6 +155,7 @@ export async function PUT(req: Request) {
       ...(defaultPaperSize !== undefined ? { defaultPaperSize } : {}),
       ...(parsed.data.default_monthly_fee !== undefined ? { defaultMonthlyFee: parsed.data.default_monthly_fee } : {}),
       ...(parsed.data.due_day_of_month !== undefined ? { dueDayOfMonth: parsed.data.due_day_of_month } : {}),
+      ...(parsed.data.auto_generate_fees !== undefined ? { autoGenerateFees: parsed.data.auto_generate_fees } : {}),
     },
   });
 

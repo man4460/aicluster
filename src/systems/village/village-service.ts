@@ -15,6 +15,8 @@ export type VillageProfile = {
   default_paper_size: string;
   default_monthly_fee: number;
   due_day_of_month: number;
+  /** สร้างบิลค่าส่วนกลางอัตโนมัติเมื่อเปิดหน้า fees / cron */
+  auto_generate_fees: boolean;
 };
 
 export type VillageHouse = {
@@ -25,6 +27,8 @@ export type VillageHouse = {
   phone: string | null;
   monthly_fee_override: number | null;
   fee_cycle: VillageHouseFeeCycle;
+  /** YYYY-MM — เริ่มเก็บตั้งแต่เดือนนี้; null = ไม่กำหนด */
+  billing_start_ym: string | null;
   is_active: boolean;
   sort_order: number;
   residents: VillageResident[];
@@ -193,7 +197,12 @@ export function createVillageSessionApiRepository() {
     async getFeeRows(
       yearMonth: string,
       status?: string,
-    ): Promise<{ default_monthly_fee: number; due_day_of_month: number; fee_rows: VillageFeeRow[] }> {
+    ): Promise<{
+      default_monthly_fee: number;
+      due_day_of_month: number;
+      auto_generate_fees?: boolean;
+      fee_rows: VillageFeeRow[];
+    }> {
       const q = new URLSearchParams({ year_month: yearMonth });
       if (status) q.set("status", status);
       const res = await fetch(`/api/village/session/fee-rows?${q}`, { credentials: "include" });

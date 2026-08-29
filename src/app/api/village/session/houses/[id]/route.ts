@@ -6,10 +6,20 @@ import { villageOwnerFromAuth } from "@/lib/village/api-owner";
 import { getVillageDataScope } from "@/lib/trial/module-scopes";
 import { isPrismaSchemaMismatchError, isPrismaUniqueViolation, PRISMA_SYNC_HINT_TH } from "@/lib/prisma-errors";
 import { normalizeVillageHouseNo } from "@/lib/village/house-no";
+import { mapVillageHouseWithResidents, syncVillageHouseResidents } from "@/lib/village/house-residents-sync";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 const feeCycleEnum = z.enum(["MONTHLY", "SEMI_ANNUAL", "ANNUAL"]);
+const ymRegex = /^\d{4}-\d{2}$/;
+
+const residentDraftSchema = z.object({
+  id: z.number().int().positive().optional(),
+  name: z.string().min(1).max(120),
+  phone: z.string().max(32).optional().nullable(),
+  note: z.string().max(200).optional().nullable(),
+  is_primary: z.boolean().optional(),
+});
 
 const patchSchema = z.object({
   house_no: z.string().min(1).max(120).optional(),
@@ -18,8 +28,10 @@ const patchSchema = z.object({
   phone: z.string().max(32).optional().nullable(),
   monthly_fee_override: z.number().int().min(0).max(9_999_999).optional().nullable(),
   fee_cycle: feeCycleEnum.optional(),
+  billing_start_ym: z.string().regex(ymRegex).nullable().optional(),
   is_active: z.boolean().optional(),
   sort_order: z.number().int().min(0).max(999_999).optional(),
+  residents: z.array(residentDraftSchema).optional(),
 });
 
 function parseId(raw: string): number | null {
@@ -58,33 +70,40 @@ export async function PATCH(req: Request, ctx: Ctx) {
   }
 
   try {
-    const row = await prisma.villageHouse.update({
-      where: { id },
-      data: {
-        ...(normalizedHouseNo !== undefined ? { houseNo: normalizedHouseNo } : {}),
-        ...(parsed.data.plot_label !== undefined ? { plotLabel: parsed.data.plot_label?.trim() || null } : {}),
-        ...(parsed.data.owner_name !== undefined ? { ownerName: parsed.data.owner_name?.trim() || null } : {}),
-        ...(parsed.data.phone !== undefined ? { phone: parsed.data.phone?.trim() || null } : {}),
-        ...(parsed.data.monthly_fee_override !== undefined
-          ? { monthlyFeeOverride: parsed.data.monthly_fee_override }
-          : {}),
-        ...(parsed.data.fee_cycle !== undefined ? { feeCycle: parsed.data.fee_cycle } : {}),
-        ...(parsed.data.is_active !== undefined ? { isActive: parsed.data.is_active } : {}),
-        ...(parsed.data.sort_order !== undefined ? { sortOrder: parsed.data.sort_order } : {}),
-      },
+    const house = await prisma.$transaction(async (tx) => {
+      await tx.villageHouse.update({
+        where: { id },
+        data: {
+          ...(normalizedHouseNo !== undefined ? { houseNo: normalizedHouseNo } : {}),
+          ...(parsed.data.plot_label !== undefined ? { plotLabel: parsed.data.plot_label?.trim() || null } : {}),
+          ...(parsed.data.owner_name !== undefined ? { ownerName: parsed.data.owner_name?.trim() || null } : {}),
+          ...(parsed.data.phone !== undefined ? { phone: parsed.data.phone?.trim() || null } : {}),
+          ...(parsed.data.monthly_fee_override !== undefined
+            ? { monthlyFeeOverride: parsed.data.monthly_fee_override }
+            : {}),
+          ...(parsed.data.fee_cycle !== undefined ? { feeCycle: parsed.data.fee_cycle } : {}),
+          ...(parsed.data.billing_start_ym !== undefined
+            ? { billingStartYm: parsed.data.billing_start_ym }
+            : {}),
+          ...(parsed.data.is_active !== undefined ? { isActive: parsed.data.is_active } : {}),
+          ...(parsed.data.sort_order !== undefined ? { sortOrder: parsed.data.sort_order } : {}),
+        },
+      });
+
+      if (parsed.data.residents !== undefined) {
+        await syncVillageHouseResidents(tx, id, parsed.data.residents);
+      }
+
+      return tx.villageHouse.findUniqueOrThrow({
+        where: { id },
+        include: {
+          residents: { where: { isActive: true }, orderBy: { id: "asc" } },
+        },
+      });
     });
+
     return NextResponse.json({
-      house: {
-        id: row.id,
-        house_no: row.houseNo,
-        plot_label: row.plotLabel,
-        owner_name: row.ownerName,
-        phone: row.phone,
-        monthly_fee_override: row.monthlyFeeOverride,
-        fee_cycle: row.feeCycle,
-        is_active: row.isActive,
-        sort_order: row.sortOrder,
-      },
+      house: mapVillageHouseWithResidents(house),
     });
   } catch (e) {
     if (isPrismaUniqueViolation(e)) {
@@ -99,7 +118,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       );
     }
     if (isPrismaSchemaMismatchError(e)) {
-      return NextResponse.json({ error: PRISMA_SYNC_HINT_TH }, { status: 500 });
+      return NextResponse.json({ error: PRISMA_SYNC_HINT_TH }, { status: 503 });
     }
     console.error("village houses PATCH", e);
     return NextResponse.json({ error: "บันทึกไม่สำเร็จ" }, { status: 500 });

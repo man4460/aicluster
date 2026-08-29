@@ -2766,6 +2766,8 @@ model VillageProfile {
   defaultMonthlyFee    Int      @default(0) @map("default_monthly_fee")
   /** วันครบกำหนดชำระของแต่ละเดือน (1–28) */
   dueDayOfMonth        Int      @default(5) @map("due_day_of_month")
+  /** เมื่อเปิด — สร้างบิลค่าส่วนกลางเดือนปัจจุบันอัตโนมัติ (หน้า fees + cron) */
+  autoGenerateFees     Boolean  @default(true) @map("auto_generate_fees")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
@@ -2788,6 +2790,8 @@ model VillageHouse {
   monthlyFeeOverride   Int?     @map("monthly_fee_override")
   /** รายเดือน = ทุกเดือน | รายหกเดือน = ม.ค.+ก.ค. (6×อัตรา/เดือน) | รายปี = ม.ค. (12×) */
   feeCycle             VillageHouseFeeCycle @default(MONTHLY) @map("fee_cycle")
+  /** YYYY-MM — เริ่มสร้างบิลตั้งแต่เดือนนี้; null = ไม่จำกัด */
+  billingStartYm       String?  @map("billing_start_ym") @db.VarChar(7)
   isActive             Boolean  @default(true) @map("is_active")
   sortOrder            Int      @default(0) @map("sort_order")
   createdAt            DateTime @default(now()) @map("created_at")

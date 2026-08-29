@@ -119,6 +119,7 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
     normalizeModuleSlipPaperSize(profile.default_paper_size),
   );
   const [taxId, setTaxId] = useState(profile.tax_id ?? "");
+  const [autoGenerateFees, setAutoGenerateFees] = useState(profile.auto_generate_fees ?? true);
 
   useEffect(() => {
     setTab(parseSettingsTab(searchParams.get("tab")));
@@ -127,7 +128,8 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
   useEffect(() => {
     setDefaultPaperSize(normalizeModuleSlipPaperSize(p.default_paper_size));
     setTaxId(p.tax_id ?? "");
-  }, [p.default_paper_size, p.tax_id]);
+    setAutoGenerateFees(p.auto_generate_fees ?? true);
+  }, [p.default_paper_size, p.tax_id, p.auto_generate_fees]);
 
   const selectTab = useCallback(
     (next: SettingsTab) => {
@@ -218,6 +220,7 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
                 default_paper_size: defaultPaperSize,
                 default_monthly_fee: Number.parseInt(String(fd.get("default_monthly_fee")), 10) || 0,
                 due_day_of_month: Number.parseInt(String(fd.get("due_day_of_month")), 10) || 5,
+                auto_generate_fees: autoGenerateFees,
               });
               setP(r.profile);
               setSaved(true);
@@ -312,6 +315,21 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
                   />
                 </label>
               </div>
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-emerald-200/70 bg-white/80 px-3 py-3 shadow-sm ring-1 ring-emerald-100/80">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#4d47b6] focus:ring-[#4d47b6]/30"
+                  checked={autoGenerateFees}
+                  onChange={(e) => setAutoGenerateFees(e.target.checked)}
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-bold text-slate-900">สร้างบิลค่าส่วนกลางอัตโนมัติ</span>
+                  <span className="mt-0.5 block text-[11px] leading-snug text-slate-500">
+                    เมื่อเปิด ระบบจะเติมบิลเดือนที่เลือกตอนเปิดหน้าค่าส่วนกลาง และผ่าน cron เดือนปัจจุบัน (เวลาไทย)
+                    — ปุ่ม «สร้าง/เติม» ใช้ได้เสมอ
+                  </span>
+                </span>
+              </label>
             </SettingsBlock>
           </div>
 

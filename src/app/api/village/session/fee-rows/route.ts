@@ -5,12 +5,58 @@ import { requireSession } from "@/lib/api-auth";
 import { villageOwnerFromAuth } from "@/lib/village/api-owner";
 import { getVillageDataScope } from "@/lib/trial/module-scopes";
 import { isPrismaSchemaMismatchError, PRISMA_SYNC_HINT_TH } from "@/lib/prisma-errors";
-import { villageFeeAmountDueForYearMonth, villageFeeRowStatusAfterRegenerate } from "@/lib/village/house-fee-cycle";
+import { generateVillageFeeRowsForScope } from "@/lib/village/generate-fee-rows";
 
 const ymRegex = /^\d{4}-\d{2}$/;
 const postGenSchema = z.object({
   year_month: z.string().regex(ymRegex),
 });
+
+function mapFeeRow(r: {
+  id: number;
+  houseId: number;
+  yearMonth: string;
+  amountDue: number;
+  amountPaid: number;
+  status: string;
+  note: string | null;
+  paidAt: Date | null;
+  house: { houseNo: string; ownerName: string | null; feeCycle: string };
+  slips: { id: number; amount: number; slipImageUrl: string; submittedAt: Date }[];
+}) {
+  const pending = r.slips[0] ?? null;
+  return {
+    id: r.id,
+    house_id: r.houseId,
+    house_no: r.house.houseNo,
+    owner_name: r.house.ownerName,
+    fee_cycle: r.house.feeCycle,
+    year_month: r.yearMonth,
+    amount_due: r.amountDue,
+    amount_paid: r.amountPaid,
+    status: r.status,
+    note: r.note,
+    paid_at: r.paidAt?.toISOString() ?? null,
+    pending_slip: pending
+      ? {
+          id: pending.id,
+          amount: pending.amount,
+          slip_image_url: pending.slipImageUrl,
+          submitted_at: pending.submittedAt.toISOString(),
+        }
+      : null,
+  };
+}
+
+const feeRowInclude = {
+  house: { select: { houseNo: true, ownerName: true, feeCycle: true } },
+  slips: {
+    where: { status: "PENDING" as const },
+    orderBy: { submittedAt: "desc" as const },
+    take: 1,
+    select: { id: true, amount: true, slipImageUrl: true, submittedAt: true },
+  },
+};
 
 export async function GET(req: Request) {
   const auth = await requireSession();
@@ -36,10 +82,19 @@ export async function GET(req: Request) {
       where: {
         ownerUserId_trialSessionId: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
       },
-      select: { defaultMonthlyFee: true, dueDayOfMonth: true },
+      select: { defaultMonthlyFee: true, dueDayOfMonth: true, autoGenerateFees: true },
     });
     const defaultFee = profile?.defaultMonthlyFee ?? 0;
     const dueDay = profile?.dueDayOfMonth ?? 5;
+    const autoGenerateFees = profile?.autoGenerateFees ?? true;
+
+    if (autoGenerateFees) {
+      await generateVillageFeeRowsForScope({
+        ownerUserId: own.ownerId,
+        trialSessionId: scope.trialSessionId,
+        yearMonth,
+      });
+    }
 
     const rows = await prisma.villageCommonFeeRow.findMany({
       where: {
@@ -48,45 +103,15 @@ export async function GET(req: Request) {
         yearMonth,
         ...(statusFilter ? { status: statusFilter as "PENDING" | "PARTIAL" | "PAID" | "WAIVED" } : {}),
       },
-      include: {
-        house: { select: { houseNo: true, ownerName: true, feeCycle: true } },
-        slips: {
-          where: { status: "PENDING" },
-          orderBy: { submittedAt: "desc" },
-          take: 1,
-          select: { id: true, amount: true, slipImageUrl: true, submittedAt: true },
-        },
-      },
+      include: feeRowInclude,
       orderBy: [{ house: { sortOrder: "asc" } }, { id: "asc" }],
     });
 
     return NextResponse.json({
       default_monthly_fee: defaultFee,
       due_day_of_month: dueDay,
-      fee_rows: rows.map((r) => {
-        const pending = r.slips[0] ?? null;
-        return {
-          id: r.id,
-          house_id: r.houseId,
-          house_no: r.house.houseNo,
-          owner_name: r.house.ownerName,
-          fee_cycle: r.house.feeCycle,
-          year_month: r.yearMonth,
-          amount_due: r.amountDue,
-          amount_paid: r.amountPaid,
-          status: r.status,
-          note: r.note,
-          paid_at: r.paidAt?.toISOString() ?? null,
-          pending_slip: pending
-            ? {
-                id: pending.id,
-                amount: pending.amount,
-                slip_image_url: pending.slipImageUrl,
-                submitted_at: pending.submittedAt.toISOString(),
-              }
-            : null,
-        };
-      }),
+      auto_generate_fees: autoGenerateFees,
+      fee_rows: rows.map(mapFeeRow),
     });
   } catch (e) {
     if (isPrismaSchemaMismatchError(e)) {
@@ -116,89 +141,20 @@ export async function POST(req: Request) {
   const ym = parsed.data.year_month;
 
   try {
-    const profile = await prisma.villageProfile.findUnique({
-      where: {
-        ownerUserId_trialSessionId: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
-      },
+    await generateVillageFeeRowsForScope({
+      ownerUserId: own.ownerId,
+      trialSessionId: scope.trialSessionId,
+      yearMonth: ym,
     });
-    const defaultFee = profile?.defaultMonthlyFee ?? 0;
-
-    const houses = await prisma.villageHouse.findMany({
-      where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId, isActive: true },
-      orderBy: { sortOrder: "asc" },
-    });
-
-    for (const h of houses) {
-      const monthlyRate = h.monthlyFeeOverride ?? defaultFee;
-      const amountDue = villageFeeAmountDueForYearMonth(h.feeCycle, ym, monthlyRate);
-      const whereUnique = {
-        ownerUserId_trialSessionId_houseId_yearMonth: {
-          ownerUserId: own.ownerId,
-          trialSessionId: scope.trialSessionId,
-          houseId: h.id,
-          yearMonth: ym,
-        },
-      } as const;
-      const existing = await prisma.villageCommonFeeRow.findUnique({ where: whereUnique });
-      const amountPaid = existing?.amountPaid ?? 0;
-      const status = villageFeeRowStatusAfterRegenerate(amountDue, amountPaid);
-      await prisma.villageCommonFeeRow.upsert({
-        where: whereUnique,
-        create: {
-          ownerUserId: own.ownerId,
-          trialSessionId: scope.trialSessionId,
-          houseId: h.id,
-          yearMonth: ym,
-          amountDue,
-          amountPaid: 0,
-          status: amountDue <= 0 ? "WAIVED" : "PENDING",
-        },
-        update: {
-          amountDue,
-          status,
-        },
-      });
-    }
 
     const rows = await prisma.villageCommonFeeRow.findMany({
       where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId, yearMonth: ym },
-      include: {
-        house: { select: { houseNo: true, ownerName: true, feeCycle: true } },
-        slips: {
-          where: { status: "PENDING" },
-          orderBy: { submittedAt: "desc" },
-          take: 1,
-          select: { id: true, amount: true, slipImageUrl: true, submittedAt: true },
-        },
-      },
+      include: feeRowInclude,
       orderBy: [{ house: { sortOrder: "asc" } }, { id: "asc" }],
     });
 
     return NextResponse.json({
-      fee_rows: rows.map((r) => {
-        const pending = r.slips[0] ?? null;
-        return {
-          id: r.id,
-          house_id: r.houseId,
-          house_no: r.house.houseNo,
-          owner_name: r.house.ownerName,
-          fee_cycle: r.house.feeCycle,
-          year_month: r.yearMonth,
-          amount_due: r.amountDue,
-          amount_paid: r.amountPaid,
-          status: r.status,
-          note: r.note,
-          paid_at: r.paidAt?.toISOString() ?? null,
-          pending_slip: pending
-            ? {
-                id: pending.id,
-                amount: pending.amount,
-                slip_image_url: pending.slipImageUrl,
-                submitted_at: pending.submittedAt.toISOString(),
-              }
-            : null,
-        };
-      }),
+      fee_rows: rows.map(mapFeeRow),
     });
   } catch (e) {
     if (isPrismaSchemaMismatchError(e)) {
