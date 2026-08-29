@@ -6,6 +6,15 @@ import {
   bangkokDayStartEndForDateKey,
 } from "@/lib/massage/bangkok-day";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import {
+  MASSAGE_PACKAGE_SAMPLE_IMAGES,
+  MASSAGE_PORTAL_SAMPLE_BANNER,
+  MASSAGE_PORTAL_SAMPLE_CONTACT,
+  MASSAGE_PORTAL_SAMPLE_GALLERY,
+  MASSAGE_PORTAL_SAMPLE_LOGO,
+  MASSAGE_THERAPIST_SAMPLE_PHOTOS,
+  massageSerializePortalGallery,
+} from "@/systems/massage/lib/portal-media";
 
 type Tx = Omit<
   PrismaClient,
@@ -17,9 +26,15 @@ type DbLike = PrismaClient | Tx;
 /** หมายเหตุแถวที่ระบบใส่ให้อัตโนมัติ — ลบ/รีเฟรชได้โดยไม่แตะข้อมูลที่ผู้ใช้สร้าง */
 export const MASSAGE_LIVE_DEMO_NOTE = "ตัวอย่างอัตโนมัติ";
 
-/** รูปตัวอย่างสำหรับ sandbox เท่านั้น — โหลดจาก CDN สาธารณะ */
+/** รูปสลิป/ใบเสร็จตัวอย่าง — โหลดจาก CDN สาธารณะ */
 function trialPhoto(seed: string, w: number, h: number): string {
   return `https://picsum.photos/seed/${encodeURIComponent(seed)}/${w}/${h}`;
+}
+
+function isMissingOrPlaceholderImage(url: string | null | undefined): boolean {
+  if (!url?.trim()) return true;
+  if (url.includes("picsum.photos")) return true;
+  return false;
 }
 
 /** วันที่ + ชั่วโมงไทย → Date (กลางวัน/ช่วงเปิดร้าน) */
@@ -40,20 +55,67 @@ function clampHourAroundNow(offsetHours: number, fallbackHour: number): { hour: 
   return { hour: h, minute: m };
 }
 
-const PACKAGE_DEFS = [
-  { name: "นวดไทย 10 ครั้ง", price: 3500, totalSessions: 10 },
-  { name: "นวดน้ำมันอโรมา 8 ครั้ง", price: 4800, totalSessions: 8 },
-  { name: "นวดเท้า 12 ครั้ง", price: 2400, totalSessions: 12 },
-  { name: "ประคบสมุนไพร 6 ครั้ง", price: 2700, totalSessions: 6 },
-  { name: "แพ็กผ่อนคลายพรีเมียม 5 ครั้ง", price: 5500, totalSessions: 5 },
+/** เมนูบริการรายครั้ง — จองจากเว็บลูกค้า */
+export const MASSAGE_SINGLE_VISIT_PACKAGE_DEFS = [
+  { name: "นวดไทย 60 นาที", price: 450, totalSessions: 1, durationMinutes: 60 },
+  { name: "นวดน้ำมันอโรมา 90 นาที", price: 790, totalSessions: 1, durationMinutes: 90 },
+  { name: "นวดเท้า 45 นาที", price: 350, totalSessions: 1, durationMinutes: 60 },
+  { name: "ประคบสมุนไพร 60 นาที", price: 550, totalSessions: 1, durationMinutes: 60 },
+  { name: "นวดหัวไหล่ 30 นาที", price: 299, totalSessions: 1, durationMinutes: 30 },
 ] as const;
 
+/** แพ็กเหมาหลายครั้ง */
+const PACKAGE_MULTI_DEFS = [
+  { name: "นวดไทย 10 ครั้ง", price: 3500, totalSessions: 10, durationMinutes: 60 },
+  { name: "นวดน้ำมันอโรมา 8 ครั้ง", price: 4800, totalSessions: 8, durationMinutes: 90 },
+  { name: "นวดเท้า 12 ครั้ง", price: 2400, totalSessions: 12, durationMinutes: 60 },
+  { name: "ประคบสมุนไพร 6 ครั้ง", price: 2700, totalSessions: 6, durationMinutes: 60 },
+  { name: "แพ็กผ่อนคลายพรีเมียม 5 ครั้ง", price: 5500, totalSessions: 5, durationMinutes: 90 },
+] as const;
+
+const PACKAGE_DEFS = [...MASSAGE_SINGLE_VISIT_PACKAGE_DEFS, ...PACKAGE_MULTI_DEFS] as const;
+
+const PACKAGE_DURATION_BY_NAME: Record<string, number> = Object.fromEntries(
+  PACKAGE_DEFS.map((p) => [p.name, p.durationMinutes]),
+);
+
+/** หมอนวด — ชื่อสื่อความเชี่ยวชาญ + รูปคน */
 const THERAPIST_DEFS = [
-  { name: "พี่สมหญิง หมอนวดไทย", phone: "0812223001" },
-  { name: "พี่มาลี นวดน้ำมัน", phone: "0812223002" },
-  { name: "น้องน้ำฝน นวดเท้า", phone: "0812223003" },
-  { name: "พี่วิไล ประคบสมุนไพร", phone: "0812223004" },
-  { name: "พี่กานต์ ผ่อนคลาย", phone: "0812223005" },
+  {
+    name: "พี่สมหญิง — หมอนวดไทย",
+    phone: "0812223001",
+    workStartTime: "09:00",
+    workEndTime: "21:00",
+    workWeekdaysJson: "[0,1,2,3,4,5,6]",
+  },
+  {
+    name: "พี่มาลี — หมอนวดน้ำมันอโรมา",
+    phone: "0812223002",
+    workStartTime: "10:00",
+    workEndTime: "20:00",
+    workWeekdaysJson: "[1,2,3,4,5,6]",
+  },
+  {
+    name: "น้องน้ำฝน — หมอนวดเท้า",
+    phone: "0812223003",
+    workStartTime: "09:00",
+    workEndTime: "18:00",
+    workWeekdaysJson: "[0,1,2,3,4,5,6]",
+  },
+  {
+    name: "พี่วิไล — ประคบสมุนไพร",
+    phone: "0812223004",
+    workStartTime: "11:00",
+    workEndTime: "21:00",
+    workWeekdaysJson: "[1,2,3,4,5,6]",
+  },
+  {
+    name: "พี่กานต์ — หมอนวดผ่อนคลาย",
+    phone: "0812223005",
+    workStartTime: "09:00",
+    workEndTime: "19:00",
+    workWeekdaysJson: "[1,2,3,4,5]",
+  },
 ] as const;
 
 const CUSTOMER_DEFS = [
@@ -76,6 +138,148 @@ const COST_ENTRIES = [
 
 const BARBERISH_PACKAGE_FRAGMENTS = ["ตัด", "ทำสี", "นักเรียน", "สระ", "โกน"] as const;
 
+function packageSampleImage(i: number): string {
+  return MASSAGE_PACKAGE_SAMPLE_IMAGES[i % MASSAGE_PACKAGE_SAMPLE_IMAGES.length]!;
+}
+
+function therapistSamplePhoto(i: number): string {
+  return MASSAGE_THERAPIST_SAMPLE_PHOTOS[i % MASSAGE_THERAPIST_SAMPLE_PHOTOS.length]!;
+}
+
+/** สร้างเมนูรายครั้งที่ยังไม่มีใน scope (idempotent) */
+export async function ensureMassageSingleVisitPackages(
+  db: DbLike,
+  ownerUserId: string,
+  trialSessionId: string,
+): Promise<number> {
+  const existing = await db.massagePackage.findMany({
+    where: { ownerUserId, trialSessionId, totalSessions: 1 },
+    select: { name: true },
+  });
+  const have = new Set(existing.map((p) => p.name));
+  let created = 0;
+  let i = 0;
+  for (const def of MASSAGE_SINGLE_VISIT_PACKAGE_DEFS) {
+    if (have.has(def.name)) {
+      i += 1;
+      continue;
+    }
+    await db.massagePackage.create({
+      data: {
+        ownerUserId,
+        trialSessionId,
+        name: def.name,
+        price: def.price,
+        totalSessions: 1,
+        durationMinutes: def.durationMinutes,
+        imageUrl: packageSampleImage(i),
+      },
+    });
+    created += 1;
+    i += 1;
+  }
+  return created;
+}
+
+/** เติมรูปแพ็ก / ระยะเวลา / รูปหมอนวดที่เป็นคน — สำหรับ sandbox ที่เคยสร้างไปแล้ว */
+async function refreshMassageCatalogMedia(
+  db: DbLike,
+  ownerUserId: string,
+  trialSessionId: string,
+): Promise<void> {
+  await ensureMassageSingleVisitPackages(db, ownerUserId, trialSessionId);
+
+  const pkgs = await db.massagePackage.findMany({
+    where: { ownerUserId, trialSessionId },
+    orderBy: { id: "asc" },
+    select: { id: true, name: true, imageUrl: true, durationMinutes: true, totalSessions: true },
+  });
+  let pkgIndex = 0;
+  for (const pkg of pkgs) {
+    const wantDuration = PACKAGE_DURATION_BY_NAME[pkg.name];
+    const namedIndex = PACKAGE_DEFS.findIndex((d) => d.name === pkg.name);
+    const imageIndex = namedIndex >= 0 ? namedIndex : pkgIndex;
+    const needsImage = isMissingOrPlaceholderImage(pkg.imageUrl);
+    const needsDuration = wantDuration != null && pkg.durationMinutes !== wantDuration;
+    if (needsImage || needsDuration) {
+      await db.massagePackage.update({
+        where: { id: pkg.id },
+        data: {
+          ...(needsImage ? { imageUrl: packageSampleImage(imageIndex) } : {}),
+          ...(needsDuration && wantDuration != null ? { durationMinutes: wantDuration } : {}),
+        },
+      });
+    }
+    pkgIndex += 1;
+  }
+
+  const therapists = await db.massageTherapist.findMany({
+    where: { ownerUserId, trialSessionId },
+    orderBy: { id: "asc" },
+    select: { id: true, name: true, photoUrl: true, phone: true },
+  });
+  const demoPhones = new Set(THERAPIST_DEFS.map((d) => d.phone));
+  for (let i = 0; i < therapists.length; i += 1) {
+    const t = therapists[i]!;
+    const def = THERAPIST_DEFS[i % THERAPIST_DEFS.length]!;
+    const isDemoRow = demoPhones.has(t.phone);
+    const needsPhoto = isMissingOrPlaceholderImage(t.photoUrl);
+    if (!isDemoRow && !needsPhoto) continue;
+    await db.massageTherapist.update({
+      where: { id: t.id },
+      data: isDemoRow
+        ? {
+            name: def.name,
+            photoUrl: therapistSamplePhoto(i),
+            workStartTime: def.workStartTime,
+            workEndTime: def.workEndTime,
+            workWeekdaysJson: def.workWeekdaysJson,
+          }
+        : { photoUrl: therapistSamplePhoto(i) },
+    });
+  }
+
+  const profile = await db.massageShopProfile.findFirst({
+    where: { ownerUserId, trialSessionId },
+    select: {
+      id: true,
+      logoUrl: true,
+      portalBannerUrl: true,
+      portalGalleryJson: true,
+      tagline: true,
+      contactLine: true,
+    },
+  });
+  if (profile) {
+    const needsLogo = isMissingOrPlaceholderImage(profile.logoUrl);
+    const needsBanner = !profile.portalBannerUrl?.trim();
+    const galleryEmpty =
+      !profile.portalGalleryJson?.trim() || profile.portalGalleryJson.trim() === "[]";
+    if (needsLogo || needsBanner || galleryEmpty || !profile.tagline || !profile.contactLine) {
+      await db.massageShopProfile.update({
+        where: { id: profile.id },
+        data: {
+          ...(needsLogo ? { logoUrl: MASSAGE_PORTAL_SAMPLE_LOGO } : {}),
+          ...(needsBanner ? { portalBannerUrl: MASSAGE_PORTAL_SAMPLE_BANNER } : {}),
+          ...(galleryEmpty
+            ? { portalGalleryJson: massageSerializePortalGallery([...MASSAGE_PORTAL_SAMPLE_GALLERY]) }
+            : {}),
+          ...(!profile.tagline?.trim()
+            ? { tagline: "นวดไทย · อโรมา · ประคบสมุนไพร — จองคิวออนไลน์" }
+            : {}),
+          ...(!profile.contactLine?.trim()
+            ? {
+                contactLine: MASSAGE_PORTAL_SAMPLE_CONTACT.contactLine,
+                facebookUrl: MASSAGE_PORTAL_SAMPLE_CONTACT.facebookUrl,
+                mapUrl: MASSAGE_PORTAL_SAMPLE_CONTACT.mapUrl,
+              }
+            : {}),
+        },
+      });
+    }
+  }
+}
+
 async function ensureMassageCatalog(tx: DbLike, ownerUserId: string, trialSessionId: string) {
   let profile = await tx.massageShopProfile.findFirst({
     where: { ownerUserId, trialSessionId },
@@ -86,8 +290,12 @@ async function ensureMassageCatalog(tx: DbLike, ownerUserId: string, trialSessio
         ownerUserId,
         trialSessionId,
         displayName: "MAWELL Massage Studio (ทดลอง)",
-        logoUrl: trialPhoto("massage-trial-logo-v2", 160, 160),
+        tagline: "นวดไทย · อโรมา · ประคบสมุนไพร — จองคิวออนไลน์",
+        logoUrl: MASSAGE_PORTAL_SAMPLE_LOGO,
         contactPhone: "0890002233",
+        contactLine: MASSAGE_PORTAL_SAMPLE_CONTACT.contactLine,
+        facebookUrl: MASSAGE_PORTAL_SAMPLE_CONTACT.facebookUrl,
+        mapUrl: MASSAGE_PORTAL_SAMPLE_CONTACT.mapUrl,
         promptPayPhone: "0890002233",
         address: "88/12 ถ.สุขุมวิท แขวงคลองตัน เขตคลองเตย กทม. 10110",
         taxId: "0123456789012",
@@ -95,6 +303,11 @@ async function ensureMassageCatalog(tx: DbLike, ownerUserId: string, trialSessio
         bankAccountNumber: "123-4-56789-0",
         bankAccountName: "หจก.มาเวล นวดเพื่อสุขภาพ",
         defaultSlotMinutes: 60,
+        openTime: "09:00",
+        closeTime: "21:00",
+        slotMinutes: 60,
+        portalBannerUrl: MASSAGE_PORTAL_SAMPLE_BANNER,
+        portalGalleryJson: massageSerializePortalGallery([...MASSAGE_PORTAL_SAMPLE_GALLERY]),
       },
     });
   }
@@ -105,7 +318,7 @@ async function ensureMassageCatalog(tx: DbLike, ownerUserId: string, trialSessio
   });
   if (packages.length === 0) {
     packages = await Promise.all(
-      PACKAGE_DEFS.map((p) =>
+      PACKAGE_DEFS.map((p, i) =>
         tx.massagePackage.create({
           data: {
             ownerUserId,
@@ -113,10 +326,18 @@ async function ensureMassageCatalog(tx: DbLike, ownerUserId: string, trialSessio
             name: p.name,
             price: p.price,
             totalSessions: p.totalSessions,
+            durationMinutes: p.durationMinutes,
+            imageUrl: packageSampleImage(i),
           },
         }),
       ),
     );
+  } else {
+    await ensureMassageSingleVisitPackages(tx, ownerUserId, trialSessionId);
+    packages = await tx.massagePackage.findMany({
+      where: { ownerUserId, trialSessionId },
+      orderBy: { id: "asc" },
+    });
   }
 
   let therapists = await tx.massageTherapist.findMany({
@@ -132,7 +353,10 @@ async function ensureMassageCatalog(tx: DbLike, ownerUserId: string, trialSessio
             trialSessionId,
             name: s.name,
             phone: s.phone,
-            photoUrl: trialPhoto(`massage-trial-therapist-v2-${i}`, 280, 280),
+            photoUrl: therapistSamplePhoto(i),
+            workStartTime: s.workStartTime,
+            workEndTime: s.workEndTime,
+            workWeekdaysJson: s.workWeekdaysJson,
             isActive: true,
           },
         }),
@@ -245,6 +469,9 @@ export async function seedMassageLiveTodayActivity(
   const { packages, therapists, customers } = catalog;
   if (packages.length === 0 || therapists.length === 0 || customers.length === 0) return;
 
+  const multiPackages = packages.filter((p) => p.totalSessions > 1);
+  const packagesForSubs = multiPackages.length > 0 ? multiPackages : packages;
+
   /** สมาชิกแพ็ก ACTIVE สำหรับหักวันนี้ */
   let activeSubs = await db.massageCustomerSubscription.findMany({
     where: {
@@ -262,7 +489,7 @@ export async function seedMassageLiveTodayActivity(
     activeSubs = [];
     for (let i = 0; i < customers.length; i += 1) {
       const customer = customers[i]!;
-      const pkg = packages[i % packages.length]!;
+      const pkg = packagesForSubs[i % packagesForSubs.length]!;
       const therapist = therapists[i % therapists.length]!;
       const st = subStatuses[i]!;
       const remaining =
@@ -607,7 +834,7 @@ function packageLooksBarberish(name: string): boolean {
 /**
  * เรียกเมื่อเปิดแดชบอร์ดร้านนวดในโหมดทดลอง / บัญชี demo
  * — เติมแคตตาล็อกถ้าว่าง · ถ้าแพ็กยังเป็นของร้านตัดผม → รีเซ็ตชุดนวด
- * — ถ้าวันนี้ยังไม่มีคิว/ประวัติ → ใส่กิจกรรมสดตามเวลาไทย
+ * — เติมแพ็กรายครั้ง + รูปแพ็ก/หมอนวด · ถ้าวันนี้ยังไม่มีคิว/ประวัติ → กิจกรรมสด
  */
 export async function ensureMassageDemoDataForScope(
   db: PrismaClient,
@@ -617,7 +844,7 @@ export async function ensureMassageDemoDataForScope(
   const packages = await db.massagePackage.findMany({
     where: { ownerUserId, trialSessionId },
     select: { name: true },
-    take: 8,
+    take: 12,
   });
 
   if (packages.length === 0) {
@@ -635,6 +862,7 @@ export async function ensureMassageDemoDataForScope(
     return;
   }
 
+  await refreshMassageCatalogMedia(db, ownerUserId, trialSessionId);
   await seedMassageLiveTodayActivity(db, ownerUserId, trialSessionId);
 }
 

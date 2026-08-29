@@ -3,7 +3,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { parseBangkokLocalToDate } from "@/lib/massage/booking-datetime";
 import { isMassageCustomerPortalOpenForOwner } from "@/lib/massage/portal-access";
+import { createMassageBookingForPortal } from "@/lib/massage/portal-create-booking";
 import { resolvePublicMassageTrialSessionId } from "@/lib/massage/public-trial-scope";
+import { isPrismaSchemaMismatch, THAI_PRISMA_SCHEMA_MISMATCH } from "@/lib/prisma-schema-mismatch";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import {
   massageMapTherapistSchedule,
@@ -80,6 +82,34 @@ export async function POST(req: Request) {
   if (!open) return NextResponse.json({ error: "พอร์ทัลปิดชั่วคราว" }, { status: 403 });
 
   const { trialSessionId } = await resolvePublicMassageTrialSessionId(ownerId, parsed.data.t);
+
+  /**
+   * พอร์ทัลเช็คอินกะทัดรัด — ไม่ส่ง packageId / ใช้ scheduledAtLocal
+   * คงพฤติกรรมเดิมผ่าน createMassageBookingForPortal
+   */
+  if (parsed.data.packageId == null && parsed.data.scheduledAtLocal && !parsed.data.scheduledLocal) {
+    try {
+      const out = await createMassageBookingForPortal(prisma, ownerId, trialSessionId, {
+        phone: parsed.data.phone,
+        scheduledAtLocal: parsed.data.scheduledAtLocal,
+        customerName: parsed.data.customerName,
+        massageCustomerId: parsed.data.massageCustomerId ?? null,
+        therapistId: parsed.data.therapistId ?? null,
+        packageId: null,
+        useMemberPackage: true,
+      });
+      if (!out.ok) {
+        return NextResponse.json({ error: out.error }, { status: 400 });
+      }
+      return NextResponse.json({ ok: true as const, booking: out.booking });
+    } catch (e) {
+      console.error("[massage/public/portal/book] legacy", e);
+      if (isPrismaSchemaMismatch(e)) {
+        return NextResponse.json({ error: THAI_PRISMA_SCHEMA_MISMATCH }, { status: 503 });
+      }
+      return NextResponse.json({ error: "จองคิวไม่สำเร็จ — ลองใหม่อีกครั้ง" }, { status: 500 });
+    }
+  }
 
   const scheduledLocalRaw =
     parsed.data.scheduledLocal ??

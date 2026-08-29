@@ -41,25 +41,34 @@ export const MASSAGE_PORTAL_SAMPLE_GALLERY = [
   `https://images.unsplash.com/photo-1515377905703-c4788e51af15?${Q}&w=800&h=600`,
 ] as const;
 
-/** โลโก้ / รูปนักบำบัดตัวอย่าง */
+/** โลโก้ร้านนวดตัวอย่าง */
 export const MASSAGE_PORTAL_SAMPLE_LOGO =
   `https://images.unsplash.com/photo-1544161515-4ab6ce6db874?${Q}&w=240&h=240`;
 
+/** รูปโปรไฟล์หมอนวด — ใบหน้าคน (ไม่ใช่รูปมือนวด) */
 export const MASSAGE_THERAPIST_SAMPLE_PHOTOS = [
-  `https://images.unsplash.com/photo-1600334129128-685c5582fd35?${Q}&w=400&h=400`,
-  `https://images.unsplash.com/photo-1519823551278-64ac92734fb1?${Q}&w=400&h=400`,
-  `https://images.unsplash.com/photo-1544161515-4ab6ce6db874?${Q}&w=400&h=400`,
-  `https://images.unsplash.com/photo-1515377905703-c4788e51af15?${Q}&w=400&h=400`,
-  `https://images.unsplash.com/photo-1540555700478-4be289fbecef?${Q}&w=400&h=400`,
+  `https://images.unsplash.com/photo-1559839734-2b71ea197ec2?${Q}&w=400&h=400`,
+  `https://images.unsplash.com/photo-1594824476967-48c8b964273f?${Q}&w=400&h=400`,
+  `https://images.unsplash.com/photo-1582750433449-648ed127bb54?${Q}&w=400&h=400`,
+  `https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?${Q}&w=400&h=400`,
+  `https://images.unsplash.com/photo-1622253692010-333f2da6031d?${Q}&w=400&h=400`,
 ] as const;
 
-/** รูปปกแพ็กเกจตัวอย่าง */
+/**
+ * รูปปกแพ็กเกจตัวอย่าง — บริการนวด/สปา
+ * ลำดับ: ไทย · น้ำมัน · เท้า · ประคบ · หัวไหล่ · อโรมา · หินร้อน · ผ่อนคลาย · พรีเมียม · …
+ */
 export const MASSAGE_PACKAGE_SAMPLE_IMAGES = [
-  `https://images.unsplash.com/photo-1600334129128-685c5582fd35?${Q}&w=640&h=640`,
-  `https://images.unsplash.com/photo-1519823551278-64ac92734fb1?${Q}&w=640&h=640`,
   `https://images.unsplash.com/photo-1544161515-4ab6ce6db874?${Q}&w=640&h=640`,
+  `https://images.unsplash.com/photo-1600334129128-685c5582fd35?${Q}&w=640&h=640`,
   `https://images.unsplash.com/photo-1515377905703-c4788e51af15?${Q}&w=640&h=640`,
+  `https://images.unsplash.com/photo-1519823551278-64ac92734fb1?${Q}&w=640&h=640`,
+  `https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?${Q}&w=640&h=640`,
   `https://images.unsplash.com/photo-1540555700478-4be289fbecef?${Q}&w=640&h=640`,
+  `https://images.unsplash.com/photo-1600618528240-fb9fc964b853?${Q}&w=640&h=640`,
+  `https://images.unsplash.com/photo-1540555700478-4be289fbecef?${Q}&w=640&h=640&sat=-20`,
+  `https://images.unsplash.com/photo-1515377905703-c4788e51af15?${Q}&w=640&h=640&sat=-15`,
+  `https://images.unsplash.com/photo-1600334129128-685c5582fd35?${Q}&w=640&h=640&sat=-10`,
 ] as const;
 
 export const MASSAGE_PORTAL_SAMPLE_CONTACT = {
