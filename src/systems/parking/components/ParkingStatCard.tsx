@@ -8,12 +8,14 @@ export function ParkingStatCard({
   value,
   tone,
   icon,
+  subtitle,
   className,
 }: {
   title: string;
   value: string;
-  tone: "indigo" | "slate" | "emerald" | "amber" | "violet";
+  tone: "indigo" | "slate" | "emerald" | "amber" | "violet" | "rose";
   icon?: ReactNode;
+  subtitle?: string;
   className?: string;
 }) {
   return (
@@ -26,6 +28,7 @@ export function ParkingStatCard({
           {icon ? <div className="shrink-0 opacity-40">{icon}</div> : null}
         </div>
         <p className="mt-3 text-xl font-black tabular-nums tracking-tight sm:mt-4 sm:text-2xl md:text-3xl">{value}</p>
+        {subtitle ? <p className="mt-1 text-[10px] font-semibold leading-snug opacity-70 sm:text-[11px]">{subtitle}</p> : null}
       </div>
       <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-current opacity-[0.03] blur-2xl" aria-hidden />
     </div>

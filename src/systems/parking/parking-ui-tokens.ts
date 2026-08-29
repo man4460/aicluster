@@ -51,7 +51,25 @@ export function parkingFilterChipClass(active: boolean) {
     : "min-h-[40px] shrink-0 rounded-xl border border-white/60 bg-white/70 px-3 text-sm font-semibold text-[#4d47b6] transition hover:bg-white/90";
 }
 
-export function parkingStatCardClass(tone: "indigo" | "slate" | "emerald" | "amber" | "violet") {
+export const parkingPrimaryTabShellClass =
+  "flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/55 bg-white/40 p-1.5 shadow-sm backdrop-blur-md";
+
+export function parkingPrimaryTabPillClass(active: boolean) {
+  return cn(
+    "inline-flex min-h-10 items-center justify-center rounded-xl px-3.5 text-sm font-black transition-all sm:min-h-11 sm:px-4",
+    active
+      ? "bg-gradient-to-r from-[#5b61ff] to-[#6a63ff] text-white shadow-md shadow-indigo-200/60"
+      : "text-[#5f5a8a] hover:bg-white/70 hover:text-[#4d47b6]",
+  );
+}
+
+export const parkingMobileSelectClass =
+  "w-full min-h-[44px] rounded-xl border border-white/60 bg-white/80 px-3 text-sm font-bold text-[#1e1b4b] shadow-sm outline-none ring-[#5b61ff]/25 focus:ring-2";
+
+export const parkingFinanceStatsGridClass = "grid grid-cols-2 gap-3 sm:grid-cols-3";
+export const parkingFinanceStatTailClass = "col-span-2 sm:col-span-1";
+
+export function parkingStatCardClass(tone: "indigo" | "slate" | "emerald" | "amber" | "violet" | "rose") {
   const toneStyles = {
     indigo:
       "border-white/60 bg-gradient-to-br from-white/60 via-indigo-50/35 to-indigo-100/30 text-indigo-800 shadow-[0_18px_38px_-26px_rgba(79,70,229,0.45)]",
@@ -63,6 +81,8 @@ export function parkingStatCardClass(tone: "indigo" | "slate" | "emerald" | "amb
       "border-white/60 bg-gradient-to-br from-white/60 via-emerald-50/35 to-emerald-100/30 text-emerald-700 shadow-[0_18px_38px_-26px_rgba(16,185,129,0.35)]",
     amber:
       "border-white/60 bg-gradient-to-br from-white/60 via-amber-50/35 to-orange-100/30 text-amber-700 shadow-[0_18px_38px_-26px_rgba(217,119,6,0.35)]",
+    rose:
+      "border-white/60 bg-gradient-to-br from-white/60 via-rose-50/35 to-rose-100/30 text-rose-700 shadow-[0_18px_38px_-26px_rgba(225,29,72,0.35)]",
   };
   return cn(
     "relative overflow-hidden rounded-[2rem] border p-4 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_44px_-24px_rgba(30,27,75,0.4)] sm:p-5",

@@ -76,13 +76,13 @@ export default async function ParkingDashboardPage() {
               <IconSettings className="h-5 w-5 sm:hidden" />
               <span className="hidden sm:inline">ตั้งค่า</span>
             </Link>
-            <Link href="/dashboard/parking/spots" aria-label="จัดการช่องจอด" className={quickLinkClass}>
+            <Link href="/dashboard/parking/spots" aria-label="การจัดการช่องจอด" className={quickLinkClass}>
               <IconGrid className="h-5 w-5 sm:hidden" />
-              <span className="hidden sm:inline">ช่องจอด</span>
+              <span className="hidden sm:inline">การจัดการ</span>
             </Link>
-            <Link href="/dashboard/parking/history" aria-label="ประวัติการใช้บริการ" className={quickLinkClass}>
+            <Link href="/dashboard/parking/finance" aria-label="การเงินลานจอด" className={quickLinkClass}>
               <IconClock className="h-5 w-5 sm:hidden" />
-              <span className="hidden sm:inline">ประวัติ</span>
+              <span className="hidden sm:inline">การเงิน</span>
             </Link>
           </div>
         }

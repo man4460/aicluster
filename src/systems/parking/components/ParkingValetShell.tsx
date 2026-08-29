@@ -9,7 +9,7 @@ import {
   PARKING_HEADER_COLLAPSE_EVENT,
   PARKING_MODULE_DISPLAY_NAME,
   PARKING_NAV_ITEMS,
-  parkingNavActive,
+  isParkingNavItemActive,
   readParkingHeaderCollapsed,
   writeParkingHeaderCollapsed,
   type ParkingNavKey,
@@ -32,19 +32,19 @@ function IconHome({ className }: { className?: string }) {
   );
 }
 
-function IconGrid({ className }: { className?: string }) {
+function IconManage({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className={className} aria-hidden>
-      <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" strokeLinejoin="round" />
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 10h18M9 10v10M15 10v10" strokeLinecap="round" />
     </svg>
   );
 }
 
-function IconClock({ className }: { className?: string }) {
+function IconFinance({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className={className} aria-hidden>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 2" strokeLinecap="round" />
+      <path d="M4 18h16M7 14l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -63,8 +63,8 @@ function IconGear({ className }: { className?: string }) {
 
 const NAV_ICONS: Record<ParkingNavKey, typeof IconHome> = {
   dashboard: IconHome,
-  spots: IconGrid,
-  history: IconClock,
+  spots: IconManage,
+  finance: IconFinance,
   settings: IconGear,
 };
 
@@ -87,7 +87,7 @@ const parkingGuideSections = [
     ),
   },
   {
-    title: "ช่องจอด",
+    title: "การจัดการ",
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
         <li>เพิ่มรหัสช่องและโซน — แต่ละช่องมีลิงก์ QR สำหรับลูกค้าเช็คอินเอง</li>
@@ -96,10 +96,10 @@ const parkingGuideSections = [
     ),
   },
   {
-    title: "ประวัติ",
+    title: "การเงิน",
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>ค้นหาตามทะเบียน ช่วงเวลาเช็คอิน และสถานะเซสชัน</li>
+        <li>สรุปรายรับจากรอบจอดที่ชำระแล้ว และดูประวัติเซสชันตามทะเบียน/ช่วงเวลา</li>
       </ul>
     ),
   },
@@ -108,6 +108,7 @@ const parkingGuideSections = [
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
         <li>ตั้งชื่อลาน โหมดคิดเงิน (รายชั่วโมงหรือเหมารายวัน) และอัตราค่าจอด</li>
+        <li>ดูลิงก์/QR เช็คอินลูกค้าได้ที่แท็บลิงก์</li>
       </ul>
     ),
   },
@@ -195,7 +196,7 @@ export function ParkingValetShell({
           <nav aria-label="เมนูโมดูลรับฝากจอดรถ" className="mt-5 hidden border-t border-white/50 pt-5 md:block">
             <ul className="grid grid-cols-4 gap-1.5">
               {PARKING_NAV_ITEMS.map((item) => {
-                const active = parkingNavActive(pathname, item.href);
+                const active = isParkingNavItemActive(pathname, item.key);
                 const Icon = NAV_ICONS[item.key];
                 return (
                   <li key={item.href} className="min-w-0">
@@ -220,7 +221,7 @@ export function ParkingValetShell({
       <AppMobileDockShell ariaLabel="เมนูล่างรับฝากจอดรถ">
         <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
           {PARKING_NAV_ITEMS.map((item) => {
-            const active = parkingNavActive(pathname, item.href);
+            const active = isParkingNavItemActive(pathname, item.key);
             const Icon = NAV_ICONS[item.key];
             return (
               <li key={item.href} className="min-w-0">
@@ -234,7 +235,7 @@ export function ParkingValetShell({
                   title={item.label}
                 >
                   <Icon className={cn("h-5 w-5 shrink-0", active ? "text-[#5b61ff]" : "text-slate-400")} />
-                  <span className="max-w-full truncate px-0.5 text-[9px] font-black leading-none">{item.label}</span>
+                  <span className="max-w-full truncate px-0.5 text-[9px] font-black leading-none">{item.shortLabel}</span>
                 </Link>
               </li>
             );
@@ -246,7 +247,7 @@ export function ParkingValetShell({
         open={guideOpen}
         onClose={() => setGuideOpen(false)}
         title="คู่มือการใช้งาน — บริการรับฝากจอดรถ"
-        subtitle="เมนูหลัก การตั้งค่า และ QR เช็คอิน"
+        subtitle="แดชบอร์ด · การจัดการ · การเงิน · ตั้งค่า"
         sections={parkingGuideSections}
       />
     </div>

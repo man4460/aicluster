@@ -11,7 +11,7 @@ import { cn } from "@/lib/cn";
 import { parkingField } from "@/systems/parking/parking-ui";
 import { parkingValetCardClass } from "@/systems/parking/parking-valet-ui";
 
-const HISTORY_PATH = "/dashboard/parking/history";
+const DEFAULT_FILTER_PATH = "/dashboard/parking/finance";
 
 function filterActiveCount(q: string, status: string, from: string, to: string): number {
   let n = 0;
@@ -35,11 +35,17 @@ export function ParkingHistoryFilterSection({
   status,
   from,
   to,
+  basePath = DEFAULT_FILTER_PATH,
+  title = "ประวัติรอบจอด",
+  description = "สืบค้นตามทะเบียน ช่วงเวลาเช็คอิน และสถานะ",
 }: {
   q: string;
   status: string;
   from: string;
   to: string;
+  basePath?: string;
+  title?: string;
+  description?: string;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const activeFilters = useMemo(() => filterActiveCount(q, status, from, to), [q, status, from, to]);
@@ -50,8 +56,8 @@ export function ParkingHistoryFilterSection({
         tone="slate"
         className="flex flex-row items-start justify-between gap-3 sm:items-center"
         actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
-        title="ประวัติการใช้บริการ"
-        description="สืบค้นตามทะเบียน ช่วงเวลาเช็คอิน และสถานะ"
+        title={title}
+        description={description}
         action={
           <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
             <button
@@ -100,7 +106,7 @@ export function ParkingHistoryFilterSection({
 
       <form
         method="get"
-        action={HISTORY_PATH}
+        action={basePath}
         className={cn("hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-4", parkingValetCardClass)}
       >
         <div>
@@ -183,7 +189,7 @@ export function ParkingHistoryFilterSection({
               <p id="parking-history-filter-title" className="text-base font-black tracking-tight text-[#1e1b4b]">
                 กรองข้อมูล
               </p>
-              <form method="get" action={HISTORY_PATH} className="mt-4 space-y-3">
+              <form method="get" action={basePath} className="mt-4 space-y-3">
                 <div>
                   <label htmlFor="parking-h-q-m" className="block text-xs font-semibold text-[#5f5a8a]">
                     ทะเบียน
@@ -244,7 +250,7 @@ export function ParkingHistoryFilterSection({
                 </button>
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                   <Link
-                    href={HISTORY_PATH}
+                    href={basePath}
                     className="text-sm font-semibold text-[#4d47b6]"
                     onClick={() => setSheetOpen(false)}
                   >

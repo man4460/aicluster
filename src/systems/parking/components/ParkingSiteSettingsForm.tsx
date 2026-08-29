@@ -9,11 +9,15 @@ export function ParkingSiteSettingsForm({
   initialMode,
   initialHourly,
   initialDaily,
+  showName = true,
+  showPricing = true,
 }: {
   initialName: string;
   initialMode: "HOURLY" | "DAILY";
   initialHourly: number | null;
   initialDaily: number | null;
+  showName?: boolean;
+  showPricing?: boolean;
 }) {
   const router = useRouter();
   const [name, setName] = useState(initialName);
@@ -30,15 +34,17 @@ export function ParkingSiteSettingsForm({
     setMsg(null);
     setErr(null);
     try {
+      const body: Record<string, unknown> = {};
+      if (showName) body.name = name.trim();
+      if (showPricing) {
+        body.pricingMode = pricingMode;
+        body.hourlyRateBaht = hourly.trim() === "" ? null : Number(hourly);
+        body.dailyRateBaht = daily.trim() === "" ? null : Number(daily);
+      }
       const res = await fetch("/api/parking/site", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          pricingMode,
-          hourlyRateBaht: hourly.trim() === "" ? null : Number(hourly),
-          dailyRateBaht: daily.trim() === "" ? null : Number(daily),
-        }),
+        body: JSON.stringify(body),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
@@ -56,53 +62,59 @@ export function ParkingSiteSettingsForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <div>
-        <label className="block text-xs font-semibold text-[#5f5a8a]">ชื่อลานจอด</label>
-        <input
-          className={`${parkingField} mt-1`}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          maxLength={120}
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-xs font-semibold text-[#5f5a8a]">โหมดคิดเงิน</label>
-        <select
-          className={`${parkingField} mt-1`}
-          value={pricingMode}
-          onChange={(e) => setPricingMode(e.target.value as "HOURLY" | "DAILY")}
-        >
-          <option value="HOURLY">รายชั่วโมง (ปัดขึ้น)</option>
-          <option value="DAILY">เหมารายวัน (ปฏิทินไทย)</option>
-        </select>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      {showName ? (
         <div>
-          <label className="block text-xs font-semibold text-[#5f5a8a]">บาท / ชั่วโมง</label>
+          <label className="block text-xs font-semibold text-[#5f5a8a]">ชื่อลานจอด</label>
           <input
-            type="number"
-            min={0}
-            step={1}
-            className={`${parkingField} mt-1 tabular-nums`}
-            value={hourly}
-            onChange={(e) => setHourly(e.target.value)}
-            disabled={pricingMode !== "HOURLY"}
+            className={`${parkingField} mt-1`}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={120}
+            required
           />
         </div>
-        <div>
-          <label className="block text-xs font-semibold text-[#5f5a8a]">บาท / วัน</label>
-          <input
-            type="number"
-            min={0}
-            step={1}
-            className={`${parkingField} mt-1 tabular-nums`}
-            value={daily}
-            onChange={(e) => setDaily(e.target.value)}
-            disabled={pricingMode !== "DAILY"}
-          />
-        </div>
-      </div>
+      ) : null}
+      {showPricing ? (
+        <>
+          <div>
+            <label className="block text-xs font-semibold text-[#5f5a8a]">โหมดคิดเงิน</label>
+            <select
+              className={`${parkingField} mt-1`}
+              value={pricingMode}
+              onChange={(e) => setPricingMode(e.target.value as "HOURLY" | "DAILY")}
+            >
+              <option value="HOURLY">รายชั่วโมง (ปัดขึ้น)</option>
+              <option value="DAILY">เหมารายวัน (ปฏิทินไทย)</option>
+            </select>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-semibold text-[#5f5a8a]">บาท / ชั่วโมง</label>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                className={`${parkingField} mt-1 tabular-nums`}
+                value={hourly}
+                onChange={(e) => setHourly(e.target.value)}
+                disabled={pricingMode !== "HOURLY"}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#5f5a8a]">บาท / วัน</label>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                className={`${parkingField} mt-1 tabular-nums`}
+                value={daily}
+                onChange={(e) => setDaily(e.target.value)}
+                disabled={pricingMode !== "DAILY"}
+              />
+            </div>
+          </div>
+        </>
+      ) : null}
       {msg ? <p className="text-sm text-emerald-700">{msg}</p> : null}
       {err ? <p className="text-sm text-red-700">{err}</p> : null}
       <button type="submit" disabled={loading} className={parkingBtnPrimary}>

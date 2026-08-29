@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 import {
   PARKING_MODULE_DISPLAY_NAME,
   PARKING_NAV_ITEMS,
-  parkingNavActive,
+  isParkingNavItemActive,
   type ParkingNavKey,
 } from "@/systems/parking/parking-module-nav";
 
@@ -15,14 +15,14 @@ function parkingHeaderIcon(key: ParkingNavKey, className?: string) {
   if (key === "dashboard") {
     glyph = <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" />;
   } else if (key === "spots") {
-    glyph = <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" strokeLinejoin="round" />;
-  } else if (key === "history") {
     glyph = (
       <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 7v5l3 2" strokeLinecap="round" />
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="M3 10h18M9 10v10M15 10v10" strokeLinecap="round" />
       </>
     );
+  } else if (key === "finance") {
+    glyph = <path d="M4 18h16M7 14l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />;
   } else {
     glyph = (
       <>
@@ -83,7 +83,7 @@ export function ParkingHeaderBarNav({ onExpand }: { onExpand: () => void }) {
         aria-label="เมนูโมดูลที่จอดรถ"
       >
         {PARKING_NAV_ITEMS.map((item) => {
-          const active = parkingNavActive(pathname, item.href);
+          const active = isParkingNavItemActive(pathname, item.key);
           return (
             <Link
               key={item.key}
@@ -98,17 +98,13 @@ export function ParkingHeaderBarNav({ onExpand }: { onExpand: () => void }) {
               aria-label={item.label}
               title={item.label}
             >
-              <span className="flex h-3.5 w-3.5 items-center justify-center" aria-hidden>
-                {parkingHeaderIcon(item.key, "h-3.5 w-3.5")}
-              </span>
-              <span className="hidden xl:inline">{item.label}</span>
+              {parkingHeaderIcon(item.key, "h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4")}
+              <span className="hidden max-w-[4.5rem] truncate sm:inline">{item.shortLabel}</span>
             </Link>
           );
         })}
       </nav>
-      <span className="hidden max-w-[12rem] shrink-0 truncate text-right text-sm font-black tracking-tight text-white md:inline lg:max-w-[16rem]">
-        {PARKING_MODULE_DISPLAY_NAME}
-      </span>
+      <span className="hidden shrink-0 text-[10px] font-bold text-white/70 lg:inline">{PARKING_MODULE_DISPLAY_NAME}</span>
       <ParkingHeaderExpandButton onExpand={onExpand} />
     </div>
   );

@@ -11,7 +11,7 @@ import { ParkingSpotsGridList } from "@/systems/parking/components/ParkingSpotsG
 import { parkingValetInnerCardClass } from "@/systems/parking/parking-ui-tokens";
 
 export const metadata: Metadata = {
-  title: "จัดการช่องจอด | บริการรับฝากจอดรถ",
+  title: "การจัดการ | บริการรับฝากจอดรถ",
 };
 
 const backLinkClass = cn(
@@ -26,7 +26,7 @@ export default async function ParkingSpotsPage() {
   return (
     <ParkingPageStack>
       <ParkingPanelCard
-        title="จัดการช่องจอด"
+        title="การจัดการช่องจอด"
         description="เพิ่มช่อง แก้ลิงก์ QR หรือเช็คอินฝั่งพนักงานได้ที่รายละเอียดแต่ละช่อง"
         headerClassName="flex flex-row items-start justify-between gap-3 sm:items-center"
         action={
