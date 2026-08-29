@@ -218,11 +218,11 @@ async function refreshMassageCatalogMedia(
     orderBy: { id: "asc" },
     select: { id: true, name: true, photoUrl: true, phone: true },
   });
-  const demoPhones = new Set(THERAPIST_DEFS.map((d) => d.phone));
+  const demoPhones = new Set<string>(THERAPIST_DEFS.map((d) => d.phone));
   for (let i = 0; i < therapists.length; i += 1) {
     const t = therapists[i]!;
     const def = THERAPIST_DEFS[i % THERAPIST_DEFS.length]!;
-    const isDemoRow = demoPhones.has(t.phone);
+    const isDemoRow = Boolean(t.phone && demoPhones.has(t.phone));
     const needsPhoto = isMissingOrPlaceholderImage(t.photoUrl);
     if (!isDemoRow && !needsPhoto) continue;
     await db.massageTherapist.update({
