@@ -81,6 +81,14 @@ export {
   type PrintAppShortReceiptSlipParams,
   type AppReceiptSlipBuildParams,
 } from "./slip-print";
+export {
+  buildAppInvoicePayUploadQrRowHtml,
+  type AppInvoicePayUploadQrRowParams,
+} from "./invoice-pay-upload-qr";
+export {
+  AppInvoicePayUploadQrSection,
+  type AppInvoicePayUploadQrSectionProps,
+} from "./AppInvoicePayUploadQrSection";
 export { AppSlipPaperSizeToolbar, type AppSlipPaperSizeToolbarProps } from "./AppSlipPaperSizeToolbar";
 export {
   fetchAppDefaultSlipPaperSize,

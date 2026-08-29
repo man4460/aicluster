@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AppInvoicePayUploadQrSection } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { formatDormAmountStable } from "@/lib/dormitory/format-display-stable";
 
@@ -117,63 +118,17 @@ export function DormInvoiceSheetContent({
         )}
       </section>
 
-      <section className="mt-6 flex flex-col items-center border-t border-dashed border-slate-200 pt-6 sm:mt-7 sm:pt-7">
-        <h2 className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">สแกนจ่าย พร้อมเพย์</h2>
-        {promptPayQrDataUrl ? (
-          <>
-            <img
-              src={promptPayQrDataUrl}
-              alt="PromptPay QR"
-              className="mt-3 h-auto w-[min(100%,200px)] max-w-[200px] object-contain sm:mt-4 sm:w-52 sm:max-w-[208px]"
-            />
-            <p className="mt-2 text-[11px] text-slate-500">ยอด {amt} บาท</p>
-          </>
-        ) : (
-          <p className="mt-3 max-w-sm text-center text-xs leading-relaxed text-amber-900 sm:text-sm">
-            ยังไม่ได้ตั้งเบอร์พร้อมเพย์ — ตั้งค่าได้ที่โปรไฟล์ส่วนกลาง
-          </p>
-        )}
-      </section>
-
-      <section className="mt-6 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-4 sm:mt-7 sm:px-4 sm:py-5">
-        <h2 className="text-center text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">หลังโอนแล้ว — แนบสลิป</h2>
-        <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-5">
-          <ol className="min-w-0 flex-1 space-y-2.5 text-xs leading-relaxed text-slate-700 sm:text-sm">
-            <li className="flex gap-2">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#3730a3] text-[11px] font-bold text-white">
-                1
-              </span>
-              <span>โอนเงินตามช่องทางด้านบนให้ครบยอด</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#3730a3] text-[11px] font-bold text-white">
-                2
-              </span>
-              <span>
-                สแกน QR มุมขวาเพื่ออัปโหลดสลิป หรือขอลิงก์จากเจ้าของหอแล้วเปิดลิงก์แนบรูปสลิป
-              </span>
-            </li>
-            <li className="flex gap-2">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#3730a3] text-[11px] font-bold text-white">
-                3
-              </span>
-              <span>เจ้าของหอจะตรวจสลิปที่หน้าห้อง แล้วกดยืนยันรับชำระ</span>
-            </li>
-          </ol>
-          {slipUploadQrDataUrl ? (
-            <div className="flex shrink-0 flex-col items-center self-center sm:self-end">
-              <img
-                src={slipUploadQrDataUrl}
-                alt="สแกนแนบสลิป"
-                width={112}
-                height={112}
-                className="h-28 w-28 rounded-lg border border-white bg-white object-contain p-1 shadow-sm"
-              />
-              <p className="mt-1.5 text-center text-[10px] font-bold text-slate-600">สแกนแนบสลิป</p>
-            </div>
-          ) : null}
-        </div>
-      </section>
+      <AppInvoicePayUploadQrSection
+        amountLabel={amt}
+        promptPayQrDataUrl={promptPayQrDataUrl}
+        slipUploadQrDataUrl={slipUploadQrDataUrl}
+        missingPromptPayMessage="ยังไม่ได้ตั้งเบอร์พร้อมเพย์ — ตั้งค่าได้ที่โปรไฟล์ส่วนกลาง"
+        uploadSteps={[
+          "โอนเงินตามช่องทางด้านบนให้ครบยอด",
+          "สแกน QR อัปโหลดสลิปด้านขวา หรือขอลิงก์จากเจ้าของหอ",
+          "เจ้าของหอตรวจสลิปที่หน้าห้อง แล้วกดยืนยันรับชำระ",
+        ]}
+      />
 
       <p className="mt-5 text-center text-[10px] text-slate-400 sm:mt-6">MAWELL — ระบบจัดการหอพัก</p>
     </div>
