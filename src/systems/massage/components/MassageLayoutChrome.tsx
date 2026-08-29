@@ -50,7 +50,7 @@ function MassageHeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
 
 /**
  * §12 Main module DESKTOP nav (อยู่ใน glass shell header) — เมื่อซ่อน header จะหายไปด้วย
- * Nav items: 4 ใบตรงกับ MASSAGE_NAV_ITEMS (dashboard/finance/packages/settings)
+ * Nav items: 4 ใบตรงกับ MASSAGE_NAV_ITEMS (dashboard/finance/manage/settings)
  * Active: brand gradient (§4 single source of truth)
  */
 export function MassageModuleDesktopNav({ pathname }: { pathname: string }) {

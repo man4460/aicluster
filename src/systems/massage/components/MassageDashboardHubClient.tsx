@@ -14,19 +14,19 @@ import {
   MASSAGE_DASHBOARD_TAB_ITEMS,
   isMassageDashboardTabActive,
   massageDashboardTabIcon,
+  massageManageHref,
   massageTabHref,
   parseMassageDashboardTab,
   type MassageDashboardTabKey,
 } from "@/systems/massage/massage-module-nav";
 import { MassageBookingsClient } from "@/systems/massage/components/MassageBookingsClient";
 import { MassageCheckInClient } from "@/systems/massage/components/MassageCheckInClient";
-import { MassageTherapistsClient } from "@/systems/massage/components/MassageTherapistsClient";
 
 export type { MassageDashboardTabKey };
 
 /**
- * §12 Dashboard hub TAB TOOLBAR (query params ?tab= queue/checkin/therapists/overview)
- * ตารางเวลาอยู่ที่ตั้งค่า (?tab=hours)
+ * §12 Dashboard hub TAB TOOLBAR (query params ?tab= queue/checkin/overview)
+ * หมอนวดอยู่ที่การจัดการ · ตารางเวลาอยู่ที่ตั้งค่า (?tab=hours)
  */
 export function MassageDashboardTabToolbar({ className }: { className?: string }) {
   const pathname = usePathname() ?? "/dashboard/massage";
@@ -105,8 +105,13 @@ function MassageDashboardHubTabs({
   );
 
   useEffect(() => {
-    if (searchParams.get("tab") === "schedule") {
+    const raw = searchParams.get("tab");
+    if (raw === "schedule") {
       router.replace("/dashboard/massage/settings?tab=hours");
+      return;
+    }
+    if (raw === "therapists") {
+      router.replace(massageManageHref("therapists"));
     }
   }, [router, searchParams]);
 
@@ -123,7 +128,6 @@ function MassageDashboardHubTabs({
         <MassageBookingsClient initialDateKey={initialDateKey} showDashboardBackLink={false} />
       ) : null}
       {tab === "checkin" ? <MassageCheckInClient embedded /> : null}
-      {tab === "therapists" ? <MassageTherapistsClient embedded /> : null}
     </div>
   );
 }

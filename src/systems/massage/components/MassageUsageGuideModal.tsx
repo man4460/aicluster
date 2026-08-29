@@ -85,9 +85,8 @@ export function MassageUsageGuideModal({ open, onClose }: { open: boolean; onClo
               </p>
               <ol className="list-decimal space-y-1 pl-5 marker:font-semibold marker:text-[#4d47b6]">
                 <li>โปรไฟล์ — รูป ชื่อร้าน ที่อยู่ เบอร์ เลขภาษี (แท็บตั้งค่าบริษัท/ร้าน)</li>
-                <li>แพ็กเกจ — สร้างแพ็กที่ขายจริง (ราคา จำนวนครั้ง)</li>
-                <li>ช่าง — เพิ่มช่าง (ใช้ผูกกับประวัติการบริการได้)</li>
-                <li>แดชบอร์ด (แท็บคิว / เช็กอิน / หมอนวด) และตั้งค่า → ลิงก์ QR — ตาม workflow ร้าน</li>
+                <li>การจัดการ — เพิ่มหมอนวด และสร้างแพ็กที่ขายจริง (ราคา จำนวนครั้ง)</li>
+                <li>แดชบอร์ด (แท็บคิว / เช็กอิน) และตั้งค่า → ลิงก์ QR — ตาม workflow ร้าน</li>
               </ol>
             </Section>
 
@@ -96,8 +95,7 @@ export function MassageUsageGuideModal({ open, onClose }: { open: boolean; onClo
                 หน้าแรกของโมดูล — โครงคล้ายคาร์แคร์: ด้านบนมีแท็บ{" "}
                 <strong className="font-semibold text-[#2e2a58]">ภาพรวม</strong> ·{" "}
                 <strong className="font-semibold text-[#2e2a58]">จัดการคิว</strong> ·{" "}
-                <strong className="font-semibold text-[#2e2a58]">เช็กอิน</strong> ·{" "}
-                <strong className="font-semibold text-[#2e2a58]">ช่าง</strong> — สลับได้โดยไม่ต้องออกจากหน้าหลัก
+                <strong className="font-semibold text-[#2e2a58]">เช็กอิน</strong> — สลับได้โดยไม่ต้องออกจากหน้าหลัก
               </p>
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
                 <li>
@@ -201,7 +199,7 @@ export function MassageUsageGuideModal({ open, onClose }: { open: boolean; onClo
               </p>
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
                 <li>
-                  <strong className="font-semibold text-[#2e2a58]">ช่างที่บันทึก</strong> — เลือกช่างจากรายการ (ตั้งได้ที่แท็บช่างในแดชบอร์ด)
+                  <strong className="font-semibold text-[#2e2a58]">ช่างที่บันทึก</strong> — เลือกช่างจากรายการ (ตั้งได้ที่การจัดการ → หมอนวด)
                   ถ้าไม่เลือก ระบบจะไม่ผูกชื่อช่างในประวัติ
                 </li>
                 <li>
@@ -214,31 +212,28 @@ export function MassageUsageGuideModal({ open, onClose }: { open: boolean; onClo
                 </li>
                 <li>
                   <strong className="font-semibold text-[#2e2a58]">บันทึกด่วน — ขายแพ็ก</strong> — เลือกแพ็กเกจ กรอกเบอร์และชื่อลูกค้า
-                  เปิดสมาชิกแพ็กใหม่ (ต้องมีแพ็กเกจในระบบก่อน — สร้างที่เมนูแพ็กเกจ)
+                  เปิดสมาชิกแพ็กใหม่ (ต้องมีแพ็กเกจในระบบก่อน — สร้างที่เมนูการจัดการ → แพ็กเกจ)
                 </li>
               </ul>
             </Section>
 
-            <Section title="แท็บในแดชบอร์ด: ช่าง">
+            <Section title="เมนูการจัดการ (หมอนวด · แพ็กเกจ · สมาชิก)">
               <p>
-                เปิดจากแท็บ <strong className="font-semibold text-[#2e2a58]">ช่าง</strong> — จัดการรายชื่อช่างในร้าน
+                เมนู <strong className="font-semibold text-[#2e2a58]">การจัดการ</strong> รวมสามแท็บในแผงเดียว:{" "}
+                <strong className="font-semibold text-[#2e2a58]">หมอนวด</strong> ·{" "}
+                <strong className="font-semibold text-[#2e2a58]">แพ็กเกจ</strong> ·{" "}
+                <strong className="font-semibold text-[#2e2a58]">สมาชิกแพ็กเกจ</strong>
               </p>
+              <p className="font-semibold text-[#2e2a58]">แท็บหมอนวด</p>
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>เพิ่มช่าง: ชื่อ เบอร์ (ถ้ามี) รูปประจำตัว (ถ้ามี)</li>
+                <li>เพิ่มหมอนวด: ชื่อ เบอร์ (ถ้ามี) รูปประจำตัว (ถ้ามี)</li>
                 <li>แก้ไข ปิดการใช้งานชั่วคราว หรือลบตามนโยบายร้าน</li>
-                <li>รูปช่างสามารถดูขยายเต็มจอได้จากรายการ</li>
-                <li>ช่างที่เลือกในเช็กอินจะถูกบันทึกในประวัติยอดขาย</li>
+                <li>รูปสามารถดูขยายเต็มจอได้จากรายการ</li>
+                <li>หมอนวดที่เลือกในเช็กอินจะถูกบันทึกในประวัติยอดขาย</li>
               </ul>
-            </Section>
-
-            <Section title="เมนูแพ็กเกจ (แพ็กเกจ + สมาชิก)">
-              <p>
-                เมนู <strong className="font-semibold text-[#2e2a58]">แพ็กเกจ</strong> รวมสองแท็บในแผงเดียว (แบบคาร์แคร์): <strong className="font-semibold text-[#2e2a58]">แพ็กเกจ</strong>{" "}
-                กับ <strong className="font-semibold text-[#2e2a58]">สมาชิกแพ็กเกจ</strong>
-              </p>
-              <p className="font-semibold text-[#2e2a58]">แท็บแพ็กเกจ</p>
+              <p className="mt-3 font-semibold text-[#2e2a58]">แท็บแพ็กเกจ</p>
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-                <li>กำหนดแพ็กที่ร้านขาย เช่น ตัดผม 10 ครั้ง ราคาเท่าใด</li>
+                <li>กำหนดแพ็กที่ร้านขาย เช่น นวด 10 ครั้ง ราคาเท่าใด</li>
                 <li>เพิ่มแพ็กใหม่: ชื่อ ราคา (บาท) จำนวนครั้งทั้งหมด</li>
                 <li>แก้ไขหรือลบแพ็กจากรายการ (ลบกระทบเฉพาะการตั้งค่าแพ็ก — สมาชิกที่ซื้อแล้วยังอยู่ในแท็บสมาชิก)</li>
                 <li>

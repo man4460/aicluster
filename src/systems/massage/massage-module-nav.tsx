@@ -15,6 +15,8 @@ export const MASSAGE_MODULE_PATH_PREFIX = "/dashboard/massage";
 /** Staff kiosk path — ถึงแม้จะซ่อน chrome แต่ path ก็ยังอยู่ในโมดูล massage เดียว */
 export const MASSAGE_STAFF_KIOSK_PATH = "/dashboard/massage/staff";
 
+export const MASSAGE_MANAGE_HREF = "/dashboard/massage/manage";
+
 export function isMassageModulePath(pathname: string): boolean {
   if (!pathname) return false;
   return (
@@ -30,9 +32,12 @@ export function massagePathFlags(pathname: string) {
   const onFinance =
     onMassage &&
     (pathname === "/dashboard/massage/finance" || pathname.startsWith("/dashboard/massage/finance/"));
-  const onPackages =
+  const onManage =
     onMassage &&
-    (pathname === "/dashboard/massage/packages" || pathname.startsWith("/dashboard/massage/packages/"));
+    (pathname === MASSAGE_MANAGE_HREF ||
+      pathname.startsWith(`${MASSAGE_MANAGE_HREF}/`) ||
+      pathname === "/dashboard/massage/packages" ||
+      pathname.startsWith("/dashboard/massage/packages/"));
   const onQr =
     onMassage &&
     (pathname === "/dashboard/massage/qr" ||
@@ -42,12 +47,14 @@ export function massagePathFlags(pathname: string) {
   const onSettings =
     pathname === "/dashboard/massage/settings" ||
     pathname.startsWith("/dashboard/massage/settings/");
-  const plainInner = onStaff || onFinance || onPackages || onQr;
+  const plainInner = onStaff || onFinance || onManage || onQr;
   return {
     onMassage,
     onStaff,
     onFinance,
-    onPackages,
+    onManage,
+    /** @deprecated ใช้ onManage */
+    onPackages: onManage,
     onQr,
     onSettings,
     plainInner,
@@ -55,25 +62,35 @@ export function massagePathFlags(pathname: string) {
 }
 
 /**
- * Nav tab keys ของร้านนวด = 4 dashboard tabs + 1 settings
- * Dashboard hub tabs: overview / queue / checkin / therapists (query params ?tab=...)
+ * Dashboard hub tabs: overview / queue / checkin
+ * หมอนวด + แพ็กเกจ + สมาชิก → หน้าการจัดการ
  * ตารางเวลา + QR → หน้าตั้งค่า (?tab=hours|link)
- * Main module tabs: dashboard · finance · packages · settings (4 ใบ — dock grid-cols-4)
+ * Main module tabs: dashboard · finance · manage · settings (4 ใบ — dock grid-cols-4)
  */
-export type MassageModuleNavKey = "dashboard" | "finance" | "packages" | "settings";
+export type MassageModuleNavKey = "dashboard" | "finance" | "manage" | "settings";
 
-export type MassageDashboardTabKey = "overview" | "queue" | "checkin" | "therapists";
+export type MassageDashboardTabKey = "overview" | "queue" | "checkin";
 
-export const MASSAGE_DASHBOARD_TAB_KEYS = new Set<string>([
-  "overview",
-  "queue",
-  "checkin",
-  "therapists",
-]);
+/** หมวดย่อยในหน้าการจัดการ */
+export type MassageManageTabKey = "therapists" | "packages" | "members";
+
+export const MASSAGE_DASHBOARD_TAB_KEYS = new Set<string>(["overview", "queue", "checkin"]);
+
+export const MASSAGE_MANAGE_TAB_KEYS = new Set<string>(["therapists", "packages", "members"]);
 
 export function parseMassageDashboardTab(raw: string | null): MassageDashboardTabKey {
   if (raw && MASSAGE_DASHBOARD_TAB_KEYS.has(raw)) return raw as MassageDashboardTabKey;
   return "overview";
+}
+
+export function parseMassageManageTab(raw: string | null): MassageManageTabKey {
+  if (raw && MASSAGE_MANAGE_TAB_KEYS.has(raw)) return raw as MassageManageTabKey;
+  return "therapists";
+}
+
+export function massageManageHref(tab?: MassageManageTabKey): string {
+  if (!tab || tab === "therapists") return MASSAGE_MANAGE_HREF;
+  return `${MASSAGE_MANAGE_HREF}?tab=${tab}`;
 }
 
 /** Main module NAV items (ไม่รวม dashboard hub tabs) — ใช้ใน ModuleDesktopNav + HeaderBarNav */
@@ -86,11 +103,11 @@ export type MassageNavItem = {
 export const MASSAGE_NAV_ITEMS: MassageNavItem[] = [
   { key: "dashboard", label: "แดชบอร์ด", href: "/dashboard/massage" },
   { key: "finance", label: "การเงิน", href: "/dashboard/massage/finance" },
-  { key: "packages", label: "แพ็กเกจ", href: "/dashboard/massage/packages" },
+  { key: "manage", label: "การจัดการ", href: MASSAGE_MANAGE_HREF },
   { key: "settings", label: MODULE_SHOP_SETTINGS_SHORT_LABEL, href: "/dashboard/massage/settings" },
 ];
 
-/** Dashboard hub TAB items — ใช้ใน MassageDashboardTabToolbar (4 ใบ) */
+/** Dashboard hub TAB items — ใช้ใน MassageDashboardTabToolbar */
 export const MASSAGE_DASHBOARD_TAB_ITEMS: {
   key: MassageDashboardTabKey;
   label: string;
@@ -98,7 +115,15 @@ export const MASSAGE_DASHBOARD_TAB_ITEMS: {
   { key: "overview", label: "ภาพรวม" },
   { key: "queue", label: "จัดการคิว" },
   { key: "checkin", label: "เช็กอิน" },
+];
+
+export const MASSAGE_MANAGE_TAB_ITEMS: {
+  key: MassageManageTabKey;
+  label: string;
+}[] = [
   { key: "therapists", label: "หมอนวด" },
+  { key: "packages", label: "แพ็กเกจ" },
+  { key: "members", label: "สมาชิก" },
 ];
 
 export function massageTabHref(key: MassageModuleNavKey, dashboardTab?: MassageDashboardTabKey): string {
@@ -122,8 +147,10 @@ export function isMassageModuleNavItemActive(
         pathname === "/dashboard/massage/finance" ||
         pathname.startsWith("/dashboard/massage/finance/")
       );
-    case "packages":
+    case "manage":
       return (
+        pathname === MASSAGE_MANAGE_HREF ||
+        pathname.startsWith(`${MASSAGE_MANAGE_HREF}/`) ||
         pathname === "/dashboard/massage/packages" ||
         pathname.startsWith("/dashboard/massage/packages/")
       );
@@ -152,9 +179,6 @@ export function isMassageDashboardTabActive(
 
 /**
  * Nav icons (stroke glyphs, เน้น strokeWidth 2.25–2.5 strokeLinecap round)
- * - Dashboard hub tabs (5)
- * - Main module nav (5 — รวม settings gear)
- * มี 2 ฟังก์ชันแยกกันเพราะ icons ต่างกัน
  */
 export function massageDashboardTabIcon(key: MassageDashboardTabKey): React.ReactElement {
   switch (key) {
@@ -173,13 +197,6 @@ export function massageDashboardTabIcon(key: MassageDashboardTabKey): React.Reac
       );
     case "checkin":
       return <path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />;
-    case "therapists":
-      return (
-        <>
-          <circle cx="9" cy="7" r="3" />
-          <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2M16 11a3 3 0 1 0 6-3 3 3 0 0 0-3 3" />
-        </>
-      );
     default:
       return <circle cx="12" cy="12" r="9" />;
   }
@@ -191,12 +208,12 @@ export function massageModuleNavIcon(key: MassageModuleNavKey): React.ReactEleme
       return <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" />;
     case "finance":
       return <path d="M4 18h16M7 14l3-3 3 2 4-5" />;
-    case "packages":
+    case "manage":
       return (
         <>
-          <path d="M4 7h16v4H4z" />
-          <path d="M6 11v8h12v-8" />
-          <path d="M9 7V5h6v2" />
+          <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+          <path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z" />
+          <path d="M9 12h6M9 16h4" />
         </>
       );
     case "settings":

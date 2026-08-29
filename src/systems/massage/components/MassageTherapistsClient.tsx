@@ -54,7 +54,20 @@ async function uploadStylistImage(file: File): Promise<string> {
   return url;
 }
 
-export function MassageTherapistsClient({ embedded = false }: { embedded?: boolean } = {}) {
+export type MassageTherapistsEmbeddedToolbarApi = {
+  openAddModal: () => void;
+};
+
+type MassageTherapistsClientProps = {
+  embedded?: boolean;
+  /** เมื่อ embedded — ส่งปุ่ม «เพิ่มหมอนวด» ไปแถบหัว Hub */
+  onEmbeddedToolbar?: (api: MassageTherapistsEmbeddedToolbarApi | null) => void;
+};
+
+export function MassageTherapistsClient({
+  embedded = false,
+  onEmbeddedToolbar,
+}: MassageTherapistsClientProps = {}) {
   const router = useRouter();
   const [list, setList] = useState<Stylist[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,14 +182,20 @@ export function MassageTherapistsClient({ embedded = false }: { embedded?: boole
     };
   }, [anyModalOpen, previewUrl, editOpen, closeAddModal, closeEditModal]);
 
-  function openAddModal() {
+  const openAddModal = useCallback(() => {
     setErr(null);
     setName("");
     setPhone("");
     setAddPhotoFile(null);
     if (addFileRef.current) addFileRef.current.value = "";
     setAddOpen(true);
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!embedded || !onEmbeddedToolbar) return;
+    onEmbeddedToolbar({ openAddModal });
+    return () => onEmbeddedToolbar(null);
+  }, [embedded, onEmbeddedToolbar, openAddModal]);
 
   function openEditModal(s: Stylist) {
     setErr(null);
@@ -388,22 +407,24 @@ export function MassageTherapistsClient({ embedded = false }: { embedded?: boole
       ) : null}
 
       <section className={massageSectionFirstClass} aria-label="รายชื่อช่าง">
-        <AppSectionHeader
-          tone="violet"
-          title="รายชื่อช่าง"
-          action={
-            <div className={massageSectionActionsRowClass}>
-              {!embedded ? <MassageDashboardBackLink /> : null}
-              <button
-                type="button"
-                onClick={openAddModal}
-                className={`app-btn-primary min-h-[44px] ${massageCardSurfaceRadiusClass} px-4 py-2.5 text-sm font-semibold`}
-              >
-                เพิ่มช่าง
-              </button>
-            </div>
-          }
-        />
+        {!embedded ? (
+          <AppSectionHeader
+            tone="violet"
+            title="รายชื่อช่าง"
+            action={
+              <div className={massageSectionActionsRowClass}>
+                <MassageDashboardBackLink />
+                <button
+                  type="button"
+                  onClick={openAddModal}
+                  className={`app-btn-primary min-h-[44px] ${massageCardSurfaceRadiusClass} px-4 py-2.5 text-sm font-semibold`}
+                >
+                  เพิ่มช่าง
+                </button>
+              </div>
+            }
+          />
+        ) : null}
         {loading ? (
           <p className={massageMutedLoadingNoticeClass}>กำลังโหลดรายการ…</p>
         ) : list.length === 0 ? (
