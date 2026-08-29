@@ -43,6 +43,11 @@ function parsePanel(raw: string | null): VillageFinancePanel {
   return raw === "expenses" ? "expenses" : "history";
 }
 
+function parseRange(raw: string | null): FinanceRange | null {
+  if (raw === "TODAY" || raw === "MONTH" || raw === "YEAR" || raw === "CUSTOM") return raw;
+  return null;
+}
+
 function lastDayOfMonthYmd(ym: string): string {
   const y = parseInt(ym.slice(0, 4), 10);
   const m = parseInt(ym.slice(5, 7), 10);
@@ -113,19 +118,24 @@ export function VillageFinanceClient({ baseUrl }: Props) {
   const searchParams = useSearchParams();
   const panel = parsePanel(searchParams.get("panel"));
   const today = bangkokDateKey();
+  const urlRange = parseRange(searchParams.get("range"));
+  const initialRange: FinanceRange = urlRange ?? "MONTH";
+  const initialDates = rangeDates(initialRange, today);
 
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [chartsOpen, setChartsOpen] = useState(false);
-  const [financeRange, setFinanceRange] = useState<FinanceRange>("MONTH");
-  const [dateFrom, setDateFrom] = useState(`${today.slice(0, 7)}-01`);
-  const [dateTo, setDateTo] = useState(lastDayOfMonthYmd(today.slice(0, 7)));
+  const [filterOpen, setFilterOpen] = useState(urlRange === "YEAR");
+  const [chartsOpen, setChartsOpen] = useState(urlRange === "YEAR" || searchParams.get("charts") === "1");
+  const [financeRange, setFinanceRange] = useState<FinanceRange>(initialRange);
+  const [dateFrom, setDateFrom] = useState(initialDates.from);
+  const [dateTo, setDateTo] = useState(initialDates.to);
   const [keyword, setKeyword] = useState("");
   const [financeLoading, setFinanceLoading] = useState(true);
   const [financeErr, setFinanceErr] = useState<string | null>(null);
   const [buckets, setBuckets] = useState<AppRevenueCostBucket[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
-  const [financeRangeLabel, setFinanceRangeLabel] = useState("เดือนนี้");
+  const [financeRangeLabel, setFinanceRangeLabel] = useState(
+    initialRange === "YEAR" ? "ปีนี้" : initialRange === "TODAY" ? "วันนี้" : "เดือนนี้",
+  );
   const [refreshSignal, setRefreshSignal] = useState(0);
   const [costToolbar, setCostToolbar] = useState<BarberCostToolbarApi | null>(null);
   const [costBusy, setCostBusy] = useState(false);
@@ -136,10 +146,14 @@ export function VillageFinanceClient({ baseUrl }: Props) {
 
   const setPanel = useCallback(
     (next: VillageFinancePanel) => {
-      const href = next === "history" ? VILLAGE_FINANCE_HREF : `${VILLAGE_FINANCE_HREF}?panel=${next}`;
-      router.replace(href, { scroll: false });
+      const qs = new URLSearchParams();
+      if (next === "expenses") qs.set("panel", "expenses");
+      const range = searchParams.get("range");
+      if (range) qs.set("range", range);
+      const q = qs.toString();
+      router.replace(q ? `${VILLAGE_FINANCE_HREF}?${q}` : VILLAGE_FINANCE_HREF, { scroll: false });
     },
-    [router],
+    [router, searchParams],
   );
 
   const loadFinance = useCallback(async () => {
@@ -199,6 +213,11 @@ export function VillageFinanceClient({ baseUrl }: Props) {
     const { from, to } = rangeDates(next, bangkokDateKey());
     setDateFrom(from);
     setDateTo(to);
+    const qs = new URLSearchParams();
+    if (panel === "expenses") qs.set("panel", "expenses");
+    if (next !== "MONTH") qs.set("range", next);
+    const q = qs.toString();
+    router.replace(q ? `${VILLAGE_FINANCE_HREF}?${q}` : VILLAGE_FINANCE_HREF, { scroll: false });
   }
 
   function resetFilters() {
@@ -207,6 +226,10 @@ export function VillageFinanceClient({ baseUrl }: Props) {
     setDateFrom(`${t.slice(0, 7)}-01`);
     setDateTo(lastDayOfMonthYmd(t.slice(0, 7)));
     setKeyword("");
+    const qs = new URLSearchParams();
+    if (panel === "expenses") qs.set("panel", "expenses");
+    const q = qs.toString();
+    router.replace(q ? `${VILLAGE_FINANCE_HREF}?${q}` : VILLAGE_FINANCE_HREF, { scroll: false });
   }
 
   function handleRefresh() {

@@ -218,7 +218,7 @@ export function VillageCostsClient({
       description={
         <>
           <span className="sm:hidden">บันทึกต้นทุนและรายจ่าย</span>
-          <span className="hidden sm:inline">บันทึกตามหมวด แนบสลิป — เปรียบเทียบกับรายรับค่าส่วนกลางได้ที่หน้ารายปี</span>
+          <span className="hidden sm:inline">บันทึกตามหมวด แนบสลิป — เปรียบเทียบกับรายรับได้ที่หน้าการเงิน</span>
         </>
       }
       action={
@@ -226,13 +226,13 @@ export function VillageCostsClient({
           <CostToolbarButtons toolbar={toolbar} busy={loading} />
           {!embedded ? (
             <Link
-              href="/dashboard/village/annual"
+              href="/dashboard/village/finance?range=YEAR"
               className={`${villageBtnSecondary} min-h-[44px] px-3 py-2.5 text-sm font-semibold`}
-              aria-label="ไปหน้ารายปี"
-              title="ไปหน้ารายปี"
+              aria-label="ไปหน้าการเงิน"
+              title="ไปหน้าการเงิน"
             >
               <IconAnnual className="h-4 w-4 sm:hidden" />
-              <span className="hidden sm:inline">ไปหน้ารายปี</span>
+              <span className="hidden sm:inline">ไปหน้าการเงิน</span>
             </Link>
           ) : null}
         </div>

@@ -287,7 +287,7 @@ export function VillageDashboardClient() {
               description="ยอดตั้งแต่ต้นปีถึงปัจจุบัน"
               action={
                 <Link
-                  href="/dashboard/village/annual"
+                  href="/dashboard/village/finance?range=YEAR"
                   className="text-xs font-semibold text-[#5b61ff] hover:underline"
                 >
                   ดูรายละเอียด →
@@ -340,8 +340,8 @@ export function VillageDashboardClient() {
             title={`กราฟรายเดือนทั้งปี ${data.bangkok_year}`}
             description="ม.ค. ถึง ธ.ค. ของปีนี้ — แต่ละแท่งสูงตามยอดเรียกเก็บของเดือนนั้น · ส่วนสีเขียวคือยอดที่รับแล้ว (เดือนที่ยังไม่มีบิลจะเป็นแท่งต่ำหรือว่าง)"
             action={
-              <Link href="/dashboard/village/annual" className={cn(villageBtnSecondary, "min-h-[36px] px-3 py-1.5 text-xs font-semibold")}>
-                หน้าสรุปรายปี →
+              <Link href="/dashboard/village/finance?range=YEAR" className={cn(villageBtnSecondary, "min-h-[36px] px-3 py-1.5 text-xs font-semibold")}>
+                หน้าการเงิน (ปีนี้) →
               </Link>
             }
           >

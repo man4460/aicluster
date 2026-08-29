@@ -30,7 +30,6 @@ export const villageSubMenuItems: readonly VillageSubMenuItem[] = [
   { href: "/dashboard/village/residents", label: "บ้าน", group: "housing" },
   { href: "/dashboard/village/fees", label: "ค่าส่วนกลาง", group: "housing" },
   { href: "/dashboard/village/slips", label: "สลิป", group: "housing" },
-  { href: "/dashboard/village/annual", label: "รายปี", group: "housing" },
   { href: "/dashboard/village/reports", label: "ส่งออก", group: "settings" },
   { href: "/dashboard/village/settings", label: "ตั้งค่า", group: "settings" },
 ] as const;
@@ -72,14 +71,14 @@ export function villageMainKeyFromPathname(pathnameRaw: string): VillageMainMenu
   if (
     pathMatches(pathname, "/dashboard/village/residents") ||
     pathMatches(pathname, "/dashboard/village/fees") ||
-    pathMatches(pathname, "/dashboard/village/slips") ||
-    pathMatches(pathname, "/dashboard/village/annual")
+    pathMatches(pathname, "/dashboard/village/slips")
   ) {
     return "housing";
   }
   if (
     pathMatches(pathname, VILLAGE_FINANCE_HREF) ||
-    pathMatches(pathname, "/dashboard/village/costs")
+    pathMatches(pathname, "/dashboard/village/costs") ||
+    pathMatches(pathname, "/dashboard/village/annual")
   ) {
     return "finance";
   }

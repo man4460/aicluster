@@ -1,6 +1,7 @@
-import { bangkokYearCalendar } from "@/lib/dates/bangkok-calendar";
-import { VillageAnnualClient } from "@/systems/village/components/VillageAnnualClient";
+import { redirect } from "next/navigation";
+import { VILLAGE_FINANCE_HREF } from "@/systems/village/village-nav";
 
+/** รายปีรวมเข้าหน้าการเงินแล้ว — กรอง «ปีนี้» + เปิดกราฟ */
 export default function VillageAnnualPage() {
-  return <VillageAnnualClient initialYear={bangkokYearCalendar()} />;
+  redirect(`${VILLAGE_FINANCE_HREF}?range=YEAR`);
 }

@@ -4,7 +4,6 @@
 - `/dashboard/village/residents`
 - `/dashboard/village/fees`
 - `/dashboard/village/slips`
-- `/dashboard/village/annual`
 
 ## บังคับ
 
@@ -13,12 +12,14 @@
 2. ห้ามแยก “การ์ดฟิลเตอร์” กับ “การ์ดรายการ” เป็นคนละกล่องซ้อนกันในหน้าเดียวกัน
 3. ถ้าต้องแบ่งช่วงเนื้อหาในกล่องเดียว ให้ใช้ `border-t`, spacing, หรือ section heading ภายในการ์ด แทนการสร้าง `VillagePanelCard` เพิ่ม
 4. modal/dialog (เช่น `FormModal`) แยกได้ตามปกติ แต่ไม่นับเป็นการ์ดหลักของหน้า
-5. `VillageHousingQuickTabs` ต้องวางบนสุดของหน้า แล้วตามด้วยการ์ดหลักเดียว
+5. `VillageHousingQuickTabs` ต้องวางบนสุดของหน้า แล้วตามด้วยการ์ดหลักเดียว (บ้าน · ค่าส่วนกลาง · สลิป)
 
 ## หน้าการเงิน `/dashboard/village/finance`
 
 ยึด **`dashboard-finance-module-template.mdc`** (สรุป 3 การ์ด → `AppDashboardSection` ใบเดียว: กรอง · กราฟ · แท็บ ประวัติ/รายรับ · รายจ่าย)  
-`/dashboard/village/costs` เป็น **redirect** ไป `?panel=expenses` — ห้ามเปิดหน้าต้นทุนแยกเป็นทางหลัก
+- `/dashboard/village/costs` → redirect `?panel=expenses`
+- `/dashboard/village/annual` → redirect `?range=YEAR` (สรุปรายปีรวมในหน้าการเงิน — กรองปีนี้ + กราฟ)
+- ส่งออก CSV รายปียังอยู่ที่เมนูตั้งค่า → ส่งออก
 
 ## เป้าหมาย UX
 
