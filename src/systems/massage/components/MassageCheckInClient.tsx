@@ -526,41 +526,42 @@ export function MassageCheckInClient({
             ยังไม่มีพนักงาน · ตั้งที่การจัดการ → หมอนวด
           </div>
         ) : useStaffCards ? (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8b87ad]">
                 พนักงานที่บันทึก
               </p>
               <p className="text-[11px] font-medium text-[#66638c]">
-                {stylists.length} คน · แตะการ์ดเพื่อเลือก
+                {stylists.length} คน · แตะเพื่อเลือก
               </p>
             </div>
             <ul
-              className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3"
+              className="flex flex-nowrap gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-2"
               role="listbox"
               aria-label="เลือกพนักงานที่บันทึก"
             >
-              <li>
+              <li className="shrink-0">
                 <button
                   type="button"
                   role="option"
                   aria-selected={!stylistId}
                   onClick={() => setStylistId("")}
                   className={cn(
-                    "flex h-full w-full flex-col overflow-hidden rounded-[1.25rem] border bg-white text-left shadow-sm transition active:scale-[0.99]",
+                    "flex w-[4.25rem] flex-col items-center gap-1 rounded-xl border bg-white px-1 py-1.5 shadow-sm transition active:scale-[0.98] sm:w-[4.5rem]",
                     !stylistId
-                      ? "border-[#4d47b6] ring-2 ring-[#4d47b6]/30"
+                      ? "border-[#4d47b6] ring-2 ring-[#4d47b6]/25"
                       : "border-[#e8e6f4] hover:border-[#4d47b6]/40",
                   )}
                 >
-                  <div className="flex aspect-square w-full items-center justify-center bg-gradient-to-br from-[#f5f3ff] to-[#ecebff]">
-                    <span className="text-2xl font-black text-[#8b87ad]" aria-hidden>
-                      —
-                    </span>
-                  </div>
+                  <span
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#f5f3ff] to-[#ecebff] text-sm font-black text-[#8b87ad] sm:h-10 sm:w-10"
+                    aria-hidden
+                  >
+                    —
+                  </span>
                   <span
                     className={cn(
-                      "px-2 py-2 text-center text-xs font-bold leading-snug",
+                      "w-full truncate text-center text-[10px] font-bold leading-tight",
                       !stylistId ? "text-[#4d47b6]" : "text-[#5f5a8a]",
                     )}
                   >
@@ -572,21 +573,21 @@ export function MassageCheckInClient({
                 const selected = stylistId === String(s.id);
                 const initial = s.name.trim().charAt(0) || "พ";
                 return (
-                  <li key={s.id}>
+                  <li key={s.id} className="shrink-0">
                     <button
                       type="button"
                       role="option"
                       aria-selected={selected}
                       onClick={() => setStylistId(String(s.id))}
                       className={cn(
-                        "flex h-full w-full flex-col overflow-hidden rounded-[1.25rem] border bg-white text-left shadow-sm transition active:scale-[0.99]",
+                        "relative flex w-[4.25rem] flex-col items-center gap-1 rounded-xl border bg-white px-1 py-1.5 shadow-sm transition active:scale-[0.98] sm:w-[4.5rem]",
                         selected
-                          ? "border-[#4d47b6] ring-2 ring-[#4d47b6]/30"
+                          ? "border-[#4d47b6] ring-2 ring-[#4d47b6]/25"
                           : "border-[#e8e6f4] hover:border-[#4d47b6]/40",
                       )}
                       aria-label={`เลือก ${s.name}`}
                     >
-                      <div className="relative aspect-square w-full overflow-hidden bg-[#4d47b6]/08">
+                      <span className="relative h-9 w-9 overflow-hidden rounded-full bg-[#4d47b6]/08 sm:h-10 sm:w-10">
                         {s.photoUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -595,24 +596,24 @@ export function MassageCheckInClient({
                             className="h-full w-full object-cover object-center"
                           />
                         ) : (
-                          <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#5b61ff] to-[#7c3aed] text-2xl font-black text-white">
+                          <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#5b61ff] to-[#7c3aed] text-xs font-black text-white sm:text-sm">
                             {initial}
                           </span>
                         )}
                         {selected ? (
                           <span
-                            className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-[#4d47b6] text-white shadow"
+                            className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#4d47b6] text-white shadow"
                             aria-hidden
                           >
-                            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="3">
+                            <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth="3">
                               <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                           </span>
                         ) : null}
-                      </div>
+                      </span>
                       <span
                         className={cn(
-                          "line-clamp-2 px-2 py-2 text-center text-xs font-bold leading-snug",
+                          "w-full truncate text-center text-[10px] font-bold leading-tight",
                           selected ? "text-[#4d47b6]" : "text-[#2e2a58]",
                         )}
                       >
