@@ -11,9 +11,40 @@ const putSchema = z.object({
   contact_phone: z.string().max(32).optional().nullable(),
   prompt_pay_phone: z.string().max(20).optional().nullable(),
   payment_channels_note: z.string().max(2000).optional().nullable(),
+  bank_name: z.string().max(120).optional().nullable(),
+  bank_account_number: z.string().max(32).optional().nullable(),
+  bank_account_name: z.string().max(200).optional().nullable(),
   default_monthly_fee: z.number().int().min(0).max(9_999_999).optional(),
   due_day_of_month: z.number().int().min(1).max(28).optional(),
 });
+
+function mapProfile(row: {
+  id: number;
+  displayName: string | null;
+  address: string | null;
+  contactPhone: string | null;
+  promptPayPhone: string | null;
+  paymentChannelsNote: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankAccountName: string | null;
+  defaultMonthlyFee: number;
+  dueDayOfMonth: number;
+}) {
+  return {
+    id: row.id,
+    display_name: row.displayName,
+    address: row.address,
+    contact_phone: row.contactPhone,
+    prompt_pay_phone: row.promptPayPhone,
+    payment_channels_note: row.paymentChannelsNote,
+    bank_name: row.bankName,
+    bank_account_number: row.bankAccountNumber,
+    bank_account_name: row.bankAccountName,
+    default_monthly_fee: row.defaultMonthlyFee,
+    due_day_of_month: row.dueDayOfMonth,
+  };
+}
 
 export async function GET() {
   const auth = await requireSession();
@@ -39,18 +70,7 @@ export async function GET() {
     });
   }
 
-  return NextResponse.json({
-    profile: {
-      id: row.id,
-      display_name: row.displayName,
-      address: row.address,
-      contact_phone: row.contactPhone,
-      prompt_pay_phone: row.promptPayPhone,
-      payment_channels_note: row.paymentChannelsNote,
-      default_monthly_fee: row.defaultMonthlyFee,
-      due_day_of_month: row.dueDayOfMonth,
-    },
-  });
+  return NextResponse.json({ profile: mapProfile(row) });
 }
 
 export async function PUT(req: Request) {
@@ -69,6 +89,11 @@ export async function PUT(req: Request) {
   const parsed = putSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
+  const bankAccountNumber =
+    parsed.data.bank_account_number !== undefined
+      ? parsed.data.bank_account_number?.replace(/\s/g, "").slice(0, 32) || null
+      : undefined;
+
   const row = await prisma.villageProfile.upsert({
     where: {
       ownerUserId_trialSessionId: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
@@ -81,6 +106,9 @@ export async function PUT(req: Request) {
       contactPhone: parsed.data.contact_phone?.trim() || null,
       promptPayPhone: parsed.data.prompt_pay_phone?.replace(/\D/g, "").slice(0, 20) || null,
       paymentChannelsNote: parsed.data.payment_channels_note?.trim() || null,
+      bankName: parsed.data.bank_name?.trim() || null,
+      bankAccountNumber: bankAccountNumber ?? null,
+      bankAccountName: parsed.data.bank_account_name?.trim() || null,
       defaultMonthlyFee: parsed.data.default_monthly_fee ?? 0,
       dueDayOfMonth: parsed.data.due_day_of_month ?? 5,
     },
@@ -94,21 +122,15 @@ export async function PUT(req: Request) {
       ...(parsed.data.payment_channels_note !== undefined
         ? { paymentChannelsNote: parsed.data.payment_channels_note?.trim() || null }
         : {}),
+      ...(parsed.data.bank_name !== undefined ? { bankName: parsed.data.bank_name?.trim() || null } : {}),
+      ...(bankAccountNumber !== undefined ? { bankAccountNumber } : {}),
+      ...(parsed.data.bank_account_name !== undefined
+        ? { bankAccountName: parsed.data.bank_account_name?.trim() || null }
+        : {}),
       ...(parsed.data.default_monthly_fee !== undefined ? { defaultMonthlyFee: parsed.data.default_monthly_fee } : {}),
       ...(parsed.data.due_day_of_month !== undefined ? { dueDayOfMonth: parsed.data.due_day_of_month } : {}),
     },
   });
 
-  return NextResponse.json({
-    profile: {
-      id: row.id,
-      display_name: row.displayName,
-      address: row.address,
-      contact_phone: row.contactPhone,
-      prompt_pay_phone: row.promptPayPhone,
-      payment_channels_note: row.paymentChannelsNote,
-      default_monthly_fee: row.defaultMonthlyFee,
-      due_day_of_month: row.dueDayOfMonth,
-    },
-  });
+  return NextResponse.json({ profile: mapProfile(row) });
 }

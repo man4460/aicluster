@@ -13,6 +13,9 @@ export type VillageInvoicePrintPayload = {
   periodMonth: string;
   amount: number;
   paymentChannelsNote: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankAccountName: string | null;
   promptPayQrDataUrl: string | null;
   slipUploadQrDataUrl: string | null;
 };
@@ -62,12 +65,31 @@ export function buildVillageInvoiceInnerHtml(p: VillageInvoicePrintPayload): str
 <p style="margin:6px 0 0;font-size:2rem;font-weight:800;color:#3730a3;">${escapeHtml(amt)}</p>
 </div>`;
 
-  const channelsBlock = p.paymentChannelsNote?.trim()
-    ? `<section style="margin-top:18px;">
+  const hasBank = Boolean(p.bankName?.trim() || p.bankAccountNumber?.trim() || p.bankAccountName?.trim());
+  const bankLines = [
+    p.bankName?.trim() ? `<p style="margin:0 0 4px;"><span style="color:#64748b;">ธนาคาร </span><strong>${escapeHtml(p.bankName.trim())}</strong></p>` : "",
+    p.bankAccountNumber?.trim()
+      ? `<p style="margin:0 0 4px;"><span style="color:#64748b;">เลขบัญชี </span><strong style="font-variant-numeric:tabular-nums;">${escapeHtml(p.bankAccountNumber.trim())}</strong></p>`
+      : "",
+    p.bankAccountName?.trim()
+      ? `<p style="margin:0;"><span style="color:#64748b;">ชื่อบัญชี </span><strong>${escapeHtml(p.bankAccountName.trim())}</strong></p>`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("");
+
+  const channelsBlock =
+    hasBank || p.paymentChannelsNote?.trim()
+      ? `<section style="margin-top:18px;">
 <h2 style="margin:0 0 8px;font-size:0.625rem;font-weight:700;color:#64748b;letter-spacing:0.12em;">ช่องทางชำระเงิน</h2>
-<p style="margin:0;white-space:pre-wrap;font-size:0.875rem;line-height:1.5;color:#1e293b;">${escapeHtml(p.paymentChannelsNote.trim())}</p>
+${hasBank ? `<div style="font-size:0.875rem;line-height:1.5;color:#1e293b;">${bankLines}</div>` : ""}
+${
+  p.paymentChannelsNote?.trim()
+    ? `<p style="margin:${hasBank ? "12px" : "0"} 0 0;white-space:pre-wrap;font-size:0.875rem;line-height:1.5;color:#1e293b;">${escapeHtml(p.paymentChannelsNote.trim())}</p>`
+    : ""
+}
 </section>`
-    : `<p style="margin-top:12px;font-size:0.8125rem;color:#64748b;">(ตั้งค่าช่องทางโอนได้ที่ตั้งค่าโครงการ → ชำระเงิน)</p>`;
+      : `<p style="margin-top:12px;font-size:0.8125rem;color:#64748b;">(ตั้งค่าบัญชีโอนได้ที่ตั้งค่าโครงการ → ชำระเงิน)</p>`;
 
   const ppBlock = p.promptPayQrDataUrl
     ? `<section style="margin-top:24px;padding-top:22px;border-top:1px dashed #cbd5e1;text-align:center;">

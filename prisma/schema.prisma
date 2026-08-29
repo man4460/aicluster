@@ -2755,6 +2755,9 @@ model VillageProfile {
   contactPhone         String?  @map("contact_phone") @db.VarChar(32)
   promptPayPhone       String?  @map("prompt_pay_phone") @db.VarChar(20)
   paymentChannelsNote  String?  @map("payment_channels_note") @db.Text
+  bankName             String?  @map("bank_name") @db.VarChar(120)
+  bankAccountNumber    String?  @map("bank_account_number") @db.VarChar(32)
+  bankAccountName      String?  @map("bank_account_name") @db.VarChar(200)
   /** ค่าส่วนกลางมาตรฐานต่อเดือน (บาท) */
   defaultMonthlyFee    Int      @default(0) @map("default_monthly_fee")
   /** วันครบกำหนดชำระของแต่ละเดือน (1–28) */

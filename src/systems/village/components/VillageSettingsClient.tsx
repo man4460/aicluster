@@ -197,6 +197,9 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
                 contact_phone: (fd.get("contact_phone") as string) || null,
                 prompt_pay_phone: (fd.get("prompt_pay_phone") as string) || null,
                 payment_channels_note: (fd.get("payment_channels_note") as string) || null,
+                bank_name: (fd.get("bank_name") as string) || null,
+                bank_account_number: (fd.get("bank_account_number") as string) || null,
+                bank_account_name: (fd.get("bank_account_name") as string) || null,
                 default_monthly_fee: Number.parseInt(String(fd.get("default_monthly_fee")), 10) || 0,
                 due_day_of_month: Number.parseInt(String(fd.get("due_day_of_month")), 10) || 5,
               });
@@ -306,7 +309,7 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
               icon={<IconWallet className="h-5 w-5 text-sky-700" />}
               tone="bg-sky-100/90"
               title="ชำระเงิน"
-              hint="พร้อมเพย์และข้อความแนะนำช่องทาง"
+              hint="พร้อมเพย์ · บัญชีธนาคาร และข้อความแนะนำช่องทาง"
             >
               <label className="block">
                 <FieldLabel>พร้อมเพย์ (ตัวเลข)</FieldLabel>
@@ -319,8 +322,45 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
                   inputMode="numeric"
                 />
               </label>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="block sm:col-span-2">
+                  <FieldLabel>ชื่อธนาคาร</FieldLabel>
+                  <input
+                    id="bank_name"
+                    name="bank_name"
+                    key={`bn-${p.bank_name ?? ""}`}
+                    defaultValue={p.bank_name ?? ""}
+                    className={villageField}
+                    placeholder="เช่น กสิกรไทย · ไทยพาณิชย์"
+                    autoComplete="organization"
+                  />
+                </label>
+                <label className="block">
+                  <FieldLabel>เลขบัญชี</FieldLabel>
+                  <input
+                    id="bank_account_number"
+                    name="bank_account_number"
+                    key={`ban-${p.bank_account_number ?? ""}`}
+                    defaultValue={p.bank_account_number ?? ""}
+                    className={villageField}
+                    inputMode="numeric"
+                    autoComplete="off"
+                  />
+                </label>
+                <label className="block">
+                  <FieldLabel>ชื่อบัญชี</FieldLabel>
+                  <input
+                    id="bank_account_name"
+                    name="bank_account_name"
+                    key={`baa-${p.bank_account_name ?? ""}`}
+                    defaultValue={p.bank_account_name ?? ""}
+                    className={villageField}
+                    autoComplete="name"
+                  />
+                </label>
+              </div>
               <label className="block">
-                <FieldLabel>ช่องทางอื่น</FieldLabel>
+                <FieldLabel>ช่องทางอื่น / หมายเหตุ</FieldLabel>
                 <textarea
                   id="payment_channels_note"
                   name="payment_channels_note"
@@ -328,6 +368,7 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
                   defaultValue={p.payment_channels_note ?? ""}
                   rows={2}
                   className={cn(villageField, "min-h-[4rem] resize-y")}
+                  placeholder="เช่น โอนแล้วแจ้งไลน์ / สาขา"
                 />
               </label>
             </SettingsBlock>

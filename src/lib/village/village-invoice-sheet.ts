@@ -29,6 +29,9 @@ export type VillageInvoiceSheetDto = {
   /** ยอดคงเหลือที่ต้องชำระ */
   amount: number;
   paymentChannelsNote: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankAccountName: string | null;
   promptPayQrDataUrl: string | null;
   slipUploadQrDataUrl: string | null;
   uploadPagePath: string;
@@ -110,6 +113,9 @@ export async function getVillageInvoiceSheetDto(
     amountPaid: row.amountPaid,
     amount,
     paymentChannelsNote: profile?.paymentChannelsNote?.trim() || null,
+    bankName: profile?.bankName?.trim() || null,
+    bankAccountNumber: profile?.bankAccountNumber?.trim() || null,
+    bankAccountName: profile?.bankAccountName?.trim() || null,
     promptPayQrDataUrl,
     slipUploadQrDataUrl,
     uploadPagePath,
@@ -125,6 +131,9 @@ export type VillagePublicInvoiceDto = {
   periodMonth: string;
   amount: number;
   paymentChannelsNote: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankAccountName: string | null;
   promptPayQrDataUrl: string | null;
   /** true = บิลนี้เก็บครบ/ยกเว้นแล้ว ลิงก์ใช้ไม่ได้ */
   alreadyPaid: boolean;
@@ -185,6 +194,9 @@ export async function getVillagePublicInvoiceDto(token: string): Promise<Village
     periodMonth: row.yearMonth,
     amount: Math.max(0, amount),
     paymentChannelsNote: profile?.paymentChannelsNote?.trim() || null,
+    bankName: profile?.bankName?.trim() || null,
+    bankAccountNumber: profile?.bankAccountNumber?.trim() || null,
+    bankAccountName: profile?.bankAccountName?.trim() || null,
     promptPayQrDataUrl,
     alreadyPaid,
     hasPendingSlip: pendingSlips > 0,

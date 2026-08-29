@@ -14,6 +14,9 @@ export type VillageInvoiceSheetContentProps = {
   periodMonth: string;
   amount: number;
   paymentChannelsNote?: string | null;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  bankAccountName?: string | null;
   promptPayQrDataUrl?: string | null;
   /** QR หน้าแนบสลิปสาธารณะ */
   slipUploadQrDataUrl?: string | null;
@@ -34,10 +37,14 @@ export function VillageInvoiceSheetContent({
   periodMonth,
   amount,
   paymentChannelsNote,
+  bankName,
+  bankAccountNumber,
+  bankAccountName,
   promptPayQrDataUrl,
   slipUploadQrDataUrl,
 }: VillageInvoiceSheetContentProps) {
   const amt = formatVillageAmountStable(amount, 2);
+  const hasBank = Boolean(bankName?.trim() || bankAccountNumber?.trim() || bankAccountName?.trim());
 
   return (
     <div
@@ -86,11 +93,41 @@ export function VillageInvoiceSheetContent({
 
       <section className="mt-5 sm:mt-6">
         <h2 className="text-[10px] font-bold tracking-[0.12em] text-slate-500">ช่องทางชำระเงิน</h2>
-        {paymentChannelsNote ? (
-          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-800">{paymentChannelsNote}</p>
-        ) : (
-          <p className="mt-2 text-xs text-slate-500">(ตั้งค่าช่องทางโอนได้ที่ตั้งค่าโครงการ → ชำระเงิน)</p>
-        )}
+        {hasBank ? (
+          <div className="mt-2 space-y-1 text-sm leading-relaxed text-slate-800">
+            {bankName?.trim() ? (
+              <p>
+                <span className="text-slate-500">ธนาคาร </span>
+                <span className="font-semibold">{bankName.trim()}</span>
+              </p>
+            ) : null}
+            {bankAccountNumber?.trim() ? (
+              <p>
+                <span className="text-slate-500">เลขบัญชี </span>
+                <span className="font-semibold tabular-nums">{bankAccountNumber.trim()}</span>
+              </p>
+            ) : null}
+            {bankAccountName?.trim() ? (
+              <p>
+                <span className="text-slate-500">ชื่อบัญชี </span>
+                <span className="font-semibold">{bankAccountName.trim()}</span>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+        {paymentChannelsNote?.trim() ? (
+          <p
+            className={cn(
+              "whitespace-pre-line text-sm leading-relaxed text-slate-800",
+              hasBank ? "mt-3" : "mt-2",
+            )}
+          >
+            {paymentChannelsNote.trim()}
+          </p>
+        ) : null}
+        {!hasBank && !paymentChannelsNote?.trim() ? (
+          <p className="mt-2 text-xs text-slate-500">(ตั้งค่าบัญชีโอนได้ที่ตั้งค่าโครงการ → ชำระเงิน)</p>
+        ) : null}
       </section>
 
       <section className="mt-6 flex flex-col items-center border-t border-dashed border-slate-200 pt-6 sm:mt-7 sm:pt-7">

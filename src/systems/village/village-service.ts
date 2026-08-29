@@ -7,6 +7,9 @@ export type VillageProfile = {
   contact_phone: string | null;
   prompt_pay_phone: string | null;
   payment_channels_note: string | null;
+  bank_name: string | null;
+  bank_account_number: string | null;
+  bank_account_name: string | null;
   default_monthly_fee: number;
   due_day_of_month: number;
 };

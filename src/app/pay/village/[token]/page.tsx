@@ -63,9 +63,35 @@ export default async function VillagePublicSlipPage({ params }: Props) {
         </div>
       ) : null}
 
+      {invoice.bankName || invoice.bankAccountNumber || invoice.bankAccountName ? (
+        <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-bold tracking-wide text-slate-500">โอนเข้าบัญชี</p>
+          <div className="mt-2 space-y-1 text-sm text-slate-800">
+            {invoice.bankName ? (
+              <p>
+                <span className="text-slate-500">ธนาคาร </span>
+                <span className="font-semibold">{invoice.bankName}</span>
+              </p>
+            ) : null}
+            {invoice.bankAccountNumber ? (
+              <p>
+                <span className="text-slate-500">เลขบัญชี </span>
+                <span className="font-semibold tabular-nums">{invoice.bankAccountNumber}</span>
+              </p>
+            ) : null}
+            {invoice.bankAccountName ? (
+              <p>
+                <span className="text-slate-500">ชื่อบัญชี </span>
+                <span className="font-semibold">{invoice.bankAccountName}</span>
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       {invoice.paymentChannelsNote ? (
         <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-bold tracking-wide text-slate-500">ช่องทางโอน</p>
+          <p className="text-xs font-bold tracking-wide text-slate-500">ช่องทางอื่น / หมายเหตุ</p>
           <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-800">
             {invoice.paymentChannelsNote}
           </p>

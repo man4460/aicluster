@@ -24,6 +24,9 @@ function toPrintPayload(sheet: VillageInvoiceSheetDto): VillageInvoicePrintPaylo
     periodMonth: sheet.periodMonth,
     amount: sheet.amount,
     paymentChannelsNote: sheet.paymentChannelsNote,
+    bankName: sheet.bankName,
+    bankAccountNumber: sheet.bankAccountNumber,
+    bankAccountName: sheet.bankAccountName,
     promptPayQrDataUrl: sheet.promptPayQrDataUrl,
     slipUploadQrDataUrl: sheet.slipUploadQrDataUrl,
   };
@@ -199,6 +202,9 @@ export function VillageInvoiceSheetModal({
                 periodMonth={sheet.periodMonth}
                 amount={sheet.amount}
                 paymentChannelsNote={sheet.paymentChannelsNote}
+                bankName={sheet.bankName}
+                bankAccountNumber={sheet.bankAccountNumber}
+                bankAccountName={sheet.bankAccountName}
                 promptPayQrDataUrl={sheet.promptPayQrDataUrl}
                 slipUploadQrDataUrl={sheet.slipUploadQrDataUrl}
               />
