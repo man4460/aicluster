@@ -694,6 +694,8 @@ model DormitoryProfile {
   portalBannerUrl  String?  @map("portal_banner_url") @db.VarChar(512)
   /** JSON string[] รูปภาพหอพักบนพอร์ทัล */
   portalGalleryJson Json?   @map("portal_gallery_json")
+  /** สร้างบิลเดือนปัจจุบันอัตโนมัติ (เชลล์มิเตอร์ + แบ่งค่าเช่า) สำหรับห้องที่มีผู้พัก ACTIVE */
+  autoGenerateBills Boolean @default(true) @map("auto_generate_bills")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 

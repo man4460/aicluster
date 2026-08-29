@@ -51,6 +51,7 @@ export default async function DormitorySettingsPage() {
     bankAccountName: row?.bankAccountName ?? null,
     portalBannerUrl: row?.portalBannerUrl ?? null,
     portalGallery: dormitoryNormalizePortalGallery(row?.portalGalleryJson),
+    autoGenerateBills: row?.autoGenerateBills ?? true,
     staffDailyPinSet: Boolean(pinHash?.trim()),
   };
 

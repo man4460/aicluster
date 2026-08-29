@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import type { RoomStatus } from "@/generated/prisma/enums";
+import { ensureDormAutoBillsForScope } from "@/lib/dormitory/generate-bills";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
 const postSchema = z.object({
@@ -64,6 +65,11 @@ export async function GET() {
   if (!auth.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const scope = await getDormitoryDataScope(auth.session.sub);
+  await ensureDormAutoBillsForScope({
+    ownerUserId: auth.session.sub,
+    trialSessionId: scope.trialSessionId,
+  }).catch((e) => console.error("[dorm rooms GET] auto bills", e));
+
   const rooms = await prisma.room.findMany({
     where: { ownerUserId: auth.session.sub, trialSessionId: scope.trialSessionId },
     orderBy: [{ roomNumber: "asc" }],

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
+import { ensureDormAutoBillsForScope } from "@/lib/dormitory/generate-bills";
 import { prisma } from "@/lib/prisma";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 import { DormDashboardRoomGrid } from "@/systems/dormitory/components/DormDashboardRoomGrid";
@@ -20,6 +21,11 @@ export default async function DormitoryDashboardPage() {
   if (!session) return null;
 
   const scope = await getDormitoryDataScope(session.sub);
+  await ensureDormAutoBillsForScope({
+    ownerUserId: session.sub,
+    trialSessionId: scope.trialSessionId,
+  }).catch((e) => console.error("[dorm dashboard] auto bills", e));
+
   const rooms = await prisma.room.findMany({
     where: { ownerUserId: session.sub, trialSessionId: scope.trialSessionId },
     orderBy: [{ floor: "asc" }, { roomNumber: "asc" }],

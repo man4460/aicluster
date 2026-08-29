@@ -46,6 +46,7 @@ export type DormProfileDto = {
   bankAccountName: string | null;
   portalBannerUrl: string | null;
   portalGallery: string[];
+  autoGenerateBills?: boolean;
   staffDailyPinSet?: boolean;
 };
 
@@ -372,6 +373,22 @@ function DormSettingsClientInner({
               onChange={(next) => setForm((f) => ({ ...f, defaultPaperSize: next }))}
               disabled={busy}
             />
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-emerald-200/70 bg-white/80 px-3 py-3 shadow-sm ring-1 ring-emerald-100/80">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#4d47b6] focus:ring-[#4d47b6]/30"
+                checked={form.autoGenerateBills ?? true}
+                onChange={(e) => setForm((f) => ({ ...f, autoGenerateBills: e.target.checked }))}
+                disabled={busy}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-bold text-slate-900">สร้างบิลอัตโนมัติ</span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-slate-500">
+                  เมื่อเปิด ระบบจะสร้างบิลเดือนปัจจุบัน (เวลาไทย) ให้ห้องที่มีผู้พัก — พกเลขมิเตอร์จากงวดก่อน
+                  (ใช้น้ำไฟ = 0 จนกว่าจะแก้) แล้วแบ่งค่าเช่า · ไม่ทับบิลที่มีอยู่แล้ว · ทำงานตอนเปิดแดชบอร์ด/รายการห้อง และผ่าน cron
+                </span>
+              </span>
+            </label>
             <AppStaffDailyPinSettingsField
               pinDraft={pinDraft}
               clearPin={clearPin}

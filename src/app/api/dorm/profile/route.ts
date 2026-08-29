@@ -33,6 +33,7 @@ const patchSchema = z.object({
   bankAccountName: z.string().trim().max(200).optional().nullable(),
   portalBannerUrl: z.string().trim().max(512).optional().nullable(),
   portalGallery: z.array(z.string()).optional(),
+  autoGenerateBills: z.boolean().optional(),
   staffDailyPin: z.string().optional().nullable(),
   staffDailyPinClear: z.boolean().optional(),
 });
@@ -56,6 +57,7 @@ const select = {
   bankAccountName: true,
   portalBannerUrl: true,
   portalGalleryJson: true,
+  autoGenerateBills: true,
 } as const;
 
 function emptyToNull(s: string | null | undefined) {
@@ -85,6 +87,7 @@ function profileFromRow(
     bankAccountName: string | null;
     portalBannerUrl: string | null;
     portalGalleryJson: unknown;
+    autoGenerateBills: boolean;
   },
   business: Awaited<ReturnType<typeof getBusinessProfile>>,
   staffDailyPinSet: boolean,
@@ -108,6 +111,7 @@ function profileFromRow(
     bankAccountName: row.bankAccountName,
     portalBannerUrl: row.portalBannerUrl,
     portalGallery: dormitoryNormalizePortalGallery(row.portalGalleryJson),
+    autoGenerateBills: row.autoGenerateBills,
     staffDailyPinSet,
   };
 }
@@ -153,6 +157,7 @@ export async function GET() {
           bankAccountName: null,
           portalBannerUrl: null,
           portalGalleryJson: null,
+          autoGenerateBills: true,
         },
         business,
         Boolean(pinHash?.trim()),
@@ -216,6 +221,9 @@ export async function PATCH(req: Request) {
   }
   if (data.portalGallery !== undefined) {
     update.portalGalleryJson = dormitoryNormalizePortalGallery(data.portalGallery);
+  }
+  if (data.autoGenerateBills !== undefined) {
+    update.autoGenerateBills = data.autoGenerateBills;
   }
   if (data.promptPayPhone !== undefined) {
     if (data.promptPayPhone === null || data.promptPayPhone.trim() === "") {
