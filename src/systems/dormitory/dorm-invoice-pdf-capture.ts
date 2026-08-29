@@ -13,7 +13,7 @@ export async function downloadDormInvoicePdfFromCleanHtml(
   filename: string,
   docTitle: string,
 ): Promise<void> {
-  const innerHtml = buildDormInvoiceBillInnerHtml(sheet, "a4Preview");
+  const innerHtml = buildDormInvoiceBillInnerHtml(sheet, "a4Preview", "A4");
   const fullHtml = buildPosTableStaticDocumentHtml("A4", innerHtml, docTitle, {
     a4TightVerticalMargins: true,
   });

@@ -42,10 +42,7 @@ export function DormInvoicePageClient({
   const [pdfBusy, setPdfBusy] = useState(false);
   const { paper, setPaper } = useAppSlipPaperSize(defaultPaperSize);
 
-  const previewHtml = useMemo(() => {
-    const layout = paper === "A4" ? "a4Preview" : "slip";
-    return buildDormInvoiceBillInnerHtml(sheet, layout, paper);
-  }, [sheet, paper]);
+  const previewHtml = useMemo(() => buildDormInvoiceBillInnerHtml(sheet, "slip", paper), [sheet, paper]);
 
   const docTitle = `ใบแจ้งหนี้ ห้อง ${sheet.roomNumber}`;
 
@@ -71,23 +68,6 @@ export function DormInvoicePageClient({
 
   return (
     <div className="space-y-4">
-      <div className={dormInvoicePreviewOuterClass(paper)}>
-        <div
-          className={cn(
-            "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm",
-            dormInvoicePreviewWidthClass(paper),
-          )}
-        >
-          <div
-            className={cn(
-              "overflow-hidden text-slate-900",
-              paper === "A4" ? "p-4 sm:p-6 md:p-8" : "p-2 sm:p-3",
-            )}
-            dangerouslySetInnerHTML={{ __html: previewHtml }}
-          />
-        </div>
-      </div>
-
       <div className="no-print app-surface rounded-2xl p-3 sm:p-4">
         <p className="text-xs font-semibold text-[#2e2a58]">เครื่องมือใบแจ้งหนี้</p>
         <p className="mt-1 text-[11px] text-[#66638c]">ส่วนนี้ไม่ถูกพิมพ์</p>
@@ -113,11 +93,27 @@ export function DormInvoicePageClient({
           </div>
           {showSizeHint ? (
             <p className="text-xs text-slate-500">
-              เลือกขนาดกระดาษแล้วกดพิมพ์ — 58 mm กึ่งกลาง · 80 mm / A4 ชิดซ้าย (มาตรฐานเดียวกับ POS /
-              โรงแรม)
+              เลือกขนาดกระดาษแล้วกดพิมพ์ — รูปแบบเดียวกับใบเสร็จ (58 mm กึ่งกลาง · 80 mm / A4 ชิดซ้าย)
             </p>
           ) : null}
           {toolbarExtra}
+        </div>
+      </div>
+
+      <div className={dormInvoicePreviewOuterClass(paper)}>
+        <div
+          className={cn(
+            "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm",
+            dormInvoicePreviewWidthClass(paper),
+          )}
+        >
+          <div
+            className={cn(
+              "overflow-hidden text-slate-900",
+              paper === "A4" ? "p-4 sm:p-6 md:p-8" : "p-2 sm:p-3",
+            )}
+            dangerouslySetInnerHTML={{ __html: previewHtml }}
+          />
         </div>
       </div>
     </div>

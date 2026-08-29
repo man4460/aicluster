@@ -47,24 +47,29 @@ export function DormInvoicePosPrintToolbar({
   }, [sheet, docTitle]);
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      <AppSlipPaperSizeToolbar
-        value={paper}
-        onChange={setPaper}
-        sizes={["SLIP_58", "SLIP_80", "A4"]}
-        aria-label="ขนาดกระดาษใบแจ้งหนี้"
-      />
-      <button type="button" className={appTemplateOutlineButtonClass} onClick={onPrint}>
-        พิมพ์
-      </button>
-      <button
-        type="button"
-        className={shopQrTemplateGridPrimaryButtonClass}
-        disabled={pdfBusy}
-        onClick={() => void onPdf()}
-      >
-        {pdfBusy ? "กำลังสร้าง PDF…" : "ดาวน์โหลด PDF"}
-      </button>
+    <div className={cn("flex flex-col gap-2", className)}>
+      <div className="flex flex-wrap items-center gap-2">
+        <AppSlipPaperSizeToolbar
+          value={paper}
+          onChange={setPaper}
+          sizes={["SLIP_58", "SLIP_80", "A4"]}
+          aria-label="ขนาดกระดาษใบแจ้งหนี้"
+        />
+        <button type="button" className={appTemplateOutlineButtonClass} onClick={onPrint}>
+          พิมพ์
+        </button>
+        <button
+          type="button"
+          className={shopQrTemplateGridPrimaryButtonClass}
+          disabled={pdfBusy}
+          onClick={() => void onPdf()}
+        >
+          {pdfBusy ? "กำลังสร้าง PDF…" : "ดาวน์โหลด PDF"}
+        </button>
+      </div>
+      <p className="text-[11px] text-[#66638c]">
+        รูปแบบเดียวกับใบเสร็จ — 58 mm กึ่งกลาง · 80 mm / A4 ชิดซ้าย
+      </p>
     </div>
   );
 }
