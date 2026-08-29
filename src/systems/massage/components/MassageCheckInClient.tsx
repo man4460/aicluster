@@ -33,7 +33,10 @@ type SubRow = {
 
 type Pkg = { id: number; name: string; price: number; totalSessions: number };
 
-type StylistBrief = { id: number; name: string };
+type StylistBrief = { id: number; name: string; photoUrl?: string | null };
+
+/** ไม่เกินจำนวนนี้ — แสดงการ์ดเลือกแบบ POS · เกินแล้วใช้ dropdown */
+const MASSAGE_CHECKIN_STAFF_CARD_MAX = 8;
 
 function IconReceipt({ className }: { className?: string }) {
   return (
@@ -171,6 +174,9 @@ export function MassageCheckInClient({
     const s = stylists.find((x) => String(x.id) === stylistId);
     return s?.name ?? "ไม่ระบุพนักงาน";
   }, [stylists, stylistId]);
+
+  const useStaffCards =
+    stylists.length > 0 && stylists.length <= MASSAGE_CHECKIN_STAFF_CARD_MAX;
 
   const clearCashReceipt = useCallback(() => {
     setCashReceipt((prev) => {
@@ -511,46 +517,152 @@ export function MassageCheckInClient({
   return (
     <div className={embedded ? "space-y-4 sm:space-y-5" : massagePageStackClass}>
       <section className={massageSectionFirstClass} aria-label="พนักงานที่บันทึก">
-        <button
-          type="button"
-          onClick={() => setStylistModalOpen(true)}
-          className={cn(
-            "flex w-full min-h-[52px] items-center justify-between gap-3 rounded-[2rem] border border-[#e4e2f5] bg-white/90 px-4 py-3 text-left shadow-sm outline-none ring-[#4d47b6]/20 transition hover:border-[#4d47b6]/35 hover:bg-white active:scale-[0.99] focus-visible:ring-2",
-            stylists.length === 0 && "border-amber-200/90 bg-amber-50/40",
-          )}
-          aria-expanded={stylistModalOpen}
-          aria-haspopup="dialog"
-          aria-controls="massage-stylist-modal"
-          suppressHydrationWarning
-        >
-          <span className="flex min-w-0 flex-1 items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1.25rem] bg-[#4d47b6] text-sm font-black text-white shadow-md shadow-[#4d47b6]/25">
-              พ
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-[#8b87ad]">
+        {stylists.length === 0 ? (
+          <div
+            className={cn(
+              "rounded-[2rem] border border-amber-200/90 bg-amber-50/50 px-4 py-3 text-sm font-medium text-amber-950",
+            )}
+          >
+            ยังไม่มีพนักงาน · ตั้งที่การจัดการ → หมอนวด
+          </div>
+        ) : useStaffCards ? (
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#8b87ad]">
                 พนักงานที่บันทึก
+              </p>
+              <p className="text-[11px] font-medium text-[#66638c]">
+                {stylists.length} คน · แตะการ์ดเพื่อเลือก
+              </p>
+            </div>
+            <ul
+              className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3"
+              role="listbox"
+              aria-label="เลือกพนักงานที่บันทึก"
+            >
+              <li>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={!stylistId}
+                  onClick={() => setStylistId("")}
+                  className={cn(
+                    "flex h-full w-full flex-col overflow-hidden rounded-[1.25rem] border bg-white text-left shadow-sm transition active:scale-[0.99]",
+                    !stylistId
+                      ? "border-[#4d47b6] ring-2 ring-[#4d47b6]/30"
+                      : "border-[#e8e6f4] hover:border-[#4d47b6]/40",
+                  )}
+                >
+                  <div className="flex aspect-square w-full items-center justify-center bg-gradient-to-br from-[#f5f3ff] to-[#ecebff]">
+                    <span className="text-2xl font-black text-[#8b87ad]" aria-hidden>
+                      —
+                    </span>
+                  </div>
+                  <span
+                    className={cn(
+                      "px-2 py-2 text-center text-xs font-bold leading-snug",
+                      !stylistId ? "text-[#4d47b6]" : "text-[#5f5a8a]",
+                    )}
+                  >
+                    ไม่ระบุ
+                  </span>
+                </button>
+              </li>
+              {stylists.map((s) => {
+                const selected = stylistId === String(s.id);
+                const initial = s.name.trim().charAt(0) || "พ";
+                return (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onClick={() => setStylistId(String(s.id))}
+                      className={cn(
+                        "flex h-full w-full flex-col overflow-hidden rounded-[1.25rem] border bg-white text-left shadow-sm transition active:scale-[0.99]",
+                        selected
+                          ? "border-[#4d47b6] ring-2 ring-[#4d47b6]/30"
+                          : "border-[#e8e6f4] hover:border-[#4d47b6]/40",
+                      )}
+                      aria-label={`เลือก ${s.name}`}
+                    >
+                      <div className="relative aspect-square w-full overflow-hidden bg-[#4d47b6]/08">
+                        {s.photoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={s.photoUrl}
+                            alt=""
+                            className="h-full w-full object-cover object-center"
+                          />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#5b61ff] to-[#7c3aed] text-2xl font-black text-white">
+                            {initial}
+                          </span>
+                        )}
+                        {selected ? (
+                          <span
+                            className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-[#4d47b6] text-white shadow"
+                            aria-hidden
+                          >
+                            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="3">
+                              <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </span>
+                        ) : null}
+                      </div>
+                      <span
+                        className={cn(
+                          "line-clamp-2 px-2 py-2 text-center text-xs font-bold leading-snug",
+                          selected ? "text-[#4d47b6]" : "text-[#2e2a58]",
+                        )}
+                      >
+                        {s.name}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setStylistModalOpen(true)}
+            className={cn(
+              "flex w-full min-h-[52px] items-center justify-between gap-3 rounded-[2rem] border border-[#e4e2f5] bg-white/90 px-4 py-3 text-left shadow-sm outline-none ring-[#4d47b6]/20 transition hover:border-[#4d47b6]/35 hover:bg-white active:scale-[0.99] focus-visible:ring-2",
+            )}
+            aria-expanded={stylistModalOpen}
+            aria-haspopup="dialog"
+            aria-controls="massage-stylist-modal"
+            suppressHydrationWarning
+          >
+            <span className="flex min-w-0 flex-1 items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1.25rem] bg-[#4d47b6] text-sm font-black text-white shadow-md shadow-[#4d47b6]/25">
+                พ
               </span>
-              <span className="mt-0.5 block truncate text-sm font-bold text-[#2e2a58]">{stylistPickSummary}</span>
-              {stylists.length > 0 ? (
+              <span className="min-w-0">
+                <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-[#8b87ad]">
+                  พนักงานที่บันทึก
+                </span>
+                <span className="mt-0.5 block truncate text-sm font-bold text-[#2e2a58]">{stylistPickSummary}</span>
                 <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-[#66638c]">
                   <span className="h-1 w-1 rounded-full bg-emerald-500" aria-hidden />
                   {`มีพนักงาน ${stylists.length} คน · แตะเพื่อเลือก`}
                 </span>
-              ) : null}
+              </span>
             </span>
-          </span>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="h-5 w-5 shrink-0 text-[#8b87ad]"
-            aria-hidden
-          >
-            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="h-5 w-5 shrink-0 text-[#8b87ad]"
+              aria-hidden
+            >
+              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
       </section>
 
       <section className={massageSectionNextClass} aria-label="ค้นหาลูกค้า">
@@ -734,7 +846,7 @@ export function MassageCheckInClient({
         </div>
       </section>
 
-      {stylistModalOpen
+      {stylistModalOpen && !useStaffCards
         ? (
             <MassageModalPortal>
             <div className={massageModalBackdropClass} role="presentation" onClick={() => setStylistModalOpen(false)}>
