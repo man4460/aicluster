@@ -38,6 +38,7 @@ export default async function MassageSettingsPage() {
         slotMinutes: true,
         portalBookingPaymentMode: true,
         depositAmountBaht: true,
+        staffDailyPinHash: true,
         ...MODULE_SHOP_PAYMENT_SELECT,
       },
     }),
@@ -71,6 +72,7 @@ export default async function MassageSettingsPage() {
               ? row.portalBookingPaymentMode
               : "NONE",
           depositAmountBaht: row?.depositAmountBaht ?? null,
+          staffDailyPinSet: Boolean(row?.staffDailyPinHash?.trim()),
           ...paymentRowToDto(row),
         }}
         hoursPanel={<MassageDayScheduleClient plain initialDateKey={bangkokDateKey()} />}

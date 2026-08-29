@@ -1232,6 +1232,8 @@ model MassageShopProfile {
   portalBookingPaymentMode String @default("NONE") @map("portal_booking_payment_mode") @db.VarChar(16)
   /** จำนวนมัดจำ (บาท) เมื่อโหมด DEPOSIT */
   depositAmountBaht Int? @map("deposit_amount_baht")
+  /** รหัสเข้าลิงก์พนักงานรายวัน (hash) */
+  staffDailyPinHash String? @map("staff_daily_pin_hash") @db.VarChar(255)
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 

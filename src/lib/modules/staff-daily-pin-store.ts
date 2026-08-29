@@ -108,6 +108,22 @@ export async function loadBarberStaffDailyPinHash(
   return row?.staffDailyPinHash?.trim() || null;
 }
 
+export async function loadMassageStaffDailyPinHash(
+  ownerId: string,
+  trialSessionId: string,
+): Promise<string | null> {
+  const row = await prisma.massageShopProfile.findUnique({
+    where: {
+      ownerUserId_trialSessionId: {
+        ownerUserId: ownerId,
+        trialSessionId,
+      },
+    },
+    select: { staffDailyPinHash: true },
+  });
+  return row?.staffDailyPinHash?.trim() || null;
+}
+
 export async function gateStaffDailyPin(
   req: Request,
   module: StaffDailyPinModule,
@@ -174,6 +190,24 @@ async function writeStaffDailyPinHash(
   if (module === "barber") {
     const tid = trialSessionId?.trim() || "prod";
     await prisma.barberShopProfile.upsert({
+      where: {
+        ownerUserId_trialSessionId: {
+          ownerUserId: ownerId,
+          trialSessionId: tid,
+        },
+      },
+      create: {
+        ownerUserId: ownerId,
+        trialSessionId: tid,
+        staffDailyPinHash: hash,
+      },
+      update: { staffDailyPinHash: hash },
+    });
+    return;
+  }
+  if (module === "massage") {
+    const tid = trialSessionId?.trim() || "prod";
+    await prisma.massageShopProfile.upsert({
       where: {
         ownerUserId_trialSessionId: {
           ownerUserId: ownerId,

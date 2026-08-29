@@ -55,6 +55,12 @@ export const massageNavActiveGradientClass = cn(
 export const massageNavIdleClass =
   "text-slate-600/85 hover:bg-white/55 hover:text-[#2e2a58]";
 
+/** เผื่อ dock พนักงานมือถือ */
+export const massageMainPaddingBottomClass = "pb-24 lg:pb-0";
+
+/** alias โทน active สำหรับแท็บพนักงาน */
+export const massageNavActiveClass = massageNavActiveGradientClass;
+
 /** §4 Nav Active INVERSE (บน global header bar — สีขาวบนพื้นสีม่วง) */
 export const massageNavInverseActiveClass =
   "bg-white text-[#4d47b6] shadow-md shadow-black/25 ring-1 ring-white/50";

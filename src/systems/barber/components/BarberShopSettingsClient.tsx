@@ -317,6 +317,7 @@ function BarberShopSettingsClientInner({
         payload.portalBookingPaymentMode = form.portalBookingPaymentMode;
         payload.depositAmountBaht =
           form.portalBookingPaymentMode === "DEPOSIT" ? form.depositAmountBaht : null;
+        Object.assign(payload, staffDailyPinPatchBody({ pinDraft, clearPin }));
       } else {
         delete payload.payAmountPresets;
         delete payload.payAmountPresetsRaw;
@@ -662,7 +663,7 @@ function BarberShopSettingsClientInner({
                 </div>
               ) : null}
 
-              {isBarber ? (
+              {supportsPortalWebsite ? (
                 <AppStaffDailyPinSettingsField
                   pinSet={pinSet}
                   pinDraft={pinDraft}

@@ -14,6 +14,10 @@ import {
 } from "@/lib/profile/module-slip-paper-size";
 import { getMassageDataScope } from "@/lib/trial/module-scopes";
 import {
+  applyStaffDailyPinPatch,
+  loadMassageStaffDailyPinHash,
+} from "@/lib/modules/staff-daily-pin-store";
+import {
   massageNormalizePortalGallery,
   massageSerializePortalGallery,
 } from "@/systems/massage/lib/portal-media";
@@ -52,6 +56,8 @@ const patchSchema = z
     portalBookingPaymentMode: z.enum(["NONE", "DEPOSIT", "FULL"]).optional(),
     depositAmountBaht: z.number().int().min(0).max(9_999_999).nullable().optional(),
     promptPayQrImageUrl: z.string().max(512).optional().nullable(),
+    staffDailyPin: z.string().max(64).optional().nullable(),
+    staffDailyPinClear: z.boolean().optional(),
   })
   .merge(moduleShopPaymentPatchSchema);
 
@@ -72,6 +78,7 @@ const select = {
   slotMinutes: true,
   portalBookingPaymentMode: true,
   depositAmountBaht: true,
+  staffDailyPinHash: true,
   ...MODULE_SHOP_PAYMENT_SELECT,
 } as const;
 
@@ -99,6 +106,7 @@ function profileFromRow(row: {
   slotMinutes?: number | null;
   portalBookingPaymentMode?: string | null;
   depositAmountBaht?: number | null;
+  staffDailyPinHash?: string | null;
   promptPayQrImageUrl?: string | null;
   promptPayPhone?: string | null;
   bankName?: string | null;
@@ -127,6 +135,7 @@ function profileFromRow(row: {
     slotMinutes: massageNormalizeSlotMinutes(row.slotMinutes ?? 60),
     portalBookingPaymentMode: normalizeMassagePortalPaymentMode(row.portalBookingPaymentMode),
     depositAmountBaht: row.depositAmountBaht ?? null,
+    staffDailyPinSet: Boolean(row.staffDailyPinHash?.trim()),
     ...paymentRowToDto(row),
   };
 }
@@ -148,6 +157,7 @@ const emptyProfile = {
   slotMinutes: 60,
   portalBookingPaymentMode: "NONE",
   depositAmountBaht: null,
+  staffDailyPinHash: null,
   promptPayQrImageUrl: null,
 };
 
@@ -177,6 +187,17 @@ export async function PATCH(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
 
   const d = parsed.data;
+  const pinResult = await applyStaffDailyPinPatch({
+    ownerId: own.userId,
+    module: "massage",
+    trialSessionId: own.trialSessionId,
+    staffDailyPin: d.staffDailyPin,
+    staffDailyPinClear: d.staffDailyPinClear,
+  });
+  if (!pinResult.ok) {
+    return NextResponse.json({ error: pinResult.error }, { status: 400 });
+  }
+
   const gallerySerialized =
     d.portalGallery !== undefined ? massageSerializePortalGallery(d.portalGallery) : undefined;
 
@@ -298,5 +319,11 @@ export async function PATCH(req: Request) {
     select,
   });
 
-  return NextResponse.json({ profile: profileFromRow(updated) });
+  const pinHash = await loadMassageStaffDailyPinHash(own.userId, own.trialSessionId);
+  return NextResponse.json({
+    profile: {
+      ...profileFromRow(updated),
+      staffDailyPinSet: Boolean(pinHash),
+    },
+  });
 }

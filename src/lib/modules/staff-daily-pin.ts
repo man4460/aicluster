@@ -8,6 +8,7 @@ export type StaffDailyPinModule =
   | "hotel-resort"
   | "football-turf"
   | "barber"
+  | "massage"
   | "car-wash"
   | "dormitory";
 
