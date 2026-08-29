@@ -141,7 +141,7 @@ export function isMassageModuleNavItemActive(
 ): boolean {
   switch (key) {
     case "dashboard":
-      return pathname === "/dashboard/massage";
+      return pathname === "/dashboard/massage" || pathname === MASSAGE_STAFF_KIOSK_PATH;
     case "finance":
       return (
         pathname === "/dashboard/massage/finance" ||
@@ -170,11 +170,11 @@ export function isMassageDashboardTabActive(
   tabParam: string | null | undefined,
   fallbackKey: MassageDashboardTabKey,
 ): boolean {
+  const onDashboardSurface =
+    pathname === "/dashboard/massage" || pathname === MASSAGE_STAFF_KIOSK_PATH;
+  if (!onDashboardSurface) return false;
   const actual = parseMassageDashboardTab(tabParam ?? fallbackKey);
-  return (
-    isMassageModuleNavItemActive(pathname, "dashboard") &&
-    actual === tabKey
-  );
+  return actual === tabKey;
 }
 
 /**

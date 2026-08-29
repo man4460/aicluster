@@ -27,8 +27,11 @@ function formatBaht(n: number) {
 /** เนื้อหาหน้าแดชบอร์ดร้านนวด — ใช้ทั้ง `/dashboard/massage` และลิงก์พนักงาน */
 export async function MassageDashboardHome({
   className,
+  staffLane = false,
 }: {
   className?: string;
+  /** โหมดลิงก์พนักงาน — ซ่อนแท็บซ้ำ / ไม่พาไปหน้าเจ้าของ */
+  staffLane?: boolean;
 } = {}) {
   const session = await getSession();
   if (!session) return null;
@@ -72,13 +75,15 @@ export async function MassageDashboardHome({
             <p className={massageEnEyebrowLabelClass}>TODAY&apos;S STATS</p>
             <h2 className="mt-0.5 text-lg font-black text-[#2e2a58] sm:text-xl">สถิติวันนี้</h2>
           </div>
-          <Suspense
-            fallback={
-              <div className="h-11 w-44 shrink-0 animate-pulse rounded-[1.5rem] bg-white/30" aria-hidden />
-            }
-          >
-            <MassageDashboardTabToolbar className="shrink-0" />
-          </Suspense>
+          {!staffLane ? (
+            <Suspense
+              fallback={
+                <div className="h-11 w-44 shrink-0 animate-pulse rounded-[1.5rem] bg-white/30" aria-hidden />
+              }
+            >
+              <MassageDashboardTabToolbar className="shrink-0" />
+            </Suspense>
+          ) : null}
         </div>
         <div
           className={`mt-4 ${massageSurfaceRadiusClass} border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/40 p-5 shadow-sm`}
@@ -133,7 +138,9 @@ export async function MassageDashboardHome({
 
   return (
     <div className={cn(massagePageStackClass, className)}>
-      <MassageDashboardHubClient initialDateKey={bangkokDateKey()}>{overview}</MassageDashboardHubClient>
+      <MassageDashboardHubClient initialDateKey={bangkokDateKey()} staffLane={staffLane}>
+        {overview}
+      </MassageDashboardHubClient>
     </div>
   );
 }

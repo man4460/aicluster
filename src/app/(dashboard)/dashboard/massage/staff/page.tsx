@@ -5,7 +5,7 @@ import { getMassageDataScope } from "@/lib/trial/module-scopes";
 import { MassageDashboardHome } from "@/systems/massage/components/MassageDashboardHome";
 import { MassageStaffClient } from "@/systems/massage/components/MassageStaffClient";
 
-/** เป้าหมายของ QR พนักงาน — แท็บแดชบอร์ดเต็มชุด / การจัดการ · รหัสรายวันถ้าตั้งไว้ */
+/** เป้าหมายของ QR พนักงาน — เมนูแดชบอร์ดเท่านั้น (ภาพรวม · คิว · เช็กอิน) · รหัสรายวันถ้าตั้งไว้ */
 export default async function MassageStaffPage() {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -17,7 +17,7 @@ export default async function MassageStaffPage() {
     <MassageStaffClient
       shopLabel={branding.label}
       ownerId={session.sub}
-      dashboard={<MassageDashboardHome />}
+      dashboard={<MassageDashboardHome staffLane />}
     />
   );
 }

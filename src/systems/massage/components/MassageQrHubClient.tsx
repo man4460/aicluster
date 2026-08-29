@@ -144,7 +144,7 @@ export function MassageQrHubClient({
             <div className="min-w-0 flex-1 pt-0.5">
               <h3 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">QR พนักงาน</h3>
               <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-                แดชบอร์ด + การจัดการ — สแกนหรือเปิดลิงก์ (ล็อกอินร้าน · รหัสรายวันถ้าตั้งไว้)
+                ภาพรวม · คิว · เช็กอิน ในหน้าพนักงานเท่านั้น (ล็อกอินร้าน · รหัสรายวันถ้าตั้งไว้)
               </p>
               <p className="mt-5 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-800">
                 <span>คลิกเพื่อเปิด</span>
@@ -193,7 +193,7 @@ export function MassageQrHubClient({
         mobileCentered
         onClose={() => setShowStaffQrModal(false)}
         title="QR พนักงาน"
-        description="แดชบอร์ดคิว/เช็กอิน และการจัดการ — ถ้าร้านตั้งรหัสรายวันต้องใส่รหัสก่อน"
+        description="เมนูพนักงาน = ภาพรวม · จัดการคิว · เช็กอิน — ไม่เข้าเมนูเจ้าของร้าน"
         footer={<ModalCloseFooter onClose={() => setShowStaffQrModal(false)} />}
       >
         <MassageStaffQrDashboardSection

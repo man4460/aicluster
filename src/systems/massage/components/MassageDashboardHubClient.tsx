@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo } from "react";
-import Link from "next/link";
+import { Suspense, useCallback, useEffect, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 import {
@@ -12,10 +11,9 @@ import {
 } from "@/systems/massage/components/massage-ui-tokens";
 import {
   MASSAGE_DASHBOARD_TAB_ITEMS,
+  MASSAGE_STAFF_KIOSK_PATH,
   isMassageDashboardTabActive,
   massageDashboardTabIcon,
-  massageManageHref,
-  massageTabHref,
   parseMassageDashboardTab,
   type MassageDashboardTabKey,
 } from "@/systems/massage/massage-module-nav";
@@ -26,16 +24,27 @@ export type { MassageDashboardTabKey };
 
 /**
  * §12 Dashboard hub TAB TOOLBAR (query params ?tab= queue/checkin/overview)
- * หมอนวดอยู่ที่การจัดการ · ตารางเวลาอยู่ที่ตั้งค่า (?tab=hours)
+ * ใช้ pathname ปัจจุบัน — บนลิงก์พนักงานจะอยู่ที่ /dashboard/massage/staff
  */
 export function MassageDashboardTabToolbar({ className }: { className?: string }) {
+  const router = useRouter();
   const pathname = usePathname() ?? "/dashboard/massage";
   const searchParams = useSearchParams();
   const tab = useMemo(
     () => parseMassageDashboardTab(searchParams.get("tab")),
     [searchParams],
   );
-  void tab;
+
+  const setTab = useCallback(
+    (next: MassageDashboardTabKey) => {
+      const q = new URLSearchParams(searchParams.toString());
+      if (next === "overview") q.delete("tab");
+      else q.set("tab", next);
+      const qs = q.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   return (
     <nav
@@ -58,15 +67,16 @@ export function MassageDashboardTabToolbar({ className }: { className?: string }
           );
           const icon = massageDashboardTabIcon(item.key);
           return (
-            <Link
+            <button
               key={item.key}
-              href={massageTabHref("dashboard", item.key)}
+              type="button"
+              onClick={() => setTab(item.key)}
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               suppressHydrationWarning
               className={cn(
                 "inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-[2rem] px-2 py-2 transition-all sm:min-h-0 sm:min-w-0 sm:gap-1.5 sm:rounded-[1rem] sm:px-3 sm:py-1.5",
-                active ? massageNavActiveGradientClass : massageNavIdleClass,
+                active || tab === item.key ? massageNavActiveGradientClass : massageNavIdleClass,
               )}
             >
               <svg
@@ -82,7 +92,7 @@ export function MassageDashboardTabToolbar({ className }: { className?: string }
                 {icon}
               </svg>
               <span className="hidden text-xs font-bold sm:inline">{item.label}</span>
-            </Link>
+            </button>
           );
         })}
       </div>
@@ -93,31 +103,36 @@ export function MassageDashboardTabToolbar({ className }: { className?: string }
 function MassageDashboardHubTabs({
   initialDateKey,
   children,
+  staffLane = false,
 }: {
   initialDateKey: string;
   children: React.ReactNode;
+  staffLane?: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
+  const onStaff = staffLane || pathname === MASSAGE_STAFF_KIOSK_PATH;
   const tab = useMemo(
     () => parseMassageDashboardTab(searchParams.get("tab")),
     [searchParams],
   );
 
   useEffect(() => {
+    if (onStaff) return;
     const raw = searchParams.get("tab");
     if (raw === "schedule") {
       router.replace("/dashboard/massage/settings?tab=hours");
       return;
     }
     if (raw === "therapists") {
-      router.replace(massageManageHref("therapists"));
+      router.replace("/dashboard/massage/manage?tab=therapists");
     }
-  }, [router, searchParams]);
+  }, [onStaff, router, searchParams]);
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      {tab !== "overview" ? (
+      {!onStaff && tab !== "overview" ? (
         <div className="flex justify-end print:hidden">
           <MassageDashboardTabToolbar />
         </div>
@@ -125,9 +140,15 @@ function MassageDashboardHubTabs({
 
       {tab === "overview" ? <div className="space-y-4 sm:space-y-5">{children}</div> : null}
       {tab === "queue" ? (
-        <MassageBookingsClient initialDateKey={initialDateKey} showDashboardBackLink={false} />
+        <MassageBookingsClient
+          initialDateKey={initialDateKey}
+          showDashboardBackLink={false}
+          staffQrLanding={onStaff}
+        />
       ) : null}
-      {tab === "checkin" ? <MassageCheckInClient embedded /> : null}
+      {tab === "checkin" ? (
+        <MassageCheckInClient embedded staffQrLanding={onStaff} />
+      ) : null}
     </div>
   );
 }
@@ -143,13 +164,17 @@ function HubTabsFallback() {
 export function MassageDashboardHubClient({
   initialDateKey,
   children,
+  staffLane = false,
 }: {
   initialDateKey: string;
   children: React.ReactNode;
+  staffLane?: boolean;
 }) {
   return (
     <Suspense fallback={<HubTabsFallback />}>
-      <MassageDashboardHubTabs initialDateKey={initialDateKey}>{children}</MassageDashboardHubTabs>
+      <MassageDashboardHubTabs initialDateKey={initialDateKey} staffLane={staffLane}>
+        {children}
+      </MassageDashboardHubTabs>
     </Suspense>
   );
 }

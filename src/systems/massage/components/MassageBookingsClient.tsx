@@ -556,24 +556,40 @@ export function MassageBookingsClient({
                   <p className={massageMutedLoadingNoticeClass}>กำลังโหลดตารางเวลา…</p>
                 ) : scheduleClosed ? (
                   <p className="rounded-[1.25rem] bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-100">
-                    วันนี้ปิดรับจอง — ตั้งค่าได้ที่{" "}
-                    <Link
-                      href="/dashboard/massage/settings?tab=hours"
-                      className="font-bold text-[#4d47b6] underline-offset-2 hover:underline"
-                    >
-                      ตั้งค่า → เวลาเปิดร้าน
-                    </Link>
+                    วันนี้ปิดรับจอง
+                    {staffQrLanding ? (
+                      " — แจ้งเจ้าของร้านตั้งเวลาเปิดร้าน"
+                    ) : (
+                      <>
+                        {" "}
+                        — ตั้งค่าได้ที่{" "}
+                        <Link
+                          href="/dashboard/massage/settings?tab=hours"
+                          className="font-bold text-[#4d47b6] underline-offset-2 hover:underline"
+                        >
+                          ตั้งค่า → เวลาเปิดร้าน
+                        </Link>
+                      </>
+                    )}
                   </p>
                 ) : slotAvailability.length === 0 ? (
                   <p className="rounded-[1.25rem] bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-100">
-                    ยังไม่มีช่วงเวลา — ไปที่{" "}
-                    <Link
-                      href="/dashboard/massage/settings?tab=hours"
-                      className="font-bold text-[#4d47b6] underline-offset-2 hover:underline"
-                    >
-                      ตั้งค่า → เวลาเปิดร้าน
-                    </Link>{" "}
-                    ตั้งเวลาเปิด–ปิดก่อน
+                    ยังไม่มีช่วงเวลา
+                    {staffQrLanding ? (
+                      " — แจ้งเจ้าของร้านตั้งเวลาเปิด–ปิดก่อน"
+                    ) : (
+                      <>
+                        {" "}
+                        — ไปที่{" "}
+                        <Link
+                          href="/dashboard/massage/settings?tab=hours"
+                          className="font-bold text-[#4d47b6] underline-offset-2 hover:underline"
+                        >
+                          ตั้งค่า → เวลาเปิดร้าน
+                        </Link>{" "}
+                        ตั้งเวลาเปิด–ปิดก่อน
+                      </>
+                    )}
                   </p>
                 ) : (
                   <>

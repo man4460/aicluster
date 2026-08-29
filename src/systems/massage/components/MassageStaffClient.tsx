@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AppMobileDockUnifiedBar } from "@/components/app-templates";
 import { StaffDailyPinGate } from "@/components/qr/staff-daily-pin-gate";
 import { shopQrTemplatePageBgClass } from "@/components/qr/shop-qr-template";
@@ -10,34 +10,54 @@ import {
   readStoredStaffDailyUnlock,
   staffDailyUnlockHeaders,
 } from "@/lib/modules/staff-daily-pin";
-import { MassageManageHubClient } from "@/systems/massage/components/MassageManageHubClient";
+import {
+  MASSAGE_DASHBOARD_TAB_ITEMS,
+  MASSAGE_STAFF_KIOSK_PATH,
+  massageDashboardTabIcon,
+  parseMassageDashboardTab,
+  type MassageDashboardTabKey,
+} from "@/systems/massage/massage-module-nav";
 import {
   massageMainPaddingBottomClass,
   massageNavActiveClass,
   massageNavIdleClass,
 } from "@/systems/massage/components/massage-ui-tokens";
 
-type StaffTab = "dashboard" | "manage";
-
 type Props = {
   shopLabel: string;
   ownerId: string;
-  /** หน้าแดชบอร์ดเต็มชุดเดียวกับ `/dashboard/massage` */
+  /** เนื้อหาแดชบอร์ดจาก server — สลับแท็บด้วย ?tab= บน path พนักงาน */
   dashboard: ReactNode;
 };
 
-export function MassageStaffClient({
+function MassageStaffClientInner({
   shopLabel: initialShopLabel,
   ownerId,
   dashboard,
 }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [bootOk, setBootOk] = useState<boolean | null>(null);
   const [needsPin, setNeedsPin] = useState(false);
   const [shopLabel, setShopLabel] = useState(initialShopLabel);
-  const [tab, setTab] = useState<StaffTab>("dashboard");
   const [refreshing, setRefreshing] = useState(false);
   const [refreshNonce, setRefreshNonce] = useState(0);
+
+  const tab = useMemo(
+    () => parseMassageDashboardTab(searchParams.get("tab")),
+    [searchParams],
+  );
+
+  const setTab = useCallback(
+    (next: MassageDashboardTabKey) => {
+      if (next === "overview") {
+        router.replace(MASSAGE_STAFF_KIOSK_PATH, { scroll: false });
+        return;
+      }
+      router.replace(`${MASSAGE_STAFF_KIOSK_PATH}?tab=${next}`, { scroll: false });
+    },
+    [router],
+  );
 
   const runBootstrap = useCallback(async () => {
     const unlock = readStoredStaffDailyUnlock("massage", ownerId);
@@ -108,24 +128,35 @@ export function MassageStaffClient({
       role="tablist"
       aria-label={ariaLabel}
     >
-      <button
-        type="button"
-        role="tab"
-        aria-selected={tab === "dashboard"}
-        className={tabBtn(tab === "dashboard", opts?.compact)}
-        onClick={() => setTab("dashboard")}
-      >
-        แดชบอร์ด
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={tab === "manage"}
-        className={tabBtn(tab === "manage", opts?.compact)}
-        onClick={() => setTab("manage")}
-      >
-        การจัดการ
-      </button>
+      {MASSAGE_DASHBOARD_TAB_ITEMS.map((item) => {
+        const active = tab === item.key;
+        const icon = massageDashboardTabIcon(item.key);
+        return (
+          <button
+            key={item.key}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            aria-label={item.label}
+            className={cn(tabBtn(active, opts?.compact), "inline-flex items-center justify-center gap-1")}
+            onClick={() => setTab(item.key)}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4 shrink-0"
+              aria-hidden
+            >
+              {icon}
+            </svg>
+            <span className={opts?.compact ? "hidden xl:inline" : undefined}>{item.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 
@@ -205,15 +236,7 @@ export function MassageStaffClient({
           </header>
 
           <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-2 sm:px-3 sm:py-3">
-            {tab === "dashboard" ? (
-              <div role="tabpanel" aria-label="แดชบอร์ด" key={`dash-${refreshNonce}`}>
-                {dashboard}
-              </div>
-            ) : (
-              <div role="tabpanel" aria-label="การจัดการ" key={`manage-${refreshNonce}`}>
-                <MassageManageHubClient />
-              </div>
-            )}
+            <div key={`staff-dash-${refreshNonce}-${tab}`}>{dashboard}</div>
           </div>
         </div>
       </div>
@@ -224,5 +247,20 @@ export function MassageStaffClient({
         </AppMobileDockUnifiedBar>
       </div>
     </>
+  );
+}
+
+/** ลิงก์พนักงาน — เมนูเฉพาะแท็บแดชบอร์ด (ภาพรวม · คิว · เช็กอิน) อยู่ใน template พนักงานเท่านั้น */
+export function MassageStaffClient(props: Props) {
+  return (
+    <Suspense
+      fallback={
+        <div className={cn(shopQrTemplatePageBgClass, "flex min-h-dvh items-center justify-center p-6")}>
+          <p className="text-sm font-semibold text-[#66638c]">กำลังโหลด…</p>
+        </div>
+      }
+    >
+      <MassageStaffClientInner {...props} />
+    </Suspense>
   );
 }
