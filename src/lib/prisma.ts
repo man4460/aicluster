@@ -35,7 +35,8 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 72: device API key + fingerprintSlot on roster */
 /** 73: UserModulePlan — แพ็ก 199 ต่อโมดูล */
 /** 74: AttendanceBranch + homeBranchId + location.branchId — client เก่าไม่มี attendanceBranch delegate */
-const PRISMA_SINGLETON_VERSION = 74;
+/** 75: VillageIncomeCategory + VillageIncomeEntry — หน้าการเงินหมู่บ้าน */
+const PRISMA_SINGLETON_VERSION = 75;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -85,6 +86,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     chatMessage?: { findMany?: unknown };
     villageCostCategory?: { findMany?: unknown };
     villageCostEntry?: { findMany?: unknown };
+    villageIncomeCategory?: { findMany?: unknown };
+    villageIncomeEntry?: { findMany?: unknown };
     laundryPackage?: { findMany?: unknown };
     laundryOrder?: { findMany?: unknown };
     laundryCostCategory?: { findMany?: unknown };
@@ -202,6 +205,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.chatMessage?.findMany === "function" &&
     typeof c.villageCostCategory?.findMany === "function" &&
     typeof c.villageCostEntry?.findMany === "function" &&
+    typeof c.villageIncomeCategory?.findMany === "function" &&
+    typeof c.villageIncomeEntry?.findMany === "function" &&
     typeof c.laundryPackage?.findMany === "function" &&
     typeof c.laundryOrder?.findMany === "function" &&
     typeof c.laundryCostCategory?.findMany === "function" &&

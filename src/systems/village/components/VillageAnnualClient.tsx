@@ -10,7 +10,7 @@ import {
 import { cn } from "@/lib/cn";
 import { formatDormAmountStable } from "@/lib/dormitory/format-display-stable";
 import { VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
-import { VillageFinanceQuickTabs } from "@/systems/village/components/VillageFinanceQuickTabs";
+import { VillageHousingQuickTabs } from "@/systems/village/components/VillageHousingQuickTabs";
 import { createVillageSessionApiRepository } from "@/systems/village/village-service";
 import { villageBtnPrimary, villageBtnSecondary, villageField, villageGlassCard } from "@/systems/village/village-ui";
 
@@ -116,7 +116,7 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
 
   return (
     <VillagePageStack>
-      <VillageFinanceQuickTabs />
+      <VillageHousingQuickTabs />
       <VillagePanelCard
         title="สรุปรายปี"
         description={
@@ -170,7 +170,10 @@ export function VillageAnnualClient({ initialYear }: { initialYear: number }) {
           <p className="text-sm font-black tracking-tight text-[#1e1b4b]">รายได้ค่าส่วนกลาง เทียบรายจ่าย/ต้นทุน (รายเดือน)</p>
           <p className="mt-1 text-xs text-[#66638c]">
             รายได้ = ยอดรับแล้วของบิลในเดือนนั้น · รายจ่ายจากเมนู{" "}
-            <Link href="/dashboard/village/costs" className="font-semibold text-[#4338ca] underline-offset-2 hover:underline">
+            <Link
+              href="/dashboard/village/finance?panel=expenses"
+              className="font-semibold text-[#4338ca] underline-offset-2 hover:underline"
+            >
               ต้นทุน / รายจ่าย
             </Link>{" "}
             ตามวันจ่ายจริง (spentAt) ในปฏิทินไทย

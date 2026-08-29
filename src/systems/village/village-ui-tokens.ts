@@ -74,5 +74,17 @@ export function villagePrimaryTabPillClass(active: boolean): string {
   ].join(" ");
 }
 
+/** แถบแท็บย่อยหน้าการเงิน (ประวัติ / รายรับ · รายจ่าย) */
+export const villageFinanceSubTabShellClass =
+  "rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]";
+
+export const villageFinanceStatsGridClass = "grid grid-cols-2 gap-3 sm:grid-cols-3";
+
+export const villageFinanceStatTailClass = "col-span-2 sm:col-span-1";
+
+/** ช่องกรอกในฟอร์ม/โมดัลการเงิน — โทนเดียวกับ dormFieldClass */
+export const villageFieldClass =
+  "mt-1 min-h-[44px] w-full rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm font-semibold text-[#1e1b4b] outline-none ring-1 ring-inset ring-white/50 focus:border-[#5b61ff]/45 focus:ring-2 focus:ring-[#5b61ff]/20 sm:min-h-[40px]";
+
 export const villageMobileSelectClass =
   "box-border h-9 w-full min-w-0 appearance-none rounded-xl border border-[#e4e0f5] bg-white/95 px-3 pr-8 text-xs font-black text-[#1e1b4b] shadow-sm outline-none ring-1 ring-inset ring-white/70 focus:border-[#5b61ff]/40 focus:ring-2 focus:ring-[#5b61ff]/20";

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { VillageEmptyDashed, VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
-import { VillageFinanceQuickTabs } from "@/systems/village/components/VillageFinanceQuickTabs";
+import { VillageHousingQuickTabs } from "@/systems/village/components/VillageHousingQuickTabs";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import {
   createVillageSessionApiRepository,
@@ -393,7 +393,7 @@ export function VillageFeesClient({ initialYm }: { initialYm: string }) {
 
   return (
     <VillagePageStack>
-      <VillageFinanceQuickTabs />
+      <VillageHousingQuickTabs />
       <VillagePanelCard
         title="ค่าส่วนกลาง"
         description={

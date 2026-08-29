@@ -1,7 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { bangkokDateKey } from "@/lib/time/bangkok";
+import { cn } from "@/lib/cn";
+import { appTemplateOutlineButtonClass } from "@/components/app-templates";
 import {
   BarberCostPanel,
   type BarberCostToolbarApi,
@@ -13,11 +16,21 @@ import {
 } from "@/systems/village/village-cost-client";
 import type { BarberCostCategory, BarberCostEntry } from "@/systems/barber/barber-cost-client";
 import { VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
-import { VillageFinanceQuickTabs } from "@/systems/village/components/VillageFinanceQuickTabs";
 import { villageBtnPrimary, villageBtnSecondary } from "@/systems/village/village-ui";
 
 type Props = {
   baseUrl: string;
+  /** ฝังในหน้าการเงิน — ไม่ห่อ VillagePageStack */
+  embedded?: boolean;
+  /** โหมดรายการอย่างเดียว — หัวการ์ด/toolbar อยู่ที่ shell หลัก */
+  listOnly?: boolean;
+  refreshSignal?: number;
+  onToolbarReady?: (toolbar: BarberCostToolbarApi | null) => void;
+  onLoadingChange?: (loading: boolean) => void;
+  onCategoriesReady?: (categories: BarberCostCategory[]) => void;
+  filterCategoryId?: number | "all";
+  dateFrom?: string;
+  dateTo?: string;
 };
 
 function IconCategory({ className }: { className?: string }) {
@@ -47,16 +60,52 @@ function IconAnnual({ className }: { className?: string }) {
   );
 }
 
-function CostToolbarButtons({
+export function CostToolbarButtons({
   toolbar,
   busy,
+  compact = false,
 }: {
   toolbar: BarberCostToolbarApi | null;
   busy?: boolean;
+  compact?: boolean;
 }) {
   if (!toolbar) {
     return (
-      <span className="inline-flex min-h-[44px] items-center text-xs font-medium text-[#66638c]">กำลังเตรียมปุ่ม…</span>
+      <span className="inline-flex min-h-[40px] items-center text-xs font-medium text-[#66638c]">
+        กำลังเตรียมปุ่ม…
+      </span>
+    );
+  }
+  if (compact) {
+    return (
+      <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => toolbar.openManageCategories()}
+          className={cn(
+            appTemplateOutlineButtonClass,
+            "min-h-[40px] rounded-[1rem] px-3 text-xs font-black text-[#4d47b6]",
+          )}
+          aria-label="จัดการหมวดหมู่รายจ่าย"
+          title="หมวดหมู่"
+        >
+          หมวด
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => toolbar.openRecordExpense()}
+          className={cn(
+            villageBtnPrimary,
+            "min-h-[40px] min-w-[40px] rounded-[1rem] px-0 font-black sm:min-w-0 sm:px-4",
+          )}
+          aria-label="เพิ่มรายจ่าย"
+        >
+          <span className="sm:hidden">+</span>
+          <span className="hidden sm:inline">+ เพิ่มรายจ่าย</span>
+        </button>
+      </div>
     );
   }
   return (
@@ -87,7 +136,18 @@ function CostToolbarButtons({
   );
 }
 
-export function VillageCostsClient({ baseUrl }: Props) {
+export function VillageCostsClient({
+  baseUrl,
+  embedded = false,
+  listOnly = false,
+  refreshSignal = 0,
+  onToolbarReady,
+  onLoadingChange,
+  onCategoriesReady,
+  filterCategoryId = "all",
+  dateFrom,
+  dateTo,
+}: Props) {
   const [categories, setCategories] = useState<BarberCostCategory[]>([]);
   const [entries, setEntries] = useState<BarberCostEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,37 +157,74 @@ export function VillageCostsClient({ baseUrl }: Props) {
   const load = useCallback(async () => {
     setErr(null);
     setLoading(true);
+    onLoadingChange?.(true);
     try {
       const [cats, ents] = await Promise.all([fetchVillageCostCategories(), fetchVillageCostEntries()]);
       setCategories(cats);
       setEntries(ents);
+      onCategoriesReady?.(cats);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "โหลดไม่สำเร็จ");
       setCategories([]);
       setEntries([]);
     } finally {
       setLoading(false);
+      onLoadingChange?.(false);
     }
-  }, []);
+  }, [onLoadingChange, onCategoriesReady]);
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, refreshSignal]);
 
-  return (
-    <VillagePageStack>
-      <VillageFinanceQuickTabs />
-      <VillagePanelCard
-        title="ต้นทุน / รายจ่าย"
-        description={
-          <>
-            <span className="sm:hidden">บันทึกต้นทุนและรายจ่าย</span>
-            <span className="hidden sm:inline">บันทึกตามหมวด แนบสลิป — เปรียบเทียบกับรายรับค่าส่วนกลางได้ที่หน้ารายปี</span>
-          </>
-        }
-        action={
-          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-            <CostToolbarButtons toolbar={toolbar} busy={loading} />
+  const handleToolbarReady = useCallback(
+    (api: BarberCostToolbarApi | null) => {
+      setToolbar(api);
+      onToolbarReady?.(api);
+    },
+    [onToolbarReady],
+  );
+
+  const filteredEntries = useMemo(() => {
+    return entries.filter((e) => {
+      if (filterCategoryId !== "all" && e.category_id !== filterCategoryId) return false;
+      const ymd = bangkokDateKey(new Date(e.spent_at));
+      if (dateFrom && ymd < dateFrom) return false;
+      if (dateTo && ymd > dateTo) return false;
+      return true;
+    });
+  }, [entries, filterCategoryId, dateFrom, dateTo]);
+
+  const panel = (
+    <BarberCostPanel
+      baseUrl={baseUrl}
+      categories={categories}
+      entries={filteredEntries}
+      onRefresh={load}
+      listLoading={loading}
+      fetchError={err}
+      onToolbarReady={handleToolbarReady}
+      costPanelOps={villageCostPanelOps}
+      formAriaIdPrefix="village-cost"
+      renderWithoutOuterSection
+    />
+  );
+
+  if (listOnly) return panel;
+
+  const inner = (
+    <VillagePanelCard
+      title="ต้นทุน / รายจ่าย"
+      description={
+        <>
+          <span className="sm:hidden">บันทึกต้นทุนและรายจ่าย</span>
+          <span className="hidden sm:inline">บันทึกตามหมวด แนบสลิป — เปรียบเทียบกับรายรับค่าส่วนกลางได้ที่หน้ารายปี</span>
+        </>
+      }
+      action={
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+          <CostToolbarButtons toolbar={toolbar} busy={loading} />
+          {!embedded ? (
             <Link
               href="/dashboard/village/annual"
               className={`${villageBtnSecondary} min-h-[44px] px-3 py-2.5 text-sm font-semibold`}
@@ -137,22 +234,14 @@ export function VillageCostsClient({ baseUrl }: Props) {
               <IconAnnual className="h-4 w-4 sm:hidden" />
               <span className="hidden sm:inline">ไปหน้ารายปี</span>
             </Link>
-          </div>
-        }
-      >
-        <BarberCostPanel
-          baseUrl={baseUrl}
-          categories={categories}
-          entries={entries}
-          onRefresh={load}
-          listLoading={loading}
-          fetchError={err}
-          onToolbarReady={setToolbar}
-          costPanelOps={villageCostPanelOps}
-          formAriaIdPrefix="village-cost"
-          renderWithoutOuterSection
-        />
-      </VillagePanelCard>
-    </VillagePageStack>
+          ) : null}
+        </div>
+      }
+    >
+      {panel}
+    </VillagePanelCard>
   );
+
+  if (embedded) return inner;
+  return <VillagePageStack>{inner}</VillagePageStack>;
 }

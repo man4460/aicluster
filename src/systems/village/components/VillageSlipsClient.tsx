@@ -2,7 +2,7 @@
 
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { VillageEmptyDashed, VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
-import { VillageFinanceQuickTabs } from "@/systems/village/components/VillageFinanceQuickTabs";
+import { VillageHousingQuickTabs } from "@/systems/village/components/VillageHousingQuickTabs";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { prepareImageFileForUpload } from "@/components/app-templates";
 import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
@@ -341,7 +341,7 @@ export function VillageSlipsClient({ baseUrl }: { baseUrl: string }) {
 
   return (
     <VillagePageStack>
-      <VillageFinanceQuickTabs />
+      <VillageHousingQuickTabs />
       <VillagePanelCard
         title="สลิปโอนเงิน"
         description={

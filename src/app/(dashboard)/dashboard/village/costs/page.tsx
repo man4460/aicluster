@@ -1,13 +1,6 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth/session";
-import { getRequestBaseUrl } from "@/lib/app/request-base-url";
-import { VillageCostsClient } from "@/systems/village/components/VillageCostsClient";
 
-export default async function VillageCostsPage() {
-  const session = await getSession();
-  if (!session) redirect("/login");
-
-  const baseUrl = await getRequestBaseUrl();
-
-  return <VillageCostsClient baseUrl={baseUrl} />;
+/** ต้นทุน / รายจ่ายย้ายไปเป็นแท็บ «รายจ่าย» ในหน้าการเงิน */
+export default function VillageCostsPage() {
+  redirect("/dashboard/village/finance?panel=expenses");
 }

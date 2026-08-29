@@ -216,6 +216,8 @@ model User {
   villageSlipSubmissions    VillageSlipSubmission[]    @relation("VillageSlipToUser")
   villageCostCategories     VillageCostCategory[]
   villageCostEntries        VillageCostEntry[]
+  villageIncomeCategories   VillageIncomeCategory[]
+  villageIncomeEntries      VillageIncomeEntry[]
   trialSessions            TrialSession[]
   parkingSites             ParkingSite[]
   waitQueueSites           WaitQueueSite[]
@@ -2889,6 +2891,48 @@ model VillageCostEntry {
 
   @@index([ownerUserId, trialSessionId, spentAt], map: "village_cost_ent_owner_trial_spent_idx")
   @@map("village_cost_entries")
+}
+
+/** ประเภทหมวดรายรับหมู่บ้าน — COMMON_FEE = ค่าส่วนกลางจากการชำระ · CUSTOM = รายรับอื่นที่บันทึกเอง */
+enum VillageIncomeCategoryKind {
+  COMMON_FEE
+  CUSTOM
+}
+
+model VillageIncomeCategory {
+  id             String                    @id @default(cuid())
+  ownerUserId    String                    @map("owner_id") @db.VarChar(191)
+  owner          User                      @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String                    @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String                    @db.VarChar(120)
+  kind           VillageIncomeCategoryKind @default(CUSTOM)
+  isBuiltin      Boolean                   @default(false) @map("is_builtin")
+  sortOrder      Int                       @default(0) @map("sort_order")
+  createdAt      DateTime                  @default(now()) @map("created_at")
+  updatedAt      DateTime                  @updatedAt @map("updated_at")
+  entries        VillageIncomeEntry[]
+
+  @@index([ownerUserId, trialSessionId, sortOrder], map: "village_income_cat_owner_trial_sort_idx")
+  @@map("village_income_categories")
+}
+
+model VillageIncomeEntry {
+  id             String                @id @default(cuid())
+  ownerUserId    String                @map("owner_id") @db.VarChar(191)
+  owner          User                  @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String                @default("prod") @map("trial_session_id") @db.VarChar(36)
+  categoryId     String                @map("category_id") @db.VarChar(191)
+  category       VillageIncomeCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  label          String                @db.VarChar(160)
+  amountBaht     Int                   @map("amount_baht")
+  earnedAt       DateTime              @default(now()) @map("earned_at")
+  note           String?               @db.VarChar(300)
+  paymentSlipUrl String?               @map("payment_slip_url") @db.VarChar(512)
+  createdAt      DateTime              @default(now()) @map("created_at")
+
+  @@index([ownerUserId, trialSessionId, earnedAt], map: "village_income_owner_earned_idx")
+  @@index([categoryId], map: "village_income_category_idx")
+  @@map("village_income_entries")
 }
 
 /** โหมดคิดเงินที่จอดรถ — รายชั่วโมง (ปัดขึ้น) หรือ เหมารายวันปฏิทิน (Bangkok) */

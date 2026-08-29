@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { VillageEmptyDashed, VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
+import { VillageHousingQuickTabs } from "@/systems/village/components/VillageHousingQuickTabs";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { normalizeVillageHouseNo } from "@/lib/village/house-no";
 import {
@@ -74,6 +75,7 @@ export function VillageResidentsClient() {
 
   return (
     <VillagePageStack>
+      <VillageHousingQuickTabs />
       <VillagePanelCard
         title="ค้นหาและเครื่องมือ"
         description="เพิ่มบ้าน รีเฟรช หรือดาวน์โหลดรายงาน"

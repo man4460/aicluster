@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { villageFilterChipClass, villageSegmentShellClass } from "@/systems/village/village-ui-tokens";
 
-const financeItems = [
+const housingItems = [
+  { href: "/dashboard/village/residents", label: "บ้าน" },
   { href: "/dashboard/village/fees", label: "ค่าส่วนกลาง" },
   { href: "/dashboard/village/slips", label: "สลิป" },
-  { href: "/dashboard/village/costs", label: "ต้นทุน / รายจ่าย" },
   { href: "/dashboard/village/annual", label: "รายปี" },
 ] as const;
 
@@ -16,13 +16,13 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function VillageFinanceQuickTabs() {
+export function VillageHousingQuickTabs() {
   const pathname = usePathname() ?? "";
   return (
     <div className="flex w-full md:justify-end">
-      <nav aria-label="เมนูย่อยการเงิน" className={cn(villageSegmentShellClass, "md:min-w-[26rem]")}>
+      <nav aria-label="เมนูย่อยจัดการบ้าน" className={cn(villageSegmentShellClass, "md:min-w-[26rem]")}>
         <ul className="grid w-full grid-cols-2 gap-1 sm:grid-cols-4">
-          {financeItems.map((item) => {
+          {housingItems.map((item) => {
             const active = isActive(pathname, item.href);
             return (
               <li key={item.href} className="min-w-0">

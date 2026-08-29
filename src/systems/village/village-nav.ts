@@ -17,17 +17,20 @@ export const VILLAGE_MODULE_PATH_PREFIX = "/dashboard/village";
 export const VILLAGE_HEADER_COLLAPSE_KEY = "mawell-village-module-header-collapsed";
 export const VILLAGE_HEADER_COLLAPSE_EVENT = "mawell-village-header-collapse";
 
+export const VILLAGE_FINANCE_HREF = "/dashboard/village/finance";
+
 export const villageMainMenuItems: readonly VillageMainMenuItem[] = [
   { key: "overview", label: "ภาพรวม", href: "/dashboard/village" },
   { key: "housing", label: "จัดการบ้าน", href: "/dashboard/village/residents" },
-  { key: "finance", label: "การเงิน", href: "/dashboard/village/costs" },
+  { key: "finance", label: "การเงิน", href: VILLAGE_FINANCE_HREF },
   { key: "settings", label: "ตั้งค่า", href: "/dashboard/village/settings" },
 ] as const;
 
 export const villageSubMenuItems: readonly VillageSubMenuItem[] = [
-  { href: "/dashboard/village/fees", label: "ค่าส่วนกลาง", group: "finance" },
-  { href: "/dashboard/village/slips", label: "สลิป", group: "finance" },
-  { href: "/dashboard/village/costs", label: "ต้นทุน / รายจ่าย", group: "finance" },
+  { href: "/dashboard/village/residents", label: "บ้าน", group: "housing" },
+  { href: "/dashboard/village/fees", label: "ค่าส่วนกลาง", group: "housing" },
+  { href: "/dashboard/village/slips", label: "สลิป", group: "housing" },
+  { href: "/dashboard/village/annual", label: "รายปี", group: "housing" },
   { href: "/dashboard/village/reports", label: "ส่งออก", group: "settings" },
   { href: "/dashboard/village/settings", label: "ตั้งค่า", group: "settings" },
 ] as const;
@@ -66,12 +69,17 @@ function pathMatches(pathname: string, href: string): boolean {
 
 export function villageMainKeyFromPathname(pathnameRaw: string): VillageMainMenuKey {
   const pathname = (pathnameRaw || "").replace(/\/+$/, "") || "/";
-  if (pathMatches(pathname, "/dashboard/village/residents")) return "housing";
   if (
+    pathMatches(pathname, "/dashboard/village/residents") ||
     pathMatches(pathname, "/dashboard/village/fees") ||
     pathMatches(pathname, "/dashboard/village/slips") ||
-    pathMatches(pathname, "/dashboard/village/costs") ||
     pathMatches(pathname, "/dashboard/village/annual")
+  ) {
+    return "housing";
+  }
+  if (
+    pathMatches(pathname, VILLAGE_FINANCE_HREF) ||
+    pathMatches(pathname, "/dashboard/village/costs")
   ) {
     return "finance";
   }
