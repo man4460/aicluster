@@ -36,6 +36,8 @@ export type VillageHouse = {
   fee_cycle: VillageHouseFeeCycle;
   /** YYYY-MM — เริ่มเก็บตั้งแต่เดือนนี้; null = ไม่กำหนด */
   billing_start_ym: string | null;
+  /** แสดงบนเว็บลูกค้าในหมวดบ้านประกาศขาย */
+  listed_for_sale: boolean;
   is_active: boolean;
   sort_order: number;
   residents: VillageResident[];

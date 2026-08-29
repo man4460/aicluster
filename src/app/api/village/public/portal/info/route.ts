@@ -41,7 +41,7 @@ export async function GET(req: Request) {
       },
     }),
     prisma.villageHouse.findMany({
-      where: { ownerUserId: ownerId, trialSessionId, isActive: true },
+      where: { ownerUserId: ownerId, trialSessionId, isActive: true, listedForSale: true },
       orderBy: [{ sortOrder: "asc" }, { houseNo: "asc" }],
       select: {
         id: true,
@@ -57,13 +57,14 @@ export async function GET(req: Request) {
   const bannerUrl = profile?.portalBannerUrl?.trim() || VILLAGE_PORTAL_SAMPLE_BANNER;
   const galleryOut = gallery.length > 0 ? gallery : [...VILLAGE_PORTAL_SAMPLE_GALLERY];
   const villageLabel = profile?.displayName?.trim() || "หมู่บ้าน / โครงการ";
+  const contactPhone = profile?.contactPhone?.trim() || null;
 
   return NextResponse.json({
     villageLabel,
     logoUrl: profile?.logoUrl?.trim() || null,
     tagline: profile?.tagline?.trim() || "",
     address: profile?.address ?? null,
-    contactPhone: profile?.contactPhone ?? null,
+    contactPhone,
     contactLine: profile?.contactLine ?? null,
     facebookUrl: profile?.facebookUrl ?? null,
     mapUrl: profile?.mapUrl ?? null,

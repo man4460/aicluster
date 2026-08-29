@@ -122,7 +122,7 @@ export function VillagePortalClient({
             aria-label="เมนู"
           >
             <a href="#houses" className={portalNavLinkClass}>
-              บ้านในโครงการ
+              บ้านประกาศขาย
             </a>
             {showGalleryNav ? (
               <a href="#gallery" className={portalNavLinkClass}>
@@ -166,9 +166,24 @@ export function VillagePortalClient({
 
       <main className="mx-auto max-w-6xl space-y-12 px-4 pb-16 pt-8 sm:px-6">
         <section id="houses" className={cn(appPublicCheckInGlassCardClass, "scroll-mt-8 p-4 sm:p-6")}>
-          <h2 className="text-lg font-black text-[#1e1b4b]">บ้านในโครงการ</h2>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-lg font-black text-[#1e1b4b]">บ้านที่ประกาศขาย</h2>
+              <p className="mt-1 text-xs font-semibold text-[#66638c]">
+                รายการบ้านที่นิติเปิดประกาศบนเว็บนี้
+              </p>
+            </div>
+            {info.contactPhone ? (
+              <p className="text-sm font-bold text-[#4d47b6]">
+                โทรนิติ{" "}
+                <a href={`tel:${tel}`} className="tabular-nums underline-offset-2 hover:underline">
+                  {info.contactPhone}
+                </a>
+              </p>
+            ) : null}
+          </div>
           {info.houses.length === 0 ? (
-            <p className="mt-4 text-sm font-semibold text-[#66638c]">ยังไม่มีรายการบ้านแสดง</p>
+            <p className="mt-4 text-sm font-semibold text-[#66638c]">ขณะนี้ยังไม่มีบ้านประกาศขาย</p>
           ) : (
             <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {info.houses.map((h) => (
@@ -176,12 +191,21 @@ export function VillagePortalClient({
                   key={h.id}
                   className="rounded-[1.25rem] border border-white/60 bg-white/70 p-4 shadow-sm"
                 >
-                  <p className="text-xl font-black text-[#1e1b4b]">บ้าน {h.houseNo}</p>
+                  <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">ประกาศขาย</p>
+                  <p className="mt-1 text-xl font-black text-[#1e1b4b]">บ้าน {h.houseNo}</p>
                   {h.plotLabel ? (
                     <p className="mt-1 text-xs font-semibold text-[#66638c]">แปลง {h.plotLabel}</p>
                   ) : null}
                   {h.ownerName ? (
                     <p className="mt-2 text-sm font-semibold text-[#4d47b6]">{h.ownerName}</p>
+                  ) : null}
+                  {info.contactPhone ? (
+                    <a
+                      href={`tel:${tel}`}
+                      className="mt-3 inline-flex min-h-10 items-center rounded-xl border border-[#5b61ff]/25 bg-[#5b61ff]/8 px-3 text-xs font-bold text-[#4d47b6]"
+                    >
+                      โทรติดต่อนิติ {info.contactPhone}
+                    </a>
                   ) : null}
                 </li>
               ))}

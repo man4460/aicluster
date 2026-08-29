@@ -152,7 +152,7 @@ function VillagePortalLinkPanel({
   return (
     <div className="space-y-4 text-left">
       <p className="text-sm text-[#66638c]">
-        ลิงก์สาธารณะให้ลูกบ้าน / ผู้สนใจดูบ้านในโครงการ · ติดต่อนิติ · QR โปสเตอร์ด้านล่าง
+        ลิงก์สาธารณะให้ลูกบ้าน / ผู้สนใจดูบ้านประกาศขาย · ติดต่อนิติ · QR โปสเตอร์ด้านล่าง
       </p>
       {copyMsg ? <p className="text-sm font-semibold text-emerald-700">{copyMsg}</p> : null}
       <div className="space-y-2 rounded-[1.25rem] border border-white/60 bg-white/55 p-3 sm:p-4">

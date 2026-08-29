@@ -29,6 +29,7 @@ const patchSchema = z.object({
   monthly_fee_override: z.number().int().min(0).max(9_999_999).optional().nullable(),
   fee_cycle: feeCycleEnum.optional(),
   billing_start_ym: z.string().regex(ymRegex).nullable().optional(),
+  listed_for_sale: z.boolean().optional(),
   is_active: z.boolean().optional(),
   sort_order: z.number().int().min(0).max(999_999).optional(),
   residents: z.array(residentDraftSchema).optional(),
@@ -84,6 +85,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
           ...(parsed.data.fee_cycle !== undefined ? { feeCycle: parsed.data.fee_cycle } : {}),
           ...(parsed.data.billing_start_ym !== undefined
             ? { billingStartYm: parsed.data.billing_start_ym }
+            : {}),
+          ...(parsed.data.listed_for_sale !== undefined
+            ? { listedForSale: parsed.data.listed_for_sale }
             : {}),
           ...(parsed.data.is_active !== undefined ? { isActive: parsed.data.is_active } : {}),
           ...(parsed.data.sort_order !== undefined ? { sortOrder: parsed.data.sort_order } : {}),

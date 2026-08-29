@@ -64,6 +64,7 @@ export function mapVillageHouseWithResidents(h: {
   monthlyFeeOverride: number | null;
   feeCycle: string;
   billingStartYm: string | null;
+  listedForSale: boolean;
   isActive: boolean;
   sortOrder: number;
   residents: {
@@ -84,6 +85,7 @@ export function mapVillageHouseWithResidents(h: {
     monthly_fee_override: h.monthlyFeeOverride,
     fee_cycle: h.feeCycle,
     billing_start_ym: h.billingStartYm,
+    listed_for_sale: h.listedForSale,
     is_active: h.isActive,
     sort_order: h.sortOrder,
     residents: h.residents.map((r) => ({

@@ -151,7 +151,14 @@ export function VillageResidentsClient() {
                         {/* ซ้าย — ข้อมูลบ้าน */}
                         <div className="flex min-w-0 flex-1 flex-col">
                           <div className="min-w-0">
-                            <span className="text-[9px] font-semibold text-slate-400">เลขที่</span>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-[9px] font-semibold text-slate-400">เลขที่</span>
+                              {h.listed_for_sale ? (
+                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-black text-amber-800 ring-1 ring-amber-200/80">
+                                  ประกาศขาย
+                                </span>
+                              ) : null}
+                            </div>
                             <p className={`${villageHouseNumber} mt-0.5`}>{h.house_no}</p>
                             {h.plot_label ? (
                               <p className="mt-1 line-clamp-1 text-[10px] leading-tight text-slate-500">{h.plot_label}</p>
@@ -275,6 +282,7 @@ function HouseFormModal({
   const [override, setOverride] = useState(house?.monthly_fee_override != null ? String(house.monthly_fee_override) : "");
   const [feeCycle, setFeeCycle] = useState<VillageHouseFeeCycle>(house?.fee_cycle ?? "MONTHLY");
   const [billingStartYm, setBillingStartYm] = useState(house?.billing_start_ym ?? "");
+  const [listedForSale, setListedForSale] = useState(house?.listed_for_sale ?? false);
   const [residents, setResidents] = useState<ResidentDraft[]>(() => {
     const existing = (house?.residents ?? []).map((r) => ({
       key: `id-${r.id}`,
@@ -351,6 +359,7 @@ function HouseFormModal({
                 monthly_fee_override: ov != null && Number.isFinite(ov) ? ov : null,
                 fee_cycle: feeCycle,
                 billing_start_ym: billingStartYm.trim() || null,
+                listed_for_sale: listedForSale,
                 residents: cleaned,
               };
               if (mode === "add") await api.postHouse(body);
@@ -412,6 +421,20 @@ function HouseFormModal({
             onChange={(e) => setBillingStartYm(e.target.value)}
           />
           <span className="mt-1 block text-[11px] text-slate-400">เว้นว่าง = ไม่จำกัด (สร้างบิลได้ทุกเดือน)</span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200/80 bg-amber-50/70 px-3 py-3 shadow-sm ring-1 ring-amber-100/80">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-400/40"
+            checked={listedForSale}
+            onChange={(e) => setListedForSale(e.target.checked)}
+          />
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-slate-900">ประกาศขายบนเว็บลูกค้า</span>
+            <span className="mt-0.5 block text-[11px] leading-snug text-slate-500">
+              เมื่อเปิด บ้านหลังนี้จะโชว์ในหมวด «บ้านที่ประกาศขาย» พร้อมเบอร์โทรนิติจากตั้งค่าโครงการ
+            </span>
+          </span>
         </label>
 
         <section

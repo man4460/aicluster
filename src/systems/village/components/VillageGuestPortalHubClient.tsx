@@ -41,7 +41,7 @@ export function VillageGuestPortalHubClient({
           </div>
           <div>
             <h2 className="text-lg font-black text-[#1e1b4b] sm:text-xl">QR เว็บโครงการ</h2>
-            <p className="mt-2 text-sm font-medium text-slate-600">ลูกค้าดูบ้าน · ภาพ · ติดต่อนิติ</p>
+            <p className="mt-2 text-sm font-medium text-slate-600">ลูกค้าดูบ้านประกาศขาย · ติดต่อนิติ</p>
             <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-[#5b61ff]">คลิกเพื่อเปิด</p>
           </div>
         </div>

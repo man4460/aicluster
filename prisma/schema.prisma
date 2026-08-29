@@ -2805,6 +2805,8 @@ model VillageHouse {
   feeCycle             VillageHouseFeeCycle @default(MONTHLY) @map("fee_cycle")
   /** YYYY-MM — เริ่มสร้างบิลตั้งแต่เดือนนี้; null = ไม่จำกัด */
   billingStartYm       String?  @map("billing_start_ym") @db.VarChar(7)
+  /** แสดงบนเว็บลิงก์ลูกค้าในหมวดบ้านประกาศขาย */
+  listedForSale        Boolean  @default(false) @map("listed_for_sale")
   isActive             Boolean  @default(true) @map("is_active")
   sortOrder            Int      @default(0) @map("sort_order")
   createdAt            DateTime @default(now()) @map("created_at")
@@ -2815,6 +2817,7 @@ model VillageHouse {
 
   @@unique([ownerUserId, trialSessionId, houseNo], map: "vhouse_owner_trial_no_uniq")
   @@index([ownerUserId, trialSessionId, sortOrder], map: "vhouse_owner_trial_sort_idx")
+  @@index([ownerUserId, trialSessionId, listedForSale, isActive], map: "vhouse_owner_trial_sale_idx")
   @@index([ownerUserId], map: "vhouse_owner_idx")
   @@map("village_houses")
 }

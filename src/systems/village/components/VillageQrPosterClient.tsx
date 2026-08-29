@@ -74,7 +74,7 @@ export function VillageQrPosterClient({
       qrDataUrl,
       shopLabel: headline,
       logoUrl: resolvedLogoUrl,
-      tagline: "สแกนดูเว็บโครงการ · ติดต่อนิติ",
+      tagline: "สแกนดูบ้านประกาศขาย · ติดต่อนิติ",
     }).then(setPosterPreviewUrl);
   }, [qrDataUrl, headline, resolvedLogoUrl]);
 
@@ -132,7 +132,7 @@ export function VillageQrPosterClient({
                       qrDataUrl,
                       shopLabel: headline,
                       logoUrl: resolvedLogoUrl,
-                      tagline: "สแกนดูเว็บโครงการ · ติดต่อนิติ",
+                      tagline: "สแกนดูบ้านประกาศขาย · ติดต่อนิติ",
                     });
                     await downloadPosterPng(canvas, `${headline}-portal-qr.png`);
                   } finally {
@@ -154,7 +154,7 @@ export function VillageQrPosterClient({
                       qrDataUrl,
                       shopLabel: headline,
                       logoUrl: resolvedLogoUrl,
-                      tagline: "สแกนดูเว็บโครงการ · ติดต่อนิติ",
+                      tagline: "สแกนดูบ้านประกาศขาย · ติดต่อนิติ",
                     });
                     await downloadPosterPdf(canvas, `${headline}-portal-qr.pdf`);
                   } finally {
