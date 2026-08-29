@@ -497,13 +497,18 @@ export function VillageFeesClient({ initialYm, baseUrl }: { initialYm: string; b
           <div className="grid grid-cols-2 gap-2 sm:flex sm:w-auto sm:shrink-0 sm:gap-2">
             <button
               type="button"
-              className={cn(villageBtnSecondary, "w-full sm:w-auto sm:min-w-[5.5rem]")}
+              className={cn(
+                villageBtnSecondary,
+                "inline-flex w-full min-h-[40px] items-center justify-center gap-1.5 sm:w-auto sm:min-w-[5.5rem]",
+              )}
               onClick={() => void load()}
-              aria-label="โหลดรายการ"
-              title="โหลดรายการ"
+              aria-label="รีเฟรชรายการ"
+              title="รีเฟรช"
+              disabled={loading}
+              aria-busy={loading}
             >
-              <IconRefresh className="h-4 w-4 sm:hidden" />
-              <span className="hidden sm:inline">โหลด</span>
+              <IconRefresh className={cn("h-4 w-4 shrink-0", loading && "animate-spin")} aria-hidden />
+              <span className="hidden sm:inline">รีเฟรช</span>
             </button>
             <button
               type="button"
