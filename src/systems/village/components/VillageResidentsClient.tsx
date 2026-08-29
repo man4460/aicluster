@@ -18,7 +18,6 @@ import {
   villageBtnSecondary,
   villageDivider,
   villageField,
-  villageGlassCard,
   villageHouseCardDivider,
   villageHouseFieldLabel,
   villageHouseListCard,
@@ -142,97 +141,100 @@ export function VillageResidentsClient() {
             </VillageEmptyDashed>
           ) : (
             <ul className="mt-1 grid grid-cols-1 gap-3.5 md:grid-cols-2">
-              {filteredHouses.map((h) => (
-                <li key={h.id} className="min-w-0">
-                  <article className={villageHouseListCard}>
-                    <div className="min-w-0 pr-1">
-                      <div className="flex items-end justify-between gap-2">
-                        <div>
-                          <span className="text-[9px] font-semibold text-slate-400">เลขที่</span>
-                          <p className={`${villageHouseNumber} mt-0.5`}>{h.house_no}</p>
-                        </div>
-                      </div>
-                      {h.plot_label ? (
-                        <p className="mt-1 line-clamp-1 text-[10px] leading-tight text-slate-500">{h.plot_label}</p>
-                      ) : null}
-                    </div>
+              {filteredHouses.map((h) => {
+                const primary = h.residents.find((r) => r.is_primary) ?? h.residents[0] ?? null;
+                const ownerLabel = primary?.name?.trim() || h.owner_name?.trim() || null;
+                return (
+                  <li key={h.id} className="min-w-0">
+                    <article className={villageHouseListCard}>
+                      <div className="flex min-h-0 flex-1 gap-3">
+                        {/* ซ้าย — ข้อมูลบ้าน */}
+                        <div className="flex min-w-0 flex-1 flex-col">
+                          <div className="min-w-0">
+                            <span className="text-[9px] font-semibold text-slate-400">เลขที่</span>
+                            <p className={`${villageHouseNumber} mt-0.5`}>{h.house_no}</p>
+                            {h.plot_label ? (
+                              <p className="mt-1 line-clamp-1 text-[10px] leading-tight text-slate-500">{h.plot_label}</p>
+                            ) : null}
+                          </div>
 
-                    <div className={`${villageHouseCardDivider} mt-2 space-y-1.5 border-slate-200/60 pt-2`}>
-                      <div className={villageHouseMetaRow}>
-                        <span className={villageHouseFieldLabel}>เจ้าบ้าน</span>
-                        <div className="min-w-0 flex-1 text-[11px] leading-snug">
-                          <span className="font-semibold text-slate-800">{h.owner_name?.trim() || "—"}</span>
-                          {h.phone?.trim() ? (
-                            <span className="text-slate-500 tabular-nums"> · {h.phone.trim()}</span>
-                          ) : null}
-                        </div>
-                      </div>
-                      <div className={`${villageHouseMetaRow} items-center`}>
-                        <span className={villageHouseFieldLabel}>ผู้พัก</span>
-                        <span className="inline-flex rounded-md bg-slate-100/95 px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-slate-700 ring-1 ring-slate-200/80">
-                          {h.residents.length} คน
-                        </span>
-                      </div>
-                      <div className={villageHouseMetaRow}>
-                        <span className={villageHouseFieldLabel}>ค่าส่วนกลาง</span>
-                        <div className="min-w-0 flex-1 space-y-0.5">
-                          <p className="text-[10px] leading-snug text-slate-600 line-clamp-2">
-                            {villageFeeCycleLabelTh(h.fee_cycle)}
-                          </p>
-                          <p className="text-[11px] font-semibold tabular-nums leading-tight text-slate-900">
-                            {h.monthly_fee_override != null
-                              ? `${h.monthly_fee_override.toLocaleString("th-TH")} บ./ด. (เฉพาะหลังนี้)`
-                              : "ตามโครงการ"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className={villageHouseMetaRow}>
-                        <span className={villageHouseFieldLabel}>เริ่มเก็บ</span>
-                        <span className="min-w-0 flex-1 text-[11px] font-semibold tabular-nums text-slate-800">
-                          {h.billing_start_ym?.trim() || "ไม่กำหนด"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-2 flex-1">
-                      {h.residents.length === 0 ? (
-                        <p className="rounded-md border border-dashed border-white/75 bg-white/65 py-1.5 text-center text-[10px] font-medium leading-tight text-slate-500">
-                          ยังไม่มีรายชื่อ — กดแก้ไขเพื่อเพิ่มผู้อาศัย
-                        </p>
-                      ) : (
-                        <ul className="space-y-1">
-                          {h.residents.map((r) => (
-                            <li
-                              key={r.id}
-                              className={cn("rounded-md py-1 pl-1.5 pr-1", villageGlassCard)}
-                            >
-                              <span className="min-w-0 text-[10px] leading-tight sm:text-[11px]">
-                                <span className="font-semibold text-slate-800">{r.name}</span>
-                                {r.is_primary ? (
-                                  <span className="ml-0.5 text-[9px] font-bold text-[#4d47b6]">หลัก</span>
-                                ) : null}
-                                {r.phone ? (
-                                  <span className="ml-1 tabular-nums text-slate-500">{r.phone}</span>
-                                ) : null}
+                          <div className={`${villageHouseCardDivider} mt-2 space-y-1.5 border-slate-200/60 pt-2`}>
+                            {ownerLabel ? (
+                              <div className={villageHouseMetaRow}>
+                                <span className={villageHouseFieldLabel}>เจ้าบ้าน</span>
+                                <div className="min-w-0 flex-1 text-[11px] leading-snug">
+                                  <span className="font-semibold text-slate-800">{ownerLabel}</span>
+                                  {(primary?.phone ?? h.phone)?.trim() ? (
+                                    <span className="text-slate-500 tabular-nums">
+                                      {" "}
+                                      · {(primary?.phone ?? h.phone)!.trim()}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              </div>
+                            ) : null}
+                            <div className={villageHouseMetaRow}>
+                              <span className={villageHouseFieldLabel}>ค่าส่วนกลาง</span>
+                              <div className="min-w-0 flex-1 space-y-0.5">
+                                <p className="line-clamp-2 text-[10px] leading-snug text-slate-600">
+                                  {villageFeeCycleLabelTh(h.fee_cycle)}
+                                </p>
+                                <p className="text-[11px] font-semibold tabular-nums leading-tight text-slate-900">
+                                  {h.monthly_fee_override != null
+                                    ? `${h.monthly_fee_override.toLocaleString("th-TH")} บ./ด.`
+                                    : "ตามโครงการ"}
+                                </p>
+                              </div>
+                            </div>
+                            <div className={villageHouseMetaRow}>
+                              <span className={villageHouseFieldLabel}>เริ่มเก็บ</span>
+                              <span className="min-w-0 flex-1 text-[11px] font-semibold tabular-nums text-slate-800">
+                                {h.billing_start_ym?.trim() || "ไม่กำหนด"}
                               </span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
+                            </div>
+                          </div>
 
-                    <div className={cn("mt-auto flex flex-wrap gap-1.5 border-t pt-2", villageDivider)}>
-                      <button
-                        type="button"
-                        className="app-btn-soft rounded-lg px-2.5 py-1.5 text-[10px] font-semibold text-slate-800 sm:text-[11px]"
-                        onClick={() => setHouseModal({ mode: "edit", house: h })}
-                      >
-                        แก้ไข
-                      </button>
-                    </div>
-                  </article>
-                </li>
-              ))}
+                          <div className={cn("mt-auto flex flex-wrap gap-1.5 border-t pt-2", villageDivider)}>
+                            <button
+                              type="button"
+                              className="app-btn-soft rounded-lg px-2.5 py-1.5 text-[10px] font-semibold text-slate-800 sm:text-[11px]"
+                              onClick={() => setHouseModal({ mode: "edit", house: h })}
+                            >
+                              แก้ไข
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* ขวา — รายชื่อผู้อาศัย ไม่มีกรอบ */}
+                        <div className="flex w-[42%] shrink-0 flex-col border-l border-slate-200/50 pl-3 sm:w-[38%]">
+                          <span className="text-[9px] font-semibold tracking-wide text-slate-400">
+                            ผู้อาศัย · {h.residents.length}
+                          </span>
+                          {h.residents.length === 0 ? (
+                            <p className="mt-2 text-[10px] leading-snug text-slate-400">ยังไม่มีรายชื่อ</p>
+                          ) : (
+                            <ul className="mt-1.5 min-h-0 flex-1 space-y-1 overflow-hidden">
+                              {h.residents.map((r) => (
+                                <li key={r.id} className="min-w-0 text-[11px] leading-snug">
+                                  <span className="font-semibold text-slate-800">{r.name}</span>
+                                  {r.is_primary ? (
+                                    <span className="ml-1 text-[9px] font-bold text-[#4d47b6]">เจ้าบ้าน</span>
+                                  ) : null}
+                                  {r.phone?.trim() ? (
+                                    <span className="mt-0.5 block text-[10px] tabular-nums text-slate-500">
+                                      {r.phone.trim()}
+                                    </span>
+                                  ) : null}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </VillagePanelCard>
@@ -270,20 +272,32 @@ function HouseFormModal({
   const residentsSectionId = useId();
   const [houseNo, setHouseNo] = useState(house?.house_no ?? "");
   const [plot, setPlot] = useState(house?.plot_label ?? "");
-  const [ownerName, setOwnerName] = useState(house?.owner_name ?? "");
-  const [phone, setPhone] = useState(house?.phone ?? "");
   const [override, setOverride] = useState(house?.monthly_fee_override != null ? String(house.monthly_fee_override) : "");
   const [feeCycle, setFeeCycle] = useState<VillageHouseFeeCycle>(house?.fee_cycle ?? "MONTHLY");
   const [billingStartYm, setBillingStartYm] = useState(house?.billing_start_ym ?? "");
-  const [residents, setResidents] = useState<ResidentDraft[]>(() =>
-    (house?.residents ?? []).map((r) => ({
+  const [residents, setResidents] = useState<ResidentDraft[]>(() => {
+    const existing = (house?.residents ?? []).map((r) => ({
       key: `id-${r.id}`,
       id: r.id,
       name: r.name,
       phone: r.phone ?? "",
       is_primary: r.is_primary,
-    })),
-  );
+    }));
+    if (existing.length > 0) return existing;
+    // บ้านเก่ามีแค่ชื่อเจ้าบ้าน — เติมเป็นแถวผู้อาศัย + ติ๊กเจ้าบ้าน
+    const legacyName = house?.owner_name?.trim();
+    if (legacyName) {
+      return [
+        {
+          key: newDraftKey(),
+          name: legacyName,
+          phone: house?.phone?.trim() ?? "",
+          is_primary: true,
+        },
+      ];
+    }
+    return [{ key: newDraftKey(), name: "", phone: "", is_primary: true }];
+  });
   const [busy, setBusy] = useState(false);
 
   function updateResident(key: string, patch: Partial<ResidentDraft>) {
@@ -302,7 +316,7 @@ function HouseFormModal({
     <FormModal
       open
       title={mode === "add" ? "เพิ่มบ้าน" : "แก้ไขบ้าน"}
-      description="ข้อมูลบ้าน · เดือนเริ่มเก็บ · และรายชื่อผู้อาศัย"
+      description="ข้อมูลบ้าน · เดือนเริ่มเก็บ · รายชื่อผู้อาศัย (ติ๊กเจ้าบ้าน)"
       onClose={onClose}
       size="lg"
       footer={
@@ -316,22 +330,28 @@ function HouseFormModal({
             setBusy(true);
             try {
               const ov = override.trim() === "" ? null : Number.parseInt(override, 10);
+              const cleaned = residents
+                .filter((r) => r.name.trim())
+                .map((r) => ({
+                  ...(r.id != null ? { id: r.id } : {}),
+                  name: r.name.trim(),
+                  phone: r.phone.trim() || null,
+                  is_primary: r.is_primary,
+                }));
+              // ให้มีเจ้าบ้านอย่างน้อย 1 คนถ้ามีรายชื่อ
+              if (cleaned.length > 0 && !cleaned.some((r) => r.is_primary)) {
+                cleaned[0]!.is_primary = true;
+              }
+              const owner = cleaned.find((r) => r.is_primary) ?? cleaned[0] ?? null;
               const body = {
                 house_no: normalizeVillageHouseNo(houseNo),
                 plot_label: plot.trim() || null,
-                owner_name: ownerName.trim() || null,
-                phone: phone.trim() || null,
+                owner_name: owner?.name ?? null,
+                phone: owner?.phone ?? null,
                 monthly_fee_override: ov != null && Number.isFinite(ov) ? ov : null,
                 fee_cycle: feeCycle,
                 billing_start_ym: billingStartYm.trim() || null,
-                residents: residents
-                  .filter((r) => r.name.trim())
-                  .map((r) => ({
-                    ...(r.id != null ? { id: r.id } : {}),
-                    name: r.name.trim(),
-                    phone: r.phone.trim() || null,
-                    is_primary: r.is_primary,
-                  })),
+                residents: cleaned,
               };
               if (mode === "add") await api.postHouse(body);
               else if (house) await api.patchHouse(house.id, body);
@@ -361,14 +381,6 @@ function HouseFormModal({
         <label className="block">
           <span className="text-xs font-medium text-slate-600">แปลง / หมายเหตุที่อยู่</span>
           <input className={`mt-1.5 ${villageField}`} value={plot} onChange={(e) => setPlot(e.target.value)} />
-        </label>
-        <label className="block">
-          <span className="text-xs font-medium text-slate-600">ชื่อเจ้าบ้าน (แสดงผล)</span>
-          <input className={`mt-1.5 ${villageField}`} value={ownerName} onChange={(e) => setOwnerName(e.target.value)} />
-        </label>
-        <label className="block">
-          <span className="text-xs font-medium text-slate-600">เบอร์โทร</span>
-          <input className={`mt-1.5 ${villageField}`} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" />
         </label>
         <label className="block">
           <span className="text-xs font-medium text-slate-600">รอบเรียกเก็บ (อัตราด้านล่าง = บาทต่อเดือน)</span>
@@ -408,7 +420,10 @@ function HouseFormModal({
           aria-label="ผู้อาศัย"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-bold text-slate-900">ผู้อาศัย</h3>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">ผู้อาศัย</h3>
+              <p className="mt-0.5 text-[10px] text-slate-500">ติ๊ก «เจ้าบ้าน» คนใดคนหนึ่ง — ไม่ต้องกรอกชื่อซ้ำ</p>
+            </div>
             <button
               type="button"
               className="rounded-xl border border-[#5b61ff]/30 bg-white px-3 py-1.5 text-[11px] font-semibold text-[#4d47b6] shadow-sm"
@@ -427,10 +442,7 @@ function HouseFormModal({
           ) : (
             <ul className="mt-3 space-y-2.5">
               {residents.map((r, idx) => (
-                <li
-                  key={r.key}
-                  className="rounded-xl border border-white/80 bg-white/90 p-3 shadow-sm ring-1 ring-slate-200/60"
-                >
+                <li key={r.key} className="rounded-xl border border-white/80 bg-white/90 p-3 shadow-sm ring-1 ring-slate-200/60">
                   <div className="flex items-start justify-between gap-2">
                     <span className="text-[10px] font-bold text-slate-400">#{idx + 1}</span>
                     <button
@@ -441,7 +453,7 @@ function HouseFormModal({
                       ลบ
                     </button>
                   </div>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
                     <label className="block sm:col-span-2">
                       <span className="text-[10px] font-medium text-slate-500">ชื่อ-สกุล</span>
                       <input
@@ -451,7 +463,19 @@ function HouseFormModal({
                         placeholder="ชื่อผู้อาศัย"
                       />
                     </label>
-                    <label className="block">
+                    <label className="flex items-end gap-2 pb-2 sm:row-span-2 sm:flex-col sm:items-start sm:justify-end sm:pb-0">
+                      <span className="inline-flex items-center gap-2 rounded-lg border border-slate-200/80 bg-slate-50/80 px-2.5 py-2">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-[#5b61ff]"
+                          checked={r.is_primary}
+                          onChange={(e) => updateResident(r.key, { is_primary: e.target.checked })}
+                          aria-label={`เจ้าบ้าน ${r.name || `#${idx + 1}`}`}
+                        />
+                        <span className="text-[11px] font-bold text-[#4d47b6]">เจ้าบ้าน</span>
+                      </span>
+                    </label>
+                    <label className="block sm:col-span-2">
                       <span className="text-[10px] font-medium text-slate-500">เบอร์</span>
                       <input
                         className={`mt-1 ${villageField}`}
@@ -459,14 +483,6 @@ function HouseFormModal({
                         onChange={(e) => updateResident(r.key, { phone: e.target.value })}
                         inputMode="tel"
                       />
-                    </label>
-                    <label className="flex items-center gap-2 pt-5">
-                      <input
-                        type="checkbox"
-                        checked={r.is_primary}
-                        onChange={(e) => updateResident(r.key, { is_primary: e.target.checked })}
-                      />
-                      <span className="text-[11px] font-medium text-slate-700">ผู้ติดต่อหลัก</span>
                     </label>
                   </div>
                 </li>
