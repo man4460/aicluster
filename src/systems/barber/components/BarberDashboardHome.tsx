@@ -25,8 +25,11 @@ function formatBaht(n: number) {
 /** เนื้อหาหน้าแดชบอร์ดร้านตัดผม — ใช้ทั้ง `/dashboard/barber` และลิงก์พนักงาน */
 export async function BarberDashboardHome({
   className,
+  staffLane = false,
 }: {
   className?: string;
+  /** โหมดลิงก์พนักงาน — ซ่อนแท็บซ้ำ / ไม่พาไปหน้าเจ้าของ */
+  staffLane?: boolean;
 } = {}) {
   const session = await getSession();
   if (!session) return null;
@@ -72,13 +75,15 @@ export async function BarberDashboardHome({
             </p>
             <h2 className="text-lg font-bold text-[#2e2a58]">สถิติวันนี้</h2>
           </div>
-          <Suspense
-            fallback={
-              <div className="h-10 w-full max-w-md animate-pulse rounded-[1.25rem] bg-white/30 sm:w-72" aria-hidden />
-            }
-          >
-            <BarberDashboardHeaderTrailing className="w-full sm:w-auto" />
-          </Suspense>
+          {!staffLane ? (
+            <Suspense
+              fallback={
+                <div className="h-10 w-full max-w-md animate-pulse rounded-[1.25rem] bg-white/30 sm:w-72" aria-hidden />
+              }
+            >
+              <BarberDashboardHeaderTrailing className="w-full sm:w-auto" />
+            </Suspense>
+          ) : null}
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
@@ -193,7 +198,9 @@ export async function BarberDashboardHome({
 
   return (
     <div className={cn(barberPageStackClass, className)}>
-      <BarberDashboardHubClient initialDateKey={bangkokDateKey()}>{overview}</BarberDashboardHubClient>
+      <BarberDashboardHubClient initialDateKey={bangkokDateKey()} staffLane={staffLane}>
+        {overview}
+      </BarberDashboardHubClient>
     </div>
   );
 }

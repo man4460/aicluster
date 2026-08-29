@@ -160,6 +160,24 @@ export function barberModuleNavIcon(key: BarberModuleNavKey): ReactElement {
   }
 }
 
+export function barberDashboardTabIcon(key: BarberDashboardTabKey): ReactElement {
+  switch (key) {
+    case "overview":
+      return <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" />;
+    case "queue":
+      return (
+        <>
+          <rect x="3" y="4" width="18" height="18" rx="2" />
+          <path d="M16 2v4M8 2v4M3 10h18" />
+        </>
+      );
+    case "checkin":
+      return <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />;
+    default:
+      return <circle cx="12" cy="12" r="9" />;
+  }
+}
+
 export function readBarberHeaderCollapsed(): boolean {
   try {
     if (typeof window === "undefined") return false;

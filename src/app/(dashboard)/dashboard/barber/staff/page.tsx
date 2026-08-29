@@ -5,7 +5,7 @@ import { getBarberDataScope } from "@/lib/trial/module-scopes";
 import { BarberDashboardHome } from "@/systems/barber/components/BarberDashboardHome";
 import { BarberStaffClient } from "@/systems/barber/components/BarberStaffClient";
 
-/** เป้าหมายของ QR พนักงาน — แท็บแดชบอร์ดเต็มชุด / แพ็กเกจ · รหัสรายวันถ้าตั้งไว้ */
+/** เป้าหมายของ QR พนักงาน — เมนูแดชบอร์ดเท่านั้น (ภาพรวม · คิว · เช็กอิน) · รหัสรายวันถ้าตั้งไว้ */
 export default async function BarberStaffPage() {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -17,7 +17,7 @@ export default async function BarberStaffPage() {
     <BarberStaffClient
       shopLabel={branding.label}
       ownerId={session.sub}
-      dashboard={<BarberDashboardHome />}
+      dashboard={<BarberDashboardHome staffLane />}
     />
   );
 }
