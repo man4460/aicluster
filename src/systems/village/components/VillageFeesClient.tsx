@@ -195,6 +195,11 @@ function VillageFeeRowCard({
           </div>
         </div>
 
+        <div
+          className="hidden h-10 w-px shrink-0 self-center bg-gradient-to-b from-transparent via-slate-300/80 to-transparent sm:block"
+          aria-hidden
+        />
+
         <div className="hidden min-w-0 shrink-0 items-center gap-3 sm:flex sm:w-[11rem]">
           <div className="min-w-0">
             <p className="text-[9px] font-semibold text-slate-400">เรียกเก็บ</p>
@@ -206,7 +211,7 @@ function VillageFeeRowCard({
           </div>
         </div>
 
-        <div className="flex w-[4.5rem] shrink-0 flex-col items-start gap-0.5 sm:hidden">
+        <div className="flex w-[4.5rem] shrink-0 flex-col items-start gap-0.5 border-l border-slate-200/70 pl-2 sm:hidden">
           <p className="text-[10px] font-bold tabular-nums text-slate-900">{r.amount_due.toLocaleString("th-TH")}</p>
           <p className="text-[10px] font-bold tabular-nums text-emerald-800">{r.amount_paid.toLocaleString("th-TH")}</p>
         </div>
@@ -219,6 +224,11 @@ function VillageFeeRowCard({
         >
           {statusLabel}
         </span>
+
+        <div
+          className="h-10 w-px shrink-0 self-center bg-gradient-to-b from-transparent via-slate-300/80 to-transparent"
+          aria-hidden
+        />
 
         <div className="flex h-14 w-[7.5rem] shrink-0 items-center gap-1.5 sm:w-[8.25rem]">
           {slipSrc ? (
@@ -263,6 +273,11 @@ function VillageFeeRowCard({
             </div>
           )}
         </div>
+
+        <div
+          className="h-10 w-px shrink-0 self-center bg-gradient-to-b from-transparent via-slate-300/80 to-transparent"
+          aria-hidden
+        />
 
         <div className="ml-auto flex shrink-0 items-center gap-1">
           {canInvoice ? (
