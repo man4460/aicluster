@@ -64,7 +64,7 @@ export default async function MassageDashboardPage() {
       <section className={massageSectionNextClass} aria-label="สถิติวันนี้">
         <div className="flex min-w-0 flex-row items-center justify-between gap-2 sm:items-start sm:gap-4">
           <div className="min-w-0 flex-1">
-            <p className={massageEnEyebrowLabelClass}>TODAY'S STATS</p>
+            <p className={massageEnEyebrowLabelClass}>TODAY&apos;S STATS</p>
             <h2 className="mt-0.5 text-lg font-black text-[#2e2a58] sm:text-xl">สถิติวันนี้</h2>
           </div>
           <Suspense
@@ -87,7 +87,9 @@ export default async function MassageDashboardPage() {
               เงินสด walk-in:{" "}
               <span className="font-bold tabular-nums text-[#2e2a58]">{formatBaht(revenue.revenueCashBaht)}</span>
             </span>
-            <span className="hidden text-[#d8d6ec] sm:inline" aria-hidden>|</span>
+            <span className="hidden text-[#d8d6ec] sm:inline" aria-hidden>
+              |
+            </span>
             <span>
               ขายแพ็กใหม่:{" "}
               <span className="font-bold tabular-nums text-[#2e2a58]">

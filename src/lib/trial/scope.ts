@@ -13,6 +13,7 @@ import { expireStaleTrialSessionsForUser } from "./trial-service";
 const TRIAL_EMPTY_FALLBACK_SLUGS = new Set<string>([
   CAR_WASH_MODULE_SLUG,
   BARBER_MODULE_SLUG,
+  MASSAGE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
 ]);
 
