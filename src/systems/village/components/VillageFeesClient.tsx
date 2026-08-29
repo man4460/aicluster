@@ -171,7 +171,7 @@ function VillageFeeRowCard({
     <>
       <article
         className={cn(
-          "relative flex h-[5.5rem] w-full items-center gap-2 overflow-hidden rounded-[1.25rem] px-2.5 py-2 sm:h-[5.75rem] sm:gap-3 sm:rounded-[1.5rem] sm:px-3.5",
+          "relative flex h-full min-h-[11.5rem] w-full flex-col overflow-hidden rounded-[1.25rem] sm:min-h-[12rem] sm:rounded-[1.5rem]",
           villageGlassCard,
           "hover:border-white/80 hover:shadow-[0_16px_34px_-22px_rgba(79,70,229,0.32)]",
         )}
@@ -181,142 +181,132 @@ function VillageFeeRowCard({
           aria-hidden
         />
 
-        <div className="flex min-w-0 flex-[1.2] items-center gap-2 pl-1 sm:gap-2.5">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#5b61ff]/15 to-[#6a63ff]/10 text-[#5b61ff] sm:h-11 sm:w-11">
-            <IconHome className="h-5 w-5" />
+        {/* โซนหัว — บ้าน + สถานะ */}
+        <div className="flex items-start gap-2 border-b border-slate-200/70 px-3 pb-2.5 pt-3 pl-3.5 sm:gap-2.5 sm:px-3.5 sm:pb-3 sm:pt-3.5 sm:pl-4">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#5b61ff]/15 to-[#6a63ff]/10 text-[#5b61ff] sm:h-10 sm:w-10">
+            <IconHome className="h-4 w-4 sm:h-5 sm:w-5" />
           </span>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold tabular-nums tracking-tight text-slate-900 sm:text-base">
-              บ้าน {r.house_no}
-            </p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-1.5">
+              <p className="truncate text-sm font-bold tabular-nums tracking-tight text-slate-900 sm:text-[15px]">
+                บ้าน {r.house_no}
+              </p>
+              <span
+                className={cn(
+                  "shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold leading-none tracking-tight sm:px-2 sm:text-[10px]",
+                  feeStatusBadgeClass(r.status),
+                )}
+              >
+                {statusLabel}
+              </span>
+            </div>
             <p className="mt-0.5 truncate text-[10px] leading-snug text-slate-500 sm:text-[11px]">
               {r.owner_name?.trim() || "—"} · {villageFeeCycleLabelTh(r.fee_cycle)}
             </p>
           </div>
         </div>
 
-        <div
-          className="hidden h-10 w-px shrink-0 self-center bg-gradient-to-b from-transparent via-slate-300/80 to-transparent sm:block"
-          aria-hidden
-        />
-
-        <div className="hidden min-w-0 shrink-0 items-center gap-3 sm:flex sm:w-[11rem]">
-          <div className="min-w-0">
+        {/* โซนยอด — เรียกเก็บ | รับแล้ว */}
+        <div className="grid grid-cols-2 divide-x divide-slate-200/70 border-b border-slate-200/70">
+          <div className="px-3 py-2 sm:px-3.5 sm:py-2.5">
             <p className="text-[9px] font-semibold text-slate-400">เรียกเก็บ</p>
-            <p className="truncate text-sm font-bold tabular-nums text-slate-900">{r.amount_due.toLocaleString("th-TH")}</p>
+            <p className="mt-0.5 truncate text-sm font-bold tabular-nums text-slate-900 sm:text-base">
+              {r.amount_due.toLocaleString("th-TH")}
+            </p>
           </div>
-          <div className="min-w-0">
+          <div className="px-3 py-2 sm:px-3.5 sm:py-2.5">
             <p className="text-[9px] font-semibold text-emerald-700/70">รับแล้ว</p>
-            <p className="truncate text-sm font-bold tabular-nums text-emerald-800">{r.amount_paid.toLocaleString("th-TH")}</p>
+            <p className="mt-0.5 truncate text-sm font-bold tabular-nums text-emerald-800 sm:text-base">
+              {r.amount_paid.toLocaleString("th-TH")}
+            </p>
           </div>
         </div>
 
-        <div className="flex w-[4.5rem] shrink-0 flex-col items-start gap-0.5 border-l border-slate-200/70 pl-2 sm:hidden">
-          <p className="text-[10px] font-bold tabular-nums text-slate-900">{r.amount_due.toLocaleString("th-TH")}</p>
-          <p className="text-[10px] font-bold tabular-nums text-emerald-800">{r.amount_paid.toLocaleString("th-TH")}</p>
-        </div>
+        {/* โซนล่าง — สลิป | แอ็กชัน */}
+        <div className="mt-auto grid min-h-[4.25rem] flex-1 grid-cols-2 divide-x divide-slate-200/70">
+          <div className="flex items-center gap-1.5 px-2.5 py-2 sm:gap-2 sm:px-3">
+            {slipSrc ? (
+              <>
+                <button
+                  type="button"
+                  className="relative h-12 w-10 shrink-0 overflow-hidden rounded-lg border border-amber-200/90 bg-white shadow-sm ring-1 ring-amber-100 sm:h-14 sm:w-11"
+                  onClick={() => lb.open(slipSrc)}
+                  aria-label={`ดูสลิปรอตรวจ บ้าน ${r.house_no}`}
+                  title="ดูสลิปรอตรวจ"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={slipSrc} alt="" className="h-full w-full object-cover" />
+                  <span className="absolute inset-x-0 bottom-0 bg-amber-500/90 py-px text-center text-[8px] font-bold text-white">
+                    รอตรวจ
+                  </span>
+                </button>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <button
+                    type="button"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700"
+                    onClick={() => void reviewSlip("APPROVED")}
+                    aria-label="อนุมัติสลิป"
+                    title="อนุมัติสลิป"
+                  >
+                    <IconCheckCircle className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-rose-200 bg-rose-50 text-rose-600"
+                    onClick={() => void reviewSlip("REJECTED")}
+                    aria-label="ปฏิเสธสลิป"
+                    title="ปฏิเสธสลิป"
+                  >
+                    <IconNoSymbol className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex h-12 w-full flex-col items-center justify-center rounded-lg border border-dashed border-slate-200/90 bg-white/50 px-1 text-center sm:h-14">
+                <p className="text-[9px] font-semibold leading-tight text-slate-400">ยังไม่มีสลิป</p>
+              </div>
+            )}
+          </div>
 
-        <span
-          className={cn(
-            "hidden shrink-0 rounded-full border px-2 py-1 text-[10px] font-bold leading-none tracking-tight md:inline-flex",
-            feeStatusBadgeClass(r.status),
-          )}
-        >
-          {statusLabel}
-        </span>
-
-        <div
-          className="h-10 w-px shrink-0 self-center bg-gradient-to-b from-transparent via-slate-300/80 to-transparent"
-          aria-hidden
-        />
-
-        <div className="flex h-14 w-[7.5rem] shrink-0 items-center gap-1.5 sm:w-[8.25rem]">
-          {slipSrc ? (
-            <>
+          <div className="flex flex-wrap items-center justify-end gap-1 px-2 py-2 sm:gap-1.5 sm:px-2.5">
+            {canInvoice ? (
               <button
                 type="button"
-                className="relative h-14 w-11 shrink-0 overflow-hidden rounded-lg border border-amber-200/90 bg-white shadow-sm ring-1 ring-amber-100"
-                onClick={() => lb.open(slipSrc)}
-                aria-label={`ดูสลิปรอตรวจ บ้าน ${r.house_no}`}
-                title="ดูสลิปรอตรวจ"
+                className="inline-flex h-9 min-w-[36px] items-center justify-center gap-1 rounded-xl border border-[#4d47b6]/25 bg-[#ecebff] px-1.5 text-[9px] font-bold text-[#3730a3] sm:h-10 sm:min-w-[40px] sm:px-2 sm:text-[10px]"
+                onClick={onInvoice}
+                aria-label={`เปิดใบแจ้งหนี้ บ้าน ${r.house_no}`}
+                title="ใบแจ้งหนี้ · QR · ลิงก์แนบสลิป"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={slipSrc} alt="" className="h-full w-full object-cover" />
-                <span className="absolute inset-x-0 bottom-0 bg-amber-500/90 py-px text-center text-[8px] font-bold text-white">
-                  รอตรวจ
-                </span>
+                <IconInvoice className="h-4 w-4" />
+                <span className="hidden lg:inline">แจ้งหนี้</span>
               </button>
-              <div className="flex flex-col gap-1">
-                <button
-                  type="button"
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700"
-                  onClick={() => void reviewSlip("APPROVED")}
-                  aria-label="อนุมัติสลิป"
-                  title="อนุมัติสลิป"
-                >
-                  <IconCheckCircle className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-rose-200 bg-rose-50 text-rose-600"
-                  onClick={() => void reviewSlip("REJECTED")}
-                  aria-label="ปฏิเสธสลิป"
-                  title="ปฏิเสธสลิป"
-                >
-                  <IconNoSymbol className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="flex h-14 w-full flex-col items-center justify-center rounded-lg border border-dashed border-slate-200/90 bg-white/50 px-1 text-center">
-              <p className="text-[9px] font-semibold leading-tight text-slate-400">ยังไม่มีสลิป</p>
-            </div>
-          )}
-        </div>
-
-        <div
-          className="h-10 w-px shrink-0 self-center bg-gradient-to-b from-transparent via-slate-300/80 to-transparent"
-          aria-hidden
-        />
-
-        <div className="ml-auto flex shrink-0 items-center gap-1">
-          {canInvoice ? (
+            ) : null}
             <button
               type="button"
-              className="inline-flex h-10 min-w-[40px] items-center justify-center gap-1 rounded-xl border border-[#4d47b6]/25 bg-[#ecebff] px-2 text-[10px] font-bold text-[#3730a3] sm:min-w-[5.5rem] sm:px-2.5"
-              onClick={onInvoice}
-              aria-label={`เปิดใบแจ้งหนี้ บ้าน ${r.house_no}`}
-              title="ใบแจ้งหนี้ · QR · ลิงก์แนบสลิป"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-[#3730a3] sm:h-10 sm:w-10"
+              onClick={onEdit}
+              aria-label={`แก้ยอด บ้าน ${r.house_no}`}
+              title="แก้ยอด"
             >
-              <IconInvoice className="h-4 w-4" />
-              <span className="hidden sm:inline">แจ้งหนี้</span>
+              <IconPencil className="h-4 w-4" />
             </button>
-          ) : null}
-          <button
-            type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-[#3730a3]"
-            onClick={onEdit}
-            aria-label={`แก้ยอด บ้าน ${r.house_no}`}
-            title="แก้ยอด"
-          >
-            <IconPencil className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-200/90 bg-emerald-50/80 text-emerald-800"
-            onClick={async () => {
-              try {
-                await api.patchFeeRow(r.id, { amount_paid: r.amount_due, status: "PAID" });
-                onReload();
-              } catch (e) {
-                alert(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
-              }
-            }}
-            aria-label={`ชำระครบ บ้าน ${r.house_no}`}
-            title="ชำระครบ"
-          >
-            <IconCheckCircle className="h-4 w-4" />
-          </button>
+            <button
+              type="button"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-200/90 bg-emerald-50/80 text-emerald-800 sm:h-10 sm:w-10"
+              onClick={async () => {
+                try {
+                  await api.patchFeeRow(r.id, { amount_paid: r.amount_due, status: "PAID" });
+                  onReload();
+                } catch (e) {
+                  alert(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
+                }
+              }}
+              aria-label={`ชำระครบ บ้าน ${r.house_no}`}
+              title="ชำระครบ"
+            >
+              <IconCheckCircle className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </article>
       <AppImageLightbox src={lb.src} onClose={lb.close} alt={`สลิปบ้าน ${r.house_no}`} />
@@ -474,9 +464,9 @@ export function VillageFeesClient({ initialYm, baseUrl }: { initialYm: string; b
         title="ค่าส่วนกลาง"
         description={
           <>
-            <span className="sm:hidden">บิล · ใบแจ้งหนี้ · สลิปรอตรวจ ในแถวเดียวกัน</span>
+            <span className="sm:hidden">บิล · สลิป · แจ้งหนี้ — การ์ด 2 คอลัมน์</span>
             <span className="hidden sm:inline">
-              จัดการบิลรายเดือน เปิดใบแจ้งหนี้ และอนุมัติสลิปจากการ์ดแถวเดียว ความสูงเท่ากันทุกหลัง
+              จัดการบิลรายเดือน เปิดใบแจ้งหนี้ และอนุมัติสลิป — การ์ด 2 คอลัมน์ ความสูงเท่ากัน แบ่งโซนชัดเจน
             </span>
           </>
         }
@@ -576,9 +566,9 @@ export function VillageFeesClient({ initialYm, baseUrl }: { initialYm: string; b
               <VillageEmptyDashed>ยังไม่มีรายการ — กด «สร้าง/เติมทุกหลัง» เพื่อสร้างบิลทุกบ้าน</VillageEmptyDashed>
             </div>
           ) : (
-            <ul className="mt-3 flex list-none flex-col gap-2">
+            <ul className="mt-3 grid list-none grid-cols-2 gap-2 sm:gap-3">
               {rows.map((r) => (
-                <li key={r.id} className="w-full">
+                <li key={r.id} className="min-w-0">
                   <VillageFeeRowCard
                     r={r}
                     baseUrl={baseUrl}
