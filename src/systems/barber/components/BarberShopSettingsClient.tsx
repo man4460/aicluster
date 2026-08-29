@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AppDashboardSection,
@@ -75,6 +75,7 @@ const BARBER_SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
 const MASSAGE_SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
   { id: "basic", label: "ตั้งค่าพื้นฐาน" },
   { id: "finance", label: "ตั้งค่าเกี่ยวกับการเงิน" },
+  { id: "hours", label: "ตั้งค่าเวลาเปิดร้าน" },
 ];
 
 function IconSave({ className }: { className?: string }) {
@@ -176,6 +177,7 @@ export function BarberShopSettingsClient({
   ownerId,
   trialSessionId,
   linkHub,
+  hoursPanel,
 }: {
   initial: ShopProfile;
   apiBase: "/api/barber/shop-profile" | "/api/massage/shop-profile";
@@ -188,6 +190,7 @@ export function BarberShopSettingsClient({
     trialExportBlocked: boolean;
     isTrialSandbox: boolean;
   };
+  hoursPanel?: ReactNode;
 }) {
   return (
     <Suspense fallback={<div className="h-40 animate-pulse rounded-[1.5rem] bg-white/30" aria-busy />}>
@@ -197,6 +200,7 @@ export function BarberShopSettingsClient({
         ownerId={ownerId}
         trialSessionId={trialSessionId}
         linkHub={linkHub}
+        hoursPanel={hoursPanel}
       />
     </Suspense>
   );
@@ -208,6 +212,7 @@ function BarberShopSettingsClientInner({
   ownerId,
   trialSessionId,
   linkHub,
+  hoursPanel,
 }: {
   initial: ShopProfile;
   apiBase: "/api/barber/shop-profile" | "/api/massage/shop-profile";
@@ -220,6 +225,7 @@ function BarberShopSettingsClientInner({
     trialExportBlocked: boolean;
     isTrialSandbox: boolean;
   };
+  hoursPanel?: ReactNode;
 }) {
   const router = useRouter();
   const isBarber = apiBase === "/api/barber/shop-profile";
@@ -365,11 +371,12 @@ function BarberShopSettingsClientInner({
           description={
             isBarber
               ? "พื้นฐาน · การเงิน · ลิงก์ลูกค้า · เวลาเปิดร้าน"
-              : "พื้นฐาน · การเงิน"
+              : "พื้นฐาน · การเงิน · เวลาเปิดร้าน"
           }
           className="flex flex-row items-center justify-between gap-2 sm:gap-3"
           actionWrapClassName="shrink-0"
           action={
+            tab === "hours" && !isBarber && hoursPanel ? null : (
             <div className={barberDashboardSegmentShellClass} role="group">
               <button
                 type="button"
@@ -383,6 +390,7 @@ function BarberShopSettingsClientInner({
                 <span className="hidden sm:inline">{busy ? "กำลังบันทึก…" : "บันทึก"}</span>
               </button>
             </div>
+            )
           }
         />
 
@@ -726,6 +734,17 @@ function BarberShopSettingsClientInner({
                   <option value={60}>60 นาที</option>
                 </select>
               </label>
+            </div>
+          ) : null}
+
+          {tab === "hours" && !isBarber && hoursPanel ? (
+            <div
+              id="barber-settings-panel-hours"
+              role="tabpanel"
+              aria-labelledby="barber-settings-tab-hours"
+              className="min-w-0"
+            >
+              {hoursPanel}
             </div>
           ) : null}
 

@@ -163,7 +163,7 @@ export async function assertBookingSlotAvailable(
   if ("error" in schedule) return { ok: false, error: schedule.error };
 
   if (schedule.isClosed) {
-    return { ok: false, error: "วันนี้ปิดรับจอง — ไปที่แท็บ「ตารางเวลา」เพื่อเปิดร้าน" };
+    return { ok: false, error: "วันนี้ปิดรับจอง — ไปที่ตั้งค่า → เวลาเปิดร้าน เพื่อเปิดร้าน" };
   }
 
   if (!schedule.slots.includes(time)) {

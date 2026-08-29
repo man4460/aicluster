@@ -50,22 +50,22 @@ export function massagePathFlags(pathname: string) {
 }
 
 /**
- * Nav tab keys ของร้านนวด = 5 dashboard tabs + 1 settings
- * Dashboard hub tabs: overview / queue / checkin / therapists / schedule (query params ?tab=...)
+ * Nav tab keys ของร้านนวด = 4 dashboard tabs + 1 settings
+ * Dashboard hub tabs: overview / queue / checkin / therapists (query params ?tab=...)
+ * ตารางเวลา → หน้าตั้งค่า (?tab=hours)
  * Main module tabs (MassageModuleDesktopNav / HeaderBarNav):
  *   dashboard (แดชบอร์ด), finance (การเงิน), packages (แพ็กเกจ), qr (QR), settings (ตั้งค่าร้าน)
  *   5 ใบพอดีตรงกับ MassageModuleMobileDock grid-cols-5
  */
 export type MassageModuleNavKey = "dashboard" | "finance" | "packages" | "qr" | "settings";
 
-export type MassageDashboardTabKey = "overview" | "queue" | "checkin" | "therapists" | "schedule";
+export type MassageDashboardTabKey = "overview" | "queue" | "checkin" | "therapists";
 
 export const MASSAGE_DASHBOARD_TAB_KEYS = new Set<string>([
   "overview",
   "queue",
   "checkin",
   "therapists",
-  "schedule",
 ]);
 
 export function parseMassageDashboardTab(raw: string | null): MassageDashboardTabKey {
@@ -88,7 +88,7 @@ export const MASSAGE_NAV_ITEMS: MassageNavItem[] = [
   { key: "settings", label: MODULE_SHOP_SETTINGS_SHORT_LABEL, href: "/dashboard/massage/settings" },
 ];
 
-/** Dashboard hub TAB items — ใช้ใน MassageDashboardTabToolbar (5 ใบ) */
+/** Dashboard hub TAB items — ใช้ใน MassageDashboardTabToolbar (4 ใบ) */
 export const MASSAGE_DASHBOARD_TAB_ITEMS: {
   key: MassageDashboardTabKey;
   label: string;
@@ -97,7 +97,6 @@ export const MASSAGE_DASHBOARD_TAB_ITEMS: {
   { key: "queue", label: "จัดการคิว" },
   { key: "checkin", label: "เช็กอิน" },
   { key: "therapists", label: "หมอนวด" },
-  { key: "schedule", label: "ตารางเวลา" },
 ];
 
 export function massageTabHref(key: MassageModuleNavKey, dashboardTab?: MassageDashboardTabKey): string {
@@ -179,13 +178,6 @@ export function massageDashboardTabIcon(key: MassageDashboardTabKey): React.Reac
         <>
           <circle cx="9" cy="7" r="3" />
           <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2M16 11a3 3 0 1 0 6-3 3 3 0 0 0-3 3" />
-        </>
-      );
-    case "schedule":
-      return (
-        <>
-          <rect x="3" y="4" width="18" height="18" rx="2" />
-          <path d="M16 2v4M8 2v4M3 10h18" />
         </>
       );
     default:

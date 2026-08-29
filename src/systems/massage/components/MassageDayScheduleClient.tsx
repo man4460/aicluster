@@ -47,9 +47,12 @@ function ScheduleFormSkeleton() {
 
 export function MassageDayScheduleClient({
   embedded = false,
+  plain = false,
   initialDateKey,
 }: {
   embedded?: boolean;
+  /** ไม่ห่อการ์ด — ใช้ในแผงตั้งค่าที่มีการ์ดนอกแล้ว */
+  plain?: boolean;
   /** จากเซิร์ฟเวอร์ — กัน hydration mismatch กับ bangkokDateKey() บน client */
   initialDateKey: string;
 }) {
@@ -250,6 +253,20 @@ export function MassageDayScheduleClient({
       ) : null}
     </div>
   );
+
+  if (plain) {
+    return (
+      <div className="min-w-0 space-y-3">
+        <div>
+          <h3 className="text-sm font-black text-[#1e1b4b]">ตั้งช่วงเวลานวดรายวัน</h3>
+          <p className="mt-0.5 text-xs font-semibold text-[#66638c]">
+            กำหนดเวลาเปิด–ปิดและระยะคิวสำหรับการจอง (เวลาไทย)
+          </p>
+        </div>
+        {inner}
+      </div>
+    );
+  }
 
   if (embedded) {
     return (

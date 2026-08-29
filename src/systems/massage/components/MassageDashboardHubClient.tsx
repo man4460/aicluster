@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 import {
   massageCardSurfaceRadiusClass,
@@ -21,14 +21,12 @@ import {
 import { MassageBookingsClient } from "@/systems/massage/components/MassageBookingsClient";
 import { MassageCheckInClient } from "@/systems/massage/components/MassageCheckInClient";
 import { MassageTherapistsClient } from "@/systems/massage/components/MassageTherapistsClient";
-import { MassageDayScheduleClient } from "@/systems/massage/components/MassageDayScheduleClient";
 
 export type { MassageDashboardTabKey };
 
 /**
- * §12 Dashboard hub TAB TOOLBAR (query params ?tab= queue/checkin/therapists/schedule/overview)
- * เปลี่ยนจาก onClick → `<Link href>` (ตรง hotel/car-wash pattern)
- * Active = brand gradient §4 single source of truth
+ * §12 Dashboard hub TAB TOOLBAR (query params ?tab= queue/checkin/therapists/overview)
+ * ตารางเวลาอยู่ที่ตั้งค่า (?tab=hours)
  */
 export function MassageDashboardTabToolbar({ className }: { className?: string }) {
   const pathname = usePathname() ?? "/dashboard/massage";
@@ -99,11 +97,18 @@ function MassageDashboardHubTabs({
   initialDateKey: string;
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const tab = useMemo(
     () => parseMassageDashboardTab(searchParams.get("tab")),
     [searchParams],
   );
+
+  useEffect(() => {
+    if (searchParams.get("tab") === "schedule") {
+      router.replace("/dashboard/massage/settings?tab=hours");
+    }
+  }, [router, searchParams]);
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -119,9 +124,6 @@ function MassageDashboardHubTabs({
       ) : null}
       {tab === "checkin" ? <MassageCheckInClient embedded /> : null}
       {tab === "therapists" ? <MassageTherapistsClient embedded /> : null}
-      {tab === "schedule" ? (
-        <MassageDayScheduleClient embedded initialDateKey={initialDateKey} />
-      ) : null}
     </div>
   );
 }

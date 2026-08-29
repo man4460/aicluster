@@ -4,7 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { MODULE_SHOP_PAYMENT_SELECT, paymentRowToDto } from "@/lib/module-shop/payment";
 import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
 import { getMassageDataScope } from "@/lib/trial/module-scopes";
+import { bangkokDateKey } from "@/lib/time/bangkok";
 import { BarberShopSettingsClient } from "@/systems/barber/components/BarberShopSettingsClient";
+import { MassageDayScheduleClient } from "@/systems/massage/components/MassageDayScheduleClient";
 
 export default async function MassageSettingsPage() {
   const session = await getSession();
@@ -36,6 +38,7 @@ export default async function MassageSettingsPage() {
           slipPaperSize: normalizeModuleSlipPaperSize(row?.slipPaperSize),
           ...paymentRowToDto(row),
         }}
+        hoursPanel={<MassageDayScheduleClient plain initialDateKey={bangkokDateKey()} />}
       />
     </div>
   );
