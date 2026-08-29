@@ -17,7 +17,7 @@ import {
   useAppSlipPaperSize,
 } from "@/components/app-templates";
 import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
-import type { VillageInvoiceSheetDto } from "@/lib/village/village-invoice-sheet";
+import type { VillageInvoiceSheetDto } from "@/lib/village/village-invoice-shared";
 import {
   createVillageSessionApiRepository,
   villageFeeCycleLabelTh,
@@ -27,7 +27,7 @@ import {
 import { printVillageInvoicesBatch } from "@/systems/village/village-invoice-print";
 import type { VillageInvoicePrintPayload } from "@/systems/village/village-invoice-print-html";
 import { villageBtnPrimary, villageBtnSecondary, villageDivider, villageField, villageGlassCard } from "@/systems/village/village-ui";
-import { VILLAGE_INVOICE_FALLBACK_NAME } from "@/lib/village/village-invoice-sheet";
+import { VILLAGE_INVOICE_FALLBACK_NAME } from "@/lib/village/village-invoice-shared";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 
 type FeeStatus = "PENDING" | "PARTIAL" | "PAID" | "WAIVED";

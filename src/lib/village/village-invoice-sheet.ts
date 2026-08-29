@@ -3,42 +3,22 @@ import { buildUrlQrDataUrl } from "@/lib/dormitory/url-qr-dataurl";
 import { prisma } from "@/lib/prisma";
 import { getVillageDataScope } from "@/lib/trial/module-scopes";
 import { ensureFeeRowPublicProofToken } from "@/lib/village/proof-token";
+import {
+  VILLAGE_INVOICE_FALLBACK_NAME,
+  VILLAGE_UNPAID_FEE_STATUSES,
+  type VillageInvoiceSheetDto,
+} from "@/lib/village/village-invoice-shared";
 
-export const VILLAGE_INVOICE_FALLBACK_NAME = "โครงการหมู่บ้าน";
-
-/** สถานะบิลค่าส่วนกลางที่ยังออกใบแจ้งหนี้ / แนบสลิปได้ */
-export const VILLAGE_UNPAID_FEE_STATUSES = ["PENDING", "PARTIAL"] as const;
+export {
+  VILLAGE_INVOICE_FALLBACK_NAME,
+  VILLAGE_UNPAID_FEE_STATUSES,
+  type VillageInvoiceSheetDto,
+} from "@/lib/village/village-invoice-shared";
 
 /** ใช้ใน Prisma `where` */
 export function villageUnpaidFeeRowStatusFilter() {
   return { status: { in: [...VILLAGE_UNPAID_FEE_STATUSES] } };
 }
-
-export type VillageInvoiceSheetDto = {
-  feeRowId: number;
-  houseId: number;
-  villageName: string;
-  address: string | null;
-  contactPhone: string | null;
-  taxId: string | null;
-  defaultPaperSize: string;
-  houseNo: string;
-  residentName: string;
-  residentPhone: string;
-  periodMonth: string;
-  amountDue: number;
-  amountPaid: number;
-  /** ยอดคงเหลือที่ต้องชำระ */
-  amount: number;
-  paymentChannelsNote: string | null;
-  bankName: string | null;
-  bankAccountNumber: string | null;
-  bankAccountName: string | null;
-  promptPayQrDataUrl: string | null;
-  slipUploadQrDataUrl: string | null;
-  uploadPagePath: string;
-  uploadPageAbs: string;
-};
 
 function absoluteUploadUrl(baseUrl: string, path: string): string {
   const base = baseUrl.trim().replace(/\/$/, "");

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
-import type { VillageInvoiceSheetDto } from "@/lib/village/village-invoice-sheet";
+import type { VillageInvoiceSheetDto } from "@/lib/village/village-invoice-shared";
 import { VillageInvoiceSheetContent } from "@/systems/village/components/VillageInvoiceSheetContent";
 import { VillageInvoicePosPrintToolbar } from "@/systems/village/components/VillageInvoicePosPrintToolbar";
 import type { VillageInvoicePrintPayload } from "@/systems/village/village-invoice-print-html";
