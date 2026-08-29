@@ -593,13 +593,13 @@ export function MassageCheckInClient({
             >
               <div className="relative min-w-0 flex-1">
                 <span
-                  className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-emerald-600/75"
+                  className="pointer-events-none absolute inset-y-0 left-0 z-[1] flex w-11 items-center justify-center text-emerald-600/80"
                   aria-hidden
                 >
-                  <IconSearch className="h-5 w-5" />
+                  <IconSearch className="h-5 w-5 shrink-0" />
                 </span>
                 <input
-                  className="app-input min-h-[52px] w-full rounded-[1.25rem] border-emerald-200/90 bg-white/95 py-3 pl-12 pr-3 text-base font-medium text-[#1e293b] shadow-inner shadow-emerald-950/5 placeholder:text-slate-400 focus:border-emerald-400 focus:ring-emerald-400/25"
+                  className="app-input min-h-[52px] w-full rounded-[1.25rem] border-emerald-200/90 bg-white/95 py-3 !pl-11 pr-3 text-base font-medium text-[#1e293b] shadow-inner shadow-emerald-950/5 placeholder:text-slate-400 focus:border-emerald-400 focus:ring-emerald-400/25"
                   inputMode="numeric"
                   placeholder="เบอร์โทรลูกค้า"
                   autoComplete="tel"
