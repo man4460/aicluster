@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { VillageEmptyDashed, VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
 import { VillageHousingQuickTabs } from "@/systems/village/components/VillageHousingQuickTabs";
 import { VillageInvoiceSheetModal } from "@/systems/village/components/VillageInvoiceSheetModal";
+import { VillageSlipsClient } from "@/systems/village/components/VillageSlipsClient";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import {
   createVillageSessionApiRepository,
@@ -12,6 +14,14 @@ import {
   type VillageFeeRow,
 } from "@/systems/village/village-service";
 import { villageBtnPrimary, villageBtnSecondary, villageDivider, villageField, villageGlassCard } from "@/systems/village/village-ui";
+import { villagePrimaryTabPillClass, villagePrimaryTabShellClass } from "@/systems/village/village-ui-tokens";
+
+type VillageFeesTab = "bills" | "slips";
+
+const VILLAGE_FEES_TABS: readonly { key: VillageFeesTab; label: string }[] = [
+  { key: "bills", label: "บิล" },
+  { key: "slips", label: "รับชำระ" },
+] as const;
 
 type FeeStatus = "PENDING" | "PARTIAL" | "PAID" | "WAIVED";
 
@@ -385,8 +395,11 @@ function FeeEditModal({
   );
 }
 
-export function VillageFeesClient({ initialYm }: { initialYm: string }) {
+export function VillageFeesClient({ initialYm, baseUrl }: { initialYm: string; baseUrl: string }) {
   const api = useMemo(() => createVillageSessionApiRepository(), []);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tab: VillageFeesTab = searchParams.get("tab") === "slips" ? "slips" : "bills";
   const [ym, setYm] = useState(initialYm);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [rows, setRows] = useState<VillageFeeRow[]>([]);
@@ -416,6 +429,15 @@ export function VillageFeesClient({ initialYm }: { initialYm: string }) {
     void load();
   }, [load]);
 
+  const selectTab = useCallback(
+    (next: VillageFeesTab) => {
+      router.replace(next === "slips" ? "/dashboard/village/fees?tab=slips" : "/dashboard/village/fees", {
+        scroll: false,
+      });
+    },
+    [router],
+  );
+
   const filterPill = (active: boolean) =>
     cn(
       "shrink-0 whitespace-nowrap rounded-full border border-transparent px-3 py-2 text-[11px] font-bold transition",
@@ -431,124 +453,173 @@ export function VillageFeesClient({ initialYm }: { initialYm: string }) {
       <VillagePanelCard
         title="ค่าส่วนกลาง"
         description={
-          <>
-            <span className="sm:hidden">จัดการรอบบิลและสถานะการชำระ</span>
-            <span className="hidden sm:inline">จัดการรอบบิลรายเดือน กรองสถานะ และตรวจสอบรายการค่าส่วนกลางในกล่องเดียว</span>
-          </>
+          tab === "slips" ? (
+            <>
+              <span className="sm:hidden">ตรวจสลิป อนุมัติ/ปฏิเสธ ในกล่องเดียว</span>
+              <span className="hidden sm:inline">แนบสลิปใหม่ กรองรายการ และตรวจอนุมัติการชำระได้จากการ์ดเดียว</span>
+            </>
+          ) : (
+            <>
+              <span className="sm:hidden">จัดการรอบบิลและสถานะการชำระ</span>
+              <span className="hidden sm:inline">จัดการรอบบิลรายเดือน กรองสถานะ และตรวจสอบรายการค่าส่วนกลางในกล่องเดียว</span>
+            </>
+          )
         }
       >
-        <div className="flex flex-wrap gap-1.5">
-          <span className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100/80 px-2.5 py-1 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200/80">
-            <span className="text-slate-400">ค่ามาตรฐาน</span>
-            <span className="tabular-nums text-slate-800">{defaultFee.toLocaleString("th-TH")} บาท</span>
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-indigo-50/90 to-violet-50/80 px-2.5 py-1 text-[10px] font-semibold text-indigo-900/90 ring-1 ring-indigo-200/60">
-            ครบกำหนดวันที่ <span className="tabular-nums">{dueDay}</span>
-          </span>
-          <span className="hidden items-center rounded-lg bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200/80 sm:inline-flex">
-            รอบเรียกเก็บต่อหลัง
-          </span>
-        </div>
+        <nav className={villagePrimaryTabShellClass} role="tablist" aria-label="เมนูค่าส่วนกลาง">
+          {VILLAGE_FEES_TABS.map((item) => {
+            const active = tab === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                role="tab"
+                id={`village-fees-tab-${item.key}`}
+                aria-selected={active}
+                aria-controls={`village-fees-panel-${item.key}`}
+                className={villagePrimaryTabPillClass(active)}
+                onClick={() => selectTab(item.key)}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
 
-        <div className="mt-3.5 grid grid-cols-1 gap-3 sm:mt-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:gap-3">
-          <label className="min-w-0">
-            <span className="mb-1 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-slate-500">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#6366f1]" aria-hidden />
-              เดือนบิล
-            </span>
-            <input
-              type="month"
-              className={`block w-full font-mono text-sm ${villageField}`}
-              value={ym}
-              onChange={(e) => setYm(e.target.value)}
-            />
-          </label>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:w-auto sm:shrink-0 sm:gap-2">
-            <button
-              type="button"
-              className={cn(villageBtnSecondary, "w-full sm:w-auto sm:min-w-[5.5rem]")}
-              onClick={() => void load()}
-              aria-label="โหลดรายการ"
-              title="โหลดรายการ"
-            >
-              <IconRefresh className="h-4 w-4 sm:hidden" />
-              <span className="hidden sm:inline">โหลด</span>
-            </button>
-            <button
-              type="button"
-              className={cn(villageBtnPrimary, "w-full sm:w-auto sm:min-w-[6.5rem]")}
-              onClick={async () => {
-                try {
-                  await api.generateFeeRows(ym);
-                  void load();
-                } catch (e) {
-                  alert(e instanceof Error ? e.message : "สร้างรายการไม่สำเร็จ");
-                }
-              }}
-            >
-              <IconPlus className="h-4 w-4 sm:hidden" />
-              <span className="sm:hidden">สร้าง/เติม</span>
-              <span className="hidden sm:inline">+ สร้าง/เติมทุกหลัง</span>
-            </button>
+        {tab === "slips" ? (
+          <div
+            id="village-fees-panel-slips"
+            role="tabpanel"
+            aria-labelledby="village-fees-tab-slips"
+            className="mt-4"
+          >
+            <VillageSlipsClient baseUrl={baseUrl} embedded />
           </div>
-        </div>
+        ) : (
+          <div
+            id="village-fees-panel-bills"
+            role="tabpanel"
+            aria-labelledby="village-fees-tab-bills"
+            className="mt-4"
+          >
+            <div className="flex flex-wrap gap-1.5">
+              <span className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-slate-50 to-slate-100/80 px-2.5 py-1 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200/80">
+                <span className="text-slate-400">ค่ามาตรฐาน</span>
+                <span className="tabular-nums text-slate-800">{defaultFee.toLocaleString("th-TH")} บาท</span>
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-indigo-50/90 to-violet-50/80 px-2.5 py-1 text-[10px] font-semibold text-indigo-900/90 ring-1 ring-indigo-200/60">
+                ครบกำหนดวันที่ <span className="tabular-nums">{dueDay}</span>
+              </span>
+              <span className="hidden items-center rounded-lg bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200/80 sm:inline-flex">
+                รอบเรียกเก็บต่อหลัง
+              </span>
+            </div>
 
-        <div className={cn("mt-4 border-t pt-3", villageDivider)}>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <span className="shrink-0 text-[10px] font-bold tracking-wide text-slate-400">กรองสถานะ</span>
-            <div
-              className="-mx-1 min-w-0 flex-1 overflow-x-auto overscroll-x-contain px-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] sm:overflow-visible sm:px-0"
-              style={{ scrollbarColor: "rgb(203 213 225) transparent" }}
-            >
-              <div className="flex w-max gap-1.5 sm:w-auto sm:flex-wrap sm:gap-2">
-                <button type="button" className={filterPill(statusFilter == null)} onClick={() => setStatusFilter(null)}>
-                  ทั้งหมด
+            <div className="mt-3.5 grid grid-cols-1 gap-3 sm:mt-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:gap-3">
+              <label className="min-w-0">
+                <span className="mb-1 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-slate-500">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#6366f1]" aria-hidden />
+                  เดือนบิล
+                </span>
+                <input
+                  type="month"
+                  className={`block w-full font-mono text-sm ${villageField}`}
+                  value={ym}
+                  onChange={(e) => setYm(e.target.value)}
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:w-auto sm:shrink-0 sm:gap-2">
+                <button
+                  type="button"
+                  className={cn(villageBtnSecondary, "w-full sm:w-auto sm:min-w-[5.5rem]")}
+                  onClick={() => void load()}
+                  aria-label="โหลดรายการ"
+                  title="โหลดรายการ"
+                >
+                  <IconRefresh className="h-4 w-4 sm:hidden" />
+                  <span className="hidden sm:inline">โหลด</span>
                 </button>
-                {STATUS_OPTIONS.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    className={filterPill(statusFilter === s)}
-                    onClick={() => setStatusFilter(s)}
-                  >
-                    {STATUS_LABEL_TH[s]}
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  className={cn(villageBtnPrimary, "w-full sm:w-auto sm:min-w-[6.5rem]")}
+                  onClick={async () => {
+                    try {
+                      await api.generateFeeRows(ym);
+                      void load();
+                    } catch (e) {
+                      alert(e instanceof Error ? e.message : "สร้างรายการไม่สำเร็จ");
+                    }
+                  }}
+                >
+                  <IconPlus className="h-4 w-4 sm:hidden" />
+                  <span className="sm:hidden">สร้าง/เติม</span>
+                  <span className="hidden sm:inline">+ สร้าง/เติมทุกหลัง</span>
+                </button>
               </div>
             </div>
-          </div>
-        </div>
-        <div className={cn("mt-4 border-t pt-3.5", villageDivider)}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-black tracking-tight text-[#1e1b4b]">รายการบิลรายเดือน</h3>
-            <p className="text-xs text-[#66638c]">
-              เดือน <span className="font-mono font-semibold text-slate-700">{ym}</span> ·{" "}
-              <span className="tabular-nums">{rows.length}</span> รายการ
-            </p>
-          </div>
-          {err ? <p className="mt-2 text-sm text-rose-600">{err}</p> : null}
-          {loading ? (
-            <p className="mt-3 text-center text-sm text-[#66638c]">กำลังโหลด…</p>
-          ) : rows.length === 0 ? (
-            <div className="mt-3">
-              <VillageEmptyDashed>ยังไม่มีรายการ — กด «สร้าง/เติมทุกหลัง» เพื่อสร้างบิลทุกบ้าน</VillageEmptyDashed>
+
+            <div className={cn("mt-4 border-t pt-3", villageDivider)}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                <span className="shrink-0 text-[10px] font-bold tracking-wide text-slate-400">กรองสถานะ</span>
+                <div
+                  className="-mx-1 min-w-0 flex-1 overflow-x-auto overscroll-x-contain px-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] sm:overflow-visible sm:px-0"
+                  style={{ scrollbarColor: "rgb(203 213 225) transparent" }}
+                >
+                  <div className="flex w-max gap-1.5 sm:w-auto sm:flex-wrap sm:gap-2">
+                    <button
+                      type="button"
+                      className={filterPill(statusFilter == null)}
+                      onClick={() => setStatusFilter(null)}
+                    >
+                      ทั้งหมด
+                    </button>
+                    {STATUS_OPTIONS.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        className={filterPill(statusFilter === s)}
+                        onClick={() => setStatusFilter(s)}
+                      >
+                        {STATUS_LABEL_TH[s]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
-          ) : (
-            <ul className="mt-3 grid list-none grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {rows.map((r) => (
-                <li key={r.id}>
-                  <VillageFeeRowCard
-                    r={r}
-                    api={api}
-                    onEdit={() => setEditRow(r)}
-                    onInvoice={() => setInvoiceRow(r)}
-                    onReload={() => void load()}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+            <div className={cn("mt-4 border-t pt-3.5", villageDivider)}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-black tracking-tight text-[#1e1b4b]">รายการบิลรายเดือน</h3>
+                <p className="text-xs text-[#66638c]">
+                  เดือน <span className="font-mono font-semibold text-slate-700">{ym}</span> ·{" "}
+                  <span className="tabular-nums">{rows.length}</span> รายการ
+                </p>
+              </div>
+              {err ? <p className="mt-2 text-sm text-rose-600">{err}</p> : null}
+              {loading ? (
+                <p className="mt-3 text-center text-sm text-[#66638c]">กำลังโหลด…</p>
+              ) : rows.length === 0 ? (
+                <div className="mt-3">
+                  <VillageEmptyDashed>ยังไม่มีรายการ — กด «สร้าง/เติมทุกหลัง» เพื่อสร้างบิลทุกบ้าน</VillageEmptyDashed>
+                </div>
+              ) : (
+                <ul className="mt-3 grid list-none grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {rows.map((r) => (
+                    <li key={r.id}>
+                      <VillageFeeRowCard
+                        r={r}
+                        api={api}
+                        onEdit={() => setEditRow(r)}
+                        onInvoice={() => setInvoiceRow(r)}
+                        onReload={() => void load()}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
       </VillagePanelCard>
       {editRow ? (
         <FeeEditModal

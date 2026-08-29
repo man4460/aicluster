@@ -8,7 +8,6 @@ import { villageFilterChipClass, villageSegmentShellClass } from "@/systems/vill
 const housingItems = [
   { href: "/dashboard/village/residents", label: "บ้าน" },
   { href: "/dashboard/village/fees", label: "ค่าส่วนกลาง" },
-  { href: "/dashboard/village/slips", label: "สลิป" },
 ] as const;
 
 function isActive(pathname: string, href: string) {
@@ -20,7 +19,7 @@ export function VillageHousingQuickTabs() {
   return (
     <div className="flex w-full md:justify-end">
       <nav aria-label="เมนูย่อยจัดการบ้าน" className={cn(villageSegmentShellClass, "md:min-w-[20rem]")}>
-        <ul className="grid w-full grid-cols-3 gap-1">
+        <ul className="grid w-full grid-cols-2 gap-1">
           {housingItems.map((item) => {
             const active = isActive(pathname, item.href);
             return (

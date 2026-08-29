@@ -29,7 +29,6 @@ export const villageMainMenuItems: readonly VillageMainMenuItem[] = [
 export const villageSubMenuItems: readonly VillageSubMenuItem[] = [
   { href: "/dashboard/village/residents", label: "บ้าน", group: "housing" },
   { href: "/dashboard/village/fees", label: "ค่าส่วนกลาง", group: "housing" },
-  { href: "/dashboard/village/slips", label: "สลิป", group: "housing" },
   { href: "/dashboard/village/reports", label: "ส่งออก", group: "settings" },
   { href: "/dashboard/village/settings", label: "ตั้งค่า", group: "settings" },
 ] as const;

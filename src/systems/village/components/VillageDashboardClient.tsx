@@ -218,7 +218,7 @@ export function VillageDashboardClient() {
                 tone: "slate" as "blue" | "green" | "red" | "slate" | "amber",
               },
               {
-                href: "/dashboard/village/slips",
+                href: "/dashboard/village/fees?tab=slips",
                 title: "สลิปรอตรวจ",
                 value: String(data.pending_slips) as string,
                 tone: (data.pending_slips > 0 ? "amber" : "green") as "blue" | "green" | "red" | "slate" | "amber",

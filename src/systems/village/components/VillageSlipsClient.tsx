@@ -297,7 +297,7 @@ function VillageEditSlipModal({
   );
 }
 
-export function VillageSlipsClient({ baseUrl }: { baseUrl: string }) {
+export function VillageSlipsClient({ baseUrl, embedded = false }: { baseUrl: string; embedded?: boolean }) {
   const api = useMemo(() => createVillageSessionApiRepository(), []);
   const [houses, setHouses] = useState<VillageHouse[]>([]);
   const [slips, setSlips] = useState<VillageSlip[]>([]);
@@ -339,18 +339,8 @@ export function VillageSlipsClient({ baseUrl }: { baseUrl: string }) {
   const [review, setReview] = useState<{ slip: VillageSlip; action: "APPROVED" | "REJECTED" } | null>(null);
   const [reviewNote, setReviewNote] = useState("");
 
-  return (
-    <VillagePageStack>
-      <VillageHousingQuickTabs />
-      <VillagePanelCard
-        title="สลิปโอนเงิน"
-        description={
-          <>
-            <span className="sm:hidden">ตรวจสลิป อนุมัติ/ปฏิเสธ ในกล่องเดียว</span>
-            <span className="hidden sm:inline">แนบสลิปใหม่ กรองรายการ และตรวจอนุมัติได้จากการ์ดหลักเดียว</span>
-          </>
-        }
-      >
+  const slipsBody = (
+    <>
         <div className="flex flex-col gap-3">
           <button
             type="button"
@@ -557,8 +547,11 @@ export function VillageSlipsClient({ baseUrl }: { baseUrl: string }) {
             </div>
           ) : null}
         </div>
-      </VillagePanelCard>
+    </>
+  );
 
+  const slipsModals = (
+    <>
       <VillageNewSlipModal
         open={newSlipOpen}
         onClose={() => setNewSlipOpen(false)}
@@ -617,6 +610,33 @@ export function VillageSlipsClient({ baseUrl }: { baseUrl: string }) {
           </label>
         </FormModal>
       ) : null}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <>
+        {slipsBody}
+        {slipsModals}
+      </>
+    );
+  }
+
+  return (
+    <VillagePageStack>
+      <VillageHousingQuickTabs />
+      <VillagePanelCard
+        title="สลิปโอนเงิน"
+        description={
+          <>
+            <span className="sm:hidden">ตรวจสลิป อนุมัติ/ปฏิเสธ ในกล่องเดียว</span>
+            <span className="hidden sm:inline">แนบสลิปใหม่ กรองรายการ และตรวจอนุมัติได้จากการ์ดหลักเดียว</span>
+          </>
+        }
+      >
+        {slipsBody}
+      </VillagePanelCard>
+      {slipsModals}
     </VillagePageStack>
   );
 }

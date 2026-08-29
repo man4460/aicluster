@@ -2,8 +2,7 @@
 
 เมื่อปรับหน้าในโมดูลหมู่บ้านกลุ่มจัดการบ้าน:
 - `/dashboard/village/residents`
-- `/dashboard/village/fees`
-- `/dashboard/village/slips`
+- `/dashboard/village/fees` — ฮับ 2 แท็บ: **บิล** | **รับชำระ** (`?tab=slips`)
 
 ## บังคับ
 
@@ -12,7 +11,16 @@
 2. ห้ามแยก “การ์ดฟิลเตอร์” กับ “การ์ดรายการ” เป็นคนละกล่องซ้อนกันในหน้าเดียวกัน
 3. ถ้าต้องแบ่งช่วงเนื้อหาในกล่องเดียว ให้ใช้ `border-t`, spacing, หรือ section heading ภายในการ์ด แทนการสร้าง `VillagePanelCard` เพิ่ม
 4. modal/dialog (เช่น `FormModal`) แยกได้ตามปกติ แต่ไม่นับเป็นการ์ดหลักของหน้า
-5. `VillageHousingQuickTabs` ต้องวางบนสุดของหน้า แล้วตามด้วยการ์ดหลักเดียว (บ้าน · ค่าส่วนกลาง · สลิป)
+5. `VillageHousingQuickTabs` ต้องวางบนสุดของหน้า แล้วตามด้วยการ์ดหลักเดียว — มี **2 เมนู**: บ้าน · ค่าส่วนกลาง
+
+## สลิป (รับชำระ) — ไม่ใช่หน้าแยก
+
+- **ไม่มี** หน้า `/dashboard/village/slips` แล้ว — redirect ไป `/dashboard/village/fees?tab=slips`
+- สลิปเป็น **แท็บหลัก «รับชำระ»** ในการ์ดเดียวกับบิล (`VillageFeesClient`) ตามกฎ `dashboard-primary-secondary-menu-tabs.mdc`
+ - แถบหลัก: `villagePrimaryTabShellClass` + `villagePrimaryTabPillClass(active)` · `role="tablist"` / `tabpanel`
+ - `VillageSlipsClient` รับ prop **`embedded`** — เมื่อ embed **ห้าม** render `VillagePageStack` / `VillageHousingQuickTabs` / `VillagePanelCard` ซ้ำ
+- ลิงก์ทุกที่ (การ์ด «สลิปรอตรวจ» หน้าภาพรวม ฯลฯ) ต้องชี้ **`/dashboard/village/fees?tab=slips`**
+- `villageSubMenuItems` **ไม่มี** รายการสลิป — แต่ `villageMainKeyFromPathname` ยังแม็ป `/slips` เป็นกลุ่ม `housing`
 
 ## หน้าการเงิน `/dashboard/village/finance`
 

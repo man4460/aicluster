@@ -1,7 +1,5 @@
-import { getRequestBaseUrl } from "@/lib/app/request-base-url";
-import { VillageSlipsClient } from "@/systems/village/components/VillageSlipsClient";
+import { redirect } from "next/navigation";
 
-export default async function VillageSlipsPage() {
-  const baseUrl = await getRequestBaseUrl();
-  return <VillageSlipsClient baseUrl={baseUrl} />;
+export default function VillageSlipsPage() {
+  redirect("/dashboard/village/fees?tab=slips");
 }
