@@ -64,12 +64,19 @@ async function uploadStylistImage(file: File): Promise<string> {
   return url;
 }
 
+export type BarberStylistsEmbeddedToolbarApi = {
+  openAddModal: () => void;
+};
+
 export function BarberStylistsClient({
   embedded = false,
   showHubToolbar = false,
+  onEmbeddedToolbar,
 }: {
   embedded?: boolean;
   showHubToolbar?: boolean;
+  /** เมื่อ embedded — ส่งปุ่ม «เพิ่มช่าง» ไปแถบหัว Hub */
+  onEmbeddedToolbar?: (api: BarberStylistsEmbeddedToolbarApi | null) => void;
 } = {}) {
   const router = useRouter();
   const [list, setList] = useState<Stylist[]>([]);
@@ -213,7 +220,7 @@ export function BarberStylistsClient({
     };
   }, [anyModalOpen, previewUrl, editOpen, closeAddModal, closeEditModal]);
 
-  function openAddModal() {
+  const openAddModal = useCallback(() => {
     setErr(null);
     setName("");
     setPhone("");
@@ -223,7 +230,13 @@ export function BarberStylistsClient({
     setAddPhotoFile(null);
     if (addFileRef.current) addFileRef.current.value = "";
     setAddOpen(true);
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!embedded || !onEmbeddedToolbar) return;
+    onEmbeddedToolbar({ openAddModal });
+    return () => onEmbeddedToolbar(null);
+  }, [embedded, onEmbeddedToolbar, openAddModal]);
 
   function openEditModal(s: Stylist) {
     setErr(null);
@@ -455,56 +468,58 @@ export function BarberStylistsClient({
       ) : null}
 
       <section className={barberSectionFirstClass} aria-label="รายชื่อช่าง">
-        <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-          <h2 className="shrink-0 text-base font-black leading-none tracking-tight text-[#1e1b4b] sm:text-lg">
-            รายชื่อช่าง
-          </h2>
-          {showHubToolbar ? (
-            <BarberDashboardHeaderTrailing className="w-full sm:w-auto">
-              {!embedded ? <BarberDashboardBackLink /> : null}
-              <button
-                type="button"
-                onClick={openAddModal}
-                className={barberDashboardSegmentBtnClass(true)}
-                aria-label="เพิ่มช่าง"
-              >
-                <svg
-                  className="h-4 w-4 shrink-0"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  aria-hidden
+        {!embedded ? (
+          <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <h2 className="shrink-0 text-base font-black leading-none tracking-tight text-[#1e1b4b] sm:text-lg">
+              รายชื่อช่าง
+            </h2>
+            {showHubToolbar ? (
+              <BarberDashboardHeaderTrailing className="w-full sm:w-auto">
+                <BarberDashboardBackLink />
+                <button
+                  type="button"
+                  onClick={openAddModal}
+                  className={barberDashboardSegmentBtnClass(true)}
+                  aria-label="เพิ่มช่าง"
                 >
-                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-                </svg>
-                <span className="hidden sm:inline">เพิ่มช่าง</span>
-              </button>
-            </BarberDashboardHeaderTrailing>
-          ) : (
-            <div className={barberSectionActionsRowClass}>
-              {!embedded ? <BarberDashboardBackLink /> : null}
-              <button
-                type="button"
-                onClick={openAddModal}
-                className={barberDashboardSegmentBtnClass(true)}
-                aria-label="เพิ่มช่าง"
-              >
-                <svg
-                  className="h-4 w-4 shrink-0"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  aria-hidden
+                  <svg
+                    className="h-4 w-4 shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    aria-hidden
+                  >
+                    <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                  </svg>
+                  <span className="hidden sm:inline">เพิ่มช่าง</span>
+                </button>
+              </BarberDashboardHeaderTrailing>
+            ) : (
+              <div className={barberSectionActionsRowClass}>
+                <BarberDashboardBackLink />
+                <button
+                  type="button"
+                  onClick={openAddModal}
+                  className={barberDashboardSegmentBtnClass(true)}
+                  aria-label="เพิ่มช่าง"
                 >
-                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-                </svg>
-                <span className="hidden sm:inline">เพิ่มช่าง</span>
-              </button>
-            </div>
-          )}
-        </div>
+                  <svg
+                    className="h-4 w-4 shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    aria-hidden
+                  >
+                    <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                  </svg>
+                  <span className="hidden sm:inline">เพิ่มช่าง</span>
+                </button>
+              </div>
+            )}
+          </div>
+        ) : null}
         {loading ? (
           <p className={barberMutedLoadingNoticeClass}>กำลังโหลดรายการ…</p>
         ) : list.length === 0 ? (

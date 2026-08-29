@@ -4,27 +4,18 @@ import { Suspense, useCallback, useMemo, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 import {
+  BARBER_DASHBOARD_TAB_ITEMS,
+  parseBarberDashboardTab,
+  type BarberDashboardTabKey,
+} from "@/systems/barber/barber-module-nav";
+import {
   barberDashboardSegmentShellClass,
   barberDashboardToolsRowClass,
   barberNavActiveClass,
   barberNavIdleClass,
 } from "@/systems/barber/components/barber-ui-tokens";
 
-export type BarberDashboardTabKey = "overview" | "queue" | "checkin" | "stylists";
-
-const TAB_KEYS = new Set<string>(["overview", "queue", "checkin", "stylists"]);
-
-function parseTab(raw: string | null): BarberDashboardTabKey {
-  if (raw && TAB_KEYS.has(raw)) return raw as BarberDashboardTabKey;
-  return "overview";
-}
-
-const TAB_ITEMS: { key: BarberDashboardTabKey; label: string }[] = [
-  { key: "overview", label: "ภาพรวม" },
-  { key: "queue", label: "จัดการคิว" },
-  { key: "checkin", label: "เช็กอิน" },
-  { key: "stylists", label: "ช่าง" },
-];
+export type { BarberDashboardTabKey };
 
 function hubTabIcon(key: BarberDashboardTabKey) {
   switch (key) {
@@ -39,13 +30,6 @@ function hubTabIcon(key: BarberDashboardTabKey) {
       );
     case "checkin":
       return <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />;
-    case "stylists":
-      return (
-        <g>
-          <circle cx="9" cy="7" r="3" />
-          <path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2M16 11a3 3 0 106-3 3 3 0 00-3 3" />
-        </g>
-      );
     default:
       return <circle cx="12" cy="12" r="9" />;
   }
@@ -57,7 +41,7 @@ export function BarberDashboardTabToolbar({ className }: { className?: string })
   const pathname = usePathname() ?? "/dashboard/barber";
   const searchParams = useSearchParams();
 
-  const tab = useMemo(() => parseTab(searchParams.get("tab")), [searchParams]);
+  const tab = useMemo(() => parseBarberDashboardTab(searchParams.get("tab")), [searchParams]);
 
   const setTab = useCallback(
     (next: BarberDashboardTabKey) => {
@@ -76,7 +60,7 @@ export function BarberDashboardTabToolbar({ className }: { className?: string })
       aria-label="แท็บแดชบอร์ดร้านตัดผม"
     >
       <div className={barberDashboardSegmentShellClass} role="group">
-        {TAB_ITEMS.map((item) => {
+        {BARBER_DASHBOARD_TAB_ITEMS.map((item) => {
           const active = tab === item.key;
           return (
             <button

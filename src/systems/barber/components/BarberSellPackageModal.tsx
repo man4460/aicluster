@@ -278,7 +278,7 @@ export function BarberSellPackageModal({
               <legend className="text-sm font-semibold text-[#4d47b6]">เลือกแพ็กเกจ</legend>
               {pkgList.length === 0 ? (
                 <p className="rounded-[1.25rem] border border-dashed border-[#d4cff7]/75 bg-[#faf9ff]/80 px-3 py-6 text-center text-sm text-[#66638c]">
-                  ยังไม่มีแพ็กเกจ — ไปเพิ่มที่เมนูแพ็กเกจก่อน
+                  ยังไม่มีแพ็กเกจ — ไปเพิ่มที่การจัดการ → แพ็กเกจก่อน
                 </p>
               ) : (
                 <ul className="grid max-h-[min(40vh,22rem)] grid-cols-1 gap-2 overflow-y-auto pr-0.5 sm:grid-cols-2">

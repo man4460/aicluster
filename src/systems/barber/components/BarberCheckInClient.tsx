@@ -161,7 +161,7 @@ export function BarberCheckInClient({
   const [shopPrintProfile, setShopPrintProfile] = useState<BarberPrintShopProfile | null>(null);
 
   const stylistPickSummary = useMemo(() => {
-    if (stylists.length === 0) return "ยังไม่มีช่าง · ตั้งที่เมนูช่าง";
+    if (stylists.length === 0) return "ยังไม่มีช่าง · ตั้งที่การจัดการ → ช่าง";
     if (!stylistId) return "ไม่ระบุช่าง";
     const s = stylists.find((x) => String(x.id) === stylistId);
     return s?.name ?? "ไม่ระบุช่าง";
@@ -474,7 +474,7 @@ export function BarberCheckInClient({
               "rounded-[2rem] border border-amber-200/90 bg-amber-50/50 px-4 py-3 text-sm font-medium text-amber-950",
             )}
           >
-            ยังไม่มีช่าง · ตั้งที่เมนูช่าง
+            ยังไม่มีช่าง · ตั้งที่การจัดการ → ช่าง
           </div>
         ) : useStaffCards ? (
           <div className="space-y-1.5">
@@ -830,7 +830,8 @@ export function BarberCheckInClient({
                 <div className="space-y-4 px-5 py-5">
                   {stylists.length === 0 ? (
                     <p className={`${barberCardSurfaceRadiusClass} border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950`}>
-                      ยังไม่มีรายชื่อช่าง — ไปที่เมนู <strong className="font-bold">ช่าง</strong> เพื่อเพิ่มก่อน
+                      ยังไม่มีรายชื่อช่าง — ไปที่{" "}
+                      <strong className="font-bold">การจัดการ → ช่าง</strong> เพื่อเพิ่มก่อน
                     </p>
                   ) : (
                     <>

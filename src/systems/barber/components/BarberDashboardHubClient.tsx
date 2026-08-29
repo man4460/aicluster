@@ -1,30 +1,21 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
-import {
-  barberCardSurfaceRadiusClass,
-} from "@/systems/barber/components/barber-ui-tokens";
+import { Suspense, useEffect, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { barberCardSurfaceRadiusClass } from "@/systems/barber/components/barber-ui-tokens";
 import {
   BarberDashboardTabToolbar,
   type BarberDashboardTabKey,
 } from "@/systems/barber/components/BarberDashboardHeaderTrailing";
 import { BarberBookingsClient } from "@/systems/barber/components/BarberBookingsClient";
 import { BarberCheckInClient } from "@/systems/barber/components/BarberCheckInClient";
-import { BarberStylistsClient } from "@/systems/barber/components/BarberStylistsClient";
+import { parseBarberDashboardTab } from "@/systems/barber/barber-module-nav";
 
 export type { BarberDashboardTabKey };
 export {
   BarberDashboardHeaderTrailing,
   BarberDashboardTabToolbar,
 } from "@/systems/barber/components/BarberDashboardHeaderTrailing";
-
-const TAB_KEYS = new Set<string>(["overview", "queue", "checkin", "stylists"]);
-
-function parseTab(raw: string | null): BarberDashboardTabKey {
-  if (raw && TAB_KEYS.has(raw)) return raw as BarberDashboardTabKey;
-  return "overview";
-}
 
 function BarberDashboardHubTabs({
   initialDateKey,
@@ -33,11 +24,19 @@ function BarberDashboardHubTabs({
   initialDateKey: string;
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const tab = useMemo(
-    () => parseTab(searchParams.get("tab")),
+    () => parseBarberDashboardTab(searchParams.get("tab")),
     [searchParams],
   );
+
+  useEffect(() => {
+    const raw = searchParams.get("tab");
+    if (raw === "stylists") {
+      router.replace("/dashboard/barber/manage?tab=stylists");
+    }
+  }, [router, searchParams]);
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -52,7 +51,6 @@ function BarberDashboardHubTabs({
       {tab === "checkin" ? (
         <BarberCheckInClient embedded headerToolbar={<BarberDashboardTabToolbar />} />
       ) : null}
-      {tab === "stylists" ? <BarberStylistsClient embedded showHubToolbar /> : null}
     </div>
   );
 }
