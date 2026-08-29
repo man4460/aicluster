@@ -114,7 +114,7 @@ ${
 </li>
 <li style="display:flex;gap:8px;align-items:flex-start;">
 <span style="flex-shrink:0;width:24px;height:24px;border-radius:999px;background:#3730a3;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">3</span>
-<span>นิติบุคคลตรวจสลิปที่หน้าสลิปโอนเงิน แล้วกดอนุมัติรับชำระ</span>
+<span>นิติบุคคลตรวจสลิปที่ค่าส่วนกลาง → รับชำระ แล้วกดอนุมัติ</span>
 </li>
 </ol>
 ${

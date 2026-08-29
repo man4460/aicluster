@@ -156,7 +156,7 @@ export function VillageInvoiceSheetContent({
             {[
               "โอนเงินตามช่องทางด้านบนให้ครบยอด",
               "สแกน QR ด้านขวาเพื่ออัปโหลดสลิป หรือขอลิงก์จากนิติบุคคลแล้วเปิดลิงก์แนบรูปสลิป",
-              "นิติบุคคลตรวจสลิปที่หน้าสลิปโอนเงิน แล้วกดอนุมัติรับชำระ",
+              "นิติบุคคลตรวจสลิปที่ค่าส่วนกลาง → รับชำระ แล้วกดอนุมัติ",
             ].map((step, i) => (
               <li key={step} className="flex gap-2">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#3730a3] text-[11px] font-bold text-white">
