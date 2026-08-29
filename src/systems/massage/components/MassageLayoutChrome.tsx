@@ -93,7 +93,7 @@ export function MassageModuleDesktopNav({ pathname }: { pathname: string }) {
 }
 
 /**
- * §12 Mobile dock nav (ล่างจอ) — grid-cols-5 เพราะ 5 ใบพอดี
+ * §12 Mobile dock nav (ล่างจอ) — grid-cols-4 เพราะ 4 ใบพอดี
  * Icon: stroke 2.5, active = brand gradient
  */
 export function MassageModuleMobileDock({ pathname }: { pathname: string }) {
