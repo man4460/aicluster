@@ -199,8 +199,8 @@ export function MassageUsageGuideModal({ open, onClose }: { open: boolean; onClo
               </p>
               <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
                 <li>
-                  <strong className="font-semibold text-[#2e2a58]">ช่างที่บันทึก</strong> — เลือกช่างจากรายการ (ตั้งได้ที่การจัดการ → หมอนวด)
-                  ถ้าไม่เลือก ระบบจะไม่ผูกชื่อช่างในประวัติ
+                  <strong className="font-semibold text-[#2e2a58]">พนักงานที่บันทึก</strong> — เลือกจากรายการหมอนวด (ตั้งได้ที่การจัดการ → หมอนวด)
+                  ถ้าไม่เลือก ระบบจะไม่ผูกชื่อพนักงานในประวัติ
                 </li>
                 <li>
                   <strong className="font-semibold text-[#2e2a58]">ค้นหาลูกค้า</strong> — กรอกเบอร์แล้วค้นหา

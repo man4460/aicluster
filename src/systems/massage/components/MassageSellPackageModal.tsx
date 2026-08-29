@@ -268,7 +268,7 @@ export function MassageSellPackageModal({
             {showInternalStylist ? (
               <div>
                 <label htmlFor="massage-sell-modal-stylist" className="text-sm font-semibold text-[#4d47b6]">
-                  ช่างที่บันทึกการขาย (ไม่บังคับ)
+                  พนักงานที่บันทึกการขาย (ไม่บังคับ)
                 </label>
                 <select
                   id="massage-sell-modal-stylist"
@@ -276,7 +276,7 @@ export function MassageSellPackageModal({
                   value={internalStylistId}
                   onChange={(e) => setInternalStylistId(e.target.value)}
                 >
-                  <option value="">— ไม่ระบุช่าง —</option>
+                  <option value="">— ไม่ระบุพนักงาน —</option>
                   {stylists.map((s) => (
                     <option key={s.id} value={String(s.id)}>
                       {s.name}

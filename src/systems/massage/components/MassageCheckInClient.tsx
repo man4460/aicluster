@@ -166,10 +166,10 @@ export function MassageCheckInClient({
   const cashVideoRef = useRef<HTMLVideoElement>(null);
 
   const stylistPickSummary = useMemo(() => {
-    if (stylists.length === 0) return "ยังไม่มีช่าง · ตั้งที่เมนูช่าง";
-    if (!stylistId) return "ไม่ระบุช่าง";
+    if (stylists.length === 0) return "ยังไม่มีพนักงาน · ตั้งที่การจัดการ → หมอนวด";
+    if (!stylistId) return "ไม่ระบุพนักงาน";
     const s = stylists.find((x) => String(x.id) === stylistId);
-    return s?.name ?? "ไม่ระบุช่าง";
+    return s?.name ?? "ไม่ระบุพนักงาน";
   }, [stylists, stylistId]);
 
   const clearCashReceipt = useCallback(() => {
@@ -510,7 +510,7 @@ export function MassageCheckInClient({
 
   return (
     <div className={embedded ? "space-y-4 sm:space-y-5" : massagePageStackClass}>
-      <section className={massageSectionFirstClass} aria-label="ช่างที่บันทึก">
+      <section className={massageSectionFirstClass} aria-label="พนักงานที่บันทึก">
         <button
           type="button"
           onClick={() => setStylistModalOpen(true)}
@@ -525,17 +525,17 @@ export function MassageCheckInClient({
         >
           <span className="flex min-w-0 flex-1 items-center gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1.25rem] bg-[#4d47b6] text-sm font-black text-white shadow-md shadow-[#4d47b6]/25">
-              ช
+              พ
             </span>
             <span className="min-w-0">
               <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-[#8b87ad]">
-                ช่างที่บันทึก
+                พนักงานที่บันทึก
               </span>
               <span className="mt-0.5 block truncate text-sm font-bold text-[#2e2a58]">{stylistPickSummary}</span>
               {stylists.length > 0 ? (
                 <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-[#66638c]">
                   <span className="h-1 w-1 rounded-full bg-emerald-500" aria-hidden />
-                  {`มีช่าง ${stylists.length} คน · แตะเพื่อเลือก`}
+                  {`มีพนักงาน ${stylists.length} คน · แตะเพื่อเลือก`}
                 </span>
               ) : null}
             </span>
@@ -749,7 +749,7 @@ export function MassageCheckInClient({
                 <div className={massageModalHeaderClass}>
                   <div className="min-w-0">
                     <h2 id="massage-stylist-modal-title" className={massageModalTitleClass}>
-                      ช่างที่บันทึก
+                      พนักงานที่บันทึก
                     </h2>
                     <p className={massageModalSubtitleClass}>
                       ใช้กับการหักแพ็ก เงินสด และขายแพ็ก — เลือกครั้งเดียวต่อเซสชัน
@@ -767,26 +767,27 @@ export function MassageCheckInClient({
                 <div className="space-y-4 px-5 py-5">
                   {stylists.length === 0 ? (
                     <p className={`${massageCardSurfaceRadiusClass} border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950`}>
-                      ยังไม่มีรายชื่อช่าง — ไปที่เมนู <strong className="font-bold">ช่าง</strong> เพื่อเพิ่มก่อน
+                      ยังไม่มีรายชื่อพนักงาน — ไปที่{" "}
+                      <strong className="font-bold">การจัดการ → หมอนวด</strong> เพื่อเพิ่มก่อน
                     </p>
                   ) : (
                     <>
                       <p className="inline-flex items-center gap-1.5 rounded-full border border-[#ecebff] bg-[#f8f7ff] px-3 py-1 text-[11px] font-semibold text-[#5f5a8a]">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
-                        {`ช่างในระบบ ${stylists.length} คน`}
+                        {`พนักงานในระบบ ${stylists.length} คน`}
                       </p>
                       <div>
                         <label htmlFor="massage-stylist-select-modal" className="text-sm font-semibold text-[#4d47b6]">
-                          เลือกช่าง
+                          เลือกพนักงาน
                         </label>
                         <select
                           id="massage-stylist-select-modal"
                           className="app-input mt-2 min-h-[52px] w-full rounded-[1.25rem] px-4 py-3 text-base shadow-sm focus:border-[#4d47b6] focus:outline-none focus:ring-2 focus:ring-[#4d47b6]/25"
                           value={stylistId}
                           onChange={(e) => setStylistId(e.target.value)}
-                          aria-label="เลือกช่างที่บันทึก"
+                          aria-label="เลือกพนักงานที่บันทึก"
                         >
-                          <option value="">— ไม่ระบุช่าง —</option>
+                          <option value="">— ไม่ระบุพนักงาน —</option>
                           {stylists.map((s) => (
                             <option key={s.id} value={String(s.id)}>
                               {s.name}
@@ -794,7 +795,7 @@ export function MassageCheckInClient({
                           ))}
                         </select>
                         <p className="mt-2 text-[11px] leading-snug text-[#8b87ad]">
-                          ว่าง = ไม่บันทึกชื่อช่างในประวัติ
+                          ว่าง = ไม่บันทึกชื่อพนักงานในประวัติ
                         </p>
                       </div>
                     </>
