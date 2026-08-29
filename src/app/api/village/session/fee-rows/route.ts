@@ -48,26 +48,45 @@ export async function GET(req: Request) {
         yearMonth,
         ...(statusFilter ? { status: statusFilter as "PENDING" | "PARTIAL" | "PAID" | "WAIVED" } : {}),
       },
-      include: { house: { select: { houseNo: true, ownerName: true, feeCycle: true } } },
+      include: {
+        house: { select: { houseNo: true, ownerName: true, feeCycle: true } },
+        slips: {
+          where: { status: "PENDING" },
+          orderBy: { submittedAt: "desc" },
+          take: 1,
+          select: { id: true, amount: true, slipImageUrl: true, submittedAt: true },
+        },
+      },
       orderBy: [{ house: { sortOrder: "asc" } }, { id: "asc" }],
     });
 
     return NextResponse.json({
       default_monthly_fee: defaultFee,
       due_day_of_month: dueDay,
-      fee_rows: rows.map((r) => ({
-        id: r.id,
-        house_id: r.houseId,
-        house_no: r.house.houseNo,
-        owner_name: r.house.ownerName,
-        fee_cycle: r.house.feeCycle,
-        year_month: r.yearMonth,
-        amount_due: r.amountDue,
-        amount_paid: r.amountPaid,
-        status: r.status,
-        note: r.note,
-        paid_at: r.paidAt?.toISOString() ?? null,
-      })),
+      fee_rows: rows.map((r) => {
+        const pending = r.slips[0] ?? null;
+        return {
+          id: r.id,
+          house_id: r.houseId,
+          house_no: r.house.houseNo,
+          owner_name: r.house.ownerName,
+          fee_cycle: r.house.feeCycle,
+          year_month: r.yearMonth,
+          amount_due: r.amountDue,
+          amount_paid: r.amountPaid,
+          status: r.status,
+          note: r.note,
+          paid_at: r.paidAt?.toISOString() ?? null,
+          pending_slip: pending
+            ? {
+                id: pending.id,
+                amount: pending.amount,
+                slip_image_url: pending.slipImageUrl,
+                submitted_at: pending.submittedAt.toISOString(),
+              }
+            : null,
+        };
+      }),
     });
   } catch (e) {
     if (isPrismaSchemaMismatchError(e)) {
@@ -143,24 +162,43 @@ export async function POST(req: Request) {
 
     const rows = await prisma.villageCommonFeeRow.findMany({
       where: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId, yearMonth: ym },
-      include: { house: { select: { houseNo: true, ownerName: true, feeCycle: true } } },
+      include: {
+        house: { select: { houseNo: true, ownerName: true, feeCycle: true } },
+        slips: {
+          where: { status: "PENDING" },
+          orderBy: { submittedAt: "desc" },
+          take: 1,
+          select: { id: true, amount: true, slipImageUrl: true, submittedAt: true },
+        },
+      },
       orderBy: [{ house: { sortOrder: "asc" } }, { id: "asc" }],
     });
 
     return NextResponse.json({
-      fee_rows: rows.map((r) => ({
-        id: r.id,
-        house_id: r.houseId,
-        house_no: r.house.houseNo,
-        owner_name: r.house.ownerName,
-        fee_cycle: r.house.feeCycle,
-        year_month: r.yearMonth,
-        amount_due: r.amountDue,
-        amount_paid: r.amountPaid,
-        status: r.status,
-        note: r.note,
-        paid_at: r.paidAt?.toISOString() ?? null,
-      })),
+      fee_rows: rows.map((r) => {
+        const pending = r.slips[0] ?? null;
+        return {
+          id: r.id,
+          house_id: r.houseId,
+          house_no: r.house.houseNo,
+          owner_name: r.house.ownerName,
+          fee_cycle: r.house.feeCycle,
+          year_month: r.yearMonth,
+          amount_due: r.amountDue,
+          amount_paid: r.amountPaid,
+          status: r.status,
+          note: r.note,
+          paid_at: r.paidAt?.toISOString() ?? null,
+          pending_slip: pending
+            ? {
+                id: pending.id,
+                amount: pending.amount,
+                slip_image_url: pending.slipImageUrl,
+                submitted_at: pending.submittedAt.toISOString(),
+              }
+            : null,
+        };
+      }),
     });
   } catch (e) {
     if (isPrismaSchemaMismatchError(e)) {

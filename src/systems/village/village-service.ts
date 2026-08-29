@@ -48,6 +48,13 @@ export type VillageFeeRow = {
   status: string;
   note: string | null;
   paid_at: string | null;
+  /** สลิปรอตรวจล่าสุดที่ผูกกับบิลนี้ (ถ้ามี) */
+  pending_slip: {
+    id: number;
+    amount: number;
+    slip_image_url: string;
+    submitted_at: string;
+  } | null;
 };
 
 export type VillageSlip = {
