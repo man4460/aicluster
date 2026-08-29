@@ -263,6 +263,66 @@ import {
   readLoyaltyStampHeaderCollapsed,
   writeLoyaltyStampHeaderCollapsed,
 } from "@/systems/loyalty-stamp/loyalty-stamp-module-nav";
+import {
+  VillageHeaderBarNav,
+  VillageHeaderExpandButton,
+} from "@/systems/village/components/VillageHeaderBarNav";
+import {
+  VILLAGE_HEADER_COLLAPSE_EVENT,
+  isVillageModulePath,
+  readVillageHeaderCollapsed,
+  writeVillageHeaderCollapsed,
+} from "@/systems/village/village-nav";
+import {
+  LaundryHeaderBarNav,
+  LaundryHeaderExpandButton,
+} from "@/systems/laundry/components/LaundryHeaderBarNav";
+import {
+  LAUNDRY_HEADER_COLLAPSE_EVENT,
+  isLaundryModulePath,
+  readLaundryHeaderCollapsed,
+  writeLaundryHeaderCollapsed,
+} from "@/systems/laundry/laundry-module-nav";
+import {
+  ParkingHeaderBarNav,
+  ParkingHeaderExpandButton,
+} from "@/systems/parking/components/ParkingHeaderBarNav";
+import {
+  PARKING_HEADER_COLLAPSE_EVENT,
+  isParkingModulePath,
+  readParkingHeaderCollapsed,
+  writeParkingHeaderCollapsed,
+} from "@/systems/parking/parking-module-nav";
+import {
+  InventoryHeaderBarNav,
+  InventoryHeaderExpandButton,
+} from "@/systems/inventory/components/InventoryHeaderBarNav";
+import {
+  INVENTORY_HEADER_COLLAPSE_EVENT,
+  isInventoryModulePath,
+  readInventoryHeaderCollapsed,
+  writeInventoryHeaderCollapsed,
+} from "@/systems/inventory/inventory-module-nav";
+import {
+  SmartPoliceHeaderBarNav,
+  SmartPoliceHeaderExpandButton,
+} from "@/systems/smart-police/components/SmartPoliceHeaderBarNav";
+import {
+  SMART_POLICE_HEADER_COLLAPSE_EVENT,
+  isSmartPoliceModulePath,
+  readSmartPoliceHeaderCollapsed,
+  writeSmartPoliceHeaderCollapsed,
+} from "@/systems/smart-police/smart-police-nav";
+import {
+  MediaRegistryHeaderBarNav,
+  MediaRegistryHeaderExpandButton,
+} from "@/systems/media-registry/components/MediaRegistryHeaderBarNav";
+import {
+  MEDIA_REGISTRY_HEADER_COLLAPSE_EVENT,
+  isMediaRegistryModulePath,
+  readMediaRegistryHeaderCollapsed,
+  writeMediaRegistryHeaderCollapsed,
+} from "@/systems/media-registry/media-registry-module-nav";
 
 /** localStorage — ซ่อนแถบเมนูซ้ายบนเดสก์ท็อป (ใช้ทุกหน้าแดชบอร์ดที่ผ่าน DashboardShell) */
 const DASHBOARD_SIDEBAR_COLLAPSED_KEY = "mawell-dashboard-sidebar-collapsed";
@@ -565,6 +625,12 @@ export function DashboardShell({
   const [promptLibraryHeaderCollapsed, setPromptLibraryHeaderCollapsed] = useState(false);
   const [docTransmissionHeaderCollapsed, setDocTransmissionHeaderCollapsed] = useState(false);
   const [loyaltyStampHeaderCollapsed, setLoyaltyStampHeaderCollapsed] = useState(false);
+  const [villageHeaderCollapsed, setVillageHeaderCollapsed] = useState(false);
+  const [laundryHeaderCollapsed, setLaundryHeaderCollapsed] = useState(false);
+  const [parkingHeaderCollapsed, setParkingHeaderCollapsed] = useState(false);
+  const [inventoryHeaderCollapsed, setInventoryHeaderCollapsed] = useState(false);
+  const [smartPoliceHeaderCollapsed, setSmartPoliceHeaderCollapsed] = useState(false);
+  const [mediaRegistryHeaderCollapsed, setMediaRegistryHeaderCollapsed] = useState(false);
   const accountWrapRef = useRef<HTMLDivElement>(null);
   const moduleMenuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -599,6 +665,12 @@ export function DashboardShell({
   const onPromptLibraryModule = isPromptLibraryModulePath(pathname);
   const onDocTransmissionModule = isDocTransmissionModulePath(pathname);
   const onLoyaltyStampModule = isLoyaltyStampModulePath(pathname);
+  const onVillageModule = isVillageModulePath(pathname);
+  const onLaundryModule = isLaundryModulePath(pathname);
+  const onParkingModule = isParkingModulePath(pathname);
+  const onInventoryModule = isInventoryModulePath(pathname);
+  const onSmartPoliceModule = isSmartPoliceModulePath(pathname);
+  const onMediaRegistryModule = isMediaRegistryModulePath(pathname);
   const onDormitoryModule = isDormitoryModulePath(pathname);
   const showDrinkPosHeaderBar = onDrinkPosModule && drinkPosHeaderCollapsed;
   const showBuildingPosHeaderBar = onBuildingPosModule && buildingPosHeaderCollapsed;
@@ -622,6 +694,12 @@ export function DashboardShell({
   const showPromptLibraryHeaderBar = onPromptLibraryModule && promptLibraryHeaderCollapsed;
   const showDocTransmissionHeaderBar = onDocTransmissionModule && docTransmissionHeaderCollapsed;
   const showLoyaltyStampHeaderBar = onLoyaltyStampModule && loyaltyStampHeaderCollapsed;
+  const showVillageHeaderBar = onVillageModule && villageHeaderCollapsed;
+  const showLaundryHeaderBar = onLaundryModule && laundryHeaderCollapsed;
+  const showParkingHeaderBar = onParkingModule && parkingHeaderCollapsed;
+  const showInventoryHeaderBar = onInventoryModule && inventoryHeaderCollapsed;
+  const showSmartPoliceHeaderBar = onSmartPoliceModule && smartPoliceHeaderCollapsed;
+  const showMediaRegistryHeaderBar = onMediaRegistryModule && mediaRegistryHeaderCollapsed;
   const showAdminHubHeaderBar = onAdminHub && adminHubHeaderCollapsed;
   const showDormitoryHeaderBar = onDormitoryModule && dormitoryHeaderCollapsed;
   const mainNavGroups = navGroups.filter((group) => group.id === "basic");
@@ -1052,6 +1130,96 @@ export function DashboardShell({
       window.removeEventListener("storage", sync);
     };
   }, [onLoyaltyStampModule]);
+
+  useEffect(() => {
+    if (!onVillageModule) {
+      setVillageHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setVillageHeaderCollapsed(readVillageHeaderCollapsed());
+    sync();
+    window.addEventListener(VILLAGE_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(VILLAGE_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onVillageModule]);
+
+  useEffect(() => {
+    if (!onLaundryModule) {
+      setLaundryHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setLaundryHeaderCollapsed(readLaundryHeaderCollapsed());
+    sync();
+    window.addEventListener(LAUNDRY_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(LAUNDRY_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onLaundryModule]);
+
+  useEffect(() => {
+    if (!onParkingModule) {
+      setParkingHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setParkingHeaderCollapsed(readParkingHeaderCollapsed());
+    sync();
+    window.addEventListener(PARKING_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(PARKING_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onParkingModule]);
+
+  useEffect(() => {
+    if (!onInventoryModule) {
+      setInventoryHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setInventoryHeaderCollapsed(readInventoryHeaderCollapsed());
+    sync();
+    window.addEventListener(INVENTORY_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(INVENTORY_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onInventoryModule]);
+
+  useEffect(() => {
+    if (!onSmartPoliceModule) {
+      setSmartPoliceHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setSmartPoliceHeaderCollapsed(readSmartPoliceHeaderCollapsed());
+    sync();
+    window.addEventListener(SMART_POLICE_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(SMART_POLICE_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onSmartPoliceModule]);
+
+  useEffect(() => {
+    if (!onMediaRegistryModule) {
+      setMediaRegistryHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setMediaRegistryHeaderCollapsed(readMediaRegistryHeaderCollapsed());
+    sync();
+    window.addEventListener(MEDIA_REGISTRY_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(MEDIA_REGISTRY_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onMediaRegistryModule]);
 
   useEffect(() => {
     if (!onAdminHub) {
@@ -1789,6 +1957,150 @@ export function DashboardShell({
                     <span className="font-medium text-white/90">{displayName}</span>
                   </p>
                   <LoyaltyStampHeaderExpandButton onExpand={() => writeLoyaltyStampHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showVillageHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <VillageHeaderBarNav onExpand={() => writeVillageHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <VillageHeaderExpandButton onExpand={() => writeVillageHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showLaundryHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <LaundryHeaderBarNav onExpand={() => writeLaundryHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <LaundryHeaderExpandButton onExpand={() => writeLaundryHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showParkingHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <ParkingHeaderBarNav onExpand={() => writeParkingHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <ParkingHeaderExpandButton onExpand={() => writeParkingHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showInventoryHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <InventoryHeaderBarNav onExpand={() => writeInventoryHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <InventoryHeaderExpandButton onExpand={() => writeInventoryHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showSmartPoliceHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <SmartPoliceHeaderBarNav onExpand={() => writeSmartPoliceHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <SmartPoliceHeaderExpandButton onExpand={() => writeSmartPoliceHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showMediaRegistryHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <MediaRegistryHeaderBarNav onExpand={() => writeMediaRegistryHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <MediaRegistryHeaderExpandButton onExpand={() => writeMediaRegistryHeaderCollapsed(false)} />
                 </div>
               </>
             ) : showAdminHubHeaderBar ? (

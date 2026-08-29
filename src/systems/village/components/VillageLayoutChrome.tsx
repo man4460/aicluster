@@ -1,12 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { TrialSandboxStrip } from "@/components/dashboard/TrialSandboxStrip";
 import { AppUsageGuideModal } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
-import { villageIconBadgeClass, villageModuleHeaderShellClass } from "@/systems/village/village-ui-tokens";
+import {
+  VILLAGE_HEADER_COLLAPSE_EVENT,
+  VILLAGE_MODULE_DISPLAY_NAME,
+  readVillageHeaderCollapsed,
+  writeVillageHeaderCollapsed,
+} from "@/systems/village/village-nav";
+import {
+  villageHeaderCollapseBtnClass,
+  villageHeaderToolbarGroupClass,
+  villageIconBadgeClass,
+  villageModuleHeaderShellClass,
+} from "@/systems/village/village-ui-tokens";
 import { VillageModuleHeader } from "./VillageModuleHeader";
 import { VillageMobileDock } from "./VillageMobileDock";
+
+function VillageHeaderCollapseGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
+      <path d="M4 8h16M4 12h16M4 16h16" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 /** สองการ์ดแยกกันแบบคาร์แวช: การ์ดชื่อระบบ · การ์ดเมนู (มีช่องว่างระหว่างการ์ด) */
 export function VillageLayoutChrome({
@@ -18,10 +37,26 @@ export function VillageLayoutChrome({
   trialExpiresLabel?: string | null;
 }) {
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+
+  useEffect(() => {
+    const sync = () => setHeaderCollapsed(readVillageHeaderCollapsed());
+    sync();
+    window.addEventListener(VILLAGE_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(VILLAGE_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  const toggleHeader = useCallback(() => {
+    writeVillageHeaderCollapsed(!headerCollapsed);
+  }, [headerCollapsed]);
 
   return (
     <div className="flex min-h-0 max-w-full flex-1 flex-col gap-3 pb-28 sm:gap-4 sm:pb-6">
-      <header className={cn(villageModuleHeaderShellClass, "print:hidden")}>
+      <header className={cn(villageModuleHeaderShellClass, "print:hidden", headerCollapsed && "hidden")}>
         <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
           <div className="min-w-0 flex-1">
             <div className="flex items-start gap-3">
@@ -32,28 +67,41 @@ export function VillageLayoutChrome({
                 </svg>
               </div>
               <div>
-                <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">จัดการหมู่บ้าน</h1>
+                <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">{VILLAGE_MODULE_DISPLAY_NAME}</h1>
                 <p className="mt-1 hidden max-w-2xl text-sm leading-snug text-[#66638c] md:block">
                   ค่าส่วนกลาง · ลูกบ้าน · สลิป · ต้นทุน/รายจ่าย · รายปี · ส่งออก
                 </p>
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setUsageGuideOpen(true)}
-            className="flex h-10 min-h-[40px] items-center gap-2 rounded-2xl border border-white/60 bg-white/55 px-3 text-sm font-semibold text-[#4d47b6] shadow-sm backdrop-blur-md transition hover:bg-white/75 sm:px-4"
-            aria-haspopup="dialog"
-            aria-expanded={usageGuideOpen}
-            aria-label="คู่มือการใช้งาน"
-            title="คู่มือการใช้งาน"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-              <path d="M12 17v.01M10 9.5a2 2 0 1 1 3.2 1.6c-.8.55-1.2 1-1.2 1.9" strokeLinecap="round" />
-              <circle cx="12" cy="12" r="9" />
-            </svg>
-            <span className="hidden sm:inline">คู่มือการใช้งาน</span>
-          </button>
+          <div className={villageHeaderToolbarGroupClass}>
+            <button
+              type="button"
+              onClick={toggleHeader}
+              className={villageHeaderCollapseBtnClass}
+              aria-expanded={!headerCollapsed}
+              aria-label={headerCollapsed ? "แสดงส่วนหัวโมดูล" : "ซ่อนส่วนหัวโมดูล"}
+              title={headerCollapsed ? "แสดงส่วนหัวโมดูล" : "ซ่อนส่วนหัวโมดูล"}
+              suppressHydrationWarning
+            >
+              <VillageHeaderCollapseGlyph />
+            </button>
+            <button
+              type="button"
+              onClick={() => setUsageGuideOpen(true)}
+              className="flex h-10 min-h-[40px] items-center gap-2 rounded-2xl border border-white/60 bg-white/55 px-3 text-sm font-semibold text-[#4d47b6] shadow-sm backdrop-blur-md transition hover:bg-white/75 sm:px-4"
+              aria-haspopup="dialog"
+              aria-expanded={usageGuideOpen}
+              aria-label="คู่มือการใช้งาน"
+              title="คู่มือการใช้งาน"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                <path d="M12 17v.01M10 9.5a2 2 0 1 1 3.2 1.6c-.8.55-1.2 1-1.2 1.9" strokeLinecap="round" />
+                <circle cx="12" cy="12" r="9" />
+              </svg>
+              <span className="hidden sm:inline">คู่มือการใช้งาน</span>
+            </button>
+          </div>
         </div>
         <div className="mt-4 hidden border-t border-white/50 pt-4 md:block">
           <VillageModuleHeader variant="embedded" />

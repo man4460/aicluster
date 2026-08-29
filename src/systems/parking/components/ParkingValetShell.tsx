@@ -2,9 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AppMobileDockShell, appMobileDockGridClass, AppUsageGuideModal } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import {
+  PARKING_HEADER_COLLAPSE_EVENT,
+  PARKING_MODULE_DISPLAY_NAME,
+  PARKING_NAV_ITEMS,
+  parkingNavActive,
+  readParkingHeaderCollapsed,
+  writeParkingHeaderCollapsed,
+  type ParkingNavKey,
+} from "@/systems/parking/parking-module-nav";
 import {
   parkingDockItemActiveClass,
   parkingDockItemIdleClass,
@@ -52,22 +61,19 @@ function IconGear({ className }: { className?: string }) {
   );
 }
 
-const NAV: {
-  href: string;
-  label: string;
-  icon: typeof IconHome;
-}[] = [
-  { href: "/dashboard/parking", label: "แดชบอร์ด", icon: IconHome },
-  { href: "/dashboard/parking/spots", label: "ช่องจอด", icon: IconGrid },
-  { href: "/dashboard/parking/history", label: "ประวัติ", icon: IconClock },
-  { href: "/dashboard/parking/settings", label: "ตั้งค่า", icon: IconGear },
-];
+const NAV_ICONS: Record<ParkingNavKey, typeof IconHome> = {
+  dashboard: IconHome,
+  spots: IconGrid,
+  history: IconClock,
+  settings: IconGear,
+};
 
-function navActive(pathname: string, href: string): boolean {
-  if (href === "/dashboard/parking") {
-    return pathname === "/dashboard/parking";
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
+function ParkingHeaderCollapseGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
+      <path d="M4 8h16M4 12h16M4 16h16" strokeLinecap="round" />
+    </svg>
+  );
 }
 
 const parkingGuideSections = [
@@ -116,11 +122,27 @@ export function ParkingValetShell({
 }) {
   const pathname = usePathname() ?? "";
   const [guideOpen, setGuideOpen] = useState(false);
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+
+  useEffect(() => {
+    const sync = () => setHeaderCollapsed(readParkingHeaderCollapsed());
+    sync();
+    window.addEventListener(PARKING_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(PARKING_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  const toggleHeader = useCallback(() => {
+    writeParkingHeaderCollapsed(!headerCollapsed);
+  }, [headerCollapsed]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 flex-col gap-4 pb-24 sm:gap-6 sm:pb-6">
-        <div className={parkingModuleHeaderShellClass}>
+        <div className={cn(parkingModuleHeaderShellClass, "print:hidden", headerCollapsed && "hidden")}>
           <header>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="min-w-0 flex-1">
@@ -135,33 +157,46 @@ export function ParkingValetShell({
                   </div>
                   <div className="min-w-0">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">โมดูลจอดรถ</p>
-                    <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">บริการรับฝากจอดรถ</h1>
+                    <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">{PARKING_MODULE_DISPLAY_NAME}</h1>
                     <p className="mt-0.5 truncate text-xs font-semibold text-[#66638c]">{siteName}</p>
                   </div>
                 </div>
               </div>
-              <button
-                type="button"
-                suppressHydrationWarning
-                onClick={() => setGuideOpen(true)}
-                className="flex h-10 min-h-[40px] items-center gap-2 rounded-2xl border border-white/60 bg-white/55 px-3 text-sm font-semibold text-[#4d47b6] shadow-sm backdrop-blur-md transition hover:bg-white/75 sm:px-4"
-                aria-label="เปิดคู่มือการใช้งาน"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
-                  <circle cx="12" cy="17" r="1" />
-                </svg>
-                <span className="hidden sm:inline">คู่มือ</span>
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleHeader}
+                  className="inline-flex h-10 min-h-[40px] w-10 items-center justify-center rounded-2xl border border-white/60 bg-white/55 text-[#4d47b6] shadow-sm backdrop-blur-md transition hover:bg-white/75 active:scale-95"
+                  aria-expanded={!headerCollapsed}
+                  aria-label={headerCollapsed ? "แสดงส่วนหัวโมดูล" : "ซ่อนส่วนหัวโมดูล"}
+                  title={headerCollapsed ? "แสดงส่วนหัวโมดูล" : "ซ่อนส่วนหัวโมดูล"}
+                  suppressHydrationWarning
+                >
+                  <ParkingHeaderCollapseGlyph />
+                </button>
+                <button
+                  type="button"
+                  suppressHydrationWarning
+                  onClick={() => setGuideOpen(true)}
+                  className="flex h-10 min-h-[40px] items-center gap-2 rounded-2xl border border-white/60 bg-white/55 px-3 text-sm font-semibold text-[#4d47b6] shadow-sm backdrop-blur-md transition hover:bg-white/75 sm:px-4"
+                  aria-label="เปิดคู่มือการใช้งาน"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
+                    <circle cx="12" cy="17" r="1" />
+                  </svg>
+                  <span className="hidden sm:inline">คู่มือ</span>
+                </button>
+              </div>
             </div>
           </header>
 
           <nav aria-label="เมนูโมดูลรับฝากจอดรถ" className="mt-5 hidden border-t border-white/50 pt-5 md:block">
             <ul className="grid grid-cols-4 gap-1.5">
-              {NAV.map((item) => {
-                const active = navActive(pathname, item.href);
-                const Icon = item.icon;
+              {PARKING_NAV_ITEMS.map((item) => {
+                const active = parkingNavActive(pathname, item.href);
+                const Icon = NAV_ICONS[item.key];
                 return (
                   <li key={item.href} className="min-w-0">
                     <Link
@@ -184,9 +219,9 @@ export function ParkingValetShell({
 
       <AppMobileDockShell ariaLabel="เมนูล่างรับฝากจอดรถ">
         <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
-          {NAV.map((item) => {
-            const active = navActive(pathname, item.href);
-            const Icon = item.icon;
+          {PARKING_NAV_ITEMS.map((item) => {
+            const active = parkingNavActive(pathname, item.href);
+            const Icon = NAV_ICONS[item.key];
             return (
               <li key={item.href} className="min-w-0">
                 <Link

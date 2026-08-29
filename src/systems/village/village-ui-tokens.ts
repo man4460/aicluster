@@ -28,6 +28,12 @@ export {
 export const villageIconBadgeClass =
   "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5b61ff] to-[#6a63ff] text-white shadow-lg shadow-indigo-100";
 
+/** Header collapse ปุ่ม (ซ่อน/แสดงหัวโมดูล) — icon-only */
+export const villageHeaderCollapseBtnClass =
+  "inline-flex h-10 min-h-[44px] w-10 items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/80 text-[#4d47b6] shadow-sm backdrop-blur-md transition-all hover:bg-white active:scale-[0.98]";
+
+export const villageHeaderToolbarGroupClass = "flex shrink-0 items-center gap-2";
+
 export function villageFilterChipClass(active: boolean) {
   return active
     ? "min-h-[40px] shrink-0 rounded-xl border border-[#5b61ff]/40 bg-[#5b61ff] px-3 text-sm font-bold text-white shadow-sm"

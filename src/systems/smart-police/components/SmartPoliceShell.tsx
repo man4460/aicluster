@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { SmartPoliceMobileDock } from "@/systems/smart-police/components/SmartPoliceMobileDock";
 import {
@@ -12,8 +13,12 @@ import {
   IconSpTemplate,
 } from "@/systems/smart-police/components/SmartPoliceIcons";
 import {
+  SMART_POLICE_HEADER_COLLAPSE_EVENT,
+  SMART_POLICE_MODULE_DISPLAY_NAME,
+  readSmartPoliceHeaderCollapsed,
   smartPoliceMainKeyFromPathname,
   smartPoliceMainMenuItems,
+  writeSmartPoliceHeaderCollapsed,
   type SmartPoliceMainKey,
 } from "@/systems/smart-police/smart-police-nav";
 
@@ -28,22 +33,75 @@ function navIcon(key: SmartPoliceMainKey) {
   return IconSpSettings;
 }
 
+function HeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {collapsed ? <path d="M6 9l6 6 6-6" /> : <path d="M6 15l6-6 6 6" />}
+    </svg>
+  );
+}
+
 export function SmartPoliceShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
   const activeMain = smartPoliceMainKeyFromPathname(pathname);
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+
+  useEffect(() => {
+    const sync = () => setHeaderCollapsed(readSmartPoliceHeaderCollapsed());
+    sync();
+    window.addEventListener(SMART_POLICE_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(SMART_POLICE_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  const toggleHeaderCollapse = useCallback(() => {
+    writeSmartPoliceHeaderCollapsed(!headerCollapsed);
+  }, [headerCollapsed]);
 
   return (
     <div className="-mt-1 max-w-full space-y-4 pb-24 sm:mt-0 sm:space-y-6 sm:pb-0">
-      <header className="-mx-3 app-surface rounded-[2rem] px-4 py-4 sm:mx-0 sm:rounded-[2.5rem] sm:px-6 sm:py-5 print:hidden">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[#8b87b8]">
-          กลุ่ม 2 (Silver) · 1 โทเคน/วัน
-        </p>
-        <h1 className="bg-gradient-to-r from-[#1e1b4b] to-[#4d47b6] bg-clip-text text-xl font-black tracking-tight text-transparent sm:text-2xl">
-          Smart Police
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm leading-snug text-[#66638c]">
-          สำนวนคดี · คำให้การ · หมายเรียก · พิมพ์เอกสาร · รายงานสรุป — อิงรูปแบบ SmartPolice
-        </p>
+      <header
+        className={cn(
+          "-mx-3 app-surface rounded-[2rem] px-4 py-4 sm:mx-0 sm:rounded-[2.5rem] sm:px-6 sm:py-5 print:hidden",
+          headerCollapsed && "hidden",
+        )}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#8b87b8]">
+              กลุ่ม 2 (Silver) · 1 โทเคน/วัน
+            </p>
+            <h1 className="bg-gradient-to-r from-[#1e1b4b] to-[#4d47b6] bg-clip-text text-xl font-black tracking-tight text-transparent sm:text-2xl">
+              {SMART_POLICE_MODULE_DISPLAY_NAME}
+            </h1>
+            <p className="mt-1 max-w-2xl text-sm leading-snug text-[#66638c]">
+              สำนวนคดี · คำให้การ · หมายเรียก · พิมพ์เอกสาร · รายงานสรุป — อิงรูปแบบ SmartPolice
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleHeaderCollapse}
+            className="inline-flex h-10 min-h-[44px] w-10 shrink-0 items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/80 text-[#4d47b6] shadow-sm backdrop-blur-md transition-all hover:bg-white active:scale-95"
+            aria-pressed={headerCollapsed}
+            aria-label="ซ่อนส่วนหัวโมดูล"
+            title="ซ่อนส่วนหัวโมดูล"
+            suppressHydrationWarning
+          >
+            <HeaderCollapseGlyph collapsed={headerCollapsed} />
+          </button>
+        </div>
         <nav
           aria-label="เมนู Smart Police"
           className="mt-3 hidden border-t border-white/60 pt-3 sm:mt-4 sm:block sm:pt-4"

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   AppMobileDockShell,
   appMobileDockGridClass,
@@ -11,12 +11,16 @@ import {
 import { cn } from "@/lib/cn";
 import { LaundryUsageGuideModal } from "@/systems/laundry/components/LaundryUsageGuideModal";
 import {
+  LAUNDRY_HEADER_COLLAPSE_EVENT,
+  LAUNDRY_MODULE_DISPLAY_NAME,
   LAUNDRY_SETTINGS_PATH,
   LAUNDRY_STAFF_PATH,
   LAUNDRY_TAB_ITEMS,
   isLaundrySettingsActive,
   isLaundryTabActive,
   laundryTabHref,
+  readLaundryHeaderCollapsed,
+  writeLaundryHeaderCollapsed,
   type LaundryTabKey,
 } from "@/systems/laundry/laundry-module-nav";
 import {
@@ -64,13 +68,41 @@ function LaundryTabIcon({ tabKey }: { tabKey: LaundryTabKey }) {
   }
 }
 
+function LaundryHeaderCollapseGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
+      <path d="M4 8h16M4 12h16M4 16h16" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function LaundryModuleChromeInner({ children }: { children: ReactNode }) {
   const pathname = (usePathname() ?? "").replace(/\/+$/, "");
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
   const staffKiosk = pathname === LAUNDRY_STAFF_PATH;
   const onSettings = isLaundrySettingsActive(pathname);
+
+  useEffect(() => {
+    if (staffKiosk) {
+      setHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setHeaderCollapsed(readLaundryHeaderCollapsed());
+    sync();
+    window.addEventListener(LAUNDRY_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(LAUNDRY_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [staffKiosk]);
+
+  const toggleHeader = useCallback(() => {
+    writeLaundryHeaderCollapsed(!headerCollapsed);
+  }, [headerCollapsed]);
 
   if (staffKiosk) {
     return <div className="flex min-w-0 flex-col gap-4 sm:gap-6">{children}</div>;
@@ -78,7 +110,7 @@ function LaundryModuleChromeInner({ children }: { children: ReactNode }) {
 
   return (
     <div className={cn("flex min-w-0 flex-col gap-4 sm:gap-6", "max-lg:pb-24 lg:pb-0")}>
-      <div className={laundryModuleGlassShellClass}>
+      <div className={cn(laundryModuleGlassShellClass, headerCollapsed && "hidden")}>
         <header>
           <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
             <div className="flex min-w-0 items-center gap-3">
@@ -92,27 +124,42 @@ function LaundryModuleChromeInner({ children }: { children: ReactNode }) {
                 </svg>
               </div>
               <div className="min-w-0">
-                <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">รับฝากซักผ้า</h1>
+                <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">
+                  {LAUNDRY_MODULE_DISPLAY_NAME}
+                </h1>
                 <p className="mt-0.5 hidden text-xs font-semibold text-slate-500 sm:block">
                   รับผ้าที่บ้าน · ซัก/อบ/รีด · ส่งคืนลูกค้า
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setUsageGuideOpen(true)}
-              className="flex h-10 min-h-[44px] w-10 shrink-0 items-center justify-center rounded-2xl border border-white/60 bg-white/45 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-95 sm:w-auto sm:gap-2 sm:px-4"
-              aria-label="คู่มือการใช้งาน"
-              aria-haspopup="dialog"
-              aria-expanded={usageGuideOpen}
-            >
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-                <circle cx="12" cy="12" r="9" />
-                <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
-                <circle cx="12" cy="17" r="1" />
-              </svg>
-              <span className="hidden sm:inline">คู่มือการใช้งาน</span>
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleHeader}
+                className="flex h-10 min-h-[44px] w-10 shrink-0 items-center justify-center rounded-2xl border border-white/60 bg-white/45 text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-95"
+                aria-expanded={!headerCollapsed}
+                aria-label={headerCollapsed ? "แสดงส่วนหัวโมดูล" : "ซ่อนส่วนหัวโมดูล"}
+                title={headerCollapsed ? "แสดงส่วนหัวโมดูล" : "ซ่อนส่วนหัวโมดูล"}
+                suppressHydrationWarning
+              >
+                <LaundryHeaderCollapseGlyph />
+              </button>
+              <button
+                type="button"
+                onClick={() => setUsageGuideOpen(true)}
+                className="flex h-10 min-h-[44px] w-10 shrink-0 items-center justify-center rounded-2xl border border-white/60 bg-white/45 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-95 sm:w-auto sm:gap-2 sm:px-4"
+                aria-label="คู่มือการใช้งาน"
+                aria-haspopup="dialog"
+                aria-expanded={usageGuideOpen}
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
+                  <circle cx="12" cy="17" r="1" />
+                </svg>
+                <span className="hidden sm:inline">คู่มือการใช้งาน</span>
+              </button>
+            </div>
           </div>
         </header>
 

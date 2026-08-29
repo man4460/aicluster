@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { MediaRegistryMobileDock } from "@/systems/media-registry/components/MediaRegistryMobileDock";
 import {
@@ -11,6 +12,15 @@ import {
   mrNavItemBase,
   mrNavItemIdleClass,
 } from "@/systems/media-registry/components/media-registry-ui-tokens";
+import {
+  MEDIA_REGISTRY_HEADER_COLLAPSE_EVENT,
+  MEDIA_REGISTRY_MODULE_DISPLAY_NAME,
+  MEDIA_REGISTRY_NAV_ITEMS,
+  isMediaRegistryNavItemActive,
+  readMediaRegistryHeaderCollapsed,
+  writeMediaRegistryHeaderCollapsed,
+  type MediaRegistryNavKey,
+} from "@/systems/media-registry/media-registry-module-nav";
 
 function NavItem({
   href,
@@ -32,60 +42,6 @@ function NavItem({
       <Icon className={cn("h-4 w-4 shrink-0", active ? "text-[#5b61ff]" : "text-slate-400")} />
       {children}
     </Link>
-  );
-}
-
-const navLinks = [
-  { href: "/dashboard/media-registry", label: "ภาพรวม", icon: IconDash },
-  { href: "/dashboard/media-registry/items", label: "ทะเบียนสื่อ", icon: IconClip },
-  { href: "/dashboard/media-registry/borrow", label: "ยืม-คืน", icon: IconSwap },
-  { href: "/dashboard/media-registry/issues", label: "ชำรุด/ซ่อม", icon: IconWarn },
-  { href: "/dashboard/media-registry/master", label: "ข้อมูลหลัก", icon: IconDb },
-] as const;
-
-function navActive(pathname: string, href: string): boolean {
-  if (href === "/dashboard/media-registry") return pathname === href;
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-export function MediaRegistryShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname() ?? "";
-  return (
-    <div className="max-w-full space-y-4 pb-28 sm:space-y-6 sm:pb-6">
-      <header className={cn(mrModuleHeaderShellClass, "print:hidden")}>
-        <div className="flex flex-wrap items-start gap-4">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start gap-3">
-              <div className={mrIconBadgeClass}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5" aria-hidden>
-                  <path d="M9 4h6l1 3H8L9 4z" strokeLinejoin="round" />
-                  <path d="M8 7h8v13a1 1 0 01-1 1H9a1 1 0 01-1-1V7z" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">ทะเบียนคุมสื่อ</h1>
-                <p className="mt-1 hidden max-w-2xl text-sm leading-snug text-[#66638c] md:block">
-                  ทะเบียน ยืม-คืน มูลค่าและที่เก็บ · บันทึกชำรุด ซ่อม สูญหาย จำหน่าย
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <nav aria-label="เมนู ทะเบียนคุมสื่อ" className="mt-4 hidden border-t border-white/50 pt-4 sm:block">
-          <ul className="grid grid-cols-2 gap-2 lg:grid-cols-5">
-            {navLinks.map(({ href, label, icon }) => (
-              <li key={href} className="min-w-0">
-                <NavItem href={href} icon={icon} active={navActive(pathname, href)}>
-                  {label}
-                </NavItem>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </header>
-      {children}
-      <MediaRegistryMobileDock />
-    </div>
   );
 }
 
@@ -132,5 +88,112 @@ function IconDb({ className }: { className?: string }) {
       <path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
       <path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6" />
     </svg>
+  );
+}
+
+function navIconForKey(key: MediaRegistryNavKey): (props: { className?: string }) => React.ReactNode {
+  switch (key) {
+    case "overview":
+      return IconDash;
+    case "items":
+      return IconClip;
+    case "borrow":
+      return IconSwap;
+    case "issues":
+      return IconWarn;
+    case "master":
+      return IconDb;
+  }
+}
+
+function HeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {collapsed ? <path d="M6 9l6 6 6-6" /> : <path d="M6 15l6-6 6 6" />}
+    </svg>
+  );
+}
+
+export function MediaRegistryShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname() ?? "";
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+
+  useEffect(() => {
+    const sync = () => setHeaderCollapsed(readMediaRegistryHeaderCollapsed());
+    sync();
+    window.addEventListener(MEDIA_REGISTRY_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(MEDIA_REGISTRY_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  const toggleHeaderCollapse = useCallback(() => {
+    writeMediaRegistryHeaderCollapsed(!headerCollapsed);
+  }, [headerCollapsed]);
+
+  return (
+    <div className="max-w-full space-y-4 pb-28 sm:space-y-6 sm:pb-6">
+      <header className={cn(mrModuleHeaderShellClass, "print:hidden", headerCollapsed && "hidden")}>
+        <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start gap-3">
+              <div className={mrIconBadgeClass}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5" aria-hidden>
+                  <path d="M9 4h6l1 3H8L9 4z" strokeLinejoin="round" />
+                  <path d="M8 7h8v13a1 1 0 01-1 1H9a1 1 0 01-1-1V7z" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">
+                  {MEDIA_REGISTRY_MODULE_DISPLAY_NAME}
+                </h1>
+                <p className="mt-1 hidden max-w-2xl text-sm leading-snug text-[#66638c] md:block">
+                  ทะเบียน ยืม-คืน มูลค่าและที่เก็บ · บันทึกชำรุด ซ่อม สูญหาย จำหน่าย
+                </p>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={toggleHeaderCollapse}
+            className="inline-flex h-10 min-h-[44px] w-10 shrink-0 items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/80 text-[#4d47b6] shadow-sm backdrop-blur-md transition-all hover:bg-white active:scale-95"
+            aria-pressed={headerCollapsed}
+            aria-label="ซ่อนส่วนหัวโมดูล"
+            title="ซ่อนส่วนหัวโมดูล"
+            suppressHydrationWarning
+          >
+            <HeaderCollapseGlyph collapsed={headerCollapsed} />
+          </button>
+        </div>
+        <nav aria-label="เมนู ทะเบียนคุมสื่อ" className="mt-4 hidden border-t border-white/50 pt-4 sm:block">
+          <ul className="grid grid-cols-2 gap-2 lg:grid-cols-5">
+            {MEDIA_REGISTRY_NAV_ITEMS.map((item) => (
+              <li key={item.key} className="min-w-0">
+                <NavItem
+                  href={item.href}
+                  icon={navIconForKey(item.key)}
+                  active={isMediaRegistryNavItemActive(pathname, item.key)}
+                >
+                  {item.label}
+                </NavItem>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </header>
+      {children}
+      <MediaRegistryMobileDock />
+    </div>
   );
 }
