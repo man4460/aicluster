@@ -65,6 +65,9 @@ export function VillageInvoicePosPrintToolbar({
           {pdfBusy ? "กำลังสร้าง PDF…" : "ดาวน์โหลด PDF"}
         </button>
       ) : null}
+      <p className="basis-full text-[11px] leading-snug text-slate-500">
+        รูปแบบเดียวกับใบเสร็จ — 58 mm กึ่งกลาง · 80 mm / A4 ชิดซ้าย
+      </p>
     </div>
   );
 }
