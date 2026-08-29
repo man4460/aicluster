@@ -5,18 +5,30 @@ import { cn } from "@/lib/cn";
 import { VillageEmptyDashed, VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
 import { VillageHousingQuickTabs } from "@/systems/village/components/VillageHousingQuickTabs";
 import { VillageInvoiceSheetModal } from "@/systems/village/components/VillageInvoiceSheetModal";
+import {
+  VillagePaymentPrintModal,
+  type VillagePaymentPrintSource,
+} from "@/systems/village/components/VillagePaymentPrintModal";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
-import { AppImageLightbox, useAppImageLightbox } from "@/components/app-templates";
+import {
+  AppImageLightbox,
+  AppSlipPaperSizeToolbar,
+  useAppImageLightbox,
+  useAppSlipPaperSize,
+} from "@/components/app-templates";
 import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
 import type { VillageInvoiceSheetDto } from "@/lib/village/village-invoice-sheet";
 import {
   createVillageSessionApiRepository,
   villageFeeCycleLabelTh,
   type VillageFeeRow,
+  type VillageProfile,
 } from "@/systems/village/village-service";
 import { printVillageInvoicesBatch } from "@/systems/village/village-invoice-print";
 import type { VillageInvoicePrintPayload } from "@/systems/village/village-invoice-print-html";
 import { villageBtnPrimary, villageBtnSecondary, villageDivider, villageField, villageGlassCard } from "@/systems/village/village-ui";
+import { VILLAGE_INVOICE_FALLBACK_NAME } from "@/lib/village/village-invoice-sheet";
+import { bangkokDateKey } from "@/lib/time/bangkok";
 
 type FeeStatus = "PENDING" | "PARTIAL" | "PAID" | "WAIVED";
 
@@ -121,6 +133,7 @@ function IconPrinter({ className }: { className?: string }) {
 function sheetToPrintPayload(sheet: VillageInvoiceSheetDto): VillageInvoicePrintPayload {
   return {
     villageName: sheet.villageName,
+    taxId: sheet.taxId,
     address: sheet.address,
     contactPhone: sheet.contactPhone,
     houseNo: sheet.houseNo,
@@ -170,6 +183,7 @@ function VillageFeeRowCard({
   api,
   onEdit,
   onInvoice,
+  onPrintDocs,
   onReload,
 }: {
   r: VillageFeeRow;
@@ -177,6 +191,7 @@ function VillageFeeRowCard({
   api: ReturnType<typeof createVillageSessionApiRepository>;
   onEdit: () => void;
   onInvoice: () => void;
+  onPrintDocs: () => void;
   onReload: () => void;
 }) {
   const lb = useAppImageLightbox();
@@ -184,6 +199,7 @@ function VillageFeeRowCard({
   const slip = r.pending_slip;
   const slipSrc = slip ? resolveAssetUrl(slip.slip_image_url, baseUrl) : null;
   const canInvoice = feeRowInvoiceAvailable(r);
+  const canPrintPaid = r.amount_paid > 0;
 
   async function reviewSlip(action: "APPROVED" | "REJECTED") {
     if (!slip) return;
@@ -313,6 +329,17 @@ function VillageFeeRowCard({
               >
                 <IconInvoice className="h-4 w-4" />
                 <span className="hidden lg:inline">แจ้งหนี้</span>
+              </button>
+            ) : null}
+            {canPrintPaid ? (
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-200/90 bg-emerald-50/90 text-emerald-800 sm:h-10 sm:w-10"
+                onClick={onPrintDocs}
+                aria-label={`พิมพ์ใบเสร็จ / ใบกำกับ บ้าน ${r.house_no}`}
+                title="พิมพ์ใบเสร็จ · ใบกำกับภาษี"
+              >
+                <IconPrinter className="h-4 w-4" />
               </button>
             ) : null}
             <button
@@ -453,11 +480,25 @@ export function VillageFeesClient({ initialYm, baseUrl }: { initialYm: string; b
   const [rows, setRows] = useState<VillageFeeRow[]>([]);
   const [defaultFee, setDefaultFee] = useState(0);
   const [dueDay, setDueDay] = useState(5);
+  const [profile, setProfile] = useState<VillageProfile | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [editRow, setEditRow] = useState<VillageFeeRow | null>(null);
   const [invoiceRow, setInvoiceRow] = useState<VillageFeeRow | null>(null);
+  const [paidPrintPayment, setPaidPrintPayment] = useState<VillagePaymentPrintSource | null>(null);
   const [printAllBusy, setPrintAllBusy] = useState(false);
+  const { paper, setPaper } = useAppSlipPaperSize(profile?.default_paper_size);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const r = await api.getProfile();
+        setProfile(r.profile);
+      } catch {
+        /* ใช้ค่า default จาก hook */
+      }
+    })();
+  }, [api]);
 
   const load = useCallback(async () => {
     setErr(null);
@@ -504,7 +545,7 @@ export function VillageFeesClient({ initialYm, baseUrl }: { initialYm: string; b
         `พิมพ์ใบแจ้งหนี้ ${sheets.length} หลัง ของเดือน ${ym} พร้อมกัน?\n(แต่ละบ้านขึ้นหน้าใหม่)`,
       );
       if (!ok) return;
-      if (!printVillageInvoicesBatch(sheets.map(sheetToPrintPayload))) {
+      if (!printVillageInvoicesBatch(sheets.map(sheetToPrintPayload), paper)) {
         window.alert("เบราว์เซอร์บล็อกหน้าต่างพิมพ์ — อนุญาต popup แล้วลองใหม่");
       }
     } catch (e) {
@@ -630,24 +671,32 @@ export function VillageFeesClient({ initialYm, baseUrl }: { initialYm: string; b
                 <span className="tabular-nums">{rows.length}</span> รายการ
               </p>
             </div>
-            <button
-              type="button"
-              className={cn(
-                villageBtnSecondary,
-                "inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 px-3",
-                printAllBusy && "opacity-70",
-              )}
-              onClick={() => void printAllInvoices()}
-              disabled={printAllBusy || loading}
-              aria-busy={printAllBusy}
-              aria-label="พิมพ์ใบแจ้งหนี้ทั้งหมดพร้อมกัน"
-              title="พิมพ์ใบแจ้งหนี้ทุกบิลค้างของเดือนนี้"
-            >
-              <IconPrinter className={cn("h-4 w-4 shrink-0", printAllBusy && "animate-pulse")} aria-hidden />
-              <span className="text-[11px] font-bold sm:text-xs">
-                {printAllBusy ? "กำลังเตรียม…" : "พิมพ์ใบแจ้งหนี้ทั้งหมด"}
-              </span>
-            </button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <AppSlipPaperSizeToolbar
+                value={paper}
+                onChange={setPaper}
+                sizes={["SLIP_58", "SLIP_80", "A4"]}
+                aria-label="ขนาดกระดาษใบแจ้งหนี้ทั้งหมด"
+              />
+              <button
+                type="button"
+                className={cn(
+                  villageBtnSecondary,
+                  "inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 px-3",
+                  printAllBusy && "opacity-70",
+                )}
+                onClick={() => void printAllInvoices()}
+                disabled={printAllBusy || loading}
+                aria-busy={printAllBusy}
+                aria-label="พิมพ์ใบแจ้งหนี้ทั้งหมดพร้อมกัน"
+                title="พิมพ์ใบแจ้งหนี้ทุกบิลค้างของเดือนนี้"
+              >
+                <IconPrinter className={cn("h-4 w-4 shrink-0", printAllBusy && "animate-pulse")} aria-hidden />
+                <span className="text-[11px] font-bold sm:text-xs">
+                  {printAllBusy ? "กำลังเตรียม…" : "พิมพ์ใบแจ้งหนี้ทั้งหมด"}
+                </span>
+              </button>
+            </div>
           </div>
           {err ? <p className="mt-2 text-sm text-rose-600">{err}</p> : null}
           {loading ? (
@@ -666,6 +715,16 @@ export function VillageFeesClient({ initialYm, baseUrl }: { initialYm: string; b
                     api={api}
                     onEdit={() => setEditRow(r)}
                     onInvoice={() => setInvoiceRow(r)}
+                    onPrintDocs={() =>
+                      setPaidPrintPayment({
+                        houseNo: r.house_no,
+                        residentName: r.owner_name?.trim() || "—",
+                        periodMonth: r.year_month,
+                        amountBaht: r.amount_paid,
+                        paidAtIso: r.paid_at ?? `${bangkokDateKey()}T12:00:00+07:00`,
+                        note: r.note,
+                      })
+                    }
                     onReload={() => void load()}
                   />
                 </li>
@@ -695,6 +754,18 @@ export function VillageFeesClient({ initialYm, baseUrl }: { initialYm: string; b
           }}
         />
       ) : null}
+      <VillagePaymentPrintModal
+        open={Boolean(paidPrintPayment)}
+        onClose={() => setPaidPrintPayment(null)}
+        defaultPaperSize={profile?.default_paper_size}
+        brand={{
+          villageTitle: profile?.display_name?.trim() || VILLAGE_INVOICE_FALLBACK_NAME,
+          taxId: profile?.tax_id,
+          address: profile?.address,
+          contactPhone: profile?.contact_phone,
+        }}
+        payment={paidPrintPayment}
+      />
     </VillagePageStack>
   );
 }

@@ -2758,6 +2758,10 @@ model VillageProfile {
   bankName             String?  @map("bank_name") @db.VarChar(120)
   bankAccountNumber    String?  @map("bank_account_number") @db.VarChar(32)
   bankAccountName      String?  @map("bank_account_name") @db.VarChar(200)
+  /** เลขผู้เสียภาษีโครงการ — ใช้บนใบแจ้งหนี้ / ใบเสร็จ / ใบกำกับ */
+  taxId                String?  @map("tax_id") @db.VarChar(30)
+  /** ขนาดกระดาษเริ่มต้นเมื่อพิมพ์: SLIP_58 | SLIP_80 | A4 */
+  defaultPaperSize     String   @default("SLIP_58") @map("default_paper_size") @db.VarChar(16)
   /** ค่าส่วนกลางมาตรฐานต่อเดือน (บาท) */
   defaultMonthlyFee    Int      @default(0) @map("default_monthly_fee")
   /** วันครบกำหนดชำระของแต่ละเดือน (1–28) */

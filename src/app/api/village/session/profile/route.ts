@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api-auth";
 import { villageOwnerFromAuth } from "@/lib/village/api-owner";
 import { getVillageDataScope } from "@/lib/trial/module-scopes";
+import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
+
+const paperSizes = ["SLIP_58", "SLIP_80", "A4"] as const;
 
 const putSchema = z.object({
   display_name: z.string().max(200).optional().nullable(),
@@ -14,6 +17,8 @@ const putSchema = z.object({
   bank_name: z.string().max(120).optional().nullable(),
   bank_account_number: z.string().max(32).optional().nullable(),
   bank_account_name: z.string().max(200).optional().nullable(),
+  tax_id: z.string().max(30).optional().nullable(),
+  default_paper_size: z.enum(paperSizes).optional(),
   default_monthly_fee: z.number().int().min(0).max(9_999_999).optional(),
   due_day_of_month: z.number().int().min(1).max(28).optional(),
 });
@@ -28,6 +33,8 @@ function mapProfile(row: {
   bankName: string | null;
   bankAccountNumber: string | null;
   bankAccountName: string | null;
+  taxId: string | null;
+  defaultPaperSize: string;
   defaultMonthlyFee: number;
   dueDayOfMonth: number;
 }) {
@@ -41,6 +48,8 @@ function mapProfile(row: {
     bank_name: row.bankName,
     bank_account_number: row.bankAccountNumber,
     bank_account_name: row.bankAccountName,
+    tax_id: row.taxId,
+    default_paper_size: normalizeModuleSlipPaperSize(row.defaultPaperSize),
     default_monthly_fee: row.defaultMonthlyFee,
     due_day_of_month: row.dueDayOfMonth,
   };
@@ -66,6 +75,7 @@ export async function GET() {
         displayName: null,
         defaultMonthlyFee: 0,
         dueDayOfMonth: 5,
+        defaultPaperSize: "SLIP_58",
       },
     });
   }
@@ -94,6 +104,11 @@ export async function PUT(req: Request) {
       ? parsed.data.bank_account_number?.replace(/\s/g, "").slice(0, 32) || null
       : undefined;
 
+  const defaultPaperSize =
+    parsed.data.default_paper_size !== undefined
+      ? normalizeModuleSlipPaperSize(parsed.data.default_paper_size)
+      : undefined;
+
   const row = await prisma.villageProfile.upsert({
     where: {
       ownerUserId_trialSessionId: { ownerUserId: own.ownerId, trialSessionId: scope.trialSessionId },
@@ -109,6 +124,8 @@ export async function PUT(req: Request) {
       bankName: parsed.data.bank_name?.trim() || null,
       bankAccountNumber: bankAccountNumber ?? null,
       bankAccountName: parsed.data.bank_account_name?.trim() || null,
+      taxId: parsed.data.tax_id?.replace(/\s/g, "").slice(0, 30) || null,
+      defaultPaperSize: defaultPaperSize ?? "SLIP_58",
       defaultMonthlyFee: parsed.data.default_monthly_fee ?? 0,
       dueDayOfMonth: parsed.data.due_day_of_month ?? 5,
     },
@@ -127,6 +144,10 @@ export async function PUT(req: Request) {
       ...(parsed.data.bank_account_name !== undefined
         ? { bankAccountName: parsed.data.bank_account_name?.trim() || null }
         : {}),
+      ...(parsed.data.tax_id !== undefined
+        ? { taxId: parsed.data.tax_id?.replace(/\s/g, "").slice(0, 30) || null }
+        : {}),
+      ...(defaultPaperSize !== undefined ? { defaultPaperSize } : {}),
       ...(parsed.data.default_monthly_fee !== undefined ? { defaultMonthlyFee: parsed.data.default_monthly_fee } : {}),
       ...(parsed.data.due_day_of_month !== undefined ? { dueDayOfMonth: parsed.data.due_day_of_month } : {}),
     },

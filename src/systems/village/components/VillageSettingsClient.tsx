@@ -2,6 +2,11 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  AppSlipPaperSizeSettingsField,
+  type AppSlipPaperSize,
+} from "@/components/app-templates";
+import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
 import { VillagePageStack, VillagePanelCard } from "@/systems/village/components/VillagePageChrome";
 import { VillageSettingsQuickTabs } from "@/systems/village/components/VillageSettingsQuickTabs";
 import { createVillageSessionApiRepository, type VillageProfile } from "@/systems/village/village-service";
@@ -110,10 +115,19 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
   const [err, setErr] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [tab, setTab] = useState<SettingsTab>(() => parseSettingsTab(searchParams.get("tab")));
+  const [defaultPaperSize, setDefaultPaperSize] = useState<AppSlipPaperSize>(() =>
+    normalizeModuleSlipPaperSize(profile.default_paper_size),
+  );
+  const [taxId, setTaxId] = useState(profile.tax_id ?? "");
 
   useEffect(() => {
     setTab(parseSettingsTab(searchParams.get("tab")));
   }, [searchParams]);
+
+  useEffect(() => {
+    setDefaultPaperSize(normalizeModuleSlipPaperSize(p.default_paper_size));
+    setTaxId(p.tax_id ?? "");
+  }, [p.default_paper_size, p.tax_id]);
 
   const selectTab = useCallback(
     (next: SettingsTab) => {
@@ -200,6 +214,8 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
                 bank_name: (fd.get("bank_name") as string) || null,
                 bank_account_number: (fd.get("bank_account_number") as string) || null,
                 bank_account_name: (fd.get("bank_account_name") as string) || null,
+                tax_id: taxId.trim() || null,
+                default_paper_size: defaultPaperSize,
                 default_monthly_fee: Number.parseInt(String(fd.get("default_monthly_fee")), 10) || 0,
                 due_day_of_month: Number.parseInt(String(fd.get("due_day_of_month")), 10) || 5,
               });
@@ -371,6 +387,25 @@ function VillageSettingsForm({ profile }: { profile: VillageProfile }) {
                   placeholder="เช่น โอนแล้วแจ้งไลน์ / สาขา"
                 />
               </label>
+              <label className="block">
+                <FieldLabel>เลขผู้เสียภาษีโครงการ</FieldLabel>
+                <input
+                  id="tax_id"
+                  value={taxId}
+                  onChange={(e) => setTaxId(e.target.value)}
+                  className={villageField}
+                  inputMode="numeric"
+                  placeholder="ใช้บนใบแจ้งหนี้ · ใบเสร็จ · ใบกำกับ"
+                  autoComplete="off"
+                />
+              </label>
+              <AppSlipPaperSizeSettingsField
+                label="ขนาดกระดาษเริ่มต้นเมื่อพิมพ์"
+                hint="ใบแจ้งหนี้ · ใบเสร็จ · ใบกำกับ · 58 mm กึ่งกลาง · 80 mm / A4 ชิดซ้าย"
+                fieldClassName={villageField}
+                value={defaultPaperSize}
+                onChange={setDefaultPaperSize}
+              />
             </SettingsBlock>
           </div>
 

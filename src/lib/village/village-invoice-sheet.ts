@@ -20,6 +20,8 @@ export type VillageInvoiceSheetDto = {
   villageName: string;
   address: string | null;
   contactPhone: string | null;
+  taxId: string | null;
+  defaultPaperSize: string;
   houseNo: string;
   residentName: string;
   residentPhone: string;
@@ -105,6 +107,8 @@ export async function getVillageInvoiceSheetDto(
     villageName: profile?.displayName?.trim() || VILLAGE_INVOICE_FALLBACK_NAME,
     address: profile?.address?.trim() || null,
     contactPhone: profile?.contactPhone?.trim() || null,
+    taxId: profile?.taxId?.trim() || null,
+    defaultPaperSize: profile?.defaultPaperSize?.trim() || "SLIP_58",
     houseNo: row.house.houseNo,
     residentName,
     residentPhone,
@@ -163,6 +167,8 @@ export async function listVillageInvoiceSheetsForYearMonth(
   const villageName = profile?.displayName?.trim() || VILLAGE_INVOICE_FALLBACK_NAME;
   const address = profile?.address?.trim() || null;
   const contactPhone = profile?.contactPhone?.trim() || null;
+  const taxId = profile?.taxId?.trim() || null;
+  const defaultPaperSize = profile?.defaultPaperSize?.trim() || "SLIP_58";
   const paymentChannelsNote = profile?.paymentChannelsNote?.trim() || null;
   const bankName = profile?.bankName?.trim() || null;
   const bankAccountNumber = profile?.bankAccountNumber?.trim() || null;
@@ -193,6 +199,8 @@ export async function listVillageInvoiceSheetsForYearMonth(
       villageName,
       address,
       contactPhone,
+      taxId,
+      defaultPaperSize,
       houseNo: row.house.houseNo,
       residentName: row.house.ownerName?.trim() || primaryResident?.name?.trim() || "—",
       residentPhone: row.house.phone?.trim() || primaryResident?.phone?.trim() || "—",

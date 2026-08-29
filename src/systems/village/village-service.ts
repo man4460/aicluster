@@ -10,6 +10,9 @@ export type VillageProfile = {
   bank_name: string | null;
   bank_account_number: string | null;
   bank_account_name: string | null;
+  tax_id: string | null;
+  /** SLIP_58 | SLIP_80 | A4 */
+  default_paper_size: string;
   default_monthly_fee: number;
   due_day_of_month: number;
 };

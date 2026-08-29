@@ -5,9 +5,9 @@ import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
 import type { VillageInvoiceSheetDto } from "@/lib/village/village-invoice-sheet";
 import { VillageInvoiceSheetContent } from "@/systems/village/components/VillageInvoiceSheetContent";
-import { downloadVillageInvoicePdf, printVillageInvoice } from "@/systems/village/village-invoice-print";
+import { VillageInvoicePosPrintToolbar } from "@/systems/village/components/VillageInvoicePosPrintToolbar";
 import type { VillageInvoicePrintPayload } from "@/systems/village/village-invoice-print-html";
-import { villageBtnPrimary, villageBtnSecondary } from "@/systems/village/village-ui";
+import { villageBtnSecondary } from "@/systems/village/village-ui";
 
 function subscribeToClient() {
   return () => {};
@@ -16,6 +16,7 @@ function subscribeToClient() {
 function toPrintPayload(sheet: VillageInvoiceSheetDto): VillageInvoicePrintPayload {
   return {
     villageName: sheet.villageName,
+    taxId: sheet.taxId,
     address: sheet.address,
     contactPhone: sheet.contactPhone,
     houseNo: sheet.houseNo,
@@ -46,7 +47,6 @@ export function VillageInvoiceSheetModal({
   const [sheet, setSheet] = useState<VillageInvoiceSheetDto | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pdfBusy, setPdfBusy] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const handleClose = useCallback(() => onClose(), [onClose]);
@@ -102,18 +102,6 @@ export function VillageInvoiceSheetModal({
     }
   }, [sheet]);
 
-  const downloadPdf = useCallback(async () => {
-    if (!sheet) return;
-    setPdfBusy(true);
-    try {
-      await downloadVillageInvoicePdf(toPrintPayload(sheet));
-    } catch (e) {
-      window.alert(e instanceof Error ? e.message : "สร้าง PDF ไม่สำเร็จ");
-    } finally {
-      setPdfBusy(false);
-    }
-  }, [sheet]);
-
   if (!isClient) return null;
 
   return createPortal(
@@ -156,25 +144,10 @@ export function VillageInvoiceSheetModal({
           ) : sheet ? (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/90 bg-white/95 px-3 py-2.5 shadow-sm">
-                <button
-                  type="button"
-                  className={cn(villageBtnPrimary, "min-w-[6.5rem] flex-1 sm:flex-none")}
-                  onClick={() => {
-                    if (!printVillageInvoice(toPrintPayload(sheet))) {
-                      window.alert("เบราว์เซอร์บล็อกหน้าต่างพิมพ์ — อนุญาต popup แล้วลองใหม่");
-                    }
-                  }}
-                >
-                  พิมพ์
-                </button>
-                <button
-                  type="button"
-                  disabled={pdfBusy}
-                  className={cn(villageBtnSecondary, "min-w-[6.5rem] flex-1 sm:flex-none")}
-                  onClick={() => void downloadPdf()}
-                >
-                  {pdfBusy ? "กำลังสร้าง PDF…" : "ดาวน์โหลด PDF"}
-                </button>
+                <VillageInvoicePosPrintToolbar
+                  sheet={toPrintPayload(sheet)}
+                  defaultPaperSize={sheet.defaultPaperSize}
+                />
                 <button
                   type="button"
                   className={cn(villageBtnSecondary, "min-w-[6.5rem] flex-1 sm:flex-none")}
@@ -194,6 +167,7 @@ export function VillageInvoiceSheetModal({
               <p className="break-all px-1 text-[11px] leading-snug text-slate-500">{sheet.uploadPageAbs}</p>
               <VillageInvoiceSheetContent
                 villageName={sheet.villageName}
+                taxId={sheet.taxId}
                 address={sheet.address}
                 contactPhone={sheet.contactPhone}
                 houseNo={sheet.houseNo}

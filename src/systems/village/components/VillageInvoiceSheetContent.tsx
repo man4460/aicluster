@@ -6,6 +6,7 @@ import { formatVillageAmountStable } from "@/lib/village/format-display-stable";
 export type VillageInvoiceSheetContentProps = {
   className?: string;
   villageName: string;
+  taxId?: string | null;
   address?: string | null;
   contactPhone?: string | null;
   houseNo: string;
@@ -29,6 +30,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 export function VillageInvoiceSheetContent({
   className,
   villageName,
+  taxId,
   address,
   contactPhone,
   houseNo,
@@ -59,7 +61,8 @@ export function VillageInvoiceSheetContent({
           <p className="mt-1 text-xs font-semibold text-[#3730a3] sm:text-sm">ใบแจ้งหนี้ค่าส่วนกลาง</p>
         </div>
         <div className="min-w-0 text-left text-xs leading-relaxed text-slate-600 sm:max-w-[55%] sm:text-right sm:text-sm">
-          {address ? <p className="whitespace-pre-line">{address}</p> : null}
+          {taxId ? <p className="font-medium text-slate-800">เลขผู้เสียภาษี {taxId}</p> : null}
+          {address ? <p className={cn("whitespace-pre-line", Boolean(taxId) && "mt-1")}>{address}</p> : null}
           {contactPhone ? <p className="mt-1.5 font-medium text-slate-800">ติดต่อ {contactPhone}</p> : null}
         </div>
       </header>
