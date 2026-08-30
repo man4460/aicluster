@@ -70,7 +70,7 @@ export function ParkingDeleteSpotButton({ spotId }: { spotId: number }) {
         return;
       }
       setOpen(false);
-      router.push("/dashboard/parking/spots");
+      router.push("/dashboard/parking/lots");
       router.refresh();
     } catch {
       setErr("เชื่อมต่อไม่สำเร็จ");

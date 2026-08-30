@@ -84,3 +84,27 @@ export function writeDrinkPosHeaderCollapsed(collapsed: boolean): void {
     /* ignore */
   }
 }
+
+/** จำติ๊ก «พิมพ์สลิปหลังออเดอร์» บนหน้าออเดอร์ */
+export const DRINK_POS_ORDER_PRINT_SLIP_KEY = "mawell-drink-pos-order-print-slip";
+
+export function readDrinkPosOrderPrintSlipPref(defaultWhenMissing = true): boolean {
+  try {
+    if (typeof window === "undefined") return defaultWhenMissing;
+    const raw = window.localStorage.getItem(DRINK_POS_ORDER_PRINT_SLIP_KEY);
+    if (raw === "1") return true;
+    if (raw === "0") return false;
+    return defaultWhenMissing;
+  } catch {
+    return defaultWhenMissing;
+  }
+}
+
+export function writeDrinkPosOrderPrintSlipPref(enabled: boolean): void {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(DRINK_POS_ORDER_PRINT_SLIP_KEY, enabled ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+}

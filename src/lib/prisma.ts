@@ -36,7 +36,7 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 73: UserModulePlan — แพ็ก 199 ต่อโมดูล */
 /** 74: AttendanceBranch + homeBranchId + location.branchId — client เก่าไม่มี attendanceBranch delegate */
 /** 75: VillageIncomeCategory + VillageIncomeEntry — หน้าการเงินหมู่บ้าน */
-const PRISMA_SINGLETON_VERSION = 75;
+const PRISMA_SINGLETON_VERSION = 76;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -74,6 +74,9 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     parkingSite?: { findFirst?: unknown };
     parkingSpot?: { findMany?: unknown };
     parkingSession?: { findMany?: unknown };
+    parkingPackage?: { findMany?: unknown };
+    parkingMembership?: { findMany?: unknown };
+    parkingBooking?: { findMany?: unknown };
     buildingPosOrder?: { findMany?: unknown };
     buildingPosStaffLink?: { findUnique?: unknown };
     buildingPosCategory?: { findMany?: unknown };
@@ -193,6 +196,9 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.parkingSite?.findFirst === "function" &&
     typeof c.parkingSpot?.findMany === "function" &&
     typeof c.parkingSession?.findMany === "function" &&
+    typeof c.parkingPackage?.findMany === "function" &&
+    typeof c.parkingMembership?.findMany === "function" &&
+    typeof c.parkingBooking?.findMany === "function" &&
     typeof c.buildingPosOrder?.findMany === "function" &&
     typeof c.buildingPosStaffLink?.findUnique === "function" &&
     typeof c.buildingPosCategory?.findMany === "function" &&

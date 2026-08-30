@@ -12,12 +12,31 @@ export async function getParkingOwnerContext() {
   const scope = await getParkingDataScope(session.sub);
   const site = await ensureDefaultParkingSite(session.sub, scope.trialSessionId);
   await ensureSampleSpotsIfEmpty(site.id);
-  return { userId: session.sub, scope, site };
+  return {
+    userId: session.sub,
+    ownerUserId: session.sub,
+    trialSessionId: scope.trialSessionId,
+    scope,
+    site,
+  };
+}
+
+export async function assertSiteOwned(siteId: number, userId: string, trialSessionId: string) {
+  return prisma.parkingSite.findFirst({
+    where: { id: siteId, ownerUserId: userId, trialSessionId },
+  });
 }
 
 export async function assertSpotOwned(siteId: number, userId: string, trialSessionId: string) {
-  const site = await prisma.parkingSite.findFirst({
-    where: { id: siteId, ownerUserId: userId, trialSessionId },
+  return assertSiteOwned(siteId, userId, trialSessionId);
+}
+
+export async function findOwnedSpot(spotId: number, userId: string, trialSessionId: string) {
+  return prisma.parkingSpot.findFirst({
+    where: {
+      id: spotId,
+      site: { ownerUserId: userId, trialSessionId },
+    },
+    include: { site: true },
   });
-  return site;
 }

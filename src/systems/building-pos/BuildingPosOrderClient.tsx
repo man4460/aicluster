@@ -35,7 +35,11 @@ import {
   buildingPosPulseWashClass,
 } from "@/systems/building-pos/components/building-pos-ui-tokens";
 import { BuildingPosOrderLoyaltyStrip } from "@/systems/building-pos/components/BuildingPosOrderLoyaltyStrip";
-import { normalizeBuildingPosMemberPhone } from "@/systems/building-pos/lib/loyalty-rule";
+import { normalizeBuildingPosMemberPhone, resolveBuildingPosSubmitMemberPhone } from "@/systems/building-pos/lib/loyalty-rule";
+import {
+  readBuildingPosOrderPrintSlipPref,
+  writeBuildingPosOrderPrintSlipPref,
+} from "@/systems/building-pos/building-pos-nav";
 
 const qtyBtnClass =
   "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#5b61ff]/25 bg-white text-[#4d47b6] shadow-sm transition hover:bg-violet-50 active:scale-95 disabled:opacity-35";
@@ -105,7 +109,9 @@ export function BuildingPosOrderClient({
   const [reviewOpen, setReviewOpen] = useState(false);
   /** พิมพ์สลิปครัวหลังส่งออเดอร์สำเร็จ — ใช้ได้เมื่อแพ็กเหมาเปิดสิทธิ์ */
   const [slipPrintEnabled, setSlipPrintEnabled] = useState(slipPrintEnabledProp === true);
-  const [printSlipAfterSubmit, setPrintSlipAfterSubmit] = useState(slipPrintEnabledProp === true);
+  const [printSlipAfterSubmit, setPrintSlipAfterSubmit] = useState(() =>
+    readBuildingPosOrderPrintSlipPref(slipPrintEnabledProp === true),
+  );
   const { paper: slipPaper } = useAppSlipPaperSize();
   const menuScrollRef = useRef<HTMLDivElement>(null);
   const productGridRef = useRef<HTMLUListElement>(null);
@@ -113,7 +119,6 @@ export function BuildingPosOrderClient({
   useEffect(() => {
     if (typeof slipPrintEnabledProp === "boolean") {
       setSlipPrintEnabled(slipPrintEnabledProp);
-      setPrintSlipAfterSubmit(slipPrintEnabledProp);
     }
   }, [slipPrintEnabledProp]);
 
@@ -229,11 +234,11 @@ export function BuildingPosOrderClient({
     setBusy(true);
     setSubmitErr(null);
     try {
-      const phoneDigits = normalizeBuildingPosMemberPhone(memberPhone);
+      const phoneForOrder = resolveBuildingPosSubmitMemberPhone(memberPhone);
       const created = await repo.createOrder({
         customer_name: customerName.trim(),
         table_no: tableNo.trim(),
-        member_phone: phoneDigits.length >= 9 ? phoneDigits : "",
+        member_phone: phoneForOrder,
         status: "NEW",
         items: cartList,
         note: buildingPosStaffOrderNoteLine(staffChannel),
@@ -465,6 +470,7 @@ export function BuildingPosOrderClient({
                 return;
               }
               setPrintSlipAfterSubmit(e.target.checked);
+              writeBuildingPosOrderPrintSlipPref(e.target.checked);
             }}
             disabled={busy}
           />
@@ -728,6 +734,7 @@ export function BuildingPosOrderClient({
                   return;
                 }
                 setPrintSlipAfterSubmit(e.target.checked);
+              writeBuildingPosOrderPrintSlipPref(e.target.checked);
               }}
               disabled={busy}
             />

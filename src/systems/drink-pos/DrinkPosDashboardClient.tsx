@@ -42,6 +42,7 @@ import {
   drinkPosPaymentSubmitBlocked,
 } from "@/systems/drink-pos/components/DrinkPosPaymentPanel";
 import type { DrinkPosLoyaltyMemberDto } from "@/systems/drink-pos/lib/loyalty-rule";
+import { resolveDrinkPosSubmitMemberPhone } from "@/systems/drink-pos/lib/loyalty-rule";
 import type { DrinkPosPaymentMethod } from "@/systems/drink-pos/lib/payment-method";
 import {
   defaultDrinkPosSizePrices,
@@ -172,6 +173,7 @@ export function DrinkPosDashboardClient() {
   const [draftBusy, setDraftBusy] = useState(false);
   const [billReviewOpen, setBillReviewOpen] = useState(false);
   const [loyaltyMember, setLoyaltyMember] = useState<DrinkPosLoyaltyMemberDto | null>(null);
+  const [loyaltyPhoneInput, setLoyaltyPhoneInput] = useState("");
   const [sizePick, setSizePick] = useState<{ product: DrinkPosProductRow; quantity: number } | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<DrinkPosPaymentMethod>("CASH");
   const [paymentSlipUrl, setPaymentSlipUrl] = useState<string | null>(null);
@@ -612,6 +614,7 @@ export function DrinkPosDashboardClient() {
   async function postSaleLines(
     lines: { productId: string; quantity: number; size?: DrinkPosSizeCode | null }[],
     payment?: { paymentMethod: DrinkPosPaymentMethod; paymentSlipUrl: string | null },
+    memberPhone?: string | null,
   ) {
     const res = await fetch("/api/drink-pos/sales", {
       method: "POST",
@@ -619,7 +622,7 @@ export function DrinkPosDashboardClient() {
       credentials: "include",
       body: JSON.stringify({
         note: null,
-        memberPhone: loyaltyMember?.phone ?? null,
+        memberPhone: memberPhone ?? null,
         paymentMethod: payment?.paymentMethod ?? "CASH",
         paymentSlipUrl: payment?.paymentSlipUrl ?? null,
         lines,
@@ -648,6 +651,7 @@ export function DrinkPosDashboardClient() {
     }
     setDraftBusy(true);
     try {
+      const memberPhoneForSubmit = resolveDrinkPosSubmitMemberPhone(loyaltyMember, loyaltyPhoneInput);
       await postSaleLines(
         draftLines.map((l) => ({
           productId: l.productId,
@@ -658,27 +662,20 @@ export function DrinkPosDashboardClient() {
           paymentMethod: payTotal <= 0 ? "CASH" : paymentMethod,
           paymentSlipUrl: payTotal <= 0 || paymentMethod === "CASH" ? null : paymentSlipUrl,
         },
+        memberPhoneForSubmit,
       );
       setDraftLines([]);
       setBillReviewOpen(false);
       resetPayment();
-      if (loyaltyMember?.phone) {
-        const lookupRes = await fetch(
-          `/api/drink-pos/session/loyalty/members?phone=${encodeURIComponent(loyaltyMember.phone)}`,
-          { credentials: "include", cache: "no-store" },
-        );
-        const lj = (await lookupRes.json().catch(() => ({}))) as {
-          member?: DrinkPosLoyaltyMemberDto | null;
-        };
-        if (lookupRes.ok && lj.member) setLoyaltyMember(lj.member);
-      }
+      setLoyaltyMember(null);
+      setLoyaltyPhoneInput("");
       await reload();
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
     } finally {
       setDraftBusy(false);
     }
-  }, [draftLines, reload, loyaltyMember, paymentMethod, paymentSlipUrl, resetPayment]);
+  }, [draftLines, reload, loyaltyMember, loyaltyPhoneInput, paymentMethod, paymentSlipUrl, resetPayment]);
 
   const draftTotalBaht = useMemo(() => {
     return draftLines.reduce((s, l) => s + l.unitPriceBaht * l.quantity, 0);
@@ -784,7 +781,12 @@ export function DrinkPosDashboardClient() {
         </ul>
       </section>
 
-      <DrinkPosLoyaltyBar member={loyaltyMember} onMemberChange={setLoyaltyMember} />
+      <DrinkPosLoyaltyBar
+        member={loyaltyMember}
+        onMemberChange={setLoyaltyMember}
+        onPhoneChange={setLoyaltyPhoneInput}
+        phoneValue={loyaltyPhoneInput}
+      />
 
       <AppDashboardSection tone="violet">
         <AppSectionHeader

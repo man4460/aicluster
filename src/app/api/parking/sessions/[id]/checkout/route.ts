@@ -28,7 +28,7 @@ export async function POST(req: Request, { params }: Params) {
     where: {
       id,
       status: "ACTIVE",
-      spot: { siteId: ctx.site.id },
+      spot: { site: { ownerUserId: ctx.ownerUserId, trialSessionId: ctx.trialSessionId } },
     },
   });
   if (!row) {
@@ -42,6 +42,7 @@ export async function POST(req: Request, { params }: Params) {
     checkOutAt,
     row.hourlyRateSnap != null ? Number(row.hourlyRateSnap) : null,
     row.dailyRateSnap != null ? Number(row.dailyRateSnap) : null,
+    row.monthlyRateSnap != null ? Number(row.monthlyRateSnap) : null,
   );
 
   const paid =

@@ -34,7 +34,10 @@ import {
   printDrinkPosSaleReceipt,
   type DrinkPosShopReceiptMeta,
 } from "@/systems/drink-pos/lib/drink-pos-order-ticket-print";
-import type { DrinkPosLoyaltyMemberDto } from "@/systems/drink-pos/lib/loyalty-rule";
+import {
+  resolveDrinkPosSubmitMemberPhone,
+  type DrinkPosLoyaltyMemberDto,
+} from "@/systems/drink-pos/lib/loyalty-rule";
 import type { DrinkPosPaymentMethod } from "@/systems/drink-pos/lib/payment-method";
 import {
   drinkPosActiveSizePrices,
@@ -51,6 +54,10 @@ import {
   drinkPosProductGridClass,
   drinkPosPulseWashClass,
 } from "@/systems/drink-pos/lib/ui-tokens";
+import {
+  readDrinkPosOrderPrintSlipPref,
+  writeDrinkPosOrderPrintSlipPref,
+} from "@/systems/drink-pos/lib/drink-pos-module-nav";
 
 const DRINK_POS_CARD_DOUBLE_TAP_MS = 280;
 
@@ -138,12 +145,15 @@ export function DrinkPosOrderClient({
   const [draftBusy, setDraftBusy] = useState(false);
   const [billReviewOpen, setBillReviewOpen] = useState(false);
   const [loyaltyMember, setLoyaltyMember] = useState<DrinkPosLoyaltyMemberDto | null>(null);
+  const [loyaltyPhoneInput, setLoyaltyPhoneInput] = useState("");
   const [sizePick, setSizePick] = useState<{ product: DrinkPosProductRow; quantity: number } | null>(null);
   const [submitErr, setSubmitErr] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<DrinkPosPaymentMethod>("CASH");
   const [paymentSlipUrl, setPaymentSlipUrl] = useState<string | null>(null);
   const [slipPrintEnabled, setSlipPrintEnabled] = useState(slipPrintEnabledProp === true);
-  const [printSlipAfterSubmit, setPrintSlipAfterSubmit] = useState(slipPrintEnabledProp === true);
+  const [printSlipAfterSubmit, setPrintSlipAfterSubmit] = useState(() =>
+    readDrinkPosOrderPrintSlipPref(slipPrintEnabledProp === true),
+  );
   const [shopReceipt, setShopReceipt] = useState<DrinkPosShopReceiptMeta | null>(shopReceiptProp);
   const { paper: slipPaper } = useAppSlipPaperSize(
     defaultPaperSizeProp ?? shopReceiptProp?.slipPaperSize ?? shopReceipt?.slipPaperSize,
@@ -155,7 +165,6 @@ export function DrinkPosOrderClient({
   useEffect(() => {
     if (typeof slipPrintEnabledProp === "boolean") {
       setSlipPrintEnabled(slipPrintEnabledProp);
-      setPrintSlipAfterSubmit(slipPrintEnabledProp);
     }
   }, [slipPrintEnabledProp]);
 
@@ -384,6 +393,7 @@ export function DrinkPosOrderClient({
     }
     setDraftBusy(true);
     setSubmitErr(null);
+    const memberPhoneForSubmit = resolveDrinkPosSubmitMemberPhone(loyaltyMember, loyaltyPhoneInput);
     try {
       const salesUrl = staffAuth ? `/api/drink-pos/staff/orders?${staffQs}` : "/api/drink-pos/sales";
       const res = await fetch(salesUrl, {
@@ -395,7 +405,7 @@ export function DrinkPosOrderClient({
         credentials: staffAuth ? "omit" : "include",
         body: JSON.stringify({
           note: null,
-          memberPhone: loyaltyMember?.phone ?? null,
+          memberPhone: memberPhoneForSubmit,
           paymentMethod: payTotal <= 0 ? "CASH" : paymentMethod,
           paymentSlipUrl: payTotal <= 0 || paymentMethod === "CASH" ? null : paymentSlipUrl,
           lines: draftLines.map((l) => ({
@@ -460,20 +470,8 @@ export function DrinkPosOrderClient({
       setDraftLines([]);
       setBillReviewOpen(false);
       resetPayment();
-      if (loyaltyMember?.phone) {
-        const lookupUrl = staffAuth
-          ? `/api/drink-pos/staff/loyalty/members?${staffQs}&phone=${encodeURIComponent(loyaltyMember.phone)}`
-          : `/api/drink-pos/session/loyalty/members?phone=${encodeURIComponent(loyaltyMember.phone)}`;
-        const lookupRes = await fetch(lookupUrl, {
-          credentials: staffAuth ? "omit" : "include",
-          cache: "no-store",
-          headers: staffAuth ? staffDailyUnlockHeaders("drink-pos", staffAuth.ownerId) : undefined,
-        });
-        const lj = (await lookupRes.json().catch(() => ({}))) as {
-          member?: DrinkPosLoyaltyMemberDto | null;
-        };
-        if (lookupRes.ok && lj.member) setLoyaltyMember(lj.member);
-      }
+      setLoyaltyMember(null);
+      setLoyaltyPhoneInput("");
     } catch (e) {
       setSubmitErr(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
     } finally {
@@ -482,6 +480,7 @@ export function DrinkPosOrderClient({
   }, [
     draftLines,
     loyaltyMember,
+    loyaltyPhoneInput,
     paymentMethod,
     paymentSlipUrl,
     printSlipAfterSubmit,
@@ -506,6 +505,7 @@ export function DrinkPosOrderClient({
             return;
           }
           setPrintSlipAfterSubmit(e.target.checked);
+          writeDrinkPosOrderPrintSlipPref(e.target.checked);
         }}
         disabled={draftBusy}
       />
@@ -598,6 +598,8 @@ export function DrinkPosOrderClient({
           <DrinkPosLoyaltyBar
             member={loyaltyMember}
             onMemberChange={setLoyaltyMember}
+            onPhoneChange={setLoyaltyPhoneInput}
+            phoneValue={loyaltyPhoneInput}
             compact
             hideMembersLink={Boolean(staffAuth)}
             staffAuth={staffAuth}
@@ -624,6 +626,8 @@ export function DrinkPosOrderClient({
             <DrinkPosLoyaltyBar
               member={loyaltyMember}
               onMemberChange={setLoyaltyMember}
+              onPhoneChange={setLoyaltyPhoneInput}
+              phoneValue={loyaltyPhoneInput}
               compact
               hideMembersLink={Boolean(staffAuth)}
               staffAuth={staffAuth}
@@ -642,6 +646,8 @@ export function DrinkPosOrderClient({
           <DrinkPosLoyaltyBar
             member={loyaltyMember}
             onMemberChange={setLoyaltyMember}
+            onPhoneChange={setLoyaltyPhoneInput}
+            phoneValue={loyaltyPhoneInput}
             compact
             hideMembersLink={Boolean(staffAuth)}
             staffAuth={staffAuth}

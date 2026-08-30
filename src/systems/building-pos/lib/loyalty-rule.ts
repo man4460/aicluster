@@ -70,3 +70,9 @@ export function isBuildingPosMemberPhoneReady(raw: string): boolean {
   const n = normalizeBuildingPosMemberPhone(raw).length;
   return n >= 9 && n <= 10;
 }
+
+/** เบอร์ที่ส่งตอนบันทึกออเดอร์ — เบอร์เต็มที่พิมพ์ (ผูกสมาชิกอัตโนมัติเมื่อชำระแล้ว) */
+export function resolveBuildingPosSubmitMemberPhone(typedPhone: string): string {
+  const digits = normalizeBuildingPosMemberPhone(typedPhone);
+  return isBuildingPosMemberPhoneReady(digits) ? digits : "";
+}

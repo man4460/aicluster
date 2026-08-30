@@ -69,6 +69,16 @@ export function isDrinkPosMemberPhoneReady(raw: string): boolean {
   return n >= 9 && n <= 10;
 }
 
+/** เบอร์ที่ส่งตอนบันทึกบิล — สมาชิกที่ผูกแล้ว หรือเบอร์เต็มที่พิมพ์ (ผูกอัตโนมัติตอนชำระ) */
+export function resolveDrinkPosSubmitMemberPhone(
+  member: { phone: string } | null | undefined,
+  typedPhone: string,
+): string | null {
+  if (member?.phone) return normalizeDrinkPosMemberPhone(member.phone);
+  const digits = normalizeDrinkPosMemberPhone(typedPhone);
+  return isDrinkPosMemberPhoneReady(digits) ? digits : null;
+}
+
 /** @deprecated ใช้ formatDrinkPosLoyaltyEarnRule */
 export function formatDrinkPosLoyaltyRule(stampsPerReward: number, rewardTitle: string): string {
   const n = Math.max(1, Math.min(Math.floor(stampsPerReward) || 10, 30));

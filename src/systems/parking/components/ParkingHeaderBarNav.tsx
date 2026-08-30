@@ -13,8 +13,15 @@ import {
 function parkingHeaderIcon(key: ParkingNavKey, className?: string) {
   let glyph: React.ReactNode;
   if (key === "dashboard") {
-    glyph = <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" />;
-  } else if (key === "spots") {
+    glyph = <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" strokeLinejoin="round" />;
+  } else if (key === "offers") {
+    glyph = (
+      <>
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" strokeLinejoin="round" />
+        <circle cx="7" cy="7" r="1.5" />
+      </>
+    );
+  } else if (key === "lots") {
     glyph = (
       <>
         <rect x="3" y="4" width="18" height="16" rx="2" />

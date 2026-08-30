@@ -24,15 +24,24 @@ import {
   parkingNavItemIdleClass,
 } from "@/systems/parking/parking-ui-tokens";
 
-function IconHome({ className }: { className?: string }) {
+function IconDashboard({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className={className} aria-hidden>
-      <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" />
+      <path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function IconManage({ className }: { className?: string }) {
+function IconOffers({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className={className} aria-hidden>
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" strokeLinejoin="round" />
+      <circle cx="7" cy="7" r="1.5" />
+    </svg>
+  );
+}
+
+function IconLots({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className={className} aria-hidden>
       <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -61,9 +70,10 @@ function IconGear({ className }: { className?: string }) {
   );
 }
 
-const NAV_ICONS: Record<ParkingNavKey, typeof IconHome> = {
-  dashboard: IconHome,
-  spots: IconManage,
+const NAV_ICONS: Record<ParkingNavKey, typeof IconDashboard> = {
+  dashboard: IconDashboard,
+  offers: IconOffers,
+  lots: IconLots,
   finance: IconFinance,
   settings: IconGear,
 };
@@ -78,20 +88,26 @@ function ParkingHeaderCollapseGlyph() {
 
 const parkingGuideSections = [
   {
-    title: "ภาพรวม",
+    title: "แดชบอร์ด",
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>ดูจำนวนรถกำลังจอด จำนวนช่อง และเช็คเอาต์วันนี้</li>
-        <li>แตะการ์ดช่องเพื่อเปิด QR เช็คอินและจัดการเซสชัน</li>
+        <li>ภาพรวม · สถานะช่อง (ว่าง / มีการจอง / มีรถจอด) · เช็คอินพนักงาน · จองล่วงหน้า</li>
       </ul>
     ),
   },
   {
-    title: "การจัดการ",
+    title: "แพ็กเกจ / สมาชิก",
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>เพิ่มรหัสช่องและโซน — แต่ละช่องมีลิงก์ QR สำหรับลูกค้าเช็คอินเอง</li>
-        <li>สร้างลิงก์ QR ใหม่ได้เมื่อต้องการตัดลิงก์เก่า</li>
+        <li>สร้างแพ็กเกจบริการ และขายสมาชิกเหมาจ่าย — ตัดสิทธิ์ตอนเช็คอิน</li>
+      </ul>
+    ),
+  },
+  {
+    title: "ลานจอด",
+    content: (
+      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+        <li>เพิ่มลาน · ตั้งราคาชม./วัน/เดือน · จัดการช่องจอดและ QR ในแต่ละลาน</li>
       </ul>
     ),
   },
@@ -99,7 +115,7 @@ const parkingGuideSections = [
     title: "การเงิน",
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>สรุปรายรับจากรอบจอดที่ชำระแล้ว และดูประวัติเซสชันตามทะเบียน/ช่วงเวลา</li>
+        <li>สรุปรายรับจากรอบจอดที่ชำระแล้ว และดูประวัติเซสชัน</li>
       </ul>
     ),
   },
@@ -107,8 +123,7 @@ const parkingGuideSections = [
     title: "ตั้งค่า",
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>ตั้งชื่อลาน โหมดคิดเงิน (รายชั่วโมงหรือเหมารายวัน) และอัตราค่าจอด</li>
-        <li>ดูลิงก์/QR เช็คอินลูกค้าได้ที่แท็บลิงก์</li>
+        <li>ตั้งค่าพื้นฐานและการเงินของลานหลัก · ลิงก์ / QR</li>
       </ul>
     ),
   },
@@ -194,7 +209,7 @@ export function ParkingValetShell({
           </header>
 
           <nav aria-label="เมนูโมดูลรับฝากจอดรถ" className="mt-5 hidden border-t border-white/50 pt-5 md:block">
-            <ul className="grid grid-cols-4 gap-1.5">
+            <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
               {PARKING_NAV_ITEMS.map((item) => {
                 const active = isParkingNavItemActive(pathname, item.key);
                 const Icon = NAV_ICONS[item.key];
@@ -219,7 +234,7 @@ export function ParkingValetShell({
       </div>
 
       <AppMobileDockShell ariaLabel="เมนูล่างรับฝากจอดรถ">
-        <ul className={cn(appMobileDockGridClass, "grid-cols-4")}>
+        <ul className={cn(appMobileDockGridClass, "grid-cols-5")}>
           {PARKING_NAV_ITEMS.map((item) => {
             const active = isParkingNavItemActive(pathname, item.key);
             const Icon = NAV_ICONS[item.key];
@@ -247,7 +262,7 @@ export function ParkingValetShell({
         open={guideOpen}
         onClose={() => setGuideOpen(false)}
         title="คู่มือการใช้งาน — บริการรับฝากจอดรถ"
-        subtitle="แดชบอร์ด · การจัดการ · การเงิน · ตั้งค่า"
+        subtitle="แดชบอร์ด · แพ็กเกจ · ลาน · การเงิน · ตั้งค่า"
         sections={parkingGuideSections}
       />
     </div>

@@ -1,5 +1,3 @@
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -8,17 +6,16 @@ import { writeSystemActivityLog } from "@/lib/audit-log";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import { homeFinanceEntryPostSchema } from "@/lib/home-finance/entry-schema";
 import { formatDbDateToYmd, parseYmdToDbDate } from "@/lib/home-finance/entry-date";
-import { resolveOwnerUploadSegment } from "@/lib/home-finance/user-upload-dir";
 import {
   OLLAMA_DEFAULT_SLIP_VISION_MODEL,
   THAI_SLIP_VISION_OCR_BLOCK,
   withThaiSlipOcrPreamble,
 } from "@/lib/home-finance/slip-vision-prompts";
 import { ollamaCallVisionText } from "@/lib/ollama/ollama-vision";
+import { saveModuleUpload } from "@/lib/upload/save-module-upload";
 
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
-const ALLOWED_IMAGES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 type AiSuggestion = {
   entryDate: string;
@@ -371,34 +368,22 @@ export async function POST(req: Request) {
         : "GENERAL_SHOPPING";
 
   const isPdf = uploadFile.type === "application/pdf";
-  if (!isPdf && !ALLOWED_IMAGES.has(uploadFile.type)) {
-    return NextResponse.json({ error: "รองรับ JPG PNG WEBP GIF หรือ PDF" }, { status: 400 });
-  }
   const fileBuffer = Buffer.from(await uploadFile.arrayBuffer());
-  const maxBytes = isPdf ? MAX_PDF_BYTES : MAX_IMAGE_BYTES;
-  if (fileBuffer.length > maxBytes) {
-    return NextResponse.json(
-      { error: isPdf ? "PDF ใหญ่เกิน 5MB" : "ไฟล์ใหญ่เกิน 3MB" },
-      { status: 400 },
-    );
-  }
 
-  const ext = isPdf
-    ? "pdf"
-    : uploadFile.type === "image/png"
-      ? "png"
-      : uploadFile.type === "image/webp"
-        ? "webp"
-        : uploadFile.type === "image/gif"
-          ? "gif"
-          : "jpg";
-  const storedMimeType = file.type.trim() || (isPdf ? "application/pdf" : "image/jpeg");
-  const userSegment = resolveOwnerUploadSegment(billingCtx.billingUserId);
-  const dir = path.join(process.cwd(), "public", "uploads", "home-finance", userSegment);
-  await mkdir(dir, { recursive: true });
-  const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  await writeFile(path.join(dir, filename), fileBuffer);
-  const imageUrl = `/uploads/home-finance/${userSegment}/${filename}`;
+  const saved = await saveModuleUpload({
+    file: uploadFile,
+    moduleSlug: "home-finance",
+    ownerUserId: billingCtx.billingUserId,
+    accept: "image-or-pdf",
+    kind: "slip",
+    maxImageBytes: MAX_IMAGE_BYTES,
+    maxPdfBytes: MAX_PDF_BYTES,
+  });
+  if (!saved.ok) {
+    return NextResponse.json({ error: saved.error }, { status: saved.status });
+  }
+  const imageUrl = saved.imageUrl;
+  const storedMimeType = saved.mimeType || (isPdf ? "application/pdf" : "image/jpeg");
 
   const ai = await callSlipAi({
     fileBuffer,

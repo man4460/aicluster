@@ -10,7 +10,7 @@ export async function GET(req: Request) {
   const spot = await prisma.parkingSpot.findUnique({
     where: { checkInToken: token },
     include: {
-      site: { select: { name: true, pricingMode: true, hourlyRateBaht: true, dailyRateBaht: true } },
+      site: { select: { name: true, pricingMode: true, hourlyRateBaht: true, dailyRateBaht: true, monthlyRateBaht: true } },
       sessions: { where: { status: "ACTIVE" }, take: 1 },
     },
   });
@@ -25,6 +25,7 @@ export async function GET(req: Request) {
     pricingMode: spot.site.pricingMode,
     hourlyRateBaht: spot.site.hourlyRateBaht != null ? Number(spot.site.hourlyRateBaht) : null,
     dailyRateBaht: spot.site.dailyRateBaht != null ? Number(spot.site.dailyRateBaht) : null,
+    monthlyRateBaht: spot.site.monthlyRateBaht != null ? Number(spot.site.monthlyRateBaht) : null,
     occupied,
   });
 }

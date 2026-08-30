@@ -56,10 +56,17 @@ export function BuildingPosOrderLoyaltyStrip({
     : `/api/building-pos/session/loyalty/members`;
 
   useEffect(() => {
-    if (phone && phone !== query && normalizeBuildingPosMemberPhone(phone).length >= 9) {
+    if (!phone) {
+      setQuery("");
+      setMember(null);
+      setCandidates([]);
+      return;
+    }
+    if (phone !== query && normalizeBuildingPosMemberPhone(phone).length >= 9) {
       setQuery(phone);
     }
-  }, [phone, query]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync parent reset / full phone only
+  }, [phone]);
 
   const lookup = useCallback(
     async (raw: string) => {
@@ -100,7 +107,12 @@ export function BuildingPosOrderLoyaltyStrip({
         } else {
           setMember(null);
           if (j.error && !j.candidates?.length) {
-            notice.warning(j.error, { title: "แจ้งเตือน" });
+            notice.warning(
+              j.error.includes("ไม่พบ") ?
+                "ยังไม่มีสมาชิก — จะผูกเบอร์อัตโนมัติเมื่อชำระเงิน"
+              : j.error,
+              { title: "แจ้งเตือน" },
+            );
           }
         }
       } catch {
@@ -147,7 +159,7 @@ export function BuildingPosOrderLoyaltyStrip({
             onChange={(e) => {
               const v = e.target.value.replace(/\D/g, "").slice(0, 20);
               setQuery(v);
-              onPhoneChange(v.length >= 9 ? v : "");
+              onPhoneChange(v);
               setCandidates([]);
               if (v.length < 4) setMember(null);
             }}

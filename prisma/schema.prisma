@@ -220,6 +220,9 @@ model User {
   villageIncomeEntries      VillageIncomeEntry[]
   trialSessions            TrialSession[]
   parkingSites             ParkingSite[]
+  parkingPackages          ParkingPackage[]
+  parkingMemberships       ParkingMembership[]
+  parkingBookings          ParkingBooking[]
   waitQueueSites           WaitQueueSite[]
   appointmentQueueShopProfiles AppointmentQueueShopProfile[]
   appointmentQueueServices     AppointmentQueueService[]
@@ -2968,12 +2971,21 @@ model VillageIncomeEntry {
 enum ParkingPricingMode {
   HOURLY
   DAILY
+  MONTHLY
 }
 
 enum ParkingSessionStatus {
   ACTIVE
   COMPLETED
   CANCELLED
+}
+
+enum ParkingBookingStatus {
+  SCHEDULED
+  CHECKED_IN
+  COMPLETED
+  CANCELLED
+  NO_SHOW
 }
 
 /** สถานะคิวหน้าร้าน — walk-in / เรียกเข้าร้าน */
@@ -2985,7 +2997,7 @@ enum WaitQueueTicketStatus {
   SKIPPED
 }
 
-/** ลานจอดต่อเจ้าของ — ตั้งราคาและโหมดคิดเงิน */
+/** ลานจอดต่อเจ้าของ — ตั้งราคาและโหมดคิดเงิน (รองรับหลายลาน) */
 model ParkingSite {
   id               Int                @id @default(autoincrement())
   ownerUserId      String             @map("owner_user_id") @db.VarChar(191)
@@ -2995,13 +3007,18 @@ model ParkingSite {
   pricingMode      ParkingPricingMode @default(HOURLY) @map("pricing_mode")
   hourlyRateBaht   Decimal?           @map("hourly_rate_baht") @db.Decimal(10, 2)
   dailyRateBaht    Decimal?           @map("daily_rate_baht") @db.Decimal(10, 2)
+  monthlyRateBaht  Decimal?           @map("monthly_rate_baht") @db.Decimal(10, 2)
+  note             String             @default("") @db.VarChar(500)
+  isActive         Boolean            @default(true) @map("is_active")
   createdAt        DateTime           @default(now()) @map("created_at")
   updatedAt        DateTime           @updatedAt @map("updated_at")
 
-  spots ParkingSpot[]
+  spots    ParkingSpot[]
+  bookings ParkingBooking[]
 
   @@unique([ownerUserId, name, trialSessionId], map: "parking_site_owner_name_trial_uniq")
   @@index([ownerUserId], map: "parking_site_owner_idx")
+  @@index([ownerUserId, trialSessionId], map: "parking_site_owner_trial_idx")
   @@map("parking_sites")
 }
 
@@ -3040,9 +3057,16 @@ model ParkingSession {
   pricingMode     ParkingPricingMode   @map("pricing_mode")
   hourlyRateSnap  Decimal?             @map("hourly_rate_snap") @db.Decimal(10, 2)
   dailyRateSnap   Decimal?             @map("daily_rate_snap") @db.Decimal(10, 2)
+  monthlyRateSnap Decimal?             @map("monthly_rate_snap") @db.Decimal(10, 2)
   billedUnits     Int?                 @map("billed_units")
   amountDueBaht   Decimal?             @map("amount_due_baht") @db.Decimal(10, 2)
   amountPaidBaht  Decimal?             @map("amount_paid_baht") @db.Decimal(10, 2)
+  packageId       Int?                 @map("package_id")
+  packageName     String?              @map("package_name") @db.VarChar(160)
+  membershipId    Int?                 @map("membership_id")
+  membership      ParkingMembership?   @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  bookingId       Int?                 @unique @map("booking_id")
+  booking         ParkingBooking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   internalNote    String?              @map("internal_note") @db.Text
   shuttleFrom     String?              @map("shuttle_from") @db.VarChar(255)
   shuttleTo       String?              @map("shuttle_to") @db.VarChar(255)
@@ -3053,7 +3077,91 @@ model ParkingSession {
   @@index([spotId, status], map: "parking_sess_spot_status_idx")
   @@index([checkInAt], map: "parking_sess_checkin_idx")
   @@index([licensePlate], map: "parking_sess_plate_idx")
+  @@index([membershipId], map: "parking_sess_membership_idx")
   @@map("parking_sessions")
+}
+
+/** แพ็กเกจบริการจอด — รายครั้งหรือเหมา (totalUses > 1) */
+model ParkingPackage {
+  id             Int                @id @default(autoincrement())
+  ownerUserId    String             @map("owner_user_id") @db.VarChar(191)
+  owner          User               @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String             @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String             @db.VarChar(160)
+  price          Int
+  /** โหมดคิดสิทธิ์ในแพ็ก — ชม./วัน/เดือน */
+  stayMode       ParkingPricingMode @default(DAILY) @map("stay_mode")
+  /** จำนวนหน่วยต่อครั้งใช้ (ชม./วัน/เดือน ตาม stayMode) */
+  stayUnits      Int                @default(1) @map("stay_units")
+  /** จำนวนครั้งในแพ็ก — 1 = รายครั้ง · >1 = เหมา/สมาชิก */
+  totalUses      Int                @default(1) @map("total_uses")
+  description    String             @default("") @db.VarChar(800)
+  isActive       Boolean            @default(true) @map("is_active")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, isActive], map: "parking_pkg_owner_trial_active_idx")
+  @@index([ownerUserId], map: "parking_pkg_owner_idx")
+  @@map("parking_packages")
+}
+
+/** สมาชิก/เหมาจ่าย — ขายแพ็กให้ลูกค้าแล้วตัดสิทธิ์ตอนเช็คอิน */
+model ParkingMembership {
+  id             Int      @id @default(autoincrement())
+  ownerUserId    String   @map("owner_user_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  customerName   String   @map("customer_name") @db.VarChar(160)
+  customerPhone  String   @default("") @map("customer_phone") @db.VarChar(32)
+  licensePlate   String   @map("license_plate") @db.VarChar(24)
+  packageId      Int      @map("package_id")
+  packageName    String   @map("package_name") @db.VarChar(160)
+  paidAmount     Int      @default(0) @map("paid_amount")
+  totalUses      Int      @default(0) @map("total_uses")
+  usedUses       Int      @default(0) @map("used_uses")
+  isActive       Boolean  @default(true) @map("is_active")
+  slipPhotoUrl   String   @default("") @map("slip_photo_url") @db.VarChar(512)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  sessions       ParkingSession[]
+
+  @@index([ownerUserId, trialSessionId, isActive], map: "parking_mbr_owner_trial_active_idx")
+  @@index([ownerUserId, trialSessionId, customerPhone], map: "parking_mbr_owner_trial_phone_idx")
+  @@index([ownerUserId, trialSessionId, licensePlate], map: "parking_mbr_owner_trial_plate_idx")
+  @@index([ownerUserId], map: "parking_mbr_owner_idx")
+  @@map("parking_memberships")
+}
+
+/** จองที่จอดล่วงหน้า */
+model ParkingBooking {
+  id             Int                  @id @default(autoincrement())
+  ownerUserId    String               @map("owner_user_id") @db.VarChar(191)
+  owner          User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String               @default("prod") @map("trial_session_id") @db.VarChar(36)
+  siteId         Int                  @map("site_id")
+  site           ParkingSite          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  spotId         Int?                 @map("spot_id")
+  licensePlate   String               @map("license_plate") @db.VarChar(24)
+  customerName   String?              @map("customer_name") @db.VarChar(100)
+  customerPhone  String?              @map("customer_phone") @db.VarChar(32)
+  packageId      Int?                 @map("package_id")
+  packageName    String               @default("") @map("package_name") @db.VarChar(160)
+  scheduledStart DateTime             @map("scheduled_start")
+  scheduledEnd   DateTime?            @map("scheduled_end")
+  pricingMode    ParkingPricingMode   @default(HOURLY) @map("pricing_mode")
+  amountBaht     Int                  @default(0) @map("amount_baht")
+  amountPaidBaht Int                  @default(0) @map("amount_paid_baht")
+  paymentStatus  String               @default("UNPAID") @map("payment_status") @db.VarChar(24)
+  status         ParkingBookingStatus @default(SCHEDULED)
+  note           String?              @db.VarChar(255)
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  session        ParkingSession?
+
+  @@index([ownerUserId, scheduledStart], map: "parking_book_owner_start_idx")
+  @@index([ownerUserId, trialSessionId], map: "parking_book_owner_trial_idx")
+  @@index([siteId], map: "parking_book_site_idx")
+  @@map("parking_bookings")
 }
 
 /** จุดบริการคิวหน้าร้าน — ต่อเจ้าของ + trial scope */

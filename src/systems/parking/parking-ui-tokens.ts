@@ -89,3 +89,7 @@ export function parkingStatCardClass(tone: "indigo" | "slate" | "emerald" | "amb
     toneStyles[tone],
   );
 }
+
+/** Hub QR ลูกค้า — ชั้นนอกสอดคล้องเปลือกโมดูล */
+export const parkingQrHubOuterClass =
+  "overflow-hidden rounded-[2.5rem] max-md:rounded-2xl border border-white/50 bg-gradient-to-br from-white/55 via-[#faf9ff] to-indigo-50/25 shadow-[0_24px_60px_-28px_rgba(77,71,182,0.35)] backdrop-blur-xl ring-1 ring-inset ring-white/45";

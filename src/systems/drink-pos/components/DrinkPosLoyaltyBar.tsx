@@ -35,6 +35,10 @@ type Props = {
   compact?: boolean;
   /** โหมดลิงก์พนักงาน — เรียก /api/drink-pos/staff/loyalty* */
   staffAuth?: { ownerId: string; trialSessionId: string; k: string } | null;
+  /** แจ้งเบอร์ที่พิมพ์ (ใช้ผูกอัตโนมัติตอนชำระ) */
+  onPhoneChange?: (phone: string) => void;
+  /** ซิงก์/รีเซ็ตจาก parent (เช่นหลังส่งออเดอร์) */
+  phoneValue?: string;
 };
 
 export function DrinkPosLoyaltyBar({
@@ -44,6 +48,8 @@ export function DrinkPosLoyaltyBar({
   onRedeemed,
   compact = false,
   staffAuth = null,
+  onPhoneChange,
+  phoneValue,
 }: Props) {
   const notice = useAppNoticePopup({
     defaultConfirmTone: "warning",
@@ -82,8 +88,21 @@ export function DrinkPosLoyaltyBar({
       : `/api/drink-pos/session/loyalty/members?action=${encodeURIComponent(action)}`;
 
   useEffect(() => {
-    if (member?.phone) setPhone(member.phone);
-  }, [member?.phone]);
+    if (member?.phone) {
+      setPhone(member.phone);
+      onPhoneChange?.(member.phone);
+    }
+  }, [member?.phone, onPhoneChange]);
+
+  useEffect(() => {
+    if (phoneValue === undefined) return;
+    setPhone(phoneValue);
+    if (!phoneValue) {
+      setCandidates([]);
+      setErr(null);
+      setMsg(null);
+    }
+  }, [phoneValue]);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,7 +170,7 @@ export function DrinkPosLoyaltyBar({
         setPhone(j.member.phone);
       } else {
         onMemberChange(null);
-        setErr(j.error ?? "ยังไม่มีสมาชิกบนเบอร์นี้ — กดผูกเบอร์ได้");
+        setErr(j.error ?? (compact ? "ยังไม่มีสมาชิก — จะผูกเบอร์อัตโนมัติเมื่อชำระเงิน" : "ยังไม่มีสมาชิกบนเบอร์นี้ — กดผูกเบอร์ได้"));
       }
     } catch (e) {
       onMemberChange(null);
@@ -349,7 +368,9 @@ export function DrinkPosLoyaltyBar({
           placeholder="08xxxxxxxx หรือ 4 หลักท้าย"
           value={phone}
           onChange={(e) => {
-            setPhone(e.target.value.replace(/\D/g, "").slice(0, 20));
+            const next = e.target.value.replace(/\D/g, "").slice(0, 20);
+            setPhone(next);
+            onPhoneChange?.(next);
             setCandidates([]);
           }}
         />

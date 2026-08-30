@@ -56,7 +56,12 @@ export async function prepareImageFileForUpload(file: File): Promise<File> {
       canvas.width = w;
       canvas.height = h;
       const ctx = canvas.getContext("2d");
-      if (!ctx) return file;
+      if (!ctx) {
+        if (file.size > MAX_PREPARED_BYTES) {
+          throw new Error("ไม่สามารถย่อรูปได้ — ลองเลือก JPG/PNG");
+        }
+        return file;
+      }
       ctx.drawImage(bmp, 0, 0, w, h);
 
       let quality = 0.85;
@@ -65,13 +70,23 @@ export async function prepareImageFileForUpload(file: File): Promise<File> {
         quality -= 0.1;
         blob = await new Promise((res) => canvas.toBlob((b) => res(b), "image/jpeg", quality));
       }
-      if (!blob || blob.size === 0) return file;
+      if (!blob || blob.size === 0) {
+        if (file.size > MAX_PREPARED_BYTES) {
+          throw new Error("ไม่สามารถย่อรูปได้ — ลองเลือก JPG/PNG หรือลดความละเอียด");
+        }
+        return file;
+      }
       const base = file.name.replace(/\.[^.]+$/, "") || "image";
       return new File([blob], `${base}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
     } finally {
       bmp.close();
     }
-  } catch {
+  } catch (e) {
+    if (file.size > MAX_PREPARED_BYTES) {
+      throw new Error(
+        e instanceof Error && e.message ? e.message : "ไม่สามารถย่อรูปได้ — ลองเลือก JPG/PNG",
+      );
+    }
     return file;
   }
 }

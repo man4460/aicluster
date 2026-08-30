@@ -24,12 +24,16 @@ export async function POST(req: Request) {
   const displayNameRaw = form.get("displayName");
   const displayName = typeof displayNameRaw === "string" ? displayNameRaw : null;
 
+  const kindRaw = form.get("kind");
+  const kindStr = typeof kindRaw === "string" ? kindRaw.trim().toLowerCase() : "attach";
+  const kind = kindStr === "slip" || kindStr === "cover" ? kindStr : "attach";
+
   const saved = await saveModuleUpload({
     file,
     moduleSlug: "home-finance",
     ownerUserId: ctx.billingUserId,
     accept: "image-or-pdf",
-    kind: "attach",
+    kind,
     displayName,
     maxImageBytes: 3 * 1024 * 1024,
     maxPdfBytes: 5 * 1024 * 1024,

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { parkingBtnSecondary, parkingField } from "@/systems/parking/parking-ui";
 
-export function ParkingAddSpotForm() {
+export function ParkingAddSpotForm({ siteId }: { siteId?: number }) {
   const router = useRouter();
   const [spotCode, setSpotCode] = useState("");
   const [zoneLabel, setZoneLabel] = useState("");
@@ -23,6 +23,7 @@ export function ParkingAddSpotForm() {
         body: JSON.stringify({
           spotCode: spotCode.trim(),
           zoneLabel: zoneLabel.trim() || null,
+          ...(siteId != null ? { siteId } : {}),
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };

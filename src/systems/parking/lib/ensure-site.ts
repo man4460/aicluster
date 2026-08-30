@@ -17,6 +17,7 @@ export async function ensureDefaultParkingSite(ownerUserId: string, trialSession
         pricingMode: "HOURLY",
         hourlyRateBaht: 20,
         dailyRateBaht: 150,
+        monthlyRateBaht: 2500,
       },
     });
   }

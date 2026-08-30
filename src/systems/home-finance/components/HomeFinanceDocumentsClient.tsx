@@ -5,13 +5,16 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
-  prepareUploadFile,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import {
   encodeHomeFinancePublicAssetHref,
   isHomeFinancePdfUrl,
 } from "@/lib/home-finance/attachments";
+import {
+  homeFinanceUploadErrorMessage,
+  uploadHomeFinanceFileUrl,
+} from "@/lib/home-finance/upload-client";
 import {
   HomeFinanceEmptyState,
   HomeFinanceEntityActions,
@@ -43,31 +46,6 @@ type PersonalDocument = {
   note: string | null;
   createdAt: string;
 };
-
-const HOME_FINANCE_UPLOAD_MS = 120_000;
-
-async function uploadHomeFinanceFile(file: File): Promise<string | null> {
-  const toSend = await prepareUploadFile(file, { accept: "image-or-pdf", maxPdfBytes: 5 * 1024 * 1024 });
-  const fd = new FormData();
-  fd.set("file", toSend);
-  const ctrl = new AbortController();
-  const tid = window.setTimeout(() => ctrl.abort(), HOME_FINANCE_UPLOAD_MS);
-  try {
-    const res = await fetch("/api/home-finance/upload", {
-      method: "POST",
-      body: fd,
-      credentials: "include",
-      signal: ctrl.signal,
-    });
-    const j = (await res.json().catch(() => ({}))) as { imageUrl?: string };
-    if (!res.ok) return null;
-    return j.imageUrl ?? null;
-  } catch {
-    return null;
-  } finally {
-    window.clearTimeout(tid);
-  }
-}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -144,16 +122,14 @@ export function HomeFinanceDocumentsClient() {
     setUploading(true);
     setError(null);
     try {
-      const url = await uploadHomeFinanceFile(file);
-      if (!url) {
-        setError("อัปโหลดไม่สำเร็จ — ใช้ JPG/PNG/WebP/GIF/PDF ตามขนาดที่กำหนด");
-        return;
-      }
+      const url = await uploadHomeFinanceFileUrl(file, { kind: "attach" });
       setForm((s) => ({
         ...s,
         fileUrl: url,
         // ชื่อเอกสารให้ผู้ใช้ตั้งเอง — ไม่ดึงจากชื่อไฟล์ OS
       }));
+    } catch (err) {
+      setError(homeFinanceUploadErrorMessage(err, "อัปโหลดไม่สำเร็จ"));
     } finally {
       setUploading(false);
     }

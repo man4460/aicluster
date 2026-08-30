@@ -25,7 +25,7 @@ export async function GET(req: Request) {
   }
 
   const where: Prisma.ParkingSessionWhereInput = {
-    spot: { siteId: ctx.site.id },
+    spot: { site: { ownerUserId: ctx.ownerUserId, trialSessionId: ctx.trialSessionId } },
     ...(q ? { licensePlate: { contains: q.replace(/\s+/g, "") } } : {}),
     ...(status === "ACTIVE" || status === "COMPLETED" || status === "CANCELLED" ? { status } : {}),
     ...(Object.keys(checkInRange).length > 0 ? { checkInAt: checkInRange } : {}),
@@ -77,7 +77,11 @@ export async function POST(req: Request) {
   }
 
   const spot = await prisma.parkingSpot.findFirst({
-    where: { id: spotId, siteId: ctx.site.id },
+    where: {
+      id: spotId,
+      site: { ownerUserId: ctx.ownerUserId, trialSessionId: ctx.trialSessionId },
+    },
+    include: { site: true },
   });
   if (!spot) {
     return NextResponse.json({ error: "ไม่พบช่องจอด" }, { status: 404 });
@@ -90,7 +94,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "ช่องนี้มีรถจอดอยู่แล้ว" }, { status: 400 });
   }
 
-  const site = ctx.site;
+  const site = spot.site;
+  const membershipIdRaw = body?.membershipId;
+  const membershipId =
+    typeof membershipIdRaw === "number"
+      ? membershipIdRaw
+      : typeof membershipIdRaw === "string"
+        ? Number(membershipIdRaw)
+        : null;
+  let membershipSnap: { id: number; packageName: string; packageId: number } | null = null;
+  if (membershipId != null && Number.isInteger(membershipId) && membershipId > 0) {
+    const m = await prisma.parkingMembership.findFirst({
+      where: {
+        id: membershipId,
+        ownerUserId: ctx.ownerUserId,
+        trialSessionId: ctx.trialSessionId,
+        isActive: true,
+      },
+    });
+    if (!m || m.usedUses >= m.totalUses) {
+      return NextResponse.json({ error: "สมาชิก/เหมาไม่พร้อมใช้งาน หรือสิทธิ์หมดแล้ว" }, { status: 400 });
+    }
+    membershipSnap = { id: m.id, packageName: m.packageName, packageId: m.packageId };
+  }
+
   const customerName =
     typeof body?.customerName === "string" && body.customerName.trim()
       ? body.customerName.trim().slice(0, 100)
@@ -112,23 +139,46 @@ export async function POST(req: Request) {
   const internalNote =
     typeof body?.internalNote === "string" && body.internalNote.trim() ? body.internalNote.trim() : null;
 
-  const session = await prisma.parkingSession.create({
-    data: {
-      spotId,
-      checkInAt: new Date(),
-      licensePlate,
-      customerName,
-      customerPhone,
-      selfCheckIn: false,
-      pricingMode: site.pricingMode,
-      hourlyRateSnap: site.hourlyRateBaht,
-      dailyRateSnap: site.dailyRateBaht,
-      shuttleFrom,
-      shuttleTo,
-      shuttleNote,
-      internalNote,
-    },
+  const session = await prisma.$transaction(async (tx) => {
+    if (membershipSnap) {
+      const current = await tx.parkingMembership.findUnique({ where: { id: membershipSnap.id } });
+      if (!current || !current.isActive || current.usedUses >= current.totalUses) {
+        throw new Error("MEMBERSHIP_EXHAUSTED");
+      }
+      await tx.parkingMembership.update({
+        where: { id: membershipSnap.id },
+        data: { usedUses: { increment: 1 } },
+      });
+    }
+    return tx.parkingSession.create({
+      data: {
+        spotId,
+        checkInAt: new Date(),
+        licensePlate,
+        customerName,
+        customerPhone,
+        selfCheckIn: false,
+        pricingMode: site.pricingMode,
+        hourlyRateSnap: site.hourlyRateBaht,
+        dailyRateSnap: site.dailyRateBaht,
+        monthlyRateSnap: site.monthlyRateBaht,
+        packageId: membershipSnap?.packageId ?? null,
+        packageName: membershipSnap ? `สมาชิก: ${membershipSnap.packageName}` : null,
+        membershipId: membershipSnap?.id ?? null,
+        shuttleFrom,
+        shuttleTo,
+        shuttleNote,
+        internalNote,
+      },
+    });
+  }).catch((e: unknown) => {
+    if (e instanceof Error && e.message === "MEMBERSHIP_EXHAUSTED") return null;
+    throw e;
   });
+
+  if (!session) {
+    return NextResponse.json({ error: "สมาชิก/เหมาสิทธิ์หมดแล้ว" }, { status: 400 });
+  }
 
   return NextResponse.json({
     session: {

@@ -56,6 +56,7 @@ export async function POST(req: Request) {
       pricingMode: site.pricingMode,
       hourlyRateSnap: site.hourlyRateBaht,
       dailyRateSnap: site.dailyRateBaht,
+      monthlyRateSnap: site.monthlyRateBaht,
       shuttleFrom,
       shuttleTo,
       shuttleNote,

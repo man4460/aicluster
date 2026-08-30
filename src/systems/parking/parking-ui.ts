@@ -20,5 +20,8 @@ export const parkingSpotTile =
 export const parkingSpotTileOccupied =
   "before:from-amber-500/90 before:via-amber-600/80 before:to-orange-500/70";
 
+export const parkingSpotTileBooked =
+  "before:from-violet-500/90 before:via-indigo-500/75 before:to-[#5b61ff]/70";
+
 export const parkingField =
   "app-input w-full rounded-xl px-3 py-2.5 text-sm text-[#1e1b4b] outline-none transition focus:border-[#5b61ff]/45 focus:ring-2 focus:ring-[#5b61ff]/15";

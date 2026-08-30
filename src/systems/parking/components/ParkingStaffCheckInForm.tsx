@@ -54,7 +54,6 @@ export function ParkingStaffCheckInForm({ spotId }: { spotId: number }) {
 
   return (
     <form onSubmit={onSubmit} className="space-y-3">
-      <p className="text-xs font-semibold text-[#5f5a8a]">เช็คอิน (พนักงาน)</p>
       <input
         required
         className={parkingField}

@@ -22,7 +22,6 @@ import {
   AppSparkChartPanel,
   AppSparkChartsTwoColumnGrid,
   openPrintableHtml,
-  prepareUploadFile,
   useAppImageLightbox,
   type AppColumnBarBucket,
   type AppCompareBarRow,
@@ -71,6 +70,11 @@ import {
   MAX_HOME_FINANCE_ATTACHMENTS,
   normalizeVehicleAttachmentUrls,
 } from "@/lib/home-finance/attachments";
+import {
+  homeFinanceUploadErrorMessage,
+  uploadHomeFinanceFileUrl,
+} from "@/lib/home-finance/upload-client";
+import { prepareUploadFile } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   deriveHomeFinanceSection,
@@ -185,10 +189,6 @@ function firstActiveCategoryKey(rows: Category[]): string {
   return active[0] ? categoryKeyFromRow(active[0]) : "";
 }
 
-/** โยนเมื่ออัปโหลดถูกยกเลิกเพราะหมดเวลา (ไฟล์ใหญ่/เน็ตช้า) */
-const HOME_FINANCE_UPLOAD_TIMEOUT = "HOME_FINANCE_UPLOAD_TIMEOUT";
-const HOME_FINANCE_UPLOAD_MS = 120_000;
-
 function newHomeFinancePendingRow(file: File): HomeFinancePendingUpload {
   const id =
     typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -200,36 +200,6 @@ function newHomeFinancePendingRow(file: File): HomeFinancePendingUpload {
     name: file.name,
     isPdf: file.type === "application/pdf" || /\.pdf$/i.test(file.name),
   };
-}
-
-async function uploadHomeFinanceFile(file: File): Promise<string | null> {
-  const toSend = await prepareUploadFile(file, { accept: "image-or-pdf", maxPdfBytes: 5 * 1024 * 1024 });
-  const fd = new FormData();
-  fd.set("file", toSend);
-  const ctrl = new AbortController();
-  const tid = window.setTimeout(() => ctrl.abort(), HOME_FINANCE_UPLOAD_MS);
-  try {
-    const res = await fetch("/api/home-finance/upload", {
-      method: "POST",
-      body: fd,
-      credentials: "include",
-      signal: ctrl.signal,
-    });
-    const j = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
-    if (!res.ok) {
-      console.error(j.error ?? "upload failed");
-      return null;
-    }
-    return j.imageUrl ?? null;
-  } catch (e) {
-    if (e instanceof DOMException && e.name === "AbortError") {
-      throw new Error(HOME_FINANCE_UPLOAD_TIMEOUT);
-    }
-    console.error(e);
-    return null;
-  } finally {
-    window.clearTimeout(tid);
-  }
 }
 
 function isUtilityCategoryKey(key: string) {
@@ -921,22 +891,10 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
     setEntrySlipUploading(true);
     setError(null);
     try {
-      let url: string | null;
-      try {
-        url = await uploadHomeFinanceFile(file);
-      } catch (err) {
-        setError(
-          err instanceof Error && err.message === HOME_FINANCE_UPLOAD_TIMEOUT
-            ? "อัปโหลดรูปหมดเวลา — ลองรูปเล็กลงหรือเน็ตที่เร็วขึ้น"
-            : "อัปโหลดรูปไม่สำเร็จ",
-        );
-        return;
-      }
-      if (!url) {
-        setError("อัปโหลดรูปไม่สำเร็จ — ใช้ JPG/PNG/WebP/GIF ไม่เกิน 3MB");
-        return;
-      }
+      const url = await uploadHomeFinanceFileUrl(file, { kind: "slip" });
       setEntrySlipImageUrl(url);
+    } catch (err) {
+      setError(homeFinanceUploadErrorMessage(err, "อัปโหลดสลิปไม่สำเร็จ"));
     } finally {
       setEntrySlipUploading(false);
     }
@@ -946,22 +904,10 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
     setEditSlipUploading(true);
     setError(null);
     try {
-      let url: string | null;
-      try {
-        url = await uploadHomeFinanceFile(file);
-      } catch (err) {
-        setError(
-          err instanceof Error && err.message === HOME_FINANCE_UPLOAD_TIMEOUT
-            ? "อัปโหลดรูปหมดเวลา — ลองรูปเล็กลงหรือเน็ตที่เร็วขึ้น"
-            : "อัปโหลดรูปไม่สำเร็จ",
-        );
-        return;
-      }
-      if (!url) {
-        setError("อัปโหลดรูปไม่สำเร็จ — ใช้ JPG/PNG/WebP/GIF ไม่เกิน 3MB");
-        return;
-      }
+      const url = await uploadHomeFinanceFileUrl(file, { kind: "slip" });
       setEditForm((s) => ({ ...s, slipImageUrl: url }));
+    } catch (err) {
+      setError(homeFinanceUploadErrorMessage(err, "อัปโหลดสลิปไม่สำเร็จ"));
     } finally {
       setEditSlipUploading(false);
     }
@@ -1527,21 +1473,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
     setCoverPhotoUploadingUtilityId(id);
     setError(null);
     try {
-      let url: string | null;
-      try {
-        url = await uploadHomeFinanceFile(file);
-      } catch (err) {
-        setError(
-          err instanceof Error && err.message === HOME_FINANCE_UPLOAD_TIMEOUT
-            ? "อัปโหลดรูปหมดเวลา — ลองรูปเล็กลงหรือเน็ตที่เร็วขึ้น"
-            : "อัปโหลดรูปไม่สำเร็จ",
-        );
-        return;
-      }
-      if (!url) {
-        setError("อัปโหลดรูปไม่สำเร็จ");
-        return;
-      }
+      const url = await uploadHomeFinanceFileUrl(file, { kind: "cover" });
       try {
         const res = await homeFinanceFetch(`/api/home-finance/utilities/${id}`, {
           method: "PATCH",
@@ -1559,6 +1491,8 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
         return;
       }
       await loadMeta();
+    } catch (err) {
+      setError(homeFinanceUploadErrorMessage(err, "อัปโหลดรูปไม่สำเร็จ"));
     } finally {
       setCoverPhotoUploadingUtilityId(null);
     }
@@ -1568,21 +1502,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
     setCoverPhotoUploadingVehicleId(id);
     setError(null);
     try {
-      let url: string | null;
-      try {
-        url = await uploadHomeFinanceFile(file);
-      } catch (err) {
-        setError(
-          err instanceof Error && err.message === HOME_FINANCE_UPLOAD_TIMEOUT
-            ? "อัปโหลดรูปหมดเวลา — ลองรูปเล็กลงหรือเน็ตที่เร็วขึ้น"
-            : "อัปโหลดรูปไม่สำเร็จ",
-        );
-        return;
-      }
-      if (!url) {
-        setError("อัปโหลดรูปไม่สำเร็จ");
-        return;
-      }
+      const url = await uploadHomeFinanceFileUrl(file, { kind: "cover" });
       try {
         const res = await homeFinanceFetch(`/api/home-finance/vehicles/${id}`, {
           method: "PATCH",
@@ -1600,6 +1520,8 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
         return;
       }
       await loadMeta();
+    } catch (err) {
+      setError(homeFinanceUploadErrorMessage(err, "อัปโหลดรูปไม่สำเร็จ"));
     } finally {
       setCoverPhotoUploadingVehicleId(null);
     }
@@ -1905,14 +1827,8 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
         const file = batch[i];
         setAttachmentUploadProgress({ current: i + 1, total: batch.length });
         try {
-          const url = await uploadHomeFinanceFile(file);
+          const url = await uploadHomeFinanceFileUrl(file, { kind: "attach" });
           if (isStale()) {
-            URL.revokeObjectURL(row.objectUrl);
-            setPending((p) => p.filter((x) => x.id !== row.id));
-            break;
-          }
-          if (!url) {
-            setError("อัปโหลดไม่สำเร็จ — ตรวจสอบชนิดไฟล์ (JPG/PNG/WebP/GIF/PDF) และขนาด");
             URL.revokeObjectURL(row.objectUrl);
             setPending((p) => p.filter((x) => x.id !== row.id));
             break;
@@ -1926,11 +1842,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
         } catch (err) {
           URL.revokeObjectURL(row.objectUrl);
           setPending((p) => p.filter((x) => x.id !== row.id));
-          setError(
-            err instanceof Error && err.message === HOME_FINANCE_UPLOAD_TIMEOUT
-              ? "อัปโหลดหมดเวลา — ลองไฟล์เล็กลงหรือเน็ตที่เร็วขึ้น"
-              : "อัปโหลดไม่สำเร็จ",
-          );
+          setError(homeFinanceUploadErrorMessage(err, "อัปโหลดไม่สำเร็จ"));
           break;
         }
       }
@@ -3351,7 +3263,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                   onChange={setVehicleAddAttachmentUrls}
                   inputId={vehicleAddAttachInputId}
                   accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
-                  hint="PDF สูงสุด 5MB · รูปสูงสุด 3MB ต่อไฟล์ · รวมได้สูงสุด 20 ไฟล์ — แนบทีละ 1 ไฟล์"
+                  hint="PDF สูงสุด 5MB · รูปย่ออัตโนมัติก่อนส่ง · รวมได้สูงสุด 20 ไฟล์ — แนบทีละ 1 ไฟล์"
                   emptyStateVariant="vehicle"
                   attachUiMode="vehicle-single"
                   uploadProgress={attachmentUploadProgress}
@@ -3492,7 +3404,7 @@ export function HomeFinanceClient({ section: sectionFromRoute, calendarDefaults 
                   onChange={setVehicleEditAttachmentUrls}
                   inputId={vehicleEditAttachInputId}
                   accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
-                  hint="PDF สูงสุด 5MB · รูปสูงสุด 3MB ต่อไฟล์ · รวมได้สูงสุด 20 ไฟล์ — แนบทีละ 1 ไฟล์"
+                  hint="PDF สูงสุด 5MB · รูปย่ออัตโนมัติก่อนส่ง · รวมได้สูงสุด 20 ไฟล์ — แนบทีละ 1 ไฟล์"
                   emptyStateVariant="vehicle"
                   attachUiMode="vehicle-single"
                   uploadProgress={attachmentUploadProgress}

@@ -55,7 +55,7 @@ export function HomeFinanceSlipUploadField({
         </div>
       ) : (
         <p className="text-xs leading-relaxed text-slate-600">
-          แนบสลิปโอนเงินหรือใบเสร็จ — เลือกจากแกลเลอรีหรือถ่ายรูปได้ทันที (ไม่บังคับ)
+          แนบสลิปโอนเงินหรือใบเสร็จ — รูปจากกล้องจะถูกย่ออัตโนมัติก่อนส่ง (ไม่บังคับ)
         </p>
       )}
       <AppGalleryCameraFileInputs
