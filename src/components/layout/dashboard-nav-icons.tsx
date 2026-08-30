@@ -601,6 +601,14 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  if (href === "/dashboard/systems") {
+    return (
+      <Svg>
+        <rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" />
+        <path d="M15 8h5M15 12h5M15 16h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </Svg>
+    );
+  }
   if (href === "/dashboard/modules") {
     return (
       <Svg>

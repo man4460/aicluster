@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { displayAppModuleTitle } from "@/lib/modules/config";
 import { MODULE_RESUBSCRIBE_COOLDOWN_MS } from "@/lib/modules/module-subscription-cooldown";
+import { moduleHasActiveMonthly199 } from "@/lib/tokens/module-monthly-199";
 
 export { MODULE_RESUBSCRIBE_COOLDOWN_MS } from "@/lib/modules/module-subscription-cooldown";
 
@@ -65,6 +66,7 @@ export async function unsubscribeModule(userId: string, moduleId: string): Promi
     where: { id: moduleId },
     select: { slug: true },
   });
+  const hadMonthly199 = mod?.slug ? await moduleHasActiveMonthly199(userId, mod.slug) : false;
   await prisma.$executeRawUnsafe(
     "DELETE FROM user_module_subscriptions WHERE user_id = ? AND module_id = ?",
     userId,
@@ -74,7 +76,11 @@ export async function unsubscribeModule(userId: string, moduleId: string): Promi
     const { clearModuleMonthly199 } = await import("@/lib/tokens/module-monthly-199");
     await clearModuleMonthly199(userId, mod.slug);
   }
-  await recordUnsubscribeCooldown(userId, moduleId);
+  if (hadMonthly199) {
+    await deleteResubscribeCooldown(userId, moduleId);
+  } else {
+    await recordUnsubscribeCooldown(userId, moduleId);
+  }
 }
 
 /** บันทึกเวลายกเลิก Subscribe — ใช้คำนวณช่วงห้าม Subscribe/ทดลองซ้ำ */

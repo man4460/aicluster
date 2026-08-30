@@ -28,6 +28,12 @@ export function DashboardMobileAppInstallCard({ displayName, className }: Props)
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <Link
+            href="/dashboard/systems"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-white/70 bg-white/85 px-3 text-xs font-black text-[#2e2a58] shadow-sm transition hover:bg-white active:scale-[0.99] sm:px-4"
+          >
+            ดูระบบ
+          </Link>
+          <Link
             href="/dashboard/modules"
             className="inline-flex h-10 items-center justify-center rounded-lg border border-[#0000BF]/20 bg-[#0000BF]/10 px-3 text-xs font-black text-[#2e2a58] shadow-sm transition hover:bg-[#0000BF]/12 active:scale-[0.99] sm:px-4"
           >

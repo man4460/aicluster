@@ -20,8 +20,10 @@ import { dashboardModuleCardDescription } from "@/lib/modules/dashboard-card-des
 import { getModuleDailyUsageBadge } from "@/lib/modules/module-usage-badge";
 import { MODULE_RESUBSCRIBE_COOLDOWN_MS } from "@/lib/modules/module-subscription-cooldown";
 import { isSafeModuleCardDisplayUrl } from "@/lib/module-card-image";
-import { appDashboardBrandGradientBarClass, appDashboardBrandGradientFillClass } from "@/components/app-templates";
+import { appDashboardBrandGradientBarClass, appDashboardBrandGradientFillClass, useAppNoticePopup } from "@/components/app-templates";
 import { isSystemMapCatalogSlug } from "@/lib/modules/system-map-catalog";
+import { MODULE_MONTHLY_199_TOKEN_COST } from "@/lib/tokens/token-debt";
+import { MODULE_DAILY_SUBSCRIBE_TOKEN_COST } from "@/lib/tokens/module-daily-deduction";
 import {
   DashboardModuleHeroCard,
   dashboardModulePrimaryCtaClass,
@@ -200,6 +202,11 @@ export function ModuleSubscriptionBrowser({
   hydrationReferenceMs,
 }: Props) {
   const router = useRouter();
+  const notice = useAppNoticePopup({
+    defaultConfirmTitle: "ยืนยัน",
+    defaultConfirmLabel: "ตกลง",
+  });
+  const [tokenBalance, setTokenBalance] = useState(access.tokens);
   const [cooldownClockMounted, setCooldownClockMounted] = useState(false);
   useEffect(() => setCooldownClockMounted(true), []);
   const cooldownNowMs = cooldownClockMounted ? Date.now() : hydrationReferenceMs;
@@ -218,7 +225,10 @@ export function ModuleSubscriptionBrowser({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [infoBanner, setInfoBanner] = useState<string | null>(null);
-  const [pendingUnsubscribe, setPendingUnsubscribe] = useState<{ id: string; title: string } | null>(null);
+
+  useEffect(() => {
+    setTokenBalance(access.tokens);
+  }, [access.tokens]);
 
   const subSyncKey = useMemo(() => [...initialSubscribedIds].sort().join(","), [initialSubscribedIds]);
   const trialSyncKey = useMemo(() => [...initialTrialIds].sort().join(","), [initialTrialIds]);
@@ -318,10 +328,9 @@ export function ModuleSubscriptionBrowser({
     return iso;
   }
 
-  async function performUnsubscribe(moduleId: string) {
+  async function performUnsubscribe(moduleId: string, title: string) {
     setErr(null);
     setInfoBanner(null);
-    setPendingUnsubscribe(null);
     setBusyId(moduleId);
     try {
       const res = await fetch(`/api/modules/subscriptions/${moduleId}`, {
@@ -330,9 +339,11 @@ export function ModuleSubscriptionBrowser({
       });
       const j = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setErr(j.error ?? "ยกเลิก Subscribe ไม่สำเร็จ");
+        notice.error(j.error ?? "ยกเลิกสมัครไม่สำเร็จ", { title: "ไม่สำเร็จ" });
         return;
       }
+      const mod = modules.find((m) => m.id === moduleId);
+      const wasMonthly199 = mod ? monthly199Slugs.has(mod.slug) : false;
       setSavedSubscribedIds((prev) => {
         const n = new Set(prev);
         n.delete(moduleId);
@@ -343,15 +354,52 @@ export function ModuleSubscriptionBrowser({
         n.delete(moduleId);
         return n;
       });
-      const unlockIso = new Date(Date.now() + MODULE_RESUBSCRIBE_COOLDOWN_MS).toISOString();
-      setCooldownUnlocks((prev) => ({ ...prev, [moduleId]: unlockIso }));
-      setInfoBanner(
-        `ยกเลิก Subscribe แล้ว — ปุ่ม Subscribe จะถูกล็อคจนถึง ${formatBangkokDateTimeLong(unlockIso)} (ครบ 1 เดือนนับจากนี้)`,
-      );
+      if (mod) {
+        setMonthly199Slugs((prev) => {
+          const n = new Set(prev);
+          n.delete(mod.slug);
+          return n;
+        });
+      }
+      if (!wasMonthly199) {
+        const unlockIso = new Date(Date.now() + MODULE_RESUBSCRIBE_COOLDOWN_MS).toISOString();
+        setCooldownUnlocks((prev) => ({ ...prev, [moduleId]: unlockIso }));
+        notice.success(
+          `ยกเลิกสมัคร «${title}» แล้ว — สมัครใหม่ได้เมื่อครบ 1 เดือน (${formatBangkokDateTimeLong(unlockIso)})`,
+          { title: "ยกเลิกสมัครแล้ว" },
+        );
+      } else {
+        setCooldownUnlocks((prev) => {
+          const n = { ...prev };
+          delete n[moduleId];
+          return n;
+        });
+        notice.success(
+          `ยกเลิกแพ็กรายเดือน «${title}» แล้ว — สมัครใหม่ได้ทันที (หัก ${MODULE_MONTHLY_199_TOKEN_COST} โทเคนทุกครั้ง)`,
+          { title: "ยกเลิกสมัครแล้ว" },
+        );
+      }
       router.refresh();
     } finally {
       setBusyId(null);
     }
+  }
+
+  async function requestUnsubscribe(moduleId: string, title: string) {
+    const mod = modules.find((m) => m.id === moduleId);
+    const isMonthly199 = mod ? monthly199Slugs.has(mod.slug) : false;
+    const ok = await notice.confirm(
+      isMonthly199
+        ? `ยกเลิกสมัครแพ็กรายเดือน «${title}»?\n\nหลังยกเลิกแล้ว สมัครใหม่ได้ทันที — ทุกครั้งที่สมัครจะหัก ${MODULE_MONTHLY_199_TOKEN_COST} โทเคนก่อน (ถ้าโทเคนไม่พอจะสมัครไม่ได้)`
+        : `ยกเลิกสมัคร «${title}»?\n\nหลังยกเลิกแล้ว จะสมัครระบบนี้ใหม่ได้เมื่อครบ 1 เดือน (30 วัน) นับจากวันนี้`,
+      {
+        title: "ยืนยันยกเลิกสมัคร",
+        confirmLabel: "ยกเลิกสมัคร",
+        tone: "warning",
+      },
+    );
+    if (!ok) return;
+    await performUnsubscribe(moduleId, title);
   }
 
   async function subscribeOnly(moduleId: string, plan: "daily" | "monthly199" = "daily") {
@@ -369,12 +417,16 @@ export function ModuleSubscriptionBrowser({
         error?: string;
         unlockAt?: string;
         monthly199?: boolean;
+        tokensRemaining?: number;
       };
       if (!res.ok) {
         if (j.unlockAt) {
           setCooldownUnlocks((prev) => ({ ...prev, [moduleId]: j.unlockAt! }));
         }
-        setErr(j.error ?? (plan === "monthly199" ? "สมัครแพ็ก 199 ไม่สำเร็จ" : "Subscribe ไม่สำเร็จ"));
+        notice.error(
+          j.error ?? (plan === "monthly199" ? "สมัครแพ็ก 199 ไม่สำเร็จ" : "สมัครไม่สำเร็จ"),
+          { title: "สมัครไม่ได้" },
+        );
         return;
       }
       setSavedSubscribedIds((prev) => new Set(prev).add(moduleId));
@@ -392,11 +444,59 @@ export function ModuleSubscriptionBrowser({
         const slug = modules.find((m) => m.id === moduleId)?.slug;
         if (slug) setMonthly199Slugs((prev) => new Set(prev).add(slug));
       }
+      if (typeof j.tokensRemaining === "number") {
+        setTokenBalance(j.tokensRemaining);
+      }
+      const modTitle = modules.find((m) => m.id === moduleId)?.title ?? "ระบบ";
+      notice.success(
+        plan === "monthly199"
+          ? `สมัครแพ็ก 199 «${modTitle}» สำเร็จ — หัก ${MODULE_MONTHLY_199_TOKEN_COST} โทเคน`
+          : `สมัคร «${modTitle}» สำเร็จ`,
+        { title: "สมัครแล้ว" },
+      );
       router.refresh();
     } finally {
       setBusyId(null);
     }
   }
+
+  async function requestSubscribe(moduleId: string, plan: "daily" | "monthly199" = "daily") {
+    const mod = modules.find((m) => m.id === moduleId);
+    if (!mod) return;
+    const tokenFree = isFreeModule(mod);
+    const tokenCost =
+      plan === "monthly199" ? MODULE_MONTHLY_199_TOKEN_COST : tokenFree ? 0 : MODULE_DAILY_SUBSCRIBE_TOKEN_COST;
+
+    if (tokenCost > 0 && tokenBalance < tokenCost) {
+      notice.error(`โทเคนไม่พอ — มี ${tokenBalance.toLocaleString("th-TH")} ต้องการ ${tokenCost.toLocaleString("th-TH")}`, {
+        title: "สมัครไม่ได้",
+      });
+      return;
+    }
+
+    const planLine =
+      plan === "monthly199"
+        ? `แพ็ก 199 / เดือน (หัก ${MODULE_MONTHLY_199_TOKEN_COST} โทเคน)`
+        : tokenFree
+          ? "ฟรี (ไม่หักโทเคน)"
+          : `1 บาท/วัน (หัก ${MODULE_DAILY_SUBSCRIBE_TOKEN_COST} โทเคนทันที)`;
+
+    const balanceLine =
+      tokenCost > 0
+        ? `\n\nยอดโทเคนคงเหลือหลังสมัครประมาณ ${(tokenBalance - tokenCost).toLocaleString("th-TH")} โทเคน`
+        : "";
+
+    const ok = await notice.confirm(`สมัครระบบ «${mod.title}»\n${planLine}${balanceLine}`, {
+      title: "ยืนยันการสมัคร",
+      confirmLabel: "สมัคร",
+      tone: "confirm",
+    });
+    if (!ok) return;
+    await subscribeOnly(moduleId, plan);
+  }
+
+  const unsubscribeButtonClass =
+    "app-tap-feedback rounded-xl border border-rose-200 bg-rose-50 font-bold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50";
 
   return (
     <div className="min-w-0 max-w-full space-y-4 sm:space-y-6">
@@ -559,15 +659,26 @@ export function ModuleSubscriptionBrowser({
                           >
                             เข้าใช้งาน
                           </Link>
-                          {SHOW_MODULE_MONTHLY_199_CTA && !isFreeModule(m) && monthly199Slugs.has(m.slug) ? (
+                          {subscribed ? (
+                            <button
+                              type="button"
+                              suppressHydrationWarning
+                              disabled={busyId === m.id}
+                              onClick={() => void requestUnsubscribe(m.id, m.title)}
+                              className={cn(unsubscribeButtonClass, "w-full px-3 py-2 text-xs")}
+                            >
+                              {busyId === m.id ? "กำลังยกเลิก..." : "ยกเลิกสมัคร"}
+                            </button>
+                          ) : null}
+                          {SHOW_MODULE_MONTHLY_199_CTA && subscribed && !isFreeModule(m) && monthly199Slugs.has(m.slug) ? (
                             <p className="text-center text-[11px] font-bold text-emerald-800">แพ็ก 199 / เดือน</p>
                           ) : null}
-                          {SHOW_MODULE_MONTHLY_199_CTA && !isFreeModule(m) && !monthly199Slugs.has(m.slug) ? (
+                          {SHOW_MODULE_MONTHLY_199_CTA && subscribed && !isFreeModule(m) && !monthly199Slugs.has(m.slug) ? (
                             <button
                               type="button"
                               suppressHydrationWarning
                               disabled={busyId === m.id || !unlocked}
-                              onClick={() => void subscribeOnly(m.id, "monthly199")}
+                              onClick={() => void requestSubscribe(m.id, "monthly199")}
                               className="app-tap-feedback w-full rounded-xl border border-[#0000BF]/20 bg-white px-3 py-2 text-xs font-bold text-[#2e2a58] hover:bg-indigo-50 disabled:opacity-50"
                             >
                               {busyId === m.id ? "กำลังสมัคร 199..." : "แพ็ก 199 / เดือน"}
@@ -595,7 +706,7 @@ export function ModuleSubscriptionBrowser({
                             type="button"
                             suppressHydrationWarning
                             disabled={busyId === m.id || !unlocked}
-                            onClick={() => void subscribeOnly(m.id, "daily")}
+                            onClick={() => void requestSubscribe(m.id, "daily")}
                             className={cn(dashboardModuleSubscribeButtonClass, "app-tap-feedback !min-h-[40px] !rounded-xl !py-2")}
                           >
                             {busyId === m.id ? (
@@ -615,7 +726,7 @@ export function ModuleSubscriptionBrowser({
                               type="button"
                               suppressHydrationWarning
                               disabled={busyId === m.id || !unlocked}
-                              onClick={() => void subscribeOnly(m.id, "monthly199")}
+                              onClick={() => void requestSubscribe(m.id, "monthly199")}
                               className="app-tap-feedback w-full rounded-xl border border-[#0000BF]/20 bg-white px-3 py-2 text-xs font-bold text-[#2e2a58] hover:bg-indigo-50 disabled:opacity-50"
                             >
                               แพ็ก 199 / เดือน
@@ -701,14 +812,27 @@ export function ModuleSubscriptionBrowser({
                     <Link href={dashboardModuleHref(m.slug)} className={cn(rowClass, "flex-1")}>
                       {body}
                     </Link>
-                    {SHOW_MODULE_MONTHLY_199_CTA && !isFreeModule(m) && !monthly199Slugs.has(m.slug) ? (
+                    {subscribed ? (
+                      <button
+                        type="button"
+                        suppressHydrationWarning
+                        disabled={busyId === m.id}
+                        aria-label={`ยกเลิกสมัคร ${m.title}`}
+                        title="ยกเลิกสมัคร"
+                        onClick={() => void requestUnsubscribe(m.id, m.title)}
+                        className={cn(unsubscribeButtonClass, "min-h-[44px] shrink-0 px-2.5 text-[11px]")}
+                      >
+                        {busyId === m.id ? "..." : "ยกเลิก"}
+                      </button>
+                    ) : null}
+                    {SHOW_MODULE_MONTHLY_199_CTA && subscribed && !isFreeModule(m) && !monthly199Slugs.has(m.slug) ? (
                       <button
                         type="button"
                         suppressHydrationWarning
                         disabled={busyId === m.id}
                         aria-label={`สมัครแพ็ก 199 ${m.title}`}
                         title="แพ็ก 199 / เดือน"
-                        onClick={() => void subscribeOnly(m.id, "monthly199")}
+                        onClick={() => void requestSubscribe(m.id, "monthly199")}
                         className="app-tap-feedback shrink-0 rounded-xl border border-[#0000BF]/20 bg-white px-2.5 text-[11px] font-black text-[#2e2a58] hover:bg-indigo-50 disabled:opacity-50"
                       >
                         199
@@ -745,7 +869,7 @@ export function ModuleSubscriptionBrowser({
                     suppressHydrationWarning
                     disabled={busyId === m.id || !unlocked}
                     className={cn(rowClass, "flex-1 disabled:opacity-50")}
-                    onClick={() => void subscribeOnly(m.id, "daily")}
+                    onClick={() => void requestSubscribe(m.id, "daily")}
                   >
                     {body}
                   </button>
@@ -756,7 +880,7 @@ export function ModuleSubscriptionBrowser({
                       disabled={busyId === m.id || !unlocked}
                       aria-label={`สมัครแพ็ก 199 ${m.title}`}
                       title="แพ็ก 199 / เดือน"
-                      onClick={() => void subscribeOnly(m.id, "monthly199")}
+                      onClick={() => void requestSubscribe(m.id, "monthly199")}
                       className="app-tap-feedback shrink-0 rounded-xl border border-[#0000BF]/20 bg-white px-2.5 text-[11px] font-black text-[#2e2a58] hover:bg-indigo-50 disabled:opacity-50"
                     >
                       199
@@ -769,46 +893,7 @@ export function ModuleSubscriptionBrowser({
         )}
       </section>
 
-      {pendingUnsubscribe ? (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="unsub-confirm-title"
-        >
-          <div className="app-surface-strong w-full max-w-md rounded-2xl p-5 shadow-xl">
-            <h2 id="unsub-confirm-title" className="text-base font-bold text-slate-900">
-              ยืนยันยกเลิก Subscribe
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-slate-600">
-              คุณกำลังจะยกเลิก Subscribe ระบบ <span className="font-semibold text-slate-800">{pendingUnsubscribe.title}</span>
-            </p>
-            <p className="mt-3 text-sm leading-relaxed text-amber-900">
-              หลังยกเลิกแล้ว คุณจะสามารถกลับมา Subscribe ระบบนี้ได้อีกครั้งเมื่อครบ{" "}
-              <span className="font-semibold">1 เดือน (30 วัน)</span> นับจากวันที่ยกเลิก
-            </p>
-            <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                suppressHydrationWarning
-                className="app-btn-soft app-tap-feedback rounded-lg px-4 py-2 text-sm font-semibold"
-                onClick={() => setPendingUnsubscribe(null)}
-              >
-                ยกเลิก
-              </button>
-              <button
-                type="button"
-                suppressHydrationWarning
-                disabled={busyId === pendingUnsubscribe.id}
-                className="app-tap-feedback rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
-                onClick={() => void performUnsubscribe(pendingUnsubscribe.id)}
-              >
-                ยืนยันยกเลิก Subscribe
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {notice.popup}
     </div>
   );
 }

@@ -151,7 +151,16 @@ function buildDefaultRecent(all: HomeModule[], count: number) {
   return all.slice(0, count).map((m) => m.slug);
 }
 
-export function DashboardHomeModuleShelf({ modules }: { modules: HomeModule[] }) {
+export function DashboardHomeModuleShelf({
+  modules,
+  variant = "home",
+  moreLink = { href: "/dashboard/systems", label: "ดูระบบ" },
+}: {
+  modules: HomeModule[];
+  /** home = แท็บล่าสุด/ปักหมุด · all = แสดงทุกระบบที่สมัคร */
+  variant?: "home" | "all";
+  moreLink?: { href: string; label: string };
+}) {
   const bySlug = useMemo(() => new Map(modules.map((m) => [m.slug, m])), [modules]);
   const [shelfTab, setShelfTab] = useState<ShelfTab>("recent");
   const [pinnedSlugs, setPinnedSlugs] = useState<string[]>(() => buildDefaultPinned(modules));
@@ -207,60 +216,64 @@ export function DashboardHomeModuleShelf({ modules }: { modules: HomeModule[] })
     return modules.slice(0, RECENT_LIMIT);
   }, [bySlug, modules, recentSlugs]);
 
-  const visibleModules = shelfTab === "pinned" ? pinnedModules : recentModules;
+  const visibleModules = variant === "all" ? modules : shelfTab === "pinned" ? pinnedModules : recentModules;
   const emptyLabel =
-    shelfTab === "pinned"
-      ? "ยังไม่มีโปรแกรมปักหมุด — กดดาวบนการ์ดเพื่อปักหมุด"
-      : "ยังไม่มีรายการล่าสุด — เปิดโปรแกรมจากดูทั้งหมด";
+    variant === "all"
+      ? "ยังไม่มีระบบที่สมัคร — ไปเลือกระบบที่หน้าระบบทั้งหมด"
+      : shelfTab === "pinned"
+        ? "ยังไม่มีโปรแกรมปักหมุด — กดดาวบนการ์ดเพื่อปักหมุด"
+        : "ยังไม่มีรายการล่าสุด — เปิดโปรแกรมจากดูระบบ";
 
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 pl-0.5 sm:pl-0">
-        <h2 className="text-xl font-bold text-[#2e2a58]">โปรแกรม</h2>
-        <Link href="/dashboard/modules" className="text-sm font-semibold text-[#5b61ff] hover:underline">
-          ดูทั้งหมด
+        <h2 className="text-xl font-bold text-[#2e2a58]">{variant === "all" ? "ระบบทั้งหมดที่เปิดใช้" : "โปรแกรม"}</h2>
+        <Link href={moreLink.href} className="text-sm font-semibold text-[#5b61ff] hover:underline">
+          {moreLink.label}
         </Link>
       </div>
 
-      <div
-        className="flex gap-1 rounded-2xl border border-indigo-100/90 bg-white/90 p-1 shadow-sm ring-1 ring-indigo-100/60"
-        role="tablist"
-        aria-label="เลือกมุมมองโปรแกรม"
-      >
-        {(
-          [
-            { id: "recent" as const, label: "ล่าสุด", count: recentModules.length },
-            { id: "pinned" as const, label: "ปักหมุด", count: pinnedModules.length },
-          ] as const
-        ).map((tab) => {
-          const active = shelfTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setShelfTab(tab.id)}
-              className={cn(
-                "relative flex min-h-[42px] flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm font-black transition",
-                active
-                  ? cn(appDashboardBrandGradientFillClass, "text-white shadow-md shadow-indigo-400/25")
-                  : "bg-transparent text-slate-600 hover:bg-indigo-50/80",
-              )}
-            >
-              <span>{tab.label}</span>
-              <span
+      {variant === "home" ? (
+        <div
+          className="flex gap-1 rounded-2xl border border-indigo-100/90 bg-white/90 p-1 shadow-sm ring-1 ring-indigo-100/60"
+          role="tablist"
+          aria-label="เลือกมุมมองโปรแกรม"
+        >
+          {(
+            [
+              { id: "recent" as const, label: "ล่าสุด", count: recentModules.length },
+              { id: "pinned" as const, label: "ปักหมุด", count: pinnedModules.length },
+            ] as const
+          ).map((tab) => {
+            const active = shelfTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setShelfTab(tab.id)}
                 className={cn(
-                  "rounded-md px-1.5 py-0.5 text-[10px] font-black tabular-nums",
-                  active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500",
+                  "relative flex min-h-[42px] flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm font-black transition",
+                  active
+                    ? cn(appDashboardBrandGradientFillClass, "text-white shadow-md shadow-indigo-400/25")
+                    : "bg-transparent text-slate-600 hover:bg-indigo-50/80",
                 )}
               >
-                {tab.count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+                <span>{tab.label}</span>
+                <span
+                  className={cn(
+                    "rounded-md px-1.5 py-0.5 text-[10px] font-black tabular-nums",
+                    active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500",
+                  )}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
       {visibleModules.length === 0 ? (
         <p className="rounded-[1.35rem] border border-dashed border-[#d8d6ec] bg-white/60 px-4 py-8 text-center text-sm font-semibold text-[#66638c]">
@@ -270,7 +283,7 @@ export function DashboardHomeModuleShelf({ modules }: { modules: HomeModule[] })
         <div className="grid grid-cols-3 gap-2 sm:gap-2.5 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
           {visibleModules.map((m) => (
             <CompactModuleCard
-              key={`${shelfTab}-${m.slug}`}
+              key={`${variant}-${shelfTab}-${m.slug}`}
               module={m}
               pinned={pinnedSlugs.includes(m.slug)}
               shelfTab={shelfTab}

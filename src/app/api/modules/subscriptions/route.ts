@@ -14,6 +14,7 @@ import {
 import { isDailyTokenExemptModuleSlug, MQTT_SERVICE_MODULE_SLUG } from "@/lib/modules/config";
 import { isMqttServiceModuleEnabled } from "@/lib/modules/mqtt-feature";
 import { listMonthly199ModuleSlugs, purchaseModuleMonthly199 } from "@/lib/tokens/module-monthly-199";
+import { chargeModuleSubscribeDailyToken } from "@/lib/tokens/module-daily-deduction";
 import { isTokenDebtLocked } from "@/lib/tokens/token-debt";
 
 const bodySchema = z.object({
@@ -103,9 +104,38 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: bought.message }, { status: 400 });
     }
     await subscribeModule(auth.session.sub, mod.id);
-    return NextResponse.json({ ok: true, monthly199: true, tokensRemaining: bought.tokensRemaining });
+    return NextResponse.json({
+      ok: true,
+      monthly199: true,
+      tokensRemaining: bought.tokensRemaining,
+    });
+  }
+
+  if (!isDailyTokenExemptModuleSlug(mod.slug)) {
+    const charged = await chargeModuleSubscribeDailyToken(ctx.billingUserId, mod.slug);
+    if (!charged.ok) {
+      if (charged.code === "INSUFFICIENT_TOKENS") {
+        return NextResponse.json(
+          {
+            error: `โทเคนไม่พอสำหรับสมัครระบบนี้ (มี ${charged.balance} ต้องการ ${charged.requiredTokens})`,
+            code: charged.code,
+            balance: charged.balance,
+            requiredTokens: charged.requiredTokens,
+          },
+          { status: 402 },
+        );
+      }
+      return NextResponse.json({ error: charged.message }, { status: 403 });
+    }
+    await subscribeModule(auth.session.sub, mod.id);
+    return NextResponse.json({
+      ok: true,
+      monthly199: false,
+      tokensRemaining: charged.tokensRemaining,
+      tokenCharged: charged.charged,
+    });
   }
 
   await subscribeModule(auth.session.sub, mod.id);
-  return NextResponse.json({ ok: true, monthly199: false });
+  return NextResponse.json({ ok: true, monthly199: false, tokensRemaining: ctx.access.tokens });
 }

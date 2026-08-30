@@ -3,7 +3,6 @@ import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enum
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
-import { canAccessAppModule } from "@/lib/modules/access";
 import {
   appDashboardBrandGradientFillClass,
 } from "@/components/app-templates";
@@ -11,19 +10,8 @@ import { TokenTopupModal } from "@/components/dashboard/TokenTopupModal";
 import { cn } from "@/lib/cn";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import {
-  displayAppModuleTitle,
-  filterAppModulesForDashboardUi,
-  MQTT_SERVICE_MODULE_SLUG,
-} from "@/lib/modules/config";
-import { isMqttServiceModuleEnabled } from "@/lib/modules/mqtt-feature";
-import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
-import { listTrialModuleIds } from "@/lib/modules/trial-store";
-import { listModuleSlugsChargedToday } from "@/lib/tokens/module-daily-deduction";
-import { getModuleBillingContext } from "@/lib/modules/billing-context";
-import { STAFF_ALLOWED_MODULE_SLUGS } from "@/lib/modules/staff-policy";
+import { listDashboardAccessibleModules } from "@/lib/modules/dashboard-accessible-modules";
 import { getModuleDailyUsageBadge } from "@/lib/modules/module-usage-badge";
-import { SYSTEM_MAP_CATALOG_SLUG } from "@/lib/modules/system-map-catalog";
 import { isChatAiDisabled } from "@/lib/chat-ai/feature";
 import { CHAT_AI_DASHBOARD_HREF } from "@/lib/dashboard/chat-ai-href";
 import { resolveModuleCardDisplayImageUrl } from "@/lib/modules/dashboard-module-cover-images";
@@ -44,7 +32,7 @@ export default async function DashboardHomePage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const [user, modulesRaw, subscribedIds, trialIds, billCtx] = await Promise.all([
+  const [user, { modules: subscribedModules }] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.sub },
       select: {
@@ -57,56 +45,12 @@ export default async function DashboardHomePage() {
         employerUserId: true,
       },
     }),
-    prisma.appModule.findMany({
-      where: { isActive: true },
-      orderBy: [{ groupId: "asc" }, { sortOrder: "asc" }],
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        description: true,
-        groupId: true,
-        cardImageUrl: true,
-      },
-    }),
-    listSubscribedModuleIds(session.sub),
-    listTrialModuleIds(session.sub),
-    getModuleBillingContext(session.sub),
+    listDashboardAccessibleModules(session.sub),
   ]);
 
   if (!user) redirect("/login");
 
-  const chargedTodaySlugs = billCtx
-    ? await listModuleSlugsChargedToday(billCtx.billingUserId).catch(() => new Set<string>())
-    : new Set<string>();
-
-  const modules = filterAppModulesForDashboardUi(modulesRaw, user.role);
-
   const tierLine = planSummaryLine(user.subscriptionType, user.subscriptionTier);
-
-  const accessSet = new Set([...subscribedIds, ...trialIds]);
-  const accessFields = {
-    role: user.role,
-    subscriptionType: user.subscriptionType,
-    subscriptionTier: user.subscriptionTier,
-    tokens: user.tokens,
-  };
-  const subscribedModules = modules
-    .filter((m) => m.slug !== SYSTEM_MAP_CATALOG_SLUG)
-    .filter((m) => isMqttServiceModuleEnabled() || m.slug !== MQTT_SERVICE_MODULE_SLUG)
-    .filter((m) => !user.employerUserId || STAFF_ALLOWED_MODULE_SLUGS.has(m.slug))
-    .filter((m) => accessSet.has(m.id))
-    .filter(
-      (m) =>
-        user.role === "ADMIN" ||
-        user.employerUserId ||
-        canAccessAppModule(
-          accessFields,
-          { slug: m.slug, groupId: m.groupId },
-          { chargedTodaySlugs },
-        ),
-    )
-    .map((m) => ({ ...m, title: displayAppModuleTitle(m.slug, m.title) }));
 
   /** ยังไม่มีโปรแกรมที่เปิดใช้ได้ — พาไปเลือกระบบที่หน้ารวมก่อน */
   if (subscribedModules.length === 0) {

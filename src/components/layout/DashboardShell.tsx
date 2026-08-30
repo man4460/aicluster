@@ -363,6 +363,7 @@ function isModuleWorkspacePath(pathname: string): boolean {
     "/dashboard/plans",
     "/dashboard/chat",
     "/dashboard/modules",
+    "/dashboard/systems",
     "/dashboard/admin",
   ] as const;
 
