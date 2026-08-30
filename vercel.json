@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/attendance-prune-faces",
       "schedule": "0 4 1 * *"
+    },
+    {
+      "path": "/api/cron/demo-refresh",
+      "schedule": "15 17 * * *"
     }
   ]
 }

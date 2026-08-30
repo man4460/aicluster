@@ -15,6 +15,7 @@ import {
   COMMUNITY_COOP_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
   FOOTBALL_TURF_MODULE_SLUG,
+  HOTEL_RESORT_MODULE_SLUG,
 } from "@/lib/modules/config";
 import { seedDocTransmissionDemoForUser } from "@/lib/trial/seed-doc-transmission";
 import { TRIAL_PROD_SCOPE, trialSessionDaysDefault } from "./constants";
@@ -30,6 +31,7 @@ import { seedSchoolBankTrialData } from "./seed-school-bank";
 import { seedCommunityCoopTrialData } from "./seed-community-coop";
 import { seedLaundryTrialData } from "./seed-mqtt-laundry";
 import { seedFootballTurfTrialData } from "./seed-football-turf";
+import { seedHotelResortTrialData } from "./seed-hotel-resort";
 import { seedTrialModuleSettings } from "./seed-trial-module-settings";
 
 type Tx = Omit<
@@ -99,6 +101,12 @@ async function deleteSandboxRowsInTx(tx: Tx, ownerUserId: string, trialSessionId
   await tx.docTransmissionRecord.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.docTransmissionDepartment.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.docTransmissionSettings.deleteMany({ where: { ownerUserId, trialSessionId } });
+
+  await tx.hotelResortBooking.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.hotelResortGuest.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.hotelResortReview.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.hotelResortStaffLink.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.hotelResortProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
 }
 
 /**
@@ -232,6 +240,8 @@ export async function startTrial(userId: string, moduleId: string): Promise<void
       await seedLaundryTrialData(tx, userId, session.id);
     } else if (mod.slug === FOOTBALL_TURF_MODULE_SLUG) {
       await seedFootballTurfTrialData(tx, userId, session.id);
+    } else if (mod.slug === HOTEL_RESORT_MODULE_SLUG) {
+      await seedHotelResortTrialData(tx, userId, session.id);
     }
 
     await seedTrialModuleSettings(tx, userId, session.id, mod.slug);
