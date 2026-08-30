@@ -22,8 +22,7 @@ import { MODULE_RESUBSCRIBE_COOLDOWN_MS } from "@/lib/modules/module-subscriptio
 import { isSafeModuleCardDisplayUrl } from "@/lib/module-card-image";
 import { appDashboardBrandGradientBarClass, appDashboardBrandGradientFillClass, useAppNoticePopup } from "@/components/app-templates";
 import { isSystemMapCatalogSlug } from "@/lib/modules/system-map-catalog";
-import { MODULE_MONTHLY_199_TOKEN_COST } from "@/lib/tokens/token-debt";
-import { MODULE_DAILY_SUBSCRIBE_TOKEN_COST } from "@/lib/tokens/module-daily-deduction";
+import { MODULE_DAILY_SUBSCRIBE_TOKEN_COST, MODULE_MONTHLY_199_TOKEN_COST } from "@/lib/tokens/token-debt";
 import {
   DashboardModuleHeroCard,
   dashboardModulePrimaryCtaClass,

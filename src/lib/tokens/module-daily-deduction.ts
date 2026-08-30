@@ -1,11 +1,10 @@
 import { isDailyTokenExemptModuleSlug } from "@/lib/modules/config";
 import { prisma } from "@/lib/prisma";
 import { bangkokDateKey } from "@/lib/time/bangkok";
-import { isTokenDebtLocked } from "@/lib/tokens/token-debt";
+import { isTokenDebtLocked, MODULE_DAILY_SUBSCRIBE_TOKEN_COST } from "@/lib/tokens/token-debt";
 import { moduleHasActiveMonthly199 } from "@/lib/tokens/module-monthly-199";
 
-/** โทเคนที่หักตอนกดสมัครสายรายวัน (1 บาท/วัน) */
-export const MODULE_DAILY_SUBSCRIBE_TOKEN_COST = 1;
+export { MODULE_DAILY_SUBSCRIBE_TOKEN_COST } from "@/lib/tokens/token-debt";
 
 /**
  * ผลการหักโทเคนต่อโมดูล/วัน (Bangkok)

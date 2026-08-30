@@ -7,6 +7,9 @@ export const TOKEN_DEBT_LOCK_LIMIT = 100;
 /** 1 บาท = 1 โทเคน */
 export const MODULE_MONTHLY_199_TOKEN_COST = 199;
 
+/** โทเคนที่หักตอนกดสมัครสายรายวัน (1 บาท/วัน) */
+export const MODULE_DAILY_SUBSCRIBE_TOKEN_COST = 1;
+
 export function isTokenDebtLocked(tokens: number): boolean {
   return tokens <= -TOKEN_DEBT_LOCK_LIMIT;
 }
