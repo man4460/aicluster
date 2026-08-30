@@ -36,7 +36,11 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 73: UserModulePlan — แพ็ก 199 ต่อโมดูล */
 /** 74: AttendanceBranch + homeBranchId + location.branchId — client เก่าไม่มี attendanceBranch delegate */
 /** 75: VillageIncomeCategory + VillageIncomeEntry — หน้าการเงินหมู่บ้าน */
-const PRISMA_SINGLETON_VERSION = 76;
+/** 76: (reserved bump) */
+/** 77: ParkingCostCategory/Entry + ParkingIncomeCategory/Entry — หมวดรายรับ-รายจ่ายจอดรถ */
+/** 78: ParkingStaffLink + branding/PIN fields on ParkingSite */
+/** 79: ParkingSite portal banner/gallery */
+const PRISMA_SINGLETON_VERSION = 81;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -77,6 +81,13 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     parkingPackage?: { findMany?: unknown };
     parkingMembership?: { findMany?: unknown };
     parkingBooking?: { findMany?: unknown };
+    parkingReview?: { findMany?: unknown };
+    hotelResortReview?: { findMany?: unknown };
+    parkingStaffLink?: { findUnique?: unknown };
+    parkingCostCategory?: { findMany?: unknown };
+    parkingCostEntry?: { findMany?: unknown };
+    parkingIncomeCategory?: { findMany?: unknown };
+    parkingIncomeEntry?: { findMany?: unknown };
     buildingPosOrder?: { findMany?: unknown };
     buildingPosStaffLink?: { findUnique?: unknown };
     buildingPosCategory?: { findMany?: unknown };
@@ -199,6 +210,9 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.parkingPackage?.findMany === "function" &&
     typeof c.parkingMembership?.findMany === "function" &&
     typeof c.parkingBooking?.findMany === "function" &&
+    typeof c.parkingReview?.findMany === "function" &&
+    typeof c.hotelResortReview?.findMany === "function" &&
+    typeof c.parkingStaffLink?.findUnique === "function" &&
     typeof c.buildingPosOrder?.findMany === "function" &&
     typeof c.buildingPosStaffLink?.findUnique === "function" &&
     typeof c.buildingPosCategory?.findMany === "function" &&
@@ -282,14 +296,29 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.footballTurfIncomeCategory?.findMany === "function" &&
     typeof c.footballTurfIncomeEntry?.findMany === "function" &&
     typeof c.footballTurfStaffLink?.findUnique === "function" &&
+    typeof c.parkingSite?.findFirst === "function" &&
+    typeof c.parkingCostCategory?.findMany === "function" &&
+    typeof c.parkingCostEntry?.findMany === "function" &&
+    typeof c.parkingIncomeCategory?.findMany === "function" &&
+    typeof c.parkingIncomeEntry?.findMany === "function" &&
     typeof c.userModulePlan?.findMany === "function" &&
     typeof c.siteSetting?.findUnique === "function"
   );
 }
 
 function parkingDelegatesPresent(client: unknown): boolean {
-  const c = client as { parkingSite?: { findFirst?: unknown } };
-  return typeof c.parkingSite?.findFirst === "function";
+  const c = client as {
+    parkingSite?: { findFirst?: unknown };
+    parkingCostCategory?: { findMany?: unknown };
+    parkingIncomeCategory?: { findMany?: unknown };
+    parkingStaffLink?: { findUnique?: unknown };
+  };
+  return (
+    typeof c.parkingSite?.findFirst === "function" &&
+    typeof c.parkingCostCategory?.findMany === "function" &&
+    typeof c.parkingIncomeCategory?.findMany === "function" &&
+    typeof c.parkingStaffLink?.findUnique === "function"
+  );
 }
 
 function getPrisma(): PrismaClient {

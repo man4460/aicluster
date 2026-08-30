@@ -14,15 +14,20 @@ import {
   assetRowEditIconButtonClass,
   assetRowRemoveIconButtonClass,
 } from "@/systems/asset/components/AssetRowActionIcons";
-import { ParkingPageStack, ParkingPanelCard } from "@/systems/parking/components/ParkingPageChrome";
+import { ParkingPanelCard } from "@/systems/parking/components/ParkingPageChrome";
 import { ParkingSpotsGridList } from "@/systems/parking/components/ParkingSpotsGridList";
 import {
+  parkingOffersHref,
+  parseParkingLotsView,
   parkingPricingModeLabel,
+  type ParkingLotsViewKey,
   type ParkingPricingMode,
 } from "@/systems/parking/parking-module-nav";
 import { parkingBtnPrimary, parkingField } from "@/systems/parking/parking-ui";
 import {
   parkingFilterChipClass,
+  parkingPrimaryTabPillClass,
+  parkingPrimaryTabShellClass,
   parkingValetInnerCardClass,
 } from "@/systems/parking/parking-ui-tokens";
 
@@ -67,6 +72,7 @@ export function ParkingLotsClient() {
   const [spots, setSpots] = useState<SpotRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [lotFilter, setLotFilter] = useState<string>(() => searchParams.get("lot") ?? "");
+  const lotsView = parseParkingLotsView(searchParams.get("view"));
 
   const [lotModal, setLotModal] = useState(false);
   const [editingLot, setEditingLot] = useState<LotCard | null>(null);
@@ -109,8 +115,20 @@ export function ParkingLotsClient() {
 
   useEffect(() => {
     const q = searchParams.get("lot");
-    if (q) setLotFilter(q);
+    setLotFilter(q ?? "");
   }, [searchParams]);
+
+  function setLotsView(next: ParkingLotsViewKey, lot?: string) {
+    const resolvedLot = lot !== undefined ? lot : lotFilter;
+    router.replace(
+      parkingOffersHref({
+        tab: "lots",
+        view: next,
+        lot: next === "spots" ? resolvedLot || undefined : undefined,
+      }),
+      { scroll: false },
+    );
+  }
 
   const activeLots = useMemo(() => lots.filter((l) => l.isActive), [lots]);
 
@@ -168,7 +186,7 @@ export function ParkingLotsClient() {
       await reload();
       if (!editingLot && data.site?.id) {
         setLotFilter(String(data.site.id));
-        router.replace(`/dashboard/parking/lots?lot=${data.site.id}`, { scroll: false });
+        router.replace(parkingOffersHref({ tab: "lots", view: "lots", lot: data.site.id }), { scroll: false });
       }
       router.refresh();
     } catch {
@@ -193,7 +211,7 @@ export function ParkingLotsClient() {
     if (res.ok) {
       if (lotFilter === String(lot.id)) {
         setLotFilter("");
-        router.replace("/dashboard/parking/lots", { scroll: false });
+        router.replace(parkingOffersHref({ tab: "lots", view: "lots" }), { scroll: false });
       }
       await reload();
       router.refresh();
@@ -272,7 +290,7 @@ export function ParkingLotsClient() {
       setEditingSpot(null);
       if (!editingSpot) {
         setLotFilter(String(siteId));
-        router.replace(`/dashboard/parking/lots?lot=${siteId}`, { scroll: false });
+        router.replace(parkingOffersHref({ tab: "lots", view: "spots", lot: siteId }), { scroll: false });
       }
       await reload();
       router.refresh();
@@ -285,190 +303,217 @@ export function ParkingLotsClient() {
 
   function selectLotFilter(id: string) {
     setLotFilter(id);
-    const href = id ? `/dashboard/parking/lots?lot=${id}` : "/dashboard/parking/lots";
-    router.replace(href, { scroll: false });
+    router.replace(parkingOffersHref({ tab: "lots", view: "spots", lot: id || undefined }), { scroll: false });
   }
 
   const addSpotDisabled = activeLots.length === 0;
 
+  const viewTabs = (
+    <nav className={cn(parkingPrimaryTabShellClass, "shrink-0")} role="tablist" aria-label="เลือกมุมมองลานจอด">
+      {(
+        [
+          { key: "lots" as const, label: "ลานจอด" },
+          { key: "spots" as const, label: "ช่องจอด" },
+        ] as const
+      ).map((t) => (
+        <button
+          key={t.key}
+          type="button"
+          role="tab"
+          aria-selected={lotsView === t.key}
+          className={parkingPrimaryTabPillClass(lotsView === t.key)}
+          onClick={() => setLotsView(t.key)}
+        >
+          {t.label}
+        </button>
+      ))}
+    </nav>
+  );
+
   return (
-    <ParkingPageStack>
-      {/* —— ลานจอด (= อาคารของโรงแรม) —— */}
+    <>
       <ParkingPanelCard
-        title="ลานจอด"
-        headerClassName="flex flex-row items-start justify-between gap-3 sm:items-center"
+        title={lotsView === "lots" ? "ลานจอด" : "ช่องจอด"}
+        description={
+          lotsView === "lots"
+            ? "เพิ่มลาน · ตั้งราคาชม./วัน/เดือน"
+            : "จัดการช่องจอดในแต่ละลาน"
+        }
+        headerClassName="flex flex-row flex-wrap items-start justify-between gap-3 sm:items-center"
         action={
-          <button
-            type="button"
-            onClick={openCreateLot}
-            aria-label="เพิ่มลานจอด"
-            className={cn(
-              parkingBtnPrimary,
-              "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2.5 sm:min-w-0 sm:px-4",
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {viewTabs}
+            {lotsView === "lots" ? (
+              <button
+                type="button"
+                onClick={openCreateLot}
+                aria-label="เพิ่มลานจอด"
+                className={cn(
+                  parkingBtnPrimary,
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2.5 sm:min-w-0 sm:px-4",
+                )}
+              >
+                <span className="text-lg leading-none sm:hidden">+</span>
+                <span className="hidden sm:inline">+ เพิ่มลาน</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={openCreateSpot}
+                disabled={addSpotDisabled}
+                aria-label="เพิ่มช่องจอด"
+                title={addSpotDisabled ? "เพิ่มลานก่อน" : "เพิ่มช่องจอด"}
+                className={cn(
+                  parkingBtnPrimary,
+                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2.5 sm:min-w-0 sm:px-4",
+                  addSpotDisabled && "pointer-events-none opacity-45",
+                )}
+              >
+                <span className="text-lg leading-none sm:hidden">+</span>
+                <span className="hidden sm:inline">+ เพิ่มช่อง</span>
+              </button>
             )}
-          >
-            <span className="text-lg leading-none sm:hidden">+</span>
-            <span className="hidden sm:inline">+ เพิ่มลาน</span>
-          </button>
+          </div>
         }
       >
-        {loading ? (
-          <p className="text-sm text-[#66638c]">กำลังโหลด…</p>
-        ) : loadErr ? (
-          <p className="text-sm text-rose-700">{loadErr}</p>
-        ) : lots.length === 0 ? (
-          <AppEmptyState tone="glass">ยังไม่มีลานจอด — กด「เพิ่มลาน」เพื่อเริ่มต้น</AppEmptyState>
-        ) : (
-          <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-            {lots.map((lot) => (
-              <li key={lot.id} className={cn(parkingValetInnerCardClass, !lot.isActive && "opacity-60")}>
-                <div className="flex items-start justify-between gap-2">
-                  <button
-                    type="button"
-                    className="min-w-0 flex-1 text-left"
-                    onClick={() => selectLotFilter(String(lot.id))}
-                    aria-label={`กรองช่องของ ${lot.name}`}
-                  >
-                    <p className="text-lg font-black tracking-tight text-[#1e1b4b]">{lot.name}</p>
-                    <p className="mt-0.5 text-xs font-semibold text-[#66638c]">
-                      {parkingPricingModeLabel(lot.pricingMode)}
-                      {!lot.isActive ? " · ปิดใช้งาน" : ""}
-                    </p>
-                  </button>
-                  <div className="flex shrink-0 items-center gap-1">
+        {lotsView === "lots" ? (
+          loading ? (
+            <p className="text-sm text-[#66638c]">กำลังโหลด…</p>
+          ) : loadErr ? (
+            <p className="text-sm text-rose-700">{loadErr}</p>
+          ) : lots.length === 0 ? (
+            <AppEmptyState tone="glass">ยังไม่มีลานจอด — กด「เพิ่มลาน」เพื่อเริ่มต้น</AppEmptyState>
+          ) : (
+            <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+              {lots.map((lot) => (
+                <li key={lot.id} className={cn(parkingValetInnerCardClass, !lot.isActive && "opacity-60")}>
+                  <div className="flex items-start justify-between gap-2">
                     <button
                       type="button"
-                      className={assetRowEditIconButtonClass}
-                      aria-label={`แก้ไข ${lot.name}`}
-                      title="แก้ไข"
-                      onClick={() => openEditLot(lot)}
+                      className="min-w-0 flex-1 text-left"
+                      onClick={() => selectLotFilter(String(lot.id))}
+                      aria-label={`ดูช่องของ ${lot.name}`}
                     >
-                      <IconRowEdit className="h-4 w-4" />
+                      <p className="text-lg font-black tracking-tight text-[#1e1b4b]">{lot.name}</p>
+                      <p className="mt-0.5 text-xs font-semibold text-[#66638c]">
+                        {parkingPricingModeLabel(lot.pricingMode)}
+                        {!lot.isActive ? " · ปิดใช้งาน" : ""}
+                      </p>
                     </button>
-                    {lot.isActive ? (
+                    <div className="flex shrink-0 items-center gap-1">
                       <button
                         type="button"
-                        className={assetRowRemoveIconButtonClass}
-                        aria-label={`ปิดใช้งาน ${lot.name}`}
-                        title="ปิดใช้งาน"
-                        onClick={() => void deactivateLot(lot)}
+                        className={assetRowEditIconButtonClass}
+                        aria-label={`แก้ไข ${lot.name}`}
+                        title="แก้ไข"
+                        onClick={() => openEditLot(lot)}
                       >
-                        <IconRowRemove className="h-4 w-4" />
+                        <IconRowEdit className="h-4 w-4" />
                       </button>
-                    ) : null}
+                      {lot.isActive ? (
+                        <button
+                          type="button"
+                          className={assetRowRemoveIconButtonClass}
+                          aria-label={`ปิดใช้งาน ${lot.name}`}
+                          title="ปิดใช้งาน"
+                          onClick={() => void deactivateLot(lot)}
+                        >
+                          <IconRowRemove className="h-4 w-4" />
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-                <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-xl bg-white/55 px-2 py-2 ring-1 ring-white/70">
-                    <dt className="text-[10px] font-bold text-[#66638c]">ชม.</dt>
-                    <dd className="text-sm font-black tabular-nums text-[#1e1b4b]">
-                      {lot.hourlyRateBaht != null ? lot.hourlyRateBaht.toLocaleString("th-TH") : "—"}
-                    </dd>
-                  </div>
-                  <div className="rounded-xl bg-white/55 px-2 py-2 ring-1 ring-white/70">
-                    <dt className="text-[10px] font-bold text-[#66638c]">วัน</dt>
-                    <dd className="text-sm font-black tabular-nums text-[#1e1b4b]">
-                      {lot.dailyRateBaht != null ? lot.dailyRateBaht.toLocaleString("th-TH") : "—"}
-                    </dd>
-                  </div>
-                  <div className="rounded-xl bg-white/55 px-2 py-2 ring-1 ring-white/70">
-                    <dt className="text-[10px] font-bold text-[#66638c]">เดือน</dt>
-                    <dd className="text-sm font-black tabular-nums text-[#1e1b4b]">
-                      {lot.monthlyRateBaht != null ? lot.monthlyRateBaht.toLocaleString("th-TH") : "—"}
-                    </dd>
-                  </div>
-                </dl>
-                {lot.note ? <p className="mt-2 line-clamp-2 text-xs text-[#66638c]">{lot.note}</p> : null}
-                <p className="mt-3 border-t border-white/50 pt-3 text-xs font-semibold text-[#5f5a8a]">
-                  ช่อง {lot.spotCount} · จอดอยู่ {lot.activeSessions}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </ParkingPanelCard>
-
-      {/* —— ช่องจอด (= ห้องของโรงแรม) —— */}
-      <ParkingPanelCard
-        title="ช่องจอด"
-        headerClassName="flex flex-row items-start justify-between gap-3 sm:items-center"
-        action={
-          <button
-            type="button"
-            onClick={openCreateSpot}
-            disabled={addSpotDisabled}
-            aria-label="เพิ่มช่องจอด"
-            title={addSpotDisabled ? "เพิ่มลานก่อน" : "เพิ่มช่องจอด"}
-            className={cn(
-              parkingBtnPrimary,
-              "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2.5 sm:min-w-0 sm:px-4",
-              addSpotDisabled && "pointer-events-none opacity-45",
-            )}
-          >
-            <span className="text-lg leading-none sm:hidden">+</span>
-            <span className="hidden sm:inline">+ เพิ่มช่อง</span>
-          </button>
-        }
-      >
-        {activeLots.length > 0 ? (
-          <div className="mb-3 flex flex-wrap gap-1.5" role="tablist" aria-label="กรองตามลาน">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={!lotFilter}
-              className={parkingFilterChipClass(!lotFilter)}
-              onClick={() => selectLotFilter("")}
-            >
-              ทั้งหมด
-            </button>
-            {activeLots.map((l) => (
-              <button
-                key={l.id}
-                type="button"
-                role="tab"
-                aria-selected={lotFilter === String(l.id)}
-                className={parkingFilterChipClass(lotFilter === String(l.id))}
-                onClick={() => selectLotFilter(String(l.id))}
-              >
-                {l.name}
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        {loading ? (
-          <p className="text-sm text-[#66638c]">กำลังโหลด…</p>
-        ) : addSpotDisabled ? (
-          <AppEmptyState tone="glass">เพิ่มลานจอดก่อน แล้วค่อยเพิ่มช่องจอดของลาน</AppEmptyState>
+                  <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-xl bg-white/55 px-2 py-2 ring-1 ring-white/70">
+                      <dt className="text-[10px] font-bold text-[#66638c]">ชม.</dt>
+                      <dd className="text-sm font-black tabular-nums text-[#1e1b4b]">
+                        {lot.hourlyRateBaht != null ? lot.hourlyRateBaht.toLocaleString("th-TH") : "—"}
+                      </dd>
+                    </div>
+                    <div className="rounded-xl bg-white/55 px-2 py-2 ring-1 ring-white/70">
+                      <dt className="text-[10px] font-bold text-[#66638c]">วัน</dt>
+                      <dd className="text-sm font-black tabular-nums text-[#1e1b4b]">
+                        {lot.dailyRateBaht != null ? lot.dailyRateBaht.toLocaleString("th-TH") : "—"}
+                      </dd>
+                    </div>
+                    <div className="rounded-xl bg-white/55 px-2 py-2 ring-1 ring-white/70">
+                      <dt className="text-[10px] font-bold text-[#66638c]">เดือน</dt>
+                      <dd className="text-sm font-black tabular-nums text-[#1e1b4b]">
+                        {lot.monthlyRateBaht != null ? lot.monthlyRateBaht.toLocaleString("th-TH") : "—"}
+                      </dd>
+                    </div>
+                  </dl>
+                  {lot.note ? <p className="mt-2 line-clamp-2 text-xs text-[#66638c]">{lot.note}</p> : null}
+                  <p className="mt-3 border-t border-white/50 pt-3 text-xs font-semibold text-[#5f5a8a]">
+                    ช่อง {lot.spotCount} · จอดอยู่ {lot.activeSessions}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )
         ) : (
-          <ParkingSpotsGridList
-            emptyLabel={
-              lotFilter
-                ? "ลานนี้ยังไม่มีช่อง — กด「เพิ่มช่อง」"
-                : "ยังไม่มีช่องจอด — กด「เพิ่มช่อง」"
-            }
-            spots={filteredSpots.map((s) => ({
-              id: s.id,
-              spotCode: s.spotCode,
-              zoneLabel: !lotFilter
-                ? [s.siteName, s.zoneLabel].filter(Boolean).join(" · ") || null
-                : s.zoneLabel,
-              activeSession: s.activeSession
-                ? {
-                    licensePlate: s.activeSession.licensePlate,
-                    checkInAt: new Date(s.activeSession.checkInAt),
-                  }
-                : null,
-            }))}
-            onEdit={(spotId) => {
-              const spot = spots.find((s) => s.id === spotId);
-              if (spot) openEditSpot(spot);
-            }}
-            onDelete={(spotId) => {
-              const spot = spots.find((s) => s.id === spotId);
-              if (spot) void deleteSpot(spot);
-            }}
-          />
+          <>
+            {activeLots.length > 0 ? (
+              <div className="mb-3 flex flex-wrap gap-1.5" role="tablist" aria-label="กรองตามลาน">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={!lotFilter}
+                  className={parkingFilterChipClass(!lotFilter)}
+                  onClick={() => selectLotFilter("")}
+                >
+                  ทั้งหมด
+                </button>
+                {activeLots.map((l) => (
+                  <button
+                    key={l.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={lotFilter === String(l.id)}
+                    className={parkingFilterChipClass(lotFilter === String(l.id))}
+                    onClick={() => selectLotFilter(String(l.id))}
+                  >
+                    {l.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {loading ? (
+              <p className="text-sm text-[#66638c]">กำลังโหลด…</p>
+            ) : addSpotDisabled ? (
+              <AppEmptyState tone="glass">เพิ่มลานจอดก่อน แล้วค่อยเพิ่มช่องจอดของลาน</AppEmptyState>
+            ) : (
+              <ParkingSpotsGridList
+                emptyLabel={
+                  lotFilter
+                    ? "ลานนี้ยังไม่มีช่อง — กด「เพิ่มช่อง」"
+                    : "ยังไม่มีช่องจอด — กด「เพิ่มช่อง」"
+                }
+                spots={filteredSpots.map((s) => ({
+                  id: s.id,
+                  spotCode: s.spotCode,
+                  zoneLabel: !lotFilter
+                    ? [s.siteName, s.zoneLabel].filter(Boolean).join(" · ") || null
+                    : s.zoneLabel,
+                  activeSession: s.activeSession
+                    ? {
+                        licensePlate: s.activeSession.licensePlate,
+                        checkInAt: new Date(s.activeSession.checkInAt),
+                      }
+                    : null,
+                }))}
+                onEdit={(spotId) => {
+                  const spot = spots.find((s) => s.id === spotId);
+                  if (spot) openEditSpot(spot);
+                }}
+                onDelete={(spotId) => {
+                  const spot = spots.find((s) => s.id === spotId);
+                  if (spot) void deleteSpot(spot);
+                }}
+              />
+            )}
+          </>
         )}
       </ParkingPanelCard>
 
@@ -622,6 +667,6 @@ export function ParkingLotsClient() {
       </FormModal>
 
       {notice.popup}
-    </ParkingPageStack>
+    </>
   );
 }

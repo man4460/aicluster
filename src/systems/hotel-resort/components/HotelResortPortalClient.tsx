@@ -16,10 +16,14 @@ import {
 import { cn } from "@/lib/cn";
 import { hotelResortPublicBookingUrl } from "@/lib/hotel-resort/public-url";
 import type { HotelPortalBookingPaymentMode } from "@/systems/hotel-resort/lib/portal-booking";
-import { HOTEL_RESORT_PORTAL_SAMPLE_BANNER } from "@/systems/hotel-resort/lib/portal-media";
+import {
+  HOTEL_RESORT_PORTAL_SAMPLE_BANNER,
+  HOTEL_RESORT_REVIEW_PHOTO_MAX,
+} from "@/systems/hotel-resort/lib/portal-media";
 import {
   hotelResortContentCardClass,
   hotelResortFieldClass,
+  hotelResortFilterChipClass,
   hotelResortFormLabelClass,
 } from "@/systems/hotel-resort/lib/ui-tokens";
 
@@ -28,6 +32,7 @@ type PortalReview = {
   guestName: string;
   rating: number;
   comment: string;
+  photoUrls: string[];
   createdAt: string;
 };
 
@@ -188,8 +193,16 @@ export function HotelResortPortalClient({
   const [payQr, setPayQr] = useState<PortalPayQr | null>(null);
   const [payQrBusy, setPayQrBusy] = useState(false);
   const [payQrErr, setPayQrErr] = useState<string | null>(null);
+  const [revName, setRevName] = useState("");
+  const [revComment, setRevComment] = useState("");
+  const [revRating, setRevRating] = useState(5);
+  const [revPhotos, setRevPhotos] = useState<string[]>([]);
+  const [revBusy, setRevBusy] = useState(false);
+  const [revMsg, setRevMsg] = useState<string | null>(null);
   const slipGalleryRef = useRef<HTMLInputElement>(null);
+  const revGalleryRef = useRef<HTMLInputElement>(null);
   const { openCamera, cameraInputRef, cameraModal } = useAppCameraCapture({ title: "ถ่ายรูปสลิป" });
+  const revCamera = useAppCameraCapture({ title: "ถ่ายรูปรีวิว" });
   const lb = useAppImageLightbox();
   const roomsRef = useRef<HTMLElement | null>(null);
   const router = useRouter();
@@ -207,7 +220,14 @@ export function HotelResortPortalClient({
           const j = (await res.json().catch(() => ({}))) as { error?: string };
           throw new Error(j.error ?? "โหลดไม่สำเร็จ");
         }
-        setInfo((await res.json()) as PortalInfo);
+        const data = (await res.json()) as PortalInfo;
+        setInfo({
+          ...data,
+          reviews: (data.reviews ?? []).map((r) => ({
+            ...r,
+            photoUrls: Array.isArray(r.photoUrls) ? r.photoUrls : [],
+          })),
+        });
       })
       .catch((e) => setLoadErr(e instanceof Error ? e.message : "โหลดไม่สำเร็จ"));
   }, [qBase]);
@@ -321,6 +341,67 @@ export function HotelResortPortalClient({
     const j = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
     if (!res.ok || !j.imageUrl) throw new Error(j.error ?? "อัปโหลดไม่สำเร็จ");
     setSlipUrl(j.imageUrl);
+  }
+
+  async function uploadPublicImage(file: File) {
+    const prepared = await prepareImageFileForUpload(file);
+    const fd = new FormData();
+    fd.append("ownerId", ownerId);
+    fd.append("file", prepared);
+    const res = await fetch("/api/hotel-resort/public/portal/upload-slip", {
+      method: "POST",
+      body: fd,
+    });
+    const j = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
+    if (!res.ok || !j.imageUrl) throw new Error(j.error ?? "อัปโหลดไม่สำเร็จ");
+    return j.imageUrl;
+  }
+
+  async function onSubmitReview(e: FormEvent) {
+    e.preventDefault();
+    if (!revName.trim() || !revComment.trim()) return;
+    setRevBusy(true);
+    setRevMsg(null);
+    try {
+      const res = await fetch("/api/hotel-resort/public/portal/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownerId,
+          t: trialSessionId,
+          guestName: revName.trim(),
+          rating: revRating,
+          comment: revComment.trim(),
+          photoUrls: revPhotos,
+        }),
+      });
+      const j = (await res.json()) as { review?: PortalReview; error?: string };
+      if (!res.ok || !j.review) throw new Error(j.error || "ส่งรีวิวไม่สำเร็จ");
+      setInfo((prev) =>
+        prev
+          ? {
+              ...prev,
+              reviews: [j.review!, ...prev.reviews].slice(0, 40),
+              reviewCount: prev.reviewCount + 1,
+              reviewAvg:
+                Math.round(
+                  ((prev.reviewAvg ?? 0) * prev.reviewCount + j.review!.rating) /
+                    (prev.reviewCount + 1) *
+                    10,
+                ) / 10,
+            }
+          : prev,
+      );
+      setRevName("");
+      setRevComment("");
+      setRevPhotos([]);
+      setRevRating(5);
+      setRevMsg("ส่งรีวิวแล้ว");
+    } catch (cause) {
+      setRevMsg(cause instanceof Error ? cause.message : "ส่งรีวิวไม่สำเร็จ");
+    } finally {
+      setRevBusy(false);
+    }
   }
 
   async function submitBook(e: FormEvent) {
@@ -671,10 +752,99 @@ export function HotelResortPortalClient({
                     <Stars n={r.rating} />
                   </div>
                   <p className="mt-2 text-sm font-medium leading-relaxed text-[#66638c]">{r.comment}</p>
+                  {r.photoUrls?.length ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {r.photoUrls.map((u) => (
+                        <AppImageThumb key={u} src={u} alt="รีวิว" onOpen={() => lb.open(u)} />
+                      ))}
+                    </div>
+                  ) : null}
                 </li>
               ))}
             </ul>
           )}
+          <form
+            className={cn(hotelResortContentCardClass, "mt-6 space-y-3")}
+            onSubmit={(e) => void onSubmitReview(e)}
+          >
+            <h3 className="text-sm font-black text-[#1e1b4b]">เขียนรีวิว</h3>
+            <input
+              required
+              placeholder="ชื่อ"
+              value={revName}
+              onChange={(e) => setRevName(e.target.value)}
+              className={hotelResortFieldClass}
+            />
+            <div className="flex flex-wrap gap-2">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={hotelResortFilterChipClass(revRating === n)}
+                  onClick={() => setRevRating(n)}
+                >
+                  ★{n}
+                </button>
+              ))}
+            </div>
+            <textarea
+              required
+              rows={3}
+              placeholder="ความคิดเห็น"
+              value={revComment}
+              onChange={(e) => setRevComment(e.target.value)}
+              className={cn(hotelResortFieldClass, "min-h-[88px] py-3")}
+            />
+            <AppGalleryCameraFileInputs
+              galleryInputRef={revGalleryRef}
+              cameraInputRef={revCamera.cameraInputRef}
+              onChange={(e) => {
+                const files = e.target.files;
+                e.target.value = "";
+                if (!files?.length) return;
+                void (async () => {
+                  const added: string[] = [];
+                  for (const file of Array.from(files).slice(
+                    0,
+                    HOTEL_RESORT_REVIEW_PHOTO_MAX - revPhotos.length,
+                  )) {
+                    added.push(await uploadPublicImage(file));
+                  }
+                  setRevPhotos((p) => [...p, ...added].slice(0, HOTEL_RESORT_REVIEW_PHOTO_MAX));
+                })().catch((err) =>
+                  setRevMsg(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ"),
+                );
+              }}
+            />
+            <AppImagePickCameraButtons
+              onPickGallery={() => revGalleryRef.current?.click()}
+              onPickCamera={() =>
+                revCamera.openCamera(async (file) => {
+                  try {
+                    const url = await uploadPublicImage(file);
+                    setRevPhotos((p) => [...p, url].slice(0, HOTEL_RESORT_REVIEW_PHOTO_MAX));
+                  } catch (err) {
+                    setRevMsg(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
+                  }
+                })
+              }
+            />
+            {revPhotos.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {revPhotos.map((u) => (
+                  <AppImageThumb key={u} src={u} alt="แนบรีวิว" onOpen={() => lb.open(u)} />
+                ))}
+              </div>
+            ) : null}
+            {revMsg ? <p className="text-sm font-semibold text-[#4d47b6]">{revMsg}</p> : null}
+            <button
+              type="submit"
+              disabled={revBusy}
+              className="app-btn-primary min-h-11 rounded-xl px-5 text-sm font-black disabled:opacity-60"
+            >
+              ส่งรีวิว
+            </button>
+          </form>
         </section>
 
         <section id="contact" className="scroll-mt-8">
@@ -978,6 +1148,7 @@ export function HotelResortPortalClient({
         alt="รูปโรงแรม"
       />
       {cameraModal}
+      {revCamera.cameraModal}
     </AppPublicCheckInGlassPage>
   );
 }

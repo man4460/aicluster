@@ -1,7 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
 import { PARKING_MODULE_SLUG } from "@/lib/modules/config";
 import { getParkingDataScope } from "@/lib/trial/module-scopes";
+import { ensureParkingDemoFreshForOwner } from "@/lib/trial/seed-parking";
 import { applyModuleDailyTokenDeduction } from "@/lib/tokens/module-daily-deduction";
 import { loadParkingAccessState } from "@/systems/parking/lib/parking-access-guard";
 import { loadParkingSiteForOwner } from "@/systems/parking/lib/load-dashboard";
@@ -23,5 +25,15 @@ export async function requireParkingPage() {
 
   const scope = await getParkingDataScope(session.sub);
   const site = await loadParkingSiteForOwner(session.sub, scope.trialSessionId);
-  return { session, scope, site };
+
+  if (scope.trialSessionId === "prod") {
+    const user = await prisma.user.findUnique({ where: { id: session.sub }, select: { email: true } });
+    try {
+      await ensureParkingDemoFreshForOwner(prisma, session.sub, user?.email);
+    } catch (e) {
+      console.warn("[parking] demo refresh skipped:", e instanceof Error ? e.message : e);
+    }
+  }
+
+  return { session, scope, site: await loadParkingSiteForOwner(session.sub, scope.trialSessionId) };
 }

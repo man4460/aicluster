@@ -21,13 +21,6 @@ function parkingHeaderIcon(key: ParkingNavKey, className?: string) {
         <circle cx="7" cy="7" r="1.5" />
       </>
     );
-  } else if (key === "lots") {
-    glyph = (
-      <>
-        <rect x="3" y="4" width="18" height="16" rx="2" />
-        <path d="M3 10h18M9 10v10M15 10v10" strokeLinecap="round" />
-      </>
-    );
   } else if (key === "finance") {
     glyph = <path d="M4 18h16M7 14l3-3 3 2 4-5" strokeLinecap="round" strokeLinejoin="round" />;
   } else {

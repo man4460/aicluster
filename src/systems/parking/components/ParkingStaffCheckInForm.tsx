@@ -1,11 +1,25 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import {
+  AppPaymentMethodPanel,
+  type AppPaymentInfo,
+  type AppPaymentMethod,
+} from "@/components/app-templates";
 import { parkingBtnPrimary, parkingField } from "@/systems/parking/parking-ui";
+import { printParkingReceipt } from "@/systems/parking/lib/parking-print-docs";
+import { useParkingApiFetch } from "@/systems/parking/lib/staff-api-fetch";
 
-export function ParkingStaffCheckInForm({ spotId }: { spotId: number }) {
+export function ParkingStaffCheckInForm({
+  spotId,
+  estimatedAmountBaht,
+}: {
+  spotId: number;
+  estimatedAmountBaht: number | null;
+}) {
   const router = useRouter();
+  const apiFetch = useParkingApiFetch();
   const [licensePlate, setLicensePlate] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -14,13 +28,37 @@ export function ParkingStaffCheckInForm({ spotId }: { spotId: number }) {
   const [shuttleNote, setShuttleNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<AppPaymentMethod>("CASH");
+  const [paymentSlipUrl, setPaymentSlipUrl] = useState<string | null>(null);
+  const amountPaidBaht = Math.max(0, estimatedAmountBaht ?? 0);
+
+  const fetchPayInfo = useCallback(async (amountBaht: number): Promise<AppPaymentInfo> => {
+    const res = await apiFetch("/api/parking/promptpay-qr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amountBaht }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "โหลดข้อมูลชำระเงินไม่สำเร็จ");
+    return data as AppPaymentInfo;
+  }, [apiFetch]);
+
+  const uploadSlip = useCallback(async (file: File): Promise<string> => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await apiFetch("/api/parking/upload", { method: "POST", body: form });
+    const data = await res.json();
+    const url = data.imageUrl ?? data.url;
+    if (!res.ok || typeof url !== "string") throw new Error(data.error ?? "อัปโหลดสลิปไม่สำเร็จ");
+    return url;
+  }, [apiFetch]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setErr(null);
     try {
-      const res = await fetch("/api/parking/sessions", {
+      const res = await apiFetch("/api/parking/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -31,9 +69,15 @@ export function ParkingStaffCheckInForm({ spotId }: { spotId: number }) {
           shuttleFrom: shuttleFrom.trim() || null,
           shuttleTo: shuttleTo.trim() || null,
           shuttleNote: shuttleNote.trim() || null,
+          paymentMethod,
+          paymentSlipUrl,
+          amountPaidBaht,
         }),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        session?: { id: number; licensePlate: string; amountPaidBaht?: number };
+      };
       if (!res.ok) {
         setErr(data.error ?? "เช็คอินไม่สำเร็จ");
         return;
@@ -44,6 +88,15 @@ export function ParkingStaffCheckInForm({ spotId }: { spotId: number }) {
       setShuttleFrom("");
       setShuttleTo("");
       setShuttleNote("");
+      setPaymentSlipUrl(null);
+      if (data.session && amountPaidBaht > 0) {
+        printParkingReceipt({
+          sessionId: data.session.id,
+          licensePlate: data.session.licensePlate,
+          amountPaidBaht,
+          paymentMethod,
+        });
+      }
       router.refresh();
     } catch {
       setErr("เชื่อมต่อไม่สำเร็จ");
@@ -101,6 +154,23 @@ export function ParkingStaffCheckInForm({ spotId }: { spotId: number }) {
         placeholder="หมายเหตุรับส่ง"
         maxLength={2000}
       />
+      {estimatedAmountBaht != null ? (
+        <AppPaymentMethodPanel
+          amountBaht={amountPaidBaht}
+          method={paymentMethod}
+          slipUrl={paymentSlipUrl}
+          onMethodChange={setPaymentMethod}
+          onSlipUrlChange={setPaymentSlipUrl}
+          fetchPayInfo={fetchPayInfo}
+          uploadSlip={uploadSlip}
+          disabled={loading}
+          variant="staff"
+        />
+      ) : (
+        <p className="rounded-xl bg-amber-50/80 p-3 text-xs font-semibold text-amber-800">
+          รายชั่วโมงจะคิดยอดและรับชำระตอนเช็คเอาต์
+        </p>
+      )}
       {err ? <p className="text-sm text-red-700">{err}</p> : null}
       <button type="submit" disabled={loading} className={parkingBtnPrimary}>
         {loading ? "กำลังบันทึก…" : "บันทึกเช็คอิน"}

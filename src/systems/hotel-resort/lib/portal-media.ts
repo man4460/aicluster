@@ -1,6 +1,25 @@
 /** รูปพอร์ทัลลูกค้า — แบนเนอร์ + แกลเลอรีภาพรวมโรงแรม */
 
 export const HOTEL_RESORT_PORTAL_GALLERY_MAX = 8;
+export const HOTEL_RESORT_REVIEW_PHOTO_MAX = 5;
+
+export function hotelResortNormalizeReviewPhotos(raw: unknown): string[] {
+  let arr: unknown[] = [];
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed)) arr = parsed;
+    } catch {
+      arr = [];
+    }
+  } else if (Array.isArray(raw)) {
+    arr = raw;
+  }
+  return arr
+    .filter((u): u is string => typeof u === "string" && u.trim().startsWith("/"))
+    .map((u) => u.trim())
+    .slice(0, HOTEL_RESORT_REVIEW_PHOTO_MAX);
+}
 
 export function hotelResortNormalizePortalGallery(raw: unknown): string[] {
   let list: unknown = raw;

@@ -18,17 +18,19 @@ export function ParkingPanelCard({
   title?: string;
   description?: ReactNode;
   action?: ReactNode;
-  children: ReactNode;
+  children?: ReactNode;
   className?: string;
   headerClassName?: string;
 }) {
   const hasHead = Boolean(title || description || action);
+  const hasBody = children != null && children !== false;
   return (
-    <section className={cn(parkingPanelCardClass, "flex flex-col gap-4", className)}>
+    <section className={cn(parkingPanelCardClass, "flex flex-col", hasBody && "gap-4", className)}>
       {hasHead ? (
         <div
           className={cn(
-            "flex flex-col gap-3 border-b border-white/50 pb-4 sm:flex-row sm:items-start sm:justify-between",
+            "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
+            hasBody && "border-b border-white/50 pb-4",
             headerClassName,
           )}
         >
@@ -39,7 +41,7 @@ export function ParkingPanelCard({
           {action ? <div className="shrink-0 self-start pt-0.5 sm:pt-0">{action}</div> : null}
         </div>
       ) : null}
-      {children}
+      {hasBody ? children : null}
     </section>
   );
 }

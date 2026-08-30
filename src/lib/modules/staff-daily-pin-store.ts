@@ -11,6 +11,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { BUILDING_POS_MODULE_SLUG, CAR_WASH_MODULE_SLUG } from "@/lib/modules/config";
 import { NextResponse } from "next/server";
+import { getParkingDataScope } from "@/lib/trial/module-scopes";
 
 export async function loadDrinkPosStaffDailyPinHash(ownerId: string): Promise<string | null> {
   const row = await prisma.drinkPosShopProfile.findUnique({
@@ -87,6 +88,16 @@ export async function loadCarWashStaffDailyPinHash(ownerId: string): Promise<str
         moduleSlug: CAR_WASH_MODULE_SLUG,
       },
     },
+    select: { staffDailyPinHash: true },
+  });
+  return row?.staffDailyPinHash?.trim() || null;
+}
+
+export async function loadParkingStaffDailyPinHash(ownerId: string): Promise<string | null> {
+  const scope = await getParkingDataScope(ownerId);
+  const row = await prisma.parkingSite.findFirst({
+    where: { ownerUserId: ownerId, trialSessionId: scope.trialSessionId, isActive: true },
+    orderBy: { id: "asc" },
     select: { staffDailyPinHash: true },
   });
   return row?.staffDailyPinHash?.trim() || null;
@@ -304,6 +315,20 @@ async function writeStaffDailyPinHash(
         staffDailyPinHash: hash,
       },
       update: { staffDailyPinHash: hash },
+    });
+    return;
+  }
+  if (module === "parking") {
+    const tid = trialSessionId?.trim() || (await getParkingDataScope(ownerId)).trialSessionId;
+    const site = await prisma.parkingSite.findFirst({
+      where: { ownerUserId: ownerId, trialSessionId: tid },
+      orderBy: { id: "asc" },
+      select: { id: true },
+    });
+    if (!site) throw new Error("ไม่พบลานจอดสำหรับบันทึกรหัสพนักงาน");
+    await prisma.parkingSite.update({
+      where: { id: site.id },
+      data: { staffDailyPinHash: hash },
     });
     return;
   }

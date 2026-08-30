@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withHotelResortOwnerContext } from "@/systems/hotel-resort/lib/api-auth";
 import { ensureHotelResortProfile } from "@/systems/hotel-resort/lib/ensure-profile";
+import { hotelResortNormalizeReviewPhotos } from "@/systems/hotel-resort/lib/portal-media";
 
 const createSchema = z.object({
   guestName: z.string().trim().min(1).max(120),
@@ -19,6 +20,26 @@ const patchSchema = z.object({
   isPublished: z.boolean().optional(),
 });
 
+function mapReview(row: {
+  id: string;
+  guestName: string;
+  rating: number;
+  comment: string;
+  photoUrlsJson: string;
+  isPublished: boolean;
+  createdAt: Date;
+}) {
+  return {
+    id: row.id,
+    guestName: row.guestName,
+    rating: row.rating,
+    comment: row.comment,
+    photoUrls: hotelResortNormalizeReviewPhotos(row.photoUrlsJson),
+    isPublished: row.isPublished,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
 export async function GET() {
   const auth = await withHotelResortOwnerContext();
   if (!auth.ok) return auth.res;
@@ -30,16 +51,7 @@ export async function GET() {
     },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
   });
-  return NextResponse.json({
-    reviews: reviews.map((r) => ({
-      id: r.id,
-      guestName: r.guestName,
-      rating: r.rating,
-      comment: r.comment,
-      isPublished: r.isPublished,
-      createdAt: r.createdAt.toISOString(),
-    })),
-  });
+  return NextResponse.json({ reviews: reviews.map(mapReview) });
 }
 
 export async function POST(req: Request) {
@@ -61,19 +73,11 @@ export async function POST(req: Request) {
       guestName: parsed.data.guestName,
       rating: parsed.data.rating,
       comment: parsed.data.comment,
+      photoUrlsJson: "[]",
       isPublished: parsed.data.isPublished ?? true,
     },
   });
-  return NextResponse.json({
-    review: {
-      id: row.id,
-      guestName: row.guestName,
-      rating: row.rating,
-      comment: row.comment,
-      isPublished: row.isPublished,
-      createdAt: row.createdAt.toISOString(),
-    },
-  });
+  return NextResponse.json({ review: mapReview(row) });
 }
 
 export async function PATCH(req: Request) {
@@ -104,16 +108,7 @@ export async function PATCH(req: Request) {
       ...(parsed.data.isPublished !== undefined ? { isPublished: parsed.data.isPublished } : {}),
     },
   });
-  return NextResponse.json({
-    review: {
-      id: row.id,
-      guestName: row.guestName,
-      rating: row.rating,
-      comment: row.comment,
-      isPublished: row.isPublished,
-      createdAt: row.createdAt.toISOString(),
-    },
-  });
+  return NextResponse.json({ review: mapReview(row) });
 }
 
 export async function DELETE(req: Request) {

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getParkingOwnerContext, assertSiteOwned } from "@/systems/parking/lib/parking-api-auth";
+import { isAppPaymentMethod } from "@/components/app-templates/payment-method";
+import { bangkokDateKey } from "@/lib/time/bangkok";
 
 const postSchema = z.object({
   site_id: z.number().int().positive(),
@@ -16,10 +18,14 @@ const postSchema = z.object({
   pricing_mode: z.enum(["HOURLY", "DAILY", "MONTHLY"]).optional(),
   amount_baht: z.number().int().min(0).max(9_999_999).optional(),
   note: z.string().max(255).optional().nullable(),
+  payment_method: z.string().max(24).optional().nullable(),
+  payment_slip_url: z.string().max(512).optional().nullable(),
+  deposit_slip_url: z.string().max(512).optional().nullable(),
+  amount_paid_baht: z.number().int().min(0).max(9_999_999).optional(),
 });
 
 export async function GET(req: Request) {
-  const ctx = await getParkingOwnerContext();
+  const ctx = await getParkingOwnerContext(req);
   if (!ctx) return NextResponse.json({ error: "ไม่ได้รับอนุญาต" }, { status: 401 });
 
   const url = new URL(req.url);
@@ -61,6 +67,10 @@ export async function GET(req: Request) {
       amount_baht: r.amountBaht,
       amount_paid_baht: r.amountPaidBaht,
       payment_status: r.paymentStatus,
+      payment_method: r.paymentMethod,
+      payment_slip_url: r.paymentSlipUrl,
+      deposit_slip_url: r.depositSlipUrl,
+      deposit_amount_baht: r.depositAmountBaht,
       status: r.status,
       note: r.note,
     })),
@@ -68,7 +78,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const ctx = await getParkingOwnerContext();
+  const ctx = await getParkingOwnerContext(req);
   if (!ctx) return NextResponse.json({ error: "ไม่ได้รับอนุญาต" }, { status: 401 });
 
   let json: unknown;
@@ -94,6 +104,7 @@ export async function POST(req: Request) {
   if (end && Number.isNaN(end.getTime())) {
     return NextResponse.json({ error: "วันเวลาสิ้นสุดไม่ถูกต้อง" }, { status: 400 });
   }
+  if (end && end <= start) return NextResponse.json({ error: "วันสิ้นสุดต้องอยู่หลังวันเริ่ม" }, { status: 400 });
 
   if (parsed.data.spot_id) {
     const spot = await prisma.parkingSpot.findFirst({
@@ -102,6 +113,18 @@ export async function POST(req: Request) {
     if (!spot) return NextResponse.json({ error: "ไม่พบช่องจอดในลานนี้" }, { status: 404 });
   }
 
+  const startDay = new Date(`${bangkokDateKey(start)}T12:00:00+07:00`).getTime();
+  const endDay = end ? new Date(`${bangkokDateKey(end)}T12:00:00+07:00`).getTime() : startDay;
+  const days = Math.max(1, Math.ceil((endDay - startDay) / 86_400_000));
+  const amountBaht = Math.round(Number(site.dailyRateBaht ?? 0) * days);
+  const depositAmountBaht =
+    site.bookingPaymentMode === "FULL"
+      ? amountBaht
+      : site.bookingPaymentMode === "DEPOSIT"
+        ? Math.round(amountBaht * Math.max(0, Math.min(100, site.depositPercent ?? 0)) / 100)
+        : 0;
+  const paid = Math.min(amountBaht, parsed.data.amount_paid_baht ?? depositAmountBaht);
+  const paymentMethod = isAppPaymentMethod(parsed.data.payment_method) ? parsed.data.payment_method : null;
   const row = await prisma.parkingBooking.create({
     data: {
       ownerUserId: ctx.ownerUserId,
@@ -115,8 +138,14 @@ export async function POST(req: Request) {
       packageName: parsed.data.package_name?.trim() ?? "",
       scheduledStart: start,
       scheduledEnd: end,
-      pricingMode: parsed.data.pricing_mode ?? site.pricingMode,
-      amountBaht: parsed.data.amount_baht ?? 0,
+      pricingMode: "DAILY",
+      amountBaht,
+      amountPaidBaht: paid,
+      depositAmountBaht,
+      paymentMethod,
+      paymentSlipUrl: parsed.data.payment_slip_url?.trim() || null,
+      depositSlipUrl: parsed.data.deposit_slip_url?.trim() || null,
+      paymentStatus: paid >= amountBaht && amountBaht > 0 ? "PAID" : paid > 0 ? "PARTIAL" : "UNPAID",
       note: parsed.data.note?.trim() || null,
       status: "SCHEDULED",
     },
@@ -141,6 +170,10 @@ export async function POST(req: Request) {
         amount_baht: row.amountBaht,
         amount_paid_baht: row.amountPaidBaht,
         payment_status: row.paymentStatus,
+        payment_method: row.paymentMethod,
+        payment_slip_url: row.paymentSlipUrl,
+        deposit_slip_url: row.depositSlipUrl,
+        deposit_amount_baht: row.depositAmountBaht,
         status: row.status,
         note: row.note,
       },

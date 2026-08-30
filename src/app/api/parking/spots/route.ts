@@ -4,7 +4,7 @@ import { getParkingOwnerContext, assertSiteOwned } from "@/systems/parking/lib/p
 import { newParkingCheckInToken } from "@/systems/parking/lib/parking-token";
 
 export async function GET(req: Request) {
-  const ctx = await getParkingOwnerContext();
+  const ctx = await getParkingOwnerContext(req);
   if (!ctx) {
     return NextResponse.json({ error: "ไม่ได้รับอนุญาต" }, { status: 401 });
   }
@@ -51,8 +51,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const ctx = await getParkingOwnerContext();
-  if (!ctx) {
+  const ctx = await getParkingOwnerContext(req);
+  if (!ctx || ctx.isStaff) {
     return NextResponse.json({ error: "ไม่ได้รับอนุญาต" }, { status: 401 });
   }
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;

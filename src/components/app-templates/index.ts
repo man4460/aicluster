@@ -8,6 +8,19 @@
 export { AppImageLightbox, type AppImageLightboxProps } from "./AppImageLightbox";
 export { AppImageThumb, type AppImageThumbProps } from "./AppImageThumb";
 export { useAppImageLightbox, type AppImageLightboxState } from "./useAppImageLightbox";
+export {
+  APP_PAYMENT_METHODS,
+  appPaymentMethodLabel,
+  appPaymentRequiresSlip,
+  appPaymentShowsSlipUpload,
+  isAppPaymentMethod,
+  type AppPaymentMethod,
+} from "./payment-method";
+export {
+  AppPaymentMethodPanel,
+  type AppPaymentInfo,
+  type AppPaymentMethodPanelProps,
+} from "./AppPaymentMethodPanel";
 
 export {
   appDashboardBrandCtaPillButtonClass,

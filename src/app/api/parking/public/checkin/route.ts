@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isAppPaymentMethod } from "@/components/app-templates/payment-method";
+import { applyParkingLoyaltyEarnOnPaid, ensureParkingLoyaltyMember } from "@/systems/parking/lib/loyalty";
+import { normalizeParkingMemberPhone } from "@/systems/parking/lib/loyalty-rule";
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
@@ -44,6 +47,24 @@ export async function POST(req: Request) {
       : null;
   const shuttleNote =
     typeof body?.shuttleNote === "string" && body.shuttleNote.trim() ? body.shuttleNote.trim() : null;
+  const memberPhone = normalizeParkingMemberPhone(customerPhone ?? "");
+  const paymentMethodRaw = typeof body?.paymentMethod === "string" ? body.paymentMethod : null;
+  const paymentMethod = isAppPaymentMethod(paymentMethodRaw) ? paymentMethodRaw : null;
+  const paymentSlipUrl =
+    typeof body?.paymentSlipUrl === "string" && body.paymentSlipUrl.trim()
+      ? body.paymentSlipUrl.trim().slice(0, 512)
+      : null;
+  const paidCandidate = Number(body?.amountPaidBaht ?? 0);
+  const amountPaidBaht = Number.isFinite(paidCandidate) && paidCandidate >= 0 ? paidCandidate : 0;
+
+  if (memberPhone.length >= 9) {
+    await ensureParkingLoyaltyMember({
+      ownerUserId: site.ownerUserId,
+      trialSessionId: site.trialSessionId,
+      phone: memberPhone,
+      customerName,
+    });
+  }
 
   const session = await prisma.parkingSession.create({
     data: {
@@ -60,7 +81,21 @@ export async function POST(req: Request) {
       shuttleFrom,
       shuttleTo,
       shuttleNote,
+      memberPhone: memberPhone || null,
+      paymentMethod,
+      paymentSlipUrl,
+      amountPaidBaht,
+      amountDueBaht: amountPaidBaht > 0 ? amountPaidBaht : null,
     },
+  });
+
+  const pointsEarned = await applyParkingLoyaltyEarnOnPaid({
+    ownerUserId: site.ownerUserId,
+    trialSessionId: site.trialSessionId,
+    sessionId: session.id,
+    amountPaidBaht,
+    memberPhone,
+    customerName,
   });
 
   return NextResponse.json({
@@ -69,5 +104,7 @@ export async function POST(req: Request) {
     sessionId: session.id,
     checkInAt: session.checkInAt.toISOString(),
     pricingMode: site.pricingMode,
+    amountPaidBaht,
+    pointsEarned,
   });
 }

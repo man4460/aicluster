@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
+import { parkingOffersHref } from "@/systems/parking/parking-module-nav";
 import { parkingBtnSecondary } from "@/systems/parking/parking-ui";
 
 export function ParkingRegenerateTokenButton({ spotId }: { spotId: number }) {
@@ -70,7 +71,7 @@ export function ParkingDeleteSpotButton({ spotId }: { spotId: number }) {
         return;
       }
       setOpen(false);
-      router.push("/dashboard/parking/lots");
+      router.push(parkingOffersHref({ tab: "lots", view: "spots" }));
       router.refresh();
     } catch {
       setErr("เชื่อมต่อไม่สำเร็จ");

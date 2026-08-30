@@ -69,6 +69,16 @@ export const parkingMobileSelectClass =
 export const parkingFinanceStatsGridClass = "grid grid-cols-2 gap-3 sm:grid-cols-3";
 export const parkingFinanceStatTailClass = "col-span-2 sm:col-span-1";
 
+/** ปุ่มสลับ รายรับ/รายจ่าย มุมขวาบนแถวเดียวกับกรอง — เล็กกว่าแท็บหลัก */
+export function parkingFinanceHeaderTabPillClass(active: boolean) {
+  return cn(
+    "inline-flex min-h-8 items-center justify-center rounded-lg px-2.5 text-[11px] font-black transition-all sm:min-h-9 sm:px-3 sm:text-xs",
+    active
+      ? "bg-gradient-to-r from-[#5b61ff] to-[#6a63ff] text-white shadow-sm shadow-indigo-200/50"
+      : "border border-white/70 bg-white/75 text-[#5f5a8a] hover:bg-white hover:text-[#4d47b6]",
+  );
+}
+
 export function parkingStatCardClass(tone: "indigo" | "slate" | "emerald" | "amber" | "violet" | "rose") {
   const toneStyles = {
     indigo:
@@ -93,3 +103,16 @@ export function parkingStatCardClass(tone: "indigo" | "slate" | "emerald" | "amb
 /** Hub QR ลูกค้า — ชั้นนอกสอดคล้องเปลือกโมดูล */
 export const parkingQrHubOuterClass =
   "overflow-hidden rounded-[2.5rem] max-md:rounded-2xl border border-white/50 bg-gradient-to-br from-white/55 via-[#faf9ff] to-indigo-50/25 shadow-[0_24px_60px_-28px_rgba(77,71,182,0.35)] backdrop-blur-xl ring-1 ring-inset ring-white/45";
+
+/** พอร์ทัลลูกค้า — การ์ดเนื้อหา (คู่สนามฟุตบอล) */
+export const parkingPortalContentCardClass =
+  "relative overflow-hidden rounded-[1.5rem] border border-white/60 bg-gradient-to-br from-white/65 via-indigo-50/25 to-violet-100/20 p-3 shadow-[0_14px_32px_-24px_rgba(30,27,75,0.28)] ring-1 ring-inset ring-white/55 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-24px_rgba(30,27,75,0.38)] sm:p-4";
+
+export const parkingPortalFieldClass =
+  "h-11 w-full rounded-2xl border border-white/50 bg-white/80 px-4 text-sm font-bold text-[#1e1b4b] shadow-inner outline-none ring-1 ring-inset ring-white/40 backdrop-blur-sm transition focus:border-[#5b61ff]/40 focus:ring-2 focus:ring-[#5b61ff]/20";
+
+export const parkingPortalSectionTitleClass =
+  "text-2xl font-black tracking-tight text-[#1e1b4b] sm:text-3xl";
+
+/** กริดช่องจอดว่างบนพอร์ทัล — มือถือ 2 · คอม 8 */
+export const parkingPortalSpotGridClass = "mt-6 grid grid-cols-2 gap-3 lg:grid-cols-8 lg:gap-3";

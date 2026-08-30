@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
 import { ParkingSpotCustomerQrPanel } from "@/systems/parking/components/ParkingSpotCustomerQrPanel";
 import { ParkingRegenerateTokenButton } from "@/systems/parking/components/ParkingSpotAdminButtons";
 import { publicParkingCheckInUrl } from "@/systems/parking/lib/public-checkin-url";
-import { PARKING_LOTS_HREF } from "@/systems/parking/parking-module-nav";
+import { parkingOffersHref } from "@/systems/parking/parking-module-nav";
 import { parkingFilterChipClass, parkingQrHubOuterClass } from "@/systems/parking/parking-ui-tokens";
 
 export type ParkingQrLotRow = {
@@ -103,7 +103,7 @@ export function ParkingCustomerQrHubClient({
       <div className="space-y-3">
         <AppEmptyState tone="glass">ยังไม่มีช่องจอด — เพิ่มลานและช่องก่อนสร้าง QR</AppEmptyState>
         <Link
-          href={PARKING_LOTS_HREF}
+          href={parkingOffersHref({ tab: "lots", view: "lots" })}
           className={cn(appTemplateOutlineButtonClass, "inline-flex min-h-10 items-center rounded-xl px-4 text-sm font-bold")}
         >
           ไปหน้าลานจอด

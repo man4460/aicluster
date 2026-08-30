@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getParkingOwnerContext, assertSiteOwned } from "@/systems/parking/lib/parking-api-auth";
 import type { ParkingPricingMode } from "@/systems/parking/parking-module-nav";
+import { applyStaffDailyPinPatch } from "@/lib/modules/staff-daily-pin-store";
 
 function mapSite(site: {
   id: number;
@@ -12,6 +13,25 @@ function mapSite(site: {
   monthlyRateBaht?: { toString(): string } | number | null;
   note?: string;
   isActive?: boolean;
+  loyaltyEnabled: boolean;
+  loyaltyBahtPerPoint: number;
+  loyaltyPointsPerUnit: number;
+  bookingPaymentMode: "NONE" | "DEPOSIT" | "FULL";
+  depositPercent: number | null;
+  promptPayPhone: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankAccountName: string | null;
+  logoUrl: string | null;
+  contactPhone: string | null;
+  tagline: string | null;
+  address: string | null;
+  lineId: string | null;
+  facebookUrl: string | null;
+  mapUrl: string | null;
+  portalBannerUrl: string | null;
+  portalGalleryJson: string;
+  staffDailyPinHash: string | null;
 }) {
   return {
     id: site.id,
@@ -22,11 +42,30 @@ function mapSite(site: {
     monthlyRateBaht: site.monthlyRateBaht != null ? Number(site.monthlyRateBaht) : null,
     note: site.note ?? "",
     isActive: site.isActive ?? true,
+    loyaltyEnabled: site.loyaltyEnabled,
+    loyaltyBahtPerPoint: site.loyaltyBahtPerPoint,
+    loyaltyPointsPerUnit: site.loyaltyPointsPerUnit,
+    bookingPaymentMode: site.bookingPaymentMode,
+    depositPercent: site.depositPercent,
+    promptPayPhone: site.promptPayPhone,
+    bankName: site.bankName,
+    bankAccountNumber: site.bankAccountNumber,
+    bankAccountName: site.bankAccountName,
+    logoUrl: site.logoUrl,
+    contactPhone: site.contactPhone,
+    tagline: site.tagline,
+    address: site.address,
+    lineId: site.lineId,
+    facebookUrl: site.facebookUrl,
+    mapUrl: site.mapUrl,
+    portalBannerUrl: site.portalBannerUrl,
+    portalGalleryJson: site.portalGalleryJson,
+    staffDailyPinSet: Boolean(site.staffDailyPinHash?.trim()),
   };
 }
 
-export async function GET() {
-  const ctx = await getParkingOwnerContext();
+export async function GET(req: Request) {
+  const ctx = await getParkingOwnerContext(req);
   if (!ctx) {
     return NextResponse.json({ error: "ไม่ได้รับอนุญาต" }, { status: 401 });
   }
@@ -70,8 +109,8 @@ function parseMode(v: unknown): ParkingPricingMode | undefined {
 }
 
 export async function POST(req: Request) {
-  const ctx = await getParkingOwnerContext();
-  if (!ctx) {
+  const ctx = await getParkingOwnerContext(req);
+  if (!ctx || ctx.isStaff) {
     return NextResponse.json({ error: "ไม่ได้รับอนุญาต" }, { status: 401 });
   }
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
@@ -121,8 +160,8 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const ctx = await getParkingOwnerContext();
-  if (!ctx) {
+  const ctx = await getParkingOwnerContext(req);
+  if (!ctx || ctx.isStaff) {
     return NextResponse.json({ error: "ไม่ได้รับอนุญาต" }, { status: 401 });
   }
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
@@ -149,6 +188,27 @@ export async function PATCH(req: Request) {
   const monthly = parseRate(body.monthlyRateBaht);
   const note = typeof body.note === "string" ? body.note.trim().slice(0, 500) : undefined;
   const isActive = typeof body.isActive === "boolean" ? body.isActive : undefined;
+  const bookingPaymentMode =
+    body.bookingPaymentMode === "NONE" || body.bookingPaymentMode === "DEPOSIT" || body.bookingPaymentMode === "FULL"
+      ? body.bookingPaymentMode
+      : undefined;
+  const depositPercent =
+    body.depositPercent === null || body.depositPercent === ""
+      ? null
+      : typeof body.depositPercent === "number"
+        ? Math.max(0, Math.min(100, Math.round(body.depositPercent)))
+        : undefined;
+  const paymentText = (key: string, max: number) =>
+    typeof body[key] === "string" ? body[key].trim().slice(0, max) || null : undefined;
+  const brandingText = paymentText;
+  const portalGallery =
+    body.portalGalleryJson !== undefined
+      ? typeof body.portalGalleryJson === "string"
+        ? body.portalGalleryJson
+        : Array.isArray(body.portalGalleryJson)
+          ? JSON.stringify(body.portalGalleryJson)
+          : undefined
+      : undefined;
 
   const nextMode = pricingMode ?? owned.pricingMode;
   const nextHourly =
@@ -182,8 +242,37 @@ export async function PATCH(req: Request) {
       ...(monthly !== undefined ? { monthlyRateBaht: monthly } : {}),
       ...(note !== undefined ? { note } : {}),
       ...(isActive !== undefined ? { isActive } : {}),
+      ...(bookingPaymentMode ? { bookingPaymentMode } : {}),
+      ...(depositPercent !== undefined ? { depositPercent } : {}),
+      ...(paymentText("promptPayPhone", 32) !== undefined ? { promptPayPhone: paymentText("promptPayPhone", 32) } : {}),
+      ...(paymentText("bankName", 120) !== undefined ? { bankName: paymentText("bankName", 120) } : {}),
+      ...(paymentText("bankAccountNumber", 64) !== undefined
+        ? { bankAccountNumber: paymentText("bankAccountNumber", 64) }
+        : {}),
+      ...(paymentText("bankAccountName", 160) !== undefined ? { bankAccountName: paymentText("bankAccountName", 160) } : {}),
+      ...(brandingText("logoUrl", 512) !== undefined ? { logoUrl: brandingText("logoUrl", 512) } : {}),
+      ...(brandingText("contactPhone", 32) !== undefined ? { contactPhone: brandingText("contactPhone", 32) } : {}),
+      ...(brandingText("tagline", 300) !== undefined ? { tagline: brandingText("tagline", 300) } : {}),
+      ...(brandingText("address", 500) !== undefined ? { address: brandingText("address", 500) } : {}),
+      ...(brandingText("lineId", 120) !== undefined ? { lineId: brandingText("lineId", 120) } : {}),
+      ...(brandingText("facebookUrl", 512) !== undefined ? { facebookUrl: brandingText("facebookUrl", 512) } : {}),
+      ...(brandingText("mapUrl", 512) !== undefined ? { mapUrl: brandingText("mapUrl", 512) } : {}),
+      ...(brandingText("portalBannerUrl", 512) !== undefined
+        ? { portalBannerUrl: brandingText("portalBannerUrl", 512) }
+        : {}),
+      ...(portalGallery !== undefined ? { portalGalleryJson: portalGallery.slice(0, 6000) } : {}),
     },
   });
 
-  return NextResponse.json({ site: mapSite(updated) });
+  const pinResult = await applyStaffDailyPinPatch({
+    ownerId: ctx.ownerUserId,
+    module: "parking",
+    trialSessionId: ctx.trialSessionId,
+    staffDailyPin: typeof body.staffDailyPin === "string" ? body.staffDailyPin : undefined,
+    staffDailyPinClear: body.staffDailyPinClear === true,
+  });
+  if (!pinResult.ok) return NextResponse.json({ error: pinResult.error }, { status: 400 });
+
+  const refreshed = await prisma.parkingSite.findUniqueOrThrow({ where: { id: updated.id } });
+  return NextResponse.json({ site: mapSite(refreshed) });
 }

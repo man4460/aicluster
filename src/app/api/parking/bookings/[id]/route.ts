@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getParkingOwnerContext } from "@/systems/parking/lib/parking-api-auth";
+import { isAppPaymentMethod } from "@/components/app-templates/payment-method";
+import { applyParkingLoyaltyEarnOnPaid } from "@/systems/parking/lib/loyalty";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -9,10 +11,14 @@ const patchSchema = z.object({
   status: z.enum(["SCHEDULED", "CHECKED_IN", "COMPLETED", "CANCELLED", "NO_SHOW"]).optional(),
   spot_id: z.number().int().positive().optional().nullable(),
   note: z.string().max(255).optional().nullable(),
+  payment_method: z.string().max(24).optional().nullable(),
+  payment_slip_url: z.string().max(512).optional().nullable(),
+  deposit_slip_url: z.string().max(512).optional().nullable(),
+  amount_paid_baht: z.number().int().min(0).max(9_999_999).optional(),
 });
 
 export async function PATCH(req: Request, { params }: Params) {
-  const ctx = await getParkingOwnerContext();
+  const ctx = await getParkingOwnerContext(req);
   if (!ctx) return NextResponse.json({ error: "ไม่ได้รับอนุญาต" }, { status: 401 });
   const id = Number((await params).id);
   if (!Number.isInteger(id) || id < 1) return NextResponse.json({ error: "ไม่พบการจอง" }, { status: 404 });
@@ -65,6 +71,10 @@ export async function PATCH(req: Request, { params }: Params) {
           packageId: existing.packageId,
           packageName: existing.packageName || null,
           bookingId: existing.id,
+          amountPaidBaht: existing.amountPaidBaht,
+          paymentMethod: existing.paymentMethod,
+          paymentSlipUrl: existing.paymentSlipUrl ?? existing.depositSlipUrl,
+          memberPhone: existing.customerPhone?.replace(/\D/g, "").slice(0, 20) || null,
         },
       });
       const booking = await tx.parkingBooking.update({
@@ -77,6 +87,14 @@ export async function PATCH(req: Request, { params }: Params) {
         include: { site: { select: { name: true } } },
       });
       return { session, booking };
+    });
+    await applyParkingLoyaltyEarnOnPaid({
+      ownerUserId: ctx.ownerUserId,
+      trialSessionId: ctx.trialSessionId,
+      sessionId: result.session.id,
+      amountPaidBaht: result.booking.amountPaidBaht,
+      memberPhone: result.booking.customerPhone ?? "",
+      customerName: result.booking.customerName,
     });
 
     return NextResponse.json({
@@ -96,6 +114,10 @@ export async function PATCH(req: Request, { params }: Params) {
         amount_baht: result.booking.amountBaht,
         amount_paid_baht: result.booking.amountPaidBaht,
         payment_status: result.booking.paymentStatus,
+        payment_method: result.booking.paymentMethod,
+        payment_slip_url: result.booking.paymentSlipUrl,
+        deposit_slip_url: result.booking.depositSlipUrl,
+        deposit_amount_baht: result.booking.depositAmountBaht,
         status: result.booking.status,
         note: result.booking.note,
       },
@@ -109,6 +131,22 @@ export async function PATCH(req: Request, { params }: Params) {
       ...(parsed.data.status != null ? { status: parsed.data.status } : {}),
       ...(parsed.data.spot_id !== undefined ? { spotId: parsed.data.spot_id } : {}),
       ...(parsed.data.note !== undefined ? { note: parsed.data.note } : {}),
+      ...(parsed.data.payment_method !== undefined
+        ? { paymentMethod: isAppPaymentMethod(parsed.data.payment_method) ? parsed.data.payment_method : null }
+        : {}),
+      ...(parsed.data.payment_slip_url !== undefined ? { paymentSlipUrl: parsed.data.payment_slip_url?.trim() || null } : {}),
+      ...(parsed.data.deposit_slip_url !== undefined ? { depositSlipUrl: parsed.data.deposit_slip_url?.trim() || null } : {}),
+      ...(parsed.data.amount_paid_baht !== undefined
+        ? {
+            amountPaidBaht: Math.min(existing.amountBaht, parsed.data.amount_paid_baht),
+            paymentStatus:
+              parsed.data.amount_paid_baht >= existing.amountBaht && existing.amountBaht > 0
+                ? "PAID"
+                : parsed.data.amount_paid_baht > 0
+                  ? "PARTIAL"
+                  : "UNPAID",
+          }
+        : {}),
     },
     include: { site: { select: { name: true } } },
   });
@@ -130,14 +168,18 @@ export async function PATCH(req: Request, { params }: Params) {
       amount_baht: row.amountBaht,
       amount_paid_baht: row.amountPaidBaht,
       payment_status: row.paymentStatus,
+      payment_method: row.paymentMethod,
+      payment_slip_url: row.paymentSlipUrl,
+      deposit_slip_url: row.depositSlipUrl,
+      deposit_amount_baht: row.depositAmountBaht,
       status: row.status,
       note: row.note,
     },
   });
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
-  const ctx = await getParkingOwnerContext();
+export async function DELETE(req: Request, { params }: Params) {
+  const ctx = await getParkingOwnerContext(req);
   if (!ctx) return NextResponse.json({ error: "ไม่ได้รับอนุญาต" }, { status: 401 });
   const id = Number((await params).id);
   if (!Number.isInteger(id) || id < 1) return NextResponse.json({ error: "ไม่พบการจอง" }, { status: 404 });

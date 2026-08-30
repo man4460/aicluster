@@ -23,6 +23,9 @@ export type ParkingCheckInSpotRow = {
   siteName: string;
   spotCode: string;
   zoneLabel: string | null;
+  pricingMode: "HOURLY" | "DAILY" | "MONTHLY";
+  dailyRateBaht: number | null;
+  monthlyRateBaht: number | null;
   activeSession: {
     id: number;
     licensePlate: string;
@@ -114,7 +117,7 @@ export function ParkingStaffCheckInClient({
     return (
       <ParkingPageStack>
         <ParkingPanelCard title="เช็คอิน (พนักงาน)" description="บันทึกทะเบียนและข้อมูลลูกค้า">
-          <AppEmptyState tone="glass">ยังไม่มีช่องจอด — เพิ่มได้ที่เมนูลานจอด</AppEmptyState>
+          <AppEmptyState tone="glass">ยังไม่มีช่องจอด — เพิ่มได้ที่เมนูการจัดการ → ลานจอด</AppEmptyState>
         </ParkingPanelCard>
       </ParkingPageStack>
     );
@@ -225,7 +228,16 @@ export function ParkingStaffCheckInClient({
           </div>
         ) : selectedSpot ? (
           <div className="rounded-[2rem] border border-white/55 bg-white/28 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
-            <ParkingStaffCheckInForm spotId={selectedSpot.id} />
+            <ParkingStaffCheckInForm
+              spotId={selectedSpot.id}
+              estimatedAmountBaht={
+                selectedSpot.pricingMode === "DAILY"
+                  ? selectedSpot.dailyRateBaht
+                  : selectedSpot.pricingMode === "MONTHLY"
+                    ? selectedSpot.monthlyRateBaht
+                    : null
+              }
+            />
           </div>
         ) : null}
       </ParkingPanelCard>

@@ -3,6 +3,7 @@
 import { Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { ParkingBookingsClient } from "@/systems/parking/components/ParkingBookingsClient";
+import { ParkingCheckoutClient } from "@/systems/parking/components/ParkingCheckoutClient";
 import {
   ParkingStaffCheckInClient,
   type ParkingCheckInLotRow,
@@ -38,6 +39,7 @@ function ParkingDashboardHubTabs({
         </Suspense>
       ) : null}
       {tab === "booking" ? <ParkingBookingsClient /> : null}
+      {tab === "checkout" ? <ParkingCheckoutClient /> : null}
     </div>
   );
 }

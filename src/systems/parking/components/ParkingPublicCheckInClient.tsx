@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  AppPaymentMethodPanel,
+  type AppPaymentInfo,
+  type AppPaymentMethod,
+} from "@/components/app-templates";
 import { parkingBtnPrimary, parkingCard, parkingField } from "@/systems/parking/parking-ui";
 
 type SpotInfo = {
@@ -10,6 +15,7 @@ type SpotInfo = {
   pricingMode: string;
   hourlyRateBaht: number | null;
   dailyRateBaht: number | null;
+  monthlyRateBaht: number | null;
   occupied: boolean;
 };
 
@@ -26,6 +32,29 @@ export function ParkingPublicCheckInClient({ token }: { token: string }) {
   const [shuttleFrom, setShuttleFrom] = useState("");
   const [shuttleTo, setShuttleTo] = useState("");
   const [shuttleNote, setShuttleNote] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<AppPaymentMethod>("PROMPTPAY");
+  const [paymentSlipUrl, setPaymentSlipUrl] = useState<string | null>(null);
+
+  const fetchPayInfo = useCallback(async (amountBaht: number): Promise<AppPaymentInfo> => {
+    const res = await fetch("/api/parking/public/promptpay-qr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, amountBaht }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "โหลดข้อมูลชำระเงินไม่สำเร็จ");
+    return data as AppPaymentInfo;
+  }, [token]);
+
+  const uploadSlip = useCallback(async (file: File): Promise<string> => {
+    const form = new FormData();
+    form.append("token", token);
+    form.append("file", file);
+    const res = await fetch("/api/parking/public/upload", { method: "POST", body: form });
+    const data = await res.json();
+    if (!res.ok || typeof data.imageUrl !== "string") throw new Error(data.error ?? "อัปโหลดสลิปไม่สำเร็จ");
+    return data.imageUrl;
+  }, [token]);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +101,14 @@ export function ParkingPublicCheckInClient({ token }: { token: string }) {
           shuttleFrom: shuttleFrom.trim() || null,
           shuttleTo: shuttleTo.trim() || null,
           shuttleNote: shuttleNote.trim() || null,
+          paymentMethod,
+          paymentSlipUrl,
+          amountPaidBaht:
+            info?.pricingMode === "DAILY"
+              ? info.dailyRateBaht ?? 0
+              : info?.pricingMode === "MONTHLY"
+                ? info.monthlyRateBaht ?? 0
+                : 0,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -142,6 +179,10 @@ export function ParkingPublicCheckInClient({ token }: { token: string }) {
       ? info.dailyRateBaht != null
         ? `เหมาวันละ ${info.dailyRateBaht.toLocaleString("th-TH")} บาท (ปฏิทินไทย)`
         : "—"
+      : info.pricingMode === "MONTHLY"
+        ? info.monthlyRateBaht != null
+          ? `เหมารายเดือน ${info.monthlyRateBaht.toLocaleString("th-TH")} บาท`
+          : "—"
       : info.hourlyRateBaht != null
         ? `ชม. ละ ${info.hourlyRateBaht.toLocaleString("th-TH")} บาท (ปัดขึ้น)`
         : "—";
@@ -174,6 +215,27 @@ export function ParkingPublicCheckInClient({ token }: { token: string }) {
             autoComplete="off"
           />
         </div>
+        {info.pricingMode === "DAILY" || info.pricingMode === "MONTHLY" ? (
+          <AppPaymentMethodPanel
+            amountBaht={
+              info.pricingMode === "DAILY"
+                ? info.dailyRateBaht ?? 0
+                : info.monthlyRateBaht ?? 0
+            }
+            method={paymentMethod}
+            slipUrl={paymentSlipUrl}
+            onMethodChange={setPaymentMethod}
+            onSlipUrlChange={setPaymentSlipUrl}
+            fetchPayInfo={fetchPayInfo}
+            uploadSlip={uploadSlip}
+            disabled={submitting}
+            variant="public"
+          />
+        ) : (
+          <p className="rounded-xl bg-amber-50/80 p-3 text-xs font-semibold text-amber-800">
+            ค่าจอดรายชั่วโมงชำระตอนเช็คเอาต์
+          </p>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="name" className="block text-xs font-semibold text-slate-700">

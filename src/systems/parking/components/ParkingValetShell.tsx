@@ -41,15 +41,6 @@ function IconOffers({ className }: { className?: string }) {
   );
 }
 
-function IconLots({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className={className} aria-hidden>
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="M3 10h18M9 10v10M15 10v10" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function IconFinance({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className={className} aria-hidden>
@@ -73,7 +64,6 @@ function IconGear({ className }: { className?: string }) {
 const NAV_ICONS: Record<ParkingNavKey, typeof IconDashboard> = {
   dashboard: IconDashboard,
   offers: IconOffers,
-  lots: IconLots,
   finance: IconFinance,
   settings: IconGear,
 };
@@ -96,17 +86,10 @@ const parkingGuideSections = [
     ),
   },
   {
-    title: "แพ็กเกจ / สมาชิก",
+    title: "การจัดการ",
     content: (
       <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
-        <li>สร้างแพ็กเกจบริการ และขายสมาชิกเหมาจ่าย — ตัดสิทธิ์ตอนเช็คอิน</li>
-      </ul>
-    ),
-  },
-  {
-    title: "ลานจอด",
-    content: (
-      <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+        <li>แพ็กเกจบริการ · สมาชิกเหมาจ่าย — ตัดสิทธิ์ตอนเช็คอิน</li>
         <li>เพิ่มลาน · ตั้งราคาชม./วัน/เดือน · จัดการช่องจอดและ QR ในแต่ละลาน</li>
       </ul>
     ),
@@ -262,7 +245,7 @@ export function ParkingValetShell({
         open={guideOpen}
         onClose={() => setGuideOpen(false)}
         title="คู่มือการใช้งาน — บริการรับฝากจอดรถ"
-        subtitle="แดชบอร์ด · แพ็กเกจ · ลาน · การเงิน · ตั้งค่า"
+        subtitle="แดชบอร์ด · การจัดการ · การเงิน · ตั้งค่า"
         sections={parkingGuideSections}
       />
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AppEmptyState,
   useAppNoticePopup,
@@ -13,15 +14,17 @@ import {
   assetRowEditIconButtonClass,
   assetRowRemoveIconButtonClass,
 } from "@/systems/asset/components/AssetRowActionIcons";
+import { ParkingLotsClient } from "@/systems/parking/components/ParkingLotsClient";
 import { ParkingPageStack, ParkingPanelCard } from "@/systems/parking/components/ParkingPageChrome";
 import {
+  parseParkingManageTab,
+  parkingOffersHref,
   parkingPricingModeLabel,
+  type ParkingManageTabKey,
   type ParkingPricingMode,
 } from "@/systems/parking/parking-module-nav";
 import { parkingBtnPrimary, parkingField } from "@/systems/parking/parking-ui";
 import {
-  parkingPrimaryTabPillClass,
-  parkingPrimaryTabShellClass,
   parkingValetInnerCardClass,
 } from "@/systems/parking/parking-ui-tokens";
 
@@ -49,11 +52,11 @@ type Membership = {
   is_active: boolean;
 };
 
-type OffersTab = "packages" | "memberships";
-
 export function ParkingOffersClient() {
   const notice = useAppNoticePopup();
-  const [tab, setTab] = useState<OffersTab>("packages");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tab = parseParkingManageTab(searchParams.get("tab"));
   const [packages, setPackages] = useState<Pkg[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,6 +85,13 @@ export function ParkingOffersClient() {
     is_active: true,
   });
 
+  function setTab(next: ParkingManageTabKey) {
+    const lot = searchParams.get("lot");
+    router.replace(parkingOffersHref({ tab: next, lot: next === "lots" ? lot ?? undefined : undefined }), {
+      scroll: false,
+    });
+  }
+
   const reload = useCallback(async () => {
     setLoading(true);
     try {
@@ -99,8 +109,9 @@ export function ParkingOffersClient() {
   }, []);
 
   useEffect(() => {
+    if (tab === "lots") return;
     void reload();
-  }, [reload]);
+  }, [reload, tab]);
 
   const multiUsePackages = useMemo(
     () => packages.filter((p) => p.is_active && p.total_uses > 1),
@@ -239,48 +250,78 @@ export function ParkingOffersClient() {
     await reload();
   }
 
+  const manageTabs = (
+    <nav
+      className="inline-flex max-w-full shrink-0 flex-wrap items-center justify-end gap-0.5 rounded-xl border border-white/60 bg-white/55 p-0.5 shadow-sm backdrop-blur-md"
+      role="tablist"
+      aria-label="หมวดการจัดการ"
+    >
+      {(
+        [
+          { key: "packages" as const, label: "แพ็กเกจ" },
+          { key: "memberships" as const, label: "สมาชิก" },
+          { key: "lots" as const, label: "ลานจอด" },
+        ] as const
+      ).map((t) => (
+        <button
+          key={t.key}
+          type="button"
+          role="tab"
+          aria-selected={tab === t.key}
+          className={cn(
+            "inline-flex min-h-8 items-center justify-center rounded-lg px-2 text-[11px] font-black transition sm:min-h-9 sm:px-2.5 sm:text-xs",
+            tab === t.key
+              ? "bg-gradient-to-r from-[#5b61ff] to-[#6a63ff] text-white shadow-sm"
+              : "text-[#5f5a8a] hover:bg-white/80 hover:text-[#4d47b6]",
+          )}
+          onClick={() => setTab(t.key)}
+        >
+          {t.label}
+        </button>
+      ))}
+    </nav>
+  );
+
+  if (tab === "lots") {
+    return (
+      <ParkingPageStack>
+        <ParkingPanelCard
+          title="การจัดการ"
+          description="แพ็กเกจ · สมาชิก · ลานจอดและช่องจอด"
+          headerClassName="flex flex-row items-start justify-between gap-3 sm:items-center"
+          action={manageTabs}
+        />
+        <ParkingLotsClient />
+        {notice.popup}
+      </ParkingPageStack>
+    );
+  }
+
   return (
     <ParkingPageStack>
       <ParkingPanelCard
-        title="แพ็กเกจ / สมาชิก"
-        description="แพ็กเกจบริการ · สมาชิกเหมาจ่าย (ตัดสิทธิ์ตอนเช็คอิน)"
+        title="การจัดการ"
+        description="แพ็กเกจบริการ · สมาชิกเหมาจ่าย · ลานจอด"
         headerClassName="flex flex-row items-start justify-between gap-3 sm:items-center"
         action={
-          <button
-            type="button"
-            onClick={() => (tab === "packages" ? openCreatePkg() : openCreateMbr())}
-            aria-label={tab === "packages" ? "เพิ่มแพ็กเกจ" : "เพิ่มสมาชิก"}
-            className={cn(
-              parkingBtnPrimary,
-              "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2.5 sm:min-w-0 sm:px-4",
-            )}
-          >
-            <span className="sm:hidden text-lg leading-none">+</span>
-            <span className="hidden sm:inline">{tab === "packages" ? "+ เพิ่มแพ็กเกจ" : "+ เพิ่มสมาชิก"}</span>
-          </button>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {manageTabs}
+            <button
+              type="button"
+              onClick={() => (tab === "packages" ? openCreatePkg() : openCreateMbr())}
+              aria-label={tab === "packages" ? "เพิ่มแพ็กเกจ" : "เพิ่มสมาชิก"}
+              className={cn(
+                parkingBtnPrimary,
+                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2.5 sm:min-w-0 sm:px-4",
+              )}
+            >
+              <span className="sm:hidden text-lg leading-none">+</span>
+              <span className="hidden sm:inline">{tab === "packages" ? "+ เพิ่มแพ็กเกจ" : "+ เพิ่มสมาชิก"}</span>
+            </button>
+          </div>
         }
       >
-        <nav className={parkingPrimaryTabShellClass} role="tablist" aria-label="แพ็กเกจหรือสมาชิก">
-          {(
-            [
-              { key: "packages" as const, label: "แพ็กเกจ" },
-              { key: "memberships" as const, label: "สมาชิก" },
-            ] as const
-          ).map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              role="tab"
-              aria-selected={tab === t.key}
-              className={parkingPrimaryTabPillClass(tab === t.key)}
-              onClick={() => setTab(t.key)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
-
-        <div className="mt-4" role="tabpanel">
+        <div role="tabpanel">
           {loading ? (
             <p className="text-sm text-[#66638c]">กำลังโหลด…</p>
           ) : tab === "packages" ? (

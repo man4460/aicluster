@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isHotelResortPortalOpenForOwner } from "@/lib/hotel-resort/portal-access";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
-import { hotelResortNormalizePortalGallery } from "@/systems/hotel-resort/lib/portal-media";
+import {
+  hotelResortNormalizePortalGallery,
+  hotelResortNormalizeReviewPhotos,
+} from "@/systems/hotel-resort/lib/portal-media";
 import {
   hotelResortComputePortalPayDue,
   hotelResortNormalizePortalPaymentMode,
@@ -49,6 +52,7 @@ export async function GET(req: Request) {
         guestName: true,
         rating: true,
         comment: true,
+        photoUrlsJson: true,
         createdAt: true,
       },
     }),
@@ -89,6 +93,7 @@ export async function GET(req: Request) {
       guestName: r.guestName,
       rating: r.rating,
       comment: r.comment,
+      photoUrls: hotelResortNormalizeReviewPhotos(r.photoUrlsJson),
       createdAt: r.createdAt.toISOString(),
     })),
     reviewAvg:

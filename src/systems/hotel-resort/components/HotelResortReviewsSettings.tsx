@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import {
   AppDashboardSection,
+  AppImageLightbox,
+  AppImageThumb,
   AppSectionHeader,
+  useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
@@ -24,6 +27,7 @@ type ReviewRow = {
   guestName: string;
   rating: number;
   comment: string;
+  photoUrls: string[];
   isPublished: boolean;
   createdAt: string;
 };
@@ -36,12 +40,18 @@ export function HotelResortReviewsSettings({ embedded = false }: { embedded?: bo
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const lb = useAppImageLightbox();
 
   async function load() {
     const res = await fetch("/api/hotel-resort/reviews", { credentials: "include", cache: "no-store" });
     if (!res.ok) return;
     const j = (await res.json()) as { reviews?: ReviewRow[] };
-    setRows(j.reviews ?? []);
+    setRows(
+      (j.reviews ?? []).map((r) => ({
+        ...r,
+        photoUrls: Array.isArray(r.photoUrls) ? r.photoUrls : [],
+      })),
+    );
   }
 
   useEffect(() => {
@@ -110,86 +120,100 @@ export function HotelResortReviewsSettings({ embedded = false }: { embedded?: bo
 
   const body = (
     <div className={embedded ? "space-y-3" : "mt-4 space-y-3"}>
-        {err ? <HotelResortErrorBanner message={err} /> : null}
-        {msg ? <p className={hotelResortSuccessBannerClass}>{msg}</p> : null}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block space-y-1">
-            <span className={hotelResortFormLabelClass}>ชื่อผู้รีวิว</span>
-            <input
-              className={cn(hotelResortFieldClass, "mt-1")}
-              value={guestName}
-              onChange={(e) => setGuestName(e.target.value)}
-            />
-          </label>
-          <label className="block space-y-1">
-            <span className={hotelResortFormLabelClass}>คะแนน</span>
-            <select
-              className={cn(hotelResortFieldClass, "mt-1")}
-              value={rating}
-              onChange={(e) => setRating(Number(e.target.value))}
-            >
-              {[5, 4, 3, 2, 1].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+      {err ? <HotelResortErrorBanner message={err} /> : null}
+      {msg ? <p className={hotelResortSuccessBannerClass}>{msg}</p> : null}
+      <div className="grid gap-3 sm:grid-cols-2">
         <label className="block space-y-1">
-          <span className={hotelResortFormLabelClass}>ข้อความ</span>
-          <textarea
-            className={cn(hotelResortFieldClass, "mt-1 min-h-[88px]")}
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            maxLength={800}
+          <span className={hotelResortFormLabelClass}>ชื่อผู้รีวิว</span>
+          <input
+            className={cn(hotelResortFieldClass, "mt-1")}
+            value={guestName}
+            onChange={(e) => setGuestName(e.target.value)}
           />
         </label>
-        <button
-          type="button"
-          disabled={busy || !guestName.trim() || !comment.trim()}
-          onClick={() => void add()}
-          className="app-btn-primary min-h-[44px] rounded-xl px-5 text-sm font-bold disabled:opacity-50"
-        >
-          {busy ? "กำลังบันทึก…" : "+ เพิ่มรีวิว"}
-        </button>
-        <ul className="space-y-2">
-          {rows.map((r) => (
-            <li
-              key={r.id}
-              className="flex items-start gap-2 rounded-2xl border border-white/60 bg-white/50 px-3 py-3"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-black text-[#1e1b4b]">
-                  {r.guestName} · {r.rating}/5
-                  {!r.isPublished ? (
-                    <span className="ml-2 text-[11px] font-bold text-[#8b87b8]">ซ่อน</span>
-                  ) : null}
-                </p>
-                <p className="mt-1 text-xs font-medium text-[#66638c]">{r.comment}</p>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void togglePublished(r)}
-                  className="mt-2 text-[11px] font-bold text-[#4d47b6]"
-                >
-                  {r.isPublished ? "ซ่อนจากหน้าลิงก์" : "แสดงบนหน้าลิงก์"}
-                </button>
-              </div>
+        <label className="block space-y-1">
+          <span className={hotelResortFormLabelClass}>คะแนน</span>
+          <select
+            className={cn(hotelResortFieldClass, "mt-1")}
+            value={rating}
+            onChange={(e) => setRating(Number(e.target.value))}
+          >
+            {[5, 4, 3, 2, 1].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label className="block space-y-1">
+        <span className={hotelResortFormLabelClass}>ข้อความ</span>
+        <textarea
+          className={cn(hotelResortFieldClass, "mt-1 min-h-[88px]")}
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          maxLength={800}
+        />
+      </label>
+      <button
+        type="button"
+        disabled={busy || !guestName.trim() || !comment.trim()}
+        onClick={() => void add()}
+        className="app-btn-primary min-h-[44px] rounded-xl px-5 text-sm font-bold disabled:opacity-50"
+      >
+        {busy ? "กำลังบันทึก…" : "+ เพิ่มรีวิว"}
+      </button>
+      <ul className="space-y-2">
+        {rows.map((r) => (
+          <li
+            key={r.id}
+            className="flex items-start gap-2 rounded-2xl border border-white/60 bg-white/50 px-3 py-3"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-black text-[#1e1b4b]">
+                {r.guestName} · {r.rating}/5
+                {!r.isPublished ? (
+                  <span className="ml-2 text-[11px] font-bold text-[#8b87b8]">ซ่อน</span>
+                ) : null}
+              </p>
+              <p className="mt-1 text-xs font-medium text-[#66638c]">{r.comment}</p>
+              {r.photoUrls.length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {r.photoUrls.map((u) => (
+                    <AppImageThumb
+                      key={u}
+                      src={u}
+                      alt="รูปรีวิว"
+                      onOpen={() => lb.open(u)}
+                      className="h-12 w-12"
+                    />
+                  ))}
+                </div>
+              ) : null}
               <button
                 type="button"
-                className={assetRowRemoveIconButtonClass}
-                aria-label={`ลบรีวิว ${r.guestName}`}
-                title="ลบ"
                 disabled={busy}
-                onClick={() => void remove(r.id)}
+                onClick={() => void togglePublished(r)}
+                className="mt-2 text-[11px] font-bold text-[#4d47b6]"
               >
-                <IconRowRemove className="h-4 w-4" />
+                {r.isPublished ? "ซ่อนจากหน้าลิงก์" : "แสดงบนหน้าลิงก์"}
               </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+            </div>
+            <button
+              type="button"
+              className={assetRowRemoveIconButtonClass}
+              aria-label={`ลบรีวิว ${r.guestName}`}
+              title="ลบ"
+              disabled={busy}
+              onClick={() => void remove(r.id)}
+            >
+              <IconRowRemove className="h-4 w-4" />
+            </button>
+          </li>
+        ))}
+      </ul>
+      <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปรีวิว" />
+    </div>
   );
 
   if (embedded) {

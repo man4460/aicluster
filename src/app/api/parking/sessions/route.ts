@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getParkingOwnerContext } from "@/systems/parking/lib/parking-api-auth";
+import { isAppPaymentMethod } from "@/components/app-templates/payment-method";
+import { applyParkingLoyaltyEarnOnPaid, ensureParkingLoyaltyMember } from "@/systems/parking/lib/loyalty";
+import { normalizeParkingMemberPhone } from "@/systems/parking/lib/loyalty-rule";
+import { computeSessionAmount } from "@/systems/parking/lib/parking-math";
 
 export async function GET(req: Request) {
-  const ctx = await getParkingOwnerContext();
+  const ctx = await getParkingOwnerContext(req);
   if (!ctx) {
     return NextResponse.json({ error: "ไม่ได้รับอนุญาต" }, { status: 401 });
   }
@@ -54,6 +58,17 @@ export async function GET(req: Request) {
       billedUnits: s.billedUnits,
       amountDueBaht: s.amountDueBaht != null ? Number(s.amountDueBaht) : null,
       amountPaidBaht: s.amountPaidBaht != null ? Number(s.amountPaidBaht) : null,
+      currentAmountDueBaht:
+        s.status === "ACTIVE"
+          ? computeSessionAmount(
+              s.pricingMode,
+              s.checkInAt,
+              new Date(),
+              s.hourlyRateSnap == null ? null : Number(s.hourlyRateSnap),
+              s.dailyRateSnap == null ? null : Number(s.dailyRateSnap),
+              s.monthlyRateSnap == null ? null : Number(s.monthlyRateSnap),
+            ).amount
+          : s.amountDueBaht == null ? null : Number(s.amountDueBaht),
       shuttleFrom: s.shuttleFrom,
       shuttleTo: s.shuttleTo,
       shuttleNote: s.shuttleNote,
@@ -64,7 +79,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const ctx = await getParkingOwnerContext();
+  const ctx = await getParkingOwnerContext(req);
   if (!ctx) {
     return NextResponse.json({ error: "ไม่ได้รับอนุญาต" }, { status: 401 });
   }
@@ -138,6 +153,26 @@ export async function POST(req: Request) {
     typeof body?.shuttleNote === "string" && body.shuttleNote.trim() ? body.shuttleNote.trim() : null;
   const internalNote =
     typeof body?.internalNote === "string" && body.internalNote.trim() ? body.internalNote.trim() : null;
+  const memberPhone = normalizeParkingMemberPhone(customerPhone ?? "");
+  const paymentMethodRaw = typeof body?.paymentMethod === "string" ? body.paymentMethod : null;
+  const paymentMethod = isAppPaymentMethod(paymentMethodRaw) ? paymentMethodRaw : null;
+  const paymentSlipUrl =
+    typeof body?.paymentSlipUrl === "string" && body.paymentSlipUrl.trim()
+      ? body.paymentSlipUrl.trim().slice(0, 512)
+      : null;
+  const amountPaidCandidate = Number(body?.amountPaidBaht ?? 0);
+  const amountPaidBaht = Number.isFinite(amountPaidCandidate) && amountPaidCandidate >= 0
+    ? Math.round(amountPaidCandidate * 100) / 100
+    : 0;
+
+  if (memberPhone.length >= 9) {
+    await ensureParkingLoyaltyMember({
+      ownerUserId: ctx.ownerUserId,
+      trialSessionId: ctx.trialSessionId,
+      phone: memberPhone,
+      customerName,
+    });
+  }
 
   const session = await prisma.$transaction(async (tx) => {
     if (membershipSnap) {
@@ -169,6 +204,11 @@ export async function POST(req: Request) {
         shuttleTo,
         shuttleNote,
         internalNote,
+        memberPhone: memberPhone || null,
+        paymentMethod,
+        paymentSlipUrl,
+        amountPaidBaht,
+        amountDueBaht: amountPaidBaht > 0 ? amountPaidBaht : null,
       },
     });
   }).catch((e: unknown) => {
@@ -180,11 +220,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "สมาชิก/เหมาสิทธิ์หมดแล้ว" }, { status: 400 });
   }
 
+  const pointsEarned = await applyParkingLoyaltyEarnOnPaid({
+    ownerUserId: ctx.ownerUserId,
+    trialSessionId: ctx.trialSessionId,
+    sessionId: session.id,
+    amountPaidBaht,
+    memberPhone,
+    customerName,
+  });
+
   return NextResponse.json({
     session: {
       id: session.id,
       checkInAt: session.checkInAt.toISOString(),
       licensePlate: session.licensePlate,
+      amountPaidBaht,
+      paymentMethod,
+      pointsEarned,
     },
   });
 }

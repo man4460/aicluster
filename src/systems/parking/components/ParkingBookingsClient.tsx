@@ -1,9 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { AppEmptyState, useAppNoticePopup } from "@/components/app-templates";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  AppEmptyState,
+  AppPaymentMethodPanel,
+  type AppPaymentInfo,
+  type AppPaymentMethod,
+  useAppNoticePopup,
+} from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import { bangkokDateKey } from "@/lib/time/bangkok";
 import {
   IconRowRemove,
   assetRowRemoveIconButtonClass,
@@ -12,8 +19,16 @@ import { ParkingPageStack, ParkingPanelCard } from "@/systems/parking/components
 import type { ParkingPricingMode } from "@/systems/parking/parking-module-nav";
 import { parkingBtnPrimary, parkingField } from "@/systems/parking/parking-ui";
 import { parkingValetInnerCardClass } from "@/systems/parking/parking-ui-tokens";
+import { useParkingApiFetch } from "@/systems/parking/lib/staff-api-fetch";
 
-type LotOpt = { id: number; name: string; pricingMode: ParkingPricingMode };
+type LotOpt = {
+  id: number;
+  name: string;
+  pricingMode: ParkingPricingMode;
+  dailyRateBaht: number | null;
+  bookingPaymentMode: "NONE" | "DEPOSIT" | "FULL";
+  depositPercent: number | null;
+};
 type SpotOpt = { id: number; spotCode: string; siteId: number };
 
 type Booking = {
@@ -29,6 +44,10 @@ type Booking = {
   scheduled_end: string | null;
   pricing_mode: ParkingPricingMode;
   amount_baht: number;
+  amount_paid_baht: number;
+  payment_method: string | null;
+  deposit_slip_url: string | null;
+  deposit_amount_baht: number;
   status: string;
   note: string | null;
 };
@@ -43,6 +62,7 @@ const STATUS_TH: Record<string, string> = {
 
 export function ParkingBookingsClient() {
   const notice = useAppNoticePopup();
+  const apiFetch = useParkingApiFetch();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [lots, setLots] = useState<LotOpt[]>([]);
   const [spots, setSpots] = useState<SpotOpt[]>([]);
@@ -58,17 +78,53 @@ export function ParkingBookingsClient() {
     customer_name: "",
     customer_phone: "",
     scheduled_start: "",
-    amount_baht: "0",
+    scheduled_end: "",
     note: "",
   });
+  const [paymentMethod, setPaymentMethod] = useState<AppPaymentMethod>("PROMPTPAY");
+  const [depositSlipUrl, setDepositSlipUrl] = useState<string | null>(null);
+
+  const selectedLot = lots.find((lot) => lot.id === Number(form.site_id)) ?? null;
+  const bookingDays = useMemo(() => {
+    if (!form.scheduled_start || !form.scheduled_end) return 1;
+    const start = new Date(`${form.scheduled_start}T12:00:00+07:00`).getTime();
+    const end = new Date(`${form.scheduled_end}T12:00:00+07:00`).getTime();
+    return Math.max(1, Math.ceil((end - start) / 86_400_000));
+  }, [form.scheduled_end, form.scheduled_start]);
+  const bookingAmountBaht = Math.round((selectedLot?.dailyRateBaht ?? 0) * bookingDays);
+  const payDueBaht =
+    selectedLot?.bookingPaymentMode === "FULL"
+      ? bookingAmountBaht
+      : selectedLot?.bookingPaymentMode === "DEPOSIT"
+        ? Math.round(bookingAmountBaht * Math.max(0, Math.min(100, selectedLot.depositPercent ?? 0)) / 100)
+        : 0;
+
+  const fetchPayInfo = useCallback(async (amountBaht: number): Promise<AppPaymentInfo> => {
+    const res = await apiFetch("/api/parking/promptpay-qr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amountBaht }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "โหลดข้อมูลชำระเงินไม่สำเร็จ");
+    return data as AppPaymentInfo;
+  }, [apiFetch]);
+  const uploadSlip = useCallback(async (file: File): Promise<string> => {
+    const body = new FormData();
+    body.append("file", file);
+    const res = await apiFetch("/api/parking/upload", { method: "POST", body });
+    const data = await res.json();
+    if (!res.ok || typeof data.imageUrl !== "string") throw new Error(data.error ?? "อัปโหลดสลิปไม่สำเร็จ");
+    return data.imageUrl;
+  }, [apiFetch]);
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
       const [bRes, sRes, spotRes] = await Promise.all([
-        fetch("/api/parking/bookings"),
-        fetch("/api/parking/site"),
-        fetch("/api/parking/spots"),
+        apiFetch("/api/parking/bookings"),
+        apiFetch("/api/parking/site"),
+        apiFetch("/api/parking/spots"),
       ]);
       const bData = (await bRes.json()) as { bookings?: Booking[] };
       const sData = (await sRes.json()) as { sites?: LotOpt[] };
@@ -79,7 +135,7 @@ export function ParkingBookingsClient() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [apiFetch]);
 
   useEffect(() => {
     void reload();
@@ -87,19 +143,20 @@ export function ParkingBookingsClient() {
 
   function openCreate() {
     const first = lots[0];
-    const now = new Date();
-    now.setMinutes(0, 0, 0);
-    now.setHours(now.getHours() + 1);
-    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const today = bangkokDateKey();
+    const tomorrowDate = new Date(`${today}T12:00:00+07:00`);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrow = tomorrowDate.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
     setForm({
       site_id: first ? String(first.id) : "",
       license_plate: "",
       customer_name: "",
       customer_phone: "",
-      scheduled_start: local,
-      amount_baht: "0",
+      scheduled_start: today,
+      scheduled_end: tomorrow,
       note: "",
     });
+    setDepositSlipUrl(null);
     setErr(null);
     setModalOpen(true);
   }
@@ -109,8 +166,7 @@ export function ParkingBookingsClient() {
     setErr(null);
     try {
       const siteId = Number(form.site_id);
-      const lot = lots.find((l) => l.id === siteId);
-      const res = await fetch("/api/parking/bookings", {
+      const res = await apiFetch("/api/parking/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -118,9 +174,13 @@ export function ParkingBookingsClient() {
           license_plate: form.license_plate.trim(),
           customer_name: form.customer_name.trim() || null,
           customer_phone: form.customer_phone.trim() || null,
-          scheduled_start: new Date(form.scheduled_start).toISOString(),
-          pricing_mode: lot?.pricingMode ?? "HOURLY",
-          amount_baht: Number(form.amount_baht) || 0,
+          scheduled_start: `${form.scheduled_start}T12:00:00+07:00`,
+          scheduled_end: `${form.scheduled_end}T12:00:00+07:00`,
+          pricing_mode: "DAILY",
+          amount_baht: bookingAmountBaht,
+          amount_paid_baht: payDueBaht,
+          payment_method: payDueBaht > 0 ? paymentMethod : null,
+          deposit_slip_url: payDueBaht > 0 ? depositSlipUrl : null,
           note: form.note.trim() || null,
         }),
       });
@@ -143,7 +203,7 @@ export function ParkingBookingsClient() {
       tone: "error",
     });
     if (!ok) return;
-    await fetch(`/api/parking/bookings/${b.id}`, {
+    await apiFetch(`/api/parking/bookings/${b.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "CANCELLED" }),
@@ -156,7 +216,7 @@ export function ParkingBookingsClient() {
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch(`/api/parking/bookings/${checkinFor.id}`, {
+      const res = await apiFetch(`/api/parking/bookings/${checkinFor.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -219,6 +279,9 @@ export function ParkingBookingsClient() {
                     <p className="mt-1 text-xs text-[#5f5a8a]">
                       {new Date(b.scheduled_start).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
                     </p>
+                    <p className="mt-1 text-xs font-bold text-[#4d47b6]">
+                      เหมารายวัน ฿{b.amount_baht.toLocaleString("th-TH")} · ชำระแล้ว ฿{b.amount_paid_baht.toLocaleString("th-TH")}
+                    </p>
                   </div>
                   <span className="shrink-0 rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-[#4d47b6] ring-1 ring-white/80">
                     {STATUS_TH[b.status] ?? b.status}
@@ -267,7 +330,14 @@ export function ParkingBookingsClient() {
             onCancel={() => setModalOpen(false)}
             onSubmit={() => void saveBooking()}
             submitLabel="บันทึกจอง"
-            submitDisabled={!form.site_id || !form.license_plate.trim() || !form.scheduled_start || busy}
+            submitDisabled={
+              !form.site_id ||
+              !form.license_plate.trim() ||
+              !form.scheduled_start ||
+              !form.scheduled_end ||
+              form.scheduled_end <= form.scheduled_start ||
+              busy
+            }
             loading={busy}
           />
         }
@@ -298,18 +368,34 @@ export function ParkingBookingsClient() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#5f5a8a]">วันเวลาจอง (เวลาไทยบนเครื่อง)</label>
+            <label className="block text-xs font-semibold text-[#5f5a8a]">วันเริ่มจอด (เวลาไทย)</label>
             <input
-              type="datetime-local"
+              type="date"
               className={`${parkingField} mt-1`}
               value={form.scheduled_start}
               onChange={(e) => setForm((f) => ({ ...f, scheduled_start: e.target.value }))}
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#5f5a8a]">ยอดประมาณ (บาท)</label>
-            <input type="number" min={0} className={`${parkingField} mt-1`} value={form.amount_baht} onChange={(e) => setForm((f) => ({ ...f, amount_baht: e.target.value }))} />
+            <label className="block text-xs font-semibold text-[#5f5a8a]">วันสิ้นสุด (อย่างน้อยวันถัดไป)</label>
+            <input type="date" className={`${parkingField} mt-1`} value={form.scheduled_end} min={form.scheduled_start} onChange={(e) => setForm((f) => ({ ...f, scheduled_end: e.target.value }))} />
           </div>
+          <div className="rounded-2xl bg-white/70 p-3 text-sm font-bold text-[#4d47b6]">
+            เหมารายวัน {bookingDays} วัน · รวม ฿{bookingAmountBaht.toLocaleString("th-TH")}
+            <span className="mt-1 block text-xs text-[#66638c]">ชำระตอนจอง ฿{payDueBaht.toLocaleString("th-TH")}</span>
+          </div>
+          {payDueBaht > 0 ? (
+            <AppPaymentMethodPanel
+              amountBaht={payDueBaht}
+              method={paymentMethod}
+              slipUrl={depositSlipUrl}
+              onMethodChange={setPaymentMethod}
+              onSlipUrlChange={setDepositSlipUrl}
+              fetchPayInfo={fetchPayInfo}
+              uploadSlip={uploadSlip}
+              disabled={busy}
+            />
+          ) : null}
           {err ? <p className="text-sm text-rose-700">{err}</p> : null}
         </div>
       </FormModal>

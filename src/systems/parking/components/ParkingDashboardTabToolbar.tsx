@@ -22,6 +22,13 @@ function hubTabIcon(key: ParkingDashboardTabKey) {
           <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" strokeLinecap="round" />
         </>
       );
+    case "checkout":
+      return (
+        <>
+          <path d="M4 7h16v12H4z" strokeLinejoin="round" />
+          <path d="M4 10h16M8 15h4" strokeLinecap="round" />
+        </>
+      );
     case "booking":
       return (
         <>
