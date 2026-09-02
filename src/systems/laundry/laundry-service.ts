@@ -30,6 +30,8 @@ export type LaundryPackage = {
   image_url?: string | null;
   /** รายการตะกร้า×ราคา — ถ้ามี ให้เลือกขั้นตอนก่อนบันทึกออเดอร์ */
   basket_tiers?: LaundryBasketTier[] | null;
+  /** จำนวนครั้งในแพ็กเหมา — มากกว่า 1 = แพ็ก bulk */
+  total_sessions?: number | null;
   is_active: boolean;
 };
 
@@ -49,6 +51,10 @@ export type LaundryOrder = {
   note: string;
   recorded_by_name: string;
   status: LaundryOrderStatus;
+  payment_method?: string | null;
+  receipt_image_url?: string | null;
+  /** ระยะจากร้าน (กม.) — จากพอร์ทัลรับที่บ้าน */
+  distance_km?: number | null;
 };
 
 /** หมวดรายจ่าย — เทียบ `CostCategory` คาร์แคร์ */
@@ -88,6 +94,24 @@ export type LaundryCostEntryPatch = Partial<{
   note: string;
   slip_photo_url: string;
 }>;
+
+export type LaundryRevenueCategory = {
+  id: number;
+  name: string;
+  created_at: string;
+};
+
+export type LaundryRevenueEntry = {
+  id: number;
+  category_id: number;
+  category_name: string;
+  earned_at: string;
+  amount: number;
+  item_label: string;
+  note: string;
+  slip_photo_url: string;
+  created_at: string;
+};
 
 export interface LaundryRepository {
   listPackages(): Promise<LaundryPackage[]>;
