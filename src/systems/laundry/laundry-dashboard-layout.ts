@@ -9,10 +9,12 @@ export const laundryDashboardCardGridClass =
 export const laundryStaffQrLandingCardGridClass = "grid grid-cols-1 gap-2 sm:gap-3";
 
 /**
- * กริด **การ์ดสถิติวันนี้** (`LaundryStat` × 4) — **2 คอลัมน์ต่อแถวทุกขนาดจอ** (`grid-cols-2`) = 2×2
+ * กริด **การ์ดสถิติวันนี้** (`LaundryStat` × 4)
+ * - มือถือ: 2×2 (`grid-cols-2`)
+ * - คอม (`lg+`): แถวเดียว 4 คอลัมน์ · คอลัมรายรับกว้างกว่า · ความสูงเท่ากันทั้งแถว
  */
 export const laundryDashboardStatsGridClass =
-  "grid grid-cols-2 gap-2 sm:gap-3";
+  "grid auto-rows-fr grid-cols-2 gap-2 sm:gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.45fr)]";
 
 /**
  * แท็บ «แพ็กเกจ» — **หนึ่งการ์ดต่อแถวทุก breakpoint** (บนคอมเป็นรายการแถวเต็มความกว้าง ไม่จัด 3 คอลัมน์)

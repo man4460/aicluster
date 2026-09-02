@@ -1,0 +1,44 @@
+---
+description: หักแพ็กสมาชิกต้องมีลงนามลูกค้า (AppSignaturePad) — ต้นแบบร้านตัดผม · ใช้กับซักผ้า/นวด/คาร์แคร์ และโมดูลใหม่
+alwaysApply: true
+---
+
+# หักแพ็กสมาชิก — บังคับลงนามลูกค้า
+
+เมื่อโมดูลมี **หักครั้งจากแพ็กเหมา / สมาชิก** (check-in · PACKAGE_USE) ให้ทำเหมือน **ร้านตัดผม** — ลูกค้าต้องลงชื่อก่อนหัก
+
+**ต้นแบบ:** `BarberQueueCheckInModal` · `AppSignaturePad` · `uploadBarberSignatureBlob` · API `/api/barber/check-in` + `/api/barber/signature/upload`
+
+**ซักผ้า (ทำแล้ว):** `LaundryCheckInForm` · `LaundryCheckInModal` · `uploadLaundrySignatureBlob` · `/api/laundry/check-in` + `/api/laundry/signature/upload`
+
+---
+
+## บังคับ (UI)
+
+1. ใช้ **`AppSignaturePad`** จาก `@/components/app-templates` เท่านั้น — ห้ามวาด canvas ลงนามเอง
+2. วาง pad **หลังเลือกแพ็ก** และ **ก่อนปุ่มหักครั้ง**
+3. กดหักแล้วถ้า pad ว่าง → แสดง error ชัด เช่น «ให้ลูกค้าลงชื่อด้วยปากกาหรือนิ้วก่อนหักแพ็ก» — **ห้าม** หักโดยไม่มีลายเซ็น
+4. ลำดับ: ตรวจ pad → `toPngBlob()` → อัปโหลด → POST check-in พร้อม `signatureImageUrl`
+5. ขณะบันทึก: `disabled` pad + ปุ่มหัก
+
+## บังคับ (API / DB)
+
+1. ตาราง log การใช้บริการ (เช่น `*ServiceLog` / visit) ต้องมี **`signatureImageUrl`** (`VARCHAR(512)` nullable)
+2. body หักแพ็ก: `subscriptionId` + **`signatureImageUrl`** (regex path อัปโหลดโมดูลนั้น เช่น `/uploads/laundry/` หรือ `/uploads/barber`)
+3. มี route อัปโหลดลายเซ็นแยก (แนะนำ ` /api/{module}/signature/upload`) ใช้ `saveOwnerModuleUploadImage(..., "signatures", ownerId)`
+4. helper ฝั่ง client: `upload{Module}SignatureBlob(blob)` ใน `systems/{module}/lib/upload-signature.ts`
+5. บันทึกลง log ตอนสร้าง `PACKAGE_USE` — อย่าทิ้ง URL ทิ้งไว้โดยไม่ผูกแถว
+
+## ห้าม
+
+- หักแพ็กได้โดยไม่บังคับลายเซ็นบน UI แดชบอร์ด/staff
+- คัดลอก pad / upload logic ซ้ำโดยไม่ใช้ `AppSignaturePad` + helper กลางของโมดูล
+- รับ `data:` URL ยาว ๆ ใน body check-in — ต้องอัปโหลดไฟล์ก่อนแล้วส่ง path
+
+## เช็กลิสต์เมื่อเพิ่มโมดูลใหม่
+
+- [ ] คอลัมน์ `signature_image_url` + migration
+- [ ] `/api/.../signature/upload`
+- [ ] `upload*SignatureBlob` helper
+- [ ] check-in schema รับ `signatureImageUrl` และบันทึก
+- [ ] UI: `AppSignaturePad` ก่อนปุ่มหัก · ว่างแล้ว error

@@ -260,10 +260,23 @@ model User {
   schoolBankAccounts                 SchoolBankAccount[]
   communityCoopSettings              CommunityCoopSettings[]
   communityCoopAccounts              CommunityCoopAccount[]
+  laundryShopProfiles                LaundryShopProfile[]
   laundryPackages                    LaundryPackage[]
   laundryOrders                      LaundryOrder[]
+  laundryCustomers                   LaundryCustomer[]
+  laundryCustomerSubscriptions       LaundryCustomerSubscription[]
+  laundryServiceLogs                 LaundryServiceLog[]
   laundryCostCategories              LaundryCostCategory[]
   laundryCostEntries                 LaundryCostEntry[]
+  laundryRevenueCategories           LaundryRevenueCategory[]
+  laundryRevenueEntries              LaundryRevenueEntry[]
+  clubEventProfiles                  ClubEventProfile[]
+  clubEventRecords                   ClubEventRecord[]
+  clubEventGalleryImages             ClubEventGalleryImage[]
+  clubEventMembers                   ClubEventMember[]
+  clubEventFinanceTransactions       ClubEventFinanceTransaction[]
+  clubEventAssets                    ClubEventAsset[]
+  clubEventDynamicLinks              ClubEventDynamicLink[]
   educareSchools                     EducareSchool[]
   educareClassrooms                  EducareClassroom[]
   educareStudents                    EducareStudent[]
@@ -4237,6 +4250,71 @@ model CommunityCoopLedgerEntry {
   @@map("community_coop_ledger_entries")
 }
 
+// --- Laundry / รับฝากซักผ้า ---
+
+enum LaundrySubscriptionStatus {
+  ACTIVE
+  EXHAUSTED
+  CANCELLED
+}
+
+enum LaundryVisitType {
+  PACKAGE_USE
+  PACKAGE_SALE
+  CASH_WALK_IN
+}
+
+/**
+ * ข้อมูลร้านซักผ้า — โลโก้/พอร์ทัล/เวลาเปิด/พิกัดร้าน
+ */
+model LaundryShopProfile {
+  id                       Int      @id @default(autoincrement())
+  ownerUserId              String   @map("owner_id") @db.VarChar(191)
+  owner                    User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId           String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  displayName              String?  @map("display_name") @db.VarChar(200)
+  logoUrl                  String?  @map("logo_url") @db.VarChar(512)
+  tagline                  String?  @db.VarChar(300)
+  taxId                    String?  @map("tax_id") @db.VarChar(30)
+  address                  String?  @db.Text
+  contactPhone             String?  @map("contact_phone") @db.VarChar(32)
+  contactLine              String?  @map("contact_line") @db.VarChar(120)
+  facebookUrl              String?  @map("facebook_url") @db.VarChar(512)
+  mapUrl                   String?  @map("map_url") @db.VarChar(512)
+  /**
+   * พิกัดร้าน — ใช้คำนวณระยะรับผ้าที่บ้าน
+   */
+  shopLat                  Decimal? @map("shop_lat") @db.Decimal(10, 7)
+  shopLng                  Decimal? @map("shop_lng") @db.Decimal(10, 7)
+  promptPayPhone           String?  @map("prompt_pay_phone") @db.VarChar(20)
+  promptPayQrImageUrl      String?  @map("prompt_pay_qr_image_url") @db.VarChar(512)
+  bankName                 String?  @map("bank_name") @db.VarChar(120)
+  bankAccountNumber        String?  @map("bank_account_number") @db.VarChar(32)
+  bankAccountName          String?  @map("bank_account_name") @db.VarChar(200)
+  slipPaperSize            String   @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
+  payAmountPresets         String   @default("80,100,120,150") @map("pay_amount_presets") @db.VarChar(200)
+  staffDailyPinHash        String?  @map("staff_daily_pin_hash") @db.VarChar(255)
+  openTime                 String   @default("09:00") @map("open_time") @db.VarChar(5)
+  closeTime                String   @default("20:00") @map("close_time") @db.VarChar(5)
+  portalBannerUrl          String?  @map("portal_banner_url") @db.VarChar(512)
+  portalGalleryJson        String   @default("[]") @map("portal_gallery_json") @db.Text
+  /**
+   * NONE | DEPOSIT | FULL — ชำระตอนจองรับผ้าที่บ้าน
+   */
+  portalBookingPaymentMode String   @default("NONE") @map("portal_booking_payment_mode") @db.VarChar(16)
+  depositAmountBaht        Int?     @map("deposit_amount_baht")
+  /**
+   * ค่าขนส่งต่อกม. (บาท) — null = ไม่คิดอัตโนมัติ
+   */
+  pickupFeePerKmBaht       Int?     @map("pickup_fee_per_km_baht")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  @@unique([ownerUserId, trialSessionId])
+  @@index([ownerUserId])
+  @@map("laundry_shop_profiles")
+}
+
 /**
  * แพ็กซักรีด — สอดคล้องกับ `laundry_packages` (migration)
  */
@@ -4258,10 +4336,15 @@ model LaundryPackage {
    * JSON: label + price ต่อขนาดตะกร้า (array of objects)
    */
   basketTiers    Json?          @map("basket_tiers")
+  /**
+   * 1 = รายครั้ง · >1 = เหมาซัก (จำนวนครั้ง)
+   */
+  totalSessions  Int            @default(1) @map("total_sessions")
   isActive       Boolean        @default(true) @map("is_active")
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
   orders         LaundryOrder[]
+  subscriptions  LaundryCustomerSubscription[]
 
   @@index([ownerUserId, trialSessionId, isActive], map: "laundry_pkg_owner_trial_active_idx")
   @@index([ownerUserId], map: "laundry_pkg_owner_idx")
@@ -4295,12 +4378,109 @@ model LaundryOrder {
    * โทเค็นติดตามคำขอรับผ้าที่บ้าน (QR) — ไม่ซ้ำเมื่อมีค่า
    */
   pickupPublicToken String?         @unique @map("pickup_public_token") @db.VarChar(36)
+  laundryCustomerId Int?            @map("laundry_customer_id")
+  customer          LaundryCustomer? @relation(fields: [laundryCustomerId], references: [id], onDelete: SetNull)
+  subscriptionId    Int?            @map("subscription_id")
+  subscription      LaundryCustomerSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  pickupLat         Decimal?        @map("pickup_lat") @db.Decimal(10, 7)
+  pickupLng         Decimal?        @map("pickup_lng") @db.Decimal(10, 7)
+  distanceKm        Decimal?        @map("distance_km") @db.Decimal(10, 3)
+  paymentMethod     String?         @map("payment_method") @db.VarChar(24)
+  receiptImageUrl   String?         @map("receipt_image_url") @db.VarChar(512)
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
 
   @@index([ownerUserId, trialSessionId, orderAt], map: "laundry_ord_owner_trial_order_idx")
   @@index([ownerUserId], map: "laundry_ord_owner_idx")
+  @@index([laundryCustomerId])
   @@map("laundry_orders")
+}
+
+/**
+ * ลูกค้าร้านซักผ้า (ค้นด้วยเบอร์)
+ */
+model LaundryCustomer {
+  id                Int      @id @default(autoincrement())
+  ownerUserId       String   @map("owner_id") @db.VarChar(191)
+  owner             User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId    String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  phone             String   @db.VarChar(20)
+  name              String?  @db.VarChar(100)
+  taxInvoiceEnabled Boolean  @default(false) @map("tax_invoice_enabled")
+  billingName       String   @default("") @map("billing_name") @db.VarChar(160)
+  taxId             String   @default("") @map("tax_id") @db.VarChar(30)
+  taxAddress        String   @default("") @map("tax_address") @db.VarChar(1000)
+  taxBranch         String   @default("") @map("tax_branch") @db.VarChar(120)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  subscriptions LaundryCustomerSubscription[]
+  serviceLogs   LaundryServiceLog[]
+  orders        LaundryOrder[]
+
+  @@unique([ownerUserId, phone, trialSessionId])
+  @@index([ownerUserId])
+  @@map("laundry_customers")
+}
+
+/**
+ * สมาชิกแพ็กเหมาซัก
+ */
+model LaundryCustomerSubscription {
+  id                  Int                       @id @default(autoincrement())
+  ownerUserId         String                    @map("owner_id") @db.VarChar(191)
+  owner               User                      @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId      String                    @default("prod") @map("trial_session_id") @db.VarChar(36)
+  laundryCustomerId   Int                       @map("laundry_customer_id")
+  customer            LaundryCustomer           @relation(fields: [laundryCustomerId], references: [id], onDelete: Cascade)
+  packageId           Int                       @map("package_id")
+  package             LaundryPackage            @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  remainingSessions   Int                       @map("remaining_sessions")
+  status              LaundrySubscriptionStatus @default(ACTIVE)
+  saleReceiptImageUrl String?                   @map("sale_receipt_image_url") @db.VarChar(512)
+  paymentMethod       String?                   @map("payment_method") @db.VarChar(20)
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @updatedAt @map("updated_at")
+
+  serviceLogs LaundryServiceLog[]
+  orders      LaundryOrder[]
+
+  @@index([ownerUserId])
+  @@index([laundryCustomerId])
+  @@index([packageId])
+  @@index([ownerUserId, trialSessionId])
+  @@map("laundry_customer_subscriptions")
+}
+
+/**
+ * ประวัติขายแพ็ก / หักครั้ง / รายรับเงินสด
+ */
+model LaundryServiceLog {
+  id                Int                          @id @default(autoincrement())
+  ownerUserId       String                       @map("owner_id") @db.VarChar(191)
+  owner             User                         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId    String                       @default("prod") @map("trial_session_id") @db.VarChar(36)
+  subscriptionId    Int?                         @map("subscription_id")
+  subscription      LaundryCustomerSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  laundryCustomerId Int                          @map("laundry_customer_id")
+  customer          LaundryCustomer              @relation(fields: [laundryCustomerId], references: [id], onDelete: Cascade)
+  visitType         LaundryVisitType             @map("visit_type")
+  amountBaht        Decimal?                     @map("amount_baht") @db.Decimal(10, 2)
+  receiptImageUrl   String?                      @map("receipt_image_url") @db.VarChar(512)
+  /**
+   * ลายเซ็นลูกค้าตอนหักแพ็ก (PACKAGE_USE) — บังคับบน UI เหมือนร้านตัดผม
+   */
+  signatureImageUrl String?                      @map("signature_image_url") @db.VarChar(512)
+  paymentMethod     String?                      @map("payment_method") @db.VarChar(20)
+  revenueCategoryId Int?                         @map("revenue_category_id")
+  revenueCategory   LaundryRevenueCategory?      @relation(fields: [revenueCategoryId], references: [id], onDelete: SetNull)
+  note              String?                      @db.VarChar(255)
+  createdAt         DateTime                     @default(now()) @map("created_at")
+
+  @@index([ownerUserId, createdAt])
+  @@index([laundryCustomerId])
+  @@index([ownerUserId, trialSessionId])
+  @@map("laundry_service_logs")
 }
 
 /**
@@ -4340,6 +4520,48 @@ model LaundryCostEntry {
 
   @@index([ownerUserId, trialSessionId, spentAt], map: "laundry_cost_ent_owner_trial_spent_idx")
   @@map("laundry_cost_entries")
+}
+
+/**
+ * หมวดรายรับซักผ้า
+ */
+model LaundryRevenueCategory {
+  id             Int                 @id @default(autoincrement())
+  ownerUserId    String              @map("owner_id") @db.VarChar(191)
+  owner          User                @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String              @default("prod") @map("trial_session_id") @db.VarChar(36)
+  name           String              @db.VarChar(120)
+  sortOrder      Int                 @default(0) @map("sort_order")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  entries        LaundryRevenueEntry[]
+  serviceLogs    LaundryServiceLog[]
+
+  @@index([ownerUserId, trialSessionId, sortOrder], map: "laundry_rev_cat_owner_trial_sort_idx")
+  @@map("laundry_revenue_categories")
+}
+
+/**
+ * รายการรายรับซักผ้า (บันทึกเพิ่ม / นอกออเดอร์)
+ */
+model LaundryRevenueEntry {
+  id              Int                  @id @default(autoincrement())
+  ownerUserId     String               @map("owner_id") @db.VarChar(191)
+  owner           User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId  String               @default("prod") @map("trial_session_id") @db.VarChar(36)
+  categoryId      Int                  @map("category_id")
+  category        LaundryRevenueCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  earnedAt        DateTime             @map("earned_at")
+  amount          Int
+  itemLabel       String               @default("") @map("item_label") @db.VarChar(200)
+  note            String               @default("") @db.VarChar(500)
+  slipPhotoUrl    String               @default("") @map("slip_photo_url") @db.VarChar(512)
+  paymentMethod   String?              @map("payment_method") @db.VarChar(20)
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, earnedAt], map: "laundry_rev_ent_owner_trial_earned_idx")
+  @@map("laundry_revenue_entries")
 }
 
 /**
@@ -6921,6 +7143,196 @@ model FootballTurfStaffLink {
   @@unique([ownerUserId, trialSessionId], map: "football_turf_staff_link_owner_trial_uniq")
   @@index([ownerUserId], map: "football_turf_staff_link_owner_idx")
   @@map("football_turf_staff_links")
+}
+
+// --- Club Event / บริหารชมรม ---
+
+enum ClubEventScheduleStatus {
+  UPCOMING
+  PAST
+}
+
+enum ClubEventFinanceType {
+  INCOME
+  EXPENSE
+}
+
+enum ClubEventDynamicLinkType {
+  SURVEY
+  RSVP
+  PAYMENT
+  URL
+}
+
+enum ClubEventAssetStatus {
+  AVAILABLE
+  IN_USE
+  DAMAGED
+  RETIRED
+}
+
+/**
+ * โปรไฟล์ชมรม — slug สำหรับพอร์ทัลสาธารณะ /club/[slug]
+ */
+model ClubEventProfile {
+  id                  String   @id @default(cuid())
+  ownerUserId         String   @map("owner_id") @db.VarChar(191)
+  owner               User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId      String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  slug                String   @db.VarChar(80)
+  displayName         String   @map("display_name") @db.VarChar(200)
+  logoUrl             String?  @map("logo_url") @db.VarChar(512)
+  tagline             String?  @db.VarChar(300)
+  rulesMarkdown       String   @default("") @map("rules_markdown") @db.Text
+  /**
+   * JSON: โครงสร้างประธาน/กรรมการ/เลขา [{ role, name, phone?, photoUrl? }]
+   */
+  committeeJson       String   @default("[]") @map("committee_json") @db.Text
+  contactPhone        String?  @map("contact_phone") @db.VarChar(32)
+  contactLine         String?  @map("contact_line") @db.VarChar(120)
+  promptPayPhone        String?  @map("prompt_pay_phone") @db.VarChar(20)
+  promptPayQrImageUrl   String?  @map("prompt_pay_qr_image_url") @db.VarChar(512)
+  bankName              String?  @map("bank_name") @db.VarChar(120)
+  bankAccountNumber     String?  @map("bank_account_number") @db.VarChar(32)
+  bankAccountName       String?  @map("bank_account_name") @db.VarChar(200)
+  slipPaperSize         String   @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  events       ClubEventRecord[]
+  members      ClubEventMember[]
+  assets       ClubEventAsset[]
+  dynamicLinks ClubEventDynamicLink[]
+  financeRows  ClubEventFinanceTransaction[]
+
+  @@unique([ownerUserId, trialSessionId], map: "club_event_profile_owner_trial_uniq")
+  @@unique([slug, trialSessionId], map: "club_event_profile_slug_trial_uniq")
+  @@index([ownerUserId], map: "club_event_profile_owner_idx")
+  @@map("club_event_profiles")
+}
+
+model ClubEventRecord {
+  id              String                   @id @default(cuid())
+  ownerUserId     String                   @map("owner_id") @db.VarChar(191)
+  owner           User                     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId  String                   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId       String                   @map("profile_id")
+  profile         ClubEventProfile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title           String                   @db.VarChar(200)
+  eventDate       DateTime                 @map("event_date")
+  status          ClubEventScheduleStatus  @default(UPCOMING)
+  description     String                   @default("") @db.Text
+  youtubeEmbedUrl String?                  @map("youtube_embed_url") @db.VarChar(512)
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+
+  gallery ClubEventGalleryImage[]
+
+  @@index([ownerUserId, trialSessionId, eventDate], map: "club_event_rec_owner_trial_date_idx")
+  @@index([profileId, status], map: "club_event_rec_profile_status_idx")
+  @@map("club_event_records")
+}
+
+model ClubEventGalleryImage {
+  id             String          @id @default(cuid())
+  ownerUserId    String          @map("owner_id") @db.VarChar(191)
+  owner          User            @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String          @default("prod") @map("trial_session_id") @db.VarChar(36)
+  eventId        String          @map("event_id")
+  event          ClubEventRecord @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  imageUrl       String          @map("image_url") @db.VarChar(512)
+  fileName       String          @map("file_name") @db.VarChar(200)
+  sortOrder      Int             @default(0) @map("sort_order")
+  createdAt      DateTime        @default(now()) @map("created_at")
+
+  @@index([eventId, sortOrder], map: "club_event_gallery_event_sort_idx")
+  @@index([ownerUserId, trialSessionId], map: "club_event_gallery_owner_trial_idx")
+  @@map("club_event_gallery_images")
+}
+
+model ClubEventMember {
+  id               String           @id @default(cuid())
+  ownerUserId      String           @map("owner_id") @db.VarChar(191)
+  owner            User             @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String           @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId        String           @map("profile_id")
+  profile          ClubEventProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name             String           @db.VarChar(160)
+  phone            String           @default("") @db.VarChar(32)
+  photoUrl         String?          @map("photo_url") @db.VarChar(512)
+  /**
+   * JSON: [{ key, label, value }] ฟิลด์เพิ่มเติม
+   */
+  customFieldsJson String           @default("[]") @map("custom_fields_json") @db.Text
+  isActive         Boolean          @default(true) @map("is_active")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId], map: "club_event_member_owner_trial_idx")
+  @@index([profileId, isActive], map: "club_event_member_profile_active_idx")
+  @@map("club_event_members")
+}
+
+model ClubEventFinanceTransaction {
+  id             String               @id @default(cuid())
+  ownerUserId    String               @map("owner_id") @db.VarChar(191)
+  owner          User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String               @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId      String               @map("profile_id")
+  profile        ClubEventProfile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type           ClubEventFinanceType
+  category       String               @db.VarChar(120)
+  amountBaht     Int                  @map("amount_baht")
+  transactedAt   DateTime             @map("transacted_at")
+  note           String               @default("") @db.VarChar(500)
+  slipUrl        String?              @map("slip_url") @db.VarChar(512)
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, transactedAt], map: "club_event_fin_owner_trial_date_idx")
+  @@index([profileId, type], map: "club_event_fin_profile_type_idx")
+  @@map("club_event_finance_transactions")
+}
+
+model ClubEventAsset {
+  id             String               @id @default(cuid())
+  ownerUserId    String               @map("owner_id") @db.VarChar(191)
+  owner          User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String               @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId      String               @map("profile_id")
+  profile        ClubEventProfile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name           String               @db.VarChar(200)
+  quantity       Int                  @default(1)
+  status         ClubEventAssetStatus @default(AVAILABLE)
+  note           String               @default("") @db.VarChar(500)
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId], map: "club_event_asset_owner_trial_idx")
+  @@index([profileId, status], map: "club_event_asset_profile_status_idx")
+  @@map("club_event_assets")
+}
+
+model ClubEventDynamicLink {
+  id             String                   @id @default(cuid())
+  ownerUserId    String                   @map("owner_id") @db.VarChar(191)
+  owner          User                     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String                   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId      String                   @map("profile_id")
+  profile        ClubEventProfile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type           ClubEventDynamicLinkType
+  title          String                   @db.VarChar(200)
+  /**
+   * JSON: ฟิลด์ฟอร์ม / จำนวนเงิน / URL ปลายทาง ฯลฯ
+   */
+  configJson     String                   @default("{}") @map("config_json") @db.Text
+  isActive       Boolean                  @default(true) @map("is_active")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId], map: "club_event_link_owner_trial_idx")
+  @@index([profileId, isActive], map: "club_event_link_profile_active_idx")
+  @@map("club_event_dynamic_links")
 }
 
 /**
