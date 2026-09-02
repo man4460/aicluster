@@ -8,7 +8,7 @@ import { DemoSessionBanner } from "@/components/dashboard/DemoSessionBanner";
 import { LogoutButton, LogoutIconButton } from "@/components/layout/LogoutButton";
 import { dashboardNavIconForHref } from "@/components/layout/dashboard-nav-icons";
 import { MawellLogo } from "@/components/layout/MawellLogo";
-import { appDashboardBrandGradientBarClass, appDashboardBrandGradientFillClass } from "@/components/app-templates";
+import { appDashboardBrandGradientBarClass, appDashboardBrandGradientFillClass, AppBrowserFullscreenButton } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enums";
 import {
@@ -2208,6 +2208,7 @@ export function DashboardShell({
               ) : null}
             </div>
 
+            <AppBrowserFullscreenButton className="h-9 w-9 sm:h-10 sm:w-10" />
             <LogoutIconButton className="h-9 w-9 sm:h-10 sm:w-10 transition-all hover:rotate-12" />
           </div>
         </div>

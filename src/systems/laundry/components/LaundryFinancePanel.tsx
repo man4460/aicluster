@@ -179,8 +179,8 @@ export function LaundryFinancePanel({
   orders,
   costCategories,
   costEntries,
-  revenueCategories,
-  revenueEntries,
+  revenueCategories = [],
+  revenueEntries = [],
   repo,
   baseUrl,
   onRefresh,
@@ -193,8 +193,8 @@ export function LaundryFinancePanel({
   orders: LaundryOrder[];
   costCategories: LaundryCostCategory[];
   costEntries: LaundryCostEntry[];
-  revenueCategories: LaundryRevenueCategory[];
-  revenueEntries: LaundryRevenueEntry[];
+  revenueCategories?: LaundryRevenueCategory[];
+  revenueEntries?: LaundryRevenueEntry[];
   repo: LaundryRepository;
   baseUrl: string;
   onRefresh: () => Promise<void>;
