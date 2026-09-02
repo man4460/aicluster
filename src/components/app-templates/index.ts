@@ -213,4 +213,4 @@ export {
   type AppTime24InputProps,
 } from "./AppTime24Input";
 export { AppBrowserFullscreenButton, type AppBrowserFullscreenButtonProps } from "./AppBrowserFullscreenButton";
-export { useAppBrowserFullscreen, type AppBrowserFullscreenState } from "./useAppBrowserFullscreen";
+export { useAppBrowserFullscreen, restoreAppBrowserFullscreenIfWanted, type AppBrowserFullscreenState } from "./useAppBrowserFullscreen";

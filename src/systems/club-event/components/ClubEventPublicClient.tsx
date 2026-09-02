@@ -68,7 +68,12 @@ export function ClubEventPublicClient({ slug, trialParam }: { slug: string; tria
   }
 
   if (!profile) {
-    return <AppEmptyState title="ไม่พบชมรม" description="ตรวจสอบลิงก์อีกครั้ง" />;
+    return (
+      <AppEmptyState tone="violet">
+        ไม่พบชมรม
+        <span className="mt-1 block text-xs">ตรวจสอบลิงก์อีกครั้ง</span>
+      </AppEmptyState>
+    );
   }
 
   return (

@@ -2,6 +2,8 @@
  * พิมพ์ผ่าน iframe ซ่อน — ใช้เมื่อเปิดหน้าต่างใหม่ไม่ได้
  * เอกสาร HTML ไม่ควรเรียก `window.close()` หลังพิมพ์ (เช่น บิล POS ใช้โหมด `afterPrint: "none"`)
  */
+import { restoreAppBrowserFullscreenIfWanted } from "@/components/app-templates/useAppBrowserFullscreen";
+
 export function printPrintableHtmlInHiddenIframe(fullDocumentHtml: string): boolean {
   const iframe = document.createElement("iframe");
   iframe.setAttribute("title", "พิมพ์เอกสาร");
@@ -25,7 +27,11 @@ export function printPrintableHtmlInHiddenIframe(fullDocumentHtml: string): bool
   const cleanup = () => {
     iframe.remove();
   };
-  cw.addEventListener("afterprint", cleanup, { once: true });
+  const onAfterPrint = () => {
+    cleanup();
+    restoreAppBrowserFullscreenIfWanted();
+  };
+  cw.addEventListener("afterprint", onAfterPrint, { once: true });
   setTimeout(cleanup, 60_000);
   return true;
 }
@@ -84,6 +90,9 @@ img#print-img { width: 340px; max-width: 100%; height: auto; display: block; }
   var img = document.getElementById("print-img");
   function doPrint() {
     window.focus();
+    window.addEventListener("afterprint", function () {
+      try { if (window.opener) window.opener.postMessage("mawell-restore-fullscreen", "*"); } catch (e) {}
+    }, { once: true });
     setTimeout(function () { window.print(); }, 150);
   }
   if (!img) return;

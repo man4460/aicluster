@@ -97,8 +97,6 @@ export function LaundryFinancePageClient({ baseUrl }: { baseUrl: string }) {
       <LaundryOrderEditModal
         order={editOrder}
         onClose={() => setEditOrder(null)}
-        packages={[]}
-        repo={repo}
         onSaved={() => void loadAll({ silent: true })}
         onUpdate={(id, patch) => repo.updateOrder(id, patch)}
       />

@@ -231,7 +231,7 @@ export function ClubEventFinanceClient() {
         {loading ? (
           <p className="py-6 text-center text-sm text-[#66638c]">กำลังโหลด…</p>
         ) : rows.length === 0 ? (
-          <AppEmptyState title="ยังไม่มีรายการ" />
+          <AppEmptyState tone="violet">ยังไม่มีรายการ</AppEmptyState>
         ) : (
           <ul className="space-y-2">
             {rows.map((row) => (

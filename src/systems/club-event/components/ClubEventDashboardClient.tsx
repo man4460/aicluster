@@ -265,7 +265,10 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
         {loading ? (
           <p className="py-8 text-center text-sm text-[#66638c]">กำลังโหลด…</p>
         ) : events.length === 0 ? (
-          <AppEmptyState title="ยังไม่มีกิจกรรม" description="กดเพิ่มกิจกรรมเพื่อเริ่มต้น" />
+          <AppEmptyState tone="violet">
+            ยังไม่มีกิจกรรม
+            <span className="mt-1 block text-xs">กดเพิ่มกิจกรรมเพื่อเริ่มต้น</span>
+          </AppEmptyState>
         ) : (
           <ul className="space-y-2">
             {events.map((ev) => (
@@ -455,7 +458,10 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
                 </label>
               </div>
               {gallery.length === 0 ? (
-                <AppEmptyState title="ยังไม่มีรูป" description="อัปโหลดรูปกิจกรรม (แปลง WebP อัตโนมัติ)" />
+                <AppEmptyState tone="violet">
+                  ยังไม่มีรูป
+                  <span className="mt-1 block text-xs">อัปโหลดรูปกิจกรรม (แปลง WebP อัตโนมัติ)</span>
+                </AppEmptyState>
               ) : (
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                   {gallery.map((g) => (

@@ -332,7 +332,15 @@ export async function POST(req: Request) {
     let sub: { id: number; remainingSessions: number; status: string };
     let receiptSkipped = false;
 
-    const createSubscription = async (data: typeof baseData & { saleReceiptImageUrl?: string }) => {
+    const createSubscription = async (data: {
+      ownerUserId: string;
+      trialSessionId: string;
+      laundryCustomerId: number;
+      packageId: number;
+      remainingSessions: number;
+      paymentMethod?: typeof paymentMethod;
+      saleReceiptImageUrl?: string;
+    }) => {
       return prisma.laundryCustomerSubscription.create({
         data,
         select: { id: true, remainingSessions: true, status: true },

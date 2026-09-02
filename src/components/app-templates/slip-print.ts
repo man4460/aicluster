@@ -124,8 +124,10 @@ function buildPrintDocumentHtml(
     afterPrint === "closeWindow" ?
       "setTimeout(function(){try{window.close();}catch(e){}},400);"
     : "";
+  const restoreOpener =
+    "try{if(window.opener){window.opener.postMessage(\"mawell-restore-fullscreen\",\"*\");}}catch(e){}";
   // ต้องใช้ window.onload — addEventListener เปล่า ๆ จะ ReferenceError ในเบราว์เซอร์
-  const boot = `window.onload=function(){setTimeout(function(){window.print();${after}},200);};`;
+  const boot = `window.onload=function(){setTimeout(function(){window.print();${restoreOpener}${after}},200);};`;
   /** title ว่าง — กันหัวพิมพ์เบราว์เซอร์โชว์ชื่อเอกสาร (คู่กับ @page margin:0 บน A4) */
   const safeTitle = paper === "A4" ? "" : escapeDocTitle(documentTitle);
   return `<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"/><title>${safeTitle}</title><style>${css}</style></head><body><div class="root">${innerHtml}</div><script>${boot}<\/script></body></html>`;

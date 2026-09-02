@@ -240,7 +240,7 @@ export function ClubEventManageClient() {
           <p className="py-6 text-center text-sm text-[#66638c]">กำลังโหลด…</p>
         ) : tab === "members" ? (
           filteredMembers.length === 0 ? (
-            <AppEmptyState title="ยังไม่มีสมาชิก" />
+            <AppEmptyState tone="violet">ยังไม่มีสมาชิก</AppEmptyState>
           ) : (
             <ul className="space-y-2">
               {filteredMembers.map((m) => (
@@ -267,7 +267,7 @@ export function ClubEventManageClient() {
             </ul>
           )
         ) : assets.length === 0 ? (
-          <AppEmptyState title="ยังไม่มีทรัพย์สิน" />
+          <AppEmptyState tone="violet">ยังไม่มีทรัพย์สิน</AppEmptyState>
         ) : (
           <ul className="space-y-2">
             {assets.map((a) => (

@@ -9,6 +9,7 @@ import {
   AppSectionHeader,
   AppSlipPaperSizeSettingsField,
   appTemplateOutlineButtonClass,
+  parseAppSlipPaperSize,
   prepareImageFileForUpload,
   useAppNoticePopup,
 } from "@/components/app-templates";
@@ -188,7 +189,7 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
             <input className={clubEventFieldClass} placeholder="ธนาคาร" value={profile.bankName ?? ""} onChange={(e) => setProfile({ ...profile, bankName: e.target.value })} />
             <input className={clubEventFieldClass} placeholder="เลขบัญชี" value={profile.bankAccountNumber ?? ""} onChange={(e) => setProfile({ ...profile, bankAccountNumber: e.target.value })} />
             <input className={clubEventFieldClass} placeholder="ชื่อบัญชี" value={profile.bankAccountName ?? ""} onChange={(e) => setProfile({ ...profile, bankAccountName: e.target.value })} />
-            <AppSlipPaperSizeSettingsField value={profile.slipPaperSize} onChange={(v) => setProfile({ ...profile, slipPaperSize: v })} />
+            <AppSlipPaperSizeSettingsField value={parseAppSlipPaperSize(profile.slipPaperSize)} onChange={(v) => setProfile({ ...profile, slipPaperSize: v })} />
             <div className={clubEventFixedBottomActionClass}>
               <button type="button" className="app-btn-primary w-full min-h-[48px] rounded-xl sm:w-auto sm:px-6" disabled={saving} onClick={() => void saveProfile(profile)}>
                 บันทึก
@@ -212,7 +213,10 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
             }
           />
           {links.length === 0 ? (
-            <AppEmptyState title="ยังไม่มีลิงก์" description="สร้างแบบสำรวจ RSVP เก็บเงิน หรือ URL" />
+            <AppEmptyState tone="violet">
+              ยังไม่มีลิงก์
+              <span className="mt-1 block text-xs">สร้างแบบสำรวจ RSVP เก็บเงิน หรือ URL</span>
+            </AppEmptyState>
           ) : (
             <ul className="space-y-2">
               {links.map((l) => (
