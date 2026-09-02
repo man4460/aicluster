@@ -1,17 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AppDashboardSection,
   AppEmptyState,
   AppRevenueCostColumnChart,
+  AppSectionHeader,
   type AppCompareBarRow,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
-import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
+import {
+  barberFinanceRangeBounds,
+  type BarberFinanceRange,
+} from "@/lib/barber/finance-range";
+import { bangkokDateKey } from "@/lib/time/bangkok";
 import { HomeFinanceListHeading } from "@/systems/home-finance/components/HomeFinanceUi";
 import { LaundryCostPanel } from "@/systems/laundry/components/LaundryCostPanel";
 import { LaundryOrderCard } from "@/systems/laundry/components/LaundryOrderCard";
+import { LaundryRevenuePanel } from "@/systems/laundry/components/LaundryRevenuePanel";
 import { laundryDashboardCardGridClass } from "@/systems/laundry/laundry-dashboard-layout";
 import {
   LAUNDRY_ORDER_STATUSES,
@@ -21,9 +27,33 @@ import {
   type LaundryOrder,
   type LaundryOrderStatus,
   type LaundryRepository,
+  type LaundryRevenueCategory,
+  type LaundryRevenueEntry,
 } from "@/systems/laundry/laundry-service";
+import {
+  laundryDashboardSegmentBtnClass,
+  laundryDashboardSegmentShellClass,
+  laundryPrimaryTabPillClass,
+  laundryPrimaryTabShellClass,
+} from "@/systems/laundry/lib/ui-tokens";
 
 const MAX_COMPARE_ROWS = 18;
+
+type HistoryLog = {
+  id: number;
+  visitType: string;
+  note: string | null;
+  amountBaht: string | null;
+  createdAt: string;
+  customer: { phone: string; name: string | null };
+};
+
+type HistorySummary = {
+  revenueCashBaht: number;
+  revenuePackageBaht: number;
+  revenueNewPackageBaht: number;
+  revenueTotalBaht: number;
+};
 
 function capLeaderboard(entries: [string, number][], max: number): [string, number][] {
   if (entries.length <= max) return entries;
@@ -59,51 +89,90 @@ function donutGradientFromRows(rows: AppCompareBarRow[]): string {
   return `conic-gradient(${segments.join(", ")})`;
 }
 
-function getBangkokDateFilterDefaults(): { year: string; month: string; day: string } {
-  const key = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
-  const [y, mRaw, dRaw] = key.split("-");
-  return {
-    year: y ?? "",
-    month: mRaw ? String(Number(mRaw)) : "",
-    day: dRaw ? String(Number(dRaw)) : "",
-  };
-}
-
 function orderDateKeyBangkok(iso: string): string {
   return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
 }
 
-function orderPartsBangkok(iso: string): { y: number; m: number; d: number } {
-  const key = orderDateKeyBangkok(iso);
-  const [y, m, d] = key.split("-").map((x) => Number(x));
-  return { y, m, d };
+function formatChartLabel(isoDateKey: string): string {
+  const p = isoDateKey.split("-").map(Number);
+  return `${p[2] ?? 0}/${p[1] ?? 0}`;
 }
 
-function matchesPeriod(iso: string, year: string, month: string, day: string): boolean {
-  const { y, m, d } = orderPartsBangkok(iso);
-  if (year) {
-    const yN = Number(year);
-    if (!Number.isFinite(yN) || y !== yN) return false;
-  }
-  if (month) {
-    const mN = Number(month);
-    if (!Number.isFinite(mN) || m !== mN) return false;
-  }
-  if (day) {
-    const dN = Number(day);
-    if (!Number.isFinite(dN) || d !== dN) return false;
-  }
-  return true;
+function orderCountsTowardRevenue(o: LaundryOrder): boolean {
+  return o.status !== "CANCELLED";
 }
 
-function maxDayInMonthForFilter(yearStr: string, monthStr: string): number {
-  const m = Number(monthStr);
-  if (!monthStr || !Number.isFinite(m) || m < 1 || m > 12) return 31;
-  const y =
-    yearStr && Number.isFinite(Number(yearStr)) && Number(yearStr) >= 1900
-      ? Number(yearStr)
-      : 2024;
-  return new Date(y, m, 0).getDate();
+function inRange(iso: string, start: Date, end: Date): boolean {
+  const t = new Date(iso).getTime();
+  return t >= start.getTime() && t < end.getTime();
+}
+
+function visitLabel(v: string): string {
+  if (v === "PACKAGE_USE") return "หักแพ็กเกจ";
+  if (v === "PACKAGE_SALE") return "ขายแพ็กเกจ";
+  if (v === "CASH_WALK_IN") return "Walk-in";
+  return v;
+}
+
+function financeRangeLabelTh(range: BarberFinanceRange, from: string, to: string): string {
+  if (range === "TODAY") return "วันนี้";
+  if (range === "MONTH") return "เดือนนี้";
+  if (range === "YEAR") return "ปีนี้";
+  if (from && to && from !== to) return `${from} ถึง ${to}`;
+  if (from || to) return `วันที่ ${from || to}`;
+  return "กำหนดเอง";
+}
+
+function FinanceRangeChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-10 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-bold transition-all sm:text-sm",
+        active ?
+          "bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] text-white shadow-md"
+        : "border border-white/60 bg-white/70 text-[#4d47b6] hover:border-indigo-200",
+      )}
+      aria-pressed={active}
+    >
+      {label}
+    </button>
+  );
+}
+
+function IconFilter({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+      <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconChart({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+      <path d="M3 3v18h18" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 14v4M12 9v9M17 5v13" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconRefresh({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" strokeLinecap="round" />
+      <path d="M21 3v6h-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 function matchesSearchOrder(o: LaundryOrder, q: string): boolean {
@@ -115,28 +184,19 @@ function matchesSearchOrder(o: LaundryOrder, q: string): boolean {
   return blob.includes(s);
 }
 
-function matchesSearchCostEntry(e: LaundryCostEntry, q: string): boolean {
+function matchesSearchLog(l: HistoryLog, q: string): boolean {
   const s = q.trim().toLowerCase();
   if (!s) return true;
-  const blob = [e.category_name, e.item_label, e.note].join(" ").toLowerCase();
+  const blob = [l.customer.phone, l.customer.name, l.note, l.visitType].join(" ").toLowerCase();
   return blob.includes(s);
-}
-
-function formatChartLabel(isoDateKey: string): string {
-  const p = isoDateKey.split("-").map(Number);
-  const d = p[2] ?? 0;
-  const m = p[1] ?? 0;
-  return `${d}/${m}`;
-}
-
-function orderCountsTowardRevenue(o: LaundryOrder): boolean {
-  return o.status !== "CANCELLED";
 }
 
 export function LaundryFinancePanel({
   orders,
   costCategories,
   costEntries,
+  revenueCategories,
+  revenueEntries,
   repo,
   baseUrl,
   onRefresh,
@@ -144,10 +204,13 @@ export function LaundryFinancePanel({
   onEditOrder,
   onDeleteOrder,
   onStatusChange,
+  onPrintOrder,
 }: {
   orders: LaundryOrder[];
   costCategories: LaundryCostCategory[];
   costEntries: LaundryCostEntry[];
+  revenueCategories: LaundryRevenueCategory[];
+  revenueEntries: LaundryRevenueEntry[];
   repo: LaundryRepository;
   baseUrl: string;
   onRefresh: () => Promise<void>;
@@ -155,41 +218,84 @@ export function LaundryFinancePanel({
   onEditOrder: (o: LaundryOrder) => void;
   onDeleteOrder: (o: LaundryOrder) => void | Promise<void>;
   onStatusChange: (id: number, status: LaundryOrderStatus) => void | Promise<void>;
+  onPrintOrder?: (o: LaundryOrder) => void;
 }) {
-  const bangkokFilterDefaults = useMemo(() => getBangkokDateFilterDefaults(), []);
-  const [filterYear, setFilterYear] = useState(bangkokFilterDefaults.year);
-  const [filterMonth, setFilterMonth] = useState(bangkokFilterDefaults.month);
-  const [filterDay, setFilterDay] = useState("");
+  const todayKey = bangkokDateKey();
+  const [financeRange, setFinanceRange] = useState<BarberFinanceRange>("MONTH");
+  const [dateFrom, setDateFrom] = useState(`${todayKey.slice(0, 7)}-01`);
+  const [dateTo, setDateTo] = useState(todayKey);
   const [search, setSearch] = useState("");
-  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [chartsOpen, setChartsOpen] = useState(false);
   const [activeListTab, setActiveListTab] = useState<"sales" | "costs">("sales");
   const [orderStatusFilter, setOrderStatusFilter] = useState<"all" | LaundryOrderStatus>("all");
 
-  const yearOptions = useMemo(() => {
-    const ys = new Set<number>();
-    const nowKey = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
-    ys.add(Number(nowKey.slice(0, 4)));
-    orders.forEach((o) => ys.add(orderPartsBangkok(o.order_at).y));
-    costEntries.forEach((e) => ys.add(orderPartsBangkok(e.spent_at).y));
-    return Array.from(ys).sort((a, b) => b - a);
-  }, [orders, costEntries]);
+  const [historyLogs, setHistoryLogs] = useState<HistoryLog[]>([]);
+  const [historySummary, setHistorySummary] = useState<HistorySummary | null>(null);
+  const [rangeLabel, setRangeLabel] = useState("เดือนนี้");
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
-  const dayNumbers = useMemo(() => {
-    const max = maxDayInMonthForFilter(filterYear, filterMonth);
-    return Array.from({ length: max }, (_, i) => i + 1);
-  }, [filterYear, filterMonth]);
+  const rangeBounds = useMemo(
+    () => barberFinanceRangeBounds(financeRange, dateFrom, dateTo),
+    [financeRange, dateFrom, dateTo],
+  );
+
+  const filtersActive = financeRange !== "MONTH" || search.trim().length > 0;
+
+  const resetFilters = useCallback(() => {
+    setFinanceRange("MONTH");
+    setDateFrom(`${todayKey.slice(0, 7)}-01`);
+    setDateTo(todayKey);
+    setSearch("");
+  }, [todayKey]);
+
+  const fetchHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const params = new URLSearchParams({ range: financeRange });
+      if (financeRange === "CUSTOM") {
+        if (dateFrom) params.set("from", dateFrom);
+        if (dateTo) params.set("to", dateTo);
+      }
+      const q = search.trim();
+      if (q) params.set("q", q);
+      const res = await fetch(`/api/laundry/history?${params.toString()}`, { credentials: "include" });
+      const data = (await res.json()) as {
+        logs?: HistoryLog[];
+        summary?: HistorySummary;
+        meta?: { rangeLabel?: string };
+        error?: string;
+      };
+      if (!res.ok) {
+        setHistoryError(data.error ?? "โหลดประวัติไม่สำเร็จ");
+        setHistoryLogs([]);
+        setHistorySummary(null);
+        return;
+      }
+      setHistoryLogs(Array.isArray(data.logs) ? data.logs : []);
+      setHistorySummary(data.summary ?? null);
+      setRangeLabel(data.meta?.rangeLabel ?? financeRangeLabelTh(financeRange, dateFrom, dateTo));
+    } catch {
+      setHistoryError("เชื่อมต่อไม่สำเร็จ");
+      setHistoryLogs([]);
+      setHistorySummary(null);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [financeRange, dateFrom, dateTo, search]);
 
   useEffect(() => {
-    if (!filterDay) return;
-    const max = maxDayInMonthForFilter(filterYear, filterMonth);
-    if (Number(filterDay) > max) setFilterDay("");
-  }, [filterYear, filterMonth, filterDay]);
+    void fetchHistory();
+  }, [fetchHistory]);
 
   const filteredOrdersBase = useMemo(() => {
+    const { start, end } = rangeBounds;
     return orders.filter(
-      (o) => matchesPeriod(o.order_at, filterYear, filterMonth, filterDay) && matchesSearchOrder(o, search),
+      (o) => inRange(o.order_at, start, end) && matchesSearchOrder(o, search),
     );
-  }, [orders, filterYear, filterMonth, filterDay, search]);
+  }, [orders, rangeBounds, search]);
 
   const filteredOrdersForRevenue = useMemo(() => {
     return filteredOrdersBase.filter(orderCountsTowardRevenue);
@@ -201,22 +307,67 @@ export function LaundryFinancePanel({
   }, [filteredOrdersBase, orderStatusFilter]);
 
   const filteredCostEntries = useMemo(() => {
-    return costEntries.filter(
-      (e) => matchesPeriod(e.spent_at, filterYear, filterMonth, filterDay) && matchesSearchCostEntry(e, search),
+    const { start, end } = rangeBounds;
+    return costEntries.filter((e) => inRange(e.spent_at, start, end));
+  }, [costEntries, rangeBounds]);
+
+  const filteredRevenueEntries = useMemo(() => {
+    const { start, end } = rangeBounds;
+    return revenueEntries.filter((e) => inRange(e.earned_at, start, end));
+  }, [revenueEntries, rangeBounds]);
+
+  const filteredHistoryLogs = useMemo(() => {
+    return historyLogs.filter((l) => matchesSearchLog(l, search));
+  }, [historyLogs, search]);
+
+  const ordersRevenue = useMemo(
+    () => filteredOrdersForRevenue.reduce((s, o) => s + o.final_price, 0),
+    [filteredOrdersForRevenue],
+  );
+
+  const manualRevenue = useMemo(
+    () => filteredRevenueEntries.reduce((s, e) => s + e.amount, 0),
+    [filteredRevenueEntries],
+  );
+
+  const historyRevenue = useMemo(() => {
+    if (!historySummary) return 0;
+    return (
+      historySummary.revenueTotalBaht +
+      (historySummary.revenuePackageBaht ?? 0)
     );
-  }, [costEntries, filterYear, filterMonth, filterDay, search]);
+  }, [historySummary]);
+
+  const periodTotalRevenue = historyRevenue + ordersRevenue + manualRevenue;
+  const periodTotalCost = useMemo(
+    () => filteredCostEntries.reduce((a, e) => a + e.amount, 0),
+    [filteredCostEntries],
+  );
 
   const revenueCostBuckets = useMemo(() => {
     const revenueByDay = new Map<string, number>();
+    const costByDay = new Map<string, number>();
+
+    for (const l of filteredHistoryLogs) {
+      const amt = l.amountBaht != null ? Number(l.amountBaht) : 0;
+      if (Number.isFinite(amt) && amt > 0) {
+        const k = orderDateKeyBangkok(l.createdAt);
+        revenueByDay.set(k, (revenueByDay.get(k) ?? 0) + amt);
+      }
+    }
     for (const o of filteredOrdersForRevenue) {
       const k = orderDateKeyBangkok(o.order_at);
       revenueByDay.set(k, (revenueByDay.get(k) ?? 0) + o.final_price);
     }
-    const costByDay = new Map<string, number>();
+    for (const e of filteredRevenueEntries) {
+      const k = orderDateKeyBangkok(e.earned_at);
+      revenueByDay.set(k, (revenueByDay.get(k) ?? 0) + e.amount);
+    }
     for (const e of filteredCostEntries) {
       const k = orderDateKeyBangkok(e.spent_at);
       costByDay.set(k, (costByDay.get(k) ?? 0) + e.amount);
     }
+
     const allKeys = new Set<string>([...revenueByDay.keys(), ...costByDay.keys()]);
     const keys = Array.from(allKeys).sort();
     const maxBars = 36;
@@ -234,14 +385,7 @@ export function LaundryFinancePanel({
         costPct: Math.round((cost / maxVal) * 100),
       };
     });
-  }, [filteredOrdersForRevenue, filteredCostEntries]);
-
-  const periodTotalRevenue = useMemo(
-    () => filteredOrdersForRevenue.reduce((s, o) => s + o.final_price, 0),
-    [filteredOrdersForRevenue],
-  );
-
-  const periodTotalCost = useMemo(() => filteredCostEntries.reduce((a, e) => a + e.amount, 0), [filteredCostEntries]);
+  }, [filteredHistoryLogs, filteredOrdersForRevenue, filteredRevenueEntries, filteredCostEntries]);
 
   const packageCompareRows = useMemo(() => {
     const totals = new Map<string, number>();
@@ -253,124 +397,129 @@ export function LaundryFinancePanel({
     return entriesToBarRows(capLeaderboard(sorted, MAX_COMPARE_ROWS));
   }, [filteredOrdersForRevenue]);
 
-  const filterFields = (
-    <div className="grid flex-1 grid-cols-2 gap-3">
-      <div className="space-y-1.5">
-        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="lf-y">
-          ปี
-        </label>
-        <select
-          id="lf-y"
-          className="app-input w-full min-h-[40px] rounded-xl text-sm font-semibold"
-          value={filterYear}
-          onChange={(e) => {
-            setFilterYear(e.target.value);
-            setFilterMonth("");
-            setFilterDay("");
-          }}
-        >
-          <option value="">ทั้งหมด</option>
-          {yearOptions.map((y) => (
-            <option key={y} value={String(y)}>
-              {y}
-            </option>
-          ))}
-        </select>
+  const filterPanel = (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="กรองช่วงเวลาการเงิน">
+        <FinanceRangeChip label="วันนี้" active={financeRange === "TODAY"} onClick={() => setFinanceRange("TODAY")} />
+        <FinanceRangeChip label="เดือนนี้" active={financeRange === "MONTH"} onClick={() => setFinanceRange("MONTH")} />
+        <FinanceRangeChip label="ปีนี้" active={financeRange === "YEAR"} onClick={() => setFinanceRange("YEAR")} />
+        <FinanceRangeChip label="กำหนดเอง" active={financeRange === "CUSTOM"} onClick={() => setFinanceRange("CUSTOM")} />
       </div>
-      <div className="space-y-1.5">
-        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="lf-m">
-          เดือน
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        {financeRange === "CUSTOM" ?
+          <>
+            <label className="min-w-0 flex-1 sm:max-w-[11rem]">
+              <span className="text-xs font-bold text-[#4d47b6]">ตั้งแต่วันที่</span>
+              <input
+                type="date"
+                className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+            </label>
+            <label className="min-w-0 flex-1 sm:max-w-[11rem]">
+              <span className="text-xs font-bold text-[#4d47b6]">ถึงวันที่</span>
+              <input
+                type="date"
+                className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </label>
+          </>
+        : null}
+        <label className="min-w-0 flex-1 sm:max-w-[16rem]">
+          <span className="text-xs font-bold text-[#4d47b6]">ค้นหา</span>
+          <input
+            className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm font-semibold placeholder:text-slate-400"
+            placeholder="ชื่อ, เบอร์, แพ็กเกจ…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </label>
-        <select
-          id="lf-m"
-          className="app-input w-full min-h-[40px] rounded-xl text-sm font-semibold"
-          value={filterMonth}
-          onChange={(e) => {
-            setFilterMonth(e.target.value);
-            setFilterDay("");
-          }}
-        >
-          <option value="">ทุกเดือน</option>
-          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-            <option key={m} value={String(m)}>
-              {m}
-            </option>
-          ))}
-        </select>
+        {filtersActive ?
+          <button
+            type="button"
+            onClick={resetFilters}
+            className={cn(laundryDashboardSegmentBtnClass(false), "h-11 min-h-[44px] px-4")}
+          >
+            รีเซ็ต · เดือนนี้
+          </button>
+        : null}
       </div>
-      <div className="space-y-1.5">
-        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="lf-d">
-          วัน
-        </label>
-        <select
-          id="lf-d"
-          className="app-input w-full min-h-[40px] rounded-xl text-sm font-semibold"
-          value={dayNumbers.includes(Number(filterDay)) ? filterDay : ""}
-          onChange={(e) => setFilterDay(e.target.value)}
-        >
-          <option value="">ทุกวัน</option>
-          {dayNumbers.map((d) => (
-            <option key={d} value={String(d)}>
-              {d}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="space-y-1.5">
-        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400" htmlFor="lf-s">
-          ค้นหา
-        </label>
-        <input
-          id="lf-s"
-          className="app-input w-full min-h-[40px] rounded-xl text-sm font-semibold placeholder:text-slate-400"
-          placeholder="ชื่อ, เบอร์, แพ็กเกจ…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+      <p className="text-xs font-semibold text-[#66638c]">กำลังดู: {rangeLabel}</p>
     </div>
   );
 
   return (
     <div className="space-y-5 sm:space-y-6">
       <AppDashboardSection tone="violet">
-        <div className="flex items-center justify-between gap-4 rounded-[2rem] border border-white/55 bg-white/35 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
-          <div>
-            <h2 className="text-xl font-black tracking-tight text-[#1e1b4b]">ภาพรวมการเงิน</h2>
-            <p className="text-xs font-medium text-slate-600">รายได้จากงานบริการและต้นทุน / รายจ่าย — เทียบโครงคาร์แคร์</p>
-          </div>
-          <button
-            type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/55 text-violet-600 shadow-sm backdrop-blur-md transition-all active:scale-95 md:hidden"
-            onClick={() => setMobileFilterOpen(true)}
-            aria-label="เปิดตัวกรอง"
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-            </svg>
-          </button>
-        </div>
+        <AppSectionHeader
+          tone="violet"
+          title="ภาพรวมการเงิน"
+          className="flex flex-row items-start justify-between gap-3 sm:items-center"
+          actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
+          action={
+            <div className={cn(laundryDashboardSegmentShellClass, "max-w-full")} role="group" aria-label="เครื่องมือการเงิน">
+              <button
+                type="button"
+                onClick={() => setFilterOpen((o) => !o)}
+                aria-expanded={filterOpen}
+                aria-controls="laundry-finance-filter-panel"
+                aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+                className={cn(
+                  laundryDashboardSegmentBtnClass(filterOpen),
+                  "relative min-h-[40px] min-w-[40px] sm:min-w-0",
+                  filtersActive && !filterOpen && "ring-1 ring-amber-300/80",
+                )}
+              >
+                <IconFilter className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+                {filtersActive ?
+                  <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] ring-2 ring-white" aria-hidden />
+                : null}
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartsOpen((o) => !o)}
+                aria-expanded={chartsOpen}
+                aria-controls="laundry-finance-charts"
+                aria-label={chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
+                title={chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
+                className={cn(laundryDashboardSegmentBtnClass(chartsOpen), "min-h-[40px] min-w-[40px] sm:min-w-0")}
+              >
+                <IconChart className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden sm:inline">{chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void Promise.all([fetchHistory(), onRefresh()])}
+                disabled={historyLoading}
+                aria-busy={historyLoading}
+                aria-label="รีเฟรชข้อมูลรายงาน"
+                title="รีเฟรช"
+                className={cn(laundryDashboardSegmentBtnClass(false), "min-h-[40px] min-w-[40px] disabled:opacity-50 sm:min-w-0")}
+              >
+                <IconRefresh className={cn("h-3.5 w-3.5 shrink-0", historyLoading && "animate-spin")} />
+                <span className="hidden sm:inline">รีเฟรช</span>
+              </button>
+            </div>
+          }
+        />
 
-        <div className="mt-5 hidden rounded-2xl border border-white/55 bg-white/30 p-3 backdrop-blur-xl md:flex md:items-end md:gap-3">
-          {filterFields}
+        <div id="laundry-finance-filter-panel" className={cn("mt-3 space-y-3", filterOpen ? "block" : "hidden")}>
+          {filterPanel}
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-2 sm:gap-4">
           <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/60 bg-gradient-to-br from-white/60 via-violet-50/35 to-indigo-100/30 p-3 shadow-[0_16px_34px_-24px_rgba(91,97,255,0.4)] backdrop-blur-xl sm:p-5">
-            <span className="truncate text-[8px] font-bold uppercase tracking-wider text-violet-500 sm:text-[10px]">
-              รายได้รวม
-            </span>
-            <p className="mt-2 text-sm font-black text-[#1e1b4b] sm:mt-3 sm:text-2xl">
-              ฿{periodTotalRevenue.toLocaleString("th-TH")}
-            </p>
+            <span className="truncate text-[8px] font-bold uppercase tracking-wider text-violet-500 sm:text-[10px]">รายได้รวม</span>
+            <p className="mt-2 text-sm font-black text-[#1e1b4b] sm:mt-3 sm:text-2xl">฿{periodTotalRevenue.toLocaleString("th-TH")}</p>
           </div>
           <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/60 bg-gradient-to-br from-white/60 via-rose-50/30 to-orange-100/25 p-3 shadow-[0_16px_34px_-24px_rgba(244,63,94,0.35)] backdrop-blur-xl sm:p-5">
-            <span className="truncate text-[8px] font-bold uppercase tracking-wider text-rose-500 sm:text-[10px]">
-              รายจ่ายรวม
-            </span>
-            <p className="mt-2 text-sm font-black text-rose-900 sm:mt-3 sm:text-2xl">
-              ฿{periodTotalCost.toLocaleString("th-TH")}
-            </p>
+            <span className="truncate text-[8px] font-bold uppercase tracking-wider text-rose-500 sm:text-[10px]">รายจ่ายรวม</span>
+            <p className="mt-2 text-sm font-black text-rose-900 sm:mt-3 sm:text-2xl">฿{periodTotalCost.toLocaleString("th-TH")}</p>
           </div>
           <div
             className={cn(
@@ -380,171 +529,158 @@ export function LaundryFinancePanel({
               : "bg-gradient-to-br from-white/60 to-orange-100/28",
             )}
           >
-            <span
-              className={cn(
-                "truncate text-[8px] font-bold uppercase tracking-wider sm:text-[10px]",
-                periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-600" : "text-orange-600",
-              )}
-            >
+            <span className={cn("truncate text-[8px] font-bold uppercase tracking-wider sm:text-[10px]", periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-600" : "text-orange-600")}>
               กำไรสุทธิ
             </span>
-            <p
-              className={cn(
-                "mt-2 text-sm font-black sm:mt-3 sm:text-2xl",
-                periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-900" : "text-orange-900",
-              )}
-            >
+            <p className={cn("mt-2 text-sm font-black sm:mt-3 sm:text-2xl", periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-900" : "text-orange-900")}>
               ฿{(periodTotalRevenue - periodTotalCost).toLocaleString("th-TH")}
             </p>
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-white/60 bg-white/45 p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
-            <div className="mb-2 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-              <h3 className="text-sm font-black text-[#1e1b4b] sm:text-base">แนวโน้มรายได้และรายจ่าย</h3>
-            </div>
-            <div className="h-[200px] w-full sm:h-[260px]">
-              <AppRevenueCostColumnChart
-                className="h-full w-full"
-                buckets={revenueCostBuckets}
-                title=""
-                emptyText="ไม่มีข้อมูลในช่วงที่เลือก"
-                formatTitle={(b) =>
-                  `${b.label}: รายได้ ฿${b.revenue.toLocaleString("th-TH")} · รายจ่าย ฿${b.cost.toLocaleString("th-TH")}`
-                }
-              />
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-white/60 bg-white/45 p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl">
-            <h3 className="text-xs font-black text-[#1e1b4b] sm:text-sm">สัดส่วนตามแพ็กเกจ (รายได้)</h3>
-            {packageCompareRows.length > 0 ?
-              <div className="mt-4 flex items-center gap-4">
-                <div
-                  className="h-16 w-16 shrink-0 rounded-full ring-4 ring-slate-50 sm:h-20 sm:w-20"
-                  style={{ background: donutGradientFromRows(packageCompareRows) }}
-                  aria-hidden
+        {chartsOpen ?
+          <div id="laundry-finance-charts" className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-white/60 bg-white/45 p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
+              <h3 className="mb-2 text-sm font-black text-[#1e1b4b] sm:text-base">แนวโน้มรายได้และรายจ่าย · {rangeLabel}</h3>
+              <div className="h-[200px] w-full sm:h-[260px]">
+                <AppRevenueCostColumnChart
+                  className="h-full w-full"
+                  compact
+                  buckets={revenueCostBuckets}
+                  title=""
+                  emptyText="ไม่มีข้อมูลในช่วงที่เลือก"
+                  formatTitle={(b) =>
+                    `${b.label}: รายได้ ฿${b.revenue.toLocaleString("th-TH")} · รายจ่าย ฿${b.cost.toLocaleString("th-TH")}`
+                  }
                 />
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  {packageCompareRows.slice(0, 4).map((row, idx) => (
-                    <div key={row.key} className="flex items-center justify-between text-[10px] sm:text-[11px]">
-                      <span className="truncate font-medium text-slate-500">
-                        <span
-                          className={cn(
-                            "mr-1.5 inline-block h-1.5 w-1.5 rounded-full",
-                            idx === 0 ? "bg-[#5b61ff]"
-                            : idx === 1 ? "bg-[#8d64ff]"
-                            : idx === 2 ? "bg-[#f06dc8]"
-                            : "bg-[#22c55e]",
-                          )}
-                          aria-hidden
-                        />
-                        {row.label}
-                      </span>
-                      <span className="font-bold text-[#1e1b4b]">฿{row.amount.toLocaleString("th-TH")}</span>
-                    </div>
-                  ))}
-                </div>
               </div>
-            : <p className="mt-4 text-center text-[10px] text-slate-400">ไม่มีข้อมูล</p>}
+            </div>
+            <div className="rounded-2xl border border-white/60 bg-white/45 p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl">
+              <h3 className="text-xs font-black text-[#1e1b4b] sm:text-sm">สัดส่วนตามแพ็กเกจ (งานรับ–ส่ง)</h3>
+              {packageCompareRows.length > 0 ?
+                <div className="mt-4 flex items-center gap-4">
+                  <div className="h-16 w-16 shrink-0 rounded-full ring-4 ring-slate-50 sm:h-20 sm:w-20" style={{ background: donutGradientFromRows(packageCompareRows) }} aria-hidden />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    {packageCompareRows.slice(0, 4).map((row, idx) => (
+                      <div key={row.key} className="flex items-center justify-between text-[10px] sm:text-[11px]">
+                        <span className="truncate font-medium text-slate-500">{row.label}</span>
+                        <span className="font-bold text-[#1e1b4b]">฿{row.amount.toLocaleString("th-TH")}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              : <p className="mt-4 text-center text-[10px] text-slate-400">ไม่มีข้อมูล</p>}
+            </div>
           </div>
-        </div>
+        : null}
       </AppDashboardSection>
-
-      <FormModal
-        open={mobileFilterOpen}
-        onClose={() => setMobileFilterOpen(false)}
-        title="ตัวกรองการเงิน"
-        size="md"
-        mobileCentered
-        footer={
-          <FormModalFooterActions
-            onCancel={() => setMobileFilterOpen(false)}
-            onSubmit={() => setMobileFilterOpen(false)}
-            submitLabel="ปิด"
-          />
-        }
-      >
-        <div className="space-y-4">{filterFields}</div>
-      </FormModal>
 
       <AppDashboardSection tone="slate">
         <div className="flex flex-col gap-4 rounded-[2rem] border border-white/55 bg-white/35 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div>
             <HomeFinanceListHeading className="mb-0">
-              {activeListTab === "sales" ? "ประวัติการให้บริการ (รายรับ)" : "ต้นทุน / รายจ่าย"}
+              {activeListTab === "sales" ? "รายรับ" : "รายจ่าย"}
             </HomeFinanceListHeading>
             <p className="mt-1 text-xs font-medium text-slate-500">
               {activeListTab === "sales" ?
-                `รวม ${filteredOrdersList.length} รายการในช่วงที่กรอง`
-              : `รวม ${filteredCostEntries.length} รายการ`}
+                `ประวัติบริการ ${filteredHistoryLogs.length} · งาน ${filteredOrdersList.length} รายการ`
+              : `รายจ่าย ${filteredCostEntries.length} รายการ`}
             </p>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-1 rounded-xl border border-white/60 bg-white/40 p-1 backdrop-blur-md">
-            <button
-              type="button"
-              className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
-                activeListTab === "sales" ?
-                  "bg-white/80 text-[#5b61ff] shadow-sm ring-1 ring-white/80"
-                : "text-slate-600 hover:bg-white/55 hover:text-slate-800",
-              )}
-              onClick={() => setActiveListTab("sales")}
-            >
+          <nav className={laundryPrimaryTabShellClass} role="tablist" aria-label="รายรับหรือรายจ่าย">
+            <button type="button" role="tab" aria-selected={activeListTab === "sales"} className={laundryPrimaryTabPillClass(activeListTab === "sales")} onClick={() => setActiveListTab("sales")}>
               รายรับ
             </button>
-            <button
-              type="button"
-              className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-bold transition-all",
-                activeListTab === "costs" ?
-                  "bg-white/80 text-rose-600 shadow-sm ring-1 ring-white/80"
-                : "text-slate-600 hover:bg-white/55 hover:text-slate-800",
-              )}
-              onClick={() => setActiveListTab("costs")}
-            >
+            <button type="button" role="tab" aria-selected={activeListTab === "costs"} className={laundryPrimaryTabPillClass(activeListTab === "costs")} onClick={() => setActiveListTab("costs")}>
               รายจ่าย
             </button>
-          </div>
+          </nav>
         </div>
 
         {activeListTab === "sales" ?
-          <div className="mt-4 space-y-3">
-            <label className="text-xs font-semibold text-slate-600">
-              กรองตามสถานะงาน
-              <select
-                className="app-input ml-2 mt-1 min-h-[40px] rounded-xl px-3 py-2 text-sm sm:mt-0"
-                value={orderStatusFilter}
-                onChange={(e) => setOrderStatusFilter(e.target.value as typeof orderStatusFilter)}
-              >
-                <option value="all">ทั้งหมด ({filteredOrdersBase.length})</option>
-                {LAUNDRY_ORDER_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {laundryOrderStatusLabelTh(s)} ({filteredOrdersBase.filter((o) => o.status === s).length})
-                  </option>
-                ))}
-              </select>
-            </label>
-            {filteredOrdersList.length === 0 ?
-              <AppEmptyState tone="glass">ไม่พบรายการตามเงื่อนไข</AppEmptyState>
-            : <ul className={cn(laundryDashboardCardGridClass, "list-none p-0")} aria-label="ประวัติงานซักผ้า">
-                {filteredOrdersList.map((o) => (
-                  <li key={o.id} className="min-w-0">
-                    <LaundryOrderCard
-                      order={o}
-                      tone="slate"
-                      showStatusSelect={false}
-                      showOrderedAt
-                      onView={() => onViewOrder(o)}
-                      onEdit={() => onEditOrder(o)}
-                      onDelete={() => void onDeleteOrder(o)}
-                      onStatusChange={onStatusChange}
-                    />
-                  </li>
-                ))}
+          <div className="mt-4 space-y-6">
+            {historyError ?
+              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{historyError}</p>
+            : null}
+            {historyLoading ?
+              <p className="text-center text-sm text-slate-500">กำลังโหลดประวัติบริการ…</p>
+            : filteredHistoryLogs.length === 0 ?
+              <AppEmptyState tone="glass">ไม่มีประวัติบริการในช่วงที่เลือก</AppEmptyState>
+            : <ul className="space-y-2" aria-label="ประวัติบริการ">
+                {filteredHistoryLogs.map((l) => {
+                  const amt = l.amountBaht != null ? Number(l.amountBaht) : NaN;
+                  return (
+                    <li key={l.id} className="rounded-2xl border border-white/60 bg-white/70 px-4 py-3 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-[#1e1b4b]">{visitLabel(l.visitType)}</p>
+                          <p className="text-xs text-slate-600">
+                            {l.customer.name?.trim() || l.customer.phone}
+                            {l.note?.trim() ? ` · ${l.note.trim()}` : ""}
+                          </p>
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            {new Date(l.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
+                          </p>
+                        </div>
+                        {Number.isFinite(amt) && amt > 0 ?
+                          <p className="shrink-0 text-lg font-black tabular-nums text-emerald-700">฿{amt.toLocaleString("th-TH")}</p>
+                        : null}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             }
+
+            <div>
+              <h3 className="mb-3 text-sm font-black text-[#1e1b4b]">งานรับ–ส่ง / ออเดอร์</h3>
+              <label className="text-xs font-semibold text-slate-600">
+                กรองตามสถานะ
+                <select
+                  className="app-input ml-2 mt-1 min-h-[40px] rounded-xl px-3 py-2 text-sm sm:mt-0"
+                  value={orderStatusFilter}
+                  onChange={(e) => setOrderStatusFilter(e.target.value as typeof orderStatusFilter)}
+                >
+                  <option value="all">ทั้งหมด ({filteredOrdersBase.length})</option>
+                  {LAUNDRY_ORDER_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {laundryOrderStatusLabelTh(s)} ({filteredOrdersBase.filter((o) => o.status === s).length})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {filteredOrdersList.length === 0 ?
+                <AppEmptyState tone="glass" className="mt-3">ไม่พบออเดอร์ตามเงื่อนไข</AppEmptyState>
+              : <ul className={cn(laundryDashboardCardGridClass, "mt-3 list-none p-0")} aria-label="ออเดอร์ซักผ้า">
+                  {filteredOrdersList.map((o) => (
+                    <li key={o.id} className="min-h-0 min-w-0">
+                      <LaundryOrderCard
+                        order={o}
+                        tone="slate"
+                        showStatusSelect={false}
+                        showOrderedAt
+                        onView={() => onViewOrder(o)}
+                        onEdit={() => onEditOrder(o)}
+                        onDelete={() => void onDeleteOrder(o)}
+                        onPrint={onPrintOrder ? () => onPrintOrder(o) : undefined}
+                        onStatusChange={onStatusChange}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              }
+            </div>
+
+            <div>
+              <h3 className="mb-3 text-sm font-black text-[#1e1b4b]">รายรับเพิ่ม (บันทึกด้วยตนเอง)</h3>
+              <LaundryRevenuePanel
+                repo={repo}
+                baseUrl={baseUrl}
+                categories={revenueCategories}
+                entries={filteredRevenueEntries}
+                onRefresh={onRefresh}
+              />
+            </div>
           </div>
         : <div className="mt-4">
             <LaundryCostPanel

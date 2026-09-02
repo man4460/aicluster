@@ -13,6 +13,7 @@ import { LaundryOrderPrintModal } from "@/systems/laundry/components/LaundryOrde
 import { LaundryPaymentPanel } from "@/systems/laundry/components/LaundryPaymentPanel";
 import { isLaundryOrderFromCustomerPickupPortal } from "@/systems/laundry/laundry-customer-pickup-request";
 import { type LaundryPaymentMethod, laundryPaymentShowsSlipUpload } from "@/systems/laundry/lib/payment-method";
+import { laundryOrderCardListGridClass } from "@/systems/laundry/laundry-dashboard-layout";
 import {
   laundryDashboardSegmentBtnClass,
   laundryDashboardSegmentShellClass,
@@ -562,9 +563,9 @@ export function LaundryOrdersPosClient({
               <p className="text-xs text-[#66638c]">กำลังโหลด…</p>
             : walkInOrders.length === 0 ?
               <AppEmptyState tone="violet">ยังไม่มีงานหน้าร้านค้าง — รับผ้าจาก POS ด้านบน</AppEmptyState>
-            : <ul className="grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 xl:grid-cols-3">
+            : <ul className={laundryOrderCardListGridClass}>
                 {walkInOrders.map((o) => (
-                  <li key={o.id}>
+                  <li key={o.id} className="min-h-0 min-w-0">
                     <LaundryOrderCard
                       order={o}
                       tone="violet"
@@ -589,9 +590,9 @@ export function LaundryOrdersPosClient({
             <p className="text-xs text-[#66638c]">กำลังโหลด…</p>
           : pickupOrders.length === 0 ?
             <AppEmptyState tone="violet">ไม่มีคิวรับที่บ้านค้าง — แชร์ลิงก์ลูกค้าใน ตั้งค่า → ลิงก์ QR</AppEmptyState>
-          : <ul className="grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 xl:grid-cols-3">
+          : <ul className={laundryOrderCardListGridClass}>
               {pickupOrders.map((o) => (
-                <li key={o.id}>
+                <li key={o.id} className="min-h-0 min-w-0">
                   <LaundryOrderCard
                     order={o}
                     tone="slate"

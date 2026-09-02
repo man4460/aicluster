@@ -11,7 +11,10 @@ import {
   type LaundryOrder,
   type LaundryOrderStatus,
 } from "@/systems/laundry/laundry-service";
-import { laundryDashboardStatsGridClass } from "@/systems/laundry/laundry-dashboard-layout";
+import {
+  laundryDashboardStatsGridClass,
+  laundryOrderCardListGridClass,
+} from "@/systems/laundry/laundry-dashboard-layout";
 import {
   laundryPanelClass,
   laundryPanelDividerClass,
@@ -247,9 +250,9 @@ export function LaundryOverviewPanel({
           <p className="mt-3 text-xs text-[#66638c]">กำลังโหลด…</p>
         : filteredOrders.length === 0 ?
           <p className="mt-3 text-sm text-[#66638c]">ไม่มีรายการตามตัวกรองนี้</p>
-        : <ul className="mt-3 grid list-none grid-cols-1 gap-2.5 p-0 sm:grid-cols-2 xl:grid-cols-3">
+        : <ul className={cn(laundryOrderCardListGridClass, "mt-3")}>
             {filteredOrders.map((o) => (
-              <li key={o.id}>
+              <li key={o.id} className="min-h-0 min-w-0">
                 <LaundryOrderCard
                   order={o}
                   tone="violet"

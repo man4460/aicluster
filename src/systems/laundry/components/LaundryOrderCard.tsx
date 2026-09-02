@@ -10,6 +10,7 @@ import { LaundryOrderStatusIconStrip } from "@/systems/laundry/components/Laundr
 import {
   LaundryIconEye,
   LaundryIconPencil,
+  LaundryIconPrint,
   LaundryIconTrash,
   LaundryToolbarIconButton,
 } from "@/systems/laundry/components/LaundryToolbarIconButton";
@@ -32,6 +33,7 @@ export function LaundryOrderCard({
   onView,
   onEdit,
   onDelete,
+  onPrint,
   onStatusChange,
 }: {
   order: LaundryOrder;
@@ -43,6 +45,7 @@ export function LaundryOrderCard({
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onPrint?: () => void;
   onStatusChange: (id: number, status: LaundryOrderStatus) => void | Promise<void>;
 }) {
   const tc = laundryOrderCardToneClasses(o.status);
@@ -67,29 +70,20 @@ export function LaundryOrderCard({
   return (
     <article
       className={cn(
-        "group/item relative flex w-full flex-col overflow-hidden rounded-lg border-2 p-2 text-left shadow-sm ring-1 transition-all duration-300 hover:shadow-md sm:rounded-2xl sm:p-4",
-        tc.border,
+        "group/item relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl border border-slate-200/90 border-l-[3px] p-3 text-left shadow-sm transition-all duration-200 sm:p-4",
+        tc.leftBorder,
         tc.bg,
-        tc.ring,
-        tc.hoverBorder,
+        tc.hoverShadow,
       )}
     >
-      <span
-        aria-hidden
-        className={cn(
-          "pointer-events-none absolute bottom-3 left-0 top-3 w-1 rounded-r-full bg-gradient-to-b opacity-85 transition-all duration-300 group-hover/item:w-1.5",
-          tc.ribbonGradient,
-        )}
-      />
-
-      <div className="relative flex gap-2 sm:gap-4">
+      <div className="relative flex min-h-0 flex-1 gap-2 sm:gap-4">
         {/* ซ้าย: แพ็กเกจ · ขนาด · เบอร์ · ชื่อ · ที่อยู่ย่อ */}
         <div className="min-w-0 flex-1 space-y-1.5 pl-0.5 sm:space-y-2 sm:pl-1.5">
           <div>
             <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#66638c] sm:text-[10px] sm:tracking-[0.14em]">
               แพ็กเกจ
             </p>
-            <p className="mt-0.5 truncate bg-gradient-to-r from-[#4338ca] to-[#6366f1] bg-clip-text text-sm font-bold leading-snug text-transparent sm:text-lg">
+            <p className="mt-0.5 truncate text-sm font-bold leading-snug text-[#4338ca] sm:text-lg">
               {pkgMain}
             </p>
             {pkgSub ?
@@ -158,6 +152,12 @@ export function LaundryOrderCard({
 
           {showAddressBlock ?
             <div className={cn("space-y-px text-[10px] leading-snug sm:space-y-0.5 sm:text-[11px]", addrClass)}>
+              {fromCustomerPickup && o.distance_km != null && o.distance_km > 0 ?
+                <p className="font-semibold text-sky-900">
+                  ระยะจากร้าน ~{" "}
+                  <span className="font-black tabular-nums">{o.distance_km.toLocaleString("th-TH")} กม.</span>
+                </p>
+              : null}
               {showPickup ?
                 <p className="line-clamp-1 sm:line-clamp-2">
                   <span className="font-semibold text-[#4d47b6]/85">รับ</span> {pickupRaw}
@@ -185,6 +185,11 @@ export function LaundryOrderCard({
           </div>
 
           <div className="mt-auto flex flex-row flex-nowrap items-center justify-end gap-0.5 pt-2 sm:gap-1 sm:pt-3">
+            {onPrint ?
+              <LaundryToolbarIconButton label={`พิมพ์สลิป #${o.id}`} onClick={onPrint}>
+                <LaundryIconPrint />
+              </LaundryToolbarIconButton>
+            : null}
             <LaundryToolbarIconButton label="ดูข้อมูล" onClick={onView}>
               <LaundryIconEye />
             </LaundryToolbarIconButton>
@@ -201,7 +206,7 @@ export function LaundryOrderCard({
       {showStatusSelect ?
         <div
           className={cn(
-            "relative mt-3 rounded-b-lg border-t-2 pt-3 sm:mt-4 sm:pt-4",
+            "relative mt-3 shrink-0 border-t-2 pt-3 sm:mt-4 sm:pt-4",
             dividerStrong,
             dimHorizontalStripRidge,
           )}
