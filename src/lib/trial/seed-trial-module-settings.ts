@@ -15,6 +15,7 @@ import {
   FOOTBALL_TURF_MODULE_SLUG,
   HOTEL_RESORT_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
+  CLUB_EVENT_MODULE_SLUG,
   LOYALTY_STAMP_MODULE_SLUG,
   MASSAGE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
@@ -336,6 +337,10 @@ export async function seedTrialModuleSettings(
 
     case LAUNDRY_MODULE_SLUG:
       await upsertModuleShopBranding(tx, ownerUserId, trialSessionId, LAUNDRY_MODULE_SLUG);
+      break;
+
+    case CLUB_EVENT_MODULE_SLUG:
+      await upsertModuleShopBranding(tx, ownerUserId, trialSessionId, CLUB_EVENT_MODULE_SLUG);
       break;
 
     case BUILDING_POS_MODULE_SLUG:

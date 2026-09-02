@@ -84,7 +84,7 @@ export async function POST(req: Request) {
       const out = await prisma.$transaction(async (tx) => {
         const sub = await tx.laundryCustomerSubscription.findFirst({
           where: { id: subscriptionId, ownerUserId: ownerId, trialSessionId },
-          include: { customer: true },
+          include: { customer: true, package: { select: { name: true } } },
         });
         if (!sub) throw new Error("NOT_FOUND");
         if (sub.status !== "ACTIVE" || sub.remainingSessions <= 0) {
@@ -100,12 +100,14 @@ export async function POST(req: Request) {
           },
         });
 
+        const packageNote = sub.package.name.trim().slice(0, 255) || null;
         const logCore = {
           ownerUserId: ownerId,
           trialSessionId,
           subscriptionId: sub.id,
           laundryCustomerId: sub.laundryCustomerId,
           visitType: "PACKAGE_USE" as const,
+          ...(packageNote ? { note: packageNote } : {}),
           ...(signatureImageUrl != null ? { signatureImageUrl } : {}),
         };
 

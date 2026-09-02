@@ -16,10 +16,14 @@ import {
   laundryOrderCardListGridClass,
 } from "@/systems/laundry/laundry-dashboard-layout";
 import {
+  laundryFilterChipClass,
+  laundryFilterChipShellClass,
   laundryPanelClass,
   laundryPanelDividerClass,
   laundryPanelSectionClass,
   laundrySectionHeadingClass,
+  laundryStaffPanelSectionClass,
+  laundryStaffPlainPanelClass,
   laundryStatInlineClass,
 } from "@/systems/laundry/lib/ui-tokens";
 
@@ -97,6 +101,7 @@ export function LaundryOverviewPanel({
   onDeleteOrder,
   onStatusChange,
   onPrintOrder,
+  staffQrLanding = false,
 }: {
   orders: LaundryOrder[];
   todayStats: {
@@ -111,8 +116,10 @@ export function LaundryOverviewPanel({
   onDeleteOrder: (o: LaundryOrder) => void | Promise<void>;
   onStatusChange: (id: number, status: LaundryOrderStatus) => void | Promise<void>;
   onPrintOrder?: (o: LaundryOrder) => void;
+  staffQrLanding?: boolean;
 }) {
   const [statFilter, setStatFilter] = useState<StatFilterKey | null>(null);
+  const [statusFilter, setStatusFilter] = useState<LaundryOrderStatus | null>(null);
   const todayKey = bangkokDateKey();
 
   const statusCounts = useMemo(() => {
@@ -125,9 +132,9 @@ export function LaundryOverviewPanel({
     return LAUNDRY_ORDER_STATUSES.map((s) => ({ status: s, count: map.get(s) ?? 0 })).filter((x) => x.count > 0);
   }, [orders]);
 
-  const filteredOrders = useMemo(() => {
+  const baseOrders = useMemo(() => {
     if (!statFilter) {
-      return orders.filter(isActiveOrder).slice(0, 12);
+      return orders.filter(isActiveOrder);
     }
     const todayRows = orders.filter((o) => orderDateKey(o) === todayKey);
     switch (statFilter) {
@@ -143,21 +150,36 @@ export function LaundryOverviewPanel({
     }
   }, [orders, statFilter, todayKey]);
 
+  const filteredOrders = useMemo(() => {
+    let list = statusFilter ? baseOrders.filter((o) => o.status === statusFilter) : baseOrders;
+    if (!statFilter && !statusFilter) {
+      list = list.slice(0, 12);
+    }
+    return list;
+  }, [baseOrders, statFilter, statusFilter]);
+
   const listTitle = statFilter ? LIST_TITLE[statFilter] : "งานล่าสุดที่ยังไม่จบ";
 
   function toggleStat(key: StatFilterKey) {
+    setStatusFilter(null);
     setStatFilter((prev) => (prev === key ? null : key));
   }
 
-  return (
-    <div className={laundryPanelClass}>
-      <div className={laundryPanelSectionClass}>
-        <div className="flex flex-nowrap items-center justify-between gap-2">
-          <h2 className="min-w-0 shrink truncate text-base font-bold text-[#1e1b4b] sm:text-lg">ภาพรวม</h2>
-          <LaundryDashboardHeaderToolbar />
-        </div>
+  function toggleStatusFilter(status: LaundryOrderStatus) {
+    setStatusFilter((prev) => (prev === status ? null : status));
+  }
 
-        <div className={cn(laundryDashboardStatsGridClass, "mt-4")}>
+  return (
+    <div className={staffQrLanding ? laundryStaffPlainPanelClass : laundryPanelClass}>
+      <div className={staffQrLanding ? laundryStaffPanelSectionClass : laundryPanelSectionClass}>
+        {!staffQrLanding ?
+          <div className="flex flex-nowrap items-center justify-between gap-2">
+            <h2 className="min-w-0 shrink truncate text-base font-bold text-[#1e1b4b] sm:text-lg">ภาพรวม</h2>
+            <LaundryDashboardHeaderToolbar hideSubNav={staffQrLanding} staffQrLanding={staffQrLanding} />
+          </div>
+        : null}
+
+        <div className={cn(laundryDashboardStatsGridClass, !staffQrLanding && "mt-4")}>
           <LaundryStat
             title="รับงานวันนี้"
             value={todayStats.totalOrders.toLocaleString("th-TH")}
@@ -212,40 +234,46 @@ export function LaundryOverviewPanel({
         </div>
       </div>
 
-      {statusCounts.length > 0 ?
-        <div className={cn(laundryPanelSectionClass, laundryPanelDividerClass)}>
+      <div className={cn(staffQrLanding ? laundryStaffPanelSectionClass : laundryPanelSectionClass, laundryPanelDividerClass)}>
+        <div className="space-y-2">
           <h3 className={laundrySectionHeadingClass}>
-            <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#5b61ff]" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+            <svg viewBox="0 0 24 24" className="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
             </svg>
-            สถานะงานค้าง
+            {listTitle}
+            <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[#5f5a8a]">
+              {filteredOrders.length}
+            </span>
           </h3>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {statusCounts.map(({ status, count }) => (
-              <span
-                key={status}
-                className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-[#4d47b6]"
-              >
-                {laundryOrderStatusLabelTh(status)}
-                <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-indigo-800">
-                  {count}
-                </span>
-              </span>
-            ))}
-          </div>
-        </div>
-      : null}
 
-      <div className={cn(laundryPanelSectionClass, laundryPanelDividerClass)}>
-        <h3 className={laundrySectionHeadingClass}>
-          <svg viewBox="0 0 24 24" className="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
-          </svg>
-          {listTitle}
-          <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[#5f5a8a]">
-            {filteredOrders.length}
-          </span>
-        </h3>
+          {statusCounts.length > 0 ?
+            <nav className={laundryFilterChipShellClass} aria-label="กรองตามสถานะงานค้าง" role="tablist">
+              {statusCounts.map(({ status, count }) => {
+                const active = statusFilter === status;
+                return (
+                  <button
+                    key={status}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => toggleStatusFilter(status)}
+                    className={laundryFilterChipClass(active)}
+                  >
+                    {laundryOrderStatusLabelTh(status)}
+                    <span
+                      className={cn(
+                        "rounded px-1 py-0.5 text-[9px] font-bold tabular-nums sm:text-[10px]",
+                        active ? "bg-[#5b61ff]/15 text-indigo-900" : "bg-indigo-100 text-indigo-800",
+                      )}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
+          : null}
+        </div>
         {loading ?
           <p className="mt-3 text-xs text-[#66638c]">กำลังโหลด…</p>
         : filteredOrders.length === 0 ?
@@ -258,6 +286,7 @@ export function LaundryOverviewPanel({
                   tone="violet"
                   showStatusSelect
                   showOrderedAt
+                  compact={staffQrLanding}
                   onView={() => onViewOrder(o)}
                   onEdit={() => onEditOrder(o)}
                   onDelete={() => void onDeleteOrder(o)}

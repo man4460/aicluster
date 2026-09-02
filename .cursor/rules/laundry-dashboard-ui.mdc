@@ -181,6 +181,36 @@ globs:
 
 ---
 
+## หน้าตั้งค่าร้าน (`LaundrySettingsClient`)
+
+เทียบ **`dashboard-module-shop-settings-tabs.mdc`** · **`dashboard-module-settings-single-row-tabs.mdc`**
+
+### มือถือ — dropdown แล้วซ่อนแถบ pill
+
+| จอ | UI |
+|----|-----|
+| **`< md`** | dropdown เต็มความกว้าง (`laundryMobileSelectClass` · `md:hidden`) + ป้าย «กรุณาเลือกหมวดตั้งค่า» |
+| **`md+`** | แถบ pill คู่ปุ่ม **บันทึก** แถวเดียวกัน (มุมขวาหัวการ์ด) |
+
+**บังคับ**
+
+1. เมื่อมี dropdown บนมือถือ — **ห้าม** โชว์แถบ pill แท็บพร้อมกัน  
+2. ซ่อน pill ด้วย **wrapper** `<div className="hidden md:block">` ห่อ `<nav>` — **ห้าม** ใส่ `hidden md:inline-flex` บน element เดียวกับ shell ที่มี `inline-flex` (twMerge อาจทำให้ pill โผล่คู่ dropdown)  
+3. หัวแถวมือถือ: **ชื่อ + ปุ่มบันทึก** เท่านั้น — แท็บอยู่แถว dropdown ด้านล่าง  
+4. ปุ่มรอง/อัปโหลดในฟอร์ม: **`laundryCompactOutlineButtonClass`** (`min-h-8` · outline slate)
+
+**Implementation:** `src/systems/laundry/components/LaundrySettingsClient.tsx` · โทเค็น `src/systems/laundry/lib/ui-tokens.ts`
+
+---
+
+## รูปตัวอย่างพอร์ทัล / แพ็กเกจ (Unsplash)
+
+- **แหล่งความจริง:** `src/systems/laundry/lib/portal-media.ts` — ห้าม hardcode URL Unsplash ซ้ำใน component/seed
+- **ก่อน commit URL ใหม่:** ตรวจ HTTP ว่าไม่ 404 (เช่น `curl -I` หรือเปิดในเบราว์เซอร์)
+- **URL ที่เคย 404:** ใช้ `laundryRepairSampleImageUrl` / `laundryRepairPortalGallery` ตอน **อ่าน API** และ `repairLaundryBrokenSampleImagesDb` ใน seed เพื่อซ่อมข้อมูลเก่าใน DB
+
+---
+
 ## เช็กลิสต์เมื่อแก้ UI ซักผ้า
 
 - [ ] การ์ดสถิติ overview ใช้ **`laundryDashboardStatsGridClass`** (`grid-cols-2` ตลอด) — รายการงานยัง **`laundryDashboardCardGridClass`** (`sm:grid-cols-2`)
@@ -190,5 +220,6 @@ globs:
 - [ ] โฟลว์บันทึกรายการยังเป็น POS สองขั้น (`LaundryRecordOrderModal`) — การ์ดแพ็กเกจ + จัดการรูป/ตะกร้า · แล้วเบอร์/ชื่อเล่น — โมดัลใช้ **`mobileCentered`** ให้อยู่กลางจอบนมือถือ · กริดเลือกแพ็กเกจสอดคล้องแดชบอร์ด：**มือถือ `grid-cols-1` · `sm+` `grid-cols-3`** (ไม่ขยาย 4 คอลัมน์ที่คอม)
 - [ ] **`LaundryPackageCard`** — แท็บแพ็กเกจ: **`laundryPackageTabListGridClass`** + **`packagesTabRowLayout`** · **ข้อความล้วน** · เมตาขวา **`·`** · **มือถือระยะกระชับ** (`p-2.5` · `gap-2` · `space-y-1.5` · `detailStackClass` **`gap-y-1 sm:gap-y-2`** · `pt-1.5` ใต้เส้นคั่น · ฯลฯ ตามหัวข้อย่อย **มือถือ (ระยะห่าง)** ในกฎ) · **`LaundryPackageViewModal`** สอดคล้องเมื่อแตะดู
 - [ ] แท็บ **การเงิน** — **`LaundryFinancePanel`** + **`LaundryCostPanel`** สอดคล้อง **`CarWashSalesPanel`** / **`CarWashCostPanel`** (กราฟคู่ · โหลด cost ใน `loadAll`)
+- [ ] **ตั้งค่าร้าน** — มือถือ dropdown **`md:hidden`** · pill ใน **`hidden md:block`** wrapper · **ไม่** โชว์ pill + dropdown พร้อมกัน
 - [ ] รายการงาน (คิว + การเงิน) ใช้ **`LaundryOrderCard`** — ข้อความแพ็กเกจไม่ซ้ำ (`laundry-order-package-lines.ts`) · คิวงานอัปเดตสถานะด้วย **`LaundryOrderStatusIconStrip`** ไม่ใช้ dropdown บนการ์ด
 - [ ] คำบรรยาย subtitle / `FormModal` **สั้น** และ **ซ่อนบนมือถือ** (ตามกฎด้านบน)

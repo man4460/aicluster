@@ -7,9 +7,10 @@ export type LaundryCheckInModalProps = {
   open: boolean;
   onClose: () => void;
   onRequestSell?: () => void;
+  onDeductSuccess?: (detail: { remainingSessions: number; packageName: string }) => void;
 };
 
-export function LaundryCheckInModal({ open, onClose, onRequestSell }: LaundryCheckInModalProps) {
+export function LaundryCheckInModal({ open, onClose, onRequestSell, onDeductSuccess }: LaundryCheckInModalProps) {
   return (
     <FormModal
       open={open}
@@ -18,7 +19,12 @@ export function LaundryCheckInModal({ open, onClose, onRequestSell }: LaundryChe
       description="ค้นหาเบอร์ลูกค้า แล้วหักครั้งจากแพ็กเหมา"
       size="lg"
     >
-      <LaundryCheckInForm variant="modal" active={open} onRequestSell={onRequestSell} />
+      <LaundryCheckInForm
+        variant="modal"
+        active={open}
+        onRequestSell={onRequestSell}
+        onDeductSuccess={onDeductSuccess}
+      />
     </FormModal>
   );
 }

@@ -11,6 +11,8 @@ import {
   LAUNDRY_DURATION_HOURS_MIN,
   roundLaundryDurationHours,
 } from "@/systems/laundry/laundry-duration-hours";
+import { laundryRepairSampleImageUrl } from "@/systems/laundry/lib/portal-media";
+import { notifyLaundryDashboard } from "@/systems/laundry/lib/dashboard-sse";
 
 const pricingModelZod = z.enum(["PER_KG", "PER_ITEM", "FLAT"]);
 
@@ -39,6 +41,7 @@ const postSchema = z.object({
   pricing_model: pricingModelZod,
   base_price: z.number().int().min(0).max(9_999_999),
   duration_hours: durationHoursZod,
+  total_sessions: z.number().int().min(1).max(9999).optional(),
   description: z.string().max(800).optional().nullable(),
   is_active: z.boolean(),
   image_url: z.string().max(500).optional().nullable(),
@@ -64,9 +67,10 @@ export async function GET() {
         pricing_model: r.pricingModel,
         base_price: r.basePrice,
         duration_hours: Number(r.durationHours),
+        total_sessions: r.totalSessions,
         description: r.description,
         is_active: r.isActive,
-        image_url: r.imageUrl ?? null,
+        image_url: laundryRepairSampleImageUrl(r.imageUrl),
         basket_tiers: normalizeBasketTiers(r.basketTiers),
       })),
     });
@@ -113,12 +117,14 @@ export async function POST(req: Request) {
         pricingModel: parsed.data.pricing_model,
         basePrice: parsed.data.base_price,
         durationHours: new Prisma.Decimal(String(dh)),
+        totalSessions: parsed.data.total_sessions ?? 1,
         description: parsed.data.description?.trim() ?? "",
         isActive: parsed.data.is_active,
         imageUrl: img && img.length > 0 ? img.slice(0, 500) : null,
         basketTiers: tiers ?? Prisma.DbNull,
       },
     });
+    notifyLaundryDashboard(own.ownerId);
     return NextResponse.json({
       package: {
         id: row.id,
@@ -126,6 +132,7 @@ export async function POST(req: Request) {
         pricing_model: row.pricingModel,
         base_price: row.basePrice,
         duration_hours: Number(row.durationHours),
+        total_sessions: row.totalSessions,
         description: row.description,
         is_active: row.isActive,
         image_url: row.imageUrl ?? null,

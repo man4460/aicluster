@@ -18,8 +18,19 @@ type SubRow = {
   remainingSessions: number;
   status: string;
   packageName: string;
+  packageDescription?: string;
   packageId: number;
+  totalSessions?: number;
+  durationMinutes?: number;
+  basePrice?: number;
 };
+
+function packageDescMeaningful(raw: string | null | undefined): boolean {
+  const t = raw?.trim() ?? "";
+  if (t.length < 2) return false;
+  if (/^(ไม่มี|n\/?a|-|—)$/i.test(t)) return false;
+  return true;
+}
 
 function IconSearch({ className }: { className?: string }) {
   return (
@@ -35,12 +46,15 @@ export type LaundryCheckInFormProps = {
   /** เมื่อเปิดโมดัล — รีเซ็ตฟอร์มเมื่อปิด */
   active?: boolean;
   onRequestSell?: () => void;
+  /** หลังหักแพ็กสำเร็จ (โมดัล) — แสดงแจ้งเตือนแล้วกลับภาพรวม */
+  onDeductSuccess?: (detail: { remainingSessions: number; packageName: string }) => void;
 };
 
 export function LaundryCheckInForm({
   variant = "page",
   active = true,
   onRequestSell,
+  onDeductSuccess,
 }: LaundryCheckInFormProps) {
   const router = useRouter();
   const modal = variant === "modal";
@@ -136,11 +150,17 @@ export function LaundryCheckInForm({
         setErr(data.error ?? "บันทึกไม่สำเร็จ");
         return;
       }
-      setMsg(`หัก 1 ครั้งแล้ว — เหลือ ${data.remainingSessions ?? 0} ครั้ง`);
+      const remaining = data.remainingSessions ?? 0;
+      const pkgName = subs.find((s) => s.id === selectedSubId)?.packageName ?? "แพ็ก";
+      if (onDeductSuccess) {
+        onDeductSuccess({ remainingSessions: remaining, packageName: pkgName });
+        return;
+      }
+      setMsg(`หัก 1 ครั้งแล้ว — เหลือ ${remaining} ครั้ง`);
       setSubs((prev) =>
         prev.map((s) =>
           s.id === selectedSubId
-            ? { ...s, remainingSessions: data.remainingSessions ?? 0, status: data.status ?? s.status }
+            ? { ...s, remainingSessions: remaining, status: data.status ?? s.status }
             : s,
         ),
       );
@@ -267,8 +287,28 @@ export function LaundryCheckInForm({
                       className="h-5 w-5 accent-[#5b61ff]"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-[#2e2a58]">{s.packageName}</p>
-                      <p className="mt-0.5 text-lg font-black tabular-nums text-[#4d47b6]">เหลือ {s.remainingSessions} ครั้ง</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">แพ็กเกจ</p>
+                      <p className="text-sm font-bold text-[#2e2a58] sm:text-base">{s.packageName}</p>
+                      {packageDescMeaningful(s.packageDescription) ?
+                        <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-[#66638c]">
+                          {s.packageDescription!.trim()}
+                        </p>
+                      : null}
+                      <p className="mt-1 text-lg font-black tabular-nums text-[#4d47b6]">
+                        เหลือ {s.remainingSessions.toLocaleString("th-TH")} ครั้ง
+                        {s.totalSessions != null && s.totalSessions > 0 ?
+                          <span className="ml-1 text-sm font-bold text-[#8b87ad]">
+                            / {s.totalSessions.toLocaleString("th-TH")}
+                          </span>
+                        : null}
+                      </p>
+                      {s.durationMinutes != null && s.durationMinutes > 0 ?
+                        <p className="mt-0.5 text-[11px] font-medium text-[#66638c]">
+                          ระยะบริการประมาณ {s.durationMinutes >= 60
+                            ? `${(s.durationMinutes / 60).toLocaleString("th-TH", { maximumFractionDigits: 1 })} ชม.`
+                            : `${s.durationMinutes} นาที`}
+                        </p>
+                      : null}
                     </div>
                   </label>
                 ))}
@@ -287,7 +327,11 @@ export function LaundryCheckInForm({
               onClick={() => void onDeduct()}
               className="mt-5 flex min-h-[48px] w-full items-center justify-center rounded-lg bg-gradient-to-r from-sky-600 to-indigo-600 py-3 text-sm font-bold text-white transition hover:brightness-[1.03] active:scale-[0.99] disabled:pointer-events-none disabled:opacity-45"
             >
-              {deducting ? "กำลังบันทึก…" : "หัก 1 ครั้งจากแพ็ก (รับผ้า)"}
+              {deducting
+                ? "กำลังบันทึก…"
+                : selectedSubId
+                  ? `หัก 1 ครั้ง — ${subs.find((s) => s.id === selectedSubId)?.packageName ?? "แพ็ก"}`
+                  : "หัก 1 ครั้งจากแพ็ก (รับผ้า)"}
             </button>
           </div>
         </section>

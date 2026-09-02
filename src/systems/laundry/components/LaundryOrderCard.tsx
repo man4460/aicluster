@@ -30,6 +30,7 @@ export function LaundryOrderCard({
   tone,
   showStatusSelect,
   showOrderedAt,
+  compact = false,
   onView,
   onEdit,
   onDelete,
@@ -42,6 +43,8 @@ export function LaundryOrderCard({
   showStatusSelect: boolean;
   /** แสดงเวลารับงาน — แท็บการเงิน / ประวัติรายรับ */
   showOrderedAt?: boolean;
+  /** หน้าพนักงาน — padding แคบกว่าแดชบอร์ดปกติ */
+  compact?: boolean;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -70,13 +73,14 @@ export function LaundryOrderCard({
   return (
     <article
       className={cn(
-        "group/item relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl border border-slate-200/90 border-l-[3px] p-3 text-left shadow-sm transition-all duration-200 sm:p-4",
+        "group/item relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl border border-slate-200/90 border-l-[3px] text-left shadow-sm transition-all duration-200",
+        compact ? "p-2 sm:p-2.5" : "p-3 sm:p-4",
         tc.leftBorder,
         tc.bg,
         tc.hoverShadow,
       )}
     >
-      <div className="relative flex min-h-0 flex-1 gap-2 sm:gap-4">
+      <div className={cn("relative flex min-h-0 flex-1", compact ? "gap-1.5 sm:gap-2" : "gap-2 sm:gap-4")}>
         {/* ซ้าย: แพ็กเกจ · ขนาด · เบอร์ · ชื่อ · ที่อยู่ย่อ */}
         <div className="min-w-0 flex-1 space-y-1.5 pl-0.5 sm:space-y-2 sm:pl-1.5">
           <div>
@@ -98,10 +102,10 @@ export function LaundryOrderCard({
                       "border-sky-300/90 bg-sky-50 text-sky-950"
                     : "border-sky-200 bg-sky-50/95 text-sky-950",
                   )}
-                  title="ลูกค้าส่งคำขอรับผ้าที่บ้านผ่านลิงก์ — ไม่ใช่การบันทึกในร้าน"
+                  title="ลูกค้าส่งคำขอบริการรับ-ส่งที่บ้านผ่านลิงก์ — ไม่ใช่การบันทึกในร้าน"
                 >
                   <span aria-hidden className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500" />
-                  <span className="truncate">คำขอรับผ้าจากลูกค้า (QR)</span>
+                  <span className="truncate">คำขอรับ-ส่งจากลูกค้า (QR)</span>
                 </span>
               </p>
             : null}

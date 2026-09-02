@@ -8,6 +8,7 @@ import { laundryOwnerFromAuth } from "@/lib/laundry/api-owner";
 import { laundryOrderStatusZod, normalizeLaundryOrderStatus } from "@/lib/laundry/order-status";
 import { jsonLaundrySessionError } from "@/lib/laundry/route-errors";
 import { getLaundryDataScope } from "@/lib/trial/module-scopes";
+import { notifyLaundryDashboard } from "@/systems/laundry/lib/dashboard-sse";
 
 const patchSchema = z
   .object({
@@ -61,6 +62,9 @@ function orderJson(row: {
   note: string;
   recordedByName: string;
   status: string;
+  distanceKm: Prisma.Decimal | null;
+  paymentMethod: string | null;
+  receiptImageUrl: string | null;
 }) {
   return {
     id: row.id,
@@ -78,6 +82,9 @@ function orderJson(row: {
     note: row.note,
     recorded_by_name: row.recordedByName,
     status: normalizeLaundryOrderStatus(row.status),
+    distance_km: row.distanceKm != null ? Number(row.distanceKm) : null,
+    payment_method: row.paymentMethod,
+    receipt_image_url: row.receiptImageUrl,
   };
 }
 
@@ -138,6 +145,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       },
     });
 
+    notifyLaundryDashboard(own.ownerId);
     return NextResponse.json({ order: orderJson(updated) });
   } catch (e) {
     return jsonLaundrySessionError(e, "laundry/session/orders/[id] PATCH");
@@ -161,6 +169,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     });
     if (!row) return NextResponse.json({ ok: false });
     await prisma.laundryOrder.delete({ where: { id: row.id } });
+    notifyLaundryDashboard(own.ownerId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return jsonLaundrySessionError(e, "laundry/session/orders/[id] DELETE");

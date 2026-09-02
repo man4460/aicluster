@@ -52,9 +52,10 @@ export function LaundryUsageGuideModal({ open, onClose }: { open: boolean; onClo
           ),
         },
         {
-          title: "เมนู: QR",
+          title: "ตั้งค่า: ลิงก์ QR",
           content: (
             <ul className="list-disc space-y-1.5 pl-5 marker:text-[#4d47b6]">
+              <li>เปิดเมนูตั้งค่าร้าน → แท็บลิงก์ QR</li>
               <li>เปิดการ์ด QR ลูกค้า/พนักงานผ่าน popup ตามบทบาท</li>
               <li>ดาวน์โหลดโปสเตอร์หรือคัดลอกลิงก์ไปใช้งานหน้าร้าน</li>
               <li>ลิงก์พนักงานใช้สำหรับเข้าหน้ารับงานโดยตรง</li>

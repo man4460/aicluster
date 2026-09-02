@@ -2,20 +2,60 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AppPublicCheckInGlassPage } from "@/components/app-templates";
+import {
+  AppEmptyState,
+  AppPublicCheckInGlassPage,
+  appPublicCheckInGlassCardClass,
+  useAppNoticePopup,
+} from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { LaundryPublicPaymentPanel } from "@/systems/laundry/components/LaundryPublicPaymentPanel";
+import {
+  LaundryPortalPackageSelectCard,
+  laundryPortalPackageGridClass,
+  laundryPortalPackageGridScrollClass,
+  laundryPortalPackagePriceLabel,
+  type LaundryPortalPackageItem,
+} from "@/systems/laundry/components/LaundryPortalPackageCard";
 import { isTerminalLaundryOrderStatus } from "@/systems/laundry/laundry-order-status";
+import { laundryDistanceKm, laundryPickupFeeBaht } from "@/systems/laundry/lib/pickup-distance";
+import {
+  laundryPaymentSubmitBlocked,
+  type LaundryPublicPaymentMethod,
+} from "@/systems/laundry/lib/payment-method";
+import {
+  laundryComputePortalPayDue,
+  laundryPortalSlipProofMessage,
+  normalizeLaundryPortalPaymentMode,
+  type LaundryPortalBookingPaymentMode,
+} from "@/systems/laundry/lib/portal-booking";
+import {
+  laundryDashboardSegmentBtnClass,
+  laundryDashboardSegmentShellClass,
+  laundryInlineAlertErrorClass,
+  laundryMutedLoadingNoticeClass,
+  laundryPanelClass,
+  laundryPanelSectionClass,
+  laundryPaymentChipActiveClass,
+  laundryPaymentChipIdleClass,
+  laundryPaymentCtaClass,
+  laundryPortalChipActiveClass,
+  laundryPortalChipIdleClass,
+  laundryPortalFieldClass,
+  laundryPortalInfoBannerClass,
+  laundryPortalInsetPanelClass,
+  laundryPortalLabelClass,
+  laundryPortalPrimaryBtnClass,
+  laundryPortalStepNavBtnClass,
+  laundryPortalSuccessPanelClass,
+  laundryPortalTextareaClass,
+  laundryPortalTierPickerShellClass,
+  laundrySectionHeadingClass,
+} from "@/systems/laundry/lib/ui-tokens";
 
 const TRACK_STORE_PREFIX = "laundryPickupTrack:v1:";
 
-function trackStorageKey(ownerId: string): string {
-  return `${TRACK_STORE_PREFIX}${ownerId}`;
-}
-
-/** รูปแบบ UUID (เช่น จาก `crypto.randomUUID()`) */
-function looksLikeUuid(s: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s.trim());
-}
+type Tab = "info" | "service" | "orders";
 
 type PublicPickupTrackPayload = {
   ok?: boolean;
@@ -30,35 +70,20 @@ type PublicPickupTrackPayload = {
   error?: string;
 };
 
-type Step = "package" | "contact" | "location";
+type PublicPackage = LaundryPortalPackageItem;
 
-type PublicPackage = {
-  id: number;
-  name: string;
-  base_price: number;
-  description: string;
-  image_url: string | null;
-  basket_tiers: { label: string; price: number }[] | null;
-};
+function trackStorageKey(ownerId: string): string {
+  return `${TRACK_STORE_PREFIX}${ownerId}`;
+}
+
+function looksLikeUuid(s: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s.trim());
+}
 
 function priceHint(pkg: PublicPackage): string {
-  const tiers = pkg.basket_tiers?.filter((t) => t.label.trim()) ?? [];
-  if (tiers.length) {
-    const prices = tiers.map((t) => t.price);
-    const min = Math.min(...prices);
-    const max = Math.max(...prices);
-    return min === max ? `฿${min.toLocaleString("th-TH")}` : `฿${min.toLocaleString("th-TH")} – ฿${max.toLocaleString("th-TH")}`;
-  }
-  return `฿${pkg.base_price.toLocaleString("th-TH")}`;
+  return laundryPortalPackagePriceLabel(pkg);
 }
 
-function IconCheck(props: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className={props.className} aria-hidden>
-      <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 function buildPickupAddress(coords: { lat: number; lng: number } | null, detail: string): string {
   const lines: string[] = [];
@@ -74,21 +99,49 @@ function mapsLink(coords: { lat: number; lng: number }): string {
   return `https://www.google.com/maps?q=${coords.lat},${coords.lng}`;
 }
 
+function formatBaht(n: number) {
+  return n.toLocaleString("th-TH");
+}
+
 export function LaundryPickupPublicClient({
   ownerId,
   shopLabel,
+  embeddedInPortal = false,
+  initialPackages,
+  shopLocation,
+  portalPayment,
+  seedCustomerName,
+  seedCustomerPhone,
+  seedPackageId,
 }: {
   ownerId: string;
   shopLabel: string;
+  embeddedInPortal?: boolean;
+  initialPackages?: PublicPackage[];
+  shopLocation?: {
+    shopLat: number | null;
+    shopLng: number | null;
+    pickupFeePerKmBaht: number | null;
+  } | null;
+  portalPayment?: {
+    mode: LaundryPortalBookingPaymentMode;
+    depositAmountBaht: number | null;
+  };
+  /** ค่าจากแถบย่อบนแบนเนอร์ — sync เมื่อเปิดฟอร์มเต็ม */
+  seedCustomerName?: string;
+  seedCustomerPhone?: string;
+  /** แพ็กที่เลือกจาก popup รายละเอียดบนเว็บ */
+  seedPackageId?: number | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const trialParam = searchParams.get("t");
+  const notice = useAppNoticePopup();
 
-  const [step, setStep] = useState<Step>("package");
-  const [packages, setPackages] = useState<PublicPackage[]>([]);
-  const [packagesLoading, setPackagesLoading] = useState(true);
+  const [tab, setTab] = useState<Tab>("info");
+  const [packages, setPackages] = useState<PublicPackage[]>(initialPackages ?? []);
+  const [packagesLoading, setPackagesLoading] = useState(!initialPackages?.length);
   const [packagesError, setPackagesError] = useState<string | null>(null);
 
   const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
@@ -106,16 +159,69 @@ export function LaundryPickupPublicClient({
   const [estimated_item_count, setEstimatedItemCount] = useState("");
   const [extra_note, setExtraNote] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [doneMsg, setDoneMsg] = useState<string | null>(null);
+
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<LaundryPublicPaymentMethod>("CASH");
+  const [paymentSlipUrl, setPaymentSlipUrl] = useState<string | null>(null);
+  const [resolvedPayment, setResolvedPayment] = useState<{
+    mode: LaundryPortalBookingPaymentMode;
+    depositAmountBaht: number | null;
+  } | null>(portalPayment ?? null);
 
   const [trackingToken, setTrackingToken] = useState<string | null>(null);
   const [trackingInfo, setTrackingInfo] = useState<PublicPickupTrackPayload | null>(null);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [trackingError, setTrackingError] = useState<string | null>(null);
-  const [copyTrackHint, setCopyTrackHint] = useState<string | null>(null);
+
+  const payMode = resolvedPayment?.mode ?? "NONE";
+  const depositAmountBaht = resolvedPayment?.depositAmountBaht ?? null;
 
   useEffect(() => {
+    if (seedCustomerName != null && seedCustomerName.trim()) {
+      setCustomerName(seedCustomerName.trim());
+    }
+  }, [seedCustomerName]);
+
+  useEffect(() => {
+    if (seedCustomerPhone != null && seedCustomerPhone.trim()) {
+      setCustomerPhone(seedCustomerPhone.trim());
+    }
+  }, [seedCustomerPhone]);
+
+  useEffect(() => {
+    if (portalPayment) {
+      setResolvedPayment(portalPayment);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const q = trialParam ? `&t=${encodeURIComponent(trialParam)}` : "";
+        const res = await fetch(`/api/laundry/public/portal?ownerId=${encodeURIComponent(ownerId)}${q}`);
+        const data = (await res.json()) as {
+          shop?: { portalBookingPaymentMode?: string; depositAmountBaht?: number | null };
+        };
+        if (!cancelled && res.ok && data.shop) {
+          setResolvedPayment({
+            mode: normalizeLaundryPortalPaymentMode(data.shop.portalBookingPaymentMode),
+            depositAmountBaht: data.shop.depositAmountBaht ?? null,
+          });
+        }
+      } catch {
+        /* keep NONE */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerId, portalPayment, trialParam]);
+
+  useEffect(() => {
+    if (initialPackages?.length) {
+      setPackages(initialPackages);
+      setPackagesLoading(false);
+      return;
+    }
     let cancelled = false;
     (async () => {
       setPackagesLoading(true);
@@ -137,7 +243,7 @@ export function LaundryPickupPublicClient({
     return () => {
       cancelled = true;
     };
-  }, [ownerId]);
+  }, [ownerId, initialPackages]);
 
   useEffect(() => {
     const fromUrl = searchParams.get("track")?.trim() ?? "";
@@ -203,7 +309,6 @@ export function LaundryPickupPublicClient({
     };
   }, [trackingToken, fetchTracking]);
 
-  /** มีคำขอที่ยังดำเนินการ — ซ่อนการเลือกแพ็กเกจจนกว่าสถานะจะเป็น COMPLETED / CANCELLED (โหลดซ้ำในเบื้องหลังไม่ใช้ trackingLoading เพื่อไม่ให้การ์ดกระพริบ) */
   const blocksPackageSelection = useMemo(() => {
     if (!trackingToken || trackingError) return false;
     if (trackingInfo == null) return trackingLoading;
@@ -211,16 +316,41 @@ export function LaundryPickupPublicClient({
   }, [trackingError, trackingInfo, trackingLoading, trackingToken]);
 
   useEffect(() => {
-    if (blocksPackageSelection && step !== "package") {
-      setStep("package");
+    if (blocksPackageSelection) {
+      setTab("orders");
     }
-  }, [blocksPackageSelection, step]);
+  }, [blocksPackageSelection]);
+
+  useEffect(() => {
+    if (seedPackageId == null) return;
+    const p = packages.find((x) => x.id === seedPackageId);
+    if (!p) return;
+    setSelectedPackageId(p.id);
+    const list = p.basket_tiers?.filter((t) => t.label.trim()) ?? [];
+    setTierIndex(list.length > 0 ? 0 : null);
+    if (!blocksPackageSelection) {
+      setTab("service");
+    }
+  }, [blocksPackageSelection, packages, seedPackageId]);
+
+  useEffect(() => {
+    if (!reviewOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setReviewOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [reviewOpen]);
 
   const dismissTracking = useCallback(() => {
     setTrackingToken(null);
     setTrackingInfo(null);
     setTrackingError(null);
-    setCopyTrackHint(null);
     try {
       sessionStorage.removeItem(trackStorageKey(ownerId));
     } catch {
@@ -234,19 +364,17 @@ export function LaundryPickupPublicClient({
 
   const copyTrackingLink = useCallback(async () => {
     if (!trackingToken || typeof window === "undefined") return;
-    setCopyTrackHint(null);
     const params = new URLSearchParams();
     params.set("track", trackingToken);
     if (trialParam) params.set("t", trialParam);
     const url = `${window.location.origin}${pathname}?${params.toString()}`;
     try {
       await navigator.clipboard.writeText(url);
-      setCopyTrackHint("คัดลอกลิงก์ติดตามแล้ว — เปิดลิงก์นี้ภายหลังเพื่อดูสถานะ");
-      window.setTimeout(() => setCopyTrackHint(null), 3200);
+      notice.success("คัดลอกลิงก์ติดตามแล้ว — เปิดลิงก์นี้ภายหลังเพื่อดูสถานะ");
     } catch {
-      setCopyTrackHint("คัดลอกอัตโนมัติไม่ได้ — ลองเลือกและคัดลอกจากแถบที่อยู่");
+      notice.warning("คัดลอกอัตโนมัติไม่ได้ — ลองเลือกและคัดลอกจากแถบที่อยู่");
     }
-  }, [pathname, trackingToken, trialParam]);
+  }, [notice, pathname, trackingToken, trialParam]);
 
   const selectedPkg = useMemo(
     () => (selectedPackageId != null ? packages.find((p) => p.id === selectedPackageId) ?? null : null),
@@ -266,9 +394,52 @@ export function LaundryPickupPublicClient({
 
   const pickup_address = useMemo(() => buildPickupAddress(coords, locationDetail), [coords, locationDetail]);
 
+  const distanceKm = useMemo(
+    () =>
+      laundryDistanceKm(
+        shopLocation?.shopLat,
+        shopLocation?.shopLng,
+        coords?.lat,
+        coords?.lng,
+      ),
+    [shopLocation?.shopLat, shopLocation?.shopLng, coords],
+  );
+
+  const estimatedPickupFee = useMemo(
+    () => laundryPickupFeeBaht(distanceKm, shopLocation?.pickupFeePerKmBaht),
+    [distanceKm, shopLocation?.pickupFeePerKmBaht],
+  );
+
+  const totalEstimatedPrice = useMemo(() => {
+    const base = resolvedPrice;
+    if (estimatedPickupFee != null && estimatedPickupFee > 0) return base + estimatedPickupFee;
+    return base;
+  }, [resolvedPrice, estimatedPickupFee]);
+
+  const payDue = useMemo(
+    () =>
+      laundryComputePortalPayDue({
+        mode: payMode,
+        depositAmountBaht,
+        orderTotalBaht: totalEstimatedPrice,
+      }),
+    [payMode, depositAmountBaht, totalEstimatedPrice],
+  );
+
   const canProceedPackage = selectedPkg != null && (tiers.length === 0 || tierIndex != null);
   const canProceedContact = customer_name.trim().length > 0 && customer_phone.trim().length > 0;
   const hasLocation = coords != null || locationDetail.trim().length > 0;
+
+  const customerTabs = useMemo(() => {
+    const tabs: Array<{ id: Tab; label: string }> = [
+      { id: "info", label: "ข้อมูล" },
+    ];
+    if (!blocksPackageSelection) {
+      tabs.push({ id: "service", label: "เลือกบริการ" });
+    }
+    tabs.push({ id: "orders", label: "รายการ" });
+    return tabs;
+  }, [blocksPackageSelection]);
 
   function selectPackage(p: PublicPackage) {
     setSelectedPackageId(p.id);
@@ -299,36 +470,57 @@ export function LaundryPickupPublicClient({
     );
   }, []);
 
-  const submit = useCallback(async () => {
-    setError(null);
-    setDoneMsg(null);
-    if (!selectedPkg || !canProceedPackage) {
-      setError("กรุณาเลือกแพ็กเกจ");
-      return;
-    }
+  function validateInfo(): string | null {
     if (!customer_name.trim() || !customer_phone.trim()) {
-      setError("กรุณากรอกชื่อและเบอร์โทร");
-      return;
+      return "กรุณากรอกชื่อและเบอร์โทร";
     }
     if (!hasLocation) {
-      setError("กดดึงพิกัดจากเครื่อง หรือกรอกรายละเอียดสถานที่รับผ้า");
-      return;
-    }
-    const addr = pickup_address.trim();
-    if (!addr) {
-      setError("ข้อมูลที่อยู่รับผ้าไม่ครบ");
-      return;
+      return "กดดึงพิกัดจากเครื่อง หรือกรอกรายละเอียดสถานที่รับผ้า";
     }
     const w = estimated_weight_kg.trim() === "" ? undefined : Number(estimated_weight_kg);
     const ic = estimated_item_count.trim() === "" ? undefined : Number.parseInt(estimated_item_count, 10);
     if (w !== undefined && (!Number.isFinite(w) || w < 0)) {
-      setError("น้ำหนักประมาณการไม่ถูกต้อง");
-      return;
+      return "น้ำหนักประมาณการไม่ถูกต้อง";
     }
     if (ic !== undefined && (!Number.isFinite(ic) || ic < 0)) {
-      setError("จำนวนชิ้นประมาณการไม่ถูกต้อง");
+      return "จำนวนชิ้นประมาณการไม่ถูกต้อง";
+    }
+    return null;
+  }
+
+  function goToServiceTab() {
+    const errMsg = validateInfo();
+    if (errMsg) {
+      notice.warning(errMsg);
       return;
     }
+    setTab("service");
+  }
+
+  const submit = useCallback(async () => {
+    if (!selectedPkg || !canProceedPackage) {
+      notice.warning("กรุณาเลือกแพ็กเกจ");
+      return;
+    }
+    const infoErr = validateInfo();
+    if (infoErr) {
+      notice.warning(infoErr);
+      return;
+    }
+    const addr = pickup_address.trim();
+    if (!addr) {
+      notice.warning("ข้อมูลที่อยู่รับผ้าไม่ครบ");
+      return;
+    }
+    if (laundryPaymentSubmitBlocked(paymentMethod, payDue, paymentSlipUrl)) {
+      notice.warning(
+        paymentMethod === "PROMPTPAY" ? "กรุณาแนบสลิปหลังโอนพร้อมเพย์" : "กรุณาแนบสลิปการโอน",
+      );
+      return;
+    }
+
+    const w = estimated_weight_kg.trim() === "" ? undefined : Number(estimated_weight_kg);
+    const ic = estimated_item_count.trim() === "" ? undefined : Number.parseInt(estimated_item_count, 10);
 
     setLoading(true);
     try {
@@ -347,6 +539,16 @@ export function LaundryPickupPublicClient({
       if (tiers.length > 0 && tierIndex != null) {
         body.basket_tier_index = tierIndex;
       }
+      if (coords) {
+        body.pickup_lat = coords.lat;
+        body.pickup_lng = coords.lng;
+      }
+      if (payDue > 0) {
+        body.payment_method = paymentMethod;
+        if (paymentMethod === "PROMPTPAY" || paymentMethod === "TRANSFER") {
+          body.receipt_image_url = paymentSlipUrl;
+        }
+      }
 
       const res = await fetch("/api/laundry/public/pickup-request", {
         method: "POST",
@@ -360,10 +562,13 @@ export function LaundryPickupPublicClient({
         tracking_token?: string;
       };
       if (!res.ok) {
-        setError(data.error ?? "ส่งคำขอไม่สำเร็จ");
+        notice.error(data.error ?? "ส่งคำขอไม่สำเร็จ");
         return;
       }
-      setDoneMsg(data.message ?? "ส่งคำขอแล้ว");
+      notice.success(data.message ?? "ส่งคำขอแล้ว");
+      setReviewOpen(false);
+      setPaymentMethod("CASH");
+      setPaymentSlipUrl(null);
       if (data.tracking_token && looksLikeUuid(data.tracking_token)) {
         setTrackingToken(data.tracking_token);
         try {
@@ -375,7 +580,7 @@ export function LaundryPickupPublicClient({
         params.set("track", data.tracking_token);
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
       }
-      setStep("package");
+      setTab("orders");
       setSelectedPackageId(null);
       setTierIndex(null);
       setCustomerName("");
@@ -390,20 +595,24 @@ export function LaundryPickupPublicClient({
       setGeoError(null);
       router.refresh();
     } catch {
-      setError("เชื่อมต่อไม่ได้ ลองใหม่ภายหลัง");
+      notice.error("เชื่อมต่อไม่ได้ ลองใหม่ภายหลัง");
     } finally {
       setLoading(false);
     }
   }, [
     canProceedPackage,
+    coords,
     customer_name,
     customer_phone,
     dropoff_address,
     estimated_weight_kg,
     estimated_item_count,
     extra_note,
-    hasLocation,
     ownerId,
+    notice,
+    payDue,
+    paymentMethod,
+    paymentSlipUrl,
     pickup_address,
     preferred_pickup_note,
     router,
@@ -414,273 +623,247 @@ export function LaundryPickupPublicClient({
     tiers.length,
   ]);
 
-  const inputClass =
-    "app-input mt-2 w-full min-h-[52px] rounded-2xl px-4 py-3 text-base font-semibold text-[#1e1b4b] placeholder:text-slate-400";
-  const labelClass = "block text-sm font-bold text-[#4d47b6]";
+  async function handleConfirmFromReview() {
+    await submit();
+  }
 
-  const stepTitle =
-    blocksPackageSelection ? "คำขอรับผ้าที่ยังดำเนินการ — ดูสถานะด้านบน"
-    : step === "package" ? "ขั้นตอนที่ 1 — เลือกแพ็กเกจ"
-    : step === "contact" ? "ขั้นตอนที่ 2 — ชื่อและเบอร์โทร"
-    : "ขั้นตอนที่ 3 — พิกัดและจุดรับผ้า";
+  const inputClass = cn(laundryPortalFieldClass, "mt-1");
+  const textareaClass = cn(laundryPortalTextareaClass, "mt-1");
+  const labelClass = laundryPortalLabelClass;
 
-  return (
-    <AppPublicCheckInGlassPage className="flex min-h-[100dvh] flex-col pb-0">
-      <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col">
-      <header className="shrink-0 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-center">
-        <div
-          className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-[1.25rem] border border-white/70 bg-gradient-to-br from-white/80 to-violet-100/60 shadow-[0_8px_24px_-8px_rgba(91,97,255,0.35)] backdrop-blur-xl ring-1 ring-inset ring-white/70"
-          aria-hidden
-        >
-          <svg
-            viewBox="0 0 24 24"
-            className="h-7 w-7 text-[#5b61ff]"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M4 7h16v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" />
-            <path d="M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2" />
-            <path d="M8 3h8" />
-            <circle cx="12" cy="13.5" r="3.25" />
-          </svg>
+  const sectionCardClass = embeddedInPortal
+    ? "space-y-3"
+    : cn(laundryPanelClass, laundryPanelSectionClass);
+
+  const sectionWrapClass = embeddedInPortal ? "w-full" : cn("mx-auto max-w-md", sectionCardClass);
+  const contentPadClass = embeddedInPortal ? "" : "px-4";
+
+  const stepSummary = useMemo(() => {
+    const parts: string[] = [];
+    if (customer_name.trim()) parts.push(customer_name.trim());
+    if (customer_phone.trim()) parts.push(customer_phone.trim());
+    if (selectedPkg?.name) parts.push(selectedPkg.name);
+    return parts.join(" · ");
+  }, [customer_name, customer_phone, selectedPkg?.name]);
+
+  const trackingSection = (
+    <section
+      className={cn(laundryPanelClass, "px-4 py-3", !embeddedInPortal && "mx-auto max-w-md")}
+      aria-label="ติดตามสถานะคำขอบริการรับ-ส่ง"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">ติดตามคำขอ</p>
+          {trackingInfo?.order_id != null ?
+            <p className="mt-1 truncate text-sm font-bold text-[#1e1b4b]">เลขอ้างอิง #{trackingInfo.order_id}</p>
+          : trackingLoading ?
+            <p className="mt-1 text-sm text-slate-600">กำลังโหลดสถานะ…</p>
+          : null}
         </div>
-        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-indigo-500">รับฝากซักผ้า</p>
-        <h1 className="mt-1 text-xl font-black leading-tight tracking-tight text-[#1e1b4b] sm:text-2xl">{shopLabel}</h1>
-        <p className="mt-2 text-sm leading-snug text-[#6b6894]">{stepTitle}</p>
-        {trialParam ?
-          <p className="mx-auto mt-3 max-w-md rounded-2xl border border-amber-200 bg-amber-50/95 px-3 py-2 text-xs font-semibold text-amber-950">
-            โหมดทดลองร้าน — ข้อมูลจะอยู่ในชุดทดลองของร้าน
-          </p>
-        : null}
-        {doneMsg ?
-          <p className="mx-auto mt-3 max-w-md rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900">
-            {doneMsg}
-          </p>
-        : null}
         {trackingToken ?
-          <section
-            className="mx-auto mt-3 w-full max-w-md rounded-2xl border border-indigo-200/90 bg-white/95 px-4 py-3 text-left shadow-md shadow-indigo-950/5"
-            aria-label="ติดตามสถานะคำขอรับผ้า"
+          <button
+            type="button"
+            onClick={() => dismissTracking()}
+            className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-slate-500 underline decoration-slate-300"
           >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">ติดตามคำขอ</p>
-                {trackingInfo?.order_id != null ?
-                  <p className="mt-1 truncate text-sm font-bold text-[#1e1b4b]">เลขอ้างอิง #{trackingInfo.order_id}</p>
-                : trackingLoading ?
-                  <p className="mt-1 text-sm text-slate-600">กำลังโหลดสถานะ…</p>
-                : null}
-              </div>
-              <button
-                type="button"
-                onClick={() => dismissTracking()}
-                className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold text-slate-500 underline decoration-slate-300"
-              >
-                ปิด
-              </button>
-            </div>
-            {trackingInfo?.status_label_th ?
-              <>
-                <p className="mt-3 text-lg font-black leading-snug text-indigo-700">{trackingInfo.status_label_th}</p>
-                <p className="mt-1 text-xs font-semibold text-slate-600">
-                  {(trackingInfo.service_type?.trim() || trackingInfo.package_name?.trim() || "—") +
-                    (trackingInfo.final_price != null && trackingInfo.final_price > 0 ?
-                      ` · ฿${trackingInfo.final_price.toLocaleString("th-TH")}`
-                    : "")}
-                </p>
-                {trackingInfo.updated_at ?
-                  <p className="mt-2 text-[11px] font-medium text-slate-500">
-                    อัปเดตล่าสุด{" "}
-                    {new Date(trackingInfo.updated_at).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })}
-                  </p>
-                : null}
-              </>
-            : null}
-            {trackingError ?
-              <p className="mt-2 text-xs font-semibold text-red-700">{trackingError}</p>
-            : null}
-            <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
-              <button
-                type="button"
-                disabled={trackingLoading}
-                onClick={() => void fetchTracking()}
-                aria-label={trackingLoading ? "กำลังรีเฟรชสถานะ" : "รีเฟรชสถานะ"}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-indigo-200/90 bg-indigo-50/90 text-indigo-800 shadow-sm transition hover:bg-indigo-100/90 disabled:opacity-60"
-              >
-                {trackingLoading ?
-                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" aria-hidden />
-                : <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
-                    <path d="M20 11a8 8 0 1 0-2.3 5.6M20 4v7h-7" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                }
-              </button>
-              <button
-                type="button"
-                onClick={() => void copyTrackingLink()}
-                aria-label="คัดลอกลิงก์ติดตาม"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/90 bg-white/90 text-[#4d47b6] shadow-sm transition hover:bg-white"
-              >
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                </svg>
-              </button>
-            </div>
-            {copyTrackHint ?
-              <p className="mt-2 text-[11px] font-semibold leading-snug text-emerald-800">{copyTrackHint}</p>
-            : null}
-            <p className="mt-2 text-[10px] leading-snug text-slate-500">
-              สถานะจะเปลี่ยนตามที่ร้านอัปเดตในระบบ — เปิดหน้านี้ค้างไว้หรือบันทึกลิงก์เพื่อตรวจสอบภายหลัง (รีเฟรชอัตโนมัติทุก 30 วินาที)
+            ปิด
+          </button>
+        : null}
+      </div>
+      {trackingInfo?.status_label_th ?
+        <>
+          <p className="mt-3 text-lg font-black leading-snug text-indigo-700">{trackingInfo.status_label_th}</p>
+          <p className="mt-1 text-xs font-semibold text-slate-600">
+            {(trackingInfo.service_type?.trim() || trackingInfo.package_name?.trim() || "—") +
+              (trackingInfo.final_price != null && trackingInfo.final_price > 0 ?
+                ` · ฿${trackingInfo.final_price.toLocaleString("th-TH")}`
+              : "")}
+          </p>
+          {trackingInfo.updated_at ?
+            <p className="mt-2 text-[11px] font-medium text-slate-500">
+              อัปเดตล่าสุด{" "}
+              {new Date(trackingInfo.updated_at).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })}
             </p>
-          </section>
-        : null}
-        {error ?
-          <p className="mx-auto mt-3 max-w-md rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-900">{error}</p>
-        : null}
-      </header>
-
-      <main className="flex-1 overflow-y-auto px-4 pb-28">
-        {step === "package" ?
-          <section className="mx-auto max-w-md" aria-labelledby="pickup-step-package">
-            <h2 id="pickup-step-package" className="sr-only">
-              {blocksPackageSelection ? "แพ็กเกจปิดชั่วคราว — มีคำขอที่ยังดำเนินการ" : "เลือกแพ็กเกจ"}
-            </h2>
-            {blocksPackageSelection ?
-              <div
-                className="rounded-2xl border border-indigo-200/90 bg-indigo-50/70 px-4 py-8 text-center shadow-inner shadow-indigo-950/5"
-                role="status"
-              >
-                <p className="text-sm font-black leading-snug text-[#1e1b4b]">แพ็กเกจจะแสดงอีกครั้งเมื่อคำขอนี้จบ</p>
-                <p className="mt-3 text-xs font-semibold leading-relaxed text-[#4d47b6]">
-                  กล่อง<strong className="font-black"> ติดตามคำขอ </strong>ด้านบนจะอัปเดตตามร้าน เมื่อสถานะเป็น
-                  <span className="whitespace-nowrap font-bold"> ส่งคืนสำเร็จ </span>
-                  หรือ<span className="whitespace-nowrap font-bold"> ยกเลิก </span>
-                  แล้ว คุณจะเลือกแพ็กเกจเพื่อส่งคำขอใหม่ได้
-                </p>
-              </div>
-            : <>
-                <p className="mb-4 text-center text-xs font-medium text-slate-600">แตะการ์ดเลือกแพ็กเกจ — เหมือนตอนพนักงานบันทึกที่ร้าน</p>
-                {packagesLoading ?
-                  <p className="rounded-2xl border border-indigo-100 bg-white/70 py-10 text-center text-sm font-medium text-slate-600">กำลังโหลดแพ็กเกจ…</p>
-                : packagesError ?
-                  <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-6 text-center text-sm font-semibold text-red-900">{packagesError}</p>
-                : packages.length === 0 ?
-                  <p className="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/60 px-4 py-8 text-center text-sm font-semibold text-[#4d47b6]">
-                    ร้านยังไม่มีแพ็กเกจที่เปิดให้เลือก — โปรดติดต่อร้านโดยตรง
-                  </p>
-                : <>
-                    <div className="grid max-h-[min(58vh,520px)] grid-cols-1 gap-3 overflow-y-auto pb-2">
-                      {packages.map((p) => {
-                        const selected = selectedPackageId === p.id;
-                        return (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => selectPackage(p)}
-                            className={cn(
-                              "relative flex w-full flex-col overflow-hidden rounded-2xl border text-left transition-all duration-200",
-                              selected ?
-                                "border-indigo-400 bg-indigo-50/90 shadow-[0_0_0_1px_rgba(99,102,241,0.35)] ring-2 ring-indigo-200/80"
-                              : "border-slate-200/90 bg-white shadow-sm hover:border-indigo-200 hover:shadow-md",
-                            )}
-                          >
-                            <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200">
-                              {p.image_url ?
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={p.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
-                              : <div className="flex h-full w-full items-center justify-center text-slate-400">
-                                  <svg viewBox="0 0 24 24" className="h-12 w-12 opacity-35" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                                    <path d="M12 3v3M12 18v3M3 12h3M18 12h3" strokeLinecap="round" />
-                                    <rect x="6" y="6" width="12" height="12" rx="2" />
-                                  </svg>
-                                </div>
-                              }
-                              {selected ?
-                                <div className="absolute inset-0 flex items-center justify-center bg-indigo-600/25 backdrop-blur-[2px]">
-                                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg ring-2 ring-white/60">
-                                    <IconCheck className="h-5 w-5" />
-                                  </div>
-                                </div>
-                              : null}
-                            </div>
-                            <div className="space-y-1 p-3">
-                              <p className="line-clamp-2 text-sm font-black text-[#2e2a58]">{p.name}</p>
-                              <p className="text-xs font-bold text-indigo-600">{priceHint(p)}</p>
-                              {p.description ?
-                                <p className="line-clamp-2 text-[11px] leading-snug text-[#66638c]">{p.description}</p>
-                              : null}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {selectedPkg && tiers.length > 0 ?
-                      <div className="mt-4 rounded-2xl border border-[#ecebff] bg-[#f8f7ff] p-3">
-                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#66638c]">เลือกขนาดตะกร้า / ราคา</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {tiers.map((t, i) => (
-                            <button
-                              key={`${t.label}-${i}`}
-                              type="button"
-                              onClick={() => setTierIndex(i)}
-                              className={cn(
-                                "min-h-[44px] rounded-xl border px-3 py-2 text-left text-xs font-bold transition-all",
-                                tierIndex === i ?
-                                  "border-indigo-400 bg-white text-indigo-700 shadow-sm ring-1 ring-indigo-200"
-                                : "border-transparent bg-white/70 text-[#2e2a58] hover:border-indigo-200",
-                              )}
-                            >
-                              <span className="block">{t.label}</span>
-                              <span className="text-[11px] font-black text-indigo-600">฿{t.price.toLocaleString("th-TH")}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    : null}
-                  </>
-                }
-              </>
-            }
-          </section>
-        : step === "contact" ?
-          <section
-            className="mx-auto max-w-md rounded-[1.75rem] border border-white/70 bg-white/75 p-4 shadow-xl shadow-indigo-950/10 backdrop-blur-xl sm:p-5"
-            aria-labelledby="pickup-step-contact"
+          : null}
+        </>
+      : null}
+      {trackingError ?
+        <p className={cn("mt-2", laundryInlineAlertErrorClass)}>{trackingError}</p>
+      : null}
+      {trackingToken ?
+        <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            disabled={trackingLoading}
+            onClick={() => void fetchTracking()}
+            aria-label={trackingLoading ? "กำลังรีเฟรชสถานะ" : "รีเฟรชสถานะ"}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-indigo-200/90 bg-indigo-50/90 text-indigo-800 shadow-sm transition hover:bg-indigo-100/90 disabled:opacity-60"
           >
-            <button
-              type="button"
-              onClick={() => {
-                setError(null);
-                setDoneMsg(null);
-                setStep("package");
-              }}
-              className="mb-4 flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white/80 px-3 py-2 text-sm font-bold text-[#4d47b6] shadow-sm active:scale-[0.99]"
-            >
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-                <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            {trackingLoading ?
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" aria-hidden />
+            : <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+                <path d="M20 11a8 8 0 1 0-2.3 5.6M20 4v7h-7" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              แก้แพ็กเกจ
-            </button>
-            {selectedPkg ?
-              <div className="mb-5 rounded-2xl border border-indigo-100 bg-indigo-50/50 px-3 py-2 text-sm font-bold text-[#2e2a58]">
-                <span>{selectedPkg.name}</span>
-                {tiers.length > 0 && tierIndex != null && tiers[tierIndex] ?
-                  <span className="font-semibold text-[#66638c]">
-                    {" "}
-                    · {tiers[tierIndex].label} · ฿{tiers[tierIndex].price.toLocaleString("th-TH")}
-                  </span>
-                : <span className="font-semibold text-[#66638c]"> · ฿{resolvedPrice.toLocaleString("th-TH")}</span>}
+            }
+          </button>
+          <button
+            type="button"
+            onClick={() => void copyTrackingLink()}
+            aria-label="คัดลอกลิงก์ติดตาม"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/90 bg-white/90 text-[#4d47b6] shadow-sm transition hover:bg-white"
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+            </svg>
+          </button>
+        </div>
+      : null}
+    </section>
+  );
+
+  const packageGrid = (
+    <>
+      {packagesLoading ?
+        <p className={laundryMutedLoadingNoticeClass}>กำลังโหลดแพ็กเกจ…</p>
+      : packagesError ?
+        <AppEmptyState tone="violet">
+          <span className="block font-semibold text-[#1e1b4b]">โหลดแพ็กเกจไม่สำเร็จ</span>
+          <span className="mt-1 block text-xs">{packagesError}</span>
+        </AppEmptyState>
+      : packages.length === 0 ?
+        <AppEmptyState tone="violet">
+          ร้านยังไม่มีแพ็กเกจที่เปิดให้เลือก — โปรดติดต่อร้านโดยตรง
+        </AppEmptyState>
+      : <>
+          <ul className={cn(laundryPortalPackageGridClass, laundryPortalPackageGridScrollClass, "list-none p-0")}>
+            {packages.map((p) => (
+              <LaundryPortalPackageSelectCard
+                key={p.id}
+                pkg={p}
+                selected={selectedPackageId === p.id}
+                onSelect={() => selectPackage(p)}
+              />
+            ))}
+          </ul>
+
+          {selectedPkg && tiers.length > 0 ?
+            <div className={laundryPortalTierPickerShellClass}>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#66638c]">เลือกขนาดตะกร้า / ราคา</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {tiers.map((t, i) => (
+                  <button
+                    key={`${t.label}-${i}`}
+                    type="button"
+                    onClick={() => setTierIndex(i)}
+                    className={cn(
+                      "min-h-[44px] px-3 py-2 text-left text-xs font-bold transition-all",
+                      tierIndex === i ? laundryPaymentChipActiveClass : laundryPaymentChipIdleClass,
+                    )}
+                  >
+                    <span className="block">{t.label}</span>
+                    <span className="text-[11px] font-black text-indigo-600">฿{t.price.toLocaleString("th-TH")}</span>
+                  </button>
+                ))}
               </div>
+            </div>
+          : null}
+        </>
+      }
+    </>
+  );
+
+  const shell = (
+    <div
+      className={cn(
+        "relative mx-auto flex w-full max-w-md flex-1 flex-col",
+        embeddedInPortal && "max-w-none",
+        tab === "service" && canProceedPackage && !blocksPackageSelection ? "pb-24" : embeddedInPortal ? "pb-4" : "pb-6",
+      )}
+    >
+      {!embeddedInPortal ?
+        <header className="shrink-0 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-center">
+          <div
+            className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-[1.25rem] border border-white/70 bg-gradient-to-br from-white/80 to-violet-100/60 shadow-[0_8px_24px_-8px_rgba(91,97,255,0.35)] backdrop-blur-xl ring-1 ring-inset ring-white/70"
+            aria-hidden
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-7 w-7 text-[#5b61ff]"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4 7h16v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" />
+              <path d="M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2" />
+              <path d="M8 3h8" />
+              <circle cx="12" cy="13.5" r="3.25" />
+            </svg>
+          </div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-indigo-500">รับฝากซักผ้า</p>
+          <h1 className="mt-1 text-xl font-black leading-tight tracking-tight text-[#1e1b4b] sm:text-2xl">{shopLabel}</h1>
+          {trialParam ?
+            <p className={cn("mx-auto mt-3 max-w-md", laundryPortalInfoBannerClass)}>
+              โหมดทดลองร้าน — ข้อมูลจะอยู่ในชุดทดลองของร้าน
+            </p>
+          : null}
+        </header>
+      : null}
+
+      <div className={cn("shrink-0", contentPadClass, embeddedInPortal ? "pt-0" : "")}>
+        {embeddedInPortal && tab !== "info" && stepSummary ?
+          <p className="mt-2 text-sm font-semibold text-[#66638c]">{stepSummary}</p>
+        : null}
+
+        {embeddedInPortal ?
+          <div className="mt-4 flex flex-wrap gap-2" role="tablist" aria-label="ขั้นตอนขอบริการรับ-ส่ง">
+            {customerTabs.map((t, idx) => {
+              const active = tab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setTab(t.id)}
+                  className={active ? laundryPortalChipActiveClass : laundryPortalChipIdleClass}
+                >
+                  {idx + 1}. {t.label}
+                </button>
+              );
+            })}
+          </div>
+        : <div className={laundryDashboardSegmentShellClass} role="tablist" aria-label="เมนูขอบริการรับ-ส่ง">
+            {customerTabs.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.id}
+                onClick={() => setTab(t.id)}
+                className={cn(laundryDashboardSegmentBtnClass(tab === t.id), "min-h-9 flex-1 px-2 sm:px-3")}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        }
+      </div>
+
+      <main className={cn("flex-1 overflow-y-auto", embeddedInPortal ? "pt-3" : "pt-4", contentPadClass)}>
+        {tab === "info" ?
+          <section className={sectionWrapClass} aria-labelledby="pickup-tab-info">
+            <div className={embeddedInPortal ? sectionCardClass : undefined}>
+            {!embeddedInPortal ?
+              <h2 id="pickup-tab-info" className={laundrySectionHeadingClass}>
+                ข้อมูล
+              </h2>
             : null}
-            <h2 id="pickup-step-contact" className="sr-only">
-              ข้อมูลติดต่อ
-            </h2>
+            <div className={cn("grid gap-3 sm:grid-cols-2", embeddedInPortal ? "" : "mt-4")}>
             <label className={labelClass}>
-              ชื่อ–นามสกุล <span className="text-rose-600">*</span>
+              {embeddedInPortal ? "ชื่อ" : <>ชื่อ–นามสกุล <span className="text-rose-600">*</span></>}
               <input
                 className={inputClass}
                 placeholder="เช่น สมชาย ใจดี"
@@ -688,10 +871,11 @@ export function LaundryPickupPublicClient({
                 onChange={(e) => setCustomerName(e.target.value)}
                 autoComplete="name"
                 autoCapitalize="words"
+                required
               />
             </label>
-            <label className={cn(labelClass, "mt-5 block")}>
-              เบอร์โทรติดต่อ <span className="text-rose-600">*</span>
+            <label className={labelClass}>
+              {embeddedInPortal ? "เบอร์โทร" : <>เบอร์โทรติดต่อ <span className="text-rose-600">*</span></>}
               <input
                 className={inputClass}
                 placeholder="เช่น 0812345678"
@@ -699,227 +883,362 @@ export function LaundryPickupPublicClient({
                 onChange={(e) => setCustomerPhone(e.target.value)}
                 inputMode="tel"
                 autoComplete="tel"
+                required
               />
             </label>
-          </section>
-        : <div className="mx-auto max-w-md space-y-4">
+            </div>
+
             <button
               type="button"
-              onClick={() => setStep("contact")}
-              className="flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white/80 px-3 py-2 text-sm font-bold text-[#4d47b6] shadow-sm backdrop-blur-sm active:scale-[0.99]"
+              disabled={geoLoading}
+              onClick={() => void fetchGeo()}
+              className={cn(
+                embeddedInPortal ? laundryPortalChipIdleClass : "app-btn-primary",
+                "mt-3 flex w-full items-center justify-center gap-2 sm:w-auto",
+                !embeddedInPortal && "min-h-[48px] rounded-2xl text-sm font-bold shadow-lg shadow-indigo-200/60",
+                geoLoading && "opacity-60",
+              )}
             >
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-                <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              แก้ชื่อหรือเบอร์
-            </button>
-            {selectedPkg ?
-              <p className="rounded-2xl border border-violet-100 bg-violet-50/40 px-4 py-2 text-center text-xs font-bold text-[#2e2a58]">
-                {selectedPkg.name}
-                {tiers.length > 0 && tierIndex != null && tiers[tierIndex] ?
-                  <span className="text-[#66638c]"> · {tiers[tierIndex].label} · ฿{tiers[tierIndex].price.toLocaleString("th-TH")}</span>
-                : <span className="text-[#66638c]"> · ฿{resolvedPrice.toLocaleString("th-TH")}</span>}
-              </p>
-            : null}
-            <p className="rounded-2xl border border-indigo-100 bg-indigo-50/50 px-4 py-3 text-center text-sm font-bold text-[#2e2a58]">
-              {customer_name.trim() || "—"}{" "}
-              <span className="font-semibold text-[#66638c]">·</span> {customer_phone.trim() || "—"}
-            </p>
-
-            <section
-              className="rounded-[1.75rem] border border-white/70 bg-white/75 p-4 shadow-xl shadow-indigo-950/10 backdrop-blur-xl sm:p-5"
-              aria-labelledby="pickup-step-location"
-            >
-              <h2 id="pickup-step-location" className="text-base font-black text-[#1e1b4b]">
-                พิกัดรับผ้า
-              </h2>
-              <p className="mt-1 text-xs font-medium leading-relaxed text-slate-600">
-                แนะนำให้กดดึงพิกัดจากเครื่อง แล้วเติมบ้านเลขที่ ซอย หรือจุดสังเกตเพิ่ม
-              </p>
-
-              <button
-                type="button"
-                disabled={geoLoading}
-                onClick={() => void fetchGeo()}
-                className="app-btn-primary mt-4 flex w-full min-h-[52px] items-center justify-center gap-2 rounded-2xl text-base font-bold shadow-lg shadow-indigo-200/60 disabled:opacity-60"
-              >
-                {geoLoading ?
-                  <>
-                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden />
-                    กำลังดึงพิกัด…
-                  </>
-                : <>
-                    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-                      <path d="M12 21c-3.314 0-6-2.686-6-6 0-4.5 6-10 6-10s6 5.5 6 10c0 3.314-2.686 6-6 6z" strokeLinejoin="round" />
-                      <circle cx="12" cy="15" r="2.5" />
-                    </svg>
-                    ดึงพิกัดจากเครื่อง
-                  </>
-                }
-              </button>
-
-              {geoError ?
-                <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950">{geoError}</p>
-              : null}
-
-              {coords ?
-                <div className="mt-4 rounded-2xl border border-emerald-200/80 bg-emerald-50/60 p-4">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-emerald-700">พิกัดที่ได้รับ</p>
-                  <p className="mt-2 font-mono text-sm font-bold text-emerald-950">
-                    {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
-                  </p>
-                  <a
-                    href={mapsLink(coords)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 inline-flex min-h-[44px] items-center justify-center rounded-xl border border-emerald-300 bg-white px-4 text-sm font-bold text-emerald-800"
-                  >
-                    เปิดใน Google Maps
-                  </a>
-                </div>
-              : null}
-
-              <label className={cn(labelClass, "mt-6 block")}>
-                รายละเอียดสถานที่ <span className="font-semibold text-slate-500">(บ้านเลขที่ ซอย ป้อมรปภ. ฯลฯ)</span>
-                {!coords ?
-                  <span className="text-rose-600"> *</span>
-                : null}
-                <textarea
-                  className={cn(inputClass, "min-h-[100px] resize-y py-3")}
-                  placeholder={
-                    coords ?
-                      "เพิ่มจุดสังเกตให้พนักงานหาง่าย…"
-                    : "ระบุที่อยู่หรือจุดสังเกต — จำเป็นหากยังไม่ดึงพิกัด"
-                  }
-                  value={locationDetail}
-                  onChange={(e) => setLocationDetail(e.target.value)}
-                />
-              </label>
-              {!hasLocation ?
-                <p className="mt-2 text-xs font-semibold text-rose-600">ต้องมีพิกัดจากเครื่อง หรือรายละเอียดสถานที่อย่างใดอย่างหนึ่ง</p>
-              : null}
-
-              <details className="group mt-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 open:bg-white/80">
-                <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold text-[#4d47b6] [&::-webkit-details-marker]:hidden">
-                  <span className="flex items-center justify-between gap-2">
-                    ข้อมูลเพิ่มเติม <span className="text-xs font-semibold text-slate-500">ไม่บังคับ</span>
-                  </span>
-                </summary>
-                <div className="space-y-4 border-t border-slate-100 px-4 pb-4 pt-3">
-                  <label className={cn(labelClass, "text-[#66638c]")}>
-                    ที่อยู่ส่งคืน
-                    <textarea
-                      className={cn(inputClass, "min-h-[72px] text-sm")}
-                      placeholder="ว่าง = ใช้ที่อยู่รับผ้าเดียวกัน"
-                      value={dropoff_address}
-                      onChange={(e) => setDropoffAddress(e.target.value)}
-                    />
-                  </label>
-                  <label className={cn(labelClass, "text-[#66638c]")}>
-                    ช่วงเวลาที่สะดวกให้ไปรับ
-                    <textarea
-                      className={cn(inputClass, "min-h-[72px] text-sm")}
-                      placeholder="เช่น เสาร์ 9:00–12:00"
-                      value={preferred_pickup_note}
-                      onChange={(e) => setPreferredPickupNote(e.target.value)}
-                    />
-                  </label>
-                  <div className="grid grid-cols-1 gap-3">
-                    <label className={cn(labelClass, "text-[#66638c]")}>
-                      น้ำหนักโดยประมาณ (กก.)
-                      <input
-                        className={cn(inputClass, "min-h-[48px] text-sm")}
-                        type="number"
-                        min={0}
-                        step={0.1}
-                        placeholder="—"
-                        value={estimated_weight_kg}
-                        onChange={(e) => setEstimatedWeightKg(e.target.value)}
-                      />
-                    </label>
-                    <label className={cn(labelClass, "text-[#66638c]")}>
-                      จำนวนชิ้นโดยประมาณ
-                      <input
-                        className={cn(inputClass, "min-h-[48px] text-sm")}
-                        type="number"
-                        min={0}
-                        placeholder="—"
-                        value={estimated_item_count}
-                        onChange={(e) => setEstimatedItemCount(e.target.value)}
-                      />
-                    </label>
-                  </div>
-                  <label className={cn(labelClass, "text-[#66638c]")}>
-                    หมายเหตุอื่น ๆ
-                    <textarea
-                      className={cn(inputClass, "min-h-[72px] text-sm")}
-                      placeholder="ประเภทผ้า รหัสประตู ฯลฯ"
-                      value={extra_note}
-                      onChange={(e) => setExtraNote(e.target.value)}
-                    />
-                  </label>
-                </div>
-              </details>
-            </section>
-          </div>
-        }
-      </main>
-
-      <footer className="fixed bottom-0 left-0 right-0 z-10 border-t border-white/50 bg-white/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_30px_-12px_rgba(30,27,75,0.2)] backdrop-blur-lg">
-        <div className="mx-auto flex max-w-lg flex-col gap-2">
-          {step === "package" ?
-            <button
-              type="button"
-              disabled={blocksPackageSelection || !canProceedPackage || packages.length === 0}
-              onClick={() => {
-                setError(null);
-                setDoneMsg(null);
-                setStep("contact");
-              }}
-              aria-label="ถัดไป — ข้อมูลติดต่อ"
-              className="app-btn-primary flex min-h-[54px] w-full items-center justify-center rounded-2xl shadow-lg shadow-indigo-200/70 disabled:opacity-45"
-            >
-              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
-                <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          : step === "contact" ?
-            <button
-              type="button"
-              disabled={!canProceedContact}
-              onClick={() => {
-                setError(null);
-                setDoneMsg(null);
-                setStep("location");
-              }}
-              aria-label="ถัดไป — พิกัดรับผ้า"
-              className="app-btn-primary flex min-h-[54px] w-full items-center justify-center rounded-2xl shadow-lg shadow-indigo-200/70 disabled:opacity-45"
-            >
-              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
-                <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          : <button
-              type="button"
-              disabled={loading || !hasLocation}
-              onClick={() => void submit()}
-              aria-label={loading ? "กำลังส่งคำขอ" : "ส่งคำขอรับผ้า"}
-              className="app-btn-primary flex min-h-[54px] w-full items-center justify-center rounded-2xl shadow-lg shadow-indigo-200/70 disabled:opacity-45"
-            >
-              {loading ?
-                <span className="h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden />
-              : <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
-                  <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+              {geoLoading ?
+                <>
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden />
+                  กำลังดึงพิกัด…
+                </>
+              : <>
+                  <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+                    <path d="M12 21c-3.314 0-6-2.686-6-6 0-4.5 6-10 6-10s6 5.5 6 10c0 3.314-2.686 6-6 6z" strokeLinejoin="round" />
+                    <circle cx="12" cy="15" r="2.5" />
+                  </svg>
+                  ดึงพิกัดจากเครื่อง
+                </>
               }
             </button>
-          }
-          <p className="text-center text-[11px] font-medium text-slate-500">
-            ข้อมูลส่งถึงร้านเท่านั้น — ร้านจะติดต่อกลับก่อนเข้ารับ
-          </p>
+
+            {geoError ?
+              <p className={cn("mt-3", laundryPortalInfoBannerClass)}>{geoError}</p>
+            : null}
+
+            {coords ?
+              <div className={cn("mt-3", laundryPortalSuccessPanelClass)}>
+                <p className="text-[10px] font-black uppercase tracking-wider text-emerald-700">พิกัดที่ได้รับ</p>
+                <p className="mt-1.5 font-mono text-xs font-bold text-emerald-950 sm:text-sm">
+                  {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
+                </p>
+                <a
+                  href={mapsLink(coords)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex min-h-[40px] items-center justify-center rounded-xl border border-emerald-300 bg-white px-3 text-xs font-bold text-emerald-800 sm:text-sm"
+                >
+                  เปิดใน Google Maps
+                </a>
+                {distanceKm != null ?
+                  <div className="mt-3 space-y-1 border-t border-emerald-200/70 pt-3">
+                    <p className="text-xs font-semibold text-emerald-900">
+                      ระยะจากร้านประมาณ <span className="font-black tabular-nums">{distanceKm.toLocaleString("th-TH")} กม.</span>
+                    </p>
+                    {estimatedPickupFee != null && estimatedPickupFee > 0 ?
+                      <p className="text-xs font-bold text-emerald-800">
+                        ค่ารับ–ส่งโดยประมาณ ฿{estimatedPickupFee.toLocaleString("th-TH")}
+                        {shopLocation?.pickupFeePerKmBaht ?
+                          <span className="font-semibold text-emerald-700/80">
+                            {" "}
+                            (฿{shopLocation.pickupFeePerKmBaht.toLocaleString("th-TH")}/กม.)
+                          </span>
+                        : null}
+                      </p>
+                    : shopLocation?.pickupFeePerKmBaht ?
+                      <p className="text-[11px] font-medium text-emerald-800/80">ร้านยังไม่คิดค่ารับ–ส่งอัตโนมัติจากระยะทาง</p>
+                    : null}
+                  </div>
+                : null}
+              </div>
+            : null}
+
+            <label className={cn(labelClass, "mt-3 block sm:col-span-2")}>
+              รายละเอียดสถานที่
+              {!coords ?
+                <span className="text-rose-600"> *</span>
+              : null}
+              <textarea
+                className={textareaClass}
+                placeholder={
+                  coords ?
+                    "เพิ่มจุดสังเกตให้พนักงานหาง่าย…"
+                  : "ระบุที่อยู่หรือจุดสังเกต — จำเป็นหากยังไม่ดึงพิกัด"
+                }
+                value={locationDetail}
+                onChange={(e) => setLocationDetail(e.target.value)}
+              />
+            </label>
+            {!hasLocation ?
+              <p className="mt-2 text-xs font-semibold text-rose-600">ต้องมีพิกัดจากเครื่อง หรือรายละเอียดสถานที่อย่างใดอย่างหนึ่ง</p>
+            : null}
+
+            <details className={cn("group mt-3 open:bg-white/80", laundryPortalInsetPanelClass)}>
+              <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-bold text-[#4d47b6] sm:px-4 sm:text-sm [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center justify-between gap-2">
+                  ข้อมูลเพิ่มเติม <span className="text-xs font-semibold text-slate-500">ไม่บังคับ</span>
+                </span>
+              </summary>
+              <div className="space-y-3 border-t border-slate-100 px-3 pb-3 pt-2 sm:px-4 sm:pb-4">
+                <label className={cn(labelClass, "text-[#66638c]")}>
+                  ที่อยู่ส่งคืน
+                  <textarea
+                    className={cn(textareaClass, "min-h-[72px]")}
+                    placeholder="ว่าง = ใช้ที่อยู่รับผ้าเดียวกัน"
+                    value={dropoff_address}
+                    onChange={(e) => setDropoffAddress(e.target.value)}
+                  />
+                </label>
+                <label className={cn(labelClass, "text-[#66638c]")}>
+                  ช่วงเวลาที่สะดวกให้ไปรับ
+                  <textarea
+                    className={cn(textareaClass, "min-h-[72px]")}
+                    placeholder="เช่น เสาร์ 9:00–12:00"
+                    value={preferred_pickup_note}
+                    onChange={(e) => setPreferredPickupNote(e.target.value)}
+                  />
+                </label>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <label className={cn(labelClass, "text-[#66638c]")}>
+                    น้ำหนักโดยประมาณ (กก.)
+                    <input
+                      className={inputClass}
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      placeholder="—"
+                      value={estimated_weight_kg}
+                      onChange={(e) => setEstimatedWeightKg(e.target.value)}
+                    />
+                  </label>
+                  <label className={cn(labelClass, "text-[#66638c]")}>
+                    จำนวนชิ้นโดยประมาณ
+                    <input
+                      className={inputClass}
+                      type="number"
+                      min={0}
+                      placeholder="—"
+                      value={estimated_item_count}
+                      onChange={(e) => setEstimatedItemCount(e.target.value)}
+                    />
+                  </label>
+                </div>
+                <label className={cn(labelClass, "text-[#66638c]")}>
+                  หมายเหตุอื่น ๆ
+                  <textarea
+                    className={cn(textareaClass, "min-h-[72px]")}
+                    placeholder="ประเภทผ้า รหัสประตู ฯลฯ"
+                    value={extra_note}
+                    onChange={(e) => setExtraNote(e.target.value)}
+                  />
+                </label>
+              </div>
+            </details>
+
+            {!blocksPackageSelection ?
+              embeddedInPortal ?
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    type="button"
+                    disabled={!canProceedContact || !hasLocation}
+                    onClick={goToServiceTab}
+                    className={cn(laundryPortalPrimaryBtnClass, "disabled:opacity-45")}
+                  >
+                    ถัดไป
+                  </button>
+                </div>
+              : <button
+                  type="button"
+                  disabled={!canProceedContact || !hasLocation}
+                  onClick={goToServiceTab}
+                  className={cn(laundryPaymentCtaClass, "mt-6 w-full min-h-[48px] disabled:opacity-45")}
+                >
+                  เลือกบริการ
+                </button>
+            : null}
+            </div>
+          </section>
+        : null}
+
+        {tab === "service" && !blocksPackageSelection ?
+          <section className={sectionWrapClass} aria-labelledby="pickup-tab-service">
+            <div className={embeddedInPortal ? sectionCardClass : undefined}>
+            <h2
+              id="pickup-tab-service"
+              className={embeddedInPortal ? "sr-only" : "sr-only"}
+            >
+              เลือกบริการ
+            </h2>
+            {packageGrid}
+            </div>
+          </section>
+        : null}
+
+        {tab === "orders" ?
+          <section className={cn(sectionWrapClass, "space-y-4")} aria-labelledby="pickup-tab-orders">
+            <h2 id="pickup-tab-orders" className={laundrySectionHeadingClass}>
+              รายการ
+            </h2>
+            {blocksPackageSelection ?
+              <div className={cn(laundryPortalInsetPanelClass, "text-center")} role="status">
+                <p className="text-sm font-black leading-snug text-[#1e1b4b]">มีคำขอที่ยังดำเนินการ</p>
+                <p className="mt-2 text-xs font-semibold leading-relaxed text-[#4d47b6]">
+                  เลือกแพ็กเกจใหม่ได้เมื่อสถานะเป็น ส่งคืนสำเร็จ หรือ ยกเลิก
+                </p>
+              </div>
+            : null}
+            {trackingToken ?
+              trackingSection
+            : <p className="text-sm font-semibold text-[#66638c]">ยังไม่มีคำขอ — กรอกข้อมูลแล้วเลือกบริการ</p>}
+          </section>
+        : null}
+      </main>
+
+      {tab === "service" && canProceedPackage && !blocksPackageSelection ?
+        <div
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur-xl",
+            embeddedInPortal
+              ? "border-white/50 bg-white/90 shadow-[0_-12px_40px_rgba(30,27,75,0.12)]"
+              : "border-slate-200 bg-white/95 shadow-[0_-8px_32px_rgba(15,23,42,0.08)]",
+          )}
+        >
+          <div
+            className={cn(
+              "mx-auto flex items-center justify-between gap-3 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+              embeddedInPortal ? "max-w-6xl sm:px-6" : "max-w-lg",
+            )}
+          >
+            <div>
+              <p className="text-xs text-[#66638c]">ยอดโดยประมาณ</p>
+              <p className="text-lg font-bold tabular-nums text-[#1e1b4b]">฿{formatBaht(totalEstimatedPrice)}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReviewOpen(true)}
+              className={cn(laundryPaymentCtaClass, "min-h-[48px] shrink-0 px-5")}
+            >
+              ตรวจสอบและชำระ
+            </button>
+          </div>
         </div>
-      </footer>
+      : null}
+
+      {reviewOpen ?
+        <div className="fixed inset-0 z-[60] flex flex-col justify-end sm:justify-center sm:p-4" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/45 backdrop-blur-[2px]"
+            aria-label="ปิด"
+            onClick={() => setReviewOpen(false)}
+          />
+          <div
+            className="relative z-10 flex max-h-[min(92dvh,720px)] w-full flex-col rounded-t-3xl border border-slate-200 bg-white shadow-2xl sm:mx-auto sm:max-w-lg sm:rounded-3xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="laundry-pickup-review-title"
+          >
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-5 sm:px-5 sm:pt-6">
+              <h2 id="laundry-pickup-review-title" className="text-lg font-bold text-slate-900">
+                สรุปรายการ
+              </h2>
+              <dl className={cn("mt-4 space-y-2 text-sm", laundryPortalInsetPanelClass)}>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-slate-500">ชื่อ</dt>
+                  <dd className="max-w-[65%] text-right font-medium text-slate-800">{customer_name.trim() || "—"}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-slate-500">เบอร์โทร</dt>
+                  <dd className="text-right font-medium tabular-nums text-slate-800">{customer_phone.trim() || "—"}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="shrink-0 text-slate-500">จุดรับผ้า</dt>
+                  <dd className="max-w-[65%] whitespace-pre-wrap text-right text-xs font-medium leading-snug text-slate-800">
+                    {pickup_address.trim() || "—"}
+                  </dd>
+                </div>
+                {selectedPkg ?
+                  <div className="flex justify-between gap-2 border-t border-slate-200/80 pt-2">
+                    <dt className="text-slate-500">แพ็กเกจ</dt>
+                    <dd className="max-w-[65%] text-right font-medium text-slate-800">
+                      {selectedPkg.name}
+                      {tiers.length > 0 && tierIndex != null && tiers[tierIndex] ?
+                        <span className="block text-xs font-semibold text-slate-500">
+                          {tiers[tierIndex].label} · ฿{formatBaht(tiers[tierIndex].price)}
+                        </span>
+                      : <span className="block text-xs font-semibold text-slate-500">฿{formatBaht(resolvedPrice)}</span>}
+                    </dd>
+                  </div>
+                : null}
+                {estimatedPickupFee != null && estimatedPickupFee > 0 ?
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-slate-500">ค่ารับ–ส่ง</dt>
+                    <dd className="font-medium tabular-nums text-slate-800">฿{formatBaht(estimatedPickupFee)}</dd>
+                  </div>
+                : null}
+                <div className="flex justify-between gap-2 border-t border-slate-200/80 pt-2">
+                  <dt className="font-semibold text-slate-700">ยอดโดยประมาณ</dt>
+                  <dd className="text-lg font-bold tabular-nums text-indigo-800">฿{formatBaht(totalEstimatedPrice)}</dd>
+                </div>
+                {payDue > 0 && payDue !== totalEstimatedPrice ?
+                  <div className="flex justify-between gap-2">
+                    <dt className="font-semibold text-indigo-700">ชำระตอนนี้</dt>
+                    <dd className="font-bold tabular-nums text-indigo-800">฿{formatBaht(payDue)}</dd>
+                  </div>
+                : null}
+              </dl>
+
+              {payDue > 0 ?
+                <>
+                  <p className="mt-3 text-xs font-medium text-slate-600">{laundryPortalSlipProofMessage(payMode)}</p>
+                  <div className="mt-3">
+                    <LaundryPublicPaymentPanel
+                      ownerId={ownerId}
+                      amountBaht={payDue}
+                      method={paymentMethod}
+                      slipUrl={paymentSlipUrl}
+                      onMethodChange={setPaymentMethod}
+                      onSlipUrlChange={setPaymentSlipUrl}
+                      disabled={loading}
+                      trialParam={trialParam}
+                    />
+                  </div>
+                </>
+              : null}
+            </div>
+            <div className="flex shrink-0 gap-2 border-t border-slate-200 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5">
+              <button
+                type="button"
+                onClick={() => setReviewOpen(false)}
+                className={cn(laundryPortalStepNavBtnClass, "min-h-[48px] flex-1")}
+              >
+                กลับ
+              </button>
+              <button
+                type="button"
+                disabled={loading || laundryPaymentSubmitBlocked(paymentMethod, payDue, paymentSlipUrl)}
+                onClick={() => void handleConfirmFromReview()}
+                className={cn(laundryPaymentCtaClass, "min-h-[48px] flex-[1.15] px-4 disabled:opacity-50")}
+              >
+                {loading ? "กำลังส่ง…" : "ยืนยันส่งคำขอ"}
+              </button>
+            </div>
+          </div>
+        </div>
+      : null}
+      {notice.popup}
     </div>
+  );
+
+  if (embeddedInPortal) {
+    return shell;
+  }
+
+  return (
+    <AppPublicCheckInGlassPage className="flex min-h-[100dvh] flex-col pb-0">
+      {shell}
     </AppPublicCheckInGlassPage>
   );
 }

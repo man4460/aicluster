@@ -9,6 +9,8 @@ import { jsonLaundrySessionError } from "@/lib/laundry/route-errors";
 import { LAUNDRY_MODULE_SLUG } from "@/lib/modules/config";
 import { resolveDataScopeForModule } from "@/lib/trial/scope";
 import { LAUNDRY_RECORDED_BY_CUSTOMER_PICKUP_QR } from "@/systems/laundry/laundry-customer-pickup-request";
+import { laundryDistanceKm, laundryPickupFeeBaht } from "@/systems/laundry/lib/pickup-distance";
+import { notifyLaundryDashboard } from "@/systems/laundry/lib/dashboard-sse";
 
 const basketTierZod = z.object({
   label: z.string().min(1).max(80).trim(),
@@ -33,11 +35,15 @@ const postSchema = z.object({
   preferred_pickup_note: z.string().max(500).optional().nullable(),
   estimated_weight_kg: z.number().min(0).max(9999.999).optional(),
   estimated_item_count: z.number().int().min(0).max(999_999).optional(),
+  pickup_lat: z.number().min(-90).max(90).optional().nullable(),
+  pickup_lng: z.number().min(-180).max(180).optional().nullable(),
   extra_note: z.string().max(500).optional().nullable(),
+  payment_method: z.enum(["CASH", "PROMPTPAY", "TRANSFER"]).optional().nullable(),
+  receipt_image_url: z.string().max(512).optional().nullable(),
 });
 
 function buildPickupNote(parsed: z.infer<typeof postSchema>): string {
-  const lines: string[] = ["คำขอรับผ้าที่บ้าน (QR)"];
+  const lines: string[] = ["คำขอบริการรับ-ส่ง (QR)"];
   const pref = parsed.preferred_pickup_note?.trim();
   if (pref) lines.push(`ช่วงเวลาที่สะดวกรับผ้า: ${pref}`);
   const parts: string[] = [];
@@ -114,6 +120,31 @@ export async function POST(req: Request) {
     const weight = parsed.data.estimated_weight_kg ?? 0;
     const items = parsed.data.estimated_item_count ?? 0;
 
+    const shopProfile = await prisma.laundryShopProfile.findUnique({
+      where: {
+        ownerUserId_trialSessionId: { ownerUserId: ownerId, trialSessionId: scope.trialSessionId },
+      },
+      select: { shopLat: true, shopLng: true, pickupFeePerKmBaht: true },
+    });
+
+    const pickupLat = parsed.data.pickup_lat ?? null;
+    const pickupLng = parsed.data.pickup_lng ?? null;
+    const shopLat = shopProfile?.shopLat != null ? Number(shopProfile.shopLat) : null;
+    const shopLng = shopProfile?.shopLng != null ? Number(shopProfile.shopLng) : null;
+    const distanceKm = laundryDistanceKm(shopLat, shopLng, pickupLat, pickupLng);
+    const pickupFee = laundryPickupFeeBaht(distanceKm, shopProfile?.pickupFeePerKmBaht ?? null);
+    if (pickupFee != null && pickupFee > 0) {
+      finalPrice += pickupFee;
+    }
+
+    const payMethod = parsed.data.payment_method?.trim() || null;
+    const slipUrl = parsed.data.receipt_image_url?.trim() || null;
+    if (payMethod === "PROMPTPAY" || payMethod === "TRANSFER") {
+      if (!slipUrl || !slipUrl.startsWith("/uploads/")) {
+        return NextResponse.json({ error: "กรุณาแนบสลิปการชำระเงิน" }, { status: 400 });
+      }
+    }
+
     const pickupPublicToken = randomUUID();
     const row = await prisma.laundryOrder.create({
       data: {
@@ -133,9 +164,15 @@ export async function POST(req: Request) {
         recordedByName: LAUNDRY_RECORDED_BY_CUSTOMER_PICKUP_QR,
         status: "PENDING_PICKUP",
         pickupPublicToken,
+        pickupLat: pickupLat != null ? new Prisma.Decimal(pickupLat) : null,
+        pickupLng: pickupLng != null ? new Prisma.Decimal(pickupLng) : null,
+        distanceKm: distanceKm != null ? new Prisma.Decimal(distanceKm) : null,
+        paymentMethod: payMethod,
+        receiptImageUrl: slipUrl,
       },
     });
 
+    notifyLaundryDashboard(ownerId);
     return NextResponse.json({
       ok: true,
       order_id: row.id,

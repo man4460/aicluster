@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useImperativeHandle, useMemo, useRef, useState, forwardRef, type ChangeEvent } from "react";
 import {
   AppCameraCaptureModal,
   AppEmptyState,
@@ -14,13 +14,19 @@ import { resolveAssetUrl } from "@/components/qr/shop-qr-template";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { prepareBuildingPosSlipImageFile } from "@/systems/building-pos/building-pos-slip-image";
-import { PopupIconButton, popupIconBtnDanger } from "@/systems/car-wash/car-wash-popup-icon-buttons";
+import {
+  assetRowEditIconButtonClass,
+  assetRowRemoveIconButtonClass,
+  IconRowEdit,
+  IconRowRemove,
+} from "@/systems/asset/components/AssetRowActionIcons";
 import {
   uploadLaundrySessionImage,
   type LaundryCostCategory,
   type LaundryCostEntry,
   type LaundryRepository,
 } from "@/systems/laundry/laundry-service";
+import { laundrySectionHeadingClass } from "@/systems/laundry/lib/ui-tokens";
 
 function isoToDatetimeLocalInput(iso: string): string {
   const d = new Date(iso);
@@ -139,19 +145,28 @@ function CostSlipAttachmentZone({
   );
 }
 
-export function LaundryCostPanel({
-  repo,
-  baseUrl,
-  categories,
-  entries,
-  onRefresh,
-}: {
-  repo: LaundryRepository;
-  baseUrl: string;
-  categories: LaundryCostCategory[];
-  entries: LaundryCostEntry[];
-  onRefresh: () => Promise<void>;
-}) {
+export type LaundryCostPanelHandle = {
+  openAddEntry: () => void;
+  openManageCategories: () => void;
+};
+
+export const LaundryCostPanel = forwardRef<
+  LaundryCostPanelHandle,
+  {
+    repo: LaundryRepository;
+    baseUrl: string;
+    categories: LaundryCostCategory[];
+    entries: LaundryCostEntry[];
+    onRefresh: () => Promise<void>;
+    /** แสดงเฉพาะโมดัล — ปุ่มเพิ่มอยู่ที่แถบเมนูภายนอก */
+    modalsOnly?: boolean;
+    /** ซ่อนแถบปุ่มหัวแผง (ยังแสดงรายการ) */
+    hideToolbar?: boolean;
+  }
+>(function LaundryCostPanel(
+  { repo, baseUrl, categories, entries, onRefresh, modalsOnly = false, hideToolbar = false },
+  ref,
+) {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -180,7 +195,6 @@ export function LaundryCostPanel({
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const [entryCameraOpen, setEntryCameraOpen] = useState(false);
   const [entryPhotoBusy, setEntryPhotoBusy] = useState(false);
-
   const lightbox = useAppImageLightbox();
 
   const sortedEntries = useMemo(
@@ -255,6 +269,15 @@ export function LaundryCostPanel({
     resetAddEntryForm();
     setShowAddEntryModal(true);
   }, [resetAddEntryForm]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      openAddEntry,
+      openManageCategories,
+    }),
+    [openAddEntry, openManageCategories],
+  );
 
   const finalizeSlipFile = useCallback(async (file: File, target: "add" | "edit") => {
     setEntryPhotoBusy(true);
@@ -393,109 +416,143 @@ export function LaundryCostPanel({
     editEntryForm?.slip_photo_url?.trim() ? resolveAssetUrl(editEntryForm.slip_photo_url, baseUrl) : null;
 
   return (
-    <div className="space-y-6">
-      {err ? <p className="text-sm text-red-600">{err}</p> : null}
+    <div className={modalsOnly ? "contents" : "space-y-6"}>
+      {!modalsOnly ?
+        <>
+          {err && !hideToolbar ? <p className="text-sm text-red-600">{err}</p> : null}
 
-      <div className="flex items-start justify-between gap-3 sm:items-center sm:gap-4">
-        <div className="min-w-0 text-xs text-slate-500">
-          <p className="text-sm font-semibold text-slate-900">ต้นทุน</p>
-          <p className="mt-0.5 text-xs font-semibold tabular-nums text-rose-700">
-            รวมทั้งสิ้น ฿{totalCostAmount.toLocaleString("en-US")}
-          </p>
-          {categories.length === 0 ?
-            <p className="mt-1 font-medium text-amber-800">สร้างหมวดก่อนจึงจะบันทึกรายการได้</p>
+          {!hideToolbar ?
+            <div className="flex items-start justify-between gap-3 sm:items-center sm:gap-4">
+              <div className="min-w-0 text-xs text-slate-500">
+                <p className="text-sm font-semibold text-slate-900">ต้นทุน</p>
+                <p className="mt-0.5 text-xs font-semibold tabular-nums text-rose-700">
+                  รวมทั้งสิ้น ฿{totalCostAmount.toLocaleString("en-US")}
+                </p>
+                {categories.length === 0 ?
+                  <p className="mt-1 font-medium text-amber-800">สร้างหมวดก่อนจึงจะบันทึกรายการได้</p>
+                : null}
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={openManageCategories}
+                  className="app-btn-primary inline-flex h-9 w-9 items-center justify-center rounded-xl p-0 text-sm font-semibold disabled:opacity-60 sm:h-auto sm:w-auto sm:gap-2 sm:px-3 sm:py-2"
+                  aria-label="จัดการหมวด"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden>
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  </svg>
+                  <span className="hidden sm:inline">จัดการหมวด</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || categories.length === 0}
+                  onClick={openAddEntry}
+                  className="app-btn-primary inline-flex h-9 w-9 items-center justify-center rounded-xl p-0 text-sm font-semibold disabled:opacity-60 sm:h-auto sm:w-auto sm:gap-2 sm:px-3 sm:py-2"
+                  aria-label="บันทึกรายการ"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  <span className="hidden sm:inline">บันทึกรายการ</span>
+                </button>
+              </div>
+            </div>
+          : err ?
+            <p className="text-sm text-red-600">{err}</p>
           : null}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={openManageCategories}
-            className="app-btn-primary inline-flex h-9 w-9 items-center justify-center rounded-xl p-0 text-sm font-semibold disabled:opacity-60 sm:h-auto sm:w-auto sm:gap-2 sm:px-3 sm:py-2"
-            aria-label="จัดการหมวด"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden>
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-            <span className="hidden sm:inline">จัดการหมวด</span>
-          </button>
-          <button
-            type="button"
-            disabled={busy || categories.length === 0}
-            onClick={openAddEntry}
-            className="app-btn-primary inline-flex h-9 w-9 items-center justify-center rounded-xl p-0 text-sm font-semibold disabled:opacity-60 sm:h-auto sm:w-auto sm:gap-2 sm:px-3 sm:py-2"
-            aria-label="บันทึกรายการ"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            <span className="hidden sm:inline">บันทึกรายการ</span>
-          </button>
-        </div>
-      </div>
 
-      <div>
-        {sortedEntries.length === 0 ?
-          <AppEmptyState>ยังไม่มีรายการต้นทุน</AppEmptyState>
-        : <div className="max-h-[min(60vh,32rem)] overflow-y-auto rounded-xl border border-slate-200 bg-white lg:border-0 lg:bg-transparent">
-            <ul className="divide-y divide-slate-100 p-1 lg:grid lg:grid-cols-4 lg:gap-3 lg:divide-y-0 lg:p-2">
-              {sortedEntries.map((e) => {
-                const slipResolved = e.slip_photo_url?.trim() ? resolveAssetUrl(e.slip_photo_url, baseUrl) : null;
-                return (
-                  <li
-                    key={e.id}
-                    className="relative overflow-hidden flex flex-col gap-2 px-3 py-2.5 sm:px-4 lg:rounded-xl lg:border lg:border-slate-200 lg:bg-white lg:px-3 lg:py-3 lg:shadow-sm"
-                  >
-                    <span
-                      aria-hidden
-                      className="absolute bottom-2 left-0 top-2 w-1 rounded-r-full bg-gradient-to-b from-[#5b61ff] via-[#8d64ff] to-[#f06dc8]"
-                    />
-                    <div className="flex min-w-0 items-start gap-3">
-                      <AppImageThumb
-                        src={slipResolved}
-                        alt="สลิป"
-                        onOpen={() => slipResolved && lightbox.open(slipResolved)}
-                        className="h-14 w-14 rounded-lg lg:h-16 lg:w-16"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs tabular-nums text-slate-500">
-                          {new Date(e.spent_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
-                        </p>
-                        <p className="font-semibold text-slate-900">
-                          {e.item_label?.trim() || "—"}
-                          <span className="ml-1.5 font-normal text-slate-500">({e.category_name})</span>
-                        </p>
-                        <p className="text-lg font-bold tabular-nums text-rose-700">฿{e.amount.toLocaleString()}</p>
-                        {e.note?.trim() ? <p className="text-xs text-slate-600">{e.note}</p> : null}
+          <div>
+            {hideToolbar ?
+              <>
+                <h3 className={laundrySectionHeadingClass}>
+                  รายจ่าย
+                  <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[#5f5a8a]">
+                    {sortedEntries.length}
+                  </span>
+                </h3>
+                <p className="mt-1 text-xs font-medium text-[#66638c]">แถวละ 1 รายการ — แก้ไขหรือลบจากปุ่มด้านขวา</p>
+              </>
+            : null}
+            {sortedEntries.length === 0 ?
+              <AppEmptyState tone="slate" className={hideToolbar ? "mt-3" : undefined}>
+                ยังไม่มีรายการต้นทุน
+              </AppEmptyState>
+            : <ul
+                className={cn(
+                  "grid list-none grid-cols-1 gap-2 p-0",
+                  hideToolbar ? "mt-3" : "mt-0",
+                  "max-h-[min(60vh,32rem)] overflow-y-auto",
+                )}
+                aria-label="รายการรายจ่าย"
+              >
+                {sortedEntries.map((e) => {
+                  const title = e.item_label?.trim() || e.category_name || "รายจ่าย";
+                  const subtitle = [e.category_name, e.note?.trim()].filter(Boolean).join(" · ");
+                  const slipResolved = e.slip_photo_url?.trim()
+                    ? resolveAssetUrl(e.slip_photo_url, baseUrl)
+                    : null;
+                  return (
+                    <li
+                      key={e.id}
+                      className="rounded-lg border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm sm:px-4 sm:py-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                          <AppImageThumb
+                            src={slipResolved}
+                            alt="สลิปรายจ่าย"
+                            emptyLabel="ไม่มีสลิป"
+                            onOpen={() => slipResolved && lightbox.open(slipResolved)}
+                            className="h-14 w-14 shrink-0 rounded-lg sm:h-16 sm:w-16"
+                          />
+                          <div className="min-w-0 flex-1 text-left">
+                            <p className="text-sm font-bold text-[#1e1b4b]">{title}</p>
+                            {subtitle ?
+                              <p className="mt-0.5 truncate text-xs text-[#5f5a8a]">{subtitle}</p>
+                            : null}
+                            <p className="mt-1 text-[11px] text-[#66638c]">
+                              {new Date(e.spent_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
+                              {` · #${e.id}`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <p className="mr-1 text-base font-black tabular-nums text-rose-600 sm:text-lg">
+                            ฿{e.amount.toLocaleString("th-TH")}
+                          </p>
+                          <button
+                            type="button"
+                            className={assetRowEditIconButtonClass}
+                            aria-label={`แก้ไขรายจ่าย #${e.id}`}
+                            title="แก้ไข"
+                            disabled={busy}
+                            onClick={() => openEditEntry(e)}
+                          >
+                            <IconRowEdit className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            className={assetRowRemoveIconButtonClass}
+                            aria-label={`ลบรายจ่าย #${e.id}`}
+                            title="ลบ"
+                            disabled={busy}
+                            onClick={() => void removeEntry(e)}
+                          >
+                            <IconRowRemove className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex shrink-0 justify-end gap-1 border-t border-slate-100 pt-2">
-                      <PopupIconButton label="แก้ไขรายการ" disabled={busy} onClick={() => openEditEntry(e)}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" aria-hidden>
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                        </svg>
-                      </PopupIconButton>
-                      <PopupIconButton
-                        label="ลบรายการ"
-                        disabled={busy}
-                        className={popupIconBtnDanger}
-                        onClick={() => void removeEntry(e)}
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" aria-hidden>
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        </svg>
-                      </PopupIconButton>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                    </li>
+                  );
+                })}
+              </ul>
+            }
           </div>
-        }
-      </div>
+        </>
+      : null}
 
       <FormModal
         open={manageCategoriesOpen}
@@ -635,6 +692,22 @@ export function LaundryCostPanel({
         }
       >
         <div className="space-y-6">
+          {err ? <p className="text-sm text-red-600">{err}</p> : null}
+          {categories.length === 0 ?
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+              <p className="font-semibold">ยังไม่มีหมวดรายจ่าย</p>
+              <button
+                type="button"
+                className="mt-1 text-sm font-bold text-[#4d47b6] underline"
+                onClick={() => {
+                  setShowAddEntryModal(false);
+                  openManageCategories();
+                }}
+              >
+                จัดการหมวดก่อน
+              </button>
+            </div>
+          : null}
           <CostSlipAttachmentZone
             slipUrl={entrySlipUrl}
             onSlipUrlChange={setEntrySlipUrl}
@@ -692,22 +765,14 @@ export function LaundryCostPanel({
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">จำนวนเงิน (บาท)</label>
-              <div className="relative">
-                {!entryAmount && (
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-rose-500">฿</span>
-                )}
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  className={cn(
-                    "w-full rounded-xl border-slate-200 bg-white pr-4 py-2.5 text-lg font-black tabular-nums text-rose-600 focus:ring-rose-500 transition-all",
-                    entryAmount ? "pl-4" : "pl-10"
-                  )}
-                  placeholder="0.00"
-                  value={entryAmount}
-                  onChange={(ev) => setEntryAmount(ev.target.value)}
-                />
-              </div>
+              <input
+                type="text"
+                inputMode="decimal"
+                className="w-full rounded-xl border-slate-200 bg-white px-3 py-2.5 text-lg font-black tabular-nums text-rose-600 focus:ring-rose-500"
+                placeholder="0"
+                value={entryAmount}
+                onChange={(ev) => setEntryAmount(ev.target.value)}
+              />
             </div>
           </div>
 
@@ -808,22 +873,14 @@ export function LaundryCostPanel({
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">จำนวนเงิน (บาท)</label>
-                <div className="relative">
-                  {!editEntryForm.amount && (
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-rose-500">฿</span>
-                  )}
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    className={cn(
-                      "w-full rounded-xl border-slate-200 bg-white pr-4 py-2.5 text-lg font-black tabular-nums text-rose-600 focus:ring-rose-500",
-                      editEntryForm.amount ? "pl-4" : "pl-10",
-                    )}
-                    placeholder="0.00"
-                    value={editEntryForm.amount}
-                    onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, amount: ev.target.value } : s))}
-                  />
-                </div>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  className="w-full rounded-xl border-slate-200 bg-white px-3 py-2.5 text-lg font-black tabular-nums text-rose-600 focus:ring-rose-500"
+                  placeholder="0"
+                  value={editEntryForm.amount}
+                  onChange={(ev) => setEditEntryForm((s) => (s ? { ...s, amount: ev.target.value } : s))}
+                />
               </div>
             </div>
 
@@ -841,7 +898,9 @@ export function LaundryCostPanel({
         ) : null}
       </FormModal>
 
-      <AppImageLightbox src={lightbox.src} alt="สลิปต้นทุน" onClose={lightbox.close} />
+      <AppImageLightbox src={lightbox.src} alt="สลิปรายจ่าย" onClose={lightbox.close} />
     </div>
   );
-}
+});
+
+LaundryCostPanel.displayName = "LaundryCostPanel";

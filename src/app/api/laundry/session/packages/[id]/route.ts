@@ -11,6 +11,7 @@ import {
   LAUNDRY_DURATION_HOURS_MIN,
   roundLaundryDurationHours,
 } from "@/systems/laundry/laundry-duration-hours";
+import { notifyLaundryDashboard } from "@/systems/laundry/lib/dashboard-sse";
 
 const pricingModelZod = z.enum(["PER_KG", "PER_ITEM", "FLAT"]);
 
@@ -39,6 +40,7 @@ const patchSchema = z.object({
   pricing_model: pricingModelZod.optional(),
   base_price: z.number().int().min(0).max(9_999_999).optional(),
   duration_hours: durationHoursZod.optional(),
+  total_sessions: z.number().int().min(1).max(9999).optional(),
   description: z.string().max(800).optional().nullable(),
   is_active: z.boolean().optional(),
   image_url: z.union([z.string().max(500), z.null()]).optional(),
@@ -89,6 +91,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
             durationHours: new Prisma.Decimal(String(roundLaundryDurationHours(parsed.data.duration_hours))),
           }
         : {}),
+        ...(parsed.data.total_sessions != null ? { totalSessions: parsed.data.total_sessions } : {}),
         ...(parsed.data.description !== undefined ? { description: parsed.data.description?.trim() ?? "" } : {}),
         ...(parsed.data.is_active != null ? { isActive: parsed.data.is_active } : {}),
         ...(parsed.data.image_url !== undefined ?
@@ -109,6 +112,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         : {}),
       },
     });
+    notifyLaundryDashboard(own.ownerId);
     return NextResponse.json({
       package: {
         id: updated.id,
@@ -116,6 +120,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         pricing_model: updated.pricingModel,
         base_price: updated.basePrice,
         duration_hours: Number(updated.durationHours),
+        total_sessions: updated.totalSessions,
         description: updated.description,
         is_active: updated.isActive,
         image_url: updated.imageUrl ?? null,
@@ -144,6 +149,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     });
     if (!row) return NextResponse.json({ ok: false });
     await prisma.laundryPackage.delete({ where: { id: row.id } });
+    notifyLaundryDashboard(own.ownerId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return jsonLaundrySessionError(e, "laundry/session/packages/[id] DELETE");

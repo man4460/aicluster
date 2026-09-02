@@ -27,6 +27,7 @@ function defaultCreateDraft() {
     draftImageUrl: "",
     draftTiers: [{ label: "ตะกร้า S", price: base }] as LaundryBasketTier[],
     draftActive: true,
+    draftTotalSessions: "1",
   };
 }
 
@@ -58,6 +59,7 @@ export function LaundryPackageEditorModal({
   const [draftImageUrl, setDraftImageUrl] = useState("");
   const [draftTiers, setDraftTiers] = useState<LaundryBasketTier[]>([{ label: "ตะกร้า S", price: 45 }]);
   const [draftActive, setDraftActive] = useState(true);
+  const [draftTotalSessions, setDraftTotalSessions] = useState("1");
 
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
@@ -78,6 +80,7 @@ export function LaundryPackageEditorModal({
         : [{ label: "ตะกร้า S", price: editingPackage.base_price }],
       );
       setDraftActive(editingPackage.is_active);
+      setDraftTotalSessions(String(Math.max(1, editingPackage.total_sessions ?? 1)));
     } else {
       const d = defaultCreateDraft();
       setDraftName(d.draftName);
@@ -88,6 +91,7 @@ export function LaundryPackageEditorModal({
       setDraftImageUrl(d.draftImageUrl);
       setDraftTiers(d.draftTiers);
       setDraftActive(d.draftActive);
+      setDraftTotalSessions(d.draftTotalSessions);
     }
   }, [open, editingPackage]);
 
@@ -127,6 +131,11 @@ export function LaundryPackageEditorModal({
     const cleanedTiers = draftTiers
       .map((t) => ({ label: t.label.trim(), price: Math.round(Number(t.price)) }))
       .filter((t) => t.label.length > 0 && Number.isFinite(t.price) && t.price >= 0);
+    const totalSessions = Math.trunc(Number(draftTotalSessions));
+    if (!Number.isInteger(totalSessions) || totalSessions < 1 || totalSessions > 9999) {
+      setErr("จำนวนครั้งต้องเป็นเลขจำนวนเต็ม 1–9999");
+      return;
+    }
 
     setSaving(true);
     setErr("");
@@ -139,6 +148,7 @@ export function LaundryPackageEditorModal({
         pricing_model: draftPricingModel,
         base_price: Math.round(base),
         duration_hours: durHours,
+        total_sessions: totalSessions,
         description: descTrim,
         is_active: draftActive,
         image_url: imgTrim.length > 0 ? imgTrim.slice(0, 500) : null,
@@ -269,6 +279,20 @@ export function LaundryPackageEditorModal({
           <label className="flex cursor-pointer items-center gap-2 pt-6 text-xs font-semibold text-[#2e2a58]">
             <input type="checkbox" checked={draftActive} onChange={(e) => setDraftActive(e.target.checked)} />
             เปิดใช้บนการ์ด POS
+          </label>
+          <label className="text-xs font-semibold text-[#66638c]">
+            จำนวนครั้งในแพ็ก
+            <input
+              className="app-input mt-1 w-full rounded-xl px-3 py-2 text-sm tabular-nums"
+              type="number"
+              min={1}
+              max={9999}
+              value={draftTotalSessions}
+              onChange={(e) => setDraftTotalSessions(e.target.value)}
+            />
+            <span className="mt-1 block text-[10px] font-normal leading-snug text-slate-500">
+              1 = รายครั้ง · มากกว่า 1 = เหมาซัก N ครั้ง (ขายเป็นสมาชิกแพ็ก)
+            </span>
           </label>
         </div>
 

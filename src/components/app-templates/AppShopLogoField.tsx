@@ -15,6 +15,9 @@ export type AppShopLogoFieldProps = {
   onLogoUrlChange: (url: string) => void;
   className?: string;
   labels?: { gallery?: string; camera?: string };
+  buttonClassName?: string;
+  galleryButtonClassName?: string;
+  cameraButtonClassName?: string;
 };
 
 export function AppShopLogoField({
@@ -24,6 +27,9 @@ export function AppShopLogoField({
   onLogoUrlChange,
   className,
   labels,
+  buttonClassName,
+  galleryButtonClassName,
+  cameraButtonClassName,
 }: AppShopLogoFieldProps) {
   const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -98,6 +104,9 @@ export function AppShopLogoField({
           onPickGallery={() => galleryRef.current?.click()}
           onPickCamera={() => openCamera((file) => void upload(file))}
           labels={{ gallery: labels?.gallery ?? "เลือกโลโก้", camera: labels?.camera ?? "ถ่ายโลโก้" }}
+          buttonClassName={buttonClassName}
+          galleryButtonClassName={galleryButtonClassName}
+          cameraButtonClassName={cameraButtonClassName}
         />
         {err ? <p className="mt-1 text-xs text-rose-600">{err}</p> : null}
       </div>

@@ -10,7 +10,7 @@ import { LaundryPickupPublicClient } from "@/systems/laundry/components/LaundryP
 type Props = { params: Promise<{ ownerId: string }> };
 
 export const metadata: Metadata = {
-  title: "ขอรับผ้าที่บ้าน",
+  title: "ขอบริการรับ-ส่ง",
   robots: { index: false, follow: false },
 };
 

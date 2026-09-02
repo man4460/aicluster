@@ -8,6 +8,7 @@ import {
 import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { LaundryDashboardHeaderToolbar } from "@/systems/laundry/components/LaundryDashboardHeaderToolbar";
+import { LaundryRefreshButton } from "@/systems/laundry/components/LaundryRefreshButton";
 import { LaundryOrderCard } from "@/systems/laundry/components/LaundryOrderCard";
 import { LaundryOrderPrintModal } from "@/systems/laundry/components/LaundryOrderPrintModal";
 import { LaundryPaymentPanel } from "@/systems/laundry/components/LaundryPaymentPanel";
@@ -19,8 +20,10 @@ import {
   laundryDashboardSegmentShellClass,
   laundryOffersTabSegmentShellClass,
   laundryPanelClass,
+  laundryStaffPlainPanelClass,
   laundryPanelDividerClass,
   laundryPanelSectionClass,
+  laundryStaffPanelSectionClass,
   laundryPaymentCtaClass,
   laundrySectionHeadingClass,
   laundrySubtitleClass,
@@ -74,6 +77,7 @@ export function LaundryOrdersPosClient({
   fixedLane,
   shopLabel,
   logoUrl,
+  staffQrLanding = false,
 }: {
   orders: LaundryOrder[];
   packages: LaundryPackage[];
@@ -91,6 +95,7 @@ export function LaundryOrdersPosClient({
   fixedLane?: "pos" | "pickup";
   shopLabel?: string;
   logoUrl?: string | null;
+  staffQrLanding?: boolean;
 }) {
   const { profile: shopPrint } = useLaundryShopPrintProfile({ shopLabel, logoUrl });
   const [printOrder, setPrintOrder] = useState<LaundryOrder | null>(null);
@@ -435,83 +440,80 @@ export function LaundryOrdersPosClient({
 
   const headerTitle =
     fixedLane === "pickup" ? "คิวสั่งออนไลน์" : fixedLane === "pos" ? "ออเดอร์หน้าร้าน" : "ออเดอร์";
-  const headerDesc =
-    fixedLane === "pickup" ? "คำขอจากลิงก์ลูกค้า" : fixedLane === "pos" ? "เลือกแพ็ก · ชำระเงิน" : undefined;
+  const headerDesc = staffQrLanding
+    ? undefined
+    : fixedLane === "pickup"
+      ? "คำขอจากลิงก์ลูกค้า"
+      : fixedLane === "pos"
+        ? "เลือกแพ็ก · ชำระเงิน"
+        : undefined;
+
+  const orderListGridClass = laundryOrderCardListGridClass;
+  const panelSection = staffQrLanding ? laundryStaffPanelSectionClass : laundryPanelSectionClass;
 
   return (
-    <div className={cn(laundryPanelClass, "min-w-0")}>
-      <div className={laundryPanelSectionClass}>
-        <div className="flex flex-nowrap items-center justify-between gap-2 sm:gap-3">
-          <div className="min-w-0 shrink">
-            <h2 className="truncate text-base font-bold text-[#1e1b4b] sm:text-lg">{headerTitle}</h2>
-            {headerDesc ?
-              <p className={laundrySubtitleClass}>{headerDesc}</p>
-            : null}
-          </div>
-          <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
-            {fixedLane ? <LaundryDashboardHeaderToolbar /> : null}
-            <button
-              type="button"
-              onClick={() => void onRefresh()}
-              disabled={refreshing}
-              aria-busy={refreshing}
-              aria-label={refreshing ? "กำลังรีเฟรชออเดอร์" : "รีเฟรชออเดอร์"}
-              title="รีเฟรช"
-              className={cn(
-                appTemplateOutlineButtonClass,
-                "inline-flex h-7 w-7 min-h-7 min-w-7 shrink-0 items-center justify-center p-0 sm:h-8 sm:w-8 sm:min-h-8 sm:min-w-8",
-              )}
-            >
-              <svg
-                className={cn("h-3.5 w-3.5", refreshing && "animate-spin")}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.2}
-                aria-hidden
-              >
-                <path d="M20 11a8 8 0 1 0 2.3 5.6M20 4v7h-7" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
-        </div>
+    <div className={cn(staffQrLanding ? laundryStaffPlainPanelClass : laundryPanelClass, "min-w-0")}>
+      {!staffQrLanding || !fixedLane ?
+        <div className={panelSection}>
+          {!staffQrLanding ?
+            <div className="flex flex-nowrap items-center justify-between gap-2 sm:gap-3">
+              <div className="min-w-0 shrink">
+                <h2 className="truncate text-base font-bold text-[#1e1b4b] sm:text-lg">{headerTitle}</h2>
+                {headerDesc ?
+                  <p className={laundrySubtitleClass}>{headerDesc}</p>
+                : null}
+              </div>
+              <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
+                {fixedLane ?
+                  <LaundryDashboardHeaderToolbar hideSubNav={staffQrLanding} staffQrLanding={staffQrLanding} />
+                : null}
+                <LaundryRefreshButton
+                  refreshing={refreshing}
+                  onClick={() => void onRefresh()}
+                  ariaLabel="รีเฟรชออเดอร์"
+                  title="รีเฟรชออเดอร์"
+                />
+              </div>
+            </div>
+          : null}
 
-      {!fixedLane ?
-        <div className={cn(laundryOffersTabSegmentShellClass, "mt-3 w-full")}>
-          <div className={cn(laundryDashboardSegmentShellClass, "w-full")} role="tablist" aria-label="ประเภทออเดอร์">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={lane === "pos"}
-              onClick={() => setLaneState("pos")}
-              className={cn(laundryDashboardSegmentBtnClass(lane === "pos"), "flex-1 sm:flex-initial sm:px-4")}
-            >
-              หน้าร้าน (POS)
-              {walkInOrders.length > 0 ?
-                <span className="ml-1 rounded-full bg-indigo-600/15 px-1.5 py-0.5 text-[10px] tabular-nums">{walkInOrders.length}</span>
-              : null}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={lane === "pickup"}
-              onClick={() => setLaneState("pickup")}
-              className={cn(laundryDashboardSegmentBtnClass(lane === "pickup"), "flex-1 sm:flex-initial sm:px-4")}
-            >
-              คิวรับที่บ้าน
-              {pickupOrders.length > 0 ?
-                <span className="ml-1 rounded-full bg-sky-600/15 px-1.5 py-0.5 text-[10px] tabular-nums text-sky-900">
-                  {pickupOrders.length}
-                </span>
-              : null}
-            </button>
-          </div>
+          {!fixedLane ?
+            <div className={cn(laundryOffersTabSegmentShellClass, staffQrLanding ? "w-full" : "mt-3 w-full")}>
+              <div className={cn(laundryDashboardSegmentShellClass, "w-full")} role="tablist" aria-label="ประเภทออเดอร์">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={lane === "pos"}
+                  onClick={() => setLaneState("pos")}
+                  className={cn(laundryDashboardSegmentBtnClass(lane === "pos"), "flex-1 sm:flex-initial sm:px-4")}
+                >
+                  หน้าร้าน (POS)
+                  {walkInOrders.length > 0 ?
+                    <span className="ml-1 rounded-full bg-indigo-600/15 px-1.5 py-0.5 text-[10px] tabular-nums">{walkInOrders.length}</span>
+                  : null}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={lane === "pickup"}
+                  onClick={() => setLaneState("pickup")}
+                  className={cn(laundryDashboardSegmentBtnClass(lane === "pickup"), "flex-1 sm:flex-initial sm:px-4")}
+                >
+                  คิวรับที่บ้าน
+                  {pickupOrders.length > 0 ?
+                    <span className="ml-1 rounded-full bg-sky-600/15 px-1.5 py-0.5 text-[10px] tabular-nums text-sky-900">
+                      {pickupOrders.length}
+                    </span>
+                  : null}
+                </button>
+              </div>
+            </div>
+          : null}
         </div>
       : null}
-      </div>
 
       {lane === "pos" ?
-        <div className={cn(laundryPanelSectionClass, laundryPanelDividerClass)}>
+        <div className={cn(panelSection, laundryPanelDividerClass)}>
           <div className="grid min-h-0 gap-0 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)] lg:divide-x lg:divide-slate-200/80">
             <aside className="hidden min-h-0 flex-col p-4 lg:flex lg:max-h-[calc(100vh-18rem)] lg:overflow-y-auto">
               <p className={cn(laundrySectionHeadingClass, "mb-3")}>
@@ -551,46 +553,16 @@ export function LaundryOrdersPosClient({
               </button>
             </div>
           : null}
-
-          <div className={cn("space-y-3", laundryPanelDividerClass, "border-t pt-4")}>
-            <h3 className={laundrySectionHeadingClass}>
-              <svg viewBox="0 0 24 24" className="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-                <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
-              </svg>
-              งานหน้าร้านค้าง ({walkInOrders.length})
-            </h3>
-            {loading ?
-              <p className="text-xs text-[#66638c]">กำลังโหลด…</p>
-            : walkInOrders.length === 0 ?
-              <AppEmptyState tone="violet">ยังไม่มีงานหน้าร้านค้าง — รับผ้าจาก POS ด้านบน</AppEmptyState>
-            : <ul className={laundryOrderCardListGridClass}>
-                {walkInOrders.map((o) => (
-                  <li key={o.id} className="min-h-0 min-w-0">
-                    <LaundryOrderCard
-                      order={o}
-                      tone="violet"
-                      showStatusSelect
-                      onView={() => onViewOrder(o)}
-                      onEdit={() => onEditOrder(o)}
-                      onDelete={() => void onDeleteOrder(o)}
-                      onPrint={() => setPrintOrder(o)}
-                      onStatusChange={onStatusChange}
-                    />
-                  </li>
-                ))}
-              </ul>
-            }
-          </div>
         </div>
       : null}
 
       {lane === "pickup" ?
-        <div className={cn(laundryPanelSectionClass, laundryPanelDividerClass)}>
+        <div className={cn(panelSection, laundryPanelDividerClass)}>
           {loading ?
             <p className="text-xs text-[#66638c]">กำลังโหลด…</p>
           : pickupOrders.length === 0 ?
             <AppEmptyState tone="violet">ไม่มีคิวรับที่บ้านค้าง — แชร์ลิงก์ลูกค้าใน ตั้งค่า → ลิงก์ QR</AppEmptyState>
-          : <ul className={laundryOrderCardListGridClass}>
+          : <ul className={orderListGridClass}>
               {pickupOrders.map((o) => (
                 <li key={o.id} className="min-h-0 min-w-0">
                   <LaundryOrderCard
@@ -598,6 +570,7 @@ export function LaundryOrdersPosClient({
                     tone="slate"
                     showStatusSelect
                     showOrderedAt
+                    compact={staffQrLanding}
                     onView={() => onViewOrder(o)}
                     onEdit={() => onEditOrder(o)}
                     onDelete={() => void onDeleteOrder(o)}

@@ -16,6 +16,14 @@ export function isLaundryCostTableMissingP2021(err: unknown): boolean {
   return t === "laundry_cost_categories" || t === "laundry_cost_entries";
 }
 
+/** DB ยังไม่รัน migration ตารางรายรับซักผ้า — GET จะคืนค่าว่างแทน 500 */
+export function isLaundryRevenueTableMissingP2021(err: unknown): boolean {
+  if (!(err instanceof Prisma.PrismaClientKnownRequestError) || err.code !== "P2021") return false;
+  const meta = err.meta as { table?: string } | undefined;
+  const t = meta?.table;
+  return t === "laundry_revenue_categories" || t === "laundry_revenue_entries";
+}
+
 export function formatLaundrySessionDbError(err: unknown): string {
   if (isPrismaSchemaMismatchError(err)) return PRISMA_SYNC_HINT_TH;
   if (isPrismaClientValidationSyncError(err)) return PRISMA_GENERATE_HINT_TH;

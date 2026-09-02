@@ -6,8 +6,10 @@ import { requireSession } from "@/lib/api-auth";
 import { normalizePhone } from "@/lib/car-wash/http";
 import { laundryOwnerFromAuth } from "@/lib/laundry/api-owner";
 import { laundryOrderStatusZod, normalizeLaundryOrderStatus } from "@/lib/laundry/order-status";
+import { isLaundryPaymentMethod } from "@/systems/laundry/lib/payment-method";
 import { jsonLaundrySessionError } from "@/lib/laundry/route-errors";
 import { getLaundryDataScope } from "@/lib/trial/module-scopes";
+import { notifyLaundryDashboard } from "@/systems/laundry/lib/dashboard-sse";
 
 const postSchema = z.object({
   customer_name: z.string().max(160).optional().nullable(),
@@ -24,6 +26,8 @@ const postSchema = z.object({
   recorded_by_name: z.string().max(160).optional().nullable(),
   order_at: z.string().datetime().optional(),
   status: laundryOrderStatusZod.optional(),
+  payment_method: z.string().max(24).optional().nullable(),
+  receipt_image_url: z.string().max(512).optional().nullable(),
 });
 
 function orderJson(row: {
@@ -42,6 +46,9 @@ function orderJson(row: {
   note: string;
   recordedByName: string;
   status: string;
+  distanceKm: Prisma.Decimal | null;
+  paymentMethod: string | null;
+  receiptImageUrl: string | null;
 }) {
   return {
     id: row.id,
@@ -59,6 +66,9 @@ function orderJson(row: {
     note: row.note,
     recorded_by_name: row.recordedByName,
     status: normalizeLaundryOrderStatus(row.status),
+    distance_km: row.distanceKm != null ? Number(row.distanceKm) : null,
+    payment_method: row.paymentMethod,
+    receipt_image_url: row.receiptImageUrl,
   };
 }
 
@@ -113,6 +123,12 @@ export async function POST(req: Request) {
       if (!pkg) return NextResponse.json({ error: "ไม่พบแพ็กเกจ" }, { status: 400 });
     }
 
+    const paymentMethod =
+      parsed.data.payment_method != null && isLaundryPaymentMethod(parsed.data.payment_method) ?
+        parsed.data.payment_method
+      : null;
+    const receiptUrl = parsed.data.receipt_image_url?.trim() || null;
+
     const row = await prisma.laundryOrder.create({
       data: {
         ownerUserId: own.ownerId,
@@ -131,9 +147,12 @@ export async function POST(req: Request) {
         note: parsed.data.note?.trim() ?? "",
         recordedByName: parsed.data.recorded_by_name?.trim() ?? "",
         status,
+        ...(paymentMethod != null ? { paymentMethod } : {}),
+        ...(receiptUrl ? { receiptImageUrl: receiptUrl } : {}),
       },
     });
 
+    notifyLaundryDashboard(own.ownerId);
     return NextResponse.json({ order: orderJson(row) });
   } catch (e) {
     return jsonLaundrySessionError(e, "laundry/session/orders POST");

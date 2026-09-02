@@ -1,7 +1,6 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { cn } from "@/lib/cn";
 import { appTemplatePickGalleryImageButtonClass, appTemplateTakePhotoButtonClass } from "./dashboard-tokens";
 
 export type AppPickGalleryImageButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className"> & {
@@ -17,7 +16,7 @@ export function AppPickGalleryImageButton({
   ...props
 }: AppPickGalleryImageButtonProps) {
   return (
-    <button type={type} className={cn(appTemplatePickGalleryImageButtonClass, className)} {...props}>
+    <button type={type} className={className ?? appTemplatePickGalleryImageButtonClass} {...props}>
       {children}
     </button>
   );
@@ -36,7 +35,7 @@ export function AppTakePhotoButton({
   ...props
 }: AppTakePhotoButtonProps) {
   return (
-    <button type={type} className={cn(appTemplateTakePhotoButtonClass, className)} {...props}>
+    <button type={type} className={className ?? appTemplateTakePhotoButtonClass} {...props}>
       {children}
     </button>
   );

@@ -122,8 +122,8 @@ export function LaundryRecordOrderModal({
       await repo.createOrder({
         customer_name: nickname.trim(),
         customer_phone: customerPhone.trim(),
-        pickup_address: "-",
-        dropoff_address: "-",
+        pickup_address: "หน้าร้าน",
+        dropoff_address: "หน้าร้าน",
         service_type: tier ? `${selectedPkg.name} (${tier.label})` : selectedPkg.name,
         package_id: selectedPkg.id,
         package_name: selectedPkg.name,
@@ -132,6 +132,7 @@ export function LaundryRecordOrderModal({
         final_price: resolvedPrice,
         note: "",
         recorded_by_name: recorderDisplayName,
+        status: "PICKED_UP",
       });
       await onSaved();
       onClose();

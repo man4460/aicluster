@@ -74,7 +74,7 @@ alwaysApply: false
 | โมดูล | ไฟล์ |
 |-------|------|
 | คาร์แคร์ | `CarWashSettingsClient.tsx` · `CarWashPortalMediaSettings.tsx` · `CarWashShopHoursPanel.tsx` |
-| ร้านตัดผม | `BarberShopSettingsClient.tsx` · `BarberPortalMediaSettings.tsx` |
+| ซักผ้า | `LaundrySettingsClient.tsx` · `LaundryPortalMediaSettings.tsx` |
 | UX พอร์ทัลลูกค้า | `module-customer-booking-website-portal.mdc` · `shop-customer-qr-portal.mdc` |
 
 ## เช็กลิสต์

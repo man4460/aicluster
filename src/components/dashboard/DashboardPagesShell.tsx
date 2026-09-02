@@ -27,6 +27,7 @@ const WIDE_MODULE_PREFIXES = [
   "/dashboard/admin",
   "/dashboard/car-wash",
   "/dashboard/laundry",
+  "/dashboard/club-event",
   "/dashboard/massage",
   "/dashboard/spa",
   "/dashboard/rental",
@@ -62,6 +63,7 @@ const WIDE_MODULE_PREFIXES = [
 /** Module paths ที่มี bottom dock — บังคับ !px-0 (ซ้ำกับ WIDE ได้ — กันพลาด) */
 const DOCKED_MODULE_PREFIXES = [
   "/dashboard/laundry",
+  "/dashboard/club-event",
   "/dashboard/massage",
   "/dashboard/parking",
   "/dashboard/car-wash",

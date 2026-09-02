@@ -24,6 +24,7 @@ import { seedVillageProdDemoForOwner } from "../src/lib/trial/seed-village";
 import { seedHomeFinanceProdDemoForOwner } from "../src/lib/trial/seed-home-finance";
 import {
   seedLaundryProdDemoForOwner,
+  seedLaundryDemoForAllSubscribers,
   seedMqttProdDemoForOwner,
 } from "../src/lib/trial/seed-mqtt-laundry";
 import { seedVaultProdDemoForOwner } from "../src/lib/trial/seed-vault";
@@ -53,6 +54,7 @@ import {
   ECOMMERCE_STORE_MODULE_SLUG,
   SMART_POLICE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
+  CLUB_EVENT_MODULE_SLUG,
   LOYALTY_STAMP_MODULE_SLUG,
   MEDIA_REGISTRY_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
@@ -377,6 +379,14 @@ async function main() {
       sortOrder: 35,
     },
     {
+      slug: "club-event",
+      title: "บริหารชมรม",
+      description:
+        "กลุ่ม 1 (Basic) — กิจกรรม สมาชิก การเงิน ทรัพย์สิน และเว็บสาธารณะ /club/[slug]",
+      groupId: 1,
+      sortOrder: 36,
+    },
+    {
       slug: "smart-police",
       title: "Smart Police (สำนวนคดี)",
       description:
@@ -496,6 +506,7 @@ async function main() {
     HOME_FINANCE_BASIC_MODULE_SLUG,
     MQTT_SERVICE_MODULE_SLUG,
     LAUNDRY_MODULE_SLUG,
+    CLUB_EVENT_MODULE_SLUG,
     VAULT_MODULE_SLUG,
     INVENTORY_MODULE_SLUG,
     GENERAL_STORE_POS_MODULE_SLUG,
@@ -762,7 +773,8 @@ async function main() {
     }
   }
 
-  /** รับฝากซักผ้า — แพ็กตัวอย่าง */
+  /** รับฝากซักผ้า — แพ็กตัวอย่าง (ทุกบัญชีที่ subscribe + demo emails) */
+  await tryDemoSeed("laundry (subscribers)", () => seedLaundryDemoForAllSubscribers(prisma));
   for (const email of demoSeedDataOwnerEmails) {
     const row = await prisma.user.findUnique({
       where: { email },
@@ -771,6 +783,13 @@ async function main() {
     if (row) {
       await tryDemoSeed(`laundry (${email})`, () => seedLaundryProdDemoForOwner(prisma, row.id));
     }
+  }
+  const adminRow = await prisma.user.findUnique({
+    where: { email: "admin@mawell.local" },
+    select: { id: true },
+  });
+  if (adminRow) {
+    await tryDemoSeed("laundry (admin)", () => seedLaundryProdDemoForOwner(prisma, adminRow.id));
   }
 
   /** คลังรหัสผ่าน — ตัวอย่าง 13 รายการ (Google, Facebook, LINE, GitHub ฯลฯ) */

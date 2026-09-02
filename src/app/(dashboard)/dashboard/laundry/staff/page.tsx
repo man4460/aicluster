@@ -5,7 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { getQrLaundryBranding } from "@/lib/profile/qr-branding";
 import { getLaundryDataScope } from "@/lib/trial/module-scopes";
 import { LaundryDashboard } from "@/systems/laundry/LaundryDashboard";
+import { LaundryStaffClient } from "@/systems/laundry/components/LaundryStaffClient";
 
+/** เป้าหมายของ QR พนักงาน — เมนูแดชบอร์ดย่อยเท่านั้น (ภาพรวม · ออเดอร์ · คิวสั่งออนไลน์) · รหัสรายวันถ้าตั้งไว้ */
 export default async function LaundryStaffPage() {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -20,15 +22,21 @@ export default async function LaundryStaffPage() {
   ]);
   const recorderDisplayName = userRow?.fullName?.trim() || userRow?.username || session.username;
   return (
-    <LaundryDashboard
+    <LaundryStaffClient
       shopLabel={branding.label}
-      logoUrl={branding.logoUrl}
-      baseUrl={baseUrl}
-      ownerUserId={session.sub}
-      recorderDisplayName={recorderDisplayName}
-      trialSessionId={scope.trialSessionId}
-      isTrialSandbox={scope.isTrialSandbox}
-      layoutVariant="staff_lane"
+      ownerId={session.sub}
+      dashboard={
+        <LaundryDashboard
+          shopLabel={branding.label}
+          logoUrl={branding.logoUrl}
+          baseUrl={baseUrl}
+          ownerUserId={session.sub}
+          recorderDisplayName={recorderDisplayName}
+          trialSessionId={scope.trialSessionId}
+          isTrialSandbox={scope.isTrialSandbox}
+          layoutVariant="staff_lane"
+        />
+      }
     />
   );
 }

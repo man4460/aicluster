@@ -10,8 +10,8 @@ export const laundryDashboardCardGridClass =
 export const laundryOrderCardListGridClass =
   "grid auto-rows-fr list-none grid-cols-1 items-stretch gap-2.5 p-0 sm:grid-cols-2 sm:gap-3 xl:grid-cols-3";
 
-/** หน้า QR พนักงาน — หนึ่งการ์ดต่อแถวทุก breakpoint (เหมือนมือถือ ไม่จัด 2 คอลัมน์บนจอใหญ่) */
-export const laundryStaffQrLandingCardGridClass = "grid grid-cols-1 gap-2 sm:gap-3";
+/** หน้า QR พนักงาน — เหมือนกริดรายการงานแดชบอร์ด (มือถือ 1 · sm 2 · xl 3 คอลัมน์) */
+export const laundryStaffQrLandingCardGridClass = laundryOrderCardListGridClass;
 
 /**
  * กริด **การ์ดสถิติวันนี้** (`LaundryStat` × 4)

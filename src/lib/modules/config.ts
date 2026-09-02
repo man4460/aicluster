@@ -67,6 +67,8 @@ export const VILLAGE_MODULE_SLUG = "village" as const;
 export const VILLAGE_MODULE_GROUP_ID = 1 as const;
 export const LAUNDRY_MODULE_SLUG = "laundry" as const;
 export const LAUNDRY_MODULE_GROUP_ID = 1 as const;
+export const CLUB_EVENT_MODULE_SLUG = "club-event" as const;
+export const CLUB_EVENT_MODULE_GROUP_ID = 1 as const;
 export const EDUCARE_MODULE_SLUG = "educare" as const;
 export const EDUCARE_MODULE_GROUP_ID = 1 as const;
 export const ASSET_MODULE_SLUG = "asset" as const;
@@ -192,6 +194,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === DORMITORY_MODULE_SLUG) return "จัดการหอพัก";
   if (slug === VILLAGE_MODULE_SLUG) return "จัดการหมู่บ้าน";
   if (slug === LAUNDRY_MODULE_SLUG) return "รับฝากซักผ้า";
+  if (slug === CLUB_EVENT_MODULE_SLUG) return "บริหารชมรม";
   if (slug === PARKING_MODULE_SLUG) return "บริการรับฝากจอดรถ";
   if (slug === WAIT_QUEUE_MODULE_SLUG) return "คิวหน้าร้าน";
   if (slug === APPOINTMENT_QUEUE_MODULE_SLUG) return "จองคิวอัจฉริยะ";

@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AppNoticePopup } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { LaundryCheckInModal } from "@/systems/laundry/components/LaundryCheckInModal";
 import { LaundryDashboardSubNavInline } from "@/systems/laundry/components/LaundryDashboardSubNavInline";
 import { LaundrySellPackageModal } from "@/systems/laundry/components/LaundrySellPackageModal";
+import { LAUNDRY_BASE, LAUNDRY_STAFF_PATH } from "@/systems/laundry/laundry-module-nav";
 import { laundryHeaderActionBtnClass } from "@/systems/laundry/lib/ui-tokens";
 
 function IconDeduct({ className }: { className?: string }) {
@@ -19,7 +22,7 @@ function IconDeduct({ className }: { className?: string }) {
 
 function IconPackageSpark({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" aria-hidden>
       <path
         d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
         strokeLinecap="round"
@@ -34,16 +37,31 @@ function IconPackageSpark({ className }: { className?: string }) {
   );
 }
 
-/** แท็บย่อย + ปุ่มหักแพ็ก/ขายแพ็ก — มุมขวาบนในการ์ดแดชบอร์ด */
-export function LaundryDashboardHeaderToolbar({ className }: { className?: string }) {
+/** ปุ่มหักแพ็ก/ขายแพ็ก + โมดัล — ใช้ในแถบเมนูพนักงานหรือหัวการ์ดแดชบอร์ด */
+export function LaundryDashboardQuickActions({
+  className,
+  staffQrLanding = false,
+  showLabels = true,
+}: {
+  className?: string;
+  staffQrLanding?: boolean;
+  showLabels?: boolean;
+}) {
+  const router = useRouter();
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [sellOpen, setSellOpen] = useState(false);
+  const [deductSuccessMsg, setDeductSuccessMsg] = useState<string | null>(null);
+
+  const finishDeductAndGoOverview = useCallback(() => {
+    setDeductSuccessMsg(null);
+    setCheckInOpen(false);
+    router.replace(staffQrLanding ? LAUNDRY_STAFF_PATH : LAUNDRY_BASE, { scroll: false });
+    router.refresh();
+  }, [router, staffQrLanding]);
 
   return (
     <>
-      <div className={cn("flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5", className)}>
-        <LaundryDashboardSubNavInline />
-        <span className="hidden h-5 w-px shrink-0 bg-slate-200/90 sm:block" aria-hidden />
+      <div className={cn("inline-flex shrink-0 flex-nowrap items-center gap-0.5", className)}>
         <button
           type="button"
           onClick={() => setCheckInOpen(true)}
@@ -52,7 +70,9 @@ export function LaundryDashboardHeaderToolbar({ className }: { className?: strin
           title="หักแพ็ก"
         >
           <IconDeduct className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden sm:inline">หักแพ็ก</span>
+          {showLabels ?
+            <span className="hidden sm:inline">หักแพ็ก</span>
+          : null}
         </button>
         <button
           type="button"
@@ -62,7 +82,9 @@ export function LaundryDashboardHeaderToolbar({ className }: { className?: strin
           title="ขายแพ็ก"
         >
           <IconPackageSpark className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden sm:inline">ขายแพ็ก</span>
+          {showLabels ?
+            <span className="hidden sm:inline">ขายแพ็ก</span>
+          : null}
         </button>
       </div>
 
@@ -73,8 +95,52 @@ export function LaundryDashboardHeaderToolbar({ className }: { className?: strin
           setCheckInOpen(false);
           setSellOpen(true);
         }}
+        onDeductSuccess={({ remainingSessions, packageName }) => {
+          setCheckInOpen(false);
+          setDeductSuccessMsg(
+            `หักแพ็ก "${packageName}" สำเร็จ\nเหลือ ${remainingSessions.toLocaleString("th-TH")} ครั้ง`,
+          );
+        }}
       />
       <LaundrySellPackageModal open={sellOpen} onClose={() => setSellOpen(false)} />
+
+      {deductSuccessMsg ?
+        <AppNoticePopup
+          open
+          tone="success"
+          title="หักแพ็กสำเร็จ"
+          message={deductSuccessMsg}
+          confirmLabel="ตกลง"
+          autoCloseMs={0}
+          onClose={finishDeductAndGoOverview}
+        />
+      : null}
     </>
+  );
+}
+
+/** แท็บย่อย + ปุ่มหักแพ็ก/ขายแพ็ก — มุมขวาบนในการ์ดแดชบอร์ด */
+export function LaundryDashboardHeaderToolbar({
+  className,
+  hideSubNav = false,
+  staffQrLanding = false,
+}: {
+  className?: string;
+  /** ซ่อนแท็บย่อยแดชบอร์ด (ใช้ในโหมดพนักงาน — มีเมนูใน shell แล้ว) */
+  hideSubNav?: boolean;
+  staffQrLanding?: boolean;
+}) {
+  if (staffQrLanding) return null;
+
+  return (
+    <div className={cn("flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5", className)}>
+      {!hideSubNav ?
+        <>
+          <LaundryDashboardSubNavInline />
+          <span className="hidden h-5 w-px shrink-0 bg-slate-200/90 sm:block" aria-hidden />
+        </>
+      : null}
+      <LaundryDashboardQuickActions staffQrLanding={staffQrLanding} />
+    </div>
   );
 }

@@ -28,6 +28,7 @@ export function DemoSessionBanner() {
           type="submit"
           className={`${chipClass} bg-[#0000BF] ring-1 ring-[#00008a]/40 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:scale-105 hover:bg-[#1a1aff] hover:shadow-[0_6px_16px_-4px_rgba(0,0,191,0.75)] hover:ring-2 hover:ring-white/70 focus-visible:outline focus-visible:ring-2 focus-visible:ring-white/80 active:translate-y-0 active:scale-95`}
           title="ออกจากบัญชีทดลองแล้วไปหน้าเข้าสู่ระบบ / สมัคร"
+          suppressHydrationWarning
         >
           สนใจสมัคร
         </button>

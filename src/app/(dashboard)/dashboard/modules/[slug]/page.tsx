@@ -17,6 +17,7 @@ import {
   HOME_FINANCE_BASIC_MODULE_SLUG,
   INVENTORY_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
+  CLUB_EVENT_MODULE_SLUG,
   GENERAL_STORE_POS_MODULE_SLUG,
   DRINK_POS_MODULE_SLUG,
   HOTEL_RESORT_MODULE_SLUG,
@@ -76,6 +77,9 @@ export default async function ModuleEntryPage({ params }: Props) {
   }
   if (slug === LAUNDRY_MODULE_SLUG) {
     redirect("/dashboard/laundry");
+  }
+  if (slug === CLUB_EVENT_MODULE_SLUG) {
+    redirect("/dashboard/club-event");
   }
   if (slug === PARKING_MODULE_SLUG) {
     redirect("/dashboard/parking");

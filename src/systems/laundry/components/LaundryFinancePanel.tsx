@@ -1,11 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AppDashboardSection,
-  AppEmptyState,
   AppRevenueCostColumnChart,
-  AppSectionHeader,
   type AppCompareBarRow,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
@@ -14,14 +11,14 @@ import {
   type BarberFinanceRange,
 } from "@/lib/barber/finance-range";
 import { bangkokDateKey } from "@/lib/time/bangkok";
-import { HomeFinanceListHeading } from "@/systems/home-finance/components/HomeFinanceUi";
-import { LaundryCostPanel } from "@/systems/laundry/components/LaundryCostPanel";
-import { LaundryOrderCard } from "@/systems/laundry/components/LaundryOrderCard";
-import { LaundryRevenuePanel } from "@/systems/laundry/components/LaundryRevenuePanel";
-import { laundryDashboardCardGridClass } from "@/systems/laundry/laundry-dashboard-layout";
+import { LaundryCostPanel, type LaundryCostPanelHandle } from "@/systems/laundry/components/LaundryCostPanel";
 import {
-  LAUNDRY_ORDER_STATUSES,
-  laundryOrderStatusLabelTh,
+  LaundryRevenuePanel,
+  type LaundryRevenuePanelHandle,
+} from "@/systems/laundry/components/LaundryRevenuePanel";
+import { LaundryServiceHistoryList } from "@/systems/laundry/components/LaundryServiceHistoryList";
+import { LaundryRefreshButton } from "@/systems/laundry/components/LaundryRefreshButton";
+import {
   type LaundryCostCategory,
   type LaundryCostEntry,
   type LaundryOrder,
@@ -31,10 +28,17 @@ import {
   type LaundryRevenueEntry,
 } from "@/systems/laundry/laundry-service";
 import {
-  laundryDashboardSegmentBtnClass,
-  laundryDashboardSegmentShellClass,
-  laundryPrimaryTabPillClass,
-  laundryPrimaryTabShellClass,
+  laundryCompactOutlineButtonClass,
+  laundryFinanceRangeChipClass,
+  laundryFinanceStatTailClass,
+  laundryFinanceStatsGridClass,
+  laundryInlineSubNavBtnClass,
+  laundryInlineSubNavShellClass,
+  laundryPanelClass,
+  laundryPanelDividerClass,
+  laundryPanelSectionClass,
+  laundrySectionHeadingClass,
+  laundryStatInlineClass,
 } from "@/systems/laundry/lib/ui-tokens";
 
 const MAX_COMPARE_ROWS = 18;
@@ -43,7 +47,11 @@ type HistoryLog = {
   id: number;
   visitType: string;
   note: string | null;
+  packageName?: string | null;
+  packageDescription?: string | null;
   amountBaht: string | null;
+  paymentMethod?: string | null;
+  receiptImageUrl?: string | null;
   createdAt: string;
   customer: { phone: string; name: string | null };
 };
@@ -107,13 +115,6 @@ function inRange(iso: string, start: Date, end: Date): boolean {
   return t >= start.getTime() && t < end.getTime();
 }
 
-function visitLabel(v: string): string {
-  if (v === "PACKAGE_USE") return "หักแพ็กเกจ";
-  if (v === "PACKAGE_SALE") return "ขายแพ็กเกจ";
-  if (v === "CASH_WALK_IN") return "Walk-in";
-  return v;
-}
-
 function financeRangeLabelTh(range: BarberFinanceRange, from: string, to: string): string {
   if (range === "TODAY") return "วันนี้";
   if (range === "MONTH") return "เดือนนี้";
@@ -133,17 +134,7 @@ function FinanceRangeChip({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "inline-flex h-10 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-bold transition-all sm:text-sm",
-        active ?
-          "bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] text-white shadow-md"
-        : "border border-white/60 bg-white/70 text-[#4d47b6] hover:border-indigo-200",
-      )}
-      aria-pressed={active}
-    >
+    <button type="button" onClick={onClick} className={laundryFinanceRangeChipClass(active)} aria-pressed={active}>
       {label}
     </button>
   );
@@ -166,15 +157,6 @@ function IconChart({ className }: { className?: string }) {
   );
 }
 
-function IconRefresh({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
-      <path d="M21 12a9 9 0 1 1-2.64-6.36" strokeLinecap="round" />
-      <path d="M21 3v6h-6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function matchesSearchOrder(o: LaundryOrder, q: string): boolean {
   const s = q.trim().toLowerCase();
   if (!s) return true;
@@ -187,7 +169,9 @@ function matchesSearchOrder(o: LaundryOrder, q: string): boolean {
 function matchesSearchLog(l: HistoryLog, q: string): boolean {
   const s = q.trim().toLowerCase();
   if (!s) return true;
-  const blob = [l.customer.phone, l.customer.name, l.note, l.visitType].join(" ").toLowerCase();
+  const blob = [l.customer.phone, l.customer.name, l.note, l.packageName, l.packageDescription, l.visitType]
+    .join(" ")
+    .toLowerCase();
   return blob.includes(s);
 }
 
@@ -228,7 +212,8 @@ export function LaundryFinancePanel({
   const [filterOpen, setFilterOpen] = useState(false);
   const [chartsOpen, setChartsOpen] = useState(false);
   const [activeListTab, setActiveListTab] = useState<"sales" | "costs">("sales");
-  const [orderStatusFilter, setOrderStatusFilter] = useState<"all" | LaundryOrderStatus>("all");
+  const revenuePanelRef = useRef<LaundryRevenuePanelHandle>(null);
+  const costPanelRef = useRef<LaundryCostPanelHandle>(null);
 
   const [historyLogs, setHistoryLogs] = useState<HistoryLog[]>([]);
   const [historySummary, setHistorySummary] = useState<HistorySummary | null>(null);
@@ -300,11 +285,6 @@ export function LaundryFinancePanel({
   const filteredOrdersForRevenue = useMemo(() => {
     return filteredOrdersBase.filter(orderCountsTowardRevenue);
   }, [filteredOrdersBase]);
-
-  const filteredOrdersList = useMemo(() => {
-    if (orderStatusFilter === "all") return filteredOrdersBase;
-    return filteredOrdersBase.filter((o) => o.status === orderStatusFilter);
-  }, [filteredOrdersBase, orderStatusFilter]);
 
   const filteredCostEntries = useMemo(() => {
     const { start, end } = rangeBounds;
@@ -441,7 +421,7 @@ export function LaundryFinancePanel({
           <button
             type="button"
             onClick={resetFilters}
-            className={cn(laundryDashboardSegmentBtnClass(false), "h-11 min-h-[44px] px-4")}
+            className={laundryCompactOutlineButtonClass}
           >
             รีเซ็ต · เดือนนี้
           </button>
@@ -451,16 +431,92 @@ export function LaundryFinancePanel({
     </div>
   );
 
+  const net = periodTotalRevenue - periodTotalCost;
+
   return (
-    <div className="space-y-5 sm:space-y-6">
-      <AppDashboardSection tone="violet">
-        <AppSectionHeader
-          tone="violet"
-          title="ภาพรวมการเงิน"
-          className="flex flex-row items-start justify-between gap-3 sm:items-center"
-          actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
-          action={
-            <div className={cn(laundryDashboardSegmentShellClass, "max-w-full")} role="group" aria-label="เครื่องมือการเงิน">
+    <div className={laundryPanelClass}>
+      <div className={laundryPanelSectionClass}>
+        <div className="flex flex-nowrap items-center justify-between gap-2">
+          <h2 className="min-w-0 shrink truncate text-base font-bold text-[#1e1b4b] sm:text-lg">การเงิน</h2>
+          <div
+            className="flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5"
+            role="group"
+            aria-label="เครื่องมือการเงิน"
+          >
+            <nav className={laundryInlineSubNavShellClass} role="tablist" aria-label="รายรับหรือรายจ่าย">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeListTab === "sales"}
+                title="รายรับ"
+                aria-label="รายรับ"
+                className={laundryInlineSubNavBtnClass(activeListTab === "sales")}
+                onClick={() => setActiveListTab("sales")}
+              >
+                <span className="hidden sm:inline">รายรับ</span>
+                <span className="sm:hidden" aria-hidden>
+                  รับ
+                </span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeListTab === "costs"}
+                title="รายจ่าย"
+                aria-label="รายจ่าย"
+                className={laundryInlineSubNavBtnClass(activeListTab === "costs")}
+                onClick={() => setActiveListTab("costs")}
+              >
+                <span className="hidden sm:inline">รายจ่าย</span>
+                <span className="sm:hidden" aria-hidden>
+                  จ่าย
+                </span>
+              </button>
+            </nav>
+            {activeListTab === "sales" ?
+              <div className={laundryInlineSubNavShellClass}>
+                <button
+                  type="button"
+                  className={laundryInlineSubNavBtnClass(false)}
+                  title="บันทึกรายรับเพิ่ม"
+                  aria-label="บันทึกรายรับเพิ่ม"
+                  onClick={() => {
+                    if (revenueCategories.length === 0) {
+                      revenuePanelRef.current?.openManageCategories();
+                      return;
+                    }
+                    revenuePanelRef.current?.openAddEntry();
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  <span className="hidden sm:inline">รายรับเพิ่ม</span>
+                </button>
+              </div>
+            : <div className={laundryInlineSubNavShellClass}>
+                <button
+                  type="button"
+                  className={laundryInlineSubNavBtnClass(false)}
+                  title="บันทึกรายจ่าย"
+                  aria-label="บันทึกรายจ่าย"
+                  onClick={() => {
+                    if (costCategories.length === 0) {
+                      costPanelRef.current?.openManageCategories();
+                      return;
+                    }
+                    costPanelRef.current?.openAddEntry();
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  <span className="hidden sm:inline">รายจ่ายเพิ่ม</span>
+                </button>
+              </div>
+            }
+            <span className="hidden h-5 w-px shrink-0 bg-slate-200/90 sm:block" aria-hidden />
+            <div className={laundryInlineSubNavShellClass}>
               <button
                 type="button"
                 onClick={() => setFilterOpen((o) => !o)}
@@ -469,15 +525,18 @@ export function LaundryFinancePanel({
                 aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
                 title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
                 className={cn(
-                  laundryDashboardSegmentBtnClass(filterOpen),
-                  "relative min-h-[40px] min-w-[40px] sm:min-w-0",
+                  laundryInlineSubNavBtnClass(filterOpen),
+                  "relative",
                   filtersActive && !filterOpen && "ring-1 ring-amber-300/80",
                 )}
               >
                 <IconFilter className="h-3.5 w-3.5 shrink-0" />
                 <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
                 {filtersActive ?
-                  <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] ring-2 ring-white" aria-hidden />
+                  <span
+                    className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
+                    aria-hidden
+                  />
                 : null}
               </button>
               <button
@@ -487,212 +546,139 @@ export function LaundryFinancePanel({
                 aria-controls="laundry-finance-charts"
                 aria-label={chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
                 title={chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
-                className={cn(laundryDashboardSegmentBtnClass(chartsOpen), "min-h-[40px] min-w-[40px] sm:min-w-0")}
+                className={laundryInlineSubNavBtnClass(chartsOpen)}
               >
                 <IconChart className="h-3.5 w-3.5 shrink-0" />
                 <span className="hidden sm:inline">{chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}</span>
               </button>
-              <button
-                type="button"
+              <LaundryRefreshButton
+                variant="inline"
+                refreshing={historyLoading}
                 onClick={() => void Promise.all([fetchHistory(), onRefresh()])}
-                disabled={historyLoading}
-                aria-busy={historyLoading}
-                aria-label="รีเฟรชข้อมูลรายงาน"
-                title="รีเฟรช"
-                className={cn(laundryDashboardSegmentBtnClass(false), "min-h-[40px] min-w-[40px] disabled:opacity-50 sm:min-w-0")}
-              >
-                <IconRefresh className={cn("h-3.5 w-3.5 shrink-0", historyLoading && "animate-spin")} />
-                <span className="hidden sm:inline">รีเฟรช</span>
-              </button>
+                ariaLabel="รีเฟรชข้อมูลรายงาน"
+              />
             </div>
-          }
-        />
+          </div>
+        </div>
 
-        <div id="laundry-finance-filter-panel" className={cn("mt-3 space-y-3", filterOpen ? "block" : "hidden")}>
+        <ul className={cn(laundryFinanceStatsGridClass, "mt-4")} aria-label={`สรุปการเงิน ${rangeLabel}`}>
+          <li className={cn(laundryStatInlineClass, "border-l-[3px] border-l-emerald-500")}>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700/80">รายรับ</p>
+            <p className="text-lg font-black tabular-nums text-emerald-700 sm:text-xl">
+              ฿{periodTotalRevenue.toLocaleString("th-TH")}
+            </p>
+          </li>
+          <li className={cn(laundryStatInlineClass, "border-l-[3px] border-l-rose-500")}>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-rose-600/80">รายจ่าย</p>
+            <p className="text-lg font-black tabular-nums text-rose-600 sm:text-xl">
+              ฿{periodTotalCost.toLocaleString("th-TH")}
+            </p>
+          </li>
+          <li
+            className={cn(
+              laundryStatInlineClass,
+              laundryFinanceStatTailClass,
+              "border-l-[3px]",
+              net >= 0 ? "border-l-slate-400" : "border-l-rose-500",
+            )}
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#66638c]">สุทธิ</p>
+            <p
+              className={cn(
+                "text-lg font-black tabular-nums sm:text-xl",
+                net >= 0 ? "text-[#1e1b4b]" : "text-rose-800",
+              )}
+            >
+              ฿{net.toLocaleString("th-TH")}
+            </p>
+          </li>
+        </ul>
+
+        <div id="laundry-finance-filter-panel" className={cn("mt-4 space-y-3", filterOpen ? "block" : "hidden")}>
           {filterPanel}
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-2 sm:gap-4">
-          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/60 bg-gradient-to-br from-white/60 via-violet-50/35 to-indigo-100/30 p-3 shadow-[0_16px_34px_-24px_rgba(91,97,255,0.4)] backdrop-blur-xl sm:p-5">
-            <span className="truncate text-[8px] font-bold uppercase tracking-wider text-violet-500 sm:text-[10px]">รายได้รวม</span>
-            <p className="mt-2 text-sm font-black text-[#1e1b4b] sm:mt-3 sm:text-2xl">฿{periodTotalRevenue.toLocaleString("th-TH")}</p>
-          </div>
-          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/60 bg-gradient-to-br from-white/60 via-rose-50/30 to-orange-100/25 p-3 shadow-[0_16px_34px_-24px_rgba(244,63,94,0.35)] backdrop-blur-xl sm:p-5">
-            <span className="truncate text-[8px] font-bold uppercase tracking-wider text-rose-500 sm:text-[10px]">รายจ่ายรวม</span>
-            <p className="mt-2 text-sm font-black text-rose-900 sm:mt-3 sm:text-2xl">฿{periodTotalCost.toLocaleString("th-TH")}</p>
-          </div>
-          <div
-            className={cn(
-              "relative col-span-2 flex flex-col justify-between overflow-hidden rounded-2xl border border-white/60 p-3 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.32)] backdrop-blur-xl sm:p-5",
-              periodTotalRevenue - periodTotalCost >= 0 ?
-                "bg-gradient-to-br from-white/60 to-emerald-100/28"
-              : "bg-gradient-to-br from-white/60 to-orange-100/28",
-            )}
-          >
-            <span className={cn("truncate text-[8px] font-bold uppercase tracking-wider sm:text-[10px]", periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-600" : "text-orange-600")}>
-              กำไรสุทธิ
-            </span>
-            <p className={cn("mt-2 text-sm font-black sm:mt-3 sm:text-2xl", periodTotalRevenue - periodTotalCost >= 0 ? "text-emerald-900" : "text-orange-900")}>
-              ฿{(periodTotalRevenue - periodTotalCost).toLocaleString("th-TH")}
-            </p>
-          </div>
-        </div>
-
         {chartsOpen ?
-          <div id="laundry-finance-charts" className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <div className="rounded-2xl border border-white/60 bg-white/45 p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:p-5">
-              <h3 className="mb-2 text-sm font-black text-[#1e1b4b] sm:text-base">แนวโน้มรายได้และรายจ่าย · {rangeLabel}</h3>
-              <div className="h-[200px] w-full sm:h-[260px]">
-                <AppRevenueCostColumnChart
-                  className="h-full w-full"
-                  compact
-                  buckets={revenueCostBuckets}
-                  title=""
-                  emptyText="ไม่มีข้อมูลในช่วงที่เลือก"
-                  formatTitle={(b) =>
-                    `${b.label}: รายได้ ฿${b.revenue.toLocaleString("th-TH")} · รายจ่าย ฿${b.cost.toLocaleString("th-TH")}`
-                  }
-                />
-              </div>
+          <div id="laundry-finance-charts" className="mt-4 space-y-3">
+            <div className="rounded-lg border border-slate-200/90 bg-slate-50/50 p-3 sm:p-4">
+              <h3 className={cn(laundrySectionHeadingClass, "mb-2")}>แนวโน้มรายรับ–รายจ่าย</h3>
+              <AppRevenueCostColumnChart
+                className="flex min-h-0 flex-1 flex-col"
+                compact
+                buckets={revenueCostBuckets}
+                title=""
+                emptyText="ไม่มีข้อมูลในช่วงที่เลือก"
+                formatTitle={(b) =>
+                  `${b.label}: รายรับ ฿${b.revenue.toLocaleString("th-TH")} · รายจ่าย ฿${b.cost.toLocaleString("th-TH")}`
+                }
+              />
             </div>
-            <div className="rounded-2xl border border-white/60 bg-white/45 p-4 shadow-[0_16px_34px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl">
-              <h3 className="text-xs font-black text-[#1e1b4b] sm:text-sm">สัดส่วนตามแพ็กเกจ (งานรับ–ส่ง)</h3>
+            <div className="rounded-lg border border-slate-200/90 bg-slate-50/50 p-3 sm:p-4">
+              <h3 className={laundrySectionHeadingClass}>สัดส่วนตามแพ็กเกจ</h3>
               {packageCompareRows.length > 0 ?
-                <div className="mt-4 flex items-center gap-4">
-                  <div className="h-16 w-16 shrink-0 rounded-full ring-4 ring-slate-50 sm:h-20 sm:w-20" style={{ background: donutGradientFromRows(packageCompareRows) }} aria-hidden />
+                <div className="mt-3 flex items-center gap-4">
+                  <div
+                    className="h-16 w-16 shrink-0 rounded-full ring-2 ring-slate-100 sm:h-20 sm:w-20"
+                    style={{ background: donutGradientFromRows(packageCompareRows) }}
+                    aria-hidden
+                  />
                   <div className="min-w-0 flex-1 space-y-1.5">
-                    {packageCompareRows.slice(0, 4).map((row, idx) => (
-                      <div key={row.key} className="flex items-center justify-between text-[10px] sm:text-[11px]">
-                        <span className="truncate font-medium text-slate-500">{row.label}</span>
-                        <span className="font-bold text-[#1e1b4b]">฿{row.amount.toLocaleString("th-TH")}</span>
+                    {packageCompareRows.slice(0, 4).map((row) => (
+                      <div key={row.key} className="flex items-center justify-between gap-2 text-[10px] sm:text-[11px]">
+                        <span className="truncate font-medium text-[#66638c]">{row.label}</span>
+                        <span className="shrink-0 font-bold tabular-nums text-emerald-700">
+                          ฿{row.amount.toLocaleString("th-TH")}
+                        </span>
                       </div>
                     ))}
                   </div>
                 </div>
-              : <p className="mt-4 text-center text-[10px] text-slate-400">ไม่มีข้อมูล</p>}
+              : <p className="mt-3 text-center text-xs text-[#66638c]">ไม่มีข้อมูล</p>}
             </div>
           </div>
         : null}
-      </AppDashboardSection>
+      </div>
 
-      <AppDashboardSection tone="slate">
-        <div className="flex flex-col gap-4 rounded-[2rem] border border-white/55 bg-white/35 p-4 shadow-[0_18px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <div>
-            <HomeFinanceListHeading className="mb-0">
-              {activeListTab === "sales" ? "รายรับ" : "รายจ่าย"}
-            </HomeFinanceListHeading>
-            <p className="mt-1 text-xs font-medium text-slate-500">
-              {activeListTab === "sales" ?
-                `ประวัติบริการ ${filteredHistoryLogs.length} · งาน ${filteredOrdersList.length} รายการ`
-              : `รายจ่าย ${filteredCostEntries.length} รายการ`}
-            </p>
-          </div>
-          <nav className={laundryPrimaryTabShellClass} role="tablist" aria-label="รายรับหรือรายจ่าย">
-            <button type="button" role="tab" aria-selected={activeListTab === "sales"} className={laundryPrimaryTabPillClass(activeListTab === "sales")} onClick={() => setActiveListTab("sales")}>
-              รายรับ
-            </button>
-            <button type="button" role="tab" aria-selected={activeListTab === "costs"} className={laundryPrimaryTabPillClass(activeListTab === "costs")} onClick={() => setActiveListTab("costs")}>
-              รายจ่าย
-            </button>
-          </nav>
-        </div>
-
+      <div className={cn(laundryPanelSectionClass, laundryPanelDividerClass)}>
         {activeListTab === "sales" ?
-          <div className="mt-4 space-y-6">
-            {historyError ?
-              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{historyError}</p>
-            : null}
-            {historyLoading ?
-              <p className="text-center text-sm text-slate-500">กำลังโหลดประวัติบริการ…</p>
-            : filteredHistoryLogs.length === 0 ?
-              <AppEmptyState tone="glass">ไม่มีประวัติบริการในช่วงที่เลือก</AppEmptyState>
-            : <ul className="space-y-2" aria-label="ประวัติบริการ">
-                {filteredHistoryLogs.map((l) => {
-                  const amt = l.amountBaht != null ? Number(l.amountBaht) : NaN;
-                  return (
-                    <li key={l.id} className="rounded-2xl border border-white/60 bg-white/70 px-4 py-3 shadow-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-[#1e1b4b]">{visitLabel(l.visitType)}</p>
-                          <p className="text-xs text-slate-600">
-                            {l.customer.name?.trim() || l.customer.phone}
-                            {l.note?.trim() ? ` · ${l.note.trim()}` : ""}
-                          </p>
-                          <p className="mt-1 text-[11px] text-slate-500">
-                            {new Date(l.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
-                          </p>
-                        </div>
-                        {Number.isFinite(amt) && amt > 0 ?
-                          <p className="shrink-0 text-lg font-black tabular-nums text-emerald-700">฿{amt.toLocaleString("th-TH")}</p>
-                        : null}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            }
-
-            <div>
-              <h3 className="mb-3 text-sm font-black text-[#1e1b4b]">งานรับ–ส่ง / ออเดอร์</h3>
-              <label className="text-xs font-semibold text-slate-600">
-                กรองตามสถานะ
-                <select
-                  className="app-input ml-2 mt-1 min-h-[40px] rounded-xl px-3 py-2 text-sm sm:mt-0"
-                  value={orderStatusFilter}
-                  onChange={(e) => setOrderStatusFilter(e.target.value as typeof orderStatusFilter)}
-                >
-                  <option value="all">ทั้งหมด ({filteredOrdersBase.length})</option>
-                  {LAUNDRY_ORDER_STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {laundryOrderStatusLabelTh(s)} ({filteredOrdersBase.filter((o) => o.status === s).length})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {filteredOrdersList.length === 0 ?
-                <AppEmptyState tone="glass" className="mt-3">ไม่พบออเดอร์ตามเงื่อนไข</AppEmptyState>
-              : <ul className={cn(laundryDashboardCardGridClass, "mt-3 list-none p-0")} aria-label="ออเดอร์ซักผ้า">
-                  {filteredOrdersList.map((o) => (
-                    <li key={o.id} className="min-h-0 min-w-0">
-                      <LaundryOrderCard
-                        order={o}
-                        tone="slate"
-                        showStatusSelect={false}
-                        showOrderedAt
-                        onView={() => onViewOrder(o)}
-                        onEdit={() => onEditOrder(o)}
-                        onDelete={() => void onDeleteOrder(o)}
-                        onPrint={onPrintOrder ? () => onPrintOrder(o) : undefined}
-                        onStatusChange={onStatusChange}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              }
-            </div>
-
-            <div>
-              <h3 className="mb-3 text-sm font-black text-[#1e1b4b]">รายรับเพิ่ม (บันทึกด้วยตนเอง)</h3>
-              <LaundryRevenuePanel
-                repo={repo}
-                baseUrl={baseUrl}
-                categories={revenueCategories}
-                entries={filteredRevenueEntries}
-                onRefresh={onRefresh}
-              />
-            </div>
-          </div>
-        : <div className="mt-4">
-            <LaundryCostPanel
-              repo={repo}
-              baseUrl={baseUrl}
-              categories={costCategories}
-              entries={filteredCostEntries}
-              onRefresh={onRefresh}
-            />
-          </div>
+          <LaundryServiceHistoryList
+            logs={filteredHistoryLogs}
+            orders={filteredOrdersBase}
+            revenueEntries={filteredRevenueEntries}
+            baseUrl={baseUrl}
+            loading={historyLoading}
+            error={historyError}
+            onRefresh={async () => {
+              await Promise.all([fetchHistory(), onRefresh()]);
+            }}
+            onViewOrder={onViewOrder}
+            onEditOrder={onEditOrder}
+            onDeleteOrder={onDeleteOrder}
+            onEditRevenue={(e) => revenuePanelRef.current?.openEditEntry(e)}
+          />
+        : <LaundryCostPanel
+            ref={costPanelRef}
+            hideToolbar
+            repo={repo}
+            baseUrl={baseUrl}
+            categories={costCategories}
+            entries={filteredCostEntries}
+            onRefresh={onRefresh}
+          />
         }
-      </AppDashboardSection>
+      </div>
+
+      <LaundryRevenuePanel
+        ref={revenuePanelRef}
+        modalsOnly
+        repo={repo}
+        baseUrl={baseUrl}
+        categories={revenueCategories}
+        entries={filteredRevenueEntries}
+        onRefresh={async () => {
+          await Promise.all([fetchHistory(), onRefresh()]);
+        }}
+      />
     </div>
   );
 }
