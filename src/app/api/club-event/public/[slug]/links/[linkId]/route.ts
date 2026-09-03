@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { findClubEventPublicProfile } from "@/lib/club-event/public-profile";
 import { parseDynamicLinkConfig } from "@/systems/club-event/lib/mappers";
@@ -11,12 +10,16 @@ export async function GET(req: Request, ctx: Ctx) {
     const { slug, linkId } = await ctx.params;
     const url = new URL(req.url);
     const profile = await findClubEventPublicProfile(slug, url.searchParams.get("t"));
-    if (!profile) notFound();
+    if (!profile) {
+      return NextResponse.json({ error: "ไม่พบชมรม" }, { status: 404 });
+    }
 
     const link = await prisma.clubEventDynamicLink.findFirst({
       where: { id: linkId, profileId: profile.id, isActive: true },
     });
-    if (!link) notFound();
+    if (!link) {
+      return NextResponse.json({ error: "ไม่พบลิงก์" }, { status: 404 });
+    }
 
     const config = parseDynamicLinkConfig(link.configJson);
     let eventTitle: string | null = null;

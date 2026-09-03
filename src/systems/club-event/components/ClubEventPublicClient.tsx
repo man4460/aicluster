@@ -1,76 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Calendar, ExternalLink, MapPin, Phone, Play, Users } from "lucide-react";
 import {
-  AppEmptyState,
   AppImageLightbox,
   AppImageThumb,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import type { ClubPublicPortalPayload } from "@/lib/club-event/load-public-portal";
 import { formatBangkokDateTimeLong } from "@/lib/time/bangkok";
 import { ClubEventSlideshow } from "@/systems/club-event/components/ClubEventSlideshow";
 import { ClubEventYoutubePlayer } from "@/systems/club-event/components/ClubEventYoutubePlayer";
-import type { ClubCommitteeMember, ClubEventProfileDto, ClubEventRecordDto } from "@/systems/club-event/lib/mappers";
 import { CLUB_EVENT_LINK_TYPE_LABELS } from "@/systems/club-event/lib/mappers";
 import { clubEventGlassShellClass, clubEventPanelClass } from "@/systems/club-event/lib/ui-tokens";
 
-type PastEvent = ClubEventRecordDto & {
-  galleryPreview: { id: string; imageUrl: string; fileName: string }[];
-};
-
-type PublicLink = {
-  id: string;
-  type: keyof typeof CLUB_EVENT_LINK_TYPE_LABELS;
-  title: string;
-  publicPath: string;
-};
-
-export function ClubEventPublicClient({ slug, trialParam }: { slug: string; trialParam?: string }) {
+export function ClubEventPublicClient({
+  slug,
+  trialParam,
+  initialData,
+}: {
+  slug: string;
+  trialParam?: string;
+  initialData: ClubPublicPortalPayload;
+}) {
   const lb = useAppImageLightbox();
-  const [profile, setProfile] = useState<ClubEventProfileDto | null>(null);
-  const [committee, setCommittee] = useState<ClubCommitteeMember[]>([]);
-  const [upcoming, setUpcoming] = useState<ClubEventRecordDto[]>([]);
-  const [past, setPast] = useState<PastEvent[]>([]);
-  const [links, setLinks] = useState<PublicLink[]>([]);
-  const [loading, setLoading] = useState(true);
+  const profile = initialData.profile;
+  const committee = initialData.committee;
+  const upcoming = initialData.upcomingEvents;
+  const past = initialData.pastEvents;
+  const links = initialData.links;
   const [slideshowSlides, setSlideshowSlides] = useState<{ id: string; imageUrl: string; fileName?: string }[]>([]);
   const [slideshowOpen, setSlideshowOpen] = useState(false);
   const [slideshowTitle, setSlideshowTitle] = useState("");
 
-  useEffect(() => {
-    const q = trialParam ? `?t=${encodeURIComponent(trialParam)}` : "";
-    void fetch(`/api/club-event/public/${encodeURIComponent(slug)}${q}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setProfile(data.profile ?? null);
-        setCommittee(data.committee ?? []);
-        setUpcoming(data.upcomingEvents ?? []);
-        setPast(data.pastEvents ?? []);
-        setLinks(data.links ?? []);
-      })
-      .finally(() => setLoading(false));
-  }, [slug, trialParam]);
-
   const openEventGallery = async (eventId: string, title: string) => {
     const q = trialParam ? `?t=${encodeURIComponent(trialParam)}` : "";
     const res = await fetch(`/api/club-event/public/${encodeURIComponent(slug)}/events/${eventId}${q}`);
-    const data = (await res.json()) as { gallery?: { id: string; imageUrl: string; fileName: string }[] };
+    const data = (await res.json().catch(() => ({}))) as {
+      gallery?: { id: string; imageUrl: string; fileName: string }[];
+    };
     const slides = data.gallery ?? [];
     if (slides.length === 0) return;
     setSlideshowSlides(slides);
     setSlideshowTitle(title);
     setSlideshowOpen(true);
   };
-
-  if (loading) {
-    return <p className="py-16 text-center text-sm text-[#66638c]">กำลังโหลด…</p>;
-  }
-
-  if (!profile) {
-    return <AppEmptyState>ไม่พบชมรม — ตรวจสอบลิงก์อีกครั้ง</AppEmptyState>;
-  }
 
   const gallery = profile.portalGallery ?? [];
   const banner = profile.portalBannerUrl?.trim() || null;

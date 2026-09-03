@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AppEmptyState, useAppNoticePopup } from "@/components/app-templates";
+import { useAppNoticePopup } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   ClubEventPublicPaymentPanel,
@@ -17,7 +17,7 @@ import {
   clubEventTextareaClass,
 } from "@/systems/club-event/lib/ui-tokens";
 
-type PublicLinkPayload = {
+export type ClubPublicLinkPayload = {
   ownerId: string;
   clubName: string;
   paymentRulesNote: string;
@@ -52,14 +52,15 @@ export function ClubEventPublicLinkClient({
   slug,
   linkId,
   trialParam,
+  initialData,
 }: {
   slug: string;
   linkId: string;
   trialParam?: string;
+  initialData: ClubPublicLinkPayload;
 }) {
   const notice = useAppNoticePopup();
-  const [data, setData] = useState<PublicLinkPayload | null>(null);
-  const [loading, setLoading] = useState(true);
+  const data = initialData;
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [answer, setAnswer] = useState("");
@@ -67,29 +68,6 @@ export function ClubEventPublicLinkClient({
   const [slipUrl, setSlipUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
-
-  useEffect(() => {
-    const q = trialParam ? `?t=${encodeURIComponent(trialParam)}` : "";
-    void fetch(`/api/club-event/public/${encodeURIComponent(slug)}/links/${encodeURIComponent(linkId)}${q}`)
-      .then((r) => r.json())
-      .then((j) => {
-        if (j?.link) setData(j as PublicLinkPayload);
-        else setData(null);
-      })
-      .finally(() => setLoading(false));
-  }, [slug, linkId, trialParam]);
-
-  if (loading) {
-    return <p className="py-16 text-center text-sm text-[#66638c]">กำลังโหลด…</p>;
-  }
-
-  if (!data?.link) {
-    return (
-      <div className="mx-auto max-w-lg px-3 py-10">
-        <AppEmptyState>ไม่พบลิงก์ หรือลิงก์ถูกปิดแล้ว</AppEmptyState>
-      </div>
-    );
-  }
 
   const { link, clubName, ownerId, paymentRulesNote } = data;
   const amountBaht = link.type === "PAYMENT" ? Number(link.config.amountBaht) || 0 : 0;
@@ -137,7 +115,7 @@ export function ClubEventPublicLinkClient({
           }),
         },
       );
-      const j = (await res.json()) as { error?: string };
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(j.error ?? "ส่งไม่สำเร็จ");
       setDone(true);
       notice.success("บันทึกแล้ว");
