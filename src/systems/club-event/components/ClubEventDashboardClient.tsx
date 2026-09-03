@@ -34,13 +34,20 @@ import {
 } from "@/systems/club-event/club-event-module-nav";
 import {
   ClubEventLinkEditorModal,
+  clubLinkFormFromDto,
   emptyClubLinkForm,
 } from "@/systems/club-event/components/ClubEventLinkEditorModal";
 import { ClubEventPageSubNav } from "@/systems/club-event/components/ClubEventPageSubNav";
 import { ClubEventSlideshow } from "@/systems/club-event/components/ClubEventSlideshow";
 import { ClubEventYoutubePlayer } from "@/systems/club-event/components/ClubEventYoutubePlayer";
 import { prepareClubEventGalleryWebp } from "@/systems/club-event/lib/gallery-image";
-import type { ClubCommitteeMember, ClubEventProfileDto, ClubEventRecordDto } from "@/systems/club-event/lib/mappers";
+import type {
+  ClubCommitteeMember,
+  ClubEventDynamicLinkDto,
+  ClubEventProfileDto,
+  ClubEventRecordDto,
+} from "@/systems/club-event/lib/mappers";
+import { CLUB_EVENT_LINK_TYPE_LABELS } from "@/systems/club-event/lib/mappers";
 import { clubEventYoutubeWatchUrlFromStored } from "@/systems/club-event/lib/youtube";
 import {
   clubEventFieldClass,
@@ -52,6 +59,17 @@ import {
 } from "@/systems/club-event/lib/ui-tokens";
 
 type GalleryItem = { id: string; imageUrl: string; fileName: string; sortOrder: number };
+type ClubLinkRow = ClubEventDynamicLinkDto & { submissionsCount?: number };
+type ClubSubmissionRow = {
+  id: string;
+  respondentName: string;
+  respondentPhone: string;
+  amountBaht: number | null;
+  paymentMethod: string | null;
+  slipUrl: string | null;
+  createdAt: string;
+  payload: Record<string, unknown>;
+};
 
 export function ClubEventDashboardClient({ initialProfile }: { initialProfile: ClubEventProfileDto }) {
   const router = useRouter();
@@ -69,8 +87,12 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [slideshowOpen, setSlideshowOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [links, setLinks] = useState<ClubLinkRow[]>([]);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [linkForm, setLinkForm] = useState(() => emptyClubLinkForm());
+  const [subsOpen, setSubsOpen] = useState(false);
+  const [subsTitle, setSubsTitle] = useState("");
+  const [subsRows, setSubsRows] = useState<ClubSubmissionRow[]>([]);
 
   const [eventForm, setEventForm] = useState({
     id: "",
@@ -87,6 +109,17 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
     },
     [router],
   );
+
+  const loadLinks = useCallback(async () => {
+    try {
+      const res = await fetch("/api/club-event/session/links");
+      const data = (await res.json()) as { links?: ClubLinkRow[]; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "โหลดลิงก์ไม่สำเร็จ");
+      setLinks(data.links ?? []);
+    } catch (e) {
+      notice.error(e instanceof Error ? e.message : "โหลดลิงก์ไม่สำเร็จ");
+    }
+  }, [notice.error]);
 
   const loadEvents = useCallback(async () => {
     if (tab === "committee") {
@@ -110,6 +143,11 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
   useEffect(() => {
     void loadEvents();
   }, [loadEvents]);
+
+  useEffect(() => {
+    if (tab === "committee") return;
+    void loadLinks();
+  }, [tab, loadLinks]);
 
   const openCreateEvent = () => {
     setEventForm({
@@ -229,6 +267,48 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
     }
   };
 
+  const openCreateLinkForEvent = (ev: ClubEventRecordDto) => {
+    setLinkForm(
+      emptyClubLinkForm({
+        type: "RSVP",
+        title: `ลงทะเบียน · ${ev.title}`,
+        eventId: ev.id,
+      }),
+    );
+    setLinkModalOpen(true);
+  };
+
+  const openEditLink = (l: ClubEventDynamicLinkDto) => {
+    setLinkForm(clubLinkFormFromDto(l));
+    setLinkModalOpen(true);
+  };
+
+  const deleteLink = async (id: string, title: string) => {
+    const ok = await notice.confirm(`ลบลิงก์ «${title}» ใช่หรือไม่?`);
+    if (!ok) return;
+    try {
+      const res = await fetch(`/api/club-event/session/links/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("ลบไม่สำเร็จ");
+      await loadLinks();
+    } catch (e) {
+      notice.error(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
+    }
+  };
+
+  const openSubmissions = async (l: ClubEventDynamicLinkDto) => {
+    setSubsTitle(l.title);
+    setSubsOpen(true);
+    try {
+      const res = await fetch(`/api/club-event/session/links/${l.id}/submissions`);
+      const data = (await res.json()) as { submissions?: ClubSubmissionRow[]; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "โหลดคำตอบไม่สำเร็จ");
+      setSubsRows(data.submissions ?? []);
+    } catch (e) {
+      notice.error(e instanceof Error ? e.message : "โหลดคำตอบไม่สำเร็จ");
+      setSubsRows([]);
+    }
+  };
+
   const saveCommittee = async () => {
     setSaving(true);
     try {
@@ -249,6 +329,9 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
   };
 
   const selectedEvent = events.find((e) => e.id === detailId);
+  const eventLinks = selectedEvent
+    ? links.filter((l) => l.config.eventId === selectedEvent.id)
+    : [];
 
   return (
     <>
@@ -353,6 +436,11 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
                       {ev.galleryCount > 0 ? (
                         <p className="mt-1 text-xs text-[#5f5a8a]">รูป {ev.galleryCount} รายการ</p>
                       ) : null}
+                      {links.filter((l) => l.config.eventId === ev.id).length > 0 ? (
+                        <p className="mt-1 text-xs text-[#5f5a8a]">
+                          ลิงก์ {links.filter((l) => l.config.eventId === ev.id).length} รายการ
+                        </p>
+                      ) : null}
                       {ev.youtubeEmbedUrl ? (
                         <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#0000BF]">
                           <Play className="h-3.5 w-3.5" aria-hidden />
@@ -366,16 +454,7 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
                         className={cn(assetRowEditIconButtonClass, "text-[#0000BF]")}
                         aria-label={`สร้างลิงก์สำหรับ ${ev.title}`}
                         title="สร้างลิงก์"
-                        onClick={() => {
-                          setLinkForm(
-                            emptyClubLinkForm({
-                              type: "RSVP",
-                              title: `ลงทะเบียน · ${ev.title}`,
-                              eventId: ev.id,
-                            }),
-                          );
-                          setLinkModalOpen(true);
-                        }}
+                        onClick={() => openCreateLinkForEvent(ev)}
                       >
                         <Link2 className="h-4 w-4" aria-hidden />
                       </button>
@@ -483,23 +562,73 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
           <div className="space-y-4">
             <p className="text-sm text-[#66638c]">{formatBangkokDateTimeLong(selectedEvent.eventDate)}</p>
             {selectedEvent.description ? <p className="whitespace-pre-wrap text-sm text-[#1e1b4b]">{selectedEvent.description}</p> : null}
-            <button
-              type="button"
-              className={cn(clubEventOutlineButtonClass, "inline-flex w-full items-center justify-center gap-2 sm:w-auto")}
-              onClick={() => {
-                setLinkForm(
-                  emptyClubLinkForm({
-                    type: "RSVP",
-                    title: `ลงทะเบียน · ${selectedEvent.title}`,
-                    eventId: selectedEvent.id,
-                  }),
-                );
-                setLinkModalOpen(true);
-              }}
-            >
-              <Link2 className="h-4 w-4" aria-hidden />
-              สร้างลิงก์สำหรับกิจกรรมนี้
-            </button>
+
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-bold text-[#1e1b4b]">ลิงก์สำรวจ · RSVP · เก็บค่า</h3>
+                <button
+                  type="button"
+                  className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
+                  onClick={() => openCreateLinkForEvent(selectedEvent)}
+                >
+                  <Link2 className="h-4 w-4" aria-hidden />
+                  สร้างลิงก์
+                </button>
+              </div>
+              {eventLinks.length === 0 ? (
+                <AppEmptyState>ยังไม่มีลิงก์ของกิจกรรมนี้ — สร้าง RSVP · สำรวจ · เก็บค่า หรือลิงก์ภายนอก</AppEmptyState>
+              ) : (
+                <ul className="space-y-2">
+                  {eventLinks.map((l) => (
+                    <li key={l.id} className={clubEventRowCardClass}>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-[#1e1b4b]">{l.title}</p>
+                        <p className="text-sm text-[#66638c]">
+                          {CLUB_EVENT_LINK_TYPE_LABELS[l.type]}
+                          {typeof l.submissionsCount === "number" ? ` · คำตอบ ${l.submissionsCount}` : ""}
+                        </p>
+                        <a
+                          href={l.publicPath}
+                          className="text-xs text-[#0000BF] underline"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {l.publicPath}
+                        </a>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap items-center gap-1">
+                        <button
+                          type="button"
+                          className={clubEventOutlineButtonClass}
+                          onClick={() => void openSubmissions(l)}
+                        >
+                          คำตอบ
+                        </button>
+                        <button
+                          type="button"
+                          className={assetRowEditIconButtonClass}
+                          aria-label={`แก้ไข ${l.title}`}
+                          title="แก้ไข"
+                          onClick={() => openEditLink(l)}
+                        >
+                          <IconRowEdit className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className={assetRowRemoveIconButtonClass}
+                          aria-label={`ลบ ${l.title}`}
+                          title="ลบ"
+                          onClick={() => void deleteLink(l.id, l.title)}
+                        >
+                          <IconRowRemove className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
             {selectedEvent.youtubeEmbedUrl ? (
               <div>
                 <h3 className="mb-2 text-sm font-bold text-[#1e1b4b]">วิดีโอ</h3>
@@ -553,8 +682,65 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
         onClose={() => setLinkModalOpen(false)}
         initial={linkForm}
         events={events}
-        onSaved={() => undefined}
+        lockEventId={Boolean(linkForm.eventId)}
+        onSaved={() => void loadLinks()}
       />
+
+      <FormModal open={subsOpen} onClose={() => setSubsOpen(false)} title={`คำตอบ · ${subsTitle}`} mobileCentered>
+        {subsRows.length === 0 ? (
+          <AppEmptyState>ยังไม่มีคำตอบ</AppEmptyState>
+        ) : (
+          <ul className="space-y-2">
+            {subsRows.map((s) => {
+              const answers =
+                s.payload.answers && typeof s.payload.answers === "object"
+                  ? (s.payload.answers as Record<string, string>)
+                  : null;
+              const fieldMeta = Array.isArray(s.payload.fields)
+                ? (s.payload.fields as { key?: string; label?: string }[])
+                : [];
+              const labelOf = (key: string) =>
+                fieldMeta.find((f) => f.key === key)?.label?.trim() || key;
+              const legacyAnswer =
+                typeof s.payload.answer === "string" ? s.payload.answer : "";
+              return (
+                <li key={s.id} className="rounded-lg border border-slate-200/90 p-3 text-sm">
+                  <p className="font-bold text-[#1e1b4b]">
+                    {s.respondentName || "ไม่ระบุชื่อ"}
+                    {s.respondentPhone ? ` · ${s.respondentPhone}` : ""}
+                  </p>
+                  {s.amountBaht != null ? (
+                    <p className="text-[#4d47b6]">
+                      ฿{s.amountBaht.toLocaleString("th-TH")}
+                      {s.paymentMethod ? ` · ${s.paymentMethod}` : ""}
+                    </p>
+                  ) : null}
+                  {answers
+                    ? Object.entries(answers).map(([k, v]) =>
+                        v ? (
+                          <p key={k} className="mt-1 text-[#66638c]">
+                            <span className="font-semibold text-[#4d47b6]">{labelOf(k)}: </span>
+                            {v}
+                          </p>
+                        ) : null,
+                      )
+                    : legacyAnswer
+                      ? <p className="mt-1 text-[#66638c]">{legacyAnswer}</p>
+                      : null}
+                  {s.slipUrl ? (
+                    <a href={s.slipUrl} target="_blank" rel="noreferrer" className="text-xs text-[#0000BF] underline">
+                      ดูสลิป
+                    </a>
+                  ) : null}
+                  <p className="mt-1 text-[10px] text-[#9490c0]">
+                    {new Date(s.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </FormModal>
 
       <ClubEventSlideshow
         open={slideshowOpen}

@@ -1,49 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Copy, ExternalLink, Plus } from "lucide-react";
+import { Copy, ExternalLink } from "lucide-react";
 import {
-  AppEmptyState,
   AppModuleShopPaymentFields,
   AppShopLogoField,
   AppSlipPaperSizeSettingsField,
   useAppNoticePopup,
   type AppSlipPaperSize,
 } from "@/components/app-templates";
-import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
-import {
-  assetRowEditIconButtonClass,
-  assetRowRemoveIconButtonClass,
-  IconRowEdit,
-  IconRowRemove,
-} from "@/systems/asset/components/AssetRowActionIcons";
 import {
   CLUB_EVENT_SETTINGS_TAB_ITEMS,
   clubEventSettingsHref,
   parseClubEventSettingsTab,
   type ClubEventSettingsTab,
 } from "@/systems/club-event/club-event-module-nav";
-import {
-  ClubEventLinkEditorModal,
-  clubLinkFormFromDto,
-  emptyClubLinkForm,
-} from "@/systems/club-event/components/ClubEventLinkEditorModal";
 import { ClubEventPageSubNav } from "@/systems/club-event/components/ClubEventPageSubNav";
 import { ClubEventPortalMediaSettings } from "@/systems/club-event/components/ClubEventPortalMediaSettings";
-import type {
-  ClubEventDynamicLinkDto,
-  ClubEventProfileDto,
-  ClubEventRecordDto,
-} from "@/systems/club-event/lib/mappers";
-import { CLUB_EVENT_LINK_TYPE_LABELS } from "@/systems/club-event/lib/mappers";
+import type { ClubEventProfileDto } from "@/systems/club-event/lib/mappers";
 import {
   clubEventFieldClass,
   clubEventOutlineButtonClass,
   clubEventPrimaryButtonClass,
-  clubEventRowCardClass,
   clubEventTextareaClass,
 } from "@/systems/club-event/lib/ui-tokens";
 
@@ -105,25 +86,7 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
   const tab = parseClubEventSettingsTab(searchParams.get("tab"));
   const notice = useAppNoticePopup();
   const [form, setForm] = useState(initialProfile);
-  const [links, setLinks] = useState<(ClubEventDynamicLinkDto & { submissionsCount?: number })[]>([]);
-  const [events, setEvents] = useState<ClubEventRecordDto[]>([]);
   const [saving, setSaving] = useState(false);
-  const [linkModalOpen, setLinkModalOpen] = useState(false);
-  const [linkForm, setLinkForm] = useState(() => emptyClubLinkForm());
-  const [subsOpen, setSubsOpen] = useState(false);
-  const [subsTitle, setSubsTitle] = useState("");
-  const [subsRows, setSubsRows] = useState<
-    {
-      id: string;
-      respondentName: string;
-      respondentPhone: string;
-      amountBaht: number | null;
-      paymentMethod: string | null;
-      slipUrl: string | null;
-      createdAt: string;
-      payload: Record<string, unknown>;
-    }[]
-  >([]);
 
   const setTab = useCallback(
     (next: string) => {
@@ -131,31 +94,6 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
     },
     [router],
   );
-
-  const loadLinks = useCallback(async () => {
-    const res = await fetch("/api/club-event/session/links");
-    const data = (await res.json()) as {
-      links?: (ClubEventDynamicLinkDto & { submissionsCount?: number })[];
-    };
-    setLinks(data.links ?? []);
-  }, []);
-
-  const loadEvents = useCallback(async () => {
-    const res = await fetch("/api/club-event/session/events");
-    const data = (await res.json()) as { events?: ClubEventRecordDto[] };
-    setEvents(data.events ?? []);
-  }, []);
-
-  useEffect(() => {
-    if (tab === "portal") {
-      void loadLinks();
-      void loadEvents();
-    }
-  }, [tab, loadLinks, loadEvents]);
-
-  useEffect(() => {
-    setForm(initialProfile);
-  }, [initialProfile]);
 
   const saveProfile = async () => {
     setSaving(true);
@@ -166,6 +104,7 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
         body: JSON.stringify({
           displayName: form.displayName,
           slug: form.slug,
+          logoUrl: form.logoUrl,
           tagline: form.tagline,
           rulesMarkdown: form.rulesMarkdown,
           contactPhone: form.contactPhone,
@@ -183,7 +122,6 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
           bankAccountName: form.bankAccountName,
           taxId: form.taxId,
           slipPaperSize: form.slipPaperSize,
-          logoUrl: form.logoUrl,
         }),
       });
       const data = (await res.json()) as { profile?: ClubEventProfileDto; error?: string };
@@ -206,35 +144,6 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
     taxId: form.taxId,
   };
 
-  const deleteLink = async (id: string, title: string) => {
-    const ok = await notice.confirm(`ลบลิงก์ «${title}» ใช่หรือไม่?`);
-    if (!ok) return;
-    const res = await fetch(`/api/club-event/session/links/${id}`, { method: "DELETE" });
-    if (res.ok) await loadLinks();
-    else notice.error("ลบไม่สำเร็จ");
-  };
-
-  const openEditLink = (l: ClubEventDynamicLinkDto) => {
-    setLinkForm(clubLinkFormFromDto(l));
-    setLinkModalOpen(true);
-  };
-
-  const openSubmissions = async (l: ClubEventDynamicLinkDto) => {
-    setSubsTitle(l.title);
-    setSubsOpen(true);
-    const res = await fetch(`/api/club-event/session/links/${l.id}/submissions`);
-    const data = (await res.json()) as {
-      submissions?: typeof subsRows;
-      error?: string;
-    };
-    if (!res.ok) {
-      notice.error(data.error ?? "โหลดคำตอบไม่สำเร็จ");
-      setSubsRows([]);
-      return;
-    }
-    setSubsRows(data.submissions ?? []);
-  };
-
   const portalPath = form.publicUrl || `/club/${form.slug}`;
 
   return (
@@ -247,29 +156,14 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
         onSelect={setTab}
         ariaLabel="แท็บตั้งค่า"
         action={
-          tab === "portal" ? (
-            <button
-              type="button"
-              className={clubEventPrimaryButtonClass}
-              aria-label="สร้างลิงก์"
-              onClick={() => {
-                setLinkForm(emptyClubLinkForm());
-                setLinkModalOpen(true);
-              }}
-            >
-              <Plus className="h-5 w-5 sm:hidden" aria-hidden />
-              <span className="hidden sm:inline">+ สร้างลิงก์</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={clubEventPrimaryButtonClass}
-              disabled={saving}
-              onClick={() => void saveProfile()}
-            >
-              บันทึก
-            </button>
-          )
+          <button
+            type="button"
+            className={clubEventPrimaryButtonClass}
+            disabled={saving}
+            onClick={() => void saveProfile()}
+          >
+            บันทึก
+          </button>
         }
       >
         {tab === "basic" ? (
@@ -397,8 +291,8 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
                         }
                         setForm((prev) => ({ ...prev, promptPayQrImageUrl: json.imageUrl! }));
                         notice.success("อัปโหลด QR พร้อมเพย์แล้ว");
-                      } catch (errUpload) {
-                        notice.error(errUpload instanceof Error ? errUpload.message : "อัปโหลดไม่สำเร็จ");
+                      } catch (err) {
+                        notice.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
                       } finally {
                         setSaving(false);
                       }
@@ -412,9 +306,9 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
               <span className={labelTextClass}>กฎ / หมายเหตุการชำระเงิน (แสดงบนลิงก์เก็บค่า)</span>
               <textarea
                 className={cn(clubEventTextareaClass, "mt-1")}
-                value={form.paymentRulesNote}
+                value={form.paymentRulesNote ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, paymentRulesNote: e.target.value }))}
-                placeholder="เช่น โอนภายใน 24 ชม. แล้วแนบสลิป · ระบุชื่อ-กิจกรรมในหมายเหตุโอน"
+                placeholder="เช่น โอนแล้วแนบสลิป · ชำระภายใน 24 ชม."
               />
             </label>
 
@@ -433,6 +327,9 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
               onCopied={() => notice.success("คัดลอกลิงก์แล้ว")}
               onCopyFailed={() => notice.error("คัดลอกไม่สำเร็จ")}
             />
+            <p className="text-xs font-semibold text-[#66638c]">
+              ลิงก์ RSVP / สำรวจ / เก็บค่า — สร้างและจัดการจากหน้ากำหนดการของแต่ละกิจกรรม
+            </p>
             <ClubEventPortalMediaSettings
               bannerUrl={form.portalBannerUrl ?? ""}
               gallery={form.portalGallery ?? []}
@@ -446,138 +343,9 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
               onContactLineChange={(value) => setForm((f) => ({ ...f, contactLine: value || null }))}
               disabled={saving}
             />
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-bold text-[#1e1b4b]">ลิงก์สำรวจ · RSVP · เก็บค่ากิจกรรม</p>
-              <button
-                type="button"
-                className={clubEventPrimaryButtonClass}
-                onClick={() => void saveProfile()}
-                disabled={saving}
-              >
-                บันทึกสื่อเว็บ
-              </button>
-            </div>
-            {links.length === 0 ? (
-              <AppEmptyState>
-                ยังไม่มีลิงก์ — สร้างแบบสำรวจ · ลงทะเบียนเข้าร่วม · เก็บค่า หรือลิงก์ภายนอก
-              </AppEmptyState>
-            ) : (
-              <ul className="space-y-2">
-                {links.map((l) => (
-                  <li key={l.id} className={clubEventRowCardClass}>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-[#1e1b4b]">{l.title}</p>
-                      <p className="text-sm text-[#66638c]">
-                        {CLUB_EVENT_LINK_TYPE_LABELS[l.type]}
-                        {typeof l.submissionsCount === "number" ? ` · คำตอบ ${l.submissionsCount}` : ""}
-                      </p>
-                      <a
-                        href={l.publicPath}
-                        className="text-xs text-[#0000BF] underline"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {l.publicPath}
-                      </a>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-1">
-                      <button
-                        type="button"
-                        className={clubEventOutlineButtonClass}
-                        onClick={() => void openSubmissions(l)}
-                      >
-                        คำตอบ
-                      </button>
-                      <button
-                        type="button"
-                        className={assetRowEditIconButtonClass}
-                        aria-label={`แก้ไข ${l.title}`}
-                        title="แก้ไข"
-                        onClick={() => openEditLink(l)}
-                      >
-                        <IconRowEdit className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className={assetRowRemoveIconButtonClass}
-                        aria-label={`ลบ ${l.title}`}
-                        title="ลบ"
-                        onClick={() => void deleteLink(l.id, l.title)}
-                      >
-                        <IconRowRemove className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
         ) : null}
       </ClubEventPageSubNav>
-
-      <ClubEventLinkEditorModal
-        open={linkModalOpen}
-        onClose={() => setLinkModalOpen(false)}
-        initial={linkForm}
-        events={events}
-        onSaved={loadLinks}
-      />
-
-      <FormModal open={subsOpen} onClose={() => setSubsOpen(false)} title={`คำตอบ · ${subsTitle}`} mobileCentered>
-        {subsRows.length === 0 ? (
-          <AppEmptyState>ยังไม่มีคำตอบ</AppEmptyState>
-        ) : (
-          <ul className="space-y-2">
-            {subsRows.map((s) => {
-              const answers =
-                s.payload.answers && typeof s.payload.answers === "object"
-                  ? (s.payload.answers as Record<string, string>)
-                  : null;
-              const fieldMeta = Array.isArray(s.payload.fields)
-                ? (s.payload.fields as { key?: string; label?: string }[])
-                : [];
-              const labelOf = (key: string) =>
-                fieldMeta.find((f) => f.key === key)?.label?.trim() || key;
-              const legacyAnswer =
-                typeof s.payload.answer === "string" ? s.payload.answer : "";
-              return (
-                <li key={s.id} className="rounded-lg border border-slate-200/90 p-3 text-sm">
-                  <p className="font-bold text-[#1e1b4b]">
-                    {s.respondentName || "ไม่ระบุชื่อ"}
-                    {s.respondentPhone ? ` · ${s.respondentPhone}` : ""}
-                  </p>
-                  {s.amountBaht != null ? (
-                    <p className="text-[#4d47b6]">
-                      ฿{s.amountBaht.toLocaleString("th-TH")}
-                      {s.paymentMethod ? ` · ${s.paymentMethod}` : ""}
-                    </p>
-                  ) : null}
-                  {answers
-                    ? Object.entries(answers).map(([k, v]) =>
-                        v ? (
-                          <p key={k} className="mt-1 text-[#66638c]">
-                            <span className="font-semibold text-[#4d47b6]">{labelOf(k)}: </span>
-                            {v}
-                          </p>
-                        ) : null,
-                      )
-                    : legacyAnswer
-                      ? <p className="mt-1 text-[#66638c]">{legacyAnswer}</p>
-                      : null}
-                  {s.slipUrl ? (
-                    <a href={s.slipUrl} target="_blank" rel="noreferrer" className="text-xs text-[#0000BF] underline">
-                      ดูสลิป
-                    </a>
-                  ) : null}
-                  <p className="mt-1 text-[10px] text-[#9490c0]">
-                    {new Date(s.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </FormModal>
     </>
   );
 }

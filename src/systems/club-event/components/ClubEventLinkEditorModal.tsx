@@ -91,12 +91,15 @@ export function ClubEventLinkEditorModal({
   initial,
   events,
   onSaved,
+  lockEventId = false,
 }: {
   open: boolean;
   onClose: () => void;
   initial: LinkFormState;
   events: ClubEventRecordDto[];
   onSaved: () => void | Promise<void>;
+  /** เมื่อสร้าง/แก้จากหน้ารายละเอียดกิจกรรม — ห้ามเปลี่ยนกิจกรรมที่ผูก */
+  lockEventId?: boolean;
 }) {
   const notice = useAppNoticePopup();
   const [form, setForm] = useState<LinkFormState>(initial);
@@ -138,6 +141,10 @@ export function ClubEventLinkEditorModal({
       notice.error("กรอกจำนวนเงินที่เก็บ (บาท)");
       return;
     }
+    if (lockEventId && !form.eventId) {
+      notice.error("ต้องผูกกับกิจกรรม");
+      return;
+    }
 
     const fields = showFields
       ? normalizeClubDynamicLinkFields(
@@ -164,19 +171,24 @@ export function ClubEventLinkEditorModal({
 
     setSaving(true);
     try {
+      const eventId = form.eventId || undefined;
       const config =
         form.type === "PAYMENT"
           ? {
               amountBaht: Number(form.amountBaht) || 0,
               description: form.description.trim() || undefined,
-              eventId: form.eventId || undefined,
+              eventId,
               fields: fields.length > 0 ? fields : undefined,
             }
           : form.type === "URL"
-            ? { url: form.url.trim(), description: form.description.trim() || undefined }
+            ? {
+                url: form.url.trim(),
+                description: form.description.trim() || undefined,
+                eventId,
+              }
             : {
                 description: form.description.trim() || undefined,
-                eventId: form.eventId || undefined,
+                eventId,
                 fields,
               };
 
@@ -271,7 +283,14 @@ export function ClubEventLinkEditorModal({
             />
           </label>
 
-          {form.type !== "URL" ? (
+          {lockEventId ? (
+            <p className="rounded-lg border border-slate-200/90 bg-slate-50/80 px-3 py-2 text-xs font-semibold text-[#66638c]">
+              ผูกกับกิจกรรม:{" "}
+              <span className="text-[#1e1b4b]">
+                {events.find((ev) => ev.id === form.eventId)?.title ?? "กิจกรรมนี้"}
+              </span>
+            </p>
+          ) : (
             <label className={labelClass}>
               <span className={labelTextClass}>ผูกกับกิจกรรม (ถ้ามี)</span>
               <select
@@ -287,7 +306,7 @@ export function ClubEventLinkEditorModal({
                 ))}
               </select>
             </label>
-          ) : null}
+          )}
 
           {form.type === "URL" ? (
             <label className={labelClass}>
