@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ImagePlus, Link2, Play, Trash2 } from "lucide-react";
+import { ArrowLeft, ImagePlus, Link2, Play } from "lucide-react";
 import {
   AppEmptyState,
   AppImageLightbox,
@@ -724,17 +724,26 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
           ) : gallery.length === 0 ? (
             <AppEmptyState>ยังไม่มีรูป — อัปโหลดรูปกิจกรรม (แปลง WebP อัตโนมัติ)</AppEmptyState>
           ) : (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
               {gallery.map((g) => (
                 <div key={g.id} className="relative">
-                  <AppImageThumb src={g.imageUrl} alt={g.fileName} onOpen={() => lb.open(g.imageUrl)} />
+                  <AppImageThumb
+                    src={g.imageUrl}
+                    alt={g.fileName}
+                    onOpen={() => lb.open(g.imageUrl)}
+                    className="h-20 w-full sm:h-24"
+                  />
                   <button
                     type="button"
-                    className="absolute -right-1 -top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-rose-600 text-white"
+                    className={cn(
+                      assetRowRemoveIconButtonClass,
+                      "absolute -right-1 -top-1 !min-h-[32px] !min-w-[32px] rounded-full shadow-sm",
+                    )}
                     aria-label={`ลบรูป ${g.fileName}`}
+                    title="ลบรูป"
                     onClick={() => void removeGalleryImage(g.id)}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <IconRowRemove className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ))}
