@@ -3,6 +3,10 @@ import { requireSession } from "@/lib/api-auth";
 import { clubEventOwnerFromAuth } from "@/lib/club-event/api-owner";
 import { clubEventOwnerWhere, clubEventSessionContext } from "@/lib/club-event/session-context";
 import { prisma } from "@/lib/prisma";
+import {
+  eventIdFromLinkConfigBody,
+  findClubEventLinkIdByEventId,
+} from "@/systems/club-event/lib/link-event-unique";
 import { parseDynamicLinkConfig } from "@/systems/club-event/lib/mappers";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -22,6 +26,28 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (!existing) return NextResponse.json({ error: "ไม่พบลิงก์" }, { status: 404 });
 
     const body = (await req.json()) as Record<string, unknown>;
+    const nextConfig = body.config !== undefined ? body.config : parseDynamicLinkConfig(existing.configJson);
+    const eventId = eventIdFromLinkConfigBody(nextConfig);
+    if (eventId) {
+      const otherId = await findClubEventLinkIdByEventId({
+        profileId: profile.id,
+        ownerUserId: own.ownerId,
+        trialSessionId: scope.trialSessionId,
+        eventId,
+        excludeLinkId: id,
+      });
+      if (otherId) {
+        return NextResponse.json(
+          {
+            error: "กิจกรรมนี้มีลิงก์อื่นอยู่แล้ว — แก้ไขลิงก์เดิมของกิจกรรมนั้นเท่านั้น",
+            code: "CLUB_EVENT_LINK_EXISTS",
+            existingLinkId: otherId,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
     const row = await prisma.clubEventDynamicLink.update({
       where: { id },
       data: {

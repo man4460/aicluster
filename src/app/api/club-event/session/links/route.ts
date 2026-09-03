@@ -3,6 +3,10 @@ import { requireSession } from "@/lib/api-auth";
 import { clubEventOwnerFromAuth } from "@/lib/club-event/api-owner";
 import { clubEventOwnerWhere, clubEventSessionContext } from "@/lib/club-event/session-context";
 import { prisma } from "@/lib/prisma";
+import {
+  eventIdFromLinkConfigBody,
+  findClubEventLinkIdByEventId,
+} from "@/systems/club-event/lib/link-event-unique";
 import { parseDynamicLinkConfig } from "@/systems/club-event/lib/mappers";
 
 export async function GET() {
@@ -51,6 +55,31 @@ export async function POST(req: Request) {
         ? body.type
         : null;
     if (!title || !type) return NextResponse.json({ error: "กรอกชื่อและประเภทลิงก์" }, { status: 400 });
+
+    const eventId = eventIdFromLinkConfigBody(body.config);
+    if (!eventId) {
+      return NextResponse.json(
+        { error: "ต้องผูกลิงก์กับกิจกรรม — สร้างจากหน้ารายละเอียดกิจกรรมเท่านั้น" },
+        { status: 400 },
+      );
+    }
+
+    const existingId = await findClubEventLinkIdByEventId({
+      profileId: profile.id,
+      ownerUserId: own.ownerId,
+      trialSessionId: scope.trialSessionId,
+      eventId,
+    });
+    if (existingId) {
+      return NextResponse.json(
+        {
+          error: "กิจกรรมนี้มีลิงก์แล้ว — แก้ไขลิงก์เดิมได้เท่านั้น ไม่สร้างเพิ่ม",
+          code: "CLUB_EVENT_LINK_EXISTS",
+          existingLinkId: existingId,
+        },
+        { status: 409 },
+      );
+    }
 
     const row = await prisma.clubEventDynamicLink.create({
       data: {

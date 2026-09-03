@@ -304,9 +304,18 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
     }
   };
 
+  const openEditLink = (l: ClubEventDynamicLinkDto) => {
+    setLinkForm(clubLinkFormFromDto(l));
+    setLinkModalOpen(true);
+  };
+
   const openCreateLink = () => {
     if (!activeEventId) {
       notice.error("บันทึกกิจกรรมก่อน แล้วค่อยสร้างลิงก์");
+      return;
+    }
+    if (links.length > 0) {
+      openEditLink(links[0]!);
       return;
     }
     setLinkForm(
@@ -316,11 +325,6 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
         eventId: activeEventId,
       }),
     );
-    setLinkModalOpen(true);
-  };
-
-  const openEditLink = (l: ClubEventDynamicLinkDto) => {
-    setLinkForm(clubLinkFormFromDto(l));
     setLinkModalOpen(true);
   };
 
@@ -564,21 +568,34 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
         <ClubEventPageBlock
           title="ลิงก์สำรวจ · RSVP · เก็บค่า"
           action={
-            <button
-              type="button"
-              className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
-              disabled={!activeEventId}
-              onClick={openCreateLink}
-            >
-              <Link2 className="h-4 w-4" aria-hidden />
-              สร้างลิงก์
-            </button>
+            activeEventId ? (
+              <button
+                type="button"
+                className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
+                onClick={openCreateLink}
+              >
+                {links.length > 0 ? (
+                  <>
+                    <IconRowEdit className="h-4 w-4" aria-hidden />
+                    แก้ไขลิงก์
+                  </>
+                ) : (
+                  <>
+                    <Link2 className="h-4 w-4" aria-hidden />
+                    สร้างลิงก์
+                  </>
+                )}
+              </button>
+            ) : undefined
           }
         >
+          <p className="mb-2 text-[11px] font-semibold text-[#8b87b8]">
+            กิจกรรมละ 1 ลิงก์ — สร้างแล้วแก้ของเดิมได้เท่านั้น ไม่สร้างซ้ำ
+          </p>
           {!activeEventId ? (
             <AppEmptyState>บันทึกกิจกรรมก่อน แล้วค่อยสร้างลิงก์</AppEmptyState>
           ) : links.length === 0 ? (
-            <AppEmptyState>ยังไม่มีลิงก์ของกิจกรรมนี้</AppEmptyState>
+            <AppEmptyState>ยังไม่มีลิงก์ของกิจกรรมนี้ — กดสร้างลิงก์</AppEmptyState>
           ) : (
             <ul className="space-y-2">
               {links.map((l) => (
