@@ -47,6 +47,7 @@ import type { ClubEventMediaLimits } from "@/systems/club-event/lib/plan-limits"
 import {
   CLUB_EVENT_FREE_GALLERY_MAX,
   CLUB_EVENT_FREE_YOUTUBE_MAX,
+  CLUB_EVENT_MONTHLY_YOUTUBE_MAX,
 } from "@/systems/club-event/lib/plan-limits";
 import type { ClubSubmissionRow } from "@/systems/club-event/lib/submission-summary";
 import type { ClubEventYoutubeVideo } from "@/systems/club-event/lib/youtube";
@@ -513,11 +514,19 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
 
         <ClubEventPageBlock title="วิดีโอ YouTube">
           <p className="mb-3 text-[11px] font-semibold text-[#8b87b8]">
+            {youtubeVideos.length}/{limits.youtubeMax} คลิป
             {limits.isMonthly
-              ? `แพ็กเดือน · ได้สูงสุด ${limits.youtubeMax} คลิป`
-              : `แพ็กฟรี · ได้ ${CLUB_EVENT_FREE_YOUTUBE_MAX} คลิป — เพิ่มมากกว่านี้ต้องสมัครรายเดือน`}
+              ? ` · แพ็กเดือน สูงสุด ${limits.youtubeMax}`
+              : ` · ฟรีได้ ${CLUB_EVENT_FREE_YOUTUBE_MAX} คลิป เกินนี้สมัครรายเดือน`}
           </p>
 
+          {ytEditIdx == null && !canAddYoutube ? (
+            <div className="rounded-[1.25rem] border border-amber-200/90 bg-amber-50/90 px-3 py-3 text-sm font-semibold text-amber-950 sm:px-4">
+              {limits.isMonthly
+                ? `เพิ่มคลิปครบโควต้าแล้ว (${limits.youtubeMax}/${limits.youtubeMax})`
+                : `แพ็กฟรีเพิ่มได้ ${CLUB_EVENT_FREE_YOUTUBE_MAX} คลิปต่อกิจกรรม — ต้องการหลายวิดีโอให้สมัครรายเดือนโมดูลบริหารชมรม (สูงสุด ${CLUB_EVENT_MONTHLY_YOUTUBE_MAX} คลิป)`}
+            </div>
+          ) : (
           <div className="space-y-3 rounded-[1.25rem] border border-white/70 bg-white/70 p-3 sm:p-4">
             <div className="flex flex-row items-start justify-between gap-3">
               <p className="text-sm font-black text-[#1e1b4b]">
@@ -570,14 +579,13 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
             <button
               type="button"
               className={cn(appDashboardBrandCtaPillButtonClass, "min-h-10 w-full sm:w-auto sm:px-4")}
-              disabled={ytEditIdx == null && !canAddYoutube}
               onClick={() => {
                 if (ytEditIdx == null && !canAddYoutube) {
-                  notice.error(
-                    limits.isMonthly
-                      ? `เพิ่มได้สูงสุด ${limits.youtubeMax} ลิงก์`
-                      : `แพ็กฟรีได้ ${CLUB_EVENT_FREE_YOUTUBE_MAX} ลิงก์ — สมัครรายเดือนเพื่อเพิ่มหลายวิดีโอ`,
-                  );
+                  const msg = limits.isMonthly
+                    ? `เพิ่มได้สูงสุด ${limits.youtubeMax} ลิงก์`
+                    : `แพ็กฟรีได้ ${CLUB_EVENT_FREE_YOUTUBE_MAX} ลิงก์ — สมัครรายเดือนเพื่อเพิ่มหลายวิดีโอ`;
+                  setYtFormErr(msg);
+                  notice.error(msg);
                   return;
                 }
                 saveYoutubeFormLocal();
@@ -594,6 +602,7 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
               />
             ) : null}
           </div>
+          )}
 
           {youtubeVideos.length === 0 ? (
             <AppEmptyState tone="violet" className="mt-3">
