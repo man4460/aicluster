@@ -32,7 +32,28 @@ export async function POST(req: Request, ctx: Ctx) {
     }
 
     const config = parseDynamicLinkConfig(link.configJson);
-    const answer = typeof body.answer === "string" ? body.answer.trim().slice(0, 2000) : "";
+    const fields = config.fields ?? [];
+    const answersRaw =
+      body.answers && typeof body.answers === "object" && !Array.isArray(body.answers)
+        ? (body.answers as Record<string, unknown>)
+        : null;
+    const answers: Record<string, string> = {};
+    for (const f of fields) {
+      const fromMap = answersRaw && typeof answersRaw[f.key] === "string" ? String(answersRaw[f.key]) : "";
+      answers[f.key] = fromMap.trim().slice(0, 2000);
+      if (f.required && !answers[f.key]) {
+        return NextResponse.json({ error: `กรอก/เลือก: ${f.label}` }, { status: 400 });
+      }
+      if (f.type === "choice" && answers[f.key] && f.options && !f.options.includes(answers[f.key])) {
+        return NextResponse.json({ error: `ตัวเลือกไม่ถูกต้อง: ${f.label}` }, { status: 400 });
+      }
+    }
+    const legacyAnswer =
+      typeof body.answer === "string" ? body.answer.trim().slice(0, 2000) : "";
+    if (fields.length === 0 && legacyAnswer) {
+      answers.answer = legacyAnswer;
+    }
+
     const paymentMethod =
       typeof body.paymentMethod === "string" ? body.paymentMethod.trim().slice(0, 32) : null;
     const slipUrl = typeof body.slipUrl === "string" ? body.slipUrl.trim().slice(0, 512) : null;
@@ -46,9 +67,10 @@ export async function POST(req: Request, ctx: Ctx) {
     }
 
     const payload = {
-      answer,
+      answers,
+      answer: answers[fields[0]?.key ?? "answer"] ?? legacyAnswer,
       eventId: config.eventId ?? null,
-      fields: config.fields ?? [],
+      fields,
     };
 
     const row = await prisma.clubEventLinkSubmission.create({

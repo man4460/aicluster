@@ -26,6 +26,11 @@ import {
   parseClubEventSettingsTab,
   type ClubEventSettingsTab,
 } from "@/systems/club-event/club-event-module-nav";
+import {
+  ClubEventLinkEditorModal,
+  clubLinkFormFromDto,
+  emptyClubLinkForm,
+} from "@/systems/club-event/components/ClubEventLinkEditorModal";
 import { ClubEventPageSubNav } from "@/systems/club-event/components/ClubEventPageSubNav";
 import { ClubEventPortalMediaSettings } from "@/systems/club-event/components/ClubEventPortalMediaSettings";
 import type {
@@ -36,7 +41,6 @@ import type {
 import { CLUB_EVENT_LINK_TYPE_LABELS } from "@/systems/club-event/lib/mappers";
 import {
   clubEventFieldClass,
-  clubEventFixedBottomActionClass,
   clubEventOutlineButtonClass,
   clubEventPrimaryButtonClass,
   clubEventRowCardClass,
@@ -46,28 +50,6 @@ import {
 const LOGO_UPLOAD = "/api/club-event/session/images/upload";
 const labelClass = "block space-y-1";
 const labelTextClass = "text-xs font-bold text-[#4d47b6]";
-
-type LinkFormState = {
-  id: string;
-  type: ClubEventDynamicLinkDto["type"];
-  title: string;
-  description: string;
-  url: string;
-  amountBaht: string;
-  eventId: string;
-  fieldLabel: string;
-};
-
-const emptyLinkForm = (): LinkFormState => ({
-  id: "",
-  type: "RSVP",
-  title: "",
-  description: "",
-  url: "",
-  amountBaht: "",
-  eventId: "",
-  fieldLabel: "คำถาม / หมายเหตุ",
-});
 
 function absoluteUrl(path: string): string {
   if (typeof window === "undefined") return path;
@@ -127,7 +109,7 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
   const [events, setEvents] = useState<ClubEventRecordDto[]>([]);
   const [saving, setSaving] = useState(false);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
-  const [linkForm, setLinkForm] = useState<LinkFormState>(emptyLinkForm);
+  const [linkForm, setLinkForm] = useState(() => emptyClubLinkForm());
   const [subsOpen, setSubsOpen] = useState(false);
   const [subsTitle, setSubsTitle] = useState("");
   const [subsRows, setSubsRows] = useState<
@@ -224,63 +206,6 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
     taxId: form.taxId,
   };
 
-  const saveLink = async () => {
-    if (!linkForm.title.trim()) {
-      notice.error("กรอกชื่อลิงก์");
-      return;
-    }
-    if (linkForm.type === "URL" && !linkForm.url.trim()) {
-      notice.error("กรอก URL ปลายทาง");
-      return;
-    }
-    if (linkForm.type === "PAYMENT" && !(Number(linkForm.amountBaht) > 0)) {
-      notice.error("กรอกจำนวนเงินที่เก็บ (บาท)");
-      return;
-    }
-    setSaving(true);
-    try {
-      const config =
-        linkForm.type === "PAYMENT"
-          ? {
-              amountBaht: Number(linkForm.amountBaht) || 0,
-              description: linkForm.description.trim() || undefined,
-              eventId: linkForm.eventId || undefined,
-            }
-          : linkForm.type === "URL"
-            ? { url: linkForm.url.trim(), description: linkForm.description.trim() || undefined }
-            : {
-                description: linkForm.description.trim() || undefined,
-                eventId: linkForm.eventId || undefined,
-                fields: [
-                  {
-                    key: "answer",
-                    label: linkForm.fieldLabel.trim() || "คำถาม / หมายเหตุ",
-                    type: "text",
-                  },
-                ],
-              };
-      const payload = { type: linkForm.type, title: linkForm.title.trim(), config, isActive: true };
-      const res = await fetch(
-        linkForm.id ? `/api/club-event/session/links/${linkForm.id}` : "/api/club-event/session/links",
-        {
-          method: linkForm.id ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
-      );
-      const data = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(data.error ?? "บันทึกไม่สำเร็จ");
-      setLinkModalOpen(false);
-      setLinkForm(emptyLinkForm());
-      await loadLinks();
-      notice.success("บันทึกลิงก์แล้ว");
-    } catch (e) {
-      notice.error(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const deleteLink = async (id: string, title: string) => {
     const ok = await notice.confirm(`ลบลิงก์ «${title}» ใช่หรือไม่?`);
     if (!ok) return;
@@ -290,16 +215,7 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
   };
 
   const openEditLink = (l: ClubEventDynamicLinkDto) => {
-    setLinkForm({
-      id: l.id,
-      type: l.type,
-      title: l.title,
-      description: l.config.description ?? "",
-      url: l.config.url ?? "",
-      amountBaht: l.config.amountBaht != null ? String(l.config.amountBaht) : "",
-      eventId: l.config.eventId ?? "",
-      fieldLabel: l.config.fields?.[0]?.label ?? "คำถาม / หมายเหตุ",
-    });
+    setLinkForm(clubLinkFormFromDto(l));
     setLinkModalOpen(true);
   };
 
@@ -337,7 +253,7 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
               className={clubEventPrimaryButtonClass}
               aria-label="สร้างลิงก์"
               onClick={() => {
-                setLinkForm(emptyLinkForm());
+                setLinkForm(emptyClubLinkForm());
                 setLinkModalOpen(true);
               }}
             >
@@ -599,143 +515,66 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
         ) : null}
       </ClubEventPageSubNav>
 
-      <FormModal
+      <ClubEventLinkEditorModal
         open={linkModalOpen}
         onClose={() => setLinkModalOpen(false)}
-        title={linkForm.id ? "แก้ไขลิงก์" : "สร้างลิงก์"}
-        mobileCentered
-        footer={
-          <div className={clubEventFixedBottomActionClass}>
-            <button
-              type="button"
-              className={cn(clubEventPrimaryButtonClass, "w-full sm:w-auto sm:px-6")}
-              disabled={saving}
-              onClick={() => void saveLink()}
-            >
-              บันทึก
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-3">
-          <label className={labelClass}>
-            <span className={labelTextClass}>ประเภทลิงก์</span>
-            <select
-              className={cn(clubEventFieldClass, "mt-1")}
-              value={linkForm.type}
-              onChange={(e) =>
-                setLinkForm({ ...linkForm, type: e.target.value as ClubEventDynamicLinkDto["type"] })
-              }
-            >
-              {(Object.keys(CLUB_EVENT_LINK_TYPE_LABELS) as ClubEventDynamicLinkDto["type"][]).map((t) => (
-                <option key={t} value={t}>
-                  {CLUB_EVENT_LINK_TYPE_LABELS[t]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={labelClass}>
-            <span className={labelTextClass}>ชื่อลิงก์ (แสดงให้ผู้เข้าร่วม)</span>
-            <input
-              className={cn(clubEventFieldClass, "mt-1")}
-              value={linkForm.title}
-              onChange={(e) => setLinkForm({ ...linkForm, title: e.target.value })}
-              placeholder="เช่น สำรวจอาหารว่าง · ลงทะเบียนวิ่ง · ค่าสมัคร 100 บาท"
-            />
-          </label>
-          <label className={labelClass}>
-            <span className={labelTextClass}>คำอธิบายสั้น</span>
-            <textarea
-              className={cn(clubEventTextareaClass, "mt-1")}
-              value={linkForm.description}
-              onChange={(e) => setLinkForm({ ...linkForm, description: e.target.value })}
-              placeholder="รายละเอียดเพิ่มเติมบนหน้าฟอร์ม"
-            />
-          </label>
-          {linkForm.type !== "URL" ? (
-            <label className={labelClass}>
-              <span className={labelTextClass}>ผูกกับกิจกรรม (ถ้ามี)</span>
-              <select
-                className={cn(clubEventFieldClass, "mt-1")}
-                value={linkForm.eventId}
-                onChange={(e) => setLinkForm({ ...linkForm, eventId: e.target.value })}
-              >
-                <option value="">— ไม่ระบุ —</option>
-                {events.map((ev) => (
-                  <option key={ev.id} value={ev.id}>
-                    {ev.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          {linkForm.type === "URL" ? (
-            <label className={labelClass}>
-              <span className={labelTextClass}>URL ปลายทาง</span>
-              <input
-                className={cn(clubEventFieldClass, "mt-1")}
-                value={linkForm.url}
-                onChange={(e) => setLinkForm({ ...linkForm, url: e.target.value })}
-                placeholder="https://..."
-              />
-            </label>
-          ) : null}
-          {linkForm.type === "PAYMENT" ? (
-            <label className={labelClass}>
-              <span className={labelTextClass}>จำนวนเงินที่เก็บ (บาท)</span>
-              <input
-                className={cn(clubEventFieldClass, "mt-1")}
-                value={linkForm.amountBaht}
-                onChange={(e) => setLinkForm({ ...linkForm, amountBaht: e.target.value })}
-                placeholder="100"
-                inputMode="decimal"
-              />
-            </label>
-          ) : null}
-          {linkForm.type === "SURVEY" || linkForm.type === "RSVP" ? (
-            <label className={labelClass}>
-              <span className={labelTextClass}>ป้ายช่องคำถามเพิ่ม (นอกจากชื่อ-เบอร์)</span>
-              <input
-                className={cn(clubEventFieldClass, "mt-1")}
-                value={linkForm.fieldLabel}
-                onChange={(e) => setLinkForm({ ...linkForm, fieldLabel: e.target.value })}
-                placeholder="เช่น จำนวนคน · เมนูอาหาร · ขนาดเสื้อ"
-              />
-            </label>
-          ) : null}
-        </div>
-      </FormModal>
+        initial={linkForm}
+        events={events}
+        onSaved={loadLinks}
+      />
 
       <FormModal open={subsOpen} onClose={() => setSubsOpen(false)} title={`คำตอบ · ${subsTitle}`} mobileCentered>
         {subsRows.length === 0 ? (
           <AppEmptyState>ยังไม่มีคำตอบ</AppEmptyState>
         ) : (
           <ul className="space-y-2">
-            {subsRows.map((s) => (
-              <li key={s.id} className="rounded-lg border border-slate-200/90 p-3 text-sm">
-                <p className="font-bold text-[#1e1b4b]">
-                  {s.respondentName || "ไม่ระบุชื่อ"}
-                  {s.respondentPhone ? ` · ${s.respondentPhone}` : ""}
-                </p>
-                {s.amountBaht != null ? (
-                  <p className="text-[#4d47b6]">
-                    ฿{s.amountBaht.toLocaleString("th-TH")}
-                    {s.paymentMethod ? ` · ${s.paymentMethod}` : ""}
+            {subsRows.map((s) => {
+              const answers =
+                s.payload.answers && typeof s.payload.answers === "object"
+                  ? (s.payload.answers as Record<string, string>)
+                  : null;
+              const fieldMeta = Array.isArray(s.payload.fields)
+                ? (s.payload.fields as { key?: string; label?: string }[])
+                : [];
+              const labelOf = (key: string) =>
+                fieldMeta.find((f) => f.key === key)?.label?.trim() || key;
+              const legacyAnswer =
+                typeof s.payload.answer === "string" ? s.payload.answer : "";
+              return (
+                <li key={s.id} className="rounded-lg border border-slate-200/90 p-3 text-sm">
+                  <p className="font-bold text-[#1e1b4b]">
+                    {s.respondentName || "ไม่ระบุชื่อ"}
+                    {s.respondentPhone ? ` · ${s.respondentPhone}` : ""}
                   </p>
-                ) : null}
-                {typeof s.payload.answer === "string" && s.payload.answer ? (
-                  <p className="mt-1 text-[#66638c]">{s.payload.answer}</p>
-                ) : null}
-                {s.slipUrl ? (
-                  <a href={s.slipUrl} target="_blank" rel="noreferrer" className="text-xs text-[#0000BF] underline">
-                    ดูสลิป
-                  </a>
-                ) : null}
-                <p className="mt-1 text-[10px] text-[#9490c0]">
-                  {new Date(s.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
-                </p>
-              </li>
-            ))}
+                  {s.amountBaht != null ? (
+                    <p className="text-[#4d47b6]">
+                      ฿{s.amountBaht.toLocaleString("th-TH")}
+                      {s.paymentMethod ? ` · ${s.paymentMethod}` : ""}
+                    </p>
+                  ) : null}
+                  {answers
+                    ? Object.entries(answers).map(([k, v]) =>
+                        v ? (
+                          <p key={k} className="mt-1 text-[#66638c]">
+                            <span className="font-semibold text-[#4d47b6]">{labelOf(k)}: </span>
+                            {v}
+                          </p>
+                        ) : null,
+                      )
+                    : legacyAnswer
+                      ? <p className="mt-1 text-[#66638c]">{legacyAnswer}</p>
+                      : null}
+                  {s.slipUrl ? (
+                    <a href={s.slipUrl} target="_blank" rel="noreferrer" className="text-xs text-[#0000BF] underline">
+                      ดูสลิป
+                    </a>
+                  ) : null}
+                  <p className="mt-1 text-[10px] text-[#9490c0]">
+                    {new Date(s.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
+                  </p>
+                </li>
+              );
+            })}
           </ul>
         )}
       </FormModal>

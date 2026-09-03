@@ -18,13 +18,65 @@ export type ClubMemberCustomField = {
   value: string;
 };
 
+export type ClubDynamicLinkFieldType = "text" | "choice";
+
+export type ClubDynamicLinkField = {
+  key: string;
+  label: string;
+  type: ClubDynamicLinkFieldType;
+  /** ตัวเลือกเมื่อ type = choice */
+  options?: string[];
+  required?: boolean;
+};
+
 export type ClubDynamicLinkConfig = {
   url?: string;
   amountBaht?: number;
   eventId?: string;
   description?: string;
-  fields?: { key: string; label: string; type?: string }[];
+  fields?: ClubDynamicLinkField[];
 };
+
+export function normalizeClubDynamicLinkFields(raw: unknown): ClubDynamicLinkField[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ClubDynamicLinkField[] = [];
+  for (let i = 0; i < raw.length && out.length < 20; i += 1) {
+    const row = raw[i];
+    if (typeof row !== "object" || row === null) continue;
+    const label = typeof (row as { label?: unknown }).label === "string"
+      ? (row as { label: string }).label.trim().slice(0, 160)
+      : "";
+    if (!label) continue;
+    const typeRaw = (row as { type?: unknown }).type;
+    const type: ClubDynamicLinkFieldType = typeRaw === "choice" ? "choice" : "text";
+    const keyRaw = typeof (row as { key?: unknown }).key === "string"
+      ? (row as { key: string }).key.trim().slice(0, 64)
+      : "";
+    const key = keyRaw || `q${i + 1}`;
+    let options: string[] | undefined;
+    if (type === "choice") {
+      const optsRaw = (row as { options?: unknown }).options;
+      const list = Array.isArray(optsRaw)
+        ? optsRaw
+        : typeof optsRaw === "string"
+          ? optsRaw.split(/\n|,/)
+          : [];
+      options = list
+        .map((o) => (typeof o === "string" ? o.trim() : ""))
+        .filter(Boolean)
+        .slice(0, 30);
+      if (options.length === 0) options = ["ตัวเลือก 1"];
+    }
+    out.push({
+      key,
+      label,
+      type,
+      options,
+      required: Boolean((row as { required?: unknown }).required),
+    });
+  }
+  return out;
+}
 
 export function parseCommitteeJson(raw: string): ClubCommitteeMember[] {
   try {
@@ -62,7 +114,11 @@ export function parseDynamicLinkConfig(raw: string): ClubDynamicLinkConfig {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (typeof parsed !== "object" || parsed === null) return {};
-    return parsed as ClubDynamicLinkConfig;
+    const cfg = parsed as ClubDynamicLinkConfig;
+    return {
+      ...cfg,
+      fields: cfg.fields ? normalizeClubDynamicLinkFields(cfg.fields) : undefined,
+    };
   } catch {
     return {};
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAppNoticePopup } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
@@ -8,7 +8,7 @@ import {
   clubEventPublicPayBlocked,
   type ClubEventPublicPayMethod,
 } from "@/systems/club-event/components/ClubEventPublicPaymentPanel";
-import { CLUB_EVENT_LINK_TYPE_LABELS } from "@/systems/club-event/lib/mappers";
+import { CLUB_EVENT_LINK_TYPE_LABELS, normalizeClubDynamicLinkFields } from "@/systems/club-event/lib/mappers";
 import type { ClubDynamicLinkConfig, ClubEventDynamicLinkDto } from "@/systems/club-event/lib/mappers";
 import {
   clubEventFieldClass,
@@ -63,7 +63,7 @@ export function ClubEventPublicLinkClient({
   const data = initialData;
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [answer, setAnswer] = useState("");
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [method, setMethod] = useState<ClubEventPublicPayMethod>("PROMPTPAY");
   const [slipUrl, setSlipUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -71,7 +71,16 @@ export function ClubEventPublicLinkClient({
 
   const { link, clubName, ownerId, paymentRulesNote } = data;
   const amountBaht = link.type === "PAYMENT" ? Number(link.config.amountBaht) || 0 : 0;
-  const fieldLabel = link.config.fields?.[0]?.label ?? "คำถาม / หมายเหตุ";
+  const fields = useMemo(
+    () => normalizeClubDynamicLinkFields(link.config.fields ?? []),
+    [link.config.fields],
+  );
+
+  useEffect(() => {
+    const init: Record<string, string> = {};
+    for (const f of fields) init[f.key] = "";
+    setAnswers(init);
+  }, [fields]);
 
   if (link.type === "URL" && link.config.url) {
     return <ClubEventExternalRedirect url={link.config.url} />;
@@ -93,6 +102,17 @@ export function ClubEventPublicLinkClient({
       notice.error("กรอกชื่อ");
       return;
     }
+    for (const f of fields) {
+      const val = (answers[f.key] ?? "").trim();
+      if (f.required && !val) {
+        notice.error(`กรอก/เลือก: ${f.label}`);
+        return;
+      }
+      if (f.type === "choice" && val && f.options && !f.options.includes(val)) {
+        notice.error(`ตัวเลือกไม่ถูกต้อง: ${f.label}`);
+        return;
+      }
+    }
     if (link.type === "PAYMENT" && clubEventPublicPayBlocked(method, amountBaht, slipUrl)) {
       notice.error("แนบสลิปหลังชำระด้วยพร้อมเพย์หรือโอน");
       return;
@@ -100,6 +120,10 @@ export function ClubEventPublicLinkClient({
     setSubmitting(true);
     try {
       const q = trialParam ? `?t=${encodeURIComponent(trialParam)}` : "";
+      const trimmedAnswers: Record<string, string> = {};
+      for (const f of fields) {
+        trimmedAnswers[f.key] = (answers[f.key] ?? "").trim();
+      }
       const res = await fetch(
         `/api/club-event/public/${encodeURIComponent(slug)}/links/${encodeURIComponent(linkId)}/submit${q}`,
         {
@@ -108,7 +132,9 @@ export function ClubEventPublicLinkClient({
           body: JSON.stringify({
             respondentName: name.trim(),
             respondentPhone: phone.trim(),
-            answer: answer.trim(),
+            answers: trimmedAnswers,
+            // รองรับลิงก์เก่าที่ยังมีช่องเดียว
+            answer: trimmedAnswers[fields[0]?.key ?? "answer"] ?? "",
             paymentMethod: link.type === "PAYMENT" ? method : undefined,
             slipUrl: link.type === "PAYMENT" ? slipUrl : undefined,
             amountBaht: link.type === "PAYMENT" ? amountBaht : undefined,
@@ -133,7 +159,9 @@ export function ClubEventPublicLinkClient({
         <p className="text-xs font-bold uppercase tracking-widest text-[#9490c0]">{clubName}</p>
         <h1 className="mt-1 text-xl font-black text-[#1e1b4b]">{link.title}</h1>
         <p className="mt-1 text-sm text-[#66638c]">{CLUB_EVENT_LINK_TYPE_LABELS[link.type]}</p>
-        {link.eventTitle ? <p className="mt-2 text-xs font-semibold text-[#4d47b6]">กิจกรรม: {link.eventTitle}</p> : null}
+        {link.eventTitle ? (
+          <p className="mt-2 text-xs font-semibold text-[#4d47b6]">กิจกรรม: {link.eventTitle}</p>
+        ) : null}
         {link.config.description ? (
           <p className="mt-3 whitespace-pre-wrap text-left text-sm text-[#5f5a8a]">{link.config.description}</p>
         ) : null}
@@ -161,17 +189,37 @@ export function ClubEventPublicLinkClient({
             disabled={submitting}
           />
         </label>
-        {link.type === "SURVEY" || link.type === "RSVP" ? (
-          <label className={labelClass}>
-            <span className={labelText}>{fieldLabel}</span>
-            <textarea
-              className={cn(clubEventTextareaClass, "mt-1")}
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              disabled={submitting}
-            />
+
+        {fields.map((f) => (
+          <label key={f.key} className={labelClass}>
+            <span className={labelText}>
+              {f.label}
+              {f.required ? <span className="text-rose-500"> *</span> : null}
+            </span>
+            {f.type === "choice" ? (
+              <select
+                className={cn(clubEventFieldClass, "mt-1")}
+                value={answers[f.key] ?? ""}
+                onChange={(e) => setAnswers((a) => ({ ...a, [f.key]: e.target.value }))}
+                disabled={submitting}
+              >
+                <option value="">— เลือก —</option>
+                {(f.options ?? []).map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <textarea
+                className={cn(clubEventTextareaClass, "mt-1")}
+                value={answers[f.key] ?? ""}
+                onChange={(e) => setAnswers((a) => ({ ...a, [f.key]: e.target.value }))}
+                disabled={submitting}
+              />
+            )}
           </label>
-        ) : null}
+        ))}
 
         {link.type === "PAYMENT" ? (
           <ClubEventPublicPaymentPanel

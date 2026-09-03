@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Calendar,
   ImagePlus,
+  Link2,
   Play,
   Plus,
   Trash2,
@@ -31,6 +32,10 @@ import {
   parseClubEventDashboardTab,
   type ClubEventDashboardTabKey,
 } from "@/systems/club-event/club-event-module-nav";
+import {
+  ClubEventLinkEditorModal,
+  emptyClubLinkForm,
+} from "@/systems/club-event/components/ClubEventLinkEditorModal";
 import { ClubEventPageSubNav } from "@/systems/club-event/components/ClubEventPageSubNav";
 import { ClubEventSlideshow } from "@/systems/club-event/components/ClubEventSlideshow";
 import { ClubEventYoutubePlayer } from "@/systems/club-event/components/ClubEventYoutubePlayer";
@@ -64,6 +69,8 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [slideshowOpen, setSlideshowOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [linkForm, setLinkForm] = useState(() => emptyClubLinkForm());
 
   const [eventForm, setEventForm] = useState({
     id: "",
@@ -356,6 +363,24 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
                     <div className="flex shrink-0 items-center gap-1 self-end sm:self-center">
                       <button
                         type="button"
+                        className={cn(assetRowEditIconButtonClass, "text-[#0000BF]")}
+                        aria-label={`สร้างลิงก์สำหรับ ${ev.title}`}
+                        title="สร้างลิงก์"
+                        onClick={() => {
+                          setLinkForm(
+                            emptyClubLinkForm({
+                              type: "RSVP",
+                              title: `ลงทะเบียน · ${ev.title}`,
+                              eventId: ev.id,
+                            }),
+                          );
+                          setLinkModalOpen(true);
+                        }}
+                      >
+                        <Link2 className="h-4 w-4" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
                         className={clubEventOutlineButtonClass}
                         onClick={() => void loadDetail(ev.id)}
                       >
@@ -458,6 +483,23 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
           <div className="space-y-4">
             <p className="text-sm text-[#66638c]">{formatBangkokDateTimeLong(selectedEvent.eventDate)}</p>
             {selectedEvent.description ? <p className="whitespace-pre-wrap text-sm text-[#1e1b4b]">{selectedEvent.description}</p> : null}
+            <button
+              type="button"
+              className={cn(clubEventOutlineButtonClass, "inline-flex w-full items-center justify-center gap-2 sm:w-auto")}
+              onClick={() => {
+                setLinkForm(
+                  emptyClubLinkForm({
+                    type: "RSVP",
+                    title: `ลงทะเบียน · ${selectedEvent.title}`,
+                    eventId: selectedEvent.id,
+                  }),
+                );
+                setLinkModalOpen(true);
+              }}
+            >
+              <Link2 className="h-4 w-4" aria-hidden />
+              สร้างลิงก์สำหรับกิจกรรมนี้
+            </button>
             {selectedEvent.youtubeEmbedUrl ? (
               <div>
                 <h3 className="mb-2 text-sm font-bold text-[#1e1b4b]">วิดีโอ</h3>
@@ -505,6 +547,14 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
           </div>
         ) : null}
       </FormModal>
+
+      <ClubEventLinkEditorModal
+        open={linkModalOpen}
+        onClose={() => setLinkModalOpen(false)}
+        initial={linkForm}
+        events={events}
+        onSaved={() => undefined}
+      />
 
       <ClubEventSlideshow
         open={slideshowOpen}
