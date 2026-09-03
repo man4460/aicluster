@@ -28,6 +28,10 @@ import {
   clubLinkFormFromDto,
   emptyClubLinkForm,
 } from "@/systems/club-event/components/ClubEventLinkEditorModal";
+import {
+  ClubEventPageBlock,
+  ClubEventPageSubNav,
+} from "@/systems/club-event/components/ClubEventPageSubNav";
 import { ClubEventSlideshow } from "@/systems/club-event/components/ClubEventSlideshow";
 import { ClubEventYoutubePlayer } from "@/systems/club-event/components/ClubEventYoutubePlayer";
 import { prepareClubEventGalleryWebp } from "@/systems/club-event/lib/gallery-image";
@@ -44,6 +48,7 @@ import {
 import { clubEventYoutubeWatchUrlFromStored } from "@/systems/club-event/lib/youtube";
 import {
   clubEventFieldClass,
+  clubEventIconButtonClass,
   clubEventOutlineButtonClass,
   clubEventPrimaryButtonClass,
   clubEventRowCardClass,
@@ -320,74 +325,78 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
   };
 
   if (loading) {
-    return <p className="py-8 text-center text-sm text-[#66638c]">กำลังโหลด…</p>;
+    return (
+      <ClubEventPageSubNav title="กำหนดการ" subtitle="กำลังโหลด…">
+        <p className="py-6 text-center text-sm text-[#66638c]">กำลังโหลด…</p>
+      </ClubEventPageSubNav>
+    );
   }
+
+  const pageSubtitle = isNew && !savedId ? "เพิ่มกิจกรรม" : "แก้ไขกิจกรรม";
 
   return (
     <>
       {notice.popup}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <Link
-          href={CLUB_EVENT_BASE}
-          className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          กลับกำหนดการ
-        </Link>
-        <button
-          type="button"
-          className={clubEventPrimaryButtonClass}
-          disabled={saving}
-          onClick={() => void saveEvent()}
-        >
-          {saving ? "กำลังบันทึก…" : "บันทึก"}
-        </button>
-      </div>
+      <ClubEventPageSubNav
+        title="กำหนดการ"
+        subtitle={pageSubtitle}
+        action={
+          <div className="flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5">
+            <Link
+              href={CLUB_EVENT_BASE}
+              className={clubEventIconButtonClass}
+              aria-label="กลับกำหนดการ"
+              title="กลับกำหนดการ"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden />
+            </Link>
+            <button
+              type="button"
+              className={clubEventPrimaryButtonClass}
+              disabled={saving}
+              onClick={() => void saveEvent()}
+            >
+              {saving ? "กำลังบันทึก…" : "บันทึก"}
+            </button>
+          </div>
+        }
+      >
+        <ClubEventPageBlock first>
+          <div className="space-y-3">
+            <label className="block space-y-1">
+              <span className="text-sm font-semibold text-[#1e1b4b]">ชื่อกิจกรรม</span>
+              <input
+                className={clubEventFieldClass}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="เช่น ประชุมใหญ่ประจำปี"
+              />
+            </label>
 
-      <div className="space-y-4 rounded-[1.5rem] border border-white/55 bg-white/70 p-4 shadow-sm backdrop-blur-xl sm:p-5">
-        <h1 className="text-lg font-black tracking-tight text-[#1e1b4b] sm:text-xl">
-          {isNew && !savedId ? "เพิ่มกิจกรรม" : "รายละเอียด / แก้ไขกิจกรรม"}
-        </h1>
+            <label className="block space-y-1">
+              <span className="text-sm font-semibold text-[#1e1b4b]">วันเวลา</span>
+              <input
+                type="datetime-local"
+                className={clubEventFieldClass}
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value)}
+              />
+            </label>
 
-        <label className="block space-y-1">
-          <span className="text-sm font-semibold text-[#1e1b4b]">ชื่อกิจกรรม</span>
-          <input
-            className={clubEventFieldClass}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="เช่น ประชุมใหญ่ประจำปี"
-          />
-        </label>
+            <label className="block space-y-1">
+              <span className="text-sm font-semibold text-[#1e1b4b]">รายละเอียด</span>
+              <textarea
+                className={clubEventTextareaClass}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </label>
+          </div>
+        </ClubEventPageBlock>
 
-        <label className="block space-y-1">
-          <span className="text-sm font-semibold text-[#1e1b4b]">วันเวลา</span>
-          <input
-            type="datetime-local"
-            className={clubEventFieldClass}
-            value={eventDate}
-            onChange={(e) => setEventDate(e.target.value)}
-          />
-        </label>
-
-        <label className="block space-y-1">
-          <span className="text-sm font-semibold text-[#1e1b4b]">รายละเอียด</span>
-          <textarea
-            className={clubEventTextareaClass}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </label>
-
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-sm font-bold text-[#1e1b4b]">วิดีโอ YouTube</p>
-              <p className="text-[11px] font-semibold text-[#8b87b8]">
-                {limits.isMonthly
-                  ? `แพ็กเดือน · ได้สูงสุด ${limits.youtubeMax} ลิงก์`
-                  : `แพ็กฟรี · ได้ ${CLUB_EVENT_FREE_YOUTUBE_MAX} ลิงก์ — เพิ่มมากกว่านี้ต้องสมัครรายเดือน`}
-              </p>
-            </div>
+        <ClubEventPageBlock
+          title="วิดีโอ YouTube"
+          action={
             <button
               type="button"
               className={clubEventOutlineButtonClass}
@@ -407,7 +416,13 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
               <Plus className="mr-1 inline h-4 w-4" aria-hidden />
               เพิ่มลิงก์
             </button>
-          </div>
+          }
+        >
+          <p className="mb-2 text-[11px] font-semibold text-[#8b87b8]">
+            {limits.isMonthly
+              ? `แพ็กเดือน · ได้สูงสุด ${limits.youtubeMax} ลิงก์`
+              : `แพ็กฟรี · ได้ ${CLUB_EVENT_FREE_YOUTUBE_MAX} ลิงก์ — เพิ่มมากกว่านี้ต้องสมัครรายเดือน`}
+          </p>
           <ul className="space-y-2">
             {youtubeInputs.map((url, idx) => (
               <li key={idx} className="flex gap-2">
@@ -438,7 +453,7 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
             ))}
           </ul>
           {youtubeInputs.some((u) => u.trim()) ? (
-            <div className="space-y-3">
+            <div className="mt-3 space-y-3">
               {youtubeInputs
                 .filter((u) => u.trim())
                 .map((u, i) => (
@@ -446,145 +461,143 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
                 ))}
             </div>
           ) : null}
-        </div>
-      </div>
+        </ClubEventPageBlock>
 
-      <div className="mt-4 space-y-3 rounded-[1.5rem] border border-white/55 bg-white/70 p-4 shadow-sm backdrop-blur-xl sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="text-sm font-bold text-[#1e1b4b]">แกลเลอรี</h2>
-            <p className="text-[11px] font-semibold text-[#8b87b8]">
-              {gallery.length}/{limits.galleryMax} รูป
-              {!limits.isMonthly
-                ? ` · ฟรีได้ ${CLUB_EVENT_FREE_GALLERY_MAX} รูป เกินนี้สมัครรายเดือน`
-                : null}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {gallery.length > 0 ? (
-              <button
-                type="button"
-                className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
-                onClick={() => setSlideshowOpen(true)}
-              >
-                <Play className="h-4 w-4" aria-hidden />
-                Slideshow
-              </button>
-            ) : null}
-            <label
-              className={cn(
-                clubEventOutlineButtonClass,
-                "inline-flex cursor-pointer items-center gap-1.5",
-                (!activeEventId || !canAddGallery) && "pointer-events-none opacity-50",
-              )}
-            >
-              <ImagePlus className="h-4 w-4" aria-hidden />
-              <span>เพิ่มรูป</span>
-              <input
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                disabled={!activeEventId || !canAddGallery}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void uploadGallery(f);
-                  e.target.value = "";
-                }}
-              />
-            </label>
-          </div>
-        </div>
-        {!activeEventId ? (
-          <AppEmptyState>บันทึกกิจกรรมก่อน แล้วค่อยอัปโหลดรูป</AppEmptyState>
-        ) : gallery.length === 0 ? (
-          <AppEmptyState>ยังไม่มีรูป — อัปโหลดรูปกิจกรรม (แปลง WebP อัตโนมัติ)</AppEmptyState>
-        ) : (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {gallery.map((g) => (
-              <div key={g.id} className="relative">
-                <AppImageThumb src={g.imageUrl} alt={g.fileName} onOpen={() => lb.open(g.imageUrl)} />
+        <ClubEventPageBlock
+          title="แกลเลอรี"
+          action={
+            <div className="flex flex-wrap gap-1.5">
+              {gallery.length > 0 ? (
                 <button
                   type="button"
-                  className="absolute -right-1 -top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-rose-600 text-white"
-                  aria-label={`ลบรูป ${g.fileName}`}
-                  onClick={() => void removeGalleryImage(g.id)}
+                  className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
+                  onClick={() => setSlideshowOpen(true)}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Play className="h-4 w-4" aria-hidden />
+                  <span className="hidden sm:inline">Slideshow</span>
                 </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ) : null}
+              <label
+                className={cn(
+                  clubEventOutlineButtonClass,
+                  "inline-flex cursor-pointer items-center gap-1.5",
+                  (!activeEventId || !canAddGallery) && "pointer-events-none opacity-50",
+                )}
+              >
+                <ImagePlus className="h-4 w-4" aria-hidden />
+                <span>เพิ่มรูป</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  disabled={!activeEventId || !canAddGallery}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void uploadGallery(f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+          }
+        >
+          <p className="mb-2 text-[11px] font-semibold text-[#8b87b8]">
+            {gallery.length}/{limits.galleryMax} รูป
+            {!limits.isMonthly ? ` · ฟรีได้ ${CLUB_EVENT_FREE_GALLERY_MAX} รูป เกินนี้สมัครรายเดือน` : null}
+          </p>
+          {!activeEventId ? (
+            <AppEmptyState>บันทึกกิจกรรมก่อน แล้วค่อยอัปโหลดรูป</AppEmptyState>
+          ) : gallery.length === 0 ? (
+            <AppEmptyState>ยังไม่มีรูป — อัปโหลดรูปกิจกรรม (แปลง WebP อัตโนมัติ)</AppEmptyState>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {gallery.map((g) => (
+                <div key={g.id} className="relative">
+                  <AppImageThumb src={g.imageUrl} alt={g.fileName} onOpen={() => lb.open(g.imageUrl)} />
+                  <button
+                    type="button"
+                    className="absolute -right-1 -top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-rose-600 text-white"
+                    aria-label={`ลบรูป ${g.fileName}`}
+                    onClick={() => void removeGalleryImage(g.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </ClubEventPageBlock>
 
-      <div className="mt-4 space-y-3 rounded-[1.5rem] border border-white/55 bg-white/70 p-4 shadow-sm backdrop-blur-xl sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-bold text-[#1e1b4b]">ลิงก์สำรวจ · RSVP · เก็บค่า</h2>
-          <button
-            type="button"
-            className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
-            disabled={!activeEventId}
-            onClick={openCreateLink}
-          >
-            <Link2 className="h-4 w-4" aria-hidden />
-            สร้างลิงก์
-          </button>
-        </div>
-        {!activeEventId ? (
-          <AppEmptyState>บันทึกกิจกรรมก่อน แล้วค่อยสร้างลิงก์</AppEmptyState>
-        ) : links.length === 0 ? (
-          <AppEmptyState>ยังไม่มีลิงก์ของกิจกรรมนี้</AppEmptyState>
-        ) : (
-          <ul className="space-y-2">
-            {links.map((l) => (
-              <li key={l.id} className={clubEventRowCardClass}>
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-[#1e1b4b]">{l.title}</p>
-                  <p className="text-sm text-[#66638c]">
-                    {CLUB_EVENT_LINK_TYPE_LABELS[l.type]}
-                    {typeof l.submissionsCount === "number" ? ` · คำตอบ ${l.submissionsCount}` : ""}
-                  </p>
-                  <a
-                    href={l.publicPath}
-                    className="text-xs text-[#0000BF] underline"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {l.publicPath}
-                  </a>
-                </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-1">
-                  <button
-                    type="button"
-                    className={clubEventOutlineButtonClass}
-                    onClick={() => void openSubmissions(l)}
-                  >
-                    คำตอบ
-                  </button>
-                  <button
-                    type="button"
-                    className={assetRowEditIconButtonClass}
-                    aria-label={`แก้ไข ${l.title}`}
-                    title="แก้ไข"
-                    onClick={() => openEditLink(l)}
-                  >
-                    <IconRowEdit className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    className={assetRowRemoveIconButtonClass}
-                    aria-label={`ลบ ${l.title}`}
-                    title="ลบ"
-                    onClick={() => void deleteLink(l.id, l.title)}
-                  >
-                    <IconRowRemove className="h-4 w-4" />
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+        <ClubEventPageBlock
+          title="ลิงก์สำรวจ · RSVP · เก็บค่า"
+          action={
+            <button
+              type="button"
+              className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
+              disabled={!activeEventId}
+              onClick={openCreateLink}
+            >
+              <Link2 className="h-4 w-4" aria-hidden />
+              สร้างลิงก์
+            </button>
+          }
+        >
+          {!activeEventId ? (
+            <AppEmptyState>บันทึกกิจกรรมก่อน แล้วค่อยสร้างลิงก์</AppEmptyState>
+          ) : links.length === 0 ? (
+            <AppEmptyState>ยังไม่มีลิงก์ของกิจกรรมนี้</AppEmptyState>
+          ) : (
+            <ul className="space-y-2">
+              {links.map((l) => (
+                <li key={l.id} className={clubEventRowCardClass}>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-[#1e1b4b]">{l.title}</p>
+                    <p className="text-sm text-[#66638c]">
+                      {CLUB_EVENT_LINK_TYPE_LABELS[l.type]}
+                      {typeof l.submissionsCount === "number" ? ` · คำตอบ ${l.submissionsCount}` : ""}
+                    </p>
+                    <a
+                      href={l.publicPath}
+                      className="text-xs text-[#0000BF] underline"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {l.publicPath}
+                    </a>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center gap-1">
+                    <button
+                      type="button"
+                      className={clubEventOutlineButtonClass}
+                      onClick={() => void openSubmissions(l)}
+                    >
+                      คำตอบ
+                    </button>
+                    <button
+                      type="button"
+                      className={assetRowEditIconButtonClass}
+                      aria-label={`แก้ไข ${l.title}`}
+                      title="แก้ไข"
+                      onClick={() => openEditLink(l)}
+                    >
+                      <IconRowEdit className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className={assetRowRemoveIconButtonClass}
+                      aria-label={`ลบ ${l.title}`}
+                      title="ลบ"
+                      onClick={() => void deleteLink(l.id, l.title)}
+                    >
+                      <IconRowRemove className="h-4 w-4" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </ClubEventPageBlock>
+      </ClubEventPageSubNav>
 
       <ClubEventLinkEditorModal
         open={linkModalOpen}

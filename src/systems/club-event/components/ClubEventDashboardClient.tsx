@@ -214,9 +214,6 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
                       ) : null}
                     </div>
                     <div className="flex shrink-0 items-center gap-1 self-end sm:self-center">
-                      <Link href={clubEventEventHref(ev.id)} className={clubEventOutlineButtonClass}>
-                        รายละเอียด
-                      </Link>
                       <Link
                         href={clubEventEventHref(ev.id)}
                         className={assetRowEditIconButtonClass}
