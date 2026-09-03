@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ImagePlus, Link2, Play } from "lucide-react";
@@ -95,6 +95,11 @@ const defaultLimits: ClubEventMediaLimits = {
   galleryMax: CLUB_EVENT_FREE_GALLERY_MAX,
 };
 
+/** แกลเลอรีในฟอร์มแก้ไข — 8 คอลัมน์ × 2 แถว ต่อหน้า */
+const EDITOR_GALLERY_PAGE_COLS = 8;
+const EDITOR_GALLERY_PAGE_ROWS = 2;
+const EDITOR_GALLERY_PAGE_SIZE = EDITOR_GALLERY_PAGE_COLS * EDITOR_GALLERY_PAGE_ROWS;
+
 export function ClubEventEventEditorClient({ eventId }: { eventId: string | null }) {
   const router = useRouter();
   const isNew = !eventId;
@@ -115,6 +120,7 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
   const [ytForm, setYtForm] = useState<YoutubeDraft>(() => newYoutubeDraft());
   const [ytFormErr, setYtFormErr] = useState<string | null>(null);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
+  const [galleryPage, setGalleryPage] = useState(0);
   const [slideshowOpen, setSlideshowOpen] = useState(false);
   const [galleryUploading, setGalleryUploading] = useState(false);
   const [links, setLinks] = useState<ClubLinkRow[]>([]);
@@ -186,6 +192,7 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
       setYtForm(newYoutubeDraft());
       setYtFormErr(null);
       setGallery(data.gallery ?? []);
+      setGalleryPage(0);
       if (data.mediaLimits) setLimits(data.mediaLimits);
       setSavedId(ev.id);
       await loadLinks(ev.id);
@@ -215,6 +222,19 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
 
   const canAddYoutube = youtubeVideos.length < limits.youtubeMax;
   const canAddGallery = gallery.length < limits.galleryMax;
+  const galleryPageCount = Math.max(1, Math.ceil(gallery.length / EDITOR_GALLERY_PAGE_SIZE));
+  const gallerySlice = useMemo(() => {
+    const start = galleryPage * EDITOR_GALLERY_PAGE_SIZE;
+    return gallery.slice(start, start + EDITOR_GALLERY_PAGE_SIZE).map((g, i) => ({
+      item: g,
+      index: start + i,
+    }));
+  }, [gallery, galleryPage]);
+
+  useEffect(() => {
+    setGalleryPage((p) => Math.min(p, Math.max(0, galleryPageCount - 1)));
+  }, [galleryPageCount]);
+
   const ytFormPreviewId = extractYoutubeVideoId(ytForm.youtubeUrl);
   const ytEditing = ytEditIdx !== null || Boolean(ytForm.title || ytForm.youtubeUrl);
 
@@ -740,29 +760,76 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
           ) : gallery.length === 0 ? (
             <AppEmptyState>ยังไม่มีรูป — อัปโหลดรูปกิจกรรม (แปลง WebP อัตโนมัติ)</AppEmptyState>
           ) : (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
-              {gallery.map((g) => (
-                <div key={g.id} className="relative">
-                  <AppImageThumb
-                    src={g.imageUrl}
-                    alt={g.fileName}
-                    onOpen={() => lb.open(g.imageUrl)}
-                    className="h-20 w-full sm:h-24"
-                  />
-                  <button
-                    type="button"
-                    className={cn(
-                      assetRowRemoveIconButtonClass,
-                      "absolute -right-1 -top-1 !min-h-[32px] !min-w-[32px] rounded-full shadow-sm",
-                    )}
-                    aria-label={`ลบรูป ${g.fileName}`}
-                    title="ลบรูป"
-                    onClick={() => void removeGalleryImage(g.id)}
-                  >
-                    <IconRowRemove className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
+            <div className="space-y-3">
+              <div className="grid grid-cols-8 gap-1.5 sm:gap-2">
+                {gallerySlice.map(({ item: g, index }) => (
+                  <div key={g.id} className="relative">
+                    <AppImageThumb
+                      src={g.imageUrl}
+                      alt={g.fileName}
+                      onOpen={() =>
+                        lb.openGallery(
+                          gallery.map((x) => x.imageUrl),
+                          index,
+                        )
+                      }
+                      className="h-14 w-full sm:h-16 md:h-20"
+                    />
+                    <button
+                      type="button"
+                      className={cn(
+                        assetRowRemoveIconButtonClass,
+                        "absolute -right-0.5 -top-0.5 !min-h-[28px] !min-w-[28px] rounded-full shadow-sm sm:!min-h-[32px] sm:!min-w-[32px]",
+                      )}
+                      aria-label={`ลบรูป ${g.fileName}`}
+                      title="ลบรูป"
+                      onClick={() => void removeGalleryImage(g.id)}
+                    >
+                      <IconRowRemove className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {galleryPageCount > 1 ? (
+                <nav
+                  className="flex flex-wrap items-center justify-between gap-2"
+                  aria-label="หน้าแกลเลอรี"
+                >
+                  <p className="text-xs font-semibold text-[#66638c]">
+                    หน้า {galleryPage + 1} / {galleryPageCount}
+                    <span className="text-slate-400">
+                      {" "}
+                      · แสดง {gallerySlice.length}/{gallery.length} รูป
+                    </span>
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className={clubEventOutlineButtonClass}
+                      disabled={galleryPage <= 0}
+                      aria-label="หน้าก่อนหน้า"
+                      onClick={() => setGalleryPage((p) => Math.max(0, p - 1))}
+                    >
+                      ก่อนหน้า
+                    </button>
+                    <button
+                      type="button"
+                      className={cn(
+                        galleryPage >= galleryPageCount - 1
+                          ? clubEventOutlineButtonClass
+                          : clubEventPrimaryButtonClass,
+                      )}
+                      disabled={galleryPage >= galleryPageCount - 1}
+                      aria-label="หน้าถัดไป"
+                      onClick={() =>
+                        setGalleryPage((p) => Math.min(galleryPageCount - 1, p + 1))
+                      }
+                    >
+                      ถัดไป
+                    </button>
+                  </div>
+                </nav>
+              ) : null}
             </div>
           )}
         </ClubEventPageBlock>
@@ -874,7 +941,13 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
         slides={gallery}
         title={title}
       />
-      <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปกิจกรรม" />
+      <AppImageLightbox
+        src={lb.src}
+        sources={lb.sources}
+        initialIndex={lb.initialIndex}
+        onClose={lb.close}
+        alt="รูปกิจกรรม"
+      />
       <AppYoutubeLightbox
         youtubeUrl={ytLb.youtubeUrl}
         title={ytLb.title}
