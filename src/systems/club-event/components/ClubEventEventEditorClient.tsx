@@ -33,8 +33,8 @@ import {
 } from "@/systems/club-event/components/ClubEventLinkEditorModal";
 import { ClubEventLinkSubmissionsModal } from "@/systems/club-event/components/ClubEventLinkSubmissionsModal";
 import {
-  ClubEventPageBlock,
   ClubEventPageSubNav,
+  type ClubEventPageSubNavItem,
 } from "@/systems/club-event/components/ClubEventPageSubNav";
 import { ClubEventSlideshow } from "@/systems/club-event/components/ClubEventSlideshow";
 import { prepareClubEventGalleryWebp } from "@/systems/club-event/lib/gallery-image";
@@ -100,6 +100,15 @@ const EDITOR_GALLERY_PAGE_COLS = 8;
 const EDITOR_GALLERY_PAGE_ROWS = 2;
 const EDITOR_GALLERY_PAGE_SIZE = EDITOR_GALLERY_PAGE_COLS * EDITOR_GALLERY_PAGE_ROWS;
 
+type EditorTabKey = "general" | "youtube" | "gallery" | "links";
+
+const EDITOR_TAB_ITEMS: ClubEventPageSubNavItem[] = [
+  { key: "general", label: "ทั่วไป", shortLabel: "ทั่วไป" },
+  { key: "youtube", label: "ยูทูป", shortLabel: "ยูทูป" },
+  { key: "gallery", label: "แกลเลอรี", shortLabel: "รูป" },
+  { key: "links", label: "ลิงก์", shortLabel: "ลิงก์" },
+];
+
 export function ClubEventEventEditorClient({ eventId }: { eventId: string | null }) {
   const router = useRouter();
   const isNew = !eventId;
@@ -121,6 +130,7 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
   const [ytFormErr, setYtFormErr] = useState<string | null>(null);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [galleryPage, setGalleryPage] = useState(0);
+  const [editorTab, setEditorTab] = useState<EditorTabKey>("general");
   const [slideshowOpen, setSlideshowOpen] = useState(false);
   const [galleryUploading, setGalleryUploading] = useState(false);
   const [links, setLinks] = useState<ClubLinkRow[]>([]);
@@ -472,14 +482,21 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
     );
   }
 
-  const pageSubtitle = isNew && !savedId ? "เพิ่มกิจกรรม" : "แก้ไขกิจกรรม";
+  const pageTitle = isNew && !savedId ? "เพิ่มกิจกรรม" : "แก้ไขกิจกรรม";
 
   return (
     <>
       {notice.popup}
       <ClubEventPageSubNav
-        title="กำหนดการ"
-        subtitle={pageSubtitle}
+        title={pageTitle}
+        items={EDITOR_TAB_ITEMS}
+        activeKey={editorTab}
+        onSelect={(key) => setEditorTab(key as EditorTabKey)}
+        ariaLabel="เมนูแก้ไขกิจกรรม"
+        mobileSelect={{
+          id: "club-event-editor-tab-mobile",
+          label: "เลือกหมวด",
+        }}
         action={
           <div className="flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5">
             <Link
@@ -501,8 +518,8 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
           </div>
         }
       >
-        <ClubEventPageBlock first>
-          <div className="space-y-3">
+        {editorTab === "general" ? (
+        <div role="tabpanel" className="space-y-3">
             <label className="block space-y-1">
               <span className="text-sm font-semibold text-[#1e1b4b]">ชื่อกิจกรรม</span>
               <input
@@ -531,10 +548,11 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
                 onChange={(e) => setDescription(e.target.value)}
               />
             </label>
-          </div>
-        </ClubEventPageBlock>
+        </div>
+        ) : null}
 
-        <ClubEventPageBlock title="วิดีโอ YouTube">
+        {editorTab === "youtube" ? (
+        <div role="tabpanel">
           <p className="mb-3 text-[11px] font-semibold text-[#8b87b8]">
             {youtubeVideos.length}/{limits.youtubeMax} คลิป
             {limits.isMonthly
@@ -710,11 +728,16 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
               })}
             </div>
           )}
-        </ClubEventPageBlock>
+        </div>
+        ) : null}
 
-        <ClubEventPageBlock
-          title="แกลเลอรี"
-          action={
+        {editorTab === "gallery" ? (
+        <div role="tabpanel">
+          <div className="mb-3 flex flex-row items-start justify-between gap-3">
+            <p className="text-[11px] font-semibold text-[#8b87b8]">
+              {gallery.length}/{limits.galleryMax} รูป
+              {!limits.isMonthly ? ` · ฟรีได้ ${CLUB_EVENT_FREE_GALLERY_MAX} รูป เกินนี้สมัครรายเดือน` : null}
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {gallery.length > 0 ? (
                 <button
@@ -749,12 +772,7 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
                 />
               </label>
             </div>
-          }
-        >
-          <p className="mb-2 text-[11px] font-semibold text-[#8b87b8]">
-            {gallery.length}/{limits.galleryMax} รูป
-            {!limits.isMonthly ? ` · ฟรีได้ ${CLUB_EVENT_FREE_GALLERY_MAX} รูป เกินนี้สมัครรายเดือน` : null}
-          </p>
+          </div>
           {!activeEventId ? (
             <AppEmptyState>บันทึกกิจกรรมก่อน แล้วค่อยอัปโหลดรูป</AppEmptyState>
           ) : gallery.length === 0 ? (
@@ -832,15 +850,19 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
               ) : null}
             </div>
           )}
-        </ClubEventPageBlock>
+        </div>
+        ) : null}
 
-        <ClubEventPageBlock
-          title="ลิงก์สำรวจ · RSVP · เก็บค่า"
-          action={
-            activeEventId ? (
+        {editorTab === "links" ? (
+        <div role="tabpanel">
+          <div className="mb-3 flex flex-row items-start justify-between gap-3">
+            <p className="text-[11px] font-semibold text-[#8b87b8]">
+              กิจกรรมละ 1 ลิงก์ — สร้างแล้วแก้ของเดิมได้เท่านั้น ไม่สร้างซ้ำ
+            </p>
+            {activeEventId ? (
               <button
                 type="button"
-                className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
+                className={cn(clubEventOutlineButtonClass, "inline-flex shrink-0 items-center gap-1.5")}
                 onClick={openCreateLink}
               >
                 {links.length > 0 ? (
@@ -855,12 +877,8 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
                   </>
                 )}
               </button>
-            ) : undefined
-          }
-        >
-          <p className="mb-2 text-[11px] font-semibold text-[#8b87b8]">
-            กิจกรรมละ 1 ลิงก์ — สร้างแล้วแก้ของเดิมได้เท่านั้น ไม่สร้างซ้ำ
-          </p>
+            ) : null}
+          </div>
           {!activeEventId ? (
             <AppEmptyState>บันทึกกิจกรรมก่อน แล้วค่อยสร้างลิงก์</AppEmptyState>
           ) : links.length === 0 ? (
@@ -915,7 +933,8 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
               ))}
             </ul>
           )}
-        </ClubEventPageBlock>
+        </div>
+        ) : null}
       </ClubEventPageSubNav>
 
       <ClubEventLinkEditorModal

@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 import {
   clubEventInlineSubNavBtnClass,
   clubEventInlineSubNavShellClass,
+  clubEventMobileSelectClass,
   clubEventPanelClass,
   clubEventPanelDividerClass,
   clubEventPanelSectionClass,
@@ -14,13 +15,14 @@ import {
 export type ClubEventPageSubNavItem = {
   key: string;
   label: string;
-  /** ป้ายสั้นบนมือถือ */
+  /** ป้ายสั้นบนมือถือ (เมื่อไม่ใช้ dropdown) */
   shortLabel?: string;
   icon?: ReactNode;
 };
 
 /**
  * หัวการ์ดแบบซักผ้า — ชื่อเมนูหลัก + หัวข้อย่อยแถวเดียว · แท็บ/ปุ่มขวา · เส้นบาง · เนื้อหา
+ * แท็บหลายตัว: มือถือใช้ select (ส่ง mobileSelect) · sm+ แสดง pill มุมขวา
  */
 export function ClubEventPageSubNav({
   title,
@@ -30,6 +32,7 @@ export function ClubEventPageSubNav({
   onSelect,
   ariaLabel,
   action,
+  mobileSelect,
   children,
   className,
 }: {
@@ -41,12 +44,18 @@ export function ClubEventPageSubNav({
   onSelect?: (key: string) => void;
   ariaLabel?: string;
   action?: ReactNode;
+  /** เมื่อมีหลายแท็บ — dropdown บนมือถือ + ซ่อน pill (กฎ dashboard-primary-secondary-menu-tabs) */
+  mobileSelect?: {
+    id: string;
+    label: string;
+  };
   children?: ReactNode;
   className?: string;
 }) {
   const hasTabs = Boolean(items?.length && onSelect && activeKey != null);
   const activeItem = items?.find((i) => i.key === activeKey);
   const sub = subtitle ?? activeItem?.label;
+  const useMobileSelect = Boolean(hasTabs && mobileSelect);
 
   return (
     <div className={cn(clubEventPanelClass, className)}>
@@ -68,39 +77,94 @@ export function ClubEventPageSubNav({
             aria-label={ariaLabel ?? "เครื่องมือหน้า"}
           >
             {hasTabs ? (
-              <nav className={clubEventInlineSubNavShellClass} role="tablist" aria-label={ariaLabel ?? "เมนูย่อย"}>
-                {items!.map((item) => {
-                  const active = activeKey === item.key;
-                  const short = item.shortLabel ?? item.label;
-                  return (
-                    <button
-                      key={item.key}
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
-                      aria-current={active ? "page" : undefined}
-                      title={item.label}
-                      aria-label={item.label}
-                      onClick={() => onSelect?.(item.key)}
-                      className={clubEventInlineSubNavBtnClass(active)}
-                    >
-                      {item.icon ? (
-                        <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
-                          {item.icon}
+              useMobileSelect ? (
+                <div className="hidden sm:block">
+                  <nav
+                    className={clubEventInlineSubNavShellClass}
+                    role="tablist"
+                    aria-label={ariaLabel ?? "เมนูย่อย"}
+                  >
+                    {items!.map((item) => {
+                      const active = activeKey === item.key;
+                      return (
+                        <button
+                          key={item.key}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          aria-current={active ? "page" : undefined}
+                          title={item.label}
+                          aria-label={item.label}
+                          onClick={() => onSelect?.(item.key)}
+                          className={clubEventInlineSubNavBtnClass(active)}
+                        >
+                          {item.icon ? (
+                            <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
+                              {item.icon}
+                            </span>
+                          ) : null}
+                          <span>{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </nav>
+                </div>
+              ) : (
+                <nav className={clubEventInlineSubNavShellClass} role="tablist" aria-label={ariaLabel ?? "เมนูย่อย"}>
+                  {items!.map((item) => {
+                    const active = activeKey === item.key;
+                    const short = item.shortLabel ?? item.label;
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        aria-current={active ? "page" : undefined}
+                        title={item.label}
+                        aria-label={item.label}
+                        onClick={() => onSelect?.(item.key)}
+                        className={clubEventInlineSubNavBtnClass(active)}
+                      >
+                        {item.icon ? (
+                          <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
+                            {item.icon}
+                          </span>
+                        ) : null}
+                        <span className="hidden sm:inline">{item.label}</span>
+                        <span className="sm:hidden" aria-hidden>
+                          {short}
                         </span>
-                      ) : null}
-                      <span className="hidden sm:inline">{item.label}</span>
-                      <span className="sm:hidden" aria-hidden>
-                        {short}
-                      </span>
-                    </button>
-                  );
-                })}
-              </nav>
+                      </button>
+                    );
+                  })}
+                </nav>
+              )
             ) : null}
             {action}
           </div>
         </div>
+
+        {useMobileSelect && mobileSelect ? (
+          <div className="mt-3 w-full sm:hidden">
+            <label htmlFor={mobileSelect.id} className="mb-1.5 block text-[11px] font-bold text-[#4d47b6]">
+              {mobileSelect.label}
+            </label>
+            <select
+              id={mobileSelect.id}
+              value={activeKey}
+              onChange={(e) => onSelect?.(e.target.value)}
+              className={clubEventMobileSelectClass}
+              aria-label={mobileSelect.label}
+            >
+              {items!.map((item) => (
+                <option key={item.key} value={item.key}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
       </div>
 
       {children != null ? (
