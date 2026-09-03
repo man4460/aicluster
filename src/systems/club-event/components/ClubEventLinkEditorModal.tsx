@@ -406,22 +406,53 @@ export function ClubEventLinkEditorModal({
                       </div>
 
                       {field.type === "choice" ? (
-                        <label className={labelClass}>
-                          <span className={labelTextClass}>ตัวเลือก (บรรทัดละ 1 รายการ)</span>
-                          <textarea
-                            className={cn(clubEventTextareaClass, "mt-1")}
-                            value={(field.options ?? []).join("\n")}
-                            onChange={(e) =>
-                              updateField(index, {
-                                options: e.target.value
-                                  .split("\n")
-                                  .map((s) => s.trim())
-                                  .filter(Boolean),
-                              })
-                            }
-                            placeholder={"S\nM\nL\nXL"}
-                          />
-                        </label>
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className={labelTextClass}>ตัวเลือก</span>
+                            <button
+                              type="button"
+                              className={cn(clubEventOutlineButtonClass, "gap-1")}
+                              onClick={() => {
+                                const opts = [...(field.options ?? [])];
+                                opts.push(`ตัวเลือก ${opts.length + 1}`);
+                                updateField(index, { options: opts });
+                              }}
+                            >
+                              <Plus className="h-4 w-4" aria-hidden />
+                              เพิ่มตัวเลือก
+                            </button>
+                          </div>
+                          <ul className="space-y-2">
+                            {(field.options ?? []).map((opt, optIdx) => (
+                              <li key={`${field.key}-opt-${optIdx}`} className="flex gap-2">
+                                <input
+                                  className={cn(clubEventFieldClass, "min-w-0 flex-1")}
+                                  value={opt}
+                                  onChange={(e) => {
+                                    const opts = [...(field.options ?? [])];
+                                    opts[optIdx] = e.target.value;
+                                    updateField(index, { options: opts });
+                                  }}
+                                  placeholder={`ตัวเลือก ${optIdx + 1}`}
+                                />
+                                <button
+                                  type="button"
+                                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50 disabled:opacity-40"
+                                  aria-label={`ลบตัวเลือก ${optIdx + 1}`}
+                                  title="ลบตัวเลือก"
+                                  disabled={(field.options ?? []).length <= 2}
+                                  onClick={() => {
+                                    const opts = (field.options ?? []).filter((_, i) => i !== optIdx);
+                                    updateField(index, { options: opts });
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" aria-hidden />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="text-[11px] font-semibold text-[#8b87b8]">อย่างน้อย 2 ตัวเลือก</p>
+                        </div>
                       ) : null}
                     </li>
                   ))}
