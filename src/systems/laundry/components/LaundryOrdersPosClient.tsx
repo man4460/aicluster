@@ -8,7 +8,6 @@ import {
 import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { LaundryDashboardHeaderToolbar } from "@/systems/laundry/components/LaundryDashboardHeaderToolbar";
-import { LaundryRefreshButton } from "@/systems/laundry/components/LaundryRefreshButton";
 import { LaundryOrderCard } from "@/systems/laundry/components/LaundryOrderCard";
 import { LaundryOrderPrintModal } from "@/systems/laundry/components/LaundryOrderPrintModal";
 import { LaundryPaymentPanel } from "@/systems/laundry/components/LaundryPaymentPanel";
@@ -18,6 +17,7 @@ import { laundryOrderCardListGridClass } from "@/systems/laundry/laundry-dashboa
 import {
   laundryDashboardSegmentBtnClass,
   laundryDashboardSegmentShellClass,
+  laundryFieldClass,
   laundryOffersTabSegmentShellClass,
   laundryPanelClass,
   laundryStaffPlainPanelClass,
@@ -265,7 +265,7 @@ export function LaundryOrdersPosClient({
           <label className="block text-xs font-bold text-[#4d47b6]">
             เบอร์โทร
             <input
-              className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+              className={cn(laundryFieldClass, "mt-1")}
               inputMode="tel"
               placeholder="0812345678"
               value={customerPhone}
@@ -275,7 +275,7 @@ export function LaundryOrdersPosClient({
           <label className="block text-xs font-bold text-[#4d47b6]">
             ชื่อลูกค้า
             <input
-              className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+              className={cn(laundryFieldClass, "mt-1")}
               placeholder="เช่น คุณสมชาย"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
@@ -284,7 +284,7 @@ export function LaundryOrdersPosClient({
           <label className="block text-xs font-bold text-[#4d47b6]">
             หมายเหตุ
             <input
-              className="app-input mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+              className={cn(laundryFieldClass, "mt-1")}
               placeholder="เช่น รีดด่วน"
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -464,14 +464,11 @@ export function LaundryOrdersPosClient({
                 : null}
               </div>
               <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
-                {fixedLane ?
-                  <LaundryDashboardHeaderToolbar hideSubNav={staffQrLanding} staffQrLanding={staffQrLanding} />
-                : null}
-                <LaundryRefreshButton
+                <LaundryDashboardHeaderToolbar
+                  hideSubNav={staffQrLanding}
+                  staffQrLanding={staffQrLanding}
                   refreshing={refreshing}
-                  onClick={() => void onRefresh()}
-                  ariaLabel="รีเฟรชออเดอร์"
-                  title="รีเฟรชออเดอร์"
+                  onRefresh={onRefresh}
                 />
               </div>
             </div>

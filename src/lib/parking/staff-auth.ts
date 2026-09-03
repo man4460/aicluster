@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveParkingStaffFromUrl, type ParkingStaffContext } from "@/lib/parking/staff-request";
+import { PARKING_MODULE_SLUG } from "@/lib/modules/config";
+import { ensureOwnerModuleDailyChargeOnPublicUse } from "@/lib/modules/public-portal-access";
 import {
   gateStaffDailyPin,
   loadParkingStaffDailyPinHash,
@@ -16,6 +18,10 @@ export async function requireParkingStaff(
   const ctx = await resolveParkingStaffFromUrl(new URL(req.url));
   if (!ctx) {
     return { error: NextResponse.json({ error: "ลิงก์ไม่ถูกต้องหรือถูกยกเลิก" }, { status: 401 }) };
+  }
+  const charge = await ensureOwnerModuleDailyChargeOnPublicUse(ctx.ownerId, PARKING_MODULE_SLUG);
+  if (!charge.ok) {
+    return { error: NextResponse.json({ error: "ลิงก์ปิดชั่วคราว" }, { status: 403 }) };
   }
   if (!opts?.skipDailyPin) {
     const pinHash = await loadParkingStaffDailyPinHash(ctx.ownerId);

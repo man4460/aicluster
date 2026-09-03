@@ -1,44 +1,138 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { type ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import {
+  clubEventInlineSubNavBtnClass,
+  clubEventInlineSubNavShellClass,
+  clubEventPanelClass,
+  clubEventPanelDividerClass,
+  clubEventPanelSectionClass,
+  clubEventSectionHeadingClass,
+} from "@/systems/club-event/lib/ui-tokens";
 
-type Tab = { key: string; label: string; href: string };
+export type ClubEventPageSubNavItem = {
+  key: string;
+  label: string;
+  /** ป้ายสั้นบนมือถือ */
+  shortLabel?: string;
+  icon?: ReactNode;
+};
 
-export function ClubEventPageSubNav({ tabs, ariaLabel }: { tabs: Tab[]; ariaLabel: string }) {
-  const pathname = usePathname() ?? "";
-  const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
+/**
+ * หัวการ์ดแบบซักผ้า — ชื่อเมนูหลัก + หัวข้อย่อยแถวเดียว · แท็บ/ปุ่มขวา · เส้นบาง · เนื้อหา
+ */
+export function ClubEventPageSubNav({
+  title,
+  subtitle,
+  items,
+  activeKey,
+  onSelect,
+  ariaLabel,
+  action,
+  children,
+  className,
+}: {
+  title: string;
+  /** ถ้าไม่ส่ง จะใช้ label ของแท็บที่เลือก */
+  subtitle?: string;
+  items?: ClubEventPageSubNavItem[];
+  activeKey?: string;
+  onSelect?: (key: string) => void;
+  ariaLabel?: string;
+  action?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+}) {
+  const hasTabs = Boolean(items?.length && onSelect && activeKey != null);
+  const activeItem = items?.find((i) => i.key === activeKey);
+  const sub = subtitle ?? activeItem?.label;
 
   return (
-    <nav
-      className="mb-3 flex flex-wrap gap-1.5 rounded-2xl border border-slate-100 bg-white/90 p-1.5 sm:rounded-3xl"
-      aria-label={ariaLabel}
-      role="tablist"
-    >
-      {tabs.map((tab) => {
-        const url = new URL(tab.href, "http://local");
-        const active =
-          pathname === url.pathname &&
-          (url.searchParams.get("tab") ?? null) === (tabParam ?? url.searchParams.get("tab"));
-        return (
-          <Link
-            key={tab.key}
-            href={tab.href}
-            role="tab"
-            aria-selected={active}
-            className={cn(
-              "min-h-8 rounded-lg px-3 py-1.5 text-[11px] font-black sm:min-h-9 sm:text-xs",
-              active
-                ? "bg-gradient-to-r from-[#0000BF] to-[#6366f1] text-white shadow-sm"
-                : "text-[#5f5a8a] hover:bg-violet-50/80",
-            )}
+    <div className={cn(clubEventPanelClass, className)}>
+      <div className={cn(clubEventPanelSectionClass, "print:hidden")}>
+        <div className="flex flex-nowrap items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <h2 className="min-w-0 shrink truncate text-base font-bold text-[#1e1b4b] sm:text-lg">{title}</h2>
+            {sub ? (
+              <>
+                <span className="h-4 w-px shrink-0 bg-slate-200/90" aria-hidden />
+                <p className="min-w-0 truncate text-sm font-semibold text-[#66638c]">{sub}</p>
+              </>
+            ) : null}
+          </div>
+
+          <div
+            className="flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5"
+            role="group"
+            aria-label={ariaLabel ?? "เครื่องมือหน้า"}
           >
-            {tab.label}
-          </Link>
-        );
-      })}
-    </nav>
+            {hasTabs ? (
+              <nav className={clubEventInlineSubNavShellClass} role="tablist" aria-label={ariaLabel ?? "เมนูย่อย"}>
+                {items!.map((item) => {
+                  const active = activeKey === item.key;
+                  const short = item.shortLabel ?? item.label;
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      aria-current={active ? "page" : undefined}
+                      title={item.label}
+                      aria-label={item.label}
+                      onClick={() => onSelect?.(item.key)}
+                      className={clubEventInlineSubNavBtnClass(active)}
+                    >
+                      {item.icon ? (
+                        <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
+                          {item.icon}
+                        </span>
+                      ) : null}
+                      <span className="hidden sm:inline">{item.label}</span>
+                      <span className="sm:hidden" aria-hidden>
+                        {short}
+                      </span>
+                    </button>
+                  );
+                })}
+              </nav>
+            ) : null}
+            {action}
+          </div>
+        </div>
+      </div>
+
+      {children != null ? (
+        <div className={cn(clubEventPanelSectionClass, clubEventPanelDividerClass)}>{children}</div>
+      ) : null}
+    </div>
+  );
+}
+
+/** บล็อกย่อยในเนื้อหา — คั่นเส้นบาง (บล็อกแรกส่ง first) · ไม่ใส่หัวซ้ำถ้าหัวอยู่แถวเมนูแล้ว */
+export function ClubEventPageBlock({
+  title,
+  action,
+  children,
+  first = false,
+  className,
+}: {
+  title?: string;
+  action?: ReactNode;
+  children: ReactNode;
+  first?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn(!first && cn(clubEventPanelDividerClass, "mt-4 pt-4"), className)}>
+      {title || action ? (
+        <div className="mb-3 flex flex-row items-start justify-between gap-3">
+          {title ? <h3 className={clubEventSectionHeadingClass}>{title}</h3> : <span />}
+          {action ? <div className="shrink-0">{action}</div> : null}
+        </div>
+      ) : null}
+      {children}
+    </div>
   );
 }

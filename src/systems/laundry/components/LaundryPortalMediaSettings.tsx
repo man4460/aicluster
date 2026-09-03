@@ -15,7 +15,7 @@ import {
   assetRowRemoveIconButtonClass,
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
-import { laundryCompactOutlineButtonClass } from "@/systems/laundry/lib/ui-tokens";
+import { laundryCompactOutlineButtonClass, laundryFieldClass } from "@/systems/laundry/lib/ui-tokens";
 import {
   LAUNDRY_PORTAL_GALLERY_MAX,
   LAUNDRY_PORTAL_SAMPLE_BANNER,
@@ -44,8 +44,7 @@ type Props = {
   disabled?: boolean;
 };
 
-const fieldClass =
-  "app-input mt-1 w-full rounded-xl border border-white/70 bg-white/85 font-semibold text-[#1e1b4b]";
+const fieldClass = cn(laundryFieldClass, "mt-1 border-white/70 bg-white/85");
 const labelClass = "block space-y-1 text-xs font-bold text-[#4d47b6]";
 
 export function LaundryPortalMediaSettings({

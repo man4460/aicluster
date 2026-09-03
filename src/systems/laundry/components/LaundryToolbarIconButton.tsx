@@ -2,8 +2,9 @@
 
 import { type ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { laundryRowIconButtonClass } from "@/systems/laundry/lib/ui-tokens";
 
-/** ปุ่มไอคอนมุมรายการ — ดู / แก้ไข / ลบ (โมดูลซักผ้า) */
+/** ปุ่มไอคอนมุมรายการ — พิมพ์ / ดู / แก้ไข / ลบ (เล็กกว่าปุ่มแถบหัว) */
 export function LaundryToolbarIconButton({
   label,
   onClick,
@@ -25,14 +26,12 @@ export function LaundryToolbarIconButton({
       disabled={disabled}
       onClick={() => void onClick()}
       className={cn(
-        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-[0] transition-colors disabled:opacity-40 sm:h-9 sm:w-9 sm:rounded-xl",
-        variant === "danger" ?
-          "border-rose-200/90 bg-white text-rose-600 hover:bg-rose-50"
-        : "border-[#e8e6f4] bg-white text-[#4d47b6] hover:bg-[#f4f3ff]",
+        laundryRowIconButtonClass,
+        variant === "danger" && "border-rose-200/90 text-rose-600 hover:bg-rose-50",
       )}
     >
       <span className="sr-only">{label}</span>
-      <span className="flex h-5 w-5 items-center justify-center max-sm:h-4 max-sm:w-4 [&>svg]:h-[18px] [&>svg]:w-[18px] max-sm:[&>svg]:h-[14px] max-sm:[&>svg]:w-[14px]">
+      <span className="flex h-3.5 w-3.5 items-center justify-center [&>svg]:h-3.5 [&>svg]:w-3.5">
         {children}
       </span>
     </button>

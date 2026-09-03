@@ -1,23 +1,31 @@
 ---
 description: คู่มือการใช้งานโมดูลซักผ้าในหัวการ์ด (แนวเดียวกับคาร์แคร์)
 globs:
-  - "src/systems/laundry/LaundryDashboard.tsx"
+  - "src/systems/laundry/components/LaundryUsageGuideModal.tsx"
+  - "src/systems/laundry/components/LaundryModuleChrome.tsx"
 ---
 
 # Laundry usage guide modal
 
-เมื่อแก้ `LaundryDashboard` ให้คงแพทเทิร์นคู่มือการใช้งานแบบเดียวกับคาร์แคร์:
+เมื่อแก้ chrome หรือเนื้อหาคู่มือซักผ้า ให้คงแพทเทิร์นเดียวกับคาร์แคร์/สนามฟุตบอล:
 
-1. มีปุ่ม `คู่มือการใช้งาน` บริเวณหัวการ์ดโมดูล (ปุ่มไอคอน `?` + label บน `sm+`)
-2. ใช้ `AppUsageGuideModal` จาก `@/components/app-templates` — **กึ่งกลางจอบนมือถือ** (`FormModal` + `mobileCentered`) ตาม `.cursor/rules/app-usage-guide-modal.mdc`
-3. โครง modal:
+1. มีปุ่ม **`?` คู่มือการใช้งาน** บริเวณหัวการ์ดโมดูล (`LaundryModuleChrome`) — ไอคอนมือถือ · label บน `sm+`
+2. ใช้ **`AppUsageGuideModal`** จาก `@/components/app-templates` — กึ่งกลางจอบนมือถือ (`FormModal` + `mobileCentered`)
+3. ไฟล์เนื้อหา: **`src/systems/laundry/components/LaundryUsageGuideModal.tsx`**
+4. โครง modal:
    - `title`: "คู่มือการใช้งาน — ระบบรับฝากซักผ้า"
-   - `subtitle`: คำอธิบายสั้น 1 บรรทัด
-   - มี sections ครอบคลุมอย่างน้อย:
-     - ลำดับเริ่มต้นแนะนำ
-     - เมนู: แดชบอร์ด
-     - เมนู: การเงิน
-     - เมนู: แพ็กเกจ
-     - เมนู: QR
-4. เนื้อหาใช้ bullet/ordered list ภาษาไทย อ่านง่าย และเน้นวิธีใช้งานจริง
-5. หาก refactor header ห้ามลบปุ่มคู่มือโดยไม่ใส่ทางเข้าใหม่ที่เทียบเท่า
+   - `subtitle`: ครอบคลุมแดชบอร์ด · การเงิน · การจัดการ · ตั้งค่า · พนักงาน · เว็บลูกค้า · QR
+   - **sections ต้องสะท้อนเมนูจริง** (อัปเดตเมื่อเพิ่มแท็บ/flow):
+     - ลำดับเริ่มต้นแนะนำ (ร้านใหม่)
+     - เมนูหลักโมดูล (4 รายการ + dock + ยุบหัว)
+     - แดชบอร์ด — ภาพรวม · ออเดอร์ · คิวออนไลน์ · SSE
+     - การเงิน — กรอง · กราฟ compact · รายรับ/รายจ่าย/ประวัติ
+     - การจัดการ — แพ็กเกจ · สมาชิก · ลายเซ็นหักแพ็ก · พิมพ์ขาย
+     - ชำระเงิน · สลิป · พิมพ์
+     - ตั้งค่าร้าน (5 แท็บ)
+     - เว็บลูกค้า · **ขอบริการรับ-ส่ง** (compact bar · popup แพ็ก · 3 ขั้นตอน)
+     - QR · พนักงาน · staff kiosk
+     - แจ้งเตือน · popup กลางจอ
+5. เนื้อหา bullet/ordered list ภาษาไทย — เน้นวิธีใช้จริง ไม่ copy ข้อความ UI ยาวจาก label
+6. หาก refactor header ห้ามลบปุ่มคู่มือโดยไม่ใส่ทางเข้าเทียบเท่า
+7. แม่แบบ UX โมดูล: **`laundry-module-dashboard-template.mdc`**

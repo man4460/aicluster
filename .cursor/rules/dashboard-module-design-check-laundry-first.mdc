@@ -1,0 +1,51 @@
+---
+description: ก่อนออกแบบหรือทำ UI โมดูลแดชบอร์ด ใหม่ — อ่านแม่แบบรับฝากซักผ้าก่อนเสมอ
+alwaysApply: true
+---
+
+# ก่อนออกแบบโมดูลใหม่ — ดูแม่แบบซักผ้าก่อน
+
+เมื่อจะ **สร้างโมดูลแดชบอร์ด ใหม่** · **เพิ่มหน้า/แท็บโมดูล** · **ออกแบบ layout การ์ด ปุ่ม ชำระเงิน พิมพ์ popup เมนู กรอง กราฟ** หรือ **refactor chrome โมดูล**:
+
+## บังคับ — ลำดับการอ่าน
+
+1. **`.cursor/rules/laundry-module-dashboard-template.mdc`** — แผนที่ไฟล์ · เมนู 4 รายการ · tokens · กรอง · กราฟ · ชำระเงิน · พิมพ์ · popup · พอร์ทัล  
+2. **`.cursor/rules/laundry-module-portal-website-template.mdc`** — เว็บลูกค้า flat section · สีแบรนด์ · compact hero · lookup (เมื่อทำพอร์ทัล)  
+3. **`src/systems/laundry/lib/ui-tokens.ts`** — โทเค็นกล่อง/แท็บ/segment ที่ใช้จริง  
+4. **`@/components/app-templates`** (`index.ts`) — กราฟ · รูป · พิมพ์ · lightbox · signature · usage guide  
+5. กฎโปรเจกต์ที่ซักผ้าใช้แล้ว:  
+   - `dashboard-ux-car-wash-baseline.mdc` (dock ล่าง · มุมมน)  
+   - `dashboard-module-list-filter.mdc` · `dashboard-mobile-filter-icon.mdc`  
+   - `app-templates-spark-charts.mdc` · `app-templates-media.mdc`  
+   - `dashboard-page-width.mdc` · `dashboard-row-action-icon-buttons.mdc`  
+
+## บังคับ — อย่าเริ่มจากศูนย์ถ้ามี pattern แล้ว
+
+| งาน | เปิดดูก่อน (ซักผ้า) |
+|-----|---------------------|
+| Shell + dock + ยุบหัว | `LaundryModuleChrome.tsx` · `laundry-module-nav.tsx` |
+| ปุ่มแถบหัว / แถวการ์ด | `lib/ui-tokens.ts` (§ ปุ่ม) · `LaundryDashboardHeaderToolbar` · `LaundryToolbarIconButton` · กฎ §6 ใน `laundry-module-dashboard-template.mdc` |
+| หน้าการเงิน + กรอง + กราฟ | `LaundryFinancePanel.tsx` |
+| รายการ + กรอง + ปุ่มเพิ่ม | `LaundryPurchasesClient.tsx` · `LaundryPackagesClient.tsx` |
+| ชำระเงิน + สลิป | `LaundryPaymentPanel.tsx` · `LaundryPublicPaymentPanel.tsx` |
+| พิมพ์ใบเสร็จ/ใบกำกับ | `lib/laundry-print-docs.ts` · `LaundrySellPackageModal.tsx` |
+| Popup แจ้งเตือน | `useAppNoticePopup` ใน portal/pickup/finance |
+| เว็บลูกค้า | `LaundryPortalPublicClient.tsx` · `LaundryPickupPublicClient.tsx` · **`laundry-module-portal-website-template.mdc`** |
+| คู่มือ | `LaundryUsageGuideModal.tsx` |
+| QR hub | `LaundryQrHubClient.tsx` |
+
+## หลังออกแบบ
+
+- สร้าง **`lib/ui-tokens.ts`** ในโมดูลใหม่ — **อย่า** copy-paste class กระจายหลายไฟล์  
+- เพิ่ม sidebar icon ใน `dashboard-nav-icons.tsx`  
+- เพิ่ม path ใน `DashboardPagesShell` (gutter wide module)  
+- ถ้าโมดูล ใหญ่พอ — เพิ่ม `*UsageGuideModal` + ปุ่ม `?` ในหัว chrome  
+
+## ห้าม
+
+- ออกแบบ UI โมดูล ใหม่โดยไม่อ่าน `laundry-module-dashboard-template.mdc`  
+- ทำพอร์ทัลลูกค้าโดยไม่อ่าน **`laundry-module-portal-website-template.mdc`**
+- สร้างกราฟ/กรอง/lightbox/พิมพ์เอง ทั้งที่ `app-templates` มีแล้ว  
+- ใช้ `window.confirm` / inline error banner ใน flow ใหม่ ขณะที่แม่แบบใช้ `useAppNoticePopup` แล้ว  
+
+**แม่แบบรอง (โครงสร้างเทียบ):** คาร์แคร์/บาร์เบอร์ `dashboard-module-car-wash-barber-reference.mdc` · สนามฟุตบอล `football-turf-module-dashboard-template.mdc` — ใช้เมื่อโดเมนต่าง แต่ **UX ชุดล่าสุด (กรอง · popup · finance page แยก)** ให้ยึด **ซักผ้า** เป็นหลัก

@@ -5,6 +5,11 @@ import { laundryDashboardCardDividerClasses } from "@/systems/laundry/laundry-da
 import { laundryOrderCardToneClasses } from "@/systems/laundry/laundry-order-card-tone";
 import { laundryOrderCardPackageLines } from "@/systems/laundry/laundry-order-package-lines";
 import { isLaundryOrderFromCustomerPickupPortal } from "@/systems/laundry/laundry-customer-pickup-request";
+import {
+  laundryGoogleMapsUrl,
+  laundryResolveOrderPickupCoords,
+  laundryStripGpsLineFromAddress,
+} from "@/systems/laundry/lib/order-pickup-coords";
 import { laundryOrderStatusLabelTh, type LaundryOrder, type LaundryOrderStatus } from "@/systems/laundry/laundry-service";
 import { LaundryOrderStatusIconStrip } from "@/systems/laundry/components/LaundryOrderStatusIconStrip";
 import {
@@ -23,6 +28,12 @@ function isPlaceholderAddress(raw: string | null | undefined): boolean {
 function isGenericCustomerName(raw: string | null | undefined): boolean {
   const t = raw?.trim() ?? "";
   return t === "" || t === "ลูกค้า";
+}
+
+function fromCustomerPickupDistance(o: LaundryOrder): number | null {
+  if (!isLaundryOrderFromCustomerPickupPortal(o.recorded_by_name)) return null;
+  if (o.distance_km == null || !(o.distance_km > 0)) return null;
+  return o.distance_km;
 }
 
 export function LaundryOrderCard({
@@ -60,11 +71,14 @@ export function LaundryOrderCard({
   const showWeight = o.weight_kg > 0;
   const showItemCount = o.item_count > 0;
   const showSizeRow = showWeight || showItemCount;
-  const pickupRaw = o.pickup_address?.trim() ?? "";
-  const dropoffRaw = o.dropoff_address?.trim() ?? "";
-  const showPickup = !isPlaceholderAddress(pickupRaw);
-  const showDropoff = !isPlaceholderAddress(dropoffRaw);
-  const showAddressBlock = showPickup || showDropoff;
+  const pickupDisplay = laundryStripGpsLineFromAddress(o.pickup_address);
+  const dropoffDisplay = laundryStripGpsLineFromAddress(o.dropoff_address);
+  const showPickup = !isPlaceholderAddress(pickupDisplay);
+  const showDropoff = !isPlaceholderAddress(dropoffDisplay);
+  const pickupCoords = laundryResolveOrderPickupCoords(o);
+  const mapsUrl = pickupCoords ? laundryGoogleMapsUrl(pickupCoords.lat, pickupCoords.lng) : null;
+  const distanceKm = fromCustomerPickupDistance(o);
+  const showAddressBlock = showPickup || showDropoff || distanceKm != null;
   const { dividerStrong, dimHorizontalStripRidge } = laundryDashboardCardDividerClasses(tone);
   const metaMuted = tone === "violet" ? "text-[#5c5788]" : "text-slate-500";
   const addrClass = tone === "violet" ? "text-[#66638c]/95" : "text-slate-500";
@@ -156,27 +170,27 @@ export function LaundryOrderCard({
 
           {showAddressBlock ?
             <div className={cn("space-y-px text-[10px] leading-snug sm:space-y-0.5 sm:text-[11px]", addrClass)}>
-              {fromCustomerPickup && o.distance_km != null && o.distance_km > 0 ?
+              {distanceKm != null ?
                 <p className="font-semibold text-sky-900">
                   ระยะจากร้าน ~{" "}
-                  <span className="font-black tabular-nums">{o.distance_km.toLocaleString("th-TH")} กม.</span>
+                  <span className="font-black tabular-nums">{distanceKm.toLocaleString("th-TH")} กม.</span>
                 </p>
               : null}
               {showPickup ?
                 <p className="line-clamp-1 sm:line-clamp-2">
-                  <span className="font-semibold text-[#4d47b6]/85">รับ</span> {pickupRaw}
+                  <span className="font-semibold text-[#4d47b6]/85">รับ</span> {pickupDisplay}
                 </p>
               : null}
               {showDropoff ?
                 <p className="line-clamp-1 sm:line-clamp-2">
-                  <span className="font-semibold text-[#4d47b6]/85">ส่ง</span> {dropoffRaw}
+                  <span className="font-semibold text-[#4d47b6]/85">ส่ง</span> {dropoffDisplay}
                 </p>
               : null}
             </div>
           : null}
         </div>
 
-        {/* ขวา: สถานะ · เลขที่ · ราคา · ปุ่ม */}
+        {/* ขวา: สถานะ · เลขที่ · ราคา · แผนที่ · ปุ่ม */}
         <div className="flex min-w-[5.75rem] w-[30%] max-w-[8rem] shrink-0 flex-col pt-0.5 pl-2 sm:min-w-[9rem] sm:w-[9rem] sm:max-w-none sm:pl-3">
           <div className="flex flex-col items-end gap-0.5 pb-2 text-right sm:gap-1 sm:pb-3">
             <span className={cn("max-w-full truncate text-right text-[9px] sm:text-[10px]", tc.badge)}>
@@ -186,6 +200,21 @@ export function LaundryOrderCard({
             <p className="text-sm font-black tabular-nums text-emerald-700 sm:text-lg">
               ฿{o.final_price.toLocaleString("th-TH")}
             </p>
+            {mapsUrl ?
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-0.5 inline-flex max-w-full items-center gap-1 text-[10px] font-bold text-[#4d47b6] underline-offset-2 hover:underline sm:text-[11px]"
+                title="เปิดพิกัดใน Google Maps"
+              >
+                <svg viewBox="0 0 24 24" className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+                  <path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11Z" strokeLinejoin="round" />
+                  <circle cx="12" cy="10" r="2.5" />
+                </svg>
+                <span className="truncate">เปิด Google Maps</span>
+              </a>
+            : null}
           </div>
 
           <div className="mt-auto flex flex-row flex-nowrap items-center justify-end gap-0.5 pt-2 sm:gap-1 sm:pt-3">

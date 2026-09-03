@@ -227,7 +227,7 @@ export function LaundryPaymentPanel({
             <button
               type="button"
               disabled={disabled}
-              className={cn(laundryPaymentCtaClass, "w-full min-h-[44px] rounded-2xl text-sm")}
+              className={cn(laundryPaymentCtaClass, "w-full text-sm")}
               onClick={() => setCustomerQrOpen(true)}
               aria-label="แสดง QR พร้อมเพย์ให้ลูกค้าสแกน"
             >

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveHotelResortStaffFromUrl } from "@/lib/hotel-resort/staff-request";
+import { HOTEL_RESORT_MODULE_SLUG } from "@/lib/modules/config";
+import { ensureOwnerModuleDailyChargeOnPublicUse } from "@/lib/modules/public-portal-access";
 import {
   gateStaffDailyPin,
   loadHotelResortStaffDailyPinHash,
@@ -17,6 +19,10 @@ export async function requireHotelResortStaff(
   const ctx = await resolveHotelResortStaffFromUrl(new URL(req.url));
   if (!ctx) {
     return { error: NextResponse.json({ error: "ลิงก์ไม่ถูกต้องหรือถูกยกเลิก" }, { status: 401 }) };
+  }
+  const charge = await ensureOwnerModuleDailyChargeOnPublicUse(ctx.ownerId, HOTEL_RESORT_MODULE_SLUG);
+  if (!charge.ok) {
+    return { error: NextResponse.json({ error: "ลิงก์ปิดชั่วคราว" }, { status: 403 }) };
   }
   if (!opts?.skipDailyPin) {
     const pinHash = await loadHotelResortStaffDailyPinHash(ctx.ownerId);

@@ -207,6 +207,8 @@ export function LaundryDashboard({
             orders={orders}
             todayStats={todayStats}
             loading={loading}
+            refreshing={refreshing}
+            onRefresh={refreshData}
             onViewOrder={setViewOrder}
             onEditOrder={setEditOrder}
             onDeleteOrder={deleteOrderRow}
@@ -276,6 +278,8 @@ export function LaundryDashboard({
           orders={orders}
           todayStats={todayStats}
           loading={loading}
+          refreshing={refreshing}
+          onRefresh={refreshData}
           onViewOrder={setViewOrder}
           onEditOrder={setEditOrder}
           onDeleteOrder={deleteOrderRow}

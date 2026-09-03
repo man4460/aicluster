@@ -277,6 +277,18 @@ model User {
   clubEventFinanceTransactions       ClubEventFinanceTransaction[]
   clubEventAssets                    ClubEventAsset[]
   clubEventDynamicLinks              ClubEventDynamicLink[]
+  clubEventLinkSubmissions           ClubEventLinkSubmission[]
+  lmsProfiles                        LmsProfile[]
+  lmsCourses                         LmsCourse[]
+  lmsLessons                         LmsLesson[]
+  lmsLearners                        LmsLearner[]
+  lmsEnrollments                     LmsEnrollment[]
+  lmsExams                           LmsExam[]
+  lmsQuestions                       LmsQuestion[]
+  lmsCertificates                    LmsCertificate[]
+  lmsFinanceTransactions             LmsFinanceTransaction[]
+  lmsLessonProgresses                LmsLessonProgress[]
+  lmsCoursePurchases                 LmsCoursePurchase[]
   educareSchools                     EducareSchool[]
   educareClassrooms                  EducareClassroom[]
   educareStudents                    EducareStudent[]
@@ -7190,12 +7202,29 @@ model ClubEventProfile {
   committeeJson       String   @default("[]") @map("committee_json") @db.Text
   contactPhone        String?  @map("contact_phone") @db.VarChar(32)
   contactLine         String?  @map("contact_line") @db.VarChar(120)
+  address             String?  @db.Text
+  facebookUrl         String?  @map("facebook_url") @db.VarChar(512)
+  mapUrl              String?  @map("map_url") @db.VarChar(512)
+  portalBannerUrl     String?  @map("portal_banner_url") @db.VarChar(512)
+  /**
+   * JSON string[] — แกลเลอรีพอร์ทัลสาธารณะ
+   */
+  portalGalleryJson   String   @default("[]") @map("portal_gallery_json") @db.Text
+  /**
+   * กฎ/หมายเหตุการชำระเงินสำหรับลูกค้า (แสดงบนลิงก์เก็บค่า)
+   */
+  paymentRulesNote    String   @default("") @map("payment_rules_note") @db.Text
   promptPayPhone        String?  @map("prompt_pay_phone") @db.VarChar(20)
   promptPayQrImageUrl   String?  @map("prompt_pay_qr_image_url") @db.VarChar(512)
   bankName              String?  @map("bank_name") @db.VarChar(120)
   bankAccountNumber     String?  @map("bank_account_number") @db.VarChar(32)
   bankAccountName       String?  @map("bank_account_name") @db.VarChar(200)
+  taxId                 String?  @map("tax_id") @db.VarChar(30)
   slipPaperSize         String   @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
+  /**
+   * JSON: [{ id, name, type: "INCOME"|"EXPENSE" }] หมวดหมู่รายรับ–รายจ่าย
+   */
+  financeCategoriesJson String   @default("[]") @map("finance_categories_json") @db.VarChar(4000)
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
 
@@ -7257,11 +7286,29 @@ model ClubEventMember {
   trialSessionId   String           @default("prod") @map("trial_session_id") @db.VarChar(36)
   profileId        String           @map("profile_id")
   profile          ClubEventProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  /**
+   * ชื่อแสดงเต็ม (ประกอบจากชื่อ+นามสกุล) — ใช้ค้นหา/แสดงรายการ
+   */
   name             String           @db.VarChar(160)
+  firstName        String           @default("") @map("first_name") @db.VarChar(80)
+  lastName         String           @default("") @map("last_name") @db.VarChar(80)
+  nickname         String           @default("") @db.VarChar(80)
+  /**
+   * MALE | FEMALE | OTHER | "" (ไม่ระบุ)
+   */
+  gender           String           @default("") @db.VarChar(20)
   phone            String           @default("") @db.VarChar(32)
   photoUrl         String?          @map("photo_url") @db.VarChar(512)
+  position         String           @default("") @db.VarChar(120)
+  email            String           @default("") @db.VarChar(200)
+  social           String           @default("") @db.VarChar(300)
+  memberCode       String           @default("") @map("member_code") @db.VarChar(64)
   /**
-   * JSON: [{ key, label, value }] ฟิลด์เพิ่มเติม
+   * ยินยอมเก็บข้อมูลส่วนบุคคล
+   */
+  dataConsent      Boolean          @default(false) @map("data_consent")
+  /**
+   * JSON: [{ key, label, value }] ฟิลด์เพิ่มเติมที่ผู้ใช้กำหนดเอง
    */
   customFieldsJson String           @default("[]") @map("custom_fields_json") @db.Text
   isActive         Boolean          @default(true) @map("is_active")
@@ -7270,6 +7317,7 @@ model ClubEventMember {
 
   @@index([ownerUserId, trialSessionId], map: "club_event_member_owner_trial_idx")
   @@index([profileId, isActive], map: "club_event_member_profile_active_idx")
+  @@index([profileId, memberCode], map: "club_event_member_profile_code_idx")
   @@map("club_event_members")
 }
 
@@ -7305,6 +7353,7 @@ model ClubEventAsset {
   quantity       Int                  @default(1)
   status         ClubEventAssetStatus @default(AVAILABLE)
   note           String               @default("") @db.VarChar(500)
+  imageUrl       String?              @map("image_url") @db.VarChar(512)
   createdAt      DateTime             @default(now()) @map("created_at")
   updatedAt      DateTime             @updatedAt @map("updated_at")
 
@@ -7323,16 +7372,346 @@ model ClubEventDynamicLink {
   type           ClubEventDynamicLinkType
   title          String                   @db.VarChar(200)
   /**
-   * JSON: ฟิลด์ฟอร์ม / จำนวนเงิน / URL ปลายทาง ฯลฯ
+   * JSON: eventId?, amountBaht?, url?, description?, fields?: [{ key, label, type }]
    */
   configJson     String                   @default("{}") @map("config_json") @db.Text
   isActive       Boolean                  @default(true) @map("is_active")
   createdAt      DateTime                 @default(now()) @map("created_at")
   updatedAt      DateTime                 @updatedAt @map("updated_at")
 
+  submissions ClubEventLinkSubmission[]
+
   @@index([ownerUserId, trialSessionId], map: "club_event_link_owner_trial_idx")
   @@index([profileId, isActive], map: "club_event_link_profile_active_idx")
   @@map("club_event_dynamic_links")
+}
+
+/**
+ * คำตอบจากลิงก์สำรวจ / RSVP / เก็บค่ากิจกรรม
+ */
+model ClubEventLinkSubmission {
+  id             String               @id @default(cuid())
+  ownerUserId    String               @map("owner_id") @db.VarChar(191)
+  owner          User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String               @default("prod") @map("trial_session_id") @db.VarChar(36)
+  linkId         String               @map("link_id")
+  link           ClubEventDynamicLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  respondentName String               @default("") @map("respondent_name") @db.VarChar(160)
+  respondentPhone String              @default("") @map("respondent_phone") @db.VarChar(32)
+  /**
+   * JSON: คำตอบฟอร์ม + เมตาชำระเงิน
+   */
+  payloadJson    String               @default("{}") @map("payload_json") @db.Text
+  amountBaht     Int?                 @map("amount_baht")
+  paymentMethod  String?              @map("payment_method") @db.VarChar(32)
+  slipUrl        String?              @map("slip_url") @db.VarChar(512)
+  createdAt      DateTime             @default(now()) @map("created_at")
+
+  @@index([linkId, createdAt], map: "club_event_link_sub_link_created_idx")
+  @@index([ownerUserId, trialSessionId], map: "club_event_link_sub_owner_trial_idx")
+  @@map("club_event_link_submissions")
+}
+
+// ─── LMS & Online Course (multi-tenant via ownerUserId) ───
+
+enum LmsCourseStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum LmsLearnerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum LmsEnrollmentStatus {
+  ENROLLED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum LmsFinanceType {
+  INCOME
+  EXPENSE
+}
+
+enum LmsPurchaseStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum LmsPurchasePayMethod {
+  PROMPTPAY
+  TRANSFER
+}
+
+/**
+ * โปรไฟล์สถาบัน LMS ต่อเจ้าของ (tenant) + trial
+ */
+model LmsProfile {
+  id                  String   @id @default(cuid())
+  ownerUserId         String   @map("owner_id") @db.VarChar(191)
+  owner               User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId      String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  slug                String   @db.VarChar(80)
+  displayName         String   @map("display_name") @db.VarChar(200)
+  logoUrl             String?  @map("logo_url") @db.VarChar(512)
+  tagline             String?  @db.VarChar(300)
+  address             String?  @db.Text
+  contactPhone        String?  @map("contact_phone") @db.VarChar(32)
+  contactLine         String?  @map("contact_line") @db.VarChar(120)
+  certSignerName      String   @default("") @map("cert_signer_name") @db.VarChar(160)
+  certSignatureUrl    String?  @map("cert_signature_url") @db.VarChar(512)
+  certTemplateNote    String   @default("") @map("cert_template_note") @db.Text
+  promptPayPhone      String?  @map("prompt_pay_phone") @db.VarChar(20)
+  promptPayQrImageUrl String?  @map("prompt_pay_qr_image_url") @db.VarChar(512)
+  bankName            String?  @map("bank_name") @db.VarChar(120)
+  bankAccountNumber   String?  @map("bank_account_number") @db.VarChar(32)
+  bankAccountName     String?  @map("bank_account_name") @db.VarChar(200)
+  taxId               String?  @map("tax_id") @db.VarChar(30)
+  slipPaperSize       String   @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
+  /**
+   * JSON: [{ id, name, type: "INCOME"|"EXPENSE" }] หมวดหมู่รายรับ–รายจ่าย
+   */
+  financeCategoriesJson String @default("[]") @map("finance_categories_json") @db.VarChar(4000)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  courses     LmsCourse[]
+  learners    LmsLearner[]
+  financeRows LmsFinanceTransaction[]
+  purchases   LmsCoursePurchase[]
+
+  @@unique([ownerUserId, trialSessionId], map: "lms_profile_owner_trial_uniq")
+  @@unique([slug, trialSessionId], map: "lms_profile_slug_trial_uniq")
+  @@index([ownerUserId], map: "lms_profile_owner_idx")
+  @@map("lms_profiles")
+}
+
+model LmsCourse {
+  id             String          @id @default(cuid())
+  ownerUserId    String          @map("owner_id") @db.VarChar(191)
+  owner          User            @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String          @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId      String          @map("profile_id")
+  profile        LmsProfile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title          String          @db.VarChar(200)
+  description    String          @default("") @db.Text
+  coverImageUrl  String?         @map("cover_image_url") @db.VarChar(512)
+  status         LmsCourseStatus @default(DRAFT)
+  priceBaht      Int             @default(0) @map("price_baht")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  lessons      LmsLesson[]
+  enrollments  LmsEnrollment[]
+  exam         LmsExam?
+  certificates LmsCertificate[]
+  purchases    LmsCoursePurchase[]
+
+  @@index([ownerUserId, trialSessionId], map: "lms_course_owner_trial_idx")
+  @@index([profileId, status], map: "lms_course_profile_status_idx")
+  @@map("lms_courses")
+}
+
+model LmsLesson {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  courseId       String   @map("course_id")
+  course         LmsCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title          String   @db.VarChar(200)
+  youtubeUrl     String   @map("youtube_url") @db.VarChar(512)
+  durationSec    Int      @default(0) @map("duration_sec")
+  orderIndex     Int      @default(0) @map("order_index")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  progresses LmsLessonProgress[]
+
+  @@index([courseId, orderIndex], map: "lms_lesson_course_order_idx")
+  @@index([ownerUserId, trialSessionId], map: "lms_lesson_owner_trial_idx")
+  @@map("lms_lessons")
+}
+
+model LmsLearner {
+  id             String           @id @default(cuid())
+  ownerUserId    String           @map("owner_id") @db.VarChar(191)
+  owner          User             @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String           @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId      String           @map("profile_id")
+  profile        LmsProfile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  username       String           @db.VarChar(80)
+  passwordHash   String           @map("password_hash") @db.VarChar(191)
+  fullName       String           @map("full_name") @db.VarChar(160)
+  email          String           @default("") @db.VarChar(200)
+  phone          String           @default("") @db.VarChar(32)
+  status         LmsLearnerStatus @default(ACTIVE)
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  enrollments  LmsEnrollment[]
+  certificates LmsCertificate[]
+  progresses   LmsLessonProgress[]
+  purchases    LmsCoursePurchase[]
+
+  @@unique([profileId, username], map: "lms_learner_profile_username_uniq")
+  @@index([ownerUserId, trialSessionId], map: "lms_learner_owner_trial_idx")
+  @@index([profileId, status], map: "lms_learner_profile_status_idx")
+  @@map("lms_learners")
+}
+
+model LmsEnrollment {
+  id              String              @id @default(cuid())
+  ownerUserId     String              @map("owner_id") @db.VarChar(191)
+  owner           User                @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId  String              @default("prod") @map("trial_session_id") @db.VarChar(36)
+  learnerId       String              @map("learner_id")
+  learner         LmsLearner          @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  courseId        String              @map("course_id")
+  course          LmsCourse           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progressPercent Int                 @default(0) @map("progress_percent")
+  status          LmsEnrollmentStatus @default(ENROLLED)
+  examScorePercent Int?               @map("exam_score_percent")
+  enrolledAt      DateTime            @default(now()) @map("enrolled_at")
+  completedAt     DateTime?           @map("completed_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  @@unique([learnerId, courseId], map: "lms_enrollment_learner_course_uniq")
+  @@index([ownerUserId, trialSessionId], map: "lms_enrollment_owner_trial_idx")
+  @@index([courseId, status], map: "lms_enrollment_course_status_idx")
+  @@map("lms_enrollments")
+}
+
+model LmsLessonProgress {
+  id             String    @id @default(cuid())
+  ownerUserId    String    @map("owner_id") @db.VarChar(191)
+  owner          User      @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String    @default("prod") @map("trial_session_id") @db.VarChar(36)
+  learnerId      String    @map("learner_id")
+  learner        LmsLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  lessonId       String    @map("lesson_id")
+  lesson         LmsLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  watchedPercent Int       @default(0) @map("watched_percent")
+  completed      Boolean   @default(false)
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@unique([learnerId, lessonId], map: "lms_lesson_progress_learner_lesson_uniq")
+  @@index([ownerUserId, trialSessionId], map: "lms_lesson_progress_owner_trial_idx")
+  @@map("lms_lesson_progresses")
+}
+
+model LmsExam {
+  id                  String   @id @default(cuid())
+  ownerUserId         String   @map("owner_id") @db.VarChar(191)
+  owner               User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId      String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  courseId            String   @unique @map("course_id")
+  course              LmsCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title               String   @default("แบบทดสอบท้ายคอร์ส") @db.VarChar(200)
+  passingScorePercent Int      @default(70) @map("passing_score_percent")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  questions LmsQuestion[]
+
+  @@index([ownerUserId, trialSessionId], map: "lms_exam_owner_trial_idx")
+  @@map("lms_exams")
+}
+
+model LmsQuestion {
+  id             String   @id @default(cuid())
+  ownerUserId    String   @map("owner_id") @db.VarChar(191)
+  owner          User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  examId         String   @map("exam_id")
+  exam           LmsExam  @relation(fields: [examId], references: [id], onDelete: Cascade)
+  questionText   String   @map("question_text") @db.Text
+  /**
+   * JSON string[] — ตัวเลือก เช่น ["ก","ข","ค","ง"]
+   */
+  choicesJson    String   @map("choices_json") @db.Text
+  /**
+   * ดัชนีคำตอบถูก (0-based) หรือข้อความที่ตรงกับ choices
+   */
+  correctAnswer  String   @map("correct_answer") @db.VarChar(200)
+  orderIndex     Int      @default(0) @map("order_index")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([examId, orderIndex], map: "lms_question_exam_order_idx")
+  @@index([ownerUserId, trialSessionId], map: "lms_question_owner_trial_idx")
+  @@map("lms_questions")
+}
+
+model LmsCertificate {
+  id             String    @id @default(cuid())
+  ownerUserId    String    @map("owner_id") @db.VarChar(191)
+  owner          User      @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String    @default("prod") @map("trial_session_id") @db.VarChar(36)
+  learnerId      String    @map("learner_id")
+  learner        LmsLearner @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  courseId       String    @map("course_id")
+  course         LmsCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  issueDate      DateTime  @map("issue_date")
+  certCode       String    @map("cert_code") @db.VarChar(64)
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@unique([learnerId, courseId], map: "lms_cert_learner_course_uniq")
+  @@unique([ownerUserId, trialSessionId, certCode], map: "lms_cert_owner_trial_code_uniq")
+  @@index([courseId], map: "lms_cert_course_idx")
+  @@map("lms_certificates")
+}
+
+model LmsFinanceTransaction {
+  id             String         @id @default(cuid())
+  ownerUserId    String         @map("owner_id") @db.VarChar(191)
+  owner          User           @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String         @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId      String         @map("profile_id")
+  profile        LmsProfile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type           LmsFinanceType
+  category       String         @db.VarChar(120)
+  amountBaht     Int            @map("amount_baht")
+  transactedAt   DateTime       @map("transacted_at")
+  note           String         @default("") @db.VarChar(500)
+  slipUrl        String?        @map("slip_url") @db.VarChar(512)
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, transactedAt], map: "lms_fin_owner_trial_date_idx")
+  @@index([profileId, type], map: "lms_fin_profile_type_idx")
+  @@map("lms_finance_transactions")
+}
+
+/**
+ * คำขอซื้อคอร์สจากผู้เรียน — รอตรวจสลิป / อนุมัติ / ปฏิเสธ
+ */
+model LmsCoursePurchase {
+  id               String               @id @default(cuid())
+  ownerUserId      String               @map("owner_id") @db.VarChar(191)
+  owner            User                 @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId   String               @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId        String               @map("profile_id")
+  profile          LmsProfile           @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  learnerId        String               @map("learner_id")
+  learner          LmsLearner           @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  courseId         String               @map("course_id")
+  course           LmsCourse            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  amountBaht       Int                  @map("amount_baht")
+  payMethod        LmsPurchasePayMethod @map("pay_method")
+  slipUrl          String?              @map("slip_url") @db.VarChar(512)
+  status           LmsPurchaseStatus    @default(PENDING_REVIEW)
+  reviewerNote     String               @default("") @map("reviewer_note") @db.VarChar(500)
+  reviewedAt       DateTime?            @map("reviewed_at")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+
+  @@index([ownerUserId, trialSessionId, status], map: "lms_purchase_owner_trial_status_idx")
+  @@index([profileId, status], map: "lms_purchase_profile_status_idx")
+  @@index([learnerId, courseId], map: "lms_purchase_learner_course_idx")
+  @@map("lms_course_purchases")
 }
 
 /**

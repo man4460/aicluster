@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { resolveFootballTurfStaffFromUrl } from "@/lib/football-turf/staff-request";
 import type { FootballTurfStaffContext } from "@/lib/football-turf/staff-request";
+import { FOOTBALL_TURF_MODULE_SLUG } from "@/lib/modules/config";
+import { ensureOwnerModuleDailyChargeOnPublicUse } from "@/lib/modules/public-portal-access";
 import {
   gateStaffDailyPin,
   loadFootballTurfStaffDailyPinHash,
@@ -17,6 +19,10 @@ export async function requireFootballTurfStaff(
   const ctx = await resolveFootballTurfStaffFromUrl(new URL(req.url));
   if (!ctx) {
     return { error: NextResponse.json({ error: "ลิงก์ไม่ถูกต้องหรือถูกยกเลิก" }, { status: 401 }) };
+  }
+  const charge = await ensureOwnerModuleDailyChargeOnPublicUse(ctx.ownerId, FOOTBALL_TURF_MODULE_SLUG);
+  if (!charge.ok) {
+    return { error: NextResponse.json({ error: "ลิงก์ปิดชั่วคราว" }, { status: 403 }) };
   }
   if (!opts?.skipDailyPin) {
     const pinHash = await loadFootballTurfStaffDailyPinHash(ctx.ownerId);

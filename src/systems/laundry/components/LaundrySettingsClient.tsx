@@ -31,6 +31,7 @@ import {
 import {
   laundryCompactOutlineButtonClass,
   laundryDashboardSegmentBtnClass,
+  laundryFieldClass,
   laundryHeaderActionShellClass,
   laundryMobileSelectClass,
   laundryPanelClass,
@@ -466,7 +467,7 @@ function LaundrySettingsClientInner({
               <label className="block space-y-1">
                 <span className="text-xs font-bold text-[#4d47b6]">ชื่อร้านรับฝากซักผ้า</span>
                 <input
-                  className="app-input mt-1 w-full rounded-xl"
+                  className={cn(laundryFieldClass, "mt-1")}
                   value={form.displayName ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))}
                 />
@@ -474,7 +475,7 @@ function LaundrySettingsClientInner({
               <label className="block space-y-1">
                 <span className="text-xs font-bold text-[#4d47b6]">สโลแกน</span>
                 <input
-                  className="app-input mt-1 w-full rounded-xl"
+                  className={cn(laundryFieldClass, "mt-1")}
                   value={form.tagline ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))}
                 />
@@ -482,7 +483,7 @@ function LaundrySettingsClientInner({
               <label className="block space-y-1">
                 <span className="text-xs font-bold text-[#4d47b6]">เบอร์ติดต่อร้าน</span>
                 <input
-                  className="app-input mt-1 w-full rounded-xl"
+                  className={cn(laundryFieldClass, "mt-1")}
                   value={form.contactPhone ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, contactPhone: e.target.value }))}
                 />
@@ -490,7 +491,7 @@ function LaundrySettingsClientInner({
               <label className="block space-y-1">
                 <span className="text-xs font-bold text-[#4d47b6]">ที่อยู่</span>
                 <input
-                  className="app-input mt-1 w-full rounded-xl"
+                  className={cn(laundryFieldClass, "mt-1")}
                   value={form.address ?? ""}
                   onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
                 />
@@ -538,7 +539,7 @@ function LaundrySettingsClientInner({
                     <input
                       type="number"
                       min={1}
-                      className="app-input mt-1 w-full rounded-xl"
+                      className={cn(laundryFieldClass, "mt-1")}
                       value={form.depositAmountBaht ?? ""}
                       disabled={busy}
                       onChange={(e) =>
@@ -622,7 +623,7 @@ function LaundrySettingsClientInner({
                 <label className="block space-y-1">
                   <span className="text-xs font-bold text-[#4d47b6]">ปุ่มลัดยอดรับชำระ (บาท)</span>
                   <input
-                    className="app-input mt-1 w-full rounded-xl font-semibold tabular-nums"
+                    className={cn(laundryFieldClass, "mt-1 font-semibold tabular-nums")}
                     value={form.payAmountPresetsRaw}
                     onChange={(e) => setForm((f) => ({ ...f, payAmountPresetsRaw: e.target.value }))}
                     placeholder="80, 100, 120, 150"

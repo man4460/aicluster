@@ -154,6 +154,12 @@ export const LANDING_DAILY_MODULE_SHOWCASE: LandingModuleShowcaseItem[] = [
       "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=78",
   },
   {
+    slug: "lms",
+    blurb: "คอร์สออนไลน์ บทเรียน YouTube ข้อสอบ ใบรับรอง",
+    coverSrc:
+      "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=78",
+  },
+  {
     slug: "parking",
     blurb: "จอดรถ ยอด ประวัติ",
     coverSrc:

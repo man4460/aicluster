@@ -78,6 +78,16 @@ async function deleteSandboxRowsInTx(tx: Tx, ownerUserId: string, trialSessionId
   await tx.clubEventAsset.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.clubEventDynamicLink.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.clubEventProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.lmsCertificate.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.lmsLessonProgress.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.lmsEnrollment.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.lmsQuestion.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.lmsExam.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.lmsLesson.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.lmsCourse.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.lmsFinanceTransaction.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.lmsLearner.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.lmsProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.mqttClientSessionLog.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.mqttMessageStatDaily.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.mqttAclRule.deleteMany({ where: { ownerUserId, trialSessionId } });

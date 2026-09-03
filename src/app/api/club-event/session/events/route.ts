@@ -4,6 +4,7 @@ import { clubEventOwnerFromAuth } from "@/lib/club-event/api-owner";
 import { clubEventOwnerWhere, clubEventSessionContext } from "@/lib/club-event/session-context";
 import { prisma } from "@/lib/prisma";
 import { deriveEventStatus, mapClubEventRecord } from "@/systems/club-event/lib/mappers";
+import { normalizeClubEventYoutubeEmbedUrl } from "@/systems/club-event/lib/youtube";
 
 export async function GET(req: Request) {
   try {
@@ -52,6 +53,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "วันที่ไม่ถูกต้อง" }, { status: 400 });
     }
 
+    let youtubeEmbedUrl: string | null = null;
+    if (typeof body.youtubeEmbedUrl === "string" && body.youtubeEmbedUrl.trim()) {
+      youtubeEmbedUrl = normalizeClubEventYoutubeEmbedUrl(body.youtubeEmbedUrl);
+      if (!youtubeEmbedUrl) {
+        return NextResponse.json(
+          { error: "ลิงก์ YouTube ไม่ถูกต้อง — วางจาก watch / youtu.be / embed ได้" },
+          { status: 400 },
+        );
+      }
+    }
+
     const row = await prisma.clubEventRecord.create({
       data: {
         ownerUserId: own.ownerId,
@@ -61,8 +73,7 @@ export async function POST(req: Request) {
         eventDate,
         status: deriveEventStatus(eventDate),
         description: typeof body.description === "string" ? body.description : "",
-        youtubeEmbedUrl:
-          typeof body.youtubeEmbedUrl === "string" ? body.youtubeEmbedUrl.slice(0, 512) : null,
+        youtubeEmbedUrl,
       },
       include: { _count: { select: { gallery: true } } },
     });

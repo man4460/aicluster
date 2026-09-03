@@ -28,6 +28,8 @@ import {
   seedMqttProdDemoForOwner,
 } from "../src/lib/trial/seed-mqtt-laundry";
 import { seedVaultProdDemoForOwner } from "../src/lib/trial/seed-vault";
+import { seedClubEventProdDemoForOwner } from "../src/lib/trial/seed-club-event";
+import { seedLmsProdDemoForOwner } from "../src/lib/trial/seed-lms";
 import { seedInventoryProdDemoForOwner } from "../src/lib/trial/seed-inventory";
 import { seedGeneralStorePosProdDemoForOwner } from "../src/lib/trial/seed-general-store-pos";
 import { seedDrinkPosProdDemoForOwner } from "../src/lib/trial/seed-drink-pos";
@@ -55,6 +57,7 @@ import {
   SMART_POLICE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
   CLUB_EVENT_MODULE_SLUG,
+  LMS_MODULE_SLUG,
   LOYALTY_STAMP_MODULE_SLUG,
   MEDIA_REGISTRY_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
@@ -387,6 +390,14 @@ async function main() {
       sortOrder: 36,
     },
     {
+      slug: "lms",
+      title: "LMS คอร์สออนไลน์",
+      description:
+        "กลุ่ม 1 (Basic) — คอร์ส บทเรียน YouTube ข้อสอบ นักเรียน (โควตา 10) และเว็บ /lms/[slug]",
+      groupId: 1,
+      sortOrder: 37,
+    },
+    {
       slug: "smart-police",
       title: "Smart Police (สำนวนคดี)",
       description:
@@ -507,6 +518,7 @@ async function main() {
     MQTT_SERVICE_MODULE_SLUG,
     LAUNDRY_MODULE_SLUG,
     CLUB_EVENT_MODULE_SLUG,
+    LMS_MODULE_SLUG,
     VAULT_MODULE_SLUG,
     INVENTORY_MODULE_SLUG,
     GENERAL_STORE_POS_MODULE_SLUG,
@@ -790,6 +802,28 @@ async function main() {
   });
   if (adminRow) {
     await tryDemoSeed("laundry (admin)", () => seedLaundryProdDemoForOwner(prisma, adminRow.id));
+  }
+
+  /** บริหารชมรม — กิจกรรมย้อนหลัง+รูปเยอะ · สมาชิก · การเงิน · ทรัพย์สิน · ลิงก์ · YouTube */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`club-event (${email})`, () => seedClubEventProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** LMS คอร์สออนไลน์ — คอร์ส · บทเรียน · ข้อสอบ · นักเรียน · การเงิน */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`lms (${email})`, () => seedLmsProdDemoForOwner(prisma, row.id));
+    }
   }
 
   /** คลังรหัสผ่าน — ตัวอย่าง 13 รายการ (Google, Facebook, LINE, GitHub ฯลฯ) */

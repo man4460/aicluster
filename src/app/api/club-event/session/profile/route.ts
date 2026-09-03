@@ -62,6 +62,31 @@ export async function PUT(req: Request) {
         committeeJson,
         contactPhone: typeof body.contactPhone === "string" ? body.contactPhone.slice(0, 32) : body.contactPhone === null ? null : profile.contactPhone,
         contactLine: typeof body.contactLine === "string" ? body.contactLine.slice(0, 120) : body.contactLine === null ? null : profile.contactLine,
+        address: typeof body.address === "string" ? body.address : body.address === null ? null : profile.address,
+        facebookUrl:
+          typeof body.facebookUrl === "string"
+            ? body.facebookUrl.slice(0, 512)
+            : body.facebookUrl === null
+              ? null
+              : profile.facebookUrl,
+        mapUrl:
+          typeof body.mapUrl === "string" ? body.mapUrl.slice(0, 512) : body.mapUrl === null ? null : profile.mapUrl,
+        portalBannerUrl:
+          typeof body.portalBannerUrl === "string"
+            ? body.portalBannerUrl.slice(0, 512)
+            : body.portalBannerUrl === null
+              ? null
+              : profile.portalBannerUrl,
+        portalGalleryJson:
+          body.portalGallery !== undefined
+            ? JSON.stringify(
+                Array.isArray(body.portalGallery)
+                  ? body.portalGallery.filter((u): u is string => typeof u === "string").slice(0, 24)
+                  : [],
+              )
+            : profile.portalGalleryJson,
+        paymentRulesNote:
+          typeof body.paymentRulesNote === "string" ? body.paymentRulesNote : profile.paymentRulesNote,
         promptPayPhone: typeof body.promptPayPhone === "string" ? body.promptPayPhone.slice(0, 20) : body.promptPayPhone === null ? null : profile.promptPayPhone,
         promptPayQrImageUrl:
           typeof body.promptPayQrImageUrl === "string"
@@ -82,7 +107,13 @@ export async function PUT(req: Request) {
             : body.bankAccountName === null
               ? null
               : profile.bankAccountName,
+        taxId:
+          typeof body.taxId === "string" ? body.taxId.slice(0, 30) : body.taxId === null ? null : profile.taxId,
         slipPaperSize: typeof body.slipPaperSize === "string" ? body.slipPaperSize.slice(0, 16) : profile.slipPaperSize,
+        financeCategoriesJson:
+          body.financeCategories !== undefined
+            ? JSON.stringify(body.financeCategories).slice(0, 4000)
+            : profile.financeCategoriesJson,
       },
     });
 

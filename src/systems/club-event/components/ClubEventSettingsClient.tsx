@@ -1,85 +1,212 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { Plus } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Copy, ExternalLink, Plus } from "lucide-react";
 import {
-  AppDashboardSection,
   AppEmptyState,
-  AppSectionHeader,
+  AppModuleShopPaymentFields,
+  AppShopLogoField,
   AppSlipPaperSizeSettingsField,
-  appTemplateOutlineButtonClass,
-  prepareImageFileForUpload,
   useAppNoticePopup,
+  type AppSlipPaperSize,
 } from "@/components/app-templates";
 import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
 import {
+  assetRowEditIconButtonClass,
   assetRowRemoveIconButtonClass,
+  IconRowEdit,
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
 import {
-  CLUB_EVENT_SETTINGS_PATH,
+  CLUB_EVENT_SETTINGS_TAB_ITEMS,
+  clubEventSettingsHref,
   parseClubEventSettingsTab,
+  type ClubEventSettingsTab,
 } from "@/systems/club-event/club-event-module-nav";
 import { ClubEventPageSubNav } from "@/systems/club-event/components/ClubEventPageSubNav";
-import type { ClubEventDynamicLinkDto, ClubEventProfileDto } from "@/systems/club-event/lib/mappers";
+import { ClubEventPortalMediaSettings } from "@/systems/club-event/components/ClubEventPortalMediaSettings";
+import type {
+  ClubEventDynamicLinkDto,
+  ClubEventProfileDto,
+  ClubEventRecordDto,
+} from "@/systems/club-event/lib/mappers";
 import { CLUB_EVENT_LINK_TYPE_LABELS } from "@/systems/club-event/lib/mappers";
 import {
   clubEventFieldClass,
   clubEventFixedBottomActionClass,
-  clubEventPanelClass,
+  clubEventOutlineButtonClass,
+  clubEventPrimaryButtonClass,
   clubEventRowCardClass,
+  clubEventTextareaClass,
 } from "@/systems/club-event/lib/ui-tokens";
 
-const SETTINGS_TABS = [
-  { key: "basic", label: "ข้อมูลชมรม", href: CLUB_EVENT_SETTINGS_PATH },
-  { key: "finance", label: "การเงิน", href: `${CLUB_EVENT_SETTINGS_PATH}?tab=finance` },
-  { key: "links", label: "Link Hub", href: `${CLUB_EVENT_SETTINGS_PATH}?tab=links` },
-] as const;
+const LOGO_UPLOAD = "/api/club-event/session/images/upload";
+const labelClass = "block space-y-1";
+const labelTextClass = "text-xs font-bold text-[#4d47b6]";
+
+type LinkFormState = {
+  id: string;
+  type: ClubEventDynamicLinkDto["type"];
+  title: string;
+  description: string;
+  url: string;
+  amountBaht: string;
+  eventId: string;
+  fieldLabel: string;
+};
+
+const emptyLinkForm = (): LinkFormState => ({
+  id: "",
+  type: "RSVP",
+  title: "",
+  description: "",
+  url: "",
+  amountBaht: "",
+  eventId: "",
+  fieldLabel: "คำถาม / หมายเหตุ",
+});
+
+function absoluteUrl(path: string): string {
+  if (typeof window === "undefined") return path;
+  return `${window.location.origin}${path}`;
+}
+
+function ClubEventPortalLinkPanel({
+  portalPath,
+  onCopied,
+  onCopyFailed,
+}: {
+  portalPath: string;
+  onCopied: () => void;
+  onCopyFailed: () => void;
+}) {
+  return (
+    <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
+      <p className="text-xs font-black text-[#4d47b6]">ลิงก์เว็บชมรมสาธารณะ</p>
+      <p className="break-all text-sm font-semibold text-[#1e1b4b]">{portalPath}</p>
+      <div className="flex flex-wrap gap-2">
+        <a
+          href={portalPath}
+          target="_blank"
+          rel="noreferrer"
+          className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
+        >
+          <ExternalLink className="h-4 w-4" aria-hidden />
+          เปิดเว็บ
+        </a>
+        <button
+          type="button"
+          className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(absoluteUrl(portalPath));
+              onCopied();
+            } catch {
+              onCopyFailed();
+            }
+          }}
+        >
+          <Copy className="h-4 w-4" aria-hidden />
+          คัดลอก
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function ClubEventSettingsClient({ initialProfile }: { initialProfile: ClubEventProfileDto }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const tab = parseClubEventSettingsTab(searchParams.get("tab"));
   const notice = useAppNoticePopup();
-  const [profile, setProfile] = useState(initialProfile);
-  const [links, setLinks] = useState<ClubEventDynamicLinkDto[]>([]);
+  const [form, setForm] = useState(initialProfile);
+  const [links, setLinks] = useState<(ClubEventDynamicLinkDto & { submissionsCount?: number })[]>([]);
+  const [events, setEvents] = useState<ClubEventRecordDto[]>([]);
   const [saving, setSaving] = useState(false);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
-  const [linkForm, setLinkForm] = useState({
-    id: "",
-    type: "URL" as ClubEventDynamicLinkDto["type"],
-    title: "",
-    url: "",
-    amountBaht: "",
-  });
+  const [linkForm, setLinkForm] = useState<LinkFormState>(emptyLinkForm);
+  const [subsOpen, setSubsOpen] = useState(false);
+  const [subsTitle, setSubsTitle] = useState("");
+  const [subsRows, setSubsRows] = useState<
+    {
+      id: string;
+      respondentName: string;
+      respondentPhone: string;
+      amountBaht: number | null;
+      paymentMethod: string | null;
+      slipUrl: string | null;
+      createdAt: string;
+      payload: Record<string, unknown>;
+    }[]
+  >([]);
 
-  const subTabs = useMemo(
-    () => SETTINGS_TABS.map((t) => ({ key: t.key, label: t.label, href: t.href })),
-    [],
+  const setTab = useCallback(
+    (next: string) => {
+      router.replace(clubEventSettingsHref(next as ClubEventSettingsTab), { scroll: false });
+    },
+    [router],
   );
 
   const loadLinks = useCallback(async () => {
     const res = await fetch("/api/club-event/session/links");
-    const data = (await res.json()) as { links?: ClubEventDynamicLinkDto[] };
+    const data = (await res.json()) as {
+      links?: (ClubEventDynamicLinkDto & { submissionsCount?: number })[];
+    };
     setLinks(data.links ?? []);
   }, []);
 
-  useEffect(() => {
-    if (tab === "links") void loadLinks();
-  }, [tab, loadLinks]);
+  const loadEvents = useCallback(async () => {
+    const res = await fetch("/api/club-event/session/events");
+    const data = (await res.json()) as { events?: ClubEventRecordDto[] };
+    setEvents(data.events ?? []);
+  }, []);
 
-  const saveProfile = async (patch: Partial<ClubEventProfileDto> & Record<string, unknown>) => {
+  useEffect(() => {
+    if (tab === "portal") {
+      void loadLinks();
+      void loadEvents();
+    }
+  }, [tab, loadLinks, loadEvents]);
+
+  useEffect(() => {
+    setForm(initialProfile);
+  }, [initialProfile]);
+
+  const saveProfile = async () => {
     setSaving(true);
     try {
       const res = await fetch("/api/club-event/session/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
+        body: JSON.stringify({
+          displayName: form.displayName,
+          slug: form.slug,
+          tagline: form.tagline,
+          rulesMarkdown: form.rulesMarkdown,
+          contactPhone: form.contactPhone,
+          contactLine: form.contactLine,
+          address: form.address,
+          facebookUrl: form.facebookUrl,
+          mapUrl: form.mapUrl,
+          portalBannerUrl: form.portalBannerUrl,
+          portalGallery: form.portalGallery,
+          paymentRulesNote: form.paymentRulesNote,
+          promptPayPhone: form.promptPayPhone,
+          promptPayQrImageUrl: form.promptPayQrImageUrl,
+          bankName: form.bankName,
+          bankAccountNumber: form.bankAccountNumber,
+          bankAccountName: form.bankAccountName,
+          taxId: form.taxId,
+          slipPaperSize: form.slipPaperSize,
+          logoUrl: form.logoUrl,
+        }),
       });
       const data = (await res.json()) as { profile?: ClubEventProfileDto; error?: string };
       if (!res.ok) throw new Error(data.error ?? "บันทึกไม่สำเร็จ");
-      if (data.profile) setProfile(data.profile);
+      if (data.profile) setForm(data.profile);
       notice.success("บันทึกแล้ว");
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
@@ -88,18 +215,13 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
     }
   };
 
-  const uploadLogo = async (file: File) => {
-    try {
-      const prepared = await prepareImageFileForUpload(file);
-      const form = new FormData();
-      form.set("file", prepared);
-      const res = await fetch("/api/club-event/session/images/upload", { method: "POST", body: form });
-      const data = (await res.json()) as { imageUrl?: string; error?: string };
-      if (!res.ok) throw new Error(data.error ?? "อัปโหลดไม่สำเร็จ");
-      setProfile((p) => ({ ...p, logoUrl: data.imageUrl ?? p.logoUrl }));
-    } catch (e) {
-      notice.error(e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ");
-    }
+  const paymentValue: ModuleShopPaymentDto = {
+    promptPayPhone: form.promptPayPhone,
+    promptPayQrImageUrl: form.promptPayQrImageUrl,
+    bankName: form.bankName,
+    bankAccountNumber: form.bankAccountNumber,
+    bankAccountName: form.bankAccountName,
+    taxId: form.taxId,
   };
 
   const saveLink = async () => {
@@ -107,15 +229,37 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
       notice.error("กรอกชื่อลิงก์");
       return;
     }
+    if (linkForm.type === "URL" && !linkForm.url.trim()) {
+      notice.error("กรอก URL ปลายทาง");
+      return;
+    }
+    if (linkForm.type === "PAYMENT" && !(Number(linkForm.amountBaht) > 0)) {
+      notice.error("กรอกจำนวนเงินที่เก็บ (บาท)");
+      return;
+    }
     setSaving(true);
     try {
       const config =
         linkForm.type === "PAYMENT"
-          ? { amountBaht: Number(linkForm.amountBaht) || 0 }
+          ? {
+              amountBaht: Number(linkForm.amountBaht) || 0,
+              description: linkForm.description.trim() || undefined,
+              eventId: linkForm.eventId || undefined,
+            }
           : linkForm.type === "URL"
-            ? { url: linkForm.url }
-            : { fields: [{ key: "answer", label: "คำตอบ", type: "text" }] };
-      const payload = { type: linkForm.type, title: linkForm.title, config };
+            ? { url: linkForm.url.trim(), description: linkForm.description.trim() || undefined }
+            : {
+                description: linkForm.description.trim() || undefined,
+                eventId: linkForm.eventId || undefined,
+                fields: [
+                  {
+                    key: "answer",
+                    label: linkForm.fieldLabel.trim() || "คำถาม / หมายเหตุ",
+                    type: "text",
+                  },
+                ],
+              };
+      const payload = { type: linkForm.type, title: linkForm.title.trim(), config, isActive: true };
       const res = await fetch(
         linkForm.id ? `/api/club-event/session/links/${linkForm.id}` : "/api/club-event/session/links",
         {
@@ -127,7 +271,9 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? "บันทึกไม่สำเร็จ");
       setLinkModalOpen(false);
+      setLinkForm(emptyLinkForm());
       await loadLinks();
+      notice.success("บันทึกลิงก์แล้ว");
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
     } finally {
@@ -135,136 +281,464 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
     }
   };
 
-  const deleteLink = async (id: string) => {
-    if (!window.confirm("ลบลิงก์นี้?")) return;
+  const deleteLink = async (id: string, title: string) => {
+    const ok = await notice.confirm(`ลบลิงก์ «${title}» ใช่หรือไม่?`);
+    if (!ok) return;
     const res = await fetch(`/api/club-event/session/links/${id}`, { method: "DELETE" });
     if (res.ok) await loadLinks();
+    else notice.error("ลบไม่สำเร็จ");
   };
 
+  const openEditLink = (l: ClubEventDynamicLinkDto) => {
+    setLinkForm({
+      id: l.id,
+      type: l.type,
+      title: l.title,
+      description: l.config.description ?? "",
+      url: l.config.url ?? "",
+      amountBaht: l.config.amountBaht != null ? String(l.config.amountBaht) : "",
+      eventId: l.config.eventId ?? "",
+      fieldLabel: l.config.fields?.[0]?.label ?? "คำถาม / หมายเหตุ",
+    });
+    setLinkModalOpen(true);
+  };
+
+  const openSubmissions = async (l: ClubEventDynamicLinkDto) => {
+    setSubsTitle(l.title);
+    setSubsOpen(true);
+    const res = await fetch(`/api/club-event/session/links/${l.id}/submissions`);
+    const data = (await res.json()) as {
+      submissions?: typeof subsRows;
+      error?: string;
+    };
+    if (!res.ok) {
+      notice.error(data.error ?? "โหลดคำตอบไม่สำเร็จ");
+      setSubsRows([]);
+      return;
+    }
+    setSubsRows(data.submissions ?? []);
+  };
+
+  const portalPath = form.publicUrl || `/club/${form.slug}`;
+
   return (
-    <div className="space-y-3">
+    <>
       {notice.popup}
-      <ClubEventPageSubNav tabs={[...subTabs]} ariaLabel="แท็บตั้งค่า" />
-
-      {tab === "basic" ? (
-        <AppDashboardSection className={clubEventPanelClass}>
-          <AppSectionHeader title="ข้อมูลชมรม" />
-          <div className="space-y-3">
-            <label className="block space-y-1">
-              <span className="text-sm font-semibold">ชื่อชมรม</span>
-              <input className={clubEventFieldClass} value={profile.displayName} onChange={(e) => setProfile({ ...profile, displayName: e.target.value })} />
-            </label>
-            <label className="block space-y-1">
-              <span className="text-sm font-semibold">Slug (URL)</span>
-              <input className={clubEventFieldClass} value={profile.slug} onChange={(e) => setProfile({ ...profile, slug: e.target.value })} />
-              <p className="text-xs text-[#5f5a8a]">พอร์ทัล: {profile.publicUrl}</p>
-            </label>
-            <label className="block space-y-1">
-              <span className="text-sm font-semibold">Tagline</span>
-              <input className={clubEventFieldClass} value={profile.tagline ?? ""} onChange={(e) => setProfile({ ...profile, tagline: e.target.value })} />
-            </label>
-            <label className="block space-y-1">
-              <span className="text-sm font-semibold">กฎระเบียบ</span>
-              <textarea className={cn(clubEventFieldClass, "min-h-[120px]")} value={profile.rulesMarkdown} onChange={(e) => setProfile({ ...profile, rulesMarkdown: e.target.value })} />
-            </label>
-            <label className={cn(appTemplateOutlineButtonClass, "inline-flex cursor-pointer items-center gap-2")}>
-              อัปโหลดโลโก้
-              <input type="file" accept="image/*" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadLogo(f); e.target.value = ""; }} />
-            </label>
-            <div className={clubEventFixedBottomActionClass}>
-              <button type="button" className="app-btn-primary w-full min-h-[48px] rounded-xl sm:w-auto sm:px-6" disabled={saving} onClick={() => void saveProfile(profile)}>
-                บันทึก
-              </button>
-            </div>
-          </div>
-        </AppDashboardSection>
-      ) : null}
-
-      {tab === "finance" ? (
-        <AppDashboardSection className={clubEventPanelClass}>
-          <AppSectionHeader title="ตั้งค่าการเงิน" />
-          <div className="space-y-3">
-            <input className={clubEventFieldClass} placeholder="PromptPay" value={profile.promptPayPhone ?? ""} onChange={(e) => setProfile({ ...profile, promptPayPhone: e.target.value })} />
-            <input className={clubEventFieldClass} placeholder="ธนาคาร" value={profile.bankName ?? ""} onChange={(e) => setProfile({ ...profile, bankName: e.target.value })} />
-            <input className={clubEventFieldClass} placeholder="เลขบัญชี" value={profile.bankAccountNumber ?? ""} onChange={(e) => setProfile({ ...profile, bankAccountNumber: e.target.value })} />
-            <input className={clubEventFieldClass} placeholder="ชื่อบัญชี" value={profile.bankAccountName ?? ""} onChange={(e) => setProfile({ ...profile, bankAccountName: e.target.value })} />
-            <AppSlipPaperSizeSettingsField value={profile.slipPaperSize} onChange={(v) => setProfile({ ...profile, slipPaperSize: v })} />
-            <div className={clubEventFixedBottomActionClass}>
-              <button type="button" className="app-btn-primary w-full min-h-[48px] rounded-xl sm:w-auto sm:px-6" disabled={saving} onClick={() => void saveProfile(profile)}>
-                บันทึก
-              </button>
-            </div>
-          </div>
-        </AppDashboardSection>
-      ) : null}
-
-      {tab === "links" ? (
-        <AppDashboardSection className={clubEventPanelClass}>
-          <AppSectionHeader
-            title="Link Hub"
-            className="flex flex-row items-start justify-between gap-3 sm:items-center"
-            actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
-            action={
-              <button type="button" className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center sm:min-w-0 sm:px-4" aria-label="เพิ่มลิงก์" onClick={() => { setLinkForm({ id: "", type: "URL", title: "", url: "", amountBaht: "" }); setLinkModalOpen(true); }}>
-                <Plus className="h-5 w-5 sm:hidden" aria-hidden />
-                <span className="hidden sm:inline">+ เพิ่มลิงก์</span>
-              </button>
-            }
-          />
-          {links.length === 0 ? (
-            <AppEmptyState title="ยังไม่มีลิงก์" description="สร้างแบบสำรวจ RSVP เก็บเงิน หรือ URL" />
+      <ClubEventPageSubNav
+        title="ตั้งค่า"
+        items={CLUB_EVENT_SETTINGS_TAB_ITEMS}
+        activeKey={tab}
+        onSelect={setTab}
+        ariaLabel="แท็บตั้งค่า"
+        action={
+          tab === "portal" ? (
+            <button
+              type="button"
+              className={clubEventPrimaryButtonClass}
+              aria-label="สร้างลิงก์"
+              onClick={() => {
+                setLinkForm(emptyLinkForm());
+                setLinkModalOpen(true);
+              }}
+            >
+              <Plus className="h-5 w-5 sm:hidden" aria-hidden />
+              <span className="hidden sm:inline">+ สร้างลิงก์</span>
+            </button>
           ) : (
-            <ul className="space-y-2">
-              {links.map((l) => (
-                <li key={l.id} className={clubEventRowCardClass}>
-                  <div className="min-w-0">
-                    <p className="font-black text-[#1e1b4b]">{l.title}</p>
-                    <p className="text-sm text-[#66638c]">{CLUB_EVENT_LINK_TYPE_LABELS[l.type]}</p>
-                    <a href={l.publicPath} className="text-xs text-[#0000BF] underline" target="_blank" rel="noreferrer">
-                      {l.publicPath}
-                    </a>
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    <button type="button" className={assetRowRemoveIconButtonClass} aria-label={`ลบ ${l.title}`} onClick={() => void deleteLink(l.id)}>
-                      <IconRowRemove className="h-4 w-4" />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </AppDashboardSection>
-      ) : null}
+            <button
+              type="button"
+              className={clubEventPrimaryButtonClass}
+              disabled={saving}
+              onClick={() => void saveProfile()}
+            >
+              บันทึก
+            </button>
+          )
+        }
+      >
+        {tab === "basic" ? (
+          <div id="club-event-settings-panel-basic" role="tabpanel" className="space-y-3">
+            <AppShopLogoField
+              logoUrl={form.logoUrl}
+              fallbackLabel={form.displayName || "ชมรม"}
+              uploadUrl={LOGO_UPLOAD}
+              onLogoUrlChange={(url) => setForm((f) => ({ ...f, logoUrl: url }))}
+              buttonClassName={clubEventOutlineButtonClass}
+            />
+            <label className={labelClass}>
+              <span className={labelTextClass}>ชื่อชมรม / กิจกรรม</span>
+              <input
+                className={cn(clubEventFieldClass, "mt-1")}
+                value={form.displayName}
+                onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))}
+                placeholder="เช่น ชมรมวิ่งชุมชน"
+              />
+            </label>
+            <label className={labelClass}>
+              <span className={labelTextClass}>Slug (ใช้ใน URL เว็บสาธารณะ)</span>
+              <input
+                className={cn(clubEventFieldClass, "mt-1")}
+                value={form.slug}
+                onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
+                placeholder="my-club"
+              />
+              <p className="mt-1 text-[11px] font-semibold text-[#8b87b8]">พอร์ทัล: {portalPath}</p>
+            </label>
+            <label className={labelClass}>
+              <span className={labelTextClass}>สโลแกน</span>
+              <input
+                className={cn(clubEventFieldClass, "mt-1")}
+                value={form.tagline ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))}
+                placeholder="ข้อความสั้นใต้ชื่อชมรม"
+              />
+            </label>
+            <label className={labelClass}>
+              <span className={labelTextClass}>เบอร์ติดต่อ</span>
+              <input
+                className={cn(clubEventFieldClass, "mt-1")}
+                value={form.contactPhone ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, contactPhone: e.target.value }))}
+                placeholder="08x-xxx-xxxx"
+                inputMode="tel"
+              />
+            </label>
+            <label className={labelClass}>
+              <span className={labelTextClass}>ที่อยู่ / สถานที่ชมรม</span>
+              <input
+                className={cn(clubEventFieldClass, "mt-1")}
+                value={form.address ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                placeholder="ที่อยู่สำหรับแสดงบนเว็บ"
+              />
+            </label>
+            <label className={labelClass}>
+              <span className={labelTextClass}>กฎระเบียบ / ข้อปฏิบัติ</span>
+              <textarea
+                className={cn(clubEventTextareaClass, "mt-1")}
+                value={form.rulesMarkdown}
+                onChange={(e) => setForm((f) => ({ ...f, rulesMarkdown: e.target.value }))}
+                placeholder="ข้อความแสดงบนเว็บสาธารณะ"
+              />
+            </label>
+          </div>
+        ) : null}
+
+        {tab === "finance" ? (
+          <div id="club-event-settings-panel-finance" role="tabpanel" className="space-y-3">
+            <AppModuleShopPaymentFields
+              value={paymentValue}
+              onChange={(payment) => setForm((f) => ({ ...f, ...payment }))}
+              fieldClassName={cn(clubEventFieldClass, "mt-1")}
+            />
+
+            <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
+              <p className="text-xs font-black text-[#4d47b6]">QR พร้อมเพย์ (อัปโหลดรูป)</p>
+              <p className="text-[11px] font-semibold text-[#8b87b8]">
+                ทางเลือก — อัปโหลดภาพ QR จากแอปธนาคาร ถ้ามีรูปนี้ระบบจะแสดงรูปนี้แทนการสร้างจากเบอร์
+              </p>
+              {form.promptPayQrImageUrl ? (
+                <div className="flex flex-wrap items-start gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={form.promptPayQrImageUrl}
+                    alt="QR พร้อมเพย์ที่อัปโหลด"
+                    className="h-28 w-28 rounded-xl border border-white bg-white object-contain p-1 shadow-sm"
+                  />
+                  <button
+                    type="button"
+                    disabled={saving}
+                    className={cn(clubEventOutlineButtonClass, "text-rose-700")}
+                    onClick={() => setForm((f) => ({ ...f, promptPayQrImageUrl: null }))}
+                  >
+                    ลบรูป QR
+                  </button>
+                </div>
+              ) : null}
+              <label className={cn(clubEventOutlineButtonClass, "cursor-pointer")}>
+                {form.promptPayQrImageUrl ? "เปลี่ยนภาพ QR" : "เลือกภาพ QR พร้อมเพย์"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  disabled={saving}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!file) return;
+                    void (async () => {
+                      setSaving(true);
+                      try {
+                        const fd = new FormData();
+                        fd.set("file", file);
+                        const res = await fetch(LOGO_UPLOAD, { method: "POST", body: fd });
+                        const json = (await res.json().catch(() => ({}))) as {
+                          imageUrl?: string;
+                          error?: string;
+                        };
+                        if (!res.ok || !json.imageUrl) {
+                          throw new Error(json.error ?? "อัปโหลดไม่สำเร็จ");
+                        }
+                        setForm((prev) => ({ ...prev, promptPayQrImageUrl: json.imageUrl! }));
+                        notice.success("อัปโหลด QR พร้อมเพย์แล้ว");
+                      } catch (errUpload) {
+                        notice.error(errUpload instanceof Error ? errUpload.message : "อัปโหลดไม่สำเร็จ");
+                      } finally {
+                        setSaving(false);
+                      }
+                    })();
+                  }}
+                />
+              </label>
+            </div>
+
+            <label className={labelClass}>
+              <span className={labelTextClass}>กฎ / หมายเหตุการชำระเงิน (แสดงบนลิงก์เก็บค่า)</span>
+              <textarea
+                className={cn(clubEventTextareaClass, "mt-1")}
+                value={form.paymentRulesNote}
+                onChange={(e) => setForm((f) => ({ ...f, paymentRulesNote: e.target.value }))}
+                placeholder="เช่น โอนภายใน 24 ชม. แล้วแนบสลิป · ระบุชื่อ-กิจกรรมในหมายเหตุโอน"
+              />
+            </label>
+
+            <AppSlipPaperSizeSettingsField
+              value={form.slipPaperSize as AppSlipPaperSize}
+              onChange={(slipPaperSize) => setForm((f) => ({ ...f, slipPaperSize }))}
+              disabled={saving}
+            />
+          </div>
+        ) : null}
+
+        {tab === "portal" ? (
+          <div id="club-event-settings-panel-portal" role="tabpanel" className="space-y-4">
+            <ClubEventPortalLinkPanel
+              portalPath={portalPath}
+              onCopied={() => notice.success("คัดลอกลิงก์แล้ว")}
+              onCopyFailed={() => notice.error("คัดลอกไม่สำเร็จ")}
+            />
+            <ClubEventPortalMediaSettings
+              bannerUrl={form.portalBannerUrl ?? ""}
+              gallery={form.portalGallery ?? []}
+              facebookUrl={form.facebookUrl ?? ""}
+              mapUrl={form.mapUrl ?? ""}
+              contactLine={form.contactLine ?? ""}
+              onBannerUrlChange={(url) => setForm((f) => ({ ...f, portalBannerUrl: url || null }))}
+              onGalleryChange={(urls) => setForm((f) => ({ ...f, portalGallery: urls }))}
+              onFacebookUrlChange={(url) => setForm((f) => ({ ...f, facebookUrl: url || null }))}
+              onMapUrlChange={(url) => setForm((f) => ({ ...f, mapUrl: url || null }))}
+              onContactLineChange={(value) => setForm((f) => ({ ...f, contactLine: value || null }))}
+              disabled={saving}
+            />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-bold text-[#1e1b4b]">ลิงก์สำรวจ · RSVP · เก็บค่ากิจกรรม</p>
+              <button
+                type="button"
+                className={clubEventPrimaryButtonClass}
+                onClick={() => void saveProfile()}
+                disabled={saving}
+              >
+                บันทึกสื่อเว็บ
+              </button>
+            </div>
+            {links.length === 0 ? (
+              <AppEmptyState>
+                ยังไม่มีลิงก์ — สร้างแบบสำรวจ · ลงทะเบียนเข้าร่วม · เก็บค่า หรือลิงก์ภายนอก
+              </AppEmptyState>
+            ) : (
+              <ul className="space-y-2">
+                {links.map((l) => (
+                  <li key={l.id} className={clubEventRowCardClass}>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-[#1e1b4b]">{l.title}</p>
+                      <p className="text-sm text-[#66638c]">
+                        {CLUB_EVENT_LINK_TYPE_LABELS[l.type]}
+                        {typeof l.submissionsCount === "number" ? ` · คำตอบ ${l.submissionsCount}` : ""}
+                      </p>
+                      <a
+                        href={l.publicPath}
+                        className="text-xs text-[#0000BF] underline"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {l.publicPath}
+                      </a>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-1">
+                      <button
+                        type="button"
+                        className={clubEventOutlineButtonClass}
+                        onClick={() => void openSubmissions(l)}
+                      >
+                        คำตอบ
+                      </button>
+                      <button
+                        type="button"
+                        className={assetRowEditIconButtonClass}
+                        aria-label={`แก้ไข ${l.title}`}
+                        title="แก้ไข"
+                        onClick={() => openEditLink(l)}
+                      >
+                        <IconRowEdit className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className={assetRowRemoveIconButtonClass}
+                        aria-label={`ลบ ${l.title}`}
+                        title="ลบ"
+                        onClick={() => void deleteLink(l.id, l.title)}
+                      >
+                        <IconRowRemove className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : null}
+      </ClubEventPageSubNav>
 
       <FormModal
         open={linkModalOpen}
         onClose={() => setLinkModalOpen(false)}
-        title="เพิ่มลิงก์"
+        title={linkForm.id ? "แก้ไขลิงก์" : "สร้างลิงก์"}
+        mobileCentered
         footer={
           <div className={clubEventFixedBottomActionClass}>
-            <button type="button" className="app-btn-primary w-full min-h-[48px] rounded-xl sm:w-auto sm:px-6" disabled={saving} onClick={() => void saveLink()}>
+            <button
+              type="button"
+              className={cn(clubEventPrimaryButtonClass, "w-full sm:w-auto sm:px-6")}
+              disabled={saving}
+              onClick={() => void saveLink()}
+            >
               บันทึก
             </button>
           </div>
         }
       >
         <div className="space-y-3">
-          <select className={clubEventFieldClass} value={linkForm.type} onChange={(e) => setLinkForm({ ...linkForm, type: e.target.value as ClubEventDynamicLinkDto["type"] })}>
-            {(Object.keys(CLUB_EVENT_LINK_TYPE_LABELS) as ClubEventDynamicLinkDto["type"][]).map((t) => (
-              <option key={t} value={t}>
-                {CLUB_EVENT_LINK_TYPE_LABELS[t]}
-              </option>
-            ))}
-          </select>
-          <input className={clubEventFieldClass} placeholder="ชื่อลิงก์" value={linkForm.title} onChange={(e) => setLinkForm({ ...linkForm, title: e.target.value })} />
+          <label className={labelClass}>
+            <span className={labelTextClass}>ประเภทลิงก์</span>
+            <select
+              className={cn(clubEventFieldClass, "mt-1")}
+              value={linkForm.type}
+              onChange={(e) =>
+                setLinkForm({ ...linkForm, type: e.target.value as ClubEventDynamicLinkDto["type"] })
+              }
+            >
+              {(Object.keys(CLUB_EVENT_LINK_TYPE_LABELS) as ClubEventDynamicLinkDto["type"][]).map((t) => (
+                <option key={t} value={t}>
+                  {CLUB_EVENT_LINK_TYPE_LABELS[t]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={labelClass}>
+            <span className={labelTextClass}>ชื่อลิงก์ (แสดงให้ผู้เข้าร่วม)</span>
+            <input
+              className={cn(clubEventFieldClass, "mt-1")}
+              value={linkForm.title}
+              onChange={(e) => setLinkForm({ ...linkForm, title: e.target.value })}
+              placeholder="เช่น สำรวจอาหารว่าง · ลงทะเบียนวิ่ง · ค่าสมัคร 100 บาท"
+            />
+          </label>
+          <label className={labelClass}>
+            <span className={labelTextClass}>คำอธิบายสั้น</span>
+            <textarea
+              className={cn(clubEventTextareaClass, "mt-1")}
+              value={linkForm.description}
+              onChange={(e) => setLinkForm({ ...linkForm, description: e.target.value })}
+              placeholder="รายละเอียดเพิ่มเติมบนหน้าฟอร์ม"
+            />
+          </label>
+          {linkForm.type !== "URL" ? (
+            <label className={labelClass}>
+              <span className={labelTextClass}>ผูกกับกิจกรรม (ถ้ามี)</span>
+              <select
+                className={cn(clubEventFieldClass, "mt-1")}
+                value={linkForm.eventId}
+                onChange={(e) => setLinkForm({ ...linkForm, eventId: e.target.value })}
+              >
+                <option value="">— ไม่ระบุ —</option>
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>
+                    {ev.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           {linkForm.type === "URL" ? (
-            <input className={clubEventFieldClass} placeholder="https://..." value={linkForm.url} onChange={(e) => setLinkForm({ ...linkForm, url: e.target.value })} />
+            <label className={labelClass}>
+              <span className={labelTextClass}>URL ปลายทาง</span>
+              <input
+                className={cn(clubEventFieldClass, "mt-1")}
+                value={linkForm.url}
+                onChange={(e) => setLinkForm({ ...linkForm, url: e.target.value })}
+                placeholder="https://..."
+              />
+            </label>
           ) : null}
           {linkForm.type === "PAYMENT" ? (
-            <input className={clubEventFieldClass} placeholder="จำนวนเงิน (บาท)" value={linkForm.amountBaht} onChange={(e) => setLinkForm({ ...linkForm, amountBaht: e.target.value })} />
+            <label className={labelClass}>
+              <span className={labelTextClass}>จำนวนเงินที่เก็บ (บาท)</span>
+              <input
+                className={cn(clubEventFieldClass, "mt-1")}
+                value={linkForm.amountBaht}
+                onChange={(e) => setLinkForm({ ...linkForm, amountBaht: e.target.value })}
+                placeholder="100"
+                inputMode="decimal"
+              />
+            </label>
+          ) : null}
+          {linkForm.type === "SURVEY" || linkForm.type === "RSVP" ? (
+            <label className={labelClass}>
+              <span className={labelTextClass}>ป้ายช่องคำถามเพิ่ม (นอกจากชื่อ-เบอร์)</span>
+              <input
+                className={cn(clubEventFieldClass, "mt-1")}
+                value={linkForm.fieldLabel}
+                onChange={(e) => setLinkForm({ ...linkForm, fieldLabel: e.target.value })}
+                placeholder="เช่น จำนวนคน · เมนูอาหาร · ขนาดเสื้อ"
+              />
+            </label>
           ) : null}
         </div>
       </FormModal>
-    </div>
+
+      <FormModal open={subsOpen} onClose={() => setSubsOpen(false)} title={`คำตอบ · ${subsTitle}`} mobileCentered>
+        {subsRows.length === 0 ? (
+          <AppEmptyState>ยังไม่มีคำตอบ</AppEmptyState>
+        ) : (
+          <ul className="space-y-2">
+            {subsRows.map((s) => (
+              <li key={s.id} className="rounded-lg border border-slate-200/90 p-3 text-sm">
+                <p className="font-bold text-[#1e1b4b]">
+                  {s.respondentName || "ไม่ระบุชื่อ"}
+                  {s.respondentPhone ? ` · ${s.respondentPhone}` : ""}
+                </p>
+                {s.amountBaht != null ? (
+                  <p className="text-[#4d47b6]">
+                    ฿{s.amountBaht.toLocaleString("th-TH")}
+                    {s.paymentMethod ? ` · ${s.paymentMethod}` : ""}
+                  </p>
+                ) : null}
+                {typeof s.payload.answer === "string" && s.payload.answer ? (
+                  <p className="mt-1 text-[#66638c]">{s.payload.answer}</p>
+                ) : null}
+                {s.slipUrl ? (
+                  <a href={s.slipUrl} target="_blank" rel="noreferrer" className="text-xs text-[#0000BF] underline">
+                    ดูสลิป
+                  </a>
+                ) : null}
+                <p className="mt-1 text-[10px] text-[#9490c0]">
+                  {new Date(s.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </FormModal>
+    </>
   );
 }

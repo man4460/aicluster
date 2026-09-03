@@ -40,6 +40,16 @@ export function LaundryPackageViewModal({
     >
       {p ?
         <div className="space-y-1 px-1">
+          {p.image_url?.trim() ?
+            <div className="mb-3 overflow-hidden rounded-xl border border-slate-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={p.image_url.trim()}
+                alt=""
+                className="aspect-[16/10] w-full object-cover"
+              />
+            </div>
+          : null}
           <Row label="โมเดลราคา" value={p.pricing_model} />
           <Row label="ราคาฐาน" value={`฿${p.base_price.toLocaleString("th-TH")}`} />
           <Row label="เวลาประมาณ (ชม.)" value={formatLaundryDurationHoursTh(p.duration_hours)} />

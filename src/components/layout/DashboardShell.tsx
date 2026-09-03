@@ -284,6 +284,26 @@ import {
   writeLaundryHeaderCollapsed,
 } from "@/systems/laundry/laundry-module-nav";
 import {
+  ClubEventHeaderBarNav,
+  ClubEventHeaderExpandButton,
+} from "@/systems/club-event/components/ClubEventHeaderBarNav";
+import {
+  CLUB_EVENT_HEADER_COLLAPSE_EVENT,
+  isClubEventModulePath,
+  readClubEventHeaderCollapsed,
+  writeClubEventHeaderCollapsed,
+} from "@/systems/club-event/club-event-module-nav";
+import {
+  LmsHeaderBarNav,
+  LmsHeaderExpandButton,
+} from "@/systems/lms/components/LmsHeaderBarNav";
+import {
+  LMS_HEADER_COLLAPSE_EVENT,
+  isLmsModulePath,
+  readLmsHeaderCollapsed,
+  writeLmsHeaderCollapsed,
+} from "@/systems/lms/lms-module-nav";
+import {
   ParkingHeaderBarNav,
   ParkingHeaderExpandButton,
 } from "@/systems/parking/components/ParkingHeaderBarNav";
@@ -628,6 +648,8 @@ export function DashboardShell({
   const [loyaltyStampHeaderCollapsed, setLoyaltyStampHeaderCollapsed] = useState(false);
   const [villageHeaderCollapsed, setVillageHeaderCollapsed] = useState(false);
   const [laundryHeaderCollapsed, setLaundryHeaderCollapsed] = useState(false);
+  const [clubEventHeaderCollapsed, setClubEventHeaderCollapsed] = useState(false);
+  const [lmsHeaderCollapsed, setLmsHeaderCollapsed] = useState(false);
   const [parkingHeaderCollapsed, setParkingHeaderCollapsed] = useState(false);
   const [inventoryHeaderCollapsed, setInventoryHeaderCollapsed] = useState(false);
   const [smartPoliceHeaderCollapsed, setSmartPoliceHeaderCollapsed] = useState(false);
@@ -668,6 +690,8 @@ export function DashboardShell({
   const onLoyaltyStampModule = isLoyaltyStampModulePath(pathname);
   const onVillageModule = isVillageModulePath(pathname);
   const onLaundryModule = isLaundryModulePath(pathname);
+  const onClubEventModule = isClubEventModulePath(pathname);
+  const onLmsModule = isLmsModulePath(pathname);
   const onParkingModule = isParkingModulePath(pathname);
   const onInventoryModule = isInventoryModulePath(pathname);
   const onSmartPoliceModule = isSmartPoliceModulePath(pathname);
@@ -697,6 +721,8 @@ export function DashboardShell({
   const showLoyaltyStampHeaderBar = onLoyaltyStampModule && loyaltyStampHeaderCollapsed;
   const showVillageHeaderBar = onVillageModule && villageHeaderCollapsed;
   const showLaundryHeaderBar = onLaundryModule && laundryHeaderCollapsed;
+  const showClubEventHeaderBar = onClubEventModule && clubEventHeaderCollapsed;
+  const showLmsHeaderBar = onLmsModule && lmsHeaderCollapsed;
   const showParkingHeaderBar = onParkingModule && parkingHeaderCollapsed;
   const showInventoryHeaderBar = onInventoryModule && inventoryHeaderCollapsed;
   const showSmartPoliceHeaderBar = onSmartPoliceModule && smartPoliceHeaderCollapsed;
@@ -1161,6 +1187,36 @@ export function DashboardShell({
       window.removeEventListener("storage", sync);
     };
   }, [onLaundryModule]);
+
+  useEffect(() => {
+    if (!onClubEventModule) {
+      setClubEventHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setClubEventHeaderCollapsed(readClubEventHeaderCollapsed());
+    sync();
+    window.addEventListener(CLUB_EVENT_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(CLUB_EVENT_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onClubEventModule]);
+
+  useEffect(() => {
+    if (!onLmsModule) {
+      setLmsHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setLmsHeaderCollapsed(readLmsHeaderCollapsed());
+    sync();
+    window.addEventListener(LMS_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(LMS_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onLmsModule]);
 
   useEffect(() => {
     if (!onParkingModule) {
@@ -2006,6 +2062,54 @@ export function DashboardShell({
                     <span className="font-medium text-white/90">{displayName}</span>
                   </p>
                   <LaundryHeaderExpandButton onExpand={() => writeLaundryHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showClubEventHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <ClubEventHeaderBarNav onExpand={() => writeClubEventHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <ClubEventHeaderExpandButton onExpand={() => writeClubEventHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showLmsHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <LmsHeaderBarNav onExpand={() => writeLmsHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <LmsHeaderExpandButton onExpand={() => writeLmsHeaderCollapsed(false)} />
                 </div>
               </>
             ) : showParkingHeaderBar ? (

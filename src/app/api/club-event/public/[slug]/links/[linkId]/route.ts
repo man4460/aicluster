@@ -1,0 +1,47 @@
+import { NextResponse } from "next/server";
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { findClubEventPublicProfile } from "@/lib/club-event/public-profile";
+import { parseDynamicLinkConfig } from "@/systems/club-event/lib/mappers";
+
+type Ctx = { params: Promise<{ slug: string; linkId: string }> };
+
+export async function GET(req: Request, ctx: Ctx) {
+  try {
+    const { slug, linkId } = await ctx.params;
+    const url = new URL(req.url);
+    const profile = await findClubEventPublicProfile(slug, url.searchParams.get("t"));
+    if (!profile) notFound();
+
+    const link = await prisma.clubEventDynamicLink.findFirst({
+      where: { id: linkId, profileId: profile.id, isActive: true },
+    });
+    if (!link) notFound();
+
+    const config = parseDynamicLinkConfig(link.configJson);
+    let eventTitle: string | null = null;
+    if (config.eventId) {
+      const ev = await prisma.clubEventRecord.findFirst({
+        where: { id: config.eventId, profileId: profile.id },
+        select: { title: true },
+      });
+      eventTitle = ev?.title ?? null;
+    }
+
+    return NextResponse.json({
+      ownerId: profile.ownerUserId,
+      clubName: profile.displayName,
+      paymentRulesNote: profile.paymentRulesNote ?? "",
+      link: {
+        id: link.id,
+        type: link.type,
+        title: link.title,
+        config,
+        eventTitle,
+      },
+    });
+  } catch (e) {
+    console.error("[club-event/public links GET]", e);
+    return NextResponse.json({ error: "โหลดไม่สำเร็จ" }, { status: 500 });
+  }
+}

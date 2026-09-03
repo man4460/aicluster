@@ -11,6 +11,7 @@ import {
   EDUCARE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
   CLUB_EVENT_MODULE_SLUG,
+  LMS_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
   VILLAGE_MODULE_SLUG,
@@ -66,6 +67,10 @@ export function getLaundryDataScope(userId: string): Promise<ModuleDataScope> {
 
 export function getClubEventDataScope(userId: string): Promise<ModuleDataScope> {
   return resolveDataScopeBySlug(userId, CLUB_EVENT_MODULE_SLUG);
+}
+
+export function getLmsDataScope(userId: string): Promise<ModuleDataScope> {
+  return resolveDataScopeBySlug(userId, LMS_MODULE_SLUG);
 }
 
 export function getParkingDataScope(userId: string): Promise<ModuleDataScope> {

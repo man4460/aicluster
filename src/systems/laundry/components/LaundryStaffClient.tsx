@@ -26,6 +26,7 @@ import {
   laundryStaffMainPaddingBottomClass,
   laundryStaffNavDividerClass,
   laundryStaffNavTabClass,
+  laundryToolbarRowClass,
 } from "@/systems/laundry/lib/ui-tokens";
 
 type Props = {
@@ -116,7 +117,7 @@ function LaundryStaffClientInner({ shopLabel: initialShopLabel, ownerId, dashboa
 
   const renderMainTabs = (ariaLabel: string) => (
     <div
-      className="hidden shrink-0 flex-wrap items-center justify-end gap-0.5 sm:flex"
+      className={cn(laundryToolbarRowClass, "hidden flex-wrap justify-end sm:flex")}
       role="tablist"
       aria-label={ariaLabel}
     >
@@ -231,14 +232,14 @@ function LaundryStaffClientInner({ shopLabel: initialShopLabel, ownerId, dashboa
                 <span className="truncate">{tabLabel}</span>
               </h1>
             </div>
-            <div className="hidden shrink-0 flex-wrap items-center justify-end gap-0.5 sm:flex">
+            <div className={cn(laundryToolbarRowClass, "hidden flex-wrap justify-end sm:flex")}>
               <LaundryDashboardQuickActions staffQrLanding showLabels />
               <span className={laundryStaffNavDividerClass} aria-hidden />
               {renderMainTabs("เมนูพนักงาน")}
               <span className={laundryStaffNavDividerClass} aria-hidden />
               <LaundryRefreshButton refreshing={refreshing} onClick={() => void refreshPortal()} />
             </div>
-            <div className="flex shrink-0 items-center gap-0.5 sm:hidden">
+            <div className={cn(laundryToolbarRowClass, "sm:hidden")}>
               <LaundryDashboardQuickActions staffQrLanding showLabels={false} />
               <LaundryRefreshButton refreshing={refreshing} onClick={() => void refreshPortal()} />
             </div>

@@ -6,9 +6,14 @@ import { AppNoticePopup } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { LaundryCheckInModal } from "@/systems/laundry/components/LaundryCheckInModal";
 import { LaundryDashboardSubNavInline } from "@/systems/laundry/components/LaundryDashboardSubNavInline";
+import { LaundryRefreshButton } from "@/systems/laundry/components/LaundryRefreshButton";
 import { LaundrySellPackageModal } from "@/systems/laundry/components/LaundrySellPackageModal";
 import { LAUNDRY_BASE, LAUNDRY_STAFF_PATH } from "@/systems/laundry/laundry-module-nav";
-import { laundryHeaderActionBtnClass } from "@/systems/laundry/lib/ui-tokens";
+import {
+  laundryHeaderActionBtnClass,
+  laundryStaffNavDividerClass,
+  laundryToolbarRowClass,
+} from "@/systems/laundry/lib/ui-tokens";
 
 function IconDeduct({ className }: { className?: string }) {
   return (
@@ -61,7 +66,7 @@ export function LaundryDashboardQuickActions({
 
   return (
     <>
-      <div className={cn("inline-flex shrink-0 flex-nowrap items-center gap-0.5", className)}>
+      <div className={cn(laundryToolbarRowClass, className)}>
         <button
           type="button"
           onClick={() => setCheckInOpen(true)}
@@ -69,7 +74,7 @@ export function LaundryDashboardQuickActions({
           aria-label="หักแพ็กสมาชิก"
           title="หักแพ็ก"
         >
-          <IconDeduct className="h-3.5 w-3.5 shrink-0" />
+          <IconDeduct className="h-4 w-4 shrink-0" />
           {showLabels ?
             <span className="hidden sm:inline">หักแพ็ก</span>
           : null}
@@ -81,7 +86,7 @@ export function LaundryDashboardQuickActions({
           aria-label="ขายแพ็กเหมา"
           title="ขายแพ็ก"
         >
-          <IconPackageSpark className="h-3.5 w-3.5 shrink-0" />
+          <IconPackageSpark className="h-4 w-4 shrink-0" />
           {showLabels ?
             <span className="hidden sm:inline">ขายแพ็ก</span>
           : null}
@@ -119,28 +124,46 @@ export function LaundryDashboardQuickActions({
   );
 }
 
-/** แท็บย่อย + ปุ่มหักแพ็ก/ขายแพ็ก — มุมขวาบนในการ์ดแดชบอร์ด */
+/**
+ * แถบหัวแดชบอร์ด — ลำดับเดียวกับหน้าพนักงาน:
+ * หักแพ็ก · ขายแพ็ก → แท็บย่อย → รีเฟรช
+ */
 export function LaundryDashboardHeaderToolbar({
   className,
   hideSubNav = false,
   staffQrLanding = false,
+  refreshing = false,
+  onRefresh,
 }: {
   className?: string;
   /** ซ่อนแท็บย่อยแดชบอร์ด (ใช้ในโหมดพนักงาน — มีเมนูใน shell แล้ว) */
   hideSubNav?: boolean;
   staffQrLanding?: boolean;
+  refreshing?: boolean;
+  onRefresh?: () => void | Promise<void>;
 }) {
   if (staffQrLanding) return null;
 
   return (
-    <div className={cn("flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5", className)}>
+    <div className={cn(laundryToolbarRowClass, className)}>
+      <LaundryDashboardQuickActions staffQrLanding={staffQrLanding} />
       {!hideSubNav ?
         <>
+          <span className={cn(laundryStaffNavDividerClass, "hidden sm:block")} aria-hidden />
           <LaundryDashboardSubNavInline />
-          <span className="hidden h-5 w-px shrink-0 bg-slate-200/90 sm:block" aria-hidden />
         </>
       : null}
-      <LaundryDashboardQuickActions staffQrLanding={staffQrLanding} />
+      {onRefresh ?
+        <>
+          <span className={cn(laundryStaffNavDividerClass, "hidden sm:block")} aria-hidden />
+          <LaundryRefreshButton
+            refreshing={refreshing}
+            onClick={() => void onRefresh()}
+            ariaLabel="รีเฟรชข้อมูล"
+            title="รีเฟรช"
+          />
+        </>
+      : null}
     </div>
   );
 }

@@ -1,0 +1,238 @@
+---
+description: แม่แบบเว็บไซต์ลูกค้า (รับฝากซักผ้า) — flat section · สีแบรนด์ · compact hero · ขอบริการ · ติดตามสถานะ — อ้างอิงเมื่อออกแบบพอร์ทัลโมดูลถัดไป
+globs:
+  - "**/systems/laundry/components/LaundryPortal*.tsx"
+  - "**/systems/laundry/components/LaundryPickupPublicClient.tsx"
+  - "**/app/laundry/**"
+  - "**/api/laundry/public/**"
+  - "**/systems/**/components/*PortalPublicClient*.tsx"
+  - "**/systems/**/components/*PortalSection*.tsx"
+  - "**/systems/**/lib/ui-tokens.ts"
+alwaysApply: false
+---
+
+# เว็บไซต์ลูกค้า — แม่แบบซักผ้า (Golden Example)
+
+ใช้เมื่อทำหรือปรับ **หน้าเว็บสาธารณะของลูกค้า** ในโมดูลใหม่ — ยึด **รับฝากซักผ้า** เป็นต้นแบบเลย์เอาต์ flat · สีแบรนด์ · ส่วนหัว–เนื้อหา · ปุ่มหลัก · ชื่อร้าน
+
+**กฎที่ต้องคู่ด้วย:**  
+`module-customer-booking-website-portal.mdc` (URL · trial · glass shell · hero ทั่วไป) · `customer-portal-no-description-copy.mdc` · `app-templates-media.mdc` · `app-templates-central.mdc` · `module-thailand-timezone.mdc` · `laundry-module-dashboard-template.mdc` §12
+
+**ก่อนออกแบบ:** อ่าน **`dashboard-module-design-check-laundry-first.mdc`** แล้วเปิดไฟล์ซักผ้าด้านล่าง
+
+---
+
+## 0) เมื่อไหร่ใช้แม่แบบนี้ vs กฎจองทั่วไป
+
+| ชนิดเว็บ | แม่แบบหลัก |
+|---------|------------|
+| จองทรัพยากร · ห้อง · สนาม · จอดรถ · โต๊ะ | `module-customer-booking-website-portal.mdc` (โรงแรม/จอดรถ) |
+| **ขอบริการ · รับ-ส่ง · หลายขั้นตอน · ติดตามสถานะ** | **กฎนี้ (ซักผ้า)** |
+| QR เช็คอินสั้น | `shop-customer-qr-portal.mdc` |
+
+โมดูลใหม่ที่มี hero + หลายส่วน + ฟอร์มยาว → คัดลอก **โครง flat section + token + component** จากซักผ้า แล้วปรับโดเมน
+
+---
+
+## 1) แผนที่ไฟล์ (ซักผ้า)
+
+| บทบาท | พาธ |
+|--------|-----|
+| หน้าเว็บหลัก | `src/app/laundry/[ownerId]/page.tsx` → `LaundryPortalPublicClient` |
+| ส่วนหัว–เนื้อหา | `LaundryPortalSection.tsx` |
+| ติดตามสถานะ | `LaundryPortalStatusLookup.tsx` |
+| ฟอร์มรับ-ส่ง | `LaundryPickupPublicClient.tsx` (embedded + standalone) |
+| การ์ดแพ็ก | `LaundryPortalPackageCard.tsx` · `LaundryPortalPackageDetailModal.tsx` |
+| โทเค็น UI | `lib/ui-tokens.ts` — คำนำหน้า `laundryPortal*` |
+| API พอร์ทัล | `/api/laundry/public/portal` |
+| ค้นหาสถานะเบอร์ | `/api/laundry/public/pickup-lookup` |
+| สื่อตัวอย่าง | `lib/portal-media.ts` |
+
+**โมดูลใหม่:** สร้าง `{Module}PortalSection` · `{module}Portal*` tokens · `{Module}PortalPublicClient` — **อย่า** copy-paste class Tailwind กระจายหลายไฟล์
+
+---
+
+## 2) โครงหน้า (บังคับ)
+
+```
+AppPublicCheckInGlassPage (!px-0 !pt-0)
+├── header (absolute) — โลโก้ + ชื่อร้าน + nav เดสก์ท็อป
+├── hero (เต็มความกว้าง) — แบนเนอร์ + overlay + compact CTA
+└── main (max-w-6xl space-y-12)
+    ├── ฟอร์มเต็ม (เมื่อ expand) — PortalSection
+    ├── ติดตามสถานะ — PortalSection
+    ├── แพ็กเกจ / แกลเลอรี — PortalSection
+    └── ติดต่อ — PortalSection (flat ไม่มีกล่อง)
+```
+
+| ชั้น | ค่า |
+|------|-----|
+| ความกว้างเนื้อหา | `max-w-6xl` · `px-4 sm:px-6` |
+| ระยะห่างส่วน | `space-y-12 sm:space-y-14` |
+| Early return | `loading` / `loadErr` — glass แยก `!px-0 !pt-0` · ข้อความกลางจอ |
+| Layout โมดูล | `app/{module}/layout.tsx` — **เต็มจอ** ห้าม `max-w-lg` ห่อทั้งโมดูล |
+
+---
+
+## 3) ส่วนหัว–เนื้อหา — `PortalSection` (บังคับ)
+
+**ทุกส่วนใน `main`** ใช้ component แบบ `LaundryPortalSection`:
+
+1. **หัวข้อ** (`h2`) — `{module}PortalPageTitleClass`
+2. **เส้นบาง** — `{module}PortalSectionDividerClass` + padding บน (`PortalPageBodyClass`)
+3. **เนื้อหา** — ฟอร์ม · รายการ · แกลเลอรี
+
+```tsx
+<section id={id} className="scroll-mt-16" aria-labelledby={headingId}>
+  <h2 className={portalPageTitleClass}>{title}</h2>
+  <div className={portalPageBodyClass}>
+    {subtitle ? <p className={portalPageSubtitleClass}>{subtitle}</p> : null}
+    {children}
+  </div>
+</section>
+```
+
+### ห้าม
+
+- ห่อทั้งส่วนด้วยการ์ด glass / `rounded-2xl border shadow` ซ้อนนอก (ยกเว้นการ์ดรายการย่อย เช่น แพ็ก · ผลค้นหา)
+- ใส่ **คำอธิบายยาว** ใต้หัวข้อเมื่อหัวข้อสื่อความหมายพอ — ดู `customer-portal-no-description-copy.mdc`  
+  ตัวอย่างที่ตัดแล้ว: ~~«ค้นหาด้วยเบอร์โทรที่ใช้ส่งคำขอรับ-ส่ง»~~ → เหลือแค่ «ติดตามสถานะ»
+- subtitle ใช้เฉพาะเมื่อจำเป็น (เช่น สรุปชื่อ·เบอร์ในฟอร์มขยาย)
+
+---
+
+## 4) Flat layout — แบ่งด้วยเส้น ไม่ซ้อนกล่อง (บังคับ)
+
+| องค์ประกอบ | แนวทาง |
+|-----------|--------|
+| ส่วนใน `main` | **ไม่มี** การ์ดนอกรอบ — ใช้ `PortalSection` + เส้น `border-t border-slate-200/80` |
+| แผงย่อยในฟอร์ม | `{module}PortalInsetPanelClass` — เส้นบน + `bg-slate-50/50` **ไม่มี** border รอบ |
+| บล็อกฟอร์ม | `{module}PortalFlatBlockClass` = `space-y-4` |
+| ติดต่อ | ข้อความ + ปุ่ม outline — **ห้าม** กล่อง dashed/border รอบทั้งส่วน |
+| Hero compact | มือถือ: `border-t border-white/40` · `sm+`: การ์ดขาวบาง (`sm:border sm:bg-white/95`) |
+
+**โทเค็นซักผ้า:** `laundryPortalSectionDividerClass` · `laundryPortalPageBodyClass` · `laundryPortalFlatBlockClass` · `laundryPortalInsetPanelClass`
+
+---
+
+## 5) สีแบรนด์ · ชื่อร้าน · ปุ่มหลัก (บังคับ)
+
+### ปุ่ม CTA หลัก
+
+- ใช้ **`appDashboardBrandGradientFillClass`** จาก `@/components/app-templates` (ไล่ `#0000BF` → violet → pink)
+- ซักผ้า: **`laundryPrimaryButtonClass`** (= ความสูง **`h-10`** · `rounded-lg`) — alias เก่า `laundryPortalPrimaryBtnClass` / `laundryPaymentCtaClass`
+- โมดูลใหม่: `{module}PrimaryButtonClass` ชุดเดียวกับแดชบอร์ด — **ห้าม** สร้าง CTA คนละความสูงกับปุ่มโมดูล
+- ชิป/step active: gradient เดียวกับ CTA
+
+### ชื่อร้าน
+
+| ตำแหน่ง | โทเค็น |
+|--------|--------|
+| Header / ติดต่อ (พื้นอ่อน) | `{module}PortalShopNameClass` — gradient + `bg-clip-text text-transparent` |
+| บน hero (พื้นมืด/รูป) | `{module}PortalShopNameHeroClass` — gradient + `drop-shadow` อ่านง่าย |
+
+**ห้าม** ชื่อร้านเป็นสีเทา/plain เมื่อโมดูลอื่นต้องการความสม่ำเสมอกับแดชบอร์ด
+
+---
+
+## 6) Header · Nav (เดสก์ท็อป)
+
+| รายการ | แนวทาง |
+|--------|--------|
+| โลโก้ | `h-10 w-10 rounded-full` — header absolute เท่านั้น |
+| ชื่อร้าน header | truncate · `{module}PortalShopNameHeroClass` |
+| Nav shell | `{module}PortalHeaderNavShellClass` — **`rounded-lg`** segment (ไม่ใช่ pill `rounded-full`) · glass บนแบนเนอร์ |
+| ลิงก์ nav | anchor `#pickup` `#status` `#packages` `#gallery` `#contact` |
+| มือถือ | nav ซ่อน (`hidden md:inline-flex`) — scroll ไปส่วนหรือ compact hero |
+
+---
+
+## 7) Hero · Compact CTA (บังคับ)
+
+1. แบนเนอร์ **เต็มความกว้าง** · `min-h-[56vh] sm:min-h-[64vh]` · คลิกดูใหญ่ (`AppImageLightbox`)
+2. Overlay: `from-[#1e1b4b]/20` + fade ล่าง → `#faf9ff`
+3. บน hero: eyebrow โดเมน · **H1 ชื่อร้าน gradient** · tagline (ถ้ามี)
+4. **Compact bar** (`#pickup`): ชื่อ · เบอร์ · ปุ่ม **ขอบริการ…** — submit แล้ว **expand** ฟอร์มเต็ม + scroll `#pickup-form`
+5. **`#pickup` ใน URL** → scroll ถึง compact bar **เท่านั้น** — **ห้าม** auto-expand ฟอร์มเต็ม
+6. คลิกการ์ดแพ็ก → **detail modal** · ปุ่มใน modal ค่อย seed แพ็ก + expand ฟอร์ม
+
+---
+
+## 8) ฟอร์ม embedded (หลายขั้นตอน)
+
+**ไฟล์:** `LaundryPickupPublicClient.tsx` — `embeddedInPortal`
+
+| รายการ | แนวทาง |
+|--------|--------|
+| Step nav | `{module}DashboardSegmentShellClass` + segment btn — 3 ขั้น: ที่อยู่ → บริการ → รายการ/ติดตาม |
+| ไม่มีปุ่มย้อน «กลับหน้าร้าน» | อยู่ใน portal แล้ว |
+| ฟิลด์ | `{module}PortalFieldClass` · `min-h-[44px]` · `rounded-xl` |
+| Label | `{module}PortalLabelClass` — สั้น ไม่มี `(ไม่บังคับ)` ยาว |
+| แจ้งเตือน | **`useAppNoticePopup`** — ห้าม inline banner แดง/เขียว |
+| ชำระเงิน | `{Module}PublicPaymentPanel` · สลิป · QR · validate ก่อนบันทึก |
+
+---
+
+## 9) ติดตามสถานะ · Lookup
+
+1. ส่วน `{Module}PortalStatusLookup` ห่อด้วย `PortalSection` — **ไม่มี subtitle อธิบาย workflow**
+2. ช่องเบอร์ + ปุ่มค้นหา (primary gradient)
+3. API แยก: `GET …/public/pickup-lookup?owner_id=&phone=` (+ trial `t=`)
+4. ผลลัพธ์: รายการ flat — เส้นแบ่งระหว่างแถว (`PortalSectionDividerClass`) ไม่การ์ดซ้อน
+5. คัดลอกลิงก์ติดตาม token ได้เมื่อมี
+
+---
+
+## 10) แพ็กเกจ · แกลเลอรี · ติดต่อ
+
+| ส่วน | แนวทาง |
+|------|--------|
+| แพ็กเกจ | กริดการ์ดคลิกได้ → modal รายละเอียด · ชื่อ + คำอธิบาย + ราคา (`module-package-name-description-ui.mdc`) |
+| แกลเลอรี | `LaundryPortalGallery` · `AppImageThumb` + lightbox ชุดรูป · กริด `2 / sm:3 / lg:4` · **คอม 2 แถวต่อหน้า** (8 รูป) แล้วแบ่งหน้า · สูงสุด 20 รูป |
+| ติดต่อ | ชื่อร้าน gradient · ที่อยู่ · เวลาเปิด (**เวลาไทย**) · ปุ่ม outline โทร/LINE/Facebook/แผนที่ — **flat** |
+
+---
+
+## 11) โทเค็นที่ต้องมีใน `ui-tokens.ts` (โมดูลใหม่)
+
+คัดลอกชุดจากซักผ้า แล้วเปลี่ยนคำนำหน้า:
+
+| โทเค็น | ใช้เมื่อ |
+|--------|---------|
+| `{module}PortalShopNameClass` / `HeroClass` | ชื่อร้าน gradient |
+| `{module}PrimaryButtonClass` (หรือ alias PortalPrimary) | CTA หลัก — สูงเท่าปุ่มแดชบอร์ด (`h-10`) |
+| `{module}OutlineButtonClass` | ปุ่มขอบขาว |
+| `{module}PortalPageTitleClass` | หัวข้อ section |
+| `{module}PortalPageBodyClass` | เนื้อหาหลังเส้น |
+| `{module}PortalSectionDividerClass` | เส้นแบ่ง |
+| `{module}PortalFieldClass` / `LabelClass` | ฟอร์ม |
+| `{module}PortalHeaderNavShellClass` / `NavLinkClass` | nav บน hero |
+| `{module}PortalHeroCompactShellClass` | แถว compact บนแบนเนอร์ |
+| `{module}PortalFlatBlockClass` / `InsetPanelClass` | ฟอร์ม flat |
+
+---
+
+## 12) เช็กลิสต์โมดูลใหม่ (คัดลอกจากซักผ้า)
+
+- [ ] `{Module}PortalSection.tsx` — หัวข้อ → เส้น → เนื้อหา
+- [ ] `{module}Portal*` tokens ใน `ui-tokens.ts`
+- [ ] Hero เต็มจอ + compact CTA + ปุ่ม/ชื่อสีแบรนด์
+- [ ] `main` flat — ไม่การ์ดนอกรอบแต่ละส่วน
+- [ ] ไม่มีคำอธิบายยาวใต้หัวข้อ (`customer-portal-no-description-copy.mdc`)
+- [ ] `useAppNoticePopup` ทุก flow
+- [ ] `AppImageThumb` / `AppImageLightbox` สำหรับรูป
+- [ ] Trial `?t=` + gate portal API
+- [ ] เวลาเปิด/ปิดแสดง «เวลาไทย»
+- [ ] ตั้งค่าสื่อในแดชบอร์ด (แบนเนอร์ · แกลเลอรี) — ไม่ hardcode URL ใน component
+
+---
+
+## 13) อ้างอิงโค้ด
+
+- `LaundryPortalPublicClient.tsx` — hero · header · main sections
+- `LaundryPortalSection.tsx` — shell ส่วน
+- `LaundryPortalStatusLookup.tsx` — lookup ไม่มี subtitle
+- `LaundryPickupPublicClient.tsx` — embedded steps flat
+- `src/systems/laundry/lib/ui-tokens.ts` — บรรทัด `laundryPortal*`
+- กฎจองทั่วไป: `module-customer-booking-website-portal.mdc`
+- แดชบอร์ดโมดูล: `laundry-module-dashboard-template.mdc`

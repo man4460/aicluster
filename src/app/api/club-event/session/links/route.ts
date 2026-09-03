@@ -16,6 +16,7 @@ export async function GET() {
     const rows = await prisma.clubEventDynamicLink.findMany({
       where: { profileId: profile.id, ...clubEventOwnerWhere(own.ownerId, scope.trialSessionId) },
       orderBy: { createdAt: "desc" },
+      include: { _count: { select: { submissions: true } } },
     });
 
     return NextResponse.json({
@@ -25,6 +26,7 @@ export async function GET() {
         title: l.title,
         config: parseDynamicLinkConfig(l.configJson),
         isActive: l.isActive,
+        submissionsCount: l._count.submissions,
         publicPath: `/club/${profile.slug}/link/${l.id}`,
       })),
     });

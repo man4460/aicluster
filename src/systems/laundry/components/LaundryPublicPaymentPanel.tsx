@@ -225,7 +225,7 @@ export function LaundryPublicPaymentPanel({
               <button
                 type="button"
                 disabled={disabled}
-                className={cn(laundryPaymentCtaClass, "w-full min-h-[44px] rounded-2xl text-sm")}
+                className={cn(laundryPaymentCtaClass, "w-full text-sm")}
                 onClick={() => setCustomerQrOpen(true)}
               >
                 แสดง QR ให้สแกน
@@ -271,7 +271,7 @@ export function LaundryPublicPaymentPanel({
             <div className="relative max-w-sm rounded-2xl bg-white p-4 shadow-xl">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={info.qrDataUrl} alt="QR พร้อมเพย์" className="mx-auto h-64 w-64 object-contain" />
-              <button type="button" className={cn(laundryPaymentCtaClass, "mt-4 w-full min-h-[44px]")} onClick={() => setCustomerQrOpen(false)}>
+              <button type="button" className={cn(laundryPaymentCtaClass, "mt-4 w-full")} onClick={() => setCustomerQrOpen(false)}>
                 ปิด
               </button>
             </div>

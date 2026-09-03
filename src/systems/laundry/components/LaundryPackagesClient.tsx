@@ -14,10 +14,12 @@ import {
   type LaundryRepository,
 } from "@/systems/laundry/laundry-service";
 import {
+  laundryFieldClass,
   laundryMutedLoadingNoticeClass,
   laundryDashboardSegmentBtnClass,
   laundryDashboardSegmentShellClass,
   laundryOffersEmptyStateClass,
+  laundryPrimaryButtonClass,
   laundrySectionFirstClass,
   laundrySectionNextClass,
 } from "@/systems/laundry/lib/ui-tokens";
@@ -133,13 +135,13 @@ export function LaundryPackagesClient({
             <button
               type="button"
               onClick={openAddModal}
-              className="cw-btn app-btn-primary app-tap-feedback inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-bold shadow-sm sm:min-h-[42px] sm:px-4"
+              className={laundryPrimaryButtonClass}
               aria-label="เพิ่มแพ็กเกจ"
             >
-              <svg className="cw-btn-icon h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+              <svg className="h-4 w-4 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
                 <path d="M12 5v14M5 12h14" strokeLinecap="round" />
               </svg>
-              <span className="cw-btn-label">เพิ่มแพ็กเกจ</span>
+              <span className="hidden sm:inline">+ เพิ่มแพ็กเกจ</span>
             </button>
           </div>
           <p className="mt-2 hidden text-xs text-[#66638c] sm:block">
@@ -209,7 +211,7 @@ export function LaundryPackagesClient({
                     <span className="text-xs font-bold text-[#4d47b6]">ค้นหาแพ็กเกจ</span>
                     <input
                       id="laundry-package-filter-keyword"
-                      className="app-input mt-1 min-h-[44px] w-full rounded-[1.25rem] px-3 py-2 text-base"
+                      className={cn(laundryFieldClass, "mt-1")}
                       placeholder="ชื่อหรือคำอธิบาย"
                       value={filterKeyword}
                       onChange={(e) => setFilterKeyword(e.target.value)}

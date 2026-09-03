@@ -55,6 +55,7 @@ Canonical เลย์เอาต์เว็บ + hero: **โรงแรม**
 | ชนิด | กฎ | เมื่อไหร่ |
 |------|-----|----------|
 | **เว็บไซต์จอง (กฎนี้ = template)** | `module-customer-booking-website-portal.mdc` | โรงแรม · จอดรถ · สนาม · ที่พัก · จองโต๊ะ · โดเมนที่ต้อง “หน้าเว็บ” |
+| **ขอบริการ · รับ-ส่ง · ติดตามสถานะ** | **`laundry-module-portal-website-template.mdc`** (ซักผ้า — flat section · สีแบรนด์) |
 | เว็บร้าน + สั่งเลย (ไม่มีจอง) | กฎนี้ + `pos-customer-order-link-ux.mdc` | ร้านเครื่องดื่ม |
 | พอร์ทัล QR กะทัดรัด | `shop-customer-qr-portal.mdc` | คาร์แคร์ · บาร์เบอร์ · เช็คอินสั้น |
 | จองสล็อต + พนักงาน | `module-booking-staff-schedule-template.mdc` | บาร์เบอร์ · นวด |

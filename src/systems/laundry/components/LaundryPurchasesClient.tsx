@@ -43,7 +43,10 @@ import {
   laundryMutedLoadingNoticeClass,
   laundryOffersEmptyStateClass,
   laundryOffersListRowCardClass,
+  laundryOutlineButtonClass,
   laundryPageStackClass,
+  laundryPrimaryButtonClass,
+  laundryFieldClass,
   laundrySectionFirstClass,
   laundrySectionNextClass,
   laundryStatCardClass,
@@ -512,10 +515,7 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
               <button
                 type="button"
                 onClick={openSellModal}
-                className={cn(
-                  "app-btn-primary inline-flex min-h-[44px] items-center justify-center px-4 py-2.5 text-sm font-semibold text-white",
-                  laundryCardSurfaceRadiusClass,
-                )}
+                className={laundryPrimaryButtonClass}
               >
                 ขายแพ็กเกจ
               </button>
@@ -616,7 +616,7 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
                   <span className="text-xs font-bold text-[#4d47b6]">เบอร์โทร</span>
                   <input
                     id="laundry-purchase-filter-phone"
-                    className="app-input mt-1 min-h-[44px] w-full rounded-[1.25rem] px-3 py-2 text-base"
+                    className={cn(laundryFieldClass, "mt-1")}
                     inputMode="numeric"
                     placeholder="เช่น 081..."
                     value={filterPhone}
@@ -627,7 +627,7 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
                   <span className="text-xs font-bold text-[#4d47b6]">ชื่อลูกค้า</span>
                   <input
                     id="laundry-purchase-filter-name"
-                    className="app-input mt-1 min-h-[44px] w-full rounded-[1.25rem] px-3 py-2 text-base"
+                    className={cn(laundryFieldClass, "mt-1")}
                     placeholder="ค้นหาบางส่วนได้"
                     value={filterName}
                     onChange={(e) => setFilterName(e.target.value)}
@@ -704,7 +704,7 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
               <label className="block text-xs font-semibold text-[#4d47b6]">
                 ชื่อลูกค้า (ไม่บังคับ)
                 <input
-                  className="app-input mt-1 w-full rounded-[1.25rem] px-3 py-2.5 text-sm"
+                  className={cn(laundryFieldClass, "mt-1")}
                   value={editCustomerName}
                   onChange={(e) => setEditCustomerName(e.target.value.slice(0, 100))}
                 />
@@ -715,7 +715,7 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
                   type="number"
                   min={0}
                   max={9999}
-                  className="app-input mt-1 w-full rounded-[1.25rem] px-3 py-2.5 text-base tabular-nums"
+                  className={cn(laundryFieldClass, "mt-1 tabular-nums")}
                   value={editRemain}
                   onChange={(e) => setEditRemain(e.target.value)}
                   required
@@ -724,7 +724,7 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
               <label className="block text-xs font-semibold text-[#4d47b6]">
                 สถานะ
                 <select
-                  className="app-input mt-1 w-full rounded-[1.25rem] px-3 py-2.5 text-sm"
+                  className={cn(laundryFieldClass, "mt-1")}
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value as typeof editStatus)}
                 >
@@ -749,14 +749,14 @@ export function LaundryPurchasesClient({ embedded = false, onEmbeddedToolbar }: 
                 <button
                   type="button"
                   onClick={() => closeEditModal()}
-                  className={cn("app-btn-soft min-h-[48px] px-4 py-3 text-sm font-semibold text-[#2e2a58]", laundryCardSurfaceRadiusClass)}
+                  className={cn(laundryOutlineButtonClass, "w-full sm:w-auto")}
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
                   disabled={editSaving}
-                  className={cn("app-btn-primary min-h-[48px] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60", laundryCardSurfaceRadiusClass)}
+                  className={cn(laundryPrimaryButtonClass, "w-full sm:w-auto")}
                 >
                   {editSaving ? "กำลังบันทึก…" : "บันทึก"}
                 </button>

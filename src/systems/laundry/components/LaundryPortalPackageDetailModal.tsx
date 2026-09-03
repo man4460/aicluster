@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect } from "react";
-import { appPublicCheckInGlassCardClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   laundryPortalPackagePriceLabel,
   type LaundryPortalPackageItem,
 } from "@/systems/laundry/components/LaundryPortalPackageCard";
 import {
-  laundryPaymentCtaClass,
-  laundryPortalInsetPanelClass,
-  laundryPortalStepNavBtnClass,
+  laundryCardSurfaceRadiusClass,
+  laundryCompactOutlineButtonClass,
+  laundryPortalPrimaryBtnClass,
+  laundryPortalSectionDividerClass,
 } from "@/systems/laundry/lib/ui-tokens";
 
 export function LaundryPortalPackageDetailModal({
@@ -53,8 +53,8 @@ export function LaundryPortalPackageDetailModal({
         aria-modal="true"
         aria-labelledby="laundry-portal-pkg-detail-title"
         className={cn(
-          appPublicCheckInGlassCardClass,
-          "relative z-10 flex max-h-[min(90dvh,640px)] w-full max-w-md flex-col overflow-hidden p-0 sm:max-w-lg",
+          laundryCardSurfaceRadiusClass,
+          "relative z-10 flex max-h-[min(90dvh,640px)] w-full max-w-md flex-col overflow-hidden border border-slate-200/90 bg-white shadow-xl sm:max-w-lg",
         )}
       >
         <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden bg-gradient-to-br from-sky-50 to-indigo-100">
@@ -71,7 +71,7 @@ export function LaundryPortalPackageDetailModal({
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/70 bg-white/90 text-lg font-bold text-[#4d47b6] shadow-sm"
+            className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/70 bg-white/90 text-lg font-bold text-[#4d47b6] shadow-sm"
             aria-label="ปิด"
           >
             ×
@@ -91,7 +91,7 @@ export function LaundryPortalPackageDetailModal({
           : null}
 
           {tiers.length > 0 ?
-            <div className={cn("mt-4", laundryPortalInsetPanelClass)}>
+            <div className={cn("mt-4", laundryPortalSectionDividerClass, "pt-4")}>
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#66638c]">ขนาด / ราคา</p>
               <ul className="mt-2 space-y-1.5">
                 {tiers.map((t, i) => (
@@ -108,14 +108,14 @@ export function LaundryPortalPackageDetailModal({
           : null}
         </div>
 
-        <div className="flex shrink-0 gap-2 border-t border-white/50 bg-white/40 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5">
-          <button type="button" onClick={onClose} className={cn(laundryPortalStepNavBtnClass, "min-h-[48px] flex-1")}>
+        <div className="flex shrink-0 gap-2 border-t border-slate-200/80 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5">
+          <button type="button" onClick={onClose} className={cn(laundryCompactOutlineButtonClass, "flex-1")}>
             ปิด
           </button>
           <button
             type="button"
             onClick={() => onRequestPickup(pkg)}
-            className={cn(laundryPaymentCtaClass, "min-h-[48px] flex-[1.35] px-4")}
+            className={cn(laundryPortalPrimaryBtnClass, "flex-1")}
           >
             ขอบริการรับ-ส่งแพ็กนี้
           </button>

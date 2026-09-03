@@ -302,6 +302,25 @@ export function dashboardNavIconForHref(href: string): ReactNode {
       </Svg>
     );
   }
+  if (href.startsWith("/dashboard/lms")) {
+    return (
+      <Svg>
+        <path
+          d="M22 10L12 5 2 10l10 5 10-5z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M6 12v5c0 1 3 3 6 3s6-2 6-3v-5"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <path d="M22 10v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </Svg>
+    );
+  }
   if (href.startsWith("/dashboard/club-event")) {
     return (
       <Svg>

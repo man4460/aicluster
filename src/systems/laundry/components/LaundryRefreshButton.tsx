@@ -1,8 +1,7 @@
 "use client";
 
-import { appTemplateOutlineButtonClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
-import { laundryInlineSubNavBtnClass } from "@/systems/laundry/lib/ui-tokens";
+import { laundryRefreshIconButtonClass } from "@/systems/laundry/lib/ui-tokens";
 
 export function LaundryIconRefresh({ className, spinning }: { className?: string; spinning?: boolean }) {
   return (
@@ -27,42 +26,25 @@ type LaundryRefreshButtonProps = {
   onClick: () => void | Promise<void>;
   /** ค่าเริ่ม: รีเฟรชข้อมูล */
   ariaLabel?: string;
-  /** ข้อความบน sm+ — ค่าเริ่ม: รีเฟรช */
+  /** @deprecated ไม่แสดงข้อความแล้ว — คงไว้เพื่อไม่พัง caller เก่า */
   label?: string;
-  /** header = มุมการ์ด/แถบหัว · inline = แถบย่อยในการ์ด */
+  /** header / inline ใช้ขนาดเดียวกัน (ไอคอนล้วน) */
   variant?: "header" | "inline";
   className?: string;
   title?: string;
 };
 
-/** ปุ่มรีเฟรชมาตรฐานโมดูลซักผ้า — มือถือไอคอน · sm+ ไอคอน+ข้อความ */
+/** ปุ่มรีเฟรชมาตรฐานโมดูลซักผ้า — ไอคอนล้วน · ขนาด/มนเท่าปุ่ม compact ของโมดูล */
 export function LaundryRefreshButton({
   refreshing = false,
   onClick,
   ariaLabel = "รีเฟรชข้อมูล",
-  label = "รีเฟรช",
-  variant = "header",
+  variant: _variant = "header",
   className,
   title = "รีเฟรช",
 }: LaundryRefreshButtonProps) {
+  void _variant;
   const resolvedAriaLabel = refreshing ? `กำลัง${ariaLabel}` : ariaLabel;
-
-  if (variant === "inline") {
-    return (
-      <button
-        type="button"
-        onClick={() => void onClick()}
-        disabled={refreshing}
-        aria-busy={refreshing}
-        aria-label={resolvedAriaLabel}
-        title={title}
-        className={cn(laundryInlineSubNavBtnClass(false), "disabled:opacity-50", className)}
-      >
-        <LaundryIconRefresh className="h-3.5 w-3.5 shrink-0" spinning={refreshing} />
-        <span className="hidden sm:inline">{refreshing ? "กำลังรีเฟรช…" : label}</span>
-      </button>
-    );
-  }
 
   return (
     <button
@@ -72,16 +54,9 @@ export function LaundryRefreshButton({
       aria-busy={refreshing}
       aria-label={resolvedAriaLabel}
       title={title}
-      className={cn(
-        appTemplateOutlineButtonClass,
-        "inline-flex min-h-[40px] min-w-[40px] items-center justify-center px-0 text-[#4d47b6] disabled:opacity-60 sm:min-w-0 sm:px-3",
-        className,
-      )}
+      className={cn(laundryRefreshIconButtonClass, className)}
     >
-      <LaundryIconRefresh className="h-5 w-5 shrink-0 sm:mr-1.5" spinning={refreshing} />
-      <span className="hidden text-sm font-semibold sm:inline">
-        {refreshing ? "กำลังรีเฟรช…" : label}
-      </span>
+      <LaundryIconRefresh className="h-4 w-4 shrink-0" spinning={refreshing} />
     </button>
   );
 }

@@ -8,7 +8,7 @@ import {
 } from "@/systems/laundry/laundry-service";
 
 function StatusGlyph({ status }: { status: LaundryOrderStatus }) {
-  const cls = "h-[15px] w-[15px] sm:h-[18px] sm:w-[18px]";
+  const cls = "h-3 w-3 sm:h-3.5 sm:w-3.5";
   switch (status) {
     case "PENDING_PICKUP":
       return (
@@ -122,7 +122,7 @@ export function LaundryOrderStatusIconStrip({
               void onSelect(s);
             }}
             className={cn(
-              "snap-start flex h-8 min-w-[2rem] shrink-0 items-center justify-center rounded-lg border text-[#4d47b6] transition-all sm:h-10 sm:min-w-[2.5rem] sm:rounded-xl",
+              "snap-start flex h-7 min-w-[1.75rem] shrink-0 items-center justify-center rounded-md border text-[#4d47b6] transition-all sm:h-8 sm:min-w-[2rem]",
               active ?
                 cn(
                   "cursor-default border-[#5b61ff] bg-white shadow-sm ring-2 ring-[#5b61ff]/30",

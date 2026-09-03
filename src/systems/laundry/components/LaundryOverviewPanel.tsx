@@ -102,6 +102,8 @@ export function LaundryOverviewPanel({
   onStatusChange,
   onPrintOrder,
   staffQrLanding = false,
+  refreshing = false,
+  onRefresh,
 }: {
   orders: LaundryOrder[];
   todayStats: {
@@ -117,6 +119,8 @@ export function LaundryOverviewPanel({
   onStatusChange: (id: number, status: LaundryOrderStatus) => void | Promise<void>;
   onPrintOrder?: (o: LaundryOrder) => void;
   staffQrLanding?: boolean;
+  refreshing?: boolean;
+  onRefresh?: () => void | Promise<void>;
 }) {
   const [statFilter, setStatFilter] = useState<StatFilterKey | null>(null);
   const [statusFilter, setStatusFilter] = useState<LaundryOrderStatus | null>(null);
@@ -175,7 +179,12 @@ export function LaundryOverviewPanel({
         {!staffQrLanding ?
           <div className="flex flex-nowrap items-center justify-between gap-2">
             <h2 className="min-w-0 shrink truncate text-base font-bold text-[#1e1b4b] sm:text-lg">ภาพรวม</h2>
-            <LaundryDashboardHeaderToolbar hideSubNav={staffQrLanding} staffQrLanding={staffQrLanding} />
+            <LaundryDashboardHeaderToolbar
+              hideSubNav={staffQrLanding}
+              staffQrLanding={staffQrLanding}
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+            />
           </div>
         : null}
 

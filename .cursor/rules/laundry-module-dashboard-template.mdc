@@ -1,0 +1,318 @@
+---
+description: แม่แบบโมดูลแดชบอร์ดครบชุด (รับฝากซักผ้า) — กล่อง layout ปุ่ม ชำระเงิน สลิป พิมพ์ popup การ์ด เมนู ซ่อนเมนู คู่มือ กรอง กราฟ — อ้างอิงเมื่อสร้างหรือปรับโมดูลใหม่
+globs:
+  - "**/systems/laundry/**"
+  - "**/app/**/dashboard/laundry/**"
+  - "**/app/laundry/**"
+  - "**/app/api/laundry/**"
+  - "**/systems/**/components/*Shell*.tsx"
+  - "**/systems/**/components/*Chrome*.tsx"
+  - "**/lib/modules/**"
+alwaysApply: false
+---
+
+# รับฝากซักผ้า — แม่แบบโมดูลแดชบอร์ด (Golden Example)
+
+ใช้เมื่อ **สร้างโมดูลแดชบอร์ด ใหม่** หรือปรับโมดูลเดิมให้ครบมาตรฐาน UX/UI โปรเจกต์ — ยึด **ซักผ้า** เป็นต้นแบบโครงสร้าง + การ์ด + ชำระเงิน + พิมพ์ + พอร์ทัลลูกค้า + การเงิน/กราฟ
+
+**กฎที่ต้องคู่ด้วย:**  
+`dashboard-ux-car-wash-baseline.mdc` · `app-templates-central.mdc` · `app-templates-media.mdc` · `app-templates-spark-charts.mdc` · `module-chrome-no-branding.mdc` · `dashboard-new-module-sidebar-icon.mdc` · `dashboard-page-width.mdc` · `dashboard-mobile-summary-stat-grid.mdc` · `dashboard-row-action-icon-buttons.mdc` · `dashboard-module-list-filter.mdc` · `dashboard-mobile-filter-icon.mdc` · `dashboard-finance-module-template.mdc` · `module-package-deduct-signature.mdc` · `module-package-sell-tax-invoice-print.mdc` · `module-package-name-description-ui.mdc` · `shop-qr-hub-popup-pattern.mdc` · `module-customer-booking-website-portal.mdc` · **`laundry-module-portal-website-template.mdc`** · `module-thailand-timezone.mdc`
+
+**ก่อนออกแบบโมดูลใหม่:** อ่าน **`dashboard-module-design-check-laundry-first.mdc`** ก่อนเสมอ
+
+**คู่ขนาน chrome:** `football-turf-module-dashboard-template.mdc` · `dashboard-module-car-wash-barber-reference.mdc`
+
+---
+
+## 0) หลักคิดสั้น ๆ
+
+1. **โครงสร้างไฟล์แยกชั้น** — shell/chrome/nav ≠ หน้าย่อย ≠ client panels ≠ service ≠ API ≠ พอร์ทัลสาธารณะ  
+2. **UX มือถือ = dock ล่าง 4 รายการ** · เดสก์ท็อป = แท็บหัวในการ์ด · ยุบหัวได้  
+3. **แจ้งเตือน/ยืนยัน = `useAppNoticePopup` + `AppNoticePopup`** — ห้าม inline banner แดง/เขียว · หลีกเลี่ยง `window.confirm` ใน flow ใหม่  
+4. **UI token รวมที่ `ui-tokens.ts`** — ห้ามคัดลอกสตริง Tailwind ซ้ำหลายไฟล์  
+5. **กราฟการเงิน = `compact` ชุดเดียวทั้งหน้า** — `AppRevenueCostColumnChart` + `AppColumnBarSparkChart`  
+6. **หัวข้อการ์ดสั้น** — รายละเอียดยาว → คู่มือ `?` ใน `LaundryUsageGuideModal`  
+7. **ห้ามซ้ำแบรนด์ / ห้ามซ้ำ gutter** กับ `PageContainer` — ดู §2b  
+
+---
+
+## 1) แผนที่ไฟล์
+
+| บทบาท | พาธอ้างอิงซักผ้า |
+|--------|------------------|
+| Layout + guard | `src/app/(dashboard)/dashboard/laundry/layout.tsx` → `LaundryModuleShell` |
+| หน้าแยก | `.../laundry/page.tsx` · `finance/` · `manage/` · `settings/` · `staff/` |
+| Shell / Chrome | `components/LaundryModuleChrome.tsx` · `LaundryModuleShell.tsx` |
+| Nav keys / collapse | `laundry-module-nav.tsx` — `LAUNDRY_HEADER_COLLAPSE_*` |
+| แท็บเมื่อหัวยุบ | `LaundryHeaderBarNav.tsx` |
+| Dock มือถือ | `AppMobileDockShell` ใน `LaundryModuleChrome` |
+| แดชบอร์ด hub | `LaundryDashboardHubClient.tsx` · sub-nav `LaundryPageSubNav.tsx` |
+| ภาพรวม / POS / คิว | `LaundryOverviewPanel` · `LaundryOrdersPosClient` · `LaundryOrderCard` |
+| การเงิน | `LaundryFinancePageClient` · `LaundryFinancePanel` · `LaundryRevenuePanel` · `LaundryCostPanel` |
+| จัดการ | `LaundryManageHubClient` · `LaundryPackagesClient` · `LaundryPurchasesClient` |
+| ตั้งค่า | `LaundrySettingsClient` · `LaundryPortalMediaSettings` |
+| QR hub | `LaundryQrHubClient` |
+| คู่มือ | `LaundryUsageGuideModal.tsx` |
+| พอร์ทัลลูกค้า | `/laundry/[ownerId]` · `LaundryPortalPublicClient` · `LaundryPortalPackageDetailModal` |
+| รับ–ส่ง | `LaundryPickupPublicClient` · `/laundry/pickup/[ownerId]` |
+| ชำระเงิน | `LaundryPaymentPanel` · `LaundryPublicPaymentPanel` |
+| พิมพ์ | `lib/laundry-print-docs.ts` · `LaundryOrderPrintModal` · `LaundryMemberPrintModal` |
+| UI tokens | `lib/ui-tokens.ts` |
+| Service / SSE | `laundry-service.ts` · `lib/dashboard-sse.ts` · `lib/dashboard-bus.ts` |
+| Staff PIN | `LaundryStaffClient` · `/api/laundry/staff/*` |
+
+**โมดูลใหม่:** แยก **nav + chrome + dock + page clients + tokens + service + API + portal** — อย่ายัดทุกแท็บในไฟล์เดียว
+
+---
+
+## 2) เมนูหลักโมดูล (4 รายการ)
+
+| key | ชื่อ | หน้า | sub-nav |
+|-----|------|------|---------|
+| `dashboard` | แดชบอร์ด | `/dashboard/laundry` | ภาพรวม · ออเดอร์ · คิวออนไลน์ |
+| `finance` | การเงิน | `/dashboard/laundry/finance` | — |
+| `manage` | การจัดการ | `/dashboard/laundry/manage` | แพ็กเกจ · สมาชิก |
+| `settings` | ตั้งค่า | `/dashboard/laundry/settings` | พื้นฐาน · การเงิน · เว็บลูกค้า · เวลา · QR |
+
+- **มือถือ:** dock ล่าง 4 คอลัมน์ · `rounded-[2.5rem]` · safe-area · `pb-24` เนื้อหา  
+- **เดสก์ท็อป:** แท็บในการ์ดหัว (`laundryPrimaryTabShellClass` / pills)  
+- **Sub-nav:** `LaundryPageSubNav` — segment shell (`laundryDashboardSegmentShellClass`)  
+- **Sidebar icon:** `dashboard-nav-icons.tsx` — href `/dashboard/laundry`  
+
+---
+
+## 3) ซ่อนเมนูหลักระบบ + ยุบหัวโมดูล
+
+### ซ่อน MobileBottomNav / ย่อ sidebar
+
+- เข้า `/dashboard/laundry/*` → `isModuleWorkspacePath` → **ย่อ sidebar** · **ซ่อน** `MobileBottomNav` หลัก  
+- **Staff kiosk** `/dashboard/laundry/staff` → `DashboardPagesShell` ใช้ `!px-0 !py-0` · ไม่มี dock โมดูลเต็มรูปแบบ  
+
+### ยุบหัวโมดูล
+
+| รายการ | ค่า |
+|--------|-----|
+| localStorage | `mawell-laundry-module-header-collapsed` (`LAUNDRY_HEADER_COLLAPSE_KEY`) |
+| event | `mawell-laundry-header-collapse` |
+| ปุ่ม | มุมขวาบนการ์ดหัว · จำสถานะ |
+| เมื่อยุบ | แท็บไป `LaundryHeaderBarNav` ในแถบม่วง `DashboardShell` |
+
+---
+
+## 4) กล่อง · การ์ด · อักษร (ui-tokens)
+
+**แหล่งความจริง:** `src/systems/laundry/lib/ui-tokens.ts`
+
+| โทเค็น | ใช้เมื่อ |
+|--------|---------|
+| `laundryPanelClass` | การ์ดหลักทุกแผง — `rounded-xl border slate shadow-sm` (plain inner ไม่ glass ซ้อน) |
+| `laundryPanelSectionClass` | padding เนื้อหาในแผง |
+| `laundrySectionHeadingClass` | หัวข้อการ์ด `text-sm font-bold #1e1b4b` |
+| `laundrySubtitleClass` | คำอธิบายสั้น — **ซ่อนบนมือถือ** (`hidden sm:block`) |
+| `laundryStatInlineClass` | สถิติเส้นซ้าย — กริด **2 คอลัมน์** มือถือ (`laundryDashboardStatsGridClass`) |
+| `laundryBtnHeightClass` | ความสูงปุ่มมาตรฐาน — **`box-border h-10 min-h-10 max-h-10`** |
+| `laundryOutlineButtonClass` / `laundryPrimaryButtonClass` | ปุ่มข้อความขาว / ไล่สีน้ำเงิน→ชมพู |
+| `laundryIconButtonClass` | ปุ่มไอคอนล้วนสูงเท่าปุ่มข้อความ (`h-10 w-10`) — รีเฟรช · ปิดโมดัล |
+| `laundryRowIconButtonClass` | ปุ่มไอคอน**ในแถวการ์ด** — **`h-7 w-7`** (เล็กกว่าแถบหัว) |
+| `laundryToolbarRowClass` | แถวปุ่มหัวแดชบอร์ด/พนักงาน — `items-center gap-1` |
+| `laundryHeaderActionBtnClass` | หักแพ็ก / ขายแพ็ก — ใช้ outline/primary ชุดเดียว |
+| `laundryInlineSubNavBtnClass` / `laundryStaffNavTabClass` | แท็บแถบหัว — **คลาสเดียวกับ** outline/primary (สูงเท่ากัน) |
+| `laundryFieldClass` | ช่องกรอกสูง/มนเท่าปุ่ม (`h-10` · `rounded-lg`) |
+| `laundryPrimaryTabShellClass` / `laundryPrimaryTabPillClass` | แท็บหลัก / ตั้งค่า |
+| `laundryDashboardSegmentShellClass` / `laundryDashboardSegmentBtnClass` | sub-tab ในเนื้อหา (compact `h-8`) |
+| `laundryFilterChipClass` | ชิปสถานะกรอง |
+| `laundryCompactOutlineButtonClass` | **deprecated** → `laundryOutlineButtonClass` |
+| `laundryRefreshIconButtonClass` | **deprecated** → `laundryIconButtonClass` |
+| `laundryPortalPrimaryBtnClass` | **deprecated** → `laundryPrimaryButtonClass` |
+| `laundryPortalInsetPanelClass` | panel ย่อยในเว็บลูกค้า (flat) |
+| `laundryPortalPageTitleClass` / `PageBodyClass` | หัวข้อส่วน + เส้น + เนื้อหา — ดู **`laundry-module-portal-website-template.mdc`** |
+| `laundryPortalShopNameClass` | ชื่อร้าน gradient |
+| `laundryStaffPlainPanelClass` | staff kiosk — ไม่มีขอบการ์ดหนัก |
+
+**ห้าม:** สร้าง `rounded-3xl glass` ใหม่ในโมดูลอื่นโดยไม่ดูว่าซักผ้าใช้ plain panel + segment แทน
+
+**หมายเหตุ `cn`:** โปรเจกต์นี้ **ไม่มี twMerge** — ห้ามซ้อนคลาสชนกัน (เช่น `px-4` แล้วตามด้วย `px-0` บน element เดียว) · ปุ่มไอคอนต้องประกอบจาก `laundryBtnBaseClass` **โดยไม่** สืบทอด `px` จาก outline
+
+---
+
+## 5) Layout · ขอบซ้าย–ขวา
+
+| # | ชั้น | ซักผ้า |
+|---|------|--------|
+| 1 | `DashboardShell` main | `max-md:px-2 sm:px-4` |
+| 2 | `DashboardPagesShell` | `WIDE_MODULE` → `max-w-none !px-0` (ยกเว้น staff) |
+| 3 | `LaundryModuleChrome` หัว | padding ในหัว · **children ไม่ห่อ px ทั้งหน้า** |
+| 4 | การ์ดย่อย | `laundryPanelSectionClass` / `p-3 sm:p-4` |
+
+ดูเต็ม: `dashboard-page-width.mdc`
+
+---
+
+## 6) ปุ่ม · แถบหัว · แถวการ์ด
+
+**แหล่งความจริง:** `src/systems/laundry/lib/ui-tokens.ts` · `LaundryDashboardHeaderToolbar` · `LaundryRefreshButton` · `LaundryToolbarIconButton`
+
+### ลำดับชั้นขนาดปุ่ม (บังคับ)
+
+| ชั้น | ความสูง | โทเค็น / คอมโพเนนต์ | ใช้เมื่อ |
+|------|---------|---------------------|----------|
+| **แถบหัว / CTA** | **`h-10`** | `laundryOutlineButtonClass` · `laundryPrimaryButtonClass` · `laundryIconButtonClass` | หักแพ็ก · ขายแพ็ก · แท็บแถบหัว · รีเฟรช · CTA ฟอร์ม · ช่องกรอกคู่ปุ่ม |
+| **ไอคอนในแถวการ์ด** | **`h-7 w-7`** | `laundryRowIconButtonClass` → `LaundryToolbarIconButton` | พิมพ์ · ดู · แก้ไข · ลบ บนการ์ดออเดอร์/แพ็ก |
+| **อัปเดตสถานะ** | **`h-7` / `sm:h-8`** | `LaundryOrderStatusIconStrip` | ชิปสถานะบนการ์ดคิว |
+| **segment ในเนื้อหา** | **`h-8`** | `laundryDashboardSegmentBtnClass` | กรอง/แท็บย่อย**ในแผง** (ไม่ใช่แถบหัว) |
+
+### แถบหัวแดชบอร์ด / พนักงาน (บังคับสูงเท่ากัน)
+
+ลำดับ: **หักแพ็ก · ขายแพ็ก → แท็บย่อย → รีเฟรช**
+
+1. ห่อด้วย **`laundryToolbarRowClass`**  
+2. ทุกปุ่มในแถวใช้ **ชุด `h-10` เดียวกัน** — แท็บใช้ `laundryInlineSubNavBtnClass` / `laundryStaffNavTabClass` = outline/primary **ตรง ๆ**  
+3. **ห้าม** ห่อแท็บด้วย shell `p-0.5` ที่ทำให้ความสูงภายนอกเพี้ยนจากปุ่มข้าง ๆ  
+4. **`LaundryRefreshButton`** = `laundryIconButtonClass` (`h-10 w-10` ไอคอนล้วน) — **ห้าม** ย่อเป็น `h-8` คนละชุดกับหักแพ็ก  
+5. หน้าพนักงาน: โทเค็นชุดเดียวกัน (`LaundryStaffClient`)
+
+### ปุ่มหัวการ์ด (มือถือ)
+
+- `AppSectionHeader` → `className="flex flex-row items-start justify-between gap-3 sm:items-center"`  
+- `actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"`  
+- **เพิ่มรายการ:** ไอคอน `+` มือถือ · ข้อความ `sm+` · ใช้ `laundryPrimaryButtonClass` (หรือเทียบเท่า `h-10`)  
+- **กรอง:** ไอคอน funnel · `แสดงกรอง`/`ซ่อนกรอง` ที่ `sm+` · badge เมื่อกรองค้างและแผงปิด  
+- **รีเฟรช:** `LaundryRefreshButton` — ไอคอนล้วน · สูงเท่าแถบหัว  
+
+### แถว action ในการ์ด
+
+- **พิมพ์ / ดู / แก้ไข / ลบ:** `LaundryToolbarIconButton` → **`laundryRowIconButtonClass` (`h-7`)** — **ห้าม** ใช้ `laundryIconButtonClass` (`h-10`) ในแถวการ์ด  
+- **ลบ:** `variant="danger"` · `aria-label` + `title` ทุกปุ่ม  
+- **สถานะออเดอร์:** `LaundryOrderStatusIconStrip` — แถบไอคอน compact  
+- **พิกัดรับผ้า:** ลิงก์ **เปิด Google Maps** อยู่**ใต้ราคา** (คอลัมน์ขวา) — ตัดบรรทัด `พิกัด GPS:…` ออกจากที่อยู่ซ้าย (`order-pickup-coords.ts`)
+
+### คู่มือ
+
+- ปุ่ม **`?`** มุมขวาบนการ์ดหัว · `LaundryUsageGuideModal` · `AppUsageGuideModal`  
+- เนื้อหาครบ: เริ่มต้น · เมนู 4 รายการ · แดชบอร์ด · การเงิน · จัดการ · ชำระ/พิมพ์ · ตั้งค่า · เว็บลูกค้า · QR/staff · popup  
+
+---
+
+## 7) แสดง/ซ่อนกรอง (`filterOpen`)
+
+**อ้างอิง:** `LaundryFinancePanel` · `LaundryPurchasesClient` · `LaundryPackagesClient`
+
+1. `useState(true)` หรือ `false` ตามหน้า — รายการแนะนำเปิดเริ่มต้น  
+2. ปุ่ม toggle **ทุก breakpoint** — ห้าม `sm:block` บังคับเปิด  
+3. แผง: `filterOpen ? "block" : "hidden"`  
+4. `aria-expanded` · `aria-controls` · `id` แผงกรอง  
+5. ชิปสถานะ + ค้นหา + ล้างเมื่อค้าง  
+6. จุด amber เมื่อ `filtersActive && !filterOpen`  
+
+---
+
+## 8) กราฟการเงิน
+
+**ไฟล์:** `LaundryFinancePanel.tsx`
+
+- **`AppRevenueCostColumnChart`** — รายรับ vs รายจ่ายรายวัน · `compact`  
+- **`AppColumnBarSparkChart`** — รายได้ตามแพ็ก · `compact` · `variant="brand"`  
+- **ห้ามผสม** compact / non-compact ในหน้าเดียว  
+- วันที่ / กรอง — **`bangkokDateKey`** · `Asia/Bangkok`  
+- ออเดอร์ **`CANCELLED`** ไม่นับรายได้  
+
+---
+
+## 9) ชำระเงิน · สลิป · QR
+
+| ชั้น | ไฟล์ | พฤติกรรม |
+|------|------|----------|
+| แดชบอร์ด POS | `LaundryPaymentPanel` | เงินสด · พร้อมเพย์ · โอน · บัตร · preset ยอด |
+| เว็บลูกค้า | `LaundryPublicPaymentPanel` | มัดจำ/เต็มตามตั้งค่า · QR · อัปโหลดสลิป |
+| อัปโหลด | `AppImagePickCameraButtons` · `prepareImageFileForUpload` | กล้อง + แกลเลอรี |
+| ดูสลิป | `AppImageThumb` + `useAppImageLightbox` | ห้าม lightbox เอง |
+| PromptPay | `/api/laundry/promptpay-qr` · public route | |
+
+**บังคับ:** มียอดชำระ + โอน/พร้อมเพย์ → ต้องมีสลิปก่อนบันทึก (validate + `useAppNoticePopup`)
+
+---
+
+## 10) พิมพ์ · ใบเสร็จ · ใบกำกับ
+
+**ไฟล์:** `lib/laundry-print-docs.ts` · `LaundryOrderPrintModal` · `LaundryMemberPrintModal` · `LaundrySellPackageModal`
+
+- ขนาดกระดาษ: `AppSlipPaperSizeSettingsField` + `useAppSlipPaperSize`  
+- ขายแพ็ก: ติ๊กใบกำกับ → พิมพ์ **ใบกำกับอย่างเดียว** · ไม่ติ๊ก → **ใบเสร็จอย่างเดียว** (`module-package-sell-tax-invoice-print.mdc`)  
+- พิมพ์ย้อนหลัง: โมดัลเลือก receipt / tax invoice  
+- ใช้ `openPrintableHtml` / `printPrintableHtmlInHiddenIframe` จาก `app-templates`  
+
+---
+
+## 11) Popup · Modal · แจ้งเตือน
+
+| ประเภท | ใช้ |
+|--------|-----|
+| สำเร็จ/ผิดพลาด/validate | `useAppNoticePopup()` |
+| ฟอร์ม CRUD | `FormModal` |
+| รายละเอียดแพ็ก เว็บ | `LaundryPortalPackageDetailModal` |
+| QR โปสเตอร์ | `LaundryQrHubClient` + pattern hub popup |
+| ขายแพ็ก / บันทึกออเดอร์ | `LaundrySellPackageModal` · `LaundryRecordOrderModal` |
+| หักแพ็ก | `LaundryCheckInModal` + **`AppSignaturePad`** |
+
+**ห้าม:** `<div className="bg-red-50">` แจ้ง error ด้านบนฟอร์มใน flow ใหม่ (portal/pickup ทำแล้ว)
+
+---
+
+## 12) เว็บลูกค้า · ขอบริการรับ-ส่ง
+
+**กฎเต็ม (flat section · สีแบรนด์ · token):** **`laundry-module-portal-website-template.mdc`**
+
+**ไฟล์:** `LaundryPortalPublicClient` · `LaundryPortalSection` · `LaundryPortalStatusLookup` · `LaundryPickupPublicClient` · `LaundryPortalPackageCard`
+
+### โครงหน้า
+
+1. `AppPublicCheckInGlassPage` (`!px-0 !pt-0`) · hero เต็มจอ · `main` `max-w-6xl space-y-12`  
+2. **ทุกส่วนใน main:** `LaundryPortalSection` — **หัวข้อ → เส้นบาง → เนื้อหา** (flat ไม่ห่อการ์ดนอก)  
+3. **ชื่อร้าน:** `laundryPortalShopNameClass` / `HeroClass` — gradient แบรนด์  
+4. **ปุ่มหลัก:** `laundryPrimaryButtonClass` (หรือ alias `laundryPortalPrimaryBtnClass`) — ไล่สีแบรนด์ · สูง `h-10`  
+
+### โฟลว์รับ-ส่ง
+
+1. Hero + แถบ **compact** (`#pickup`) — ชื่อ · เบอร์ · ปุ่ม **ขอบริการรับ-ส่ง**  
+2. ฟอร์มเต็ม **ซ่อนจนกด** compact CTA หรือ «ขอบริการ…» จาก modal แพ็ก  
+3. `#pickup` ใน URL → scroll ถึง compact bar **ไม่** auto-expand  
+4. คลิกการ์ดแพ็ก → **detail modal** ไม่ jump ตรง `#pickup`  
+5. 3 ขั้นตอน embedded: ที่อยู่ → เลือกบริการ → รายการ/ติดตาม · segment pills  
+6. **ติดตามสถานะ:** หัวข้ออย่างเดียว — **ห้าม** subtitle อธิบาย workflow (`customer-portal-no-description-copy.mdc`)  
+7. **ติดต่อ:** flat — ไม่มีกล่อง border รอบทั้งส่วน  
+
+---
+
+## 13) แพ็กสมาชิก · ชื่อ · ลายเซ็น
+
+- การ์ดเลือกแพ็ก: **ชื่อ + คำอธิบาย + เหลือครั้ง** (`module-package-name-description-ui.mdc`)  
+- หักแพ็ก: **`AppSignaturePad`** ก่อนปุ่มหัก (`module-package-deduct-signature.mdc`)  
+- ประวัติ: หัวข้อ `หักแพ็กเกจ · {ชื่อ}` / `ขายแพ็กเกจ · {ชื่อ}`  
+
+---
+
+## 14) เช็กลิสต์โมดูลใหม่ (คัดลอกจากซักผ้า)
+
+- [ ] `laundry-module-nav.tsx` แบบ — nav keys + collapse storage + dock items  
+- [ ] `*ModuleChrome` — หัว · คู่มือ `?` · ยุบหัว · dock  
+- [ ] `lib/ui-tokens.ts` — panel · **ปุ่ม `h-10` แถบหัว** · **`h-7` แถวการ์ด** · tabs · segment · filter chip  
+- [ ] แถบหัว: หักแพ็ก/ขายแพ็ก/แท็บ/รีเฟรช **สูงเท่ากัน** (`laundryToolbarRowClass`)  
+- [ ] หน้าแยก `/dashboard/{slug}/finance|manage|settings`  
+- [ ] `DashboardPagesShell` + sidebar icon  
+- [ ] Stat grid **`grid-cols-2`** มือถือ  
+- [ ] กรอง **`filterOpen`** + ปุ่มแสดง/ซ่อนทุก breakpoint  
+- [ ] กราฟ **`compact`** ชุดเดียว  
+- [ ] ชำระเงิน + สลิป + PromptPay panel  
+- [ ] พิมพ์ + ขนาดกระดาษ  
+- [ ] `useAppNoticePopup` แทน inline banner  
+- [ ] พอร์ทัลลูกค้า (ถ้ามี) — ดู **`laundry-module-portal-website-template.mdc`**: compact CTA · PortalSection flat · สีแบรนด์ · modal รายละเอียด  
+- [ ] คู่มือ `AppUsageGuideModal` ครบเมนูจริง  
+- [ ] ไม่มี `MawellLogo` ใน chrome โมดูล  
+
+---
+
+## 15) อ้างอิงเพิ่ม
+
+- การ์ดสถิติ / กริดรายการ: `laundry-dashboard-ui.mdc`  
+- คู่มือ modal: `laundry-usage-guide-modal.mdc`  
+- Car wash คู่ขนาน: `dashboard-module-car-wash-barber-reference.mdc`

@@ -5,6 +5,7 @@ import {
   LAUNDRY_DURATION_HOURS_MIN,
   roundLaundryDurationHours,
 } from "@/systems/laundry/laundry-duration-hours";
+import { LAUNDRY_PACKAGE_SAMPLE_IMAGES } from "@/systems/laundry/lib/portal-media";
 
 export type { LaundryOrderStatus };
 export {
@@ -53,6 +54,9 @@ export type LaundryOrder = {
   status: LaundryOrderStatus;
   /** ระยะรับผ้าที่บ้าน (กม.) — จากลิงก์ลูกค้า */
   distance_km?: number | null;
+  /** พิกัดรับผ้า — จากลิงก์ลูกค้า */
+  pickup_lat?: number | null;
+  pickup_lng?: number | null;
   payment_method?: string | null;
   receipt_image_url?: string | null;
 };
@@ -203,7 +207,7 @@ const seedDB: LaundryDB = {
       duration_hours: 24,
       total_sessions: 1,
       description: "คิดราคาต่อกิโล เหมาะกับผ้าทั่วไป",
-      image_url: null,
+      image_url: LAUNDRY_PACKAGE_SAMPLE_IMAGES[0],
       basket_tiers: [
         { label: "ตะกร้า S", price: 120 },
         { label: "ตะกร้า M", price: 180 },
@@ -219,7 +223,7 @@ const seedDB: LaundryDB = {
       duration_hours: 36,
       total_sessions: 1,
       description: "คิดราคาต่อชิ้นสำหรับผ้าห่ม/ผ้านวม",
-      image_url: null,
+      image_url: LAUNDRY_PACKAGE_SAMPLE_IMAGES[1],
       basket_tiers: [{ label: "ต่อชิ้น", price: 150 }],
       is_active: true,
     },

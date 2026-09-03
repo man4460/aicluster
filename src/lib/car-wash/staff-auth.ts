@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { resolveCarWashStaffFromUrl } from "@/lib/car-wash/staff-request";
 import type { CarWashStaffContext } from "@/lib/car-wash/staff-request";
+import { CAR_WASH_MODULE_SLUG } from "@/lib/modules/config";
+import { ensureOwnerModuleDailyChargeOnPublicUse } from "@/lib/modules/public-portal-access";
 import {
   gateStaffDailyPin,
   loadCarWashStaffDailyPinHash,
@@ -17,6 +19,10 @@ export async function requireCarWashStaff(
   const ctx = await resolveCarWashStaffFromUrl(new URL(req.url));
   if (!ctx) {
     return { error: NextResponse.json({ error: "ลิงก์ไม่ถูกต้องหรือถูกยกเลิก" }, { status: 401 }) };
+  }
+  const charge = await ensureOwnerModuleDailyChargeOnPublicUse(ctx.ownerId, CAR_WASH_MODULE_SLUG);
+  if (!charge.ok) {
+    return { error: NextResponse.json({ error: "ลิงก์ปิดชั่วคราว" }, { status: 403 }) };
   }
   if (!opts?.skipDailyPin) {
     const pinHash = await loadCarWashStaffDailyPinHash(ctx.ownerId);

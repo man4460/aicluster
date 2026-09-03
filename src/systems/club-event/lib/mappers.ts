@@ -21,6 +21,8 @@ export type ClubMemberCustomField = {
 export type ClubDynamicLinkConfig = {
   url?: string;
   amountBaht?: number;
+  eventId?: string;
+  description?: string;
   fields?: { key: string; label: string; type?: string }[];
 };
 
@@ -66,6 +68,12 @@ export function parseDynamicLinkConfig(raw: string): ClubDynamicLinkConfig {
   }
 }
 
+export type ClubFinanceCategory = {
+  id: string;
+  name: string;
+  type: ClubEventFinanceType;
+};
+
 export type ClubEventProfileDto = {
   id: string;
   slug: string;
@@ -76,12 +84,20 @@ export type ClubEventProfileDto = {
   committee: ClubCommitteeMember[];
   contactPhone: string | null;
   contactLine: string | null;
+  address: string | null;
+  facebookUrl: string | null;
+  mapUrl: string | null;
+  portalBannerUrl: string | null;
+  portalGallery: string[];
+  paymentRulesNote: string;
   promptPayPhone: string | null;
   promptPayQrImageUrl: string | null;
   bankName: string | null;
   bankAccountNumber: string | null;
   bankAccountName: string | null;
+  taxId: string | null;
   slipPaperSize: string;
+  financeCategories: ClubFinanceCategory[];
   publicUrl: string;
 };
 
@@ -106,8 +122,17 @@ export type ClubEventGalleryDto = {
 export type ClubEventMemberDto = {
   id: string;
   name: string;
+  firstName: string;
+  lastName: string;
+  nickname: string;
+  gender: string;
   phone: string;
   photoUrl: string | null;
+  position: string;
+  email: string;
+  social: string;
+  memberCode: string;
+  dataConsent: boolean;
   customFields: ClubMemberCustomField[];
   isActive: boolean;
 };
@@ -128,6 +153,7 @@ export type ClubEventAssetDto = {
   quantity: number;
   status: ClubEventAssetStatus;
   note: string;
+  imageUrl: string | null;
 };
 
 export type ClubEventDynamicLinkDto = {
@@ -139,6 +165,43 @@ export type ClubEventDynamicLinkDto = {
   publicPath: string;
 };
 
+export function parseFinanceCategoriesJson(raw: string): ClubFinanceCategory[] {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (row): row is ClubFinanceCategory =>
+        typeof row === "object" &&
+        row !== null &&
+        typeof (row as ClubFinanceCategory).id === "string" &&
+        typeof (row as ClubFinanceCategory).name === "string" &&
+        ((row as ClubFinanceCategory).type === "INCOME" || (row as ClubFinanceCategory).type === "EXPENSE"),
+    );
+  } catch {
+    return [];
+  }
+}
+
+export const DEFAULT_CLUB_EVENT_FINANCE_CATEGORIES: ClubFinanceCategory[] = [
+  { id: "inc-dues", name: "ค่าบำรุงสมาชิก", type: "INCOME" },
+  { id: "inc-sponsor", name: "สปอนเซอร์", type: "INCOME" },
+  { id: "inc-other", name: "รายรับอื่น", type: "INCOME" },
+  { id: "exp-venue", name: "ค่าสถานที่", type: "EXPENSE" },
+  { id: "exp-food", name: "อาหารว่าง", type: "EXPENSE" },
+  { id: "exp-prize", name: "ของรางวัล", type: "EXPENSE" },
+  { id: "exp-other", name: "รายจ่ายอื่น", type: "EXPENSE" },
+];
+
+export function parsePortalGalleryJson(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((u): u is string => typeof u === "string" && u.trim().length > 0).slice(0, 24);
+  } catch {
+    return [];
+  }
+}
+
 export function mapClubEventProfile(row: {
   id: string;
   slug: string;
@@ -149,13 +212,22 @@ export function mapClubEventProfile(row: {
   committeeJson: string;
   contactPhone: string | null;
   contactLine: string | null;
+  address?: string | null;
+  facebookUrl?: string | null;
+  mapUrl?: string | null;
+  portalBannerUrl?: string | null;
+  portalGalleryJson?: string;
+  paymentRulesNote?: string;
   promptPayPhone: string | null;
   promptPayQrImageUrl: string | null;
   bankName: string | null;
   bankAccountNumber: string | null;
   bankAccountName: string | null;
+  taxId?: string | null;
   slipPaperSize: string;
+  financeCategoriesJson?: string;
 }): ClubEventProfileDto {
+  const cats = parseFinanceCategoriesJson(row.financeCategoriesJson ?? "[]");
   return {
     id: row.id,
     slug: row.slug,
@@ -166,12 +238,20 @@ export function mapClubEventProfile(row: {
     committee: parseCommitteeJson(row.committeeJson),
     contactPhone: row.contactPhone,
     contactLine: row.contactLine,
+    address: row.address ?? null,
+    facebookUrl: row.facebookUrl ?? null,
+    mapUrl: row.mapUrl ?? null,
+    portalBannerUrl: row.portalBannerUrl ?? null,
+    portalGallery: parsePortalGalleryJson(row.portalGalleryJson ?? "[]"),
+    paymentRulesNote: row.paymentRulesNote ?? "",
     promptPayPhone: row.promptPayPhone,
     promptPayQrImageUrl: row.promptPayQrImageUrl,
     bankName: row.bankName,
     bankAccountNumber: row.bankAccountNumber,
     bankAccountName: row.bankAccountName,
+    taxId: row.taxId ?? null,
     slipPaperSize: row.slipPaperSize,
+    financeCategories: cats.length > 0 ? cats : DEFAULT_CLUB_EVENT_FINANCE_CATEGORIES,
     publicUrl: `/club/${row.slug}`,
   };
 }
@@ -193,6 +273,48 @@ export function mapClubEventRecord(row: {
     description: row.description,
     youtubeEmbedUrl: row.youtubeEmbedUrl,
     galleryCount: row._count?.gallery ?? 0,
+  };
+}
+
+export function mapClubEventMember(row: {
+  id: string;
+  name: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  nickname?: string | null;
+  gender?: string | null;
+  phone: string;
+  photoUrl: string | null;
+  position?: string | null;
+  email?: string | null;
+  social?: string | null;
+  memberCode?: string | null;
+  dataConsent?: boolean | null;
+  customFieldsJson: string;
+  isActive: boolean;
+}): ClubEventMemberDto {
+  const firstName = (row.firstName ?? "").trim();
+  const lastName = (row.lastName ?? "").trim();
+  const display =
+    `${firstName} ${lastName}`.trim() ||
+    row.name ||
+    [firstName, lastName].filter(Boolean).join(" ");
+  return {
+    id: row.id,
+    name: display,
+    firstName: firstName || (display.includes(" ") ? display.split(/\s+/)[0]! : display),
+    lastName: lastName || (display.includes(" ") ? display.split(/\s+/).slice(1).join(" ") : ""),
+    nickname: row.nickname ?? "",
+    gender: row.gender ?? "",
+    phone: row.phone,
+    photoUrl: row.photoUrl,
+    position: row.position ?? "",
+    email: row.email ?? "",
+    social: row.social ?? "",
+    memberCode: row.memberCode ?? "",
+    dataConsent: Boolean(row.dataConsent),
+    customFields: parseCustomFieldsJson(row.customFieldsJson),
+    isActive: row.isActive,
   };
 }
 

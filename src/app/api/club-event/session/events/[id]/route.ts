@@ -4,6 +4,7 @@ import { clubEventOwnerFromAuth } from "@/lib/club-event/api-owner";
 import { clubEventOwnerWhere, clubEventSessionContext } from "@/lib/club-event/session-context";
 import { prisma } from "@/lib/prisma";
 import { deriveEventStatus, mapClubEventRecord } from "@/systems/club-event/lib/mappers";
+import { normalizeClubEventYoutubeEmbedUrl } from "@/systems/club-event/lib/youtube";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -66,6 +67,20 @@ export async function PATCH(req: Request, ctx: Ctx) {
     const status =
       body.status === "UPCOMING" || body.status === "PAST" ? body.status : deriveEventStatus(eventDate);
 
+    let youtubeEmbedUrl = existing.youtubeEmbedUrl;
+    if (body.youtubeEmbedUrl === null || body.youtubeEmbedUrl === "") {
+      youtubeEmbedUrl = null;
+    } else if (typeof body.youtubeEmbedUrl === "string") {
+      const normalized = normalizeClubEventYoutubeEmbedUrl(body.youtubeEmbedUrl);
+      if (!normalized) {
+        return NextResponse.json(
+          { error: "ลิงก์ YouTube ไม่ถูกต้อง — วางจาก watch / youtu.be / embed ได้" },
+          { status: 400 },
+        );
+      }
+      youtubeEmbedUrl = normalized;
+    }
+
     const row = await prisma.clubEventRecord.update({
       where: { id },
       data: {
@@ -73,12 +88,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
         eventDate,
         status,
         description: typeof body.description === "string" ? body.description : existing.description,
-        youtubeEmbedUrl:
-          typeof body.youtubeEmbedUrl === "string"
-            ? body.youtubeEmbedUrl.slice(0, 512)
-            : body.youtubeEmbedUrl === null
-              ? null
-              : existing.youtubeEmbedUrl,
+        youtubeEmbedUrl,
       },
       include: { _count: { select: { gallery: true } } },
     });

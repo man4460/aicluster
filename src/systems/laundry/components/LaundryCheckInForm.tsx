@@ -23,6 +23,7 @@ type SubRow = {
   totalSessions?: number;
   durationMinutes?: number;
   basePrice?: number;
+  imageUrl?: string | null;
 };
 
 function packageDescMeaningful(raw: string | null | undefined): boolean {
@@ -271,7 +272,9 @@ export function LaundryCheckInForm({
             {subs.length > 0 ? (
               <div className="mt-4 space-y-3">
                 <p className="text-[11px] font-bold uppercase tracking-wide text-[#8b87ad]">เลือกแพ็กเพื่อหักครั้ง</p>
-                {subs.map((s) => (
+                {subs.map((s) => {
+                  const img = s.imageUrl?.trim() || null;
+                  return (
                   <label
                     key={s.id}
                     className={cn(
@@ -286,6 +289,21 @@ export function LaundryCheckInForm({
                       onChange={() => setSelectedSubId(s.id)}
                       className="h-5 w-5 accent-[#5b61ff]"
                     />
+                    <span
+                      className={cn(
+                        "h-14 w-14 shrink-0 overflow-hidden rounded-xl",
+                        !img && "flex items-center justify-center bg-gradient-to-br from-sky-50 to-indigo-100",
+                      )}
+                    >
+                      {img ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={img} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-sm font-black text-[#4d47b6]/70">
+                          {s.packageName.trim().charAt(0) || "P"}
+                        </span>
+                      )}
+                    </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">แพ็กเกจ</p>
                       <p className="text-sm font-bold text-[#2e2a58] sm:text-base">{s.packageName}</p>
@@ -311,7 +329,8 @@ export function LaundryCheckInForm({
                       : null}
                     </div>
                   </label>
-                ))}
+                  );
+                })}
               </div>
             ) : null}
 

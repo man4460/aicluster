@@ -3,9 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   AppImageLightbox,
-  AppImageThumb,
   AppPublicCheckInGlassPage,
-  appPublicCheckInGlassCardClass,
   useAppImageLightbox,
   useAppNoticePopup,
 } from "@/components/app-templates";
@@ -16,11 +14,20 @@ import {
   laundryPortalPackageGridClass,
   type LaundryPortalPackageItem,
 } from "@/systems/laundry/components/LaundryPortalPackageCard";
+import { LaundryPortalSection } from "@/systems/laundry/components/LaundryPortalSection";
+import { LaundryPortalStatusLookup } from "@/systems/laundry/components/LaundryPortalStatusLookup";
+import { LaundryPortalGallery } from "@/systems/laundry/components/LaundryPortalGallery";
 import { LaundryPortalPackageDetailModal } from "@/systems/laundry/components/LaundryPortalPackageDetailModal";
 import { LAUNDRY_PORTAL_SAMPLE_BANNER } from "@/systems/laundry/lib/portal-media";
 import {
-  laundryPaymentCtaClass,
+  laundryCompactOutlineButtonClass,
   laundryPortalFieldClass,
+  laundryPortalHeaderNavLinkClass,
+  laundryPortalHeaderNavShellClass,
+  laundryPortalHeroCompactShellClass,
+  laundryPortalPrimaryBtnClass,
+  laundryPortalShopNameClass,
+  laundryPortalShopNameHeroClass,
 } from "@/systems/laundry/lib/ui-tokens";
 
 type PortalShop = {
@@ -44,11 +51,6 @@ type PortalShop = {
 };
 
 type PortalPackage = LaundryPortalPackageItem;
-
-const navLinkClass =
-  "rounded-full px-3 py-2 text-xs font-bold text-white/95 transition hover:bg-white/25 sm:text-sm";
-const sectionTitleClass = "text-2xl font-black tracking-tight text-[#1e1b4b] sm:text-3xl";
-const portalMutedTextClass = "text-sm font-semibold text-[#66638c]";
 
 function pickupPayModeHint(shop: PortalShop): string | null {
   if (shop.portalBookingPaymentMode === "DEPOSIT" && shop.depositAmountBaht != null) {
@@ -181,26 +183,26 @@ export function LaundryPortalPublicClient({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={shop.logoUrl} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
             : null}
-            <p className="truncate text-sm font-black tracking-tight text-white drop-shadow sm:text-base">{title}</p>
+            <p className={cn("truncate text-sm sm:text-base", laundryPortalShopNameHeroClass)}>{title}</p>
           </div>
-          <nav
-            className="hidden items-center gap-1 rounded-full border border-white/40 bg-white/20 px-1 py-1 backdrop-blur-xl md:flex"
-            aria-label="เมนู"
-          >
-            <a href="#pickup" className={navLinkClass} onClick={() => scrollToPickupCompact()}>
+          <nav className={laundryPortalHeaderNavShellClass} aria-label="เมนู">
+            <a href="#pickup" className={laundryPortalHeaderNavLinkClass()} onClick={() => scrollToPickupCompact()}>
               ขอบริการรับ-ส่ง
             </a>
+            <a href="#status" className={laundryPortalHeaderNavLinkClass()}>
+              ติดตามสถานะ
+            </a>
             {packages.length > 0 ?
-              <a href="#packages" className={navLinkClass}>
+              <a href="#packages" className={laundryPortalHeaderNavLinkClass()}>
                 แพ็กเกจ
               </a>
             : null}
             {gallery.length > 0 ?
-              <a href="#gallery" className={navLinkClass}>
+              <a href="#gallery" className={laundryPortalHeaderNavLinkClass()}>
                 แกลเลอรี
               </a>
             : null}
-            <a href="#contact" className={navLinkClass}>
+            <a href="#contact" className={laundryPortalHeaderNavLinkClass()}>
               ติดต่อ
             </a>
           </nav>
@@ -222,7 +224,7 @@ export function LaundryPortalPublicClient({
         <div className="relative z-10 mx-auto flex min-h-[56vh] max-w-6xl flex-col justify-end px-4 pb-8 pt-24 sm:min-h-[64vh] sm:px-6 sm:pb-10">
           <div className="max-w-2xl">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/80 drop-shadow">Laundry</p>
-            <h1 className="mt-2 text-4xl font-black tracking-tight text-white drop-shadow-md sm:text-5xl">{title}</h1>
+            <h1 className={cn("mt-2 text-4xl sm:text-5xl", laundryPortalShopNameHeroClass)}>{title}</h1>
             {shop.tagline ?
               <p className="mt-3 text-base font-semibold text-white/90 drop-shadow sm:text-lg">{shop.tagline}</p>
             : null}
@@ -231,21 +233,17 @@ export function LaundryPortalPublicClient({
           <form
             id="pickup"
             onSubmit={handleCompactPickupSubmit}
-            className={cn(
-              appPublicCheckInGlassCardClass,
-              "mt-8 grid w-full gap-3 p-4 text-[#1e1b4b]",
-              "sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end sm:gap-3 sm:p-5",
-            )}
+            className={laundryPortalHeroCompactShellClass}
           >
             <label className="flex min-w-0 flex-col gap-1">
-              <span className="text-xs font-bold text-[#4d47b6]">ชื่อ</span>
+              <span className="text-xs font-bold text-[#4d47b6] sm:text-[#4d47b6]">ชื่อ</span>
               <input
                 required
                 value={compactName}
                 onChange={(e) => setCompactName(e.target.value)}
                 placeholder="เช่น สมชาย ใจดี"
                 autoComplete="name"
-                className={cn(laundryPortalFieldClass, "h-11 min-h-11 rounded-2xl")}
+                className={cn(laundryPortalFieldClass, "bg-white/95 sm:bg-white")}
               />
             </label>
             <label className="flex min-w-0 flex-col gap-1">
@@ -257,17 +255,17 @@ export function LaundryPortalPublicClient({
                 onChange={(e) => setCompactPhone(e.target.value)}
                 placeholder="0812345678"
                 autoComplete="tel"
-                className={cn(laundryPortalFieldClass, "h-11 min-h-11 rounded-2xl")}
+                className={cn(laundryPortalFieldClass, "bg-white/95 sm:bg-white")}
               />
             </label>
             <button
               type="submit"
-              className={cn(laundryPaymentCtaClass, "h-11 min-h-11 self-end rounded-[1rem] px-6 text-sm font-black sm:mt-0")}
+              className={cn(laundryPortalPrimaryBtnClass, "self-end sm:mt-0")}
             >
               ขอบริการรับ-ส่ง
             </button>
             {payModeHint ?
-              <p className={cn("sm:col-span-3", portalMutedTextClass, "!text-[11px]")}>{payModeHint}</p>
+              <p className="text-[11px] font-semibold text-[#66638c] sm:col-span-3">{payModeHint}</p>
             : null}
           </form>
         </div>
@@ -275,69 +273,53 @@ export function LaundryPortalPublicClient({
 
       <main className="relative z-10 mx-auto max-w-6xl space-y-12 px-4 pb-16 pt-2 sm:space-y-14 sm:px-6">
         {pickupExpanded ?
-          <section id="pickup-form" className="scroll-mt-16">
-            <h2 className={sectionTitleClass}>ขอบริการรับ-ส่ง</h2>
-            <p className={cn("mt-2", portalMutedTextClass)}>
-              {compactName.trim() || "—"} · {compactPhone.trim() || "—"}
-            </p>
-            <div className={cn(appPublicCheckInGlassCardClass, "mt-4 space-y-3 p-4 sm:p-5")}>
-              <LaundryPickupPublicClient
-                ownerId={ownerId}
-                shopLabel={title}
-                embeddedInPortal
-                initialPackages={packages}
-                seedCustomerName={compactName}
-                seedCustomerPhone={compactPhone}
-                seedPackageId={seedPackageId}
-                shopLocation={{
-                  shopLat: shop.shopLat,
-                  shopLng: shop.shopLng,
-                  pickupFeePerKmBaht: shop.pickupFeePerKmBaht,
-                }}
-                portalPayment={{
-                  mode: shop.portalBookingPaymentMode,
-                  depositAmountBaht: shop.depositAmountBaht,
-                }}
-              />
-            </div>
-          </section>
+          <LaundryPortalSection
+            id="pickup-form"
+            title="ขอบริการรับ-ส่ง"
+            subtitle={`${compactName.trim() || "—"} · ${compactPhone.trim() || "—"}`}
+          >
+            <LaundryPickupPublicClient
+              ownerId={ownerId}
+              shopLabel={title}
+              embeddedInPortal
+              initialPackages={packages}
+              seedCustomerName={compactName}
+              seedCustomerPhone={compactPhone}
+              seedPackageId={seedPackageId}
+              shopLocation={{
+                shopLat: shop.shopLat,
+                shopLng: shop.shopLng,
+                pickupFeePerKmBaht: shop.pickupFeePerKmBaht,
+              }}
+              portalPayment={{
+                mode: shop.portalBookingPaymentMode,
+                depositAmountBaht: shop.depositAmountBaht,
+              }}
+            />
+          </LaundryPortalSection>
         : null}
 
+        <LaundryPortalStatusLookup ownerId={ownerId} trialSessionId={trialSessionId} />
+
         {packages.length > 0 ?
-          <section id="packages" className="scroll-mt-16">
-            <h2 className={sectionTitleClass}>แพ็กเกจ</h2>
-            <ul className={cn(laundryPortalPackageGridClass, "mt-6")}>
+          <LaundryPortalSection id="packages" title="แพ็กเกจ">
+            <ul className={cn(laundryPortalPackageGridClass, "list-none p-0")}>
               {packages.map((pkg) => (
                 <LaundryPortalPackageLinkCard key={pkg.id} pkg={pkg} onOpenDetail={setDetailPkg} />
               ))}
             </ul>
-          </section>
+          </LaundryPortalSection>
         : null}
 
-        <section id="gallery" className="scroll-mt-16">
-          <h2 className={sectionTitleClass}>แกลเลอรี</h2>
-          {gallery.length === 0 ?
-            <p className="mt-3 text-sm font-semibold text-[#66638c]">ยังไม่มีรูป</p>
-          : <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {gallery.map((url, idx) => (
-                <li key={`${url}-${idx}`}>
-                  <AppImageThumb
-                    src={url}
-                    alt={`ภาพร้าน ${idx + 1}`}
-                    onOpen={() => lb.open(url)}
-                    className="h-36 w-full sm:h-40"
-                  />
-                </li>
-              ))}
-            </ul>
-          }
-        </section>
+        <LaundryPortalGallery
+          urls={gallery}
+          onOpenAt={(index) => lb.openGallery(gallery, index)}
+        />
 
-        <section id="contact" className="scroll-mt-16">
-          <h2 className={sectionTitleClass}>ติดต่อ</h2>
-          <div className={cn(appPublicCheckInGlassCardClass, "mt-6 grid gap-4 p-4 sm:grid-cols-2 sm:p-5")}>
+        <LaundryPortalSection id="contact" title="ติดต่อ">
+          <div className="space-y-4 sm:grid sm:grid-cols-2 sm:gap-8 sm:space-y-0">
             <div className="space-y-2 text-sm font-semibold text-[#66638c]">
-              <p className="text-lg font-black text-[#1e1b4b]">{title}</p>
+              <p className={cn("text-lg", laundryPortalShopNameClass)}>{title}</p>
               {shop.address ? <p>{shop.address}</p> : null}
               <p>
                 {shop.openTime} – {shop.closeTime}
@@ -356,10 +338,7 @@ export function LaundryPortalPublicClient({
             </div>
             <div className="flex flex-wrap content-start gap-2">
               {shop.contactPhone ?
-                <a
-                  href={`tel:${shop.contactPhone.replace(/\D/g, "")}`}
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 text-sm font-bold text-[#4d47b6]"
-                >
+                <a href={`tel:${shop.contactPhone.replace(/\D/g, "")}`} className={laundryCompactOutlineButtonClass}>
                   โทร
                 </a>
               : null}
@@ -368,7 +347,7 @@ export function LaundryPortalPublicClient({
                   href={`https://line.me/ti/p/~${encodeURIComponent(shop.contactLine.replace(/^@/, ""))}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-700"
+                  className={laundryCompactOutlineButtonClass}
                 >
                   LINE
                 </a>
@@ -378,18 +357,13 @@ export function LaundryPortalPublicClient({
                   href={shop.facebookUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 text-sm font-bold text-sky-700"
+                  className={laundryCompactOutlineButtonClass}
                 >
                   Facebook
                 </a>
               : null}
               {shop.mapUrl ?
-                <a
-                  href={shop.mapUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/70 bg-white/80 px-4 text-sm font-bold text-[#4d47b6]"
-                >
+                <a href={shop.mapUrl} target="_blank" rel="noreferrer" className={laundryCompactOutlineButtonClass}>
                   แผนที่
                 </a>
               : null}
@@ -398,7 +372,7 @@ export function LaundryPortalPublicClient({
               : null}
             </div>
           </div>
-        </section>
+        </LaundryPortalSection>
       </main>
 
       <LaundryPortalPackageDetailModal
@@ -407,7 +381,13 @@ export function LaundryPortalPublicClient({
         onRequestPickup={handleRequestPickupFromPackage}
       />
 
-      <AppImageLightbox src={lb.src} alt="ภาพร้าน" onClose={lb.close} />
+      <AppImageLightbox
+        src={lb.src}
+        sources={lb.sources}
+        initialIndex={lb.initialIndex}
+        alt="ภาพร้าน"
+        onClose={lb.close}
+      />
     </AppPublicCheckInGlassPage>
   );
 }

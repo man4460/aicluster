@@ -26,7 +26,7 @@ import {
   type LaundryCostEntry,
   type LaundryRepository,
 } from "@/systems/laundry/laundry-service";
-import { laundrySectionHeadingClass } from "@/systems/laundry/lib/ui-tokens";
+import { laundryFieldClass, laundrySectionHeadingClass } from "@/systems/laundry/lib/ui-tokens";
 
 function isoToDatetimeLocalInput(iso: string): string {
   const d = new Date(iso);

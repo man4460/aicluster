@@ -29,6 +29,7 @@ import {
 } from "@/systems/laundry/laundry-service";
 import {
   laundryCompactOutlineButtonClass,
+  laundryFieldClass,
   laundryFinanceRangeChipClass,
   laundryFinanceStatTailClass,
   laundryFinanceStatsGridClass,
@@ -392,7 +393,7 @@ export function LaundryFinancePanel({
               <span className="text-xs font-bold text-[#4d47b6]">ตั้งแต่วันที่</span>
               <input
                 type="date"
-                className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm"
+                className={cn(laundryFieldClass, "mt-1")}
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
               />
@@ -401,7 +402,7 @@ export function LaundryFinancePanel({
               <span className="text-xs font-bold text-[#4d47b6]">ถึงวันที่</span>
               <input
                 type="date"
-                className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm"
+                className={cn(laundryFieldClass, "mt-1")}
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
               />
@@ -411,7 +412,7 @@ export function LaundryFinancePanel({
         <label className="min-w-0 flex-1 sm:max-w-[16rem]">
           <span className="text-xs font-bold text-[#4d47b6]">ค้นหา</span>
           <input
-            className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm font-semibold placeholder:text-slate-400"
+            className={cn(laundryFieldClass, "mt-1")}
             placeholder="ชื่อ, เบอร์, แพ็กเกจ…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}

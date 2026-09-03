@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveDrinkPosStaffFromUrl } from "@/lib/drink-pos/staff-request";
+import { DRINK_POS_MODULE_SLUG } from "@/lib/modules/config";
+import { ensureOwnerModuleDailyChargeOnPublicUse } from "@/lib/modules/public-portal-access";
 import {
   gateStaffDailyPin,
   handleStaffDailyUnlockPost,
@@ -15,6 +17,10 @@ export async function requireDrinkPosStaff(
   const ctx = await resolveDrinkPosStaffFromUrl(new URL(req.url));
   if (!ctx) {
     return { error: NextResponse.json({ error: "ลิงก์ไม่ถูกต้องหรือถูกยกเลิก" }, { status: 401 }) };
+  }
+  const charge = await ensureOwnerModuleDailyChargeOnPublicUse(ctx.ownerId, DRINK_POS_MODULE_SLUG);
+  if (!charge.ok) {
+    return { error: NextResponse.json({ error: "ลิงก์ปิดชั่วคราว" }, { status: 403 }) };
   }
   if (!opts?.skipDailyPin) {
     const pinHash = await loadDrinkPosStaffDailyPinHash(ctx.ownerId);

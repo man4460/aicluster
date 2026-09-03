@@ -40,7 +40,10 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 77: ParkingCostCategory/Entry + ParkingIncomeCategory/Entry — หมวดรายรับ-รายจ่ายจอดรถ */
 /** 78: ParkingStaffLink + branding/PIN fields on ParkingSite */
 /** 79: ParkingSite portal banner/gallery */
-const PRISMA_SINGLETON_VERSION = 81;
+/** 82: ClubEvent portal fields + submissions */
+/** 83: Lms* LMS online course module */
+/** 84: LmsCoursePurchase — learner buy + slip review */
+const PRISMA_SINGLETON_VERSION = 84;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -177,6 +180,10 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     footballTurfStaffLink?: { findUnique?: unknown };
     userModulePlan?: { findMany?: unknown };
     siteSetting?: { findUnique?: unknown };
+    lmsProfile?: { findUnique?: unknown };
+    lmsCourse?: { findMany?: unknown };
+    lmsLearner?: { findMany?: unknown };
+    lmsCoursePurchase?: { findMany?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -302,7 +309,11 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.parkingIncomeCategory?.findMany === "function" &&
     typeof c.parkingIncomeEntry?.findMany === "function" &&
     typeof c.userModulePlan?.findMany === "function" &&
-    typeof c.siteSetting?.findUnique === "function"
+    typeof c.siteSetting?.findUnique === "function" &&
+    typeof c.lmsProfile?.findUnique === "function" &&
+    typeof c.lmsCourse?.findMany === "function" &&
+    typeof c.lmsLearner?.findMany === "function" &&
+    typeof c.lmsCoursePurchase?.findMany === "function"
   );
 }
 

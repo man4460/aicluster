@@ -53,7 +53,7 @@ function LaundryDashboardSubNavInlineInner({ className }: { className?: string }
             onClick={() => setTab(item.key)}
             className={laundryInlineSubNavBtnClass(active)}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-3.5 w-3.5 shrink-0 sm:h-3.5 sm:w-3.5" aria-hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} className="h-4 w-4 shrink-0" aria-hidden>
               {laundryDashboardTabIcon(item.key)}
             </svg>
             <span className="hidden sm:inline">{item.label}</span>

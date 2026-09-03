@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/cn";
 import { digitsOnlyTaxId, isValidThaiId13 } from "@/lib/thai-tax-id";
-import { laundryCardSurfaceRadiusClass } from "@/systems/laundry/lib/ui-tokens";
+import { laundryCardSurfaceRadiusClass, laundryFieldClass } from "@/systems/laundry/lib/ui-tokens";
 
 export type LaundryTaxInvoiceFormValue = {
   taxInvoiceEnabled: boolean;
@@ -22,8 +22,7 @@ export function emptyLaundryTaxInvoiceForm(): LaundryTaxInvoiceFormValue {
   };
 }
 
-const fieldClass =
-  "app-input mt-1 w-full rounded-[1.25rem] px-3 py-2.5 text-sm font-semibold text-[#1e1b4b]";
+const fieldClass = cn(laundryFieldClass, "mt-1");
 
 type Props = {
   value: LaundryTaxInvoiceFormValue;

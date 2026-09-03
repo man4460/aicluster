@@ -24,6 +24,7 @@ export async function GET() {
         quantity: a.quantity,
         status: a.status,
         note: a.note,
+        imageUrl: a.imageUrl,
       })),
     });
   } catch (e) {
@@ -59,6 +60,7 @@ export async function POST(req: Request) {
             ? body.status
             : "AVAILABLE",
         note: typeof body.note === "string" ? body.note.slice(0, 500) : "",
+        imageUrl: typeof body.imageUrl === "string" ? body.imageUrl.slice(0, 512) : null,
       },
     });
 
@@ -69,6 +71,7 @@ export async function POST(req: Request) {
         quantity: row.quantity,
         status: row.status,
         note: row.note,
+        imageUrl: row.imageUrl,
       },
     });
   } catch (e) {

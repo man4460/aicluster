@@ -20,6 +20,7 @@ import {
   serializeLaundryPayAmountPresets,
 } from "@/systems/laundry/lib/pay-amount-presets";
 import {
+  LAUNDRY_PORTAL_GALLERY_MAX,
   laundryNormalizePortalGallery,
   laundryRepairPortalGallery,
   laundryRepairSampleImageUrl,
@@ -50,7 +51,7 @@ const patchSchema = z
     shopLat: z.number().finite().min(-90).max(90).nullable().optional(),
     shopLng: z.number().finite().min(-180).max(180).nullable().optional(),
     portalBannerUrl: z.string().max(512).optional().nullable(),
-    portalGallery: z.array(z.string().max(512)).max(8).optional(),
+    portalGallery: z.array(z.string().max(512)).max(LAUNDRY_PORTAL_GALLERY_MAX).optional(),
     slipPaperSize: appSlipPaperSizeZod.optional(),
     payAmountPresets: z.string().max(200).optional().nullable(),
     openTime: hmTimeSchema.optional(),

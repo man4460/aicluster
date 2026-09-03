@@ -10,6 +10,7 @@ import {
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { LaundryPublicPaymentPanel } from "@/systems/laundry/components/LaundryPublicPaymentPanel";
+import { LaundryRefreshButton } from "@/systems/laundry/components/LaundryRefreshButton";
 import {
   LaundryPortalPackageSelectCard,
   laundryPortalPackageGridClass,
@@ -32,6 +33,8 @@ import {
 import {
   laundryDashboardSegmentBtnClass,
   laundryDashboardSegmentShellClass,
+  laundryCompactOutlineButtonClass,
+  laundryIconButtonClass,
   laundryInlineAlertErrorClass,
   laundryMutedLoadingNoticeClass,
   laundryPanelClass,
@@ -42,10 +45,12 @@ import {
   laundryPortalChipActiveClass,
   laundryPortalChipIdleClass,
   laundryPortalFieldClass,
+  laundryPortalFlatBlockClass,
   laundryPortalInfoBannerClass,
   laundryPortalInsetPanelClass,
   laundryPortalLabelClass,
   laundryPortalPrimaryBtnClass,
+  laundryPortalSectionDividerClass,
   laundryPortalStepNavBtnClass,
   laundryPortalSuccessPanelClass,
   laundryPortalTextareaClass,
@@ -632,7 +637,7 @@ export function LaundryPickupPublicClient({
   const labelClass = laundryPortalLabelClass;
 
   const sectionCardClass = embeddedInPortal
-    ? "space-y-3"
+    ? laundryPortalFlatBlockClass
     : cn(laundryPanelClass, laundryPanelSectionClass);
 
   const sectionWrapClass = embeddedInPortal ? "w-full" : cn("mx-auto max-w-md", sectionCardClass);
@@ -648,7 +653,10 @@ export function LaundryPickupPublicClient({
 
   const trackingSection = (
     <section
-      className={cn(laundryPanelClass, "px-4 py-3", !embeddedInPortal && "mx-auto max-w-md")}
+      className={cn(
+        embeddedInPortal ? cn(laundryPortalSectionDividerClass, "pt-4") : cn(laundryPanelClass, "px-4 py-3"),
+        !embeddedInPortal && "mx-auto max-w-md",
+      )}
       aria-label="ติดตามสถานะคำขอบริการรับ-ส่ง"
     >
       <div className="flex items-start justify-between gap-2">
@@ -692,27 +700,19 @@ export function LaundryPickupPublicClient({
       : null}
       {trackingToken ?
         <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            disabled={trackingLoading}
+          <LaundryRefreshButton
+            refreshing={trackingLoading}
             onClick={() => void fetchTracking()}
-            aria-label={trackingLoading ? "กำลังรีเฟรชสถานะ" : "รีเฟรชสถานะ"}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-indigo-200/90 bg-indigo-50/90 text-indigo-800 shadow-sm transition hover:bg-indigo-100/90 disabled:opacity-60"
-          >
-            {trackingLoading ?
-              <span className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" aria-hidden />
-            : <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
-                <path d="M20 11a8 8 0 1 0-2.3 5.6M20 4v7h-7" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            }
-          </button>
+            ariaLabel="รีเฟรชสถานะ"
+            title="รีเฟรชสถานะ"
+          />
           <button
             type="button"
             onClick={() => void copyTrackingLink()}
             aria-label="คัดลอกลิงก์ติดตาม"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/90 bg-white/90 text-[#4d47b6] shadow-sm transition hover:bg-white"
+            className={laundryIconButtonClass}
           >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
               <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
               <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
             </svg>
@@ -818,7 +818,7 @@ export function LaundryPickupPublicClient({
         : null}
 
         {embeddedInPortal ?
-          <div className="mt-4 flex flex-wrap gap-2" role="tablist" aria-label="ขั้นตอนขอบริการรับ-ส่ง">
+          <div className={cn(laundryDashboardSegmentShellClass, "mt-4 w-full")} role="tablist" aria-label="ขั้นตอนขอบริการรับ-ส่ง">
             {customerTabs.map((t, idx) => {
               const active = tab === t.id;
               return (
@@ -828,7 +828,10 @@ export function LaundryPickupPublicClient({
                   role="tab"
                   aria-selected={active}
                   onClick={() => setTab(t.id)}
-                  className={active ? laundryPortalChipActiveClass : laundryPortalChipIdleClass}
+                  className={cn(
+                    laundryDashboardSegmentBtnClass(active),
+                    "min-h-9 flex-1 px-2 text-[11px] sm:min-h-9 sm:px-3 sm:text-xs",
+                  )}
                 >
                   {idx + 1}. {t.label}
                 </button>
@@ -893,9 +896,8 @@ export function LaundryPickupPublicClient({
               disabled={geoLoading}
               onClick={() => void fetchGeo()}
               className={cn(
-                embeddedInPortal ? laundryPortalChipIdleClass : "app-btn-primary",
+                embeddedInPortal ? laundryCompactOutlineButtonClass : laundryPortalPrimaryBtnClass,
                 "mt-3 flex w-full items-center justify-center gap-2 sm:w-auto",
-                !embeddedInPortal && "min-h-[48px] rounded-2xl text-sm font-bold shadow-lg shadow-indigo-200/60",
                 geoLoading && "opacity-60",
               )}
             >
@@ -928,7 +930,7 @@ export function LaundryPickupPublicClient({
                   href={mapsLink(coords)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-2 inline-flex min-h-[40px] items-center justify-center rounded-xl border border-emerald-300 bg-white px-3 text-xs font-bold text-emerald-800 sm:text-sm"
+                  className="mt-2 inline-flex min-h-[40px] items-center justify-center rounded-lg border border-emerald-300/80 bg-white px-3 text-xs font-bold text-emerald-800 sm:text-sm"
                 >
                   เปิดใน Google Maps
                 </a>
@@ -975,13 +977,13 @@ export function LaundryPickupPublicClient({
               <p className="mt-2 text-xs font-semibold text-rose-600">ต้องมีพิกัดจากเครื่อง หรือรายละเอียดสถานที่อย่างใดอย่างหนึ่ง</p>
             : null}
 
-            <details className={cn("group mt-3 open:bg-white/80", laundryPortalInsetPanelClass)}>
-              <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-bold text-[#4d47b6] sm:px-4 sm:text-sm [&::-webkit-details-marker]:hidden">
+            <details className={cn("group mt-3", embeddedInPortal && laundryPortalSectionDividerClass, "pt-3")}>
+              <summary className="cursor-pointer list-none py-1 text-xs font-bold text-[#4d47b6] sm:text-sm [&::-webkit-details-marker]:hidden">
                 <span className="flex items-center justify-between gap-2">
                   ข้อมูลเพิ่มเติม <span className="text-xs font-semibold text-slate-500">ไม่บังคับ</span>
                 </span>
               </summary>
-              <div className="space-y-3 border-t border-slate-100 px-3 pb-3 pt-2 sm:px-4 sm:pb-4">
+              <div className={cn("space-y-3 pt-3", laundryPortalSectionDividerClass)}>
                 <label className={cn(labelClass, "text-[#66638c]")}>
                   ที่อยู่ส่งคืน
                   <textarea
@@ -1053,7 +1055,7 @@ export function LaundryPickupPublicClient({
                   type="button"
                   disabled={!canProceedContact || !hasLocation}
                   onClick={goToServiceTab}
-                  className={cn(laundryPaymentCtaClass, "mt-6 w-full min-h-[48px] disabled:opacity-45")}
+                  className={cn(laundryPaymentCtaClass, "mt-6 w-full")}
                 >
                   เลือกบริการ
                 </button>
@@ -1082,7 +1084,7 @@ export function LaundryPickupPublicClient({
               รายการ
             </h2>
             {blocksPackageSelection ?
-              <div className={cn(laundryPortalInsetPanelClass, "text-center")} role="status">
+              <div className={cn(laundryPortalSectionDividerClass, "pt-4 text-center")} role="status">
                 <p className="text-sm font-black leading-snug text-[#1e1b4b]">มีคำขอที่ยังดำเนินการ</p>
                 <p className="mt-2 text-xs font-semibold leading-relaxed text-[#4d47b6]">
                   เลือกแพ็กเกจใหม่ได้เมื่อสถานะเป็น ส่งคืนสำเร็จ หรือ ยกเลิก
@@ -1099,10 +1101,10 @@ export function LaundryPickupPublicClient({
       {tab === "service" && canProceedPackage && !blocksPackageSelection ?
         <div
           className={cn(
-            "fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur-xl",
+            "fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/90 bg-white/95 backdrop-blur-md",
             embeddedInPortal
-              ? "border-white/50 bg-white/90 shadow-[0_-12px_40px_rgba(30,27,75,0.12)]"
-              : "border-slate-200 bg-white/95 shadow-[0_-8px_32px_rgba(15,23,42,0.08)]",
+              ? "shadow-[0_-8px_24px_rgba(30,27,75,0.08)]"
+              : "shadow-[0_-8px_32px_rgba(15,23,42,0.08)]",
           )}
         >
           <div
@@ -1118,7 +1120,7 @@ export function LaundryPickupPublicClient({
             <button
               type="button"
               onClick={() => setReviewOpen(true)}
-              className={cn(laundryPaymentCtaClass, "min-h-[48px] shrink-0 px-5")}
+              className={cn(laundryPortalPrimaryBtnClass, "shrink-0")}
             >
               ตรวจสอบและชำระ
             </button>
@@ -1135,7 +1137,7 @@ export function LaundryPickupPublicClient({
             onClick={() => setReviewOpen(false)}
           />
           <div
-            className="relative z-10 flex max-h-[min(92dvh,720px)] w-full flex-col rounded-t-3xl border border-slate-200 bg-white shadow-2xl sm:mx-auto sm:max-w-lg sm:rounded-3xl"
+            className="relative z-10 flex max-h-[min(92dvh,720px)] w-full flex-col rounded-t-2xl border border-slate-200/90 bg-white shadow-xl sm:mx-auto sm:max-w-lg sm:rounded-xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="laundry-pickup-review-title"
@@ -1144,23 +1146,23 @@ export function LaundryPickupPublicClient({
               <h2 id="laundry-pickup-review-title" className="text-lg font-bold text-slate-900">
                 สรุปรายการ
               </h2>
-              <dl className={cn("mt-4 space-y-2 text-sm", laundryPortalInsetPanelClass)}>
-                <div className="flex justify-between gap-2">
+              <dl className="mt-4 divide-y divide-slate-200/80 text-sm [&>div]:flex [&>div]:justify-between [&>div]:gap-2 [&>div]:py-2.5">
+                <div>
                   <dt className="text-slate-500">ชื่อ</dt>
                   <dd className="max-w-[65%] text-right font-medium text-slate-800">{customer_name.trim() || "—"}</dd>
                 </div>
-                <div className="flex justify-between gap-2">
+                <div>
                   <dt className="text-slate-500">เบอร์โทร</dt>
                   <dd className="text-right font-medium tabular-nums text-slate-800">{customer_phone.trim() || "—"}</dd>
                 </div>
-                <div className="flex justify-between gap-2">
+                <div>
                   <dt className="shrink-0 text-slate-500">จุดรับผ้า</dt>
                   <dd className="max-w-[65%] whitespace-pre-wrap text-right text-xs font-medium leading-snug text-slate-800">
                     {pickup_address.trim() || "—"}
                   </dd>
                 </div>
                 {selectedPkg ?
-                  <div className="flex justify-between gap-2 border-t border-slate-200/80 pt-2">
+                  <div>
                     <dt className="text-slate-500">แพ็กเกจ</dt>
                     <dd className="max-w-[65%] text-right font-medium text-slate-800">
                       {selectedPkg.name}
@@ -1173,17 +1175,17 @@ export function LaundryPickupPublicClient({
                   </div>
                 : null}
                 {estimatedPickupFee != null && estimatedPickupFee > 0 ?
-                  <div className="flex justify-between gap-2">
+                  <div>
                     <dt className="text-slate-500">ค่ารับ–ส่ง</dt>
                     <dd className="font-medium tabular-nums text-slate-800">฿{formatBaht(estimatedPickupFee)}</dd>
                   </div>
                 : null}
-                <div className="flex justify-between gap-2 border-t border-slate-200/80 pt-2">
+                <div>
                   <dt className="font-semibold text-slate-700">ยอดโดยประมาณ</dt>
                   <dd className="text-lg font-bold tabular-nums text-indigo-800">฿{formatBaht(totalEstimatedPrice)}</dd>
                 </div>
                 {payDue > 0 && payDue !== totalEstimatedPrice ?
-                  <div className="flex justify-between gap-2">
+                  <div>
                     <dt className="font-semibold text-indigo-700">ชำระตอนนี้</dt>
                     <dd className="font-bold tabular-nums text-indigo-800">฿{formatBaht(payDue)}</dd>
                   </div>
@@ -1208,11 +1210,11 @@ export function LaundryPickupPublicClient({
                 </>
               : null}
             </div>
-            <div className="flex shrink-0 gap-2 border-t border-slate-200 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5">
+            <div className="flex shrink-0 gap-2 border-t border-slate-200/80 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5">
               <button
                 type="button"
                 onClick={() => setReviewOpen(false)}
-                className={cn(laundryPortalStepNavBtnClass, "min-h-[48px] flex-1")}
+                className={cn(laundryCompactOutlineButtonClass, "flex-1")}
               >
                 กลับ
               </button>
@@ -1220,7 +1222,7 @@ export function LaundryPickupPublicClient({
                 type="button"
                 disabled={loading || laundryPaymentSubmitBlocked(paymentMethod, payDue, paymentSlipUrl)}
                 onClick={() => void handleConfirmFromReview()}
-                className={cn(laundryPaymentCtaClass, "min-h-[48px] flex-[1.15] px-4 disabled:opacity-50")}
+                className={cn(laundryPortalPrimaryBtnClass, "flex-1")}
               >
                 {loading ? "กำลังส่ง…" : "ยืนยันส่งคำขอ"}
               </button>

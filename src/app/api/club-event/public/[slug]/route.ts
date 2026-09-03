@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
+import { findClubEventPublicProfile } from "@/lib/club-event/public-profile";
 import {
   mapClubEventProfile,
   mapClubEventRecord,
@@ -11,29 +11,11 @@ import {
 
 type Ctx = { params: Promise<{ slug: string }> };
 
-async function resolvePublicTrialSessionId(slug: string, trialParam: string | null): Promise<string> {
-  if (!trialParam) return TRIAL_PROD_SCOPE;
-  const row = await prisma.clubEventProfile.findFirst({
-    where: { slug, trialSessionId: trialParam },
-    select: { trialSessionId: true },
-  });
-  if (!row) return TRIAL_PROD_SCOPE;
-  const trial = await prisma.trialSession.findFirst({
-    where: { id: trialParam, status: "ACTIVE", expiresAt: { gt: new Date() } },
-    select: { id: true },
-  });
-  return trial ? trialParam : TRIAL_PROD_SCOPE;
-}
-
 export async function GET(req: Request, ctx: Ctx) {
   try {
     const { slug } = await ctx.params;
     const url = new URL(req.url);
-    const trialSessionId = await resolvePublicTrialSessionId(slug, url.searchParams.get("t"));
-
-    const profile = await prisma.clubEventProfile.findFirst({
-      where: { slug, trialSessionId },
-    });
+    const profile = await findClubEventPublicProfile(slug, url.searchParams.get("t"));
     if (!profile) notFound();
 
     const [upcoming, past, links] = await Promise.all([

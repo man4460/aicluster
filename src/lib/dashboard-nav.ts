@@ -24,6 +24,7 @@ import {
   VILLAGE_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
   CLUB_EVENT_MODULE_SLUG,
+  LMS_MODULE_SLUG,
   VAULT_MODULE_SLUG,
   INVENTORY_MODULE_SLUG,
   GENERAL_STORE_POS_MODULE_SLUG,
@@ -66,6 +67,7 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === COMMUNITY_COOP_MODULE_SLUG) return "/dashboard/community-coop";
   if (slug === LAUNDRY_MODULE_SLUG) return "/dashboard/laundry";
   if (slug === CLUB_EVENT_MODULE_SLUG) return "/dashboard/club-event";
+  if (slug === LMS_MODULE_SLUG) return "/dashboard/lms";
   if (slug === EDUCARE_MODULE_SLUG) return "/dashboard/educare";
   if (slug === ASSET_MODULE_SLUG) return "/dashboard/asset";
   if (slug === DOC_TRANSMISSION_MODULE_SLUG) return "/dashboard/doc-transmission";
@@ -176,6 +178,7 @@ export function buildDashboardNavGroups(
       LOYALTY_STAMP_MODULE_SLUG,
       LAUNDRY_MODULE_SLUG,
       CLUB_EVENT_MODULE_SLUG,
+      LMS_MODULE_SLUG,
       BUILDING_POS_MODULE_SLUG,
       GENERAL_STORE_POS_MODULE_SLUG,
       ECOMMERCE_STORE_MODULE_SLUG,

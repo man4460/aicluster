@@ -37,6 +37,12 @@ export async function PATCH(req: Request, ctx: Ctx) {
             ? body.status
             : existing.status,
         note: typeof body.note === "string" ? body.note.slice(0, 500) : existing.note,
+        imageUrl:
+          typeof body.imageUrl === "string"
+            ? body.imageUrl.slice(0, 512)
+            : body.imageUrl === null
+              ? null
+              : existing.imageUrl,
       },
     });
 
@@ -47,6 +53,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
         quantity: row.quantity,
         status: row.status,
         note: row.note,
+        imageUrl: row.imageUrl,
       },
     });
   } catch (e) {

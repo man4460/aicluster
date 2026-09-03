@@ -23,6 +23,10 @@ globs:
 
 **QR hub + FormModal:** `.cursor/rules/shop-qr-hub-popup-pattern.mdc`
 
+**ก่อนออกแบบโมดูลใหม่ (บังคับ):** `.cursor/rules/dashboard-module-design-check-laundry-first.mdc` → `.cursor/rules/laundry-module-dashboard-template.mdc`
+
+**ซักผ้า — แม่แบบโมดูลครบชุด (layout · ชำระเงิน · พิมพ์ · popup · กรอง · กราฟ · พอร์ทัล):** `.cursor/rules/laundry-module-dashboard-template.mdc`
+
 **ซักผ้า — การ์ดสถิติแดชบอร์ด + QR:** `.cursor/rules/laundry-dashboard-ui.mdc`
 
 **สนามฟุตบอล — ตัวอย่างโมดูลครบชุด (เลย์เอาต์ · สี · ปุ่ม · QR · อัปโหลด · ยืนยัน · ซ่อม · พอร์ทัล · คู่มือ):** `.cursor/rules/football-turf-module-dashboard-template.mdc`

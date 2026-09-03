@@ -11,6 +11,9 @@ import {
   laundryModalSubtitleClass,
   laundryModalTitleClass,
   laundryOffersListRowCardClass,
+  laundryOutlineButtonClass,
+  laundryFieldClass,
+  laundryPrimaryButtonClass,
 } from "@/systems/laundry/lib/ui-tokens";
 import { LaundryPaymentPanel } from "@/systems/laundry/components/LaundryPaymentPanel";
 import {
@@ -345,14 +348,14 @@ export function LaundrySellPackageModal({
             </div>
           : null}
           <input
-            className="min-h-[48px] rounded-[1.25rem] border border-slate-200 px-3 text-base"
+            className={laundryFieldClass}
             placeholder="เบอร์ลูกค้า"
             inputMode="numeric"
             value={sellPhone}
             onChange={(e) => setSellPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
           />
           <input
-            className="min-h-[48px] rounded-[1.25rem] border border-slate-200 px-3 text-base"
+            className={laundryFieldClass}
             placeholder="ชื่อลูกค้า (ไม่บังคับ)"
             value={sellName}
             onChange={(e) => setSellName(e.target.value)}
@@ -390,23 +393,13 @@ export function LaundrySellPackageModal({
             </span>
           </label>
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={onClose}
-              className={cn(
-                "min-h-[48px] border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700",
-                laundryCardSurfaceRadiusClass,
-              )}
-            >
+            <button type="button" onClick={onClose} className={cn(laundryOutlineButtonClass, "w-full sm:w-auto")}>
               ยกเลิก
             </button>
             <button
               type="submit"
               disabled={sellLoading || pkgList.length === 0 || !sellPkg}
-              className={cn(
-                "app-btn-primary min-h-[48px] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50",
-                laundryCardSurfaceRadiusClass,
-              )}
+              className={cn(laundryPrimaryButtonClass, "w-full sm:w-auto")}
             >
               {sellLoading ? "…" : "เปิดแพ็ก"}
             </button>

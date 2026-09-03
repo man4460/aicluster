@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle, CheckCircle2, Trash2, XCircle } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -336,26 +336,33 @@ export function useAppNoticePopup(options: UseAppNoticePopupOptions = {}) {
     setState(null);
   }, [clearResolve]);
 
-  const popup = (
-    <AppNoticePopup
-      open={Boolean(state)}
-      message={state?.message ?? ""}
-      tone={state?.tone ?? "success"}
-      title={state?.title}
-      confirmLabel={state?.confirmLabel}
-      cancelLabel={state && state.kind === "confirm" ? state.cancelLabel : undefined}
-      onClose={close}
-      onConfirm={state?.kind === "confirm" ? onConfirm : undefined}
-    />
+  const popup = useMemo(
+    () => (
+      <AppNoticePopup
+        open={Boolean(state)}
+        message={state?.message ?? ""}
+        tone={state?.tone ?? "success"}
+        title={state?.title}
+        confirmLabel={state?.confirmLabel}
+        cancelLabel={state && state.kind === "confirm" ? state.cancelLabel : undefined}
+        onClose={close}
+        onConfirm={state?.kind === "confirm" ? onConfirm : undefined}
+      />
+    ),
+    [state, close, onConfirm],
   );
 
-  return {
-    popup,
-    show,
-    success,
-    error,
-    warning,
-    confirm,
-    close,
-  };
+  /** คืนอ็อบเจ็กต์เสถียร — กัน useEffect ที่ depend `notice` ยิงโหลดซ้ำไม่หยุด */
+  return useMemo(
+    () => ({
+      popup,
+      show,
+      success,
+      error,
+      warning,
+      confirm,
+      close,
+    }),
+    [popup, show, success, error, warning, confirm, close],
+  );
 }

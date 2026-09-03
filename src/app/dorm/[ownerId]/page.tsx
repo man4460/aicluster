@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { isDormitoryPortalOpenForOwner } from "@/lib/dormitory/portal-access";
 import { DormPortalClient } from "@/systems/dormitory/DormPortalClient";
 import { getDormitoryDataScope } from "@/lib/trial/module-scopes";
 
@@ -13,6 +14,8 @@ export default async function DormPublicPortalPage({
   const sp = await searchParams;
   const ownerId = p.ownerId?.trim() ?? "";
   if (!ownerId || ownerId.length < 10) notFound();
+  const open = await isDormitoryPortalOpenForOwner(ownerId);
+  if (!open) notFound();
   const scope = await getDormitoryDataScope(ownerId);
   const trialSessionId = sp.t?.trim() || scope.trialSessionId;
   return <DormPortalClient ownerId={ownerId} trialSessionId={trialSessionId} />;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calendar, ExternalLink, Play, Users } from "lucide-react";
+import { Calendar, ExternalLink, MapPin, Phone, Play, Users } from "lucide-react";
 import {
   AppEmptyState,
   AppImageLightbox,
@@ -11,6 +11,7 @@ import {
 import { cn } from "@/lib/cn";
 import { formatBangkokDateTimeLong } from "@/lib/time/bangkok";
 import { ClubEventSlideshow } from "@/systems/club-event/components/ClubEventSlideshow";
+import { ClubEventYoutubePlayer } from "@/systems/club-event/components/ClubEventYoutubePlayer";
 import type { ClubCommitteeMember, ClubEventProfileDto, ClubEventRecordDto } from "@/systems/club-event/lib/mappers";
 import { CLUB_EVENT_LINK_TYPE_LABELS } from "@/systems/club-event/lib/mappers";
 import { clubEventGlassShellClass, clubEventPanelClass } from "@/systems/club-event/lib/ui-tokens";
@@ -68,13 +69,24 @@ export function ClubEventPublicClient({ slug, trialParam }: { slug: string; tria
   }
 
   if (!profile) {
-    return <AppEmptyState title="ไม่พบชมรม" description="ตรวจสอบลิงก์อีกครั้ง" />;
+    return <AppEmptyState>ไม่พบชมรม — ตรวจสอบลิงก์อีกครั้ง</AppEmptyState>;
   }
 
+  const gallery = profile.portalGallery ?? [];
+  const banner = profile.portalBannerUrl?.trim() || null;
+
   return (
-    <div className="mx-auto max-w-3xl space-y-4 px-3 py-6 sm:px-4">
+    <div className="mx-auto max-w-3xl space-y-6 px-3 py-6 sm:px-4">
+      {banner ? (
+        <div className="overflow-hidden rounded-2xl">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={banner} alt="" className="max-h-56 w-full object-cover sm:max-h-72" />
+        </div>
+      ) : null}
+
       <header className={cn("p-6 text-center", clubEventGlassShellClass)}>
         {profile.logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={profile.logoUrl} alt="" className="mx-auto mb-3 h-20 w-20 rounded-2xl object-cover" />
         ) : null}
         <h1 className="text-2xl font-black tracking-tight text-[#1e1b4b]">{profile.displayName}</h1>
@@ -147,15 +159,7 @@ export function ClubEventPublicClient({ slug, trialParam }: { slug: string; tria
                   ) : null}
                 </div>
                 {ev.youtubeEmbedUrl ? (
-                  <div className="mt-3 aspect-video overflow-hidden rounded-xl">
-                    <iframe
-                      src={ev.youtubeEmbedUrl}
-                      title={ev.title}
-                      className="h-full w-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
+                  <ClubEventYoutubePlayer className="mt-3" youtubeEmbedUrl={ev.youtubeEmbedUrl} title={ev.title} />
                 ) : null}
                 {ev.galleryPreview.length > 0 ? (
                   <div className="mt-3 grid grid-cols-3 gap-2">
@@ -169,6 +173,17 @@ export function ClubEventPublicClient({ slug, trialParam }: { slug: string; tria
           </ul>
         )}
       </section>
+
+      {gallery.length > 0 ? (
+        <section className={cn(clubEventPanelClass, "p-4 sm:p-5")}>
+          <h2 className="mb-3 text-lg font-black text-[#1e1b4b]">แกลเลอรี</h2>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {gallery.map((url) => (
+              <AppImageThumb key={url} src={url} alt="แกลเลอรี" onOpen={() => lb.open(url)} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {profile.rulesMarkdown ? (
         <section className={cn(clubEventPanelClass, "p-4 sm:p-5")}>
@@ -184,7 +199,7 @@ export function ClubEventPublicClient({ slug, trialParam }: { slug: string; tria
             {links.map((l) => (
               <li key={l.id}>
                 <a
-                  href={l.publicPath}
+                  href={trialParam ? `${l.publicPath}?t=${encodeURIComponent(trialParam)}` : l.publicPath}
                   className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 p-3 font-semibold text-[#0000BF]"
                 >
                   <span>
@@ -198,6 +213,52 @@ export function ClubEventPublicClient({ slug, trialParam }: { slug: string; tria
           </ul>
         </section>
       ) : null}
+
+      <section className={cn(clubEventPanelClass, "p-4 sm:p-5")}>
+        <h2 className="mb-3 text-lg font-black text-[#1e1b4b]">ติดต่อ</h2>
+        <ul className="space-y-2 text-sm font-semibold text-[#1e1b4b]">
+          {profile.contactPhone ? (
+            <li className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-[#4d47b6]" aria-hidden />
+              <a href={`tel:${profile.contactPhone}`} className="text-[#0000BF]">
+                {profile.contactPhone}
+              </a>
+            </li>
+          ) : null}
+          {profile.contactLine ? (
+            <li>
+              LINE: <span className="text-[#4d47b6]">{profile.contactLine}</span>
+            </li>
+          ) : null}
+          {profile.facebookUrl ? (
+            <li>
+              <a href={profile.facebookUrl} target="_blank" rel="noreferrer" className="text-[#0000BF] underline">
+                Facebook
+              </a>
+            </li>
+          ) : null}
+          {profile.address ? (
+            <li className="flex items-start gap-2">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#4d47b6]" aria-hidden />
+              <span>{profile.address}</span>
+            </li>
+          ) : null}
+          {profile.mapUrl ? (
+            <li>
+              <a href={profile.mapUrl} target="_blank" rel="noreferrer" className="text-[#0000BF] underline">
+                เปิดแผนที่
+              </a>
+            </li>
+          ) : null}
+          {!profile.contactPhone &&
+          !profile.contactLine &&
+          !profile.facebookUrl &&
+          !profile.address &&
+          !profile.mapUrl ? (
+            <li className="font-medium text-[#66638c]">ยังไม่มีข้อมูลติดต่อ</li>
+          ) : null}
+        </ul>
+      </section>
 
       <ClubEventSlideshow open={slideshowOpen} onClose={() => setSlideshowOpen(false)} slides={slideshowSlides} title={slideshowTitle} />
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปกิจกรรม" />

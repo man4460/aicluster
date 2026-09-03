@@ -47,6 +47,8 @@ function orderJson(row: {
   recordedByName: string;
   status: string;
   distanceKm: Prisma.Decimal | null;
+  pickupLat?: Prisma.Decimal | null;
+  pickupLng?: Prisma.Decimal | null;
   paymentMethod: string | null;
   receiptImageUrl: string | null;
 }) {
@@ -67,6 +69,8 @@ function orderJson(row: {
     recorded_by_name: row.recordedByName,
     status: normalizeLaundryOrderStatus(row.status),
     distance_km: row.distanceKm != null ? Number(row.distanceKm) : null,
+    pickup_lat: row.pickupLat != null ? Number(row.pickupLat) : null,
+    pickup_lng: row.pickupLng != null ? Number(row.pickupLng) : null,
     payment_method: row.paymentMethod,
     receipt_image_url: row.receiptImageUrl,
   };

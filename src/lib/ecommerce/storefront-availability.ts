@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { canAccessAppModule } from "@/lib/modules/access";
 import { ECOMMERCE_STORE_MODULE_SLUG } from "@/lib/modules/config";
+import { ensureOwnerModuleDailyChargeOnPublicUse } from "@/lib/modules/public-portal-access";
 import { listModuleSlugsChargedToday } from "@/lib/tokens/module-daily-deduction";
 
 export type StorefrontAvailability =
@@ -8,9 +9,10 @@ export type StorefrontAvailability =
   | { ok: false; reason: "not_found" | "paused" | "unavailable" };
 
 /**
- * หน้าร้องสาธารณะเปิดได้เมื่อ:
+ * หน้าร้านสาธารณะเปิดได้เมื่อ:
  * - มีร้านและ Merchant ไม่ pause
  * - เจ้าของร้านยังมีสิทธิ์โมดูล (โทเคน/Buffet/หักวันนี้แล้ว)
+ * - หักโทเคนรายวันเมื่อลูกค้าเข้าใช้ (แม้เจ้าของไม่เปิดแดชบอร์ด)
  */
 export async function getEcommerceStorefrontAvailability(
   storeId: string,
@@ -43,6 +45,12 @@ export async function getEcommerceStorefrontAvailability(
   const chargedTodaySlugs = await listModuleSlugsChargedToday(store.ownerUserId);
   const allowed = canAccessAppModule(store.owner, mod, { chargedTodaySlugs });
   if (!allowed) return { ok: false, reason: "unavailable" };
+
+  const charge = await ensureOwnerModuleDailyChargeOnPublicUse(
+    store.ownerUserId,
+    ECOMMERCE_STORE_MODULE_SLUG,
+  );
+  if (!charge.ok) return { ok: false, reason: "unavailable" };
 
   return { ok: true };
 }

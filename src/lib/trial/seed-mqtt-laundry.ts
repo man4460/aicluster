@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { bangkokDateKey } from "@/lib/time/bangkok";
@@ -5,12 +6,13 @@ import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import { LAUNDRY_RECORDED_BY_CUSTOMER_PICKUP_QR } from "@/systems/laundry/laundry-customer-pickup-request";
 import type { LaundryOrderStatus } from "@/systems/laundry/laundry-order-status";
 import {
+  LAUNDRY_BROKEN_UNSPLASH_REPLACEMENTS,
   LAUNDRY_PACKAGE_SAMPLE_IMAGES,
   LAUNDRY_PORTAL_SAMPLE_BANNER,
   LAUNDRY_PORTAL_SAMPLE_GALLERY,
   LAUNDRY_PORTAL_SAMPLE_LOGO,
-  LAUNDRY_BROKEN_UNSplash_RE,
   laundryNormalizePortalGallery,
+  laundryPackageSampleImage,
   laundryRepairPortalGallery,
   laundryRepairSampleImageUrl,
   laundrySerializePortalGallery,
@@ -174,8 +176,6 @@ async function repairLaundryBrokenSampleImagesDb(
   ownerUserId: string,
   trialSessionId: string,
 ): Promise<void> {
-  const brokenContains = "photo-1610557892470";
-
   const profile = await db.laundryShopProfile.findUnique({
     where: { ownerUserId_trialSessionId: { ownerUserId, trialSessionId } },
     select: { logoUrl: true, portalBannerUrl: true, portalGalleryJson: true },
@@ -187,9 +187,6 @@ async function repairLaundryBrokenSampleImagesDb(
       laundryRepairPortalGallery(laundryNormalizePortalGallery(profile.portalGalleryJson)),
     );
     const needsRepair =
-      (profile.logoUrl && LAUNDRY_BROKEN_UNSplash_RE.test(profile.logoUrl)) ||
-      (profile.portalBannerUrl && LAUNDRY_BROKEN_UNSplash_RE.test(profile.portalBannerUrl)) ||
-      (profile.portalGalleryJson && LAUNDRY_BROKEN_UNSplash_RE.test(profile.portalGalleryJson)) ||
       logoUrl !== profile.logoUrl ||
       portalBannerUrl !== profile.portalBannerUrl ||
       portalGalleryJson !== profile.portalGalleryJson;
@@ -201,10 +198,29 @@ async function repairLaundryBrokenSampleImagesDb(
     }
   }
 
-  await db.laundryPackage.updateMany({
-    where: { ownerUserId, trialSessionId, imageUrl: { contains: brokenContains } },
-    data: { imageUrl: LAUNDRY_PACKAGE_SAMPLE_IMAGES[0] },
+  for (const brokenId of Object.keys(LAUNDRY_BROKEN_UNSPLASH_REPLACEMENTS)) {
+    await db.laundryPackage.updateMany({
+      where: { ownerUserId, trialSessionId, imageUrl: { contains: brokenId } },
+      data: { imageUrl: LAUNDRY_PACKAGE_SAMPLE_IMAGES[0] },
+    });
+  }
+
+  const packagesMissingImage = await db.laundryPackage.findMany({
+    where: {
+      ownerUserId,
+      trialSessionId,
+      OR: [{ imageUrl: null }, { imageUrl: "" }],
+    },
+    select: { id: true },
+    orderBy: { id: "asc" },
   });
+  for (let i = 0; i < packagesMissingImage.length; i++) {
+    const row = packagesMissingImage[i]!;
+    await db.laundryPackage.update({
+      where: { id: row.id },
+      data: { imageUrl: laundryPackageSampleImage(i) },
+    });
+  }
 }
 
 async function ensureLaundryDemoShopProfileDb(
@@ -237,6 +253,33 @@ async function ensureLaundryDemoShopProfileDb(
     create: { ownerUserId, trialSessionId, ...data },
     update: data,
   });
+}
+
+/** ออเดอร์คิวออนไลน์ตัวอย่างที่สร้างก่อนมี pickup_public_token — เติมให้ค้นหาเบอร์บนพอร์ทัลได้ */
+async function repairLaundryDemoPickupPublicTokensDb(
+  db: PrismaClient | Tx,
+  ownerUserId: string,
+  trialSessionId: string,
+): Promise<number> {
+  const rows = await db.laundryOrder.findMany({
+    where: {
+      ownerUserId,
+      trialSessionId,
+      pickupPublicToken: null,
+      recordedByName: LAUNDRY_RECORDED_BY_CUSTOMER_PICKUP_QR,
+      note: { startsWith: DEMO_NOTE },
+    },
+    select: { id: true },
+  });
+  let n = 0;
+  for (const row of rows) {
+    await db.laundryOrder.update({
+      where: { id: row.id },
+      data: { pickupPublicToken: randomUUID() },
+    });
+    n += 1;
+  }
+  return n;
 }
 
 async function ensureLaundryDemoOrdersDb(
@@ -292,6 +335,7 @@ async function ensureLaundryDemoOrdersDb(
         status: def.status,
         distanceKm: def.online ? new Prisma.Decimal("3.5") : null,
         paymentMethod: def.paymentMethod ?? null,
+        pickupPublicToken: def.online ? randomUUID() : null,
       },
     });
     created += 1;
@@ -447,6 +491,7 @@ export async function seedLaundryTrialData(tx: Tx, ownerUserId: string, trialSes
   await ensureLaundryDemoShopProfileDb(tx, ownerUserId, trialSessionId);
   await ensureLaundryExamplePackages(tx, ownerUserId, trialSessionId);
   await ensureLaundryDemoOrdersDb(tx, ownerUserId, trialSessionId);
+  await repairLaundryDemoPickupPublicTokensDb(tx, ownerUserId, trialSessionId);
   await ensureLaundryDemoCustomersDb(tx, ownerUserId, trialSessionId);
   await ensureLaundryDemoFinanceDb(tx, ownerUserId, trialSessionId);
 }
@@ -518,6 +563,7 @@ async function ensureLaundryDemoForScope(
   await ensureLaundryExamplePackages(db, ownerUserId, trialSessionId);
   await repairLaundryBrokenSampleImagesDb(db, ownerUserId, trialSessionId);
   await ensureLaundryDemoOrdersDb(db, ownerUserId, trialSessionId);
+  await repairLaundryDemoPickupPublicTokensDb(db, ownerUserId, trialSessionId);
   await ensureLaundryDemoCustomersDb(db, ownerUserId, trialSessionId);
   await ensureLaundryDemoFinanceDb(db, ownerUserId, trialSessionId);
 }

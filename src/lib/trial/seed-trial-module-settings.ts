@@ -16,6 +16,7 @@ import {
   HOTEL_RESORT_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
   CLUB_EVENT_MODULE_SLUG,
+  LMS_MODULE_SLUG,
   LOYALTY_STAMP_MODULE_SLUG,
   MASSAGE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
@@ -340,7 +341,37 @@ export async function seedTrialModuleSettings(
       break;
 
     case CLUB_EVENT_MODULE_SLUG:
-      await upsertModuleShopBranding(tx, ownerUserId, trialSessionId, CLUB_EVENT_MODULE_SLUG);
+      await tx.clubEventProfile.updateMany({
+        where: { ownerUserId, trialSessionId },
+        data: {
+          displayName: trialDemoDisplayName("ชมรมตัวอย่าง"),
+          tagline: "ชุดข้อมูลทดลอง — แก้ไขในเมนูตั้งค่าได้",
+          logoUrl: DEMO_MODULE_LOGO_URL,
+          contactPhone: DEMO_MODULE_CONTACT.contactPhone,
+          contactLine: DEMO_MODULE_CONTACT.lineId,
+          promptPayPhone: DEMO_MODULE_PAYMENT.promptPayPhone,
+          bankName: DEMO_MODULE_PAYMENT.bankName,
+          bankAccountNumber: DEMO_MODULE_PAYMENT.bankAccountNumber,
+          bankAccountName: DEMO_MODULE_PAYMENT.bankAccountName,
+        },
+      });
+      break;
+
+    case LMS_MODULE_SLUG:
+      await tx.lmsProfile.updateMany({
+        where: { ownerUserId, trialSessionId },
+        data: {
+          displayName: trialDemoDisplayName("สถาบัน LMS ตัวอย่าง"),
+          tagline: "ชุดข้อมูลทดลอง — แก้ไขในเมนูตั้งค่าได้",
+          logoUrl: DEMO_MODULE_LOGO_URL,
+          contactPhone: DEMO_MODULE_CONTACT.contactPhone,
+          contactLine: DEMO_MODULE_CONTACT.lineId,
+          promptPayPhone: DEMO_MODULE_PAYMENT.promptPayPhone,
+          bankName: DEMO_MODULE_PAYMENT.bankName,
+          bankAccountNumber: DEMO_MODULE_PAYMENT.bankAccountNumber,
+          bankAccountName: DEMO_MODULE_PAYMENT.bankAccountName,
+        },
+      });
       break;
 
     case BUILDING_POS_MODULE_SLUG:

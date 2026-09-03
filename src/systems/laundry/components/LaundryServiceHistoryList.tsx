@@ -18,7 +18,7 @@ import {
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
 import type { LaundryOrder, LaundryRevenueEntry } from "@/systems/laundry/laundry-service";
-import { laundrySectionHeadingClass } from "@/systems/laundry/lib/ui-tokens";
+import { laundryFieldClass, laundrySectionHeadingClass } from "@/systems/laundry/lib/ui-tokens";
 
 export type LaundryHistoryLogRow = {
   id: number;
@@ -425,7 +425,7 @@ export function LaundryServiceHistoryList({
           <label className="block">
             <span className="text-xs font-bold text-[#4d47b6]">เบอร์โทร</span>
             <input
-              className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm"
+              className={cn(laundryFieldClass, "mt-1")}
               inputMode="numeric"
               value={editPhone}
               onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, "").slice(0, 15))}
@@ -434,7 +434,7 @@ export function LaundryServiceHistoryList({
           <label className="block">
             <span className="text-xs font-bold text-[#4d47b6]">ชื่อลูกค้า</span>
             <input
-              className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm"
+              className={cn(laundryFieldClass, "mt-1")}
               value={editName}
               onChange={(e) => setEditName(e.target.value.slice(0, 100))}
             />
@@ -443,7 +443,7 @@ export function LaundryServiceHistoryList({
             <span className="text-xs font-bold text-[#4d47b6]">วันเวลา (ไทย)</span>
             <input
               type="datetime-local"
-              className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm"
+              className={cn(laundryFieldClass, "mt-1")}
               value={editCreatedLocal}
               onChange={(e) => setEditCreatedLocal(e.target.value)}
             />
@@ -452,7 +452,7 @@ export function LaundryServiceHistoryList({
             <label className="block">
               <span className="text-xs font-bold text-[#4d47b6]">ยอดเงิน (บาท)</span>
               <input
-                className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm"
+                className={cn(laundryFieldClass, "mt-1")}
                 inputMode="decimal"
                 value={editAmount}
                 onChange={(e) => setEditAmount(e.target.value)}
@@ -462,7 +462,7 @@ export function LaundryServiceHistoryList({
           <label className="block">
             <span className="text-xs font-bold text-[#4d47b6]">หมายเหตุ</span>
             <input
-              className="app-input mt-1 min-h-[44px] w-full rounded-xl px-3 py-2 text-sm"
+              className={cn(laundryFieldClass, "mt-1")}
               value={editNote}
               onChange={(e) => setEditNote(e.target.value.slice(0, 255))}
             />

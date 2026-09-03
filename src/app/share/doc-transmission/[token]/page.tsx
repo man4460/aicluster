@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/cn";
+import { DOC_TRANSMISSION_MODULE_SLUG } from "@/lib/modules/config";
+import { ensureOwnerModuleDailyChargeOnPublicUse } from "@/lib/modules/public-portal-access";
 import {
   DOC_CATEGORY_BY_KEY,
   DOC_PRIORITY_BY_KEY,
@@ -28,6 +30,12 @@ export default async function PublicDocSharePage({
     },
   });
   if (!record) notFound();
+
+  const charge = await ensureOwnerModuleDailyChargeOnPublicUse(
+    record.ownerUserId,
+    DOC_TRANSMISSION_MODULE_SLUG,
+  );
+  if (!charge.ok) notFound();
 
   const setting = await prisma.docTransmissionSettings.findFirst({
     where: { ownerUserId: record.ownerUserId, trialSessionId: record.trialSessionId },

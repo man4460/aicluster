@@ -7,9 +7,11 @@ globs:
 
 # Laundry — แดชบอร์ด & การ์ดสถิติ & QR
 
-**แม่แบบ UX ระดับโมดูล:** เทียบ **`CarWashDashboard`** (`overview`) และ **`shop-qr-hub-popup-pattern.mdc`**
+**แม่แบบ UX ระดับโมดูล:** เทียบ **`CarWashDashboard`** และ **`shop-qr-hub-popup-pattern.mdc`**
 
-**แม่แบบโครงสร้างโมดูลทั้งก้อน:** **`dashboard-module-car-wash-barber-reference.mdc`**
+**แม่แบบโครงสร้างโมดูลทั้งก้อน (อัปเดต):** **`laundry-module-dashboard-template.mdc`** — ก่อนออกแบบโมดูลใหม่ อ่าน **`dashboard-module-design-check-laundry-first.mdc`**
+
+**แผนที่คู่ขนานคาร์แคร์/บาร์เบอร์:** **`dashboard-module-car-wash-barber-reference.mdc`**
 
 ---
 
@@ -106,8 +108,9 @@ globs:
 2. **แถบไฮไลต์ซ้าย** — `absolute` แถบ `w-1` `bg-gradient-to-b` ตาม `ribbonGradient` · ขยายเมื่อ `group-hover/item` (เทียบแพ็กเหมาคาร์แคร์)
 3. **แบ่งซ้าย–ขวา** — `flex` · `gap-2 sm:gap-4`
    - **ซ้าย (`flex-1`)** — หัว `แพ็กเกจ` ตัวพิมพ์เล็ก uppercase · **ชื่อบรรทัดหลัก** จาก `laundryOrderCardPackageLines(package_name, service_type)` — ถ้า `service_type` เป็นแค่ชื่อแพ็กเกจ + คำขยาย เช่น `(ตะกร้า S)` ให้แสดง **บรรทัดเดียว** (`service_type` เต็ม) · แสดงบรรทัดรองเฉพาะเมื่อสองฟิลด์ไม่เกี่ยวข้องกัน · gradient เดิม (`bg-clip-text`) · แถวข้อความ **ขนาด** (ไม่ใช้แคปซูลมีขอบ) · เบอร์ · ชื่อ · เวลา · ที่อยู่ (ตามกฎซ่อน placeholder)
-   - **ขวา** — คอลัมน์ย่อบนมือถือ (`min-w-[5.75rem] w-[30%] max-w-[8rem] sm:min-w-[9rem] sm:w-[9rem]`) — ข้อความสถานะ (สีตามขั้น · **ไม่** ใช้แคปซูล) · `#id` · ราคา · กลุ่มปุ่มดู/แก้ไข/ลบ — **ไม่** ใช้ `border-l` / พื้นหลังแถบปุ่ม (แยกด้วย `gap` / `pt`)
-4. **อัปเดตสถานะ (คิวงาน)** — **ไม่ใช้ `<select>`** — ใช้ **`LaundryOrderStatusIconStrip`** แถบเลื่อนแนวนอน · ปุ่ม **`h-8 min-w-[2rem]` บนมือถือ** · `sm:` ขยายเป็น ~40px · ไอคอนรายสถานะ + **`aria-label` / `title`** เป็นชื่อไทย (`laundryOrderStatusLabelTh`) · สถานะปัจจุบัน `aria-current="true"` + ขอบ/วงแหวนเน้น · แถบมี **`role="toolbar"`** + **`aria-label`** ระบุเลขรายการ · ซ่อนหัวข้อความรอง «อัปเดตสถานะ» บนมือถือ (`hidden sm:block`) — แก้สถานะในโมดัลแก้ไขออเดอร์ยังใช้ dropdown ได้ตามฟอร์ม · **บล็อกนี้ยังใช้ `border-t-2` + `dividerStrong` + `dimHorizontalStripRidge`** จาก `laundryDashboardCardDividerClasses` เพื่อคั่นจากเนื้อหาด้านบน (ส่วนเดียวที่มีเส้นคั่นแนวนอนในการ์ด)
+   - **ขวา** — คอลัมน์ย่อบนมือถือ (`min-w-[5.75rem] w-[30%] max-w-[8rem] sm:min-w-[9rem] sm:w-[9rem]`) — ข้อความสถานะ (สีตามขั้น · **ไม่** ใช้แคปซูล) · `#id` · ราคา · **ลิงก์เปิด Google Maps ใต้ราคา** (เมื่อมีพิกัด) · กลุ่มปุ่มพิมพ์/ดู/แก้ไข/ลบ — **ไม่** ใช้ `border-l` / พื้นหลังแถบปุ่ม (แยกด้วย `gap` / `pt`)
+4. **อัปเดตสถานะ (คิวงาน)** — **ไม่ใช้ `<select>`** — ใช้ **`LaundryOrderStatusIconStrip`** แถบเลื่อนแนวนอน · ปุ่ม **`h-7 min-w-[1.75rem]` มือถือ** · `sm:h-8 sm:min-w-[2rem]` · ไอคอนรายสถานะ + **`aria-label` / `title`** เป็นชื่อไทย (`laundryOrderStatusLabelTh`) · สถานะปัจจุบัน `aria-current="true"` + ขอบ/วงแหวนเน้น · แถบมี **`role="toolbar"`** + **`aria-label`** ระบุเลขรายการ · ซ่อนหัวข้อความรอง «อัปเดตสถานะ» บนมือถือ (`hidden sm:block`) — แก้สถานะในโมดัลแก้ไขออเดอร์ยังใช้ dropdown ได้ตามฟอร์ม · **บล็อกนี้ยังใช้ `border-t-2` + `dividerStrong` + `dimHorizontalStripRidge`** จาก `laundryDashboardCardDividerClasses` เพื่อคั่นจากเนื้อหาด้านบน (ส่วนเดียวที่มีเส้นคั่นแนวนอนในการ์ด)
+5. **พิกัดรับผ้า** — ตัดบรรทัด `พิกัด GPS:…` ออกจากที่อยู่ซ้าย · ใช้ `laundryResolveOrderPickupCoords` / `laundryGoogleMapsUrl` (`lib/order-pickup-coords.ts`) · แสดงลิงก์ใต้ราคาเท่านั้น
 
 ---
 
@@ -164,13 +167,15 @@ globs:
 
 ---
 
-## กลุ่มปุ่มรายการ (ดู / แก้ไข / ลบ)
+## กลุ่มปุ่มรายการ (พิมพ์ / ดู / แก้ไข / ลบ)
 
-- **รายการออเดอร์** (งานค้าง · การเงิน — ประวัติรายรับ) และ **รายการแพ็กเกจ** — มุมขวาของการ์ด/แถว ใช้ปุ่มสี่เหลี่ยมมน **`LaundryToolbarIconButton`** ขนาด ~36px:
-  1. **ดูข้อมูล** — ไอคอนตา (`LaundryIconEye`) → โมดัลอ่านอย่างเดียว
-  2. **แก้ไข** — ไอคอนดินสอ (`LaundryIconPencil`) → โมดัลแก้ไข (ออเดอร์: ชื่อ เบอร์ สถานะ หมายเหตุ · แพ็กเกจ: `LaundryPackageEditorModal`)
-  3. **ลบ** — ไอคอนถัง (`LaundryIconTrash`) · `variant="danger"` → `window.confirm` แล้วเรียก `repo.deleteOrder` / `repo.deletePackage`
+- **รายการออเดอร์** (งานค้าง · การเงิน — ประวัติรายรับ) และ **รายการแพ็กเกจ** — มุมขวาของการ์ด/แถว ใช้ **`LaundryToolbarIconButton`** กับ **`laundryRowIconButtonClass` (`h-7 w-7`)** — **เล็กกว่า** ปุ่มแถบหัว (`h-10`)
+  1. **พิมพ์** (ถ้ามี) — `LaundryIconPrint`
+  2. **ดูข้อมูล** — ไอคอนตา (`LaundryIconEye`) → โมดัลอ่านอย่างเดียว
+  3. **แก้ไข** — ไอคอนดินสอ (`LaundryIconPencil`) → โมดัลแก้ไข (ออเดอร์: ชื่อ เบอร์ สถานะ หมายเหตุ · แพ็กเกจ: `LaundryPackageEditorModal`)
+  4. **ลบ** — ไอคอนถัง (`LaundryIconTrash`) · `variant="danger"` → ยืนยันแล้วเรียก `repo.deleteOrder` / `repo.deletePackage`
 - ทุกปุ่มต้องมี **`aria-label`** และ **`title`** (`label` prop เดียวกันในคอมโพเนนต์)
+- **ห้าม** ใช้ `laundryIconButtonClass` (`h-10`) ในแถวการ์ด — สงวนไว้แถบหัว/รีเฟรช
 
 ---
 
@@ -197,7 +202,7 @@ globs:
 1. เมื่อมี dropdown บนมือถือ — **ห้าม** โชว์แถบ pill แท็บพร้อมกัน  
 2. ซ่อน pill ด้วย **wrapper** `<div className="hidden md:block">` ห่อ `<nav>` — **ห้าม** ใส่ `hidden md:inline-flex` บน element เดียวกับ shell ที่มี `inline-flex` (twMerge อาจทำให้ pill โผล่คู่ dropdown)  
 3. หัวแถวมือถือ: **ชื่อ + ปุ่มบันทึก** เท่านั้น — แท็บอยู่แถว dropdown ด้านล่าง  
-4. ปุ่มรอง/อัปโหลดในฟอร์ม: **`laundryCompactOutlineButtonClass`** (`min-h-8` · outline slate)
+4. ปุ่มรอง/อัปโหลดในฟอร์ม: **`laundryOutlineButtonClass`** (สูง `h-10` · outline slate) — alias เก่า `laundryCompactOutlineButtonClass`
 
 **Implementation:** `src/systems/laundry/components/LaundrySettingsClient.tsx` · โทเค็น `src/systems/laundry/lib/ui-tokens.ts`
 
