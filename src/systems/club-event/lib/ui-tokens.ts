@@ -135,6 +135,49 @@ export const clubEventFixedBottomActionClass =
 export const clubEventGlassShellClass =
   "rounded-[1.75rem] border border-white/50 bg-gradient-to-br from-white/70 via-white/55 to-violet-50/40 shadow-[0_8px_32px_rgba(30,27,75,0.06)] backdrop-blur-2xl sm:rounded-[2.5rem]";
 
+/** —— เว็บลูกค้าชมรม (แม่แบบซักผ้า) —— */
+export const clubEventPortalPrimaryBtnClass = clubEventPrimaryButtonClass;
+export const clubEventPortalFieldClass = clubEventFieldClass;
+
+export const clubEventPortalShopNameClass =
+  "bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] bg-clip-text font-black tracking-tight text-transparent";
+
+export const clubEventPortalShopNameHeroClass = cn(
+  clubEventPortalShopNameClass,
+  "drop-shadow-[0_1px_8px_rgba(255,255,255,0.55)]",
+);
+
+export const clubEventPortalSectionDividerClass = "border-t border-slate-200/80";
+
+export const clubEventPortalPageTitleClass =
+  "text-2xl font-black tracking-tight text-[#1e1b4b] sm:text-3xl";
+
+export const clubEventPortalPageSubtitleClass = "text-sm font-semibold text-[#66638c]";
+
+export const clubEventPortalPageBodyClass = cn(
+  clubEventPortalSectionDividerClass,
+  "mt-4 space-y-4 pt-5",
+);
+
+export const clubEventPortalHeaderNavShellClass =
+  "hidden items-center gap-0.5 rounded-lg border border-white/45 bg-white/20 p-0.5 backdrop-blur-md md:inline-flex";
+
+export function clubEventPortalHeaderNavLinkClass(): string {
+  return cn(
+    "inline-flex min-h-9 items-center justify-center rounded-md px-3 text-xs font-semibold text-white/95 transition hover:bg-white/25 sm:px-3.5 sm:text-sm",
+  );
+}
+
+export const clubEventPortalHeroCompactShellClass =
+  "mt-8 grid w-full gap-3 border-t border-white/40 pt-5 text-[#1e1b4b] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:gap-3 sm:rounded-xl sm:border sm:border-slate-200/90 sm:bg-white/95 sm:p-5 sm:pt-5 sm:shadow-sm";
+
+export const clubEventPortalFlatBlockClass = "space-y-4";
+
+export const clubEventPortalInsetPanelClass = cn(
+  clubEventPortalSectionDividerClass,
+  "space-y-3 bg-slate-50/50 pt-4",
+);
+
 /** @deprecated ใช้ clubEventPrimaryButtonClass */
 export const clubEventNavActiveClass = clubEventPrimaryButtonClass;
 /** @deprecated ใช้ clubEventOutlineButtonClass */
