@@ -91,6 +91,7 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
   const [youtubeInputs, setYoutubeInputs] = useState<string[]>([""]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [slideshowOpen, setSlideshowOpen] = useState(false);
+  const [galleryUploading, setGalleryUploading] = useState(false);
   const [links, setLinks] = useState<ClubLinkRow[]>([]);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [linkForm, setLinkForm] = useState(() => emptyClubLinkForm());
@@ -233,12 +234,19 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
     }
   };
 
-  const uploadGallery = async (file: File) => {
+  const uploadGalleryFiles = async (fileList: FileList | File[]) => {
     if (!activeEventId) {
       notice.error("บันทึกกิจกรรมก่อน แล้วค่อยอัปโหลดรูป");
       return;
     }
-    if (!canAddGallery) {
+    const files = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
+    if (files.length === 0) {
+      notice.error("เลือกรูปภาพเท่านั้น");
+      return;
+    }
+
+    const remaining = limits.galleryMax - gallery.length;
+    if (remaining <= 0) {
       notice.error(
         limits.isMonthly
           ? `อัปโหลดได้สูงสุด ${limits.galleryMax} รูป`
@@ -246,20 +254,45 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
       );
       return;
     }
+
+    const toUpload = files.slice(0, remaining);
+    const skipped = files.length - toUpload.length;
+    setGalleryUploading(true);
+    let ok = 0;
+    let lastError = "";
     try {
-      const webp = await prepareClubEventGalleryWebp(file);
-      const form = new FormData();
-      form.set("file", webp);
-      const res = await fetch(`/api/club-event/session/events/${activeEventId}/gallery`, {
-        method: "POST",
-        body: form,
-      });
-      const data = (await res.json()) as { image?: GalleryItem; error?: string };
-      if (!res.ok) throw new Error(data.error ?? "อัปโหลดไม่สำเร็จ");
-      if (data.image) setGallery((g) => [...g, data.image!]);
-      notice.success("อัปโหลดรูปแล้ว");
-    } catch (e) {
-      notice.error(e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ");
+      for (const file of toUpload) {
+        try {
+          const webp = await prepareClubEventGalleryWebp(file);
+          const form = new FormData();
+          form.set("file", webp);
+          const res = await fetch(`/api/club-event/session/events/${activeEventId}/gallery`, {
+            method: "POST",
+            body: form,
+          });
+          const data = (await res.json()) as { image?: GalleryItem; error?: string };
+          if (!res.ok) throw new Error(data.error ?? "อัปโหลดไม่สำเร็จ");
+          if (data.image) {
+            setGallery((g) => [...g, data.image!]);
+            ok += 1;
+          }
+        } catch (e) {
+          lastError = e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ";
+        }
+      }
+      if (ok > 0) {
+        notice.success(ok === 1 ? "อัปโหลดรูปแล้ว" : `อัปโหลด ${ok} รูปแล้ว`);
+      }
+      if (skipped > 0) {
+        notice.error(
+          `เหลือโควต้า ${remaining} รูป — ข้าม ${skipped} ไฟล์` +
+            (limits.isMonthly ? "" : ` (ฟรีได้ ${CLUB_EVENT_FREE_GALLERY_MAX} รูป)`),
+        );
+      } else if (ok === 0 && lastError) {
+        notice.error(lastError);
+      }
+    } finally {
+      setGalleryUploading(false);
     }
   };
 
@@ -481,19 +514,20 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
                 className={cn(
                   clubEventOutlineButtonClass,
                   "inline-flex cursor-pointer items-center gap-1.5",
-                  (!activeEventId || !canAddGallery) && "pointer-events-none opacity-50",
+                  (!activeEventId || !canAddGallery || galleryUploading) && "pointer-events-none opacity-50",
                 )}
               >
                 <ImagePlus className="h-4 w-4" aria-hidden />
-                <span>เพิ่มรูป</span>
+                <span>{galleryUploading ? "กำลังอัปโหลด…" : "เพิ่มรูป"}</span>
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   className="sr-only"
-                  disabled={!activeEventId || !canAddGallery}
+                  disabled={!activeEventId || !canAddGallery || galleryUploading}
                   onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) void uploadGallery(f);
+                    const files = e.target.files;
+                    if (files?.length) void uploadGalleryFiles(files);
                     e.target.value = "";
                   }}
                 />

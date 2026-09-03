@@ -3,8 +3,15 @@
 const MAX_DIMENSION = 1920;
 const WEBP_QUALITY = 0.82;
 
+/** ชื่อไฟล์มาตรฐานฝั่ง client ก่อนอัปโหลดแกลเลอรี */
+export function clubEventClientGalleryFileName(): string {
+  const stamp = Date.now();
+  const rand = Math.random().toString(36).slice(2, 8);
+  return `club-event-gallery-${stamp}-${rand}.webp`;
+}
+
 /**
- * ย่อรูปและแปลงเป็น WebP ฝั่ง client ก่อนอัปโหลดแกลเลอรีกิจกรรม
+ * ย่อรูป · แปลง WebP · ตั้งชื่อมาตรฐาน ฝั่ง client ก่อนอัปโหลดแกลเลอรีกิจกรรม
  */
 export async function prepareClubEventGalleryWebp(file: File): Promise<File> {
   const bmp = await createImageBitmap(file);
@@ -26,7 +33,10 @@ export async function prepareClubEventGalleryWebp(file: File): Promise<File> {
       canvas.toBlob(resolve, "image/webp", WEBP_QUALITY),
     );
     if (!blob) throw new Error("แปลงรูปเป็น WebP ไม่สำเร็จ");
-    return new File([blob], file.name.replace(/\.\w+$/, ".webp"), { type: "image/webp" });
+    return new File([blob], clubEventClientGalleryFileName(), {
+      type: "image/webp",
+      lastModified: Date.now(),
+    });
   } finally {
     bmp.close();
   }
