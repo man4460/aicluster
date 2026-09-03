@@ -1,14 +1,14 @@
 "use client";
 
-const MAX_DIMENSION = 1920;
-const WEBP_QUALITY = 0.82;
-
 /** ชื่อไฟล์มาตรฐานฝั่ง client ก่อนอัปโหลดแกลเลอรี */
 export function clubEventClientGalleryFileName(): string {
   const stamp = Date.now();
   const rand = Math.random().toString(36).slice(2, 8);
   return `club-event-gallery-${stamp}-${rand}.webp`;
 }
+
+const MAX_DIMENSION = 1920;
+const WEBP_QUALITY = 0.82;
 
 /**
  * ย่อรูป · แปลง WebP · ตั้งชื่อมาตรฐาน ฝั่ง client ก่อนอัปโหลดแกลเลอรีกิจกรรม
@@ -40,8 +40,4 @@ export async function prepareClubEventGalleryWebp(file: File): Promise<File> {
   } finally {
     bmp.close();
   }
-}
-
-export function clubEventGalleryFileName(ownerUserId: string, eventId: string): string {
-  return `${ownerUserId}_${eventId}_${Date.now()}.webp`;
 }

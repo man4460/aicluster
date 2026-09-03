@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/api-auth";
 import { clubEventOwnerFromAuth } from "@/lib/club-event/api-owner";
 import { clubEventOwnerWhere, clubEventSessionContext } from "@/lib/club-event/session-context";
 import { prisma } from "@/lib/prisma";
-import { clubEventGalleryFileName } from "@/systems/club-event/lib/gallery-image";
+import { clubEventGalleryFileName } from "@/systems/club-event/lib/gallery-filename";
 import {
   assertClubEventGalleryCount,
   resolveClubEventMediaLimits,
