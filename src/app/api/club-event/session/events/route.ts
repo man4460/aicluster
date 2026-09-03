@@ -9,8 +9,9 @@ import {
   resolveClubEventMediaLimits,
 } from "@/systems/club-event/lib/plan-limits";
 import {
-  normalizeClubEventYoutubeUrlsFromBody,
-  serializeClubEventYoutubeUrls,
+  normalizeClubEventYoutubeEmbedUrl,
+  normalizeClubEventYoutubeVideosFromBody,
+  serializeClubEventYoutubeVideos,
 } from "@/systems/club-event/lib/youtube";
 
 export async function GET(req: Request) {
@@ -64,11 +65,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "วันที่ไม่ถูกต้อง" }, { status: 400 });
     }
 
-    const yt = normalizeClubEventYoutubeUrlsFromBody(body);
+    const yt = normalizeClubEventYoutubeVideosFromBody(body);
     if (!yt.ok) return NextResponse.json({ error: yt.error }, { status: 400 });
 
     const limits = resolveClubEventMediaLimits(own.access);
-    const ytGate = assertClubEventYoutubeCount(yt.urls.length, limits);
+    const ytGate = assertClubEventYoutubeCount(yt.videos.length, limits);
     if (!ytGate.ok) {
       return NextResponse.json({ error: ytGate.error, code: ytGate.code }, { status: 403 });
     }
@@ -82,8 +83,10 @@ export async function POST(req: Request) {
         eventDate,
         status: deriveEventStatus(eventDate),
         description: typeof body.description === "string" ? body.description : "",
-        youtubeEmbedUrl: yt.urls[0] ?? null,
-        youtubeUrlsJson: serializeClubEventYoutubeUrls(yt.urls),
+        youtubeEmbedUrl: yt.videos[0]
+          ? normalizeClubEventYoutubeEmbedUrl(yt.videos[0].youtubeUrl)
+          : null,
+        youtubeUrlsJson: serializeClubEventYoutubeVideos(yt.videos),
       },
       include: { _count: { select: { gallery: true } } },
     });

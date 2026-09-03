@@ -247,15 +247,18 @@ export function ClubEventPublicClient({
                       </button>
                     ) : null}
                   </div>
-                  {(ev.youtubeUrls?.length ? ev.youtubeUrls : ev.youtubeEmbedUrl ? [ev.youtubeEmbedUrl] : []).map(
-                    (url, i) => (
-                      <ClubEventYoutubePlayer
-                        key={`${ev.id}-yt-${i}`}
-                        youtubeEmbedUrl={url}
-                        title={`${ev.title}${ev.youtubeUrls && ev.youtubeUrls.length > 1 ? ` · ${i + 1}` : ""}`}
-                      />
-                    ),
-                  )}
+                  {(ev.youtubeVideos?.length
+                    ? ev.youtubeVideos
+                    : []
+                  ).map((clip) => (
+                    <div key={clip.id} className="space-y-1">
+                      <p className="text-sm font-black text-[#1e1b4b]">{clip.title}</p>
+                      {clip.hint ? (
+                        <p className="text-xs font-medium text-[#66638c]">{clip.hint}</p>
+                      ) : null}
+                      <ClubEventYoutubePlayer youtubeEmbedUrl={clip.youtubeUrl} title={clip.title} />
+                    </div>
+                  ))}
                   {ev.galleryPreview.length > 0 ? (
                     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                       {ev.galleryPreview.map((g) => (

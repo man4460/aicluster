@@ -3,15 +3,17 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ImagePlus, Link2, Play, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, ImagePlus, Link2, Play, Trash2 } from "lucide-react";
 import {
   AppEmptyState,
   AppImageLightbox,
   AppImageThumb,
+  appDashboardBrandCtaPillButtonClass,
   useAppImageLightbox,
   useAppNoticePopup,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { extractYoutubeVideoId, youtubeThumbUrl } from "@/lib/youtube-url";
 import {
   assetRowEditIconButtonClass,
   assetRowRemoveIconButtonClass,
@@ -47,7 +49,7 @@ import {
   CLUB_EVENT_FREE_YOUTUBE_MAX,
 } from "@/systems/club-event/lib/plan-limits";
 import type { ClubSubmissionRow } from "@/systems/club-event/lib/submission-summary";
-import { clubEventYoutubeWatchUrlFromStored } from "@/systems/club-event/lib/youtube";
+import type { ClubEventYoutubeVideo } from "@/systems/club-event/lib/youtube";
 import {
   clubEventFieldClass,
   clubEventIconButtonClass,
@@ -59,6 +61,31 @@ import {
 
 type GalleryItem = { id: string; imageUrl: string; fileName: string; sortOrder: number };
 type ClubLinkRow = ClubEventDynamicLinkDto & { submissionsCount?: number };
+
+type YoutubeDraft = {
+  id: string;
+  title: string;
+  hint: string;
+  youtubeUrl: string;
+};
+
+function newYoutubeDraft(): YoutubeDraft {
+  return {
+    id: `tmp-${Date.now().toString(36)}`,
+    title: "",
+    hint: "",
+    youtubeUrl: "",
+  };
+}
+
+function draftFromVideo(v: ClubEventYoutubeVideo): YoutubeDraft {
+  return {
+    id: v.id,
+    title: v.title,
+    hint: v.hint,
+    youtubeUrl: v.youtubeUrl,
+  };
+}
 
 const defaultLimits: ClubEventMediaLimits = {
   isMonthly: false,
@@ -80,7 +107,10 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
   const [eventDate, setEventDate] = useState(() => new Date().toISOString().slice(0, 16));
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<"UPCOMING" | "PAST">("UPCOMING");
-  const [youtubeInputs, setYoutubeInputs] = useState<string[]>([""]);
+  const [youtubeVideos, setYoutubeVideos] = useState<YoutubeDraft[]>([]);
+  const [ytEditIdx, setYtEditIdx] = useState<number | null>(null);
+  const [ytForm, setYtForm] = useState<YoutubeDraft>(() => newYoutubeDraft());
+  const [ytFormErr, setYtFormErr] = useState<string | null>(null);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [slideshowOpen, setSlideshowOpen] = useState(false);
   const [galleryUploading, setGalleryUploading] = useState(false);
@@ -103,6 +133,7 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
           description,
           youtubeEmbedUrl: null,
           youtubeUrls: [],
+          youtubeVideos: [],
           galleryCount: gallery.length,
         },
       ]
@@ -136,13 +167,21 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
       setEventDate(ev.eventDate.slice(0, 16));
       setDescription(ev.description);
       setStatus(ev.status);
-      const urls =
-        ev.youtubeUrls?.length > 0
-          ? ev.youtubeUrls.map((u) => clubEventYoutubeWatchUrlFromStored(u) ?? u)
-          : ev.youtubeEmbedUrl
-            ? [clubEventYoutubeWatchUrlFromStored(ev.youtubeEmbedUrl) ?? ev.youtubeEmbedUrl]
-            : [""];
-      setYoutubeInputs(urls.length > 0 ? urls : [""]);
+      setYoutubeVideos(
+        (ev.youtubeVideos?.length
+          ? ev.youtubeVideos
+          : (ev.youtubeUrls ?? []).map((u, i) => ({
+              id: `legacy-${i}`,
+              title: `คลิป ${i + 1}`,
+              hint: "",
+              youtubeUrl: u,
+              videoId: extractYoutubeVideoId(u) ?? `legacy-${i}`,
+            }))
+        ).map(draftFromVideo),
+      );
+      setYtEditIdx(null);
+      setYtForm(newYoutubeDraft());
+      setYtFormErr(null);
       setGallery(data.gallery ?? []);
       if (data.mediaLimits) setLimits(data.mediaLimits);
       setSavedId(ev.id);
@@ -171,16 +210,53 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
     void loadEvent();
   }, [isNew, loadEvent]);
 
-  const canAddYoutube = youtubeInputs.filter((u) => u.trim()).length < limits.youtubeMax;
+  const canAddYoutube = youtubeVideos.length < limits.youtubeMax;
   const canAddGallery = gallery.length < limits.galleryMax;
+  const ytFormPreviewId = extractYoutubeVideoId(ytForm.youtubeUrl);
+  const ytEditing = ytEditIdx !== null || Boolean(ytForm.title || ytForm.youtubeUrl);
+
+  function saveYoutubeFormLocal() {
+    const clipTitle = ytForm.title.trim();
+    const youtubeUrl = ytForm.youtubeUrl.trim();
+    if (!clipTitle || !youtubeUrl) {
+      setYtFormErr("กรอกชื่อคลิปและลิงก์ YouTube");
+      return;
+    }
+    if (!extractYoutubeVideoId(youtubeUrl)) {
+      setYtFormErr("ลิงก์ YouTube ไม่ถูกต้อง");
+      return;
+    }
+    if (ytEditIdx == null && youtubeVideos.length >= limits.youtubeMax) {
+      setYtFormErr(
+        limits.isMonthly
+          ? `เพิ่มได้สูงสุด ${limits.youtubeMax} ลิงก์`
+          : `แพ็กฟรีได้ ${CLUB_EVENT_FREE_YOUTUBE_MAX} ลิงก์ — สมัครรายเดือนเพื่อเพิ่มหลายวิดีโอ`,
+      );
+      return;
+    }
+    setYtFormErr(null);
+    setYoutubeVideos((prev) => {
+      const next = [...prev];
+      const row = {
+        ...ytForm,
+        title: clipTitle,
+        youtubeUrl,
+        hint: ytForm.hint.trim(),
+      };
+      if (ytEditIdx == null) next.push(row);
+      else next[ytEditIdx] = row;
+      return next;
+    });
+    setYtEditIdx(null);
+    setYtForm(newYoutubeDraft());
+  }
 
   const saveEvent = async () => {
     if (!title.trim()) {
       notice.error("กรอกชื่อกิจกรรม");
       return;
     }
-    const youtubeUrls = youtubeInputs.map((u) => u.trim()).filter(Boolean);
-    if (youtubeUrls.length > limits.youtubeMax) {
+    if (youtubeVideos.length > limits.youtubeMax) {
       notice.error(
         limits.isMonthly
           ? `เพิ่ม YouTube ได้สูงสุด ${limits.youtubeMax} ลิงก์`
@@ -196,7 +272,12 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
         eventDate: new Date(eventDate).toISOString(),
         description,
         status,
-        youtubeUrls,
+        youtubeVideos: youtubeVideos.map((v) => ({
+          id: v.id.startsWith("tmp-") ? undefined : v.id,
+          title: v.title,
+          hint: v.hint || null,
+          youtubeUrl: v.youtubeUrl,
+        })),
       };
       const res = await fetch(
         activeEventId ? `/api/club-event/session/events/${activeEventId}` : "/api/club-event/session/events",
@@ -430,15 +511,68 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
           </div>
         </ClubEventPageBlock>
 
-        <ClubEventPageBlock
-          title="วิดีโอ YouTube"
-          action={
+        <ClubEventPageBlock title="วิดีโอ YouTube">
+          <p className="mb-3 text-[11px] font-semibold text-[#8b87b8]">
+            {limits.isMonthly
+              ? `แพ็กเดือน · ได้สูงสุด ${limits.youtubeMax} คลิป`
+              : `แพ็กฟรี · ได้ ${CLUB_EVENT_FREE_YOUTUBE_MAX} คลิป — เพิ่มมากกว่านี้ต้องสมัครรายเดือน`}
+          </p>
+
+          <div className="space-y-3 rounded-[1.25rem] border border-white/70 bg-white/70 p-3 sm:p-4">
+            <div className="flex flex-row items-start justify-between gap-3">
+              <p className="text-sm font-black text-[#1e1b4b]">
+                {ytEditIdx == null ? "เพิ่มคลิป" : "แก้ไขคลิป"}
+              </p>
+              {ytEditIdx != null ? (
+                <button
+                  type="button"
+                  className={cn(clubEventOutlineButtonClass, "min-h-9 px-3 text-xs")}
+                  onClick={() => {
+                    setYtEditIdx(null);
+                    setYtForm(newYoutubeDraft());
+                    setYtFormErr(null);
+                  }}
+                >
+                  ยกเลิกแก้
+                </button>
+              ) : null}
+            </div>
+            {ytFormErr ? <p className="text-sm font-semibold text-rose-600">{ytFormErr}</p> : null}
+            <label className="block space-y-1">
+              <span className="text-xs font-bold text-[#4d47b6]">ชื่อคลิป</span>
+              <input
+                className={clubEventFieldClass}
+                value={ytForm.title}
+                onChange={(e) => setYtForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="เช่น ไฮไลต์งานปีที่แล้ว"
+              />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-xs font-bold text-[#4d47b6]">ลิงก์ YouTube</span>
+              <input
+                className={clubEventFieldClass}
+                value={ytForm.youtubeUrl}
+                onChange={(e) => setYtForm((f) => ({ ...f, youtubeUrl: e.target.value }))}
+                placeholder="https://www.youtube.com/watch?v=..."
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-xs font-bold text-[#4d47b6]">คำอธิบายสั้น (ไม่บังคับ)</span>
+              <input
+                className={clubEventFieldClass}
+                value={ytForm.hint}
+                onChange={(e) => setYtForm((f) => ({ ...f, hint: e.target.value }))}
+                placeholder="เช่น สรุปผลงานชมรม"
+              />
+            </label>
             <button
               type="button"
-              className={clubEventOutlineButtonClass}
-              disabled={!canAddYoutube}
+              className={cn(appDashboardBrandCtaPillButtonClass, "min-h-10 w-full sm:w-auto sm:px-4")}
+              disabled={ytEditIdx == null && !canAddYoutube}
               onClick={() => {
-                if (!canAddYoutube) {
+                if (ytEditIdx == null && !canAddYoutube) {
                   notice.error(
                     limits.isMonthly
                       ? `เพิ่มได้สูงสุด ${limits.youtubeMax} ลิงก์`
@@ -446,55 +580,98 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
                   );
                   return;
                 }
-                setYoutubeInputs((rows) => [...rows, ""]);
+                saveYoutubeFormLocal();
               }}
             >
-              <Plus className="mr-1 inline h-4 w-4" aria-hidden />
-              เพิ่มลิงก์
+              {ytEditIdx == null ? "เพิ่มในรายการ" : "อัปเดตรายการ"}
             </button>
-          }
-        >
-          <p className="mb-2 text-[11px] font-semibold text-[#8b87b8]">
-            {limits.isMonthly
-              ? `แพ็กเดือน · ได้สูงสุด ${limits.youtubeMax} ลิงก์`
-              : `แพ็กฟรี · ได้ ${CLUB_EVENT_FREE_YOUTUBE_MAX} ลิงก์ — เพิ่มมากกว่านี้ต้องสมัครรายเดือน`}
-          </p>
-          <ul className="space-y-2">
-            {youtubeInputs.map((url, idx) => (
-              <li key={idx} className="flex gap-2">
-                <input
-                  className={cn(clubEventFieldClass, "min-w-0 flex-1")}
-                  value={url}
-                  onChange={(e) => {
-                    const next = [...youtubeInputs];
-                    next[idx] = e.target.value;
-                    setYoutubeInputs(next);
-                  }}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-                {youtubeInputs.length > 1 ? (
-                  <button
-                    type="button"
-                    className={assetRowRemoveIconButtonClass}
-                    aria-label={`ลบลิงก์วิดีโอที่ ${idx + 1}`}
-                    title="ลบ"
-                    onClick={() => setYoutubeInputs((rows) => rows.filter((_, i) => i !== idx))}
+            {ytEditing && ytFormPreviewId ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={youtubeThumbUrl(ytFormPreviewId)}
+                alt=""
+                className="mt-1 h-24 w-auto rounded-lg object-cover"
+              />
+            ) : null}
+          </div>
+
+          {youtubeVideos.length === 0 ? (
+            <AppEmptyState tone="violet" className="mt-3">
+              ยังไม่มีคลิป — กรอกชื่อและลิงก์ YouTube ด้านบน แล้วกดเพิ่มในรายการ
+            </AppEmptyState>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {youtubeVideos.map((v, i) => {
+                const vid = extractYoutubeVideoId(v.youtubeUrl);
+                return (
+                  <li
+                    key={v.id}
+                    className="flex items-start gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm"
                   >
-                    <IconRowRemove className="h-4 w-4" />
-                  </button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-          {youtubeInputs.some((u) => u.trim()) ? (
+                    {vid ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={youtubeThumbUrl(vid)}
+                        alt=""
+                        className="h-14 w-20 shrink-0 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="h-14 w-20 shrink-0 rounded-lg bg-slate-100" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-black text-[#1e1b4b]">{v.title}</p>
+                      {v.hint ? (
+                        <p className="mt-0.5 break-words text-xs font-medium text-[#66638c]">{v.hint}</p>
+                      ) : null}
+                      <p className="mt-1 break-all text-[10px] text-[#8b87a8]">{v.youtubeUrl}</p>
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <button
+                        type="button"
+                        className={assetRowEditIconButtonClass}
+                        aria-label={`แก้ไข ${v.title}`}
+                        title="แก้ไข"
+                        onClick={() => {
+                          setYtEditIdx(i);
+                          setYtForm({ ...v });
+                          setYtFormErr(null);
+                        }}
+                      >
+                        <IconRowEdit className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className={assetRowRemoveIconButtonClass}
+                        aria-label={`ลบ ${v.title}`}
+                        title="ลบ"
+                        onClick={() => {
+                          setYoutubeVideos((prev) => prev.filter((_, j) => j !== i));
+                          if (ytEditIdx === i) {
+                            setYtEditIdx(null);
+                            setYtForm(newYoutubeDraft());
+                          } else if (ytEditIdx != null && ytEditIdx > i) {
+                            setYtEditIdx(ytEditIdx - 1);
+                          }
+                        }}
+                      >
+                        <IconRowRemove className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {youtubeVideos.length > 0 ? (
             <div className="mt-3 space-y-3">
-              {youtubeInputs
-                .filter((u) => u.trim())
-                .map((u, i) => (
-                  <ClubEventYoutubePlayer key={`${u}-${i}`} youtubeEmbedUrl={u} title={`${title || "วิดีโอ"} ${i + 1}`} />
-                ))}
+              {youtubeVideos.map((v) => (
+                <div key={`preview-${v.id}`} className="space-y-1">
+                  <p className="text-xs font-bold text-[#4d47b6]">{v.title}</p>
+                  {v.hint ? <p className="text-[11px] font-medium text-[#66638c]">{v.hint}</p> : null}
+                  <ClubEventYoutubePlayer youtubeEmbedUrl={v.youtubeUrl} title={v.title} />
+                </div>
+              ))}
             </div>
           ) : null}
         </ClubEventPageBlock>

@@ -4,7 +4,11 @@ import type {
   ClubEventFinanceType,
   ClubEventScheduleStatus,
 } from "@/generated/prisma/enums";
-import { parseClubEventYoutubeUrls } from "@/systems/club-event/lib/youtube";
+import {
+  normalizeClubEventYoutubeEmbedUrl,
+  parseClubEventYoutubeVideos,
+  type ClubEventYoutubeVideo,
+} from "@/systems/club-event/lib/youtube";
 
 export type ClubCommitteeMember = {
   role: string;
@@ -164,9 +168,12 @@ export type ClubEventRecordDto = {
   eventDate: string;
   status: ClubEventScheduleStatus;
   description: string;
-  /** @deprecated ใช้ youtubeUrls — คงไว้เป็นวิดีโอตัวแรก */
+  /** @deprecated ใช้ youtubeVideos — คงไว้เป็นวิดีโอตัวแรก */
   youtubeEmbedUrl: string | null;
+  /** embed URL รายการ — คงไว้เพื่อความเข้ากันได้ */
   youtubeUrls: string[];
+  /** คลิป YouTube แบบลิงก์ทดลอง (ชื่อ · คำอธิบาย · URL) */
+  youtubeVideos: ClubEventYoutubeVideo[];
   galleryCount: number;
 };
 
@@ -325,7 +332,10 @@ export function mapClubEventRecord(row: {
   youtubeUrlsJson?: string | null;
   _count?: { gallery: number };
 }): ClubEventRecordDto {
-  const youtubeUrls = parseClubEventYoutubeUrls(row.youtubeUrlsJson, row.youtubeEmbedUrl);
+  const youtubeVideos = parseClubEventYoutubeVideos(row.youtubeUrlsJson, row.youtubeEmbedUrl);
+  const youtubeUrls = youtubeVideos
+    .map((v) => normalizeClubEventYoutubeEmbedUrl(v.youtubeUrl))
+    .filter((u): u is string => Boolean(u));
   return {
     id: row.id,
     title: row.title,
@@ -334,6 +344,7 @@ export function mapClubEventRecord(row: {
     description: row.description,
     youtubeEmbedUrl: youtubeUrls[0] ?? null,
     youtubeUrls,
+    youtubeVideos,
     galleryCount: row._count?.gallery ?? 0,
   };
 }

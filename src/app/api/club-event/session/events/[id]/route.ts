@@ -9,9 +9,10 @@ import {
   resolveClubEventMediaLimits,
 } from "@/systems/club-event/lib/plan-limits";
 import {
-  normalizeClubEventYoutubeUrlsFromBody,
-  parseClubEventYoutubeUrls,
-  serializeClubEventYoutubeUrls,
+  normalizeClubEventYoutubeEmbedUrl,
+  normalizeClubEventYoutubeVideosFromBody,
+  parseClubEventYoutubeVideos,
+  serializeClubEventYoutubeVideos,
 } from "@/systems/club-event/lib/youtube";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -78,14 +79,18 @@ export async function PATCH(req: Request, ctx: Ctx) {
       body.status === "UPCOMING" || body.status === "PAST" ? body.status : deriveEventStatus(eventDate);
 
     const limits = resolveClubEventMediaLimits(own.access);
-    let youtubeUrls = parseClubEventYoutubeUrls(existing.youtubeUrlsJson, existing.youtubeEmbedUrl);
-    if (body.youtubeUrls !== undefined || body.youtubeEmbedUrl !== undefined) {
-      const yt = normalizeClubEventYoutubeUrlsFromBody(body);
+    let youtubeVideos = parseClubEventYoutubeVideos(existing.youtubeUrlsJson, existing.youtubeEmbedUrl);
+    if (
+      body.youtubeVideos !== undefined ||
+      body.youtubeUrls !== undefined ||
+      body.youtubeEmbedUrl !== undefined
+    ) {
+      const yt = normalizeClubEventYoutubeVideosFromBody(body);
       if (!yt.ok) return NextResponse.json({ error: yt.error }, { status: 400 });
-      youtubeUrls = yt.urls;
+      youtubeVideos = yt.videos;
     }
 
-    const ytGate = assertClubEventYoutubeCount(youtubeUrls.length, limits);
+    const ytGate = assertClubEventYoutubeCount(youtubeVideos.length, limits);
     if (!ytGate.ok) {
       return NextResponse.json({ error: ytGate.error, code: ytGate.code }, { status: 403 });
     }
@@ -97,8 +102,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
         eventDate,
         status,
         description: typeof body.description === "string" ? body.description : existing.description,
-        youtubeEmbedUrl: youtubeUrls[0] ?? null,
-        youtubeUrlsJson: serializeClubEventYoutubeUrls(youtubeUrls),
+        youtubeEmbedUrl: youtubeVideos[0]
+          ? normalizeClubEventYoutubeEmbedUrl(youtubeVideos[0].youtubeUrl)
+          : null,
+        youtubeUrlsJson: serializeClubEventYoutubeVideos(youtubeVideos),
       },
       include: { _count: { select: { gallery: true } } },
     });

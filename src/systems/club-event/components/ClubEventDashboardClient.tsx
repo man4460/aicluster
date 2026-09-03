@@ -206,10 +206,15 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
                       {ev.galleryCount > 0 ? (
                         <p className="mt-1 text-xs text-[#5f5a8a]">รูป {ev.galleryCount} รายการ</p>
                       ) : null}
-                      {(ev.youtubeUrls?.length ?? 0) > 0 || ev.youtubeEmbedUrl ? (
+                      {(ev.youtubeVideos?.length ?? ev.youtubeUrls?.length ?? 0) > 0 ||
+                      ev.youtubeEmbedUrl ? (
                         <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#0000BF]">
                           <Play className="h-3.5 w-3.5" aria-hidden />
-                          วิดีโอ {(ev.youtubeUrls?.length || (ev.youtubeEmbedUrl ? 1 : 0))} รายการ
+                          วิดีโอ{" "}
+                          {ev.youtubeVideos?.length ||
+                            ev.youtubeUrls?.length ||
+                            (ev.youtubeEmbedUrl ? 1 : 0)}{" "}
+                          รายการ
                         </p>
                       ) : null}
                     </div>
