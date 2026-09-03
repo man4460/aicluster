@@ -8,6 +8,8 @@
 export { AppImageLightbox, type AppImageLightboxProps } from "./AppImageLightbox";
 export { AppImageThumb, type AppImageThumbProps } from "./AppImageThumb";
 export { useAppImageLightbox, type AppImageLightboxState } from "./useAppImageLightbox";
+export { AppYoutubeLightbox, type AppYoutubeLightboxProps } from "./AppYoutubeLightbox";
+export { useAppYoutubeLightbox, type AppYoutubeLightboxState } from "./useAppYoutubeLightbox";
 export {
   APP_PAYMENT_METHODS,
   appPaymentMethodLabel,

@@ -8,9 +8,11 @@ import {
   AppEmptyState,
   AppImageLightbox,
   AppImageThumb,
+  AppYoutubeLightbox,
   appDashboardBrandCtaPillButtonClass,
   useAppImageLightbox,
   useAppNoticePopup,
+  useAppYoutubeLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { extractYoutubeVideoId, youtubeThumbUrl } from "@/lib/youtube-url";
@@ -35,7 +37,6 @@ import {
   ClubEventPageSubNav,
 } from "@/systems/club-event/components/ClubEventPageSubNav";
 import { ClubEventSlideshow } from "@/systems/club-event/components/ClubEventSlideshow";
-import { ClubEventYoutubePlayer } from "@/systems/club-event/components/ClubEventYoutubePlayer";
 import { prepareClubEventGalleryWebp } from "@/systems/club-event/lib/gallery-image";
 import type {
   ClubDynamicLinkField,
@@ -99,6 +100,7 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
   const isNew = !eventId;
   const notice = useAppNoticePopup();
   const lb = useAppImageLightbox();
+  const ytLb = useAppYoutubeLightbox();
 
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
@@ -609,35 +611,49 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
               ยังไม่มีคลิป — กรอกชื่อและลิงก์ YouTube ด้านบน แล้วกดเพิ่มในรายการ
             </AppEmptyState>
           ) : (
-            <ul className="mt-3 space-y-2">
+            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
               {youtubeVideos.map((v, i) => {
                 const vid = extractYoutubeVideoId(v.youtubeUrl);
                 return (
-                  <li
-                    key={v.id}
-                    className="flex items-start gap-3 rounded-xl border border-white/70 bg-white/85 p-3 shadow-sm"
-                  >
-                    {vid ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={youtubeThumbUrl(vid)}
-                        alt=""
-                        className="h-14 w-20 shrink-0 rounded-lg object-cover"
-                      />
-                    ) : (
-                      <div className="h-14 w-20 shrink-0 rounded-lg bg-slate-100" />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="break-words text-sm font-black text-[#1e1b4b]">{v.title}</p>
-                      {v.hint ? (
-                        <p className="mt-0.5 break-words text-xs font-medium text-[#66638c]">{v.hint}</p>
-                      ) : null}
-                      <p className="mt-1 break-all text-[10px] text-[#8b87a8]">{v.youtubeUrl}</p>
-                    </div>
-                    <div className="flex shrink-0 gap-1">
+                  <div key={v.id} className="relative">
+                    <button
+                      type="button"
+                      className="group relative block w-full overflow-hidden rounded-xl ring-2 ring-slate-100 transition hover:ring-[#0000BF]/30"
+                      aria-label={`เล่น ${v.title}`}
+                      title={v.title}
+                      onClick={() => ytLb.open(v.youtubeUrl, v.title)}
+                    >
+                      {vid ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={youtubeThumbUrl(vid)}
+                          alt=""
+                          className="h-20 w-full object-cover object-center sm:h-24"
+                        />
+                      ) : (
+                        <div className="flex h-20 w-full items-center justify-center bg-slate-100 text-[10px] font-semibold text-slate-400 sm:h-24">
+                          ไม่มีตัวอย่าง
+                        </div>
+                      )}
+                      <span
+                        className="absolute inset-0 flex items-center justify-center bg-[#1e1b4b]/30"
+                        aria-hidden
+                      >
+                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-[#4d47b6] shadow-md">
+                          <Play className="ml-0.5 h-4 w-4 fill-current" />
+                        </span>
+                      </span>
+                      <span className="absolute inset-x-0 bottom-0 truncate bg-black/55 px-1.5 py-1 text-[10px] font-bold text-white">
+                        {v.title}
+                      </span>
+                    </button>
+                    <div className="absolute -right-1 -top-1 z-[1] flex gap-0.5">
                       <button
                         type="button"
-                        className={assetRowEditIconButtonClass}
+                        className={cn(
+                          assetRowEditIconButtonClass,
+                          "!min-h-[32px] !min-w-[32px] rounded-full shadow-sm",
+                        )}
                         aria-label={`แก้ไข ${v.title}`}
                         title="แก้ไข"
                         onClick={() => {
@@ -646,11 +662,14 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
                           setYtFormErr(null);
                         }}
                       >
-                        <IconRowEdit className="h-4 w-4" />
+                        <IconRowEdit className="h-3.5 w-3.5" />
                       </button>
                       <button
                         type="button"
-                        className={assetRowRemoveIconButtonClass}
+                        className={cn(
+                          assetRowRemoveIconButtonClass,
+                          "!min-h-[32px] !min-w-[32px] rounded-full shadow-sm",
+                        )}
                         aria-label={`ลบ ${v.title}`}
                         title="ลบ"
                         onClick={() => {
@@ -663,26 +682,14 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
                           }
                         }}
                       >
-                        <IconRowRemove className="h-4 w-4" />
+                        <IconRowRemove className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                  </li>
+                  </div>
                 );
               })}
-            </ul>
-          )}
-
-          {youtubeVideos.length > 0 ? (
-            <div className="mt-3 space-y-3">
-              {youtubeVideos.map((v) => (
-                <div key={`preview-${v.id}`} className="space-y-1">
-                  <p className="text-xs font-bold text-[#4d47b6]">{v.title}</p>
-                  {v.hint ? <p className="text-[11px] font-medium text-[#66638c]">{v.hint}</p> : null}
-                  <ClubEventYoutubePlayer youtubeEmbedUrl={v.youtubeUrl} title={v.title} />
-                </div>
-              ))}
             </div>
-          ) : null}
+          )}
         </ClubEventPageBlock>
 
         <ClubEventPageBlock
@@ -868,6 +875,11 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
         title={title}
       />
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปกิจกรรม" />
+      <AppYoutubeLightbox
+        youtubeUrl={ytLb.youtubeUrl}
+        title={ytLb.title}
+        onClose={ytLb.close}
+      />
     </>
   );
 }
