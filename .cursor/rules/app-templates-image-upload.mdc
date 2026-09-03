@@ -1,0 +1,89 @@
+---
+description: Template กลาง — อัปโหลดรูป / สลิป / แกลเลอรี ต้องย่อ+ตั้งชื่อก่อนส่ง และรองรับหลายรูปเมื่อเป็นแกลเลอรี
+alwaysApply: true
+---
+
+# อัปโหลดรูป · สลิป · แกลเลอรี (บังคับก่อนส่งเซิร์ฟเวอร์)
+
+ใช้เมื่อมี **เพิ่มรูป · แนบสลิป · แกลเลอรี · โลโก้ · หลักฐานโอน · รูปแลกรางวัล** จาก client
+
+คู่กับ: `app-templates-media.mdc` (thumb/lightbox) · `app-templates-central.mdc` · รายละเอียดชื่อไฟล์เซิร์ฟเวอร์: `football-turf-module-dashboard-template.mdc` §9
+
+---
+
+## 1) ย่อ / แปลงก่อนอัปโหลด (บังคับ)
+
+| กรณี | ฟังก์ชัน | จาก |
+|------|---------|-----|
+| สลิป · โลโก้ · รูปทั่วไป · หลักฐาน | **`prepareImageFileForUpload(file)`** | `@/components/app-templates` |
+| ต้องการ data URL ชั่วคราวก่อน persist | **`prepareImageFileAsDataUrl(file)`** | เดียวกัน |
+| รูป+PDF | **`prepareUploadFile(file)`** | เดียวกัน |
+| โดเมนบังคับ WebP (เช่นแกลเลอรีกิจกรรมชมรม) | helper โมดูลที่ **ย่อ+ตั้งชื่อ** แล้ว (เช่น `prepareClubEventGalleryWebp`) — ห้ามส่งไฟล์ดิบ |
+
+**ลำดับ:**
+
+1. ได้ `File` จาก `<input type="file">` / กล้อง / `useAppCameraCapture`
+2. **`await prepare*(file)`** (หรือ helper โมดูลที่เทียบเท่า)
+3. ใส่ `FormData` → `POST` endpoint อัปโหลดโมดูล
+4. เก็บ **path** ที่ API คืน (`/uploads/…`) ใน DB — ห้ามเก็บ data URL ยาวใน `VarChar` สั้น
+
+```tsx
+// ✅
+const prepared = await prepareImageFileForUpload(file);
+const fd = new FormData();
+fd.set("file", prepared);
+await fetch("/api/…/upload", { method: "POST", body: fd });
+
+// ❌ ส่ง File ดิบจาก input โดยไม่ย่อ
+fd.set("file", file);
+```
+
+---
+
+## 2) ชื่อไฟล์
+
+- **บนดิสก์ (server):** ให้ `saveModuleUpload` / `buildStoredUploadFileName` / `saveOwnerModuleUploadImage` สร้างชื่อมาตรฐาน — อย่าพึ่งชื่อจากเครื่องลูกค้าเป็นความจริง
+- **ฝั่ง client หลัง prepare:** ชื่อที่ helper คืน (เช่น `….jpg` / `club-event-gallery-{ts}-{rand}.webp`) ใช้ส่งต่อได้
+- **ชื่อที่แสดงใน UI/DB** (ถ้ามีฟิลด์แยก): ให้ผู้ใช้ตั้งเองได้ — ห้ามบังคับใช้ชื่อไฟล์จากเครื่อง
+
+---
+
+## 3) UI เลือกไฟล์ / กล้อง
+
+- แกลเลอรี + ถ่าย: **`AppGalleryCameraFileInputs`** + **`AppImagePickCameraButtons`** (+ **`useAppCameraCapture`**)
+- ปุ่มเดี่ยว: **`AppPickGalleryImageButton`** / **`AppTakePhotoButton`**
+- **ห้าม** ผูกปุ่มถ่ายไป `input.capture.click()` อย่างเดียวเมื่อมี `useAppCameraCapture`
+
+---
+
+## 4) หลายรูปพร้อมกัน (แกลเลอรี)
+
+เมื่อ UX คือ **เพิ่มรูปหลายใบ** (แกลเลอรีกิจกรรม · แกลเลอรีพอร์ทัล · อัลบั้ม):
+
+1. `<input type="file" accept="image/*" multiple />` หรือ `AppGalleryCameraFileInputs` + **`galleryMultiple`**
+2. วนแต่ละไฟล์ → **prepare ทีละไฟล์** → อัปโหลดทีละไฟล์ (หรือ batch ที่ API รองรับ)
+3. เคารพโควต้า/แพ็กเกจ — ตัดส่วนเกินแล้วแจ้งผู้ใช้
+4. สลิป/หลักฐานชำระ **ปกติทีละรูป** — ไม่บังคับ `multiple` เว้นโดเมนชัดเจน
+
+---
+
+## 5) แสดงผลหลังอัปโหลด
+
+- ย่อ: **`AppImageThumb`** · เต็มจอ: **`AppImageLightbox`** + **`useAppImageLightbox`**
+- แถวการเงิน: สลิป**เฉพาะเมื่อมี URL** — ดู `dashboard-finance-detail-tabs.mdc`
+
+---
+
+## ห้าม
+
+- อัปโหลดรูป/สลิปโดยไม่ผ่าน `prepareImageFileForUpload` (หรือเทียบเท่าโมดูล)
+- คัดลอก canvas ย่อรูปใหม่ในโมดูลโดยไม่ใช้ helper กลาง / helper โมดูลที่มีอยู่แล้ว
+- เก็บ data URL ดิบยาวในคอลัมน์สั้น
+- สร้าง lightbox / ปุ่มแกลเลอรี-กล้อง เองทั้งที่ `app-templates` มีแล้ว
+
+## เช็กลิสต์
+
+- [ ] ก่อน `FormData` มี `prepare*`
+- [ ] ใช้ปุ่ม/input จาก `app-templates` เมื่อเป็นแกลเลอรี+กล้อง
+- [ ] แกลเลอรีหลายรูป → `multiple` + วน prepare
+- [ ] API คืน path ใต้ `/uploads/…` · แสดงด้วย `AppImageThumb`

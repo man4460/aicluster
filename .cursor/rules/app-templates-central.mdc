@@ -19,6 +19,7 @@ alwaysApply: true
 - การ์ดแดชบอร์ด / หัวข้อ / ว่าง → `AppDashboardSection`, `AppSectionHeader`, `AppEmptyState`, โทเค็น `appDashboard*`
 - กราฟแท่งเปรียบเทียบ / แท่งรายวัน / แท่งคู่ต่อช่วง / รายได้เทียบต้นทุนรายวัน → `AppCompareBarList`, `AppColumnBarSparkChart`, `AppColumnBarDualSparkChart`, `AppRevenueCostColumnChart`, เลย์เอาต์ `AppSparkChartPanel`, `AppSparkChartsTwoColumnGrid` (รายละเอียดกฎ `app-templates-spark-charts.mdc`)
 - พิมพ์ HTML / ย่อรูปก่อนอัปโหลด → `openPrintableHtml`, `printPrintableHtmlInHiddenIframe`, `prepareImageFileForUpload`
+- **อัปโหลดรูป / สลิป / แกลเลอรี (ย่อ+ชื่อ+หลายรูป)** → กฎ **`app-templates-image-upload.mdc`**
 - **ใบเสร็จ / สลิปขนาดโปรไฟล์** → `printAppReceiptSlip` · `printAppOrderTicketSlip` · `useAppSlipPaperSize` · `AppSlipPaperSizeToolbar` · **ตั้งค่าต่อโมดูล:** `AppSlipPaperSizeSettingsField` + `slipPaperSize` (รายละเอียด `app-templates-slip-receipt.mdc`)
 - สลิป เลือกรูป ถ่ายกล้อง → `AppGalleryCameraFileInputs`, `AppImagePickCameraButtons`, `AppPickGalleryImageButton`, `AppTakePhotoButton`, `AppCameraCaptureModal`
 - **เวลา 24 ชม. ในฟอร์ม** → `AppTime24Input` (ดู `module-thailand-timezone.mdc`)

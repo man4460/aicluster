@@ -51,11 +51,19 @@ const lb = useAppImageLightbox();
 - **`AppCompareBarList`** — กราฟแท่งแนวนอนเปรียบเทียบหลายแถว
 - **`AppColumnBarSparkChart`** — กราฟแท่งแนวตั้งเลื่อนแนวนอน (ยอดรายวัน ฯลฯ)
 - **`openPrintableHtml` / `printPrintableHtmlInHiddenIframe`** — เอกสาร HTML เต็มฉบับสำหรับ `window.print()` (บิล/สลิป/รายงาน)
-- **`prepareImageFileForUpload`** — ย่อ/บีบ JPEG ก่อนอัปโหลด
+- **`prepareImageFileForUpload`** — ย่อ/บีบ JPEG ก่อนอัปโหลด (**บังคับทุกครั้ง** — รายละเอียดเต็ม: **`app-templates-image-upload.mdc`**)
 - **`AppPickGalleryImageButton`** / **`AppTakePhotoButton`** — ปุ่มเดี่ยว (คลาส: `appTemplatePickGalleryImageButtonClass`, `appTemplateTakePhotoButtonClass`)
-- **`AppGalleryCameraFileInputs`** + **`AppImagePickCameraButtons`** — แถวปุ่มคู่ (คู่กับ **`AppCameraCaptureModal`** — `getUserMedia`; สำรอง `input capture`)
+- **`AppGalleryCameraFileInputs`** + **`AppImagePickCameraButtons`** — แถวปุ่มคู่ (คู่กับ **`AppCameraCaptureModal`** — `getUserMedia`; สำรอง `input capture`) · แกลเลอรีหลายรูปใช้ **`galleryMultiple`**
 - **ปุ่มถ่ายรูป:** ใช้ **`useAppCameraCapture()`** → `openCamera(onFile)` + render `cameraModal` — ห้ามผูก `onPickCamera` ไป `input.capture.click()` อย่างเดียวเมื่อมี hook กลางนี้ (ลิงก์ลูกค้าโรงแรม / แผงชำระแดชบอร์ด)
 - **`appTemplateOutlineButtonClass`** — ปุ่มขอบ (เช่น เลือกขนาดกระดาษพิมพ์)
 - **`AppWindowPrintButton`** — พิมพ์หน้าปัจจุบัน (`window.print()`)
 
 หลีกเลี่ยงการคัดลอกบล็อก JSX เดิมจาก POS / home-finance — ขยายที่ `app-templates` แทน
+
+## อัปโหลดรูป / สลิป (สรุป)
+
+1. ได้ไฟล์ → **`prepareImageFileForUpload`** (หรือเทียบเท่า) → `FormData` → API
+2. แกลเลอรีหลายใบ → `multiple` / `galleryMultiple` + วน prepare ทีละไฟล์
+3. แสดง → `AppImageThumb` + lightbox — **ห้าม**ส่งไฟล์ดิบโดยไม่ย่อ
+
+รายละเอียดบังคับ: **`.cursor/rules/app-templates-image-upload.mdc`**
