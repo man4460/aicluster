@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/api-auth";
 import { clubEventOwnerFromAuth } from "@/lib/club-event/api-owner";
 import { clubEventOwnerWhere, clubEventSessionContext } from "@/lib/club-event/session-context";
 import { prisma } from "@/lib/prisma";
+import { parseDynamicLinkConfig } from "@/systems/club-event/lib/mappers";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -17,7 +18,7 @@ export async function GET(_req: Request, ctx: Ctx) {
     const { scope } = await clubEventSessionContext(own.ownerId);
     const link = await prisma.clubEventDynamicLink.findFirst({
       where: { id, ...clubEventOwnerWhere(own.ownerId, scope.trialSessionId) },
-      select: { id: true },
+      select: { id: true, title: true, configJson: true },
     });
     if (!link) return NextResponse.json({ error: "ไม่พบลิงก์" }, { status: 404 });
 
@@ -46,6 +47,8 @@ export async function GET(_req: Request, ctx: Ctx) {
           payload,
         };
       }),
+      fields: parseDynamicLinkConfig(link.configJson).fields ?? [],
+      linkTitle: link.title,
     });
   } catch (e) {
     console.error("[club-event/session/links submissions GET]", e);

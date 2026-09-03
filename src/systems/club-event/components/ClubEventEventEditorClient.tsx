@@ -11,7 +11,6 @@ import {
   useAppImageLightbox,
   useAppNoticePopup,
 } from "@/components/app-templates";
-import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import {
   assetRowEditIconButtonClass,
@@ -28,6 +27,7 @@ import {
   clubLinkFormFromDto,
   emptyClubLinkForm,
 } from "@/systems/club-event/components/ClubEventLinkEditorModal";
+import { ClubEventLinkSubmissionsModal } from "@/systems/club-event/components/ClubEventLinkSubmissionsModal";
 import {
   ClubEventPageBlock,
   ClubEventPageSubNav,
@@ -36,6 +36,7 @@ import { ClubEventSlideshow } from "@/systems/club-event/components/ClubEventSli
 import { ClubEventYoutubePlayer } from "@/systems/club-event/components/ClubEventYoutubePlayer";
 import { prepareClubEventGalleryWebp } from "@/systems/club-event/lib/gallery-image";
 import type {
+  ClubDynamicLinkField,
   ClubEventDynamicLinkDto,
   ClubEventRecordDto,
 } from "@/systems/club-event/lib/mappers";
@@ -45,6 +46,7 @@ import {
   CLUB_EVENT_FREE_GALLERY_MAX,
   CLUB_EVENT_FREE_YOUTUBE_MAX,
 } from "@/systems/club-event/lib/plan-limits";
+import type { ClubSubmissionRow } from "@/systems/club-event/lib/submission-summary";
 import { clubEventYoutubeWatchUrlFromStored } from "@/systems/club-event/lib/youtube";
 import {
   clubEventFieldClass,
@@ -57,16 +59,6 @@ import {
 
 type GalleryItem = { id: string; imageUrl: string; fileName: string; sortOrder: number };
 type ClubLinkRow = ClubEventDynamicLinkDto & { submissionsCount?: number };
-type ClubSubmissionRow = {
-  id: string;
-  respondentName: string;
-  respondentPhone: string;
-  amountBaht: number | null;
-  paymentMethod: string | null;
-  slipUrl: string | null;
-  createdAt: string;
-  payload: Record<string, unknown>;
-};
 
 const defaultLimits: ClubEventMediaLimits = {
   isMonthly: false,
@@ -98,6 +90,7 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
   const [subsOpen, setSubsOpen] = useState(false);
   const [subsTitle, setSubsTitle] = useState("");
   const [subsRows, setSubsRows] = useState<ClubSubmissionRow[]>([]);
+  const [subsFields, setSubsFields] = useState<ClubDynamicLinkField[]>([]);
 
   const activeEventId = savedId;
   const eventAsList: ClubEventRecordDto[] = activeEventId
@@ -345,12 +338,18 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
 
   const openSubmissions = async (l: ClubEventDynamicLinkDto) => {
     setSubsTitle(l.title);
+    setSubsFields(l.config.fields ?? []);
     setSubsOpen(true);
     try {
       const res = await fetch(`/api/club-event/session/links/${l.id}/submissions`);
-      const data = (await res.json()) as { submissions?: ClubSubmissionRow[]; error?: string };
+      const data = (await res.json()) as {
+        submissions?: ClubSubmissionRow[];
+        fields?: ClubDynamicLinkField[];
+        error?: string;
+      };
       if (!res.ok) throw new Error(data.error ?? "โหลดคำตอบไม่สำเร็จ");
       setSubsRows(data.submissions ?? []);
+      if (data.fields?.length) setSubsFields(data.fields);
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "โหลดคำตอบไม่สำเร็จ");
       setSubsRows([]);
@@ -642,61 +641,13 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
         onSaved={() => (activeEventId ? void loadLinks(activeEventId) : undefined)}
       />
 
-      <FormModal open={subsOpen} onClose={() => setSubsOpen(false)} title={`คำตอบ · ${subsTitle}`} mobileCentered>
-        {subsRows.length === 0 ? (
-          <AppEmptyState>ยังไม่มีคำตอบ</AppEmptyState>
-        ) : (
-          <ul className="space-y-2">
-            {subsRows.map((s) => {
-              const answers =
-                s.payload.answers && typeof s.payload.answers === "object"
-                  ? (s.payload.answers as Record<string, string>)
-                  : null;
-              const fieldMeta = Array.isArray(s.payload.fields)
-                ? (s.payload.fields as { key?: string; label?: string }[])
-                : [];
-              const labelOf = (key: string) =>
-                fieldMeta.find((f) => f.key === key)?.label?.trim() || key;
-              const legacyAnswer =
-                typeof s.payload.answer === "string" ? s.payload.answer : "";
-              return (
-                <li key={s.id} className="rounded-lg border border-slate-200/90 p-3 text-sm">
-                  <p className="font-bold text-[#1e1b4b]">
-                    {s.respondentName || "ไม่ระบุชื่อ"}
-                    {s.respondentPhone ? ` · ${s.respondentPhone}` : ""}
-                  </p>
-                  {s.amountBaht != null ? (
-                    <p className="text-[#4d47b6]">
-                      ฿{s.amountBaht.toLocaleString("th-TH")}
-                      {s.paymentMethod ? ` · ${s.paymentMethod}` : ""}
-                    </p>
-                  ) : null}
-                  {answers
-                    ? Object.entries(answers).map(([k, v]) =>
-                        v ? (
-                          <p key={k} className="mt-1 text-[#66638c]">
-                            <span className="font-semibold text-[#4d47b6]">{labelOf(k)}: </span>
-                            {v}
-                          </p>
-                        ) : null,
-                      )
-                    : legacyAnswer
-                      ? <p className="mt-1 text-[#66638c]">{legacyAnswer}</p>
-                      : null}
-                  {s.slipUrl ? (
-                    <a href={s.slipUrl} target="_blank" rel="noreferrer" className="text-xs text-[#0000BF] underline">
-                      ดูสลิป
-                    </a>
-                  ) : null}
-                  <p className="mt-1 text-[10px] text-[#9490c0]">
-                    {new Date(s.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </FormModal>
+      <ClubEventLinkSubmissionsModal
+        open={subsOpen}
+        onClose={() => setSubsOpen(false)}
+        title={subsTitle}
+        rows={subsRows}
+        fields={subsFields}
+      />
 
       <ClubEventSlideshow
         open={slideshowOpen}
