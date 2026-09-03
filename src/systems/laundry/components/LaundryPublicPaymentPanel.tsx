@@ -252,7 +252,7 @@ export function LaundryPublicPaymentPanel({
               onPickGallery={() => galleryRef.current?.click()}
               onPickCamera={() => openCamera((f) => void uploadSlip(f))}
             />
-            <AppGalleryCameraFileInputs galleryRef={galleryRef} cameraRef={cameraInputRef} onGalleryChange={onSlipInputChange} />
+            <AppGalleryCameraFileInputs galleryInputRef={galleryRef} cameraInputRef={cameraInputRef} onChange={onSlipInputChange} />
             {slipUrl ?
               <AppImageThumb src={slipUrl} alt="สลิปชำระเงิน" onOpen={() => lb.open(slipUrl)} className="h-20 w-20" />
             : null}

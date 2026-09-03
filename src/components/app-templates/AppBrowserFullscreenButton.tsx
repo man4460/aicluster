@@ -47,14 +47,14 @@ export function AppBrowserFullscreenButton({
   className,
   iconOnly = true,
 }: AppBrowserFullscreenButtonProps) {
-  const { isFullscreen, supported, hideControl, toggle } = useAppBrowserFullscreen();
+  const { pinned, supported, hideControl, toggle } = useAppBrowserFullscreen();
 
   if (hideControl) return null;
 
-  const label = isFullscreen ? "ออกจากโหมดเต็มจอ" : "แสดงเต็มจอ";
+  const label = pinned ? "ออกจากโหมดเต็มจอ" : "แสดงเต็มจอ";
   const hint = supported
-    ? isFullscreen
-      ? "กด Esc หรือปุ่มนี้เพื่อออก"
+    ? pinned
+      ? "กดปุ่มนี้เพื่อออก — โหมดเต็มจอจะคงอยู่แม้พิมพ์เอกสาร"
       : "ซ่อนแถบ URL และเมนูของเบราว์เซอร์"
     : "เบราว์เซอร์นี้ไม่รองรับ — ลอง Chrome/Edge บน Android หรือติดตั้งแอป MAWELL";
 
@@ -69,13 +69,13 @@ export function AppBrowserFullscreenButton({
         className,
       )}
       aria-label={label}
-      aria-pressed={isFullscreen}
+      aria-pressed={pinned}
       title={`${label} — ${hint}`}
       onClick={() => {
         void toggle();
       }}
     >
-      {isFullscreen ? (
+      {pinned ? (
         <IconExitFullscreen className="h-[1.125rem] w-[1.125rem]" />
       ) : (
         <IconEnterFullscreen className="h-[1.125rem] w-[1.125rem]" />

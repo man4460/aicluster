@@ -786,7 +786,9 @@ async function main() {
   }
 
   /** รับฝากซักผ้า — แพ็กตัวอย่าง (ทุกบัญชีที่ subscribe + demo emails) */
-  await tryDemoSeed("laundry (subscribers)", () => seedLaundryDemoForAllSubscribers(prisma));
+  await tryDemoSeed("laundry (subscribers)", async () => {
+    await seedLaundryDemoForAllSubscribers(prisma);
+  });
   for (const email of demoSeedDataOwnerEmails) {
     const row = await prisma.user.findUnique({
       where: { email },

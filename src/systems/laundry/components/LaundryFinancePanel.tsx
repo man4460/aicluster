@@ -16,7 +16,7 @@ import {
   LaundryRevenuePanel,
   type LaundryRevenuePanelHandle,
 } from "@/systems/laundry/components/LaundryRevenuePanel";
-import { LaundryServiceHistoryList } from "@/systems/laundry/components/LaundryServiceHistoryList";
+import { LaundryServiceHistoryList, type LaundryHistoryLogRow } from "@/systems/laundry/components/LaundryServiceHistoryList";
 import { LaundryRefreshButton } from "@/systems/laundry/components/LaundryRefreshButton";
 import {
   type LaundryCostCategory,
@@ -44,18 +44,7 @@ import {
 
 const MAX_COMPARE_ROWS = 18;
 
-type HistoryLog = {
-  id: number;
-  visitType: string;
-  note: string | null;
-  packageName?: string | null;
-  packageDescription?: string | null;
-  amountBaht: string | null;
-  paymentMethod?: string | null;
-  receiptImageUrl?: string | null;
-  createdAt: string;
-  customer: { phone: string; name: string | null };
-};
+type HistoryLog = LaundryHistoryLogRow;
 
 type HistorySummary = {
   revenueCashBaht: number;
@@ -260,7 +249,11 @@ export function LaundryFinancePanel({
         setHistorySummary(null);
         return;
       }
-      setHistoryLogs(Array.isArray(data.logs) ? data.logs : []);
+      setHistoryLogs(
+        Array.isArray(data.logs)
+          ? data.logs.map((l) => ({ ...l, paymentMethod: l.paymentMethod ?? null }))
+          : [],
+      );
       setHistorySummary(data.summary ?? null);
       setRangeLabel(data.meta?.rangeLabel ?? financeRangeLabelTh(financeRange, dateFrom, dateTo));
     } catch {

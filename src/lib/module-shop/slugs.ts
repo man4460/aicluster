@@ -3,6 +3,7 @@ import { EMPTY_MODULE_SHOP_PAYMENT } from "@/lib/module-shop/payment";
 import {
   BUILDING_POS_MODULE_SLUG,
   CAR_WASH_MODULE_SLUG,
+  CLUB_EVENT_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
 } from "@/lib/modules/config";
 import type { AppSlipPaperSize } from "@/components/app-templates/slip-print";
@@ -13,6 +14,7 @@ export const MODULE_SHOP_BRANDING_SLUGS = [
   CAR_WASH_MODULE_SLUG,
   LAUNDRY_MODULE_SLUG,
   BUILDING_POS_MODULE_SLUG,
+  CLUB_EVENT_MODULE_SLUG,
 ] as const;
 
 export type ModuleShopBrandingSlug = (typeof MODULE_SHOP_BRANDING_SLUGS)[number];
@@ -25,6 +27,7 @@ export const MODULE_SHOP_BRANDING_FALLBACK_LABELS: Record<ModuleShopBrandingSlug
   [CAR_WASH_MODULE_SLUG]: "คาร์แคร์",
   [LAUNDRY_MODULE_SLUG]: "ระบบซักผ้า",
   [BUILDING_POS_MODULE_SLUG]: "POS ร้านอาหาร",
+  [CLUB_EVENT_MODULE_SLUG]: "บริหารชมรม",
 };
 
 export type ModuleShopBrandingDto = {
