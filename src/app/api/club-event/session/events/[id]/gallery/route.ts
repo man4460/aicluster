@@ -6,6 +6,10 @@ import { clubEventOwnerFromAuth } from "@/lib/club-event/api-owner";
 import { clubEventOwnerWhere, clubEventSessionContext } from "@/lib/club-event/session-context";
 import { prisma } from "@/lib/prisma";
 import { clubEventGalleryFileName } from "@/systems/club-event/lib/gallery-image";
+import {
+  assertClubEventGalleryCount,
+  resolveClubEventMediaLimits,
+} from "@/systems/club-event/lib/plan-limits";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -26,6 +30,13 @@ export async function POST(req: Request, ctx: Ctx) {
       select: { id: true },
     });
     if (!event) return NextResponse.json({ error: "ไม่พบกิจกรรม" }, { status: 404 });
+
+    const limits = resolveClubEventMediaLimits(own.access);
+    const galleryCount = await prisma.clubEventGalleryImage.count({ where: { eventId } });
+    const gate = assertClubEventGalleryCount(galleryCount + 1, limits);
+    if (!gate.ok) {
+      return NextResponse.json({ error: gate.error, code: gate.code }, { status: 403 });
+    }
 
     let form: FormData;
     try {

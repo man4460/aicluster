@@ -4,6 +4,7 @@ import type {
   ClubEventFinanceType,
   ClubEventScheduleStatus,
 } from "@/generated/prisma/enums";
+import { parseClubEventYoutubeUrls } from "@/systems/club-event/lib/youtube";
 
 export type ClubCommitteeMember = {
   role: string;
@@ -163,7 +164,9 @@ export type ClubEventRecordDto = {
   eventDate: string;
   status: ClubEventScheduleStatus;
   description: string;
+  /** @deprecated ใช้ youtubeUrls — คงไว้เป็นวิดีโอตัวแรก */
   youtubeEmbedUrl: string | null;
+  youtubeUrls: string[];
   galleryCount: number;
 };
 
@@ -319,15 +322,18 @@ export function mapClubEventRecord(row: {
   status: ClubEventScheduleStatus;
   description: string;
   youtubeEmbedUrl: string | null;
+  youtubeUrlsJson?: string | null;
   _count?: { gallery: number };
 }): ClubEventRecordDto {
+  const youtubeUrls = parseClubEventYoutubeUrls(row.youtubeUrlsJson, row.youtubeEmbedUrl);
   return {
     id: row.id,
     title: row.title,
     eventDate: row.eventDate.toISOString(),
     status: row.status,
     description: row.description,
-    youtubeEmbedUrl: row.youtubeEmbedUrl,
+    youtubeEmbedUrl: youtubeUrls[0] ?? null,
+    youtubeUrls,
     galleryCount: row._count?.gallery ?? 0,
   };
 }

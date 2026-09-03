@@ -247,9 +247,15 @@ export function ClubEventPublicClient({
                       </button>
                     ) : null}
                   </div>
-                  {ev.youtubeEmbedUrl ? (
-                    <ClubEventYoutubePlayer youtubeEmbedUrl={ev.youtubeEmbedUrl} title={ev.title} />
-                  ) : null}
+                  {(ev.youtubeUrls?.length ? ev.youtubeUrls : ev.youtubeEmbedUrl ? [ev.youtubeEmbedUrl] : []).map(
+                    (url, i) => (
+                      <ClubEventYoutubePlayer
+                        key={`${ev.id}-yt-${i}`}
+                        youtubeEmbedUrl={url}
+                        title={`${ev.title}${ev.youtubeUrls && ev.youtubeUrls.length > 1 ? ` · ${i + 1}` : ""}`}
+                      />
+                    ),
+                  )}
                   {ev.galleryPreview.length > 0 ? (
                     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                       {ev.galleryPreview.map((g) => (

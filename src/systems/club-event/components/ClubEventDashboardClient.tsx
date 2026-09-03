@@ -1,23 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Calendar,
-  ImagePlus,
-  Link2,
-  Play,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import {
-  AppEmptyState,
-  AppImageLightbox,
-  AppImageThumb,
-  useAppImageLightbox,
-  useAppNoticePopup,
-} from "@/components/app-templates";
-import { FormModal } from "@/components/ui/FormModal";
+import { Calendar, Play, Plus } from "lucide-react";
+import { AppEmptyState, useAppNoticePopup } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { formatBangkokDateTimeLong } from "@/lib/time/bangkok";
 import {
@@ -29,79 +16,31 @@ import {
 import {
   CLUB_EVENT_DASHBOARD_TAB_ITEMS,
   clubEventDashboardTabHref,
+  clubEventEventHref,
+  clubEventNewEventHref,
   parseClubEventDashboardTab,
   type ClubEventDashboardTabKey,
 } from "@/systems/club-event/club-event-module-nav";
-import {
-  ClubEventLinkEditorModal,
-  clubLinkFormFromDto,
-  emptyClubLinkForm,
-} from "@/systems/club-event/components/ClubEventLinkEditorModal";
 import { ClubEventPageSubNav } from "@/systems/club-event/components/ClubEventPageSubNav";
-import { ClubEventSlideshow } from "@/systems/club-event/components/ClubEventSlideshow";
-import { ClubEventYoutubePlayer } from "@/systems/club-event/components/ClubEventYoutubePlayer";
-import { prepareClubEventGalleryWebp } from "@/systems/club-event/lib/gallery-image";
-import type {
-  ClubCommitteeMember,
-  ClubEventDynamicLinkDto,
-  ClubEventProfileDto,
-  ClubEventRecordDto,
-} from "@/systems/club-event/lib/mappers";
-import { CLUB_EVENT_LINK_TYPE_LABELS } from "@/systems/club-event/lib/mappers";
-import { clubEventYoutubeWatchUrlFromStored } from "@/systems/club-event/lib/youtube";
+import type { ClubCommitteeMember, ClubEventProfileDto, ClubEventRecordDto } from "@/systems/club-event/lib/mappers";
 import {
   clubEventFieldClass,
-  clubEventFixedBottomActionClass,
   clubEventOutlineButtonClass,
   clubEventPrimaryButtonClass,
   clubEventRowCardClass,
-  clubEventTextareaClass,
 } from "@/systems/club-event/lib/ui-tokens";
-
-type GalleryItem = { id: string; imageUrl: string; fileName: string; sortOrder: number };
-type ClubLinkRow = ClubEventDynamicLinkDto & { submissionsCount?: number };
-type ClubSubmissionRow = {
-  id: string;
-  respondentName: string;
-  respondentPhone: string;
-  amountBaht: number | null;
-  paymentMethod: string | null;
-  slipUrl: string | null;
-  createdAt: string;
-  payload: Record<string, unknown>;
-};
 
 export function ClubEventDashboardClient({ initialProfile }: { initialProfile: ClubEventProfileDto }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = parseClubEventDashboardTab(searchParams.get("tab"));
   const notice = useAppNoticePopup();
-  const lb = useAppImageLightbox();
 
   const [profile, setProfile] = useState(initialProfile);
   const [events, setEvents] = useState<ClubEventRecordDto[]>([]);
   const [committee, setCommittee] = useState<ClubCommitteeMember[]>(initialProfile.committee);
   const [loading, setLoading] = useState(true);
-  const [eventModalOpen, setEventModalOpen] = useState(false);
-  const [detailId, setDetailId] = useState<string | null>(null);
-  const [gallery, setGallery] = useState<GalleryItem[]>([]);
-  const [slideshowOpen, setSlideshowOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [links, setLinks] = useState<ClubLinkRow[]>([]);
-  const [linkModalOpen, setLinkModalOpen] = useState(false);
-  const [linkForm, setLinkForm] = useState(() => emptyClubLinkForm());
-  const [subsOpen, setSubsOpen] = useState(false);
-  const [subsTitle, setSubsTitle] = useState("");
-  const [subsRows, setSubsRows] = useState<ClubSubmissionRow[]>([]);
-
-  const [eventForm, setEventForm] = useState({
-    id: "",
-    title: "",
-    eventDate: "",
-    description: "",
-    youtubeEmbedUrl: "",
-    status: "UPCOMING" as "UPCOMING" | "PAST",
-  });
 
   const setTab = useCallback(
     (next: string) => {
@@ -109,17 +48,6 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
     },
     [router],
   );
-
-  const loadLinks = useCallback(async () => {
-    try {
-      const res = await fetch("/api/club-event/session/links");
-      const data = (await res.json()) as { links?: ClubLinkRow[]; error?: string };
-      if (!res.ok) throw new Error(data.error ?? "โหลดลิงก์ไม่สำเร็จ");
-      setLinks(data.links ?? []);
-    } catch (e) {
-      notice.error(e instanceof Error ? e.message : "โหลดลิงก์ไม่สำเร็จ");
-    }
-  }, [notice.error]);
 
   const loadEvents = useCallback(async () => {
     if (tab === "committee") {
@@ -144,69 +72,6 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
     void loadEvents();
   }, [loadEvents]);
 
-  useEffect(() => {
-    if (tab === "committee") return;
-    void loadLinks();
-  }, [tab, loadLinks]);
-
-  const openCreateEvent = () => {
-    setEventForm({
-      id: "",
-      title: "",
-      eventDate: new Date().toISOString().slice(0, 16),
-      description: "",
-      youtubeEmbedUrl: "",
-      status: tab === "past" ? "PAST" : "UPCOMING",
-    });
-    setEventModalOpen(true);
-  };
-
-  const openEditEvent = (ev: ClubEventRecordDto) => {
-    setEventForm({
-      id: ev.id,
-      title: ev.title,
-      eventDate: ev.eventDate.slice(0, 16),
-      description: ev.description,
-      youtubeEmbedUrl: clubEventYoutubeWatchUrlFromStored(ev.youtubeEmbedUrl) ?? ev.youtubeEmbedUrl ?? "",
-      status: ev.status,
-    });
-    setEventModalOpen(true);
-  };
-
-  const saveEvent = async () => {
-    if (!eventForm.title.trim()) {
-      notice.error("กรอกชื่อกิจกรรม");
-      return;
-    }
-    setSaving(true);
-    try {
-      const payload = {
-        title: eventForm.title,
-        eventDate: new Date(eventForm.eventDate).toISOString(),
-        description: eventForm.description,
-        youtubeEmbedUrl: eventForm.youtubeEmbedUrl || null,
-        status: eventForm.status,
-      };
-      const res = await fetch(
-        eventForm.id ? `/api/club-event/session/events/${eventForm.id}` : "/api/club-event/session/events",
-        {
-          method: eventForm.id ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
-      );
-      const data = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(data.error ?? "บันทึกไม่สำเร็จ");
-      setEventModalOpen(false);
-      await loadEvents();
-      notice.success("บันทึกกิจกรรมแล้ว");
-    } catch (e) {
-      notice.error(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const deleteEvent = async (id: string, title: string) => {
     const ok = await notice.confirm(`ลบกิจกรรม «${title}» ใช่หรือไม่?`);
     if (!ok) return;
@@ -214,98 +79,9 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
       const res = await fetch(`/api/club-event/session/events/${id}`, { method: "DELETE" });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? "ลบไม่สำเร็จ");
-      if (detailId === id) setDetailId(null);
       await loadEvents();
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
-    }
-  };
-
-  const loadDetail = async (id: string) => {
-    setDetailId(id);
-    try {
-      const res = await fetch(`/api/club-event/session/events/${id}`);
-      const data = (await res.json()) as { gallery?: GalleryItem[]; error?: string };
-      if (!res.ok) throw new Error(data.error ?? "โหลดไม่สำเร็จ");
-      setGallery(data.gallery ?? []);
-    } catch (e) {
-      notice.error(e instanceof Error ? e.message : "โหลดไม่สำเร็จ");
-    }
-  };
-
-  const uploadGallery = async (file: File) => {
-    if (!detailId) return;
-    try {
-      const webp = await prepareClubEventGalleryWebp(file);
-      const form = new FormData();
-      form.set("file", webp);
-      const res = await fetch(`/api/club-event/session/events/${detailId}/gallery`, {
-        method: "POST",
-        body: form,
-      });
-      const data = (await res.json()) as { image?: GalleryItem; error?: string };
-      if (!res.ok) throw new Error(data.error ?? "อัปโหลดไม่สำเร็จ");
-      if (data.image) setGallery((g) => [...g, data.image!]);
-      notice.success("อัปโหลดรูปแล้ว");
-    } catch (e) {
-      notice.error(e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ");
-    }
-  };
-
-  const removeGalleryImage = async (imageId: string) => {
-    if (!detailId) return;
-    try {
-      const res = await fetch(
-        `/api/club-event/session/events/${detailId}/gallery?imageId=${encodeURIComponent(imageId)}`,
-        { method: "DELETE" },
-      );
-      const data = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(data.error ?? "ลบไม่สำเร็จ");
-      setGallery((g) => g.filter((x) => x.id !== imageId));
-    } catch (e) {
-      notice.error(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
-    }
-  };
-
-  const openCreateLinkForEvent = (ev: ClubEventRecordDto) => {
-    setLinkForm(
-      emptyClubLinkForm({
-        type: "RSVP",
-        title: `ลงทะเบียน · ${ev.title}`,
-        eventId: ev.id,
-      }),
-    );
-    setLinkModalOpen(true);
-  };
-
-  const openEditLink = (l: ClubEventDynamicLinkDto) => {
-    setLinkForm(clubLinkFormFromDto(l));
-    setLinkModalOpen(true);
-  };
-
-  const deleteLink = async (id: string, title: string) => {
-    const ok = await notice.confirm(`ลบลิงก์ «${title}» ใช่หรือไม่?`);
-    if (!ok) return;
-    try {
-      const res = await fetch(`/api/club-event/session/links/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("ลบไม่สำเร็จ");
-      await loadLinks();
-    } catch (e) {
-      notice.error(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
-    }
-  };
-
-  const openSubmissions = async (l: ClubEventDynamicLinkDto) => {
-    setSubsTitle(l.title);
-    setSubsOpen(true);
-    try {
-      const res = await fetch(`/api/club-event/session/links/${l.id}/submissions`);
-      const data = (await res.json()) as { submissions?: ClubSubmissionRow[]; error?: string };
-      if (!res.ok) throw new Error(data.error ?? "โหลดคำตอบไม่สำเร็จ");
-      setSubsRows(data.submissions ?? []);
-    } catch (e) {
-      notice.error(e instanceof Error ? e.message : "โหลดคำตอบไม่สำเร็จ");
-      setSubsRows([]);
     }
   };
 
@@ -328,11 +104,6 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
     }
   };
 
-  const selectedEvent = events.find((e) => e.id === detailId);
-  const eventLinks = selectedEvent
-    ? links.filter((l) => l.config.eventId === selectedEvent.id)
-    : [];
-
   return (
     <>
       {notice.popup}
@@ -353,15 +124,14 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
               บันทึก
             </button>
           ) : (
-            <button
-              type="button"
+            <Link
+              href={clubEventNewEventHref()}
               className={clubEventPrimaryButtonClass}
               aria-label="เพิ่มกิจกรรม"
-              onClick={openCreateEvent}
             >
               <Plus className="h-5 w-5 sm:hidden" aria-hidden />
               <span className="hidden sm:inline">+ เพิ่มกิจกรรม</span>
-            </button>
+            </Link>
           )
         }
       >
@@ -436,44 +206,25 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
                       {ev.galleryCount > 0 ? (
                         <p className="mt-1 text-xs text-[#5f5a8a]">รูป {ev.galleryCount} รายการ</p>
                       ) : null}
-                      {links.filter((l) => l.config.eventId === ev.id).length > 0 ? (
-                        <p className="mt-1 text-xs text-[#5f5a8a]">
-                          ลิงก์ {links.filter((l) => l.config.eventId === ev.id).length} รายการ
-                        </p>
-                      ) : null}
-                      {ev.youtubeEmbedUrl ? (
+                      {(ev.youtubeUrls?.length ?? 0) > 0 || ev.youtubeEmbedUrl ? (
                         <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#0000BF]">
                           <Play className="h-3.5 w-3.5" aria-hidden />
-                          มีวิดีโอ YouTube
+                          วิดีโอ {(ev.youtubeUrls?.length || (ev.youtubeEmbedUrl ? 1 : 0))} รายการ
                         </p>
                       ) : null}
                     </div>
                     <div className="flex shrink-0 items-center gap-1 self-end sm:self-center">
-                      <button
-                        type="button"
-                        className={cn(assetRowEditIconButtonClass, "text-[#0000BF]")}
-                        aria-label={`สร้างลิงก์สำหรับ ${ev.title}`}
-                        title="สร้างลิงก์"
-                        onClick={() => openCreateLinkForEvent(ev)}
-                      >
-                        <Link2 className="h-4 w-4" aria-hidden />
-                      </button>
-                      <button
-                        type="button"
-                        className={clubEventOutlineButtonClass}
-                        onClick={() => void loadDetail(ev.id)}
-                      >
+                      <Link href={clubEventEventHref(ev.id)} className={clubEventOutlineButtonClass}>
                         รายละเอียด
-                      </button>
-                      <button
-                        type="button"
+                      </Link>
+                      <Link
+                        href={clubEventEventHref(ev.id)}
                         className={assetRowEditIconButtonClass}
                         aria-label={`แก้ไข ${ev.title}`}
                         title="แก้ไข"
-                        onClick={() => openEditEvent(ev)}
                       >
                         <IconRowEdit className="h-4 w-4" />
-                      </button>
+                      </Link>
                       <button
                         type="button"
                         className={assetRowRemoveIconButtonClass}
@@ -491,264 +242,6 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
           </>
         )}
       </ClubEventPageSubNav>
-
-      <FormModal
-        open={eventModalOpen}
-        onClose={() => setEventModalOpen(false)}
-        title={eventForm.id ? "แก้ไขกิจกรรม" : "เพิ่มกิจกรรม"}
-        mobileCentered
-        footer={
-          <div className={clubEventFixedBottomActionClass}>
-            <button type="button" className={cn(clubEventPrimaryButtonClass, "w-full sm:w-auto sm:px-6")} disabled={saving} onClick={() => void saveEvent()}>
-              บันทึก
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-3">
-          <label className="block space-y-1">
-            <span className="text-sm font-semibold text-[#1e1b4b]">ชื่อกิจกรรม</span>
-            <input className={clubEventFieldClass} value={eventForm.title} onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })} />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-sm font-semibold text-[#1e1b4b]">วันเวลา</span>
-            <input type="datetime-local" className={clubEventFieldClass} value={eventForm.eventDate} onChange={(e) => setEventForm({ ...eventForm, eventDate: e.target.value })} />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-sm font-semibold text-[#1e1b4b]">ลิงก์วิดีโอ YouTube</span>
-            <input
-              className={clubEventFieldClass}
-              value={eventForm.youtubeEmbedUrl}
-              onChange={(e) => setEventForm({ ...eventForm, youtubeEmbedUrl: e.target.value })}
-              placeholder="https://www.youtube.com/watch?v=... หรือ youtu.be/..."
-              autoComplete="off"
-              spellCheck={false}
-            />
-            <span className="block text-xs text-[#66638c]">
-              วางลิงก์จาก YouTube ได้เลย — ระบบจะเปิดเล่นในหน้ารายละเอียด (ไม่มีปุ่มคัดลอกลิงก์)
-            </span>
-          </label>
-          {eventForm.youtubeEmbedUrl.trim() ? (
-            <ClubEventYoutubePlayer youtubeEmbedUrl={eventForm.youtubeEmbedUrl} title={eventForm.title || "ตัวอย่างวิดีโอ"} />
-          ) : null}
-          <label className="block space-y-1">
-            <span className="text-sm font-semibold text-[#1e1b4b]">รายละเอียด</span>
-            <textarea className={clubEventTextareaClass} value={eventForm.description} onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })} />
-          </label>
-        </div>
-      </FormModal>
-
-      <FormModal
-        open={Boolean(detailId && selectedEvent)}
-        onClose={() => setDetailId(null)}
-        title={selectedEvent?.title ?? "รายละเอียดกิจกรรม"}
-        mobileCentered
-        footer={
-          gallery.length > 0 ? (
-            <div className={clubEventFixedBottomActionClass}>
-              <button
-                type="button"
-                className={cn(clubEventPrimaryButtonClass, "inline-flex w-full items-center justify-center gap-2 sm:w-auto sm:px-6")}
-                onClick={() => setSlideshowOpen(true)}
-              >
-                <Play className="h-5 w-5" aria-hidden />
-                Play Slideshow
-              </button>
-            </div>
-          ) : undefined
-        }
-      >
-        {selectedEvent ? (
-          <div className="space-y-4">
-            <p className="text-sm text-[#66638c]">{formatBangkokDateTimeLong(selectedEvent.eventDate)}</p>
-            {selectedEvent.description ? <p className="whitespace-pre-wrap text-sm text-[#1e1b4b]">{selectedEvent.description}</p> : null}
-
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-sm font-bold text-[#1e1b4b]">ลิงก์สำรวจ · RSVP · เก็บค่า</h3>
-                <button
-                  type="button"
-                  className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
-                  onClick={() => openCreateLinkForEvent(selectedEvent)}
-                >
-                  <Link2 className="h-4 w-4" aria-hidden />
-                  สร้างลิงก์
-                </button>
-              </div>
-              {eventLinks.length === 0 ? (
-                <AppEmptyState>ยังไม่มีลิงก์ของกิจกรรมนี้ — สร้าง RSVP · สำรวจ · เก็บค่า หรือลิงก์ภายนอก</AppEmptyState>
-              ) : (
-                <ul className="space-y-2">
-                  {eventLinks.map((l) => (
-                    <li key={l.id} className={clubEventRowCardClass}>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-[#1e1b4b]">{l.title}</p>
-                        <p className="text-sm text-[#66638c]">
-                          {CLUB_EVENT_LINK_TYPE_LABELS[l.type]}
-                          {typeof l.submissionsCount === "number" ? ` · คำตอบ ${l.submissionsCount}` : ""}
-                        </p>
-                        <a
-                          href={l.publicPath}
-                          className="text-xs text-[#0000BF] underline"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {l.publicPath}
-                        </a>
-                      </div>
-                      <div className="flex shrink-0 flex-wrap items-center gap-1">
-                        <button
-                          type="button"
-                          className={clubEventOutlineButtonClass}
-                          onClick={() => void openSubmissions(l)}
-                        >
-                          คำตอบ
-                        </button>
-                        <button
-                          type="button"
-                          className={assetRowEditIconButtonClass}
-                          aria-label={`แก้ไข ${l.title}`}
-                          title="แก้ไข"
-                          onClick={() => openEditLink(l)}
-                        >
-                          <IconRowEdit className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          className={assetRowRemoveIconButtonClass}
-                          aria-label={`ลบ ${l.title}`}
-                          title="ลบ"
-                          onClick={() => void deleteLink(l.id, l.title)}
-                        >
-                          <IconRowRemove className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {selectedEvent.youtubeEmbedUrl ? (
-              <div>
-                <h3 className="mb-2 text-sm font-bold text-[#1e1b4b]">วิดีโอ</h3>
-                <ClubEventYoutubePlayer youtubeEmbedUrl={selectedEvent.youtubeEmbedUrl} title={selectedEvent.title} />
-              </div>
-            ) : null}
-            <div>
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <h3 className="text-sm font-bold text-[#1e1b4b]">แกลเลอรี</h3>
-                <label className={cn(clubEventOutlineButtonClass, "inline-flex cursor-pointer items-center gap-1.5")}>
-                  <ImagePlus className="h-4 w-4" aria-hidden />
-                  <span>เพิ่มรูป</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="sr-only"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) void uploadGallery(f);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-              </div>
-              {gallery.length === 0 ? (
-                <AppEmptyState>ยังไม่มีรูป — อัปโหลดรูปกิจกรรม (แปลง WebP อัตโนมัติ)</AppEmptyState>
-              ) : (
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {gallery.map((g) => (
-                    <div key={g.id} className="relative">
-                      <AppImageThumb src={g.imageUrl} alt={g.fileName} onOpen={() => lb.open(g.imageUrl)} />
-                      <button
-                        type="button"
-                        className="absolute -right-1 -top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-rose-600 text-white"
-                        aria-label={`ลบรูป ${g.fileName}`}
-                        onClick={() => void removeGalleryImage(g.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        ) : null}
-      </FormModal>
-
-      <ClubEventLinkEditorModal
-        open={linkModalOpen}
-        onClose={() => setLinkModalOpen(false)}
-        initial={linkForm}
-        events={events}
-        lockEventId={Boolean(linkForm.eventId)}
-        onSaved={() => void loadLinks()}
-      />
-
-      <FormModal open={subsOpen} onClose={() => setSubsOpen(false)} title={`คำตอบ · ${subsTitle}`} mobileCentered>
-        {subsRows.length === 0 ? (
-          <AppEmptyState>ยังไม่มีคำตอบ</AppEmptyState>
-        ) : (
-          <ul className="space-y-2">
-            {subsRows.map((s) => {
-              const answers =
-                s.payload.answers && typeof s.payload.answers === "object"
-                  ? (s.payload.answers as Record<string, string>)
-                  : null;
-              const fieldMeta = Array.isArray(s.payload.fields)
-                ? (s.payload.fields as { key?: string; label?: string }[])
-                : [];
-              const labelOf = (key: string) =>
-                fieldMeta.find((f) => f.key === key)?.label?.trim() || key;
-              const legacyAnswer =
-                typeof s.payload.answer === "string" ? s.payload.answer : "";
-              return (
-                <li key={s.id} className="rounded-lg border border-slate-200/90 p-3 text-sm">
-                  <p className="font-bold text-[#1e1b4b]">
-                    {s.respondentName || "ไม่ระบุชื่อ"}
-                    {s.respondentPhone ? ` · ${s.respondentPhone}` : ""}
-                  </p>
-                  {s.amountBaht != null ? (
-                    <p className="text-[#4d47b6]">
-                      ฿{s.amountBaht.toLocaleString("th-TH")}
-                      {s.paymentMethod ? ` · ${s.paymentMethod}` : ""}
-                    </p>
-                  ) : null}
-                  {answers
-                    ? Object.entries(answers).map(([k, v]) =>
-                        v ? (
-                          <p key={k} className="mt-1 text-[#66638c]">
-                            <span className="font-semibold text-[#4d47b6]">{labelOf(k)}: </span>
-                            {v}
-                          </p>
-                        ) : null,
-                      )
-                    : legacyAnswer
-                      ? <p className="mt-1 text-[#66638c]">{legacyAnswer}</p>
-                      : null}
-                  {s.slipUrl ? (
-                    <a href={s.slipUrl} target="_blank" rel="noreferrer" className="text-xs text-[#0000BF] underline">
-                      ดูสลิป
-                    </a>
-                  ) : null}
-                  <p className="mt-1 text-[10px] text-[#9490c0]">
-                    {new Date(s.createdAt).toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </FormModal>
-
-      <ClubEventSlideshow
-        open={slideshowOpen}
-        onClose={() => setSlideshowOpen(false)}
-        slides={gallery}
-        title={selectedEvent?.title}
-      />
-      <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปกิจกรรม" />
     </>
   );
 }

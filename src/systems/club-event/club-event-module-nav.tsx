@@ -5,6 +5,15 @@ export const CLUB_EVENT_BASE = "/dashboard/club-event";
 export const CLUB_EVENT_FINANCE_PATH = `${CLUB_EVENT_BASE}/finance`;
 export const CLUB_EVENT_MANAGE_PATH = `${CLUB_EVENT_BASE}/manage`;
 export const CLUB_EVENT_SETTINGS_PATH = `${CLUB_EVENT_BASE}/settings`;
+export const CLUB_EVENT_EVENTS_PATH = `${CLUB_EVENT_BASE}/events`;
+
+export function clubEventEventHref(id: string): string {
+  return `${CLUB_EVENT_EVENTS_PATH}/${encodeURIComponent(id)}`;
+}
+
+export function clubEventNewEventHref(): string {
+  return `${CLUB_EVENT_EVENTS_PATH}/new`;
+}
 
 export const CLUB_EVENT_MODULE_DISPLAY_NAME = "บริหารชมรม";
 export const CLUB_EVENT_HEADER_COLLAPSE_KEY = "mawell-club-event-module-header-collapsed";
@@ -79,7 +88,11 @@ export function isClubEventModuleNavItemActive(pathname: string, key: ClubEventM
   const norm = pathname.replace(/\/+$/, "");
   switch (key) {
     case "dashboard":
-      return norm === CLUB_EVENT_BASE;
+      return (
+        norm === CLUB_EVENT_BASE ||
+        norm === CLUB_EVENT_EVENTS_PATH ||
+        norm.startsWith(`${CLUB_EVENT_EVENTS_PATH}/`)
+      );
     case "finance":
       return norm === CLUB_EVENT_FINANCE_PATH || norm.startsWith(`${CLUB_EVENT_FINANCE_PATH}/`);
     case "manage":

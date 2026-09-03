@@ -4,7 +4,15 @@ import { clubEventOwnerFromAuth } from "@/lib/club-event/api-owner";
 import { clubEventOwnerWhere, clubEventSessionContext } from "@/lib/club-event/session-context";
 import { prisma } from "@/lib/prisma";
 import { deriveEventStatus, mapClubEventRecord } from "@/systems/club-event/lib/mappers";
-import { normalizeClubEventYoutubeEmbedUrl } from "@/systems/club-event/lib/youtube";
+import {
+  assertClubEventYoutubeCount,
+  resolveClubEventMediaLimits,
+} from "@/systems/club-event/lib/plan-limits";
+import {
+  normalizeClubEventYoutubeUrlsFromBody,
+  parseClubEventYoutubeUrls,
+  serializeClubEventYoutubeUrls,
+} from "@/systems/club-event/lib/youtube";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -17,6 +25,7 @@ export async function GET(_req: Request, ctx: Ctx) {
 
     const { id } = await ctx.params;
     const { scope } = await clubEventSessionContext(own.ownerId);
+    const limits = resolveClubEventMediaLimits(own.access);
 
     const row = await prisma.clubEventRecord.findFirst({
       where: { id, ...clubEventOwnerWhere(own.ownerId, scope.trialSessionId) },
@@ -36,6 +45,7 @@ export async function GET(_req: Request, ctx: Ctx) {
         fileName: g.fileName,
         sortOrder: g.sortOrder,
       })),
+      mediaLimits: limits,
     });
   } catch (e) {
     console.error("[club-event/session/events/[id] GET]", e);
@@ -67,18 +77,17 @@ export async function PATCH(req: Request, ctx: Ctx) {
     const status =
       body.status === "UPCOMING" || body.status === "PAST" ? body.status : deriveEventStatus(eventDate);
 
-    let youtubeEmbedUrl = existing.youtubeEmbedUrl;
-    if (body.youtubeEmbedUrl === null || body.youtubeEmbedUrl === "") {
-      youtubeEmbedUrl = null;
-    } else if (typeof body.youtubeEmbedUrl === "string") {
-      const normalized = normalizeClubEventYoutubeEmbedUrl(body.youtubeEmbedUrl);
-      if (!normalized) {
-        return NextResponse.json(
-          { error: "ลิงก์ YouTube ไม่ถูกต้อง — วางจาก watch / youtu.be / embed ได้" },
-          { status: 400 },
-        );
-      }
-      youtubeEmbedUrl = normalized;
+    const limits = resolveClubEventMediaLimits(own.access);
+    let youtubeUrls = parseClubEventYoutubeUrls(existing.youtubeUrlsJson, existing.youtubeEmbedUrl);
+    if (body.youtubeUrls !== undefined || body.youtubeEmbedUrl !== undefined) {
+      const yt = normalizeClubEventYoutubeUrlsFromBody(body);
+      if (!yt.ok) return NextResponse.json({ error: yt.error }, { status: 400 });
+      youtubeUrls = yt.urls;
+    }
+
+    const ytGate = assertClubEventYoutubeCount(youtubeUrls.length, limits);
+    if (!ytGate.ok) {
+      return NextResponse.json({ error: ytGate.error, code: ytGate.code }, { status: 403 });
     }
 
     const row = await prisma.clubEventRecord.update({
@@ -88,12 +97,13 @@ export async function PATCH(req: Request, ctx: Ctx) {
         eventDate,
         status,
         description: typeof body.description === "string" ? body.description : existing.description,
-        youtubeEmbedUrl,
+        youtubeEmbedUrl: youtubeUrls[0] ?? null,
+        youtubeUrlsJson: serializeClubEventYoutubeUrls(youtubeUrls),
       },
       include: { _count: { select: { gallery: true } } },
     });
 
-    return NextResponse.json({ event: mapClubEventRecord(row) });
+    return NextResponse.json({ event: mapClubEventRecord(row), mediaLimits: limits });
   } catch (e) {
     console.error("[club-event/session/events/[id] PATCH]", e);
     return NextResponse.json({ error: "บันทึกไม่สำเร็จ" }, { status: 500 });

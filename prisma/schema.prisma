@@ -7251,7 +7251,10 @@ model ClubEventRecord {
   eventDate       DateTime                 @map("event_date")
   status          ClubEventScheduleStatus  @default(UPCOMING)
   description     String                   @default("") @db.Text
+  /** embed URL ตัวแรก — คงไว้เพื่อความเข้ากันได้; แหล่งความจริงคือ youtubeUrlsJson */
   youtubeEmbedUrl String?                  @map("youtube_embed_url") @db.VarChar(512)
+  /** JSON string[] ของ YouTube embed URLs */
+  youtubeUrlsJson String                   @default("[]") @map("youtube_urls_json") @db.Text
   createdAt       DateTime                 @default(now()) @map("created_at")
   updatedAt       DateTime                 @updatedAt @map("updated_at")
 
