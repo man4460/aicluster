@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { isPrismaUniqueViolation } from "@/lib/prisma-errors";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 
 type Db = Pick<PrismaClient, "resumeProfile" | "user">;
@@ -40,16 +41,27 @@ export async function ensureResumeProfile(
     slug = `${defaultSlugFromUser(username, ownerUserId)}-${suffix}`;
   }
 
-  return db.resumeProfile.create({
-    data: {
-      ownerUserId,
-      trialSessionId,
-      slug,
-      fullName: username,
-      positionTitle: "",
-      bio: "",
-      isPremium: false,
-      publicEnabled: true,
-    },
-  });
+  try {
+    return await db.resumeProfile.create({
+      data: {
+        ownerUserId,
+        trialSessionId,
+        slug,
+        fullName: username,
+        positionTitle: "",
+        bio: "",
+        isPremium: false,
+        publicEnabled: true,
+      },
+    });
+  } catch (e) {
+    // layout + page เรียก ensure พร้อมกัน → P2002 บน owner+trial
+    if (isPrismaUniqueViolation(e)) {
+      const raced = await db.resumeProfile.findUnique({
+        where: { ownerUserId_trialSessionId: { ownerUserId, trialSessionId } },
+      });
+      if (raced) return raced;
+    }
+    throw e;
+  }
 }

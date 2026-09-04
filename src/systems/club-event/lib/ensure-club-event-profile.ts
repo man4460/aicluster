@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { isPrismaUniqueViolation } from "@/lib/prisma-errors";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 
 type Db = Pick<PrismaClient, "clubEventProfile" | "user">;
@@ -40,14 +41,24 @@ export async function ensureClubEventProfile(
     slug = `${defaultSlugFromUser(username, ownerUserId)}-${suffix}`;
   }
 
-  return db.clubEventProfile.create({
-    data: {
-      ownerUserId,
-      trialSessionId,
-      slug,
-      displayName: "ชมรมของฉัน",
-      rulesMarkdown: "",
-      committeeJson: "[]",
-    },
-  });
+  try {
+    return await db.clubEventProfile.create({
+      data: {
+        ownerUserId,
+        trialSessionId,
+        slug,
+        displayName: "ชมรมของฉัน",
+        rulesMarkdown: "",
+        committeeJson: "[]",
+      },
+    });
+  } catch (e) {
+    if (isPrismaUniqueViolation(e)) {
+      const raced = await db.clubEventProfile.findUnique({
+        where: { ownerUserId_trialSessionId: { ownerUserId, trialSessionId } },
+      });
+      if (raced) return raced;
+    }
+    throw e;
+  }
 }

@@ -37,10 +37,20 @@ export default async function LmsLayout({ children }: { children: React.ReactNod
     console.error("[lms layout] getActiveTrialBanner", e);
   }
 
-  const { profile } = await loadLmsPage();
+  let schoolName = "สถาบัน";
+  try {
+    const { profile } = await loadLmsPage();
+    schoolName = profile.displayName;
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error("[lms layout] loadLmsPage", e);
+    return (
+      <DashboardDataLoadError message="โหลดโปรไฟล์ LMS ไม่สำเร็จ — ลองรีเฟรชอีกครั้ง" />
+    );
+  }
 
   return (
-    <LmsModuleShell schoolName={profile.displayName} trialExpiresLabel={trialExpiresLabel}>
+    <LmsModuleShell schoolName={schoolName} trialExpiresLabel={trialExpiresLabel}>
       {children}
     </LmsModuleShell>
   );

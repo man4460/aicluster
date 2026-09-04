@@ -37,10 +37,20 @@ export default async function ClubEventLayout({ children }: { children: React.Re
     console.error("[club-event layout] getActiveTrialBanner", e);
   }
 
-  const { profile } = await loadClubEventPage();
+  let clubName = "ชมรม";
+  try {
+    const { profile } = await loadClubEventPage();
+    clubName = profile.displayName;
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error("[club-event layout] loadClubEventPage", e);
+    return (
+      <DashboardDataLoadError message="โหลดโปรไฟล์ชมรมไม่สำเร็จ — ลองรีเฟรชอีกครั้ง" />
+    );
+  }
 
   return (
-    <ClubEventModuleShell clubName={profile.displayName} trialExpiresLabel={trialExpiresLabel}>
+    <ClubEventModuleShell clubName={clubName} trialExpiresLabel={trialExpiresLabel}>
       {children}
     </ClubEventModuleShell>
   );

@@ -37,10 +37,20 @@ export default async function ProResumeLayout({ children }: { children: React.Re
     console.error("[pro-resume layout] getActiveTrialBanner", e);
   }
 
-  const { profile } = await loadProResumePage();
+  let profileFullName = "Pro Resume";
+  try {
+    const { profile } = await loadProResumePage();
+    profileFullName = profile.fullName;
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error("[pro-resume layout] loadProResumePage", e);
+    return (
+      <DashboardDataLoadError message="โหลดโปรไฟล์ Pro Resume ไม่สำเร็จ — ลองรีเฟรชอีกครั้ง" />
+    );
+  }
 
   return (
-    <ProResumeModuleShell displayName={profile.fullName} trialExpiresLabel={trialExpiresLabel}>
+    <ProResumeModuleShell displayName={profileFullName} trialExpiresLabel={trialExpiresLabel}>
       {children}
     </ProResumeModuleShell>
   );

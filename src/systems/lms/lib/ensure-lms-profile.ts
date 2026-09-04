@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { isPrismaUniqueViolation } from "@/lib/prisma-errors";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 
 type Db = Pick<PrismaClient, "lmsProfile" | "user">;
@@ -40,14 +41,24 @@ export async function ensureLmsProfile(
     slug = `${defaultSlugFromUser(username, ownerUserId)}-${suffix}`;
   }
 
-  return db.lmsProfile.create({
-    data: {
-      ownerUserId,
-      trialSessionId,
-      slug,
-      displayName: "สถาบันของฉัน",
-      certSignerName: "",
-      certTemplateNote: "",
-    },
-  });
+  try {
+    return await db.lmsProfile.create({
+      data: {
+        ownerUserId,
+        trialSessionId,
+        slug,
+        displayName: "สถาบันของฉัน",
+        certSignerName: "",
+        certTemplateNote: "",
+      },
+    });
+  } catch (e) {
+    if (isPrismaUniqueViolation(e)) {
+      const raced = await db.lmsProfile.findUnique({
+        where: { ownerUserId_trialSessionId: { ownerUserId, trialSessionId } },
+      });
+      if (raced) return raced;
+    }
+    throw e;
+  }
 }
