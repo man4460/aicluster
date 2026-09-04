@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AppImageLightbox,
+  AppImagePickCameraButtons,
   AppImageThumb,
   AppPickGalleryImageButton,
   AppTakePhotoButton,
@@ -29,9 +30,10 @@ import type {
   ResumeExperienceDto,
   ResumeProfileDto,
 } from "@/systems/pro-resume/lib/mappers";
-import { proResumePageTitleIcon, proResumePageTitleTone, proResumeSectionIcon } from "@/systems/pro-resume/lib/page-menu-icons";
+import { proResumeSectionIcon } from "@/systems/pro-resume/lib/page-menu-icons";
 import {
   proResumeFieldClass,
+  proResumeOutlineButtonClass,
   proResumePrimaryButtonClass,
   proResumeRowIconButtonClass,
   proResumeTextareaClass,
@@ -204,60 +206,37 @@ export function ProResumeProfileClient({ initialProfile }: { initialProfile: Res
 
       <ProResumePagePanel
         title="โปรไฟล์"
-        titleIcon={proResumePageTitleIcon("profile")}
-        titleTone={proResumePageTitleTone("profile")}
         action={
-          <button type="button" className={proResumePrimaryButtonClass} disabled={saving} onClick={() => void saveProfile()}>
+          <button
+            type="button"
+            className={proResumePrimaryButtonClass}
+            disabled={saving}
+            onClick={() => void saveProfile()}
+            aria-label="บันทึกโปรไฟล์"
+          >
             บันทึก
           </button>
         }
       >
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-          <div className="space-y-3">
-            <label className={labelClass}>
-              ชื่อ-นามสกุล
-              <input className={proResumeFieldClass} value={profile.fullName} onChange={(e) => setProfile((p) => ({ ...p, fullName: e.target.value }))} />
-            </label>
-            <label className={labelClass}>
-              ตำแหน่ง / หัวข้อ
-              <input className={proResumeFieldClass} value={profile.positionTitle} onChange={(e) => setProfile((p) => ({ ...p, positionTitle: e.target.value }))} />
-            </label>
-            <label className={labelClass}>
-              เกี่ยวกับตัวเอง
-              <textarea className={proResumeTextareaClass} value={profile.bio} onChange={(e) => setProfile((p) => ({ ...p, bio: e.target.value }))} />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className={labelClass}>
-                อีเมล
-                <input className={proResumeFieldClass} type="email" value={profile.contactEmail ?? ""} onChange={(e) => setProfile((p) => ({ ...p, contactEmail: e.target.value }))} />
-              </label>
-              <label className={labelClass}>
-                โทรศัพท์
-                <input className={proResumeFieldClass} value={profile.contactPhone ?? ""} onChange={(e) => setProfile((p) => ({ ...p, contactPhone: e.target.value }))} />
-              </label>
-            </div>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <AppImageThumb
-              src={profile.profileImageUrl}
-              alt={profile.fullName}
-              className="h-24 w-24 sm:h-28 sm:w-28"
-              onOpen={() => profile.profileImageUrl && lb.open(profile.profileImageUrl)}
-            />
-            <AppPickGalleryImageButton
-              disabled={saving}
-              onClick={() => profileGalleryRef.current?.click()}
-              className={proResumePrimaryButtonClass}
-            >
-              เลือกรูป
-            </AppPickGalleryImageButton>
-            <AppTakePhotoButton
-              disabled={saving}
-              onClick={() => profileCamera.openCamera((file) => void uploadProfileImage(file))}
-              className={proResumePrimaryButtonClass}
-            >
-              ถ่ายรูป
-            </AppTakePhotoButton>
+        <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start sm:gap-6">
+          {/* ซ้าย: รูปจริง (ไม่ใช่ไอคอน) + ปุ่มตามเทมเพลต */}
+          <div className="flex w-full flex-col items-start gap-2 sm:w-auto">
+            {profile.profileImageUrl ? (
+              <AppImageThumb
+                src={profile.profileImageUrl}
+                alt={profile.fullName}
+                className="h-28 w-28 shrink-0 rounded-2xl sm:h-32 sm:w-32"
+                onOpen={() => profile.profileImageUrl && lb.open(profile.profileImageUrl)}
+              />
+            ) : (
+              <div
+                className="flex h-28 w-28 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-sm font-semibold text-[#8b87b8] sm:h-32 sm:w-32"
+                aria-hidden
+              >
+                ไม่มีรูป
+              </div>
+            )}
+            <p className="text-xs font-bold text-[#4d47b6]">รูปโปรไฟล์</p>
             <input
               ref={profileGalleryRef}
               type="file"
@@ -271,7 +250,78 @@ export function ProResumeProfileClient({ initialProfile }: { initialProfile: Res
                 if (file) void uploadProfileImage(file);
               }}
             />
+            <AppImagePickCameraButtons
+              className="justify-start"
+              busy={saving}
+              disabled={saving}
+              onPickGallery={() => profileGalleryRef.current?.click()}
+              onPickCamera={() => profileCamera.openCamera((file) => void uploadProfileImage(file))}
+              labels={{ gallery: "เลือกรูป", camera: "ถ่ายรูป", busy: "กำลังอัปโหลด…" }}
+              buttonClassName={proResumeOutlineButtonClass}
+            />
+            {profile.profileImageUrl ? (
+              <button
+                type="button"
+                className={proResumeOutlineButtonClass}
+                disabled={saving}
+                onClick={() => setProfile((p) => ({ ...p, profileImageUrl: null }))}
+              >
+                ลบรูป
+              </button>
+            ) : null}
             {profileCamera.cameraModal}
+          </div>
+
+          {/* ขวา: ข้อมูลโปรไฟล์ */}
+          <div className="min-w-0 space-y-3">
+            <label className={labelClass}>
+              ชื่อ-นามสกุล
+              <input
+                className={proResumeFieldClass}
+                value={profile.fullName}
+                disabled={saving}
+                onChange={(e) => setProfile((p) => ({ ...p, fullName: e.target.value }))}
+              />
+            </label>
+            <label className={labelClass}>
+              ตำแหน่ง / หัวข้อ
+              <input
+                className={proResumeFieldClass}
+                value={profile.positionTitle}
+                disabled={saving}
+                onChange={(e) => setProfile((p) => ({ ...p, positionTitle: e.target.value }))}
+              />
+            </label>
+            <label className={labelClass}>
+              เกี่ยวกับตัวเอง
+              <textarea
+                className={proResumeTextareaClass}
+                value={profile.bio}
+                disabled={saving}
+                onChange={(e) => setProfile((p) => ({ ...p, bio: e.target.value }))}
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className={labelClass}>
+                อีเมล
+                <input
+                  className={proResumeFieldClass}
+                  type="email"
+                  value={profile.contactEmail ?? ""}
+                  disabled={saving}
+                  onChange={(e) => setProfile((p) => ({ ...p, contactEmail: e.target.value }))}
+                />
+              </label>
+              <label className={labelClass}>
+                โทรศัพท์
+                <input
+                  className={proResumeFieldClass}
+                  value={profile.contactPhone ?? ""}
+                  disabled={saving}
+                  onChange={(e) => setProfile((p) => ({ ...p, contactPhone: e.target.value }))}
+                />
+              </label>
+            </div>
           </div>
         </div>
 
@@ -362,14 +412,18 @@ export function ProResumeProfileClient({ initialProfile }: { initialProfile: Res
                   onUp={() => void moveItem("certificates", certificates, i, -1)}
                   onDown={() => void moveItem("certificates", certificates, i, 1)}
                 />
+                <AppImageThumb
+                  src={row.fileUrl}
+                  alt={row.name}
+                  emptyLabel="ไม่มีรูป"
+                  className="h-14 w-14 shrink-0"
+                  onOpen={() => row.fileUrl && lb.open(row.fileUrl)}
+                />
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-[#1e1b4b]">{row.name}</p>
                   <p className="text-sm text-[#66638c]">{row.issuedBy || "—"}</p>
                   {row.year ? <p className="text-xs text-[#8b87b8]">{row.year}</p> : null}
                 </div>
-                {row.fileUrl ? (
-                  <AppImageThumb src={row.fileUrl} alt={row.name} onOpen={() => lb.open(row.fileUrl!)} />
-                ) : null}
               </div>
               <div className="flex shrink-0 gap-1 self-end sm:self-center">
                 <button type="button" className={assetRowEditIconButtonClass} aria-label={`แก้ไข ${row.name}`} title="แก้ไข" onClick={() => setCertModal(row)}>

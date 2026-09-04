@@ -61,16 +61,33 @@ export const proResumeSubtitleClass =
 export const proResumePageStackClass = "min-w-0 space-y-4";
 
 export const proResumePrimaryTabShellClass =
-  "inline-flex w-full max-w-full flex-wrap content-start items-center gap-1 rounded-lg border border-slate-200/90 bg-slate-50/80 p-1";
+  "inline-flex w-full max-w-full flex-nowrap items-center gap-1 rounded-lg border border-slate-200/90 bg-slate-50/80 p-1";
 
 export function proResumePrimaryTabPillClass(active: boolean): string {
   return cn(
-    "min-h-8 shrink-0 grow basis-[calc(50%-4px)] whitespace-nowrap rounded-md px-2.5 text-xs font-bold leading-none sm:min-h-9 sm:grow-0 sm:basis-auto sm:px-3",
+    "inline-flex min-h-9 min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2 text-xs font-bold leading-none sm:min-h-10 sm:px-3 sm:text-sm",
     active
       ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
       : "text-[#5f5a8a] transition hover:bg-white hover:text-[#4d47b6]",
   );
 }
+
+/** เปลือกแถบเมนูมือถือ+ไอแพดแนวตั้ง — ชิดล่างสุด · พื้นขาวเต็ม รวม safe area */
+export const proResumePortalTabDockMobileShellClass = cn(
+  "fixed inset-x-0 bottom-0 z-40 bg-white lg:hidden",
+  "pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]",
+  "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-32 after:bg-white",
+);
+
+export const proResumePortalTabDockMobileInnerClass = cn(
+  "flex w-full flex-nowrap items-center gap-1 border-t border-slate-200/90 bg-white px-3 pt-2 pb-2",
+  "shadow-[0_-6px_20px_rgba(30,27,75,0.06)]",
+);
+
+/** แถบเมนูบนเดสก์ท็อป (lg+) — ห่อด้วย wrap ที่ซ่อนเมื่อมีแถบล่าง */
+export const proResumePortalTabDockDesktopWrapClass = "hidden lg:block";
+
+export const proResumePortalTabDockDesktopClass = cn(proResumePrimaryTabShellClass, "w-full");
 
 export const proResumeFilterChipShellClass =
   "flex w-full flex-wrap content-start items-center gap-1 sm:gap-1.5";
@@ -83,6 +100,16 @@ export function proResumeFilterChipClass(active = false): string {
       : "border-slate-200 bg-slate-50 text-[#4d47b6] hover:border-slate-300 hover:bg-white",
   );
 }
+
+/** กริดผลงานสาธารณะ — มือถือ 2 · ไอแพดแนวตั้ง 3 · คอม 4 */
+export const proResumePortalPortfolioGridClass =
+  "grid list-none grid-cols-2 gap-2 p-0 md:grid-cols-3 md:gap-3 lg:grid-cols-4 lg:gap-4";
+
+/** 2 แถวต่อหน้า */
+export const PRO_RESUME_PORTAL_PORTFOLIO_ROWS = 2;
+export const PRO_RESUME_PORTAL_PORTFOLIO_PAGE_SIZE_MOBILE = 2 * PRO_RESUME_PORTAL_PORTFOLIO_ROWS;
+export const PRO_RESUME_PORTAL_PORTFOLIO_PAGE_SIZE_TABLET = 3 * PRO_RESUME_PORTAL_PORTFOLIO_ROWS;
+export const PRO_RESUME_PORTAL_PORTFOLIO_PAGE_SIZE_DESKTOP = 4 * PRO_RESUME_PORTAL_PORTFOLIO_ROWS;
 
 export const proResumeStatsGridClass = "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3";
 
@@ -99,6 +126,9 @@ export const proResumeGlassShellClass =
 
 export const proResumePortalPrimaryBtnClass = proResumePrimaryButtonClass;
 export const proResumePortalFieldClass = proResumeFieldClass;
+
+/** ความกว้างหน้าสาธารณะ — กว้างขึ้นบนเดสก์ท็อป */
+export const proResumePortalContainerClass = "mx-auto w-full max-w-6xl";
 
 export const proResumePortalShopNameClass =
   "bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] bg-clip-text font-black tracking-tight text-transparent";

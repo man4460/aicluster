@@ -78,12 +78,26 @@ export function ProResumeSettingsClient({
     }
   };
 
-  const openPreview = () => {
+  const openPreview = async () => {
+    if (!canShare) {
+      setPremiumModalOpen(true);
+      return;
+    }
     if (!form.publicEnabled) {
       notice.error("เปิดเผยแพร่ก่อนเพื่อดูตัวอย่าง");
       return;
     }
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(publicAbsoluteUrl);
+      copied = true;
+    } catch {
+      /* เปิดตัวอย่างได้แม้คัดลอกไม่สำเร็จ */
+    }
     window.open(form.publicUrl, "_blank", "noopener,noreferrer");
+    if (copied) {
+      notice.success("เปิดตัวอย่างและคัดลอกลิงก์แชร์แล้ว");
+    }
   };
 
   return (
@@ -129,7 +143,12 @@ export function ProResumeSettingsClient({
             <p className="text-xs font-black text-[#4d47b6]">ตัวอย่าง / แชร์ลิงก์</p>
             <p className="break-all text-sm font-semibold text-[#1e1b4b]">{form.publicUrl}</p>
             <div className="flex flex-wrap gap-2">
-              <button type="button" className={proResumeOutlineButtonClass} onClick={() => void openPreview()}>
+              <button
+                type="button"
+                className={cn(proResumeOutlineButtonClass, !canShare && "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 opacity-80")}
+                onClick={() => void openPreview()}
+                aria-disabled={!canShare}
+              >
                 เปิดตัวอย่าง
               </button>
               <button
@@ -142,7 +161,7 @@ export function ProResumeSettingsClient({
               </button>
             </div>
             {!hasMonthly ? (
-              <p className="text-xs font-semibold text-amber-800">แพ็กฟรี — แชร์ลิงก์/QR ต้องอัปเกรดรายเดือน</p>
+              <p className="text-xs font-semibold text-amber-800">แพ็กฟรี — เปิดตัวอย่าง / แชร์ลิงก์ / QR ต้องอัปเกรดรายเดือน</p>
             ) : null}
           </div>
 

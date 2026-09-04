@@ -20,18 +20,18 @@ import {
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
 import { ProResumePagePanel } from "@/systems/pro-resume/components/ProResumePagePanel";
-import { proResumeCardIconTileClass, proResumeTonedRowCardClass } from "@/systems/pro-resume/lib/card-tones";
+import { proResumeTonedRowCardClass } from "@/systems/pro-resume/lib/card-tones";
 import type {
   ResumePortfolioCategoryDto,
   ResumePortfolioItemDto,
 } from "@/systems/pro-resume/lib/mappers";
-import { proResumePageTitleIcon, proResumePageTitleTone, proResumeSectionIcon } from "@/systems/pro-resume/lib/page-menu-icons";
+import { proResumePageTitleIcon, proResumePageTitleTone } from "@/systems/pro-resume/lib/page-menu-icons";
 import {
   proResumeFieldClass,
   proResumeFilterChipClass,
   proResumeFilterChipShellClass,
+  proResumeOutlineButtonClass,
   proResumePrimaryButtonClass,
-  proResumeRowIconButtonClass,
   proResumeTextareaClass,
 } from "@/systems/pro-resume/lib/ui-tokens";
 
@@ -44,7 +44,7 @@ export function ProResumePortfolioClient() {
   const [categories, setCategories] = useState<ResumePortfolioCategoryDto[]>([]);
   const [items, setItems] = useState<ResumePortfolioItemDto[]>([]);
   const [filterCat, setFilterCat] = useState<string>("all");
-  const [catModal, setCatModal] = useState<ResumePortfolioCategoryDto | "new" | null>(null);
+  const [catsManageOpen, setCatsManageOpen] = useState(false);
   const [itemModal, setItemModal] = useState<ResumePortfolioItemDto | "new" | null>(null);
 
   const load = useCallback(async () => {
@@ -55,8 +55,10 @@ export function ProResumePortfolioClient() {
       ]);
       const cData = (await cRes.json()) as { categories?: ResumePortfolioCategoryDto[] };
       const iData = (await iRes.json()) as { items?: ResumePortfolioItemDto[] };
-      setCategories(cData.categories ?? []);
+      const nextCats = cData.categories ?? [];
+      setCategories(nextCats);
       setItems(iData.items ?? []);
+      setFilterCat((prev) => (prev === "all" || nextCats.some((c) => c.id === prev) ? prev : "all"));
     } catch {
       notice.error("โหลดไม่สำเร็จ");
     }
@@ -71,17 +73,6 @@ export function ProResumePortfolioClient() {
     return items.filter((i) => i.categoryId === filterCat);
   }, [items, filterCat]);
 
-  const deleteCat = async (id: string, name: string) => {
-    const ok = await notice.confirm(`ลบหมวด «${name}» และผลงานในหมวดนี้ใช่หรือไม่?`);
-    if (!ok) return;
-    const res = await fetch(`/api/pro-resume/session/categories/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      notice.error("ลบไม่สำเร็จ");
-      return;
-    }
-    await load();
-  };
-
   const deleteItem = async (id: string, title: string) => {
     const ok = await notice.confirm(`ลบผลงาน «${title}» ใช่หรือไม่?`);
     if (!ok) return;
@@ -91,20 +82,6 @@ export function ProResumePortfolioClient() {
       return;
     }
     await load();
-  };
-
-  const reorderCats = async (list: ResumePortfolioCategoryDto[], index: number, dir: -1 | 1) => {
-    const next = [...list];
-    const j = index + dir;
-    if (j < 0 || j >= next.length) return;
-    [next[index], next[j]] = [next[j]!, next[index]!];
-    const res = await fetch("/api/pro-resume/session/categories", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderedIds: next.map((c) => c.id) }),
-    });
-    if (!res.ok) notice.error("จัดลำดับไม่สำเร็จ");
-    else await load();
   };
 
   return (
@@ -118,8 +95,14 @@ export function ProResumePortfolioClient() {
         titleTone={proResumePageTitleTone("portfolio")}
         action={
           <div className="flex shrink-0 gap-1.5">
-            <button type="button" className={proResumePrimaryButtonClass} onClick={() => setCatModal("new")} aria-label="เพิ่มหมวด">
-              + หมวด
+            <button
+              type="button"
+              className={proResumeOutlineButtonClass}
+              onClick={() => setCatsManageOpen(true)}
+              aria-label="จัดการหมวดหมู่"
+              title="จัดการหมวด"
+            >
+              จัดการหมวด
             </button>
             <button type="button" className={proResumePrimaryButtonClass} onClick={() => setItemModal("new")} aria-label="เพิ่มผลงาน">
               + ผลงาน
@@ -127,40 +110,6 @@ export function ProResumePortfolioClient() {
           </div>
         }
       >
-        <div className="space-y-2 border-b border-slate-200/80 pb-4">
-          <h3 className="flex items-center gap-2 text-sm font-bold text-[#1e1b4b]">
-            <span className={proResumeCardIconTileClass("violet", "md")} aria-hidden>
-              {proResumeSectionIcon("portfolio")}
-            </span>
-            หมวดหมู่
-          </h3>
-          {categories.length ? (
-            <ul className="space-y-2">
-              {categories.map((cat, i) => (
-                <li key={cat.id} className={proResumeTonedRowCardClass("violet")}>
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <div className="flex shrink-0 flex-col gap-0.5">
-                      <button type="button" className={proResumeRowIconButtonClass} disabled={i === 0} aria-label="เลื่อนขึ้น" onClick={() => void reorderCats(categories, i, -1)}>↑</button>
-                      <button type="button" className={proResumeRowIconButtonClass} disabled={i >= categories.length - 1} aria-label="เลื่อนลง" onClick={() => void reorderCats(categories, i, 1)}>↓</button>
-                    </div>
-                    <span className="font-bold text-[#1e1b4b]">{cat.name}</span>
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    <button type="button" className={assetRowEditIconButtonClass} aria-label={`แก้ไข ${cat.name}`} onClick={() => setCatModal(cat)}>
-                      <IconRowEdit className="h-4 w-4" />
-                    </button>
-                    <button type="button" className={assetRowRemoveIconButtonClass} aria-label={`ลบ ${cat.name}`} onClick={() => void deleteCat(cat.id, cat.name)}>
-                      <IconRowRemove className="h-4 w-4" />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-[#66638c]">ยังไม่มีหมวด — เพิ่มหมวดก่อนจัดผลงาน</p>
-          )}
-        </div>
-
         <nav className={proResumeFilterChipShellClass} role="tablist" aria-label="กรองหมวดผลงาน">
           <button type="button" role="tab" aria-selected={filterCat === "all"} className={proResumeFilterChipClass(filterCat === "all")} onClick={() => setFilterCat("all")}>
             ทั้งหมด ({items.length})
@@ -203,49 +152,86 @@ export function ProResumePortfolioClient() {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-[#66638c]">ยังไม่มีผลงานในหมวดนี้</p>
+          <p className="text-sm text-[#66638c]">
+            {categories.length ? "ยังไม่มีผลงานในหมวดนี้" : "ยังไม่มีหมวด — กด «จัดการหมวด» เพื่อเพิ่มก่อน"}
+          </p>
         )}
       </ProResumePagePanel>
 
-      <CategoryModal open={catModal !== null} row={catModal} onClose={() => setCatModal(null)} onSaved={load} notice={notice} />
+      <CategoriesManageModal
+        open={catsManageOpen}
+        categories={categories}
+        onClose={() => setCatsManageOpen(false)}
+        onSaved={load}
+        notice={notice}
+      />
       <ItemModal open={itemModal !== null} row={itemModal} categories={categories} onClose={() => setItemModal(null)} onSaved={load} notice={notice} lb={lb} />
     </>
   );
 }
 
-function CategoryModal({
+function CategoriesManageModal({
   open,
-  row,
+  categories,
   onClose,
   onSaved,
   notice,
 }: {
   open: boolean;
-  row: ResumePortfolioCategoryDto | "new" | null;
+  categories: ResumePortfolioCategoryDto[];
   onClose: () => void;
   onSaved: () => Promise<void>;
   notice: ReturnType<typeof useAppNoticePopup>;
 }) {
-  const [name, setName] = useState("");
+  const [newName, setNewName] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
-    setName(row && row !== "new" ? row.name : "");
-  }, [open, row]);
+    if (!open) {
+      setNewName("");
+      setEditingId(null);
+      setEditName("");
+    }
+  }, [open]);
 
-  const submit = async () => {
+  const addCategory = async () => {
+    const name = newName.trim();
+    if (!name) return;
     setBusy(true);
     try {
-      const isEdit = row && row !== "new";
-      const res = await fetch(isEdit ? `/api/pro-resume/session/categories/${row.id}` : "/api/pro-resume/session/categories", {
-        method: isEdit ? "PUT" : "POST",
+      const res = await fetch("/api/pro-resume/session/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "เพิ่มไม่สำเร็จ");
+      setNewName("");
+      await onSaved();
+    } catch (e) {
+      notice.error(e instanceof Error ? e.message : "เพิ่มไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveEdit = async () => {
+    if (!editingId) return;
+    const name = editName.trim();
+    if (!name) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/pro-resume/session/categories/${editingId}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? "บันทึกไม่สำเร็จ");
-      onClose();
+      setEditingId(null);
+      setEditName("");
       await onSaved();
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
@@ -254,9 +240,118 @@ function CategoryModal({
     }
   };
 
+  const deleteCat = async (id: string, name: string) => {
+    const ok = await notice.confirm(`ลบหมวด «${name}» และผลงานในหมวดนี้ใช่หรือไม่?`);
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/pro-resume/session/categories/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("ลบไม่สำเร็จ");
+      if (editingId === id) {
+        setEditingId(null);
+        setEditName("");
+      }
+      await onSaved();
+    } catch (e) {
+      notice.error(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <FormModal open={open} onClose={onClose} title={row === "new" ? "เพิ่มหมวด" : "แก้ไขหมวด"} size="sm" footer={<FormModalFooterActions onCancel={onClose} onSubmit={() => void submit()} submitLabel="บันทึก" loading={busy} submitDisabled={!name.trim()} />}>
-      <label className={labelClass}>ชื่อหมวด<input className={proResumeFieldClass} value={name} onChange={(e) => setName(e.target.value)} /></label>
+    <FormModal open={open} onClose={onClose} title="จัดการหมวดหมู่" size="md" mobileCentered>
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          <input
+            className={proResumeFieldClass}
+            placeholder="ชื่อหมวดใหม่"
+            value={newName}
+            disabled={busy}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void addCategory();
+              }
+            }}
+          />
+          <button type="button" className={proResumePrimaryButtonClass} disabled={busy || !newName.trim()} onClick={() => void addCategory()}>
+            เพิ่ม
+          </button>
+        </div>
+
+        {categories.length === 0 ? (
+          <p className="text-sm text-[#66638c]">ยังไม่มีหมวด — เพิ่มก่อนจัดผลงาน</p>
+        ) : (
+          <ul className="space-y-2">
+            {categories.map((cat) => (
+              <li key={cat.id} className={proResumeTonedRowCardClass("violet")}>
+                {editingId === cat.id ? (
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                    <input
+                      className={proResumeFieldClass}
+                      value={editName}
+                      disabled={busy}
+                      autoFocus
+                      onChange={(e) => setEditName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void saveEdit();
+                        }
+                      }}
+                    />
+                    <button type="button" className={proResumePrimaryButtonClass} disabled={busy || !editName.trim()} onClick={() => void saveEdit()}>
+                      บันทึก
+                    </button>
+                    <button
+                      type="button"
+                      className={proResumeOutlineButtonClass}
+                      disabled={busy}
+                      onClick={() => {
+                        setEditingId(null);
+                        setEditName("");
+                      }}
+                    >
+                      ยกเลิก
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <p className="min-w-0 flex-1 font-bold text-[#1e1b4b]">{cat.name}</p>
+                    <div className="flex shrink-0 gap-1">
+                      <button
+                        type="button"
+                        className={assetRowEditIconButtonClass}
+                        aria-label={`แก้ไข ${cat.name}`}
+                        title="แก้ไข"
+                        disabled={busy}
+                        onClick={() => {
+                          setEditingId(cat.id);
+                          setEditName(cat.name);
+                        }}
+                      >
+                        <IconRowEdit className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className={assetRowRemoveIconButtonClass}
+                        aria-label={`ลบ ${cat.name}`}
+                        title="ลบ"
+                        disabled={busy}
+                        onClick={() => void deleteCat(cat.id, cat.name)}
+                      >
+                        <IconRowRemove className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </FormModal>
   );
 }
