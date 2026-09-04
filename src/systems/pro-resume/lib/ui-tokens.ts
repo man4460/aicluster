@@ -111,13 +111,16 @@ export const PRO_RESUME_PORTAL_PORTFOLIO_PAGE_SIZE_MOBILE = 2 * PRO_RESUME_PORTA
 export const PRO_RESUME_PORTAL_PORTFOLIO_PAGE_SIZE_TABLET = 3 * PRO_RESUME_PORTAL_PORTFOLIO_ROWS;
 export const PRO_RESUME_PORTAL_PORTFOLIO_PAGE_SIZE_DESKTOP = 4 * PRO_RESUME_PORTAL_PORTFOLIO_ROWS;
 
-export const proResumeStatsGridClass = "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3";
+export const proResumeStatsGridClass = "grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-1";
 
-export const proResumeStatTailClass = "col-span-2 sm:col-span-1";
+export const proResumeStatTailClass = "col-span-2 sm:col-span-1 lg:col-span-1";
 
 export const proResumeStatInlineClass =
   "flex h-full min-h-[4.25rem] min-w-0 flex-col justify-center gap-0.5 rounded-lg bg-slate-50/90 px-3 py-2.5";
 
+/** แดชบอร์ด — สรุปซ้าย · กราฟขวาเต็มพื้นที่ (คอม) ไม่ห่อกล่อง */
+export const proResumeDashboardOverviewGridClass =
+  "grid w-full min-w-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(10rem,13.5rem)_minmax(0,1fr)] lg:items-start lg:gap-5";
 export const proResumeRowCardClass =
   "flex flex-col gap-3 rounded-lg border border-slate-200/90 bg-white p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4";
 
@@ -144,6 +147,20 @@ export const proResumePortalPageTitleClass =
   "text-2xl font-black tracking-tight text-[#1e1b4b] sm:text-3xl";
 
 export const proResumePortalPageSubtitleClass = "text-sm font-semibold text-[#66638c]";
+
+/** เนื้อหารายละเอียดสาธารณะ — หัวข้อใหญ่ · ย่อหน้า · บูลเล็ต · ตัวหนา */
+export const proResumePortalRichContentClass = cn(
+  "max-w-none text-[#1e1b4b]",
+  "[&_h1]:mb-2 [&_h1]:mt-5 [&_h1]:text-xl [&_h1]:font-black [&_h1]:tracking-tight [&_h1]:text-[#1e1b4b] [&_h1]:first:mt-0 sm:[&_h1]:text-2xl",
+  "[&_h2]:mb-1.5 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-black [&_h2]:tracking-tight [&_h2]:text-[#1e1b4b] [&_h2]:first:mt-0 sm:[&_h2]:text-lg",
+  "[&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-[#4d47b6] [&_h3]:first:mt-0 sm:[&_h3]:text-base",
+  "[&_p]:mt-2 [&_p]:text-sm [&_p]:font-medium [&_p]:leading-relaxed [&_p]:text-[#5f5a8a] [&_p]:first:mt-0 sm:[&_p]:text-[0.9375rem]",
+  "[&_ul]:mt-2 [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-5 [&_ul]:marker:text-[#5b61ff]",
+  "[&_ol]:mt-2 [&_ol]:list-decimal [&_ol]:space-y-1.5 [&_ol]:pl-5 [&_ol]:marker:font-bold [&_ol]:marker:text-[#5b61ff]",
+  "[&_li]:text-sm [&_li]:font-medium [&_li]:leading-relaxed [&_li]:text-[#5f5a8a] sm:[&_li]:text-[0.9375rem]",
+  "[&_strong]:font-bold [&_strong]:text-[#1e1b4b]",
+  "[&_em]:italic",
+);
 
 export const proResumePortalPageBodyClass = cn(
   proResumePortalSectionDividerClass,

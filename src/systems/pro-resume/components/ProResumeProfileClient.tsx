@@ -549,7 +549,22 @@ function EducationModal({
           <label className={labelClass}>ปีเริ่ม<input className={proResumeFieldClass} inputMode="numeric" value={form.startYear} onChange={(e) => setForm((f) => ({ ...f, startYear: e.target.value }))} /></label>
           <label className={labelClass}>ปีจบ<input className={proResumeFieldClass} inputMode="numeric" value={form.endYear} onChange={(e) => setForm((f) => ({ ...f, endYear: e.target.value }))} /></label>
         </div>
-        <label className={labelClass}>รายละเอียด<textarea className={proResumeTextareaClass} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></label>
+        <label className={labelClass}>
+          รายละเอียด
+          <textarea
+            className={proResumeTextareaClass}
+            value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            placeholder={`## หัวข้อ
+รายละเอียดย่อหน้า
+
+- รายการที่ 1
+- รายการที่ 2`}
+          />
+          <span className="mt-1 block text-[10px] font-medium leading-relaxed text-[#66638c]">
+            รองรับหัวข้อ · บูลเล็ต · ตัวหนา · ย่อหน้า เหมือนช่องผลงาน
+          </span>
+        </label>
       </div>
     </FormModal>
   );
@@ -622,7 +637,22 @@ function ExperienceModal({
           <label className={labelClass}>เริ่ม (เช่น 2020-01)<input className={proResumeFieldClass} value={form.startDate} onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))} /></label>
           <label className={labelClass}>สิ้นสุด<input className={proResumeFieldClass} value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} placeholder="ว่าง = ปัจจุบัน" /></label>
         </div>
-        <label className={labelClass}>ผลงาน / หน้าที่<textarea className={proResumeTextareaClass} value={form.achievements} onChange={(e) => setForm((f) => ({ ...f, achievements: e.target.value }))} /></label>
+        <label className={labelClass}>
+          ผลงาน / หน้าที่
+          <textarea
+            className={proResumeTextareaClass}
+            value={form.achievements}
+            onChange={(e) => setForm((f) => ({ ...f, achievements: e.target.value }))}
+            placeholder={`## ผลลัพธ์
+ลดงานเอกสารและเปิดชำระผ่านลิงก์
+
+- เป้าหมายชัดเจนและวัดผลได้
+- ทำงานร่วมทีมข้ามหน่วยงาน`}
+          />
+          <span className="mt-1 block text-[10px] font-medium leading-relaxed text-[#66638c]">
+            รองรับหัวข้อ (<code className="rounded bg-slate-100 px-1">##</code>) · บูลเล็ต (<code className="rounded bg-slate-100 px-1">-</code>) · ตัวหนา (<code className="rounded bg-slate-100 px-1">**</code>) · ย่อหน้าคั่นบรรทัดว่าง
+          </span>
+        </label>
       </div>
     </FormModal>
   );

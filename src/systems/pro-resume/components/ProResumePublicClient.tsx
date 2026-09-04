@@ -12,6 +12,7 @@ import {
 import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { ProResumePortalSection } from "@/systems/pro-resume/components/ProResumePortalSection";
+import { ProResumeRichContent } from "@/systems/pro-resume/components/ProResumeRichContent";
 import type { ResumePortfolioItemDto, ResumePublicDto } from "@/systems/pro-resume/lib/mappers";
 import {
   proResumePortalContactIcon,
@@ -315,7 +316,9 @@ export function ProResumePublicClient({
                       <p className="text-[11px] font-bold uppercase leading-tight tracking-wide text-[#8b87b8] sm:text-xs">{row.range}</p>
                       <h3 className="mt-0.5 text-sm font-black leading-snug text-[#1e1b4b] sm:text-base">{row.title}</h3>
                       <p className="text-xs font-semibold leading-snug text-[#4d47b6] sm:text-sm">{row.subtitle}</p>
-                      {row.body ? <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-[#66638c] sm:text-sm">{row.body}</p> : null}
+                      {row.body ? (
+                        <ProResumeRichContent content={row.body} className="mt-1.5" />
+                      ) : null}
                     </li>
                   ))}
                 </ol>
@@ -463,7 +466,7 @@ export function ProResumePublicClient({
             ) : null}
             {detailItem.shortDesc ? <p className="text-sm font-semibold text-[#66638c]">{detailItem.shortDesc}</p> : null}
             {detailItem.contentHTML ? (
-              <div className="prose prose-sm max-w-none text-[#1e1b4b]" dangerouslySetInnerHTML={{ __html: detailItem.contentHTML }} />
+              <ProResumeRichContent content={detailItem.contentHTML} />
             ) : null}
             {detailItem.youtubeUrl ? (
               <button

@@ -13,6 +13,7 @@ import {
   useAppNoticePopup,
 } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
+import { cn } from "@/lib/cn";
 import {
   assetRowEditIconButtonClass,
   assetRowRemoveIconButtonClass,
@@ -25,6 +26,10 @@ import type {
   ResumePortfolioCategoryDto,
   ResumePortfolioItemDto,
 } from "@/systems/pro-resume/lib/mappers";
+import {
+  contentHtmlToPlainText,
+  plainTextToContentHtml,
+} from "@/systems/pro-resume/lib/content-plain";
 import { proResumePageTitleIcon, proResumePageTitleTone } from "@/systems/pro-resume/lib/page-menu-icons";
 import {
   proResumeFieldClass,
@@ -378,7 +383,7 @@ function ItemModal({
     title: "",
     coverImage: null as string | null,
     shortDesc: "",
-    contentHTML: "",
+    contentPlain: "",
     youtubeUrl: "",
     images: [] as string[],
   });
@@ -396,7 +401,7 @@ function ItemModal({
         title: row.title,
         coverImage: row.coverImage,
         shortDesc: row.shortDesc,
-        contentHTML: row.contentHTML,
+        contentPlain: contentHtmlToPlainText(row.contentHTML),
         youtubeUrl: row.youtubeUrl ?? "",
         images: row.images,
       });
@@ -406,7 +411,7 @@ function ItemModal({
         title: "",
         coverImage: null,
         shortDesc: "",
-        contentHTML: "",
+        contentPlain: "",
         youtubeUrl: "",
         images: [],
       });
@@ -458,7 +463,7 @@ function ItemModal({
         title: form.title,
         coverImage: form.coverImage,
         shortDesc: form.shortDesc,
-        contentHTML: form.contentHTML,
+        contentHTML: plainTextToContentHtml(form.contentPlain),
         youtubeUrl: form.youtubeUrl || null,
         images: form.images,
       };
@@ -499,7 +504,28 @@ function ItemModal({
         </label>
         <label className={labelClass}>ชื่อผลงาน<input className={proResumeFieldClass} value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} /></label>
         <label className={labelClass}>คำอธิบายสั้น<input className={proResumeFieldClass} value={form.shortDesc} onChange={(e) => setForm((f) => ({ ...f, shortDesc: e.target.value }))} /></label>
-        <label className={labelClass}>เนื้อหา (HTML)<textarea className={proResumeTextareaClass} value={form.contentHTML} onChange={(e) => setForm((f) => ({ ...f, contentHTML: e.target.value }))} /></label>
+        <label className={labelClass}>
+          เนื้อหา
+          <textarea
+            className={cn(proResumeTextareaClass, "min-h-[10rem]")}
+            value={form.contentPlain}
+            onChange={(e) => setForm((f) => ({ ...f, contentPlain: e.target.value }))}
+            placeholder={`## ผลลัพธ์
+ลดงานเอกสารลงทะเบียนวันงาน และเปิดให้สมาชิกชำระค่าบำรุงผ่านลิงก์ไดนามิก
+
+## จุดเด่น
+- เป้าหมายชัดเจนและวัดผลได้
+- ทำงานร่วมทีมข้ามหน่วยงาน
+- ส่งมอบตรงเวลาพร้อมเอกสารครบ
+
+เน้น **ส่งมอบตรงเวลา** และเอกสารครบ`}
+          />
+          <span className="mt-1 block space-y-0.5 text-[10px] font-medium leading-relaxed text-[#66638c]">
+            <span className="block">หัวข้อ: ขึ้นต้นด้วย <code className="rounded bg-slate-100 px-1">##</code> หรือบรรทัดสั้นเดี่ยวคั่นบรรทัดว่าง</span>
+            <span className="block">บูลเล็ต: <code className="rounded bg-slate-100 px-1">- ข้อความ</code> · ตัวหนา: <code className="rounded bg-slate-100 px-1">**ข้อความ**</code></span>
+            <span className="block">ย่อหน้า: คั่นด้วยบรรทัดว่าง</span>
+          </span>
+        </label>
         <label className={labelClass}>YouTube URL<input className={proResumeFieldClass} value={form.youtubeUrl} onChange={(e) => setForm((f) => ({ ...f, youtubeUrl: e.target.value }))} placeholder="https://youtube.com/..." /></label>
         <div className="space-y-2">
           <p className={labelClass}>รูปปก</p>
