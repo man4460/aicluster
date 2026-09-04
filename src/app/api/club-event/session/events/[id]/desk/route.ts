@@ -13,6 +13,7 @@ import {
   parseSubmissionAnswers,
   serializeFulfillmentJson,
 } from "@/systems/club-event/lib/desk";
+import { notifyClubEventDesk } from "@/systems/club-event/lib/desk-sse";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -269,6 +270,7 @@ export async function POST(req: Request, ctx: Ctx) {
         where: { eventId, submissionId },
       });
       if (existing) {
+        notifyClubEventDesk(eventId);
         return NextResponse.json({
           checkIn: mapClubEventCheckInRow(existing),
           already: true,
@@ -298,6 +300,7 @@ export async function POST(req: Request, ctx: Ctx) {
         where: { eventId, memberId: member.id },
       });
       if (existing) {
+        notifyClubEventDesk(eventId);
         return NextResponse.json({
           checkIn: mapClubEventCheckInRow(existing),
           already: true,
@@ -318,6 +321,7 @@ export async function POST(req: Request, ctx: Ctx) {
         where: { eventId, memberCode },
       });
       if (byCode) {
+        notifyClubEventDesk(eventId);
         return NextResponse.json({
           checkIn: mapClubEventCheckInRow(byCode),
           already: true,
@@ -344,6 +348,7 @@ export async function POST(req: Request, ctx: Ctx) {
       },
     });
 
+    notifyClubEventDesk(eventId);
     return NextResponse.json({ checkIn: mapClubEventCheckInRow(created), already: false });
   } catch (e) {
     console.error("[club-event/desk POST]", e);

@@ -9,6 +9,7 @@ import {
   serializeFulfillmentJson,
   type ClubEventFulfillmentItem,
 } from "@/systems/club-event/lib/desk";
+import { notifyClubEventDesk } from "@/systems/club-event/lib/desk-sse";
 
 type Ctx = { params: Promise<{ id: string; checkInId: string }> };
 
@@ -75,7 +76,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (
       signatureImageUrl &&
       !/^\/uploads\/club-event\//.test(signatureImageUrl) &&
-      !/^\/uploads\//.test(signatureImageUrl)
+      !/^\/uploads\//.test(signatureImageUrl) &&
+      !/^https:\/\//.test(signatureImageUrl)
     ) {
       return NextResponse.json({ error: "ลายเซ็นไม่ถูกต้อง" }, { status: 400 });
     }
@@ -109,6 +111,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       },
     });
 
+    notifyClubEventDesk(eventId);
     return NextResponse.json({ checkIn: mapClubEventCheckInRow(updated) });
   } catch (e) {
     console.error("[club-event/desk PATCH]", e);

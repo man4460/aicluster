@@ -11,6 +11,7 @@ import {
   parseSubmissionAnswers,
   serializeFulfillmentJson,
 } from "@/systems/club-event/lib/desk";
+import { notifyClubEventDesk } from "@/systems/club-event/lib/desk-sse";
 import { saveOwnerModuleUploadImage } from "@/lib/upload/save-owner-module-image";
 
 type Ctx = { params: Promise<{ slug: string; eventId: string }> };
@@ -229,6 +230,7 @@ export async function POST(req: Request, ctx: Ctx) {
         where: { eventId, submissionId },
       });
       if (existing) {
+        notifyClubEventDesk(eventId);
         return NextResponse.json({ checkIn: mapClubEventCheckInRow(existing), already: true });
       }
       guestName = sub.respondentName || guestName || "ไม่ระบุชื่อ";
@@ -254,6 +256,7 @@ export async function POST(req: Request, ctx: Ctx) {
         where: { eventId, memberId: member.id },
       });
       if (existing) {
+        notifyClubEventDesk(eventId);
         return NextResponse.json({ checkIn: mapClubEventCheckInRow(existing), already: true });
       }
       guestName = member.name;
@@ -273,6 +276,7 @@ export async function POST(req: Request, ctx: Ctx) {
         where: { eventId, memberCode },
       });
       if (byCode) {
+        notifyClubEventDesk(eventId);
         return NextResponse.json({ checkIn: mapClubEventCheckInRow(byCode), already: true });
       }
     }
@@ -295,6 +299,7 @@ export async function POST(req: Request, ctx: Ctx) {
       },
     });
 
+    notifyClubEventDesk(eventId);
     return NextResponse.json({ checkIn: mapClubEventCheckInRow(created), already: false });
   } catch (e) {
     console.error("[club-event/public check-in POST]", e);
@@ -341,6 +346,7 @@ export async function PUT(req: Request, ctx: Ctx) {
       },
     });
 
+    notifyClubEventDesk(eventId);
     return NextResponse.json({ checkIn: mapClubEventCheckInRow(updated) });
   } catch (e) {
     console.error("[club-event/public check-in PUT]", e);
