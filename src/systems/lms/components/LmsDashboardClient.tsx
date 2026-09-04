@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BookOpen, GraduationCap, RefreshCw, Scale, Users } from "lucide-react";
 import { AppEmptyState, useAppNoticePopup } from "@/components/app-templates";
@@ -24,7 +24,10 @@ import {
 } from "@/systems/lms/lib/page-menu-icons";
 import {
   lmsDashboardStatsGridClass,
+  lmsFilterChipClass,
+  lmsFilterChipShellClass,
   lmsIconButtonClass,
+  lmsOutlineButtonClass,
   lmsSectionHeadingClass,
   lmsStatInlineClass,
 } from "@/systems/lms/lib/ui-tokens";
@@ -33,6 +36,10 @@ const DASHBOARD_TAB_ITEMS = LMS_DASHBOARD_TAB_ITEMS.map((item) => ({
   ...item,
   icon: lmsDashboardTabIcon(item.key),
 }));
+
+const PROGRESS_PAGE_SIZE = 8;
+
+type ProgressFilter = "all" | "learning" | "completed";
 
 type Stats = {
   courseCount: number;
@@ -99,6 +106,10 @@ function progressBarTone(pct: number, status: ProgressRow["status"]): string {
   return "bg-slate-300";
 }
 
+function isLearningStatus(status: ProgressRow["status"]): boolean {
+  return status === "ENROLLED" || status === "IN_PROGRESS";
+}
+
 export function LmsDashboardClient({ initialProfile }: { initialProfile: LmsProfileDto }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -106,6 +117,8 @@ export function LmsDashboardClient({ initialProfile }: { initialProfile: LmsProf
   const notice = useAppNoticePopup();
   const [stats, setStats] = useState<Stats | null>(null);
   const [progress, setProgress] = useState<ProgressRow[]>([]);
+  const [progressFilter, setProgressFilter] = useState<ProgressFilter>("all");
+  const [progressPage, setProgressPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const purchasesRefreshRef = useRef<(() => void) | null>(null);
   const onPurchasesRefreshReady = useCallback((fn: () => void) => {
@@ -131,6 +144,7 @@ export function LmsDashboardClient({ initialProfile }: { initialProfile: LmsProf
       if (!res.ok) throw new Error(data.error ?? "โหลดไม่สำเร็จ");
       setStats(data.stats ?? null);
       setProgress(data.progress ?? []);
+      setProgressPage(0);
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "โหลดไม่สำเร็จ");
     } finally {
@@ -152,6 +166,38 @@ export function LmsDashboardClient({ initialProfile }: { initialProfile: LmsProf
     expense: 0,
     balance: 0,
   };
+
+  const progressCounts = useMemo(() => {
+    let learning = 0;
+    let completed = 0;
+    for (const row of progress) {
+      if (row.status === "COMPLETED") completed += 1;
+      else if (isLearningStatus(row.status)) learning += 1;
+    }
+    return { all: progress.length, learning, completed };
+  }, [progress]);
+
+  const filteredProgress = useMemo(() => {
+    if (progressFilter === "completed") {
+      return progress.filter((row) => row.status === "COMPLETED");
+    }
+    if (progressFilter === "learning") {
+      return progress.filter((row) => isLearningStatus(row.status));
+    }
+    return progress;
+  }, [progress, progressFilter]);
+
+  const progressPageCount = Math.max(1, Math.ceil(filteredProgress.length / PROGRESS_PAGE_SIZE));
+  const safeProgressPage = Math.min(progressPage, progressPageCount - 1);
+  const pagedProgress = useMemo(() => {
+    const start = safeProgressPage * PROGRESS_PAGE_SIZE;
+    return filteredProgress.slice(start, start + PROGRESS_PAGE_SIZE);
+  }, [filteredProgress, safeProgressPage]);
+
+  const setProgressFilterAndReset = useCallback((next: ProgressFilter) => {
+    setProgressFilter(next);
+    setProgressPage(0);
+  }, []);
 
   return (
     <div className="min-w-0 space-y-4">
@@ -255,40 +301,121 @@ export function LmsDashboardClient({ initialProfile }: { initialProfile: LmsProf
                     การลงทะเบียน
                   </p>
                 </div>
+                {filteredProgress.length > 0 ? (
+                  <p className="text-xs font-bold tabular-nums text-[#66638c]">
+                    แสดง {pagedProgress.length}/{filteredProgress.length}
+                  </p>
+                ) : null}
+              </div>
+
+              <div
+                className={lmsFilterChipShellClass}
+                role="tablist"
+                aria-label="กรองความคืบหน้าผู้เรียน"
+              >
+                {(
+                  [
+                    { key: "all" as const, label: "ทั้งหมด", count: progressCounts.all },
+                    { key: "learning" as const, label: "กำลังเรียน", count: progressCounts.learning },
+                    { key: "completed" as const, label: "จบแล้ว", count: progressCounts.completed },
+                  ]
+                ).map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={progressFilter === opt.key}
+                    className={lmsFilterChipClass(progressFilter === opt.key)}
+                    onClick={() => setProgressFilterAndReset(opt.key)}
+                  >
+                    {opt.label} ({opt.count})
+                  </button>
+                ))}
               </div>
 
               {loading && progress.length === 0 ? (
                 <p className="text-sm font-semibold text-[#66638c]">กำลังโหลด…</p>
               ) : progress.length === 0 ? (
-                <AppEmptyState>ยังไม่มีการลงทะเบียนเรียน — เพิ่มผู้เรียนและลงทะเบียนคอร์สที่เมนูจัดการ</AppEmptyState>
+                <AppEmptyState>
+                  ยังไม่มีการลงทะเบียนเรียน — เพิ่มผู้เรียนและลงทะเบียนคอร์สที่เมนูจัดการ
+                </AppEmptyState>
+              ) : filteredProgress.length === 0 ? (
+                <AppEmptyState>
+                  {progressFilter === "completed"
+                    ? "ยังไม่มีผู้เรียนที่จบคอร์ส"
+                    : "ยังไม่มีผู้เรียนที่กำลังเรียน"}
+                </AppEmptyState>
               ) : (
-                <ul className="space-y-2">
-                  {progress.map((row) => {
-                    const pct = Math.min(100, Math.max(0, row.progressPercent));
-                    return (
-                      <li
-                        key={row.id}
-                        className="rounded-lg border border-slate-200/90 border-l-[3px] border-l-violet-400 bg-violet-50/40 px-3 py-2.5 sm:px-4"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-bold text-[#1e1b4b]">{row.learnerName}</p>
-                            <p className="truncate text-xs font-semibold text-[#66638c]">
-                              {row.courseTitle} · {LMS_ENROLLMENT_STATUS_LABELS[row.status] ?? row.status}
+                <>
+                  <ul className="space-y-2">
+                    {pagedProgress.map((row) => {
+                      const pct = Math.min(100, Math.max(0, row.progressPercent));
+                      return (
+                        <li
+                          key={row.id}
+                          className={cn(
+                            "rounded-lg border border-slate-200/90 border-l-[3px] px-3 py-2.5 sm:px-4",
+                            row.status === "COMPLETED"
+                              ? "border-l-emerald-500 bg-emerald-50/40"
+                              : "border-l-violet-400 bg-violet-50/40",
+                          )}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-bold text-[#1e1b4b]">{row.learnerName}</p>
+                              <p className="truncate text-xs font-semibold text-[#66638c]">
+                                {row.courseTitle} ·{" "}
+                                {LMS_ENROLLMENT_STATUS_LABELS[row.status] ?? row.status}
+                              </p>
+                            </div>
+                            <p className="shrink-0 text-sm font-black tabular-nums text-[#4d47b6]">
+                              {pct}%
                             </p>
                           </div>
-                          <p className="shrink-0 text-sm font-black tabular-nums text-[#4d47b6]">{pct}%</p>
-                        </div>
-                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/80 ring-1 ring-slate-200/80">
-                          <div
-                            className={cn("h-full rounded-full transition-all", progressBarTone(pct, row.status))}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/80 ring-1 ring-slate-200/80">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-all",
+                                progressBarTone(pct, row.status),
+                              )}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  {progressPageCount > 1 ? (
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                      <p className="text-xs font-semibold text-[#66638c]">
+                        หน้า {safeProgressPage + 1}/{progressPageCount}
+                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          className={lmsOutlineButtonClass}
+                          disabled={safeProgressPage <= 0}
+                          onClick={() => setProgressPage((p) => Math.max(0, p - 1))}
+                          aria-label="หน้าก่อนหน้า"
+                        >
+                          ก่อนหน้า
+                        </button>
+                        <button
+                          type="button"
+                          className={lmsOutlineButtonClass}
+                          disabled={safeProgressPage >= progressPageCount - 1}
+                          onClick={() =>
+                            setProgressPage((p) => Math.min(progressPageCount - 1, p + 1))
+                          }
+                          aria-label="หน้าถัดไป"
+                        >
+                          ถัดไป
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </>
               )}
             </section>
           </>
