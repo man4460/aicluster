@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
-import { ArrowLeft, Package, PenLine, QrCode, Search, UserRound } from "lucide-react";
+import { ArrowLeft, Package, QrCode, Search, UserRound } from "lucide-react";
 import {
   AppEmptyState,
   AppSignaturePad,
@@ -199,37 +199,15 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
     }
   };
 
-  const patchCheckIn = async (id: string, body: Record<string, unknown>) => {
-    setBusy(true);
-    try {
-      const res = await fetch(
-        `/api/club-event/session/events/${encodeURIComponent(eventId)}/desk/${encodeURIComponent(id)}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        },
-      );
-      const json = (await res.json()) as { checkIn?: ClubEventCheckInDto; error?: string };
-      if (!res.ok) throw new Error(json.error ?? "บันทึกไม่สำเร็จ");
-      if (json.checkIn) setSelected(json.checkIn);
-      await load(q, { silent: true });
-    } catch (e) {
-      notice.error(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const saveSignature = async () => {
     if (!selected) return;
-    if (selected.fulfillment.some((f) => !f.delivered)) {
-      notice.error("จ่ายของครบทุกรายการก่อนเซ็นรับ");
-      return;
-    }
     const pad = padRef.current;
     if (!pad || pad.isEmpty()) {
       notice.error("ให้ผู้รับเซ็นชื่อก่อนบันทึก");
+      return;
+    }
+    if (selected.fulfillment.length === 0) {
+      notice.error("ไม่มีรายการของแจก");
       return;
     }
     setBusy(true);
@@ -242,7 +220,10 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ signatureImageUrl: imageUrl }),
+          body: JSON.stringify({
+            deliverAll: true,
+            signatureImageUrl: imageUrl,
+          }),
         },
       );
       const json = (await res.json()) as { checkIn?: ClubEventCheckInDto; error?: string };
@@ -252,9 +233,9 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
       setManageOpen(false);
       setQrOpen(false);
       await load(q, { silent: true });
-      notice.success("บันทึกลายเซ็นรับของแล้ว");
+      notice.success("จ่ายของและเซ็นรับแล้ว");
     } catch (e) {
-      notice.error(e instanceof Error ? e.message : "บันทึกลายเซ็นไม่สำเร็จ");
+      notice.error(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
     } finally {
       setBusy(false);
     }
@@ -536,26 +517,16 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                                 ) : null}
                               </div>
                               <div className="flex shrink-0 flex-wrap gap-1.5">
-                                {checkInNeedsFulfill(c) ? (
-                                  <button
-                                    type="button"
-                                    disabled={busy}
-                                    className={clubEventPrimaryButtonClass}
-                                    onClick={() => void patchCheckIn(c.id, { deliverAll: true })}
-                                  >
-                                    <Package className="h-3.5 w-3.5" aria-hidden />
-                                    จ่ายของทั้งหมด
-                                  </button>
-                                ) : null}
-                                {checkInNeedsSign(c) ? (
+                                {c.fulfillment.length > 0 &&
+                                (checkInNeedsFulfill(c) || checkInNeedsSign(c)) ? (
                                   <button
                                     type="button"
                                     disabled={busy}
                                     className={clubEventPrimaryButtonClass}
                                     onClick={() => openManage(c)}
                                   >
-                                    <PenLine className="h-3.5 w-3.5" aria-hidden />
-                                    เซ็นรับ
+                                    <Package className="h-3.5 w-3.5" aria-hidden />
+                                    จ่ายของทั้งหมด
                                   </button>
                                 ) : null}
                                 <button
@@ -780,7 +751,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
       <FormModal
         open={manageOpen && Boolean(selected)}
         onClose={closeManage}
-        title={selected ? `จัดการ · ${selected.guestName}` : "จัดการ"}
+        title={selected ? `จ่ายของ · ${selected.guestName}` : "จ่ายของ"}
         description={
           selected
             ? [[selected.memberCode, selected.guestPhone, selected.source].filter(Boolean).join(" · "), formatBangkokDateTimeLong(selected.checkedInAt)]
@@ -803,25 +774,14 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                     <span className="min-w-0 font-semibold text-[#1e1b4b]">
                       {f.label} ×{f.qty}
                     </span>
-                    {f.delivered ? (
-                      <button
-                        type="button"
-                        className={clubEventOutlineButtonClass}
-                        disabled={busy}
-                        onClick={() => void patchCheckIn(selected.id, { undeliverKey: f.key })}
-                      >
-                        จ่ายแล้ว · ยกเลิก
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className={clubEventPrimaryButtonClass}
-                        disabled={busy}
-                        onClick={() => void patchCheckIn(selected.id, { deliverKey: f.key })}
-                      >
-                        จ่ายของ
-                      </button>
-                    )}
+                    <span
+                      className={cn(
+                        "shrink-0 text-[11px] font-bold",
+                        f.delivered ? "text-emerald-700" : "text-amber-800",
+                      )}
+                    >
+                      {f.delivered ? "จ่ายแล้ว" : "รอจ่าย"}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -829,36 +789,23 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
               <p className="text-sm font-semibold text-[#8b87b8]">ไม่มีรายการของแจกจากฟอร์ม</p>
             )}
 
-            {selected.fulfillment.some((f) => !f.delivered) ? (
-              <button
-                type="button"
-                className={cn(clubEventOutlineButtonClass, "w-full")}
-                disabled={busy}
-                onClick={() => void patchCheckIn(selected.id, { deliverAll: true })}
-              >
-                จ่ายของทั้งหมด
-              </button>
-            ) : null}
-
-            {selected.fulfillment.some((f) => f.delivered) ? (
-              <div className="space-y-2">
-                <p className="text-xs font-black text-[#4d47b6]">เซ็นรับของ</p>
-                {selected.signatureImageUrl ? (
-                  <p className="text-sm font-bold text-emerald-700">เซ็นรับแล้ว</p>
-                ) : (
-                  <>
-                    <AppSignaturePad ref={padRef} disabled={busy} />
-                    <button
-                      type="button"
-                      className={cn(clubEventPrimaryButtonClass, "w-full")}
-                      disabled={busy}
-                      onClick={() => void saveSignature()}
-                    >
-                      บันทึกลายเซ็น
-                    </button>
-                  </>
-                )}
-              </div>
+            {selected.fulfillment.length > 0 ? (
+              selected.signatureImageUrl ? (
+                <p className="text-sm font-bold text-emerald-700">เซ็นรับครบแล้ว</p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs font-black text-[#4d47b6]">เซ็นรับของ</p>
+                  <AppSignaturePad ref={padRef} disabled={busy} />
+                  <button
+                    type="button"
+                    className={cn(clubEventPrimaryButtonClass, "w-full")}
+                    disabled={busy}
+                    onClick={() => void saveSignature()}
+                  >
+                    ยืนยันจ่ายของและเซ็นรับ
+                  </button>
+                </div>
+              )
             ) : null}
           </div>
         ) : null}
