@@ -248,16 +248,8 @@ export function ClubEventPortalMemberSearch({
                     {m.nickname ? (
                       <p className="text-sm font-semibold text-[#66638c]">ชื่อเล่น: {m.nickname}</p>
                     ) : null}
-                    {m.position || m.memberCode ? (
-                      <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-semibold text-[#66638c]">
-                        {m.position ? <span>{m.position}</span> : null}
-                        {m.position && m.memberCode ? (
-                          <span className="text-slate-300" aria-hidden>
-                            ·
-                          </span>
-                        ) : null}
-                        {m.memberCode ? <span>รหัส: {m.memberCode}</span> : null}
-                      </p>
+                    {m.memberCode ? (
+                      <p className="text-sm font-semibold text-[#66638c]">รหัส: {m.memberCode}</p>
                     ) : null}
                     {m.gender ? (
                       <p className="text-sm font-semibold text-[#66638c]">
