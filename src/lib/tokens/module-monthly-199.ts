@@ -168,3 +168,136 @@ export async function clearModuleMonthly199(userId: string, moduleSlug: string):
     // ตารางยังไม่มีหลัง generate — ไม่บล็อกยกเลิก subscribe
   }
 }
+
+/** ดาวน์เกรด: ลบแพ็ก 199 ทั้งหมด — คง Subscribe ไว้ หักรายวันตามปกติ */
+export async function downgradeAllMonthly199ToDaily(userId: string): Promise<{ cleared: number }> {
+  if (!userId) return { cleared: 0 };
+  try {
+    const result = await prisma.userModulePlan.deleteMany({
+      where: { userId, kind: "MONTHLY_199" },
+    });
+    await prisma.user.updateMany({
+      where: { id: userId, subscriptionType: "BUFFET" },
+      data: { subscriptionType: "DAILY", subscriptionTier: "NONE" },
+    });
+    return { cleared: result.count };
+  } catch {
+    return { cleared: 0 };
+  }
+}
+
+export type UpgradeSubscribedToMonthly199Result =
+  | {
+      ok: true;
+      upgraded: number;
+      alreadyMonthly: number;
+      tokensRemaining: number;
+      tokensCharged: number;
+    }
+  | { ok: false; code: "NO_MODULES"; message: string }
+  | { ok: false; code: "INSUFFICIENT_TOKENS"; balance: number; requiredTokens: number; moduleCount: number }
+  | { ok: false; code: "REJECTED"; message: string };
+
+/**
+ * อัปเกรดโมดูลที่ Subscribe อยู่ (ไม่ฟรี) เป็นแพ็ก 199 — หัก 199 × จำนวนที่ยังไม่ใช่รายเดือน
+ */
+export async function upgradeSubscribedModulesToMonthly199(
+  userId: string,
+): Promise<UpgradeSubscribedToMonthly199Result> {
+  if (!userId) return { ok: false, code: "REJECTED", message: "ข้อมูลไม่ครบ" };
+
+  const { listSubscribedModuleIds } = await import("@/lib/modules/subscriptions-store");
+  const moduleIds = await listSubscribedModuleIds(userId);
+  if (moduleIds.length === 0) {
+    return {
+      ok: false,
+      code: "NO_MODULES",
+      message: "ยังไม่ได้สมัครระบบใด — ไปที่หน้า ระบบทั้งหมด เพื่อสมัครก่อน แล้วค่อยอัปเกรด",
+    };
+  }
+
+  const modules = await prisma.appModule.findMany({
+    where: { id: { in: moduleIds }, isActive: true },
+    select: { id: true, slug: true },
+  });
+  const billable = modules.filter((m) => !isDailyTokenExemptModuleSlug(m.slug));
+  if (billable.length === 0) {
+    return {
+      ok: false,
+      code: "NO_MODULES",
+      message: "โมดูลที่สมัครอยู่เป็นแบบฟรี — ไม่ต้องอัปเกรดแพ็ก 199",
+    };
+  }
+
+  const existing = await prisma.userModulePlan.findMany({
+    where: {
+      userId,
+      kind: "MONTHLY_199",
+      moduleSlug: { in: billable.map((m) => m.slug) },
+    },
+    select: { moduleSlug: true },
+  });
+  const already = new Set(existing.map((r) => r.moduleSlug));
+  const toUpgrade = billable.filter((m) => !already.has(m.slug));
+  if (toUpgrade.length === 0) {
+    return {
+      ok: true,
+      upgraded: 0,
+      alreadyMonthly: already.size,
+      tokensRemaining: (await prisma.user.findUnique({ where: { id: userId }, select: { tokens: true } }))?.tokens ?? 0,
+      tokensCharged: 0,
+    };
+  }
+
+  const required = toUpgrade.length * MODULE_MONTHLY_199_TOKEN_COST;
+
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { tokens: true, role: true },
+    });
+    if (!user) return { ok: false as const, code: "REJECTED" as const, message: "ไม่พบผู้ใช้" };
+    if (user.role === "ADMIN") {
+      return {
+        ok: true as const,
+        upgraded: 0,
+        alreadyMonthly: already.size,
+        tokensRemaining: user.tokens,
+        tokensCharged: 0,
+      };
+    }
+    if (isTokenDebtLocked(user.tokens)) {
+      return { ok: false as const, code: "REJECTED" as const, message: "บัญชีถูกล็อค — ชำระค่าค้างก่อนอัปเกรด" };
+    }
+    if (user.tokens < required) {
+      return {
+        ok: false as const,
+        code: "INSUFFICIENT_TOKENS" as const,
+        balance: user.tokens,
+        requiredTokens: required,
+        moduleCount: toUpgrade.length,
+      };
+    }
+
+    const month = bangkokMonthKey();
+    await tx.user.update({
+      where: { id: userId },
+      data: { tokens: { decrement: required } },
+    });
+    for (const m of toUpgrade) {
+      await tx.userModulePlan.upsert({
+        where: { userId_moduleSlug: { userId, moduleSlug: m.slug } },
+        create: { userId, moduleSlug: m.slug, kind: "MONTHLY_199", lastBillingMonth: month },
+        update: { kind: "MONTHLY_199", lastBillingMonth: month },
+      });
+    }
+    const after = await tx.user.findUnique({ where: { id: userId }, select: { tokens: true } });
+    return {
+      ok: true as const,
+      upgraded: toUpgrade.length,
+      alreadyMonthly: already.size,
+      tokensRemaining: after?.tokens ?? user.tokens - required,
+      tokensCharged: required,
+    };
+  });
+}

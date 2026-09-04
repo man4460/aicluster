@@ -5,6 +5,7 @@ import { appDashboardBrandGradientBarClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { listMonthly199ModuleSlugs } from "@/lib/tokens/module-monthly-199";
 
 export const metadata: Metadata = {
   title: "แพ็กเกจ | MAWELL PLATFORM",
@@ -26,6 +27,8 @@ export default async function PlansPage({ searchParams }: Props) {
     },
   });
   if (!user) redirect("/login");
+
+  const monthly199Slugs = await listMonthly199ModuleSlugs(session.sub);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -49,6 +52,7 @@ export default async function PlansPage({ searchParams }: Props) {
         subscriptionTier={user.subscriptionTier}
         subscriptionType={user.subscriptionType}
         tokens={user.tokens}
+        monthly199Slugs={monthly199Slugs}
       />
     </div>
   );
