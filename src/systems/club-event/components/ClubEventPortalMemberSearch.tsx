@@ -27,10 +27,12 @@ function MemberContactActions({
   phone,
   social,
   email,
+  className,
 }: {
   phone?: string;
   social?: string;
   email?: string;
+  className?: string;
 }) {
   const [copied, setCopied] = useState(false);
   const lineId = social ? normalizeLineId(social) : "";
@@ -50,7 +52,7 @@ function MemberContactActions({
   if (!phone && !social && !email) return null;
 
   return (
-    <div className="mt-2 flex flex-wrap gap-1.5">
+    <div className={cn("flex shrink-0 flex-wrap items-center justify-end gap-1.5", className)}>
       {phoneDigits ? (
         <a
           href={`tel:${phoneDigits}`}
@@ -62,7 +64,8 @@ function MemberContactActions({
           title="โทร"
         >
           <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          <span>{phone}</span>
+          <span className="hidden sm:inline">{phone}</span>
+          <span className="sm:hidden">โทร</span>
         </a>
       ) : null}
 
@@ -80,7 +83,7 @@ function MemberContactActions({
             title="เปิด LINE"
           >
             <MessageCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            <span className="max-w-[10rem] truncate">LINE {lineId}</span>
+            <span>LINE</span>
           </a>
           <button
             type="button"
@@ -112,7 +115,8 @@ function MemberContactActions({
           title="ส่งอีเมล"
         >
           <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          <span className="max-w-[12rem] truncate">{email}</span>
+          <span className="hidden sm:inline max-w-[10rem] truncate">{email}</span>
+          <span className="sm:hidden">อีเมล</span>
         </a>
       ) : null}
     </div>
@@ -219,43 +223,55 @@ export function ClubEventPortalMemberSearch({
 
       {members && members.length > 0 ? (
         <ul className="divide-y divide-slate-200/80 rounded-2xl border border-slate-200/80 bg-white/70">
-          {members.map((m) => (
-            <li key={m.id} className="flex items-start gap-3 p-3 sm:p-4">
-              {m.photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={m.photoUrl}
-                  alt=""
-                  className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-white"
-                />
-              ) : (
-                <span
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-black text-[#4d47b6]"
-                  aria-hidden
-                >
-                  {(m.name || "?").slice(0, 1)}
-                </span>
-              )}
-              <div className="min-w-0 flex-1 space-y-0.5">
-                <p className="font-bold text-[#1e1b4b]">{m.name}</p>
-                {m.nickname ? (
-                  <p className="text-sm font-semibold text-[#66638c]">ชื่อเล่น: {m.nickname}</p>
-                ) : null}
-                {m.position ? (
-                  <p className="text-sm font-semibold text-[#66638c]">{m.position}</p>
-                ) : null}
-                {m.memberCode ? (
-                  <p className="text-sm font-semibold text-[#66638c]">รหัส: {m.memberCode}</p>
-                ) : null}
-                {m.gender ? (
-                  <p className="text-sm font-semibold text-[#66638c]">
-                    เพศ: {GENDER_LABEL[m.gender] ?? m.gender}
-                  </p>
-                ) : null}
-                <MemberContactActions phone={m.phone} social={m.social} email={m.email} />
-              </div>
-            </li>
-          ))}
+          {members.map((m) => {
+            const hasContact = Boolean(m.phone || m.social || m.email);
+            return (
+              <li key={m.id} className="flex items-start gap-3 p-3 sm:items-center sm:p-4">
+                {m.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={m.photoUrl}
+                    alt=""
+                    className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-white"
+                  />
+                ) : (
+                  <span
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-black text-[#4d47b6]"
+                    aria-hidden
+                  >
+                    {(m.name || "?").slice(0, 1)}
+                  </span>
+                )}
+                <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <p className="font-bold text-[#1e1b4b]">{m.name}</p>
+                    {m.nickname ? (
+                      <p className="text-sm font-semibold text-[#66638c]">ชื่อเล่น: {m.nickname}</p>
+                    ) : null}
+                    {m.position || m.memberCode ? (
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-semibold text-[#66638c]">
+                        {m.position ? <span>{m.position}</span> : null}
+                        {m.position && m.memberCode ? (
+                          <span className="text-slate-300" aria-hidden>
+                            ·
+                          </span>
+                        ) : null}
+                        {m.memberCode ? <span>รหัส: {m.memberCode}</span> : null}
+                      </p>
+                    ) : null}
+                    {m.gender ? (
+                      <p className="text-sm font-semibold text-[#66638c]">
+                        เพศ: {GENDER_LABEL[m.gender] ?? m.gender}
+                      </p>
+                    ) : null}
+                  </div>
+                  {hasContact ? (
+                    <MemberContactActions phone={m.phone} social={m.social} email={m.email} />
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       ) : null}
     </div>
