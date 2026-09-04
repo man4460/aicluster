@@ -17,6 +17,7 @@ import {
   LAUNDRY_MODULE_SLUG,
   CLUB_EVENT_MODULE_SLUG,
   LMS_MODULE_SLUG,
+  PRO_RESUME_MODULE_SLUG,
   LOYALTY_STAMP_MODULE_SLUG,
   MASSAGE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
@@ -370,6 +371,20 @@ export async function seedTrialModuleSettings(
           bankName: DEMO_MODULE_PAYMENT.bankName,
           bankAccountNumber: DEMO_MODULE_PAYMENT.bankAccountNumber,
           bankAccountName: DEMO_MODULE_PAYMENT.bankAccountName,
+        },
+      });
+      break;
+
+    case PRO_RESUME_MODULE_SLUG:
+      await tx.resumeProfile.updateMany({
+        where: { ownerUserId, trialSessionId },
+        data: {
+          fullName: trialDemoDisplayName("โปรไฟล์เรซูเม่ตัวอย่าง"),
+          positionTitle: "นักพัฒนาระบบ (ทดลอง)",
+          bio: "ชุดข้อมูลทดลอง — แก้ไขในเมนูโปรไฟล์ได้",
+          profileImageUrl: DEMO_MODULE_LOGO_URL,
+          contactPhone: DEMO_MODULE_CONTACT.contactPhone,
+          publicEnabled: true,
         },
       });
       break;

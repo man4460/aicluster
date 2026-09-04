@@ -30,6 +30,7 @@ import {
 import { seedVaultProdDemoForOwner } from "../src/lib/trial/seed-vault";
 import { seedClubEventProdDemoForOwner } from "../src/lib/trial/seed-club-event";
 import { seedLmsProdDemoForOwner } from "../src/lib/trial/seed-lms";
+import { seedProResumeProdDemoForOwner } from "../src/lib/trial/seed-pro-resume";
 import { seedInventoryProdDemoForOwner } from "../src/lib/trial/seed-inventory";
 import { seedGeneralStorePosProdDemoForOwner } from "../src/lib/trial/seed-general-store-pos";
 import { seedDrinkPosProdDemoForOwner } from "../src/lib/trial/seed-drink-pos";
@@ -58,6 +59,7 @@ import {
   LAUNDRY_MODULE_SLUG,
   CLUB_EVENT_MODULE_SLUG,
   LMS_MODULE_SLUG,
+  PRO_RESUME_MODULE_SLUG,
   LOYALTY_STAMP_MODULE_SLUG,
   MEDIA_REGISTRY_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
@@ -527,6 +529,7 @@ async function main() {
     LAUNDRY_MODULE_SLUG,
     CLUB_EVENT_MODULE_SLUG,
     LMS_MODULE_SLUG,
+    PRO_RESUME_MODULE_SLUG,
     VAULT_MODULE_SLUG,
     INVENTORY_MODULE_SLUG,
     GENERAL_STORE_POS_MODULE_SLUG,
@@ -833,6 +836,17 @@ async function main() {
     });
     if (row) {
       await tryDemoSeed(`lms (${email})`, () => seedLmsProdDemoForOwner(prisma, row.id));
+    }
+  }
+
+  /** Pro Resume — โปรไฟล์ · การศึกษา · ประวัติงาน · ใบประกาศ · พอร์ตโฟลิโอ · สถิติเข้าชม */
+  for (const email of demoSeedDataOwnerEmails) {
+    const row = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (row) {
+      await tryDemoSeed(`pro-resume (${email})`, () => seedProResumeProdDemoForOwner(prisma, row.id));
     }
   }
 

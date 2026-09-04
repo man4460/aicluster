@@ -88,6 +88,13 @@ async function deleteSandboxRowsInTx(tx: Tx, ownerUserId: string, trialSessionId
   await tx.lmsFinanceTransaction.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.lmsLearner.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.lmsProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.resumeViewAnalytics.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.resumePortfolioItem.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.resumePortfolioCategory.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.resumeCertificate.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.resumeExperience.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.resumeEducation.deleteMany({ where: { ownerUserId, trialSessionId } });
+  await tx.resumeProfile.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.mqttClientSessionLog.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.mqttMessageStatDaily.deleteMany({ where: { ownerUserId, trialSessionId } });
   await tx.mqttAclRule.deleteMany({ where: { ownerUserId, trialSessionId } });

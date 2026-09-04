@@ -23,6 +23,7 @@ import {
   MEDIA_REGISTRY_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
   PARKING_MODULE_SLUG,
+  PRO_RESUME_MODULE_SLUG,
   PROMPT_LIBRARY_MODULE_SLUG,
   SCHOOL_BANK_MODULE_SLUG,
   SMART_POLICE_MODULE_SLUG,
@@ -60,6 +61,7 @@ import { seedPromptLibraryProdDemoForOwner } from "@/lib/trial/seed-prompt-libra
 import { seedSchoolBankProdDemoForOwner } from "@/lib/trial/seed-school-bank";
 import { seedSmartPoliceProdDemoForOwner } from "@/lib/trial/seed-smart-police";
 import { seedVaultProdDemoForOwner } from "@/lib/trial/seed-vault";
+import { seedProResumeProdDemoForOwner } from "@/lib/trial/seed-pro-resume";
 import { seedVillageProdDemoForOwner } from "@/lib/trial/seed-village";
 import { seedWaitQueueProdDemoForOwner } from "@/lib/trial/seed-wait-queue";
 
@@ -88,8 +90,9 @@ const SUBSCRIBE_SLUGS = [
   VILLAGE_MODULE_SLUG,
   HOME_FINANCE_BASIC_MODULE_SLUG,
   MQTT_SERVICE_MODULE_SLUG,
-  LAUNDRY_MODULE_SLUG,
-  VAULT_MODULE_SLUG,
+    LAUNDRY_MODULE_SLUG,
+    PRO_RESUME_MODULE_SLUG,
+    VAULT_MODULE_SLUG,
   INVENTORY_MODULE_SLUG,
   GENERAL_STORE_POS_MODULE_SLUG,
   DRINK_POS_MODULE_SLUG,
@@ -197,6 +200,7 @@ export async function runDemoRefreshForOwners(
     await trySeed(lines, "home-finance", () => seedHomeFinanceProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "mqtt", () => seedMqttProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "laundry", () => seedLaundryProdDemoForOwner(prisma, id), log);
+    await trySeed(lines, "pro-resume", () => seedProResumeProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "vault", () => seedVaultProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "inventory", () => seedInventoryProdDemoForOwner(prisma, id), log);
     await trySeed(lines, "smart-police", () => seedSmartPoliceProdDemoForOwner(prisma, id), log);
