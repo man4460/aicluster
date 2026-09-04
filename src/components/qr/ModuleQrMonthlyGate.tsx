@@ -78,23 +78,19 @@ export function ModuleQrMonthlyGate({
 
   if (!allowed) {
     return (
-      <div className={cn("space-y-3", className)}>
-        <div className="rounded-[1.25rem] border border-amber-200/90 bg-amber-50/90 px-4 py-4 text-sm text-amber-950">
-          <p className="font-black text-[#1e1b4b]">{title}</p>
-          <p className="mt-1.5 font-semibold leading-relaxed">
-            ลิงก์และ QR ใช้ได้เฉพาะแพ็กรายเดือนของโมดูลนี้ — สายรายวันยังไม่เปิดสิทธิ์นี้
-          </p>
-        </div>
-        <ModuleMonthlyUpgradeCta
-          moduleSlug={moduleSlug}
-          benefit="อัปเกรดเป็นแพ็กรายเดือน (199) เพื่อเปิดลิงก์ลูกค้า · QR พนักงาน และดาวน์โหลดโปสเตอร์"
-          buttonLabel="อัปเกรดเพื่อเปิดลิงก์ QR"
-          onUpgraded={() => {
-            setAllowed(true);
-            void reload();
-          }}
-        />
-      </div>
+      <ModuleMonthlyUpgradeCta
+        moduleSlug={moduleSlug}
+        className={className}
+        benefit={
+          title === "ลิงก์ QR"
+            ? "ลิงก์และ QR ใช้ได้เฉพาะแพ็กรายเดือนของโมดูลนี้ — สายรายวันยังไม่เปิดสิทธิ์นี้"
+            : `${title} — ใช้ได้เฉพาะแพ็กรายเดือนของโมดูลนี้ · สายรายวันยังไม่เปิดสิทธิ์นี้`
+        }
+        onUpgraded={() => {
+          setAllowed(true);
+          void reload();
+        }}
+      />
     );
   }
 

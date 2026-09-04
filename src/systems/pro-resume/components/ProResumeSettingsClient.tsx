@@ -18,9 +18,6 @@ import {
   proResumePrimaryButtonClass,
 } from "@/systems/pro-resume/lib/ui-tokens";
 
-const PREMIUM_UPSELL =
-  "ฟีเจอร์นี้สำหรับผู้ใช้งานแบบรายเดือน (Monthly Subscription) อัปเกรดวันนี้เพื่อส่งโปรไฟล์ที่โดดเด่นของคุณให้ผู้บริหารและ HR";
-
 const labelClass = "block space-y-1 text-xs font-bold text-[#4d47b6]";
 
 function absoluteUrl(path: string): string {
@@ -193,15 +190,14 @@ export function ProResumeSettingsClient({
               downloadFilePrefix={`resume-${form.slug || "portal"}`}
             />
           ) : (
-            <div className="space-y-2 rounded-xl border border-dashed border-slate-300 bg-slate-50/90 p-4">
+            <div className="space-y-2">
               <p className="text-sm font-bold text-[#1e1b4b]">QR / โปสเตอร์แชร์</p>
-              <p className="text-xs text-[#66638c]">{PREMIUM_UPSELL}</p>
               <ModuleMonthlyUpgradeCta
                 moduleSlug={PRO_RESUME_MODULE_SLUG}
-                variant="button"
-                buttonLabel="อัปเกรดเพื่อเปิด QR / แชร์"
+                benefit="แพ็กฟรี — เปิดตัวอย่าง / แชร์ลิงก์ / QR ต้องอัปเกรดรายเดือน"
                 onUpgraded={() => {
                   setMonthlyOk(true);
+                  setPremiumModalOpen(false);
                   router.refresh();
                 }}
               />
@@ -224,10 +220,9 @@ export function ProResumeSettingsClient({
           />
         }
       >
-        <p className="mb-3 text-sm leading-relaxed text-[#1e1b4b]">{PREMIUM_UPSELL}</p>
         <ModuleMonthlyUpgradeCta
           moduleSlug={PRO_RESUME_MODULE_SLUG}
-          variant="button"
+          benefit="แพ็กฟรี — เปิดตัวอย่าง / แชร์ลิงก์ / QR ต้องอัปเกรดรายเดือน"
           onUpgraded={() => {
             setMonthlyOk(true);
             setPremiumModalOpen(false);
