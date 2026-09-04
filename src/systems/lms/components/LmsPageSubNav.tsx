@@ -3,6 +3,11 @@
 import { type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import {
+  lmsBlockTitleIconTileClass,
+  lmsPageTitleIconTileClass,
+  type LmsCardTone,
+} from "@/systems/lms/lib/card-tones";
+import {
   lmsInlineSubNavBtnClass,
   lmsInlineSubNavShellClass,
   lmsPanelClass,
@@ -20,10 +25,12 @@ export type LmsPageSubNavItem = {
 };
 
 /**
- * หัวการ์ดแบบซักผ้า — ชื่อเมนูหลัก + หัวข้อย่อยแถวเดียว · แท็บ/ปุ่มขวา · เส้นบาง · เนื้อหา
+ * หัวการ์ดแบบซักผ้า — ไอคอนหัวข้อ + ชื่อเมนูหลัก + หัวข้อย่อย · แท็บ/ปุ่มขวา · เส้นบาง · เนื้อหา
  */
 export function LmsPageSubNav({
   title,
+  titleIcon,
+  titleTone = "sky",
   subtitle,
   items,
   activeKey,
@@ -34,6 +41,9 @@ export function LmsPageSubNav({
   className,
 }: {
   title: string;
+  /** ไอคอนข้างหัวข้อหน้า (บังคับตามแม่แบบเมนู) */
+  titleIcon?: ReactNode;
+  titleTone?: LmsCardTone;
   /** ถ้าไม่ส่ง จะใช้ label ของแท็บที่เลือก */
   subtitle?: string;
   items?: LmsPageSubNavItem[];
@@ -53,6 +63,11 @@ export function LmsPageSubNav({
       <div className={cn(lmsPanelSectionClass, "print:hidden")}>
         <div className="flex flex-nowrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
+            {titleIcon ? (
+              <span className={lmsPageTitleIconTileClass(titleTone)} aria-hidden>
+                {titleIcon}
+              </span>
+            ) : null}
             <h2 className="min-w-0 shrink truncate text-base font-bold text-[#1e1b4b] sm:text-lg">{title}</h2>
             {sub ? (
               <>
@@ -116,12 +131,16 @@ export function LmsPageSubNav({
 /** บล็อกย่อยในเนื้อหา — คั่นเส้นบาง (บล็อกแรกส่ง first) · ไม่ใส่หัวซ้ำถ้าหัวอยู่แถวเมนูแล้ว */
 export function LmsPageBlock({
   title,
+  titleIcon,
+  titleTone = "slate",
   action,
   children,
   first = false,
   className,
 }: {
   title?: string;
+  titleIcon?: ReactNode;
+  titleTone?: LmsCardTone;
   action?: ReactNode;
   children: ReactNode;
   first?: boolean;
@@ -131,7 +150,18 @@ export function LmsPageBlock({
     <div className={cn(!first && cn(lmsPanelDividerClass, "mt-4 pt-4"), className)}>
       {title || action ? (
         <div className="mb-3 flex flex-row items-start justify-between gap-3">
-          {title ? <h3 className={lmsSectionHeadingClass}>{title}</h3> : <span />}
+          {title ? (
+            <h3 className={cn(lmsSectionHeadingClass, "gap-2")}>
+              {titleIcon ? (
+                <span className={lmsBlockTitleIconTileClass(titleTone)} aria-hidden>
+                  {titleIcon}
+                </span>
+              ) : null}
+              {title}
+            </h3>
+          ) : (
+            <span />
+          )}
           {action ? <div className="shrink-0">{action}</div> : null}
         </div>
       ) : null}

@@ -27,11 +27,17 @@ import {
   IconRowEdit,
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
+import { lmsPageTitleIconTileClass } from "@/systems/lms/lib/card-tones";
 import type { LmsFinanceCategory, LmsFinanceDto } from "@/systems/lms/lib/mappers";
 import {
   DEFAULT_LMS_FINANCE_CATEGORIES,
   LMS_FINANCE_TYPE_LABELS,
 } from "@/systems/lms/lib/mappers";
+import {
+  lmsFinanceTabIcon,
+  lmsPageTitleIcon,
+  lmsPageTitleTone,
+} from "@/systems/lms/lib/page-menu-icons";
 import {
   lmsFieldClass,
   lmsFilterChipClass,
@@ -384,7 +390,12 @@ export function LmsFinanceClient() {
       <div className={lmsPanelClass}>
         <div className={lmsPanelSectionClass}>
           <div className="flex flex-nowrap items-center justify-between gap-2">
-            <h2 className="min-w-0 shrink truncate text-base font-bold text-[#1e1b4b] sm:text-lg">การเงิน</h2>
+            <div className="flex min-w-0 items-center gap-2">
+              <span className={lmsPageTitleIconTileClass(lmsPageTitleTone("finance"))} aria-hidden>
+                {lmsPageTitleIcon("finance")}
+              </span>
+              <h2 className="min-w-0 shrink truncate text-base font-bold text-[#1e1b4b] sm:text-lg">การเงิน</h2>
+            </div>
             <div
               className="flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5"
               role="group"
@@ -403,6 +414,9 @@ export function LmsFinanceClient() {
                     setCategoryFilter("");
                   }}
                 >
+                  <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
+                    {lmsFinanceTabIcon("INCOME")}
+                  </span>
                   <span className="hidden sm:inline">รายรับ</span>
                   <span className="sm:hidden" aria-hidden>
                     รับ
@@ -420,6 +434,9 @@ export function LmsFinanceClient() {
                     setCategoryFilter("");
                   }}
                 >
+                  <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden>
+                    {lmsFinanceTabIcon("EXPENSE")}
+                  </span>
                   <span className="hidden sm:inline">รายจ่าย</span>
                   <span className="sm:hidden" aria-hidden>
                     จ่าย

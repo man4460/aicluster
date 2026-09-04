@@ -21,6 +21,11 @@ import {
 import { LmsPageSubNav } from "@/systems/lms/components/LmsPageSubNav";
 import type { LmsProfileDto } from "@/systems/lms/lib/mappers";
 import {
+  lmsPageTitleIcon,
+  lmsPageTitleTone,
+  lmsSettingsTabIcon,
+} from "@/systems/lms/lib/page-menu-icons";
+import {
   lmsFieldClass,
   lmsFixedBottomActionClass,
   lmsOutlineButtonClass,
@@ -29,6 +34,11 @@ import {
 
 const LOGO_UPLOAD = "/api/lms/session/images/upload";
 const QR_UPLOAD = "/api/lms/session/images/upload";
+
+const SETTINGS_TAB_ITEMS = LMS_SETTINGS_TAB_ITEMS.map((item) => ({
+  ...item,
+  icon: lmsSettingsTabIcon(item.key),
+}));
 
 function absoluteUrl(path: string): string {
   if (typeof window === "undefined") return path;
@@ -103,7 +113,9 @@ export function LmsSettingsClient({ initialProfile }: { initialProfile: LmsProfi
       {notice.popup}
       <LmsPageSubNav
         title="ตั้งค่า"
-        items={LMS_SETTINGS_TAB_ITEMS}
+        titleIcon={lmsPageTitleIcon("settings")}
+        titleTone={lmsPageTitleTone("settings")}
+        items={SETTINGS_TAB_ITEMS}
         activeKey={tab}
         onSelect={setTab}
         ariaLabel="เมนูย่อยตั้งค่า"

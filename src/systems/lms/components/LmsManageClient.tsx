@@ -38,6 +38,11 @@ import {
   LMS_ENROLLMENT_STATUS_LABELS,
 } from "@/systems/lms/lib/mappers";
 import {
+  lmsManageTabIcon,
+  lmsPageTitleIcon,
+  lmsPageTitleTone,
+} from "@/systems/lms/lib/page-menu-icons";
+import {
   lmsFieldClass,
   lmsFilterChipClass,
   lmsFilterChipShellClass,
@@ -46,6 +51,11 @@ import {
   lmsRowCardClass,
   lmsTextareaClass,
 } from "@/systems/lms/lib/ui-tokens";
+
+const MANAGE_TAB_ITEMS = LMS_MANAGE_TAB_ITEMS.map((item) => ({
+  ...item,
+  icon: lmsManageTabIcon(item.key),
+}));
 
 function IconFilter({ className }: { className?: string }) {
   return (
@@ -397,7 +407,9 @@ export function LmsManageClient() {
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปปกคอร์ส" />
       <LmsPageSubNav
         title="การจัดการ"
-        items={LMS_MANAGE_TAB_ITEMS}
+        titleIcon={lmsPageTitleIcon("manage")}
+        titleTone={lmsPageTitleTone("manage")}
+        items={MANAGE_TAB_ITEMS}
         activeKey={tab}
         onSelect={setTab}
         ariaLabel="เมนูย่อยการจัดการ"

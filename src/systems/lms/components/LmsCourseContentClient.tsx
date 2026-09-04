@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -14,6 +14,11 @@ import {
 import { LmsPageBlock, LmsPageSubNav } from "@/systems/lms/components/LmsPageSubNav";
 import { LMS_MANAGE_PATH } from "@/systems/lms/lms-module-nav";
 import type { LmsCourseDto, LmsExamDto, LmsLessonDto } from "@/systems/lms/lib/mappers";
+import {
+  lmsCourseContentTabIcon,
+  lmsPageTitleIcon,
+  lmsPageTitleTone,
+} from "@/systems/lms/lib/page-menu-icons";
 import { lmsYoutubeWatchUrlFromStored } from "@/systems/lms/lib/youtube";
 import {
   lmsFieldClass,
@@ -37,9 +42,9 @@ const emptyQuestion = (): QuestionDraft => ({
 
 type ContentTab = "lessons" | "exam";
 
-const CONTENT_TABS: { key: ContentTab; label: string; shortLabel: string }[] = [
-  { key: "lessons", label: "บทเรียน", shortLabel: "บท" },
-  { key: "exam", label: "ข้อสอบ", shortLabel: "สอบ" },
+const CONTENT_TABS: { key: ContentTab; label: string; shortLabel: string; icon: ReactNode }[] = [
+  { key: "lessons", label: "บทเรียน", shortLabel: "บท", icon: lmsCourseContentTabIcon("lessons") },
+  { key: "exam", label: "ข้อสอบ", shortLabel: "สอบ", icon: lmsCourseContentTabIcon("exam") },
 ];
 
 type Props = {
@@ -239,6 +244,8 @@ export function LmsCourseContentClient({ courseId }: Props) {
 
       <LmsPageSubNav
         title={course?.title ?? "คอร์ส"}
+        titleIcon={lmsPageTitleIcon("courseContent")}
+        titleTone={lmsPageTitleTone("courseContent")}
         items={CONTENT_TABS}
         activeKey={tab}
         onSelect={(key) => setTab(key as ContentTab)}

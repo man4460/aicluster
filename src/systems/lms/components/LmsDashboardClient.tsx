@@ -18,11 +18,21 @@ import {
   type LmsProfileDto,
 } from "@/systems/lms/lib/mappers";
 import {
+  lmsDashboardTabIcon,
+  lmsPageTitleIcon,
+  lmsPageTitleTone,
+} from "@/systems/lms/lib/page-menu-icons";
+import {
   lmsDashboardStatsGridClass,
   lmsIconButtonClass,
   lmsSectionHeadingClass,
   lmsStatInlineClass,
 } from "@/systems/lms/lib/ui-tokens";
+
+const DASHBOARD_TAB_ITEMS = LMS_DASHBOARD_TAB_ITEMS.map((item) => ({
+  ...item,
+  icon: lmsDashboardTabIcon(item.key),
+}));
 
 type Stats = {
   courseCount: number;
@@ -148,8 +158,10 @@ export function LmsDashboardClient({ initialProfile }: { initialProfile: LmsProf
       {notice.popup}
       <LmsPageSubNav
         title="แดชบอร์ด"
+        titleIcon={lmsPageTitleIcon("dashboard")}
+        titleTone={lmsPageTitleTone("dashboard")}
         subtitle={initialProfile.displayName}
-        items={LMS_DASHBOARD_TAB_ITEMS}
+        items={DASHBOARD_TAB_ITEMS}
         activeKey={tab}
         onSelect={setTab}
         ariaLabel="เมนูย่อยแดชบอร์ด"
