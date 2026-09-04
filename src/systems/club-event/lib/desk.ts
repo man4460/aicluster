@@ -166,6 +166,21 @@ export function clubDeskMatchScore(opts: {
   return false;
 }
 
+/** คีย์รวมคนเดียวกัน (รหัสสมาชิก → เบอร์ → ชื่อ) — ใช้กันรายการค้นหาซ้ำ */
+export function clubDeskPersonKey(opts: {
+  memberCode?: string | null;
+  phone?: string | null;
+  name?: string | null;
+}): string {
+  const code = (opts.memberCode ?? "").trim().toLowerCase();
+  if (code) return `c:${code}`;
+  const phone = normalizeClubPhoneDigits(opts.phone);
+  if (phone.length >= 9) return `p:${phone}`;
+  const name = (opts.name ?? "").trim().toLowerCase();
+  if (name) return `n:${name}`;
+  return "";
+}
+
 export function clubEventPublicCheckInPath(slug: string, eventId: string): string {
   return `/club/${encodeURIComponent(slug)}/events/${encodeURIComponent(eventId)}/check-in`;
 }

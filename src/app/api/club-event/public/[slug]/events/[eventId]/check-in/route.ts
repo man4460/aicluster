@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { parseDynamicLinkConfig } from "@/systems/club-event/lib/mappers";
 import {
   clubDeskMatchScore,
+  clubDeskPersonKey,
   fieldsFromLinkConfigJson,
   fulfillmentFromAnswers,
   mapClubEventCheckInRow,
@@ -81,6 +82,8 @@ export async function GET(req: Request, ctx: Ctx) {
       );
 
       const linkMap = new Map(links.map((l) => [l.id, l]));
+      const seenPeople = new Set<string>();
+
       for (const s of subs) {
         let memberCode = "";
         try {
@@ -99,6 +102,14 @@ export async function GET(req: Request, ctx: Ctx) {
         ) {
           continue;
         }
+        const personKey = clubDeskPersonKey({
+          memberCode,
+          phone: s.respondentPhone,
+          name: s.respondentName,
+        });
+        if (personKey && seenPeople.has(personKey)) continue;
+        if (personKey) seenPeople.add(personKey);
+
         const link = linkMap.get(s.linkId);
         const fulfillment = link
           ? fulfillmentFromAnswers(
@@ -130,6 +141,15 @@ export async function GET(req: Request, ctx: Ctx) {
         ) {
           continue;
         }
+        const personKey = clubDeskPersonKey({
+          memberCode: m.memberCode,
+          phone: m.phone,
+          name: m.name,
+        });
+        // มีคำตอบลงทะเบียนล่วงหน้าแล้ว — ไม่โชว์ซ้ำจากรายชื่อสมาชิก
+        if (personKey && seenPeople.has(personKey)) continue;
+        if (personKey) seenPeople.add(personKey);
+
         hits.push({
           kind: "member",
           memberId: m.id,

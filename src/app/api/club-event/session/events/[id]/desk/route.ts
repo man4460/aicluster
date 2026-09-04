@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { parseDynamicLinkConfig } from "@/systems/club-event/lib/mappers";
 import {
   clubDeskMatchScore,
+  clubDeskPersonKey,
   fieldsFromLinkConfigJson,
   fulfillmentFromAnswers,
   mapClubEventCheckInRow,
@@ -146,7 +147,12 @@ export async function GET(req: Request, ctx: Ctx) {
           }),
         )
       : registered;
-    const filteredMembers = q
+    const registeredKeys = new Set(
+      filteredRegistered
+        .map((r) => clubDeskPersonKey({ memberCode: r.memberCode, phone: r.phone, name: r.name }))
+        .filter(Boolean),
+    );
+    const filteredMembers = (q
       ? memberRows.filter((m) =>
           clubDeskMatchScore({
             name: m.name,
@@ -155,7 +161,15 @@ export async function GET(req: Request, ctx: Ctx) {
             query: q,
           }),
         )
-      : memberRows;
+      : memberRows
+    ).filter((m) => {
+      const key = clubDeskPersonKey({
+        memberCode: m.memberCode,
+        phone: m.phone,
+        name: m.name,
+      });
+      return !key || !registeredKeys.has(key);
+    });
     const filteredCheckIns = q
       ? checkInDtos.filter((c) =>
           clubDeskMatchScore({
