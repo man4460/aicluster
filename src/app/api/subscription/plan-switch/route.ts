@@ -5,12 +5,15 @@ import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import {
   downgradeAllMonthly199ToDaily,
   listMonthly199ModuleSlugs,
+  upgradeSingleModuleToMonthly199,
   upgradeSubscribedModulesToMonthly199,
 } from "@/lib/tokens/module-monthly-199";
 import { isTokenDebtLocked } from "@/lib/tokens/token-debt";
 
 const bodySchema = z.object({
   target: z.enum(["daily", "monthly199"]),
+  /** อัปเกรดเฉพาะโมดูลนี้ (slug) — ใช้ตอนโควตาเต็มในโมดูล */
+  moduleSlug: z.string().min(1).max(80).optional(),
 });
 
 export async function POST(req: Request) {
@@ -46,6 +49,12 @@ export async function POST(req: Request) {
   const billingUserId = ctx.billingUserId;
 
   if (parsed.data.target === "daily") {
+    if (parsed.data.moduleSlug) {
+      return NextResponse.json(
+        { error: "ดาวน์เกรดทีละโมดูลยังไม่รองรับ — ใช้ดาวน์เกรดทั้งหมดที่หน้าแพ็กเกจ" },
+        { status: 400 },
+      );
+    }
     const current = await listMonthly199ModuleSlugs(billingUserId);
     if (current.length === 0 && ctx.access.subscriptionType !== "BUFFET") {
       return NextResponse.json({ ok: true, cleared: 0, alreadyDaily: true });
@@ -56,6 +65,35 @@ export async function POST(req: Request) {
       target: "daily",
       cleared,
       monthly199Slugs: [] as string[],
+    });
+  }
+
+  if (parsed.data.moduleSlug) {
+    const result = await upgradeSingleModuleToMonthly199(billingUserId, parsed.data.moduleSlug);
+    if (!result.ok) {
+      if (result.code === "INSUFFICIENT_TOKENS") {
+        return NextResponse.json(
+          {
+            error: `โทเคนไม่พอสำหรับแพ็ก 199 (มี ${result.balance} ต้องการ ${result.requiredTokens})`,
+            code: result.code,
+            balance: result.balance,
+            requiredTokens: result.requiredTokens,
+          },
+          { status: 402 },
+        );
+      }
+      return NextResponse.json({ error: result.message, code: result.code }, { status: 400 });
+    }
+    const monthly199Slugs = await listMonthly199ModuleSlugs(billingUserId);
+    return NextResponse.json({
+      ok: true,
+      target: "monthly199",
+      moduleSlug: parsed.data.moduleSlug,
+      upgraded: result.alreadyHad ? 0 : 1,
+      alreadyHad: Boolean(result.alreadyHad),
+      tokensRemaining: result.tokensRemaining,
+      tokensCharged: result.alreadyHad ? 0 : 199,
+      monthly199Slugs,
     });
   }
 

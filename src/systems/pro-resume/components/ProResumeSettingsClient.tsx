@@ -1,11 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAppNoticePopup } from "@/components/app-templates";
+import { ModuleMonthlyUpgradeCta } from "@/components/dashboard/ModuleMonthlyUpgradeCta";
 import { ModulePublicLinkQrPanel } from "@/components/qr/module-public-link-qr-panel";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import { PRO_RESUME_MODULE_SLUG } from "@/lib/modules/config";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import { ProResumePagePanel } from "@/systems/pro-resume/components/ProResumePagePanel";
 import type { ResumeProfileDto } from "@/systems/pro-resume/lib/mappers";
@@ -36,12 +38,14 @@ export function ProResumeSettingsClient({
   trialSessionId?: string;
 }) {
   const notice = useAppNoticePopup();
+  const router = useRouter();
   const [form, setForm] = useState(initialProfile);
   const [saving, setSaving] = useState(false);
   const [premiumModalOpen, setPremiumModalOpen] = useState(false);
+  const [monthlyOk, setMonthlyOk] = useState(hasMonthly);
 
   const publicAbsoluteUrl = useMemo(() => absoluteUrl(form.publicUrl), [form.publicUrl]);
-  const canShare = hasMonthly;
+  const canShare = monthlyOk;
 
   const saveProfile = async () => {
     setSaving(true);
@@ -160,8 +164,16 @@ export function ProResumeSettingsClient({
                 คัดลอกลิงก์
               </button>
             </div>
-            {!hasMonthly ? (
-              <p className="text-xs font-semibold text-amber-800">แพ็กฟรี — เปิดตัวอย่าง / แชร์ลิงก์ / QR ต้องอัปเกรดรายเดือน</p>
+            {!monthlyOk ? (
+              <ModuleMonthlyUpgradeCta
+                moduleSlug={PRO_RESUME_MODULE_SLUG}
+                benefit="แพ็กฟรี — เปิดตัวอย่าง / แชร์ลิงก์ / QR ต้องอัปเกรดรายเดือน"
+                onUpgraded={() => {
+                  setMonthlyOk(true);
+                  setPremiumModalOpen(false);
+                  router.refresh();
+                }}
+              />
             ) : null}
           </div>
 
@@ -183,22 +195,15 @@ export function ProResumeSettingsClient({
             <div className="space-y-2 rounded-xl border border-dashed border-slate-300 bg-slate-50/90 p-4">
               <p className="text-sm font-bold text-[#1e1b4b]">QR / โปสเตอร์แชร์</p>
               <p className="text-xs text-[#66638c]">{PREMIUM_UPSELL}</p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className={cn(proResumeOutlineButtonClass, "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400")}
-                  onClick={() => setPremiumModalOpen(true)}
-                >
-                  สร้าง QR
-                </button>
-                <button
-                  type="button"
-                  className={cn(proResumeOutlineButtonClass, "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400")}
-                  onClick={() => setPremiumModalOpen(true)}
-                >
-                  ดาวน์โหลดโปสเตอร์
-                </button>
-              </div>
+              <ModuleMonthlyUpgradeCta
+                moduleSlug={PRO_RESUME_MODULE_SLUG}
+                variant="button"
+                buttonLabel="อัปเกรดเพื่อเปิด QR / แชร์"
+                onUpgraded={() => {
+                  setMonthlyOk(true);
+                  router.refresh();
+                }}
+              />
             </div>
           )}
         </div>
@@ -213,21 +218,21 @@ export function ProResumeSettingsClient({
           <FormModalFooterActions
             onCancel={() => setPremiumModalOpen(false)}
             cancelLabel="ปิด"
-            onSubmit={() => {
-              setPremiumModalOpen(false);
-              window.location.href = "/dashboard/plans";
-            }}
-            submitLabel="ดูแพ็กเกจ"
+            submitLabel="ปิด"
+            onSubmit={() => setPremiumModalOpen(false)}
           />
         }
       >
-        <p className="text-sm leading-relaxed text-[#1e1b4b]">{PREMIUM_UPSELL}</p>
-        <p className="mt-3 text-xs text-[#66638c]">
-          หรือ{" "}
-          <Link href="/dashboard/plans" className="font-bold text-[#4d47b6] underline">
-            ไปที่หน้าแพ็กเกจ
-          </Link>
-        </p>
+        <p className="mb-3 text-sm leading-relaxed text-[#1e1b4b]">{PREMIUM_UPSELL}</p>
+        <ModuleMonthlyUpgradeCta
+          moduleSlug={PRO_RESUME_MODULE_SLUG}
+          variant="button"
+          onUpgraded={() => {
+            setMonthlyOk(true);
+            setPremiumModalOpen(false);
+            router.refresh();
+          }}
+        />
       </FormModal>
     </>
   );

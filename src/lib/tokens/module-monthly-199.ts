@@ -103,9 +103,43 @@ export async function applyModuleMonthly199Billing(userId: string): Promise<void
 }
 
 export type PurchaseModule199Result =
-  | { ok: true; tokensRemaining: number }
+  | { ok: true; tokensRemaining: number; alreadyHad?: boolean }
   | { ok: false; code: "INSUFFICIENT_TOKENS"; balance: number; requiredTokens: number }
   | { ok: false; code: "REJECTED"; message: string };
+
+/**
+ * อัปเกรดโมดูลเดียวเป็นแพ็ก 199 + Subscribe (ถ้ายังไม่สมัคร)
+ * — ใช้ตอนโควตาเต็ม / ฟีเจอร์ล็อก แม้ CTA แพ็ก 199 ในแคตตาล็อกจะซ่อนอยู่
+ */
+export async function upgradeSingleModuleToMonthly199(
+  userId: string,
+  moduleSlug: string,
+): Promise<PurchaseModule199Result> {
+  if (!userId || !moduleSlug) return { ok: false, code: "REJECTED", message: "ข้อมูลไม่ครบ" };
+  if (isDailyTokenExemptModuleSlug(moduleSlug)) {
+    return { ok: false, code: "REJECTED", message: "โมดูลฟรีไม่ต้องสมัครแพ็ก 199" };
+  }
+
+  const mod = await prisma.appModule.findUnique({
+    where: { slug: moduleSlug },
+    select: { id: true, isActive: true },
+  });
+  if (!mod?.isActive) return { ok: false, code: "REJECTED", message: "ไม่พบระบบ" };
+
+  const already = await moduleHasActiveMonthly199(userId, moduleSlug);
+  if (already) {
+    const { subscribeModule } = await import("@/lib/modules/subscriptions-store");
+    await subscribeModule(userId, mod.id);
+    const tokens = (await prisma.user.findUnique({ where: { id: userId }, select: { tokens: true } }))?.tokens ?? 0;
+    return { ok: true, tokensRemaining: tokens, alreadyHad: true };
+  }
+
+  const bought = await purchaseModuleMonthly199(userId, moduleSlug);
+  if (!bought.ok) return bought;
+  const { subscribeModule } = await import("@/lib/modules/subscriptions-store");
+  await subscribeModule(userId, mod.id);
+  return bought;
+}
 
 export async function purchaseModuleMonthly199(
   userId: string,

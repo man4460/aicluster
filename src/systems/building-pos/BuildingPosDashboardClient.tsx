@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
 import { AppEmptyState, AppImageLightbox, appTemplateOutlineButtonClass, printDataUrlImagePoster, useAppImageLightbox, useAppNoticePopup } from "@/components/app-templates";
+import { ModuleMonthlyUpgradeCta } from "@/components/dashboard/ModuleMonthlyUpgradeCta";
 import { cn } from "@/lib/cn";
+import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
 import {
   createShopQrPosterCanvas,
   createShopQrPosterDataUrl,
@@ -1829,7 +1831,9 @@ export function BuildingPosDashboardClient({
         description={
           kitchenFormOpen
             ? "ตั้งชื่อแผนก เช่น ครัวร้อน · ครัวเย็น · บาร์ — เมนูจะส่งไปลิงก์ครัวของแผนกนั้น"
-            : "เพิ่ม แก้ไข หรือลบแผนกครัว (แพ็ก 299+)"
+            : multiKitchenEnabled
+              ? "เพิ่ม แก้ไข หรือลบแผนกครัว"
+              : "หลายแผนกครัวต้องอัปเกรดแพ็กรายเดือนของ POS ร้านอาหาร"
         }
         size="lg"
         mobileCentered
@@ -1848,13 +1852,17 @@ export function BuildingPosDashboardClient({
             />
           ) : (
             <div className="flex w-full flex-wrap justify-between gap-2">
-              <button
-                type="button"
-                className="app-btn-primary min-h-[44px] rounded-xl px-4 text-sm font-black"
-                onClick={() => openKitchenCreate()}
-              >
-                เพิ่มแผนกครัว
-              </button>
+              {multiKitchenEnabled ? (
+                <button
+                  type="button"
+                  className="app-btn-primary min-h-[44px] rounded-xl px-4 text-sm font-black"
+                  onClick={() => openKitchenCreate()}
+                >
+                  เพิ่มแผนกครัว
+                </button>
+              ) : (
+                <span />
+              )}
               <button
                 type="button"
                 className={cn(appTemplateOutlineButtonClass, "min-h-[44px] rounded-xl px-4 text-sm font-black")}
@@ -1900,6 +1908,12 @@ export function BuildingPosDashboardClient({
               เปิดใช้งานแผนกนี้
             </label>
           </div>
+        ) : !multiKitchenEnabled ? (
+          <ModuleMonthlyUpgradeCta
+            moduleSlug={BUILDING_POS_MODULE_SLUG}
+            benefit="หลายแผนกครัว · ลิงก์ครัวแยกตามแผนก — ต้องอัปเกรดแพ็กรายเดือนของ POS ร้านอาหาร (199)"
+            onUpgraded={() => void loadAll()}
+          />
         ) : kitchenDepartments.length === 0 ? (
           <p className="rounded-[1.25rem] border border-dashed border-[#d8d6ec] bg-[#faf9ff]/70 px-3 py-8 text-center text-sm font-semibold text-[#66638c]">
             ยังไม่มีแผนกครัว — กด «เพิ่มแผนกครัว»

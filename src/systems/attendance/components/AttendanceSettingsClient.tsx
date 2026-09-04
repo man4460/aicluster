@@ -17,6 +17,8 @@ import {
   ATTENDANCE_MAX_SHIFTS_PER_LOCATION,
   formatAttendanceLocationLimit,
 } from "@/lib/attendance/plan-quota";
+import { ModuleMonthlyUpgradeCta } from "@/components/dashboard/ModuleMonthlyUpgradeCta";
+import { ATTENDANCE_MODULE_SLUG } from "@/lib/modules/config";
 import { cn } from "@/lib/cn";
 import {
   attendanceAddLocationDashedClass,
@@ -407,9 +409,13 @@ function AttendanceSettingsClientInner() {
           </p>
         ) : null}
         {overLocationQuota && tab === "locations" ? (
-          <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
-            มีจุดเช็ค {locCount} จุด แต่แพ็กปัจจุบันรองรับได้ {maxLoc} จุด — ลบจุดที่ไม่ใช้หรืออัปเกรดแพ็กก่อนบันทึก
-          </p>
+          <div className="mt-3">
+            <ModuleMonthlyUpgradeCta
+              moduleSlug={ATTENDANCE_MODULE_SLUG}
+              benefit={`มีจุดเช็ค ${locCount} จุด แต่แพ็กปัจจุบันรองรับได้ ${maxLoc} จุด — อัปเกรดแพ็กรายเดือนเพื่อเพิ่มโควต้า (หรือลบจุดที่ไม่ใช้)`}
+              onUpgraded={() => void load()}
+            />
+          </div>
         ) : null}
 
         <div
@@ -828,6 +834,14 @@ function AttendanceSettingsClientInner() {
                         ({locCount}/{maxLocLabel})
                       </span>
                     </button>
+                  </div>
+                ) : maxLoc != null ? (
+                  <div className="w-full min-w-0 basis-full">
+                    <ModuleMonthlyUpgradeCta
+                      moduleSlug={ATTENDANCE_MODULE_SLUG}
+                      benefit={`ใช้ครบโควต้าจุดเช็คแล้ว (${locCount}/${maxLocLabel}) — อัปเกรดแพ็กรายเดือนเพื่อเพิ่มจุด`}
+                      onUpgraded={() => void load()}
+                    />
                   </div>
                 ) : null}
 

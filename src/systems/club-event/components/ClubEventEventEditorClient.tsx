@@ -50,8 +50,11 @@ import type { ClubEventMediaLimits } from "@/systems/club-event/lib/plan-limits"
 import {
   CLUB_EVENT_FREE_GALLERY_MAX,
   CLUB_EVENT_FREE_YOUTUBE_MAX,
+  CLUB_EVENT_MONTHLY_GALLERY_MAX,
   CLUB_EVENT_MONTHLY_YOUTUBE_MAX,
 } from "@/systems/club-event/lib/plan-limits";
+import { ModuleMonthlyUpgradeCta } from "@/components/dashboard/ModuleMonthlyUpgradeCta";
+import { CLUB_EVENT_MODULE_SLUG } from "@/lib/modules/config";
 import {
   clubEventEditorTabIcon,
   clubEventPageTitleIcon,
@@ -579,11 +582,27 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
           </p>
 
           {ytEditIdx == null && !canAddYoutube ? (
-            <div className="rounded-[1.25rem] border border-amber-200/90 bg-amber-50/90 px-3 py-3 text-sm font-semibold text-amber-950 sm:px-4">
-              {limits.isMonthly
-                ? `เพิ่มคลิปครบโควต้าแล้ว (${limits.youtubeMax}/${limits.youtubeMax})`
-                : `แพ็กฟรีเพิ่มได้ ${CLUB_EVENT_FREE_YOUTUBE_MAX} คลิปต่อกิจกรรม — ต้องการหลายวิดีโอให้สมัครรายเดือนโมดูลบริหารชมรม (สูงสุด ${CLUB_EVENT_MONTHLY_YOUTUBE_MAX} คลิป)`}
-            </div>
+            limits.isMonthly ? (
+              <div className="rounded-[1.25rem] border border-amber-200/90 bg-amber-50/90 px-3 py-3 text-sm font-semibold text-amber-950 sm:px-4">
+                {`เพิ่มคลิปครบโควต้าแล้ว (${limits.youtubeMax}/${limits.youtubeMax})`}
+              </div>
+            ) : (
+              <ModuleMonthlyUpgradeCta
+                moduleSlug={CLUB_EVENT_MODULE_SLUG}
+                benefit={`แพ็กฟรีเพิ่มได้ ${CLUB_EVENT_FREE_YOUTUBE_MAX} คลิปต่อกิจกรรม — อัปเกรดเพื่อเพิ่มได้สูงสุด ${CLUB_EVENT_MONTHLY_YOUTUBE_MAX} คลิป`}
+                onUpgraded={() => {
+                  if (isNew) {
+                    setLimits({
+                      isMonthly: true,
+                      youtubeMax: CLUB_EVENT_MONTHLY_YOUTUBE_MAX,
+                      galleryMax: CLUB_EVENT_MONTHLY_GALLERY_MAX,
+                    });
+                  } else {
+                    void loadEvent();
+                  }
+                }}
+              />
+            )
           ) : (
           <div className="space-y-3 rounded-[1.25rem] border border-white/70 bg-white/70 p-3 sm:p-4">
             <div className="flex flex-row items-start justify-between gap-3">
@@ -793,6 +812,25 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
               </label>
             </div>
           </div>
+          {!limits.isMonthly && !canAddGallery ? (
+            <div className="mb-3">
+              <ModuleMonthlyUpgradeCta
+                moduleSlug={CLUB_EVENT_MODULE_SLUG}
+                benefit={`แพ็กฟรีอัปโหลดได้ ${CLUB_EVENT_FREE_GALLERY_MAX} รูป — อัปเกรดเพื่อเพิ่มได้สูงสุด ${CLUB_EVENT_MONTHLY_GALLERY_MAX} รูป`}
+                onUpgraded={() => {
+                  if (isNew) {
+                    setLimits({
+                      isMonthly: true,
+                      youtubeMax: CLUB_EVENT_MONTHLY_YOUTUBE_MAX,
+                      galleryMax: CLUB_EVENT_MONTHLY_GALLERY_MAX,
+                    });
+                  } else {
+                    void loadEvent();
+                  }
+                }}
+              />
+            </div>
+          ) : null}
           {!activeEventId ? (
             <AppEmptyState>บันทึกกิจกรรมก่อน แล้วค่อยอัปโหลดรูป</AppEmptyState>
           ) : gallery.length === 0 ? (

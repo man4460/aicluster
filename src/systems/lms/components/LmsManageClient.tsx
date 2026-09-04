@@ -31,6 +31,8 @@ import {
   type LmsManageTabKey,
 } from "@/systems/lms/lms-module-nav";
 import { LmsPageSubNav } from "@/systems/lms/components/LmsPageSubNav";
+import { ModuleMonthlyUpgradeCta } from "@/components/dashboard/ModuleMonthlyUpgradeCta";
+import { LMS_MODULE_SLUG } from "@/lib/modules/config";
 import { LMS_LEARNER_QUOTA_DAILY, isLmsLearnerQuotaFull } from "@/systems/lms/lib/constants";
 import type { LmsCourseDto, LmsLearnerDto } from "@/systems/lms/lib/mappers";
 import {
@@ -572,13 +574,11 @@ export function LmsManageClient() {
         ) : (
           <div className="space-y-3">
             {quotaFull ? (
-              <div
-                role="status"
-                className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-950"
-              >
-                โควตาผู้เรียนเต็ม {quota.used}/{quota.max} (สายรายวันสูงสุด {LMS_LEARNER_QUOTA_DAILY} คน)
-                กรุณาสมัครแพ็กเกจรายเดือน (Monthly Subscription) เพื่อเพิ่มผู้เรียนไม่จำกัด
-              </div>
+              <ModuleMonthlyUpgradeCta
+                moduleSlug={LMS_MODULE_SLUG}
+                benefit={`โควตาผู้เรียนเต็ม ${quota.used}/${quota.max} (สายรายวันสูงสุด ${LMS_LEARNER_QUOTA_DAILY} คน) — อัปเกรดแพ็กรายเดือนเพื่อเพิ่มผู้เรียนไม่จำกัด`}
+                onUpgraded={() => void load()}
+              />
             ) : (
               <p className="text-xs font-medium text-[#66638c]">
                 โควตาผู้เรียน {quota.used}
