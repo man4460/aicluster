@@ -13,6 +13,8 @@ alwaysApply: true
   - **`AppImageThumb`** — ปุ่มรูปย่อ (ค่าเริ่ม 64×64) + `onOpen`
   - **`AppImageLightbox`** — overlay ดูรูปเต็ม
   - **`useAppImageLightbox()`** — `{ src, open, close }` คู่กับ Lightbox
+  - **`AppYoutubeLightbox`** + **`useAppYoutubeLightbox()`** — เล่น YouTube ในป๊อปอัป + เต็มจอ
+- **แกลเลอรีหลายรูป + สไลด์โชว์ + กริดวิดีโอ:** ดูกฎ **`dashboard-module-media-gallery-slideshow.mdc`** (ต้นแบบชมรม)
 - **ห้าม** คัดลอก/เลียนแบบ `HomeFinanceImageLightbox` หรือ `HomeFinanceThumb` เป็นไฟล์ใหม่ในโมดูลอื่น
 - **ห้าม** สร้าง lightbox ใหม่ด้วย `fixed inset-0` + `img` เองถ้าเป้าหมายคือ “ดูรูปแนบแบบเดียวกับระบบเดิม” — ขยายที่ `AppImageLightbox` ถ้าต้องการพฤติกรรมเพิ่ม (แล้วได้ทุกหน้าพร้อมกัน)
 

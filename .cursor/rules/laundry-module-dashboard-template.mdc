@@ -330,5 +330,6 @@ alwaysApply: false
 - การ์ดสถิติ / กริดรายการ: `laundry-dashboard-ui.mdc`  
 - **ไอคอน + โทนสีการ์ดรายการ:** `dashboard-module-list-card-icon-tones.mdc` (ต้นแบบคิว: `laundry-order-card-tone.ts` · ต้นแบบรายการทั่วไป: `club-event/lib/card-tones.ts`)  
 - **ไอคอนหัวข้อเมนู / แท็บ:** `dashboard-module-page-menu-icons.mdc` (ต้นแบบ: `club-event/lib/page-menu-icons.tsx` · `LaundryPageSubNav`)  
+- **วิดีโอ / แกลเลอรี / สไลด์:** `dashboard-module-media-gallery-slideshow.mdc` (ต้นแบบ: `ClubEventEventDetailClient` · `ClubEventSlideshow`)  
 - คู่มือ modal: `laundry-usage-guide-modal.mdc`  
 - Car wash คู่ขนาน: `dashboard-module-car-wash-barber-reference.mdc`

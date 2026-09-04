@@ -1,0 +1,102 @@
+---
+description: แกลเลอรีรูป + วิดีโอ YouTube บนหน้ารายละเอียด — กริดการ์ด · lightbox · สไลด์ป๊อปอัปเต็มจอ (ต้นแบบชมรม)
+globs:
+  - "src/systems/**/components/**/*.{tsx,ts}"
+  - "src/components/app-templates/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# สื่อกิจกรรม — กริดวิดีโอ / แกลเลอรี / สไลด์โชว์
+
+ใช้เมื่อโมดูลมี **วิดีโอ YouTube** และ/หรือ **แกลเลอรีรูป** บนหน้ารายละเอียดหรือแก้ไข (ต้นแบบ: **ชมรมกิจกรรม**)
+
+**คู่กับ:** `app-templates-media.mdc` · `app-image-lightbox-centered.mdc` · `dashboard-module-design-check-laundry-first.mdc`
+
+**อ้างอิงโค้ด:**
+
+| ชิ้น | พาธ |
+|------|-----|
+| หน้ารายละเอียด | `ClubEventEventDetailClient.tsx` |
+| สไลด์ป๊อปอัป | `ClubEventSlideshow.tsx` |
+| YouTube lightbox | `AppYoutubeLightbox` + `useAppYoutubeLightbox` |
+| รูปเดี่ยว / เลื่อน | `AppImageLightbox` + `useAppImageLightbox` |
+| โทเค็นกริด | `clubEventYoutubeCardGridClass` · `clubEventGalleryCardGridClass` ใน `club-event/lib/ui-tokens.ts` |
+| คลิปตัวอย่างทดลอง | `CLUB_EVENT_TRIAL_SAMPLE_YOUTUBE_VIDEOS` ใน `club-event/lib/youtube.ts` |
+
+---
+
+## 1) กริดวิดีโอ YouTube (บังคับ)
+
+| Breakpoint | คอลัมน์ |
+|------------|---------|
+| มือถือ (`default`) | **2** |
+| คอม (`lg+`) | **6** |
+
+1. แสดงเป็น **การ์ด thumb** (aspect-video + ปุ่ม Play ทับ) — **ห้าม** ฝัง iframe เล่นตรงในรายการยาวทั้งหน้า  
+2. **คลิกการ์ด** → เปิด **`AppYoutubeLightbox`** (ป๊อปอัปเล่น)  
+3. ใน lightbox ต้องมีปุ่ม **เต็มจอ** (browser fullscreen / YouTube allowFullScreen)  
+4. โทเค็นกริดรวมใน `lib/ui-tokens.ts` ของโมดูล — อย่า copy `grid-cols-*` กระจายหลายไฟล์  
+
+```tsx
+<ul className={clubEventYoutubeCardGridClass}>
+  {videos.map((v) => (
+    <YoutubeThumbCard key={v.id} onPlay={() => ytLb.open(v.youtubeUrl, v.title)} />
+  ))}
+</ul>
+<AppYoutubeLightbox youtubeUrl={ytLb.youtubeUrl} title={ytLb.title} onClose={ytLb.close} />
+```
+
+### บัญชีทดลอง / ฟรี
+
+- เมื่อ **ยังไม่มีคลิปจริง** บนหน้ารายละเอียด — โชว์ **ตัวอย่าง ~6 คลิป** (ป้าย «ตัวอย่าง») ให้เห็นเลย์เอาต์กริดเต็มแถว  
+- คลิปตัวอย่างเล่นใน lightbox ได้ · **ไม่** นับเป็นโควต้าบันทึก  
+- มีคลิปจริงแล้ว → โชว์ของจริงเท่านั้น  
+
+---
+
+## 2) กริดแกลเลอรีรูป (บังคับ)
+
+| Breakpoint | คอลัมน์ |
+|------------|---------|
+| มือถือ (`default`) | **3** |
+| คอม (`lg+`) | **8** |
+
+1. Thumb กด → `AppImageLightbox` / `openGallery` (เลื่อนรูปได้)  
+2. ใช้ `aspect-square` + `object-cover` ให้กริดสม่ำเสมอ  
+3. โทเค็น: เช่น `clubEventGalleryCardGridClass`  
+
+---
+
+## 3) รับชมสไลด์ (บังคับเมื่อมีแกลเลอรี ≥ 1)
+
+1. ปุ่ม **«รับชมสไลด์»** ที่หัวบล็อกแกลเลอรี (มือถือไอคอน · `sm+` มีข้อความ)  
+2. เปิด **ป๊อปอัปสไลด์** (portal `document.body` · พื้นมืด · Esc / คลิกพื้นหลังปิด)  
+3. ต้องมีอย่างน้อย: เล่นอัตโนมัติ / หยุด · ก่อน-ถัดไป · thumb strip · ปุ่ม **เต็มจอ** (`requestFullscreen` บน stage)  
+4. ต้นแบบโมดูล: `ClubEventSlideshow` — โมดูลใหม่คัดลอกหรือย้ายเข้า `app-templates` ถ้าใช้ซ้ำ ≥ 2 โมดูล  
+
+```tsx
+<button type="button" onClick={() => setSlideshowOpen(true)} aria-label="รับชมสไลด์">
+  …รับชมสไลด์
+</button>
+<ClubEventSlideshow open={slideshowOpen} onClose={…} slides={…} title={…} />
+```
+
+---
+
+## 4) ห้าม
+
+- ฝัง YouTube iframe เต็มความกว้างเป็นรายการยาวบนหน้ารายละเอียดแทนกริดการ์ด  
+- กริดวิดีโอมือถือ 1 คอลัมน์ หรือเดสก์ท็อปไม่ถึง 6 เมื่อต้องการแถวตัวอย่างทดลอง  
+- กริดรูปมือถือ 2 / เดสก์ท็อป 4 เป็นค่าเริ่มเมื่อทำโมดูลใหม่ตามแม่แบบนี้ (ใช้ 3 / 8)  
+- สไลด์เต็มจอแบบ `fixed inset-0` โดยไม่มีปุ่ม **เต็มจอ** ของเบราว์เซอร์ และไม่มีโหมดป๊อปอัป  
+- สร้าง lightbox YouTube / รูป เอง ทั้งที่ `AppYoutubeLightbox` / `AppImageLightbox` มีแล้ว  
+
+---
+
+## 5) เช็กลิสต์
+
+- [ ] YouTube: การ์ด · `grid-cols-2 lg:grid-cols-6` · คลิก → `AppYoutubeLightbox` + เต็มจอ  
+- [ ] ทดลองว่าง: ตัวอย่าง ~6 คลิป + ป้ายตัวอย่าง  
+- [ ] แกลเลอรี: `grid-cols-3 lg:grid-cols-8` · คลิก → `AppImageLightbox`  
+- [ ] ปุ่มรับชมสไลด์ + ป๊อปอัป + เต็มจอ  
+- [ ] โทเค็นกริดใน `ui-tokens` ของโมดูล  

@@ -13,9 +13,10 @@ alwaysApply: true
 2. **`.cursor/rules/laundry-module-portal-website-template.mdc`** — เว็บลูกค้า flat section · สีแบรนด์ · compact hero · lookup (เมื่อทำพอร์ทัล)  
 3. **`.cursor/rules/dashboard-module-list-card-icon-tones.mdc`** — การ์ดรายการ: เส้นซ้าย · พื้น pastel · ไอคอน tile (เมื่อทำ/ปรับรายการ)  
 4. **`.cursor/rules/dashboard-module-page-menu-icons.mdc`** — ไอคอนหัวข้อหน้า + แท็บเมนูย่อย  
-5. **`src/systems/laundry/lib/ui-tokens.ts`** — โทเค็นกล่อง/แท็บ/segment ที่ใช้จริง  
-6. **`@/components/app-templates`** (`index.ts`) — กราฟ · รูป · พิมพ์ · lightbox · signature · usage guide  
-7. กฎโปรเจกต์ที่ซักผ้าใช้แล้ว:  
+5. **`.cursor/rules/dashboard-module-media-gallery-slideshow.mdc`** — กริดวิดีโอ 2/6 · แกลเลอรี 3/8 · สไลด์ป๊อปอัปเต็มจอ (เมื่อมี YouTube/แกลเลอรี)  
+6. **`src/systems/laundry/lib/ui-tokens.ts`** — โทเค็นกล่อง/แท็บ/segment ที่ใช้จริง  
+7. **`@/components/app-templates`** (`index.ts`) — กราฟ · รูป · พิมพ์ · lightbox · signature · usage guide  
+8. กฎโปรเจกต์ที่ซักผ้าใช้แล้ว:  
    - `dashboard-ux-car-wash-baseline.mdc` (dock ล่าง · มุมมน)  
    - `dashboard-module-list-filter.mdc` · `dashboard-mobile-filter-icon.mdc`  
    - `app-templates-spark-charts.mdc` · `app-templates-media.mdc`  
@@ -31,6 +32,7 @@ alwaysApply: true
 | รายการ + กรอง + ปุ่มเพิ่ม | `LaundryPurchasesClient.tsx` · `LaundryPackagesClient.tsx` |
 | การ์ดรายการไอคอน + สี | `laundry-order-card-tone.ts` · `LaundryOrderCard` · **ชมรม** `club-event/lib/card-tones.ts` · กฎ **`dashboard-module-list-card-icon-tones.mdc`** |
 | ไอคอนหัวข้อเมนู / แท็บ | `LaundryPageSubNav` · **ชมรม** `page-menu-icons.tsx` · กฎ **`dashboard-module-page-menu-icons.mdc`** |
+| YouTube / แกลเลอรี / สไลด์ | **ชมรม** `ClubEventEventDetailClient` · `ClubEventSlideshow` · กฎ **`dashboard-module-media-gallery-slideshow.mdc`** |
 | ชำระเงิน + สลิป | `LaundryPaymentPanel.tsx` · `LaundryPublicPaymentPanel.tsx` |
 | พิมพ์ใบเสร็จ/ใบกำกับ | `lib/laundry-print-docs.ts` · `LaundrySellPackageModal.tsx` |
 | Popup แจ้งเตือน | `useAppNoticePopup` ใน portal/pickup/finance |
