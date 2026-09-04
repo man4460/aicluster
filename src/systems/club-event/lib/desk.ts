@@ -64,6 +64,15 @@ export function serializeFulfillmentJson(items: ClubEventFulfillmentItem[]): str
   return JSON.stringify(items);
 }
 
+/** แสดงชื่อรายการแจก — ตัดคำนำหน้าชื่อคำถาม qty ที่เคยต่อไว้ */
+export function formatClubEventFulfillmentLabel(label: string): string {
+  const raw = label.trim();
+  if (!raw) return raw;
+  const sep = raw.indexOf(": ");
+  if (sep > 0 && sep < raw.length - 2) return raw.slice(sep + 2).trim() || raw;
+  return raw;
+}
+
 export function mapClubEventCheckInRow(row: {
   id: string;
   eventId: string;
@@ -117,7 +126,8 @@ export function fulfillmentFromAnswers(
       if (qty <= 0) continue;
       out.push({
         key: `${f.key}:${item.key}`,
-        label: `${f.label}: ${item.label}`,
+        /** แสดงชื่อรายการอย่างเดียว — ไม่ต่อชื่อคำถาม qty (เช่น «รับของหน้างาน») */
+        label: item.label.trim() || f.label.trim() || item.key,
         qty,
         delivered: false,
         deliveredAt: null,

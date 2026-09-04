@@ -8,7 +8,10 @@ import {
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { formatBangkokDateTimeLong } from "@/lib/time/bangkok";
-import type { ClubEventCheckInDto } from "@/systems/club-event/lib/desk";
+import {
+  formatClubEventFulfillmentLabel,
+  type ClubEventCheckInDto,
+} from "@/systems/club-event/lib/desk";
 import {
   clubEventFieldClass,
   clubEventGlassShellClass,
@@ -197,7 +200,7 @@ export function ClubEventPublicCheckInClient({
               {checkIn.fulfillment.map((f) => (
                 <li key={f.key} className="flex justify-between gap-2 font-semibold text-[#1e1b4b]">
                   <span>
-                    {f.label} ×{f.qty}
+                    {formatClubEventFulfillmentLabel(f.label)} ×{f.qty}
                   </span>
                   <span className={f.delivered ? "text-emerald-700" : "text-amber-700"}>
                     {f.delivered ? "รับแล้ว" : "รอรับที่โต๊ะ"}

@@ -20,6 +20,7 @@ import {
 import { ClubEventPageSubNav } from "@/systems/club-event/components/ClubEventPageSubNav";
 import {
   clubEventPublicCheckInPath,
+  formatClubEventFulfillmentLabel,
   type ClubEventCheckInDto,
 } from "@/systems/club-event/lib/desk";
 import { useClubEventDeskSse } from "@/systems/club-event/lib/use-club-event-desk-sse";
@@ -590,7 +591,9 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                               {r.fulfillment.length > 0 ? (
                                 <p className="mt-1 text-xs font-semibold text-[#4d47b6]">
                                   ของ:{" "}
-                                  {r.fulfillment.map((f) => `${f.label}×${f.qty}`).join(" · ")}
+                                  {r.fulfillment
+                                    .map((f) => `${formatClubEventFulfillmentLabel(f.label)}×${f.qty}`)
+                                    .join(" · ")}
                                 </p>
                               ) : null}
                             </div>
@@ -794,7 +797,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                     className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/80 bg-white px-3 py-2.5 text-sm"
                   >
                     <span className="min-w-0 font-semibold text-[#1e1b4b]">
-                      {f.label} ×{f.qty}
+                      {formatClubEventFulfillmentLabel(f.label)} ×{f.qty}
                     </span>
                     <span
                       className={cn(
