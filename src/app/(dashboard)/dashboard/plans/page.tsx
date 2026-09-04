@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { PlansPricing } from "@/components/dashboard/PlansPricing";
+import { PlansPricing, type PlansModuleRow } from "@/components/dashboard/PlansPricing";
 import { appDashboardBrandGradientBarClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { getSession } from "@/lib/auth/session";
+import {
+  displayAppModuleTitle,
+  isDailyTokenExemptModuleSlug,
+} from "@/lib/modules/config";
+import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { prisma } from "@/lib/prisma";
 import { listMonthly199ModuleSlugs } from "@/lib/tokens/module-monthly-199";
 
@@ -28,7 +33,40 @@ export default async function PlansPage({ searchParams }: Props) {
   });
   if (!user) redirect("/login");
 
-  const monthly199Slugs = await listMonthly199ModuleSlugs(session.sub);
+  const [moduleIds, monthly199Slugs] = await Promise.all([
+    listSubscribedModuleIds(session.sub),
+    listMonthly199ModuleSlugs(session.sub),
+  ]);
+  const monthlySet = new Set(monthly199Slugs);
+
+  const appModules =
+    moduleIds.length > 0
+      ? await prisma.appModule.findMany({
+          where: { id: { in: moduleIds }, isActive: true },
+          select: { id: true, slug: true, title: true, sortOrder: true, groupId: true },
+          orderBy: [{ groupId: "asc" }, { sortOrder: "asc" }, { title: "asc" }],
+        })
+      : [];
+
+  const byId = new Map(appModules.map((m) => [m.id, m]));
+  const modules: PlansModuleRow[] = moduleIds
+    .map((id) => byId.get(id))
+    .filter((m): m is NonNullable<typeof m> => Boolean(m))
+    .map((m) => {
+      const tokenFree = isDailyTokenExemptModuleSlug(m.slug);
+      const plan: PlansModuleRow["plan"] = tokenFree
+        ? "free"
+        : monthlySet.has(m.slug)
+          ? "monthly199"
+          : "daily";
+      return {
+        id: m.id,
+        slug: m.slug,
+        title: displayAppModuleTitle(m.slug, m.title),
+        tokenFree,
+        plan,
+      };
+    });
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -45,6 +83,9 @@ export default async function PlansPage({ searchParams }: Props) {
         <div className="relative mt-3">
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#66638c]">Plans</p>
           <h1 className="mt-1 text-2xl font-black tracking-tight text-[#2e2a58] sm:text-3xl">แพ็กเกจ</h1>
+          <p className="mt-1.5 max-w-xl text-sm font-medium text-[#66638c]">
+            จัดการสายรายวัน / รายเดือน ของแต่ละระบบที่สมัคร
+          </p>
         </div>
       </header>
       <PlansPricing
@@ -52,7 +93,7 @@ export default async function PlansPage({ searchParams }: Props) {
         subscriptionTier={user.subscriptionTier}
         subscriptionType={user.subscriptionType}
         tokens={user.tokens}
-        monthly199Slugs={monthly199Slugs}
+        modules={modules}
       />
     </div>
   );

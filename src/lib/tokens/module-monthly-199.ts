@@ -203,6 +203,21 @@ export async function clearModuleMonthly199(userId: string, moduleSlug: string):
   }
 }
 
+/** ดาวน์เกรดโมดูลเดียวเป็นสายรายวัน — คง Subscribe ไว้ */
+export async function downgradeSingleModuleToDaily(
+  userId: string,
+  moduleSlug: string,
+): Promise<{ ok: true; cleared: boolean } | { ok: false; code: "REJECTED"; message: string }> {
+  if (!userId || !moduleSlug) return { ok: false, code: "REJECTED", message: "ข้อมูลไม่ครบ" };
+  if (isDailyTokenExemptModuleSlug(moduleSlug)) {
+    return { ok: false, code: "REJECTED", message: "โมดูลฟรีไม่มีแพ็กรายเดือน" };
+  }
+  const had = await moduleHasActiveMonthly199(userId, moduleSlug);
+  if (!had) return { ok: true, cleared: false };
+  await clearModuleMonthly199(userId, moduleSlug);
+  return { ok: true, cleared: true };
+}
+
 /** ดาวน์เกรด: ลบแพ็ก 199 ทั้งหมด — คง Subscribe ไว้ หักรายวันตามปกติ */
 export async function downgradeAllMonthly199ToDaily(userId: string): Promise<{ cleared: number }> {
   if (!userId) return { cleared: 0 };

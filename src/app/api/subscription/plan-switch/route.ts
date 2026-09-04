@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/api-auth";
 import { getModuleBillingContext } from "@/lib/modules/billing-context";
 import {
   downgradeAllMonthly199ToDaily,
+  downgradeSingleModuleToDaily,
   listMonthly199ModuleSlugs,
   upgradeSingleModuleToMonthly199,
   upgradeSubscribedModulesToMonthly199,
@@ -50,10 +51,19 @@ export async function POST(req: Request) {
 
   if (parsed.data.target === "daily") {
     if (parsed.data.moduleSlug) {
-      return NextResponse.json(
-        { error: "ดาวน์เกรดทีละโมดูลยังไม่รองรับ — ใช้ดาวน์เกรดทั้งหมดที่หน้าแพ็กเกจ" },
-        { status: 400 },
-      );
+      const result = await downgradeSingleModuleToDaily(billingUserId, parsed.data.moduleSlug);
+      if (!result.ok) {
+        return NextResponse.json({ error: result.message, code: result.code }, { status: 400 });
+      }
+      const monthly199Slugs = await listMonthly199ModuleSlugs(billingUserId);
+      return NextResponse.json({
+        ok: true,
+        target: "daily",
+        moduleSlug: parsed.data.moduleSlug,
+        cleared: result.cleared ? 1 : 0,
+        alreadyDaily: !result.cleared,
+        monthly199Slugs,
+      });
     }
     const current = await listMonthly199ModuleSlugs(billingUserId);
     if (current.length === 0 && ctx.access.subscriptionType !== "BUFFET") {
