@@ -388,14 +388,16 @@ function ItemModal({
     images: [] as string[],
   });
   const [busy, setBusy] = useState(false);
-  const coverGalleryRef = useRef<HTMLInputElement>(null);
   const galleryPickRef = useRef<HTMLInputElement>(null);
-  const coverCamera = useAppCameraCapture();
   const galleryCamera = useAppCameraCapture();
 
   useEffect(() => {
     if (!open) return;
     if (row && row !== "new") {
+      const images =
+        row.coverImage && !row.images.includes(row.coverImage)
+          ? [row.coverImage, ...row.images]
+          : row.images;
       setForm({
         categoryId: row.categoryId,
         title: row.title,
@@ -403,7 +405,7 @@ function ItemModal({
         shortDesc: row.shortDesc,
         contentPlain: contentHtmlToPlainText(row.contentHTML),
         youtubeUrl: row.youtubeUrl ?? "",
-        images: row.images,
+        images,
       });
     } else {
       setForm({
@@ -429,30 +431,40 @@ function ItemModal({
     return data.imageUrl;
   };
 
-  const onPickCover = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    try {
-      const url = await uploadImage(file);
-      setForm((f) => ({ ...f, coverImage: url }));
-    } catch (err) {
-      notice.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
-    }
+  const appendGalleryImages = (urls: string[]) => {
+    if (!urls.length) return;
+    setForm((f) => {
+      const images = [...f.images, ...urls].slice(0, 24);
+      return {
+        ...f,
+        images,
+        coverImage: f.coverImage && images.includes(f.coverImage) ? f.coverImage : images[0] ?? null,
+      };
+    });
+  };
+
+  const removeGalleryImage = (url: string) => {
+    setForm((f) => {
+      const images = f.images.filter((u) => u !== url);
+      const coverImage =
+        f.coverImage === url ? images[0] ?? null : f.coverImage && images.includes(f.coverImage) ? f.coverImage : images[0] ?? null;
+      return { ...f, images, coverImage };
+    });
   };
 
   const onPickGalleryImages = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
     e.target.value = "";
+    const uploaded: string[] = [];
     for (const file of files) {
       try {
-        const url = await uploadImage(file);
-        setForm((f) => ({ ...f, images: [...f.images, url].slice(0, 24) }));
+        uploaded.push(await uploadImage(file));
       } catch (err) {
         notice.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
         break;
       }
     }
+    appendGalleryImages(uploaded);
   };
 
   const submit = async () => {
@@ -528,42 +540,63 @@ function ItemModal({
         </label>
         <label className={labelClass}>YouTube URL<input className={proResumeFieldClass} value={form.youtubeUrl} onChange={(e) => setForm((f) => ({ ...f, youtubeUrl: e.target.value }))} placeholder="https://youtube.com/..." /></label>
         <div className="space-y-2">
-          <p className={labelClass}>รูปปก</p>
-          <div className="flex flex-wrap items-center gap-2">
-            {form.coverImage ? <AppImageThumb src={form.coverImage} alt="ปก" onOpen={() => lb.open(form.coverImage!)} /> : null}
-            <AppImagePickCameraButtons
-              disabled={busy}
-              onPickGallery={() => coverGalleryRef.current?.click()}
-              onPickCamera={() => coverCamera.openCamera(async (file) => {
-                try {
-                  const url = await uploadImage(file);
-                  setForm((f) => ({ ...f, coverImage: url }));
-                } catch (err) {
-                  notice.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
-                }
-              })}
-            />
-            <AppGalleryCameraFileInputs galleryInputRef={coverGalleryRef} cameraInputRef={coverCamera.cameraInputRef} onChange={onPickCover} />
-            {coverCamera.cameraModal}
-          </div>
-        </div>
-        <div className="space-y-2">
           <p className={labelClass}>แกลเลอรี ({form.images.length})</p>
-          <div className="flex flex-wrap gap-2">
-            {form.images.map((url) => (
-              <div key={url} className="relative">
-                <AppImageThumb src={url} alt="" onOpen={() => lb.open(url)} />
-                <button type="button" className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[10px] text-white" aria-label="ลบรูป" onClick={() => setForm((f) => ({ ...f, images: f.images.filter((u) => u !== url) }))}>×</button>
+          <p className="text-[10px] font-medium leading-relaxed text-[#66638c]">
+            อัปโหลดรูปแล้วกด «ตั้งเป็นปก» บนรูปที่ต้องการเป็นหน้าปก
+          </p>
+          {form.coverImage ? (
+            <div className="flex items-center gap-2 rounded-xl border border-[#0000BF]/15 bg-[#0000BF]/5 px-2.5 py-2">
+              <AppImageThumb src={form.coverImage} alt="หน้าปก" className="h-12 w-12" onOpen={() => lb.open(form.coverImage!)} />
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold text-[#4d47b6]">หน้าปกปัจจุบัน</p>
+                <p className="text-[10px] text-[#66638c]">เลือกใหม่ได้จากแกลเลอรีด้านล่าง</p>
               </div>
-            ))}
+            </div>
+          ) : (
+            <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-3 py-2 text-[11px] text-[#66638c]">
+              ยังไม่มีหน้าปก — เพิ่มรูปแล้วตั้งเป็นปก
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {form.images.map((url) => {
+              const isCover = form.coverImage === url;
+              return (
+                <div key={url} className="relative">
+                  <div className={cn(isCover && "rounded-xl ring-2 ring-[#0000BF] ring-offset-2")}>
+                    <AppImageThumb src={url} alt="" onOpen={() => lb.open(url)} />
+                  </div>
+                  {isCover ? (
+                    <span className="absolute -left-1 -top-1 rounded-md bg-[#0000BF] px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm">
+                      ปก
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="absolute bottom-1 left-1 right-1 rounded-md bg-white/95 px-1 py-0.5 text-[9px] font-bold text-[#4d47b6] shadow-sm ring-1 ring-[#0000BF]/20"
+                      onClick={() => setForm((f) => ({ ...f, coverImage: url }))}
+                    >
+                      ตั้งเป็นปก
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[10px] text-white"
+                    aria-label="ลบรูป"
+                    onClick={() => removeGalleryImage(url)}
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
           </div>
           <AppImagePickCameraButtons
             disabled={busy}
             onPickGallery={() => galleryPickRef.current?.click()}
             onPickCamera={() => galleryCamera.openCamera(async (file) => {
               try {
-                const url = await uploadImage(file);
-                setForm((f) => ({ ...f, images: [...f.images, url].slice(0, 24) }));
+                appendGalleryImages([await uploadImage(file)]);
               } catch (err) {
                 notice.error(err instanceof Error ? err.message : "อัปโหลดไม่สำเร็จ");
               }
