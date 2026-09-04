@@ -30,6 +30,7 @@ import {
 } from "@/systems/club-event/lib/page-menu-icons";
 import {
   clubEventFieldClass,
+  clubEventIconButtonClass,
   clubEventOutlineButtonClass,
   clubEventPrimaryButtonClass,
   clubEventRowCardClass,
@@ -313,20 +314,15 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
           <div className="flex shrink-0 items-center gap-1.5">
             <Link
               href={clubEventEventHref(eventId)}
-              className={cn(
-                clubEventOutlineButtonClass,
-                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center",
-              )}
+              className={clubEventIconButtonClass}
               aria-label="กลับกิจกรรม"
+              title="กลับกิจกรรม"
             >
               <ArrowLeft className="h-4 w-4" aria-hidden />
             </Link>
             <button
               type="button"
-              className={cn(
-                clubEventOutlineButtonClass,
-                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 sm:min-w-0 sm:px-3",
-              )}
+              className={cn(clubEventOutlineButtonClass, "gap-1.5")}
               aria-label="แสดง QR เช็กอิน"
               title="QR เช็กอิน"
               onClick={() => setQrOpen(true)}
@@ -336,7 +332,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
             </button>
             <button
               type="button"
-              className={cn(clubEventOutlineButtonClass, "min-h-[40px]")}
+              className={clubEventOutlineButtonClass}
               onClick={() => void load()}
               disabled={loading}
             >
@@ -436,7 +432,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                 <p className="text-xs font-bold text-[#4d47b6]">{filterHint}</p>
                 <button
                   type="button"
-                  className={cn(clubEventOutlineButtonClass, "min-h-8")}
+                  className={clubEventOutlineButtonClass}
                   onClick={() => setFilter("all")}
                 >
                   แสดงทั้งหมด
@@ -457,18 +453,16 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                   />
                   <button
                     type="button"
-                    className={cn(clubEventOutlineButtonClass, "min-h-[40px] min-w-[40px]")}
+                    className={clubEventIconButtonClass}
                     aria-label="ค้นหา"
+                    title="ค้นหา"
                     onClick={() => void load()}
                   >
                     <Search className="h-4 w-4" aria-hidden />
                   </button>
                   <button
                     type="button"
-                    className={cn(
-                      clubEventPrimaryButtonClass,
-                      "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 sm:min-w-0 sm:px-3",
-                    )}
+                    className={cn(clubEventPrimaryButtonClass, "gap-1.5")}
                     aria-label="แสดง QR เช็กอิน"
                     title="QR เช็กอิน"
                     onClick={() => setQrOpen(true)}
@@ -539,15 +533,15 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                                   </p>
                                 ) : null}
                               </div>
-                              <div className="flex shrink-0 flex-wrap gap-2">
+                              <div className="flex shrink-0 flex-wrap gap-1.5">
                                 {checkInNeedsFulfill(c) ? (
                                   <button
                                     type="button"
                                     disabled={busy}
-                                    className={cn(clubEventPrimaryButtonClass, "min-h-10 px-3")}
+                                    className={clubEventPrimaryButtonClass}
                                     onClick={() => void patchCheckIn(c.id, { deliverAll: true })}
                                   >
-                                    <Package className="h-4 w-4" aria-hidden />
+                                    <Package className="h-3.5 w-3.5" aria-hidden />
                                     จ่ายของทั้งหมด
                                   </button>
                                 ) : null}
@@ -555,16 +549,16 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                                   <button
                                     type="button"
                                     disabled={busy}
-                                    className={cn(clubEventPrimaryButtonClass, "min-h-10 px-3")}
+                                    className={clubEventPrimaryButtonClass}
                                     onClick={() => openManage(c)}
                                   >
-                                    <PenLine className="h-4 w-4" aria-hidden />
+                                    <PenLine className="h-3.5 w-3.5" aria-hidden />
                                     เซ็นรับ
                                   </button>
                                 ) : null}
                                 <button
                                   type="button"
-                                  className={cn(clubEventOutlineButtonClass, "min-h-10 px-3")}
+                                  className={clubEventOutlineButtonClass}
                                   onClick={() => openManage(c)}
                                 >
                                   จัดการ
@@ -615,8 +609,8 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                               ) : null}
                             </div>
                             {r.alreadyCheckedIn ? (
-                              <div className="flex shrink-0 flex-wrap gap-2">
-                                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                              <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
                                   มาแล้ว
                                 </span>
                                 {(() => {
@@ -626,7 +620,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                                   return linked ? (
                                     <button
                                       type="button"
-                                      className={cn(clubEventOutlineButtonClass, "min-h-10")}
+                                      className={clubEventOutlineButtonClass}
                                       onClick={() => openManage(linked)}
                                     >
                                       จัดการ
@@ -638,12 +632,12 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                               <button
                                 type="button"
                                 disabled={busy}
-                                className={cn(clubEventPrimaryButtonClass, "min-h-10 shrink-0")}
+                                className={cn(clubEventPrimaryButtonClass, "shrink-0")}
                                 onClick={() =>
                                   void checkIn({ submissionId: r.submissionId, source: "STAFF" })
                                 }
                               >
-                                <UserRound className="h-4 w-4" aria-hidden />
+                                <UserRound className="h-3.5 w-3.5" aria-hidden />
                                 เช็กอิน
                               </button>
                             )}
@@ -683,7 +677,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                               <button
                                 type="button"
                                 disabled={busy}
-                                className={cn(clubEventOutlineButtonClass, "min-h-10 shrink-0")}
+                                className={cn(clubEventOutlineButtonClass, "shrink-0")}
                                 onClick={() =>
                                   void checkIn({ memberId: m.memberId, source: "STAFF" })
                                 }
@@ -720,7 +714,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                     <button
                       type="button"
                       disabled={busy || !walkName.trim()}
-                      className={cn(clubEventPrimaryButtonClass, "min-h-10 w-full sm:w-auto")}
+                      className={cn(clubEventPrimaryButtonClass, "w-full sm:w-auto")}
                       onClick={() =>
                         void checkIn({
                           guestName: walkName.trim(),
@@ -810,7 +804,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                     {f.delivered ? (
                       <button
                         type="button"
-                        className={cn(clubEventOutlineButtonClass, "min-h-9 text-[11px]")}
+                        className={clubEventOutlineButtonClass}
                         disabled={busy}
                         onClick={() => void patchCheckIn(selected.id, { undeliverKey: f.key })}
                       >
@@ -819,7 +813,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                     ) : (
                       <button
                         type="button"
-                        className={cn(clubEventPrimaryButtonClass, "min-h-9")}
+                        className={clubEventPrimaryButtonClass}
                         disabled={busy}
                         onClick={() => void patchCheckIn(selected.id, { deliverKey: f.key })}
                       >
@@ -836,7 +830,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
             {selected.fulfillment.some((f) => !f.delivered) ? (
               <button
                 type="button"
-                className={cn(clubEventOutlineButtonClass, "min-h-10 w-full")}
+                className={cn(clubEventOutlineButtonClass, "w-full")}
                 disabled={busy}
                 onClick={() => void patchCheckIn(selected.id, { deliverAll: true })}
               >
@@ -854,7 +848,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                     <AppSignaturePad ref={padRef} disabled={busy} />
                     <button
                       type="button"
-                      className={cn(clubEventPrimaryButtonClass, "min-h-10 w-full")}
+                      className={cn(clubEventPrimaryButtonClass, "w-full")}
                       disabled={busy}
                       onClick={() => void saveSignature()}
                     >
