@@ -14,7 +14,7 @@ export async function GET() {
     const { profile, scope } = await lmsSessionContext(own.ownerId);
     const ow = lmsOwnerWhere(own.ownerId, scope.trialSessionId);
 
-    const [courseCount, learnerCount, enrollments, finance] = await Promise.all([
+    const [courseCount, learnerCount, enrollments, finance, progressRows] = await Promise.all([
       prisma.lmsCourse.count({ where: { profileId: profile.id, ...ow } }),
       prisma.lmsLearner.count({ where: { profileId: profile.id, ...ow } }),
       prisma.lmsEnrollment.findMany({
@@ -23,8 +23,20 @@ export async function GET() {
       }),
       prisma.lmsFinanceTransaction.findMany({
         where: { profileId: profile.id, ...ow },
-        select: { type: true, amountBaht: true, transactedAt: true },
-        orderBy: { transactedAt: "asc" },
+        select: { type: true, amountBaht: true },
+      }),
+      prisma.lmsEnrollment.findMany({
+        where: { ...ow, course: { profileId: profile.id } },
+        orderBy: [{ updatedAt: "desc" }],
+        take: 16,
+        select: {
+          id: true,
+          progressPercent: true,
+          status: true,
+          updatedAt: true,
+          learner: { select: { fullName: true, username: true } },
+          course: { select: { title: true } },
+        },
       }),
     ]);
 
@@ -39,18 +51,6 @@ export async function GET() {
     const income = finance.filter((r) => r.type === "INCOME").reduce((s, r) => s + r.amountBaht, 0);
     const expense = finance.filter((r) => r.type === "EXPENSE").reduce((s, r) => s + r.amountBaht, 0);
 
-    const byDay = new Map<string, { income: number; expense: number }>();
-    for (const row of finance) {
-      const key = row.transactedAt.toISOString().slice(0, 10);
-      const cur = byDay.get(key) ?? { income: 0, expense: 0 };
-      if (row.type === "INCOME") cur.income += row.amountBaht;
-      else cur.expense += row.amountBaht;
-      byDay.set(key, cur);
-    }
-    const spark = [...byDay.entries()]
-      .slice(-14)
-      .map(([date, v]) => ({ date, income: v.income, expense: v.expense }));
-
     return NextResponse.json({
       stats: {
         courseCount,
@@ -62,7 +62,15 @@ export async function GET() {
         expense,
         balance: income - expense,
       },
-      spark,
+      progress: progressRows.map((row) => ({
+        id: row.id,
+        progressPercent: row.progressPercent,
+        status: row.status,
+        updatedAt: row.updatedAt.toISOString(),
+        learnerName: row.learner.fullName || row.learner.username,
+        learnerUsername: row.learner.username,
+        courseTitle: row.course.title,
+      })),
     });
   } catch (e) {
     console.error("[lms/session/summary GET]", e);
