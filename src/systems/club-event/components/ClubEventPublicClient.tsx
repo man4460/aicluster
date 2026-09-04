@@ -42,6 +42,7 @@ export function ClubEventPublicClient({
   const committee = initialData.committee;
   const upcoming = initialData.upcomingEvents;
   const past = initialData.pastEvents;
+  const links = initialData.links;
   const standaloneLinks = initialData.standaloneLinks;
   const [committeeOpen, setCommitteeOpen] = useState(false);
 
@@ -183,6 +184,7 @@ export function ClubEventPublicClient({
             events={upcoming}
             eventHref={eventHref}
             linkHref={linkHref}
+            links={links}
             emptyLabel="ยังไม่มีกิจกรรมที่กำลังจะมาถึง"
             ariaLabel="กำหนดการกิจกรรม"
           />
@@ -194,6 +196,7 @@ export function ClubEventPublicClient({
               events={past}
               eventHref={eventHref}
               linkHref={linkHref}
+              links={links}
               emptyLabel="ยังไม่มีกิจกรรมย้อนหลัง"
               ariaLabel="กิจกรรมย้อนหลัง"
             />

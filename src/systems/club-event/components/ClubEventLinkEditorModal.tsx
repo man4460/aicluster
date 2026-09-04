@@ -33,6 +33,14 @@ type LinkFormState = {
   amountBaht: string;
   eventId: string;
   fields: ClubDynamicLinkField[];
+  linkAnnualDues: boolean;
+};
+
+export type ClubProfileDuesOption = {
+  enabled: boolean;
+  amountBaht: number;
+  periodLabel: string;
+  linkId: string | null;
 };
 
 function newFieldKey(): string {
@@ -63,6 +71,7 @@ export function emptyClubLinkForm(preset?: {
     amountBaht: "",
     eventId: preset?.eventId ?? "",
     fields: [emptyField("text")],
+    linkAnnualDues: false,
   };
 }
 
@@ -82,6 +91,7 @@ export function clubLinkFormFromDto(l: ClubEventDynamicLinkDto): LinkFormState {
         : l.type === "SURVEY" || l.type === "RSVP"
           ? [emptyField("text")]
           : [],
+    linkAnnualDues: Boolean(l.config.linkAnnualDues) || Boolean(l.config.annualDuesLinkId),
   };
 }
 
@@ -92,6 +102,7 @@ export function ClubEventLinkEditorModal({
   events,
   onSaved,
   lockEventId = false,
+  profileDues = null,
 }: {
   open: boolean;
   onClose: () => void;
@@ -100,6 +111,7 @@ export function ClubEventLinkEditorModal({
   onSaved: () => void | Promise<void>;
   /** เมื่อสร้าง/แก้จากหน้ารายละเอียดกิจกรรม — ห้ามเปลี่ยนกิจกรรมที่ผูก */
   lockEventId?: boolean;
+  profileDues?: ClubProfileDuesOption | null;
 }) {
   const notice = useAppNoticePopup();
   const [form, setForm] = useState<LinkFormState>(initial);
@@ -172,6 +184,13 @@ export function ClubEventLinkEditorModal({
     setSaving(true);
     try {
       const eventId = form.eventId || undefined;
+      const duesExtras =
+        profileDues?.enabled && form.linkAnnualDues
+          ? {
+              linkAnnualDues: true as const,
+              annualDuesLinkId: profileDues.linkId ?? undefined,
+            }
+          : { linkAnnualDues: false as const };
       const config =
         form.type === "PAYMENT"
           ? {
@@ -179,17 +198,20 @@ export function ClubEventLinkEditorModal({
               description: form.description.trim() || undefined,
               eventId,
               fields: fields.length > 0 ? fields : undefined,
+              ...duesExtras,
             }
           : form.type === "URL"
             ? {
                 url: form.url.trim(),
                 description: form.description.trim() || undefined,
                 eventId,
+                ...duesExtras,
               }
             : {
                 description: form.description.trim() || undefined,
                 eventId,
                 fields,
+                ...duesExtras,
               };
 
       const payload = { type: form.type, title: form.title.trim(), config, isActive: true };
@@ -282,6 +304,25 @@ export function ClubEventLinkEditorModal({
               placeholder="รายละเอียดเพิ่มเติมบนหน้าฟอร์ม"
             />
           </label>
+
+          {profileDues?.enabled && profileDues.amountBaht > 0 ? (
+            <label className="flex min-h-[48px] cursor-pointer items-center gap-3 rounded-2xl border border-slate-100 bg-white px-3 py-2.5">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300 text-[#5b61ff] focus:ring-[#5b61ff]"
+                checked={form.linkAnnualDues}
+                onChange={(e) => setForm({ ...form, linkAnnualDues: e.target.checked })}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-black text-[#1e1b4b]">
+                  พ่วงค่าบำรุง · {profileDues.periodLabel}
+                </span>
+                <span className="block text-[11px] font-semibold text-[#66638c]">
+                  ฿{profileDues.amountBaht.toLocaleString("th-TH")} — ผู้กรอกเลือกจ่ายพร้อมลิงก์นี้ได้
+                </span>
+              </span>
+            </label>
+          ) : null}
 
           {lockEventId ? (
             <p className="rounded-lg border border-slate-200/90 bg-slate-50/80 px-3 py-2 text-xs font-semibold text-[#66638c]">

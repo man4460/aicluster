@@ -1,4 +1,10 @@
-/** สื่อพอร์ทัลสาธารณะชมรม — แบนเนอร์ตัวอย่าง + ขนาดแกลเลอรี */
+/** สื่อพอร์ทัลสาธารณะชมรม — แบนเนอร์ตัวอย่าง + ขนาดแกลเลอรี / กริดกิจกรรม */
+
+/** กริดการ์ดกิจกรรม: มือถือ 2 · แท็บเล็ต 3 · เดสก์ท็อป 6 — แสดง 2 แถวต่อหน้า */
+export const CLUB_EVENT_PORTAL_EVENT_COLS_MOBILE = 2;
+export const CLUB_EVENT_PORTAL_EVENT_COLS_TABLET = 3;
+export const CLUB_EVENT_PORTAL_EVENT_COLS_DESKTOP = 6;
+export const CLUB_EVENT_PORTAL_EVENT_ROWS = 2;
 
 export const CLUB_EVENT_PORTAL_GALLERY_MAX = 20;
 

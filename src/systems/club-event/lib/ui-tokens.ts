@@ -121,6 +121,10 @@ export function clubEventFilterChipClass(active = false): string {
   );
 }
 
+/** กริดการ์ดกิจกรรมพอร์ทัล: มือถือ 2 · แท็บเล็ต 3 · เดสก์ท็อป 6 */
+export const clubEventPortalEventCardGridClass =
+  "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 lg:grid-cols-6";
+
 /** วิดีโอ YouTube — การ์ด thumb: มือถือ 2 · เดสก์ท็อป 6 */
 export const clubEventYoutubeCardGridClass =
   "grid grid-cols-2 gap-2 sm:gap-2.5 lg:grid-cols-6";

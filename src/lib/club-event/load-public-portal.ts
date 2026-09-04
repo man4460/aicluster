@@ -11,6 +11,14 @@ import {
   type ClubEventDynamicLinkDto,
 } from "@/systems/club-event/lib/mappers";
 
+export type ClubPublicPortalLink = {
+  id: string;
+  type: ClubEventDynamicLinkDto["type"];
+  title: string;
+  config: ReturnType<typeof parseDynamicLinkConfig>;
+  publicPath: string;
+};
+
 export type ClubPublicPortalPayload = {
   profile: ClubEventProfileDto;
   committee: ClubCommitteeMember[];
@@ -20,13 +28,9 @@ export type ClubPublicPortalPayload = {
       galleryPreview: { id: string; imageUrl: string; fileName: string }[];
     }
   >;
-  links: Array<{
-    id: string;
-    type: ClubEventDynamicLinkDto["type"];
-    title: string;
-    config: ReturnType<typeof parseDynamicLinkConfig>;
-    publicPath: string;
-  }>;
+  links: ClubPublicPortalLink[];
+  /** ลิงก์ที่ไม่มี eventId — แสดงใต้กฎระเบียบ */
+  standaloneLinks: ClubPublicPortalLink[];
 };
 
 /** โหลดพอร์ทัลสาธารณะชมรม — ใช้ทั้งหน้า SSR และ API */
@@ -59,6 +63,14 @@ export async function loadClubEventPublicPortal(
     }),
   ]);
 
+  const mappedLinks: ClubPublicPortalLink[] = links.map((l) => ({
+    id: l.id,
+    type: l.type,
+    title: l.title,
+    config: parseDynamicLinkConfig(l.configJson),
+    publicPath: `/club/${slug}/link/${l.id}`,
+  }));
+
   return {
     profile: mapClubEventProfile(profile),
     committee: parseCommitteeJson(profile.committeeJson),
@@ -71,12 +83,7 @@ export async function loadClubEventPublicPortal(
         fileName: g.fileName,
       })),
     })),
-    links: links.map((l) => ({
-      id: l.id,
-      type: l.type,
-      title: l.title,
-      config: parseDynamicLinkConfig(l.configJson),
-      publicPath: `/club/${slug}/link/${l.id}`,
-    })),
+    links: mappedLinks,
+    standaloneLinks: mappedLinks.filter((l) => !l.config.eventId?.trim()),
   };
 }
