@@ -248,9 +248,11 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
       const json = (await res.json()) as { checkIn?: ClubEventCheckInDto; error?: string };
       if (!res.ok) throw new Error(json.error ?? "บันทึกไม่สำเร็จ");
       if (json.checkIn) setSelected(json.checkIn);
-      notice.success("บันทึกลายเซ็นรับของแล้ว");
       pad.clear();
+      setManageOpen(false);
+      setQrOpen(false);
       await load(q, { silent: true });
+      notice.success("บันทึกลายเซ็นรับของแล้ว");
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "บันทึกลายเซ็นไม่สำเร็จ");
     } finally {
