@@ -72,20 +72,12 @@ export default async function DashboardHomePage() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <TokenTopupModal
-                triggerLabel="เติมโทเคน"
-                triggerClassName="app-btn-primary inline-flex min-h-[44px] w-full items-center justify-center rounded-lg px-5 text-sm font-black shadow-lg transition active:scale-[0.99]"
-                subscriptionTier={user.subscriptionTier}
-                subscriptionType={user.subscriptionType}
-              />
-              <Link
-                href="/dashboard/plans"
-                className="inline-flex min-h-[44px] w-full items-center justify-center rounded-lg border border-[#0000BF]/20 bg-[#0000BF]/10 px-5 text-sm font-black text-[#2e2a58] shadow-sm transition hover:bg-[#0000BF]/12 active:scale-[0.99]"
-              >
-                อัปเกรดแพ็กเกจ
-              </Link>
-            </div>
+            <TokenTopupModal
+              triggerLabel="เติมโทเคน"
+              triggerClassName="app-btn-primary inline-flex min-h-[44px] w-full items-center justify-center rounded-lg px-5 text-sm font-black shadow-lg transition active:scale-[0.99]"
+              subscriptionTier={user.subscriptionTier}
+              subscriptionType={user.subscriptionType}
+            />
           </div>
         </section>
 
