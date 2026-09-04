@@ -357,10 +357,11 @@ import {
 /** localStorage — ซ่อนแถบเมนูซ้ายบนเดสก์ท็อป (ใช้ทุกหน้าแดชบอร์ดที่ผ่าน DashboardShell) */
 const DASHBOARD_SIDEBAR_COLLAPSED_KEY = "mawell-dashboard-sidebar-collapsed";
 
+/** แพ็กเป็นรายโมดูล — ไม่โชว์ «สายรายวัน» ทั้งระบบใน header */
 function headerPackageLabel(
   subscriptionType: SubscriptionType,
   subscriptionTier: SubscriptionTier,
-): string {
+): string | null {
   if (subscriptionType === "BUFFET" && subscriptionTier !== "NONE") {
     const g = buffetTierMaxGroup(subscriptionTier);
     const name = MODULE_GROUP_TIER_NAME[g] ?? subscriptionTier;
@@ -369,7 +370,41 @@ function headerPackageLabel(
     }
     return name;
   }
-  return "สายรายวัน";
+  return null;
+}
+
+function HeaderAccountSummary({
+  tokens,
+  packageLabel,
+  displayName,
+  className,
+}: {
+  tokens: number;
+  packageLabel: string | null;
+  displayName: string;
+  className?: string;
+}) {
+  const title = [`${tokens.toLocaleString()} โทเคน`, packageLabel, displayName]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <p className={className} title={title}>
+      <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+      <span className="font-medium text-white/70">โทเคน</span>
+      {packageLabel ? (
+        <>
+          <span className="mx-1.5 text-white/30" aria-hidden>
+            |
+          </span>
+          <span className="font-bold text-white">{packageLabel}</span>
+        </>
+      ) : null}
+      <span className="mx-1.5 text-white/30" aria-hidden>
+        |
+      </span>
+      <span className="font-medium text-white/90">{displayName}</span>
+    </p>
+  );
 }
 
 function isNavActive(href: string, pathname: string) {
@@ -1496,21 +1531,12 @@ export function DashboardShell({
                   />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <DrinkPosHeaderExpandButton onExpand={() => writeDrinkPosHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1520,21 +1546,12 @@ export function DashboardShell({
                   <BuildingPosHeaderBarNav onExpand={() => writeBuildingPosHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <BuildingPosHeaderExpandButton onExpand={() => writeBuildingPosHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1544,21 +1561,12 @@ export function DashboardShell({
                   <DormitoryHeaderBarNav onExpand={() => writeDormitoryHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <DormitoryHeaderExpandButton onExpand={() => writeDormitoryHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1570,21 +1578,12 @@ export function DashboardShell({
                   </Suspense>
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <FootballTurfHeaderExpandButton onExpand={() => writeFootballTurfHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1594,21 +1593,12 @@ export function DashboardShell({
                   <HotelResortHeaderBarNav onExpand={() => writeHotelResortHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <HotelResortHeaderExpandButton onExpand={() => writeHotelResortHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1618,21 +1608,12 @@ export function DashboardShell({
                   <AttendanceHeaderBarNav onExpand={() => writeAttendanceHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <AttendanceHeaderExpandButton onExpand={() => writeAttendanceHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1642,21 +1623,12 @@ export function DashboardShell({
                   <CarWashHeaderBarNav onExpand={() => writeCarWashHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <CarWashHeaderExpandButton onExpand={() => writeCarWashHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1666,21 +1638,12 @@ export function DashboardShell({
                   <MassageHeaderBarNav onExpand={() => writeMassageHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <MassageHeaderExpandButton onExpand={() => writeMassageHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1690,21 +1653,12 @@ export function DashboardShell({
                   <BarberHeaderBarNav onExpand={() => writeBarberHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <BarberHeaderExpandButton onExpand={() => writeBarberHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1714,21 +1668,12 @@ export function DashboardShell({
                   <VaultHeaderBarNav onExpand={() => writeVaultHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <VaultHeaderExpandButton onExpand={() => writeVaultHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1738,21 +1683,12 @@ export function DashboardShell({
                   <AssetHeaderBarNav onExpand={() => writeAssetHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <AssetHeaderExpandButton onExpand={() => writeAssetHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1762,21 +1698,12 @@ export function DashboardShell({
                   <GeneralStorePosHeaderBarNav onExpand={() => writeGeneralStorePosHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <GeneralStorePosHeaderExpandButton onExpand={() => writeGeneralStorePosHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1786,21 +1713,12 @@ export function DashboardShell({
                   <EducareHeaderBarNav onExpand={() => writeEducareHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <EducareHeaderExpandButton onExpand={() => writeEducareHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1810,21 +1728,12 @@ export function DashboardShell({
                   <CommunityCoopHeaderBarNav onExpand={() => writeCommunityCoopHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <CommunityCoopHeaderExpandButton onExpand={() => writeCommunityCoopHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1834,21 +1743,12 @@ export function DashboardShell({
                   <HomeFinanceHeaderBarNav onExpand={() => writeHomeFinanceHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <HomeFinanceHeaderExpandButton onExpand={() => writeHomeFinanceHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1858,21 +1758,12 @@ export function DashboardShell({
                   <EcommerceStoreHeaderBarNav onExpand={() => writeEcommerceStoreHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <EcommerceStoreHeaderExpandButton onExpand={() => writeEcommerceStoreHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1882,21 +1773,12 @@ export function DashboardShell({
                   <AppointmentQueueHeaderBarNav onExpand={() => writeAppointmentQueueHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <AppointmentQueueHeaderExpandButton onExpand={() => writeAppointmentQueueHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1906,21 +1788,12 @@ export function DashboardShell({
                   <SchoolBankHeaderBarNav onExpand={() => writeSchoolBankHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <SchoolBankHeaderExpandButton onExpand={() => writeSchoolBankHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1930,21 +1803,12 @@ export function DashboardShell({
                   <WaitQueueHeaderBarNav onExpand={() => writeWaitQueueHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <WaitQueueHeaderExpandButton onExpand={() => writeWaitQueueHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1954,21 +1818,12 @@ export function DashboardShell({
                   <ActivityLogsHeaderBarNav onExpand={() => writeActivityLogsHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <ActivityLogsHeaderExpandButton onExpand={() => writeActivityLogsHeaderCollapsed(false)} />
                 </div>
               </>
@@ -1978,21 +1833,12 @@ export function DashboardShell({
                   <PromptLibraryHeaderBarNav onExpand={() => writePromptLibraryHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <PromptLibraryHeaderExpandButton onExpand={() => writePromptLibraryHeaderCollapsed(false)} />
                 </div>
               </>
@@ -2002,21 +1848,12 @@ export function DashboardShell({
                   <DocTransmissionHeaderBarNav onExpand={() => writeDocTransmissionHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <DocTransmissionHeaderExpandButton onExpand={() => writeDocTransmissionHeaderCollapsed(false)} />
                 </div>
               </>
@@ -2026,21 +1863,12 @@ export function DashboardShell({
                   <LoyaltyStampHeaderBarNav onExpand={() => writeLoyaltyStampHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <LoyaltyStampHeaderExpandButton onExpand={() => writeLoyaltyStampHeaderCollapsed(false)} />
                 </div>
               </>
@@ -2050,21 +1878,12 @@ export function DashboardShell({
                   <VillageHeaderBarNav onExpand={() => writeVillageHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <VillageHeaderExpandButton onExpand={() => writeVillageHeaderCollapsed(false)} />
                 </div>
               </>
@@ -2074,21 +1893,12 @@ export function DashboardShell({
                   <LaundryHeaderBarNav onExpand={() => writeLaundryHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <LaundryHeaderExpandButton onExpand={() => writeLaundryHeaderCollapsed(false)} />
                 </div>
               </>
@@ -2098,21 +1908,12 @@ export function DashboardShell({
                   <ClubEventHeaderBarNav onExpand={() => writeClubEventHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <ClubEventHeaderExpandButton onExpand={() => writeClubEventHeaderCollapsed(false)} />
                 </div>
               </>
@@ -2122,21 +1923,12 @@ export function DashboardShell({
                   <ProResumeHeaderBarNav onExpand={() => writeProResumeHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <ProResumeHeaderExpandButton onExpand={() => writeProResumeHeaderCollapsed(false)} />
                 </div>
               </>
@@ -2146,21 +1938,12 @@ export function DashboardShell({
                   <LmsHeaderBarNav onExpand={() => writeLmsHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <LmsHeaderExpandButton onExpand={() => writeLmsHeaderCollapsed(false)} />
                 </div>
               </>
@@ -2170,21 +1953,12 @@ export function DashboardShell({
                   <ParkingHeaderBarNav onExpand={() => writeParkingHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <ParkingHeaderExpandButton onExpand={() => writeParkingHeaderCollapsed(false)} />
                 </div>
               </>
@@ -2194,21 +1968,12 @@ export function DashboardShell({
                   <InventoryHeaderBarNav onExpand={() => writeInventoryHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <InventoryHeaderExpandButton onExpand={() => writeInventoryHeaderCollapsed(false)} />
                 </div>
               </>
@@ -2218,21 +1983,12 @@ export function DashboardShell({
                   <SmartPoliceHeaderBarNav onExpand={() => writeSmartPoliceHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <SmartPoliceHeaderExpandButton onExpand={() => writeSmartPoliceHeaderCollapsed(false)} />
                 </div>
               </>
@@ -2242,21 +1998,12 @@ export function DashboardShell({
                   <MediaRegistryHeaderBarNav onExpand={() => writeMediaRegistryHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <MediaRegistryHeaderExpandButton onExpand={() => writeMediaRegistryHeaderCollapsed(false)} />
                 </div>
               </>
@@ -2266,40 +2013,22 @@ export function DashboardShell({
                   <AdminHubHeaderBarNav onExpand={() => writeAdminHubHeaderCollapsed(false)} />
                 </div>
                 <div className="flex min-w-0 items-center gap-2 lg:hidden">
-                  <p
+                  <HeaderAccountSummary
+                    tokens={tokens}
+                    packageLabel={packageLabel}
+                    displayName={displayName}
                     className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
-                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-                  >
-                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                    <span className="font-medium text-white/70">โทเคน</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-bold text-white">{packageLabel}</span>
-                    <span className="mx-1.5 text-white/30" aria-hidden>
-                      |
-                    </span>
-                    <span className="font-medium text-white/90">{displayName}</span>
-                  </p>
+                  />
                   <AdminHubHeaderExpandButton onExpand={() => writeAdminHubHeaderCollapsed(false)} />
                 </div>
               </>
             ) : (
-              <p
+              <HeaderAccountSummary
+                tokens={tokens}
+                packageLabel={packageLabel}
+                displayName={displayName}
                 className="truncate text-left text-[11px] leading-snug text-white/95 sm:text-[13.5px] sm:leading-normal md:text-right"
-                title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
-              >
-                <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
-                <span className="font-medium text-white/70">โทเคน</span>
-                <span className="mx-1.5 text-white/30" aria-hidden>
-                  |
-                </span>
-                <span className="font-bold text-white">{packageLabel}</span>
-                <span className="mx-1.5 text-white/30" aria-hidden>
-                  |
-                </span>
-                <span className="font-medium text-white/90">{displayName}</span>
-              </p>
+              />
             )}
           </div>
 

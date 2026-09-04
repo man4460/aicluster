@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import type { SubscriptionTier, SubscriptionType } from "@/generated/prisma/enums";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
@@ -22,12 +21,6 @@ export const metadata: Metadata = {
   title: "แดชบอร์ด | MAWELL PLATFORM",
 };
 
-function planSummaryLine(subscriptionType: SubscriptionType, subscriptionTier: SubscriptionTier): string {
-  if (subscriptionType === "DAILY") return "สายรายวัน";
-  if (subscriptionType === "BUFFET" && subscriptionTier !== "NONE") return "กำลังแปลงเป็นแพ็กต่อโมดูล";
-  return "สายรายวัน";
-}
-
 export default async function DashboardHomePage() {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -49,8 +42,6 @@ export default async function DashboardHomePage() {
   ]);
 
   if (!user) redirect("/login");
-
-  const tierLine = planSummaryLine(user.subscriptionType, user.subscriptionTier);
 
   /** ยังไม่มีโปรแกรมที่เปิดใช้ได้ — พาไปเลือกระบบที่หน้ารวมก่อน */
   if (subscribedModules.length === 0) {
@@ -77,9 +68,6 @@ export default async function DashboardHomePage() {
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-lg border border-[#0000BF]/20 bg-[#0000BF]/10 px-3 py-1 text-xs font-black text-[#2e2a58]">
                   {subscribedModules.length} ระบบ
-                </span>
-                <span className="rounded-lg border border-white/70 bg-white/80 px-3 py-1 text-xs font-black text-[#2e2a58]">
-                  {tierLine}
                 </span>
               </div>
             </div>
