@@ -14,5 +14,8 @@ export async function loadLmsPage() {
   const ownerId = billing?.billingUserId ?? session.sub;
   const scope = await getLmsDataScope(ownerId);
   const profile = await ensureLmsProfile(prisma, ownerId, scope.trialSessionId);
-  return { profile: mapLmsProfile(profile) };
+  return {
+    profile: mapLmsProfile(profile),
+    trialSessionId: scope.trialSessionId,
+  };
 }

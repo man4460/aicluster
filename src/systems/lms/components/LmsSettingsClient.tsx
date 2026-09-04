@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Copy, ExternalLink } from "lucide-react";
 import {
   AppModuleShopPaymentFields,
   AppShopLogoField,
@@ -10,7 +9,9 @@ import {
   useAppNoticePopup,
   type AppSlipPaperSize,
 } from "@/components/app-templates";
+import { ModulePublicLinkQrPanel } from "@/components/qr/module-public-link-qr-panel";
 import { cn } from "@/lib/cn";
+import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
 import {
   LMS_SETTINGS_TAB_ITEMS,
@@ -42,10 +43,16 @@ const SETTINGS_TAB_ITEMS = LMS_SETTINGS_TAB_ITEMS.map((item) => ({
 
 function absoluteUrl(path: string): string {
   if (typeof window === "undefined") return path;
-  return `${window.location.origin}${path}`;
+  return `${window.location.origin}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-export function LmsSettingsClient({ initialProfile }: { initialProfile: LmsProfileDto }) {
+export function LmsSettingsClient({
+  initialProfile,
+  trialSessionId = TRIAL_PROD_SCOPE,
+}: {
+  initialProfile: LmsProfileDto;
+  trialSessionId?: string;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = parseLmsSettingsTab(searchParams.get("tab"));
@@ -63,6 +70,11 @@ export function LmsSettingsClient({ initialProfile }: { initialProfile: LmsProfi
   useEffect(() => {
     setForm(initialProfile);
   }, [initialProfile]);
+
+  const portalAbsoluteUrl = useMemo(
+    () => absoluteUrl(form.publicUrl || `/lms/${form.slug}`),
+    [form.publicUrl, form.slug],
+  );
 
   const paymentDto: ModuleShopPaymentDto = {
     promptPayPhone: form.promptPayPhone,
@@ -239,36 +251,27 @@ export function LmsSettingsClient({ initialProfile }: { initialProfile: LmsProfi
         ) : null}
 
         {tab === "portal" ? (
-          <div className="space-y-3 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
-            <p className="text-xs font-black text-[#4d47b6]">ลิงก์เว็บ LMS สาธารณะ</p>
-            <p className="break-all text-sm font-semibold text-[#1e1b4b]">{form.publicUrl}</p>
-            <div className="flex flex-wrap gap-2">
-              <a
-                href={form.publicUrl}
-                target="_blank"
-                rel="noreferrer"
-                className={cn(lmsOutlineButtonClass, "inline-flex items-center gap-1.5")}
-              >
-                <ExternalLink className="h-4 w-4" aria-hidden />
-                เปิดเว็บ
-              </a>
-              <button
-                type="button"
-                className={cn(lmsOutlineButtonClass, "inline-flex items-center gap-1.5")}
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(absoluteUrl(form.publicUrl));
-                    notice.success("คัดลอกแล้ว");
-                  } catch {
-                    notice.error("คัดลอกไม่สำเร็จ");
-                  }
-                }}
-              >
-                <Copy className="h-4 w-4" aria-hidden />
-                คัดลอก
-              </button>
+          <div className="space-y-4">
+            <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
+              <p className="text-xs font-black text-[#4d47b6]">ลิงก์เว็บ LMS สาธารณะ</p>
+              <p className="break-all text-sm font-semibold text-[#1e1b4b]">{form.publicUrl}</p>
+              <p className="text-xs text-[#66638c]">
+                พอร์ทัลนักเรียนอยู่ที่ /lms/{form.slug} — สร้าง QR ด้านล่างเพื่อพิมพ์หรือแชร์
+              </p>
             </div>
-            <p className="text-xs text-[#66638c]">พอร์ทัลนักเรียนอยู่ที่ /lms/{form.slug}</p>
+            <ModulePublicLinkQrPanel
+              pageUrl={portalAbsoluteUrl}
+              shopLabel={form.displayName || "LMS"}
+              logoUrl={form.logoUrl}
+              trialExportBlocked={trialSessionId !== TRIAL_PROD_SCOPE}
+              tagline="สแกนเพื่อเข้าเรียน / ดูคอร์สออนไลน์"
+              mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าเว็บ LMS"
+              openPrimaryLabel="เปิดเว็บ LMS"
+              openSecondaryLabel="เปิดเว็บ"
+              qrAlt="QR เว็บ LMS สาธารณะ"
+              posterAlt="โปสเตอร์ QR เว็บ LMS"
+              downloadFilePrefix={`lms-portal-${form.slug || "portal"}`}
+            />
           </div>
         ) : null}
 
