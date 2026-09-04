@@ -83,6 +83,7 @@ export function ClubEventPortalMemberSearch({
           className={cn(
             clubEventPortalFieldClass,
             "flex !h-auto !min-h-[44px] !max-h-none items-center gap-2.5",
+            "!border-white/55 !bg-white/45 !shadow-none backdrop-blur-md",
           )}
         >
           <Search className="h-4 w-4 shrink-0 text-[#66638c]" aria-hidden />
