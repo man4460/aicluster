@@ -28,7 +28,7 @@ export async function GET() {
       prisma.lmsEnrollment.findMany({
         where: { ...ow, course: { profileId: profile.id } },
         orderBy: [{ updatedAt: "desc" }],
-        take: 16,
+        take: 200,
         select: {
           id: true,
           progressPercent: true,
