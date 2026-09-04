@@ -20,7 +20,6 @@ import {
   lmsFilterChipShellClass,
   lmsOutlineButtonClass,
   lmsPrimaryButtonClass,
-  lmsRowCardClass,
   lmsSectionHeadingClass,
 } from "@/systems/lms/lib/ui-tokens";
 
@@ -257,7 +256,7 @@ export function LmsPurchasesPanel({
               title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
               className={cn(
                 lmsOutlineButtonClass,
-                "relative min-h-[40px] min-w-[40px] px-0 sm:min-w-0 sm:px-3",
+                "relative min-w-9 px-0 sm:min-w-0 sm:px-2.5",
                 filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
                 filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
               )}
@@ -305,7 +304,7 @@ export function LmsPurchasesPanel({
               {filtersActive ? (
                 <button
                   type="button"
-                  className={cn(lmsOutlineButtonClass, "min-h-[44px] px-4")}
+                  className={cn(lmsOutlineButtonClass, "px-3")}
                   onClick={clearFilters}
                 >
                   ล้างกรอง
@@ -325,8 +324,23 @@ export function LmsPurchasesPanel({
       ) : (
         <ul className="space-y-3">
           {filtered.map((p) => (
-            <li key={p.id} className={cn(lmsRowCardClass, "flex-col items-stretch gap-3")}>
-              <div className="flex flex-wrap items-start justify-between gap-2">
+            <li key={p.id} className="flex items-stretch gap-3 rounded-lg border border-slate-200/90 bg-white p-3 sm:p-4">
+              {p.slipUrl ? (
+                <AppImageThumb
+                  src={p.slipUrl}
+                  alt="สลิป"
+                  className="h-20 w-20 shrink-0 self-start sm:h-24 sm:w-24"
+                  onOpen={() => lb.open(p.slipUrl!)}
+                />
+              ) : (
+                <span
+                  className="flex h-20 w-20 shrink-0 items-center justify-center self-start rounded-xl bg-slate-100 text-[11px] font-bold text-[#9b97b8] sm:h-24 sm:w-24"
+                  aria-hidden
+                >
+                  ไม่มีสลิป
+                </span>
+              )}
+              <div className="flex min-w-0 flex-1 flex-col gap-3">
                 <div className="min-w-0">
                   <p className="font-bold text-[#1e1b4b]">{p.course?.title || "คอร์ส"}</p>
                   <p className="text-xs text-[#66638c]">
@@ -340,40 +354,34 @@ export function LmsPurchasesPanel({
                     <p className="mt-1 text-xs font-semibold text-rose-700">{p.reviewerNote}</p>
                   ) : null}
                 </div>
-                {p.slipUrl ? (
-                  <AppImageThumb
-                    src={p.slipUrl}
-                    alt="สลิป"
-                    className="h-16 w-16"
-                    onOpen={() => lb.open(p.slipUrl!)}
-                  />
+                {p.status === "PENDING_REVIEW" ? (
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      className={cn(lmsPrimaryButtonClass, "w-full sm:w-auto sm:self-start")}
+                      onClick={() => void reviewPurchase(p, "APPROVE")}
+                    >
+                      ยืนยันสลิป · บันทึกรายรับ
+                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className={lmsOutlineButtonClass}
+                        onClick={() => void reviewPurchase(p, "REJECT")}
+                      >
+                        ปฏิเสธ · ถอนสิทธิ์
+                      </button>
+                      <button
+                        type="button"
+                        className={cn(lmsOutlineButtonClass, "border-rose-300 text-rose-700")}
+                        onClick={() => void reviewPurchase(p, "REJECT", { deactivateLearner: true })}
+                      >
+                        ปฏิเสธ + ปิดบัญชี
+                      </button>
+                    </div>
+                  </div>
                 ) : null}
               </div>
-              {p.status === "PENDING_REVIEW" ? (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className={lmsPrimaryButtonClass}
-                    onClick={() => void reviewPurchase(p, "APPROVE")}
-                  >
-                    ยืนยันสลิป · บันทึกรายรับ
-                  </button>
-                  <button
-                    type="button"
-                    className={lmsOutlineButtonClass}
-                    onClick={() => void reviewPurchase(p, "REJECT")}
-                  >
-                    ปฏิเสธ · ถอนสิทธิ์
-                  </button>
-                  <button
-                    type="button"
-                    className={cn(lmsOutlineButtonClass, "border-rose-300 text-rose-700")}
-                    onClick={() => void reviewPurchase(p, "REJECT", { deactivateLearner: true })}
-                  >
-                    ปฏิเสธ + ปิดบัญชี
-                  </button>
-                </div>
-              ) : null}
             </li>
           ))}
         </ul>

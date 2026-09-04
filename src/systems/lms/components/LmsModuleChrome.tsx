@@ -83,7 +83,7 @@ function LmsModuleChromeInner({
         <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
           <div className="flex min-w-0 items-center gap-3">
             <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-[#5b61ff] text-white shadow-sm"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-[#5b61ff] text-white shadow-sm"
               aria-hidden
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5}>
@@ -105,7 +105,7 @@ function LmsModuleChromeInner({
             <button
               type="button"
               onClick={() => setUsageGuideOpen(true)}
-              className="flex h-10 min-h-[44px] w-10 shrink-0 items-center justify-center rounded-lg border border-[#0000BF]/25 bg-white text-sm font-semibold text-[#4d47b6] shadow-sm transition hover:bg-slate-50 active:scale-95 sm:w-auto sm:gap-2 sm:px-4"
+              className="flex h-9 min-h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#0000BF]/25 bg-white text-xs font-semibold text-[#4d47b6] shadow-sm transition hover:bg-slate-50 active:scale-95 sm:w-auto sm:gap-2 sm:px-3"
               aria-label="คู่มือการใช้งาน"
               aria-haspopup="dialog"
               aria-expanded={usageGuideOpen}
@@ -121,7 +121,7 @@ function LmsModuleChromeInner({
             <button
               type="button"
               onClick={toggleHeaderCollapse}
-              className="inline-flex h-10 min-h-[44px] w-10 items-center justify-center rounded-lg border border-[#0000BF]/25 bg-white text-[#4d47b6] shadow-sm transition hover:bg-slate-50 active:scale-95"
+              className="inline-flex h-9 min-h-9 w-9 items-center justify-center rounded-lg border border-[#0000BF]/25 bg-white text-[#4d47b6] shadow-sm transition hover:bg-slate-50 active:scale-95"
               aria-pressed={headerCollapsed}
               aria-label="ซ่อนส่วนหัวโมดูล"
               title="ซ่อนส่วนหัวโมดูล"

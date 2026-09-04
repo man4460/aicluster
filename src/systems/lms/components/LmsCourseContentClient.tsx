@@ -247,7 +247,7 @@ export function LmsCourseContentClient({ courseId }: Props) {
           <div className="flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5">
             <Link
               href={LMS_MANAGE_PATH}
-              className={cn(lmsOutlineButtonClass, "inline-flex min-h-10 min-w-[40px] items-center justify-center gap-1.5 px-0 sm:px-3")}
+              className={cn(lmsOutlineButtonClass, "inline-flex min-h-9 min-w-[40px] items-center justify-center gap-1.5 px-0 sm:px-3")}
               aria-label="ย้อนกลับ"
               title="ย้อนกลับ"
             >

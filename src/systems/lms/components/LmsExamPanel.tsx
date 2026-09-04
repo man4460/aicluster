@@ -180,7 +180,7 @@ export function LmsExamPanel({
               <button
                 type="button"
                 onClick={retake}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white"
+                className="inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white"
               >
                 <RotateCcw className="h-4 w-4" aria-hidden />
                 ทำข้อสอบใหม่
@@ -237,7 +237,7 @@ export function LmsExamPanel({
               type="button"
               disabled={submitting}
               onClick={() => void submit()}
-              className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white disabled:opacity-60 sm:w-auto"
+              className="inline-flex min-h-9 w-full items-center justify-center rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white disabled:opacity-60 sm:w-auto"
             >
               {submitting ? "กำลังตรวจ…" : "ส่งแบบทดสอบ"}
             </button>

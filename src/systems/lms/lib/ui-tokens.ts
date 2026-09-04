@@ -2,17 +2,17 @@
 import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 
 /**
- * ปุ่ม / การ์ด / แท็บ โมดูลLMS คอร์สออนไลน์ — ชุดเดียวกับแม่แบบซักผ้า (plain panel · h-10 · rounded-lg)
+ * ปุ่ม / การ์ด / แท็บ โมดูล LMS — ชุดเดียวกับแม่แบบซักผ้า (plain panel · h-9 · rounded-lg)
  * หมายเหตุ: `cn` ในโปรเจกต์นี้ไม่ใช้ twMerge — ห้ามซ้อนคลาสชนกัน
  */
 export const lmsBtnRadiusClass = "rounded-lg";
-export const lmsBtnHeightClass = "box-border h-10 min-h-10 max-h-10";
-export const lmsBtnPadXClass = "px-3";
+export const lmsBtnHeightClass = "box-border h-9 min-h-9 max-h-9";
+export const lmsBtnPadXClass = "px-2.5";
 export const lmsBtnBaseClass = cn(
   "inline-flex shrink-0 items-center justify-center gap-1.5",
   lmsBtnRadiusClass,
   lmsBtnHeightClass,
-  "text-xs font-bold leading-none shadow-sm touch-manipulation transition disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm",
+  "text-[11px] font-bold leading-none shadow-sm touch-manipulation transition disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs",
 );
 
 export const lmsOutlineButtonClass = cn(
@@ -30,7 +30,7 @@ export const lmsPrimaryButtonClass = cn(
 
 export const lmsIconButtonClass = cn(
   lmsBtnBaseClass,
-  "w-10 min-w-10 border border-slate-200/90 bg-white px-0 text-[#1e1b4b] hover:border-slate-300 hover:bg-slate-50",
+  "w-9 min-w-9 border border-slate-200/90 bg-white px-0 text-[#1e1b4b] hover:border-slate-300 hover:bg-slate-50",
 );
 
 export const lmsRowIconButtonClass = cn(
@@ -70,14 +70,14 @@ export const lmsPrimaryTabShellClass =
 
 export function lmsPrimaryTabPillClass(active: boolean): string {
   return cn(
-    "min-h-9 shrink-0 grow basis-[calc(50%-4px)] whitespace-nowrap rounded-md px-3 text-sm font-bold leading-none sm:min-h-10 sm:grow-0 sm:basis-auto sm:px-4",
+    "min-h-8 shrink-0 grow basis-[calc(50%-4px)] whitespace-nowrap rounded-md px-2.5 text-xs font-bold leading-none sm:min-h-9 sm:grow-0 sm:basis-auto sm:px-3",
     active
       ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
       : "text-[#5f5a8a] transition hover:bg-white hover:text-[#4d47b6]",
   );
 }
 
-/** เมนูย่อยแถบหัว — แบบซักผ้า (ปุ่ม h-10 คู่กับ action) */
+/** เมนูย่อยแถบหัว — แบบซักผ้า (ปุ่ม h-9 คู่กับ action) */
 export const lmsInlineSubNavShellClass =
   "inline-flex shrink-0 flex-nowrap items-center gap-0.5";
 
@@ -125,7 +125,7 @@ export const lmsFinanceStatTailClass = "col-span-2 sm:col-span-1";
 /** ชิปช่วงเวลาการเงิน — pill ตามแม่แบบซักผ้า */
 export function lmsFinanceRangeChipClass(active = false): string {
   return cn(
-    "inline-flex h-10 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-bold transition-all sm:text-sm",
+    "inline-flex h-9 shrink-0 items-center justify-center rounded-full px-3 text-[11px] font-bold transition-all sm:text-xs",
     active
       ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
       : "border border-slate-200/90 bg-white text-[#4d47b6] hover:border-[#5b61ff]/35 hover:bg-slate-50",

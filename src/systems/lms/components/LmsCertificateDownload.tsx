@@ -136,7 +136,7 @@ export function LmsCertificateDownload({
         onClick={() => void download()}
         className={
           className ||
-          "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-900 disabled:opacity-60"
+          "inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-900 disabled:opacity-60"
         }
       >
         <Download className="h-4 w-4" aria-hidden />

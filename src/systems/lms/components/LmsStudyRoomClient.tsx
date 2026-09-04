@@ -205,7 +205,7 @@ export function LmsStudyRoomClient({ slug, courseId }: Props) {
       <div className="flex flex-wrap items-center gap-3">
         <Link
           href={`/lms/${encodeURIComponent(slug)}/dashboard`}
-          className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700"
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           แดชบอร์ด

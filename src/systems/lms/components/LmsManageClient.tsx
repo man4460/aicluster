@@ -527,7 +527,7 @@ export function LmsManageClient() {
                       <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 self-end sm:self-start">
                         <Link
                           href={lmsManageCourseHref(c.id)}
-                          className={cn(lmsOutlineButtonClass, "inline-flex min-h-10 items-center")}
+                          className={cn(lmsOutlineButtonClass, "inline-flex min-h-9 items-center")}
                           aria-label={`บทเรียนและข้อสอบ ${c.title}`}
                         >
                           บทเรียน

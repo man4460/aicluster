@@ -254,7 +254,7 @@ export function LmsLearnerDashboardClient({ slug }: Props) {
           <button
             type="button"
             onClick={() => void logout()}
-            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700"
+            className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700"
             aria-label="ออกจากระบบ"
           >
             <LogOut className="h-4 w-4" aria-hidden />
@@ -339,7 +339,7 @@ export function LmsLearnerDashboardClient({ slug }: Props) {
                       type="button"
                       disabled={c.pendingPurchase}
                       onClick={() => openBuy(c)}
-                      className="mt-auto inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 text-sm font-semibold text-white disabled:opacity-50"
+                      className="mt-auto inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 text-sm font-semibold text-white disabled:opacity-50"
                     >
                       <ShoppingBag className="h-4 w-4" aria-hidden />
                       {c.pendingPurchase ? "รอตรวจสลิป" : c.priceBaht > 0 ? "ซื้อคอร์ส" : "ลงทะเบียนฟรี"}
@@ -415,7 +415,7 @@ export function LmsLearnerDashboardClient({ slug }: Props) {
                     {e.course ? (
                       <Link
                         href={`/lms/${encodeURIComponent(slug)}/course/${encodeURIComponent(e.course.id)}`}
-                        className="inline-flex min-h-10 flex-1 items-center justify-center rounded-lg bg-indigo-600 px-3 text-sm font-semibold text-white"
+                        className="inline-flex min-h-9 flex-1 items-center justify-center rounded-lg bg-indigo-600 px-3 text-sm font-semibold text-white"
                       >
                         {e.status === "COMPLETED" ? "ดูคอร์ส" : "เข้าเรียน"}
                       </Link>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Maximize2, Minimize2, Pause, Play } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Maximize2, Minimize2, Pause, Play, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
   lmsSecureYoutubeEmbedSrc,
@@ -11,6 +11,9 @@ import {
 type YTPlayer = {
   playVideo: () => void;
   pauseVideo: () => void;
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
   getPlayerState: () => number;
   destroy: () => void;
 };
@@ -47,6 +50,15 @@ async function exitFullscreen(): Promise<void> {
   if (doc.webkitExitFullscreen) {
     await doc.webkitExitFullscreen();
   }
+}
+
+function formatTime(sec: number): string {
+  if (!Number.isFinite(sec) || sec < 0) return "0:00";
+  const s = Math.floor(sec % 60);
+  const m = Math.floor(sec / 60) % 60;
+  const h = Math.floor(sec / 3600);
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 declare global {
@@ -91,6 +103,9 @@ function loadYoutubeApi(): Promise<void> {
   return ytApiPromise;
 }
 
+const controlBtnClass =
+  "pointer-events-auto inline-flex h-9 min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-black/30 px-2.5 text-[11px] font-semibold text-white shadow-none backdrop-blur-[2px] transition hover:bg-black/45 disabled:opacity-40 sm:text-xs";
+
 type Props = {
   youtubeUrl: string;
   title: string;
@@ -112,9 +127,13 @@ export function LmsSecureYoutubePlayer({
   const playerRef = useRef<YTPlayer | null>(null);
   const onProgressRef = useRef(onProgress);
   const autoPlayRef = useRef(autoPlay);
+  const maxWatchedRef = useRef(0);
   const [playing, setPlaying] = useState(false);
   const [ready, setReady] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [currentSec, setCurrentSec] = useState(0);
+  const [durationSec, setDurationSec] = useState(0);
+  const [maxWatchedSec, setMaxWatchedSec] = useState(0);
   const videoId = lmsYoutubeVideoId(youtubeUrl);
   const embedFallback = lmsSecureYoutubeEmbedSrc(youtubeUrl);
 
@@ -125,6 +144,13 @@ export function LmsSecureYoutubePlayer({
   useEffect(() => {
     autoPlayRef.current = autoPlay;
   }, [autoPlay]);
+
+  useEffect(() => {
+    maxWatchedRef.current = 0;
+    setCurrentSec(0);
+    setDurationSec(0);
+    setMaxWatchedSec(0);
+  }, [videoId]);
 
   useEffect(() => {
     const syncFullscreen = () => {
@@ -138,6 +164,30 @@ export function LmsSecureYoutubePlayer({
       document.removeEventListener("webkitfullscreenchange", syncFullscreen as EventListener);
     };
   }, []);
+
+  const seekWithinWatched = useCallback((target: number) => {
+    const p = playerRef.current;
+    if (!p) return;
+    const dur = p.getDuration?.() || durationSec || 0;
+    const maxAllowed = Math.max(maxWatchedRef.current, 0);
+    const clamped = Math.max(0, Math.min(target, maxAllowed, dur || target));
+    try {
+      p.seekTo(clamped, true);
+      setCurrentSec(clamped);
+    } catch {
+      /* ignore */
+    }
+  }, [durationSec]);
+
+  const rewind = useCallback(
+    (seconds = 10) => {
+      const p = playerRef.current;
+      if (!p) return;
+      const now = p.getCurrentTime?.() ?? currentSec;
+      seekWithinWatched(now - seconds);
+    },
+    [currentSec, seekWithinWatched],
+  );
 
   useEffect(() => {
     if (!videoId || !hostRef.current) return;
@@ -164,6 +214,12 @@ export function LmsSecureYoutubePlayer({
           onReady: (e) => {
             if (cancelled) return;
             setReady(true);
+            try {
+              const dur = e.target.getDuration?.() ?? 0;
+              if (dur > 0) setDurationSec(dur);
+            } catch {
+              /* ignore */
+            }
             if (autoPlayRef.current) {
               try {
                 e.target.playVideo();
@@ -180,6 +236,12 @@ export function LmsSecureYoutubePlayer({
             if (e.data === PAUSED) setPlaying(false);
             if (e.data === ENDED) {
               setPlaying(false);
+              const dur = e.target.getDuration?.() ?? 0;
+              if (dur > 0) {
+                maxWatchedRef.current = dur;
+                setMaxWatchedSec(dur);
+                setCurrentSec(dur);
+              }
               onProgressRef.current?.(100, true);
             }
           },
@@ -187,16 +249,29 @@ export function LmsSecureYoutubePlayer({
       });
 
       poll = setInterval(() => {
-        const p = playerRef.current as YTPlayer & {
-          getCurrentTime?: () => number;
-          getDuration?: () => number;
-        };
+        const p = playerRef.current;
         if (!p?.getCurrentTime || !p?.getDuration) return;
         const dur = p.getDuration();
         if (!dur || dur <= 0) return;
-        const pct = Math.min(100, Math.round((p.getCurrentTime() / dur) * 100));
+        const cur = p.getCurrentTime();
+        // ห้ามกระโดดข้ามส่วนที่ยังไม่เคยดู — ถ้าเลย max ให้ดึงกลับ
+        if (cur > maxWatchedRef.current + 1.25) {
+          try {
+            p.seekTo(maxWatchedRef.current, true);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+        if (cur > maxWatchedRef.current) {
+          maxWatchedRef.current = cur;
+          setMaxWatchedSec(cur);
+        }
+        setCurrentSec(cur);
+        setDurationSec(dur);
+        const pct = Math.min(100, Math.round((cur / dur) * 100));
         onProgressRef.current?.(pct, false);
-      }, 5000);
+      }, 500);
     })();
 
     return () => {
@@ -226,6 +301,9 @@ export function LmsSecureYoutubePlayer({
     );
   }
 
+  const progressPct = durationSec > 0 ? Math.min(100, (currentSec / durationSec) * 100) : 0;
+  const watchedPct = durationSec > 0 ? Math.min(100, (maxWatchedSec / durationSec) * 100) : 0;
+
   return (
     <div
       ref={shellRef}
@@ -236,52 +314,95 @@ export function LmsSecureYoutubePlayer({
       )}
     >
       <div ref={hostRef} className="h-full w-full" title={title} />
+      {/* บล็อกคลิกบน iframe — ใช้แถบควบคุมด้านล่างแทน (ย้อนกลับได้ · ห้ามข้ามไปข้างหน้า) */}
       <div
         className="absolute inset-0 z-10"
         onContextMenu={(e) => e.preventDefault()}
         aria-hidden
       />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-center justify-center gap-2 bg-gradient-to-t from-black/25 to-transparent p-3">
-        <button
-          type="button"
-          className="pointer-events-auto inline-flex min-h-10 min-w-10 items-center justify-center gap-2 rounded-full border border-white/25 bg-black/25 px-4 text-sm font-semibold text-white shadow-none backdrop-blur-[2px] transition hover:bg-black/40"
-          disabled={!ready}
-          onClick={() => {
-            const p = playerRef.current;
-            if (!p) return;
-            if (playing) p.pauseVideo();
-            else p.playVideo();
-          }}
-          aria-label={playing ? "หยุดชั่วคราว" : "เล่น"}
-        >
-          {playing ? <Pause className="h-4 w-4" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
-          <span>{playing ? "หยุด" : "เล่น"}</span>
-        </button>
-        <button
-          type="button"
-          className="pointer-events-auto inline-flex min-h-10 min-w-10 items-center justify-center gap-2 rounded-full border border-white/25 bg-black/25 px-3 text-sm font-semibold text-white shadow-none backdrop-blur-[2px] transition hover:bg-black/40 sm:px-4"
-          onClick={() => {
-            const shell = shellRef.current;
-            if (!shell) return;
-            void (async () => {
-              try {
-                if (isFullscreen) await exitFullscreen();
-                else await enterFullscreen(shell);
-              } catch {
-                /* browser may block fullscreen without gesture / unsupported */
-              }
-            })();
-          }}
-          aria-label={isFullscreen ? "ออกจากเต็มจอ" : "ขยายเต็มจอ"}
-          title={isFullscreen ? "ออกจากเต็มจอ" : "เต็มจอ"}
-        >
-          {isFullscreen ? (
-            <Minimize2 className="h-4 w-4" aria-hidden />
-          ) : (
-            <Maximize2 className="h-4 w-4" aria-hidden />
-          )}
-          <span className="hidden sm:inline">{isFullscreen ? "ย่อ" : "เต็มจอ"}</span>
-        </button>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 space-y-2 bg-gradient-to-t from-black/70 via-black/35 to-transparent p-3 pt-10">
+        <div className="pointer-events-auto">
+          <label className="sr-only" htmlFor={`lms-yt-seek-${videoId}`}>
+            ตำแหน่งวิดีโอ (ย้อนกลับได้ในส่วนที่ดูแล้ว)
+          </label>
+          <input
+            id={`lms-yt-seek-${videoId}`}
+            type="range"
+            min={0}
+            max={Math.max(1, Math.floor(durationSec) || 1)}
+            step={1}
+            value={Math.min(Math.floor(currentSec), Math.floor(maxWatchedSec) || 0)}
+            disabled={!ready || durationSec <= 0}
+            className="lms-yt-seek h-2 w-full cursor-pointer appearance-none rounded-full bg-white/25 accent-white disabled:opacity-40"
+            style={{
+              background: `linear-gradient(to right, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.85) ${progressPct}%, rgba(255,255,255,0.35) ${progressPct}%, rgba(255,255,255,0.35) ${watchedPct}%, rgba(255,255,255,0.15) ${watchedPct}%, rgba(255,255,255,0.15) 100%)`,
+            }}
+            onChange={(e) => {
+              seekWithinWatched(Number(e.target.value));
+            }}
+            aria-valuemin={0}
+            aria-valuemax={Math.floor(durationSec) || 0}
+            aria-valuenow={Math.floor(currentSec)}
+            aria-valuetext={`${formatTime(currentSec)} จาก ${formatTime(durationSec)}`}
+          />
+          <div className="mt-1 flex justify-between text-[10px] font-semibold tabular-nums text-white/80">
+            <span>{formatTime(currentSec)}</span>
+            <span>{formatTime(durationSec)}</span>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-1.5">
+          <button
+            type="button"
+            className={controlBtnClass}
+            disabled={!ready || currentSec <= 0}
+            onClick={() => rewind(10)}
+            aria-label="ย้อนกลับ 10 วินาที"
+            title="ย้อนกลับ 10 วินาที"
+          >
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+            <span>−10วิ</span>
+          </button>
+          <button
+            type="button"
+            className={cn(controlBtnClass, "min-w-[4.5rem] px-3")}
+            disabled={!ready}
+            onClick={() => {
+              const p = playerRef.current;
+              if (!p) return;
+              if (playing) p.pauseVideo();
+              else p.playVideo();
+            }}
+            aria-label={playing ? "หยุดชั่วคราว" : "เล่น"}
+          >
+            {playing ? <Pause className="h-3.5 w-3.5" aria-hidden /> : <Play className="h-3.5 w-3.5" aria-hidden />}
+            <span>{playing ? "หยุด" : "เล่น"}</span>
+          </button>
+          <button
+            type="button"
+            className={controlBtnClass}
+            onClick={() => {
+              const shell = shellRef.current;
+              if (!shell) return;
+              void (async () => {
+                try {
+                  if (isFullscreen) await exitFullscreen();
+                  else await enterFullscreen(shell);
+                } catch {
+                  /* browser may block fullscreen */
+                }
+              })();
+            }}
+            aria-label={isFullscreen ? "ออกจากเต็มจอ" : "ขยายเต็มจอ"}
+            title={isFullscreen ? "ออกจากเต็มจอ" : "เต็มจอ"}
+          >
+            {isFullscreen ? (
+              <Minimize2 className="h-3.5 w-3.5" aria-hidden />
+            ) : (
+              <Maximize2 className="h-3.5 w-3.5" aria-hidden />
+            )}
+            <span className="hidden sm:inline">{isFullscreen ? "ย่อ" : "เต็มจอ"}</span>
+          </button>
+        </div>
       </div>
     </div>
   );
