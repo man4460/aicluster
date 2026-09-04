@@ -24,6 +24,7 @@ import {
 } from "@/systems/asset/components/AssetRowActionIcons";
 import {
   CLUB_EVENT_BASE,
+  clubEventEventEditHref,
   clubEventEventHref,
 } from "@/systems/club-event/club-event-module-nav";
 import {
@@ -50,15 +51,23 @@ import {
   CLUB_EVENT_FREE_YOUTUBE_MAX,
   CLUB_EVENT_MONTHLY_YOUTUBE_MAX,
 } from "@/systems/club-event/lib/plan-limits";
+import {
+  clubEventEditorTabIcon,
+  clubEventPageTitleIcon,
+  clubEventPageTitleTone,
+} from "@/systems/club-event/lib/page-menu-icons";
 import type { ClubSubmissionRow } from "@/systems/club-event/lib/submission-summary";
 import type { ClubEventYoutubeVideo } from "@/systems/club-event/lib/youtube";
 import {
   clubEventFieldClass,
+  clubEventGalleryCardGridClass,
   clubEventIconButtonClass,
+  clubEventNavDividerClass,
   clubEventOutlineButtonClass,
   clubEventPrimaryButtonClass,
   clubEventRowCardClass,
   clubEventTextareaClass,
+  clubEventYoutubeCardGridClass,
 } from "@/systems/club-event/lib/ui-tokens";
 
 type GalleryItem = { id: string; imageUrl: string; fileName: string; sortOrder: number };
@@ -103,10 +112,10 @@ const EDITOR_GALLERY_PAGE_SIZE = EDITOR_GALLERY_PAGE_COLS * EDITOR_GALLERY_PAGE_
 type EditorTabKey = "general" | "youtube" | "gallery" | "links";
 
 const EDITOR_TAB_ITEMS: ClubEventPageSubNavItem[] = [
-  { key: "general", label: "ทั่วไป", shortLabel: "ทั่วไป" },
-  { key: "youtube", label: "ยูทูป", shortLabel: "ยูทูป" },
-  { key: "gallery", label: "แกลเลอรี", shortLabel: "รูป" },
-  { key: "links", label: "ลิงก์", shortLabel: "ลิงก์" },
+  { key: "general", label: "ทั่วไป", shortLabel: "ทั่วไป", icon: clubEventEditorTabIcon("general") },
+  { key: "youtube", label: "ยูทูป", shortLabel: "ยูทูป", icon: clubEventEditorTabIcon("youtube") },
+  { key: "gallery", label: "แกลเลอรี", shortLabel: "รูป", icon: clubEventEditorTabIcon("gallery") },
+  { key: "links", label: "ลิงก์", shortLabel: "ลิงก์", icon: clubEventEditorTabIcon("links") },
 ];
 
 export function ClubEventEventEditorClient({ eventId }: { eventId: string | null }) {
@@ -330,7 +339,7 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
       notice.success("บันทึกกิจกรรมแล้ว");
       if (data.event && isNew) {
         setSavedId(data.event.id);
-        router.replace(clubEventEventHref(data.event.id));
+        router.replace(clubEventEventEditHref(data.event.id));
       } else if (data.event) {
         setSavedId(data.event.id);
       }
@@ -476,7 +485,12 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
 
   if (loading) {
     return (
-      <ClubEventPageSubNav title="กำหนดการ" subtitle="กำลังโหลด…">
+      <ClubEventPageSubNav
+        title="กำหนดการ"
+        titleIcon={clubEventPageTitleIcon("eventEdit")}
+        titleTone={clubEventPageTitleTone("eventEdit")}
+        subtitle="กำลังโหลด…"
+      >
         <p className="py-6 text-center text-sm text-[#66638c]">กำลังโหลด…</p>
       </ClubEventPageSubNav>
     );
@@ -489,6 +503,8 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
       {notice.popup}
       <ClubEventPageSubNav
         title={pageTitle}
+        titleIcon={clubEventPageTitleIcon("eventEdit")}
+        titleTone={clubEventPageTitleTone("eventEdit")}
         items={EDITOR_TAB_ITEMS}
         activeKey={editorTab}
         onSelect={(key) => setEditorTab(key as EditorTabKey)}
@@ -500,13 +516,14 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
         action={
           <div className="flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5">
             <Link
-              href={CLUB_EVENT_BASE}
+              href={activeEventId ? clubEventEventHref(activeEventId) : CLUB_EVENT_BASE}
               className={clubEventIconButtonClass}
-              aria-label="กลับกำหนดการ"
-              title="กลับกำหนดการ"
+              aria-label={activeEventId ? "กลับหน้ารายละเอียด" : "กลับแดชบอร์ด"}
+              title={activeEventId ? "กลับหน้ารายละเอียด" : "กลับแดชบอร์ด"}
             >
               <ArrowLeft className="h-4 w-4" aria-hidden />
             </Link>
+            <span className={clubEventNavDividerClass} aria-hidden />
             <button
               type="button"
               className={clubEventPrimaryButtonClass}
@@ -649,11 +666,11 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
               ยังไม่มีคลิป — กรอกชื่อและลิงก์ YouTube ด้านบน แล้วกดเพิ่มในรายการ
             </AppEmptyState>
           ) : (
-            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+            <div className={cn("mt-3", clubEventYoutubeCardGridClass)}>
               {youtubeVideos.map((v, i) => {
                 const vid = extractYoutubeVideoId(v.youtubeUrl);
                 return (
-                  <div key={v.id} className="relative">
+                  <div key={v.id} className="relative min-w-0">
                     <button
                       type="button"
                       className="group relative block w-full overflow-hidden rounded-xl ring-2 ring-slate-100 transition hover:ring-[#0000BF]/30"
@@ -661,28 +678,30 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
                       title={v.title}
                       onClick={() => ytLb.open(v.youtubeUrl, v.title)}
                     >
-                      {vid ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={youtubeThumbUrl(vid)}
-                          alt=""
-                          className="h-20 w-full object-cover object-center sm:h-24"
-                        />
-                      ) : (
-                        <div className="flex h-20 w-full items-center justify-center bg-slate-100 text-[10px] font-semibold text-slate-400 sm:h-24">
-                          ไม่มีตัวอย่าง
-                        </div>
-                      )}
-                      <span
-                        className="absolute inset-0 flex items-center justify-center bg-[#1e1b4b]/30"
-                        aria-hidden
-                      >
-                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-[#4d47b6] shadow-md">
-                          <Play className="ml-0.5 h-4 w-4 fill-current" />
+                      <span className="relative block aspect-video w-full">
+                        {vid ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={youtubeThumbUrl(vid)}
+                            alt=""
+                            className="h-full w-full object-cover object-center"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-slate-100 text-[10px] font-semibold text-slate-400">
+                            ไม่มีตัวอย่าง
+                          </div>
+                        )}
+                        <span
+                          className="absolute inset-0 flex items-center justify-center bg-[#1e1b4b]/30"
+                          aria-hidden
+                        >
+                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-[#4d47b6] shadow-md">
+                            <Play className="ml-0.5 h-4 w-4 fill-current" />
+                          </span>
                         </span>
-                      </span>
-                      <span className="absolute inset-x-0 bottom-0 truncate bg-black/55 px-1.5 py-1 text-[10px] font-bold text-white">
-                        {v.title}
+                        <span className="absolute inset-x-0 bottom-0 truncate bg-black/55 px-1.5 py-1 text-[10px] font-bold text-white">
+                          {v.title}
+                        </span>
                       </span>
                     </button>
                     <div className="absolute -right-1 -top-1 z-[1] flex gap-0.5">
@@ -746,7 +765,7 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
                   onClick={() => setSlideshowOpen(true)}
                 >
                   <Play className="h-4 w-4" aria-hidden />
-                  <span className="hidden sm:inline">Slideshow</span>
+                  <span className="hidden sm:inline">รับชมสไลด์</span>
                 </button>
               ) : null}
               <label
@@ -779,9 +798,9 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
             <AppEmptyState>ยังไม่มีรูป — อัปโหลดรูปกิจกรรม (แปลง WebP อัตโนมัติ)</AppEmptyState>
           ) : (
             <div className="space-y-3">
-              <div className="grid grid-cols-8 gap-1.5 sm:gap-2">
+              <div className={clubEventGalleryCardGridClass}>
                 {gallerySlice.map(({ item: g, index }) => (
-                  <div key={g.id} className="relative">
+                  <div key={g.id} className="relative min-w-0">
                     <AppImageThumb
                       src={g.imageUrl}
                       alt={g.fileName}
@@ -791,7 +810,7 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
                           index,
                         )
                       }
-                      className="h-14 w-full sm:h-16 md:h-20"
+                      className="aspect-square h-auto w-full"
                     />
                     <button
                       type="button"

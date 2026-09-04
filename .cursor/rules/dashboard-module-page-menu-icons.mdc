@@ -1,0 +1,79 @@
+---
+description: หัวข้อเมนูหน้าโมดูล + แท็บย่อยต้องมีไอคอน (tile/คู่ป้าย) — แม่แบบซักผ้า/ชมรม
+globs: src/systems/**/components/**/{*PageSubNav*,*Dashboard*,*Settings*,*Manage*,*Finance*}*.{tsx,ts}
+alwaysApply: false
+---
+
+# หัวข้อเมนู — ไอคอน (มาตรฐานโมดูล)
+
+ใช้เมื่อทำหรือปรับ **หัวข้อหน้า** (`PageSubNav` / การ์ดหัวแผง) และ **แท็บเมนูย่อย** ของโมดูลแดชบอร์ด
+
+**คู่กับ:** `laundry-module-dashboard-template.mdc` · `dashboard-module-list-card-icon-tones.mdc` · `dashboard-module-design-check-laundry-first.mdc`
+
+---
+
+## 0) บังคับ
+
+1. **หัวข้อหน้าหลัก** (เช่น แดชบอร์ด · การเงิน · การจัดการ · ตั้งค่า) ต้องมี **ไอคอนในกล่อง tile** ข้างชื่อ — ไม่เหลือข้อความล้วน  
+2. **แท็บเมนูย่อย** ทุกตัวควรมี **ไอคอนเล็ก** คู่ป้าย (lucide หรือชุดเดียวกับโมดูล)  
+3. รวมไอคอนในไฟล์ helper ของโมดูล (เช่น `lib/page-menu-icons.tsx`) — **ห้าม** คัดลอก JSX ไอคอนกระจายหลายหน้า  
+4. ไอคอนตกแต่งใส่ **`aria-hidden`** เมื่อมีข้อความหัวข้อ/ป้ายแท็บแล้ว  
+
+---
+
+## 1) หัวข้อหน้า (`titleIcon`)
+
+| ชิ้น | แนวทาง |
+|-----|--------|
+| ตำแหน่ง | ซ้ายของ `<h2>` ชื่อเมนู |
+| กล่อง | `h-9 w-9` · `rounded-xl` · พื้น pastel + `ring-1` ตามโทนหน้า (sky/emerald/violet/indigo…) |
+| ไอคอน | ~`h-4 w-4` · `strokeWidth` ~2.25 |
+| API | prop `titleIcon` (+ `titleTone` ถ้าโมดูลมีโทนการ์ด) บน `*PageSubNav` |
+
+**อ้างอิง:**  
+- ชมรม: `ClubEventPageSubNav` · `club-event/lib/page-menu-icons.tsx`  
+- ซักผ้า (template): `LaundryPageSubNav` prop `titleIcon`
+
+---
+
+## 2) แท็บย่อย (`items[].icon`)
+
+| ชิ้น | แนวทาง |
+|-----|--------|
+| ขนาด | `h-3.5`–`h-5` ในปุ่มแท็บ |
+| คู่ข้อความ | ไอคอน + ป้าย · มือถืออาจเหลือป้ายสั้น + ไอคอน |
+| ตัวอย่าง | กำหนดการ=ปฏิทิน · ย้อนหลัง=History · สมาชิก=User · ทรัพย์สิน=Package · ตั้งค่าเว็บ=Globe |
+
+---
+
+## 3) หัวข้อบล็อกในเนื้อหา (ถ้ามี)
+
+บล็อกย่อยใต้เส้นแบ่ง (`*PageBlock`) ถ้ามีหัวข้อ — ใส่ไอคอนเล็กในกล่อง `h-7 w-7` คู่ชื่อ (เช่น รายละเอียด · ยูทูป · แกลเลอรี)
+
+---
+
+## 4) ห้าม
+
+- หัวข้อหน้าหลักไม่มีไอคอนเมื่อโมดูลอื่นในชุดเดียวกันมีแล้ว  
+- Hardcode SVG/lucide ซ้ำในทุก `*Client.tsx` โดยไม่มี helper  
+- ใช้ emoji เป็นไอคอนเมนู  
+- ไอคอนใหญ่แข่งกับชื่อหัวข้อ (เกิน ~`h-5` ในแท็บ / เกิน tile `h-9` ที่หัวหน้า)  
+
+---
+
+## 5) เช็กลิสต์
+
+- [ ] `*PageSubNav` รองรับ `titleIcon`  
+- [ ] ทุกหน้าหลักส่ง `titleIcon` (+ โทนถ้ามี)  
+- [ ] แท็บย่อยทุก key มี `icon`  
+- [ ] helper รวมที่ `lib/page-menu-icons.tsx` (หรือเทียบเท่า)  
+- [ ] บล็อกเนื้อหาที่มีหัวข้อ — มีไอคอนเมื่อเหมาะสม  
+
+---
+
+## 6) อ้างอิงโค้ด
+
+| โมดูล | ไฟล์ |
+|-------|------|
+| ชมรม | `page-menu-icons.tsx` · `ClubEventPageSubNav` · Dashboard/Finance/Manage/Settings/Detail/Editor |
+| ซักผ้า | `LaundryPageSubNav.tsx` (`titleIcon` + `items[].icon`) |

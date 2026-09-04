@@ -13,6 +13,55 @@ export type ClubEventYoutubeVideo = {
   videoId: string;
 };
 
+/**
+ * คลิปตัวอย่างสำหรับบัญชีทดลอง/ฟรี — โชว์บนหน้ารายละเอียดเมื่อยังไม่มีวิดีโอจริง
+ * เพื่อให้เห็นการ์ดกริด ~6 ใบ (มือถือ 2 · เดสก์ท็อป 6)
+ */
+export const CLUB_EVENT_TRIAL_SAMPLE_YOUTUBE_VIDEOS: ClubEventYoutubeVideo[] = [
+  {
+    id: "sample-1",
+    title: "ตัวอย่างคลิป 1",
+    hint: "ตัวอย่างสำหรับบัญชีทดลอง",
+    videoId: "M7lc1UVf-VE",
+    youtubeUrl: youtubeWatchUrl("M7lc1UVf-VE"),
+  },
+  {
+    id: "sample-2",
+    title: "ตัวอย่างคลิป 2",
+    hint: "ตัวอย่างสำหรับบัญชีทดลอง",
+    videoId: "aqz-KE-bpKQ",
+    youtubeUrl: youtubeWatchUrl("aqz-KE-bpKQ"),
+  },
+  {
+    id: "sample-3",
+    title: "ตัวอย่างคลิป 3",
+    hint: "ตัวอย่างสำหรับบัญชีทดลอง",
+    videoId: "LXb3EKWsInQ",
+    youtubeUrl: youtubeWatchUrl("LXb3EKWsInQ"),
+  },
+  {
+    id: "sample-4",
+    title: "ตัวอย่างคลิป 4",
+    hint: "ตัวอย่างสำหรับบัญชีทดลอง",
+    videoId: "ScMzIvxBSi4",
+    youtubeUrl: youtubeWatchUrl("ScMzIvxBSi4"),
+  },
+  {
+    id: "sample-5",
+    title: "ตัวอย่างคลิป 5",
+    hint: "ตัวอย่างสำหรับบัญชีทดลอง",
+    videoId: "jNQXAC9IVRw",
+    youtubeUrl: youtubeWatchUrl("jNQXAC9IVRw"),
+  },
+  {
+    id: "sample-6",
+    title: "ตัวอย่างคลิป 6",
+    hint: "ตัวอย่างสำหรับบัญชีทดลอง",
+    videoId: "C0DPdy98e4c",
+    youtubeUrl: youtubeWatchUrl("C0DPdy98e4c"),
+  },
+];
+
 /** แปลงลิงก์ YouTube ใด ๆ (watch / youtu.be / embed / shorts) เป็น embed URL เก็บใน DB — ไม่มี autoplay */
 export function normalizeClubEventYoutubeEmbedUrl(raw: string | null | undefined): string | null {
   if (raw == null) return null;

@@ -22,12 +22,21 @@ import { ClubEventPageSubNav } from "@/systems/club-event/components/ClubEventPa
 import { ClubEventPortalMediaSettings } from "@/systems/club-event/components/ClubEventPortalMediaSettings";
 import type { ClubEventProfileDto } from "@/systems/club-event/lib/mappers";
 import {
+  clubEventPageTitleIcon,
+  clubEventPageTitleTone,
+  clubEventSettingsTabIcon,
+} from "@/systems/club-event/lib/page-menu-icons";
+import {
   clubEventFieldClass,
   clubEventOutlineButtonClass,
   clubEventPrimaryButtonClass,
   clubEventTextareaClass,
 } from "@/systems/club-event/lib/ui-tokens";
 
+const SETTINGS_TAB_ITEMS = CLUB_EVENT_SETTINGS_TAB_ITEMS.map((item) => ({
+  ...item,
+  icon: clubEventSettingsTabIcon(item.key),
+}));
 const LOGO_UPLOAD = "/api/club-event/session/images/upload";
 const labelClass = "block space-y-1";
 const labelTextClass = "text-xs font-bold text-[#4d47b6]";
@@ -151,7 +160,9 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
       {notice.popup}
       <ClubEventPageSubNav
         title="ตั้งค่า"
-        items={CLUB_EVENT_SETTINGS_TAB_ITEMS}
+        titleIcon={clubEventPageTitleIcon("settings")}
+        titleTone={clubEventPageTitleTone("settings")}
+        items={SETTINGS_TAB_ITEMS}
         activeKey={tab}
         onSelect={setTab}
         ariaLabel="แท็บตั้งค่า"

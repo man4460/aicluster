@@ -120,7 +120,7 @@ AppPublicCheckInGlassPage (!px-0 !pt-0)
 ### ปุ่ม CTA หลัก
 
 - ใช้ **`appDashboardBrandGradientFillClass`** จาก `@/components/app-templates` (ไล่ `#0000BF` → violet → pink)
-- ซักผ้า: **`laundryPrimaryButtonClass`** (= ความสูง **`h-10`** · `rounded-lg`) — alias เก่า `laundryPortalPrimaryBtnClass` / `laundryPaymentCtaClass`
+- ซักผ้า: **`laundryPrimaryButtonClass`** (= ความสูง **`h-9`** · `rounded-lg`) — alias เก่า `laundryPortalPrimaryBtnClass` / `laundryPaymentCtaClass`
 - โมดูลใหม่: `{module}PrimaryButtonClass` ชุดเดียวกับแดชบอร์ด — **ห้าม** สร้าง CTA คนละความสูงกับปุ่มโมดูล
 - ชิป/step active: gradient เดียวกับ CTA
 
@@ -200,7 +200,7 @@ AppPublicCheckInGlassPage (!px-0 !pt-0)
 | โทเค็น | ใช้เมื่อ |
 |--------|---------|
 | `{module}PortalShopNameClass` / `HeroClass` | ชื่อร้าน gradient |
-| `{module}PrimaryButtonClass` (หรือ alias PortalPrimary) | CTA หลัก — สูงเท่าปุ่มแดชบอร์ด (`h-10`) |
+| `{module}PrimaryButtonClass` (หรือ alias PortalPrimary) | CTA หลัก — สูงเท่าปุ่มแดชบอร์ด (`h-9`) |
 | `{module}OutlineButtonClass` | ปุ่มขอบขาว |
 | `{module}PortalPageTitleClass` | หัวข้อ section |
 | `{module}PortalPageBodyClass` | เนื้อหาหลังเส้น |

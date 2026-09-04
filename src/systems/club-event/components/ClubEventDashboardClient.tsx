@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Calendar, Play, Plus } from "lucide-react";
+import { Calendar, Images, Play, Plus, UserCog } from "lucide-react";
 import { AppEmptyState, useAppNoticePopup } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { formatBangkokDateTimeLong } from "@/lib/time/bangkok";
@@ -16,19 +16,33 @@ import {
 import {
   CLUB_EVENT_DASHBOARD_TAB_ITEMS,
   clubEventDashboardTabHref,
+  clubEventEventEditHref,
   clubEventEventHref,
   clubEventNewEventHref,
   parseClubEventDashboardTab,
   type ClubEventDashboardTabKey,
 } from "@/systems/club-event/club-event-module-nav";
 import { ClubEventPageSubNav } from "@/systems/club-event/components/ClubEventPageSubNav";
+import {
+  clubEventCardIconTileClass,
+  clubEventTonedRowCardClass,
+} from "@/systems/club-event/lib/card-tones";
 import type { ClubCommitteeMember, ClubEventProfileDto, ClubEventRecordDto } from "@/systems/club-event/lib/mappers";
+import {
+  clubEventDashboardTabIcon,
+  clubEventPageTitleIcon,
+  clubEventPageTitleTone,
+} from "@/systems/club-event/lib/page-menu-icons";
 import {
   clubEventFieldClass,
   clubEventOutlineButtonClass,
   clubEventPrimaryButtonClass,
-  clubEventRowCardClass,
 } from "@/systems/club-event/lib/ui-tokens";
+
+const DASHBOARD_TAB_ITEMS = CLUB_EVENT_DASHBOARD_TAB_ITEMS.map((item) => ({
+  ...item,
+  icon: clubEventDashboardTabIcon(item.key),
+}));
 
 export function ClubEventDashboardClient({ initialProfile }: { initialProfile: ClubEventProfileDto }) {
   const router = useRouter();
@@ -109,7 +123,9 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
       {notice.popup}
       <ClubEventPageSubNav
         title="แดชบอร์ด"
-        items={CLUB_EVENT_DASHBOARD_TAB_ITEMS}
+        titleIcon={clubEventPageTitleIcon("dashboard")}
+        titleTone={clubEventPageTitleTone("dashboard")}
+        items={DASHBOARD_TAB_ITEMS}
         activeKey={tab}
         onSelect={setTab}
         ariaLabel="แท็บแดชบอร์ด"
@@ -139,37 +155,47 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
           <div>
             <div className="space-y-2">
               {committee.map((row, idx) => (
-                <div key={idx} className="grid gap-2 rounded-lg border border-slate-200/90 p-3 sm:grid-cols-3">
-                  <input
-                    className={clubEventFieldClass}
-                    placeholder="ตำแหน่ง"
-                    value={row.role}
-                    onChange={(e) => {
-                      const next = [...committee];
-                      next[idx] = { ...row, role: e.target.value };
-                      setCommittee(next);
-                    }}
-                  />
-                  <input
-                    className={clubEventFieldClass}
-                    placeholder="ชื่อ"
-                    value={row.name}
-                    onChange={(e) => {
-                      const next = [...committee];
-                      next[idx] = { ...row, name: e.target.value };
-                      setCommittee(next);
-                    }}
-                  />
-                  <input
-                    className={clubEventFieldClass}
-                    placeholder="เบอร์โทร"
-                    value={row.phone ?? ""}
-                    onChange={(e) => {
-                      const next = [...committee];
-                      next[idx] = { ...row, phone: e.target.value };
-                      setCommittee(next);
-                    }}
-                  />
+                <div
+                  key={idx}
+                  className={cn(clubEventTonedRowCardClass("indigo"), "sm:items-stretch")}
+                >
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <span className={clubEventCardIconTileClass("indigo")} aria-hidden>
+                      <UserCog className="h-5 w-5" strokeWidth={2.25} />
+                    </span>
+                    <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-3">
+                      <input
+                        className={clubEventFieldClass}
+                        placeholder="ตำแหน่ง"
+                        value={row.role}
+                        onChange={(e) => {
+                          const next = [...committee];
+                          next[idx] = { ...row, role: e.target.value };
+                          setCommittee(next);
+                        }}
+                      />
+                      <input
+                        className={clubEventFieldClass}
+                        placeholder="ชื่อ"
+                        value={row.name}
+                        onChange={(e) => {
+                          const next = [...committee];
+                          next[idx] = { ...row, name: e.target.value };
+                          setCommittee(next);
+                        }}
+                      />
+                      <input
+                        className={clubEventFieldClass}
+                        placeholder="เบอร์โทร"
+                        value={row.phone ?? ""}
+                        onChange={(e) => {
+                          const next = [...committee];
+                          next[idx] = { ...row, phone: e.target.value };
+                          setCommittee(next);
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               ))}
               <button
@@ -195,50 +221,73 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
               <AppEmptyState>ยังไม่มีกิจกรรม — กดเพิ่มกิจกรรมเพื่อเริ่มต้น</AppEmptyState>
             ) : (
               <ul className="space-y-2">
-                {events.map((ev) => (
-                  <li key={ev.id} className={clubEventRowCardClass}>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-[#1e1b4b]">{ev.title}</p>
-                      <p className="mt-0.5 flex items-center gap-1.5 text-sm text-[#66638c]">
-                        <Calendar className="h-4 w-4 shrink-0" aria-hidden />
-                        {formatBangkokDateTimeLong(ev.eventDate)}
-                      </p>
-                      {ev.galleryCount > 0 ? (
-                        <p className="mt-1 text-xs text-[#5f5a8a]">รูป {ev.galleryCount} รายการ</p>
-                      ) : null}
-                      {(ev.youtubeVideos?.length ?? ev.youtubeUrls?.length ?? 0) > 0 ||
-                      ev.youtubeEmbedUrl ? (
-                        <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#0000BF]">
-                          <Play className="h-3.5 w-3.5" aria-hidden />
-                          วิดีโอ{" "}
-                          {ev.youtubeVideos?.length ||
-                            ev.youtubeUrls?.length ||
-                            (ev.youtubeEmbedUrl ? 1 : 0)}{" "}
-                          รายการ
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1 self-end sm:self-center">
-                      <Link
-                        href={clubEventEventHref(ev.id)}
-                        className={assetRowEditIconButtonClass}
-                        aria-label={`แก้ไข ${ev.title}`}
-                        title="แก้ไข"
+                {events.map((ev, i) => {
+                  const tone = tab === "past" ? "slate" : (["sky", "violet", "fuchsia", "cyan"] as const)[i % 4];
+                  return (
+                    <li key={ev.id}>
+                      <div
+                        className={cn(
+                          clubEventTonedRowCardClass(tone),
+                          "relative transition hover:brightness-[0.99]",
+                        )}
                       >
-                        <IconRowEdit className="h-4 w-4" />
-                      </Link>
-                      <button
-                        type="button"
-                        className={assetRowRemoveIconButtonClass}
-                        aria-label={`ลบ ${ev.title}`}
-                        title="ลบ"
-                        onClick={() => void deleteEvent(ev.id, ev.title)}
-                      >
-                        <IconRowRemove className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </li>
-                ))}
+                        <Link
+                          href={clubEventEventHref(ev.id)}
+                          className="absolute inset-0 z-0 rounded-[inherit]"
+                          aria-label={`ดูรายละเอียด ${ev.title}`}
+                        />
+                        <div className="relative z-[1] flex min-w-0 flex-1 items-start gap-3 pointer-events-none">
+                          <span className={clubEventCardIconTileClass(tone, "lg")} aria-hidden>
+                            <Calendar className="h-7 w-7" strokeWidth={2.1} />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-[#1e1b4b]">{ev.title}</p>
+                            <p className="mt-0.5 flex items-center gap-1.5 text-sm text-[#66638c]">
+                              <Calendar className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+                              {formatBangkokDateTimeLong(ev.eventDate)}
+                            </p>
+                            {ev.galleryCount > 0 ? (
+                              <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#5f5a8a]">
+                                <Images className="h-3.5 w-3.5" aria-hidden />
+                                รูป {ev.galleryCount} รายการ
+                              </p>
+                            ) : null}
+                            {(ev.youtubeVideos?.length ?? ev.youtubeUrls?.length ?? 0) > 0 ||
+                            ev.youtubeEmbedUrl ? (
+                              <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#0000BF]">
+                                <Play className="h-3.5 w-3.5" aria-hidden />
+                                วิดีโอ{" "}
+                                {ev.youtubeVideos?.length ||
+                                  ev.youtubeUrls?.length ||
+                                  (ev.youtubeEmbedUrl ? 1 : 0)}{" "}
+                                รายการ
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="relative z-[1] flex shrink-0 items-center gap-1 self-end sm:self-center">
+                          <Link
+                            href={clubEventEventEditHref(ev.id)}
+                            className={assetRowEditIconButtonClass}
+                            aria-label={`แก้ไข ${ev.title}`}
+                            title="แก้ไข"
+                          >
+                            <IconRowEdit className="h-4 w-4" />
+                          </Link>
+                          <button
+                            type="button"
+                            className={assetRowRemoveIconButtonClass}
+                            aria-label={`ลบ ${ev.title}`}
+                            title="ลบ"
+                            onClick={() => void deleteEvent(ev.id, ev.title)}
+                          >
+                            <IconRowRemove className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </>

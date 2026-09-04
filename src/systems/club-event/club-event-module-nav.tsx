@@ -11,6 +11,11 @@ export function clubEventEventHref(id: string): string {
   return `${CLUB_EVENT_EVENTS_PATH}/${encodeURIComponent(id)}`;
 }
 
+/** หน้าแก้ไขกิจกรรม (ทั่วไป · ยูทูป · แกลเลอรี · ลิงก์) */
+export function clubEventEventEditHref(id: string): string {
+  return `${clubEventEventHref(id)}/edit`;
+}
+
 export function clubEventNewEventHref(): string {
   return `${CLUB_EVENT_EVENTS_PATH}/new`;
 }

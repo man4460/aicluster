@@ -3,9 +3,14 @@
 import { type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import {
+  clubEventCardIconTileClass,
+  type ClubEventCardTone,
+} from "@/systems/club-event/lib/card-tones";
+import {
   clubEventInlineSubNavBtnClass,
   clubEventInlineSubNavShellClass,
   clubEventMobileSelectClass,
+  clubEventNavDividerClass,
   clubEventPanelClass,
   clubEventPanelDividerClass,
   clubEventPanelSectionClass,
@@ -21,11 +26,13 @@ export type ClubEventPageSubNavItem = {
 };
 
 /**
- * หัวการ์ดแบบซักผ้า — ชื่อเมนูหลัก + หัวข้อย่อยแถวเดียว · แท็บ/ปุ่มขวา · เส้นบาง · เนื้อหา
+ * หัวการ์ดแบบซักผ้า — ไอคอนหัวข้อ + ชื่อเมนูหลัก + หัวข้อย่อย · แท็บ/ปุ่มขวา · เส้นบาง · เนื้อหา
  * แท็บหลายตัว: มือถือใช้ select (ส่ง mobileSelect) · sm+ แสดง pill มุมขวา
  */
 export function ClubEventPageSubNav({
   title,
+  titleIcon,
+  titleTone = "sky",
   subtitle,
   items,
   activeKey,
@@ -37,6 +44,9 @@ export function ClubEventPageSubNav({
   className,
 }: {
   title: string;
+  /** ไอคอนข้างหัวข้อหน้า (บังคับตามแม่แบบเมนู) */
+  titleIcon?: ReactNode;
+  titleTone?: ClubEventCardTone;
   /** ถ้าไม่ส่ง จะใช้ label ของแท็บที่เลือก */
   subtitle?: string;
   items?: ClubEventPageSubNavItem[];
@@ -62,6 +72,11 @@ export function ClubEventPageSubNav({
       <div className={cn(clubEventPanelSectionClass, "print:hidden")}>
         <div className="flex flex-nowrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
+            {titleIcon ? (
+              <span className={clubEventCardIconTileClass(titleTone)} aria-hidden>
+                {titleIcon}
+              </span>
+            ) : null}
             <h2 className="min-w-0 shrink truncate text-base font-bold text-[#1e1b4b] sm:text-lg">{title}</h2>
             {sub ? (
               <>
@@ -141,6 +156,9 @@ export function ClubEventPageSubNav({
                 </nav>
               )
             ) : null}
+            {hasTabs && action ? (
+              <span className={cn(clubEventNavDividerClass, useMobileSelect && "hidden sm:block")} aria-hidden />
+            ) : null}
             {action}
           </div>
         </div>
@@ -177,12 +195,14 @@ export function ClubEventPageSubNav({
 /** บล็อกย่อยในเนื้อหา — คั่นเส้นบาง (บล็อกแรกส่ง first) · ไม่ใส่หัวซ้ำถ้าหัวอยู่แถวเมนูแล้ว */
 export function ClubEventPageBlock({
   title,
+  titleIcon,
   action,
   children,
   first = false,
   className,
 }: {
   title?: string;
+  titleIcon?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
   first?: boolean;
@@ -192,7 +212,21 @@ export function ClubEventPageBlock({
     <div className={cn(!first && cn(clubEventPanelDividerClass, "mt-4 pt-4"), className)}>
       {title || action ? (
         <div className="mb-3 flex flex-row items-start justify-between gap-3">
-          {title ? <h3 className={clubEventSectionHeadingClass}>{title}</h3> : <span />}
+          {title ? (
+            <h3 className={clubEventSectionHeadingClass}>
+              {titleIcon ? (
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[#4d47b6] ring-1 ring-slate-200/80"
+                  aria-hidden
+                >
+                  {titleIcon}
+                </span>
+              ) : null}
+              {title}
+            </h3>
+          ) : (
+            <span />
+          )}
           {action ? <div className="shrink-0">{action}</div> : null}
         </div>
       ) : null}

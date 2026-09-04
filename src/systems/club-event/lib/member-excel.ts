@@ -84,12 +84,27 @@ function xmlEscape(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function cell(value: string): string {
-  return `<Cell><Data ss:Type="String">${xmlEscape(value)}</Data></Cell>`;
+/** คอลัมน์โทรศัพท์ในแบบฟอร์ม (1-based) — ชื่อ · นามสกุล · ชื่อเล่น · เพศ · โทรศัพท์ */
+const PHONE_COLUMN_INDEX_1 = 5;
+
+function cell(value: string, styleId?: string): string {
+  const style = styleId ? ` ss:StyleID="${styleId}"` : "";
+  return `<Cell${style}><Data ss:Type="String">${xmlEscape(value)}</Data></Cell>`;
 }
 
-function row(cells: string[]): string {
-  return `<Row>${cells.map((v) => cell(v)).join("")}</Row>`;
+function row(cells: string[], textColIndexes1Based: number[] = []): string {
+  const textCols = new Set(textColIndexes1Based);
+  return `<Row>${cells
+    .map((v, i) => cell(v, textCols.has(i + 1) ? "Text" : undefined))
+    .join("")}</Row>`;
+}
+
+/** คง 0 นำหน้า — เก็บเฉพาะตัวเลข ไม่ตัด 0 หน้า */
+export function normalizeClubEventMemberPhone(raw: string | null | undefined): string {
+  return String(raw ?? "")
+    .trim()
+    .replace(/[^\d]/g, "")
+    .slice(0, 32);
 }
 
 /** คอลัมน์มาตรฐานของแบบฟอร์มสมาชิก */
@@ -194,7 +209,7 @@ export function buildClubEventMemberImportTemplateXls(customFieldLabels: string[
     ["สมหญิง", "รักงาน", "มิ้น", "หญิง", "0898765432", "กรรมการ", "somying@example.com", "line:somying", "M002", "ใช่", "ใช่", ...extra.map(() => "")],
   ];
   const note =
-    "กรอกใต้หัวคอลัมน์ · * จำเป็น · เพศ: ชาย/หญิง/อื่นๆ · ยินยอม/เปิดใช้งาน: ใช่ หรือ ไม่ · คอลัมน์พิเศษหลัง «เปิดใช้งาน» = ฟิลด์เพิ่มเติม · ลบแถวตัวอย่างก่อนนำเข้า";
+    "กรอกใต้หัวคอลัมน์ · * จำเป็น · คอลัมน์โทรศัพท์เป็นข้อความ — ใส่ 0 นำหน้าได้ เช่น 0812345678 · เพศ: ชาย/หญิง/อื่นๆ · ยินยอม/เปิดใช้งาน: ใช่ หรือ ไม่ · คอลัมน์พิเศษหลัง «เปิดใช้งาน» = ฟิลด์เพิ่มเติม · ลบแถวตัวอย่างก่อนนำเข้า";
 
   return `<?xml version="1.0"?>
 <?mso-application progid="Excel.Sheet"?>
@@ -206,12 +221,14 @@ export function buildClubEventMemberImportTemplateXls(customFieldLabels: string[
  <Styles>
   <Style ss:ID="Header"><Font ss:Bold="1"/><Interior ss:Color="#ECEBFF" ss:Pattern="Solid"/></Style>
   <Style ss:ID="Note"><Font ss:Italic="1" ss:Color="#66638C"/></Style>
+  <Style ss:ID="Text"><NumberFormat ss:Format="@"/></Style>
  </Styles>
  <Worksheet ss:Name="สมาชิกชมรม">
   <Table>
+   <Column ss:Index="${PHONE_COLUMN_INDEX_1}" ss:StyleID="Text" ss:Width="120"/>
    <Row ss:StyleID="Note"><Cell ss:MergeAcross="${Math.max(headers.length - 1, 0)}"><Data ss:Type="String">${xmlEscape(note)}</Data></Cell></Row>
    <Row ss:StyleID="Header">${headers.map((h) => cell(h)).join("")}</Row>
-   ${examples.map((ex) => row(ex.slice(0, headers.length))).join("\n   ")}
+   ${examples.map((ex) => row(ex.slice(0, headers.length), [PHONE_COLUMN_INDEX_1])).join("\n   ")}
   </Table>
  </Worksheet>
  <Worksheet ss:Name="คำอธิบาย">
@@ -221,7 +238,7 @@ export function buildClubEventMemberImportTemplateXls(customFieldLabels: string[
    ${row(["นามสกุล*", "นามสกุล"])}
    ${row(["ชื่อเล่น", "ชื่อเล่น (ถ้ามี)"])}
    ${row(["เพศ", "ชาย / หญิง / อื่นๆ / ว่าง"])}
-   ${row(["โทรศัพท์", "เบอร์ติดต่อ"])}
+   ${row(["โทรศัพท์", "ข้อความ (รูปแบบ @) — ใส่ 0 นำหน้าได้ เช่น 0812345678 · อย่าจัดรูปแบบเป็นตัวเลข"])}
    ${row(["ตำแหน่ง", "ตำแหน่งในชมรม"])}
    ${row(["อีเมล", "อีเมล"])}
    ${row(["โซเชียล", "LINE / Facebook / Instagram ฯลฯ"])}
@@ -283,10 +300,14 @@ export function buildClubEventMemberExportXls(
  xmlns:x="urn:schemas-microsoft-com:office:excel"
  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
  xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+  <Style ss:ID="Text"><NumberFormat ss:Format="@"/></Style>
+ </Styles>
  <Worksheet ss:Name="สมาชิกชมรม">
   <Table>
+   <Column ss:Index="${PHONE_COLUMN_INDEX_1}" ss:StyleID="Text" ss:Width="120"/>
    <Row>${headers.map((h) => cell(h)).join("")}</Row>
-   ${body.map((r) => row(r)).join("\n   ")}
+   ${body.map((r) => row(r, [PHONE_COLUMN_INDEX_1])).join("\n   ")}
   </Table>
  </Worksheet>
 </Workbook>`;
@@ -368,7 +389,7 @@ export function parseClubEventMemberImportTable(table: string[][]): ClubEventMem
       gender: normalizeClubEventMemberGender(
         std.gender != null ? String(line[std.gender] ?? "") : "",
       ),
-      phone: std.phone != null ? String(line[std.phone] ?? "").replace(/\D/g, "").slice(0, 32) : "",
+      phone: std.phone != null ? normalizeClubEventMemberPhone(String(line[std.phone] ?? "")) : "",
       position: std.position != null ? String(line[std.position] ?? "").trim().slice(0, 120) : "",
       email: std.email != null ? String(line[std.email] ?? "").trim().slice(0, 200) : "",
       social: std.social != null ? String(line[std.social] ?? "").trim().slice(0, 300) : "",

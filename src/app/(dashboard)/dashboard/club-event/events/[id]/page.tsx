@@ -1,8 +1,8 @@
-import { ClubEventEventEditorClient } from "@/systems/club-event/components/ClubEventEventEditorClient";
+import { ClubEventEventDetailClient } from "@/systems/club-event/components/ClubEventEventDetailClient";
 
 type Props = { params: Promise<{ id: string }> };
 
-export default async function ClubEventEventPage({ params }: Props) {
+export default async function ClubEventEventDetailPage({ params }: Props) {
   const { id } = await params;
-  return <ClubEventEventEditorClient eventId={id} />;
+  return <ClubEventEventDetailClient eventId={id} />;
 }

@@ -105,7 +105,7 @@ function ClubEventModuleChromeInner({
             <button
               type="button"
               onClick={() => setUsageGuideOpen(true)}
-              className="flex h-10 min-h-[44px] w-10 shrink-0 items-center justify-center rounded-lg border border-[#0000BF]/25 bg-white text-sm font-semibold text-[#4d47b6] shadow-sm transition hover:bg-slate-50 active:scale-95 sm:w-auto sm:gap-2 sm:px-4"
+              className="flex h-9 min-h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#0000BF]/25 bg-white text-xs font-semibold text-[#4d47b6] shadow-sm transition hover:bg-slate-50 active:scale-95 sm:w-auto sm:gap-2 sm:px-3"
               aria-label="คู่มือการใช้งาน"
               aria-haspopup="dialog"
               aria-expanded={usageGuideOpen}
@@ -121,7 +121,7 @@ function ClubEventModuleChromeInner({
             <button
               type="button"
               onClick={toggleHeaderCollapse}
-              className="inline-flex h-10 min-h-[44px] w-10 items-center justify-center rounded-lg border border-[#0000BF]/25 bg-white text-[#4d47b6] shadow-sm transition hover:bg-slate-50 active:scale-95"
+              className="inline-flex h-9 min-h-9 w-9 items-center justify-center rounded-lg border border-[#0000BF]/25 bg-white text-[#4d47b6] shadow-sm transition hover:bg-slate-50 active:scale-95"
               aria-pressed={headerCollapsed}
               aria-label="ซ่อนส่วนหัวโมดูล"
               title="ซ่อนส่วนหัวโมดูล"

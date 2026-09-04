@@ -104,7 +104,7 @@ globs:
 
 เทียบ **การ์ดคิวลานล้าง** ใน `CarWashServiceLanePanel` (ทะเบียน/แพ็ก/ราคา แยกคอลัมน์ · `border-2` · `ring-1` · พื้นหลังตามสถานะ):
 
-1. **โครงกล่อง** — `rounded-lg border-2 · sm:rounded-2xl` · `p-2 sm:p-4` · `ring-1` · `shadow-sm` · `hover:shadow-md` · พื้น/ขอบตาม `laundryOrderCardToneClasses(status)` ใน `src/systems/laundry/laundry-order-card-tone.ts` (amber / sky / violet / cyan / indigo / teal / emerald / slate / rose ตามสายงาน)
+1. **โครงกล่อง** — `rounded-lg border-2 · sm:rounded-2xl` · `p-2 sm:p-4` · `ring-1` · `shadow-sm` · `hover:shadow-md` · พื้น/ขอบตาม `laundryOrderCardToneClasses(status)` ใน `src/systems/laundry/laundry-order-card-tone.ts` (amber / sky / violet / cyan / indigo / teal / emerald / slate / rose ตามสายงาน) — **มาตรฐานข้ามโมดูล (รายการทั่วไป + ไอคอน tile):** **`dashboard-module-list-card-icon-tones.mdc`**
 2. **แถบไฮไลต์ซ้าย** — `absolute` แถบ `w-1` `bg-gradient-to-b` ตาม `ribbonGradient` · ขยายเมื่อ `group-hover/item` (เทียบแพ็กเหมาคาร์แคร์)
 3. **แบ่งซ้าย–ขวา** — `flex` · `gap-2 sm:gap-4`
    - **ซ้าย (`flex-1`)** — หัว `แพ็กเกจ` ตัวพิมพ์เล็ก uppercase · **ชื่อบรรทัดหลัก** จาก `laundryOrderCardPackageLines(package_name, service_type)` — ถ้า `service_type` เป็นแค่ชื่อแพ็กเกจ + คำขยาย เช่น `(ตะกร้า S)` ให้แสดง **บรรทัดเดียว** (`service_type` เต็ม) · แสดงบรรทัดรองเฉพาะเมื่อสองฟิลด์ไม่เกี่ยวข้องกัน · gradient เดิม (`bg-clip-text`) · แถวข้อความ **ขนาด** (ไม่ใช้แคปซูลมีขอบ) · เบอร์ · ชื่อ · เวลา · ที่อยู่ (ตามกฎซ่อน placeholder)

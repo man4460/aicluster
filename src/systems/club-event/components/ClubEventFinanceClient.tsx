@@ -22,11 +22,20 @@ import {
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
 import { ClubEventPageSubNav } from "@/systems/club-event/components/ClubEventPageSubNav";
+import {
+  clubEventCardIconTileClass,
+  clubEventCardToneClasses,
+  clubEventTonedRowCardClass,
+} from "@/systems/club-event/lib/card-tones";
 import type { ClubEventFinanceDto, ClubFinanceCategory } from "@/systems/club-event/lib/mappers";
 import {
   DEFAULT_CLUB_EVENT_FINANCE_CATEGORIES,
   CLUB_EVENT_FINANCE_TYPE_LABELS,
 } from "@/systems/club-event/lib/mappers";
+import {
+  clubEventPageTitleIcon,
+  clubEventPageTitleTone,
+} from "@/systems/club-event/lib/page-menu-icons";
 import {
   clubEventFieldClass,
   clubEventFilterChipClass,
@@ -36,12 +45,13 @@ import {
   clubEventFixedBottomActionClass,
   clubEventInlineSubNavBtnClass,
   clubEventInlineSubNavShellClass,
+  clubEventNavDividerClass,
   clubEventOutlineButtonClass,
   clubEventPrimaryButtonClass,
-  clubEventRowCardClass,
   clubEventStatInlineClass,
   clubEventTextareaClass,
 } from "@/systems/club-event/lib/ui-tokens";
+import { ArrowDownLeft, ArrowUpRight, Scale, Wallet } from "lucide-react";
 
 function IconPlus({ className }: { className?: string }) {
   return (
@@ -285,6 +295,8 @@ export function ClubEventFinanceClient() {
       {notice.popup}
       <ClubEventPageSubNav
         title="การเงิน"
+        titleIcon={clubEventPageTitleIcon("finance")}
+        titleTone={clubEventPageTitleTone("finance")}
         subtitle={CLUB_EVENT_FINANCE_TYPE_LABELS[listTab]}
         action={
           <div className="flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5">
@@ -314,6 +326,7 @@ export function ClubEventFinanceClient() {
                 </span>
               </button>
             </nav>
+            <span className={clubEventNavDividerClass} aria-hidden />
             <div className={clubEventInlineSubNavShellClass}>
               <button
                 type="button"
@@ -326,7 +339,7 @@ export function ClubEventFinanceClient() {
                 <span className="hidden sm:inline">{listTab === "INCOME" ? "รายรับเพิ่ม" : "รายจ่ายเพิ่ม"}</span>
               </button>
             </div>
-            <span className="hidden h-5 w-px shrink-0 bg-slate-200/90 sm:block" aria-hidden />
+            <span className={clubEventNavDividerClass} aria-hidden />
             <div className={clubEventInlineSubNavShellClass}>
               <button
                 type="button"
@@ -354,14 +367,30 @@ export function ClubEventFinanceClient() {
         }
       >
         <ul className={clubEventFinanceStatsGridClass} aria-label="สรุปการเงิน">
-          <li className={cn(clubEventStatInlineClass, "border-l-[3px] border-l-emerald-500")}>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700/80">รายรับ</p>
+          <li
+            className={cn(
+              clubEventStatInlineClass,
+              "border-l-[3px] border-l-emerald-500 bg-emerald-50/60",
+            )}
+          >
+            <div className={cn("flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide", clubEventCardToneClasses("emerald").label)}>
+              <ArrowDownLeft className="h-3.5 w-3.5" aria-hidden />
+              รายรับ
+            </div>
             <p className="text-lg font-black tabular-nums text-emerald-700 sm:text-xl">
               ฿{summary.income.toLocaleString("th-TH")}
             </p>
           </li>
-          <li className={cn(clubEventStatInlineClass, "border-l-[3px] border-l-rose-500")}>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-rose-600/80">รายจ่าย</p>
+          <li
+            className={cn(
+              clubEventStatInlineClass,
+              "border-l-[3px] border-l-rose-500 bg-rose-50/55",
+            )}
+          >
+            <div className={cn("flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide", clubEventCardToneClasses("rose").label)}>
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+              รายจ่าย
+            </div>
             <p className="text-lg font-black tabular-nums text-rose-600 sm:text-xl">
               ฿{summary.expense.toLocaleString("th-TH")}
             </p>
@@ -371,10 +400,20 @@ export function ClubEventFinanceClient() {
               clubEventStatInlineClass,
               clubEventFinanceStatTailClass,
               "border-l-[3px]",
-              summary.balance >= 0 ? "border-l-slate-400" : "border-l-rose-500",
+              summary.balance >= 0
+                ? "border-l-indigo-500 bg-indigo-50/50"
+                : "border-l-rose-500 bg-rose-50/55",
             )}
           >
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#66638c]">คงเหลือ</p>
+            <div
+              className={cn(
+                "flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide",
+                summary.balance >= 0 ? clubEventCardToneClasses("indigo").label : clubEventCardToneClasses("rose").label,
+              )}
+            >
+              <Scale className="h-3.5 w-3.5" aria-hidden />
+              คงเหลือ
+            </div>
             <p
               className={cn(
                 "text-lg font-black tabular-nums sm:text-xl",
@@ -411,54 +450,58 @@ export function ClubEventFinanceClient() {
             <AppEmptyState>ยังไม่มี{CLUB_EVENT_FINANCE_TYPE_LABELS[listTab]} — กดปุ่มเพิ่มด้านบน</AppEmptyState>
           ) : (
             <ul className="space-y-2">
-              {visibleRows.map((row) => (
-                <li key={row.id} className={clubEventRowCardClass}>
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
-                    {row.slipUrl ? (
-                      <AppImageThumb src={row.slipUrl} alt="สลิป" onOpen={() => lb.open(row.slipUrl!)} />
-                    ) : (
-                      <div
-                        className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-[10px] font-semibold text-slate-400"
-                        aria-hidden
-                      >
-                        ไม่มีสลิป
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-[#1e1b4b]">{row.category}</p>
-                      <p className="text-sm text-[#66638c]">{formatBangkokDateTimeLong(row.transactedAt)}</p>
-                      {row.note ? <p className="text-xs text-[#5f5a8a]">{row.note}</p> : null}
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
-                    <p
-                      className={cn(
-                        "text-base font-black tabular-nums",
-                        row.type === "INCOME" ? "text-emerald-700" : "text-rose-600",
+              {visibleRows.map((row) => {
+                const tone = row.type === "INCOME" ? "emerald" : "rose";
+                return (
+                  <li key={row.id} className={clubEventTonedRowCardClass(tone)}>
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      {row.slipUrl ? (
+                        <AppImageThumb src={row.slipUrl} alt="สลิป" onOpen={() => lb.open(row.slipUrl!)} />
+                      ) : (
+                        <span className={clubEventCardIconTileClass(tone, "lg")} aria-hidden>
+                          {row.type === "INCOME" ? (
+                            <ArrowDownLeft className="h-7 w-7" strokeWidth={2.1} />
+                          ) : (
+                            <Wallet className="h-7 w-7" strokeWidth={2.1} />
+                          )}
+                        </span>
                       )}
-                    >
-                      {row.type === "EXPENSE" ? "-" : "+"}
-                      {row.amountBaht.toLocaleString("th-TH")} ฿
-                    </p>
-                    <button
-                      type="button"
-                      className={assetRowEditIconButtonClass}
-                      aria-label={`แก้ไข ${row.category}`}
-                      onClick={() => openEdit(row)}
-                    >
-                      <IconRowEdit className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      className={assetRowRemoveIconButtonClass}
-                      aria-label={`ลบ ${row.category}`}
-                      onClick={() => void remove(row.id)}
-                    >
-                      <IconRowRemove className="h-4 w-4" />
-                    </button>
-                  </div>
-                </li>
-              ))}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-[#1e1b4b]">{row.category}</p>
+                        <p className="text-sm text-[#66638c]">{formatBangkokDateTimeLong(row.transactedAt)}</p>
+                        {row.note ? <p className="text-xs text-[#5f5a8a]">{row.note}</p> : null}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
+                      <p
+                        className={cn(
+                          "text-base font-black tabular-nums",
+                          row.type === "INCOME" ? "text-emerald-700" : "text-rose-600",
+                        )}
+                      >
+                        {row.type === "EXPENSE" ? "-" : "+"}
+                        {row.amountBaht.toLocaleString("th-TH")} ฿
+                      </p>
+                      <button
+                        type="button"
+                        className={assetRowEditIconButtonClass}
+                        aria-label={`แก้ไข ${row.category}`}
+                        onClick={() => openEdit(row)}
+                      >
+                        <IconRowEdit className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className={assetRowRemoveIconButtonClass}
+                        aria-label={`ลบ ${row.category}`}
+                        onClick={() => void remove(row.id)}
+                      >
+                        <IconRowRemove className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -616,8 +659,16 @@ export function ClubEventFinanceClient() {
           ) : (
             <ul className="space-y-2">
               {catsForTab.map((c) => (
-                <li key={c.id} className={cn(clubEventRowCardClass, "sm:items-center")}>
-                  <p className="font-bold text-[#1e1b4b]">{c.name}</p>
+                <li key={c.id} className={cn(clubEventTonedRowCardClass(listTab === "INCOME" ? "emerald" : "rose"), "sm:items-center")}>
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <span
+                      className={clubEventCardIconTileClass(listTab === "INCOME" ? "emerald" : "rose")}
+                      aria-hidden
+                    >
+                      <Wallet className="h-5 w-5" strokeWidth={2.25} />
+                    </span>
+                    <p className="font-bold text-[#1e1b4b]">{c.name}</p>
+                  </div>
                   <button
                     type="button"
                     className={assetRowRemoveIconButtonClass}

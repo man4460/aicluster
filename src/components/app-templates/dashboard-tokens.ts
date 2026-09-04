@@ -35,14 +35,14 @@ export const appModuleShellMainScrollClass = "min-h-0 w-full flex-1";
 export const appDashboardInnerScrollClass =
   "overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]";
 
-/** ปุ่มขอบเขตรอง (แถวพิมพ์ขนาดกระดาษ ฯลฯ) */
+/** ปุ่มขอบเขตรอง (แถวพิมพ์ขนาดกระดาษ ฯลฯ) — สูงใกล้เคียงปุ่มโมดูล h-9 */
 export const appTemplateOutlineButtonClass =
-  "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 touch-manipulation";
+  "box-border inline-flex h-9 min-h-9 max-h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold leading-none text-slate-800 shadow-sm hover:bg-slate-50 touch-manipulation";
 
 /** ปุ่มเลือกรูปจากแกลเลอรี (ม่วง POS / สลิป) — คู่กับ `appTemplateTakePhotoButtonClass` */
 export const appTemplatePickGalleryImageButtonClass =
-  "min-h-[40px] rounded-xl border border-[#4d47b6]/35 bg-[#ecebff] px-3 py-2 text-xs font-semibold text-[#4d47b6] touch-manipulation disabled:opacity-50";
+  "box-border inline-flex h-9 min-h-9 max-h-9 items-center justify-center rounded-lg border border-[#4d47b6]/35 bg-[#ecebff] px-2.5 text-[11px] font-semibold leading-none text-[#4d47b6] touch-manipulation disabled:opacity-50 sm:text-xs";
 
 /** ปุ่มถ่ายรูป / เปิดกล้อง (เขียว) */
 export const appTemplateTakePhotoButtonClass =
-  "min-h-[40px] rounded-xl border border-emerald-600/40 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900 touch-manipulation disabled:opacity-50";
+  "box-border inline-flex h-9 min-h-9 max-h-9 items-center justify-center rounded-lg border border-emerald-600/40 bg-emerald-50 px-2.5 text-[11px] font-semibold leading-none text-emerald-900 touch-manipulation disabled:opacity-50 sm:text-xs";

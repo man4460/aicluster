@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Download, Upload } from "lucide-react";
+import { Download, Package, Upload, UserRound } from "lucide-react";
 import {
   AppEmptyState,
   AppImageLightbox,
@@ -26,12 +26,27 @@ import {
   type ClubEventManageTabKey,
 } from "@/systems/club-event/club-event-module-nav";
 import { ClubEventPageSubNav } from "@/systems/club-event/components/ClubEventPageSubNav";
+import {
+  clubEventCardIconTileClass,
+  type ClubEventCardTone,
+  clubEventTonedRowCardClass,
+} from "@/systems/club-event/lib/card-tones";
 import type {
   ClubEventAssetDto,
   ClubEventMemberDto,
   ClubMemberCustomField,
 } from "@/systems/club-event/lib/mappers";
 import { CLUB_EVENT_ASSET_STATUS_LABELS } from "@/systems/club-event/lib/mappers";
+import {
+  clubEventManageTabIcon,
+  clubEventPageTitleIcon,
+  clubEventPageTitleTone,
+} from "@/systems/club-event/lib/page-menu-icons";
+
+const MANAGE_TAB_ITEMS = CLUB_EVENT_MANAGE_TAB_ITEMS.map((item) => ({
+  ...item,
+  icon: clubEventManageTabIcon(item.key),
+}));
 import {
   CLUB_EVENT_MEMBER_GENDER_OPTIONS,
   clubEventMemberGenderLabel,
@@ -41,9 +56,9 @@ import {
   clubEventFixedBottomActionClass,
   clubEventInlineSubNavBtnClass,
   clubEventInlineSubNavShellClass,
+  clubEventNavDividerClass,
   clubEventOutlineButtonClass,
   clubEventPrimaryButtonClass,
-  clubEventRowCardClass,
   clubEventTextareaClass,
 } from "@/systems/club-event/lib/ui-tokens";
 
@@ -397,68 +412,75 @@ export function ClubEventManageClient() {
       />
       <ClubEventPageSubNav
         title="การจัดการ"
-        items={CLUB_EVENT_MANAGE_TAB_ITEMS}
+        titleIcon={clubEventPageTitleIcon("manage")}
+        titleTone={clubEventPageTitleTone("manage")}
+        items={MANAGE_TAB_ITEMS}
         activeKey={tab}
         onSelect={setTab}
         ariaLabel="แท็บการจัดการ"
         action={
-          <div className={clubEventInlineSubNavShellClass}>
+          <div className="flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5">
             {tab === "members" ? (
               <>
-                <button
-                  type="button"
-                  aria-expanded={filterOpen}
-                  aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
-                  title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
-                  className={cn(clubEventInlineSubNavBtnClass(filterOpen), "relative")}
-                  onClick={() => setFilterOpen((o) => !o)}
-                >
-                  <IconFilter className="h-3.5 w-3.5 shrink-0" />
-                  <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
-                </button>
-                <button
-                  type="button"
-                  className={clubEventInlineSubNavBtnClass(false)}
-                  aria-label="ดาวน์โหลดแบบฟอร์ม Excel"
-                  title="ดาวน์โหลดแบบฟอร์ม"
-                  onClick={() => void downloadExcel("template")}
-                >
-                  <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  <span className="hidden lg:inline">แบบฟอร์ม</span>
-                </button>
-                <button
-                  type="button"
-                  className={clubEventInlineSubNavBtnClass(false)}
-                  aria-label="ส่งออกรายชื่อ Excel"
-                  title="ส่งออกรายชื่อ"
-                  onClick={() => void downloadExcel("export")}
-                >
-                  <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  <span className="hidden lg:inline">ส่งออก</span>
-                </button>
-                <button
-                  type="button"
-                  className={clubEventInlineSubNavBtnClass(false)}
-                  aria-label="อัปโหลดแบบฟอร์ม Excel"
-                  title="อัปโหลด Excel"
-                  disabled={importBusy}
-                  onClick={() => excelInputRef.current?.click()}
-                >
-                  <Upload className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  <span className="hidden lg:inline">{importBusy ? "กำลังนำเข้า…" : "นำเข้า"}</span>
-                </button>
+                <div className={clubEventInlineSubNavShellClass}>
+                  <button
+                    type="button"
+                    aria-expanded={filterOpen}
+                    aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                    title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+                    className={cn(clubEventInlineSubNavBtnClass(filterOpen), "relative")}
+                    onClick={() => setFilterOpen((o) => !o)}
+                  >
+                    <IconFilter className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={clubEventInlineSubNavBtnClass(false)}
+                    aria-label="ดาวน์โหลดแบบฟอร์ม Excel"
+                    title="ดาวน์โหลดแบบฟอร์ม"
+                    onClick={() => void downloadExcel("template")}
+                  >
+                    <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span className="hidden lg:inline">แบบฟอร์ม</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={clubEventInlineSubNavBtnClass(false)}
+                    aria-label="ส่งออกรายชื่อ Excel"
+                    title="ส่งออกรายชื่อ"
+                    onClick={() => void downloadExcel("export")}
+                  >
+                    <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span className="hidden lg:inline">ส่งออก</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={clubEventInlineSubNavBtnClass(false)}
+                    aria-label="อัปโหลดแบบฟอร์ม Excel"
+                    title="อัปโหลด Excel"
+                    disabled={importBusy}
+                    onClick={() => excelInputRef.current?.click()}
+                  >
+                    <Upload className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span className="hidden lg:inline">{importBusy ? "กำลังนำเข้า…" : "นำเข้า"}</span>
+                  </button>
+                </div>
+                <span className={clubEventNavDividerClass} aria-hidden />
               </>
             ) : null}
-            <button
-              type="button"
-              className={clubEventInlineSubNavBtnClass(false)}
-              aria-label={tab === "members" ? "เพิ่มสมาชิก" : "เพิ่มทรัพย์สิน"}
-              title={tab === "members" ? "เพิ่มสมาชิก" : "เพิ่มทรัพย์สิน"}
-              onClick={tab === "members" ? openMemberCreate : openAssetCreate}
-            >
-              <IconPlus className="h-3.5 w-3.5 shrink-0" />
-              <span className="hidden sm:inline">เพิ่ม{tab === "members" ? "สมาชิก" : "ทรัพย์สิน"}</span>
-            </button>
+            <div className={clubEventInlineSubNavShellClass}>
+              <button
+                type="button"
+                className={clubEventInlineSubNavBtnClass(false)}
+                aria-label={tab === "members" ? "เพิ่มสมาชิก" : "เพิ่มทรัพย์สิน"}
+                title={tab === "members" ? "เพิ่มสมาชิก" : "เพิ่มทรัพย์สิน"}
+                onClick={tab === "members" ? openMemberCreate : openAssetCreate}
+              >
+                <IconPlus className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden sm:inline">เพิ่ม{tab === "members" ? "สมาชิก" : "ทรัพย์สิน"}</span>
+              </button>
+            </div>
           </div>
         }
       >
@@ -478,116 +500,127 @@ export function ClubEventManageClient() {
             <AppEmptyState>ยังไม่มีสมาชิก — เพิ่มทีละคนหรือนำเข้าจากแบบฟอร์ม Excel</AppEmptyState>
           ) : (
             <ul className="space-y-2">
-              {filteredMembers.map((m) => (
-                <li key={m.id} className={clubEventRowCardClass}>
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    {m.photoUrl ? (
-                      <AppImageThumb src={m.photoUrl} alt={m.name} onOpen={() => lb.open(m.photoUrl!)} />
-                    ) : (
-                      <div
-                        className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-[10px] font-semibold text-slate-400"
-                        aria-hidden
-                      >
-                        ไม่มีรูป
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="font-bold text-[#1e1b4b]">
-                        {m.name}
-                        {m.nickname ? (
-                          <span className="ml-1 font-semibold text-[#66638c]">({m.nickname})</span>
-                        ) : null}
-                      </p>
-                      <p className="text-sm text-[#66638c]">
-                        {[
-                          m.memberCode ? `รหัส ${m.memberCode}` : null,
-                          m.position || null,
-                          clubEventMemberGenderLabel(m.gender) !== "ไม่ระบุ"
-                            ? clubEventMemberGenderLabel(m.gender)
-                            : null,
-                          m.phone || null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-                      <p className="mt-0.5 text-xs text-[#5f5a8a]">
-                        {m.dataConsent ? "ยินยอมเก็บข้อมูล" : "ยังไม่ยินยอมเก็บข้อมูล"}
-                        {!m.isActive ? " · ปิดใช้งาน" : ""}
-                      </p>
-                      {m.customFields.map((cf) => (
-                        <p key={cf.key} className="text-xs text-[#5f5a8a]">
-                          {cf.label}: {cf.value}
+              {filteredMembers.map((m, i) => {
+                const tone: ClubEventCardTone = !m.isActive
+                  ? "slate"
+                  : m.dataConsent
+                    ? (["violet", "sky", "fuchsia", "indigo"] as const)[i % 4]
+                    : "amber";
+                return (
+                  <li key={m.id} className={clubEventTonedRowCardClass(tone)}>
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      {m.photoUrl ? (
+                        <AppImageThumb src={m.photoUrl} alt={m.name} onOpen={() => lb.open(m.photoUrl!)} />
+                      ) : (
+                        <span className={clubEventCardIconTileClass(tone, "lg")} aria-hidden>
+                          <UserRound className="h-7 w-7" strokeWidth={2.1} />
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-bold text-[#1e1b4b]">
+                          {m.name}
+                          {m.nickname ? (
+                            <span className="ml-1 font-semibold text-[#66638c]">({m.nickname})</span>
+                          ) : null}
                         </p>
-                      ))}
+                        <p className="text-sm text-[#66638c]">
+                          {[
+                            m.memberCode ? `รหัส ${m.memberCode}` : null,
+                            m.position || null,
+                            clubEventMemberGenderLabel(m.gender) !== "ไม่ระบุ"
+                              ? clubEventMemberGenderLabel(m.gender)
+                              : null,
+                            m.phone || null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[#5f5a8a]">
+                          {m.dataConsent ? "ยินยอมเก็บข้อมูล" : "ยังไม่ยินยอมเก็บข้อมูล"}
+                          {!m.isActive ? " · ปิดใช้งาน" : ""}
+                        </p>
+                        {m.customFields.map((cf) => (
+                          <p key={cf.key} className="text-xs text-[#5f5a8a]">
+                            {cf.label}: {cf.value}
+                          </p>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex shrink-0 gap-1 self-end sm:self-center">
-                    <button
-                      type="button"
-                      className={assetRowEditIconButtonClass}
-                      aria-label={`แก้ไข ${m.name}`}
-                      onClick={() => openMemberEdit(m)}
-                    >
-                      <IconRowEdit className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      className={assetRowRemoveIconButtonClass}
-                      aria-label={`ลบ ${m.name}`}
-                      onClick={() => void removeItem("members", m.id)}
-                    >
-                      <IconRowRemove className="h-4 w-4" />
-                    </button>
-                  </div>
-                </li>
-              ))}
+                    <div className="flex shrink-0 gap-1 self-end sm:self-center">
+                      <button
+                        type="button"
+                        className={assetRowEditIconButtonClass}
+                        aria-label={`แก้ไข ${m.name}`}
+                        onClick={() => openMemberEdit(m)}
+                      >
+                        <IconRowEdit className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className={assetRowRemoveIconButtonClass}
+                        aria-label={`ลบ ${m.name}`}
+                        onClick={() => void removeItem("members", m.id)}
+                      >
+                        <IconRowRemove className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )
         ) : assets.length === 0 ? (
           <AppEmptyState>ยังไม่มีทรัพย์สิน</AppEmptyState>
         ) : (
           <ul className="space-y-2">
-            {assets.map((a) => (
-              <li key={a.id} className={clubEventRowCardClass}>
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  {a.imageUrl ? (
-                    <AppImageThumb src={a.imageUrl} alt={a.name} onOpen={() => lb.open(a.imageUrl!)} />
-                  ) : (
-                    <div
-                      className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-[10px] font-semibold text-slate-400"
-                      aria-hidden
-                    >
-                      ไม่มีรูป
+            {assets.map((a) => {
+              const tone: ClubEventCardTone =
+                a.status === "AVAILABLE"
+                  ? "emerald"
+                  : a.status === "IN_USE"
+                    ? "sky"
+                    : a.status === "DAMAGED"
+                      ? "rose"
+                      : "slate";
+              return (
+                <li key={a.id} className={clubEventTonedRowCardClass(tone)}>
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    {a.imageUrl ? (
+                      <AppImageThumb src={a.imageUrl} alt={a.name} onOpen={() => lb.open(a.imageUrl!)} />
+                    ) : (
+                      <span className={clubEventCardIconTileClass(tone, "lg")} aria-hidden>
+                        <Package className="h-7 w-7" strokeWidth={2.1} />
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-bold text-[#1e1b4b]">{a.name}</p>
+                      <p className="text-sm text-[#66638c]">
+                        จำนวน {a.quantity} · {CLUB_EVENT_ASSET_STATUS_LABELS[a.status]}
+                      </p>
+                      {a.note ? <p className="text-xs text-[#5f5a8a]">{a.note}</p> : null}
                     </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="font-bold text-[#1e1b4b]">{a.name}</p>
-                    <p className="text-sm text-[#66638c]">
-                      จำนวน {a.quantity} · {CLUB_EVENT_ASSET_STATUS_LABELS[a.status]}
-                    </p>
-                    {a.note ? <p className="text-xs text-[#5f5a8a]">{a.note}</p> : null}
                   </div>
-                </div>
-                <div className="flex shrink-0 gap-1 self-end sm:self-center">
-                  <button
-                    type="button"
-                    className={assetRowEditIconButtonClass}
-                    aria-label={`แก้ไข ${a.name}`}
-                    onClick={() => openAssetEdit(a)}
-                  >
-                    <IconRowEdit className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    className={assetRowRemoveIconButtonClass}
-                    aria-label={`ลบ ${a.name}`}
-                    onClick={() => void removeItem("assets", a.id)}
-                  >
-                    <IconRowRemove className="h-4 w-4" />
-                  </button>
-                </div>
-              </li>
-            ))}
+                  <div className="flex shrink-0 gap-1 self-end sm:self-center">
+                    <button
+                      type="button"
+                      className={assetRowEditIconButtonClass}
+                      aria-label={`แก้ไข ${a.name}`}
+                      onClick={() => openAssetEdit(a)}
+                    >
+                      <IconRowEdit className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className={assetRowRemoveIconButtonClass}
+                      aria-label={`ลบ ${a.name}`}
+                      onClick={() => void removeItem("assets", a.id)}
+                    >
+                      <IconRowRemove className="h-4 w-4" />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </ClubEventPageSubNav>

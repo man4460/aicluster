@@ -26,6 +26,7 @@ const tabBtnClass = (active: boolean) =>
 /** แถบเมนูย่อยของแต่ละหน้าหลัก — แยกจากเนื้อหา · ไม่ซ้อนในการ์ดข้อมูล */
 export function LaundryPageSubNav({
   title,
+  titleIcon,
   description,
   items,
   activeKey,
@@ -36,6 +37,8 @@ export function LaundryPageSubNav({
   className,
 }: {
   title: string;
+  /** ไอคอนข้างหัวข้อหน้า — ตามกฎ dashboard-module-page-menu-icons */
+  titleIcon?: ReactNode;
   description?: string;
   items: LaundryPageSubNavItem[];
   activeKey: string;
@@ -52,20 +55,28 @@ export function LaundryPageSubNav({
     <div className={cn(laundryPanelClass, laundryPanelSectionClass, "print:hidden", className)}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-bold text-[#1e1b4b] sm:text-lg">{title}</h2>
-          {description ?
-            <p className={laundrySubtitleClass}>{description}</p>
-          : null}
+          <div className="flex min-w-0 items-center gap-2">
+            {titleIcon ? (
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-100/90 text-sky-700 ring-1 ring-sky-200/80"
+                aria-hidden
+              >
+                {titleIcon}
+              </span>
+            ) : null}
+            <h2 className="min-w-0 truncate text-base font-bold text-[#1e1b4b] sm:text-lg">{title}</h2>
+          </div>
+          {description ? <p className={laundrySubtitleClass}>{description}</p> : null}
         </div>
 
         <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-3">
-          {action ?
+          {action ? (
             <div className="order-2 flex w-full flex-col gap-2 sm:order-1 sm:w-auto sm:flex-row sm:justify-end">
               {action}
             </div>
-          : null}
+          ) : null}
 
-          {mobileSelect ?
+          {mobileSelect ? (
             <div className="order-1 w-full sm:hidden">
               <label htmlFor={mobileSelect.id} className="mb-1.5 block text-[11px] font-bold text-[#4d47b6]">
                 {mobileSelect.label}
@@ -84,7 +95,7 @@ export function LaundryPageSubNav({
                 ))}
               </select>
             </div>
-          : null}
+          ) : null}
 
           <nav
             className={cn(
@@ -108,11 +119,11 @@ export function LaundryPageSubNav({
                   onClick={() => onSelect(item.key)}
                   className={tabBtnClass(active)}
                 >
-                  {item.icon ?
+                  {item.icon ? (
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden>
                       {item.icon}
                     </span>
-                  : null}
+                  ) : null}
                   <span className="max-w-[5.5rem] text-center sm:max-w-none">{item.label}</span>
                 </button>
               );

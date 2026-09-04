@@ -8,13 +8,13 @@ import { appDashboardBrandGradientFillClass } from "@/components/app-templates/d
  */
 export const laundryBtnRadiusClass = "rounded-lg";
 /** ความสูงมาตรฐานปุ่มโมดูล — รวมแถบหัว (หักแพ็ก · แท็บ · รีเฟรช) */
-export const laundryBtnHeightClass = "box-border h-10 min-h-10 max-h-10";
-export const laundryBtnPadXClass = "px-3";
+export const laundryBtnHeightClass = "box-border h-9 min-h-9 max-h-9";
+export const laundryBtnPadXClass = "px-2.5";
 export const laundryBtnBaseClass = cn(
   "inline-flex shrink-0 items-center justify-center gap-1.5",
   laundryBtnRadiusClass,
   laundryBtnHeightClass,
-  "text-xs font-bold leading-none shadow-sm touch-manipulation transition disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm",
+  "text-[11px] font-bold leading-none shadow-sm touch-manipulation transition disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs",
 );
 
 /** ปุ่มขาวขอบเทา */
@@ -38,12 +38,12 @@ export const laundryPairedBtnClass = "min-w-[6.75rem]";
 /** ปุ่มไอคอนล้วน — สูงเท่าปุ่มข้อความ (ไม่สืบทอด px จาก outline) */
 export const laundryIconButtonClass = cn(
   laundryBtnBaseClass,
-  "w-10 min-w-10 border border-slate-200/90 bg-white px-0 text-[#1e1b4b] hover:border-slate-300 hover:bg-slate-50",
+  "w-9 min-w-9 border border-slate-200/90 bg-white px-0 text-[#1e1b4b] hover:border-slate-300 hover:bg-slate-50",
 );
 
 export const laundryPrimaryIconButtonClass = cn(
   laundryBtnBaseClass,
-  "w-10 min-w-10 border border-transparent px-0 text-white",
+  "w-9 min-w-9 border border-transparent px-0 text-white",
   appDashboardBrandGradientFillClass,
 );
 
@@ -64,7 +64,7 @@ export const laundryPaymentCtaClass = laundryPrimaryButtonClass;
 /** @deprecated ใช้ laundryPrimaryButtonClass */
 export const laundryPortalPrimaryBtnClass = laundryPrimaryButtonClass;
 
-/** ช่องกรอก — สูง/มนเท่าปุ่มโมดูล (`h-10` · `rounded-lg`) */
+/** ช่องกรอก — สูง/มนเท่าปุ่มโมดูล (`h-9` · `rounded-lg`) */
 export const laundryFieldClass = cn(
   "app-input box-border w-full",
   laundryBtnHeightClass,
@@ -109,7 +109,7 @@ export const laundryPrimaryTabShellClass =
 
 export function laundryPrimaryTabPillClass(active: boolean): string {
   return cn(
-    "min-h-9 shrink-0 grow basis-[calc(50%-4px)] whitespace-nowrap rounded-md px-3 text-sm font-bold leading-none sm:min-h-10 sm:grow-0 sm:basis-auto sm:px-4",
+    "min-h-8 shrink-0 grow basis-[calc(50%-4px)] whitespace-nowrap rounded-md px-2.5 text-xs font-bold leading-none sm:min-h-9 sm:grow-0 sm:basis-auto sm:px-3",
     active
       ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
       : "text-[#5f5a8a] transition hover:bg-white hover:text-[#4d47b6]",
@@ -208,7 +208,7 @@ export const laundryFinanceStatTailClass = "col-span-2 sm:col-span-1";
 /** ชิปช่วงเวลาการเงิน — pill ตามแม่แบบ finance */
 export function laundryFinanceRangeChipClass(active = false): string {
   return cn(
-    "inline-flex h-10 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-bold transition-all sm:text-sm",
+    "inline-flex h-9 shrink-0 items-center justify-center rounded-full px-3 text-[11px] font-bold transition-all sm:text-xs",
     active
       ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
       : "border border-slate-200/90 bg-white text-[#4d47b6] hover:border-[#5b61ff]/35 hover:bg-slate-50",
@@ -303,8 +303,8 @@ export const laundryPortalShopNameHeroClass = cn(
 /** พอร์ทัลพนักงาน — เมนูอยู่หัวหน้าแล้ว ไม่ต้อง padding ล่างพ้น dock */
 export const laundryStaffMainPaddingBottomClass = "pb-0";
 
-/** เส้นแบ่งบางในแถบเมนู — สูงกลางปุ่ม h-10 */
-export const laundryStaffNavDividerClass = "mx-0.5 h-6 w-px shrink-0 self-center bg-slate-200/90";
+/** เส้นแบ่งบางในแถบเมนู — สูงกลางปุ่ม h-9 */
+export const laundryStaffNavDividerClass = "mx-0.5 h-5 w-px shrink-0 self-center bg-slate-200/90";
 
 /** เนื้อหาแท็บพนักงาน — ไม่ซ้อนกล่องการ์ด */
 export const laundryStaffPlainPanelClass = "min-w-0";

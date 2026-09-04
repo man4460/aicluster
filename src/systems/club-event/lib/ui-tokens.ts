@@ -2,17 +2,17 @@ import { cn } from "@/lib/cn";
 import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 
 /**
- * ปุ่ม / การ์ด / แท็บ โมดูลบริหารชมรม — ชุดเดียวกับแม่แบบซักผ้า (plain panel · h-10 · rounded-lg)
+ * ปุ่ม / การ์ด / แท็บ โมดูลบริหารชมรม — ชุดเดียวกับแม่แบบซักผ้า (plain panel · h-9 · rounded-lg)
  * หมายเหตุ: `cn` ในโปรเจกต์นี้ไม่ใช้ twMerge — ห้ามซ้อนคลาสชนกัน
  */
 export const clubEventBtnRadiusClass = "rounded-lg";
-export const clubEventBtnHeightClass = "box-border h-10 min-h-10 max-h-10";
-export const clubEventBtnPadXClass = "px-3";
+export const clubEventBtnHeightClass = "box-border h-9 min-h-9 max-h-9";
+export const clubEventBtnPadXClass = "px-2.5";
 export const clubEventBtnBaseClass = cn(
   "inline-flex shrink-0 items-center justify-center gap-1.5",
   clubEventBtnRadiusClass,
   clubEventBtnHeightClass,
-  "text-xs font-bold leading-none shadow-sm touch-manipulation transition disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm",
+  "text-[11px] font-bold leading-none shadow-sm touch-manipulation transition disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs",
 );
 
 export const clubEventOutlineButtonClass = cn(
@@ -30,7 +30,7 @@ export const clubEventPrimaryButtonClass = cn(
 
 export const clubEventIconButtonClass = cn(
   clubEventBtnBaseClass,
-  "w-10 min-w-10 border border-slate-200/90 bg-white px-0 text-[#1e1b4b] hover:border-slate-300 hover:bg-slate-50",
+  "w-9 min-w-9 border border-slate-200/90 bg-white px-0 text-[#1e1b4b] hover:border-slate-300 hover:bg-slate-50",
 );
 
 export const clubEventRowIconButtonClass = cn(
@@ -70,16 +70,20 @@ export const clubEventPrimaryTabShellClass =
 
 export function clubEventPrimaryTabPillClass(active: boolean): string {
   return cn(
-    "min-h-9 shrink-0 grow basis-[calc(50%-4px)] whitespace-nowrap rounded-md px-3 text-sm font-bold leading-none sm:min-h-10 sm:grow-0 sm:basis-auto sm:px-4",
+    "min-h-8 shrink-0 grow basis-[calc(50%-4px)] whitespace-nowrap rounded-md px-2.5 text-xs font-bold leading-none sm:min-h-9 sm:grow-0 sm:basis-auto sm:px-3",
     active
       ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
       : "text-[#5f5a8a] transition hover:bg-white hover:text-[#4d47b6]",
   );
 }
 
-/** เมนูย่อยแถบหัว — แบบซักผ้า (ปุ่ม h-10 คู่กับ action) */
+/** เมนูย่อยแถบหัว — แบบซักผ้า (ปุ่ม h-9 คู่กับ action) */
 export const clubEventInlineSubNavShellClass =
   "inline-flex shrink-0 flex-nowrap items-center gap-0.5";
+
+/** เส้นบางกั้นระหว่างกลุ่มเมนูในแถบหัว — สูงกลางปุ่ม h-9 */
+export const clubEventNavDividerClass =
+  "mx-0.5 h-5 w-px shrink-0 self-center bg-slate-200/90";
 
 export function clubEventInlineSubNavBtnClass(active = false): string {
   return active ? clubEventPrimaryButtonClass : clubEventOutlineButtonClass;
@@ -116,6 +120,14 @@ export function clubEventFilterChipClass(active = false): string {
       : "border-slate-200 bg-slate-50 text-[#4d47b6] hover:border-slate-300 hover:bg-white",
   );
 }
+
+/** วิดีโอ YouTube — การ์ด thumb: มือถือ 2 · เดสก์ท็อป 6 */
+export const clubEventYoutubeCardGridClass =
+  "grid grid-cols-2 gap-2 sm:gap-2.5 lg:grid-cols-6";
+
+/** แกลเลอรีรูป — มือถือ 3 · คอม 8 */
+export const clubEventGalleryCardGridClass =
+  "grid grid-cols-3 gap-2 sm:gap-2.5 lg:grid-cols-8";
 
 export const clubEventFinanceStatsGridClass =
   "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3";
