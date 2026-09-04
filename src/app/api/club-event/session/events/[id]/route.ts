@@ -31,7 +31,7 @@ export async function GET(_req: Request, ctx: Ctx) {
     const row = await prisma.clubEventRecord.findFirst({
       where: { id, ...clubEventOwnerWhere(own.ownerId, scope.trialSessionId) },
       include: {
-        _count: { select: { gallery: true } },
+        _count: { select: { gallery: true, checkIns: true } },
         gallery: { orderBy: { sortOrder: "asc" } },
       },
     });
@@ -107,7 +107,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
           : null,
         youtubeUrlsJson: serializeClubEventYoutubeVideos(youtubeVideos),
       },
-      include: { _count: { select: { gallery: true } } },
+      include: { _count: { select: { gallery: true, checkIns: true } } },
     });
 
     return NextResponse.json({ event: mapClubEventRecord(row), mediaLimits: limits });

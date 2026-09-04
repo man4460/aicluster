@@ -278,6 +278,8 @@ model User {
   clubEventAssets                    ClubEventAsset[]
   clubEventDynamicLinks              ClubEventDynamicLink[]
   clubEventLinkSubmissions           ClubEventLinkSubmission[]
+  clubEventDuesPayments              ClubEventDuesPayment[]
+  clubEventCheckIns                  ClubEventCheckIn[]
   lmsProfiles                        LmsProfile[]
   lmsCourses                         LmsCourse[]
   lmsLessons                         LmsLesson[]
@@ -7183,6 +7185,14 @@ enum ClubEventAssetStatus {
   RETIRED
 }
 
+/** รอบเก็บค่าบำรุงสมาชิก */
+enum ClubEventDuesPeriod {
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  YEARLY
+}
+
 /**
  * โปรไฟล์ชมรม — slug สำหรับพอร์ทัลสาธารณะ /club/[slug]
  */
@@ -7211,6 +7221,10 @@ model ClubEventProfile {
    */
   portalGalleryJson   String   @default("[]") @map("portal_gallery_json") @db.Text
   /**
+   * แสดงปุ่มคณะกรรมการบนเว็บสาธารณะ
+   */
+  portalShowCommittee Boolean  @default(true) @map("portal_show_committee")
+  /**
    * กฎ/หมายเหตุการชำระเงินสำหรับลูกค้า (แสดงบนลิงก์เก็บค่า)
    */
   paymentRulesNote    String   @default("") @map("payment_rules_note") @db.Text
@@ -7225,6 +7239,13 @@ model ClubEventProfile {
    * JSON: [{ id, name, type: "INCOME"|"EXPENSE" }] หมวดหมู่รายรับ–รายจ่าย
    */
   financeCategoriesJson String   @default("[]") @map("finance_categories_json") @db.VarChar(4000)
+  /**
+   * ค่าบำรุงสมาชิก — เปิด/ปิด · จำนวน · รอบเก็บ · ลิงก์สาธารณะที่ระบบดูแล
+   */
+  duesEnabled           Boolean            @default(false) @map("dues_enabled")
+  duesAmountBaht        Int                @default(0) @map("dues_amount_baht")
+  duesPeriod            ClubEventDuesPeriod @default(YEARLY) @map("dues_period")
+  duesLinkId            String?            @map("dues_link_id") @db.VarChar(191)
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
 
@@ -7233,6 +7254,8 @@ model ClubEventProfile {
   assets       ClubEventAsset[]
   dynamicLinks ClubEventDynamicLink[]
   financeRows  ClubEventFinanceTransaction[]
+  duesPayments ClubEventDuesPayment[]
+  checkIns     ClubEventCheckIn[]
 
   @@unique([ownerUserId, trialSessionId], map: "club_event_profile_owner_trial_uniq")
   @@unique([slug, trialSessionId], map: "club_event_profile_slug_trial_uniq")
@@ -7258,7 +7281,8 @@ model ClubEventRecord {
   createdAt       DateTime                 @default(now()) @map("created_at")
   updatedAt       DateTime                 @updatedAt @map("updated_at")
 
-  gallery ClubEventGalleryImage[]
+  gallery  ClubEventGalleryImage[]
+  checkIns ClubEventCheckIn[]
 
   @@index([ownerUserId, trialSessionId, eventDate], map: "club_event_rec_owner_trial_date_idx")
   @@index([profileId, status], map: "club_event_rec_profile_status_idx")
@@ -7413,6 +7437,85 @@ model ClubEventLinkSubmission {
   @@index([linkId, createdAt], map: "club_event_link_sub_link_created_idx")
   @@index([ownerUserId, trialSessionId], map: "club_event_link_sub_owner_trial_idx")
   @@map("club_event_link_submissions")
+}
+
+/**
+ * เช็กอินวันงาน — สมาชิกที่ลงทะเบียนล่วงหน้า / walk-in / สแกน QR
+ */
+model ClubEventCheckIn {
+  id                String           @id @default(cuid())
+  ownerUserId       String           @map("owner_id") @db.VarChar(191)
+  owner             User             @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId    String           @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId         String           @map("profile_id")
+  profile           ClubEventProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  eventId           String           @map("event_id")
+  event             ClubEventRecord  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  memberId          String?          @map("member_id") @db.VarChar(191)
+  guestName         String           @map("guest_name") @db.VarChar(160)
+  guestPhone        String           @default("") @map("guest_phone") @db.VarChar(32)
+  memberCode        String           @default("") @map("member_code") @db.VarChar(64)
+  /**
+   * QR | STAFF | WALK_IN
+   */
+  source            String           @default("STAFF") @db.VarChar(16)
+  submissionId      String?          @map("submission_id") @db.VarChar(191)
+  checkedInAt       DateTime         @default(now()) @map("checked_in_at")
+  /**
+   * JSON: [{ key, label, qty, delivered, deliveredAt? }]
+   */
+  fulfillmentJson   String           @default("[]") @map("fulfillment_json") @db.Text
+  paymentDueBaht    Int              @default(0) @map("payment_due_baht")
+  paymentCleared    Boolean          @default(false) @map("payment_cleared")
+  signatureImageUrl String?          @map("signature_image_url") @db.VarChar(512)
+  signedAt          DateTime?        @map("signed_at")
+  note              String           @default("") @db.VarChar(500)
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  @@index([eventId, checkedInAt], map: "club_event_checkin_event_time_idx")
+  @@index([profileId, eventId], map: "club_event_checkin_profile_event_idx")
+  @@index([ownerUserId, trialSessionId], map: "club_event_checkin_owner_trial_idx")
+  @@map("club_event_check_ins")
+}
+
+/**
+ * ประวัติจ่ายค่าบำรุงสมาชิก (จากลิงก์ค่าบำรุงโดยตรง หรือพ่วงจากฟอร์มกิจกรรม)
+ */
+model ClubEventDuesPayment {
+  id                  String   @id @default(cuid())
+  ownerUserId         String   @map("owner_id") @db.VarChar(191)
+  owner               User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId      String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId           String   @map("profile_id")
+  profile             ClubEventProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  memberId            String?  @map("member_id") @db.VarChar(191)
+  payerName           String   @map("payer_name") @db.VarChar(160)
+  payerPhone          String   @default("") @map("payer_phone") @db.VarChar(32)
+  memberCode          String   @default("") @map("member_code") @db.VarChar(64)
+  amountBaht          Int      @map("amount_baht")
+  /**
+   * คีย์รอบ เช่น 2026 · 2026-Q1 · 2026-H1 · 2026-03
+   */
+  periodKey           String   @map("period_key") @db.VarChar(32)
+  periodLabel         String   @map("period_label") @db.VarChar(80)
+  paymentMethod       String?  @map("payment_method") @db.VarChar(32)
+  slipUrl             String?  @map("slip_url") @db.VarChar(512)
+  /**
+   * DIRECT | EVENT_BUNDLE | MANUAL
+   */
+  source              String   @default("DIRECT") @db.VarChar(24)
+  sourceLinkId        String?  @map("source_link_id") @db.VarChar(191)
+  sourceSubmissionId  String?  @map("source_submission_id") @db.VarChar(191)
+  sourceEventId       String?  @map("source_event_id") @db.VarChar(191)
+  note                String   @default("") @db.VarChar(500)
+  paidAt              DateTime @map("paid_at")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@index([profileId, paidAt], map: "club_event_dues_profile_paid_idx")
+  @@index([profileId, periodKey], map: "club_event_dues_profile_period_idx")
+  @@index([ownerUserId, trialSessionId], map: "club_event_dues_owner_trial_idx")
+  @@map("club_event_dues_payments")
 }
 
 // ─── LMS & Online Course (multi-tenant via ownerUserId) ───

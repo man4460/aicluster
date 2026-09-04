@@ -33,7 +33,7 @@ export async function GET(req: Request) {
         ...(status === "UPCOMING" || status === "PAST" ? { status } : {}),
       },
       orderBy: { eventDate: status === "PAST" ? "desc" : "asc" },
-      include: { _count: { select: { gallery: true } } },
+      include: { _count: { select: { gallery: true, checkIns: true } } },
     });
 
     return NextResponse.json({
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
           : null,
         youtubeUrlsJson: serializeClubEventYoutubeVideos(yt.videos),
       },
-      include: { _count: { select: { gallery: true } } },
+      include: { _count: { select: { gallery: true, checkIns: true } } },
     });
 
     return NextResponse.json({ event: mapClubEventRecord(row), mediaLimits: limits });

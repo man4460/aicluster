@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Calendar, Images, Play, Plus, UserCog } from "lucide-react";
+import { Calendar, ClipboardCheck, Images, Play, Plus, UserCog } from "lucide-react";
 import { AppEmptyState, useAppNoticePopup } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { formatBangkokDateTimeLong } from "@/lib/time/bangkok";
@@ -16,6 +16,7 @@ import {
 import {
   CLUB_EVENT_DASHBOARD_TAB_ITEMS,
   clubEventDashboardTabHref,
+  clubEventEventDeskHref,
   clubEventEventEditHref,
   clubEventEventHref,
   clubEventNewEventHref,
@@ -252,6 +253,12 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
                                 รูป {ev.galleryCount} รายการ
                               </p>
                             ) : null}
+                            {ev.checkInCount > 0 ? (
+                              <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                                <ClipboardCheck className="h-3.5 w-3.5" aria-hidden />
+                                เช็กอิน {ev.checkInCount} คน
+                              </p>
+                            ) : null}
                             {(ev.youtubeVideos?.length ?? ev.youtubeUrls?.length ?? 0) > 0 ||
                             ev.youtubeEmbedUrl ? (
                               <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#0000BF]">
@@ -266,6 +273,17 @@ export function ClubEventDashboardClient({ initialProfile }: { initialProfile: C
                           </div>
                         </div>
                         <div className="relative z-[1] flex shrink-0 items-center gap-1 self-end sm:self-center">
+                          <Link
+                            href={clubEventEventDeskHref(ev.id)}
+                            className={cn(
+                              assetRowEditIconButtonClass,
+                              "border-emerald-200 bg-emerald-50 text-emerald-700",
+                            )}
+                            aria-label={`จุดลงทะเบียน ${ev.title}`}
+                            title="จุดลงทะเบียนวันงาน"
+                          >
+                            <ClipboardCheck className="h-4 w-4" aria-hidden />
+                          </Link>
                           <Link
                             href={clubEventEventEditHref(ev.id)}
                             className={assetRowEditIconButtonClass}

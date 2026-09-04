@@ -16,6 +16,16 @@ export function clubEventEventEditHref(id: string): string {
   return `${clubEventEventHref(id)}/edit`;
 }
 
+/** หน้าคำตอบจากลิงก์สอบถามของกิจกรรม */
+export function clubEventEventSubmissionsHref(id: string): string {
+  return `${clubEventEventHref(id)}/submissions`;
+}
+
+/** จุดลงทะเบียนวันงาน (staff desk) */
+export function clubEventEventDeskHref(id: string): string {
+  return `${clubEventEventHref(id)}/desk`;
+}
+
 export function clubEventNewEventHref(): string {
   return `${CLUB_EVENT_EVENTS_PATH}/new`;
 }
@@ -30,11 +40,11 @@ export type ClubEventModuleNavKey = "dashboard" | "finance" | "manage" | "settin
 /** แท็บย่อยแดชบอร์ด: กำหนดการ · ย้อนหลัง · โครงสร้าง */
 export type ClubEventDashboardTabKey = "upcoming" | "past" | "committee";
 
-/** แท็บย่อยการจัดการ: สมาชิก · ทรัพย์สิน */
-export type ClubEventManageTabKey = "members" | "assets";
+/** แท็บย่อยการจัดการ: สมาชิก · ค่าบำรุง · ทรัพย์สิน */
+export type ClubEventManageTabKey = "members" | "dues" | "assets";
 
-/** แท็บย่อยตั้งค่า: พื้นฐาน · การเงิน · เว็ปลิงค์ลูกค้า */
-export type ClubEventSettingsTab = "basic" | "finance" | "portal";
+/** แท็บย่อยตั้งค่า: พื้นฐาน · การเงิน · ค่าบำรุง · เว็ปลิงค์ลูกค้า */
+export type ClubEventSettingsTab = "basic" | "finance" | "dues" | "portal";
 
 export type ClubEventNavItem = {
   key: ClubEventModuleNavKey;
@@ -71,6 +81,7 @@ export const CLUB_EVENT_MANAGE_TAB_ITEMS: {
   shortLabel?: string;
 }[] = [
   { key: "members", label: "สมาชิก" },
+  { key: "dues", label: "ค่าบำรุงประจำปี", shortLabel: "บำรุง" },
   { key: "assets", label: "ทรัพย์สิน", shortLabel: "ทรัพย์" },
 ];
 
@@ -81,6 +92,7 @@ export const CLUB_EVENT_SETTINGS_TAB_ITEMS: {
 }[] = [
   { key: "basic", label: "ตั้งค่าพื้นฐาน", shortLabel: "พื้นฐาน" },
   { key: "finance", label: "ตั้งค่าเกี่ยวกับการเงิน", shortLabel: "การเงิน" },
+  { key: "dues", label: "ค่าบำรุงประจำปี", shortLabel: "บำรุง" },
   { key: "portal", label: "ตั้งค่าเว็ปลิงค์ลูกค้า", shortLabel: "เว็บ" },
 ];
 
@@ -121,7 +133,9 @@ export function clubEventDashboardTabHref(tab: ClubEventDashboardTabKey): string
 }
 
 export function parseClubEventManageTab(raw: string | null | undefined): ClubEventManageTabKey {
-  return raw === "assets" ? "assets" : "members";
+  if (raw === "assets") return "assets";
+  if (raw === "dues") return "dues";
+  return "members";
 }
 
 export function clubEventManageHref(tab?: ClubEventManageTabKey): string {
@@ -130,7 +144,7 @@ export function clubEventManageHref(tab?: ClubEventManageTabKey): string {
 }
 
 export function parseClubEventSettingsTab(raw: string | null | undefined): ClubEventSettingsTab {
-  if (raw === "finance" || raw === "portal") return raw;
+  if (raw === "finance" || raw === "portal" || raw === "dues") return raw;
   if (raw === "links") return "portal";
   return "basic";
 }
