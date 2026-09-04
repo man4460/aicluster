@@ -77,6 +77,31 @@ type DeskPayload = {
 
 type DeskFilter = "all" | "checkedIn" | "registered" | "pendingFulfill" | "pendingSign";
 
+type DeskRegistered = DeskPayload["registered"][number];
+type DeskMember = DeskPayload["members"][number];
+
+type UnifiedDeskRow =
+  | {
+      key: string;
+      sortAt: number;
+      kind: "checkIn";
+      checkIn: ClubEventCheckInDto;
+    }
+  | {
+      key: string;
+      sortAt: number;
+      kind: "registered";
+      row: DeskRegistered;
+    }
+  | {
+      key: string;
+      sortAt: number;
+      kind: "member";
+      row: DeskMember;
+    };
+
+type StatusTag = { text: string; className: string };
+
 function checkInNeedsFulfill(c: ClubEventCheckInDto): boolean {
   return c.fulfillment.some((f) => !f.delivered);
 }
@@ -85,17 +110,41 @@ function checkInNeedsSign(c: ClubEventCheckInDto): boolean {
   return c.fulfillment.some((f) => f.delivered) && !c.signatureImageUrl;
 }
 
-function checkInStatusLabel(c: ClubEventCheckInDto): { text: string; className: string } {
-  if (c.fulfillment.length === 0) {
-    return { text: "เช็กอินแล้ว", className: "bg-emerald-50 text-emerald-700" };
+function checkInStatusTags(c: ClubEventCheckInDto): StatusTag[] {
+  const tags: StatusTag[] = [
+    { text: "มาแล้ว", className: "bg-emerald-50 text-emerald-700" },
+  ];
+  if (c.source === "WALK_IN") {
+    tags.push({ text: "Walk-in", className: "bg-slate-100 text-[#5f5a8a]" });
+  } else if (c.submissionId) {
+    tags.push({ text: "ลงทะเบียนล่วงหน้า", className: "bg-indigo-50 text-indigo-700" });
+  } else if (c.memberId) {
+    tags.push({ text: "สมาชิก", className: "bg-violet-50 text-violet-700" });
   }
+  if (c.fulfillment.length === 0) return tags;
   if (checkInNeedsFulfill(c)) {
-    return { text: "รอรับของ", className: "bg-amber-50 text-amber-800" };
+    tags.push({ text: "รอรับของ", className: "bg-amber-50 text-amber-800" });
+  } else if (checkInNeedsSign(c)) {
+    tags.push({ text: "รอเซ็นรับ", className: "bg-rose-50 text-rose-700" });
+  } else {
+    tags.push({ text: "ครบแล้ว", className: "bg-emerald-50 text-emerald-700" });
   }
-  if (checkInNeedsSign(c)) {
-    return { text: "รอเซ็นรับ", className: "bg-rose-50 text-rose-700" };
-  }
-  return { text: "ครบแล้ว", className: "bg-emerald-50 text-emerald-700" };
+  return tags;
+}
+
+function StatusTagRow({ tags }: { tags: StatusTag[] }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {tags.map((t) => (
+        <span
+          key={t.text}
+          className={cn("rounded-full px-2 py-0.5 text-[11px] font-bold", t.className)}
+        >
+          {t.text}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
@@ -255,31 +304,72 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
     }
   };
 
-  const filteredCheckIns = useMemo(() => {
+  const unifiedRows = useMemo((): UnifiedDeskRow[] => {
     if (!data) return [];
-    const list = data.checkIns;
-    if (filter === "pendingFulfill") return list.filter(checkInNeedsFulfill);
-    if (filter === "pendingSign") return list.filter(checkInNeedsSign);
-    if (filter === "checkedIn") return list;
-    return list;
-  }, [data, filter]);
+    const checkedSubmissionIds = new Set(
+      data.checkIns.map((c) => c.submissionId).filter(Boolean) as string[],
+    );
+    const checkedMemberIds = new Set(
+      data.checkIns.map((c) => c.memberId).filter(Boolean) as string[],
+    );
+    const checkedCodes = new Set(
+      data.checkIns.map((c) => c.memberCode.trim().toLowerCase()).filter(Boolean),
+    );
 
-  const filteredRegistered = useMemo(() => {
-    if (!data) return [];
-    if (filter === "registered") {
-      return data.registered.filter((r) => !r.alreadyCheckedIn);
+    const rows: UnifiedDeskRow[] = [];
+
+    for (const c of data.checkIns) {
+      if (filter === "registered") continue;
+      if (filter === "pendingFulfill" && !checkInNeedsFulfill(c)) continue;
+      if (filter === "pendingSign" && !checkInNeedsSign(c)) continue;
+      rows.push({
+        key: `ci-${c.id}`,
+        sortAt: new Date(c.checkedInAt).getTime(),
+        kind: "checkIn",
+        checkIn: c,
+      });
     }
-    return data.registered;
-  }, [data, filter]);
 
-  const showRegisteredSection = filter === "all" || filter === "registered";
-  const showMembersSection = filter === "all";
-  const showWalkInSection = filter === "all";
-  const showCheckInSection =
-    filter === "all" ||
-    filter === "checkedIn" ||
-    filter === "pendingFulfill" ||
-    filter === "pendingSign";
+    if (filter === "all" || filter === "registered") {
+      for (const r of data.registered) {
+        if (r.alreadyCheckedIn || checkedSubmissionIds.has(r.submissionId)) continue;
+        if (
+          r.memberCode.trim() &&
+          checkedCodes.has(r.memberCode.trim().toLowerCase())
+        ) {
+          continue;
+        }
+        rows.push({
+          key: `reg-${r.submissionId}`,
+          sortAt: 0,
+          kind: "registered",
+          row: r,
+        });
+      }
+    }
+
+    if (filter === "all") {
+      for (const m of data.members) {
+        if (m.alreadyCheckedIn || checkedMemberIds.has(m.memberId)) continue;
+        if (m.memberCode.trim() && checkedCodes.has(m.memberCode.trim().toLowerCase())) {
+          continue;
+        }
+        rows.push({
+          key: `mem-${m.memberId}`,
+          sortAt: -1,
+          kind: "member",
+          row: m,
+        });
+      }
+    }
+
+    rows.sort((a, b) => {
+      if (a.kind === "checkIn" && b.kind !== "checkIn") return -1;
+      if (a.kind !== "checkIn" && b.kind === "checkIn") return 1;
+      return b.sortAt - a.sortAt;
+    });
+    return rows;
+  }, [data, filter]);
 
   const publicUrl =
     data?.event.slug && typeof window !== "undefined"
@@ -469,64 +559,50 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                   </button>
                 </div>
 
-                {showCheckInSection ? (
-                  <section className="space-y-2">
+                <section className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="text-sm font-black text-[#4d47b6]">
-                      {filter === "pendingFulfill"
-                        ? "รายการรอรับของ"
-                        : filter === "pendingSign"
-                          ? "รายการรอเซ็นรับ"
-                          : "มาแล้ว"}
+                      รายชื่อ
                       <span className="ml-1.5 font-semibold text-[#9490c0]">
-                        ({filteredCheckIns.length})
+                        ({unifiedRows.length})
                       </span>
                     </h3>
-                    {filteredCheckIns.length === 0 ? (
-                      <p className="rounded-xl border border-dashed border-[#d8d6ec] bg-white/70 p-4 text-sm text-[#8b87b8]">
-                        ไม่มีรายการในกลุ่มนี้
-                      </p>
-                    ) : (
-                      <ul className="space-y-2.5">
-                        {filteredCheckIns.map((c) => {
-                          const status = checkInStatusLabel(c);
+                  </div>
+                  {unifiedRows.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-[#d8d6ec] bg-white/70 p-4 text-sm text-[#8b87b8]">
+                      ไม่พบรายการตามเงื่อนไข
+                    </p>
+                  ) : (
+                    <ul className="space-y-2.5">
+                      {unifiedRows.map((item) => {
+                        if (item.kind === "checkIn") {
+                          const c = item.checkIn;
+                          const tags = checkInStatusTags(c);
                           const pendingItems = c.fulfillment.filter((f) => !f.delivered).length;
                           return (
                             <li
-                              key={c.id}
+                              key={item.key}
                               className={cn(
                                 clubEventRowCardClass,
                                 "flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-4",
                                 selected?.id === c.id && "ring-2 ring-[#0000BF]/35",
                               )}
                             >
-                              <div className="min-w-0 flex-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <p className="text-base font-black text-[#1e1b4b] sm:text-lg">
-                                    {c.guestName}
-                                  </p>
-                                  <span
-                                    className={cn(
-                                      "rounded-full px-2 py-0.5 text-[11px] font-bold",
-                                      status.className,
-                                    )}
-                                  >
-                                    {status.text}
-                                  </span>
-                                </div>
-                                <p className="mt-1 text-xs font-semibold text-[#66638c]">
-                                  {[c.memberCode, c.guestPhone, c.source].filter(Boolean).join(" · ")}
+                              <div className="min-w-0 flex-1 space-y-1.5">
+                                <p className="text-base font-black text-[#1e1b4b] sm:text-lg">
+                                  {c.guestName}
+                                </p>
+                                <StatusTagRow tags={tags} />
+                                <p className="text-xs font-semibold text-[#66638c]">
+                                  {[c.memberCode, c.guestPhone].filter(Boolean).join(" · ") || "—"}
                                 </p>
                                 <p className="text-[11px] font-semibold text-[#9490c0]">
-                                  {formatBangkokDateTimeLong(c.checkedInAt)}
+                                  เช็กอิน {formatBangkokDateTimeLong(c.checkedInAt)}
                                 </p>
                                 {c.fulfillment.length > 0 ? (
-                                  <p className="mt-1.5 text-xs font-semibold text-[#4d47b6]">
+                                  <p className="text-xs font-semibold text-[#4d47b6]">
                                     ของ {c.fulfillment.reduce((n, f) => n + f.qty, 0)} ชิ้น
-                                    {pendingItems > 0
-                                      ? ` · รอจ่าย ${pendingItems} รายการ`
-                                      : c.signatureImageUrl
-                                        ? " · เซ็นรับแล้ว"
-                                        : " · พร้อมเซ็นรับ"}
+                                    {pendingItems > 0 ? ` · รอจ่าย ${pendingItems} รายการ` : ""}
                                   </p>
                                 ) : null}
                               </div>
@@ -553,71 +629,49 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                               </div>
                             </li>
                           );
-                        })}
-                      </ul>
-                    )}
-                  </section>
-                ) : null}
+                        }
 
-                {showRegisteredSection ? (
-                  <section className="space-y-2">
-                    <h3 className="text-sm font-black text-[#4d47b6]">
-                      ลงทะเบียนล่วงหน้า
-                      <span className="ml-1.5 font-semibold text-[#9490c0]">
-                        ({filteredRegistered.length})
-                      </span>
-                    </h3>
-                    {filteredRegistered.length === 0 ? (
-                      <p className="text-sm text-[#8b87b8]">
-                        {filter === "registered"
-                          ? "เช็กอินครบแล้ว หรือยังไม่มีคำตอบ"
-                          : "ไม่พบรายการ / ยังไม่มีคำตอบลิงก์ที่ผูกกิจกรรม"}
-                      </p>
-                    ) : (
-                      <ul className="space-y-2.5">
-                        {filteredRegistered.map((r) => (
-                          <li
-                            key={r.submissionId}
-                            className={cn(
-                              clubEventRowCardClass,
-                              "flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4",
-                            )}
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className="text-base font-black text-[#1e1b4b]">{r.name || "ไม่ระบุชื่อ"}</p>
-                              <p className="mt-0.5 text-xs font-semibold text-[#66638c]">
-                                {[r.memberCode, r.phone, r.linkTitle].filter(Boolean).join(" · ")}
-                              </p>
-                              {r.fulfillment.length > 0 ? (
-                                <p className="mt-1 text-xs font-semibold text-[#4d47b6]">
-                                  ของ:{" "}
-                                  {r.fulfillment
-                                    .map((f) => `${formatClubEventFulfillmentLabel(f.label)}×${f.qty}`)
-                                    .join(" · ")}
+                        if (item.kind === "registered") {
+                          const r = item.row;
+                          return (
+                            <li
+                              key={item.key}
+                              className={cn(
+                                clubEventRowCardClass,
+                                "flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4",
+                              )}
+                            >
+                              <div className="min-w-0 flex-1 space-y-1.5">
+                                <p className="text-base font-black text-[#1e1b4b]">
+                                  {r.name || "ไม่ระบุชื่อ"}
                                 </p>
-                              ) : null}
-                            </div>
-                            {r.alreadyCheckedIn ? (
-                              <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-                                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
-                                  มาแล้ว
-                                </span>
-                                {(() => {
-                                  const linked = data.checkIns.find(
-                                    (c) => c.submissionId === r.submissionId,
-                                  );
-                                  return linked ? (
-                                    <button
-                                      type="button"
-                                      className={clubEventOutlineButtonClass}
-                                      onClick={() => openManage(linked)}
-                                    >
-                                      จัดการ
-                                    </button>
-                                  ) : null;
-                                })()}
+                                <StatusTagRow
+                                  tags={[
+                                    {
+                                      text: "ลงทะเบียนล่วงหน้า",
+                                      className: "bg-indigo-50 text-indigo-700",
+                                    },
+                                    {
+                                      text: "ยังไม่เช็กอิน",
+                                      className: "bg-amber-50 text-amber-800",
+                                    },
+                                  ]}
+                                />
+                                <p className="text-xs font-semibold text-[#66638c]">
+                                  {[r.memberCode, r.phone, r.linkTitle].filter(Boolean).join(" · ")}
+                                </p>
+                                {r.fulfillment.length > 0 ? (
+                                  <p className="text-xs font-semibold text-[#4d47b6]">
+                                    ของ:{" "}
+                                    {r.fulfillment
+                                      .map(
+                                        (f) =>
+                                          `${formatClubEventFulfillmentLabel(f.label)}×${f.qty}`,
+                                      )
+                                      .join(" · ")}
+                                  </p>
+                                ) : null}
                               </div>
-                            ) : (
                               <button
                                 type="button"
                                 disabled={busy}
@@ -629,93 +683,85 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                                 <UserRound className="h-3.5 w-3.5" aria-hidden />
                                 เช็กอิน
                               </button>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </section>
-                ) : null}
+                            </li>
+                          );
+                        }
 
-                {showMembersSection ? (
-                  <section className="space-y-2">
-                    <h3 className="text-sm font-black text-[#4d47b6]">สมาชิกชมรม (ยังไม่ผูกฟอร์มก็ได้)</h3>
-                    {data.members.length === 0 ? (
-                      <p className="text-sm text-[#8b87b8]">ไม่พบสมาชิกตามคำค้น</p>
-                    ) : (
-                      <ul className="max-h-80 space-y-2 overflow-y-auto">
-                        {data.members.map((m) => (
+                        const m = item.row;
+                        return (
                           <li
-                            key={m.memberId}
+                            key={item.key}
                             className={cn(
                               clubEventRowCardClass,
-                              "flex flex-row items-center justify-between gap-3 p-3.5",
+                              "flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4",
                             )}
                           >
-                            <div className="min-w-0">
-                              <p className="font-bold text-[#1e1b4b]">{m.name}</p>
-                              <p className="truncate text-xs font-semibold text-[#66638c]">
+                            <div className="min-w-0 flex-1 space-y-1.5">
+                              <p className="text-base font-black text-[#1e1b4b]">{m.name}</p>
+                              <StatusTagRow
+                                tags={[
+                                  { text: "สมาชิก", className: "bg-violet-50 text-violet-700" },
+                                  {
+                                    text: "ยังไม่เช็กอิน",
+                                    className: "bg-amber-50 text-amber-800",
+                                  },
+                                ]}
+                              />
+                              <p className="text-xs font-semibold text-[#66638c]">
                                 {[m.memberCode, m.phone].filter(Boolean).join(" · ") || "—"}
                               </p>
                             </div>
-                            {m.alreadyCheckedIn ? (
-                              <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
-                                มาแล้ว
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                disabled={busy}
-                                className={cn(clubEventOutlineButtonClass, "shrink-0")}
-                                onClick={() =>
-                                  void checkIn({ memberId: m.memberId, source: "STAFF" })
-                                }
-                              >
-                                เช็กอิน
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              disabled={busy}
+                              className={cn(clubEventPrimaryButtonClass, "shrink-0")}
+                              onClick={() =>
+                                void checkIn({ memberId: m.memberId, source: "STAFF" })
+                              }
+                            >
+                              <UserRound className="h-3.5 w-3.5" aria-hidden />
+                              เช็กอิน
+                            </button>
                           </li>
-                        ))}
-                      </ul>
-                    )}
-                  </section>
-                ) : null}
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
 
-                {showWalkInSection ? (
-                  <section className="space-y-2 rounded-xl border border-dashed border-[#d8d6ec] bg-white/80 p-3">
-                    <h3 className="text-sm font-black text-[#4d47b6]">
-                      Walk-in — มาหน้างาน (ยังไม่ลงทะเบียน)
-                    </h3>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <input
-                        className={clubEventFieldClass}
-                        value={walkName}
-                        onChange={(e) => setWalkName(e.target.value)}
-                        placeholder="ชื่อ *"
-                      />
-                      <input
-                        className={clubEventFieldClass}
-                        value={walkPhone}
-                        onChange={(e) => setWalkPhone(e.target.value)}
-                        placeholder="เบอร์โทร"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      disabled={busy || !walkName.trim()}
-                      className={cn(clubEventPrimaryButtonClass, "w-full sm:w-auto")}
-                      onClick={() =>
-                        void checkIn({
-                          guestName: walkName.trim(),
-                          guestPhone: walkPhone.trim(),
-                          source: "WALK_IN",
-                        })
-                      }
-                    >
-                      เช็กอิน Walk-in
-                    </button>
-                  </section>
-                ) : null}
+                <section className="space-y-2 rounded-xl border border-dashed border-[#d8d6ec] bg-white/80 p-3">
+                  <h3 className="text-sm font-black text-[#4d47b6]">
+                    Walk-in — มาหน้างาน (ยังไม่ลงทะเบียน)
+                  </h3>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <input
+                      className={clubEventFieldClass}
+                      value={walkName}
+                      onChange={(e) => setWalkName(e.target.value)}
+                      placeholder="ชื่อ *"
+                    />
+                    <input
+                      className={clubEventFieldClass}
+                      value={walkPhone}
+                      onChange={(e) => setWalkPhone(e.target.value)}
+                      placeholder="เบอร์โทร"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busy || !walkName.trim()}
+                    className={cn(clubEventPrimaryButtonClass, "w-full sm:w-auto")}
+                    onClick={() =>
+                      void checkIn({
+                        guestName: walkName.trim(),
+                        guestPhone: walkPhone.trim(),
+                        source: "WALK_IN",
+                      })
+                    }
+                  >
+                    เช็กอิน Walk-in
+                  </button>
+                </section>
             </div>
           </div>
         )}
