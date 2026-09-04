@@ -43,12 +43,19 @@ export function detectDeviceType(ua: string | null): string {
 }
 
 export function last7BangkokDateKeys(end = new Date()): string[] {
+  return lastNBangkokDateKeys(7, end);
+}
+
+export function last30BangkokDateKeys(end = new Date()): string[] {
+  return lastNBangkokDateKeys(30, end);
+}
+
+export function lastNBangkokDateKeys(n: number, end = new Date()): string[] {
+  const count = Math.max(1, Math.floor(n));
   const keys: string[] = [];
-  for (let i = 6; i >= 0; i -= 1) {
+  for (let i = count - 1; i >= 0; i -= 1) {
     const d = new Date(end.getTime() - i * 86400000);
-    keys.push(
-      d.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }),
-    );
+    keys.push(d.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }));
   }
   return keys;
 }

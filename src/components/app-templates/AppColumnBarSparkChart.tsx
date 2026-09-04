@@ -23,7 +23,7 @@ export type AppColumnBarSparkChartProps = {
    */
   pairedLayout?: boolean;
   compact?: boolean;
-  /** กระจายคอลัมน์เต็มความกว้าง (เหมาะ Top 5 หมวด — ไม่เลื่อนแนวนอน) */
+  /** กระจายคอลัมน์เต็มความกว้าง (เหมาะ Top 5–30 วัน — ไม่เลื่อนแนวนอน) */
   evenDistribution?: boolean;
 };
 
@@ -42,7 +42,7 @@ export function AppColumnBarSparkChart({
   compact = false,
   evenDistribution = false,
 }: AppColumnBarSparkChartProps) {
-  const distribute = evenDistribution && buckets.length > 0 && buckets.length <= 8;
+  const distribute = evenDistribution && buckets.length > 0 && buckets.length <= 31;
   const track = variant === "brand" ? "bg-[#ecebff]/50" : "bg-emerald-100/50";
   const bar =
     variant === "brand" ?

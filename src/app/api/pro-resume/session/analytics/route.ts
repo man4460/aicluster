@@ -3,7 +3,7 @@ import { requireSession } from "@/lib/api-auth";
 import { proResumeOwnerFromAuth } from "@/lib/pro-resume/api-owner";
 import { proResumeSessionContext } from "@/lib/pro-resume/session-context";
 import { prisma } from "@/lib/prisma";
-import { bangkokWeekStartKey, last7BangkokDateKeys } from "@/systems/pro-resume/lib/helpers";
+import { bangkokWeekStartKey, last30BangkokDateKeys } from "@/systems/pro-resume/lib/helpers";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 
 export async function GET() {
@@ -16,7 +16,7 @@ export async function GET() {
     const { profile } = await proResumeSessionContext(own.ownerId);
     const weekStart = bangkokWeekStartKey();
     const todayKey = bangkokDateKey();
-    const dayKeys = last7BangkokDateKeys();
+    const dayKeys = last30BangkokDateKeys();
     const rangeStart = dayKeys[0] < weekStart ? dayKeys[0] : weekStart;
 
     const views = await prisma.resumeViewAnalytics.findMany({

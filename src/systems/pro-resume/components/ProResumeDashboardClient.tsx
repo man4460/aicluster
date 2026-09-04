@@ -8,10 +8,10 @@ import { ProResumePagePanel } from "@/systems/pro-resume/components/ProResumePag
 import { proResumePageTitleIcon, proResumePageTitleTone } from "@/systems/pro-resume/lib/page-menu-icons";
 import type { ResumeProfileDto } from "@/systems/pro-resume/lib/mappers";
 import {
+  proResumeDashboardOverviewGridClass,
   proResumeIconButtonClass,
   proResumeStatInlineClass,
   proResumeStatsGridClass,
-  proResumeStatTailClass,
 } from "@/systems/pro-resume/lib/ui-tokens";
 
 type Analytics = {
@@ -85,39 +85,39 @@ export function ProResumeDashboardClient({
           </button>
         }
       >
-        <div className={proResumeStatsGridClass}>
-          <div className={proResumeStatInlineClass}>
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-[#66638c]">
-              <Eye className="h-3.5 w-3.5 text-sky-600" aria-hidden />
-              เข้าชมสัปดาห์นี้
-            </span>
-            <p className="text-xl font-black tabular-nums text-[#1e1b4b]">
-              {loading ? "—" : (analytics?.viewsThisWeek ?? 0).toLocaleString("th-TH")}
-            </p>
+        <div className={proResumeDashboardOverviewGridClass}>
+          <div className="flex min-w-0 flex-col">
+            <h3 className="text-xs font-semibold text-[#2e2a58]">สรุปสัปดาห์นี้</h3>
+            <div className={cn(proResumeStatsGridClass, "mt-2")}>
+              <div className={proResumeStatInlineClass}>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-[#66638c]">
+                  <Eye className="h-3.5 w-3.5 text-sky-600" aria-hidden />
+                  เข้าชมสัปดาห์นี้
+                </span>
+                <p className="text-xl font-black tabular-nums text-[#1e1b4b]">
+                  {loading ? "—" : (analytics?.viewsThisWeek ?? 0).toLocaleString("th-TH")}
+                </p>
+              </div>
+              <div className={proResumeStatInlineClass}>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-[#66638c]">
+                  <TrendingUp className="h-3.5 w-3.5 text-violet-600" aria-hidden />
+                  เริ่มสัปดาห์
+                </span>
+                <p className="text-sm font-bold text-[#1e1b4b]">{analytics?.weekStart ?? "—"}</p>
+              </div>
+            </div>
           </div>
-          <div className={proResumeStatInlineClass}>
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-[#66638c]">
-              <TrendingUp className="h-3.5 w-3.5 text-violet-600" aria-hidden />
-              เริ่มสัปดาห์
-            </span>
-            <p className="text-sm font-bold text-[#1e1b4b]">{analytics?.weekStart ?? "—"}</p>
-          </div>
-          <div className={cn(proResumeStatInlineClass, proResumeStatTailClass)}>
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-[#66638c]">
-              แพ็กแชร์ลิงก์
-            </span>
-            <p className="text-sm font-bold text-[#1e1b4b]">{hasMonthly ? "รายเดือน ✓" : "ฟรี (ลิงก์ปิด)"}</p>
-          </div>
-        </div>
 
-        <AppColumnBarSparkChart
-          title="การเข้าชม 7 วันล่าสุด (เวลาไทย)"
-          buckets={chartBuckets}
-          emptyText="ยังไม่มีข้อมูลการเข้าชม"
-          variant="brand"
-          compact
-          className="flex min-h-0 flex-1 flex-col"
-        />
+          <AppColumnBarSparkChart
+            title="การเข้าชม 30 วันล่าสุด (เวลาไทย)"
+            buckets={chartBuckets}
+            emptyText="ยังไม่มีข้อมูลการเข้าชม"
+            variant="brand"
+            compact
+            evenDistribution
+            className="flex min-h-0 w-full min-w-0 flex-1 flex-col"
+          />
+        </div>
 
         <div className="space-y-2">
           <h3 className="flex items-center gap-2 text-sm font-bold text-[#1e1b4b]">
