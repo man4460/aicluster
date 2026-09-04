@@ -398,7 +398,14 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
                   className="mt-1 h-4 w-4 rounded border-slate-300 text-[#0000BF] focus:ring-[#0000BF]/30"
                   checked={Boolean(form.portalShowMembers)}
                   disabled={saving}
-                  onChange={(e) => setForm((f) => ({ ...f, portalShowMembers: e.target.checked }))}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      portalShowMembers: e.target.checked,
+                      // เมื่อเปิดครั้งแรกให้คงค่าเดิม — ถ้ายังไม่มี ให้ใช้ค่าเริ่มที่ปิดเบอร์/อีเมล/โซเชียล
+                      portalMemberFields: f.portalMemberFields ?? DEFAULT_CLUB_PORTAL_MEMBER_FIELDS,
+                    }))
+                  }
                 />
                 <span>
                   <span className="block text-sm font-bold text-[#1e1b4b]">เปิดค้นหาสมาชิกบนเว็บไซต์</span>

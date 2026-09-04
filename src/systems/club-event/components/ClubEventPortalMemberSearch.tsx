@@ -79,14 +79,16 @@ export function ClubEventPortalMemberSearch({
     <div className="space-y-4">
       <label className="block">
         <span className="sr-only">ค้นหาสมาชิก</span>
-        <div className="relative">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#66638c]"
-            aria-hidden
-          />
+        <div
+          className={cn(
+            clubEventPortalFieldClass,
+            "flex min-h-[44px] items-center gap-2.5 !px-3",
+          )}
+        >
+          <Search className="h-4 w-4 shrink-0 text-[#66638c]" aria-hidden />
           <input
             type="search"
-            className={cn(clubEventPortalFieldClass, "min-h-[44px] w-full pl-10")}
+            className="min-h-[40px] min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-semibold leading-none text-[#1e1b4b] outline-none ring-0 placeholder:text-slate-400 focus:outline-none focus:ring-0"
             placeholder="ค้นหาชื่อ · ชื่อเล่น · รหัสสมาชิก…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
