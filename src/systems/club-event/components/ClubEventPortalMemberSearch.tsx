@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Search } from "lucide-react";
+import { Check, Copy, Mail, MessageCircle, Phone, Search } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { ClubPortalPublicMember } from "@/systems/club-event/lib/portal-member-fields";
 import {
@@ -14,6 +14,110 @@ const GENDER_LABEL: Record<string, string> = {
   FEMALE: "หญิง",
   OTHER: "อื่นๆ",
 };
+
+function normalizeLineId(raw: string): string {
+  return raw
+    .trim()
+    .replace(/^line\s*[:：]\s*/i, "")
+    .replace(/^@+/, "")
+    .trim();
+}
+
+function MemberContactActions({
+  phone,
+  social,
+  email,
+}: {
+  phone?: string;
+  social?: string;
+  email?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const lineId = social ? normalizeLineId(social) : "";
+  const phoneDigits = phone ? phone.replace(/\D/g, "") : "";
+
+  const copyLine = useCallback(async () => {
+    if (!lineId) return;
+    try {
+      await navigator.clipboard.writeText(lineId.startsWith("@") ? lineId : `@${lineId}`);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      /* ignore */
+    }
+  }, [lineId]);
+
+  if (!phone && !social && !email) return null;
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {phoneDigits ? (
+        <a
+          href={`tel:${phoneDigits}`}
+          className={cn(
+            clubEventOutlineButtonClass,
+            "inline-flex min-h-9 items-center gap-1.5 px-3 text-xs font-bold",
+          )}
+          aria-label={`โทร ${phone}`}
+          title="โทร"
+        >
+          <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span>{phone}</span>
+        </a>
+      ) : null}
+
+      {lineId ? (
+        <>
+          <a
+            href={`https://line.me/ti/p/~${encodeURIComponent(lineId)}`}
+            target="_blank"
+            rel="noreferrer"
+            className={cn(
+              clubEventOutlineButtonClass,
+              "inline-flex min-h-9 items-center gap-1.5 px-3 text-xs font-bold text-[#06C755]",
+            )}
+            aria-label={`เปิด LINE ${lineId}`}
+            title="เปิด LINE"
+          >
+            <MessageCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span className="max-w-[10rem] truncate">LINE {lineId}</span>
+          </a>
+          <button
+            type="button"
+            className={cn(
+              clubEventOutlineButtonClass,
+              "inline-flex min-h-9 min-w-9 items-center justify-center px-2 text-xs font-bold",
+            )}
+            onClick={() => void copyLine()}
+            aria-label={copied ? "คัดลอก LINE แล้ว" : `คัดลอก LINE ${lineId}`}
+            title={copied ? "คัดลอกแล้ว" : "คัดลอก LINE"}
+          >
+            {copied ? (
+              <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden />
+            ) : (
+              <Copy className="h-3.5 w-3.5" aria-hidden />
+            )}
+          </button>
+        </>
+      ) : null}
+
+      {email ? (
+        <a
+          href={`mailto:${email}`}
+          className={cn(
+            clubEventOutlineButtonClass,
+            "inline-flex min-h-9 items-center gap-1.5 px-3 text-xs font-bold",
+          )}
+          aria-label={`อีเมล ${email}`}
+          title="ส่งอีเมล"
+        >
+          <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span className="max-w-[12rem] truncate">{email}</span>
+        </a>
+      ) : null}
+    </div>
+  );
+}
 
 export function ClubEventPortalMemberSearch({
   slug,
@@ -148,22 +252,7 @@ export function ClubEventPortalMemberSearch({
                     เพศ: {GENDER_LABEL[m.gender] ?? m.gender}
                   </p>
                 ) : null}
-                {m.email ? (
-                  <p className="text-sm font-semibold text-[#66638c]">
-                    <a className="text-[#4d47b6] hover:underline" href={`mailto:${m.email}`}>
-                      {m.email}
-                    </a>
-                  </p>
-                ) : null}
-                {m.social ? <p className="text-sm font-semibold text-[#66638c]">{m.social}</p> : null}
-                {m.phone ? (
-                  <a
-                    href={`tel:${m.phone.replace(/\D/g, "")}`}
-                    className={cn(clubEventOutlineButtonClass, "mt-1 inline-flex min-h-8 px-3 text-xs")}
-                  >
-                    {m.phone}
-                  </a>
-                ) : null}
+                <MemberContactActions phone={m.phone} social={m.social} email={m.email} />
               </div>
             </li>
           ))}
