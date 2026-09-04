@@ -11,6 +11,7 @@ import {
 } from "@/components/app-templates";
 import { ModulePublicLinkQrPanel } from "@/components/qr/module-public-link-qr-panel";
 import { cn } from "@/lib/cn";
+import { LMS_MODULE_SLUG } from "@/lib/modules/config";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
 import {
@@ -260,6 +261,7 @@ export function LmsSettingsClient({
               </p>
             </div>
             <ModulePublicLinkQrPanel
+              moduleSlug={LMS_MODULE_SLUG}
               pageUrl={portalAbsoluteUrl}
               shopLabel={form.displayName || "LMS"}
               logoUrl={form.logoUrl}

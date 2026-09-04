@@ -8,7 +8,9 @@ import { appTemplateOutlineButtonClass } from "@/components/app-templates";
 import { DrinkPosButton } from "@/systems/drink-pos/components/DrinkPosButton";
 import { DrinkPosLoyaltyBar } from "@/systems/drink-pos/components/DrinkPosLoyaltyBar";
 import { DrinkPosQrPosterClient } from "@/systems/drink-pos/components/DrinkPosQrPosterClient";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { ModuleStaffTokenQrPanel } from "@/components/qr/module-staff-token-qr-panel";
+import { DRINK_POS_MODULE_SLUG } from "@/lib/modules/config";
 import type { DrinkPosLoyaltyMemberDto } from "@/systems/drink-pos/lib/loyalty-rule";
 import { formatDrinkPosLoyaltyEarnRule } from "@/systems/drink-pos/lib/loyalty-rule";
 import {
@@ -322,15 +324,17 @@ export function DrinkPosLoyaltyHubClient({
         title="QR ลูกค้า"
         footer={<ModalCloseFooter onClose={() => setModal(null)} />}
       >
-        <DrinkPosQrPosterClient
-          ownerId={ownerId}
-          shopLabel={shopLabel}
-          logoUrl={logoUrl}
-          baseUrl={baseUrl}
-          trialSessionId={trialSessionId}
-          trialExportBlocked={trialExportBlocked}
-          compactForModal
-        />
+        <ModuleQrMonthlyGate moduleSlug={DRINK_POS_MODULE_SLUG}>
+          <DrinkPosQrPosterClient
+            ownerId={ownerId}
+            shopLabel={shopLabel}
+            logoUrl={logoUrl}
+            baseUrl={baseUrl}
+            trialSessionId={trialSessionId}
+            trialExportBlocked={trialExportBlocked}
+            compactForModal
+          />
+        </ModuleQrMonthlyGate>
       </FormModal>
 
       <FormModal
@@ -363,6 +367,7 @@ export function DrinkPosLoyaltyHubClient({
         footer={<ModalCloseFooter onClose={() => setModal(null)} />}
       >
         <ModuleStaffTokenQrPanel
+          moduleSlug={DRINK_POS_MODULE_SLUG}
           staffLinkApiPath="/api/drink-pos/session/staff-link"
           shopLabel={shopLabel}
           logoUrl={logoUrl}

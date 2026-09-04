@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { FormModal } from "@/components/ui/FormModal";
 import { appTemplateOutlineButtonClass } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { HOTEL_RESORT_MODULE_SLUG } from "@/lib/modules/config";
 import { HotelResortButton } from "@/systems/hotel-resort/components/HotelResortButton";
 import {
   hotelResortHubCardAmberClass,
@@ -52,6 +54,7 @@ export function HotelResortGuestPortalHubClient({
   const [modal, setModal] = useState<"qr" | "staff" | null>(null);
 
   return (
+    <ModuleQrMonthlyGate moduleSlug={HOTEL_RESORT_MODULE_SLUG}>
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <HotelResortButton
@@ -144,5 +147,6 @@ export function HotelResortGuestPortalHubClient({
         />
       </FormModal>
     </div>
+    </ModuleQrMonthlyGate>
   );
 }

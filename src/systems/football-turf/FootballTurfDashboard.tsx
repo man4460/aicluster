@@ -143,6 +143,8 @@ import {
 } from "@/systems/football-turf/football-turf-module-nav";
 import { ModuleStaffTokenQrPanel } from "@/components/qr/module-staff-token-qr-panel";
 import { ModulePublicLinkQrPanel } from "@/components/qr/module-public-link-qr-panel";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
+import { FOOTBALL_TURF_MODULE_SLUG } from "@/lib/modules/config";
 import {
   readStoredStaffDailyUnlock,
   staffDailyUnlockHeaders,
@@ -7310,6 +7312,7 @@ export function FootballTurfDashboard({
             ) : null}
             {settingsMenu === "link" ? (
               <div id="ft-settings-panel-link" role="tabpanel" aria-labelledby="ft-settings-tab-link" className="space-y-4">
+                <ModuleQrMonthlyGate moduleSlug={FOOTBALL_TURF_MODULE_SLUG}>
                 <div className="min-w-0 space-y-4 sm:space-y-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
             <button
@@ -7372,6 +7375,8 @@ export function FootballTurfDashboard({
             }
           >
             <ModulePublicLinkQrPanel
+              moduleSlug={FOOTBALL_TURF_MODULE_SLUG}
+              planGateAllowed
               pageUrl={publicBookUrl}
               shopLabel={settings.venueName || "สนามฟุตบอล"}
               logoUrl={settings.logoUrl || null}
@@ -7405,6 +7410,8 @@ export function FootballTurfDashboard({
             }
           >
             <ModuleStaffTokenQrPanel
+              moduleSlug={FOOTBALL_TURF_MODULE_SLUG}
+              planGateAllowed
               staffLinkApiPath="/api/football-turf/session/staff-link"
               shopLabel={settings.venueName || "สนามฟุตบอล"}
               logoUrl={settings.logoUrl || null}
@@ -7414,6 +7421,7 @@ export function FootballTurfDashboard({
             />
           </FormModal>
         </div>
+                </ModuleQrMonthlyGate>
               </div>
             ) : null}
 

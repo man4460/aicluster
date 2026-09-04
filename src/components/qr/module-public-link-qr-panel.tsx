@@ -9,9 +9,14 @@ import {
   downloadPosterPng,
   resolveAssetUrl,
 } from "@/components/qr/shop-qr-template";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { ShopStaffQrPanel } from "@/components/qr/shop-staff-qr-panel";
 
 type Props = {
+  /** slug โมดูล — สายรายวันจะล็อกแผง + ปุ่มอัปเกรด */
+  moduleSlug: string;
+  /** พ่อห่อ ModuleQrMonthlyGate แล้ว — ไม่ต้องตรวจซ้ำ */
+  planGateAllowed?: boolean;
   pageUrl: string;
   shopLabel: string;
   logoUrl?: string | null;
@@ -26,11 +31,25 @@ type Props = {
   downloadFilePrefix?: string;
 };
 
+type InnerProps = Omit<Props, "moduleSlug" | "planGateAllowed">;
+
 /**
  * แผง QR ลิงก์สาธารณะ (ลูกค้า) — UX เดียวกับ ModuleStaffTokenQrPanel / ShopStaffQrPanel
- * ใช้ URL คงที่ ไม่ต้องสร้างโทเค็น
+ * ใช้ URL คงที่ ไม่ต้องสร้างโทเค็น · สายรายวันล็อก (ยกเว้นโมดูลฟรี)
  */
-export function ModulePublicLinkQrPanel({
+export function ModulePublicLinkQrPanel({ moduleSlug, planGateAllowed, ...rest }: Props) {
+  return (
+    <ModuleQrMonthlyGate
+      moduleSlug={moduleSlug}
+      allowed={planGateAllowed}
+      title="ลิงก์ / QR ลูกค้า"
+    >
+      <ModulePublicLinkQrPanelInner {...rest} />
+    </ModuleQrMonthlyGate>
+  );
+}
+
+function ModulePublicLinkQrPanelInner({
   pageUrl,
   shopLabel,
   logoUrl = null,
@@ -43,7 +62,7 @@ export function ModulePublicLinkQrPanel({
   qrAlt = "QR ลิงก์ลูกค้า",
   posterAlt = "โปสเตอร์ QR ลิงก์ลูกค้า",
   downloadFilePrefix = "customer-qr",
-}: Props) {
+}: InnerProps) {
   const url = pageUrl.trim();
   const [qrPng, setQrPng] = useState<string | null>(null);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);

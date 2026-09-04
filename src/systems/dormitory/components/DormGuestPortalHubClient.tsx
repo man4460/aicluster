@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { FormModal } from "@/components/ui/FormModal";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { ModuleStaffTokenQrPanel } from "@/components/qr/module-staff-token-qr-panel";
+import { DORMITORY_MODULE_SLUG } from "@/lib/modules/config";
 import { DormQrPosterClient } from "@/systems/dormitory/components/DormQrPosterClient";
 import { DormPortalMediaSettings } from "@/systems/dormitory/components/DormPortalMediaSettings";
 import { dormBtnPrimary, dormBtnSecondary } from "@/systems/dormitory/dorm-ui";
@@ -92,6 +94,7 @@ export function DormGuestPortalHubClient({
 
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
+      <ModuleQrMonthlyGate moduleSlug={DORMITORY_MODULE_SLUG}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <button type="button" onClick={() => setModal("qr")} className={dormHubCardVioletClass}>
           <div className="flex items-start gap-3">
@@ -161,6 +164,8 @@ export function DormGuestPortalHubClient({
         footer={<ModalCloseFooter onClose={() => setModal(null)} />}
       >
         <ModuleStaffTokenQrPanel
+          moduleSlug={DORMITORY_MODULE_SLUG}
+          planGateAllowed
           staffLinkApiPath="/api/dorm/session/staff-link"
           shopLabel={dormLabel}
           logoUrl={logoUrl}
@@ -170,6 +175,7 @@ export function DormGuestPortalHubClient({
           openPrimaryLabel="เปิดหน้าพนักงาน"
         />
       </FormModal>
+      </ModuleQrMonthlyGate>
 
       {!embedded ? (
       <div className="rounded-[2rem] border border-white/60 bg-white/55 p-4 backdrop-blur-sm sm:p-5">

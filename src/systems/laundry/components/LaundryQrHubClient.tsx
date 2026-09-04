@@ -9,9 +9,11 @@ import {
   downloadPosterPng,
   resolveAssetUrl,
 } from "@/components/qr/shop-qr-template";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { ShopStaffQrPanel } from "@/components/qr/shop-staff-qr-panel";
 import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import { LAUNDRY_MODULE_SLUG } from "@/lib/modules/config";
 import {
   laundryCompactOutlineButtonClass,
   laundryDashboardSegmentBtnClass,
@@ -450,6 +452,7 @@ export function LaundryQrHubClient({
   }
 
   return (
+    <ModuleQrMonthlyGate moduleSlug={LAUNDRY_MODULE_SLUG}>
     <div className="min-w-0 space-y-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
         <button
@@ -614,5 +617,6 @@ export function LaundryQrHubClient({
         />
       </FormModal>
     </div>
+    </ModuleQrMonthlyGate>
   );
 }

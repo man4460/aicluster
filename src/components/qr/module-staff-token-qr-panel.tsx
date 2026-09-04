@@ -9,10 +9,15 @@ import {
   downloadPosterPng,
   resolveAssetUrl,
 } from "@/components/qr/shop-qr-template";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { ShopStaffQrPanel } from "@/components/qr/shop-staff-qr-panel";
 import { cn } from "@/lib/cn";
 
 type Props = {
+  /** slug โมดูล — สายรายวันจะล็อกแผง + ปุ่มอัปเกรด */
+  moduleSlug: string;
+  /** พ่อห่อ ModuleQrMonthlyGate แล้ว — ไม่ต้องตรวจซ้ำ */
+  planGateAllowed?: boolean;
   /** เช่น `/api/drink-pos/session/staff-link` */
   staffLinkApiPath: string;
   shopLabel: string;
@@ -25,10 +30,25 @@ type Props = {
   posterTintClass?: string;
 };
 
+type InnerProps = Omit<Props, "moduleSlug" | "planGateAllowed">;
+
 /**
  * แผงสร้าง/แสดง QR พนักงานแบบโทเค็น (เหมือนร้านอาหาร) — ใช้ ShopStaffQrPanel
+ * สายรายวันล็อก (ยกเว้นโมดูลฟรี)
  */
-export function ModuleStaffTokenQrPanel({
+export function ModuleStaffTokenQrPanel({ moduleSlug, planGateAllowed, ...rest }: Props) {
+  return (
+    <ModuleQrMonthlyGate
+      moduleSlug={moduleSlug}
+      allowed={planGateAllowed}
+      title="ลิงก์ / QR พนักงาน"
+    >
+      <ModuleStaffTokenQrPanelInner {...rest} />
+    </ModuleQrMonthlyGate>
+  );
+}
+
+function ModuleStaffTokenQrPanelInner({
   staffLinkApiPath,
   shopLabel,
   logoUrl = null,
@@ -38,7 +58,7 @@ export function ModuleStaffTokenQrPanel({
   openPrimaryLabel = "เปิดหน้าพนักงาน",
   openSecondaryLabel = "เปิดหน้า",
   posterTintClass = "shadow-amber-950/10",
-}: Props) {
+}: InnerProps) {
   const [configured, setConfigured] = useState(false);
   const [pageUrl, setPageUrl] = useState("");
   const [qrPng, setQrPng] = useState<string | null>(null);
@@ -52,7 +72,10 @@ export function ModuleStaffTokenQrPanel({
   const [qrSize, setQrSize] = useState(240);
 
   const headline = shopLabel.trim() || "ร้าน";
-  const resolvedLogo = useMemo(() => resolveAssetUrl(logoUrl, typeof window !== "undefined" ? window.location.origin : ""), [logoUrl]);
+  const resolvedLogo = useMemo(
+    () => resolveAssetUrl(logoUrl, typeof window !== "undefined" ? window.location.origin : ""),
+    [logoUrl],
+  );
 
   const load = useCallback(async () => {
     const r = await fetch(staffLinkApiPath, { credentials: "include" });

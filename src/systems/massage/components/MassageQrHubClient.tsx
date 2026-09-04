@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { cn } from "@/lib/cn";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { FormModal } from "@/components/ui/FormModal";
+import { cn } from "@/lib/cn";
+import { MASSAGE_MODULE_SLUG } from "@/lib/modules/config";
 import { MassageQrPosterClient } from "@/systems/massage/components/MassageQrPosterClient";
 import { MassageStaffQrDashboardSection } from "@/systems/massage/components/MassageStaffQrDashboardSection";
 
@@ -48,6 +50,7 @@ export function MassageQrHubClient({
   const [showStaffQrModal, setShowStaffQrModal] = useState(false);
 
   return (
+    <ModuleQrMonthlyGate moduleSlug={MASSAGE_MODULE_SLUG}>
     <div className="min-w-0 space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <button
@@ -209,5 +212,6 @@ export function MassageQrHubClient({
         />
       </FormModal>
     </div>
+    </ModuleQrMonthlyGate>
   );
 }

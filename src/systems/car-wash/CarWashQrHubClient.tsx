@@ -13,9 +13,11 @@ import {
   downloadPosterPng,
   resolveAssetUrl,
 } from "@/components/qr/shop-qr-template";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { ModuleStaffTokenQrPanel } from "@/components/qr/module-staff-token-qr-panel";
 import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
+import { CAR_WASH_MODULE_SLUG } from "@/lib/modules/config";
 
 const CAR_WASH_CUSTOMER_QR_TAGLINE = "สแกน จองคิว · เลือกแพ็ก · ใช้แพ็กเหมาได้เอง";
 
@@ -374,6 +376,8 @@ export function CarWashQrHubClient({
         }
       >
         <ModuleStaffTokenQrPanel
+          moduleSlug={CAR_WASH_MODULE_SLUG}
+          planGateAllowed
           staffLinkApiPath="/api/car-wash/session/staff-link"
           shopLabel={shopLabel.trim() || "คาร์แคร์"}
           logoUrl={resolvedLogoUrl}
@@ -386,13 +390,19 @@ export function CarWashQrHubClient({
   );
 
   if (embedded) {
-    return <div className="min-w-0 space-y-4">{hubBody}</div>;
+    return (
+      <ModuleQrMonthlyGate moduleSlug={CAR_WASH_MODULE_SLUG}>
+        <div className="min-w-0 space-y-4">{hubBody}</div>
+      </ModuleQrMonthlyGate>
+    );
   }
 
   return (
-    <AppDashboardSection tone="violet">
-      <AppSectionHeader tone="violet" title="ลิงก์ QR" />
-      {hubBody}
-    </AppDashboardSection>
+    <ModuleQrMonthlyGate moduleSlug={CAR_WASH_MODULE_SLUG}>
+      <AppDashboardSection tone="violet">
+        <AppSectionHeader tone="violet" title="ลิงก์ QR" />
+        {hubBody}
+      </AppDashboardSection>
+    </ModuleQrMonthlyGate>
   );
 }

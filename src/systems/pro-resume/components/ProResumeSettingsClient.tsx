@@ -179,6 +179,7 @@ export function ProResumeSettingsClient({
 
           {canShare ? (
             <ModulePublicLinkQrPanel
+              moduleSlug={PRO_RESUME_MODULE_SLUG}
               pageUrl={publicAbsoluteUrl}
               shopLabel={form.fullName || "Resume"}
               logoUrl={form.profileImageUrl}

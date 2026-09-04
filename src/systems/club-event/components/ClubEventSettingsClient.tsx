@@ -11,6 +11,7 @@ import {
 } from "@/components/app-templates";
 import { ModulePublicLinkQrPanel } from "@/components/qr/module-public-link-qr-panel";
 import { cn } from "@/lib/cn";
+import { CLUB_EVENT_MODULE_SLUG } from "@/lib/modules/config";
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
 import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import {
@@ -327,6 +328,7 @@ export function ClubEventSettingsClient({
               </p>
             </div>
             <ModulePublicLinkQrPanel
+              moduleSlug={CLUB_EVENT_MODULE_SLUG}
               pageUrl={portalAbsoluteUrl}
               shopLabel={form.displayName || "ชมรม"}
               logoUrl={form.logoUrl}

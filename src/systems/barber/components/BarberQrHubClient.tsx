@@ -5,8 +5,10 @@ import {
   AppDashboardSection,
   AppSectionHeader,
 } from "@/components/app-templates";
-import { cn } from "@/lib/cn";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { FormModal } from "@/components/ui/FormModal";
+import { cn } from "@/lib/cn";
+import { BARBER_MODULE_SLUG } from "@/lib/modules/config";
 import { BarberQrPosterClient } from "@/systems/barber/components/BarberQrPosterClient";
 import { BarberStaffQrDashboardSection } from "@/systems/barber/components/BarberStaffQrDashboardSection";
 import {
@@ -225,13 +227,19 @@ export function BarberQrHubClient({
   );
 
   if (embedded) {
-    return <div className="min-w-0">{hubBody}</div>;
+    return (
+      <ModuleQrMonthlyGate moduleSlug={BARBER_MODULE_SLUG}>
+        <div className="min-w-0">{hubBody}</div>
+      </ModuleQrMonthlyGate>
+    );
   }
 
   return (
-    <AppDashboardSection tone="violet">
-      <AppSectionHeader tone="violet" title="ลิงก์" />
-      {hubBody}
-    </AppDashboardSection>
+    <ModuleQrMonthlyGate moduleSlug={BARBER_MODULE_SLUG}>
+      <AppDashboardSection tone="violet">
+        <AppSectionHeader tone="violet" title="ลิงก์" />
+        {hubBody}
+      </AppDashboardSection>
+    </ModuleQrMonthlyGate>
   );
 }

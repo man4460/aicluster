@@ -6,7 +6,9 @@ import {
   AppDashboardSection,
   AppSectionHeader,
 } from "@/components/app-templates";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { cn } from "@/lib/cn";
+import { ATTENDANCE_MODULE_SLUG } from "@/lib/modules/config";
 import { AttendanceQrPosterClient } from "@/systems/attendance/components/AttendanceQrPosterClient";
 import {
   attendanceMobileSelectClass,
@@ -259,16 +261,18 @@ function AttendanceQrClientInner({
       </p>
 
       <div className="mt-4 rounded-[1.25rem] border border-white/60 bg-white/55 p-3 sm:p-4" role="tabpanel">
-        <AttendanceQrPosterClient
-          ownerId={ownerId}
-          sandboxTrialSessionId={sandboxTrialSessionId}
-          orgLabel={orgLabel}
-          logoUrl={logoUrl}
-          baseUrl={baseUrl}
-          locationId={loc.id}
-          locationName={loc.name}
-          faceKiosk={mode === "face"}
-        />
+        <ModuleQrMonthlyGate moduleSlug={ATTENDANCE_MODULE_SLUG}>
+          <AttendanceQrPosterClient
+            ownerId={ownerId}
+            sandboxTrialSessionId={sandboxTrialSessionId}
+            orgLabel={orgLabel}
+            logoUrl={logoUrl}
+            baseUrl={baseUrl}
+            locationId={loc.id}
+            locationName={loc.name}
+            faceKiosk={mode === "face"}
+          />
+        </ModuleQrMonthlyGate>
       </div>
     </AppDashboardSection>
   );

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
 import { AppEmptyState, AppImageLightbox, appTemplateOutlineButtonClass, printDataUrlImagePoster, useAppImageLightbox, useAppNoticePopup } from "@/components/app-templates";
 import { ModuleMonthlyUpgradeCta } from "@/components/dashboard/ModuleMonthlyUpgradeCta";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { cn } from "@/lib/cn";
 import { BUILDING_POS_MODULE_SLUG } from "@/lib/modules/config";
 import {
@@ -1170,6 +1171,7 @@ export function BuildingPosDashboardClient({
       ) : null}
 
       {linkOnly ? (
+        <ModuleQrMonthlyGate moduleSlug={BUILDING_POS_MODULE_SLUG}>
         <div className="space-y-4">
           <section className={buildingPosQrHubOuterClass}>
             <div className="border-b border-white/50 bg-gradient-to-r from-[#4d47b6]/[0.08] via-transparent to-[#0d9488]/[0.06] px-4 py-4 sm:px-6 sm:py-5">
@@ -1640,6 +1642,7 @@ export function BuildingPosDashboardClient({
             ) : null}
           </FormModal>
         </div>
+        </ModuleQrMonthlyGate>
       ) : null}
 
       {!linkOnly && nav.main === "finance" ? (
