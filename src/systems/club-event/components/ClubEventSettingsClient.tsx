@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Copy, ExternalLink } from "lucide-react";
 import {
   AppModuleShopPaymentFields,
   AppShopLogoField,
@@ -10,8 +9,10 @@ import {
   useAppNoticePopup,
   type AppSlipPaperSize,
 } from "@/components/app-templates";
+import { ModulePublicLinkQrPanel } from "@/components/qr/module-public-link-qr-panel";
 import { cn } from "@/lib/cn";
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
+import { TRIAL_PROD_SCOPE } from "@/lib/trial/constants";
 import {
   CLUB_EVENT_SETTINGS_TAB_ITEMS,
   clubEventSettingsHref,
@@ -48,53 +49,16 @@ const labelTextClass = "text-xs font-bold text-[#4d47b6]";
 
 function absoluteUrl(path: string): string {
   if (typeof window === "undefined") return path;
-  return `${window.location.origin}${path}`;
+  return `${window.location.origin}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-function ClubEventPortalLinkPanel({
-  portalPath,
-  onCopied,
-  onCopyFailed,
+export function ClubEventSettingsClient({
+  initialProfile,
+  trialSessionId = TRIAL_PROD_SCOPE,
 }: {
-  portalPath: string;
-  onCopied: () => void;
-  onCopyFailed: () => void;
+  initialProfile: ClubEventProfileDto;
+  trialSessionId?: string;
 }) {
-  return (
-    <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
-      <p className="text-xs font-black text-[#4d47b6]">ลิงก์เว็บชมรมสาธารณะ</p>
-      <p className="break-all text-sm font-semibold text-[#1e1b4b]">{portalPath}</p>
-      <div className="flex flex-wrap gap-2">
-        <a
-          href={portalPath}
-          target="_blank"
-          rel="noreferrer"
-          className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
-        >
-          <ExternalLink className="h-4 w-4" aria-hidden />
-          เปิดเว็บ
-        </a>
-        <button
-          type="button"
-          className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(absoluteUrl(portalPath));
-              onCopied();
-            } catch {
-              onCopyFailed();
-            }
-          }}
-        >
-          <Copy className="h-4 w-4" aria-hidden />
-          คัดลอก
-        </button>
-      </div>
-    </div>
-  );
-}
-
-export function ClubEventSettingsClient({ initialProfile }: { initialProfile: ClubEventProfileDto }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = parseClubEventSettingsTab(searchParams.get("tab"));
@@ -165,6 +129,7 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
   };
 
   const portalPath = form.publicUrl || `/club/${form.slug}`;
+  const portalAbsoluteUrl = useMemo(() => absoluteUrl(portalPath), [portalPath]);
 
   return (
     <>
@@ -354,10 +319,25 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
 
         {tab === "portal" ? (
           <div id="club-event-settings-panel-portal" role="tabpanel" className="space-y-4">
-            <ClubEventPortalLinkPanel
-              portalPath={portalPath}
-              onCopied={() => notice.success("คัดลอกลิงก์แล้ว")}
-              onCopyFailed={() => notice.error("คัดลอกไม่สำเร็จ")}
+            <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
+              <p className="text-xs font-black text-[#4d47b6]">ลิงก์เว็บชมรมสาธารณะ</p>
+              <p className="break-all text-sm font-semibold text-[#1e1b4b]">{portalPath}</p>
+              <p className="text-xs text-[#66638c]">
+                พอร์ทัลชมรมอยู่ที่ /club/{form.slug} — สร้าง QR ด้านล่างเพื่อพิมพ์หรือแชร์
+              </p>
+            </div>
+            <ModulePublicLinkQrPanel
+              pageUrl={portalAbsoluteUrl}
+              shopLabel={form.displayName || "ชมรม"}
+              logoUrl={form.logoUrl}
+              trialExportBlocked={trialSessionId !== TRIAL_PROD_SCOPE}
+              tagline="สแกนเพื่อเข้าเว็บชมรม / ดูกิจกรรม"
+              mobileBannerText="สแกน QR หรือเปิดลิงก์เพื่อเข้าเว็บชมรม"
+              openPrimaryLabel="เปิดเว็บชมรม"
+              openSecondaryLabel="เปิดเว็บ"
+              qrAlt="QR เว็บชมรมสาธารณะ"
+              posterAlt="โปสเตอร์ QR เว็บชมรม"
+              downloadFilePrefix={`club-portal-${form.slug || "portal"}`}
             />
             <p className="text-xs font-semibold text-[#66638c]">
               ลิงก์ RSVP / สำรวจ / เก็บค่า — สร้างและจัดการจากหน้ากำหนดการของแต่ละกิจกรรม

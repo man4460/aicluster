@@ -14,5 +14,8 @@ export async function loadClubEventPage() {
   const ownerId = billing?.billingUserId ?? session.sub;
   const scope = await getClubEventDataScope(ownerId);
   const profile = await ensureClubEventProfile(prisma, ownerId, scope.trialSessionId);
-  return { profile: mapClubEventProfile(profile) };
+  return {
+    profile: mapClubEventProfile(profile),
+    trialSessionId: scope.trialSessionId,
+  };
 }
