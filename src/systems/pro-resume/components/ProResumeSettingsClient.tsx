@@ -140,6 +140,18 @@ export function ProResumeSettingsClient({
             </span>
           </label>
 
+          {!monthlyOk ? (
+            <ModuleMonthlyUpgradeCta
+              moduleSlug={PRO_RESUME_MODULE_SLUG}
+              benefit="แพ็กฟรี — เปิดตัวอย่าง / แชร์ลิงก์ / QR ต้องอัปเกรดรายเดือน"
+              onUpgraded={() => {
+                setMonthlyOk(true);
+                setPremiumModalOpen(false);
+                router.refresh();
+              }}
+            />
+          ) : null}
+
           <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
             <p className="text-xs font-black text-[#4d47b6]">ตัวอย่าง / แชร์ลิงก์</p>
             <p className="break-all text-sm font-semibold text-[#1e1b4b]">{form.publicUrl}</p>
@@ -161,22 +173,15 @@ export function ProResumeSettingsClient({
                 คัดลอกลิงก์
               </button>
             </div>
-            {!monthlyOk ? (
-              <ModuleMonthlyUpgradeCta
-                moduleSlug={PRO_RESUME_MODULE_SLUG}
-                benefit="แพ็กฟรี — เปิดตัวอย่าง / แชร์ลิงก์ / QR ต้องอัปเกรดรายเดือน"
-                onUpgraded={() => {
-                  setMonthlyOk(true);
-                  setPremiumModalOpen(false);
-                  router.refresh();
-                }}
-              />
+            {!canShare ? (
+              <p className="text-xs font-semibold text-[#66638c]">ใช้ปุ่มอัปเกรดด้านบนเพื่อเปิดตัวอย่างและแชร์ลิงก์</p>
             ) : null}
           </div>
 
           {canShare ? (
             <ModulePublicLinkQrPanel
               moduleSlug={PRO_RESUME_MODULE_SLUG}
+              planGateAllowed
               pageUrl={publicAbsoluteUrl}
               shopLabel={form.fullName || "Resume"}
               logoUrl={form.profileImageUrl}
@@ -190,17 +195,9 @@ export function ProResumeSettingsClient({
               downloadFilePrefix={`resume-${form.slug || "portal"}`}
             />
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1 rounded-xl border border-dashed border-slate-300 bg-slate-50/90 p-4">
               <p className="text-sm font-bold text-[#1e1b4b]">QR / โปสเตอร์แชร์</p>
-              <ModuleMonthlyUpgradeCta
-                moduleSlug={PRO_RESUME_MODULE_SLUG}
-                benefit="แพ็กฟรี — เปิดตัวอย่าง / แชร์ลิงก์ / QR ต้องอัปเกรดรายเดือน"
-                onUpgraded={() => {
-                  setMonthlyOk(true);
-                  setPremiumModalOpen(false);
-                  router.refresh();
-                }}
-              />
+              <p className="text-xs font-semibold text-[#66638c]">ใช้ปุ่มอัปเกรดด้านบนเพื่อเปิด QR และโปสเตอร์</p>
             </div>
           )}
         </div>
@@ -209,7 +206,7 @@ export function ProResumeSettingsClient({
       <FormModal
         open={premiumModalOpen}
         onClose={() => setPremiumModalOpen(false)}
-        title="อัปเกรดแพ็กรายเดือน"
+        title="ต้องอัปเกรดแพ็กรายเดือน"
         size="sm"
         footer={
           <FormModalFooterActions
@@ -220,15 +217,9 @@ export function ProResumeSettingsClient({
           />
         }
       >
-        <ModuleMonthlyUpgradeCta
-          moduleSlug={PRO_RESUME_MODULE_SLUG}
-          benefit="แพ็กฟรี — เปิดตัวอย่าง / แชร์ลิงก์ / QR ต้องอัปเกรดรายเดือน"
-          onUpgraded={() => {
-            setMonthlyOk(true);
-            setPremiumModalOpen(false);
-            router.refresh();
-          }}
-        />
+        <p className="text-sm font-semibold leading-relaxed text-[#1e1b4b]">
+          เปิดตัวอย่าง · แชร์ลิงก์ · QR ใช้ได้เฉพาะแพ็กรายเดือน — ปิดหน้าต่างนี้แล้วกดปุ่มอัปเกรดบนหน้าตั้งค่า
+        </p>
       </FormModal>
     </>
   );

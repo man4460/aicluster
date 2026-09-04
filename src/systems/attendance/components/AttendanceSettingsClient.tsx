@@ -408,11 +408,15 @@ function AttendanceSettingsClientInner() {
             {msg}
           </p>
         ) : null}
-        {overLocationQuota && tab === "locations" ? (
+        {tab === "locations" && maxLoc != null && !canAddLocation ? (
           <div className="mt-3">
             <ModuleMonthlyUpgradeCta
               moduleSlug={ATTENDANCE_MODULE_SLUG}
-              benefit={`มีจุดเช็ค ${locCount} จุด แต่แพ็กปัจจุบันรองรับได้ ${maxLoc} จุด — อัปเกรดแพ็กรายเดือนเพื่อเพิ่มโควต้า (หรือลบจุดที่ไม่ใช้)`}
+              benefit={
+                overLocationQuota
+                  ? `มีจุดเช็ค ${locCount} จุด แต่แพ็กปัจจุบันรองรับได้ ${maxLoc} จุด — อัปเกรดแพ็กรายเดือนเพื่อเพิ่มโควต้า (หรือลบจุดที่ไม่ใช้)`
+                  : `ใช้ครบโควต้าจุดเช็คแล้ว (${locCount}/${maxLocLabel}) — อัปเกรดแพ็กรายเดือนเพื่อเพิ่มจุด`
+              }
               onUpgraded={() => void load()}
             />
           </div>
@@ -836,12 +840,10 @@ function AttendanceSettingsClientInner() {
                     </button>
                   </div>
                 ) : maxLoc != null ? (
-                  <div className="w-full min-w-0 basis-full">
-                    <ModuleMonthlyUpgradeCta
-                      moduleSlug={ATTENDANCE_MODULE_SLUG}
-                      benefit={`ใช้ครบโควต้าจุดเช็คแล้ว (${locCount}/${maxLocLabel}) — อัปเกรดแพ็กรายเดือนเพื่อเพิ่มจุด`}
-                      onUpgraded={() => void load()}
-                    />
+                  <div className={cn(attendanceAddLocationDashedClass, "flex-1 min-w-[200px]")}>
+                    <p className="px-2 text-center text-sm font-semibold text-[#66638c]">
+                      โควตาจุดเช็คเต็มแล้ว ({locCount}/{maxLocLabel}) — ใช้ปุ่มอัปเกรดด้านบน
+                    </p>
                   </div>
                 ) : null}
 
