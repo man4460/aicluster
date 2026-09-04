@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { RefreshCw } from "lucide-react";
+import { BookOpen, GraduationCap, RefreshCw, Scale, Users } from "lucide-react";
 import {
   AppColumnBarSparkChart,
   useAppNoticePopup,
@@ -34,6 +34,43 @@ type Stats = {
   expense: number;
   balance: number;
 };
+
+const STAT_ACCENTS = {
+  sky: "border-l-sky-500 text-sky-800",
+  violet: "border-l-violet-500 text-violet-800",
+  emerald: "border-l-emerald-500 text-emerald-800",
+  slate: "border-l-slate-400 text-slate-700",
+  rose: "border-l-rose-500 text-rose-800",
+} as const;
+
+function LmsStatCard({
+  title,
+  hint,
+  value,
+  tone,
+  icon,
+  valueClassName,
+}: {
+  title: string;
+  hint?: string;
+  value: string;
+  tone: keyof typeof STAT_ACCENTS;
+  icon: ReactNode;
+  valueClassName?: string;
+}) {
+  return (
+    <div className={cn(lmsStatInlineClass, "border-l-[3px]", STAT_ACCENTS[tone])}>
+      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide opacity-80">
+        <span className="text-current" aria-hidden>
+          {icon}
+        </span>
+        {title}
+      </div>
+      <p className={cn("text-lg font-black tabular-nums sm:text-xl", valueClassName)}>{value}</p>
+      {hint ? <p className="text-[10px] font-semibold leading-tight text-[#66638c]/90">{hint}</p> : null}
+    </div>
+  );
+}
 
 export function LmsDashboardClient({ initialProfile }: { initialProfile: LmsProfileDto }) {
   const router = useRouter();
@@ -133,31 +170,45 @@ export function LmsDashboardClient({ initialProfile }: { initialProfile: LmsProf
           </div>
         ) : (
           <>
-            <div className={cn(lmsDashboardStatsGridClass, "mb-4")}>
-              <div className={lmsStatInlineClass}>
-                <p className="text-[10px] font-bold uppercase tracking-wide text-[#66638c]">คอร์ส</p>
-                <p className="text-xl font-black tabular-nums text-[#1e1b4b]">{s.courseCount}</p>
-              </div>
-              <div className={lmsStatInlineClass}>
-                <p className="text-[10px] font-bold uppercase tracking-wide text-[#66638c]">นักเรียน</p>
-                <p className="text-xl font-black tabular-nums text-[#1e1b4b]">{s.learnerCount}</p>
-              </div>
-              <div className={lmsStatInlineClass}>
-                <p className="text-[10px] font-bold uppercase tracking-wide text-[#66638c]">อัตราจบคอร์ส</p>
-                <p className="text-xl font-black tabular-nums text-emerald-700">{s.completionRate}%</p>
-              </div>
-              <div className={lmsStatInlineClass}>
-                <p className="text-[10px] font-bold uppercase tracking-wide text-[#66638c]">คงเหลือ</p>
-                <p
-                  className={cn(
-                    "text-xl font-black tabular-nums",
-                    s.balance >= 0 ? "text-[#1e1b4b]" : "text-rose-800",
-                  )}
-                >
-                  ฿{s.balance.toLocaleString()}
-                </p>
-              </div>
-            </div>
+            <ul className={cn(lmsDashboardStatsGridClass, "mb-4")} aria-label="สรุปสถาบัน">
+              <li>
+                <LmsStatCard
+                  title="คอร์ส"
+                  value={s.courseCount.toLocaleString("th-TH")}
+                  tone="sky"
+                  icon={<BookOpen className="h-3.5 w-3.5" />}
+                  valueClassName="text-[#1e1b4b]"
+                />
+              </li>
+              <li>
+                <LmsStatCard
+                  title="ผู้เรียน"
+                  value={s.learnerCount.toLocaleString("th-TH")}
+                  tone="violet"
+                  icon={<Users className="h-3.5 w-3.5" />}
+                  valueClassName="text-[#1e1b4b]"
+                />
+              </li>
+              <li>
+                <LmsStatCard
+                  title="อัตราจบคอร์ส"
+                  value={`${s.completionRate}%`}
+                  tone="emerald"
+                  icon={<GraduationCap className="h-3.5 w-3.5" />}
+                  valueClassName="text-emerald-700"
+                />
+              </li>
+              <li>
+                <LmsStatCard
+                  title="ยอดคงเหลือ"
+                  hint={`รายรับ ฿${s.income.toLocaleString("th-TH")} − รายจ่าย ฿${s.expense.toLocaleString("th-TH")}`}
+                  value={`฿${s.balance.toLocaleString("th-TH")}`}
+                  tone={s.balance >= 0 ? "slate" : "rose"}
+                  icon={<Scale className="h-3.5 w-3.5" />}
+                  valueClassName={s.balance >= 0 ? "text-[#1e1b4b]" : "text-rose-800"}
+                />
+              </li>
+            </ul>
 
             <div className="mb-4 space-y-3">
               <LmsPurchasesPanel
