@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
-import { ArrowLeft, Package, QrCode, Search, UserRound } from "lucide-react";
+import { ArrowLeft, Download, Package, QrCode, Search, UserRound } from "lucide-react";
 import {
   AppEmptyState,
   AppSignaturePad,
@@ -164,6 +164,19 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
 
   const closeManage = () => {
     setManageOpen(false);
+  };
+
+  const downloadQrPng = () => {
+    if (!qrDataUrl || !data?.event.title) {
+      notice.error("ยังไม่มี QR ให้ดาวน์โหลด");
+      return;
+    }
+    const safe = data.event.title.replace(/[^\w\u0E00-\u0E7F-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") || "check-in";
+    const link = document.createElement("a");
+    link.href = qrDataUrl;
+    link.download = `club-event-check-in-${safe}.png`;
+    link.click();
+    notice.success("ดาวน์โหลด QR แล้ว");
   };
 
   const toggleFilter = (key: DeskFilter) => {
@@ -722,6 +735,15 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
           )}
           <p className="break-all text-[11px] font-semibold text-[#8b87b8]">{publicUrl}</p>
           <div className="flex flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              className={clubEventPrimaryButtonClass}
+              disabled={!qrDataUrl}
+              onClick={downloadQrPng}
+            >
+              <Download className="h-3.5 w-3.5" aria-hidden />
+              ดาวน์โหลด
+            </button>
             <button
               type="button"
               className={clubEventOutlineButtonClass}
