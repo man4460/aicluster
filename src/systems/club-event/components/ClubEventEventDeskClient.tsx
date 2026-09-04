@@ -10,6 +10,7 @@ import {
   type AppSignaturePadHandle,
   useAppNoticePopup,
 } from "@/components/app-templates";
+import { FormModal } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { formatBangkokDateTimeLong } from "@/lib/time/bangkok";
 import {
@@ -107,7 +108,8 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
   const [walkName, setWalkName] = useState("");
   const [walkPhone, setWalkPhone] = useState("");
   const [filter, setFilter] = useState<DeskFilter>("all");
-  const manageRef = useRef<HTMLDivElement>(null);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
 
   const load = useCallback(
     async (query = q, opts?: { silent?: boolean }) => {
@@ -156,9 +158,11 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
 
   const openManage = (c: ClubEventCheckInDto) => {
     setSelected(c);
-    window.requestAnimationFrame(() => {
-      manageRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    });
+    setManageOpen(true);
+  };
+
+  const closeManage = () => {
+    setManageOpen(false);
   };
 
   const toggleFilter = (key: DeskFilter) => {
@@ -319,6 +323,19 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
             </Link>
             <button
               type="button"
+              className={cn(
+                clubEventOutlineButtonClass,
+                "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 sm:min-w-0 sm:px-3",
+              )}
+              aria-label="แสดง QR เช็กอิน"
+              title="QR เช็กอิน"
+              onClick={() => setQrOpen(true)}
+            >
+              <QrCode className="h-4 w-4" aria-hidden />
+              <span className="hidden sm:inline">QR</span>
+            </button>
+            <button
+              type="button"
               className={cn(clubEventOutlineButtonClass, "min-h-[40px]")}
               onClick={() => void load()}
               disabled={loading}
@@ -427,8 +444,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
               </div>
             ) : null}
 
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)]">
-              <div className="space-y-4">
+            <div className="space-y-4">
                 <div className="flex gap-2">
                   <input
                     className={cn(clubEventFieldClass, "min-w-0 flex-1")}
@@ -446,6 +462,19 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                     onClick={() => void load()}
                   >
                     <Search className="h-4 w-4" aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      clubEventPrimaryButtonClass,
+                      "inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 sm:min-w-0 sm:px-3",
+                    )}
+                    aria-label="แสดง QR เช็กอิน"
+                    title="QR เช็กอิน"
+                    onClick={() => setQrOpen(true)}
+                  >
+                    <QrCode className="h-4 w-4" aria-hidden />
+                    <span className="hidden sm:inline">QR</span>
                   </button>
                 </div>
 
@@ -704,150 +733,140 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                     </button>
                   </section>
                 ) : null}
-              </div>
-
-              <aside className="space-y-3 lg:sticky lg:top-3 lg:self-start">
-                <div className="rounded-xl border border-[#e4e0f5] bg-white p-3 text-center">
-                  <p className="mb-2 flex items-center justify-center gap-1 text-xs font-black text-[#4d47b6]">
-                    <QrCode className="h-4 w-4" aria-hidden />
-                    QR ให้สมาชิกสแกน
-                  </p>
-                  {qrDataUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={qrDataUrl} alt="QR เช็กอิน" className="mx-auto h-44 w-44" />
-                  ) : (
-                    <p className="py-8 text-xs text-[#9490c0]">กำลังสร้าง QR…</p>
-                  )}
-                  <p className="mt-2 break-all text-[10px] font-semibold text-[#8b87b8]">{publicUrl}</p>
-                  <div className="mt-2 flex flex-wrap justify-center gap-2">
-                    <button
-                      type="button"
-                      className={clubEventOutlineButtonClass}
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(publicUrl);
-                          notice.success("คัดลอกลิงก์แล้ว");
-                        } catch {
-                          notice.error("คัดลอกไม่สำเร็จ");
-                        }
-                      }}
-                    >
-                      คัดลอกลิงก์
-                    </button>
-                    <a
-                      href={publicUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={clubEventOutlineButtonClass}
-                    >
-                      เปิดหน้าสมาชิก
-                    </a>
-                  </div>
-                </div>
-
-                <div
-                  ref={manageRef}
-                  className="space-y-3 rounded-xl border border-[#e4e0f5] bg-[#faf9ff]/90 p-4"
-                >
-                  {selected ? (
-                    <>
-                      <div>
-                        <p className="text-base font-black text-[#1e1b4b]">{selected.guestName}</p>
-                        <p className="text-xs font-semibold text-[#66638c]">
-                          {[selected.memberCode, selected.guestPhone, selected.source]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </p>
-                        <p className="text-[11px] text-[#9490c0]">
-                          เช็กอิน {formatBangkokDateTimeLong(selected.checkedInAt)}
-                        </p>
-                      </div>
-
-                      {selected.fulfillment.length > 0 ? (
-                        <ul className="space-y-2">
-                          {selected.fulfillment.map((f) => (
-                            <li
-                              key={f.key}
-                              className="flex items-center justify-between gap-2 rounded-lg bg-white px-3 py-2.5 text-sm"
-                            >
-                              <span className="min-w-0 font-semibold text-[#1e1b4b]">
-                                {f.label} ×{f.qty}
-                              </span>
-                              {f.delivered ? (
-                                <button
-                                  type="button"
-                                  className={cn(clubEventOutlineButtonClass, "min-h-9 text-[11px]")}
-                                  disabled={busy}
-                                  onClick={() =>
-                                    void patchCheckIn(selected.id, { undeliverKey: f.key })
-                                  }
-                                >
-                                  จ่ายแล้ว · ยกเลิก
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className={cn(clubEventPrimaryButtonClass, "min-h-9")}
-                                  disabled={busy}
-                                  onClick={() =>
-                                    void patchCheckIn(selected.id, { deliverKey: f.key })
-                                  }
-                                >
-                                  จ่ายของ
-                                </button>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-xs font-semibold text-[#8b87b8]">
-                          ไม่มีรายการของแจกจากฟอร์ม
-                        </p>
-                      )}
-
-                      {selected.fulfillment.some((f) => !f.delivered) ? (
-                        <button
-                          type="button"
-                          className={cn(clubEventOutlineButtonClass, "min-h-10 w-full")}
-                          disabled={busy}
-                          onClick={() => void patchCheckIn(selected.id, { deliverAll: true })}
-                        >
-                          จ่ายของทั้งหมด
-                        </button>
-                      ) : null}
-
-                      {selected.fulfillment.some((f) => f.delivered) ? (
-                        <div className="space-y-2">
-                          <p className="text-xs font-black text-[#4d47b6]">เซ็นรับของ</p>
-                          {selected.signatureImageUrl ? (
-                            <p className="text-xs font-bold text-emerald-700">เซ็นรับแล้ว</p>
-                          ) : (
-                            <>
-                              <AppSignaturePad ref={padRef} disabled={busy} />
-                              <button
-                                type="button"
-                                className={cn(clubEventPrimaryButtonClass, "min-h-10 w-full")}
-                                disabled={busy}
-                                onClick={() => void saveSignature()}
-                              >
-                                บันทึกลายเซ็น
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      ) : null}
-                    </>
-                  ) : (
-                    <p className="py-6 text-center text-xs font-semibold text-[#8b87b8]">
-                      กด «จัดการ» หรือ «เซ็นรับ» จากรายการซ้าย เพื่อเปิดแผงจ่ายของ / เซ็นรับ
-                    </p>
-                  )}
-                </div>
-              </aside>
             </div>
           </div>
         )}
       </ClubEventPageSubNav>
+
+      <FormModal
+        open={qrOpen}
+        onClose={() => setQrOpen(false)}
+        title="QR ให้สมาชิกสแกน"
+        description="เช็กอินวันงาน · อัปเดตสดบนแดชบอร์ด"
+        size="sm"
+        appearance="glass"
+      >
+        <div className="space-y-3 text-center">
+          {qrDataUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={qrDataUrl} alt="QR เช็กอิน" className="mx-auto h-56 w-56" />
+          ) : (
+            <p className="py-10 text-sm text-[#9490c0]">กำลังสร้าง QR…</p>
+          )}
+          <p className="break-all text-[11px] font-semibold text-[#8b87b8]">{publicUrl}</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              className={clubEventOutlineButtonClass}
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(publicUrl);
+                  notice.success("คัดลอกลิงก์แล้ว");
+                } catch {
+                  notice.error("คัดลอกไม่สำเร็จ");
+                }
+              }}
+            >
+              คัดลอกลิงก์
+            </button>
+            <a
+              href={publicUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={clubEventOutlineButtonClass}
+            >
+              เปิดหน้าสมาชิก
+            </a>
+          </div>
+        </div>
+      </FormModal>
+
+      <FormModal
+        open={manageOpen && Boolean(selected)}
+        onClose={closeManage}
+        title={selected ? `จัดการ · ${selected.guestName}` : "จัดการ"}
+        description={
+          selected
+            ? [[selected.memberCode, selected.guestPhone, selected.source].filter(Boolean).join(" · "), formatBangkokDateTimeLong(selected.checkedInAt)]
+                .filter(Boolean)
+                .join(" · ")
+            : undefined
+        }
+        size="md"
+        appearance="glass"
+      >
+        {selected ? (
+          <div className="space-y-3">
+            {selected.fulfillment.length > 0 ? (
+              <ul className="space-y-2">
+                {selected.fulfillment.map((f) => (
+                  <li
+                    key={f.key}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/80 bg-white px-3 py-2.5 text-sm"
+                  >
+                    <span className="min-w-0 font-semibold text-[#1e1b4b]">
+                      {f.label} ×{f.qty}
+                    </span>
+                    {f.delivered ? (
+                      <button
+                        type="button"
+                        className={cn(clubEventOutlineButtonClass, "min-h-9 text-[11px]")}
+                        disabled={busy}
+                        onClick={() => void patchCheckIn(selected.id, { undeliverKey: f.key })}
+                      >
+                        จ่ายแล้ว · ยกเลิก
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className={cn(clubEventPrimaryButtonClass, "min-h-9")}
+                        disabled={busy}
+                        onClick={() => void patchCheckIn(selected.id, { deliverKey: f.key })}
+                      >
+                        จ่ายของ
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm font-semibold text-[#8b87b8]">ไม่มีรายการของแจกจากฟอร์ม</p>
+            )}
+
+            {selected.fulfillment.some((f) => !f.delivered) ? (
+              <button
+                type="button"
+                className={cn(clubEventOutlineButtonClass, "min-h-10 w-full")}
+                disabled={busy}
+                onClick={() => void patchCheckIn(selected.id, { deliverAll: true })}
+              >
+                จ่ายของทั้งหมด
+              </button>
+            ) : null}
+
+            {selected.fulfillment.some((f) => f.delivered) ? (
+              <div className="space-y-2">
+                <p className="text-xs font-black text-[#4d47b6]">เซ็นรับของ</p>
+                {selected.signatureImageUrl ? (
+                  <p className="text-sm font-bold text-emerald-700">เซ็นรับแล้ว</p>
+                ) : (
+                  <>
+                    <AppSignaturePad ref={padRef} disabled={busy} />
+                    <button
+                      type="button"
+                      className={cn(clubEventPrimaryButtonClass, "min-h-10 w-full")}
+                      disabled={busy}
+                      onClick={() => void saveSignature()}
+                    >
+                      บันทึกลายเซ็น
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </FormModal>
     </>
   );
 }
