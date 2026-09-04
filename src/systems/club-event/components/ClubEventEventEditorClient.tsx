@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ImagePlus, Link2, Play } from "lucide-react";
+import { ArrowLeft, ImagePlus, Link2, MessageSquareText, Play } from "lucide-react";
 import {
   AppEmptyState,
   AppImageLightbox,
@@ -26,13 +26,14 @@ import {
   CLUB_EVENT_BASE,
   clubEventEventEditHref,
   clubEventEventHref,
+  clubEventEventSubmissionsHref,
 } from "@/systems/club-event/club-event-module-nav";
 import {
   ClubEventLinkEditorModal,
   clubLinkFormFromDto,
   emptyClubLinkForm,
+  type ClubProfileDuesOption,
 } from "@/systems/club-event/components/ClubEventLinkEditorModal";
-import { ClubEventLinkSubmissionsModal } from "@/systems/club-event/components/ClubEventLinkSubmissionsModal";
 import {
   ClubEventPageSubNav,
   type ClubEventPageSubNavItem,
@@ -40,11 +41,11 @@ import {
 import { ClubEventSlideshow } from "@/systems/club-event/components/ClubEventSlideshow";
 import { prepareClubEventGalleryWebp } from "@/systems/club-event/lib/gallery-image";
 import type {
-  ClubDynamicLinkField,
   ClubEventDynamicLinkDto,
   ClubEventRecordDto,
 } from "@/systems/club-event/lib/mappers";
 import { CLUB_EVENT_LINK_TYPE_LABELS } from "@/systems/club-event/lib/mappers";
+import { CLUB_EVENT_DUES_PERIOD_LABELS } from "@/systems/club-event/lib/dues";
 import type { ClubEventMediaLimits } from "@/systems/club-event/lib/plan-limits";
 import {
   CLUB_EVENT_FREE_GALLERY_MAX,
@@ -56,7 +57,6 @@ import {
   clubEventPageTitleIcon,
   clubEventPageTitleTone,
 } from "@/systems/club-event/lib/page-menu-icons";
-import type { ClubSubmissionRow } from "@/systems/club-event/lib/submission-summary";
 import type { ClubEventYoutubeVideo } from "@/systems/club-event/lib/youtube";
 import {
   clubEventFieldClass,
@@ -143,12 +143,9 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
   const [slideshowOpen, setSlideshowOpen] = useState(false);
   const [galleryUploading, setGalleryUploading] = useState(false);
   const [links, setLinks] = useState<ClubLinkRow[]>([]);
+  const [profileDues, setProfileDues] = useState<ClubProfileDuesOption | null>(null);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [linkForm, setLinkForm] = useState(() => emptyClubLinkForm());
-  const [subsOpen, setSubsOpen] = useState(false);
-  const [subsTitle, setSubsTitle] = useState("");
-  const [subsRows, setSubsRows] = useState<ClubSubmissionRow[]>([]);
-  const [subsFields, setSubsFields] = useState<ClubDynamicLinkField[]>([]);
 
   const activeEventId = savedId;
   const eventAsList: ClubEventRecordDto[] = activeEventId
@@ -163,16 +160,40 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
           youtubeUrls: [],
           youtubeVideos: [],
           galleryCount: gallery.length,
+          checkInCount: 0,
         },
       ]
     : [];
 
   const loadLinks = useCallback(async (forEventId: string) => {
     try {
-      const res = await fetch("/api/club-event/session/links");
-      const data = (await res.json()) as { links?: ClubLinkRow[]; error?: string };
-      if (!res.ok) throw new Error(data.error ?? "โหลดลิงก์ไม่สำเร็จ");
-      setLinks((data.links ?? []).filter((l) => l.config.eventId === forEventId));
+      const [linksRes, profileRes] = await Promise.all([
+        fetch("/api/club-event/session/links"),
+        fetch("/api/club-event/session/profile"),
+      ]);
+      const data = (await linksRes.json()) as { links?: ClubLinkRow[]; error?: string };
+      if (!linksRes.ok) throw new Error(data.error ?? "โหลดลิงก์ไม่สำเร็จ");
+      const all = data.links ?? [];
+      setLinks(all.filter((l) => l.config.eventId === forEventId));
+
+      const profileData = (await profileRes.json()) as {
+        profile?: {
+          duesEnabled?: boolean;
+          duesAmountBaht?: number;
+          duesPeriod?: keyof typeof CLUB_EVENT_DUES_PERIOD_LABELS;
+          duesLinkId?: string | null;
+        };
+      };
+      const p = profileData.profile;
+      if (p) {
+        const period = p.duesPeriod ?? "YEARLY";
+        setProfileDues({
+          enabled: Boolean(p.duesEnabled),
+          amountBaht: Math.max(0, Math.round(Number(p.duesAmountBaht) || 0)),
+          periodLabel: CLUB_EVENT_DUES_PERIOD_LABELS[period] ?? "รายปี",
+          linkId: p.duesLinkId ?? null,
+        });
+      }
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "โหลดลิงก์ไม่สำเร็จ");
     }
@@ -460,26 +481,6 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
       if (activeEventId) await loadLinks(activeEventId);
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "ลบไม่สำเร็จ");
-    }
-  };
-
-  const openSubmissions = async (l: ClubEventDynamicLinkDto) => {
-    setSubsTitle(l.title);
-    setSubsFields(l.config.fields ?? []);
-    setSubsOpen(true);
-    try {
-      const res = await fetch(`/api/club-event/session/links/${l.id}/submissions`);
-      const data = (await res.json()) as {
-        submissions?: ClubSubmissionRow[];
-        fields?: ClubDynamicLinkField[];
-        error?: string;
-      };
-      if (!res.ok) throw new Error(data.error ?? "โหลดคำตอบไม่สำเร็จ");
-      setSubsRows(data.submissions ?? []);
-      if (data.fields?.length) setSubsFields(data.fields);
-    } catch (e) {
-      notice.error(e instanceof Error ? e.message : "โหลดคำตอบไม่สำเร็จ");
-      setSubsRows([]);
     }
   };
 
@@ -922,13 +923,19 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
                     </a>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center gap-1">
-                    <button
-                      type="button"
-                      className={clubEventOutlineButtonClass}
-                      onClick={() => void openSubmissions(l)}
-                    >
-                      คำตอบ
-                    </button>
+                    {activeEventId ? (
+                      <Link
+                        href={clubEventEventSubmissionsHref(activeEventId)}
+                        className={cn(
+                          clubEventOutlineButtonClass,
+                          "min-h-[40px] min-w-[40px] sm:min-w-0 sm:px-2.5",
+                        )}
+                        aria-label={`คำตอบ ${l.title}`}
+                      >
+                        <MessageSquareText className="h-4 w-4 sm:hidden" aria-hidden />
+                        <span className="hidden sm:inline">คำตอบ</span>
+                      </Link>
+                    ) : null}
                     <button
                       type="button"
                       className={assetRowEditIconButtonClass}
@@ -962,15 +969,8 @@ export function ClubEventEventEditorClient({ eventId }: { eventId: string | null
         initial={linkForm}
         events={eventAsList}
         lockEventId
+        profileDues={profileDues}
         onSaved={() => (activeEventId ? void loadLinks(activeEventId) : undefined)}
-      />
-
-      <ClubEventLinkSubmissionsModal
-        open={subsOpen}
-        onClose={() => setSubsOpen(false)}
-        title={subsTitle}
-        rows={subsRows}
-        fields={subsFields}
       />
 
       <ClubEventSlideshow

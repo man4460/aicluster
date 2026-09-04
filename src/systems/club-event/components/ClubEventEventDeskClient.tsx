@@ -523,7 +523,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                       clubEventStatInlineClass,
                       "border-l-[3px] text-left transition",
                       card.border,
-                      "span" in card && card.span ? "col-span-2 sm:col-span-1" : null,
+                      "span" in card && card.span ? "col-span-2 sm:col-span-1" : false,
                       active
                         ? "ring-2 ring-[#0000BF]/35 bg-[#0000BF]/5"
                         : "hover:bg-white/90",

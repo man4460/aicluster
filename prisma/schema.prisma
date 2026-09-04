@@ -7225,6 +7225,15 @@ model ClubEventProfile {
    */
   portalShowCommittee Boolean  @default(true) @map("portal_show_committee")
   /**
+   * เปิดส่วนค้นหาสมาชิกบนเว็บสาธารณะ
+   */
+  portalShowMembers   Boolean  @default(false) @map("portal_show_members")
+  /**
+   * JSON: ฟิลด์สมาชิกที่เปิดเผยบนเว็บ (ชื่อเต็มเปิดเสมอเมื่อเปิดค้นหา)
+   * { photo, nickname, position, memberCode, phone, email, social, gender }
+   */
+  portalMemberFieldsJson String @default("{}") @map("portal_member_fields_json") @db.VarChar(1000)
+  /**
    * กฎ/หมายเหตุการชำระเงินสำหรับลูกค้า (แสดงบนลิงก์เก็บค่า)
    */
   paymentRulesNote    String   @default("") @map("payment_rules_note") @db.Text

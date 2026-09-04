@@ -19,8 +19,13 @@ import {
   type ClubEventSettingsTab,
 } from "@/systems/club-event/club-event-module-nav";
 import { ClubEventPageSubNav } from "@/systems/club-event/components/ClubEventPageSubNav";
+import { ClubEventDuesSettingsPanel } from "@/systems/club-event/components/ClubEventDuesSettingsPanel";
 import { ClubEventPortalMediaSettings } from "@/systems/club-event/components/ClubEventPortalMediaSettings";
 import type { ClubEventProfileDto } from "@/systems/club-event/lib/mappers";
+import {
+  CLUB_PORTAL_MEMBER_FIELD_OPTIONS,
+  DEFAULT_CLUB_PORTAL_MEMBER_FIELDS,
+} from "@/systems/club-event/lib/portal-member-fields";
 import {
   clubEventPageTitleIcon,
   clubEventPageTitleTone,
@@ -123,6 +128,9 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
           mapUrl: form.mapUrl,
           portalBannerUrl: form.portalBannerUrl,
           portalGallery: form.portalGallery,
+          portalShowCommittee: form.portalShowCommittee !== false,
+          portalShowMembers: Boolean(form.portalShowMembers),
+          portalMemberFields: form.portalMemberFields,
           paymentRulesNote: form.paymentRulesNote,
           promptPayPhone: form.promptPayPhone,
           promptPayQrImageUrl: form.promptPayQrImageUrl,
@@ -131,6 +139,9 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
           bankAccountName: form.bankAccountName,
           taxId: form.taxId,
           slipPaperSize: form.slipPaperSize,
+          duesEnabled: form.duesEnabled,
+          duesAmountBaht: form.duesAmountBaht,
+          duesPeriod: form.duesPeriod,
         }),
       });
       const data = (await res.json()) as { profile?: ClubEventProfileDto; error?: string };
@@ -331,6 +342,16 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
           </div>
         ) : null}
 
+        {tab === "dues" ? (
+          <ClubEventDuesSettingsPanel
+            form={form}
+            setForm={setForm}
+            saving={saving}
+            onCopied={() => notice.success("คัดลอกลิงก์แล้ว")}
+            onCopyFailed={() => notice.error("คัดลอกไม่สำเร็จ")}
+          />
+        ) : null}
+
         {tab === "portal" ? (
           <div id="club-event-settings-panel-portal" role="tabpanel" className="space-y-4">
             <ClubEventPortalLinkPanel
@@ -354,6 +375,85 @@ export function ClubEventSettingsClient({ initialProfile }: { initialProfile: Cl
               onContactLineChange={(value) => setForm((f) => ({ ...f, contactLine: value || null }))}
               disabled={saving}
             />
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-[#0000BF] focus:ring-[#0000BF]/30"
+                checked={form.portalShowCommittee !== false}
+                disabled={saving}
+                onChange={(e) => setForm((f) => ({ ...f, portalShowCommittee: e.target.checked }))}
+              />
+              <span>
+                <span className="block text-sm font-bold text-[#1e1b4b]">แสดงคณะกรรมการบนเว็บไซต์</span>
+                <span className="mt-0.5 block text-xs font-semibold text-[#66638c]">
+                  เมื่อเปิด จะมีปุ่มคณะกรรมการบนเว็บสาธารณะ — กดแล้วเปิดป๊อปอัปรายชื่อ
+                </span>
+              </span>
+            </label>
+
+            <div className="space-y-3 rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm sm:p-4">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-[#0000BF] focus:ring-[#0000BF]/30"
+                  checked={Boolean(form.portalShowMembers)}
+                  disabled={saving}
+                  onChange={(e) => setForm((f) => ({ ...f, portalShowMembers: e.target.checked }))}
+                />
+                <span>
+                  <span className="block text-sm font-bold text-[#1e1b4b]">เปิดค้นหาสมาชิกบนเว็บไซต์</span>
+                  <span className="mt-0.5 block text-xs font-semibold text-[#66638c]">
+                    ผู้เยี่ยมชมค้นหาสมาชิกที่ใช้งานอยู่ได้ — ชื่อเต็มแสดงเสมอเมื่อเปิดส่วนนี้
+                  </span>
+                </span>
+              </label>
+
+              {form.portalShowMembers ? (
+                <fieldset className="space-y-2 border-t border-slate-100 pt-3" disabled={saving}>
+                  <legend className="text-xs font-bold uppercase tracking-wide text-[#66638c]">
+                    เปิดเผยข้อมูลสมาชิกใดบ้าง
+                  </legend>
+                  <p className="text-xs font-semibold text-[#66638c]">
+                    ชื่อเต็มเปิดเสมอ · เลือกฟิลด์เพิ่มด้านล่าง (ค่าเริ่มต้นปิดเบอร์โทรและอีเมล)
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {CLUB_PORTAL_MEMBER_FIELD_OPTIONS.map((opt) => {
+                      const fields = form.portalMemberFields ?? DEFAULT_CLUB_PORTAL_MEMBER_FIELDS;
+                      const checked = Boolean(fields[opt.key]);
+                      return (
+                        <label
+                          key={opt.key}
+                          className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-100 bg-slate-50/80 px-2.5 py-2"
+                        >
+                          <input
+                            type="checkbox"
+                            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#0000BF] focus:ring-[#0000BF]/30"
+                            checked={checked}
+                            onChange={(e) =>
+                              setForm((f) => ({
+                                ...f,
+                                portalMemberFields: {
+                                  ...(f.portalMemberFields ?? DEFAULT_CLUB_PORTAL_MEMBER_FIELDS),
+                                  [opt.key]: e.target.checked,
+                                },
+                              }))
+                            }
+                          />
+                          <span>
+                            <span className="block text-sm font-bold text-[#1e1b4b]">{opt.label}</span>
+                            {opt.hint ? (
+                              <span className="mt-0.5 block text-[11px] font-semibold text-[#66638c]">
+                                {opt.hint}
+                              </span>
+                            ) : null}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </ClubEventPageSubNav>

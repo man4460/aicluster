@@ -9,8 +9,10 @@ import {
   parseClubEventYoutubeVideos,
   type ClubEventYoutubeVideo,
 } from "@/systems/club-event/lib/youtube";
+import type { ClubPortalMemberPublicFields } from "@/systems/club-event/lib/portal-member-fields";
+import { parsePortalMemberFieldsJson } from "@/systems/club-event/lib/portal-member-fields";
 
-export type { ClubEventYoutubeVideo };
+export type { ClubEventYoutubeVideo, ClubPortalMemberPublicFields };
 
 export type ClubCommitteeMember = {
   role: string;
@@ -291,6 +293,10 @@ export type ClubEventProfileDto = {
   portalGallery: string[];
   /** แสดงปุ่มคณะกรรมการบนเว็บสาธารณะ */
   portalShowCommittee: boolean;
+  /** เปิดค้นหาสมาชิกบนเว็บสาธารณะ */
+  portalShowMembers: boolean;
+  /** ฟิลด์สมาชิกที่เปิดเผยบนเว็บ (ชื่อเต็มเปิดเสมอ) */
+  portalMemberFields: ClubPortalMemberPublicFields;
   paymentRulesNote: string;
   promptPayPhone: string | null;
   promptPayQrImageUrl: string | null;
@@ -449,6 +455,8 @@ export function mapClubEventProfile(row: {
   portalBannerUrl?: string | null;
   portalGalleryJson?: string;
   portalShowCommittee?: boolean;
+  portalShowMembers?: boolean;
+  portalMemberFieldsJson?: string;
   paymentRulesNote?: string;
   promptPayPhone: string | null;
   promptPayQrImageUrl: string | null;
@@ -483,6 +491,8 @@ export function mapClubEventProfile(row: {
     portalBannerUrl: row.portalBannerUrl ?? null,
     portalGallery: parsePortalGalleryJson(row.portalGalleryJson ?? "[]"),
     portalShowCommittee: row.portalShowCommittee !== false,
+    portalShowMembers: Boolean(row.portalShowMembers),
+    portalMemberFields: parsePortalMemberFieldsJson(row.portalMemberFieldsJson),
     paymentRulesNote: row.paymentRulesNote ?? "",
     promptPayPhone: row.promptPayPhone,
     promptPayQrImageUrl: row.promptPayQrImageUrl,

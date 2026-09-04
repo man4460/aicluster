@@ -3,7 +3,20 @@ import { requireSession } from "@/lib/api-auth";
 import { clubEventOwnerFromAuth } from "@/lib/club-event/api-owner";
 import { clubEventSessionContext } from "@/lib/club-event/session-context";
 import { prisma } from "@/lib/prisma";
+import type { ClubEventDuesPeriodKey } from "@/systems/club-event/lib/dues";
 import { mapClubEventProfile } from "@/systems/club-event/lib/mappers";
+import {
+  parsePortalMemberFieldsJson,
+  serializePortalMemberFields,
+} from "@/systems/club-event/lib/portal-member-fields";
+import { syncClubEventDuesPublicLink } from "@/systems/club-event/lib/sync-dues-link";
+
+function parseDuesPeriod(raw: unknown): ClubEventDuesPeriodKey | null {
+  if (raw === "MONTHLY" || raw === "QUARTERLY" || raw === "SEMIANNUAL" || raw === "YEARLY") {
+    return raw;
+  }
+  return null;
+}
 
 export async function GET() {
   try {
@@ -51,6 +64,32 @@ export async function PUT(req: Request) {
     const committeeJson =
       body.committee !== undefined ? JSON.stringify(body.committee) : profile.committeeJson;
 
+    const duesEnabled =
+      typeof body.duesEnabled === "boolean" ? body.duesEnabled : profile.duesEnabled;
+    const duesAmountRaw =
+      typeof body.duesAmountBaht === "number"
+        ? body.duesAmountBaht
+        : typeof body.duesAmountBaht === "string"
+          ? Number(body.duesAmountBaht)
+          : profile.duesAmountBaht;
+    const duesAmountBaht = Math.max(0, Math.round(Number(duesAmountRaw) || 0));
+    const duesPeriod = parseDuesPeriod(body.duesPeriod) ?? profile.duesPeriod;
+
+    if (duesEnabled && duesAmountBaht <= 0) {
+      return NextResponse.json({ error: "เปิดเก็บค่าบำรุงแล้วต้องระบุจำนวนเงินมากกว่า 0" }, { status: 400 });
+    }
+
+    const duesLinkId = await syncClubEventDuesPublicLink({
+      prisma,
+      profileId: profile.id,
+      ownerUserId: own.ownerId,
+      trialSessionId: scope.trialSessionId,
+      duesEnabled,
+      duesAmountBaht,
+      duesPeriod,
+      existingDuesLinkId: profile.duesLinkId,
+    });
+
     const updated = await prisma.clubEventProfile.update({
       where: { id: profile.id },
       data: {
@@ -85,6 +124,23 @@ export async function PUT(req: Request) {
                   : [],
               )
             : profile.portalGalleryJson,
+        portalShowCommittee:
+          typeof body.portalShowCommittee === "boolean"
+            ? body.portalShowCommittee
+            : profile.portalShowCommittee,
+        portalShowMembers:
+          typeof body.portalShowMembers === "boolean"
+            ? body.portalShowMembers
+            : profile.portalShowMembers,
+        portalMemberFieldsJson:
+          body.portalMemberFields !== undefined &&
+          typeof body.portalMemberFields === "object" &&
+          body.portalMemberFields !== null &&
+          !Array.isArray(body.portalMemberFields)
+            ? serializePortalMemberFields(
+                parsePortalMemberFieldsJson(JSON.stringify(body.portalMemberFields)),
+              )
+            : profile.portalMemberFieldsJson,
         paymentRulesNote:
           typeof body.paymentRulesNote === "string" ? body.paymentRulesNote : profile.paymentRulesNote,
         promptPayPhone: typeof body.promptPayPhone === "string" ? body.promptPayPhone.slice(0, 20) : body.promptPayPhone === null ? null : profile.promptPayPhone,
@@ -114,6 +170,10 @@ export async function PUT(req: Request) {
           body.financeCategories !== undefined
             ? JSON.stringify(body.financeCategories).slice(0, 4000)
             : profile.financeCategoriesJson,
+        duesEnabled,
+        duesAmountBaht,
+        duesPeriod,
+        duesLinkId,
       },
     });
 

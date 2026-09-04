@@ -1,21 +1,22 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { ExternalLink, Play } from "lucide-react";
+import { Users } from "lucide-react";
 import {
   AppImageLightbox,
-  AppImageThumb,
   AppPublicCheckInGlassPage,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import type { ClubPublicPortalPayload } from "@/lib/club-event/load-public-portal";
-import { formatBangkokDateTimeLong } from "@/lib/time/bangkok";
+import { ClubEventCommitteePopup } from "@/systems/club-event/components/ClubEventCommitteePopup";
+import {
+  ClubEventPortalEventCardGrid,
+  ClubEventPortalStandaloneLinks,
+} from "@/systems/club-event/components/ClubEventPortalEventCardGrid";
 import { ClubEventPortalGallery } from "@/systems/club-event/components/ClubEventPortalGallery";
+import { ClubEventPortalMemberSearch } from "@/systems/club-event/components/ClubEventPortalMemberSearch";
 import { ClubEventPortalSection } from "@/systems/club-event/components/ClubEventPortalSection";
-import { ClubEventSlideshow } from "@/systems/club-event/components/ClubEventSlideshow";
-import { ClubEventYoutubePlayer } from "@/systems/club-event/components/ClubEventYoutubePlayer";
-import { CLUB_EVENT_LINK_TYPE_LABELS } from "@/systems/club-event/lib/mappers";
 import { CLUB_EVENT_PORTAL_SAMPLE_BANNER } from "@/systems/club-event/lib/portal-media";
 import {
   clubEventOutlineButtonClass,
@@ -41,62 +42,51 @@ export function ClubEventPublicClient({
   const committee = initialData.committee;
   const upcoming = initialData.upcomingEvents;
   const past = initialData.pastEvents;
-  const links = initialData.links;
-  const [slideshowSlides, setSlideshowSlides] = useState<{ id: string; imageUrl: string; fileName?: string }[]>([]);
-  const [slideshowOpen, setSlideshowOpen] = useState(false);
-  const [slideshowTitle, setSlideshowTitle] = useState("");
+  const standaloneLinks = initialData.standaloneLinks;
+  const [committeeOpen, setCommitteeOpen] = useState(false);
 
   const title = profile.displayName.trim() || "ชมรม";
   const gallery = profile.portalGallery?.length ? profile.portalGallery : [];
   const banner = profile.portalBannerUrl?.trim() || CLUB_EVENT_PORTAL_SAMPLE_BANNER;
+  const showCommittee = profile.portalShowCommittee && committee.length > 0;
+  const showMembers = Boolean(profile.portalShowMembers);
 
   const linkHref = useCallback(
     (path: string) => (trialParam ? `${path}?t=${encodeURIComponent(trialParam)}` : path),
     [trialParam],
   );
 
+  const eventHref = useCallback(
+    (eventId: string) => {
+      const base = `/club/${encodeURIComponent(slug)}/events/${encodeURIComponent(eventId)}`;
+      return trialParam ? `${base}?t=${encodeURIComponent(trialParam)}` : base;
+    },
+    [slug, trialParam],
+  );
+
   const scrollTo = useCallback((id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
-
-  const openEventGallery = async (eventId: string, eventTitle: string) => {
-    const q = trialParam ? `?t=${encodeURIComponent(trialParam)}` : "";
-    const res = await fetch(`/api/club-event/public/${encodeURIComponent(slug)}/events/${eventId}${q}`);
-    const data = (await res.json().catch(() => ({}))) as {
-      gallery?: { id: string; imageUrl: string; fileName: string }[];
-    };
-    const slides = data.gallery ?? [];
-    if (slides.length === 0) return;
-    setSlideshowSlides(slides);
-    setSlideshowTitle(eventTitle);
-    setSlideshowOpen(true);
-  };
 
   return (
     <AppPublicCheckInGlassPage className="!px-0 !pt-0 sm:!px-0">
       <header className="absolute inset-x-0 top-0 z-30">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3 rounded-full border border-white/70 bg-white/85 py-1.5 pl-1.5 pr-3 shadow-sm backdrop-blur-md">
             {profile.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.logoUrl} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
-            ) : null}
-            <p className={cn("truncate text-sm sm:text-base", clubEventPortalShopNameHeroClass)}>{title}</p>
+              <img src={profile.logoUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+            ) : (
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0000BF]/10 text-xs font-black text-[#0000BF]">
+                {(title || "C").slice(0, 1)}
+              </span>
+            )}
+            <p className={cn("truncate text-sm sm:text-base", clubEventPortalShopNameClass)}>{title}</p>
           </div>
           <nav className={clubEventPortalHeaderNavShellClass} aria-label="เมนู">
             <a href="#schedule" className={clubEventPortalHeaderNavLinkClass()} onClick={() => scrollTo("schedule")}>
               กำหนดการ
             </a>
-            {links.length > 0 ? (
-              <a href="#links" className={clubEventPortalHeaderNavLinkClass()} onClick={() => scrollTo("links")}>
-                ลิงก์ / ฟอร์ม
-              </a>
-            ) : null}
-            {committee.length > 0 ? (
-              <a href="#committee" className={clubEventPortalHeaderNavLinkClass()} onClick={() => scrollTo("committee")}>
-                คณะกรรมการ
-              </a>
-            ) : null}
             {past.length > 0 ? (
               <a href="#past" className={clubEventPortalHeaderNavLinkClass()} onClick={() => scrollTo("past")}>
                 ย้อนหลัง
@@ -107,6 +97,25 @@ export function ClubEventPublicClient({
                 แกลเลอรี
               </a>
             ) : null}
+            {profile.rulesMarkdown?.trim() || standaloneLinks.length > 0 ? (
+              <a href="#rules" className={clubEventPortalHeaderNavLinkClass()} onClick={() => scrollTo("rules")}>
+                กฎระเบียบ
+              </a>
+            ) : null}
+            {showCommittee ? (
+              <button
+                type="button"
+                className={clubEventPortalHeaderNavLinkClass()}
+                onClick={() => setCommitteeOpen(true)}
+              >
+                คณะกรรมการ
+              </button>
+            ) : null}
+            {showMembers ? (
+              <a href="#members" className={clubEventPortalHeaderNavLinkClass()} onClick={() => scrollTo("members")}>
+                สมาชิก
+              </a>
+            ) : null}
             <a href="#contact" className={clubEventPortalHeaderNavLinkClass()} onClick={() => scrollTo("contact")}>
               ติดต่อ
             </a>
@@ -114,7 +123,7 @@ export function ClubEventPublicClient({
         </div>
       </header>
 
-      <section className="relative isolate min-h-[56vh] overflow-hidden sm:min-h-[64vh]">
+      <section className="relative isolate min-h-[48vh] overflow-hidden sm:min-h-[56vh]">
         <button
           type="button"
           className="absolute inset-0 block"
@@ -124,14 +133,18 @@ export function ClubEventPublicClient({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={banner} alt="" className="h-full w-full object-cover object-center" />
         </button>
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#1e1b4b]/20 via-transparent to-[#faf9ff]/70" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#faf9ff] via-[#faf9ff]/45 to-transparent" />
-        <div className="relative z-10 mx-auto flex min-h-[56vh] max-w-6xl flex-col justify-end px-4 pb-8 pt-24 sm:min-h-[64vh] sm:px-6 sm:pb-10">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/35 via-white/10 to-[#faf9ff]/85" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#faf9ff] via-[#faf9ff]/70 to-transparent" />
+        <div className="relative z-10 mx-auto flex min-h-[48vh] max-w-6xl flex-col justify-end px-4 pb-8 pt-24 sm:min-h-[56vh] sm:px-6 sm:pb-10">
           <div className="max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/80 drop-shadow">Club</p>
-            <h1 className={cn("mt-2 text-4xl sm:text-5xl", clubEventPortalShopNameHeroClass)}>{title}</h1>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#5f5a8a] drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">
+              Club
+            </p>
+            <h1 className={cn("mt-1 text-3xl sm:text-4xl", clubEventPortalShopNameHeroClass)}>{title}</h1>
             {profile.tagline ? (
-              <p className="mt-3 text-base font-semibold text-white/90 drop-shadow sm:text-lg">{profile.tagline}</p>
+              <p className="mt-2 text-sm font-semibold text-[#3f3a6a] drop-shadow-[0_1px_2px_rgba(255,255,255,0.85)] sm:text-base">
+                {profile.tagline}
+              </p>
             ) : null}
           </div>
 
@@ -139,7 +152,7 @@ export function ClubEventPublicClient({
             <p className="text-sm font-semibold text-[#5f5a8a] sm:pb-1">
               {upcoming.length > 0
                 ? `กิจกรรมถัดไป ${upcoming.length} รายการ`
-                : "ดูกำหนดการ ลิงก์ฟอร์ม และติดต่อชมรม"}
+                : "ดูกำหนดการและติดต่อชมรม"}
             </p>
             <div className="flex flex-wrap gap-2">
               <button
@@ -149,13 +162,14 @@ export function ClubEventPublicClient({
               >
                 ดูกำหนดการ
               </button>
-              {links.length > 0 ? (
+              {showCommittee ? (
                 <button
                   type="button"
-                  className={clubEventOutlineButtonClass}
-                  onClick={() => scrollTo("links")}
+                  className={cn(clubEventOutlineButtonClass, "inline-flex items-center gap-1.5")}
+                  onClick={() => setCommitteeOpen(true)}
                 >
-                  ลิงก์ / ฟอร์ม
+                  <Users className="h-4 w-4" aria-hidden />
+                  คณะกรรมการ
                 </button>
               ) : null}
             </div>
@@ -165,126 +179,47 @@ export function ClubEventPublicClient({
 
       <main className="relative z-10 mx-auto max-w-6xl space-y-12 px-4 pb-16 pt-2 sm:space-y-14 sm:px-6">
         <ClubEventPortalSection id="schedule" title="กำหนดการ">
-          {upcoming.length === 0 ? (
-            <p className="text-sm font-semibold text-[#66638c]">ยังไม่มีกิจกรรมที่กำลังจะมาถึง</p>
-          ) : (
-            <ul className="space-y-0 divide-y divide-slate-200/80">
-              {upcoming.map((ev) => (
-                <li key={ev.id} className="flex flex-col gap-1 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
-                  <p className="font-bold text-[#1e1b4b]">{ev.title}</p>
-                  <p className="shrink-0 text-sm font-semibold text-[#66638c]">
-                    {formatBangkokDateTimeLong(ev.eventDate)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
+          <ClubEventPortalEventCardGrid
+            events={upcoming}
+            eventHref={eventHref}
+            linkHref={linkHref}
+            emptyLabel="ยังไม่มีกิจกรรมที่กำลังจะมาถึง"
+            ariaLabel="กำหนดการกิจกรรม"
+          />
         </ClubEventPortalSection>
-
-        {links.length > 0 ? (
-          <ClubEventPortalSection id="links" title="ลิงก์ / ฟอร์ม">
-            <ul className="grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2">
-              {links.map((l) => (
-                <li key={l.id}>
-                  <a
-                    href={linkHref(l.publicPath)}
-                    className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-slate-200/90 bg-white px-4 py-3 font-semibold text-[#0000BF] shadow-sm transition hover:border-[#5b61ff]/35 hover:bg-slate-50/80"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate">{l.title}</span>
-                      <span className="text-xs font-semibold text-[#66638c]">
-                        {CLUB_EVENT_LINK_TYPE_LABELS[l.type]}
-                      </span>
-                    </span>
-                    <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </ClubEventPortalSection>
-        ) : null}
-
-        {committee.length > 0 ? (
-          <ClubEventPortalSection id="committee" title="คณะกรรมการ">
-            <ul className="space-y-0 divide-y divide-slate-200/80">
-              {committee.map((c, i) => (
-                <li key={i} className="flex items-center justify-between gap-3 py-4 first:pt-0 last:pb-0">
-                  <div className="min-w-0">
-                    <p className="font-bold text-[#1e1b4b]">{c.name}</p>
-                    <p className="text-sm font-semibold text-[#66638c]">{c.role}</p>
-                  </div>
-                  {c.phone ? (
-                    <a href={`tel:${c.phone.replace(/\D/g, "")}`} className="shrink-0 text-sm font-bold text-[#4d47b6]">
-                      {c.phone}
-                    </a>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </ClubEventPortalSection>
-        ) : null}
 
         {past.length > 0 ? (
           <ClubEventPortalSection id="past" title="กิจกรรมย้อนหลัง">
-            <ul className="space-y-8">
-              {past.map((ev) => (
-                <li key={ev.id} className="space-y-3">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="font-bold text-[#1e1b4b]">{ev.title}</p>
-                      <p className="text-sm font-semibold text-[#66638c]">
-                        {formatBangkokDateTimeLong(ev.eventDate)}
-                      </p>
-                    </div>
-                    {ev.galleryPreview.length > 0 ? (
-                      <button
-                        type="button"
-                        className={cn(clubEventOutlineButtonClass, "gap-1.5")}
-                        onClick={() => void openEventGallery(ev.id, ev.title)}
-                      >
-                        <Play className="h-4 w-4" aria-hidden />
-                        Slideshow
-                      </button>
-                    ) : null}
-                  </div>
-                  {(ev.youtubeVideos?.length
-                    ? ev.youtubeVideos
-                    : []
-                  ).map((clip) => (
-                    <div key={clip.id} className="space-y-1">
-                      <p className="text-sm font-black text-[#1e1b4b]">{clip.title}</p>
-                      {clip.hint ? (
-                        <p className="text-xs font-medium text-[#66638c]">{clip.hint}</p>
-                      ) : null}
-                      <ClubEventYoutubePlayer youtubeEmbedUrl={clip.youtubeUrl} title={clip.title} />
-                    </div>
-                  ))}
-                  {ev.galleryPreview.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                      {ev.galleryPreview.map((g) => (
-                        <AppImageThumb
-                          key={g.id}
-                          src={g.imageUrl}
-                          alt={g.fileName}
-                          onOpen={() => lb.open(g.imageUrl)}
-                          className="h-28 w-full sm:h-32"
-                        />
-                      ))}
-                    </div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            <ClubEventPortalEventCardGrid
+              events={past}
+              eventHref={eventHref}
+              linkHref={linkHref}
+              emptyLabel="ยังไม่มีกิจกรรมย้อนหลัง"
+              ariaLabel="กิจกรรมย้อนหลัง"
+            />
           </ClubEventPortalSection>
         ) : null}
 
         <ClubEventPortalGallery urls={gallery} onOpenAt={(index) => lb.openGallery(gallery, index)} />
 
-        {profile.rulesMarkdown?.trim() ? (
+        {showMembers ? (
+          <ClubEventPortalSection
+            id="members"
+            title="ค้นหาสมาชิก"
+            subtitle="พิมพ์ชื่อ ชื่อเล่น หรือรหัสสมาชิก เพื่อค้นหา"
+          >
+            <ClubEventPortalMemberSearch slug={slug} trialParam={trialParam} />
+          </ClubEventPortalSection>
+        ) : null}
+
+        {profile.rulesMarkdown?.trim() || standaloneLinks.length > 0 ? (
           <ClubEventPortalSection id="rules" title="กฎระเบียบ">
-            <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed text-[#1e1b4b]">
-              {profile.rulesMarkdown}
-            </p>
+            {profile.rulesMarkdown?.trim() ? (
+              <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed text-[#1e1b4b]">
+                {profile.rulesMarkdown}
+              </p>
+            ) : null}
+            <ClubEventPortalStandaloneLinks links={standaloneLinks} linkHref={linkHref} />
           </ClubEventPortalSection>
         ) : null}
 
@@ -346,11 +281,11 @@ export function ClubEventPublicClient({
         </ClubEventPortalSection>
       </main>
 
-      <ClubEventSlideshow
-        open={slideshowOpen}
-        onClose={() => setSlideshowOpen(false)}
-        slides={slideshowSlides}
-        title={slideshowTitle}
+      <ClubEventCommitteePopup
+        open={committeeOpen}
+        onClose={() => setCommitteeOpen(false)}
+        committee={committee}
+        clubName={title}
       />
       <AppImageLightbox
         src={lb.src}

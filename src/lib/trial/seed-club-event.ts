@@ -139,6 +139,17 @@ export async function seedClubEventProdDemoForOwner(
       portalBannerUrl: BANNER,
       portalGalleryJson: JSON.stringify(pickGallery(0, 8)),
       portalShowCommittee: true,
+      portalShowMembers: true,
+      portalMemberFieldsJson: JSON.stringify({
+        photo: true,
+        nickname: true,
+        position: true,
+        memberCode: true,
+        phone: false,
+        email: false,
+        social: false,
+        gender: false,
+      }),
       paymentRulesNote:
         "โอนค่าบำรุงหรือมัดจำกิจกรรมแล้วแนบสลิปทุกครั้ง · ตรวจสอบภายใน 1–2 วันทำการ",
       promptPayPhone: DEMO_MODULE_PAYMENT.promptPayPhone,

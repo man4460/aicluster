@@ -1,0 +1,83 @@
+---
+description: เว็บสาธารณะชมรม (/club/[slug]) — กริดกิจกรรม 6 คอลัมน์ · รายละเอียด · คณะกรรมการ popup · แบนเนอร์โทนสว่าง
+globs:
+  - "**/systems/club-event/components/ClubEventPublic*.tsx"
+  - "**/systems/club-event/components/ClubEventPortal*.tsx"
+  - "**/systems/club-event/lib/portal-media.ts"
+  - "**/app/club/**"
+  - "**/lib/club-event/load-public-portal.ts"
+alwaysApply: false
+---
+
+# เว็บสาธารณะชมรม — พอร์ทัลลูกค้า
+
+คู่กับ: `laundry-module-portal-website-template.mdc` · `dashboard-module-media-gallery-slideshow.mdc` · `app-templates-media.mdc`
+
+**ต้นแบบโค้ด:** `ClubEventPublicClient` · `ClubEventPortalEventCardGrid` · `ClubEventPublicEventDetailClient` · `portal-media.ts`
+
+---
+
+## 1) โครงหน้า (บังคับ)
+
+```
+AppPublicCheckInGlassPage
+├── header (absolute) — โลโก้+ชื่อในเม็ดขาว · nav โทนมืดบนพื้นสว่าง
+├── hero แบนเนอร์โทนสว่าง + การ์ดชื่อทับเบา ๆ + CTA
+└── main (max-w-6xl · space-y-12)
+    ├── กำหนดการ — กริดการ์ด  
+    ├── ย้อนหลัง — กริดการ์ดเดียวกัน  
+    ├── แกลเลอรีพอร์ทัล  
+    ├── ค้นหาสมาชิก — เมื่อ `portalShowMembers` (ไม่โหลดรายชื่อทั้งหมด)  
+    ├── กฎระเบียบ (+ ลิงก์เดี่ยวที่ไม่มี eventId เช่น LINE / ค่าบำรุงทั่วไป)  
+    └── ติดต่อ  
+```
+
+- **ห้าม** ส่วนลิงก์แยกยาว / คณะกรรมการเป็นรายการยาวใน `main`  
+- ลิงก์ที่ไม่มี `eventId` อยู่ใต้ **กฎระเบียบ** ไม่ใช่ใต้กำหนดการ  
+- คณะกรรมการ = **ปุ่ม** → `ClubEventCommitteePopup` (`FormModal`)  
+- ตั้งค่า: `portalShowCommittee` ในแท็บเว็ปลิงค์ลูกค้า  
+- ค้นหาสมาชิก = ส่วน `#members` + `ClubEventPortalMemberSearch` เมื่อเปิด `portalShowMembers`  
+- ฟิลด์ที่เปิดเผย: `portalMemberFieldsJson` / `portalMemberFields` (ชื่อเต็มเปิดเสมอ · เบอร์/อีเมลค่าเริ่มปิด)  
+- API: `GET /api/club-event/public/[slug]/members/search?q=` — คืนเฉพาะฟิลด์ที่อนุญาต  
+
+---
+
+## 2) กริดกิจกรรม (กำหนดการ + ย้อนหลัง)
+
+| Breakpoint | คอลัมน์ |
+|---|---|
+| มือถือ | **2** |
+| แท็บเล็ต `sm` | **3** |
+| เดสก์ท็อป `lg+` | **6** |
+
+1. แสดง **2 แถว** ต่อหน้า → ขนาดหน้า = คอลัมน์ × 2 (เดสก์ท็อป **12** ใบ)  
+2. เกินแล้วมี **ก่อนหน้า / ถัดไป**  
+3. ค่าคงที่ใน `portal-media.ts`: `CLUB_EVENT_PORTAL_EVENT_*`  
+4. โทเค็นกริด: `clubEventPortalEventCardGridClass`  
+5. คลิกการ์ด → `/club/[slug]/events/[eventId]` (รายละเอียดสาธารณะ — YouTube กริด · แกลเลอรี · สไลด์ · ลิงก์ที่ผูกกิจกรรม)  
+6. ชิปลิงก์ RSVP/ชำระ/สำรวจ ที่ `config.eventId` ตรง — โชว์ใต้การ์ด  
+
+### หน้ารายละเอียดสาธารณะ (`ClubEventPublicEventDetailClient`)
+
+- **แบน** — ห้ามหุ้มด้วย `ClubEventPageSubNav` / glass panel / การ์ดโทนแถว  
+- หัวข้อ · วันเวลา · ส่วนรายละเอียด · ลิงก์ (ข้อความ+underline) · วิดีโอ · แกลเลอรี เป็น `section` ใน `space-y-10`  
+- รูป/วิดีโอยังเป็น media thumb ได้ — ไม่ใส่กล่องขอบขาวหุ้มทั้งหน้า  
+
+---
+
+## 3) แบนเนอร์
+
+- โทน**สว่าง** (กลางแจ้ง / คนยิ้ม) — ค่าเริ่ม `CLUB_EVENT_PORTAL_SAMPLE_BANNER`  
+- Overlay อ่อนขาว ไม่ทับมืดม่วงทั้งจอ · **ชื่อชมรมในแบนเนอร์ไม่มีกล่อง** (ข้อความโปร่งทับภาพ + drop-shadow อ่านง่าย)  
+- หัวเมนู: พื้นขาวโปร่ง · ตัวอักษรโทน `#3f3a6a`
+
+---
+
+## 4) เช็กลิสต์
+
+- [ ] กริด 2 / 3 / 6 + แบ่งหน้า 2 แถว  
+- [ ] คลิกการ์ด → หน้ารายละเอียดสาธารณะ (แบน ไม่มีกล่องหุ้ม)  
+- [ ] ลิงก์ผูกกิจกรรมโชว์บนการ์ด  
+- [ ] คณะกรรมการ = ปุ่ม + popup + สวิตช์ตั้งค่า  
+- [ ] ค้นหาสมาชิก = สวิตช์ + ฟิลด์เปิดเผย + API search (ไม่ลิสต์ทั้งหมด)  
+- [ ] แบนเนอร์โทนสว่าง  
