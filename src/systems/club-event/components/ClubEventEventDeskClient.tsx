@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
-import { ArrowLeft, Download, Package, QrCode, Search, UserRound } from "lucide-react";
+import { ArrowLeft, Download, Package, QrCode, UserRound } from "lucide-react";
 import {
   AppEmptyState,
   AppSignaturePad,
@@ -19,6 +19,7 @@ import {
 } from "@/systems/club-event/club-event-module-nav";
 import { ClubEventPageSubNav } from "@/systems/club-event/components/ClubEventPageSubNav";
 import {
+  clubDeskMatchScore,
   clubEventPublicCheckInPath,
   formatClubEventFulfillmentLabel,
   type ClubEventCheckInDto,
@@ -163,13 +164,11 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
   const [manageOpen, setManageOpen] = useState(false);
 
   const load = useCallback(
-    async (query = q, opts?: { silent?: boolean }) => {
+    async (opts?: { silent?: boolean }) => {
       if (!opts?.silent) setLoading(true);
       try {
-        const params = new URLSearchParams();
-        if (query.trim()) params.set("q", query.trim());
         const res = await fetch(
-          `/api/club-event/session/events/${encodeURIComponent(eventId)}/desk?${params}`,
+          `/api/club-event/session/events/${encodeURIComponent(eventId)}/desk`,
         );
         const json = (await res.json()) as DeskPayload & { error?: string };
         if (!res.ok) throw new Error(json.error ?? "โหลดไม่สำเร็จ");
@@ -186,15 +185,15 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
         if (!opts?.silent) setLoading(false);
       }
     },
-    [eventId, notice, q],
+    [eventId, notice],
   );
 
   useEffect(() => {
-    void load("");
+    void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
-  useClubEventDeskSse(eventId, () => void load(q, { silent: true }), Boolean(eventId));
+  useClubEventDeskSse(eventId, () => void load({ silent: true }), Boolean(eventId));
 
   useEffect(() => {
     if (!data?.event.slug) return;
@@ -254,7 +253,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
       if (json.checkIn) openManage(json.checkIn);
       setWalkName("");
       setWalkPhone("");
-      await load(q, { silent: true });
+      await load({ silent: true });
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "เช็กอินไม่สำเร็จ");
     } finally {
@@ -295,7 +294,7 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
       pad.clear();
       setManageOpen(false);
       setQrOpen(false);
-      await load(q, { silent: true });
+      await load({ silent: true });
       notice.success("จ่ายของและเซ็นรับแล้ว");
     } catch (e) {
       notice.error(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
@@ -368,8 +367,34 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
       if (a.kind !== "checkIn" && b.kind === "checkIn") return 1;
       return b.sortAt - a.sortAt;
     });
-    return rows;
-  }, [data, filter]);
+
+    const query = q.trim();
+    if (!query) return rows;
+    return rows.filter((item) => {
+      if (item.kind === "checkIn") {
+        return clubDeskMatchScore({
+          name: item.checkIn.guestName,
+          phone: item.checkIn.guestPhone,
+          memberCode: item.checkIn.memberCode,
+          query,
+        });
+      }
+      if (item.kind === "registered") {
+        return clubDeskMatchScore({
+          name: item.row.name,
+          phone: item.row.phone,
+          memberCode: item.row.memberCode,
+          query,
+        });
+      }
+      return clubDeskMatchScore({
+        name: item.row.name,
+        phone: item.row.phone,
+        memberCode: item.row.memberCode,
+        query,
+      });
+    });
+  }, [data, filter, q]);
 
   const publicUrl =
     data?.event.slug && typeof window !== "undefined"
@@ -533,20 +558,9 @@ export function ClubEventEventDeskClient({ eventId }: { eventId: string }) {
                     className={cn(clubEventFieldClass, "min-w-0 flex-1")}
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
-                    placeholder="ค้นชื่อ · เบอร์ · รหัสสมาชิก"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") void load();
-                    }}
+                    placeholder="พิมพ์ชื่อ · เบอร์ · รหัส เพื่อกรองทันที"
+                    autoComplete="off"
                   />
-                  <button
-                    type="button"
-                    className={clubEventIconButtonClass}
-                    aria-label="ค้นหา"
-                    title="ค้นหา"
-                    onClick={() => void load()}
-                  >
-                    <Search className="h-4 w-4" aria-hidden />
-                  </button>
                   <button
                     type="button"
                     className={cn(clubEventPrimaryButtonClass, "gap-1.5")}
