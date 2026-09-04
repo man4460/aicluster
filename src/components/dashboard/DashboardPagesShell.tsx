@@ -59,6 +59,7 @@ const WIDE_MODULE_PREFIXES = [
   "/dashboard/wait-queue",
   "/dashboard/home-finance",
   "/dashboard/vault",
+  "/dashboard/pro-resume",
 ] as const;
 
 /** Module paths ที่มี bottom dock — บังคับ !px-0 (ซ้ำกับ WIDE ได้ — กันพลาด) */
@@ -69,6 +70,7 @@ const DOCKED_MODULE_PREFIXES = [
   "/dashboard/massage",
   "/dashboard/parking",
   "/dashboard/car-wash",
+  "/dashboard/pro-resume",
 ] as const;
 
 const BASIC_WIDE_PATHS = [

@@ -291,6 +291,13 @@ model User {
   lmsFinanceTransactions             LmsFinanceTransaction[]
   lmsLessonProgresses                LmsLessonProgress[]
   lmsCoursePurchases                 LmsCoursePurchase[]
+  resumeProfiles                     ResumeProfile[]
+  resumeEducations                   ResumeEducation[]
+  resumeExperiences                  ResumeExperience[]
+  resumeCertificates                 ResumeCertificate[]
+  resumePortfolioCategories          ResumePortfolioCategory[]
+  resumePortfolioItems               ResumePortfolioItem[]
+  resumeViewAnalytics                ResumeViewAnalytics[]
   educareSchools                     EducareSchool[]
   educareClassrooms                  EducareClassroom[]
   educareStudents                    EducareStudent[]
@@ -7827,6 +7834,173 @@ model LmsCoursePurchase {
   @@index([profileId, status], map: "lms_purchase_profile_status_idx")
   @@index([learnerId, courseId], map: "lms_purchase_learner_course_idx")
   @@map("lms_course_purchases")
+}
+
+/**
+ * Pro Resume & Portfolio Builder — โปรไฟล์เรซูเม่ต่อ owner + trial
+ * (multi-tenant: ownerUserId = tenant ของแพลตฟอร์ม)
+ */
+model ResumeProfile {
+  id              String   @id @default(cuid())
+  ownerUserId     String   @map("owner_id") @db.VarChar(191)
+  owner           User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId  String   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  slug            String   @db.VarChar(80)
+  fullName        String   @map("full_name") @db.VarChar(200)
+  positionTitle   String   @default("") @map("position_title") @db.VarChar(200)
+  bio             String   @default("") @db.Text
+  profileImageUrl String?  @map("profile_image_url") @db.VarChar(512)
+  contactEmail    String?  @map("contact_email") @db.VarChar(200)
+  contactPhone    String?  @map("contact_phone") @db.VarChar(32)
+  /**
+   * สะท้อนสิทธิ์แชร์ลิงก์/QR — sync จากแพ็ก monthly199 ของโมดูล (หรือแอดมิน)
+   */
+  isPremium       Boolean  @default(false) @map("is_premium")
+  publicEnabled   Boolean  @default(true) @map("public_enabled")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  educations          ResumeEducation[]
+  experiences         ResumeExperience[]
+  certificates        ResumeCertificate[]
+  portfolioCategories ResumePortfolioCategory[]
+  portfolioItems      ResumePortfolioItem[]
+  viewAnalytics       ResumeViewAnalytics[]
+
+  @@unique([ownerUserId, trialSessionId], map: "resume_profile_owner_trial_uniq")
+  @@unique([slug, trialSessionId], map: "resume_profile_slug_trial_uniq")
+  @@index([ownerUserId], map: "resume_profile_owner_idx")
+  @@map("resume_profiles")
+}
+
+model ResumeEducation {
+  id             String        @id @default(cuid())
+  ownerUserId    String        @map("owner_id") @db.VarChar(191)
+  owner          User          @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String        @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId      String        @map("profile_id")
+  profile        ResumeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  degree         String        @db.VarChar(200)
+  institution    String        @db.VarChar(200)
+  startYear      Int?          @map("start_year")
+  endYear        Int?          @map("end_year")
+  description    String        @default("") @db.Text
+  orderIndex     Int           @default(0) @map("order_index")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  @@index([profileId, orderIndex], map: "resume_edu_profile_order_idx")
+  @@index([ownerUserId, trialSessionId], map: "resume_edu_owner_trial_idx")
+  @@map("resume_educations")
+}
+
+model ResumeExperience {
+  id             String        @id @default(cuid())
+  ownerUserId    String        @map("owner_id") @db.VarChar(191)
+  owner          User          @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String        @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId      String        @map("profile_id")
+  profile        ResumeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  jobTitle       String        @map("job_title") @db.VarChar(200)
+  company        String        @db.VarChar(200)
+  startDate      String        @default("") @map("start_date") @db.VarChar(32)
+  endDate        String?       @map("end_date") @db.VarChar(32)
+  achievements   String        @default("") @db.Text
+  orderIndex     Int           @default(0) @map("order_index")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  @@index([profileId, orderIndex], map: "resume_exp_profile_order_idx")
+  @@index([ownerUserId, trialSessionId], map: "resume_exp_owner_trial_idx")
+  @@map("resume_experiences")
+}
+
+model ResumeCertificate {
+  id             String        @id @default(cuid())
+  ownerUserId    String        @map("owner_id") @db.VarChar(191)
+  owner          User          @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String        @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId      String        @map("profile_id")
+  profile        ResumeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name           String        @db.VarChar(200)
+  issuedBy       String        @default("") @map("issued_by") @db.VarChar(200)
+  year           Int?
+  fileUrl        String?       @map("file_url") @db.VarChar(512)
+  orderIndex     Int           @default(0) @map("order_index")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  @@index([profileId, orderIndex], map: "resume_cert_profile_order_idx")
+  @@index([ownerUserId, trialSessionId], map: "resume_cert_owner_trial_idx")
+  @@map("resume_certificates")
+}
+
+model ResumePortfolioCategory {
+  id             String        @id @default(cuid())
+  ownerUserId    String        @map("owner_id") @db.VarChar(191)
+  owner          User          @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String        @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId      String        @map("profile_id")
+  profile        ResumeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name           String        @db.VarChar(120)
+  orderIndex     Int           @default(0) @map("order_index")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  items ResumePortfolioItem[]
+
+  @@index([profileId, orderIndex], map: "resume_port_cat_profile_order_idx")
+  @@index([ownerUserId, trialSessionId], map: "resume_port_cat_owner_trial_idx")
+  @@map("resume_portfolio_categories")
+}
+
+model ResumePortfolioItem {
+  id             String                   @id @default(cuid())
+  ownerUserId    String                   @map("owner_id") @db.VarChar(191)
+  owner          User                     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId String                   @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId      String                   @map("profile_id")
+  profile        ResumeProfile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  categoryId     String                   @map("category_id")
+  category       ResumePortfolioCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  title          String                   @db.VarChar(200)
+  coverImage     String?                  @map("cover_image") @db.VarChar(512)
+  shortDesc      String                   @default("") @map("short_desc") @db.VarChar(500)
+  contentHTML    String                   @default("") @map("content_html") @db.Text
+  youtubeUrl     String?                  @map("youtube_url") @db.VarChar(512)
+  /**
+   * JSON string[] — แกลเลอรีรูปผลงาน
+   */
+  imagesJson     String                   @default("[]") @map("images_json") @db.Text
+  orderIndex     Int                      @default(0) @map("order_index")
+  clickCount     Int                      @default(0) @map("click_count")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+
+  @@index([categoryId, orderIndex], map: "resume_port_item_cat_order_idx")
+  @@index([profileId], map: "resume_port_item_profile_idx")
+  @@index([ownerUserId, trialSessionId], map: "resume_port_item_owner_trial_idx")
+  @@map("resume_portfolio_items")
+}
+
+model ResumeViewAnalytics {
+  id              String         @id @default(cuid())
+  ownerUserId     String         @map("owner_id") @db.VarChar(191)
+  owner           User           @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  trialSessionId  String         @default("prod") @map("trial_session_id") @db.VarChar(36)
+  profileId       String         @map("profile_id")
+  profile         ResumeProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  viewerIp        String?        @map("viewer_ip") @db.VarChar(64)
+  viewedAt        DateTime       @default(now()) @map("viewed_at")
+  deviceType      String?        @map("device_type") @db.VarChar(32)
+  /**
+   * null = เปิดหน้าเรซูเม่ · มีค่า = คลิกการ์ดผลงาน
+   */
+  portfolioItemId String?        @map("portfolio_item_id") @db.VarChar(191)
+
+  @@index([profileId, viewedAt], map: "resume_view_profile_at_idx")
+  @@index([ownerUserId, trialSessionId, viewedAt], map: "resume_view_owner_trial_at_idx")
+  @@map("resume_view_analytics")
 }
 
 /**

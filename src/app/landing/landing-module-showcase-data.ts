@@ -154,6 +154,12 @@ export const LANDING_DAILY_MODULE_SHOWCASE: LandingModuleShowcaseItem[] = [
       "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=78",
   },
   {
+    slug: "pro-resume",
+    blurb: "เรซูเม่ ประวัติ ผลงาน เว็บสาธารณะ",
+    coverSrc:
+      "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=900&q=78",
+  },
+  {
     slug: "lms",
     blurb: "คอร์สออนไลน์ บทเรียน YouTube ข้อสอบ ใบรับรอง",
     coverSrc:

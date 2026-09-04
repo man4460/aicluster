@@ -390,12 +390,20 @@ async function main() {
       sortOrder: 36,
     },
     {
+      slug: "pro-resume",
+      title: "Pro Resume & Portfolio Builder",
+      description:
+        "กลุ่ม 1 (Basic) — เรซูเม่ ประวัติ ผลงาน และเว็บสาธารณะ /resume/[slug]",
+      groupId: 1,
+      sortOrder: 37,
+    },
+    {
       slug: "lms",
       title: "LMS คอร์สออนไลน์",
       description:
         "กลุ่ม 1 (Basic) — คอร์ส บทเรียน YouTube ข้อสอบ นักเรียน (โควตา 10) และเว็บ /lms/[slug]",
       groupId: 1,
-      sortOrder: 37,
+      sortOrder: 38,
     },
     {
       slug: "smart-police",

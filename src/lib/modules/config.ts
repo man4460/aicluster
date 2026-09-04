@@ -115,6 +115,10 @@ export const COMMUNITY_COOP_MODULE_GROUP_ID = 1 as const;
 export const VAULT_MODULE_SLUG = "vault" as const;
 export const VAULT_MODULE_GROUP_ID = 1 as const;
 
+/** Pro Resume & Portfolio Builder — เรซูเม่ + แฟ้มผลงานออนไลน์ */
+export const PRO_RESUME_MODULE_SLUG = "pro-resume" as const;
+export const PRO_RESUME_MODULE_GROUP_ID = 1 as const;
+
 /** คลังสต๊อกสินค้า — จัดการคลัง หมวด สินค้า การเคลื่อนไหวสต๊อก */
 export const INVENTORY_MODULE_SLUG = "inventory" as const;
 export const INVENTORY_MODULE_GROUP_ID = 1 as const;
@@ -211,6 +215,7 @@ export function displayAppModuleTitle(slug: string, title: string): string {
   if (slug === PROMPT_LIBRARY_MODULE_SLUG) return "คลังคำสั่ง AI (Prompt)";
   if (slug === MEDIA_REGISTRY_MODULE_SLUG) return "ทะเบียนคุมสื่อ";
   if (slug === VAULT_MODULE_SLUG) return "คลังรหัสผ่าน";
+  if (slug === PRO_RESUME_MODULE_SLUG) return "Pro Resume & Portfolio";
   if (slug === INVENTORY_MODULE_SLUG) return "คลัง · สต๊อกสินค้า";
   if (slug === GENERAL_STORE_POS_MODULE_SLUG) return "POS ร้านทั่วไป (ง่าย)";
   if (slug === DRINK_POS_MODULE_SLUG) return "POS ร้านเครื่องดื่ม";

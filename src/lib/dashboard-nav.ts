@@ -26,6 +26,7 @@ import {
   CLUB_EVENT_MODULE_SLUG,
   LMS_MODULE_SLUG,
   VAULT_MODULE_SLUG,
+  PRO_RESUME_MODULE_SLUG,
   INVENTORY_MODULE_SLUG,
   GENERAL_STORE_POS_MODULE_SLUG,
   DRINK_POS_MODULE_SLUG,
@@ -74,6 +75,7 @@ export function dashboardModuleHref(slug: string): string {
   if (slug === PROMPT_LIBRARY_MODULE_SLUG) return "/dashboard/prompt-library";
   if (slug === MEDIA_REGISTRY_MODULE_SLUG) return "/dashboard/media-registry";
   if (slug === VAULT_MODULE_SLUG) return "/dashboard/vault";
+  if (slug === PRO_RESUME_MODULE_SLUG) return "/dashboard/pro-resume";
   if (slug === INVENTORY_MODULE_SLUG) return "/dashboard/inventory";
   if (slug === GENERAL_STORE_POS_MODULE_SLUG) return "/dashboard/general-store-pos";
   if (slug === DRINK_POS_MODULE_SLUG) return "/dashboard/drink-pos";
@@ -198,6 +200,7 @@ export function buildDashboardNavGroups(
       MEDIA_REGISTRY_MODULE_SLUG,
       MQTT_SERVICE_MODULE_SLUG,
       SYSTEM_MAP_CATALOG_SLUG,
+      PRO_RESUME_MODULE_SLUG,
     ]);
 
     const financeItems = serviceLinks.filter((l) => financeSlugs.has(l.slug));

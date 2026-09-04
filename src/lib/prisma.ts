@@ -43,7 +43,7 @@ import { getAuditActor } from "@/lib/audit-context";
 /** 82: ClubEvent portal fields + submissions */
 /** 83: Lms* LMS online course module */
 /** 84: LmsCoursePurchase — learner buy + slip review */
-const PRISMA_SINGLETON_VERSION = 85;
+const PRISMA_SINGLETON_VERSION = 86;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -184,6 +184,8 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     lmsCourse?: { findMany?: unknown };
     lmsLearner?: { findMany?: unknown };
     lmsCoursePurchase?: { findMany?: unknown };
+    resumeProfile?: { findUnique?: unknown };
+    resumePortfolioItem?: { findMany?: unknown };
   };
   return (
     typeof c.appModule?.findMany === "function" &&
@@ -313,7 +315,9 @@ function prismaClientHasExpectedDelegates(client: PrismaClient): boolean {
     typeof c.lmsProfile?.findUnique === "function" &&
     typeof c.lmsCourse?.findMany === "function" &&
     typeof c.lmsLearner?.findMany === "function" &&
-    typeof c.lmsCoursePurchase?.findMany === "function"
+    typeof c.lmsCoursePurchase?.findMany === "function" &&
+    typeof c.resumeProfile?.findUnique === "function" &&
+    typeof c.resumePortfolioItem?.findMany === "function"
   );
 }
 

@@ -294,6 +294,16 @@ import {
   writeClubEventHeaderCollapsed,
 } from "@/systems/club-event/club-event-module-nav";
 import {
+  ProResumeHeaderBarNav,
+  ProResumeHeaderExpandButton,
+} from "@/systems/pro-resume/components/ProResumeHeaderBarNav";
+import {
+  PRO_RESUME_HEADER_COLLAPSE_EVENT,
+  isProResumeModulePath,
+  readProResumeHeaderCollapsed,
+  writeProResumeHeaderCollapsed,
+} from "@/systems/pro-resume/pro-resume-module-nav";
+import {
   LmsHeaderBarNav,
   LmsHeaderExpandButton,
 } from "@/systems/lms/components/LmsHeaderBarNav";
@@ -649,6 +659,7 @@ export function DashboardShell({
   const [villageHeaderCollapsed, setVillageHeaderCollapsed] = useState(false);
   const [laundryHeaderCollapsed, setLaundryHeaderCollapsed] = useState(false);
   const [clubEventHeaderCollapsed, setClubEventHeaderCollapsed] = useState(false);
+  const [proResumeHeaderCollapsed, setProResumeHeaderCollapsed] = useState(false);
   const [lmsHeaderCollapsed, setLmsHeaderCollapsed] = useState(false);
   const [parkingHeaderCollapsed, setParkingHeaderCollapsed] = useState(false);
   const [inventoryHeaderCollapsed, setInventoryHeaderCollapsed] = useState(false);
@@ -691,6 +702,7 @@ export function DashboardShell({
   const onVillageModule = isVillageModulePath(pathname);
   const onLaundryModule = isLaundryModulePath(pathname);
   const onClubEventModule = isClubEventModulePath(pathname);
+  const onProResumeModule = isProResumeModulePath(pathname);
   const onLmsModule = isLmsModulePath(pathname);
   const onParkingModule = isParkingModulePath(pathname);
   const onInventoryModule = isInventoryModulePath(pathname);
@@ -722,6 +734,7 @@ export function DashboardShell({
   const showVillageHeaderBar = onVillageModule && villageHeaderCollapsed;
   const showLaundryHeaderBar = onLaundryModule && laundryHeaderCollapsed;
   const showClubEventHeaderBar = onClubEventModule && clubEventHeaderCollapsed;
+  const showProResumeHeaderBar = onProResumeModule && proResumeHeaderCollapsed;
   const showLmsHeaderBar = onLmsModule && lmsHeaderCollapsed;
   const showParkingHeaderBar = onParkingModule && parkingHeaderCollapsed;
   const showInventoryHeaderBar = onInventoryModule && inventoryHeaderCollapsed;
@@ -1202,6 +1215,21 @@ export function DashboardShell({
       window.removeEventListener("storage", sync);
     };
   }, [onClubEventModule]);
+
+  useEffect(() => {
+    if (!onProResumeModule) {
+      setProResumeHeaderCollapsed(false);
+      return;
+    }
+    const sync = () => setProResumeHeaderCollapsed(readProResumeHeaderCollapsed());
+    sync();
+    window.addEventListener(PRO_RESUME_HEADER_COLLAPSE_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(PRO_RESUME_HEADER_COLLAPSE_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [onProResumeModule]);
 
   useEffect(() => {
     if (!onLmsModule) {
@@ -2086,6 +2114,30 @@ export function DashboardShell({
                     <span className="font-medium text-white/90">{displayName}</span>
                   </p>
                   <ClubEventHeaderExpandButton onExpand={() => writeClubEventHeaderCollapsed(false)} />
+                </div>
+              </>
+            ) : showProResumeHeaderBar ? (
+              <>
+                <div className="hidden min-w-0 lg:block">
+                  <ProResumeHeaderBarNav onExpand={() => writeProResumeHeaderCollapsed(false)} />
+                </div>
+                <div className="flex min-w-0 items-center gap-2 lg:hidden">
+                  <p
+                    className="min-w-0 flex-1 truncate text-left text-[11px] leading-snug text-white/95"
+                    title={`${tokens} โทเคน · ${packageLabel} · ${displayName}`}
+                  >
+                    <span className="tabular-nums font-black">{tokens.toLocaleString()}</span>{" "}
+                    <span className="font-medium text-white/70">โทเคน</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-bold text-white">{packageLabel}</span>
+                    <span className="mx-1.5 text-white/30" aria-hidden>
+                      |
+                    </span>
+                    <span className="font-medium text-white/90">{displayName}</span>
+                  </p>
+                  <ProResumeHeaderExpandButton onExpand={() => writeProResumeHeaderCollapsed(false)} />
                 </div>
               </>
             ) : showLmsHeaderBar ? (
