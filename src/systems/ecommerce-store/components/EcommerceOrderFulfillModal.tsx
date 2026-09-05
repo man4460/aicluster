@@ -52,9 +52,9 @@ type Props = {
   onShip: (courierTrackingNo: string) => Promise<void> | void;
 };
 
-/** กล่องฟอร์มขาว + เส้นบาง (แม่แบบซักผ้า / ecommerce panel) */
-const sectionClass = "rounded-lg border border-slate-200/90 bg-white p-3";
+/** หัวข้อส่วน — flat ไม่ห่อกล่อง */
 const sectionLabelClass = "text-xs font-bold text-[#4d47b6]";
+const sectionDividerClass = "border-t border-slate-200/80 pt-3";
 
 export function EcommerceOrderFulfillModal({
   open,
@@ -148,8 +148,8 @@ export function EcommerceOrderFulfillModal({
         }
       >
         {order ? (
-          <div className="space-y-3 text-left">
-            <div className={cn(sectionClass, "flex items-start gap-3")}>
+          <div className="space-y-4 text-left">
+            <div className="flex items-start gap-3">
               {order.paymentSlipUrl ? (
                 <AppImageThumb
                   src={order.paymentSlipUrl}
@@ -186,24 +186,21 @@ export function EcommerceOrderFulfillModal({
               </div>
             </div>
 
-            <div className={cn(sectionClass, "space-y-1.5")}>
+            <div className={cn(sectionDividerClass, "space-y-1.5")}>
               <p className={sectionLabelClass}>ที่อยู่จัดส่ง</p>
               <p className="whitespace-pre-wrap text-sm font-semibold text-[#1e1b4b]">
                 {order.customerAddress?.trim() || "— ลูกค้าไม่ได้ระบุที่อยู่ —"}
               </p>
             </div>
 
-            <div className={cn(sectionClass, "space-y-2")}>
+            <div className={cn(sectionDividerClass, "space-y-2")}>
               <p className={sectionLabelClass}>รายการสินค้า</p>
-              <ul className="space-y-2">
+              <ul className="divide-y divide-slate-200/80">
                 {items.length === 0 ? (
-                  <li className="text-sm text-[#66638c]">ไม่มีรายการสินค้า</li>
+                  <li className="py-1 text-sm text-[#66638c]">ไม่มีรายการสินค้า</li>
                 ) : (
                   items.map((it) => (
-                    <li
-                      key={it.id}
-                      className="flex items-center gap-2.5 rounded-lg border border-slate-200/90 bg-white px-2.5 py-2"
-                    >
+                    <li key={it.id} className="flex items-center gap-2.5 py-2 first:pt-0 last:pb-0">
                       {it.imageUrl ? (
                         <AppImageThumb
                           src={it.imageUrl}
@@ -228,7 +225,7 @@ export function EcommerceOrderFulfillModal({
               </ul>
             </div>
 
-            <div className={cn(sectionClass, "space-y-2")}>
+            <div className={cn(sectionDividerClass, "space-y-2")}>
               <p className={sectionLabelClass}>พิมพ์เอกสาร</p>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -272,7 +269,7 @@ export function EcommerceOrderFulfillModal({
 
             <label
               className={cn(
-                sectionClass,
+                sectionDividerClass,
                 "flex items-start gap-2 text-sm font-semibold text-[#1e1b4b]",
               )}
             >
@@ -285,7 +282,7 @@ export function EcommerceOrderFulfillModal({
               <span>แพ็คใส่กล่องเรียบร้อยแล้ว พร้อมติดฉลากและจัดส่ง</span>
             </label>
 
-            <div className={cn(sectionClass, "space-y-1.5")}>
+            <div className={cn(sectionDividerClass, "space-y-1.5")}>
               <label className="block space-y-1.5">
                 <span className={sectionLabelClass}>เลขพัสดุขนส่ง</span>
                 <input
