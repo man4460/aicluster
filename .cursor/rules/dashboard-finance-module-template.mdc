@@ -17,7 +17,10 @@ alwaysApply: false
 
 # แม่แบบหน้าการเงิน — มาตรฐานข้ามโมดูล (Golden Template)
 
-ใช้เมื่อ **สร้างหน้าการเงิน/ยอดขายใหม่** หรือปรับโมดูลเดิมให้ตรงชุดที่ทำแล้วใน **ร้านอาหาร · เครื่องดื่ม · โรงแรม**
+ใช้เมื่อ **สร้างหน้าการเงิน/ยอดขายใหม่** หรือปรับโมดูลเดิมให้ตรงชุดที่ทำแล้ว
+
+**ต้นแบบ UX/UI ล่าสุด (บังคับยึด):** **รับฝากซักผ้า** `LaundryFinancePanel.tsx` · เทียบเคียงร้านออนไลน์ `EcommerceFinanceClient.tsx`  
+**ต้นแบบโดเมน/ฟอร์มรายจ่าย:** ร้านอาหาร `BuildingPosSalesAnalytics` + `BuildingPosCostsPanel` · เครื่องดื่ม · โรงแรม
 
 **กฎย่อย (อ่านคู่กัน):**
 
@@ -32,9 +35,8 @@ alwaysApply: false
 | สรุปมือถือ 2 คอลัมน์ | `dashboard-mobile-summary-stat-grid.mdc` |
 | รีเฟรชหัวการ์ด | `dashboard-mobile-report-refresh-icon.mdc` |
 | ไอคอนแก้ไข/ลบ | `dashboard-row-action-icon-buttons.mdc` |
-| ยืนยันก่อนลบ | `AppNoticePopup` / `useAppNoticePopup` จาก `@/components/app-templates` (ต้นแบบสนามฟุตบอล) |
-
-**ต้นแบบโค้ด:** `BuildingPosSalesAnalytics.tsx` + `BuildingPosCostsPanel.tsx` · เทียบเคียง `DrinkPosSalesClient` · `HotelResortFinanceClient`
+| ยืนยันก่อนลบ | `AppNoticePopup` / `useAppNoticePopup` จาก `@/components/app-templates` |
+| โมดูลซักผ้า (chrome · ปุ่ม · มน) | `laundry-module-dashboard-template.mdc` |
 
 ---
 
@@ -42,25 +44,46 @@ alwaysApply: false
 
 ผู้ใช้เห็น **ตัวเลขสรุปทันที** → กรองช่วงเวลาได้ → เปิดกราฟเมื่อต้องการ → สลับ **ประวัติ/รายรับ · รายจ่าย** ในหน้าเดียว → แนบ/ดูสลิปได้ → บันทึกรายจ่ายครบหมวด
 
-**ห้าม** แยกหน้าต้นทุนเป็นทางหลัก · แยกการ์ดกรองกับรายละเอียด · ชิปช่วงเวลาเต็มจอ · placeholder เมื่อซ่อนกรอง/กราฟ · แสดงช่องสลิปว่าง
+**ห้าม** แยกหน้าต้นทุนเป็นทางหลัก · แยกการ์ดกรองกับรายละเอียด · ชิปช่วงเวลาเต็มจอ · placeholder เมื่อซ่อนกรอง/กราฟ · แสดงช่องสลิปว่าง · ใช้ `AppDashboardSection` glass/`rounded-2xl` แทนแผงโมดูล plain
+
+---
+
+## 0b) ความโค้งมน · ปุ่ม · แผง (บังคับ — ยึดซักผ้า)
+
+| ชั้น | ความมน | โทเค็นตัวอย่าง |
+|------|--------|----------------|
+| **แผงการเงินหลัก** | `rounded-xl` · ขอบ `border-slate-200/90` · พื้นขาว · ไม่ glass | `laundryPanelClass` / `ecommerceStorePanelClass` |
+| **การ์ดสรุปตัวเลข** | `rounded-lg` | `*StatInlineClass` |
+| **แถวรายรับ/รายจ่าย** | `rounded-lg` · ขอบ slate · พื้นขาว | `laundry` list row / `ecommerceStoreFinanceListRowClass` |
+| **กรอบกราฟ** | `rounded-lg` · `border-slate-200/90` · `bg-slate-50/50` | `ecommerceStoreFinanceChartPanelClass` |
+| **ปุ่มหัว / กรอง / รีเฟรช / แท็บ** | **`h-9` · `rounded-lg`** · ชุด `*InlineSubNavBtnClass` / `*OutlineButtonClass` | ห้าม `rounded-2xl` / `rounded-full` บนปุ่มเครื่องมือ |
+| **ชิปช่วงเวลา** | `rounded-full` · **`h-9`** · pill ตามความยาวข้อความ | `*FinanceRangeChipClass` |
+
+**หัวแผง (ลำดับขวา):** แท็บรายรับ|รายจ่าย → CTA ตามแท็บ (รายจ่ายเพิ่ม / หมวด / ลิงก์ออเดอร์) → เส้นแบ่ง → **ซ่อนกรอง · ซ่อนกราฟ · รีเฟรช** ใน `*InlineSubNavShellClass` เดียวกัน
+
+**ห้าม**
+
+- ห่อทั้งหน้าด้วย `AppDashboardSection` โทน violet/`app-surface`/`rounded-2xl` เป็นแผงหลักการเงิน
+- แถวรายการ glass `rounded-[1.25rem]` + gradient ทับแผง plain
+- ปุ่มรีเซ็ต/เครื่องมือที่ใช้ความสูงหรือมนคนละชุดกับปุ่มโมดูล (`h-9` / `rounded-lg`)
 
 ---
 
 ## 1) ลำดับหน้าจอ (บังคับ)
 
 ```
-[1] สรุปตัวเลข — นอกการ์ดหลัก · ไม่ถูกซ่อนกราฟ
-[2] AppDashboardSection «การเงิน» ใบเดียว
-      ├─ หัว: แสดง/ซ่อนกรอง · แสดง/ซ่อนกราฟ · รีเฟรช
-      ├─ แผงกรอง (ซ่อนได้)
+[1] แผงการเงินใบเดียว (*PanelClass · rounded-xl)
+      ├─ หัว: แท็บรายรับ|รายจ่าย · CTA · กรอง · กราฟ · รีเฟรช
+      ├─ สรุปตัวเลข (รายรับ/ช่องทาง · รายจ่าย · สุทธิ)
+      ├─ แผงกรอง (ซ่อนได้ · ค่าเริ่มซ่อน)
       ├─ แผงกราฟ (ซ่อนได้ · ค่าเริ่มซ่อน)
-      └─ แถบแท็บ + รายการ (คั่น border-t ได้)
+      └─ โซนรายการ (คั่น border-t) — ประวัติหรือรายจ่ายตามแท็บ
 ```
 
 | ชั้น | บังคับ |
 |------|--------|
-| สรุป | **รายรับ · รายจ่าย · สุทธิ** (หรือรายได้·ต้นทุน·กำไร) · `grid-cols-2` มือถือ · การ์ดคี่ใบสุดท้าย `col-span-2 sm:col-span-1` · `sm:grid-cols-3` |
-| การ์ดหลัก | กรอง + กราฟ + รายละเอียด **ใบเดียว** — ห้ามสอง `AppDashboardSection` |
+| สรุป | **รายรับ · รายจ่าย · สุทธิ** (หรือแยกช่องทางขายได้) · `grid-cols-2` มือถือ · การ์ดคี่ใบสุดท้าย `col-span-2 sm:col-span-1` · `sm:grid-cols-3` (หรือ 4 ถ้ามีช่องทาง) |
+| การ์ดหลัก | กรอง + กราฟ + รายละเอียด **ใบเดียว** — ห้ามสองแผงหลัก |
 | ค่าเริ่ม | ช่วง **เดือนนี้** · **กรองซ่อน** · **กราฟซ่อน** |
 
 ---
@@ -91,27 +114,29 @@ alwaysApply: false
 | `CUSTOM` | กำหนดเอง |
 
 - คอนเทนเนอร์: `flex flex-wrap gap-2` · `role="group"` · `aria-label`
-- ปุ่ม: **pill ตามความยาวข้อความ** · `h-10` · `shrink-0` · `rounded-full` · `px-3.5` · `aria-pressed`
+- ปุ่ม: **pill ตามความยาวข้อความ** · **`h-9`** · `shrink-0` · `rounded-full` · `px-3` · `aria-pressed`
 - **ห้าม** `grid-cols-2 sm:grid-cols-4` + `w-full` บนชิป (ไม่เต็มจอ / ไม่บังคับกว้างเท่ากัน)
+- **ห้าม** `h-10` / `h-11` บนชิปถ้าปุ่มโมดูลเป็น `h-9` — ให้สูงชุดเดียวกับซักผ้า
 
 ### ช่องพิมพ์
 
 | ชิ้น | เมื่อไหร่ | หมายเหตุ |
 |------|----------|----------|
 | ตั้งแต่วันที่ / ถึงวันที่ | เฉพาะ `CUSTOM` | `type="date"` · label มองเห็นได้ |
-| ค้นหา | เสมอเมื่อเปิดกรอง | placeholder ตามโดเมน (โน้ต/สินค้า/โต๊ะ/แขก…) |
+| ค้นหา | เสมอเมื่อเปิดกรอง | placeholder ตามโดเมน · label มองเห็นได้ |
 | **รีเซ็ต · เดือนนี้** | **เฉพาะเมื่อมีเงื่อนไขกรองค้าง** (ช่วง ≠ เดือนนี้ หรือมีวันที่/คำค้น) | ห้ามโชว์ตลอด |
 
-- ความสูงช่องพิมพ์เท่ากัน: `min-h-[44px]` / `h-11`
+- ความสูงช่องพิมพ์ = ปุ่มโมดูล: **`h-9` · `rounded-lg`** (`*FieldClass`)
 - **`sm+`:** วันที่ + ค้นหา + รีเซ็ต **แถวเดียวกัน** (`flex-row flex-wrap items-end`)
 - มือถือ: เรียงแนวตั้งได้
 - ข้อความสถานะสั้นได้ เช่น `กำลังดู: เดือนนี้`
 - **ห้าม** select ปี/เดือน/วัน แยกชั้นแทนชิป
+- ปุ่มรีเซ็ตใช้ `*OutlineButtonClass` / `*CompactOutlineButtonClass` — **ห้าม** คลาสคนละชุดกับปุ่มโมดูล
 
 ### ซ่อนกรอง / ซ่อนกราฟ
 
-- คนละปุ่มที่หัวการ์ด (`aria-expanded` · `aria-controls`)
-- ปุ่มกรองมี **badge จุด** ได้เมื่อมีเงื่อนไขค้าง (แม้แผงซ่อน)
+- คนละปุ่มที่หัวแผง (`aria-expanded` · `aria-controls`) — คู่กับรีเฟรชใน shell เดียวกัน
+- ปุ่มกรองมี **badge จุด** ได้เมื่อมีเงื่อนไขค้าง
 - **ขณะซ่อน — ไม่มี** กล่อง dashed / ข้อความ «ตัวกรองถูกซ่อน» / «กราฟถูกซ่อน»
 
 รายละเอียดเพิ่ม: **`dashboard-finance-filter-charts-toggle.mdc`**
@@ -138,9 +163,9 @@ alwaysApply: false
 | 1 | **ประวัติ / รายรับ** | ออเดอร์ · ขาย · เข้าพัก ตามกรอง |
 | 2 | **รายจ่าย** | ต้นทุน + หมวด + ฟอร์ม |
 
-- อยู่**ใต้**กรอง/กราฟ ในการ์ดเดียวกัน
+- แท็บอยู่ที่**หัวแผง** (คู่เครื่องมือ) — แผงเนื้อหาอยู่ใต้กรอง/กราฟ คั่น `border-t`
 - `<nav role="tablist">` · ปุ่ม `role="tab"` · แผง `role="tabpanel"` · `aria-selected` · `aria-controls`
-- เปลือก: `*FinanceSubTabShellClass` · ปุ่ม `flex-1 min-h-[44px] font-black` · active/idle ตาม token โมดูล
+- เปลือก: `*InlineSubNavShellClass` · ปุ่ม `*InlineSubNavBtnClass` (`h-9` · `rounded-lg`) — **ห้าม** แท็บเต็มความกว้าง `min-h-[44px] flex-1` ถ้าโมดูลใช้ชุดซักผ้าแล้ว
 - URL เก่า (เช่น `?fin=costs`) → เปิดแท็บรายจ่ายในหน้าเดิมได้
 
 รายละเอียด: **`dashboard-finance-detail-tabs.mdc`**
@@ -253,15 +278,17 @@ await deleteApi(...);
 
 ---
 
-## 9) หัวการ์ด — ปุ่มเครื่องมือ
+## 9) หัวแผง — ปุ่มเครื่องมือ
 
-จัดแถวเดียวขวาสุด (`AppSectionHeader` + `actionWrapClassName="shrink-0 self-start…"`):
+จัดแถวเดียวขวาสุดของหัวแผง (ไม่บังคับ `AppSectionHeader` — ซักผ้าใช้ `h2` + กลุ่มปุ่ม):
 
-1. แสดง/ซ่อนกรอง (มี badge เมื่อกรองค้าง)  
-2. แสดง/ซ่อนกราฟ  
-3. รีเฟรช — มือถือไอคอน · `sm+` ไอคอน+ข้อความ · `aria-label` · ตาม `dashboard-mobile-report-refresh-icon.mdc`
+1. แท็บ **รายรับ | รายจ่าย**  
+2. CTA ตามแท็บ (เช่น รายจ่ายเพิ่ม · หมวดหมู่ · ลิงก์ออเดอร์)  
+3. แสดง/ซ่อนกรอง (มี badge เมื่อกรองค้าง)  
+4. แสดง/ซ่อนกราฟ  
+5. รีเฟรช — มือถือไอคอน · `sm+` ไอคอน+ข้อความ · `aria-label`
 
-คลาสปุ่ม outline: `appTemplateOutlineButtonClass` · `min-h-[40px]` · `text-xs font-black text-[#4d47b6]`
+คลาสปุ่ม: ชุดโมดูล `*InlineSubNavBtnClass` / `*OutlineButtonClass` — **`h-9` · `rounded-lg`** · มือถือซ่อนข้อความยาวด้วย `hidden sm:inline`
 
 ---
 
@@ -269,6 +296,8 @@ await deleteApi(...);
 
 | โมดูล | ไฟล์หลัก |
 |-------|----------|
+| **ซักผ้า (UX chrome)** | `LaundryFinancePanel.tsx` · `LaundryCostPanel` · `LaundryRevenuePanel` |
+| **ร้านออนไลน์** | `EcommerceFinanceClient.tsx` · `EcommerceCostsPanel` |
 | POS ร้านอาหาร | `BuildingPosSalesAnalytics.tsx` · `BuildingPosCostsPanel.tsx` |
 | POS เครื่องดื่ม | `DrinkPosSalesClient.tsx` · `DrinkPosCostsPanel.tsx` |
 | โรงแรมรีสอร์ท | `HotelResortFinanceClient.tsx` |
@@ -279,20 +308,22 @@ await deleteApi(...);
 
 ## 11) เช็กลิสต์โมดูลใหม่ / ปรับให้ตรงแม่แบบ
 
-### โครง + สรุป
-- [ ] สรุป 3 การ์ดบนสุด · สีราคาตาม §2 · กริดมือถือ 2 คอลัมน์
-- [ ] การ์ด «การเงิน» ใบเดียวรวมกรอง·กราฟ·แท็บ
+### โครง + สรุป + chrome
+- [ ] แผงหลัก `rounded-xl` plain — ไม่ใช่ `AppDashboardSection` glass/`rounded-2xl`
+- [ ] สรุปตัวเลข · สีราคาตาม §2 · กริดมือถือ 2 คอลัมน์ · การ์ดสรุป `rounded-lg`
+- [ ] แถวรายการ `rounded-lg` · กราฟในกรอบ `rounded-lg`
+- [ ] ปุ่มเครื่องมือ/แท็บ/รีเซ็ตชุด `h-9` · `rounded-lg`
 
 ### กรอง
-- [ ] ชิป วันนี้/เดือนนี้/ปีนี้/กำหนดเอง เป็น **pill เล็ก** (`flex-wrap`) ไม่เต็มจอ
+- [ ] ชิป วันนี้/เดือนนี้/ปีนี้/กำหนดเอง เป็น **pill `h-9`** (`flex-wrap`) ไม่เต็มจอ
 - [ ] default เดือนนี้ · กรองซ่อน · กราฟซ่อน
 - [ ] วันที่เฉพาะ CUSTOM · ค้นหา · รีเซ็ตเฉพาะเมื่อกรองค้าง
-- [ ] ช่องพิมพ์สูงเท่ากัน · `sm+` แถวเดียว
+- [ ] ช่องพิมพ์สูงเท่าปุ่มโมดูล · `sm+` แถวเดียว
 - [ ] คนละปุ่มซ่อนกรอง/กราฟ · ซ่อนแล้วไม่มี placeholder
 
 ### กราฟ + แท็บ
-- [ ] กราฟจาก `app-templates` · ไม่มี CTA รายจ่ายเหนือกราฟ
-- [ ] แท็บประวัติ/รายรับ · รายจ่าย + a11y tablist
+- [ ] กราฟจาก `app-templates` · `compact` · ไม่มี CTA รายจ่ายเหนือกราฟ
+- [ ] แท็บประวัติ/รายรับ · รายจ่าย ที่หัวแผง + a11y tablist
 
 ### สลิป + แถว
 - [ ] สลิปเฉพาะเมื่อมี URL · lightbox จาก app-templates

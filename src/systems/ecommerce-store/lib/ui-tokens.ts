@@ -178,12 +178,12 @@ export const ecommerceStoreChipActiveClass = cn(
   appDashboardBrandGradientFillClass,
 );
 
-/** ชิปช่วงเวลาการเงิน — pill ตามแม่แบบ finance */
+/** ชิปช่วงเวลาการเงิน — pill เล็ก (แม่แบบซักผ้า · h-9) */
 export function ecommerceStoreFinanceRangeChipClass(active = false): string {
   return cn(
-    "inline-flex h-10 shrink-0 items-center justify-center rounded-full px-3.5 text-xs font-black transition-all sm:px-4",
+    "inline-flex h-9 shrink-0 items-center justify-center rounded-full px-3 text-[11px] font-bold transition-all sm:text-xs",
     active
-      ? cn(appDashboardBrandGradientFillClass, "text-white shadow-[0_18px_30px_-22px_rgba(91,97,255,0.55)]")
+      ? cn(appDashboardBrandGradientFillClass, "text-white shadow-sm")
       : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50",
   );
 }
@@ -192,14 +192,26 @@ export function ecommerceStoreFinanceRangeChipClass(active = false): string {
 export const ecommerceStoreFinanceStatsGridClass =
   "grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3";
 
-/** การ์ดสรุปแบบเส้นซ้าย + พื้น pastel (แม่แบบ laundry / club-event) */
+/** การ์ดสรุปแบบเส้นซ้าย + พื้น pastel (แม่แบบ laundry) — มน `rounded-lg` */
 export const ecommerceStoreFinanceStatInlineClass =
   "flex h-full min-h-[4.25rem] min-w-0 flex-col justify-center gap-0.5 rounded-lg bg-slate-50/90 px-3 py-2.5";
 
 export const ecommerceStoreFinanceStatTailClass = "col-span-2 sm:col-span-1";
 
-export const ecommerceStoreFinanceSubTabShellClass =
-  "rounded-[1.25rem] border border-[#e4e0f5]/90 bg-gradient-to-r from-white/95 via-[#faf9ff] to-indigo-50/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.88)]";
+/** แท็บรายรับ/รายจ่าย — เปลือกเดียวกับ inline sub-nav (rounded-lg) */
+export const ecommerceStoreFinanceSubTabShellClass = ecommerceStoreInlineSubNavShellClass;
+
+export function ecommerceStoreFinanceSubTabPillClass(active = false): string {
+  return ecommerceStoreInlineSubNavBtnClass(active);
+}
+
+/** กรอบกราฟในการเงิน */
+export const ecommerceStoreFinanceChartPanelClass =
+  "rounded-lg border border-slate-200/90 bg-slate-50/50 p-3 sm:p-4";
+
+/** แถวรายรับ/รายจ่ายในรายการ */
+export const ecommerceStoreFinanceListRowClass =
+  "rounded-lg border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm sm:px-4 sm:py-3";
 
 export const ecommerceStoreContentStackClass = "space-y-4 sm:space-y-5";
 

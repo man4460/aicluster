@@ -33,6 +33,7 @@ import {
   ecommerceStoreChipActiveClass,
   ecommerceStoreChipIdleClass,
   ecommerceStoreFieldClass,
+  ecommerceStoreFinanceListRowClass,
   ecommerceStoreOutlineButtonClass,
   ecommerceStorePrimaryButtonClass,
   ecommerceStoreSectionHeadingClass,
@@ -435,14 +436,14 @@ export const EcommerceCostsPanel = forwardRef<
             return (
               <li
                 key={entry.id}
-                className="flex items-start gap-2 rounded-[1.25rem] border border-white/50 bg-gradient-to-br from-white/55 to-slate-50/15 px-3 py-3 shadow-sm ring-1 ring-inset ring-white/40"
+                className={cn(ecommerceStoreFinanceListRowClass, "flex items-start gap-2")}
               >
                 {slip ? (
                   <AppImageThumb
                     src={slip}
                     alt={`สลิป ${entry.label}`}
                     onOpen={() => slipLb.open(slip)}
-                    className="h-14 w-14 shrink-0"
+                    className="h-14 w-14 shrink-0 rounded-lg"
                   />
                 ) : null}
                 <div className="min-w-0 flex-1">
@@ -536,7 +537,7 @@ export const EcommerceCostsPanel = forwardRef<
             />
           </label>
         ) : sortedCategories.length === 0 ? (
-          <p className="rounded-[1.25rem] border border-dashed border-[#d8d6ec] bg-[#faf9ff] px-3 py-6 text-center text-sm font-semibold text-[#66638c]">
+          <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50/80 px-3 py-6 text-center text-sm font-semibold text-[#66638c]">
             ยังไม่มีหมวด — กด «เพิ่มหมวดหมู่»
           </p>
         ) : (
@@ -544,7 +545,7 @@ export const EcommerceCostsPanel = forwardRef<
             {sortedCategories.map((c) => (
               <li
                 key={c.id}
-                className="flex items-center justify-between gap-2 rounded-[1.25rem] border border-white/50 bg-white/70 px-3 py-2.5"
+                className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm"
               >
                 <p className="min-w-0 truncate text-sm font-black text-[#1e1b4b]">{c.name}</p>
                 <div className="flex shrink-0 items-center gap-1">
