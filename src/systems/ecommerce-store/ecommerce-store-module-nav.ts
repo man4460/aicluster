@@ -10,11 +10,11 @@ export type EcommerceStoreSettingsTab = "basic" | "finance" | "portal";
 /** แท็บย่อยแดชบอร์ด: ภาพรวม · ออเดอร์ออนไลน์ · ขายหน้าร้าน */
 export type EcommerceStoreDashboardTabKey = "overview" | "orders" | "pos";
 
-/** แท็บย่อยการจัดการ: สินค้า · สต๊อก · CRM */
-export type EcommerceStoreManageTabKey = "products" | "stock" | "crm";
+/** แท็บย่อยการจัดการ: สินค้า (รวมสต๊อก) · CRM */
+export type EcommerceStoreManageTabKey = "products" | "crm";
 
 export const ECOMMERCE_STORE_DASHBOARD_TAB_KEYS = new Set<string>(["overview", "orders", "pos"]);
-export const ECOMMERCE_STORE_MANAGE_TAB_KEYS = new Set<string>(["products", "stock", "crm", "customers"]);
+export const ECOMMERCE_STORE_MANAGE_TAB_KEYS = new Set<string>(["products", "crm", "customers", "stock"]);
 
 export const ECOMMERCE_STORE_DASHBOARD_TAB_ITEMS: {
   key: EcommerceStoreDashboardTabKey;
@@ -32,7 +32,6 @@ export const ECOMMERCE_STORE_MANAGE_TAB_ITEMS: {
   shortLabel: string;
 }[] = [
   { key: "products", label: "สินค้า", shortLabel: "สินค้า" },
-  { key: "stock", label: "สต๊อกสินค้า", shortLabel: "สต๊อก" },
   { key: "crm", label: "CRM", shortLabel: "ลูกค้า" },
 ];
 
@@ -49,8 +48,8 @@ export function parseEcommerceStoreManageTab(
   raw: string | null | undefined,
 ): EcommerceStoreManageTabKey {
   if (raw === "crm" || raw === "customers") return "crm";
-  if (raw === "stock") return "stock";
-  if (raw === "products") return "products";
+  /** `stock` เดิมรวมเข้าสินค้าแล้ว */
+  if (raw === "stock" || raw === "products") return "products";
   return "products";
 }
 

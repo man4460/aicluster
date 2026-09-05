@@ -9,6 +9,7 @@ import {
   AppImageThumb,
   AppSectionHeader,
   useAppImageLightbox,
+  useAppNoticePopup,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
@@ -24,7 +25,6 @@ import {
   ecommerceGradientPriceClass,
   ecommerceListStackClass,
   ecommerceProductTagClass,
-  ecommerceStockButtonClass,
   ecommerceStockPillClass,
 } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
 import {
@@ -36,6 +36,7 @@ import {
   ecommerceStoreInlineSubNavBtnClass,
   ecommerceStoreInlineSubNavShellClass,
   ecommerceStoreNavDividerClass,
+  ecommerceStoreRowIconButtonClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
 
 type Category = {
@@ -64,6 +65,12 @@ export type EcommerceProductsEmbeddedToolbarApi = {
   toggleFilter: () => void;
   openAddProduct: () => void;
   openAddCategory: () => void;
+  downloadTemplate: () => void;
+  downloadExport: () => void;
+  triggerImport: () => void;
+  importBusy: boolean;
+  reload: () => void;
+  loading: boolean;
 };
 
 export function EcommerceProductsClient({
@@ -73,9 +80,13 @@ export function EcommerceProductsClient({
   embedded?: boolean;
   onEmbeddedToolbar?: (api: EcommerceProductsEmbeddedToolbarApi | null) => void;
 } = {}) {
+  const notice = useAppNoticePopup();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [threshold, setThreshold] = useState(5);
+  const [loading, setLoading] = useState(true);
+  const [importBusy, setImportBusy] = useState(false);
+  const importRef = useRef<HTMLInputElement>(null);
 
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showEditProductModal, setShowEditProductModal] = useState(false);
@@ -117,7 +128,7 @@ export function EcommerceProductsClient({
 
   const [keyword, setKeyword] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
-  const [stockFilter, setStockFilter] = useState<"all" | "low" | "inactive">("all");
+  const [stockFilter, setStockFilter] = useState<"all" | "low" | "out" | "inactive">("all");
   const [filterOpen, setFilterOpen] = useState(true);
   const [stockModalProduct, setStockModalProduct] = useState<Product | null>(null);
 
@@ -175,14 +186,78 @@ export function EcommerceProductsClient({
   }
 
   async function reload() {
-    const [prodRes] = await Promise.all([
-      fetch("/api/ecommerce-store/session/products"),
-      reloadCategories(),
-    ]);
-    const j = await prodRes.json();
-    setProducts(j.products ?? []);
-    setThreshold(j.lowStockThreshold ?? 5);
+    setLoading(true);
+    try {
+      const [prodRes] = await Promise.all([
+        fetch("/api/ecommerce-store/session/products"),
+        reloadCategories(),
+      ]);
+      const j = await prodRes.json();
+      setProducts(j.products ?? []);
+      setThreshold(j.lowStockThreshold ?? 5);
+    } finally {
+      setLoading(false);
+    }
   }
+
+  const downloadExcel = useCallback(
+    async (mode: "template" | "export") => {
+      try {
+        const q = mode === "template" ? "?mode=template" : "";
+        const res = await fetch(`/api/ecommerce-store/session/stock/excel${q}`);
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          throw new Error((j as { error?: string }).error ?? "ดาวน์โหลดไม่สำเร็จ");
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download =
+          mode === "export"
+            ? `ecommerce-stock-${new Date().toISOString().slice(0, 10)}.xls`
+            : "ecommerce-stock-template.xls";
+        a.click();
+        URL.revokeObjectURL(url);
+        notice.success(mode === "export" ? "ส่งออกสินค้าแล้ว" : "ดาวน์โหลดแบบฟอร์มแล้ว");
+      } catch (e) {
+        notice.error(e instanceof Error ? e.message : "ดาวน์โหลดไม่สำเร็จ");
+      }
+    },
+    [notice],
+  );
+
+  const importExcel = useCallback(
+    async (file: File) => {
+      setImportBusy(true);
+      try {
+        const fd = new FormData();
+        fd.set("file", file);
+        const res = await fetch("/api/ecommerce-store/session/stock/import", {
+          method: "POST",
+          body: fd,
+        });
+        const j = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          created?: number;
+          updated?: number;
+          skipped?: number;
+        };
+        if (!res.ok) throw new Error(j.error ?? "นำเข้าไม่สำเร็จ");
+        notice.success(
+          `นำเข้าแล้ว · เพิ่ม ${j.created ?? 0} · อัปเดต ${j.updated ?? 0}${
+            j.skipped ? ` · ข้าม ${j.skipped}` : ""
+          }`,
+        );
+        await reload();
+      } catch (e) {
+        notice.error(e instanceof Error ? e.message : "นำเข้าไม่สำเร็จ");
+      } finally {
+        setImportBusy(false);
+      }
+    },
+    [notice],
+  );
 
   useEffect(() => {
     void reload();
@@ -334,13 +409,23 @@ export function EcommerceProductsClient({
     const kw = keyword.trim().toLowerCase();
     return products.filter((p) => {
       if (categoryFilter && p.categoryId !== categoryFilter) return false;
-      if (stockFilter === "low" && p.stockBalance > threshold) return false;
+      if (stockFilter === "out" && p.stockBalance > 0) return false;
+      if (stockFilter === "low" && (p.stockBalance <= 0 || p.stockBalance > threshold)) return false;
       if (stockFilter === "inactive" && p.isActive) return false;
       if (!kw) return true;
       const blob = `${p.name} ${p.sku ?? ""} ${p.category?.name ?? ""}`.toLowerCase();
       return blob.includes(kw);
     });
   }, [products, keyword, categoryFilter, stockFilter, threshold]);
+
+  const lowStockCount = useMemo(
+    () => products.filter((p) => p.stockBalance > 0 && p.stockBalance <= threshold).length,
+    [products, threshold],
+  );
+  const outOfStockCount = useMemo(
+    () => products.filter((p) => p.stockBalance <= 0).length,
+    [products],
+  );
 
   const hasActiveFilter = keyword.trim() !== "" || categoryFilter !== "" || stockFilter !== "all";
 
@@ -366,6 +451,14 @@ export function EcommerceProductsClient({
       toggleFilter,
       openAddProduct,
       openAddCategory,
+      downloadTemplate: () => void downloadExcel("template"),
+      downloadExport: () => void downloadExcel("export"),
+      triggerImport: () => importRef.current?.click(),
+      importBusy,
+      reload: () => {
+        void reload();
+      },
+      loading,
     });
     return () => onEmbeddedToolbar(null);
   }, [
@@ -376,6 +469,9 @@ export function EcommerceProductsClient({
     toggleFilter,
     openAddProduct,
     openAddCategory,
+    downloadExcel,
+    importBusy,
+    loading,
   ]);
 
   const productFormFields = (
@@ -545,6 +641,18 @@ export function EcommerceProductsClient({
 
   const body = (
     <>
+      {notice.popup}
+      <input
+        ref={importRef}
+        type="file"
+        accept=".xls,.csv,text/csv,application/vnd.ms-excel,text/plain"
+        className="sr-only"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (f) void importExcel(f);
+        }}
+      />
       {!embedded ? (
         <AppSectionHeader
           title="สินค้า & สต๊อก"
@@ -626,6 +734,7 @@ export function EcommerceProductsClient({
                 [
                   { key: "all" as const, label: "ทั้งหมด" },
                   { key: "low" as const, label: "ใกล้หมด" },
+                  { key: "out" as const, label: "หมดสต๊อก" },
                   { key: "inactive" as const, label: "ปิดขาย" },
                 ] as const
               ).map((f) => (
@@ -689,132 +798,150 @@ export function EcommerceProductsClient({
           </div>
         </section>
 
+      {(lowStockCount > 0 || outOfStockCount > 0) && (
+        <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 px-3 py-2.5 text-xs font-semibold text-amber-950">
+          แจ้งเตือนสต๊อก
+          {outOfStockCount > 0 ? ` · หมดสต๊อก ${outOfStockCount} รายการ` : ""}
+          {lowStockCount > 0 ? ` · ใกล้หมด ${lowStockCount} รายการ` : ""}
+          {" "}— เกณฑ์ ≤ {threshold} ชิ้น · สต๊อกหักอัตโนมัติจากขายหน้าร้านและเว็บลูกค้า
+        </div>
+      )}
+
+      {loading ? (
+        <div className="h-32 animate-pulse rounded-lg bg-slate-100/80" aria-hidden />
+      ) : (
       <ul className={ecommerceListStackClass}>
         {products.length === 0 ? (
-          <li className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 py-10 text-center text-sm font-semibold text-[#66638c]">
-            ยังไม่มีสินค้า — กด + เพิ่มสินค้า
+          <li className="col-span-full rounded-lg border border-dashed border-slate-200 bg-slate-50/80 py-10 text-center text-sm font-semibold text-[#66638c]">
+            ยังไม่มีสินค้า — กด + เพิ่มสินค้า หรือนำเข้า Excel
           </li>
         ) : null}
         {filteredProducts.length === 0 && products.length > 0 ? (
-          <li className="rounded-2xl border border-dashed border-amber-200/80 bg-amber-50/50 py-10 text-center text-sm font-semibold text-amber-950">
+          <li className="col-span-full rounded-lg border border-dashed border-amber-200/80 bg-amber-50/50 py-10 text-center text-sm font-semibold text-amber-950">
             ไม่พบสินค้าตามเงื่อนไข
           </li>
         ) : null}
         {filteredProducts.map((p) => {
-          const low = p.stockBalance <= threshold;
+          const out = p.stockBalance <= 0;
+          const low = !out && p.stockBalance <= threshold;
           const tone = ecommerceStoreProductRowTone({
             isActive: p.isActive,
-            lowStock: low,
+            lowStock: low || out,
             isRecommended: p.isRecommended,
             isBestseller: p.isBestseller,
           });
-
-          const stockPill = (
-            <button
-              type="button"
-              className={cn(
-                ecommerceStockPillClass,
-                low && "border-amber-300/70 bg-amber-50/90 text-amber-800 ring-amber-200/50",
-              )}
-              onClick={() => setStockModalProduct(p)}
-              aria-label={`สต๊อก ${p.stockBalance} ชิ้น — กดเพื่อปรับ ${p.name}`}
-            >
-              {p.stockBalance}
-            </button>
-          );
-
-          const actionButtons = (
-            <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                className={assetRowEditIconButtonClass}
-                aria-label={`แก้ไข ${p.name}`}
-                title="แก้ไข"
-                onClick={() => openEditProduct(p)}
-              >
-                <IconRowEdit className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                className={cn(
-                  assetRowEditIconButtonClass,
-                  !p.isActive && "border-slate-200 bg-slate-50 text-slate-500",
-                )}
-                aria-label={`${p.isActive ? "ปิด" : "เปิด"}ขาย ${p.name}`}
-                title={p.isActive ? "ปิดขาย" : "เปิดขาย"}
-                onClick={() => void toggleActive(p.id, p.isActive)}
-              >
-                {p.isActive ? (
-                  <IconEyeOff className="h-4 w-4" aria-hidden />
-                ) : (
-                  <IconEye className="h-4 w-4" aria-hidden />
-                )}
-              </button>
-              <button
-                type="button"
-                className={assetRowRemoveIconButtonClass}
-                aria-label={`ลบ ${p.name}`}
-                title="ลบ"
-                onClick={() => void removeProduct(p.id, p.name)}
-              >
-                <IconRowRemove className="h-4 w-4" />
-              </button>
-            </div>
-          );
 
           const productImage = p.imageUrl ? (
             <AppImageThumb
               src={p.imageUrl}
               alt={p.name}
               onOpen={() => lb.open(p.imageUrl!)}
-              className="h-14 w-14 shrink-0 sm:h-16 sm:w-16"
+              className="h-12 w-12 shrink-0 rounded-lg sm:h-14 sm:w-14"
             />
           ) : (
-            <span className={ecommerceStoreCardIconTileClass(tone, "lg")} aria-hidden>
-              <Package className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.1} />
+            <span className={ecommerceStoreCardIconTileClass(tone)} aria-hidden>
+              <Package className="h-5 w-5" strokeWidth={2.1} />
             </span>
           );
 
           return (
             <li key={p.id} className={cn(ecommerceStoreTonedRowCardClass(tone), !p.isActive && "opacity-80")}>
-              <div className="flex min-w-0 flex-1 items-start gap-3">
+              <div className="flex min-w-0 flex-1 items-start gap-2.5">
                 {productImage}
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <p className="truncate text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">
-                      {p.name}
-                    </p>
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <div className="flex flex-wrap items-center gap-1">
+                    <p className="truncate text-sm font-black tracking-tight text-[#1e1b4b]">{p.name}</p>
                     {!p.isActive ? <span className={ecommerceProductTagClass("slate")}>ปิดขาย</span> : null}
+                    {out ? <span className={ecommerceProductTagClass("rose")}>หมด</span> : null}
                     {low ? <span className={ecommerceProductTagClass("amber")}>ใกล้หมด</span> : null}
                     {p.isRecommended ? <span className={ecommerceProductTagClass("rose")}>แนะนำ</span> : null}
                     {p.isBestseller ? <span className={ecommerceProductTagClass("amber")}>ขายดี</span> : null}
                   </div>
-                  <p className="truncate text-xs font-medium text-[#66638c]">
+                  <p className="truncate text-[11px] font-medium text-[#66638c]">
                     {p.category?.name ?? "ไม่มีหมวด"}
                     {p.sku ? ` · ${p.sku}` : ""}
                   </p>
-                  <div className="flex flex-wrap items-center gap-2 pt-0.5 sm:hidden">
-                    {stockPill}
-                    <p className={cn("text-base font-black tabular-nums", ecommerceGradientPriceClass)}>
-                      ฿{Number(p.priceBaht).toLocaleString("th-TH")}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex shrink-0 items-center justify-between gap-3 sm:flex-col sm:items-end sm:justify-center sm:gap-2">
-                <div className="hidden items-center gap-3 sm:flex">
-                  {stockPill}
-                  <p className={cn("text-lg font-black tabular-nums", ecommerceGradientPriceClass)}>
+                  <p className={cn("text-sm font-black tabular-nums", ecommerceGradientPriceClass)}>
                     ฿{Number(p.priceBaht).toLocaleString("th-TH")}
                   </p>
                 </div>
-                {actionButtons}
+              </div>
+
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    className={ecommerceStoreRowIconButtonClass}
+                    aria-label={`ลดสต๊อก ${p.name}`}
+                    disabled={p.stockBalance <= 0}
+                    onClick={() => void adjustStock(p.id, -1)}
+                  >
+                    −
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      ecommerceStockPillClass,
+                      "min-w-[2.25rem]",
+                      (low || out) && "border-amber-300/70 bg-amber-50/90 text-amber-800 ring-amber-200/50",
+                      out && "border-rose-300/70 bg-rose-50/90 text-rose-700 ring-rose-200/50",
+                    )}
+                    onClick={() => setStockModalProduct(p)}
+                    aria-label={`สต๊อก ${p.stockBalance} ชิ้น — กดเพื่อปรับ ${p.name}`}
+                  >
+                    {p.stockBalance}
+                  </button>
+                  <button
+                    type="button"
+                    className={ecommerceStoreRowIconButtonClass}
+                    aria-label={`เพิ่มสต๊อก ${p.name}`}
+                    onClick={() => void adjustStock(p.id, 1)}
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    className={assetRowEditIconButtonClass}
+                    aria-label={`แก้ไข ${p.name}`}
+                    title="แก้ไข"
+                    onClick={() => openEditProduct(p)}
+                  >
+                    <IconRowEdit className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      assetRowEditIconButtonClass,
+                      !p.isActive && "border-slate-200 bg-slate-50 text-slate-500",
+                    )}
+                    aria-label={`${p.isActive ? "ปิด" : "เปิด"}ขาย ${p.name}`}
+                    title={p.isActive ? "ปิดขาย" : "เปิดขาย"}
+                    onClick={() => void toggleActive(p.id, p.isActive)}
+                  >
+                    {p.isActive ? (
+                      <IconEyeOff className="h-4 w-4" aria-hidden />
+                    ) : (
+                      <IconEye className="h-4 w-4" aria-hidden />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className={assetRowRemoveIconButtonClass}
+                    aria-label={`ลบ ${p.name}`}
+                    title="ลบ"
+                    onClick={() => void removeProduct(p.id, p.name)}
+                  >
+                    <IconRowRemove className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </li>
           );
         })}
       </ul>
+      )}
       </div>
 
       <FormModal

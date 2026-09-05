@@ -77,7 +77,7 @@ export const ecommerceOverviewStatsGridClass = "grid grid-cols-2 items-stretch g
 export const ecommerceSalesHeroGridClass = "mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4";
 
 /** แถวรายการ — กริดมือถือ/เดสก์ท็อป */
-export const ecommerceListStackClass = "mt-4 space-y-3 sm:space-y-3";
+export const ecommerceListStackClass = "mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3";
 
 /** ป้ายสถานะออเดอร์ */
 export function ecommerceOrderStatusBadgeClass(

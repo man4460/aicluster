@@ -95,7 +95,7 @@ export function ecommerceStoreCardToneClasses(tone: EcommerceStoreCardTone): Eco
 export function ecommerceStoreTonedRowCardClass(tone: EcommerceStoreCardTone): string {
   const t = ecommerceStoreCardToneClasses(tone);
   return cn(
-    "flex flex-col gap-3 rounded-lg border border-slate-200/70 border-l-[3px] p-3 shadow-sm transition sm:flex-row sm:items-center sm:justify-between sm:p-4",
+    "flex flex-row items-start justify-between gap-3 rounded-lg border border-slate-200/70 border-l-[3px] p-3 shadow-sm transition sm:items-center sm:p-4",
     t.leftBorder,
     t.bg,
     t.hoverShadow,
