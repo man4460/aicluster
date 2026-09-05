@@ -110,7 +110,11 @@ export async function GET(req: Request) {
 
   const [orders, costs] = await Promise.all([
     prisma.ecommerceOrder.findMany({
-      where: { storeId: store.id, createdAt: { gte: fromUtc, lte: toUtc } },
+      where: {
+        storeId: store.id,
+        status: "SHIPPED",
+        createdAt: { gte: fromUtc, lte: toUtc },
+      },
       select: { totalAmount: true, createdAt: true, salesChannel: true },
     }),
     prisma.ecommerceCostEntry.findMany({

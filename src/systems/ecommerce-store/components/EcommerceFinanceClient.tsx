@@ -28,6 +28,11 @@ import {
   type EcommerceCostsPanelHandle,
 } from "@/systems/ecommerce-store/components/EcommerceCostsPanel";
 import {
+  EcommerceOrderFulfillModal,
+  type EcommerceFulfillOrder,
+} from "@/systems/ecommerce-store/components/EcommerceOrderFulfillModal";
+import type { EcommerceOrderPrintShop } from "@/systems/ecommerce-store/lib/ecommerce-order-print";
+import {
   ecommerceSalesChannelLabel,
   ecommercePosPaymentMethodLabel,
 } from "@/systems/ecommerce-store/lib/sales-channel";
@@ -66,15 +71,23 @@ type OrderRow = {
   id: string;
   referenceCode: string;
   trackingCode: string;
+  courierTrackingNo?: string | null;
   customerName: string;
   customerPhone: string;
+  customerAddress?: string | null;
   totalAmount: unknown;
   paymentSlipUrl: string | null;
   paymentMethod?: string | null;
   salesChannel?: "ONLINE" | "IN_STORE";
   status: keyof typeof ECOMMERCE_ORDER_STATUS_LABELS;
   createdAt: string;
-  items?: { productName: string }[];
+  items?: {
+    id?: string;
+    productName: string;
+    quantity?: number;
+    unitPriceBaht?: string;
+    imageUrl?: string | null;
+  }[];
 };
 
 function bangkokDateKey(iso: string): string {
@@ -175,6 +188,9 @@ export function EcommerceFinanceClient() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [costs, setCosts] = useState<EcommerceCostEntryRow[]>([]);
   const [categories, setCategories] = useState<EcommerceCostCategoryRow[]>([]);
+  const [shop, setShop] = useState<EcommerceOrderPrintShop | null>(null);
+  const [detailOrder, setDetailOrder] = useState<EcommerceFulfillOrder | null>(null);
+  const [detailBusy, setDetailBusy] = useState(false);
 
   const filtersActive =
     financeRange !== "MONTH" || Boolean(dateFrom.trim() || dateTo.trim() || keyword.trim());
@@ -188,11 +204,12 @@ export function EcommerceFinanceClient() {
         if (dateFrom.trim()) params.set("from", dateFrom.trim());
         if (dateTo.trim()) params.set("to", dateTo.trim());
       }
-      const [sumRes, ordRes, costRes, catRes] = await Promise.all([
+      const [sumRes, ordRes, costRes, catRes, storeRes] = await Promise.all([
         fetch(`/api/ecommerce-store/session/finance-summary?${params}`, { credentials: "include" }),
         fetch("/api/ecommerce-store/session/orders", { credentials: "include" }),
         fetch("/api/ecommerce-store/session/costs", { credentials: "include" }),
         fetch("/api/ecommerce-store/session/cost-categories", { credentials: "include" }),
+        fetch("/api/ecommerce-store/session/store", { credentials: "include", cache: "no-store" }),
       ]);
       const sumJ = (await sumRes.json().catch(() => ({}))) as {
         error?: string;
@@ -212,6 +229,16 @@ export function EcommerceFinanceClient() {
         categories?: EcommerceCostCategoryRow[];
         error?: string;
       };
+      const storeJ = (await storeRes.json().catch(() => ({}))) as {
+        store?: {
+          storeName?: string;
+          logoUrl?: string | null;
+          address?: string | null;
+          taxId?: string | null;
+          contactPhone?: string | null;
+          slipPaperSize?: string | null;
+        };
+      };
       if (!sumRes.ok) throw new Error(sumJ.error ?? "โหลดสรุปการเงินไม่สำเร็จ");
       if (!ordRes.ok) throw new Error(ordJ.error ?? "โหลดออเดอร์ไม่สำเร็จ");
       if (!costRes.ok) throw new Error(costJ.error ?? "โหลดรายจ่ายไม่สำเร็จ");
@@ -226,6 +253,16 @@ export function EcommerceFinanceClient() {
       setOrders(ordJ.orders ?? []);
       setCosts(costJ.costs ?? []);
       setCategories(catJ.categories ?? []);
+      if (storeJ.store) {
+        setShop({
+          storeName: storeJ.store.storeName,
+          logoUrl: storeJ.store.logoUrl,
+          address: storeJ.store.address,
+          taxId: storeJ.store.taxId,
+          contactPhone: storeJ.store.contactPhone,
+          slipPaperSize: storeJ.store.slipPaperSize,
+        });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "โหลดไม่สำเร็จ");
     } finally {
@@ -241,6 +278,8 @@ export function EcommerceFinanceClient() {
     const kw = keyword.trim().toLowerCase();
     const kwDigits = keyword.replace(/\D/g, "");
     return orders.filter((o) => {
+      /** รายรับ = ออเดอร์ที่จัดส่ง/ขายเสร็จแล้วเท่านั้น */
+      if (o.status !== "SHIPPED") return false;
       const day = bangkokDateKey(o.createdAt);
       if (!dateKeyInFinanceRange(day, financeRange, todayKey, dateFrom.trim(), dateTo.trim())) {
         return false;
@@ -252,6 +291,7 @@ export function EcommerceFinanceClient() {
           o.customerPhone,
           o.referenceCode,
           o.trackingCode,
+          o.courierTrackingNo ?? "",
           ...(o.items ?? []).map((i) => i.productName),
         ]
           .join(" ")
@@ -263,6 +303,57 @@ export function EcommerceFinanceClient() {
       return true;
     });
   }, [orders, keyword, financeRange, todayKey, dateFrom, dateTo]);
+
+  function toFulfillOrder(o: OrderRow): EcommerceFulfillOrder {
+    return {
+      id: o.id,
+      referenceCode: o.referenceCode,
+      trackingCode: o.trackingCode,
+      courierTrackingNo: o.courierTrackingNo,
+      customerName: o.customerName,
+      customerPhone: o.customerPhone,
+      customerAddress: o.customerAddress,
+      totalAmount: String(o.totalAmount ?? "0"),
+      paymentSlipUrl: o.paymentSlipUrl,
+      paymentMethod: o.paymentMethod,
+      status: o.status,
+      createdAt: o.createdAt,
+      items: (o.items ?? []).map((it, idx) => ({
+        id: it.id ?? `${o.id}-${idx}`,
+        productName: it.productName,
+        quantity: it.quantity ?? 1,
+        unitPriceBaht: it.unitPriceBaht ?? "0",
+        imageUrl: it.imageUrl ?? null,
+      })),
+    };
+  }
+
+  async function saveDetailTracking(courierTrackingNo: string) {
+    if (!detailOrder) return;
+    setDetailBusy(true);
+    try {
+      const res = await fetch("/api/ecommerce-store/session/orders", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: detailOrder.id,
+          status: "SHIPPED",
+          courierTrackingNo,
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        notice.error(typeof j.error === "string" ? j.error : "บันทึกไม่สำเร็จ");
+        return;
+      }
+      notice.success("อัปเดตเลขพัสดุแล้ว");
+      setDetailOrder(null);
+      await reload();
+    } finally {
+      setDetailBusy(false);
+    }
+  }
 
   const filteredCosts = useMemo(() => {
     return costs.filter((c) => {
@@ -358,7 +449,6 @@ export function EcommerceFinanceClient() {
 
   return (
     <div className={ecommerceStoreContentStackClass}>
-      {notice.popup}
       {error ? (
         <div className="rounded-lg border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm font-semibold text-rose-800">
           {error}
@@ -762,13 +852,13 @@ export function EcommerceFinanceClient() {
               </h3>
               {loading ? (
                 <div className="mt-3 h-32 animate-pulse rounded-lg bg-slate-100/80" aria-hidden />
-              ) : orders.length === 0 ? (
+              ) : orders.filter((o) => o.status === "SHIPPED").length === 0 ? (
                 <AppEmptyState tone="slate" className="mt-3">
-                  ยังไม่มีออเดอร์
+                  ยังไม่มีรายรับ — เมื่อจัดส่งออเดอร์ออนไลน์หรือขายหน้าร้านจะแสดงที่นี่
                 </AppEmptyState>
               ) : filteredOrders.length === 0 ? (
                 <AppEmptyState tone="slate" className="mt-3">
-                  ไม่พบออเดอร์ตามตัวกรอง
+                  ไม่พบรายรับตามตัวกรอง
                 </AppEmptyState>
               ) : (
                 <div
@@ -781,7 +871,13 @@ export function EcommerceFinanceClient() {
                       const slip = o.paymentSlipUrl?.trim() || "";
                       const baht = ecommerceDecimalToBahtNumber(o.totalAmount as never);
                       return (
-                        <li key={o.id} className={cn(ecommerceStoreFinanceListRowClass, "flex items-start gap-2")}>
+                        <li
+                          key={o.id}
+                          className={cn(
+                            ecommerceStoreFinanceListRowClass,
+                            "flex items-start gap-2 transition hover:border-[#5b61ff]/35 hover:bg-violet-50/40",
+                          )}
+                        >
                           {slip ? (
                             <AppImageThumb
                               src={slip}
@@ -790,43 +886,51 @@ export function EcommerceFinanceClient() {
                               className="h-14 w-14 shrink-0 rounded-lg"
                             />
                           ) : null}
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[11px] font-bold tabular-nums text-[#66638c]">
-                              {formatOrderAt(o.createdAt)}
-                            </p>
-                            <p className="mt-0.5 truncate text-sm font-black text-[#1e1b4b]">
-                              {o.customerName}
-                              <span className="ml-1 font-bold text-[#66638c]">· {o.referenceCode}</span>
-                            </p>
-                            <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-[#4d47b6]">
-                              <span
-                                className={ecommerceProductTagClass(
-                                  o.salesChannel === "IN_STORE" ? "violet" : "sky",
-                                )}
-                              >
-                                {ecommerceSalesChannelLabel(o.salesChannel)}
-                              </span>
-                              <span>{ECOMMERCE_ORDER_STATUS_LABELS[o.status] ?? o.status}</span>
-                              {o.paymentMethod ? (
-                                <span>· {ecommercePosPaymentMethodLabel(o.paymentMethod)}</span>
-                              ) : null}
-                              {o.customerPhone ? <span>· {o.customerPhone}</span> : null}
-                            </p>
-                          </div>
-                          <div className="flex shrink-0 flex-col items-end gap-1.5">
-                            <p className="text-base font-black tabular-nums text-emerald-700">
+                          <button
+                            type="button"
+                            className="flex min-w-0 flex-1 items-start gap-2 text-left"
+                            onClick={() => setDetailOrder(toFulfillOrder(o))}
+                            aria-label={`ดูรายละเอียดออเดอร์ ${o.referenceCode}`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[11px] font-bold tabular-nums text-[#66638c]">
+                                {formatOrderAt(o.createdAt)}
+                              </p>
+                              <p className="mt-0.5 truncate text-sm font-black text-[#1e1b4b]">
+                                {o.customerName}
+                                <span className="ml-1 font-bold text-[#66638c]">· {o.referenceCode}</span>
+                              </p>
+                              <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-[#4d47b6]">
+                                <span
+                                  className={ecommerceProductTagClass(
+                                    o.salesChannel === "IN_STORE" ? "violet" : "sky",
+                                  )}
+                                >
+                                  {ecommerceSalesChannelLabel(o.salesChannel)}
+                                </span>
+                                <span>{ECOMMERCE_ORDER_STATUS_LABELS[o.status] ?? o.status}</span>
+                                {o.courierTrackingNo ? (
+                                  <span>· พัสดุ {o.courierTrackingNo}</span>
+                                ) : null}
+                                {o.paymentMethod ? (
+                                  <span>· {ecommercePosPaymentMethodLabel(o.paymentMethod)}</span>
+                                ) : null}
+                                {o.customerPhone ? <span>· {o.customerPhone}</span> : null}
+                              </p>
+                            </div>
+                            <p className="shrink-0 text-base font-black tabular-nums text-emerald-700">
                               ฿{formatEcommerceBaht(baht)}
                             </p>
-                            <button
-                              type="button"
-                              className={assetRowRemoveIconButtonClass}
-                              aria-label={`ลบออเดอร์ ${o.referenceCode}`}
-                              title="ลบ"
-                              onClick={() => void deleteOrder(o)}
-                            >
-                              <IconRowRemove className="h-4 w-4" />
-                            </button>
-                          </div>
+                          </button>
+                          <button
+                            type="button"
+                            className={assetRowRemoveIconButtonClass}
+                            aria-label={`ลบออเดอร์ ${o.referenceCode}`}
+                            title="ลบ"
+                            onClick={() => void deleteOrder(o)}
+                          >
+                            <IconRowRemove className="h-4 w-4" />
+                          </button>
                         </li>
                       );
                     })}
@@ -854,6 +958,15 @@ export function EcommerceFinanceClient() {
       </div>
 
       <AppImageLightbox src={slipLb.src} onClose={slipLb.close} alt="สลิปชำระเงิน" />
+      <EcommerceOrderFulfillModal
+        open={Boolean(detailOrder)}
+        order={detailOrder}
+        shop={shop}
+        busy={detailBusy}
+        onClose={() => setDetailOrder(null)}
+        onShip={saveDetailTracking}
+      />
+      {notice.popup}
     </div>
   );
 }

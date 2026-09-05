@@ -266,7 +266,7 @@ export function EcommerceOrdersClient({
         notice.error(typeof j.error === "string" ? j.error : "จัดส่งไม่สำเร็จ");
         return;
       }
-      notice.success(`จัดส่งแล้ว · พัสดุ ${courierTrackingNo}`);
+      notice.success(`จัดส่งแล้ว · พัสดุ ${courierTrackingNo} — ยอดเข้าการเงินรายรับแล้ว`);
       setFulfillOrder(null);
       await reload({ silent: true });
     } finally {

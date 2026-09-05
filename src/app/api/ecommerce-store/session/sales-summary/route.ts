@@ -26,6 +26,7 @@ export async function GET(req: Request) {
   const store = await getOrCreateEcommerceStore(auth.ctx.ownerUserId);
   const orderWhere = {
     storeId: store.id,
+    status: "SHIPPED" as const,
     createdAt: { gte: range.start, lt: range.end },
   };
 
