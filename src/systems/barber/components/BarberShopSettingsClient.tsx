@@ -16,6 +16,8 @@ import {
 } from "@/components/app-templates";
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
 import { cn } from "@/lib/cn";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
+import { BARBER_MODULE_SLUG, MASSAGE_MODULE_SLUG } from "@/lib/modules/config";
 import { barberPublicPortalUrl } from "@/lib/barber/public-url";
 import { massagePublicPortalUrl } from "@/lib/massage/public-url";
 import {
@@ -109,9 +111,11 @@ function parseSettingsTab(raw: string | null, allowed: SettingsTab[]): SettingsT
 
 function BarberPortalLinkPanel({
   portalPath,
+  moduleSlug,
   onGoToQr,
 }: {
   portalPath: string;
+  moduleSlug: string;
   onGoToQr?: () => void;
 }) {
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
@@ -131,6 +135,7 @@ function BarberPortalLinkPanel({
   };
 
   return (
+    <ModuleQrMonthlyGate moduleSlug={moduleSlug} title="ตั้งค่าเว็ปลิงค์ลูกค้า">
     <div className="space-y-3 text-left">
       <p className="text-sm text-[#5f5a8a]">
         ลิงก์สาธารณะให้ลูกค้าจองคิว — ตั้งแบนเนอร์ · แกลเลอรี · LINE · Facebook · แผนที่ด้านล่าง
@@ -167,6 +172,7 @@ function BarberPortalLinkPanel({
         </div>
       </div>
     </div>
+    </ModuleQrMonthlyGate>
   );
 }
 
@@ -696,6 +702,7 @@ function BarberShopSettingsClientInner({
                       ? barberPublicPortalUrl("", ownerId, trialSessionId)
                       : massagePublicPortalUrl("", ownerId, trialSessionId)
                   }
+                  moduleSlug={isBarber ? BARBER_MODULE_SLUG : MASSAGE_MODULE_SLUG}
                   onGoToQr={() => selectTab("link")}
                 />
               ) : null}

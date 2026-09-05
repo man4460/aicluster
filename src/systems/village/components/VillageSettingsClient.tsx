@@ -9,6 +9,8 @@ import {
   type AppSlipPaperSize,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
+import { VILLAGE_MODULE_SLUG } from "@/lib/modules/config";
 import { villagePublicPortalUrl } from "@/lib/village/public-url";
 import { normalizeModuleSlipPaperSize } from "@/lib/profile/module-slip-paper-size";
 import { VillageGuestPortalHubClient } from "@/systems/village/components/VillageGuestPortalHubClient";
@@ -150,6 +152,7 @@ function VillagePortalLinkPanel({
   };
 
   return (
+    <ModuleQrMonthlyGate moduleSlug={VILLAGE_MODULE_SLUG} title="ตั้งค่าเว็ปลิงค์ลูกค้า">
     <div className="space-y-4 text-left">
       <p className="text-sm text-[#66638c]">
         ลิงก์สาธารณะให้ลูกบ้าน / ผู้สนใจดูบ้านประกาศขาย · ติดต่อนิติ · QR โปสเตอร์ด้านล่าง
@@ -177,6 +180,7 @@ function VillagePortalLinkPanel({
         </div>
       </div>
     </div>
+    </ModuleQrMonthlyGate>
   );
 }
 

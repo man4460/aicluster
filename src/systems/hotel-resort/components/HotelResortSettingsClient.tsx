@@ -17,6 +17,8 @@ import {
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
 import { hotelResortPublicPortalUrl } from "@/lib/hotel-resort/public-url";
 import { cn } from "@/lib/cn";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
+import { HOTEL_RESORT_MODULE_SLUG } from "@/lib/modules/config";
 import { HotelResortBookingPaymentSettings } from "@/systems/hotel-resort/components/HotelResortBookingPaymentSettings";
 import { HotelResortErrorBanner } from "@/systems/hotel-resort/components/HotelResortErrorBanner";
 import { HotelResortGuestPortalHubClient } from "@/systems/hotel-resort/components/HotelResortGuestPortalHubClient";
@@ -407,6 +409,7 @@ function HotelResortSettingsClientInner({
         ) : null}
 
         {tab === "portal" ? (
+          <ModuleQrMonthlyGate moduleSlug={HOTEL_RESORT_MODULE_SLUG} title="ตั้งค่าเว็ปลิงค์ลูกค้า">
           <div className="space-y-4">
             <div className="space-y-2 rounded-[1.25rem] border border-white/60 bg-white/55 p-3 sm:p-4">
               <p className="text-xs font-bold text-[#4d47b6]">ลิงก์จองลูกค้า</p>
@@ -499,6 +502,7 @@ function HotelResortSettingsClientInner({
 
             <HotelResortReviewsSettings embedded />
           </div>
+          </ModuleQrMonthlyGate>
         ) : null}
 
         {tab === "hours" ? (

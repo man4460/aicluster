@@ -8,6 +8,7 @@ import {
   AppSectionHeader,
   appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { cn } from "@/lib/cn";
 import { CAR_WASH_MODULE_SLUG } from "@/lib/modules/config";
 import type { ModuleShopBrandingDto } from "@/lib/module-shop/slugs";
@@ -83,6 +84,7 @@ function CarWashPortalLinkPanel({
   };
 
   return (
+    <ModuleQrMonthlyGate moduleSlug={CAR_WASH_MODULE_SLUG} title="ตั้งค่าเว็ปลิงค์ลูกค้า">
     <div className="space-y-4 text-left">
       <p className="text-sm text-[#5f5a8a]">
         ลิงก์สาธารณะให้ลูกค้าจองคิว — ตั้งแบนเนอร์ · แกลเลอรี · LINE · Facebook · แผนที่ด้านล่าง
@@ -143,6 +145,7 @@ function CarWashPortalLinkPanel({
         </button>
       ) : null}
     </div>
+    </ModuleQrMonthlyGate>
   );
 }
 

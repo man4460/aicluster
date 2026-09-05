@@ -32,6 +32,8 @@ import { ParkingPortalHubClient } from "@/systems/parking/components/ParkingPort
 import { ParkingPortalMediaSettings } from "@/systems/parking/components/ParkingPortalMediaSettings";
 import { ParkingReviewsSettings } from "@/systems/parking/components/ParkingReviewsSettings";
 import { parkingPublicPortalUrl } from "@/lib/parking/public-url";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
+import { PARKING_MODULE_SLUG } from "@/lib/modules/config";
 import { parkingBtnPrimary, parkingField } from "@/systems/parking/parking-ui";
 
 import {
@@ -422,6 +424,7 @@ function ParkingSettingsInner({
 
       {tab === "portal" ? (
         <div id="parking-settings-panel-portal" role="tabpanel" aria-labelledby="parking-settings-tab-portal" className="mt-4 space-y-4 text-left">
+          <ModuleQrMonthlyGate moduleSlug={PARKING_MODULE_SLUG} title="ตั้งค่าเว็ปลิงค์ลูกค้า">
           <div className="rounded-2xl border border-white/60 bg-white/45 p-4">
             <p className="text-xs font-black text-[#4d47b6]">ลิงก์เว็บไซต์จองลูกค้า</p>
             <p className="mt-2 break-all rounded-xl bg-white/75 p-3 text-xs font-semibold text-[#66638c]">{publicPortalUrl}</p>
@@ -433,6 +436,7 @@ function ParkingSettingsInner({
           <ParkingPortalMediaSettings initialBannerUrl={portalBannerUrl} initialGallery={portalGallery} />
           <ParkingReviewsSettings />
           <ParkingBookingPaymentSettings initialMode={bookingPaymentMode} initialPercent={depositPercent} />
+          </ModuleQrMonthlyGate>
         </div>
       ) : null}
 

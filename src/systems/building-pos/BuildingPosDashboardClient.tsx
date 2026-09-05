@@ -31,7 +31,6 @@ import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { BuildingPosOpenTablesPanel, BuildingPosSalesHistoryPanel } from "@/systems/building-pos/BuildingPosSalesAnalytics";
 import { BuildingPosReservationsPanel } from "@/systems/building-pos/components/BuildingPosReservationsPanel";
 import { BuildingPosStaffQrSection } from "@/systems/building-pos/components/BuildingPosStaffQrSection";
-import { buildingPosPublicPortalUrl } from "@/lib/building-pos/public-url";
 import {
   BUILDING_POS_ORDER_HREF,
   BUILDING_POS_ORDERS_HREF,
@@ -188,7 +187,6 @@ export function BuildingPosDashboardClient({
   const [menuSaving, setMenuSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [portalCopyMsg, setPortalCopyMsg] = useState<string | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
   const [showStaffQrModal, setShowStaffQrModal] = useState(false);
   const [stationModal, setStationModal] = useState<"serve" | "kitchen" | null>(null);
@@ -1252,45 +1250,15 @@ export function BuildingPosDashboardClient({
                 )}
               >
                 <p className="text-xs font-bold uppercase tracking-widest text-[#9490c0]">เว็บไซต์จองลูกค้า</p>
-                <p className="mt-2 break-all text-sm font-semibold text-[#1e1b4b]">
-                  {buildingPosPublicPortalUrl(baseUrl || "", ownerId, trialSessionId)}
+                <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+                  ตั้งแบนเนอร์ · แกลเลอรี · เปิด/คัดลอกลิงก์ — รวมที่ตั้งค่าร้าน
                 </p>
-                {portalCopyMsg ? (
-                  <p className="mt-2 text-sm font-semibold text-emerald-700">{portalCopyMsg}</p>
-                ) : null}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <a
-                    href={buildingPosPublicPortalUrl("", ownerId, trialSessionId)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(appTemplateOutlineButtonClass, "min-h-10 rounded-xl px-4 text-sm font-bold")}
-                  >
-                    เปิดลิงก์
-                  </a>
-                  <button
-                    type="button"
-                    className="app-btn-primary min-h-10 rounded-xl px-4 text-sm font-bold"
-                    onClick={async () => {
-                      const url = buildingPosPublicPortalUrl(
-                        typeof window !== "undefined" ? window.location.origin : baseUrl || "",
-                        ownerId,
-                        trialSessionId,
-                      );
-                      try {
-                        await navigator.clipboard.writeText(url);
-                        setPortalCopyMsg("คัดลอกลิงก์แล้ว");
-                      } catch {
-                        setPortalCopyMsg("คัดลอกไม่สำเร็จ");
-                      }
-                    }}
-                  >
-                    คัดลอกลิงก์
-                  </button>
+                <div className="mt-3">
                   <Link
                     href="/dashboard/building-pos/settings?tab=portal"
                     className={cn(appTemplateOutlineButtonClass, "inline-flex min-h-10 items-center rounded-xl px-4 text-sm font-bold")}
                   >
-                    ตั้งค่าเว็บ
+                    ตั้งค่าเว็ปลิงค์ลูกค้า
                   </Link>
                 </div>
               </div>

@@ -13,6 +13,8 @@ import {
 } from "@/components/app-templates";
 import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
 import { cn } from "@/lib/cn";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
+import { LAUNDRY_MODULE_SLUG } from "@/lib/modules/config";
 import { LaundryPortalMediaSettings } from "@/systems/laundry/components/LaundryPortalMediaSettings";
 import { LaundryQrHubClient } from "@/systems/laundry/components/LaundryQrHubClient";
 import {
@@ -150,6 +152,7 @@ function LaundryPortalLinkPanel({
   };
 
   return (
+    <ModuleQrMonthlyGate moduleSlug={LAUNDRY_MODULE_SLUG} title="ตั้งค่าเว็ปลิงค์ลูกค้า">
     <div className="space-y-3 text-left">
       <p className="text-sm text-[#5f5a8a]">
         ลิงก์สาธารณะให้ลูกค้าขอบริการรับ-ส่งที่บ้าน — ตั้งแบนเนอร์ · แกลเลอรี · LINE · Facebook · แผนที่ด้านล่าง
@@ -186,6 +189,7 @@ function LaundryPortalLinkPanel({
         </div>
       </div>
     </div>
+    </ModuleQrMonthlyGate>
   );
 }
 

@@ -8,8 +8,10 @@ import {
   AppTime24Input,
   appTemplateOutlineButtonClass,
 } from "@/components/app-templates";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { cn } from "@/lib/cn";
 import { drinkPosPublicPortalUrl } from "@/lib/drink-pos/public-url";
+import { DRINK_POS_MODULE_SLUG } from "@/lib/modules/config";
 import { DrinkPosLoyaltyHubClient } from "@/systems/drink-pos/components/DrinkPosLoyaltyHubClient";
 import { DrinkPosLoyaltySettingsClient } from "@/systems/drink-pos/components/DrinkPosLoyaltySettingsClient";
 import { DrinkPosPortalMediaSettings } from "@/systems/drink-pos/components/DrinkPosPortalMediaSettings";
@@ -236,7 +238,7 @@ function DrinkPosSettingsClientInner({
         className="flex flex-row items-start justify-between gap-3 sm:items-center"
         actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
         action={
-          tab === "portal" || tab === "hours" ? (
+          tab === "hours" ? (
             <button
               type="button"
               disabled={busy}
@@ -314,93 +316,104 @@ function DrinkPosSettingsClientInner({
         ) : null}
 
         {tab === "portal" ? (
-          <div className="space-y-4">
-            <div className="space-y-2 rounded-[1.25rem] border border-white/60 bg-white/55 p-3 sm:p-4">
-              <p className="text-xs font-bold text-[#4d47b6]">ลิงก์เว็บลูกค้า</p>
-              <p className="text-[11px] font-semibold text-[#8b87b8]">สั่งเครื่องดื่ม</p>
-              <p className="break-all text-sm font-semibold text-[#1e1b4b]">{portalPath}</p>
-              {copyMsg ? <p className="text-sm font-semibold text-emerald-700">{copyMsg}</p> : null}
-              <div className="flex flex-wrap gap-2">
-                <a
-                  href={portalPath}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(appTemplateOutlineButtonClass, "min-h-10 rounded-xl px-4 text-sm font-bold")}
-                >
-                  เปิดลิงก์
-                </a>
-                <button
-                  type="button"
-                  className="app-btn-primary min-h-10 rounded-xl px-4 text-sm font-bold"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(absoluteUrl(portalPath));
-                      setCopyMsg("คัดลอกลิงก์แล้ว");
-                    } catch {
-                      setCopyMsg("คัดลอกไม่สำเร็จ");
-                    }
-                  }}
-                >
-                  คัดลอกลิงก์
-                </button>
-                <button
-                  type="button"
-                  className={cn(appTemplateOutlineButtonClass, "min-h-10 rounded-xl px-4 text-sm font-bold")}
-                  onClick={() => selectTab("link")}
-                >
-                  ไปหน้า QR
-                </button>
-              </div>
-            </div>
-
-            <DrinkPosPortalMediaSettings
-              bannerUrl={form.portalBannerUrl}
-              gallery={form.portalGallery}
-              address={form.address}
-              facebookUrl={form.facebookUrl}
-              mapUrl={form.mapUrl}
-              contactLine={form.contactLine}
-              onBannerUrlChange={(portalBannerUrl) => setForm((f) => ({ ...f, portalBannerUrl }))}
-              onGalleryChange={(portalGallery) => setForm((f) => ({ ...f, portalGallery }))}
-              onAddressChange={(address) => setForm((f) => ({ ...f, address }))}
-              onFacebookUrlChange={(facebookUrl) => setForm((f) => ({ ...f, facebookUrl }))}
-              onMapUrlChange={(mapUrl) => setForm((f) => ({ ...f, mapUrl }))}
-              onContactLineChange={(contactLine) => setForm((f) => ({ ...f, contactLine }))}
-              disabled={busy}
-            />
-
-            <div className="rounded-2xl border border-[#ecebff] bg-white/70 p-3 sm:p-4">
-              <p className="text-xs font-bold text-[#4d47b6]">รีวิว</p>
-              <ul className="mt-3 space-y-2">
-                {reviews.map((r) => (
-                  <li
-                    key={r.id}
-                    className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-[#ecebff] bg-[#faf9ff]/80 p-3"
+          <ModuleQrMonthlyGate moduleSlug={DRINK_POS_MODULE_SLUG} title="ตั้งค่าเว็ปลิงค์ลูกค้า">
+            <div className="space-y-4">
+              <div className="space-y-2 rounded-[1.25rem] border border-white/60 bg-white/55 p-3 sm:p-4">
+                <p className="text-xs font-bold text-[#4d47b6]">ลิงก์เว็บลูกค้า</p>
+                <p className="text-[11px] font-semibold text-[#8b87b8]">สั่งเครื่องดื่ม</p>
+                <p className="break-all text-sm font-semibold text-[#1e1b4b]">{portalPath}</p>
+                {copyMsg ? <p className="text-sm font-semibold text-emerald-700">{copyMsg}</p> : null}
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={portalPath}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(appTemplateOutlineButtonClass, "min-h-10 rounded-xl px-4 text-sm font-bold")}
                   >
-                    <div className="min-w-0">
-                      <p className="text-sm font-black text-[#1e1b4b]">
-                        {r.guestName} · ★{r.rating}
-                        {!r.isPublished ? (
-                          <span className="ml-2 text-xs font-bold text-amber-700">ซ่อน</span>
-                        ) : null}
-                      </p>
-                      <p className="mt-1 text-sm text-[#5f5a8a]">{r.comment}</p>
-                    </div>
-                    <button
-                      type="button"
-                      className={cn(appTemplateOutlineButtonClass, "min-h-9 rounded-xl px-3 text-xs font-bold")}
-                      onClick={() => void toggleReview(r.id, !r.isPublished)}
+                    เปิดลิงก์
+                  </a>
+                  <button
+                    type="button"
+                    className="app-btn-primary min-h-10 rounded-xl px-4 text-sm font-bold"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(absoluteUrl(portalPath));
+                        setCopyMsg("คัดลอกลิงก์แล้ว");
+                      } catch {
+                        setCopyMsg("คัดลอกไม่สำเร็จ");
+                      }
+                    }}
+                  >
+                    คัดลอกลิงก์
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(appTemplateOutlineButtonClass, "min-h-10 rounded-xl px-4 text-sm font-bold")}
+                    onClick={() => selectTab("link")}
+                  >
+                    ไปหน้า QR
+                  </button>
+                </div>
+              </div>
+
+              <DrinkPosPortalMediaSettings
+                bannerUrl={form.portalBannerUrl}
+                gallery={form.portalGallery}
+                address={form.address}
+                facebookUrl={form.facebookUrl}
+                mapUrl={form.mapUrl}
+                contactLine={form.contactLine}
+                onBannerUrlChange={(portalBannerUrl) => setForm((f) => ({ ...f, portalBannerUrl }))}
+                onGalleryChange={(portalGallery) => setForm((f) => ({ ...f, portalGallery }))}
+                onAddressChange={(address) => setForm((f) => ({ ...f, address }))}
+                onFacebookUrlChange={(facebookUrl) => setForm((f) => ({ ...f, facebookUrl }))}
+                onMapUrlChange={(mapUrl) => setForm((f) => ({ ...f, mapUrl }))}
+                onContactLineChange={(contactLine) => setForm((f) => ({ ...f, contactLine }))}
+                disabled={busy}
+              />
+
+              <div className="rounded-2xl border border-[#ecebff] bg-white/70 p-3 sm:p-4">
+                <p className="text-xs font-bold text-[#4d47b6]">รีวิว</p>
+                <ul className="mt-3 space-y-2">
+                  {reviews.map((r) => (
+                    <li
+                      key={r.id}
+                      className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-[#ecebff] bg-[#faf9ff]/80 p-3"
                     >
-                      {r.isPublished ? "ซ่อน" : "เผยแพร่"}
-                    </button>
-                  </li>
-                ))}
-                {reviews.length === 0 ? (
-                  <p className="text-sm font-semibold text-[#8b87b8]">ยังไม่มีรีวิว</p>
-                ) : null}
-              </ul>
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-[#1e1b4b]">
+                          {r.guestName} · ★{r.rating}
+                          {!r.isPublished ? (
+                            <span className="ml-2 text-xs font-bold text-amber-700">ซ่อน</span>
+                          ) : null}
+                        </p>
+                        <p className="mt-1 text-sm text-[#5f5a8a]">{r.comment}</p>
+                      </div>
+                      <button
+                        type="button"
+                        className={cn(appTemplateOutlineButtonClass, "min-h-9 rounded-xl px-3 text-xs font-bold")}
+                        onClick={() => void toggleReview(r.id, !r.isPublished)}
+                      >
+                        {r.isPublished ? "ซ่อน" : "เผยแพร่"}
+                      </button>
+                    </li>
+                  ))}
+                  {reviews.length === 0 ? (
+                    <p className="text-sm font-semibold text-[#8b87b8]">ยังไม่มีรีวิว</p>
+                  ) : null}
+                </ul>
+              </div>
+
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void saveProfile()}
+                className="app-btn-primary min-h-10 rounded-xl px-4 text-sm font-bold disabled:opacity-60"
+              >
+                {busy ? "กำลังบันทึก…" : "บันทึกเว็ปลิงค์ลูกค้า"}
+              </button>
             </div>
-          </div>
+          </ModuleQrMonthlyGate>
         ) : null}
 
         {tab === "hours" ? (

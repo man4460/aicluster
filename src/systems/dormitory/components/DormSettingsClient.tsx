@@ -14,6 +14,8 @@ import {
   type AppSlipPaperSize,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
+import { DORMITORY_MODULE_SLUG } from "@/lib/modules/config";
 import { dormitoryPublicPortalUrl } from "@/lib/dormitory/public-url";
 import { DormGuestPortalHubClient } from "@/systems/dormitory/components/DormGuestPortalHubClient";
 import { DormPortalMediaSettings } from "@/systems/dormitory/components/DormPortalMediaSettings";
@@ -92,6 +94,7 @@ function DormPortalLinkPanel({
   };
 
   return (
+    <ModuleQrMonthlyGate moduleSlug={DORMITORY_MODULE_SLUG} title="ตั้งค่าเว็ปลิงค์ลูกค้า">
     <div className="space-y-4 text-left">
       <p className="text-sm text-[#66638c]">
         ลิงก์สาธารณะให้ผู้เช่าดูห้องว่าง · ติดต่อสอบถาม · QR โปสเตอร์ด้านล่าง
@@ -119,6 +122,7 @@ function DormPortalLinkPanel({
         </div>
       </div>
     </div>
+    </ModuleQrMonthlyGate>
   );
 }
 
