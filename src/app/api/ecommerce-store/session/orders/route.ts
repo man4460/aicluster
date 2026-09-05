@@ -12,8 +12,7 @@ import {
 import { normalizeEcommercePhone } from "@/lib/ecommerce/phone";
 import { prisma } from "@/lib/prisma";
 import {
-  ECOMMERCE_POS_PAYMENT_METHODS,
-  type EcommercePosPaymentMethod,
+  isEcommercePosPaymentMethod,
   type EcommerceSalesChannel,
 } from "@/systems/ecommerce-store/lib/sales-channel";
 
@@ -65,13 +64,17 @@ export async function POST(req: Request) {
   }
 
   const paymentMethodRaw = typeof body.paymentMethod === "string" ? body.paymentMethod.trim() : "CASH";
-  if (!ECOMMERCE_POS_PAYMENT_METHODS.includes(paymentMethodRaw as EcommercePosPaymentMethod)) {
+  if (!isEcommercePosPaymentMethod(paymentMethodRaw)) {
     return NextResponse.json({ error: "วิธีชำระไม่ถูกต้อง" }, { status: 400 });
   }
-  const paymentMethod = paymentMethodRaw as EcommercePosPaymentMethod;
-  const paymentSlipUrl =
+  const paymentMethod = paymentMethodRaw;
+  const paymentSlipUrlRaw =
     typeof body.paymentSlipUrl === "string" && body.paymentSlipUrl.trim()
       ? body.paymentSlipUrl.trim().slice(0, 512)
+      : null;
+  const paymentSlipUrl =
+    (paymentMethod === "PROMPTPAY" || paymentMethod === "TRANSFER") && paymentSlipUrlRaw
+      ? paymentSlipUrlRaw
       : null;
   const customerNameRaw = typeof body.customerName === "string" ? body.customerName.trim() : "";
   const customerPhoneRaw = typeof body.customerPhone === "string" ? body.customerPhone.trim() : "";

@@ -12,26 +12,12 @@ export function ecommerceSalesChannelLabel(channel: string | null | undefined): 
   }
 }
 
-/** วิธีชำระหน้าร้าน (POS) */
-export const ECOMMERCE_POS_PAYMENT_METHODS = ["CASH", "PROMPTPAY", "TRANSFER"] as const;
-export type EcommercePosPaymentMethod = (typeof ECOMMERCE_POS_PAYMENT_METHODS)[number];
-
-export function ecommercePosPaymentMethodLabel(method: string | null | undefined): string {
-  switch (method) {
-    case "PROMPTPAY":
-      return "พร้อมเพย์";
-    case "TRANSFER":
-      return "โอนเงิน";
-    case "CASH":
-    default:
-      return "เงินสด";
-  }
-}
-
-export function ecommercePosPaymentShowsSlip(
-  method: EcommercePosPaymentMethod,
-  totalBaht: number,
-): boolean {
-  if (totalBaht <= 0) return false;
-  return method === "PROMPTPAY" || method === "TRANSFER";
-}
+export {
+  ECOMMERCE_POS_PAYMENT_METHODS,
+  ecommercePosPaymentMethodLabel,
+  ecommercePosPaymentRequiresSlip,
+  ecommercePosPaymentShowsSlip,
+  ecommercePosPaymentShowsSlipUpload,
+  isEcommercePosPaymentMethod,
+  type EcommercePosPaymentMethod,
+} from "@/systems/ecommerce-store/lib/payment-method";

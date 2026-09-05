@@ -1,36 +1,18 @@
 "use client";
 
 import { ShoppingBag, Trash2 } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ChangeEvent,
-} from "react";
-import {
-  AppEmptyState,
-  AppGalleryCameraFileInputs,
-  AppImageLightbox,
-  AppImagePickCameraButtons,
-  AppImageThumb,
-  prepareImageFileForUpload,
-  useAppCameraCapture,
-  useAppImageLightbox,
-  useAppNoticePopup,
-} from "@/components/app-templates";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AppEmptyState, useAppNoticePopup } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import {
   ecommerceFieldClass,
   ecommerceFilterChipClass,
 } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
+import { EcommercePaymentPanel } from "@/systems/ecommerce-store/components/EcommercePaymentPanel";
 import {
-  ECOMMERCE_POS_PAYMENT_METHODS,
   ecommercePosPaymentMethodLabel,
-  ecommercePosPaymentShowsSlip,
   type EcommercePosPaymentMethod,
-} from "@/systems/ecommerce-store/lib/sales-channel";
+} from "@/systems/ecommerce-store/lib/payment-method";
 import {
   ecommerceStorePosDraftPanelClass,
   ecommerceStorePosProductCardClass,
@@ -68,10 +50,6 @@ function IconImagePlaceholder({ className }: { className?: string }) {
 
 export function EcommercePosClient() {
   const notice = useAppNoticePopup();
-  const lb = useAppImageLightbox();
-  const { openCamera, cameraModal } = useAppCameraCapture();
-  const galleryRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +60,6 @@ export function EcommercePosClient() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<EcommercePosPaymentMethod>("CASH");
   const [slipUrl, setSlipUrl] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const reload = useCallback(async () => {
@@ -130,8 +107,6 @@ export function EcommercePosClient() {
   );
   const cartItemCount = useMemo(() => cart.reduce((s, l) => s + l.quantity, 0), [cart]);
 
-  const showSlip = ecommercePosPaymentShowsSlip(paymentMethod, cartTotal);
-
   function addToCart(p: Product) {
     if (p.stockBalance <= 0) {
       notice.error(`สต๊อกหมด — ${p.name}`);
@@ -173,33 +148,6 @@ export function EcommercePosClient() {
     );
   }
 
-  async function uploadSlip(file: File) {
-    setUploading(true);
-    try {
-      const prepared = await prepareImageFileForUpload(file);
-      const fd = new FormData();
-      fd.set("file", prepared);
-      const res = await fetch("/api/ecommerce-store/session/upload-slip", {
-        method: "POST",
-        body: fd,
-      });
-      const j = await res.json();
-      if (!res.ok) {
-        notice.error(j.error ?? "อัปโหลดสลิปไม่สำเร็จ");
-        return;
-      }
-      setSlipUrl(typeof j.imageUrl === "string" ? j.imageUrl : null);
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  function onSlipInputChange(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    e.target.value = "";
-    if (f) void uploadSlip(f);
-  }
-
   async function checkout() {
     if (cart.length === 0) {
       notice.error("เลือกสินค้าก่อนบันทึกขาย");
@@ -214,7 +162,7 @@ export function EcommercePosClient() {
           customerName: customerName.trim() || undefined,
           customerPhone: customerPhone.trim() || undefined,
           paymentMethod,
-          paymentSlipUrl: showSlip ? slipUrl : null,
+          paymentSlipUrl: slipUrl,
           items: cart.map((l) => ({ productId: l.productId, quantity: l.quantity })),
         }),
       });
@@ -323,46 +271,14 @@ export function EcommercePosClient() {
         />
       </label>
 
-      <div className="space-y-1.5" role="group" aria-label="วิธีชำระ">
-        <p className="text-xs font-bold text-[#4d47b6]">ชำระเงิน</p>
-        <div className="flex flex-wrap gap-1.5">
-          {ECOMMERCE_POS_PAYMENT_METHODS.map((m) => (
-            <button
-              key={m}
-              type="button"
-              className={ecommerceFilterChipClass(paymentMethod === m)}
-              aria-pressed={paymentMethod === m}
-              onClick={() => {
-                setPaymentMethod(m);
-                if (!ecommercePosPaymentShowsSlip(m, cartTotal)) setSlipUrl(null);
-              }}
-            >
-              {ecommercePosPaymentMethodLabel(m)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {showSlip ? (
-        <div className="space-y-2">
-          <p className="text-xs font-bold text-[#4d47b6]">แนบสลิป (ถ้ามี)</p>
-          {slipUrl ? (
-            <AppImageThumb src={slipUrl} alt="สลิป" onOpen={() => lb.open(slipUrl)} className="h-16 w-16" />
-          ) : null}
-          <AppGalleryCameraFileInputs
-            galleryInputRef={galleryRef}
-            cameraInputRef={cameraInputRef}
-            onChange={onSlipInputChange}
-          />
-          <AppImagePickCameraButtons
-            busy={uploading}
-            onPickGallery={() => galleryRef.current?.click()}
-            onPickCamera={() => openCamera((file) => void uploadSlip(file))}
-            labels={{ gallery: "เลือกสลิป", camera: "ถ่ายสลิป", busy: "กำลังอัปโหลด…" }}
-            className="justify-start"
-          />
-        </div>
-      ) : null}
+      <EcommercePaymentPanel
+        amountBaht={cartTotal}
+        method={paymentMethod}
+        slipUrl={slipUrl}
+        onMethodChange={setPaymentMethod}
+        onSlipUrlChange={setSlipUrl}
+        disabled={saving}
+      />
 
       <div className="flex items-end justify-between gap-3 border-t border-white/60 pt-3">
         <div>
@@ -386,8 +302,6 @@ export function EcommercePosClient() {
   return (
     <div className="space-y-3">
       {notice.popup}
-      {cameraModal}
-      <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิป" />
 
       <div className="min-w-0">
         <h3 className="text-base font-black text-[#1e1b4b]">ขายหน้าร้าน</h3>

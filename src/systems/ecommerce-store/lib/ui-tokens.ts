@@ -233,3 +233,14 @@ export const ecommerceStorePosDraftPanelClass =
   "rounded-[1.5rem] border border-white/70 bg-gradient-to-br from-white/90 via-[#f5f3ff]/75 to-[#fdf2f8]/55 p-3 shadow-[0_20px_50px_-20px_rgba(30,27,75,0.4)] backdrop-blur-2xl ring-1 ring-inset ring-white/60 sm:p-4";
 
 export const ecommerceStorePosPulseWashClass = "bg-[#5b61ff]/08";
+
+/** ชิปช่องทางชำระ — แผง POS / PaymentPanel */
+export const ecommerceStorePaymentChipIdleClass = cn(
+  ecommerceStoreOutlineButtonClass,
+  "px-3 text-xs",
+);
+export const ecommerceStorePaymentChipActiveClass = cn(
+  ecommerceStorePrimaryButtonClass,
+  "px-3 text-xs",
+);
+export const ecommerceStorePaymentCtaClass = ecommerceStorePrimaryButtonClass;
