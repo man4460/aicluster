@@ -52,6 +52,10 @@ type Props = {
   onShip: (courierTrackingNo: string) => Promise<void> | void;
 };
 
+/** กล่องฟอร์มขาว + เส้นบาง (แม่แบบซักผ้า / ecommerce panel) */
+const sectionClass = "rounded-lg border border-slate-200/90 bg-white p-3";
+const sectionLabelClass = "text-xs font-bold text-[#4d47b6]";
+
 export function EcommerceOrderFulfillModal({
   open,
   order,
@@ -124,8 +128,7 @@ export function EcommerceOrderFulfillModal({
         open={open && Boolean(order)}
         onClose={onClose}
         title="จัดของ · แพ็ค · จัดส่ง"
-        appearance="glass"
-        glassTint="violet"
+        appearance="default"
         size="lg"
         mobileCentered
         footer={
@@ -145,8 +148,8 @@ export function EcommerceOrderFulfillModal({
         }
       >
         {order ? (
-          <div className="space-y-4 text-left">
-            <div className="flex items-start gap-3 rounded-[1.25rem] border border-white/60 bg-white/70 p-3">
+          <div className="space-y-3 text-left">
+            <div className={cn(sectionClass, "flex items-start gap-3")}>
               {order.paymentSlipUrl ? (
                 <AppImageThumb
                   src={order.paymentSlipUrl}
@@ -162,7 +165,7 @@ export function EcommerceOrderFulfillModal({
                   className="h-16 w-16 shrink-0"
                 />
               ) : (
-                <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-sm font-black text-violet-700">
+                <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-slate-200/90 bg-slate-50 text-sm font-black text-[#4d47b6]">
                   {order.referenceCode.slice(-4)}
                 </span>
               )}
@@ -183,15 +186,15 @@ export function EcommerceOrderFulfillModal({
               </div>
             </div>
 
-            <div className="space-y-1.5 rounded-[1.25rem] border border-slate-200/80 bg-slate-50/80 p-3">
-              <p className="text-xs font-black text-[#4d47b6]">ที่อยู่จัดส่ง</p>
+            <div className={cn(sectionClass, "space-y-1.5")}>
+              <p className={sectionLabelClass}>ที่อยู่จัดส่ง</p>
               <p className="whitespace-pre-wrap text-sm font-semibold text-[#1e1b4b]">
                 {order.customerAddress?.trim() || "— ลูกค้าไม่ได้ระบุที่อยู่ —"}
               </p>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-xs font-black text-[#4d47b6]">รายการสินค้า</p>
+            <div className={cn(sectionClass, "space-y-2")}>
+              <p className={sectionLabelClass}>รายการสินค้า</p>
               <ul className="space-y-2">
                 {items.length === 0 ? (
                   <li className="text-sm text-[#66638c]">ไม่มีรายการสินค้า</li>
@@ -199,7 +202,7 @@ export function EcommerceOrderFulfillModal({
                   items.map((it) => (
                     <li
                       key={it.id}
-                      className="flex items-center gap-2.5 rounded-xl border border-white/70 bg-white/80 px-2.5 py-2"
+                      className="flex items-center gap-2.5 rounded-lg border border-slate-200/90 bg-white px-2.5 py-2"
                     >
                       {it.imageUrl ? (
                         <AppImageThumb
@@ -209,7 +212,7 @@ export function EcommerceOrderFulfillModal({
                           className="h-11 w-11 shrink-0"
                         />
                       ) : (
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-bold text-slate-500">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200/90 bg-slate-50 text-[10px] font-bold text-slate-500">
                           —
                         </span>
                       )}
@@ -225,8 +228,8 @@ export function EcommerceOrderFulfillModal({
               </ul>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-xs font-black text-[#4d47b6]">พิมพ์เอกสาร</p>
+            <div className={cn(sectionClass, "space-y-2")}>
+              <p className={sectionLabelClass}>พิมพ์เอกสาร</p>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -267,7 +270,12 @@ export function EcommerceOrderFulfillModal({
               </div>
             </div>
 
-            <label className="flex items-start gap-2 rounded-[1.25rem] border border-amber-200/80 bg-amber-50/70 px-3 py-2.5 text-sm font-semibold text-amber-950">
+            <label
+              className={cn(
+                sectionClass,
+                "flex items-start gap-2 text-sm font-semibold text-[#1e1b4b]",
+              )}
+            >
               <input
                 type="checkbox"
                 className="mt-0.5"
@@ -277,25 +285,27 @@ export function EcommerceOrderFulfillModal({
               <span>แพ็คใส่กล่องเรียบร้อยแล้ว พร้อมติดฉลากและจัดส่ง</span>
             </label>
 
-            <label className="block space-y-1.5">
-              <span className="text-xs font-black text-[#4d47b6]">เลขพัสดุขนส่ง</span>
-              <input
-                className={cn(ecommerceStoreFieldClass, "min-h-[44px]")}
-                value={courierNo}
-                onChange={(e) => setCourierNo(e.target.value)}
-                placeholder="เช่น Kerry / Flash / ไปรษณีย์"
-                autoComplete="off"
-                disabled={busy}
-              />
+            <div className={cn(sectionClass, "space-y-1.5")}>
+              <label className="block space-y-1.5">
+                <span className={sectionLabelClass}>เลขพัสดุขนส่ง</span>
+                <input
+                  className={cn(ecommerceStoreFieldClass, "min-h-[44px]")}
+                  value={courierNo}
+                  onChange={(e) => setCourierNo(e.target.value)}
+                  placeholder="เช่น Kerry / Flash / ไปรษณีย์"
+                  autoComplete="off"
+                  disabled={busy}
+                />
+              </label>
               <p className="text-[11px] font-medium text-[#66638c]">
                 กรอกเลขพัสดุจากบริษัทขนส่ง แล้วกด «จัดส่งแล้ว»
               </p>
-            </label>
+            </div>
 
             {err ? <p className="text-sm font-semibold text-rose-700">{err}</p> : null}
             {info ? <p className="text-sm font-semibold text-emerald-700">{info}</p> : null}
 
-            <p className={cn("text-[11px] text-[#8b87b8]", busy && "opacity-60")}>
+            <p className={cn("text-[11px] text-[#66638c]", busy && "opacity-60")}>
               ลำดับแนะนำ: ดูข้อมูล → พิมพ์ฉลาก/สลิป/ใบกำกับ → แพ็คกล่อง → กรอกเลขพัสดุ → จัดส่ง
             </p>
           </div>
