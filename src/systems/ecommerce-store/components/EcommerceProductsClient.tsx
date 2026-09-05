@@ -92,7 +92,7 @@ export function EcommerceProductsClient({
   const [threshold, setThreshold] = useState(5);
   const [loading, setLoading] = useState(true);
   const [importBusy, setImportBusy] = useState(false);
-  const [stockBusyId, setStockBusyId] = useState<string | null>(null);
+  const stockInflightRef = useRef<Set<string>>(new Set());
   const importRef = useRef<HTMLInputElement>(null);
 
   const [showAddProductModal, setShowAddProductModal] = useState(false);
@@ -394,19 +394,26 @@ export function EcommerceProductsClient({
   }
 
   async function adjustStock(id: string, delta: number) {
-    if (stockBusyId) return;
-    const prev = products.find((p) => p.id === id);
-    if (!prev) return;
-    const nextBalance = Math.max(0, prev.stockBalance + delta);
-    if (nextBalance === prev.stockBalance && delta < 0) return;
+    if (stockInflightRef.current.has(id)) return;
 
-    setStockBusyId(id);
-    setProducts((list) =>
-      list.map((p) => (p.id === id ? { ...p, stockBalance: nextBalance } : p)),
-    );
+    let snapshot: Product | undefined;
+    let optimistic = 0;
+    setProducts((list) => {
+      const cur = list.find((p) => p.id === id);
+      if (!cur) return list;
+      snapshot = cur;
+      optimistic = Math.max(0, cur.stockBalance + delta);
+      if (optimistic === cur.stockBalance && delta < 0) return list;
+      return list.map((p) => (p.id === id ? { ...p, stockBalance: optimistic } : p));
+    });
+    if (!snapshot) return;
+    if (optimistic === snapshot.stockBalance && delta < 0) return;
+
     setStockModalProduct((cur) =>
-      cur && cur.id === id ? { ...cur, stockBalance: nextBalance } : cur,
+      cur && cur.id === id ? { ...cur, stockBalance: optimistic } : cur,
     );
+
+    stockInflightRef.current.add(id);
     try {
       const res = await fetch("/api/ecommerce-store/session/products", {
         method: "PATCH",
@@ -422,19 +429,22 @@ export function EcommerceProductsClient({
         throw new Error(typeof j.error === "string" ? j.error : "ปรับสต๊อกไม่สำเร็จ");
       }
       const serverBalance =
-        typeof j.product?.stockBalance === "number" ? j.product.stockBalance : nextBalance;
-      setProducts((list) =>
-        list.map((p) => (p.id === id ? { ...p, stockBalance: serverBalance } : p)),
-      );
-      setStockModalProduct((cur) =>
-        cur && cur.id === id ? { ...cur, stockBalance: serverBalance } : cur,
-      );
+        typeof j.product?.stockBalance === "number" ? j.product.stockBalance : optimistic;
+      // sync เฉพาะชิ้นนี้ — ไม่ reload รายการ
+      if (serverBalance !== optimistic) {
+        setProducts((list) =>
+          list.map((p) => (p.id === id ? { ...p, stockBalance: serverBalance } : p)),
+        );
+        setStockModalProduct((cur) =>
+          cur && cur.id === id ? { ...cur, stockBalance: serverBalance } : cur,
+        );
+      }
     } catch (e) {
-      setProducts((list) => list.map((p) => (p.id === id ? prev : p)));
-      setStockModalProduct((cur) => (cur && cur.id === id ? prev : cur));
+      setProducts((list) => list.map((p) => (p.id === id && snapshot ? snapshot : p)));
+      setStockModalProduct((cur) => (cur && cur.id === id && snapshot ? snapshot : cur));
       noticeErrorRef.current(e instanceof Error ? e.message : "ปรับสต๊อกไม่สำเร็จ");
     } finally {
-      setStockBusyId(null);
+      stockInflightRef.current.delete(id);
     }
   }
 
@@ -928,7 +938,7 @@ export function EcommerceProductsClient({
                     type="button"
                     className={ecommerceStoreRowIconButtonClass}
                     aria-label={`ลดสต๊อก ${p.name}`}
-                    disabled={p.stockBalance <= 0 || stockBusyId === p.id}
+                    disabled={p.stockBalance <= 0}
                     onClick={() => void adjustStock(p.id, -1)}
                   >
                     −
@@ -950,7 +960,6 @@ export function EcommerceProductsClient({
                     type="button"
                     className={ecommerceStoreRowIconButtonClass}
                     aria-label={`เพิ่มสต๊อก ${p.name}`}
-                    disabled={stockBusyId === p.id}
                     onClick={() => void adjustStock(p.id, 1)}
                   >
                     +
@@ -1146,7 +1155,7 @@ export function EcommerceProductsClient({
                 type="button"
                 className={ecommerceStockButtonClass}
                 onClick={() => void adjustStockFromModal(-1)}
-                disabled={stockModalProduct.stockBalance <= 0 || stockBusyId === stockModalProduct.id}
+                disabled={stockModalProduct.stockBalance <= 0}
                 aria-label="ลดสต๊อก"
               >
                 −
@@ -1163,7 +1172,6 @@ export function EcommerceProductsClient({
                 type="button"
                 className={ecommerceStockButtonClass}
                 onClick={() => void adjustStockFromModal(1)}
-                disabled={stockBusyId === stockModalProduct.id}
                 aria-label="เพิ่มสต๊อก"
               >
                 +
