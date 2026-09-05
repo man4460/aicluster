@@ -1,5 +1,5 @@
-import { EcommerceDashboardClient } from "@/systems/ecommerce-store/components/EcommerceDashboardClient";
+import { EcommerceDashboardHubClient } from "@/systems/ecommerce-store/components/EcommerceDashboardHubClient";
 
 export default function EcommerceStoreDashboardPage() {
-  return <EcommerceDashboardClient />;
+  return <EcommerceDashboardHubClient />;
 }

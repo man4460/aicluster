@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AppDashboardSection, AppSectionHeader, appTemplateOutlineButtonClass } from "@/components/app-templates";
-import { cn } from "@/lib/cn";
-import { ecommercePublicShopUrl } from "@/lib/ecommerce/constants";
+import { AppDashboardSection, AppSectionHeader } from "@/components/app-templates";
 import { formatEcommerceBaht } from "@/lib/ecommerce/sales-period";
 import { bangkokDateKey } from "@/lib/time/bangkok";
 import { EcommerceStatCard } from "@/systems/ecommerce-store/components/EcommerceStatCard";
@@ -13,9 +11,11 @@ import {
   ecommerceHeroRevenueCardClass,
   ecommerceOverviewStatsGridClass,
   ecommerceSalesHeroGridClass,
-  ecommerceShopLinkPanelClass,
 } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
-import { IconCopy } from "@/systems/ecommerce-store/components/EcommerceStoreIcons";
+import {
+  ecommerceStoreOutlineButtonClass,
+} from "@/systems/ecommerce-store/lib/ui-tokens";
+import { ECOMMERCE_STORE_SETTINGS_PORTAL_HREF } from "@/systems/ecommerce-store/ecommerce-store-module-nav";
 
 type SalesPeriod = "today" | "month" | "year" | "custom";
 
@@ -44,8 +44,6 @@ const PERIOD_OPTIONS: { key: SalesPeriod; label: string }[] = [
 
 export function EcommerceDashboardClient() {
   const [data, setData] = useState<Summary | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [shopLinkOpen, setShopLinkOpen] = useState(false);
   const [salesPeriod, setSalesPeriod] = useState<SalesPeriod>("today");
   const [customFrom, setCustomFrom] = useState(() => bangkokDateKey());
   const [customTo, setCustomTo] = useState(() => bangkokDateKey());
@@ -110,27 +108,6 @@ export function EcommerceDashboardClient() {
     setCustomTo(customDraftTo);
   }
 
-  const [shopPath, setShopPath] = useState("");
-
-  useEffect(() => {
-    if (!data?.store.id) {
-      setShopPath("");
-      return;
-    }
-    setShopPath(ecommercePublicShopUrl(data.store.id, window.location.origin));
-  }, [data?.store.id]);
-
-  async function copyLink() {
-    if (!shopPath) return;
-    try {
-      await navigator.clipboard.writeText(shopPath);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* ignore */
-    }
-  }
-
   const salesRangeHint =
     sales?.from && sales?.to
       ? sales.from === sales.to
@@ -148,12 +125,12 @@ export function EcommerceDashboardClient() {
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           action={
             <Link
-              href="/dashboard/ecommerce-store/orders"
-              className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-white/60 bg-white/80 px-0 text-sm font-semibold text-[#4d47b6] shadow-sm backdrop-blur-sm transition hover:bg-white/95 sm:min-w-0 sm:px-4"
+              href="/dashboard/ecommerce-store?tab=orders"
+              className={ecommerceStoreOutlineButtonClass}
               aria-label="ดูรายการออเดอร์"
             >
               <span className="hidden sm:inline">ดูออเดอร์</span>
-              <svg className="h-5 w-5 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+              <svg className="h-4 w-4 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
                 <rect x="5" y="4" width="14" height="17" rx="2" />
                 <path d="M8 12h8M8 16h5" strokeLinecap="round" />
               </svg>
@@ -184,14 +161,14 @@ export function EcommerceDashboardClient() {
         </div>
 
         {salesPeriod === "custom" ? (
-          <div className="mt-3 flex flex-col gap-2 rounded-[2rem] border border-white/55 bg-white/50 p-3 backdrop-blur-sm sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="mt-3 flex flex-col gap-2 rounded-xl border border-slate-200/90 bg-slate-50/80 p-3 sm:flex-row sm:flex-wrap sm:items-end">
             <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-semibold text-[#66638c]">
               ตั้งแต่
               <input
                 type="date"
                 value={customDraftFrom}
                 onChange={(e) => setCustomDraftFrom(e.target.value)}
-                className="min-h-[44px] rounded-xl border border-white/70 bg-white/90 px-3 text-sm font-semibold text-[#1e1b4b]"
+                className="min-h-[44px] rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-[#1e1b4b]"
               />
             </label>
             <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-semibold text-[#66638c]">
@@ -200,13 +177,13 @@ export function EcommerceDashboardClient() {
                 type="date"
                 value={customDraftTo}
                 onChange={(e) => setCustomDraftTo(e.target.value)}
-                className="min-h-[44px] rounded-xl border border-white/70 bg-white/90 px-3 text-sm font-semibold text-[#1e1b4b]"
+                className="min-h-[44px] rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-[#1e1b4b]"
               />
             </label>
             <button
               type="button"
               onClick={() => void applyCustomRange()}
-              className="min-h-[44px] w-full rounded-xl border border-[#5b61ff]/30 bg-gradient-to-br from-[#5b61ff] to-[#6a63ff] px-4 text-sm font-black text-white shadow-sm sm:w-auto"
+              className="min-h-[44px] w-full rounded-lg bg-gradient-to-br from-[#5b61ff] to-[#6a63ff] px-4 text-sm font-black text-white shadow-sm sm:w-auto"
             >
               ดูยอด
             </button>
@@ -253,25 +230,17 @@ export function EcommerceDashboardClient() {
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           action={
-            shopPath ? (
-              <button
-                type="button"
-                onClick={() => setShopLinkOpen((v) => !v)}
-                className={cn(
-                  appTemplateOutlineButtonClass,
-                  "min-h-[40px] min-w-[40px] rounded-xl px-3 text-xs font-black text-[#4d47b6] sm:min-w-0 sm:px-4 sm:text-sm",
-                  shopLinkOpen && "border-[#5b61ff]/40 bg-[#ecebff]/80",
-                )}
-                aria-expanded={shopLinkOpen}
-                aria-label={shopLinkOpen ? "ซ่อนลิงก์ร้าน" : "แสดงลิงก์ร้าน"}
-              >
-                <span className="hidden sm:inline">{shopLinkOpen ? "ซ่อนลิงก์" : "แสดงลิงก์"}</span>
-                <svg className="h-5 w-5 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-                  <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" strokeLinecap="round" />
-                  <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" strokeLinecap="round" />
-                </svg>
-              </button>
-            ) : null
+            <Link
+              href={ECOMMERCE_STORE_SETTINGS_PORTAL_HREF}
+              className={ecommerceStoreOutlineButtonClass}
+              aria-label="ไปตั้งค่าเว็ปลิงค์ลูกค้า"
+            >
+              <span className="hidden sm:inline">ลิงก์ร้าน</span>
+              <svg className="h-4 w-4 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+                <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" strokeLinecap="round" />
+                <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" strokeLinecap="round" />
+              </svg>
+            </Link>
           }
         />
 
@@ -319,31 +288,6 @@ export function EcommerceDashboardClient() {
             }
           />
         </div>
-
-        {shopLinkOpen && shopPath && data ? (
-          <div className={cn(ecommerceShopLinkPanelClass, "mt-4 space-y-3")}>
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-xs font-black uppercase tracking-wider text-[#8b87b8]">ลิงก์หน้าร้าน</p>
-              <button
-                type="button"
-                onClick={() => void copyLink()}
-                className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-xl border border-white/60 bg-white/80 px-3 text-xs font-black text-[#4d47b6] shadow-sm transition hover:bg-white"
-                aria-label="คัดลอกลิงก์ร้าน"
-              >
-                <IconCopy className="h-4 w-4" aria-hidden />
-                {copied ? "คัดลอกแล้ว" : "คัดลอก"}
-              </button>
-            </div>
-            <Link
-              href={ecommercePublicShopUrl(data.store.id)}
-              className="block break-all text-sm font-semibold leading-relaxed text-[#4d47b6] underline decoration-[#5b61ff]/30 underline-offset-2"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {shopPath}
-            </Link>
-          </div>
-        ) : null}
       </AppDashboardSection>
     </div>
   );

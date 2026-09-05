@@ -16,7 +16,6 @@ import {
 } from "@/systems/ecommerce-store/ecommerce-store-module-nav";
 import { EcommerceStoreMobileBottomProvider } from "@/systems/ecommerce-store/components/EcommerceStoreMobileBottomChrome";
 import {
-  IconClipboard,
   IconPackage,
   IconSettings,
   IconStore,
@@ -35,7 +34,6 @@ import {
 const navIcons = {
   dashboard: IconStore,
   products: IconPackage,
-  orders: IconClipboard,
   crm: IconUsers,
   settings: IconSettings,
 } as const;
@@ -157,7 +155,7 @@ function EcommerceStoreShellInner({ children }: { children: React.ReactNode }) {
         open={guideOpen}
         onClose={() => setGuideOpen(false)}
         title="คู่มือการใช้งาน — ร้านออนไลน์"
-        subtitle="แดชบอร์ด · สินค้า · ออเดอร์ · CRM · ตั้งค่า · เว็บลูกค้า"
+        subtitle="แดชบอร์ด · สินค้า · CRM · ตั้งค่า · เว็บลูกค้า"
         sections={[
           {
             title: "เริ่มต้น",
@@ -167,12 +165,17 @@ function EcommerceStoreShellInner({ children }: { children: React.ReactNode }) {
           {
             title: "เมนูหลัก",
             content:
-              "แดชบอร์ด · สินค้า · ออเดอร์ · CRM · ตั้งค่า — มือถือใช้เมนูล่าง · เดสก์ท็อปใช้แท็บในหัว · กดไอคอนซ่อนหัวเพื่อย้ายเมนูขึ้นแถบม่วง",
+              "แดชบอร์ด (ภาพรวม · ออเดอร์) · สินค้า · CRM · ตั้งค่า — มือถือใช้เมนูล่าง · เดสก์ท็อปใช้แท็บในหัว · กดไอคอนซ่อนหัวเพื่อย้ายเมนูขึ้นแถบม่วง",
+          },
+          {
+            title: "แดชบอร์ด — ภาพรวม · ออเดอร์",
+            content:
+              "ภาพรวมแสดงยอดขายและสถิติร้าน · ออเดอร์เป็นเมนูย่อยสำหรับตรวจสลิปและอัปเดตสถานะ",
           },
           {
             title: "ตั้งค่าร้าน",
             content:
-              "แยกหมวด พื้นฐาน · การเงิน · เว็ปลิงค์ลูกค้า — มือถือเลือกจาก dropdown · คอมใช้แถบเมนูคู่ปุ่มบันทึก",
+              "แยกหมวด พื้นฐาน · การเงิน · เว็ปลิงค์ลูกค้า — ลิงก์แชร์ร้าน · โดเมน · Sale Page อยู่แท็บเว็ปลิงค์ · มือถือเลือกจาก dropdown · คอมใช้แถบเมนูคู่ปุ่มบันทึก",
           },
           {
             title: "PromptPay",

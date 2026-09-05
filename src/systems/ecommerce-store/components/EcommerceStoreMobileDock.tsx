@@ -16,7 +16,6 @@ import {
   type EcommerceStoreNavKey,
 } from "@/systems/ecommerce-store/ecommerce-store-module-nav";
 import {
-  IconClipboard,
   IconPackage,
   IconSettings,
   IconStore,
@@ -29,8 +28,6 @@ function dockIcon(key: EcommerceStoreNavKey, className?: string): ReactNode {
       return <IconStore className={className} />;
     case "products":
       return <IconPackage className={className} />;
-    case "orders":
-      return <IconClipboard className={className} />;
     case "crm":
       return <IconUsers className={className} />;
     case "settings":
@@ -43,7 +40,7 @@ export function EcommerceStoreMobileDockNav() {
   if (!isEcommerceStoreModulePath(pathname)) return null;
 
   return (
-    <ul className={cn(appMobileDockGridClass, "grid-cols-5")} aria-label="แท็บนำทางโมดูลร้านออนไลน์">
+    <ul className={cn(appMobileDockGridClass, "grid-cols-4")} aria-label="แท็บนำทางโมดูลร้านออนไลน์">
       {ECOMMERCE_STORE_NAV_ITEMS.map((item) => {
         const active = isEcommerceStoreNavItemActive(pathname, item.key);
         return (

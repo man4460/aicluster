@@ -1,13 +1,36 @@
 export const ECOMMERCE_STORE_BASE = "/dashboard/ecommerce-store";
 export const ECOMMERCE_STORE_SETTINGS_HREF = `${ECOMMERCE_STORE_BASE}/settings`;
+export const ECOMMERCE_STORE_SETTINGS_PORTAL_HREF = `${ECOMMERCE_STORE_SETTINGS_HREF}?tab=portal`;
 export const ECOMMERCE_STORE_MODULE_DISPLAY_NAME = "ร้านออนไลน์";
 
 export type EcommerceStoreSettingsTab = "basic" | "finance" | "portal";
 
+/** แท็บย่อยแดชบอร์ด: ภาพรวม · ออเดอร์ */
+export type EcommerceStoreDashboardTabKey = "overview" | "orders";
+
+export const ECOMMERCE_STORE_DASHBOARD_TAB_KEYS = new Set<string>(["overview", "orders"]);
+
+export const ECOMMERCE_STORE_DASHBOARD_TAB_ITEMS: {
+  key: EcommerceStoreDashboardTabKey;
+  label: string;
+}[] = [
+  { key: "overview", label: "ภาพรวม" },
+  { key: "orders", label: "ออเดอร์" },
+];
+
+export function parseEcommerceStoreDashboardTab(
+  raw: string | null | undefined,
+): EcommerceStoreDashboardTabKey {
+  if (raw && ECOMMERCE_STORE_DASHBOARD_TAB_KEYS.has(raw)) {
+    return raw as EcommerceStoreDashboardTabKey;
+  }
+  return "overview";
+}
+
 export const ECOMMERCE_STORE_HEADER_COLLAPSE_KEY = "mawell-ecommerce-store-module-header-collapsed";
 export const ECOMMERCE_STORE_HEADER_COLLAPSE_EVENT = "mawell-ecommerce-store-header-collapse";
 
-export type EcommerceStoreNavKey = "dashboard" | "products" | "orders" | "crm" | "settings";
+export type EcommerceStoreNavKey = "dashboard" | "products" | "crm" | "settings";
 
 export type EcommerceStoreNavItem = {
   key: EcommerceStoreNavKey;
@@ -17,9 +40,8 @@ export type EcommerceStoreNavItem = {
 };
 
 export const ECOMMERCE_STORE_NAV_ITEMS: EcommerceStoreNavItem[] = [
-  { key: "dashboard", href: ECOMMERCE_STORE_BASE, label: "แดชบอร์ด", shortLabel: "ภาพรวม" },
+  { key: "dashboard", href: ECOMMERCE_STORE_BASE, label: "แดชบอร์ด", shortLabel: "แดช" },
   { key: "products", href: `${ECOMMERCE_STORE_BASE}/products`, label: "สินค้า", shortLabel: "สินค้า" },
-  { key: "orders", href: `${ECOMMERCE_STORE_BASE}/orders`, label: "ออเดอร์", shortLabel: "ออเดอร์" },
   { key: "crm", href: `${ECOMMERCE_STORE_BASE}/customers`, label: "CRM", shortLabel: "ลูกค้า" },
   { key: "settings", href: ECOMMERCE_STORE_SETTINGS_HREF, label: "ตั้งค่า", shortLabel: "ตั้งค่า" },
 ];
@@ -39,7 +61,8 @@ export function ecommerceStorePathFlags(pathname: string) {
     pathNorm.startsWith(`${ECOMMERCE_STORE_BASE}/customers`) || pathNorm.endsWith("/customers");
   const isSettings =
     pathNorm === ECOMMERCE_STORE_SETTINGS_HREF || pathNorm.endsWith("/settings");
-  const isDashboard = onModule && !isProducts && !isOrders && !isCrm && !isSettings;
+  /** ออเดอร์ (`/orders`) นับเป็นแดชบอร์ด — เป็นเมนูย่อยไม่ใช่เมนูหลัก */
+  const isDashboard = onModule && !isProducts && !isCrm && !isSettings;
   return { onModule, isDashboard, isProducts, isOrders, isCrm, isSettings };
 }
 
@@ -50,8 +73,6 @@ export function isEcommerceStoreNavItemActive(pathname: string, key: EcommerceSt
       return f.isDashboard;
     case "products":
       return f.isProducts;
-    case "orders":
-      return f.isOrders;
     case "crm":
       return f.isCrm;
     case "settings":
