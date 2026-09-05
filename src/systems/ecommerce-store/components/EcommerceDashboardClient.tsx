@@ -9,6 +9,11 @@ import {
   ECOMMERCE_STORE_SETTINGS_PORTAL_HREF,
 } from "@/systems/ecommerce-store/ecommerce-store-module-nav";
 import {
+  IconClipboard,
+  IconFinance,
+  IconStore,
+} from "@/systems/ecommerce-store/components/EcommerceStoreIcons";
+import {
   ecommerceStoreDashboardStatsGridClass,
   ecommerceStoreOutlineButtonClass,
   ecommerceStoreSectionHeadingClass,
@@ -93,52 +98,49 @@ export function EcommerceDashboardClient() {
 
   const storeOpen = data ? !data.store.merchantPaused : null;
 
+  const statusMeta = (() => {
+    if (!data) return "สรุปด่วนของร้าน";
+    const parts = [data.store.storeName];
+    if (storeOpen != null) parts.push(storeOpen ? "ร้านเปิด" : "ปิดชั่วคราว");
+    parts.push(`สินค้า ${data.productCount.toLocaleString("th-TH")}`);
+    return parts.join(" · ");
+  })();
+
+  const quickLinkClass = cn(
+    ecommerceStoreOutlineButtonClass,
+    "min-h-[40px] min-w-[40px] px-0 sm:min-w-0 sm:px-2.5",
+  );
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="space-y-3">
+      <div className="flex flex-row items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className={ecommerceStoreSectionHeadingClass}>สถานะร้าน</h3>
-          <p className="mt-0.5 hidden text-xs font-medium text-[#66638c] sm:block">
-            {data?.store.storeName
-              ? `${data.store.storeName} · เวลาไทย (กรุงเทพ)`
-              : "สรุปด่วน — ประวัติการเงินอยู่หน้าการเงิน"}
-          </p>
+          <p className="mt-0.5 truncate text-xs font-medium text-[#66638c]">{statusMeta}</p>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <Link
-            href={ECOMMERCE_STORE_FINANCE_HREF}
-            className={ecommerceStoreOutlineButtonClass}
-            aria-label="ไปหน้าการเงิน"
-          >
-            การเงิน
+        <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
+          <Link href={ECOMMERCE_STORE_FINANCE_HREF} className={quickLinkClass} aria-label="ไปหน้าการเงิน">
+            <IconFinance className="h-4 w-4 sm:hidden" />
+            <span className="hidden sm:inline">การเงิน</span>
           </Link>
           <Link
             href="/dashboard/ecommerce-store?tab=orders"
-            className={ecommerceStoreOutlineButtonClass}
+            className={quickLinkClass}
             aria-label="ดูรายการออเดอร์"
           >
-            ออเดอร์
+            <IconClipboard className="h-4 w-4 sm:hidden" />
+            <span className="hidden sm:inline">ออเดอร์</span>
           </Link>
           <Link
             href={ECOMMERCE_STORE_SETTINGS_PORTAL_HREF}
-            className={ecommerceStoreOutlineButtonClass}
+            className={quickLinkClass}
             aria-label="ไปตั้งค่าเว็ปลิงค์ลูกค้า"
           >
-            ลิงก์ร้าน
+            <IconStore className="h-4 w-4 sm:hidden" />
+            <span className="hidden sm:inline">ลิงก์ร้าน</span>
           </Link>
         </div>
       </div>
-
-      {storeOpen != null ? (
-        <p className="text-xs font-semibold text-[#66638c]">
-          ร้าน{storeOpen ? "เปิด" : "ปิดชั่วคราว"}
-          {data ? ` · สินค้า ${data.productCount.toLocaleString("th-TH")} รายการ` : null}
-          {" · "}
-          <Link href={ECOMMERCE_STORE_FINANCE_HREF} className="font-bold text-[#4d47b6] underline-offset-2 hover:underline">
-            ดูประวัติการเงิน
-          </Link>
-        </p>
-      ) : null}
 
       <div className={ecommerceStoreDashboardStatsGridClass}>
         <OverviewStat
