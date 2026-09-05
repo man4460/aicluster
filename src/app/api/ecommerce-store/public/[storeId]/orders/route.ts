@@ -116,6 +116,7 @@ export async function POST(
         totalAmount: total,
         paymentSlipUrl,
         status: "VERIFYING",
+        salesChannel: "ONLINE",
         buyerCustomerId: buyer.id,
         items: { create: orderItems },
       },

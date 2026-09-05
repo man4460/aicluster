@@ -1,28 +1,33 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Package, Phone, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AppDashboardSection,
   AppEmptyState,
   AppImageLightbox,
+  AppImageThumb,
   AppSectionHeader,
-  appTemplateOutlineButtonClass,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { ECOMMERCE_ORDER_STATUS_LABELS } from "@/lib/ecommerce/constants";
 import {
-  ecommerceCardAccentBarClass,
   ecommerceFieldClass,
   ecommerceFilterChipClass,
-  ecommerceGradientPriceClass,
-  ecommerceInitialAvatarClass,
-  ecommerceListRowCardClass,
-  ecommerceListStackClass,
-  ecommerceMetaChipClass,
   ecommerceOrderStatusBadgeClass,
-  ecommercePlainIconActionClass,
+  ecommerceProductTagClass,
 } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
+import {
+  ecommerceStoreCardIconTileClass,
+  ecommerceStoreOrderRowTone,
+  ecommerceStoreTonedRowCardClass,
+} from "@/systems/ecommerce-store/lib/card-tones";
+import {
+  ecommerceStoreContentStackClass,
+  ecommerceStoreInlineSubNavBtnClass,
+  ecommerceStoreInlineSubNavShellClass,
+} from "@/systems/ecommerce-store/lib/ui-tokens";
 
 type OrderStatus = "PENDING_SLIP" | "VERIFYING" | "PREPARING" | "SHIPPED";
 
@@ -34,6 +39,7 @@ type Order = {
   totalAmount: string;
   paymentSlipUrl: string | null;
   status: OrderStatus;
+  salesChannel?: "ONLINE" | "IN_STORE";
 };
 
 const NEXT_STATUS: Record<string, OrderStatus | undefined> = {
@@ -52,17 +58,10 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "SHIPPED", label: "ส่งแล้ว" },
 ];
 
-const STATUS_ACCENT: Record<OrderStatus, "amber" | "sky" | "violet" | "emerald"> = {
-  PENDING_SLIP: "amber",
-  VERIFYING: "sky",
-  PREPARING: "violet",
-  SHIPPED: "emerald",
-};
-
 const STATUS_NEXT_LABEL: Record<OrderStatus, string> = {
-  PENDING_SLIP: "ยืนยันสลิป → ตรวจสอบ",
-  VERIFYING: "ยืนยันยอด → จัดของ",
-  PREPARING: "แจ้งจัดส่งแล้ว",
+  PENDING_SLIP: "ยืนยันสลิป",
+  VERIFYING: "เริ่มจัดของ",
+  PREPARING: "จัดส่งแล้ว",
   SHIPPED: "",
 };
 
@@ -74,83 +73,28 @@ function getInitials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function avatarToneFor(id: string): "violet" | "amber" | "emerald" | "rose" | "slate" {
-  const tones: Array<"violet" | "amber" | "emerald" | "rose" | "slate"> = [
-    "violet",
-    "amber",
-    "emerald",
-    "rose",
-    "slate",
-  ];
-  let sum = 0;
-  for (let i = 0; i < id.length; i += 1) sum += id.charCodeAt(i);
-  return tones[sum % tones.length];
-}
-
-function statusIcon(status: OrderStatus, className?: string) {
-  const iconProps = {
-    className,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 2.2,
-    "aria-hidden": true as const,
-  };
-  switch (status) {
-    case "PENDING_SLIP":
-      return (
-        <svg {...iconProps}>
-          <path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z" />
-          <path d="M14 3v6h6M9 15h6M9 11h3" strokeLinecap="round" />
-        </svg>
-      );
-    case "VERIFYING":
-      return (
-        <svg {...iconProps}>
-          <circle cx="11" cy="11" r="7" />
-          <path d="M20 20l-3-3M9 11h4M11 9v4" strokeLinecap="round" />
-        </svg>
-      );
-    case "PREPARING":
-      return (
-        <svg {...iconProps}>
-          <path d="M21 16V8a2 2 0 00-1-1.73L13 2.27a2 2 0 00-2 0L4 6.27A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" strokeLinejoin="round" />
-          <path d="M12 22V12M12 12L3 7M12 12l9-5" />
-        </svg>
-      );
-    case "SHIPPED":
-      return (
-        <svg {...iconProps}>
-          <path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z" strokeLinejoin="round" />
-          <circle cx="7" cy="18" r="1.8" />
-          <circle cx="17" cy="18" r="1.8" />
-        </svg>
-      );
-  }
-}
-
 export function EcommerceOrdersClient({ embedded = false }: { embedded?: boolean }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [keyword, setKeyword] = useState("");
-  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const lb = useAppImageLightbox();
 
-  async function reload() {
+  const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/ecommerce-store/session/orders");
+      const res = await fetch("/api/ecommerce-store/session/orders?channel=ONLINE");
       const j = await res.json();
       setOrders(j.orders ?? []);
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void reload();
-  }, []);
+  }, [reload]);
 
   const counts = useMemo(() => {
     const map: Record<FilterKey, number> = {
@@ -185,91 +129,95 @@ export function EcommerceOrdersClient({ embedded = false }: { embedded?: boolean
     await reload();
   }
 
+  const toolbar = (
+    <div className={ecommerceStoreInlineSubNavShellClass}>
+      <button
+        type="button"
+        onClick={() => setFilterOpen((o) => !o)}
+        aria-expanded={filterOpen}
+        aria-controls="ecommerce-orders-filter-panel"
+        aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+        title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+        className={cn(
+          ecommerceStoreInlineSubNavBtnClass(filterOpen),
+          "relative",
+          hasActiveFilter && !filterOpen && "ring-1 ring-amber-300/80",
+        )}
+      >
+        <IconFilter className="h-3.5 w-3.5 shrink-0" />
+        <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+        {hasActiveFilter && !filterOpen ? (
+          <span
+            className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] ring-2 ring-white"
+            aria-hidden
+          />
+        ) : null}
+      </button>
+      <button
+        type="button"
+        onClick={() => void reload()}
+        disabled={loading}
+        aria-busy={loading}
+        aria-label="รีเฟรชออเดอร์ออนไลน์"
+        title="รีเฟรช"
+        className={cn(ecommerceStoreInlineSubNavBtnClass(false), "disabled:opacity-50")}
+      >
+        <RefreshCw className={cn("h-3.5 w-3.5 shrink-0", loading && "animate-spin")} aria-hidden />
+        <span className="hidden sm:inline">รีเฟรช</span>
+      </button>
+    </div>
+  );
+
   const body = (
     <>
       {!embedded ? (
         <AppSectionHeader
-          title="คำสั่งซื้อ"
+          title="ออเดอร์ออนไลน์"
           description="ตรวจสลิป · อนุมัติ · อัปเดตสถานะจัดส่ง"
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
-          action={
-            <button
-              type="button"
-              onClick={() => void reload()}
-              className={cn(
-                appTemplateOutlineButtonClass,
-                "min-h-[40px] min-w-[40px] rounded-xl px-0 sm:min-w-0 sm:px-4",
-              )}
-              aria-label="รีเฟรชรายการออเดอร์"
-              aria-busy={loading}
-            >
-              <IconRefresh className={cn("h-5 w-5 sm:mr-1.5", loading && "animate-spin")} aria-hidden />
-              <span className="hidden sm:inline">รีเฟรช</span>
-            </button>
-          }
+          action={toolbar}
         />
       ) : (
         <div className="mb-3 flex items-center justify-between gap-2">
           <p className="text-xs font-semibold text-[#66638c]">ตรวจสลิป · อัปเดตสถานะจัดส่ง</p>
-          <button
-            type="button"
-            onClick={() => void reload()}
-            className={cn(appTemplateOutlineButtonClass, "min-h-9 min-w-9 rounded-lg px-0 sm:min-w-0 sm:px-3")}
-            aria-label="รีเฟรชรายการออเดอร์"
-            aria-busy={loading}
-          >
-            <IconRefresh className={cn("h-4 w-4 sm:mr-1.5", loading && "animate-spin")} aria-hidden />
-            <span className="hidden sm:inline">รีเฟรช</span>
-          </button>
+          {toolbar}
         </div>
       )}
 
-      <div className="space-y-2">
-        <div className="flex gap-2">
-          <div className="relative min-w-0 flex-1">
+      <div className="min-w-0 space-y-2.5">
+        <p className="text-sm font-black tabular-nums text-[#2e2a58]">
+          {hasActiveFilter
+            ? `แสดง ${filtered.length.toLocaleString("th-TH")} จาก ${orders.length.toLocaleString("th-TH")} ออเดอร์`
+            : `ทั้งหมด ${orders.length.toLocaleString("th-TH")} ออเดอร์`}
+        </p>
+
+        <div
+          id="ecommerce-orders-filter-panel"
+          className={cn("space-y-3", filterOpen ? "block" : "hidden")}
+        >
+          <div className="relative">
             <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8b87b8]" />
             <input
               type="search"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder="ค้นหารหัสออเดอร์ · ชื่อ · เบอร์โทร"
-              className={cn(ecommerceFieldClass, "pl-9")}
-              aria-label="ค้นหาออเดอร์"
+              placeholder="ค้นหารหัส · ชื่อ · เบอร์"
+              className={cn(ecommerceFieldClass, "min-h-[44px] pl-9")}
+              aria-label="ค้นหาออเดอร์ออนไลน์"
             />
           </div>
-          <button
-            type="button"
-            onClick={() => setMobileFilterOpen((v) => !v)}
-            className={cn(
-              appTemplateOutlineButtonClass,
-              "relative min-h-[44px] min-w-[44px] shrink-0 px-0 sm:hidden",
-              (hasActiveFilter || mobileFilterOpen) && "border-[#5b61ff]/40 bg-[#ecebff]/80",
-            )}
-            aria-label="เปิดตัวกรองสถานะ"
-            aria-expanded={mobileFilterOpen}
-          >
-            <IconFilter className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div
-          className={cn(
-            "space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/50 p-3 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0",
-            mobileFilterOpen ? "block" : "hidden sm:block",
-          )}
-        >
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [-webkit-overflow-scrolling:touch]">
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="กรองสถานะออเดอร์">
             {FILTERS.map((f) => {
               const active = filter === f.key;
-              const count = counts[f.key];
               return (
                 <button
                   key={f.key}
                   type="button"
+                  role="tab"
+                  aria-selected={active}
                   onClick={() => setFilter(f.key)}
                   className={cn(ecommerceFilterChipClass(active), "gap-1.5")}
-                  aria-pressed={active}
                 >
                   {f.label}
                   <span
@@ -278,160 +226,130 @@ export function EcommerceOrdersClient({ embedded = false }: { embedded?: boolean
                       active ? "bg-white/25 text-white" : "bg-[#5b61ff]/10 text-[#4d47b6]",
                     )}
                   >
-                    {count}
+                    {counts[f.key]}
                   </span>
                 </button>
               );
             })}
-          </div>
-          <p className="text-xs font-semibold text-[#66638c]">
-            {hasActiveFilter
-              ? `แสดง ${filtered.length.toLocaleString("th-TH")} จาก ${orders.length.toLocaleString("th-TH")} ออเดอร์`
-              : `ทั้งหมด ${orders.length.toLocaleString("th-TH")} ออเดอร์`}
-          </p>
-        </div>
-      </div>
-
-      {filtered.length === 0 ? (
-        <AppEmptyState>{loading ? "กำลังโหลด…" : "ไม่มีออเดอร์ในสถานะนี้"}</AppEmptyState>
-      ) : (
-        <ul className={ecommerceListStackClass}>
-          {filtered.map((o) => {
-            const next = NEXT_STATUS[o.status];
-            const accent = STATUS_ACCENT[o.status];
-            const amountText = `฿${Number(o.totalAmount).toLocaleString("th-TH")}`;
-
-            const slipIcon = o.paymentSlipUrl ? (
+            {hasActiveFilter ? (
               <button
                 type="button"
-                className={cn(ecommercePlainIconActionClass, "text-emerald-600 hover:bg-emerald-500/[0.08]")}
-                onClick={() => lb.open(o.paymentSlipUrl!)}
-                aria-label={`ดูสลิป ${o.referenceCode}`}
-                title="ดูสลิป"
+                onClick={() => {
+                  setFilter("all");
+                  setKeyword("");
+                }}
+                className={ecommerceStoreInlineSubNavBtnClass(false)}
+                aria-label="ล้างตัวกรอง"
               >
-                <IconReceipt className="h-5 w-5" aria-hidden />
+                ล้างกรอง
               </button>
-            ) : (
-              <span
-                className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center text-amber-500"
-                title="ยังไม่มีสลิป"
-                aria-label="ยังไม่มีสลิป"
-              >
-                <IconReceipt className="h-5 w-5 opacity-40" aria-hidden />
-              </span>
-            );
+            ) : null}
+          </div>
+        </div>
 
-            const priceBlock = (compact?: boolean) => (
-              <div className={cn("text-right", compact ? "" : "shrink-0")}>
-                {!compact ? (
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[#8b87b8]">ยอดชำระ</p>
-                ) : null}
-                <p
-                  className={cn(
-                    "font-black tabular-nums leading-tight",
-                    compact ? "text-lg" : "text-xl sm:text-2xl",
-                    ecommerceGradientPriceClass,
-                  )}
-                >
-                  {amountText}
-                </p>
-              </div>
-            );
+        {filtered.length === 0 ? (
+          <AppEmptyState tone="slate">
+            {loading ? "กำลังโหลด…" : "ยังไม่มีออเดอร์ออนไลน์ในตัวกรองนี้"}
+          </AppEmptyState>
+        ) : (
+          <ul className="space-y-2" aria-label="รายการออเดอร์ออนไลน์">
+            {filtered.map((o) => {
+              const next = NEXT_STATUS[o.status];
+              const tone = ecommerceStoreOrderRowTone(o.status);
+              const amount = Number(o.totalAmount);
 
-            return (
-              <li key={o.id} className={cn(ecommerceListRowCardClass, "relative overflow-hidden pl-5 sm:pl-6")}>
-                <span className={ecommerceCardAccentBarClass(accent)} aria-hidden />
-
-                <div className="hidden md:absolute md:right-4 md:top-4 md:flex md:flex-col md:items-end md:gap-1.5">
-                  {priceBlock()}
-                  {slipIcon}
-                </div>
-
-                <div className="flex gap-3 md:pr-36">
-                  <div className={cn(ecommerceInitialAvatarClass(avatarToneFor(o.id)), "shrink-0")}>
-                    {getInitials(o.customerName)}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <p className="text-base font-black tracking-tight text-[#1e1b4b]">{o.referenceCode}</p>
-                      <span className={cn(ecommerceOrderStatusBadgeClass(o.status), "inline-flex items-center gap-1")}>
-                        {statusIcon(o.status, "h-3 w-3")}
-                        {ECOMMERCE_ORDER_STATUS_LABELS[o.status]}
-                      </span>
-                    </div>
-
-                    <div className="mt-1.5 flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-[#2e2a58]">{o.customerName}</p>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                          <span className={ecommerceMetaChipClass}>
-                            <IconPhone className="h-3 w-3" />
-                            {o.customerPhone}
-                          </span>
-                          <span className="md:hidden">{slipIcon}</span>
-                        </div>
+              return (
+                <li key={o.id} className={ecommerceStoreTonedRowCardClass(tone)}>
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <span className={ecommerceStoreCardIconTileClass(tone, "lg")} aria-hidden>
+                      <span className="text-sm font-black sm:text-base">{getInitials(o.customerName)}</span>
+                    </span>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="truncate text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">
+                          {o.referenceCode}
+                        </p>
+                        <span className={ecommerceOrderStatusBadgeClass(o.status)}>
+                          {ECOMMERCE_ORDER_STATUS_LABELS[o.status]}
+                        </span>
+                        <span className={ecommerceProductTagClass("sky")}>ออนไลน์</span>
                       </div>
-                      <div className="shrink-0 md:hidden">{priceBlock(true)}</div>
+                      <p className="truncate text-sm font-semibold text-[#2e2a58]">{o.customerName}</p>
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-semibold text-[#66638c]">
+                        <span className="inline-flex items-center gap-1">
+                          <Phone className="h-3 w-3 shrink-0" aria-hidden />
+                          {o.customerPhone}
+                        </span>
+                      </p>
+                      <div className="flex items-center gap-2 pt-0.5 sm:hidden">
+                        {o.paymentSlipUrl ? (
+                          <AppImageThumb
+                            src={o.paymentSlipUrl}
+                            alt={`สลิป ${o.referenceCode}`}
+                            onOpen={() => lb.open(o.paymentSlipUrl!)}
+                            className="h-12 w-12"
+                          />
+                        ) : (
+                          <span className={ecommerceStoreCardIconTileClass("amber")} aria-hidden>
+                            <Package className="h-4 w-4" />
+                          </span>
+                        )}
+                        <p className="text-lg font-black tabular-nums text-emerald-700">
+                          ฿{amount.toLocaleString("th-TH")}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {next ? (
-                  <div className="mt-3 flex flex-col gap-2 border-t border-slate-200/80 pt-3 sm:flex-row sm:items-center sm:justify-end">
-                    <button
-                      type="button"
-                      className="app-btn-primary flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-black sm:w-auto"
-                      onClick={() => void advance(o.id, next)}
-                    >
-                      {STATUS_NEXT_LABEL[o.status]}
-                      <IconArrowRight className="h-4 w-4" aria-hidden />
-                    </button>
+                  <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+                    <div className="hidden items-center gap-2 sm:flex">
+                      {o.paymentSlipUrl ? (
+                        <AppImageThumb
+                          src={o.paymentSlipUrl}
+                          alt={`สลิป ${o.referenceCode}`}
+                          onOpen={() => lb.open(o.paymentSlipUrl!)}
+                          className="h-12 w-12"
+                        />
+                      ) : null}
+                      <p className="text-xl font-black tabular-nums text-emerald-700">
+                        ฿{amount.toLocaleString("th-TH")}
+                      </p>
+                    </div>
+                    {next ? (
+                      <button
+                        type="button"
+                        className="app-btn-primary min-h-[40px] rounded-xl px-4 text-sm font-black"
+                        onClick={() => void advance(o.id, next)}
+                      >
+                        {STATUS_NEXT_LABEL[o.status]}
+                      </button>
+                    ) : (
+                      <p className="text-xs font-black text-emerald-700">เสร็จสมบูรณ์</p>
+                    )}
                   </div>
-                ) : (
-                  <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-200/80 pt-3 text-xs font-black text-emerald-700">
-                    <IconCheck className="h-4 w-4" />
-                    เสร็จสมบูรณ์
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิปชำระเงิน" />
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิปโอน" />
     </>
   );
 
-  if (embedded) {
-    return <div className="space-y-3">{body}</div>;
-  }
-
-  return <AppDashboardSection className="appDashboardSectionVioletClass">{body}</AppDashboardSection>;
-}
-
-function IconReceipt({ className }: { className?: string }) {
+  if (embedded) return body;
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-      <path d="M6 3h12v18l-2-1.5L14 21l-2-1.5L10 21l-2-1.5L6 21V3z" strokeLinejoin="round" />
-      <path d="M9 8h6M9 12h6M9 16h4" strokeLinecap="round" />
-    </svg>
+    <div className={ecommerceStoreContentStackClass}>
+      <AppDashboardSection tone="violet">{body}</AppDashboardSection>
+    </div>
   );
 }
 
 function IconFilter({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
       <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconRefresh({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-      <path d="M21 12a9 9 0 1 1-2.64-6.36" strokeLinecap="round" />
-      <path d="M21 3v6h-6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -441,30 +359,6 @@ function IconSearch({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
       <circle cx="11" cy="11" r="7" />
       <path d="M20 20l-3-3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconPhone({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-      <path d="M5 3h4l2 5-3 2c1 3 3 5 6 6l2-3 5 2v4c0 1.1-.9 2-2 2A17 17 0 013 5c0-1.1.9-2 2-2z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconArrowRight({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
-      <path d="M5 12h14M13 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconCheck({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
-      <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

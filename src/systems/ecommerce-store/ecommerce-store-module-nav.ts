@@ -7,21 +7,23 @@ export const ECOMMERCE_STORE_MODULE_DISPLAY_NAME = "ร้านออนไล�
 
 export type EcommerceStoreSettingsTab = "basic" | "finance" | "portal";
 
-/** แท็บย่อยแดชบอร์ด: ภาพรวม · ออเดอร์ */
-export type EcommerceStoreDashboardTabKey = "overview" | "orders";
+/** แท็บย่อยแดชบอร์ด: ภาพรวม · ออเดอร์ออนไลน์ · ขายหน้าร้าน */
+export type EcommerceStoreDashboardTabKey = "overview" | "orders" | "pos";
 
 /** แท็บย่อยการจัดการ: สินค้า · CRM */
 export type EcommerceStoreManageTabKey = "products" | "crm";
 
-export const ECOMMERCE_STORE_DASHBOARD_TAB_KEYS = new Set<string>(["overview", "orders"]);
+export const ECOMMERCE_STORE_DASHBOARD_TAB_KEYS = new Set<string>(["overview", "orders", "pos"]);
 export const ECOMMERCE_STORE_MANAGE_TAB_KEYS = new Set<string>(["products", "crm", "customers"]);
 
 export const ECOMMERCE_STORE_DASHBOARD_TAB_ITEMS: {
   key: EcommerceStoreDashboardTabKey;
   label: string;
+  shortLabel: string;
 }[] = [
-  { key: "overview", label: "ภาพรวม" },
-  { key: "orders", label: "ออเดอร์" },
+  { key: "overview", label: "ภาพรวม", shortLabel: "ภาพรวม" },
+  { key: "orders", label: "ออเดอร์ออนไลน์", shortLabel: "ออนไลน์" },
+  { key: "pos", label: "ขายหน้าร้าน", shortLabel: "หน้าร้าน" },
 ];
 
 export const ECOMMERCE_STORE_MANAGE_TAB_ITEMS: {

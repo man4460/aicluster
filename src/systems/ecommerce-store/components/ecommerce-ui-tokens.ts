@@ -91,17 +91,24 @@ export function ecommerceOrderStatusBadgeClass(
 }
 
 /** ป้ายแท็กสินค้า */
-export function ecommerceProductTagClass(tone: "rose" | "amber" | "slate" | "emerald"): string {
-  const base = "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-black";
+export function ecommerceProductTagClass(
+  tone: "rose" | "amber" | "slate" | "emerald" | "sky" | "violet",
+): string {
+  const base = "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-black tracking-wide";
   switch (tone) {
     case "rose":
-      return `${base} border-rose-200/80 bg-rose-50/90 text-rose-700`;
+      return `${base} border-rose-200/80 bg-rose-50 text-rose-700`;
     case "amber":
-      return `${base} border-amber-200/80 bg-amber-50/90 text-amber-800`;
+      return `${base} border-amber-200/80 bg-amber-50 text-amber-800`;
     case "emerald":
-      return `${base} border-emerald-200/80 bg-emerald-50/90 text-emerald-800`;
+      return `${base} border-emerald-200/80 bg-emerald-50 text-emerald-700`;
+    case "sky":
+      return `${base} border-sky-200/80 bg-sky-50 text-sky-700`;
+    case "violet":
+      return `${base} border-violet-200/80 bg-violet-50 text-violet-700`;
     case "slate":
-      return `${base} border-slate-200/80 bg-slate-50/90 text-slate-600`;
+    default:
+      return `${base} border-slate-200/80 bg-slate-50 text-slate-600`;
   }
 }
 

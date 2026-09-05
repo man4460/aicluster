@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@/generated/prisma/client";
 import type { EcommerceOrderStatus } from "@/generated/prisma/enums";
 import { getSession } from "@/lib/auth/session";
 import { requireModulePage } from "@/lib/modules/guard";
 import { ECOMMERCE_STORE_MODULE_SLUG } from "@/lib/modules/config";
 import { getEcommerceOwnerFromAuth, getOrCreateEcommerceStore } from "@/lib/ecommerce/api-owner";
+import {
+  generateEcommerceReferenceCode,
+  generateEcommerceTrackingCode,
+} from "@/lib/ecommerce/order-codes";
+import { normalizeEcommercePhone } from "@/lib/ecommerce/phone";
 import { prisma } from "@/lib/prisma";
+import {
+  ECOMMERCE_POS_PAYMENT_METHODS,
+  type EcommercePosPaymentMethod,
+  type EcommerceSalesChannel,
+} from "@/systems/ecommerce-store/lib/sales-channel";
 
 const STATUSES: EcommerceOrderStatus[] = ["PENDING_SLIP", "VERIFYING", "PREPARING", "SHIPPED"];
 
@@ -17,6 +28,11 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const status = url.searchParams.get("status");
+  const channelRaw = url.searchParams.get("channel");
+  const channel =
+    channelRaw === "ONLINE" || channelRaw === "IN_STORE"
+      ? (channelRaw as EcommerceSalesChannel)
+      : null;
   const store = await getOrCreateEcommerceStore(owner.ownerUserId);
 
   const orders = await prisma.ecommerceOrder.findMany({
@@ -25,12 +41,158 @@ export async function GET(req: Request) {
       ...(status && STATUSES.includes(status as EcommerceOrderStatus)
         ? { status: status as EcommerceOrderStatus }
         : {}),
+      ...(channel ? { salesChannel: channel } : {}),
     },
     include: { items: true },
     orderBy: { createdAt: "desc" },
     take: 100,
   });
   return NextResponse.json({ orders });
+}
+
+export async function POST(req: Request) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  await requireModulePage(ECOMMERCE_STORE_MODULE_SLUG);
+  const owner = await getEcommerceOwnerFromAuth(session.sub);
+  if (!owner) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "JSON ไม่ถูกต้อง" }, { status: 400 });
+  }
+
+  const paymentMethodRaw = typeof body.paymentMethod === "string" ? body.paymentMethod.trim() : "CASH";
+  if (!ECOMMERCE_POS_PAYMENT_METHODS.includes(paymentMethodRaw as EcommercePosPaymentMethod)) {
+    return NextResponse.json({ error: "วิธีชำระไม่ถูกต้อง" }, { status: 400 });
+  }
+  const paymentMethod = paymentMethodRaw as EcommercePosPaymentMethod;
+  const paymentSlipUrl =
+    typeof body.paymentSlipUrl === "string" && body.paymentSlipUrl.trim()
+      ? body.paymentSlipUrl.trim().slice(0, 512)
+      : null;
+  const customerNameRaw = typeof body.customerName === "string" ? body.customerName.trim() : "";
+  const customerPhoneRaw = typeof body.customerPhone === "string" ? body.customerPhone.trim() : "";
+  const customerPhone = customerPhoneRaw ? normalizeEcommercePhone(customerPhoneRaw) : "";
+  const customerName = customerNameRaw || (customerPhone ? `ลูกค้า ${customerPhone}` : "ลูกค้าหน้าร้าน");
+
+  const lines = Array.isArray(body.items)
+    ? (body.items as { productId?: string; quantity?: number }[])
+    : [];
+  if (lines.length === 0) {
+    return NextResponse.json({ error: "ไม่มีสินค้าในตะกร้า" }, { status: 400 });
+  }
+
+  const store = await getOrCreateEcommerceStore(owner.ownerUserId);
+  const productIds = lines.map((l) => String(l.productId ?? "")).filter(Boolean);
+  const products = await prisma.ecommerceProduct.findMany({
+    where: { storeId: store.id, id: { in: productIds }, isActive: true },
+  });
+  const productMap = new Map(products.map((p) => [p.id, p]));
+
+  let total = new Prisma.Decimal(0);
+  const orderItems: {
+    productId: string;
+    productName: string;
+    quantity: number;
+    unitPriceBaht: Prisma.Decimal;
+    lineTotalBaht: Prisma.Decimal;
+  }[] = [];
+
+  for (const line of lines) {
+    const qty = Math.max(1, Math.floor(Number(line.quantity) || 0));
+    const product = productMap.get(String(line.productId ?? ""));
+    if (!product || product.stockBalance < qty) {
+      return NextResponse.json(
+        { error: `สต๊อกไม่พอ: ${product?.name ?? line.productId}` },
+        { status: 400 },
+      );
+    }
+    const unit = product.priceBaht;
+    const lineTotal = unit.mul(qty);
+    total = total.add(lineTotal);
+    orderItems.push({
+      productId: product.id,
+      productName: product.name,
+      quantity: qty,
+      unitPriceBaht: unit,
+      lineTotalBaht: lineTotal,
+    });
+  }
+
+  const referenceCode = generateEcommerceReferenceCode();
+  const trackingCode = generateEcommerceTrackingCode();
+
+  const order = await prisma.$transaction(async (tx) => {
+    let buyerId: string | null = null;
+    if (customerPhone.length >= 9) {
+      let buyer = await tx.ecommerceBuyerCustomer.findUnique({
+        where: { storeId_phone: { storeId: store.id, phone: customerPhone } },
+      });
+      if (!buyer) {
+        buyer = await tx.ecommerceBuyerCustomer.create({
+          data: {
+            storeId: store.id,
+            ownerUserId: store.ownerUserId,
+            name: customerName,
+            phone: customerPhone,
+          },
+        });
+      } else if (customerNameRaw && buyer.name !== customerName) {
+        buyer = await tx.ecommerceBuyerCustomer.update({
+          where: { id: buyer.id },
+          data: { name: customerName },
+        });
+      }
+      buyerId = buyer.id;
+      await tx.ecommerceBuyerCustomer.update({
+        where: { id: buyer.id },
+        data: {
+          totalSpendBaht: { increment: total },
+          orderCount: { increment: 1 },
+          lastOrderAt: new Date(),
+        },
+      });
+    }
+
+    const created = await tx.ecommerceOrder.create({
+      data: {
+        storeId: store.id,
+        ownerUserId: store.ownerUserId,
+        referenceCode,
+        trackingCode,
+        customerName,
+        customerPhone: customerPhone || "-",
+        customerAddress: null,
+        totalAmount: total,
+        paymentSlipUrl,
+        paymentMethod,
+        salesChannel: "IN_STORE",
+        status: "SHIPPED",
+        buyerCustomerId: buyerId,
+        items: { create: orderItems },
+      },
+      include: { items: true },
+    });
+
+    for (const item of orderItems) {
+      await tx.ecommerceProduct.update({
+        where: { id: item.productId },
+        data: { stockBalance: { decrement: item.quantity } },
+      });
+    }
+
+    return created;
+  });
+
+  return NextResponse.json({
+    order: {
+      ...order,
+      totalAmount: order.totalAmount.toString(),
+    },
+  });
 }
 
 export async function PATCH(req: Request) {

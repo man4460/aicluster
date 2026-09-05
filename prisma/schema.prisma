@@ -6442,6 +6442,11 @@ enum EcommerceOrderStatus {
   SHIPPED
 }
 
+enum EcommerceSalesChannel {
+  ONLINE
+  IN_STORE
+}
+
 /**
  * ร้านค้าออนไลน์ของ Merchant — ผูก ownerUserId (เจ้าของร้าน)
  */
@@ -6583,6 +6588,14 @@ model EcommerceOrder {
 
   totalAmount     Decimal                 @map("total_amount") @db.Decimal(14, 2)
   paymentSlipUrl  String?                 @map("payment_slip_url") @db.VarChar(512)
+  /**
+   * ช่องทางขาย — ONLINE = เว็บลูกค้า · IN_STORE = POS หน้าร้าน
+   */
+  salesChannel    EcommerceSalesChannel   @default(ONLINE) @map("sales_channel")
+  /**
+   * วิธีชำระ (หน้าร้าน) — CASH | PROMPTPAY | TRANSFER
+   */
+  paymentMethod   String?                 @map("payment_method") @db.VarChar(24)
   status          EcommerceOrderStatus    @default(PENDING_SLIP)
   buyerCustomerId String?                 @map("buyer_customer_id") @db.VarChar(191)
   buyerCustomer   EcommerceBuyerCustomer? @relation(fields: [buyerCustomerId], references: [id], onDelete: SetNull)
@@ -6595,6 +6608,7 @@ model EcommerceOrder {
   @@unique([storeId, referenceCode], map: "ecord_store_ref_uidx")
   @@unique([trackingCode], map: "ecord_tracking_uidx")
   @@index([storeId, status, createdAt], map: "ecord_store_status_idx")
+  @@index([storeId, salesChannel, createdAt], map: "ecord_store_channel_idx")
   @@index([ownerUserId], map: "ecord_owner_idx")
   @@map("ecommerce_orders")
 }

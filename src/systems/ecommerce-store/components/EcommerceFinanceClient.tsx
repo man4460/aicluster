@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowDownLeft, ArrowUpRight, FolderOpen, Scale } from "lucide-react";
+import { ArrowUpRight, FolderOpen, MonitorSmartphone, Scale, Store } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AppColumnBarDualSparkChart,
   AppColumnBarSparkChart,
   AppDashboardSection,
   AppEmptyState,
@@ -32,17 +33,21 @@ import {
 } from "@/systems/ecommerce-store/components/EcommerceCostsPanel";
 import { EcommerceStoreButton } from "@/systems/ecommerce-store/components/EcommerceStoreButton";
 import {
+  ecommerceSalesChannelLabel,
+  ecommercePosPaymentMethodLabel,
+} from "@/systems/ecommerce-store/lib/sales-channel";
+import {
   ecommerceStoreContentStackClass,
   ecommerceStoreFieldClass,
   ecommerceStoreFinanceRangeChipClass,
   ecommerceStoreFinanceStatInlineClass,
   ecommerceStoreFinanceStatsGridClass,
-  ecommerceStoreFinanceStatTailClass,
   ecommerceStoreInlineSubNavBtnClass,
   ecommerceStoreInlineSubNavShellClass,
   ecommerceStoreNavDividerClass,
   ecommerceStoreSectionHeadingClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
+import { ecommerceProductTagClass } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
 
 type FinanceRange = "TODAY" | "MONTH" | "YEAR" | "CUSTOM";
 type DetailPanel = "history" | "expenses";
@@ -51,6 +56,8 @@ type FinanceBucket = {
   dateKey: string;
   label: string;
   revenueBaht: number;
+  onlineRevenueBaht?: number;
+  inStoreRevenueBaht?: number;
   costBaht: number;
 };
 
@@ -62,6 +69,8 @@ type OrderRow = {
   customerPhone: string;
   totalAmount: unknown;
   paymentSlipUrl: string | null;
+  paymentMethod?: string | null;
+  salesChannel?: "ONLINE" | "IN_STORE";
   status: keyof typeof ECOMMERCE_ORDER_STATUS_LABELS;
   createdAt: string;
   items?: { productName: string }[];
@@ -155,6 +164,8 @@ export function EcommerceFinanceClient() {
   const [error, setError] = useState<string | null>(null);
   const [financeBuckets, setFinanceBuckets] = useState<FinanceBucket[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalOnlineRevenue, setTotalOnlineRevenue] = useState(0);
+  const [totalInStoreRevenue, setTotalInStoreRevenue] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
   const [financeRangeLabel, setFinanceRangeLabel] = useState("เดือนนี้");
   const [orders, setOrders] = useState<OrderRow[]>([]);
@@ -183,6 +194,8 @@ export function EcommerceFinanceClient() {
         error?: string;
         buckets?: FinanceBucket[];
         totalRevenue?: number;
+        totalOnlineRevenue?: number;
+        totalInStoreRevenue?: number;
         totalCost?: number;
         rangeLabel?: string;
       };
@@ -202,6 +215,8 @@ export function EcommerceFinanceClient() {
 
       setFinanceBuckets(sumJ.buckets ?? []);
       setTotalRevenue(sumJ.totalRevenue ?? 0);
+      setTotalOnlineRevenue(sumJ.totalOnlineRevenue ?? 0);
+      setTotalInStoreRevenue(sumJ.totalInStoreRevenue ?? 0);
       setTotalCost(sumJ.totalCost ?? 0);
       setFinanceRangeLabel(sumJ.rangeLabel ?? "เดือนนี้");
       setOrders(ordJ.orders ?? []);
@@ -282,6 +297,25 @@ export function EcommerceFinanceClient() {
       revenuePct: (b.revenueBaht / max) * 100,
       costPct: (b.costBaht / max) * 100,
     }));
+  }, [financeBuckets]);
+
+  const channelChartBuckets = useMemo(() => {
+    const max = Math.max(
+      1,
+      ...financeBuckets.map((b) =>
+        Math.max(b.onlineRevenueBaht ?? 0, b.inStoreRevenueBaht ?? 0),
+      ),
+    );
+    return financeBuckets.map((b) => {
+      const online = b.onlineRevenueBaht ?? 0;
+      const inStore = b.inStoreRevenueBaht ?? 0;
+      return {
+        key: b.dateKey,
+        label: b.label,
+        seriesA: { amount: online, pct: (online / max) * 100 },
+        seriesB: { amount: inStore, pct: (inStore / max) * 100 },
+      };
+    });
   }, [financeBuckets]);
 
   function resetFilters() {
@@ -501,15 +535,29 @@ export function EcommerceFinanceClient() {
           <li
             className={cn(
               ecommerceStoreFinanceStatInlineClass,
-              "border-l-[3px] border-l-emerald-500 bg-emerald-50/60",
+              "border-l-[3px] border-l-sky-500 bg-sky-50/55",
             )}
           >
-            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800/80">
-              <ArrowDownLeft className="h-3.5 w-3.5" aria-hidden />
-              รายรับ · {financeRangeLabel}
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-sky-800/80">
+              <MonitorSmartphone className="h-3.5 w-3.5" aria-hidden />
+              ออนไลน์
             </div>
-            <p className="text-lg font-black tabular-nums text-emerald-700 sm:text-xl">
-              ฿{formatEcommerceBaht(totalRevenue)}
+            <p className="text-lg font-black tabular-nums text-sky-800 sm:text-xl">
+              ฿{formatEcommerceBaht(totalOnlineRevenue)}
+            </p>
+          </li>
+          <li
+            className={cn(
+              ecommerceStoreFinanceStatInlineClass,
+              "border-l-[3px] border-l-violet-500 bg-violet-50/50",
+            )}
+          >
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-violet-800/80">
+              <Store className="h-3.5 w-3.5" aria-hidden />
+              หน้าร้าน
+            </div>
+            <p className="text-lg font-black tabular-nums text-violet-800 sm:text-xl">
+              ฿{formatEcommerceBaht(totalInStoreRevenue)}
             </p>
           </li>
           <li
@@ -520,7 +568,7 @@ export function EcommerceFinanceClient() {
           >
             <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-rose-800/80">
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-              รายจ่าย · {financeRangeLabel}
+              รายจ่าย
             </div>
             <p className="text-lg font-black tabular-nums text-rose-600 sm:text-xl">
               ฿{formatEcommerceBaht(totalCost)}
@@ -529,7 +577,6 @@ export function EcommerceFinanceClient() {
           <li
             className={cn(
               ecommerceStoreFinanceStatInlineClass,
-              ecommerceStoreFinanceStatTailClass,
               "border-l-[3px]",
               profitTotal >= 0
                 ? "border-l-indigo-500 bg-indigo-50/50"
@@ -543,7 +590,7 @@ export function EcommerceFinanceClient() {
               )}
             >
               <Scale className="h-3.5 w-3.5" aria-hidden />
-              สุทธิ
+              สุทธิ · รวม ฿{formatEcommerceBaht(totalRevenue)}
             </div>
             <p
               className={cn(
@@ -651,6 +698,26 @@ export function EcommerceFinanceClient() {
               </AppSparkChartPanel>
             )}
 
+            <p className="text-sm font-black text-[#1e1b4b]">ออนไลน์ vs หน้าร้าน · {financeRangeLabel}</p>
+            {loading ? (
+              <div className="h-36 animate-pulse rounded-2xl bg-slate-100/80" aria-hidden />
+            ) : (
+              <AppSparkChartPanel className="w-full min-w-0">
+                <AppColumnBarDualSparkChart
+                  className="flex min-h-0 w-full min-w-0 flex-1 flex-col"
+                  compact
+                  titleTone="brand"
+                  seriesALabel="ออนไลน์"
+                  seriesBLabel="หน้าร้าน"
+                  emptyText="ยังไม่มีข้อมูลช่องทางขาย"
+                  buckets={channelChartBuckets}
+                  formatGroupTitle={(b) =>
+                    `${b.label}: ออนไลน์ ฿${formatEcommerceBaht(b.seriesA.amount)} · หน้าร้าน ฿${formatEcommerceBaht(b.seriesB.amount)}`
+                  }
+                />
+              </AppSparkChartPanel>
+            )}
+
             <p className="text-sm font-black text-[#1e1b4b]">ยอดขาย · {financeRangeLabel}</p>
             {loading ? (
               <div className="h-36 animate-pulse rounded-2xl bg-slate-100/80" aria-hidden />
@@ -739,9 +806,19 @@ export function EcommerceFinanceClient() {
                               {o.customerName}
                               <span className="ml-1 font-bold text-[#66638c]">· {o.referenceCode}</span>
                             </p>
-                            <p className="mt-0.5 text-[11px] font-bold text-[#4d47b6]">
-                              {ECOMMERCE_ORDER_STATUS_LABELS[o.status] ?? o.status}
-                              {o.customerPhone ? ` · ${o.customerPhone}` : ""}
+                            <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-[#4d47b6]">
+                              <span
+                                className={ecommerceProductTagClass(
+                                  o.salesChannel === "IN_STORE" ? "violet" : "sky",
+                                )}
+                              >
+                                {ecommerceSalesChannelLabel(o.salesChannel)}
+                              </span>
+                              <span>{ECOMMERCE_ORDER_STATUS_LABELS[o.status] ?? o.status}</span>
+                              {o.paymentMethod ? (
+                                <span>· {ecommercePosPaymentMethodLabel(o.paymentMethod)}</span>
+                              ) : null}
+                              {o.customerPhone ? <span>· {o.customerPhone}</span> : null}
                             </p>
                           </div>
                           <div className="flex shrink-0 flex-col items-end gap-1.5">

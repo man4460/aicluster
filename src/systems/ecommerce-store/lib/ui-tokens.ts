@@ -169,9 +169,9 @@ export function ecommerceStoreFinanceRangeChipClass(active = false): string {
   );
 }
 
-/** สรุปการเงิน — กริด 2 คอลัมน์มือถือ · คี่ใบสุดท้ายเต็มแถว */
+/** สรุปการเงิน — กริด 2 คอลัมน์มือถือ · 4 การ์ดบน sm */
 export const ecommerceStoreFinanceStatsGridClass =
-  "grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3";
+  "grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3";
 
 /** การ์ดสรุปแบบเส้นซ้าย + พื้น pastel (แม่แบบ laundry / club-event) */
 export const ecommerceStoreFinanceStatInlineClass =

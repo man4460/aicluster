@@ -141,3 +141,19 @@ export function ecommerceStoreProductRowTone(opts: {
   if (opts.isRecommended || opts.isBestseller) return "rose";
   return "violet";
 }
+
+/** โทนแถวออเดอร์ออนไลน์ตามสถานะ */
+export function ecommerceStoreOrderRowTone(
+  status: "PENDING_SLIP" | "VERIFYING" | "PREPARING" | "SHIPPED",
+): EcommerceStoreCardTone {
+  switch (status) {
+    case "PENDING_SLIP":
+      return "amber";
+    case "VERIFYING":
+      return "sky";
+    case "PREPARING":
+      return "violet";
+    case "SHIPPED":
+      return "emerald";
+  }
+}

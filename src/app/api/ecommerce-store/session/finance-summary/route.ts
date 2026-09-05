@@ -111,7 +111,7 @@ export async function GET(req: Request) {
   const [orders, costs] = await Promise.all([
     prisma.ecommerceOrder.findMany({
       where: { storeId: store.id, createdAt: { gte: fromUtc, lte: toUtc } },
-      select: { totalAmount: true, createdAt: true },
+      select: { totalAmount: true, createdAt: true, salesChannel: true },
     }),
     prisma.ecommerceCostEntry.findMany({
       where: { ownerUserId, spentAt: { gte: fromUtc, lte: toUtc } },
@@ -120,13 +120,21 @@ export async function GET(req: Request) {
   ]);
 
   const revMap = new Map<string, number>();
+  const onlineMap = new Map<string, number>();
+  const inStoreMap = new Map<string, number>();
   const costMap = new Map<string, number>();
 
   for (const o of orders) {
     const day = bangkokDayKey(o.createdAt);
     if (day < bounds.start || day > bounds.end) continue;
     const key = bounds.grain === "month" ? day.slice(0, 7) : day;
-    revMap.set(key, (revMap.get(key) ?? 0) + ecommerceDecimalToBahtNumber(o.totalAmount));
+    const amt = ecommerceDecimalToBahtNumber(o.totalAmount);
+    revMap.set(key, (revMap.get(key) ?? 0) + amt);
+    if (o.salesChannel === "IN_STORE") {
+      inStoreMap.set(key, (inStoreMap.get(key) ?? 0) + amt);
+    } else {
+      onlineMap.set(key, (onlineMap.get(key) ?? 0) + amt);
+    }
   }
   for (const c of costs) {
     const day = bangkokDayKey(c.spentAt);
@@ -147,10 +155,14 @@ export async function GET(req: Request) {
         ? dateKey.slice(5).replace(/^0/, "") + "/" + dateKey.slice(0, 4)
         : dateKey.slice(5).replace("-", "/"),
     revenueBaht: revMap.get(dateKey) ?? 0,
+    onlineRevenueBaht: onlineMap.get(dateKey) ?? 0,
+    inStoreRevenueBaht: inStoreMap.get(dateKey) ?? 0,
     costBaht: costMap.get(dateKey) ?? 0,
   }));
 
   const totalRevenue = buckets.reduce((s, b) => s + b.revenueBaht, 0);
+  const totalOnlineRevenue = buckets.reduce((s, b) => s + b.onlineRevenueBaht, 0);
+  const totalInStoreRevenue = buckets.reduce((s, b) => s + b.inStoreRevenueBaht, 0);
   const totalCost = buckets.reduce((s, b) => s + b.costBaht, 0);
 
   return NextResponse.json({
@@ -161,6 +173,8 @@ export async function GET(req: Request) {
     grain: bounds.grain,
     buckets,
     totalRevenue,
+    totalOnlineRevenue,
+    totalInStoreRevenue,
     totalCost,
     totalRevenue7d: totalRevenue,
     totalCost7d: totalCost,

@@ -1,5 +1,6 @@
 "use client";
 
+import { Package, ShoppingBag } from "lucide-react";
 import { Suspense, useCallback, useMemo, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -11,19 +12,13 @@ import {
 import { EcommerceDashboardClient } from "@/systems/ecommerce-store/components/EcommerceDashboardClient";
 import { EcommerceOrdersClient } from "@/systems/ecommerce-store/components/EcommerceOrdersClient";
 import { EcommercePageSubNav } from "@/systems/ecommerce-store/components/EcommercePageSubNav";
+import { EcommercePosClient } from "@/systems/ecommerce-store/components/EcommercePosClient";
 import { IconClipboard, IconStore } from "@/systems/ecommerce-store/components/EcommerceStoreIcons";
 
-function IconOverview({ className }: { className?: string }) {
-  return <IconStore className={className} />;
-}
-
-function IconOrders({ className }: { className?: string }) {
-  return <IconClipboard className={className} />;
-}
-
 const TAB_ICONS: Record<EcommerceStoreDashboardTabKey, ReactNode> = {
-  overview: <IconOverview className="h-3.5 w-3.5" />,
-  orders: <IconOrders className="h-3.5 w-3.5" />,
+  overview: <IconStore className="h-3.5 w-3.5" />,
+  orders: <IconClipboard className="h-3.5 w-3.5" />,
+  pos: <ShoppingBag className="h-3.5 w-3.5" />,
 };
 
 function EcommerceDashboardHubInner() {
@@ -53,7 +48,7 @@ function EcommerceDashboardHubInner() {
   return (
     <EcommercePageSubNav
       title="แดชบอร์ด"
-      titleIcon={<IconOverview className="h-4 w-4" />}
+      titleIcon={<Package className="h-4 w-4" aria-hidden />}
       ariaLabel="เมนูย่อยแดชบอร์ดร้านออนไลน์"
       activeKey={tab}
       onSelect={setTab}
@@ -61,12 +56,13 @@ function EcommerceDashboardHubInner() {
       items={ECOMMERCE_STORE_DASHBOARD_TAB_ITEMS.map((item) => ({
         key: item.key,
         label: item.label,
-        shortLabel: item.label,
+        shortLabel: item.shortLabel,
         icon: TAB_ICONS[item.key],
       }))}
     >
       {tab === "overview" ? <EcommerceDashboardClient /> : null}
       {tab === "orders" ? <EcommerceOrdersClient embedded /> : null}
+      {tab === "pos" ? <EcommercePosClient /> : null}
     </EcommercePageSubNav>
   );
 }
