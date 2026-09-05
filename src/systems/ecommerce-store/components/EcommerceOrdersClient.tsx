@@ -129,7 +129,7 @@ function statusIcon(status: OrderStatus, className?: string) {
   }
 }
 
-export function EcommerceOrdersClient() {
+export function EcommerceOrdersClient({ embedded = false }: { embedded?: boolean }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [keyword, setKeyword] = useState("");
@@ -185,29 +185,45 @@ export function EcommerceOrdersClient() {
     await reload();
   }
 
-  return (
-    <AppDashboardSection className="appDashboardSectionVioletClass">
-      <AppSectionHeader
-        title="คำสั่งซื้อ"
-        description="ตรวจสลิป · อนุมัติ · อัปเดตสถานะจัดส่ง"
-        className="flex flex-row items-start justify-between gap-3 sm:items-center"
-        actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
-        action={
+  const body = (
+    <>
+      {!embedded ? (
+        <AppSectionHeader
+          title="คำสั่งซื้อ"
+          description="ตรวจสลิป · อนุมัติ · อัปเดตสถานะจัดส่ง"
+          className="flex flex-row items-start justify-between gap-3 sm:items-center"
+          actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
+          action={
+            <button
+              type="button"
+              onClick={() => void reload()}
+              className={cn(
+                appTemplateOutlineButtonClass,
+                "min-h-[40px] min-w-[40px] rounded-xl px-0 sm:min-w-0 sm:px-4",
+              )}
+              aria-label="รีเฟรชรายการออเดอร์"
+              aria-busy={loading}
+            >
+              <IconRefresh className={cn("h-5 w-5 sm:mr-1.5", loading && "animate-spin")} aria-hidden />
+              <span className="hidden sm:inline">รีเฟรช</span>
+            </button>
+          }
+        />
+      ) : (
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold text-[#66638c]">ตรวจสลิป · อัปเดตสถานะจัดส่ง</p>
           <button
             type="button"
             onClick={() => void reload()}
-            className={cn(
-              appTemplateOutlineButtonClass,
-              "min-h-[40px] min-w-[40px] rounded-xl px-0 sm:min-w-0 sm:px-4",
-            )}
+            className={cn(appTemplateOutlineButtonClass, "min-h-9 min-w-9 rounded-lg px-0 sm:min-w-0 sm:px-3")}
             aria-label="รีเฟรชรายการออเดอร์"
             aria-busy={loading}
           >
-            <IconRefresh className={cn("h-5 w-5 sm:mr-1.5", loading && "animate-spin")} aria-hidden />
+            <IconRefresh className={cn("h-4 w-4 sm:mr-1.5", loading && "animate-spin")} aria-hidden />
             <span className="hidden sm:inline">รีเฟรช</span>
           </button>
-        }
-      />
+        </div>
+      )}
 
       <div className="space-y-2">
         <div className="flex gap-2">
@@ -239,7 +255,7 @@ export function EcommerceOrdersClient() {
 
         <div
           className={cn(
-            "space-y-2 rounded-2xl border border-white/50 bg-white/25 p-3 backdrop-blur-sm sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none",
+            "space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/50 p-3 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0",
             mobileFilterOpen ? "block" : "hidden sm:block",
           )}
         >
@@ -362,7 +378,7 @@ export function EcommerceOrdersClient() {
                 </div>
 
                 {next ? (
-                  <div className="mt-3 flex flex-col gap-2 border-t border-white/40 pt-3 sm:flex-row sm:items-center sm:justify-end">
+                  <div className="mt-3 flex flex-col gap-2 border-t border-slate-200/80 pt-3 sm:flex-row sm:items-center sm:justify-end">
                     <button
                       type="button"
                       className="app-btn-primary flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-black sm:w-auto"
@@ -373,7 +389,7 @@ export function EcommerceOrdersClient() {
                     </button>
                   </div>
                 ) : (
-                  <div className="mt-3 flex items-center justify-end gap-2 border-t border-white/40 pt-3 text-xs font-black text-emerald-700">
+                  <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-200/80 pt-3 text-xs font-black text-emerald-700">
                     <IconCheck className="h-4 w-4" />
                     เสร็จสมบูรณ์
                   </div>
@@ -384,8 +400,14 @@ export function EcommerceOrdersClient() {
         </ul>
       )}
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิปชำระเงิน" />
-    </AppDashboardSection>
+    </>
   );
+
+  if (embedded) {
+    return <div className="space-y-3">{body}</div>;
+  }
+
+  return <AppDashboardSection className="appDashboardSectionVioletClass">{body}</AppDashboardSection>;
 }
 
 function IconReceipt({ className }: { className?: string }) {

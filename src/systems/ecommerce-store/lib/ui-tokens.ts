@@ -129,6 +129,28 @@ export function ecommerceStoreNavLinkClass(active: boolean): string {
   );
 }
 
+/** แท็บย่อยแดชบอร์ดในแถวหัวการ์ด */
+export const ecommerceStoreInlineSubNavShellClass =
+  "inline-flex shrink-0 flex-nowrap items-center gap-0.5 rounded-lg border border-slate-200/90 bg-slate-50/80 p-0.5";
+
+export function ecommerceStoreInlineSubNavBtnClass(active = false): string {
+  return active ? ecommerceStorePrimaryButtonClass : ecommerceStoreOutlineButtonClass;
+}
+
+export const ecommerceStoreNavDividerClass = "mx-0.5 hidden h-6 w-px shrink-0 bg-slate-200/90 sm:block";
+
+export const ecommerceStoreSectionHeadingClass =
+  "flex items-center gap-2 text-sm font-bold text-[#1e1b4b]";
+
+/** สถิติเส้นซ้าย — กริด 2 คอลัมน์มือถือ */
+export const ecommerceStoreStatInlineClass =
+  "flex h-full min-h-[4.25rem] min-w-0 flex-col justify-center gap-0.5 rounded-lg bg-slate-50/90 px-3 py-2.5";
+
+export const ecommerceStoreDashboardStatsGridClass = "grid grid-cols-2 items-stretch gap-2 sm:gap-3";
+
+export const ecommerceStoreFilterChipShellClass =
+  "flex flex-wrap content-start items-center gap-1.5";
+
 /* —— เว็บไซต์ลูกค้า (storefront) —— */
 
 export const ecommerceStorePortalShopNameClass =

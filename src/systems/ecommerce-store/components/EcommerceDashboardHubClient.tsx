@@ -22,8 +22,8 @@ function IconOrders({ className }: { className?: string }) {
 }
 
 const TAB_ICONS: Record<EcommerceStoreDashboardTabKey, ReactNode> = {
-  overview: <IconOverview className="h-4 w-4" />,
-  orders: <IconOrders className="h-4 w-4" />,
+  overview: <IconOverview className="h-3.5 w-3.5" />,
+  orders: <IconOrders className="h-3.5 w-3.5" />,
 };
 
 function EcommerceDashboardHubInner() {
@@ -51,25 +51,23 @@ function EcommerceDashboardHubInner() {
   );
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <EcommercePageSubNav
-        title="แดชบอร์ด"
-        titleIcon={<IconOverview className="h-4 w-4" />}
-        description="ยอดขาย · สถานะร้าน · ออเดอร์"
-        ariaLabel="เมนูย่อยแดชบอร์ดร้านออนไลน์"
-        activeKey={tab}
-        onSelect={setTab}
-        mobileSelect={{ id: "ecommerce-dashboard-tab-mobile", label: "เลือกเมนูแดชบอร์ด" }}
-        items={ECOMMERCE_STORE_DASHBOARD_TAB_ITEMS.map((item) => ({
-          key: item.key,
-          label: item.label,
-          icon: TAB_ICONS[item.key],
-        }))}
-      />
-
+    <EcommercePageSubNav
+      title="แดชบอร์ด"
+      titleIcon={<IconOverview className="h-4 w-4" />}
+      ariaLabel="เมนูย่อยแดชบอร์ดร้านออนไลน์"
+      activeKey={tab}
+      onSelect={setTab}
+      mobileSelect={{ id: "ecommerce-dashboard-tab-mobile", label: "เลือกเมนูแดชบอร์ด" }}
+      items={ECOMMERCE_STORE_DASHBOARD_TAB_ITEMS.map((item) => ({
+        key: item.key,
+        label: item.label,
+        shortLabel: item.label,
+        icon: TAB_ICONS[item.key],
+      }))}
+    >
       {tab === "overview" ? <EcommerceDashboardClient /> : null}
-      {tab === "orders" ? <EcommerceOrdersClient /> : null}
-    </div>
+      {tab === "orders" ? <EcommerceOrdersClient embedded /> : null}
+    </EcommercePageSubNav>
   );
 }
 
