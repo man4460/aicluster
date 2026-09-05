@@ -1,21 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { formatEcommerceBaht } from "@/lib/ecommerce/sales-period";
 import {
-  ECOMMERCE_STORE_FINANCE_HREF,
-  ECOMMERCE_STORE_SETTINGS_PORTAL_HREF,
-} from "@/systems/ecommerce-store/ecommerce-store-module-nav";
-import {
-  IconClipboard,
-  IconFinance,
-  IconStore,
-} from "@/systems/ecommerce-store/components/EcommerceStoreIcons";
-import {
   ecommerceStoreDashboardStatsGridClass,
-  ecommerceStoreOutlineButtonClass,
   ecommerceStoreSectionHeadingClass,
   ecommerceStoreStatInlineClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
@@ -106,40 +95,11 @@ export function EcommerceDashboardClient() {
     return parts.join(" · ");
   })();
 
-  const quickLinkClass = cn(
-    ecommerceStoreOutlineButtonClass,
-    "min-h-[40px] min-w-[40px] px-0 sm:min-w-0 sm:px-2.5",
-  );
-
   return (
     <div className="space-y-3">
-      <div className="flex flex-row items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className={ecommerceStoreSectionHeadingClass}>สถานะร้าน</h3>
-          <p className="mt-0.5 truncate text-xs font-medium text-[#66638c]">{statusMeta}</p>
-        </div>
-        <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
-          <Link href={ECOMMERCE_STORE_FINANCE_HREF} className={quickLinkClass} aria-label="ไปหน้าการเงิน">
-            <IconFinance className="h-4 w-4 sm:hidden" />
-            <span className="hidden sm:inline">การเงิน</span>
-          </Link>
-          <Link
-            href="/dashboard/ecommerce-store?tab=orders"
-            className={quickLinkClass}
-            aria-label="ดูรายการออเดอร์"
-          >
-            <IconClipboard className="h-4 w-4 sm:hidden" />
-            <span className="hidden sm:inline">ออเดอร์</span>
-          </Link>
-          <Link
-            href={ECOMMERCE_STORE_SETTINGS_PORTAL_HREF}
-            className={quickLinkClass}
-            aria-label="ไปตั้งค่าเว็ปลิงค์ลูกค้า"
-          >
-            <IconStore className="h-4 w-4 sm:hidden" />
-            <span className="hidden sm:inline">ลิงก์ร้าน</span>
-          </Link>
-        </div>
+      <div className="min-w-0">
+        <h3 className={ecommerceStoreSectionHeadingClass}>สถานะร้าน</h3>
+        <p className="mt-0.5 truncate text-xs font-medium text-[#66638c]">{statusMeta}</p>
       </div>
 
       <div className={ecommerceStoreDashboardStatsGridClass}>
