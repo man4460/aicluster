@@ -1,13 +1,43 @@
 "use client";
 
+import Link from "next/link";
+import { Package } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
+import {
+  AppEmptyState,
+  AppImageLightbox,
+  AppImageThumb,
+  useAppImageLightbox,
+} from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { formatEcommerceBaht } from "@/lib/ecommerce/sales-period";
+import {
+  ecommerceStoreCardIconTileClass,
+  ecommerceStoreTonedRowCardClass,
+  type EcommerceStoreCardTone,
+} from "@/systems/ecommerce-store/lib/card-tones";
+import {
+  ecommerceGradientPriceClass,
+  ecommerceProductTagClass,
+} from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
 import {
   ecommerceStoreDashboardStatsGridClass,
   ecommerceStoreSectionHeadingClass,
   ecommerceStoreStatInlineClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
+import { ECOMMERCE_STORE_MANAGE_HREF } from "@/systems/ecommerce-store/ecommerce-store-module-nav";
+
+type TopProduct = {
+  rank: number;
+  productId: string;
+  name: string;
+  imageUrl: string | null;
+  sku: string | null;
+  priceBaht: string | null;
+  stockBalance: number | null;
+  soldQty: number;
+  soldBaht: number;
+};
 
 type Summary = {
   store: { id: string; storeName: string; merchantPaused: boolean };
@@ -16,6 +46,8 @@ type Summary = {
   productCount: number;
   monthRevenueBaht: number;
   monthOrderCount: number;
+  salesLabel: string;
+  topProducts: TopProduct[];
 };
 
 const STAT_ACCENTS = {
@@ -26,6 +58,14 @@ const STAT_ACCENTS = {
   rose: "border-l-rose-500 text-rose-800",
   indigo: "border-l-indigo-500 text-indigo-800",
 } as const;
+
+function rankTone(rank: number): EcommerceStoreCardTone {
+  if (rank === 1) return "amber";
+  if (rank === 2) return "slate";
+  if (rank === 3) return "rose";
+  if (rank <= 5) return "violet";
+  return "sky";
+}
 
 function OverviewStat({
   title,
@@ -54,21 +94,33 @@ function OverviewStat({
 export function EcommerceDashboardClient() {
   const [data, setData] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const lb = useAppImageLightbox();
 
   useEffect(() => {
     void (async () => {
       setLoading(true);
       try {
         const [storeRes, prodRes, ordRes, salesRes] = await Promise.all([
-          fetch("/api/ecommerce-store/session/store"),
-          fetch("/api/ecommerce-store/session/products"),
-          fetch("/api/ecommerce-store/session/orders?status=PENDING_SLIP"),
-          fetch("/api/ecommerce-store/session/sales-summary?period=month"),
+          fetch("/api/ecommerce-store/session/store", { credentials: "include", cache: "no-store" }),
+          fetch("/api/ecommerce-store/session/products", { credentials: "include", cache: "no-store" }),
+          fetch("/api/ecommerce-store/session/orders?status=PENDING_SLIP", {
+            credentials: "include",
+            cache: "no-store",
+          }),
+          fetch("/api/ecommerce-store/session/sales-summary?period=month", {
+            credentials: "include",
+            cache: "no-store",
+          }),
         ]);
         const storeJ = await storeRes.json();
         const prodJ = await prodRes.json();
         const ordJ = await ordRes.json();
-        const salesJ = (await salesRes.json()) as { totalBaht?: number; orderCount?: number };
+        const salesJ = (await salesRes.json()) as {
+          totalBaht?: number;
+          orderCount?: number;
+          label?: string;
+          topProducts?: TopProduct[];
+        };
         const products = (prodJ.products ?? []) as { stockBalance: number }[];
         const threshold = prodJ.lowStockThreshold ?? 5;
         setData({
@@ -78,6 +130,8 @@ export function EcommerceDashboardClient() {
           lowStockCount: products.filter((p) => p.stockBalance <= threshold).length,
           monthRevenueBaht: salesJ.totalBaht ?? 0,
           monthOrderCount: salesJ.orderCount ?? 0,
+          salesLabel: salesJ.label ?? "เดือนนี้",
+          topProducts: Array.isArray(salesJ.topProducts) ? salesJ.topProducts.slice(0, 10) : [],
         });
       } finally {
         setLoading(false);
@@ -96,7 +150,7 @@ export function EcommerceDashboardClient() {
   })();
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="min-w-0">
         <h3 className={ecommerceStoreSectionHeadingClass}>สถานะร้าน</h3>
         <p className="mt-0.5 truncate text-xs font-medium text-[#66638c]">{statusMeta}</p>
@@ -150,6 +204,92 @@ export function EcommerceDashboardClient() {
           }
         />
       </div>
+
+      <section className="space-y-2.5" aria-label="สินค้าขายดี 10 อันดับ">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className={ecommerceStoreSectionHeadingClass}>สินค้าขายดี · 10 อันดับ</h3>
+            <p className="mt-0.5 text-xs font-medium text-[#66638c]">
+              เรียงตามจำนวนชิ้นที่ขาย · {data?.salesLabel ?? "เดือนนี้"}
+            </p>
+          </div>
+          <Link
+            href={ECOMMERCE_STORE_MANAGE_HREF}
+            className="text-xs font-bold text-[#4d47b6] underline-offset-2 hover:underline"
+          >
+            จัดการสินค้า
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="h-40 animate-pulse rounded-lg bg-slate-100/80" aria-hidden />
+        ) : !data?.topProducts.length ? (
+          <AppEmptyState tone="slate">
+            ยังไม่มียอดขายในช่วงนี้ — เมื่อมีออเดอร์จะแสดงอันดับขายดีที่นี่
+          </AppEmptyState>
+        ) : (
+          <ol className="grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
+            {data.topProducts.map((p) => {
+              const tone = rankTone(p.rank);
+              return (
+                <li key={p.productId} className={ecommerceStoreTonedRowCardClass(tone)}>
+                  <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                    <span
+                      className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-black tabular-nums ring-1",
+                        p.rank === 1 && "bg-amber-100 text-amber-800 ring-amber-200/80",
+                        p.rank === 2 && "bg-slate-100 text-slate-700 ring-slate-200/80",
+                        p.rank === 3 && "bg-rose-100 text-rose-700 ring-rose-200/80",
+                        p.rank > 3 && "bg-white/80 text-[#4d47b6] ring-slate-200/80",
+                      )}
+                      aria-label={`อันดับ ${p.rank}`}
+                    >
+                      {p.rank}
+                    </span>
+                    {p.imageUrl ? (
+                      <AppImageThumb
+                        src={p.imageUrl}
+                        alt={p.name}
+                        onOpen={() => lb.open(p.imageUrl!)}
+                        className="h-12 w-12 shrink-0 rounded-lg"
+                      />
+                    ) : (
+                      <span className={ecommerceStoreCardIconTileClass(tone)} aria-hidden>
+                        <Package className="h-5 w-5" strokeWidth={2.1} />
+                      </span>
+                    )}
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <p className="truncate text-sm font-black text-[#1e1b4b]">{p.name}</p>
+                      <p className="truncate text-[11px] font-medium text-[#66638c]">
+                        {p.sku ? `SKU ${p.sku}` : "—"}
+                        {p.priceBaht != null
+                          ? ` · ฿${Number(p.priceBaht).toLocaleString("th-TH")}`
+                          : ""}
+                      </p>
+                      {p.rank <= 3 ? (
+                        <span className={ecommerceProductTagClass(p.rank === 1 ? "amber" : "violet")}>
+                          Top {p.rank}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-0.5">
+                    <p className="text-sm font-black tabular-nums text-[#1e1b4b]">
+                      {p.soldQty.toLocaleString("th-TH")}{" "}
+                      <span className="text-[11px] font-bold text-[#66638c]">ชิ้น</span>
+                    </p>
+                    <p className={cn("text-xs font-black tabular-nums", ecommerceGradientPriceClass)}>
+                      ฿{formatEcommerceBaht(p.soldBaht)}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </section>
+
+      <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปสินค้า" />
     </div>
   );
 }
