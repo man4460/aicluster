@@ -6,7 +6,6 @@ import {
   AppDashboardSection,
   AppEmptyState,
   AppImageLightbox,
-  AppImageThumb,
   AppSectionHeader,
   useAppImageLightbox,
   useAppNoticePopup,
@@ -36,6 +35,7 @@ import {
   ecommerceStorePrimaryButtonClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
 import { useEcommerceDashboardSse } from "@/systems/ecommerce-store/lib/use-ecommerce-dashboard-sse";
+import { EcommerceLabeledImageThumb } from "@/systems/ecommerce-store/components/EcommerceLabeledImageThumb";
 import {
   useEcommerceApiFetch,
   useEcommerceStaffAuth,
@@ -97,12 +97,6 @@ function getInitials(name: string): string {
   const parts = trimmed.split(/\s+/).filter(Boolean);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-function orderThumbUrl(o: Order): string | null {
-  if (o.paymentSlipUrl?.trim()) return o.paymentSlipUrl.trim();
-  const first = o.items?.find((it) => it.imageUrl?.trim())?.imageUrl?.trim();
-  return first || null;
 }
 
 export type EcommerceOrdersEmbeddedToolbarApi = {
@@ -394,18 +388,35 @@ export function EcommerceOrdersClient({
               const next = NEXT_STATUS[o.status];
               const tone = ecommerceStoreOrderRowTone(o.status);
               const amount = Number(o.totalAmount);
-              const thumb = orderThumbUrl(o);
+              const slipUrl = o.paymentSlipUrl?.trim() || "";
+              const productUrl =
+                o.items?.find((it) => it.imageUrl?.trim())?.imageUrl?.trim() || "";
 
               return (
                 <li key={o.id} className={ecommerceStoreTonedRowCardClass(tone)}>
                   <div className="flex min-w-0 flex-1 items-start gap-3">
-                    {thumb ? (
-                      <AppImageThumb
-                        src={thumb}
-                        alt={o.paymentSlipUrl ? `สลิป ${o.referenceCode}` : o.items?.[0]?.productName || o.referenceCode}
-                        onOpen={() => lb.open(thumb)}
-                        className="h-14 w-14 shrink-0 sm:h-16 sm:w-16"
-                      />
+                    {slipUrl || productUrl ? (
+                      <div className="flex shrink-0 items-start gap-1.5">
+                        {slipUrl ? (
+                          <EcommerceLabeledImageThumb
+                            src={slipUrl}
+                            kind="slip"
+                            alt={o.referenceCode}
+                            onOpen={() => lb.open(slipUrl)}
+                          />
+                        ) : null}
+                        {productUrl ? (
+                          <EcommerceLabeledImageThumb
+                            src={productUrl}
+                            kind="product"
+                            alt={
+                              o.items?.find((it) => it.imageUrl?.trim())?.productName ||
+                              o.referenceCode
+                            }
+                            onOpen={() => lb.open(productUrl)}
+                          />
+                        ) : null}
+                      </div>
                     ) : (
                       <span className={ecommerceStoreCardIconTileClass(tone, "lg")} aria-hidden>
                         <span className="text-sm font-black sm:text-base">{getInitials(o.customerName)}</span>
@@ -479,7 +490,7 @@ export function EcommerceOrdersClient({
         )}
       </div>
 
-      <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิปโอน" />
+      <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปออเดอร์" />
       <EcommerceOrderFulfillModal
         open={Boolean(fulfillOrder)}
         order={fulfillOrder}

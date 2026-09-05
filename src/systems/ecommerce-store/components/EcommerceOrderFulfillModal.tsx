@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  AppImageLightbox,
-  AppImageThumb,
-  useAppImageLightbox,
-} from "@/components/app-templates";
+import { AppImageLightbox, useAppImageLightbox } from "@/components/app-templates";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { ECOMMERCE_ORDER_STATUS_LABELS } from "@/lib/ecommerce/constants";
+import { EcommerceLabeledImageThumb } from "@/systems/ecommerce-store/components/EcommerceLabeledImageThumb";
+import { ecommerceOrderStatusBadgeClass } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
 import {
   printEcommerceOrderReceipt,
   printEcommerceOrderTaxInvoice,
@@ -19,7 +17,6 @@ import {
   ecommerceStoreFieldClass,
   ecommerceStoreOutlineButtonClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
-import { ecommerceOrderStatusBadgeClass } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
 
 export type EcommerceFulfillOrder = {
   id: string;
@@ -149,41 +146,35 @@ export function EcommerceOrderFulfillModal({
       >
         {order ? (
           <div className="space-y-4 text-left">
-            <div className="flex items-start gap-3">
-              {order.paymentSlipUrl ? (
-                <AppImageThumb
-                  src={order.paymentSlipUrl}
-                  alt={`สลิป ${order.referenceCode}`}
-                  onOpen={() => lb.open(order.paymentSlipUrl!)}
-                  className="h-16 w-16 shrink-0"
-                />
-              ) : items[0]?.imageUrl ? (
-                <AppImageThumb
-                  src={items[0].imageUrl}
-                  alt={items[0].productName}
-                  onOpen={() => lb.open(items[0].imageUrl!)}
-                  className="h-16 w-16 shrink-0"
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <p className="text-base font-black text-[#1e1b4b]">{order.referenceCode}</p>
+                <span className={ecommerceOrderStatusBadgeClass(order.status)}>
+                  {ECOMMERCE_ORDER_STATUS_LABELS[order.status]}
+                </span>
+              </div>
+              <p className="text-sm font-semibold text-[#2e2a58]">{order.customerName}</p>
+              <p className="text-xs font-semibold text-[#66638c]">
+                โทร. {order.customerPhone} · ติดตามร้าน {order.trackingCode}
+              </p>
+              <p className="text-lg font-black tabular-nums text-emerald-700">
+                ฿{amount.toLocaleString("th-TH")}
+              </p>
+            </div>
+
+            <div className={cn(sectionDividerClass, "space-y-2")}>
+              <p className={sectionLabelClass}>สลิปชำระเงิน</p>
+              {order.paymentSlipUrl?.trim() ? (
+                <EcommerceLabeledImageThumb
+                  src={order.paymentSlipUrl.trim()}
+                  kind="slip"
+                  alt={order.referenceCode}
+                  onOpen={() => lb.open(order.paymentSlipUrl!.trim())}
+                  className="h-20 w-20 sm:h-24 sm:w-24"
                 />
               ) : (
-                <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-slate-200/90 bg-slate-50 text-sm font-black text-[#4d47b6]">
-                  {order.referenceCode.slice(-4)}
-                </span>
+                <p className="text-sm font-semibold text-[#66638c]">ยังไม่มีสลิปโอน</p>
               )}
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <p className="text-base font-black text-[#1e1b4b]">{order.referenceCode}</p>
-                  <span className={ecommerceOrderStatusBadgeClass(order.status)}>
-                    {ECOMMERCE_ORDER_STATUS_LABELS[order.status]}
-                  </span>
-                </div>
-                <p className="text-sm font-semibold text-[#2e2a58]">{order.customerName}</p>
-                <p className="text-xs font-semibold text-[#66638c]">
-                  โทร. {order.customerPhone} · ติดตามร้าน {order.trackingCode}
-                </p>
-                <p className="text-lg font-black tabular-nums text-emerald-700">
-                  ฿{amount.toLocaleString("th-TH")}
-                </p>
-              </div>
             </div>
 
             <div className={cn(sectionDividerClass, "space-y-1.5")}>
@@ -202,11 +193,12 @@ export function EcommerceOrderFulfillModal({
                   items.map((it) => (
                     <li key={it.id} className="flex items-center gap-2.5 py-2 first:pt-0 last:pb-0">
                       {it.imageUrl ? (
-                        <AppImageThumb
+                        <EcommerceLabeledImageThumb
                           src={it.imageUrl}
+                          kind="product"
                           alt={it.productName}
                           onOpen={() => lb.open(it.imageUrl!)}
-                          className="h-11 w-11 shrink-0"
+                          className="h-11 w-11 sm:h-11 sm:w-11"
                         />
                       ) : (
                         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200/90 bg-slate-50 text-[10px] font-bold text-slate-500">

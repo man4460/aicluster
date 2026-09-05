@@ -8,7 +8,6 @@ import {
   AppColumnBarSparkChart,
   AppEmptyState,
   AppImageLightbox,
-  AppImageThumb,
   AppRevenueCostColumnChart,
   appDashboardInnerScrollClass,
   useAppImageLightbox,
@@ -31,6 +30,7 @@ import {
   EcommerceOrderFulfillModal,
   type EcommerceFulfillOrder,
 } from "@/systems/ecommerce-store/components/EcommerceOrderFulfillModal";
+import { EcommerceLabeledImageThumb } from "@/systems/ecommerce-store/components/EcommerceLabeledImageThumb";
 import type { EcommerceOrderPrintShop } from "@/systems/ecommerce-store/lib/ecommerce-order-print";
 import {
   ecommerceSalesChannelLabel,
@@ -879,11 +879,12 @@ export function EcommerceFinanceClient() {
                           )}
                         >
                           {slip ? (
-                            <AppImageThumb
+                            <EcommerceLabeledImageThumb
                               src={slip}
-                              alt={`สลิป ${o.referenceCode}`}
+                              kind="slip"
+                              alt={o.referenceCode}
                               onOpen={() => slipLb.open(slip)}
-                              className="h-14 w-14 shrink-0 rounded-lg"
+                              className="h-14 w-14 sm:h-14 sm:w-14"
                             />
                           ) : null}
                           <button
