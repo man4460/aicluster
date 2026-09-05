@@ -6592,6 +6592,10 @@ model EcommerceOrder {
    * รหัสติดตามสาธารณะสำหรับผู้ซื้อ (ไม่ใช่ cuid)
    */
   trackingCode  String @map("tracking_code") @db.VarChar(24)
+  /**
+   * เลขพัสดุขนส่ง (Kerry / Flash / ไปรษณีย์ ฯลฯ) — กรอกตอนจัดส่ง
+   */
+  courierTrackingNo String? @map("courier_tracking_no") @db.VarChar(64)
 
   customerName    String  @map("customer_name") @db.VarChar(200)
   customerPhone   String  @map("customer_phone") @db.VarChar(32)

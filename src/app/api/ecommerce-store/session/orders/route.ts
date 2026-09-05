@@ -38,11 +38,29 @@ export async function GET(req: Request) {
         : {}),
       ...(channel ? { salesChannel: channel } : {}),
     },
-    include: { items: true },
+    include: {
+      items: {
+        include: { product: { select: { id: true, imageUrl: true } } },
+      },
+    },
     orderBy: { createdAt: "desc" },
     take: 100,
   });
-  return NextResponse.json({ orders });
+  return NextResponse.json({
+    orders: orders.map((o) => ({
+      ...o,
+      totalAmount: o.totalAmount.toString(),
+      items: o.items.map((it) => ({
+        id: it.id,
+        productId: it.productId,
+        productName: it.productName,
+        quantity: it.quantity,
+        unitPriceBaht: it.unitPriceBaht.toString(),
+        lineTotalBaht: it.lineTotalBaht.toString(),
+        imageUrl: it.product?.imageUrl ?? null,
+      })),
+    })),
+  });
 }
 
 export async function POST(req: Request) {
@@ -202,8 +220,14 @@ export async function PATCH(req: Request) {
   const body = (await req.json()) as Record<string, unknown>;
   const id = typeof body.id === "string" ? body.id : "";
   const status = typeof body.status === "string" ? body.status : "";
+  const courierTrackingRaw =
+    typeof body.courierTrackingNo === "string" ? body.courierTrackingNo.trim().slice(0, 64) : undefined;
   if (!id || !STATUSES.includes(status as EcommerceOrderStatus)) {
     return NextResponse.json({ error: "ข้อมูลไม่ครบ" }, { status: 400 });
+  }
+
+  if (status === "SHIPPED" && (!courierTrackingRaw || courierTrackingRaw.length < 4)) {
+    return NextResponse.json({ error: "กรอกเลขพัสดุขนส่งก่อนจัดส่ง" }, { status: 400 });
   }
 
   const store = await getOrCreateEcommerceStore(ownerUserId);
@@ -214,11 +238,34 @@ export async function PATCH(req: Request) {
 
   const updated = await prisma.ecommerceOrder.update({
     where: { id },
-    data: { status: status as EcommerceOrderStatus },
-    include: { items: true },
+    data: {
+      status: status as EcommerceOrderStatus,
+      ...(courierTrackingRaw !== undefined
+        ? { courierTrackingNo: courierTrackingRaw || null }
+        : {}),
+    },
+    include: {
+      items: {
+        include: { product: { select: { id: true, imageUrl: true } } },
+      },
+    },
   });
   notifyEcommerceDashboard(ownerUserId);
-  return NextResponse.json({ order: updated });
+  return NextResponse.json({
+    order: {
+      ...updated,
+      totalAmount: updated.totalAmount.toString(),
+      items: updated.items.map((it) => ({
+        id: it.id,
+        productId: it.productId,
+        productName: it.productName,
+        quantity: it.quantity,
+        unitPriceBaht: it.unitPriceBaht.toString(),
+        lineTotalBaht: it.lineTotalBaht.toString(),
+        imageUrl: it.product?.imageUrl ?? null,
+      })),
+    },
+  });
 }
 
 export async function DELETE(req: Request) {

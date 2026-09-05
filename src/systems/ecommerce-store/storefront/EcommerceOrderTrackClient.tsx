@@ -33,6 +33,8 @@ export function EcommerceOrderTrackClient({ storeId }: { storeId: string }) {
   const [phone, setPhone] = useState("");
   const [result, setResult] = useState<{
     referenceCode: string;
+    trackingCode?: string;
+    courierTrackingNo?: string | null;
     status: keyof typeof ECOMMERCE_ORDER_STATUS_LABELS;
     statusLabel: string;
     totalAmount: string;
@@ -205,6 +207,12 @@ export function EcommerceOrderTrackClient({ storeId }: { storeId: string }) {
                 <p>
                   <span className="text-[#66638c]">ยอด:</span> ฿{Number(result.totalAmount).toLocaleString("th-TH")}
                 </p>
+                {result.courierTrackingNo ? (
+                  <p>
+                    <span className="text-[#66638c]">เลขพัสดุ:</span>{" "}
+                    <span className="font-bold text-[#1e1b4b]">{result.courierTrackingNo}</span>
+                  </p>
+                ) : null}
               </div>
             ) : null}
           </>

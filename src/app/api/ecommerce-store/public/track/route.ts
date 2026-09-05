@@ -11,6 +11,7 @@ export async function GET(req: Request) {
     select: {
       referenceCode: true,
       trackingCode: true,
+      courierTrackingNo: true,
       status: true,
       totalAmount: true,
       customerName: true,

@@ -9,6 +9,7 @@ import {
   AppImageThumb,
   AppSectionHeader,
   useAppImageLightbox,
+  useAppNoticePopup,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { ECOMMERCE_ORDER_STATUS_LABELS } from "@/lib/ecommerce/constants";
@@ -19,10 +20,15 @@ import {
   ecommerceProductTagClass,
 } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
 import {
+  EcommerceOrderFulfillModal,
+  type EcommerceFulfillOrder,
+} from "@/systems/ecommerce-store/components/EcommerceOrderFulfillModal";
+import {
   ecommerceStoreCardIconTileClass,
   ecommerceStoreOrderRowTone,
   ecommerceStoreTonedRowCardClass,
 } from "@/systems/ecommerce-store/lib/card-tones";
+import type { EcommerceOrderPrintShop } from "@/systems/ecommerce-store/lib/ecommerce-order-print";
 import {
   ecommerceStoreContentStackClass,
   ecommerceStoreInlineSubNavBtnClass,
@@ -37,15 +43,29 @@ import {
 
 type OrderStatus = "PENDING_SLIP" | "VERIFYING" | "PREPARING" | "SHIPPED";
 
+type OrderItem = {
+  id: string;
+  productName: string;
+  quantity: number;
+  unitPriceBaht: string;
+  imageUrl?: string | null;
+};
+
 type Order = {
   id: string;
   referenceCode: string;
+  trackingCode: string;
+  courierTrackingNo?: string | null;
   customerName: string;
   customerPhone: string;
+  customerAddress?: string | null;
   totalAmount: string;
   paymentSlipUrl: string | null;
+  paymentMethod?: string | null;
   status: OrderStatus;
   salesChannel?: "ONLINE" | "IN_STORE";
+  createdAt?: string;
+  items?: OrderItem[];
 };
 
 const NEXT_STATUS: Record<string, OrderStatus | undefined> = {
@@ -67,7 +87,7 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 const STATUS_NEXT_LABEL: Record<OrderStatus, string> = {
   PENDING_SLIP: "ยืนยันสลิป",
   VERIFYING: "เริ่มจัดของ",
-  PREPARING: "จัดส่งแล้ว",
+  PREPARING: "จัดของ / จัดส่ง",
   SHIPPED: "",
 };
 
@@ -77,6 +97,12 @@ function getInitials(name: string): string {
   const parts = trimmed.split(/\s+/).filter(Boolean);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function orderThumbUrl(o: Order): string | null {
+  if (o.paymentSlipUrl?.trim()) return o.paymentSlipUrl.trim();
+  const first = o.items?.find((it) => it.imageUrl?.trim())?.imageUrl?.trim();
+  return first || null;
 }
 
 export type EcommerceOrdersEmbeddedToolbarApi = {
@@ -96,23 +122,54 @@ export function EcommerceOrdersClient({
 } = {}) {
   const apiFetch = useEcommerceApiFetch();
   const staffAuth = useEcommerceStaffAuth();
+  const notice = useAppNoticePopup();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [shop, setShop] = useState<EcommerceOrderPrintShop | null>(null);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [keyword, setKeyword] = useState("");
   const [filterOpen, setFilterOpen] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [fulfillOrder, setFulfillOrder] = useState<EcommerceFulfillOrder | null>(null);
+  const [shipBusy, setShipBusy] = useState(false);
   const lb = useAppImageLightbox();
 
-  const reload = useCallback(async (opts?: { silent?: boolean }) => {
-    if (!opts?.silent) setLoading(true);
-    try {
-      const res = await apiFetch("/api/ecommerce-store/session/orders?channel=ONLINE");
-      const j = await res.json();
-      setOrders(j.orders ?? []);
-    } finally {
-      if (!opts?.silent) setLoading(false);
-    }
-  }, [apiFetch]);
+  const reload = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!opts?.silent) setLoading(true);
+      try {
+        const [ordRes, storeRes] = await Promise.all([
+          apiFetch("/api/ecommerce-store/session/orders?channel=ONLINE"),
+          apiFetch("/api/ecommerce-store/session/store", { cache: "no-store" }),
+        ]);
+        const j = await ordRes.json();
+        setOrders(j.orders ?? []);
+        const storeJ = await storeRes.json().catch(() => ({}));
+        const s = storeJ.store as
+          | {
+              storeName?: string;
+              logoUrl?: string | null;
+              address?: string | null;
+              taxId?: string | null;
+              contactPhone?: string | null;
+              slipPaperSize?: string | null;
+            }
+          | undefined;
+        if (s) {
+          setShop({
+            storeName: s.storeName,
+            logoUrl: s.logoUrl,
+            address: s.address,
+            taxId: s.taxId,
+            contactPhone: s.contactPhone,
+            slipPaperSize: s.slipPaperSize,
+          });
+        }
+      } finally {
+        if (!opts?.silent) setLoading(false);
+      }
+    },
+    [apiFetch],
+  );
 
   useEffect(() => {
     void reload();
@@ -159,18 +216,62 @@ export function EcommerceOrdersClient({
     return orders.filter((o) => {
       if (filter !== "all" && o.status !== filter) return false;
       if (!kw) return true;
-      const blob = `${o.referenceCode} ${o.customerName} ${o.customerPhone}`.toLowerCase();
+      const blob = `${o.referenceCode} ${o.customerName} ${o.customerPhone} ${o.courierTrackingNo ?? ""} ${o.trackingCode}`.toLowerCase();
       return blob.includes(kw);
     });
   }, [orders, filter, keyword]);
 
   async function advance(id: string, status: string) {
-    await apiFetch("/api/ecommerce-store/session/orders", {
+    const res = await apiFetch("/api/ecommerce-store/session/orders", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, status }),
     });
-    await reload();
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      notice.error(typeof j.error === "string" ? j.error : "อัปเดตสถานะไม่สำเร็จ");
+      return;
+    }
+    await reload({ silent: true });
+  }
+
+  async function openFulfill(order: Order) {
+    if (order.status === "VERIFYING") {
+      await advance(order.id, "PREPARING");
+      const refreshed = await apiFetch(`/api/ecommerce-store/session/orders?channel=ONLINE`);
+      const j = await refreshed.json();
+      const list = (j.orders ?? []) as Order[];
+      const next = list.find((o) => o.id === order.id) ?? { ...order, status: "PREPARING" as const };
+      setFulfillOrder(next);
+      return;
+    }
+    setFulfillOrder(order);
+  }
+
+  async function shipOrder(courierTrackingNo: string) {
+    if (!fulfillOrder) return;
+    setShipBusy(true);
+    try {
+      const res = await apiFetch("/api/ecommerce-store/session/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: fulfillOrder.id,
+          status: "SHIPPED",
+          courierTrackingNo,
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        notice.error(typeof j.error === "string" ? j.error : "จัดส่งไม่สำเร็จ");
+        return;
+      }
+      notice.success(`จัดส่งแล้ว · พัสดุ ${courierTrackingNo}`);
+      setFulfillOrder(null);
+      await reload({ silent: true });
+    } finally {
+      setShipBusy(false);
+    }
   }
 
   const toolbar = (
@@ -217,7 +318,7 @@ export function EcommerceOrdersClient({
       {!embedded ? (
         <AppSectionHeader
           title="ออเดอร์ออนไลน์"
-          description="ตรวจสลิป · อนุมัติ · อัปเดตสถานะจัดส่ง"
+          description="ตรวจสลิป · จัดของ · พิมพ์ฉลาก · ใส่เลขพัสดุ"
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           action={toolbar}
@@ -239,7 +340,7 @@ export function EcommerceOrdersClient({
             type="search"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="ค้นหารหัส · ชื่อ · เบอร์"
+            placeholder="ค้นหารหัส · ชื่อ · เบอร์ · เลขพัสดุ"
             className={cn(ecommerceFieldClass, "min-h-[44px]")}
             aria-label="ค้นหาออเดอร์ออนไลน์"
           />
@@ -293,13 +394,23 @@ export function EcommerceOrdersClient({
               const next = NEXT_STATUS[o.status];
               const tone = ecommerceStoreOrderRowTone(o.status);
               const amount = Number(o.totalAmount);
+              const thumb = orderThumbUrl(o);
 
               return (
                 <li key={o.id} className={ecommerceStoreTonedRowCardClass(tone)}>
                   <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <span className={ecommerceStoreCardIconTileClass(tone, "lg")} aria-hidden>
-                      <span className="text-sm font-black sm:text-base">{getInitials(o.customerName)}</span>
-                    </span>
+                    {thumb ? (
+                      <AppImageThumb
+                        src={thumb}
+                        alt={o.paymentSlipUrl ? `สลิป ${o.referenceCode}` : o.items?.[0]?.productName || o.referenceCode}
+                        onOpen={() => lb.open(thumb)}
+                        className="h-14 w-14 shrink-0 sm:h-16 sm:w-16"
+                      />
+                    ) : (
+                      <span className={ecommerceStoreCardIconTileClass(tone, "lg")} aria-hidden>
+                        <span className="text-sm font-black sm:text-base">{getInitials(o.customerName)}</span>
+                      </span>
+                    )}
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <p className="truncate text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">
@@ -316,42 +427,40 @@ export function EcommerceOrdersClient({
                           <Phone className="h-3 w-3 shrink-0" aria-hidden />
                           {o.customerPhone}
                         </span>
-                      </p>
-                      <div className="flex items-center gap-2 pt-0.5 sm:hidden">
-                        {o.paymentSlipUrl ? (
-                          <AppImageThumb
-                            src={o.paymentSlipUrl}
-                            alt={`สลิป ${o.referenceCode}`}
-                            onOpen={() => lb.open(o.paymentSlipUrl!)}
-                            className="h-12 w-12"
-                          />
-                        ) : (
-                          <span className={ecommerceStoreCardIconTileClass("amber")} aria-hidden>
-                            <Package className="h-4 w-4" />
+                        {o.courierTrackingNo ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Package className="h-3 w-3 shrink-0" aria-hidden />
+                            พัสดุ {o.courierTrackingNo}
                           </span>
-                        )}
-                        <p className="text-lg font-black tabular-nums text-emerald-700">
-                          ฿{amount.toLocaleString("th-TH")}
-                        </p>
-                      </div>
+                        ) : null}
+                      </p>
+                      <p className="text-lg font-black tabular-nums text-emerald-700 sm:hidden">
+                        ฿{amount.toLocaleString("th-TH")}
+                      </p>
                     </div>
                   </div>
 
                   <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
-                    <div className="hidden items-center gap-2 sm:flex">
-                      {o.paymentSlipUrl ? (
-                        <AppImageThumb
-                          src={o.paymentSlipUrl}
-                          alt={`สลิป ${o.referenceCode}`}
-                          onOpen={() => lb.open(o.paymentSlipUrl!)}
-                          className="h-12 w-12"
-                        />
-                      ) : null}
-                      <p className="text-xl font-black tabular-nums text-emerald-700">
-                        ฿{amount.toLocaleString("th-TH")}
-                      </p>
-                    </div>
-                    {next ? (
+                    <p className="hidden text-xl font-black tabular-nums text-emerald-700 sm:block">
+                      ฿{amount.toLocaleString("th-TH")}
+                    </p>
+                    {o.status === "SHIPPED" ? (
+                      <button
+                        type="button"
+                        className={cn(ecommerceStorePrimaryButtonClass, "px-4")}
+                        onClick={() => setFulfillOrder(o)}
+                      >
+                        ดู / พิมพ์ซ้ำ
+                      </button>
+                    ) : next === "PREPARING" || next === "SHIPPED" || o.status === "PREPARING" ? (
+                      <button
+                        type="button"
+                        className={cn(ecommerceStorePrimaryButtonClass, "px-4")}
+                        onClick={() => void openFulfill(o)}
+                      >
+                        {STATUS_NEXT_LABEL[o.status] || "จัดของ"}
+                      </button>
+                    ) : next ? (
                       <button
                         type="button"
                         className={cn(ecommerceStorePrimaryButtonClass, "px-4")}
@@ -371,6 +480,15 @@ export function EcommerceOrdersClient({
       </div>
 
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="สลิปโอน" />
+      <EcommerceOrderFulfillModal
+        open={Boolean(fulfillOrder)}
+        order={fulfillOrder}
+        shop={shop}
+        busy={shipBusy}
+        onClose={() => setFulfillOrder(null)}
+        onShip={shipOrder}
+      />
+      {notice.popup}
     </>
   );
 
