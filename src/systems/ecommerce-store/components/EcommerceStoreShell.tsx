@@ -16,11 +16,10 @@ import {
 } from "@/systems/ecommerce-store/ecommerce-store-module-nav";
 import { EcommerceStoreMobileBottomProvider } from "@/systems/ecommerce-store/components/EcommerceStoreMobileBottomChrome";
 import {
+  IconClipboard,
   IconFinance,
-  IconPackage,
   IconSettings,
   IconStore,
-  IconUsers,
 } from "@/systems/ecommerce-store/components/EcommerceStoreIcons";
 import {
   ecommerceStoreAccentBarClass,
@@ -35,8 +34,7 @@ import {
 const navIcons = {
   dashboard: IconStore,
   finance: IconFinance,
-  products: IconPackage,
-  crm: IconUsers,
+  manage: IconClipboard,
   settings: IconSettings,
 } as const;
 
@@ -157,17 +155,17 @@ function EcommerceStoreShellInner({ children }: { children: React.ReactNode }) {
         open={guideOpen}
         onClose={() => setGuideOpen(false)}
         title="คู่มือการใช้งาน — ร้านออนไลน์"
-        subtitle="แดชบอร์ด · การเงิน · สินค้า · CRM · ตั้งค่า · เว็บลูกค้า"
+        subtitle="แดชบอร์ด · การเงิน · การจัดการ · ตั้งค่า · เว็บลูกค้า"
         sections={[
           {
             title: "เริ่มต้น",
             content:
-              "ตั้งค่าร้าน → เพิ่มสินค้าและรูป → คัดลอกลิงก์ /shop แชร์ลูกค้า → ตรวจสลิปที่แท็บออเดอร์",
+              "ตั้งค่าร้าน → การจัดการ → เพิ่มสินค้าและรูป → คัดลอกลิงก์ /shop แชร์ลูกค้า → ตรวจสลิปที่แท็บออเดอร์",
           },
           {
             title: "เมนูหลัก",
             content:
-              "แดชบอร์ด (ภาพรวม · ออเดอร์) · การเงิน · สินค้า · CRM · ตั้งค่า — มือถือใช้เมนูล่าง · เดสก์ท็อปใช้แท็บในหัว · กดไอคอนซ่อนหัวเพื่อย้ายเมนูขึ้นแถบม่วง",
+              "แดชบอร์ด (ภาพรวม · ออเดอร์) · การเงิน · การจัดการ (สินค้า · CRM) · ตั้งค่า — มือถือใช้เมนูล่าง · เดสก์ท็อปใช้แท็บในหัว · กดไอคอนซ่อนหัวเพื่อย้ายเมนูขึ้นแถบม่วง",
           },
           {
             title: "แดชบอร์ด — ภาพรวม · ออเดอร์",
@@ -178,6 +176,11 @@ function EcommerceStoreShellInner({ children }: { children: React.ReactNode }) {
             title: "การเงิน",
             content:
               "สรุปรายรับ · รายจ่าย · สุทธิ · กรองช่วงเวลา · กราฟ · แท็บประวัติออเดอร์และรายจ่าย (หมวด + สลิป) — ค่าเริ่มต้นเดือนนี้",
+          },
+          {
+            title: "การจัดการ",
+            content:
+              "แท็บสินค้า (สต๊อก · หมวด · รูป) และแท็บ CRM (ลูกค้า · ยอดซื้อ) — สลับจากแถบย่อยในการ์ดเดียวกัน",
           },
           {
             title: "ตั้งค่าร้าน",

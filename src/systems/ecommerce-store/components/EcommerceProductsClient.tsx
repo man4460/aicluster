@@ -53,7 +53,7 @@ type Product = {
   isBestseller: boolean;
 };
 
-export function EcommerceProductsClient() {
+export function EcommerceProductsClient({ embedded = false }: { embedded?: boolean } = {}) {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [threshold, setThreshold] = useState(5);
@@ -490,8 +490,8 @@ export function EcommerceProductsClient() {
     </div>
   );
 
-  return (
-    <AppDashboardSection className="appDashboardSectionSlateClass">
+  const body = (
+    <>
       <AppSectionHeader
         title="สินค้า & สต๊อก"
         description="เพิ่มสินค้า · ปรับสต๊อก"
@@ -953,8 +953,11 @@ export function EcommerceProductsClient() {
       </FormModal>
 
       <AppImageLightbox src={lb.src} onClose={lb.close} alt="รูปสินค้า" />
-    </AppDashboardSection>
+    </>
   );
+
+  if (embedded) return body;
+  return <AppDashboardSection tone="slate">{body}</AppDashboardSection>;
 }
 
 function IconFilter({ className }: { className?: string }) {

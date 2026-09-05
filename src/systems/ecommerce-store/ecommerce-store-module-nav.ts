@@ -1,5 +1,6 @@
 export const ECOMMERCE_STORE_BASE = "/dashboard/ecommerce-store";
 export const ECOMMERCE_STORE_FINANCE_HREF = `${ECOMMERCE_STORE_BASE}/finance`;
+export const ECOMMERCE_STORE_MANAGE_HREF = `${ECOMMERCE_STORE_BASE}/manage`;
 export const ECOMMERCE_STORE_SETTINGS_HREF = `${ECOMMERCE_STORE_BASE}/settings`;
 export const ECOMMERCE_STORE_SETTINGS_PORTAL_HREF = `${ECOMMERCE_STORE_SETTINGS_HREF}?tab=portal`;
 export const ECOMMERCE_STORE_MODULE_DISPLAY_NAME = "ร้านออนไลน์";
@@ -9,7 +10,11 @@ export type EcommerceStoreSettingsTab = "basic" | "finance" | "portal";
 /** แท็บย่อยแดชบอร์ด: ภาพรวม · ออเดอร์ */
 export type EcommerceStoreDashboardTabKey = "overview" | "orders";
 
+/** แท็บย่อยการจัดการ: สินค้า · CRM */
+export type EcommerceStoreManageTabKey = "products" | "crm";
+
 export const ECOMMERCE_STORE_DASHBOARD_TAB_KEYS = new Set<string>(["overview", "orders"]);
+export const ECOMMERCE_STORE_MANAGE_TAB_KEYS = new Set<string>(["products", "crm", "customers"]);
 
 export const ECOMMERCE_STORE_DASHBOARD_TAB_ITEMS: {
   key: EcommerceStoreDashboardTabKey;
@@ -17,6 +22,15 @@ export const ECOMMERCE_STORE_DASHBOARD_TAB_ITEMS: {
 }[] = [
   { key: "overview", label: "ภาพรวม" },
   { key: "orders", label: "ออเดอร์" },
+];
+
+export const ECOMMERCE_STORE_MANAGE_TAB_ITEMS: {
+  key: EcommerceStoreManageTabKey;
+  label: string;
+  shortLabel: string;
+}[] = [
+  { key: "products", label: "สินค้า", shortLabel: "สินค้า" },
+  { key: "crm", label: "CRM", shortLabel: "ลูกค้า" },
 ];
 
 export function parseEcommerceStoreDashboardTab(
@@ -28,10 +42,23 @@ export function parseEcommerceStoreDashboardTab(
   return "overview";
 }
 
+export function parseEcommerceStoreManageTab(
+  raw: string | null | undefined,
+): EcommerceStoreManageTabKey {
+  if (raw === "crm" || raw === "customers") return "crm";
+  if (raw === "products") return "products";
+  return "products";
+}
+
+export function ecommerceStoreManageHref(tab?: EcommerceStoreManageTabKey): string {
+  if (!tab || tab === "products") return ECOMMERCE_STORE_MANAGE_HREF;
+  return `${ECOMMERCE_STORE_MANAGE_HREF}?tab=${tab}`;
+}
+
 export const ECOMMERCE_STORE_HEADER_COLLAPSE_KEY = "mawell-ecommerce-store-module-header-collapsed";
 export const ECOMMERCE_STORE_HEADER_COLLAPSE_EVENT = "mawell-ecommerce-store-header-collapse";
 
-export type EcommerceStoreNavKey = "dashboard" | "finance" | "products" | "crm" | "settings";
+export type EcommerceStoreNavKey = "dashboard" | "finance" | "manage" | "settings";
 
 export type EcommerceStoreNavItem = {
   key: EcommerceStoreNavKey;
@@ -43,8 +70,7 @@ export type EcommerceStoreNavItem = {
 export const ECOMMERCE_STORE_NAV_ITEMS: EcommerceStoreNavItem[] = [
   { key: "dashboard", href: ECOMMERCE_STORE_BASE, label: "แดชบอร์ด", shortLabel: "แดช" },
   { key: "finance", href: ECOMMERCE_STORE_FINANCE_HREF, label: "การเงิน", shortLabel: "เงิน" },
-  { key: "products", href: `${ECOMMERCE_STORE_BASE}/products`, label: "สินค้า", shortLabel: "สินค้า" },
-  { key: "crm", href: `${ECOMMERCE_STORE_BASE}/customers`, label: "CRM", shortLabel: "ลูกค้า" },
+  { key: "manage", href: ECOMMERCE_STORE_MANAGE_HREF, label: "การจัดการ", shortLabel: "จัดการ" },
   { key: "settings", href: ECOMMERCE_STORE_SETTINGS_HREF, label: "ตั้งค่า", shortLabel: "ตั้งค่า" },
 ];
 
@@ -63,11 +89,16 @@ export function ecommerceStorePathFlags(pathname: string) {
     pathNorm.startsWith(`${ECOMMERCE_STORE_BASE}/finance`) || pathNorm.endsWith("/finance");
   const isCrm =
     pathNorm.startsWith(`${ECOMMERCE_STORE_BASE}/customers`) || pathNorm.endsWith("/customers");
+  const isManage =
+    pathNorm === ECOMMERCE_STORE_MANAGE_HREF ||
+    pathNorm.startsWith(`${ECOMMERCE_STORE_MANAGE_HREF}/`) ||
+    isProducts ||
+    isCrm;
   const isSettings =
     pathNorm === ECOMMERCE_STORE_SETTINGS_HREF || pathNorm.endsWith("/settings");
   /** ออเดอร์ (`/orders`) นับเป็นแดชบอร์ด — เป็นเมนูย่อยไม่ใช่เมนูหลัก */
-  const isDashboard = onModule && !isProducts && !isCrm && !isSettings && !isFinance;
-  return { onModule, isDashboard, isProducts, isOrders, isFinance, isCrm, isSettings };
+  const isDashboard = onModule && !isManage && !isSettings && !isFinance;
+  return { onModule, isDashboard, isProducts, isOrders, isFinance, isCrm, isManage, isSettings };
 }
 
 export function isEcommerceStoreNavItemActive(pathname: string, key: EcommerceStoreNavKey): boolean {
@@ -77,10 +108,8 @@ export function isEcommerceStoreNavItemActive(pathname: string, key: EcommerceSt
       return f.isDashboard;
     case "finance":
       return f.isFinance;
-    case "products":
-      return f.isProducts;
-    case "crm":
-      return f.isCrm;
+    case "manage":
+      return f.isManage;
     case "settings":
       return f.isSettings;
     default:

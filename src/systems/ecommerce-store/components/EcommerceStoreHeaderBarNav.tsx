@@ -10,11 +10,10 @@ import {
   type EcommerceStoreNavKey,
 } from "@/systems/ecommerce-store/ecommerce-store-module-nav";
 import {
+  IconClipboard,
   IconFinance,
-  IconPackage,
   IconSettings,
   IconStore,
-  IconUsers,
 } from "@/systems/ecommerce-store/components/EcommerceStoreIcons";
 
 function navIcon(key: EcommerceStoreNavKey, className?: string) {
@@ -23,10 +22,8 @@ function navIcon(key: EcommerceStoreNavKey, className?: string) {
       return <IconStore className={className} />;
     case "finance":
       return <IconFinance className={className} />;
-    case "products":
-      return <IconPackage className={className} />;
-    case "crm":
-      return <IconUsers className={className} />;
+    case "manage":
+      return <IconClipboard className={className} />;
     case "settings":
       return <IconSettings className={className} />;
   }

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowDownLeft, ArrowUpRight, FolderOpen, Scale } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AppColumnBarSparkChart,
   AppDashboardSection,
@@ -27,19 +28,20 @@ import {
   EcommerceCostsPanel,
   type EcommerceCostCategoryRow,
   type EcommerceCostEntryRow,
+  type EcommerceCostsPanelHandle,
 } from "@/systems/ecommerce-store/components/EcommerceCostsPanel";
 import { EcommerceStoreButton } from "@/systems/ecommerce-store/components/EcommerceStoreButton";
 import {
   ecommerceStoreContentStackClass,
   ecommerceStoreFieldClass,
   ecommerceStoreFinanceRangeChipClass,
-  ecommerceStoreFinanceStatCardClass,
+  ecommerceStoreFinanceStatInlineClass,
   ecommerceStoreFinanceStatsGridClass,
   ecommerceStoreFinanceStatTailClass,
-  ecommerceStoreFinanceSubTabShellClass,
-  ecommerceStoreNavActiveClass,
-  ecommerceStoreNavIdleClass,
-  ecommerceStoreOutlineButtonClass,
+  ecommerceStoreInlineSubNavBtnClass,
+  ecommerceStoreInlineSubNavShellClass,
+  ecommerceStoreNavDividerClass,
+  ecommerceStoreSectionHeadingClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
 
 type FinanceRange = "TODAY" | "MONTH" | "YEAR" | "CUSTOM";
@@ -64,11 +66,6 @@ type OrderRow = {
   createdAt: string;
   items?: { productName: string }[];
 };
-
-const FINANCE_DETAIL_TABS: { id: DetailPanel; label: string }[] = [
-  { id: "history", label: "ประวัติ / รายรับ" },
-  { id: "expenses", label: "รายจ่าย" },
-];
 
 function bangkokDateKey(iso: string): string {
   const d = new Date(iso);
@@ -143,6 +140,7 @@ const filterResetButtonClass = cn(
 export function EcommerceFinanceClient() {
   const notice = useAppNoticePopup();
   const slipLb = useAppImageLightbox();
+  const costsPanelRef = useRef<EcommerceCostsPanelHandle>(null);
   const todayKey = bangkokTodayKey();
 
   const [financeRange, setFinanceRange] = useState<FinanceRange>("MONTH");
@@ -331,38 +329,6 @@ export function EcommerceFinanceClient() {
         </div>
       ) : null}
 
-      <section aria-label={`สรุปการเงิน ${financeRangeLabel}`}>
-        <ul className={ecommerceStoreFinanceStatsGridClass}>
-          <li className={ecommerceStoreFinanceStatCardClass}>
-            <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">
-              รายรับ · {financeRangeLabel}
-            </p>
-            <p className="mt-2 text-left text-2xl font-black tabular-nums text-emerald-700 sm:text-3xl">
-              ฿{formatEcommerceBaht(totalRevenue)}
-            </p>
-          </li>
-          <li className={ecommerceStoreFinanceStatCardClass}>
-            <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">
-              รายจ่าย · {financeRangeLabel}
-            </p>
-            <p className="mt-2 text-left text-2xl font-black tabular-nums text-rose-600 sm:text-3xl">
-              ฿{formatEcommerceBaht(totalCost)}
-            </p>
-          </li>
-          <li className={cn(ecommerceStoreFinanceStatCardClass, ecommerceStoreFinanceStatTailClass)}>
-            <p className="text-left text-[10px] font-black uppercase tracking-widest text-[#66638c]">สุทธิ</p>
-            <p
-              className={cn(
-                "mt-2 text-left text-2xl font-black tabular-nums sm:text-3xl",
-                profitTotal < 0 ? "text-rose-800" : "text-[#1e1b4b]",
-              )}
-            >
-              ฿{formatEcommerceBaht(profitTotal)}
-            </p>
-          </li>
-        </ul>
-      </section>
-
       <AppDashboardSection tone="violet">
         <AppSectionHeader
           tone="violet"
@@ -370,64 +336,225 @@ export function EcommerceFinanceClient() {
           className="flex flex-row items-start justify-between gap-3 sm:items-center"
           actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
           action={
-            <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
-              <EcommerceStoreButton
-                type="button"
-                onClick={() => setFilterOpen((o) => !o)}
-                aria-expanded={filterOpen}
-                aria-controls="ecommerce-finance-filter-panel"
-                aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
-                title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
-                className={cn(
-                  appTemplateOutlineButtonClass,
-                  "relative inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 px-3 text-xs font-black text-[#4d47b6] sm:min-w-0",
-                  filterOpen && "border-[#0000BF]/45 bg-[#0000BF]/10 ring-2 ring-[#0000BF]/20",
-                  filtersActive && !filterOpen && "border-amber-300/80 bg-amber-50/90",
-                )}
-              >
-                <IconFilter className="h-5 w-5 shrink-0" />
-                <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
-                {filtersActive ? (
-                  <span
-                    className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] ring-2 ring-white"
+            <div
+              className="flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5"
+              role="group"
+              aria-label="เครื่องมือการเงิน"
+            >
+              <nav className={ecommerceStoreInlineSubNavShellClass} role="tablist" aria-label="รายรับหรือรายจ่าย">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={detailPanel === "history"}
+                  id="ecommerce-finance-tab-history"
+                  aria-controls="ecommerce-finance-panel-history"
+                  title="รายรับ"
+                  aria-label="รายรับ"
+                  className={ecommerceStoreInlineSubNavBtnClass(detailPanel === "history")}
+                  onClick={() => setDetailPanel("history")}
+                >
+                  <span className="hidden sm:inline">รายรับ</span>
+                  <span className="sm:hidden" aria-hidden>
+                    รับ
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={detailPanel === "expenses"}
+                  id="ecommerce-finance-tab-expenses"
+                  aria-controls="ecommerce-finance-panel-expenses"
+                  title="รายจ่าย"
+                  aria-label="รายจ่าย"
+                  className={ecommerceStoreInlineSubNavBtnClass(detailPanel === "expenses")}
+                  onClick={() => setDetailPanel("expenses")}
+                >
+                  <span className="hidden sm:inline">รายจ่าย</span>
+                  <span className="sm:hidden" aria-hidden>
+                    จ่าย
+                  </span>
+                </button>
+              </nav>
+              {detailPanel === "history" ? (
+                <div className={ecommerceStoreInlineSubNavShellClass}>
+                  <Link
+                    href="/dashboard/ecommerce-store?tab=orders"
+                    className={ecommerceStoreInlineSubNavBtnClass(false)}
+                    title="ไปหน้าออเดอร์"
+                    aria-label="ไปหน้าออเดอร์"
+                  >
+                    <span className="hidden sm:inline">ออเดอร์</span>
+                    <span className="sm:hidden" aria-hidden>
+                      ออเดอร์
+                    </span>
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <div className={ecommerceStoreInlineSubNavShellClass}>
+                    <button
+                      type="button"
+                      className={ecommerceStoreInlineSubNavBtnClass(false)}
+                      title="จัดการหมวดหมู่"
+                      aria-label="จัดการหมวดหมู่รายจ่าย"
+                      onClick={() => costsPanelRef.current?.openManageCategories()}
+                    >
+                      <FolderOpen className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      <span className="hidden sm:inline">หมวดหมู่</span>
+                    </button>
+                  </div>
+                  <div className={ecommerceStoreInlineSubNavShellClass}>
+                    <button
+                      type="button"
+                      className={ecommerceStoreInlineSubNavBtnClass(false)}
+                      title="บันทึกรายจ่าย"
+                      aria-label="บันทึกรายจ่าย"
+                      onClick={() => {
+                        if (categories.length === 0) {
+                          costsPanelRef.current?.openManageCategories();
+                          return;
+                        }
+                        costsPanelRef.current?.openAddEntry();
+                      }}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="h-3.5 w-3.5 shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                        aria-hidden
+                      >
+                        <path d="M12 5v14M5 12h14" />
+                      </svg>
+                      <span className="hidden sm:inline">รายจ่ายเพิ่ม</span>
+                    </button>
+                  </div>
+                </>
+              )}
+              <span className={ecommerceStoreNavDividerClass} aria-hidden />
+              <div className={ecommerceStoreInlineSubNavShellClass}>
+                <button
+                  type="button"
+                  onClick={() => setFilterOpen((o) => !o)}
+                  aria-expanded={filterOpen}
+                  aria-controls="ecommerce-finance-filter-panel"
+                  aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                  title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+                  className={cn(
+                    ecommerceStoreInlineSubNavBtnClass(filterOpen),
+                    "relative",
+                    filtersActive && !filterOpen && "ring-1 ring-amber-300/80",
+                  )}
+                >
+                  <IconFilter className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+                  {filtersActive ? (
+                    <span
+                      className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#5b61ff] ring-2 ring-white"
+                      aria-hidden
+                    />
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChartsOpen((o) => !o)}
+                  aria-expanded={chartsOpen}
+                  aria-controls="ecommerce-finance-charts"
+                  aria-label={chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
+                  title={chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
+                  className={ecommerceStoreInlineSubNavBtnClass(chartsOpen)}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-3.5 w-3.5 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.25}
                     aria-hidden
-                  />
-                ) : null}
-              </EcommerceStoreButton>
-              <EcommerceStoreButton
-                type="button"
-                onClick={() => setChartsOpen((o) => !o)}
-                aria-expanded={chartsOpen}
-                aria-controls="ecommerce-finance-charts"
-                aria-label={chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
-                title={chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
-                className={cn(
-                  appTemplateOutlineButtonClass,
-                  "inline-flex min-h-[40px] items-center justify-center px-3 text-xs font-black text-[#4d47b6]",
-                  chartsOpen && "border-[#0000BF]/45 bg-[#0000BF]/10",
-                )}
-              >
-                {chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}
-              </EcommerceStoreButton>
-              <EcommerceStoreButton
-                type="button"
-                onClick={() => void reload()}
-                disabled={loading}
-                aria-busy={loading}
-                aria-label="รีเฟรชข้อมูลรายงาน"
-                title="รีเฟรช"
-                className={cn(
-                  appTemplateOutlineButtonClass,
-                  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-2xl px-0 sm:min-w-0 sm:px-3",
-                  "disabled:opacity-50",
-                )}
-              >
-                <IconRefresh className={cn("h-5 w-5 shrink-0 sm:mr-1.5", loading && "animate-spin")} />
-                <span className="hidden sm:inline">รีเฟรช</span>
-              </EcommerceStoreButton>
+                  >
+                    <path d="M4 19V5M10 19V9M16 19v-6M22 19V7" strokeLinecap="round" />
+                  </svg>
+                  <span className="hidden sm:inline">{chartsOpen ? "ซ่อนกราฟ" : "แสดงกราฟ"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void reload()}
+                  disabled={loading}
+                  aria-busy={loading}
+                  aria-label="รีเฟรชข้อมูลรายงาน"
+                  title="รีเฟรช"
+                  className={cn(ecommerceStoreInlineSubNavBtnClass(false), "disabled:opacity-50")}
+                >
+                  <IconRefresh className={cn("h-3.5 w-3.5 shrink-0", loading && "animate-spin")} />
+                  <span className="hidden sm:inline">รีเฟรช</span>
+                </button>
+              </div>
             </div>
           }
         />
+
+        <ul
+          className={cn(ecommerceStoreFinanceStatsGridClass, "mt-4")}
+          aria-label={`สรุปการเงิน ${financeRangeLabel}`}
+        >
+          <li
+            className={cn(
+              ecommerceStoreFinanceStatInlineClass,
+              "border-l-[3px] border-l-emerald-500 bg-emerald-50/60",
+            )}
+          >
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800/80">
+              <ArrowDownLeft className="h-3.5 w-3.5" aria-hidden />
+              รายรับ · {financeRangeLabel}
+            </div>
+            <p className="text-lg font-black tabular-nums text-emerald-700 sm:text-xl">
+              ฿{formatEcommerceBaht(totalRevenue)}
+            </p>
+          </li>
+          <li
+            className={cn(
+              ecommerceStoreFinanceStatInlineClass,
+              "border-l-[3px] border-l-rose-500 bg-rose-50/55",
+            )}
+          >
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-rose-800/80">
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+              รายจ่าย · {financeRangeLabel}
+            </div>
+            <p className="text-lg font-black tabular-nums text-rose-600 sm:text-xl">
+              ฿{formatEcommerceBaht(totalCost)}
+            </p>
+          </li>
+          <li
+            className={cn(
+              ecommerceStoreFinanceStatInlineClass,
+              ecommerceStoreFinanceStatTailClass,
+              "border-l-[3px]",
+              profitTotal >= 0
+                ? "border-l-indigo-500 bg-indigo-50/50"
+                : "border-l-rose-500 bg-rose-50/55",
+            )}
+          >
+            <div
+              className={cn(
+                "flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide",
+                profitTotal >= 0 ? "text-indigo-800/80" : "text-rose-800/80",
+              )}
+            >
+              <Scale className="h-3.5 w-3.5" aria-hidden />
+              สุทธิ
+            </div>
+            <p
+              className={cn(
+                "text-lg font-black tabular-nums sm:text-xl",
+                profitTotal < 0 ? "text-rose-800" : "text-[#1e1b4b]",
+              )}
+            >
+              ฿{formatEcommerceBaht(profitTotal)}
+            </p>
+          </li>
+        </ul>
 
         <div
           id="ecommerce-finance-filter-panel"
@@ -559,137 +686,101 @@ export function EcommerceFinanceClient() {
         ) : null}
 
         <div className="mt-4 space-y-4 border-t border-[#ecebff] pt-4">
-          <nav className={ecommerceStoreFinanceSubTabShellClass} aria-label="เมนูการเงิน">
-            <div className="flex w-full min-w-0 gap-1" role="tablist">
-              {FINANCE_DETAIL_TABS.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={detailPanel === t.id}
-                  id={`ecommerce-finance-tab-${t.id}`}
-                  aria-controls={`ecommerce-finance-panel-${t.id}`}
-                  onClick={() => setDetailPanel(t.id)}
-                  className={cn(
-                    "flex min-h-[44px] min-w-0 flex-1 items-center justify-center rounded-[1.25rem] px-2 py-2 text-center text-[11px] font-black leading-tight transition-all sm:px-3 sm:text-sm",
-                    detailPanel === t.id
-                      ? cn(ecommerceStoreNavActiveClass, "ring-1 ring-white/55")
-                      : cn("ring-1 ring-transparent", ecommerceStoreNavIdleClass),
-                  )}
+          {detailPanel === "history" ? (
+            <div
+              id="ecommerce-finance-panel-history"
+              role="tabpanel"
+              aria-labelledby="ecommerce-finance-tab-history"
+            >
+              <h3 className={ecommerceStoreSectionHeadingClass}>
+                ประวัติ / รายรับ
+                <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[#5f5a8a]">
+                  {filteredOrders.length}
+                </span>
+              </h3>
+              {loading ? (
+                <div className="mt-3 h-32 animate-pulse rounded-2xl bg-slate-100/80" aria-hidden />
+              ) : orders.length === 0 ? (
+                <AppEmptyState tone="slate" className="mt-3">
+                  ยังไม่มีออเดอร์
+                </AppEmptyState>
+              ) : filteredOrders.length === 0 ? (
+                <AppEmptyState tone="slate" className="mt-3">
+                  ไม่พบออเดอร์ตามตัวกรอง
+                </AppEmptyState>
+              ) : (
+                <div
+                  className={cn("mt-3 max-h-[min(70vh,44rem)] min-h-0", appDashboardInnerScrollClass)}
+                  role="region"
+                  aria-label="รายการออเดอร์รายรับ"
                 >
-                  {t.label}
-                </button>
-              ))}
+                  <ul className="space-y-2 pr-0.5">
+                    {filteredOrders.map((o) => {
+                      const slip = o.paymentSlipUrl?.trim() || "";
+                      const baht = ecommerceDecimalToBahtNumber(o.totalAmount as never);
+                      return (
+                        <li
+                          key={o.id}
+                          className="flex items-start gap-2 rounded-[1.25rem] border border-white/50 bg-gradient-to-br from-white/55 to-slate-50/15 px-3 py-3 shadow-sm ring-1 ring-inset ring-white/40"
+                        >
+                          {slip ? (
+                            <AppImageThumb
+                              src={slip}
+                              alt={`สลิป ${o.referenceCode}`}
+                              onOpen={() => slipLb.open(slip)}
+                              className="h-14 w-14 shrink-0"
+                            />
+                          ) : null}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-bold tabular-nums text-[#66638c]">
+                              {formatOrderAt(o.createdAt)}
+                            </p>
+                            <p className="mt-0.5 truncate text-sm font-black text-[#1e1b4b]">
+                              {o.customerName}
+                              <span className="ml-1 font-bold text-[#66638c]">· {o.referenceCode}</span>
+                            </p>
+                            <p className="mt-0.5 text-[11px] font-bold text-[#4d47b6]">
+                              {ECOMMERCE_ORDER_STATUS_LABELS[o.status] ?? o.status}
+                              {o.customerPhone ? ` · ${o.customerPhone}` : ""}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end gap-1.5">
+                            <p className="text-base font-black tabular-nums text-emerald-700">
+                              ฿{formatEcommerceBaht(baht)}
+                            </p>
+                            <button
+                              type="button"
+                              className={assetRowRemoveIconButtonClass}
+                              aria-label={`ลบออเดอร์ ${o.referenceCode}`}
+                              title="ลบ"
+                              onClick={() => void deleteOrder(o)}
+                            >
+                              <IconRowRemove className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
             </div>
-          </nav>
-
-          <div className="mt-4">
-            {detailPanel === "history" ? (
-              <div
-                id="ecommerce-finance-panel-history"
-                role="tabpanel"
-                aria-labelledby="ecommerce-finance-tab-history"
-              >
-                <AppSectionHeader
-                  tone="slate"
-                  title="ประวัติ / รายรับ"
-                  className="flex flex-row items-start justify-between gap-3 sm:items-center"
-                  actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
-                  action={
-                    <Link
-                      href="/dashboard/ecommerce-store?tab=orders"
-                      className={cn(
-                        ecommerceStoreOutlineButtonClass,
-                        "min-h-[40px] px-3 text-xs font-black text-[#4d47b6]",
-                      )}
-                      aria-label="ไปหน้าออเดอร์"
-                    >
-                      ออเดอร์
-                    </Link>
-                  }
-                />
-                {loading ? (
-                  <div className="mt-4 h-32 animate-pulse rounded-2xl bg-slate-100/80" aria-hidden />
-                ) : orders.length === 0 ? (
-                  <AppEmptyState tone="slate" className="mt-4">
-                    ยังไม่มีออเดอร์
-                  </AppEmptyState>
-                ) : filteredOrders.length === 0 ? (
-                  <AppEmptyState tone="slate" className="mt-4">
-                    ไม่พบออเดอร์ตามตัวกรอง
-                  </AppEmptyState>
-                ) : (
-                  <div
-                    className={cn("mt-4 max-h-[min(70vh,44rem)] min-h-0", appDashboardInnerScrollClass)}
-                    role="region"
-                    aria-label="รายการออเดอร์รายรับ"
-                  >
-                    <ul className="space-y-2 pr-0.5">
-                      {filteredOrders.map((o) => {
-                        const slip = o.paymentSlipUrl?.trim() || "";
-                        const baht = ecommerceDecimalToBahtNumber(o.totalAmount as never);
-                        return (
-                          <li
-                            key={o.id}
-                            className="flex items-start gap-2 rounded-[1.25rem] border border-white/50 bg-gradient-to-br from-white/55 to-slate-50/15 px-3 py-3 shadow-sm ring-1 ring-inset ring-white/40"
-                          >
-                            {slip ? (
-                              <AppImageThumb
-                                src={slip}
-                                alt={`สลิป ${o.referenceCode}`}
-                                onOpen={() => slipLb.open(slip)}
-                                className="h-14 w-14 shrink-0"
-                              />
-                            ) : null}
-                            <div className="min-w-0 flex-1">
-                              <p className="text-[11px] font-bold tabular-nums text-[#66638c]">
-                                {formatOrderAt(o.createdAt)}
-                              </p>
-                              <p className="mt-0.5 truncate text-sm font-black text-[#1e1b4b]">
-                                {o.customerName}
-                                <span className="ml-1 font-bold text-[#66638c]">· {o.referenceCode}</span>
-                              </p>
-                              <p className="mt-0.5 text-[11px] font-bold text-[#4d47b6]">
-                                {ECOMMERCE_ORDER_STATUS_LABELS[o.status] ?? o.status}
-                                {o.customerPhone ? ` · ${o.customerPhone}` : ""}
-                              </p>
-                            </div>
-                            <div className="flex shrink-0 flex-col items-end gap-1.5">
-                              <p className="text-base font-black tabular-nums text-emerald-700">
-                                ฿{formatEcommerceBaht(baht)}
-                              </p>
-                              <button
-                                type="button"
-                                className={assetRowRemoveIconButtonClass}
-                                aria-label={`ลบออเดอร์ ${o.referenceCode}`}
-                                title="ลบ"
-                                onClick={() => void deleteOrder(o)}
-                              >
-                                <IconRowRemove className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div
-                id="ecommerce-finance-panel-expenses"
-                role="tabpanel"
-                aria-labelledby="ecommerce-finance-tab-expenses"
-              >
-                <EcommerceCostsPanel
-                  categories={categories}
-                  entries={filteredCosts}
-                  onChanged={() => void reload()}
-                  emptyWhenFilteredMessage="ไม่มีรายจ่ายในช่วงที่กรอง"
-                />
-              </div>
-            )}
-          </div>
+          ) : (
+            <div
+              id="ecommerce-finance-panel-expenses"
+              role="tabpanel"
+              aria-labelledby="ecommerce-finance-tab-expenses"
+            >
+              <EcommerceCostsPanel
+                ref={costsPanelRef}
+                hideToolbar
+                categories={categories}
+                entries={filteredCosts}
+                onChanged={() => void reload()}
+                emptyWhenFilteredMessage="ไม่มีรายจ่ายในช่วงที่กรอง"
+              />
+            </div>
+          )}
         </div>
       </AppDashboardSection>
 

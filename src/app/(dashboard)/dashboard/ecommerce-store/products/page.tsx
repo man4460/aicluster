@@ -1,5 +1,6 @@
-import { EcommerceProductsClient } from "@/systems/ecommerce-store/components/EcommerceProductsClient";
+import { redirect } from "next/navigation";
+import { ecommerceStoreManageHref } from "@/systems/ecommerce-store/ecommerce-store-module-nav";
 
 export default function EcommerceStoreProductsPage() {
-  return <EcommerceProductsClient />;
+  redirect(ecommerceStoreManageHref("products"));
 }

@@ -1,6 +1,14 @@
 "use client";
 
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import {
   AppEmptyState,
   AppGalleryCameraFileInputs,
@@ -26,6 +34,7 @@ import {
   ecommerceStoreChipActiveClass,
   ecommerceStoreChipIdleClass,
   ecommerceStoreFieldClass,
+  ecommerceStoreSectionHeadingClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
 
 export type EcommerceCostCategoryRow = {
@@ -61,18 +70,26 @@ async function uploadEcommerceCostSlip(file: File): Promise<string> {
   return j.imageUrl.trim();
 }
 
+export type EcommerceCostsPanelHandle = {
+  openAddEntry: () => void;
+  openManageCategories: () => void;
+};
+
 /** รายจ่าย — รายจ่ายร้านออนไลน์ */
-export function EcommerceCostsPanel({
-  categories,
-  entries,
-  onChanged,
-  emptyWhenFilteredMessage,
-}: {
-  categories: EcommerceCostCategoryRow[];
-  entries: EcommerceCostEntryRow[];
-  onChanged: () => void | Promise<void>;
-  emptyWhenFilteredMessage?: string;
-}) {
+export const EcommerceCostsPanel = forwardRef<
+  EcommerceCostsPanelHandle,
+  {
+    categories: EcommerceCostCategoryRow[];
+    entries: EcommerceCostEntryRow[];
+    onChanged: () => void | Promise<void>;
+    emptyWhenFilteredMessage?: string;
+    /** ซ่อนหัวแผง — ปุ่มหมวด/เพิ่มอยู่แถบหัวการเงิน (แม่แบบซักผ้า) */
+    hideToolbar?: boolean;
+  }
+>(function EcommerceCostsPanel(
+  { categories, entries, onChanged, emptyWhenFilteredMessage, hideToolbar = false },
+  ref,
+) {
   const slipLb = useAppImageLightbox();
   const notice = useAppNoticePopup();
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -207,7 +224,7 @@ export function EcommerceCostsPanel({
     setCostErr(null);
   }
 
-  function openCostCreate() {
+  const openCostCreate = useCallback(() => {
     if (sortedCategories.length === 0) {
       closeCatForm();
       setCatModalOpen(true);
@@ -215,7 +232,21 @@ export function EcommerceCostsPanel({
     }
     resetCostForm();
     setCostModalOpen(true);
-  }
+  }, [sortedCategories.length, filterCat, sortedCategories]);
+
+  const openManageCategories = useCallback(() => {
+    closeCatForm();
+    setCatModalOpen(true);
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      openAddEntry: openCostCreate,
+      openManageCategories,
+    }),
+    [openCostCreate, openManageCategories],
+  );
 
   function openCostEdit(entry: EcommerceCostEntryRow) {
     setCostEditing(entry);
@@ -312,40 +343,49 @@ export function EcommerceCostsPanel({
   return (
     <>
       {notice.popup}
-      <div className="flex flex-row items-start justify-between gap-3">
-        <h2 className="min-w-0 text-lg font-black tracking-tight text-[#1e1b4b]">รายจ่าย</h2>
-        <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
-          <EcommerceStoreButton
-            type="button"
-            onClick={() => {
-              closeCatForm();
-              setCatModalOpen(true);
-            }}
-            className={cn(
-              appTemplateOutlineButtonClass,
-              "inline-flex min-h-[40px] items-center justify-center rounded-xl px-3 text-xs font-semibold text-[#4d47b6] sm:px-4 sm:text-sm",
-            )}
-            aria-label="จัดการหมวดหมู่รายจ่าย"
-            title="หมวดหมู่ — เพิ่ม แก้ไข ลบ"
-          >
-            หมวดหมู่
-          </EcommerceStoreButton>
-          <EcommerceStoreButton
-            type="button"
-            onClick={openCostCreate}
-            className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-0 text-sm font-semibold sm:min-w-0 sm:px-4"
-            aria-label="เพิ่มรายจ่าย"
-          >
-            <span className="sm:hidden" aria-hidden>
-              +
-            </span>
-            <span className="hidden sm:inline">+ เพิ่มรายจ่าย</span>
-          </EcommerceStoreButton>
+      {!hideToolbar ? (
+        <div className="flex flex-row items-start justify-between gap-3">
+          <h2 className="min-w-0 text-lg font-black tracking-tight text-[#1e1b4b]">รายจ่าย</h2>
+          <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
+            <EcommerceStoreButton
+              type="button"
+              onClick={openManageCategories}
+              className={cn(
+                appTemplateOutlineButtonClass,
+                "inline-flex min-h-[40px] items-center justify-center rounded-xl px-3 text-xs font-semibold text-[#4d47b6] sm:px-4 sm:text-sm",
+              )}
+              aria-label="จัดการหมวดหมู่รายจ่าย"
+              title="หมวดหมู่ — เพิ่ม แก้ไข ลบ"
+            >
+              หมวดหมู่
+            </EcommerceStoreButton>
+            <EcommerceStoreButton
+              type="button"
+              onClick={openCostCreate}
+              className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-0 text-sm font-semibold sm:min-w-0 sm:px-4"
+              aria-label="เพิ่มรายจ่าย"
+            >
+              <span className="sm:hidden" aria-hidden>
+                +
+              </span>
+              <span className="hidden sm:inline">+ เพิ่มรายจ่าย</span>
+            </EcommerceStoreButton>
+          </div>
         </div>
-      </div>
+      ) : (
+        <h3 className={ecommerceStoreSectionHeadingClass}>
+          รายจ่าย
+          <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[#5f5a8a]">
+            {sortedEntries.length}
+          </span>
+        </h3>
+      )}
 
       <div
-        className="mt-4 min-w-0 overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth pb-1 [-webkit-overflow-scrolling:touch]"
+        className={cn(
+          "min-w-0 overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth pb-1 [-webkit-overflow-scrolling:touch]",
+          hideToolbar ? "mt-3" : "mt-4",
+        )}
         role="group"
         aria-label="กรองตามหมวดหมู่ — เลื่อนซ้ายขวาได้"
       >
@@ -636,4 +676,4 @@ export function EcommerceCostsPanel({
       </FormModal>
     </>
   );
-}
+});
