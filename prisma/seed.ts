@@ -905,7 +905,7 @@ async function main() {
     }
   }
 
-  /** E-Commerce Store Builder — ร้านตัวอย่าง 8 สินค้า + Sale Page + ออเดอร์รอตรวจ */
+  /** E-Commerce Store — หมวด 5 · สินค้า 23 · CRM · ออเดอร์หลายสถานะ · รายจ่าย */
   for (const email of demoSeedDataOwnerEmails) {
     const row = await prisma.user.findUnique({
       where: { email },
