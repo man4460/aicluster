@@ -6459,12 +6459,22 @@ model EcommerceStore {
   storeName   String  @map("store_name") @db.VarChar(200)
   logoUrl     String? @map("logo_url") @db.VarChar(512)
   description String? @db.Text
+  tagline     String? @db.VarChar(300)
+  contactPhone String? @map("contact_phone") @db.VarChar(32)
+  address     String? @db.VarChar(500)
 
-  promptPayPhone    String? @map("prompt_pay_phone") @db.VarChar(20)
-  bankName          String? @map("bank_name") @db.VarChar(120)
-  bankAccountName   String? @map("bank_account_name") @db.VarChar(200)
-  bankAccountNumber String? @map("bank_account_number") @db.VarChar(64)
-  paymentNote       String? @map("payment_note") @db.Text
+  promptPayPhone       String? @map("prompt_pay_phone") @db.VarChar(20)
+  promptPayQrImageUrl  String? @map("prompt_pay_qr_image_url") @db.VarChar(512)
+  bankName             String? @map("bank_name") @db.VarChar(120)
+  bankAccountName      String? @map("bank_account_name") @db.VarChar(200)
+  bankAccountNumber    String? @map("bank_account_number") @db.VarChar(64)
+  taxId                String? @map("tax_id") @db.VarChar(30)
+  paymentNote          String? @map("payment_note") @db.Text
+  slipPaperSize        String  @default("SLIP_58") @map("slip_paper_size") @db.VarChar(16)
+
+  contactLine  String? @map("contact_line") @db.VarChar(120)
+  facebookUrl  String? @map("facebook_url") @db.VarChar(512)
+  mapUrl       String? @map("map_url") @db.VarChar(512)
 
   /**
    * โดเมนส่วนตัว (ชี้ DNS มาที่ MAWELL) — ยังไม่ verify ได้จนกว่าจะตั้งค่า middleware

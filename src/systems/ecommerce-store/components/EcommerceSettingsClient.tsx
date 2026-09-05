@@ -1,18 +1,25 @@
 "use client";
 
-import { EcommerceRemoteImg } from "@/systems/ecommerce-store/components/EcommerceRemoteImg";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  AppImagePickCameraButtons,
-  prepareImageFileForUpload,
+  AppModuleShopPaymentFields,
+  AppShopLogoField,
+  AppSlipPaperSizeSettingsField,
+  parseAppSlipPaperSize,
+  type AppSlipPaperSize,
 } from "@/components/app-templates";
+import { ModuleQrMonthlyGate } from "@/components/qr/ModuleQrMonthlyGate";
 import { cn } from "@/lib/cn";
+import { ECOMMERCE_STORE_MODULE_SLUG } from "@/lib/modules/config";
 import { ecommercePublicShopUrl } from "@/lib/ecommerce/constants";
 import { validateEcommerceCustomDomainInput } from "@/lib/ecommerce/custom-domain";
+import type { ModuleShopPaymentDto } from "@/lib/module-shop/payment";
+import { EcommercePortalMediaSettings } from "@/systems/ecommerce-store/components/EcommercePortalMediaSettings";
 import { IconCopy } from "@/systems/ecommerce-store/components/EcommerceStoreIcons";
 import type { EcommerceStoreSettingsTab } from "@/systems/ecommerce-store/ecommerce-store-module-nav";
 import {
+  ecommerceStoreCompactOutlineButtonClass,
   ecommerceStoreDashboardSegmentBtnClass,
   ecommerceStoreFieldClass,
   ecommerceStoreHeaderActionShellClass,
@@ -31,12 +38,21 @@ type Store = {
   id: string;
   storeName: string;
   description: string | null;
+  tagline: string | null;
+  contactPhone: string | null;
+  address: string | null;
   logoUrl: string | null;
   promptPayPhone: string | null;
+  promptPayQrImageUrl: string | null;
   bankName: string | null;
   bankAccountName: string | null;
   bankAccountNumber: string | null;
+  taxId: string | null;
   paymentNote: string | null;
+  slipPaperSize: AppSlipPaperSize;
+  contactLine: string | null;
+  facebookUrl: string | null;
+  mapUrl: string | null;
   customDomain: string | null;
   customDomainVerified: boolean;
   salePageEnabled: boolean;
@@ -47,6 +63,8 @@ type Store = {
 
 type ProductOption = { id: string; name: string };
 
+const LOGO_UPLOAD_URL = "/api/ecommerce-store/session/upload-logo";
+
 const SETTINGS_TABS: { id: EcommerceStoreSettingsTab; label: string; shortLabel: string }[] = [
   { id: "basic", label: "ตั้งค่าพื้นฐาน", shortLabel: "พื้นฐาน" },
   { id: "finance", label: "ตั้งค่าเกี่ยวกับการเงิน", shortLabel: "การเงิน" },
@@ -54,9 +72,9 @@ const SETTINGS_TABS: { id: EcommerceStoreSettingsTab; label: string; shortLabel:
 ];
 
 const SETTINGS_TAB_DESCRIPTIONS: Record<EcommerceStoreSettingsTab, string> = {
-  basic: "ชื่อร้าน · โลโก้ · รายละเอียด · สต๊อก · ปิดรับออเดอร์",
-  finance: "พร้อมเพย์ · บัญชีธนาคาร · หมายเหตุชำระเงิน",
-  portal: "ลิงก์แชร์ · โดเมนส่วนตัว · Sale Page",
+  basic: "ชื่อร้าน · โลโก้ · สโลแกน · เบอร์ติดต่อ · ที่อยู่ · สต๊อก",
+  finance: "ชำระเงิน · พร้อมเพย์ · ขนาดสลิป · หมายเหตุชำระ",
+  portal: "ลิงก์ร้าน · LINE · Facebook · แผนที่ · โดเมน · Sale Page",
 };
 
 const SETTINGS_TAB_KEYS = new Set<string>(SETTINGS_TABS.map((t) => t.id));
@@ -85,12 +103,68 @@ function IconSave({ className }: { className?: string }) {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function EcommercePortalLinkPanel({
+  shopUrl,
+  storeId,
+  salePageEnabled,
+  featuredProductId,
+}: {
+  shopUrl: string;
+  storeId: string;
+  salePageEnabled: boolean;
+  featuredProductId: string | null;
+}) {
+  const [copyMsg, setCopyMsg] = useState<string | null>(null);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(shopUrl);
+      setCopyMsg("คัดลอกลิงก์ร้านแล้ว");
+    } catch {
+      setCopyMsg("คัดลอกลิงก์ไม่สำเร็จ");
+    }
+  };
+
   return (
-    <label className="block space-y-1">
-      <span className="text-xs font-bold text-[#4d47b6]">{label}</span>
-      {children}
-    </label>
+    <ModuleQrMonthlyGate moduleSlug={ECOMMERCE_STORE_MODULE_SLUG} title="ตั้งค่าเว็ปลิงค์ลูกค้า">
+      <div className="space-y-3 text-left">
+        <p className="text-sm text-[#5f5a8a]">
+          ลิงก์สาธารณะให้ลูกค้าเข้าหน้าร้าน — ตั้ง LINE · Facebook · แผนที่ด้านล่าง
+        </p>
+        {copyMsg ? <p className="text-sm font-semibold text-emerald-700">{copyMsg}</p> : null}
+        <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
+          <p className="text-xs font-bold text-[#4d47b6]">ลิงก์ร้านออนไลน์</p>
+          <p className="break-all text-sm font-semibold text-[#1e1b4b]">{shopUrl}</p>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={ecommercePublicShopUrl(storeId)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={ecommerceStoreCompactOutlineButtonClass}
+            >
+              เปิดลิงก์
+            </a>
+            <button
+              type="button"
+              onClick={() => void copy()}
+              className={cn(ecommerceStoreDashboardSegmentBtnClass(true), "min-h-8 px-3")}
+            >
+              <IconCopy className="h-3.5 w-3.5" aria-hidden />
+              คัดลอกลิงก์
+            </button>
+            {salePageEnabled && featuredProductId ? (
+              <Link
+                href={`/shop/${storeId}/sale`}
+                target="_blank"
+                className={ecommerceStoreCompactOutlineButtonClass}
+              >
+                Sale Page
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </ModuleQrMonthlyGate>
   );
 }
 
@@ -99,13 +173,11 @@ export function EcommerceSettingsClient() {
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
   const [shopUrl, setShopUrl] = useState("");
   const [cnameTarget, setCnameTarget] = useState("app.ma-well.com");
   const [tab, setTab] = useState<EcommerceStoreSettingsTab>("basic");
-  const logoGalleryRef = useRef<HTMLInputElement>(null);
-  const logoCameraRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -122,7 +194,18 @@ export function EcommerceSettingsClient() {
         setCnameTarget(storeJ.cnameTarget.trim());
       }
       if (s) {
-        setStore(s);
+        setStore({
+          ...s,
+          slipPaperSize: parseAppSlipPaperSize(s.slipPaperSize),
+          tagline: s.tagline ?? null,
+          contactPhone: s.contactPhone ?? null,
+          address: s.address ?? null,
+          taxId: s.taxId ?? null,
+          promptPayQrImageUrl: s.promptPayQrImageUrl ?? null,
+          contactLine: s.contactLine ?? null,
+          facebookUrl: s.facebookUrl ?? null,
+          mapUrl: s.mapUrl ?? null,
+        });
         setShopUrl(ecommercePublicShopUrl(s.id));
       }
       const list = (prodJ.products ?? []) as { id: string; name: string }[];
@@ -142,77 +225,108 @@ export function EcommerceSettingsClient() {
     window.history.replaceState({}, "", url.toString());
   };
 
+  const paymentValue: ModuleShopPaymentDto | null = store
+    ? {
+        promptPayPhone: store.promptPayPhone,
+        promptPayQrImageUrl: store.promptPayQrImageUrl,
+        bankName: store.bankName,
+        bankAccountNumber: store.bankAccountNumber,
+        bankAccountName: store.bankAccountName,
+        taxId: store.taxId,
+      }
+    : null;
+
   async function save() {
     if (!store) return;
     setSaving(true);
     setMsg(null);
-    const res = await fetch("/api/ecommerce-store/session/store", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(store),
-    });
-    setSaving(false);
-    if (res.ok) {
-      const j = await res.json();
-      setStore(j.store);
+    setErr(null);
+    try {
+      const res = await fetch("/api/ecommerce-store/session/store", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(store),
+      });
+      const j = (await res.json().catch(() => ({}))) as { store?: Store; error?: string };
+      if (!res.ok) throw new Error(j.error ?? "บันทึกไม่สำเร็จ");
+      if (j.store) {
+        setStore({
+          ...j.store,
+          slipPaperSize: parseAppSlipPaperSize(j.store.slipPaperSize),
+        });
+      }
       setMsg("บันทึกแล้ว");
-    } else setMsg("บันทึกไม่สำเร็จ");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function verifyDomain() {
     if (!store) return;
     const domainErr = validateEcommerceCustomDomainInput(store.customDomain ?? "");
     if (domainErr) {
-      setMsg(domainErr);
+      setErr(domainErr);
       return;
     }
     setVerifying(true);
     setMsg(null);
+    setErr(null);
     try {
       const saveRes = await fetch("/api/ecommerce-store/session/store", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(store),
       });
-      const saveJ = await saveRes.json();
+      const saveJ = (await saveRes.json().catch(() => ({}))) as { store?: Store; error?: string };
       if (!saveRes.ok) {
-        setMsg(saveJ.error ?? "บันทึกโดเมนไม่สำเร็จ — ลองกดบันทึกการตั้งค่าก่อน");
+        setErr(saveJ.error ?? "บันทึกโดเมนไม่สำเร็จ — ลองกดบันทึกการตั้งค่าก่อน");
         return;
       }
-      setStore(saveJ.store);
+      if (saveJ.store) {
+        setStore({
+          ...saveJ.store,
+          slipPaperSize: parseAppSlipPaperSize(saveJ.store.slipPaperSize),
+        });
+      }
 
       const res = await fetch("/api/ecommerce-store/session/store/verify-domain", { method: "POST" });
-      const j = await res.json();
-      if (res.ok) {
-        setStore(j.store);
+      const j = (await res.json().catch(() => ({}))) as { store?: Store; error?: string };
+      if (res.ok && j.store) {
+        setStore({
+          ...j.store,
+          slipPaperSize: parseAppSlipPaperSize(j.store.slipPaperSize),
+        });
         setMsg("ยืนยันโดเมนแล้ว — ลูกค้าเข้า https://" + (j.store.customDomain ?? ""));
       } else {
-        setMsg(j.error ?? "ยืนยันไม่สำเร็จ");
+        setErr(j.error ?? "ยืนยันไม่สำเร็จ");
       }
     } finally {
       setVerifying(false);
     }
   }
 
-  async function uploadLogo(file: File) {
-    setUploadingLogo(true);
-    setMsg(null);
+  async function uploadPromptPayQr(file: File) {
+    if (!store) return;
+    setSaving(true);
+    setErr(null);
     try {
-      const prepared = await prepareImageFileForUpload(file);
       const fd = new FormData();
-      fd.set("file", prepared);
-      const res = await fetch("/api/ecommerce-store/session/upload-logo", { method: "POST", body: fd });
-      const j = await res.json();
-      if (res.ok && store) setStore({ ...store, logoUrl: j.imageUrl });
-      else setMsg(j.error ?? "อัปโหลดโลโก้ไม่สำเร็จ");
-    } catch {
-      setMsg("อัปโหลดโลโก้ไม่สำเร็จ");
+      fd.set("file", file);
+      const res = await fetch(LOGO_UPLOAD_URL, { method: "POST", body: fd });
+      const json = (await res.json().catch(() => ({}))) as { imageUrl?: string; error?: string };
+      if (!res.ok || !json.imageUrl) throw new Error(json.error ?? "อัปโหลดไม่สำเร็จ");
+      setStore({ ...store, promptPayQrImageUrl: json.imageUrl });
+      setMsg("อัปโหลด QR พร้อมเพย์แล้ว");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ");
     } finally {
-      setUploadingLogo(false);
+      setSaving(false);
     }
   }
 
-  if (!store) {
+  if (!store || !paymentValue) {
     return <div className="h-32 animate-pulse rounded-xl bg-slate-100" aria-hidden />;
   }
 
@@ -304,106 +418,91 @@ export function EcommerceSettingsClient() {
 
       <div className={cn(ecommerceStorePanelSectionClass, ecommerceStorePanelDividerClass)}>
         <div className="space-y-3 text-left">
-          {msg ? (
-            <p
-              className={cn(
-                "text-sm font-semibold",
-                /^(บันทึกแล้ว|ยืนยันโดเมนแล้ว)/.test(msg) ? "text-emerald-700" : "text-rose-600",
-              )}
-            >
-              {msg}
-            </p>
-          ) : null}
+          {err ? <p className="text-sm text-rose-600">{err}</p> : null}
+          {msg ? <p className="text-sm font-semibold text-emerald-700">{msg}</p> : null}
 
           {tab === "basic" ? (
             <div
               id="ecommerce-settings-panel-basic"
               role="tabpanel"
               aria-labelledby="ecommerce-settings-tab-basic"
-              className="space-y-4"
+              className="space-y-3"
             >
-              <div className="flex flex-wrap items-center gap-4">
-                {store.logoUrl ? (
-                  <EcommerceRemoteImg
-                    src={store.logoUrl}
-                    className="h-[72px] w-[72px] rounded-lg object-cover ring-1 ring-slate-200"
-                    fallback={
-                      <div className="flex h-[72px] w-[72px] items-center justify-center rounded-lg bg-slate-100 text-lg font-black text-[#4d47b6]">
-                        {store.storeName.slice(0, 1)}
-                      </div>
-                    }
-                  />
-                ) : (
-                  <div className="flex h-[72px] w-[72px] items-center justify-center rounded-lg bg-slate-100 text-lg font-black text-[#4d47b6]">
-                    {store.storeName.slice(0, 1)}
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm font-bold text-[#1e1b4b]">โลโก้ร้าน</p>
-                  <input
-                    ref={logoGalleryRef}
-                    type="file"
-                    accept="image/*"
-                    className="sr-only"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) void uploadLogo(f);
-                      e.target.value = "";
-                    }}
-                  />
-                  <input
-                    ref={logoCameraRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="sr-only"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) void uploadLogo(f);
-                      e.target.value = "";
-                    }}
-                  />
-                  <AppImagePickCameraButtons
-                    className="mt-2 justify-start"
-                    busy={uploadingLogo}
-                    onPickGallery={() => logoGalleryRef.current?.click()}
-                    onPickCamera={() => logoCameraRef.current?.click()}
-                    labels={{ gallery: "เลือกโลโก้", camera: "ถ่ายโลโก้" }}
-                  />
-                </div>
-              </div>
-
-              <Field label="ชื่อร้าน">
+              <AppShopLogoField
+                logoUrl={store.logoUrl}
+                fallbackLabel={store.storeName || "ร้าน"}
+                uploadUrl={LOGO_UPLOAD_URL}
+                onLogoUrlChange={(url) => setStore({ ...store, logoUrl: url })}
+                buttonClassName={ecommerceStoreCompactOutlineButtonClass}
+              />
+              <label className="block space-y-1">
+                <span className="text-xs font-bold text-[#4d47b6]">ชื่อร้านออนไลน์</span>
                 <input
                   className={cn(ecommerceStoreFieldClass, "mt-1")}
                   value={store.storeName}
                   onChange={(e) => setStore({ ...store, storeName: e.target.value })}
                 />
-              </Field>
-              <Field label="รายละเอียดร้าน">
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-bold text-[#4d47b6]">สโลแกน</span>
+                <input
+                  className={cn(ecommerceStoreFieldClass, "mt-1")}
+                  value={store.tagline ?? ""}
+                  onChange={(e) => setStore({ ...store, tagline: e.target.value })}
+                  placeholder="สั้น ๆ ใต้ชื่อร้าน"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-bold text-[#4d47b6]">เบอร์ติดต่อร้าน</span>
+                <input
+                  className={cn(ecommerceStoreFieldClass, "mt-1")}
+                  value={store.contactPhone ?? ""}
+                  onChange={(e) => setStore({ ...store, contactPhone: e.target.value })}
+                  inputMode="tel"
+                  autoComplete="tel"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-bold text-[#4d47b6]">ที่อยู่</span>
+                <input
+                  className={cn(ecommerceStoreFieldClass, "mt-1")}
+                  value={store.address ?? ""}
+                  onChange={(e) => setStore({ ...store, address: e.target.value })}
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-bold text-[#4d47b6]">รายละเอียดร้าน</span>
                 <textarea
                   className={cn(ecommerceStoreTextareaClass, "mt-1")}
                   value={store.description ?? ""}
                   onChange={(e) => setStore({ ...store, description: e.target.value })}
+                  rows={3}
                 />
-              </Field>
-              <Field label="แจ้งเตือนสต๊อกต่ำกว่า">
-                <input
-                  type="number"
-                  min={0}
-                  className={cn(ecommerceStoreFieldClass, "mt-1")}
-                  value={store.lowStockThreshold}
-                  onChange={(e) => setStore({ ...store, lowStockThreshold: Number(e.target.value) })}
-                />
-              </Field>
-              <label className="flex items-center gap-2 text-sm font-semibold text-rose-600">
-                <input
-                  type="checkbox"
-                  checked={store.merchantPaused}
-                  onChange={(e) => setStore({ ...store, merchantPaused: e.target.checked })}
-                />
-                ปิดรับออเดอร์ชั่วคราว
               </label>
+
+              <div className="space-y-3 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
+                <p className="text-xs font-bold text-[#4d47b6]">การดำเนินงานร้าน</p>
+                <label className="block space-y-1">
+                  <span className="text-xs font-bold text-[#4d47b6]">แจ้งเตือนสต๊อกต่ำกว่า</span>
+                  <input
+                    type="number"
+                    min={0}
+                    className={cn(ecommerceStoreFieldClass, "mt-1")}
+                    value={store.lowStockThreshold}
+                    onChange={(e) =>
+                      setStore({ ...store, lowStockThreshold: Number(e.target.value) })
+                    }
+                  />
+                </label>
+                <label className="flex items-center gap-2 text-sm font-semibold text-rose-600">
+                  <input
+                    type="checkbox"
+                    checked={store.merchantPaused}
+                    onChange={(e) => setStore({ ...store, merchantPaused: e.target.checked })}
+                  />
+                  ปิดรับออเดอร์ชั่วคราว
+                </label>
+              </div>
             </div>
           ) : null}
 
@@ -412,45 +511,80 @@ export function EcommerceSettingsClient() {
               id="ecommerce-settings-panel-finance"
               role="tabpanel"
               aria-labelledby="ecommerce-settings-tab-finance"
-              className="grid gap-4 sm:grid-cols-2"
+              className="space-y-3"
             >
-              <Field label="พร้อมเพย์ (เบอร์)">
-                <input
-                  className={cn(ecommerceStoreFieldClass, "mt-1")}
-                  value={store.promptPayPhone ?? ""}
-                  onChange={(e) => setStore({ ...store, promptPayPhone: e.target.value })}
-                />
-              </Field>
-              <Field label="ธนาคาร">
-                <input
-                  className={cn(ecommerceStoreFieldClass, "mt-1")}
-                  value={store.bankName ?? ""}
-                  onChange={(e) => setStore({ ...store, bankName: e.target.value })}
-                />
-              </Field>
-              <Field label="ชื่อบัญชี">
-                <input
-                  className={cn(ecommerceStoreFieldClass, "mt-1")}
-                  value={store.bankAccountName ?? ""}
-                  onChange={(e) => setStore({ ...store, bankAccountName: e.target.value })}
-                />
-              </Field>
-              <Field label="เลขบัญชี">
-                <input
-                  className={cn(ecommerceStoreFieldClass, "mt-1")}
-                  value={store.bankAccountNumber ?? ""}
-                  onChange={(e) => setStore({ ...store, bankAccountNumber: e.target.value })}
-                />
-              </Field>
-              <div className="sm:col-span-2">
-                <Field label="หมายเหตุชำระเงิน">
-                  <textarea
-                    className={cn(ecommerceStoreTextareaClass, "mt-1")}
-                    value={store.paymentNote ?? ""}
-                    onChange={(e) => setStore({ ...store, paymentNote: e.target.value })}
+              <AppModuleShopPaymentFields
+                value={paymentValue}
+                onChange={(payment) =>
+                  setStore({
+                    ...store,
+                    promptPayPhone: payment.promptPayPhone,
+                    promptPayQrImageUrl: payment.promptPayQrImageUrl,
+                    bankName: payment.bankName,
+                    bankAccountNumber: payment.bankAccountNumber,
+                    bankAccountName: payment.bankAccountName,
+                    taxId: payment.taxId,
+                  })
+                }
+                fieldClassName={cn(ecommerceStoreFieldClass, "mt-1")}
+              />
+
+              <div className="space-y-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
+                <p className="text-xs font-black text-[#4d47b6]">QR พร้อมเพย์ (อัปโหลดรูป)</p>
+                <p className="text-[11px] font-semibold text-[#8b87b8]">
+                  ทางเลือก — อัปโหลดภาพ QR จากแอปธนาคาร ถ้ามีรูปนี้ระบบจะแสดงรูปนี้แทนการสร้างจากเบอร์
+                </p>
+                {store.promptPayQrImageUrl ? (
+                  <div className="flex flex-wrap items-start gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={store.promptPayQrImageUrl}
+                      alt="QR พร้อมเพย์ที่อัปโหลด"
+                      className="h-28 w-28 rounded-xl border border-white bg-white object-contain p-1 shadow-sm"
+                    />
+                    <button
+                      type="button"
+                      disabled={saving}
+                      className={cn(ecommerceStoreCompactOutlineButtonClass, "text-rose-700")}
+                      onClick={() => setStore({ ...store, promptPayQrImageUrl: null })}
+                    >
+                      ลบรูป QR
+                    </button>
+                  </div>
+                ) : null}
+                <label className={cn(ecommerceStoreCompactOutlineButtonClass, "cursor-pointer")}>
+                  {store.promptPayQrImageUrl ? "เปลี่ยนภาพ QR" : "เลือกภาพ QR พร้อมเพย์"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    disabled={saving}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) void uploadPromptPayQr(f);
+                    }}
                   />
-                </Field>
+                </label>
               </div>
+
+              <label className="block space-y-1">
+                <span className="text-xs font-bold text-[#4d47b6]">หมายเหตุชำระเงิน</span>
+                <textarea
+                  className={cn(ecommerceStoreTextareaClass, "mt-1")}
+                  value={store.paymentNote ?? ""}
+                  onChange={(e) => setStore({ ...store, paymentNote: e.target.value })}
+                  rows={2}
+                />
+              </label>
+
+              <AppSlipPaperSizeSettingsField
+                value={store.slipPaperSize}
+                onChange={(slipPaperSize) => setStore({ ...store, slipPaperSize })}
+                disabled={saving}
+                fieldClassName={cn(ecommerceStoreFieldClass, "mt-1")}
+                className="rounded-lg border-slate-200/90 bg-slate-50/80 ring-0"
+              />
             </div>
           ) : null}
 
@@ -461,36 +595,21 @@ export function EcommerceSettingsClient() {
               aria-labelledby="ecommerce-settings-tab-portal"
               className="space-y-4"
             >
-              <div className="space-y-3 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
-                <p className="text-sm font-bold text-[#1e1b4b]">ลิงก์ร้าน (แชร์ Facebook / TikTok)</p>
-                <p className="break-all text-xs text-[#66638c]">{shopUrl}</p>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className={cn(ecommerceStoreDashboardSegmentBtnClass(true), "min-h-8 px-3")}
-                    onClick={() => void navigator.clipboard.writeText(shopUrl)}
-                  >
-                    <IconCopy className="h-3.5 w-3.5" aria-hidden />
-                    คัดลอกลิงก์
-                  </button>
-                  <Link
-                    href={ecommercePublicShopUrl(store.id)}
-                    target="_blank"
-                    className={ecommerceStoreOutlineButtonClass}
-                  >
-                    เปิดหน้าร้อง
-                  </Link>
-                  {store.salePageEnabled && store.featuredProductId ? (
-                    <Link
-                      href={`/shop/${store.id}/sale`}
-                      target="_blank"
-                      className={ecommerceStoreOutlineButtonClass}
-                    >
-                      Sale Page
-                    </Link>
-                  ) : null}
-                </div>
-              </div>
+              <EcommercePortalLinkPanel
+                shopUrl={shopUrl}
+                storeId={store.id}
+                salePageEnabled={store.salePageEnabled}
+                featuredProductId={store.featuredProductId}
+              />
+              <EcommercePortalMediaSettings
+                contactLine={store.contactLine ?? ""}
+                facebookUrl={store.facebookUrl ?? ""}
+                mapUrl={store.mapUrl ?? ""}
+                onContactLineChange={(value) => setStore({ ...store, contactLine: value || null })}
+                onFacebookUrlChange={(url) => setStore({ ...store, facebookUrl: url || null })}
+                onMapUrlChange={(url) => setStore({ ...store, mapUrl: url || null })}
+                disabled={saving}
+              />
 
               <div className="space-y-3 rounded-lg border border-slate-200/90 bg-slate-50/80 p-3">
                 <p className="text-sm font-bold text-[#1e1b4b]">Custom Domain</p>
@@ -547,7 +666,8 @@ export function EcommerceSettingsClient() {
                   เปิดโหมด Sale Page (หน้าเดียว — เหมาะ TikTok/FB)
                 </label>
                 {store.salePageEnabled ? (
-                  <Field label="สินค้าเด่น (Sale Page)">
+                  <label className="block space-y-1">
+                    <span className="text-xs font-bold text-[#4d47b6]">สินค้าเด่น (Sale Page)</span>
                     <select
                       className={cn(ecommerceStoreFieldClass, "mt-1")}
                       value={store.featuredProductId ?? ""}
@@ -562,7 +682,7 @@ export function EcommerceSettingsClient() {
                         </option>
                       ))}
                     </select>
-                  </Field>
+                  </label>
                 ) : null}
               </div>
             </div>

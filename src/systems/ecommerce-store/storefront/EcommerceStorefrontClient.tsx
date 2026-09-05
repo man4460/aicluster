@@ -37,7 +37,18 @@ export type StorefrontProductItem = {
 };
 
 type StorePayload = {
-  store: { id: string; storeName: string; logoUrl: string | null; description: string | null };
+  store: {
+    id: string;
+    storeName: string;
+    logoUrl: string | null;
+    description: string | null;
+    tagline?: string | null;
+    contactPhone?: string | null;
+    address?: string | null;
+    contactLine?: string | null;
+    facebookUrl?: string | null;
+    mapUrl?: string | null;
+  };
   categories: Category[];
   products: StorefrontProductItem[];
   salePageEnabled?: boolean;
@@ -158,6 +169,9 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
             <h1 className={cn(ecommerceStorePortalShopNameClass, "truncate text-lg sm:text-xl")}>
               {data.store.storeName}
             </h1>
+            {data.store.tagline?.trim() ? (
+              <p className="truncate text-xs font-medium text-[#66638c]">{data.store.tagline}</p>
+            ) : null}
           </div>
           <Link
             href={`/shop/${data.store.id}/track?tab=history`}
@@ -300,6 +314,63 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
             </div>
           )}
         </EcommercePortalSection>
+
+        {data.store.description?.trim() ||
+        data.store.contactPhone?.trim() ||
+        data.store.address?.trim() ||
+        data.store.contactLine?.trim() ||
+        data.store.facebookUrl?.trim() ||
+        data.store.mapUrl?.trim() ? (
+          <EcommercePortalSection id="contact" title="ติดต่อร้าน">
+            <div className="space-y-2 text-sm font-medium text-[#5f5a8a]">
+              {data.store.description?.trim() ? <p>{data.store.description}</p> : null}
+              {data.store.address?.trim() ? <p>ที่อยู่: {data.store.address}</p> : null}
+              {data.store.contactPhone?.trim() ? (
+                <p>
+                  โทร:{" "}
+                  <a
+                    href={`tel:${data.store.contactPhone.replace(/\s/g, "")}`}
+                    className="font-bold text-[#4d47b6]"
+                  >
+                    {data.store.contactPhone}
+                  </a>
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {data.store.contactLine?.trim() ? (
+                  <a
+                    href={`https://line.me/ti/p/${encodeURIComponent(data.store.contactLine.replace(/^@/, ""))}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={ecommerceStoreOutlineButtonClass}
+                  >
+                    LINE
+                  </a>
+                ) : null}
+                {data.store.facebookUrl?.trim() ? (
+                  <a
+                    href={data.store.facebookUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={ecommerceStoreOutlineButtonClass}
+                  >
+                    Facebook
+                  </a>
+                ) : null}
+                {data.store.mapUrl?.trim() ? (
+                  <a
+                    href={data.store.mapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={ecommerceStoreOutlineButtonClass}
+                  >
+                    แผนที่
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          </EcommercePortalSection>
+        ) : null}
       </main>
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">

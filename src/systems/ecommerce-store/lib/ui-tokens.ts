@@ -24,6 +24,9 @@ export const ecommerceStoreOutlineButtonClass = cn(
   "border border-slate-200/90 bg-white text-[#1e1b4b] hover:border-slate-300 hover:bg-slate-50",
 );
 
+/** alias — ปุ่มขอบเล็กในตั้งค่า (แม่แบบซักผ้า) */
+export const ecommerceStoreCompactOutlineButtonClass = ecommerceStoreOutlineButtonClass;
+
 export const ecommerceStorePrimaryButtonClass = cn(
   ecommerceStoreBtnBaseClass,
   ecommerceStoreBtnPadXClass,

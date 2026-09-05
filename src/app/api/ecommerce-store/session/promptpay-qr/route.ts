@@ -31,13 +31,25 @@ export async function POST(req: Request) {
   const store = await getOrCreateEcommerceStore(auth.ctx.ownerUserId);
   const phone = store.promptPayPhone?.trim() ?? "";
   const digits = phone.replace(/\D/g, "");
+  const uploadedQr = store.promptPayQrImageUrl?.trim() || null;
   const bankPayload = {
     promptPayPhone: phone || null,
+    promptPayQrImageUrl: uploadedQr,
     bankName: store.bankName ?? null,
     bankAccountNumber: store.bankAccountNumber ?? null,
     bankAccountName: store.bankAccountName ?? null,
     shopName: store.storeName ?? null,
   };
+
+  if (uploadedQr) {
+    return NextResponse.json({
+      qrDataUrl: uploadedQr,
+      configured: true,
+      qrSource: "upload" as const,
+      amountBaht: amount,
+      ...bankPayload,
+    });
+  }
 
   if (digits.length < 9) {
     return NextResponse.json({
