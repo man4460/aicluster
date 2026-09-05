@@ -10,7 +10,7 @@ import {
 } from "@/lib/modules/config";
 import { listSubscribedModuleIds } from "@/lib/modules/subscriptions-store";
 import { prisma } from "@/lib/prisma";
-import { listMonthly199ModuleSlugs } from "@/lib/tokens/module-monthly-199";
+import { listMonthly199ModuleSlugs, listPendingMonthlyDowngradeSlugs } from "@/lib/tokens/module-monthly-199";
 
 export const metadata: Metadata = {
   title: "แพ็กเกจ | MAWELL PLATFORM",
@@ -33,11 +33,13 @@ export default async function PlansPage({ searchParams }: Props) {
   });
   if (!user) redirect("/login");
 
-  const [moduleIds, monthly199Slugs] = await Promise.all([
+  const [moduleIds, monthly199Slugs, pendingDowngradeSlugs] = await Promise.all([
     listSubscribedModuleIds(session.sub),
     listMonthly199ModuleSlugs(session.sub),
+    listPendingMonthlyDowngradeSlugs(session.sub),
   ]);
   const monthlySet = new Set(monthly199Slugs);
+  const pendingDowngradeSet = new Set(pendingDowngradeSlugs);
 
   const appModules =
     moduleIds.length > 0
@@ -65,6 +67,7 @@ export default async function PlansPage({ searchParams }: Props) {
         title: displayAppModuleTitle(m.slug, m.title),
         tokenFree,
         plan,
+        pendingDowngrade: plan === "monthly199" && pendingDowngradeSet.has(m.slug),
       };
     });
 

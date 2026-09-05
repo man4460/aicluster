@@ -6,6 +6,7 @@ import {
   downgradeAllMonthly199ToDaily,
   downgradeSingleModuleToDaily,
   listMonthly199ModuleSlugs,
+  listPendingMonthlyDowngradeSlugs,
   upgradeSingleModuleToMonthly199,
   upgradeSubscribedModulesToMonthly199,
 } from "@/lib/tokens/module-monthly-199";
@@ -55,26 +56,45 @@ export async function POST(req: Request) {
       if (!result.ok) {
         return NextResponse.json({ error: result.message, code: result.code }, { status: 400 });
       }
-      const monthly199Slugs = await listMonthly199ModuleSlugs(billingUserId);
+      const [monthly199Slugs, pendingDowngradeSlugs] = await Promise.all([
+        listMonthly199ModuleSlugs(billingUserId),
+        listPendingMonthlyDowngradeSlugs(billingUserId),
+      ]);
       return NextResponse.json({
         ok: true,
         target: "daily",
         moduleSlug: parsed.data.moduleSlug,
         cleared: result.cleared ? 1 : 0,
-        alreadyDaily: !result.cleared,
+        scheduled: Boolean(result.scheduled),
+        alreadyDaily: !result.cleared && !result.scheduled,
+        alreadyPending: Boolean(result.alreadyPending),
         monthly199Slugs,
+        pendingDowngradeSlugs,
       });
     }
     const current = await listMonthly199ModuleSlugs(billingUserId);
     if (current.length === 0 && ctx.access.subscriptionType !== "BUFFET") {
-      return NextResponse.json({ ok: true, cleared: 0, alreadyDaily: true });
+      return NextResponse.json({
+        ok: true,
+        cleared: 0,
+        scheduled: 0,
+        alreadyDaily: true,
+        monthly199Slugs: [] as string[],
+        pendingDowngradeSlugs: [] as string[],
+      });
     }
-    const { cleared } = await downgradeAllMonthly199ToDaily(billingUserId);
+    const { cleared, scheduled } = await downgradeAllMonthly199ToDaily(billingUserId);
+    const [monthly199Slugs, pendingDowngradeSlugs] = await Promise.all([
+      listMonthly199ModuleSlugs(billingUserId),
+      listPendingMonthlyDowngradeSlugs(billingUserId),
+    ]);
     return NextResponse.json({
       ok: true,
       target: "daily",
       cleared,
-      monthly199Slugs: [] as string[],
+      scheduled,
+      monthly199Slugs,
+      pendingDowngradeSlugs,
     });
   }
 
@@ -95,6 +115,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: result.message, code: result.code }, { status: 400 });
     }
     const monthly199Slugs = await listMonthly199ModuleSlugs(billingUserId);
+    const pendingDowngradeSlugs = await listPendingMonthlyDowngradeSlugs(billingUserId);
     return NextResponse.json({
       ok: true,
       target: "monthly199",
@@ -104,6 +125,7 @@ export async function POST(req: Request) {
       tokensRemaining: result.tokensRemaining,
       tokensCharged: result.alreadyHad ? 0 : 199,
       monthly199Slugs,
+      pendingDowngradeSlugs,
     });
   }
 
@@ -125,6 +147,7 @@ export async function POST(req: Request) {
   }
 
   const monthly199Slugs = await listMonthly199ModuleSlugs(billingUserId);
+  const pendingDowngradeSlugs = await listPendingMonthlyDowngradeSlugs(billingUserId);
   return NextResponse.json({
     ok: true,
     target: "monthly199",
@@ -133,5 +156,6 @@ export async function POST(req: Request) {
     tokensRemaining: result.tokensRemaining,
     tokensCharged: result.tokensCharged,
     monthly199Slugs,
+    pendingDowngradeSlugs,
   });
 }

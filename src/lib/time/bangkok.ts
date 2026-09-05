@@ -65,6 +65,31 @@ export function bangkokMonthKey(d = new Date()): string {
   return key.slice(0, 7);
 }
 
+/** วันสุดท้ายของเดือน Bangkok รูปแบบ YYYY-MM-DD */
+export function bangkokMonthEndDateKey(monthKey = bangkokMonthKey()): string {
+  const [ys, ms] = monthKey.split("-");
+  const y = Number(ys);
+  const m = Number(ms);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return `${monthKey}-28`;
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return `${monthKey}-${String(lastDay).padStart(2, "0")}`;
+}
+
+/** ป้ายสิ้นเดือนภาษาไทย (เช่น 30 ก.ย. 2569) — ใช้แสดงจองดาวน์เกรด */
+export function formatBangkokMonthEndLabel(monthKey = bangkokMonthKey()): string {
+  const endKey = bangkokMonthEndDateKey(monthKey);
+  try {
+    return new Date(`${endKey}T12:00:00+07:00`).toLocaleDateString("th-TH", {
+      timeZone: "Asia/Bangkok",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return endKey;
+  }
+}
+
 /** เทียบว่า key a มาก่อน b หรือไม่ (ลำดับสตริง YYYY-MM-DD) */
 export function isBangkokDateBefore(aKey: string, bKey: string): boolean {
   return aKey < bKey;

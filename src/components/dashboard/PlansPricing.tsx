@@ -15,6 +15,7 @@ import {
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import { cn } from "@/lib/cn";
 import { dashboardModuleHref } from "@/lib/dashboard-nav";
+import { formatBangkokMonthEndLabel } from "@/lib/time/bangkok";
 import { MODULE_MONTHLY_199_TOKEN_COST, isTokenDebtLocked, tokenArrearsToClear } from "@/lib/tokens/token-debt";
 
 export type PlansModuleRow = {
@@ -24,6 +25,8 @@ export type PlansModuleRow = {
   /** โมดูลฟรี — ไม่หักรายวัน/รายเดือน */
   tokenFree: boolean;
   plan: "daily" | "monthly199" | "free";
+  /** จองดาวน์เกรดแล้ว — ยังใช้รายเดือนจนสิ้นเดือน */
+  pendingDowngrade?: boolean;
 };
 
 type Props = {
@@ -51,6 +54,7 @@ export function PlansPricing({ showUpgradeHint, tokens, modules: initialModules 
 
   const arrears = tokenArrearsToClear(tokens);
   const locked = isTokenDebtLocked(tokens);
+  const monthEndLabel = useMemo(() => formatBangkokMonthEndLabel(), []);
 
   useEffect(() => {
     setModules(initialModules);
@@ -190,11 +194,14 @@ export function PlansPricing({ showUpgradeHint, tokens, modules: initialModules 
 
     const ok = await notice.confirm(
       target === "monthly199"
-        ? `อัปเกรด «${mod.title}» เป็นแพ็กรายเดือน?\n\nหัก ${MODULE_MONTHLY_199_TOKEN_COST} โทเคน · ไม่หัก 1 บาท/วันของโมดูลนี้`
-        : `ดาวน์เกรด «${mod.title}» เป็นสายรายวัน?\n\nยังสมัครโมดูลนี้ไว้ — จะหัก 1 บาท/วันเมื่อเข้าใช้\nไม่คืนโทเคนที่จ่ายไปแล้วในงวดนี้`,
+        ? mod.pendingDowngrade
+          ? `ยกเลิกการดาวน์เกรด «${mod.title}»?\n\nจะใช้แพ็กรายเดือนต่อไปตามปกติ`
+          : `อัปเกรด «${mod.title}» เป็นแพ็กรายเดือน?\n\nหัก ${MODULE_MONTHLY_199_TOKEN_COST} โทเคน · ไม่หัก 1 บาท/วันของโมดูลนี้`
+        : `ดาวน์เกรด «${mod.title}» เป็นสายรายวัน?\n\nยังใช้แพ็กรายเดือนได้ถึง ${monthEndLabel}\nจากนั้นจึงเปลี่ยนเป็นสายรายวัน (หัก 1 บาท/วันเมื่อเข้าใช้)\nไม่คืนโทเคนที่จ่ายไปแล้วในงวดนี้`,
       {
-        title: target === "monthly199" ? "ยืนยันอัปเกรด" : "ยืนยันดาวน์เกรด",
-        confirmLabel: target === "monthly199" ? "อัปเกรด" : "ดาวน์เกรด",
+        title: target === "monthly199" ? (mod.pendingDowngrade ? "ยกเลิกดาวน์เกรด" : "ยืนยันอัปเกรด") : "ยืนยันดาวน์เกรด",
+        confirmLabel:
+          target === "monthly199" ? (mod.pendingDowngrade ? "คงรายเดือน" : "อัปเกรด") : "จองดาวน์เกรด",
         tone: target === "monthly199" ? "confirm" : "warning",
       },
     );
@@ -212,8 +219,11 @@ export function PlansPricing({ showUpgradeHint, tokens, modules: initialModules 
         error?: string;
         alreadyHad?: boolean;
         alreadyDaily?: boolean;
+        alreadyPending?: boolean;
+        scheduled?: boolean;
         tokensCharged?: number;
         monthly199Slugs?: string[];
+        pendingDowngradeSlugs?: string[];
       };
       if (!res.ok) {
         notice.error(data.error ?? "เปลี่ยนแพ็กไม่สำเร็จ", { title: "ไม่สำเร็จ" });
@@ -221,36 +231,46 @@ export function PlansPricing({ showUpgradeHint, tokens, modules: initialModules 
       }
 
       const monthlySet = new Set(Array.isArray(data.monthly199Slugs) ? data.monthly199Slugs : []);
+      const pendingSet = new Set(
+        Array.isArray(data.pendingDowngradeSlugs) ? data.pendingDowngradeSlugs : [],
+      );
       setModules((prev) =>
         prev.map((row) => {
-          if (row.tokenFree) return { ...row, plan: "free" as const };
+          if (row.tokenFree) return { ...row, plan: "free" as const, pendingDowngrade: false };
           if (Array.isArray(data.monthly199Slugs)) {
+            const plan = monthlySet.has(row.slug) ? ("monthly199" as const) : ("daily" as const);
             return {
               ...row,
-              plan: monthlySet.has(row.slug) ? ("monthly199" as const) : ("daily" as const),
+              plan,
+              pendingDowngrade: plan === "monthly199" && pendingSet.has(row.slug),
             };
           }
           if (row.slug !== mod.slug) return row;
           return {
             ...row,
             plan: target === "monthly199" ? ("monthly199" as const) : ("daily" as const),
+            pendingDowngrade: target === "daily" ? Boolean(data.scheduled) : false,
           };
         }),
       );
 
       if (target === "monthly199") {
         notice.success(
-          data.alreadyHad
-            ? `«${mod.title}» เป็นแพ็กรายเดือนอยู่แล้ว`
+          mod.pendingDowngrade || data.alreadyHad
+            ? data.alreadyHad && !mod.pendingDowngrade
+              ? `«${mod.title}» เป็นแพ็กรายเดือนอยู่แล้ว`
+              : `ยกเลิกดาวน์เกรดแล้ว — «${mod.title}» ใช้แพ็กรายเดือนต่อไป`
             : `อัปเกรด «${mod.title}» สำเร็จ — หัก ${data.tokensCharged ?? MODULE_MONTHLY_199_TOKEN_COST} โทเคน`,
-          { title: "อัปเกรดแล้ว" },
+          { title: mod.pendingDowngrade ? "คงรายเดือน" : "อัปเกรดแล้ว" },
         );
       } else {
         notice.success(
           data.alreadyDaily
             ? `«${mod.title}» เป็นสายรายวันอยู่แล้ว`
-            : `ดาวน์เกรด «${mod.title}» เป็นสายรายวันแล้ว`,
-          { title: "ดาวน์เกรดแล้ว" },
+            : data.alreadyPending || data.scheduled
+              ? `จองดาวน์เกรดแล้ว — ใช้แพ็กรายเดือนได้ถึง ${monthEndLabel}`
+              : `ดาวน์เกรด «${mod.title}» เป็นสายรายวันแล้ว`,
+          { title: data.scheduled || data.alreadyPending ? "จองดาวน์เกรดแล้ว" : "ดาวน์เกรดแล้ว" },
         );
       }
       router.refresh();
@@ -374,6 +394,7 @@ export function PlansPricing({ showUpgradeHint, tokens, modules: initialModules 
               const busy = busySlug === mod.slug;
               const isMonthly = mod.plan === "monthly199";
               const isFree = mod.plan === "free";
+              const pendingDowngrade = Boolean(mod.pendingDowngrade);
               return (
                 <article
                   key={mod.id}
@@ -406,13 +427,20 @@ export function PlansPricing({ showUpgradeHint, tokens, modules: initialModules 
                       >
                         {isMonthly ? "สายรายเดือน" : isFree ? "ฟรี" : "สายรายวัน"}
                       </span>
+                      {pendingDowngrade ? (
+                        <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 ring-1 ring-amber-200">
+                          สิ้นสุด {monthEndLabel}
+                        </span>
+                      ) : null}
                     </div>
                     <p className="mt-1 text-[11px] font-medium text-[#66638c]">
-                      {isMonthly
-                        ? `หัก ${MODULE_MONTHLY_199_TOKEN_COST} โทเคน / เดือน · ไม่หักรายวัน`
-                        : isFree
-                          ? "ไม่หักโทเคน"
-                          : "หัก 1 โทเคน / วัน เมื่อเข้าใช้"}
+                      {pendingDowngrade
+                        ? `ใช้แพ็กรายเดือนได้ถึง ${monthEndLabel} แล้วเปลี่ยนเป็นสายรายวัน`
+                        : isMonthly
+                          ? `หัก ${MODULE_MONTHLY_199_TOKEN_COST} โทเคน / เดือน · ไม่หักรายวัน`
+                          : isFree
+                            ? "ไม่หักโทเคน"
+                            : "หัก 1 โทเคน / วัน เมื่อเข้าใช้"}
                     </p>
                   </div>
 
@@ -421,6 +449,15 @@ export function PlansPricing({ showUpgradeHint, tokens, modules: initialModules 
                       <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
                         ไม่ต้องอัปเกรด
                       </span>
+                    ) : pendingDowngrade ? (
+                      <button
+                        type="button"
+                        disabled={busy || busySlug != null || locked}
+                        onClick={() => void switchModulePlan(mod, "monthly199")}
+                        className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-violet-200 bg-violet-50 px-3 text-xs font-bold text-violet-800 hover:bg-violet-100 disabled:opacity-50"
+                      >
+                        {busy ? "กำลังบันทึก..." : "ยกเลิกดาวน์เกรด"}
+                      </button>
                     ) : isMonthly ? (
                       <button
                         type="button"

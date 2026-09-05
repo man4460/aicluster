@@ -407,14 +407,16 @@ model UserModuleDailyCharge {
  * แพ็กต่อโมดูล — MONTHLY_199 = สิทธิ์ตามที่แอดมินตั้ง (ข้อมูลเกินเกณฑ์ · พิมพ์สลิป ฯลฯ) ไม่เหมาทั้งระบบ
  */
 model UserModulePlan {
-  id               String            @id @default(cuid())
-  userId           String            @map("user_id") @db.VarChar(191)
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  moduleSlug       String            @map("module_slug") @db.VarChar(64)
-  kind             ModuleBillingKind @default(MONTHLY_199)
-  lastBillingMonth String?           @map("last_billing_month") @db.VarChar(7)
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
+  id                 String            @id @default(cuid())
+  userId             String            @map("user_id") @db.VarChar(191)
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moduleSlug         String            @map("module_slug") @db.VarChar(64)
+  kind               ModuleBillingKind @default(MONTHLY_199)
+  lastBillingMonth   String?           @map("last_billing_month") @db.VarChar(7)
+  /** จองดาวน์เกรดเป็นสายรายวัน — ยังใช้ MONTHLY_199 จนสิ้นรอบที่จ่ายแล้ว แล้วค่อยตัดตอนหักงวดถัดไป */
+  cancelAtPeriodEnd  Boolean           @default(false) @map("cancel_at_period_end")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
 
   @@unique([userId, moduleSlug], map: "ump_user_slug_uidx")
   @@index([userId, kind], map: "ump_user_kind_idx")

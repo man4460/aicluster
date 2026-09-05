@@ -17,6 +17,20 @@ export async function listMonthly199ModuleSlugs(billingUserId: string): Promise<
   }
 }
 
+/** โมดูลที่จองดาวน์เกรดแล้ว แต่ยังใช้แพ็กรายเดือนจนสิ้นรอบ */
+export async function listPendingMonthlyDowngradeSlugs(billingUserId: string): Promise<string[]> {
+  if (!billingUserId) return [];
+  try {
+    const rows = await prisma.userModulePlan.findMany({
+      where: { userId: billingUserId, kind: "MONTHLY_199", cancelAtPeriodEnd: true },
+      select: { moduleSlug: true },
+    });
+    return rows.map((r) => r.moduleSlug);
+  } catch {
+    return [];
+  }
+}
+
 export async function moduleHasActiveMonthly199(billingUserId: string, moduleSlug: string): Promise<boolean> {
   if (!billingUserId || !moduleSlug) return false;
   const row = await prisma.userModulePlan.findUnique({
@@ -50,8 +64,14 @@ async function migrateLegacyAccountBuffet(userId: string): Promise<void> {
     if (isDailyTokenExemptModuleSlug(m.slug)) continue;
     await prisma.userModulePlan.upsert({
       where: { userId_moduleSlug: { userId, moduleSlug: m.slug } },
-      create: { userId, moduleSlug: m.slug, kind: "MONTHLY_199", lastBillingMonth: month },
-      update: { kind: "MONTHLY_199", lastBillingMonth: month },
+      create: {
+        userId,
+        moduleSlug: m.slug,
+        kind: "MONTHLY_199",
+        lastBillingMonth: month,
+        cancelAtPeriodEnd: false,
+      },
+      update: { kind: "MONTHLY_199", lastBillingMonth: month, cancelAtPeriodEnd: false },
     });
   }
   await prisma.user.update({
@@ -78,7 +98,7 @@ export async function applyModuleMonthly199Billing(userId: string): Promise<void
       kind: "MONTHLY_199",
       OR: [{ lastBillingMonth: null }, { lastBillingMonth: { not: month } }],
     },
-    select: { id: true, moduleSlug: true },
+    select: { id: true, moduleSlug: true, cancelAtPeriodEnd: true },
   });
   if (due.length === 0) return;
 
@@ -88,6 +108,12 @@ export async function applyModuleMonthly199Billing(userId: string): Promise<void
     if (isTokenDebtLocked(fresh.tokens)) return;
 
     for (const row of due) {
+      // จองดาวน์เกรดไว้แล้ว — สิ้นรอบที่จ่ายแล้ว → ตัดแพ็ก ไม่หัก 199 งวดใหม่
+      if (row.cancelAtPeriodEnd) {
+        await tx.userModulePlan.delete({ where: { id: row.id } });
+        continue;
+      }
+
       await tx.user.update({
         where: { id: userId },
         data: { tokens: { decrement: MODULE_MONTHLY_199_TOKEN_COST } },
@@ -126,8 +152,18 @@ export async function upgradeSingleModuleToMonthly199(
   });
   if (!mod?.isActive) return { ok: false, code: "REJECTED", message: "ไม่พบระบบ" };
 
-  const already = await moduleHasActiveMonthly199(userId, moduleSlug);
-  if (already) {
+  const existing = await prisma.userModulePlan.findUnique({
+    where: { userId_moduleSlug: { userId, moduleSlug } },
+    select: { kind: true, cancelAtPeriodEnd: true },
+  });
+  if (existing?.kind === "MONTHLY_199") {
+    // ยกเลิกจองดาวน์เกรด — คงแพ็กรายเดือนต่อ
+    if (existing.cancelAtPeriodEnd) {
+      await prisma.userModulePlan.update({
+        where: { userId_moduleSlug: { userId, moduleSlug } },
+        data: { cancelAtPeriodEnd: false },
+      });
+    }
     const { subscribeModule } = await import("@/lib/modules/subscriptions-store");
     await subscribeModule(userId, mod.id);
     const tokens = (await prisma.user.findUnique({ where: { id: userId }, select: { tokens: true } }))?.tokens ?? 0;
@@ -171,10 +207,17 @@ export async function purchaseModuleMonthly199(
 
     const existing = await tx.userModulePlan.findUnique({
       where: { userId_moduleSlug: { userId, moduleSlug } },
-      select: { kind: true, lastBillingMonth: true },
+      select: { kind: true, lastBillingMonth: true, cancelAtPeriodEnd: true },
     });
     const month = bangkokMonthKey();
     if (existing?.kind === "MONTHLY_199" && existing.lastBillingMonth === month) {
+      if (existing.cancelAtPeriodEnd) {
+        await tx.userModulePlan.update({
+          where: { userId_moduleSlug: { userId, moduleSlug } },
+          data: { cancelAtPeriodEnd: false },
+        });
+        return { ok: true, tokensRemaining: user.tokens, alreadyHad: true };
+      }
       return { ok: false, code: "REJECTED", message: "โมดูลนี้มีแพ็ก 199 สำหรับเดือนนี้อยู่แล้ว" };
     }
 
@@ -184,8 +227,14 @@ export async function purchaseModuleMonthly199(
     });
     await tx.userModulePlan.upsert({
       where: { userId_moduleSlug: { userId, moduleSlug } },
-      create: { userId, moduleSlug, kind: "MONTHLY_199", lastBillingMonth: month },
-      update: { kind: "MONTHLY_199", lastBillingMonth: month },
+      create: {
+        userId,
+        moduleSlug,
+        kind: "MONTHLY_199",
+        lastBillingMonth: month,
+        cancelAtPeriodEnd: false,
+      },
+      update: { kind: "MONTHLY_199", lastBillingMonth: month, cancelAtPeriodEnd: false },
     });
     const after = await tx.user.findUnique({ where: { id: userId }, select: { tokens: true } });
     return { ok: true, tokensRemaining: after?.tokens ?? user.tokens - MODULE_MONTHLY_199_TOKEN_COST };
@@ -203,35 +252,50 @@ export async function clearModuleMonthly199(userId: string, moduleSlug: string):
   }
 }
 
-/** ดาวน์เกรดโมดูลเดียวเป็นสายรายวัน — คง Subscribe ไว้ */
+/**
+ * ดาวน์เกรดโมดูลเดียวเป็นสายรายวัน — จองสิ้นรอบ
+ * ยังใช้แพ็กรายเดือนจนครบเดือนที่จ่ายแล้ว แล้วค่อยตัดตอนหักงวดถัดไป
+ */
 export async function downgradeSingleModuleToDaily(
   userId: string,
   moduleSlug: string,
-): Promise<{ ok: true; cleared: boolean } | { ok: false; code: "REJECTED"; message: string }> {
+): Promise<
+  | { ok: true; cleared: boolean; scheduled?: boolean; alreadyPending?: boolean }
+  | { ok: false; code: "REJECTED"; message: string }
+> {
   if (!userId || !moduleSlug) return { ok: false, code: "REJECTED", message: "ข้อมูลไม่ครบ" };
   if (isDailyTokenExemptModuleSlug(moduleSlug)) {
     return { ok: false, code: "REJECTED", message: "โมดูลฟรีไม่มีแพ็กรายเดือน" };
   }
-  const had = await moduleHasActiveMonthly199(userId, moduleSlug);
-  if (!had) return { ok: true, cleared: false };
-  await clearModuleMonthly199(userId, moduleSlug);
-  return { ok: true, cleared: true };
+  const row = await prisma.userModulePlan.findUnique({
+    where: { userId_moduleSlug: { userId, moduleSlug } },
+    select: { kind: true, cancelAtPeriodEnd: true },
+  });
+  if (!row || row.kind !== "MONTHLY_199") return { ok: true, cleared: false };
+  if (row.cancelAtPeriodEnd) return { ok: true, cleared: false, alreadyPending: true, scheduled: true };
+
+  await prisma.userModulePlan.update({
+    where: { userId_moduleSlug: { userId, moduleSlug } },
+    data: { cancelAtPeriodEnd: true },
+  });
+  return { ok: true, cleared: false, scheduled: true };
 }
 
-/** ดาวน์เกรด: ลบแพ็ก 199 ทั้งหมด — คง Subscribe ไว้ หักรายวันตามปกติ */
-export async function downgradeAllMonthly199ToDaily(userId: string): Promise<{ cleared: number }> {
-  if (!userId) return { cleared: 0 };
+/** ดาวน์เกรด: จองยกเลิกแพ็ก 199 ทั้งหมดเมื่อสิ้นรอบ — คงสิทธิ์รายเดือนจนกว่าจะครบเดือน */
+export async function downgradeAllMonthly199ToDaily(userId: string): Promise<{ cleared: number; scheduled: number }> {
+  if (!userId) return { cleared: 0, scheduled: 0 };
   try {
-    const result = await prisma.userModulePlan.deleteMany({
-      where: { userId, kind: "MONTHLY_199" },
+    const result = await prisma.userModulePlan.updateMany({
+      where: { userId, kind: "MONTHLY_199", cancelAtPeriodEnd: false },
+      data: { cancelAtPeriodEnd: true },
     });
     await prisma.user.updateMany({
       where: { id: userId, subscriptionType: "BUFFET" },
       data: { subscriptionType: "DAILY", subscriptionTier: "NONE" },
     });
-    return { cleared: result.count };
+    return { cleared: 0, scheduled: result.count };
   } catch {
-    return { cleared: 0 };
+    return { cleared: 0, scheduled: 0 };
   }
 }
 
@@ -284,8 +348,16 @@ export async function upgradeSubscribedModulesToMonthly199(
       kind: "MONTHLY_199",
       moduleSlug: { in: billable.map((m) => m.slug) },
     },
-    select: { moduleSlug: true },
+    select: { moduleSlug: true, cancelAtPeriodEnd: true },
   });
+  // ยกเลิกจองดาวน์เกรดของโมดูลที่ยังเป็นรายเดือน
+  const pendingCancel = existing.filter((r) => r.cancelAtPeriodEnd).map((r) => r.moduleSlug);
+  if (pendingCancel.length > 0) {
+    await prisma.userModulePlan.updateMany({
+      where: { userId, moduleSlug: { in: pendingCancel }, kind: "MONTHLY_199" },
+      data: { cancelAtPeriodEnd: false },
+    });
+  }
   const already = new Set(existing.map((r) => r.moduleSlug));
   const toUpgrade = billable.filter((m) => !already.has(m.slug));
   if (toUpgrade.length === 0) {
@@ -336,8 +408,14 @@ export async function upgradeSubscribedModulesToMonthly199(
     for (const m of toUpgrade) {
       await tx.userModulePlan.upsert({
         where: { userId_moduleSlug: { userId, moduleSlug: m.slug } },
-        create: { userId, moduleSlug: m.slug, kind: "MONTHLY_199", lastBillingMonth: month },
-        update: { kind: "MONTHLY_199", lastBillingMonth: month },
+        create: {
+          userId,
+          moduleSlug: m.slug,
+          kind: "MONTHLY_199",
+          lastBillingMonth: month,
+          cancelAtPeriodEnd: false,
+        },
+        update: { kind: "MONTHLY_199", lastBillingMonth: month, cancelAtPeriodEnd: false },
       });
     }
     const after = await tx.user.findUnique({ where: { id: userId }, select: { tokens: true } });
