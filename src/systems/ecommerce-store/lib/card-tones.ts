@@ -128,3 +128,16 @@ export function ecommerceStoreCustomerRowTone(opts: {
   if (opts.spendBaht > 0) return "violet";
   return "slate";
 }
+
+/** โทนแถวสินค้าตามสถานะสต๊อก / เปิดขาย */
+export function ecommerceStoreProductRowTone(opts: {
+  isActive: boolean;
+  lowStock: boolean;
+  isRecommended?: boolean;
+  isBestseller?: boolean;
+}): EcommerceStoreCardTone {
+  if (!opts.isActive) return "slate";
+  if (opts.lowStock) return "amber";
+  if (opts.isRecommended || opts.isBestseller) return "rose";
+  return "violet";
+}

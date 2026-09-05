@@ -1,37 +1,42 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { Package } from "lucide-react";
 import {
   AppDashboardSection,
   AppImagePickCameraButtons,
   AppImageLightbox,
   AppImageThumb,
   AppSectionHeader,
-  appTemplateOutlineButtonClass,
   useAppImageLightbox,
 } from "@/components/app-templates";
 import { cn } from "@/lib/cn";
 import { FormModal, FormModalFooterActions } from "@/components/ui/FormModal";
 import {
+  assetRowEditIconButtonClass,
+  assetRowRemoveIconButtonClass,
   IconRowEdit,
   IconRowRemove,
 } from "@/systems/asset/components/AssetRowActionIcons";
 import {
-  ecommerceCardAccentBarClass,
   ecommerceFieldClass,
   ecommerceFilterChipClass,
   ecommerceGradientPriceClass,
-  ecommerceListRowCardClass,
-  ecommerceListRowCardWarnClass,
   ecommerceListStackClass,
-  ecommercePlainIconActionClass,
-  ecommercePlainIconActionToggleActiveClass,
-  ecommercePlainIconActionToggleInactiveClass,
-  ecommercePlainIconActionWarnClass,
   ecommerceProductTagClass,
   ecommerceStockButtonClass,
   ecommerceStockPillClass,
 } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
+import {
+  ecommerceStoreCardIconTileClass,
+  ecommerceStoreProductRowTone,
+  ecommerceStoreTonedRowCardClass,
+} from "@/systems/ecommerce-store/lib/card-tones";
+import {
+  ecommerceStoreInlineSubNavBtnClass,
+  ecommerceStoreInlineSubNavShellClass,
+  ecommerceStoreNavDividerClass,
+} from "@/systems/ecommerce-store/lib/ui-tokens";
 
 type Category = {
   id: string;
@@ -53,7 +58,21 @@ type Product = {
   isBestseller: boolean;
 };
 
-export function EcommerceProductsClient({ embedded = false }: { embedded?: boolean } = {}) {
+export type EcommerceProductsEmbeddedToolbarApi = {
+  filterOpen: boolean;
+  hasActiveFilters: boolean;
+  toggleFilter: () => void;
+  openAddProduct: () => void;
+  openAddCategory: () => void;
+};
+
+export function EcommerceProductsClient({
+  embedded = false,
+  onEmbeddedToolbar,
+}: {
+  embedded?: boolean;
+  onEmbeddedToolbar?: (api: EcommerceProductsEmbeddedToolbarApi | null) => void;
+} = {}) {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [threshold, setThreshold] = useState(5);
@@ -99,7 +118,7 @@ export function EcommerceProductsClient({ embedded = false }: { embedded?: boole
   const [keyword, setKeyword] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "inactive">("all");
-  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(true);
   const [stockModalProduct, setStockModalProduct] = useState<Product | null>(null);
 
   function resetProductForm() {
@@ -325,6 +344,40 @@ export function EcommerceProductsClient({ embedded = false }: { embedded?: boole
 
   const hasActiveFilter = keyword.trim() !== "" || categoryFilter !== "" || stockFilter !== "all";
 
+  const toggleFilter = useCallback(() => {
+    setFilterOpen((o) => !o);
+  }, []);
+
+  const openAddProduct = useCallback(() => {
+    resetProductForm();
+    setShowAddProductModal(true);
+  }, []);
+
+  const openAddCategory = useCallback(() => {
+    resetCategoryForm();
+    setShowAddCategoryModal(true);
+  }, []);
+
+  useEffect(() => {
+    if (!embedded || !onEmbeddedToolbar) return;
+    onEmbeddedToolbar({
+      filterOpen,
+      hasActiveFilters: hasActiveFilter,
+      toggleFilter,
+      openAddProduct,
+      openAddCategory,
+    });
+    return () => onEmbeddedToolbar(null);
+  }, [
+    embedded,
+    onEmbeddedToolbar,
+    filterOpen,
+    hasActiveFilter,
+    toggleFilter,
+    openAddProduct,
+    openAddCategory,
+  ]);
+
   const productFormFields = (
     opts: {
       nameVal: string;
@@ -492,77 +545,83 @@ export function EcommerceProductsClient({ embedded = false }: { embedded?: boole
 
   const body = (
     <>
-      <AppSectionHeader
-        title="สินค้า & สต๊อก"
-        description="เพิ่มสินค้า · ปรับสต๊อก"
-        className="flex flex-row items-start justify-between gap-3 sm:items-center"
-        actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
-        action={
-          <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
-            <button
-              type="button"
-              className={cn(
-                appTemplateOutlineButtonClass,
-                "min-h-[40px] rounded-xl px-3 text-sm font-bold sm:px-4",
-              )}
-              aria-label="เพิ่มหมวดหมู่"
-              onClick={() => {
-                resetCategoryForm();
-                setShowAddCategoryModal(true);
-              }}
+      {!embedded ? (
+        <AppSectionHeader
+          title="สินค้า & สต๊อก"
+          description="เพิ่มสินค้า · ปรับสต๊อก"
+          className="flex flex-row items-start justify-between gap-3 sm:items-center"
+          actionWrapClassName="shrink-0 self-start pt-0.5 sm:pt-0"
+          action={
+            <div
+              className="flex shrink-0 flex-nowrap items-center gap-1 sm:gap-1.5"
+              role="group"
+              aria-label="เครื่องมือสินค้า"
             >
-              <span className="sm:hidden">หมวด</span>
-              <span className="hidden sm:inline">+ หมวด</span>
-            </button>
-            <button
-              type="button"
-              className="app-btn-primary min-h-[40px] min-w-[40px] rounded-xl px-3 text-sm font-bold sm:min-w-0 sm:px-4"
-              aria-label="เพิ่มสินค้า"
-              onClick={() => {
-                resetProductForm();
-                setShowAddProductModal(true);
-              }}
-            >
-              <span className="sm:hidden">+</span>
-              <span className="hidden sm:inline">+ เพิ่มสินค้า</span>
-            </button>
-          </div>
-        }
-      />
+              <div className={ecommerceStoreInlineSubNavShellClass}>
+                <button
+                  type="button"
+                  onClick={toggleFilter}
+                  aria-expanded={filterOpen}
+                  aria-controls="ecommerce-products-filter-panel"
+                  aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+                  title={filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+                  className={cn(
+                    ecommerceStoreInlineSubNavBtnClass(filterOpen),
+                    "relative",
+                    hasActiveFilter && !filterOpen && "ring-1 ring-amber-300/80",
+                  )}
+                >
+                  <IconFilter className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+                  {hasActiveFilter && !filterOpen ? (
+                    <span
+                      className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] ring-2 ring-white"
+                      aria-hidden
+                    />
+                  ) : null}
+                </button>
+              </div>
+              <span className={ecommerceStoreNavDividerClass} aria-hidden />
+              <div className={ecommerceStoreInlineSubNavShellClass}>
+                <button
+                  type="button"
+                  className={ecommerceStoreInlineSubNavBtnClass(false)}
+                  aria-label="เพิ่มหมวดหมู่"
+                  onClick={openAddCategory}
+                >
+                  <span className="hidden sm:inline">+ หมวด</span>
+                  <span className="sm:hidden text-[10px] font-black" aria-hidden>
+                    หมวด
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className={ecommerceStoreInlineSubNavBtnClass(false)}
+                  aria-label="เพิ่มสินค้า"
+                  onClick={openAddProduct}
+                >
+                  <span className="sm:hidden">+</span>
+                  <span className="hidden sm:inline">+ เพิ่มสินค้า</span>
+                </button>
+              </div>
+            </div>
+          }
+        />
+      ) : null}
 
-      <div className="space-y-2">
-        <div className="flex gap-2">
-          <input
-            type="search"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="ค้นหาชื่อ · SKU · หมวด"
-            className={cn(ecommerceFieldClass, "min-w-0 flex-1")}
-            aria-label="ค้นหาสินค้า"
-          />
-          <button
-            type="button"
-            onClick={() => setMobileFilterOpen((v) => !v)}
-            className={cn(
-              appTemplateOutlineButtonClass,
-              "relative min-h-[44px] min-w-[44px] shrink-0 px-0 sm:hidden",
-              (hasActiveFilter || mobileFilterOpen) && "border-[#5b61ff]/40 bg-[#ecebff]/80",
-            )}
-            aria-label="เปิดตัวกรอง"
-            aria-expanded={mobileFilterOpen}
+      <div className={cn(embedded ? "min-w-0 space-y-2.5" : "mt-3 space-y-3")}>
+        <section className="min-w-0 space-y-2.5" aria-label="กรองสินค้า">
+          <p className="text-sm font-black tabular-nums text-[#2e2a58]">
+            {hasActiveFilter
+              ? `แสดง ${filteredProducts.length.toLocaleString("th-TH")} จาก ${products.length.toLocaleString("th-TH")} รายการ`
+              : `ทั้งหมด ${products.length.toLocaleString("th-TH")} รายการ`}
+          </p>
+
+          <div
+            id="ecommerce-products-filter-panel"
+            className={cn("space-y-3", filterOpen ? "block" : "hidden")}
           >
-            <IconFilter className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div
-          className={cn(
-            "space-y-2 rounded-2xl border border-white/50 bg-white/25 p-3 backdrop-blur-sm sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none",
-            mobileFilterOpen ? "block" : "hidden sm:block",
-          )}
-        >
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [-webkit-overflow-scrolling:touch]">
+            <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="กรองสต๊อก">
               {(
                 [
                   { key: "all" as const, label: "ทั้งหมด" },
@@ -573,50 +632,82 @@ export function EcommerceProductsClient({ embedded = false }: { embedded?: boole
                 <button
                   key={f.key}
                   type="button"
+                  role="tab"
                   onClick={() => setStockFilter(f.key)}
                   className={ecommerceFilterChipClass(stockFilter === f.key)}
-                  aria-pressed={stockFilter === f.key}
+                  aria-selected={stockFilter === f.key}
                 >
                   {f.label}
                 </button>
               ))}
             </div>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className={cn(ecommerceFieldClass, "sm:max-w-[12rem]")}
-              aria-label="กรองหมวดหมู่"
-            >
-              <option value="">ทุกหมวด</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <label className="min-w-0 flex-1" htmlFor="ecommerce-product-filter-keyword">
+                <span className="text-xs font-bold text-[#4d47b6]">ค้นหา</span>
+                <input
+                  id="ecommerce-product-filter-keyword"
+                  type="search"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  placeholder="ชื่อ · SKU · หมวด"
+                  className={cn(ecommerceFieldClass, "mt-1 min-h-[44px]")}
+                  aria-label="ค้นหาสินค้า"
+                />
+              </label>
+              <label className="min-w-0 sm:max-w-[12rem]" htmlFor="ecommerce-product-filter-category">
+                <span className="text-xs font-bold text-[#4d47b6]">หมวดหมู่</span>
+                <select
+                  id="ecommerce-product-filter-category"
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className={cn(ecommerceFieldClass, "mt-1 min-h-[44px]")}
+                  aria-label="กรองหมวดหมู่"
+                >
+                  <option value="">ทุกหมวด</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {hasActiveFilter ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setKeyword("");
+                    setCategoryFilter("");
+                    setStockFilter("all");
+                  }}
+                  className={cn(ecommerceStoreInlineSubNavBtnClass(false), "min-h-[44px] px-4")}
+                  aria-label="ล้างตัวกรอง"
+                >
+                  ล้างกรอง
+                </button>
+              ) : null}
+            </div>
           </div>
-          <p className="text-xs font-semibold text-[#66638c]">
-            {hasActiveFilter
-              ? `แสดง ${filteredProducts.length.toLocaleString("th-TH")} จาก ${products.length.toLocaleString("th-TH")} รายการ`
-              : `ทั้งหมด ${products.length.toLocaleString("th-TH")} รายการ`}
-          </p>
-        </div>
-      </div>
+        </section>
 
       <ul className={ecommerceListStackClass}>
         {products.length === 0 ? (
-          <li className="rounded-2xl border border-dashed border-white/60 py-10 text-center text-sm font-semibold text-[#66638c]">
+          <li className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 py-10 text-center text-sm font-semibold text-[#66638c]">
             ยังไม่มีสินค้า — กด + เพิ่มสินค้า
           </li>
         ) : null}
         {filteredProducts.length === 0 && products.length > 0 ? (
-          <li className="rounded-2xl border border-dashed border-white/60 py-10 text-center text-sm font-semibold text-[#66638c]">
+          <li className="rounded-2xl border border-dashed border-amber-200/80 bg-amber-50/50 py-10 text-center text-sm font-semibold text-amber-950">
             ไม่พบสินค้าตามเงื่อนไข
           </li>
         ) : null}
         {filteredProducts.map((p) => {
           const low = p.stockBalance <= threshold;
-          const accent = !p.isActive ? "slate" : low ? "amber" : p.isRecommended || p.isBestseller ? "rose" : "violet";
+          const tone = ecommerceStoreProductRowTone({
+            isActive: p.isActive,
+            lowStock: low,
+            isRecommended: p.isRecommended,
+            isBestseller: p.isBestseller,
+          });
 
           const stockPill = (
             <button
@@ -632,88 +723,43 @@ export function EcommerceProductsClient({ embedded = false }: { embedded?: boole
             </button>
           );
 
-          const stockInline = (
-            <button
-              type="button"
-              className={cn(
-                "inline font-black tabular-nums underline-offset-2 transition hover:underline",
-                low ? "text-amber-700" : "text-[#4d47b6]",
-              )}
-              onClick={() => setStockModalProduct(p)}
-              aria-label={`สต๊อก ${p.stockBalance} ชิ้น — กดเพื่อปรับ ${p.name}`}
-            >
-              {p.stockBalance}
-            </button>
-          );
-
-          const priceBlock = (
-            <div className="text-right">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#8b87b8] md:hidden">ราคา</p>
-              <p className={cn("text-lg font-black tabular-nums leading-tight md:text-xl", ecommerceGradientPriceClass)}>
-                ฿{Number(p.priceBaht).toLocaleString("th-TH")}
-              </p>
-            </div>
-          );
-
           const actionButtons = (
-            <div className="flex shrink-0 items-center gap-0.5">
+            <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className={ecommercePlainIconActionClass}
+                className={assetRowEditIconButtonClass}
                 aria-label={`แก้ไข ${p.name}`}
                 title="แก้ไข"
                 onClick={() => openEditProduct(p)}
               >
-                <IconRowEdit className="h-5 w-5" aria-hidden />
+                <IconRowEdit className="h-4 w-4" />
               </button>
               <button
                 type="button"
-                className={p.isActive ? ecommercePlainIconActionToggleActiveClass : ecommercePlainIconActionToggleInactiveClass}
+                className={cn(
+                  assetRowEditIconButtonClass,
+                  !p.isActive && "border-slate-200 bg-slate-50 text-slate-500",
+                )}
                 aria-label={`${p.isActive ? "ปิด" : "เปิด"}ขาย ${p.name}`}
                 title={p.isActive ? "ปิดขาย" : "เปิดขาย"}
                 onClick={() => void toggleActive(p.id, p.isActive)}
               >
                 {p.isActive ? (
-                  <IconEyeOff className="h-5 w-5" aria-hidden />
+                  <IconEyeOff className="h-4 w-4" aria-hidden />
                 ) : (
-                  <IconEye className="h-5 w-5" aria-hidden />
+                  <IconEye className="h-4 w-4" aria-hidden />
                 )}
               </button>
               <button
                 type="button"
-                className={ecommercePlainIconActionWarnClass}
+                className={assetRowRemoveIconButtonClass}
                 aria-label={`ลบ ${p.name}`}
                 title="ลบ"
                 onClick={() => void removeProduct(p.id, p.name)}
               >
-                <IconRowRemove className="h-5 w-5" aria-hidden />
+                <IconRowRemove className="h-4 w-4" />
               </button>
             </div>
-          );
-
-          const statusTags = (
-            <>
-              {!p.isActive ? <span className={ecommerceProductTagClass("slate")}>ปิดขาย</span> : null}
-              {low ? <span className={ecommerceProductTagClass("amber")}>ใกล้หมด</span> : null}
-            </>
-          );
-
-          const featureTagsLeft = (
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-              {p.isRecommended ? <span className={ecommerceProductTagClass("rose")}>แนะนำ</span> : null}
-              {p.isBestseller ? <span className={ecommerceProductTagClass("amber")}>ขายดี</span> : null}
-            </div>
-          );
-
-          const metaLine = (
-            <p className="truncate text-xs font-medium leading-relaxed text-[#66638c]">
-              {p.category?.name ?? "ไม่มีหมวด"}
-              {p.sku ? ` · ${p.sku}` : ""}
-              <span className="hidden md:inline">
-                {" · "}
-                {stockInline}
-              </span>
-            </p>
           );
 
           const productImage = p.imageUrl ? (
@@ -721,61 +767,55 @@ export function EcommerceProductsClient({ embedded = false }: { embedded?: boole
               src={p.imageUrl}
               alt={p.name}
               onOpen={() => lb.open(p.imageUrl!)}
-              className="h-16 w-16 shrink-0 md:h-20 md:w-20"
+              className="h-14 w-14 shrink-0 sm:h-16 sm:w-16"
             />
           ) : (
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-white/60 bg-gradient-to-br from-[#f5f4ff] to-[#ecebff] md:h-20 md:w-20">
-              <IconImage className="h-6 w-6 text-[#b3b0d2]" />
-            </div>
+            <span className={ecommerceStoreCardIconTileClass(tone, "lg")} aria-hidden>
+              <Package className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.1} />
+            </span>
           );
 
           return (
-            <li
-              key={p.id}
-              className={cn(
-                "relative overflow-hidden pl-5 md:pl-6",
-                low ? ecommerceListRowCardWarnClass : ecommerceListRowCardClass,
-                !p.isActive && "opacity-80",
-              )}
-            >
-              <span className={ecommerceCardAccentBarClass(accent)} aria-hidden />
-
-              <div className="md:grid md:grid-cols-[5rem_minmax(0,1fr)_auto] md:items-start md:gap-5">
-                <div className="flex gap-3 md:contents">
-                  <div className="flex shrink-0 flex-col gap-1.5 md:w-20">
-                    {productImage}
-                    {(p.isRecommended || p.isBestseller) ? (
-                      <div className="hidden flex-wrap gap-1 md:flex">{featureTagsLeft}</div>
-                    ) : null}
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <p className="text-base font-black leading-snug text-[#1e1b4b] md:leading-tight md:tracking-tight">
+            <li key={p.id} className={cn(ecommerceStoreTonedRowCardClass(tone), !p.isActive && "opacity-80")}>
+              <div className="flex min-w-0 flex-1 items-start gap-3">
+                {productImage}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="truncate text-sm font-black tracking-tight text-[#1e1b4b] sm:text-base">
                       {p.name}
                     </p>
-                    <div className="flex flex-wrap gap-1">{statusTags}</div>
-                    {metaLine}
+                    {!p.isActive ? <span className={ecommerceProductTagClass("slate")}>ปิดขาย</span> : null}
+                    {low ? <span className={ecommerceProductTagClass("amber")}>ใกล้หมด</span> : null}
+                    {p.isRecommended ? <span className={ecommerceProductTagClass("rose")}>แนะนำ</span> : null}
+                    {p.isBestseller ? <span className={ecommerceProductTagClass("amber")}>ขายดี</span> : null}
                   </div>
-                </div>
-
-                <div className="mt-2 flex items-center justify-between gap-2 md:hidden">
-                  {featureTagsLeft}
-                  {stockPill}
-                </div>
-
-                <div className="hidden md:flex md:flex-col md:items-end md:gap-2 md:self-start">
-                  {priceBlock}
-                  {actionButtons}
+                  <p className="truncate text-xs font-medium text-[#66638c]">
+                    {p.category?.name ?? "ไม่มีหมวด"}
+                    {p.sku ? ` · ${p.sku}` : ""}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 pt-0.5 sm:hidden">
+                    {stockPill}
+                    <p className={cn("text-base font-black tabular-nums", ecommerceGradientPriceClass)}>
+                      ฿{Number(p.priceBaht).toLocaleString("th-TH")}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-3 flex items-center justify-between gap-3 md:hidden">
-                {priceBlock}
+              <div className="flex shrink-0 items-center justify-between gap-3 sm:flex-col sm:items-end sm:justify-center sm:gap-2">
+                <div className="hidden items-center gap-3 sm:flex">
+                  {stockPill}
+                  <p className={cn("text-lg font-black tabular-nums", ecommerceGradientPriceClass)}>
+                    ฿{Number(p.priceBaht).toLocaleString("th-TH")}
+                  </p>
+                </div>
                 {actionButtons}
               </div>
             </li>
           );
         })}
       </ul>
+      </div>
 
       <FormModal
         open={showAddCategoryModal}
@@ -964,16 +1004,6 @@ function IconFilter({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
       <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconImage({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <circle cx="9" cy="10" r="1.5" />
-      <path d="M4 18l5-5 4 4 3-3 4 4" strokeLinejoin="round" />
     </svg>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { Crown, Phone, ShoppingBag, Users, Wallet } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   AppDashboardSection,
   AppEmptyState,
@@ -104,14 +104,28 @@ function CrmStatCard({
   );
 }
 
-export function EcommerceCrmClient({ embedded = false }: { embedded?: boolean }) {
+export type EcommerceCrmEmbeddedToolbarApi = {
+  filterOpen: boolean;
+  hasActiveFilters: boolean;
+  toggleFilter: () => void;
+  reload: () => void;
+  loading: boolean;
+};
+
+export function EcommerceCrmClient({
+  embedded = false,
+  onEmbeddedToolbar,
+}: {
+  embedded?: boolean;
+  onEmbeddedToolbar?: (api: EcommerceCrmEmbeddedToolbarApi | null) => void;
+} = {}) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [keyword, setKeyword] = useState("");
   const [sort, setSort] = useState<SortKey>("spend");
   const [filterOpen, setFilterOpen] = useState(true);
   const [loading, setLoading] = useState(true);
 
-  async function reload() {
+  const reload = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/ecommerce-store/session/customers");
@@ -120,11 +134,11 @@ export function EcommerceCrmClient({ embedded = false }: { embedded?: boolean })
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void reload();
-  }, []);
+  }, [reload]);
 
   const stats = useMemo(() => {
     const total = customers.reduce((acc, c) => acc + Number(c.totalSpendBaht || 0), 0);
@@ -134,6 +148,24 @@ export function EcommerceCrmClient({ embedded = false }: { embedded?: boolean })
   }, [customers]);
 
   const filtersActive = Boolean(keyword.trim()) || sort !== "spend";
+
+  const toggleFilter = useCallback(() => {
+    setFilterOpen((o) => !o);
+  }, []);
+
+  useEffect(() => {
+    if (!embedded || !onEmbeddedToolbar) return;
+    onEmbeddedToolbar({
+      filterOpen,
+      hasActiveFilters: filtersActive,
+      toggleFilter,
+      reload: () => {
+        void reload();
+      },
+      loading,
+    });
+    return () => onEmbeddedToolbar(null);
+  }, [embedded, onEmbeddedToolbar, filterOpen, filtersActive, toggleFilter, reload, loading]);
 
   const filtered = useMemo(() => {
     const kw = keyword.trim().toLowerCase();
@@ -167,6 +199,7 @@ export function EcommerceCrmClient({ embedded = false }: { embedded?: boolean })
 
   const body = (
       <>
+        {!embedded ? (
         <AppSectionHeader
           tone="violet"
           title="ลูกค้า (CRM)"
@@ -181,7 +214,7 @@ export function EcommerceCrmClient({ embedded = false }: { embedded?: boolean })
               <div className={ecommerceStoreInlineSubNavShellClass}>
                 <button
                   type="button"
-                  onClick={() => setFilterOpen((o) => !o)}
+                  onClick={toggleFilter}
                   aria-expanded={filterOpen}
                   aria-controls="ecommerce-crm-filter-panel"
                   aria-label={filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
@@ -194,7 +227,7 @@ export function EcommerceCrmClient({ embedded = false }: { embedded?: boolean })
                 >
                   <IconFilter className="h-3.5 w-3.5 shrink-0" />
                   <span className="hidden sm:inline">{filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
-                  {filtersActive ? (
+                  {filtersActive && !filterOpen ? (
                     <span
                       className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] ring-2 ring-white"
                       aria-hidden
@@ -220,8 +253,10 @@ export function EcommerceCrmClient({ embedded = false }: { embedded?: boolean })
             </div>
           }
         />
+        ) : null}
 
-        <ul className={cn(CRM_STATS_GRID_CLASS, "mt-4")} aria-label="สรุปลูกค้า">
+        <div className={cn(embedded ? "min-w-0 space-y-2.5" : "mt-4 space-y-4")}>
+        <ul className={CRM_STATS_GRID_CLASS} aria-label="สรุปลูกค้า">
           <CrmStatCard
             tone="violet"
             label="ลูกค้าทั้งหมด"
@@ -253,7 +288,7 @@ export function EcommerceCrmClient({ embedded = false }: { embedded?: boolean })
         </ul>
 
         {topSpender && Number(topSpender.totalSpendBaht) > 0 ? (
-          <div className={cn(ecommerceStoreTonedRowCardClass("amber"), "mt-4 sm:items-center")}>
+          <div className={cn(ecommerceStoreTonedRowCardClass("amber"), "sm:items-center")}>
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <span className={ecommerceStoreCardIconTileClass("amber", "lg")} aria-hidden>
                 <span className="text-sm font-black sm:text-base">{getInitials(topSpender.name)}</span>
@@ -280,7 +315,7 @@ export function EcommerceCrmClient({ embedded = false }: { embedded?: boolean })
 
         <div
           id="ecommerce-crm-filter-panel"
-          className={cn("mt-4 space-y-3", filterOpen ? "block" : "hidden")}
+          className={cn("space-y-3", filterOpen ? "block" : "hidden")}
         >
           <div className="relative">
             <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8b87b8]" />
@@ -318,7 +353,7 @@ export function EcommerceCrmClient({ embedded = false }: { embedded?: boolean })
           </div>
         </div>
 
-        <div className="mt-4 space-y-3 border-t border-[#ecebff] pt-4">
+        <div className="space-y-3 border-t border-[#ecebff] pt-4">
           <h3 className={ecommerceStoreSectionHeadingClass}>
             รายชื่อลูกค้า
             <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[#5f5a8a]">
@@ -384,6 +419,7 @@ export function EcommerceCrmClient({ embedded = false }: { embedded?: boolean })
               })}
             </ul>
           )}
+        </div>
         </div>
       </>
   );
