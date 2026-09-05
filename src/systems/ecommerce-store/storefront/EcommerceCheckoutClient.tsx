@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -11,8 +10,10 @@ import {
   prepareImageFileForUpload,
   useAppImageLightbox,
 } from "@/components/app-templates";
+import { cn } from "@/lib/cn";
 import { useMounted } from "@/systems/ecommerce-store/hooks/useMounted";
 import { fetchEcommercePromptPayQr } from "@/systems/ecommerce-store/lib/fetch-promptpay-qr";
+import { ecommerceStorePrimaryButtonClass } from "@/systems/ecommerce-store/lib/ui-tokens";
 import { useEcommerceCart } from "@/systems/ecommerce-store/storefront/useEcommerceCart";
 import { useEcommerceBuyerPhone } from "@/systems/ecommerce-store/storefront/useEcommerceBuyerPhone";
 
@@ -123,7 +124,7 @@ export function EcommerceCheckoutClient({ store }: { store: StorePay }) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
         <p className="text-[#66638c]">ตะกร้าว่าง</p>
-        <Link href={`/shop/${store.id}`} className="app-btn-primary mt-4 inline-flex rounded-2xl px-6 py-3 text-sm font-bold">
+        <Link href={`/shop/${store.id}`} className={cn(ecommerceStorePrimaryButtonClass, "mt-4 px-6")}>
           เลือกสินค้า
         </Link>
       </div>
@@ -245,7 +246,7 @@ export function EcommerceCheckoutClient({ store }: { store: StorePay }) {
           type="button"
           disabled={busy}
           onClick={() => void submit()}
-          className="mx-auto flex w-full max-w-lg min-h-[48px] items-center justify-center rounded-2xl bg-[#4d47b6] font-bold text-white disabled:opacity-60"
+          className={cn(ecommerceStorePrimaryButtonClass, "mx-auto w-full max-w-lg")}
         >
           {busy ? "กำลังส่ง..." : "ยืนยันออเดอร์"}
         </button>

@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
+import { EcommerceRemoteImg } from "@/systems/ecommerce-store/components/EcommerceRemoteImg";
 import { ecommerceStorePrimaryButtonClass } from "@/systems/ecommerce-store/lib/ui-tokens";
 
 export type StorefrontProduct = {
@@ -22,6 +22,17 @@ type Props = {
   inCartQty: number;
   onAdd: (qty: number) => boolean;
 };
+
+function ProductImageFallback() {
+  return (
+    <div className="flex h-full items-center justify-center bg-slate-50 text-[#4d47b6]" aria-hidden>
+      <svg viewBox="0 0 24 24" className="h-8 w-8 opacity-40" fill="none" stroke="currentColor" strokeWidth={1.75}>
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" strokeLinejoin="round" />
+        <path d="M3.3 7 12 12l8.7-5M12 22V12" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </div>
+  );
+}
 
 export function EcommerceProductCard({ product, categoryName, inCartQty, onAdd }: Props) {
   const price = Number(product.priceBaht);
@@ -44,13 +55,13 @@ export function EcommerceProductCard({ product, categoryName, inCartQty, onAdd }
 
   if (maxQty <= 0) {
     return (
-      <article className="flex flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white opacity-70 shadow-sm">
+      <article className="flex flex-col overflow-hidden rounded-lg border border-slate-200/90 bg-white opacity-70 shadow-sm">
         <div className="relative aspect-square bg-slate-100">
-          {product.imageUrl ? (
-            <Image src={product.imageUrl} alt="" fill className="object-cover grayscale" sizes="50vw" />
-          ) : (
-            <div className="flex h-full items-center justify-center text-xs text-[#8b87b8]">ไม่มีรูป</div>
-          )}
+          <EcommerceRemoteImg
+            src={product.imageUrl}
+            className="absolute inset-0 h-full w-full object-cover grayscale"
+            fallback={<ProductImageFallback />}
+          />
         </div>
         <div className="p-3">
           <h3 className="line-clamp-2 text-sm font-bold text-[#1e1b4b]">{product.name}</h3>
@@ -61,18 +72,13 @@ export function EcommerceProductCard({ product, categoryName, inCartQty, onAdd }
   }
 
   return (
-    <article className="flex flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm transition hover:shadow-md">
+    <article className="flex flex-col overflow-hidden rounded-lg border border-slate-200/90 bg-white shadow-sm transition hover:shadow-md">
       <div className="relative aspect-square bg-slate-100">
-        {product.imageUrl ? (
-          <Image src={product.imageUrl} alt="" fill className="object-cover" sizes="(max-width: 640px) 50vw, 25vw" />
-        ) : (
-          <div className="flex h-full items-center justify-center bg-slate-50 text-[#4d47b6]" aria-hidden>
-            <svg viewBox="0 0 24 24" className="h-8 w-8 opacity-40" fill="none" stroke="currentColor" strokeWidth={1.75}>
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" strokeLinejoin="round" />
-              <path d="M3.3 7 12 12l8.7-5M12 22V12" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-        )}
+        <EcommerceRemoteImg
+          src={product.imageUrl}
+          className="absolute inset-0 h-full w-full object-cover"
+          fallback={<ProductImageFallback />}
+        />
         <div className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-col gap-1">
           {product.isBestseller ? (
             <span className="w-fit rounded-md bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">
@@ -107,7 +113,7 @@ export function EcommerceProductCard({ product, categoryName, inCartQty, onAdd }
           <div className="flex items-center rounded-lg border border-slate-200/90 bg-white">
             <button
               type="button"
-              className="min-h-[36px] min-w-[36px] text-sm font-bold text-[#4d47b6]"
+              className="min-h-9 min-w-9 text-sm font-bold text-[#4d47b6]"
               aria-label={`ลดจำนวน ${product.name}`}
               onClick={() => setPickQty((q) => Math.max(1, q - 1))}
             >
@@ -116,7 +122,7 @@ export function EcommerceProductCard({ product, categoryName, inCartQty, onAdd }
             <span className="min-w-[28px] text-center text-sm font-bold tabular-nums">{safePick}</span>
             <button
               type="button"
-              className="min-h-[36px] min-w-[36px] text-sm font-bold text-[#4d47b6]"
+              className="min-h-9 min-w-9 text-sm font-bold text-[#4d47b6]"
               aria-label={`เพิ่มจำนวน ${product.name}`}
               onClick={() => setPickQty((q) => Math.min(maxQty, q + 1))}
             >

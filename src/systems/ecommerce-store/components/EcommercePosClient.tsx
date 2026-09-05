@@ -13,11 +13,15 @@ import {
   ecommercePosPaymentMethodLabel,
   type EcommercePosPaymentMethod,
 } from "@/systems/ecommerce-store/lib/payment-method";
+import { EcommerceRemoteImg } from "@/systems/ecommerce-store/components/EcommerceRemoteImg";
 import {
   ecommerceStorePosDraftPanelClass,
   ecommerceStorePosProductCardClass,
   ecommerceStorePosProductGridClass,
   ecommerceStorePosPulseWashClass,
+  ecommerceStorePrimaryButtonClass,
+  ecommerceStoreRowIconButtonClass,
+  ecommerceStoreRowIconDangerClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
 
 type Product = {
@@ -188,7 +192,7 @@ export function EcommercePosClient() {
   const cartPanel = (
     <aside className={cn(ecommerceStorePosDraftPanelClass, "space-y-3 lg:sticky lg:top-3")}>
       <div className="flex items-center gap-2">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100/90 text-emerald-700 ring-1 ring-emerald-200/80">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100/90 text-emerald-700 ring-1 ring-emerald-200/80">
           <ShoppingBag className="h-4 w-4" aria-hidden />
         </span>
         <div className="min-w-0">
@@ -219,7 +223,7 @@ export function EcommercePosClient() {
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-black text-[#4d47b6]"
+                  className={ecommerceStoreRowIconButtonClass}
                   aria-label={`ลด ${l.name}`}
                   onClick={() => setQty(l.productId, l.quantity - 1)}
                 >
@@ -230,7 +234,7 @@ export function EcommercePosClient() {
                 </span>
                 <button
                   type="button"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-black text-[#4d47b6] disabled:opacity-40"
+                  className={ecommerceStoreRowIconButtonClass}
                   aria-label={`เพิ่ม ${l.name}`}
                   disabled={l.quantity >= l.stockBalance}
                   onClick={() => setQty(l.productId, l.quantity + 1)}
@@ -239,11 +243,11 @@ export function EcommercePosClient() {
                 </button>
                 <button
                   type="button"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-rose-600"
+                  className={ecommerceStoreRowIconDangerClass}
                   aria-label={`ลบ ${l.name}`}
                   onClick={() => setQty(l.productId, 0)}
                 >
-                  <Trash2 className="h-4 w-4" aria-hidden />
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
                 </button>
               </div>
             </li>
@@ -254,7 +258,7 @@ export function EcommercePosClient() {
       <label className="block text-xs font-bold text-[#4d47b6]">
         ชื่อลูกค้า (ไม่บังคับ)
         <input
-          className={cn(ecommerceFieldClass, "mt-1 min-h-[40px]")}
+          className={cn(ecommerceFieldClass, "mt-1")}
           value={customerName}
           onChange={(e) => setCustomerName(e.target.value)}
           placeholder="ลูกค้าหน้าร้าน"
@@ -263,7 +267,7 @@ export function EcommercePosClient() {
       <label className="block text-xs font-bold text-[#4d47b6]">
         เบอร์โทร (ไม่บังคับ · บันทึก CRM)
         <input
-          className={cn(ecommerceFieldClass, "mt-1 min-h-[40px]")}
+          className={cn(ecommerceFieldClass, "mt-1")}
           value={customerPhone}
           onChange={(e) => setCustomerPhone(e.target.value)}
           placeholder="08x-xxx-xxxx"
@@ -289,7 +293,7 @@ export function EcommercePosClient() {
         </div>
         <button
           type="button"
-          className="app-btn-primary min-h-[44px] rounded-xl px-5 text-sm font-black disabled:opacity-50"
+          className={cn(ecommerceStorePrimaryButtonClass, "px-4")}
           disabled={saving || cart.length === 0}
           onClick={() => void checkout()}
         >
@@ -319,7 +323,7 @@ export function EcommercePosClient() {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="ค้นหาสินค้า"
-            className={cn(ecommerceFieldClass, "min-h-[40px] sm:min-h-[44px]")}
+            className={ecommerceFieldClass}
             aria-label="ค้นหาสินค้าหน้าร้าน"
           />
           <div
@@ -385,18 +389,15 @@ export function EcommercePosClient() {
                           ecommerceStorePosPulseWashClass,
                         )}
                       >
-                        {p.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={p.imageUrl}
-                            alt=""
-                            className="h-full w-full max-h-full max-w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[#66638c]">
-                            <IconImagePlaceholder className="h-5 w-5 opacity-40 sm:h-8 sm:w-8" />
-                          </div>
-                        )}
+                        <EcommerceRemoteImg
+                          src={p.imageUrl}
+                          className="h-full w-full max-h-full max-w-full object-cover object-center transition duration-300 group-hover:scale-[1.03]"
+                          fallback={
+                            <div className="flex h-full w-full items-center justify-center text-[#66638c]">
+                              <IconImagePlaceholder className="h-5 w-5 opacity-40 sm:h-8 sm:w-8" />
+                            </div>
+                          }
+                        />
                         {inCartQty > 0 ? (
                           <span className="absolute right-1 top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-gradient-to-r from-[#5b61ff] via-[#8b5cf6] to-[#ec4899] px-1 text-[9px] font-black text-white shadow-md sm:right-1.5 sm:top-1.5 sm:h-6 sm:min-w-[1.5rem] sm:px-1.5 sm:text-[10px]">
                             ×{inCartQty}

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -10,8 +9,14 @@ import {
   prepareImageFileForUpload,
   useAppImageLightbox,
 } from "@/components/app-templates";
+import { cn } from "@/lib/cn";
+import { EcommerceRemoteImg } from "@/systems/ecommerce-store/components/EcommerceRemoteImg";
 import { useMounted } from "@/systems/ecommerce-store/hooks/useMounted";
 import { fetchEcommercePromptPayQr } from "@/systems/ecommerce-store/lib/fetch-promptpay-qr";
+import {
+  ecommerceStorePrimaryButtonClass,
+  ecommerceStoreRowIconButtonClass,
+} from "@/systems/ecommerce-store/lib/ui-tokens";
 
 type Product = {
   id: string;
@@ -134,7 +139,7 @@ export function EcommerceSalePageClient({
         <p className="mt-2 text-sm text-[#66638c]">รหัสติดตาม: {tracking}</p>
         <Link
           href={`/shop/${store.id}/track?code=${encodeURIComponent(tracking)}`}
-          className="app-btn-primary mt-6 inline-flex rounded-2xl px-6 py-3 font-bold"
+          className={cn(ecommerceStorePrimaryButtonClass, "mt-6 px-6")}
         >
           ดูสถานะ
         </Link>
@@ -148,11 +153,13 @@ export function EcommerceSalePageClient({
         <h1 className="font-black text-xl text-[#1e1b4b]">{store.storeName}</h1>
       </header>
       <div className="mx-auto max-w-lg space-y-4 px-4">
-        <article className="app-surface overflow-hidden rounded-[2rem]">
+        <article className="app-surface overflow-hidden rounded-lg">
           <div className="relative aspect-[4/3] bg-[#f3f2fa]">
-            {product.imageUrl ? (
-              <Image src={product.imageUrl} alt="" fill className="object-cover" sizes="100vw" />
-            ) : null}
+            <EcommerceRemoteImg
+              src={product.imageUrl}
+              className="absolute inset-0 h-full w-full object-cover"
+              fallback={<div className="flex h-full items-center justify-center text-sm text-[#8b87b8]">ไม่มีรูป</div>}
+            />
           </div>
           <div className="p-4">
             <h2 className="font-black text-lg text-[#1e1b4b]">{product.name}</h2>
@@ -166,7 +173,7 @@ export function EcommerceSalePageClient({
               <span className="text-sm font-semibold">จำนวน</span>
               <button
                 type="button"
-                className="min-h-[40px] min-w-[40px] rounded-xl border font-bold"
+                className={ecommerceStoreRowIconButtonClass}
                 aria-label="ลดจำนวน"
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
               >
@@ -175,7 +182,7 @@ export function EcommerceSalePageClient({
               <span className="font-bold tabular-nums">{qty}</span>
               <button
                 type="button"
-                className="min-h-[40px] min-w-[40px] rounded-xl border font-bold"
+                className={ecommerceStoreRowIconButtonClass}
                 aria-label="เพิ่มจำนวน"
                 onClick={() => setQty((q) => Math.min(product.stockBalance, q + 1))}
               >
@@ -268,7 +275,7 @@ export function EcommerceSalePageClient({
           type="button"
           disabled={busy}
           onClick={() => void submit()}
-          className="mx-auto flex w-full max-w-lg min-h-[48px] items-center justify-center rounded-2xl bg-[#4d47b6] font-bold text-white disabled:opacity-60"
+          className={cn(ecommerceStorePrimaryButtonClass, "mx-auto w-full max-w-lg")}
         >
           {busy ? "กำลังส่ง..." : "สั่งซื้อจบในหน้าเดียว"}
         </button>

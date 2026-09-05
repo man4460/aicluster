@@ -15,7 +15,6 @@ import {
   AppImageLightbox,
   AppImagePickCameraButtons,
   AppImageThumb,
-  appTemplateOutlineButtonClass,
   prepareImageFileForUpload,
   useAppCameraCapture,
   useAppImageLightbox,
@@ -34,6 +33,8 @@ import {
   ecommerceStoreChipActiveClass,
   ecommerceStoreChipIdleClass,
   ecommerceStoreFieldClass,
+  ecommerceStoreOutlineButtonClass,
+  ecommerceStorePrimaryButtonClass,
   ecommerceStoreSectionHeadingClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
 
@@ -350,10 +351,7 @@ export const EcommerceCostsPanel = forwardRef<
             <EcommerceStoreButton
               type="button"
               onClick={openManageCategories}
-              className={cn(
-                appTemplateOutlineButtonClass,
-                "inline-flex min-h-[40px] items-center justify-center rounded-xl px-3 text-xs font-semibold text-[#4d47b6] sm:px-4 sm:text-sm",
-              )}
+              className={ecommerceStoreOutlineButtonClass}
               aria-label="จัดการหมวดหมู่รายจ่าย"
               title="หมวดหมู่ — เพิ่ม แก้ไข ลบ"
             >
@@ -362,7 +360,7 @@ export const EcommerceCostsPanel = forwardRef<
             <EcommerceStoreButton
               type="button"
               onClick={openCostCreate}
-              className="app-btn-primary inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-0 text-sm font-semibold sm:min-w-0 sm:px-4"
+              className={cn(ecommerceStorePrimaryButtonClass, "w-9 min-w-9 px-0 sm:w-auto sm:min-w-0 sm:px-2.5")}
               aria-label="เพิ่มรายจ่าย"
             >
               <span className="sm:hidden" aria-hidden>
@@ -510,14 +508,14 @@ export const EcommerceCostsPanel = forwardRef<
               <EcommerceStoreButton
                 type="button"
                 onClick={openCatCreate}
-                className="app-btn-primary rounded-xl px-4 py-2 text-sm font-bold"
+                className={ecommerceStorePrimaryButtonClass}
               >
                 + เพิ่มหมวดหมู่
               </EcommerceStoreButton>
               <EcommerceStoreButton
                 type="button"
                 onClick={() => setCatModalOpen(false)}
-                className={cn(appTemplateOutlineButtonClass, "rounded-xl px-4 py-2 text-sm font-bold")}
+                className={ecommerceStoreOutlineButtonClass}
               >
                 ปิด
               </EcommerceStoreButton>
@@ -665,7 +663,7 @@ export const EcommerceCostsPanel = forwardRef<
                 <button
                   type="button"
                   onClick={() => setCostSlipUrl("")}
-                  className={cn(appTemplateOutlineButtonClass, "rounded-xl px-3 py-2 text-xs font-bold")}
+                  className={ecommerceStoreOutlineButtonClass}
                 >
                   ลบสลิป
                 </button>

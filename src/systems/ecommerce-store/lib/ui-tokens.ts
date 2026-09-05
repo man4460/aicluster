@@ -36,6 +36,25 @@ export const ecommerceStoreIconButtonClass = cn(
   "w-9 min-w-9 border border-slate-200/90 bg-white px-0 text-[#1e1b4b] hover:border-slate-300 hover:bg-slate-50",
 );
 
+export const ecommerceStorePrimaryIconButtonClass = cn(
+  ecommerceStoreBtnBaseClass,
+  "w-9 min-w-9 border border-transparent px-0 text-white",
+  appDashboardBrandGradientFillClass,
+);
+
+/** ปุ่มไอคอนในแถวการ์ด (± สต๊อก · ตะกร้า) — เล็กกว่าแถบหัว */
+export const ecommerceStoreRowIconButtonClass = cn(
+  "inline-flex shrink-0 items-center justify-center",
+  ecommerceStoreBtnRadiusClass,
+  "h-7 w-7 border border-slate-200/90 bg-white text-sm font-black text-[#4d47b6] shadow-sm transition hover:bg-slate-50 disabled:opacity-40",
+);
+
+export const ecommerceStoreRowIconDangerClass = cn(
+  "inline-flex shrink-0 items-center justify-center",
+  ecommerceStoreBtnRadiusClass,
+  "h-7 w-7 text-rose-600 transition hover:bg-rose-50",
+);
+
 export const ecommerceStoreFieldClass = cn(
   "app-input box-border w-full",
   ecommerceStoreBtnHeightClass,
@@ -226,11 +245,11 @@ export const ecommerceStorePosProductGridClass =
 
 /** การ์ดเมนู — รูปสี่เหลี่ยม · glass · hover ยก */
 export const ecommerceStorePosProductCardClass =
-  "group relative flex min-w-0 flex-col overflow-hidden rounded-lg border border-white/70 bg-gradient-to-br from-white/85 via-white/70 to-violet-50/45 shadow-sm ring-1 ring-inset ring-white/55 backdrop-blur-md transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-xl lg:rounded-[1.25rem]";
+  "group relative flex min-w-0 flex-col overflow-hidden rounded-lg border border-white/70 bg-gradient-to-br from-white/85 via-white/70 to-violet-50/45 shadow-sm ring-1 ring-inset ring-white/55 backdrop-blur-md transition hover:-translate-y-0.5 hover:shadow-md";
 
 /** แผงบิล / ตะกร้า */
 export const ecommerceStorePosDraftPanelClass =
-  "rounded-[1.5rem] border border-white/70 bg-gradient-to-br from-white/90 via-[#f5f3ff]/75 to-[#fdf2f8]/55 p-3 shadow-[0_20px_50px_-20px_rgba(30,27,75,0.4)] backdrop-blur-2xl ring-1 ring-inset ring-white/60 sm:p-4";
+  "rounded-lg border border-white/70 bg-gradient-to-br from-white/90 via-[#f5f3ff]/75 to-[#fdf2f8]/55 p-3 shadow-[0_20px_50px_-20px_rgba(30,27,75,0.4)] backdrop-blur-2xl ring-1 ring-inset ring-white/60 sm:p-4";
 
 export const ecommerceStorePosPulseWashClass = "bg-[#5b61ff]/08";
 

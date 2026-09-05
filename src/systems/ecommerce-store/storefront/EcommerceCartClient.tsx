@@ -1,9 +1,15 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { cn } from "@/lib/cn";
+import { EcommerceRemoteImg } from "@/systems/ecommerce-store/components/EcommerceRemoteImg";
 import { useMounted } from "@/systems/ecommerce-store/hooks/useMounted";
 import { useEcommerceCart } from "@/systems/ecommerce-store/storefront/useEcommerceCart";
+import {
+  ecommerceStoreOutlineButtonClass,
+  ecommerceStorePrimaryButtonClass,
+  ecommerceStoreRowIconButtonClass,
+} from "@/systems/ecommerce-store/lib/ui-tokens";
 
 type Props = {
   storeId: string;
@@ -18,9 +24,9 @@ export function EcommerceCartClient({ storeId, storeName }: Props) {
     return (
       <div className="min-h-dvh bg-gradient-to-b from-[#f8f7ff] to-white pb-28" aria-hidden>
         <div className="mx-auto max-w-lg space-y-3 px-4 py-6">
-          <div className="h-8 w-40 animate-pulse rounded-xl bg-[#ecebff]/50" />
-          <div className="app-surface h-24 animate-pulse rounded-2xl" />
-          <div className="app-surface h-24 animate-pulse rounded-2xl" />
+          <div className="h-8 w-40 animate-pulse rounded-lg bg-[#ecebff]/50" />
+          <div className="app-surface h-24 animate-pulse rounded-lg" />
+          <div className="app-surface h-24 animate-pulse rounded-lg" />
         </div>
       </div>
     );
@@ -31,10 +37,7 @@ export function EcommerceCartClient({ storeId, storeName }: Props) {
       <div className="min-h-dvh bg-gradient-to-b from-[#f8f7ff] to-white px-4 py-12 text-center">
         <h1 className="font-black text-xl text-[#1e1b4b]">ตะกร้าว่าง</h1>
         <p className="mt-2 text-sm text-[#66638c]">{storeName}</p>
-        <Link
-          href={`/shop/${storeId}`}
-          className="app-btn-primary mt-6 inline-flex min-h-[48px] items-center rounded-2xl px-8 font-bold"
-        >
+        <Link href={`/shop/${storeId}`} className={cn(ecommerceStorePrimaryButtonClass, "mt-6 px-6")}>
           เลือกสินค้า
         </Link>
       </div>
@@ -49,7 +52,7 @@ export function EcommerceCartClient({ storeId, storeName }: Props) {
             <h1 className="font-black text-xl text-[#1e1b4b]">ตะกร้าสินค้า</h1>
             <p className="text-sm text-[#66638c]">{storeName}</p>
           </div>
-          <Link href={`/shop/${storeId}`} className="text-sm font-semibold text-[#4d47b6]">
+          <Link href={`/shop/${storeId}`} className={cn(ecommerceStoreOutlineButtonClass, "text-sm")}>
             + เพิ่มสินค้า
           </Link>
         </div>
@@ -59,14 +62,16 @@ export function EcommerceCartClient({ storeId, storeName }: Props) {
         {cart.lines.map((line) => (
           <li
             key={line.productId}
-            className="app-surface flex gap-3 rounded-2xl border border-white/60 p-3"
+            className="app-surface flex gap-3 rounded-lg border border-white/60 p-3"
           >
-            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#f3f2fa]">
-              {line.imageUrl ? (
-                <Image src={line.imageUrl} alt="" fill className="object-cover" sizes="80px" />
-              ) : (
-                <div className="flex h-full items-center justify-center text-[10px] text-[#8b87b8]">ไม่มีรูป</div>
-              )}
+            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-[#f3f2fa]">
+              <EcommerceRemoteImg
+                src={line.imageUrl}
+                className="absolute inset-0 h-full w-full object-cover"
+                fallback={
+                  <div className="flex h-full items-center justify-center text-[10px] text-[#8b87b8]">ไม่มีรูป</div>
+                }
+              />
             </div>
             <div className="min-w-0 flex-1">
               <p className="line-clamp-2 font-bold text-sm text-[#1e1b4b]">{line.name}</p>
@@ -77,7 +82,7 @@ export function EcommerceCartClient({ storeId, storeName }: Props) {
               <div className="mt-2 flex items-center gap-2">
                 <button
                   type="button"
-                  className="min-h-[36px] min-w-[36px] rounded-lg border border-white/70 bg-white/90 text-sm font-bold text-[#4d47b6]"
+                  className={ecommerceStoreRowIconButtonClass}
                   aria-label={`ลด ${line.name}`}
                   onClick={() => cart.setQty(line.productId, line.quantity - 1, line.maxStock)}
                 >
@@ -86,7 +91,7 @@ export function EcommerceCartClient({ storeId, storeName }: Props) {
                 <span className="min-w-[24px] text-center text-sm font-bold tabular-nums">{line.quantity}</span>
                 <button
                   type="button"
-                  className="min-h-[36px] min-w-[36px] rounded-lg border border-white/70 bg-white/90 text-sm font-bold text-[#4d47b6]"
+                  className={ecommerceStoreRowIconButtonClass}
                   aria-label={`เพิ่ม ${line.name}`}
                   onClick={() => cart.setQty(line.productId, line.quantity + 1, line.maxStock)}
                 >
@@ -115,7 +120,7 @@ export function EcommerceCartClient({ storeId, storeName }: Props) {
           </p>
           <Link
             href={`/shop/${storeId}/checkout`}
-            className="flex min-h-[48px] w-full items-center justify-center rounded-2xl bg-[#4d47b6] font-bold text-white shadow-lg"
+            className={cn(ecommerceStorePrimaryButtonClass, "w-full")}
           >
             ไปชำระเงิน
           </Link>

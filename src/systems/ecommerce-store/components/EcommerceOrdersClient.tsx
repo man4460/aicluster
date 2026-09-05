@@ -27,6 +27,7 @@ import {
   ecommerceStoreContentStackClass,
   ecommerceStoreInlineSubNavBtnClass,
   ecommerceStoreInlineSubNavShellClass,
+  ecommerceStorePrimaryButtonClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
 
 type OrderStatus = "PENDING_SLIP" | "VERIFYING" | "PREPARING" | "SHIPPED";
@@ -318,7 +319,7 @@ export function EcommerceOrdersClient({ embedded = false }: { embedded?: boolean
                     {next ? (
                       <button
                         type="button"
-                        className="app-btn-primary min-h-[40px] rounded-xl px-4 text-sm font-black"
+                        className={cn(ecommerceStorePrimaryButtonClass, "px-4")}
                         onClick={() => void advance(o.id, next)}
                       >
                         {STATUS_NEXT_LABEL[o.status]}

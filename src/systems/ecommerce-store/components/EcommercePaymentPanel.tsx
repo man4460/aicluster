@@ -23,6 +23,7 @@ import {
   ecommerceStorePaymentChipActiveClass,
   ecommerceStorePaymentChipIdleClass,
   ecommerceStorePaymentCtaClass,
+  ecommerceStoreOutlineButtonClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
 
 type PayInfo = {
@@ -239,7 +240,7 @@ export function EcommercePaymentPanel({
             <button
               type="button"
               disabled={disabled}
-              className={cn(ecommerceStorePaymentCtaClass, "h-auto min-h-[40px] w-full max-h-none text-sm")}
+              className={cn(ecommerceStorePaymentCtaClass, "w-full")}
               onClick={() => setCustomerQrOpen(true)}
               aria-label="แสดง QR พร้อมเพย์ให้ลูกค้าสแกน"
             >
@@ -276,7 +277,7 @@ export function EcommercePaymentPanel({
                 />
                 <button
                   type="button"
-                  className="mt-5 min-h-[44px] w-full rounded-2xl border bg-[#f5f3ff] px-4 text-sm font-black text-[#4d47b6]"
+                  className={cn(ecommerceStoreOutlineButtonClass, "mt-5 w-full")}
                   onClick={() => setCustomerQrOpen(false)}
                 >
                   ปิด

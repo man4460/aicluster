@@ -42,7 +42,7 @@ export function EcommerceStoreHeaderExpandButton({ onExpand }: { onExpand: () =>
     <button
       type="button"
       onClick={onExpand}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/35 bg-white/15 text-white transition-all hover:bg-white/25 active:scale-95 sm:h-9 sm:w-9 sm:rounded-xl"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/35 bg-white/15 text-white transition-all hover:bg-white/25 active:scale-95"
       aria-label="แสดงส่วนหัวโมดูล"
       title="แสดงส่วนหัวโมดูล"
       suppressHydrationWarning
@@ -54,7 +54,7 @@ export function EcommerceStoreHeaderExpandButton({ onExpand }: { onExpand: () =>
 
 const headerNavLinkClass = (active: boolean) =>
   cn(
-    "inline-flex h-8 min-w-[2rem] shrink-0 items-center justify-center gap-1 rounded-lg px-1.5 text-[10px] font-black transition-all sm:h-9 sm:gap-1.5 sm:rounded-xl sm:px-2.5 sm:text-xs",
+    "inline-flex h-9 min-w-[2rem] shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-black transition-all",
     active
       ? "bg-white text-[#4d47b6] shadow-md shadow-black/25 ring-1 ring-white/50"
       : "text-white/85 hover:bg-white/15 hover:text-white",

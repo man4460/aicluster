@@ -3,8 +3,13 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useMounted } from "@/systems/ecommerce-store/hooks/useMounted";
+import { cn } from "@/lib/cn";
 import { ECOMMERCE_ORDER_STATUS_LABELS } from "@/lib/ecommerce/constants";
+import { useMounted } from "@/systems/ecommerce-store/hooks/useMounted";
+import {
+  ecommerceStoreFieldClass,
+  ecommerceStorePrimaryButtonClass,
+} from "@/systems/ecommerce-store/lib/ui-tokens";
 import { useEcommerceBuyerPhone } from "@/systems/ecommerce-store/storefront/useEcommerceBuyerPhone";
 
 type OrderSummary = {
@@ -170,7 +175,7 @@ export function EcommerceOrderTrackClient({ storeId }: { storeId: string }) {
             <p className="mt-4 text-xs text-[#8b87b8]">ใส่รหัสที่ได้หลังสั่งซื้อสำเร็จ (หน้าชำระเงินจะพาไปหน้านี้อัตโนมัติ)</p>
             <div className="mt-3 flex gap-2">
               <input
-                className="app-input min-h-[44px] flex-1 rounded-xl"
+                className={cn(ecommerceStoreFieldClass, "flex-1")}
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="รหัสติดตาม"
@@ -180,7 +185,7 @@ export function EcommerceOrderTrackClient({ storeId }: { storeId: string }) {
                 type="button"
                 disabled={busy || !code.trim()}
                 onClick={() => void lookupByCode()}
-                className="app-btn-primary min-h-[44px] shrink-0 rounded-xl px-4 text-sm font-bold"
+                className={cn(ecommerceStorePrimaryButtonClass, "px-4")}
               >
                 ค้นหา
               </button>
@@ -210,7 +215,7 @@ export function EcommerceOrderTrackClient({ storeId }: { storeId: string }) {
             </p>
             <div className="mt-3 flex gap-2">
               <input
-                className="app-input min-h-[44px] flex-1 rounded-xl"
+                className={cn(ecommerceStoreFieldClass, "flex-1")}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="เบอร์โทร"
@@ -221,7 +226,7 @@ export function EcommerceOrderTrackClient({ storeId }: { storeId: string }) {
                 type="button"
                 disabled={busy || !phone.trim()}
                 onClick={() => void lookupByPhone()}
-                className="app-btn-primary min-h-[44px] shrink-0 rounded-xl px-4 text-sm font-bold"
+                className={cn(ecommerceStorePrimaryButtonClass, "px-4")}
               >
                 ดูประวัติ
               </button>

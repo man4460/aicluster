@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { EcommerceRemoteImg } from "@/systems/ecommerce-store/components/EcommerceRemoteImg";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -324,15 +324,17 @@ export function EcommerceSettingsClient() {
             >
               <div className="flex flex-wrap items-center gap-4">
                 {store.logoUrl ? (
-                  <Image
+                  <EcommerceRemoteImg
                     src={store.logoUrl}
-                    alt=""
-                    width={72}
-                    height={72}
-                    className="h-[72px] w-[72px] rounded-xl object-cover ring-1 ring-slate-200"
+                    className="h-[72px] w-[72px] rounded-lg object-cover ring-1 ring-slate-200"
+                    fallback={
+                      <div className="flex h-[72px] w-[72px] items-center justify-center rounded-lg bg-slate-100 text-lg font-black text-[#4d47b6]">
+                        {store.storeName.slice(0, 1)}
+                      </div>
+                    }
                   />
                 ) : (
-                  <div className="flex h-[72px] w-[72px] items-center justify-center rounded-xl bg-slate-100 text-lg font-black text-[#4d47b6]">
+                  <div className="flex h-[72px] w-[72px] items-center justify-center rounded-lg bg-slate-100 text-lg font-black text-[#4d47b6]">
                     {store.storeName.slice(0, 1)}
                   </div>
                 )}

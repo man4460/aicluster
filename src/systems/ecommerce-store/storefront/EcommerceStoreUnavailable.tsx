@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { cn } from "@/lib/cn";
+import { ecommerceStorePrimaryButtonClass } from "@/systems/ecommerce-store/lib/ui-tokens";
 
 export function EcommerceStoreUnavailable({
   storeName,
@@ -22,15 +24,12 @@ export function EcommerceStoreUnavailable({
 
   return (
     <div className="flex min-h-[70dvh] flex-col items-center justify-center px-6 text-center">
-      <div className="app-surface max-w-md rounded-[2rem] px-8 py-10">
+      <div className="app-surface max-w-md rounded-lg px-8 py-10">
         <p className="text-xs font-bold uppercase tracking-wider text-[#8b87b8]">MAWELL Shop</p>
         <h1 className="mt-2 font-black text-2xl tracking-tight text-[#1e1b4b]">{title}</h1>
         {storeName ? <p className="mt-1 text-sm font-semibold text-[#4d47b6]">{storeName}</p> : null}
         <p className="mt-4 text-sm text-[#66638c]">{detail}</p>
-        <Link
-          href="/"
-          className="app-btn-primary mt-6 inline-flex min-h-[44px] items-center justify-center rounded-2xl px-6 text-sm font-bold"
-        >
+        <Link href="/" className={cn(ecommerceStorePrimaryButtonClass, "mt-6 px-6")}>
           กลับหน้าหลัก MAWELL
         </Link>
       </div>

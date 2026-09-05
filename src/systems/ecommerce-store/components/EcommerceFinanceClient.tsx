@@ -14,7 +14,6 @@ import {
   AppSectionHeader,
   AppSparkChartPanel,
   appDashboardInnerScrollClass,
-  appTemplateOutlineButtonClass,
   useAppImageLightbox,
   useAppNoticePopup,
 } from "@/components/app-templates";
@@ -45,6 +44,7 @@ import {
   ecommerceStoreInlineSubNavBtnClass,
   ecommerceStoreInlineSubNavShellClass,
   ecommerceStoreNavDividerClass,
+  ecommerceStoreOutlineButtonClass,
   ecommerceStoreSectionHeadingClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
 import { ecommerceProductTagClass } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
@@ -140,11 +140,8 @@ function IconRefresh({ className }: { className?: string }) {
   );
 }
 
-const filterFieldClass = cn(ecommerceStoreFieldClass, "box-border min-h-[44px] h-11 max-h-none");
-const filterResetButtonClass = cn(
-  appTemplateOutlineButtonClass,
-  "inline-flex h-11 w-full min-h-[44px] shrink-0 items-center justify-center rounded-2xl px-3 text-sm font-black text-[#4d47b6] sm:w-auto sm:min-w-[8.5rem]",
-);
+const filterFieldClass = ecommerceStoreFieldClass;
+const filterResetButtonClass = ecommerceStoreOutlineButtonClass;
 
 export function EcommerceFinanceClient() {
   const notice = useAppNoticePopup();

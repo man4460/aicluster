@@ -1,6 +1,13 @@
 /**
- * โทน UI ร้านออนไลน์ — สอดคล้องคาร์แคร์ / template กลาง (ม่วง MAWELL)
+ * โทน UI ร้านออนไลน์ — สอดคล้องแม่แบบซักผ้า (ปุ่ม `rounded-lg` · h-9)
  */
+import { cn } from "@/lib/cn";
+import {
+  ecommerceStoreFieldClass,
+  ecommerceStoreOutlineButtonClass,
+  ecommerceStorePrimaryButtonClass,
+  ecommerceStoreRowIconButtonClass,
+} from "@/systems/ecommerce-store/lib/ui-tokens";
 
 export const ecommerceCardSurfaceRadiusClass = "rounded-[2rem]";
 export const ecommerceCardLargeRadiusClass = "rounded-[2.5rem]";
@@ -11,12 +18,13 @@ export const ecommerceModuleHeaderShellClass =
   "overflow-hidden rounded-[2.5rem] border border-white/50 bg-gradient-to-br from-white/50 via-indigo-50/25 to-violet-100/20 p-4 shadow-[0_24px_60px_-28px_rgba(30,27,75,0.32),inset_0_1px_0_0_rgba(255,255,255,0.55)] backdrop-blur-2xl ring-1 ring-inset ring-white/55 sm:px-8 sm:py-6";
 
 export const ecommerceNavItemBase =
-  "flex min-h-[44px] min-w-0 touch-manipulation select-none items-center justify-center gap-2 rounded-2xl px-3 text-sm font-semibold transition-all active:scale-[0.98] sm:min-h-0 sm:w-auto sm:justify-center sm:px-3.5 sm:py-2";
+  "flex min-h-[44px] min-w-0 touch-manipulation select-none items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition-all active:scale-[0.98] sm:min-h-0 sm:w-auto sm:justify-center sm:px-3.5 sm:py-2";
 
 export const ecommerceNavItemActiveClass =
   "bg-white/75 text-[#5b61ff] shadow-md ring-1 ring-[#5b61ff]/20 backdrop-blur-sm";
 
-export const ecommerceNavItemIdleClass = "app-btn-soft text-[#66638c] hover:bg-white/55 hover:text-[#4d47b6]";
+export const ecommerceNavItemIdleClass =
+  "border border-transparent text-[#66638c] hover:bg-white/55 hover:text-[#4d47b6]";
 
 /** Dock มือถือ */
 export {
@@ -27,11 +35,12 @@ export {
   appMobileDockItemIdleClass as ecommerceDockItemIdleClass,
 } from "@/components/app-templates/mobile-dock-tokens";
 
-/** ชิป / แท็บกรอง */
+/** ชิป / แท็บกรอง — มนเท่าปุ่ม template */
 export function ecommerceFilterChipClass(active: boolean) {
-  return active
-    ? "min-h-[40px] shrink-0 rounded-xl border border-[#5b61ff]/40 bg-[#5b61ff] px-3 text-sm font-bold text-white shadow-sm"
-    : "min-h-[40px] shrink-0 rounded-xl border border-white/60 bg-white/70 px-3 text-sm font-semibold text-[#4d47b6] transition hover:bg-white/90";
+  return cn(
+    active ? ecommerceStorePrimaryButtonClass : ecommerceStoreOutlineButtonClass,
+    "px-3",
+  );
 }
 
 /** การ์ดแถวรายการ */
@@ -54,14 +63,12 @@ export const ecommerceHeroRevenueCardClass =
   `${ecommerceInsetControlRadiusClass} border border-white/60 bg-gradient-to-br from-white/60 via-indigo-50/35 to-violet-100/30 px-4 py-4 text-indigo-900 shadow-[0_18px_38px_-26px_rgba(79,70,229,0.45)] backdrop-blur-xl sm:px-5 sm:py-5`;
 
 export const ecommerceIconBadgeClass =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5b61ff] to-[#6a63ff] text-white shadow-lg shadow-indigo-100";
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#5b61ff] to-[#6a63ff] text-white shadow-lg shadow-indigo-100";
 
-export const ecommerceGuideButtonClass =
-  "flex min-h-[40px] shrink-0 items-center gap-2 rounded-2xl border border-white/60 bg-white/45 px-4 text-sm font-black text-slate-700 shadow-sm backdrop-blur-md transition-all hover:bg-white/65 active:scale-95";
+export const ecommerceGuideButtonClass = ecommerceStoreOutlineButtonClass;
 
-/** ช่องค้นหา / select */
-export const ecommerceFieldClass =
-  "min-h-[44px] w-full rounded-xl border border-white/65 bg-white/85 px-3 text-sm font-semibold text-[#1e1b4b] shadow-sm outline-none ring-[#5b61ff]/15 backdrop-blur-sm placeholder:text-[#8b87b8] focus:ring-2";
+/** ช่องค้นหา / select — สูง/มนเท่าปุ่ม */
+export const ecommerceFieldClass = ecommerceStoreFieldClass;
 
 /** กริดสถิติภาพรวม — มือถือ 2 คอลัมน์ */
 export const ecommerceOverviewStatsGridClass = "grid grid-cols-2 items-stretch gap-3 sm:grid-cols-4 sm:gap-4";
@@ -123,26 +130,31 @@ export const ecommerceOrderCardInnerClass = "flex flex-col gap-3 sm:flex-row sm:
 export const ecommercePriceEmphasisClass = "text-lg font-black tabular-nums tracking-tight text-[#1e1b4b] sm:text-xl";
 
 /** ปุ่มสต๊อก ± */
-export const ecommerceStockButtonClass =
-  "flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-white/60 bg-white/80 text-base font-black text-[#4d47b6] shadow-sm transition hover:bg-white";
+export const ecommerceStockButtonClass = ecommerceStoreRowIconButtonClass;
 
 /** ปุ่มแสดงจำนวนสต๊อก — กดเปิด popup ปรับ */
-export const ecommerceStockPillClass =
-  "inline-flex min-h-[36px] min-w-[2.75rem] shrink-0 items-center justify-center rounded-xl border border-white/65 bg-white/85 px-2.5 text-sm font-black tabular-nums text-[#1e1b4b] shadow-sm ring-1 ring-[#5b61ff]/10 transition hover:border-[#5b61ff]/35 hover:bg-[#ecebff]/80 active:scale-95";
+export const ecommerceStockPillClass = cn(
+  ecommerceStoreOutlineButtonClass,
+  "min-w-[2.75rem] px-2.5 tabular-nums",
+);
 
 /** ไอคอน action ล้วน — ไม่มีกรอบ/พื้นปุ่ม */
 export const ecommercePlainIconActionClass =
-  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-lg p-0 text-[#4d47b6] transition hover:bg-black/[0.04] active:scale-95";
+  "inline-flex h-9 w-9 min-h-9 min-w-9 items-center justify-center rounded-lg p-0 text-[#4d47b6] transition hover:bg-black/[0.04] active:scale-95";
 
 export const ecommercePlainIconActionWarnClass =
-  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-lg p-0 text-rose-600 transition hover:bg-rose-500/[0.08] active:scale-95";
+  "inline-flex h-9 w-9 min-h-9 min-w-9 items-center justify-center rounded-lg p-0 text-rose-600 transition hover:bg-rose-500/[0.08] active:scale-95";
 
 export const ecommercePlainIconActionToggleActiveClass =
-  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-lg p-0 text-amber-600 transition hover:bg-amber-500/[0.08] active:scale-95";
+  "inline-flex h-9 w-9 min-h-9 min-w-9 items-center justify-center rounded-lg p-0 text-amber-600 transition hover:bg-amber-500/[0.08] active:scale-95";
 
 export const ecommercePlainIconActionToggleInactiveClass =
-  "inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-lg p-0 text-emerald-600 transition hover:bg-emerald-500/[0.08] active:scale-95";
+  "inline-flex h-9 w-9 min-h-9 min-w-9 items-center justify-center rounded-lg p-0 text-emerald-600 transition hover:bg-emerald-500/[0.08] active:scale-95";
 
+export {
+  ecommerceStoreOutlineButtonClass,
+  ecommerceStorePrimaryButtonClass,
+};
 /** ตัวอักษรไล่สีเน้น (ราคา / ตัวเลขเด่น) */
 export const ecommerceGradientPriceClass =
   "bg-gradient-to-br from-[#5b61ff] via-[#7c66ff] to-[#c026d3] bg-clip-text text-transparent";

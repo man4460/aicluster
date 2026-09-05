@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { EcommerceRemoteImg } from "@/systems/ecommerce-store/components/EcommerceRemoteImg";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { IconCart, IconSearch } from "@/systems/ecommerce-store/components/EcommerceStoreIcons";
@@ -140,12 +140,14 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
           {data.store.logoUrl ? (
-            <Image
+            <EcommerceRemoteImg
               src={data.store.logoUrl}
-              alt=""
-              width={44}
-              height={44}
               className="h-11 w-11 rounded-full object-cover"
+              fallback={
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#5b61ff] to-[#c026d3] text-sm font-black text-white">
+                  {data.store.storeName.slice(0, 1)}
+                </div>
+              }
             />
           ) : (
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#5b61ff] to-[#c026d3] text-sm font-black text-white">
@@ -241,7 +243,7 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
             href={`/shop/${data.store.id}/sale`}
             className={cn(
               ecommerceStorePrimaryButtonClass,
-              "h-auto min-h-11 w-full justify-between px-4 py-3 text-left sm:text-sm",
+              "w-full justify-between px-4 text-left",
             )}
           >
             <span>ซื้อด่วน — สินค้าเด่น (หน้าเดียวจบ)</span>
@@ -304,19 +306,19 @@ export function EcommerceStorefrontClient({ data }: { data: StorePayload }) {
         <div className="mx-auto flex max-w-6xl gap-2">
           <Link
             href={`/shop/${data.store.id}/cart`}
-            className={cn(ecommerceStoreOutlineButtonClass, "h-11 min-h-11 flex-1 text-sm")}
+            className={cn(ecommerceStoreOutlineButtonClass, "flex-1")}
           >
             ตะกร้า{cart.itemCount > 0 ? ` (${cart.itemCount})` : ""}
           </Link>
           {cart.itemCount > 0 ? (
             <Link
               href={`/shop/${data.store.id}/checkout`}
-              className={cn(ecommerceStorePrimaryButtonClass, "h-11 min-h-11 flex-[1.4] text-sm")}
+              className={cn(ecommerceStorePrimaryButtonClass, "flex-[1.4]")}
             >
               ชำระ ฿{cart.totalBaht.toLocaleString("th-TH")}
             </Link>
           ) : (
-            <span className="inline-flex h-11 min-h-11 flex-[1.4] items-center justify-center rounded-lg bg-slate-100 text-sm font-semibold text-[#8b87b8]">
+            <span className={cn(ecommerceStoreOutlineButtonClass, "flex-[1.4] cursor-default opacity-60")}>
               เลือกสินค้าก่อน
             </span>
           )}

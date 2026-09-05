@@ -411,7 +411,7 @@ export function EcommerceProductsClient({
         <label className="block text-sm font-semibold text-[#1e1b4b] sm:col-span-2">
           ชื่อสินค้า
           <input
-            className="app-input mt-1.5 min-h-[44px] w-full rounded-xl"
+            className={cn(ecommerceFieldClass, "mt-1.5")}
             value={opts.nameVal}
             onChange={(e) => opts.setNameVal(e.target.value)}
           />
@@ -419,7 +419,7 @@ export function EcommerceProductsClient({
         <label className="block text-sm font-semibold text-[#1e1b4b]">
           ราคา (บาท)
           <input
-            className="app-input mt-1.5 min-h-[44px] w-full rounded-xl"
+            className={cn(ecommerceFieldClass, "mt-1.5")}
             type="number"
             min={0}
             value={opts.priceVal}
@@ -429,7 +429,7 @@ export function EcommerceProductsClient({
         <label className="block text-sm font-semibold text-[#1e1b4b]">
           สต๊อก
           <input
-            className="app-input mt-1.5 min-h-[44px] w-full rounded-xl"
+            className={cn(ecommerceFieldClass, "mt-1.5")}
             type="number"
             min={0}
             value={opts.stockVal}
@@ -440,7 +440,7 @@ export function EcommerceProductsClient({
           <label className="block text-sm font-semibold text-[#1e1b4b] sm:col-span-2">
             SKU (ถ้ามี)
             <input
-              className="app-input mt-1.5 min-h-[44px] w-full rounded-xl"
+              className={cn(ecommerceFieldClass, "mt-1.5")}
               value={opts.skuVal}
               onChange={(e) => opts.setSkuVal?.(e.target.value)}
             />
@@ -450,7 +450,7 @@ export function EcommerceProductsClient({
       <label className="block text-sm font-semibold text-[#1e1b4b]">
         หมวดหมู่
         <select
-          className="app-input mt-1.5 min-h-[44px] w-full rounded-xl"
+          className={cn(ecommerceFieldClass, "mt-1.5")}
           value={opts.categoryVal}
           onChange={(e) => opts.setCategoryVal(e.target.value)}
         >
@@ -650,7 +650,7 @@ export function EcommerceProductsClient({
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                   placeholder="ชื่อ · SKU · หมวด"
-                  className={cn(ecommerceFieldClass, "mt-1 min-h-[44px]")}
+                  className={cn(ecommerceFieldClass, "mt-1")}
                   aria-label="ค้นหาสินค้า"
                 />
               </label>
@@ -660,7 +660,7 @@ export function EcommerceProductsClient({
                   id="ecommerce-product-filter-category"
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
-                  className={cn(ecommerceFieldClass, "mt-1 min-h-[44px]")}
+                  className={cn(ecommerceFieldClass, "mt-1")}
                   aria-label="กรองหมวดหมู่"
                 >
                   <option value="">ทุกหมวด</option>
@@ -843,7 +843,7 @@ export function EcommerceProductsClient({
           <label className="block text-sm font-semibold text-[#1e1b4b]">
             ชื่อหมวด
             <input
-              className="app-input mt-1.5 min-h-[44px] w-full rounded-xl"
+              className={cn(ecommerceFieldClass, "mt-1.5")}
               placeholder="เช่น สกินแคร์"
               value={categoryName}
               onChange={(e) => setCategoryName(e.target.value)}
