@@ -48,8 +48,8 @@ type Summary = {
   pendingOrders: number;
   lowStockCount: number;
   productCount: number;
-  monthRevenueBaht: number;
-  monthOrderCount: number;
+  todayRevenueBaht: number;
+  todayOrderCount: number;
   salesLabel: string;
   topProducts: TopProduct[];
 };
@@ -110,7 +110,7 @@ export function EcommerceDashboardClient() {
           apiFetch("/api/ecommerce-store/session/store", { cache: "no-store" }),
           apiFetch("/api/ecommerce-store/session/products", { cache: "no-store" }),
           apiFetch("/api/ecommerce-store/session/orders?status=PENDING_SLIP", { cache: "no-store" }),
-          apiFetch("/api/ecommerce-store/session/sales-summary?period=month", { cache: "no-store" }),
+          apiFetch("/api/ecommerce-store/session/sales-summary?period=today", { cache: "no-store" }),
         ]);
         const storeJ = await storeRes.json();
         const prodJ = await prodRes.json();
@@ -128,9 +128,9 @@ export function EcommerceDashboardClient() {
           pendingOrders: (ordJ.orders ?? []).length,
           productCount: products.length,
           lowStockCount: products.filter((p) => p.stockBalance <= threshold).length,
-          monthRevenueBaht: salesJ.totalBaht ?? 0,
-          monthOrderCount: salesJ.orderCount ?? 0,
-          salesLabel: salesJ.label ?? "เดือนนี้",
+          todayRevenueBaht: salesJ.totalBaht ?? 0,
+          todayOrderCount: salesJ.orderCount ?? 0,
+          salesLabel: salesJ.label ?? "วันนี้",
           topProducts: Array.isArray(salesJ.topProducts) ? salesJ.topProducts.slice(0, 10) : [],
         });
       } finally {
@@ -158,8 +158,8 @@ export function EcommerceDashboardClient() {
 
       <div className={ecommerceStoreDashboardStatsGridClass}>
         <OverviewStat
-          title="รายรับเดือนนี้"
-          value={loading ? "…" : `฿${formatEcommerceBaht(data?.monthRevenueBaht ?? 0)}`}
+          title="รายรับวันนี้"
+          value={loading ? "…" : `฿${formatEcommerceBaht(data?.todayRevenueBaht ?? 0)}`}
           tone="emerald"
           icon={
             <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5}>
@@ -169,8 +169,8 @@ export function EcommerceDashboardClient() {
           }
         />
         <OverviewStat
-          title="ออเดอร์เดือนนี้"
-          value={loading ? "—" : (data?.monthOrderCount ?? 0).toLocaleString("th-TH")}
+          title="ออเดอร์วันนี้"
+          value={loading ? "—" : (data?.todayOrderCount ?? 0).toLocaleString("th-TH")}
           tone="indigo"
           icon={
             <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5}>
@@ -210,7 +210,7 @@ export function EcommerceDashboardClient() {
           <div className="min-w-0">
             <h3 className={ecommerceStoreSectionHeadingClass}>สินค้าขายดี · 10 อันดับ</h3>
             <p className="mt-0.5 text-xs font-medium text-[#66638c]">
-              เรียงตามจำนวนชิ้นที่ขาย · {data?.salesLabel ?? "เดือนนี้"}
+              เรียงตามจำนวนชิ้นที่ขาย · {data?.salesLabel ?? "วันนี้"}
             </p>
           </div>
           {!staffAuth ? (
