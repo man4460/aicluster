@@ -1,6 +1,15 @@
 "use client";
 
-import { ClipboardList, Package, Plus, RefreshCw, Users } from "lucide-react";
+import {
+  ClipboardList,
+  Download,
+  Package,
+  Plus,
+  RefreshCw,
+  Upload,
+  Users,
+  Warehouse,
+} from "lucide-react";
 import { Suspense, useCallback, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/cn";
@@ -14,6 +23,10 @@ import {
   type EcommerceProductsEmbeddedToolbarApi,
 } from "@/systems/ecommerce-store/components/EcommerceProductsClient";
 import {
+  EcommerceStockClient,
+  type EcommerceStockEmbeddedToolbarApi,
+} from "@/systems/ecommerce-store/components/EcommerceStockClient";
+import {
   ECOMMERCE_STORE_MANAGE_TAB_ITEMS,
   ecommerceStoreManageHref,
   parseEcommerceStoreManageTab,
@@ -26,6 +39,7 @@ import {
 
 function manageTabIcon(key: EcommerceStoreManageTabKey) {
   if (key === "crm") return <Users className="h-3.5 w-3.5" aria-hidden />;
+  if (key === "stock") return <Warehouse className="h-3.5 w-3.5" aria-hidden />;
   return <Package className="h-3.5 w-3.5" aria-hidden />;
 }
 
@@ -46,10 +60,15 @@ function EcommerceManageHubTabs() {
   );
 
   const [productsToolbar, setProductsToolbar] = useState<EcommerceProductsEmbeddedToolbarApi | null>(null);
+  const [stockToolbar, setStockToolbar] = useState<EcommerceStockEmbeddedToolbarApi | null>(null);
   const [crmToolbar, setCrmToolbar] = useState<EcommerceCrmEmbeddedToolbarApi | null>(null);
 
   const registerProductsToolbar = useCallback((api: EcommerceProductsEmbeddedToolbarApi | null) => {
     setProductsToolbar(api);
+  }, []);
+
+  const registerStockToolbar = useCallback((api: EcommerceStockEmbeddedToolbarApi | null) => {
+    setStockToolbar(api);
   }, []);
 
   const registerCrmToolbar = useCallback((api: EcommerceCrmEmbeddedToolbarApi | null) => {
@@ -116,6 +135,101 @@ function EcommerceManageHubTabs() {
     </div>
   );
 
+  const stockActions = (
+    <div className={ecommerceStoreInlineSubNavShellClass}>
+      <button
+        type="button"
+        className={cn(
+          ecommerceStoreInlineSubNavBtnClass(stockToolbar?.filterOpen ?? false),
+          "relative",
+          stockToolbar?.hasActiveFilters && !stockToolbar.filterOpen && "ring-1 ring-amber-300/80",
+        )}
+        title={stockToolbar?.filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}
+        aria-label={stockToolbar?.filterOpen ? "ซ่อนตัวกรอง" : "แสดงตัวกรอง"}
+        aria-expanded={stockToolbar?.filterOpen ?? false}
+        aria-controls="ecommerce-stock-filter-panel"
+        disabled={!stockToolbar}
+        onClick={() => stockToolbar?.toggleFilter()}
+      >
+        <IconFilter className="h-3.5 w-3.5 shrink-0" />
+        <span className="hidden sm:inline">{stockToolbar?.filterOpen ? "ซ่อนกรอง" : "แสดงกรอง"}</span>
+        {stockToolbar?.hasActiveFilters && !stockToolbar.filterOpen ? (
+          <span
+            className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-gradient-to-r from-[#0000BF] via-[#8b5cf6] to-[#ec4899] ring-2 ring-white"
+            aria-hidden
+          />
+        ) : null}
+      </button>
+      <button
+        type="button"
+        className={ecommerceStoreInlineSubNavBtnClass(false)}
+        title="หมวดหมู่สต๊อก"
+        aria-label="จัดการหมวดหมู่สต๊อก"
+        disabled={!stockToolbar}
+        onClick={() => stockToolbar?.openCategories()}
+      >
+        <span className="hidden sm:inline">หมวด</span>
+        <span className="sm:hidden text-[10px] font-black" aria-hidden>
+          หมวด
+        </span>
+      </button>
+      <button
+        type="button"
+        className={ecommerceStoreInlineSubNavBtnClass(false)}
+        title="ดาวน์โหลดแบบฟอร์ม Excel"
+        aria-label="ดาวน์โหลดแบบฟอร์ม Excel"
+        disabled={!stockToolbar}
+        onClick={() => stockToolbar?.downloadTemplate()}
+      >
+        <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span className="hidden sm:inline">แบบฟอร์ม</span>
+      </button>
+      <button
+        type="button"
+        className={cn(ecommerceStoreInlineSubNavBtnClass(false), "disabled:opacity-50")}
+        title="นำเข้า Excel"
+        aria-label="นำเข้า Excel"
+        disabled={!stockToolbar || stockToolbar.importBusy}
+        onClick={() => stockToolbar?.triggerImport()}
+      >
+        <Upload className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span className="hidden sm:inline">นำเข้า</span>
+      </button>
+      <button
+        type="button"
+        className={ecommerceStoreInlineSubNavBtnClass(false)}
+        title="ส่งออก Excel"
+        aria-label="ส่งออก Excel"
+        disabled={!stockToolbar}
+        onClick={() => stockToolbar?.downloadExport()}
+      >
+        <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span className="hidden sm:inline">ส่งออก</span>
+      </button>
+      <button
+        type="button"
+        className={cn(ecommerceStoreInlineSubNavBtnClass(false), "disabled:opacity-50")}
+        title="รีเฟรช"
+        aria-label="รีเฟรชสต๊อก"
+        disabled={!stockToolbar || stockToolbar.loading}
+        onClick={() => stockToolbar?.reload()}
+      >
+        <RefreshCw className={cn("h-3.5 w-3.5 shrink-0", stockToolbar?.loading && "animate-spin")} aria-hidden />
+      </button>
+      <button
+        type="button"
+        className={ecommerceStoreInlineSubNavBtnClass(false)}
+        title="เพิ่มสต๊อก"
+        aria-label="เพิ่มสต๊อก"
+        disabled={!stockToolbar}
+        onClick={() => stockToolbar?.openAdd()}
+      >
+        <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span className="hidden sm:inline">เพิ่ม</span>
+      </button>
+    </div>
+  );
+
   const crmActions = (
     <div className={ecommerceStoreInlineSubNavShellClass}>
       <button
@@ -156,6 +270,9 @@ function EcommerceManageHubTabs() {
     </div>
   );
 
+  const action =
+    tab === "crm" ? crmActions : tab === "stock" ? stockActions : productsActions;
+
   return (
     <EcommercePageSubNav
       title="การจัดการ"
@@ -170,10 +287,12 @@ function EcommerceManageHubTabs() {
       onSelect={setTab}
       ariaLabel="แท็บการจัดการ"
       mobileSelect={{ id: "ecommerce-manage-tab-select", label: "เลือกหมวดการจัดการ" }}
-      action={tab === "crm" ? crmActions : productsActions}
+      action={action}
     >
       {tab === "crm" ? (
         <EcommerceCrmClient embedded onEmbeddedToolbar={registerCrmToolbar} />
+      ) : tab === "stock" ? (
+        <EcommerceStockClient embedded onEmbeddedToolbar={registerStockToolbar} />
       ) : (
         <EcommerceProductsClient embedded onEmbeddedToolbar={registerProductsToolbar} />
       )}
@@ -185,7 +304,7 @@ export function EcommerceManageHubClient() {
   return (
     <Suspense
       fallback={
-        <div className="rounded-xl border border-slate-200/90 bg-white px-4 py-8 text-center text-sm font-semibold text-[#66638c]">
+        <div className="rounded-lg border border-slate-200/90 bg-white px-4 py-8 text-center text-sm font-semibold text-[#66638c]">
           กำลังโหลด…
         </div>
       }
