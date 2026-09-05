@@ -1,24 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AppUsageGuideModal, appModuleShellMainScrollClass } from "@/components/app-templates";
-import { appDashboardBrandGradientFillClass } from "@/components/app-templates/dashboard-tokens";
 import { cn } from "@/lib/cn";
 import {
   ECOMMERCE_STORE_HEADER_COLLAPSE_EVENT,
   ECOMMERCE_STORE_MODULE_DISPLAY_NAME,
   ECOMMERCE_STORE_NAV_ITEMS,
-  ecommerceStorePathFlags,
   isEcommerceStoreNavItemActive,
   readEcommerceStoreHeaderCollapsed,
   writeEcommerceStoreHeaderCollapsed,
   type EcommerceStoreNavKey,
 } from "@/systems/ecommerce-store/ecommerce-store-module-nav";
 import { EcommerceStoreMobileBottomProvider } from "@/systems/ecommerce-store/components/EcommerceStoreMobileBottomChrome";
-import { EcommerceStoreButton } from "@/systems/ecommerce-store/components/EcommerceStoreButton";
 import {
   IconClipboard,
   IconPackage,
@@ -28,11 +24,12 @@ import {
 } from "@/systems/ecommerce-store/components/EcommerceStoreIcons";
 import {
   ecommerceStoreAccentBarClass,
-  ecommerceStoreGlassShellClass,
+  ecommerceStoreIconButtonClass,
   ecommerceStoreMainPaddingBottomClass,
   ecommerceStoreModuleIconBadgeClass,
-  ecommerceStoreNavActiveClass,
-  ecommerceStoreNavIdleClass,
+  ecommerceStoreModuleShellClass,
+  ecommerceStoreNavLinkClass,
+  ecommerceStoreOutlineButtonClass,
 } from "@/systems/ecommerce-store/lib/ui-tokens";
 
 const navIcons = {
@@ -48,52 +45,16 @@ function navIcon(key: EcommerceStoreNavKey, className?: string) {
   return IconCmp ? <IconCmp className={className} /> : null;
 }
 
-function TabLink({
-  href,
-  label,
-  active,
-  icon,
-}: {
-  href: string;
-  label: string;
-  active: boolean;
-  icon: ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "flex min-h-[44px] min-w-0 touch-manipulation select-none items-center justify-center gap-2 rounded-2xl px-3 text-sm font-semibold transition-all active:scale-[0.98] w-full sm:min-h-0 sm:w-auto sm:justify-center sm:px-3.5 sm:py-2",
-        active ? ecommerceStoreNavActiveClass : ecommerceStoreNavIdleClass,
-      )}
-      aria-current={active ? "page" : undefined}
-    >
-      <span
-        className={cn("flex h-4 w-4 shrink-0 items-center justify-center", active ? "text-white" : "text-slate-400")}
-        aria-hidden
-      >
-        {icon}
-      </span>
-      <span>{label}</span>
-    </Link>
-  );
-}
-
-function HeaderCollapseGlyph({ collapsed }: { collapsed: boolean }) {
+function HeaderCollapseGlyph() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
-      {collapsed ? (
-        <path d="M6 15l6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
-      ) : (
-        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-      )}
+      <path d="M4 6h16M4 12h16M4 18h10" strokeLinecap="round" />
     </svg>
   );
 }
 
 function EcommerceStoreShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
-  const flags = ecommerceStorePathFlags(pathname);
   const [guideOpen, setGuideOpen] = useState(false);
   const [headerCollapsed, setHeaderCollapsed] = useState(readEcommerceStoreHeaderCollapsed());
 
@@ -112,79 +73,79 @@ function EcommerceStoreShellInner({ children }: { children: React.ReactNode }) {
     writeEcommerceStoreHeaderCollapsed(!headerCollapsed);
   }, [headerCollapsed]);
 
-  void flags;
-
   return (
-    <div className={cn("max-w-full space-y-4 sm:space-y-6", ecommerceStoreMainPaddingBottomClass)}>
+    <div className={cn("flex min-w-0 flex-col gap-4 sm:gap-6", ecommerceStoreMainPaddingBottomClass)}>
       <header
         className={cn(
-          ecommerceStoreGlassShellClass,
-          "flex shrink-0 flex-col print:hidden",
+          ecommerceStoreModuleShellClass,
+          "flex flex-col px-4 py-4 sm:px-6 sm:py-5",
           headerCollapsed && "hidden",
         )}
       >
-        <div className={ecommerceStoreAccentBarClass} aria-hidden />
-        <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
-          <div className="flex min-w-0 items-start gap-3">
-            <div
-              className={cn(
-                ecommerceStoreModuleIconBadgeClass,
-                "flex items-center justify-center shadow-lg shadow-fuchsia-500/20",
-                appDashboardBrandGradientFillClass,
-              )}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5" aria-hidden>
+        <div className={cn(ecommerceStoreAccentBarClass, "mb-0")} aria-hidden />
+        <div className="mt-5 flex flex-wrap items-start justify-between gap-3 gap-y-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className={ecommerceStoreModuleIconBadgeClass} aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-5 w-5">
                 <path d="M3 9l9-6 9 6v11a1 1 0 01-1 1H4a1 1 0 01-1-1V9z" strokeLinejoin="round" />
                 <path d="M9 22V12h6v10" strokeLinecap="round" />
               </svg>
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#4d47b6]">โมดูล</p>
-              <h1 className="mt-1 truncate text-xl font-black tracking-tight text-[#1e1b4b] sm:text-2xl">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#4d47b6]">โมดูล</p>
+              <h1 className="mt-0.5 text-xl font-bold tracking-tight text-[#1e1b4b] sm:text-2xl">
                 {ECOMMERCE_STORE_MODULE_DISPLAY_NAME}
               </h1>
             </div>
           </div>
+
           <div className="flex shrink-0 items-center gap-2">
-            <EcommerceStoreButton
+            <button
               type="button"
               onClick={() => setGuideOpen(true)}
-              className="flex h-10 min-h-[44px] w-10 shrink-0 items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/80 text-sm font-black text-[#4d47b6] shadow-sm backdrop-blur-md transition-all hover:bg-white active:scale-95 sm:w-auto sm:gap-1.5 sm:px-4 sm:inline-flex"
+              className={cn(ecommerceStoreOutlineButtonClass, "w-9 min-w-9 px-0 sm:w-auto sm:min-w-0 sm:px-2.5")}
               aria-label="คู่มือการใช้งาน"
               aria-haspopup="dialog"
               aria-expanded={guideOpen}
+              suppressHydrationWarning
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
                 <circle cx="12" cy="12" r="9" />
                 <path d="M9.5 9a2.5 2.5 0 115 0c0 1.6-2.5 2.1-2.5 4" strokeLinecap="round" />
                 <circle cx="12" cy="17" r="1" />
               </svg>
-              <span className="hidden sm:inline">คู่มือ</span>
-            </EcommerceStoreButton>
-            <EcommerceStoreButton
+              <span className="hidden sm:inline">คู่มือการใช้งาน</span>
+            </button>
+            <button
               type="button"
               onClick={toggleHeaderCollapse}
-              className="inline-flex h-10 min-h-[44px] w-10 items-center justify-center rounded-2xl border border-[#0000BF]/25 bg-white/80 text-[#4d47b6] shadow-sm backdrop-blur-md transition-all hover:bg-white active:scale-95"
+              className={ecommerceStoreIconButtonClass}
               aria-pressed={headerCollapsed}
               aria-label="ซ่อนส่วนหัวโมดูล"
               title="ซ่อนส่วนหัวโมดูล"
+              suppressHydrationWarning
             >
-              <HeaderCollapseGlyph collapsed={headerCollapsed} />
-            </EcommerceStoreButton>
+              <HeaderCollapseGlyph />
+            </button>
           </div>
         </div>
-        <nav className="mt-5 hidden border-t border-[#e8e6fc]/70 pt-5 lg:block print:hidden" aria-label="เมนูร้านออนไลน์">
-          <ul className="grid grid-cols-5 gap-2">
+
+        <nav aria-label="เมนูร้านออนไลน์" className="mt-4 hidden border-t border-slate-200/80 pt-4 lg:block print:hidden">
+          <ul className="-mx-1 flex gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {ECOMMERCE_STORE_NAV_ITEMS.map((item) => {
               const active = isEcommerceStoreNavItemActive(pathname, item.key);
               return (
-                <li key={item.key}>
-                  <TabLink
+                <li key={item.key} className="min-w-0 shrink-0 flex-[1_1_0%]">
+                  <Link
                     href={item.href}
-                    label={item.label}
-                    active={active}
-                    icon={navIcon(item.key, "h-4 w-4")}
-                  />
+                    className={ecommerceStoreNavLinkClass(active)}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden>
+                      {navIcon(item.key, "h-4 w-4")}
+                    </span>
+                    <span className="truncate">{item.label}</span>
+                  </Link>
                 </li>
               );
             })}
@@ -195,7 +156,8 @@ function EcommerceStoreShellInner({ children }: { children: React.ReactNode }) {
       <AppUsageGuideModal
         open={guideOpen}
         onClose={() => setGuideOpen(false)}
-        title="คู่มือร้านออนไลน์"
+        title="คู่มือการใช้งาน — ร้านออนไลน์"
+        subtitle="แดชบอร์ด · สินค้า · ออเดอร์ · CRM · ตั้งค่า · เว็บลูกค้า"
         sections={[
           {
             title: "เริ่มต้น",
@@ -203,13 +165,23 @@ function EcommerceStoreShellInner({ children }: { children: React.ReactNode }) {
               "ตั้งค่าร้าน → เพิ่มสินค้าและรูป → คัดลอกลิงก์ /shop แชร์ลูกค้า → ตรวจสลิปที่แท็บออเดอร์",
           },
           {
+            title: "เมนูหลัก",
+            content:
+              "แดชบอร์ด · สินค้า · ออเดอร์ · CRM · ตั้งค่า — มือถือใช้เมนูล่าง · เดสก์ท็อปใช้แท็บในหัว · กดไอคอนซ่อนหัวเพื่อย้ายเมนูขึ้นแถบม่วง",
+          },
+          {
+            title: "ตั้งค่าร้าน",
+            content:
+              "แยกหมวด พื้นฐาน · การเงิน · เว็ปลิงค์ลูกค้า — มือถือเลือกจาก dropdown · คอมใช้แถบเมนูคู่ปุ่มบันทึก",
+          },
+          {
             title: "PromptPay",
-            content: "ใส่เบอร์พร้อมเพย์ในตั้งค่า — หน้าชำระเงินลูกค้าจะเห็น QR ฝังยอดอัตโนมัติ",
+            content: "ใส่เบอร์พร้อมเพย์ในตั้งค่าการเงิน — หน้าชำระเงินลูกค้าจะเห็น QR ฝังยอดอัตโนมัติ",
           },
           {
             title: "Sale Page",
             content:
-              "เลือกสินค้าเด่นในตั้งค่า + เปิดโหมด Sale Page — เหมาะโพสต์ TikTok/FB จบในหน้าเดียว",
+              "ในแท็บเว็ปลิงค์ลูกค้า เลือกสินค้าเด่น + เปิดโหมด Sale Page — เหมาะโพสต์ TikTok/FB จบในหน้าเดียว",
           },
           {
             title: "โดเมนส่วนตัว",

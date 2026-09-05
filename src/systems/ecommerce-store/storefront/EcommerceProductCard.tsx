@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
+import { ecommerceStorePrimaryButtonClass } from "@/systems/ecommerce-store/lib/ui-tokens";
 
 export type StorefrontProduct = {
   id: string;
@@ -43,8 +44,8 @@ export function EcommerceProductCard({ product, categoryName, inCartQty, onAdd }
 
   if (maxQty <= 0) {
     return (
-      <article className="app-surface flex flex-col overflow-hidden rounded-2xl border border-white/60 opacity-70">
-        <div className="relative aspect-square bg-[#f3f2fa]">
+      <article className="flex flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white opacity-70 shadow-sm">
+        <div className="relative aspect-square bg-slate-100">
           {product.imageUrl ? (
             <Image src={product.imageUrl} alt="" fill className="object-cover grayscale" sizes="50vw" />
           ) : (
@@ -52,7 +53,7 @@ export function EcommerceProductCard({ product, categoryName, inCartQty, onAdd }
           )}
         </div>
         <div className="p-3">
-          <h2 className="line-clamp-2 text-sm font-bold text-[#1e1b4b]">{product.name}</h2>
+          <h3 className="line-clamp-2 text-sm font-bold text-[#1e1b4b]">{product.name}</h3>
           <p className="mt-2 text-xs font-semibold text-rose-600">สินค้าหมด</p>
         </div>
       </article>
@@ -60,43 +61,50 @@ export function EcommerceProductCard({ product, categoryName, inCartQty, onAdd }
   }
 
   return (
-    <article className="app-surface flex flex-col overflow-hidden rounded-2xl border border-white/60 shadow-sm">
-      <div className="relative aspect-square bg-[#f3f2fa]">
+    <article className="flex flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm transition hover:shadow-md">
+      <div className="relative aspect-square bg-slate-100">
         {product.imageUrl ? (
-          <Image src={product.imageUrl} alt="" fill className="object-cover" sizes="50vw" />
+          <Image src={product.imageUrl} alt="" fill className="object-cover" sizes="(max-width: 640px) 50vw, 25vw" />
         ) : (
-          <div className="flex h-full items-center justify-center text-xs text-[#8b87b8]">ไม่มีรูป</div>
+          <div className="flex h-full items-center justify-center bg-slate-50 text-[#4d47b6]" aria-hidden>
+            <svg viewBox="0 0 24 24" className="h-8 w-8 opacity-40" fill="none" stroke="currentColor" strokeWidth={1.75}>
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" strokeLinejoin="round" />
+              <path d="M3.3 7 12 12l8.7-5M12 22V12" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
         )}
         <div className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-col gap-1">
           {product.isBestseller ? (
-            <span className="w-fit rounded-lg bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">
+            <span className="w-fit rounded-md bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">
               ขายดี
             </span>
           ) : null}
           {product.isRecommended ? (
-            <span className="w-fit rounded-lg bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">
+            <span className="w-fit rounded-md bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">
               แนะนำ
             </span>
           ) : null}
           {inCartQty > 0 ? (
-            <span className="w-fit rounded-lg bg-[#4d47b6] px-2 py-0.5 text-[10px] font-bold text-white shadow">
+            <span className="w-fit rounded-md bg-[#4d47b6] px-2 py-0.5 text-[10px] font-bold text-white shadow">
               ในตะกร้า {inCartQty}
             </span>
           ) : null}
         </div>
       </div>
       <div className="flex flex-1 flex-col p-3">
-        <h2 className="line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-snug text-[#1e1b4b]">
+        <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-snug text-[#1e1b4b]">
           {product.name}
-        </h2>
+        </h3>
         {categoryName ? (
           <p className="mt-1 line-clamp-1 text-[10px] font-semibold text-[#8b87b8]">{categoryName}</p>
         ) : null}
-        <p className="mt-1 font-black text-[#4d47b6]">฿{price.toLocaleString("th-TH")}</p>
+        <p className="mt-1 text-base font-black tabular-nums text-emerald-700">
+          ฿{price.toLocaleString("th-TH")}
+        </p>
         <p className="mt-0.5 text-[10px] text-[#8b87b8]">คงเหลือ {maxQty} ชิ้น</p>
 
         <div className="mt-3 flex items-center justify-between gap-2">
-          <div className="flex items-center rounded-xl border border-white/70 bg-white/80">
+          <div className="flex items-center rounded-lg border border-slate-200/90 bg-white">
             <button
               type="button"
               className="min-h-[36px] min-w-[36px] text-sm font-bold text-[#4d47b6]"
@@ -121,12 +129,12 @@ export function EcommerceProductCard({ product, categoryName, inCartQty, onAdd }
           type="button"
           onClick={handleAdd}
           className={cn(
-            "mt-2 min-h-[40px] w-full rounded-xl text-xs font-bold transition",
+            "mt-2 w-full",
             flash === "ok"
-              ? "bg-emerald-600 text-white"
+              ? "inline-flex h-9 items-center justify-center rounded-lg bg-emerald-600 text-xs font-bold text-white"
               : flash === "fail"
-                ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
-                : "bg-gradient-to-r from-[#5b61ff] to-[#4d47b6] text-white active:scale-[0.98]",
+                ? "inline-flex h-9 items-center justify-center rounded-lg bg-rose-100 text-xs font-bold text-rose-700 ring-1 ring-rose-200"
+                : ecommerceStorePrimaryButtonClass,
           )}
         >
           {flash === "ok" ? "ใส่ตะกร้าแล้ว" : flash === "fail" ? "เกินสต๊อก / หมด" : "ใส่ตะกร้า"}

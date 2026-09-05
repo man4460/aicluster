@@ -2,6 +2,8 @@ export const ECOMMERCE_STORE_BASE = "/dashboard/ecommerce-store";
 export const ECOMMERCE_STORE_SETTINGS_HREF = `${ECOMMERCE_STORE_BASE}/settings`;
 export const ECOMMERCE_STORE_MODULE_DISPLAY_NAME = "ร้านออนไลน์";
 
+export type EcommerceStoreSettingsTab = "basic" | "finance" | "portal";
+
 export const ECOMMERCE_STORE_HEADER_COLLAPSE_KEY = "mawell-ecommerce-store-module-header-collapsed";
 export const ECOMMERCE_STORE_HEADER_COLLAPSE_EVENT = "mawell-ecommerce-store-header-collapse";
 
