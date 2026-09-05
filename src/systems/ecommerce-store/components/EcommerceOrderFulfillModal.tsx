@@ -234,8 +234,9 @@ export function EcommerceOrderFulfillModal({
                   onClick={() => {
                     const data = printOrder();
                     if (!data) return;
-                    printEcommerceShippingLabel(data, shop);
-                    setInfo("ส่งพิมพ์ฉลากแล้ว");
+                    void printEcommerceShippingLabel(data, shop).then(() => {
+                      setInfo("ส่งพิมพ์ฉลากแล้ว");
+                    });
                   }}
                 >
                   พิมพ์ฉลาก
