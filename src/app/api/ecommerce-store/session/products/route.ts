@@ -94,12 +94,15 @@ export async function PATCH(req: Request) {
   if (typeof body.sku === "string") data.sku = body.sku.trim() || null;
   if (typeof body.imageUrl === "string") data.imageUrl = body.imageUrl.trim() || null;
   if (typeof body.description === "string") data.description = body.description.trim() || null;
-  if (typeof body.stockBalance === "number") data.stockBalance = Math.max(0, Math.floor(body.stockBalance));
+  if (typeof body.stockBalance === "number" && Number.isFinite(body.stockBalance)) {
+    data.stockBalance = Math.max(0, Math.floor(body.stockBalance));
+  }
   if (typeof body.isActive === "boolean") data.isActive = body.isActive;
   if (typeof body.isRecommended === "boolean") data.isRecommended = body.isRecommended;
   if (typeof body.isBestseller === "boolean") data.isBestseller = body.isBestseller;
   if (typeof body.stockDelta === "number" && Number.isFinite(body.stockDelta)) {
-    data.stockBalance = Math.max(0, existing.stockBalance + Math.floor(body.stockDelta));
+    const delta = Math.trunc(body.stockDelta);
+    data.stockBalance = Math.max(0, existing.stockBalance + delta);
   }
   if (body.categoryId === null || body.categoryId === "") {
     data.category = { disconnect: true };
@@ -109,6 +112,10 @@ export async function PATCH(req: Request) {
     });
     if (!cat) return NextResponse.json({ error: "หมวดหมู่ไม่ถูกต้อง" }, { status: 400 });
     data.category = { connect: { id: cat.id } };
+  }
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: "ไม่มีข้อมูลให้อัปเดต" }, { status: 400 });
   }
 
   const product = await prisma.ecommerceProduct.update({

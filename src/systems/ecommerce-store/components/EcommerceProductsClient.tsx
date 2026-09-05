@@ -25,6 +25,7 @@ import {
   ecommerceGradientPriceClass,
   ecommerceListStackClass,
   ecommerceProductTagClass,
+  ecommerceStockButtonClass,
   ecommerceStockPillClass,
 } from "@/systems/ecommerce-store/components/ecommerce-ui-tokens";
 import {
@@ -81,11 +82,17 @@ export function EcommerceProductsClient({
   onEmbeddedToolbar?: (api: EcommerceProductsEmbeddedToolbarApi | null) => void;
 } = {}) {
   const notice = useAppNoticePopup();
+  const noticeErrorRef = useRef(notice.error);
+  noticeErrorRef.current = notice.error;
+  const noticeSuccessRef = useRef(notice.success);
+  noticeSuccessRef.current = notice.success;
+
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [threshold, setThreshold] = useState(5);
   const [loading, setLoading] = useState(true);
   const [importBusy, setImportBusy] = useState(false);
+  const [stockBusyId, setStockBusyId] = useState<string | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
 
   const [showAddProductModal, setShowAddProductModal] = useState(false);
@@ -180,52 +187,59 @@ export function EcommerceProductsClient({
   }
 
   async function reloadCategories() {
-    const res = await fetch("/api/ecommerce-store/session/categories");
+    const res = await fetch("/api/ecommerce-store/session/categories", {
+      credentials: "include",
+      cache: "no-store",
+    });
     const j = await res.json();
     setCategories(j.categories ?? []);
   }
 
-  async function reload() {
-    setLoading(true);
+  const reload = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
       const [prodRes] = await Promise.all([
-        fetch("/api/ecommerce-store/session/products"),
+        fetch("/api/ecommerce-store/session/products", { credentials: "include", cache: "no-store" }),
         reloadCategories(),
       ]);
       const j = await prodRes.json();
+      if (!prodRes.ok) {
+        throw new Error(typeof j.error === "string" ? j.error : "โหลดสินค้าไม่สำเร็จ");
+      }
       setProducts(j.products ?? []);
       setThreshold(j.lowStockThreshold ?? 5);
+    } catch (e) {
+      noticeErrorRef.current(e instanceof Error ? e.message : "โหลดสินค้าไม่สำเร็จ");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
-  }
+  }, []);
 
-  const downloadExcel = useCallback(
-    async (mode: "template" | "export") => {
-      try {
-        const q = mode === "template" ? "?mode=template" : "";
-        const res = await fetch(`/api/ecommerce-store/session/stock/excel${q}`);
-        if (!res.ok) {
-          const j = await res.json().catch(() => ({}));
-          throw new Error((j as { error?: string }).error ?? "ดาวน์โหลดไม่สำเร็จ");
-        }
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download =
-          mode === "export"
-            ? `ecommerce-stock-${new Date().toISOString().slice(0, 10)}.xls`
-            : "ecommerce-stock-template.xls";
-        a.click();
-        URL.revokeObjectURL(url);
-        notice.success(mode === "export" ? "ส่งออกสินค้าแล้ว" : "ดาวน์โหลดแบบฟอร์มแล้ว");
-      } catch (e) {
-        notice.error(e instanceof Error ? e.message : "ดาวน์โหลดไม่สำเร็จ");
+  const downloadExcel = useCallback(async (mode: "template" | "export") => {
+    try {
+      const q = mode === "template" ? "?mode=template" : "";
+      const res = await fetch(`/api/ecommerce-store/session/stock/excel${q}`, {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error((j as { error?: string }).error ?? "ดาวน์โหลดไม่สำเร็จ");
       }
-    },
-    [notice],
-  );
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download =
+        mode === "export"
+          ? `ecommerce-stock-${new Date().toISOString().slice(0, 10)}.xls`
+          : "ecommerce-stock-template.xls";
+      a.click();
+      URL.revokeObjectURL(url);
+      noticeSuccessRef.current(mode === "export" ? "ส่งออกสินค้าแล้ว" : "ดาวน์โหลดแบบฟอร์มแล้ว");
+    } catch (e) {
+      noticeErrorRef.current(e instanceof Error ? e.message : "ดาวน์โหลดไม่สำเร็จ");
+    }
+  }, []);
 
   const importExcel = useCallback(
     async (file: File) => {
@@ -236,6 +250,7 @@ export function EcommerceProductsClient({
         const res = await fetch("/api/ecommerce-store/session/stock/import", {
           method: "POST",
           body: fd,
+          credentials: "include",
         });
         const j = (await res.json().catch(() => ({}))) as {
           error?: string;
@@ -244,24 +259,24 @@ export function EcommerceProductsClient({
           skipped?: number;
         };
         if (!res.ok) throw new Error(j.error ?? "นำเข้าไม่สำเร็จ");
-        notice.success(
+        noticeSuccessRef.current(
           `นำเข้าแล้ว · เพิ่ม ${j.created ?? 0} · อัปเดต ${j.updated ?? 0}${
             j.skipped ? ` · ข้าม ${j.skipped}` : ""
           }`,
         );
-        await reload();
+        await reload({ silent: true });
       } catch (e) {
-        notice.error(e instanceof Error ? e.message : "นำเข้าไม่สำเร็จ");
+        noticeErrorRef.current(e instanceof Error ? e.message : "นำเข้าไม่สำเร็จ");
       } finally {
         setImportBusy(false);
       }
     },
-    [notice],
+    [reload],
   );
 
   useEffect(() => {
     void reload();
-  }, []);
+  }, [reload]);
 
   async function uploadImage(file: File, onUrl: (url: string) => void) {
     setUploading(true);
@@ -332,17 +347,23 @@ export function EcommerceProductsClient({
 
   async function saveEditProduct() {
     if (!editId || !editName.trim()) return;
+    const stockNum = Number(editStock);
+    if (!Number.isFinite(stockNum) || stockNum < 0) {
+      setEditErr("จำนวนสต๊อกไม่ถูกต้อง");
+      return;
+    }
     setEditBusy(true);
     setEditErr(null);
     try {
       const res = await fetch("/api/ecommerce-store/session/products", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           id: editId,
           name: editName,
           priceBaht: Number(editPrice),
-          stockBalance: Number(editStock),
+          stockBalance: Math.floor(stockNum),
           sku: editSku.trim() || null,
           imageUrl: editImageUrl,
           categoryId: editCategoryId || null,
@@ -360,32 +381,66 @@ export function EcommerceProductsClient({
         await fetch("/api/ecommerce-store/session/store", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ featuredProductId: editId, salePageEnabled: true }),
         });
       }
       setShowEditProductModal(false);
       resetEditForm();
-      await reload();
+      await reload({ silent: true });
     } finally {
       setEditBusy(false);
     }
   }
 
   async function adjustStock(id: string, delta: number) {
-    await fetch("/api/ecommerce-store/session/products", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, stockDelta: delta }),
-    });
-    await reload();
+    if (stockBusyId) return;
+    const prev = products.find((p) => p.id === id);
+    if (!prev) return;
+    const nextBalance = Math.max(0, prev.stockBalance + delta);
+    if (nextBalance === prev.stockBalance && delta < 0) return;
+
+    setStockBusyId(id);
+    setProducts((list) =>
+      list.map((p) => (p.id === id ? { ...p, stockBalance: nextBalance } : p)),
+    );
+    setStockModalProduct((cur) =>
+      cur && cur.id === id ? { ...cur, stockBalance: nextBalance } : cur,
+    );
+    try {
+      const res = await fetch("/api/ecommerce-store/session/products", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id, stockDelta: delta }),
+      });
+      const j = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        product?: { stockBalance?: number };
+      };
+      if (!res.ok) {
+        throw new Error(typeof j.error === "string" ? j.error : "ปรับสต๊อกไม่สำเร็จ");
+      }
+      const serverBalance =
+        typeof j.product?.stockBalance === "number" ? j.product.stockBalance : nextBalance;
+      setProducts((list) =>
+        list.map((p) => (p.id === id ? { ...p, stockBalance: serverBalance } : p)),
+      );
+      setStockModalProduct((cur) =>
+        cur && cur.id === id ? { ...cur, stockBalance: serverBalance } : cur,
+      );
+    } catch (e) {
+      setProducts((list) => list.map((p) => (p.id === id ? prev : p)));
+      setStockModalProduct((cur) => (cur && cur.id === id ? prev : cur));
+      noticeErrorRef.current(e instanceof Error ? e.message : "ปรับสต๊อกไม่สำเร็จ");
+    } finally {
+      setStockBusyId(null);
+    }
   }
 
   async function adjustStockFromModal(delta: number) {
     if (!stockModalProduct) return;
     await adjustStock(stockModalProduct.id, delta);
-    setStockModalProduct((prev) =>
-      prev ? { ...prev, stockBalance: Math.max(0, prev.stockBalance + delta) } : null,
-    );
   }
 
   async function removeProduct(id: string, productName: string) {
@@ -873,7 +928,7 @@ export function EcommerceProductsClient({
                     type="button"
                     className={ecommerceStoreRowIconButtonClass}
                     aria-label={`ลดสต๊อก ${p.name}`}
-                    disabled={p.stockBalance <= 0}
+                    disabled={p.stockBalance <= 0 || stockBusyId === p.id}
                     onClick={() => void adjustStock(p.id, -1)}
                   >
                     −
@@ -895,6 +950,7 @@ export function EcommerceProductsClient({
                     type="button"
                     className={ecommerceStoreRowIconButtonClass}
                     aria-label={`เพิ่มสต๊อก ${p.name}`}
+                    disabled={stockBusyId === p.id}
                     onClick={() => void adjustStock(p.id, 1)}
                   >
                     +
@@ -1090,7 +1146,7 @@ export function EcommerceProductsClient({
                 type="button"
                 className={ecommerceStockButtonClass}
                 onClick={() => void adjustStockFromModal(-1)}
-                disabled={stockModalProduct.stockBalance <= 0}
+                disabled={stockModalProduct.stockBalance <= 0 || stockBusyId === stockModalProduct.id}
                 aria-label="ลดสต๊อก"
               >
                 −
@@ -1107,6 +1163,7 @@ export function EcommerceProductsClient({
                 type="button"
                 className={ecommerceStockButtonClass}
                 onClick={() => void adjustStockFromModal(1)}
+                disabled={stockBusyId === stockModalProduct.id}
                 aria-label="เพิ่มสต๊อก"
               >
                 +
